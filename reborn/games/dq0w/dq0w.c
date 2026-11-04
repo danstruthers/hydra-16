@@ -51,6 +51,7 @@
 #include <dice.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
+#include "hub0.h"
 #include "world.h"
 #include "work.h"
 #include "things.h"
@@ -556,7 +557,7 @@ static void __fastcall__ path_add (unsigned char h, unsigned long t)
         p[0] = h;
         p[1] = (unsigned char) t;
         p[2] = (unsigned char) (t >> 8);
-        hub_map (at_bank);
+        (hub_map) (at_bank);
     }
 }
 
@@ -597,7 +598,7 @@ static unsigned long __fastcall__ way (unsigned char tx, unsigned char ty)
                 fy_ = ty_ - dir_y[q];
             }
         }
-        hub_map (at_bank);
+        (hub_map) (at_bank);
     }
     return t;
 }
@@ -2613,7 +2614,7 @@ static void __fastcall__ weigh (unsigned ex, unsigned ey)
     hy_bank (ovbank[OVBANKS + 1]);
     for (i = 0; i < tv.legs && (TRAV_TK[i][0] != ex || TRAV_TK[i][1] != ey); ++i) {
     }
-    hub_map (at_bank);                          /* (The chunk back in the window) */
+    (hub_map) (at_bank);                          /* (The chunk back in the window) */
     r = (i < tv.legs) + (ex == tbx && ey == tby ? 2 : 0);
     if (dx < 0) {
         dx = -dx;
@@ -4630,7 +4631,7 @@ void __fastcall__ s_path_ways (unsigned char tx, unsigned char ty)
         p[2] = (unsigned char) (w->t >> 8);
         i -= dir_x[d] + (int) dir_y[d] * CW;
     }
-    hub_map (at_bank);
+    (hub_map) (at_bank);
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -6409,6 +6410,7 @@ unsigned char ui_first (void)
 int main (int argc, char* argv[])
 {
     static struct msg m;
+    static unsigned char uf;
     unsigned char was_busy = 0, dseq = 0, took;
 
     if (argc < 4 || ovl_load (argv[3]) || wstart (argv)) {
@@ -6417,11 +6419,16 @@ int main (int argc, char* argv[])
     while (hub_map (0), !HUB->quit) {         /* (The hub at $8000 again, each time round) */
         while (hy_sem_try (HUB->sem[T_WORLD]) == 0) {
         }
+        uf = ui_first ();                       /* (The UI's command in hand at the real paces, its answer first: the
+                                                **   world's own periodic work waits for it, a quarter second at most:
+                                                **   ui_first's) */
         stocks ();                              /* (The chunks the maker stocked: their things put down, marked so) */
-        if (tr_n >= TR_FLUSH) {
-            tr_flush (0);                       /* (The passings journalled taken into the traces' store: part 28's) */
+        if (tr_n >= TR_FLUSH && !uf) {
+            tr_flush (TF_SOME);                 /* (The passings journalled taken into the traces' store: part 28's,
+                                                **   giving way as a command comes; 160,000 cycles of the world's and a
+                                                **   part's swap, on whichever answer it fell: 2026-11-03) */
         }
-        if (DEN_INTENTS () && !ui_first ()) {
+        if (DEN_INTENTS () && !uf) {
             den_intents ();                     /* (The denizens' intents carried out; not while the UI's command is
                                                 **   in hand at the real paces, its answer first: ui_first's) */
         }
@@ -6438,7 +6445,7 @@ int main (int argc, char* argv[])
             den_saw = 0;                        /* (A body fallen: looked at again, the things too) */
             see (0);
         }
-        if (HUB->den_seq != dseq && !ui_first ()) {   /* (Not while the UI's command is in hand at the real paces:
+        if (HUB->den_seq != dseq && !uf) {      /* (Not while the UI's command is in hand at the real paces:
                                                 **   the senses' look of them after its answer's begun, 2026-11-01) */
             hub_map (0);
             dseq = HUB->den_seq;
@@ -6452,9 +6459,10 @@ int main (int argc, char* argv[])
             }
             hub_map (0);
         }
-        if (HUB->round && (burn_ask || HUB->now >= burn_due)) {
+        if (HUB->round && (burn_ask || HUB->now >= burn_due) && !uf) {
             burns_now ();                       /* (The lights burnt down, a game minute's: part 27's; once the game's
-                                                **   begun, WQ_START's, its clock a game carried on's) */
+                                                **   begun, WQ_START's, its clock a game carried on's; a command's
+                                                **   answer first, some 200,000 cycles of the world's) */
             hub_map (0);
         }
         if (!((unsigned char) HUB->pcsum.cond & C_UNCONSCIOUS)) {
@@ -6618,7 +6626,7 @@ void __fastcall__ s_ways_go (unsigned char r, unsigned char fx, unsigned char fy
         q = WAYS_AT[i].trap;
         x = i & (CW - 1);
         y = i >> CW_BITS;
-        hub_map (at_bank);
+        (hub_map) (at_bank);
         for (d = 0; d < 8; ++d) {
             c[d] = step_by (x, y, d);
             tr[d] = wtrap;
@@ -6639,7 +6647,7 @@ void __fastcall__ s_ways_go (unsigned char r, unsigned char fx, unsigned char fy
             WAYS_Q[tail++] = n;
         }
     }
-    hub_map (at_bank);
+    (hub_map) (at_bank);
 }
 
 #pragma code-name (push, "SW78CODE")            /* (go_to's own part's, 2026-10-31: part 21's room) */
@@ -6670,7 +6678,7 @@ unsigned char __fastcall__ s_ways_near (unsigned char* tx, unsigned char* ty)
             }
         }
     }
-    hub_map (at_bank);
+    (hub_map) (at_bank);
     if (bx == 0xFF) {
         return 0;
     }
@@ -7029,6 +7037,12 @@ void s_burns_now (void)
     char ln[14];
 
     hub_map (0);
+    if (asked & BA_SCONCES) {                   /* (A minute in two passes: the sconces' on their own, a part's swap and
+                                                **   its passes of the store, a command coming between) */
+        burn_ask = asked & ~BA_SCONCES;
+        sconce_lights (0xFF);
+        return;
+    }
     burn_ask = 0;
     if (asked == TS_ASK && HUB->now < burn_due) {
         HUB->tb.due = 0;                        /* (The time it believes alone, if the burning's look isn't due: no
@@ -7129,8 +7143,8 @@ void s_burns_now (void)
                                                 **   in hand, its answer first) */
             }
         }
-        sconce_lights (0xFF);                   /* (The rooms' lights by their sconces, a minute's: one burnt out, its
-                                                **   keepers gone: wkept.c's) */
+        burn_ask |= BA_SCONCES;                 /* (The rooms' lights by their sconces, a minute's: one burnt out, its
+                                                **   keepers gone: wkept.c's; next time round) */
     }
     if (out || seen) {
         if (out) {

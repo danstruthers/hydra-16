@@ -191,6 +191,8 @@ static void take (void)
 
 /* The journal's ring (the denizens' or the character's: k) taken in from its place so far to its count now (those
 ** written over since, lost) */
+unsigned char ui_first (void);                  /* (dq0w.c's) */
+static unsigned char keeps;                     /* (s_tr_flush's keep: TF_SOME, ring gives way to a command) */
 static void __fastcall__ ring (unsigned char k)
 {
     unsigned at, n;
@@ -203,6 +205,10 @@ static void __fastcall__ ring (unsigned char k)
         at = n - (k ? NTRAIL : NJOURNAL);
     }
     for (; at != n; ++at) {
+        if (keeps == TF_SOME && (hub_map (0), ui_first ())) {
+            tr_n = TR_FLUSH;                    /* (A command come: its answer first, the rest as it's answered) */
+            break;
+        }
         hub_map (DEN_BANK);
         memcpy (&s, k ? &TJ_AT->p[at % NTRAIL] : &TJ_AT->e[at % NJOURNAL], sizeof s);
         take ();
@@ -225,6 +231,7 @@ void __fastcall__ s_tr_flush (unsigned char keep)
     int fd;
 
     tr_n = 0;
+    keeps = keep;
     own ();
     if (THD->magic != TR_MAGIC) {
         for (h = 2; h < 4; ++h) {               /* (The store empty) */
@@ -272,7 +279,7 @@ void __fastcall__ s_tr_flush (unsigned char keep)
     }
     ring (0);                                   /* (The nine first: a lair's scent, its keepers', in one of them) */
     ring (1);
-    for (h = 1; keep && h <= NTCH; ++h) {
+    for (h = 1; keep == 1 && h <= NTCH; ++h) {
         own ();
         if (THD->ch[h - 1].used && (THD->ch[h - 1].flags & TC_DIRTY)) {
             tr_file (h, TF_KEEP);

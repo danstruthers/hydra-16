@@ -72,6 +72,23 @@ static void __fastcall__ struck (unsigned char n, unsigned char you)
     }
 }
 
+/* A blow (an E_FIGHT: the character's, or one at it), worded; the character dead of it, the game's end; knocked
+** senseless, it waits it out (main.c's till 2026-11-03: the main RAM's room) */
+unsigned __fastcall__ o_fight_words (const struct msg* m);
+void __fastcall__ o_blow (const struct msg* m)
+{
+    unsigned out = o_fight_words (m);
+    unsigned char c;
+
+    msg (lb);
+    hub_mem (0, &c, (const void*) &HUB->pcsum.cond, 1);
+    if (c & C_DEAD) {
+        end (END_DIED);                         /* (The game's end, as harm's is) */
+    } else if (out) {
+        intend2 (I_WAIT, out, 1);               /* (Out: the time it's senseless) */
+    }
+}
+
 unsigned __fastcall__ o_fight_words (const struct msg* m)
 {
     static unsigned char n;                     /* (What the character sees: whether it sees the denizen, or one of its

@@ -66,6 +66,13 @@ void __fastcall__ hub_map (unsigned char bank)
     *(volatile unsigned char*) 0 = hub_x[bank];
 }
 
+#ifdef HUB_ZERO
+void hub0 (void)                                /* (hub_map (0), two bytes less at each call: hub0.h's, the world's room) */
+{
+    hub_map (0);
+}
+#endif
+
 #if !defined (HUB_ATTACHED) || defined (HUB_BACK)  /* (The UI's and the maker's: the others' room) */
 /* Where the window is (the hub's bank hub_map put there last, and the bank register), and the window put back there:
 ** U as that bank of the hub's had it, then the bank register (the hub's banks may be in more than one of the shared

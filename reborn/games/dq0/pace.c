@@ -24,6 +24,7 @@
 #pragma rodata-name (push, "SW4RODATA")
 
 #define NW      12
+unsigned char paced;
 static char b[INMAX + 1];
 static char* w[NW];
 static unsigned char nw;
@@ -179,6 +180,9 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
     }
     said = g != 0xFF && ((g & 7) > GA_WALK || (g & GA_SAID)) ? GA_SAID : 0;  /* (Outright, GA_SAID's or faster than a walk: for the dark;
                                                 **   the legs' way, crawling or hopping, the world's: slice 4.1b's) */
+    if (g != 0xFF) {
+        paced = said || (g & (GA_CRAWL | GA_HOP));   /* (Not plainly walking, the world's bold_ and pmode: main.c's) */
+    }
     g = g == 0xFF ? g : g & ~GA_SAID;
     wa = HUB->watch;
     if (any ("stop\0")) {                       /* (Stopped: what it names; a pace's, back to a walk) */
@@ -364,23 +368,32 @@ static const char pace_words[] =                /* (Each word after its length: 
 unsigned char __fastcall__ o_pacing (const char* l)
 {
     static const char* p;
-    static unsigned char n, k;
+    static unsigned char n, k, w, words;
 
-    for (;;) {
+    w = 0;
+    for (words = 0; ; ++words) {
         while (*l == ' ' || *l == ',' || *l == '.' || *l == '!') {
             ++l;
         }
         if (!*l) {
-            return 0;
+            return !w || words > 1 ? w : 2;     /* ("Walk" first and the only one of them, more said after it, "walk to the
+                                                **   door": 1, none of its work to do if it's walking plainly (main.c's: its
+                                                **   parts' swaps and a word with the world, all a walk's first words were
+                                                **   waiting on); else 2) */
         }
         if (*l >= '0' && *l <= '9') {
-            return 1;
+            return 2;
         }
         for (n = 0; l[n] && l[n] != ' ' && l[n] != ',' && l[n] != '.' && l[n] != '!'; ++n) {
         }
+        if (!words && n == 4 && !strnicmp (l, "walk", 4)) {
+            w = 1;
+            l += n;
+            continue;
+        }
         for (p = pace_words; (k = *p) != 0; p += k + 1) {  /* (Each word's length, then its first letter) */
             if (k == n && p[1] == (*l | 0x20) && !strnicmp (l, p + 1, n)) {
-                return 1;
+                return 2;
             }
         }
         l += n;

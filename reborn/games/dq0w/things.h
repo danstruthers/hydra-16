@@ -216,6 +216,7 @@ unsigned char __fastcall__ water_at (unsigned char well);  /* (Part 75's, wwater
 void burns_now (void);                          /* (Part 27: dq0w.c) The lights burnt down by the minutes gone */
 extern unsigned long burn_due;                  /*   (when the next minute's due: the main loop's) */
 extern unsigned char burn_ask;                  /*   (or at once: a light's change; | TS_ASK, the time's */
-#define TS_ASK          2                       /*   alone: a wait begun or ended, a black-out ..., part 76's) */
+#define TS_ASK          2                       /*   alone: a wait begun or ended, a black-out ..., part 76's; */
+#define BA_SCONCES      4                       /*   BA_SCONCES, a minute's second pass, part 27's) */
 #define CLOCK_256       (*(unsigned*) ((unsigned char*) &HUB->now + 1))   /* (The clock in 25.6 seconds, 16 bits: its
                                                 **   tenths' middle bytes, no long division: ipage.c's stamps) */

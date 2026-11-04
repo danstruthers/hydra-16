@@ -190,9 +190,35 @@ unsigned char o_may_den (void)
     return 0;
 }
 
+/* A walk over told as it begins, at once (the user's D17, a command answers at once: 2026-11-02), by the thing's name, or
+** the command's thing (0); its arrival not "You go over to it." (placing, or a command's walk's reach, E_ARRIVE's).  (Here
+** since 2026-11-03, a walk's first words no part's swap: an overlay's call takes nothing) */
+void __fastcall__ o_walk_says (const char* name)
+{
+    unsigned char k = cmd.obj.kind;
+
+    if (said_ahead) {
+        said_ahead = 0;                         /* (Told already, walk_ahead's) */
+        placing = 1;
+        return;
+    }
+    if (!name) {
+        name = cmd.obj.word;
+    }
+    if (*name && !k) {
+        sayf ("\nYou go over to the %s.", name);
+    } else if (k == OB_DOOR || k == OB_WINDOW || k == OB_PORTC) {
+        sayf ("\nYou head for the %s.", k == OB_DOOR ? "door" : k == OB_WINDOW ? "window" : "portcullis");
+    } else {
+        msg ("You go over to it.");
+    }
+    t_flush ();                                 /* (Out before the world's walk starts: the user's D17) */
+    placing = 1;
+}
+
 /* A thing to take, by the name said, that the character sees lying about, none of that name in reach: its walk over told
 ** now, before the world's asked, whose answer's the time (its parts' copies, its chooser through the store): the same
-** words, and the world's IR_NOT_HERE says none again (said_ahead, s_walk_says) */
+** words, and the world's IR_NOT_HERE says none again (said_ahead, o_walk_says) */
 void __fastcall__ o_walk_ahead (const char* name)
 {
     struct sight* s;
@@ -215,7 +241,7 @@ void __fastcall__ o_walk_ahead (const char* name)
         }
     }
     if (away) {
-        walk_says (name);
+        o_walk_says (name);
         placing = 0;
         said_ahead = 1;
     }

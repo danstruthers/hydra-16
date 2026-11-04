@@ -132,7 +132,7 @@ go:
             SWPART      41, 11              ; An opening told with what it shows beyond (dq0w.c's revealed; overlay 19's, 2026-10-30: part 72's room)
             SWPART      42, 21              ; What a closer look at a thing shows; its condition (things.c)
             SWPART      43, 7              ; A walk in the dark set out on: its way felt, a thing stumbled over
-            SWPART      44, 9              ; A walk in the dark ended: what it met, felt or blundered into
+            SWPART      44, 2              ; A walk in the dark ended: what it met, felt or blundered into
             SWPART      45, 5              ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
             SWPART      46, 25               ; A search's thing, for or on; what a search turns up (things.c)
             SWPART      47, 22              ; What's on a thing or in it, searched (things.c)
@@ -305,7 +305,8 @@ go:
             SWFN        on_it, 47
             SWFN        thing_words, 11
             SWFN        describe, 40
-            SWFN        look_at, 39
+            SWFN        look_on, 39
+            SWFN        look_pick, 4
             SWFN        look_more, 40
             SWFN        closer, 42
             SWFN        inside, 61

@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
+#include "hub0.h"
 #include "world.h"
 #include "work.h"
 #include "things.h"
@@ -68,7 +69,8 @@ unsigned __fastcall__ seen_named (const char* name);
 unsigned char __fastcall__ moved (unsigned char op);
 unsigned char shut_work (void);
 unsigned char inside (void);                    /* Part 36 */
-unsigned char look_at (void);                   /* Part 39 */
+unsigned __fastcall__ look_pick (void);         /* Part 4 */
+void __fastcall__ look_on (unsigned n);         /* Part 39 */
 unsigned char __fastcall__ describe (const char* name);    /* Part 40 */
 unsigned __fastcall__ shut_in (unsigned n);     /* Part 35 */
 unsigned __fastcall__ s_shut_in (unsigned n);
@@ -194,6 +196,11 @@ unsigned char things_req (void)
         wear (tbuf, HUB->ireq.to);
     } else if (k == IO_LIST) {
         list ();
+    } else if (k == IO_LOOK) {
+        look_on (look_pick ());                 /* (A thing looked at: part 4's chooser, then part 39's words, with no
+                                                **   part 10 to come back to, four swaps less before its first letter:
+                                                **   the user's D17, 2026-11-03) */
+        return 0;
     } else {
         return serve ();
     }
@@ -1715,9 +1722,6 @@ unsigned char s_serve (void)
     case IO_DESCRIBE:
         iq.result = describe (iq.name);
         break;
-    case IO_LOOK:                               /* (A thing looked at, as anyone sees it: part 39's) */
-        iq.result = look_at ();
-        break;
     case IO_HIDE:
         iq.result = hide (iq.name);
         break;
@@ -1966,7 +1970,7 @@ unsigned char __fastcall__ s_throw_at (const char* name)
 static unsigned char __fastcall__ word_of4 (const char* k, const char* w, unsigned char n)
 {
     for (;;) {
-        if (!strncmp (k, w, n)) {
+        if (*k == *w && !strncmp (k, w, n)) {
             return 1;
         }
         if (!(k = strchr (k, ' '))) {
@@ -1978,10 +1982,10 @@ static unsigned char __fastcall__ word_of4 (const char* k, const char* w, unsign
 
 static unsigned char __fastcall__ named4 (const char* k, const char* w)
 {
-    unsigned char n = strlen (w), m = strlen (k);
+    unsigned char n = strlen (w), m;
 
     return word_of4 (k, w, n) || (n > 2 && w[n - 1] == 's' && (word_of4 (k, w, n - 1) ||
-        (w[n - 2] == 'e' && word_of4 (k, w, n - 2)))) || (n > 3 && m > n && !strcmp (k + m - n, w));    /* (Or the end
+        (w[n - 2] == 'e' && word_of4 (k, w, n - 2)))) || (n > 3 && (m = strlen (k)) > n && !strcmp (k + m - n, w));    /* (Or the end
                                                 **   of a name of one word and another: "pack" a backpack, "skin" a
                                                 **   waterskin, 2026-10-26) */
 }
@@ -2068,9 +2072,16 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
             continue;
         }
         p = 0;
+        if (*name != '#') {                     /* (A kind's name asked where it lies, once a kind: nothing copied out,
+                                                **   a thing named its first letter the sooner, the user's D17) */
+            hub_map (KIND_BANK);
+            if (!named4 ((const char*) kinds + ((unsigned) pk << 5) + ((unsigned) pk << 2) + pk, name)) {
+                no[pk] = 1;
+                continue;
+            }
+        }
         fetch (&rec, i);
-        if (!is_named (name)) {
-            no[pk] = *name != '#';
+        if (*name == '#' && !is_named (name)) {
             continue;
         }
         if (d = chain (i), cnot && s != SL_NTH) {
@@ -2166,6 +2177,17 @@ unsigned __fastcall__ s_at_hand (const char* name)
 {
     afar = 0;
     return *name ? s_pick (name, HW_HAND) : 0;
+}
+
+/* The thing a look's asked of (IO_LOOK: the request's to, LM_*): carried, or seen: the one most to hand, of several; all
+** but a plain look, remembered too, walked to; gone to: lying about.  The request read for part 39's s_look_on */
+unsigned __fastcall__ s_look_pick (void)
+{
+    hub_map (0);
+    memcpy (&iq, &HUB->ireq, sizeof iq);
+    wsel = iq.sel;
+    wnot = win = wforce = 0;
+    return s_pick (iq.name, iq.to == LM_AT ? HW_ANY : iq.to == LM_GO ? HW_GONE : HW_KNOWN);
 }
 
 /* A tool used, got out first (HOUSE.md's handy tools: its reach owed, part 10's; part 4's, its room): the first the
@@ -3266,7 +3288,25 @@ static void __fastcall__ word (const char* s)
 unsigned char __fastcall__ look_more (unsigned n, unsigned char mode);    /* (Part 40's) */
 void __fastcall__ closer (unsigned char mode);  /* (Part 42's) */
 
-unsigned char s_look_at (void)
+static unsigned char __fastcall__ look_at (unsigned n);
+
+/* A thing looked at (n, s_look_pick's: 0, none), its reply's result (a look into what's in it may owe a reach: reach_done's,
+** the character's next spell's, in the reply's y) */
+void __fastcall__ s_look_on (unsigned n)
+{
+    static unsigned char r;
+
+    r = look_at (n);
+    hub_map (0);
+    if (rsteps | rbody) {
+        n = reach_done (RD_SAID);               /* (Nothing owed after it) */
+        hub_map (0);
+        HUB->ireq.y = n;
+    }
+    HUB->ireq.result = r;
+}
+
+static unsigned char __fastcall__ look_at (unsigned n)
 {
     static const char* const where[6] = { "worn", "on you", "in your hand", "in your left hand", "in your right hand",
         "in both hands" };
@@ -3274,14 +3314,12 @@ unsigned char s_look_at (void)
         { "unstoppered", "stoppered" } };
     const struct kind* q;
     struct item* p;
-    unsigned n, c, px, py;
+    unsigned c, px, py;
     unsigned char mode = iq.to, sh, cl, k, mine;
     char b[6];
 
     text_new ();
-    if (!(n = pick (iq.name, mode == LM_AT ? HW_ANY : mode == LM_GO ? HW_GONE : HW_KNOWN))) {    /* (Carried, or seen: the
-                                                **   one most to hand, of several; all but a plain look, remembered too,
-                                                **   walked to; gone to: lying about) */
+    if (!n) {
         if (mode == LM_GO) {
             closer (LM_GO);                     /* (A trap it knows of: part 42's room, its reply in ld) */
             return ld;
@@ -4091,14 +4129,6 @@ void __fastcall__ s_listed (unsigned n)
 #pragma code-name (push, "SW27CODE")
 #pragma rodata-name (push, "SW27RODATA")
 
-/* Thing i the character's (on it, or in what it carries) */
-static unsigned char __fastcall__ carried (unsigned i)
-{
-    for (; item_at (i)->where == IW_ITEM; i = item_at (i)->x) {
-    }
-    return i == rs_pack || (item_at (i)->where == IW_ACTOR && !item_at (i)->x);
-}
-
 static void __fastcall__ put3 (const char* a, const char* b, const char* c)
 {
     put (a);
@@ -4116,7 +4146,7 @@ unsigned char s_fill (void)
 {
     struct item l, f;                           /* (On the C stack: the main RAM's room) */
     const struct burn* b;
-    unsigned n, c, room, give;
+    unsigned n, c, room, give, n2;
     unsigned char takes, k, bk = 0;
     char ln[14], fn[14];
 
@@ -4134,8 +4164,8 @@ unsigned char s_fill (void)
                 break;
             }
             fetch (&l, n);
-            if ((b = burn_of (l.kind)) != 0 && l.fuel < b->life * 10 && b->life * 10 - l.fuel > room) {
-                room = b->life * 10 - l.fuel;
+            if ((b = burn_of (l.kind)) != 0 && (give = b->life * 10) > l.fuel && give - l.fuel > room) {
+                room = give - l.fuel;
                 bk = k;
             }
         }
@@ -4157,16 +4187,19 @@ unsigned char s_fill (void)
         put3 ("The ", ln, " takes no fuel: it burns away.");
         return IR_NO;
     }
-    room = l.fuel < b->life * 10 ? b->life * 10 - l.fuel : 0;
+    room = (give = b->life * 10) > l.fuel ? give - l.fuel : 0;
     wsel = iq.osel;                             /* (The fuel's own selector) */
     if (*iq.into) {
         c = at_hand (iq.into);
     } else {
         for (c = 0; (c = items (c, IN_ACTOR | IN_ITEM, 0)) != 0; ) {    /* (The first carried it takes, not empty) */
             fetch (&f, c);
-            if (f.fuel && (b = burn_of (f.kind)) != 0 && (b->fuels & takes) && !(kind_of (f.kind)->flags & K_LIGHT) &&
-                carried (c)) {
-                break;
+            if (f.fuel && (b = burn_of (f.kind)) != 0 && (b->fuels & takes) && !(kind_of (f.kind)->flags & K_LIGHT)) {
+                for (n2 = c; item_at (n2)->where == IW_ITEM; n2 = ip->x) {
+                }
+                if (n2 == rs_pack || (ip->where == IW_ACTOR && !ip->x)) {
+                    break;                      /* (The character's: on it, or in what it carries) */
+                }
             }
         }
     }

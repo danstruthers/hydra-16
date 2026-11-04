@@ -923,7 +923,7 @@ void status (void)
 }
 
 /* The game's end (theme.h's END_*): its words, the theme's; the save marked so (a game done isn't carried on) */
-static void __fastcall__ end (unsigned char how)
+void __fastcall__ end (unsigned char how)
 {
     ending (how);
     Q.done = how;
@@ -944,20 +944,6 @@ unsigned char lsn;                              /* (A listen, or a sniff, under 
 static unsigned char heard_rel = 0xFF;
 char heard_what[20];
 
-
-/* A blow (an E_FIGHT: the character's, or one at it), worded (overlay 6's); the character dead of it, the game's
-** end; knocked senseless, it waits it out */
-static void __fastcall__ blow (const struct msg* m)
-{
-    unsigned out = fight_words (m);
-
-    msg (lb);
-    if (HUB->pcsum.cond & C_DEAD) {
-        end (END_DIED);                         /* (The game's end, as harm's is) */
-    } else if (out) {
-        intend2 (I_WAIT, out, 1);               /* (Out: the time it's senseless) */
-    }
-}
 
 static void heard (void)
 {
@@ -2126,7 +2112,8 @@ void __fastcall__ s_command (char* l)
     d = choose (&cmd);                          /* (A choice asked for: this line's, the command again; a fixture's, */
     d |= answer (d);                            /*   or a thing's) */
     tx = 0;
-    if (!d && (unsigned char) (cmd.action - VB_MOVE_DIRECTION) < 2 && cmd.how && travel_go (l)) {
+    if (!d && (unsigned char) (cmd.action - VB_MOVE_DIRECTION) < 2 && cmd.how && cmd.how != HOW_ACROSS &&
+        (!cmd.obj.kind || cmd.obj.kind == OB_ROOM || cmd.obj.kind == OB_WAY_OUT) && travel_go (l)) {
         return;                                 /* (A place it knows gone to, "go back to the Mausoleum": part 4's) */
     }
     if (!d && (cmd.flags & CF_STRANGE) && *l != '#') {   /* (A verb the game doesn't know: the grammar's, not done
@@ -2523,31 +2510,6 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
 static struct msg pm;                           /* (reach_go's, place_go's) */
 static unsigned char pm_kind = I_TAKE;          /* (reach_go's walk: door_go's I_GOTO, to the door's square) */
 
-/* A walk over told as it begins, at once (the user's D17, a command answers at once: 2026-11-02), by the thing's name, or
-** the command's thing (0); its arrival not "You go over to it." (placing, or a command's walk's reach, E_ARRIVE's) */
-void __fastcall__ s_walk_says (const char* name)
-{
-    unsigned char k = cmd.obj.kind;
-
-    if (said_ahead) {
-        said_ahead = 0;                         /* (Told already, walk_ahead's) */
-        placing = 1;
-        return;
-    }
-    if (!name) {
-        name = cmd.obj.word;
-    }
-    if (*name && !k) {
-        sayf ("\nYou go over to the %s.", name);
-    } else if (k == OB_DOOR || k == OB_WINDOW || k == OB_PORTC) {
-        sayf ("\nYou head for the %s.", k == OB_DOOR ? "door" : k == OB_WINDOW ? "window" : "portcullis");
-    } else {
-        msg ("You go over to it.");
-    }
-    t_flush ();                                 /* (Out before the world's walk starts: the user's D17) */
-    placing = 1;
-}
-
 unsigned char s_reach_go (void)
 {
     unsigned b = hub_here ();
@@ -2560,8 +2522,7 @@ unsigned char s_reach_go (void)
         hub_map (UI_BANK);
         memcpy (&UIREC->kept, &cmd, sizeof cmd);
         hub_map (0);
-        s_walk_says (0);
-        hub_map (0);
+        walk_says (0);
         pm.kind = pm_kind;
         pm.who = 0;
         pm.a = 1;
@@ -2953,8 +2914,10 @@ int main (int argc, char* argv[])
                                                 **   command's only part 2, the commands') */
             k = (alias_wait || alias_said (l)) && alias_line (l) ? NL_DONE :    /* (The shortcuts': alias.c's) */
                 f & NI_LINE ? names_line (l) : NL_NONE;     /* (A name given or forgotten: the names') */
-            if (k == NL_NONE && pacing (l) && pace_cmd (l)) {
-                k = NL_DONE;                    /* (The pace's, the state's, a small move's: pace.c's) */
+            if (k == NL_NONE && pacing (l) > (HUB->gait == GA_WALK && !paced) && pace_cmd (l)) {
+                k = NL_DONE;                    /* (The pace's, the state's, a small move's: pace.c's; "walk to the
+                                                **   door", walking plainly: nothing to change, three parts' swaps and a
+                                                **   word with the world spared, the user's D17) */
             }
             if (k == NL_NONE && names_n && (f & NI_THING) && (t = names_subst (l)) != 0) {
                 to_hand ();                     /* (The things' names in it made theirs, "#" and the id; a weapon

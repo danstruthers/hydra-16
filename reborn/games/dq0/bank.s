@@ -90,6 +90,8 @@ ovl_out:
             OVFN        parts_in, 6
             OVFN        alias_said, 4
             OVFN        sway_words, 15
+            OVFN        walk_says, 15       ; (A walk's first words: sway.c's, no part's swap, the user's D17)
+            OVFN        blow, 6             ; (A blow worded and its end: blows.c's since 2026-11-03, the main RAM's room)
             OVFN        dig_words, 19
             OVFN        task_words, 3
             OVFN        beat_words, 16          ; (A walk's beats: task.c's, overlay 3's room, 2026-11-01)
@@ -219,7 +221,6 @@ ovl_out:
             SWFN        bandage_out, 19
             SWFN        find_banks, 19
             SWFN        reach_said, 19
-            SWFN        walk_says, 13
             SWFN        door_go, 13         ; (A door round a bend walked up to first: main.c, 2026-11-03)
             SWFN        place_go, 7
             SWFN        look_way, 17
