@@ -67,6 +67,7 @@ static const struct vkind {
     { "adder", 3, 60, V_ACHE | V_BLEED },       /* (Snakes 2-3, p88: the heath adder's) */
     { "basilsk", 2, 10, 0 },                    /* (Dragons 13, p36) */
     { "lindwrm", 3, 10, V_NUMB },               /* (Dragons 14, p37) */
+    { "spider", 3, 60, V_ACHE | V_BLEED },      /* (A cave spider's bite, 2026-11-04: its kin the adder's, the house's) */
     { "dart", 4, 10, 0, 2 },                    /* (A trap's dart's or needle's: sick and dizzy, the house's) */
     { "contact", 4, 20, 0, 2 },                 /* (A lock's, a chest's smear: the skin burning, numb) */
     { "food", 4, 60, V_MILD, 3 },               /* (Spoiled food's: cramps and vomiting, the book's critical failure
@@ -76,10 +77,9 @@ static const struct vkind {
     { "ghoul", 4, 1440, V_SICK, 4, 4, 7 },      /* (Grave rot, the grave-wight's: H4, C4, its wound festering, the
                                                 **   universal penalty 20, 2d6 hours' incubation (7), the bestiary's;
                                                 **   its claws' and its teeth's when they draw blood) */
-    { "spider", 3, 60, V_ACHE | V_BLEED },      /* (A cave spider's bite, 2026-11-04: its kin the adder's, the house's) */
 };
 #define NVENOMS         (sizeof venoms / sizeof venoms[0])
-enum { VK_DART = 3, VK_CONTACT, VK_FOOD, VK_FLUX };
+enum { VK_DART = 4, VK_CONTACT, VK_FOOD, VK_FLUX };
 
 struct venom pv;                                /* (The character's toxin: dq0harn.h's) */
 struct sick pd;                                 /* (Its disease) */
