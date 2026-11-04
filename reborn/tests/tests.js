@@ -5929,6 +5929,23 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0lurk', initiative: true, near: ['denizens'], what: 'Dingus Quest Zero\'s robbers lying in wait of themselves (A12: HOUSE.md\'s hiding oneself, the denizens hiding; initiative: true, as -I turns it off): a lair of hostile bandits about, the character standing with its torch out, waiting: a bandit that comes to sense it, unseen, in the dark or under cover, hides (its state past 1, watched line by line), its hiding the world\'s by the one code',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g", 'douse the torch', ...Array(12).fill('wait'), 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {
+        m.lurked = [];
+        dq0Poke(m, Array.from({ length: 12 }, (_, i) => ({ g: 1, line: 'wait', n: i + 1, call: (h, L, K, at) => { for (let k = 0; k < L.nactors; k++) m.lurked.push(h[at(k) + L.aState]); } })));
+      },
+      check(m, out) {
+        const f = [];
+        if (!m.lurked.some(v => v > 1)) f.push('no bandit hid: ' + [...new Set(m.lurked)].join(',') + ' ' + dq0Story(out).slice(-700));
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0stay', meaning: true, what: 'Dingus Quest Zero\'s scents strengthened by passing and by staying (the user\'s, 2026-10-22: "repeated passage or occupancy should enhance prior smells"; HOUSE.md\'s light and traces, DUNGEON.md\'s a stay counts as passings), by the world\'s reply (the UI bank\'s tread), its words and the traces\' journal: at seed 3 the giant rats\' lair by the way down where the character starts, its keepers\' scent journalled where they live as it\'s placed (each rat a passing at its home square, with the most stays: the denizens\' ring), sniffed at once and heavy ("A musky smell hangs heavy here: giant rats, by the smell of it.": its strength 6, TR_HEAVY); the rats standing about as the character waits 50 minutes a step off, their stays journalled where each stood (I_TROD\'s TS_STAY, a TQ each); and the character\'s own stay there, its torch lit: once it\'s stepped back (and looked for tracks: the journal taken in as its torch burns, the store\'s smoke a torch\'s) and put its torch out, its smoke still smelt three hours on (faint), where a passing\'s is gone by then (dq0traces)',
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml awa 80 >> /ram/c.hm',
