@@ -272,13 +272,15 @@ static void list_over (void)
     unsigned id, x0, y0;
     unsigned char j, m, b, k;
 
-    x0 = STRATUM (L->sn).x0 + ((unsigned) L->cx << CW_BITS);
-    y0 = STRATUM (L->sn).y0 + ((unsigned) L->cy << CW_BITS);
-    m = b = 0;
+    m = b = x0 = 0;
     for (j = 0; j < sk.n; ++j) {
         e = &sk.e[j];
         if (e->kind != KI_KEY) {
             continue;
+        }
+        if (!x0) {
+            x0 = STRATUM (L->sn).x0 + ((unsigned) L->cx << CW_BITS);
+            y0 = STRATUM (L->sn).y0 + ((unsigned) L->cy << CW_BITS);
         }
         for (; m < L->nportals; ++m) {
             p = &L->portal[m];
@@ -316,11 +318,12 @@ static void list_over (void)
         }
         --j;
     }
-    k = STRATUM (L->sn).style;
-    if (k == ST_BUILT || k == ST_MINE) {
-        for (j = 0; j < L->nopen; ++j) {
-            if (L->open[j].kind == O_SHAFT_DOWN) {
-                put_down (k == ST_MINE ? KI_POST : KI_MOOR, L->sn, x0 + L->open[j].x, y0 + L->open[j].y, 1, ST_SHOWN);
+    for (j = 0; j < L->nopen; ++j) {
+        if (L->open[j].kind == O_SHAFT_DOWN) {
+            k = STRATUM (L->sn).style;
+            if (k == ST_BUILT || k == ST_MINE) {
+                put_down (k == ST_MINE ? KI_POST : KI_MOOR, L->sn, STRATUM (L->sn).x0 + ((unsigned) L->cx << CW_BITS) + L->open[j].x,
+                    STRATUM (L->sn).y0 + ((unsigned) L->cy << CW_BITS) + L->open[j].y, 1, ST_SHOWN);
             }
         }
     }

@@ -38,21 +38,27 @@ const text = strs('cmd_text'), world = strs('cmd_case_world'), names = strs('cmd
 const ok = block('cmd_ok').split(',').map(s => s.trim()).filter(Boolean).map(Number);
 
 function sim65() {
-  const bin = path.join(OUT, 'cmdtest.bin');
-  run(tool('cl65'), ['--cpu', '65C02', '-t', 'sim65c02', '-O', '-D', 'CMD_NO_RESULTS', '-I', OUT, '-I', HERE, '-o', bin,
-    path.join(HERE, 'cmdtest.c'), path.join(GAME, 'cmdmatch.s'), path.join(HERE, 'cmdmatch_c.s')], { cwd: OUT, stdio: ['ignore', 'pipe', 'pipe'] });   // (Its warnings: the test data's unused arrays)
-  const out = run(tool('sim65'), ['--cpu', '65C02', '-x', '4000000000', bin], { cwd: OUT }).split(/\r?\n/);
   let init = 0, worlds = [], bad = 0;
   const each = [];
-  for (const l of out) {
-    let m;
-    if ((m = l.match(/^init (\d+)$/))) init = +m[1];
-    else if ((m = l.match(/^world (\d+)$/))) worlds.push(+m[1]);
-    else if ((m = l.match(/^(\d+) (-?\d+) (\d+)$/))) {
-      const i = +m[1], r = +m[2];
-      each.push({ i, c: +m[3] });
-      if (r !== ok[i]) { bad++; console.log('differs: ' + text[i] + ' (' + r + ', the host ' + ok[i] + ')'); }
-    } else if (/not right/.test(l)) console.log(l);
+  // (The corpus in two runs, half of it each, cmd_corpus.h written again for each: the sim's 64K, 2026-11-04)
+  const half = Math.ceil(text.length / 2);
+  for (const [from, to] of [[0, half], [half, text.length]]) {
+    const dir = path.join(OUT, 'half' + from), bin = path.join(dir, 'cmdtest.bin'), arr = (n, v) => 'static const char *const ' + n + '[] = {\n' + v.slice(from, to).map(x => JSON.stringify(x)).join(',\n') + '\n};\n';
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'cmd_corpus.h'), '#define CMD_CASES ' + (to - from) + '\n' + arr('cmd_text', text) + arr('cmd_case_world', world) + arr('cmd_case_names', names) + arr('cmd_case_deities', deities));
+    run(tool('cl65'), ['--cpu', '65C02', '-t', 'sim65c02', '-O', '-D', 'CMD_NO_RESULTS', '-I', dir, '-I', OUT, '-I', HERE, '-o', bin,
+      path.join(HERE, 'cmdtest.c'), path.join(GAME, 'cmdmatch.s'), path.join(HERE, 'cmdmatch_c.s')], { cwd: dir, stdio: ['ignore', 'pipe', 'pipe'] });   // (Its warnings: the test data's unuse
+    const out = run(tool('sim65'), ['--cpu', '65C02', '-x', '4000000000', bin], { cwd: dir }).split(/\r?\n/);
+    for (const l of out) {
+      let m;
+      if ((m = l.match(/^init (\d+)$/))) init = +m[1];
+      else if ((m = l.match(/^world (\d+)$/))) worlds.push(+m[1]);
+      else if ((m = l.match(/^(\d+) (-?\d+) (\d+)$/))) {
+        const i = +m[1] + from, r = +m[2];
+        each.push({ i, c: +m[3] });
+        if (r !== ok[i]) { bad++; console.log('differs: ' + text[i] + ' (' + r + ', the host ' + ok[i] + ')'); }
+      } else if (/not right/.test(l)) console.log(l);
+    }
   }
   if (each.length !== text.length) { console.log('only ' + each.length + ' of ' + text.length + ' commands ran'); return false; }
   const sum = each.reduce((a, e) => a + e.c, 0);

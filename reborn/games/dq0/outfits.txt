@@ -115,8 +115,7 @@ need: round shield@worn *60 noble*30 | buckler@worn *30 noble*10 | kite shield@w
 60: lockpicks@pouch
 [skill Climbing]
 50: rope@pack
-15: grapple@pack
-20: iron spike@pack
+15: grapple@pack, iron spike@pack 2, hammer@pack
 [skill Seamanship]
 50: rope@pack
 [skill Mining]

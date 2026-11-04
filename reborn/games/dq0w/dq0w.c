@@ -2250,11 +2250,11 @@ void __fastcall__ s_climb (unsigned char d)
     l = link_here (d, &t);
     if (l == 0xFF || t == 0xFFFFFFFFUL) {
         if (!start_ledge (d == DIR_UP, face, jump)) { /* (No way up or down here: a ledge ahead, climbed) */
+            hub_map (0);
             if (d == DIR_UP && HUB->ropes && climb_go (CG_DOWN)) {
                 s_climb (DIR_DOWN);             /* ("Climb the rope" at its top: no way up here, so down it) */
                 return;
             }
-            hub_map (0);
             no_way (N_NO_STAIRS);
         }
         return;
@@ -6133,6 +6133,9 @@ static void __fastcall__ intent (struct msg* m)
         go (m->a & 7);
         set_out ((m->a & 7) | 16);
         break;
+    case I_CLIMB:
+        climb (m->a);
+        break;
     case I_STEP:
         step_to (m->w1 & 7, m->w2, (m->w1 & STEP_KEEP) != 0);
         set_out ((m->w1 & 7) | 8);
@@ -6376,10 +6379,7 @@ void __fastcall__ s_intent_more (struct msg* m)
 
     memcpy (&lw_m, m, sizeof lw_m);             /* (Kept: a tool's reach first, things.c's part 83) */
     switch (m->kind) {
-    case I_CLIMB:                               /* (Here since 2026-11-04: the main RAM's room) */
-        climb (m->a);
-        break;
-    case I_GOTO:
+    case I_GOTO:                                /* (Here since 2026-11-04: the main RAM's room) */
         go_near = m->a;
         go_to (m->w1, m->w2);
         go_near = 0;
