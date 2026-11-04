@@ -561,7 +561,7 @@ course, first aid and healing (Wounds over time); courage in a fight (Morale).
   it finishes where it lies, as the character finishes a creature (the book's dispatch: a mortal wound to its neck,
   to its skull by a blunt weapon; "The ghoul bites at you: a mortal deep bite to your neck. You are dead.": the game's
   end).  A robber (r: the kobolds and their lord, the bandits and their lord, the brown orcs, the orc king) comes up to it and takes what it holds
-  (but a light lit: it leaves it its light) and every penny it has, a round's work (and a round a step of its reach:
+  (but a light lit: it leaves it its light) and every coin it has (pennies, farthings, crowns: 2026-11-03), a round's work (and a round a step of its reach:
   Reach's a robber's, below), off to its lair (into its faction's
   hoard, or at its home, hidden if its kind hides its things: Outfits' the robbers' takings, below; where it stands, if that can't be had), and goes ("The bandit goes through
   your things as you lie helpless, and takes what it finds."); it doesn't strike at it.  One that only defended itself
