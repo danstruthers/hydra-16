@@ -2104,6 +2104,7 @@ function dq0Answers(out) {
 function dq0Repeats(name, out) {
   const found = [];
   for (const a of dq0Answers(out)) {
+    if (/ and |,/.test(a.cmd)) continue;     // (A list's parts each told, "Put down." "Put down.": games/dq0/parts.c)
     // (Each stir a telling of its own: a denizen's place told again after a change between, "two rats" then "a rat",
     // is what changed, not a repeat; within a telling, a look's or a stir's, nothing twice)
     for (const part of a.text.split(/(?=Something stirs\.)/)) {

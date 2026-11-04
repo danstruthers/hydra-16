@@ -87,7 +87,9 @@ ovl_out:
             OVFN        title, 1
             OVFN        help, 1
             OVFN        unknown, 1
+            OVFN        qual_ok, 1
             OVFN        parts_in, 6
+            OVFN        parts_op, 6
             OVFN        alias_said, 4
             OVFN        sway_words, 15
             OVFN        walk_says, 17       ; (A walk's first words: sway.c's, no part's swap, the user's D17)
@@ -143,14 +145,14 @@ ovl_out:
             OVFN        facing_words, 19
             OVFN        sky_words, 1        ; (The sky seen by a window, a skylight, a shaft: time.c, 16's room)
             OVFN        turned_says, 19     ; (A turn's first words: task.c's, the main RAM's room)
-            OVFN        fore_set, 6         ; (The answer's tasks in the foreground: main.c's)
+            OVFN        fore_set, 5         ; (The answer's tasks in the foreground: main.c's)
             OVFN        water_words, 4      ; (The water's news, hunger's and thirst's: water.c, slice 4.9's)
             OVFN        time_ui, 16         ; (The time of day believed, worded: time.c, 2026-10-31)
             OVFN        say_raw, 16         ; (A line as it is, the map's: term.c, the main RAM's room)
             OVFN        t_status, 16        ; (The status line drawn: term.c, the main RAM's room, 2026-11-03)
             OVFN        may_den, 15         ; (The thing named may be a denizen: sway.c, 2026-11-03)
             OVFN        walk_ahead, 15      ; (A walk over told before the world's asked: sway.c, 2026-11-03)
-            OVFN        dots, 6             ; (The game's start's progress: main.c's)
+            OVFN        dots, 5             ; (The game's start's progress: main.c's)
 
 ; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)
 
@@ -172,7 +174,7 @@ ovl_out:
             SWPART      13, 18              ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
             SWPART      14, 3               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
             SWPART      15, 17              ; An ally's errands, the character's gifts, the market (errand.c: slice 4.8's; 2026-11-02)
-            SWPART      16, 6               ; Eating and drinking (feed.c: slice 4.9's)
+            SWPART      16, 5               ; Eating and drinking (feed.c: slice 4.9's)
             SWPART      17, 14              ; Looking one way, a close look (way.c: part 6's till 2026-11-01)
             SWPART      18, 19              ; A denizen's door's words (2026-11-02: overlay 3's room)
             SWPART      19, 15              ; The reach's steps (main.c: 2026-11-02, HOUSE.md's reach)

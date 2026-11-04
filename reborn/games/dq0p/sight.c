@@ -329,7 +329,15 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
                 S.up_rel = REL8 (z->gy > 0 ? H_S : H_N, face);
                 S.up_ft = (z->gy > 0 ? z->gy : -z->gy) / 2;
             }
-            if (!S.dark && (S.lit || (unsigned) light * SQ_FT + EYE >= z->cmid)) {
+            d = 0;                              /* (Daylight falling in, a skylight or a shaft open to the sky of its room's:
+                                                **   the ceiling seen by it, 2026-11-04) */
+            for (i = 0; sun_ && i < C->nopen; ++i) {
+                if (C->open[i].kind >= O_SKYLIGHT && C->open[i].x >= rp.x && C->open[i].x < rp.x + rp.w &&
+                    C->open[i].y >= rp.y && C->open[i].y < rp.y + rp.h) {
+                    d = 1;
+                }
+            }
+            if (!S.dark && (S.lit || d || (unsigned) light * SQ_FT + EYE >= z->cmid)) {
                 S.ceil = z->ceil;
                 S.cmid = z->cmid;
                 S.cwall = z->cwall;

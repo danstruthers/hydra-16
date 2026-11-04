@@ -247,6 +247,10 @@ void help (void);                               /* Overlay 1 (help.c's): the com
 void __fastcall__ unknown (unsigned char f);    /* Overlay 1: a verb the game doesn't know (f 0), or doesn't do yet
                                                 **   (f 1), said back from the command's line (cl) */
 extern const char* cl;                          /* The command's line (main.c's) */
+unsigned char __fastcall__ qual_ok (const char* name, const char* w);   /* Overlay 1: the word said before w fits name */
+unsigned char __fastcall__ parts_op (unsigned char op);    /* Overlay 6 (parts.c's): a list's matters */
+#define PO_STOP     0                           /*   The long task stopped: the rest of its line let go */
+#define PO_AGAIN    1                           /*   The command has no verb: the list's verb put to it, back in the queue: 1 */
 unsigned char parts_in (void);                  /* Overlay 6 (parts.c's): the line typed queued in its parts, 0 no room */
 #define QMAX        256                         /* The lines typed ahead (term.c's queue, qlen) */
 extern char queue[QMAX];

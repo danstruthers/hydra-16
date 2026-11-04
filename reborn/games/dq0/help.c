@@ -56,6 +56,37 @@ void o_help (void)
     }
 }
 
+/* Thing name, w its word in the command's line: 0 if the word said before w there is one that makes one kind another, and
+** isn't in its name ("attack the black orc" and only a small orc there, 2026-11-04: dq0c's command has the last word
+** alone, its head; a word not known, "the sleeping rat", passed over) */
+unsigned char __fastcall__ o_qual_ok (const char* name, const char* w)
+{
+    static const char quals[] = " black brown red white small great cave giant dwarf kobold iron brass broken ";
+    const char* p;
+    const char* b;
+    char q[10];
+    unsigned char n;
+
+    if ((p = strstr (cl, w)) == 0 || p == cl) {
+        return 1;
+    }
+    for (b = --p; b > cl && b[-1] != ' '; --b) {
+    }
+    n = p - b;
+    if (n > 7 || !n) {
+        return 1;
+    }
+    q[0] = ' ';
+    memcpy (q + 1, b, n);
+    q[n + 1] = ' ';
+    q[n + 2] = 0;
+    if (!strstr (quals, q)) {
+        return 1;
+    }
+    q[n + 1] = 0;
+    return !strncmp (name, q + 1, n) || strstr (name, q) != 0;
+}
+
 /* The command's first word said: "I don't know how to bribe." (f 0: no verb of the game's), or one the game has but
 ** doesn't do yet, "You can't eat in this game yet." (f 1) */
 void __fastcall__ o_unknown (unsigned char f)

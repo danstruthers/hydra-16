@@ -60,7 +60,7 @@ function grammarNames(rules, open) {
 }
 
 // The kind of each open name, one byte: the matcher's K_ codes in cmdmatch.s (quoted-text is a rule, so not listed).
-const OPEN_KIND = { name: 0, alias: 0, adj: 1, number: 2, ordinal: 3, 'task-name': 4, 'spell-word': 5, text: 6,
+const OPEN_KIND = { name: 0, alias: 0, adj: 1, number: 2, ordinal: 3, 'task-name': 6, 'spell-word': 5, text: 6,
   'meta-topic': 6, 'name-word': 7, 'deity-name': 8, 'pretense-word': 9, noun: 11 };
 
 function encodeGrammar(rules, open) {
@@ -333,7 +333,6 @@ function lexiconWords() {
   const m = new Map();
   const add = (words, flag) => { for (const w of words) m.set(w, (m.get(w) || 0) | flag); };
   add(LEXICON.adj, LX.adj);
-  add(LEXICON.tasks, LX.task);
   add(LEXICON.ordinals, LX.ordinal);
   add(LEXICON.numbers, LX.number);
   add(LEXICON.spellStop, LX.notspell);

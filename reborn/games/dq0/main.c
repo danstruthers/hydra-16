@@ -802,8 +802,8 @@ static void stop_world (void)
 ** the player, and its tasks take their turns as they did (fore_sync's; overlay 6's) */
 #define FS_CMD      1
 #define FS_UI       2
-#pragma code-name (push, "OV6CODE")
-#pragma rodata-name (push, "OV6RODATA")
+#pragma code-name (push, "OV5CODE")
+#pragma rodata-name (push, "OV5RODATA")
 void __fastcall__ o_fore_set (unsigned char on)
 {
     static const unsigned char fg[] = { T_WORLD, T_COMMANDS, T_SENSES, T_REFEREE };
@@ -2118,6 +2118,9 @@ void __fastcall__ s_command (char* l)
     d = choose (&cmd);                          /* (A choice asked for: this line's, the command again; a fixture's, */
     d |= answer (d);                            /*   or a thing's) */
     tx = 0;
+    if (!d && parts_op (PO_AGAIN)) {
+        return;                                 /* (A list's later part, a thing alone: "take rope and torch") */
+    }
     if (!d && (unsigned char) (cmd.action - VB_MOVE_DIRECTION) < 2 && cmd.how && cmd.how != HOW_ACROSS &&
         (!cmd.obj.kind || cmd.obj.kind == OB_ROOM || cmd.obj.kind == OB_WAY_OUT) && travel_go (l)) {
         return;                                 /* (A place it knows gone to, "go back to the Mausoleum": part 4's) */
