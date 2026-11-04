@@ -626,6 +626,7 @@ void __fastcall__ o_felt_words (unsigned w)
         if (reach == 2) {                       /* (Its command again, walked over first: told as the walk began) */
             return;
         }
+        worded = 2;                             /* (Its way told: not "You set off south." after it: facing_words') */
         if (b >> 4) {
             sayf ("\nYou %s %s into the dark.", gait[g], head_name[k]);
         } else {
@@ -700,6 +701,9 @@ void __fastcall__ o_turned_says (unsigned char go)
     hub_mem (0, &d, &HUB->pc_skew, 1);
     if (go) {                                   /* (A way set out on, V_SETOFF's: 8 a step, by the way it faces; a walk, by
                                                 **   the north it believes in) */
+        if (worded == 2) {
+            return;
+        }
         if (go & 8) {
             sayf ("\nYou step %s.", st[(go - f) & 7]);
         } else {
@@ -955,6 +959,9 @@ static unsigned __fastcall__ wait_of (const char* l, unsigned char n)
     return !said ? 0 : t > 65535UL ? 65535U : t ? (unsigned) t : 1;
 }
 
+static unsigned char time_told = 0;              /* (Its words said already, o_wait_go's: not as its E_TIME comes) */
+void __fastcall__ o_time_said (unsigned w, unsigned char b);
+
 /* A wait (VB_WAIT, VB_PASS) or a sleep or a rest (VB_SLEEP) begun (chores'): as long as the line says (wait_of); a
 ** wait or a pass with none said a round; a sleep or a rest a night's, eight hours, or a short one's, half an hour
 ** (the house's); its intent in tenths, or in minutes past 100 of them (WA_MIN), asleep for a sleep (WA_SLEEP) */
@@ -978,6 +985,12 @@ void __fastcall__ o_wait_go (unsigned char action)
     } else {
         m *= 600;
     }
+    if (!busy) {
+        o_time_said (m, a);                     /* (Told at once, the world's E_TIME to come saying nothing: the user's,
+                                                **   2026-11-04) */
+        t_flush ();
+        time_told = 1;
+    }
     intend_a = a;
     intend2 (I_WAIT, m, 0);
 }
@@ -989,6 +1002,10 @@ void __fastcall__ o_time_said (unsigned w, unsigned char b)
 {
     unsigned m = b & WA_MIN ? w : w / 600, h = m / 60, r = m % 60;
 
+    if (time_told) {
+        time_told = 0;
+        return;
+    }
     if (!(b & (WA_MIN | WA_SLEEP)) && (w < 600 || w % 600)) {
         tell (T_TIME_PASSES);                   /* (A round, or less than a minute's: as it was) */
         return;

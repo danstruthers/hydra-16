@@ -167,6 +167,7 @@ void __fastcall__ o_sway_words (const struct sway* s)
 /* The thing named may be a denizen, by what's in the hub (the first three letters of the word in an actor's name, or one
 ** the player has named: the denizens' own meant is the judge), so that they're asked: they're the background, and an
 ** answer waiting on one of their minds' turns took a second and more (dq0answer's, 2026-11-03: "examine the torch") */
+#pragma code-name (push, "OV10CODE")            /* (Overlay 10's since 2026-11-04, overlay 17's room) */
 unsigned char o_may_den (void)
 {
     char w[4], nm[sizeof HUB->actor[0].name + 1];
@@ -189,6 +190,7 @@ unsigned char o_may_den (void)
     }
     return 0;
 }
+#pragma code-name (pop)
 
 /* A walk over told as it begins, at once (the user's D17, a command answers at once: 2026-11-02), by the thing's name, or
 ** the command's thing (0); its arrival not "You go over to it." (placing, or a command's walk's reach, E_ARRIVE's).  (Here
@@ -196,10 +198,67 @@ unsigned char o_may_den (void)
 #pragma code-name (push, "OV17CODE")
 #pragma rodata-name (push, "OV17RODATA")
 #pragma local-strings (push, on)
+#pragma data-name (push, "OV17RODATA")
+#pragma bss-name (push, "OV17RODATA")
+#pragma static-locals (push, on)                /* (Its locals static, in its bank: the code the less) */
+static const char* __fastcall__ port_name (unsigned char k)
+{
+    return k == OB_DOOR ? "door" : k == OB_WINDOW ? "window" : "portcullis";
+}
+
+/* A command's first word that isn't a thing's by its name (walk_says' name, under W_MAX): n a portal's work about to be
+** asked of the world, its PA_* + 1, tx, ty the one meant (words that hold whatever comes of it; none if a turn to it comes
+** first, its first words those); or W_DIG (a dig, the floor or the wall looked at), W_SWAY (a denizen swayed, a gift, a
+** trade: the thing said), W_PEER, W_LISTEN.  Once a line (worded) */
+static void __fastcall__ first_word (unsigned char n)
+{
+    const struct sight* s = sight_get ();
+    const char* v = "reach for";
+    const char* name = cmd.obj.word;
+    const char* a = s->dark ? "feel" : "look at";
+    unsigned char k = cmd.obj.kind;
+
+    if (worded) {
+        return;
+    }
+    if (n >= W_PEER) {
+        msg (n == W_PEER ? "You peer ahead." : "You listen.");
+        t_flush ();
+        worded = 3;
+        return;
+    }
+    if (n == W_SWAY) {
+        v = s->dark ? "feel for" : "look for";
+        if (!*name) {
+            return;
+        }
+    } else if (n == W_DIG) {
+        name = cmd.dir == GO_DOWN ? "floor" : "wall";
+        v = a;
+    } else {
+        --n;
+        if (!tx || (cmd.obj.lies <= H_NW && cmd.obj.lies != pc_face) || (k != OB_DOOR && k != OB_WINDOW && k != OB_PORTC)) {
+            return;
+        }
+        name = port_name (k);
+        v = tx - s->x + 1 > 2 || ty - s->y + 1 > 2 ? "head for" : n == PA_OPEN ? "try" : n == PA_CLOSE ? v : a;
+    }
+    sayf ("\nYou %s the %s.", v, name);
+    t_flush ();
+    worded = 1;
+}
+#pragma static-locals (pop)
+#pragma data-name (pop)
+#pragma bss-name (pop)
+
 void __fastcall__ o_walk_says (const char* name)
 {
     unsigned char k = cmd.obj.kind;
 
+    if (name && (unsigned) name < W_MAX) {
+        first_word ((unsigned char) name);
+        return;
+    }
     if (said_ahead) {
         said_ahead = 0;                         /* (Told already, walk_ahead's) */
         placing = 1;
@@ -211,7 +270,7 @@ void __fastcall__ o_walk_says (const char* name)
     if (*name && !k) {
         sayf ("\nYou go over to the %s.", name);
     } else if (k == OB_DOOR || k == OB_WINDOW || k == OB_PORTC) {
-        sayf ("\nYou head for the %s.", k == OB_DOOR ? "door" : k == OB_WINDOW ? "window" : "portcullis");
+        sayf ("\nYou head for the %s.", port_name (k));
     } else {
         msg ("You go over to it.");
     }
@@ -222,33 +281,55 @@ void __fastcall__ o_walk_says (const char* name)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* A thing to take, by the name said, that the character sees lying about, none of that name in reach: its walk over told
-** now, before the world's asked, whose answer's the time (its parts' copies, its chooser through the store): the same
-** words, and the world's IR_NOT_HERE says none again (said_ahead, o_walk_says) */
+/* A command's first words at once, before the world's asked, whose answer's the time (its parts' copies, its chooser through
+** the store; the user's D17, and 2026-11-04: "Word as they begin."): words that hold whatever the world then says.  A thing
+** handled, by the name said (things ()): a thing to take seen out of reach only, its walk over, the same words as ever, the
+** world's IR_NOT_HERE saying none again (said_ahead, o_walk_says); "You reach for the sack."; not seen to take, or asked
+** of, "You look for ..." (the rest: first_word, overlay 17's) */
+#pragma data-name (push, "OV15RODATA")
+#pragma bss-name (push, "OV15RODATA")
+#pragma static-locals (push, on)                /* (Its locals static, in its bank: the code the less) */
 void __fastcall__ o_walk_ahead (const char* name)
 {
-    struct sight* s;
+    struct sight* s = sight_get ();
     struct sitem* it;
-    unsigned char k, away = 0;
-    unsigned dx, dy;
+    const char* v = "reach for";
+    const char* a;
+    const char* f;
+    unsigned char k, away = 0, op = walk_op & ~IO_STEPS;
+    static const char ops[] = { IO_GET, IO_DROP, IO_FILL, IO_HIDE, IO_SHUT, IO_THROW, IO_DESCRIBE, IO_INSIDE, 0 };
 
-    if (*name == '#') {
+    if (worded) {                               /* (Told once a line: not again as its command's asked again after a step) */
         return;
     }
-    s = sight_get ();
-    for (k = s->nitems, it = s->item; k; --k, ++it) {
-        if (strstr (it->name, name)) {
-            dx = it->x - s->x + 1;
-            dy = it->y - s->y + 1;
-            if (dx <= 2 && dy <= 2) {
-                return;
+    a = s->dark ? "feel" : "look at";
+    f = s->dark ? "feel for" : "look for";
+    {                                           /* (A thing handled, by its name) */
+        if (*name == '#' || !*name || (!strchr (ops, op) && (op < IO_HOLD || op > IO_DOUSE))) {
+            return;
+        }
+        for (k = s->nitems, it = s->item; k; --k, ++it) {
+            if (strstr (it->name, name)) {
+                away |= it->x - s->x + 1 > 2 || it->y - s->y + 1 > 2 ? 1 : 2;
             }
-            away = 1;
+        }
+        if (op == IO_DESCRIBE || op == IO_INSIDE) {   /* (Looked at, asked of it: its quality, its weight ...; way.c's) */
+            v = cmd.obj.kind || away ? a : f;
+        } else if (away == 1) {                 /* (Out of reach only: walked to, if it's to be taken) */
+            if (op == IO_GET && !(cmd.obj.sel | cmd.obj.n)) {
+                walk_says (name);
+                placing = 0;
+                said_ahead = 1;
+            }
+            return;
+        } else if (!away && op == IO_GET) {     /* (Not seen now: none in reach, or remembered out of sight) */
+            v = f;
         }
     }
-    if (away) {
-        walk_says (name);
-        placing = 0;
-        said_ahead = 1;
-    }
+    sayf ("\nYou %s the %s.", v, name);
+    t_flush ();
+    worded = 1;
 }
+#pragma static-locals (pop)
+#pragma data-name (pop)
+#pragma bss-name (pop)

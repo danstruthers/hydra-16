@@ -196,6 +196,10 @@ static unsigned char examine (void)
         strcpy (cmd.obj.word, "pennies");       /* (The money counted, its pennies: "count the money", 2026-10-28) */
     }
     if (cmd.obj.word[0]) {
+        if (ex || !k) {
+            walk_op = IO_DESCRIBE;              /* (Its first words before the world's asked: walk_ahead's, sway.c) */
+            walk_ahead (cmd.obj.word);
+        }
         if (ex & EX_BOTH ? judged_as (ex) : looked (ex & EX_TRAPS ? LM_TRAPS : ex & EX_WEIGHT ? LM_WEIGHT : ex & EX_LOCK ?
             LM_LOCK : ex & EX_COND ? LM_COND : LM_CLOSE, ex & EX_TRAPS ? 100 : ex ? 10 : 30)) {
             return 0;
@@ -216,6 +220,7 @@ static unsigned char examine (void)
     } else if (ex) {
         msg ("Which thing? Name it (assess the sword, check the chest for traps ...).");
     } else if (k == OB_WALL) {
+        walk_says ((const char*) W_DIG);
         intend2 (I_TRACE, TRC_WALL, 0);         /* (The wall ahead, its rock: the world's words, slice 4.10's) */
     } else {
         look (2);                               /* (A close look about: the room's figures) */
@@ -300,6 +305,10 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
         return 0;
     }
     if (action == VB_TRACK) {
+        if (cmd.aux != TRC_TRACK) {             /* (The floor looked at, or the wall: its first words at once) */
+            cmd.dir = cmd.aux ? 0 : GO_DOWN;    /* (TRC_FLOOR's 0) */
+            walk_says ((const char*) W_DIG);
+        }
         intend2 (I_TRACE, cmd.aux, 0);          /* (The traces read, the world's: the floor looked at, the Tracking
                                                 **   test; worded as its E_VIEW comes, V_TRACED) */
         return 0;
@@ -323,6 +332,9 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
     }
     if (h <= H_NW && h != HUB->pc_face) {       /* (Turned to it first: the turn's look) */
         turn_to (h);
+    } else if (k < 4) {                         /* (Its first words at once, the look's or the listen's 4.8M cycles and
+                                                **   more off: the user's, 2026-11-04; turned first, the turn's are) */
+        walk_says ((const char*) (k ? W_LISTEN : W_PEER));
     }
     if (!k) {
         intend2 (I_LOOK, WAY_T, 0);             /* (The world's: the senses' look one way, E_VIEW V_LOOKED) */
@@ -382,7 +394,9 @@ void o_focus_words (void)
     if (W.seq != S.seq) {
         W.nbeyond = W.nitems = W.ndens = W.nglows = 0;  /* (Not this record's: a look about came after it) */
     }
-    msg (S.dark ? "You peer ahead into the dark." : "You peer ahead.");
+    if (worded != 3) {
+        msg (S.dark ? "You peer ahead into the dark." : "You peer ahead.");
+    }
     for (i = 0, b = W.beyond; i < W.nbeyond; ++i, ++b) {    /* What's beyond the openings ahead (k: the opening,
                                                 **   BN_PASSAGE 0): "You can't see past the door ahead: it's
                                                 **   closed."; "Through the doorway ahead you see only darkness."; "...

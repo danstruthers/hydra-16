@@ -538,8 +538,9 @@ void o_state (void)
     const harn_injury* j;
     char b[56];
 
-    h = house_pace (ps.gait, ps.watch, ps.dark == 1);   /* (The pace's words, every referee's: rshouse.h; its
-                                                **   pace said outright in the dark, held to nothing there) */
+    h = house_pace (ps.gait, ps.watch | (pc.state == HARN_SHOCK ? HOUSE_SHOCK : 0) | (limbs_of (&pc) & (LB_LEG_L | LB_LEG_R) ?
+        HOUSE_LEG : 0), ps.dark == 1);          /* (The pace's words, every referee's: rshouse.h; its pace said outright in the
+                                                **   dark, held to nothing there) */
     put (" (");
     k = harn_move (&pc);
     if (pc.state == HARN_SHOCK) {

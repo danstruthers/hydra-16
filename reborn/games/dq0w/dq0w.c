@@ -433,7 +433,7 @@ static void paced (void)
         g = GA_WALK;
     }
     feel_ = dk;
-    rush_ = dk && g > GA_SLOW ? g : 0;
+    rush_ = 0;
     pace_ = g;
     mul_ = g < GA_WALK ? GA_WALK + 1 - g : 1;
     w = HUB->pcsum.gstep[g < GA_WALK ? GA_WALK : g];
@@ -444,9 +444,10 @@ static void paced (void)
     }
     HUB->pc_noise = 0xFF;                       /* (Its steps by its pace, the senses' to reckon; but creeping, or its
                                                 **   legs not whole, not standing: part 50's, slices 4.5, 4.6) */
-    if (HUB->pc_pos || HUB->pcsum.limp || (HUB->pcsum.limbs & (LB_LEG_L | LB_LEG_R)) || pmode || lsaid || !g ||
-        HUB->pc_clank == 0xFF) {
-        legs (L_PACE);                          /* (Its legs not whole, or not standing: part 50's, slice 4.1b's) */
+    if (dk || (HUB->pcsum.cond & C_STUNNED) || HUB->pc_pos || HUB->pcsum.limp || (HUB->pcsum.limbs & (LB_LEG_L | LB_LEG_R)) ||
+        pmode || lsaid || !g || HUB->pc_clank == 0xFF) {
+        legs (L_PACE);                          /* (In the dark, in shock, its legs not whole, or not standing: part 50's,
+                                                **   slice 4.1b's) */
     }
 }
 
@@ -5016,6 +5017,10 @@ unsigned char __fastcall__ s_dark_end (unsigned char how)
     int z;
 
     hub_map (0);
+    if (HUB->pc_swim || (HUB->pc_wet & 0x7F) >= 3) {
+        prush = 0;                              /* (Come into deep water on the way: no running into anything, its hands
+                                                **   first: told as they meet it) */
+    }
     if (how == A_CROSSED) {
         how = A_STEPPED;                        /* (Across a room it doesn't see: no "You cross the room.") */
     }
@@ -7229,7 +7234,20 @@ static void legs_pace (void);
 
 void s_limbs_pace (void)
 {
+    hub_map (0);
+    if ((HUB->pcsum.cond & C_STUNNED) && pace_ > GA_WALK) {
+        pace_ = GA_WALK;                        /* (In shock: a run is that walk, HOUSE.md's) */
+        pst = HUB->pcsum.gstep[GA_WALK];
+    }
     legs_pace ();
+    hub_map (0);
+    if (pace_ < NGAITS) {                       /* (The pace it's really going at, for all that asks and tells: a limit's
+                                                **   above, in legs_pace; hopping is a crawl's pace, GA_WORK's tiring) */
+        HUB->pc_going = pace_ + 1 | (HUB->pc_going & GOING_DARK);
+    }
+    /* In the dark, a walk or faster gone at: its words and its dangers (dark_way, s_dark_end), by that pace; none crawling,
+    ** hopping or crouched, nor in water to the waist or swimming, whose hands go first (the user's, 2026-11-04) */
+    rush_ = feel_ && pace_ > GA_SLOW && pace_ < NGAITS && !HUB->pc_swim && (HUB->pc_wet & 0x7F) < 3 ? pace_ : 0;
     s_step_loud ();                             /* (How loud its steps are: slice 4.5's) */
 }
 

@@ -804,8 +804,8 @@ static void stop_world (void)
 ** the player, and its tasks take their turns as they did (fore_sync's; overlay 6's) */
 #define FS_CMD      1
 #define FS_UI       2
-#pragma code-name (push, "OV17CODE")
-#pragma rodata-name (push, "OV17RODATA")
+#pragma code-name (push, "OV18CODE")            /* (Overlay 18's and 3's since 2026-11-04, overlay 17's room) */
+#pragma rodata-name (push, "OV18RODATA")
 void __fastcall__ o_fore_set (unsigned char on)
 {
     static const unsigned char fg[] = { T_WORLD, T_COMMANDS, T_SENSES, T_REFEREE };
@@ -825,6 +825,10 @@ void __fastcall__ o_fore_set (unsigned char on)
 ** waits on a task's reply (hub.c's hub_wait_t: its doorbell's wait out); 1: main's loop round while the game starts,
 ** a dot each second or so; the character ready the first time (its first look told, E_READY), the start over: the
 ** help's line said, with the prompt after it */
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "OV3CODE")
+#pragma rodata-name (push, "OV3RODATA")
 void __fastcall__ o_dots (unsigned char k)
 {
     static unsigned at;
@@ -884,6 +888,7 @@ unsigned char reach;                            /* (5: a step of the reach under
                                                 **   out again, its end; 6: walking over for a command the world carries
                                                 **   out as it gets there: a thing taken, a blow) */
 unsigned char said_ahead;                       /* (A walk over told as the thing's asked for, walk_ahead's: not told again) */
+unsigned char walk_op, worded;                  /* (The things' request it's asked for, IO_*; its first word told this line: walk_ahead's) */
 unsigned char placing;                          /* (A place in the room walked to: place_go's, or a walk told as it began,
                                                 **   walk_says': its arrival not "over to it") */
 unsigned char untarget;                         /* (The target let go at the next command: resolve.c's) */
@@ -1710,6 +1715,15 @@ void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2)
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
 
+/* An intent sent: the character's busy with it */
+static void __fastcall__ sent (struct msg* m)
+{
+    if (hub_send (m)) {
+        busy = 1;
+        t_prompt (0);
+    }
+}
+
 /* A portal (or a trap) worked: what's done (PA_*), to what (the parser's thing: a door, a window, or either) */
 static void __fastcall__ work (unsigned char what, unsigned char obj)
 {
@@ -1724,10 +1738,7 @@ static void __fastcall__ work (unsigned char what, unsigned char obj)
     m.x[0] = barw;
     m.x[1] = strike;
     m.x[2] = shand;
-    if (hub_send (&m)) {
-        busy = 1;
-        t_prompt (0);
-    }
+    sent (&m);
 }
 
 static void __fastcall__ intend (unsigned char kind, unsigned char a)
@@ -1744,10 +1755,7 @@ static void __fastcall__ intend (unsigned char kind, unsigned char a)
         m.w1 = tx;
         m.w2 = ty;
     }
-    if (hub_send (&m)) {
-        busy = 1;
-        t_prompt (0);
-    }
+    sent (&m);
 }
 
 #pragma code-name (pop)
@@ -1777,9 +1785,11 @@ unsigned char __fastcall__ things (unsigned char op, const char* name)
     strncpy (q->name, name, sizeof q->name - 1);
     q->name[sizeof q->name - 1] = 0;
     said_ahead = 0;
-    if (op == (IO_GET | IO_STEPS) && !q->sel) {
-        walk_ahead (name);                      /* (Seen out of reach: told now, the world's answer some 700,000 cycles
-                                                **   off, its parts' copies and its chooser: the user's D17, 2026-11-03) */
+    if (op & IO_STEPS) {
+        walk_op = op;
+        walk_ahead (name);                      /* (Its first words told now, the world's answer some 700,000 cycles off
+                                                **   and more, its parts' copies and its chooser: the user's D17,
+                                                **   2026-11-03; the user's, 2026-11-04: a word as it begins, sway.c's) */
     }
     hub_call (q, T_WORLD);                      /* (Asleep till the world rings with the reply) */
     q->state = REQ_FREE;
@@ -1958,10 +1968,7 @@ void __fastcall__ s_take (const char* name)
         m.w1 = HUB->ireq.x;
         m.w2 = HUB->ireq.y;
         m.t = HUB->ireq.item;
-        if (hub_send (&m)) {
-            busy = 1;
-            t_prompt (0);
-        }
+        sent (&m);
     } else if (r == IR_FIXED) {
         lift (taking);
     } else if (r == IR_NO) {
@@ -2190,6 +2197,7 @@ void __fastcall__ s_command (char* l)
         reach = 0;                              /* (A line's own, the character free: none kept; one carried out at
                                                 **   once as it's busy, the kept left be) */
     }
+    worded = 0;
     ok = s_cq_cmd (l);                          /* (The command the parser made: dq0c's, the grammar's verdict with
                                                 **   it) */
     pc_face = HUB->pc_face;
@@ -2258,6 +2266,7 @@ again:
             } else if ((cmd.how == HOW_THROUGH || cmd.action == VB_ENTER) &&
                 (cmd.obj.kind == OB_DOOR || cmd.obj.kind == OB_PASSAGE)) {
                 if (!door_go ()) {
+                    walk_says (0);              /* (Its first words at once) */
                     intend (I_GO, bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y));
                 }
             } else {
@@ -2331,6 +2340,7 @@ portal:
         if (cmd.obj.lies <= H_NW && cmd.obj.lies != HUB->pc_face) {
             intend (I_TURN, cmd.obj.lies);      /* (The door that way: faced first) */
         }
+        walk_says ((const char*) (pa + 1));     /* (Its first words at once, the world's answer some 2M cycles off: sway.c's) */
         HUB->ireq.to = 0;
         barw = pa == PA_BAR && things (IO_BAR, "") == IR_NO ? HUB->ireq.x : 0;    /* (The widest bar to hand) */
         work (pa, cmd.obj.kind);
@@ -2356,13 +2366,12 @@ portal:
         return;
     case VB_DIG:
         d = cmd.dir;
-        if (d == GO_DOWN) {
-            intend (I_DIG, DIR_DOWN);
-        } else if (d <= H_NW) {
-            intend (I_DIG, d + 8);              /* (A heading, 8 on: the world's, a diagonal too) */
-        } else {
+        if (d != GO_DOWN && d > H_NW) {
             tell (T_DIG_WHICH_WAY);
+            return;
         }
+        walk_says ((const char*) W_DIG);
+        intend (I_DIG, d == GO_DOWN ? DIR_DOWN : d + 8);    /* (A heading, 8 on: the world's, a diagonal too) */
         return;
     case VB_RETRIEVE_OBJECT:
         if (cmd.prep == PR_FROM) {

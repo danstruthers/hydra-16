@@ -285,6 +285,7 @@ unsigned char s_errand (void)
     unsigned n, w, v;
     char t[16];
 
+    walk_says ((const char*) W_SWAY);           /* (Its first words at once, the denizens the background: sway.c's) */
     if (cmd.action == VB_TRADE) {
         return trade ();                        /* (The market, entertaining: part 15's, 2026-11-02) */
     }

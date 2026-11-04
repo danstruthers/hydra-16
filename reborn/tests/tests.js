@@ -2046,6 +2046,7 @@ function inTurn(o, want, f, name = '') {
 // with its reason; and the hub's live chunks (dq0Doubled) with no two portals or traps on one square (a door made
 // twice, its trap twice: the look told it twice).  sim/test.js's dq0 check, in every dq0 test (HUBOWN=0 too)
 const DQ0_REPEATS = [
+  { what: /^You reach for the [a-z ]+\.$/, why: 'a thing handled, each command of a line (or typed ahead) its own first word: dq0firstword holds it to once a command' },
   { what: /^(Put down\.|You fumble for the sword\.|You see none of those here\.|You carry none of those\.|Taken\.)/, tests: /^dq0engage$/, why: 'its lines typed ahead, one answer' },
   { what: /^The [a-z ]+ (unslings|draws) its [a-z ]+\.$/,
     why: 'several of a kind readying their weapons in one answer, each one\'s told (slice 4.7\'s: three elves unslinging their hartbows)' },
@@ -2864,7 +2865,7 @@ function dq0Timer(m) {
       const w = c.want.split('|').map(x => story.indexOf(x)).filter(x => x >= 0).reduce((a, b) => a < 0 || b < a ? b : a, -1);   // (Words the answer may begin with, | between)
       let last = prompt < 0 ? idx.length - 1 : prompt - 1;
       while (last > 0 && story[last] === ' ') last--;
-      res.push({ line: c.line, first: w < 0 ? null : at[idx[w]] - e.t, whole: w < 0 || last < w ? null : at[idx[last]] - e.t });
+      res.push({ line: c.line, first: w < 0 ? null : at[idx[w]] - e.t, whole: w < 0 || last < w ? null : at[idx[last]] - e.t, story, letter: k => at[idx[k]] - e.t, lastAt: last });
     }
     return res;
   };
@@ -2953,8 +2954,11 @@ function dq0JobsTest() {
 // a carried thing examined, a thing taken with a walk or a pack, a step or a turn with a denizen's things being drawn at
 // wait 0, its answer behind that draw's giving way
 const DQ0_ANSWERS = [['turn left', 'You turn left', 800000], ['turn right', 'You turn right', 1300000],
-  ['step forward', 'You step forward', 1400000], ['inventory', 'You carry', 500000], ['examine the torch', 'Your torch', 900000], ['walk to the door ahead to my left', 'You head for', 760000], ['examine the door', 'You head for|A door|Which door', 720000],
-  ['look', 'You', 650000, 1790000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You', 800000], ['walk to the window', 'You head for', 700000], ['take the bones', 'You go over to the bones.|You stop', 950000], ['look', 'You', 650000]];   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
+  ['step forward', 'You step forward', 1400000], ['inventory', 'You carry', 500000], ['examine the torch', 'You look for the torch', 1500000], ['walk to the door ahead to my left', 'You head for', 760000], ['examine the door', 'You head for|A door|Which door', 720000],
+  ['open the door', 'You try the door|You turn|Which door', 1500000], ['close the door', 'You reach for the door|You turn|Which door', 1500000], ['listen', 'You listen', 1500000], ['bar the door', 'You look at the door|You turn|Which door', 1500000],
+  ['look', 'You', 650000, 1790000], ['look ahead', 'You peer ahead|You turn', 1500000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You', 800000], ['walk to the window', 'You head for', 700000], ['take the bones', 'You look for the bones|You go over to the bones.|You stop', 950000], ['look', 'You', 650000],
+  ['take the sack from the backpack', 'You reach for the sack', 1500000], ['put the whetstone in the sack', 'You reach for the whetstone', 1500000], ['take the whetstone from the sack', 'You reach for the whetstone', 1500000],
+  ['drop the sack', 'You reach for the sack', 1500000], ['take the sack', 'You reach for the sack', 1500000], ['assess the sack', 'You look at the sack|You look for the sack', 1500000], ['sit', 'You sit down', 1500000], ['stand', 'You get to your feet', 1500000], ['wait 1 minute', 'You wait a minute', 1500000], ['dig down', 'You look at the floor', 1500000], ['stop', 'You', 1500000]];   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
 function dq0AnswerTest(baud) {
   const wait = +(process.env.DQ0ANS_WAIT || 0);   // (Each line typed after 0-2 waits of 2M cycles: the timing moved, for an average)
   const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'];
@@ -2963,7 +2967,7 @@ function dq0AnswerTest(baud) {
   return {
     name: baud === 115200 ? 'dq0answer' : 'dq0answer96', what: 'Dingus Quest Zero\'s answers timed at ' + baud + ' baud (the user\'s D17: the responsiveness targets at 115,200; a command answered in a fifth of a second, 720,000 cycles, a look in half, 1.79M): from Enter to the answer\'s first letter, and to its last, for a turn left and right at seed 3, a step, what the character carries, a door examined, a look, a step that can\'t be taken and a walk, at the turns pace and the normal pace',
     meaning: true, outfit: true,                  // (The game as it's played: its outfit drawn, 2026-10-27)
-    init: 't_rc', cycles: 1500e6,
+    init: 't_rc', cycles: 2500e6,
     machine: { input: lines.map((l, i) => '\u0101' + '\u0100'.repeat(wait * (i + 1) % 3) + l + '\r').join('') },
     expect: ['% echo $status'],
     start(m) { this.timer = dq0Timer(m); },
@@ -4164,7 +4168,7 @@ module.exports = {
         const f = [], s = dq0Story(out);
         const looks = { shale: 'flaky', sandstone: 'buff', limestone: 'pale grey', slate: 'blue-grey', marble: 'white', granite: 'speckled grey',
           basalt: 'black', quartz: 'white-veined', ironstone: 'rusty red', 'copper ore': 'green-stained' };
-        const said = [...s.matchAll(/(?:examine|look at) the wall (The wall's masonry|The wall's the bare rock, ([a-z -]+?)(?:: ([a-z ]+))?\.|It's too dark|There's no wall)/g)];
+        const said = [...s.matchAll(/(?:examine|look at) the wall (?:You look at the wall\. )?(The wall's masonry|The wall's the bare rock, ([a-z -]+?)(?:: ([a-z ]+))?\.|It's too dark|There's no wall)/g)];
         if (said.length !== 4) return ['the walls not told, four times: ' + said.map(x => x[1]).join(' / ')];
         if (said[0][1] !== 'The wall\'s masonry') f.push('the cell\'s wall not masonry: ' + said[0][0]);
         for (const [all, w, look, name] of said.slice(1)) {
@@ -4264,7 +4268,7 @@ module.exports = {
     },
     {
       name: 'dq0highkinds', near: ['gear'], sdcard: true, what: "Dingus Quest Zero's kinds past 127 (the margins' pass, 2026-11-03: a kind's number a whole byte everywhere, 60 more in the catalogue's room, items.h's NKINDS; HOUSE.md's digging): a mang in hand, struck with (the hub's pc_strike SK_OF its kind, its name in the words), a mattock kept in a save and read back; a mang in a long task named by its kind; a mattock on a denizen's arm, let fall and taken up (the actor's arm, E_BEAT WB_PICKS); a wood chisel no use on stone, told so, a stone chisel with a hammer a chisel's dig, a spade and a mattock told as a shovel is",
-      init: 't_rc', cycles: 2400e6,
+      init: 't_rc', cycles: 2600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 26 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm', 'echo ml swd 60 >> /ram/c.hm',
         'dq0 -p t -s 14 -c /ram/c.hm -d /ram/s -k mang,mattock', 'inventory', 'hit the door with the mang', 'quit', 'dq0 -d /ram/s', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k mang,whetstone', 'sharpen the mang', 'quit',
@@ -5077,7 +5081,7 @@ module.exports = {
         const want = ['> bribe the rat I don\'t know how to bribe.', '> grapple the rat You can\'t grapple in this game yet.',
           '> give the torch to the rat', '> ? Moving: north,', 'Several at once: north then east;',
           '> examine the torch carefully', '> status Pace: a walk', 'Watching: nothing in particular.',
-          '> drop pick then take it Put down.', 'Taken.', '> drop pick; take it Put down. Taken.',
+          '> drop pick then take it You reach for the pick. Put down.', 'You reach for the pick. Taken.', '> drop pick; take it You reach for the pick. Put down. You reach for the pick. Taken.',
           '> take the bones and the pick Taken. Taken.', 'a pick', 'bones', '> pick the bones Taken.',
           '> drop the pick carefully Put down.', '> status Pace: a walk', 'Watching: nothing in particular.',
           '> defend counter You will strike back first.', '> defend best You will defend yourself as best you can.',
@@ -5365,7 +5369,7 @@ module.exports = {
         const g1 = T.of("dq0 -p t -s 5 -c /ram/c.hm -T -k 'rope,iron spike,hammer'");
         const climbs = t => t.replies.filter(r => /^slot/.test(r.req) && r.a === K.P_CLIMB).map(r => r.steps);
         // A rope, tied off
-        say(0, /tie the rope There's no drop here to let a rope down\./, 'no drop');
+        say(0, /tie the rope You reach for the rope\. There's no drop here to let a rope down\./, 'no drop');
         const t1 = T.of('tie the rope', g1.k), t2 = T.of('tie the rope', t1.k + 1), d1 = T.of('d', g1.k), n1 = T.after(d1, 'look');
         say(0, /You get out the hammer\./, 'the hammer got out, the hands routine');
         say(0, /You set to tying the rope\./, 'its first words');
@@ -6899,7 +6903,7 @@ module.exports = {
         const f = [], s = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' ').replace(/ # /g, ' ').replace(/ UP( \d+)?(?= )/g, '');   // (The status line's pieces, as it's drawn between a task's steps, out of the story)
         this.notes = [s.slice(s.indexOf('> hold the sword')).slice(0, 1200), s.slice(-1200)];
         const after = (w, re, what) => { const i = s.indexOf(w); if (i < 0 || !re.test(s.slice(i))) f.push(what + ': ' + s.slice(i, i + 500)); };
-        after('> dig north', /^> dig north( > dig north)? You sheathe the sword\. You sling the round shield\. You take off your backpack, and set it down at your feet\. You reach into the backpack\. You get out the pick\./, 'not its hands freed, each told, then the pick got out');
+        after('> dig north', /^> dig north( > dig north)? You look at the wall\. You sheathe the sword\. You sling the round shield\. You take off your backpack, and set it down at your feet\. You reach into the backpack\. You get out the pick\./, 'not its hands freed, each told, then the pick got out');
         after('> stop', /You stop digging\. Your backpack lies at your feet\. Your pick is in your hand\./, 'stopped: not told in hand');
         const inv = s.indexOf('You stop digging'), i2 = s.indexOf('> inventory', inv);
         if (!/a pick, in both hands/.test(s.slice(i2, i2 + 400))) f.push('stopped: the pick not truly in its hands');
@@ -7419,9 +7423,83 @@ module.exports = {
     },
     dq0AnswerTest(115200),
     { name: 'dq0jobs', ...dq0JobsTest() },
+    (() => {
+      const LINES = ['walk to the door ahead to my left', 'open the door', 'close the door', 'listen', 'wait 1 minute', 'take the sack from the backpack', 'put the rope in the sack', 'take the rope from the sack',
+        'stow the rope', 'drop the sack', 'take the sack', 'take the pumpkin', 'dig down', 'stop', 'look at the floor', 'douse the torch', 'dig down', 'stop', 'quit'];
+      return {
+        name: 'dq0firstword', outfit: true, near: ['parser', 'time'], what: "Dingus Quest Zero's slow commands saying a word as they begin (the user's, 2026-11-04: \"Word as they begin.\"; HOUSE.md's the first word), by the words: each told once, in its order, before what comes of it, true whatever comes of it: a door tried and found open, closed; a listen; a thing reached for, taken from a sack, put in it, dropped, taken up; a dig's floor; a wait told at once and not again; no reach for a thing it doesn't see lying about; in the dark, felt, not looked at",
+        init: 't_rc', cycles: 1500e6,
+        machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', ...LINES, 'echo $status']) },
+        expect: ['% echo $status'],
+        check(m, out) {
+          const f = [], o = dq0Story(out), said = (l, want, from = 0) => {
+            const i = o.indexOf('> ' + l + ' ', from), e = o.indexOf('> ' + LINES[LINES.indexOf(l) + 1] + ' ', i + 1), s = o.slice(i, e < 0 ? undefined : e);
+            inTurn(s, want, f, l + ': ');
+            if (s.split(want[0]).length !== 2) f.push(l + ': "' + want[0] + '" told ' + (s.split(want[0]).length - 1) + ' times: ' + s);
+            return s;
+          };
+          said('walk to the door ahead to my left', ['You head for the door.']);
+          said('open the door', ['You try the door.', 'It stands open already.']);
+          said('close the door', ['You reach for the door.', 'You close the door.']);
+          said('listen', ['You listen.', 'You hear']);
+          said('wait 1 minute', ['You wait a minute.']);
+          said('take the sack from the backpack', ['You reach for the sack.', 'You take the sack in your right hand.']);
+          said('put the rope in the sack', ['You reach for the rope.', 'You put the rope in the sack.']);
+          said('take the rope from the sack', ['You reach for the rope.']);
+          said('drop the sack', ['You reach for the sack.', 'Put down.']);
+          said('take the sack', ['You reach for the sack.', 'Taken.'], o.indexOf('> drop the sack'));
+          const none = said('take the pumpkin', ['You look for the pumpkin.', 'You see none of those here.']);
+          if (/You reach/.test(none)) f.push('a thing it doesn\'t see reached for: ' + none);
+          said('dig down', ['You look at the floor.', 'flagstones']);
+          said('look at the floor', ['You look at the floor.', 'The floor here']);
+          inTurn(o.slice(o.indexOf('> douse the torch')), ['> dig down', 'You feel the floor.'], f, 'in the dark: ');
+          return f;
+        },
+        sdcard: true
+      };
+    })(),
+    {
+      name: 'dq0paceword', near: ['body', 'senses'], what: "Dingus Quest Zero's words tell the pace it's really going (soak seed 192: told \"You jog south\" in shock, \"You jog headlong into a wall\" swimming; HOUSE.md's a run in shock is that walk), by the words: in the dark, a run said in shock a walk (\"You walk south into the dark.\", no run into the wall, the status command's \"held to a walk in shock\"); on one leg no run told, a hop feeling its way (the status command's \"held to a walk on one leg\"); swimming, its hands finding the wall, no run into it; a walk's way told once in the dark; a run whole, a run still",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/a.hm', 'echo inj 12 0 3 4 0 8 >> /ram/a.hm',
+        'dq0 -p t -s 7 -c /ram/c.hm', 'face north', 'open the door behind me', 'douse the torch', 's', 'wait', 'run south', 'status', 'quit',
+        'dq0 -p t -s 3 -c /ram/a.hm', 'douse the torch', 'run east', 'status', 'quit',
+        'dq0 -p t -s 17 -c /ram/c.hm -T', 'd', 'n', 'step east', 'run north', 'quit', 'dq0 -p t -s 7 -c /ram/c.hm', 'douse the torch', 'run east', 'quit', 'echo $status']) },
+      start(m) {
+        const off = (h, L, K) => {
+          const at = k => L.actor + k * L.actorSize, R = dq0Rec(m), now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16, due = now + 3000;
+          let n = 0;
+          for (let k = 0; k < L.nactors; k++) if (h[at(k) + L.aName] && h[at(k) + L.aState]) {
+            const o = R.at(h[at(k) + L.aName + 12]), x = 32706 + (n & 3), y = 32784 + (n++ >> 2);
+            h[at(k) + L.aX] = R.mem[o + R.X] = x & 255; h[at(k) + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8;
+            h[at(k) + L.aY] = R.mem[o + R.Y] = y & 255; h[at(k) + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8;
+            h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_FRIENDLY;
+            h[at(k) + L.aDoing] = K.DO_ROAM;
+            for (let i = 0; i < 4; i++) h[at(k) + L.aReady + i] = due >>> (8 * i) & 255;
+          }
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+        };
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, call: () => dq0PcShock(m, 3000) }, { g: 3, line: 'n', n: 1, call: off }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out), games = o.split('dq0 -p t -s ').slice(1);
+        inTurn(games[0], ['> run south', 'You walk south into the dark.', 'You walk into', '> status', 'Pace: a run, held to a walk in shock'], f, 'in shock: ');
+        if (/You run |You jog |headlong/.test(games[0])) f.push('in shock, a run told: ' + games[0].slice(games[0].indexOf('> run south'), games[0].indexOf('> status')));
+        if (/You set off south/.test(games[0].slice(games[0].indexOf('> run south'), games[0].indexOf('> status')))) f.push('its way told twice in the dark');
+        inTurn(games[1], ['> run east', "You can't run on one leg.", 'You hop along on your good leg.', 'Your hands meet a wall.', '> status', 'held to a walk on one leg'], f, 'on one leg: ');
+        if (/You run |headlong/.test(games[1])) f.push('on one leg, a run told: ' + games[1]);
+        inTurn(games[2], ["You're out of your depth: you swim.", '> run north', 'Your hands meet a wall.'], f, 'swimming: ');
+        if (/You run |headlong/.test(games[2])) f.push('swimming, a run told: ' + games[2]);
+        inTurn(games[3], ['> run east', 'You run east into the dark.', 'You run headlong into a wall!'], f, 'a run in the dark, whole: ');
+        return f;
+      },
+      sdcard: true
+    },
     // (dq0answer96, the same at 9,600 baud: its times noted, no budget of its own (the user's targets, D17, are 115,200's):
     // only with DQ0ANS96=1, to measure)
     ...(process.env.DQ0ANS96 ? [dq0AnswerTest(9600)] : []),
+    ...(process.env.DQ0PROBE_JS ? [require(process.env.DQ0PROBE_JS)({ dq0Timer, dq0Poke, dq0Rec, dq0OnWords, dq0PcShock, dq0BodyPoke, dq0Portal, dq0PortalAt, dq0Body, dq0DoorScene })] : []),
     {
       name: 'dq0looks', what: 'Dingus Quest Zero\'s looks the same as they were (the look quickened, reborn-game-look: its grid kept and moved, its marks put only where they reach, the store gone through once): eight games at the turns pace (seeds 3, 5, 7, 12, 4, 517: turns, steps, walks, a walk\'s chosen door, a stairway down, a torch put out and lit again, one put down and taken up, a portcullis lowered and raised, a window broken (punched bare-handed, as the old code\'s run struck it: the torch in hand would strike it now, the user\'s, 2026-10-22) and climbed through, a weak-eyed character; each dungeon dry, dq0 -W: the looks before the water, slice 4.9\'s), every reply the senses give (a look\'s, the denizens\' senses\') with the same request, the same record of what the character perceives and the same squares seen and visible in every live chunk as tests/dq0/looks.ref, the old code\'s (DQ0LOOKS=write: written afresh from this run)',
       init: 't_rc', cycles: 3000e6,
@@ -9317,7 +9395,7 @@ module.exports = {
         const g = ps.at && ps.at.actors.find(a => a.name === 'ghoul'), engaged = !!g && g.sn === ps.at.pc.sn && g.pos !== K.POS_PRONE && g.doing === 'DO_FIGHT' &&
           Math.max(Math.abs(g.x - ps.at.pc.x), Math.abs(g.y - ps.at.pc.y)) === 1;
         if (!engaged) f.push('the pass not begun engaged: ' + JSON.stringify(g || null));
-        else if (rounds(ps) !== 1) f.push('the pass, engaged, not charged as a round of strenuous work: ' + rounds(ps) + ' charged in it');
+        else if (rounds(ps) + rounds(T.after(ps, 'look')) !== 1) f.push('the pass, engaged, not charged as a round of strenuous work: ' + rounds(ps) + ' charged in it');   // (Its words told at once, the line after them typed before its world's turn)
         const work = T.reduce((n, t) => n + rounds(t), 0), fought = blows + ups + (engaged ? 1 : 0);
         if (!blows || work !== fought) f.push('a fight\'s rounds not charged as strenuous work: ' + work + ' charged, ' + fought + ' rounds fought (' + blows + ' blows, ' + ups + ' struggles up, the pass)');
         return f;
