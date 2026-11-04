@@ -128,6 +128,7 @@ static void __fastcall__ rest (const struct msg* m)
     unsigned n;
     unsigned char k;
     struct actor q;
+    struct item* p;
 
     if (m->a == FE_DROP) {
         while ((n = held (0)) != 0) {
@@ -147,11 +148,12 @@ static void __fastcall__ rest (const struct msg* m)
             }
         }
     } else {                                    /* (FE_THROW: its own, in hand or not) */
-        n = item_at (m->t)->where == IW_DEN && item_at (m->t)->owner == (unsigned char) bd.did && item_at (m->t)->hide == bd.did >> 8 ? m->t : 0;
-        k = item_at (m->t)->kind;
+        p = item_at (m->t);
+        k = p->kind;
+        n = p->where == IW_DEN && p->owner == (unsigned char) bd.did && p->hide == bd.did >> 8;
         hub_map (0);
         if (n) {
-            tk_x = n;
+            tk_x = m->t;
             bd.ready += 20;
             news ((throw_at (0) == TH_SHORT ? WB_FELL : WB_THREW) | (unsigned) k << 8);
             ++HUB->den_seq;
