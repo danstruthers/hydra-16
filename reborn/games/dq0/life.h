@@ -28,17 +28,20 @@ enum { LO_NONE, LO_SOLVED, LO_LEFT, LO_DIED };  /* (A dungeon's outcome: not ove
 /* The head of a dungeon's game.dat (the UI's: main.c's the save, its versions there), what dq0life reads of it too: the dungeon's
 ** end */
 #define SAVE_MAGIC      0x5144                  /* "DQ" */
-#define SAVE_VER        41
+#define SAVE_VER        42
 struct quest {                                  /* The game's theme and its end (kept in the save) */
     unsigned char   theme;                      /* The theme's number (the save's: the one it began with) */
     unsigned char   done;                       /* The game's ending (theme.h's END_*: 0 not yet) */
+    unsigned char   solved;                     /* The dungeon solved, as it's told (the ending it's to have, END_ESCAPED or
+                                                **   END_RULED; 0 not yet), kept whatever comes of it: dying on the way
+                                                **   out still solved (Q2) */
 };
 struct save {
     unsigned        magic;
     unsigned char   version, pace;
     unsigned long   seed;
     char            referee[12];                /* The ruleset's referee (dq0 -r NAME's: dq0NAME) */
-    unsigned char   outcome;                    /* How it ended (LO_*: the ends': the record of the life's) */
+    unsigned char   outcome;                    /* How it ended (LO_*, from q: solved, else left, else died): the record's */
     struct quest    q;                          /* (Its theme, its puzzle, and its ending: a game done isn't carried
                                                 **   on, but a new one begun) */
     unsigned char   plain;                      /* (The map in plain letters: the player's, dq0.h's) */

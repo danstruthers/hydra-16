@@ -117,7 +117,7 @@ static unsigned char pc_gait, pc_watch;         /* (The character's file's pace 
 struct pc P;
 struct quest Q;                                 /* The theme's puzzle, as it stands (theme.c's; the save's) */
 char tname[32];
-static volatile unsigned char quit;
+volatile unsigned char quit;
 
 static void interrupted (int sig)
 {
@@ -449,7 +449,7 @@ static void load_pc (void)
                                                 **   tunnellers: DO_DIG among the doings, slice 4.11's; 32: the same seed's
                                                 **   natural chunks not as they were, great caverns and sloping tunnels
                                                 **   in them, a dungeon's change records laid on what they were made
-                                                **   for, 2026-11-02; 38, the body line's venom numbers, the cave spider's among them, 2026-11-04; 41, the outcome (life.h's), the sheet's copy
+                                                **   for, 2026-11-02; 38, the body line's venom numbers, the cave spider's among them, 2026-11-04; 41, the ends' solved in the quest; 42, the outcome (life.h's), the sheet's copy
                                                 **   gone; each dungeon in its own folder, life.dat; kit.dat each thing as it is) */
 static struct save sv;
 static unsigned char resumed;
@@ -561,7 +561,7 @@ void s_save_game (void)
     sv.version = SAVE_VER;
     sv.pace = pace | hard << 7;                 /* (Hard mode, its top bit: slice 4.4's) */
     sv.seed = HUB->seed;
-    sv.outcome = Q.done == END_DIED ? LO_DIED : LO_SOLVED;     /* (Till the ends' own: a way out's locked till it's solved) */
+    sv.outcome = Q.solved ? LO_SOLVED : Q.done == END_LEFT ? LO_LEFT : Q.done ? LO_DIED : LO_NONE;
     sv.q = Q;
     sv.plain = plain;
     if ((fd = open (save_at ("game.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
@@ -930,14 +930,6 @@ void status (void)
     t_status (left, right);
 }
 
-/* The game's end (theme.h's END_*): its words, the theme's; the save marked so (a game done isn't carried on) */
-void __fastcall__ end (unsigned char how)
-{
-    ending (how);
-    Q.done = how;
-    quit = 1;
-}
-
 /* ---- The world's events, worded */
 
 /* ---- The denizens' events (DENIZENS.md: events), as the character hears them: by its hearing (the referee's, 0-9),
@@ -1026,7 +1018,7 @@ static unsigned char events (void)          /* (How many there were) */
                     look_way (VB_NONE);         /* (A listen's or a sniff's end: way.c's) */
                 }
                 if (news_due && (task_words (TE_BODY, 0) & 8)) {
-                    end (END_DIED);             /* (Its body's news held as it slept: told as it wakes, slice 4.3's) */
+                    ending (END_DIED);             /* (Its body's news held as it slept: told as it wakes, slice 4.3's) */
                 }
                 if (!quit) {
                     t_prompt (!busy);
@@ -1099,7 +1091,7 @@ static unsigned char events (void)          /* (How many there were) */
                     t_prompt (1);               /* (Its answer's prompt: the character still busy) */
                 }
                 if (k & 8) {
-                    end (END_DIED);             /* (Dead of its wounds, its venom: TE_BODY's, slice 4.3's) */
+                    ending (END_DIED);             /* (Dead of its wounds, its venom: TE_BODY's, slice 4.3's) */
                 }
                 if (k & 4) {
                     busy = 1;                   /* (Fighting on begun by the world: busy till it's done, E_READY; a
@@ -1156,9 +1148,9 @@ static unsigned char events (void)          /* (How many there were) */
                 took_up (m.w1 | m.w2 << 8);
             }
             break;
-        case E_LEFT:                            /* (Up the way out, open: the theme's mission's) */
+        case E_LEFT:                            /* (Out of the dungeon, solved or not; a take rule done: theme.c's) */
             if (m.who == 0) {
-                end (END_ESCAPED);
+                ending ((unsigned char) m.w1);
             }
             break;
         }
@@ -1312,7 +1304,7 @@ void __fastcall__ s_news (const struct msg* m)
         r->state = REQ_FREE;
         harm_words (m->w1, HUB->pcsum.cond);
         if (HUB->pcsum.cond & C_DEAD) {
-            end (END_DIED);                     /* (The game's end) */
+            ending (END_DIED);                     /* (The game's end) */
         }
         break;
     case E_PORTAL:
@@ -2236,9 +2228,6 @@ again:
     if ((d = puzzle (&cmd)) != Q_NONE) {        /* (The theme's puzzle's: theme.c) */
         if (d >= Q_DONE) {
             intend2 (I_WAIT, 50, 1);            /* (Its time: the way out opened the world's already) */
-        }
-        if (d == Q_RULED) {
-            end (END_RULED);
         }
         return;
     }

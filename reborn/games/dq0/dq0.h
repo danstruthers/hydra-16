@@ -209,20 +209,23 @@ extern unsigned char untarget;                  /* (main.c's: the target let go 
 #include "life.h"                               /* (Its struct quest) */
 extern struct quest Q;                          /* (main.c's) */
 extern char tname[32];                          /* A theme's name for something (theme_named's) */
-enum { TN_THEME, TN_STRATUM, TN_ROOM, TN_LIGHT };
-enum { Q_NONE, Q_TOLD, Q_DONE, Q_OPEN, Q_RULED };   /* (puzzle's: not its; words only; a rule done; the way out
-                                                **   opened; the place ruled) */
+enum { TN_THEME, TN_STRATUM, TN_ROOM, TN_LIGHT, TN_END, TN_GONE };
+enum { Q_NONE, Q_TOLD, Q_DONE };                 /* (puzzle's: not its; words only; a rule done) */
 void __fastcall__ theme_load (unsigned char t);     /* Overlay 5: the theme (its number: the file's counted round)
                                                 **   read in: into the hub's theme bank and the overlay's; its kinds
                                                 **   into the hub's catalogue (the things' read in first) */
 void __fastcall__ theme_named (unsigned char what, unsigned char n);   /* Overlay 5: its name, a stratum's (n its
                                                 **   number) into tname; a room's (n its kind), its light, added to
-                                                **   lb */
+                                                **   lb; an ending's words said (n its END_*); E_LEFT's (n its w1 less EL_WAY:
+                                                **   how the character's out, or a take rule told; theme.c's: one stub,
+                                                **   the main RAM's room) */
 void __fastcall__ story (unsigned char resumed);    /* Overlay 5: the theme's name (and its story, a new game's) */
 void way_words (void);                          /* Overlay 5: the way out, shut or open */
 unsigned char __fastcall__ history (unsigned long seed);    /* Part 7: a game's own theme made, themegen's (main.c):
                                                 **   the theme to read (0xFF its own, else a stand-in's) */
-void __fastcall__ ending (unsigned char how);   /* Overlay 5: an ending's words (END_*) */
+void __fastcall__ ending (unsigned char how);   /* Overlay 15: the game's end (END_*: its words, the save marked so, a game
+                                                **   done isn't carried on); or, how EL_WAY on, E_LEFT's */
+extern volatile unsigned char quit;             /* (main.c's) */
 unsigned char __fastcall__ puzzle (struct cmd* c);      /* Overlay 5: a command the puzzle's (Q_*: the world's
                                                 **   judgement, IO_PUZZLE, worded) */
 unsigned char __fastcall__ othings (unsigned char op, const char* name, const char* into, unsigned char to);
@@ -406,7 +409,6 @@ unsigned char may_den (void);                   /* (sway.c's: the thing named ma
 extern unsigned char paced;                     /* (pace.c's: a manner said with the last pace: main.c's look at a line) */
 void __fastcall__ walk_ahead (const char* name);    /* (sway.c's: a thing to take seen out of reach: its walk told before the world's asked) */
 extern unsigned char said_ahead, placing;       /* (main.c's: its walk told already; a walk over's arrival short) */
-void __fastcall__ end (unsigned char how);       /* (main.c's) The game's end (theme.h's END_*) */
 void __fastcall__ blow (const struct msg* m);    /* (Overlay 6's, blows.c: an E_FIGHT worded, and what comes of it) */
 void __fastcall__ walk_says (const char* name);    /* (A walk over told as it begins, at once: "You go over to the pot."; 0: the command's thing) */
 unsigned char search_go (void);                 /* (Part 10's) A search begun, by its form (search.c) */

@@ -474,6 +474,9 @@ static void __fastcall__ place (unsigned n, unsigned char where, unsigned x, uns
     p->where = where;
     p->x = x;
     p->flags = (p->flags & ~(I_HELD | I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | flags;
+    if ((where = p->kind - KI_THEME) < NTKINDS) {
+        take_go ((const struct msg*) (unsigned) where);   /* (A theme's own thing come to hand: its take rule's, Q2's) */
+    }
 }
 
 /* Thing n carried: into the pack if it fits, else in a hand, the one that suits it (part 48's: hand first, the other

@@ -180,7 +180,7 @@ void __fastcall__ o_sky_words (unsigned char p, unsigned char k, const char* w)
         "at the window", "in the skylight above", "at the top of the shaft above", "far up the shaft above"
     };
     static const char* const shafts[] = {           /* (SKP_TOO_HIGH on) */
-        "The shaft's mouth is too high to reach.", "An iron grating bars the top of the shaft: that's no way out.",
+        "The shaft's mouth is too high to reach.",
         "The shaft is choked with fallen rock a little way down.", "It falls away down the shaft, and you hear it land far below.",
         "You take hold of the rope.", "You put your weight on the rope: the grapple tears loose and comes clattering down.",
         "The rope's end hangs out of reach."

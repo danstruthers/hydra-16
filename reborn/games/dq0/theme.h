@@ -21,9 +21,10 @@
 ** (dq0m/plan.c), put down as the chunk is first made (dq0m/stock.c's list, the world's to put down); and the rules
 ** of what's done with them (read, combine, put one on or in another, use one on the way out), each with its words
 ** and what it does (the way out opened, the place ruled);
-** its mission (to escape, to rule the place, or either), and how the character came in (walked in, or fallen in: its
-** bearings, slice 4.2's); the way out's lock in words, shut and open; and the
-** endings' words (escaped, ruled, dead).
+** its mission (what solves it: the way out opened, the place ruled, or either), and how the character came in (walked in, or fallen in: its
+** bearings, slice 4.2's); the way out's lock in words, shut and open; whether the way in stands open behind it (TM_OPEN) or
+** where another way out is to be found (exit_sn), the two ways of leaving unsolved the theme checker proves (Q1, DECISIONS.md); and the
+** endings' words (solved: escaped or ruled; left; dead).
 **
 ** And its history (the user's, DesignIdeas.md: "determine what the history of the geographic area is, then you can
 ** build a believable dungeon"; games/dq0/HISTORY.md): the region, its peoples and its eras (who came, what they
@@ -40,7 +41,7 @@
 #define _THEME_H
 
 #define THEME_SIZE      0x1000                  /* A theme's bytes in dq0t.dat (its record, then its words) */
-#define THEME_HEAD      1594                    /* (struct theme's: make.js lays it out the same) */
+#define THEME_HEAD      1595                    /* (struct theme's: make.js lays it out the same) */
 #define NTKINDS         8                       /* Its own kinds of things, */
 #define KI_THEME        120                     /*   the catalogue's from here to KI_THEME + NTKINDS - 1 (items.h's
                                                 **   KI_HIGH on after them, 2026-10-27: a theme's kinds held to 127) */
@@ -61,14 +62,18 @@ struct trule {
     unsigned char   effect;                     /* TE_* */
     unsigned        words;                      /* What's told as it's done (an offset of the theme's words) */
 };
-enum { TR_READ, TR_COMBINE, TR_PUT, TR_OUT };
-enum { TE_NONE, TE_OPEN, TE_RULE };             /* Nothing more; the way out opened; the place ruled (an ending) */
+enum { TR_READ, TR_COMBINE, TR_PUT, TR_OUT, TR_TAKE };
+enum { TE_NONE, TE_OPEN, TE_RULE };             /* Nothing more; the way out opened; the place ruled and the way out
+                                                **   opened: either, the dungeon solved, to be walked out of (Q2) */
 #define TM_ESCAPE       0x01                    /* The mission: to escape, */
 #define TM_RULE         0x02                    /*   to rule the place (either, if both) */
+#define TM_OPEN         0x40                    /* (The way in stands open from the start: the theme file's wayin) */
 #define TM_FELL         0x80                    /* (And how the character came in, the theme file's start: come round
                                                 **   below from a fall, its bearings off, slice 4.2's; else walked in by
                                                 **   the way in from the surface, knowing north) */
-enum { END_NONE, END_ESCAPED, END_RULED, END_DIED };
+enum { END_NONE, END_ESCAPED, END_RULED, END_DIED, END_LEFT };   /* (The end[] of each: its number and 3, END_LEFT's the
+                                                **   slot END_NONE never wanted.  Escaped and ruled, solved; left, out
+                                                **   unsolved; died, solved or not as Q.solved says) */
 enum { P_HALLS, P_KEEP, P_TEMPLE, P_CELLARS, P_CRYPT, P_WORKS };  /* A stratum's purpose (DUNGEON.md: built to a plan) */
 #define P_FORT          0x80                    /*   and fortified */
 #define TUSES           12                      /* The uses' words past the rooms' eight (world.h's U_KITCHEN on) */
@@ -150,7 +155,7 @@ struct theme {
     struct trule    rule[NRULES];
     unsigned        story, lock, opened;        /* Its words (offsets in the theme; 0 none): its story; the way out
                                                 **   shut (tried, examined), and open; */
-    unsigned        end[4];                     /*   the endings' (END_*) */
+    unsigned        end[4];                     /*   the endings' (END_* and 3) */
     char            uses[TUSES][16];            /* A room's words by its use, past the eight (U_KITCHEN ...) */
     unsigned char   purpose[TSTRATA];           /* Each stratum's purpose (P_*, P_FORT: its layers' last built or
                                                 **   reused, the uses' plan's) */
@@ -173,6 +178,8 @@ struct theme {
     unsigned char   nmints;                     /* Its mints (the theme file's mint lines, 2026-10-28: a coin's its
                                                 **   number, 1 ..., an item's fuel's low byte; 0 none told) */
     struct tmint    mint[TMINTS];
+    unsigned char   exit_sn;                    /* Another way out's stratum (1 ...: the wayout line's, a through goal's
+                                                **   goal_sn; 0 none): a stair to the daylight, the maker's, open */
 };
 #define THEME           ((struct theme*) 0x8000)    /* (In the hub's theme bank) */
 typedef char theme_head[sizeof (struct theme) == THEME_HEAD ? 1 : -1];

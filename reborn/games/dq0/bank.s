@@ -133,7 +133,7 @@ ovl_out:
             OVFN        theme_named, 5
             OVFN        story, 5
             OVFN        way_words, 5
-            OVFN        ending, 5
+            OVFN        ending, 15
             OVFN        puzzle, 5
             OVFN        fight_words, 6
             OVFN        fight_target, 6

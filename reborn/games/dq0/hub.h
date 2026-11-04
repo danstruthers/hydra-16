@@ -556,7 +556,9 @@ enum {
                                                 **   between it and the character, of a loud one on its stratum (the
                                                 **   squares of wall and rock on the line, 15 at most, and the shut
                                                 **   doors times 16: SOUND.md) */
-    E_LEFT,                                     /* who's gone up the way out, open (theme.h: the mission's, escaped) */
+    E_LEFT,                                     /* who's gone up the way out, open (w1 EL_WAY), or a shaft to the sky (EL_SKY):
+                                                **   out of the dungeon, solved or not; or (EL_RULE + the rule) a theme's
+                                                **   take rule done as the thing's taken up: the UI's words (theme.c's) */
     E_FIGHT,                                    /* (The denizens' too, their queue's) A blow struck: who the attacker
                                                 **   (0 the character, else the actor plus 1), a the defender (the
                                                 **   same), b how loud, w1 w2 the attacker's square, x[0] its stratum,
@@ -584,6 +586,9 @@ enum {
     NEVENTS
 };
 enum { BRG_NONE, BRG_LOST, BRG_KNOWN, BRG_SKY };
+#define EL_WAY          0x10                    /* (E_LEFT's w1: past the UI's ending's END_*, its own stub: theme.c's) */
+#define EL_SKY          0x11
+#define EL_RULE         0x12
 enum { SKP_NONE, SKP_DAWN, SKP_DAY, SKP_DUSK, SKP_NIGHT, SKP_SUN, SKP_STARS, SKP_HIGH, SKP_LOW, SKP_SUN_WATCHED,
     SKP_STARS_WATCHED,                          /* (E_BEARING BRG_SKY's b: the sky seen, the time read by it: grey light
                                                 **   above, daylight, the light fading, the dark; the sun read by the
@@ -591,7 +596,7 @@ enum { SKP_NONE, SKP_DAWN, SKP_DAY, SKP_DUSK, SKP_NIGHT, SKP_SUN, SKP_STARS, SKP
                                                 **   lost; the sun or the stars watched a while, their way across the
                                                 **   sky: the time, and north, known; b's high four bits, SKS_*, what
                                                 **   showed it */
-    SKP_TOO_HIGH, SKP_GRATE, SKP_CHOKED, SKP_LET_FALL, SKP_ROPE,
+    SKP_TOO_HIGH, SKP_CHOKED, SKP_LET_FALL, SKP_ROPE,
     SKP_GAVE = 0x10, SKP_NO_ROPE = 0x20 };      /* (Past the phases' four bits: a rope's, 2026-11-04, a phase of none with
                                                 **   a way shown: time.c's) */    /* (And, w1's high byte, b none, a shaft's refusals, the
                                                 **   time.c words' room: its mouth too high to reach, barred at the top,
