@@ -2071,6 +2071,8 @@ const DQ0_REPEATS = [
     why: 'a walk by feel, its beats as it goes: a wall can end more than once along a winding way, more than one door felt, each its own (the soak\'s seeds 149, 200, by feel: told three times)' },
   { what: /^(The passage turns (left|right)|The passage bends away [a-z-]+|You go through a doorway|You go on down the passage|The way (rises|falls away))\.$/,
     why: 'a walk\'s beats as it goes (slice 4.0): a winding passage turns or bends the same way more than once (a bend\'s heading, 2026-11-01: the soak\'s seed 200), has more than one doorway, goes on quietly every 30 feet' },
+  { what: /^(?:You go under!|You come up, gasping\.)$/,
+    why: 'a swim\'s minutes as a walk goes on: under, up and under again, each told as it comes (the soak\'s seed 192)' },
   { what: /^(?:It falls senseless|It flees|The .+ falls dead|You finish the .+ where it lies|The .+ gets to its feet|You get to your feet|You turn to the .+|You fight back against the .+)\.$/,
     why: 'fighting on (the user\'s, 2026-10-20): one attack fights its foes in turn, each falling, fleeing, getting up, fought back or turned to told as it comes (two of a name, the same words)' },
   { what: /^(?:Your .+ falls from your hand|The .+ drops its .+|The .+ snatches up its .+)\.$/,
@@ -2105,14 +2107,14 @@ function dq0Answers(out) {
 function dq0Repeats(name, out) {
   const found = [];
   for (const a of dq0Answers(out)) {
-    if (/ and |,/.test(a.cmd)) continue;     // (A list's parts each told, "Put down." "Put down.": games/dq0/parts.c)
+    const parts = a.cmd.split(/ and |,/).length;     // (A list's parts each told, "Put down." "Put down.": games/dq0/parts.c; no oftener than it has parts)
     // (Each stir a telling of its own: a denizen's place told again after a change between, "two rats" then "a rat",
     // is what changed, not a repeat; within a telling, a look's or a stir's, nothing twice)
     for (const part of a.text.split(/(?=Something stirs\.)/)) {
       const n = new Map();
       for (const t of part.split(/(?<=[.!?])\s+/)) if (t.length > 8 && /[a-z]{2}/i.test(t)) n.set(t, (n.get(t) || 0) + 1);
       for (const [sentence, c] of n) {
-        if (c < 2 || DQ0_REPEATS.some(r => r.what.test(sentence) && (!r.tests || r.tests.test(name)))) continue;
+        if (c < 2 || (parts > 1 && c <= parts) || DQ0_REPEATS.some(r => r.what.test(sentence) && (!r.tests || r.tests.test(name)))) continue;
         found.push({ test: name, cmd: a.cmd, sentence, n: c });
       }
     }
