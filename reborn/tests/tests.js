@@ -5001,7 +5001,7 @@ module.exports = {
         const beats = ev(east, 'E_BEAT', {});
         if (!beats.some(e => e.beat === 'WB_TURN') || !beats.some(e => e.beat === 'WB_QUIET')) f.push('the walk east not told as it went: ' + beats.map(e => e.beat + ':' + e.side).join(', '));
         if (!ev(east, 'E_ARRIVE', {}).length) f.push('the walk east not ended');
-        if (!/\[#+\.*\]/.test(out)) f.push('no long task\'s bar on the status line');
+        if (!/\[[#.]+\]/.test(out) || !out.includes('#')) f.push('no long task\'s bar on the status line');   // (Empty as it begins, now its first words are told at once; its #s drawn after it, each as it's done)
         // (A dig: a stop that names another task refused, then the dig stopped)
         has(games[1], { te: 'TE_NOT', task: 'LT_DIG', named: 'LT_WALK' }, '"stop walking" not refused as the dig went on');
         has(games[1], { te: 'TE_STOPPED', task: 'LT_DIG' }, '"stop digging" not the dig stopped');
