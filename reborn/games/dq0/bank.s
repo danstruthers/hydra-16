@@ -144,14 +144,14 @@ ovl_out:
             OVFN        facing_words, 19
             OVFN        sky_words, 1        ; (The sky seen by a window, a skylight, a shaft: time.c, 16's room)
             OVFN        turned_says, 19     ; (A turn's first words: task.c's, the main RAM's room)
-            OVFN        fore_set, 17        ; (The answer's tasks in the foreground: main.c's)
+            OVFN        fore_set, 13        ; (The answer's tasks in the foreground: main.c's)
             OVFN        water_words, 4      ; (The water's news, hunger's and thirst's: water.c, slice 4.9's)
             OVFN        time_ui, 16         ; (The time of day believed, worded: time.c, 2026-10-31)
             OVFN        say_raw, 16         ; (A line as it is, the map's: term.c, the main RAM's room)
             OVFN        t_status, 16        ; (The status line drawn: term.c, the main RAM's room, 2026-11-03)
-            OVFN        may_den, 15         ; (The thing named may be a denizen: sway.c, 2026-11-03)
+            OVFN        may_den, 16         ; (The thing named may be a denizen: sway.c, 2026-11-03)
             OVFN        walk_ahead, 15      ; (A walk over told before the world's asked: sway.c, 2026-11-03)
-            OVFN        dots, 17            ; (The game's start's progress: main.c's)
+            OVFN        dots, 3            ; (The game's start's progress: main.c's)
 
 ; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)
 
@@ -178,7 +178,7 @@ ovl_out:
             SWPART      18, 18              ; A denizen's door's words (2026-11-02: overlay 3's room)
             SWPART      19, 15              ; The reach's steps (main.c: 2026-11-02, HOUSE.md's reach)
             SWPART      20, 7               ; An ally's errands, gifts (errand.c: part 15's room, 2026-11-03)
-            SWPART      21, 17              ; The record of a life, as a game begins (main.c: 2026-11-04)
+            SWPART      21, 8               ; The record of a life, as a game begins (main.c: 2026-11-04)
             SWPART      22, 10              ;   and its dungeon's folder found
 
             SWFN        errand, 20
@@ -237,12 +237,12 @@ ovl_out:
             SWFN        limbs_cmd, 11
             SWFN        bg_words, 14
             SWFN        pose_words, 12
-            SWFN        when_free, 12
+            SWFN        when_free, 14
             SWFN        noise_told, 14
             SWFN        dig_used, 14
             SWFN        hold_first, 11
             SWFN        missiles, 13        ; (The missiles: slice 4.7's)
-            SWFN        gear_look, 11
+            SWFN        gear_look, 3
             SWFN        early, 12
             SWFN        tend, 12
             SWFN        body_words, 12

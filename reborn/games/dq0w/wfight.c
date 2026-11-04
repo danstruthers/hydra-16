@@ -275,6 +275,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         drop_held (dh, 1);                      /* (Told after the blow, in the denizens' ring) */
     }
     if (cd) {
+        look_more (0, LM_ROPES);                      /* (Part 91 read in, the first time: things.c's) */
         den_drop (cd - 1);                            /* (Its weapon on the floor, told: part 51's) */
     }
     if (ff & (me == att ? FF_A_DEAD : FF_D_DEAD)) {

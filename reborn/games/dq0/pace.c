@@ -337,6 +337,8 @@ unsigned char __fastcall__ s_travel_go (const char* l)
     } else {
         return 0;
     }
+    msg ("You think back.");                    /* (Its first words at once, the way its to find: the user's, 2026-11-04) */
+    t_flush ();
     if (hub_send (&m)) {
         busy = 1;
         t_prompt (0);

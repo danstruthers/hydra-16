@@ -1775,6 +1775,14 @@ The user (2026-11-03): all thirteen accepted, "until a playtest says otherwise".
 
 **So:** settled as they stood: A4, A5, A13, A21, A22, A23.  To build: A1, A2, A3, A6, A7, A9, A10, A11, A12, A14, A15, A16, A17, A19, A24, A25, A26, A27.  To plan: the game between dungeons, with what takes a character to a dungeon in the first place (A8, A18), and clues, scripts and scholars (A20); the rules stand till then, and reading stays open.  **Design:** HOUSE.md's guide at its head (what's accepted, what's carved out, what a *for review* mark means from now on), each rule named there, and its Decided, not yet built.
 
+### A word as they begin (2026-11-04)
+
+`open the door` (4.8M cycles to the first letter) and `listen` (6.2M) worked out the outcome before they said anything.  The choice put: a word as they begin, or the outcome told first.  The user: "Word as they begin."
+
+Built for the kind, every command over the 720,000: words that hold whatever comes of it (HOUSE.md's a command's first words).  And an answer's first words go out as they're said, however short: many were made in time and held for the rest of the world's news.
+
+**Design:** HOUSE.md's a command's first words.
+
 ## The game between dungeons, the plan answered (2026-11-04)
 
 The plan (F:/.claude/hydra-2/plans/between-dungeons.md, sections 1-7) put ten questions; the user chose among the options as put:

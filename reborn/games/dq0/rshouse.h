@@ -126,6 +126,8 @@ static signed char __fastcall__ house_notice (const struct req* r, unsigned char
 ** referee's condition before it) */
 #if defined (RS_HOUSE_STATE) && !defined (RS_HOUSE_STATE_DONE)
 #define RS_HOUSE_STATE_DONE
+#define HOUSE_SHOCK     0x80                    /* (house_pace's watch |: the ruleset's, in shock; on one good leg) */
+#define HOUSE_LEG       0x40
 static const char* const pace_name[NGAITS] = { "a creep", "a slow walk", "a walk", "a jog", "a run", "a sprint" };
 
 static unsigned char __fastcall__ house_pace (unsigned char g, unsigned char watch, unsigned char dark)
@@ -134,7 +136,7 @@ static unsigned char __fastcall__ house_pace (unsigned char g, unsigned char wat
 
     if (h > GA_SLOW && ((watch & (WA_TRAPS | WA_MAP)) || dark)) {
         h = GA_SLOW;
-    } else if (h > GA_WALK && (watch & WA_LISTEN)) {
+    } else if (h > GA_WALK && (watch & (WA_LISTEN | HOUSE_SHOCK | HOUSE_LEG))) {
         h = GA_WALK;
     }
     put ("Pace: ");
@@ -143,7 +145,8 @@ static unsigned char __fastcall__ house_pace (unsigned char g, unsigned char wat
         put (", held to ");
         put (pace_name[h]);
         put (watch & WA_TRAPS ? " while you search as you go" : watch & WA_MAP ? " while you map as you go" :
-            dark && h == GA_SLOW ? " in the dark" : " while you listen");
+            dark && h == GA_SLOW ? " in the dark" : watch & HOUSE_SHOCK ? " in shock" : watch & HOUSE_LEG ? " on one leg" :
+            " while you listen");
     }
     return h;
 }

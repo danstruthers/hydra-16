@@ -542,7 +542,7 @@ want sum.step=33 sum.g0=99 sum.g2=33 sum.g3=33 sum.g5=33
 set gait=GA_RUN
 dice
 ask DESCRIBE b=3
-want text~"a run (15 feet a round)"
+want text~"a run, held to a walk in shock (15 feet a round)"
 set gait=GA_CREEP
 
 # ---- The senses (HOUSE.md: 0-9 from the attribute, (attribute - 3) times 3 / 5; 3 or less none, 18 or more 9)

@@ -409,7 +409,12 @@ void __fastcall__ reach_said (unsigned w, unsigned char named);   /* Part 19: th
 unsigned char may_den (void);                   /* (sway.c's: the thing named may be a denizen: the denizens asked) */
 extern unsigned char paced;                     /* (pace.c's: a manner said with the last pace: main.c's look at a line) */
 void __fastcall__ walk_ahead (const char* name);    /* (sway.c's: a thing to take seen out of reach: its walk told before the world's asked) */
-extern unsigned char said_ahead, placing;       /* (main.c's: its walk told already; a walk over's arrival short) */
+#define W_DIG           (PA_CHECK + 2)          /* (walk_says' name, a first word by what's asked: PA_* + 1 a portal's work, sway.c's) */
+#define W_SWAY          (PA_CHECK + 3)
+#define W_PEER          (PA_CHECK + 4)
+#define W_LISTEN        (PA_CHECK + 5)
+#define W_MAX           (PA_CHECK + 6)
+extern unsigned char said_ahead, walk_op, worded, placing;       /* (main.c's: its walk told already; a walk over's arrival short) */
 void __fastcall__ blow (const struct msg* m);    /* (Overlay 6's, blows.c: an E_FIGHT worded, and what comes of it) */
 void __fastcall__ walk_says (const char* name);    /* (A walk over told as it begins, at once: "You go over to the pot."; 0: the command's thing) */
 unsigned char search_go (void);                 /* (Part 10's) A search begun, by its form (search.c) */

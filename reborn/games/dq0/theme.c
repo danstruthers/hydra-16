@@ -173,6 +173,9 @@ static void __fastcall__ gone (unsigned char w)
 ** done (Q_DONE).  Its words here; whether it's done the world's, by the theme's rules
 ** (the things' request, IO_PUZZLE: the things found to hand, the rule for their kinds, the things made one or put,
 ** the way out opened) */
+#pragma data-name (push, "OV5RODATA")
+#pragma bss-name (push, "OV5RODATA")
+#pragma static-locals (push, on)                /* (Its locals static, in its bank: the code the less) */
 unsigned char __fastcall__ o_puzzle (struct cmd* c)
 {
     unsigned char v = c->action, t, r;
@@ -182,8 +185,8 @@ unsigned char __fastcall__ o_puzzle (struct cmd* c)
             msg (c->obj.kind ? "There's nothing written on it." : "Read what?");
             return Q_TOLD;
         }
-        hub_mem (SIGHT_BANK, &t, &SIGHT->dark, 1);
-        if (t) {
+        hub_mem (SIGHT_BANK, lb, &SIGHT->dark, 1);   /* (Not t: its statics in this bank, in the window) */
+        if (lb[0]) {
             msg ("You can't see to read.");     /* (In the dark, or blind: none of it, of anything) */
             return Q_TOLD;
         }
@@ -209,6 +212,10 @@ unsigned char __fastcall__ o_puzzle (struct cmd* c)
             return Q_TOLD;
         }
         return Q_NONE;
+    }
+    if (t != TR_OUT) {
+        walk_op = IO_PUT;                       /* (Its first words before this asking: walk_ahead's, sway.c) */
+        walk_ahead (c->obj.word);
     }
     if (t == TR_READ && c->obj.word[0] && othings (IO_LOOK, c->obj.word, "", LM_COND) == IR_NOT_HERE) {
         reach_go ();                            /* (Out of reach: walked over to first, then again, as any inspecting) */
@@ -237,6 +244,9 @@ unsigned char __fastcall__ o_puzzle (struct cmd* c)
     }
     return Q_TOLD;
 }
+#pragma static-locals (pop)
+#pragma data-name (pop)
+#pragma bss-name (pop)
 
 /* ---- The ending: overlay 15's (5's room), the theme's words asked of overlay 5 */
 

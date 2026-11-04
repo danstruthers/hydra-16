@@ -529,7 +529,7 @@ course, first aid and healing (Wounds over time); courage in a fight (Morale).
     a blade dulled (wear 32 up, "its edge dulled") a point less of its edge's impact, dull (128 up, "its edge dull") two, never under nothing; every actor's, its blows and thrusts as they were.
     **A weapon may break** (the book's Weapon Damage, Combat 12, every actor's): on a Block, weapon against weapon or shield (a bare part struck instead, H2, as ever), the lower Weapon Quality tested first (the attacker's at a tie), the other only if
     that holds: three dice over it and it's destroyed; on a blow at something hard (iron, stone: what its edge can't bite, the door's wood not; the character's, a creature's own is never hurt by it) the same, the weapon alone.  Quality: the book's table (a sword's 12, a dagger's 11, a club's 9, a kite shield's 14)
-    *(new, for review: and its make, its quality 0-9 read as the book's table's ±4 about 5; a tool, none: no test)*; by their own die, the game's others roll as they did; none on the book's optional partial damage.  **Broken**: "Your sword breaks!", "The bandit's sword breaks!"; it falls as a "broken weapon" (useless: soft to swing, a farthing's scrap), so no blow's made with it; a creature to its fists.  (gear.c's row_of, o_pc_side, o_pc_wield;
+    *(new, for review: and its make, its quality 0-9 read as the book's table's ï¿½4 about 5; a tool, none: no test)*; by their own die, the game's others roll as they did; none on the book's optional partial damage.  **Broken**: "Your sword breaks!", "The bandit's sword breaks!"; it falls as a "broken weapon" (useless: soft to swing, a farthing's scrap), so no blow's made with it; a creature to its fists.  (gear.c's row_of, o_pc_side, o_pc_wield;
     rshouse.h's RS_HOUSE_SWING; choose.c's wield; resolve.c's tool_ok; dq0w.c's door_work, swatted, in_hand.)
 - **A creature defends** by dodging, or by counterstriking if it's better at that, as the book advises for animals;
   one holding a shield blocks with it if that's the best of the three, once a round (2026-10-29: the denizens' gear's,
@@ -613,7 +613,7 @@ course, first aid and healing (Wounds over time); courage in a fight (Morale).
   conscious, so one in shock was struck on and never fell): over its Endurance, it's senseless.  (sheet.c's wound.)
 - **In shock, the character can only rest, or walk or crawl away at half its Move** (Skills 22; the book's Combat 14
   asks an Initiative test for the half-move: the game takes Skills 22's, no test): its walk's steps twice as long, no
-  faster pace (a run in shock is that walk); it ignores any blow (no defence) and is in no state to fight; nothing
+  faster pace (a run in shock is that walk, told so: "You walk south into the dark.", the status command's "Pace: a run, held to a walk in shock"); it ignores any blow (no defence) and is in no state to fight; nothing
   else but rest, a look, a word called out and the little more wounds over time's in shock lists, below (slice 4.3's).
   (dq0harn.c's status.)
 - **A helpless character and its foes, by their nature** (the user's choice, 2026-10-21; helpless: senseless, or in
@@ -803,6 +803,33 @@ and traces.
   status"), which then takes its place as a line's first word, and removing that brings the game's back.  Sixteen
   shortcuts, each a word of 15 letters and a line of 95, kept in the theme bank (hub.h's ALIAS_AT) and the save.
   (alias.c, part 9, a bank of its own; term.c's enter.)
+
+## A command's first words *(2026-11-04: the user's "Word as they begin."; new, for review: the words)*
+
+A command's first letter comes within a fifth of a second (720,000 cycles, D17), or it says a word as it begins and the
+world's answer follows.  The word is said before the world's asked, and holds whatever the world then says:
+
+- **A portal worked** (open, close, unlock, force, bar, unbar, raise, lower, bend, go over for traps, disarm, break, climb
+  through): "You try the door." to open; "You reach for the door." to close; "You look at the door." for the rest ("You
+  feel the door." in the dark); "You head for the door." from across its room.  None if a turn to it comes first (the turn's
+  words are its first), or if it's asked which door.
+- **A thing handled** (hold, stow, put, take from, wear, take off, light, put out, drop, fill, sharpen, hide, tie, untie,
+  open or close a thing, throw): "You reach for the sack."  A thing to take from the floor, "You reach for" only if it's seen in reach; seen only
+  out of reach, its walk ("You go over to the bones."); not seen now, "You look for the bones." (then its walk, if it's remembered, or "You see none of those here."; in the dark, none).
+- **A thing looked at closely or asked of** (examine, assess, heft, its lock, its traps, look in it): "You look at the sack." if it's
+  seen; else "You look for the sack."  In the dark, none: the answer's its first words.
+- **A denizen swayed, a gift, a trade** (talk, calm, threaten, name, give, buy, sell ...: the denizens' task's to answer): "You look for the rat." ("You feel for ...").
+- **Read, combine**: "You reach for the sack."
+- **A look one way**: "You peer ahead." at once, unless it turns first.
+- **Listen**: "You listen."  **A dig, the floor or the wall looked at**: "You look at the floor." ("You feel the floor.").  **A journey**:
+  "You think back."  **Through a door**: "You head for the door."
+- **A wait, a rest, a sleep, as long as it says**: its own words at once ("You wait a minute."), not again as the world starts it.  A round's ("Time passes.") by the world, in time as it is.
+- **Told once a line**, not again as its command's asked again after a step of the reach.
+- **Short answers go out as they're said**: an answer's first words aren't held for the rest of the world's news
+  ("You sit down." at 590,000 cycles, not 860,000).
+- **Left as they are, over the target**: a plain walk or step ("n", "go south", "go back": "You set off south." some 650,000 to
+  1.4M, its way worked out first; a word before it would be said on every move, and "You set off" can't be said till the
+  way's known); a door gone over for traps (about a million: the pace's words looked for first in "search"); a blow's walk over ("You go over to the giant rat.", 1.1M); "name the rat Bob" (2.6M: its names' parts first); "help" (a million: the card); "stop" with nothing to stop, the map, a pace set (to 780,000: the answer itself, no word that reads well).
 
 ## Characters *(hmchar: HarnMaster's character generator)*
 
@@ -1638,7 +1665,9 @@ hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous li
   the catalogue's: a spear, a shovel, a door's bar) is a crutch, a walk's pace at most ("You lean on the spear and
   hobble along.").  No faster than a walk on one leg ("You can't run on one leg.").  "crawl north" goes down and
   crawls, "hop north" hops, "walk north" the best it can (a crutch, else a hop), each kept as a pace is till another's
-  said.  (dq0w.c's part 50, limbs_pace.)
+  said.  (dq0w.c's part 50, limbs_pace.)  In the dark its words and its dangers go by the pace it's really going at, a limit's
+  (s_limbs_pace, 2026-11-04, *new, for review*): on a crutch "You walk south into the dark."; hopping or crawling, feeling its way;
+  to the waist in water or swimming, its hands first ("Your hands meet a wall."), no run into anything.
 - **Crawling** is at the same pace, three times a walk's time a square (the house's), tiring as a walk does: on its
   belly, prone ("You crawl."; PRONE on the status line).  It needs a good arm and a good leg, or both arms with no
   good leg (the user's, 2026-10-22); both legs useless, it falls at its first move ("You fall.") and crawls; neither
