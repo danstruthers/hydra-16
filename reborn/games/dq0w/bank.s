@@ -301,6 +301,7 @@ go:
             SWFN        reach_do, 86
             SWFN        rs_for, 87
             SWFN        rs_more, 90
+            SWFN        rs_did2, 75
             SWFN        hub_attach, 88
             SWFN        handy, 56
             SWFN        tool_reach, 72

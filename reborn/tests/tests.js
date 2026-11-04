@@ -2140,7 +2140,7 @@ function dq0Doubled(m) {
 // test whose game's meant to end names it, lostLines: true)
 function dq0Lost(name, m) {
   const t = module.exports.tests.find(x => x.name === name.replace(/@\d+$/, ''));
-  if (t && t.lostLines) return [];
+  if ((t && t.lostLines) || /^dq0soak-/.test(name)) return [];   // (The soak's scripted lines outlast a death, as they may)
   const e = String.fromCharCode(27), o = (m.out || '').split(e + '[').map((s, i) => i ? s.replace(/^[0-9;?]*[A-Za-z]/, '') : s).join('');
   const lost = [...o.matchAll(/^rc: ([a-z0-9]+): not found/gm)].map(x => x[1]).filter(w => !/^(?:dq0|hmchar|quit)$/.test(w));   // (A last quit: nothing lost by it)
   return lost.length ? ['lines typed to rc, the game over before them: ' + lost.slice(0, 6).join(', ')] : [];
@@ -6702,6 +6702,39 @@ module.exports = {
         if (!/Your sword breaks!/.test(s)) f.push('the crude sword not broken on the iron');
         if (/a sword/.test(inv)) f.push('the sword still carried: ' + inv);
         if (!/broken weapon/.test(s.slice(i))) f.push('no pieces where it fell');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0busyloop', reach: true, near: ['gear'], what: "Dingus Quest Zero's hands made free, in the states the soak found going round (2026-11-04: a thing being readied never what's put away; a step that can't help ends in words; HOUSE.md's readying with busy hands): at seed 374 a torch to light in one hand, a spear in the other: the spear put away, never the torch, the tinderbox got out once, lit, put away; the torch in the pack, both hands full: both ways the tinderbox stays till it's lit and the torch comes out, each told once; a pick wanted in the pack, a sword in one hand and no scabbard: the pack off into the other hand is set down, not slung to come off again; a spare torch in the other hand dipping: that one lit, no other got out; two torches lying lit going out in one long rest told once; a chisel with no room anywhere ending in words",
+      init: 't_rc', cycles: 4500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        "dq0 -p t -s 374 -c /ram/c.hm -T -k spear", 'put out the torch', 'inventory', 'light the torch', 'inventory', 'quit',
+        "dq0 -p t -s 374 -c /ram/c.hm -T -k spear,sword", 'put out the torch', 'stow the torch', 'inventory', 'hold the sword', 'inventory', 'light the torch', 'inventory', 'quit',
+        "dq0 -p t -s 374 -c /ram/c.hm -T -k pick,sword", 'put the pick in the backpack', 'drop the torch', 'hold the sword', 'inventory', 'dig north', 'stop', 'inventory', 'quit',
+        "dq0 -p t -s 3 -c /ram/c.hm -T", 'hold another torch', 'inventory', 'wait 20 minutes', 'dip the torch', 'inventory', 'quit',
+        "dq0 -p t -s 3 -c /ram/c.hm -T -k lantern", 'hold another torch', 'light the torch', 'drop the torch', 'drop the torch', 'rest for 2 hours', 'quit', 'echo $status']) },
+      start(m) {
+        dq0OnWords(m, [{ g: 3, line: 'dig north', n: 1, words: 'You dig', text: 'stop\r' }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], all = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' ');
+        const games = all.split(/% dq0 -p t /).slice(1), n = (g, re) => (g.match(re) || []).length;
+        this.notes = games.map(g => g.slice(g.indexOf('> '), g.indexOf('> ') + 1100));
+        if (games.length !== 5) return ['not five games: ' + games.length];
+        const [a, b, c, d, e] = games;
+        if (n(a, /You get out the tinderbox\./g) !== 1 || n(a, /put away the tinderbox/g) !== 1) f.push('the tinderbox not out once and back once: ' + a.slice(-900));
+        if (/You put the torch in your pack\./.test(a)) f.push('the torch to light put away for its tinderbox');
+        if (!/It catches\./.test(a) || !/You light the torch\./.test(a)) f.push('not lit');
+        if (n(b, /You get out the tinderbox\./g) !== 1) f.push('hands full, the torch in the pack: the tinderbox out more than once: ' + n(b, /You get out the tinderbox\./g));
+        if (!/You light the torch\./.test(b)) f.push('hands full, the torch in the pack: not lit: ' + b.slice(-900));
+        if (/You sling the backpack/.test(c)) f.push('the pack slung to come off again');
+        if (!/You get out the pick\./.test(c)) f.push('the pick not got out: ' + c.slice(-900));
+        if (/You get out the new torch/.test(d)) f.push('a spare got out, one in the other hand: ' + d.slice(-900));
+        if (n(d, /You set the new torch down at your feet\./g) > 1) f.push('set down twice');
+        if (n(e, /The torch gutters and goes out/g) > 1) f.push('two going out in one answer told twice');
         return f;
       },
       sdcard: true

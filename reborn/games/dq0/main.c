@@ -2477,7 +2477,7 @@ unsigned char s_bandage_out (void)
 ** the step's first words; the pack left off, stopped part way; the world's own step's grope failed */
 void __fastcall__ s_reach_said (unsigned w, unsigned char named)
 {
-    static const char* const first[LT_INPACK - LT_PACKOFF + 1] = {
+    static const char* const first[LT_INPACK2 - LT_PACKOFF + 1] = {
         "\nYou take off your %s.", "\nYou take off your %s, and set it down at your feet.", "\nYou reach into the %s.",
         "\nYou hold the %s open.", "\nYou get out the %s.", "\nYou put your %s back on.", "\nYou let the %s fall.",
         "\nYou let the %s fall, still burning.", "\nYou put away the %s.", "\nYou blow out the %s.",
@@ -2486,7 +2486,8 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
         "\nYou get out the new %s.", "\nYou put away the old %s.", "\nYou take up the new %s.", "\nYou set the new %s down at your feet.",
         "\nYou blow out the old %s.", "\nYou light the new %s from the burning one.", "\nYou set to dipping the old %s.",
         "\nYou let the old %s fall.", "\nYou sheathe the %s.", "\nYou sling the %s.", "\nYou set the %s in the sconce.",
-        "\nYou lay the %s on the ground, still burning.", "\nYou put the %s in your pack."
+        "\nYou lay the %s on the ground, still burning.", "\nYou put the %s in your pack.",
+        "\nYou lay the %s down too, still lit.", "\nYou put the %s in your pack too."
     };
     char t[sizeof CATALOGUE[0].name];
 

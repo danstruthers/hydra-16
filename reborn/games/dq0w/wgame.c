@@ -196,7 +196,7 @@ unsigned char s_take_up (void)
         hub_map (0);
         rs_ok = !(HUB->pc_lump & (PL_NOSTEPS | PL_TOLD));                  /* (Into the worn pack: by the reach's steps, the UI's to take it again,
                                                 **   IR_FIXED's) */
-        rs_live = rs_paid = rs_using = 0;
+        rs_live = rs_paid = rs_using = rs_free = 0;
         rs_pack = 0;
         if ((r = take_rest ()) == IR_NONE) {    /* (A count, taken up as it gets there: the request as it was, part
                                                 **   4's: "take 4 rations", the user's) */

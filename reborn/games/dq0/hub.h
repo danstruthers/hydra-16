@@ -960,7 +960,7 @@ enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK
                                                 **   4.3's) */
        LT_PACKOFF, LT_PACKDOWN, LT_REACHIN, LT_OPENUP, LT_GETOUT, LT_PACKON, LT_LETFALL, LT_LETBURN, LT_PUTAWAY, LT_BLOWOUT, LT_BLOWDARK, LT_LIGHTFROM, LT_SETDOWN, LT_TAKEUP, LT_HONE,
        LT_KINDLE, LT_GETNEW, LT_PUTOLD, LT_TAKENEW, LT_DOWNNEW, LT_BLOWOLD, LT_LIGHTNEW, LT_DIPOLD, LT_LETOLD,
-       LT_SHEATHE, LT_SLING, LT_SCONCE, LT_LAYLIT, LT_INPACK };   /* (The reach's
+       LT_SHEATHE, LT_SLING, LT_SCONCE, LT_LAYLIT, LT_INPACK, LT_LAYLIT2, LT_INPACK2 };   /* (The reach's
                                                 **   steps, each its own time, HOUSE.md's: a pack on the back taken off,
                                                 **   into a hand, or set at its feet; a container's level reached into,
                                                 **   held open, a thing got out; the pack put back on: things.c's part

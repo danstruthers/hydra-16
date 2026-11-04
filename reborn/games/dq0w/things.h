@@ -141,10 +141,12 @@ unsigned char __fastcall__ rs_for (unsigned n);  /* (Part 86's: the hand the pac
 #define RF_PICKS        0xFFF4                  /* (An intent's tool got out first: lockpicks; a digger's) */
 #define RF_DIGGERS      0xFFF5
 #define RF_ROLL         0xFFF6                  /* (The dark's test of the hands, its grade's good: 1; in the light 1) */
+void rs_did2 (void);                            /* (Part 75's: a step's end, part 86's rs_did's RS_HAND on) */
 unsigned char __fastcall__ rs_more (unsigned char w);  /* (Part 90's: 0 hands made free for rs_tool, 1 a step's begun; 1 a
                                                 **   step's end, part 86's rs_did's RS_HAND on) */
 #define RF_TELL         0x8000                  /* (| TE_* | its kind times 256: a word to the UI, E_TASK's, b rs_what) */
 extern unsigned rs_tool;                        /* (The tool in use; a fire-maker to hand, part 10's flame's) */
+extern unsigned char rs_free;
 extern unsigned char rs_using;                  /* (A tool's: 1 out; 2 caught, a fire-maker's) */
 #define LW_REACH        0xFE                    /* (lwork's: a step of the reach, its end RO_END's) */
 extern unsigned rs_pack;                        /* (The pack off for this handling) */

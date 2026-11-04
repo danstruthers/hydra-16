@@ -1864,6 +1864,7 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   a time, each told and each stopping as a step does: **a light burning in the hand** (not a lantern's, that hangs) into an empty sconce within reach, "You set the torch in the sconce."; else laid at its feet still lit, "You lay the torch on the ground, still burning."
   (it lights the work as it lies; a look says "a lit torch"; taken up lit); **what's kept worn** (a shield), "You sling the round shield." (five seconds); **what a carrier of its family on the body holds** (a sword, a scabbard; a knife, a sheath), "You sheathe the sword." (two);
   **anything else into the pack**, by the reach's steps; no pack, or no room, set down at its feet.  A chisel takes both hands cleared, and its hammer got out by the same steps after it.  In a fight the same, no refusal: its time is the danger.
+  **Never what's being readied**: the tool, a tool out already, the thing it's for (the torch to light), a chisel's hammer; the pack off for this, if it's in a hand, set down, not slung; six things at most a sequence, then no hand, the handler's words (the soak, 2026-11-04: nothing goes round for ever).  A second thing put away told "too".
   **As the job ends what was put away isn't brought back** (it's where it was put): the one exception's the routines that did so already: a torch's dipping and a new light set down what's in the way ("You set the sword down at your feet.") and take it up again after.  dq0 -J's lump has none of it, the hands untouched (the tests').
 - **A whetstone** *(2026-11-02: the user's "like sharpening your sword (if you have a whetstone)"; the book has none: all
   the house's, for review)*: "sharpen the sword", "hone", "whet" (the fill's verb, the rules' bank spared): a metal
@@ -1871,6 +1872,7 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   minute's timed work, "You set to sharpening the sword.", at its end half its wear gone, "You put a fresh edge on the
   sword."; no wear on it, "The sword is as sharp as it will go."  None carried, told.
   That wear reaches the blow (What strikes, above): a dull sword cuts two points less, so the whetstone's halving brings it a point or two back.
+- **Which is lit** (2026-11-04): "light the torch" means one in a hand first, whichever way it's lit, none put away for another; a dipping's spare the one in the other hand first.
 - **Lighting by a fire-maker** *(2026-11-02: the user's words, DECISIONS.md's; for review: the numbers, and the test)*: for
   anything lit with no flame to hand (a lit thing carried or within reach lights it, as ever, no fire-maker).  That routine,
   its use the tries: "You strike a spark.", 5 seconds, its test at its end, whether engaged or not: the referee's grope
@@ -2055,6 +2057,7 @@ ruleset's (the fatigue rested off the referee's).
   said); a round's wait, or less than a minute, "Time passes." as before.  As it goes: "Keep waiting?", "Keep
   sleeping?"; stopped, "You stop waiting.", "You stop sleeping."; "stop sleeping" and "stop resting" name a sleep, "stop
   waiting" a wait.
+- **A light seen going out** (2026-11-04): one lying about or in a sconce, told once an answer however many go in a long rest.
 - **Sleep and rest as built** *(the house's, but for the senses, the book's and the user's, 2026-11-03: A6)*: the same as a wait in the world but for
   their words and their lying down: the book's fatigue recovery for the time of it, a fatigue level each ten minutes of rest (Skills 6's
   Fatigue Recovery, the referee's already; a night's sleep, the book says, clears most or all of it: eight hours of it

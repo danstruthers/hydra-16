@@ -250,6 +250,13 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     case TE_OUT:                                /* (Its fuel burnt: its own, its only light, its task stopped with
                                                 **   it; or one it sees lying there, TO_SEEN) */
         p = lamp (named);
+        if (one & TO_SEEN) {                    /* (One lying about or in a sconce: told once an answer, a long rest's two
+                                                **   the soak's, 2026-11-04; harm_told's bit, the prone's it doesn't read) */
+            if (harm_told & 1) {
+                break;
+            }
+            harm_told |= 1;
+        }
         if (!(one & TO_SEEN) && !p && (one & TO_ANOTHER)) {     /* (Another of its name burning still, the world's: "One of
                                                 **   your torches", not "Your torch" twice) */
             sayf ("\nOne of your %s%s gutters and goes out", fn, strchr ("sxh", fn[strlen (fn) - 1]) ? "es" : "s");
@@ -354,7 +361,7 @@ void __fastcall__ o_state_words (unsigned char cond)
             say (harm_told & c_[i] ? still_[i] : now_[i]);
         }
     }
-    harm_told |= cond;
+    harm_told |= cond & ~1;
 }
 
 #pragma local-strings (pop)
