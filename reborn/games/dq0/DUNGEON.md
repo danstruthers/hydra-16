@@ -1439,7 +1439,7 @@ rest".  Built (HOUSE.md's the character carries on has the numbers):
   healing on), and the things it carried out (the world's kit.dat, kept with every save, made its outfit there).
 - **Death and the autosave:** the game is kept as the character comes into a stratum and as it's quit; a death isn't
   kept, so the last save is there to go back to.  Hard mode (dq0 -H, kept in the save) keeps the death: the folder's
-  next game is a new one, a new character.  The autosave before danger (a fight's start) is to come.
+  next game is a new one, a new character.  No autosave before danger (the user's, 2026-11-03: DECISIONS.md's HOUSE.md's review), till a playtest shows the lost play hurts.
 - **D13's rules:** the free pounds of encumbrance by Strength; a weapon's version (the book's light, average and heavy:
   its impact and its weight by it), the heaviest wielded without penalty by Strength, a strong character made with
   heavy weapons; a wrecked door, window or portcullis appraised by its state; a slip climbing out of a pit ending the
@@ -1595,7 +1595,7 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
 - **One path for every actor** (Phase 3C, begun 2026-11-02: below; a denizen's portcullises and a robber's lock
   picking built 2026-11-02, DENIZENS.md's): left, a denizen working windows, an ally asked to open a door ("ask the dwarf to open the door"), a denizen eating the
   food it takes up, its lift by its size, the things' put down, given and thrown by the minds as the character's are.
-- **The character carries on** (slice 4.4, built 2026-11-02: above): left, the autosave before danger, the denizens'
+- **The character carries on** (slice 4.4, built 2026-11-02: above): left, the denizens'
   weapons' versions (the outfits' gear's), a thing's wear and fuel carried as they were.
 - **The market** (built in part 2026-11-02: HOUSE.md's the market, entertaining and remedies; DENIZENS.md's trading):
   buying, selling, a price asked, haggling, with any folk denizen, in pennies; remedies (antidotes, a physician's

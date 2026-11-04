@@ -1640,3 +1640,137 @@ The user (2026-11-03): "Not mine, correct it (Recommended)"
 The user (2026-11-03), asked whether to add a softer rock: "There should be softer materials, so digging would make sense, but claws shouldn't work trying to dig in shale, at least not without some damage.  I guess it depends on the animal.  Obviously it would be spelled out in the monster's sheet if they could tunnel through rock, so I think we are fine without generally allowing claws to dig rock.  Clay or softer would not be very stable without shoring anyway, so existing tunnels, except in a shored mine shaft, would not have lasted anyway."
 
 **So:** no softer rock added for now: claws dig rubble, earth and soil, and no rock; a kind that tunnels through rock has it said on its sheet.  Damage to claws tried on shale is not built.
+
+## 2026-11-03
+
+### HOUSE.md's review: the user's answers
+
+The lead read HOUSE.md against this file and the game, and put what it found to the user: 27 questions, most important first, numbered here A1 to A27 as HOUSE.md calls them, and 13 bundles to accept.  A question with the options offered named is one the user answered in words of its own; the rest are the option chosen, its label and its words as offered.
+
+**A1, Tongues.**  The lead: "A character speaks its own tongue and common, and the character maker gives no second one.  Bandits, cultists and soldiers speak common; kobolds, dwarves, elves and all orcs have tongues of their own.  So a human can never persuade, threaten, deceive or haggle with a dwarf, an elf, an orc or a kobold, and can only reach them by gifts and bare buying.  Should that change?"  (Offered: "Leaders speak common (Recommended)", "Characters learn tongues", "Both of those", "Leave it as it is".)
+
+The user (2026-11-03): "What do the HM rules say about languages spoken/written?"  Told the book's rule, the user chose "Book, plus leaders": occupations the book gives a 2nd Language get one, its mastery capping a skill used through it, as the book says; elders, kings, captains and wardens also know common, so each people has someone to talk to (that part the house's).  Widens the character sheet.
+
+**A2, Who trades.**  The lead: "There's no merchant kind yet, so any thinking, non-hostile person will buy your things and sell you what it carries that it isn't using: a soldier or a bandit is a walking shop.  Should that stand?"
+
+The user (2026-11-03): "Friendly folk only": "Only people friendly to you will trade; indifferent ones refuse, so trading has to be earned first."
+
+**A3, Skill growth.**  The lead: "A skill you use is marked, and after eight hours' rest each marked skill gets one improvement roll, told as you wake.  However often you used it, it's one roll; nothing improves until you rest.  Is that how skills should grow?"  (Offered: "After a night's rest (Recommended)", "At once, as used", "Extra roll, hard use".)
+
+The user (2026-11-03): "Improvement rolls should only happen after a minumum number of uses once the skill is opened, not after each use.  I would say 5 uses = 1 improvement roll.  I don't know what thre HM rules say, so might be better to use their numbers."  Told the book's rule (a roll for a use in a dangerous or special situation, none for routine use; more for a very dangerous one; about 3 practice rolls a month), the user chose "Stress, or 5 routine uses": a stressful use earns a roll; 5 routine uses earn one too.
+
+**A4, Healing rest.**  The lead: "Wounds heal by a roll every five days, and each roll is lost unless the character rested 60 hours of those five days.  It starts with three days' rations.  So a serious wound means staying put for days with food to find; a night's sleep heals almost nothing.  Keep that?"
+
+The user (2026-11-03): "Keep it (Recommended)": "It's the book's pace and your "healing over days of rest"; wounds matter, and first aid and care with fights matter more."
+
+**A5, Autosave.**  The lead: "The game saves as you enter a new level and as you quit.  If you die, you go back to that save, which may be hours of play earlier.  You also asked for autosaves "before danger"; those aren't built.  A save stops the game for its time on the card, and a real-time fight would begin with that pause.  What should happen?"
+
+The user (2026-11-03): "Stay as it is (Recommended)": "Level entry and quit only until a playtest shows the lost play hurts; no pause as a fight starts."
+
+**A6, Asleep.**  The lead: "A sleeping character notices things exactly as one awake: a sound or a denizen in sight wakes it as it would stop a wait.  Denizens asleep hear at half and don't see, as the book has it.  Should your character sleep as lightly as it does now?"
+
+The user (2026-11-03): "Half awareness asleep (Recommended)": "The book's rule, already built for denizens; where you choose to sleep starts to matter."
+
+**A7, Shield skill.**  The lead: "Blocking with a shield improves the skill of the weapon in your other hand, not your Shield skill, so Shield never gets better by using it.  Change that?"
+
+The user (2026-11-03): "Block improves Shield (Recommended)": "The skill used is the skill marked, as everywhere else; a small change."
+
+**A8, Carried gear.**  The lead: "When a character who got out carries on into a new dungeon, its wounds and skills come along as they are, but everything it carries is made new: a battered sword comes back whole.  (Fuel and oil being renewed you've already left as it is; this is about wear and damage.)  Keep that?"  (Offered: "Made new (Recommended)", "Wear and damage stay".)
+
+The user (2026-11-03): "Until there is some inter-dungeon "town time", there should probably be a random amount of time between dungeons, and healing should probably happen accordingly (auto-rolled by the game), and weapon and gear maintenance as well, with the appropriate cost (including food, housing, etc.),and skill improvement should be handled as per the book if > 30 days passes."
+
+**A9, Early foes.**  The lead: "Six creatures still have the game's own stand-in numbers rather than the Bestiary's: the giant rat, cave spider, ghoul, skeleton, cave bear and kobold.  They're the first foes most games meet, so they set how fights feel.  The rest already follow the Bestiary, as you asked.  Move these six too?"
+
+The user (2026-11-03): "Book's figures now (Recommended)": "Your rule for every denizen, and fights feel right from the first rat; many fight tests must be re-baselined, which is real work."
+
+**A10, Worn blades.**  The lead: "A blade's wear only changes the words ("its edge dull"): a dull sword hits as hard as a sharp one, a crude one as hard as a fine one, and sharpening with a whetstone changes nothing in a fight.  (Checked in the code.)  The book's rule that a weapon striking something hard may break isn't built either.  What should wear do?"
+
+The user (2026-11-03): "Both of those": "Dull edges cut less and weapons can break; the most work and the most to go wrong in a fight."
+
+**A11, Your menace.**  The lead: "A creature's courage weighs how fearsome its foe is, but the character's figure is a fixed placeholder, so a knight in mail frightens a rat no more than a beggar does; beasts in particular are never put off by you.  Should the character's real might count?"
+
+The user (2026-11-03): "Reckon it properly (Recommended)": "By its size and its weapon skill, as the creatures' is; beasts break off from a strong fighter sooner; a small change."
+
+**A12, Hiding.**  The lead: ""hide" only hides a thing.  You can't hide yourself, though you named the skill for both ("hide in shadows anyone?"), and it was put off until denizens could look for you, which they now can.  Should it be built?"
+
+The user (2026-11-03): "Queue it next (Recommended)": "It's the thief's other half beside moving quietly; denizens' senses need a new check, so it's moderate work."
+
+**A13, Foes & traps.**  The lead: "Denizens never set off a trap, on a door or underfoot, so you can't lure a foe over one, and a rat runs safely across a pit trap you know is there.  Each faction knowing its own traps is planned, not built.  Should that wait?"
+
+The user (2026-11-03): "Leave for now (Recommended)": "It waits for that plan, and for rules for a denizen hurt outside a fight, which don't exist yet."
+
+**A14, Morale tests.**  The lead: "A creature tests its courage only when it's wounded, or hears a friend or leader fall.  The book tests before every action.  So a band never quails just from the look of you, however badly outmatched.  Keep that?"
+
+The user (2026-11-03): "Also on first facing you": "One more test as it first engages you, so a weak band can break before a blow; a little more time per fight."
+
+**A15, Looting mail.**  The lead: "Taking armour off a dead body takes no longer than picking the same piece up off the floor, so a dead bandit's mail comes off in a moment.  The plan had it at twice the time to take off your own.  Which?"
+
+The user (2026-11-03): "Twice taking-off time (Recommended)": "Stripping a body takes real time, so it's a risk with others near; the plan's way."
+
+**A16, Rope.**  The lead: "Rope and grapples are in the game and climbers start with them, but nothing uses them: "tie the rope" does nothing, and a shaft mouth more than 9 feet up simply can't be reached.  What should happen?"
+
+The user (2026-11-03): "Queue rope rules (Recommended)": "Tying off, climbing aided, a grapple thrown up; players will try it at once.  New commands and rules, so real work."
+
+**A17, Found keys.**  The lead: "Keys found lying in the dungeon open nothing; only keys carried by a door's or a chest's owner fit.  A player who finds a key will carry it round trying doors for nothing.  What should happen?"
+
+The user (2026-11-03): "Fit something nearby (Recommended)": "A found key opens a door or chest in its neighbourhood, so finding one means something; the dungeon's growing must tie them, moderate work."
+
+**A18, Sky shaft.**  The lead: "Some shafts go up to the open sky.  You can climb one, but until the dungeon's mission is done an iron grating bars the top.  So you can see daylight and not leave, and the puzzle can't be skipped.  Keep that?"  (Offered: "Keep the grating (Recommended)", "Climbing out wins", "Out, but no win".)
+
+The user (2026-11-03): "It is not about winning or losing.  It is about solving a puzzle.  That means climbing out and not solving the puzzle is not a loss, just a disappointment.  We will need to build the rest of the game that takes you to the dungeons in the first place, which are usually to find some bit of knowledge, or some item, or to kill some local scourge, of just because someone mentioned that they found the dungeon and were afraid to enter.  There could be lots of reasons, but that part of the game is not built, and we need to plan for that.  The inter-dungeon time will make it feel more realistic and should tie the whole character arc together."
+
+**A19, Firedamp.**  The lead: "Marsh gas gathers in shale.  A weak pocket shows a blue cap on your flame as a warning, but a strong one explodes as you walk in with a torch or candle: a burn of 3 or 4 dice, your lights out, no warning first.  Is that fair?"
+
+The user (2026-11-03): "Warn before bursting (Recommended)": "The flame shows a warning a step before the burst, so a careful player can back out; still deadly if ignored, a small change."
+
+**A20, Reading.**  The lead: "Anyone can read anything if there's light; no skill is tested.  (Checked in the code.)  You've remarked that most folk here would be illiterate.  Should reading need the Script skill?"  (Offered: "Leave it open (Recommended)", "Reading needs Script".)
+
+The user (2026-11-03): "Eventually, part of the game should be to collect clues and take them back to a library or to a scholar to determine the next thing to do.  Each clue might be in a unique script that needs a specialist to help decipher, or time in the library if the character is literate.  The HM rules describe languages and scripts known, so that makes scribes and scholars viable character classes.  Put a plan together for this, but for now, leave it open."
+
+**A21, Relic's end.**  The lead: "In a dungeon whose goal is to end a curse, laying the relic on the altar ends the game there and then, though the cursed dead are still walking about.  Keep that?"
+
+The user (2026-11-03): "Keep for now (Recommended)": "The dead's response to it hasn't been built, and the ending's words carry it."
+
+**A22, North adrift.**  The lead: "When the character's sense of north is an eighth of a turn off, typing "north" in a passage often answers "You can't go that way", since the way it believes is north is really a diagonal.  "Forward" and "left" still work.  So the compass misleads rather than quietly going the nearest way.  Keep that?"
+
+The user (2026-11-03): "Keep it (Recommended)": "Your "things will get interesting" when players trust their compass; the words a player uses as it faces never fail."
+
+**A23, Far journeys.**  The lead: ""Go back to the Mausoleum" only works on the level you're on; from another it says "The Mausoleum isn't on this level."  Should journeys reach other levels?"
+
+The user (2026-11-03): "Same level, for now (Recommended)": "You walk to the stairs yourself and then travel; a journey between levels raises hard questions about what's remembered."
+
+**A24, Tinderbox.**  The lead: "Striking a light with a tinderbox asks for no free hand: with sword and shield both held, you can still light a torch.  Dipping a torch, and working a chisel, do ask for hands.  Should striking a light?"
+
+The user (2026-11-03): "Needs a free hand (Recommended)": "The same as your hammer and chisel, and lighting up in a fight costs something; a small change."
+
+**A25, Chisel.**  The lead: "Other tools get themselves out of your pack by the usual steps as you use them, as you asked for any tool.  A hammer and chisel don't: you're told to hold them yourself first ("hold the chisel", "hold the hammer").  Should they work like the rest?"  (Offered: "Get them out (Recommended)", "You hold them".)
+
+The user (2026-11-03): "If your hands are busy and your want to ready tools or other things, it should probably put the other things away first (in their appropriate place) then take the tools in hand.  A torch would be placed in a nearby empty sconce or laid on the ground, a sword put in its scabbard, etc."
+
+**A26, Tool stopped.**  The lead: "Stop halfway through using a tool you took from your pack (a blow, or "stop"), and the tool is back in the pack at once, though you never put it away, and your pack may be lying at your feet.  Should it stay in your hand?"
+
+The user (2026-11-03): "Stays in hand (Recommended)": "The world stays true, as you asked of stopped steps; it needs a little work to find its way back later."
+
+**A27, Start hour.**  The lead: "Every game starts at six in the evening, so a player soon knows that night folk are waking and day folk going to bed as each game begins.  Should the hour vary?"
+
+The user (2026-11-03): "Vary by game": "Each game's seed picks an hour, so the same trick doesn't work twice; a small change, and some tests need the hour fixed."
+
+**The bundles.**  The lead: "Each line: accept these as they stand until a playtest says otherwise."  Everything in the questions above is carved out of them; rules marked the user's or the book's are in them only for their numbers.
+
+- **B1.  Tests, noticing, searching, traps; the second ruleset; test flags.**  Which skill each purpose tests, senses as numbers, how pace affects noticing, what's hidden how well, a thing hidden's grades, disarming's steps, a whole room's search and its times, a heap's hidden things; the null ruleset's numbers; the tests' -N, -J, -F switches.
+- **B2.  Moving, tiring, climbing, positions.**  Paces and the fatigue table, inclines told, a load's tiring, a sleeper lying down, encumbrance's words, climbing rates, falls with no armour counted, senselessness, a pit; crouching, kneeling, sitting and lying.
+- **B3.  Digging and the rock.**  Tool rates and wear beyond your own, chisel and new tool prices, words for why a dig fails, a dig finding a hidden door, a named tool's refusals, rock beds and hardness, rotten rock's fall (1d6), age's collapses and rubble, mixed strata, diagonal digging.
+- **B4.  Doors, windows and looking.**  Lock, force and bar steps, portcullis work, battering's beats, time and words for looking, examining, each aspect asked by name, what opening reveals.
+- **B5.  Fights and missiles.**  Improvised weapon classes (club, stick, soft), who defends how, what's outnumbered, armour quality, courage's table, health words, the wound record's folding; throw ranges and reaches; launchers' times and ranges underground, the cover, strays' one die, arrow breakage, denizens' shooting and throwing, falls told, auto-target; weapon versions' Strength limits; a pass tiring.
+- **B6.  Wounds, poison, disease, air, hunger.**  First aid's house rules, self-treatment, what you may do in shock, creatures' healing and binding, venom's spread; poisons, diseases and their rates, a dart trap in four poisoned, the air's strengths and times, a flame's warnings, where bad air lies, antidotes; swimming and instant drowning, hunger, thirst and meal numbers.
+- **B7.  Reach, tools and lights.**  Every second of the pack steps, a run of handlings, dipping two torches, a new light's order and its 2026-11-03 cases, the whetstone's numbers, the tinderbox's thirty lightings, a dig tool's choice among tools, things used up, engaged steps a round each, a wound not stopping them.
+- **B8.  Outfits, money and the market.**  The kit's light thresholds, what starts full, what's bought in what order, makes, weapons by skill, armour by bent, tools, an outfit that fits; money's prices, jewels' values, mints and mixes, what coins are worth; a gift's worth and test, reputation; prices, haggling, remedies' prices, entertaining.
+- **B9.  Denizens' things and peoples.**  Where each kind lives and how many, gear and blows, unready weapons, a shield's block, beds, stores, dens' remains, hoards, purses, what a look, examine and assess tell of a denizen; names, sheets, senses, attitudes, tongues, homes and gear of the peoples.
+- **B10.  Denizens' minds and day.**  Morale's influence, field, bonds and succession numbers; allies' errands; denizens' tiring, paces, water and hunger; hours, watches, sleep, meals, work, rounds, leisure and drink; tunnellers and builders; working doors and portcullises, keys, what they pick up, ways found, bodies found.
+- **B11.  Senses and belief.**  Sound's reach and the background (hearing stays yours to tune by ear), noise drawing foes, moving quietly's grades, the draught; when bearings are tested and how they drift, memory's fading, drawing a map, what it costs; a journey's choices and its forty legs; waiting's words and speed; the time of day's drift, clues and words.
+- **B12.  The dungeon's shape.**  How often and where each thing is grown: history's leavings and ruins, water, windows and skylights, shafts, daylight's reach, diagonal ways, a passage's slant and its words, diagonal passages and rooms, great caverns, long slopes.
+- **B13.  Your playtest requests as built, and commands.**  Straight walks, going to anything, leaving a room, inspecting over a distance, what can be named, "the door on the left", walking over for a command, a door's state, feeling your way, looking in the dark: all your own words, marked only "did it come out as you meant?"; a hostile unaware not engaging; "take all"'s eight, which of several, shortcuts' limits; first-use skills told, the ending's words.
+
+The user (2026-11-03): all thirteen accepted, "until a playtest says otherwise".
+
+**So:** settled as they stood: A4, A5, A13, A21, A22, A23.  To build: A1, A2, A3, A6, A7, A9, A10, A11, A12, A14, A15, A16, A17, A19, A24, A25, A26, A27.  To plan: the game between dungeons, with what takes a character to a dungeon in the first place (A8, A18), and clues, scripts and scholars (A20); the rules stand till then, and reading stays open.  **Design:** HOUSE.md's guide at its head (what's accepted, what's carved out, what a *for review* mark means from now on), each rule named there, and its Decided, not yet built.
