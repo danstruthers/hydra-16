@@ -449,8 +449,7 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
 ### Fights
 
 - **Sheets:** each actor has the referee's sheet (RS_NEW_ACTOR, by its kind's key, its record's number:
-  dq0harn/fight.c's bestiary: the first six kinds' the game's own numbers, the rest the HarnWorld Bestiary's for the
-  like creature; each attribute varied by a die of its own so no die of the referee's is spent on it: HOUSE.md's
+  dq0harn/beasts.c's bestiary: the HarnWorld Bestiary's for the like creature, where it has none its nearest kin's; each attribute varied by a die of its own so no die of the referee's is spent on it: HOUSE.md's
   fights), made the first time and kept after (its wounds, its state) in a
   bank of the referee's, saved with the game (beasts.dat).
 - **Blows** (the referee's HarnMaster melee, behind rs.h's RS_ATTACK): a hostile actor sensing the character beside it

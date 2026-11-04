@@ -107,8 +107,8 @@ hiding wants magic in both referees (a line each).
 
 ## What it still takes for granted (known, not fixed)
 
-- **The stand-in bestiary is in the HarnMaster referee** (fight.c's, by kinds.txt's keys: rat, spider, ghoul, skel,
-  bear, kobold): the creatures are the game's, their numbers HarnMaster's.  Phase 3D's bestiary as the game's data
+- **The bestiary is in the HarnMaster referee** (beasts.c's, by kinds.txt's keys): the creatures are the game's, their
+  numbers HarnMaster's.  Phase 3D's bestiary as the game's data
   (the pop agent's) is to give the referee a kind's numbers; a ruleset with no bestiary (null) treats every creature
   alike.
 - **The fight words key on the referee's weapon words** ("foot", "head", "bite", "claws": above).  A ruleset must use

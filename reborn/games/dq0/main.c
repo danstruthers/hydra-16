@@ -440,7 +440,7 @@ static void load_pc (void)
                                                 **   tunnellers: DO_DIG among the doings, slice 4.11's; 32: the same seed's
                                                 **   natural chunks not as they were, great caverns and sloping tunnels
                                                 **   in them, a dungeon's change records laid on what they were made
-                                                **   for, 2026-11-02) */
+                                                **   for, 2026-11-02; 38, the body line's venom numbers, the cave spider's among them, 2026-11-04) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
