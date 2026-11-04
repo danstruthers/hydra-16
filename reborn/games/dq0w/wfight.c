@@ -411,7 +411,7 @@ void __fastcall__ s_den_rob (const struct msg* q)
     for (n = 0, i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
         kind = ip->kind;
         f = ip->flags;
-        if (!mine () || (kind != KI_PENNIES && ((f & (I_HELD | I_LIT)) != I_HELD))) {
+        if (!mine () || (kind != KI_PENNIES && kind != KI_FARTHINGS && kind != KI_CROWNS && ((f & (I_HELD | I_LIT)) != I_HELD))) {
             continue;
         }
         reach_from (i);                         /* (Its reach, the robber's: HOUSE.md's, every actor's) */
