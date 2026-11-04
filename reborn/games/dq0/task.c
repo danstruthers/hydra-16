@@ -22,7 +22,7 @@ static const char* const doing[] = {           /* (By LT_*) */
     "doing anything", "walking", "climbing", "digging", "searching", "waiting", "sleeping", "talking", "battering",
     "fighting", "travelling", "studying the mechanism", "disarming the trap", "picking the lock", "forcing", "heaving at",
     "bending the bars", "winding the winch", "working the pane free", "tracking", "sniffing the air", "filling",
-    "hiding", "tending the wound", "taking off", "taking off", "reaching into", "holding open", "getting out", "putting on",
+    "hiding", "tending the wound", "turning a key", "taking off", "taking off", "reaching into", "holding open", "getting out", "putting on",
     "letting fall", "letting fall", "putting away", "blowing out", "blowing out", "lighting", "setting down", "taking up", "sharpening",
     "striking a spark", "getting out", "putting away", "taking up", "setting down", "blowing out", "lighting", "dipping"
 };
@@ -150,7 +150,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     }
     d = doing_of (k, n);
     if (p <= TE_NEAR || p == TE_ENGAGED || (p == TE_OUT && k)) {
-        parts_op (PO_STOP);                     /* (The rest of its line with it: parts.c's lists, 2026-11-04) */
+        parts_in (PO_STOP);                     /* (The rest of its line with it: parts.c's lists, 2026-11-04) */
         if (k != LT_FIGHT || reach < 5) {          /* (A fight begun as the character came free, its line's first step in hand: that stopped, not the step) */
             reach = 0;                          /* (A walk over to a thing stopped: its command dropped; a thing's
                                                 **   timed work stopped: its end dropped, words.c's) */
@@ -168,7 +168,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         if (autogo) {
             return 2;
         }
-        parts_op (PO_STOP);                     /* (Asked: the rest of a list isn't its answer, and goes as a stop's does) */
+        parts_in (PO_STOP);                     /* (Asked: the rest of a list isn't its answer, and goes as a stop's does) */
     }
     switch (k) {
     case TE_BODY:                               /* (What time did to its body: the referee's words, part 12's; 8 dead
@@ -196,7 +196,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         }
         break;
     case TE_CANT:
-        msg ("There's no stopping part way up: you cling on, and climb.");
+        msg ("There's no stopping part way up: you cling on and climb.");
         break;
     case TE_ENGAGED:                            /* (HOUSE.md's engagement: "The giant rat engages you: you stop
                                                 **   walking."; engaged already, "You're engaged with the giant rat.") */

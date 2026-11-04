@@ -4019,8 +4019,9 @@ void __fastcall__ s_door_work (unsigned char what)
                                                 **   task, a blow at a time as it's free, its first words at once, the
                                                 **   user's: the striker's, a part of it or the thing named) */
     } else if (wk.task) {
-        if (wk.task == LT_PICK && rs_for (RF_PICKS)) {
-            return;                             /* (The lockpicks got out first, the world's steps: lw_m again) */
+        if ((wk.task == LT_PICK || wk.task == LT_KEY) && rs_for (wk.task == LT_KEY ? RF_DOORKEY : RF_PICKS)) {
+            return;                             /* (The lockpicks, the door's key, got out first, the world's steps: lw_m
+                                                **   again) */
         }
         lwork = what;                           /* (The timed work: done as its time's up, work_done) */
         lw_x = px_;

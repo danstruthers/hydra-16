@@ -34,6 +34,7 @@
 #include "world.h"
 #include "work.h"
 #include "things.h"
+#include "wbody.h"
 #include "outfit.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
@@ -101,6 +102,7 @@ void __fastcall__ listed (unsigned n);          /* Part 11 */
 extern const struct kind kinds[];               /* (kinds.c's: in the catalogue's bank) */
 extern const unsigned char throws[];            /* (kinds.c's: a kind's reach, thrown) */
 unsigned char __fastcall__ throw_at (const char* name);    /* Part 88 */
+unsigned door_key (void);                       /* (Part 80's, wport.c: a key that fits, the actor's) */
 
 /* A buffer in the main RAM (the words said, the kit's names, the store kept a piece at a time) */
 static char tbuf[80];
@@ -941,17 +943,18 @@ unsigned char __fastcall__ s_rs_for (unsigned n)
         if (n <= RF_FIRE && n >= RF_DRAW) {
             return rs_draw (n == RF_FIRE);
         }
-        if (n >= RF_PICKS && n <= RF_DIGGERS) {  /* (An intent's tool got out first, the world's own steps, lw_m the intent
+        if ((n >= RF_PICKS && n <= RF_DIGGERS) || n == RF_DOORKEY) {  /* (An intent's tool got out first, the world's own steps, lw_m the intent
                                                 **   asked again as they're done: 1 if a step's begun; 0 out, on with it,
                                                 **   put away and the pack back on after it.  Its keys in the main RAM:
-                                                **   strings here gone as tool_reach's part is copied in) */
+                                                **   strings here gone as tool_reach's part is copied in; the door's key,
+                                                **   by its number: the key that fits, of those carried, 2026-11-04) */
             if (!rs_live) {
                 rs_paid = rs_using = rs_free = 0;
                 rs_pack = 0;
                 hub_map (0);
                 HUB->rs_nout = 0;
             }
-            memcpy (rs_keys, n == RF_PICKS ? "picks\0\0" : dig_key, 9);
+            memcpy (rs_keys, n == RF_DOORKEY ? "\0\0\0\0\0\0\0\0" : n == RF_PICKS ? "picks\0\0" : dig_key, 9);
             hub_map (0);
             if (HUB->pc_lump & (PL_NOSTEPS | PL_TOLD)) {
                 tool_reach (rs_keys);                /* (dq0 -J's: its time owed the next spell) */
@@ -1703,7 +1706,11 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
             return 0;
         }
         if (rs_using) {
-            goto back;                          /* (The tool put away first, the pack after it) */
+            if (item_kind (rs_tool)) {
+                goto back;                      /* (The tool put away first, the pack after it) */
+            }
+            rs_using = 0;                       /* (Used up: the last ration, the last bandage; none to put away) */
+            hub_map (0);
         }
         if (rs_redo) {
             w = rs_after ();
@@ -2149,17 +2156,23 @@ void s_chart_now (void)
 ** less; thrown hard, twice as far, and 10 less), the referee's Throwing test (P_THROW, the band's steps): it lands on
 ** the mark, hit or missed (a miss falls there, by it), or short of it, beyond the extreme band (along the line to it:
 ** squares it sees); out of the thrower's hands.  IR_OK (how it went in the request's qty, TH_*; where it lies in x,
-** y), IR_NONE (none carried), IR_NO (not a thing to throw) */
+** y), IR_NONE (none carried), IR_NO (not a thing to throw).  name 0, body bd's (2026-11-04: FE_THROW, wtake.c's): thing
+** tk_x, at the character; the referee's test by its sheet; its value TH_* (its reach's own, in hand or not: a denizen's
+** reach no steps, the lump's), or IR_NO's TH_SHORT, not a thing to throw, left held */
+extern unsigned tk_x;
 unsigned char __fastcall__ s_throw_at (const char* name)
 {
-    static unsigned char reach, band, d, sn;
-    static unsigned px, py;
+    static unsigned char reach, band, d, sn, who;
+    static unsigned px, py, mx, my;
     static int dx, dy;
     static signed char steps, g;
     struct req* r;
     unsigned n = 0;
 
-    if (*name) {
+    who = name ? 0 : bk + 1;
+    if (who) {
+        n = tk_x;
+    } else if (*name) {
         n = carried_named (name);
     } else {
         while ((n = items (n, IN_FLAGS | IN_ACTOR, I_HELD)) != 0 && !on_pc (n)) {
@@ -2168,56 +2181,72 @@ unsigned char __fastcall__ s_throw_at (const char* name)
     if (!n) {
         return IR_NONE;
     }
-    reach_from (n);                             /* (Got out first: its reach, HOUSE.md's) */
+    if (!who) {
+        reach_from (n);                         /* (Got out first: its reach, HOUSE.md's) */
+    }
     fetch (&rec, n);
     cat_map ();
     reach = throws[rec.kind < KI_COUNT ? rec.kind : 0];
     if (!reach) {
-        return IR_NO;
+        return who ? TH_SHORT : IR_NO;
     }
-    if (reach_step (n, 0)) {
+    if (!who && reach_step (n, 0)) {
         return IR_NO;
     }
     hub_map (0);
-    sn = HUB->pc_stratum;
-    px = HUB->pc_x;
-    py = HUB->pc_y;
-    dx = iq.x - px;
-    dy = iq.y - py;
+    if (who) {
+        sn = bd.sn;
+        px = bd.x;
+        py = bd.y;
+        mx = bpx;
+        my = bpy;
+    } else {
+        sn = HUB->pc_stratum;
+        px = HUB->pc_x;
+        py = HUB->pc_y;
+        mx = iq.x;
+        my = iq.y;
+    }
+    dx = mx - px;
+    dy = my - py;
     d = (dx < 0 ? -dx : dx) > (dy < 0 ? -dy : dy) ? (dx < 0 ? -dx : dx) : (dy < 0 ? -dy : dy);
     steps = 0;
-    if (iq.to & MN_HARD) {
+    if (!who && (iq.to & MN_HARD)) {
         reach <<= 1;
         steps = -2;
     }
     for (band = 0; band < 4 && d > (reach << band); ++band) {
     }
-    iq.qty = TH_SHORT;
+    g = TH_SHORT;
     if (band == 4) {                            /* (Too far: it falls at the extreme band's end, on the line) */
-        iq.x = px + dx * (reach << 3) / d;
-        iq.y = py + dy * (reach << 3) / d;
+        mx = px + dx * (reach << 3) / d;
+        my = py + dy * (reach << 3) / d;
     } else {
         r = &HUB->slot[SLOT_WORLD];
         r->kind = RS_TEST;
-        r->actor = 0;
+        r->actor = who;
         r->a = P_THROW;
         r->b = 0;
         r->steps = steps - 4 * band;            /* (20 less a band: 4 steps of 5) */
         r = hub_ask (SLOT_WORLD);
         g = r->grade;
         r->state = REQ_FREE;
-        iq.qty = G_OK (g) ? TH_HIT : TH_MISS;
+        g = G_OK (g) ? TH_HIT : TH_MISS;
     }
     item_at (n)->where = IW_SQUARE;             /* (Out of its hands: where it falls) */
     item_at (n)->sn = sn;
-    item_at (n)->x = iq.x;
-    item_at (n)->y = iq.y;
+    item_at (n)->x = mx;
+    item_at (n)->y = my;
+    item_at (n)->owner = item_at (n)->hide = 0;
     item_at (n)->flags &= ~(I_HELD | I_WORN);
-    dropped = n;
     hub_map (0);
-    HUB->ireq.qty = iq.qty;
-    HUB->ireq.x = iq.x;
-    HUB->ireq.y = iq.y;
+    if (who) {
+        return g;
+    }
+    dropped = n;
+    HUB->ireq.qty = g;
+    HUB->ireq.x = mx;
+    HUB->ireq.y = my;
     return IR_OK;
 }
 
@@ -2481,9 +2510,19 @@ unsigned char __fastcall__ s_tool_reach (const char* keys)
     const char* k;
     unsigned i = 0;
 
+    if (!*keys) {                               /* (The door's key: the one that fits, part 80's) */
+        if ((i = door_key ()) != 0) {
+            reach_from (i);
+            return reach_step (i, RS_TOOL);
+        }
+        return 0;
+    }
     while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
         for (k = keys; *k; k += strlen (k) + 1) {
             if (!strcmp (kind_at (i)->tool, k) && on_pc (i)) {
+                if (*k == 'w' && item_at (i)->where == IW_ITEM) {
+                    i = item_at (i)->x;         /* (Water: what it's in, the waterskin) */
+                }
                 reach_from (i);
                 return reach_step (i, RS_TOOL);
             }

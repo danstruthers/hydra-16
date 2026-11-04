@@ -32,7 +32,7 @@
 #include "workpart.h"
 
 extern unsigned char burn_ask;                  /* (things.h's) */
-unsigned char door_key (void);                  /* (Part 80's, wport.c: a key that fits it, the actor's) */
+unsigned door_key (void);                       /* (Part 80's, wport.c: a key that fits it, the actor's) */
 
 void s_doors (void)
 {
@@ -114,8 +114,16 @@ found:
                 out = PO_NO_LOCK;
                 break;
             }
-            if (door_key ()) {                  /* (Its key to hand: no test, three seconds, every actor's) */
-                wk.tt += 30;
+            if (door_key ()) {                  /* (Its key: no test, three seconds, every actor's; the character's by a
+                                                **   tool's steps, a timed work: s_door_work's, 2026-11-04) */
+                if (!wk.who) {
+                    if (wk.plan) {
+                        timed (LT_KEY, 30);
+                        return;
+                    }
+                } else {
+                    wk.tt += 30;
+                }
                 out = PO_KEYED;
                 door_state (wk.pq.state & ~PS_LOCKED);
                 break;
@@ -166,9 +174,15 @@ found:
             }
             break;
         case PA_LOCK:                           /* (Locked with its key, shut, every actor's: Phase 3C's) */
-            wk.tt += 30;
             out = !wk.pq.lock || (wk.pq.state & PS_BROKEN) ? PO_NO_LOCK : wk.pq.state & PS_LOCKED ? PO_IS_LOCKED :
                 wk.pq.state & PS_OPEN ? PO_SHUT_FIRST : door_key () ? PO_KEY_LOCKED : PO_NO_KEY;
+            if (wk.who || wk.plan) {
+                if (out == PO_KEY_LOCKED && !wk.who) {
+                    timed (LT_KEY, 30);         /* (As unlocking: a tool's steps) */
+                    return;
+                }
+                wk.tt += 30;
+            }
             if (out == PO_KEY_LOCKED) {
                 door_state (wk.pq.state | PS_LOCKED);
             }

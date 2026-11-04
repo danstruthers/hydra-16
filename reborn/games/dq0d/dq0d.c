@@ -2334,6 +2334,7 @@ unsigned char __fastcall__ s_take_way (unsigned char k)
 {
     unsigned char want = 0, d, idle = k & 0x80;
     unsigned w, x, y;
+#define q ((struct actor*) x)                   /* (x's room: no local more, a runtime part less in the main RAM) */
 
     k &= 7;
     aloot[k] = NOW_T + 4;                       /* (Looked for again in a hundred seconds) */
@@ -2355,6 +2356,32 @@ unsigned char __fastcall__ s_take_way (unsigned char k)
         want |= TW_LOOT;
     }
     w = HUB->dig_t[k];
+    if (w == TW_ATE) {                          /* (It's eaten what it held: fed, and the world told so) */
+        fed (k, 1);
+        want = 0;
+        goto ask;
+    }
+    if (fled[k]) {                              /* (Broken, in flight: what it holds that's no weapon nor light let fall, by
+                                                **   the character's let fall: 2026-11-04, the house's) */
+        im.a = FE_DROP;
+        im.x[0] = im.x[1] = 0xFF;
+        post (I_ROB, k + 1);
+        return 0xFF;
+    }
+    if (!(want & TW_FOOD)) {                    /* (Not hungry, a hungry fellow of its faction beside it: the food it holds
+                                                **   handed over, if it holds any, the world's) */
+        for (d = 0; d < NACTORS; ++d) {
+            x = (unsigned) &HUB->actor[d];
+            if (d != k && q->state && q->faction == a.faction && q->sn == a.sn && apart (q->x - a.x, q->y - a.y) <= 1 &&
+                (unsigned char) (NOW_U - aate[d]) >= W_HUNGRY) {
+                im.a = FE_PASS;
+                im.b = d + 1;
+                im.x[0] = im.x[1] = 0xFF;
+                post (I_ROB, k + 1);
+                break;
+            }
+        }
+    }
     if (!want) {
         return 0xFF;
     }
@@ -2374,6 +2401,8 @@ unsigned char __fastcall__ s_take_way (unsigned char k)
             return d;
         }
     }
+#undef q
+ask:
     im.a = want;
     im.b = 0;
     im.t = 0;
@@ -3302,7 +3331,7 @@ unsigned char __fastcall__ s_draw_on (unsigned char k)
 ** or 0xFE (its wait, wt) */
 unsigned char __fastcall__ s_ally (unsigned char k)
 {
-    unsigned char d = 0xFE, n = 1 + akeep[k], w;
+    unsigned char d = 0xFE, n = 1 + akeep[k], w = 0;
     unsigned x = lsx[k], y = lsy[k], i = afetch[k] & ~FETCH_TRIED;
 
     if (sres[k]) {
@@ -3394,6 +3423,14 @@ unsigned char __fastcall__ s_ally (unsigned char k)
         refy = pcy;
     }
     if (d >= 4) {
+        if (w && a.sn == pcs && (*at (a.sn, a.x, a.y) & T_VIS)) {
+            im.a = FE_THROW;                    /* (The thing brought back, no way nearer, in the character's sight: thrown
+                                                **   over, by the character's throw: the world's, 2026-11-04, the house's) */
+            im.t = i;
+            act (I_ROB, k);
+            afetch[k] = 0;
+            aorder[k] = OR_FOLLOW;
+        }
         wt = 5 + random (10);
         d = 0xFE;
     }

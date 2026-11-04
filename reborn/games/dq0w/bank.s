@@ -25,7 +25,7 @@ SWDEPTH     = 12                    ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
                                     ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
-OVBANKS     = 27                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
+OVBANKS     = 28                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
 
             .bss
 _ovbank:    .res        OVBANKS + 4 ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
@@ -160,13 +160,13 @@ go:
             SWPART      63, 12              ; The character's kit (things.c's, part 13's till 2026-10-28; overlay 21's, 2026-10-29)
             SWPART      64, 21              ; The coins' mints (things.c's, 2026-10-28; overlay 21's, 2026-10-29)
             SWPART      65, 20              ; The missiles: a shot, its line, where it falls (wshoot.c: slice 4.7's)
-            SWPART      66, 16              ; The missiles gathered (wshoot.c; overlay 15's, 2026-10-30)
+            SWPART      66, 23              ; The missiles gathered (wshoot.c; overlay 15's, 2026-10-30)
             SWPART      67, 20              ; The character's shot, the denizens' shots and throws (wshoot.c)
             SWPART      68, 15              ; Where a missile falls, a miss's stray; a launcher loaded (wshoot.c)
             SWPART      69, 26               ; A robbery (wfight.c's: part 67's room, overlay 5's, 2026-10-30; 12's room, 2026-11-02)
             SWPART      70, 25              ; Wounds over time: the bodies' time told, a thing used up (wtend.c; overlay 21's room, slice 4.4)
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
-            SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
+            SWPART      72, 28              ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
             SWPART      73, 1               ; The water: wading, swimming (dq0w.c's: slice 4.9's); the air (2026-10-31)
             SWPART      74, 19              ; A waterskin filled (wwater.c: slice 4.9's)
             SWPART      75, 4               ; The water's depth where the character stands (wwater.c)
@@ -176,7 +176,7 @@ go:
                                             ;   2026-10-31, its room the walk's)
             SWPART      79, 24              ; A tunneller's dig (wdig.c: slice 4.11's, 2026-11-01)
             SWPART      80, 24              ; One path: a denizen's doors, the doors' keys (wport.c: Phase 3C's)
-            SWPART      81, 23               ; One path: the take rule, a denizen's take (wtake.c: Phase 3C's)
+            SWPART      81, 28               ; One path: the take rule, a denizen's take (wtake.c: Phase 3C's)
             SWPART      82, 25              ; A room searched whole (wroom.inc: the user's playtest, 2026-11-02)
             SWPART      83, 25              ; Its tests at a stop (wroom.c)
             SWPART      84, 10              ; The character's dig's own: told why, a hidden door, nothing to show (2026-11-02)

@@ -166,6 +166,7 @@ static void let_go (void)
     if (qlen > qafter) {
         memmove (queue, queue + (qlen - qafter), qafter);
         qlen = qafter;
+        held |= 2;                              /* (The next line's parse, posted, with it: main's) */
     }
     lnp = 0;
 }
@@ -179,11 +180,15 @@ static void __fastcall__ q_put (const char* s, unsigned char n)
 
 /* The line typed (inl) queued for t_line, a line for each of its parts.  0: no room (the line stays on the line
 ** typed, and Enter must be pressed again) */
-unsigned char o_parts_in (void)
+static unsigned char __fastcall__ parts_op (unsigned char op);
+unsigned char __fastcall__ o_parts_in (unsigned char op)
 {
     static unsigned qwas = 0;
     static unsigned char own = 0, j = 0, t = 0;
 
+    if (op) {
+        return parts_op (op);
+    }
     parts ();
     a = qlen > qafter;                          /* (A list's parts still to come) */
     if (a && np && pn[0] == 4 && !strnicmp (inl + pa[0], "stop", 4)) {
@@ -252,10 +257,10 @@ unsigned char o_parts_in (void)
     return 1;
 }
 
-/* A list's matters: PO_STOP, the long task stopped, or asked about: the rest of its line let go.  PO_AGAIN, the command cl
+/* A list's matters (parts_in's): PO_STOP, the long task stopped, or asked about: the rest of its line let go.  PO_AGAIN, the command cl
 ** has no verb, and no way in it ("rope"): a list's later part (after "and", or a comma) has the verb of the part before it
 ** put to it, back in the queue: 1 (nothing to say) */
-unsigned char __fastcall__ o_parts_op (unsigned char op)
+static unsigned char __fastcall__ parts_op (unsigned char op)
 {
     static unsigned d = 0;
     static unsigned char n = 0, m = 0;

@@ -248,10 +248,13 @@ void __fastcall__ unknown (unsigned char f);    /* Overlay 1: a verb the game do
                                                 **   (f 1), said back from the command's line (cl) */
 extern const char* cl;                          /* The command's line (main.c's) */
 unsigned char __fastcall__ qual_ok (const char* name, const char* w);   /* Overlay 1: the word said before w fits name */
-unsigned char __fastcall__ parts_op (unsigned char op);    /* Overlay 6 (parts.c's): a list's matters */
-#define PO_STOP     0                           /*   The long task stopped: the rest of its line let go */
-#define PO_AGAIN    1                           /*   The command has no verb: the list's verb put to it, back in the queue: 1 */
-unsigned char parts_in (void);                  /* Overlay 6 (parts.c's): the line typed queued in its parts, 0 no room */
+unsigned char __fastcall__ parts_in (unsigned char op);    /* Overlay 6 (parts.c's): the line typed queued in its
+                                                **   parts, 0 no room (PO_LINE); */
+#define PO_LINE     0
+#define PO_STOP     1                           /*   the long task stopped: the rest of its line let go; */
+#define PO_AGAIN    2                           /*   the command has no verb: the list's verb put to it, back in the queue: 1 */
+extern unsigned char held;                      /* (main.c's: the next line held for the character; | 2, that line let go: its
+                                                **   parse with it) */
 #define QMAX        256                         /* The lines typed ahead (term.c's queue, qlen) */
 extern char queue[QMAX];
 extern unsigned qlen;
@@ -260,7 +263,7 @@ void __fastcall__ sway_words (const struct sway* s);   /* Overlay 6: the charact
                                                 **   denizens' task's answer (the hub's sway, copied), into lb */
 void __fastcall__ dig_words (unsigned char how, unsigned char feet);   /* Overlay 1: digging's, how it goes */
 unsigned char __fastcall__ task_words (unsigned w, unsigned char named);   /* Overlay 3: a long task's (task.c) */
-void __fastcall__ shot_words (unsigned w, unsigned char named);   /* Overlay 15: the missiles' (shots.c: slice 4.7's) */
+void __fastcall__ shot_words (unsigned w, unsigned char named);   /* Overlay 1: the missiles' (shots.c: slice 4.7's) */
 void __fastcall__ beat_words (unsigned w);
 void __fastcall__ felt_words (unsigned w);      /* (Overlay 7's) A walk in the dark's beat (task.c's) */
 unsigned __fastcall__ dnum (const char* s);     /* (main.c's) A number, a word's (atoi's) */
@@ -393,7 +396,7 @@ unsigned char __fastcall__ den_seen (unsigned x, unsigned y);   /* Part 8: an ac
 unsigned char __fastcall__ actor_seen (unsigned char b);        /* Part 8: an event's actor seen (b: 0 the character) */                /* Part 8: the character's place in the room, and the room's size */
 unsigned char __fastcall__ lie_words (unsigned char i);   /* Part 8: a thing's place in the room (its sight_copy's) */
 unsigned char reach_go (void);
-unsigned char bandage_out (void);               /* Part 19: a bandage got out, a tool's steps */
+unsigned char __fastcall__ tool_out (unsigned char which);    /* Part 19: a thing got out for its use (0 a bandage, 1 food, 2 water), a tool's steps */
 extern unsigned char nap, what_hi, take_more, nosteps;    /* (main.c's) */
 void step_go (void);                            /* Part 19: a step of the reach begun by the world (IO_STEP's) */
 void __fastcall__ reach_said (unsigned w, unsigned char named);   /* Part 19: the reach's words */

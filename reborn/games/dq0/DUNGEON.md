@@ -1470,7 +1470,11 @@ into the world's intents; a mind posts the intents itself (DECISIONS.md's table,
   character's pack or hands, its grope while engaged: things.c's get, the same tests; a denizen's hands, two things,
   or its mouth, one, and what it lifts: HOUSE.md's).  A denizen's mind posts the character's own I_TAKE (a its wants,
   TW_*: DENIZENS.md's things taken), an ally's errand takes by the rule too, and a weapon taken is in its hand as its
-  own let fall is taken up again (wlimbs.c's den_took: the referee told).
+  own let fall is taken up again (wlimbs.c's den_took: the referee told).  And the rest (2026-11-04, wtake.c, part 81: I_ROB's
+  FE_DROP, FE_PASS, FE_THROW, its t the thing, DENIZENS.md's things handled): let fall where it stands, by the character's
+  let fall (no time, a shaft's head takes it); given, the taker's own hands as the take rule's; thrown at a mark by the
+  character's throw itself (things.c's s_throw_at, its name 0: its reach, its bands, the referee's Throwing of the actor's
+  sheet); a throw at an actor one code already (wshoot.c).  A mind names the thing by its record or says "what it holds".
 
 ## Still to come
 
@@ -1593,8 +1597,8 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
 - **Powers** (Phase 5): wards and magical locks, things and doors hidden by magic found by magical means, magical
   light.
 - **One path for every actor** (Phase 3C, begun 2026-11-02: below; a denizen's portcullises and a robber's lock
-  picking built 2026-11-02, DENIZENS.md's): left, a denizen working windows, an ally asked to open a door ("ask the dwarf to open the door"), a denizen eating the
-  food it takes up, its lift by its size, the things' put down, given and thrown by the minds as the character's are.
+  picking built 2026-11-02, DENIZENS.md's): left, a denizen working windows, its lift by its size, an ally told to put a thing down or give it to another (the order's words: overlay 15 has no room), one throwing at a mark but the character.  Things put down, given and thrown, and food eaten, built 2026-11-04: above.
+  The choosers stay two (2026-11-04, looked at and not merged: choose.c, resolve.c and things.c's pick choose by the player's words, among what's seen and carried, asking which; a mind chooses by what it wants, TW_*, or by a record it was told; the user's own table has it, "a mind names things by their squares and their records, not by words": the take rule's what they share, and it's shared).
 - **The character carries on** (slice 4.4, built 2026-11-02: above): left, the denizens'
   weapons' versions (the outfits' gear's), a thing's wear and fuel carried as they were.
 - **The market** (built in part 2026-11-02: HOUSE.md's the market, entertaining and remedies; DENIZENS.md's trading):

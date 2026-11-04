@@ -65,7 +65,7 @@ unsigned char busy = 1;                         /* The character's doing somethi
 unsigned char nap = 40;                         /* (main's nap with nothing doing, ticks: o_dots's, a fiftieth once it's started) */
 unsigned char starting;                         /* The game's starting: its progress shown (dots: hub.c's waits,
                                                 **   main's loop), till the character's first ready */
-static unsigned char held;                      /* (A line typed as it's busy, held till it's free; */
+unsigned char held;                             /* (A line typed as it's busy, held till it's free; */
 static unsigned char took;                      /*   and the fight it was in stopped for it, once) */
 static unsigned place;                          /* Where this task is in the world's events */
 static int task_[NTASKS];                       /* Each task's number, as it was started (0: not) */
@@ -391,7 +391,7 @@ static void load_pc (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    37                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    38                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -1234,6 +1234,12 @@ static void __fastcall__ limb_words (const struct msg* m)
         return;
     }
     hub_mem (KIND_BANK, kn, CATALOGUE[m->w1 >> 8].name, sizeof kn);
+    if (k >= WB_EATS - WB_DROP) {
+        sayf (k == WB_EATS - WB_DROP ? "\nThe %s eats its %s." : k == WB_HANDS - WB_DROP ? "\nThe %s hands its %s to its fellow." :
+            k == WB_THREW - WB_DROP ? "\nThe %s throws you its %s." : "\nThe %s throws you its %s; it falls short.",
+            HUB->actor[(m->b - 1) & 7].name, kn);
+        return;
+    }
     if (k == WB_BROKE - WB_DROP) {
         sayf (m->b ? "\nThe %s's %s breaks!" : "\nYour %s breaks!", m->b ? HUB->actor[(m->b - 1) & 7].name : kn, kn);
         return;
@@ -1415,7 +1421,11 @@ unsigned char s_hold_first (void)
 
     HUB->ireq.into[0] = 0;
     HUB->ireq.to = shand;
-    r = things (IO_HOLD, hold_w);
+    r = things (IO_HOLD | IO_STEPS, hold_w);
+    if (HUB->ireq.kind == IO_STEP) {
+        return 0;                               /* (A step of the reach first, HOUSE.md's: the blow asked again after it, hold_w
+                                                **   still said; 2026-11-04) */
+    }
     t = HUB->ireq.x;
     hold_w[0] = 0;
     if (r == IR_OK) {
@@ -2118,7 +2128,7 @@ void __fastcall__ s_command (char* l)
     d = choose (&cmd);                          /* (A choice asked for: this line's, the command again; a fixture's, */
     d |= answer (d);                            /*   or a thing's) */
     tx = 0;
-    if (!d && parts_op (PO_AGAIN)) {
+    if (!d && parts_in (PO_AGAIN)) {
         return;                                 /* (A list's later part, a thing alone: "take rope and torch") */
     }
     if (!d && (unsigned char) (cmd.action - VB_MOVE_DIRECTION) < 2 && cmd.how && cmd.how != HOW_ACROSS &&
@@ -2469,11 +2479,13 @@ void s_step_go (void)
     }
 }
 
-/* A bandage got out for its use (first aid's, tend.c's: a tool's steps, the things'): 1 if a step's begun first, the
-** command asked again as it's up */
-unsigned char s_bandage_out (void)
+/* A thing got out for its use (a bandage, first aid's, tend.c's; a meal, a drink, feed.c's: a tool's steps, the things'):
+** 1 if a step's begun first, the command asked again as it's up */
+unsigned char __fastcall__ s_tool_out (unsigned char which)
 {
-    return things (IO_USE | IO_STEPS, "bandage") != IR_OK;
+    static const char* const keys[3] = { "bandage", "food", "water" };   /* (Here: a caller's part isn't in, this one copied over it) */
+
+    return things (IO_USE | IO_STEPS, keys[which]) != IR_OK;
 }
 
 /* The reach's words (task.c's: w an E_TASK's, TE_BEGUN with a step's kind; TE_PACKED, TE_FUMBLE; named its thing's kind):
@@ -2883,6 +2895,10 @@ int main (int argc, char* argv[])
             hub_map (0);
             HUB->ui_giving = 0;
             hub_ring (T_WORLD);
+        }
+        if (held & 2) {
+            held = 0;                           /* (That line let go, parts.c's: its parse with it) */
+            cq_drop ();
         }
         if ((l = (char*) t_next ()) != 0 && (!busy || !held)) {
             cq_post (l);                        /* (The command parser at work on it meanwhile) */

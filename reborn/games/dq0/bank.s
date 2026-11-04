@@ -89,7 +89,6 @@ ovl_out:
             OVFN        unknown, 1
             OVFN        qual_ok, 1
             OVFN        parts_in, 6
-            OVFN        parts_op, 6
             OVFN        alias_said, 4
             OVFN        sway_words, 15
             OVFN        walk_says, 17       ; (A walk's first words: sway.c's, no part's swap, the user's D17)
@@ -125,7 +124,7 @@ ovl_out:
             OVFN        taken_next, 11
             OVFN        throw_words, 10
             OVFN        fixt_words, 4
-            OVFN        shot_words, 15      ; (The missiles' words: shots.c, slice 4.7's, overlay 15)
+            OVFN        shot_words, 1       ; (The missiles' words: shots.c, slice 4.7's, overlay 15)
             OVFN        trap_words, 10
             OVFN        trap_name, 10
             OVFN        den_way, 4
@@ -220,7 +219,7 @@ ovl_out:
             SWFN        args, 7
             SWFN        reach_go, 13
             SWFN        step_go, 19
-            SWFN        bandage_out, 19
+            SWFN        tool_out, 19
             SWFN        find_banks, 19
             SWFN        reach_said, 19
             SWFN        door_go, 13         ; (A door round a bend walked up to first: main.c, 2026-11-03)
