@@ -10,6 +10,7 @@
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
+SWFAST      = 1                     ; (The parts copied four pages a pass: the swap study's, a fifth of the task's copies)
 
             .zeropage
 ova:        .res        1           ; (.A and .X kept through a stub)

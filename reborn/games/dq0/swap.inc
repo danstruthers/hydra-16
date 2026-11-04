@@ -51,18 +51,23 @@ swload:
             lda         BANKREG
             pha
 .ifdef SWMANY
-            lda         #<(swtab - 5)       ; (Its record, swtab's .Y - 1 times 5 on, into swrec: 16 bits)
-            sta         @rec + 1
-            lda         #>(swtab - 5)
-            sta         @rec + 2
-@next:      lda         @rec + 1
+            sty         tmp1                ; (Its record, into swrec: swtab - 5 + .Y times 5, 16 bits)
+            stz         @rec + 2
+            tya
+            asl         a
+            rol         @rec + 2
+            asl         a
+            rol         @rec + 2
             clc
-            adc         #5
-            sta         @rec + 1
+            adc         tmp1
             bcc         :+
             inc         @rec + 2
-:           dey
-            bne         @next
+            clc
+:           adc         #<(swtab - 5)
+            sta         @rec + 1
+            lda         @rec + 2
+            adc         #>(swtab - 5)
+            sta         @rec + 2
             ldy         #4
 @rec:       lda         $FFFF,y
             sta         swrec,y
