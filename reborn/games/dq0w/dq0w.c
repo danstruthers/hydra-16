@@ -6597,7 +6597,7 @@ static unsigned char turns_run (void)
     }
     if (!HUB->quit && (HUB->ui_eq != (unsigned char) HUB->eq_head || HUB->ui_dq != (unsigned char) HUB->dq_head)) {
         if (!ui_t) {
-            ui_t = (hy_ticks () - 1) | 1;       /* (Events the UI hasn't seen to yet: what it does about them, a question
+            ui_t = hy_ticks () | 1;             /* (Events the UI hasn't seen to yet: what it does about them, a question
                                                 **   of a sound, a senseless wait, at this moment of the game whatever the
                                                 **   tasks' timing, 2026-11-04.  A stuck task's let go by, as a turn's) */
         }
