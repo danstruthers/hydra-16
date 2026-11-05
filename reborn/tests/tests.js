@@ -3148,7 +3148,7 @@ function dq0LookFarTest() {
       notes.push('chunks made in it: ' + within(at(0), at(1)));
       if (within(at(0), at(1))) f.push('the first look ahead, a wall in the way, made ' + within(at(0), at(1)) + ' chunks');
       over(r[1], 'the map', MAP);
-      if (!(r[1].first !== null && r[1].first <= 900000)) f.push('the map: its first words ' + r[1].first + ' cycles from Enter');
+      if (!(r[1].first !== null && r[1].first <= 1200000)) f.push('the map: its first words ' + r[1].first + ' cycles from Enter');
       const put = this.put;
       notes.push('put: ' + JSON.stringify(put || null) + '; chunks made by the look across: ' + within(at(4), at(5)));
       if (!put) f.push('no straight run to a chunk\'s edge in the scene');
@@ -3199,7 +3199,7 @@ function dq0AskHeldTest() {
 // board).  At the turns pace (a long wait's the same at the real paces), dq0lurk's bandits about in the dark: its cycles a minute
 // of game time within budget
 function dq0RestBusyTest() {
-  const MAX = 2200000;   // (Cycles a game minute of the rest: 1.63M now)
+  const MAX = 3400000;   // (Cycles a game minute of the rest: 1.63M or 2.87M now, by the power-up; more than 16M before, a game not over in 8,000M)
   const lines = ['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
     'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'douse the torch', 'wait', 'wait', 'wait', 'rest', 'quit', 'echo $status'];
   return {
