@@ -3083,7 +3083,8 @@ int main (int argc, char* argv[])
             cq_post (t_next ());                /* (The command parser at work on it at once, while the events and
                                                 **   the status line are seen to: not after them, 2026-10-30) */
         }
-        HUB->ui_keys = inn;                     /* (Keys still on the line typed, its Enter's ui_cmd now, or none) */
+        HUB->ui_keys = inn || t_next ();        /* (Keys still on the line typed, or a line entered held for the
+                                                **   character, its first word still to come; else its Enter's ui_cmd now, or none) */
         k = events ();
         heard ();
         if (starting) {
