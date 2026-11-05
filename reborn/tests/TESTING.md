@@ -80,6 +80,13 @@ blows, the foes felled and the deaths, and fails a run with too few (until 2026-
 lines the same).  `-life` plays dungeons in sequence in one save's folder, through dq0life and dq0acct: death, leaving, solving, quitting
 and going on, hard mode, the time between's questions answered at random, the record judged after each game.
 
+A soak's machine powers up the same each run (`-power N`, 1 by default), so one tree's seed plays the same game every time and its
+failure can be chased; until 2026-11-04 its RAM was random, the tasks' timings other each run, so other words at the player's prompts,
+so other commands.  A change to any code still shifts a seed's game: the player reads the words as they fall.  `-same` plays each game
+again with its commands and scenes as they were, on a machine powered up otherwise, and fails unless the world's events, the denizens'
+and the replies are the same (the turns pace's rule, dq0turnsame's, for every game the soak plays; rest paid in other slices, the same
+in all, allowed).
+
 ## Keeping it safe
 
 The selector errs on the side of running more. The lead's whole run each round catches anything the selector

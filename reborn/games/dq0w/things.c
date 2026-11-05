@@ -688,6 +688,7 @@ enum { RS_OFF = 1, RS_IN, RS_ON, RS_DROP, RS_TRY, RS_OUT, RS_LIGHT, RS_STOW, RS_
 #define rs_down         lw_y                    /* (Things it set down: taken up again after) */
 #define rs_down2        far_x
 unsigned char rs_redo;                          /* (A redip's, RR_*: its end's steps) */
+static unsigned char rs_two;                    /* (The two it set down alike) */
 enum { RR_ON = 1, RR_STOW = 2, RR_RELIGHT = 4, RR_D1 = 8, RR_D2 = 16, RR_DIP = 32, RR_TWO = 64, RR_NEW = 128 };   /* (RR_D*: rs_down, rs_down2 in use) */
 
 /* The containers a reach comes to, out from c (level_of's rule, its own copy: open to the hand, none; a pack on the back,
@@ -1304,8 +1305,13 @@ static unsigned char __fastcall__ rs_set_down (unsigned i)
     if (rs_redo & RR_D1) {
         rs_down2 = i;
         rs_redo |= RR_ON | RR_D2;
+        if (rs_what == item_kind (rs_down)) {
+            rs_k = LT_DOWN2;                    /* (The other of two alike: its words not the first's again) */
+            rs_two = 1;
+        }
     } else {
         rs_down = i;
+        rs_two = 0;
         rs_redo |= RR_ON | RR_D1;
     }
     return rs_go ();
@@ -1556,7 +1562,8 @@ static unsigned char rs_after (void)
         rs_c = i;
         rs_do = RS_UP;
         rs_what = item_kind (i);
-        rs_k = rs_redo & RR_TWO && rs_what == item_kind (rs_old) ? LT_TAKENEW : LT_TAKEUP;
+        rs_k = rs_two && !(rs_redo & RR_D1) ? LT_UP2 :   /* (The other of two alike) */
+            rs_redo & RR_TWO && rs_what == item_kind (rs_old) ? LT_TAKENEW : LT_TAKEUP;
         rs_t = 10;
         return 1;
     }

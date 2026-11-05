@@ -42,7 +42,7 @@ static void __fastcall__ who (const char* n, unsigned char cap)
 }
 
 /* A strike's words (its line: a wound, "a ..."; or the armour that stopped it, "your ...", "its ..."; or none: no
-** harm) after what led to it: ": a serious cut ...", ", but your leather tunic turns the blow", ", but does no harm"
+** harm) after what led to it: ": a serious cut ...", ", but the blow glances off your leather tunic", ", but does no harm"
 ** (by the striker: the character's "do") */
 /* A creature's getting up in a fight (the book's Rise), by its body (hub.h's BD_*, the actor's: kinds.txt's); its fall
 ** told after the blow, the world's (E_BEAT's WB_FALLEN: main.c's limb_words, every fall, 2026-10-30) */
@@ -64,9 +64,8 @@ static void __fastcall__ struck (unsigned char n, unsigned char you)
         add (": ");
         add (l);
     } else if (*l) {
-        add (", but ");
+        add (", but the blow glances off ");    /* (Whatever its number: "your clothes", 2026-11-04) */
         add (l);
-        add (" turns the blow");
     } else {
         add (you ? ", but do no harm" : ", but does no harm");
     }
@@ -147,7 +146,7 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
     }
     if (f->which & FW_STRAY) {                  /* (A miss's stray at one beside the mark, after the miss's words:
                                                 **   "Your shot strikes the bandit instead: a minor ...", "Its dagger
-                                                **   strikes you instead, but your mail hauberk turns the blow",
+                                                **   strikes you instead, but the blow glances off your mail hauberk",
                                                 **   2026-10-30) */
         add (pc ? "Your " : "Its ");
         add (f->which & FW_THROWN ? aw : "shot");

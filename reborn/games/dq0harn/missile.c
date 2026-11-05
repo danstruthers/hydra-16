@@ -218,7 +218,7 @@ unsigned o_shot (void)
         R->result = O_HIT;
         loc = harn_strike_location (z);
         if ((f & (MS_COVER >> 8)) && HARN_LOC (loc) > HARN_NECK) {
-            strcpy (line[0], "the stone");      /* (Behind cover: "..., but the stone turns the blow") */
+            strcpy (line[0], "the stone");      /* (Behind cover: "..., but the blow glances off the stone") */
             R->c |= AF_STOPPED;
             break;
         }

@@ -115,6 +115,10 @@ by a request or an intent.
   command's done) or an intent of it waits in its ring: a command of several intents (a
   throw's taking in hand, then the throw) is taken whole first (2026-10-31: dq0cmd's rats fought otherwise as the start's timing moved; dq0turnsame
   plays a fight twice, its commands typed late the second time, and finds them the same).
+  Nor while the UI hasn't yet told the events and done what it does about them (the hub's ui_eq and ui_dq, a pass of its loop's end: a question
+  asked of a sound, a senseless wait waited out), and the character's told free only after the denizens have had their turn at what's told, so a
+  line typed at once finds what a line typed late does (2026-11-04: the life soak's `-same`, every game played again on a machine powered up
+  otherwise, the same events, the same replies).
 - **The senses** (dq0p) answer for every actor, and own every actor's memory of what it has perceived: what the
   character sees (the look, as the world asks: the hub's look) and what each denizen senses (the denizens ask, for
   their minds, as one decides: the hub's dsense), by the layers below (perception as layers); the squares the

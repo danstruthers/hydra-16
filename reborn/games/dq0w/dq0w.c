@@ -4743,8 +4743,8 @@ void __fastcall__ s_task_word (const struct msg* m)
     hub_map (0);
     k = HUB->pc_task.kind;
     if (m->kind == I_ASK) {                     /* (A sound the UI heard: asked, if there's a task going; a fight only
-                                                **   its own, badly hurt, part 24's) */
-        if (k && !HUB->pc_task.asking && (k != LT_FIGHT || m->w1 == TE_ASK_HURT)) {
+                                                **   its own, badly hurt or tiring, part 24's) */
+        if (k && !HUB->pc_task.asking && (k != LT_FIGHT || m->w1 != TE_ASK_HEARD)) {
             ask ((unsigned char) m->w1);
         }
         return;
@@ -6583,12 +6583,29 @@ static unsigned slice (void)
 
 static unsigned char turns_run (void)
 {
+    static unsigned ui_t;
     unsigned long d;
     unsigned s;
 
-    if (HUB->tpr || HUB->paused || HUB->hold || HUB->ui_giving || HUB->iq_head != HUB->iq_tail) {
+    if (HUB->tpr || HUB->paused || HUB->hold || HUB->ui_giving || HUB->iq_head != HUB->iq_tail ||
+        ((unsigned char) HUB->pcsum.cond & C_DEAD)) {
         return 0;                               /* (A command being given, or an intent of it not taken yet: no turn,
-                                                **   the clock where it is, ui_giving's, 2026-10-31) */
+                                                **   the clock where it is, ui_giving's, 2026-10-31; dead, no more of
+                                                **   them either, the game's end its words') */
+    }
+    if (!HUB->quit && (HUB->ui_eq != (unsigned char) HUB->eq_head || HUB->ui_dq != (unsigned char) HUB->dq_head)) {
+        if (!ui_t) {
+            ui_t = hy_ticks () | 1;             /* (Events the UI hasn't seen to yet: what it does about them, a question
+                                                **   of a sound, a senseless wait, at this moment of the game whatever the
+                                                **   tasks' timing, 2026-11-04.  A stuck task's let go by, as a turn's) */
+        }
+        if ((unsigned) (hy_ticks () - ui_t) < TURN_WAIT) {
+            hub_ring (T_UI);
+            hub_sleep (1);
+            return 1;
+        }
+    } else {
+        ui_t = 0;
     }
     if (HUB->eq_head != go_eq) {
         turn ();                                /* (Its own work told: the denizens' turn at it, at this clock) */
@@ -6887,7 +6904,21 @@ int main (int argc, char* argv[])
                 see (0);
             } else if (!took) {
                 HUB->pc_task.kind = LT_NONE;    /* (Its long task over) */
+                if (!HUB->tpr && !HUB->paused && !HUB->hold && HUB->eq_head != go_eq) {
+                    turn ();                    /* (The turns pace: the denizens' turn at what's told first, as its
+                                                **   line may come at once: a line typed fast finding them where a slow
+                                                **   one doesn't, 2026-11-04, the life soak's) */
+                    if ((fwant & 1) || HUB->pc_ready > HUB->now) {
+                        was_busy = 1;           /* (Struck in it: not free yet, fought on or not, then told) */
+                        continue;
+                    }
+                }
+                took = HUB->eq_head == go_eq;
                 event (E_READY, 0, 0);          /* (The character free again: the UI takes its next line) */
+                if (took) {
+                    go_eq = HUB->eq_head;       /* (Its word alone: no turn for it) */
+                }
+                took = 0;
             }
             was_busy = took == 2;
         }

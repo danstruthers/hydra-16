@@ -2172,12 +2172,13 @@ static unsigned char __fastcall__ decide (unsigned char k)
         im.b = 2;
         act (I_GOTO, k);
     } else if (d == 0xFA || d == 0xFC) {        /* (A round's blow, or a shot: outnumbering it, later) */
-        if (was != DO_FIGHT) {
+        w = fled[k];                            /* (Fleeing and cornered: at bay, it fights, its courage not asked again) */
+        if (was != DO_FIGHT && !w) {
             heart (k);                          /* (Its heart as it engages: the field about it, its bonds; a beast's a
                                                 **   foe's might and its fellows' falls; part 6's.  Its courage tested on
                                                 **   it, the user's, 2026-11-03: broken, no blow) */
         }
-        if (!fled[k]) {
+        if (w || !fled[k]) {
             a.doing = DO_FIGHT;
             im.a = 0;
             im.b = d == 0xFA ? Z_MID | AIM_SHOT : Z_MID;
@@ -2187,6 +2188,10 @@ static unsigned char __fastcall__ decide (unsigned char k)
         im.w1 = POS_STANDING;                   /* (Lying, and up to something else that isn't a step nor a blow (they
                                                 **   get it up as theirs): up first, the world's Rise, 2026-11-02) */
         act (I_RISE, k);
+    }
+    if (!wt && !stirs) {
+        wt = 10;                                /* (Nothing said, and no wait: a moment, never decided again at once, no time
+                                                **   gone: a broken one's no blow, above; 2026-11-04) */
     }
     if (wt) {
         im.w1 = wt;

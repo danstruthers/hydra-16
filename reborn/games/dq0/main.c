@@ -1069,11 +1069,13 @@ static unsigned char events (void)          /* (How many there were) */
         case E_VIEW:
             if (m.who == 0) {
                 if (m.w1 == V_STIR) {
-                    if ((t_next () || inn || HUB->ui_cmd) && HUB->tpr) {
+                    if ((t_next () || inn || HUB->ui_cmd) && (HUB->tpr || !busy)) {
                         stirs = 1;              /* (A line typed or its answer owed, at the real paces: told after its answer, main's,
                                                 **   the background's news not in its way, 2026-10-30; or one being
                                                 **   typed: told as it's entered and answered, or let go, its echo
-                                                **   and its Enter not behind the stir's words) */
+                                                **   and its Enter not behind the stir's words.  At the turns pace a line
+                                                **   typed or being typed, or just taken, nothing going: its answer's own, so what it says isn't told twice,
+                                                **   the stir's words after its echo and its look after them: 2026-11-04) */
                     } else {
                         stir ();                /* (A denizen it sees moved) */
                     }
@@ -2701,7 +2703,7 @@ unsigned char __fastcall__ s_tool_out (unsigned char which)
 ** the step's first words; the pack left off, stopped part way; the world's own step's grope failed */
 void __fastcall__ s_reach_said (unsigned w, unsigned char named)
 {
-    static const char* const first[LT_INPACK2 - LT_PACKOFF + 1] = {
+    static const char* const first[LT_UP2 - LT_PACKOFF + 1] = {
         "\nYou take off your %s.", "\nYou take off your %s, and set it down at your feet.", "\nYou reach into the %s.",
         "\nYou hold the %s open.", "\nYou get out the %s.", "\nYou put your %s back on.", "\nYou let the %s fall.",
         "\nYou let the %s fall, still burning.", "\nYou put away the %s.", "\nYou blow out the %s.",
@@ -2711,7 +2713,8 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
         "\nYou blow out the old %s.", "\nYou light the new %s from the burning one.", "\nYou set to dipping the old %s.",
         "\nYou let the old %s fall.", "\nYou sheathe the %s.", "\nYou sling the %s.", "\nYou set the %s in the sconce.",
         "\nYou lay the %s on the ground, still burning.", "\nYou put the %s in your pack.",
-        "\nYou lay the %s down too, still lit.", "\nYou put the %s in your pack too."
+        "\nYou lay the %s down too, still lit.", "\nYou put the %s in your pack too.",
+        "\nYou set the other %s down.", "\nYou take up the other %s."
     };
     char t[sizeof CATALOGUE[0].name];
 
@@ -3093,7 +3096,12 @@ int main (int argc, char* argv[])
             status ();
         }
         if (!busy && (rebar || pending[0])) {
+            HUB->ui_giving = 1;                 /* (Being given, as a line's command: "take all"'s next thing's two
+                                                **   intents falling with the clock moved between them or not, 2026-11-04) */
             when_free ();                       /* (A door barred, a thing lifted out: part 14's) */
+            hub_map (0);
+            HUB->ui_giving = 0;
+            hub_ring (T_WORLD);
         }
         if (!busy && (reach & 1)) {
             ++reach;                            /* (Walked over to its thing, or its timed work's time up: the command
@@ -3201,6 +3209,8 @@ int main (int argc, char* argv[])
                                                 **   answer begun, ui_cmd's) */
         }
         t_done ();
+        HUB->ui_eq = (unsigned char) place;     /* (All it does about the events done: the turns pace on, the world's turns_run) */
+        HUB->ui_dq = (unsigned char) dplace;
         fore_sync ();                           /* (In the foreground or out, as a command's in hand or not) */
         hub_nap (t_wrote && t_haskey () ? 0 : quick ? (--quick, 1) : nap);  /* (Keys that came as it said something,
                                                 **   a line typed as an answer or a look went out: no nap, taken at

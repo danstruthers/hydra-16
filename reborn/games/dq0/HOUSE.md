@@ -565,7 +565,7 @@ course, first aid and healing (Wounds over time); courage in a fight (Morale).
   fatigue, a level each five minutes of active combat): each round it fights charged so, whatever it does in it (a
   blow, a struggle up from the ground), and a pass while it's engaged too (2026-10-31, for the user's review: the
   book's variant counts every round of active combat, and a pass defends as it's attacked; a disengage's square is
-  its walk's, at that pace); a level more asked as a hurt is ("You're tiring.  Keep fighting?").  A missile weapon's the same
+  its walk's, at that pace); a level more asked as a hurt is ("You're tiring.  Keep fighting?"), at every pace (2026-11-04: the turns pace's was turned away, so a fight there asked nothing, however long).  A missile weapon's the same
   task (Missiles, below).  To come, the same task: a setting widening where melee's begins ("autoengage with sword at close range"),
   an ally's.  (dq0w.c's part 24.)
 - **Disengaging, the book's** (the user's, 2026-10-21: "try to have it follow the book"; Combat 7): an engaged
@@ -1680,7 +1680,9 @@ hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous li
   a test to the GM: the house takes it, Agility times 5); and the house's, with no good arm (the user's, 2026-10-22:
   "getting up with no good arms ... should probably require an agility check"), the same test four steps the harder;
   failed, the round's spent, still down ("You struggle, but can't get up.").  No good leg, it can't ("Your legs won't
-  bear you.").  The hub's pc_pos is the character's position (POS_PRONE; crouching, kneeling and sitting are slice
+  bear you."): in a fight its round goes on finding that out, the fight's over and the prompt back, no blow ever to come
+  from the ground *(new, for review, 2026-11-04: it struggled on each round before, for ever if nothing killed it; struck
+  again, it's fought on again, a round, and stops again; a crawl or a throw the player's to say)*.  The hub's pc_pos is the character's position (POS_PRONE; crouching, kneeling and sitting are slice
   4.6's).  (dq0w.c's part 50, rise_pc, limbs_go; in a fight the referee's, fight.c's attack, O_RISE; gear.c's
   rise_of, P_RISE's.)
 - **The denizens' limbs are the character's** *(every actor's)*: a creature's weapon fumbled (the melee table's
@@ -2782,7 +2784,7 @@ one may be (no standing updates: the 65C02's time).  *(Every number here is for 
   The null ruleset's stays 10.
 - **A test on first facing it** *(the user's, 2026-11-03: A14; new, for review: its worth once played)*: besides a wound and a fellow's fall, one more test of
   courage as a creature comes to strike or shoot at the character not already fighting it (a beast's too; not the mindless; once each time it
-  engages), its heart the steps: broken, or shaken if it's a shy kind, it flees with no blow struck; so a weak band can break before a blow.  (RS_MORALE's MR_FACED.  dq0 -I, the tests' with no engage initiative test, has none of it, nor a weapon broken: their games as they were; the soak plays them.)
+  engages), its heart the steps: broken, or shaken if it's a shy kind, it flees with no blow struck, its first moment gone in breaking; so a weak band can break before a blow.  Fleeing with nowhere to go, cornered beside the character, it fights at bay, its courage not tested again (2026-11-04: it tested it over and over with no time gone, and struck no blow).  (RS_MORALE's MR_FACED.  dq0 -I, the tests' with no engage initiative test, has none of it, nor a weapon broken: their games as they were; the soak plays them.)
 
 *(A fall seen but not heard isn't known apart; morale tests not before every action as the book has it: the user's, 2026-11-03, these and no more.)*
 

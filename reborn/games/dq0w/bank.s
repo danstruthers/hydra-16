@@ -184,7 +184,7 @@ go:
             SWPART      84, 30              ; The character's dig's own: told why, a hidden door, nothing to show (2026-11-02)
             SWPART      85, 16              ; The reach's steps (things.c's, 2026-11-02: HOUSE.md's reach)
             SWPART      86, 26              ; Their other half
-            SWPART      87, 26              ; And the hand the pack goes in, a tool's use, the words
+            SWPART      87, 17              ; And the hand the pack goes in, a tool's use, the words
             SWPART      88, 16              ; The hub attached (hub.c's: the start-up's, 2026-11-02)
             SWPART      89, 27              ; A shaft's going, a thing let fall, the daylight's emitters (dq0w.c: 2026-11-03)
             SWPART      90, 13              ; Hands made free, a tool in hand and back (things.c: 2026-11-03)

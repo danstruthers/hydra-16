@@ -2096,6 +2096,8 @@ const DQ0_REPEATS = [
     why: 'the time between\'s question asked again, a soak\'s answers refused (its echo in the sentence: dq0acct\'s prompt no game\'s)' },
   { what: /^You feel your way [a-z]+\.$/, tests: /^dq0soak-/,
     why: 'a walk over to a thing in the dark, each leg of it told (the first stopped by what it felt)' },
+  { what: /^The bite burns: there's venom in it\.$/,
+    why: 'a fight\'s long answer: each venomous bite that gets through told as it falls, a dose more (the fight soak\'s seed 3, 2026-11-04)' },
   { what: /^You struggle, but can't get up\.$/,
     why: 'the character\'s own Rise tried each round and failed (the book\'s test for one seriously or grievously wounded, slice 4.1b\'s), each try told' },
   { what: /^(?:The passage (?:forks here|ends here; it goes back behind you|comes to a door; it goes back behind you)|You are in a passage|It goes .+)\.$/,
@@ -2162,7 +2164,8 @@ function dq0Lost(name, m) {
 }
 function dq0Check(name, m) {
   return [...dq0Repeats(name, m.out).map(r => 'told ' + r.n + ' times in one answer (> ' + r.cmd + '): ' + JSON.stringify(r.sentence)),
-    ...dq0Doubled(m).map(s => 'a chunk\'s fixtures doubled: ' + s), ...dq0Lost(name, m)];
+    ...dq0Doubled(m).map(s => 'a chunk\'s fixtures doubled: ' + s), ...dq0Lost(name, m),
+    ];
 }
 
 // (dq0traces' budget: a square of a walk at the turns pace, its look every third square, the denizens' turn at each
@@ -2352,6 +2355,21 @@ function dq0Rec(m) {
   const h = m.dq0.bank(0), t = h[12 + 2], lbl = () => fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
   const pb = dq0RecPb || (dq0RecPb = parseInt(/^al ([0-9A-F]+) \._pb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][pb]) || new Uint8Array(0x2000);
   return { mem, at: i => 330 + 64 * 17 + 30 * i, FLAGS: 1, SN: 2, ID: 4, X: 8, Y: 10, ATTITUDE: 16, SERVE: 26, CONTACT: 27, ATE: 28, DRANK: 29 };
+}
+
+// Every denizen near but actor keep sent far off, friendly, and not free again for some five minutes: a scene with one foe in it (a dq0Poke's call)
+function dq0Alone(m, h, L, K, at, keep) {
+  const R = dq0Rec(m), far = 3000 + (h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16);
+  let n = 0;
+  for (let k = 0; k < L.nactors; k++) if (k !== keep && h[at(k) + L.aName] && h[at(k) + L.aState]) {
+    const o = R.at(h[at(k) + L.aName + 12]), x = 32706 + (n & 3), y = 32784 + (n++ >> 2);
+    h[at(k) + L.aX] = R.mem[o + R.X] = x & 255; h[at(k) + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8;
+    h[at(k) + L.aY] = R.mem[o + R.Y] = y & 255; h[at(k) + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8;
+    h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_FRIENDLY;
+    h[at(k) + L.aDoing] = K.DO_ROAM;
+    for (let i = 0; i < 4; i++) h[at(k) + L.aReady + i] = far >>> (8 * i) & 255;
+  }
+  h[L.denSeq] = h[L.denSeq] + 1 & 255;
 }
 
 function dq0Poke(m, pokes) {
@@ -7210,6 +7228,130 @@ module.exports = {
         const inv = T.of('quit');
         if (inv && inv.at && dq0Carried(inv.at).some(j => j.name === 'antidote')) f.push('the antidote still carried');
         if (f.length) f.push(g.slice(g.indexOf('> open the door'), g.indexOf('> open the door') + 2500));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0atbay', initiative: true, near: ['fight', 'denizens'], what: "Dingus Quest Zero's denizen broken and cornered beside the character (the life soak's seed 12, 2026-11-04: two shy rats far from their lair, no step of theirs allowed, each deciding again at once with no time gone: 192 tests of courage a round and no blow, the fight's rounds 66M cycles each, so \"hung\"; seed 30 the same, its budget gone before its next game's start): a giant rat beside it, fleeing, its home far off (the mind's own: no step away): at bay it bites, its courage not asked again (DENIZENS.md's morale)",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Vermin | rat | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'look', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        const lbl = n => parseInt(new RegExp('^al ([0-9A-F]+) \\._' + n + '$', 'm').exec(fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'))[1], 16);
+        const broken = (h, L, K, at) => {
+          const ram = m.taskRam[h[12 + 2]];
+          dq0Alone(m, h, L, K, at, 0);
+          ram[lbl('fled')] = 40;                // (Its mind's: broken, fleeing, these many turns)
+          for (const a of [lbl('ahx'), lbl('ahy')]) { ram[a] = 1; ram[a + 1] = 0; }   // (Its home far off: no step within its reach)
+        };
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, k: 0, beside: 2, engage: true }, { g: 1, line: 'wait', n: 1, call: broken },
+          { g: 1, line: 'wait', n: 2, call: h => { this.left = m.taskRam[h[12 + 2]][lbl('fled')]; } }]);
+      },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), C = require('../sim/lib/dq0meaning.js').constants().names, f = [], waits = T.filter(t => t.line === 'wait');
+        const tests = waits.flatMap(t => dq0Rep(t, 'dslot', { kind: C.RS_MORALE })).filter(r => r.actor === 1), blows = waits.flatMap(t => t.dens).filter(e => e.kind === 'E_FIGHT' && e.def === 0 && e.who === 1);
+        this.notes = ['tests of its courage ' + tests.length + ', its blows ' + blows.length + ', its turns of flight left of 40 after them: ' + this.left];
+        if (this.left === undefined) f.push('the second wait not given: the scene not played');
+        else if (this.left < 40 - blows.length - 4) f.push('its turns of flight gone with no time gone (decided again at once): ' + this.left + ' of 40 left, ' + blows.length + ' blows');
+        if (tests.length) f.push('fleeing, its courage tested again: ' + tests.length);
+        if (blows.length < 2) f.push('cornered, too few blows at bay: ' + blows.length);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0fighttired', asks: true, near: ['fight', 'body'], what: "Dingus Quest Zero's fight tiring the character at the turns pace (HOUSE.md's fighting on: a level more asked as a hurt is; asked only at the real paces till 2026-11-04, the world's task_word turning it away, so a long fight at the turns pace asked nothing and never gave the prompt back): a character a round short of its next level of fatigue attacks a giant rat: \"You're tiring.  Keep fighting?\", the clock still, and \"no\" ends the fight",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm', 'echo pace 2 0 5990 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Vermin | rat | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'look', 'attack the rat', 'no', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'attack the rat', n: 1, call: (h, L, K, at) => dq0Alone(m, h, L, K, at, 0) }, { g: 1, line: 'attack the rat', n: 1, k: 0, beside: 'face', engage: true }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\s+/g, ' ');
+        this.notes = [s.slice(s.indexOf('> attack the rat'), s.indexOf('> attack the rat') + 500)];
+        const at = T.filter(t => t.line === 'attack the rat').flatMap(t => t.events).filter(e => e.kind === 'E_TASK');
+        if (!at.some(e => e.te === 'TE_ASK_TIRED' && e.task === 'LT_FIGHT')) f.push('tired a level more as it fought, not asked: ' + at.map(e => e.te).join(' '));
+        if (!/You're tiring\. Keep fighting\?/.test(s)) f.push('the question not told');
+        const after = T.find(t => t.line === 'quit');
+        if (!T.some(t => t.line === 'no') || !after) f.push('its answer not taken at a prompt');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0nolegs', near: ['fight', 'body'], what: "Dingus Quest Zero's character down with no leg to stand on (HOUSE.md's prone, 2026-11-04, for review): \"attack\" takes its round and tells that its legs won't bear it, the fight over and the prompt back, a blow never to come (it struggled on each round before, for ever if nothing killed it); the player's to say what next",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'echo inj 12 0 3 4 0 8 >> /ram/c.hm', 'echo inj 140 0 3 4 0 8 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Vermin | rat | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'look', 'lie down', 'attack the rat', 'crawl north', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'attack the rat', n: 1, call: (h, L, K, at) => dq0Alone(m, h, L, K, at, 0) }, { g: 1, line: 'attack the rat', n: 1, k: 0, beside: 'face', engage: true }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], t = T.find(x => x.line === 'attack the rat'), s = dq0Story(out).replace(/\s+/g, ' ');
+        if (!t) return ['its attack not given'];
+        const K = m.dq0.layout().K, rises = t.replies.filter(r => r.kind === K.RS_ATTACK && r.actor === 0);
+        if (rises.length !== 1) f.push('rounds spent trying to rise: ' + rises.length + ', not 1');
+        if (!/Your legs won't bear you\./.test(s)) f.push("not told its legs won't bear it");
+        if (/You struggle, but can't get up/.test(s)) f.push('told it struggles, as if it might');
+        if (!T.some(x => x.line === 'crawl north')) f.push('no prompt after it');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0twoalike', reach: true, near: ['gear'], what: "Dingus Quest Zero's two things alike set down for a dipping (the life soak's seed 3, 2026-11-04: \"You set the new torch down at your feet.\" and \"You take up the new torch.\" each twice in one answer, two things, the same words): a torch in each hand and a third burning on the floor, dipped: the second told as the other, each told once (HOUSE.md's reach)",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', 'wait 20 minutes', 'hold another torch', 'light the torch', 'light the torch', 'inventory', 'dip the torch in the oil', 'inventory', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), a = s.slice(s.indexOf('> dip the torch'));
+        this.notes = [a.slice(0, 700)];
+        inTurn(a, ['You set the new torch down at your feet.', 'You set the other torch down.', 'You take up the new torch.', 'You take up the other torch.'], f, 'the dipping: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0stirtyped', near: ['senses', 'denizens'], what: "Dingus Quest Zero's stir as a line's being typed at the turns pace (the life soak's seed 5, 2026-11-04: \"> look at the rat\" answered \"Something stirs.  A giant rat is to your right, 5 feet away, keeping its distance.\" then the look, saying it again: the stir's words after the echo, the told list begun again as the line was taken): its doing changed as the line's first keys come: held for the answer, the look saying it once; a line that doesn't say it (inventory) gets the stir after its answer",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Vermin | rat | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'look', 'wait', 'look', 'inventory', 'quit', 'echo $status']) },
+      start(m) {
+        const a = m.acia, read = a.read;
+        let typed = '', looks = 0, invs = 0;
+        const stirred = doing => {
+          const h = m.dq0.bank(0), { L, K } = m.dq0.layout(), at = k => L.actor + k * L.actorSize;
+          h[at(0) + L.aDoing] = K[doing];
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+        };
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, call: (h, L, K, at) => dq0Alone(m, h, L, K, at, 0) }, { g: 1, line: 'wait', n: 1, k: 0, beside: 2, set: { attitude: 3, doing: 0 } }]);
+        const read2 = a.read;
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) typed = ''; else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+            if (typed === 'l' && m.dq0.games.length && ++looks === 2) stirred('DO_WATCH');
+            if (typed === 'i' && m.dq0.games.length && !invs++) stirred('DO_SHY');
+          }
+          return read2(r, t);
+        };
+        void read;
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], A = dq0Answers(m.out), look = A.filter(x => x.cmd === 'look').pop(), inv = A.find(x => x.cmd === 'inventory');
+        this.notes = [look ? look.text.slice(0, 400) : 'no look', inv ? inv.text.slice(0, 400) : 'no inventory'];
+        void out;
+        if (!look || !/giant rat/.test(look.text)) f.push('the look doesn\'t say the rat: the scene not set');
+        else if ((look.text.match(/A giant rat is /g) || []).length !== 1) f.push('the rat told more than once in the look\'s answer: ' + look.text);
+        if (look && /Something stirs/.test(look.text.slice(0, look.text.indexOf('You are ') < 0 ? 0 : look.text.indexOf('You are ')))) f.push('the stir told before the look: ' + look.text);
+        if (!inv || !/You carry .*Something stirs/.test(inv.text)) f.push('the stir not told after the inventory: ' + (inv ? inv.text : ''));
         return f;
       },
       sdcard: true

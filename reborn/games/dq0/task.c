@@ -25,10 +25,10 @@ static const char* const doing[] = {           /* (By LT_*) */
     "hiding", "tying the rope", "tending the wound", "turning a key", "taking off", "taking off", "reaching into", "holding open", "getting out", "putting on",
     "letting fall", "letting fall", "putting away", "blowing out", "blowing out", "lighting", "setting down", "taking up", "sharpening",
     "striking a spark", "getting out", "putting away", "taking up", "setting down", "blowing out", "lighting", "dipping",
-    "letting fall", "sheathing", "slinging", "setting down", "setting down", "putting away", "setting down", "putting away"
+    "letting fall", "sheathing", "slinging", "setting down", "setting down", "putting away", "setting down", "putting away", "setting down", "taking up"
 };
 #define NDOING          (sizeof doing / sizeof doing[0])
-typedef char doing_all[NDOING == LT_INPACK2 + 1 ? 1 : -1];   /* (Every long task's words: "You stop doing anything the torch", 2026-11-04) */
+typedef char doing_all[NDOING == LT_UP2 + 1 ? 1 : -1];   /* (Every long task's words: "You stop doing anything the torch", 2026-11-04) */
 
 /* An enemy the character's met (E_TASK's b, TE_ENGAGED's, TE_FAR's: its entry plus 1), as it's said: "the giant
 ** rat" (the first letter a capital, cap), or "something" if it isn't seen */

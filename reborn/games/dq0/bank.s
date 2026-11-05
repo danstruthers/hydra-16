@@ -170,7 +170,7 @@ ovl_out:
             SWPART      8, 3                 ; Where in its room the character is, and the things (look.c)
             SWPART      9, 13               ; The player's shortcuts (alias.c)
             SWPART      10, 18              ; A search, by its form (search.c)
-            SWPART      11, 15              ; The rarer news, worded (main.c); the hands and limbs
+            SWPART      11, 20              ; The rarer news, worded (main.c); the hands and limbs
             SWPART      12, 16              ; Wounds over time: first aid, in shock, the body's news (tend.c)
             SWPART      13, 5               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
             SWPART      14, 18              ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)

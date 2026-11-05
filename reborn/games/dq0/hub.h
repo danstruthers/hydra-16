@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     50                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     51                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -970,7 +970,7 @@ enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK
        LT_KEY,                                  /* (A door's key turned, got out by a tool's steps first, 2026-11-04) */
        LT_PACKOFF, LT_PACKDOWN, LT_REACHIN, LT_OPENUP, LT_GETOUT, LT_PACKON, LT_LETFALL, LT_LETBURN, LT_PUTAWAY, LT_BLOWOUT, LT_BLOWDARK, LT_LIGHTFROM, LT_SETDOWN, LT_TAKEUP, LT_HONE,
        LT_KINDLE, LT_GETNEW, LT_PUTOLD, LT_TAKENEW, LT_DOWNNEW, LT_BLOWOLD, LT_LIGHTNEW, LT_DIPOLD, LT_LETOLD,
-       LT_SHEATHE, LT_SLING, LT_SCONCE, LT_LAYLIT, LT_INPACK, LT_LAYLIT2, LT_INPACK2 };   /* (The reach's
+       LT_SHEATHE, LT_SLING, LT_SCONCE, LT_LAYLIT, LT_INPACK, LT_LAYLIT2, LT_INPACK2, LT_DOWN2, LT_UP2 };   /* (The reach's
                                                 **   steps, each its own time, HOUSE.md's: a pack on the back taken off,
                                                 **   into a hand, or set at its feet; a container's level reached into,
                                                 **   held open, a thing got out; the pack put back on: things.c's part
@@ -1430,6 +1430,12 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   turn and moves its clock on meanwhile, nor with an intent in its
                                                 **   ring: so the game turns on its commands, not on how the tasks'
                                                 **   timing falls between a command's intents (2026-10-31) */
+    volatile unsigned char ui_eq, ui_dq;        /* The UI's: the world's events and the denizens' it's told and done what
+                                                **   it does about (their counts' low bytes, as a pass of its loop ends: a
+                                                **   question asked of a sound heard, senselessness waited out).  At the
+                                                **   turns pace the world waits for them, the clock and the character's next
+                                                **   step alike: so what the UI does about them falls at the same moment
+                                                **   of the game whatever the tasks' timing (2026-11-04, the life soak's) */
     /* The save folder's region files' versions (world.h's struct vfh: DUNGEON.md's no fixed size), the world's, as it
     ** begins a game and as it keeps one (WQ_SAVE, the save's last step): every file stamped up to vsaved is the last
     ** save's, every one stamped past vbase (this session's floor, the stamps an earlier session may have given at
@@ -1816,6 +1822,8 @@ struct wsave {
 **   own hub.ui_cmd ui                                          (A command in hand: the look and the minds give way)
 **   own hub.starting ui +world                                 (The game's start: the sound naps)
 **   own hub.ui_giving ui                                       (A command being given: the turns pace waits)
+**   own hub.ui_eq ui                                           (The events it's seen to: the turns pace waits)
+**   own hub.ui_dq ui                                           (And the denizens')
 **   own hub.vsaved world                                       (The region files' versions: the world's, as it
 **   own hub.vbase world                                        (begins and keeps a game)
 **   own hub.vlo world

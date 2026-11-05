@@ -26,6 +26,7 @@
 ** and waits "until dawn" by it (time.c's).
 */
 
+#include <string.h>
 #include <stddef.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
@@ -272,8 +273,8 @@ void __fastcall__ s_sky_seen (unsigned char kind)
     T.how = TG_HOURS;
     if (p != T.told) {
         T.told = p;
+        memset (&e, 0, sizeof e);               /* (All of it: an event's every byte the same game's, whatever the RAM held) */
         e.kind = E_BEARING;
-        e.who = 0;
         e.b = p | src;
         e.w1 = BRG_SKY;
         e.t = HUB->now;

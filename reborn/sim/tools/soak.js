@@ -7,7 +7,7 @@
 //   cause, the turns lived), a start never left (no other room come into), the lines the grammar refused.
 // The player: commands drawn from the game's verbs, weighted toward moving and looking, its things and denizens the
 // ones the game's words have named (a thing seen lying, a denizen in sight), by a random stream of the seed's own.
-//   [RULES=NAME] node sim/tools/soak.js [-n SEEDS] [-from FIRST] [-seeds A,B,...] [-turns N] [-fight P] [-life D] [-j N] [-v]
+//   [RULES=NAME] node sim/tools/soak.js [-n SEEDS] [-from FIRST] [-seeds A,B,...] [-turns N] [-fight P] [-life D] [-power N] [-same] [-j N] [-v]
 //     -n 20, -from 1: seeds FIRST to FIRST + SEEDS - 1; -turns 60: the commands a game is given before it's quit;
 //     -fight P: the fights soaked.  A plain game hardly ever meets a denizen in its 60 turns (2026-11-04: 1 game in 40 told of
 //     one), so each seed's game is a scene: hostile folk or beasts of the seed's choosing at the way down where it begins (a
@@ -18,6 +18,10 @@
 //     (20 here) commands each: the game's death or leaving (the way out opened and the character put by it: a scene's pokes, as
 //     nothing random finds a puzzle's end), or quit and gone on with, the time between answered at random (dq0acct: no dq0auto),
 //     hard mode for some seeds, a hostile theme for some; the record (life.dat) read after each game and judged by what it ended in;
+//     -power N (1): the machine's power-up RAM, so a seed's game is the same each run of one tree (a failure can be chased: until 2026-11-04 its RAM was
+//     random, each run other timings between the tasks, so other words at the player's prompts, so other commands, and it drifted);
+//     -same: each game played again with its commands and scenes as they were, by a machine powered up otherwise: the same events, the same replies,
+//     or it fails (the turns pace's rule: seed and commands alone, whatever the tasks' timing);
 //     -j the cores; -v every game's transcript in obj/soak/SEED.txt (else only the ones that went wrong); RULES, the
 //     games with that ruleset's referee (dq0 -r NAME: games/dq0/RULESETS.md)
 // Exit status 0 if every game soaked clean.  Each game is a process of its own (--one SEED), the reports in order.
@@ -123,7 +127,7 @@ function fightScene(s) {
 // Foes brought to the character, as none has come for a while (a plain game's denizens hardly ever do): up to n of the denizens'
 // records still in their lairs put on squares it's walked in the last turns, or of the room it's in, its own stratum's; a scene's
 // poke (tests.js's dq0Rec's, between two commands, the turns pace waiting), the minds going on from there.  D_* as dq0d.c's
-function summon(m, r, n) {
+function summon(m, r, n, wr) {
   const D_OUT = 1, D_ACTOR = 2, D_DEAD = 4, g = m.dq0.games[m.dq0.games.length - 1], h = m.dq0.bank(0);
   if (!g || !h) return 0;
   const { L } = m.dq0.layout(), sn = h[L.pcSn], x = h[L.pcX] | h[L.pcX + 1] << 8, y = h[L.pcY] | h[L.pcY + 1] << 8, near = (a, b) => Math.max(Math.abs(a - x), Math.abs(b - y));
@@ -136,8 +140,8 @@ function summon(m, r, n) {
   let brought = 0;
   for (; brought < n && free.length; brought++) {
     const o = free.splice(r.int(free.length), 1)[0], [a, b] = r.pick(trail);
-    R.mem[o + R.FLAGS] |= D_OUT; R.mem[o + R.SN] = sn;
-    R.mem[o + R.X] = a & 255; R.mem[o + R.X + 1] = a >> 8; R.mem[o + R.Y] = b & 255; R.mem[o + R.Y + 1] = b >> 8;
+    wr('r', o + R.FLAGS, R.mem[o + R.FLAGS] | D_OUT); wr('r', o + R.SN, sn);
+    wr('r', o + R.X, a & 255); wr('r', o + R.X + 1, a >> 8); wr('r', o + R.Y, b & 255); wr('r', o + R.Y + 1, b >> 8);
   }
   return brought;
 }
@@ -173,6 +177,40 @@ function lifeRecord(text) {
   return { magic: u16(0), flags: b[3], seed: u32(4), dseed: u32(8), dungeon: u16(12), date: u32(14), out: n => b[32 + (n - 1) * 8 + 6] };
 }
 
+// A game played again by another machine (-same: another power-up's RAM, so other timings between the tasks) with the same commands and
+// scenes: at the turns pace it's the same game, its world's events, the denizens', the replies to each request, record by record
+// (tests.js's dq0turnsame's rule, for every game the soak plays); what differs is the game's fault, the first of it told
+function sameGame(a, b, s) {
+  // (Each ring and each slot a stream of its own: their order between them is the tasks' timing, nothing any of them reads.  An E_LIGHT's only its
+  // square and its time mean anything, an E_TASK's x nothing, an RS_TIME's steps nothing: the rest what the RAM or the slot held.  Rest paid (RS_EXERT's
+  // GA_REST, GA_STOOD) as the world's looked: in other slices the same in all, told as its sum.  What the hands hold asked by the UI (IO_HANDS) changes
+  // nothing, whenever it looks)
+  const clean = e => {
+    const c = Object.assign({}, e, { line: undefined });
+    if (e.kind === 'E_LIGHT') { c.who = c.a = c.b = c.x = undefined; }
+    if (e.kind === 'E_BYE') c.t = undefined;
+    if (e.kind === 'E_TASK') c.x = undefined;
+    if (e.req && e.kind === 9) c.steps = undefined;
+    return JSON.stringify(c);
+  };
+  const told = l => { const b = l.findIndex(e => e.kind === 'E_BYE'); return b < 0 ? l : l.filter((e, i) => !(e.kind === 'E_READY' && i < b && l.slice(i, b).every(q => q.kind === 'E_READY'))); };   // (The end: the quit's moment, a last E_READY or none, its clock a slice on or not)
+  const GA_STOOD = 0xFD, GA_REST = 0xFF, restful = e => e.req && e.kind === 10 && (e.a === GA_REST || e.a === GA_STOOD);
+  const recs = r => (r.m.dq0 ? r.m.dq0.games : []).map(g => {
+    const by = new Map(), rest = g.replies.filter(restful).reduce((t, e) => t + e.w1, 0);
+    for (const e of g.replies) if (!restful(e) && e.kind !== 'IO_HANDS') { if (!by.has(e.req)) by.set(e.req, []); by.get(e.req).push(clean(e)); }
+    return [...told(g.events).map(clean), ...g.dens.map(clean), ...[...by.keys()].sort().flatMap(k => by.get(k)), 'rest ' + rest];
+  });
+  const x = recs(a), y = recs(b), f = [];
+  if (x.length !== y.length) f.push('not the same game again: ' + x.length + ' games, then ' + y.length);
+  for (let g = 0; g < x.length && g < y.length && !f.length; g++) {
+    let d = 0;
+    while (d < x[g].length && d < y[g].length && x[g][d] === y[g][d]) d++;
+    if (d < x[g].length || d < y[g].length) f.push('not the same game again: its game ' + (g + 1) + ' from record ' + d + ' of ' + x[g].length + ' and ' + y[g].length + ': ' + (x[g][d] || 'none') + ' / ' + (y[g][d] || 'none'));
+  }
+  if (f.length) { fs.mkdirSync(OUT, { recursive: true }); fs.writeFileSync(path.join(OUT, s + '.same.json'), JSON.stringify({ x, y })); fs.writeFileSync(path.join(OUT, s + '.again.txt'), b.out); }
+  return f;
+}
+
 let dq0Rec = null;
 // One game (or life) played by that player and judged.  OUT: its report, as one()'s, with the fights' and the life's counts
 function driven(s, turns, verbose, o) {
@@ -188,11 +226,24 @@ function driven(s, turns, verbose, o) {
   const ends = [], tally = { left: 0, solved: 0, quit: 0, died: 0, abroad: 0, lives: 1, between: 0, most: 1, brought: 0 };
   const NDUNGEONS = o.life || 1, pending = ['bind -a /sd/0/games /bin', 'hmchar -q -s ' + s + ' -o /ram/c.hm', ...(o.life && r.chance(0.3) ? ["echo 'wealth 3000' >> /ram/c.hm"] : []), ...scene.lines, begin()];
   let gameFrom = 0, who = '', calm = 3, still = 0, lastClock = -1, from = 0, inGame = false, turn = 0, tries = 0, done = false, seen = { things: [], dens: [], ways: [] }, was = null, home = null, leaving = false, expect = null;
+  // (What was typed and poked, each time the player was asked: played again as it was by -same, whatever its words then)
+  const script = o.script || [];
+  let pokes = null, M = null;
+  const memOf = w => w === 'h' ? M.dq0.bank(0) : dq0Rec(M).mem;
+  const wr = (w, a, v) => { memOf(w)[a] = v; pokes.push([w, a, v]); };
+  function asked(m) {
+    M = m;
+    if (o.script) { const e = script.shift() || { l: null, p: [] }; for (const [w, a, v] of e.p) memOf(w)[a] = v; return e.l; }
+    pokes = [];
+    const l = decide(m);
+    script.push({ l, p: pokes });
+    return l;
+  }
   function hubPoke(m) {                         // (The way out opened, the character by it: on the top stratum alone)
     const h = m.dq0.bank(0), { L } = m.dq0.layout();
     if (!h || !home || h[L.pcSn] !== home.sn) return false;
-    h[L.wayOpen] = 1;
-    h[L.pcX] = home.x & 255; h[L.pcX + 1] = home.x >> 8; h[L.pcY] = home.y & 255; h[L.pcY + 1] = home.y >> 8;
+    wr('h', L.wayOpen, 1);
+    wr('h', L.pcX, home.x & 255); wr('h', L.pcX + 1, home.x >> 8); wr('h', L.pcY, home.y & 255); wr('h', L.pcY + 1, home.y >> 8);
     return true;
   }
   function atShell(m, since) {                  // (A game over: how, told by its words; the record asked after)
@@ -272,7 +323,7 @@ function driven(s, turns, verbose, o) {
     for (const k of ['things', 'dens', 'ways']) if (now[k].length || /You come into|You go /.test(since)) seen[k] = now[k];
     if (/Your? foe|is dead\.|dies\./.test(since) && !foes.length) seen.dens = [];
     calm = foes.length || struck(since) ? 0 : calm + 1;
-    if (fight && calm >= 6) { calm = 0; tally.brought += summon(m, r, 1 + r.int(2)); }
+    if (fight && calm >= 6) { calm = 0; tally.brought += summon(m, r, 1 + r.int(2), wr); }
     const { L: HL } = m.dq0.layout(), clock = s0 ? s0[HL.now] | s0[HL.now + 1] << 8 | s0[HL.now + 2] << 16 : 0;
     still = clock === lastClock ? still + 1 : 0;
     lastClock = clock;
@@ -300,7 +351,7 @@ function driven(s, turns, verbose, o) {
       q.shift = function () {                   // (The wait for a prompt over: the next line, on the whole of the answer)
         const c = shift.call(this);
         if (c === 'ā' && !this.length) {
-          const l = decide(m);
+          const l = asked(m);
           if (l === undefined) this.push('ā');   // (Waited for again)
           else if (l !== null) { for (const ch of l + '\r') this.push(ch); this.push('ā'); }
         }
@@ -309,7 +360,8 @@ function driven(s, turns, verbose, o) {
     }
   };
   sdcardOf(t);
-  const res = runTest(t, { verbose: false });
+  const res = runTest(t, { verbose: false, seed: o.power });
+  if (o.script) return res;
   const out = strip(res.out);
   problems.push(...res.failures.filter(f => !/^missing:/.test(f)));
   if (res.failures.some(f => /^missing:/.test(f))) problems.push('hung: no prompt after ' + JSON.stringify(typed[typed.length - 1] || '(the start)') + ' (' + typed.length + ' lines)');
@@ -329,6 +381,7 @@ function driven(s, turns, verbose, o) {
       if (sn.items.length > store) { store = sn.items.length; dens = sn.items.filter(i => { const p = top(i); return p && p.where === 'IW_DEN'; }).length; }
     }
   }
+  if (o.same) problems.push(...sameGame(res, driven(s, turns, false, { fight: o.fight, life: o.life, script: script.map(e => e), power: o.power + 1 }), s));
   const dead = ends.includes('died') || ends.includes('abroad');
   const end = o.life ? ends.join(' ') || 'did not end' : dead ? 'died' : ends[0] || 'did not end';
   const ok = !problems.length;
@@ -337,7 +390,7 @@ function driven(s, turns, verbose, o) {
 }
 
 // One game (seed s), played and judged.  OUT: its report { seed, ok, problems: [...], end, turns, refused: [...], left }
-function one(s, turns, verbose, fight) {
+function one(s, turns, verbose, fight, power, same) {
   const { runTest } = require('../test.js');
   const { sdcardOf } = require('../../tests/tests.js');
   const r = stream(s);
@@ -368,8 +421,14 @@ function one(s, turns, verbose, fight) {
     }
   };
   sdcardOf(t);
-  const res = runTest(t, { verbose: false });
+  const res = runTest(t, { verbose: false, seed: power });
   const o = strip(res.out), problems = [...res.failures.filter(f => !/^missing:/.test(f))];
+  if (same) {                                   // (Its commands again, each at a prompt: -same's, as driven's)
+    const again = { name: t.name, what: t.what, init: t.init, cycles: t.cycles, expect: t.expect,
+      machine: { input: t.machine.input + typed.map(l => 'ā' + l + '\r').join('') } };
+    sdcardOf(again);
+    problems.push(...sameGame(res, runTest(again, { verbose: false, seed: power + 1 }), s));
+  }
   const game = o.slice(o.indexOf('% dq0 -p t'));
   const dm = /You\s+are\s+dead\./.exec(game), dead = !!dm;           // (Its words wrapped as they may be)
   const quitAt = game.indexOf('> quit'), shellAt = game.indexOf('\n% ', 10);
@@ -405,8 +464,8 @@ function one(s, turns, verbose, fight) {
 
 function main(argv) {
   const opt = (k, d) => { const i = argv.indexOf(k); return i >= 0 ? +argv[i + 1] : d; };
-  const life = opt('-life', 0), turns = opt('-turns', life ? 20 : 60), verbose = argv.includes('-v'), fight = opt('-fight', 0);
-  if (argv.includes('--one')) { process.stdout.write(JSON.stringify(life || fight ? driven(opt('--one', 1), turns, verbose, { fight, life }) : one(opt('--one', 1), turns, verbose, fight)) + '\n'); return; }
+  const life = opt('-life', 0), turns = opt('-turns', life ? 20 : 60), verbose = argv.includes('-v'), fight = opt('-fight', 0), power = opt('-power', 1), same = argv.includes('-same');
+  if (argv.includes('--one')) { process.stdout.write(JSON.stringify(life || fight ? driven(opt('--one', 1), turns, verbose, { fight, life, power, same }) : one(opt('--one', 1), turns, verbose, fight, power, same)) + '\n'); return; }
   const list = argv.includes('-seeds') ? argv[argv.indexOf('-seeds') + 1].split(',').map(Number) : null;
   const n = list ? list.length : opt('-n', 20), first = opt('-from', 1), j = opt('-j', os.cpus().length);
   const seeds = list || Array.from({ length: n }, (_, i) => first + i), results = new Array(n);
@@ -426,7 +485,7 @@ function main(argv) {
       while (running < j && next < n) {
         const i = next++, s = seeds[i];
         running++;
-        const args = [__filename, '--one', String(s), '-turns', String(turns), ...(fight ? ['-fight', String(fight)] : []), ...(life ? ['-life', String(life)] : []), ...(verbose ? ['-v'] : [])];
+        const args = [__filename, '--one', String(s), '-turns', String(turns), ...(fight ? ['-fight', String(fight)] : []), ...(life ? ['-life', String(life)] : []), ...(verbose ? ['-v'] : []), '-power', String(power), ...(same ? ['-same'] : [])];
         cp.execFile(process.execPath, args, { cwd: ROOT, maxBuffer: 1 << 26 }, (err, stdout, stderr) => {
           running--;
           let x;

@@ -27,6 +27,7 @@
 
 static unsigned char fring;                     /* (The fights' ring's next) */
 struct mshot mshot;                             /* (wbody.h's: a blow's missile, wshoot.c's) */
+extern unsigned char pc_cut;                    /* (work.h's) */
 extern unsigned char pshoot;                    /* (wshoot.c's: the character's fight a missile's) */
 #pragma bss-name (push, "SW15RODATA")
 static char wb[32];                             /* (A blow's words on their way to the ring, a piece at a time: part
@@ -49,7 +50,10 @@ static void __fastcall__ told (unsigned char att, unsigned char def, unsigned ch
     hub_map (0);
     if (!def) {
         pc_hit = 1;
-        fwant |= 1;                             /* (A hostile one fought, fighting on's, as the character's free) */
+        if (HUB->pc_pos != POS_PRONE || (HUB->pcsum.limbs & (LB_LEG_L | LB_LEG_R)) != (LB_LEG_L | LB_LEG_R)) {
+            fwant |= 1;                         /* (A hostile one fought, fighting on's, as the character's free; but not
+                                                **   one down with no leg to stand on: no blow to come, its word said) */
+        }
         flast = att;
     }
     bev.kind = E_FIGHT;
@@ -175,6 +179,13 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
                                                 **   a: the limbs' news, no blow's record, slice 4.1b's) */
         if (r->a) {
             r->state = REQ_FREE;
+            if (!att && (HUB->pcsum.limbs & (LB_LEG_L | LB_LEG_R)) == (LB_LEG_L | LB_LEG_R)) {
+                limb_news (WB_NOT_UP | 0x100, 0);   /* (The character, no leg to stand on: no blow to come, a prone one's
+                                                **   round its getting up.  Its fight over, its round out, the player's to
+                                                **   say what next: a crawl, a throw; 2026-11-04) */
+                pc_cut = 1;
+                return 0;
+            }
             if (me != att || !(bd.move & BM_NOT_UP)) {   /* (A creature's told once as it lies there: the round's
                                                 **   spent every time, its words not; 2026-11-02) */
                 limb_news (WB_NOT_UP, att);
