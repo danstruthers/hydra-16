@@ -804,6 +804,20 @@ and traces.
   shortcuts, each a word of 15 letters and a line of 95, kept in the theme bank (hub.h's ALIAS_AT) and the save.
   (alias.c, part 9, a bank of its own; term.c's enter.)
 
+## Holding back while a line is typed *(2026-11-04: the user's "Hold back"; new, for review: the three seconds)*
+
+At the real paces the world's long jobs wait from a line's first key until its answer's first word, so none is under way
+as its Enter comes and a command's first letter isn't behind one.  They are a denizen's things drawn (and any intents
+behind them in the ring), the traces' journal taken in, the lights' minute with its sconces and the time of day it
+believes, the map making's things, and a look about as a body falls: each a tenth of a second of the world's time or
+more.  A denizen's plain intents, its steps and blows, wait for the keys not at all, and for an Enter a quarter second at most,
+as before; nor do the character's own doings wait (a step of its walk, its own look), being the answers.  So typing holds
+no one still.  A long line typed slowly or a steady typist can't starve them: three seconds at most (600 ticks,
+dq0w.c's KEY_HOLD, from the first one held back), then a pass of the world's loop goes free and whatever's due runs through, the keys
+not stopping it, and they hold back again.  A line emptied (Ctrl-U, Backspace) lets them go at once.  At the turns pace nothing holds back: that
+game turns on its seed and commands alone.  A line that takes longer than the three seconds to type may still meet a job
+as it's entered, as any line could before.
+
 ## A command's first words *(2026-11-04: the user's "Word as they begin."; new, for review: the words)*
 
 A command's first letter comes within a fifth of a second (720,000 cycles, D17), or it says a word as it begins and the

@@ -138,7 +138,8 @@ by a request or an intent.
   lines cast in assembly) is kept from one look to the next while nothing in it has changed, and moved as the
   character steps.  At the real paces the look gives way to a command the UI has in hand (the hub's ui_cmd, half a
   second a look at most; not to one waiting for an answer of the world's that waits for the look), so the world's
-  answers and the UI's words don't wait for it.
+  answers and the UI's words don't wait for it.  The world's own long jobs hold back from a line's first key too (the
+  hub's ui_keys, three seconds at most: HOUSE.md's holding back).
 - **The game's own rules** are the world's too: the **theme's puzzle** (theme.h) is judged by the world
   (dq0w/wgame.c): the UI takes a command of the puzzle's (read the tablet, combine the sunstone with the moonstone,
   put the crown on the throne, use the seal on the way out) and asks the things' request of it (IO_PUZZLE: the verb,

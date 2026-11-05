@@ -285,7 +285,7 @@ static void __fastcall__ line (const unsigned char* p, unsigned char mode)
 }
 
 /* The section at off read, its head kept, drawn as mode says if its flags are those wanted: 1, or 0 */
-unsigned char ui_first (void);                  /* (dq0w.c's) */
+unsigned char ui_long (void);                   /* (dq0w.c's) */
 unsigned char __fastcall__ s_draw_at (unsigned off, unsigned char mode)
 {
     unsigned char k, n;
@@ -306,7 +306,7 @@ unsigned char __fastcall__ s_draw_at (unsigned off, unsigned char mode)
     }
     if (mode != MD_HEAD) {
         for (n = sec[7], k = 0; k < n && p < sec + SEC_MAX && *p; ++k, p += *p) {
-            if (ost.kit && (hub_map (0), ui_first ())) {
+            if (ost.kit && (hub_map (0), ui_long ())) {
                 ost.kit = 2;
                 return 0;
             }

@@ -234,7 +234,9 @@ from the start, is the character and its allies.
   darkvision, hearing and eyes); allies by the character's requests; and says so, its intents to the world, as the UI
   says the character's (minds and bodies, below).  The populations, the records and the denizens away from the
   character are its own.  At the real paces its minds wait while the UI has a command in hand (the hub's ui_cmd, a
-  second at most), as the senses' look does, so a command's answer doesn't wait for them.  And the kernel's
+  second at most), as the senses' look does, so a command's answer doesn't wait for them.  A denizen's things drawn, and what's
+  behind them in the ring, hold back from a line's first key too (three seconds at most: HOUSE.md's holding back); its plain
+  intents don't.  And the kernel's
   foreground (TASKFORE) puts the answer's tasks first meanwhile: the UI for good, the world, the command parser, the
   senses and the referee while a command's in hand; the minds, the maker and the sound are the background, their
   turn the rest of a tick after eight of the foreground's (DECISIONS.md, 2026-10-30).

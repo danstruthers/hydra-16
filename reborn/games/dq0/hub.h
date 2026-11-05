@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     51                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     52                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -1421,6 +1421,9 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned char ui_cmd;              /* The UI's: a line taken and its command in hand (its words not yet
                                                 **   all out): the senses' look gives way to it a while (dq0prompt:
                                                 **   the UI answering at once, the world's answers its) */
+    volatile unsigned char ui_keys;             /* The UI's: a line being typed, from its first key to its Enter (ui_cmd
+                                                **   then): the world's long jobs hold back, ui_first's, a typist's own
+                                                **   time and so no answer's first letter behind one (2026-11-04) */
     unsigned char   starting;                   /* The game's still starting (the UI's, till the world's first look):
                                                 **   nothing yet to hear, the sound's naps the longer: the start's
                                                 **   time, 2026-11-03 */
@@ -1820,6 +1823,7 @@ struct wsave {
 **   own hub.den_go world                                       (The denizens' turn: the turns pace's)
 **   own hub.dsense senses +denizens                            (An actor's senses: the denizens' request)
 **   own hub.ui_cmd ui                                          (A command in hand: the look and the minds give way)
+**   own hub.ui_keys ui                                         (A line being typed: the world's long jobs hold back)
 **   own hub.starting ui +world                                 (The game's start: the sound naps)
 **   own hub.ui_giving ui                                       (A command being given: the turns pace waits)
 **   own hub.ui_eq ui                                           (The events it's seen to: the turns pace waits)

@@ -2997,6 +2997,100 @@ function dq0JobsTest() {
   };
 }
 
+// dq0hold: the world's long jobs holding back from a line's first key to its answer's first word (the user's "hold back",
+// 2026-11-04), by scenes, the jobs poked due as dq0jobs does.  At the normal pace, seed 3: a long line typed slowly, a job
+// made due just after its first key, another just after the first's run: each held about KEY_HOLD ticks (keys_hold's: 600,
+// 10.7M cycles), each run though the keys go on, none starved; the line let go by Ctrl-U, a job at once; "inventory" typed
+// fast with both due from its first key: neither before its first letter, both after it.  At the turns pace nothing held,
+// the same typing and a job run with the keys on the line: a turns-pace game turns on no one's typing
+function dq0HoldTest() {
+  const LONG = 'look about the room for a while', LINE = 'inventory', WANT = 'You carry', MAX = 720000, HELD = 8000000, LIMIT = 16000000, FREE = 1200000;
+  const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl'];
+  const slow = [...LONG].join('Ā');
+  const lines = [...pre, 'dq0 -p n -s 3 -c /ram/c.hm -T', LINE, 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'quit', 'echo $status'];
+  const input = pre.map(l => 'ā' + l + '\r').join('') + 'ā' + lines[3] + '\r' + 'ā' + slow + 'Ā\x15ĀĀ' + LINE + '\rā' + 'quit\r' + 'ā' + lines[6] + '\r' + 'ā' + slow + '\x15Ā' + 'quit\rāecho $status\r';
+  return {
+    name: 'dq0hold', what: 'Dingus Quest Zero\'s world\'s long jobs waiting from a line\'s first key to its answer\'s first word at the real paces, three seconds at most while keys go on (the user\'s "hold back"): the lights\' minute and the traces\' journal made due as a long line is typed slowly, as it\'s let go, and as a line\'s typed fast; at the turns pace not held',
+    meaning: true, outfit: true,
+    init: 't_rc', cycles: 1400e6,
+    machine: { input },
+    expect: ['% echo $status'],
+    start(m) {
+      this.timer = dq0Timer(m);
+      const lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0w', 'dq0w.lbl'), 'latin1');
+      const at = n => parseInt(new RegExp('^al ([0-9A-F]+) \\.' + n + '$', 'm').exec(lbl)[1], 16);
+      const due = at('_burn_due'), trn = at('_tr_n'), burn = at('_burns_now'), flush = at('_tr_flush');
+      const a = m.acia, cpu = m.cpu, step = cpu.step.bind(cpu), read = a.read, R = this.R = {};
+      let world = -1, game = 0, typed = '';
+      const plan = [], wants = { burn: null, trace: null };
+      // (A job made due so many cycles from now, and looked for by its first address, every run of it its name's)
+      const go = (name, what, delay) => { world = m.dq0.bank(0)[12 + 1]; plan.push({ name, what, at: cpu.cyc + delay }); };
+      a.read = (r, t) => {
+        if (r === 0 && a.rdrf) {
+          const c = a.rx;
+          if (c === 13) {
+            if (/^dq0 -p/.test(typed)) game++;
+            if (typed === LINE) R.enter = a.rxAt;
+            typed = '';
+          } else if (c === 0x15) {
+            R['letgo' + game] = a.rxAt;
+            if (game === 1) go('letgo', 'burn', 300000);
+            typed = '';
+          } else {
+            typed += String.fromCharCode(c);
+            if (typed === 'l') go(game === 1 ? 'held1' : 'turns', 'burn', 100000);
+            if (typed === 'i' && game === 1) { go('fastburn', 'burn', 100000); go('fasttrace', 'trace', 100000); }
+          }
+        }
+        return read(r, t);
+      };
+      cpu.step = v => {
+        const c = cpu.cyc;
+        if (plan.length && c >= plan[0].at) {
+          const p = plan.shift(), r = m.taskRam[world];
+          if (p.what === 'burn') r[due] = r[due + 1] = r[due + 2] = r[due + 3] = 0; else r[trn] = 24;
+          R[p.name] = { made: c, ran: 0, keys: m.dq0.bank(0)[m.dq0.layout().L.uiKeys] };
+          wants[p.what] = p.name;
+        }
+        if (m.T === world && (cpu.PC === burn || cpu.PC === flush)) {
+          const w = cpu.PC === burn ? 'burn' : 'trace', n = wants[w];
+          if (n) {
+            R[n].ran = c;
+            wants[w] = null;
+            if (n === 'held1') go('held2', 'trace', 400000);
+          }
+        }
+        return step(v);
+      };
+    },
+    check() {
+      const f = [], notes = this.notes = [], R = this.R, late = n => R[n] && R[n].ran ? R[n].ran - R[n].made : null;
+      for (const n of ['held1', 'held2']) {
+        const l = late(n);
+        notes.push(n + ': made due with ' + (R[n] && R[n].keys) + ' keys on the line, run ' + l + ' cycles later');
+        if (!(l !== null && l >= HELD)) f.push(n + ': run ' + l + ' cycles after it was due, a line being typed: not held back (at least ' + HELD + ')');
+        if (!(l !== null && l <= LIMIT)) f.push(n + ': run ' + l + ' cycles after it was due: held too long (at most ' + LIMIT + ')');
+        if (R[n] && R[n].ran > R.letgo1) f.push(n + ': run only after the line was let go, not as the keys went on');
+      }
+      const g = late('letgo');
+      notes.push('the line let go: run ' + g + ' cycles after it was due');
+      if (!(g !== null && g <= FREE)) f.push('no keys on the line: a job ' + g + ' cycles late (at most ' + FREE + ')');
+      const t = late('turns');
+      notes.push('the turns pace: run ' + t + ' cycles after it was due, keys on the line');
+      if (!(t !== null && t <= FREE)) f.push('the turns pace: a job ' + t + ' cycles late, held for the keys (at most ' + FREE + ')');
+      const r = this.timer(lines, [{ line: LINE, want: WANT }])[0];
+      notes.push(LINE + ' typed fast: first letter ' + r.first + '; the lights\' minute run ' + (R.fastburn ? R.fastburn.ran - R.enter : null) + ', the journal ' + (R.fasttrace ? R.fasttrace.ran - R.enter : null) + ' after Enter');
+      if (!(r.first !== null && r.first <= MAX)) f.push(LINE + ': its first letter ' + r.first + ' cycles from Enter (budget ' + MAX + ')');
+      for (const n of ['fastburn', 'fasttrace']) {
+        if (!(R[n] && R[n].ran)) f.push(n + ': made due as the line was typed, never run');
+        else if (r.first !== null && R[n].ran - R.enter < r.first) f.push(n + ': run ' + (R[n].ran - R.enter) + ' cycles after Enter, before its first letter at ' + r.first);
+      }
+      return f;
+    },
+    sdcard: true
+  };
+}
+
 // dq0answer's commands: at seed 3 (-T: by the way down), the turns pace, then the normal pace; each a line, the words
 // its answer begins with, and at 115,200 baud its budgets (the user's targets, D17: a command's first letter a fifth of a
 // second, 720,000 cycles; a look's first and its whole under half a second, 1.79M), its first letter's and its whole's,
@@ -7598,6 +7692,7 @@ module.exports = {
     },
     dq0AnswerTest(115200),
     { name: 'dq0jobs', ...dq0JobsTest() },
+    { name: 'dq0hold', ...dq0HoldTest() },
     (() => {
       const LINES = ['walk to the door ahead to my left', 'open the door', 'close the door', 'listen', 'wait 1 minute', 'take the sack from the backpack', 'put the rope in the sack', 'take the rope from the sack',
         'stow the rope', 'drop the sack', 'take the sack', 'take the pumpkin', 'dig down', 'stop', 'look at the floor', 'douse the torch', 'dig down', 'stop', 'quit'];

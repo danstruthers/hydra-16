@@ -3060,6 +3060,8 @@ int main (int argc, char* argv[])
             } else if (k == CH_RESIZE) {
                 t_init ();
             } else {
+                HUB->ui_keys = 1;               /* (A key: the world's long jobs hold back, ui_first's, its echo and
+                                                **   an Enter's words already behind none) */
                 t_key (k);
                 quick = 25;                     /* (A line being typed: its Enter looked for twice as often, the
                                                 **   background given way to it the sooner) */
@@ -3076,6 +3078,7 @@ int main (int argc, char* argv[])
             cq_post (t_next ());                /* (The command parser at work on it at once, while the events and
                                                 **   the status line are seen to: not after them, 2026-10-30) */
         }
+        HUB->ui_keys = inn;                     /* (Keys still on the line typed, its Enter's ui_cmd now, or none) */
         k = events ();
         heard ();
         if (starting) {

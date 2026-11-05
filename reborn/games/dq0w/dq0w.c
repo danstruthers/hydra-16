@@ -6787,6 +6787,41 @@ unsigned char ui_first (void)
     return (unsigned) (hy_ticks () - t0) < 50;
 }
 
+/* The world's long jobs (HOUSE.md's holding back: a denizen's things drawn, the traces' journal taken in, the lights'
+** minute and the sconces, the map making's things, a look about as a body falls: each a tenth of a second of the
+** world's time and more; not a denizen's plain intent, a word of the game's own) hold back for a line being typed
+** too, from its first key (the hub's ui_keys; the turns pace never, the game turning on no one's typing), so none's
+** under way as its Enter comes.  KEY_HOLD ticks at most from the first one held back, then a pass of the main loop
+** goes free (main's, kfree: a job begun then isn't stopped by the keys, a kit given way to being drawn again from the
+** start), and they hold back again: a long line typed slowly or a steady typist leaves them late by that, not
+** starved; those ticks run on through a line's answer, a steady typist's lines one hold.  Past a command's quarter
+** second (ui_first's), as they were, on with them.  The hub's header in the window */
+#define KEY_HOLD        600
+static unsigned kt0;
+static unsigned char kfree;
+static unsigned char keys_hold (void)
+{
+    if ((HUB->pace & 3) == 3 || !HUB->ui_keys || HUB->ui_cmd) {
+        if (!HUB->ui_cmd) {
+            kt0 = 0;
+        }
+        return 0;
+    }
+    if (!kt0) {
+        kt0 = hy_ticks () | 1;
+    } else if ((unsigned) (hy_ticks () - kt0) >= KEY_HOLD) {
+        kfree = 1;
+    }
+    return !kfree;
+}
+
+/* A long job, as it's due and as it goes: 1, it gives way (a command in hand, or a line being typed) */
+unsigned char ui_long (void)
+{
+    hub_map (0);
+    return ui_first () || keys_hold ();
+}
+
 int main (int argc, char* argv[])
 {
     static struct msg m;
@@ -6799,11 +6834,16 @@ int main (int argc, char* argv[])
     while (hub_map (0), !HUB->quit) {         /* (The hub at $8000 again, each time round) */
         while (hy_sem_try (HUB->sem[T_WORLD]) == 0) {
         }
+        if (kfree && !burn_ask) {
+            kfree = kt0 = 0;                    /* (Its free pass over, a minute's passes all of it: the keys' hold
+                                                **   again, keys_hold's) */
+        }
         uf = ui_first ();                       /* (The UI's command in hand at the real paces, its answer first: the
                                                 **   world's own periodic work waits for it, a quarter second at most:
-                                                **   ui_first's) */
+                                                **   ui_first's; the long jobs, as they fall due, ui_long's: a line being
+                                                **   typed too, and looked at then, this pass perhaps long since begun) */
         stocks ();                              /* (The chunks the maker stocked: their things put down, marked so) */
-        if (chart_late && !uf) {
+        if (chart_late && !ui_long ()) {
             if (chart_late & 2) {
                 sconce_lights (1);              /* (A sconce's light, a thing handled: wkept.c's) */
             }
@@ -6812,14 +6852,16 @@ int main (int argc, char* argv[])
             }
             chart_late = 0;
         }
-        if (tr_n >= TR_FLUSH && !uf) {
+        if (tr_n >= TR_FLUSH && !ui_long ()) {
             tr_flush (TF_SOME);                 /* (The passings journalled taken into the traces' store: part 28's,
                                                 **   giving way as a command comes; 160,000 cycles of the world's and a
                                                 **   part's swap, on whichever answer it fell: 2026-11-03) */
         }
-        if (DEN_INTENTS () && !uf) {
+        if (DEN_INTENTS () && !uf && (HUB->di[HUB->di_tail].kind != I_KIT || !keys_hold ())) {
             den_intents ();                     /* (The denizens' intents carried out; not while the UI's command is
-                                                **   in hand at the real paces, its answer first: ui_first's) */
+                                                **   in hand at the real paces, its answer first: ui_first's; nor a
+                                                **   denizen's things, those behind them after, while a line's typed:
+                                                **   keys_hold's, none of it its parts' swaps each time round) */
         }
         while (hub_take (&m)) {
             intent (&m);
@@ -6830,7 +6872,7 @@ int main (int argc, char* argv[])
         }
         clock_run ();
         stepping ();                            /* (The long task as the clock goes: a walk a square at a time) */
-        if (den_saw && !move.on && !uf) {
+        if (den_saw && !move.on && !ui_long ()) {
             den_saw = 0;                        /* (A body fallen: looked at again, the things too) */
             see (0);
         }
@@ -6848,7 +6890,7 @@ int main (int argc, char* argv[])
             }
             hub_map (0);
         }
-        if (HUB->round && (burn_ask || HUB->now >= burn_due) && !uf) {
+        if (HUB->round && (burn_ask || HUB->now >= burn_due) && !ui_long ()) {
             if (burn_ask & BA_SCONCES) {        /* (A minute in two passes: the sconces' on their own, a part's swap and
                                                 **   its passes of the store, a command coming between; part 27 not
                                                 **   copied for it, 2026-11-04) */
