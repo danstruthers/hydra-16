@@ -6765,7 +6765,9 @@ unsigned char __fastcall__ fumbled (unsigned char k)
 /* A command in hand at the real paces (the hub's ui_cmd, the UI's: Enter to its answer's news): 1, the denizens'
 ** intents wait (they'd copy parts in, and draw outfits, a quarter second and more of the world's time in the
 ** kernel's foreground with the UI's), a quarter second at most, each line's own; then 0, on with them (wbody.c's
-** den_intents looks between them).  The hub's header in the window */
+** den_intents looks between them).  A long job's free pass (keys_hold's) goes before it, the second time.  The hub's
+** header in the window */
+static unsigned char kfree, kcut;
 unsigned char ui_first (void)
 {
     static unsigned t0;
@@ -6776,6 +6778,10 @@ unsigned char ui_first (void)
         t0 = 0;
         return 0;
     }
+    if (kfree == 2) {
+        return 0;
+    }
+    kcut |= kfree;
     if (HUB->cq.seq != sq) {
         sq = HUB->cq.seq;                       /* (Each line's own quarter second: a line typed as the last's answer
                                                 **   was still owed had its kits drawn meanwhile, 2026-10-30) */
@@ -6794,13 +6800,13 @@ unsigned char ui_first (void)
 ** too, from its first key (the hub's ui_keys; the turns pace never, the game turning on no one's typing), so none's
 ** under way as its Enter comes.  KEY_HOLD ticks at most from the first one held back, those ticks running on through a
 ** line's answer, a steady typist's lines one hold; then a pass of the main loop goes free (kfree, main's): what's
-** begun in it isn't stopped by keys or an Enter, a kit given way to being drawn again from the start, and a steady
-** typist's Enters stopping each try for good otherwise (the denizens behind it in the ring with it).  Then they hold
-** back again: late by that, not starved.  1, it waits for the keys (a command's own ui_first's, a quarter second).
-** The hub's header in the window */
+** begun in it isn't stopped by keys; an Enter stops it, its answer first, but that once (kcut): the next free pass
+** isn't stopped by one either, a kit given way to being drawn again from the start, and a steady typist's Enters
+** stopping each try for good otherwise (the denizens behind it in the ring with it).  Then they hold back again:
+** late by that, not starved.  1, it waits for the keys (a command's own ui_first's, a quarter second).  The hub's
+** header in the window */
 #define KEY_HOLD        600
 static unsigned kt0;
-static unsigned char kfree;
 static unsigned char keys_hold (void)
 {
     if ((HUB->pace & 3) == 3 || !(HUB->ui_keys | HUB->ui_cmd)) {
@@ -6808,8 +6814,9 @@ static unsigned char keys_hold (void)
     }
     if (!kt0) {
         kt0 = (hy_ticks () - 1) | 1;            /* (ui_first's t0's) */
-    } else if ((unsigned) (hy_ticks () - kt0) >= KEY_HOLD) {
-        kfree = 1;
+    } else if (!kfree && (unsigned) (hy_ticks () - kt0) >= KEY_HOLD) {
+        kfree = 1 + kcut;
+        kcut = 0;
     }
     return !kfree && !HUB->ui_cmd;
 }
@@ -6817,11 +6824,8 @@ static unsigned char keys_hold (void)
 /* A long job, as it's due and as it goes: 1, it gives way (a command in hand, or a line being typed) */
 unsigned char ui_long (void)
 {
-    unsigned char k;
-
     hub_map (0);
-    k = keys_hold ();
-    return !kfree && (k || ui_first ());
+    return keys_hold () || ui_first ();
 }
 
 int main (int argc, char* argv[])
@@ -6836,9 +6840,12 @@ int main (int argc, char* argv[])
     while (hub_map (0), !HUB->quit) {         /* (The hub at $8000 again, each time round) */
         while (hy_sem_try (HUB->sem[T_WORLD]) == 0) {
         }
-        if (!(HUB->ui_keys | HUB->ui_cmd) || (kfree && !burn_ask)) {
-            kfree = kt0 = 0;                    /* (Nothing in hand, or its free pass over, a minute's passes all of it:
-                                                **   the keys' hold again, keys_hold's) */
+        if (!(HUB->ui_keys | HUB->ui_cmd)) {
+            kcut = 0;                           /* (Nothing in hand: all begun again) */
+            kfree = kt0 = 0;
+        } else if (kfree && !burn_ask) {
+            kfree = kt0 = 0;                    /* (Its free pass over, a minute's passes all of it: the keys' hold
+                                                **   again, keys_hold's) */
         }
         uf = ui_first ();                       /* (The UI's command in hand at the real paces, its answer first: the
                                                 **   world's own periodic work waits for it, a quarter second at most:
