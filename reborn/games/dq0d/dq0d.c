@@ -2199,6 +2199,12 @@ static unsigned char __fastcall__ decide (unsigned char k)
                                                 **   get it up as theirs): up first, the world's Rise, 2026-11-02) */
         act (I_RISE, k);
     }
+    if (pcrest && d == 0xFE && wt < 300) {
+        wt = 300;                               /* (Still, the character resting: thirty times the while at the least, as
+                                                **   a watcher's: lying in wait, or alert to a noise, a second at a time,
+                                                **   kept an eight-hour rest to ten seconds a slice, 4.9G cycles of it:
+                                                **   seed 326's "hang" in the fight soak) */
+    }
     if (!wt && !stirs) {
         wt = 10;                                /* (Nothing said, and no wait: a moment, never decided again at once, no time
                                                 **   gone: a broken one's no blow, above; 2026-11-04) */
@@ -3471,9 +3477,7 @@ unsigned char __fastcall__ s_hid_mind (unsigned char k)
         hub_map (0);
         HUB->hlook[k] = 0;
     }
-    wt = pcrest ? 300 : 10;                     /* (The character resting: thirty times the while, as a watcher's: three
-                                                **   robbers lying in wait a second at a time kept an eight-hour rest
-                                                **   to ten seconds a slice, 4.9G cycles of it: seed 326's "hang") */
+    wt = 10;
     return 0xFE;
 }
 #pragma static-locals (pop)

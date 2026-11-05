@@ -3091,6 +3091,148 @@ function dq0HoldTest() {
   };
 }
 
+// dq0lookfar: a look one way into new ground (the delays' round, 2026-11-05: the first look ahead of a game made every chunk its
+// grid touched, up to nine, behind it as well, at the normal pace 12M cycles each, 28-55 s on the board, the world and the
+// denizens stopped behind it; seed 3's five, 78.5M), by the maker's make_chunk and dq0Timer's times, at the normal pace.  At
+// seed 3's start the wall a few squares ahead: nothing made, its whole within budget; asked for again the same; the map drawn
+// with the maker first (16.3M before, 9.4M), its first words at once.  Then the character put where the line ahead reaches
+// a chunk not made yet past a glance's reach (its sight poked to 0: a glance 4 squares, a look one way 8; a straight run of
+// floor to the chunk's edge): that chunk made as the eyes reach it, by the maker in the foreground (its elapsed near its own
+// 5.5M, 12M before)
+function dq0LookFarTest() {
+  const FIRST = 8000000, MAP = 11000000, ACROSS = 24000000;
+  const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl'];
+  const cmds = [{ line: 'look ahead', want: 'You peer ahead' }, { line: 'map', want: 'The map' }, { line: 'turn left', want: 'You turn' }, { line: 'look ahead', want: 'You peer ahead' }, { line: 'look ahead', want: 'You peer ahead' }];
+  const lines = [...pre, 'dq0 -p n -s 3 -c /ram/c.hm -T', ...cmds.map(c => c.line), 'quit', 'echo $status'];
+  return {
+    name: 'dq0lookfar', near: ['senses', 'time'], meaning: true, outfit: true,
+    what: 'Dingus Quest Zero\'s look one way into new ground (the delays\' round, 2026-11-05): the first look ahead makes only the chunks the eyes reach past a glance\'s: none with a wall in the way (seed 3\'s five before, 78.5M cycles; now within 8M), the map drawn with the maker first (within 11M; 16.3M before), a chunk the line ahead does reach made then',
+    init: 't_rc', cycles: 900e6,
+    machine: { input: lines.map(l => '\u0101' + l + '\r').join('') },
+    expect: ['% echo $status'],
+    start(m) {
+      this.timer = dq0Timer(m);
+      const lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0m', 'dq0m.lbl'), 'latin1');
+      const make = parseInt(/^al ([0-9A-F]+) \._make_chunk$/m.exec(lbl)[1], 16);
+      const cpu = m.cpu, step = cpu.step.bind(cpu), made = this.made = [], enters = this.enters = [], a = m.acia, read = a.read, T = this;
+      a.read = (r, c) => { if (r === 0 && a.rdrf && a.rx === 13) enters.push(a.rxAt); return read(r, c); };
+      cpu.step = v => {
+        if (cpu.PC === make && m.dq0 && m.dq0.bank && m.dq0.bank(0) && m.T === m.dq0.bank(0)[12 + 5]) made.push(cpu.cyc);
+        return step(v);
+      };
+      dq0Poke(m, [{ g: 1, line: 'look ahead', n: 3, call: (h, L) => {
+        const sn = h[L.pcSn], S = stratumRec(m, sn), live = liveChunks(m, sn), TILE = 443, FACE = { E: 2, W: 6, N: 0, S: 4 };
+        const open = (b, x, y) => { const t = b[TILE + y * 32 + x] & 15; return t === 1 || t === 4; };
+        h[L.pcsum + L.sSight] = 0;
+        for (const k of Object.keys(live)) {
+          const [cx, cy] = k.split(',').map(Number), b = live[k];
+          const tries = [['E', 1, 0], ['W', -1, 0], ['S', 0, 1], ['N', 0, -1]];
+          for (const [nm, dx, dy] of tries) {
+            if (live[(cx + dx) + ',' + (cy + dy)] || cx + dx < 0 || cy + dy < 0 || (cx + dx + 1) * 32 > S.w || (cy + dy + 1) * 32 > S.h) continue;
+            for (let o = 2; o < 30 && !T.put; o++) {
+              let run = true;
+              for (let d = 0; d <= 4 && run; d++) { const x = dx ? (dx > 0 ? 31 - d : d) : o, y = dy ? (dy > 0 ? 31 - d : d) : o; run = open(b, x, y) && (b[1467 + y * 32 + x] === b[1467 + (dy ? (dy > 0 ? 31 : 0) : y) * 32 + (dx ? (dx > 0 ? 31 : 0) : x)]); }
+              if (!run) continue;
+              const x = S.x0 + cx * 32 + (dx ? (dx > 0 ? 27 : 4) : o), y = S.y0 + cy * 32 + (dy ? (dy > 0 ? 27 : 4) : o);
+              h[L.pcX] = x & 255; h[L.pcX + 1] = x >> 8; h[L.pcY] = y & 255; h[L.pcY + 1] = y >> 8; h[L.pcFace] = FACE[nm];
+              T.put = { k, to: (cx + dx) + ',' + (cy + dy), x, y, nm };
+            }
+          }
+        }
+      } }]);
+    },
+    check(m, out) {
+      const f = [], notes = this.notes = [], r = this.timer(lines, cmds), E = this.enters, within = (a, b) => this.made.filter(c => c >= a && c < b).length;
+      const at = i => E[pre.length + 1 + i], over = (x, name, max) => { notes.push(name + ': first letter ' + x.first + ', whole ' + x.whole); if (!(x.whole !== null && x.whole <= max)) f.push(name + ': its whole ' + x.whole + ' cycles from Enter (budget ' + max + ')'); };
+      over(r[0], 'the first look ahead', FIRST);
+      notes.push('chunks made in it: ' + within(at(0), at(1)));
+      if (within(at(0), at(1))) f.push('the first look ahead, a wall in the way, made ' + within(at(0), at(1)) + ' chunks');
+      over(r[1], 'the map', MAP);
+      if (!(r[1].first !== null && r[1].first <= 900000)) f.push('the map: its first words ' + r[1].first + ' cycles from Enter');
+      const put = this.put;
+      notes.push('put: ' + JSON.stringify(put || null) + '; chunks made by the look across: ' + within(at(4), at(5)));
+      if (!put) f.push('no straight run to a chunk\'s edge in the scene');
+      else if (within(at(4), at(5)) < 1) f.push('the look ahead along a run to a chunk not made: none made');
+      over(r[4], 'the look across', ACROSS);
+      return f;
+    },
+    sdcard: true
+  };
+}
+
+// dq0askheld: a soft question standing as other news of the long task comes (the delays' round, fight soak's seed 358, on the
+// tree before it: "Keep waiting?", then more of its news, "go on" taken for a command held till the character was free, the
+// world waiting on the answer: no prompt again, a true hang).  At seed 3 digging, "You're tiring.  Keep digging?", a light's
+// burning low told (E_TASK's TE_LOW, put in the world's ring as the question's told); "yes" still its answer: on it goes, and the
+// next question's "no" stops it, the prompt back
+function dq0AskHeldTest() {
+  const lines = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', 'dig down', 'yes', 'no', 'inventory', 'quit', 'echo $status'];
+  return {
+    name: 'dq0askheld', near: ['time'], asks: true,
+    what: 'Dingus Quest Zero\'s soft question standing as other news of the long task comes (seed 358\'s hang in the fight soak, the delays\' round): a torch burning low told as "Keep digging?" waits; "yes" goes on with the dig, "no" stops it, the prompt back',
+    init: 't_rc', cycles: 1200e6,
+    machine: { input: lines.map(l => '\u0101' + l + '\r').join('') },
+    expect: ['% echo $status', 'You carry'],
+    start(m) {
+      dq0OnWords(m, [{ g: 1, line: 'dig down', n: 1, words: 'Keep digging?', call: () => {
+        const h = m.dq0.bank(0), { L, K } = m.dq0.layout(), i = (h[L.eqHead] | h[L.eqHead + 1] << 8) % L.eqSize, o = L.eq + i * L.msg;
+        for (let k = 0; k < L.msg; k++) h[o + k] = 0;
+        h[o + L.mKind] = K.E_TASK;
+        h[o + L.mW1] = K.TE_LOW;
+        const n = (h[L.eqHead] | h[L.eqHead + 1] << 8) + 1; h[L.eqHead] = n & 255; h[L.eqHead + 1] = n >> 8 & 255;
+        m.poked = true;
+      } }]);
+    },
+    check(m, out) {
+      const f = [];
+      if (!m.poked) f.push('the question never asked');
+      if (!/low/.test(dq0Story(out))) f.push('its news not told');
+      return f;
+    },
+    sdcard: true
+  };
+}
+
+// dq0restbusy: an eight-hour rest near hostile folk it can't reach or that lie in wait (the delays' round, fight soak's seeds 326 and
+// 136 on the tree before it: "hung" after "rest", none hung: robbers lying in wait a second at a time, or a hunter stuck on a scent
+// asking each second, 93,000 and 440,000 cycles a time, kept the rest to ten-second slices, 4.9G cycles of it, 23 minutes on the
+// board).  At the turns pace (a long wait's the same at the real paces), dq0lurk's bandits about in the dark: its cycles a minute
+// of game time within budget
+function dq0RestBusyTest() {
+  const MAX = 2200000;   // (Cycles a game minute of the rest: 1.63M now)
+  const lines = ['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
+    'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'douse the torch', 'wait', 'wait', 'wait', 'rest', 'quit', 'echo $status'];
+  return {
+    name: 'dq0restbusy', near: ['time', 'denizens'], initiative: true,
+    what: 'Dingus Quest Zero\'s long rest with hostile folk about that lie in wait or can\'t reach it (seeds 326 and 136 of the fight soak, the delays\' round): robbers hidden in the dark as an eight-hour rest goes: thirty times the while between their decisions, its cycles a game minute within budget',
+    init: 't_rc', cycles: 3000e6,
+    machine: { input: lines.map(l => '\u0101' + l + '\r').join('') },
+    expect: ['% echo $status'],
+    start(m) {
+      const a = m.acia, read = a.read, R = this.R = {}, cpu = m.cpu;
+      let cur = '';
+      a.read = (r, c) => {
+        if (r === 0 && a.rdrf) {
+          const ch = a.rx;
+          if (ch === 13) {
+            const h = m.dq0 && m.dq0.bank && m.dq0.bank(0);
+            if (h && h[0] === 0x44) { const { L } = m.dq0.layout(), now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16; if (cur === 'rest') { R.t0 = cpu.cyc; R.n0 = now; } if (cur === 'quit') { R.t1 = cpu.cyc; R.n1 = now; } }
+            cur = '';
+          } else if (ch >= 32 && ch < 127) cur += String.fromCharCode(ch);
+        }
+        return read(r, c);
+      };
+    },
+    check() {
+      const f = [], notes = this.notes = [], R = this.R, mins = (R.n1 - R.n0) / 600, per = (R.t1 - R.t0) / (mins || 1);
+      notes.push('the rest: ' + Math.round(R.t1 - R.t0) + ' cycles, ' + mins.toFixed(1) + ' game minutes, ' + Math.round(per) + ' cycles a minute');
+      if (!(per <= MAX)) f.push('the rest ' + Math.round(per) + ' cycles a game minute (budget ' + MAX + ')');
+      return f;
+    },
+    sdcard: true
+  };
+}
+
 // dq0answer's commands: at seed 3 (-T: by the way down), the turns pace, then the normal pace; each a line, the words
 // its answer begins with, and at 115,200 baud its budgets (the user's targets, D17: a command's first letter a fifth of a
 // second, 720,000 cycles; a look's first and its whole under half a second, 1.79M), its first letter's and its whole's,
@@ -7693,6 +7835,9 @@ module.exports = {
     dq0AnswerTest(115200),
     { name: 'dq0jobs', ...dq0JobsTest() },
     { name: 'dq0hold', ...dq0HoldTest() },
+    dq0LookFarTest(),
+    dq0AskHeldTest(),
+    dq0RestBusyTest(),
     (() => {
       const LINES = ['walk to the door ahead to my left', 'open the door', 'close the door', 'listen', 'wait 1 minute', 'take the sack from the backpack', 'put the rope in the sack', 'take the rope from the sack',
         'stow the rope', 'drop the sack', 'take the sack', 'take the pumpkin', 'dig down', 'stop', 'look at the floor', 'douse the torch', 'dig down', 'stop', 'quit'];
