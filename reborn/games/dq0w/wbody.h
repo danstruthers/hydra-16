@@ -23,6 +23,20 @@ extern unsigned char den_saw;                   /* A body fallen: the world to l
                          bpy = HUB->pc_y, bps = HUB->pc_stratum)
 #define BD_PUT()        (hub_map (0), memcpy (&HUB->actor[bk], &bd, offsetof (struct actor, name)))
 
+/* Hiding oneself (HOUSE.md's: dq0w.c's part 94, hid_op's op): the character's, begun (I_RISE's POS_HIDE, the UI's), its time
+** up, a stop at a walk's end, a search, a blow, ended (HO_END | HW_*: its words); a denizen's, body bd (HO_DEN | HD_*: its mind's) */
+#define HO_GO           0
+#define HO_DONE         1
+#define HO_MOVED        2
+#define HO_SEARCH       3
+#define HO_BLOW         4                       /* (Body bd in a blow, the attacker if att is its entry plus 1) */
+#define HO_BLOWN        5                       /*   (the same, bd the defender) */
+#define HO_THING        6                       /* (A thing handled, the hub's ireq: if it's a doing) */
+#define HO_END          0x20
+#define HO_STOP         0x80                    /* (A stop with no long task: | the kind it names) */
+#define HO_DEN          0x40
+void __fastcall__ hid_op (unsigned char op);
+
 /* A blow's missile (wfight.c's: RS_MISSILE's, set before part 15's shot_blow by wshoot.c's, 0 after): what it's shot
 ** with or the thing thrown, its range's band, MS_* (rs.h's; its range none, 2026-10-30: no referee's) */
 struct mshot {
@@ -60,6 +74,7 @@ enum { GO_GATHER, GO_ON };
 unsigned load_go (void);                        /* (Part 68's) A launcher loaded: its time */
 
 /* ---- The parts' (bank.s's stubs) */
+extern unsigned char kit_off;                   /* (dq0w.c's: a denizen's things given way to a command, 2; and 1, its lair's keys made) */
 unsigned char ui_first (void);                  /* (dq0w.c's) The UI's command in hand: the denizens' intents wait */
 void den_intents (void);                        /* (Part 14) The denizens' intents carried out (the hub's di), they
                                                 **   rung after */
@@ -91,13 +106,15 @@ void __fastcall__ bearings_off (unsigned feet); /* (Part 52: dq0w.c) The charact
 unsigned char den_reach (void);                 /* (Part 60: wlimbs.c) Body bd's weapon let fall, in its reach */
 void den_took (void);                           /* (Part 60) Taken up again, told */
 void __fastcall__ den_word (const char* t, unsigned char n);   /* (Part 51) Its weapon's word: line n of t */
-void den_drop (void);                           /* (Part 60) Its weapon on the floor, told */
+unsigned char __fastcall__ look_more (unsigned n, unsigned char mode);   /* (things.c's stub: LM_ROPES, dq0w.rop read in) */
+void __fastcall__ den_drop (unsigned char b);                           /* (Part 60) Its weapon on the floor, told */
 unsigned char den_legs (void);                  /* (Part 51) Its legs at a move's start: 1 no move */
 void __fastcall__ den_other (const struct msg* m);  /* (Part 60) A denizen's things made (I_KIT's) */
 void __fastcall__ den_more (const struct msg* m);    /* (Part 80: wport.c) Body bd's rarer intents (part 14's room):
                                                 **   come along (I_CLIMB), a robbery (I_ROB), its door work (I_PORTAL:
                                                 **   Phase 3C's one path, the character's parts); and a lair's doors'
                                                 **   keys made (I_KIT's KT_LAIR: part 51's) */
+unsigned char __fastcall__ pc_dig (unsigned char w);    /* (Part 84: dq0w.c) The character's dig's own */
 void __fastcall__ den_dig (const struct msg* m);    /* (Part 79: wdig.c) A tunneller's dig (I_KIT's KT_DIG: slice
                                                 **   4.11's), a spell at a time */
 void __fastcall__ den_enter (const struct msg* m);  /* (Part 60) Come near (I_ENTER's): its body's from it, its

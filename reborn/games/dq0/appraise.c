@@ -106,7 +106,7 @@ static unsigned char __fastcall__ tenths (unsigned d, unsigned m)
 void __fastcall__ o_appraise (const struct ireq* q, signed char g, unsigned char ex)
 {
     signed char qual = q->quality;
-    unsigned char mat = q->mat, life;
+    unsigned char mat = q->mat, life, sz = q->craft == AP_WEAPON ? 0 : q->size;   /* (A weapon's size its version) */
     unsigned long val;
     unsigned dur = q->dur;
     char b[8];
@@ -192,15 +192,18 @@ void __fastcall__ o_appraise (const struct ireq* q, signed char g, unsigned char
         life = tenths (dur, q->dur_max);
     }
     add (". ");
-    if (q->size || q->thick) {                  /* (Its size and thickness, plain to see: a portal's part's; a
+    if (q->craft == AP_WEAPON && q->size) {     /* (Its version, plain to the hand: D13's) */
+        add (q->size == WV_HEAVY ? "It's a heavy one. " : "It's a light one. ");
+    }
+    if (sz || q->thick) {                       /* (Its size and thickness, plain to see: a portal's part's; a
                                                 **   candle's thickness) */
         add (q->plural ? "They're " : "It's ");
     }
-    if (q->size) {
-        add (utoa (q->size & 15, b, 10));
-        if (q->size >> 4) {
+    if (sz) {
+        add (utoa (sz & 15, b, 10));
+        if (sz >> 4) {
             add (" by ");
-            add (utoa (q->size >> 4, b, 10));
+            add (utoa (sz >> 4, b, 10));
             add (" feet");
         } else {
             add (" feet long");
@@ -209,7 +212,7 @@ void __fastcall__ o_appraise (const struct ireq* q, signed char g, unsigned char
             add (", ");
         }
     }
-    if (q->size || q->thick) {
+    if (sz || q->thick) {
         if (q->thick) {
             add (q->thick >= 8 ? utoa (q->thick >> 3, b, 10) : q->thick >= 4 ? "half an" : q->thick >= 2 ? "a quarter" :
                 "an eighth of an");

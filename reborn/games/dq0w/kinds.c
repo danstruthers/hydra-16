@@ -22,7 +22,7 @@
 ** surface KF_ON) and what closes it (a lid, a tie, a stopper: KF_LID, KF_TIE, KF_STOPPER), its own form (0 a thing
 ** whole; KF_COUNT a lot, counted: its weight one's; KF_TENS its weight by the ten, a coin's, KF_SMALL too, by the 64:
 ** drams) */
-typedef char kinds_fit[KI_OWN_END <= KI_THEME && KI_COUNT <= NKINDS ? 1 : -1];   /* (The theme's after the catalogue's
+typedef char kinds_fit[KI_OWN_END <= KI_THEME && KI_COUNT <= NKINDS - 2 ? 1 : -1];   /* (The theme's after the catalogue's
                                                 **   own, the high kinds after the theme's) */
 #pragma rodata-name (push, "KINDATA")           /* (The kinds in a bank of their own: the hub's KIND_BANK) */
 const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, theme.h: the UI's, as it starts) */
@@ -53,12 +53,12 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "chest", K_CONTAINER, 120, 80, 60, 400, 0, 0, 7, "", MT_WOOD, AP_WOOD, 80, SS | KF_LID },
     { "skull", 0, 4, 2, 0, 0, 0, 0, 3, "", MT_BONE, AP_BONE, 0 },
     { "broken sword", 0, 12, 2, 0, 0, 0, 0, 4, "blade", MT_IRON, AP_WEAPON, 40 },
-    { "cloak", K_WEAR, 8, 6, 0, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 96 },
-    { "potsherds", K_PLURAL, 2, 1, 0, 0, 0, 0, 2, "", MT_CLAY, AP_POTTERY, 0 },
+    { "cloak", K_WEAR, 8, 6, 2, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 96 },
+    { "potsherds", K_PLURAL, 2, 1, 2, 0, 0, 0, 2, "", MT_CLAY, AP_POTTERY, 0 },
     { "sword", K_HAND | K_HANG, 12, 3, 0, 0, FM_SWORD, 0, 4, "blade", MT_IRON, AP_WEAPON, 600 },  /* (The book's
                                                 **   broadsword) */
     { "basket", K_CONTAINER, 4, 8, 16, 80, 0, 0, 3, "", MT_WOOD, AP_WOOD, 8, KF_SOLID },
-    { "heap of sand", 0, 8, 1, 0, 0, 0, 0, 2, "", MT_STONE, AP_POTTERY, 0, 0, KF_SMALL },
+    { "heap of sand", 0, 8, 1, 2, 0, 0, 0, 2, "", MT_STONE, AP_POTTERY, 0, 0, KF_SMALL },
     { "table", 0, 160, 60, 30, 400, 0, 0, 7, "", MT_WOOD, AP_WOOD, 144, KF_ON },
     { "chair", 0, 40, 20, 8, 120, 0, 0, 5, "", MT_WOOD, AP_WOOD, 48, KF_ON },
     { "quiver", K_CONTAINER | K_HANG, 2, 2, 4, 24, FM_ARROW, 0, 2, "", MT_LEATHER, AP_HIDE, 32, KF_SOLID },
@@ -88,7 +88,7 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
                                                 **   the back, taken in hand to fight) */
     { "iron pot", K_CONTAINER, 32, 8, 6, 48, 0, 0, 3, "", MT_IRON, AP_METAL, 40, SS | KF_LIQUID | KF_LID }, /* (A room's use's
                                                 **   leavings: the stock's, dq0m/uses.c) */
-    { "heap of straw", 0, 4, 8, 0, 0, 0, 0, 3, "", MT_OTHER, AP_WOOD, 0 },
+    { "heap of straw", 0, 4, 8, 8, 0, 0, 0, 3, "", MT_OTHER, AP_WOOD, 0 },
     { "candle stubs", K_LIGHT | K_HAND | K_PLURAL, 1, 1, 0, 0, 0, 1, 1, "", MT_TALLOW, AP_FOOD, 0 },  /* (A light
                                                 **   of a few minutes: slice 4.1's) */
     { "well", 0, 255, 255, 0, 0, 0, 0, 8, "", MT_STONE, AP_STONE, 0, KF_FIXED },   /* (Its stone curb: never taken
@@ -175,9 +175,9 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "vial", K_CONTAINER | K_HAND, 2, 1, 1, 5, 0, 0, 1, "", MT_GLASS, AP_GLASS, 24, KF_LIQUID | KF_STOPPER },
     { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 },    /* (The theme's eight, the
                                                 **   UI's as it starts: KI_THEME's) */
-    /* (KI_HIGH on, 2026-10-27: the denizens' belongings and valuables, never lit nor struck with) */
-    { "furs", K_PLURAL, 40, 20, 0, 0, 0, 0, 4, "", MT_LEATHER, AP_HIDE, 120 },    /* (A lord's bed: a heap of them) */
-    { "blanket", 0, 12, 6, 0, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 192 },
+    /* (KI_HIGH on, 2026-10-27: the denizens' belongings and valuables; and what's come since) */
+    { "furs", K_PLURAL, 40, 20, 8, 0, 0, 0, 4, "", MT_LEATHER, AP_HIDE, 120 },    /* (A lord's bed: a heap of them) */
+    { "blanket", 0, 12, 6, 8, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 192 },
     { "cask", K_CONTAINER, 40, 40, 32, 200, 0, 0, 5, "", MT_WOOD, AP_WOOD, 48, KF_LIQUID | KF_STOPPER },   /* (Four
                                                 **   gallons: a band's water) */
     { "crowns", K_PLURAL, 16, 0, 0, 0, 0, 0, 1, "", MT_GOLD, AP_METAL, 960, 0, KF_SMALL | KF_COUNT | KF_TENS },  /* (The
@@ -201,6 +201,27 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "mankar", K_HAND | K_HANG, 8, 2, 0, 0, 0, 0, 3, "mankar", MT_IRON, AP_WEAPON, 336 },   /* (The Gargun's: Combat 3's
                                                 **   (G), 84d and 110d, hung from the belt as an axe is) */
     { "mang", K_HAND | K_HANG, 12, 3, 0, 0, 0, 0, 3, "mang", MT_IRON, AP_WEAPON, 440 },
+    { "whetstone", 0, 1, 1, 0, 0, 0, 0, 2, "whet", MT_STONE, AP_METAL, 24 },   /* (The house's: 6d, HOUSE.md's) */
+    { "antidote", 0, 1, 1, 0, 0, 0, 0, 1, "cure", MT_GLASS, AP_FOOD, 192 },   /* (A vial of theriac, 48d, and a
+                                                **   physician's draught, 12d: the house's prices, HOUSE.md's remedies,
+                                                **   2026-11-02) */
+    { "remedy", 0, 1, 1, 0, 0, 0, 0, 1, "remedy", MT_GLASS, AP_FOOD, 48 },
+    { "broken weapon", 0, 8, 12, 0, 0, 0, 0, 2, "", MT_LEATHER, AP_METAL, 1 },   /* (Its pieces: useless, soft to swing, a farthing's scrap) */
+    { "stone chisel", K_HAND, 2, 1, 0, 0, 0, 0, 1, "chisel", MT_STEEL, AP_METAL, 24 },    /* (As the chisel, the catalogue's
+                                                **   first: the user's, 2026-11-03, "Stone chisel versus wood chisel
+                                                **   might be a good distinction": HOUSE.md's digging) */
+    { "wood chisel", K_HAND, 2, 1, 0, 0, 0, 0, 1, "woodchi", MT_STEEL, AP_METAL, 16 },   /* (Its edge no use on stone: not
+                                                **   in the referee's diggers; the house's, 4d) */
+    { "mattock", K_HAND | K_TWO, 28, 6, 0, 0, 0, 0, 4, "mattock", MT_IRON, AP_METAL, 40, 0, KF_LONG },   /* (The house's: 10d,
+                                                **   a shovel's and a little more) */
+    { "spade", K_HAND | K_TWO, 16, 8, 0, 0, 0, 0, 4, "spade", MT_IRON, AP_METAL, 28, 0, KF_LONG },   /* (The house's: 7d) */
+    { "iron spike", K_HAND, 2, 1, 0, 0, 0, 0, 1, "spike", MT_IRON, AP_METAL, 8 },   /* (Rope and grapples, 2026-11-04: the book's climbing gear,
+                                                **   Treasure's list: a spike, driven; a ring, a post the maker's; a rope in place, a thing tied there) */
+    { "driven spike", 0, 2, 1, 0, 0, 0, 0, 1, "", MT_IRON, AP_METAL, 0, KF_FIXED },
+    { "iron ring", 0, 8, 1, 0, 0, 0, 0, 2, "", MT_IRON, AP_METAL, 0, KF_FIXED },
+    { "stout post", 0, 160, 20, 0, 0, 0, 0, 5, "", MT_WOOD, AP_WOOD, 0, KF_FIXED },
+    { "tied rope", 0, 40, 8, 0, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 48, KF_FIXED },
+    { "hanging rope", 0, 0, 0, 0, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 0, KF_FIXED },
 };
 #pragma rodata-name (pop)
 
@@ -217,7 +238,8 @@ const struct burn burns[NBURNS] = {
     { KI_TORCH, 6, FU_OIL | FU_PITCH }, { KI_CANDLE, 24, 0 }, { KI_LANTERN, 36, FU_OIL }, { KI_STUBS, 3, 0 },
     { KI_OIL, 36, FU_OIL }, { KI_PITCH, 24, FU_PITCH },
     { KI_CHARCOAL, 24, FU_DRAW }, { KI_CHALK, 18, FU_DRAW }, { KI_PENCIL, 120, FU_DRAW }, { KI_INK, 60, FU_DRAW },
-    { KI_QUILL, 180, FU_DRAW }
+    { KI_QUILL, 180, FU_DRAW },
+    { KI_TINDERBOX, 3, FU_DRAW }                /* (Thirty lightings, one off as it catches: HOUSE.md's fire-maker) */
 };
 
 /* What breaks as it's used (slice 4.7's missiles to use, the user's, 2026-10-23: "arrows can break"), its kind and its
@@ -255,7 +277,12 @@ const unsigned char throws[KI_COUNT] = {
     0, 0, 0, 0, 0, 0, 0, 0,                     /* (the theme's eight) */
     1, 1, 0, 2, 2, 2, 2, 2, 2, 2, 2,            /* furs, blanket, cask, crowns, brooch, necklace, pendant, goblet, gem,
                                                 **   talisman, dice */
-    2, 1, 1                                     /* farthings, mankar, mang */
+    2, 1, 1,                                    /* farthings, mankar, mang */
+    2,                                          /* whetstone */
+    2, 2,                                       /* antidote, remedy */
+    0,                                          /* broken weapon */
+    2, 2, 1, 1,                                 /* stone chisel, wood chisel, mattock, spade */
+    2, 0, 0, 0, 0, 0                            /* iron spike; a spike driven, a ring, a post, a rope in place */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
 
@@ -308,4 +335,12 @@ const char* const said[SA_COUNT] = {
     "The % is burnt out.",
     "The % is out of oil.",
     "The # is closed.",                        /* (A lid, a tie, a stopper: opened first, the user's) */
+    "You have no other %.",                    /* ("Light a new torch", the user's, 2026-11-02) */
+    "The # is empty.",                         /* (A fire-maker: as it's reached for, or known) */
+    "You need two good hands to dip the %.",   /* (A torch redipped: HOUSE.md's) */
+    "Your hands slip in the dark: oil spills, and the % takes none of it.",
+    "The % can't be filled or sharpened.",
+    "You have nothing to sharpen the % with.",
+    "The % is as sharp as it will go.",
+    "You put a fresh edge on the %.",
 };

@@ -20,7 +20,7 @@
 **     (carried, or lying within reach: the things' IO_FIND, as a fill's fuel and a door's bar are), else refused,
 **     the things' words ("You have no bar to hand."), never done with bare hands or another thing instead; a blow's
 **     taken in hand first, as a named weapon is (names.c's), and struck with that thing and no other (strike's
-**     SK_THING, its kind: the user's, 2026-10-22, HOUSE.md's fights and portals);
+**     SK_OF its kind: the user's, 2026-10-22, HOUSE.md's fights and portals);
 **   - a blow with nothing named, asked about first, its hands empty and a better thing carried (choose.c's: CF_ASKED,
 **     the command carried out as it's answered).
 ** A thing found has its square (struct cthing's x, y) and its name as its word.  Its own state (the last thing named,
@@ -59,9 +59,10 @@ static unsigned char cd[NASK] = { 0 };          /*   and whether it's a denizen 
 static unsigned char nc = 0;
 static char all[NASK][NAMELEN] = { { 0 } };     /* "take all": the things still to take up, */
 static unsigned char nall = 0, iall = 0;        /*   how many, the next */
-static char dens[SEE_DENS][12] = { { 0 } };     /* The denizens seen at the last command (a new one: the target let
-                                                **   go) */
+static struct sden dens[SEE_DENS] = { { 0 } };  /* The denizens last seen at a command (a new one: the target let go;
+                                                **   remembered: "go to the rat", gone from sight, where it was), */
 static unsigned char ndens = 0;
+static unsigned drx = 0, dry = 0;               /*   the room's (its first square; a passage's none) */
 
 /* Squares from the character to square (x, y) (the more of the two ways) */
 static unsigned char __fastcall__ apart (unsigned x, unsigned y)
@@ -124,7 +125,7 @@ static unsigned char __fastcall__ gather (const char* w, unsigned char what)
     nc = 0;
     if (what & 1) {
         for (i = 0; i < s->nitems; ++i) {
-            if (!(s->item[i].hid & 1) && has (s->item[i].name, w)) {    /* (Not one it hid: it knows where those are,
+            if (!(s->item[i].hid & 1) && has (s->item[i].name, w) && qual_ok (s->item[i].name, w)) {    /* (Not one it hid: it knows where those are,
                                                 **   but they're out of sight) */
                 add (s->item[i].name, s->item[i].x, s->item[i].y, s->item[i].hid >> 4, 0);
             }
@@ -132,7 +133,7 @@ static unsigned char __fastcall__ gather (const char* w, unsigned char what)
     }
     if (what & 2) {
         for (i = 0; i < s->ndens; ++i) {
-            if (*w ? has (s->den[i].name, w) : s->den[i].doing != DO_DOWN) {
+            if (*w ? has (s->den[i].name, w) && qual_ok (s->den[i].name, w) : s->den[i].doing != DO_DOWN) {
                 add (s->den[i].name, s->den[i].x, s->den[i].y, 5, s->den[i].doing == DO_DOWN ? 3 : 1);
             }
         }
@@ -358,6 +359,11 @@ static unsigned char tool_ok (void)
     if (k == sizeof tooled || !*w || cmd.obj.kind == OB_WAY_OUT) {
         return 1;                               /* (Not done with a thing; the way out's own, the puzzle's) */
     }
+    if ((a == VB_UNLOCK_OBJECT || a == VB_LOCK_OBJECT) && !strstr (w, "key") && !strstr (w, "pick")) {
+        sayf ("\nYour %s won't do for a lock.", w);   /* (A thing named is the one used, or none: a key or the lockpicks
+                                                **   aren't taken over it, 2026-11-03) */
+        return 0;
+    }
     k = w == cmd.obj.word ? cmd.obj.sel | cmd.obj.n << 4 : cmd.other.sel | cmd.other.n << 4;
     hub_mem (0, &HUB->ireq.sel, &k, 1);         /* (Which of several: the world's to choose) */
     if (othings (IO_FIND, w, "", 0) != IR_OK) {
@@ -372,11 +378,14 @@ static unsigned char tool_ok (void)
         }
     }
     if (a == VB_ATTACK_OBJECT || a == VB_BREAK_OBJECT) {
-        strike = (unsigned char) othings_x < KI_HIGH ? SK_THING | (unsigned char) othings_x : SK_BEST;  /* (That thing
-                                                **   strikes, and no other: its kind, IO_FIND's (one past seven bits,
-                                                **   items.h's KI_HIGH, the best held); in
-                                                **   hand first, once there's something to strike) */
+        strike = SK_OF (othings_x);             /* (That thing strikes, and no other: its kind, IO_FIND's; in hand first,
+                                                **   once there's something to strike) */
         strcpy (hold_w, cmd.other.word);
+    }
+    if (a == VB_DIG) {
+        strcpy (dig_word, cmd.other.word);      /* (That thing digs, the user's, 2026-11-03: a better one told of) */
+        k = othings_x;
+        hub_mem (0, &HUB->dig_kind, &k, 1);
     }
     if (a != VB_FILL_OBJECT) {
         cmd.other.word[0] = 0;                  /* (Checked: the action's own rules use what's to hand; a fill's fuel
@@ -424,8 +433,14 @@ unsigned char __fastcall__ o_answer (unsigned char chosen)
 unsigned char o_resolve (void)
 {
     struct sight* s = &sight_copy;
+    unsigned before[SEE_ITEMS + SEE_DENS];      /* (UIREC's before: on the C stack, the hub's bank in the window as it's
+                                                **   copied) */
     unsigned char k, n, a = cmd.action;
 
+    if (reach < 5) {                            /* (A line's own: no run of handlings yet, part 19's) */
+        take_more = 0;
+        hub_mem (0, &HUB->pc_lump, &nosteps, 1);
+    }
     if (cmd.flags & CF_ASKED) {
         return RV_DONE;                         /* (A blow's question put: choose.c's) */
     }
@@ -439,14 +454,25 @@ unsigned char o_resolve (void)
         target.word[0] = 0;
     }
     for (k = 0; k < s->ndens; ++k) {            /* (A denizen come into sight since: the target let go) */
-        for (n = 0; n < ndens && strcmp (dens[n], s->den[k].name); ++n) {
+        for (n = 0; n < ndens && strcmp (dens[n].name, s->den[k].name); ++n) {
         }
         if (n == ndens) {
             target.word[0] = 0;
         }
     }
-    for (ndens = 0; ndens < s->ndens; ++ndens) {
-        strcpy (dens[ndens], s->den[ndens].name);
+    for (k = 0; k < SEE_ITEMS; ++k) {           /* (What it sees as the command begins: a walk over for it tells only
+                                                **   what's new after it, way.c's) */
+        before[k] = k < s->nitems ? s->item[k].n : 0;
+    }
+    for (k = 0; k < SEE_DENS; ++k) {
+        before[SEE_ITEMS + k] = k < s->ndens ? *(unsigned*) s->den[k].name : 0;
+    }
+    hub_mem (UI_BANK, UIREC->before, before, sizeof before);
+    if ((n = s->ndens) != 0) {
+        ndens = n;
+        memcpy (dens, s->den, sizeof dens);
+        drx = s->rx;
+        dry = s->ry;
     }
     if (cmd.obj.sel == SL_IT && !cmd.obj.word[0] && !cmd.obj.kind) {   /* ("it": the last thing named) */
         if (!last.word[0] && !last.kind) {
@@ -457,6 +483,9 @@ unsigned char o_resolve (void)
     }
     if (cmd.other.sel == SL_IT && !cmd.other.word[0]) {
         memcpy (&cmd.other, &last, sizeof last);
+    }
+    if (cmd.action == VB_DIG) {
+        hub_mem (0, &HUB->dig_kind, "", 1);     /* (None named, the best to hand) */
     }
     if (cmd.prep == PR_WITH && !tool_ok ()) {   /* (What it's done with: to hand, else refused) */
         return RV_DONE;
@@ -494,6 +523,29 @@ unsigned char o_resolve (void)
         goto named;
     }
     nall = 0;
+    if (a == VB_UNEQUIP_OBJECT && !strcmp (cmd.obj.word, "bar")) {
+        cmd.action = a = VB_BAR_OBJECT;         /* ("Take the bar off", "remove the bar": unbarred, its lifting out) */
+        cmd.aux = PA_LIFT;
+        cmd.obj.kind = OB_DOOR;
+    }
+    if (((unsigned char) (a - VB_MOVE_DIRECTION) < 2 || a == VB_APPROACH_OBJECT) &&
+        (cmd.obj.kind == OB_TRAP || cmd.obj.kind == OB_LEDGE)) {   /* ("Go to the pit": the world's, as any thing's,
+                                                **   way.c's go_thing; "go to the ledge": straight at the part of the room
+                                                **   the look told, its ledge stops it) */
+        strcpy (cmd.obj.word, cmd.obj.kind == OB_TRAP ? "trap" : "ledge");
+        if (cmd.obj.kind == OB_LEDGE && s->nzones) {
+            cmd.dir = (pc_face + s->zone[0].rel) & 7;
+            cmd.obj.word[0] = 0;
+        }
+        cmd.obj.kind = 0;
+    }
+    if ((unsigned char) (a - VB_MOVE_DIRECTION) < 2 && !cmd.obj.kind) {
+        if (cmd.how == HOW_ACROSS) {
+            cmd.obj.kind = OB_ROOM;             /* ("Cross the kitchen": the room it's in, its far side) */
+        } else if (cmd.obj.word[0] && (cmd.how || a != VB_MOVE_DIRECTION)) {
+            cmd.dir = 0xFF;                     /* ("Go up to the pot", "go back to the pot": to it) */
+        }
+    }
     if (cmd.flags & CF_UNSAID) {                /* (Its thing unsaid: its verb's) */
         switch (cmd.dflt) {
         case DF_LAST:
@@ -536,10 +588,23 @@ unsigned char o_resolve (void)
                 cx[n] = cy[n] = 0xFFFF;
             }
             iall = 1;
+            take_more = nall > 1;
             strcpy (cmd.obj.word, all[0]);
             cmd.obj.sel = SL_THE;               /* (Each by its name in turn: not all of a name at once) */
-        } else if (!find_thing (&cmd.obj, a == VB_ATTACK_OBJECT ? 2 : a == VB_THROW_OBJECT ? 1 : 3, 0, 0)) {
+        } else if (!find_thing (&cmd.obj, a == VB_ATTACK_OBJECT ? 2 : a == VB_THROW_OBJECT ? 1 : 3, 0,
+            (unsigned char) (a - VB_MOVE_DIRECTION) < 2 || a == VB_APPROACH_OBJECT)) {   /* (Gone to: which, asked) */
             return RV_DONE;
+        }
+        if (!cmd.obj.x && !nc && ((unsigned char) (a - VB_MOVE_DIRECTION) < 2 || a == VB_APPROACH_OBJECT) &&
+            drx == s->rx && dry == s->ry && cmd.obj.word[0]) {
+            for (k = 0; k < ndens; ++k) {       /* (Gone from sight: where it was last seen, in this room, if not
+                                                **   beside it) */
+                if (has (dens[k].name, cmd.obj.word) && apart (dens[k].x, dens[k].y) > 1) {
+                    cmd.obj.x = dens[k].x;
+                    cmd.obj.y = dens[k].y;
+                    break;
+                }
+            }
         }
     }
     if (cmd.other.word[0] || cmd.other.sel) {   /* (The other: in it, from it, at it ...) */
@@ -574,6 +639,7 @@ void __fastcall__ o_taken_next (char* w)
     if (iall < nall) {
         strcpy (w, all[iall++]);
     }
+    take_more = iall < nall;
 }
 
 #pragma code-name (push, "OV10CODE")           /* (Overlay 10's: this one's room) */
@@ -593,6 +659,8 @@ void __fastcall__ o_throw_words (unsigned r)
     case IR_OK:
         sayf ("\nYou throw the %s%s at the %s%s", w, cmd.manner & MN_HARD ? " hard" : "", cmd.other.word,
             how[r >> 8 & 3]);
+        return;
+    case IR_FIXED:                              /* (A step of the reach first: part 19's) */
         return;
     case IR_NO:
         sayf ("\nThe %s isn't a thing you can throw.", w);

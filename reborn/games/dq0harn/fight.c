@@ -5,9 +5,8 @@
 ** copy of it in the main RAM (the hub's not in the window while the overlay is), its words put into its text.
 **
 ** A creature's sheet comes from its kind's key (the denizens' kinds', kinds.txt's) in the referee's bestiary: the
-** first six a stand-in of the game's own (their numbers the game's); the rest the HarnWorld Bestiary's averages for
-** the like creature (each entry's page given), or for folk HarnMaster's for men (about 10 to 12, their skills by
-** their trade).  Each attribute varied as the book suggests (less 7, and 2d6: at least 1, at most twice), by a die
+** HarnWorld Bestiary's averages for the like creature (each entry's page given; where it has none, its nearest kin's),
+** or for folk HarnMaster's for men (about 10 to 12, their skills by their trade).  Each attribute varied as the book suggests (less 7, and 2d6: at least 1, at most twice), by a die
 ** of its own (the game's seed and the record's number: the same creature each time, and no die of the referee's
 ** spent on it); its sheet kept in the referee's bank (dq0harn.c's sheet_get), its injuries, its state, its
 ** bloodloss, the time it's senseless till.
@@ -184,7 +183,7 @@ void __fastcall__ o_effect (unsigned char target, unsigned char kind, unsigned c
 {
     struct rs_effect* e = (struct rs_effect*) R->x + nfx;
 
-    if (kind == X_DROP && target) {
+    if (kind == X_DROP && target && aspect != 2) {
         bs.state |= BS_DISARMED;                /* (A creature's weapon let fall: its fists till it takes it up again,
                                                 **   the world's RS_REARM; slice 4.1b's) */
     }
@@ -332,8 +331,8 @@ static unsigned char defence (void)
 {
     unsigned char k = (D.who - 1) & 7;
 
-    if (D.c->state != HARN_CONSCIOUS || (!D.who && pc_out > tnow)) {
-        return HARN_IGNORE;
+    if (D.c->state != HARN_CONSCIOUS || (!D.who && pc_out > tnow) || (prones & RS_ASLEEP)) {
+        return HARN_IGNORE;                     /* (Senseless, in shock, asleep, or not seeing it coming: the book's Ignore) */
     }
     if (D.who) {
         if (D.dslot && D.dml >= D.aml && D.dml >= D.dodge && tnow >= dbt[k]) {
@@ -427,6 +426,11 @@ static void attack (void)
             o_strike (&A, &D, 2, 0, HARN_FOREARM, line[0], AF_STOPPED);
         } else if (A.part != 0xFF && !D.bare) { /* (A claw or a bite against a weapon: struck by it) */
             o_strike (&D, &A, 2, 0, A.part, line[1], AF_STOPPED_D);
+        } else if ((n = w_damage ()) != 0) {    /* (Weapon against weapon: broken, gear.c's: an X_DROP with its x[1],
+                                                **   1 a weapon, 2 a creature's shield, the world's to word and to make its
+                                                **   pieces) */
+            o_effect (n == 1 ? A.who : D.who, X_DROP, 0, 0, fumbled (n == 1 ? &A : &D, n == 1) | 0x80,
+                n == 2 && D.b && (R->c & AF_SHIELD) ? 2 : 1);
         }
         break;
     case HARN_R_AH:
@@ -579,7 +583,7 @@ static void tested (void)
     const struct bkind* b = unpack (R->actor);
 
     R->grade = cr.state != HARN_CONSCIOUS ? G_CF : grade (harn_test ((R->a == P_INITIATIVE ? b->ini :
-        5 * cr.att[R->a == P_STEALTH ? HARN_AGL : R->a == P_DIG ? HARN_STR : HARN_DEX]) - 5 * harn_get_pp (&cr) +
+        5 * cr.att[R->a == P_STEALTH ? HARN_AGL : R->a == P_NOTICE_SIGHT ? HARN_EYE : R->a == P_DIG ? HARN_STR : HARN_DEX]) - 5 * harn_get_pp (&cr) +
         STEP_PCT * (signed char) R->steps));
 }
 
@@ -610,7 +614,7 @@ static void __fastcall__ left (unsigned char shy, signed char heart)
             R->c |= AF_CAUTIOUS;
         }
     }
-    if (tup && !(f & FF_FLEES) && cr.state == HARN_CONSCIOUS && !(s->b->flags & (BF_FOLK | BF_MINDLESS))) {
+    if (tup && !(f & FF_FLEES) && cr.state == HARN_CONSCIOUS && !(s->b->flags & (BF_FOLK | BF_BIPED | BF_MINDLESS))) {
         m = courage (s->b, heart);              /* (A beast a level more tired by its round: its courage, its fatigue
                                                 **   in it; short of steady, or berserk, it breaks off, HOUSE.md's) */
         if (m != M_STEADY && m != M_BERSERK) {
@@ -633,6 +637,7 @@ void __fastcall__ o_fight (struct req* r)
     prones = r->w2;
     R = r;
     nfx = 0;
+    stress_lv = 1;                              /* (A fight: a foe near) */
     switch (r->kind) {
     case RS_NEW_ACTOR:
         new_beast ();
@@ -690,7 +695,17 @@ void __fastcall__ o_fight (struct req* r)
             R->b = sb;
         }
     } else {
+        heft (&A);                              /* (Their weapons' versions: D13's) */
+        heft (&D);
         attack ();
+        if (r->result != 0xFF && !r->actor) {   /* (The character's skill used in it, for its development rolls,
+                                                **   opened its first time, the book's, Combat 19: its weapon striking;
+                                                **   skills.c's, slice 4.4's) */
+            skill_used (A.sk);
+        }
+    }
+    if (r->result != 0xFF && r->actor && !r->other) {   /* (Or the thing that blocked, its dodge: at it, a shot too) */
+        skill_used (r->b == D_DODGE ? HARN_DGE : r->b != D_NONE ? D.sk : 0xFF);
     }
     tup = 0;
     if (r->result != 0xFF && !(r->w2 & MS_STRAY)) {

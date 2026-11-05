@@ -14,16 +14,18 @@
             .include    "../dq0/ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 7                     ; dq0m.cfg's overlays (the 6th the swapped parts' images, the 7th uses.c)
+OVMAX       = 9                     ; dq0m.cfg's overlays (the 6th the swapped parts' images, the 7th uses.c, the 8th the great caverns, the 9th sky.c)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 DEPTH       = 16                    ; Overlay calls in calls, at most
+
+            .zeropage
+ova:        .res        1           ; (.A and .X kept through a stub)
+ovx:        .res        1
 
             .bss
 _ovbank:    .res        OVMAX       ; Overlay n's bank: _ovbank[n - 1] (main.c's ovl_load sets them)
 ovstk:      .res        DEPTH       ; The banks the overlay calls found, to put back
 ovsp:       .res        1
-ova:        .res        1           ; (.A and .X kept through a stub)
-ovx:        .res        1
 
             .code
 
@@ -153,6 +155,7 @@ ovl_out:
             OVFN        crossings, 2
             OVFN        slants, 1           ; (The caves' diagonal ways: 2026-10-31, overlay 3's room)
             OVFN        grow_caves, 3
+            OVFN        cavern, 8           ; (The great caverns: slice 4.10's, caves.c's in overlay 8, 3's room)
             OVFN        wet_chunk, 6        ; (The water: slice 4.9's, caves.c's in overlay 6, 3's room)
             OVFN        air_pocket, 3       ; (The air: 2026-10-31)
             OVFN        water_plan, 5
@@ -169,6 +172,7 @@ ovl_out:
             OVFN        layer_at, 7
             OVFN        uses, 7
             OVFN        coin_mint, 5
+            OVFN        sky, 9              ; (What shows the sky: sky.c, 2026-11-03)
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0m.cfg's SWAP, a part at a time, copied
 ; there from overlay 6's bank as it's called)
@@ -184,3 +188,4 @@ ovl_out:
             SWFN        changes_save, 2
             SWFN        changes_restore, 2
             SWFN        sconces, 3
+            SWFN        stale, 3            ; (Its slots' chunks given up: dq0m.c's, the main RAM's room)

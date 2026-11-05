@@ -1,11 +1,11 @@
 /*
-** shots.c - (overlay 15, after part 12's image) the missiles' words (slice 4.7's: E_TASK's TE_NO_SHOT, TE_LOADED, TE_GATHERED, TE_READIED, the
+** shots.c - (overlay 1: overlay 15's room, 2026-11-04) the missiles' words (slice 4.7's: E_TASK's TE_NO_SHOT, TE_LOADED, TE_GATHERED, TE_READIED, the
 ** world's dq0w/wshoot.c's): why there's no shot, a launcher loaded or taken up, the missiles gathered (task.c's
 ** o_task_words calls it: overlay 3's room)
 */
 
-#pragma code-name ("OV15CODE")
-#pragma rodata-name ("OV15RODATA")
+#pragma code-name ("OV1CODE")
+#pragma rodata-name ("OV1RODATA")
 
 #include <string.h>
 #include "dq0.h"

@@ -103,7 +103,19 @@ static void __fastcall__ aff_null (struct req* r)
     unsigned m = r->w1;
     unsigned char k = r->x[18];
 
-    if (k == AK_FLUX) {
+    if (k == AK_CURE || k == AK_REMEDY) {       /* (A remedy taken, 2026-11-02: the poison's sickness, or the
+                                                **   disease's, gone) */
+        if (k == AK_CURE ? aff_m : sick_m) {
+            want_say (" The remedy works: the sickness passes.");
+        } else {
+            want_say (" It does nothing for you.");
+        }
+        if (k == AK_CURE) {
+            aff_m = 0;
+        } else {
+            sick_m = 0;
+        }
+    } else if (k == AK_FLUX) {
         if (!sick_m && !G_OK (flat (r->x[19] > 1 ? -4 : 0))) {
             sick_m = 5760;                      /* (Four days: a day hidden, three of fever) */
         }
@@ -224,7 +236,7 @@ static unsigned char __fastcall__ has (const char* key)
 }
 
 /* What the character strikes with (the hub's pc_strike): its fists, a foot, the head (bare 1), the thing named
-** (SK_THING: its kind's name, the catalogue's), or the first thing it holds (the words the UI knows: RULESETS.md) */
+** (SK_OF: its kind's name, the catalogue's), or the first thing it holds (the words the UI knows: RULESETS.md) */
 static unsigned char bare;
 static char wname[sizeof ((struct kind*) 0)->name];
 
@@ -232,10 +244,10 @@ static const char* weapon (void)
 {
     unsigned char k, s = HUB->pc_strike;
 
-    if (s & SK_THING) {
+    if (SK_IS_KIND (s)) {
         bare = 0;
         hub_map (KIND_BANK);
-        memcpy (wname, CATALOGUE[s & 0x7F].name, sizeof wname);
+        memcpy (wname, CATALOGUE[SK_KIND (s)].name, sizeof wname);
         hub_map (0);
         return wname;
     }
@@ -537,7 +549,8 @@ static void __fastcall__ attack (struct req* r)
     unsigned mw = r->w2;
     unsigned char mk = r->c;
     signed char g = 0, st = mw & RS_MISSILE ? r->steps - 2 * (r->b & 3) - (mw & MS_COVER ? 4 : 0) +
-        (mw & MS_UNAWARE ? 2 : 0) : r->steps - 2 * r->c;
+        (mw & MS_UNAWARE ? 2 : 0) : r->steps - 2 * r->c + (f & RS_ASLEEP ? 2 : 0);   /* (A sleeper struck at: two
+                                                **   steps easier, as one unaware of a shot, 2026-11-02) */
     signed char ht = RS_HEART (r);              /* (A creature's heart: its courage's steps, the denizens' field and
                                                 **   bonds, HOUSE.md's morale) */
 
@@ -700,13 +713,21 @@ static void __fastcall__ answer (struct req* r)
                                                 **   a tunneller's, its grade alone, by its own dice as moving
                                                 **   quietly's, the world's the rest: slice 4.11's) */
             m = r->b > MAT_SOIL ? MAT_STONE : r->b;
-            t = dig_tool (m);
+            t = dig_tool (m, r->text);
             k = digger[t].rate[m];
+            if (r->text[0] && !t) {
+                k = 0;                          /* (Named, and no digger) */
+            }
+            g = dig_tool (m, "");
+            strcpy (r->text + DIG_BETTER, r->text[0] && digger[(unsigned char) g].rate[m] > k ? digger[(unsigned char) g].key : "");
             strcpy (r->text, digger[t].key);
             r->w2 = digger[t].wear[m];
             if (!k) {
                 r->result = 1;
                 r->w1 = r->w2 = 0;
+                break;
+            }
+            if (r->steps == RS_DIG_QUERY) {
                 break;
             }
             g = r->grade = DIG_TESTED (m) ? flat (r->steps) : G_MS;    /* (Earth: the tool's rate, untested) */
@@ -743,8 +764,9 @@ static void __fastcall__ answer (struct req* r)
             break;
         }
         if (((r->a == P_SEARCH || r->a == P_DISARM) && r->b == HIDE_MAGICAL) ||
-            (r->a == P_PICKLOCK && !has ("picks"))) {
-            r->result = 1;                      /* (No magic; no lockpicks) */
+            (r->a == P_PICKLOCK && !r->actor && !has ("picks"))) {
+            r->result = 1;                      /* (No magic; no lockpicks: the character's, a robber's kind its own, as the
+                                                **   HarnMaster referee's, 2026-11-02) */
             break;
         }
         if ((r->a == P_PERSUADE || r->a == P_INTIMIDATE || r->a == P_DECEIVE) && r->text[0] && !speaks (r->text)) {
@@ -754,10 +776,18 @@ static void __fastcall__ answer (struct req* r)
         if (r->a <= P_NOTICE_SMELL) {           /* (By its going and watchfulness: the house's) */
             r->steps += house_notice (r, HUB->pc_going, HUB->watch);
         }
-        if (r->a == P_STEALTH || r->a == P_DIG) {
+        if ((r->a == P_STEALTH || r->a == P_DIG) && r->other != RS_ASKER) {
             QUIET_IN                            /* (Moving quietly, by its own dice: the house's) */
             r->grade = flat (r->steps);
             QUIET_OUT
+            *tp = 0;
+            break;
+        }
+        if (r->a == P_APPRAISE && r->b < NAP) {  /* (A thing judged: the first answer kept, HarnMaster referee's) */
+            r->w2 = 0;
+            JUDGE_IN (r->w1, 0)
+            r->grade = flat (r->steps);
+            JUDGE_OUT
             *tp = 0;
             break;
         }
@@ -773,7 +803,7 @@ static void __fastcall__ answer (struct req* r)
         r->w1 = 49 * 4;                         /* (Farthings, 2026-10-28) */
         r->w2 = (unsigned) HUB->seed | 1;
         r->a = 1;
-        r->x[0] = r->x[1] = 0;
+        r->x[0] = r->x[1] = r->x[2] = 0;       /* (x[2]: its weapons average, D13's) */
         *tp = 0;
         break;
     case RS_WIELD:                              /* (What it would strike with: the first it holds; its hands empty,
@@ -799,11 +829,11 @@ static void __fastcall__ answer (struct req* r)
         r->x[17] = r->w1 >> 8;
         if (r->actor != 0xFF) {                 /* (The UI's: a drink of still water, the flux's; no air, nothing else,
                                                 **   2026-10-31) */
-            r->x[18] = r->x[15] & 0x80 ? AK_FLUX : 0;
+            r->x[18] = r->x[15] & 0x80 ? AK_FLUX : r->x[15] & RT_TAKEN ? (r->x[15] & 1 ? AK_CURE : AK_REMEDY) : 0;
             r->x[19] = 1;
             r->x[20] = r->x[21] = 0;
         }
-        r->x[15] &= 0x7F;
+        r->x[15] &= r->x[15] & RT_TAKEN ? 0 : 0x7F;
         if (!r->a && wounds) {
             rest_m += r->w1;                    /* (At rest: toward a wound healed) */
         }

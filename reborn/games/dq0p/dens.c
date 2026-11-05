@@ -2,7 +2,8 @@
 ** dens.c - (dq0p) the denizens the character sees (DUNGEON.md: perception as layers): their bodies the world's (the
 ** hub's actors), which of them are seen the senses' to decide (those on squares the character sees now, the look's
 ** marks), added to what it perceives (the senses' record, SIGHT_BANK: SEE_DENS at most), after each look and as the
-** world asks (the hub's look, LK_DENS: their bodies changed).
+** world asks (the hub's look, LK_DENS: their bodies changed).  One hidden (its state not 1: HOUSE.md's hiding oneself) isn't
+** seen till it's found.
 */
 
 #include <stddef.h>
@@ -26,7 +27,7 @@ unsigned char dens_seen (void)
     for (k = n = ch = 0, a = HUB->actor; k < NACTORS; ++k, ++a) {
         hub_map (0);
         s = 0;
-        if (a->state) {                         /* (Its body copied out only if it's one: most aren't) */
+        if (a->state == 1) {                    /* (Its body copied out only if it's one, not hidden: most aren't) */
             memcpy (&sact, a, SACT);
             g = HUB->agear[k];                  /* (Its things at a look: the world's, AG_*; the hub in the window) */
             if (sact.sn == HUB->pc_stratum && n < SEE_DENS && (p = at (sact.sn, sact.x, sact.y)) != 0 && (*p & T_VIS)) {

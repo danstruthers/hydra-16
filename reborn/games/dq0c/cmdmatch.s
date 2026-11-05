@@ -85,7 +85,7 @@ W_DEITY     = 4                     ; A deity's name
 
 MAXTOK      = 14                    ; Positions 0-14 fit a 16-bit mask
 MAXRULES    = 400                   ; (A rule's number, and a name's, two bytes: rid, ridh; the open names 255 at most)
-MAXENT      = 720                   ; The dictionary's entries (the index's, 566 now, then the world's own words)
+MAXENT      = 800                   ; The dictionary's entries (the index's, 566 now, then the world's own words)
 MAXDYN      = 16                    ; The world's own words: deities' names that are no word of the dictionary's
 MAXALIAS    = 160                   ; (The default aliases: 134 now)
 MAXINDEX    = 24

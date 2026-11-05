@@ -46,17 +46,17 @@ const EXPRS = {
   now: F('struct hub', 'now'), quit: F('struct hub', 'quit'), seed: F('struct hub', 'seed'), pcstatus: F('struct hub', 'pcstatus'),
   pcSn: F('struct hub', 'pc_stratum'), pcX: F('struct hub', 'pc_x'), pcY: F('struct hub', 'pc_y'), pcFace: F('struct hub', 'pc_face'),
   pcLight: F('struct hub', 'pc_light'), pcLamp: F('struct hub', 'pc_lamp'), pcsum: F('struct hub', 'pcsum'),
-  gait: F('struct hub', 'gait'), watch: F('struct hub', 'watch'), pcPos: F('struct hub', 'pc_pos'), pcGoing: F('struct hub', 'pc_going'),
+  gait: F('struct hub', 'gait'), watch: F('struct hub', 'watch'), pcPos: F('struct hub', 'pc_pos'), pcHid: F('struct hub', 'pc_hid'), nolurk: F('struct hub', 'nolurk'), hlook: F('struct hub', 'hlook'), pcGoing: F('struct hub', 'pc_going'),
   pcReady: F('struct hub', 'pc_ready'), hubNow: F('struct hub', 'now'),
-  pcChart: F('struct hub', 'pc_chart'), pcMap: F('struct hub', 'pc_map'),
-  pcStance: F('struct hub', 'pc_stance'), pcStrike: F('struct hub', 'pc_strike'), pcShand: F('struct hub', 'pc_shand'), pcSkew: F('struct hub', 'pc_skew'), pcLost: F('struct hub', 'pc_lost'), tbSkew: F('struct hub', 'tb.skew'), tbSkewHi: F('struct hub', 'tb.skew') + ' + 1', tbUnc: F('struct hub', 'tb.unc'), tbUncHi: F('struct hub', 'tb.unc') + ' + 1', tbSky: F('struct hub', 'tb.sky'), tbHour0: F('struct hub', 'tb.hour0'), tbHow: F('struct hub', 'tb.how'), tbHours: F('struct hub', 'tb.hours'), tbDue: F('struct hub', 'tb.due'), tbDue1: F('struct hub', 'tb.due') + ' + 1', tbDue2: F('struct hub', 'tb.due') + ' + 2', tbDue3: F('struct hub', 'tb.due') + ' + 3', tsense: F('struct hub', 'pcsum.timesense'), wayOpen: F('struct hub', 'way_open'), digTool: F('struct hub', 'dig_tool'),
+  pcChart: F('struct hub', 'pc_chart'), pcChartk: F('struct hub', 'pc_chartk'), pcMap: F('struct hub', 'pc_map'),
+  pcStance: F('struct hub', 'pc_stance'), pcStrike: F('struct hub', 'pc_strike'), pcShand: F('struct hub', 'pc_shand'), pcSkew: F('struct hub', 'pc_skew'), pcLost: F('struct hub', 'pc_lost'), tbAt: F('struct hub', 'tb.at'), tbSkew: F('struct hub', 'tb.skew'), tbSkewHi: F('struct hub', 'tb.skew') + ' + 1', tbUnc: F('struct hub', 'tb.unc'), tbUncHi: F('struct hub', 'tb.unc') + ' + 1', tbSky: F('struct hub', 'tb.sky'), tbHour0: F('struct hub', 'tb.hour0'), tbHow: F('struct hub', 'tb.how'), tbHours: F('struct hub', 'tb.hours'), tbDue: F('struct hub', 'tb.due'), tbDue1: F('struct hub', 'tb.due') + ' + 1', tbDue2: F('struct hub', 'tb.due') + ' + 2', tbDue3: F('struct hub', 'tb.due') + ' + 3', tsense: F('struct hub', 'pcsum.timesense'), wayOpen: F('struct hub', 'way_open'), digTool: F('struct hub', 'dig_tool'),
   sCond: F('struct rs_summary', 'cond'), sHealth: F('struct rs_summary', 'health'), sLoad: F('struct rs_summary', 'load'),
   sSight: F('struct rs_summary', 'sight'), sStep: F('struct rs_summary', 'step'), sGstep: F('struct rs_summary', 'gstep'), ngaits: 'NGAITS',
   sLimbs: F('struct rs_summary', 'limbs'), sLimp: F('struct rs_summary', 'limp'), sNorth: F('struct rs_summary', 'northsense'),
   actor: F('struct hub', 'actor'), actorSize: 'sizeof (struct actor)', nactors: 'NACTORS', diHead: F('struct hub', 'di_head'),
   diTail: F('struct hub', 'di_tail'), diAt: F('struct hub', 'di'), msgSize: 'sizeof (struct msg)', diSize: 'DI_SIZE',
   aState: F('struct actor', 'state'), aSn: F('struct actor', 'sn'), aFace: F('struct actor', 'face'), aPos: F('struct actor', 'pos'),
-  aX: F('struct actor', 'x'), aY: F('struct actor', 'y'), aDoing: F('struct actor', 'doing'), aName: F('struct actor', 'name'),
+  aX: F('struct actor', 'x'), aY: F('struct actor', 'y'), aDoing: F('struct actor', 'doing'), aName: F('struct actor', 'name'), aArm: F('struct actor', 'arm'), aDropped: F('struct actor', 'dropped'),
   aAttitude: F('struct actor', 'attitude'), aFaction: F('struct actor', 'faction'), aKind: F('struct actor', 'kind'), aDid: F('struct actor', 'did'),
   aReady: F('struct actor', 'ready'), denSeq: F('struct hub', 'den_seq'), agear: F('struct hub', 'agear'), digT: F('struct hub', 'dig_t'),
   themeBank: 'THEME_BANK', thName: F('struct theme', 'name'), thStratum: F('struct theme', 'stratum'), tstrata: 'TSTRATA',
@@ -67,9 +67,9 @@ const EXPRS = {
   catBank: 'KIND_BANK', kindSize: 'sizeof (struct kind)', nkinds: 'NKINDS', kFlags: F('struct kind', 'flags'), kWeight: F('struct kind', 'weight'), kForm: F('struct kind', 'form'), kValue: F('struct kind', 'value'),
   item0: 'ITEM_BANK (0)', itemSize: 'sizeof (struct item)', nitems: 'NITEMS', iKind: F('struct item', 'kind'), iFlags: F('struct item', 'flags'),
   iWhere: F('struct item', 'where'), iSn: F('struct item', 'sn'), iX: F('struct item', 'x'), iY: F('struct item', 'y'),
-  iQty: F('struct item', 'qty'), iId: F('struct item', 'id'), iFuel: F('struct item', 'fuel'), iShut: F('struct item', 'shut'), iSize: F('struct item', 'size'), iThick: F('struct item', 'thick'),
+  iQty: F('struct item', 'qty'), iId: F('struct item', 'id'), iFuel: F('struct item', 'fuel'), iWear: F('struct item', 'wear'), iShut: F('struct item', 'shut'), iSize: F('struct item', 'size'), iThick: F('struct item', 'thick'),
   iMat: F('struct item', 'mat'), iQuality: F('struct item', 'quality'), iOwner: F('struct item', 'owner'), iDur: F('struct item', 'dur'), iDurMax: F('struct item', 'dur_max'), iHide: F('struct item', 'hide'), pcFuel: F('struct hub', 'pc_fuel'), pcLeft: F('struct hub', 'pc_left'),
-  ioName: 'IO_NAME', ioTheme: 'IO_THEME', ioBegin: 'IO_BEGIN', ioPuzzle: 'IO_PUZZLE', ioThrow: 'IO_THROW', ioFill: 'IO_FILL', ioShut: 'IO_SHUT', ioInside: 'IO_INSIDE', ioLook: 'IO_LOOK', ioSeek: 'IO_SEEK',
+  ioStep: 'IO_STEP', ioName: 'IO_NAME', ioTheme: 'IO_THEME', ioBegin: 'IO_BEGIN', ioPuzzle: 'IO_PUZZLE', ioThrow: 'IO_THROW', ioFill: 'IO_FILL', ioShut: 'IO_SHUT', ioInside: 'IO_INSIDE', ioLook: 'IO_LOOK', ioSeek: 'IO_SEEK',
   ioHands: 'IO_HANDS', sightBank: 'SIGHT_BANK', tSeq: F('struct sight', 'seq'), tWhere: F('struct sight', 'where'), tDark: F('struct sight', 'dark'),
   tKind: F('struct sight', 'kind'), tSize: F('struct sight', 'size'), tRw: F('struct sight', 'rw'), tRh: F('struct sight', 'rh'), tRx: F('struct sight', 'rx'), tRy: F('struct sight', 'ry'),
   tLit: F('struct sight', 'lit'), tCeil: F('struct sight', 'ceil'), tFirst: F('struct sight', 'first'), tZ: F('struct sight', 'z'),
@@ -182,7 +182,7 @@ function layout() {
   for (const b of C.blocks) for (const n of b) if (!blockOf[n]) blockOf[n] = b;
   const name = (member, v) => { const b = blockOf[member] || []; const n = b.find(x => byName[x] === v); return n === undefined ? v : n; };
   // (A things' request's kind: items.h's IO_*, the enum's or those #defined after it, IO_NAME ... IO_FILL)
-  const D = j.L, ioDefs = { [D.ioName]: 'IO_NAME', [D.ioTheme]: 'IO_THEME', [D.ioBegin]: 'IO_BEGIN', [D.ioPuzzle]: 'IO_PUZZLE', [D.ioThrow]: 'IO_THROW', [D.ioFill]: 'IO_FILL',
+  const D = j.L, ioDefs = { [D.ioStep]: 'IO_STEP', [D.ioName]: 'IO_NAME', [D.ioTheme]: 'IO_THEME', [D.ioBegin]: 'IO_BEGIN', [D.ioPuzzle]: 'IO_PUZZLE', [D.ioThrow]: 'IO_THROW', [D.ioFill]: 'IO_FILL',
     [D.ioShut]: 'IO_SHUT', [D.ioInside]: 'IO_INSIDE', [D.ioLook]: 'IO_LOOK', [D.ioSeek]: 'IO_SEEK', [D.ioHands]: 'IO_HANDS' };
   const ioName = v => { const n = name('IO_KIT', v); return typeof n === 'number' && ioDefs[v] ? ioDefs[v] : n; };
   return (LAYOUT = { L: j.L, K: byName, name, ioName });
@@ -222,7 +222,7 @@ function createRecorder() {
         else if (e.te === 'TE_NO_FOE') e.shock = !!e.b;                    //   its end, in shock or none left)
         else if (e.te === 'TE_BREAK') { e.by = (e.b & 0x3F) - 1; e.how = ['back', 'flight', 'run'][w >> 8]; delete e.task; }   // (A disengage's)
         else if (e.te === 'TE_FREE') e.none = ['engaged', 'near', 'way'][e.b];   // (None: not engaged, nothing near to flee, no way back)
-        else if (e.te === 'TE_LOW' || e.te === 'TE_OUT') { e.lamp = e.b & 0x7F; e.seen = !!(e.b & 0x80); }   // (A light's kind; one lying there seen)
+        else if (e.te === 'TE_LOW' || e.te === 'TE_OUT') { e.lamp = e.b; e.seen = !!(w >> 8 & 0x40); e.task = name('LT_NONE', w >> 8 & 0x3F); }   // (A light's kind; one lying there seen)
         else if (e.te === 'TE_ROBBED') e.by = e.b - 1;                     // (The robber: its entry)
         else if (e.te === 'TE_FETCHED') { e.by = (e.b & 15) - 1; e.ft = name('FT_TOOK', e.b >> 4); e.thing = w >> 8; delete e.task; }   // (An errand's, a gift's: slice 4.8's)
         else if (e.te === 'TE_BEGUN' || e.te === 'TE_ASK_SHORT') e.what = e.b;   // (A timed work's, a battering's: what it's done to)
@@ -247,12 +247,12 @@ function createRecorder() {
     const s = { line: enters, game: games.length - 1, cyc: m.cpu.cyc, now: w32(h, L.now), quit: h[L.quit], wayOpen: h[L.wayOpen],
       status: str(h, L.pcstatus, 16), digTool: [0, 1, 2, 3].map(i => str(h, L.digTool + i * 8, 8)),
       pc: { sn: h[L.pcSn], x: w16(h, L.pcX), y: w16(h, L.pcY), face: h[L.pcFace], light: h[L.pcLight], lamp: str(h, L.pcLamp, 14), fuel: w16(h, L.pcFuel), left: str(h, L.pcLeft, 20),
-        pos: h[L.pcPos], gait: h[L.gait], watch: h[L.watch], going: h[L.pcGoing], stance: name('D_NONE', h[L.pcStance]), strike: name('SK_BEST', h[L.pcStrike]), shand: h[L.pcShand],
-        tb: { skew: w16(h, L.tbSkew) << 16 >> 16, unc: w16(h, L.tbUnc), sky: h[L.tbSky], hour0: h[L.tbHour0], how: h[L.tbHow], hours: w16(h, L.tbHours), tsense: h[L.tsense] },
+        pos: h[L.pcPos], hid: h[L.pcHid], gait: h[L.gait], watch: h[L.watch], going: h[L.pcGoing], stance: name('D_NONE', h[L.pcStance]), strike: name('SK_BEST', h[L.pcStrike]), shand: h[L.pcShand],
+        tb: { at: w16(h, L.tbAt), due: (w16(h, L.tbDue) | w16(h, L.tbDue + 2) * 65536), skew: w16(h, L.tbSkew) << 16 >> 16, unc: w16(h, L.tbUnc), sky: h[L.tbSky], hour0: h[L.tbHour0], how: h[L.tbHow], hours: w16(h, L.tbHours), tsense: h[L.tsense] },
         skew: h[L.pcSkew], lost: h[L.pcLost], noise: h[L.pcNoise], mask: h[L.pcMask], bg: h[L.pcBg], airH: h[L.airH], airS: h[L.airS],
         task: { kind: name('LT_NONE', h[L.pcTask]), asking: h[L.pcTask + 1], len: w16(h, L.pcTask + 2), done: w16(h, L.pcTask + 4), foe: h[L.pcTask + L.ltFoe] - 1, mins: h[L.pcTask + L.ltMins] },
         ready: w16(h, L.pcReady) + w16(h, L.pcReady + 2) * 65536, now: w16(h, L.hubNow) + w16(h, L.hubNow + 2) * 65536,
-        chart: h[L.pcChart], map: w16(h, L.pcMap) },
+        chart: h[L.pcChart], chartk: h[L.pcChartk], map: w16(h, L.pcMap) },
       sum: { cond: w16(h, L.pcsum + L.sCond), health: h[L.pcsum + L.sHealth], load: h[L.pcsum + L.sLoad], sight: h[L.pcsum + L.sSight],
         step: h[L.pcsum + L.sStep], gstep: Array.from(h.subarray(L.pcsum + L.sGstep, L.pcsum + L.sGstep + L.ngaits)),
         limbs: h[L.pcsum + L.sLimbs], limp: h[L.pcsum + L.sLimp], northsense: h[L.pcsum + L.sNorth],
@@ -352,6 +352,8 @@ function createRecorder() {
         lit: t[L.tLit], ceil: t[L.tCeil], sname: t[L.tSname], first: t[L.tFirst], z: w16(t, L.tZ) << 16 >> 16, stratum: t[L.tStratum], x: w16(t, L.tX), y: w16(t, L.tY), nways: t[L.tNways], dazzled: t[L.tDazzled],
         doors: list(L.tNdoors, L.seeDoors, d0, L.tDoorSize, o => ({ rel: t[L.dRel + o], state: t[L.dState + o], x: w16(t, L.dX + o),
           y: w16(t, L.dY + o), kind: name('PK_DOOR', t[L.dKind + o]), parts: t[L.dParts + o] })),
+        known: Array.from({ length: L.seeDoors - Math.min(t[L.tNdoors], L.seeDoors) }, (_, i) => (i + Math.min(t[L.tNdoors], L.seeDoors)) * L.tDoorSize)   // (Those it remembers, after them: KNOWN_REL's, 0x40)
+          .filter(o => t[L.dRel + o] & 0x40).map(o => ({ rel: t[L.dRel + o], state: t[L.dState + o], x: w16(t, L.dX + o), y: w16(t, L.dY + o), kind: name('PK_DOOR', t[L.dKind + o]) })),
         open: list(L.tNopen, L.seeOpen, o0, L.tOpenSize, o => ({ rel: t[L.oRel + o], kind: name('O_STAIRS_UP', t[L.oKind + o]) })),
         items: list(L.tNitems, L.seeItems, i0, L.tItemSize, o => ({ name: str(t, L.sName + o, 14), qty: t[L.sQty + o], rel: t[L.sRel + o],
           hid: t[L.sHid + o] })),

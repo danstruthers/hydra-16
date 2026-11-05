@@ -130,6 +130,9 @@ void s_tend (void)
         res = r->result;
         strcpy (lb, r->text);
         r->state = REQ_FREE;
+        if (!res && tool_out (0)) {
+            goto out;                           /* (A bandage got out first: a tool's steps, part 19's) */
+        }
         msg (lb);
         if (!res) {
             hub_mem (UI_BANK, &UIREC->kept, &cmd, sizeof cmd);

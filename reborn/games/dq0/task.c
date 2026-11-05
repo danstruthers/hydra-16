@@ -22,9 +22,13 @@ static const char* const doing[] = {           /* (By LT_*) */
     "doing anything", "walking", "climbing", "digging", "searching", "waiting", "sleeping", "talking", "battering",
     "fighting", "travelling", "studying the mechanism", "disarming the trap", "picking the lock", "forcing", "heaving at",
     "bending the bars", "winding the winch", "working the pane free", "tracking", "sniffing the air", "filling",
-    "hiding", "tending the wound"
+    "hiding", "tying the rope", "tending the wound", "turning a key", "taking off", "taking off", "reaching into", "holding open", "getting out", "putting on",
+    "letting fall", "letting fall", "putting away", "blowing out", "blowing out", "lighting", "setting down", "taking up", "sharpening",
+    "striking a spark", "getting out", "putting away", "taking up", "setting down", "blowing out", "lighting", "dipping",
+    "letting fall", "sheathing", "slinging", "setting down", "setting down", "putting away", "setting down", "putting away", "setting down", "taking up"
 };
 #define NDOING          (sizeof doing / sizeof doing[0])
+typedef char doing_all[NDOING == LT_UP2 + 1 ? 1 : -1];   /* (Every long task's words: "You stop doing anything the torch", 2026-11-04) */
 
 /* An enemy the character's met (E_TASK's b, TE_ENGAGED's, TE_FAR's: its entry plus 1), as it's said: "the giant
 ** rat" (the first letter a capital, cap), or "something" if it isn't seen */
@@ -52,14 +56,14 @@ static const char* __fastcall__ foe (unsigned char b, unsigned char cap)
     return fn;
 }
 
-/* A light's kind's name (E_TASK's b, TE_LOW's, TE_OUT's: the catalogue's, its kind | 0x80), in fn; and whether it's a
+/* A light's kind's name (E_TASK's b, TE_LOW's, TE_OUT's: the catalogue's), in fn; and whether it's a
 ** plural (K_PLURAL: candle stubs) */
 static unsigned char __fastcall__ lamp (unsigned char b)
 {
     unsigned char f;
 
-    hub_mem (KIND_BANK, fn, CATALOGUE[b & 0x7F].name, sizeof CATALOGUE[0].name);
-    hub_mem (KIND_BANK, &f, &CATALOGUE[b & 0x7F].flags, 1);
+    hub_mem (KIND_BANK, fn, CATALOGUE[b].name, sizeof CATALOGUE[0].name);
+    hub_mem (KIND_BANK, &f, &CATALOGUE[b].flags, 1);
     return f & K_PLURAL;
 }
 
@@ -99,7 +103,8 @@ static const char* __fastcall__ noun (unsigned char n)
     static const char* const pk[3] = { "the door", "the window", "the portcullis" };    /* (By PK_*) */
 
     if (n & 0x80) {
-        lamp (n);                               /* (A thing's kind's name: the catalogue's) */
+        hub_mem (KIND_BANK, fn, CATALOGUE[(n & 0x7F) | what_hi].name, sizeof CATALOGUE[0].name);   /* (A thing's kind's name: the
+                                                **   catalogue's: past 127, the UI's top bit) */
         strcpy (nb, "the ");
         strcat (nb, fn);
         return nb;
@@ -114,7 +119,7 @@ static const char* __fastcall__ doing_of (unsigned char k, unsigned char n)
     static const char* const struck[4] = { "battering", "punching", "kicking", "butting" };    /* (By SK_*) */
 
     strcpy (dn, k == LT_BATTER ? struck[n >> 4 & 3] : doing[k < NDOING ? k : 0]);
-    if (n && (k == LT_BATTER || k == LT_FORCE || k == LT_HEAVE || k == LT_FILL || k == LT_HIDE)) {
+    if (n && (k == LT_BATTER || k == LT_FORCE || k == LT_HEAVE || k == LT_FILL || k == LT_HIDE || (k >= LT_PACKOFF && k != LT_KINDLE))) {
         strcat (dn, " ");
         strcat (dn, noun (n));
     }
@@ -138,8 +143,8 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     char t[20];                                 /* (On the C stack: a thing's name) */
 
     if (p == TE_OUT) {
-        one = k & 0x80;                         /* (Another of its name burning still: the world's) */
-        k &= 0x7F;
+        one = k;                                /* (Another of its name burning still; one it sees: the world's) */
+        k &= 0x3F;
     }
 
     if (p == TE_NOT || p == TE_ENGAGED || p == TE_OUT) {
@@ -147,19 +152,25 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     }
     d = doing_of (k, n);
     if (p <= TE_NEAR || p == TE_ENGAGED || (p == TE_OUT && k)) {
-        reach = 0;                              /* (A walk over to a thing stopped: its command dropped; a thing's
+        parts_in (PO_STOP);                     /* (The rest of its line with it: parts.c's lists, 2026-11-04) */
+        if (k != LT_FIGHT || reach < 5) {          /* (A fight begun as the character came free, its line's first step in hand: that stopped, not the step) */
+            reach = 0;                          /* (A walk over to a thing stopped: its command dropped; a thing's
                                                 **   timed work stopped: its end dropped, words.c's) */
+        }
     }
     k = p;
-    if (k == TE_ASK_SHORT) {                    /* (A battering's: a bare part's blow that would hurt it stopped short
+    if (k == TE_ASK_SHORT && w >> 8 != LT_DIG) {  /* (A dig's nothing to show: its words its own, E_DIG's.  A battering's: a bare part's blow that would hurt it stopped short
                                                 **   of it, once a door; told, dq0 -a's too, then asked) */
         p = named >> 4 & 3;
         sayf ("\nYou %s ", p == SK_KICK ? "kick" : p == SK_HEAD ? "butt" : "punch");
         sayf ("%s with your bare %s, but stop short of hurting yourself.", noun (named),
               p == SK_KICK ? "feet" : p == SK_HEAD ? "head" : "hands");
     }
-    if (autogo && (k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD || k == TE_ASK_HURT || k == TE_ASK_SHORT)) {
-        return 2;
+    if (k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD || k == TE_ASK_HURT || k == TE_ASK_SHORT) {
+        if (autogo) {
+            return 2;
+        }
+        parts_in (PO_STOP);                     /* (Asked: the rest of a list isn't its answer, and goes as a stop's does) */
     }
     switch (k) {
     case TE_BODY:                               /* (What time did to its body: the referee's words, part 12's; 8 dead
@@ -182,9 +193,12 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         break;
     case TE_IDLE:
         msg ("You aren't doing anything to stop.");
+        if (reach >= 5) {
+            reach_said (TE_IDLE, 0);            /* (Between two steps of the reach: they stop, part 19's) */
+        }
         break;
     case TE_CANT:
-        msg ("There's no stopping part way up: you cling on, and climb.");
+        msg ("There's no stopping part way up: you cling on and climb.");
         break;
     case TE_ENGAGED:                            /* (HOUSE.md's engagement: "The giant rat engages you: you stop
                                                 **   walking."; engaged already, "You're engaged with the giant rat.") */
@@ -223,7 +237,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
             foe (named, 0));
         break;
     case TE_FREE:                               /* (None: b 0 not engaged, 1 nothing near to flee, 2 no way back) */
-        msg (named == 2 ? "There's no way back." : named ? "There's nothing to flee from." : "You aren't engaged.");
+        msg (named == 2 ? "There's no way back." : named ? "You see nothing to flee from." : "You aren't engaged.");
         break;
     case TE_NO_FOE:                             /* (b 1: in shock, in no state to fight on; 2, a missile's fight) */
         msg (named == 1 ? "You're in no state to fight." : named ? "No foe is left in your sights." :
@@ -235,20 +249,31 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     case TE_READIED:
         shot_words (w, named);
         break;
-    case TE_LOW:                                /* (A light it carries in its last ten minutes: slice 4.1's) */
+    case TE_LOW:                                /* (A light it carries in its last ten minutes: slice 4.1's; not in its sleep) */
+        hub_mem (0, &p, &HUB->pc_task.kind, 1);
+        if (p == LT_SLEEP) {
+            break;
+        }
         p = lamp (named);
         sayf ("\nYour %s %s burning low.", fn, p ? "are" : "is");
         break;
     case TE_OUT:                                /* (Its fuel burnt: its own, its only light, its task stopped with
-                                                **   it; or one it sees lying there, | 0x80) */
+                                                **   it; or one it sees lying there, TO_SEEN) */
         p = lamp (named);
-        if (!(named & 0x80) && !p && one) {     /* (Another of its name burning still, the world's: "One of
+        if (one & TO_SEEN) {                    /* (One lying about or in a sconce: told once an answer, a long rest's two
+                                                **   the soak's, 2026-11-04; harm_told's bit, the prone's it doesn't read) */
+            if (harm_told & 1) {
+                break;
+            }
+            harm_told |= 1;
+        }
+        if (!(one & TO_SEEN) && !p && (one & TO_ANOTHER)) {     /* (Another of its name burning still, the world's: "One of
                                                 **   your torches", not "Your torch" twice) */
             sayf ("\nOne of your %s%s gutters and goes out", fn, strchr ("sxh", fn[strlen (fn) - 1]) ? "es" : "s");
         } else {
-            sayf ("\n%s %s gutter%s and go%s out", named & 0x80 ? "The" : "Your", fn, p ? "" : "s", p ? "" : "es");
+            sayf ("\n%s %s gutter%s and go%s out", one & TO_SEEN ? "The" : "Your", fn, p ? "" : "s", p ? "" : "es");
         }
-        if (w >> 8 & 0x7F) {                    /* (Its long task stopped with it: k is the code here) */
+        if (w >> 8 & 0x3F) {                    /* (Its long task stopped with it: k is the code here) */
             sayf (": you stop %s.", d);
         } else {
             say (".");
@@ -262,6 +287,11 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     case TE_ROBBED:                             /* (Helpless, robbed: a robber's way, the denizens') */
         sayf ("\n%s goes through your things as you lie helpless, and takes what it finds.", foe (named, 1));
         break;
+    case TE_PACKED:                             /* (The reach's: part 19's) */
+    case TE_FUMBLE:
+    case TE_KINDLED:
+        reach_said (w, named);
+        break;
     case TE_LEARNT:                             /* (A skill opened as it's used: Drawing, the first map, slice 4.2's) */
         msg ("You start to learn drawing.");
         break;
@@ -269,6 +299,10 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
                                                 **   outcome as its time's done, HOUSE.md's long tasks; the user's,
                                                 **   2026-10-22) */
         p = w >> 8;
+        if (p >= LT_PACKOFF) {
+            reach_said (w, named);              /* (A step of the reach: part 19's) */
+            break;
+        }
         if (p == LT_TRAVEL) {                   /* (A journey: slice 4.2's) */
             sayf ("\nYou head back toward %s.", place (named));
             break;
@@ -337,7 +371,7 @@ void __fastcall__ o_state_words (unsigned char cond)
             say (harm_told & c_[i] ? still_[i] : now_[i]);
         }
     }
-    harm_told |= cond;
+    harm_told |= cond & ~1;
 }
 
 #pragma local-strings (pop)
@@ -401,9 +435,16 @@ void __fastcall__ o_beat_words (unsigned w)
 
     switch ((unsigned char) w) {
     case WB_QUIET:
-        msg ("You go on down the passage.");
+        hub_mem (SIGHT_BANK, &r, &SIGHT->dark, 1);
+        msg (r ? "You feel your way on." : "You go on down the passage.");
         break;
     case WB_TURN:
+        hub_mem (SIGHT_BANK, &sk, &SIGHT->dark, 1);
+        if (sk) {                               /* (In the dark: as its feet go, no passage's name, no bearing) */
+            r = w >> 8;
+            msg (r & 0x10 ? "The way bends." : r == WS_LEFT ? "The way turns left." : "The way turns right.");
+            break;
+        }
         if ((r = w >> 8) & 0x10) {
             hub_mem (0, &sk, &HUB->pc_skew, 1);
             r = (r + (sk << 1)) & 15;
@@ -423,6 +464,8 @@ void __fastcall__ o_beat_words (unsigned w)
         msg ("The way falls away.");
         break;
     case WB_CROSS:
+        hub_mem (SIGHT_BANK, &r, &SIGHT->dark, 1);
+        if (!r)                                 /* (In the dark, no room's told) */
         tell (T_YOU_CROSS_THE);                 /* (A room crossed to a door, a passage: "You cross the room.") */
         break;
     case WB_TELLS:                              /* (A battering's as it goes: the user's, 2026-10-22) */
@@ -445,8 +488,8 @@ void __fastcall__ o_beat_words (unsigned w)
 #pragma rodata-name (pop)
 
 /* (Overlay 7's, its room: the dark's words, 2026-10-22) */
-#pragma code-name (push, "OV7CODE")
-#pragma rodata-name (push, "OV7RODATA")
+#pragma code-name (push, "OV17CODE")            /* (Overlay 17's since 2026-11-02: overlay 7's room, what can be named) */
+#pragma rodata-name (push, "OV17RODATA")
 #pragma local-strings (push, on)
 
 /* A walk in the dark's beat (E_BEAT's w, WB_FEEL ... WB_SHORT: HOUSE.md's walking in the dark): set out on, feeling
@@ -455,6 +498,93 @@ void __fastcall__ o_beat_words (unsigned w)
 ** thing (WB_SWAT: its actor plus 1, the thing the hub's pc_strike's), one attempt; a battering's first words, struck
 ** with the thing named (FW_BATTER, task_words': its what), "You set to battering the door with the bar." (the user's,
 ** 2026-10-22) */
+/* A walk over for a command just done (look's LOOK_NEW, E_ARRIVE's): the things and the denizens it sees that it didn't
+** as the command began (UIREC's before, resolve.c's), and not the thing it came for; nothing else: the command's outcome
+** comes next (the user's, 2026-11-02) */
+static void new_words (void)
+{
+    struct sight* s = &sight_copy;
+    unsigned before[SEE_ITEMS + SEE_DENS];      /* (On the C stack: the hub's bank in the window as it's copied) */
+    unsigned char i, j, k, n;
+
+    hub_mem (UI_BANK, before, UIREC->before, sizeof before);
+    for (i = n = 0, j = 0; i < s->nitems; ++i) {
+        for (k = 0; k < SEE_ITEMS && before[k] != s->item[i].n; ++k) {
+        }
+        if (s->item[i].hid & 2 ? j : k == SEE_ITEMS && !(cmd.obj.word[0] && strstr (s->item[i].name, cmd.obj.word))) {
+            memcpy (&s->item[n++], &s->item[i], sizeof s->item[0]);
+            j = 1;                              /* (One on the surface before it told with that, and only so) */
+        } else {
+            j = 0;
+        }
+    }
+    s->nitems = n;
+    for (i = n = 0; i < s->ndens; ++i) {
+        for (k = 0; k < SEE_DENS && before[SEE_ITEMS + k] != *(unsigned*) s->den[i].name; ++k) {
+        }
+        if (k == SEE_DENS) {
+            memcpy (&s->den[n++], &s->den[i], sizeof s->den[0]);
+        }
+    }
+    s->ndens = n;
+    lbn = 1;                                    /* (Said as a look's are) */
+    *(lbe = lb) = 0;
+    seen_words ();
+    if (lb_stream) {
+        lb_said ();
+    }
+}
+
+/* In the dark, what its hands and feet can tell (the look's, every walk's end; the user's, 2026-11-02: HOUSE.md's walking
+** in the dark): "You feel a wall ahead and to your left; nothing to your right."  No name for the place, no way told,
+** unless it's been on this square before and not forgotten it ("This should be the kitchen.") */
+static void touch_words (void)
+{
+    static const char* const kind_w[4] = { "nothing", "a wall", "a door", "iron bars" };
+    static const char* const side_w[3] = { "ahead", "to your left", "to your right" };
+    static const unsigned char order_[4] = { 1, 2, 3, 0 };
+    struct sight* s = &sight_copy;
+    unsigned char c = s->cmid, i, k, n, m, said = 0;
+
+    hub_mem (0, &k, (char*) &HUB->pcsum.cond + 1, 1);   /* (C_BLINDED, its high byte: the window's not the hub's here) */
+    strcat (lb, k & C_BLINDED >> 8 ? "You can't see. You feel " : "It is dark. You feel ");
+    for (i = 0; i < 4; ++i) {
+        k = order_[i];
+        for (n = m = 0; m < 3; ++m) {
+            n += TOUCHED (c, m) == k;
+        }
+        if (!n) {
+            continue;
+        }
+        if (said++) {
+            strcat (lb, "; ");
+        }
+        strcat (lb, kind_w[k]);
+        for (m = 0; m < 3; ++m) {
+            if (TOUCHED (c, m) == k) {
+                strcat (lb, " ");
+                strcat (lb, side_w[m]);
+                if (--n) {
+                    strcat (lb, n == 1 ? " and" : ",");
+                }
+            }
+        }
+    }
+    strcat (lb, ".");
+    lbe = lb + strlen (lb);
+    if (s->cwall) {
+        if (s->where == W_ROOM) {
+            strcat (lb, " This should be the ");
+            lbe = lb + strlen (lb);
+            theme_named (TN_ROOM, s->kind);
+            strcat (lb, ".");
+        } else {
+            strcat (lb, " You've been along this passage.");
+        }
+        lbe = lb + strlen (lb);
+    }
+}
+
 void __fastcall__ o_felt_words (unsigned w)
 {
     static const char* const met[FA_PIT + 1] = {
@@ -465,12 +595,40 @@ void __fastcall__ o_felt_words (unsigned w)
     };
     static const char* const into[FA_PIT + 1] = { "", "a wall", "a door", "iron bars", "", "a rise in the floor", "" };
     static const char* const gait[4] = { "walk", "jog", "run", "sprint" };
-    unsigned char b = w >> 8, k = b & 7, g = (b >> 4) - GA_WALK & 3, sk;
+    unsigned char b = w >> 8, k = b & 7, g = (b >> 4) - GA_WALK & 3, sk, r_;
 
+    if (w == FW_NEW) {
+        new_words ();
+        return;
+    }
+    if (w == FW_TOUCH) {
+        touch_words ();
+        return;
+    }
     switch ((unsigned char) w) {
+    case WB_SIDES:                              /* (A dark walk, as what its hands find on either side changes: its low
+                                                **   four bits now, left then right; its high four as they were) */
+        for (k = 0; k < 2; ++k, b >>= 2) {
+            sk = (b >> 4) & 3;
+            r_ = b & 3;
+            if (sk != r_) {
+                if (!r_) {
+                    sayf ("\nThe wall to your %s ends.", k ? "right" : "left");
+                } else if (r_ == 2) {
+                    sayf ("\nYou feel a door to your %s.", k ? "right" : "left");
+                } else if (sk != 2) {
+                    sayf ("\nA wall begins to your %s.", k ? "right" : "left");
+                }
+            }
+        }
+        return;
     case WB_FEEL:
         hub_mem (0, &sk, &HUB->pc_skew, 1);     /* (The way by the north it believes in: slice 4.2's) */
         k = (k + sk) & 7;
+        if (reach == 2) {                       /* (Its command again, walked over first: told as the walk began) */
+            return;
+        }
+        worded = 2;                             /* (Its way told: not "You set off south." after it: facing_words') */
         if (b >> 4) {
             sayf ("\nYou %s %s into the dark.", gait[g], head_name[k]);
         } else {
@@ -510,49 +668,137 @@ void __fastcall__ o_felt_words (unsigned w)
             strcpy (lb, k == PK_PORTCULLIS ? "portcullis" : k == PK_DOOR ? "door" : "window");
         }
         hub_mem (0, &k, &HUB->pc_strike, 1);
-        hub_mem (KIND_BANK, lb + 32, CATALOGUE[k & 0x7F].name, sizeof CATALOGUE[0].name);
+        hub_mem (KIND_BANK, lb + 32, CATALOGUE[SK_KIND (k)].name, sizeof CATALOGUE[0].name);
         sayf ((unsigned char) w == WB_SWAT ? "\nYou swat at %s%s with the %s, but it seems ineffectual." :
             "\nYou set to battering %s%s with the %s.", *lb >= 'a' ? "the " : "", lb, lb + 32);
         return;
     case WB_SPENT:                              /* (A thing used up, its kind: HOUSE.md's things used up) */
+        if (b >= KI_ANTIDOTE) {
+            return;                             /* (A remedy drunk: told as it's drunk, 2026-11-02) */
+        }
         hub_mem (KIND_BANK, lb, CATALOGUE[b].name, sizeof CATALOGUE[0].name);
-        sayf (b == KI_RATIONS ? "\nThat was the last of your %s." : b == KI_WATER ? "\nYour waterskin is empty." :
+        sayf (b == KI_RATIONS || b == KI_BANDAGES ? "\nThat was the last of your %s." : b == KI_WATER ? "\nYour waterskin is empty." :
             "\nYour %s is %s.", lb, b == KI_INK ? "dry" :
             b == KI_QUILL ? "worn out" : "worn to nothing");    /* (Rations eaten: slice 4.9's) */
         return;
     }
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "OV19CODE")            /* (Overlay 19's since 2026-11-03: overlay 1's room) */
+#pragma rodata-name (push, "OV19RODATA")
+
+/* A turn's first words (V_FACING's: the user's, 2026-11-03, "I guess the turn info is OK keeping both"): said by its way
+** as it faces ("turn r", the parser's own reply, CQ_REL | n), "You turn right, to face west."; by the compass, or another's
+** reason to turn, "You turn to face west." */
+void __fastcall__ o_turned_says (unsigned char go)
+{
+    static const char* const tw[8] = { "", "half right", "right", "well to the right", "around", "well to the left", "left",
+                                       "half left" };
+    static const char* const st[8] = { "forward", "ahead to your right", "to your right", "back to your right", "back",
+                                       "back to your left", "to your left", "ahead to your left" };
+    unsigned char f, d, b[4];
+
+    hub_mem (0, &f, &HUB->pc_face, 1);
+    hub_mem (0, &d, &HUB->pc_skew, 1);
+    if (go) {                                   /* (A way set out on, V_SETOFF's: 8 a step, by the way it faces; a walk, by
+                                                **   the north it believes in) */
+        if (worded == 2) {
+            return;
+        }
+        if (go & 8) {
+            sayf ("\nYou step %s.", st[(go - f) & 7]);
+        } else {
+            sayf ("\nYou set off %s.", head_name[(go + d) & 7]);
+        }
+        return;
+    }
+    hub_mem (CMD_BANK, b, HUB_WINDOW + CQ_CMD, 4);   /* (Its action, its actor, its flags, its way: as it was said) */
+    f = (f + d) & 7;
+    d = b[3] & 7;
+    if (b[0] != VB_FACE_DIRECTION || b[3] == 0xFF || !(b[3] & CQ_REL) || !d) {
+        sayf ("\nYou turn to face %s.", head_name[f]);
+    } else {
+        sayf ("\nYou turn %s, to face %s.", tw[b[2] & CF_HALF ? (d == 2 ? 1 : d == 6 ? 7 : d) : d], head_name[f]);
+    }
+}
+
 /* The way the character believes it faces, said (the status command's, after the referee's words of its state: slice
-** 4.2's bearings, the north it believes in; unsure of it, said so) */
+** 4.2's bearings, the north it believes in; unsure of it, said so); and first, every referee's, what the hub has of its
+** body that the referee's Condition hasn't (the user's, 2026-11-03: "When running status, I would like to see my hunger and
+** thirst state as well"): its hunger and thirst, in the game's words for them; a limb useless, a limp; how it lies, sits or
+** crouches; the water it's in */
 void o_facing_words (void)
 {
-    unsigned char f, b[2];
+    static const char* const hw[5] = { "not hungry", "hungry", "very hungry", "starving", "wasting away with hunger" };
+    static const char* const tw[5] = { "not thirsty", "thirsty", "very thirsty", "parched", "dying of thirst" };
+    static const char* const pw[8] = { "", "lying down", "crouching", "kneeling", "sitting", "", "", "" };
+    static const char* const lw[4] = { "left arm", "right arm", "left leg", "right leg" };
+    unsigned char f, b[2], w;
 
+    hub_mem (0, &w, &HUB->pc_want, 1);
+    f = WANT_HUNGER (w);
+    w = WANT_THIRST (w);
+    sayf ("\nHunger and thirst: %s, %s.", hw[f > 4 ? 4 : f], tw[w > 4 ? 4 : w]);
+    hub_mem (0, b, &HUB->pcsum.limbs, 1);
+    hub_mem (0, b + 1, &HUB->pcsum.limp, 1);
+    for (f = 0; f < 4; ++f) {
+        if (b[0] & LB_ARM_L << f) {             /* (LB_ARM_L, LB_ARM_R, LB_LEG_L, LB_LEG_R: bits in order) */
+            sayf ("\nYour %s is useless.", lw[f]);
+        }
+    }
+    if (b[1]) {
+        sayf ("\nYou limp.");
+    }
+    hub_mem (0, &f, &HUB->pc_pos, 1);
+    if (pw[f & 7][0]) {
+        sayf ("\nPosition: %s.", pw[f & 7]);
+    }
+    hub_mem (0, &f, &HUB->pc_hid, 1);
+    if (f) {
+        say ("\nYou are hidden.");
+    }
+    hub_mem (0, &f, &HUB->pc_wet, 1);
+    hub_mem (0, b, &HUB->pc_swim, 1);
+    hub_mem (0, b + 1, &HUB->pc_under, 1);
+    if (b[1]) {
+        sayf ("\nWater: under it, holding your breath.");
+    } else if (b[0]) {
+        sayf ("\nWater: swimming.");
+    } else if (f & ~WET_RUNS) {
+        sayf ("\nWater: %u feet deep where you stand.", f & ~WET_RUNS);
+    }
     hub_mem (0, &f, &HUB->pc_face, 1);
     hub_mem (0, b, &HUB->pc_skew, 2);           /* (pc_skew and pc_lost) */
     sayf ("\nFacing: %s%s.", head_name[(f + b[0]) & 7], b[1] ? ", you think; you've lost your bearings" : "");
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "OV7CODE")
+#pragma rodata-name (push, "OV7RODATA")
 
 
 /* The task a stop names, by its word ("digging"; "": none, LT_NONE) */
 unsigned char __fastcall__ o_stop_kind (const char* word)
 {
-    static const char* const word_[] = { "walking", "going", "moving", "climbing", "digging", "working", "searching",
+    static const char* const word_[] = { "walking", "going", "moving", "climbing", "digging", "searching",
                                          "waiting", "resting", "sleeping", "talking", "battering", "breaking",
                                          "smashing", "fighting", "attacking", "kicking", "punching", "butting",
                                          "studying", "disarming", "picking", "forcing", "heaving", "bending",
-                                         "winding", "tracking", "sniffing", "filling", "soaking", "hiding",
-                                         "travelling", "returning", "heading", "tending", "treating", "bandaging" };
-    static const unsigned char kind_[] = { LT_WALK, LT_WALK, LT_WALK, LT_CLIMB, LT_DIG, LT_DIG, LT_SEARCH, LT_WAIT,
+                                         "winding", "tracking", "sniffing", "filling", "soaking", "dipping", "hiding",
+                                         "travelling", "returning", "heading", "tending", "treating", "bandaging",
+                                         "prising", "freeing", "sharpening", "honing" };
+    static const unsigned char kind_[] = { LT_WALK, LT_WALK, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT,
                                            LT_SLEEP, LT_SLEEP, LT_TALK, LT_BATTER, LT_BATTER, LT_BATTER, LT_FIGHT,
                                            LT_FIGHT, LT_BATTER, LT_BATTER, LT_BATTER, LT_STUDY, LT_DISARM, LT_PICK,
                                            LT_FORCE, LT_HEAVE, LT_BEND, LT_WIND, LT_TRACK, LT_SNIFF, LT_FILL,
-                                           LT_FILL, LT_HIDE, LT_TRAVEL, LT_TRAVEL, LT_TRAVEL, LT_TEND, LT_TEND, LT_TEND };
+                                           LT_FILL, LT_FILL, LT_HIDE, LT_TRAVEL, LT_TRAVEL, LT_TRAVEL, LT_TEND, LT_TEND, LT_TEND,
+                                           LT_PRISE, LT_PRISE, LT_HONE, LT_HONE };   /* ("working" none: whatever the work is) */
     unsigned char i;
 
     for (i = 0; i < sizeof kind_; ++i) {
         if (!strcmp (word, word_[i])) {
-            return kind_[i];
+            return kind_[i] == LT_FILL && HUB->pc_task.kind == LT_DIPOLD ? LT_DIPOLD : kind_[i];   /* (A dip's the old torch's own) */
         }
     }
     return LT_NONE;
@@ -715,6 +961,9 @@ static unsigned __fastcall__ wait_of (const char* l, unsigned char n)
     return !said ? 0 : t > 65535UL ? 65535U : t ? (unsigned) t : 1;
 }
 
+static unsigned char time_told = 0;              /* (Its words said already, o_wait_go's: not as its E_TIME comes) */
+void __fastcall__ o_time_said (unsigned w, unsigned char b);
+
 /* A wait (VB_WAIT, VB_PASS) or a sleep or a rest (VB_SLEEP) begun (chores'): as long as the line says (wait_of); a
 ** wait or a pass with none said a round; a sleep or a rest a night's, eight hours, or a short one's, half an hour
 ** (the house's); its intent in tenths, or in minutes past 100 of them (WA_MIN), asleep for a sleep (WA_SLEEP) */
@@ -731,12 +980,18 @@ void __fastcall__ o_wait_go (unsigned char action)
         if (!m) {
             m = strstr (cl, "short") ? 30 : 480;
         }
-        a = WA_SLEEP;
+        a = rest_ ? WA_SLEEP | WA_REST : WA_SLEEP;
     }
     if (m > 100) {
         a |= WA_MIN;
     } else {
         m *= 600;
+    }
+    if (!busy && m) {
+        o_time_said (m, a);                     /* (As long as it says: told at once, the world's E_TIME to come saying
+                                                **   nothing, the user's, 2026-11-04; a round's in time as it is) */
+        t_flush ();
+        time_told = 1;
     }
     intend_a = a;
     intend2 (I_WAIT, m, 0);
@@ -749,6 +1004,10 @@ void __fastcall__ o_time_said (unsigned w, unsigned char b)
 {
     unsigned m = b & WA_MIN ? w : w / 600, h = m / 60, r = m % 60;
 
+    if (time_told) {
+        time_told = 0;
+        return;
+    }
     if (!(b & (WA_MIN | WA_SLEEP)) && (w < 600 || w % 600)) {
         tell (T_TIME_PASSES);                   /* (A round, or less than a minute's: as it was) */
         return;

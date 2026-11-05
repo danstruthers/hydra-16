@@ -60,10 +60,11 @@ static void __fastcall__ era_words (unsigned char e, char* out, unsigned char ag
 }
 
 /* The goal's slots, for its lines (goals.txt's) */
-static char gs_s[4], gu_s[4], ge_s[4], geu_s[4], gg_w[16];
+static char gs_s[4], gu_s[4], ge_s[4], geu_s[4], gx_s[4], gg_w[16];
 static void goal_slots (void)
 {
     struct era* g;
+    unsigned char x;
 
     strcpy (gs_s, num (gs));
     strcpy (gu_s, num (gu));
@@ -81,6 +82,10 @@ static void goal_slots (void)
     SL ('u') = gu_s;
     SL ('e') = geu_s;
     SL ('T') = st[0].name;
+    for (x = (unsigned char) seed; ns > 1 && x >= ns - 1; x -= ns - 1) {
+    }                                           /* (Another way out's stratum: below the top, by the seed, none of its dice) */
+    strcpy (gx_s, num (ns > 1 ? x + 1 : 1));
+    SL ('O') = gx_s;
     g = er + (ge - 1);                          /* (Through a pointer: goalgen.c's) */
     SL ('N') = g->great;
     SL ('P') = g->pthe;
@@ -398,7 +403,7 @@ static void dens_lines (void)
 ** reads) while there's room for it */
 static void goal_lines (void)
 {
-    static const char* const keys[TK_THEMES] = { "kind", "piece", "rule", "story", "lock", "opened", "ending" };
+    static const char* const keys[TK_THEMES] = { "kind", "piece", "rule", "story", "lock", "opened", "ending", "wayin", "wayout" };
     static char used[NTKINDS][14];
     unsigned char nk = 0, nr = 0, e, k, i, cand[TSTRATA], nc;
     int j, end;

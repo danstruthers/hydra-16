@@ -74,7 +74,18 @@ This runs, one step after another with one summary at the end:
     node sim/test.js --tier lead
 
 This runs the whole suite (dq0answer at DQ0ANS_WAIT=0 in it), RULES=null's meaning tests, the soaks
-(`soak.js -n 200` and `-n 100 -fight 0.8`), dq0answer at DQ0ANS_WAIT=1 and 2, and the parser's checks.
+(`soak.js -n 200`, `-n 60 -fight 0.8` and `-n 20 -life 3 -same`), dq0answer at DQ0ANS_WAIT=1 and 2, and the parser's checks.
+The plain soak hardly meets a denizen in 60 turns.  `-fight` plays scenes (a hostile theme, foes brought near as none come), tells the
+blows, the foes felled and the deaths, and fails a run with too few (until 2026-11-04 it was the plain soak over again: its first 100
+lines the same).  `-life` plays dungeons in sequence in one save's folder, through dq0life and dq0acct: death, leaving, solving, quitting
+and going on, hard mode, the time between's questions answered at random, the record judged after each game.
+
+A soak's machine powers up the same each run (`-power N`, 1 by default), so one tree's seed plays the same game every time and its
+failure can be chased; until 2026-11-04 its RAM was random, the tasks' timings other each run, so other words at the player's prompts,
+so other commands.  A change to any code still shifts a seed's game: the player reads the words as they fall.  `-same` plays each game
+again with its commands and scenes as they were, on a machine powered up otherwise, and fails unless the world's events, the denizens'
+and the replies are the same (the turns pace's rule, dq0turnsame's, for every game the soak plays; rest paid in other slices, the same
+in all, allowed).
 
 ## Keeping it safe
 
@@ -131,7 +142,7 @@ One report as the brief's checks were, against the report tier, for a game-only 
 |---|---|---|
 | The suite | the whole suite, 253 tests, about 22 min | 107 tests, 14 min |
 | RULES=null | 43 tests, about 5.5 min | 43 tests, 5.5 min |
-| The soaks (`-n 200`; `-n 100 -fight 0.8`) | about 19 min + 10 min (16 seeds took 90 s) | the lead's |
+| The soaks (`-n 200`; `-n 60 -fight 0.8`; `-n 20 -life 3 -same`) | about 5 min + 2 min + 3 min on eight cores (2026-11-04) | the lead's |
 | dq0answer at waits 1 and 2 | about 3 min | the lead's |
 | The parser's | always | only when the grammar changed |
 | **Total** | about 60 min | about 20 min (measured: 19 min 44 s) |

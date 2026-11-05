@@ -984,6 +984,21 @@ a critical failure the hurt (the lead's reading of the user's question; theirs t
 
 **Design:** HOUSE.md's portals (battering) and long tasks.
 
+### Searching a thing, and a whole room
+
+The user (2026-11-02, a playtest):
+
+"When searching a pile of straw, it says "no sign of a trap", but I am not looking for traps, but for anything hidden
+in the straw.  Also, I would like `search the room` to take time to search around the whole room, poking through piles
+of straw, taking a closer look at the items, etc., not just searching for hidden doors or traps.  It should report
+incrementally what you are doing as well."
+
+Built: a thing searched means what's in it or under it, no trap words unless they're asked for; a heap hides what's on
+its square; `search the room` a long task of stops along the walls and across the floor, each thing and heap in turn,
+told as it goes, kept as far as it went; bare `search` stays the quick minute.
+
+**Design:** HOUSE.md's the search's forms and a room searched whole; DUNGEON.md's searching.
+
 ### Walking and searching in the dark
 
 The user's playtest (2026-10-22): "when wandering around in the dark, you should not auto-adjust your movement
@@ -1299,6 +1314,26 @@ quicker); the game on the ROM disk (its reads some 4.5 times as quick: the start
 
 **Design:** DUNGEON.md, the game's start.
 
+### The catalogue's room (the margins' pass, 2026-11-03)
+
+The user (2026-11-02): "Stone chisel versus wood chisel might be a good distinction for future items."  Built: a kind's
+number a whole byte everywhere, room for 60 more (NKINDS 206), a stone chisel, a wood chisel, a mattock and a spade
+(HOUSE.md's digging, for review).
+
+**Design:** items.h's NKINDS, HOUSE.md's digging.
+
+### The answers' first letters (the margins' pass, 2026-11-03)
+
+The swings at the normal pace, found by a probe of each answer's tasks: (1) `examine` of any thing asked the denizens first
+whether it named one of them, and they're the background: a second and more when a mind was at work (now only when the
+word's first three letters are in an actor's name, or the player has named one); (2) a denizen's kit in hand in the world as
+Enter comes can't be left part way, up to 1.1M cycles (not cured: it would take the kit's draw and its making split, the
+world's loop looking at the UI's intents between); (3) a walk to a
+place in the room told nothing till it got there, 13M cycles ("You set off across the room." now).  The rest is the parts'
+copies: the UI's now four pages a pass (SWFAST), the chooser's pass of the store direct, not by items ().
+
+**Design:** DUNGEON.md, the game's start; HOUSE.md's going to anything.
+
 ### The answers' times held (the kernel's foreground)
 
 The user (2026-10-30): the answer-time checks (D17's, dq0answer's and dq0prompt's) are the user's and never raised;
@@ -1366,6 +1401,10 @@ dawn", "wait until morning", "watch the sun" go by it.
 
 **Design:** DUNGEON.md's the time of day believed; HOUSE.md's.
 
+Then (2026-11-03): the check of HOUSE.md found that the user had named windows, skylights and shafts for seeing the time,
+but only an open way out showed the sky.  Asked which goes first, the user: "All three together".  **Built:** HOUSE.md's
+what shows the sky.
+
 ### Poison, bad air and disease
 
 The user (2026-10-31): "What about poisoning, chemical exposure, and disease?"  Then: "Should also include poor air
@@ -1399,6 +1438,39 @@ a square corner to corner, seven feet); the cave grower's zigzag tunnels made th
 
 ## 2026-11-02
 
+### Moving: walking straight, going to anything seen, inspecting from afar
+
+The user's words (a playtest): "Can you please go [over] how moving around works?  It is still difficult to navigate
+without saying `15 feet west`, etc. and I still can't approach things other than doors and window, or say `cross the
+room`.  It is frustrating to be on one side of a room facing the far side, and if there is a closed door on that side
+(even if I can't see it) it says "the door is closed, you have to open it first" (or something like that) and I do not
+move.  I would like `f` to move me forward until I reach a wall, closed door, or other obstacle.  Also, since I can't
+move to an object yet, it is hard to inspect things."
+
+Asked whether the compass words should walk the same as the relative ones: "Answering your question, yes, all
+directions by themselves should work the same".
+
+More from the same playtest: "if you cannot see something (it is outside your light bubble), you may still be able to
+walk to, inspect, etc. even though it is not seen.  Doors you can't see can also be enumerated in the `which door...`
+response.  One last thing, if you say `walk to the door on the left` it doesn't always do what you expect."
+
+And: "When you go to something to pick it up, if you have to walk to it, it says "You walk up to <item>", then it gives
+a full look, then says "there is a <object> at your feet" and then says "Taken." or the appropriate "You are
+overburdened" if you are carrying too much."
+
+And: "Playtesting, I see that a barred door is not shown as such, just closed.  You also can't `unbar the door`."
+
+And: "When moving about in the dark, when you meet a wall, it tells you so, then says something like "It is dark; you
+feel your way. You are in a passage. It goes to your right and behind you, rising gently." Since it is dark, when you
+meet a wall, you don't really know which way the passage goes.  It might be better to just say "You feel a wall to your
+left, and nothing to your right" or some such.  What do you think?"  The lead proposed feeling your way telling only what
+the hands and feet could tell (HOUSE.md's walking and searching in the dark); the user: "That sounds great!"
+
+The lead's reading, built: what it sees now, or has seen and remembers, can be named and walked to (a door out of the
+light listed in "which door?", the look not telling it); what it has never perceived is neither listed nor found.
+
+**Design:** HOUSE.md's going places (straight walks); DUNGEON.md's going places in a room.
+
 ### One path for every actor: the common structure (Phase 3C)
 
 The user (2026-11-02): "Go ahead and start the command interpreter changes now".  On the lead's survey (the
@@ -1416,18 +1488,18 @@ their records, not by words.  How the catalogue's actions become the world's int
 | FACE_DIRECTION | I_TURN | (its face, every intent's x[1]) |
 | CLIMB, JUMP | I_CLIMB (up, down; I_JUMP) | I_CLIMB (an ally come along) |
 | DIG | I_DIG (a way) | I_KIT's KT_DIG (a tunneller's spell) |
-| OPEN, CLOSE, UNLOCK, LOCK, FORCE, BREAK, BAR, RAISE, LOWER, BEND, DISARM, SEARCH, EXAMINE (a portal) | I_PORTAL (PA_*, which, its square) | I_PORTAL (a door: PA_OPEN ... PA_BREAK) |
+| OPEN, CLOSE, UNLOCK, LOCK, FORCE, BREAK, BAR, RAISE, LOWER, BEND, DISARM, SEARCH, EXAMINE (a portal) | I_PORTAL (PA_*, which, its square) | I_PORTAL (a door: PA_OPEN ... PA_BREAK, a lock picked by a robber's kind; a portcullis: PA_RAISE, PA_LOWER, PA_BEND: 2026-11-02) |
 | RETRIEVE_OBJECT (out of reach) | I_TAKE (its square, its record) | I_TAKE (its wants: the world takes the first in its reach); I_ROB's FE_TAKE (an ally's errand) |
 | ATTACK_OBJECT, ENGAGE | I_ATTACK (whom, the aim), I_CLOSE (walked up to first) | I_ATTACK |
 | THROW_OBJECT, SHOOT_OBJECT | I_ATTACK, AIM_SHOT | I_ATTACK, AIM_SHOT |
 | LOAD_OBJECT, GATHER_OBJECT | I_LOAD, I_GATHER | |
 | DISENGAGE, FLEE | I_DISENGAGE | (its steps away) |
 | WAIT, SLEEP | I_WAIT | I_WAIT |
-| STAND, SIT, LIE_DOWN, CROUCH | I_RISE | |
+| STAND, SIT, LIE_DOWN, CROUCH | I_RISE | I_RISE (lain down to sleep, up again: 2026-11-02) |
 | LIGHT_OBJECT, EXTINGUISH_OBJECT | I_LIGHT | |
 | OBSERVE_DIRECTION, TRACK, SMELL | I_LOOK, I_TRACE | |
 | STOP, META_QUIT | I_STOP, I_QUIT | |
-| the rest (things handled, words, the meta) | the things' requests (IO_*), the sway (SW_*), the UI's own | I_ROB (a robbery, an errand) |
+| the rest (things handled, words, the meta) | the things' requests (IO_*), the sway (SW_*), the UI's own | I_ROB (a robbery, an errand; FE_DROP, FE_PASS, FE_THROW, 2026-11-04: by the character's let fall, its hands, its throw) |
 
 Built (branch reborn-game-onepath) in the brief's order: first what the denizens lacked, the doors (opened, shut,
 a bar lifted and set, unlocked and locked with their keys, forced, battered: the character's parts, wdoor.c and
@@ -1436,3 +1508,306 @@ character's take (one take rule, the minds' I_TAKE).  Steps, digging and climbin
 shared (DUNGEON.md's one path for every actor says why).
 
 **Design:** DUNGEON.md's one path for every actor and its portals; DENIZENS.md's doors; HOUSE.md's denizens and doors.
+
+### Reach told and timed a step at a time
+
+The user (2026-11-02, a playtest): "Also, when you have to take off your backpack to get something from it, it should
+read "Taking off backpack", pause, "retrieving <item>", pause, then "putting your backpack back on".  Taking just as
+long as it might take when really doing it.  Grope (take off backpack) followed by Grope (get something from backpack)
+then grope (put the pack back on), each one taking its time."
+
+The user (2026-11-02): "Dropping your pack in a fight should be automatic (no grope test), but taking it in hand should
+be."
+
+The user (2026-11-02, a playtest): "Also, `light a new torch` should drop the old one and get a new one and light it."
+
+The user (2026-11-02): "oh, and lighting a torch is a grope (take off backpack, if necessary), grope (take the tinder box),
+grope (to use the tinder box, penalized roll in the dark, continue until successful, reporting as it goes along), then
+grope (put away the tinderbox), then grope (put backpack back on).  If the tinderbox is empty, then say so once you get to
+that step (or if remembered), and if the tinderbox is in your belt pouch, no first and last grope to take on/off
+backpack."
+
+The user (2026-11-02): "Applies to any tool use, like sharpening your sword (if you have a whetstone), and similar tasks."
+
+The user (2026-11-02): "Fumbling about in the dark should be difficult, so re-dipping a torch (`refresh torch` or
+`dip/redip torch` should work), but you need to blow out the torch first unless you have another, and then re-dip (in the
+dark), then re-light it (in the dark), all appropriately done.  So lighting a new torch, blowing out the old one,
+re-dipping, putting it away, etc. should be the preferred way to "redip|refresh" your torch, if it is still lit and you
+have a spare."
+
+Built as the general kind: every reach is a sequence of timed steps, told as each begins, the world changed at each's
+end, for everything the reach rule covers; "new", "fresh" and "another" a selector (the thing not in a hand, not
+burning) for every handling, and a light's own run (the old let fall, a spare got out, lit).  **Design:** HOUSE.md's
+reach, handy tools and things used up; DUNGEON.md's reach.  A whetstone built, the kinds made 146, "sharpen" the fill's verb: HOUSE.md's.
+
+### Digs told why (the user's playtest, 2026-11-02)
+
+The user (2026-11-02): "One other thing I notices is that tunnelling at the end of a passage doesn't seem to work if there is a hidden door there that hasn't been discovered.  `dig f` does work some times, but without the right tools, especially trying to do so through stone walls, seems like it needs a "doesn't seem to be working" type of response, or "You need better tools".  Maybe a chisel would work, but without a hammer, seems moot.  Stone chisel versus wood chisel might be a good distinction for future items."
+
+**Design:** HOUSE.md's digging (a chisel and a hammer, told why, what isn't there to dig, a hidden door); DUNGEON.md's still to come (the two chisels).
+
+### The kit: light by money, what starts full, a light from a light, hammer and chisel, turning's words (2026-11-03)
+
+The lead asked: "Should the starting light be a lantern for everyone, or go by family wealth?" (recommending comfortable
+families or better a lantern and two flasks of oil, the poorest more torches, a warning at about 10 minutes of light
+left). "Must the hammer be in your hand to use a chisel, or is carrying it enough?" "Should `turn r` say "You turn right,
+to face west"?" "Should a new torch be lit from the old one before the old one is dropped?" "Can tablets be read by touch
+in the dark?"
+
+The user (2026-11-03): "2. Light source by available money, 3. Yes, hammer and chisel in each hand, 4. I guess the turn info is OK keeping both,
+5. Of course, light the new torch from the old one before it is extinguished.  6. I wouldn't worry about reading tablets
+in the dark, especially if you are illiterate (as most fantasy world folk would be)."
+
+And: "If you have a waterskin, it should be full to start."
+
+Earlier (2026-11-02): "Wandering about in the dark is really difficult.  That is good, but it makes torches or lanterns
+very important.  Maybe starting with a lantern and extra flasks of oil for it would be better?"; "`light a new torch`
+should drop the old one and get a new one and light it."; "So lighting a new torch, blowing out the old one, re-dipping,
+putting it away, etc. should be the preferred way to "redip|refresh" your torch, if it is still lit and you have a spare."
+
+And (2026-11-03): "When running status, I would like to see my hunger and thirst state as well."
+
+And (2026-11-03): "Another thing, I seem to acquire fatigue if overburdened even when sleeping.  Probably not a good thing."
+
+And, on standing under a load, asked by the lead (2026-11-03): "Yes, if you are awake and standing with the burden, you should still get fatigued."
+
+**Found:** the outfit's waterskin was already full (four pints, stoppered, so not listed); "fill the waterskin" said "You
+fill your waterskin." all the same, and nothing told how full it was: so it seemed empty.  And no code charged fatigue by a
+load at all, asleep or awake: what rose in a long sleep was hunger's and thirst's fatigue levels (very hungry or very
+thirsty one, starving or parched two, wasting or dying four, not rested off), under a Condition line that named the load and
+not the want.  **Design:** HOUSE.md's a load borne, a new light, the kit's light, a chisel and a hammer; DUNGEON.md's status.
+
+### Looking in the dark; a thing taken from a fixture (2026-11-03)
+
+The user (2026-11-03): "When in the dark, if I say `look around` it should really fell around, looking for things in the environment (on the floor, the
+walls) to see if there is anything nearby to grab/use."  And: "`feel around` already works, so that is nice".
+
+The lead asked: "In the dark, what should `look around` and plain `look` do?"  The user chose: the same as feel around; in the light they stay as they
+are; check it finds things on walls as well as the floor, and that you can take what it finds next.  Blind counts as dark.
+
+The lead asked: "Should "take the torch from the sconce" with a hand free go in the hand?"  The user chose: to a free hand; the pack only if both hands are
+full.  Any thing taken from a fixture alike.
+
+**Design:** HOUSE.md's looking in the dark, taken from a fixture.  What the look told at once it tells still (the walls felt, a light seen far off), then the feel around: for review.
+### The round after HOUSE.md's check: the user's answers on rules (2026-11-03)
+
+The lead asked, after the four readers' check of HOUSE.md against the game: "The status line shows true minutes gone ("767 min"), and every game starts at 18:00, so you can work out the real hour even when the character shouldn't know it. What should it show?"
+
+The user (2026-11-03): "Hide the minutes"
+
+The lead: HOUSE.md says denizens move at a walk, but bandits, soldiers, kobolds and ghouls cover ground at twice your walking speed.
+
+The user (2026-11-03): "walk unless hurried, and closing in to attack should be hurried unless they are cautious."
+
+On a miss's stray, the book having both 50% (a mark engaged in melee, Combat 15) and 20% (a nearby target, Combat 17), the user (2026-11-03): follow the book: 50% if the mark is engaged, 20% otherwise.
+
+The lead: "`dig down with the knife` while carrying a pick uses the pick."
+
+The user (2026-11-03): "Suggest the better tool if one is available, but allow them to continue with the less effective tool."
+
+On a thing's value or make asked again at once, a new die each time (a chest's 25, 85, 45, 11 pennies in one minute), the user (2026-11-03): keep the first answer per thing, until the skill improves.
+
+The lead: "HOUSE.md says your footprints vary by footwear, but only the words change, not the prints' tread. What should happen?"
+
+The user (2026-11-03): "Build it (Recommended)": "Prints really differ by footwear. It's a small change."
+
+The lead: "Burrowers' claws dig shale, against the rule "only a pick will work for harder materials". They also dig a bare wall in soft rock when at work but not when chasing prey. What should the rule be?"
+
+The user (2026-11-03): "Soft rock only": "Shale is too hard for claws; the same soft-rock rule at work and in a chase."
+
+The lead: "HarnMaster has a rule for aimed blows, high or low, but no command says it, so it can't happen. What should be done?"
+
+The user (2026-11-03): "Leave unbuilt for now (Recommended)"
+
+The lead: "Which of these odd rules about water and money should I change? Any you leave unticked stay as they are, marked for review."
+
+The user (2026-11-03): "Still water, Stream current, Farthing goods, Haggling pump"
+
+The lead: "Which of these odd rules about dungeons should I change? Any you leave unticked stay as they are, marked for review."
+
+The user (2026-11-03): "Naming the rock, Dust and flee"
+
+(Left as they are, marked for review: a builder walling up a room the character dug into; carrying on renewing fuel and oil.)
+
+The lead: "HOUSE.md credits you with "each step about a named one", on dipping two torches, but it's not in your recorded words. It looks like my wording. Did you say it?"
+
+The user (2026-11-03): "Not mine, correct it (Recommended)"
+
+**Built:** the status line without the minutes (dq0 -m, the tests' and debugging's, puts them back).  A kind's step its walk (kinds.txt's numbers doubled: they were the jog's), hurried its jog (fleeing; coming at its foe, but a cautious one), every actor's by wbody.c.  A stray's chance by the book.  The tool named is the one that digs (the referee's P_DIG, both), a better told of once.  An appraisal's die a hash of the thing, the skill's mastery and the seed, no store; a door's and a wall's rock too.  The character's prints by its footwear.  Claws in rubble, earth and soil, no rock, one rule at work and at prey.  Filling from still water: the flux's risk as drunk there.  One chunk of a stream in eight six feet deep, by the seed.  A price under a penny in farthings; buying never under two thirds of a thing's worth, selling never over.  The first good spell names the rock.  A place of no age no dust, a century or two a skin.  "flee" with no foe it sees: "You see nothing to flee from.", no run, a foe near or not.  **Design:** HOUSE.md's their paces, a miss's stray, a tool named, appraising a thing, what the floor shows, a burrower's claws, the diseases, the water in the dungeon, the market, told as it's come to, the time of day believed.
+
+**Doubt, for the user:** with shale out, no rock in the game is soft enough for claws, and the maker's walls are stone or masonry: burrowers now dig rubble and nothing else.  A softer rock (chalk, marl, clay) would give "soft rock" something to mean.
+
+The user (2026-11-03), asked whether to add a softer rock: "There should be softer materials, so digging would make sense, but claws shouldn't work trying to dig in shale, at least not without some damage.  I guess it depends on the animal.  Obviously it would be spelled out in the monster's sheet if they could tunnel through rock, so I think we are fine without generally allowing claws to dig rock.  Clay or softer would not be very stable without shoring anyway, so existing tunnels, except in a shored mine shaft, would not have lasted anyway."
+
+**So:** no softer rock added for now: claws dig rubble, earth and soil, and no rock; a kind that tunnels through rock has it said on its sheet.  Damage to claws tried on shale is not built.
+
+## 2026-11-03
+
+### HOUSE.md's review: the user's answers
+
+The lead read HOUSE.md against this file and the game, and put what it found to the user: 27 questions, most important first, numbered here A1 to A27 as HOUSE.md calls them, and 13 bundles to accept.  A question with the options offered named is one the user answered in words of its own; the rest are the option chosen, its label and its words as offered.
+
+**A1, Tongues.**  The lead: "A character speaks its own tongue and common, and the character maker gives no second one.  Bandits, cultists and soldiers speak common; kobolds, dwarves, elves and all orcs have tongues of their own.  So a human can never persuade, threaten, deceive or haggle with a dwarf, an elf, an orc or a kobold, and can only reach them by gifts and bare buying.  Should that change?"  (Offered: "Leaders speak common (Recommended)", "Characters learn tongues", "Both of those", "Leave it as it is".)
+
+The user (2026-11-03): "What do the HM rules say about languages spoken/written?"  Told the book's rule, the user chose "Book, plus leaders": occupations the book gives a 2nd Language get one, its mastery capping a skill used through it, as the book says; elders, kings, captains and wardens also know common, so each people has someone to talk to (that part the house's).  Widens the character sheet.
+
+**A2, Who trades.**  The lead: "There's no merchant kind yet, so any thinking, non-hostile person will buy your things and sell you what it carries that it isn't using: a soldier or a bandit is a walking shop.  Should that stand?"
+
+The user (2026-11-03): "Friendly folk only": "Only people friendly to you will trade; indifferent ones refuse, so trading has to be earned first."
+
+**A3, Skill growth.**  The lead: "A skill you use is marked, and after eight hours' rest each marked skill gets one improvement roll, told as you wake.  However often you used it, it's one roll; nothing improves until you rest.  Is that how skills should grow?"  (Offered: "After a night's rest (Recommended)", "At once, as used", "Extra roll, hard use".)
+
+The user (2026-11-03): "Improvement rolls should only happen after a minumum number of uses once the skill is opened, not after each use.  I would say 5 uses = 1 improvement roll.  I don't know what thre HM rules say, so might be better to use their numbers."  Told the book's rule (a roll for a use in a dangerous or special situation, none for routine use; more for a very dangerous one; about 3 practice rolls a month), the user chose "Stress, or 5 routine uses": a stressful use earns a roll; 5 routine uses earn one too.
+
+**A4, Healing rest.**  The lead: "Wounds heal by a roll every five days, and each roll is lost unless the character rested 60 hours of those five days.  It starts with three days' rations.  So a serious wound means staying put for days with food to find; a night's sleep heals almost nothing.  Keep that?"
+
+The user (2026-11-03): "Keep it (Recommended)": "It's the book's pace and your "healing over days of rest"; wounds matter, and first aid and care with fights matter more."
+
+**A5, Autosave.**  The lead: "The game saves as you enter a new level and as you quit.  If you die, you go back to that save, which may be hours of play earlier.  You also asked for autosaves "before danger"; those aren't built.  A save stops the game for its time on the card, and a real-time fight would begin with that pause.  What should happen?"
+
+The user (2026-11-03): "Stay as it is (Recommended)": "Level entry and quit only until a playtest shows the lost play hurts; no pause as a fight starts."
+
+**A6, Asleep.**  The lead: "A sleeping character notices things exactly as one awake: a sound or a denizen in sight wakes it as it would stop a wait.  Denizens asleep hear at half and don't see, as the book has it.  Should your character sleep as lightly as it does now?"
+
+The user (2026-11-03): "Half awareness asleep (Recommended)": "The book's rule, already built for denizens; where you choose to sleep starts to matter."
+
+**A7, Shield skill.**  The lead: "Blocking with a shield improves the skill of the weapon in your other hand, not your Shield skill, so Shield never gets better by using it.  Change that?"
+
+The user (2026-11-03): "Block improves Shield (Recommended)": "The skill used is the skill marked, as everywhere else; a small change."
+
+**A8, Carried gear.**  The lead: "When a character who got out carries on into a new dungeon, its wounds and skills come along as they are, but everything it carries is made new: a battered sword comes back whole.  (Fuel and oil being renewed you've already left as it is; this is about wear and damage.)  Keep that?"  (Offered: "Made new (Recommended)", "Wear and damage stay".)
+
+The user (2026-11-03): "Until there is some inter-dungeon "town time", there should probably be a random amount of time between dungeons, and healing should probably happen accordingly (auto-rolled by the game), and weapon and gear maintenance as well, with the appropriate cost (including food, housing, etc.),and skill improvement should be handled as per the book if > 30 days passes."
+
+**A9, Early foes.**  The lead: "Six creatures still have the game's own stand-in numbers rather than the Bestiary's: the giant rat, cave spider, ghoul, skeleton, cave bear and kobold.  They're the first foes most games meet, so they set how fights feel.  The rest already follow the Bestiary, as you asked.  Move these six too?"
+
+The user (2026-11-03): "Book's figures now (Recommended)": "Your rule for every denizen, and fights feel right from the first rat; many fight tests must be re-baselined, which is real work."
+
+**A10, Worn blades.**  The lead: "A blade's wear only changes the words ("its edge dull"): a dull sword hits as hard as a sharp one, a crude one as hard as a fine one, and sharpening with a whetstone changes nothing in a fight.  (Checked in the code.)  The book's rule that a weapon striking something hard may break isn't built either.  What should wear do?"
+
+The user (2026-11-03): "Both of those": "Dull edges cut less and weapons can break; the most work and the most to go wrong in a fight."
+
+**A11, Your menace.**  The lead: "A creature's courage weighs how fearsome its foe is, but the character's figure is a fixed placeholder, so a knight in mail frightens a rat no more than a beggar does; beasts in particular are never put off by you.  Should the character's real might count?"
+
+The user (2026-11-03): "Reckon it properly (Recommended)": "By its size and its weapon skill, as the creatures' is; beasts break off from a strong fighter sooner; a small change."
+
+**A12, Hiding.**  The lead: ""hide" only hides a thing.  You can't hide yourself, though you named the skill for both ("hide in shadows anyone?"), and it was put off until denizens could look for you, which they now can.  Should it be built?"
+
+The user (2026-11-03): "Queue it next (Recommended)": "It's the thief's other half beside moving quietly; denizens' senses need a new check, so it's moderate work."
+
+**A13, Foes & traps.**  The lead: "Denizens never set off a trap, on a door or underfoot, so you can't lure a foe over one, and a rat runs safely across a pit trap you know is there.  Each faction knowing its own traps is planned, not built.  Should that wait?"
+
+The user (2026-11-03): "Leave for now (Recommended)": "It waits for that plan, and for rules for a denizen hurt outside a fight, which don't exist yet."
+
+**A14, Morale tests.**  The lead: "A creature tests its courage only when it's wounded, or hears a friend or leader fall.  The book tests before every action.  So a band never quails just from the look of you, however badly outmatched.  Keep that?"
+
+The user (2026-11-03): "Also on first facing you": "One more test as it first engages you, so a weak band can break before a blow; a little more time per fight."
+
+**A15, Looting mail.**  The lead: "Taking armour off a dead body takes no longer than picking the same piece up off the floor, so a dead bandit's mail comes off in a moment.  The plan had it at twice the time to take off your own.  Which?"
+
+The user (2026-11-03): "Twice taking-off time (Recommended)": "Stripping a body takes real time, so it's a risk with others near; the plan's way."
+
+**A16, Rope.**  The lead: "Rope and grapples are in the game and climbers start with them, but nothing uses them: "tie the rope" does nothing, and a shaft mouth more than 9 feet up simply can't be reached.  What should happen?"
+
+The user (2026-11-03): "Queue rope rules (Recommended)": "Tying off, climbing aided, a grapple thrown up; players will try it at once.  New commands and rules, so real work."
+
+**A17, Found keys.**  The lead: "Keys found lying in the dungeon open nothing; only keys carried by a door's or a chest's owner fit.  A player who finds a key will carry it round trying doors for nothing.  What should happen?"
+
+The user (2026-11-03): "Fit something nearby (Recommended)": "A found key opens a door or chest in its neighbourhood, so finding one means something; the dungeon's growing must tie them, moderate work."
+
+**A18, Sky shaft.**  The lead: "Some shafts go up to the open sky.  You can climb one, but until the dungeon's mission is done an iron grating bars the top.  So you can see daylight and not leave, and the puzzle can't be skipped.  Keep that?"  (Offered: "Keep the grating (Recommended)", "Climbing out wins", "Out, but no win".)
+
+The user (2026-11-03): "It is not about winning or losing.  It is about solving a puzzle.  That means climbing out and not solving the puzzle is not a loss, just a disappointment.  We will need to build the rest of the game that takes you to the dungeons in the first place, which are usually to find some bit of knowledge, or some item, or to kill some local scourge, of just because someone mentioned that they found the dungeon and were afraid to enter.  There could be lots of reasons, but that part of the game is not built, and we need to plan for that.  The inter-dungeon time will make it feel more realistic and should tie the whole character arc together."
+
+**A19, Firedamp.**  The lead: "Marsh gas gathers in shale.  A weak pocket shows a blue cap on your flame as a warning, but a strong one explodes as you walk in with a torch or candle: a burn of 3 or 4 dice, your lights out, no warning first.  Is that fair?"
+
+The user (2026-11-03): "Warn before bursting (Recommended)": "The flame shows a warning a step before the burst, so a careful player can back out; still deadly if ignored, a small change."
+
+**A20, Reading.**  The lead: "Anyone can read anything if there's light; no skill is tested.  (Checked in the code.)  You've remarked that most folk here would be illiterate.  Should reading need the Script skill?"  (Offered: "Leave it open (Recommended)", "Reading needs Script".)
+
+The user (2026-11-03): "Eventually, part of the game should be to collect clues and take them back to a library or to a scholar to determine the next thing to do.  Each clue might be in a unique script that needs a specialist to help decipher, or time in the library if the character is literate.  The HM rules describe languages and scripts known, so that makes scribes and scholars viable character classes.  Put a plan together for this, but for now, leave it open."
+
+**A21, Relic's end.**  The lead: "In a dungeon whose goal is to end a curse, laying the relic on the altar ends the game there and then, though the cursed dead are still walking about.  Keep that?"
+
+The user (2026-11-03): "Keep for now (Recommended)": "The dead's response to it hasn't been built, and the ending's words carry it."
+
+**A22, North adrift.**  The lead: "When the character's sense of north is an eighth of a turn off, typing "north" in a passage often answers "You can't go that way", since the way it believes is north is really a diagonal.  "Forward" and "left" still work.  So the compass misleads rather than quietly going the nearest way.  Keep that?"
+
+The user (2026-11-03): "Keep it (Recommended)": "Your "things will get interesting" when players trust their compass; the words a player uses as it faces never fail."
+
+**A23, Far journeys.**  The lead: ""Go back to the Mausoleum" only works on the level you're on; from another it says "The Mausoleum isn't on this level."  Should journeys reach other levels?"
+
+The user (2026-11-03): "Same level, for now (Recommended)": "You walk to the stairs yourself and then travel; a journey between levels raises hard questions about what's remembered."
+
+**A24, Tinderbox.**  The lead: "Striking a light with a tinderbox asks for no free hand: with sword and shield both held, you can still light a torch.  Dipping a torch, and working a chisel, do ask for hands.  Should striking a light?"
+
+The user (2026-11-03): "Needs a free hand (Recommended)": "The same as your hammer and chisel, and lighting up in a fight costs something; a small change."
+
+**A25, Chisel.**  The lead: "Other tools get themselves out of your pack by the usual steps as you use them, as you asked for any tool.  A hammer and chisel don't: you're told to hold them yourself first ("hold the chisel", "hold the hammer").  Should they work like the rest?"  (Offered: "Get them out (Recommended)", "You hold them".)
+
+The user (2026-11-03): "If your hands are busy and your want to ready tools or other things, it should probably put the other things away first (in their appropriate place) then take the tools in hand.  A torch would be placed in a nearby empty sconce or laid on the ground, a sword put in its scabbard, etc."
+
+**A26, Tool stopped.**  The lead: "Stop halfway through using a tool you took from your pack (a blow, or "stop"), and the tool is back in the pack at once, though you never put it away, and your pack may be lying at your feet.  Should it stay in your hand?"
+
+The user (2026-11-03): "Stays in hand (Recommended)": "The world stays true, as you asked of stopped steps; it needs a little work to find its way back later."
+
+**A27, Start hour.**  The lead: "Every game starts at six in the evening, so a player soon knows that night folk are waking and day folk going to bed as each game begins.  Should the hour vary?"
+
+The user (2026-11-03): "Vary by game": "Each game's seed picks an hour, so the same trick doesn't work twice; a small change, and some tests need the hour fixed."
+
+**The bundles.**  The lead: "Each line: accept these as they stand until a playtest says otherwise."  Everything in the questions above is carved out of them; rules marked the user's or the book's are in them only for their numbers.
+
+- **B1.  Tests, noticing, searching, traps; the second ruleset; test flags.**  Which skill each purpose tests, senses as numbers, how pace affects noticing, what's hidden how well, a thing hidden's grades, disarming's steps, a whole room's search and its times, a heap's hidden things; the null ruleset's numbers; the tests' -N, -J, -F switches.
+- **B2.  Moving, tiring, climbing, positions.**  Paces and the fatigue table, inclines told, a load's tiring, a sleeper lying down, encumbrance's words, climbing rates, falls with no armour counted, senselessness, a pit; crouching, kneeling, sitting and lying.
+- **B3.  Digging and the rock.**  Tool rates and wear beyond your own, chisel and new tool prices, words for why a dig fails, a dig finding a hidden door, a named tool's refusals, rock beds and hardness, rotten rock's fall (1d6), age's collapses and rubble, mixed strata, diagonal digging.
+- **B4.  Doors, windows and looking.**  Lock, force and bar steps, portcullis work, battering's beats, time and words for looking, examining, each aspect asked by name, what opening reveals.
+- **B5.  Fights and missiles.**  Improvised weapon classes (club, stick, soft), who defends how, what's outnumbered, armour quality, courage's table, health words, the wound record's folding; throw ranges and reaches; launchers' times and ranges underground, the cover, strays' one die, arrow breakage, denizens' shooting and throwing, falls told, auto-target; weapon versions' Strength limits; a pass tiring.
+- **B6.  Wounds, poison, disease, air, hunger.**  First aid's house rules, self-treatment, what you may do in shock, creatures' healing and binding, venom's spread; poisons, diseases and their rates, a dart trap in four poisoned, the air's strengths and times, a flame's warnings, where bad air lies, antidotes; swimming and instant drowning, hunger, thirst and meal numbers.
+- **B7.  Reach, tools and lights.**  Every second of the pack steps, a run of handlings, dipping two torches, a new light's order and its 2026-11-03 cases, the whetstone's numbers, the tinderbox's thirty lightings, a dig tool's choice among tools, things used up, engaged steps a round each, a wound not stopping them.
+- **B8.  Outfits, money and the market.**  The kit's light thresholds, what starts full, what's bought in what order, makes, weapons by skill, armour by bent, tools, an outfit that fits; money's prices, jewels' values, mints and mixes, what coins are worth; a gift's worth and test, reputation; prices, haggling, remedies' prices, entertaining.
+- **B9.  Denizens' things and peoples.**  Where each kind lives and how many, gear and blows, unready weapons, a shield's block, beds, stores, dens' remains, hoards, purses, what a look, examine and assess tell of a denizen; names, sheets, senses, attitudes, tongues, homes and gear of the peoples.
+- **B10.  Denizens' minds and day.**  Morale's influence, field, bonds and succession numbers; allies' errands; denizens' tiring, paces, water and hunger; hours, watches, sleep, meals, work, rounds, leisure and drink; tunnellers and builders; working doors and portcullises, keys, what they pick up, ways found, bodies found.
+- **B11.  Senses and belief.**  Sound's reach and the background (hearing stays yours to tune by ear), noise drawing foes, moving quietly's grades, the draught; when bearings are tested and how they drift, memory's fading, drawing a map, what it costs; a journey's choices and its forty legs; waiting's words and speed; the time of day's drift, clues and words.
+- **B12.  The dungeon's shape.**  How often and where each thing is grown: history's leavings and ruins, water, windows and skylights, shafts, daylight's reach, diagonal ways, a passage's slant and its words, diagonal passages and rooms, great caverns, long slopes.
+- **B13.  Your playtest requests as built, and commands.**  Straight walks, going to anything, leaving a room, inspecting over a distance, what can be named, "the door on the left", walking over for a command, a door's state, feeling your way, looking in the dark: all your own words, marked only "did it come out as you meant?"; a hostile unaware not engaging; "take all"'s eight, which of several, shortcuts' limits; first-use skills told, the ending's words.
+
+The user (2026-11-03): all thirteen accepted, "until a playtest says otherwise".
+
+**So:** settled as they stood: A4, A5, A13, A21, A22, A23.  To build: A1, A2, A3, A6, A7, A9, A10, A11, A12, A14, A15, A16, A17, A19, A24, A25, A26, A27.  To plan: the game between dungeons, with what takes a character to a dungeon in the first place (A8, A18), and clues, scripts and scholars (A20); the rules stand till then, and reading stays open.  **Design:** HOUSE.md's guide at its head (what's accepted, what's carved out, what a *for review* mark means from now on), each rule named there, and its Decided, not yet built.
+
+### A word as they begin (2026-11-04)
+
+`open the door` (4.8M cycles to the first letter) and `listen` (6.2M) worked out the outcome before they said anything.  The choice put: a word as they begin, or the outcome told first.  The user: "Word as they begin."
+
+Built for the kind, every command over the 720,000: words that hold whatever comes of it (HOUSE.md's a command's first words).  And an answer's first words go out as they're said, however short: many were made in time and held for the rest of the world's news.
+
+**Design:** HOUSE.md's a command's first words.
+
+## The game between dungeons, the plan answered (2026-11-04)
+
+(Steps 4 to 6 built: HOUSE.md's between dungeons, for review.)
+
+The plan (F:/.claude/hydra-2/plans/between-dungeons.md, sections 1-7) put ten questions; the user chose among the options as put:
+
+- Q1 Can every dungeon be left? "Every dungeon": out by a sky shaft if it has one and by the way in, unless the reason says it's shut; a shut dungeon always has another way out to find.
+- Q2 Does solving end the dungeon at once? "No, walk out": told it's done, then walk out with what was found; dying on the way out still counts as solved in the life's account.
+- Q3 Can a character go back to a dungeon it left? "Not yet, keep it": not in the first version; each dungeon's folder kept so it can be added.
+- Q4 Who chooses the month's practice skills? "Filled-in question": one question with the answer filled in (most used, then occupation's): Enter takes it, or name your three.
+- Q5 Can a character die off-stage, of an infection? "As the roll falls": the book's roll stands; a character can die in the account. (NOT the recommended long fever.)
+- Q6 When the money runs out? "No debts": sell spare goods, live rough, work at half wages (days added), go on with what it has.
+- Q7 In the first version, should selling, mending and restocking just happen? "Just happen": in that order, valuables last, what you named never, until the town's menu gives the choice.
+- Q8 The town? "A menu"; a walked town left for Dingus Quest itself.
+- Q9 Should an illiterate really be unable to read in the dungeon? "Yes, no puzzle needs it": from step 9; a writing is a hint; the theme checker proves each puzzle solvable unread; carry or copy.
+- Q10 What's in 1.0, what goes first? "1-6 first, 7-12 in 1.0": steps 1-6 before Phase 5; 7-12 in 1.0 with a one-link clue; the long thread in 1.0 only if there's time, else first in Dingus Quest.
+
+**So:** the steps 1-6 first, before Phase 5: leaving unsolved, solving without ending, the life record, time and healing, monthly practice, food and upkeep. A18's grating goes with step 1. Reading stays open until step 9.
+
+## The swapped parts, the study answered (2026-11-04)
+
+The study (F:/.claude/hydra-2/swapstudy/report.md) measured the copies at 12-15% of all cycles in play and 16% of a first letter. The user chose among the options as put:
+
+- A second swap area in the world, about 1,700 bytes? "No, keep the room".
+- Go ahead with: "Fix the fight soak", "Smaller stubs", "Two small speedups", "Move rare code out".
+- A first word on plain walks and steps? "No word, leave them".
+
+**So:** no true cache and no second area; 6-byte stubs, the record walk, SWFAST in dq0d, rare code out of hot parts; each landing apart from game work.

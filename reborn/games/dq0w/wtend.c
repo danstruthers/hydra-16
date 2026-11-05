@@ -12,6 +12,7 @@
 #include <string.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
+#include "hub0.h"
 #include "../dq0/rs.h"
 #include "world.h"
 #include "things.h"
@@ -50,7 +51,7 @@ unsigned s_body_ask (void)
         ++n;
     }
     bled_at = (unsigned) body_at;
-    if ((!n || (!bleeds && !(HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) && HUB->pcsum.health == H_FINE &&
+    if ((!n || (!bleeds && !(HUB->pcsum.cond & (C_BLEEDING | C_POISONED | C_NEWS)) && HUB->pcsum.health == H_FINE &&
         !HUB->pc_air && HUB->now < wdue)) && HUB->pc_under != 0xFF && !HUB->pc_aff && !HUB->pc_flm) {   /* (Hurt:
                                                 **   its rest toward its healing told, a minute at a time; in bad air,
                                                 **   the same; drowned, part 73's, exposed or its flame's news, told
@@ -60,7 +61,10 @@ unsigned s_body_ask (void)
     k = HUB->pc_task.kind;
     g = HUB->pc_going & 0x3F;
     a = k == LT_WAIT || k == LT_SLEEP ? 0 : g ? (g > GA_JOG + 1 ? 2 : 1) : k == LT_FIGHT || k == LT_DIG ||
-        k == LT_BATTER || k == LT_CLIMB || k == LT_FORCE || k == LT_HEAVE || k == LT_BEND ? 2 : k == LT_NONE ? 0 : 1;   /* (At rest
+        k == LT_BATTER || k == LT_CLIMB || k == LT_FORCE || k == LT_HEAVE || k == LT_BEND ? 2 : k == LT_NONE ? 0 : 1;
+    if (HUB->pc_swim) {
+        a = 2;                                  /* (Swimming, the walk's pace or none: strenuous) */
+    }                                           /* (At rest
                                                 **   standing still, or waiting, asleep; vigorous at a run, or at
                                                 **   strenuous work, a fight; else about) */
     for (k = 0; k < NACTORS; ++k) {

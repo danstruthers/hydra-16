@@ -337,6 +337,8 @@ enter the room	VB_ENTER	object=room	near=room	enter a place
 enter	VB_ENTER	-	-	enter with no place named
 exit north	VB_LEAVE	direction=N	-	exit by a direction
 leave	VB_LEAVE	-	-	leave, no place
+go outside	VB_LEAVE	-	-	leave in plain words
+go out	VB_LEAVE	-	-	leave in plain words
 leave the room	VB_LEAVE	object=room	near=room	leave a place
 climb the wall	VB_CLIMB	object=wall	near=wall	climb an object
 climb up the rope	VB_CLIMB	direction=U;object=rope	near=rope	climb a direction and an object
@@ -380,6 +382,10 @@ fill the lantern with oil	VB_FILL_OBJECT	object=lantern;source=oil	near=lantern,
 dip the torch in the oil	VB_FILL_OBJECT	object=torch;source=oil	near=torch,oil	a torch renewed (slice 4.1)
 soak the torch in pitch	VB_FILL_OBJECT	object=torch;source=pitch	near=torch,pitch	soak is dip
 refill the lantern	VB_FILL_OBJECT	object=lantern	near=lantern	refill is fill
+dip the torch	VB_FILL_OBJECT	object=torch	near=torch	the first fuel carried (2026-11-02)
+refresh the torch	VB_FILL_OBJECT	object=torch	near=torch	refresh is fill
+redip the torch	VB_FILL_OBJECT	object=torch	near=torch	redip is fill
+sharpen the sword	VB_FILL_OBJECT	object=sword	near=sword	sharpen is fill: a whetstone's (2026-11-02)
 read the sign	VB_READ_OBJECT	object=sign	near=sign	read
 taste the potion	VB_TASTE_OBJECT	object=potion	near=potion	taste
 touch the wall	VB_TOUCH_OBJECT	object=wall	near=wall	touch
@@ -520,7 +526,8 @@ search the left wall	VB_SEARCH	-	-	a wall by the facing
 search the wall to my left	VB_SEARCH	object=wall	near=wall	a wall where it lies
 search around for a dagger	VB_SEARCH	object=dagger	near=dagger	for a thing, till it's found
 search around on the floor	VB_SEARCH	object=floor	near=floor	the floor nearby
-search on the table	VB_SEARCH	object=table	near=table	on a surface: what's on it, its trap
+search on the table	VB_SEARCH	object=table	near=table	on a surface: what's on it
+search the room	VB_SEARCH	object=room	near=room	the whole room, wall by wall and thing by thing (2026-11-02: wroom.inc)
 feel around	VB_SEARCH	-	-	by feel: within reach
 feel about for the key	VB_SEARCH	object=key	near=key	by feel, for a thing
 grope about	VB_SEARCH	-	-	by feel
@@ -563,6 +570,13 @@ open	VB_OPEN_OBJECT	-	-	open alone: what is in front
 disarm the trap	VB_DISARM_OBJECT	object=trap	near=trap	disarm
 disable the trap	VB_DISARM_OBJECT	object=trap	near=trap	disable an alias of disarm
 bar the door	VB_BAR_OBJECT	object=door	near=door	bar an alias of rebar
+tie the rope to the ring	VB_TIE_OBJECT	object=rope;support=ring	near=rope,ring	a rope tied off (2026-11-04)
+tie off the rope	VB_TIE_OBJECT	object=rope	near=rope	tied to what holds
+let down the rope	VB_TIE_OBJECT	object=rope	near=rope	let down
+let the rope down	VB_TIE_OBJECT	object=rope	near=rope	let down, its word after
+tie the grapple to the rope	VB_TIE_OBJECT	object=grapple;support=rope	near=grapple,rope	one thing
+untie the rope	VB_UNTIE_OBJECT	object=rope	near=rope	untied
+untie the sack	VB_UNTIE_OBJECT	object=sack	near=sack	a tie's
 hang the quiver on my belt	VB_HANG_OBJECT	object=quiver;support=belt	near=quiver,belt	hang
 sheathe the sword	VB_HANG_OBJECT	object=sword	near=sword	sheathe an alias of hang
 combine the sunstone with the moonstone	VB_COMBINE_OBJECT	object=sunstone;other=moonstone	near=sunstone,moonstone	combine
@@ -605,6 +619,22 @@ walk forward to the other side	VB_MOVE_TOWARD	object=side;direction=F	near=side	
 go to the near side	VB_MOVE_TOWARD	object=side	near=side	near: the side behind
 go to the far end of the hall	VB_MOVE_TOWARD	object=end	near=end	the far end: the far side
 
+# --- going to anything, crossing, leaving (the user's, 2026-11-02: HOUSE.md's straight walks and going to anything) ---
+approach the pot	VB_APPROACH_OBJECT	object=pot	near=pot	up to a thing
+go to the pot	VB_MOVE_TOWARD	object=pot	near=pot	a thing gone to
+walk to the pot	VB_MOVE_TOWARD	object=pot	near=pot	the pace's word a verb here
+walk over to the pot	VB_MOVE_TOWARD	object=pot	near=pot	over to
+go up to the pot	VB_MOVE_TOWARD	object=pot	near=pot	up to
+head for the pot	VB_MOVE_TOWARD	object=pot	near=pot	head: walk's alias; for
+move to the rat	VB_MOVE_TOWARD	object=rat	near=rat	move: walk's alias; a denizen, no blow
+cross the room	VB_MOVE_TOWARD	object=room	near=room	cross: its far side
+go across the room	VB_MOVE_TOWARD	object=room	near=room	across it
+walk to the door on the left	VB_MOVE_TOWARD	object=door;lies=L	near=door	where it lies
+leave	VB_LEAVE	-	-	out of the room, which asked
+
+unbar the door	VB_BAR_OBJECT	object=door	near=door	its bar lifted out
+unbar	VB_BAR_OBJECT	-	-	the door in front
+
 # --- travel to a place it knows (slice 4.2: the UI makes a move to a room named, or the way in, a journey) ---
 go back to the mausoleum	VB_MOVE_TOWARD	object=mausoleum;direction=B	names=mausoleum	a room named, gone back to
 go to the mausoleum	VB_MOVE_TOWARD	object=mausoleum	names=mausoleum	a room named, gone to
@@ -623,3 +653,22 @@ pick the sword	VB_RETRIEVE_OBJECT	object=sword	near=sword	pick alone is pick up,
 ignite the torch	VB_LIGHT_OBJECT	object=torch	near=torch	ignite lights it
 bolt the door	VB_BAR_OBJECT	object=door	near=door	bolt bars it
 lie on the bed	VB_LIE_DOWN	object=bed	near=bed	lying on a thing, not a lie told
+give the goblin the apple	VB_GIVE_OBJECT	object=apple;target=goblin	near=apple,goblin	give without to: the one given it first (2026-11-02)
+offer the goblin my apple	VB_GIVE_OBJECT	object=apple;target=goblin	near=apple,goblin	offer, my
+# --- the market and entertaining (2026-11-02) ---
+buy the rope from the goblin	VB_TRADE	object=rope;source=goblin	near=rope,goblin	bought from one
+buy the rope	VB_TRADE	object=rope	near=rope	from whoever has it
+sell the apple to the goblin	VB_TRADE	object=apple;source=goblin	near=apple,goblin	sold to one
+sell my apple	VB_TRADE	object=apple	near=apple	sold, my
+how much for the rope	VB_TRADE	object=rope	near=rope	its price asked
+how much is the rope	VB_TRADE	object=rope	near=rope	its price asked, is
+what will you give for the apple	VB_TRADE	object=apple	near=apple	what one would give
+haggle for the rope with the goblin	VB_TRADE	object=rope;source=goblin	near=rope,goblin	haggled over
+bargain over the rope	VB_TRADE	object=rope	near=rope	bargain, haggle
+entertain the goblin	VB_TRADE	object=goblin	near=goblin	one entertained
+sing to the goblin	VB_TRADE	object=goblin	near=goblin	sung to
+dance	VB_TRADE	-	-	danced for the nearest
+ask the goblin to open the door	VB_TELL_OBJECT	object=goblin;topic=open the door	near=goblin,door	an errand at a door
+stop honing	VB_STOP	task=honing	-	any word after stop: the UI's stop_kind knows the tasks (2026-11-04)
+shrug off the pack	VB_DROP_OBJECT	object=pack	near=pack	shrug off: the user's word, drop's (C20)
+shrug the pack off	VB_DROP_OBJECT	object=pack	near=pack	the object between

@@ -201,7 +201,7 @@ void __fastcall__ o_fixt_words (const struct msg* m)
         "It gives way, and crashes open.", "It's giving, but it holds yet.", "It's marked, but it holds.",
         "Your blows make no mark on it.",
         "It's broken: it won't shut.", "You lift the bar out of its brackets, and set it down.",
-        "The bar's on the far side: you can't get at it from here.", "There's nothing there to lift out.",
+        "The bar's on the far side: you can't get at it from here.", "It isn't barred.",
         "The bars are set fast in the stone: bend them, or break them, first.",
         "The pane comes free of its frame, and you lift it out whole.", "You work the bent bars free, and lift them out.",
         "The bars break out of the stone with a clang.",
@@ -226,7 +226,7 @@ void __fastcall__ o_fixt_words (const struct msg* m)
             kind == PK_PORTCULLIS ? "You attempt to batter the portcullis with the " :
             "You attempt to batter the door with the ");
         hub_mem (0, &out, &HUB->pc_strike, 1);
-        hub_mem (KIND_BANK, lb + strlen (lb), CATALOGUE[out & 0x7F].name, sizeof CATALOGUE[0].name);
+        hub_mem (KIND_BANK, lb + strlen (lb), CATALOGUE[SK_KIND (out)].name, sizeof CATALOGUE[0].name);
         strcat (lb, ", but it seems ineffectual.");
     } else if (out > PO_SOFT) {
         strcpy (lb, keyed[out - PO_KEYED]);
@@ -352,6 +352,9 @@ void __fastcall__ o_portal_look (const struct portal* p, signed char g, unsigned
         add (p->parts & PP_GLASS ? " It's glazed, in small leaded panes." : "");
         add (p->parts & PP_BARS ? " Iron bars an inch thick are set across it." : "");
         add (p->parts & (PP_GLASS | PP_BARS | PP_SHUTTERS) ? "" : " It's an empty frame.");
+        if (p->parts & PP_SKY) {
+            add (" It looks on the sky.");
+        }
     }
     if (k == PK_DOOR) {
         add (f & PF_STUDS ? " It's studded with iron." : "");
@@ -378,6 +381,10 @@ void __fastcall__ o_portal_look (const struct portal* p, signed char g, unsigned
     }
     if (!(ex & EX_QUALITY)) {
         return;                                 /* (A closer look: no judgement, no test) */
+    }
+    if (p->state & PS_WRECKED) {
+        add (" You judge it ruined, past mending.");   /* (Judged by its state, its make no matter now: D13's) */
+        return;
     }
     switch (g) {
     case G_CS:

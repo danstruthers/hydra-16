@@ -25,7 +25,9 @@ extern unsigned char tr_n;                      /* The passings journalled since
 /* ---- The swapped parts' (bank.s's stubs) */
 void __fastcall__ tr_flush (unsigned char keep); /* (Part 28) The journal taken into the store (keep 1: the store
                                                 **   kept, the save's, WQ_SAVE: its chunks changed written to the save
-                                                **   folder) */
+                                                **   folder; TF_SOME, the main loop's: as far as it gets before a
+                                                **   command comes, the rest as it's answered) */
+#define TF_SOME         2
 enum { TF_KEEP, TF_OUT, TF_IN };
 void __fastcall__ tr_file (unsigned char h, unsigned char what);   /* (Part 30) Directory entry h's chunk written to
                                                 **   its region's file (TF_KEEP; TF_OUT, its records freed, the entry

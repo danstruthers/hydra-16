@@ -24,6 +24,7 @@
 #pragma rodata-name (push, "SW4RODATA")
 
 #define NW      12
+unsigned char paced;
 static char b[INMAX + 1];
 static char* w[NW];
 static unsigned char nw;
@@ -177,8 +178,11 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
             n = (3 * d + 2) / 5;
         }
     }
-    said = g != 0xFF && (g & 7) > GA_WALK ? GA_SAID : 0;  /* (Outright, GA_SAID's or faster than a walk: for the dark;
+    said = g != 0xFF && ((g & 7) > GA_WALK || (g & GA_SAID)) ? GA_SAID : 0;  /* (Outright, GA_SAID's or faster than a walk: for the dark;
                                                 **   the legs' way, crawling or hopping, the world's: slice 4.1b's) */
+    if (g != 0xFF) {
+        paced = said || (g & (GA_CRAWL | GA_HOP));   /* (Not plainly walking, the world's bold_ and pmode: main.c's) */
+    }
     g = g == 0xFF ? g : g & ~GA_SAID;
     wa = HUB->watch;
     if (any ("stop\0")) {                       /* (Stopped: what it names; a pace's, back to a walk) */
@@ -218,7 +222,6 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
     if (!st && !n) {
         return 0;                               /* (None of its words: the command's) */
     }
-    cq_cmd (l);                                 /* (The direction the command parser's) */
     switch (cmd.action) {                       /* (A command of another kind, said with a manner: the command's,
                                                 **   the pace as it was: "open the chest carefully", "close the door
                                                 **   quietly", "run away" a flight) */
@@ -240,10 +243,12 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
         return 0;
     }
     k = (cmd.action == VB_MOVE_DIRECTION || cmd.action == VB_MOVE_TOWARD || cmd.action == VB_ENTER ||
-        cmd.action == VB_APPROACH_OBJECT) && (cmd.dir != 0xFF || cmd.obj.kind);
+        cmd.action == VB_APPROACH_OBJECT) && (cmd.dir != 0xFF || cmd.obj.kind || cmd.how);   /* ("walk to the pot") */
     st = st && (!k || n || g != HUB->gait || wa != HUB->watch);    /* (Said, unless it goes on as it was) */
     mw = HUB->pc_map;
-    wset (WS_PACE, g == 0xFF ? g : g | said, wa);   /* (The world's, set: its request) */
+    if (g != 0xFF || wa != HUB->watch) {
+        wset (WS_PACE, g == 0xFF ? g : g | said, wa);   /* (The world's, set: its request; none to set, a step's, none) */
+    }
     if (st) {
         described (1);
     }
@@ -256,7 +261,7 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
     } else if (d == 0xFF && n) {
         d = HUB->pc_face;                       /* ("Step": ahead) */
     }
-    if (n && d <= H_NW && !cmd.obj.kind) {             /* (A small move: its facing kept backing up, or a step aside) */
+    if (n && d <= H_NW && !cmd.obj.kind && !cmd.how) {   /* (A small move: its facing kept backing up, or a step aside) */
         keep = any ("left\0right\0l\0r\0back\0backward\0backwards\0behind\0b\0aside\0sideways\0sidestep\0") &&
             !any ("forward\0forwards\0fwd\0ahead\0front\0f\0");
         if (n == 0xFF) {                        /* (By the pace: a square at a walk or slower, two at a jog, three
@@ -302,10 +307,7 @@ unsigned char __fastcall__ s_travel_go (const char* l)
     char k[16];
     unsigned char e, o = cmd.obj.kind, back, n, best = 0;
 
-    if (o && o != OB_WAY_OUT && o != OB_ROOM) {
-        return 0;                               /* (A thing it sees: walked to, as it was) */
-    }
-    strncpy (b, l, INMAX);
+    strncpy (b, l, INMAX);                      /* (Not a thing it sees, nor across the room it's in: s_command's) */
     split ();
     back = any ("back\0return\0travel\0way\0returning\0") != 0;
     memset (&m, 0, sizeof m);
@@ -335,6 +337,8 @@ unsigned char __fastcall__ s_travel_go (const char* l)
     } else {
         return 0;
     }
+    msg ("You think back.");                    /* (Its first words at once, the way its to find: the user's, 2026-11-04) */
+    t_flush ();
     if (hub_send (&m)) {
         busy = 1;
         t_prompt (0);
@@ -364,23 +368,32 @@ static const char pace_words[] =                /* (Each word after its length: 
 unsigned char __fastcall__ o_pacing (const char* l)
 {
     static const char* p;
-    static unsigned char n, k;
+    static unsigned char n, k, w, words;
 
-    for (;;) {
+    w = 0;
+    for (words = 0; ; ++words) {
         while (*l == ' ' || *l == ',' || *l == '.' || *l == '!') {
             ++l;
         }
         if (!*l) {
-            return 0;
+            return !w || words > 1 ? w : 2;     /* ("Walk" first and the only one of them, more said after it, "walk to the
+                                                **   door": 1, none of its work to do if it's walking plainly (main.c's: its
+                                                **   parts' swaps and a word with the world, all a walk's first words were
+                                                **   waiting on); else 2) */
         }
         if (*l >= '0' && *l <= '9') {
-            return 1;
+            return 2;
         }
         for (n = 0; l[n] && l[n] != ' ' && l[n] != ',' && l[n] != '.' && l[n] != '!'; ++n) {
         }
+        if (!words && n == 4 && !strnicmp (l, "walk", 4)) {
+            w = 1;
+            l += n;
+            continue;
+        }
         for (p = pace_words; (k = *p) != 0; p += k + 1) {  /* (Each word's length, then its first letter) */
             if (k == n && p[1] == (*l | 0x20) && !strnicmp (l, p + 1, n)) {
-                return 1;
+                return 2;
             }
         }
         l += n;

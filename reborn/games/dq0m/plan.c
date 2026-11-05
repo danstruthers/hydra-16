@@ -40,7 +40,7 @@ static unsigned ri;
 #pragma code-name (push, "CODE")
 #pragma rodata-name (push, "RODATA")
 
-static struct region* __fastcall__ rg (unsigned char sn, unsigned char rx, unsigned char ry)
+struct region* __fastcall__ rg (unsigned char sn, unsigned char rx, unsigned char ry)
 {
     ri = (unsigned) ry * STRATUM (sn).rw + rx;
     rsn = sn;
@@ -341,9 +341,10 @@ void __fastcall__ o_links_down (unsigned char n)
     unsigned o, x, y, d, best;
     struct link* l;
 
-    hub_get (THEME_BANK, &THEME->goal, g, 2);   /* (A far exit's stratum, the goal's: a way out there, open, as far
-                                                **   from the way in as it's found, a stair up to the daylight) */
-    if (g[0] == G_THROUGH && g[1] == n && s->nlinks < NLINKS) {
+    hub_get (THEME_BANK, &THEME->exit_sn, g, 1);    /* (Another way out's stratum, a through goal's far exit's or a shut
+                                                **   dungeon's other way out (Q1): a way out there, open, as far from
+                                                **   the way in as it's found, a stair up to the daylight) */
+    if (g[0] == n && n && s->nlinks < NLINKS) {
         l = &s->link[s->nlinks];
         for (best = tries = 0; tries < 30; ++tries) {
             o = 2 + random (s->w - 4);
@@ -372,6 +373,7 @@ void __fastcall__ o_links_down (unsigned char n)
         return;                                 /* (The deepest: the hub's slots all wanted, without a save folder for
                                                 **   those made way for, or the stratum's number a byte's) */
     }
+    hub_get (0, &HUB->gear, g, 1);             /* (dq0 -P's, the tests': every stairway down a long slope) */
     for (k = 1 + random (2); k && s->nlinks < NLINKS; --k) {
         for (tries = 0; tries < 30; ++tries) {
             l = &s->link[s->nlinks];
@@ -381,6 +383,12 @@ void __fastcall__ o_links_down (unsigned char n)
             l->y = s->y0 + INSET (o);
             if (rg (n, (l->x - s->x0) >> 8, (l->y - s->y0) >> 8)->kind == RG_HALLS) {
                 l->kind = random (10) < 7 ? O_STAIRS_DOWN : O_LADDER_DOWN;
+                if (l->kind == O_STAIRS_DOWN && ((g[0] & GE_RAMP) || ((s->style == ST_NATURAL || s->style == ST_MINE) &&
+                    (unsigned) (l->x * 7 + l->y * 13 + (unsigned) s->seed) % 3 == 0))) {
+                    l->kind = O_RAMP_DOWN;      /* (A natural stratum's or a mine's stairway a long slope one time in
+                                                **   three, by its square's own numbers: slice 4.10's, HOUSE.md's
+                                                **   long slopes) */
+                }
                 l->to = n + 1;
                 ++s->nlinks;
                 break;
@@ -587,7 +595,7 @@ void __fastcall__ o_chunk_edges (unsigned char sn, unsigned cx, unsigned cy, str
     e->y1 = w >= CW ? CW - 1 : w - 1;
     e->nland = 0;
     for (i = 0; i < s->nlinks && e->nland < 4; ++i) {
-        if (!s->link[i].dug && s->link[i].x - x < CW && s->link[i].y - y < CW) {   /* (A dug one's the records') */
+        if (!(s->link[i].dug & LD_DUG) && s->link[i].x - x < CW && s->link[i].y - y < CW) {   /* (A dug one's the records') */
             e->lx[e->nland] = s->link[i].x - x;
             e->ly[e->nland] = s->link[i].y - y;
             e->ln[e->nland++] = i;

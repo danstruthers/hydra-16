@@ -18,6 +18,7 @@
 ** while the rest is worked out; and added at lb's end as it's kept (lbe), not looked for each time.
 */
 
+unsigned char __fastcall__ hide (const char* w);   /* (Part 18's: main.c's) */
 #pragma code-name ("OV2CODE")
 #pragma rodata-name ("OV2RODATA")
 
@@ -121,8 +122,8 @@ static void __fastcall__ doors (unsigned char mouths)
             if ((S->door[i].rel & 7) == d && is (i, mouths)) {
                 if (!mouths) {
                     add (S->door[i].state == DOORWAY ? " (a doorway)" : S->door[i].state & PS_WRECKED ?
-                         " (broken down)" : S->door[i].state & PS_OPEN_ ? " (open)" :
-                         " (closed)");
+                         " (broken down)" : S->door[i].state & PS_OPEN_ ? " (open)" : S->door[i].state & PS_BARRED_ ?
+                         " (closed, barred)" : S->door[i].state & PS_LOCKED_ ? " (closed, locked)" : " (closed)");
                 }
                 if (S->door[i].dz >= 3 || S->door[i].dz <= -3) {
                     add (",");
@@ -157,7 +158,11 @@ static void portals (void)
             add (S->door[i].state & PS_WRECKED ? " (its bars forced apart)" : S->door[i].state & PS_OPEN_ ? " (raised)" :
                  " (down)");
         } else if (k == PK_WINDOW && (p & PP_SHUTTERS)) {
-            add (S->door[i].state & PS_OPEN_ ? " (its shutters open)" : " (its shutters closed)");
+            add (S->door[i].state & PS_OPEN_ ? " (its shutters open)" : S->door[i].state & PS_BARRED_ ?
+                 " (its shutters closed, barred)" : " (its shutters closed)");
+        }
+        if (k == PK_WINDOW && (p & PP_SKY)) {
+            add (", looking on the sky");
         }
         height (S->door[i].dz);
         add (".");
@@ -318,19 +323,22 @@ static void ceiling (void)
 
 static void __fastcall__ opening (unsigned char i)
 {
-    unsigned char k = S->open[i].kind, rel = S->open[i].rel;
+    unsigned char k = S->open[i].kind, rel = S->open[i].rel, d = k & O_DAYLIT;
 
-    add (rel == 0xFF ? " You stand by " : " You see ");
-    add (k == O_WAY_OUT ? "the stairs up to the way out" : k == O_STAIRS_UP ? "a stairway leading up" :
+    k &= ~O_DAYLIT;
+    add (rel == 0xFF ? (k >= O_SKYLIGHT ? " You stand under " : " You stand by ") : " You see ");
+    add (k == O_SKYLIGHT ? "a skylight in the roof" : k == O_SKYSHAFT ? "a shaft open to the sky" :
+         k == O_WAY_OUT ? "the stairs up to the way out" : k == O_STAIRS_UP ? "a stairway leading up" :
          k == O_STAIRS_DOWN ? "a stairway leading down" : k == O_LADDER_UP ? "a ladder going up" :
          k == O_LADDER_DOWN ? "a ladder going down" : k == O_SHAFT_UP ? "a shaft in the ceiling" :
-         k == O_SHAFT_DOWN ? "a shaft in the floor" : "a window");
+         k == O_SHAFT_DOWN ? "a shaft in the floor" : k == O_RAMP_UP ? "a long slope leading up" : k == O_RAMP_DOWN ?
+         "a long slope leading down" : "a window");
     if (rel != 0xFF) {
         add (" ");
         add (relname[rel & 7]);
         height (S->open[i].dz);
     }
-    add (".");
+    add (d ? ", daylight falling from it." : ".");
 }
 
 static void room (void)
@@ -338,10 +346,14 @@ static void room (void)
     unsigned char i;
     char* art;
 
-    if (S->dark) {
-        add ("It is dark. You can see nothing, but you feel the floor of a room about you.");
-        return;
-    }
+    if (S->size >= S_VAST) {                    /* (A great cavern: where in it untold, its walls beyond the light or
+                                                **   not, slice 4.10's) */
+        add (S->size == S_VAST ? "You are somewhere in a vast cavern, its walls beyond your light." :
+            "You are in a vast cavern");
+        if (S->size == S_VAST) {
+            goto told;
+        }
+    } else {
     if (S->size != S_PART) {                    /* (Where in it, its size and shape: slice 4.0's, part 8's) */
         art = lbe + room_where ();              /* (Its words put in lb, at its end: part 8's) */
         lbe += strlen (lbe);
@@ -357,6 +369,7 @@ static void room (void)
         *art = 'n';
         ++lbe;
     }
+    }
     if (S->lit || !sight_light) {
         if (S->lit) {
             add (", ");
@@ -369,7 +382,8 @@ static void room (void)
         add (sight_lamp);
         add (".");
     }
-    if (sight_close && S->size != S_PART) {      /* (Its figures, a close look's: what it's seen of it) */
+told:
+    if (sight_close && S->size != S_PART && S->size < S_VAST) {  /* (Its figures, a close look's: what it's seen of it) */
         add (" It is ");
         addn (SQ_FT * S->rw);
         add (" feet by ");
@@ -409,7 +423,6 @@ static void passage (void)
     for (i = n = 0; i < S->ndoors; ++i) {     /* (The doors beside it, but behind it) */
         n += !REL_BEHIND (S->door[i].rel);
     }
-    add (S->dark ? "It is dark; you feel your way. " : "");
     add (S->nways <= 1 && n ? "The passage comes to a door; it goes back " : S->nways <= 1 ?
          "The passage ends here; it goes back " : S->nways == 2 ? "You are in a passage. It goes " :
          "The passage forks here. It goes ");
@@ -458,11 +471,22 @@ void o_words (void)
         }
         return;
     }
+    if (sight_close & 32) {
+        felt_words (FW_NEW);                    /* (A walk over for a command just done: only what's new: overlay 17's) */
+        return;
+    }
+    if (sight_close & 32) {
+        felt_words (FW_NEW);                    /* (A walk over for a command just done: only what's new: overlay 17's) */
+        return;
+    }
     if (sight_close & 8) {
         focus_words ();                         /* (A look one way's: what it sees that way, overlay 11's) */
         return;
     }
-    if (S->where == W_ROOM) {
+    if (S->dark) {
+        felt_words (FW_TOUCH);                  /* (In the dark, what its hands and feet can tell alone: overlay 17's,
+                                                **   HOUSE.md's walking in the dark, 2026-11-02) */
+    } else if (S->where == W_ROOM) {
         room ();
     } else {
         passage ();
@@ -497,12 +521,53 @@ static void __fastcall__ worked (unsigned char action)
         if (action == IR_OK && reach != 4) {
             intend2 (I_WAIT, t, 1);
         }
+        if (action == IR_OK && reach == 4) {    /* (A timed work's end, the reach's steps to come: the UI waits for them;
+                                                **   the torch to light again by its own steps: HOUSE.md's) */
+            hub_mem (0, &k, &HUB->ireq.y, 1);
+            if (k >= 0xFD) {
+                if (k == 0xFE) {
+                    cmd.action = VB_LIGHT_OBJECT;
+                    cmd.aux = IO_LIGHT;
+                    cmd.other.word[0] = 0;
+                    cmd.obj.sel = 0;
+                    hub_mem (UI_BANK, &UIREC->kept, &cmd, sizeof cmd);
+                    reach = 5;
+                }
+                intend2 (I_WAIT, 1, 1);
+            }
+        }
         return;
     }
-    task_words (TE_BEGUN | k << 8, n |= 0x80);
+    what_hi = n & 0x80;
+    task_words (TE_BEGUN | k << 8, k < LT_PACKOFF ? n | 0x80 : n);    /* (The steps' kinds, 8 bits: a mang sharpened) */
     hub_mem (UI_BANK, &UIREC->kept, &cmd, sizeof cmd);
     reach = 3;
     intend2 (I_WAIT, t, k << 8 | (n & 0x7F) << 1 | 1);
+}
+
+/* What's carried told (the things' words, IO_LIST's: past lb's size in pieces, each ending at a word's end) */
+void __fastcall__ o_list_say (unsigned char first)
+{
+    unsigned off = 9, n;                        /* (Past "You carry": told before the world's asked, the user's D17) */
+    char* e;
+
+    if (first) {
+        msg ("You carry");
+        t_flush ();
+        return;
+    }
+    do {
+        hub_mem (UI_BANK, lb, UIREC->things_text + off, sizeof lb - 1);
+        lb[sizeof lb - 1] = 0;
+        n = strlen (lb);
+        e = 0;
+        if (n == sizeof lb - 1 && (e = strrchr (lb, ' ')) != 0) {
+            *e = 0;
+            n = e - lb;
+        }
+        say (lb);
+        off += n;
+    } while (e);
 }
 
 /* The commands that want nothing but their action, past main.c's chores (its default's: part 2 has no room): 1 if
@@ -517,7 +582,10 @@ unsigned char __fastcall__ o_more (unsigned char action)
         break;
     case VB_FILL_OBJECT:                        /* (A light renewed, slice 4.1's: "fill the lantern", "dip the torch in
                                                 **   the oil", the things' IO_FILL; its time, quietly: a timed work) */
-        worked (othings (IO_FILL, cmd.obj.word, cmd.other.word, d));
+        if (strstr (cl, "sharpen") || strstr (cl, "hone") || strstr (cl, "whet")) {
+            d |= IO_SHARP;                      /* (A blade's words: a light has no edge, the things') */
+        }
+        worked (othings (IO_FILL | IO_STEPS, cmd.obj.word, cmd.other.word, d));
         break;
     case VB_OBSERVE_IN:                         /* (Looked into a thing, onto it: "look in the sack", "look on the */
                                                 /*   table", "look into the well", the user's, 2026-10-21; the */
@@ -527,16 +595,24 @@ unsigned char __fastcall__ o_more (unsigned char action)
             look_way (VB_OBSERVE_THROUGH);
             break;
         }
-        action = othings (IO_INSIDE, cmd.obj.word, "", 0);
+        action = othings (IO_INSIDE | IO_STEPS, cmd.obj.word, "", 0);
         if (action == IR_NOT_HERE) {
             reach_go ();                        /* (Out of reach: walked over to first, then again) */
-        } else if (action != IR_OK) {
+        } else if (action == IR_NONE) {
             sayf ("\nYou see no %s here.", cmd.obj.word);
-        } else {
+        } else if (action == IR_OK) {           /* (IR_NO: a step of the reach first, part 19's) */
             msg (lb);
             intend2 (I_WAIT, 30, 1);            /* (A look's three seconds) */
         }
         break;
+    case VB_TIE_OBJECT:                         /* (A rope's: the things', wrope.c's, IO_HIDE's shape; a sack's tie, as it's */
+    case VB_UNTIE_OBJECT:                       /*   opened or closed) */
+        if (hide (HD_ROPE)) {
+            worked (othings (IO_HIDE | IO_STEPS, cmd.obj.word, cmd.other.word,
+                d | IO_ROPE | (action == VB_UNTIE_OBJECT ? RP_UNTIE : cmd.aux)));
+            break;
+        }
+        cmd.aux = action == VB_UNTIE_OBJECT ? PA_OPEN : PA_CLOSE;
     case VB_OPEN_OBJECT:                        /* (A thing that closes, worked: "open the chest", "untie the */
     case VB_CLOSE_OBJECT:                       /*   sack", "pick the chest's lock", "force the chest", the */
     case VB_UNLOCK_OBJECT:                      /*   user's; the world's IO_SHUT, a lid, a tie, a stopper, a */
@@ -545,7 +621,7 @@ unsigned char __fastcall__ o_more (unsigned char action)
         if (!cmd.obj.word[0] || cmd.obj.kind) {
             return 0;
         }
-        action = othings (IO_SHUT, cmd.obj.word, "", (action == VB_LOCK_OBJECT ? PA_LOCK : cmd.aux) | d);
+        action = othings (IO_SHUT | IO_STEPS, cmd.obj.word, "", (action == VB_LOCK_OBJECT ? PA_LOCK : cmd.aux) | d);
         if (action == IR_NONE) {
             if (cmd.action != VB_LOCK_OBJECT) {
                 return 0;

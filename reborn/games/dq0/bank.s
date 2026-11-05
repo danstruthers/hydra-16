@@ -15,17 +15,21 @@
             .include    "ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 16                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
+OVMAX       = 20                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
+SWFAST      = 1                     ; (The parts copied four pages a pass: a walk's first words spent half their time
+                                    ;   in the copies; 2026-11-03)
+
+            .zeropage
+ova:        .res        1           ; (.A and .X kept through a stub)
+ovx:        .res        1
 
             .bss
 _ovbank:    .res        OVMAX       ; Overlay n's bank: _ovbank[n - 1] (main.c's ovl_load sets them)
 ovstk:      .res        DEPTH       ; The banks the overlay calls found, to put back
 ovsp:       .res        1
-ova:        .res        1           ; (.A and .X kept through a stub)
-ovx:        .res        1
 
             .code
 
@@ -85,10 +89,13 @@ ovl_out:
             OVFN        title, 1
             OVFN        help, 1
             OVFN        unknown, 1
+            OVFN        qual_ok, 1
             OVFN        parts_in, 6
             OVFN        alias_said, 4
             OVFN        sway_words, 15
-            OVFN        dig_words, 1
+            OVFN        walk_says, 17       ; (A walk's first words: sway.c's, no part's swap, the user's D17)
+            OVFN        blow, 6             ; (A blow worded and its end: blows.c's since 2026-11-03, the main RAM's room)
+            OVFN        dig_words, 19
             OVFN        task_words, 3
             OVFN        beat_words, 16          ; (A walk's beats: task.c's, overlay 3's room, 2026-11-01)
             OVFN        stop_kind, 7
@@ -99,13 +106,14 @@ ovl_out:
             OVFN        state_words, 7
             OVFN        free_cmd, 7
             OVFN        meta, 7
-            OVFN        climb_words, 1
+            OVFN        climb_words, 12     ; (Overlay 1's room, slice 4.4's)
             OVFN        entered, 1
             OVFN        portal_words, 10
             OVFN        harm_words, 1
             OVFN        appraise, 1
             OVFN        tell, 14
             OVFN        words, 2
+            OVFN        list_say, 16        ; (What's carried told, in pieces: words.c, 2026-11-03)
             OVFN        more, 16            ; (The commands past main.c's chores: words.c's, overlay 2's room, 2026-11-01)
             OVFN        stir_words, 9
             OVFN        heard_words, 9
@@ -118,7 +126,7 @@ ovl_out:
             OVFN        taken_next, 11
             OVFN        throw_words, 10
             OVFN        fixt_words, 4
-            OVFN        shot_words, 15      ; (The missiles' words: shots.c, slice 4.7's, overlay 15)
+            OVFN        shot_words, 1       ; (The missiles' words: shots.c, slice 4.7's, overlay 15)
             OVFN        trap_words, 10
             OVFN        trap_name, 10
             OVFN        den_way, 4
@@ -127,20 +135,25 @@ ovl_out:
             OVFN        theme_named, 5
             OVFN        story, 5
             OVFN        way_words, 5
-            OVFN        ending, 5
+            OVFN        ending, 15
             OVFN        puzzle, 5
             OVFN        fight_words, 6
             OVFN        fight_target, 6
             OVFN        pacing, 16
             OVFN        names_in, 10
             OVFN        focus_words, 13
-            OVFN        felt_words, 7
-            OVFN        facing_words, 7
-            OVFN        fore_set, 6         ; (The answer's tasks in the foreground: main.c's)
+            OVFN        felt_words, 17
+            OVFN        facing_words, 19
+            OVFN        sky_words, 1        ; (The sky seen by a window, a skylight, a shaft: time.c, 16's room)
+            OVFN        turned_says, 19     ; (A turn's first words: task.c's, the main RAM's room)
+            OVFN        fore_set, 13        ; (The answer's tasks in the foreground: main.c's)
             OVFN        water_words, 4      ; (The water's news, hunger's and thirst's: water.c, slice 4.9's)
             OVFN        time_ui, 16         ; (The time of day believed, worded: time.c, 2026-10-31)
             OVFN        say_raw, 16         ; (A line as it is, the map's: term.c, the main RAM's room)
-            OVFN        dots, 6             ; (The game's start's progress: main.c's)
+            OVFN        t_status, 16        ; (The status line drawn: term.c, the main RAM's room, 2026-11-03)
+            OVFN        may_den, 16         ; (The thing named may be a denizen: sway.c, 2026-11-03)
+            OVFN        walk_ahead, 15      ; (A walk over told before the world's asked: sway.c, 2026-11-03)
+            OVFN        dots, 3            ; (The game's start's progress: main.c's)
 
 ; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)
 
@@ -149,29 +162,37 @@ ovl_out:
             SWPART      1, 8                ; The start and the end (main.c): the task's arguments, the world
                                             ;   started, the game kept, the world stopped
             SWPART      2, 14               ; The commands (main.c: the map's bank, overlay 3 full at slice 4.2)
-            SWPART      3, 16               ; The map (look.c; overlay 14's bank till 2026-11-01)
+            SWPART      3, 19               ; The map (look.c; overlay 14's bank till 2026-11-01)
             SWPART      4, 9                ; The pace, the watchfulness, the state, small moves (pace.c)
             SWPART      5, 10               ; The names given (names.c)
             SWPART      6, 12               ; The names said (names.c)
             SWPART      7, 8                ; The game's arguments, its own theme made (main.c)
-            SWPART      8, 5                ; Where in its room the character is, and the things (look.c)
+            SWPART      8, 3                 ; Where in its room the character is, and the things (look.c)
             SWPART      9, 13               ; The player's shortcuts (alias.c)
-            SWPART      10, 11              ; A search, by its form (search.c)
-            SWPART      11, 15              ; The rarer news, worded (main.c); the hands and limbs
-            SWPART      12, 15              ; Wounds over time: first aid, in shock, the body's news (tend.c)
-            SWPART      13, 1               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
-            SWPART      14, 3               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
-            SWPART      15, 6               ; An ally's errands, the character's gifts (errand.c: slice 4.8's)
-            SWPART      16, 6               ; Eating and drinking (feed.c: slice 4.9's)
+            SWPART      10, 18              ; A search, by its form (search.c)
+            SWPART      11, 20              ; The rarer news, worded (main.c); the hands and limbs
+            SWPART      12, 16              ; Wounds over time: first aid, in shock, the body's news (tend.c)
+            SWPART      13, 5               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
+            SWPART      14, 18              ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
+            SWPART      15, 17              ; An ally's errands, the character's gifts, the market (errand.c: slice 4.8's; 2026-11-02)
+            SWPART      16, 19              ; Eating and drinking (feed.c: slice 4.9's)
             SWPART      17, 14              ; Looking one way, a close look (way.c: part 6's till 2026-11-01)
+            SWPART      18, 18              ; A denizen's door's words (2026-11-02: overlay 3's room)
+            SWPART      19, 15              ; The reach's steps (main.c: 2026-11-02, HOUSE.md's reach)
+            SWPART      20, 7               ; An ally's errands, gifts (errand.c: part 15's room, 2026-11-03)
+            SWPART      21, 20              ; The record of a life, as a game begins (main.c: 2026-11-04)
+            SWPART      22, 20              ;   and its dungeon's folder found
+            SWPART      23, 15              ; The limbs' news worded, a hand said (main.c: part 11's till 2026-11-04)
+            SWPART      24, 14              ; The commands seen to less often (main.c: part 2's till 2026-11-04)
 
-            SWFN        errand, 15
+            SWFN        errand, 20
+            SWFN        trade, 15
             SWFN        begin, 1
             SWFN        feed, 16            ; (Eating and drinking: feed.c, slice 4.9's)
             SWFN        size, 1
             SWFN        t_init, 1
             SWFN        finish, 1
-            SWFN        save_game, 1
+            SWFN        save_game, 14         ; (Part 3's: part 1's room, slice 4.4's)
             SWFN        command, 2
             SWFN        ready, 2
             SWFN        cq_post, 2
@@ -180,7 +201,9 @@ ovl_out:
             SWFN        take, 2
             SWFN        took_up, 2
             SWFN        map, 3
+            SWFN        sheet_map, 3        ; (The sheet, the map's lines: part 2's room, 2026-11-03)
             SWFN        lie_words, 8
+            SWFN        door_words, 18      ; (A denizen's door's words: overlay 3's room, 2026-11-02)
             SWFN        room_where, 8
             SWFN        den_seen, 8
             SWFN        actor_seen, 8
@@ -191,6 +214,7 @@ ovl_out:
             SWFN        names_subst, 6
             SWFN        names_say, 6
             SWFN        names_look, 6
+            SWFN        came, 6             ; (Come into a stratum, told: main.c's, 2026-11-02)
             SWFN        names_keep, 6
             SWFN        alias_line, 9
             SWFN        alias_expand, 9
@@ -199,22 +223,36 @@ ovl_out:
             SWFN        room_named, 6
             SWFN        history, 7
             SWFN        args, 7
-            SWFN        reach_go, 7
+            SWFN        between, 21         ; (The record of a life, as a game begins: part 1's bank's room, 2026-11-04)
+            SWFN        life_dir, 22
+            SWFN        reach_go, 13
+            SWFN        step_go, 19
+            SWFN        tool_out, 19
+            SWFN        find_banks, 19
+            SWFN        reach_said, 19
+            SWFN        door_go, 13         ; (A door round a bend walked up to first: main.c, 2026-11-03)
             SWFN        place_go, 7
             SWFN        look_way, 17
             SWFN        search_go, 10
+            SWFN        search_said, 10
             SWFN        news, 11
-            SWFN        hide, 11
-            SWFN        hand_said, 11
+            SWFN        hide, 18
+            SWFN        hand_said, 23
+            SWFN        limb_words, 23
+            SWFN        lift, 24
+            SWFN        deal, 24
+            SWFN        rarer, 24
+            SWFN        work, 2
+            SWFN        intend, 2
             SWFN        limbs_cmd, 11
             SWFN        bg_words, 14
             SWFN        pose_words, 12
-            SWFN        when_free, 12
+            SWFN        when_free, 14
             SWFN        noise_told, 14
             SWFN        dig_used, 14
             SWFN        hold_first, 11
             SWFN        missiles, 13        ; (The missiles: slice 4.7's)
-            SWFN        gear_look, 11
+            SWFN        gear_look, 3
             SWFN        early, 12
             SWFN        tend, 12
             SWFN        body_words, 12

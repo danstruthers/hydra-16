@@ -52,12 +52,14 @@ rule     | combine | key bow + key blade = brass key | The bow and the blade of 
            brass key.
 rule     | out | brass key | open | The brass key turns in the gate's lock with a squeal, and the gate swings open.
 rule     | put | totem | bone throne | rule | You set the totem on the bone throne.  From every tunnel comes the
-           yapping of the kobolds, and then a hush: they come, one by one, and kneel.
+           yapping of the kobolds, and then a hush: they come, one by one, and kneel, and the gate is opened.
 
 lock     | The way out is shut fast. Whatever opens it is somewhere below.  A gate of iron bars, its lock of brass.
 opened   | The gate stands open on the ruin above: go up to leave.
 ending   | escaped | You climb up through the gate and out of the ruin into the open air.  The Kobold Warren yaps
            behind you.  You have escaped.
+wayout   | 3
 ending   | ruled | The kobolds are yours, every one, and the warren and all its diggings with them.  Long live the
            chieftain!
+ending   | left | You climb out of the ruin into the open air, and the Kobold Warren yaps behind you.
 ending   | died | The kobolds pick your bones, and argue over your boots.

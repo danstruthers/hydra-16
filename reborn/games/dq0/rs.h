@@ -57,9 +57,8 @@ enum {
                                                 **   a spell of work makes, its result 1 if nothing it has can dig that */
     P_APPRAISE,                                 /* A thing judged (b: the craft that knows it, AP_*): its make, its
                                                 **   worth; the grade how near the judgement comes */
-    P_CONCEAL,                                  /* Concealment: a thing hidden, or oneself (in shadows ...): the
-                                                **   grade sets a thing's difficulty to find, or a person's against
-                                                **   a search */
+    P_CONCEAL,                                  /* Concealment: a thing hidden (oneself is P_STEALTH's: HOUSE.md's hiding oneself): the
+                                                **   grade sets a thing's difficulty to find */
     P_ASSESS,                                   /* A mechanism made out (a trap's, before it's disarmed: never
                                                 **   deadly, however it goes) */
     P_DECEIVE,                                  /* Guile: a creature talked round by a tale, a bluff (the persuading
@@ -130,6 +129,9 @@ enum { MAT_EARTH, MAT_STONE, MAT_MASONRY, MAT_FLAGS, MAT_SOIL };    /* (Earth ha
 enum { GA_CREEP, GA_SLOW, GA_WALK, GA_JOG, GA_RUN, GA_SPRINT, NGAITS };
 #define GA_REST         0xFF
 #define GA_WORK         0xFE
+#define GA_STOOD        0xFD                    /* (RS_EXERT's a: standing still on its feet, awake: rest, but a load's borne:
+                                                **   HOUSE.md's a load borne, the user's, 2026-11-03; GA_REST lying, sitting,
+                                                **   kneeling, asleep, senseless) */
 
 /* ---- Conditions (bits): what the world must know of an actor's state */
 #define C_PRONE         0x0001
@@ -151,6 +153,9 @@ enum { GA_CREEP, GA_SLOW, GA_WALK, GA_JOG, GA_RUN, GA_SPRINT, NGAITS };
                                                 **   walk) or none (crawling, its arms enough); */
 #define C_STUCK         0x4000                  /*   not at all (no leg to stand on, nor arms enough to crawl) */
 #define C_MOVE          (C_LAME | C_CRAWLS | C_STUCK)
+#define C_NEWS          0x8000                  /* (The character's alone: the referee has words for it not told yet,
+                                                **   a skill opened by its use: the world's to ask for them, RS_TIME,
+                                                **   as it does for what time did, slice 4.4's) */
 
 /* ---- Health: how hurt an actor is, in words any ruleset can say */
 enum { H_FINE, H_HURT, H_BADLY, H_CRITICAL, H_DOWN, H_DEAD };
@@ -184,7 +189,7 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 ** them in (hub.h's FF_*: the creature's courage tested if it was wounded and stands, RS_MORALE's: FF_FLEES, or
 ** AF_CAUTIOUS).  The character strikes with what the
 ** hub's pc_strike says (SK_*: the best it holds, a fist, a foot, the head: Unarmed's, the book's hand, foot and head;
-** SK_THING | a kind, that thing and no other, the catalogue's (items.h's struct kind, in the hub's CAT_BANK: the
+** SK_OF a kind, that thing and no other, the catalogue's (items.h's struct kind, in the hub's CAT_BANK: the
 ** referee's to read), a weapon of the ruleset's as itself, anything else as the ruleset treats a thing swung, by its
 ** kind's data, its words the kind's name; a soft one never asked of, the world's: rshouse.h's RS_HOUSE_SWING), in the
 ** hand the hub's pc_shand says (its hand's own: the off hand's penalty, one-handed, an arm hurt: slice 4.1b's).
@@ -203,6 +208,11 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 #define RS_PRONE_D      0x04                    /*   the defender) */
 #define RS_KILLER       0x08                    /* (RS_ATTACK's w2: the attacker a killer, the character senseless finished
                                                 **   where it lies; else the blow held: the minds', by its nature) */
+#define RS_ASKER        0xFE                    /* (RS_TEST's other, moving quietly's and a creature's: by the asker's own
+                                                **   dice, moved on: not moving quietly's, the same till the game's move:
+                                                **   a look at one hidden, each look its own, HOUSE.md's hiding oneself) */
+#define RS_ASLEEP       0x80                    /* (RS_ATTACK's w2: the defender, a creature, asleep: it ignores the
+                                                **   blow, the book's Ignore (Combat 9: one unaware); 2026-11-02) */
 #define RS_REARM        0x20                    /* (RS_ATTACK's w2: the attacker, its weapon let fall, takes it up again,
                                                 **   its turn: O_REARM, slice 4.1b's) */
 #define RS_SHORT        0x10                    /* (RS_ATTACK at RS_THING's w2: a bare part (no armour on it: the
@@ -227,6 +237,7 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 #define MS_UNAWARE      0x100
 #define MS_COVER        0x200
 #define MS_STRAY        0x400
+#define MS_HARD         0x800                   /* (The world's own: a throw's, two steps the harder in the request's steps) */
 #define AF_STOPPED      0x01                    /* The attacker's strike stopped by armour (its line the armour's) */
 #define AF_STOPPED_D    0x02                    /*   the defender's */
 #define AF_TA           0x04                    /* The defender's tactical advantage: an action more, at once */
@@ -244,7 +255,7 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 ** field and c the bonds (points, signed: the referee's to ignore, the tests' to read), w1 the fallen's record (or the
 ** leader's lost), w2 its leaders' records reckoned (its band's head, its faction's times 256; 0xFF none) */
 enum { M_STEADY, M_CAUTIOUS, M_BROKEN, M_DESPERATE, M_BERSERK };
-enum { MR_NONE, MR_FELL, MR_LEADER, MR_TOLD };   /* (Why: a friend seen or heard to fall; its leader; told of its
+enum { MR_NONE, MR_FELL, MR_LEADER, MR_TOLD, MR_FACED };   /* (Why: a friend seen or heard to fall; its leader; told of its
                                                 **   leader's loss) */
 
 /* An effect of a reply: what happened to whom (up to RS_EFFECTS a reply) */
@@ -280,12 +291,21 @@ enum { BP_SKULL, BP_FACE, BP_NECK, BP_SHOULDER, BP_UPPER_ARM, BP_ELBOW, BP_FOREA
 ** tenths the actor's out for (knocked senseless), result 1 a fall stopped (a hold grabbed); its words in the text,
 ** a line (and RS_DESCRIBE b 2's: the last harm's) */
 enum { HC_FALL, HC_STRIKE, HC_FIRE, HC_STRUCK };
+#define DIG_BETTER      8                       /* (P_DIG's text: the tool named as it's asked, "" the best to hand; the
+                                                **   reply the tool taken; a query's, at this offset, a better one to
+                                                **   hand, "" none: the user's, 2026-11-03) */
+#define RS_DIG_QUERY    127                     /* (P_DIG's steps: only what would bite into it, the tool and its rate
+                                                **   asked, no test and no wear: told at once, a dig begun) */
 
 /* ---- Afflictions (2026-10-31: HOUSE.md's poison, bad air and disease, every ruleset's to keep): what the world exposes
 ** the character to (RS_TIME's x[18], its dose x[19]), the ruleset's to judge (resisted, caught, its course, its cure):
 ** a poisoned dart's or needle's (a trap's), a contact poison's (a lock's, a chest's), spoiled food's, foul water's (a
 ** still pool drunk from: the flux).  A creature's bite that carries venom or disease the ruleset's own (its bestiary) */
 enum { AK_NONE, AK_DART, AK_CONTACT, AK_FOOD, AK_FLUX, NAK };
+#define AK_CURE         0x10                    /* (The UI's RS_TIME, a remedy taken, 2026-11-02: its x[15] RT_TAKEN | 1 an */
+#define AK_REMEDY       0x20                    /*   antidote, against the toxin; | 2 a remedy, against the disease; the
+                                                **   null ruleset's x[18] these: HOUSE.md's remedies) */
+#define RT_TAKEN        0x40
 /* The air (the world's, as it moves: the hub's pc_air, RS_TIME's x[20]): its kind times 16, and its strength (1 a little
 ** ... 3 much: the draught's thinned it): blackdamp (stale air: too little to breathe, choke-damp), whitedamp (the
 ** smoke of fire and of a blast: poisonous, giving no warning), firedamp (marsh gas, in the coal and shale beds: it burns,

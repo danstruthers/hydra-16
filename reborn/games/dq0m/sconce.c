@@ -91,4 +91,5 @@ void __fastcall__ s_sconces (struct chunk* c, unsigned x0, unsigned y0)
             put_down (KI_TORCH, c->sn, x0 + lx, y0 + ly, 1, ST_IN);
         }
     }
+    sky (c, 2);                                 /* (The list gone over: a found key's lock, a rope's ring: sky.c's) */
 }

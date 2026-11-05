@@ -65,8 +65,8 @@ factions written down, no layers (nothing of theirs in the save folder: their de
   gone); put X on (or in) Y (an offering on an altar, a crown on a throne); use X on the way out (open the way out
   with X).  The world judges a command of the puzzle's by the rules (the UI's request, IO_PUZZLE: the things found to
   hand by the item store, IO_FIND, the rule for their kinds, done: IO_COMBINE, IO_PUT), keeps it done (a bit each in
-  its world.dat), and does its effect: none more, the way out opened (the hub's way_open: the world lets the
-  character up it, and it's gone: E_LEFT), or the place ruled (the UI's to end the game); the UI tells its words
+  its world.dat), and does its effect: none more, or the dungeon solved and the way out opened (the hub's way_open: the world lets the
+  character up it, and it's gone: E_LEFT; a place ruled the same, its ending the ruled one's); the UI tells its words
   (DUNGEON.md, who keeps what: the game's own rules).
 - **The endings:** escaped (up the way out, opened), ruled (a rule's), or dead (a fatal wound); the theme's words, the
   game over, and the save marked done (dq0 -d on it again begins a new game).
@@ -175,6 +175,15 @@ done before its eyes to a foe of its (one of a faction hostile to it, sensing it
 worth's steps less one), a step each four, to friendly at most (dq0d's s_regard).  A freed prisoner's (no prisoners
 yet) is the hook's.
 
+**Trading and entertaining** *(2026-11-02; HOUSE.md's the market, entertaining and remedies, for review)*: "buy the
+rope from the dwarf", "sell my dagger", "how much for the lantern?", "what will you give for this?", "haggle for the
+rope", "sing to the bandit".  The UI finds the goods (the character's, or the trader's: the world's IO_GEAR's goods, the
+nearest named, or any, carrying them) and each side's pennies, and asks the denizens' task (SW_BUY, SW_SELL, SW_PRICE,
+SW_OFFER, SW_HAGGLE, SW_ENTERTAIN: dq0d's part 16): any folk denizen friendly or better trades (the user's, 2026-11-03), its price from the
+goods' worth by its attitude, haggled by the book's Rhetoric in its tongue; the deal done by the one path (its own
+I_ROB intents, FE_GIFT the coins or the goods it takes, FE_GIVE its own handed over: the world's wfetch.c).  Entertained
+by the referee's performing skill, its attitude moved as words move it, as far as friendly.
+
 ### Allies
 
 An ally is still the **denizens' task's**: it moves, fights and acts on its own turn by its own nature, but its goal
@@ -202,6 +211,14 @@ from the start, is the character and its allies.
   beside it (FE_GIVE: into the character's hand or pack, else set down at its feet).  Each step told (E_TASK
   TE_FETCHED: "Grub picks up the key.", "Grub hands you the key.", "Grub can't carry the anvil.", "The dwarf has its
   hands full: it can't take the torch.").  Failing, it follows again.
+- **Errands at a door** *(2026-11-02, the one path)*: "ask the dwarf to open the door", "tell Grub to shut the door",
+  "ask the dwarf to unlock the door" (the parser's order words open, close, shut, unlock: OR_OPEN, OR_CLOSE, OR_UNLOCK).
+  The UI finds the door as the character's own command does (its square), and asks the ally (one with hands: a beast
+  "doesn't know how"); it walks to beside the door (the four ways), and posts the character's own intent, I_PORTAL (its
+  PA_OPEN, PA_CLOSE, PA_UNLOCK: its key if it carries one), the world's to carry out (wport.c, told E_DEN DE_OPENS ...);
+  then it follows again.  No way to it, it gives up and follows.
+- **A gift without "to"** *(2026-11-02)*: "give the bandit 5 pennies", "offer the orc my dagger": the one given it the
+  line's first word after the verb that isn't the thing's, a number or a little word (the UI's, errand.c).
 
 ### In the tasks
 
@@ -244,7 +261,8 @@ denizens' task is their minds.
   square, facing, when it's free, its step, its position, what it's doing) and its mind the denizens' (its name, its
   record, attitude, faction, foe, kind, its remains, timid), each written by its own.  The world carries out the
   intents in turn by the character's rules (dq0w/wbody.c): a square it can walk (no wall, no shut door), no one on it,
-  nor the character, nor where the character's move ends (the hub's pc_tx, pc_ty); its time its step's, more uphill,
+  nor the character, nor where the character's move ends (the hub's pc_tx, pc_ty); its time its step's (a walk; hurried,
+  its jog, half that, by what it's doing and its heart: the user's, 2026-11-03, HOUSE.md's their paces), more uphill,
   steeply down, on steps, as the character's.  It tells what the bodies do (E_DEN, the denizens' events), and bumps
   den_seq for the senses to look at them again (those the character sees in what it perceives).  A denizen doesn't
   set off a trap underfoot, nor a door's as it opens it.  A door it works by the character's parts (its doors, below).
@@ -295,7 +313,7 @@ denizens' task is their minds.
 ### Daily life *(2026-10-31: slice 4.5's leftover; HOUSE.md's the denizens' day, for review)*
 
 Each denizen keeps a day by its kind and the game's clock (dq0d.c's part 9): the hour of the day the clock's and the
-hour the game began at, dusk (the house's).
+hour the game began at, by its seed (the user's, 2026-11-03; dq0 -E's dusk, the tests').
 
 - **Its day** (kinds.txt's day, from the bestiary's habits): diurnal (up at six, asleep at ten at night: the cave
   basilisk, the cultists and their priest, the bandits' and the soldiers' leaders, the dwarf miners and elders),
@@ -431,8 +449,7 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
 ### Fights
 
 - **Sheets:** each actor has the referee's sheet (RS_NEW_ACTOR, by its kind's key, its record's number:
-  dq0harn/fight.c's bestiary: the first six kinds' the game's own numbers, the rest the HarnWorld Bestiary's for the
-  like creature; each attribute varied by a die of its own so no die of the referee's is spent on it: HOUSE.md's
+  dq0harn/beasts.c's bestiary: the HarnWorld Bestiary's for the like creature, where it has none its nearest kin's; each attribute varied by a die of its own so no die of the referee's is spent on it: HOUSE.md's
   fights), made the first time and kept after (its wounds, its state) in a
   bank of the referee's, saved with the game (beasts.dat).
 - **Blows** (the referee's HarnMaster melee, behind rs.h's RS_ATTACK): a hostile actor sensing the character beside it
@@ -446,6 +463,8 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   what's held and worn, and how well made: RS_EQUIP's marks).  Each blow is told (E_FIGHT in the denizens' queue, its
   words in a ring in their bank: the referee's for the wounds and the armour, the UI's for the rest), heard by the
   others (they turn to it) and played (the sound task's *hit, *swish).
+- **As it first comes to strike or shoot at the character,** not fighting it already, it tests its courage (MR_FACED, a beast's as well, not the mindless: broken, no blow: the user's, 2026-11-03; once fleeing and cornered beside it, it strikes at bay, untested; no decision of a mind's without a thing done or a moment waited, 2026-11-04;
+  HOUSE.md's morale), the character's might, by its size and its best weapon skill as a creature's is, weighing on it.
 - **After:** a denizen wounded tests its morale (RS_MORALE: HOUSE.md's fights), its heart its steps (below): broken (or
   a shy one cautious) it flees a minute; cautious, it holds back a round.  As one falls its kin among the actors (its
   kind and, since 2026-10-29, its faction) that hear it test their courage (HOUSE.md's morale, since 2026-10-30, in
@@ -508,7 +527,7 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   beast, dq0 -K), the bestiary's as before; the null referee ignores them.
 - **Drawn as it strikes:** its hands empty of a weapon, its first blow draws the best on its belt instead, its round
   (WB_DRAWS); its weapon in one hand and a shield slung on its back, the next unslings the shield into its other hand
-  (WB_READIES, 2026-10-29).  A weapon let fall is its own (the same record, on the floor and back in its hand).
+  (WB_READIES, 2026-10-29).  A weapon let fall is its own (the same record, on the floor and back in its hand); one broken on a block (the book's Weapon Damage, HOUSE.md's what strikes: X_DROP's x[1]), or its shield, falls as a broken weapon, no thing to take up, its fists after.
 - **Its shield** *(2026-10-29; HOUSE.md's the denizens' gear, for review)*: held, it blocks with it when that's the
   best of its defences, once a round (the referee's: fight.c's defence, gear.c's den_side; the null referee's two
   steps), told "it fends off the blow with its buckler" (rs.h's AF_SHIELD, the fight ring's FW_SHIELD).
@@ -568,7 +587,8 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
 
 ### Tunnellers *(2026-11-01: slice 4.11; HOUSE.md's tunnellers, for review)*
 
-- **Who digs:** kinds.txt's ways d (a burrower, by its claws: the giant rat, the ghoul) and m (a miner, by the tools it
+- **Who digs:** kinds.txt's ways d (a burrower, by its claws, rubble, earth and soil, no rock, the same at work and at
+  prey: the user's, 2026-11-03; the giant rat, the ghoul) and m (a miner, by the tools it
   carries: the dwarf miner, the kobold, the brown orc; a pick, a shovel, a spade or a mattock among its things, the
   world's agear AG_PICK and AG_SPADE, as it tells the referee its things).
 - **The minds choose where** (dq0d.c's dig_way, part 12, at need: no polling): a hostile tunneller kept by rock, a
@@ -589,6 +609,31 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   hear a scraping in rock ahead to your left."), its spells after (DE_DIGS: the denizens hear them, the player's not
   told again), the way through (DE_DUG at the square dug: seen as it was, "A fresh tunnel opens ahead.  Spoil lies
   heaped by it."; heard, "You hear rock falling ..."); the rock carrying a pick's knock where the air doesn't.
+- **At its work** (2026-11-02, slice 4.11's rest: dq0d.c's work_dig, part 15's, asked by the day's, part 9's target
+  and part 10's daily, as its work's hours come: never polled): a miner digs its faction's mine (from its lair's home
+  across to its region's vein, rock.h's rock_vein, then along it), a burrower its lair's burrow (one of the four ways
+  from its home, eight squares, as far as its claws bite: no rock); the way worked out each time from the dungeon as it is (no
+  record of it kept: the open squares and doorways on it walked through, a door or a portcullis raised), the first
+  wall, rock or rubble its face, dug
+  from the square before it (its stand: an actor steps to it, a shut door on the way opened by the doors' own, part
+  14's door_way, as one following the character; then posts its spell, I_KIT's KT_DIG, w1 w2 the face), within its
+  home's chunk; its stand another's, it waits a minute or two (a record's due again a spell on).  A kind with work of its own digs when there's a vein;
+  one with none, half of them (by their numbers) dig through their waking hours (sched's SC_WORK).  A lair that finds
+  nothing to do asks again as the clock's high word moves, near enough two hours (the records' nowork, by its number:
+  part 15's a dear swap for each one due, so a door broken down or a way dug in is seen to within two hours).
+- **Away from the character** (roam's records, part 9's wander): one at its dig's stand posts its spell coarse (I_KIT's
+  KT_DIG, who 0: w1 w2 its face, x[2] its stratum, x[0] its tools), due again a spell on; the world digs it at once,
+  untested, untold (wdig.c's), the hole and the way through kept as an actor's.
+- **Poor rock** (wdig.c): a tunneller's spell critically failed in shale fills two feet of its hole again, told
+  (DE_ROOF: "The dwarf miner is showered with rock from the roof.", heard rock falling; no harm: the referees' sheets
+  are the character's).  Its spells and its way through played by the sound task (dq0s: a dig, a smash).
+- **Builders** (2026-11-02: HOUSE.md's builders, for review): a miner at work first puts up again a door broken down
+  in its home's chunk (PS_WRECKED), from a square beside it: I_KIT's KT_BUILD (w1 w2 the door), the world's wdig.c a
+  spell's work, the door's change records (PORTAL_STATE shut and whole, PORTAL_HARM none), told (DE_HANGS: "The dwarf
+  miner hangs a new door.", heard hammering).  Then walls up a way dug into a room there by others (dq0d's way_in: a
+  change record of its region, T_CORR, still a passage, a room's floor beside it, the character not on it, not of its
+  own mine; nothing kept but the records): KT_BUILD again, an hour's work, the square T_WALL by the world's change
+  (DE_WALLS: "The dwarf miner walls up the way.", heard stones being laid).
 
 ### Doors *(2026-11-02: Phase 3C's one path; HOUSE.md's denizens and doors, for review)*
 
@@ -616,7 +661,7 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
 
 - **The minds** (dq0d.c's take_way, part 14, once in a hundred seconds at most, as it isn't fighting or digging):
   what it wants (TW_*), a folk denizen's (a beast takes nothing up: it hunts): a weapon, none to hand (its
-  agear's AG_ARMED off: its own let fall and gone, none of its own); food, hungry; coins and jewels, a robber
+  agear's AG_ARMED off: its own let fall and gone, none of its own); food (the catalogue's key, rations), hungry; coins of any kind and jewels, a robber
   (kinds.txt's ways r); an ally none (its errands its own).  Its intent the character's own, I_TAKE (a its wants), the world's to carry out, as it goes on
   with what it decided (its doing and its face kept: nothing else changes if there's nothing to take).
 - **The world** (wtake.c, part 81): the first thing lying within its reach it wants (a weapon held in a hand, not a lot
@@ -625,6 +670,38 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   told, its agear's AG_ARMED), "The bandit snatches up its sword." (E_BEAT WB_PICKS).  Nothing at its own home (its
   lair's own, a robber's takings put down there).  None in its reach, the nearest it sees within four squares told its
   mind (the hub's dig_t, TW_SEEN | its offsets): idle, it steps toward it and asks again beside it.
+
+### Things handled *(2026-11-04: Phase 3C's one path, the rest; HOUSE.md's denizens handling things, for review)*
+
+- **Eaten** (its take's I_TAKE, TW_FOOD, wtake.c): hungry with food in hand, it eats it (a lot one less; five minutes, as the character's meal; "The soldier eats its rations."), its mind told (the hub's dig_t, TW_ATE; fed, and an I_TAKE of no wants clears it).
+- **Handed over** (I_ROB FE_PASS, its mind's take_way: not hungry, a hungry fellow of its faction beside it): the food it holds, if any, into the fellow's hands if it has one free (the take rule's hands), two seconds; "The soldier hands its rations to its fellow."  The fellow eats it as its own next look comes.
+- **Let fall** (I_ROB FE_DROP): one broken and fleeing lets go of what it holds that's no weapon nor light, no time, where it stands (a shaft's head takes it, as the character's), "The bandit drops its rations."; and one wanting a weapon, its hands full, puts down what's in them to take it up.
+- **Thrown** (I_ROB FE_THROW, an ally's errand): the thing it fetched, no way nearer the character, and in the character's sight: thrown over by the character's own throw (the catalogue's reach, the bands, the referee's Throwing by its sheet), "The dwarf throws you its rope." (it lies at the character's feet, or by a band's end "it falls short").  A throw at the character as a blow has been one code since slice 4.7.
+- **Seen**: told only if its square's in the character's sight (these, and the things it takes up).
+
+### Ways, positions, bodies found *(2026-11-02: the minds' leftovers; HOUSE.md's, for review)*
+
+- **Ways found** (dq0d.c's parts 17 and 18): every S_TOWARD step of the minds (step_for's: a hunter after its foe,
+  one drawn on, an ally following, a hurt one home, one to its bed, its meal or its rounds, a thing seen) that finds
+  no step nearer has a way found (a field over the squares about it and its mark, in a bank of the ways' own, each
+  square's step toward the mark), and follows it a step at a time till it's there, the greedy step's dice as ever; a
+  shut door on the way worked (door_way, wayj: for one about its day too).  The other agents' code gets it by calling
+  step_for (k, lim, S_TOWARD) with refx, refy set (the builders': no entry of its own).
+- **Positions:** a sleeper lies down at its bed (I_RISE's POS_PRONE, the world's wbody.c), up as it next acts (a
+  step's or a blow's Rise as before, else I_RISE's POS_STANDING: wlimbs.c's den_legs); a sleeper struck at ignores the
+  blow (rs.h's RS_ASLEEP: the book's Ignore).
+- **A portcullis and a lock** (door_way, part 14; the world's wport.c by wwin.c and wdoor.c): one with hands raises a
+  portcullis down in its way by its winch, or heaves it from the far side, then (hostile) bends its bars, then gives up;
+  lets one fall against the character from its winch's side; a robber's kind picks a lock it has no key to before it
+  forces it.  Told (E_DEN): DE_WINDS ("winds the portcullis's winch"), DE_HEAVES, DE_RAISES, DE_LOWERS, DE_BENDS,
+  DE_BENT, DE_PICKING ("works at the lock"), DE_PICKS.
+- **Bodies found on the records' rounds** (part 19's rfound, wander's): a record on watch that comes on a body of its
+  faction's: the faction's attitude a step worse, its others about the body gathered to it, each less well disposed,
+  a leader's loss known to them (D_LOST).
+
+## A rope in place (2026-11-04: HOUSE.md's rope and grapples)
+
+A denizen's mind climbs only with the character: an ally coming along, up or down a way between strata, by I_CLIMB, whatever way that was, a rope's as any; none goes up or down one on its own, none crosses a ledge by one (the region's ways keep to its steps), and none unties or cuts one, or takes it up: its kind's fixed where it stands, the take rule's.  Its grapple's clang, and a spike's driving, are E_NOISE, heard as work's noise is.
 
 ## Still to come
 
@@ -643,11 +720,12 @@ What the plans bring later, by the slice or phase that brings it:
   The theme format completed (Phase 7): factions and tongues, the bestiary's kinds and numbers, the pieces' keepers
   (a guardian, a faction's hoard), the strata's ages and sizes, the things lying about by theme.
 - **The command interpreter** (Phase 3C, begun 2026-11-02: the doors and things taken, above; DUNGEON.md's one path):
-  left, windows and portcullises, a lock picked, the food it takes eaten, things put down, given and thrown.
+  left (portcullises and a lock picked built 2026-11-02, above), windows, the food it takes eaten, things put down,
+  given and thrown.
 - **Daily life** (slice 4.5, built 2026-10-31: above): left (a patrol noticing a door left open: built
-  2026-11-02, the doors' above), the records' patrols finding bodies (only an actor's rounds do), routes between a faction's lairs and its gates (the way-finding the minds lack: their steps are
-  greedy), a sleeper's defence (the book's Ignore against one
-  asleep), lying down to sleep (the denizens' positions but prone still to come). (The character telling the hour, "sleep until
+  2026-11-02, the doors' above; the records' patrols finding bodies, ways found, a sleeper lying down and its
+  defence, built 2026-11-02: above), routes kept between a faction's lairs and its gates for the records away (they
+  move coarsely, no way wanted yet). (The character telling the hour, "sleep until
   dawn": built 2026-10-31, DUNGEON.md's the time of day believed; the denizens' routines learnt as its clues still to
   come.)
 - **Body position and moving quietly** (slice 4.6, built for the character and a hunter's stalk, 2026-10-29): every
@@ -659,16 +737,16 @@ What the plans bring later, by the slice or phase that brings it:
   a shorkana, a spear or a dagger in hand, another weapon kept), a weapon put up for a bow and drawn again for melee,
   a miss's stray striking one beside its mark (an actor struck by another's shot: the one blow between two actors the
   referees take, its mind's dismay and death as any blow's); left: a rock picked up, the denizens' positions but
-  prone (a shooter crouched behind cover).
+  prone (a shooter crouched behind cover: a cover map wanted; HOUSE.md's ways, positions).
 - **Fetching and influence** (slice 4.8, built 2026-10-30: fetching, gifts and bribes, reputation, D10, a follower's
-  distance, above): left, an ally asked to do other things ("ask the dwarf to open the door": it "doesn't know how"),
-  "give the bandit 5 pennies" (the two objects without "to": the parser's), a gift to one that isn't a person (an
-  altar), a faction's regard by a freed prisoner, a rescue or a piece of the puzzle, entertain and bargain.
-- **Tunnellers and builders** (slice 4.11, built in part 2026-11-01: tunnellers, above): left, the minds' other reasons
-  to dig (a burrow from a lair, a faction's mine following a vein: rock.h's veins; a way round rubble is dug now), the
-  records away from the character digging (only actors dig), poor rock coming down on a tunneller, the spoil as a thing,
-  a dig's sound played, a kobold's pick (its outfit has none); builders: a faction's folk shoring a passage, walling up
-  a way, putting up a door.
+  distance, above): left,
+  a gift to one that isn't a person (an altar), a faction's regard by a freed prisoner, a rescue or a piece of the
+  puzzle, other errands (fetching built, doors built 2026-11-02: a lock picked, a door forced or barred for the
+  character, a thing put down or given to another); the market's left (HOUSE.md's: change, crowns, farthings over a penny (a price under one is in farthings, 2026-11-03), coins
+  by mint, a merchant kind).  ("give the bandit 5 pennies", entertaining and bargaining built 2026-11-02.)
+- **Tunnellers and builders** (slice 4.11, built 2026-11-01 and 2026-11-02: tunnellers, above): left, builders
+  shoring a passage, the materials as things, the spoil as a thing, harm from falling rock on a
+  denizen, a mine past its home's chunk.
 - **Psionic and magical denizens** (slices 5.4, 5.7): kinds with talents, shielded minds, casters, the undead.
 
 Designed, but in no slice of the plans yet (DECISIONS.md has the user's words for most):
@@ -682,3 +760,11 @@ Designed, but in no slice of the plans yet (DECISIONS.md has the user's words fo
   and **bargain** beside persuading, deceiving and threatening; an attitude moved by the character's strength as the
   denizen sees it (rs.h's power, 0-100: the strong feared, the weak despised or pitied), by a rescue, or by a piece of
   the puzzle shown or taken; limits a guard's duty or a hunter's hunger sets on words.
+
+## Hiding *(2026-11-04: A12; HOUSE.md's Hiding oneself)*
+
+The character hidden, a denizen's senses answer SN_LOOK for what they'd have seen (dq0p/sense.c), and its mind tests the look (dq0d's part 20, hid_mind's HM_LOOK:
+the hider's Stealth at its cover's steps and how near the looker is, once a nearness, the hub's hlook; a marginal failure its Awareness); found, it posts I_RISE
+with POS_HIDE | HD_FOUND (the world's part 94 ends the hiding and tells it).  Heard, it's drawn to the place; smelt, it's known.
+A robber (ways r) hears the character coming, unseen: it lies in wait (HM_AMBUSH: I_RISE POS_HIDE | HD_IN, the world's to say if there's cover; the actor's state says
+how well, ST_HID), held by HM_LURK till the character's beside it, it's spotted, or two minutes pass.  Its blow from hiding is the book's Ignore (the world's blow, RS_ASLEEP).

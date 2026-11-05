@@ -18,7 +18,7 @@
 ** fight told as a blow's, FW_MISSILE), and the missile where it falls: a hit or a block at the target's feet, a miss
 ** on past it along the line (a square to four, short of what stops it), a wild one somewhere near; an arrow or a bolt
 ** broken by its chance (kinds.c's snaps, a bolt's the house's: lost), a thing thrown moved itself; known to the
-** character.  (A miss's stray at one beside its mark, the book's 20%, MS_STRAY: the referee's, the world's left for
+** character.  (A miss's stray at one beside its mark, the book's, MS_STRAY: the referee's, the world's left for
 ** the room.)  Its time a round (a bow's load and loose, a sling's; a crossbow's load a round more: the
 ** book's, Combat 8's missile attack options), the loading alone its half.
 **
@@ -32,6 +32,7 @@
 #include <dice.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
+#include "hub0.h"
 #include "world.h"
 #include "things.h"
 #include "wbody.h"
@@ -248,6 +249,9 @@ unsigned char __fastcall__ s_mfire (unsigned char att, unsigned char def, unsign
 
     mk = thr ? tk : sl_kind;
     c = reach_of (mk);
+    if (thr && (z & AIM_HARD)) {
+        c <<= 1;                                /* (Thrown hard: twice as far, 10 less, as a throw at a thing: HOUSE.md's) */
+    }
     for (band = 0; band < 4 && d > (unsigned) (c << band); ++band) {
     }
     if (band >= (thr ? 4 : BANDS)) {
@@ -260,8 +264,8 @@ unsigned char __fastcall__ s_mfire (unsigned char att, unsigned char def, unsign
     mshot.kind = mk;
     mshot.band = band;
     mshot.flags = (lcover ? MS_COVER : 0) | ((att ? (*at (sn, sx, sy) & T_VIS) : bd.doing != DO_ROAM) ? 0 :
-        MS_UNAWARE);                            /* (The character sees its shooter; a denizen senses the character) */
-    den_blow (def, z | AIM_FIRE);               /* (Part 15's blow, the missile's: how it came out, told, bev's) */
+        MS_UNAWARE) | (thr && (z & AIM_HARD) ? MS_HARD : 0);   /* (The character sees its shooter; a denizen senses the character) */
+    den_blow (def, (z & ~AIM_HARD) | AIM_FIRE);               /* (Part 15's blow, the missile's: how it came out, told, bev's) */
     if ((out = bev.x[1]) == 0xFF || out == O_RISE || out == O_REARM) {
         return out == 0xFF ? SH_CANT : 0;       /* (None struck; or its turn went getting up, taking up its weapon) */
     }
@@ -292,7 +296,7 @@ static unsigned char __fastcall__ shot_reach (unsigned char k, unsigned char z)
     unsigned tx, ty;
 
     hub_map (0);
-    if (!k || !a->state || (sn = a->sn) != HUB->pc_stratum || !IS_LAUNCHER (HUB->pc_strike & 0x7F)) {
+    if (!k || !a->state || (sn = a->sn) != HUB->pc_stratum || !IS_LAUNCHER (SK_KIND (HUB->pc_strike))) {
         return 0;
     }
     d = a->doing == DO_DOWN ? 1 : 2;
@@ -623,7 +627,7 @@ none:
     bd.ready = HUB->now;
 }
 
-/* The character's shot at actor k (part 15's pc_blow, pshoot's: the hub's pc_strike SK_THING | what it shoots with,
+/* The character's shot at actor k (part 15's pc_blow, pshoot's: the hub's pc_strike SK_OF what it shoots with,
 ** a launcher, or the thing it throws; its aim pc_aim): the shot, its missile, its time (a crossbow's load a round
 ** more, a missile not handy its reach); one carried not in hand taken up first (its round's, TE_READIED); not to be shot, told (E_TASK
 ** TE_NO_SHOT, b why: SH_*) and the fight given up */
@@ -651,7 +655,7 @@ unsigned char __fastcall__ s_pc_shot (unsigned char k)
             return 0;
         }
         hub_map (0);
-        HUB->pc_strike = SK_THING | sl_kind;
+        HUB->pc_strike = SK_OF (sl_kind);
         k = 0xFF;
     }
     if (k == 0xFF) {                            /* (The foe it turns its missiles to: the nearest hostile it can shoot
@@ -676,7 +680,7 @@ unsigned char __fastcall__ s_pc_shot (unsigned char k)
         }
         return (unsigned char) thr;
     }
-    tk = HUB->pc_strike & 0x7F;
+    tk = SK_KIND (HUB->pc_strike);
     sn = HUB->pc_stratum;
     BD_GET (k);
     tx = bd.x;
@@ -686,7 +690,7 @@ unsigned char __fastcall__ s_pc_shot (unsigned char k)
     } else if (IS_LAUNCHER (tk)) {
         why = !(ar = shot_op (SO_ARMS, 0, 0)) ? SH_NONE : !sm_item ? SH_SPENT : 0;
         hub_map (0);
-        HUB->pc_strike = SK_THING | sl_kind;    /* (What it shoots with: the referee's, the words') */
+        HUB->pc_strike = SK_OF (sl_kind);       /* (What it shoots with: the referee's, the words') */
         if (!why && ar < 2) {                 /* (Carried, not in hand: taken up, both hands but a sling's, if
                                                 **   they're free, its round's grope, the book's; its shot the next) */
             for (thr = 0; (thr = items (thr, IN_FLAGS | IN_ACTOR, I_HELD)) != 0 && ip->x; ) {
@@ -793,16 +797,17 @@ static void __fastcall__ bd_get (unsigned char k)
     BD_GET (k);
 }
 
-/* A miss's stray (the book's, Combat 17's missile attack declaration: a missile shot at one engaged in melee, a miss
-** striking a randomly determined one beside it half the time; every shooter's and thrower's, at anyone, the character
-** too: 2026-10-30): the one struck chosen among those on the squares about the mark (s's tx, ty on sn: the character,
-** the actors; not the shooter, at sx, sy), struck (the referee's MS_STRAY, part 15's blow: a strike, no test; mshot's
+/* A miss's stray (the book's: Combat 15, a missile shot at one engaged in melee, a miss striking a randomly determined
+** one beside it half the time; Combat 17, a mark not engaged, a nearby one a fifth of the time; the user's, 2026-11-03:
+** "follow the book"; every shooter's and thrower's, at anyone, the character too: 2026-10-30): the one struck chosen among
+** those on the squares about the mark (s's tx, ty on sn: the character, the actors; not the shooter, at sx, sy), the mark
+** engaged if it or one beside it is in a fight (doing DO_FIGHT), struck (the referee's MS_STRAY, part 15's blow: a strike, no test; mshot's
 ** kind what it was shot with, s's thr the thing thrown, its band kept; bev's who the shooter, 0 the character, else the
 ** actor plus 1, wfight.c's den_blow's), told as a blow (FW_STRAY's words).  Who it struck (0xFE the character, else the
 ** actor's entry), or 0xFF none; body bd and bk as they were (the caller's) */
 static unsigned char __fastcall__ stray (const struct stray* s)
 {
-    unsigned char c[NACTORS + 1], n = 0, k, sh = 0, was = bk;
+    unsigned char c[NACTORS + 1], n = 0, k, sh = 0, was = bk, eng = 0;
     struct actor* a;
 
     hub_map (0);
@@ -813,15 +818,18 @@ static unsigned char __fastcall__ stray (const struct stray* s)
         if (a->state && a->sn == s->sn) {
             if (a->x == s->sx && a->y == s->sy) {
                 sh = k + 1;                     /* (The shooter: an actor) */
-            } else if (span68 ((int) (a->x - s->tx), (int) (a->y - s->ty)) == 1) {
-                c[n++] = k;
+            } else if (span68 ((int) (a->x - s->tx), (int) (a->y - s->ty)) <= 1) {
+                eng |= a->doing == DO_FIGHT;    /* (The mark, or one beside it, in a fight) */
+                if (a->x != s->tx || a->y != s->ty) {
+                    c[n++] = k;
+                }
             }
         }
     }
     if (!sh && n && c[0] == 0xFE) {
         c[0] = c[--n];                          /* (The character the shooter: not struck by its own) */
     }
-    if (!n || random (2)) {
+    if (!n || random (100) >= (eng ? 50 : 20)) {
         return 0xFF;
     }
     k = c[random (n)];
@@ -840,8 +848,10 @@ static unsigned char __fastcall__ stray (const struct stray* s)
 
 /* Where a missile falls (part 65's fire, out the blow's O_*), shot from sx, sy at the target's tx, ty on sn: a hit or a
 ** block at the target's feet, a miss on past it along the line (a square to four, short of what stops it), a wild one
-** near the target; an arrow or a bolt broken by its chance (snaps; a bolt's the house's 15), lost; a thing thrown (thr,
-** its item) moved itself, a launcher's missile (kind mk) put down; known to the character */
+** near the target; an arrow or a bolt broken by its chance (snaps; a bolt's the house's 15), lost; a launcher's missile
+** gone wild lost one time in two besides (the user's "wild misses should possibly be lost"; how often the house's); a
+** thing thrown (thr, its item) moved itself, never lost, a launcher's missile (kind mk) put down; known to the
+** character */
 void __fastcall__ s_mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned tx, unsigned ty, unsigned char out,
     unsigned char mk, unsigned thr)
 {
@@ -887,6 +897,7 @@ void __fastcall__ s_mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned 
         --p->qty;                               /* (One of a lot thrown, a taburi of a handful: one laid where it
                                                 **   falls, below, 2026-10-30) */
         thr = 0;
+        out = O_MISS;                           /* (Thrown: never lost, wild or not) */
     }
     if (thr) {
         p->where = IW_SQUARE;                   /* (The thing itself, out of its hands: where it falls, anyone's;
@@ -896,6 +907,9 @@ void __fastcall__ s_mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned 
     } else {
         cat_map ();
         c = mk == KI_BOLTS ? 15 : mk == snaps[0].kind ? snaps[0].chance : 0;   /* (A bolt's, the house's 15) */
+        if (out == O_FUMBLE) {
+            c = 50 + c / 2;                     /* (Wild: lost one time in two, else broken by its chance) */
+        }
         hub_map (0);
         if (random (100) < c || !(thr = lay_body (mk, sn, x, y))) {
             return;                             /* (Broken: lost) */

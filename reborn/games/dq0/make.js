@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const THEME_SIZE = 0x1000, HEAD = 1594, FILE_AT = 1305, MINT_AT = 1321, TMINTS = 8, NTKINDS = 8, NPIECES = 8, NRULES = 8, TSTRATA = 8;   // theme.h's
+const THEME_SIZE = 0x1000, HEAD = 1595, FILE_AT = 1305, MINT_AT = 1321, TMINTS = 8, NTKINDS = 8, NPIECES = 8, NRULES = 8, TSTRATA = 8;   // theme.h's
 const TLAYERS = 3, TERAS = 6, TFACTIONS = 8, TPEOPLES = 8;
 const KIND = 37;                                                    // items.h's struct kind
 const WT_LB = 4, SQ_FT = 5;                                         // rs.h's units: a pound's quarters, a square's feet
@@ -20,8 +20,8 @@ const MATS = ['none', 'wood', 'iron', 'steel', 'bronze', 'leather', 'cloth', 'bo
   'other'];                                                         // items.h's MT_*
 const CRAFTS = ['weapon', 'armour', 'metal', 'wood', 'hide', 'cloth', 'pottery', 'jewel', 'book', 'food', 'bone',
   'stone', 'glass'];                                                // rs.h's AP_*
-const TR = ['read', 'combine', 'put', 'out'], TE = { '-': 0, open: 1, rule: 2 };   // theme.h's TR_*, TE_*
-const ENDS = { escaped: 1, ruled: 2, died: 3 };                    // theme.h's END_*
+const TR = ['read', 'combine', 'put', 'out', 'take'], TE = { '-': 0, open: 1, rule: 2 };   // theme.h's TR_*, TE_*
+const ENDS = { left: 0, escaped: 1, ruled: 2, died: 3 };           // theme.h's END_* and 3
 const PURPOSES = ['halls', 'keep', 'temple', 'cellars', 'crypt', 'works'];   // theme.h's P_*
 const USES = ['kitchen', 'pantry', 'barracks', 'armoury', 'chapel', 'bedchamber', 'solar', 'well room', 'cistern',
   'gatehouse', 'guardroom', 'workshop'];                            // (The uses' words, the theme's if it has them)
@@ -96,11 +96,20 @@ function compile(text, f, beasts, count) {
       case 'theme': str(l, v[0], 4, 32); break;
       case 'mission':
         t.mission = v[0] === 'both' ? 3 : v[0] === 'rule' ? 2 : v[0] === 'escape' ? 1 : bad(l, 'escape, rule or both');
-        b[1] = b[1] & 0x80 | t.mission;
+        b[1] = b[1] & 0xC0 | t.mission;
         break;
       case 'start':                                                 // (How the character came in: theme.h's TM_FELL)
         if (v[0] !== 'walked' && v[0] !== 'fell') bad(l, 'walked or fell');
         b[1] |= v[0] === 'fell' ? 0x80 : 0;
+        break;
+      case 'wayin':                                                 // (The way in open behind it: theme.h's TM_OPEN)
+        if (v[0] !== 'open') bad(l, 'open, or no line');
+        b[1] |= 0x40;
+        t.wayin = true;
+        break;
+      case 'wayout':                                                // (Another way out's stratum: theme.h's exit_sn)
+        if (!(+v[0] >= 1 && +v[0] <= 63)) bad(l, 'another way out\'s stratum: 1 to 63');
+        t.exitSn = b[HEAD - 1] = +v[0];
         break;
       case 'story': b.writeUInt16LE(text_(l, v[0]), 776); break;
       case 'stratum':
@@ -177,7 +186,7 @@ function compile(text, f, beasts, count) {
           return k;
         };
         let a, bb = 0xFF, c = 0xFF, effect = 0, w;
-        if (nrules >= NRULES || verb < 0) bad(l, 'a rule: read, combine, put or out');
+        if (nrules >= NRULES || verb < 0) bad(l, 'a rule: read, combine, put, out or take');
         if (verb === 0) [a, w] = [kind(v[1]), v[2]];
         else if (verb === 1) {
           const m = /^(.+?)\s*\+\s*(.+?)\s*=\s*(.+)$/.exec(v[1]) || bad(l, 'combine X + Y = Z');
@@ -194,8 +203,9 @@ function compile(text, f, beasts, count) {
       case 'lock': b.writeUInt16LE(text_(l, v[0]), 778); break;
       case 'opened': b.writeUInt16LE(text_(l, v[0]), 780); break;
       case 'ending':
-        if (!ENDS[v[0]]) bad(l, 'an ending: escaped, ruled or died');
+        if (ENDS[v[0]] === undefined) bad(l, 'an ending: escaped, ruled, died or left');
         b.writeUInt16LE(text_(l, v[1]), 782 + 2 * ENDS[v[0]]);
+        if (v[0] === 'left') t.leftWords = true;
         break;
       // ---- The history (HISTORY.md): the record keeps what the engine builds by; the rest is the file's to read
       case 'seed': case 'region': break;
@@ -291,6 +301,7 @@ function compile(text, f, beasts, count) {
   if (t.goal) {
     b[990] = t.goal.kind;
     b[991] = t.goal.sn;
+    if (t.goal.kind === 4) t.exitSn = b[HEAD - 1] = t.goal.sn;      // (A far exit: the way out that is the goal)
     b[992] = t.goal.guard ? faction(t.goal.l, t.goal.guard) : 0;
   }
   for (const p of t.pieces) b[1120 + p.i] = p.guard ? faction(p.l, p.guard) : 0;
@@ -303,7 +314,9 @@ function compile(text, f, beasts, count) {
 
 // The theme checker (HISTORY.md): every goal reachable (its mission's ending a rule can bring about, each rule's
 // things to be had: a piece put down somewhere, or a thing a rule makes from things to be had, carried if it's to be
-// carried; a far exit's stratum one there is), every faction placed (each of its kinds able to live somewhere in its
+// carried; a far exit's stratum one there is), a way out a character can use with nothing but its legs (Q1: the way in open, or
+// another way out, a stair the maker always puts on its stratum; a sky shaft isn't counted, by dice and maybe out of reach; and
+// words for leaving), every faction placed (each of its kinds able to live somewhere in its
 // strata, by the bestiary's styles and strata, its lair among them; a piece's guardians where the piece may lie).
 // OUT: the faults, each a sentence
 function check(t, beasts, f) {
@@ -321,6 +334,8 @@ function check(t, beasts, f) {
   if ((t.mission & 1) && !ends.has(1) && !through) faults.push('its way out can\'t be opened: no rule that opens it has its things to be had');
   if ((t.mission & 2) && !ends.has(2)) faults.push('the place can\'t be ruled: no rule that rules it has its things to be had');
   if (through && t.goal.sn >= 255) faults.push('its far exit is on no stratum');
+  if (!t.wayin && !t.exitSn) faults.push('no way out to be had: the way in shut, and no other way out (wayin, wayout)');
+  if (!t.leftWords) faults.push('no words for leaving it unsolved (ending | left)');
   t.rules.forEach((r, i) => { if (!can(r)) faults.push(`rule ${i + 1} can't be done: its things aren't all to be had`); });
   const styleOf = sn => { const s = t.strata[Math.min(sn, t.strata.length - 1)]; return s[1]; };
   const lives = (k, sn) => sn >= beasts[k].strata[0] && sn <= beasts[k].strata[1] && [...styleOf(sn)].some(c => beasts[k].styles.includes(c));

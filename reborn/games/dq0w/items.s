@@ -60,7 +60,7 @@ find:
             inx                             ; (The second bank's: at - 327)
             sty         _ip
             sta         _ip + 1
-            jmp         @mul
+            bra         @mul
 @first:     lda         at
             sta         _ip
             lda         at + 1
@@ -169,8 +169,7 @@ _items:
             cmp         _ihigh
             lda         at + 1
             sbc         _ihigh + 1
-            bcc         @more
-            jmp         @none
+            bcs         @none
 .endif
 @more:      lda         ptr1
             clc

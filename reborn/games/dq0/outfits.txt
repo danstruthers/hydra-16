@@ -44,13 +44,18 @@ free: backpack@worn
 free: belt@worn
 free: pouch@belt
 free if guilded,noble: letter@pouch
-need: torch@off lit
+; (Its light by the family's money, the user's, 2026-11-03: "Light source by available money"; a rich family's, a guilded
+; or a noble one's, a lantern lit and two flasks of oil; the rest's, a torch lit, two spare and a flask of oil; HOUSE.md's)
+; (Three lines, a lantern and its flasks: each of the old kit's three lights' draws made, so the draws after them fall as they did)
+need if rich,noble,guilded: lantern@off lit
+need if rich,noble,guilded: flask of oil@pack
+need if rich,noble,guilded: flask of oil@pack
+need not rich,noble,guilded: torch@off lit, torch@pack 2
+need not rich,noble,guilded: flask of oil@pack
 need: tinderbox@pack
 need: rations@pack 3
 need: waterskin@belt full
 need: sheath@belt, knife@in
-need: torch@pack
-need: flask of oil@pack
 
 ; ---- The weapons by the open weapon skills (Combat 2: a main weapon, a reserve and a shield; the weights the book's
 ; Treasure table's, narrowed to the catalogue's kinds), each with its carrier and its missiles (Combat 17: 12 to 24
@@ -59,6 +64,7 @@ need: flask of oil@pack
 need: sheath@belt, dagger@in instead knife
 15: bandolier@worn, taburi@in 3-5
 [skill Sword] weapon
+free 25: whetstone@pack
 need: scabbard@belt, shortsword@in *35 sindarin*0 | scabbard@belt, sword@in *30 sindarin*0 | scabbard@belt, falchion@in *15 sindarin*0 | scabbard@belt, bastard sword@in *15 sindarin*0 | scabbard@belt, longknife@in *5 sindarin*100
 [skill Club] weapon
 need: mace@belt *45 | club@belt *40
@@ -109,7 +115,7 @@ need: round shield@worn *60 noble*30 | buckler@worn *30 noble*10 | kite shield@w
 60: lockpicks@pouch
 [skill Climbing]
 50: rope@pack
-15: grapple@pack
+15: grapple@pack, iron spike@pack 2, hammer@pack
 [skill Seamanship]
 50: rope@pack
 [skill Mining]
@@ -242,6 +248,7 @@ need: vial@pack 2, herbs@pack 2
 [Apothecary]
 need: herbs@pack 3, vial@pack 2, bandages@pack 3
 40: parchment@pack, quill@pack, horn of ink@pack
+50: antidote@pack, remedy@pack 2                ; (The remedies, 2026-11-02: HOUSE.md's)
 [Astrologer]
 need: paper@pouch, pencil@pouch
 40: quill@pack, horn of ink@pack
@@ -748,6 +755,7 @@ free 20: sling@belt, pouch@belt, sling stones@in 10-20
 free 50: heap of straw@bed
 free 25: pennies@stash 1d6 | farthings@stash 1d6 | talisman@stash
 free 50: pouch@belt
+free: pick@belt
 [role koblord] free make 2 3
 free: axe@hand *60 | falchion@hand *15 | shortsword@hand *10 | battleaxe@hand *15
 free: hide jerkin@worn
@@ -946,6 +954,7 @@ free 20: crowns@pouch 1d3
 free 5: jewel@worn 1d3
 free: chest@bed, pennies@in 6d6, iron key@pouch
 free: ring@worn                                 ; (The ring of its rank, Religion 9's: not its jewelry)
+free 30: remedy@pouch 1-2                       ; (A temple's remedies, the house's: 2026-11-02)
 ; ---- The HarnWorld Bestiary's folk (DECISIONS.md's answer 11: the Khuzdul, the Sindarin, men and the Gargun), their
 ; kinds in the game since 2026-10-29 (Phase 4's peoples, kinds.txt's).  The Gargun by the book's Equipment (HarnMaster
 ; 3.5's Gargun 4-8, each sub-species its own: their own make, the house's crude to middling; a Kyani's finer, Gargun
@@ -1110,6 +1119,7 @@ free 50: lantern@home
 free: cask@home full
 free: chest@hoard, pennies@in 40-200, crowns@in 1d6, jewel@in 1d4, goblet@in, iron key@pouch
 free 30: gem@hoard
+free 30: antidote@home                          ; (2026-11-02: the remedies found)
 [lair sindwar]
 free: basket@home, rations@in 4-8
 free 50: cask@home full
@@ -1145,6 +1155,7 @@ free 50: chest@bed, pennies@in 3d6, iron key@pouch
 free 90: pennies@pouch 7d6
 free 30: crowns@pouch 1d3
 free 15: jewel@worn 1d3
+free 40: antidote@pouch, remedy@pouch           ; (An elder's remedies, the house's: 2026-11-02, the market's)
 [purse sindwar]
 free 90: pennies@pouch 7d6
 free 30: crowns@pouch 1d3

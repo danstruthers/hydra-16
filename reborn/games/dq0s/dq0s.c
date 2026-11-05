@@ -387,6 +387,11 @@ static void listen (void)
     while (hub_dnext (&dplace, &m)) {
         if (m.kind == E_DEN && m.b && m.x[0] == sn && (m.a == DE_MOVED || m.a == DE_NOISE)) {
             heard (m.who, m.x[1] % SND_KINDS * 2 + (m.a == DE_NOISE), m.b, m.w1 - px, m.w2 - py, m.x[3]);
+        } else if (m.kind == E_DEN && m.b && m.x[0] == sn && (unsigned char) (m.a - DE_DIG) <= DE_DIGS - DE_DIG) {
+            heard (m.who, WORLD (m.a == DE_DUG ? WS_SMASH : WS_DIG), m.b, m.w1 - px, m.w2 - py, m.x[3]);
+                                                /* (A tunneller's spell, its way through: slice 4.11's rest) */
+        } else if (m.kind == E_DEN && m.b && m.x[0] == sn && (unsigned char) (m.a - DE_ROOF) <= DE_WALLS - DE_ROOF) {
+            heard (m.who, WORLD (m.a == DE_ROOF ? WS_SMASH : WS_BLOW), m.b, m.w1 - px, m.w2 - py, m.x[3]);
         } else if (m.kind == E_FIGHT && m.x[0] == sn && m.x[1] < FO_BLED) {   /* (A blow: landing, or not) */
             heard (m.who, WORLD (m.x[1] == O_HIT || m.x[1] == O_BOTH_HIT || m.x[1] == O_COUNTER_HIT ||
                 m.x[1] == O_DISPATCH ? WS_HIT : WS_SWISH), m.b, m.w1 - px, m.w2 - py, 0);
@@ -559,7 +564,8 @@ int main (int argc, char* argv[])
         k = tend ();
         hub_map (0);
         ++HUB->beat[T_SOUND];
-        hy_sleep_ticks (k);
+        hy_sleep_ticks (HUB->starting ? 50 : k);    /* (Nothing to hear as the game starts: a quarter second's nap, not
+                                                **   a twentieth's, some 6,000 cycles each: 2026-11-03, the start's time) */
     }
     silence ();
     snd_close ();

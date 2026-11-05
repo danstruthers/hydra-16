@@ -434,16 +434,15 @@ void __fastcall__ s_items_begin (const char* dir)
     memset ((void*) 0x8000, 0, 0x2000);
     hub_map (KIND_BANK);
     memset ((void*) 0x8000, 0, 0x2000);
-    if ((fd = open (path, O_RDONLY)) >= 0) {    /* (The kinds first, their own bank's, as many bytes as the first
-                                                **   record's cap_weight says, PIECEs whole: dq0w/make.js's; then the
-                                                **   catalogue's) */
-        for (off = 0, k = 0x2000; off < k + 0x2000 && (n = read (fd, buf, PIECE)) > 0; off += n) {
-            if (!off) {
-                k = ((struct kind*) buf)->cap_weight;
-            }
-            hub_map (off < k ? KIND_BANK : CAT_BANK);
-            memcpy ((char*) 0x8000 + (off < k ? off : off - k), buf, n);
-        }
+    if ((fd = open (path, O_RDONLY)) >= 0) {    /* (The kinds first, their own bank's, as many bytes as their first
+                                                **   record's cap_weight says: dq0w/make.js's; then the catalogue's,
+                                                **   each read straight into its bank: the start's time, slice 4.4's) */
+        hub_map (KIND_BANK);
+        n = read (fd, (void*) 0x8000, PIECE);
+        k = ((struct kind*) 0x8000)->cap_weight;
+        read (fd, (char*) 0x8000 + n, k - n);
+        hub_map (CAT_BANK);
+        read (fd, (void*) 0x8000, 0x2000);
         close (fd);
     }
     for (b = 0; b < ITEM_BANKS; ++b) {          /* (The store empty; a game carried on, its kept) */

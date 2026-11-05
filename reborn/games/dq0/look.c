@@ -55,11 +55,12 @@ const char* tt (void)
 }
 
 /* What the character perceives (first: the first time there; 2, a close look, the room's figures with it; | 4, as a
-** run or a sprint ends: briefly; 8, a look one way's: what it sees that way, way.c's; 16, the traces read, the world's
-** reply, words.c's): the senses' record copied, worded (overlay 2) */
+** run or a sprint ends: briefly; 8, a look one way's: what it sees that way, way.c's; 32, LOOK_NEW, only what's
+** new since the command, a walk over for it just done, task.c's; 16, the traces read, the world's reply, words.c's): the senses'
+** record copied, worded (overlay 2) */
 void __fastcall__ look (unsigned char first)
 {
-    sight_close = first & 26;                   /* (The theme's words for a place's first sight: later) */
+    sight_close = first & 58;                   /* (The theme's words for a place's first sight: later) */
     sight_get ();
     sight_copy.first |= first & 4 ? SIGHT_HURRY : 0;
     sight_light = HUB->pc_light;
@@ -241,11 +242,13 @@ void __fastcall__ s_map (const char* rules)
     char* r = line + LINE - MAP_W - 1;          /* (A row's letters at the line's end, coloured into its start) */
 
     make_panel (rules);
-    hub_call (&HUB->mapq, T_MAKER);             /* (The maker draws it into the UI bank) */
-    slants ();                                  /* (A passage's slant drawn as one: 2026-11-01) */
     blank ();
     sayf ("The map (you face %s%s; heights in tens of feet against yours):", head_name[(HUB->pc_face + HUB->pc_skew) & 7],
         HUB->pc_lost ? ", or so you think" : "");
+    t_flush ();                                 /* (Its first words at once, the maker's drawing some ten million cycles:
+                                                **   the user's D17) */
+    hub_call (&HUB->mapq, T_MAKER);             /* (The maker draws it into the UI bank) */
+    slants ();                                  /* (A passage's slant drawn as one: 2026-11-01) */
     cq = HUB->pcsum.northsense ? 0 : HUB->pc_lost ? '?' : 'N';   /* (Turned: the compass, its N where the north it
                                                 **   believes in lies, as the map's turned: a quarter for every two
                                                 **   eighths it faces round) */
@@ -420,7 +423,7 @@ unsigned char __fastcall__ s_lie_words (unsigned char i)
     }
     dx = SC.item[i].x - SC.rx;
     dy = SC.item[i].y - SC.ry;
-    if ((SC.item[i].hid & 1) || SC.item[i].rel == 0xFF || SC.where != W_ROOM || SC.size == S_PART || SC.rw < 3 || SC.rh < 3 || dx >= SC.rw || dy >= SC.rh) {
+    if ((SC.item[i].hid & 1) || SC.item[i].rel == 0xFF || SC.where != W_ROOM || SC.size == S_PART || SC.size >= S_VAST || SC.rw < 3 || SC.rh < 3 || dx >= SC.rw || dy >= SC.rh) {
         return 0;
     }
     q = ((pc_face + 1) & 7) >> 1;

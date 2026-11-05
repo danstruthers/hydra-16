@@ -23,7 +23,7 @@
 **   want FIELD=V ...           the reply: grade result a b c w1 w2, eN.kind eN.band eN.loc eN.aspect eN.cond (its
 **                              effect N), dice (how many it rolled), sum.FIELD (the hub's summary after it: cond
 **                              health step gN (gstep[N]) sight hearing smell load northsense limbs limp mapmind
-**                              mapfade),
+**                              mapfade), new.FIELD (an RS_NEW_ACTOR's reply's: the creature's own, by the same names),
 **                              status="..." (the hub's pcstatus), text="..." (all of it), text~"..." (it has it),
 **                              text!"..." (it hasn't), text=@ (the words of the request before it); FIELD&MASK=V;
 **                              a value a number
@@ -221,7 +221,7 @@ struct sym {
 static const struct sym syms[] = {
     S (RS_HELLO), S (RS_LOAD_PC), S (RS_TEST), S (RS_ATTACK), S (RS_HARM), S (RS_TIME), S (RS_EXERT), S (RS_EQUIP),
     S (RS_DESCRIBE), S (RS_MORALE), S (RS_DICE), S (RS_NEW_ACTOR), S (RS_CONTEST), S (RS_WIELD), S (RS_TREAT), S (RS_KILLER),
-    S (SK_BEST), S (SK_PUNCH), S (SK_KICK), S (SK_HEAD), S (SK_THING), S (RS_THING),
+    S (SK_BEST), S (SK_PUNCH), S (SK_KICK), S (SK_HEAD), { "SK_THING", SK_OF (0) }, S (RS_THING),
     S (KI_TORCH), S (KI_DAGGER), S (KI_PICK), S (KI_SHOVEL), S (KI_ROPE), S (KI_CANDLE), S (KI_LANTERN), S (KI_SACK),
     S (KI_CHEST), S (KI_SKULL), S (KI_CLOAK), S (KI_SWORD), S (KI_BASKET), S (KI_CHAIR), S (KI_BAR), S (KI_PANE),
     S (KI_LEATHER_TUNIC), S (KI_HELM), S (KI_MACE), S (KI_SHIELD), S (KI_POT),
@@ -238,7 +238,7 @@ static const struct sym syms[] = {
     S (MAT_EARTH), S (MAT_STONE), S (MAT_MASONRY), S (MAT_FLAGS), S (MAT_SOIL),
     S (GA_CREEP), S (GA_SLOW), S (GA_WALK), S (GA_JOG), S (GA_RUN), S (GA_SPRINT), S (GA_REST), S (GA_WORK),
     S (C_PRONE), S (C_UNCONSCIOUS), S (C_DEAD), S (C_STUNNED), S (C_BLEEDING), S (C_FATIGUED), S (C_ARM_USELESS),
-    S (C_LEG_USELESS), S (C_LAME), S (C_CRAWLS), S (C_STUCK), S (C_POISONED),
+    S (C_LEG_USELESS), S (C_LAME), S (C_CRAWLS), S (C_STUCK), S (C_POISONED), S (C_NEWS),
     S (AK_DART), S (AK_CONTACT), S (AK_FOOD), S (AK_FLUX), S (FLM_LIT), S (FLM_LAMP), S (FLM_NEW),
     S (FLM_OUT), S (FLM_BURST),
     S (LB_LEFT), S (LB_AMBI), S (LB_ARM_L), S (LB_ARM_R), S (LB_LEG_L), S (LB_LEG_R), S (LB_HURT), S (DH_LEFT),
@@ -542,6 +542,13 @@ static long __fastcall__ field (const char* f, unsigned char* ok)
             return e->x[0];
         } else if (!strcmp (f, "aspect")) {
             return e->x[1];
+        }
+    } else if (!strncmp (f, "new.", 4)) {             /* (RS_NEW_ACTOR's reply: the creature's own summary, its x) */
+        f += 4;
+        for (k = 1; k < sizeof sf / sizeof sf[0] && strcmp (f, sf[k]); ++k) {
+        }
+        if (k < sizeof sf / sizeof sf[0]) {
+            return ((const unsigned char*) rep.x)[so[k]];
         }
     } else if (!strncmp (f, "sum.", 4)) {
         f += 4;

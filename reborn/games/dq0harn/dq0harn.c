@@ -16,7 +16,7 @@
 ** the status command's, the hub's pace and watchfulness); RS_WIELD (what the character would strike with, nothing
 ** named: of what it holds, else the best it carries, gear.c's); P_BEARING, the bearings underground (bearing.c's,
 ** overlay 3: its own dice).  A thing named that strikes (the hub's pc_strike,
-** SK_THING) its kind read from the hub's catalogue (kind_in: wk).  Its summary gives each pace's step, and the notice
+** SK_OF) its kind read from the hub's catalogue (kind_in: wk).  Its summary gives each pace's step, and the notice
 ** tests go by the character's pace and state.  The sheet's words and the harm are overlay 1's (sheet.c), the
 ** fights overlay 2's (fight.c): DIR/dq0harn.ovl, read into banks of its own as it starts.  Its slots: the hub's
 ** three (the world's, the UI's, and the denizens' task's: DSLOT, a short one), each rung for, answered in place, the
@@ -44,7 +44,7 @@
 void __fastcall__ load_pc (struct req* r);      /* (Part 1's stubs: bank.s's) */
 void __fastcall__ save_pc (struct req* r);
 void __fastcall__ beasts (unsigned char back);
-void __fastcall__ dig_answer (struct req* r);   /* (Part 2's) */
+void __fastcall__ dig_answer (struct req* r);   /* (Part 3's) */
 void __fastcall__ dice_set (struct req* r);
 void __fastcall__ outfit_of (struct req* r);    /* (Overlay 1's: outfit.c, RS_OUTFIT) */
 signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps);    /* (Overlay 3's) */
@@ -102,13 +102,15 @@ unsigned char tflag[NTOOLS], tqual[NTOOLS];
 unsigned wealth;                                /* (The family's wealth, its file's "wealth" line: 0 none) */
 
 /* All that's to hand, anew: the keys in the text, each after its mark (held: < in the left hand, > the right, * both;
-** + worn; a space neither) and its quality after it (a digit) */
+** + worn; a space neither) and its quality after it (a digit), a weapon's version after that (L light, H heavy, none
+** average: tqual's high bits, TQ_*, D13's) */
 static void __fastcall__ equip_all (const char* keys)
 {
     unsigned char k = 0, n, f, j;
 
     memset (tools, 0, sizeof tools);
     while (*keys) {
+        j = NTOOLS;
         f = *keys == '*' ? T_HELD | T_LEFT | T_RIGHT : *keys == '<' ? T_HELD | T_LEFT : *keys == '>' ? T_HELD | T_RIGHT :
             *keys == '+' ? T_WORN : 0;
         if (*keys < 'a') {
@@ -136,37 +138,23 @@ static void __fastcall__ equip_all (const char* keys)
         if (*keys >= '0' && *keys <= '9') {
             ++keys;
         }
-    }
-}
-
-static void __fastcall__ equip (const char* key, unsigned char on)
-{
-    unsigned char k;
-
-    for (k = 0; k < NTOOLS; ++k) {
-        if (on ? !tools[k][0] : !strcmp (tools[k], key)) {
-            if (on) {
-                strncpy (tools[k], key, sizeof tools[k] - 1);
-                tflag[k] = 0;
-            } else {
-                tools[k][0] = 0;
+        while (*keys >= 'A' && *keys <= 'Z') {
+            if (j < NTOOLS) {
+                tqual[j] |= *keys == 'L' ? TQ_LIGHT : *keys == 'H' ? TQ_HEAVY : *keys == 'D' ? TQ_DULL : *keys == 'E' ? TQ_DULLED : 0;
             }
-            return;
+            ++keys;
         }
     }
 }
 
-/* The load the character carries (the game's things, all told: quarter pounds), its equipment as harn.h has it, one
-** entry its whole weight (tenths of a pound): so its encumbrance (EP, the load over endurance) is the book's, and
-** with it the physical penalty that tests of the body and its move are the worse for (Skills 6, Combat 6) */
-static harn_equip carried = { "load", "load", 0, 0xFF, 0 };
-
-static void __fastcall__ set_load (unsigned qp)
-{
-    carried.wt = qp > 13000U ? 65000U : qp * 5 / 2;
-    pc.eq[0] = &carried;
-    pc.neq = 1;
-}
+/* The load the character carries, its equipment as harn.h has it (skills.c's set_load: one entry, its encumbering
+** part, past its free pounds, D13's), so its encumbrance (EP) is the book's on it; and its skills used since their
+** development rolls' stress, words not flagged yet (skills.c's: slice 4.4's) */
+harn_equip carried = { "load", "load", 0, 0xFF, 0 };
+unsigned char stress_lv;
+unsigned char nobreak;                          /* (dq0 -I's, the tests': no weapon broken) */
+unsigned char pc_might;
+unsigned char fresh;
 
 /* A tool equipped (Lockcraft's picks) */
 unsigned char __fastcall__ has (const char* key)
@@ -194,8 +182,8 @@ void __fastcall__ kind_in (unsigned char k)
     setbank (b);
 }
 
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
 
 /* The tool to hand that suits the material best (rshouse.h's, s_dig_tool: its digger's number); the table part 2's
 ** alone (the main RAM's room, 2026-10-27) */
@@ -214,9 +202,11 @@ static void __fastcall__ dig_of (struct req* r);
 /* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,
 ** hide Hideworking, cloth Textilecraft, pottery Ceramics, jewels Jewelcraft, books and bones Lore, food Cookery, stone
 ** Masonry, glass Glassworking, the rock where it lies Mining (part 2's, the main RAM's room, 2026-10-29) */
-static const unsigned char appraiser[NAP] = {
+static const unsigned char appraiser[NAP + 4] = {
     HARN_WPN, HARN_WPN, HARN_MET, HARN_TIM, HARN_HID, HARN_TEX, HARN_CER, HARN_JEW, HARN_LOR, HARN_COO, HARN_LOR,
-    HARN_MSN, HARN_GLA, HARN_MIN
+    HARN_MSN, HARN_GLA, HARN_MIN,
+    HARN_SNG, HARN_SNG, HARN_MUS, HARN_DAN      /* (Past the crafts, NAP + PF_*: a performance, entertaining one, its
+                                                **   skill said, unsaid Singing's (every one's, the book's automatic skill): 2026-11-02) */
 };
 
 /* RS_TEST's own tests, through one stub (the main RAM's room): a dig's, moving quietly's, an appraisal's (by the
@@ -224,15 +214,32 @@ static const unsigned char appraiser[NAP] = {
 static unsigned char __fastcall__ speaks (const char* t);
 void __fastcall__ s_dig_answer (struct req* r)
 {
+    unsigned char sk, m;
+    int e;
+
     if (r->a == P_STEALTH || r->actor) {       /* (Moving quietly; or a creature's own test, a tunneller's dig: its
                                                 **   grade by its sheet, the world's the rest, slice 4.11's) */
         s_quiet_test (r);
     } else if (r->a == P_APPRAISE) {
-        r->grade = test_sk (&pc, appraiser[r->b < NAP ? r->b : 0], r->steps);
+        sk = appraiser[r->b < NAP + 4 ? r->b : 0];
+        if (r->b < NAP) {                       /* (A thing judged, the first answer kept; a performance, a new die) */
+            r->w2 = pc.ml[sk];
+            JUDGE_IN (r->w1, pc.ml[sk])
+            r->grade = test_sk (&pc, sk, r->steps);
+            JUDGE_OUT
+        } else {
+            r->grade = test_sk (&pc, sk, r->steps);
+        }
     } else if (r->a != P_DIG && r->a != P_SWIM) {   /* (Persuading, intimidating, deceiving: main.c's) */
-        if (!speaks (r->text)) {                /* (Words in a tongue it doesn't speak: nothing) */
+        if (!(sk = speaks (r->text))) {         /* (Words in a tongue it doesn't speak: nothing) */
             r->result = 2;
         } else {
+            m = r->a == P_DECEIVE ? HARN_NTR : HARN_RHE;
+            e = pc.ml[m] ? harn_eml (&pc, m) : harn_get_oml (&pc, m) + harn_eml (&pc, m);
+            e += STEP_PCT * (signed char) r->steps;
+            if (e > sk) {                       /* (Its EML never past its mastery of the tongue: the book's, Skills 11) */
+                r->steps -= (e - sk + STEP_PCT - 1) / STEP_PCT;
+            }
             r->grade = test (&pc, r->a, r->steps);
         }
     } else if (r->a == P_SWIM) {                /* (A minute's swimming, the book's, Skills 10: its squares, by the
@@ -251,14 +258,22 @@ void __fastcall__ s_dig_answer (struct req* r)
 
 static void __fastcall__ dig_of (struct req* r)
 {
-    unsigned char m = r->b > MAT_SOIL ? MAT_STONE : r->b, t = s_dig_tool (m), k = digger[t].rate[m];
+    unsigned char m = r->b > MAT_SOIL ? MAT_STONE : r->b, t = s_dig_tool (m, r->text), k = digger[t].rate[m],
+        b = s_dig_tool (m, "");
 
+    if (r->text[0] && !t) {
+        k = 0;                                  /* (Named, and no digger) */
+    }
+    strcpy (r->text + DIG_BETTER, r->text[0] && digger[b].rate[m] > k ? digger[b].key : "");
     strcpy (r->text, digger[t].key);
     r->w2 = digger[t].wear[m];
     if (!k) {
         r->result = 1;
         r->w1 = 0;
         r->w2 = 0;
+        return;
+    }
+    if (r->steps == RS_DIG_QUERY) {
         return;
     }
     r->grade = DIG_TESTED (m) ? test (&pc, r->a, r->steps) : G_MS;
@@ -323,6 +338,10 @@ signed char __fastcall__ o_test_sk (harn_char* c, unsigned char sk, signed char 
 
     if (sk & ATTR) {
         return grade (harn_test_attr (c, sk & ~ATTR, 5, mod));
+    }
+    if (c == &pc) {
+        skill_used (sk);                        /* (Marked for its development roll; a [First Use] one opened: slice
+                                                **   4.4's, skills.c) */
     }
     if (!c->ml[sk]) {
         return grade (harn_test (harn_get_oml (c, sk) + harn_eml (c, sk) + mod));
@@ -440,12 +459,16 @@ static void status (void)
     if (s->hearing > 9) {
         s->hearing = 9;
     }
+    if (HUB->pc_task.kind == LT_SLEEP) {        /* (Asleep: at half, the UI's reach of a sound its hearing plus three: the
+                                                **   book's, the user's, 2026-11-03) */
+        s->hearing = s->hearing > 2 ? ((s->hearing + 3) >> 1) - 3 : 0;
+    }
     s->smell = sense (HARN_SML);
     s->darkvision = 0;                          /* (The species' sight in the dark: the book's, to come) */
     s->nightvision = 1;
     s->morale = pc.att[HARN_MOR];
     s->load = !ep ? 0 : ep <= 2 ? 1 : ep <= 4 ? 2 : 3;   /* (Its encumbrance: a little burdened, heavily, overloaded) */
-    s->power = 10;
+    s->power = pc_might;                        /* (As a creature's: skills.c's, the user's, 2026-11-03) */
     s->lead = pc.ml[HARN_ORA] > pc.ml[HARN_RHE] ? pc.ml[HARN_ORA] : pc.ml[HARN_RHE];   /* (Its influence: the
                                                 **   morale field's, HOUSE.md's) */
     s->northsense = pc.att[HARN_SP] == HARN_KHU;    /* (The species' trait: the Khuzdul live below, and always know
@@ -509,13 +532,15 @@ void __fastcall__ s_load_pc (struct req* r)
     r->b = watch;
     strncpy (path, r->text, sizeof path - 1);
     r->result = 1;
-    pv.hr = pd.hr = afffl = 0;                  /* (No venom, no sickness, no rest yet: its file's "body" line's) */
+    pv.hr = pd.hr = afffl = 0;                 /* (No venom, no sickness, no rest yet: its file's "body" line's; */
+    body_line (path, 3);                       /*   no skills used yet, its "body u" lines') */
     rest_m = HUB->pcsum.timesense = 0;
     if ((fd = open (path, O_RDONLY)) < 0) {
         return;
     }
     r->result = harn_read (fd, &pc, own_line) < 0;
     close (fd);
+    develop (0);                                /* (Its might, by its skills) */
     hub_map (0);
     put (name);
     put ("\n");
@@ -553,6 +578,9 @@ void __fastcall__ s_save_pc (struct req* r)
     harn_write_line (fd, line);
     body_line (line, 0);                        /* (Its venom, its rest: heal.c's) */
     harn_write_line (fd, line);
+    while (body_line (line, 2), line[0]) {      /* (Its skills' growth: slice 4.4's, 2026-11-03) */
+        harn_write_line (fd, line);
+    }
     strcpy (line, "dealt ");                    /* (What dealt each injury: its words') */
     for (g = 0; g < pc.ninj; ++g) {
         line[g + 6] = '0' | pc_by[g];
@@ -634,17 +662,19 @@ void __fastcall__ s_beasts (unsigned char back)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* Whether it speaks tongue t (a word of tongues, a space before it: part 2's, the main RAM's room, 2026-10-31) */
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+/* Whether it speaks tongue t (a word of tongues, a space before it, =its mastery after it if it isn't its own, its file's: part 2's,
+** the main RAM's room, 2026-10-31): 0, or its mastery in it (its own its Language's; 100 if it has none open) */
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
 static unsigned char __fastcall__ speaks (const char* t)
 {
     char* p = tongues;
     unsigned char n = strlen (t);
 
     while ((p = strstr (p, t)) != 0) {
-        if (p[-1] == ' ' && (!p[n] || p[n] == ' ')) {
-            return 1;
+        if (p[-1] == ' ' && (!p[n] || p[n] == ' ' || p[n] == '=')) {
+            n = p[n] == '=' ? atoi (p + n + 1) : pc.ml[HARN_LAN];
+            return n ? n : 100;
         }
         ++p;
     }
@@ -657,7 +687,12 @@ static unsigned char __fastcall__ speaks (const char* t)
 ** the words need copied for the overlay (the hub's not in the window while it is) */
 struct pstate ps;
 
-static void __fastcall__ pace_set (unsigned char a)
+void __fastcall__ pace_set (unsigned char a);
+void __fastcall__ stress (struct req* r);
+#pragma code-name (push, "SW3CODE")             /* (Part 3's: the main RAM's room, 2026-11-03) */
+#pragma rodata-name (push, "SW3RODATA")
+
+void __fastcall__ s_pace_set (unsigned char a)
 {
     status ();                                  /* (Listening: its hearing) */
     ps.gait = HUB->gait;
@@ -671,6 +706,34 @@ static void __fastcall__ pace_set (unsigned char a)
     hub_map (0);
     state ();
 }
+
+/* What a skill's used under, for its growth (HOUSE.md's, the user's, 2026-11-03: "a use under stress"), the character's
+** test r or its treatment (the hub in the window): a point each for a hostile awake within 30 feet (a hard stop's reach),
+** a trap's danger (disarmed, or dodged), the dark without a light; wounds and shock skills.c's own */
+void __fastcall__ s_stress (struct req* r)
+{
+    struct actor* q = HUB->actor;
+    unsigned char k, n = r->kind == RS_TEST && (r->a == P_DISARM || r->a == P_DODGE_HAZARD);
+    unsigned dx, dy;
+
+    for (k = NACTORS; k; --k, ++q) {
+        dx = q->x > HUB->pc_x ? q->x - HUB->pc_x : HUB->pc_x - q->x;
+        dy = q->y > HUB->pc_y ? q->y - HUB->pc_y : HUB->pc_y - q->y;
+        if (q->state && q->attitude == AT_HOSTILE && q->sn == HUB->pc_stratum && q->doing != DO_SLEEP && dx <= 6 && dy <= 6) {
+            ++n;
+            break;
+        }
+    }
+    if (!HUB->pc_light) {
+        hub_map (SIGHT_BANK);
+        n += SIGHT->dark != 0;
+        hub_map (0);
+    }
+    stress_lv = n;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The dice fixed, for a test (RS_DICE: the referee's unit tests, tests/ram/t_rules): dice.h's hook, set by the
 ** first, rolls every die after it, the faces given first (then the generator's), and keeps what each was (its sides) */
@@ -735,7 +798,10 @@ static void sheets_in (void)
 
 /* One side of two actors' tests (RS_CONTEST): who's test of purpose p, at the steps: the character's here (one
 ** senseless, or in shock, tests nothing: a critical failure), a creature's by its sheet (overlay 2's, in a copy) */
-static signed char __fastcall__ side (unsigned char who, unsigned char p, signed char steps)
+signed char __fastcall__ side (unsigned char who, unsigned char p, signed char steps);
+#pragma code-name (push, "SW3CODE")             /* (Part 3's: the main RAM's room, 2026-11-03) */
+#pragma rodata-name (push, "SW3RODATA")
+signed char __fastcall__ s_side (unsigned char who, unsigned char p, signed char steps)
 {
     struct req* q = (struct req*) rq;
 
@@ -750,14 +816,20 @@ static signed char __fastcall__ side (unsigned char who, unsigned char p, signed
     fight (q);
     return q->grade;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Moving quietly's test (RS_TEST's P_STEALTH: slice 4.6's), by its own dice (rshouse.h's RS_HOUSE_QUIET's: the game's
 ** as they stand, mixed, and put back after), so the game's other tests roll as they did: the character's, or a
 ** creature's by its sheet (a hunter's stalk, the denizens'); part 2's, the main RAM's room */
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
 void __fastcall__ s_quiet_test (struct req* r)
 {
+    if (r->other == RS_ASKER) {
+        r->grade = side (r->actor, r->a, r->steps);
+        return;
+    }
     QUIET_IN
     r->grade = side (r->actor, r->a, r->steps);  /* (The character's, or a creature's by its sheet: a tunneller's
                                                 **   dig too, slice 4.11's) */
@@ -774,6 +846,7 @@ static void __fastcall__ answer (struct req* r)
     tp = r->text;
     tend = r->text + tlim - 1;
     r->result = 0;
+    stress_lv = 0;                              /* (A skill's use here routine, but as it's found below: skills.c's) */
     switch (r->kind) {
     case RS_NEW_ACTOR:                          /* (The fights': overlay 2's, in a copy, as the harm's) */
         sheets_in ();
@@ -782,11 +855,12 @@ static void __fastcall__ answer (struct req* r)
     case RS_MORALE:
     case RS_WIELD:                              /* (What it would strike with: gear.c's, through fight's) */
         tnow = HUB->now;
+        nobreak = HUB->pc_lump & PL_NOFACE;
         stance = HUB->pc_stance;
         pc_way = HUB->pc_strike;
         pc_hand = HUB->pc_shand;
-        if (pc_way & SK_THING) {
-            kind_in (pc_way & 0x7F);            /* (The thing named that strikes: its kind, for the overlay) */
+        if (SK_IS_KIND (pc_way)) {
+            kind_in (SK_KIND (pc_way));            /* (The thing named that strikes: its kind, for the overlay) */
         }
         gseed = HUB->seed;
         memcpy (rq, r, sizeof rq);
@@ -798,6 +872,9 @@ static void __fastcall__ answer (struct req* r)
     case RS_TIME:                               /*   copy, the part said copied for it; the harm overlay 1's, its */
     case RS_TREAT:                              /*   words a line) */
         tnow = HUB->now;
+        if (r->kind == RS_TREAT) {
+            stress (r);
+        }
         strncpy (tpart, r->text, sizeof tpart - 1);
         memcpy (rq, r, sizeof rq);
         memcpy (rq + offsetof (struct req, x) + WANT_X, &HUB->pc_hunger, 6);    /* (The hub's want: slice 4.9's) */
@@ -815,10 +892,14 @@ static void __fastcall__ answer (struct req* r)
         load_pc (r);
         break;
     case RS_TEST:
+        if (!r->actor && r->a > P_NOTICE_SMELL) {
+            stress (r);                         /* (A glance's, a sound's, a smell's routine: they're many) */
+        }
         if (r->actor || r->a == P_DIG || r->a == P_STEALTH || r->a == P_APPRAISE || r->a == P_SWIM) {   /* (A creature's
                                                 **   by its sheet, any test (Phase 3C's: a door forced); judged by the tool to hand that
                                                 **   suits it best; moving quietly, by its own dice; by the craft that
-                                                **   knows the thing: part 2's) */
+                                                **   knows the thing: part 3's) */
+parted:
             dig_answer (r);
             break;
         }
@@ -838,9 +919,8 @@ static void __fastcall__ answer (struct req* r)
             break;
         }
         if ((r->a == P_PERSUADE || r->a == P_INTIMIDATE || r->a == P_DECEIVE) && r->text[0]) {   /* (Words in a
-                                                **   tongue: one it speaks, or nothing: part 2's) */
-            dig_answer (r);
-            break;
+                                                **   tongue: one it speaks, or nothing: part 3's) */
+            goto parted;
         }
         if (r->a <= P_NOTICE_SMELL) {           /* (By its state: its pace, its shock; overlay 1's, in a copy) */
             ps.go = HUB->pc_going;
@@ -863,16 +943,18 @@ static void __fastcall__ answer (struct req* r)
         status ();
         break;
     case RS_EQUIP:
-        if (r->actor) {                         /* (An actor's things held and worn: the outfits' gear, gear.c's) */
-            strncpy (dtext, r->text, sizeof dtext - 1);
-            den_equip ((r->actor - 1) & 7);
-        } else if (r->a == 2) {
+        if (r->a == 2 && !r->actor) {
             equip_all (r->text);
             hheld = r->w2;                      /* (The hands that hold something, any thing: slice 4.1b's) */
             set_load (r->w1);                   /* (And its load: its summary anew) */
             status ();
+            break;
+        }
+        strncpy (dtext, r->text, sizeof dtext - 1);
+        if (r->actor) {                         /* (An actor's things held and worn: the outfits' gear, gear.c's) */
+            den_equip ((r->actor - 1) & 7);
         } else {
-            equip (r->text, r->a);
+            equip (dtext, r->a);                /* (A tool to hand, or not: skills.c's, the main RAM's room) */
         }
         break;
 
@@ -905,6 +987,7 @@ static void __fastcall__ answer (struct req* r)
         memcpy (r, rq, sizeof rq);
         break;
     case RS_CONTEST:                            /* (Each one's test, the actor's first: who did better) */
+        stress_lv = 1;                          /* (Two meeting: a foe near) */
         g = side (r->actor, r->a, r->steps);
         k = side (r->other, r->b, r->c);
         r->grade = g;

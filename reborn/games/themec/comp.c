@@ -25,14 +25,14 @@ static const char* const mats[] = { "none", "wood", "iron", "steel", "bronze", "
     "stone", "glass", "silver", "other", 0 };
 static const char* const crafts[] = { "weapon", "armour", "metal", "wood", "hide", "cloth", "pottery", "jewel",
     "book", "food", "bone", "stone", "glass", 0 };
-static const char* const verbs[] = { "read", "combine", "put", "out", 0 };
+static const char* const verbs[] = { "read", "combine", "put", "out", "take", 0 };
 static const char* const effects[] = { "-", "open", "rule", 0 };
 static const char* const purposes[] = { "halls", "keep", "temple", "cellars", "crypt", "works", 0 };
 static const char* const did[] = { "built", "ruined", "reused", 0 };
 static const char* const endings[] = { "abandoned", "conquered", "collapsed", "flooded", "cursed", "held", 0 };
 static const char* const works[] = { "keep", "temple", "mine", "tomb", "town", "hold", 0 };
 static const char* const goals[] = { "none", "artifact", "evil", "prisoner", "through", 0 };
-static const char* const ends[] = { "-", "escaped", "ruled", "died", 0 };
+static const char* const ends[] = { "-", "escaped", "ruled", "died", "left", 0 };
 static const char* const uses[TUSES] = { "kitchen", "pantry", "barracks", "armoury", "chapel", "bedchamber", "solar",
     "well room", "cistern", "gatehouse", "guardroom", "workshop" };
 static const char ways[] = "chtwgpsf", styles[] = "bnmx";
@@ -247,7 +247,7 @@ static void __fastcall__ rule_line (struct line* l)
     const char* w = 0;
 
     if (nrules >= NRULES || verb < 0 || l->n < 3) {
-        err = "a rule: read, combine, put or out";
+        err = "a rule: read, combine, put, out or take";
         return;
     }
     r->verb = verb;
@@ -263,7 +263,7 @@ static void __fastcall__ rule_line (struct line* l)
         r->b = kind (v[2]);
         effect = find (effects, v[3]);
         w = v[4];
-    } else if (verb == TR_OUT && l->n > 3) {
+    } else if ((verb == TR_OUT || verb == TR_TAKE) && l->n > 3) {
         r->a = kind (v[1]);
         effect = find (effects, v[2]);
         w = v[3];
@@ -421,6 +421,13 @@ const char* __fastcall__ comp_line (struct line* l)
     } else if (!strcmp (k, "start")) {          /* (How the character came in: walked, or fell, TM_FELL: its bearings,
                                                 **   slice 4.2's; make.js holds a stand-in's to the two words) */
         R[1] |= *v[0] == 'f' ? TM_FELL : 0;
+    } else if (!strcmp (k, "wayin")) {          /* (The way in open behind it: TM_OPEN) */
+        R[1] |= TM_OPEN;
+    } else if (!strcmp (k, "wayout")) {         /* (Another way out's stratum) */
+        if ((x = atoi (v[0])) < 1 || x > 63) {
+            return "wayout: 1 to 63";
+        }
+        T->exit_sn = x;
     } else if (!strcmp (k, "story")) {
         T->story = text (v[0]);
     } else if (!strcmp (k, "stratum")) {
@@ -429,7 +436,7 @@ const char* __fastcall__ comp_line (struct line* l)
         }
         x = l->n > 2 && *v[2] ? purpose_of (v[2]) : P_HALLS;
         if (x < 0) {
-            return "a stratum's purpose: halls, keep, temple, cellars, crypt or works, maybe fortified or open";
+            return "a stratum's purpose: halls, keep, temple, cellars, crypt or works, fortified or open";
         }
         if (strlen (v[0]) >= 20) {
             return "a stratum's name too long";
@@ -477,9 +484,9 @@ const char* __fastcall__ comp_line (struct line* l)
         T->opened = text (v[0]);
     } else if (!strcmp (k, "ending")) {
         if ((x = find (ends, v[0])) < 1 || l->n < 2) {
-            return "an ending: escaped, ruled or died";
+            return "an ending: escaped, ruled, died or left";
         }
-        T->end[x] = text (v[1]);
+        T->end[x & 3] = text (v[1]);
     } else if (!strcmp (k, "seed") || !strcmp (k, "region")) {
         /* (The history's, the file's to read: nothing in the record) */
     } else if (!strcmp (k, "people")) {
@@ -498,10 +505,13 @@ const char* __fastcall__ comp_line (struct line* l)
         mint_line (l);
     } else if (!strcmp (k, "goal")) {
         if ((x = find (goals, v[0])) < 1 || l->n < 3 || !*v[1] || atoi (v[2]) > 255) {
-            return "a goal: artifact, evil, prisoner or through; its name; its stratum; its guardians";
+            return "a goal: artifact, evil, prisoner or through; name; stratum; guardians";
         }
         T->goal = x;
         T->goal_sn = atoi (v[2]);
+        if (x == G_THROUGH) {
+            T->exit_sn = T->goal_sn;            /* (A far exit: the way out that is the goal) */
+        }
         strncpy (gguard, l->n > 3 && strcmp (v[3], "-") ? v[3] : "", 11);
     } else {
         return "no such key";
@@ -643,14 +653,20 @@ unsigned char comp_check (void)
         if (can (r)) {
             ends |= 1 << r->effect;
         } else {
-            fault (T->kind[r->a].name, "its rule can't be done: its things aren't all to be had");
+            fault (T->kind[r->a].name, "its rule can't be done: its things aren't to be had");
         }
     }
     if ((T->mission & TM_ESCAPE) && !(ends & 1 << TE_OPEN) && !through) {
-        fault (0, "the way out can't be opened: no rule that opens it has its things to be had");
+        fault (0, "no rule that opens the way out can be done");
     }
     if ((T->mission & TM_RULE) && !(ends & 1 << TE_RULE)) {
-        fault (0, "the place can't be ruled: no rule that rules it has its things to be had");
+        fault (0, "no rule that rules the place can be done");
+    }
+    if (!(T->mission & TM_OPEN) && !T->exit_sn) {   /* (A way out by its legs alone, Q1's: a sky shaft's by dice, maybe out of reach) */
+        fault (0, "no way out: neither wayin nor wayout");
+    }
+    if (!T->end[END_LEFT & 3]) {
+        fault (0, "no ending for leaving");
     }
     for (k = 0, f = T->faction; k < T->nfactions; ++k, ++f) {
         for (any = lair = 0, sn = f->d0; sn <= f->d1 && sn < 64; ++sn) {
@@ -684,7 +700,7 @@ unsigned char comp_check (void)
     if (T->goal_guard) {
         f = &T->faction[T->goal_guard - 1];
         if (f->d1 < T->goal_sn || f->d0 > T->goal_sn) {
-            fault ("the goal", "its guardians don't live where it is");
+            fault ("the goal", "its guardians don't live where it lies");
         }
     }
     return faults;

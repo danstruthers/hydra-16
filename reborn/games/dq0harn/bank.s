@@ -18,12 +18,14 @@ OVMAX       = 8                     ; dq0harn.cfg's overlays (the 4th and 5th th
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 DEPTH       = 16                    ; Overlay calls in calls, at most
 
+            .zeropage
+ova:        .res        1           ; (.A and .X kept through a stub)
+ovx:        .res        1
+
             .bss
 _ovbank:    .res        OVMAX       ; Overlay n's bank: _ovbank[n - 1] (dq0harn.c's ovl_load sets them)
 ovstk:      .res        DEPTH       ; The banks the overlay calls found, to put back
 ovsp:       .res        1
-ova:        .res        1           ; (.A and .X kept through a stub)
-ovx:        .res        1
 
             .code
 
@@ -149,7 +151,7 @@ ovl_out:
 
 ; The overlays' functions (dq0harn.h has them with their overlays)
             OVFN        sheet, 1
-            OVFN        outfit_of, 1
+            OVFN        outfit_of, 7        ; (Overlay 1's room, slice 4.4's)
             OVFN        brief, 1
             OVFN        state, 1
             OVFN        spent, 1
@@ -169,10 +171,12 @@ ovl_out:
             OVFN        limbs_of, 5
             OVFN        cond_of, 5
             OVFN        rise_of, 5
-            OVFN        hit_thing, 3
+            OVFN        hit_thing, 5
             OVFN        health_of, 5
-            OVFN        fumbled, 3
-            OVFN        wound_drops, 3
+            OVFN        fumbled, 5
+            OVFN        wq_of, 3            ; (A weapon's quality: the book's Weapon Damage, 2026-11-03)
+            OVFN        w_damage, 3
+            OVFN        wound_drops, 5
             OVFN        test_sk, 5
             OVFN        draw_test, 5
             OVFN        bearing_of, 5
@@ -187,6 +191,12 @@ ovl_out:
             OVFN        tire, 7             ; (A creature's fatigue, 2026-10-31: tire.c)
             OVFN        worked, 7
             OVFN        want_fl, 7
+            OVFN        skill_used, 7       ; (Skills by use, the load's free pounds, slice 4.4's: skills.c)
+            OVFN        develop, 7
+            OVFN        skill_line, 7       ; (Its growth's lines in its file: 2026-11-03)
+            OVFN        set_load, 7
+            OVFN        equip, 7            ; (The main RAM's room, D13's)
+            OVFN        heft, 7             ; (A weapon's version, D13's: skills.c)
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0harn.cfg's SWAP, a part at a time,
 ; copied there from overlay 4's bank as it's called)
@@ -195,6 +205,7 @@ ovl_out:
 
             SWPART      1, 4                ; hmchar's file read and written (harnfile.c), the creatures' sheets kept
             SWPART      2, 5                ; The names (harnname.c), the tool a dig takes, a test's dice fixed
+            SWPART      3, 4                ; A dig's tool, the tests' own (part 2's room, 2026-11-03)
 
             SWFN        load_pc, 1
             SWFN        save_pc, 1
@@ -204,9 +215,12 @@ ovl_out:
             SWFN        harn_sex_name, 2
             SWFN        harn_month_name, 2
             SWFN        harn_sunsign_name, 2
-            SWFN        dig_answer, 2
+            SWFN        dig_answer, 3
             SWFN        dice_set, 2
             SWFN        fixed, 2            ; (A test's dice hook, 2026-10-31: the main RAM's room)
+            SWFN        stress, 3           ; (What a skill's used under, 2026-11-03)
+            SWFN        pace_set, 3         ; (The main RAM's room for it)
+            SWFN        side, 3
 
 ; The dice by who asks (rshouse.h's RS_HOUSE_DICE: ../dq0/dice.inc), overlay 7's, through its stub (OVFN's, by hand)
             .export     _dice_to

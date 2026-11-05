@@ -14,7 +14,7 @@ const dq0 = require('../dq0/make.js');
 const KEYS = { people: 1, land: 2, work: 3, name: 4, built: 5, reused: 6, noun: 7, ended: 8, clue: 9, rooms: 10,
   uses: 11, light: 12, folk: 13, now: 14, open: 15, ago: 16, goal: 20, thing: 21, exit: 22, title: 23, beast: 40,
   faction: 41, called: 24 };
-const TK_THEME = 30, THEME_KEYS = ['kind', 'piece', 'rule', 'story', 'lock', 'opened', 'ending'];
+const TK_THEME = 30, THEME_KEYS = ['kind', 'piece', 'rule', 'story', 'lock', 'opened', 'ending', 'wayin', 'wayout'];
 const WORKS = ['keep', 'temple', 'mine', 'tomb', 'town', 'hold', 'deep'], ENDS = ['abandoned', 'conquered', 'collapsed',
   'flooded', 'cursed', 'held'];
 const BANK = 0x2000;
@@ -39,7 +39,7 @@ function read(dir, f) {
 const SLOTS = { R: 'the Kharum Hills', P: 'the Khazrim', K: 'dwarves', N: 'Durnak', X: 'Orth', O: 'the Aldmar men',
   C: '31', W: 'they delved deep', A: 'the Horn of Durnak', a: 'silver horn', B: 'the altar of Durnak', b: 'black altar',
   M: 'Ilsa', S: 'the Deep Works', s: '2', E: '1', G: 'dead', g: 'the dead', U: 'the Undercroft', u: '1', e: '1',
-  T: 'Orth Gate' };
+  T: 'Orth Gate', O: '1' };
 const fill = (s, slots) => s.replace(/%(.)/g, (m, c) => (c in slots ? slots[c] : m));
 
 // A goal block's lines made a theme (its slots filled, a header and strata round them) and compiled: throws if

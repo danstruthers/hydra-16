@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     36                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     51                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -67,7 +67,10 @@
                                                 **   the afflictions, pc_air ... pc_dose; 35, the time of day believed,
                                                 **   tb, BRG_SKY, rs.h's TIME_STEPS and timesense; 36, the
                                                 **   tunnellers, I_KIT's KT_DIG, DG_*, dig_t, DE_DIG, DE_DUG, AG_PICK,
-                                                **   AG_SPADE, DO_DIG) */
+                                                **   AG_SPADE, DO_DIG; 37, the market's: the sway's word2 its coins
+                                                **   (SW_COIN ...), SW_BUY ... SW_ENTERTAIN, OR_OPEN ..., SR_WONT ...;
+                                                **   39, a room searched whole: SF_ROOM, SF_TRAPS, WB_SEARCH, RSW_*, RC_*,
+                                                **   IOS_*) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -318,7 +321,13 @@ enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, T_COMMA
                                                 **   denizens' ring's: who the actor plus 1, b the heading it digs
                                                 **   (H_*), x[2] what it digs with (DG_*), x[0] x[1] as its other
                                                 **   intents'; a spell of digging at a time, the world's, by the
-                                                **   character's rules: dq0w/wdig.c) */
+                                                **   character's rules: dq0w/wdig.c; w1 w2 the square it digs.  Who
+                                                **   0, a record's, away from the character: its spell at once,
+                                                **   untested, x[2] its stratum, x[0] its tools, slice 4.11's rest) */
+#define KT_BUILD        0xC0                    /* (I_KIT's a, a builder's (slice 4.11's rest): a door broken down put
+                                                **   up again, or a way dug in walled up: w1 w2 its square, b the
+                                                **   heading to it; who as KT_DIG's, a record's x[2] its stratum: the
+                                                **   world's wdig.c, a spell, a wall six) */
 #define DG_CLAWS        0x01                    /* (KT_DIG's x[2]: its claws, a burrower's (kinds.txt's ways d), */
 #define DG_PICK         0x02                    /*   a pick it carries, */
 #define DG_SPADE        0x04                    /*   a shovel, a spade or a mattock it carries) */
@@ -455,9 +464,10 @@ enum {
                                                 **   carrier (a quiver); E_TASK TE_GATHERED, b how many */
     NINTENTS
 };
+#define AIM_HARD        0x10                    /* (I_ATTACK's b: a throw, thrown hard: twice as far, 10 less) */
 #define AIM_SHOT        0x40                    /* (I_ATTACK's b, | the aim: a shot or a throw, not a blow (slice
                                                 **   4.7's: the world's missiles, the referee's RS_MISSILE), the
-                                                **   UI's with x[1] SK_THING | the launcher's kind or the thing
+                                                **   UI's with x[1] SK_OF the launcher's kind or the thing
                                                 **   thrown's; a denizen's, its mind's, with what it carries) */
 enum { SH_OK, SH_NONE, SH_SPENT, SH_RANGE, SH_LINE, SH_WAY, SH_GONE, SH_HANDS, SH_CANT };   /* (E_TASK TE_NO_SHOT's b:
                                                 **   why no shot: nothing to shoot with, no missile for it, out of
@@ -479,7 +489,9 @@ enum { SH_OK, SH_NONE, SH_SPENT, SH_RANGE, SH_LINE, SH_WAY, SH_GONE, SH_HANDS, S
 ** whenever it was free; 0: if it was later); I_DONE (who 0): w1 the turn it's done (the hub's den_go: the turns
 ** pace's, the world going on once it's in), t the clock then */
 #define WA_MIN          1                       /* (I_WAIT's a, E_TIME's b: w1 in minutes, a long duration's) */
-#define WA_SLEEP        2                       /* (I_WAIT's a, E_TIME's b: asleep, LT_SLEEP's) */
+#define WA_SLEEP        2                       /* (I_WAIT's a, E_TIME's b: asleep, LT_SLEEP's; */
+#define WA_REST         4                       /*   with it, a rest: its words a sleep's, lying down, but awake, LT_WAIT's:
+                                                **   the user's, 2026-11-03) */
 #define LONG_T          60000U                  /* (The tenths a duration's sixteen bits are given at most: past
                                                 **   them, 100 minutes, it's in minutes, to 65,535 of them, some 45
                                                 **   days: I_WAIT's WA_MIN, the long task's mins) */
@@ -544,7 +556,9 @@ enum {
                                                 **   between it and the character, of a loud one on its stratum (the
                                                 **   squares of wall and rock on the line, 15 at most, and the shut
                                                 **   doors times 16: SOUND.md) */
-    E_LEFT,                                     /* who's gone up the way out, open (theme.h: the mission's, escaped) */
+    E_LEFT,                                     /* who's gone up the way out, open (w1 EL_WAY), or a shaft to the sky (EL_SKY):
+                                                **   out of the dungeon, solved or not; or (EL_RULE + the rule) a theme's
+                                                **   take rule done as the thing's taken up: the UI's words (theme.c's) */
     E_FIGHT,                                    /* (The denizens' too, their queue's) A blow struck: who the attacker
                                                 **   (0 the character, else the actor plus 1), a the defender (the
                                                 **   same), b how loud, w1 w2 the attacker's square, x[0] its stratum,
@@ -572,12 +586,25 @@ enum {
     NEVENTS
 };
 enum { BRG_NONE, BRG_LOST, BRG_KNOWN, BRG_SKY };
+#define EL_WAY          0x10                    /* (E_LEFT's w1: past the UI's ending's END_*, its own stub: theme.c's) */
+#define EL_SKY          0x11
+#define EL_RULE         0x12
 enum { SKP_NONE, SKP_DAWN, SKP_DAY, SKP_DUSK, SKP_NIGHT, SKP_SUN, SKP_STARS, SKP_HIGH, SKP_LOW, SKP_SUN_WATCHED,
-    SKP_STARS_WATCHED };                        /* (E_BEARING BRG_SKY's b: the sky seen, the time read by it: grey light
+    SKP_STARS_WATCHED,                          /* (E_BEARING BRG_SKY's b: the sky seen, the time read by it: grey light
                                                 **   above, daylight, the light fading, the dark; the sun read by the
                                                 **   north it believes in, the stars; the sun high, low, its bearings
                                                 **   lost; the sun or the stars watched a while, their way across the
-                                                **   sky: the time, and north, known) */
+                                                **   sky: the time, and north, known; b's high four bits, SKS_*, what
+                                                **   showed it */
+    SKP_TOO_HIGH, SKP_CHOKED, SKP_LET_FALL, SKP_ROPE,
+    SKP_GAVE = 0x10, SKP_NO_ROPE = 0x20 };      /* (Past the phases' four bits: a rope's, 2026-11-04, a phase of none with
+                                                **   a way shown: time.c's) */    /* (And, w1's high byte, b none, a shaft's refusals, the
+                                                **   time.c words' room: its mouth too high to reach, barred at the top,
+                                                **   choked below; a thing let fall down it) */
+#define SKY_LAMPS       4
+enum { SKS_WAY, SKS_WINDOW, SKS_SKYLIGHT, SKS_SHAFT, SKS_DEEP };    /* (What shows the sky, E_BEARING BRG_SKY's b's high
+                                                **   four bits: the way out, a window on the surface, a skylight, a shaft
+                                                **   from the top stratum, one below it: its light alone) */
 enum { SKY_NONE, SKY_LIGHT, SKY_OPEN };         /* (The hub's tb.sky: a sky in sight, a test's poke: none; its light
                                                 **   alone, from deep below or overcast, light or dark; the open sky,
                                                 **   the sun or the stars in it) */
@@ -588,11 +615,20 @@ enum { TG_HOURS, TG_SLEEP, TG_OUT };            /* (The hub's tb.how: the hours 
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_ALARM, DE_PASTIME,
     DE_UP = 16, DE_DIG = 24, DE_DUG, DE_DIGS,
     DE_OPENS, DE_SHUTS, DE_SLAMS, DE_UNLOCKS, DE_LOCKS, DE_BARS, DE_UNBARS, DE_STRAINS, DE_BURSTS, DE_HOLDS,
-    DE_BATTERS, DE_BREAKS };                    /* (A door worked by a denizen, Phase 3C's one path, the world's
+    DE_BATTERS, DE_BREAKS,                      /* (A door worked by a denizen, Phase 3C's one path, the world's
                                                 **   wport.c: opened, shut, slammed shut as it flees, unlocked and
                                                 **   locked with its key, barred, its bar lifted out, forced (its
                                                 **   strain begun, burst open, holding), battered (a blow), broken
                                                 **   down: w1 w2 the door's square) */
+    DE_ROOF,                                    /* (Poor rock come down on a tunneller's spell gone badly, slice
+                                                **   4.11's rest: its hole two feet less, the rock showering it; told
+                                                **   as a door's are, at its square) */
+    DE_HANGS,                                   /* (A door broken down put up again by a builder: at the door's
+                                                **   square, slice 4.11's rest) */
+    DE_WALLS,                                   /* (A way dug into its home walled up by a builder: at its square) */
+    DE_WINDS, DE_HEAVES, DE_RAISES, DE_LOWERS, DE_BENDS, DE_BENT, DE_PICKING, DE_PICKS };
+                                                /* (2026-11-02: a portcullis's winch wound, heaved at, raised, let
+                                                **   fall, its bars strained at, bent apart; a lock worked at, picked) */
                                                 /* E_DEN's what: a step, a
                                                 **   noise of its own (a squeak, a growl), the character sensed, lost
                                                 **   (its senses' own); a successor rallying its fellows at its post
@@ -612,10 +648,14 @@ enum { NZ_WORK, NZ_BLOW };                      /* E_NOISE's b: work's (a dig's,
 enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's pc_strike): the best it holds (the
                                                 **   best weapon in its hands, the referee's; else the fists: the UI's
                                                 **   with nothing named, its hands empty), a fist, a foot, the head */
-#define SK_THING        0x80                    /* (| a kind, the catalogue's: the thing named, or the one in its hands
-                                                **   the UI chose, and no other: a weapon of the referee's as itself,
-                                                **   anything else as the referee treats it; a soft thing one attempt,
-                                                **   no harm, the world's: HOUSE.md's fights and portals, 2026-10-22) */
+#define SK_OF(k)        ((unsigned char) ((k) + SK_HEAD))    /* (A kind, the catalogue's, as a striker: the thing named,
+                                                **   or the one in its hands the UI chose, and no other: a weapon of the
+                                                **   referee's as itself, anything else as the referee treats it; a
+                                                **   soft thing one attempt, no harm, the world's: HOUSE.md's fights and
+                                                **   portals, 2026-10-22.  Past the parts of it, so any kind fits,
+                                                **   2026-11-03: not a flag and seven bits) */
+#define SK_IS_KIND(s)   ((unsigned char) (s) > SK_HEAD)
+#define SK_KIND(s)      ((unsigned char) ((s) - SK_HEAD))
 #define SK_WITH         0x40                    /* (The long task's what, a battering's: its striker the thing named,
                                                 **   the hub's pc_strike's kind, not a part of it times 16) */
 #define FO_GONE         0xFF
@@ -634,7 +674,8 @@ enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's
 #define E_OUT           0x4000                  /* (E_HARM's: knocked senseless a while) */
 #define E_CAUGHT        0x8000                  /*   (and a fall stopped, a hold grabbed) */
 #define E_STOPPED       0x8000                  /*   (an HC_STRUCK's: the blows stopped, the striker too hurt) */
-#define O_FELL          8                       /* (E_ARRIVE's link kind, or'd: fallen down it, jumped) */
+#define O_FELL          15                      /* (E_ARRIVE's link kind: fallen down a shaft, jumped; a kind of its
+                                                **   own since the long slopes, 8 and 9, 2026-11-02) */
 
 enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO, A_RESUMED,
        A_STOPPED, A_STEPPED };                  /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
@@ -643,12 +684,14 @@ enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIM
 enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG, N_CLOSED, N_DEN, N_DOOR };    /* E_NOWAY's why: no way that way, the way out
                                                 **   shut, no stairs, nothing to dig there, the portcullis that way
                                                 **   down, a denizen in the way (the actor times 256) */
-enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_LOOKED = 8, V_TRACED = 16 };   /* E_VIEW's why (V_STIR: a
+enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_SETOFF, V_LOOKED = 8, V_TRACED = 16 };   /* E_VIEW's why (V_STIR: a
                                                 **   denizen come into sight, gone from it, or doing something else;
                                                 **   V_FACING: a turn begun, its look to come, V_TURNED; V_LOOKED: a
                                                 **   look one way's, I_LOOK's: 8, look.c's look (8); V_TRACED: the
                                                 **   traces read, I_TRACE's, the UI bank's tread: look (16)) */
-enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN, D_ROOF };  /* E_DIG's how (D_AGAIN: begun on
+#define DN_HANDS        0x40                    /* (D_NO_TOOL's: a chisel and a hammer carried, not both in hand; */
+#define DN_LIT          0x20                    /*   and a light in hand, to set down first) */
+enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN, D_ROOF, D_FOUND, D_PORTAL, D_BETTER };  /* E_DIG's how (D_AGAIN: begun on
                                                 **   a hole dug part way before, the world's DUG record's; D_ROOF:
                                                 **   a spell gone badly in poor rock, the roof come down on the hole,
                                                 **   two feet of it in the rock filled again: slice 4.10's) */
@@ -659,6 +702,9 @@ enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE
                                                 **   healed, the bleeding: the referee's words, RS_DESCRIBE b 4's,
                                                 **   slice 4.3's) */
        TE_NO_SHOT, TE_LOADED, TE_GATHERED, TE_READIED,
+       TE_PACKED, TE_FUMBLE, TE_KINDLED,        /* (The reach's: a pack left off as it's stopped part way, b its kind,
+                                                **   0x80 at its feet; a step's grope failed, the world's own, b its kind;
+                                                **   a fire-maker's try's end, b 1 it caught) */
        TE_FETCHED };                            /* (An ally's fetching, a gift taken, slice 4.8's: b the actor plus 1, FT_*
                                                 **   times 16; the thing's kind w1's high byte) */    /* (The missiles', slice 4.7's: no shot, b why, SH_*; a
                                                 **   launcher loaded, b 1 if it was already; the missiles gathered, b how
@@ -690,9 +736,10 @@ enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE
                                                 **   engaged, 1 nothing near to flee, 2 no way back open); a light
                                                 **   the character carries burning low, its last ten minutes (b its
                                                 **   kind; slice 4.1's: told, no question); a light gone out, its
-                                                **   fuel burnt (b its kind, | 0x80 one it sees lying there; its own,
-                                                **   its only light, its long task stopped hard with it, w's high
-                                                **   byte the task's kind: a climb's and a fight's go on); robbed as
+                                                **   fuel burnt (b its kind; w's high byte: TO_SEEN, one it sees lying
+                                                **   there, TO_ANOTHER, another of its name burning still; its own,
+                                                **   its only light, its long task stopped hard with it, | the task's
+                                                **   kind: a climb's and a fight's go on); robbed as
                                                 **   it lay helpless (I_ROB's: b the robber plus 1; told only if
                                                 **   something was taken); a timed work begun, a battering (HOUSE.md's
                                                 **   long tasks: its first words at once, its outcome as its time's
@@ -704,6 +751,8 @@ enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE
 **   (the referee's: Drawing, by the first map drawn, slice 4.2's;
 **   told, no question) */
 #define TE_STILL        0x80
+#define TO_ANOTHER      0x80                    /* (TE_OUT's w's high byte: another of its name lit still, */
+#define TO_SEEN         0x40                    /*   one it sees lying there; the task's kind below them) */
 #define TE_QUIET        0x40
 enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS,     /* E_BEAT's: a quiet stretch
                                                 **   (HOUSE.md: every 30 feet), the way turns, a side passage, a door
@@ -712,7 +761,7 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
        WB_TELLS, WB_GIVES, WB_ON,                /*   a battering's as it goes (the user's, 2026-10-22): the first blow
                                                 **   that marks it, the one that leaves it giving, every fourth blow
                                                 **   else; */
-       WB_FEEL, WB_FELT, WB_THING, WB_TRIP, WB_STUMBLE, WB_HIT, WB_OFF, WB_SHORT,     /* (The dark's, 2026-10-22:
+       WB_FEEL, WB_FELT, WB_THING, WB_TRIP, WB_STUMBLE, WB_HIT, WB_OFF, WB_SHORT, WB_SIDES,     /* (The dark's, 2026-10-22:
                                                 **   HOUSE.md's walking in the dark: a walk set out on, its heading
                                                 **   times 256 and its gait faster than feeling its way times 4096 (0:
                                                 **   feeling its way); what its hands met, FA_* times 256; its foot on a
@@ -742,17 +791,38 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
                                                 **   one leg; */
        WB_POSED,                                /*   its body's position changed as it said, the position times 256,
                                                 **   | 0x8000 there already: slice 4.6's); */
-       WB_WATER, WB_SWIM, WB_UNDER, WB_DOUSED };  /* (The water's, slice 4.9's, the character's: come into
+       WB_WATER, WB_SWIM, WB_UNDER, WB_DOUSED,  /* (The water's, slice 4.9's, the character's: come into
                                                 **   it, its band times 256 (0 out of it, 1 a foot or two, 2 waist-deep, 3
                                                 **   out of its depth), | 0x8000 running; swimming, | 0x100 well, | 0x200
                                                 **   up again from under; gone under, | 0x100 drowned; its flames put out) */
-enum { FA_NONE, FA_WALL, FA_DOOR, FA_BARS, FA_DROP, FA_RISE, FA_PIT };   /* (What stops a walk in the dark, met: the
-                                                **   world's ahead) */
+       WB_BROKE,                                /* (A weapon or a shield broken, its kind times 256: every actor's, the book's) */
+       WB_SEARCH,                               /* (A room searched whole, as it goes, 2026-11-02: RSW_* times 256,
+                                                **   search.c's words: dq0w's wroom.inc) */
+       WB_EATS, WB_HANDS, WB_THREW, WB_FELL };  /* (A denizen's: what it holds eaten, handed to its fellow, thrown to the
+                                                **   character, falling short of it, its kind times 256: wtake.c's, 2026-11-04) */
+enum { RSW_BEGUN, RSW_GOES_ON, RSW_ALREADY, RSW_WALL, RSW_CORNER, RSW_MIDDLE, RSW_ROUND, RSW_END, RSW_FLOOR, RSW_DONE,
+       RSW_THING };                             /* (WB_SEARCH's what: b 1 by touch; it begun, gone on with, done before;
+                                                **   along a wall, round a corner, the floor inside, a room of one stop;
+                                                **   a thing's time up, w2 its item, the UI to ask the things; the block's,
+                                                **   w2, x[0..1] its middle; it done; a thing begun, w2 its kind, RC_*
+                                                **   times 16 with it) */
+enum { RC_PLAIN, RC_HEAP, RC_HOLDS, RC_BODY };  /* (What a thing is, to a search: nothing in it, looked over; things hidden
+                                                **   in it, a kind that isn't a container or a surface with a size it
+                                                **   hides, its cap_bulk; a container; a body) */
+#define IOS_THING       0x200                   /* (IO_SEARCH's to, a room searched whole's, | SF_TOUCH: a thing's item, what
+                                                **   came of going through it, its things found; */
+#define IOS_FLOOR       0x100                   /*   the things hidden about square x, y) */
+enum { FA_NONE, FA_WALL, FA_DOOR, FA_BARS, FA_DROP, FA_RISE, FA_PIT, FA_TRAP };   /* (What stops a walk, met: the world's
+                                                **   ahead, in the dark, or a straight walk's end; FA_TRAP, one it knows
+                                                **   of, across's) */
+#define LEDGE_MET       120                     /* (E_LEDGE's w1, as a signed byte, past it: what a straight walk came
+                                                **   to, FA_* (2026-11-02); a ledge's feet at most it) */
 enum { WS_AHEAD, WS_LEFT, WS_RIGHT };           /* E_BEAT's side (or a turn's way) */
-enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED, K_NOHOLD, K_HELD };    /* E_CLIMB's how: begun, on, slipped
+enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED, K_NOHOLD, K_HELD, K_SLID };    /* E_CLIMB's how: begun, on, slipped
                                                 **   back, fallen, up, down; jumped down (a ledge, a shaft); no hold
                                                 **   found yet (at its foot: nothing to slip back, nor to fall); its
-                                                **   grip kept, struck or hurt part way (HOUSE.md: holding on) */
+                                                **   grip kept, struck or hurt part way (HOUSE.md: holding on); slid back
+                                                **   to a pit's floor, the climb ended (D13's, slice 4.4's) */
 enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH,     /* I_PORTAL's: what's done (a door's opened, ... */
        PA_RAISE, PA_LOWER, PA_BREAK, PA_THROUGH, PA_DISARM,    /*   a portcullis raised, a window's glass broken,
                                                 **   climbed through, a trap disarmed: one in reach, or the door's; */
@@ -778,13 +848,14 @@ enum { WS_PACE, WS_STANCE, WS_PAUSE, WS_AUTO }; /* WQ_SET's what: the character'
 #define GA_CRAWL        0x40                    /* (And the way its legs go said: crawling, "crawl", prone or on one leg; */
 #define GA_HOP          0x20                    /*   hopping, "hop"; neither, the best it can: slice 4.1b's) */
 enum { PW_ANY, PW_DOOR, PW_WINDOW };            /* I_PORTAL's b: a door or a portcullis, a window or a slit */
-enum { SF_ABOUT, SF_NEAR, SF_WALL, SF_FLOOR, SF_FOR, SF_ON };   /* (PA_SEARCH's b, 2026-10-22: the search's form,
+enum { SF_ABOUT, SF_NEAR, SF_WALL, SF_FLOOR, SF_FOR, SF_ON, SF_ROOM };   /* (PA_SEARCH's b, 2026-10-22: the search's form,
                                                 **   HOUSE.md's searching: about it, as far as it sees; within reach, nearby; a
                                                 **   wall's, the heading it's on times 16; the floor nearby; for a
                                                 **   thing (the things' IO_SEEK's name, the time to find it I_PORTAL's
                                                 **   w1); on or in a thing (IO_SEEK's): the world's, | SF_TOUCH in the
                                                 **   dark, by touch) */
 #define SF_TOUCH        0x08
+#define SF_TRAPS        0x10                    /* (SF_ON's: for traps, said: a thing's traps told) */
 enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARRED, PO_UNBARRED, PO_PICKED,
        PO_NOT_PICKED, PO_NO_PICKS, PO_NO_LOCK, PO_FORCED, PO_HELD, PO_FOUND, PO_NOTHING,   /* E_PORTAL's (a door's, */
        PO_RAISED, PO_HEAVED, PO_LOWERED, PO_IS_UP, PO_IS_DOWN, PO_NO_WINCH, PO_TOO_HEAVY, PO_NOT_PORTC,   /* a
@@ -874,7 +945,10 @@ struct cthing {
                                                 **   "" */
 };
 enum { SL_THE, SL_ANY, SL_IT, SL_ALL, SL_CLOSEST, SL_LARGEST, SL_SMALLEST, SL_LEAD, SL_NTH, SL_ME,
-    SL_OTHER, SL_LIT, SL_UNLIT, SL_OPEN, SL_SHUT, SL_EMPTY };
+    SL_OTHER, SL_LIT, SL_UNLIT, SL_OPEN, SL_SHUT, SL_EMPTY,
+    SL_NEW = 28 };                              /* (SL_NEW, "a new torch", "a fresh torch", "another torch" (the user's,
+                                                **   2026-11-02): not in a hand, not burning: the world's, its low bits
+                                                **   SL_UNLIT, the request's n 1) */
                                                 /* (Which: the one there is, or the one meant; any one; it, the last
                                                 **   thing named; all of them; the closest, the largest, the smallest,
                                                 **   the one in the lead; the nth; the character; the other, one not
@@ -891,8 +965,16 @@ enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK
        LT_TRAVEL,                               /*   a journey to a place named, a leg at a time (I_TRAVEL's: each leg
                                                 **   a walk, slice 4.2's); */
        LT_STUDY, LT_DISARM, LT_PICK, LT_FORCE, LT_HEAVE, LT_BEND, LT_WIND, LT_PRISE, LT_TRACK, LT_SNIFF, LT_FILL,
-       LT_HIDE, LT_TEND };                      /* (LT_TEND: first aid, a wound treated, the UI's timed work: slice
+       LT_HIDE, LT_TIE, LT_TEND,                /* (LT_TIE: a rope tied off and let down, 2026-11-04; LT_TEND: first aid, a wound treated, the UI's timed work: slice
                                                 **   4.3's) */
+       LT_KEY,                                  /* (A door's key turned, got out by a tool's steps first, 2026-11-04) */
+       LT_PACKOFF, LT_PACKDOWN, LT_REACHIN, LT_OPENUP, LT_GETOUT, LT_PACKON, LT_LETFALL, LT_LETBURN, LT_PUTAWAY, LT_BLOWOUT, LT_BLOWDARK, LT_LIGHTFROM, LT_SETDOWN, LT_TAKEUP, LT_HONE,
+       LT_KINDLE, LT_GETNEW, LT_PUTOLD, LT_TAKENEW, LT_DOWNNEW, LT_BLOWOLD, LT_LIGHTNEW, LT_DIPOLD, LT_LETOLD,
+       LT_SHEATHE, LT_SLING, LT_SCONCE, LT_LAYLIT, LT_INPACK, LT_LAYLIT2, LT_INPACK2, LT_DOWN2, LT_UP2 };   /* (The reach's
+                                                **   steps, each its own time, HOUSE.md's: a pack on the back taken off,
+                                                **   into a hand, or set at its feet; a container's level reached into,
+                                                **   held open, a thing got out; the pack put back on: things.c's part
+                                                **   82; the old light let fall, lit or not, "light a new torch") */
                                                 /*   the timed work (HOUSE.md's long tasks, the user's, 2026-10-22:
                                                 **   its first words at once, its outcome as its time's done, decided
                                                 **   then): a trap's mechanism made out, a trap disarmed, a lock
@@ -964,20 +1046,27 @@ enum { SLOT_WORLD, SLOT_UI, NSLOTS };
 ** going on once it's in: the same game whatever the tasks' timing */
 #define NACTORS         8
 #define TURN_SLICE      100
+#define ST_HID(s)       ((s) >> 1)              /* (An actor's state's hiding: 0 not hidden; else 1 + its cover's steps) */
 struct actor {
     /* Its body (the world's) */
     volatile unsigned char state;               /* 1: a body in the dungeon (from the denizens' I_ENTER till it's
-                                                **   gone: I_LEAVE, or dead); 0 none */
+                                                **   gone: I_LEAVE, or dead); 0 none; | its hiding times 2 (ST_HID:
+                                                **   HOUSE.md's hiding oneself, as the character's pc_hid; the senses
+                                                **   leave one not 1 out of what the character sees) */
     unsigned char   sn, face;
     unsigned long   ready;                      /* When it can act again */
-    unsigned char   step;                       /* Tenths of a second to go a square */
+    unsigned char   step;                       /* Tenths of a second to walk a square (a hurried step half that) */
     unsigned char   pos;                        /* Its body's position (POS_*: standing, prone ...) */
     unsigned char   gait;                       /* The pace it goes at (rs.h's GA_*: a walk, till their paces come) */
     unsigned char   move;                       /* How its legs move it (rs.h's C_MOVE bits, the referee's, down 12: 1
                                                 **   lame, half its pace; 2 crawling or hopping, a third; 4 stuck: slice
                                                 **   4.1b's) */
+#define BM_NOT_UP       0x80                    /* (Its move's: down, a failed try to rise told: not again till it
+                                                **   rises, falls or is wounded, the world's wfight.c, 2026-11-02) */
     unsigned char   arm;                        /* Its weapon let fall, its kind (0 none), */
-    unsigned        dropped;                    /*   and where it lies (an item: to take up again) */
+    unsigned        dropped;                    /*   and where it lies (an item: to take up again; | DR_OWN, its own,
+                                                **   the outfits' gear, not a thing made as it fell) */
+#define DR_OWN          0x8000
     unsigned        x, y;                       /* (These, its doing and its name as struct sight's den: copied whole) */
     unsigned char   doing;                      /* What it's doing (DO_*: watching, coming, keeping off: it senses the
                                                 **   character) */
@@ -1023,9 +1112,15 @@ struct actor {
                                                 **   four squares told its mind in the hub's dig_t, TW_SEEN | its
                                                 **   offsets, dx + 8 and dy + 8 times 16) */
 #define TW_SEEN         0xFE00
-enum { FE_ROB, FE_TAKE, FE_GIVE, FE_GIFT };     /* (I_ROB's a: a robbery; an ally's fetching, the thing (t) taken up
+#define TW_ATE          0xFD00                  /* (The hub's dig_t: it's eaten what it held, the world's: its mind's to
+                                                **   know, and clear by an I_TAKE of no wants) */
+enum { FE_ROB, FE_TAKE, FE_GIVE, FE_GIFT,       /* (I_ROB's a: a robbery; an ally's fetching, the thing (t) taken up
                                                 **   where it lies (w1, w2), handed to the character; a gift, the
                                                 **   character's thing (t) taken by the actor: slice 4.8's) */
+       FE_DROP, FE_PASS, FE_THROW };            /* (Phase 3C's one path, the things' rest, 2026-11-04: what it holds, no
+                                                **   weapon, no light, let fall where it stands, no time; the food it holds
+                                                **   handed to actor b less 1, beside it; thing t thrown at the character,
+                                                **   by the character's throw: wtake.c's) */
 enum { FT_TOOK, FT_GAVE, FT_GONE, FT_HEAVY, FT_HANDS, FT_FEET, FT_GOT, FT_FAR };   /* (E_TASK TE_FETCHED's b's high
                                                 **   bits: taken up, handed over, gone from where it lay, too heavy
                                                 **   for it, its hands full, set down at the character's feet (its own
@@ -1036,7 +1131,8 @@ enum { FT_TOOK, FT_GAVE, FT_GONE, FT_HEAVY, FT_HANDS, FT_FEET, FT_GOT, FT_FAR };
 #define AM_STEADY       0x08                    /*   steady: its heart whole, its courage never tested (a scene's
                                                 **   setting, a test's: the fights' kin that stands, 2026-10-30); */
 #define AM_DRUNK        0x10                    /*   in drink, from its leisure's cups a while (its blows two steps
-                                                **   worse, struck at two easier: the world's, 2026-10-31) */
+                                                **   worse, struck at two easier: the world's, 2026-10-31); */
+#define AM_STALKS       0x20                    /*   a hunter by smell: it stalks what it comes at (at a walk: wbody.c's) */
 enum { BD_TWO, BD_FOUR, BD_SERPENT, BD_MANY, BD_WINGS, BD_NONE, NBODIES };
 enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIED };   /* An attitude, the worst
                                                 **   first (DENIZENS.md): attacks on sight; threatens, keeps off;
@@ -1049,11 +1145,25 @@ enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIE
 ** an animal's by P_ANIMALS alone; words want a tongue in common), a request to an ally, a name given to one, a
 ** look at how it seems, a blow (a stand-in for the fights) */
 enum { SW_LOOK, SW_TALK, SW_PERSUADE, SW_DECEIVE, SW_THREATEN, SW_CALM, SW_BEFRIEND, SW_ATTACK, SW_ORDER, SW_NAME,
-       SW_GIVE };                               /* (SW_GIVE: a gift, slice 4.8's: the thing's worth and food in the
+       SW_GIVE,                                 /* (SW_GIVE: a gift, slice 4.8's: the thing's worth and food in the
                                                 **   request, the attitude moved by it; taken, the UI's to hand over) */
-enum { OR_NONE, OR_FOLLOW, OR_WAIT, OR_HOME, OR_FETCH };   /* An ally's request (SW_ORDER's): follow the character,
-                                                **   wait where it is, go back to its own ways, fetch a thing */
-enum { SR_OK, SR_NONE, SR_FAR, SR_TONGUE, SR_BEAST, SR_MINDLESS, SR_AS_FAR, SR_NOT_ALLY, SR_CANT, SR_DOWN };
+       SW_BUY, SW_SELL, SW_PRICE, SW_OFFER, SW_HAGGLE,  /* (The market, 2026-11-02: a thing bought from one, sold to
+                                                **   one, its price asked, what it would give, haggled over (order 1:
+                                                **   the character's, sold); the goods the sway's item, its worth ix
+                                                **   (farthings, its condition's), its count iy; the coins, each side's
+                                                **   pennies, coin and its, their counts ncoin and nits; the reply's ix
+                                                **   the price, pennies) */
+       SW_ENTERTAIN };                          /* (One entertained: sung to, played or danced for, the referee's
+                                                **   performing skill by the order: PF_*) */
+enum { PF_ANY, PF_SING, PF_PLAY, PF_DANCE };    /* (SW_ENTERTAIN's order: the best of them, or the one said) */
+enum { OR_NONE, OR_FOLLOW, OR_WAIT, OR_HOME, OR_FETCH, OR_OPEN, OR_CLOSE, OR_UNLOCK };   /* An ally's request (SW_ORDER's):
+                                                **   follow the character, wait where it is, go back to its own ways,
+                                                **   fetch a thing; a door opened, shut, unlocked (its square ix, iy:
+                                                **   2026-11-02, the minds' I_PORTAL) */
+enum { SR_OK, SR_NONE, SR_FAR, SR_TONGUE, SR_BEAST, SR_MINDLESS, SR_AS_FAR, SR_NOT_ALLY, SR_CANT, SR_DOWN,
+       SR_WONT, SR_NO_GOODS, SR_POOR, SR_BROKE, SR_SPURNED };   /* (The market's, 2026-11-02: it won't trade with the
+                                                **   character, it has no such thing to sell, the character hasn't
+                                                **   the money, it hasn't, it takes offence at the haggling) */
                                                 /* A sway's result: done (a test's: grade, was, now), none such in
                                                 **   sight, too far (an animal's out of reach), no tongue in common,
                                                 **   an animal (words don't reach it), mindless, as far as that way
@@ -1073,8 +1183,18 @@ struct sway {
     unsigned        t;                          /*   the tenths it took the character */
     unsigned        item, ix, iy;               /* (The UI's: a thing to fetch, its item and where it lies; a gift's
                                                 **   worth in farthings, ix, and 1 if it's food, iy; slice 4.8's) */
-    unsigned char   actor;                      /* (The reply's: the actor it was, plus 1) */
+    unsigned char   actor;                      /* (The reply's: the actor it was, plus 1; the market's request: the
+                                                **   one the goods were found on, plus 1) */
 };
+#define SW_COIN(s)      (((unsigned*) (s)->word2)[0])   /* (The market's, in word2, its words the UI's own: the */
+#define SW_ITS(s)       (((unsigned*) (s)->word2)[1])   /*   character's pennies and the actor's, their counts: */
+#define SW_NCOIN(s)     ((s)->word2[4])                 /*   2026-11-02, the denizens' main RAM's room) */
+#define SW_NITS(s)      ((s)->word2[5])
+#define SW_FCOIN(s)     (((unsigned*) (s)->word2)[3])   /* (And their farthings, a price under a penny's: 2026-11-03) */
+#define SW_FITS(s)      (((unsigned*) (s)->word2)[4])
+#define SW_NFCOIN(s)    ((s)->word2[10])
+#define SW_NFITS(s)     ((s)->word2[11])
+#define SW_FARTHINGS    0x8000                  /* (sw.ix's reply: the price in farthings, not pennies) */
 
 #define IQ_SIZE         16                      /* The UI's intents */
 #define DI_SIZE         8                       /* The denizens' (their actors': hub.h's struct actor) */
@@ -1101,7 +1221,7 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   test_start;                 /* (dq0 -T: the character begins at a way down, for the tests; 2,
                                                 **   -T twice: by the theme's first piece on the top stratum) */
     unsigned char   resume;                     /* A game carried on from its save (the world restores, not begins) */
-    char            savedir[39];                /* The save's folder (dq0 -d), or "" (none) */
+    char            savedir[39];                /* The dungeon's folder in the save's (dq0 -d: life.h's), or "" (none) */
     unsigned char   dice;                       /* (dq0 -R n, the tests': the dice's own offset, the game's seed's the
                                                 **   same: every task's streams mixed with it, the dungeon not) */
     unsigned long   seed;
@@ -1151,6 +1271,10 @@ struct hub {                                    /* Bank 0, at $8000 */
         unsigned char res;
         unsigned char a, b;
     }               wreq;
+    char            dig_name[8];                /* A dig's tool named (its key, "-" a thing that's no tool; "": the best
+                                                **   to hand), the world's from dig_kind as the dig begins, */
+    char            dig_better[8];              /*   a better one to hand than that (told once: 2026-11-03), */
+    unsigned char   dig_kind;                   /*   and the kind named, the UI's ("with the knife": 0 none) */
     char            dig_tool[4][8];             /* A dig's spells' tools, the referee's choices (their keys), in turn */
     unsigned char   dig_wear[4];                /*   and the wear each spell did (E_DIG's b, which: the world runs on */
                                                 /*   ahead of the UI's reading of its events, the turns pace) */
@@ -1185,6 +1309,17 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** the referee says it's fallen, or got up: POS_*) */
     unsigned char   gait;                       /* rs.h's GA_* */
     unsigned char   watch;                      /* WA_* */
+    unsigned char   pc_lump;                    /* (dq0 -J, the tests': the reach in one lump, no steps, things.c's part 85, PL_*) */
+    unsigned        rs_out[2], rs_home[2], rs_place;   /* (The tools a use got out, the world's, part 87's, each where it came from, 0 anywhere;
+                                                **   the place a thing's being put away in: A25's, 2026-11-03) */
+    unsigned char   rs_nout;
+    unsigned char   ropes;                      /* (Ropes in place in the dungeon, the world's: 0, none looked for as a climb starts:
+                                                **   wrope.c's, kept with the game) */
+    unsigned char   rope_in;                    /* (The last two overlays read from their file, dq0w.rop: the world's, as a climb, a dig
+                                                **   or a rope's first wanted them: wrope.c's, the start's time, 2026-11-04) */
+    const char*     ldir;                       /* (The game's lib folder, the world's argument: its own memory) */
+    unsigned char   rlo, rhi;                   /* (The climb's rope's help: the feet above the foot it runs between; rhi 0, none:
+                                                **   dq0w.c's part 97) */
     unsigned char   pc_pos;                     /* POS_* */
     volatile unsigned char pc_going;            /* The pace it's going at plus 1 (0: not moving), | GOING_DARK: by
                                                 **   feel; not moving, GOING_BOLD, a pace said outright in the dark */
@@ -1194,7 +1329,7 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   pc_aim;                     /* Its aim (Z_*) */
     unsigned char   pc_stance;                  /* (The world's: the UI's request, WQ_SET) */
     unsigned char   pc_strike;                  /* What it strikes with (SK_*: the parser's, as it's told: the world's,
-                                                **   from the blow's intent, I_ATTACK's, I_PORTAL's x[1]; SK_THING | a
+                                                **   from the blow's intent, I_ATTACK's, I_PORTAL's x[1]; SK_OF a
                                                 **   kind, a thing; fighting back unbidden, what it holds: RS_WIELD's) */
     unsigned char   pc_shand;                   /*   and the hand that holds it (items.h's IH_*: the world's, the blow's
                                                 **   x[2] if it's said, else its hand that holds one of that kind, the
@@ -1204,7 +1339,11 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** task that works the place uses the true facing, the UI's words, the parser's compass and the map the believed */
     unsigned char   pc_skew;                    /* Eighths of a turn: its believed heading the true one plus this, & 7
                                                 **   (0 for one that knows north: the referee's summary's northsense) */
-    unsigned char   pc_lost;                    /*   and 1 if it knows it's lost its bearings ("facing NE?") */
+    unsigned char   pc_lost;                    /*   and 1 if it knows it's lost its bearings ("facing NE?"): right after
+                                                **   pc_skew, task.c's o_facing_words reads the two at once */
+    unsigned char   pc_sides;                   /* A dark walk's: what its hands found at its last step, left and right
+                                                **   (2 bits each, 0 nothing, 1 a wall, 2 a shut door) and its heading (bits
+                                                **   4-6): E_BEAT's WB_SIDES as they change (2026-11-02) */
     /* The character's time of day believed (DUNGEON.md's the time of day believed; the user's, 2026-10-31: "Timekeeping
     ** should also be a fuzzy thing, unless there is some place where you can actually see outside"): the hour it
     ** believes it is against the true one (the world's clock and the hour the game began), the world's to keep from the
@@ -1240,6 +1379,13 @@ struct hub {                                    /* Bank 0, at $8000 */
         unsigned char told;                     /* The sky's phase last told (SKP_*: 0, none in sight) */
         unsigned char watched;                  /* Minutes it's watched the sky (in sight through a wait) */
         unsigned char how;                      /* What last clouded it (TG_*: TG_HOURS the hours, or a fix since) */
+        unsigned char sun;                      /* The daylight's reach now, squares (0 night; 2 dawn, dusk; 4 day: the
+                                                **   lamps' at the skylights, the windows and the shafts, the senses',
+                                                **   as the true clock has it: part 76's, at the parts' edges) */
+        unsigned char nsky;                     /* The sky's openings near it, as it last moved (part 17's: the emitters */
+        unsigned    skx[SKY_LAMPS], sky_[SKY_LAMPS];    /*   of the daylight falling in: their squares, the senses' lamps) */
+        unsigned char nigh;                     /* The sky's opening it's come by since the last reckoning, SKS_*, as a
+                                                **   move ended or a look went by it (0 none; part 17's) */
     } tb;
     /* The denizens' intents to the world (their actors' bodies': hub.h's the denizens' intents), a ring: written at
     ** di_head (the denizens' task: a full one waited on), read at di_tail as each is carried out (the world: it rings
@@ -1275,12 +1421,21 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned char ui_cmd;              /* The UI's: a line taken and its command in hand (its words not yet
                                                 **   all out): the senses' look gives way to it a while (dq0prompt:
                                                 **   the UI answering at once, the world's answers its) */
+    unsigned char   starting;                   /* The game's still starting (the UI's, till the world's first look):
+                                                **   nothing yet to hear, the sound's naps the longer: the start's
+                                                **   time, 2026-11-03 */
     volatile unsigned char ui_giving;           /* The UI's: a line's command being given, its intents not all sent
                                                 **   (from the line taken till its command's done: a throw's taking
                                                 **   in hand, then the throw).  At the turns pace the world gives no
                                                 **   turn and moves its clock on meanwhile, nor with an intent in its
                                                 **   ring: so the game turns on its commands, not on how the tasks'
                                                 **   timing falls between a command's intents (2026-10-31) */
+    volatile unsigned char ui_eq, ui_dq;        /* The UI's: the world's events and the denizens' it's told and done what
+                                                **   it does about (their counts' low bytes, as a pass of its loop ends: a
+                                                **   question asked of a sound heard, senselessness waited out).  At the
+                                                **   turns pace the world waits for them, the clock and the character's next
+                                                **   step alike: so what the UI does about them falls at the same moment
+                                                **   of the game whatever the tasks' timing (2026-11-04, the life soak's) */
     /* The save folder's region files' versions (world.h's struct vfh: DUNGEON.md's no fixed size), the world's, as it
     ** begins a game and as it keeps one (WQ_SAVE, the save's last step): every file stamped up to vsaved is the last
     ** save's, every one stamped past vbase (this session's floor, the stamps an earlier session may have given at
@@ -1317,6 +1472,7 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** (s_light_now's): what it can draw with, and the map it carries (the senses draw on it, mapping as it goes; the
     ** maker shows its squares drawn) */
     unsigned char   pc_chart;                   /* CH_* */
+    unsigned char   pc_chartk;                  /* (CH_PACKED's: the kind they're in) */
     unsigned        pc_map;                     /*   and its map's item's id (the first map it carries; 0 none), */
     signed char     pc_drawn;                   /*   and how true it's drawing it, mapping as it goes on paper: the
                                                 **   referee's grade (rs.h's G_*: P_DRAW's, asked as it comes into a
@@ -1347,6 +1503,14 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   tested in (0xFF none yet), */
     signed char     pc_qg;                      /*   the grade, */
     unsigned        pc_qat;                     /*   when (tenths, sixteen bits) */
+    unsigned char   pc_hid;                     /* Hidden (the world's: HOUSE.md's hiding oneself, the actor's hid the
+                                                **   same): 0 not; else 1 + its cover's steps */
+    unsigned char   pc_hw;                      /* (The words of it, E_BEAT WB_POSED's HW_*: the thing it's behind, its
+                                                **   kind; who found it, who was spotted, the actor plus 1) */
+    unsigned char   nolurk;                     /* (dq0 -I, the tests', the world's: no robber lies in wait, HOUSE.md's hiding
+                                                **   oneself; only the soak and those with initiative: true play them) */
+    unsigned char   hlook[NACTORS];             /* (Each actor's last look at the one hidden, the denizens': how near it
+                                                **   was, 1 far ... 4 beside it; 0 none yet: a look nearer tested anew) */
     unsigned char   pc_auto;                    /* The auto-target range (the world's, WQ_SET's WS_AUTO, the player's
                                                 **   "autotarget at medium range"): a missile weapon's bands, 1 short
                                                 **   ... 4 extreme, 0 off; fighting on with missiles turns to a hostile
@@ -1400,16 +1564,24 @@ enum { BG_NONE, BG_WATER, BG_WIND, BG_CROWD };  /* (The hub's pc_bg: water, wind
                                                 **   before slice 4.10, the maker's) */
 #define GE_SLANT        0x10                    /* (dq0 -A, the tests': every built stratum's passages on the diagonal,
                                                 **   the maker's, 2026-11-01: ways off the compass, step 3) */
-#define GE_FLAGS        "KWMUA"                 /* (dq0's flags for them, a bit each in order: main.c's) */
+#define GE_CAVERN       0x20                    /* (dq0 -V, the tests': a great cavern in every region of a natural
+                                                **   stratum, its middle by the region's way between strata, the
+                                                **   maker's, slice 4.10's: caves.c's) */
+#define GE_RAMP         0x40                    /* (dq0 -P, the tests': every stairway down a long slope, any style's, every chunk a sloping way,
+                                                **   the maker's, slice 4.10's: plan.c's links_down) */
+#define GE_DIAMOND      0x80                    /* (dq0 -D, the tests': every built stratum's rooms at 45 degrees, the
+                                                **   maker's, ways off the compass, step 3's rest: caves.c's diamonds) */
+#define GE_FLAGS        "KWMUAVPD"             /* (dq0's flags for them, a bit each in order: main.c's) */
 #define CH_DRAW         0x01                    /* (pc_chart's: the things to draw a map with to hand, the catalogue's
                                                 **   by their keys: a sheet (paper, parchment) or its map, a pencil or
                                                 **   charcoal or a quill and ink, and a hand free; HOUSE.md's the map
                                                 **   kept) */
-#define CH_PACKED       0xFE                    /* (Or, not handy, what they're in: its kind times 2, the UI's to tell
+#define CH_PACKED       0x02                    /* (Or, not handy, in something: its kind pc_chartk, the UI's to tell
                                                 **   once, mapping as it goes: HOUSE.md's handy tools, 2026-10-26) */
 #define SN_SEEN         0x01                    /* (dsense's res: the character seen, */
 #define SN_HEARD        0x02                    /*   heard, */
 #define SN_SMELT        0x04                    /*   smelt: slice 4.1's, still air, within its nose's reach) */
+#define SN_LOOK         0x08                    /* (Hidden: it would see it, but for that: its look's test the mind's) */
 #define WA_TRAPS        0x01                    /* Searching as it goes: traps underfoot, hidden doors beside */
 #define WA_LISTEN       0x02                    /* Listening as it goes */
 #define WA_MAP          0x04                    /* Mapping as it goes (the map's side the orientation's: its
@@ -1423,6 +1595,14 @@ enum { POS_STANDING, POS_PRONE, POS_CROUCHED, POS_KNEELING, POS_SITTING };   /* 
                                                 **   sitting the player's, slice 4.6's: a low walk crouched, up first
                                                 **   from the others; kneeling and sitting, prone in a fight) */
 #define POS_LOW(p)      ((p) == POS_PRONE || (p) >= POS_KNEELING)   /* (Prone in a fight: the house's) */
+#define POS_HIDE        0x40                    /* (I_RISE's w1, | one of HD_*: hiding oneself, HOUSE.md's, not a position:
+                                                **   every actor's by the one code) */
+enum { HD_IN, HD_OUT, HD_SPOT, HD_FOUND };      /* (Hidden; out of hiding; it's spotted by the character; it finds the
+                                                **   character hidden) */
+#define HW_WORDS        0xC000                  /* (E_BEAT WB_POSED's w, its high two bits both: the words of hiding, HW_* times 256) */
+enum { HW_BEHIND, HW_HEAP, HW_DOORWAY, HW_RUBBLE, HW_SHADOW, HW_OUT, HW_OPEN, HW_FOUND, HW_SPOT, HW_LEAP, HW_STRIKE, HW_ALREADY,
+    HW_LIGHT, HW_SEEN, HW_BARE };               /* (The hub's pc_hw says of what: HW_BEHIND, HW_HEAP its kind; HW_FOUND, HW_SPOT, HW_LEAP,
+                                                **   HW_SEEN the actor plus 1) */
 
 enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY };      /* The look's kinds: a look about; the denizens seen looked at again;
                                                 **   the eyes only, as time's gone (the lights seen far off: a wait's);
@@ -1434,8 +1614,12 @@ enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY };      /* The look's kinds: a look abo
 struct uirec {
     char            map[MAP_H][MAP_W + 1];      /* The map's rows (the maker's, as the UI asks: mapq; maplay their
                                                 **   squares' layers) */
-    char            things_text[400];           /* The things' words for the UI (what's carried: ireq's reply), and
+    char            things_text[800];           /* The things' words for the UI (what's carried: ireq's reply; said in pieces
+                                                **   of lb's size, list_say's: a soldier's kit runs past 400), and
                                                 **   the UI's to the things (dq0 -k's: the things more) */
+    unsigned        before[SEE_ITEMS + SEE_DENS];   /* What it saw as the command began (resolve.c's): the things' numbers,
+                                                **   the denizens' first letters; a walk over for it tells only what's
+                                                **   new (way.c's, 2026-11-02) */
     struct cmd      kept;                       /* A command whose thing was out of reach, kept while the character
                                                 **   walks over to it (the UI's reach_go) */
     struct tread    tread;                      /* The traces read (I_TRACE's reply: the world's), */
@@ -1471,6 +1655,7 @@ struct wrec {
 struct wsave {
     unsigned        magic;
     unsigned char   version;                    /* (2: the bearings, slice 4.2's; 4: the time believed, tb) */
+    unsigned char   hid;                        /* Hidden (the hub's pc_hid) */
     unsigned char   sn, face, pos;              /* The character's place (its stratum, its facing, its body's
                                                 **   position), */
     unsigned        x, y;                       /*   its square, */
@@ -1481,6 +1666,7 @@ struct wsave {
     unsigned char   skew, lost;                 /* the character's bearings (the hub's pc_skew, pc_lost: slice 4.2's); */
     unsigned        hunger, thirst;             /* its hunger and thirst, the meals left of its ration (slice 4.9's); */
     unsigned char   meals;
+    unsigned char   ropes;                      /* the ropes in place (the hub's ropes); */
     struct tbelief  tb;                         /* the time of day it believes (the hub's tb: 2026-10-31) */
 };
 
@@ -1530,6 +1716,7 @@ struct wsave {
 **   own hub.hold world
 **   own hub.quit world
 **   own hub.pace world
+**   own hub.pc_lump ui                                         (dq0 -J, the tests's: the reach in one lump)
 **   own hub.test_start ui                                      (The game's start: dq0's arguments)
 **   own hub.resume ui
 **   own hub.savedir ui
@@ -1545,6 +1732,7 @@ struct wsave {
 **   own hub.pc_lamp world
 **   own hub.pc_fuel world                                      (Its light's minutes left: slice 4.1's)
 **   own hub.pc_left world
+**   own hub.pc_chartk world                                    (What the things to draw with are in)
 **   own hub.pc_chart world                                     (Its map making, by what it carries: slice 4.2's)
 **   own hub.pc_map world
 **   own hub.pc_drawn world
@@ -1560,6 +1748,9 @@ struct wsave {
 **   own hub.ireq world +ui                                     (The UI's requests of the things)
 **   own hub.stock world +senses                                (The senses' request: a chunk's things put down)
 **   own hub.pview world                                        (A portal looked at closely: the UI's wreq's)
+**   own hub.dig_name world
+**   own hub.dig_better world
+**   own hub.dig_kind ui
 **   own hub.dig_tool world
 **   own hub.dig_wear world
 **   own hub.dig_t world
@@ -1601,6 +1792,15 @@ struct wsave {
 **   own hub.way_open world                                     (The puzzle's: the world's, by the theme's rules)
 **   own hub.sway denizens +ui
 **   own hub.gait world                                         (The character's state: the world's, WQ_SET)
+**   own hub.rs_out world                                       (The tools a use got out, part 87's, 90's: 2026-11-03)
+**   own hub.rs_home world
+**   own hub.rs_place world
+**   own hub.rs_nout world
+**   own hub.ropes world
+**   own hub.rope_in world
+**   own hub.ldir world
+**   own hub.rlo world
+**   own hub.rhi world
 **   own hub.watch world
 **   own hub.pc_pos world                                       (Its body's position: the world's, as the referee says)
 **   own hub.pc_going world
@@ -1612,6 +1812,7 @@ struct wsave {
 **   own hub.pc_shand world
 **   own hub.pc_skew world                                      (Its bearings: the world's, by the referee's tests)
 **   own hub.pc_lost world
+**   own hub.pc_sides world                                     (What a dark walk's felt either side, its beats' WB_SIDES)
 **   own hub.tb world                                           (The time of day it believes: the world's, 2026-10-31)
 **   own hub.di_head denizens                                   (The denizens' intents: their ring)
 **   own hub.di denizens
@@ -1619,7 +1820,10 @@ struct wsave {
 **   own hub.den_go world                                       (The denizens' turn: the turns pace's)
 **   own hub.dsense senses +denizens                            (An actor's senses: the denizens' request)
 **   own hub.ui_cmd ui                                          (A command in hand: the look and the minds give way)
+**   own hub.starting ui +world                                 (The game's start: the sound naps)
 **   own hub.ui_giving ui                                       (A command being given: the turns pace waits)
+**   own hub.ui_eq ui                                           (The events it's seen to: the turns pace waits)
+**   own hub.ui_dq ui                                           (And the denizens')
 **   own hub.vsaved world                                       (The region files' versions: the world's, as it
 **   own hub.vbase world                                        (begins and keeps a game)
 **   own hub.vlo world
@@ -1635,6 +1839,10 @@ struct wsave {
 **   own hub.pc_clank world                                     (The character's armour, its creep's Stealth: the
 **   own hub.pc_qp world                                        (world's, slice 4.6's)
 **   own hub.pc_qg world
+**   own hub.pc_hid world                                       (Hiding oneself: 2026-11-04)
+**   own hub.pc_hw world
+**   own hub.nolurk world
+**   own hub.hlook denizens +world                              (Its looks the minds', cleared as it hides)
 **   own hub.pc_qat world
 **   own hub.pc_hunger referee +world                           (Hunger and thirst, the referee's, the world's to
 **   own hub.pc_thirst referee +world                           (  keep with the game, world.dat: slice 4.9's)

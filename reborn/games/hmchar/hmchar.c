@@ -380,6 +380,9 @@ static unsigned char __fastcall__ species (const char* w)
 
 static char exppath[56], bppath[56];
 
+static const char* const second[6] = { "Sage/Tutor", "Scribe", "Innkeeper", "Litigant", "Mercantyler", "Herald" };
+static const char* const tongue2[8] = { "khuzdul", "sindarin", "khuzdul", "sindarin", "khuzdul", "gargun", "gargun", "kobold" };
+
 /* The family's wealth (Character 17: by its class, poor, average or rich; the GM's to choose, the book says): rolled
 ** (the user's, DECISIONS.md's outfits, answer 2: a quarter poor, half average, a quarter rich, an outcast or an
 ** unpopular child a tenth the poorer, a favourite a tenth the richer, the house's), last of all, so the rest of the
@@ -411,7 +414,7 @@ int main (int argc, char* argv[])
 {
     static char path[64], line[48];
     const char* out = 0;
-    unsigned char i, sp = 0xFF;
+    unsigned char i, j, sp = 0xFF;
     struct bank_fn *occ, *cul;
     char* e;
     int fd;
@@ -507,6 +510,17 @@ int main (int argc, char* argv[])
                                                 **   the character's dice fall as they did; the book has none, the
                                                 **   house's, 2026-10-31: Dingus Quest Zero's time of day believed) */
         harn_write_line (fd, "timesense");
+    }
+    for (j = 0; j < 6; ++j) {                   /* (Those the book's table gives a 2nd Language, Character 15: which one
+                                                **   the house's, by its region and the game's peoples' tongues; at the book's
+                                                **   mastery for an alien family's, its skill base once, Skills 11; rolled after
+                                                **   the rest: the user's, 2026-11-03) */
+        if (!strcmp (occname, second[j])) {
+            strcpy (line, "language ");
+            strcat (line, tongue2[(h.culture & 3) * 2 + (name[0] & 1)]);
+            strcat (line, "=");
+            harn_write_line (fd, strcat (line, utoa (harn_get_sb (&h, HARN_LAN), line + 40, 10)));
+        }
     }
     close (fd);
     if (i) {

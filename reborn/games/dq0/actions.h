@@ -36,6 +36,10 @@ enum {
                                                 **   slice 4.7's) */
     VB_META_TIME,                               /* (The time of day as the character believes it: "time", "what time
                                                 **   is it", 2026-10-31) */
+    VB_TRADE,                                   /* (The market and entertaining: "buy the rope from the dwarf", "sell my
+                                                **   dagger", "how much for the lantern", "haggle for the rope", "sing to
+                                                **   the dwarf": its aux the sway's SW_*, 2026-11-02) */
+    VB_TIE_OBJECT, VB_UNTIE_OBJECT,             /* (A rope tied off and let down, untied; a sack's tie: 2026-11-04) */
     NACTIONS
 };
 

@@ -16,6 +16,7 @@
 #include <string.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
+#include "hub0.h"
 #include "world.h"
 #include "things.h"
 #include "wbody.h"
@@ -26,6 +27,7 @@
 
 static unsigned char fring;                     /* (The fights' ring's next) */
 struct mshot mshot;                             /* (wbody.h's: a blow's missile, wshoot.c's) */
+extern unsigned char pc_cut;                    /* (work.h's) */
 extern unsigned char pshoot;                    /* (wshoot.c's: the character's fight a missile's) */
 #pragma bss-name (push, "SW15RODATA")
 static char wb[32];                             /* (A blow's words on their way to the ring, a piece at a time: part
@@ -48,7 +50,10 @@ static void __fastcall__ told (unsigned char att, unsigned char def, unsigned ch
     hub_map (0);
     if (!def) {
         pc_hit = 1;
-        fwant |= 1;                             /* (A hostile one fought, fighting on's, as the character's free) */
+        if (HUB->pc_pos != POS_PRONE || (HUB->pcsum.limbs & (LB_LEG_L | LB_LEG_R)) != (LB_LEG_L | LB_LEG_R)) {
+            fwant |= 1;                         /* (A hostile one fought, fighting on's, as the character's free; but not
+                                                **   one down with no leg to stand on: no blow to come, its word said) */
+        }
         flast = att;
     }
     bev.kind = E_FIGHT;
@@ -143,12 +148,22 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
                                                 **   denizens' field and bonds, rs.h's RS_HEART) */
     pa = me == att ? bd.pos : HUB->pc_pos;     /* (Their bodies' positions, the world's: prone, the easier struck) */
     pd = me == att ? HUB->pc_pos : bd.pos;
-    r->w2 = bd.timid | (POS_LOW (pa) ? RS_PRONE_A : 0) | (POS_LOW (pd) ? RS_PRONE_D : 0) | (ra ? RS_REARM : 0);
+    r->w2 = bd.timid | (POS_LOW (pa) ? RS_PRONE_A : 0) | (POS_LOW (pd) ? RS_PRONE_D : 0) | (ra ? RS_REARM : 0) |
+        ((me != att ? bd.doing == DO_SLEEP || (HUB->pc_hid && DO_UNAWARE (bd.doing)) : bd.state > 1) ? RS_ASLEEP : 0);
+                                                /* (A sleeper struck at: no defence, the book's Ignore, 2026-11-02; and
+                                                **   one that hasn't seen a blow from hiding coming, 2026-11-04) */
     if (mshot.kind) {                           /* (A missile's, shot or thrown: wshoot.c's, slice 4.7's) */
+        if (mshot.flags & MS_HARD) {
+            r->steps -= 2;
+        }
         r->c = mshot.kind;
         r->b = mshot.band;
         r->w2 = (r->w2 | RS_MISSILE | mshot.flags) & (mshot.flags & MS_STRAY ? ~RS_PRONE_A : 0xFFFF);  /* (A stray's
                                                 **   strike no shooter's: nobody gets up for it) */
+    }
+    if (HUB->pc_hid || bd.state > 1) {
+        hid_op (me == att ? HO_BLOW : HO_BLOWN);   /* (Out of hiding: part 94's) */
+        hub_map (0);
     }
     r = hub_ask (SLOT_WORLD);
     if ((out = r->result) == 0xFF) {
@@ -164,7 +179,20 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
                                                 **   a: the limbs' news, no blow's record, slice 4.1b's) */
         if (r->a) {
             r->state = REQ_FREE;
-            limb_news (WB_NOT_UP, att);
+            if (!att && (HUB->pcsum.limbs & (LB_LEG_L | LB_LEG_R)) == (LB_LEG_L | LB_LEG_R)) {
+                limb_news (WB_NOT_UP | 0x100, 0);   /* (The character, no leg to stand on: no blow to come, a prone one's
+                                                **   round its getting up.  Its fight over, its round out, the player's to
+                                                **   say what next: a crawl, a throw; 2026-11-04) */
+                pc_cut = 1;
+                return 0;
+            }
+            if (me != att || !(bd.move & BM_NOT_UP)) {   /* (A creature's told once as it lies there: the round's
+                                                **   spent every time, its words not; 2026-11-02) */
+                limb_news (WB_NOT_UP, att);
+            }
+            if (me == att) {
+                bd.move |= BM_NOT_UP;
+            }
             return 0;
         }
         pa = POS_STANDING;
@@ -174,9 +202,9 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     for (cd = dh = i = 0, e = (const struct rs_effect*) r->x; i < RS_EFFECTS && e->kind; ++i, ++e) {
         if (e->kind == X_DROP) {
             if (e->target) {
-                cd = 1;                         /* (The creature's weapon let fall: part 51's) */
+                cd = 1 + e->x[1];               /* (The creature's weapon let fall: part 51's; broken, x[1]: 1 its weapon, 2 its shield) */
             } else {
-                dh |= e->x[0];                  /* (The character's hands' things let go of, fumbled: slice 4.1b's) */
+                dh |= e->x[0];                  /* (The character's hands' things let go of, fumbled: slice 4.1b's; | 0x80 broken) */
             }
         }
         if (e->kind == X_WOUND && e->target == me) {
@@ -192,6 +220,9 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         }
     }
     HUB->pc_pos = me == att ? pd : pa;
+    if (bd.pos != (me == att ? pa : pd)) {
+        bd.move &= ~BM_NOT_UP;                  /* (Risen, or fallen: its next failed try told) */
+    }
     bd.pos = me == att ? pa : pd;
     if (cd) {
         den_word (r->text, !att);               /* (Its weapon's word, the reply's: part 51's) */
@@ -255,7 +286,8 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         drop_held (dh, 1);                      /* (Told after the blow, in the denizens' ring) */
     }
     if (cd) {
-        den_drop ();                            /* (Its weapon on the floor, told: part 51's) */
+        look_more (0, LM_ROPES);                      /* (Part 91 read in, the first time: things.c's) */
+        den_drop (cd - 1);                            /* (Its weapon on the floor, told: part 51's) */
     }
     if (ff & (me == att ? FF_A_DEAD : FF_D_DEAD)) {
         died ();
@@ -294,6 +326,10 @@ void s_bled (void)
 ** AIM_SHOT, part 65's (slice 4.7's) */
 void __fastcall__ s_den_blow (unsigned char def, unsigned char z)
 {
+    hub_map (0);
+    if (!def && ((unsigned char) HUB->pcsum.cond & C_DEAD)) {
+        return;                                 /* (The character dead of a blow this round: no more blows at its body) */
+    }
     if (z & AIM_SHOT) {
         pc_shot (PS_DEN);                       /* (Its shot or its throw: part 67's, 2026-10-30) */
         return;
@@ -397,7 +433,7 @@ void __fastcall__ s_den_rob (const struct msg* q)
     for (n = 0, i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
         kind = ip->kind;
         f = ip->flags;
-        if (!mine () || (kind != KI_PENNIES && ((f & (I_HELD | I_LIT)) != I_HELD))) {
+        if (!mine () || (kind != KI_PENNIES && kind != KI_FARTHINGS && kind != KI_CROWNS && ((f & (I_HELD | I_LIT)) != I_HELD))) {
             continue;
         }
         reach_from (i);                         /* (Its reach, the robber's: HOUSE.md's, every actor's) */

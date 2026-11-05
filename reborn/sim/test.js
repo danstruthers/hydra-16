@@ -173,6 +173,17 @@ function initiativeOf(t) {
   } });
 }
 for (const t of tests) if (/^dq0/.test(t.name) && !t.initiative) initiativeOf(t);
+// And with -J (the reach in one lump, untold: the tests' games as they were before its steps, 2026-11-02), but in the
+// tests of them, those with reach: true (the soak plays them)
+function reachOf(t) {
+  const d = Object.getOwnPropertyDescriptor(t, 'machine');
+  Object.defineProperty(t, 'machine', { configurable: true, enumerable: true, get() {
+    const m = d ? (d.get ? d.get.call(this) : d.value) : {};
+    if (typeof m.input !== 'string') return m;
+    return Object.assign({}, m, { input: m.input.replace(/(\u0101dq0(?: [^\r]*)?)\r/g, '$1 -J\r') });
+  } });
+}
+for (const t of tests) if (/^dq0/.test(t.name) && !t.reach) reachOf(t);
 // And with -N (the character's bearings never tested, as one that knows north's: slice 4.2's, the tests' compass words
 // going where they went), but in the tests of them, those with bearings: true
 function bearingsOf(t) {
@@ -195,6 +206,28 @@ function kitOf(t) {
   } });
 }
 for (const t of tests) if (/^dq0/.test(t.name) && !t.outfit) kitOf(t);
+// And with -F (the outfit as it's drawn, unfitted to the character's strength: HOUSE.md's an outfit that fits, 2026-11-03: their
+// games as they were), but in the tests of it, those with fit: true (the soak plays it)
+function fitOf(t) {
+  const d = Object.getOwnPropertyDescriptor(t, 'machine');
+  Object.defineProperty(t, 'machine', { configurable: true, enumerable: true, get() {
+    const m = d ? (d.get ? d.get.call(this) : d.value) : {};
+    if (typeof m.input !== 'string') return m;
+    return Object.assign({}, m, { input: m.input.replace(/(\u0101dq0(?: [^\r]*)?)\r/g, '$1 -F\r') });
+  } });
+}
+for (const t of tests) if (/^dq0/.test(t.name) && !t.fit) fitOf(t);
+// And with -E (the game begins at dusk, not at its seed's hour: 2026-11-03, the user's "vary by game": their games as they were), but
+// in the tests of it, those with hours: true (the soak plays it)
+function duskOf(t) {
+  const d = Object.getOwnPropertyDescriptor(t, 'machine');
+  Object.defineProperty(t, 'machine', { configurable: true, enumerable: true, get() {
+    const m = d ? (d.get ? d.get.call(this) : d.value) : {};
+    if (typeof m.input !== 'string') return m;
+    return Object.assign({}, m, { input: m.input.replace(/(\u0101dq0(?: [^\r]*)?)\r/g, '$1 -E\r') });
+  } });
+}
+for (const t of tests) if (/^dq0/.test(t.name) && !t.hours) duskOf(t);
 // DQ0_ROLLS=N: every dq0 line typed with -R N (the dice's own offset: the same dungeon, other rolls), to find again
 // the rolls a test was written for when the dice change (the dice by who asks, 2026-10-30); a test's own -R kept.
 // DQ0_ROLLS=A-B: each dq0 test once more for each N from A to B, named NAME@N (node sim/test.js dq0cmd@1 dq0cmd@2 ...)

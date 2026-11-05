@@ -25,12 +25,12 @@ struct material {
 };
 
 /* A kind of thing (the catalogue's: a stand-in for the theme's data), in rs.h's units */
-#define NKINDS          144                     /* (In a bank of their own, the hub's KIND_BANK: 144 x 37
-                                                **   bytes; a kind's number kept in seven bits in places, a thing struck
-                                                **   with's, a light's: rs.h's SK_THING, E_TASK's; so the kinds from 128
-                                                **   on, past the theme's (theme.h's KI_THEME, 120 to 127), are none of
-                                                **   those: belongings and valuables, never lit, never a striker, KI_HIGH
-                                                **   on: 2026-10-27, the denizens' belongings) */
+#define NKINDS          206                     /* (In a bank of their own, the hub's KIND_BANK: 206 x 37 bytes, their
+                                                **   words after them, the outfits' list at its top, outfit.h's: room
+                                                **   for no more; 2026-11-03, 150 of them used.  A kind's number a whole
+                                                **   byte everywhere (the striker's rs.h's SK_OF, a long task's what's top
+                                                **   bit the UI's what_hi, an actor's arm, a light's and a pack's
+                                                **   E_TASK): 252 at most by SK_OF, 255 by the records' byte) */
 struct kind {
     char            name[14];                   /* "torch", "backpack" ... */
     unsigned char   flags;                      /* K_* */
@@ -128,8 +128,7 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_CROWBAR, KI_BANDAGES, KI_LETTER, KI_RING, KI_GRAPPLE, KI_HAMMER, KI_HERBS, KI_VIAL,   /*   tools and
                                                 **   belongings */
     KI_OWN_END,                                 /* (The theme's eight next: theme.h's KI_THEME, 120) */
-    KI_HIGH = 128,                              /* (The kinds past the theme's, from 128: never lit nor struck with,
-                                                **   NKINDS's) */
+    KI_HIGH = 128,                              /* (The kinds past the theme's, from 128) */
     KI_FURS = KI_HIGH, KI_BLANKET, KI_CASK,     /* The denizens' belongings (2026-10-27: a bed's, a store's) */
     KI_CROWNS, KI_BROOCH, KI_NECKLACE, KI_PENDANT, KI_GOBLET, KI_GEM, KI_TALISMAN, KI_DICE,  /*   and valuables (a
                                                 **   jewel's or a plate's worth its kind's for silver: HOUSE.md's worth
@@ -139,14 +138,45 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_MANKAR, KI_MANG,                         /* The Gargun's weapons (Combat 3's (G): Phase 4's peoples, 2026-10-29;
                                                 **   past the theme's, the own kinds' room full: struck with as the
                                                 **   best held, never named as the striker) */
+    KI_WHETSTONE,                               /* (A blade's edge renewed: HOUSE.md's every use of a tool, 2026-11-02) */
+    KI_ANTIDOTE, KI_REMEDY,                     /* (The remedies, 2026-11-02: an antidote, a theriac against poisons
+                                                **   and venoms; a remedy, a physician's draught against a disease;
+                                                **   drunk, their keys the things' IO_USE's: HOUSE.md's remedies) */
+    KI_WRECK,                                   /* (A weapon broken, its pieces useless: HOUSE.md's, the book's Weapon Damage, 2026-11-03) */
+    KI_STONE_CHISEL, KI_WOOD_CHISEL, KI_MATTOCK, KI_SPADE,  /* (Tools, 2026-11-03: a stone chisel as a chisel is, a wood
+                                                **   chisel no use on stone, a mattock and a spade for earth: HOUSE.md's
+                                                **   digging) */
+    KI_SPIKE, KI_DRIVEN, KI_MOOR, KI_POST, KI_TIED, KI_HUNG,  /* (Rope and grapples, 2026-11-04, the user's A16: HOUSE.md's: an
+                                                **   iron spike, the same driven in for good; a ring in the wall, a
+                                                **   post, fixed where they stand, a rope's to tie to; a rope in place,
+                                                **   its top's and its foot's: dq0w/wrope.c) */
     KI_COUNT };
+#define ROPE_FEET       50                      /* (A coil's length: the house's) */
+#define IO_ROPE         0x20                    /* (IO_HIDE's to: a rope's work, RP_* in its low bits: wrope.c's) */
+#define RP_OP           0x03
+enum { RP_TIE, RP_UNTIE, RP_THROW };
+enum { RK_SHAFT = 1, RK_LEDGE, RK_PIT, RK_SKY };    /* (A rope in place's fuel, the low four bits: what it goes down) */
+#define RK_HOW          0x0F
+#define RK_SLIP         0x80                    /* (Its grapple's to give as a climber's weight comes on it) */
+#define RA_LOOK         0x4000                  /* (The rope stub's: wrope.c's s_rope) */
+#define RA_LOOSE        0x8000
+#define RA_JOIN         0x4000                  /* (rope3's: wrope3.c's s_rope3) */
+#define RA_GONE         0x8000
+#define RA_SCAN         0x2000
+#define RA_HANG         0x1000
 
+#define GODS_AT         ((const char*) (CATALOGUE + NKINDS - 2) + 1)    /* (The world's deities' names, 0-ended, spaces between,
+                                                **   in the last two kinds' records, none (a first 0, their empty name):
+                                                **   dq0w/make.js's, for the UI's words for the parser, 2026-11-04) */
 #define KIND_WORDS      ((const char*) (CATALOGUE + NKINDS))     /* (In the kinds' bank after them: the words of
                                                 **   their names, each once, a space after each, a 0 after all: the
                                                 **   build's, dq0w/make.js's, for the command parser) */
 
 /* An item */
 #define NITEMS          (ITEM_BANKS * (0x2000 / sizeof (struct item)))
+#define WV_LIGHT        1                       /* (A weapon's version, its item's size: light, a quarter lighter; */
+#define WV_HEAVY        2                       /*   heavy, a quarter heavier; 0 average: the book's custom weapons,
+                                                **   Combat 3; D13's, slice 4.4's) */
 struct item {
     unsigned char   kind;                       /* 0: a free record; else the catalogue's (1 on) */
     unsigned char   flags;                      /* I_* */
@@ -169,7 +199,8 @@ struct item {
     unsigned        dur, dur_max;               /* Its durability: the harm it can take before it breaks, what's
                                                 **   left (its most by its quality, its material, its weight) */
     unsigned char   size;                       /* Its measure, where it matters (a portal's part's: its portal's
-                                                **   opening, world.h's: feet, its width the low four bits; or 0) */
+                                                **   opening, world.h's: feet, its width the low four bits; or 0; a
+                                                **   weapon's version, WV_*) */
     unsigned char   thick;                      /*   and its thickness, in eighths of an inch (or 0) */
     unsigned        fuel;                       /* A light's burning left, minutes (0: burnt out; or not its own yet,
                                                 **   its life decided as it's made its own), the world's as it burns
@@ -187,6 +218,7 @@ struct item {
 #define IS_CLOSED       0x01                    /* Closed (its lid down, its tie tied, its stopper in): nothing put in
                                                 **   or taken out, nothing in it seen */
 #define IS_LOCKED       0x02                    /* Locked (picked, or forced: P_PICKLOCK, P_FORCE) */
+#define IS_SPENT        0x10                    /* (A fire-maker found empty: it knows, refused at once from now on) */
 #define IS_LOCK         0x04                    /* It has a lock (a chest's: its lid's) */
 #define IS_NOCKED       0x08                    /* (A launcher's: loaded, its missile set to it, an arrow nocked, a
                                                 **   crossbow spanned and its bolt in it: slice 4.7's) */
@@ -305,6 +337,23 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   thing's kind: the UI's to word and wait as a long task), then its
                                                 **   test made and its outcome told as it's done (to | IO_DONE: the
                                                 **   UI's again as its time's up, not stopped) */
+#define PL_NOSTEPS      1                       /* (hub.pc_lump: dq0 -J's; a run on one line, more things to come, the pack left off;
+                                                **   its pack told off and on already, the rest of the line by the lump) */
+#define PL_MORE         2
+#define PL_TOLD         4
+#define PL_NOFACE        32                     /* (dq0 -I, the tests': no test of courage on facing the character, no weapon broken, their games as they were: 2026-11-03) */
+#define PL_DUSK         16                      /* (dq0 -E, the tests': the game begins at dusk, not at the seed's hour: their games as they were) */
+#define PL_NOFIT        8                       /* (dq0 -F, the tests': the outfit as it's drawn, unfitted to its strength) */
+#define IO_STEPS        0x40                    /* (A request's kind |: the UI goes by the reach's steps, a step's reply
+                                                **   IO_STEP's; HOUSE.md's, part 82's) */
+#define IO_CUT          0x3E                    /* (The reach's steps stopped, between two of them: the UI's, a stop told as
+                                                **   nothing to stop, its reach 5, part 19's) */
+#define IO_STEP         0x3F                    /* (The reply's kind: a step of the reach begun, result IR_NO, no words;
+                                                **   its long task's kind in qty, its thing's kind in item, its time in
+                                                **   x: the UI's first words, its wait, the command kept and asked again
+                                                **   as it's up: main.c's reach 5.  qty 0: a grope failed, the things'
+                                                **   words, x the round wasted) */
+#define IO_SHARP        0x40                    /* (IO_FILL's to: said as sharpening, "sharpen the torch": a light's no edge) */
 #define IO_DONE         0x80                    /* (IO_HIDE's too: a thing hidden a minute's work, begun, x its time,
                                                 **   qty LT_HIDE, item its kind; done, its hiding in qty) */
 #define IO_INSIDE       (IO_BAR + 8)            /* What's in a thing, or on it (name: carried, or seen within reach; a
@@ -343,8 +392,9 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   the character carries, for a gift: IO_DESCRIBE's reply (its worth
                                                 **   in value, a unit's, the appraisal's; its qty, its craft), its item
                                                 **   in item; IR_NONE none */
-enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS };   /* (IO_LOOK's: a look at it; a closer look; its
-                                                **   condition; its weight; its lock; gone over for traps) */
+enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS, LM_KIT, LM_GO, LM_ROPES };   /* (IO_LOOK's: a look at it; a closer look; its
+                                                **   condition; its weight; its lock; gone over for traps; LM_KIT the
+                                                **   world's own, the character's things kept, kit.dat: slice 4.4's; LM_GO, gone to, walking there) */
 #define IO_PUZZLE       (IO_BAR + 4)           /* A command of the theme's puzzle's (theme.h), judged by its rules
                                                 **   (the world's): to its verb (TR_*), name the thing (into the other:
                                                 **   combine name with into, put name on into; read name; use name on
@@ -386,6 +436,7 @@ struct sthing {
     unsigned char   make;                       /* A portal's part's: its material (MT_*) times 16, and its quality */
     unsigned char   size;                       /*   and its size (its portal's opening, a bar's its width) */
 };
+#define KEY_BOX         0xFF                    /* (A key's make, the maker's: fits the chest last before it in the list) */
 #define ST_SHOWN        0xFF
 #define ST_PORTAL       0xFE
 #define ST_IN           0xFD                    /* (In the thing listed before it, on it: a sconce's torch, cold; */

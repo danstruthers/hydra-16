@@ -849,9 +849,11 @@ each:       ldx         wi              ; Each word after the verb
             jmp         next
 :           cmp         #S_BACK
             jeq         next
-:           ldy         #C_HOW          ; How: up to it, through it
+:           ldy         #C_HOW          ; How: up to it, through it (the first said: "go through the door to the east")
             jsr         get
             beq         :+
+            ldx         cm_cmd + CM_HOW
+            jne         next
             sta         cm_cmd + CM_HOW
             jmp         next
 :           lda         spc             ; "half", "around"

@@ -56,4 +56,6 @@ lock     | The way out is shut fast. Whatever opens it is somewhere below.  The 
 opened   | The bronze doors stand open on the marsh: go up to leave.
 ending   | escaped | You climb out into the reeds and the grey light over the marsh.  Behind you the Drowned Temple
            sinks back into the water.  You have escaped.
+wayout   | 2
+ending   | left | You climb out into the reeds and the grey light over the marsh, the Mother's doors still sealed.
 ending   | died | The water closes over you, and the Mother has one more of her own.

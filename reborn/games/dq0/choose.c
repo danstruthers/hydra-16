@@ -35,8 +35,8 @@ static const char* const relname[8] = {
     "behind you to your left", "to your left", "ahead to your left"
 };
 
-static const char* const thing[] = { "", "door", "way on", "stairs", "ladder", "shaft", "ledge", "way out", "wall",
-    "window", "trap", "portcullis", "room", "corner", "pillar" };
+static const char* const thing[] = { "", "door", "passage", "stairway", "ladder", "shaft", "ledge", "way out", "wall",
+    "window", "trap", "portcullis", "exit", "corner", "pillar" };   /* (OB_ROOM's: leaving it, way.c's) */
 
 static struct cmd* cur = 0;                     /* The command being carried out (main.c's: choose's) */
 static struct cmd kept = { 0 };                 /* The command a choice was asked for, */
@@ -101,7 +101,9 @@ static void __fastcall__ named (unsigned char k, unsigned char n)
             "window" : s->door[i].kind == PK_SLIT ? "arrow slit" : s->door[i].parts & SD_DOUBLE ? "double door" : "door";
     } else {
         r = s->open[i - s->ndoors].rel;
-        w = open[s->open[i - s->ndoors].kind & 7];
+        w = s->open[i - s->ndoors].kind & 8 ? (s->open[i - s->ndoors].kind & 15) == O_SKYLIGHT ? "skylight" :
+            (s->open[i - s->ndoors].kind & 15) == O_SKYSHAFT ? "shaft overhead" : open[s->open[i - s->ndoors].kind & 7] :
+            open[s->open[i - s->ndoors].kind & 7];
     }
     add (k && w == first ? "one" : w);           /* ("the door ..., the one ...") */
     first = k ? first : w;
@@ -122,7 +124,8 @@ static void __fastcall__ named (unsigned char k, unsigned char n)
     }
     if (i < s->ndoors && !(r & MOUTH)) {
         add (st == DOORWAY ? " (a doorway)" : st & PS_WRECKED ? " (broken down)" : s->door[i].kind == PK_PORTCULLIS ?
-             (st & PS_OPEN ? " (raised)" : " (down)") : st & PS_OPEN ? " (open)" : " (closed)");
+             (st & PS_OPEN ? " (raised)" : " (down)") : st & PS_OPEN ? " (open)" : st & PS_BARRED_ ? " (closed, barred)" :
+             st & PS_LOCKED_ ? " (closed, locked)" : " (closed)");
     }
 }
 
@@ -148,19 +151,45 @@ static void __fastcall__ sort (unsigned char n)
     }
 }
 
+/* Square dx, dy off not on the side of heading h */
+static unsigned char toward (int dx, int dy, unsigned char h)
+{
+    return dx * head_x[h] + dy * head_y[h] <= 0;
+}
+
+/* Those it remembers (KNOWN_REL, after the n it sees of the m in the record, sz apart, the first's rel at p) made as
+** those it sees, in the copy: their number and those it sees */
+static unsigned char known (unsigned char* p, unsigned char n, unsigned char m, unsigned char sz)
+{
+    for (p += n * sz; n < m && (*p & KNOWN_REL); ++n, p += sz) {
+        if (*p != 0xFF) {
+            *p &= ~KNOWN_REL;
+        }
+    }
+    return n;
+}
+
 unsigned char __fastcall__ o_pick (unsigned char obj, unsigned char orel)
 {
     struct sight* s = &sight_copy;
-    unsigned char i, k, h, r, n = 0, how = obj & (PICK_TELL | PICK_ANY), best = 0xFF, bd = 0xFF;
+    unsigned char i, k, h, r, n = 0, how = obj & (PICK_TELL | PICK_ANY), best = 0xFF, bd = 0xFF, fit = 0, bars = 0;
     unsigned x, y;
 
     obj &= ~(PICK_TELL | PICK_ANY);
-    hub_mem (SIGHT_BANK, s, SIGHT, sizeof *s);  /* (The senses' record as it is now) */
-    for (i = 0; i < s->ndoors + s->nopen && n < NPICK; ++i) {
+    hub_mem (SIGHT_BANK, s, SIGHT, sizeof *s);  /* (The senses' record as it is now; in the copy, those it remembers,
+                                                **   KNOWN_REL, after those it sees: one rule for what can be named, the
+                                                **   user's, 2026-11-02) */
+    if (!(how & PICK_ANY)) {                    /* (PICK_ANY: is there one it sees) */
+        s->ndoors = known (&s->door[0].rel, s->ndoors, SEE_DOORS, sizeof s->door[0]);
+        s->nopen = known (&s->open[0].rel, s->nopen, SEE_OPEN, sizeof s->open[0]);
+    }
+again:
+    for (i = n = 0; i < s->ndoors + s->nopen && n < NPICK; ++i) {
         if (i < s->ndoors) {
             r = s->door[i].rel;
             k = s->door[i].kind == PK_WINDOW || s->door[i].kind == PK_SLIT;    /* (A window, or a slit) */
-            if (!(obj == OB_DOOR ? !(r & MOUTH) && !k : obj == OB_WINDOW ? k : obj == OB_PORTC ?
+            if (!(obj == OB_ROOM ? !k : obj == OB_DOOR ? !(r & MOUTH) && !k && (bars || s->door[i].kind != PK_PORTCULLIS) :
+                obj == OB_WINDOW ? k : obj == OB_PORTC ?
                 s->door[i].kind == PK_PORTCULLIS : obj == OB_PASSAGE && (r & MOUTH))) {
                 continue;
             }
@@ -171,15 +200,17 @@ unsigned char __fastcall__ o_pick (unsigned char obj, unsigned char orel)
             k = s->open[i - s->ndoors].kind;
             if (!((obj == OB_STAIRS && (k == O_STAIRS_UP || k == O_STAIRS_DOWN || k == O_WAY_OUT)) ||
                 (obj == OB_LADDER && (k == O_LADDER_UP || k == O_LADDER_DOWN)) ||
-                (obj == OB_SHAFT && (k == O_SHAFT_UP || k == O_SHAFT_DOWN)) || (obj == OB_WAY_OUT && k == O_WAY_OUT))) {
+                (obj == OB_SHAFT && (k == O_SHAFT_UP || k == O_SHAFT_DOWN || (k & 15) >= O_SKYLIGHT)) ||
+                (obj == OB_WAY_OUT && k == O_WAY_OUT))) {
                 continue;
             }
             x = s->open[i - s->ndoors].x;
             y = s->open[i - s->ndoors].y;
         }
-        h = r == 0xFF ? 0xFF : (pc_face + (r & 7)) & 7;
-        if (orel != 0xFF && h != orel) {
-            continue;
+        h = r == 0xFF ? 0xFF : bearing ((int) x - s->x, (int) y - s->y);    /* (By its square: the facing now's) */
+        if (orel != 0xFF && (fit ? r == 0xFF || toward (x - s->x, y - s->y, orel) : h != orel)) {
+            continue;                           /* (Not that way: first exactly as the look's words have it; none, any
+                                                **   on that side, "the door on the left" ahead of it to its left) */
         }
         if (cx && x == cx && y == cy) {         /* (The one chosen from the list) */
             best = n;
@@ -189,9 +220,18 @@ unsigned char __fastcall__ o_pick (unsigned char obj, unsigned char orel)
         ph[n] = h;
         pi[n++] = i;
     }
+    if (!n && !fit && orel <= H_NW) {
+        fit = 1;
+        goto again;
+    }
+    if (!n && !bars && obj == OB_DOOR) {        /* (A door: one that is, as the look's words have it; none, a portcullis) */
+        bars = 1;
+        fit = 0;
+        goto again;
+    }
     if (!n) {
         if (how & PICK_TELL) {
-            sayf ("\nYou see no %s %s.", thing[obj], orel == 0xFF ? "here" : "that way");
+            sayf ("\nYou haven't seen a%s %s %s.", *thing[obj] == 'e' ? "n" : "", thing[obj], orel == 0xFF ? "here" : "that way");
         }
         return 0;
     }
@@ -319,8 +359,7 @@ unsigned char s_wield (void)
     USLOT.x[1] = (unsigned char) HUB->ireq.y;
     ask_b (RS_WIELD, 0, t)->state = REQ_FREE;
     if ((k = USLOT.result) != 0) {              /* (What's in its hands strikes: held already, nothing to take) */
-        strike = USLOT.x[k - 1] < KI_HIGH ? SK_THING | USLOT.x[k - 1] : SK_BEST;   /* (A belonging no striker: its
-                                                **   kind past seven bits, items.h's KI_HIGH) */
+        strike = SK_OF (USLOT.x[k - 1]);
         k = 1;
     } else if (USLOT.text[0]) {                 /* (Its hands empty, a better thing carried: asked about) */
         HUB->ireq.to = 0;

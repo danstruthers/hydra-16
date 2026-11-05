@@ -37,7 +37,7 @@ extern unsigned char hheld;                     /* (The character's hands that h
 #define conditions()    cond_of (&pc)           /* The character's */
 unsigned char __fastcall__ health_of (const harn_char* c); /* Its health (rs.h's H_*) */
 unsigned char __fastcall__ has (const char* key);   /* A tool to hand, by its key ("pick") */
-extern struct kind wk;                          /* A thing's kind, the catalogue's (the hub's pc_strike's, SK_THING;
+extern struct kind wk;                          /* A thing's kind, the catalogue's (the hub's pc_strike's, SK_OF;
                                                 **   RS_WIELD's, each held in turn), */
 void __fastcall__ kind_in (unsigned char k);    /*   copied in (from an overlay too: the window put back) */
 signed char __fastcall__ grade (unsigned char level);   /* A level of success (harn.h's) as rs.h's grade */
@@ -57,6 +57,12 @@ extern unsigned char spent_at;
 extern char tools[NTOOLS][8];                   /* What's to hand (RS_EQUIP's): each one's key, */
 extern unsigned char tflag[NTOOLS];             /*   T_HELD, T_WORN, */
 extern unsigned char tqual[NTOOLS];             /*   its quality (0-9) */
+#define TQ_LIGHT 0x10                           /* (tqual's high bits: a weapon's version, light; heavy; none average:
+                                                **   D13's, the book's custom weapons, Combat 3) */
+#define TQ_HEAVY 0x20
+#define TQ_DULLED 0x40                          /* (tqual's top bits: its edge dulled, a point less cutting harm; dull, */
+#define TQ_DULL  0x80                           /*   two: the house's, the user's, 2026-11-03) */
+#define TQ_HEFT(q)      ((q) & TQ_LIGHT ? 0 : (q) & TQ_HEAVY ? 2 : 1)
 #define T_HELD  0x01
 #define T_WORN  0x02
 #define T_LEFT  0x04                            /* (Held in the left hand: RS_EQUIP's marks, slice 4.1b's) */
@@ -66,6 +72,29 @@ extern unsigned char stance;                    /* (The character's stance, the 
 extern unsigned long gseed;                     /* (The game's seed) */
 extern unsigned wealth;                         /* (The family's wealth, its file's: 0 none; RS_OUTFIT's) */
 extern char bkey[8];                            /* (RS_NEW_ACTOR's key, from the request's text) */
+
+/* skills.c (overlay 7): the character's skills as it goes (slice 4.4, HOUSE.md's skills by use), and its load */
+extern unsigned char stress_lv;                 /* (How much stress a skill's used under now, wounds apart: a foe near or
+                                                **   a fight, a trap's danger, the dark without a light, a point each:
+                                                **   set as a request's answered, HOUSE.md's) */
+void __fastcall__ skill_line (char* l, unsigned char rd);    /* Its growth's lines in its file (skills.c's) */
+extern unsigned char pc_might;                  /* (How fearsome it is: by its size and its best weapon skill, a creature's
+                                                **   reckoning, fight.c's new_beast; develop's, as it's read and rises) */
+extern unsigned char fresh;                     /* (Words for it in news not flagged yet: a skill opened; rs.h's
+                                                **   C_NEWS, cond_of's) */
+void __fastcall__ skill_used (unsigned char sk);    /* Skill sk used by the character (a test of it, its weapon in a
+                                                **   fight): a [First Use] one opened, told; an open one's growth */
+void __fastcall__ develop (unsigned m);         /* m minutes of rest (RS_TIME's): a night's of it, the rolls each
+                                                **   skill's earned, each that rose told */
+void __fastcall__ set_load (unsigned qp);       /* The load it carries (quarter pounds), its free pounds less
+                                                **   (D13's): its equipment as harn.h has it */
+void __fastcall__ equip (const char* key, unsigned char on);    /* A tool to hand (on), or not: its key (RS_EQUIP a
+                                                **   1, 0: dtext's copy) */
+#define HEFT_MAX(s)     ((s) >= 13 ? 2 : (s) >= 6 ? 1 : 0)  /* The heaviest version of a weapon (TQ_HEFT's: 0 light,
+                                                **   1 average, 2 heavy) wielded at Strength s without penalty (D13's,
+                                                **   the house's: the book's table's rows, Combat 3) */
+extern harn_equip carried;                      /* (Its load as harn.h has it: wt its encumbering part, cost the whole,
+                                                **   tenths of a pound) */
 
 /* A creature's sheet (a denizen's record's: kept in a bank of the referee's, 32 bytes each, by the record's number):
 ** what it is (the bestiary's entry), its own attributes, its state, its injuries; made the first time it's an actor */
@@ -146,6 +175,9 @@ extern unsigned char pc_by[HARN_INJMAX];
 /* missile.c (overlay 7): a missile's attack (RS_ATTACK's RS_MISSILE: fight.c's, its sides made), and fight.c's that
 ** it calls (through their stubs) and shares: the sides, the request, its effects, its words */
 unsigned shot (void);                           /* (Its declarations after struct side's, below) */
+struct side;
+void __fastcall__ heft (struct side* s);        /* (skills.c's) Side s's weapon's version: its impacts, a Strength's
+                                                **   penalty (D13's) */
 
 /* fight.c (overlay 2) */
 void __fastcall__ fight (struct req* r);        /* RS_NEW_ACTOR, RS_ATTACK, RS_MORALE, RS_TIME, RS_CONTEST (a
@@ -228,6 +260,7 @@ struct side {
                                                 **   dodge: gear.c's pc_defence) */
     const struct bkind* b;                      /* (A creature's entry; 0: the character) */
     char            word[14];                   /* Its weapon, in a word (a thing named, its kind's name) */
+    unsigned char   sk;                         /* (The character's: the skill it fights with, pc_side's) */
 };
 
 #define SHOT_DROP       0x8000                  /* shot's value: what it shot with let fall (fight.c's effect); else */
@@ -251,6 +284,10 @@ void __fastcall__ pc_wield (struct req* r);     /* RS_WIELD: what it would strik
                                                 **   its words put); its hands empty, the best it carries */
 unsigned char __fastcall__ fumbled (const struct side* s, unsigned char att);  /* The hands that let go of what side s
                                                 **   fumbled (its attack's, att 1; its block's), rs.h's DH_* */
+unsigned char __fastcall__ wq_of (const struct side* s, unsigned char att);  /* Its Weapon Quality, of what it strikes with
+                                                **   (att) or blocked with: 0 none */
+extern unsigned char nobreak;
+unsigned char w_damage (void);                  /* A block's Weapon Damage, A's and D's: 1 the attacker's broken, 2 the defender's */
 unsigned char __fastcall__ wound_drops (const struct side* t, unsigned char loc);  /* The hand an arm's wound at loc
                                                 **   lets go of what it holds (DH_*) */
 unsigned char __fastcall__ pc_armour (unsigned char loc, unsigned char aspect);    /* Its armour at loc against an
@@ -272,7 +309,7 @@ void __fastcall__ den_side (struct side* s, unsigned char k);  /* Its blow by th
                                                 **   and word its kind's own weapon's) */
 unsigned char __fastcall__ den_armour (unsigned char k, unsigned char loc, unsigned char aspect);  /* Its armour at
                                                 **   loc against an aspect, its pieces' (the last named in arm) */
-extern unsigned char pc_way;                    /* (The hub's pc_strike, as a request's answered: SK_*; SK_THING | a
+extern unsigned char pc_way;                    /* (The hub's pc_strike, as a request's answered: SK_*; SK_OF a
                                                 **   kind, its kind in wk) */
 extern unsigned char pc_hand;                   /* (The hub's pc_shand: the hand that holds it, items.h's IH_*) */
 

@@ -7,7 +7,11 @@
 # A line a field, a key and its values between bars; a line that starts with a space goes on with the line before
 # (its last value, a space between; or, its first character past the spaces a bar, more values).  The keys:
 #   theme     its name, as the story and the endings say it
-#   mission   escape, rule, or both: what ends the game well (the way out opened and taken; the place ruled)
+#   mission   escape, rule, or both: what solves it (the way out opened; the place ruled: told, then still to be walked out of)
+#   wayin     open: the way in stands open behind the character, to leave by (else it's shut, by the story's reason, till
+#             the mission opens it: and then, or for a through goal, there must be another way out)
+#   wayout    another way out's stratum (1 on, from the top: 0): a stair to the daylight, open from the start, the maker's,
+#             as far from that stratum's way in as it's found (a through goal's far exit is one, by its goal line)
 #   start     how the character came in: walked (in by the way in from the surface, knowing north: the default) or
 #             fell (come round below from a fall, its bearings off: slice 4.2's, DUNGEON.md's bearings underground)
 #   story     what the character knows of the place as it comes in (told after the title)
@@ -38,10 +42,11 @@
 #             cunningly) or - in plain view, how many
 #   rule      what's done with the pieces (8 at most): read X | words; combine X + Y = Z | words (both to hand:
 #             they become Z); put X | Y | effect | words (X put on Y, or in it); out X | effect | words (X used on
-#             the way out); the effect - nothing more, open (the way out opened), rule (the place ruled: an ending)
+#             the way out); take X | effect | words (X first come into its hands); the effect - nothing more, or the
+#             dungeon solved and the way out opened: open, or rule (the place ruled: the ending's words)
 #   lock      the way out, shut: told as it's tried, or looked at
 #   opened    the way out, open
-#   ending    escaped, ruled or died | its words
+#   ending    escaped or ruled (solved, as the character gets out), left (out, unsolved) or died | its words
 #
 # And its history (games/dq0/HISTORY.md): what the dungeon is what's left of.  A hand-written theme may give any of
 # it, or none; a game's own theme is themegen's (games/themegen), which writes all of it, and fills in what a
@@ -83,12 +88,14 @@
 #   and a piece's line two more values, if it has them: its era (it lies among that era's works: 1 ...; or -,
 #   anywhere) and its guardians (a faction's name: their lair by it, popgen's; or -).
 # The theme checker (make.js's, themegen's) holds every theme to it: every goal reachable (each rule's things to be
-# had, the mission's ending a rule can bring about), every faction placed (each one's kinds living in its strata).
+# had, the mission's ending a rule can bring about), a way out to be had by the legs alone (wayin or wayout, a sky shaft
+# by dice, and perhaps out of reach, not counted) with words for leaving, every faction placed (each one's kinds living
+# in its strata).
 
 theme    | the Crypt of the Dead King
 mission  | both
 story    | Aldric, last of the kings under the hill, was laid in his crypt with his crown and his seal, and the hill
-           shut after him.  The door at the top of the stair answers only to his seal; and they say that whoever
+           shut after him.  The door at the top of the stair answers only to his seal, though the Crypts have a way of their own; and they say that whoever
            sets his crown upon his throne below will rule his house of the dead after him.
 stratum  | Upper Halls | b | halls
 stratum  | Old Cellars | bn | cellars
@@ -138,13 +145,15 @@ rule     | combine | sunstone + moonstone = king's seal | You fit the two stones
 rule     | out | king's seal | open | You press the seal into the hollow in the black door.  It sinks home; somewhere
            behind the stone a weight falls, and the door grinds open on the stair up to the daylight.
 rule     | put | iron crown | throne | rule | You set the iron crown upon the throne.  The dust stirs; all through
-           the dark the dead turn their faces towards you, and are still.
+           the dark the dead turn their faces towards you, and far above the black door grinds open.
 
 lock     | The way out is shut fast. Whatever opens it is somewhere below.  A door of black stone closes the stair,
            a round hollow in its face.
 opened   | The black door stands open on the stair up to the daylight: go up to leave.
 ending   | escaped | You climb the stair into the light of day, and behind you the hill closes again over the Crypt of
            the Dead King.  You have escaped.
-ending   | ruled | The crypt is yours, and all who lie in it.  Aldric's house has a new master, under the hill, for
-           ever.
+wayout   | 3
+ending   | ruled | The crypt is yours, and all who lie in it.  Aldric's house has a new master, and he walks in the
+           daylight.
+ending   | left | You climb out into the light of day with Aldric's door still shut behind you, and the hill keeps its crypt.
 ending   | died | The crypt keeps you, as it keeps its king.

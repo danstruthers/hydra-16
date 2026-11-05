@@ -30,8 +30,9 @@ static unsigned char gap;                       /* A space is owed before the ne
 static unsigned char blanked;                   /* The story's last line is empty */
 static unsigned char away;                      /* The cursor isn't at the end of the line typed */
 static unsigned char shown;                     /* How much of the line typed is shown */
-static unsigned char soon;                      /* The next words said the first since t_done: their first few out
-                                                **   at once, if more follow (the console's a letter at a time) */
+static unsigned char soon;                      /* The next words said the first since t_done (1: their first few out at
+                                                **   once, if more follow), or a line entered (2: an answer's, however few;
+                                                **   the console's a letter at a time) */
 char queue[QMAX];                               /* Lines entered and not yet taken (typed ahead), each ends with a 0 */
 unsigned qlen;                                  /*   (parts.c's too), so many bytes of them */
 static char last[INMAX + 1];                    /* The last line entered (cursor up brings it back) */
@@ -309,7 +310,10 @@ void t_end (void)
 ** while it's away from the line typed (the user: the cursor flickered, the line drawn whole each game second); nothing
 ** at all, the cursor left where it is, if nothing has */
 
-void __fastcall__ t_status (const char* left, const char* right)
+#pragma code-name (push, "OV16CODE")            /* (Overlay 16's, through its stub, 2026-11-03: the main RAM's room,
+                                                **   for the parts' quicker copies; nothing of the hub's in it) */
+#pragma rodata-name (push, "OV16RODATA")
+void __fastcall__ o_t_status (const char* left, const char* right)
 {
     unsigned char n = strlen (left), m = strlen (right), k, a, b;
 
@@ -336,6 +340,8 @@ void __fastcall__ t_status (const char* left, const char* right)
     outs ("0m");
     away = 1;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The story */
 
@@ -388,8 +394,10 @@ void __fastcall__ say (const char* s)
             ++col;
         }
         blanked = 0;
-        if (soon && on >= 24 && strlen (p) > 24) {  /* (The first words of more, out now: the console takes some
-                                                **   900 cycles a letter, the line 311) */
+        if (soon && (on >= 24 || (soon & 2 && !*p))) {   /* (The first words of more, out now; an
+                                                **   answer's however few (2026-11-04: "You sit down." waited for the
+                                                **   rest of the world's news): the console takes some 900 cycles a
+                                                **   letter, the line 311) */
             soon = 0;
             t_flush ();
         }
@@ -525,7 +533,7 @@ void t_done (void)
         away = 0;
     }
     t_flush ();
-    soon = 1;
+    soon |= 1;                                  /* (An answer's still owed, 2: its first words, whenever they come) */
 }
 
 /* A line entered: into the story as the player typed it, then queued for t_line, a line for each of its parts
@@ -538,7 +546,7 @@ static void enter (void)
             alias_expand ();                    /* (A shortcut's word first: its line, the rest after it) */
         }
     }
-    if (!parts_in ()) {
+    if (!parts_in (PO_LINE)) {
         if (inn) {
             strcpy (inl, last);                 /* (The line as it was typed, left there) */
         }
@@ -553,6 +561,7 @@ static void enter (void)
                                                 **   its "> " a prompt only when the game's ready) */
     away = 1;
     t_flush ();                                 /* (Out at once: the answer's words, when they come, the first out) */
+    soon = 2;
 }
 
 void __fastcall__ t_key (unsigned char k)

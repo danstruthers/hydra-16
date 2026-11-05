@@ -15,6 +15,7 @@
 #include <string.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
+#include "hub0.h"
 #include "world.h"
 #include "work.h"
 #include "wbody.h"
@@ -30,9 +31,8 @@
 #define W_SPRING
 #include "workpart.h"
 
-unsigned char door_key (void);                  /* (Part 80's, wport.c: a key that fits it, the actor's) */
-void __fastcall__ tool_reach (const char* keys);    /* (things.c's parts 4 and 10: a tool got out first, HOUSE.md's */
-unsigned __fastcall__ reach_done (unsigned char said);  /*   handy tools, its time owed the next spell) */
+extern unsigned char burn_ask;                  /* (things.h's) */
+unsigned door_key (void);                       /* (Part 80's, wport.c: a key that fits it, the actor's) */
 
 void s_doors (void)
 {
@@ -43,6 +43,10 @@ void s_doors (void)
     hub_map (0);
     st = wk.who ? bd.step : HUB->pcsum.step ? HUB->pcsum.step : 10;  /* (An actor's, its own: wport.c's) */
     mine = wk.pq.bar == ((wk.pd + 2) & 3);      /* (The character on its bar's side) */
+    if (wk.pq.parts & PP_SKY && wk.pq.kind == PK_WINDOW) {
+        burn_ask |= 2;                          /* (A window on the surface's shutters: the sky looked at, as it's
+                                                **   worked: part 76's, things.h's TS_ASK) */
+    }
     if (what == PA_BEND) {
         what = PA_FORCE;                        /* (Bent: forced) */
     }
@@ -58,8 +62,13 @@ void s_doors (void)
                 out = PO_IS_OPEN;
             } else if ((wk.pq.state & PS_BARRED) && !mine) {
                 out = PO_BARRED;                /* (Barred from the far side) */
+                goto found;
             } else if (wk.pq.state & PS_LOCKED) {
                 out = PO_LOCKED;
+found:
+                if (!wk.who) {                  /* (Known from now on, the look's: "(closed, locked)") */
+                    keep (wk.px, wk.py, wk.pq.state, wk.pq.parts | PP_FOUND, PORTAL_STATE);
+                }
             } else if (wk.armed == 1) {
                 out = PO_TRAPPED;               /* (A trap on it it knows of: left alone) */
             } else {
@@ -105,14 +114,23 @@ void s_doors (void)
                 out = PO_NO_LOCK;
                 break;
             }
-            if (door_key ()) {                  /* (Its key to hand: no test, three seconds, every actor's) */
-                wk.tt += 30;
+            if (door_key ()) {                  /* (Its key: no test, three seconds, every actor's; the character's by a
+                                                **   tool's steps, a timed work: s_door_work's, 2026-11-04) */
+                if (!wk.who) {
+                    if (wk.plan) {
+                        timed (LT_KEY, 30);
+                        return;
+                    }
+                } else {
+                    wk.tt += 30;
+                }
                 out = PO_KEYED;
                 door_state (wk.pq.state & ~PS_LOCKED);
                 break;
             }
-            if (wk.who) {
-                out = PO_NO_KEY;                /* (A denizen picks no lock: the house's, as yet) */
+            if (wk.who && !wk.link) {
+                out = PO_NO_KEY;                /* (A denizen picks a lock only if its kind can (a robber's: its mind's,
+                                                **   wport.c's wk.link), its tools its own: the house's, 2026-11-02) */
                 break;
             }
             g = test (P_PICKLOCK, wk.pq.lock, -(signed char) wk.pq.lock);
@@ -123,8 +141,8 @@ void s_doors (void)
             if (wk.plan) {                      /* (Begun, the means to hand (the referee's): a minute a try, the
                                                 **   test made again at its end, its outcome then; the lockpicks
                                                 **   got out first) */
-                tool_reach ("picks\0");
-                timed (LT_PICK, 600 + reach_done (2));  /* (Its reach its length's, RD_LONG) */
+                timed (LT_PICK, 600);           /* (Its reach, the lockpicks got out, the world's steps first:
+                                                **   s_door_work's, reach_tool) */
                 return;
             }
             if (g > 0) {
@@ -156,9 +174,15 @@ void s_doors (void)
             }
             break;
         case PA_LOCK:                           /* (Locked with its key, shut, every actor's: Phase 3C's) */
-            wk.tt += 30;
             out = !wk.pq.lock || (wk.pq.state & PS_BROKEN) ? PO_NO_LOCK : wk.pq.state & PS_LOCKED ? PO_IS_LOCKED :
                 wk.pq.state & PS_OPEN ? PO_SHUT_FIRST : door_key () ? PO_KEY_LOCKED : PO_NO_KEY;
+            if (wk.who || wk.plan) {
+                if (out == PO_KEY_LOCKED && !wk.who) {
+                    timed (LT_KEY, 30);         /* (As unlocking: a tool's steps) */
+                    return;
+                }
+                wk.tt += 30;
+            }
             if (out == PO_KEY_LOCKED) {
                 door_state (wk.pq.state | PS_LOCKED);
             }

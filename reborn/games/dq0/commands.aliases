@@ -123,10 +123,14 @@ greet talk
 hail talk
 recruit persuade
 reason persuade
-bargain persuade
 win persuade
 kill fight
 head butt headbutt
+cross across
+stroll walk
+wander walk
+proceed walk
+advance walk
 mine dig
 acquire get
 grip hold
@@ -142,6 +146,11 @@ shut close
 set put
 order command
 refill fill
+refresh fill
+sharpen fill
+hone fill
+whet fill
+redip fill
 refuel fill
 # A thing looked over and judged (added 2026-10-22, the user's: "examine value [of] item", "determine value [of] item")
 check x

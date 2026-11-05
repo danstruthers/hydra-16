@@ -102,7 +102,7 @@ static unsigned char __fastcall__ part_moved (unsigned char k, unsigned x, unsig
     unsigned i;
 
     for (i = 1; i < NITEMS; ++i) {
-        hub_map (ITEM_BANK (i));
+        (hub_map) (ITEM_BANK (i));
         p = ITEM_AT (i);
         if (p->kind == k && p->where == IW_PORTAL && p->sn == wk.sn && p->x == x && p->y == y) {
             p->kind = nk;

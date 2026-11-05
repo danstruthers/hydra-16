@@ -19,10 +19,12 @@
 #include <unistd.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
+#include "hub0.h"
 #include "world.h"
 #include "things.h"
 
 extern unsigned char pmode;                     /* (dq0w.c's: the legs' way said) */
+extern unsigned char go_near;                   /* (dq0w.c's: a walk's end as near as it gets, or beside it, 2) */
 extern unsigned char nobear;                    /* (dq0w.c's: dq0 -N, the tests', its bearings never tested) */
 #include "work.h"
 
@@ -82,6 +84,39 @@ static unsigned char near_out (void)
     return !HUB->pc_stratum && STRATUM (0).link[0].x - HUB->pc_x + 2 <= 4 && STRATUM (0).link[0].y - HUB->pc_y + 2 <= 4;
 }
 
+/* Rule r done: kept, and its effect: the way out opened, the mission's, whichever it is (E_LEFT as it goes up) */
+static void __fastcall__ rule_done (unsigned char r)
+{
+    unsigned char k;
+
+    done_ |= 1 << r;
+    hub_map (THEME_BANK);
+    k = THEME->rule[r].effect;
+    hub_map (0);
+    if (k) {
+        HUB->way_open = 1;
+        burn_ask |= TS_ASK;                     /* (The sky through it: the time it believes, part 76's) */
+    }
+}
+
+/* Thing of the theme's kind k come into the character's hands (the item store's place: part 10's): its take rule, the first
+** time, done and told (E_LEFT's EL_RULE on: the UI's words).  The artifact's: it's found what it came for (Q2) */
+static void __fastcall__ took (unsigned char k)
+{
+    struct msg m;
+    unsigned char r = rule (TR_TAKE, k, 0xFF);
+
+    hub_map (0);
+    if (r != 0xFF && !(done_ & 1 << r)) {
+        rule_done (r);
+        m.kind = E_LEFT;
+        m.who = m.a = m.b = 0;
+        m.w1 = EL_RULE + r;
+        m.t = HUB->now;
+        hub_event (&m);
+    }
+}
+
 /* The hub's ireq, IO_PUZZLE's, answered (but its state, the caller's): its verb's rule for the things named looked
 ** for, by their kinds, and done (its result PZ_*, x the rule); 1 if what lies about has changed (a thing put) */
 unsigned char s_puzzle (void)
@@ -126,14 +161,7 @@ unsigned char s_puzzle (void)
         }
     }
     if (res == PZ_DONE) {
-        done_ |= 1 << r;
-        hub_map (THEME_BANK);
-        k = THEME->rule[r].effect;
-        hub_map (0);
-        if (k == TE_OPEN) {
-            HUB->way_open = 1;                  /* (The way out opened: the mission's, E_LEFT as it goes up) */
-            burn_ask |= TS_ASK;                 /* (The sky through it: the time it believes, part 76's) */
-        }
+        rule_done (r);
     }
     hub_map (0);
     HUB->ireq.result = res;
@@ -163,8 +191,13 @@ unsigned char s_take_up (void)
             (HUB->pc_x != take_fx || HUB->pc_y != take_fy)) {
             take_fx = HUB->pc_x;
             take_fy = HUB->pc_y;
+            go_near = take_only & 2 ? 3 : 0;    /* (Gone to: beside it, as near as it gets, and on as it gets nearer) */
             go_to (take_x, take_y);
-            return 2;
+            r = go_near;
+            go_near = 0;
+            if (r != 0xFF) {
+                return 2;
+            }
         }
         take_n = 0;
         return 0;
@@ -186,11 +219,22 @@ unsigned char s_take_up (void)
         }
         r = IR_NOT_HERE;
     } else {
+        hub_map (0);
+        rs_ok = !(HUB->pc_lump & (PL_NOSTEPS | PL_TOLD));                  /* (Into the worn pack: by the reach's steps, the UI's to take it again,
+                                                **   IR_FIXED's) */
+        rs_live = rs_paid = rs_using = rs_free = 0;
+        rs_pack = 0;
         if ((r = take_rest ()) == IR_NONE) {    /* (A count, taken up as it gets there: the request as it was, part
                                                 **   4's: "take 4 rations", the user's) */
             hub_map (KIND_BANK);
             r = w == IW_PORTAL || (CATALOGUE[k].keeps & KF_FIXED) ? IR_FIXED : !noinit && fumbled (k) ? IR_FUMBLED :
                 carry (n, 0) ? IR_OK : IR_FULL; /* (Engaged, a grope failed: the round wasted, its words) */
+        }
+        rs_ok = 0;
+        if (rs_st) {
+            r = rs_st == 2 ? IR_FUMBLED : IR_FIXED;
+            rs_st = 0;
+            lwork = 0;
         }
         if (r == IR_OK) {
             reach_done (0);                     /* (Its reach owed, things.c's: the UI's wait for it after) */
@@ -211,6 +255,10 @@ unsigned char s_take_up (void)
 /* I_TAKE's walk begun (its intent: the square the thing lies on, its item) */
 void __fastcall__ s_take_go (const struct msg* m)
 {
+    if ((unsigned) m < NTKINDS) {
+        took ((unsigned char) m);               /* (things.h's: its one stub) */
+        return;
+    }
     take_only = m->a;
     take_n = m->t ? (unsigned) m->t : 1;        /* (Walked over to alone: its square's, perhaps no thing's) */
     take_x = m->w1;
@@ -218,7 +266,9 @@ void __fastcall__ s_take_go (const struct msg* m)
     hub_map (0);
     take_fx = HUB->pc_x;
     take_fy = HUB->pc_y;
+    go_near = take_only & 2;                    /* (a 2: gone to, "go to the pot", stopping beside it: the UI's way.c) */
     go_to (take_x, take_y);
+    go_near = 0;
 }
 
 /* ---- The character's state, and the game's (move 2.7: the character's state home): the UI's requests of them (the
@@ -242,6 +292,9 @@ static int __fastcall__ world_dat (unsigned char out)
     return out ? open (p, O_WRONLY | O_CREAT | O_TRUNC, 0644) : open (p, O_RDONLY);
 }
 
+
+unsigned char __fastcall__ look_more (unsigned n, unsigned char mode);    /* (Part 40's: its LM_KIT, kit.dat) */
+
 /* The world's part of the game kept (WQ_SAVE's, after the change records) */
 void s_world_keep (void)
 {
@@ -257,6 +310,7 @@ void s_world_keep (void)
     w.sn = HUB->pc_stratum;
     w.face = HUB->pc_face;
     w.pos = HUB->pc_pos;
+    w.hid = HUB->pc_hid;
     w.x = HUB->pc_x;
     w.y = HUB->pc_y;
     w.gait = HUB->gait;
@@ -269,12 +323,14 @@ void s_world_keep (void)
     w.hunger = HUB->pc_hunger;
     w.thirst = HUB->pc_thirst;
     w.meals = HUB->pc_meals;
+    w.ropes = HUB->ropes;
     memcpy (&w.tb, &HUB->tb, sizeof w.tb);
     write (fd, &w, sizeof w);
     hub_map (WORLD_BANK);                       /* (The strata's records, the world bank's) */
     write (fd, WREC->strata, sizeof WREC->strata);
     hub_map (0);
     close (fd);
+    look_more (0, LM_KIT);                      /* (Its things, kit.dat: to carry on, part 40's, slice 4.4's) */
 }
 
 /* A game carried on: the world's part of its save read back (the clock, the character's place, state and bearings, the
@@ -299,6 +355,7 @@ static void world_back (void)
         HUB->pc_y = w.y;
         HUB->pc_face = w.face;
         HUB->pc_pos = w.pos;
+        HUB->pc_hid = w.hid;
         HUB->gait = w.gait;
         HUB->watch = w.watch;
         HUB->way_open = w.open;
@@ -307,6 +364,11 @@ static void world_back (void)
         HUB->pc_hunger = w.hunger;              /* (Its hunger and thirst: slice 4.9's) */
         HUB->pc_thirst = w.thirst;
         HUB->pc_meals = w.meals;
+        HUB->ropes = w.ropes;
+        if (w.ropes) {
+            look_more (0, LM_ROPES);            /* (Its parts read in, to climb it: things.c's) */
+            hub_map (0);
+        }
         memcpy (&HUB->tb, &w.tb, sizeof w.tb); /* (The time of day it believes: part 76's) */
         done_ = w.done;
         hub_map (WORLD_BANK);
@@ -329,7 +391,7 @@ void s_pc_asked (void)
         HUB->round = x;
         HUB->pace = HUB->wreq.y;
         HUB->tpr = tprs[HUB->wreq.y & 3];
-        noinit = (HUB->wreq.y & WY_NO_INIT) != 0;   /* (dq0 -I: the tests') */
+        HUB->nolurk = noinit = (HUB->wreq.y & WY_NO_INIT) != 0;   /* (dq0 -I: the tests') */
         nobear = (HUB->wreq.y & WY_NO_BEAR) != 0;   /* (dq0 -N: the tests') */
         HUB->gait = HUB->wreq.a;
         HUB->watch = HUB->wreq.b;

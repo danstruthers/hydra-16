@@ -25,8 +25,10 @@
 static const struct { char key[8]; unsigned char rate[5], wear[5]; } digger[] = {   /* Earth, stone, masonry, flags,
                                                                                     **   soil */
     { "hands", { 0, 0, 0, 0, 1 }, { 0, 0, 0, 0, 0 } }, { "shovel", RS_DIG_SHOVEL, { 0, 0, 0, 0, 0 } },
-    { "spade", { 3, 0, 0, 0, 6 }, { 0, 0, 0, 0, 0 } }, { "pick", RS_DIG_PICK, { 0, 1, 1, 1, 0 } },
-    { "mattock", { 3, 0, 0, 0, 6 }, { 0, 0, 0, 0, 0 } },
+    { "pick", RS_DIG_PICK, { 0, 1, 1, 1, 0 } },
+    { "chisel", { 0, 1, 1, 2, 0 }, { 0, 1, 1, 1, 0 } },   /* (Driven with a hammer, in both hands: the world's to
+                                                **   say, as a dig's begun, 2026-11-02) */
+    { "mattock", RS_DIG_SHOVEL, { 0, 0, 0, 0, 0 } }, { "spade", RS_DIG_SHOVEL, { 0, 0, 0, 0, 0 } },    /* (As a shovel, 2026-11-03) */
     { "blade", { 1, 0, 0, 0, 2 }, { 40, 0, 0, 0, 40 } }, { "dagger", { 1, 0, 0, 0, 2 }, { 40, 0, 0, 0, 40 } },
     { "knife", { 1, 0, 0, 0, 2 }, { 40, 0, 0, 0, 40 } },
 };
@@ -35,20 +37,21 @@ static const struct { char key[8]; unsigned char rate[5], wear[5]; } digger[] = 
 #endif
 
 /* The tool to hand that suits the material best (bare hands, digger's 0, if none does better; of two as good, the
-** one it wears less): its digger's number */
+** one it wears less), or the one named (name's key: the user's, 2026-11-03: a lesser tool named is used): its digger's
+** number (0 too if what's named is no digger) */
 #if defined (RS_HOUSE_DIG_TOOL) && !defined (RS_HOUSE_DIG_TOOL_DONE)
 #define RS_HOUSE_DIG_TOOL_DONE
-unsigned char __fastcall__ RS_HOUSE_DIG_TOOL (unsigned char m)
+unsigned char __fastcall__ RS_HOUSE_DIG_TOOL (unsigned char m, const char* name)
 {
-    unsigned char k, t, best = 0, r, br = digger[0].rate[m];
+    unsigned char k, t, best = 0, r, br = *name ? 0 : digger[0].rate[m];
 
     for (k = 0; k < NTOOLS; ++k) {
         for (t = 1; tools[k][0] && t < NDIGGERS; ++t) {
-            if (strcmp (tools[k], digger[t].key)) {
+            if (strcmp (tools[k], digger[t].key) || (*name && strcmp (name, digger[t].key))) {
                 continue;
             }
             r = digger[t].rate[m];
-            if (r > br || (r && r == br && digger[t].wear[m] < digger[best].wear[m])) {
+            if (r > br || (r && r == br && digger[t].wear[m] < digger[best].wear[m]) || *name) {
                 best = t;
                 br = r;
             }
@@ -123,6 +126,8 @@ static signed char __fastcall__ house_notice (const struct req* r, unsigned char
 ** referee's condition before it) */
 #if defined (RS_HOUSE_STATE) && !defined (RS_HOUSE_STATE_DONE)
 #define RS_HOUSE_STATE_DONE
+#define HOUSE_SHOCK     0x80                    /* (house_pace's watch |: the ruleset's, in shock; on one good leg) */
+#define HOUSE_LEG       0x40
 static const char* const pace_name[NGAITS] = { "a creep", "a slow walk", "a walk", "a jog", "a run", "a sprint" };
 
 static unsigned char __fastcall__ house_pace (unsigned char g, unsigned char watch, unsigned char dark)
@@ -131,7 +136,7 @@ static unsigned char __fastcall__ house_pace (unsigned char g, unsigned char wat
 
     if (h > GA_SLOW && ((watch & (WA_TRAPS | WA_MAP)) || dark)) {
         h = GA_SLOW;
-    } else if (h > GA_WALK && (watch & WA_LISTEN)) {
+    } else if (h > GA_WALK && (watch & (WA_LISTEN | HOUSE_SHOCK | HOUSE_LEG))) {
         h = GA_WALK;
     }
     put ("Pace: ");
@@ -140,7 +145,8 @@ static unsigned char __fastcall__ house_pace (unsigned char g, unsigned char wat
         put (", held to ");
         put (pace_name[h]);
         put (watch & WA_TRAPS ? " while you search as you go" : watch & WA_MAP ? " while you map as you go" :
-            dark && h == GA_SLOW ? " in the dark" : " while you listen");
+            dark && h == GA_SLOW ? " in the dark" : watch & HOUSE_SHOCK ? " in shock" : watch & HOUSE_LEG ? " on one leg" :
+            " while you listen");
     }
     return h;
 }
@@ -200,6 +206,12 @@ extern unsigned long xs_seed;
 #define QUIET_MIX(t)    ((t) * 1103515245UL + 12345UL | 1)
 #define QUIET_IN        { unsigned long qt_ = xs_seed; xs_seed = QUIET_MIX (qt_);
 #define QUIET_OUT       xs_seed = qt_; }
+/* (An appraisal's die, the user's, 2026-11-03: "keep the first answer", per thing, till the skill improves: no store: the
+** dice for it a hash of the thing (w1, its key: the UI's and the world's), the skill's mastery and the game's seed; the
+** game's put back after) */
+#define JUDGE_IN(k, ml) { unsigned long qt_ = xs_seed; xs_seed = QUIET_MIX (QUIET_MIX ((unsigned long) (k) << 16 ^ \
+                            (unsigned long) (ml) << 8 ^ (unsigned) HUB->seed));
+#define JUDGE_OUT       xs_seed = qt_; }
 #endif
 
 /* ---- The dice by who asks (RS_HOUSE_DICE: every referee's main loop, 2026-10-30): each requester's dice its own stream,

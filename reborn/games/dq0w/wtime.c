@@ -17,7 +17,8 @@
 **   - the clues that narrow it: its own light burning down (it sees its torch: the minutes it's burned since its belief
 **     was set by it, to a twelfth), its hunger since its last meal (to a quarter);
 **   - the sky in sight (an open way out near it: the top stratum's up its stairs, its light alone; a far exit below
-**     the top, the open sky; or a test's poke, tb.sky): its light (dawn, day, dusk, night) narrows it; the sun or the
+**     the top, the open sky; a window on the surface, a skylight, a shaft open to the sky by it, HOUSE.md's what shows
+**     the sky, part 89's; or a test's poke, tb.sky): its light (dawn, day, dusk, night) narrows it; the sun or the
 **     stars read by the north it believes in set it (wrong by its bearings' error, unknown to it); its bearings lost,
 **     the sun high or low; watched a while (a wait in its sight: SKY_WATCH minutes, the stars STARS_WATCH), their way
 **     across the sky shows the time and north both (its bearings set right).
@@ -25,9 +26,11 @@
 ** and waits "until dawn" by it (time.c's).
 */
 
+#include <string.h>
 #include <stddef.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
+#include "hub0.h"
 #include "../dq0/rs.h"
 #include "world.h"
 #include "things.h"
@@ -47,10 +50,18 @@ extern signed char wsteps;
 #define FELL            0xFFFF                  /* (T.gone: come round from a fall as the game begins) */
 #define T               (HUB->tb)
 
+#pragma bss-name (push, "SW76RODATA")           /* (Its own, wanted only as it runs: the main RAM's room) */
 static unsigned n;                              /* (The clock's minute now) */
+#pragma bss-name (pop)
 static unsigned m;                              /* (The true minute of the day, now) */
 static int lo, hi;                              /* (The sky's: the part of the day, minutes) */
+
+/* ---- Part 99 (2026-11-04, the swap study's: part 76's room, an hour's test or a waking, seldom): the belief drifting */
+#pragma code-name (push, "SW99CODE")
+#pragma rodata-name (push, "SW99RODATA")
+#pragma bss-name (push, "SW99RODATA")
 static int d;                                   /* (A drift's minutes, its way the referee's) */
+#pragma bss-name (pop)
 
 /* A minute's offset brought to -720 on, under 720 */
 static int __fastcall__ norm (int v)
@@ -110,7 +121,7 @@ static void hours (void)
 ** black-out's ten the harder (it can't tell how long it lay there): a critical success near enough, doubting an eighth
 ** of it; a marginal success off by a sixth, doubting a quarter; a marginal failure a third, and half; a critical
 ** failure two thirds, and no idea at all */
-static void woke (void)
+static void __fastcall__ woke (unsigned n)
 {
     unsigned len = T.gone == FELL ? 60 : n - T.gone, u;   /* (Come round from a fall as the game begins: an hour out,
                                                 **   the house's) */
@@ -129,6 +140,21 @@ static void woke (void)
     }
     T.gone = 0;
 }
+
+/* The clock's minute now, n: woken, or the hours awake (its stub's) */
+void __fastcall__ s_time_kept (unsigned n)
+{
+    if (T.gone) {
+        woke (n);
+    } else {
+        hours ();
+    }
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+void __fastcall__ time_kept (unsigned n);       /* (Part 99's) */
 
 /* A clue's belief (its skew s, its doubt u), taken if it's surer than the one it has */
 static void __fastcall__ clue (int s, unsigned u)
@@ -208,13 +234,15 @@ void __fastcall__ s_sky_seen (unsigned char kind)
 {
     struct msg e;
     static const int edge[5] = { 1140, 300, 420, 1020, 1140 };   /* (The parts' edges: night, dawn, day, dusk) */
-    unsigned char p, night;
+    unsigned char p, night, src;
     signed char s;
 
     if (kind == SKY_BEGUN) {
         begun ();                               /* (A new game's first look) */
         return;
     }
+    src = kind & 0xF0;                          /* (What shows it, SKS_*, told with it) */
+    kind &= 15;
     p = m < 300 || m >= 1140 ? SKP_NIGHT : m < 420 ? SKP_DAWN : m < 1020 ? SKP_DAY : SKP_DUSK;
     night = p == SKP_NIGHT;
     lo = edge[night ? 0 : p];
@@ -245,9 +273,9 @@ void __fastcall__ s_sky_seen (unsigned char kind)
     T.how = TG_HOURS;
     if (p != T.told) {
         T.told = p;
+        memset (&e, 0, sizeof e);               /* (All of it: an event's every byte the same game's, whatever the RAM held) */
         e.kind = E_BEARING;
-        e.who = 0;
-        e.b = p;
+        e.b = p | src;
         e.w1 = BRG_SKY;
         e.t = HUB->now;
         hub_event (&e);
@@ -255,13 +283,13 @@ void __fastcall__ s_sky_seen (unsigned char kind)
 }
 
 /* The hour the game began (a new game's first look): the environment's dq0hour, as the denizens' (a test's scene),
-** else dusk; come round from a fall, a black-out's guess to make */
+** else by the game's seed, dq0 -E's dusk: as the denizens' too; come round from a fall, a black-out's guess to make */
 static void begun (void)
 {
     struct hy_regs r;
     char b[4];
     char* p;
-    unsigned char h = TB_START;
+    unsigned char h = HUB->pc_lump & PL_DUSK ? TB_START : (unsigned) HUB->seed % 24;
 
     r.a = 0xFF;
     r.r[0] = (unsigned) "dq0hour";
@@ -288,9 +316,14 @@ static void begun (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The sky in sight (SKY_*): a test's poke; else an open way out within SKY_NEAR squares on the character's stratum (the
-** top's up its stairs, its light alone; a far exit below the top, out into the open).  T.skysn the stratum, if it has
-** one (its looks the more often) */
+unsigned char s_sky_near (void);                /* (dq0w.c's, this part's) */
+void s_sky_list (void);
+
+/* The sky in sight (SKY_*, and what shows it, SKS_*, times 16): a test's poke; else an open way out within SKY_NEAR squares
+** on the character's stratum (the top's up its stairs, its light alone; a far exit below the top, out into the open);
+** or a window on the surface, a skylight or a shaft open to the sky by it, or come by since the last reckoning (T.nigh:
+** the open sky, but a shaft's from below the top stratum, its light alone).  T.skysn the stratum, if it has one (its
+** looks the more often) */
 static unsigned char sky_here (void)
 {
     struct link* l;
@@ -306,21 +339,36 @@ static unsigned char sky_here (void)
             }
         }
     }
+    k = sn <= SKY_DEEP ? s_sky_near () : 0;      /* (By one now: dq0w.c's, this part's) */
+    hub_map (0);
+    if (!k) {
+        k = T.nigh;                             /* (Or come by one since) */
+    }
+    T.nigh = 0;
+    if (k) {
+        T.skysn = sn;
+        s = (k == SKS_DEEP ? SKY_LIGHT : SKY_OPEN) | k << 4;
+    }
     return T.sky ? T.sky : s;
 }
 
 /* The reckoning (part 27's, at its due or at once): the time it believes brought up to now, its next due */
+void rest_go (void);                            /* (Part 53's) */
 void s_tsense (void)
 {
     unsigned e;
     unsigned char s;
 
     hub_map (0);
-    n = (unsigned) (HUB->now / 600);
+    if (HUB->pcsum.cond & C_FATIGUED || (HUB->pcsum.load & 2) || HUB->pc_task.kind == LT_SLEEP) {
+        rest_go ();                             /* (A wait's or a sleep's rest told as it goes and as it ends; a sleep's
+                                                **   end, its eyes open) */
+    }
     if (!T.at) {
         sky_seen (SKY_BEGUN);
-        T.at = n + 1;
+        T.at = (unsigned) (HUB->now / 600) + 1;
     }
+    n = (unsigned) (HUB->now / 600);
     e = n + 1 - T.at;
     T.at = n + 1;
     m = (n + (T.hour0 & 0x80 ? TB_START : T.hour0) * 60) % 1440;
@@ -337,10 +385,12 @@ void s_tsense (void)
         T.due = HUB->now + 600;                 /* (Looked at a minute on, the burning's next: to see it wake) */
         return;
     } else if (T.gone) {
-        woke ();
+        time_kept (n);
     } else {
         T.mins += e;
-        hours ();
+        if (T.mins >= 60) {
+            time_kept (n);
+        }
     }
     clues ();
     s = sky_here ();
@@ -358,4 +408,13 @@ void s_tsense (void)
     }
     T.due = HUB->now + (s || T.skysn == HUB->pc_stratum ? 3000 : (60 - T.mins) * 600UL);   /* (The sky in sight,
                                                 **   or maybe: five minutes on, to see it watched) */
+    T.sun = m < 300 || m >= 1140 ? 0 : m < 420 || m >= 1020 ? 2 : 4;    /* (The daylight, the senses' lamps') */
+    if (HUB->pc_stratum <= SKY_DEEP) {
+        s_sky_list ();                          /* (Its emitters near it: the chunks made since it last came into one) */
+    }
+    e = m < 300 ? 300 : m < 420 ? 420 : m < 1020 ? 1020 : m < 1140 ? 1140 : 1740;     /* (Looked at again by its next
+                                                **   change, on the strata the sky's near) */
+    if (HUB->pc_stratum <= SKY_DEEP && HUB->now + (e - m) * 600UL < T.due) {
+        T.due = HUB->now + (e - m) * 600UL;
+    }
 }

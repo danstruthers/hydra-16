@@ -29,13 +29,14 @@ name:
 .endmacro
 
 .macro COMMON_BLOCK
-.local      stubs, restore
+.local      stubs, restore, none, entry
 stubs:
 .repeat 16, I
             CLABEL      .ident(.sprintf("IRQ_STUB_%X", I))
 .if I = LINE_VIA
-            jmp         IRQ_VIA                             ; (Its vector is IRQ_VIA's own: IRQ_INIT)
-            .res        3                                   ; (A stub's 6 bytes)
+            lda         #LINE_VIA_T2                        ; (Its vector is IRQ_VIA's own, IRQ_INIT's, so the
+            bra         entry                               ;   stub's room is IRQ_VIA's: timer 2's way)
+            .res        2                                   ; (A stub's 6 bytes)
 .else
             pha
             lda         #I
@@ -43,29 +44,33 @@ stubs:
 .endif
 .endrepeat
 
-; The VIA's line (its vector: IRQ_INIT): timer 2's interrupt (its own on, and run out) is LINE_VIA_T2's, CA1's
-; LINE_VIA_CA1's, the rest the VIA's (.A = 0: the tick).  But the ACIA's first, if it's interrupting too (its stub's,
-; as if it had come alone): the board gives the VIA's line the higher priority, and at 115200 a byte in has 311
-; cycles before the next overruns it, too few to wait for the tick's and timer 2's.  (Its status read clears its
-; interrupt: its handler looks at RDRF.  The VIA's comes again after it.)
+; The VIA's line (its vector: IRQ_INIT): timer 1's flag is the VIA's (.A = 0: the tick, on straight into IRQ_ENTRY:
+; K_KIRQ takes it as said), timer 2's LINE_VIA_T2's, CA1's LINE_VIA_CA1's; nothing of these, back (a flag cleared just
+; as the interrupt came).  IFR alone, no look at IER: T1's and T2's flags come only with their interrupts on (the tick's
+; always; T2's its owner's: a flag left over goes to IRQ_STRAY, which clears it, as CA1's does).  But the ACIA's first,
+; if it's interrupting too (its stub's, as if it had come alone): the board gives the VIA's line the higher priority,
+; and at 115200 a byte in has 311 cycles before the next overruns it, too few to wait for the tick's and timer 2's.
+; (Its status read clears its interrupt: its handler looks at RDRF.  The VIA's comes again after it.)  The tick first
+; of the three: its longest way, the carries and a switch noted, is the handler's longest (irq.s's budget)
+.assert     VIA_IRQ_T1 = $40 .and VIA_IRQ_T2 = $20, error, "IRQ_VIA's shifts: T1's flag, then T2's, in N"
             CLABEL      IRQ_VIA
             bit         ACIA_STATUS
             bmi         stubs + LINE_ACIA * 6               ; (IRQ_STUB_1: this copy's)
             pha
             lda         VIA_IFR
-            and         VIA_IER
-            bit         #VIA_IRQ_T2
-            bne         :+
-            and         #VIA_IRQ_CA1
-            beq         :++                                 ; (.A = 0.  IRQ_ENTRY: this copy's)
+            asl         a
+            bmi         :+
+            asl         a
+            bmi         stubs + LINE_VIA * 6                ; (Timer 2's way, this copy's: the stub's room)
+            and         #VIA_IRQ_CA1 << 2
+            beq         none
             lda         #LINE_VIA_CA1
-            bra         :++
+            bra         entry
 :
-            lda         #LINE_VIA_T2                        ; (Then on into IRQ_ENTRY: timer 2's sending, every
-                                                            ;   character, the shortest way)
+            lda         #LINE_VIA
 
 ; .A = the line.  The frame so far: A, then the CPU's P and PC
-:
+entry:                                                      ; (This copy's, for the branches to it)
             CLABEL      IRQ_ENTRY
             phx
             ldx         W_REGISTER
@@ -104,6 +109,7 @@ restore:                                                    ; (This copy's, for 
             pla
             sta         W_REGISTER                          ; Back on the interrupted page (this same code)
             plx
+none:                                                       ; (IRQ_VIA's, nothing to do: its frame is .A alone)
             pla
             rti
 

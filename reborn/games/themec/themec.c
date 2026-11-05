@@ -66,7 +66,7 @@ int main (int argc, char* argv[])
         }
     }
     if (tg_load (in (lib, "bestiary.dat"))) {
-        say ("themec: its bestiary (lib/dq0/bestiary.dat) not found\n");
+        say ("themec: no lib/dq0/bestiary.dat\n");
         return 1;
     }
     bestiary ();

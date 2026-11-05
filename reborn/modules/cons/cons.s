@@ -727,7 +727,6 @@ irq:
             and         #ACIA_ST_RDRF | ACIA_ST_OVR | $03   ; A byte, and no overrun, framing or parity error: on
             cmp         #ACIA_ST_RDRF                       ;   (else @odd: the error counted, off the short path)
             bne         @odd
-@byte:
             lda         ACIA_DATA
             ldx         pfx
             bne         @after
@@ -735,22 +734,8 @@ irq:
             ldy         rx_kind,X                           ;   or the prefix (kb_pfx).  One look, not three
             beq         @store
             bpl         @note                               ; (.Y: the note's bit)
-            sta         pfx                                 ; (Ctrl-]: it goes into the ring too)
-            bra         @store
-
-@after:                                                     ; (pfx $FF: /ser's, the bytes as they are)
-            bmi         @ser
-            stz         pfx                                 ; The key after Ctrl-]: a digit is the window that has
-            tax                                             ;   the keys now (its note group Ctrl-C's: the serve
-            eor         #'0'                                ;   entry acts on the rest).  ($30-$39 alone give 0-9)
-            cmp         #10
-            bcs         :+
-            tay
-            lda         w_group,Y
-            sta         win_grp
-:
-            txa                                             ; (On into @store: no bra, the longest of the keys'
-@store:                                                     ;   paths)
+            sta         pfx                                 ; (Ctrl-]: it goes into the ring too.  On into @store:
+@store:                                                     ;   no bra, the mark's path the longest of the keys')
             ldy         rx_head                             ; Into the ring
             sta         rx_buf,Y
             iny
@@ -762,24 +747,40 @@ irq:
             lda         #0
             rts
 
+@after:                                                     ; (pfx $FF: /ser's, the bytes as they are)
+            bmi         @ser
+            stz         pfx                                 ; The key after Ctrl-], into the ring, then a digit is
+            ldy         rx_head                             ;   the window that has the keys now (its note group
+            sta         rx_buf,Y                            ;   Ctrl-C's: the serve entry acts on the rest; and on
+            iny                                             ;   this, grp_set, when the ring's at its mark: no
+            cpy         rx_mark                             ;   look here then, to keep the mark's path short).
+            beq         irq_mark                            ;   ($30-$39 alone give 0-9)
+            sty         rx_head
+            inc         TASK_EVENT
+            eor         #'0'
+            cmp         #10
+            bcs         @none
+            tay
+            lda         w_group,Y
+            sta         win_grp
+            bra         @none
+
 @odd:                                                       ; No byte, or an error with or without one: counted (an
             tax                                             ;   overrun, else a framing or parity error), and the
-            beq         @none                               ;   byte, if there is one, taken
-            and         #ACIA_ST_OVR
-            beq         @fe
+            beq         @none                               ;   byte, if there is one, taken and dropped: a damaged
+            and         #ACIA_ST_OVR                        ;   one's no use, and a byte's gone in an overrun anyway
+            beq         @fe                                 ;   (into the ring it'd be over the budget for IRQs off)
             inc         rx_ovr
-            bne         @counted
+            bne         @took
             inc         rx_ovr + 1
-            bra         @counted
+            bra         @took
 @fe:
             inc         rx_fe
-            bne         @counted
+            bne         @took
             inc         rx_fe + 1
-@counted:
-            txa
-            and         #ACIA_ST_RDRF
-            beq         @none
-            bra         @byte
+@took:
+            lda         ACIA_DATA
+            bra         @none
 
 @note:                                                      ; The notes, to the shown window's group (NOTE_QUEUE's
             tya                                             ;   .A = 0 is this entry's answer)

@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
+#include "hub0.h"
 #include "world.h"
 #include "things.h"
 #include "outfit.h"
@@ -214,7 +215,8 @@ static unsigned char __fastcall__ weight (const unsigned char* c)
         return 0;
     }
     kind_get (c[cw]);
-    return ost.tool && !ck && !(kk.form & KF_COUNT) && drawn (c[cw]) ? 0 : w;
+    return (ost.tool || c[cw] == KI_LANTERN) && !ck && !(kk.form & KF_COUNT) && drawn (c[cw]) ? 0 : w;   /* (A lantern
+                                                **   not bought twice: the kit's light, an occupation's) */
 }
 
 /* A line (at p: its length first) drawn as mode says (MD_*) */
@@ -283,13 +285,12 @@ static void __fastcall__ line (const unsigned char* p, unsigned char mode)
 }
 
 /* The section at off read, its head kept, drawn as mode says if its flags are those wanted: 1, or 0 */
+unsigned char ui_first (void);                  /* (dq0w.c's) */
 unsigned char __fastcall__ s_draw_at (unsigned off, unsigned char mode)
 {
     unsigned char k, n;
     const unsigned char* p = sec + 8;
 
-    hub_map (0);                                /* (Its bytes alone, the index's length: its file read the less,
-                                                **   2026-10-27) */
     if (!off || lseek (ost.fd, off, SEEK_SET) != (long) off || read (ost.fd, sec, ost.slen ? ost.slen : SEC_MAX) <= 8) {
         return 0;
     }
@@ -305,6 +306,10 @@ unsigned char __fastcall__ s_draw_at (unsigned off, unsigned char mode)
     }
     if (mode != MD_HEAD) {
         for (n = sec[7], k = 0; k < n && p < sec + SEC_MAX && *p; ++k, p += *p) {
+            if (ost.kit && (hub_map (0), ui_first ())) {
+                ost.kit = 2;
+                return 0;
+            }
             line (p, mode);
         }
     }

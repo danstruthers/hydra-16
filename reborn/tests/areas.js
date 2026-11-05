@@ -78,7 +78,7 @@ const rules = [
   ['reborn/sim/tools/hydrapc.js', ['pc']],
   ['reborn/sim/tools/hysong.js', ['sound', 'word:hysong']],
   [/^reborn\/sim\/tools\/(numref|numfmt|numxcheck)\.js$/, ['numbers', 'basic', 'forth', 'hylang', 'c']],
-  [/^reborn\/sim\/tools\/(command\w*\.js|cmdmatch\/)/, ['dq0']],   // (the parser's tables: dq0c's, dq0w's make.js)
+  [/^reborn\/sim\/tools\/(command[\w-]*\.js|cmdmatch\/)/, ['dq0']],   // (the parser's tables: dq0c's, dq0w's make.js)
   [/^reborn\/sim\/tools\/(soak|sdwrite|nprof)\.js$/, ['none']],    // (the soaks: a tier's own; the card writer)
   ['reborn/sim/tiers.js', ['none']],                         // (The tiers' steps: --tier's, no test's)
   ['reborn/sim/dl/', ['dl']],                                 // (--dl's: every test then)
@@ -124,7 +124,7 @@ const NEAR = {
   gear: ['dq0outfit', 'dq0kit', 'dq0keys', 'dq0lair', 'dq0dens', 'dq0items', 'dq0equip', 'dq0money', 'dq0load', 'dq0usedup',
     'dq0examine', 'dq0inside', 'dq0handy', 'dq0hands', 'dq0shield', 'dq0armour', 'dq0robbed', 'dq0reach', 'dq0several',
     'dq0names', 'dq0rebar', 'dq0strike'],
-  money: ['dq0money', 'dq0outfit', 'dq0kit', 'dq0lair', 'dq0dens', 'dq0robbed', 'dq0load'],
+  money: ['dq0whotrades', 'dq0money', 'dq0outfit', 'dq0kit', 'dq0lair', 'dq0dens', 'dq0robbed', 'dq0load'],
   senses: ['dq0looks', 'dq0heard', 'dq0glow', 'dq0dark', 'dq0darksearch', 'dq0light', 'dq0scent', 'dq0traces', 'dq0stay',
     'dq0sound', 'dq0soundx', 'dq0watch', 'dq0lookway', 'dq0kept', 'dq0fog', 'dq0quiet', 'dq0pose'],
   denizens: ['dq0denizens', 'dq0popgen', 'dq0inhab', 'dq0reach', 'dq0sway', 'dq0talk', 'dq0names', 'dq0stay', 'dq0dens',
@@ -132,7 +132,7 @@ const NEAR = {
   theme: ['dq0theme', 'dq0pieces', 'dq0themegen', 'dq0goals', 'dq0themec', 'dq0history', 'dq0layers', 'dq0quest',
     'dq0handtheme', 'dq0plan', 'dq0inhab', 'dq0popgen'],
   time: ['dq0time', 'dq0longwait', 'dq0tasks', 'dq0timed', 'dq0pace', 'dq0steps', 'dq0tiring', 'dq0watch', 'dq0rather', 'dq0stay',
-    'dq0usedup', 'dq0answer'],
+    'dq0usedup', 'dq0answer', 'dq0jobs'],
   body: ['dq0limbs', 'dq0legs', 'dq0hands', 'dq0handy', 'dq0harm', 'dq0tiring', 'dq0senseless', 'dq0helpless', 'dq0disarm', 'dq0venom', 'dq0air', 'dq0tend',
     'dq0pose', 'dq0quiet'],
   save: ['dq0save', 'dq0kept', 'dq0soak', 'dq0quest', 'dq0vast'],

@@ -59,7 +59,7 @@ struct sight {
     unsigned char   up_rel, up_ft;              /* The floor here: the way it rises, and feet in ten (0: level) */
     unsigned char   ceil, cmid, cwall;          /* Its zone's ceiling (ceil C_UNSEEN: not seen) */
     unsigned char   ndoors;                     /* Doors, and passages' mouths (rel | MOUTH) */
-    struct { unsigned char rel; signed char dz; unsigned char state; unsigned x, y; unsigned char kind, parts; }
+    struct sdoor { unsigned char rel; signed char dz; unsigned char state; unsigned x, y; unsigned char kind, parts; }
         door[SEE_DOORS];                        /* (state: PS_OPEN ...; x, y its square; a portal's kind and
                                                 **   parts, world.h's PK_* and PP_*: a portcullis, a window, a slit;
                                                 **   but a door's or a portcullis's parts its features, PF_*, as
@@ -116,16 +116,34 @@ enum { PT_READ, PT_DICE, PT_GAME, PT_TALK, PT_SING, PT_DRINK, PT_MEND, PT_WHITTL
                                                 **   character) */
 #define SIGHT_HURRY     0x80
 #define MOUTH           0x08
+#define KNOWN_REL       0x40                    /* (A door's or an opening's rel: one it remembers, or seen further along a
+                                                **   passage: named, not told by the look: after ndoors and nopen, in
+                                                **   door[] and open[]: choose.c's, the user's, 2026-11-02) */
+#define TOUCHED(c, k)   (((c) >> (2 * (k))) & 3)    /* (In the dark, sight's cmid: what its hands find ahead, to its left, to
+                                                **   its right, k 0 1 2: 0 nothing, 1 a wall, 2 a shut door, 3 bars; cwall 1:
+                                                **   it has been on this square before: sight.c's) */
+#define PS_LOCKED_       0x02                    /* (A seen door's state: locked, as it's found; barred, its bar seen on the */
+#define PS_BARRED_       0x04                    /*   character's side, or found from the far side: sight.c's) */
 #define DOORWAY         0x83                    /* (A seen door's state: no door in it, a doorway, open; else its
                                                 **   portal's PS_OPEN and PS_WRECKED) */
 #define SD_DOUBLE       0x20                    /* (A seen door's parts: two leaves, world.h's PF_DOUBLE) */
 #define NEAR_SQ         2                       /* Squares: near enough to look a thing over closely (further, only
                                                 **   its look from afar) */
 enum { W_ROOM, W_PASSAGE };
-enum { S_PART, S_SMALL, S_MID, S_LARGE, S_LONG };
+enum { S_PART, S_SMALL, S_MID, S_LARGE, S_LONG, S_VAST, S_VASTW };    /* (A room as much as it's seen of it, its size;
+                                                **   a great cavern's part, vast: its walls beyond the light, or seen
+                                                **   (6 squares of them or more): slice 4.10's) */
 enum { Z_STEPS, Z_SLOPE, Z_LEDGE };
 enum { C_FLAT, C_BARREL, C_DOME, C_CATHEDRAL, C_SLOPED, C_ROUGH, C_UNSEEN };
-enum { O_STAIRS_UP, O_STAIRS_DOWN, O_LADDER_UP, O_LADDER_DOWN, O_WINDOW, O_SHAFT_UP, O_SHAFT_DOWN, O_WAY_OUT };
+enum { O_STAIRS_UP, O_STAIRS_DOWN, O_LADDER_UP, O_LADDER_DOWN, O_WINDOW, O_SHAFT_UP, O_SHAFT_DOWN, O_WAY_OUT,
+       O_RAMP_UP, O_RAMP_DOWN,                  /* (A long slope between strata, walked: slice 4.10's, 2026-11-02) */
+       O_SKYLIGHT, O_SKYSHAFT };                /* (The sky's, 2026-11-03: HOUSE.md's what shows the sky: a skylight in a
+                                                **   room's roof, its square under it, no link; a chunk's O_WINDOW the
+                                                **   floor square beside a window on the surface, its sill the portal's
+                                                **   number in the chunk, no link; O_SKYSHAFT a chunk's opening of a shaft
+                                                **   up open to the sky, its stratum's link's O_SHAFT_UP, LD_SKY: sky.c's) */
+#define O_DAYLIT        0x10                    /* (The senses' record's kind: a skylight's or such a shaft's, daylight
+                                                **   falling from it now) */
 enum { ST_BUILT, ST_NATURAL, ST_MINE, ST_MIXED };
 
 /* A look one way's own (HOUSE.md's looking one way: the hub's LK_WAY, the senses', in SIGHT_BANK after the record of
@@ -149,7 +167,7 @@ struct wayseen {
     unsigned char   nglows;
     struct sglow    glow[SEE_GLOWS];
 };
-enum { WB_DARK, WB_PASSAGE, WB_ROOM, WB_SHUT };
+enum { WB_DARK, WB_PASSAGE, WB_ROOM, WB_SHUT, WB_SKY };
 enum { BN_PASSAGE, BN_DOORWAY, BN_OPEN, BN_BROKEN, BN_DOOR, BN_PORTCULLIS, BN_WINDOW, BN_SLIT };
 
 /* The map's window: the stratum round the character, a square a character, drawn by the world into the hub

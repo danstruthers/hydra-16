@@ -29,9 +29,11 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <dice.h>
 #include "dq0.h"
 #include "hub.h"
 #include "level.h"
+#include "tell.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a part's, an overlay's) */
 
@@ -65,12 +67,37 @@ static void __fastcall__ turn_to (unsigned char h)
 ** wreq, WQ_EXAMINE: a doorway has none), in words (overlay 4), its aspects as ex asks (EX_*: 0 its plain features;
 ** its quality, judged by the craft that knows its material, the referee's test, P_APPRAISE: AP_WOOD, AP_METAL,
 ** AP_STONE; its lock, its condition, plain); a few seconds' looking (main.c's part 2's once, its room) */
+extern unsigned long xs_seed;
+static unsigned long judge_was;
+
+/* The words' dice for a thing judged (k its key, ml the skill's mastery, the game's seed): the same again, the same
+** words, till the skill improves (the user's, 2026-11-03: the referee's die the same way, rshouse.h's JUDGE_IN); the
+** UI's own to put back after (judge_was) */
+static void __fastcall__ judge_dice (unsigned k, unsigned ml)
+{
+    unsigned h = k * 40503U ^ ml * 257 ^ (unsigned) HUB->seed;
+
+    judge_was = xs_seed;
+    ((unsigned*) &xs_seed)[1] = h;
+    ((unsigned*) &xs_seed)[0] = (h * 25173U + 13849U) | 1;
+    random (2);
+    random (2);
+}
+
 static void __fastcall__ inspect (unsigned char obj, unsigned char orel, unsigned char ex)
 {
     struct req* r;
     signed char g = 0;
+    unsigned k = 0;
 
     if (pick (obj | PICK_TELL, orel) != 1) {
+        return;
+    }
+    if (tx - HUB->pc_x + 1 > 2 || ty - HUB->pc_y + 1 > 2) {
+        HUB->ireq.x = tx;                       /* (Out of reach, seen or remembered: walked over to first, then again) */
+        HUB->ireq.y = ty;
+        HUB->ireq.item = 0;
+        reach_go ();
         return;
     }
     if (REL_BEHIND (REL8 (g = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y), HUB->pc_face))) {
@@ -86,12 +113,17 @@ static void __fastcall__ inspect (unsigned char obj, unsigned char orel, unsigne
         return;
     }
     memcpy (&viewed, &HUB->pview, sizeof viewed);
-    if (ex & EX_QUALITY) {                      /* (Its quality judged: the appraiser's test) */
+    if (ex & EX_QUALITY) {                      /* (Its quality judged: the appraiser's test, the first answer kept, by
+                                                **   a hash of the door's square: the user's, 2026-11-03) */
+        HUB->slot[SLOT_UI].w1 = tx * 251 + ty;
         r = ask_b (RS_TEST, P_APPRAISE, viewed.mat == PM_STONE ? AP_STONE : viewed.mat == PM_IRON ? AP_METAL : AP_WOOD);
         g = r->grade;
+        k = r->w2;
         r->state = REQ_FREE;
     }
+    judge_dice (tx * 251 + ty, k);
     portal_look (&viewed, g, ex);
+    xs_seed = judge_was;
     msg (lb);
     if (!(ex & (EX_VALUE | EX_WEIGHT)) || (ex & EX_QUALITY)) {
         intend2 (I_WAIT, ex & (EX_LOCK | EX_COND) ? 20 : 50, 1);
@@ -129,14 +161,26 @@ static unsigned char __fastcall__ judged_as (unsigned char ex)
     struct req* r;
     signed char g;
 
-    if (!cmd.obj.word[0] || things (IO_DESCRIBE, cmd.obj.word) != IR_OK) {
+    if (!cmd.obj.word[0]) {
+        return 0;
+    }
+    HUB->ireq.to = 1;                           /* (Out of reach: walked over to first) */
+    if ((g = things (IO_DESCRIBE, cmd.obj.word)) == IR_NOT_HERE) {
+        reach_go ();
+        return 1;
+    }
+    if (g != IR_OK) {
         return 0;
     }
     memcpy (&judged, &HUB->ireq, sizeof judged);
+    HUB->slot[SLOT_UI].w1 = judged.item;        /* (Its number: the first answer kept till the skill improves, the
+                                                **   user's, 2026-11-03; the referee's and the words' dice its hash) */
     r = ask_b (RS_TEST, P_APPRAISE, judged.craft);
     g = r->grade;
+    judge_dice (judged.item, r->w2);
     r->state = REQ_FREE;
     appraise (&judged, g, ex);
+    xs_seed = judge_was;
     msg (lb);
     return 1;
 }
@@ -152,6 +196,10 @@ static unsigned char examine (void)
         strcpy (cmd.obj.word, "pennies");       /* (The money counted, its pennies: "count the money", 2026-10-28) */
     }
     if (cmd.obj.word[0]) {
+        if (ex || !k) {
+            walk_op = IO_DESCRIBE;              /* (Its first words before the world's asked: walk_ahead's, sway.c) */
+            walk_ahead (cmd.obj.word);
+        }
         if (ex & EX_BOTH ? judged_as (ex) : looked (ex & EX_TRAPS ? LM_TRAPS : ex & EX_WEIGHT ? LM_WEIGHT : ex & EX_LOCK ?
             LM_LOCK : ex & EX_COND ? LM_COND : LM_CLOSE, ex & EX_TRAPS ? 100 : ex ? 10 : 30)) {
             return 0;
@@ -172,6 +220,7 @@ static unsigned char examine (void)
     } else if (ex) {
         msg ("Which thing? Name it (assess the sword, check the chest for traps ...).");
     } else if (k == OB_WALL) {
+        walk_says ((const char*) W_DIG);
         intend2 (I_TRACE, TRC_WALL, 0);         /* (The wall ahead, its rock: the world's words, slice 4.10's) */
     } else {
         look (2);                               /* (A close look about: the room's figures) */
@@ -179,12 +228,73 @@ static unsigned char examine (void)
     return 0;
 }
 
+/* Gone to a thing, a denizen, a body: anything it sees, or remembers seeing in this room though it's out of the light
+** now (the user's, 2026-11-02: HOUSE.md's going places; main.c's move, VB_APPROACH_OBJECT its way here): the one found
+** (resolve.c's: asked which, of several, its square in cmd.obj), else the nearest of that name (the world's IO_LOOK,
+** LM_GO).  Walked to by the world's walk, stopping beside it (I_TAKE's a 2, walked on as it gets nearer: through a door
+** it's seen through; a denizen, I_CLOSE's w1 1: up to it, as it moves, no blow); refused only for what it hasn't seen */
+#pragma code-name (push, "SW13CODE")           /* (Part 13's, called by its s_missiles: part 17's room) */
+#pragma rodata-name (push, "SW13RODATA")
+void go_thing (void)
+{
+    unsigned x = cmd.obj.x, y = cmd.obj.y;
+    unsigned char k;
+    struct actor* a;
+
+    if (!cmd.obj.word[0]) {
+        tell (T_GO_WHICH_WAY);
+        return;
+    }
+    if (!x) {
+        HUB->ireq.to = LM_GO;
+        k = things (IO_LOOK, cmd.obj.word);
+        if (k == IR_OK) {
+            msg (tt ());                        /* (Within reach already: where it lies) */
+            return;
+        }
+        if (k != IR_NOT_HERE) {
+            sayf ("\nYou haven't seen a%s %s here.", strchr ("aeiou", *cmd.obj.word) ? "n" : "", cmd.obj.word);
+            return;
+        }
+        x = HUB->ireq.x;
+        y = HUB->ireq.y;
+    } else if (x - HUB->pc_x + 1 <= 2 && y - HUB->pc_y + 1 <= 2) {
+        sayf ("\nThe %s is beside you.", cmd.obj.word);
+        return;
+    } else {
+        for (k = 0, a = HUB->actor; k < NACTORS; ++k, ++a) {
+            if (a->state && a->x == x && a->y == y && a->sn == HUB->pc_stratum) {
+                walk_says (cmd.obj.word);
+                intend_a = k + 1;
+                intend2 (I_CLOSE, 1, 0);
+                return;
+            }
+        }
+    }
+    walk_says (cmd.obj.word);                   /* (Told at once, the user's D17) */
+    intend_a = 2;
+    intend2 (I_TAKE, x, y);
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 unsigned char __fastcall__ s_look_way (unsigned char action)
 {
     unsigned char h, k;
 
     if (action == VB_EXAMINE_OBJECT) {
         return examine ();
+    }
+    if (action == VB_LEAVE) {                   /* ("Leave", "exit", "leave the room": by the door or the passage's mouth
+                                                **   it means, which, asked; "exit north": that way) */
+        tx = 0;
+        k = cmd.obj.kind && cmd.obj.kind != OB_ROOM ? cmd.obj.kind : OB_ROOM;
+        if (cmd.dir > H_NW && pick (k | PICK_TELL, cmd.obj.lies) != 1) {
+            return 0;
+        }
+        intend_a = tx ? bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y) : cmd.dir;
+        intend2 (I_GO, tx, ty);
+        return 0;
     }
     if (action == VB_NONE) {                    /* (A listen's or a sniff's end: what came of it) */
         if (lsn & 3) {
@@ -195,6 +305,10 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
         return 0;
     }
     if (action == VB_TRACK) {
+        if (cmd.aux != TRC_TRACK) {             /* (The floor looked at, or the wall: its first words at once) */
+            cmd.dir = cmd.aux ? 0 : GO_DOWN;    /* (TRC_FLOOR's 0) */
+            walk_says ((const char*) W_DIG);
+        }
         intend2 (I_TRACE, cmd.aux, 0);          /* (The traces read, the world's: the floor looked at, the Tracking
                                                 **   test; worded as its E_VIEW comes, V_TRACED) */
         return 0;
@@ -218,6 +332,9 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
     }
     if (h <= H_NW && h != HUB->pc_face) {       /* (Turned to it first: the turn's look) */
         turn_to (h);
+    } else if (k < 4) {                         /* (Its first words at once, the look's or the listen's 4.8M cycles and
+                                                **   more off: the user's, 2026-11-04; turned first, the turn's are) */
+        walk_says ((const char*) (k ? W_LISTEN : W_PEER));
     }
     if (!k) {
         intend2 (I_LOOK, WAY_T, 0);             /* (The world's: the senses' look one way, E_VIEW V_LOOKED) */
@@ -277,7 +394,9 @@ void o_focus_words (void)
     if (W.seq != S.seq) {
         W.nbeyond = W.nitems = W.ndens = W.nglows = 0;  /* (Not this record's: a look about came after it) */
     }
-    msg (S.dark ? "You peer ahead into the dark." : "You peer ahead.");
+    if (worded != 3) {
+        msg (S.dark ? "You peer ahead into the dark." : "You peer ahead.");
+    }
     for (i = 0, b = W.beyond; i < W.nbeyond; ++i, ++b) {    /* What's beyond the openings ahead (k: the opening,
                                                 **   BN_PASSAGE 0): "You can't see past the door ahead: it's
                                                 **   closed."; "Through the doorway ahead you see only darkness."; "...
@@ -299,7 +418,7 @@ void o_focus_words (void)
             }
             sayf (" You can't see past the %s%s %s: %s.", noun[k], !n ? "" : k == BN_PORTCULLIS ? "es" : "s",
                 rel_w[(b->rel + 1) & 3], k == BN_WINDOW ? (n ? "their shutters are closed" : "its shutters are closed") :
-                n ? "they're closed" : "it's closed");
+                n ? "they're closed" : b->kind & PS_BARRED_ ? "it's barred" : b->kind & PS_LOCKED_ ? "it's locked" : "it's closed");
             continue;
         }
         for (n = 0; i + 1 < W.nbeyond && twin (b); ++n, ++i, ++b) {
@@ -308,6 +427,8 @@ void o_focus_words (void)
             rel_w[(b->rel + 1) & 3]);
         if (b->what == WB_DARK) {
             say ("only darkness");
+        } else if (b->what == WB_SKY) {
+            say ("the sky, up a light well");
         } else if (b->what == WB_PASSAGE) {
             sayf (k ? "a passage, %u feet of it" : n ? "%u feet of them" : "%u feet of it", SQ_FT * b->dist);
         } else {

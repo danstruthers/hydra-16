@@ -156,7 +156,7 @@ static char __fastcall__ glyph (unsigned x, unsigned y, unsigned char* p, unsign
     case T_STEPS:
         return '=';
     case T_UP:
-        return '<';
+        return *p & T_HOLE ? '^' : '<';         /* (A skylight's square: no way up, 2026-11-03) */
     case T_DOWN:
         return '>';
     case T_WINDOW:

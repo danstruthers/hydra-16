@@ -29,6 +29,7 @@ void sense_actor (void);                        /* (sense.c's: the hub's dsense 
 void snd_need (void);                           /* (sound.c's: the sound layer up to date) */
 
 static unsigned char sees;                      /* (The denizens seen changed: the look's reply's ch) */
+unsigned char here_known;                       /* (Its square known before this look: sight.c's, in the dark) */
 unsigned char v_way;                            /* (A look one way, the hub's LK_WAY: view.h's) */
 
 /* A look about for the character, from what the hub has of it (its square, its facing, its light, its senses; the
@@ -44,7 +45,8 @@ static void pc (void)
     own = HUB->pc_light;
     light = HUB->pc_light * (HUB->pcsum.nightvision ? HUB->pcsum.nightvision : 1);  /* (Night vision: further) */
     eye = HUB->pcsum.sight;                     /* (What it makes out at a distance: sight.c's, things.c's) */
-    sight = HUB->pcsum.cond & C_BLINDED ? 0xFF : eye;
+    sight = HUB->pcsum.cond & C_BLINDED || HUB->pc_task.kind == LT_SLEEP ? 0xFF : eye;   /* (Asleep, its eyes shut: as a
+                                                **   denizen's, the book's, the user's, 2026-11-03) */
     dark = HUB->pcsum.darkvision;               /* (Ultravision's reach, in squares) */
     sn = HUB->pc_stratum;
     x = HUB->pc_x;
@@ -168,7 +170,6 @@ int main (int argc, char* argv[])
         } else {
             hy_sem_acquire (HUB->sem[T_SENSES]);    /* (Waiting costs nothing) */
         }
-        hub_map (0);
         if (HUB->quit) {
             break;
         }
@@ -207,7 +208,6 @@ int main (int argc, char* argv[])
             light_events ();
             sense_actor ();
             hub_reply (&HUB->dsense);
-            hub_map (0);
         }
     }
     return 0;

@@ -24,7 +24,17 @@ static unsigned char seq;                       /* Its requests, counted (each o
 static unsigned char pend;                      /* A ring taken while it waited for a reply, not the reply's */
 
 /* Each bank's U and $00, kept, and bank 0 put at $8000 */
+#ifndef HUB_ATTACHED                            /* (The UI's: part 19's, the main RAM's room, 2026-11-02; */
+#pragma code-name (push, "SW19CODE")            /*   only as it starts: part 1's hub_create, through its stub) */
+#pragma rodata-name (push, "SW19RODATA")
+int s_find_banks (void)
+#else
+#ifdef HUB_ATTACH_SW3                           /* (The world's: part 88's, with hub_attach, its start-up's) */
+#pragma code-name (push, "SW88CODE")
+#pragma rodata-name (push, "SW88RODATA")
+#endif
 static int find_banks (void)
+#endif
 {
     static struct hy_regs r;
     unsigned char b;
@@ -41,6 +51,13 @@ static int find_banks (void)
     hub_map (0);
     return 0;
 }
+#if !defined (HUB_ATTACHED) || defined (HUB_ATTACH_SW3)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#endif
+#ifndef HUB_ATTACHED
+int find_banks (void);                          /* (Its stub: bank.s's) */
+#endif
 
 void __fastcall__ hub_map (unsigned char bank)
 {
@@ -48,6 +65,16 @@ void __fastcall__ hub_map (unsigned char bank)
     *(volatile unsigned char*) 0xFFF1 = hub_u[bank];    /* U, then the bank (hydra.h's hy_seg_map, without the call) */
     *(volatile unsigned char*) 0 = hub_x[bank];
 }
+
+#if defined (HUB_ZERO) || !defined (HUB_ATTACHED)
+void hub0 (void)                                /* (hub_map (0), two bytes less at each call and a little quicker: hub0.h's,
+                                                **   the world's room) */
+{
+    cur = 0;
+    *(volatile unsigned char*) 0xFFF1 = hub_u[0];
+    *(volatile unsigned char*) 0 = hub_x[0];
+}
+#endif
 
 #if !defined (HUB_ATTACHED) || defined (HUB_BACK)  /* (The UI's and the maker's: the others' room) */
 /* Where the window is (the hub's bank hub_map put there last, and the bank register), and the window put back there:
@@ -112,10 +139,12 @@ int __fastcall__ hub_create (unsigned char banks)
 
 #ifdef HUB_ATTACHED                             /* (The UI's room: what it never does left out, here and below) */
 #ifdef HUB_ATTACH_SW3
-#pragma code-name (push, "SW3CODE")             /* (The world's: its start-up's part, the main RAM's room) */
-#pragma rodata-name (push, "SW3RODATA")
-#endif
+#pragma code-name (push, "SW88CODE")            /* (The world's: its start-up's, the main RAM's room) */
+#pragma rodata-name (push, "SW88RODATA")
+int __fastcall__ s_hub_attach (unsigned char s, unsigned char me)
+#else
 int __fastcall__ hub_attach (unsigned char s, unsigned char me)
+#endif
 {
     seg = s;
     if (hy_seg_attach (s) < 0 || find_banks () || HUB->magic != HUB_MAGIC || HUB->version != HUB_VERSION) {

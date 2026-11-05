@@ -83,6 +83,9 @@ void __fastcall__ ask_line (char* b, unsigned char max);  /* A line typed, waiti
 #define PACE_TURNS      3                       /* The world moves only as the character does (a turn game) */
 extern unsigned long now;                       /* The game's time */
 extern unsigned char pace, paused;
+extern unsigned char hard;                      /* Hard mode (dq0 -H, D7's setting: no autosave to go back to, a
+                                                **   death the save's end; kept in the save's pace, its top bit: slice
+                                                **   4.4's) */
 extern unsigned char plain;                     /* The map in plain letters, no colours (the player's: "colour off",
                                                 **   pace.c's; kept with the game: main.c's save) */
 extern const char* savedir;                     /* (main.c's: dq0 -d's, the save's folder) */
@@ -114,7 +117,7 @@ void __fastcall__ map (const char* rules);      /* Part 3: the map of what it's 
 enum { OB_NONE, OB_DOOR, OB_PASSAGE, OB_STAIRS, OB_LADDER, OB_SHAFT, OB_LEDGE, OB_WAY_OUT, OB_WALL, OB_WINDOW, OB_TRAP,
     OB_PORTC, OB_ROOM, OB_CORNER, OB_PILLAR, OB_CENTRE, OB_SIDE };  /* (OB_ROOM: the room, its ceiling: looked at closely; a corner, a
                                                 **   pillar: looked round, "look around the corner") */
-enum { HOW_ANY, HOW_TO, HOW_THROUGH };
+enum { HOW_ANY, HOW_TO, HOW_THROUGH, HOW_ACROSS };
 enum { PR_NONE, PR_IN, PR_ON, PR_FROM, PR_WITH, PR_AT, PR_TO };    /* (The other thing: in it, on it, from it, with
                                                 **   it, at it, to it) */
 #define GO_UP       8                           /* (A direction: up, down; else a heading, H_N ...) */
@@ -167,6 +170,9 @@ extern unsigned char strike;                    /* (main.c's) What the character
                                                 **   with each blow (I_ATTACK's, I_PORTAL's x[1]) */
 /* ---- choose.c (overlay 7): the thing meant, of those the character perceives; of several, which, asked */
 
+#define LOOK_NEW    32                          /* (look's: only what's new since the command began) */
+#define FW_NEW      0xFFFF                      /* (felt_words': that, task.c's) */
+#define FW_TOUCH    0xFFFE                      /* (felt_words': what its hands find, in the dark, the look's: task.c's) */
 #define PICK_TELL   0x80                        /* (pick's obj |: "You see no door here", if there's none) */
 #define PICK_ANY    0x40                        /* (Any one: none asked) */
 unsigned char __fastcall__ pick (unsigned char obj, unsigned char orel);   /* The thing of kind obj (OB_*), lying
@@ -200,26 +206,26 @@ extern unsigned char untarget;                  /* (main.c's: the target let go 
 /* ---- theme.c (overlay 5): the theme's words and its puzzle (theme.h), from its copy in the overlay's bank */
 
 #define TCOPY       ((struct theme*) 0x9000)    /* (The theme, in overlay 5's bank: main.c reads it in) */
-struct quest {                                  /* The game's theme and its end (kept in the save) */
-    unsigned char   theme;                      /* The theme's number (the save's: the one it began with) */
-    unsigned char   done;                       /* The game's ending (theme.h's END_*: 0 not yet) */
-};
+#include "life.h"                               /* (Its struct quest) */
 extern struct quest Q;                          /* (main.c's) */
 extern char tname[32];                          /* A theme's name for something (theme_named's) */
-enum { TN_THEME, TN_STRATUM, TN_ROOM, TN_LIGHT };
-enum { Q_NONE, Q_TOLD, Q_DONE, Q_OPEN, Q_RULED };   /* (puzzle's: not its; words only; a rule done; the way out
-                                                **   opened; the place ruled) */
+enum { TN_THEME, TN_STRATUM, TN_ROOM, TN_LIGHT, TN_END, TN_GONE };
+enum { Q_NONE, Q_TOLD, Q_DONE };                 /* (puzzle's: not its; words only; a rule done) */
 void __fastcall__ theme_load (unsigned char t);     /* Overlay 5: the theme (its number: the file's counted round)
                                                 **   read in: into the hub's theme bank and the overlay's; its kinds
                                                 **   into the hub's catalogue (the things' read in first) */
 void __fastcall__ theme_named (unsigned char what, unsigned char n);   /* Overlay 5: its name, a stratum's (n its
                                                 **   number) into tname; a room's (n its kind), its light, added to
-                                                **   lb */
+                                                **   lb; an ending's words said (n its END_*); E_LEFT's (n its w1 less EL_WAY:
+                                                **   how the character's out, or a take rule told; theme.c's: one stub,
+                                                **   the main RAM's room) */
 void __fastcall__ story (unsigned char resumed);    /* Overlay 5: the theme's name (and its story, a new game's) */
 void way_words (void);                          /* Overlay 5: the way out, shut or open */
 unsigned char __fastcall__ history (unsigned long seed);    /* Part 7: a game's own theme made, themegen's (main.c):
                                                 **   the theme to read (0xFF its own, else a stand-in's) */
-void __fastcall__ ending (unsigned char how);   /* Overlay 5: an ending's words (END_*) */
+void __fastcall__ ending (unsigned char how);   /* Overlay 15: the game's end (END_*: its words, the save marked so, a game
+                                                **   done isn't carried on); or, how EL_WAY on, E_LEFT's */
+extern volatile unsigned char quit;             /* (main.c's) */
 unsigned char __fastcall__ puzzle (struct cmd* c);      /* Overlay 5: a command the puzzle's (Q_*: the world's
                                                 **   judgement, IO_PUZZLE, worded) */
 unsigned char __fastcall__ othings (unsigned char op, const char* name, const char* into, unsigned char to);
@@ -241,7 +247,14 @@ void help (void);                               /* Overlay 1 (help.c's): the com
 void __fastcall__ unknown (unsigned char f);    /* Overlay 1: a verb the game doesn't know (f 0), or doesn't do yet
                                                 **   (f 1), said back from the command's line (cl) */
 extern const char* cl;                          /* The command's line (main.c's) */
-unsigned char parts_in (void);                  /* Overlay 6 (parts.c's): the line typed queued in its parts, 0 no room */
+unsigned char __fastcall__ qual_ok (const char* name, const char* w);   /* Overlay 1: the word said before w fits name */
+unsigned char __fastcall__ parts_in (unsigned char op);    /* Overlay 6 (parts.c's): the line typed queued in its
+                                                **   parts, 0 no room (PO_LINE); */
+#define PO_LINE     0
+#define PO_STOP     1                           /*   the long task stopped: the rest of its line let go; */
+#define PO_AGAIN    2                           /*   the command has no verb: the list's verb put to it, back in the queue: 1 */
+extern unsigned char held;                      /* (main.c's: the next line held for the character; | 2, that line let go: its
+                                                **   parse with it) */
 #define QMAX        256                         /* The lines typed ahead (term.c's queue, qlen) */
 extern char queue[QMAX];
 extern unsigned qlen;
@@ -250,10 +263,11 @@ void __fastcall__ sway_words (const struct sway* s);   /* Overlay 6: the charact
                                                 **   denizens' task's answer (the hub's sway, copied), into lb */
 void __fastcall__ dig_words (unsigned char how, unsigned char feet);   /* Overlay 1: digging's, how it goes */
 unsigned char __fastcall__ task_words (unsigned w, unsigned char named);   /* Overlay 3: a long task's (task.c) */
-void __fastcall__ shot_words (unsigned w, unsigned char named);   /* Overlay 15: the missiles' (shots.c: slice 4.7's) */
+void __fastcall__ shot_words (unsigned w, unsigned char named);   /* Overlay 1: the missiles' (shots.c: slice 4.7's) */
 void __fastcall__ beat_words (unsigned w);
 void __fastcall__ felt_words (unsigned w);      /* (Overlay 7's) A walk in the dark's beat (task.c's) */
 unsigned __fastcall__ dnum (const char* s);     /* (main.c's) A number, a word's (atoi's) */
+void __fastcall__ turned_says (unsigned char go);                        /* (Overlay 1's) A turn's first words (task.c's, 2026-11-03) */
 void facing_words (void);                       /* (Overlay 7's) The way it believes it faces (task.c's: slice 4.2's) */
 void __fastcall__ fore_set (unsigned char on);  /* (Overlay 6's) The UI and the answer's tasks in the kernel's
                                                 **   foreground, or not (main.c's FS_*) */
@@ -271,7 +285,9 @@ extern unsigned char harm_told;                 /* (The states a harm's words to
 char* __fastcall__ env (const char* name, char* buf, unsigned char size);  /* The environment's (main.c) */
 void __fastcall__ appraise (const struct ireq* q, signed char g, unsigned char ex);   /* Overlay 1: a thing judged
                                                 **   (its value, its quality, both: ex's EX_*) */
+extern char dug_with[16];                       /* The tool a dig took: main.c's */
 extern char dig_with[16];                       /* The tool a dig's taken up, to name (then ""): main.c's */
+extern char dig_word[16];                       /* The thing named to dig with, as said: main.c's */
 void __fastcall__ climb_words (unsigned char how, unsigned char feet); /* Overlay 1: climbing's (a ledge's:
                                                                         **   CW_*) */
 enum { CW_RISES = 0x40, CW_FALLS };
@@ -289,6 +305,10 @@ struct fight;
 void __fastcall__ feed (unsigned char eat);     /* (Part 16's, feed.c: "eat", "drink", slice 4.9's) */
 void __fastcall__ water_words (unsigned w);     /* Overlay 4 (water.c): the water's news, worded
                                                 **   (an E_BEAT's w1, WB_WATER ... WB_DOUSED: slice 4.9's) */
+void __fastcall__ sky_words (unsigned char p, unsigned char k, const char* w);   /* Overlay 1 (time.c) */
+/* (Part 18's hide, main.c's and words.c's, not term.c's: HD_ROPE: the thing's word a rope's or a grapple's, or none: 1; HD_UP: a grapple or a rope thrown up, carried out: 1) */
+#define HD_ROPE         ((const char*) 1)
+#define HD_UP           ((const char*) 2)
 unsigned __fastcall__ time_ui (unsigned w);     /* Overlay 16 (time.c): the time of day believed, worded (w TU_TELL,
                                                 **   "time"; TU_SKY | its phase times 256, the sky seen; TU_UNTIL, a
                                                 **   wait's minutes "until dawn", "watch the sun", 0 none said) */
@@ -346,7 +366,7 @@ extern unsigned long heard_at;                  /* (main.c's: when a sound was l
 
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
-extern unsigned char ovbank[16];
+extern unsigned char ovbank[20];
 unsigned char early (void);                     /* Part 12: before a command's things are looked for (in shock, refused:
                                                 **   2; first aid's, 1; else 0) */
 void tend (void);                               /* Part 12: first aid (VB_TEND) */
@@ -355,7 +375,10 @@ extern unsigned char news_due;                  /* (main.c's: the body's news he
 
 /* ---- The swapped parts (bank.s's stubs: swap.inc), run in the main RAM's top (dq0.cfg's SWAP), a part at a time */
 
-void __fastcall__ args (int argc, char* argv[]);    /* Part 7 (main.c): the game's arguments read (begin's) */
+unsigned char __fastcall__ args (int argc, char* argv[]);    /* Part 7 (main.c): the game's arguments read (begin's): 1, -s said */
+enum { LF_GOING, LF_NEXT, LF_NEW };             /* (A game in the save's folder: going on, one ended, none: main.c's life) */
+void __fastcall__ between (unsigned char given);    /* Part 21 (main.c): dq0life's arguments made (given: the seed said) */
+void life_dir (void);                           /* Part 22 (main.c): the save's folder's dungeon found, by the record */
 void __fastcall__ begin (int argc, char* argv[]);   /* Part 1 (main.c): the arguments, the world started, the game
                                                 **   begun */
 void finish (void);                             /* Part 1: the game kept, the world stopped */
@@ -379,7 +402,26 @@ unsigned char __fastcall__ den_seen (unsigned x, unsigned y);   /* Part 8: an ac
 unsigned char __fastcall__ actor_seen (unsigned char b);        /* Part 8: an event's actor seen (b: 0 the character) */                /* Part 8: the character's place in the room, and the room's size */
 unsigned char __fastcall__ lie_words (unsigned char i);   /* Part 8: a thing's place in the room (its sight_copy's) */
 unsigned char reach_go (void);
+unsigned char __fastcall__ tool_out (unsigned char which);    /* Part 19: a thing got out for its use (0 a bandage, 1 food, 2 water), a tool's steps */
+extern unsigned char nap, what_hi, take_more, nosteps;    /* (main.c's) */
+void step_go (void);                            /* Part 19: a step of the reach begun by the world (IO_STEP's) */
+void __fastcall__ reach_said (unsigned w, unsigned char named);   /* Part 19: the reach's words */
+unsigned char may_den (void);                   /* (sway.c's: the thing named may be a denizen: the denizens asked) */
+extern unsigned char paced;                     /* (pace.c's: a manner said with the last pace: main.c's look at a line) */
+void __fastcall__ walk_ahead (const char* name);    /* (sway.c's: a thing to take seen out of reach: its walk told before the world's asked) */
+#define W_DIG           (PA_CHECK + 2)          /* (walk_says' name, a first word by what's asked: PA_* + 1 a portal's work, sway.c's) */
+#define W_SWAY          (PA_CHECK + 3)
+#define W_PEER          (PA_CHECK + 4)
+#define W_LISTEN        (PA_CHECK + 5)
+#define W_MAX           (PA_CHECK + 6)
+extern unsigned char said_ahead, walk_op, worded, placing;       /* (main.c's: its walk told already; a walk over's arrival short) */
+void __fastcall__ blow (const struct msg* m);    /* (Overlay 6's, blows.c: an E_FIGHT worded, and what comes of it) */
+void __fastcall__ walk_says (const char* name);    /* (A walk over told as it begins, at once: "You go over to the pot."; 0: the command's thing) */
 unsigned char search_go (void);                 /* (Part 10's) A search begun, by its form (search.c) */
+void __fastcall__ sheet_map (unsigned char what);   /* (Part 3's) The sheet (0), or the map (1) */
+void __fastcall__ list_say (unsigned char first);                           /* (Overlay 16's) What's carried told, the things' words */
+unsigned char door_go (void);                   /* (Part 13's) A door meant, not workable from here, walked up to first */
+void __fastcall__ search_said (const struct msg* m);   /* (A room searched whole's, as it goes: an E_BEAT's WB_SEARCH) */
 unsigned char __fastcall__ place_go (const struct cmd* c);   /* Part 7: a place in the room walked to */                  /* Part 7: a command's thing out of reach walked over to first */
 void __fastcall__ took_up (unsigned r);         /* Part 2: a thing taken up, or not, told (an E_TAKEN's: IR_*, the
                                                 **   light before times 256) */

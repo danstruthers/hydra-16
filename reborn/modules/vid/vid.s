@@ -331,7 +331,6 @@ irq:
             and         VERA_IEN
             bit         #VERA_IRQ_AFLOW
             bne         @aflow
-@cleared:
             and         #VERA_IRQ_VSYNC | VERA_IRQ_LINE | VERA_IRQ_SPRCOL
             sta         VERA_ISR
             lsr                                             ; A VSYNC?
@@ -359,12 +358,11 @@ irq:
             lda         #0
             rts
 
-@aflow:
-            pha                                             ; AFLOW on, and nobody fills the FIFO: its interrupt off
-            lda         #VERA_IRQ_AFLOW
-            trb         VERA_IEN
-            pla
-            bra         @cleared
+@aflow:                                                     ; AFLOW on, and nobody fills the FIFO: its interrupt off
+            lda         #VERA_IRQ_AFLOW                     ;   (The rest, if any, comes again at once: IRQ# is still
+            trb         VERA_IEN                            ;   down.  With them, this path over the budget for IRQs
+            lda         #0                                  ;   off)
+            rts
 
 ; The VERA's interrupts as the console has them: VSYNC (what came meanwhile cleared first).  Modifies .A
 irq_on:

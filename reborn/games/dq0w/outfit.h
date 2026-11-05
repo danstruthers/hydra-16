@@ -35,20 +35,38 @@ enum { PL_NONE, PL_WORN, PL_HAND, PL_OFF, PL_BOTH, PL_BELT, PL_POUCH, PL_PACK, P
 #define SF_ARMED        0x10                    /*   its own lines its weapons: no weapon skill's drawn, */
 #define SF_FOUND        0x20                    /*   a lair's leavings, lost or left: Treasure 1's Found column, */
 #define SF_OLD          0x40                    /*   of old, grave goods: the stratum's age, its oldest era's mint) */
-#define OF_INDEX        ((unsigned char*) 0x9480)    /* (The outfits' file's head and its sections' index, read into
+#define OF_INDEX        ((unsigned char*) 0x9900)    /* (The outfits' file's head and its sections' index, read into
                                                 **   the catalogue's bank after its code the first time (CAT_BANK):
                                                 **   4 bytes, then 5 a section, then each one's length, 250 at most:
-                                                **   outfits.js's, 2026-10-27; to $9A80 at most, 2026-10-29, the
-                                                **   peoples: the bank's code ends at $944A) */
+                                                **   outfits.js's, 2026-10-27; to $9F00 at most, 2026-10-29, the
+                                                **   peoples: the bank's code ends before it, make.js checks, 2026-11-02) */
 
 /* A thing drawn: its kind, how many (of a lot counted; else one), its make, where it goes, the thing it goes in (PL_IN:
 ** the list's entry plus 1), its flags, its material (MT_*: 0 its kind's) */
 struct ofit {
     unsigned char   kind, qty, quality, place, in, flags, mat;
 };
+/* A thing carried, as kit.dat keeps it (the save's folder's, part 40's: one after another, 22 bytes each, NOFIT at most): an
+** outfit's entry, then struct item's own fields, wear to shut as they lie there.  A carried-on game makes each from its entry (part
+** 57's: coins at the money-changer's cut), then lays its wear, its life, its version and its fuel on it as it was (part 63's: no
+** new life, no new fuel, no new edge; dur_max 0, a thing not made its own yet; coins none, their mints the old region's).  The plan's step 3 */
+struct kitrec {
+    struct ofit     o;
+    unsigned char   wear, hide;
+    unsigned        id;
+    unsigned char   quality, mat;
+    unsigned        dur, dur_max;
+    unsigned char   size, thick;
+    unsigned        fuel;
+    unsigned char   shut;
+};
+#define KIT_ITEM        (sizeof (struct kitrec) - sizeof (struct ofit))
+#define KIT_STATE       9                       /* (Its dur to its shut, laid on the thing) */
+#define MONEY_CUT       15                      /* (A money-changer's, in hundredths: the game's, s_mix_worth's: HOUSE.md's) */
 #define NOFIT           64
-#define OF_N            (*(unsigned char*) 0x993F)      /* (The list's count, then the list, in the kinds' bank) */
-#define OF_LIST         ((struct ofit*) 0x9940)
+#define OF_N            (*(unsigned char*) 0x9E3F)      /* (The list's count, then the list, at the top of the kinds'
+                                                **   bank, 2026-11-03: make.js holds the kinds and their words under it) */
+#define OF_LIST         ((struct ofit*) 0x9E40)
 
 /* The draw's state (things.c's, in the main RAM: parts 57 and 59 both read and write it) */
 struct ost {
@@ -56,6 +74,9 @@ struct ost {
     unsigned        budget, kept;               /* The money left to spend, and kept */
     unsigned        tags;                       /* The character's tags (rs.h's OT_*) */
     unsigned        rs;                         /* The draw's die */
+    unsigned char   kit;                        /* A denizen's draw (I_KIT's): 1; given way to a command coming, 2, drawn again as
+                                                **   it's answered (the same dice, nothing made yet: a kit's a million cycles,
+                                                **   the card's reads in it, the user's D17, 2026-11-03); else 0 */
     unsigned char   level;                      /* Its wealth: 0 poor, 1 average, 2 rich */
     unsigned char   freeall;                    /* Every line given (the universal kit, a temple's) */
     unsigned char   tool;                       /* A skill's tools drawn (one it has already not drawn again) */
@@ -81,7 +102,10 @@ enum { MD_ALL, MD_NEED, MD_CHANCE, MD_HEAD };   /* (A section's lines drawn: all
                                                 **   only read) */
 
 unsigned char outfit (void);                    /* (Part 57) The character's outfit drawn (the referee asked): its
-                                                **   things in the list, 0 none (the kit as it was) */
+                                                **   things in the list, 0 none (the kit as it was); else 1 and its
+                                                **   weapons' version (WV_*: a strong character's heavy, D13's); or
+                                                **   OF_CARRIED, its kit carried on (kit.dat open, ost's kept, for part 58) */
+#define OF_CARRIED      4
 unsigned char __fastcall__ draw_at (unsigned off, unsigned char mode);   /* (Part 59) The outfits' section at off
                                                 **   read, its head kept (ost), drawn as mode says if its flags are
                                                 **   ost.want's: 1 drawn, 0 not (none there, not wanted) */

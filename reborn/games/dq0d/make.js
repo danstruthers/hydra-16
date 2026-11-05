@@ -8,7 +8,7 @@
 // kind (the world's traces' store, dq0w/wtrace.c's struct tkind), the first the character's own.  And the world's lore
 // (lore.h): peoples.txt made obj/games/dq0f.dat, deities.txt obj/games/dq0g.dat, 64 bytes a
 // record (struct people, struct deity), the first none (its first byte the records' count), their words after; and
-// the deities' names, spaces between, obj/games/dq0g.txt (the UI's: the commands' words for them).
+// the deities' names, spaces between, obj/games/dq0g.txt (for dq0w's make: in the kinds' bank, the UI's, the commands' words).
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -164,11 +164,10 @@ function build({ dir, objdir, say = () => {} }) {
     out[at + 10] = f[35] === '-' ? 0 : [...f[35]].reduce((a, c) => a | 1 << PASTIMES.indexOf(c), 0);   // (Its pastimes: a bit
                                                 //   each, level.h's PT_*, 2026-10-31)
   });
-  fs.writeFileSync(path.join(objdir, '..', 'dq0d.dat'), out);
 
   // The kinds' traces (dq0tr.dat): each one's name, tread, smell, nose and size, its marks' words and its scent's (each
-  // 0-ended, "" none); the first the character's own (its marks booted feet, as its footwear doesn't say otherwise: the
-  // world's)
+  // 0-ended, "" none); the first the character's own (its marks and its tread by its footwear, the world's: these bare
+  // feet's tread, its smell and its nose its own)
   const tout = Buffer.alloc(TREC * (kinds.length + 1));
   const trace = (at, name, tread, smell, nose, size, marks, scent) => {
     tout.write(name, at, 'latin1');
@@ -176,9 +175,15 @@ function build({ dir, objdir, say = () => {} }) {
     if (marks !== '-') tout.write(marks, at + 16, 'latin1');
     if (scent !== '-') tout.write(scent, at + 40, 'latin1');
   };
-  trace(0, '', 4, 3, 2, 4, 'booted feet', 'a smell of sweat');
+  trace(0, '', 2, 3, 2, 4, 'bare feet', 'a smell of sweat');
   kinds.forEach((f, i) => trace(TREC * (i + 1), f[0], +f[22], +f[24], +f[26], +f[15], f[23], f[25]));
   fs.writeFileSync(path.join(objdir, '..', 'dq0tr.dat'), tout);
+  // (The noses by kind, the character's first, then its smell, at dq0d.dat's end, SND_KINDS + 1 bytes (hub.h's): what the denizens want of the
+  // traces' file, without its open and its reads as the game starts, 2026-11-04)
+  const noses = Buffer.alloc(SND_KINDS + 1);
+  for (let n = 0; n < SND_KINDS && TREC * n < tout.length; n++) noses[n] = tout[TREC * n + 14];
+  noses[SND_KINDS] = tout[13];
+  fs.writeFileSync(path.join(objdir, '..', 'dq0d.dat'), Buffer.concat([out, noses]));
 
   // The deities (dq0g.dat), first: the peoples name them
   const ds = blocks(path.join(dir, 'deities.txt'), 'deity'), dnames = ds.map(d => d.f.deity[0]);

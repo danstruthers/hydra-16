@@ -11,6 +11,7 @@
 #include <string.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
+#include "hub0.h"
 #include "../dq0/rs.h"
 #include "world.h"
 #include "things.h"
@@ -81,19 +82,26 @@ static unsigned char fill_skin (void)
     char name[16];                              /* (On the C stack: the main RAM's room) */
     struct item* p;
     unsigned sk, i;
-    unsigned char cap;
+    unsigned char cap, still;
 
     hub_map (0);
     memcpy (name, HUB->ireq.name, sizeof name);
     if (!(sk = at_hand (*name ? name : "waterskin")) || item_at (sk)->kind != KI_WATERSKIN) {
         return IR_NONE;
     }
+    hub_map (KIND_BANK);
+    cap = CATALOGUE[KI_WATERSKIN].cap_bulk;
+    if (items (0, IN_ITEM | IN_X, sk) && ip->kind == KI_WATER && ip->qty >= cap) {
+        return wsaid ("Your waterskin is full already.", 0);    /* (Why it seemed to start empty: the user's,
+                                                **   2026-11-03) */
+    }
     hub_map (0);
     if (!HUB->pc_wet && !water_at (1)) {
         return wsaid ("There's no water here.", 0);
     }
-    hub_map (KIND_BANK);
-    cap = CATALOGUE[KI_WATERSKIN].cap_bulk;
+    hub_map (0);
+    still = (unsigned char) (HUB->pc_wet - 1) < 0x7F;   /* (Still water in it: drunk, the flux's risk, as where it stood:
+                                                **   the user's, 2026-11-03; mixed with clean, still foul) */
     if (items (0, IN_ITEM | IN_X, sk) && ip->kind == KI_WATER) {
         p = ip;
     } else {
@@ -112,6 +120,7 @@ static unsigned char fill_skin (void)
         p->x = sk;
     }
     p->qty = cap;
+    p->wear |= still;
     return wsaid ("You fill your waterskin.", 600);
 }
 

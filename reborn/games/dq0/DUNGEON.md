@@ -115,6 +115,10 @@ by a request or an intent.
   command's done) or an intent of it waits in its ring: a command of several intents (a
   throw's taking in hand, then the throw) is taken whole first (2026-10-31: dq0cmd's rats fought otherwise as the start's timing moved; dq0turnsame
   plays a fight twice, its commands typed late the second time, and finds them the same).
+  Nor while the UI hasn't yet told the events and done what it does about them (the hub's ui_eq and ui_dq, a pass of its loop's end: a question
+  asked of a sound, a senseless wait waited out), and the character's told free only after the denizens have had their turn at what's told, so a
+  line typed at once finds what a line typed late does (2026-11-04: the life soak's `-same`, every game played again on a machine powered up
+  otherwise, the same events, the same replies).
 - **The senses** (dq0p) answer for every actor, and own every actor's memory of what it has perceived: what the
   character sees (the look, as the world asks: the hub's look) and what each denizen senses (the denizens ask, for
   their minds, as one decides: the hub's dsense), by the layers below (perception as layers); the squares the
@@ -189,7 +193,7 @@ written made the save's: its last step), then game.dat.  A game carried on (dq0 
 back by each (WQ_START, the hub's resume, the world's).  Only a save of the game's own version (main.c's SAVE_VER) is
 carried on: an older one isn't read, and a new game begins in its folder.
 
-Death is permanent: a game ended (dead, escaped, ruled) is marked done in its save, and dq0 -d on its folder begins
+Death is permanent: a game ended (dead, solved, left: the save's Q.done, END_*; Q.solved kept apart, for one dead on its way out) is marked done in its save, and dq0 -d on its folder begins
 a new game there.  (A death in a fight doesn't mark it yet: main.c's blow ends the game without the theme's ending,
 so the save is carried on.)
 
@@ -241,7 +245,8 @@ chunk; were they the senses', the maker would ask the senses then, as the senses
 
 **Rooms across a room's squares** (dq0w.c's ways): the ways from a square to every square of a room are worked out
 at once in the world's own bank (no fixed room size, as large as its chunk), so a room is walked across whatever its
-size.  A room is a chunk's (struct room's squares, 0-31): a cavern across many chunks is still to come (below).
+size.  A room is a chunk's (struct room's squares, 0-31): a great cavern across many chunks is a room in each,
+its part (R_CAVERN: a walk across it goes on over the edges; HOUSE.md's great caverns).
 
 **dq0 -C** (the tests'): the caches small, so a short game pages them (twelve of the chunks' slots; a change page; 24
 of the store's records, only the character's chunk kept round it; two of the denizens' regions, only the
@@ -386,7 +391,8 @@ for anyone who reads it (the lights', the denizens', the senses').
 
 An opening that isn't a plain doorway is a record (world.h's struct opening, level.h's O_*): a window (its sill's height
 above the floor), a stairway or a ladder up or down, a shaft in the ceiling or the floor, the way out; where it leads
-(the stratum's link: a stratum, a place there) and how far.  A long ramp between strata isn't made.  A stratum below is
+(the stratum's link: a stratum, a place there) and how far.  A long slope between strata (a sloping tunnel, walked: O_RAMP_DOWN, O_RAMP_UP) is a
+natural stratum's or a mine's stairway one time in three (HOUSE.md's long slopes, 2026-11-02).  A stratum below is
 made when the character first takes a way down to it: its bounds and style (a storm cellar is a stratum one chunk, 10 by
 10, with a ladder down; the catacombs under it miles each way), and the chunk where the way comes out first.
 
@@ -402,7 +408,8 @@ The dungeon isn't only what the growers made: those in it change it, and the cha
   in the stratum below (grown then, if no one has been there): a new link between the strata, its two ends' squares
   the same.  A wall is two feet, a square of rock five.  A dig stopped keeps the feet it's dug (HOUSE.md's what
   stopping costs: a change record of its own, DUG, the hole's half-feet and the way it's dug), and one begun again on
-  its square, the same way, goes on from there ("You set to digging again where you left off.").
+  its square, the same way, goes on from there ("You set to digging again where you left off.").  Nothing it has that bites is told at once, by what it carries; a hidden door is dug at as the wall it seems, found as the
+  tool comes through its facing (HOUSE.md's digging, 2026-11-02).
 - **The rock** (slice 4.10, 2026-10-31: dq0/rock.h, HOUSE.md's rock's kinds and hardness): what's behind a wall
   and under a floor is the rock, its kind where it lies worked out from the game's seed alone (rock_kind: beds of
   shale, sandstone and limestone 25 feet thick, dipping across the frame, slate and marble below 200 feet; granite
@@ -421,7 +428,12 @@ The dungeon isn't only what the growers made: those in it change it, and the cha
   character's rules (a spell at a time, the tool's rate, the rock's hardness: part 1 asked, its rock_kind; its own
   test by its sheet), the same change records (a DUG record while it's under way, the character's: either goes on
   with the other's hole; the square a passage through it), told when seen ("A fresh tunnel opens ahead.  Spoil lies
-  heaped by it.") and heard while it's dug ("a scraping in rock": the rock carrying a pick's knock).
+  heaped by it.") and heard while it's dug ("a scraping in rock": the rock carrying a pick's knock).  And at their work
+  (2026-11-02): a faction's miners dig its mine from their lair's home across to their region's vein and along it, a
+  burrower its lair's burrow (claws bite no rock, shale neither: the user's, 2026-11-03), by the clock, near the character or away from it (away, coarse: the same change
+  records); poor rock comes down on a tunneller's spell gone badly; a faction's miners put up again a door broken down
+  in their home's chunk (its PORTAL_STATE and PORTAL_HARM records), and wall up a way dug into a room there by others
+  (the square T_WALL again, a change record).
 - **Breaking** (powder, a ram, magic; by accident, a ceiling an old stratum's age has weakened brought down) is still
   to come (below).
 
@@ -443,7 +455,7 @@ carries, wherever, sent again as anything is taken up or put down), so nothing i
 world says what the work is on (digging: soil, earth, stone, masonry, flags), and a skill used takes out the tool that
 suits the work best: by its rate on that material, and of two as good the one the work wears less (a blade digs earth or soil
 faster than bare hands, and is dulled by it).  The reply names the tool and the wear the work did it; the item records its
-wear (a blade dug with is dulled, then dull: worded in what's carried).  A tool that can't do the work isn't used for
+wear (a blade dug with is dulled, then dull: worded in what's carried, and cutting less in a blow: HOUSE.md's what strikes, RS_EQUIP's D and E marks).  A tool that can't do the work isn't used for
 it (a sword won't dig stone).  The tool's named as it's first taken up ("You dig with your pick").  A game can begin
 with a thing in hand (dq0 -k TOOL: dq0 -k shovel digs an earth floor till the rock under it stops it; only a pick
 lifts flags or cuts rock).
@@ -635,7 +647,8 @@ game starts, the world's (dq0w/outfit.c, outdraw.c, outmake.c), from the referee
 occupation, the open skills by their mastery, the family's wealth, the culture, class, wealth and sex): the universal
 kit, the occupation's things, its weapons by its weapon skills (each in its carrier, with its missiles), its armour by
 its bent, its skills' tools, all bought at the book's prices with the family's wealth, strictly within it (a soldier's
-unit issue, a knight's lord's gift and a cleric's temple's things given), the money left in the pouch.  Each thing's
+unit issue, a knight's lord's gift and a cleric's temple's things given), the money left in the pouch; what it can't bear
+at encumbrance 2 left out, the heaviest first (HOUSE.md's an outfit that fits, 2026-11-03).  Each thing's
 made its own at once (its make the draw's, its own die: the world's dice untouched).  The same outfits file holds the
 denizens' gear, drawn by the same code (DENIZENS.md).  dq0 -K (the tests') begins with the kit as it was before.
 
@@ -651,7 +664,8 @@ measure, the thing's own (a flask's oil: light, below).
 **Light** (the character's): from the lit things it carries, the brightest's reach (a torch 20 feet, a candle 10, a
 lantern 30: the kinds'), in a hand, worn or hung from the belt; lit (light X, or the first unlit) with a tinderbox
 carried or another flame (one carried, or lit within reach), put out (douse X); a thing lit in the pack taken into a
-hand first.  Put down lit, it lights the squares round it it has a clear line to (the senses' light layer: perception
+hand first; "light a new torch" the old one in a hand let fall first, a spare got out by the reach's steps (HOUSE.md's a
+new light; "new", "fresh", "another" a selector of any handling).  Put down lit, it lights the squares round it it has a clear line to (the senses' light layer: perception
 as layers, below), seen from where the character stands, and its own glow is seen much further off in the dark; the
 room's words name what gives its light ("by the light of your candle").  The world keeps it in the hub (pc_light,
 pc_lamp), its item store's; it takes the time and looks again (I_LIGHT).
@@ -669,7 +683,7 @@ character's own, or one it sees lying there: E_TASK's TE_LOW, TE_OUT, the UI's w
 again (E_LIGHT) and the look with it.  A candle burns away; a lantern's dry and a torch spent till they're renewed: a
 lantern filled from a flask of oil, a torch dipped in oil or pitch (IO_FILL: "fill the lantern", "dip the torch in
 the oil").  Left in the dark by it, the character stops its long task (a climb part way, a fight, go on).  The kit
-has a spare torch and a flask of oil (D5); the status line shows the minutes left of the light carried (the hub's
+has its light by the family's money (HOUSE.md's outfits: a lantern and two flasks, or a torch, two spare and a flask); the status line shows the minutes left of the light carried (the hub's
 pc_fuel, its words pc_left).
 
 **What closes, and looking in** (slice 4.1, the user's playtest, 2026-10-21: "look in the sack", "open the chest"): a
@@ -697,11 +711,16 @@ alike together ("two sacks"), and those on one square in one sentence.
 **Reach, and things used up** (2026-10-26, the user's: "Handy would be readily available, so in a backpack that is
 being worn is not as readily available as one in a belt pouch"; HOUSE.md's reach, handy tools and things used up):
 how readily a thing comes to hand is where it is, one rule for every taking out, putting away, look in, search and
-tool's use, every actor's (the character's, a robber's rifling it): in hand at once; on the body (worn, hung from a
+tool's use, every actor's (the character's, a robber's rifling it; a tool since 2026-11-03 truly in hand, its hands made free first by steps of their own, and left there if it's stopped: HOUSE.md's every use of a tool, readying with busy hands, things.c's part 90): in hand at once; on the body (worn, hung from a
 belt, in what's open to the hand: a pouch, a quiver) or lying within reach a quick draw; each container's level more
 (held, set down, in another); a pack worn on the back (its kind's, KF_BACK) taken off and put on again; engaged, a
-round a step (the book's grope); dropping, or a pack shrugged off, no time.  The time owed is the item store's, added
-to the character's next spell of time (things.c's reach, dq0w.c's pextra).  A tool is handy in hand or on the body:
+round a step (the book's grope); dropping, or a pack shrugged off, no time.  A reach is a sequence of timed steps
+(2026-11-02, the user's: "Grope (take off backpack) followed by Grope (get something from backpack) then grope (put
+the pack back on), each one taking its time"), told as each begins, each a long task of its own (its bar, a stop, hard
+and soft interruptions), the world changed at each's end, so stopped part way the pack stays off and told; the handling
+waits, asked again as each step's up (things.c's reach_step, IO_STEP, the UI's reach 5), and the pack goes back on as
+it's done.  A robber's rifling, a load and a blow's weapon named keep the time in a lump (reach_done, dq0w.c's pextra).
+A tool is handy in hand or on the body:
 mapping as it goes draws only with its things handy.  What's used up is each kind's data, as a light's fuel: the
 things drawn with (the catalogue's burns, FU_DRAW: charcoal, chalk, a pencil, ink, a quill) a drawing's minutes off
 each, gone and told when spent; a lot's one used up, and a missile's chance to break (slice 4.7's: an arrow one
@@ -715,8 +734,8 @@ round's), its missile the loaded one ("nock an arrow", "load the crossbow") or t
 extreme none for a launcher underground); a clear line (what passes, above; one standing in it stops the shot unless
 the mark is as far beyond again); the mark behind cover beside a slit or a window; aware of the shot or not; the
 referee asked, the shot told as a blow is (a fight's words), fought on as a fight is (a long task); the missile then
-lying where it falls (at the mark's feet, past it on a miss, near it gone wild), broken by its chance, a thing thrown
-moved itself.  "gather the arrows" walks over to each one it knows of in sight within twelve squares and takes it up
+lying where it falls (at the mark's feet, past it on a miss, near it gone wild), broken by its chance, or gone wild lost
+beyond finding one time in two (HOUSE.md's), a thing thrown moved itself.  "gather the arrows" walks over to each one it knows of in sight within twelve squares and takes it up
 into its quiver.
 
 An item is **found** through the character's senses, as everything else is: only on a square it sees now, lit;
@@ -728,10 +747,11 @@ UI words them.
 
 **Concealment**: a thing concealed on purpose carries its difficulty in steps (the item record's hide), set as it's
 hidden: by the place (a floor's dust and corners) and the concealer's test of the hiding skill.  The skill is
-**Concealment**: one skill for hiding a thing and for hiding oneself, rs.h's P_CONCEAL, which a ruleset's referee
-maps to its own (HarnMaster has no skill of that name: its Stealth).  The character hides a thing where it stands
-(hide, conceal, stash X), and knows where it hid it; a search finds a thing by a test whose steps are its
-difficulty's.
+**Concealment**: one skill for hiding a thing and for hiding oneself, which a ruleset's referee maps to its own
+(HarnMaster has no skill of that name: its Stealth): rs.h's P_CONCEAL for a thing, P_STEALTH for oneself.  The
+character hides a thing where it stands (hide, conceal, stash X), and knows where it hid it; a search finds a thing by a
+test whose steps are its difficulty's.  Hiding oneself (hide; hide behind X): HOUSE.md's Hiding oneself, every actor's (the
+hub's pc_hid, an actor's state's ST_HID): a look at one hidden by the senses' SN_LOOK and the looker's mind's test.
 
 **No two things alike**: each item has its own number, never another's; its quality (0 crude ... 9 a master's, most
 middling); its material (a kind's as a rule, but a blade of steel if it's well made, of bronze if crudely), whose
@@ -813,8 +833,10 @@ nobody tends is dark.  A light that's nobody's (a cave's glow, magic) stays as t
   one (HOUSE.md's traps, searching and hiding); a passing glance (P_NOTICE_SIGHT) has a smaller chance, as the
   character moves.  In the dark a search is by touch, of the squares within reach, seen or not (what's lying there
   felt plainly, what's hidden by the test, a little harder); and a search has its forms, light or dark: nearby, a wall,
-  the floor, for a thing (till it's found), on or in a thing (what's on it, its trap) (HOUSE.md's walking and searching
-  in the dark).  What's found is known (the change records keep a found exit or trap as what it is).  A denizen
+  the floor, for a thing (till it's found), on or in a thing (what's on it or in it, what's hidden in a heap) (HOUSE.md's
+  walking and searching in the dark).  "search the room" goes over the whole of it, a long task, stop by stop along the
+  walls and across the floor, each thing and heap in turn, told as it goes and kept as far as it went (HOUSE.md's a room
+  searched whole).  What's found is known (the change records keep a found exit or trap as what it is).  A denizen
   that hides is still to come.
 - **Seeing in the dark** goes by the referee's summary, whatever the ruleset calls it: **night vision** (the faintest
   light carries further: a torch's reach, or a glow's, multiplied), and **ultravision** (sight with no light at all,
@@ -826,7 +848,7 @@ nobody tends is dark.  A light that's nobody's (a cave's glow, magic) stays as t
 A square's time is the referee's (its summary's step: the pace's, below), more uphill, a little more steeply
 downhill, more on steps.  A step takes a rise or a drop of 2 feet, steps or stairs 4 (world.h's STEP_MAX, STAIR_MAX).
 The character takes the shortest way it can walk to where it's going (around a ledge, by the steps).  A rise or a drop
-too steep to walk, a window's sill, a shaft or a ladder: a climb, the referee's test (Climbing: feet of progress each
+too steep to walk, a window's sill, a shaft (2026-11-03: any shaft, a round at a time) or a ladder: a climb, the referee's test (Climbing: feet of progress each
 test, a test a round; a fall's impact by its height, the landing's floor: HOUSE.md's climbing and falling); a ledge
 or a shaft can be jumped down (jump down: a fall of its height).
 
@@ -853,7 +875,8 @@ or a shaft can be jumped down (jump down: a fall of its height).
   walking: you're digging"); a climb can't be stopped part way, and struck or hurt it's a test to keep the grip, a
   fall if it fails.  (dq0 -a, the tests': every question answered yes, unasked.)  A search is one too, a minute,
   "Searching about..." as it begins and what it finds told as it ends (cut short, only the squares nearest as far as
-  it went, each at the full chance); a walk's exertion is the referee's as it goes, and a climb's, a dig's and a
+  it went, each at the full chance); and "search the room", a long task of many stops, told as it goes (HOUSE.md's a room
+  searched whole); a walk's exertion is the referee's as it goes, and a climb's, a dig's and a
   battering's (strenuous work), and a fatigue level more asks ("You're tiring.  Keep walking?", "Keep digging?").
   The timed work (the user's, 2026-10-22: HOUSE.md's long tasks) is one too, whatever its length: a trap's mechanism
   made out, a trap disarmed, a lock picked (a door's, a chest's), a door or a chest forced, bars bent, a portcullis
@@ -877,6 +900,20 @@ or a shaft can be jumped down (jump down: a fall of its height).
   carried out as the character gets there; a blow at a denizen out of reach ("attack the goblin", "attack" with a
   target) closes with it first, the walk ending beside it and the blow struck (the denizen's own blow as it comes up
   no stop), or engaged by another first, no blow; engaged already, refused.
+- **Straight walks** (the user's, 2026-11-02: HOUSE.md's): a way word alone, any of the twelve, walks straight from a
+  room's floor until a wall, a closed door or another obstacle stops it, told what stopped it ("You come to a closed
+  door.", E_LEDGE's LEDGE_MET and the world's ahead's FA_*), refused only with it directly in front; an open door or a
+  passage's mouth straight ahead, on through it; a shut door it has handled opened as it goes.  A door off to the side
+  isn't walked to by one: "go through the door", "go to the door", "open the door", "leave" (which, asked).
+- **Going to anything** (the user's, 2026-11-02: HOUSE.md's): approach, go to, walk to, walk over to, head for and
+  their kin, for a thing, a fixture, a denizen (no blow: I_CLOSE, w1) or a body it sees or remembers in this room (the
+  item store's pick, HW_GONE; I_GOTO, a 2: beside it); "You haven't seen a pot here." only for what it hasn't.  Crossing
+  ("cross the room", "go across the hall") its far side; a closer look, an appraisal, looking in a thing or searching
+  it, out of reach, walked over to first.
+- **What can be named** (the user's, 2026-11-02: HOUSE.md's): what it sees or has seen and remembers, by one rule: named
+  and walked to, in "which door?", though it's out of the light; never what it hasn't perceived.  "The door on the left"
+  by the look's own words, then that side of the room.  A walk over for a command told short: its words, what's new, the
+  outcome.  A bar on its side and what it has found of a lock told with the door ("(closed, barred)"); "unbar the door".
 - **Going places in a room**, by the facing: the centre, the far side (the other side, the far end, the wall ahead),
   the near, left or right side, a corner ("go to the far left corner", "walk forward to the other side"); where the
   place itself is rock (a cave's), the nearest square the way reaches.  And where you are said the same way: "You are
@@ -894,12 +931,16 @@ or a shaft can be jumped down (jump down: a fall of its height).
   edge); the world takes that pace's step for every square.
 - **In the dark** (the user's playtest, 2026-10-22: HOUSE.md's walking and searching in the dark) a walk goes by what
   the character knows (the squares it's seen and those it's felt walking: the senses' memory), never turned toward an
-  opening it hasn't seen or felt: from a room by a door it knows of, else straight on the way said; along a passage
+  opening it hasn't seen or felt: from a room straight on the way said (a door meant, one it knows of); along a passage
   straight on, round a bend only where it knows the way, a fork it knows of stopping it.  Its cautious walk feels
   ahead and stops short of what it meets, told by touch (a wall, a door, a drop, a rise, a thing in the way, known
   after); a faster one blunders into it, the world's to judge by what's really there (the stumble the referee's, the
   book's stumble roll; a blow, a fall).  A denizen whose kind has no darkvision feels its way on a dark square too, at
   half its pace.
+- **Feeling its way** (the user's, 2026-11-02: HOUSE.md's): the look in the dark, and a dark walk's end, only what the
+  hands and feet can tell: "You feel a wall ahead and to your left; nothing to your right."  No name for the place, no
+  ways, no slope ahead, unless it's been on the square before and hasn't forgotten it ("This should be the kitchen.").
+  A look or "look around" there goes on to feel around (the user's, 2026-11-03: HOUSE.md's looking in the dark).
 - **Fatigue** is the referee's (the book's movement fatigue: HOUSE.md's moving and tiring): walking (or slower) a
   fatigue level a day, jogging one each five minutes, running one each two, sprinting one each minute, the time at
   each pace added up across moves; standing still (waiting, the time between moves) is rest, a level gone each ten
@@ -930,8 +971,10 @@ or a shaft can be jumped down (jump down: a fall of its height).
 - **status** says it all in a few lines (RS_DESCRIBE b 3: the pace's, the watchfulness's and the light's words
   rshouse.h's, every ruleset's alike; the condition's the referee's own): the pace chosen and what it's held to, its
   feet a round; the watchfulness; the condition (well or hurt, its wounds in brief, bleeding, shock or
-  senseless; its fatigue levels; its load's encumbrance; the penalties they make); and its light (what gives it, or
-  none: by feel).
+  senseless; its fatigue levels, and how much is hunger's and thirst's; its load's encumbrance; the penalties they make); its
+  light (what gives it, or none: by feel); then, every referee's alike, from the hub (overlay 19's o_facing_words): its hunger
+  and thirst in the game's words (the user's, 2026-11-03), a limb useless, a limp, its position if it isn't standing, the
+  water it's in; and the way it believes it faces.
 - **Small moves** ("move left one space", "step forward", "go north 20 feet", "back up two squares", "sidestep
   right"): a square at a time (5 feet: "a space", "a square" and "a step" each one, feet and yards made squares, at
   least one), by the character's facing (forward, back, left, right, between) or the compass; the distance by the
@@ -1160,7 +1203,7 @@ often the easier.  The numbers are HOUSE.md's (bearings underground).
   C_UNCONSCIOUS; a harm's time out, a fall's, a trap's; a trap's gas choked on, wtrap.c's; its own blow at a thing
   gone wrong, wblow.c's); a fall of ten feet or more shakes it (harm_fx's: the harder the further), a failure the
   walk's drift.  Nothing moves the character while it's senseless yet.
-- **What uses the belief.**  The status line, "You turn to face ...", "You face ... already.", the dark's "You feel
+- **What uses the belief.**  The status line, "You turn to face ..." ("turn r": "You turn right, to face west."; a compass way, or a turn to a door, as it was), "You face ... already.", the dark's "You feel
   your way north.", "You search the north wall...", and the parser's compass words: "north" means the north the
   character believes in (the parser's compass made as it believes it faces, the UI's cq_cmd making it the true way
   it means for the world).  The relative words (ahead, left, behind right ...) are always true, the body's own; so
@@ -1175,7 +1218,7 @@ the hour quite arbitrary, drifting further from known as play goes on, unless th
 corrected whenever the sun can be seen and the direction is known, or by watching it a while (DECISIONS.md's).  The
 numbers are HOUSE.md's (the time of day believed).
 
-- **A true clock and a belief.**  The world's clock (the hub's now) and the hour the game began (dusk; a test's
+- **A true clock and a belief.**  The world's clock (the hub's now) and the hour the game began (by its seed; dq0 -E's dusk; a test's
   `dq0hour`: the denizens' days go by the same) are the truth; the character's time is the hub's tb, the world's (part
   76, wtime.c): its error in minutes against the true time (skew) and how far off it knows it may be (unc), kept with
   the game (world.dat), as its north is (the bearings, above).
@@ -1183,7 +1226,8 @@ numbers are HOUSE.md's (the time of day believed).
   it knew; a sleep or a black-out guessed as it wakes or comes round (the harder the longer; a critical failure, no
   idea); one with absolute timesense (the summary's timesense: hmchar's rare trait) never drifts.
 - **What narrows it**: its own light burning down (it sees its torch), its hunger since its meal; and the sky in sight
-  (an open way out near: the top's up its stairs its light alone, a far exit below the top the open sky): its light the
+  (an open way out near: the top's up its stairs its light alone, a far exit below the top the open sky; 2026-11-03,
+  a window on the surface, a skylight, a shaft open to the sky, below): its light the
   part of the day, the sun or the stars read by the north it believes in (so a wrong north reads a wrong hour), its
   bearings lost the sun high or low, watched a while the time and north both (E_BEARING BRG_SKY, told).
 - **Reckoned lazily**, never polled: at the lights' burning's look (part 27's), an hour on, five minutes where the sky
@@ -1192,6 +1236,16 @@ numbers are HOUSE.md's (the time of day believed).
 - **What uses it**: "time", "what time is it" (the UI's time.c, overlay 16: plainly when it knows, else as sure as it
   is), "sleep until dawn", "wait until morning" (the hour it means by what it believes; the true clock decides what
   happens), "watch the sun" (a wait in the sky's sight).  The light's minutes left stay true (it sees its torch).
+- **What shows the sky** (2026-11-03, the user's "All three together"; HOUSE.md's for the numbers): by the seed alone
+  (dq0m/sky.c, overlay 9: a stratum's shafts as its plan's grown, a chunk's the rest as it's made, on dice of their own), a
+  **skylight** in a top-stratum room (O_SKYLIGHT), a **window on the surface** in one (a portal's PP_SKY, its O_WINDOW on the
+  floor beside it; every other window still looks on a passage and shows no sky), and a **shaft open to the sky** (a
+  stratum's link, its dug LD_SKY: grown as any link, but no stratum's bounds go round it), the top stratum's going on
+  down through three at most.  From under or beside one the world (part 17's sky_near, part 76) sets the belief, its
+  words by what shows it.  By day and at dawn and dusk each is a **lamp** of the light layer, the world's list of those
+  near (the hub's tb.skx, part 89's) and its reach (tb.sun) the senses' to cast, for every actor alike.  A shaft's climbed
+  by the ledge's rules (s_climb, part 89's shaft_go), perhaps too high to reach; a way out only as the way out's rule lets it; a
+  thing dropped on its head falls to its foot.
 
 ### The map kept
 
@@ -1358,8 +1412,82 @@ packed, not the game on the ROM disk (2026-10-31, DECISIONS.md).  Now: 208M cycl
   theme's story and the character's entrance; "Nearly ready" and a dot each second or so till the character's first
   ready (the denizens started, the world begun, the first look); then "Type help for the commands." with the first
   prompt, not before the look (main.c's o_dots, starting).
-- **The check**: dq0starttime, its budgets 229M (seed 1) and 318M (seed 123456789), its silence 36M at most, the
-  banks as ld65 made them.
+- **The margins' pass** (2026-11-03): each bank packed against its task's own main RAM as well (a match's offset reaches
+  below the window to the program's code and read-only data, unchanged by then: only its DATA changes before the overlays
+  are read, measured): 359K bytes to 325K, no code; the unpack library's token bytes in line; the UI's loop a fifth of a
+  second's nap as the game starts (its look at the keys and the console's had a quarter of the CPU), the sound a quarter
+  second's (the hub's starting), the world's waits on its doorbell.  Measured as a game's played (the outfits drawn: the
+  check's -K had left out some 8M): see dq0starttime's budgets in tests.js.  Lazy reading of the banks was measured and
+  not built: by the first prompt 119K of 359K packed bytes aren't touched, but eighteen everyday commands touch all but
+  39K (some 10M cycles), each bank holding parts used at once and parts seldom used; a cold bank's first use would cost
+  1.5M cycles and more in a typed answer, against the user's D17.  What's left is the card: some 535K bytes at about 270
+  cycles each (164 clocking the bits in, as proven on the board).  What stands between this and ten seconds is that, and
+  the user's to choose: the game on the ROM disk (reads some 4.5 times as quick, DECISIONS.md's, not chosen on
+  2026-10-31), or on the Vera X's own card (its SPI in hardware).
+- **The check**: dq0starttime, its budgets in tests.js, its silence 36M at most, the banks as ld65 made them.
+
+### The character carries on (slice 4.4, 2026-11-02)
+
+The user's D7 and D8 (DECISIONS.md): death is permanent, with autosaves before danger a setting (off, hard mode); the
+character carries on into a new dungeon with its skills, wounds and gear.  And the plan's "skill improvement by use and
+rest".  Built (HOUSE.md's the character carries on has the numbers):
+
+- **Skills by use:** every skill the character uses (a test of it, its weapon in a fight, its dodge, a shot) is marked
+  for development rolls, success or failure alike (the book's): under stress a roll, five routine uses a roll (the user's, 2026-11-03: HOUSE.md's); those are rolled after a night's rest, each
+  that rose told as it wakes ("Your Climbing skill has improved (46)."), the sheet showing the new figure.  A [First
+  Use] skill (Swimming, Acrobatics, Physician, Cookery; a weapon's in a fight) opens the first time it's used, told at
+  once ("You've begun to learn Swimming by doing it (12)."); one learnt by study doesn't.  The referee's alone
+  (dq0harn/skills.c): the marks and the rest toward the rolls kept with the sheet in the save (pc.hm).
+- **The ending:** the theme's words, then what's next, then the character's sheet as it ends.  Solving a dungeon doesn't end it: told, it's still to walk out (HOUSE.md's how a dungeon ends).  Every dungeon can be left: by a shaft to the sky, by the way in if its reason leaves it open, or by the other way out a shut one always has, its theme's `wayin` or `wayout`, which the theme checker proves.  Alive (solved or left), "Your character carries on": the game started again with the same folder (dq0 -d) begins a new
+  dungeon (a new seed: a new history and theme) with the same character, its sheet as it ended (its skills, its wounds
+  healing on), and the things it carried out (the world's kit.dat, kept with every save, made its outfit there, each as it was).
+- **Death and the autosave:** the game is kept as the character comes into a stratum and as it's quit; a death isn't
+  kept, so the last save is there to go back to.  Hard mode (dq0 -H, kept in the save) keeps the death: the folder's
+  next game is a new one, a new character; said once, it goes on with the life, each next dungeon's too (LF_HARD, the record's).  No autosave before danger (the user's, 2026-11-03: DECISIONS.md's HOUSE.md's review), till a playtest shows the lost play hurts.
+- **D13's rules:** the free pounds of encumbrance by Strength; a weapon's version (the book's light, average and heavy:
+  its impact and its weight by it), the heaviest wielded without penalty by Strength, a strong character made with
+  heavy weapons; a wrecked door, window or portcullis appraised by its state; a slip climbing out of a pit ending the
+  climb, the player's to say what next ("climb up" again).
+
+### A character's life (the plan for the game between dungeons, step 3, 2026-11-04)
+
+The plan's section 5, HOUSE.md's carrying on for its numbers.  **life.h** has the file formats; **games/dq0life** is a small program
+of its own, in the game's lib folder (lib/dq0/dq0life, 5K): the game runs it as it starts with a save's folder and no dungeon going on in it, before
+anything of the game's (it has the CPU and its own RAM; what passes between dungeons is its neighbour dq0acct's, below).
+
+- **The save's folder** (dq0 -d): at its top the record (life.dat), the sheet (pc.hm), what's carried (kit.dat); each dungeon in its
+  own folder inside it, d1, d2 ... (game.dat, world.dat, its theme, its change records ...: the hub's savedir, so the tasks are none
+  the wiser but for kit.dat, "../kit.dat" from there).  All of them kept (the user's Q3: no going back yet, but the folder's kept).  A
+  theme written by hand left at the top (theme.txt) goes into the new dungeon's folder.
+- **The record** (life.dat, 544 bytes): the life's seed, this dungeon's seed and number, the date it began, the year the character was
+  born, reputation (nothing moves it yet), the offsets of the clues and the thread (none yet); and for each of 64 dungeons its seed, its
+  whole days by its clock, and how it ended (LO_*).  The UI reads the head as a game starts, and no more: nothing of it in main RAM.
+- **The life has one seed:** dungeon 1's is the life's (-s, or the clock's), dungeon n's made from that and n, so the same seed and
+  commands make the same life.  A seed under 65,536 goes on with seeds under it (the stand-in themes'), one over goes on over it.  -s
+  on a carry-on still chooses the dungeon's seed (the tests keep their games), and the record says so.
+- **The date:** the game's clock starts afresh in each dungeon; the record's date is a count of days (twelve months of 30, the book's),
+  on at each carry-on by the days the clock crossed from its start's hour, and one more, the day after it came out at the soonest.
+- **The end:** game.dat's outcome byte (struct save's, LO_*: the ends' to set), read by dq0life as the next dungeon begins, so a
+  game ended and not yet carried on has its record as it was.
+- **A dungeon past the first with no game kept** (the character died in it before anything was kept) is begun again, the record as it
+  is, not a new life.  A record that can't be read, a game of another version or one ended in hard mode's death: a new life.
+- **The time between two dungeons** (the plan's steps 4 to 6; HOUSE.md's between dungeons for the rules and numbers): **games/dq0acct**, a program beside dq0life (lib/acct/dq0acct, 25K, and its
+  three overlays, dq0acct.ovl, 22K: a folder of their own, last on the card, the start's time told: in lib/dq0 they cost dq0starttime 2.5M cycles), run by dq0life at a carry-on alone, for HarnMaster's games, so a new life's start reads none of it (its cost at a -d carry-on, measured: 18M to 24M cycles, 5 to 7 s on the board at 3.58 MHz, most of it the card's, a carry-on 271M
+  cycles from Enter to the first prompt in all).  It reads the sheet, kit.dat, kit0.dat and the kinds (dq0w.cat), and works by the life's seed and the dungeon's number alone: the same seed and answers, the same account.  Its
+  healing is the referee's own: games/dq0harn's **course.h** (a toxin's and a disease's course: afflict.c's, moved) and **watch.h** (a watch of the clock: heal.c's), and the library's harnheal.c, each included by both.
+  It writes pc.hm, kit.dat and the record's date; LF_BETWEEN in the record says it's yet to run (a reset between: it runs again).  It tells it in a dozen lines, asks its one question, and waits for Enter, as the game clears the screen as it starts (the rc variable dq0auto, the tests': no waiting; the tests' dq0Typed sets it for any game with a folder, dq0TypedAsk not).
+- **kit0.dat** (top of the save's folder): what the life set out with, written by the world once, its first save of a life (a new life removes it): what's restocked to.
+- **The life's account** (**games/dq0end**, lib/acct/dq0end, 5K): the dungeons, the days, what was done, told as the character dies: by the UI as a game ends in a death, by dq0life if it died between two dungeons.  **What the record holds as it dies:**
+  - *Hard mode's death in a dungeon:* the dungeon's days, outcome LO_DIED, or LO_SOLVED if it had solved it (Q2's "died, solved": LD_DIED in the dungeon's flags), the date of its death, LF_OVER.
+  - *A death with a save to go back to (not hard mode):* nothing: the record's as it was, the dungeon not ended, since it goes back to its last save; "died, solved" can't happen there.  The account's told as the life so far.
+  - *A death between two dungeons, either mode:* the dungeon before keeps its outcome (solved or left), LF_OVER and LF_ABROAD, the date of its death, the dungeon count back on the last one.  There's no save to go back to in either mode (its last save's the one marked ended, and the dice would fall the same).
+  - The next start in the folder is a new life; a record marked over is appended to **lives.dat** first, so it isn't lost.
+- **The start's time** (dq0starttime, no save's folder: dq0life isn't run): paid for by a file less to open for the UI (the deities' names
+  in the last two kinds' records, the kinds' bank's, items.h's GODS_AT) and one less for the denizens (the noses at dq0d.dat's end, not
+  dq0tr.dat read).  dq0life is in lib/dq0 because the card's layout tells: in games/ it moved the directories 16 blocks and the
+  kernel's cache held them worse, a million cycles a game.
+- **The room:** two dungeons hardly played, one a stand-in's and one with its own theme: 156K of the card (df, 14,996K free to 14,840K);
+  a save's folder grows by that kind of figure a dungeon, more as it's played.  The test card has 15M free; a real one, far more.
 
 ## One path for every actor
 
@@ -1386,21 +1514,33 @@ into the world's intents; a mind posts the intents itself (DECISIONS.md's table,
   character's pack or hands, its grope while engaged: things.c's get, the same tests; a denizen's hands, two things,
   or its mouth, one, and what it lifts: HOUSE.md's).  A denizen's mind posts the character's own I_TAKE (a its wants,
   TW_*: DENIZENS.md's things taken), an ally's errand takes by the rule too, and a weapon taken is in its hand as its
-  own let fall is taken up again (wlimbs.c's den_took: the referee told).
+  own let fall is taken up again (wlimbs.c's den_took: the referee told).  And the rest (2026-11-04, wtake.c, part 81: I_ROB's
+  FE_DROP, FE_PASS, FE_THROW, its t the thing, DENIZENS.md's things handled): let fall where it stands, by the character's
+  let fall (no time, a shaft's head takes it); given, the taker's own hands as the take rule's; thrown at a mark by the
+  character's throw itself (things.c's s_throw_at, its name 0: its reach, its bands, the referee's Throwing of the actor's
+  sheet); a throw at an actor one code already (wshoot.c).  A mind names the thing by its record or says "what it holds".
+
+## Rope in place, keys found (2026-11-04: the user's A16, A17)
+
+A rope tied off or a grapple thrown up is two things of the item store, a "tied rope" on the top's square (the rope's own record, its kind changed: fixed where it stands, so nobody takes it up) and a "hanging rope" at the foot, each saying what it goes down, the way to its other end, how high its hold is and where its end hangs, kept with its chunk's things and in the save (no chunk's change: nothing of the chunk differs, the way a thing lying there changes nothing).  HOUSE.md's rope and grapples has the rules.  A chunk's maker gives a shaft's top on a built stratum an iron ring, on a mine's a stout post; so a rope has something to tie to where it's wanted first.
+
+A found key (the stock's) fits a lock in its own chunk: the maker chooses as it lists the chunk's things, with no dice and no other chunk made, its next locked door or the next chest in its list; a key with no lock there isn't put down.  So "the same chunk always the same" (dq0pure) holds, a chunk's lock is never one made for the key, and a key's door is never far.  HOUSE.md's keys that fit.
 
 ## Still to come
 
 What the plans bring later, by the slice or phase that brings it (the detailed plan's and the game plan's):
 
 - **Ways off the compass, step 3's rest** (the user's "queue up 1-3", 2026-10-31; steps 1 and 2, the diagonal ways and
-  a passage's heading, and the built grower's diagonal passages, built): built complexes at an angle (a stratum's
-  rooms, or one complex in it, laid at 45 degrees to the compass; other angles stepped and told by step 2's words); a
+  a passage's heading, and the built grower's diagonal passages, built; the slanted strata's rooms cut to their
+  diamonds, built 2026-11-02: HOUSE.md's rooms on the diagonal): left, rooms truly turned (a long room on the
+  slant, not its corners cut; a diamond's own words, its places), other angles stepped and told by step 2's words; a
   wide tunnel's staircase told as one slant (step 2's runs follow a one-wide passage).
-- **Fetching and influence** (slice 4.8, built 2026-10-30: DENIZENS.md's allies and influence): left, other errands
-  ("ask the dwarf to open the door"), "give the bandit 5 pennies" without "to", entertain and bargain.
+- **Fetching and influence** (slice 4.8, built 2026-10-30: DENIZENS.md's allies and influence; 2026-11-02 an ally's
+  errands at a door, "give the bandit 5 pennies" without "to", entertaining and bargaining): left, the other errands (a
+  lock picked, a door forced for the character, a thing given to another).
 - **The command interpreter** (Phase 3C): every command, the player's or a denizen's mind's, one structure of
   abstract actions (VB_*), verbs as data with their defaults, affordances, selectors, a target that persists,
-  questions only when unclear; "alias" the command for text aliases ("alias x is dig down"), naming things and rooms
+  questions only when unclear; "alias" the command for text aliases ("alias dd is dig down"), naming things and rooms
   by name and call only (the command grammar's answer 15).
 - **History and themes** (Phase 3D): a region's history generated first (themegen), each stratum built from its layer
   of it (stratagen: built, ruined, reused; a temple over an older keep's ruin), the stocking and the denizens from it,
@@ -1438,12 +1578,13 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   bandit": the book's treatment, a timed work, bandages used up); healing over days of rest (the book's five-day
   rolls, infection, a treatment's EE), told as it wakes; shock's recovery each watch, and in shock only rest, a look and
   a half move; a creature come round in shock; the venoms of the adder, the basilisk and the lindworm (the bestiary's,
-  an infection's course); a folk denizen binding its own bleeding.  Not yet: antidotes (with the market), the minds'
+  an infection's course); a folk denizen binding its own bleeding; antidotes (built 2026-11-02).  Not yet: the minds'
   way with a wounded or shocked denizen (resting in its lair, tending another), stings.
 - **Poison, bad air and disease** (2026-10-31, the user's: HOUSE.md's): one course for every affliction (the book's
   Infection table), poisons (a dart trap's), diseases (foul water's flux, rat-bite fever, a ghoul's grave rot) shown
   after their incubation; the air's pockets (blackdamp, whitedamp, firedamp) and a flame's warnings, firedamp's burst.
-  Left: a door's needle and a chest's (contact poison), poisoned blades, spoiled food, antidotes (with the market), a
+  Antidotes and remedies built 2026-11-02 (HOUSE.md's the market, entertaining and remedies).
+  Left: a door's needle and a chest's (contact poison), poisoned blades, spoiled food, a
   lair's sickness, the denizens' own afflictions and their choking, old mines' air, the explosion's harm to those near.
 - **The sound layer and the denizens' hearing by pace** (slice 4.5, built 2026-10-29: perception as layers, above):
   a pulse over the squares and openings, a background that masks, the character's steps heard by its pace and its
@@ -1467,12 +1608,12 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   (the referee's, every one's by rswant.h: its news, its next ask), eating and drinking (the UI's feed.c: the things'
   IO_USE by the keys food and water), a waterskin filled (wwater.c).  Left: falls (a stream's drop told and heard), the sound layer's running water (its background's
   BG_WATER from the wet squares), running water washing the traces (wtrace.c's hook), the map's water, things soaked (a
-  scroll ruined), a stream's current carrying a swimmer, a minute's swim tested as it waits in deep water, treading water standing still (the denizens' wading and swimming, a beast that won't cross going
+  scroll ruined), a stream's current carrying a swimmer (one chunk of a stream in eight is deep enough to swim, four steps harder, 2026-11-03), a minute's swim tested as it waits in deep water, treading water standing still (the denizens' wading and swimming, a beast that won't cross going
   round, and their hunger and thirst built 2026-10-31: DENIZENS.md's their bodies; left, a denizen drowning); rain where the surface reaches (shafts, the open), washing scents and prints away; a standing order
   to eat and drink when needed.
-- **The time of day believed** (built 2026-10-31: the time of day believed, above; HOUSE.md's): left, the plan's
-  shafts, windows and skylights to the surface (where the rain's hook will find the surface reaches) as more places the
-  sky is seen from, the weather (overcast: its light alone), thirst, tiredness and the denizens' routines learnt as
+- **The time of day believed** (built 2026-10-31: the time of day believed, above; HOUSE.md's): the plan's shafts, windows and skylights to the
+  surface as more places the sky is seen from built 2026-11-03 (what shows the sky, above; HOUSE.md's); left, the weather
+  (overcast: its light alone), rain at them, thirst, tiredness and the denizens' routines learnt as
   clues, a chain of torches counted, the time on the status line.
 - **Rock and old places** (slice 4.10, built in part 2026-10-31: changing the dungeon's rock, above; HOUSE.md's rock's
   kinds and hardness): the rock's own kinds and hardness across the strata, a dig's rate by it, told as it's dug,
@@ -1485,28 +1626,34 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   line: its point and slope, rk_mix (1)'s), an adit in from the way in, a gallery widening where the vein's widest, a
   shaft at a region's line crossing the stratum's next, timbering in soft rock; the built grower given the vein's
   squares as its passages' line (built.c's joins), the stopes rooms of U_WORKS's kind.
-  **Caverns across many chunks** (the plan, not built): a region of the plan its RG_CAVERN kind (plan.c's region
-  dice, one in so many of a natural stratum's), its cavern a box in the region's squares (its corner and size, up to
-  the region, from the region's dice), every chunk it touches growing its part of the one room: the cave grower
-  given the box clipped to the chunk as a chamber's bounds, its floor the plan's ground (so the parts meet at the
-  edges, as the crossings do now), its chamber's wanderer started on each side the box crosses so the floor runs to
-  the edges; struct room's x, y, w, h the clipped part, a flag R_CAVERN and the cavern's number (the region's) in its
-  kind's spare bits, so the senses and the ways (dq0w.c's ways across a room, its room's squares a chunk's today: "No
-  fixed size") take the room as going on past the chunk's edge: the senses' look reaching into the neighbour's part
-  ("a vast cavern, its far side beyond your light"), the world's ways joined at the edge (the next chunk's part's
-  squares the way goes on into), the map's room drawn whole.  A lake or a chasm the same, the water's level the
-  cavern's.
-- **Tunnellers and builders** (slice 4.11, built in part 2026-11-01: changing the dungeon, above; DENIZENS.md's
-  tunnellers): left, a burrow dug from a lair, a faction's mine following a vein, the denizens away from the character
-  digging, poor rock on a tunneller, the spoil as a thing; builders (shoring, walling up a way, a door put up).
+  **Caverns across many chunks** (built 2026-11-02: changing the dungeon's rock, above; HOUSE.md's great caverns):
+  one natural region in three a cavern, every chunk it touches growing its part of the one room from the seed alone
+  (dq0m/caves.c's cavern, overlay 8: R_CAVERN rooms), told "vast", its walls beyond the light or in sight, walked
+  across over the chunks' edges, drawn whole as it's seen.  Left: its own places ("go to the centre" is the part's,
+  "the far side" the part's), the look reaching into the neighbour's part (each part a room of its chunk's: the
+  ways across a room are a chunk's), a lake or a chasm in one (the water's level the cavern's: dry now), a cavern in
+  a region a way between strata comes into (none, so the strata's ways in are as they were).
+  **Raises and inclines** (built 2026-11-02: HOUSE.md's moving and tiring, long slopes between strata): a sloping
+  tunnel off a cave's passage, a raise in a mine, each to a small chamber on its own level (dq0m/caves.c's incline);
+  a long slope between strata; a walk's beats telling a rise or a fall of 4 feet ("The way rises."), its climb
+  strenuous work.  Left: a raise or a ramp joining two parts of a stratum (these are ways to a chamber of their own),
+  a long slope's own length walked square by square (taken at once, as a stairway is), the denizens tiring uphill.
+- **A mason's chisel and a wood chisel** (the user's, 2026-11-02, DECISIONS.md: "Stone chisel versus wood chisel might be a
+  good distinction for future items"): built, 2026-11-03: a stone chisel, a wood chisel no use on stone (HOUSE.md's
+  digging).  The wood chisel's joinery is still to come.  The catalogue has room for 56 more (NKINDS 206, a kind's number a
+  whole byte everywhere: items.h).
+- **Tunnellers and builders** (slice 4.11, built 2026-11-01 and 2026-11-02: changing the dungeon, above; DENIZENS.md's
+  tunnellers): left, builders shoring a passage, the spoil as a thing, a mine past its lair's chunk.
 - **Powers** (Phase 5): wards and magical locks, things and doors hidden by magic found by magical means, magical
   light.
-- **One path for every actor** (Phase 3C, begun 2026-11-02: below): left, a denizen working windows and
-  portcullises, picking a lock, an ally asked to open a door ("ask the dwarf to open the door"), a denizen eating the
-  food it takes up, its lift by its size, the things' put down, given and thrown by the minds as the character's are.
-- **The house rules decided, not yet built** (HOUSE.md): Strength and weapons, free pounds, a wrecked portal appraised
-  by its state, the pit climb (D13).
-- **The market** (when trading comes: DECISIONS.md's money, 2026-10-28): buying and selling at the book's prices (a
+- **One path for every actor** (Phase 3C, begun 2026-11-02: below; a denizen's portcullises and a robber's lock
+  picking built 2026-11-02, DENIZENS.md's): left, a denizen working windows, its lift by its size, an ally told to put a thing down or give it to another (the order's words: overlay 15 has no room), one throwing at a mark but the character.  Things put down, given and thrown, and food eaten, built 2026-11-04: above.
+  The choosers stay two (2026-11-04, looked at and not merged: choose.c, resolve.c and things.c's pick choose by the player's words, among what's seen and carried, asking which; a mind chooses by what it wants, TW_*, or by a record it was told; the user's own table has it, "a mind names things by their squares and their records, not by words": the take rule's what they share, and it's shared).
+- **The character carries on** (slice 4.4, built 2026-11-02: above): left, the denizens'
+  weapons' versions (the outfits' gear's), a thing's wear and fuel carried as they were.
+- **The market** (built in part 2026-11-02: HOUSE.md's the market, entertaining and remedies; DENIZENS.md's trading):
+  buying, selling, a price asked, haggling, with any folk denizen, in pennies; remedies (antidotes, a physician's
+  draught) for sale, in kits and purses, drunk.  Left, from the plan (DECISIONS.md's money, 2026-10-28): buying and selling at the book's prices (a
   mercantyler's 10% buying and 50% selling to the source, second-hand clothes 30-60% of new, haggling), the coins'
   metal value and their discount outside their own land in the trade itself (the appraisal tells it now), farthings
   for change; paying with the lowest-worth coins first unless the seller asks for the local or the dwarves', and the
@@ -1517,12 +1664,12 @@ Designed, but in no slice of the plans yet (DECISIONS.md has the user's words fo
 
 - **Chunks made for the denizens** as they go where nobody has been, a stratum grown by their movements as well as the
   character's, and what they disturb there an event the disturbed act on.
-- **Mining up and slanting**: a raise through the ceiling to the stratum above, an incline.
+- **Mining up and slanting**: a raise through the ceiling to the stratum above, an incline (dug: the grown ones,
+  below, built).
 - **Things hidden by other things or on someone**: under a body, a cloak, a fallen beam (seen once it's moved, freed
   by a strength test); in a container's secret part (a false
   bottom, a hollow heel).  **Holes** as containers: a hole dug in a floor, filled in, a concealed one, dug out again
-  to get at what's in it.  **Hiding oneself** by Concealment, and a hidden denizen found by a contest of its
-  Concealment against the searcher's Awareness.
+  to get at what's in it.
 - **Drawbridges, gates, grates and hatches** grown (their kinds are in the records); a portcullis's winch elsewhere;
   a blow at a thing struck with the weapon in hand.
 - **More traps**: a flooding chamber, a ceiling brought down, a rune or a glyph; the denizens knowing their own

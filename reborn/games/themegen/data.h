@@ -26,7 +26,7 @@ void lines_close (void);
 enum { TK_PEOPLE = 1, TK_LAND, TK_WORK, TK_NAME, TK_BUILT, TK_REUSED, TK_NOUN, TK_ENDED, TK_CLUE, TK_ROOMS, TK_USES,
     TK_LIGHT, TK_FOLK, TK_NOW, TK_OPEN, TK_AGO, TK_GOAL = 20, TK_THING, TK_EXIT, TK_TITLE, TK_CALLED, TK_THEME = 30,
     TK_BEAST = 40, TK_FACTION };
-#define TK_THEMES       7                       /* (A goal's theme lines: kind piece rule story lock opened ending) */
+#define TK_THEMES       9                       /* (A goal's theme lines: kind piece rule story lock opened ending wayin wayout) */
 int __fastcall__ tg_load (const char* path);    /* Read in: 0, or -1 */
 void __fastcall__ tg_get (int i, struct line* l, char* text);  /* Line i's values */
 int __fastcall__ tg_find (unsigned char key, const char* first, unsigned char k);  /* The kth line (0 ...) of a key
