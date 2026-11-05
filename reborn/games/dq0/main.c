@@ -1100,9 +1100,12 @@ static unsigned char events (void)          /* (How many there were) */
                 k = task_words (m.w1, m.b);
                 if (k & 2) {
                     intend2 (I_GO_ON, 0, 0);    /* (dq0 -a's: on, unasked) */
-                } else if ((asking = k & 1) != 0) {
+                } else if (k & 1) {
+                    asking = 1;
                     t_prompt (1);               /* (Its answer's prompt: the character still busy) */
-                }
+                }                               /* (Other news of it as the question stands, a light burning low, not its
+                                                **   answer: the world asking still, "go on" held as a command for the
+                                                **   character to be free, no prompt ever again: seed 358's hang) */
                 if (k & 8) {
                     ending (END_DIED);             /* (Dead of its wounds, its venom: TE_BODY's, slice 4.3's) */
                 }

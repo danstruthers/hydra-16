@@ -924,6 +924,7 @@ static unsigned char nnear;                     /* The denizens out near the cha
                                                 **   there are entries for): their squares, each time round */
 static unsigned nearx[NEAR], neary[NEAR];
 static unsigned char sense_gen = 1;            /* (Bumped as the character changes: where it is, its light, busy) */
+static unsigned char lstep[NACTORS];            /* (The square of each actor's last step meant: decide's) */
 static unsigned char sgen[NACTORS], sres[NACTORS];  /* (Each actor's senses as they were last: of sense_gen, there) */
 static unsigned sax[NACTORS], say[NACTORS];
 static unsigned long alert[NACTORS];            /* (Each actor still and facing a noise it heard till then) */
@@ -2153,6 +2154,15 @@ static unsigned char __fastcall__ decide (unsigned char k)
                                                 **   darkvision, feeling its way in the dark: the world's, STEP_FEELS;
                                                 **   the way the scent goes, the world's to find; hurried or at a walk,
                                                 **   by what it's doing and its heart, the world's: wbody.c's) */
+        w = (unsigned char) a.x + ((unsigned char) a.y << 4);
+        if (pcrest && lstep[k] == w) {
+            wt = 300;                           /* (A step meant from this square last time too, the world refusing it (a
+                                                **   hunter stuck on a scent, asking again each second at 440,000 cycles
+                                                **   a time); the character resting: thirty times the while, as a
+                                                **   watcher's: such a one kept an eight-hour rest to ten seconds a slice,
+                                                **   seed 136's soak) */
+        }
+        lstep[k] = w;
         im.w1 = d == 0xFB ? STEP_SCENT : DH (d);
         im.w2 = K.dark ? 1 : 1 | STEP_FEELS;
         if (d == 0xFB) {
@@ -3461,7 +3471,9 @@ unsigned char __fastcall__ s_hid_mind (unsigned char k)
         hub_map (0);
         HUB->hlook[k] = 0;
     }
-    wt = 10;
+    wt = pcrest ? 300 : 10;                     /* (The character resting: thirty times the while, as a watcher's: three
+                                                **   robbers lying in wait a second at a time kept an eight-hour rest
+                                                **   to ten seconds a slice, 4.9G cycles of it: seed 326's "hang") */
     return 0xFE;
 }
 #pragma static-locals (pop)

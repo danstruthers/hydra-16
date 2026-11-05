@@ -473,8 +473,9 @@ _cast_row:
             rts
 
 ; unsigned char __fastcall__ eye_edge (unsigned char n): 1 if a line from the eyes reaches one of n squares of the view,
-; from r_i0, r_j0 on (along the row if r_wi, else down the column), squares in a chunk not made (nothing in the grid): those it could see
-; for its range, ahead or beside it (view.c's: the chunk made then); their height taken as the eyes' own
+; from r_i0, r_j0 on (along the row if r_wi, else down the column), squares in a chunk not made (nothing in the grid) past
+; a glance's chunks: those in the look one way's reach, its quarter ahead (view.c's: the chunk made then); their height
+; taken as the eyes' own
 _eye_edge:
             sta         rk
             jsr         setup
@@ -501,29 +502,14 @@ _eye_edge:
             lda         sq + 1,x
             adc         sq + 1,y
             sta         d2 + 1
-            lda         dx                  ; Not behind (a look one way's past a glance, the quarter ahead)
-            ldx         _g_hx
-            jsr         times
-            sta         qf
-            lda         dy
-            ldx         _g_hy
-            jsr         times
-            clc
-            adc         qf
-            bmi         @next
-            lda         _g_o2
-            cmp         d2
-            lda         _g_o2 + 1
-            sbc         d2 + 1
-            bcs         @line
-            lda         _g_r2
+            lda         _g_r2               ; Within its reach, in the quarter ahead
             cmp         d2
             lda         _g_r2 + 1
             sbc         d2 + 1
             bcc         @next
             jsr         quarter
             bcc         @next
-@line:      ldx         _r_i0
+            ldx         _r_i0
             lda         _r_j0
             jsr         square
             sta         ptr2

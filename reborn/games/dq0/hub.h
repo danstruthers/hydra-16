@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     53                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     52                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -1639,7 +1639,6 @@ struct wrec {
     struct stratum  strata[MAXSTRATA];          /* The strata's records (each task keeps a copy: sync_strata) */
     struct cslot    cslot[NCSLOTS];             /* The chunks' cache's table */
     unsigned        stamp;
-    unsigned char   made;                       /* The chunks made, counted (a look's grid: nothing in it no longer so) */
     unsigned char   inuse[NASK];                /* The slot each task that reads the chunks is reading (the maker
                                                 **   never makes way for it) */
     struct cpage    cpage[NCPAGES];             /* The change records' pages (world.h's: the world's) */
@@ -1911,7 +1910,6 @@ struct wsave {
 **   own wrec.cslot[*].used maker +world                        (A chunk stocked, CS_FRESH: the world's mark taken)
 **   own wrec.cslot[*].stamp maker +world +denizens +senses +ui     (Each chunk's reader's stamp, as it finds it)
 **   own wrec.stamp maker +world +denizens +senses +ui
-**   own wrec.made maker
 **   own wrec.inuse[ASK_WORLD] world
 **   own wrec.inuse[ASK_DENIZENS] denizens
 **   own wrec.inuse[ASK_SENSES] senses
