@@ -6217,6 +6217,8 @@ void __fastcall__ s_intent_few (struct msg* m)
 {
     unsigned long t;
 
+    hub_map (0);                                /* (Asked again by the things, the reach's own: a chunk's bank in the window
+                                                **   then, and its time written there, 2026-11-04, the life soak's seed 71) */
     switch (m->kind) {
     case I_WAIT:                                /* (w1 tenths, or minutes, WA_MIN's: a long wait's, a sleep's) */
         t = m->a & WA_MIN ? (unsigned long) m->w1 * 600 : m->w1 ? m->w1 : HUB->round;

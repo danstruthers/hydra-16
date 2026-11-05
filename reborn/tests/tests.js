@@ -8193,7 +8193,7 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
         'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'drop the torch', 'hold the pick', 'break the door', 'break', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k pick',
         'drop the torch', 'hold the pick', 'break the door']) +
-        'ĀĀstop digging\rstop battering\r' + dq0Typed(['break', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k pick', 'drop the torch', 'break the door ahead with the pick', 'quit',
+        'ĀĀĀĀĀstop digging\rstop battering\r' + dq0Typed(['break', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k pick', 'drop the torch', 'break the door ahead with the pick', 'quit',
         'dq0 -p t -s 14 -c /ram/c.hm', 'punch the door', 'punch the door', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k \'knee boots\'', 'wear the knee boots',
         'kick the door', 'quit', 'dq0 -p t -s 15 -c /ram/c.hm', 'kick the door ahead to my left', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
