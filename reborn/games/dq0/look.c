@@ -247,7 +247,7 @@ void __fastcall__ s_map (const char* rules)
         HUB->pc_lost ? ", or so you think" : "");
     t_flush ();                                 /* (Its first words at once, the maker's drawing some ten million cycles:
                                                 **   the user's D17) */
-    fore_set (FS_UI | FS_MAKE);                 /* (The answer begun: the maker first, the player waiting on it: main.c's) */
+    fore_set (FS_UI | FS_SENS | FS_MAKE);                 /* (The answer begun: the maker first, the player waiting on it: main.c's) */
     hub_call (&HUB->mapq, T_MAKER);             /* (The maker draws it into the UI bank) */
     fore_set (fored);
     slants ();                                  /* (A passage's slant drawn as one: 2026-11-01) */

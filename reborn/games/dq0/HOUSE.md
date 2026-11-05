@@ -2183,6 +2183,13 @@ ruleset's (the fatigue rested off the referee's).
   ends), no idle wandering in its sight, one unseen and unaware a coarse move ten or twenty minutes apart; a hostile
   one, one on its scent, one alerted by a noise, one fleeing, as ever.  Those away from it (not actors) a coarse move
   five or ten minutes apart (ten times their while).
+- **Those it can't reach, as it rests** *(new, for review; 2026-11-05, the delays' round)*: a hostile one standing still as
+  the character rests (lying in wait, alerted by a noise) looks again no sooner than every thirty seconds, and one whose
+  step was refused twice from the same square (a shut door on the scent, the way taken) tries again thirty seconds on:
+  a second at a time, three robbers lying in wait or a hunter stuck on a scent kept an eight-hour rest to ten-second
+  slices, 4.9G cycles, 23 minutes of the machine's, and more (the fight soak's seeds 326 and 136).  Still in the same
+  scene as dq0restbusy's bandits, 1.6M cycles a game minute, some 3.6 minutes of the machine's for the night.  A step that
+  isn't refused and a blow go as ever; the character changing rouses them as ever.
 - **The figures** *(2026-10-28, the emulator, 3.6 MHz)*: "wait 8 hours" with nothing near, 20.9M cycles (some 6 seconds
   of the machine's; it was 0.6M a minute, some 81 seconds for eight hours, and held to 100 minutes); at the normal pace
   the same; in the dark by the giant rats' lair (seed 3, three rats about), 66M (18 seconds; 782M, three and a half

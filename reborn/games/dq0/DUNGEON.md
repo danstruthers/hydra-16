@@ -1561,7 +1561,9 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   beats, stop, the hard stops and the soft questions (a denizen new in sight, a sound, tiring); where you are and
   going to places in a room; things out of reach walked to first, a blow's close-in, engagement; the search a long
   task, its finds told as it ends; a dig half done kept (its change record); battering a long task, a blow at a time;
-  looking one way (3 seconds, twice a glance's reach ahead, through what lets sight through), listening one way;
+  looking one way (3 seconds, twice a glance's reach ahead, through what lets sight through: the chunks past a glance's
+  reach made only as a line from the eyes in the quarter ahead reaches their edge, dq0p/view.c's, 2026-11-05; a chunk
+  made is the longest wait in the game, and it made up to nine, behind it as well), listening one way;
   every occupation the book lists in hmchar, and the player's own.  The slice built (2026-10-20); a smell layer's
   sniffing one way the trace layer's (slice 4.1).
 - **Light and traces** (slice 4.1): lights burning down and refilled (fuel), a spare torch and oil in the kit (D5);

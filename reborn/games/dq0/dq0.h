@@ -272,6 +272,7 @@ void facing_words (void);                       /* (Overlay 7's) The way it beli
 #define FS_CMD      1                           /* (fore_set's: main.c's) */
 #define FS_UI       2
 #define FS_MAKE     4
+#define FS_SENS     8
 extern unsigned char fored;
 void __fastcall__ fore_set (unsigned char on);  /* (Overlay 6's) The UI and the answer's tasks in the kernel's
                                                 **   foreground, or not (main.c's FS_*) */
