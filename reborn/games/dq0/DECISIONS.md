@@ -1811,3 +1811,15 @@ The study (F:/.claude/hydra-2/swapstudy/report.md) measured the copies at 12-15%
 - A first word on plain walks and steps? "No word, leave them".
 
 **So:** no true cache and no second area; 6-byte stubs, the record walk, SWFAST in dq0d, rare code out of hot parts; each landing apart from game work.
+
+## The last questions of the round (2026-11-04)
+
+Put to the user after the life soak's faults, with their answers:
+
+- Should long world jobs hold back once typing starts? "Hold back".
+- One G5 cut killed 6 of 20 hunters by infection: should that stand? "Try in play first".
+- A death in the account between dungeons, final in both modes? "Final in both".
+- Working toward a repair of something out of reach, skip it? "Skip it".
+- A first-dungeon death before any save says "Your last save is kept" and nothing is: save on arriving, or change the words? "Change the words".
+
+**So:** the world's long jobs wait from the first key typed until the first word is out, measured so the world isn't starved; infection left as it is until it's been played; no time goes on repairs out of reach; the words at a death tell the truth about the save, and no save is made on arriving.
