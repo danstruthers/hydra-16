@@ -3046,7 +3046,7 @@ function dq0HoldTest() {
       };
       cpu.step = v => {
         const c = cpu.cyc;
-        if (plan.length && c >= plan[0].at) {
+        if (plan.length && c >= plan[0].at && (plan[0].name === 'letgo' || m.dq0.bank(0)[m.dq0.layout().L.uiKeys])) {   // (Its keys seen by the UI, as they may not be yet: a status line being drawn)
           const p = plan.shift(), r = m.taskRam[world];
           if (p.what === 'burn') r[due] = r[due + 1] = r[due + 2] = r[due + 3] = 0; else r[trn] = 24;
           R[p.name] = { made: c, ran: 0, keys: m.dq0.bank(0)[m.dq0.layout().L.uiKeys] };

@@ -6597,7 +6597,7 @@ static unsigned char turns_run (void)
     }
     if (!HUB->quit && (HUB->ui_eq != (unsigned char) HUB->eq_head || HUB->ui_dq != (unsigned char) HUB->dq_head)) {
         if (!ui_t) {
-            ui_t = hy_ticks () | 1;             /* (Events the UI hasn't seen to yet: what it does about them, a question
+            ui_t = (hy_ticks () - 1) | 1;       /* (Events the UI hasn't seen to yet: what it does about them, a question
                                                 **   of a sound, a senseless wait, at this moment of the game whatever the
                                                 **   tasks' timing, 2026-11-04.  A stuck task's let go by, as a turn's) */
         }
@@ -6782,7 +6782,8 @@ unsigned char ui_first (void)
         t0 = 0;
     }
     if (!t0) {
-        t0 = hy_ticks () | 1;
+        t0 = (hy_ticks () - 1) | 1;             /* (Not 0, and not ahead of the ticks: an even tick's | 1 made the time
+                                                **   gone 65,535 till the next, a job let through as a command came) */
     }
     return (unsigned) (hy_ticks () - t0) < 50;
 }
@@ -6808,7 +6809,7 @@ static unsigned char keys_hold (void)
         return 0;
     }
     if (!kt0) {
-        kt0 = hy_ticks () | 1;
+        kt0 = (hy_ticks () - 1) | 1;            /* (ui_first's t0's) */
     } else if ((unsigned) (hy_ticks () - kt0) >= KEY_HOLD) {
         kfree = 1;
     }
