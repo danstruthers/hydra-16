@@ -81,7 +81,8 @@ static const char* __fastcall__ in_ (const char* folder, const char* name)
 
 /* ---- Words, by the console's width */
 
-static unsigned char width = 79, col;
+unsigned char width = 79;
+static unsigned char col;
 static char wb[96], ob[200];
 static unsigned char wn, on;
 
@@ -157,27 +158,6 @@ void __fastcall__ amount (unsigned long f)
         }
         sayn (f % PENNY);
         say ("f");
-    }
-}
-
-static void console_width (void)
-{
-    static char b[100];
-    char* p;
-    int fd, n = 0;
-
-    if ((fd = open ("/dev/consctl", O_RDONLY)) >= 0) {
-        n = read (fd, b, sizeof b - 1);
-        close (fd);
-    }
-    b[n > 0 ? n : 0] = 0;
-    for (p = b; p; p = strchr (p, '\n')) {
-        if (*p == '\n') {
-            ++p;
-        }
-        if (!strncmp (p, "size ", 5) && atoi (p + 5) >= 40) {
-            width = atoi (p + 5) > 80 ? 79 : atoi (p + 5) - 1;
-        }
     }
 }
 
@@ -535,7 +515,6 @@ unsigned long funds, fee, earned;
 struct wwas was[HARN_INJMAX];
 unsigned char wid[HARN_INJMAX], nwas;
 unsigned char tended[HARN_INJMAX], ntended, selfnd, unpaid;
-unsigned char writing;
 unsigned passed;
 
 /* The overlays (a bank each, the kinds' put back) */
@@ -666,6 +645,53 @@ static unsigned long __fastcall__ whet_price (const struct kitrec* r)
     return v ? v : 1;
 }
 
+/* What seeing to it would cost: mending (it's whetted with it), else whetting */
+static unsigned long __fastcall__ owed (const struct kitrec* r)
+{
+    unsigned long v = mend_price (r);
+
+    return v ? v : whet_price (r);
+}
+
+/* It still has one of these kinds */
+static unsigned char __fastcall__ has_kind (unsigned char a, unsigned char b)
+{
+    unsigned char k;
+
+    for (k = 0; k < kn; ++k) {
+        if (!gone[k] && K[k].o.kind >= a && K[k].o.kind <= b) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* A kind wanted that's any use to it: no arrows, bolts or sling stones with nothing left to shoot them */
+static unsigned char __fastcall__ of_use (unsigned char kind)
+{
+    return kind == KI_ARROWS ? has_kind (KI_SHORTBOW, KI_HARTBOW) : kind == KI_BOLTS ? has_kind (KI_CROSSBOW, KI_CROSSBOW) :
+        kind == KI_STONES ? has_kind (KI_SLING, KI_SLING) : 1;
+}
+
+/* All it wants paid for, by what it has now: nothing goes on seeing to a thing it's sold, nor on what the thing it's sold was for */
+static unsigned long upkeep (void)
+{
+    unsigned long t = 0;
+    unsigned char k;
+
+    for (k = 0; k < kn; ++k) {
+        if (!gone[k]) {
+            t += owed (&K[k]);
+        }
+    }
+    for (k = 0; k < nwants; ++k) {
+        if (of_use (wants[k].kind)) {
+            t += wants[k].n * (unsigned long) CAT[wants[k].kind].value;
+        }
+    }
+    return t;
+}
+
 static void __fastcall__ thing_in (unsigned char kind, unsigned char n, const struct want* w)
 {
     if (kn >= NOFIT) {
@@ -694,18 +720,9 @@ static void money_matters (void)
     unsigned char s;
     unsigned w;
 
-    nowant = 0;
-    for (k = 0; k < kn; ++k) {
-        if (!gone[k]) {
-            nowant += mend_price (&K[k]) + whet_price (&K[k]);
-        }
-    }
-    for (k = 0; k < nwants; ++k) {
-        nowant += wants[k].n * (unsigned long) CAT[wants[k].kind].value;
-    }
-    need = fee + nowant + (unsigned long) habit * passed * PENNY;
+    need = fee + (unsigned long) habit * passed * PENNY;
     for (val = 0; val < 2; ++val) {
-        while (cash < need) {
+        while (cash < need + upkeep ()) {       /* (Asked again as each's sold: not what it's sold) */
             b = 0xFF;
             best = 0;
             for (k = 0; k < kn; ++k) {
@@ -723,6 +740,7 @@ static void money_matters (void)
             cash += best;
         }
     }
+    nowant = upkeep ();
     rate = 1;
     for (s = 0; s < 4; ++s) {
         if (steps[s] <= habit && cash >= fee + nowant + (unsigned long) steps[s] * passed * PENNY) {
@@ -777,7 +795,7 @@ static void money_matters (void)
     }
     for (k = 0; k < nwants; ++k) {
         v = CAT[wants[k].kind].value;
-        b = wants[k].n;
+        b = of_use (wants[k].kind) ? wants[k].n : 0;
         wants[k].n = 0;
         while (b && v <= cash && kn < NOFIT) {
             cash -= v;
@@ -806,6 +824,26 @@ static void money_matters (void)
                     thing_in (wants[k].kind, 1, &wants[k]);
                 }
             }
+        }
+    }
+}
+
+/* What's left to hand, after the money's matters, told to the overlay (skill.c's o_tool) a thing at a time: its kind, its flags, its tool's key, for the
+** kinds aren't there with it */
+static void tools_note (void)
+{
+    unsigned char k;
+
+    ans[8] = 0;
+    OV2 (o_tool ());
+    CATS ();
+    for (k = 0; k < kn; ++k) {
+        if (!gone[k]) {
+            ans[8] = K[k].o.kind;
+            ans[9] = CAT[ans[8]].flags;
+            memcpy (ans, CAT[ans[8]].tool, 8);
+            OV2 (o_tool ());
+            CATS ();
         }
     }
 }
@@ -1057,7 +1095,6 @@ int main (int argc, char* argv[])
     regs.r[2] = 8;
     regs.r[3] = 0;
     askit = hy_call (HY_ENV_GET, &regs) != 0;
-    console_width ();
     if ((b = hy_banks_alloc (4)) < 0) {
         fail ("no banks");
     }
@@ -1074,6 +1111,7 @@ int main (int argc, char* argv[])
     hy_bank (b_cat + 3);
     read (fd, (void*) 0x8000, 0x2000);
     close (fd);
+    OV2 (o_width ());
     CATS ();
     strcpy (path, lib);
     strcat (path, "/dq0w.cat");
@@ -1096,10 +1134,6 @@ int main (int argc, char* argv[])
     inn = inns[random (8)];
     kit_read ();
     names_read (n - 1);
-    for (i = 0; i < kn; ++i) {
-        writing |= K[i].o.kind == KI_PAPER || K[i].o.kind == KI_PARCHMENT || K[i].o.kind == KI_QUILL || K[i].o.kind == KI_CHARCOAL ||
-            K[i].o.kind == KI_PENCIL;
-    }
     cash_count ();
     funds = cash + sell_total ();
     /* The wounds first: the bleeding bound, the physician; then the days they take, the road, the lull, all at rest */
@@ -1142,6 +1176,7 @@ int main (int argc, char* argv[])
     }
     CATS ();
     water_in ();
+    tools_note ();
     pc.fl = afffl;                              /* (Fatigue clear, but what a sickness holds: the plan's; hunger and thirst
                                                 **   are the world's, begun afresh with the dungeon) */
     pc.state = HARN_CONSCIOUS;

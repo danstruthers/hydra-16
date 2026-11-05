@@ -267,10 +267,8 @@ void __fastcall__ o_ending (unsigned char how)
         theme_named (TN_END, how);
     }
     blank ();
-    if (savedir) {                              /* (What's next: D7's, D8's, slice 4.4's) */
-        msg (how != END_DIED ? "Your character carries on: start the game again with this save's folder, and go on into a new dungeon." :
-            hard ? "Hard mode: there's no save to go back to." :
-            "Your last save is kept: start the game again with its folder to go back to it.");
+    if (savedir && how != END_DIED) {           /* (What's next: D8's, slice 4.4's; after a death, dq0end's, which reads the folder for it) */
+        msg ("Your character carries on: start the game again with this save's folder, and go on into a new dungeon.");
     }
     msg ("The game is over.");
     blank ();

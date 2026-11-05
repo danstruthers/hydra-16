@@ -12800,6 +12800,94 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0acctgone', outfit: true, near: ['save', 'gear', 'money'], what: "Dingus Quest Zero's time between two dungeons spending nothing on what isn't to hand (the user's, 2026-11-04: \"Skip it\"; HOUSE.md's between dungeons), by scenes on the saved files: a broke character with a spare sword half gone, the knife in its hand, and a quill: the sword sold, no work for the mending of what it sold; it can't practise the sword or the Script it sold the things for, its filled-in answer leaving them out, named refused; one that set out with a bow and arrows buys its arrows back with the bow to shoot them, and none without",
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: (() => {
+        const L = '/sd/0/games/lib/dq0';
+        const begin = (d, seed, from) => [L + '/dq0life -d /ram/' + d + ' -s ' + seed, 'cp /ram/' + from + '/kit.dat /ram/' + d + '/kit.dat', 'cp /ram/' + from + '/kit0.dat /ram/' + d + '/kit0.dat', 'cp /ram/' + from + '/pc.hm /ram/' + d + '/pc.hm'];
+        return dq0TypedAsk(['bind -a /sd/0/games /bin', 'dq0auto=1', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', "echo 'ml swd 40' >> /ram/c.hm", "echo 'ml scr 40' >> /ram/c.hm",
+          'hmchar -q -s 5 -u feudal -c hunter -o /ram/r.hm',
+          'dq0 -p t -s 3 -c /ram/c.hm -k sword,quill -d /ram/a', 'put the sword in the pack', 'draw the knife', 'inventory', 'quit',
+          'echo =SOLD', 'dq0auto=()', ...begin('z', 100077, 'a'), '/sd/0/games/lib/acct/dq0acct -d /ram/z -l ' + L, 'sword', 'script', '', '', '', 'echo =BOW', 'dq0auto=1',
+          'dq0 -p t -s 3 -c /ram/r.hm -k shortbow,arrows -d /ram/b', 'quit', 'dq0 -p t -d /ram/b', 'drop the arrows', 'quit', ...begin('y', 100077, 'b'), '/sd/0/games/lib/acct/dq0acct -d /ram/y -l ' + L,
+          'echo =NOBOW', 'dq0 -p t -s 3 -c /ram/r.hm -k shortbow,arrows -d /ram/n', 'quit', 'dq0 -p t -d /ram/n', 'drop the arrows', 'drop the shortbow', 'quit', ...begin('x', 100077, 'n'), '/sd/0/games/lib/acct/dq0acct -d /ram/x -l ' + L, 'echo =END', 'echo $status']);
+      })() },
+      expect: ['% echo $status'],
+      start(m) {                                        // (The sword half gone, dulled: a mending that costs the whole price)
+        dq0LineTime(m);
+        dq0Poke(m, [{ g: 1, line: 'put the sword in the pack', n: 1, call: (h, L) => {
+          const per = Math.floor(0x2000 / L.itemSize);
+          const cat = m.dq0.bank(L.catBank);
+          for (let k = 0; cat && k < L.nitems; k++) {
+            const b = m.dq0.bank(L.item0 + Math.floor(k / per)), o = (k % per) * L.itemSize;
+            if (!b || !b[o + L.iKind]) continue;
+            let n = '';
+            for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
+            if (n === 'sword') { const d = b[o + L.iDurMax] | b[o + L.iDurMax + 1] << 8; b[o + L.iWear] = 200; b[o + L.iDur] = (d >> 1) & 255; b[o + L.iDur + 1] = d >> 9; break; }
+          }
+        } }]);
+      },
+      check(m, out) {
+        const f = [], o = out.replace(/\r/g, ''), sect = n => { const i = o.indexOf('% echo =' + n), j = o.indexOf('% echo =', i + 3); return i < 0 ? '' : o.slice(i, j < 0 ? o.length : j).replace(/\s+/g, ' '); }, t = sect('SOLD');
+        if (!/You sell [^.]*a sword/.test(t)) f.push('the scene not set: the sword not sold: ' + t.slice(0, 500));
+        if (/you work as/.test(t) && !/You have (no money|\d farthings?)\b/.test(t)) f.push('work for the mending of the sword it sold, money over: ' + t.slice(0, 900));
+        if (/For (\d\d) of the days you work/.test(t)) f.push('weeks of work for the mending of the sword it sold: ' + t.slice(0, 900));
+        if (/mended/.test(t)) f.push('something mended: ' + t.slice(0, 500));
+        if (!/You have nothing to practise sword with./.test(t)) f.push('the sword it sold named, not refused: ' + t.slice(0, 700));
+        if (!/In the spare hours you could practise (?![^.]*Sword)[^.]*./.test(t)) f.push('its filled-in answer the sword it sold: ' + t.slice(0, 500));
+        if (/You practise for [^.]*Sword/.test(t)) f.push('it practised the sword it sold: ' + t.slice(0, 700));
+        if (!/You sell [^.]*a quill/.test(t)) f.push('the scene not set: the quill not sold: ' + t.slice(0, 500));
+        if (!/You have nothing to practise script with\./.test(t)) f.push('Script named with nothing to write with, not refused: ' + t.slice(0, 700));
+        const bow = sect('BOW'), nobow = sect('NOBOW');
+        if (!/You buy [^.]*arrows/.test(bow)) f.push('the scene not set: arrows not bought with the bow kept: ' + bow.slice(-600));
+        if (/arrows/.test(nobow.slice(nobow.indexOf('days pass')))) f.push('arrows bought with nothing to shoot them: ' + nobow.slice(-600));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0nosave', near: ['save', 'body'], what: "Dingus Quest Zero's words at a death telling the truth about the save (the user's, 2026-11-04: \"Change the words\", no save on arriving; HOUSE.md's death, and the autosave; dq0end's, by what's in the folder), a hunter (hmchar's, seed 5) dying of a grievous bleeding wound with nothing saved: in the first dungeon, nothing to go back to and a new game next (the life told as a life, not so far); in a later dungeon, that dungeon begun again by the same seed, the record not moved on; in hard mode, its own words; none of them saying a save's kept",
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/q.hm', 'echo \'inj 8 0 3 4 0 1\' >> /ram/c.hm', 'echo \'vol 0 9 0 0 0\' >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -d /ram/e', 'wait 20 minutes', 'echo =NEXT', 'dq0 -p t -s 3 -c /ram/c.hm -m -d /ram/e', 'quit',
+        'echo =HARD', 'dq0 -p t -s 3 -c /ram/c.hm -H -d /ram/h', 'wait 20 minutes',
+        'echo =OUT', 'dq0 -p t -s 3 -c /ram/q.hm -k sunstone,moonstone -d /ram/q', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u',
+        'dq0 -p t -d /ram/q', 'quit', 'rm /ram/q/d2/game.dat', 'echo \'inj 8 0 3 4 0 1\' >> /ram/q/pc.hm', 'echo \'vol 0 9 0 0 0\' >> /ram/q/pc.hm', 'xd /ram/q/life.dat',
+        'echo =LATER', 'dq0 -m -p t -d /ram/q', 'wait 20 minutes', 'xd /ram/q/life.dat', 'cat /ram/q/pc.hm',
+        'echo =AGAIN', 'dq0 -N -p t -d /ram/q', 'quit', 'xd /ram/q/life.dat', 'echo =END', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = out.replace(/\r/g, ''), sect = n => { const i = o.indexOf('% echo =' + n), j = o.indexOf('% echo =', i + 3); return i < 0 ? '' : o.slice(i, j < 0 ? o.length : j); };
+        const flat = t => t.replace(/\s+/g, ' ');
+        const first = flat(o.slice(o.indexOf('% dq0 -p t -s 3 -c /ram/c.hm -d /ram/e'), o.indexOf('% echo =NEXT')));
+        if (!/You are dead/.test(first)) f.push('not dead of its wound: ' + first.slice(-400));
+        if (/last save is kept/.test(first)) f.push('the first dungeon: says a save is kept: ' + first.slice(-500));
+        if (!/Nothing was saved before you died, so there's no save to go back to: start the game again with its folder, and a new character begins\./.test(first)) f.push('the first dungeon: not its words: ' + first.slice(-500));
+        if (/The life so far/.test(first) || !/The life of Tordan, Hunter\/Trapper, born in the year \d+: No dungeon finished\./.test(first)) f.push('the first dungeon: not told as a life: ' + first.slice(-500));
+        dq0Need(f, T.of('dq0 -p t -s 3 -c /ram/c.hm -m -d /ram/e'), 'E_ARRIVE', { how: 'A_START' }, 'the first dungeon: its next game not a new one');
+        const hard = flat(sect('HARD'));
+        if (!/You are dead/.test(hard)) f.push('hard mode: not dead of its wound');
+        if (!/Hard mode: there's no save to go back to\./.test(hard)) f.push('hard mode: not its words: ' + hard.slice(-400));
+        if (/last save is kept|Nothing was saved/.test(hard)) f.push('hard mode: another\'s words: ' + hard.slice(-400));
+        const later = flat(sect('LATER'));
+        if (!/You are dead/.test(later)) f.push('a later dungeon: not dead of its wound: ' + later.slice(-400));
+        if (/last save is kept/.test(later)) f.push('a later dungeon: says a save is kept: ' + later.slice(-500));
+        if (!/Nothing was saved in this dungeon before you died: start the game again with its folder to begin the dungeon again, as you came to it\./.test(later)) f.push('a later dungeon: not its words: ' + later.slice(-500));
+        if (!/The life so far of [^:]*: .*solved/.test(later)) f.push('a later dungeon: not the life so far: ' + later.slice(-500));
+        dq0Need(f, T.of('dq0 -N -p t -d /ram/q'), 'E_ARRIVE', { how: 'A_START' }, 'a later dungeon: not begun again');
+        const rec = n => xdBytes(sect(n), 'xd /ram/q/life.dat'), head = b => ({ dseed: b.readUInt32LE(8), dungeon: b.readUInt16LE(12) });
+        const a = rec('OUT'), b = rec('LATER'), c = rec('AGAIN');
+        if (!a.length || !b.length || !c.length) f.push('the records not read');
+        else {
+          if (head(a).dungeon !== 2 || head(c).dungeon !== 2) f.push('the record moved on: ' + head(a).dungeon + ', ' + head(c).dungeon);
+          if (head(a).dseed !== head(b).dseed || head(a).dseed !== head(c).dseed) f.push('not the same dungeon\'s seed: ' + JSON.stringify([head(a), head(b), head(c)]));
+        }
+        if (/you (win|lose)/i.test(o)) f.push('words of winning or losing');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0hardon', near: ['save', 'body'], what: "Dingus Quest Zero's hard mode going on with the life (the fight soak's find, 2026-11-04: it was lost at a carry-on, a death in the next dungeon going back to a save): the crypt solved and left in hard mode (dq0 -H), the next dungeon begun without saying so: the record says so (LF_HARD), and the new dungeon's save (its pace's top bit), so its death is hard mode's",
       init: 't_rc', cycles: 1400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
@@ -12874,13 +12962,13 @@ module.exports = {
         const T = dq0Turns(m), f = [];
         const o1 = out.slice(out.indexOf('% dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/d'), out.indexOf('% dq0 -p t -d /ram/d'));
         if (!/You are dead/.test(o1)) f.push('not dead of its wound');
-        if (!/Your last save is kept/.test(o1)) f.push('the ending\'s words don\'t say its last save is kept');
+        if (!/Your last save is kept: start the game again with its folder to go back to it\./.test(o1.replace(/\s+/g, ' '))) f.push('the ending\'s words don\'t say its last save is kept');
         dq0Need(f, T.of('dq0 -p t -d /ram/d'), 'E_ARRIVE', { how: 'A_RESUMED' }, 'not carried on from its last save');
         const o2 = out.slice(out.indexOf('% dq0 -p t -s 3 -c /ram/c.hm -T -H'), out.indexOf('% dq0 -p t -s 3 -c /ram/c.hm -d /ram/h'));
         if (!/You are dead/.test(o2)) f.push('not dead of its wound in hard mode');
         if (!/Hard mode: there's no save to go back to/.test(o2)) f.push('the ending\'s words don\'t say hard mode keeps no save');
         if (!/The life of [^:]*:[^]*died in it, \d+ days?[^]*Dead, on /.test(o2)) f.push('hard mode\'s death: no life\'s account: ' + o2.slice(-500));
-        if (!/The life so far of [^]*It goes on from your last save/.test(o1)) f.push('a death with a save: no life so far: ' + o1.slice(-500));
+        if (!/The life so far of [^]*Your last save is kept/.test(o1.replace(/\s+/g, ' '))) f.push('a death with a save: no life so far: ' + o1.slice(-500));
         dq0Need(f, T.of('dq0 -p t -s 3 -c /ram/c.hm -d /ram/h'), 'E_ARRIVE', { how: 'A_START' }, 'hard mode\'s death carried on from a save');
         return f;
       },

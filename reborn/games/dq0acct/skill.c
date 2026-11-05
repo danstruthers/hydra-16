@@ -16,7 +16,30 @@
 #include "../dq0/hub.h"
 #include "../dq0/rs.h"
 #include "../dq0harn/dq0harn.h"
+#include "../dq0harn/weapons.h"
 #include "dq0acct.h"
+
+/* The console's width, for the words */
+void o_width (void)
+{
+    static char b[100];
+    char* p;
+    int fd, n = 0;
+
+    if ((fd = open ("/dev/consctl", O_RDONLY)) >= 0) {
+        n = read (fd, b, sizeof b - 1);
+        close (fd);
+    }
+    b[n > 0 ? n : 0] = 0;
+    for (p = b; p; p = strchr (p, '\n')) {
+        if (*p == '\n') {
+            ++p;
+        }
+        if (!strncmp (p, "size ", 5) && atoi (p + 5) >= 40) {
+            width = atoi (p + 5) > 80 ? 79 : atoi (p + 5) - 1;
+        }
+    }
+}
 
 /* ---- The wages (the book's incomes, Character 13: a month's pence by the occupation's first letters; else by its class) */
 
@@ -118,8 +141,43 @@ static void trade_read (void)
     close (fd);
 }
 
+/* ---- What's to hand to practise with (HOUSE.md's between dungeons): a weapon skill wants a weapon of its kind (the referee's own table, its key the kind's; a
+** tool's no weapon to practise with, nor a torch; bows and slings the missiles'), Script and Drawing something to write or draw with (the book's, Skills
+** 11), Lockcraft its lockpicks.  What's left after the money's matters, told a thing at a time (ans: dq0acct.c's tools_note) */
+
+static unsigned char lacks[HARN_NSKILLS];
+
+void o_tool (void)
+{
+    unsigned char i = ans[8], j;
+
+    if (!i) {
+        for (j = HARN_AXE; j <= HARN_WHP; ++j) {
+            lacks[j] = 1;
+        }
+        lacks[HARN_SCR] = lacks[HARN_DRA] = lacks[HARN_LCK] = 1;
+    } else if (i == KI_PAPER || i == KI_PARCHMENT || i == KI_QUILL || i == KI_CHARCOAL || i == KI_PENCIL) {
+        lacks[HARN_SCR] = lacks[HARN_DRA] = 0;
+    } else if (i == KI_CHALK) {
+        lacks[HARN_DRA] = 0;
+    } else if (i == KI_LOCKPICKS) {
+        lacks[HARN_LCK] = 0;
+    } else if (i >= KI_SHORTBOW && i <= KI_CROSSBOW) {
+        lacks[HARN_BOW] = 0;
+    } else if (i == KI_SLING) {
+        lacks[HARN_SLG] = 0;
+    } else if (ans[0] && (ans[9] & K_HAND) && i != KI_TORCH) {
+        for (j = 0; j < sizeof weapons / sizeof weapons[0]; ++j) {
+            if (weapons[j].part != TOOL && !strncmp (weapons[j].key, ans, sizeof weapons[0].key)) {
+                lacks[weapons[j].sk] = 0;
+                return;
+            }
+        }
+    }
+}
+
 /* ---- Practice (the book's, Skills 7: 30 points a whole month, ten a roll; no weapon past 70, Skills 18; Script wants writing
-** things, Skills 11) */
+** things, Skills 11; a weapon wants one of its kind, the house's: lacks, above) */
 
 static unsigned char __fastcall__ can_practise (unsigned char sk)
 {
@@ -129,7 +187,7 @@ static unsigned char __fastcall__ can_practise (unsigned char sk)
     if (sk >= HARN_AXE && sk <= HARN_WHP && pc.ml[sk] >= WEAPON_MAX) {
         return 0;
     }
-    return sk != HARN_SCR || writing;
+    return !lacks[sk];
 }
 
 static unsigned char chosen[3], nchosen;
@@ -206,9 +264,11 @@ static unsigned char __fastcall__ choose_said (char* l)
         }
         if (k == HARN_NSKILLS) {
             l[n] = 0;
-            say ("You can't practise ");
+            for (k = 0; k < HARN_NSKILLS && !(lacks[k] && pc.ml[k] && strlen (harn_skills[k].name) >= n && same_ci (harn_skills[k].name, l, n)); ++k) {
+            }
+            say (k < HARN_NSKILLS ? "You have nothing to practise " : "You can't practise ");
             say (l);
-            say (".\n");
+            say (k < HARN_NSKILLS ? " with.\n" : ".\n");
             return 0;
         }
         l += n;

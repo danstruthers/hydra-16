@@ -18,6 +18,7 @@
 extern harn_char pc;
 extern char calling[20];
 extern unsigned char askit;
+extern unsigned char width;                     /* (The console's, for the words: skill.c's o_width) */
 void __fastcall__ say (const char* s);
 void __fastcall__ sayn (unsigned long v);
 void __fastcall__ amount (unsigned long f);
@@ -29,7 +30,6 @@ extern char who[20];
 extern char path[96];
 extern unsigned char used[HARN_NSKILLS];        /* (Its growth's lines: what it's used since its last night's rest) */
 extern unsigned passed;                         /* (The days gone by) */
-extern unsigned char writing;                   /* (It has something to write with: Script, Skills 11) */
 extern unsigned long funds, fee, earned;        /* (What it could pay with, the physician's fee, what the work earned: farthings) */
 extern unsigned work_days;
 
@@ -49,8 +49,10 @@ unsigned char o_mended (void);                  /* Nothing worse than minor left
 void o_treat (void);                            /* The physician */
 
 /* skill.c */
+void o_width (void);                            /* The console's width read */
 void o_first (void);                            /* The physician's and the wounds' words */
 unsigned char o_wage (void);                    /* A month's pence */
+void o_tool (void);                             /* A thing it has (ans: its tool's key, 8 its kind, 9 its flags; kind 0 begins): what it can practise with */
 void o_work (void);                             /* The work's words, its bonus practice */
 void o_practice (void);                         /* The question, the rolls, their words */
 
