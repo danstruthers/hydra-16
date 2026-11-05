@@ -37,6 +37,8 @@ extern unsigned char* fl_dst;
 extern unsigned char fl_su, fl_sx, fl_du, fl_dx, fl_w, fl_cj, fl_nd, fl_dsl[], fl_dsh[], fl_ddl[], fl_ddh[], fl_dcj[];
 extern unsigned char hub_u[], hub_x[];          /* (hub.c's, HUB_UX: each bank's U and $00) */
 
+extern unsigned char gw;                        /* (dq0p.c's: the look giving way to the UI's command in hand) */
+void give_way (void);
 unsigned char sgen;                             /* (Bumped as the world's doors and squares change: light.c's) */
 static unsigned char sgen_ = 0xFF;              /* (As of the layer's last pulse) */
 
@@ -53,6 +55,7 @@ void snd_need (void)
     hub_map (SIGHT_BANK);
     if (!SNDHEAD->ok || SNDHEAD->sn != sn || SNDHEAD->x != x || SNDHEAD->y != y || sgen_ != sgen) {
         sgen_ = sgen;
+        gw = 0;                                 /* (Its giving way, as a look's) */
         pulse (sn, x, y);
         sn = snd_mask (x, y, 0);                /* (Its own background: part 6's) */
         hub_map (0);
@@ -276,6 +279,8 @@ void __fastcall__ s_pulse (unsigned char sn, unsigned x, unsigned y)
                                                 **   character moves: no denizen's there, nor anyone's sound) */
     cy = (y - s->y0) >> CW_BITS;
     for (cj = 0; cj < 9; ++cj) {
+        give_way ();                            /* (A command come, its answer first: its chunks one by one, and before
+                                                **   the pulse's run, a pulse some 430,000 cycles, 2026-11-04) */
         cb[cj] = 0;
         cox[cj] = ox = (cx + cj % 3 - 1) << CW_BITS;
         coy[cj] = oy = (cy + cj / 3 - 1) << CW_BITS;
@@ -325,6 +330,7 @@ void __fastcall__ s_pulse (unsigned char sn, unsigned x, unsigned y)
         hub_map (SIGHT_BANK);
         *(unsigned char*) ((unsigned) fl_ddh[k] << 8 | fl_ddl[k]) = i;
     }
+    give_way ();
     hub_map (SIGHT_BANK);
     pulse_run (&SND_SQ (0, 0));
     SNDHEAD->sn = sn;
