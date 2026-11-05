@@ -810,21 +810,22 @@ static void stop_world (void)
 ** so a line's Enter is looked for at the next tick, a tick at most behind the background's work; a driver serving its
 ** calls, the console's, with it), and the world, the command parser, the senses and the referee while a command's in
 ** hand (FS_CMD: the hub's ui_cmd).  The senses with them: the world waits on their look and their stock (in the
-** background, an inventory's answer was 60,000 cycles the slower).  Not at the turns pace: there the game waits for
-** the player, and its tasks take their turns as they did (fore_sync's; overlay 6's) */
-#define FS_CMD      1
-#define FS_UI       2
+** background, an inventory's answer was 60,000 cycles the slower).  And the maker but while a command's in hand (FS_MAKE:
+** asked for a chunk or the map, someone waits on it, the player mostly, a chunk the longest wait in the game: in the
+** background 12M cycles, a chunk's 5.5M of its own among the denizens and the rest; asked for nothing, asleep).  Not at
+** the turns pace: there the game waits for the player, and its tasks take their turns as they did (fore_sync's; overlay
+** 6's) */
 #pragma code-name (push, "OV13CODE")            /* (Overlay 13's and 3's since 2026-11-04, overlay 17's room) */
 #pragma rodata-name (push, "OV13RODATA")
 void __fastcall__ o_fore_set (unsigned char on)
 {
-    static const unsigned char fg[] = { T_WORLD, T_COMMANDS, T_SENSES, T_REFEREE };
+    static const unsigned char fg[] = { T_WORLD, T_COMMANDS, T_SENSES, T_REFEREE, T_MAKER };
     unsigned char k;
 
     hy_taskfore (hy_task (), (on & FS_UI) != 0);
     for (k = 0; k < sizeof fg; ++k) {
         if (task_[fg[k]] > 0) {
-            hy_taskfore (task_[fg[k]], on & FS_CMD);
+            hy_taskfore (task_[fg[k]], on & (k < 4 ? FS_CMD : FS_MAKE));
         }
     }
 }
@@ -865,7 +866,7 @@ void __fastcall__ o_dots (unsigned char k)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-static unsigned char fored;                     /* (The tasks in the foreground: FS_*, fore_sync's) */
+unsigned char fored;                            /* (The tasks in the foreground: FS_*, fore_sync's) */
 static unsigned char iqh, owed, obeat;          /* (The intents' ring as a line's taken; an answer owed, main's;
                                                 **   the world's heartbeat as it was sent) */
 static unsigned char stirs;                     /* (A denizen's stir held while a line's answered: events', main's) */
@@ -877,7 +878,7 @@ static void fore_sync (void)
         HUB->ui_cmd = owed = 0;                 /* (Its intent taken and the world round again since: an answer
                                                 **   without news to the character, if any, given) */
     }
-    f = HUB->tpr ? FS_UI | (HUB->ui_cmd != 0) : 0;
+    f = HUB->tpr ? FS_UI | (HUB->ui_cmd ? FS_CMD : FS_MAKE) : 0;
     if (f != fored) {
         fore_set (fored = f);
     }

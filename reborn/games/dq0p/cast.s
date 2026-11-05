@@ -24,7 +24,7 @@
 ; squares only there.
 
             .macpack    longbranch
-            .export     _cast_row, _cast_own, _cast_lamp
+            .export     _cast_row, _cast_own, _cast_lamp, _eye_edge
             .export     _g_r, _g_m, _g_r2, _g_l2, _g_u2, _g_hx, _g_hy, _g_ez, _g_bright, _g_lmax, _g_o2
             .export     _g_nl, _g_li, _g_lj, _g_lr, _g_lzl, _g_lzh, _g_lo, _g_hi
             .importzp   ptr1, ptr2
@@ -448,23 +448,7 @@ _cast_row:
             bne         @lit
             jsr         lamps
             bcc         @next
-@lit:       lda         eye                 ;   and a line to it from the eyes clear: seen
-            sta         reye
-            lda         eye + 1
-            sta         reye + 1
-            lda         _g_ez
-            sta         rez
-            lda         _g_ez + 1
-            sta         rez + 1
-            lda         dx
-            sta         rdx
-            lda         dy
-            sta         rdy
-            lda         adx
-            sta         radx
-            lda         ady
-            sta         rady
-            jsr         ray
+@lit:       jsr         eyeray              ;   and a line to it from the eyes clear: seen
             bcc         @next
             ldy         #0
             lda         (ptr2),y
@@ -487,6 +471,104 @@ _cast_row:
             cmp         iend
             jcc         @sq
             rts
+
+; unsigned char __fastcall__ eye_edge (unsigned char n): 1 if a line from the eyes reaches one of n squares of the view,
+; from r_i0, r_j0 on (along the row if r_wi, else down the column), squares in a chunk not made (nothing in the grid): those it could see
+; for its range, ahead or beside it (view.c's: the chunk made then); their height taken as the eyes' own
+_eye_edge:
+            sta         rk
+            jsr         setup
+@sq:        lda         _r_i0
+            sec
+            sbc         _g_r
+            sta         dx
+            jsr         mag
+            sta         adx
+            asl         a
+            tax
+            lda         _r_j0
+            sec
+            sbc         _g_r
+            sta         dy
+            jsr         mag
+            sta         ady
+            asl         a
+            tay
+            lda         sq,x
+            clc
+            adc         sq,y
+            sta         d2
+            lda         sq + 1,x
+            adc         sq + 1,y
+            sta         d2 + 1
+            lda         dx                  ; Not behind (a look one way's past a glance, the quarter ahead)
+            ldx         _g_hx
+            jsr         times
+            sta         qf
+            lda         dy
+            ldx         _g_hy
+            jsr         times
+            clc
+            adc         qf
+            bmi         @next
+            lda         _g_o2
+            cmp         d2
+            lda         _g_o2 + 1
+            sbc         d2 + 1
+            bcs         @line
+            lda         _g_r2
+            cmp         d2
+            lda         _g_r2 + 1
+            sbc         d2 + 1
+            bcc         @next
+            jsr         quarter
+            bcc         @next
+@line:      ldx         _r_i0
+            lda         _r_j0
+            jsr         square
+            sta         ptr2
+            sty         ptr2 + 1
+            ldy         #1
+            lda         _g_ez
+            sta         (ptr2),y
+            jsr         eyeray
+            lda         #1
+            bcs         @end
+@next:      lda         _r_wi
+            beq         @down
+            inc         _r_i0
+            bne         @one                ; (Columns under 63)
+@down:      inc         _r_j0
+@one:       dec         rk
+            jne         @sq
+            lda         #0
+@end:       ldx         #0
+            rts
+mag:        bpl         @p
+            eor         #$FF
+            clc
+            adc         #1
+@p:         rts
+
+; The line from the eyes to the square at ptr2 (dx, dy; adx, ady): carry set if it's clear
+eyeray:
+            lda         eye
+            sta         reye
+            lda         eye + 1
+            sta         reye + 1
+            lda         _g_ez
+            sta         rez
+            lda         _g_ez + 1
+            sta         rez + 1
+            lda         dx
+            sta         rdx
+            lda         dy
+            sta         rdy
+            lda         adx
+            sta         radx
+            lda         ady
+            sta         rady
+            jmp         ray
 
 ; The square (dx, dy) in the quarter ahead (a look one way's: within 45 degrees of the way it faces, g_hx, g_hy):
 ; carry set if |dx hy - dy hx| is at most dx hx + dy hy
@@ -1016,8 +1098,8 @@ ptrs:
 ;   void rect (void);                               the grid's rows r_j0 ... (r_wj of them), its columns from r_i0
 ;                                                   ;   (r_wi of them): the squares from r_x, r_y (a shut door,
 ;                                                   ;   but a portcullis, opaque; the light layer's light, but in
-;                                                   ;   v_lmode: a chunk not made yet nothing; outside the stratum,
-;                                                   ;   nothing)
+;                                                   ;   v_lmode; a chunk not made yet nothing, as outside the
+;                                                   ;   stratum)
 ;   void grid_shift (void);                         the grid moved, sh_dx, sh_dy (each less than sh_w, its size):
 ;                                                   ;   its square i, j the one at i + sh_dx, j + sh_dy was
 ;   void __fastcall__ mark_rows (unsigned char u);  the last view's rows' marks (bx0, by0, bw; blo, bhi) put in
@@ -1269,13 +1351,11 @@ _rect:
             cmp         rk
             bcs         @k
             sta         rk
-@k:         lda         _v_lmode            ; Its chunk (the lamps' lines: one the cache has)
-            beq         @at
-            jsr         pushq
+@k:         jsr         pushq               ; Its chunk: one the cache has (view.c's: made as the eyes reach it)
             jsr         _cached
             cmp         #0
             jeq         @fill
-@at:        jsr         pushq
+            jsr         pushq
             jsr         _at
             sta         rp
             stx         rp + 1
@@ -1400,7 +1480,7 @@ _rect:
             sbc         bq + 1
             jcs         @band
             rts
-@fill:      lda         _v_look             ; (Nothing: outside the stratum, or not made for the lamps)
+@fill:      lda         _v_look             ; (Nothing: outside the stratum, or not made)
             jsr         _hub_map
             lda         #0
             sta         rr

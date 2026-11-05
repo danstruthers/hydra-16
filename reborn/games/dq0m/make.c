@@ -155,6 +155,7 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
     memcpy (CHUNK_AT (k), c, sizeof *c);
     hub_map (WORLD_BANK);
     WREC->cslot[k].used = u;
+    ++WREC->made;
     hub_map (0);
     return k;
 }

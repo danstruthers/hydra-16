@@ -269,6 +269,10 @@ void __fastcall__ felt_words (unsigned w);      /* (Overlay 7's) A walk in the d
 unsigned __fastcall__ dnum (const char* s);     /* (main.c's) A number, a word's (atoi's) */
 void __fastcall__ turned_says (unsigned char go);                        /* (Overlay 1's) A turn's first words (task.c's, 2026-11-03) */
 void facing_words (void);                       /* (Overlay 7's) The way it believes it faces (task.c's: slice 4.2's) */
+#define FS_CMD      1                           /* (fore_set's: main.c's) */
+#define FS_UI       2
+#define FS_MAKE     4
+extern unsigned char fored;
 void __fastcall__ fore_set (unsigned char on);  /* (Overlay 6's) The UI and the answer's tasks in the kernel's
                                                 **   foreground, or not (main.c's FS_*) */
 unsigned char __fastcall__ stop_kind (const char* word);  /* Overlay 7 (task.c's): the task a stop names */

@@ -247,7 +247,9 @@ void __fastcall__ s_map (const char* rules)
         HUB->pc_lost ? ", or so you think" : "");
     t_flush ();                                 /* (Its first words at once, the maker's drawing some ten million cycles:
                                                 **   the user's D17) */
+    fore_set (FS_UI | FS_MAKE);                 /* (The answer begun: the maker first, the player waiting on it: main.c's) */
     hub_call (&HUB->mapq, T_MAKER);             /* (The maker draws it into the UI bank) */
+    fore_set (fored);
     slants ();                                  /* (A passage's slant drawn as one: 2026-11-01) */
     cq = HUB->pcsum.northsense ? 0 : HUB->pc_lost ? '?' : 'N';   /* (Turned: the compass, its N where the north it
                                                 **   believes in lies, as the map's turned: a quarter for every two

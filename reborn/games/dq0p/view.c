@@ -18,7 +18,11 @@
 ** while nothing it holds has changed (the light layer's lgen: a light or a square changed near it, a lamp's lines
 ** worked out in it): a turn where it stands looks in the same grid, its marks taken out; a step or a walk moves it,
 ** only the squares come into it copied in.  (The light layer works its lamps' lines out in the same grid, before the
-** look's: grid ()'s lmode, the chunks the cache has alone.)
+** look's: grid ()'s lmode, the chunks the cache has alone.)  A chunk not made yet is nothing in the grid, as outside
+** the stratum, till a line from the eyes reaches its edge: made then, and the grid made again; a look stopped by a wall
+** a few squares off makes nothing beyond it (a chunk made is the longest wait in the game, 5.5M cycles of the maker's:
+** a look one way into new ground made every chunk its grid touched, up to nine, behind it as well, 2026-11-05).  A lamp
+** in a chunk made shines into one that is, whichever came first (light.c's).
 **
 ** A look one way (HOUSE.md's looking one way: dq0p.c's v_way) is the same look, reaching twice as far (WAY_R squares
 ** at most, the grid's) in the quarter ahead of the character (within 45 degrees of the way it faces: cast.s's), as far
@@ -53,6 +57,7 @@ extern unsigned char* run_g;
 void __fastcall__ cast_row (unsigned char j);
 void cast_own (void);
 void __fastcall__ grid_clr (unsigned char n);
+unsigned char __fastcall__ eye_edge (unsigned char n);
 extern unsigned char v_sn, v_look, v_lmode, r_i0, r_j0, r_wi, r_wj, lbk, bw, blo[VMAX], bhi[VMAX], sh_w;
 extern unsigned v_x0, v_y0, v_h, r_x, r_y, bx0, by0;
 extern signed char sh_dx, sh_dy;
@@ -68,7 +73,8 @@ unsigned char nlamps;
 
 static unsigned gx_, gy_;                       /* The grid the view made last (gw_ 0: none, or not the view's now): */
 static unsigned char gw_, gsn_, glg_;           /*   from gx_, gy_, gw_ each way, of stratum gsn_, the light layer's */
-static unsigned gsx0, gsy0, gsw, gsh;           /*   lgen then, the stratum's bounds */
+static unsigned gsx0, gsy0, gsw, gsh;           /*   lgen then, the stratum's bounds, the chunks made by then */
+static unsigned char gmd_;
 
 void give_way (void);                           /* (dq0p.c's: the look giving way to the UI's command in hand) */
 
@@ -162,8 +168,10 @@ static void __fastcall__ view_grid (unsigned gx, unsigned gy, unsigned char w)
 {
     static struct stratum* s;
     static int dx, dy;
-    static unsigned char j, ax, ay;
+    static unsigned char j, ax, ay, md;
 
+    hub_map (WORLD_BANK);
+    md = WREC->made;                            /* (One made since, by anyone: nothing in the grid no longer so) */
     s = &STRATUM (v_sn);
     v_lmode = 0;
     dx = gx - gx_;
@@ -172,7 +180,7 @@ static void __fastcall__ view_grid (unsigned gx, unsigned gy, unsigned char w)
     r_y = gy;
     r_i0 = r_j0 = 0;
     r_wi = r_wj = w;
-    if (gw_ == w && gsn_ == v_sn && glg_ == lgen && gsx0 == s->x0 && gsy0 == s->y0 && gsw == s->w && gsh == s->h &&
+    if (gw_ == w && gsn_ == v_sn && glg_ == lgen && gmd_ == md && gsx0 == s->x0 && gsy0 == s->y0 && gsw == s->w && gsh == s->h &&
         dx > -w && dx < w && dy > -w && dy < w) {
         hub_map (LOOK_BANK);                    /* (The last view's marks out: its squares the grid's) */
         for (j = 0; j < bw; ++j) {
@@ -223,6 +231,30 @@ static void __fastcall__ view_grid (unsigned gx, unsigned gy, unsigned char w)
     gsy0 = s->y0;
     gsw = s->w;
     gsh = s->h;
+    gmd_ = md;
+}
+
+/* The chunk not made at the view's squares i, j on (ni, nj of them): 1 if a line from the eyes reaches the edges of it
+** that face them (the eyes r, r in the view) */
+static unsigned char i_, j_, ni_, nj_, r_;
+static unsigned char __fastcall__ reached (void)
+{
+    hub_map (LOOK_BANK);
+    if (i_ > r_ || i_ + ni_ <= r_) {
+        r_i0 = i_ > r_ ? i_ : i_ + ni_ - 1;
+        r_j0 = j_;
+        r_wi = 0;
+        if (eye_edge (nj_)) {
+            return 1;
+        }
+    }
+    if (j_ > r_ || j_ + nj_ <= r_) {
+        r_i0 = i_;
+        r_j0 = j_ > r_ ? j_ : j_ + nj_ - 1;
+        r_wi = 1;
+        return eye_edge (ni_);
+    }
+    return 0;
 }
 
 /* ==== Part 4 (its own, small: a look's, after the view's, dq0p.c's) */
@@ -429,9 +461,8 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
     unsigned char sight, unsigned char dark)
 {
     static unsigned char range, own, j, k, w, m;
-    static unsigned yy, gy0, d, xx, gx0, gx1;
+    static unsigned yy, gy0, gy1, xx, gx0, gx1;
     static int z;
-    static struct lamp* l;
 
     hub_map (0);
     k = HUB->pc_pos;                            /* (Its eyes by its body's position: crouched, kneeling, sitting three
@@ -464,39 +495,41 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
     g_ez = z;
     g_bright = light || dark;
     g_lmax = light > dark ? light : dark;
-    for (k = 0, m = 0, l = lamp; k < nlamps; ++k, ++l) {    /* The lamps whose reach comes into the view: its chunks
-                                                **   reached that much more each way (31 squares at most), as they
-                                                **   always were, in rows first: any the maker must make made in the
-                                                **   same order, the lamps' chunks with them, for the light layer */
-        d = range + l->r;
-        if (l->x - x + d <= 2 * d && l->y - y + d <= 2 * d && l->r > m) {
-            m = l->r < 31 - range ? l->r : 31 - range;
-        }
-    }
-    w = 2 * (range + m) + 1;
-    gx0 = x - range - m;                        /* (The strata are far from the frame's edges: no wrapping) */
-    gx1 = gx0 + w - 1;
-    gy0 = y - range - m;
-    for (yy = gy0; yy < gy0 + w; yy += CW - ((yy - v_y0) & (CW - 1))) {
-        for (xx = gx0; xx <= gx1; xx += band (xx, gx1)) {
-            at (sn, xx, yy);
-        }
-    }
-    w = 2 * range + 1;                          /* The view's squares: their chunks' light (the layer's, worked out
-                                                **   if it isn't yet), then the grid */
-    gx0 = x - range;
+    w = 2 * range + 1;                          /* The view's squares */
+    gx0 = x - range;                            /* (The strata are far from the frame's edges: no wrapping) */
     gx1 = gx0 + w - 1;
     gy0 = y - range;
-    for (yy = gy0; yy < gy0 + w; yy += CW - ((yy - v_y0) & (CW - 1))) {
-        for (xx = gx0; xx <= gx1; xx += band (xx, gx1)) {
-            give_way ();
-            light_grid (sn, xx, yy, 1);
-        }
-    }
-    lbk = 0xFF;
-    stratum (sn);                               /* (The light layer's lamps' lines may have had the grid) */
-    view_grid (gx0, gy0, w);
+    gy1 = gy0 + w;
+    r_ = range;
     g_m = g_nl = 0;
+    do {
+        for (yy = gy0; yy < gy1; yy += CW - ((yy - v_y0) & (CW - 1))) {
+            for (xx = gx0; xx <= gx1; xx += band (xx, gx1)) {
+                give_way ();                    /* Their chunks' light (the layer's, worked out if it isn't yet): those */
+                if (cached (sn, xx, yy)) {      /*   made */
+                    light_grid (sn, xx, yy, 1);
+                }
+            }
+        }
+        lbk = 0xFF;
+        stratum (sn);                           /* (The light layer's lamps' lines may have had the grid) */
+        view_grid (gx0, gy0, w);                /* The grid; then those not made that the eyes reach made, and it all again */
+        m = 0;
+        for (yy = gy0; yy < gy1; yy += nj_) {
+            nj_ = CW - ((yy - v_y0) & (CW - 1));
+            if (yy + nj_ > gy1) {
+                nj_ = gy1 - yy;
+            }
+            j_ = yy - gy0;
+            for (xx = gx0; xx <= gx1; xx += ni_) {
+                ni_ = band (xx, gx1);
+                i_ = xx - gx0;
+                if (!cached (sn, xx, yy) && reached () && at (sn, xx, yy)) {
+                    m = 1;
+                }
+            }
+        }
+    } while (m);
     memset (g_lo, 0xFF, w);                     /* (Each row's marks, cast.s's as it makes them: none yet) */
     memset (g_hi, 0, w);
     if (own) {
