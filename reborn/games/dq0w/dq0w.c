@@ -6854,19 +6854,20 @@ int main (int argc, char* argv[])
         stocks ();                              /* (The chunks the maker stocked: their things put down, marked so) */
         if (chart_late && !ui_long ()) {
             if (chart_late & 2) {
+                chart_late &= ~2;
                 sconce_lights (1);              /* (A sconce's light, a thing handled: wkept.c's) */
             }
             if (chart_late & 1) {
+                chart_late &= ~1;               /* (It may give way, and so be late again) */
                 chart_now ();                   /* (The map making's things, as what it carries has changed: part 13's) */
             }
-            chart_late = 0;
         }
         if (tr_n >= TR_FLUSH && !ui_long ()) {
             tr_flush (TF_SOME);                 /* (The passings journalled taken into the traces' store: part 28's,
                                                 **   giving way as a command comes; 160,000 cycles of the world's and a
                                                 **   part's swap, on whichever answer it fell: 2026-11-03) */
         }
-        if (DEN_INTENTS () && !uf && (HUB->di[HUB->di_tail].kind != I_KIT || !keys_hold ())) {
+        if (DEN_INTENTS () && !ui_first () && (HUB->di[HUB->di_tail].kind != I_KIT || !keys_hold ())) {
             den_intents ();                     /* (The denizens' intents carried out; not while the UI's command is
                                                 **   in hand at the real paces, its answer first: ui_first's; nor a
                                                 **   denizen's things, those behind them after, while a line's typed:

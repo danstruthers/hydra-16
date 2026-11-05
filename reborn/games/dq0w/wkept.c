@@ -130,6 +130,7 @@ static void __fastcall__ room_lit (unsigned char sn, unsigned x, unsigned y, uns
 ** whatever, a chunk first stocked); a keepers' torch in one its keepers no longer keep (all dead) tended no longer,
 ** burning down from then.  Two passes of the store: the lit and the tended in things (each sconce's marked, SC_NOW),
 ** then the sconces.  1 if a room's light changed */
+unsigned char ui_long (void);                   /* (dq0w.c's) */
 static unsigned char __fastcall__ lights (unsigned char sn, unsigned x0, unsigned y0, unsigned char w,
     unsigned char force)
 {
@@ -149,6 +150,11 @@ static unsigned char __fastcall__ lights (unsigned char sn, unsigned x0, unsigne
         if ((f & I_TENDED) && !kept (p->sn, p->x, p->y)) {
             item_at (i)->flags &= ~I_TENDED;    /* (Its keepers gone: it burns down from now) */
         }
+    }
+    if (sn == 0xFF && ui_long ()) {
+        burn_ask |= BA_SCONCES;                 /* (A minute's, a command or a line being typed: its answer first, this
+                                                **   pass again after it, its marks made again the same, 2026-11-04) */
+        return 0;
     }
     for (i = 0; (i = items (i, IN_SQUARE, 0)) != 0; ) {
         if (ip->kind != KI_SCONCE) {

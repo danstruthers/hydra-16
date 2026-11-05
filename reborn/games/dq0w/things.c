@@ -2100,18 +2100,24 @@ unsigned char s_serve (void)
 ** holding one of them; its arm not useless); and the first map it carries (anywhere on it: shown).  Mapping as it goes
 ** with them, and no map, its first sheet is made the map (the kind keyed "map").  Not handy, what they're in (its kind
 ** in pc_chart: CH_PACKED's, the UI's to tell).  Part 13's (its room), called as the light is (s_light_now's) */
+unsigned char ui_long (void);                   /* (dq0w.c's) */
 void s_chart_now (void)
 {
     static const char keys[5][6] = { "sheet", "map", "draw", "quill", "ink" };
     const struct kind* k;
-    unsigned i = 0, j, sheet = 0, map = 0;
+    unsigned i = 0, j, sheet = 0, map = 0, w[5];
     unsigned char has = 0, busy, mh, h, f, pk = 0;
 
     hub_map (0);
     mh = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
     busy = (HUB->pcsum.limbs & LB_ARM_L ? IH_LEFT : 0) | (HUB->pcsum.limbs & LB_ARM_R ? IH_RIGHT : 0);
-    memset (chart_w, 0, sizeof chart_w);
+    memset (w, 0, sizeof w);
     while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
+        if (ui_long ()) {
+            chart_late |= 1;                    /* (A command or a line being typed, its answer first: all of it again
+                                                **   after it, the main loop's, a quarter of a million cycles, 2026-11-04) */
+            return;
+        }
         fetch (&rec, i);
         for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {   /* (On it, or in what it carries) */
         }
@@ -2134,12 +2140,13 @@ void s_chart_now (void)
             continue;
         }
         has |= 1 << f;
-        chart_w[f] = i;                         /* (Each handy, by its key: what it draws with, used up as it draws,
+        w[f] = i;                               /* (Each handy, by its key: what it draws with, used up as it draws,
                                                 **   dq0w.c's drawn_down) */
         if (!f && !sheet) {
             sheet = i;
         }
     }
+    memcpy (chart_w, w, sizeof w);
     f = (has & 3) && ((has & 4) || (has & 24) == 24) && (busy & IH_BOTH) != IH_BOTH;
     hub_map (0);
     if (f && !map && sheet && (HUB->watch & WA_MAP)) {
