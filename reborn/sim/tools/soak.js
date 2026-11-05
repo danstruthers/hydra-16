@@ -204,8 +204,9 @@ function sameGame(a, b, s) {
   if (x.length !== y.length) f.push('not the same game again: ' + x.length + ' games, then ' + y.length);
   for (let g = 0; g < x.length && g < y.length && !f.length; g++) {
     let d = 0;
-    const un = l => l.filter(q => !q.includes('"req":"slot0"') || q !== l.filter(w => w.includes('"req":"slot0"')).pop());   // (A blow's last test as the character dies of it, or none, the world's end its own moment)
-    if (x[g].length !== y[g].length && Math.abs(x[g].length - y[g].length) === 1) { x[g] = un(x[g]); y[g] = un(y[g]); }
+    const un = l => { const i = l.map(q => q.includes('"req":"slot0"')).lastIndexOf(true); return l.filter((q, k) => k !== i); };   // (One more of a blow's requests as the character dies of it, or none, the world's end its own moment)
+    if (x[g].length === y[g].length + 1) x[g] = un(x[g]);
+    else if (y[g].length === x[g].length + 1) y[g] = un(y[g]);
     while (d < x[g].length && d < y[g].length && x[g][d] === y[g][d]) d++;
     if (d < x[g].length || d < y[g].length) f.push('not the same game again: its game ' + (g + 1) + ' from record ' + d + ' of ' + x[g].length + ' and ' + y[g].length + ': ' + (x[g][d] || 'none') + ' / ' + (y[g][d] || 'none'));
   }
