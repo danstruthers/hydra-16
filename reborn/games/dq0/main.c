@@ -2615,7 +2615,8 @@ static void __fastcall__ arg (const char* s)
 }
 
 /* dq0life's path (lb + 300) and arguments (lb), life's, part 1's: its folder, the game's lib folder; given, the seed said (dq0 -s), else the
-** clock's its own.  Given 2, as it ends in a death (s_finish's): dq0end's, hard mode's -h: the life's account */
+** clock's its own.  Given 2, as it ends in a death (s_finish's): dq0end's, hard mode's -h, its name and occupation (dead with nothing saved, there's no
+** sheet in the folder to say): the life's account */
 void __fastcall__ s_between (unsigned char given)
 {
     ap = lb;
@@ -2625,6 +2626,10 @@ void __fastcall__ s_between (unsigned char given)
         if (hard) {
             arg ("-h");
         }
+        arg ("-n");
+        arg (P.name);
+        arg ("-o");
+        arg (P.occupation);
     } else {
         arg ("-l");
         arg (libdir);
@@ -3014,7 +3019,7 @@ void __fastcall__ s_begin (int argc, char* argv[])
 }
 
 /* The game's end: kept (as it ends: the game's quit, not lost), the world stopped.  An ending's, the character's sheet
-** told as it ends; a death's not kept (its last save, the autosave as it came into its stratum, left to go back to: D7's)
+** told as it ends; a death's not kept (its last save, if it's made one, left to go back to: D7's; dq0end says which)
 ** unless it's hard mode (dq0 -H: the save marked ended, the character gone; slice 4.4's) */
 void s_finish (void)
 {

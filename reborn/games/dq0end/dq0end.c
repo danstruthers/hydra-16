@@ -3,10 +3,12 @@
 ** life): a small program in the game's lib folder, run as the character dies: by the UI as the game ends in a death (main.c's s_finish),
 ** by dq0life if it died between two dungeons (dq0acct's).
 **
-** dq0end -d folder [-h]
+** dq0end -d folder [-h] [-n name] [-o occupation]
+**   -n, -o     who it was, for a death before any sheet was saved (the sheet's own, if there is one, says)
 **   -h         hard mode (dq0 -H), the death kept in the save: its end recorded first (its outcome solved or died, LD_DIED, LF_OVER), since the
-**              next start begins a new life over it (lives.dat keeps it then).  Without it, and the record not saying it's over, the last
-**              save's there to go back to: the record's left as it was, and it's told as the life so far.
+**              next start begins a new life over it (lives.dat keeps it then).  Without it, and the record not saying it's over, the record's
+**              left as it was, and what the next start will do is told by what's in the folder (next_is: the words at a death are this program's,
+**              since it can look): back to the last save, this dungeon begun again, or a new character.
 */
 
 #include <fcntl.h>
@@ -61,9 +63,69 @@ static void record_write (void)
     }
 }
 
+/* Words, by the console's width (a line's spaces kept till the next word: an indent stands) */
+static unsigned char width = 79, col, wn, sp, ln;
+static char wb[80], lb[81];
+
+static void word_out (void)
+{
+    unsigned char k;
+
+    if (!wn) {
+        return;
+    }
+    if (col + sp + wn > width) {
+        write (1, lb, ln);
+        write (1, "\n", 1);
+        ln = col = sp = 0;
+    }
+    for (; sp; --sp) {
+        lb[ln++] = ' ';
+        ++col;
+    }
+    for (k = 0; k < wn; ++k) {
+        lb[ln++] = wb[k];
+    }
+    col += wn;
+    wn = 0;
+}
+
 static void __fastcall__ out (const char* s)
 {
-    write (1, s, strlen (s));
+    for (; *s; ++s) {
+        if (*s == ' ') {
+            word_out ();
+            ++sp;
+        } else if (*s == '\n') {
+            word_out ();
+            lb[ln++] = '\n';
+            write (1, lb, ln);
+            ln = col = sp = 0;
+        } else if (wn < width) {
+            wb[wn++] = *s;
+        }
+    }
+}
+
+static void console_width (void)
+{
+    static char b[100];
+    char* p;
+    int fd, n = 0;
+
+    if ((fd = open ("/dev/consctl", O_RDONLY)) >= 0) {
+        n = read (fd, b, sizeof b - 1);
+        close (fd);
+    }
+    b[n > 0 ? n : 0] = 0;
+    for (p = b; p; p = strchr (p, '\n')) {
+        if (*p == '\n') {
+            ++p;
+        }
+        if (!strncmp (p, "size ", 5) && atoi (p + 5) >= 40) {
+            width = atoi (p + 5) > 80 ? 79 : atoi (p + 5) - 1;
+        }
+    }
 }
 
 static void __fastcall__ outn (unsigned long v)
@@ -131,17 +193,40 @@ static unsigned char __fastcall__ theme_line (char* l)
     return 1;
 }
 
-/* The account told; over, the life's ended (else the life so far) */
-static void __fastcall__ tell (unsigned char over)
+/* What the next start in the folder does, a death not hard mode's (dq0life's next_is, main.c's life: the same tests) */
+enum { NX_SAVE, NX_AGAIN, NX_NEW };
+static unsigned char next_is (void)
 {
+    int fd;
+    unsigned char y;
+
+    dungeon_dir (L.h.dungeon);
+    if ((fd = open (in_ (dir, "game.dat"), O_RDONLY)) < 0) {
+        return L.h.dungeon > 1 ? NX_AGAIN : NX_NEW;
+    }
+    y = read (fd, &sv, sizeof sv) == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER && !sv.q.done;
+    close (fd);
+    return y ? NX_SAVE : NX_NEW;
+}
+
+/* The account told; over, the life's ended, what it was (hard, hard mode's words after it); else what's next (next_is), the life so far unless a new
+** character's what's next */
+static void __fastcall__ tell (unsigned char over, unsigned char hard)
+{
+    static const char* const nexts[3] = {
+        "Your last save is kept: start the game again with its folder to go back to it.\n",
+        "Nothing was saved in this dungeon before you died: start the game again with its folder to begin the dungeon again, as you came to it.\n",
+        "Nothing was saved before you died, so there's no save to go back to: start the game again with its folder, and a new character begins.\n"
+    };
     unsigned n, k, last;
     unsigned long days = 0;
     const struct life_dungeon* d;
+    unsigned char next = over ? NX_NEW : next_is ();
 
     in_ (top, "pc.hm");
     lines_of (sheet_line);
     out ("\n");
-    out (over ? "The life of " : "The life so far of ");
+    out (next == NX_NEW ? "The life of " : "The life so far of ");
     out (who[0] ? who : "your character");
     if (job[0]) {
         out (", ");
@@ -175,7 +260,7 @@ static void __fastcall__ tell (unsigned char over)
         out (d->days == 1 ? " day\n" : " days\n");
     }
     if (!last) {
-        out ("  No dungeon finished yet.\n");
+        out (next == NX_NEW ? "  No dungeon finished.\n" : "  No dungeon finished yet.\n");
     }
     outn (last);
     out (last == 1 ? " dungeon, " : " dungeons, ");
@@ -192,8 +277,12 @@ static void __fastcall__ tell (unsigned char over)
         out (", aged ");
         outn (LIFE_AGE (&L.h, L.h.date, bday));
         out (".\n");
+        if (hard) {
+            out ("Hard mode: there's no save to go back to.\n");
+        }
     } else {
-        out ("It goes on from your last save.\n");
+        out ("\n");
+        out (nexts[next]);
     }
 }
 
@@ -209,11 +298,16 @@ int main (int argc, char* argv[])
             top = argv[++i];
         } else if (!strcmp (argv[i], "-h")) {
             hard = 1;
+        } else if (!strcmp (argv[i], "-n") && i + 1 < argc) {
+            strncpy (who, argv[++i], sizeof who - 1);
+        } else if (!strcmp (argv[i], "-o") && i + 1 < argc) {
+            strncpy (job, argv[++i], sizeof job - 1);
         }
     }
     if (!top) {
         return 1;
     }
+    console_width ();
     if ((fd = open (in_ (top, LIFE_FILE), O_RDONLY)) < 0 || read (fd, &L, sizeof L) != sizeof L || L.h.magic != LIFE_MAGIC ||
         L.h.version != LIFE_VER) {
         return 1;
@@ -241,7 +335,7 @@ int main (int argc, char* argv[])
         L.h.flags |= LF_OVER;
         record_write ();
     }
-    tell (L.h.flags & LF_OVER);
+    tell (L.h.flags & LF_OVER, hard);
     return 0;
 }
 
