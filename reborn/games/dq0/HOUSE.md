@@ -813,8 +813,8 @@ believes, the map making's things, and a look about as a body falls: each a tent
 more.  A denizen's plain intents, its steps and blows, wait for the keys not at all, and for an Enter a quarter second at most,
 as before; nor do the character's own doings wait (a step of its walk, its own look), being the answers.  So typing holds
 no one still.  A long line typed slowly or a steady typist can't starve them: three seconds at most (600 ticks,
-dq0w.c's KEY_HOLD, from the first one held back), then a pass of the world's loop goes free and whatever's due runs through, the keys
-not stopping it, and they hold back again.  A line emptied (Ctrl-U, Backspace) lets them go at once.  At the turns pace nothing holds back: that
+dq0w.c's KEY_HOLD, from the first one held back), then a pass of the world's loop goes free and whatever's due runs through, neither keys
+nor an Enter stopping it (one Enter's first letter behind it, at worst, in three seconds of typing), and they hold back again.  A line emptied (Ctrl-U, Backspace) lets them go at once.  At the turns pace nothing holds back: that
 game turns on its seed and commands alone.  A line that takes longer than the three seconds to type may still meet a job
 as it's entered, as any line could before.
 

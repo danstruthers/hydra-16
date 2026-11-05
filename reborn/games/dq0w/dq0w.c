@@ -6792,20 +6792,18 @@ unsigned char ui_first (void)
 ** minute and the sconces, the map making's things, a look about as a body falls: each a tenth of a second of the
 ** world's time and more; not a denizen's plain intent, a word of the game's own) hold back for a line being typed
 ** too, from its first key (the hub's ui_keys; the turns pace never, the game turning on no one's typing), so none's
-** under way as its Enter comes.  KEY_HOLD ticks at most from the first one held back, then a pass of the main loop
-** goes free (main's, kfree: a job begun then isn't stopped by the keys, a kit given way to being drawn again from the
-** start), and they hold back again: a long line typed slowly or a steady typist leaves them late by that, not
-** starved; those ticks run on through a line's answer, a steady typist's lines one hold.  Past a command's quarter
-** second (ui_first's), as they were, on with them.  The hub's header in the window */
+** under way as its Enter comes.  KEY_HOLD ticks at most from the first one held back, those ticks running on through a
+** line's answer, a steady typist's lines one hold; then a pass of the main loop goes free (kfree, main's): what's
+** begun in it isn't stopped by keys or an Enter, a kit given way to being drawn again from the start, and a steady
+** typist's Enters stopping each try for good otherwise (the denizens behind it in the ring with it).  Then they hold
+** back again: late by that, not starved.  1, it waits for the keys (a command's own ui_first's, a quarter second).
+** The hub's header in the window */
 #define KEY_HOLD        600
 static unsigned kt0;
 static unsigned char kfree;
 static unsigned char keys_hold (void)
 {
-    if ((HUB->pace & 3) == 3 || !HUB->ui_keys || HUB->ui_cmd) {
-        if (!HUB->ui_cmd) {
-            kt0 = 0;
-        }
+    if ((HUB->pace & 3) == 3 || !(HUB->ui_keys | HUB->ui_cmd)) {
         return 0;
     }
     if (!kt0) {
@@ -6813,14 +6811,17 @@ static unsigned char keys_hold (void)
     } else if ((unsigned) (hy_ticks () - kt0) >= KEY_HOLD) {
         kfree = 1;
     }
-    return !kfree;
+    return !kfree && !HUB->ui_cmd;
 }
 
 /* A long job, as it's due and as it goes: 1, it gives way (a command in hand, or a line being typed) */
 unsigned char ui_long (void)
 {
+    unsigned char k;
+
     hub_map (0);
-    return ui_first () || keys_hold ();
+    k = keys_hold ();
+    return !kfree && (k || ui_first ());
 }
 
 int main (int argc, char* argv[])
@@ -6835,9 +6836,9 @@ int main (int argc, char* argv[])
     while (hub_map (0), !HUB->quit) {         /* (The hub at $8000 again, each time round) */
         while (hy_sem_try (HUB->sem[T_WORLD]) == 0) {
         }
-        if (kfree && !burn_ask) {
-            kfree = kt0 = 0;                    /* (Its free pass over, a minute's passes all of it: the keys' hold
-                                                **   again, keys_hold's) */
+        if (!(HUB->ui_keys | HUB->ui_cmd) || (kfree && !burn_ask)) {
+            kfree = kt0 = 0;                    /* (Nothing in hand, or its free pass over, a minute's passes all of it:
+                                                **   the keys' hold again, keys_hold's) */
         }
         uf = ui_first ();                       /* (The UI's command in hand at the real paces, its answer first: the
                                                 **   world's own periodic work waits for it, a quarter second at most:
