@@ -686,3 +686,8 @@ put the dagger in the well	VB_PUT_OBJECT	object=dagger;container=well	near=dagge
 drop the dagger into the well	VB_DROP_OBJECT	object=dagger;container=well	near=dagger,well	dropped into it: put in it
 throw the dagger into the well	VB_THROW_OBJECT	object=dagger;target=well	near=dagger,well	thrown into it: let fall down it
 tie the rope to the well	VB_TIE_OBJECT	object=rope;support=well	near=rope,well	its curb holds a rope, let down its shaft
+drop the dagger down the well	VB_DROP_OBJECT	object=dagger;container=well	near=dagger,well	down it: into it, the thing kept (the meaning's, 2026-11-06)
+throw the dagger down the well	VB_THROW_OBJECT	object=dagger;target=well	near=dagger,well	thrown down it: let fall
+put the dagger down the shaft	VB_PUT_OBJECT	object=dagger;container=shaft	near=dagger,shaft	any shaft: a thing let fall down it
+drop the rope down the shaft	VB_DROP_OBJECT	object=rope;container=shaft	near=rope,shaft	dropped down a shaft
+throw the dagger down	QUESTION:DISTANCE	object=dagger;direction=D	near=dagger	down alone, nothing after it: a way, as before

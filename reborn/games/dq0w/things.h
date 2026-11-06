@@ -82,8 +82,12 @@ unsigned char __fastcall__ well (unsigned w);   /* (Part 102's: wwell.c, a well'
 #define WL_DOWN         0x0000                  /* (The well within reach's shaft, to climb down: its link, 0xFF none, 0xFE
                                                 **   choked, told; */
 #define WL_ROPE         0x2000                  /*   a rope's drop down it, wrope.h's R_*'s: 2, or 0; */
-#define WL_PUT          0x8000                  /*   the thing named let fall into it, its words the things': IR_*) */
-#define WL_OP           0xE000
+#define WL_NEAR         0x4000                  /*   part 103's asks: the well within reach, 1 or 0; its shaft, as WL_DOWN's
+                                                **   but untold; its foot there, the window on it: 1 or 0) */
+#define WL_SHAFT        0x6000
+#define WL_FOOT         0x8000
+unsigned char well_put (void);                  /* (Part 103's: wwell2.c, the thing named let fall into a well, down a shaft;
+                                                **   its words the things', IR_*) */
 #define HF_DEEP         0x40                    /* (A fall's, s_fall's: into deep water, three feet or more, the book's;) */
 #define HF_SHALLOW      0x20                    /*   into shallow water: rs.h's GR_*'s, not the referee's HF_*) */
 void __fastcall__ start (const char* dir);      /* (Part 3's: dq0w.c) The world's start, once it's attached */

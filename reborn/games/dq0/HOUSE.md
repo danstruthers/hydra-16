@@ -3197,18 +3197,23 @@ and 97; the maker's changes.c.)
   stands) and let down its shaft, 3 steps the better on its length, from either end.  Out: "u", "climb out", "climb up the
   rope" at its foot; out at the top on the floor beside the curb.  "Jump into the well", "jump down the well": a fall of its
   height.
-- **A fall into it** (a slip down it, a slip climbing up it, a jump): the book's landing surfaces, into deep water (3 feet or
-  more) 3d6 off the fall's impact, shallow water 2d6 off (Skills 8's).
+- **A fall into it** (a slip down it, a slip climbing up it, a jump), or down any shaft with water at its foot: the book's
+  landing surfaces, into deep water (3 feet or more) 3d6 off the fall's impact, shallow water 2d6 off (Skills 8's); told so
+  ("You plunge into the water: ...", "You come down in the shallows with a splash: ...", unhurt "..., shaken, but unhurt."),
+  not "You land hard"; then "You come up in the water at the foot of the well."
 - **At its foot**: in its water, told and swum as any water is (its depth's band, swimming tests a minute, a torch put out as it
   swims, going under, drowning: HOUSE.md's water); "You climb down the well, into the water at its foot.", and if the room
-  above is lit (its sconces), "Far above, its mouth shows as a small ring of light."; in the dark above, nothing.  What was put
-  in it lies there.
-- **A thing put in it** ("put the dagger in the well", "drop the dagger into the well", "throw the dagger into the well"),
-  within reach: let fall from the curb to its foot, no time taken: "You let the dagger fall into the well. A moment, and you hear
-  a splash far below."
+  above is lit (its sconces), "Far above, its mouth shows as a small ring of light."; in the dark above, nothing.  The look
+  there tells it so: "Above you the well's shaft rises to its mouth, far overhead." (the mouth's light only as it comes down:
+  the senses' room)  What was put in it lies there.
+- **A thing put in it** ("put the dagger in the well", "drop the dagger into the well", "throw the dagger into the well",
+  "drop the dagger down the well": down a thing is into it, the parser's), within reach: let fall from the curb to its foot,
+  no time taken: "You let the dagger fall into the well. A moment, and you hear a splash far below."  Down any shaft going
+  down within reach the same ("drop the rope down the shaft", "down the hole"): "You let the rope fall down the shaft. A
+  moment, and you hear it land far below." (a splash where its foot's in water).
 - **The denizens**: as at any shaft, none climbs down or up it on its own (the minds climb nowhere but with the character; an
   ally coming along as it comes along by any way), and none sets a lair at its foot.  *Not yet:* a denizen throwing someone
-  in, a splash heard, "drop the dagger down the well" (the parser's meaning loses the thing: "into" says it), the water's level
+  in, a splash heard by the denizens, the water's level
   shared with other water in its chunk (a stream's running depth where one runs).
 
 ## Poison, bad air and disease *(2026-10-31: the user's words, DECISIONS.md's; the book's where it speaks, drafted for the user to review)*

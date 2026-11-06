@@ -110,7 +110,7 @@ ovl_out:
             OVFN        climb_words, 12     ; (Overlay 1's room, slice 4.4's)
             OVFN        entered, 1
             OVFN        portal_words, 10
-            OVFN        harm_words, 1
+            OVFN        harm_words, 12      ; (Overlay 1's till 2026-11-06: a fall into water's words)
             OVFN        appraise, 1
             OVFN        tell, 14
             OVFN        words, 2

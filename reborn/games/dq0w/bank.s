@@ -200,6 +200,7 @@ go:
             SWPART      100, 9              ; A light renewed (things.c: part 27's till 2026-11-04)
             SWPART      101, 24              ; A thing hidden, the hands swapped (things.c: parts 13's and 48's till 2026-11-04)
             SWPART      102, 31             ; A well's shaft (wwell.c: 2026-11-06, dq0w.rop's)
+            SWPART      103, 31             ; A thing let fall down a well, a shaft (wwell2.c: 2026-11-06)
 
             SWFN        time_kept, 99
             SWFN        sky_note, 76
@@ -260,6 +261,7 @@ go:
             SWFN        rope2, 98
             SWFN        rope3, 95
             SWFN        well, 102           ; (A well's shaft: wwell.c)
+            SWFN        well_put, 103       ; (A thing let fall down it: wwell2.c)
             SWFN        fall, 2
             SWFN        dark_way, 43
             SWFN        dark_end, 44

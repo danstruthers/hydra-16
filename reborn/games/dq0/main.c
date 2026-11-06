@@ -1188,7 +1188,7 @@ void __fastcall__ s_came (const struct msg* m)
     if (k == O_RAMP_DOWN || k == O_RAMP_UP) {
         msg (k == O_RAMP_DOWN ? "You walk down the long slope." : "You trudge up the long slope.");
     } else if (k == O_WELL || k == O_WELL_FELL) {  /* (A well's shaft: 2026-11-06, the world's wwell.c) */
-        msg (k == O_WELL_FELL ? "You plunge into the water at the foot of the well." : (m->w1 & 0xFF) == A_DOWN ?
+        msg (k == O_WELL_FELL ? "You come up in the water at the foot of the well." : (m->w1 & 0xFF) == A_DOWN ?
             "You climb down the well, into the water at its foot." : "You climb up out of the well.");
         if (m->w1 & E_MOUTH_LIT) {
             sayf (" Far above, its mouth shows as a small ring of light.");
@@ -2427,8 +2427,8 @@ portal:
         }
         return;
     case VB_DROP_OBJECT:
-        if (cmd.other.word[0]) {
-            goto put;                           /* ("Drop the dagger into the well": put in it, 2026-11-06) */
+        if (cmd.other.word[0] || cmd.prep == PR_IN) {
+            goto put;                           /* ("Drop the dagger into the well", "down the shaft": put in it, 2026-11-06) */
         }
         if (!cmd.obj.word[0]) {
             tell (T_PUT_DOWN_WHAT);
@@ -2463,16 +2463,16 @@ portal:
     case VB_HANG_OBJECT:
     case VB_LIGHT_OBJECT:
     case VB_EXTINGUISH_OBJECT:
-        handle (cmd.aux, cmd.obj.word, cmd.other.word, cmd.prep == PR_ON);
-        return;
+        handle (cmd.aux, cmd.obj.word, cmd.other.word[0] || cmd.prep != PR_IN ? cmd.other.word : "shaft", cmd.prep == PR_ON);
+        return;                                 /* ("Put the dagger down the shaft", the hole: its kind said, no word) */
     case VB_SHOOT_OBJECT:                       /* (The missiles: part 11's, slice 4.7's; a throw at a denizen too) */
     case VB_LOAD_OBJECT:
     case VB_GATHER_OBJECT:
     case VB_THROW_OBJECT:                       /* (Thrown at the thing said, or the target: the world's throw, its
                                                 **   words overlay 11's) */
-        if (!strcmp (cmd.other.word, "well")) {
+        if (!strcmp (cmd.other.word, "well") || (cmd.prep == PR_IN && !cmd.other.word[0])) {
 put:
-            handle (IO_PUT, cmd.obj.word, cmd.other.word, 0);  /* ("Throw the dagger into the well": let fall in it) */
+            handle (IO_PUT, cmd.obj.word, cmd.other.word[0] ? cmd.other.word : "shaft", 0);  /* ("Throw the dagger into the well": let fall in it) */
             return;
         }
         d = HUB->pc_light;

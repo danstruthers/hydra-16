@@ -552,7 +552,8 @@ enum {
                                                 **   squares searched those nearer than it, squared: the UI's things'
                                                 **   search the same, IO_SEARCH's to) */
     E_HARM,                                     /* who's been harmed (the referee's RS_HARM): w1 its cause (HC_*),
-                                                **   its worst wound's band times 256 (0: unhurt), E_OUT, E_CAUGHT */
+                                                **   its worst wound's band times 256 (0: unhurt), E_OUT, E_CAUGHT; a fall's E_DEEP,
+                                                **   E_SHALLOW, into water */
     E_TRAP,                                     /* A trap and who: w1 its kind (TK_*) and its trigger (TT_*) times
                                                 **   16, what came of it (TO_*) times 256 */
     E_DEN,                                      /* (The denizens' own, their queue's: DENIZENS.md's events) A
@@ -680,6 +681,8 @@ enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's
 #define I_WELL          0x40                    /* (I_CLIMB's: a well named, down its shaft: wwell.c's, 2026-11-06) */
 #define STEP_KEEP       0x100                   /* (I_STEP's: backing up, a step aside) */
 #define E_OUT           0x4000                  /* (E_HARM's: knocked senseless a while) */
+#define E_DEEP          0x1000                  /* (E_HARM's, a fall's: into deep water, shallow: 2026-11-06, a well's foot */
+#define E_SHALLOW       0x2000                  /*   or any shaft's with water at it) */
 #define E_CAUGHT        0x8000                  /*   (and a fall stopped, a hold grabbed) */
 #define E_STOPPED       0x8000                  /*   (an HC_STRUCK's: the blows stopped, the striker too hurt) */
 #define O_FELL          15                      /* (E_ARRIVE's link kind: fallen down a shaft, jumped; a kind of its

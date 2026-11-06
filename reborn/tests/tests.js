@@ -5158,10 +5158,10 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0well', near: ['body', 'map'], what: 'Dingus Quest Zero\'s well a real shaft (the user\'s, 2026-11-06: "A real shaft", DECISIONS.md\'s climbing down a well; HOUSE.md\'s a well\'s shaft, for review), by the world\'s events, the referee\'s tests, the item store and the chunks below, at seed 3\'s kitchen: its well comes out in the roof of a cave below (its foot a pool two feet down in the cave\'s floor, under water): the dagger put in it (its words, the splash; at its foot on the stratum below), the rope tied to the curb and let down its shaft, climbed down by it (its tests 3 steps the better on its length), the dagger there and taken, climbed out (beside the curb; from deep water a round with no hold ends the climb, so tried again: three times at most); then the well moved by a poke to a square over the rock below (the stratum grown now), each kind a scene (rc\'s dq0well): a cistern with a way on (the nine squares about its foot under water, out of its depth, a passage up out of it, a rise of two feet a square, to the halls); a sump, down and up unaided (the eight about its foot rock), then jumped into: a fall, told as a plunge into the water; that game played again with its lines typed late, the same at the turns pace (-same)',
+      name: 'dq0well', near: ['body', 'map'], what: 'Dingus Quest Zero\'s well a real shaft (the user\'s, 2026-11-06: "A real shaft", DECISIONS.md\'s climbing down a well; HOUSE.md\'s a well\'s shaft, for review), by the world\'s events, the referee\'s tests, the item store and the chunks below, at seed 3\'s kitchen: its well comes out in the roof of a cave below (its foot a pool two feet down in the cave\'s floor, under water): the dagger put in it (its words, the splash; at its foot on the stratum below), the rope tied to the curb and let down its shaft, climbed down by it (its tests 3 steps the better on its length), the dagger there and taken, the look at its foot telling the well\'s shaft above; climbed out (beside the curb; from deep water a round with no hold ends the climb, so tried again: three times at most); then the well moved by a poke to a square over the rock below (the stratum grown now), each kind a scene (rc\'s dq0well): a cistern with a way on (the nine squares about its foot under water, out of its depth, a passage up out of it, a rise of two feet a square, to the halls); a sump, down and up unaided (the eight about its foot rock), then jumped into: a fall, told as a plunge into the water, not a hard landing; a dagger thrown down the well ("down": into it, the parser\'s meaning) heard to splash; that game played again with its lines typed late, the same at the turns pace (-same)',
       init: 't_rc', cycles: 12000e6,
       get machine() {
-        const g2 = "dq0 -p t -s 3 -c /ram/c.hm", o3 = ['climb out', 'climb out', 'climb out'], c2 = ['go to the well', 'climb down the well', ...o3, 'climb down the well', 'look', ...o3, 'jump into the well', 'look', 'quit'];
+        const g2 = "dq0 -p t -s 3 -c /ram/c.hm", o3 = ['climb out', 'climb out', 'climb out'], c2 = ['go to the well', 'throw the dagger down the well', 'climb down the well', ...o3, 'climb down the well', 'look', ...o3, 'jump into the well', 'look', 'quit'];
         const typed = l => 'ā' + l + '\r';
         return { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml cli 95 >> /ram/c.hm', 'dq0sky=0',
           'dq0well=3', "dq0 -p t -s 3 -c /ram/c.hm -k 'rope,dagger'", 'go to the well', 'put the dagger in the well', 'tie the rope to the well', 'climb down the well', 'look',
@@ -5237,9 +5237,12 @@ module.exports = {
         if (!cs.length || !cs.slice(0, 3).every(s => s === 3)) f.push('the climb down not aided by the rope at first: ' + cs);
         const a1 = arr(dn, K.A_DOWN);
         if (!a1 || ![12, 13].includes(a1.w1 >> 12)) f.push('not come down a well\'s shaft (E_ARRIVE O_WELL): ' + JSON.stringify(a1));
-        if (!/You (climb down the well, into the water at its foot|plunge into the water at the foot of the well)\./.test(o)) f.push('no words at the foot');
+        if (!/You (climb down the well, into the water at its foot|come up in the water at the foot of the well)\./.test(o)) f.push('no words at the foot');
         const p = feet('pool');
         if (!p || p.sn !== 1 || !p.here || p.here.t !== 7 || !p.here.wet || !p.about.some(s => s && (s.t === 1 || s.t === 4) && s.z - p.here.z === 2)) f.push('its foot in the cave not a pool two feet down, under water: ' + JSON.stringify(p && [p.sn, p.here, p.about]));
+        if (!/look .{0,400}Above you the well's shaft rises to its mouth, far overhead\./.test(o)) f.push('the look at the foot not telling the well\'s shaft');
+        if (!/throw the dagger down the well You reach for the dagger\..{0,80}You let the dagger fall into the well\. A moment, and you hear a splash far below\./.test(o)) f.push('the dagger thrown down the well: not its words');
+        if (/You land hard/.test(o.slice(o.indexOf('jump into the well')))) f.push('a fall into the water told as landing hard');
         const tk = T.after(dn, 'take the dagger');
         if (!/take the dagger You reach for the dagger\. Taken\./.test(o)) f.push('the dagger not taken at the foot');
         const up = T.after(tk, 'climb out'), a2 = arr(up, K.A_UP);
@@ -5272,7 +5275,7 @@ module.exports = {
         if (!fall.length) f.push('the jump not a fall');
         const a3 = arr(j, K.A_DOWN);
         if (!a3 || a3.w1 >> 12 !== 13) f.push('the jump not into the well (O_WELL_FELL): ' + JSON.stringify(a3));
-        if (!/jump into the well .*You plunge into the water at the foot of the well\./.test(o)) f.push('the plunge not told');
+        if (!/jump into the well .*You plunge into the water(:|, shaken).*You come up in the water at the foot of the well\./.test(o)) f.push('the plunge not told');
         this.notes = [JSON.stringify(m.moved) + ' moved; ' + JSON.stringify(fall.map(r => [r.b, r.c, r.w1])) + ' the fall; the climbs ' + [cs, climbs(d2), climbs(u2)].map(x => x.length).join(', ')];
         // The turns pace: the sump's game again, typed late, the same
         if (g.length !== 3) f.push('games played: ' + g.length + ', not 3');

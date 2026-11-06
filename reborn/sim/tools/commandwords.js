@@ -235,7 +235,10 @@ function scan(toks, w, face = 0) {
       c.n = Math.min(255, /^[0-9]+$/.test(t.typed) ? +t.typed : get(t, w.numbers));
       continue;
     }
-    if ((k = get(t, w.dirs)) !== undefined) {
+    if ((k = get(t, w.dirs)) === V.GO_DOWN && said && !c.prep && i + 1 < ws.length &&
+      [R.get('drop'), R.get('put'), R.get('throw')].includes(verb)) { c.prep = V.PR_IN; continue; }   // ("Drop the dagger down the
+                                                //   well": into it, a thing let fall down a shaft, a hole, 2026-11-06)
+    if (k !== undefined) {
       const vert = d => d === V.GO_UP || d === V.GO_DOWN;
       dir = dir === NONE || vert(k) || vert(dir) ? k : between(dir, k, face);
       continue;
@@ -310,7 +313,7 @@ function scan(toks, w, face = 0) {
 // prepositions' own actions (a count, then each: the verb, the word's entry, the action)
 const CONSTANTS = ['move', 'put', 'stow', 'doff', 'hang', 'drop', 'bar', 'get', 'turn', 'face', 'light', 'douse', 'unlock',
   'name', 'combine', 'PR_WITH', 'PR_ON', 'PR_FROM', 'OB_WAY_OUT', 'OB_DOOR', 'GO_UP', 'GO_DOWN', 'SL_ME', 'VB_SAY', 'OB_STAIRS',
-  'OB_LADDER', 'OB_SHAFT', 'throw', 'HOW_TO', 'PR_AT'];
+  'OB_LADDER', 'OB_SHAFT', 'throw', 'HOW_TO', 'PR_AT', 'PR_IN'];
 const SPECIAL = { WITH: 1, AWAY: 2, BACK: 3, HALF: 4, AROUND: 5, BAR: 6, WAY_OUT: 7 };   // (cmdmean.s's S_*)
 const COLUMNS = ['verb', 'dir', 'thing', 'prep', 'how', 'special', 'order', 'sel', 'num', 'manner', 'little', 'aspect'];   // (cmdmean.s's C_*)
 const ROW = ['alone', 'thing', 'way', 'unsaid', 'aux', 'skill', 'task', 'flags'];            // (cmdmean.s's R_*)

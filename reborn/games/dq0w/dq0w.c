@@ -1142,7 +1142,8 @@ unsigned __fastcall__ s_fall (unsigned feet, unsigned char how)
     r->w1 = feet;
     r = hub_ask (SLOT_WORLD);
     out = r->result == 1 ? 0xFFFF : r->w2;
-    event (E_HARM, 0, HC_FALL | r->b << 8 | (r->result == 1 ? E_CAUGHT : 0) | (r->w2 ? E_OUT : 0));
+    event (E_HARM, 0, HC_FALL | r->b << 8 | (r->result == 1 ? E_CAUGHT : 0) | (r->w2 ? E_OUT : 0) |
+        (how & HF_DEEP ? E_DEEP : how & HF_SHALLOW ? E_SHALLOW : 0));
     harm_fx ();                                 /* (What it dropped, fallen prone: part 49's, slice 4.1b's) */
     hub_map (0);
     r->state = REQ_FREE;

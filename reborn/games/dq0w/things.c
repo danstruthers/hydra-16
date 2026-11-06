@@ -2020,9 +2020,10 @@ unsigned char s_serve (void)
         rs_for (RF_CUT);
         break;
     case IO_PUT:
-        if (!strcmp (iq.into, "well")) {      /* (Into a well: down its shaft, part 102's, read in first: 2026-11-06) */
+        if (!strcmp (iq.into, "well") || !strcmp (iq.into, "shaft")) {   /* (Into a well, down a shaft or a hole: part
+                                                **   102's, read in first: 2026-11-06) */
             look_more (0, LM_ROPES);
-            iq.result = well (WL_PUT);
+            iq.result = well_put ();
             break;
         }
     default:                                    /* (A thing handled: IO_HOLD ...) */

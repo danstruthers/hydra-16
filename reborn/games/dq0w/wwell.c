@@ -272,66 +272,21 @@ static unsigned char shaft_of (void)
     return footed () ? W_K : 0xFF;
 }
 
-/* The thing named (the things' request's) into the well within reach: on the curb's square, then down its shaft to its
-** foot (choked, it lodges where it is), told in the things' words: IR_OK; its reach's step first, IR_NO; the well seen
-** but out of reach, IR_NOT_HERE (where it is: the UI walks over to it, and asks again); none, IR_NONE */
-static unsigned char wl_put (void)
-{
-    struct item* q;
-    const struct stratum* s;
-    unsigned n;
-    unsigned char k;
-    char b[16];
-
-    if (!near_well ()) {
-        if ((n = seen_named ("well")) == 0) {
-            return IR_NONE;
-        }
-        q = item_at (n);
-        W_X = q->x;
-        W_Y = q->y;
-        hub_map (0);
-        HUB->ireq.x = W_X;
-        HUB->ireq.y = W_Y;
-        HUB->ireq.item = n;
-        return IR_NOT_HERE;
-    }
-    if ((n = at_hand (iq.name)) == 0) {
-        return IR_NONE;
-    }
-    if (reach_step (n, 0)) {
-        return IR_NO;                           /* (A step of the reach first: got out of the pack ...) */
-    }
-    s = &STRATUM (W_B);
-    k = shaft_of () != 0xFF && it_need (W_B, (W_X - s->x0) >> CW_BITS, (W_Y - s->y0) >> CW_BITS);
-    q = item_at (n);
-    q->where = IW_SQUARE;
-    q->sn = k ? W_B : W_SN;
-    q->x = W_X;
-    q->y = W_Y;
-    q->flags &= ~(I_HELD | I_WORN);
-    k = q->kind;
-    hub_map (KIND_BANK);
-    strcpy (b, CATALOGUE[k].name);
-    put ("You let the ");
-    put (b);
-    put (item_at (n)->sn != W_SN ? " fall into the well. A moment, and you hear a splash far below." :
-        " fall into the well: it lodges a little way down, where the shaft narrows.");
-    hub_map (0);
-    HUB->ireq.x = 0;                            /* (No time: let fall, as a thing put down) */
-    return IR_OK;
-}
-
 /* (Its stub's: WL_DOWN the shaft of the well within reach, to climb down: its link, 0xFF none there, 0xFE choked (told);
-** WL_PUT the thing named into it; WL_ROPE a rope's drop down it, the R_*'s (wrope.h's: 2, or 0 none)) */
+** WL_ROPE a rope's drop down it, the R_*'s (wrope.h's: 2, or 0 none); WL_NEAR, WL_SHAFT, WL_FOOT part 103's: near_well's,
+** shaft_of's, footed's) */
 unsigned char __fastcall__ s_well (unsigned w)
 {
     static struct msg m;
     unsigned char k;
 
-    switch (w & WL_OP) {
-    case WL_PUT:
-        return wl_put ();
+    switch (w) {                                /* (wwell2.c's, part 103's: a thing let fall down it) */
+    case WL_NEAR:
+        return near_well () != 0;
+    case WL_SHAFT:
+        return shaft_of ();
+    case WL_FOOT:
+        return footed ();
     }
     if (!near_well ()) {
         return w ? 0 : 0xFF;

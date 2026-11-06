@@ -298,7 +298,7 @@ void __fastcall__ climb_words (unsigned char how, unsigned char feet); /* Overla
                                                                         **   CW_*) */
 enum { CW_RISES = 0x40, CW_FALLS };
 void __fastcall__ portal_words (unsigned char out);                     /* Overlay 1: a door worked's, into lb */
-void __fastcall__ harm_words (unsigned w, unsigned cond);               /* Overlay 1: harm's (an E_HARM's w1,
+void __fastcall__ harm_words (unsigned w, unsigned cond);               /* Overlay 12: harm's (an E_HARM's w1,
                                                                         **   the conditions; the wounds in lb) */
 void __fastcall__ fixt_words (const struct msg* m);    /* Overlay 4: a portal worked's (an E_PORTAL: a door's,
                                                 **   portal_words; an opening's with what it shows) */
@@ -349,6 +349,7 @@ void den_words (void);                          /* Overlay 9: the denizens it se
                                                 **   kept as told */
 extern char lb[400];
 extern char* lbe;                               /* (lb's end: words.c's and seen.c's add) */
+extern const char* const wl_said[2];               /* (A well's shaft overhead: look.c's) */
 extern unsigned lbn;                            /* (What a look's said of its words already: lb's before) */
 extern unsigned char lb_stream;                 /* (A look's words said a sentence at a time, as they're made) */
 extern struct sight sight_copy;
