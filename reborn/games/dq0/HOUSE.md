@@ -429,7 +429,7 @@ The book's Mining is geology, prospecting and mineworking (Skills 16), but it gi
     hiding."  Out of hiding as it's struck, either way; a blow at it, "The bandit has seen you!".
   - **The denizens hiding** *(for review)*: a hostile robber (kinds.txt's ways r) that's just sensed the character, not seen by it, three squares
     off or more, no launcher of its own, lies in wait, by the same cover (its square dark, as its kind with no darkvision feels its way); no cover,
-    it comes on as it would.  Hidden, it holds still, left out of what the character sees and engaging no one, two minutes, then comes out; strikes at
+    it comes on as it would; never for one at rest (Those that want it, as it rests, below).  Hidden, it holds still, left out of what the character sees and engaging no one, two minutes (or till the character lies down to rest), then comes out, and comes on; strikes at
     one beside it that it senses, the same no defence ("The bandit leaps out of hiding!").  The character's look at it the same test as anyone's, at
     its Stealth by its sheet, as the character sees its square ("You spot a bandit, hiding."); and a search finds it within sight (the
     referee's P_SEARCH at its cover's steps).  Not yet: other reasons to lurk, a denizen creeping on hidden, denizens looking for each
@@ -2205,6 +2205,28 @@ ruleset's (the fatigue rested off the referee's).
   slices, 4.9G cycles, 23 minutes of the machine's, and more (the fight soak's seeds 326 and 136).  Still in the same
   scene as dq0restbusy's bandits, 1.6M to 2.9M cycles a game minute, 3.6 to 6.4 minutes of the machine's for the night (more than 37 before).  A step that
   isn't refused and a blow go as ever; the character changing rouses them as ever.
+- **Those that want it, as it rests** *(new, for review; 2026-11-06, the user's "yes, robbers should come and rob a resting character")*:
+  a denizen whose aim is the character or its things doesn't stand off from it at rest (asleep, or a rest or long wait off its feet,
+  lying, sitting or kneeling; no question put: a wait standing is watchful, and it's as ever), but acts
+  on it as its kind's rule says (dq0d's decide and part 20's hid_mind, HM_FILCH; the world's wfight.c, den_rob):
+  - **Robbers** (kinds.txt's ways r: kobolds and their lord, bandits and theirs, brown orcs, the orc king) don't lie in wait for one at
+    rest, which won't come by them; one hidden as it lies down comes out at once.  Out of hiding, one knows it's there and comes on (before,
+    its two minutes up, it hid again at its next turn: three bandits lay in wait in turn for a whole night by a sleeper in the dark).
+  - **Beside it unnoticed, a robber robs it as it lies**: the book's Legerdemain (a purse cut), a creature's by its Stealth
+    *(the house's: the creatures' sheets have no Legerdemain)*, against the character's Awareness, at half asleep (the book's, Skills 11:
+    HarnMaster's referee takes half its mastery off in steps of five points, the null ruleset half its even chance); the better level,
+    the book's, catches it at it.  Caught: nothing taken, the rest stopped, hard ("You wake to find the bandit at your purse!", awake
+    "You catch the bandit at your purse!"; "something" if it isn't seen), and the robber, beside one awake now, fights as a hostile
+    one does.  Not caught: its coins taken, pennies, farthings and crowns wherever it keeps them, and nothing else *(the house's: nothing
+    out of a hand, nor a pack opened, unnoticed)*, off to its lair as from one helpless, unfriendly after; the rest goes on, and it's told
+    as it's over ("You find your coins gone: someone robbed you as you lay."), not if there were none.
+  - **Hunters and killers** (a nose for it, hostile; kinds.txt's k; the very hungry, hunting): come on and strike as ever, a sleeper
+    struck with no defence (A sleeper struck at, below).
+  - **Coming at it, any with a mind stalks it** *(the house's)*, as a hunter by smell always does: its Stealth tested as it begins, its
+    steps the quieter by the grade (Sound and stealth); the mindless (skeletons, wights) don't.  A sleeper hears at half (Sleep and
+    rest as built), so one stalking may be beside it before it wakes; heard, it's asked ("Keep sleeping?"), and a robber beside one
+    asked strikes, as at anyone awake.  An awake rest in the light sees one coming within 30 feet and stops, as ever.
+  - Not yet: a robber's sleight of hand on one awake and about; a thing taken out of a pack or a hand unnoticed.
 - **The figures** *(2026-10-28, the emulator, 3.6 MHz)*: "wait 8 hours" with nothing near, 20.9M cycles (some 6 seconds
   of the machine's; it was 0.6M a minute, some 81 seconds for eight hours, and held to 100 minutes); at the normal pace
   the same; in the dark by the giant rats' lair (seed 3, three rats about), 66M (18 seconds; 782M, three and a half

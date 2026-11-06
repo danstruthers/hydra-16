@@ -84,7 +84,7 @@ unsigned char __fastcall__ stalks (unsigned char k);
 unsigned char __fastcall__ scent (unsigned char k);
 unsigned char __fastcall__ draw_on (unsigned char k);
 void sway (void);
-int __fastcall__ start (const char* dir);      /* Part 4 */
+int __fastcall__ start (char** argv);          /* Part 4 */
 void __fastcall__ enlist (unsigned char i, unsigned char k);
 void __fastcall__ retire (unsigned char k);
 void __fastcall__ killed (unsigned char k);
@@ -123,7 +123,8 @@ void __fastcall__ roused (unsigned char k, unsigned char was);   /* Part 10's: a
 unsigned char __fastcall__ hid_mind (unsigned char k);   /* Part 20: hiding oneself (HM_*: HOUSE.md's) */
 #define HM_LOOK         0x00                    /* (hid_mind's k |: senses', a look at the character hidden: is it sensed; */
 #define HM_LURK         0x40                    /*   decide's, one hidden, what it does; */
-#define HM_AMBUSH       0x80                    /*   one sensing the character, whether it lies in wait instead) */
+#define HM_AMBUSH       0x80                    /*   one sensing the character, whether it lies in wait instead; */
+#define HM_FILCH        0xC0                    /*   a foe beside the character at rest: a robber robs it as it lies) */
 #define LURK_T          1200                    /* (Tenths: how long it lies in wait, two minutes) */
 unsigned char __fastcall__ dig_way (unsigned char k);   /* Part 12 (the tunnellers', slice 4.11's) */
 unsigned char __fastcall__ work_dig (unsigned char k);  /* Part 15 (their work's digs, the builders', slice 4.11's rest) */
@@ -461,6 +462,8 @@ static unsigned pcx, pcy;
 static unsigned char pcs, pclit, pcbusy, pcdead;
 static unsigned char pcrest;                    /* (The character in a long wait or asleep, not asked of: the actors'
                                                 **   idle ways the coarser, decide's and coarse's) */
+static unsigned char pclie;                     /* (At rest: asleep, or a long wait off its feet (lying, sitting, kneeling),
+                                                **   not asked of: robbers come for it, 2026-11-06) */
 static unsigned char pchelp;                    /* (Helpless: in shock, or senseless as it lies, busy till it comes
                                                 **   round; the referee's conditions) */
 static unsigned char pcstay;                    /* (Its stay where it stands, since it came onto the square: its
@@ -1038,6 +1041,7 @@ void __fastcall__ s_rob_to (unsigned char k)
     unsigned char i, f = K.faction;
 
     im.a = FE_ROB;                              /* (A robbery, not an errand: slice 4.8's I_ROB a) */
+    im.x[3] = 0;                                /* (One helpless: what it holds too; at rest, hid_mind's RB_PURSE after) */
     im.w1 = ahx[k];
     im.w2 = ahy[k];
     im.b = f;
@@ -2077,8 +2081,9 @@ static unsigned char __fastcall__ decide (unsigned char k)
             d = 0xFC;
         }
     } else if (sres[k] && foe && dist == 1) {
-        a.face = bearing (ddx, ddy);            /* (A foe beside it: it strikes) */
-        d = 0xFC;
+        a.face = bearing (ddx, ddy);            /* (A foe beside it: it strikes; the character at rest, unnoticed, a
+                                                **   robber robs it as it lies: part 20's) */
+        d = pclie ? hid_mind (k | HM_FILCH) : 0xFC;
     } else if (sres[k] && foe && (ag & AG_SHOOTS) && a.sn == pcs && shoots (k, ag)) {
         d = 0xFA;                               /* (A foe it senses further off, a shot: part 2's, slice 4.7's; asked
                                                 **   only of one with a launcher, the part's copy the dearer) */
@@ -2139,10 +2144,11 @@ static unsigned char __fastcall__ decide (unsigned char k)
     hub_map (0);
     HUB->actor[k].attitude = a.attitude;        /* (Its mind's own, as it decides) */
     HUB->actor[k].foe = a.foe;
-    if (!foe || !(K.flags & K_NOSE) || a.doing != DO_COMING) {
+    if (!foe || a.doing != DO_COMING || !((K.flags & K_NOSE) || (pclie && K.mind))) {
         stalk[k] = 0;                           /* (A hunter coming at the character stalks it: its Stealth tested as
                                                 **   it begins, D15's, every actor's; its grade the steps' loudness,
-                                                **   no noise of its own: HOUSE.md's sound and stealth) */
+                                                **   no noise of its own: HOUSE.md's sound and stealth; and any with a
+                                                **   mind coming at it as it rests or sleeps, 2026-11-06) */
     } else if (!stalk[k]) {
         stalk[k] = stalks (k);
     }
@@ -3434,9 +3440,41 @@ unsigned char __fastcall__ s_hid_mind (unsigned char k)
         }
         return (res & SN_SMELT) != 0;           /* (A nose isn't fooled) */
     }
+    if (op == HM_FILCH) {                       /* (A foe beside the character at rest, unnoticed (a rest's or a sleep's,
+                                                **   not asked): a robber robs it as it lies, the book's Legerdemain, its
+                                                **   Stealth the house's for it; the character's Awareness against it, at
+                                                **   half asleep (the referee's): the better, caught at it, nothing taken,
+                                                **   the rest stopped; else its coins taken, and off it goes, as a robber
+                                                **   goes from one helpless (robs'); any other strikes.  2026-11-06, the
+                                                **   user's: robbers come and rob a resting character) */
+        if (!(K_HELP (K) & H_ROBS)) {
+            return 0xFC;
+        }
+        rq.a = P_STEALTH;
+        rq.b = 0;
+        rq.steps = 0;
+        ask (RS_TEST, k + 1, RS_ASKER);
+        g = rq.grade;
+        rq.a = P_NOTICE_SOUND;
+        rq.steps = 0;
+        ask (RS_TEST, 0, 0);
+        rob_to (k);
+        hub_map (0);
+        a.doing = DO_WATCH;                     /* (Caught: beside its foe, awake now) */
+        im.x[3] = RB_PURSE | RB_CAUGHT;
+        if ((signed char) rq.grade <= (signed char) g) {
+            im.x[3] = RB_PURSE;
+            a.doing = DO_FLEE;                  /* (Off with what it takes, to its lair: robs') */
+            a.attitude = AT_UNFRIENDLY;
+            fled[k] = FLEE_T;
+        }
+        act (I_ROB, k);
+        return 0xFF;
+    }
     if (op == HM_AMBUSH) {                      /* (A robber, just come to sense it, no eye on it: under cover, or in the
-                                                **   dark, lies in wait, unseen; the world's to say if it can) */
-        if (HUB->nolurk || a.attitude != AT_HOSTILE || dist < 3 || (HUB->agear[k] & AG_SHOOTS) ||
+                                                **   dark, lies in wait, unseen; the world's to say if it can; not for one
+                                                **   at rest, which won't come by: it comes on, 2026-11-06) */
+        if (HUB->nolurk || pclie || a.attitude != AT_HOSTILE || dist < 3 || (HUB->agear[k] & AG_SHOOTS) ||
             !(p = at (a.sn, a.x, a.y)) || (*p & T_VIS)) {
             return 0;
         }
@@ -3447,14 +3485,17 @@ unsigned char __fastcall__ s_hid_mind (unsigned char k)
         act (I_RISE, k);
         return 1;
     }
-    /* Hidden: it strikes one beside it; gives it up after a while, or as it's no foe, or seen to; the character's
-    ** look at it the same test as anyone's, as the character sees its square */
+    /* Hidden: it strikes one beside it; gives it up after a while, or as it's no foe, or seen to, or the character
+    ** lies down to rest (it won't come by: it comes on); the character's look at it the same test as anyone's, as the
+    ** character sees its square */
     if (!alert[k]) {
         alert[k] = now + LURK_T;
     }
-    if (a.attitude != AT_HOSTILE || now > alert[k] || pcdead) {
+    if (a.attitude != AT_HOSTILE || now > alert[k] || pcdead || pclie) {
         alert[k] = 0;
         im.w1 = POS_HIDE | HD_OUT;
+        a.doing = DO_WATCH;                     /* (Out, it knows the character's there: it comes on, not lying in wait
+                                                **   again at once, two minutes a time for hours, 2026-11-06) */
         act (I_RISE, k);
         return 0xFF;
     }
@@ -4285,16 +4326,35 @@ static int __fastcall__ ovl_load (const char* dir)
 #pragma code-name (push, "SW4CODE")
 #pragma rodata-name (push, "SW4RODATA")
 
-/* The task begun, its banks had: the kinds read in (dir's), the theme's denizens, the records new or the game's
-** kept ones read back: 0, or -1 */
+/* The task begun (argv: its hub, the world's task, its library's directory, dir; main's, the main RAM's room, 2026-11-06),
+** its banks had, the hub attached: the kinds read in (dir's), the theme's denizens, the records new or the game's kept
+** ones read back: 0, or -1 */
 #pragma code-name (push, "SW23CODE")
 #pragma rodata-name (push, "SW23RODATA")
-int __fastcall__ s_start (const char* dir)
+
+/* A number's digits (the task's arguments) */
+static unsigned char __fastcall__ num (const char* s)
+{
+    unsigned char n = 0;
+
+    while (*s >= '0' && *s <= '9') {
+        n = n * 10 + *s++ - '0';
+    }
+    return n;
+}
+
+int __fastcall__ s_start (char** argv)
 {
     struct bank_fn* h;
     unsigned char f, k;
     int fd;
+    const char* dir = argv[3];
 
+    if ((fd = hy_banks_alloc (2)) < 0 || hub_attach (num (argv[1]), num (argv[2]))) {
+        return -1;
+    }
+    kb = fd;
+    pb = fd + 1;
     rseed (HUB->seed ^ 0x2B7E1516UL ^ (unsigned long) HUB->dice << 16);          /* (The minds' dice, their own: grow's) */
     if (kinds_load (dir)) {
         return -1;
@@ -4347,17 +4407,6 @@ int __fastcall__ s_start (const char* dir)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* A number's digits (the task's arguments) */
-static unsigned char __fastcall__ num (const char* s)
-{
-    unsigned char n = 0;
-
-    while (*s >= '0' && *s <= '9') {
-        n = n * 10 + *s++ - '0';
-    }
-    return n;
-}
-
 int main (int argc, char* argv[])
 {
     static unsigned lpx, lpy;
@@ -4365,15 +4414,8 @@ int main (int argc, char* argv[])
     static unsigned long done_at;
     static unsigned char gone, g, act;
     unsigned char* p;
-    int b;
 
-    if (argc < 4 || ovl_load (argv[3]) || (b = hy_banks_alloc (2)) < 0 ||
-        hub_attach (num (argv[1]), num (argv[2]))) {
-        return 1;
-    }
-    kb = b;
-    pb = b + 1;
-    if (start (argv[3])) {
+    if (argc < 4 || ovl_load (argv[3]) || start (argv)) {   /* (Its banks, the hub, the kinds: part 23's) */
         return 1;
     }
     wplace = HUB->eq_head;                      /* (Its events from now on) */
@@ -4420,6 +4462,7 @@ int main (int argc, char* argv[])
                                                 **   its pace, slice 4.5's fault: a busy character taken for idle,
                                                 **   one senseless not helpless, struck on, never robbed) */
             pcrest = pcbusy && (HUB->pc_task.kind == LT_WAIT || HUB->pc_task.kind == LT_SLEEP) && !HUB->pc_task.asking;
+            pclie = pcrest && (HUB->pc_task.kind == LT_SLEEP || (HUB->pc_pos & ~POS_CROUCHED));
             pcdead = (HUB->pcsum.cond & C_DEAD) != 0;
             pchelp = (HUB->pcsum.cond & C_STUNNED) || ((HUB->pcsum.cond & C_UNCONSCIOUS) && pcbusy);
             if (!(pclit = HUB->pc_light != 0) && DONE (pcs) && (p = at (pcs, pcx, pcy)) != 0) {

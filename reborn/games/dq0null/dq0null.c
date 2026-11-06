@@ -780,8 +780,8 @@ static void __fastcall__ answer (struct req* r)
             break;
         }
         if (r->a <= P_NOTICE_SMELL) {           /* (By its going and watchfulness: the house's) */
-            r->steps += house_notice (r, HUB->pc_going, HUB->watch);
-        }
+            r->steps += house_notice (r, HUB->pc_going, HUB->watch) - (!r->actor && HUB->pc_task.kind == LT_SLEEP ? BASE / 10 : 0);
+        }                                       /* (Asleep, at half, 2026-11-06: HarnMaster's, Skills 11) */
         if ((r->a == P_STEALTH || r->a == P_DIG) && r->other != RS_ASKER) {
             QUIET_IN                            /* (Moving quietly, by its own dice: the house's) */
             r->grade = flat (r->steps);
