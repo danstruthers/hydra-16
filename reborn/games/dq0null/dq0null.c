@@ -29,7 +29,8 @@
 #define NTOOLS          20
 
 static char name[16] = "Dingus", calling[20] = "Wanderer";
-static char tongues[32] = " common";            /* The tongues it speaks, a space before each (dq0harn's way) */
+static char tongues[64] = " common";            /* The tongues it speaks, a space before each, and the scripts it
+                                                **   knows, a * before each (dq0harn's way: kept, not used) */
 static unsigned char gait = GA_WALK, watch;     /* (Its file's pace and watchfulness: the world's to set) */
 static unsigned char wounds;                    /* The character's, and each creature's (by its record) */
 static unsigned char tended;                    /* (The character's wounds tended: slice 4.3's simple way) */
@@ -338,8 +339,11 @@ static void __fastcall__ load_pc (struct req* r)
                 watch = l[7] - '0';
             } else if (!strncmp (l, "wounds ", 7)) {
                 wounds = atoi (l + 7);
-            } else if (!strncmp (l, "language ", 9) && strlen (tongues) + strlen (l + 8) < sizeof tongues) {
-                strcat (tongues, l + 8);
+            } else if (!strncmp (l, "language ", 9) || !strncmp (l, "script ", 7)) {
+                l = *l == 's' ? (l[5] = ' ', l[6] = '*', l + 5) : l + 8;
+                if (strlen (tongues) + strlen (l) < sizeof tongues) {
+                    strcat (tongues, l);
+                }
             }
         }
         close (fd);
@@ -365,6 +369,7 @@ static void __fastcall__ save_pc (struct req* r)
     static char b[16];
     char* p;
     char* e;
+    unsigned char k;
 
     r->result = 1;
     if ((fd = open (r->text, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
@@ -378,11 +383,12 @@ static void __fastcall__ save_pc (struct req* r)
     b[2] += HUB->watch;
     put_line ("pace ", b);
     put_line ("wounds ", itoa (wounds, b, 10));
-    for (p = tongues + 7; *p; p = e) {          /* (Its tongues but common) */
+    for (p = tongues + 7; *p; p = e) {          /* (Its tongues but common; its scripts) */
         e = strchr (p + 1, ' ');
         e = e ? e : p + strlen (p);
-        strcpy (line, "language");
-        strncat (line, p, e - p);
+        k = p[1] == '*' ? 2 : 0;
+        strcpy (line, k ? "script " : "language");
+        strncat (line, p + k, e - p - k);
         put_line (line, "");
     }
     close (fd);

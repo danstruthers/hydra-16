@@ -77,6 +77,12 @@ static void __fastcall__ own_line (char* l)
         }
         /* (The line itself kept: its rolls stand) */
     }
+    if (!strncmp (l, "language ", 9) || !strncmp (l, "script ", 7)) {
+        if (ntongues < NTONGUES) {              /* (Its tongues and scripts: practised, skill.c's; written back after the rest) */
+            strncpy (tongue[ntongues++], l, sizeof tongue[0] - 1);
+        }
+        return;
+    }
     if (!strncmp (l, "name ", 5)) {
         strncpy (who, l + 5, sizeof who - 1);
     } else if (!strncmp (l, "occupation ", 11)) {
@@ -97,7 +103,7 @@ unsigned char o_sheet_read (void)
     int fd;
     unsigned char ok;
 
-    ownn = 0;
+    ownn = ntongues = 0;
     if ((fd = open (sheet_path (), O_RDONLY)) < 0) {
         return 0;
     }
@@ -144,6 +150,9 @@ void o_sheet_write (void)
     }
     line[k + 6] = 0;
     harn_write_line (fd, line);
+    for (k = 0; k < ntongues; ++k) {
+        harn_write_line (fd, tongue[k]);
+    }
     close (fd);
 }
 

@@ -32,6 +32,10 @@ extern unsigned char used[HARN_NSKILLS];        /* (Its growth's lines: what it'
 extern unsigned passed;                         /* (The days gone by) */
 extern unsigned long funds, fee, earned;        /* (What it could pay with, the physician's fee, what the work earned: farthings) */
 extern unsigned work_days;
+#define NTONGUES        8                       /* (Its tongues and scripts past its own: the plan for the game between dungeons, step 8) */
+extern char tongue[NTONGUES][24];               /* (Its sheet's "language NAME=ML" and "script NAME[=ML]" lines, as they are: sheet.c's;
+                                                **   practised, skill.c's) */
+extern unsigned char ntongues;
 
 /* Each injury's: the wound it was as the account began, in was (0xFF one come since) */
 struct wwas {
