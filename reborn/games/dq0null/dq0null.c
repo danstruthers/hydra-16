@@ -29,9 +29,11 @@
 #define NTOOLS          20
 
 static char name[16] = "Dingus", calling[20] = "Wanderer";
-static char tongues[64] = " common";            /* The tongues it speaks, a space before each, and the scripts it
-                                                **   knows, a * before each (dq0harn's way: kept, not used) */
+static char tongues[120] = " common";           /* The tongues it speaks, a space before each, and the scripts it
+                                                **   knows, a * before each (dq0harn's way: kept, not used; as many as its
+                                                **   store's, ../dq0harn/dq0harn.h's TONGUES_N: more refused, RS_LOAD_PC 2) */
 static unsigned char gait = GA_WALK, watch;     /* (Its file's pace and watchfulness: the world's to set) */
+static unsigned char ntongue;                   /* (Its tongues and scripts past its own, read) */
 static unsigned char wounds;                    /* The character's, and each creature's (by its record) */
 static unsigned char tended;                    /* (The character's wounds tended: slice 4.3's simple way) */
 static unsigned rest_m;                         /* (Its rest toward the next wound healed: minutes, RS_TIME's) */
@@ -341,8 +343,11 @@ static void __fastcall__ load_pc (struct req* r)
                 wounds = atoi (l + 7);
             } else if (!strncmp (l, "language ", 9) || !strncmp (l, "script ", 7)) {
                 l = *l == 's' ? (l[5] = ' ', l[6] = '*', l + 5) : l + 8;
-                if (strlen (tongues) + strlen (l) < sizeof tongues) {
+                if (++ntongue <= 8 && strlen (tongues) + strlen (l) < sizeof tongues) {   /* (Eight past its own at most:
+                                                **   dq0harn.h's TONGUE_LINES) */
                     strcat (tongues, l);
+                } else {
+                    r->result = 2;              /* (More than it can hold: refused, loudly, the UI's, never cut short) */
                 }
             }
         }

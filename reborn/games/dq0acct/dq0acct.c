@@ -295,6 +295,8 @@ char inn[16];
 char town[16];
 unsigned town_days;
 unsigned char town_seen;
+unsigned char town_taught;
+char town_study[10];
 unsigned long o_t;                              /* (o_date's: the main RAM's, an overlay's own BSS being at the window) */
 
 /* ---- The money's matters */

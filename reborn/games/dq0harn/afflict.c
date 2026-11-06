@@ -231,10 +231,18 @@ static unsigned char tw;
 
 static void __fastcall__ tongue_in (char* l)
 {
+    unsigned char n = 0;
+    const char* p;
+
     if (!strncmp (l, "language ", 9) || !strncmp (l, "script ", 7)) {
         l = *l == 's' ? (l[5] = ' ', l[6] = '*', l + 5) : l + 8;
-        if (strlen (tongues) + strlen (l) < sizeof tongues) {
+        for (p = tongues + 1; (p = strchr (p, ' ')) != 0; ++p) {
+            ++n;                                /* (Those past its own so far) */
+        }
+        if (n < TONGUE_LINES && strlen (tongues) + strlen (l) < sizeof tongues) {
             strcat (tongues, l);
+        } else {
+            tongues[0] = '!';                   /* (More than it can hold: the sheet refused, loudly, not cut short) */
         }
     }
 }
@@ -278,6 +286,7 @@ void __fastcall__ o_body_line (char* l, unsigned char rd)
     if (rd >= 2 || (rd && *l == 'u')) {
         if (rd == 3) {
             tongues[7] = tw = 0;
+            tongues[0] = ' ';                   /* (Not refused: tongue_in's) */
         }
         skill_line (l, rd);
         if (rd == 2 && !l[0]) {

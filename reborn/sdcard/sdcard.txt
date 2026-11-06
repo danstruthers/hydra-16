@@ -108,5 +108,9 @@ games/lib/acct/dq0acct ../obj/games/dq0acct.hyx ; dq0acct, the time between two 
 games/lib/acct/dq0acct.ovl ../obj/games/dq0acct.hyx.ovl
 games/lib/acct/dq0acct.ov5 ../obj/games/dq0acct.hyx.ov5 ; (its town's overlay: the plan's step 11)
 games/lib/acct/dq0town ../obj/games/dq0town.hyx ; dq0town, the town between two dungeons (dq0acct's, as the player's asked)
+games/lib/acct/dq0town.ovl ../obj/games/dq0town.hyx.ovl ; (its overlay: the plan's step 12)
 games/lib/acct/town.txt ../games/dq0town/town.txt ; (its words)
+games/lib/acct/dq0schol ../obj/games/dq0schol.hyx ; dq0schol, the scholar's house (dq0town's: the plan's step 12)
+games/lib/acct/dq0schol.ovl ../obj/games/dq0schol.hyx.ovl ; (its overlay)
+games/lib/acct/scholar.txt ../games/dq0schol/scholar.txt ; (its words)
 games/lib/acct/dq0end ../obj/games/dq0end.hyx ; dq0end, the life's account as it dies

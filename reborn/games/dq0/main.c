@@ -379,8 +379,11 @@ static void load_pc (void)
 
     r = referee (RS_LOAD_PC, 0);
     if (r->result) {
+        at = (char*) (r->result == 2 ? "dq0: too many tongues and scripts in its file" : "dq0: no character in its file");
         t_end ();
-        hy_exits ("dq0: no character in its file");
+        write (2, at, strlen (at));             /* (Said, and its status: refused aloud, never cut short) */
+        write (2, "\n", 1);
+        hy_exits (at);
     }
     at = r->text;
     if ((l = reply_line (&at)) != 0) {

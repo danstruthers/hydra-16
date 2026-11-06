@@ -1568,6 +1568,38 @@ the programs run before the game's tasks: none of the game's main RAM, none of i
   (the player's, seed 70000): 120M to the town's first question, each errand 2-4M (the inn's Intrigue's rumour 46M), 287M from
   leaving to the game's first prompt.  dq0starttime (no folder: none of it run) 217.4M and 293.7M.
 
+### The scholar's house (the plan's step 12, 2026-11-06)
+
+The plan's section 4; HOUSE.md's the scholar's house for the rules, words and numbers.  All of it in the programs run before the game's
+tasks: none of the game's main RAM, none of its answer times.
+
+- **A program of its own, games/dq0schol** (lib/acct/dq0schol, 20K, its overlay lib/acct/dq0schol.ovl, 8K, its words
+  lib/acct/scholar.txt): the town (dq0town) runs it as the player goes into the scholar's house (5, "scholar", or a command of its own
+  typed in the street: "read the journal" goes there and is done there).  The town had 69 bytes of main RAM over the 2048, so the house
+  couldn't be in it.  dq0schol's main RAM holds its words, the sheet's lines it needs and the reader; its overlay (the readings, the
+  library, the masters, the other skills), read into a bank as it starts, stays at the window all the while (nothing else of it uses
+  the window).  It reads the sheet itself (its attributes, six masteries, its tongues and scripts: the library's harnfile.c not linked)
+  and the top's clues.dat and life.dat; it writes clues.dat's records (a better reading; the other skills asked; a copy sold on) and
+  heard.txt (a better reading's rumour).
+- **Between the town and the house:** town.dat (games/dq0acct/town.h's struct townrec), written by the town before it runs the house
+  and read back after: the money (in and out), whether it's a big town (town.txt's kind lines, "big" after two of them), the writings
+  carried (their things' fuel, eight at most), the days in town so far (the house adds its own), the months with a master, the script
+  studied, what a master opened (two a stay, the store's form: "*starric=82").  The account reads the last three from the town's
+  town.dat as ever: a master's lines added to the sheet's (written as the account ends), the month's practice forfeit a month each,
+  the script studied first in the practice's filled-in answer.
+- **The town's own room:** dq0town has an overlay now (lib/acct/dq0town.ovl: its line typed, the console's width, the rumours' seed,
+  running a program, town.dat, the house's arguments: code that never looks at the window's banks, put at the window to be called, the
+  kinds' bank put back after), and its town.txt line shares the rumours' buffer (never both at once), so its main RAM is 3211 free
+  (2117 before).
+- **The clue's record** (life.h's struct clue): two bytes more, out of its words (a byte for the era's centuries, the book's Ancient a
+  dead tongue's; a byte for the other skills asked and a copy sold on), so SAVE_VER 44: old clues aren't read.
+- **The tongues' store** (dq0harn.h's tongues): 56 bytes to 120, eight past its own of the longest (TONGUE_LINES, TONGUE_MOST), the
+  account's NTONGUES the same (sheet.c's check); the room made in the referee's main RAM by s_load_pc's path and s_save_pc's line
+  sharing one buffer (dq0harn 2197 free, its floor 2190).  A sheet with more: the referee's result 2, the UI saying so as it ends
+  ("dq0: too many tongues and scripts in its file", its status too; "dq0: no character in its file" is said now as well), dq0null's
+  alike.
+- **The carry-on's time:** unchanged with no town (seed 70000's, dq0whytime's scene, Enter on the dq0 line to the first prompt, the tests' dq0auto): 391.4M cycles before, 390.5M after; a stand-in's (seed 3) 269.9M and 270.6M.  In the town, going into the scholar's house 14.5M (the program, its overlay and the clues read: about 4 s on the board at 3.58 MHz), each errand there 1-2M, back to the street 2.8M.
+
 ## One path for every actor
 
 The user's (2026-11-02, DECISIONS.md's): every actor's action is one intent, the character's and a denizen's mind's
