@@ -11248,7 +11248,7 @@ module.exports = {
           'You put down two sacks.', '> take both sacks', 'You take two sacks.', '> drop 2 rations', 'You put down 2 rations.', '> take 4 rations',
           'There are only 2 rations. You take 2 rations.', '> drop half the rations', 'You put down a ration.', '> put 2 rations in the sack',
           'You put the 2 rations in the sack.', '> drop all the sacks', 'You put down', 'sacks.', '> take all the sacks', 'You take', 'sacks.',
-          '> drop the unlit torch', 'You put down the'], f, 'the words: ');
+          '> drop the unlit torch', 'You reach for your backpack.', 'Put down.'], f, 'the words: ');
         if (/won't go inside itself/.test(s)) f.push('a sack put in itself');
         return f;
       },
