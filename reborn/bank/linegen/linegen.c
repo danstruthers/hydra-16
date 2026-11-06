@@ -2,7 +2,8 @@
 ** linegen.c - (a bank program, themegen's: sdk/c/include/bankprog.h) the theme's lines, from the history histgen and
 ** goalgen made in themegen's main RAM, emitted (themegen's emit: written to theme.txt and said) in the theme format
 ** (games/dq0/themes/1crypt.txt's), a group at a time, a hand-written theme's groups as it gives them: the seed; the
-** theme's name, mission and story (the place, each era's words, who has it now, the goal's words); the region; the
+** theme's name, mission and story (the place, each era's words, who has it now, the goal's words, why the character
+** came), why it came and what solving brings (the plan's step 7: goals.txt's why lines); the region; the
 ** peoples and the eras; the strata and their layers; the rooms' words, the uses' and the light (the people's who
 ** have the top now); the inhabitants; the goal, its things, its lines (goals.txt's, their slots filled), and a clue
 ** each era leaves among its works (history.txt's: a thing to read, its words the era's), while the record has room.
@@ -59,50 +60,11 @@ static void __fastcall__ era_words (unsigned char e, char* out, unsigned char ag
     out[199] = 0;
 }
 
-/* The goal's slots, for its lines (goals.txt's) */
-static char gs_s[4], gu_s[4], ge_s[4], geu_s[4], gx_s[4], gg_w[16];
+/* The goal's slots, for its lines (goals.txt's): as goalgen made them (gsl, themegen's: the bank's room), put back after an era's
+** words have had them */
 static void goal_slots (void)
 {
-    struct era* g;
-    unsigned char x;
-
-    strcpy (gs_s, num (gs));
-    strcpy (gu_s, num (gu));
-    strcpy (ge_s, num (ge));
-    strcpy (geu_s, num (geu));
-    SL ('A') = gA;
-    SL ('a') = ga;
-    SL ('B') = gB;
-    SL ('b') = gb;
-    SL ('M') = gM;
-    SL ('S') = st[gs].name;
-    SL ('s') = gs_s;
-    SL ('E') = ge_s;
-    SL ('U') = st[gu].name;
-    SL ('u') = gu_s;
-    SL ('e') = geu_s;
-    SL ('T') = st[0].name;
-    for (x = (unsigned char) seed; ns > 1 && x >= ns - 1; x -= ns - 1) {
-    }                                           /* (Another way out's stratum: below the top, by the seed, none of its dice) */
-    strcpy (gx_s, num (ns > 1 ? x + 1 : 1));
-    SL ('O') = gx_s;
-    g = er + (ge - 1);                          /* (Through a pointer: goalgen.c's) */
-    SL ('N') = g->great;
-    SL ('P') = g->pthe;
-    SL ('K') = g->kind;
-    SL ('X') = g->place;
-    SL ('R') = rname;
-    SL ('G') = gg != 0xFF ? fa[gg].name : "-";
-    strcpy (gg_w, "the dark");
-    if (gg != 0xFF) {
-        if (data (TK_FOLK, fa[gg].name, 0)) {
-            strcpy (gg_w, D.v[1]);
-        } else {
-            strcpy (gg_w, "the ");
-            strcat (gg_w, fa[gg].name);
-        }
-    }
-    SL ('g') = gg_w;
+    memcpy (sl, gsl, sizeof sl);
 }
 
 /* A data line (the goal's, a clue's) emitted as a theme's: its key, its values from from on, their slots filled */
@@ -124,6 +86,20 @@ static int __fastcall__ block_end (void)
     int end = tg_find (TK_GOAL, 0, gk + 1);
 
     return end < 0 ? tg_lines : end;
+}
+
+/* ---- Why the character came (the plan's step 7: goalgen's pick, themegen's gwl, gQ, gD, gpence) */
+
+/* The why line (its goal kind, its reason, its patron: what a rumour gives, and the account reads) */
+static void why_line (void)
+{
+    data (TK_GOAL, 0, gk);
+    begin_line ("why");
+    val (D.v[0]);
+    tg_get (gwl, &D, Dt);
+    val (D.v[0]);
+    val (gQ);
+    end_line ();
 }
 
 /* ---- The groups */
@@ -153,12 +129,12 @@ static unsigned char __fastcall__ given_key (const char* key)
     return hhad;
 }
 
+static void story_line (void);
+
+/* The head's lines: its name, its mission, how it came in, its story (a hand-written theme's, line by line, else made), why it
+** came and what solving brings (a goal's) */
 static void head (void)
 {
-    char* story = W;                            /* (W: its own words its eras', made apart) */
-    unsigned char e, k;
-    int j, end;
-
     if (!given_key ("theme")) {
         begin_line ("theme");
         val (title);
@@ -171,10 +147,34 @@ static void head (void)
     }
     given_key ("start");                        /* (How the character came in, if it's given: walked
                                                 **   in if not, the compiler's; slice 4.2's bearings) */
-    if (given_key ("story")) {
-        return;
+    if (!given_key ("story")) {
+        story_line ();
     }
-    SL ('R') = rname;                           /* (Its story: the place, its eras, who has it now, the goal) */
+    if (gk == 0xFF || gwl < 0) {
+        return;                                 /* (No goal kind's why: goalgen's) */
+    }
+    why_line ();                                /* (Why it came, what solving brings: the account's to read) */
+    if (!given_key ("reward")) {
+        goal_slots ();
+        tg_get (gwl, &D, Dt);
+        begin_line ("reward");
+        valn (gpence);
+        val (D.v[4]);
+        val (D.v[5]);
+        fill (W, D.v[6], LINE_TEXT);
+        val (W);
+        end_line ();
+    }
+}
+
+/* The story made: the place, its eras, who has it now, the goal, why the character came (%Y) */
+static void story_line (void)
+{
+    char* story = W;                            /* (W: its own words its eras', made apart) */
+    unsigned char e, k;
+    int j, end;
+
+    SL ('R') = rname;
     data (TK_OPEN, 0, 0);
     fill (story, D.v[0], LINE_TEXT);
     for (e = 0; e < ne; ++e) {
@@ -198,6 +198,12 @@ static void head (void)
     }
     if (gk != 0xFF) {
         goal_slots ();
+        *w = 0;
+        if (gwl >= 0) {                         /* (Why it came: its why line's words, its slots filled) */
+            tg_get (gwl, &D, Dt);
+            fill (w, D.v[2], sizeof w);
+        }
+        SL ('Y') = w;
         for (j = goal_line + 1, end = block_end (); j < end; ++j) {
             if (tg_key[j] == TK_THEME + 3) {    /* (Its story's words) */
                 tg_get (j, &D, Dt);
@@ -211,19 +217,13 @@ static void head (void)
     end_line ();
 }
 
-static void region_lines (void)
+/* The region's mints (a region given without any, a rumour's: made all the same) */
+static void mint_lines (void)
 {
     static char nm[16], adj[16];
     unsigned char e, n;
     struct era* r;
 
-    begin_line ("region");
-    val (rname);
-    val (land);
-    val (rock);
-    val (water);
-    val (climate);
-    end_line ();
     for (e = 0; e < 4; ++e) {                   /* (Its mints, 2026-10-28, the user's "each coin should include its
                                                 **   provenance": today's, the region's own realm, two neighbours (one
                                                 **   in two times hard to pass), the dwarves' hold, gold and taken at
@@ -254,6 +254,28 @@ static void region_lines (void)
             end_line ();
         }
     }
+}
+
+/* The region and its mints; a hand-written theme's as it gives them, its mints made if it gives none */
+static unsigned char minted;
+static void __fastcall__ emit_region (struct line* l)
+{
+    minted |= !strcmp (l->key, "mint");
+    emit (l);
+}
+
+static void region_lines (void)
+{
+    if (given[GR_REGION]) {
+        minted = 0;
+        given_each (GR_REGION, emit_region);
+        if (minted) {
+            return;
+        }
+    } else {
+        region_line ();
+    }
+    mint_lines ();
 }
 
 static void hist_lines (void)
@@ -523,7 +545,7 @@ void make (void)
     end_line ();
     head ();                                    /* (Its lines one by one: a hand-written theme's name, say, and the
                                                 **   story made) */
-    group (GR_REGION, region_lines);
+    region_lines ();                            /* (Its mints made if a region given has none: a rumour's) */
     group (GR_HIST, hist_lines);
     group (GR_STRATA, strata_lines);
     group (GR_WORDS, words_lines);

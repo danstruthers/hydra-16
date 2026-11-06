@@ -5,17 +5,21 @@
 ** ../dq0/themes/1crypt.txt's): the region, its peoples and eras, the strata each era left as layers, the inhabitants
 ** now, the goal and its clues, the names and the story.  games/dq0/HISTORY.md has the design.
 **
-** themegen [-s seed] [-t theme] [-o folder] [-l lib] [-q]
+** themegen [-s seed] [-t theme] [-o folder] [-l lib] [-q] [-r n]
 **   -s seed    the same history each time (default: the clock's)
 **   -t theme   a theme written by hand: what it gives kept, the rest made to fit it (by groups: the theme's name and
-**              story; the region; the peoples and the eras; the strata and their layers; the rooms' words; the
-**              inhabitants; the goal and its puzzle)
+**              story, and why the character came; the region; the peoples and the eras; the strata and their layers;
+**              the rooms' words; the inhabitants; the goal and its puzzle).  Without it, the folder's quest.txt, if it
+**              has one: the rumour the character followed (a region and a why: the plan's step 7, dq0acct's)
 **   -o folder  theme.txt (the theme, to read) written there, then themec run in themegen's place (Plan 9's exec)
 **              to compile it there into theme.dat (the record the game reads) and check it (the theme checker:
 **              every goal reachable, every faction placed)
 **   -l lib     the game's lib folder (themegen.dat, the bank programs and themegen's exports): default, its own
 **              folder's lib/dq0
 **   -q         the theme not said (without -o it's said, to read)
+**   -r n       n rumours made from the seed, not a theme (dq0life's, between two dungeons): each a place's region and a
+**              reason to go there (a goal kind each of its own, the heard ones too), written to the folder's rumours.txt
+**              as part-written themes, each begun by its rumour line (the words heard)
 ** Its exit status 0, or 1 (said why); with -o, themec's.  The UI runs it as a new game begins (theme.h): the game's
 ** seed, its save folder (or /ram/dq0).
 **
@@ -63,6 +67,12 @@ unsigned char gk, gs, ge, gg, gu, geu;
 char gA[40], gB[40], gM[12], ga[16], gb[16], title[32], gmission[8];
 int ga_line, gb_line, goal_line;
 unsigned long seed;
+char gwhy[12], gQ[16], gD[16];
+const char* gsl[58];
+char gs_s[4], gu_s[4], ge_s[4], geu_s[4], gx_s[4], gg_w[16];
+int gwl;
+unsigned gpence;
+unsigned char rmode;
 struct era* const erp = er;
 struct str* const stp = st;
 struct fac* const fap = fa;
@@ -224,6 +234,17 @@ unsigned char __fastcall__ among (const char* s, const char* list)
     return 0;
 }
 
+void region_line (void)
+{
+    begin_line ("region");
+    val (rname);
+    val (land);
+    val (rock);
+    val (water);
+    val (climate);
+    end_line ();
+}
+
 /* ---- namegen, the bank program */
 
 static struct bank_fn* namer;
@@ -248,7 +269,7 @@ const char* __fastcall__ name_of (unsigned char tongue, unsigned char form, unsi
 
 unsigned char given[GROUPS];
 static const char* const groups[GROUPS] = {
-    " theme mission start story ", " region seed mint ", " people era ", " stratum layer ", " rooms uses light ",
+    " theme mission start story why reward rumour ", " region seed mint ", " people era ", " stratum layer ", " rooms uses light ",
     " denizens faction ", " goal kind piece rule lock opened ending wayin wayout "
 };
 
@@ -468,25 +489,76 @@ static void check_layers (void)
     }
 }
 
+/* The seed mixed with a region's name given (a rumour followed: its place's history its own, not the next rumour's) */
+static void __fastcall__ seed_by (struct line* l)
+{
+    const char* s;
+
+    if (!strcmp (l->key, "region")) {
+        for (s = l->v[0]; *s; ++s) {
+            seed = seed * 31 + *s;
+        }
+    }
+}
+
+/* -r n: n rumours from the seed (rmode), into the folder's rumours.txt (the plan's step 7: dq0life's, between two dungeons, for
+** dq0acct to tell): each a history made from a seed of its own (its region, its goal kind: one of its own each, the heard ones
+** too), its goal and its reason picked, and its lines (goalgen's: the rumour, the region, the why) */
+static int __fastcall__ rumours (struct bank_fn* hist, struct bank_fn* goal)
+{
+    unsigned long base = seed;
+    unsigned char made = 0, k;
+    unsigned kinds = 0;
+
+    if (!outdir) {
+        say ("themegen: -r wants -o\n");
+        return 1;
+    }
+    mkdir (outdir, 0755);
+    if ((ofd = open (in (outdir, "rumours.txt"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
+        say ("themegen: can't write rumours.txt there\n");
+        return 1;
+    }
+    for (k = 0; made < rmode && k < 4 * rmode; ++k) {
+        seed = (base ^ 0x52554D52UL) + k * 2654435761UL;   /* (Its own: "RUMR") */
+        rseed (seed ^ 0x48495354UL);
+        bank_call (hist, void (*)(void));
+        if (gk == 0xFF || (kinds & 1 << gk)) {
+            continue;                           /* (A kind told already: another) */
+        }
+        kinds |= 1 << gk;
+        *gQ = 0;                                /* (Its patron its own: goalgen's, the rumour's lines too) */
+        bank_call (goal, void (*)(void));
+        ++made;
+        step ();
+    }
+    close (ofd);
+    return 0;
+}
+
 int main (int argc, char* argv[])
 {
     static char* targs[8];
-    static char gamedir[40], dat[64], txt[64];
+    static char gamedir[40], dat[64], txt[64], qpath[64];
     struct bank_fn* hist;
     struct bank_fn* goal;
     struct bank_fn* lines;
     const char* prog = getenv ("prog");
     char* slash;
     unsigned char i;
+    int fd;
 
     seed = hy_time () ^ hy_ticks ();
     for (i = 1; i < argc; ++i) {
-        if (i + 1 < argc && argv[i][0] == '-' && strchr ("stol", argv[i][1]) && !argv[i][2]) {
+        if (i + 1 < argc && argv[i][0] == '-' && strchr ("stolr", argv[i][1]) && !argv[i][2]) {
             switch (argv[i++][1]) {
             case 's':
                 for (seed = 0, slash = argv[i]; *slash >= '0' && *slash <= '9'; ++slash) {
                     seed = seed * 10 + *slash - '0';
                 }
+                break;
+            case 'r':
+                rmode = atoi (argv[i]);
                 break;
             case 't':
                 tfile = argv[i];
@@ -502,7 +574,7 @@ int main (int argc, char* argv[])
         } else if (!strcmp (argv[i], "-p")) {
             progress = 1;
         } else {
-            say ("usage: themegen [-s seed] [-t theme] [-o folder] [-l lib] [-q] [-p]\n");
+            say ("usage: themegen [-s seed] [-t theme] [-o folder] [-l lib] [-q] [-p] [-r n]\n");
             return 1;
         }
     }
@@ -528,10 +600,20 @@ int main (int argc, char* argv[])
     step ();
     goal = child (2, "goalgen.bp", "_make");
     step ();
+    if (rmode) {
+        return rumours (hist, goal);            /* (No lines of a theme's: linegen not loaded) */
+    }
     lines = child (3, "linegen.bp", "_make");
     step ();
+    if (!tfile && outdir && (fd = open (strcpy (qpath, in (outdir, "quest.txt")), O_RDONLY)) >= 0) {
+        close (fd);                             /* (The rumour followed: its region, why it came) */
+        tfile = qpath;
+    }
     if (tfile) {
         given_each (GROUPS, 0);                 /* (The groups it gives) */
+    }
+    if (tfile == qpath) {
+        given_each (GR_REGION, seed_by);        /* (A rumour's place its own history, whichever's followed) */
     }
     if (outdir) {
         mkdir (outdir, 0755);

@@ -1499,6 +1499,44 @@ anything of the game's (it has the CPU and its own RAM; what passes between dung
 - **The room:** two dungeons hardly played, one a stand-in's and one with its own theme: 156K of the card (df, 14,996K free to 14,840K);
   a save's folder grows by that kind of figure a dungeon, more as it's played.  The test card has 15M free; a real one, far more.
 
+### Why you came (the plan's step 7, 2026-11-06)
+
+The plan's sections 1 to 3 and 6; HOUSE.md's between dungeons for the words and numbers.  All of it in the programs run before the
+game's tasks (themegen and its bank programs, dq0life, dq0acct, dq0end): none of the game's main RAM, none of its answer times.
+
+- **Why you came, told as the dungeon begins:** each goal kind has its reasons (games/themegen/goals.txt's why lines: two with someone
+  who asks, a patron, and a stranger's find), one picked by the dungeon's seed (none of the history's dice spent) or the one a rumour
+  followed names.  Its words go in the story where "you came down to try" was (goals.txt's %Y): "Haldan, a scholar, will pay well for
+  the Chronicle of Orth, if it can be found and carried out."  The theme says its why line (its goal kind, its reason, its patron) and
+  its reward line (what solving brings) for the account to read.  A stand-in theme keeps its own story and has a reward line of its own.
+- **What solving brings:** as the character comes out solved, the account between dungeons (dq0acct) reads the dungeon's theme's reward
+  line: the patron's pennies, paid into its money before the living's paid for; a thing given (the prisoner's kin's ring, made new in its
+  pouch); the standing it earns, added to the life's reputation (life.dat's head).  Told as it comes into town.  Left unsolved, nothing's
+  paid ("No one pays for what was left undone.") and no standing's lost; dead, the life's account says the standing it came to.
+- **The standing** told after the account's last line ("Your name is known in the inns hereabouts (standing 4).") and in the life's
+  account (dq0end: "Standing 4.").
+- **The rumours, between dungeons:** a life of a real game's (its seed 65,536 or more: the stand-ins' lives hear none, their dungeons
+  being no history's) has themegen make three rumours as the time between begins (themegen -r 3, dq0life's: by the life's seed and the
+  next dungeon's number, so the same life hears the same ones: some 39M cycles, 11 s on the board, its dots shown after "Dingus Quest
+  Zero is starting", each rumour's history made only as far as its place and its goal kind; a real game's carry-on 385M from Enter to
+  the first prompt in all, its next dungeon's history made too), each a place (a region: its name, land, rock, water, climate) and a
+  reason (a goal kind each its own, the heard ones too: lore and scourge come only so), written as part-written themes in the save's
+  folder (rumours.txt: each a rumour line, the words heard, then its region and why lines).  After the account, dq0acct tells them
+  ("In Kelford there's talk of other places: 1. ...") and asks which to follow; Enter, anything not one of them, or the tests' dq0auto
+  takes the first.  The one followed is written as quest.txt, which dq0life moves into the next dungeon's folder; themegen, run with
+  the folder and no dq0 -t, takes it as dq0 -t's theme: its region given (so the goal and the eras fit its land), its why given (its
+  goal kind, its reason, its patron), the rest of the dungeon its own seed's (its history's seed mixed with the place's name, so
+  each rumour's place has its own past).  It's asked before anything's written, so a reset tells
+  the time between again, the same.
+- **Ready for what comes:** the town (the plan's step 11) will tell the rumours at its inn: quest.c (dq0acct's overlay 4) is all of it,
+  to move whole.  A clue (step 10) adds or replaces a rumour by writing a block of the same lines to heard.txt in the save's folder:
+  its rumours are told first, ahead of themegen's, three at most.
+- **New goal kinds** (goals.txt's, marked heard: a history made without a rumour still picks among the four, so the stand-ins' seeds
+  and every seed's first dungeon keep their kinds): **lore**, a writing to find (a chronicle, a codex, a testament, among an era's
+  works, hidden; a torn leaf of a library's list hints where: never needed, Q9) taken up and carried out; **scourge**, a raiders'
+  chief's standard, skull drum or totem in the kobolds' lair (kobolds the last era, as a prisoner's are), taken up and carried out, the
+  raids ended.  Each has its why lines; the theme checker (themec) proves each solvable, as every kind's.
+
 ## One path for every actor
 
 The user's (2026-11-02, DECISIONS.md's): every actor's action is one intent, the character's and a denizen's mind's

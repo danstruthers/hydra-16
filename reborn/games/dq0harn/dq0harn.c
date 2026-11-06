@@ -993,7 +993,7 @@ parted:
             goto parted;
         }
         if (r->a <= P_NOTICE_SMELL) {           /* (By its state: its pace, its shock; overlay 1's, in a copy) */
-            ps.go = HUB->pc_going;
+            ps.go = HUB->pc_task.kind == LT_SLEEP ? 0xFF : HUB->pc_going;   /* (0xFF asleep: at half, sheet.c's) */
             ps.watch = HUB->watch;
             memcpy (rq, r, sizeof rq);
             r->steps += noticing ((struct req*) rq);

@@ -9,11 +9,14 @@
 **     kit.dat          what it carries (../dq0w/outfit.h's struct kitrec, one after another)
 **     kit0.dat         the same, what the life set out with (the world's, as a life begins): dq0acct restocks to it
 **     lives.dat        the lives over in this folder: each one's record as it ended
+**     rumours.txt      the rumours heard between two dungeons (themegen -r's, dq0life runs it: part-written themes, each begun by its
+**                      rumour line; a real game's life alone, its seed 65,536 or more)
 **     clues.dat        the clues the life has carried out of its dungeons (struct clue, below: dq0life's; each dungeon's own
 **                      in its folder, the UI's)
 **     heard.txt        the rumour a clue read makes (dq0life's: a part-written theme begun by its rumour line, the plan's
 **                      step 10; the rumours between dungeons, step 7's, tell it first)
-**     d1, d2 ...       each dungeon's own folder (game.dat, world.dat, theme.txt, the change records ...), all of them
+**     quest.txt        the rumour followed (dq0acct's), till dq0life moves it into the next dungeon's folder for themegen
+**     d1, d2 ...       each dungeon's own folder (game.dat, world.dat, theme.txt, quest.txt, the change records ...), all of them
 **                      kept; the hub's savedir, in the game, is the dungeon's
 **
 ** The file: the head, 32 bytes, then LIFE_DUNGEONS records of 8 (all 0 past the last dungeon; a dungeon past the last record
@@ -71,7 +74,8 @@ struct life_head {
                                                 **   starts afresh in each; the hour's its seed's, as ever (dq0d's s_hour) */
     unsigned        born;                       /* The year the character was born, its birthday its sheet's (harn.h's
                                                 **   HARN_BD: month and day, no year; Character 3 leaves the year to the GM) */
-    int             reputation;                 /* (Nothing moves it yet: the plan's step 7) */
+    int             reputation;                 /* The standing: what solving earns (the theme's reward line, dq0acct's:
+                                                **   the plan's step 7), told in the account and the life's */
     unsigned        clues, thread;              /* (Their offsets in the file, 0 none: the plan's steps 10, 15) */
     unsigned char   room[6];
 };
