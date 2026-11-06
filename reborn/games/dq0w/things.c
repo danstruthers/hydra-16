@@ -505,9 +505,9 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
         place (n, IW_ITEM, pack, 0);
         reach_to (pack);                        /* (Put away: its reach, HOUSE.md's: part 56's) */
         if (hand_first == 2) {                  /* (Taken up, its hands full: said so, the user's, 2026-11-06) */
-            put ("Your hands are full: you put the ");
+            put ("You've no hand free for the ");
             put (kind_of (item_kind (n))->name);
-            put (" in your ");
+            put (": you put it in your ");
             put (kind_of (item_kind (pack))->name);
             put (".");
         }
@@ -1946,6 +1946,7 @@ void __fastcall__ s_name_apart (unsigned i, char* d)
 #pragma bss-name (push, "SW102RODATA")        /* (Part 102's image's, wanted only as it's made: the main RAM's room) */
 static unsigned ixi[NIX];
 static struct cix ixc[NIX];
+static unsigned char ixkk[NIXK];
 #pragma bss-name (pop)
 void s_ix_make (void)
 {
@@ -1980,9 +1981,29 @@ void s_ix_make (void)
             ixc[j - 1].flags &= ~CX_EMPTY;      /* (Something in it) */
         }
     }
+    for (m = j = 0; m < n && j < NIXK; ++m) {   /* (Its kinds, each once) */
+        for (f = 0; f < j && ixkk[f] != ixc[m].kind; ++f) {
+        }
+        if (f == j) {
+            ixkk[j++] = ixc[m].kind;
+        }
+    }
+    for (m = 0; m < n; ++m) {                   /* (Each by its kind's place among them) */
+        for (f = 0; f < j && ixkk[f] != ixc[m].kind; ++f) {
+        }
+        ixc[m].kind = f < j ? f : 0xFF;
+    }
     hub_map (UI_BANK);
     UIREC->ixn = n;
+    UIREC->ixk = j;
     memcpy (UIREC->ix, ixc, n * sizeof (struct cix));
+    for (f = 0; f < j; ++f) {
+        k = kind_of (ixkk[f]);                  /* (Copied out: the UI's bank put back for it) */
+        hub_map (UI_BANK);
+        UIREC->ixks[f].kind = ixkk[f];
+        UIREC->ixks[f].flags = k->flags;
+        memcpy (UIREC->ixks[f].name, k->name, sizeof k->name);
+    }
 }
 
 #pragma rodata-name (pop)
@@ -2741,7 +2762,7 @@ static unsigned char __fastcall__ get (unsigned n)
     hub_map (0);
     x = HUB->pc_x;
     y = HUB->pc_y;
-    h = iq.count || (HUB->pc_lump & PL_MORE) ? 0 : 2;   /* (In a hand, the pack with both full; by the count, "take all", the
+    h = iq.count || (HUB->pc_lump & (PL_MORE | PL_ALL)) ? 0 : 2;   /* (In a hand, the pack with both full; by the count, "take all", the
                                                 **   pack first: the user's, 2026-11-06) */
     HUB->ireq.x = rec.x;                        /* (Where it is: IR_NOT_HERE's, IR_FIXED's; and which, I_TAKE's) */
     HUB->ireq.y = rec.y;

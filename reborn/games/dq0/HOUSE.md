@@ -835,8 +835,10 @@ world's answer follows.  The word is said before the world's asked, and holds wh
   the character carries, the world's index of it in the UI's bank, made as what it carries changes; the state said, "the spent torch"):
   lying within reach, "You reach for the sack."; in the pack on its back, "You reach for your backpack." (then the reach's steps);
   in a sack it holds or wears, "You reach into the sack."; put in the pack or in a thing in reach, that ("You reach for your
-  backpack."); let go of, carried, not in anything, "You put down the torch." (all of it said: not "Put down." after it; by the
-  count, the world's words); in hand already with nothing to reach for, none (its answer's own); nowhere it carries or sees,
+  backpack."; in it already, "You look for the tinderbox."); let go of, carried, not in anything, "You put down the torch." (all of it said: not "Put down." after it; by the
+  count, the world's words); on the belt or in what hangs from it, "You reach for the dagger."; in hand already, the act's own
+  start ("You raise the torch." to light it or put it out, "You lift the waterskin." for the rest: the answer seconds off, a first
+  word within the fifth of a second all the same); taken from a thing lying in reach, "You reach for the candle."; nowhere it carries or sees,
   "You look for the rope." ("You feel for the rope." in the dark).  A thing to take from the floor, "You reach for" only if it's
   seen in reach; seen only out of reach, its walk ("You go over to the bones."); not seen now, "You look for the bones." (then its
   walk, if it's remembered, or "You see none of those here."; in the dark, none).

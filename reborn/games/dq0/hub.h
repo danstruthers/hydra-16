@@ -1627,7 +1627,7 @@ enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY };      /* The look's kinds: a look abo
 ** hung from the belt), its state (CX_*) */
 #define NIX             40
 struct cix {
-    unsigned char   kind, up, flags;
+    unsigned char   kind, up, flags;            /* (kind: its place in ixks, its kinds; 0xFF past them) */
 };
 #define CX_HELD         0x01                    /* (In a hand) */
 #define CX_WORN         0x02                    /* (Worn) */
@@ -1637,6 +1637,12 @@ struct cix {
 #define CX_SHUT         0x20                    /* (Closed) */
 #define CX_BACK         0x40                    /* (A pack worn on the back: taken off to reach into) */
 #define CX_HOLDS        0x80                    /* (A container or a surface) */
+#define NIXK            24
+struct cixk {                                   /* (The kinds of what it carries: each kind once, its flags, K_*, its name:
+                                                **   the UI's first words read no catalogue, the user's D17) */
+    unsigned char   kind, flags;
+    char            name[14];
+};
 enum { AW_NONE, AW_LIT, AW_UNLIT, AW_SPENT, AW_EMPTY };   /* (A thing told apart from another of its kind at hand by its
                                                 **   state: the world's apart, "the spent torch", the user's, 2026-11-06) */
 
@@ -1660,7 +1666,9 @@ struct uirec {
     unsigned char   ixn;                        /* What the character carries, for the UI's first words (the world's as
                                                 **   what it carries changes, the store's order: things.c's ix_make; the
                                                 **   user's playtest, 2026-11-06), how many, */
-    struct cix      ix[NIX];                    /*   and each */
+    struct cix      ix[NIX];                    /*   and each, */
+    unsigned char   ixk;                        /*   and their kinds, how many, */
+    struct cixk     ixks[NIXK];                 /*   and each */
 };
 enum { ML_NOW, ML_KEPT, ML_DRAWN, ML_PC, ML_COMPASS };   /* (A map's square: seen now; remembered; drawn on the map
                                                 **   carried; the character; the compass) */
@@ -1928,6 +1936,8 @@ struct wsave {
 **   own uirec.things_text world +ui
 **   own uirec.ixn world                                        (What it carries: the UI's first words, 2026-11-06)
 **   own uirec.ix world
+**   own uirec.ixk world
+**   own uirec.ixks world
 **   own uirec.tread world                                      (The traces read: I_TRACE's reply)
 **   own uirec.trtext world                                     (Their words)
 **   own bank(WORLD_BANK) maker                                 (The cache's table)

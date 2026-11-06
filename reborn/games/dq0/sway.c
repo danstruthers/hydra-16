@@ -299,9 +299,28 @@ void __fastcall__ o_walk_says (const char* name)
 #pragma local-strings (push, on)
 #pragma static-locals (push, off)               /* (Its locals on the C stack: what's copied from the hub, with the hub in the
                                                 **   window, can't be in this bank) */
-static struct cix* ix;                          /* (What's carried, copied: the world's; o_walk_ahead's, on the C stack) */
+static struct cix ix[NIX];                      /* (What's carried, copied: the world's, by way of the C stack) */
 static unsigned char nix, rk[NIX];
-static char* kn;                                /* (A kind's name: the same) */
+static char* kn;                                /* (A kind's name as it's copied: the same) */
+static struct cixk ck[NIXK];                         /* (The kinds of what it carries, their flags and names: the world's, copied
+                                                **   with it, no catalogue read, the user's D17; o_walk_ahead's) */
+static unsigned char nck, cm[NIXK];             /* (How many; whether the word said names each, 0xFF not yet asked) */
+
+/* The UI bank's bytes copied into this bank, by way of the C stack (the two share the window), a piece at a time */
+static void __fastcall__ from_ui (void* to, const void* from, unsigned n)
+{
+    char t[128];
+    unsigned k;
+
+    while (n) {
+        k = n > sizeof t ? sizeof t : n;
+        hub_mem (UI_BANK, t, from, k);
+        memcpy (to, t, k);
+        to = (char*) to + k;
+        from = (const char*) from + k;
+        n -= k;
+    }
+}
 
 /* A name said a word of the kind's, or its start, or that word made plural, or the end of a name of one word (the world's
 ** named4, things.c's: the chooser's) */
@@ -326,19 +345,16 @@ static unsigned char __fastcall__ named_ (const char* k, const char* w)
         (w[n - 2] == 'e' && word_in (k, w, n - 2)))) || (n > 3 && (m = strlen (k)) > n && !strcmp (k + m - n, w));
 }
 
-/* Entry e's kind's name (in kn); whether it's a light */
+/* Entry e's kind's place among those looked up (its name and flags read from the catalogue once a command); its name;
+** whether it's a light */
 static const char* __fastcall__ kname (unsigned char e)
 {
-    hub_mem (KIND_BANK, kn, CATALOGUE[ix[e].kind].name, sizeof CATALOGUE[0].name);
-    return kn;
+    return ix[e].kind < nck ? ck[ix[e].kind].name : "thing";
 }
 
 static unsigned char __fastcall__ alight (unsigned char e)
 {
-    unsigned char f;
-
-    hub_mem (KIND_BANK, &f, &CATALOGUE[ix[e].kind].flags, 1);
-    return f & K_LIGHT;
+    return ix[e].kind < nck ? ck[ix[e].kind].flags & K_LIGHT : 0;
 }
 
 /* Entry e's state's word (AW_*: the world's aw_of) */
@@ -371,10 +387,13 @@ static unsigned char __fastcall__ ix_pick (const char* w, unsigned char sel, uns
     if (!*w) {
         return 0xFF;
     }
+    for (e = 0; e < nck; ++e) {
+        cm[e] = named_ (ck[e].name, w);         /* (The word asked of each kind once) */
+    }
     for (e = 0; e < nix; ++e) {
         f = ix[e].flags;
         rk[e] = 0xFF;
-        if (!named_ (kname (e), w) || (s == SL_LIT ? !(f & CX_LIT) : sel == SL_NEW ? f & (CX_HELD | CX_LIT) : s == SL_UNLIT ?
+        if (ix[e].kind >= nck || !cm[ix[e].kind] || (s == SL_LIT ? !(f & CX_LIT) : sel == SL_NEW ? f & (CX_HELD | CX_LIT) : s == SL_UNLIT ?
             (f & CX_LIT) || !alight (e) : s == SL_OPEN ? f & CX_SHUT : s == SL_SHUT ? !(f & CX_SHUT) : sel == SL_SPENT ?
             !(f & CX_SPENT) : sel == SL_FULL ? f & CX_EMPTY : s == SL_EMPTY ? !(f & CX_EMPTY) :
             op == IO_LIGHT ? (f & CX_LIT) || (!s && (f & CX_SPENT)) : op == IO_DOUSE && !(f & CX_LIT))) {
@@ -451,7 +470,6 @@ void __fastcall__ o_walk_ahead (const char* name)
     const char* v = "reach for";
     const char* w = "";
     unsigned char k, away = 0, op = walk_op & ~IO_STEPS, lit = 0, unlit = 0, e, y, sel, in = 0;
-    struct cix b[NIX];
     char nb[sizeof CATALOGUE[0].name];
     static const char ops[] = { IO_GET, IO_DROP, IO_FILL, IO_HIDE, IO_SHUT, IO_THROW, IO_DESCRIBE, IO_INSIDE, 0 };
 
@@ -492,18 +510,22 @@ void __fastcall__ o_walk_ahead (const char* name)
         }
         goto say;
     }
-    ix = b;
     kn = nb;
     hub_mem (UI_BANK, &k, &UIREC->ixn, 1);
     nix = k > NIX ? NIX : k;
-    hub_mem (UI_BANK, b, UIREC->ix, nix * sizeof (struct cix));
+    from_ui (ix, UIREC->ix, nix * sizeof (struct cix));
+    hub_mem (UI_BANK, &k, &UIREC->ixk, 1);
+    nck = k > NIXK ? NIXK : k;
+    from_ui (ck, UIREC->ixks, nck * sizeof (struct cixk));
     if (op == IO_TAKE) {                        /* (From the other: in it, if it's carried) */
         if ((y = ix_pick (cmd.other.word, cmd.other.sel | cmd.other.n << 4, 0, 0)) == 0xFF) {
             for (k = s->nitems, it = s->item; k && (!strstr (it->name, cmd.other.word) || it->x - s->x + 1 > 2 ||
                 it->y - s->y + 1 > 2); --k, ++it) {
             }
-            sayf (k ? "\nYou reach into the %s." : s->dark ? "\nYou feel for the %s." : "\nYou look for the %s.", cmd.other.word);
-            goto told;                          /* (Not carried: lying in reach, reached into; else looked for) */
+            sayf (k ? "\nYou reach for the %s." : s->dark ? "\nYou feel for the %s." : "\nYou look for the %s.", k ? name :
+                cmd.other.word);
+            goto told;                          /* (Not carried: lying in reach, the thing reached for, in it or on it; else
+                                                **   it looked for) */
         }
         in = y + 1;
     }
@@ -518,8 +540,11 @@ void __fastcall__ o_walk_ahead (const char* name)
     }
     if (e == 0xFF) {
         if (op != IO_DROP && op != IO_HIDE && op != IO_THROW && op != IO_TAKE && away) {
-            if (away == 1) {
-                return;                         /* (Out of reach only: walked to, the world's IR_NOT_HERE) */
+            if (away == 1) {                    /* (Out of reach only: walked to, the world's IR_NOT_HERE, told now) */
+                walk_says (name);
+                placing = 0;
+                said_ahead = 1;
+                return;
             }
             goto say;                           /* (Lying within reach) */
         }
@@ -539,10 +564,13 @@ void __fastcall__ o_walk_ahead (const char* name)
             }
         }
         if (y != 0xFF && ix[e].up == y + 1) {
-            return;
+            v = s->dark ? "feel for" : "look for";  /* (In it already: looked for, and found there) */
+            goto say;
         }
     }
-    if ((k = top (e)) != e) {                   /* (In something: the pack worn first, or what it's in) */
+    if ((k = top (e)) != e && !(ix[k].flags & CX_WORN && !(ix[k].flags & CX_BACK))) {   /* (In something: the pack worn
+                                                **   first, or what it's in; on the belt or in what's on it, worn,
+                                                **   at hand: the thing's own) */
         sayf (ix[k].flags & CX_BACK ? "\nYou reach for your %s." : "\nYou reach into the %s.", kname (k));
         goto told;
     }
@@ -565,12 +593,10 @@ void __fastcall__ o_walk_ahead (const char* name)
             goto told;
         }
     }
-    if (ix[e].flags & CX_HELD) {
-        if (op != IO_LIGHT && op != IO_DOUSE) {
-            return;                             /* (In hand: nothing to reach for, its answer's own) */
-        }
-        v = "raise";                            /* (A light in hand lit, put out: "You raise the torch.", whether it catches or
-                                                **   not; its answer two seconds off, a look in the new light) */
+    if (ix[e].flags & CX_HELD) {                /* (In hand, nothing to reach for: the act's own start, true whatever comes
+                                                **   of it, the answer some seconds off: a light raised to be lit or put
+                                                **   out, the rest lifted; 2026-11-06) */
+        v = op == IO_LIGHT || op == IO_DOUSE ? "raise" : "lift";
     }
 say:
     sayf ("\nYou %s the %s%s.", v, w, name);

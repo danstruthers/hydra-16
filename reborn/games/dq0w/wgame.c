@@ -222,7 +222,7 @@ unsigned char s_take_up (void)
     } else {
         hub_map (0);
         rs_ok = !(HUB->pc_lump & (PL_NOSTEPS | PL_TOLD));
-        tk_hand = HUB->pc_lump & PL_MORE ? 0 : 2;                  /* (Into the worn pack: by the reach's steps, the UI's to take it again,
+        tk_hand = HUB->pc_lump & (PL_MORE | PL_ALL) ? 0 : 2;                  /* (Into the worn pack: by the reach's steps, the UI's to take it again,
                                                 **   IR_FIXED's) */
         rs_live = rs_paid = rs_using = rs_free = 0;
         rs_pack = 0;

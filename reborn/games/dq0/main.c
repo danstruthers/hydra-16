@@ -56,6 +56,7 @@ const char* cl;                                 /* (The command's line, s_comman
 unsigned char harm_told;                        /* (The states a harm's words told in this answer: intro.c's) */
 unsigned char autogo;                           /* (dq0 -a: every soft question answered yes, unasked: the tests') */
 unsigned char what_hi;                          /* (The thing's kind's top bit, the long task's what its other seven: task.c's noun) */
+unsigned char take_all;                         /* ("Take all" under way, its last thing too: the pack first, resolve.c's) */
 unsigned char take_more;                        /* ("Take all": things still to come after this one, resolve.c's) */
 unsigned char nosteps;                   /* (dq0 -J: the reach's steps none, the tests') */
 static unsigned char noinit;                    /* (dq0 -I: no engage initiative test, no grope's: the tests') */
@@ -1820,7 +1821,8 @@ unsigned char __fastcall__ things (unsigned char op, const char* name)
     q->name[sizeof q->name - 1] = 0;
     said_ahead = 0;
     if (op == (IO_GET | IO_STEPS)) {
-        HUB->pc_lump = (HUB->pc_lump & ~PL_MORE) | (take_more ? PL_MORE : 0);   /* ("Take all": its first too, the pack first) */
+        HUB->pc_lump = (HUB->pc_lump & ~(PL_MORE | PL_ALL)) | (take_more ? PL_MORE : 0) | (take_all ? PL_ALL : 0);   /* ("Take
+                                                **   all": its first and last too, the pack first) */
     }
     if (op & IO_STEPS) {
         walk_op = op;
