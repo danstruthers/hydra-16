@@ -7,20 +7,30 @@
 # slots in them (history.txt's %R, %P, %K, %N; and these):
 #   %A the goal's name (its first thing's, or a far exit's)   %a its first thing's kind (a theme kind's name)
 #   %B its second thing's name                                %b its second thing's kind
-#   %M a person of the goal's (a prisoner, a seeker, an old priest)
+#   %M a person of the goal's (a prisoner, a seeker, an old priest, a raiders' chief)
 #   %S the goal's stratum's name   %s its number   %E its era (its number)   %G its guardians (a faction, or -)
 #   %O a stratum for another way out (below the top, by the seed)
 #   %g the guardians in words ("the dead")   %U a stratum above it, its name   %u its number   %e its era
 #   %T the top stratum's name
+#   %Q the one who asked (a why line's patron: a name the seed's, or a rumour's)
+#   %Y why the character came (its why line's words, their slots filled: in the story, where "you came down to try" was)
+#   %D what the patron pays, in words ("87 pennies": a why line's reward words)
 # The lines:
 #   goal     its name (the theme's goal line's), the mission (escape, rule), and where its stratum is: built (a
 #            stratum an era built, not the deepest), cursed (an era's that ended cursed: the history makes one),
-#            lair (a faction's lair that keeps a prisoner: kobolds'), or deep (the deepest stratum)
+#            lair (a faction's lair that keeps a prisoner, or sends out raiders: kobolds'), or deep (the deepest
+#            stratum); and heard, if the kind's only heard of (a rumour's, between two dungeons, or a theme's why line):
+#            a history made without one picks among the others, the four a first dungeon's always were
 #   thing    a thing it may have (one of each role picked): its role (a, b), its name ("the Horn of %N"), and its
-#            kind (a theme's kind line's values)
+#            kind (a theme kind line's values)
 #   exit     a far exit's name, one picked (%A)
 #   called   the goal's name (its goal line's), its slots filled
 #   title    the theme's name, one picked (31 letters at most; the first that fits)
+#   why      a reason to come (the plan's step 7: one picked by the seed, or a rumour's), its values: its name; the
+#            rumour's words (heard between two dungeons: %R and %Q its only slots, the rest not made till the dungeon
+#            is); why the character came (%Y: told in the story as the dungeon begins); what solving brings: the pennies
+#            the patron pays (a range, the seed picks), the standing it earns (the life's reputation), a thing given
+#            too (a kind of the catalogue's, or -), and the words that tell it (the account's between dungeons)
 #   and the theme's lines: kind, piece (the goal's own thing first: dq0 -T -T begins by the first), rule, story (said
 #            after the history's words), lock, opened, ending, wayin, wayout (one of those two, Q1's: the way in open behind
 #            the character, or, the reason shutting it, another way out to find)
@@ -35,13 +45,28 @@ thing    | a | the Book of %N | iron book | h | 6 | 3 | 10 | iron | book | 600
 called   | %A
 title    | the Quest for %A
 title    | %A
+why      | collector | A collector of old things, %Q, is offering good money for anything brought up out of %R, and more
+           for the treasure the old tales put there.
+         | %Q, a collector of old things, has promised good money for %A if it's brought out whole, and you came for it.
+         | 120-360 | 2 | -
+         | %Q takes %A from you with both hands, and pays you %D for it; the tale goes round the inns.
+why      | heir | %Q, the last of an old house, says the treasure of the line lies somewhere under %R, and will pay to
+           have it back.
+         | %Q, the last of an old house, wants %A back for the line, and has promised to pay you for it.
+         | 80-240 | 2 | -
+         | %Q holds %A a long while without a word, then pays you %D, as promised.
+why      | found | A shepherd has found a stair going down into the ground in %R, and won't go down it.
+         | A shepherd found the stair and wouldn't go down it; you would.
+         | 40-120 | 1 | -
+         | A dealer called %Q buys %A from you for %D, less than it's worth; but you were the first down the stair,
+           and folk want to hear of it.
 kind     | journal | - | 1 | 1 | 5 | other | book | 5
 piece    | %a | %s-%s | 6 | 1 | %E | %G
 piece    | journal | 0-0 | - | 1
 rule     | read | journal | The journal is a seeker's, %M's, its last pages scrawled in haste: "%A is down there,
            in %S, among the works of %P.  %g keep it."
 rule     | take | %a | open | So this is %A, where they said it would be.
-story    | Somewhere below, in %S, lies %A.  You came down to find it; the way back up is open behind you.
+story    | Somewhere below, in %S, lies %A.  %Y  The way back up is open behind you.
 wayin    | open
 opened   | The way up stands open: go up to leave.
 ending   | escaped | You climb out into the daylight with %A in your hands.  Behind you %R keep their dark; you have
@@ -57,6 +82,20 @@ thing    | b | the altar of %N | black altar | sf | 400 | 400 | 40 | stone | sto
 thing    | b | the idol of %N | bone idol | sf | 300 | 200 | 35 | bone | bone | 0 | 20 | 300
 called   | %B
 title    | the Curse of %N
+why      | headman | The folk who live by %R say the dead walk under it, and their headman, %Q, is begging for someone
+           to end it.
+         | The folk who live by %R are afraid of the dark, and %Q, their headman, has promised you all they can gather if
+           you break the curse.
+         | 40-120 | 3 | -
+         | %Q and the folk by %R gather what they promised, %D, and your name goes with the story.
+why      | priest | %Q, a priest, is looking for someone with the nerve to lay a curse to rest under %R.
+         | %Q, a priest, has charged you to lay the curse to rest, and the temple will pay.
+         | 60-160 | 3 | -
+         | %Q's temple pays you %D, as it promised, and gives thanks for your name.
+why      | found | A charcoal-burner swears the dead walk under %R at night, and no one goes near it.
+         | A charcoal-burner swore the dead walk here; you came to see if it was true.
+         | 20-60 | 2 | -
+         | The folk by %R scrape together %D for the one who broke the curse.
 kind     | old scroll | - | 1 | 1 | 5 | other | book | 20
 piece    | %b | %s-%s | - | 1 | %E | %G
 piece    | %a | %u-%u | 4 | 1 | %e
@@ -66,7 +105,7 @@ rule     | read | old scroll | The scroll is %M's, who fought %N's curse and los
 rule     | put | %a | %b | rule | You lay %A upon %B.  A cry goes through the dark, far and near, and dies away.
            The curse is broken, and far above a way out stands open; but the dead of %P are slow to learn it.
 story    | %N's curse lies on %R still: the dead of %P walk in the dark under them.  They say %A will break it,
-           laid upon %B in %S; you came down to try, and the way has shut behind you.
+           laid upon %B in %S.  %Y  The way has shut behind you.
 lock     | The way out is shut fast.  The curse holds it till the curse is broken; if there's another way up, it's
            somewhere below.
 opened   | The way up stands open: go up to leave.
@@ -82,13 +121,27 @@ thing    | b | %M | chained man | sf | 150 | 100 | 30 | other | cloth | 0 | 10 |
 thing    | b | %M | chained woman | sf | 120 | 90 | 30 | other | cloth | 0 | 10 | 40
 called   | %M
 title    | the Rescue of %M
+why      | kin | Someone was carried off into %R by things out of the dark, and %Q, their kin, will give all there is to
+           have them back.
+         | %Q, %M's kin, has promised you all there is to give to have %M back.
+         | 30-90 | 3 | ring
+         | %Q gives you what was promised, %D and a ring besides, for bringing %M home.
+why      | steward | A lord's man has been taken by raiders out of %R, and %Q, the lord's steward, is paying to have the
+           captive brought back.
+         | %Q, a lord's steward, will pay to have %M brought back alive.
+         | 100-240 | 3 | -
+         | %Q pays you %D, as promised, for %M's return.
+why      | found | Woodcutters in %R have heard someone calling for help from under the ground.
+         | Woodcutters heard someone calling for help from under the ground; you came down after the voice.
+         | 10-40 | 2 | -
+         | %M's kin, when they're found, have little to give but thanks, and %D.
 piece    | %b | %s-%s | - | 1 | - | %G
 piece    | %a | %s-%s | 4 | 1 | - | %G
 rule     | put | %a | %b | open | You turn the key in the shackles, and they fall away.  %M stands, stiff, and
            whispers: "There's a way up, the old stair the guards use.  Go on; I'll come behind you."  Far above, stone
            grinds on stone: a way out is open.
-story    | %M was taken by %g and carried down into %S, and kept there in chains.  You came down after, and the stair
-           has fallen in behind you; if anyone knows another way up, it's %M.
+story    | %M was taken by %g and carried down into %S, and kept there in chains.  %Y  You came down after, and the
+           stair has fallen in behind you; if anyone knows another way up, it's %M.
 lock     | The way out is shut fast: the stair has fallen in behind you.  If anyone knows a way up, it's %M; or there may
            be another, somewhere below.
 opened   | %M's way up stands open: go up to leave.
@@ -106,10 +159,23 @@ exit     | the Far Door
 called   | %A
 title    | the Road Through %R
 title    | the Way to %A
+why      | caravan | %Q, a caravan master, wants to know if the old road under %R can still be travelled, and will pay
+           to hear it.
+         | %Q, a caravan master, will pay to know if the old way through can still be travelled.
+         | 60-150 | 2 | -
+         | %Q pays you %D for the news of the road, and the caravans will call it by your name.
+why      | surveyor | %Q, a lord's surveyor, is hiring someone to see whether the old way under %R still goes through.
+         | %Q, a lord's surveyor, has hired you to see whether the old way still goes through.
+         | 80-200 | 2 | -
+         | %Q pays your hire, %D, and has the way marked on the lord's maps.
+why      | found | A trapper says there's a way under %R that comes out somewhere else entirely.
+         | A trapper said the way under here comes out somewhere else entirely; you came to find out.
+         | 10-30 | 1 | -
+         | The trapper's tale is worth something now it's proved: the inns stand you ale for yours, and %D besides.
 piece    | old map | 0-0 | - | 1
 rule     | read | old map | The map is old and torn, but plain enough: the stair down, the ways below, and far
            down at the bottom, in %S, %A, that %P made long ago: a way out, on the far side of %R.
-story    | The way in fell in behind you as you came; the only way on is down, through the deeps of %R, to %A, the
+story    | %Y  The way in fell in behind you as you came; the only way on is down, through the deeps of %R, to %A, the
            old way out that %P made long ago in %S.
 lock     | The way in has fallen in behind you: there's no going back that way.  The only way out is through, and
            down.
@@ -117,3 +183,71 @@ ending   | escaped | You come up at last through %A into the open air, far from 
            through.
 ending   | left | You climb out into the daylight, not far from where you went in.  %A is still down there, untried.
 ending   | died | %A is still down there, for someone luckier.
+
+goal     | lore | escape | built | heard
+thing    | a | the Chronicle of %N | chronicle | h | 3 | 2 | 10 | other | book | 300
+thing    | a | the Codex of %X | codex | h | 4 | 3 | 10 | other | book | 400
+thing    | a | the Testament of %N | testament | h | 2 | 1 | 10 | other | book | 250
+called   | %A
+title    | the Search for %A
+title    | %A
+why      | scholar | %Q, a scholar, is offering money for anything written by the old folk of %R, and more for a book
+           the tales say they left there.
+         | %Q, a scholar, will pay well for %A, if it can be found and carried out.
+         | 80-200 | 2 | -
+         | %Q pays you %D for %A, and wants to know just where you found it.
+why      | archivist | %Q, a temple's archivist, believes a lost book of the old folk lies somewhere under %R.
+         | %Q, a temple's archivist, has asked you to bring back %A, and the temple will pay for it.
+         | 60-160 | 2 | -
+         | %Q's temple pays you %D for %A, and its scribes begin to copy it.
+why      | found | A tinker swears there's old writing cut in the rock beside a stair in %R.
+         | A tinker swore there was old writing cut beside the stair; you came to see what else was written down here.
+         | 20-80 | 1 | -
+         | A scholar, %Q, buys %A from you for %D, and asks where you found it.
+kind     | torn leaf | - | 0 | 0 | 5 | other | book | 1
+piece    | %a | %s-%s | 6 | 1 | %E | %G
+piece    | torn leaf | 0-0 | - | 1
+rule     | read | torn leaf | The leaf is torn from a list of books, in the hand of %P's scribes: "%A, kept in %S."
+rule     | take | %a | open | You lift %A from where it has lain since %P set it down.  Whatever's written in it,
+           it's what you came for.
+story    | Somewhere below, in %S, %P set down %A, and no one has opened it since.  %Y  The way back up is open behind
+           you.
+wayin    | open
+opened   | The way up stands open: go up to leave.
+ending   | escaped | You climb out into the daylight with %A under your arm.  Behind you %R keep their dark; what %P
+           wrote down comes up into the light with you.
+ending   | left | You climb out into the daylight with nothing to read.  %A still lies under %R, unopened.
+ending   | died | %A keeps what's written in it, and you with it.
+
+goal     | scourge | escape | lair | heard
+thing    | a | the Standard of %M | war standard | t | 8 | 6 | 20 | wood | wood | 30
+thing    | a | the Skull Drum of %M | skull drum | h | 6 | 8 | 15 | bone | bone | 20
+thing    | a | the Totem of %M | bone totem | h | 5 | 4 | 15 | bone | bone | 15
+called   | %M
+title    | the Raids of %M
+title    | the Hunt for %M
+why      | reeve | Raiders out of %R have burnt three farms this year, and %Q, the reeve, has put a price on their chief.
+         | %Q, the reeve of the farms by %R, has put a price on the raiders' chief, and wants %A brought back as proof.
+         | 80-200 | 3 | -
+         | %Q looks long at %A, then pays the price, %D, and the farms by %R will remember your name.
+why      | steward | A lord's men have twice failed to end the raids out of %R; now %Q, the lord's steward, is hiring
+           anyone who'll try.
+         | %Q, a lord's steward, has hired you to end the raids, and wants %A as proof that they're ended.
+         | 100-240 | 3 | -
+         | %Q pays you %D and more besides, and the lord hears your name.
+why      | found | Herders say small, quick raiders come up out of a stair in %R by night.
+         | Herders said raiders come up out of the stair by night; you came to see who they were.
+         | 20-60 | 2 | -
+         | The herders by %R gather %D for the one who ended the raids.
+piece    | %a | %s-%s | - | 1 | - | %G
+rule     | take | %a | open | You take up %A.  Without it %g will scatter: none of them will follow a chief who's lost
+           it, and %M's raids are over.
+story    | %M, chief of %g, sends raiders up out of %S to burn and steal across %R, and comes back to the dark with what
+           they take.  Take %A from %M's lair, and the raids will end.  %Y  The way back up is open behind you.
+wayin    | open
+opened   | The way up stands open: go up to leave.
+ending   | escaped | You climb out into the daylight with %A, and %g are raiders no longer.  The farms by %R can sleep at
+           night.
+ending   | left | You climb out into the daylight with nothing to show.  %M's raiders will be out again before the moon
+           turns.
+ending   | died | %M's raiders will be out again, and no one will come after them now.

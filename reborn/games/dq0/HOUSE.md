@@ -3681,7 +3681,7 @@ weapon's version and Strength, a wrecked door, a slip out of a pit.
 
 ## Between dungeons *(new, for review: the plan's steps 4 to 6, 2026-11-04; DUNGEON.md's a character's life; the user's Q4, Q5, Q6, Q7)*
 
-The game rolls it all between the ending and the next dungeon, and tells it in a dozen lines (games/dq0acct).  **Every number here is the house's and for review unless it's marked the book's.**  No town yet: a made-up town and inn name by the seed, nothing to do in them.  No rumours: the plan's step 7.
+The game rolls it all between the ending and the next dungeon, and tells it in a dozen lines (games/dq0acct).  **Every number here is the house's and for review unless it's marked the book's.**  No town yet: a made-up town and inn name by the seed, nothing to do in them but hear the rumours (the plan's step 7, below).
 
 - **How long:** the days until no wound worse than minor is left, no infection, no shock, no toxin or disease (by the real rolls), at most 90; the road, 2d6 days; a lull, d100: 01-50 1 to 7 days; 51-80 14 to 21; 81-95 30 to 60; 96-00 90 to 180.  All at rest, every wound rolling all the while; work's days after them.
 - **Healing** (the book's, Physician 2-4; the referee's own code told the days): each wound's five-day roll, blood back on the same days, infection's daily roll, shock's watch rolls, venom and disease running their course.  **A character can die of it** (the user's Q5: the roll as it falls): told, its outcome died, the life's account follows; there's no save to go back to.
@@ -3697,6 +3697,36 @@ The game rolls it all between the ending and the next dungeon, and tells it in a
 - **Practice** (the book's, Skills 7): three development rolls for each whole 30 days, odd days dropped, one after another on the three skills.  **The question (Q4):** the skills filled in, those it used most (what's on its sheet since its last night's rest: rolls earned and routine uses), then its occupation's, then its best; Enter takes them, or name your three (a word each, the start of the skill's name; fewer named, the rest filled in).  None past 70 in a weapon (the book's, Skills 18), no Initiative, Dodge or Ritual (the book's), no Script without something to write with (the book's, Skills 11).  *(New, for review, the user's "Skip it":)* by what's left after the selling, no weapon skill without a weapon of its kind to practise with (a tool, a torch, a broken sword won't do), no Drawing without something to draw with, no Lockcraft without lockpicks: the filled-in answer passes over them, and one named is told ("You have nothing to practise sword with.").  Other skills ask for no tools: study, or an hour's work with what's about.  Rolls on a weapon that's reached 70 are lost.  The rolls for skills used in the dungeon stay as they are.  **A tongue or a script past its own** *(2026-11-06, the plan's step 8)*, its sheet's "language" and "script" lines, is practised when it's named ("delvic", "khuzdul": the start of its name), never filled in: the book's roll (d100 and its skill base, Language's or Script's, over its ML), a script only with something to write with (Skills 11, as Script), a tongue *(new, for review)* with nothing (the book names no limit on it; its own tongue is the Language skill, as ever).
 - **Date and age** told: the record's date on by the days.
 
+### Why you came, what solving brings, the rumours *(new, for review: the plan's step 7, 2026-11-06; DUNGEON.md's why you came)*
+
+The words are the house's, and every number; none of it is the book's (its Campaign 2's safe environ has people with messages and
+work, no figures).
+
+- **Why you came:** each goal kind three reasons (goals.txt's why lines), told in the story where "you came down to try" was.  An
+  artifact: a collector of old things (120-360d), the last of an old house wanting it back (80-240d), a shepherd's stair no one would go
+  down (40-120d, a dealer's price).  The evil: a headman for the folk who live by it (40-120d), a priest for the temple (60-160d), a
+  charcoal-burner's tale (20-60d, what the folk scrape together).  A prisoner: its kin (30-90d and a ring), a lord's steward (100-240d),
+  woodcutters who heard a voice (10-40d).  A way through: a caravan master (60-150d), a lord's surveyor (80-200d), a trapper's tale
+  (10-30d and ale).  Lore: a scholar (80-200d), a temple's archivist (60-160d), a tinker's tale of old writing (20-80d, a scholar's
+  price).  A scourge: the reeve of the farms it raids (80-200d), a lord's steward (100-240d), herders' tale (20-60d).  The dungeon's
+  seed picks the reason, the patron's name and the pennies in its range, none of the history's dice spent; a rumour followed names
+  the reason and the patron.
+- **What solving brings** (solved, then walked out: Q2's; dying on the way out pays nothing, the life being over): the pennies paid
+  as it comes into town, before anything's paid for; the thing given (the prisoner's kin's ring, its pouch's, made new); the
+  standing: an artifact's, a way through's and lore's 2, the evil's, a prisoner's and a scourge's 3, a stranger's find's a point less
+  (you were the first down, and folk want to hear of it).  The stand-ins too: the crypt 60d and 2, the temple 40d and 2, the warren 30d
+  and 1.  **Left unsolved: nothing paid, no standing lost** (the user's "not a loss, just a disappointment"; no advance was paid, so
+  none's owed: Q6's no debts): "No one pays for what was left undone."  The money-changer's 15% falls on it with the rest.
+- **The standing** (the life's reputation, life.dat's head), told after the account's last line: none, "No one has heard of you yet";
+  1-2 "A few folk in the inns know your name"; 3-5 "Your name is known in the inns hereabouts"; 6-9 "Your name is known across the
+  land"; 10 and more "Your name is spoken of far and wide", the figure after it; and in the life's account ("Standing 4.").  Nothing
+  reads it yet: patrons, prices and the town's welcome (step 11) are its to come.
+- **The rumours:** three, told after the account in the town it walked to ("In Velford there's talk of other places:"), each a place and a
+  reason, its goal kind its own (the kinds only heard of, lore and scourge, among them); "Which will you follow, 1, 2 or 3?"  Enter, or
+  anything that isn't one of them, takes the first; the tests' dq0auto, the first.  Only a life of a real game's (its seed the clock's:
+  65,536 or more): the stand-ins' lives hear none.  The next dungeon is the place and the reason followed: its region (name, land, rock,
+  water, climate) and its why given, the rest by its own seed (its history's mixed with the place's name).  A first dungeon's goal is one of the four, as ever.
+
 ## Decided, not yet built
 
 What the user has decided and no section's rule holds yet.  Most that's decided and waits is in its own section's *Not
@@ -3710,9 +3740,9 @@ have no rules here yet.
 built, then its line here goes:
 
 
-**The game between dungeons** (the user's, 2026-11-03: A8, A18, A20; the plan's first two steps built: How a dungeon ends, above; the plan outside the repository): what takes a character
-to a dungeon in the first place; a random time between dungeons, with healing auto-rolled, weapons and gear maintained at a cost, food
-and housing paid for, and skills by the book past 30 days; clues taken to a library or a scholar, languages and scripts known, scribes
+**The game between dungeons** (the user's, 2026-11-03: A8, A18, A20; the plan's steps 1 to 7 built: How a dungeon ends, Between dungeons, above; the plan outside the repository): what
+takes a character to a dungeon in the first place, a random time between dungeons, with healing auto-rolled, weapons and gear maintained
+at a cost, food and housing paid for, and skills by the book past 30 days (all built); clues taken to a library or a scholar, languages and scripts known, scribes
 and scholars as characters.
 
 - **A theme's own tests name a purpose** (the user's, 2026-10-20), as the rest of the game's do, which each

@@ -63,3 +63,5 @@ ending   | ruled | The kobolds are yours, every one, and the warren and all its 
            chieftain!
 ending   | left | You climb out of the ruin into the open air, and the Kobold Warren yaps behind you.
 ending   | died | The kobolds pick your bones, and argue over your boots.
+reward   | 30 | 1 | - | The farmers whose hens the kobolds steal give you 30 pennies to hear that someone has been down
+           among them and come back.

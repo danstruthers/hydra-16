@@ -1,6 +1,7 @@
 /*
-** dq0acct.h - (dq0acct) what its main RAM and its two overlays share (dq0acct.c: the sheet, what's carried, the money, the words;
-** body.c, overlay 1: the referee's code, the days at rest; skill.c, overlay 2: the wages, the occupation's skills, practice).  An
+** dq0acct.h - (dq0acct) what its main RAM and its overlays share (dq0acct.c: the sheet, what's carried, the money, the words;
+** body.c, overlay 1: the referee's code, the days at rest; skill.c, overlay 2: the wages, the occupation's skills, practice;
+** sheet.c, overlay 3: the sheet; quest.c, overlay 4: what solving brings, the standing, the rumours, the plan's step 7).  An
 ** overlay runs at $8000 in place of the kinds' bank, so none of its code may look at a kind.
 */
 
@@ -32,6 +33,9 @@ extern unsigned char used[HARN_NSKILLS];        /* (Its growth's lines: what it'
 extern unsigned passed;                         /* (The days gone by) */
 extern unsigned long funds, fee, earned;        /* (What it could pay with, the physician's fee, what the work earned: farthings) */
 extern unsigned work_days;
+extern unsigned long cash;                      /* (The money: farthings) */
+extern char town[16];                           /* (Where it comes out to, its inn) */
+extern const char* inn;
 #define NTONGUES        8                       /* (Its tongues and scripts past its own: the plan for the game between dungeons, step 8) */
 extern char tongue[NTONGUES][24];               /* (Its sheet's "language NAME=ML" and "script NAME[=ML]" lines, as they are: sheet.c's;
                                                 **   practised, skill.c's) */
@@ -59,6 +63,15 @@ unsigned char o_wage (void);                    /* A month's pence */
 void o_tool (void);                             /* A thing it has (ans: its tool's key, 8 its kind, 9 its flags; kind 0 begins): what it can practise with */
 void o_work (void);                             /* The work's words, its bonus practice */
 void o_practice (void);                         /* The question, the rolls, their words */
+
+/* quest.c */
+extern unsigned rw_pence;                       /* What solving brings: the pennies, */
+extern signed char rw_stand;                    /*   the standing, */
+extern char rw_thing[16];                       /*   a thing (a kind's name: "" none) */
+void o_reward (void);                           /* What the dungeon just left brings (its theme's reward line, if solved) */
+void o_reward_say (void);                       /*   told */
+void o_standing (void);                         /* The standing in words (the account's last sentence's end) */
+void o_rumours (void);                          /* The rumours told, one followed (quest.txt); none heard, Enter to go on */
 
 /* sheet.c */
 unsigned char o_sheet_read (void);             /* The sheet read: 1, or 0 none */

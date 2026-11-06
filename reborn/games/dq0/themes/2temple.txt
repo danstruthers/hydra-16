@@ -59,3 +59,5 @@ ending   | escaped | You climb out into the reeds and the grey light over the ma
 wayout   | 2
 ending   | left | You climb out into the reeds and the grey light over the marsh, the Mother's doors still sealed.
 ending   | died | The water closes over you, and the Mother has one more of her own.
+reward   | 40 | 2 | - | The marsh-folk of Merrow, who never thought to see the Mother's doors open again, gather 40 pennies
+           for the one who opened them.
