@@ -134,8 +134,7 @@ plays them as HarnMaster's referee does.
   spell of digging two levels, a climb's round a thirtieth of one, a blow a hundredth.  Each is charged as it's done
   (after its own test: a spell's Mining, a round's Climbing, a blow), a spell given up part way for the part of it
   done; a level more is asked of as the work goes on, soft ("You're tiring.  Keep digging?"), as a walk's is (a
-  climb's, answered no, goes on: there's no stopping part way up; not off the ground yet, no hold found, it's stopped as
-  any task is, at a well's foot say: *(new, 2026-11-06, for review)*).  Swimming the same (a minute's swim: slice
+  climb's, answered no, goes on: there's no stopping part way up).  Swimming the same (a minute's swim: slice
   4.9's).  The null ruleset tires the character nothing.  (dq0w.c's arrive, stop and s_batter_on; sheet.c's o_spent, WORK.)  Why:
   the book's rate; a run's (a level each two minutes) would leave one spell of digging five levels down, every
   physical test 25 the worse.
@@ -3193,7 +3192,8 @@ and 97; the maker's changes.c.)
   there's no climbing down it."  A thing put in a choked well lodges where it narrows (on the curb's square).
 - **Climbing it**: "climb down the well", "go down the well", "climb into the well", "enter the well", or "d" with the well
   within reach and no other way down in the room (a stairway's taken first); walked over to first if it's out of reach.  A
-  round at a time, a Climbing test each; a rope tied to the curb ("tie the rope to the well": it holds a rope, fixed where it
+  round at a time, a Climbing test each (up out of deep water, a round that finds no hold ends the climb: a swimmer can't
+  cling on, and "u" tries again); a rope tied to the curb ("tie the rope to the well": it holds a rope, fixed where it
   stands) and let down its shaft, 3 steps the better on its length, from either end.  Out: "u", "climb out", "climb up the
   rope" at its foot; out at the top on the floor beside the curb.  "Jump into the well", "jump down the well": a fall of its
   height.
