@@ -37,8 +37,9 @@ enum { LO_NONE, LO_SOLVED, LO_LEFT, LO_DIED };  /* (A dungeon's outcome: not ove
 /* The head of a dungeon's game.dat (the UI's: main.c's the save, its versions there), what dq0life reads of it too: the dungeon's
 ** end */
 #define SAVE_MAGIC      0x5144                  /* "DQ" */
-#define SAVE_VER        43                      /* (43: the theme's record, theme.dat, its peoples' tongues and scripts:
-                                                **   step 9's, 2026-11-06) */
+#define SAVE_VER        44                      /* (43: the theme's record, theme.dat, its peoples' tongues and scripts:
+                                                **   step 9's, 2026-11-06; 44: a clue's age and what's been asked of it,
+                                                **   the scholar's, step 12's) */
 struct quest {                                  /* The game's theme and its end (kept in the save) */
     unsigned char   theme;                      /* The theme's number (the save's: the one it began with) */
     unsigned char   done;                       /* The game's ending (theme.h's END_*: 0 not yet) */
@@ -126,8 +127,18 @@ struct clue {
     char            people[16];                 /* Who wrote it ("the hill-kings"; "" unknown) */
     char            place[24];                  /* The place it names (the one-link clue's: "the Ostmarkan Fells"), */
     char            wrong[24];                  /*   and the place a wrong reading names in its stead */
-    char            words[CLUE_SIZE - 104];     /* What it says (its theme's rule's words) */
+    unsigned char   ago;                        /* Its era's centuries (10 or more: the book's Ancient, Treasure 8: its
+                                                **   tongue's old form, a dead one, the scholar's) */
+    unsigned char   asked;                      /* (At the top: the other skills asked of it, once each, CA_*; a copy sold
+                                                **   on, and told: the scholar's, the plan's step 12) */
+    char            words[CLUE_SIZE - 106];     /* What it says (its theme's rule's words) */
 };
+#define CA_FOLKLORE     0x01
+#define CA_MATHS        0x02
+#define CA_STARS        0x04
+#define CA_HERALDRY     0x08
+#define CA_TOLD         0x40                    /* (A copy sold on, its talk told) */
+#define CA_SOLD         0x80                    /* (A copy sold on by a dishonest scribe: talk in the street, nothing more yet) */
 typedef char clue_fits[sizeof (struct clue) == CLUE_SIZE ? 1 : -1];
 
 #define LIVES_FILE      "lives.dat"             /* (The lives over in this folder, each record as it ended, one after another: dq0life's, as a

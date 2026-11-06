@@ -524,9 +524,11 @@ static void __fastcall__ own_line (char* l)
     }
 }
 
+static char path[64];                           /* (The file's path read, and a line of it written: s_save_pc's line too, the
+                                                **   main RAM's room for the tongues, the plan's step 12) */
+
 void __fastcall__ s_load_pc (struct req* r)
 {
-    static char path[64];
     int fd;
 
     if (r->kind == RS_HELLO) {
@@ -544,7 +546,8 @@ void __fastcall__ s_load_pc (struct req* r)
     if ((fd = open (path, O_RDONLY)) < 0) {
         return;
     }
-    r->result = harn_read (fd, &pc, own_line) < 0;
+    r->result = harn_read (fd, &pc, own_line) < 0 ? 1 : *tongues == '!' ? 2 : 0;   /* (2: more tongues and scripts
+                                                **   than it can hold, refused, the UI's to say so) */
     close (fd);
     develop (0);                                /* (Its might, by its skills) */
     hub_map (0);
@@ -557,9 +560,9 @@ void __fastcall__ s_load_pc (struct req* r)
 }
 
 /* The character's sheet written (r's text a path): 0, or 1 */
+#define line    path
 void __fastcall__ s_save_pc (struct req* r)
 {
-    static char line[48];
     char b[12];
     unsigned char g = HUB->gait, w = HUB->watch;
     int fd;
@@ -598,6 +601,7 @@ void __fastcall__ s_save_pc (struct req* r)
     close (fd);
     r->result = 0;
 }
+#undef line
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)

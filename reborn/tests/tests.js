@@ -13311,7 +13311,7 @@ module.exports = {
         'themegen -q -r 3 -s 12346 -o /ram/r', 'cmp /ram/q/rumours.txt /ram/r/rumours.txt', 'echo other $status', 'cat /ram/q/rumours.txt', 'rm -r /ram/q', 'rm -r /ram/r',
         'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/b', 'u', 'echo =NEXT',
         'dq0 -p t -d /ram/b', 'quit', 'cat /ram/b/d1/theme.txt', 'cat /ram/b/rumours.txt', 'cat /ram/b/d2/quest.txt', 'cat /ram/b/d2/theme.txt', 'xd /ram/b/life.dat', 'rm -r /ram/b',
-        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/e', 'u', 'dq0auto=()', 'echo =SECOND', 'dq0 -p t -d /ram/e', '5', '2', '', 'quit', 'dq0auto=1',
+        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/e', 'u', 'dq0auto=()', 'echo =SECOND', 'dq0 -p t -d /ram/e', '6', '2', '', 'quit', 'dq0auto=1',
         'cat /ram/e/rumours.txt', 'cat /ram/e/d2/quest.txt', 'cat /ram/e/d2/theme.txt', 'rm -r /ram/e',
         "echo 'why      | lore | scholar | Haldan' > /ram/l.txt",
         "echo 'why      | scourge | reeve | Osric' > /ram/s.txt", "echo 'region   | the Grey Fells | hills | granite | springs | cold' >> /ram/s.txt",
@@ -13396,7 +13396,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0town', outfit: true, near: ['save', 'money', 'gear', 'theme'], what: "Dingus Quest Zero's town between two dungeons, a menu (the plan's step 11: games/dq0town, dq0acct's town.c; HOUSE.md's between dungeons, the town), by scenes: seed 70000 walked out solved, its knife half gone, carried on with the player asked (no dq0auto): the town's name the name maker's, a paragraph and the list, the temple and the scholar shut; the inn (a day; the rumours heard, Intrigue's one more the same themegen -r 4 makes; three days' rest), the date on by each errand's day; the market (three torches bought at their whole worth, the whetstone sold at half, its money told), the smith (the knife mended at the account's price), who's asking (a patron's offer taken, its rumour followed: quest.txt, the road's days), the account leaving alone what the player saw to, the torches in the next dungeon's pack; the same life again, the same town, left by a rumour named; a broke scribe's account (dq0auto) selling what's spare, never its quill or parchment, and practising its Script",
+      name: 'dq0town', outfit: true, near: ['save', 'money', 'gear', 'theme'], what: "Dingus Quest Zero's town between two dungeons, a menu (the plan's step 11: games/dq0town, dq0acct's town.c; HOUSE.md's between dungeons, the town), by scenes: seed 70000 walked out solved, its knife half gone, carried on with the player asked (no dq0auto): the town's name the name maker's, a paragraph and the list, the temple shut (the scholar's house open: dq0scholar); the inn (a day; the rumours heard, Intrigue's one more the same themegen -r 4 makes; three days' rest), the date on by each errand's day; the market (three torches bought at their whole worth, the whetstone sold at half, its money told), the smith (the knife mended at the account's price), who's asking (a patron's offer taken, its rumour followed: quest.txt, the road's days), the account leaving alone what the player saw to, the torches in the next dungeon's pack; the same life again, the same town, left by a rumour named; a broke scribe's account (dq0auto) selling what's spare, never its quill or parchment, and practising its Script",
       init: 't_rc', cycles: 9000e6,
       machine: { input: (() => {
         const L = '/sd/0/games/lib/dq0';
@@ -13437,7 +13437,7 @@ module.exports = {
         // The town: a name, a paragraph, the list, what's shut
         const head = /You walk to (\w+)\. .*?\1, (a [^.]+\.) ([^.]+\.)/.exec(town);
         if (!head) return f.concat(['no town: ' + town.slice(0, 800)]);
-        for (const p of ['1 The inn: rest; hear what\'s said', '2 The market: buy, sell, haggle', '3 The smith: mend, whet, a new blade', '4 Who\'s asking: patrons and what they offer', '5 Leave for: the places you\'ve heard of', 'The temple and the scholar\'s house are shut to you for now.'])
+        for (const p of ['1 The inn: rest; hear what\'s said', '2 The market: buy, sell, haggle', '3 The smith: mend, whet, a new blade', '4 Who\'s asking: patrons and what they offer', '5 The scholar\'s house: a writing read; the library; a master', '6 Leave for: the places you\'ve heard of', 'The temple is shut to you for now.'])
           if (!town.includes(p)) f.push('the list without "' + p + '"');
         // The days: each errand's day on the date, the rest's three
         const at = [...town.matchAll(/It is \d+ \w+ \d+\. You have [^;]+; your keep so far comes to [^.]+\./g)].map(x => x[0]);
@@ -13490,6 +13490,96 @@ module.exports = {
         if (!/You practise for [^.]*Script/.test(S)) f.push('the scribe not practising its Script: ' + S.slice(-600));
         if (/you (win|lose)|you've (won|lost)/i.test(o)) f.push('words of winning or losing');
         this.notes = [head[1] + ' ' + head[2] + '; ' + (/one more place/.test(town) ? 'Intrigue found one more' : 'Intrigue found nothing') + '; ' + (road || [''])[0]];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0scholar', outfit: true, near: ['save', 'money', 'body', 'theme'], what: "Dingus Quest Zero's scholar's house in the town between two dungeons (the plan's step 12: games/dq0schol, run by dq0town; HOUSE.md's the scholar's house), by scenes (the rc variable dq0sg setting a scribe's Morality and its grade, a week's, a skill's): a scribe who reads ostari and sunglyph carries the Cup of Rowon's journal out unread (seed 70000, its copy too), and in the town (the player asked) studies it in the library, a penny a day, a test a week, four failed weeks: a piece of it, heard.txt's rumour a piece's, the month's practice on sunglyph first; the journal then read by sages (its tongue's old form, 26 centuries: a sage's, three times a scribe's day, only in a big town), each grade's reading told and none its grade (a success's place; a failure's as confident, its land right and another realm; a critical failure's another place and reason; a critical success's line more: whose hand, how old, the road), a better reading the clue's and heard.txt's rumour, a worse one undoing nothing; a second opinion asked at once, an unscrupulous one's half again, the copy it sold on talked of in the street at the next visit; a diabolical one's wrong reading told of the copy; Astrology asked once, its centuries the clue's; a small town with no sage for it, a master teaching only ardic; a soldier with no script taught ardic by a master in the town's real menu, a month, 84d: its sheet's script ardic at 70 + its skill base, the month's practice forfeit; and the tongues' store (the referee's, 56 bytes till now): a sheet with eight tongues and scripts past its own read and written back whole, a ninth refused aloud, and a master refusing a ninth",
+      init: 't_rc', cycles: 14000e6,
+      machine: { input: (() => {
+        const L = '/sd/0/games/lib/dq0', S = d => '/sd/0/games/lib/acct/dq0schol -d /ram/' + d + ' -l ' + L + ' -t Velmor';
+        return dq0TypedAsk(['bind -a /sd/0/games /bin', 'dq0auto=1', 'hmchar -q -s 5 -u feudal -c scribe -o /ram/s.hm', 'cp /ram/s.hm /ram/q.hm',
+          "echo 'language ostari=60' >> /ram/q.hm", "echo 'script sunglyph=60' >> /ram/q.hm", 'hmchar -q -s 5 -u feudal -c militia -o /ram/m.hm',
+          'echo =LIB', "dq0 -p t -s 70000 -c /ram/q.hm -d /ram/a -k 'jade cup,journal,paper,charcoal'", 'copy the journal', 'u',
+          'dq0auto=()', "dq0sg='1 1 1 1'", 'dq0 -p t -d /ram/a', '5', 'study 1', '', '', '', '', '', 'quit', 'dq0auto=1', 'cat /ram/a/heard.txt',
+          'echo =G2', "dq0sg='12 2'", S('a') + ' -b 1 -c 4000 -w 1', 'read 1', '', 'cat /ram/a/heard.txt',
+          'echo =G1', "dq0sg='12 1'", S('a') + ' -b 1 -c 4000 -w 1', 'read 1', '', 'cat /ram/a/heard.txt',
+          'echo =G0', "dq0sg='12 0'", S('a') + ' -b 1 -c 4000 -w 1', 'read 1', '', 'cat /ram/a/heard.txt',
+          'echo =G3', "dq0sg='12 3 6 2'", S('a') + ' -b 1 -c 4000 -w 1', 'read 1', 'read the journal', '', 'cat /ram/a/heard.txt',
+          'echo =LIE', "dq0sg='4 3'", S('a') + ' -b 1 -c 4000 -w 16385', 'read 1', '', 'cat /ram/a/heard.txt',
+          'echo =STARS', "dq0sg='2'", S('a') + ' -b 1 -c 4000 -w 1', 'astrology 1', 'astrology the journal', '',
+          'echo =SMALL', 'dq0sg=()', S('a') + ' -b 0 -c 4000 -w 1', 'read 1', 'learn starric', '',
+          'echo =TEACH', "dq0 -p t -s 70000 -c /ram/m.hm -d /ram/b -k 'jade cup'", 'u', 'dq0auto=()', 'dq0 -p t -d /ram/b', 'learn ardic', '', '', '', '', 'quit',
+          'dq0auto=1', 'cat /ram/b/pc.hm', 'cp /ram/a/life.dat /ram/life.dat', 'rm -r /ram/a', 'rm -r /ram/b',
+          'echo =STORE', 'cp /ram/s.hm /ram/t8.hm', "echo 'language sindarin=50' >> /ram/t8.hm", "echo 'script starric=100' >> /ram/t8.hm",
+          "echo 'script sunglyph=100' >> /ram/t8.hm", "echo 'script clawmark=100' >> /ram/t8.hm", 'cp /ram/t8.hm /ram/t9.hm', "echo 'language kobold=40' >> /ram/t9.hm",
+          'dq0 -p t -s 3 -c /ram/t8.hm -d /ram/c', 'sheet', 'quit', 'cat /ram/c/pc.hm', 'echo =NINE', 'dq0 -p t -s 3 -c /ram/t9.hm', 'echo =FULL', 'mkdir /ram/t', 'cp /ram/life.dat /ram/t/life.dat',
+          'cp /ram/t8.hm /ram/t/pc.hm', S('t') + ' -b 1 -c 4000', 'learn kobold', '', 'echo =END', 'echo $status']);
+      })() },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\r/g, ''), f = [], words = s => s.replace(/\s+/g, ' ').trim();
+        const sect = n => { const i = o.indexOf('% echo =' + n), j = o.indexOf('% echo =', i + 3); return i < 0 ? '' : words(o.slice(i, j < 0 ? o.length : j)); };
+        const heard = n => (/rumour \| ([^%]*?) region \| ([^|]+) \|/.exec(sect(n).slice(sect(n).lastIndexOf('cat /ram/a/heard.txt'))) || []).slice(1).map(x => x.trim());
+        const grade = /\b(success|failure|critical|succeed|fail)/i;
+        // The library: four weeks, a piece; its rumour a piece's; the month's practice on sunglyph first
+        const lib = sect('LIB');
+        if (!/You study the journal in the library, a penny a day: after 4 weeks you've made out only a piece of it: The journal is a seeker's[^.]* \.\.\. The rest you can't make out, but it speaks of some place (in|on) the \w+\. That's 28 days, 28d\./.test(lib))
+          f.push('the library\'s four weeks not a piece: ' + lib.slice(lib.indexOf('> study'), lib.indexOf('> study') + 600));
+        const days = /Your time in \w+ comes to (\d+) days\./.exec(lib);
+        if (!days || +days[1] !== 29) f.push('the town\'s days not the visit and four weeks: ' + (days || [''])[0]);
+        if (!/In the spare hours you could practise sunglyph,/.test(lib)) f.push('the month\'s practice not on the script studied first: ' + lib.slice(lib.indexOf('spare hours') - 40, lib.indexOf('spare hours') + 200));
+        const h0 = heard('LIB');
+        if (!/^What you made out of the journal speaks of some place (in|on) the \w+\.$/.test(h0[0] || '')) f.push('heard.txt not the piece\'s rumour: ' + JSON.stringify(h0));
+        // The grades, hidden: each a reading, none its grade
+        const read = n => { const s = sect(n), i = s.indexOf('> read'); return s.slice(i, s.indexOf('>', i + 3) < 0 ? s.length : s.indexOf('>', i + 3)); };
+        const place = n => (/It tells of (the \w+ \w+), where the Houshani ([a-z ]+)\./.exec(read(n)) || []).slice(1);
+        const [p2, r2] = place('G2'), [p1, r1] = place('G1'), [p0, r0] = place('G0'), [p3, r3] = place('G3');
+        if (!p2 || r2 !== 'laid others of their dead') f.push('a success not the place and the reason: ' + read('G2'));
+        if (!p1 || p1 === p2 || p1.split(' ')[2] !== p2.split(' ')[2] || r1 !== r2) f.push('a failure not as confident, its land right and another realm: ' + read('G1'));
+        if (!p0 || p0 === p2 || r0 === r2) f.push('a critical failure not another place and reason: ' + read('G0'));
+        if (p3 !== p2 || !/says too that the hand is the Houshani's, of some (\d+) centuries ago, and the place it names lies some \d+ days' road from here\./.test(read('G3')))
+          f.push('a critical success not its line more: ' + read('G3'));
+        for (const n of ['G2', 'G1', 'G0', 'G3']) {
+          if (!/^> read 1 \w+, a sage, keeps the journal \d days? and asks \d+d; then reads it to you: The journal is a seeker's/.test(read(n))) f.push(n + ': not a sage\'s reading: ' + read(n));
+          if (grade.test(read(n)) || /can't make out/.test(read(n))) f.push(n + ': its grade told: ' + read(n));
+        }
+        // A better reading the clue's and its rumour's; a worse one undoing nothing
+        const h2 = heard('G2'), h1 = heard('G1'), hz = heard('G0'), h3 = heard('G3');
+        if (h2[0] !== 'The journal you had read tells of ' + p2 + ', where the Houshani laid others of their dead.' || h2[1] !== p2) f.push('heard.txt not the better reading\'s: ' + JSON.stringify(h2));
+        if (JSON.stringify(h1) !== JSON.stringify(h2) || JSON.stringify(hz) !== JSON.stringify(h2) || JSON.stringify(h3) !== JSON.stringify(h2)) f.push('a worse reading undid a better: ' + JSON.stringify([h1, hz, h3]));
+        // A second opinion at once: another sage, half again (unscrupulous); the copy it sold on talked of at the next visit
+        const g3 = sect('G3'), asks = [...g3.matchAll(/(\w+), a sage, keeps the journal (\d) days? and asks (\d+)d/g)];
+        if (asks.length !== 2 || asks[0][1] === asks[1][1]) f.push('no second opinion from another: ' + g3.slice(0, 900));
+        else if (+asks[0][3] !== 9 * asks[0][2] || +asks[1][3] !== 14 * asks[1][2]) f.push('a sage\'s day not 9d, an unscrupulous one\'s not 14d: ' + asks.map(x => x[0]).join(' / '));
+        const lie = sect('LIE');
+        if (!/Your writings: 1 a copy of the journal\. There's talk in the street of an old journal like yours: someone has been selling copies of it\./.test(lie)) f.push('the copy sold on not talked of: ' + lie.slice(0, 500));
+        if (!lie.includes('It tells of ' + p0 + ', where the Houshani ' + r0 + '.')) f.push('a diabolical sage\'s reading not the wrong one: ' + lie.slice(lie.indexOf('> read'), lie.indexOf('> read') + 500));
+        if (JSON.stringify(heard('LIE')) !== JSON.stringify(h2)) f.push('a lie undid a better reading: ' + JSON.stringify(heard('LIE')));
+        // Astrology, once
+        const st = sect('STARS'), cent = /of some (\d+) centuries ago/.exec(read('G3'));
+        if (!cent || !st.includes('By the signs on it, it was made some ' + cent[1] + ' centuries ago.')) f.push('Astrology not the clue\'s age: ' + st.slice(0, 600));
+        if (!st.includes('You\'ve asked that of the journal already.')) f.push('Astrology asked twice');
+        // A small town: no sage for a dead tongue, its masters ardic's alone
+        const sm = sect('SMALL');
+        if (!sm.includes('No one in Velmor reads the old ostari of the journal: the sages of a bigger town might.')) f.push('a small town read a dead tongue: ' + sm.slice(0, 500));
+        if (!sm.includes('No master in Velmor teaches that: a bigger town\'s might.')) f.push('a small town taught starric');
+        // A master's month: ardic opened, the sheet's, no practice that month
+        const t = sect('TEACH'), ml = /you can read and write it now \(ardic (\d+)\)/.exec(t);
+        if (!/You study ardic for a month with Master \w+ \(84d\)/.test(t) || !ml) f.push('the soldier not taught ardic: ' + t.slice(t.indexOf('learn ardic'), t.indexOf('learn ardic') + 500));
+        if (!ml || !new RegExp('script ardic=' + ml[1] + ' ').test(t.slice(t.lastIndexOf('cat /ram/b/pc.hm')))) f.push('ardic not on the sheet at its mastery: ' + t.slice(t.lastIndexOf('cat /ram/b/pc.hm')));
+        if (ml && +ml[1] < 70) f.push('ardic under 70 + its skill base: ' + ml[1]);
+        if (!/Your time in \w+ comes to 31 days\./.test(t) || /You practise for/.test(t)) f.push('the month with a master not the month\'s practice: ' + t.slice(t.indexOf('Your time'), t.indexOf('Your time') + 400));
+        // The tongues' store: eight kept, a ninth refused aloud, a master refusing a ninth
+        const sto = sect('STORE');
+        if (!/Tongues: common \d+, khuzdul \d+, sindarin 50\. Scripts: ardic \d+, \w+ \d+, \w+ \d+, starric 100, sunglyph 100, clawmark 100\./.test(sto)) f.push('eight tongues and scripts not held: ' + sto.slice(sto.indexOf('Tongues:'), sto.indexOf('Tongues:') + 200));
+        for (const l of ['language sindarin=50', 'script starric=100', 'script sunglyph=100', 'script clawmark=100'])
+          if (!sto.slice(sto.lastIndexOf('cat /ram/c/pc.hm')).includes(l)) f.push('written back without ' + l);
+        if (!sect('NINE').includes('dq0: too many tongues and scripts in its file')) f.push('a ninth not refused aloud: ' + sect('NINE').slice(0, 300));
+        if (!sect('FULL').includes('Your sheet holds all the tongues and scripts the game can keep, eight past your own: you can learn no more.')) f.push('a master taught a ninth: ' + sect('FULL').slice(0, 600));
+        if (/you (win|lose)|you've (won|lost)/i.test(o)) f.push('words of winning or losing');
+        this.notes = [p2 + ' (' + p1 + ', ' + p0 + ')'];
         return f;
       },
       sdcard: true
