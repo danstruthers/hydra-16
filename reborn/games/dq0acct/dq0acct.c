@@ -12,7 +12,9 @@
 ** infection, shock, venom and disease by the referee's own code told the days at rest (../dq0harn's course.h, watch.h, the
 ** library's harnheal.c); living, selling, mending, whetting, restocking and work; the month's practice.  It's told in a dozen
 ** lines, and the one question asked (its answer filled in), then Enter: the game clears the screen as it starts.  The rc
-** variable dq0auto (the tests'): nothing waited for, the answers as they're filled in.
+** variable dq0auto (the tests'): nothing waited for, the answers as they're filled in.  The player asked (no dq0auto), the town
+** (dq0town, the plan's step 11: town.c's) comes after the first lines and before the money's matters, which then leave alone what the
+** player saw to there.
 ** Its exit status: 0; 2 the character dead of it (the record says so, dq0life's to tell the life's account); 1 its fault said.
 ** The rules' numbers marked [Suggest] in the plan: HOUSE.md's between dungeons, for the user's review.
 */
@@ -85,7 +87,8 @@ static const char* __fastcall__ in_ (const char* folder, const char* name)
 
 unsigned char width = 79;
 static unsigned char col;
-static char wb[96], ob[200];
+static char wb[96];
+char ob[200];
 static unsigned char wn, on;
 
 static void out_flush (void)
@@ -163,13 +166,19 @@ void __fastcall__ amount (unsigned long f)
     }
 }
 
+/* The words so far out on the screen */
+void say_flush (void)
+{
+    word_out ();
+    out_flush ();
+}
+
 /* A line typed (b, 0-ended, its end of line gone); with the tests' dq0auto, none: "" */
 void __fastcall__ ask (char* b, unsigned char n)
 {
     int k;
 
-    word_out ();
-    out_flush ();
+    say_flush ();
     b[0] = 0;
     if (askit) {
         write (1, " > ", 3);
@@ -185,69 +194,7 @@ void __fastcall__ ask (char* b, unsigned char n)
 
 /* ---- What's carried */
 
-static unsigned char __fastcall__ is_coin (const struct kitrec* r)
-{
-    return (CAT[r->o.kind].form & (KF_SMALL | KF_COUNT)) == (KF_SMALL | KF_COUNT);
-}
-
-/* How many of it (a lot its count, else one) */
-static unsigned char __fastcall__ many (const struct kitrec* r)
-{
-    return CAT[r->o.kind].form & KF_COUNT ? r->o.qty : 1;
-}
-
-/* What's used up, and comes back at a price (the plan's: torches, oil, food, bandages; every lot but coins and water) */
-static unsigned char __fastcall__ used_up (unsigned char k)
-{
-    return k != KI_WATER && (k == KI_TORCH || k == KI_CANDLE || k == KI_OIL || k == KI_PITCH || k == KI_CHALK ||
-        (CAT[k].form & (KF_COUNT | KF_SMALL)) == KF_COUNT);
-}
-
-/* A thing's worth, a sound one, one of it (the market's, things.c's goods: a kind written in silver by its material), farthings */
-static unsigned long __fastcall__ worth (const struct kitrec* r)
-{
-    const struct kind* k = &CAT[r->o.kind];
-    unsigned long v = k->value;
-    unsigned char m = r->dur_max ? r->mat : r->o.mat;
-
-    if (k->mat == MT_SILVER && m && m != MT_SILVER && m != MT_JEWEL) {
-        v = m == MT_GOLD ? v * 20 : m == MT_STONE ? v * 8 : m == MT_GLASS ? v / 10 : v / 60;
-    }
-    return v;
-}
-
-/* Its condition, in tenths of its life (the market's: at least 1) */
-static unsigned char __fastcall__ tenths (const struct kitrec* r)
-{
-    unsigned char t;
-
-    if (!r->dur_max) {
-        return 10;
-    }
-    t = (unsigned char) (((unsigned long) r->dur * 10 + r->dur_max - 1) / r->dur_max);
-    return t ? t : 1;
-}
-
-/* What the market gives for it all: half its worth, by its condition (HOUSE.md's the market), at least a farthing */
-static unsigned long __fastcall__ sell_price (const struct kitrec* r)
-{
-    unsigned long v = worth (r) * many (r) * tenths (r) / 20;
-
-    return v ? v : 1;
-}
-
-/* Things in thing i */
-static unsigned char __fastcall__ holds (unsigned char i)
-{
-    unsigned char k;
-
-    for (k = 0; k < kn; ++k) {
-        if (!gone[k] && K[k].o.place == PL_IN && K[k].o.in == i + 1) {
-            return 1;
-        }
-    }
-    return 0;
-}
+#include "goods.h"
 
 static unsigned named[24];                      /* (The ids of what the player's named: the dungeon's game.dat's) */
 static unsigned char nnamed;
@@ -265,20 +212,18 @@ static unsigned char __fastcall__ is_named (unsigned id)
     return 0;
 }
 
-static unsigned char __fastcall__ in_hand (const struct kitrec* r)
-{
-    return r->o.place == PL_HAND || r->o.place == PL_OFF || r->o.place == PL_BOTH;
-}
+static unsigned char needed[NOFIT];             /* (What its calling or its practice needs: skill.c's o_needs, each thing's) */
 
 /* Spare: never what's named, its armour, what's worn, what's in its hand, what's used up (it'd buy it back), a key, what it lights
-** its light with, nor what holds anything; its weapon if none's in its hand */
+** its light with, nor what holds anything; its weapon if none's in its hand; nor what its calling or its practice needs (its
+** writing things, its tools: the plan's step 11, HOUSE.md's) */
 static unsigned char __fastcall__ spare (unsigned char i)
 {
     const struct kitrec* r = &K[i];
     const struct kind* k = &CAT[r->o.kind];
 
     return !gone[i] && !is_coin (r) && !used_up (r->o.kind) && r->o.kind != KI_WATER && r->o.kind != KI_KEY && r->o.kind != KI_TINDERBOX && k->value &&
-        r->o.place != PL_WORN && !in_hand (r) && k->craft != AP_ARMOUR && !is_named (r->id) && i != kept_blade && !holds (i);
+        r->o.place != PL_WORN && !in_hand (r) && k->craft != AP_ARMOUR && !is_named (r->id) && i != kept_blade && !holds (i) && !needed[i];
 }
 
 static unsigned char __fastcall__ valuable (const struct kitrec* r)
@@ -288,14 +233,14 @@ static unsigned char __fastcall__ valuable (const struct kitrec* r)
     return k->craft == AP_JEWEL || k->mat == MT_GOLD || k->mat == MT_SILVER;
 }
 
-static void kit_read (void)
+static void __fastcall__ kit_read (const char* name)
 {
     int fd;
     unsigned char k, armed = 0;
     unsigned long best = 0;
 
     kn = 0;
-    if ((fd = open (in_ (top, "kit.dat"), O_RDONLY)) >= 0) {
+    if ((fd = open (in_ (top, name), O_RDONLY)) >= 0) {
         while (kn < NOFIT && read (fd, &K[kn], sizeof K[0]) == sizeof K[0]) {
             ++kn;
         }
@@ -344,172 +289,13 @@ static void names_read (unsigned n)
 
 unsigned long cash;                             /* (Farthings: quest.c's too) */
 
-static void cash_count (void)
-{
-    unsigned char k;
+/* ---- The days' words (town.c's: the town's name and its inn's, the date) */
 
-    cash = 0;
-    for (k = 0; k < kn; ++k) {
-        if (!gone[k] && is_coin (&K[k])) {
-            cash += CAT[K[k].o.kind].value * (unsigned long) K[k].o.qty;
-        }
-    }
-}
-
-static void __fastcall__ coin_add (unsigned char kind, unsigned char q)
-{
-    if (kn < NOFIT) {
-        memset (&K[kn], 0, sizeof K[0]);
-        K[kn].o.kind = kind;
-        K[kn].o.qty = q;
-        K[kn].o.quality = 4;
-        K[kn].o.place = PL_POUCH;
-        ++kn;
-    }
-}
-
-/* cash laid out as the kit's piles: the dearest coins kept as far as they go, then pennies in lots of 250 at most, its odd farthings */
-static void cash_lay (void)
-{
-    unsigned long f = cash, v, n;
-    unsigned char k;
-
-    for (k = 0; k < kn; ++k) {
-        if (!gone[k] && is_coin (&K[k]) && K[k].o.kind != KI_PENNIES && K[k].o.kind != KI_FARTHINGS) {
-            v = CAT[K[k].o.kind].value;
-            n = v ? f / v : 0;
-            if (n > K[k].o.qty) {
-                n = K[k].o.qty;
-            }
-            f -= n * v;
-            if (!(K[k].o.qty = (unsigned char) n)) {
-                gone[k] = 1;
-            }
-        }
-    }
-    for (k = 0; k < kn; ++k) {
-        if (!gone[k] && K[k].o.kind == KI_PENNIES) {
-            n = f / PENNY;
-            n = n > 250 ? 250 : n;
-            f -= n * PENNY;
-            if (!(K[k].o.qty = (unsigned char) n)) {
-                gone[k] = 1;
-            }
-        }
-    }
-    while (f >= PENNY && kn < NOFIT) {
-        n = f / PENNY;
-        n = n > 250 ? 250 : n;
-        coin_add (KI_PENNIES, (unsigned char) n);
-        f -= n * PENNY;
-    }
-    for (k = 0; k < kn; ++k) {
-        if (!gone[k] && K[k].o.kind == KI_FARTHINGS) {
-            if (!(K[k].o.qty = (unsigned char) f)) {
-                gone[k] = 1;
-            }
-            f = 0;
-        }
-    }
-    if (f) {
-        coin_add (KI_FARTHINGS, (unsigned char) f);
-    }
-}
-
-/* The money in words: as it is, or (changed) as the next place's money-changer will give it (the 15%, each pile: outfit.c's) */
-static void __fastcall__ coins_say (unsigned char changed)
-{
-    unsigned p = 0, f = 0, c = 0, q;
-    unsigned char k;
-
-    for (k = 0; k < kn; ++k) {
-        if (!gone[k] && is_coin (&K[k])) {
-            q = K[k].o.qty;
-            if (changed) {
-                q -= (q * MONEY_CUT + 50) / 100;
-            }
-            if (K[k].o.kind == KI_PENNIES) {
-                p += q;
-            } else if (K[k].o.kind == KI_FARTHINGS) {
-                f += q;
-            } else {
-                c += q;
-            }
-        }
-    }
-    if (c) {
-        sayn (c);
-        say (c == 1 ? " crown" : " crowns");
-        say (p || f ? (p && f ? ", " : " and ") : "");
-    }
-    if (p) {
-        sayn (p);
-        say (p == 1 ? " penny" : " pennies");
-        say (f ? " and " : "");
-    }
-    if (f) {
-        sayn (f);
-        say (f == 1 ? " farthing" : " farthings");
-    }
-    if (!p && !f && !c) {
-        say ("no money");
-    }
-}
-
-/* ---- The days' words */
-
-static const char* const towns0[] = { "Vel", "Ost", "Har", "Kel", "Dun", "Mar", "Tor", "Wen" };
-static const char* const towns1[] = { "mor", "wick", "ham", "ford", "by", "stead", "mouth", "ley" };
-static const char* const inns[] = { "the Ram", "the Bell", "the Plough", "the Three Keys", "the Black Ox", "the Sheaf", "the Crown", "the Fleece" };
-const char* inn;
+char inn[16];
 char town[16];
-
-/* (The months, the library's harn_month_name's: none of the rest of its names linked) */
-static const char months[12][10] = { "Nuzyael", "Peonu", "Kelen", "Nolus", "Larane", "Agrazhar", "Azura", "Halane", "Savor", "Ilvin", "Navek", "Morgat" };
-
-static void __fastcall__ say_date (unsigned long t)
-{
-    sayn (LIFE_DAY (t));
-    say (" ");
-    say (months[LIFE_MONTH (t) - 1]);
-    say (" ");
-    sayn (LIFE_YEAR (t));
-}
-
-/* A kind's name, one or n */
-static void __fastcall__ kind_say (unsigned char k, unsigned char n)
-{
-    const char* s = CAT[k].name;
-    const char* of = strstr (s, " of ");
-    unsigned char l = strlen (s);
-    char b[20];
-
-    if (CAT[k].flags & K_PLURAL) {
-        if (n > 1 || CAT[k].form & KF_COUNT) {
-            sayn (n);
-            say (" ");
-        }
-        say (s);
-        return;
-    }
-    if (n > 1) {
-        sayn (n);
-        say (" ");
-        if (of) {
-            l = of - s;
-        }
-        memcpy (b, s, l);
-        b[l] = 0;
-        say (b);
-        say (b[l - 1] == 'h' || b[l - 1] == 's' ? "es" : "s");
-        if (of) {
-            say (of);
-        }
-        return;
-    }
-    say (strchr ("aeiou", *s) ? "an " : "a ");
-    say (s);
-}
+unsigned town_days;
+unsigned char town_seen;
+unsigned long o_t;                              /* (o_date's: the main RAM's, an overlay's own BSS being at the window) */
 
 /* ---- The money's matters */
 
@@ -526,7 +312,15 @@ static unsigned char b_cat;
 #define OV2(x)  (hy_bank (b_cat + 2), x)
 #define OV3(x)  (hy_bank (b_cat + 3), x)
 #define OV4(x)  (hy_bank (b_cat + 4), x)
+#define OV5(x)  (hy_bank (b_cat + 5), x)
 #define CATS()  hy_bank (b_cat)
+
+static void __fastcall__ say_date (unsigned long t)
+{
+    o_t = t;
+    OV5 (o_date ());
+    CATS ();
+}
 
 static unsigned char a_day (void)
 {
@@ -562,17 +356,17 @@ static unsigned long __fastcall__ sell_total (void)
 static const unsigned char habits[5] = { 1, 1, 2, 3, 8 };    /* (A day's pence by its class: the plan's table) */
 static const unsigned char steps[4] = { 8, 3, 2, 1 };
 
-static unsigned char rate, restocks;
-static unsigned long living, sold_t, smith_t, buy_t;
+unsigned char rate;
+static unsigned char restocks;
+unsigned long living;
+static unsigned long sold_t, smith_t, buy_t;
 unsigned work_days;
 static unsigned char sold[NOFIT], nsold;
 static unsigned char mended[NOFIT], whetted[NOFIT], nmend, nwhet, nosmith;
 
 /* What it set out with of what's used up (kit0.dat: the world's first save of the life, as it came in), less what it has: each
 ** kind wanted and how many */
-static struct want {
-    unsigned char   kind, n, place, in;
-} wants[16];
+static struct want wants[16];
 static unsigned char nwants;
 
 static void wants_read (void)
@@ -623,71 +417,19 @@ static void wants_read (void)
     }
 }
 
-/* The smith's price for thing i: mending a tenth of its price a tenth of its life, at most half, past that a new one at its whole
-** price (the plan's); no mending but of what's its own and whole enough to call a thing */
-static unsigned long __fastcall__ mend_price (const struct kitrec* r)
-{
-    unsigned long v = worth (r), m;
-
-    if (!r->dur_max || r->dur >= r->dur_max || is_coin (r) || used_up (r->o.kind) || r->o.kind == KI_WRECK || r->o.kind == KI_BROKEN_SWORD) {
-        return 0;
-    }
-    m = v * (10 - tenths (r) + 1) / 10;
-    return m > v / 2 ? v : m;
-}
-
-/* Whetting and oiling: a hundredth of its price a month, at least a farthing, what's worn alone (only what wears today wears) */
-static unsigned long __fastcall__ whet_price (const struct kitrec* r)
-{
-    unsigned long v;
-
-    if (!r->wear || !r->dur_max || is_coin (r)) {
-        return 0;
-    }
-    v = worth (r) * (passed / 30 ? passed / 30 : 1) / 100;
-    return v ? v : 1;
-}
-
-/* What seeing to it would cost: mending (it's whetted with it), else whetting */
-static unsigned long __fastcall__ owed (const struct kitrec* r)
-{
-    unsigned long v = mend_price (r);
-
-    return v ? v : whet_price (r);
-}
-
-/* It still has one of these kinds */
-static unsigned char __fastcall__ has_kind (unsigned char a, unsigned char b)
-{
-    unsigned char k;
-
-    for (k = 0; k < kn; ++k) {
-        if (!gone[k] && K[k].o.kind >= a && K[k].o.kind <= b) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-/* A kind wanted that's any use to it: no arrows, bolts or sling stones with nothing left to shoot them */
-static unsigned char __fastcall__ of_use (unsigned char kind)
-{
-    return kind == KI_ARROWS ? has_kind (KI_SHORTBOW, KI_HARTBOW) : kind == KI_BOLTS ? has_kind (KI_CROSSBOW, KI_CROSSBOW) :
-        kind == KI_STONES ? has_kind (KI_SLING, KI_SLING) : 1;
-}
-
-/* All it wants paid for, by what it has now: nothing goes on seeing to a thing it's sold, nor on what the thing it's sold was for */
+/* All it wants paid for, by what it has now: nothing goes on seeing to a thing it's sold, nor on what the thing it's sold was for;
+** nor what the player saw to itself in town (the smith's, the market's: town_seen) */
 static unsigned long upkeep (void)
 {
     unsigned long t = 0;
     unsigned char k;
 
-    for (k = 0; k < kn; ++k) {
+    for (k = 0; k < kn && !(town_seen & TS_SMITH); ++k) {
         if (!gone[k]) {
             t += owed (&K[k]);
         }
     }
-    for (k = 0; k < nwants; ++k) {
+    for (k = 0; k < nwants && !(town_seen & TS_MARKET); ++k) {
         if (of_use (wants[k].kind)) {
             t += wants[k].n * (unsigned long) CAT[wants[k].kind].value;
         }
@@ -695,27 +437,10 @@ static unsigned long upkeep (void)
     return t;
 }
 
-static void __fastcall__ thing_in (unsigned char kind, unsigned char n, const struct want* w)
-{
-    if (kn >= NOFIT) {
-        return;
-    }
-    memset (&K[kn], 0, sizeof K[0]);
-    K[kn].o.kind = kind;
-    K[kn].o.qty = n;
-    K[kn].o.quality = 4;
-    K[kn].o.place = w->place;
-    K[kn].o.in = w->in;
-    if (w->place == PL_IN && (!w->in || gone[w->in - 1])) {
-        K[kn].o.place = PL_PACK;
-        K[kn].o.in = 0;
-    }
-    ++kn;
-}
-
 /* All the money's matters, by the plan's order: sold what's spare till the wants are met, cheapest first, valuables last, never what
 ** it's named; down to rough; work for what's short at half a master's wage, its room and board found (the book's journeyman,
-** Character 13), at most WORK_MAX days; then what it can pay: its living, the mending, the restocking.  No debts */
+** Character 13), at most WORK_MAX days; then what it can pay: its living, the mending, the restocking.  No debts.  What the player
+** saw to itself in town is its own: the market seen, nothing sold or bought for it; the smith, nothing mended or whetted */
 static void money_matters (void)
 {
     unsigned long need, nowant, v, best;
@@ -724,7 +449,7 @@ static void money_matters (void)
     unsigned w;
 
     need = fee + (unsigned long) habit * passed * PENNY;
-    for (val = 0; val < 2; ++val) {
+    for (val = town_seen & TS_MARKET ? 2 : 0; val < 2; ++val) {
         while (cash < need + upkeep ()) {       /* (Asked again as each's sold: not what it's sold) */
             b = 0xFF;
             best = 0;
@@ -770,7 +495,7 @@ static void money_matters (void)
         living = cash;                          /* (What's short found for nothing: a barn, a kitchen's scraps) */
     }
     cash -= living;
-    for (k = 0; k < kn; ++k) {
+    for (k = 0; k < kn && !(town_seen & TS_SMITH); ++k) {
         if (gone[k]) {
             continue;
         }
@@ -796,7 +521,7 @@ static void money_matters (void)
             }
         }
     }
-    for (k = 0; k < nwants; ++k) {
+    for (k = 0; k < nwants && !(town_seen & TS_MARKET); ++k) {
         v = CAT[wants[k].kind].value;
         b = of_use (wants[k].kind) ? wants[k].n : 0;
         wants[k].n = 0;
@@ -831,9 +556,10 @@ static void money_matters (void)
     }
 }
 
-/* What's left to hand, after the money's matters, told to the overlay (skill.c's o_tool) a thing at a time: its kind, its flags, its tool's key, for the
-** kinds aren't there with it */
-static void tools_note (void)
+/* What's carried told to the overlay (skill.c's) a thing at a time: its kind, its flags, its tool's key, for the kinds aren't there
+** with it: what's left to hand to practise with, after the money's matters (o_tool); or (needs) what its calling or its practice
+** needs, before them (o_needs: never sold unasked) */
+static void __fastcall__ tools_note (unsigned char needs)
 {
     unsigned char k;
 
@@ -845,7 +571,12 @@ static void tools_note (void)
             ans[8] = K[k].o.kind;
             ans[9] = CAT[ans[8]].flags;
             memcpy (ans, CAT[ans[8]].tool, 8);
-            OV2 (o_tool ());
+            hy_bank (b_cat + 2);
+            if (needs) {
+                needed[k] = o_needs ();
+            } else {
+                o_tool ();
+            }
             CATS ();
         }
     }
@@ -877,33 +608,6 @@ static void water_in (void)
     }
 }
 
-/* kit.dat written, what's gone out of it, each thing's place in the list kept */
-static void kit_write (void)
-{
-    static unsigned char to[NOFIT];
-    unsigned char k, n = 0;
-    int fd;
-
-    for (k = 0; k < kn; ++k) {
-        to[k] = gone[k] ? 0 : ++n;
-    }
-    if ((fd = open (in_ (top, "kit.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
-        fail ("can't write what's carried");
-    }
-    for (k = 0; k < kn; ++k) {
-        if (!gone[k]) {
-            if (K[k].o.place == PL_IN) {
-                K[k].o.in = K[k].o.in ? to[K[k].o.in - 1] : 0;
-                if (!K[k].o.in) {
-                    K[k].o.place = PL_PACK;     /* (Its container sold, or gone) */
-                }
-            }
-            write (fd, &K[k], sizeof K[0]);
-        }
-    }
-    close (fd);
-}
-
 static void life_write (void)
 {
     int fd;
@@ -916,42 +620,22 @@ static void life_write (void)
 
 /* ---- The account */
 
-static const char* const lodge[9] = { 0, "You sleep in a hayloft and eat market bread", "You take a place in the common room", "You share a room",
-    0, 0, 0, 0, "You take a room of your own, with a servant to help" };
-static const char* const lodge2[9] = { 0, "", " (a bed and a hot meal and a cold", " (hot meals and ale", 0, 0, 0, 0, " (hot meals and wine" };
+static unsigned char told;                      /* (Its first lines told before the town, the player's: 1; and the town run, 2) */
 
-static void say_days (void)
-{
-    sayn (passed);
-    say (passed == 1 ? " day passes" : " days pass");
-}
-
-/* The days' first lines: where it lodged, the physician, the wounds */
+/* The days' first lines: what's paid, where it lodged (told after the town, if there's one), the physician, the wounds */
 static void first_lines (void)
 {
-    unsigned char k;
-
-    say ("You walk to ");
+    say ("\n");
+    sayn (passed);
+    say (passed == 1 ? " day passes. You walk to " : " days pass. You walk to ");
     say (town);
     say (". ");
     OV4 (o_reward_say ());                      /* (What it's paid for what it did, the plan's step 7) */
-    CATS ();
-    if (pc.state != HARN_DEAD) {
-        say (lodge[rate]);
-        if (rate > 1) {
-            say (" at ");
-            say (inn);
-            say (lodge2[rate]);
-            say (": ");
-        } else {
-            say (" (");
-        }
-        sayn (rate);
-        say ("d a day, ");
-        amount (living);
-        say ("). ");
+    hy_bank (b_cat + 5);
+    if (!told) {
+        o_lodging ();
     }
-    OV2 (o_first ());
+    o_first ();
     CATS ();
     say ("\n");
 }
@@ -1050,18 +734,16 @@ static void dead_lines (void)
 {
     unsigned long d = L.h.date + passed;
 
-    say ("\n");
-    say_days ();
-    say (". ");
-    first_lines ();
+    if (!told) {
+        first_lines ();
+    }
     say (news[0] == ' ' ? news + 1 : news);
     say (" You die on ");
     say_date (d);
     say (", at ");
     sayn (LIFE_AGE (&L.h, d, pc.att[HARN_BD]));
     say (".\n");
-    word_out ();
-    out_flush ();
+    say_flush ();
 }
 
 static unsigned char __fastcall__ lull (void)
@@ -1101,23 +783,22 @@ int main (int argc, char* argv[])
     regs.r[2] = 8;
     regs.r[3] = 0;
     askit = hy_call (HY_ENV_GET, &regs) != 0;
-    if ((b = hy_banks_alloc (5)) < 0) {
+    if ((b = hy_banks_alloc (6)) < 0) {
         fail ("no banks");
     }
     b_cat = b;
-    strcpy (path, lib);
-    strcat (path, "/../acct/dq0acct.ovl");
-    if ((fd = open (path, O_RDONLY)) < 0) {
-        fail ("no overlays");
+    for (i = 1; i < 6; ++i) {                   /* (The overlays: four in dq0acct.ovl, the town's in dq0acct.ov5) */
+        if (i == 1 || i == 5) {
+            strcpy (path, lib);
+            strcat (path, i == 1 ? "/../acct/dq0acct.ovl" : "/../acct/dq0acct.ov5");
+            close (fd);
+            if ((fd = open (path, O_RDONLY)) < 0) {
+                fail ("no overlays");
+            }
+        }
+        hy_bank (b_cat + i);
+        read (fd, (void*) 0x8000, 0x2000);
     }
-    hy_bank (b_cat + 1);
-    read (fd, (void*) 0x8000, 0x2000);
-    hy_bank (b_cat + 2);
-    read (fd, (void*) 0x8000, 0x2000);
-    hy_bank (b_cat + 3);
-    read (fd, (void*) 0x8000, 0x2000);
-    hy_bank (b_cat + 4);
-    read (fd, (void*) 0x8000, 0x2000);
     close (fd);
     OV2 (o_width ());
     CATS ();
@@ -1137,10 +818,12 @@ int main (int argc, char* argv[])
     n = L.h.dungeon;
     seed = L.h.seed + n * 2654435761UL;
     rseed (seed ? seed : 1);
-    strcpy (town, towns0[random (8)]);
-    strcat (town, towns1[random (8)]);
-    inn = inns[random (8)];
-    kit_read ();
+    random (8);                                 /* (The dice as they were: the town's name the name maker's now, its own) */
+    random (8);
+    ans[0] = random (8);
+    OV5 (o_town ());
+    CATS ();
+    kit_read ("kit.dat");
     names_read (n - 1);
     cash_count ();
     OV4 (o_reward ());                          /* (What solving the dungeon just left brings, its theme's reward line: its pennies
@@ -1175,8 +858,30 @@ int main (int argc, char* argv[])
     }
     if (more) {
         wants_read ();
-        money_matters ();
-        more = pc.state != HARN_DEAD;
+        if (askit) {                            /* (The town, the player's: the account's first lines told before it, the
+                                                **   things and the money handed to dq0town in the files, read again after;
+                                                **   its days at rest; what the player didn't see to itself done as ever) */
+            told = 1;
+            first_lines ();
+            cash_lay ();
+            kit_write (TOWN_KIT);
+            OV5 (told += o_town_go ());
+            CATS ();
+            memset (gone, 0, sizeof gone);
+            kit_read (TOWN_KIT);
+            remove (path);
+            cash_count ();
+            nwants = 0;
+            wants_read ();
+            for (n = town_days; more && n; --n) {
+                more = a_day ();
+            }
+        }
+        if (more) {
+            tools_note (1);
+            money_matters ();
+            more = pc.state != HARN_DEAD;
+        }
     }
     if (!more) {                                /* (Dead of it: the outcome died, the record the life's end; dq0life tells it) */
         dead_lines ();
@@ -1193,29 +898,36 @@ int main (int argc, char* argv[])
     }
     CATS ();
     water_in ();
-    tools_note ();
+    tools_note (0);
     pc.fl = afffl;                              /* (Fatigue clear, but what a sickness holds: the plan's; hunger and thirst
                                                 **   are the world's, begun afresh with the dungeon) */
     pc.state = HARN_CONSCIOUS;
     cash_lay ();
-    /* It's told */
-    say ("\n");
-    say_days ();
-    say (". ");
-    first_lines ();
+    /* It's told (its first lines before the town, if there was one: the rest after it) */
+    if (!told) {
+        first_lines ();
+    } else {
+        OV5 (o_lodging ());
+        CATS ();
+    }
     goods_lines ();
     OV2 (o_work ());
     OV2 (o_practice ());
     CATS ();
     last_lines ();
-    OV4 (o_rumours ());                         /* (Where next: the rumours heard, one followed, or Enter to go on; asked
-                                                **   before anything's written, so a reset tells the time between again, the same) */
+    hy_bank (b_cat + 4);                        /* (Where next: the road taken from the town; else the rumours heard, one
+                                                **   followed, or Enter to go on; asked before anything's written, so a reset
+                                                **   tells the time between again, the same) */
+    if (told == 2) {
+        OV5 (o_set_out ());
+    } else {
+        o_rumours ();
+    }
     CATS ();
-    word_out ();
-    out_flush ();
+    say_flush ();
     OV3 (o_sheet_write ());
     CATS ();
-    kit_write ();
+    kit_write ("kit.dat");
     L.h.date += passed;
     L.h.flags &= ~LF_BETWEEN;
     life_write ();

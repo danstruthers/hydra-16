@@ -20,6 +20,9 @@
 **   -r n       n rumours made from the seed, not a theme (dq0life's, between two dungeons): each a place's region and a
 **              reason to go there (a goal kind each of its own, the heard ones too), written to the folder's rumours.txt
 **              as part-written themes, each begun by its rumour line (the words heard)
+**   -a kinds   with -r: the rumours made already (rumours.txt's, kept), their goal kinds a bit each (1 << (G_* - 1)): the
+**              next ones added to the file, the same as -r n alone would have made them (the town's inn, dq0town's: one
+**              more heard by Intrigue, the plan's step 11)
 ** Its exit status 0, or 1 (said why); with -o, themec's.  The UI runs it as a new game begins (theme.h): the game's
 ** seed, its save folder (or /ram/dq0).
 **
@@ -73,6 +76,7 @@ char gs_s[4], gu_s[4], ge_s[4], geu_s[4], gx_s[4], gg_w[16];
 int gwl;
 unsigned gpence;
 unsigned char rmode;
+static unsigned char amask;                     /* (-a's: the rumours' kinds made already) */
 struct era* const erp = er;
 struct str* const stp = st;
 struct fac* const fap = fa;
@@ -508,18 +512,22 @@ static int __fastcall__ rumours (struct bank_fn* hist, struct bank_fn* goal)
 {
     unsigned long base = seed;
     unsigned char made = 0, k;
-    unsigned kinds = 0;
+    unsigned kinds = amask;
 
     if (!outdir) {
         say ("themegen: -r wants -o\n");
         return 1;
     }
     mkdir (outdir, 0755);
-    if ((ofd = open (in (outdir, "rumours.txt"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
+    if ((ofd = open (in (outdir, "rumours.txt"), O_WRONLY | O_CREAT | (amask ? O_APPEND : O_TRUNC), 0644)) < 0) {
         say ("themegen: can't write rumours.txt there\n");
         return 1;
     }
-    for (k = 0; made < rmode && k < 4 * rmode; ++k) {
+    for (k = amask; k; k &= k - 1) {            /* (-a's: those made already, each a seed of its own from the first; any skipped
+                                                **   between them was a kind told already, so it would be again) */
+        ++made;
+    }
+    for (k = made; made < rmode && k < 4 * rmode; ++k) {
         seed = (base ^ 0x52554D52UL) + k * 2654435761UL;   /* (Its own: "RUMR") */
         rseed (seed ^ 0x48495354UL);
         bank_call (hist, void (*)(void));
@@ -550,8 +558,11 @@ int main (int argc, char* argv[])
 
     seed = hy_time () ^ hy_ticks ();
     for (i = 1; i < argc; ++i) {
-        if (i + 1 < argc && argv[i][0] == '-' && strchr ("stolr", argv[i][1]) && !argv[i][2]) {
+        if (i + 1 < argc && argv[i][0] == '-' && strchr ("stolra", argv[i][1]) && !argv[i][2]) {
             switch (argv[i++][1]) {
+            case 'a':
+                amask = atoi (argv[i]);
+                break;
             case 's':
                 for (seed = 0, slash = argv[i]; *slash >= '0' && *slash <= '9'; ++slash) {
                     seed = seed * 10 + *slash - '0';
@@ -574,7 +585,7 @@ int main (int argc, char* argv[])
         } else if (!strcmp (argv[i], "-p")) {
             progress = 1;
         } else {
-            say ("usage: themegen [-s seed] [-t theme] [-o folder] [-l lib] [-q] [-p] [-r n]\n");
+            say ("usage: themegen [-s seed] [-t theme] [-o folder] [-l lib] [-q] [-p] [-r n [-a kinds]]\n");
             return 1;
         }
     }

@@ -1,0 +1,57 @@
+# town.txt - (dq0town: lib/acct/town.txt) the town's words between two dungeons (the plan for the game between dungeons, its
+# step 11; HOUSE.md's between dungeons, the town).  A line a key and its values between bars (a value's spaces trimmed); a key's
+# lines one picked by the town's dice where there are several.  Slots: %T the town's name, %I its inn's ("the Ram").  The words
+# the house's, for review; nothing here is the book's.
+#   kind     what the town is (after its name: "Velmor, a market town.")
+#   sight    a sentence of it
+#   place    the menu: its number, its name, what's done there (dq0town knows them by their numbers: 1 the inn, 2 the market,
+#            3 the smith, 4 who's asking, 5 leave for)
+#   shut     what's not open yet (the temple, the plan's step 13; the scholar, step 12)
+#   inn, market, smith, asking   a place's words as the character comes into it (one picked)
+#   goods    what the market sells (the catalogue's kinds, by their names: at their whole worth)
+#   blades   what the smith sells: a new blade
+#   words    the words that go to each place (a command's first word, or the place's number or name), the places in order, then
+#            what's shut's
+#   prompt   what's asked, in the street, then in each place in order
+#   month    the months' names (the book's calendar's)
+#   little   the little words off the front of what a command names ("sell my dagger", "haggle for the rope")
+kind     | a market town on a river.
+kind     | a hill town of grey stone.
+kind     | a walled town at a crossroads.
+kind     | a mining town under bare fells.
+kind     | a ferry town on a wide, slow river.
+kind     | a town of drovers and wool merchants.
+sight    | Its houses crowd about a stone bridge, and smoke hangs over the thatch.
+sight    | Carts churn its one street to mud, and dogs sleep in every doorway.
+sight    | A tower of the lord's stands over it, its banner limp in the wind.
+sight    | Its market cross is worn smooth, and the well beside it never runs dry.
+place    | 1 | The inn | rest; hear what's said
+place    | 2 | The market | buy, sell, haggle
+place    | 3 | The smith | mend, whet, a new blade
+place    | 4 | Who's asking | patrons and what they offer
+place    | 5 | Leave for | the places you've heard of
+shut     | The temple and the scholar's house are shut to you for now.
+inn      | The common room of %I is loud with drovers and carters.
+inn      | At %I a fire burns low, and a few old men nurse their ale.
+inn      | %T's travellers crowd the benches at %I.
+market   | Stalls of canvas and plank fill the square.
+market   | Hucksters cry their wares up and down the street.
+smith    | The smith's forge glows under a lean-to by the gate.
+smith    | The smith looks up from the anvil and wipes his hands.
+asking   | You ask about the inns and the market for anyone who needs a hand.
+goods    | torch | candle | flask of oil | pot of pitch | lantern | tinderbox | rations | waterskin | rope | backpack | sack | pouch | bandages | chalk | paper | parchment | quill | horn of ink | charcoal | crowbar | iron spike | grapple | antidote | remedy | whetstone | blanket | cloak | lockpicks | shovel | pick | hammer | chisel
+blades   | knife | dagger | shortsword | sword | falchion | hatchet | axe | mace | spear | club | staff
+words    | 1 inn tavern rest sleep listen hear rumours rumour talk
+words    | 2 market buy sell haggle bargain price how what goods
+words    | 3 smith forge mend repair whet sharpen oil blade blades
+words    | 4 who asking patron patrons offer offers take accept agree
+words    | 5 leave go road follow travel set
+words    | temple scholar library priest sage
+prompt   | Where to? (a number or a name; Enter to leave)
+prompt   | At the inn: rest (how many days), or Enter to go back
+prompt   | At the market: buy, sell, haggle, or Enter to go back
+prompt   | At the smith's: mend, whet, buy, or Enter to go back
+prompt   | Whose offer will you take? (a number; Enter to go back)
+prompt   | Which will you follow? (a number; Enter the first)
+month    | Nuzyael | Peonu | Kelen | Nolus | Larane | Agrazhar | Azura | Halane | Savor | Ilvin | Navek | Morgat
+little   | the | a | an | my | some | for | over | about | on | with | of | much | will | you | give | me | is | are | to | at | this | that | these | those | all

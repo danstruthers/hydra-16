@@ -1528,14 +1528,44 @@ game's tasks (themegen and its bank programs, dq0life, dq0acct, dq0end): none of
   goal kind, its reason, its patron), the rest of the dungeon its own seed's (its history's seed mixed with the place's name, so
   each rumour's place has its own past).  It's asked before anything's written, so a reset tells
   the time between again, the same.
-- **Ready for what comes:** the town (the plan's step 11) will tell the rumours at its inn: quest.c (dq0acct's overlay 4) is all of it,
-  to move whole.  A clue (step 10) adds or replaces a rumour by writing a block of the same lines to heard.txt in the save's folder:
-  its rumours are told first, ahead of themegen's, three at most.
+- **Ready for what comes:** the town (the plan's step 11, below) tells the rumours at its inn, and follows one from its "Leave for";
+  quest.c's question stays the straight-on character's (the tests' dq0auto).  A clue (step 10) adds or replaces a rumour by writing a
+  block of the same lines to heard.txt in the save's folder: its rumours are told first, ahead of themegen's (three at most in the
+  account's question, four in the town's).
 - **New goal kinds** (goals.txt's, marked heard: a history made without a rumour still picks among the four, so the stand-ins' seeds
   and every seed's first dungeon keep their kinds): **lore**, a writing to find (a chronicle, a codex, a testament, among an era's
   works, hidden; a torn leaf of a library's list hints where: never needed, Q9) taken up and carried out; **scourge**, a raiders'
   chief's standard, skull drum or totem in the kobolds' lair (kobolds the last era, as a prisoner's are), taken up and carried out, the
   raids ended.  Each has its why lines; the theme checker (themec) proves each solvable, as every kind's.
+
+### The town (the plan's step 11, 2026-11-06)
+
+The plan's section 3; the user's Q8 ("A menu"); HOUSE.md's between dungeons, the town, for the rules, words and numbers.  All of it in
+the programs run before the game's tasks: none of the game's main RAM, none of its answer times.
+
+- **A program of its own, games/dq0town** (lib/acct/dq0town, 25K, its words lib/acct/town.txt): the account (dq0acct) has no room for
+  it: its main RAM was at its floor (2109 free), and its overlays sit at the window where the kinds are, so none of their code can look at
+  a kind, and the market and the smith are all kinds.  dq0town has its own main RAM, the kinds and what's carried in a bank at the window
+  as the account has them, its words and the rumours in another (town.txt's lines but its notes, 3.5K; the rumours' files, 4.5K).  The
+  account runs it (SPAWN, as dq0life runs the account) only when the player's asked: the tests' dq0auto passes it by.
+- **Where in the account:** after its first lines (the days, the walk, what's paid, the physician, the wounds) and before its money's
+  matters, so the town's days are the account's days too (the wounds rolling on, the keep, the month's practice) and the account sees to
+  only what the player didn't.  The account hands it what's carried and its money as townkit.dat (kit.dat untouched till the account's
+  end, so a reset in the town tells the time between again, the same), the town's name and its inn's, the days so far, the keep owed so
+  far, a day's keep, Rhetoric's and Intrigue's EMLs (its arguments); it writes back townkit.dat, quest.txt (the place followed) and
+  town.dat (games/dq0acct/town.h: the days, what was seen to, the road), and the account reads them, passes the days, does its money's
+  matters but what was seen to (the market, the smith), and tells the rest: "Your time in Velmor comes to 7 days.", the lodging, the
+  practice, the money, the standing, "You set out for the Homuth Meres, 12 days on the road.", Enter to go on.
+- **The goods' code is shared** (games/dq0acct/goods.h: what's carried, its worth, the market's half, the smith's prices, the money laid
+  as coins), each program its own copy.  The town's name is the name maker's (namegen's code, compiled into the account's overlay 5:
+  dq0acct.ov5, a file of its own read as the account starts, 5.5K, with the wounds' words moved there from overlay 2, the date's and
+  the lodging's words from the main RAM: the account's main RAM 2281 free after it all).
+- **Intrigue's one more rumour** is made as it's heard: themegen -r 4 -a KINDS (the rumours made already, their goal kinds a bit each:
+  themegen goes on from them, so the fourth is the one -r 4 would have made), appended to rumours.txt; some 13M cycles, its dots shown.
+- **The carry-on's time** (seed 70000's, dq0whytime's scene, Enter on the dq0 line to the first prompt, the tests' dq0auto: no town):
+  385.3M cycles before, 388.8M after (the overlay's file and the name maker; a stand-in's, seed 3, 265.9M to 267.2M).  With the town
+  (the player's, seed 70000): 120M to the town's first question, each errand 2-4M (the inn's Intrigue's rumour 46M), 287M from
+  leaving to the game's first prompt.  dq0starttime (no folder: none of it run) 217.4M and 293.7M.
 
 ## One path for every actor
 

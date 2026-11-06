@@ -177,6 +177,56 @@ void o_tool (void)
     }
 }
 
+/* ---- What its calling or its practice needs, never sold unasked (the plan's step 11, HOUSE.md's between dungeons: the general
+** kind of a broke scribe's quill): a thing (as o_tool's) a skill of its own is practised with, that skill its occupation's or one
+** it's used since its last night's rest; its writing things if it knows a script at all.  The tools by their skills: what Script
+** and Drawing write and draw with, Lockcraft's picks, Mining's picks and shovels, Masonry's chisels, a bow or a sling, a weapon of
+** its skill's kind */
+
+static const struct craft_tool {
+    unsigned char   kind, sk;
+} craft_tools[] = {
+    { KI_CHALK, HARN_DRA }, { KI_LOCKPICKS, HARN_LCK }, { KI_PICK, HARN_MIN }, { KI_MATTOCK, HARN_MIN }, { KI_SHOVEL, HARN_MIN },
+    { KI_SPADE, HARN_MIN }, { KI_CHISEL, HARN_MSN }, { KI_STONE_CHISEL, HARN_MSN }, { KI_SLING, HARN_SLG }, { KI_HERBS, HARN_HRB }
+};
+
+unsigned char o_needs (void)
+{
+    unsigned char i = ans[8], sk = 0xFF, k;
+
+    if (i == KI_PAPER || i == KI_PARCHMENT || i == KI_QUILL || i == KI_CHARCOAL || i == KI_PENCIL || i == KI_INK) {
+        for (k = 0; k < ntongues && tongue[k][0] != 's'; ++k) {
+        }
+        if (pc.ml[HARN_SCR] || k < ntongues) {
+            return 1;                           /* (A script known: its writing things) */
+        }
+        sk = HARN_DRA;
+    } else if (i >= KI_SHORTBOW && i <= KI_CROSSBOW) {
+        sk = HARN_BOW;
+    } else {
+        for (k = 0; k < sizeof craft_tools / sizeof craft_tools[0]; ++k) {
+            if (craft_tools[k].kind == i) {
+                sk = craft_tools[k].sk;
+            }
+        }
+        for (k = 0; sk == 0xFF && ans[0] && (ans[9] & K_HAND) && i != KI_TORCH && k < sizeof weapons / sizeof weapons[0]; ++k) {
+            if (weapons[k].part != TOOL && !strncmp (weapons[k].key, ans, sizeof weapons[0].key)) {
+                sk = weapons[k].sk;
+            }
+        }
+    }
+    if (sk == 0xFF || !pc.ml[sk]) {
+        return 0;
+    }
+    if (used[sk]) {
+        return 1;
+    }
+    trade_read ();
+    for (k = 0; k < ntrade && trade[k] != sk; ++k) {
+    }
+    return k < ntrade;
+}
+
 /* ---- Its tongues and scripts past its own (the plan for the game between dungeons, its step 8: its sheet's "language NAME=ML" and
 ** "script NAME=ML" lines, sheet.c's tongue): each practised as a skill is, its number HARN_NSKILLS on (the j-th line's HARN_NSKILLS + j),
 ** its development roll the book's (Skills 7: d100 and its skill base over its ML, as harn_develop's), its skill base Language's or
@@ -466,89 +516,4 @@ void o_practice (void)
         }
         say (k + 1 < nchosen ? ", " : ".\n");
     }
-}
-
-
-/* Where a wound is, "left forearm" */
-static void __fastcall__ say_place (unsigned char loc)
-{
-    static const char* const locations[HARN_NLOCATIONS] = {
-        "skull", "face", "neck", "shoulder", "upper arm", "elbow", "forearm", "hand", "thorax", "abdomen", "groin", "hip",
-        "thigh", "knee", "calf", "foot"
-    };
-    unsigned char l = HARN_LOC (loc);
-
-    if ((l >= HARN_SHOULDER && l <= HARN_HAND) || l >= HARN_HIP) {
-        say (loc & HARN_RIGHT ? "right " : "left ");
-    }
-    say (locations[l < HARN_NLOCATIONS ? l : 0]);
-}
-
-static const char* const wound_word[9][3] = {
-    { "bruise", "fracture", "crush" }, { "cut", "gash", "deep gash" }, { "stab", "stab", "deep stab" },
-    { "burn", "burn", "burn" }, { "bite", "bite", "deep bite" }, { "scratch", "rake", "deep rake" },
-    { "sting", "sting", "deep sting" }, { "gore", "gore", "deep gore" }, { "ache", "ache", "ache" }
-};
-
-static const char* const sev_word[4] = { "minor", "serious", "grievous", "grievous" };
-
-static unsigned char __fastcall__ sev_of (unsigned char il)
-{
-    return il >= 4 ? 2 : il >= 2 ? 1 : 0;
-}
-
-/* What's become of each wound there was */
-static void wounds_say (void)
-{
-    const struct wwas* w;
-    unsigned char i, k, s;
-
-    for (i = 0; i < nwas; ++i) {
-        w = &was[i];
-        for (k = 0; k < pc.ninj && wid[k] != i; ++k) {
-        }
-        say ("The ");
-        say (sev_word[sev_of (w->il)]);
-        say (" ");
-        say (wound_word[w->by && w->by <= BY_VENOM ? 3 + w->by : w->aspect & 3][(w->aspect & 3) != HARN_BLUNT || w->by ? 0 : w->sev > 3 ? 2 : w->sev ? w->sev - 1 : 0]);
-        say (" to your ");
-        say_place (w->loc);
-        if (k == pc.ninj) {
-            say (w->fever ? " festers, then mends and is gone. " : " is gone. ");
-        } else if (pc.inj[k].il < w->il) {
-            s = sev_of (pc.inj[k].il);
-            say (s == sev_of (w->il) ? " mends a little." : " heals to a ");
-            if (s != sev_of (w->il)) {
-                say (sev_word[s]);
-                say (" one.");
-            }
-            say (" ");
-        } else {
-            say (w->fever ? " festers, and is no better. " : " is no better. ");
-        }
-    }
-}
-
-/* The physician's words, what's become of the wounds */
-void o_first (void)
-{
-    unsigned char k;
-
-    if (ntended) {
-        say ("A physician sees to your ");
-        for (k = 0; k < ntended; ++k) {
-            say_place (tended[k]);
-            say (k + 2 < ntended ? ", " : k + 2 == ntended ? " and " : "");
-        }
-        say (" (");
-        amount (fee);
-        say ("). ");
-    }
-    if (selfnd) {
-        say ("You tend what you can yourself. ");
-    }
-    if (unpaid) {
-        say ("There's no money for a physician. ");
-    }
-    wounds_say ();
 }
