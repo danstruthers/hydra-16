@@ -3296,6 +3296,8 @@ function dq0AnswerTest(baud) {
 const TORCHX = ['inventory', 'drop torch', 'take torch', 'inventory', 'wait 2 hours', 'light a new torch', 'take the spent torch from the ground', 'drop the spent torch',
   'drop the lit torch', 'take the spent torch from the floor', 'drop torch', 'take the lit torch', 'hold the tinderbox', 'take torch', 'inventory', 'douse the torch', 'light the torch',
   'inventory', 'take spent torch from backpack', 'put the rope in the backpack', 'put the tinderbox in the backpack', 'dip the spent torch in the oil', 'inventory'];   // (dq0torchwords' lines: the user's playtest, 2026-11-06)
+const LETSIGHT = ['drop j', 'drop c', 'drop b', 'look', 'around', 'take 5C', 'drop c', 'around', 'take 2C', 'drop rations', 'take torch from B', 'drop k',
+  'take D', 'around', 'inventory'];   // (dq0letsight's lines)
 const LETCMD = ['inventory', 'drop j', 'inventory', 'take torch', 'put j in b', 'inventory', 'take j from b', 'light j with a', 'drop 2c', 'look d',
   'drop', 'k', 'take off', 'look', 'drop the lit torch', 'inventory'];   // (dq0letcmd's lines)
 const LETTERX = [['inventory', 'drop the pick', 'inventory', 'take the pick', 'inventory', 'quit'],   // (dq0letters' lines: a game, carried on, the
@@ -7296,7 +7298,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' ').replace(/ # /g, ' ').replace(/ UP( \d+)?(?= )/g, '');   // (The status line's pieces, as it's drawn between a task's steps, out of the story)
+        const f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '').replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' ').replace(/ # /g, ' ').replace(/ UP( \d+)?(?= )/g, '');   // (The status line's pieces, as it's drawn between a task's steps, out of the story)
         this.notes = [s.slice(s.indexOf('> hold the sword')).slice(0, 1200), s.slice(-1200)];
         const after = (w, re, what) => { const i = s.indexOf(w); if (i < 0 || !re.test(s.slice(i))) f.push(what + ': ' + s.slice(i, i + 500)); };
         after('> dig north', /^> dig north( > dig north)? You look at the wall\. You sheathe the sword\. You sling the round shield\. You take off your backpack, and set it down at your feet\. You reach into the backpack\. You get out the pick\./, 'not its hands freed, each told, then the pick got out');
@@ -7792,6 +7794,47 @@ module.exports = {
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first);
           if (!/^(inventory|wait)/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0letsight', reach: true, near: ['gear', 'parser'], what: "Dingus Quest Zero's designators, step 3 (the user's design, 2026-11-06, DECISIONS.md's): a capital for each thing seen, given as it's first told, shown in the look's sentences and in the list of what's in sight (around, one a line with where it is); a capital where a thing's name goes (take D, take D from C), a count before it (take 5E: fewer there, told, the rest taken), a thing put down its old capital again; each first letter within the user's 720,000 cycles",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETSIGHT, 'quit', 'echo $status']) },
+      start(m) { this.timer = dq0Timer(m); },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
+        let at = 0;
+        for (const l of LETSIGHT) {
+          let i = o.indexOf('> ' + l + ' ', at);
+          if (i >= 0 && o.startsWith('> ' + l + ' ', i + l.length + 3)) i += l.length + 3;
+          const e = o.indexOf('> ', i + 2);
+          seg.push(i < 0 ? '' : o.slice(i + l.length + 3, e < 0 ? undefined : e));
+          if (i >= 0) at = i + 2;
+        }
+        this.notes = LETSIGHT.map((l, i) => l + ': ' + seg[i].slice(0, 400));
+        const said = (k, re, from = 0) => { const n = LETSIGHT.indexOf(k, from); if (!re.test(seg[n])) f.push(k + ': not ' + re + ': ' + seg[n].slice(0, 300)); };
+        said('look', /At your feet lie \(B\) a backpack, \(C\) 3 rations and \(D\) a torch\./);
+        said('look', /\(A\) some bones/);
+        said('around', /^\(B\) a backpack, at your feet \(C\) 3 rations, at your feet \(D\) a torch, at your feet \(A\) some bones, ahead to your right/);
+        said('take 5C', /There are only 3 there; you take them all\./);
+        said('drop c', /^You put down/, 6);                   // (Taken up, its letter again)
+        said('around', /\(C\) 3 rations, at your feet/, 6);  // (Put down again: its old capital)
+        said('take 2C', /You take 2 rations\./);
+        said('take torch from B', /torch/);
+        if (/You see no|none of those|hands are full/.test(seg[LETSIGHT.indexOf('take torch from B')])) f.push('take torch from B: not taken: ' + seg[LETSIGHT.indexOf('take torch from B')]);
+        said('take D', /Taken\./);
+        said('around', /\(E\) a torch, at your feet/, 12);  // (The spare put down: a capital of its own)
+        if (/\(D\)/.test(seg[LETSIGHT.indexOf('around', 12)])) f.push('the torch taken up still told in sight: ' + seg[LETSIGHT.indexOf('around', 12)]);
+        said('inventory', /\(j\) a torch, in your right hand/);
+        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETSIGHT],
+          LETSIGHT.map(l => ({ line: l, want: 'You|Taken|Put|There|(' })));
+        for (const r of tm) {
+          this.notes.push(r.line + ': first letter ' + r.first);
+          if (!/^(inventory|look|around)/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },
@@ -8465,7 +8508,7 @@ module.exports = {
         'close', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\([A-Z]{1,2}\) /g, '').replace(/\s+/g, ' '), f = [];
         inTurn(o, ['% dq0 -p t -s 4', '> open door Which door: 1. the door ahead to your right (open), 2. the one to your right (closed, barred), or 3. the one behind you to your right (closed)?',
           '> 3', 'You turn to face north.', 'You open the door, revealing a passage, 15 feet of it.', '> look You are on the right side of a long, narrow bedchamber',
           'There is a door ahead (open), one to your left (open) and one ahead to your left (closed, barred).', '> take the bar',
@@ -8494,7 +8537,7 @@ module.exports = {
         'search for traps as I go', 'stop searching', 'run north', 'run south', 'help', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\([A-Z]{1,2}\) /g, '').replace(/\s+/g, ' '), f = [];
         inTurn(o, ['> walk to the door behind me', 'You head for the door.', '> i', 'You carry: (a) a torch (lit), in your left hand (b) a backpack, worn (c) 3 rations (d) a tinderbox (k) a basket (l) a heap of sand',
           '(q) a sword (r) a torch (s) a flask of oil (e) a belt, worn (f) a pouch (g) 12 pennies (h) a dagger (i) a waterskin (empty) (j) a table, in both hands In all, 60 lb.', '> drop table', 'You put down the table.',
           '> put the candle on the table', 'You put the candle on the table.', '> look', 'At your feet lies a table. On the table lies a candle.',
@@ -10313,7 +10356,7 @@ module.exports = {
         const c1 = a && near(a), t1 = c1 && torchIn(a, c1);
         if (!a || !a.sight || !a.sight.lit) f.push('seed 527: the kept room not lit: ' + JSON.stringify(a && a.sight && { lit: a.sight.lit, dark: a.sight.dark }));
         if (!c1 || !t1 || (t1.flags & (LIT | TENDED)) !== (LIT | TENDED)) f.push('seed 527: the room\'s sconce\'s torch not lit and tended: ' + JSON.stringify(t1));
-        const story = dq0Story(out), w1 = story.indexOf('lit by smoky tallow lamps'), w2 = story.indexOf('is a sconce, a lit torch in it.');
+        const story = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, ''), w1 = story.indexOf('lit by smoky tallow lamps'), w2 = story.indexOf('is a sconce, a lit torch in it.');
         if (w1 < 0 || w2 < 0) f.push('seed 527: the kept room\'s words: ' + JSON.stringify(story.slice(story.indexOf('Type help'), story.indexOf('Type help') + 600)));
         const tk = T.of('take the torch from the sconce'), b = tk.after;
         if (!b || !b.sight || b.sight.lit || !c1 || roomLit(b, c1) !== 0) f.push('seed 527: the torch taken, the room still lit: ' + JSON.stringify(b && b.sight && b.sight.lit) + ' ' + (c1 && b ? roomLit(b, c1) : ''));
@@ -10362,7 +10405,7 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm', 'look into the well', 'look in the pot', 'open the pot', 'look in the pot', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '');
         const IS_CLOSED = 1, IS_LOCK = 4;               // (items.h's IS_*)
         const thing = (st, n) => st && (dq0Carried(st).find(i => i.name === n) || st.items.find(i => i.name === n && i.sn === st.pc.sn));
         const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -k \'table,chisel,chisel,sack,chest,iron pot\'');
@@ -11357,7 +11400,7 @@ module.exports = {
         inTurn(s, ['> i', 'two sacks', '> put the sack in the sack', 'You put the sack in the sack.', '> put the first sack in the second sack',
           'You put the sack in the sack.', '> put the sack in the other sack', 'You put the sack in the sack.', '> drop two of the sacks',
           'You put down two sacks.', '> take both sacks', 'You take two sacks.', '> drop 2 rations', 'You put down 2 rations.', '> take 4 rations',
-          'There are only 2 rations. You take 2 rations.', '> drop half the rations', 'You put down a ration.', '> put 2 rations in the sack',
+          'There are only 2 there; you take both.', '> drop half the rations', 'You put down a ration.', '> put 2 rations in the sack',
           'You put the 2 rations in the sack.', '> drop all the sacks', 'You put down', 'sacks.', '> take all the sacks', 'You take', 'sacks.',
           '> drop the unlit torch', 'You reach for your backpack.', 'Put down.'], f, 'the words: ');
         if (/won't go inside itself/.test(s)) f.push('a sack put in itself');
@@ -11862,7 +11905,7 @@ module.exports = {
         dq0Poke(m, [rec(1), rec(2), { g: 2, line: 'd', n: 1, call: goto_head }, { g: 3, line: 'look', n: 2, call: () => { const h = m.dq0.bank(0), [A,B] = require('../sim/lib/hubown.js').evaluate(['offsetof (struct hub, tb.nsky)', 'offsetof (struct hub, tb.sun)']); m.dbg = [h[A], h[B]]; } }, rec(5), { g: 6, line: 'u', n: 1, call: roof(8) }]);
       },
       check(m, out) {
-        const f = [], G = dq0Story(out).split('enters the dungeon'), ok = (g, re, what) => { if (!re.test(G[g] || '')) f.push(what); };
+        const f = [], G = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '').split('enters the dungeon'), ok = (g, re, what) => { if (!re.test(G[g] || '')) f.push(what); };
         const sk = m.sky || {}, sky = (r, kind) => r && r.links.find(l => l.kind === kind && l.dug === 2);
         if (!sk[1] || sky(sk[1][0], 5)) f.push('seed 1 with a shaft: ' + JSON.stringify(sk[1]));
         const up = sk[2] && sky(sk[2][0], 5), dn = sk[2] && sky(sk[2][0], 6);
@@ -12598,7 +12641,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), T = dq0Turns(m);
+        const f = [], o = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '').replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), T = dq0Turns(m);
         this.notes = [o.slice(o.indexOf('> dig north')).slice(0, 900)];
         if (!/You lay the torch on the ground, still burning\./.test(o)) f.push('the torch in hand not laid down lit');
         if (!/You get out the hammer\./.test(o)) f.push('the hammer not got out');   // (dq0 -k's chisel in hand already)

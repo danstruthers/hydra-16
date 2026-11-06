@@ -438,6 +438,10 @@ const char* __fastcall__ des_map (const char* w, unsigned char k);   /* (Overlay
 unsigned char __fastcall__ des_find (const char* w, unsigned char k);   /* (Overlay 22's) The first of the line's letters from ldes[k] on
                                                 **   that named a thing by word w: its place plus 1, or 0 */
 #define des_is(w)   des_find ((w), 0)
+extern char capb[6];
+const char* __fastcall__ cap_of (unsigned char i);  /* (Overlay 22's) Thing i in sight's capital, "(C) " (capb), for the
+                                                **   look's words: given as it's first told; "" none */
+void around (void);                             /* (Overlay 22's) What's in sight listed, its capitals ("around") */
 unsigned char __fastcall__ des_low (const char* w);   /* (Overlay 22's) A lower case's word, its thing carried, for a thing done with:
                                                 **   1 (resolve.c's tool_ok: to hand) */
 void __fastcall__ letters_in (char* l);         /* (Overlay 22's) The line's letters made its things' names, as it's posted */

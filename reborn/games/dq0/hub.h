@@ -1659,6 +1659,7 @@ struct ucap {
     unsigned        id;                         /* The thing's id (0: the capital free) */
     unsigned char   what;                       /* CW_*: a thing's; a denizen's (the plan's step 4: its id the
                                                 **   denizen's, its did) */
+    unsigned char   kind;                       /* Its kind (the catalogue's: a capital typed made its name) */
     unsigned        t;                          /* When it was last told or named (the clock's minutes: the longest
                                                 **   ago given up first) */
 };

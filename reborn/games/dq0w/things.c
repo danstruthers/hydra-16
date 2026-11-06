@@ -77,7 +77,7 @@ void __fastcall__ look_on (unsigned n);         /* Part 39 */
 unsigned char __fastcall__ describe (const char* name);    /* Part 40 */
 unsigned __fastcall__ shut_in (unsigned n);     /* Part 35 */
 unsigned __fastcall__ s_shut_in (unsigned n);
-void __fastcall__ many (char* b, unsigned n, unsigned char k);    /* Part 35 */
+void __fastcall__ many (char* b, unsigned n, unsigned char k);    /* Part 103 */
 void __fastcall__ s_many (char* b, unsigned n, unsigned char k);  /*   (its own, there) */
 unsigned char bar_hand (void);                  /* Part 35 */
 unsigned char __fastcall__ hold_in (unsigned n, unsigned char want);    /* Part 48 */
@@ -3044,6 +3044,11 @@ unsigned char __fastcall__ s_moved (unsigned char op)
         }
         join (n);
         ++times;
+        if (*iq.name == '#' && !(kind_of (kind)->form & KF_COUNT)) {
+            strcpy (iq.name, kind_of (kind)->name);   /* (A thing named by its letter, a count of it: the rest of those
+                                                **   alike by its kind's name; a lot's count its own alone, the user's
+                                                **   designators, 2026-11-06) */
+        }
         if (op == IO_STOW || op == IO_PUT) {
             win = cont;                         /* (The next not one put there already) */
         }
@@ -3056,9 +3061,15 @@ unsigned char __fastcall__ s_moved (unsigned char op)
     rs_ok &= 3;
     if (r == IR_OK && (iq.count || times > 1)) {
         text_new ();                            /* (Their words by the count: "You take 4 rations.") */
-        s_many (b, got, kind);
+        many (b, got, kind);
         if (want != 0xFFFF && got < want && !away) {
             put (op == IO_DROP ? "You have only " : got == 1 ? "There is only " : "There are only ");
+            if (op <= IO_DROP || op == IO_TAKE) {   /* ("There are only 2 there; you take both.", the user's, 2026-11-06) */
+                put (got == 1 ? "one" : utoa (got, b, 10));
+                put (op == IO_DROP ? "; you put down " : " there; you take ");
+                put (got == 1 ? "it." : got == 2 ? "both." : "them all.");
+                return r;
+            }
             put (b);
             put (". ");
         }
@@ -3080,7 +3091,10 @@ unsigned char __fastcall__ s_moved (unsigned char op)
 }
 
 /* How many of kind k, in words, into b: "a sack", "two sacks", "12 sacks"; a lot counted (KF_COUNT), its count in
-** digits, "4 rations"; one of a lot, "a ration", "a penny" (part 35's: the main RAM's room; part 11's through its stub) */
+** digits, "4 rations"; one of a lot, "a ration", "a penny" (part 103's since 2026-11-06, part 35's room: through its
+** stub; an inventory's alike the quicker, part 103 the smaller to swap in) */
+#pragma code-name (push, "SW103CODE")
+#pragma rodata-name (push, "SW103RODATA")
 void __fastcall__ s_many (char* b, unsigned n, unsigned char k)
 {
     static const char* const few[11] = { "no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
@@ -3117,6 +3131,8 @@ void __fastcall__ s_many (char* b, unsigned n, unsigned char k)
     }
     strcat (b, p->name + i);
 }
+#pragma rodata-name (pop)
+#pragma code-name (pop)
 
 /* (Part 16's: I_TAKE's walk over to a thing, a count taken up as it gets there: the request as it was, its count;
 ** wgame.c's take_up) */

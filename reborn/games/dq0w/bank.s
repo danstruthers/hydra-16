@@ -200,7 +200,7 @@ go:
             SWPART      100, 9              ; A light renewed (things.c: part 27's till 2026-11-04)
             SWPART      101, 15              ; A thing hidden, the hands swapped (things.c: parts 13's and 48's till 2026-11-04)
             SWPART      102, 24              ; A thing told apart, what it carries for the UI (things.c, 2026-11-06)
-            SWPART      103, 18              ; What it carries listed: gathered first (things.c, 2026-11-06: part 11's room)
+            SWPART      103, 3               ; What it carries listed: gathered first (things.c, 2026-11-06: part 11's room)
 
             SWFN        time_kept, 99
             SWFN        sky_note, 76
@@ -347,7 +347,7 @@ go:
             SWFN        kit_lock, 61
             SWFN        gear_words, 62
             SWFN        listed, 11
-            SWFN        many, 35
+            SWFN        many, 103
             SWFN        hide, 101
             SWFN        door_work, 12
             SWFN        batter_on, 12

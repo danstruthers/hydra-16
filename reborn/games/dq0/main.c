@@ -3217,6 +3217,10 @@ int main (int argc, char* argv[])
                                                 **   door", walking plainly: nothing to change, three parts' swaps and a
                                                 **   word with the world spared, the user's D17) */
             }
+            if (k == NL_NONE && !strcmp (l, "around")) {
+                around ();                      /* (What's in sight listed, its capitals: letters.c's) */
+                k = NL_DONE;
+            }
             if (k == NL_NONE && names_n && (f & NI_THING) && (t = names_subst (l)) != 0) {
                 to_hand ();                     /* (The things' names in it made theirs, "#" and the id; a weapon
                                                 **   named taken in hand to strike with: its time, as after ()'s) */

@@ -881,7 +881,7 @@ world's answer follows.  The word is said before the world's asked, and holds wh
   brackets, "(a) a torch (lit), in your right hand", "(c) a backpack, worn"; what's in a thing under it, indented two
   spaces a level, "  (d) a torch (spent)"; things alike told together under the first one's letter with their count, "(g)
   two torches" (each has its own letter all the same: the others' shown as they're told apart), a lot counted one thing,
-  "(f) 3 rations"; the burden line after it ("In all, 11 lb.", "You're a little burdened.").  Not a light's minutes left
+  "(f) 3 rations"; the burden line after it ("In all, 11 lb.", "You're a little burdened.").  *(New, for review:)* not a light's minutes left
   ("(lit, 40 minutes left)": the status line has its light's), nor four spaces a level: the list's letters are its time at
   the console's pace (some 1,300 cycles each), and the answer after an inventory at the turns pace's wait 0 came late
   with them (dq0answer's examine, 665,000 cycles of its 640,000).
@@ -896,6 +896,18 @@ world's answer follows.  The word is said before the world's asked, and holds wh
   the letters of those it can be done to, in their order: "Drop what? [a, b, d]" (dropped, any; held or wielded, one not in
   hand; worn, a thing that's worn, not worn now; taken off, one worn; put away, one in hand).  A letter alone answers it
   ("d": drop d); any other line lets it go, a command of its own.  (Before, "drop" alone dropped the last thing named.)
+- **A capital for each thing seen** (the user's: "capital letters for in-the-environment things ... designators only for
+  seen items or creatures"): A ... Z, then AA ... AZ, given as each thing is first told (the look's sentences, the list of
+  what's in sight), kept while it's remembered: given up only when a new one's wanted and none is free, the one told
+  longest ago, some ten minutes ago at least, not in sight now.  A thing put down again has its own back.  Shown in the
+  look ("At your feet lie (B) a backpack, (C) 3 rations and (D) a torch."), and in "around" (the user's "a list of all in
+  sight"; its name for now): one a line with where it is, "(C) 3 rations, at your feet", "(A) some bones, ahead to your
+  right, 10 feet away", "(E) a candle, on the table"; one too far off to make out has its capital too ("(F) something
+  small").  The denizens (the plan's step 4) take theirs from the same capitals, given before the things' in a look.
+- **A capital where a thing's name goes**: "take D", "take D from C", "take 5C" (its count): fewer there than asked, told
+  and the rest taken ("There are only 3 there; you take them all.", "...; you take both.", "There is only one there; you
+  take it."), as for a count of any name ("take 5 rations"); put down, "You have only 2; you put down both."  A count by
+  the letter of one of several alike (not a lot) takes that one, then others of its kind, the most to hand.
 
 ## Characters *(hmchar: HarnMaster's character generator)*
 

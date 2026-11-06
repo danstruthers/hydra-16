@@ -160,6 +160,8 @@ ovl_out:
             OVFN        des_find, 22        ; (A word a letter made: letters.c)
             OVFN        des_low, 22
             OVFN        des_map, 22
+            OVFN        cap_of, 22          ; (A thing in sight's capital, the look's: letters.c)
+            OVFN        around, 22          ; (What's in sight listed: letters.c)
             OVFN        dots, 3            ; (The game's start's progress: main.c's)
 
 ; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)

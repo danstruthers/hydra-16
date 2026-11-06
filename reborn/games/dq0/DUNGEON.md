@@ -725,7 +725,12 @@ name goes names that thing (letters.c, overlay 22's, its own: the line's letters
 by the records' ids, part 4's pick; the resolver's question of several not asked of it; its first words its own, sway.c's
 des_e; a tool named by its letter to hand without the world asked): the grammar the same, the letters never the
 parser's.  A command with nothing named of those done to a thing carried asks with their letters ("Drop what? [a, b,
-d]", o_what_ask), a letter answering it.
+d]", o_what_ask), a letter answering it.  A capital for each thing
+seen, A ... Z then AA ... AZ (the UI bank's cap: its id, its kind, when last told: letters.c's cap_give), given as it's
+first told (seen.c's one, o_cap_of; "around", o_around, one a line with where it is), kept while remembered, given up
+only as a new one's wanted and none is free, the one told longest ago that isn't in sight; typed, it names its thing as a
+letter does (the catalogue's name of its kind; "take 5C" its count, part 35's: fewer there told, "There are only 3
+there; you take them all."; by the letter of one of several alike, the rest by its kind's name).
 
 **Reach, and things used up** (2026-10-26, the user's: "Handy would be readily available, so in a backpack that is
 being worn is not as readily available as one in a belt pouch"; HOUSE.md's reach, handy tools and things used up):
