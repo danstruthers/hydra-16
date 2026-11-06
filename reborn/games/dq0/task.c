@@ -174,8 +174,11 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     }
     switch (k) {
     case TE_BODY:                               /* (What time did to its body: the referee's words, part 12's; 8 dead
-                                                **   of it, slice 4.3's) */
-        return body_words ();
+                                                **   of it, slice 4.3's; then a robbery at rest, as it's up: robbed's) */
+        if (!(p = body_words ())) {
+            robbed (0, 0);
+        }
+        return p;
     case TE_STOPPED:
     case TE_HIT:
     case TE_NEAR:
@@ -284,8 +287,9 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         strcpy (t, fn);
         sayf (fetched[(n >> 4) & 7], foe (n & 15, 1), t);
         break;
-    case TE_ROBBED:                             /* (Helpless, robbed: a robber's way, the denizens') */
-        sayf ("\n%s goes through your things as you lie helpless, and takes what it finds.", foe (named, 1));
+    case TE_ROBBED:                             /* (Helpless, robbed: a robber's way, the denizens'.  At rest, 2026-11-06:
+                                                **   caught at it, or its coins taken unawares: overlay 15's robbed) */
+        robbed (w, (char*) foe (named, 0));
         break;
     case TE_PACKED:                             /* (The reach's: part 19's) */
     case TE_FUMBLE:
@@ -1037,3 +1041,46 @@ void __fastcall__ o_time_said (unsigned w, unsigned char b)
 #pragma rodata-name (pop)
 #pragma data-name (pop)
 #pragma bss-name (pop)
+
+/* ---- A robbery's words (E_TASK's TE_ROBBED, task_words': overlay 15's, overlay 3's room), who its robber as it's said
+** ("the bandit", "something" unseen), w its how (the world's: RB_* in its high byte).  Helpless, robbed; at rest (a rest's
+** or a sleep's), caught at it, or its coins taken unawares, told as it's up (who 0: E_READY's TE_BODY, news_due's 2, its
+** long task over), 2026-11-06 (HOUSE.md's robbers at a rest) */
+#pragma code-name (push, "OV15CODE")
+#pragma rodata-name (push, "OV15RODATA")
+#pragma local-strings (push, on)
+
+static unsigned char pursed;                    /* (Its coins taken as it lay, not told yet) */
+
+void __fastcall__ o_robbed (unsigned w, char* who)
+{
+    unsigned char p = w >> 8;
+
+    if (!who) {
+        if (pursed) {
+            hub_mem (0, &p, &HUB->pc_task.kind, 1);
+            if (p) {
+                news_due |= 2;                  /* (At rest still: as it's up) */
+                return;
+            }
+            pursed = 0;
+            msg ("You find your coins gone: someone robbed you as you lay.");
+        }
+        return;
+    }
+    if (p & RB_CAUGHT) {
+        sayf (p & RB_ASLEEP ? "\nYou wake to find %s at your purse!" : "\nYou catch %s at your purse!", who);
+    } else if (p & RB_PURSE) {
+        pursed = 1;
+        news_due |= 2;
+    } else {
+        if (who[0] >= 'a') {
+            who[0] -= 'a' - 'A';
+        }
+        sayf ("\n%s goes through your things as you lie helpless, and takes what it finds.", who);
+    }
+}
+
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)

@@ -3210,14 +3210,16 @@ function dq0AskHeldTest() {
 // 136 on the tree before it: "hung" after "rest", none hung: robbers lying in wait a second at a time, or a hunter stuck on a scent
 // asking each second, 93,000 and 440,000 cycles a time, kept the rest to ten-second slices, 4.9G cycles of it, 23 minutes on the
 // board).  At the turns pace (a long wait's the same at the real paces), dq0lurk's bandits about in the dark: its cycles a minute
-// of game time within budget
+// of game time within budget.  Since 2026-11-06 (the user's: robbers come and rob a resting character) none lies in wait for one
+// at rest, and those that reach it rob it: the scene a sleep, the character's Awareness 5, so one robs it unawares and it sleeps
+// on, the rest of the band about it (an awake rest's seen them coming in the cell's light, and stopped, a third of a minute in)
 function dq0RestBusyTest() {
   const MAX = 3400000;   // (Cycles a game minute of the rest: 1.63M or 2.87M now, by the power-up; more than 16M before, a game not over in 8,000M)
-  const lines = ['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
-    'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'douse the torch', 'wait', 'wait', 'wait', 'rest', 'quit', 'echo $status'];
+  const lines = ['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml awa 5 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
+    'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'douse the torch', 'wait', 'wait', 'wait', 'sleep', 'quit', 'echo $status'];
   return {
     name: 'dq0restbusy', near: ['time', 'denizens'], initiative: true,
-    what: 'Dingus Quest Zero\'s long rest with hostile folk about that lie in wait or can\'t reach it (seeds 326 and 136 of the fight soak, the delays\' round): robbers hidden in the dark as an eight-hour rest goes: thirty times the while between their decisions, its cycles a game minute within budget',
+    what: 'Dingus Quest Zero\'s long rest with hostile folk about that lie in wait or can\'t reach it (seeds 326 and 136 of the fight soak, the delays\' round): robbers about in the dark as an eight-hour sleep goes (since 2026-11-06 one comes and robs it unawares, and it sleeps on): thirty times the while between their decisions, its cycles a game minute within budget',
     init: 't_rc', cycles: 3000e6,
     machine: { input: lines.map(l => '\u0101' + l + '\r').join('') },
     expect: ['% echo $status'],
@@ -3229,7 +3231,7 @@ function dq0RestBusyTest() {
           const ch = a.rx;
           if (ch === 13) {
             const h = m.dq0 && m.dq0.bank && m.dq0.bank(0);
-            if (h && h[0] === 0x44) { const { L } = m.dq0.layout(), now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16; if (cur === 'rest') { R.t0 = cpu.cyc; R.n0 = now; } if (cur === 'quit') { R.t1 = cpu.cyc; R.n1 = now; } }
+            if (h && h[0] === 0x44) { const { L } = m.dq0.layout(), now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16; if (cur === 'sleep') { R.t0 = cpu.cyc; R.n0 = now; } if (cur === 'quit') { R.t1 = cpu.cyc; R.n1 = now; } }
             cur = '';
           } else if (ch >= 32 && ch < 127) cur += String.fromCharCode(ch);
         }
@@ -6573,6 +6575,91 @@ module.exports = {
       check(m, out) {
         const f = [];
         if (!m.lurked.some(v => v > 1)) f.push('no bandit hid: ' + [...new Set(m.lurked)].join(',') + ' ' + dq0Story(out).slice(-700));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0lurkrest', initiative: true, near: ['denizens', 'time'], what: 'Dingus Quest Zero\'s robbers lying in wait for a character that lies down to rest (the user\'s, 2026-11-06: "robbers should come and rob a resting character"; HOUSE.md\'s those that want it, as it rests, for review): dq0lurk\'s bandits about in the dark, one hidden as the character waits; the character rests for an hour: the hidden one comes out at once and comes on (before, its two minutes up, it hid again at its next turn, a whole night by a resting character: dq0restbusy\'s scene), none hidden as the rest goes, the rest stopped as the character sees it coming in the cell\'s light',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g", 'douse the torch', ...Array(12).fill('wait'), 'rest for an hour', 'inventory', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {
+        const R = this.R = { hid: [], during: [] }, a = m.acia, cpu = m.cpu;
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 12, call: (h, L, K, at) => { for (let k = 0; k < L.nactors; k++) R.hid.push(h[at(k) + L.aState]); } }]);
+        const read = a.read;
+        let cur = '', on = false, next = 0, n0 = -1;
+        a.read = (r, c) => {
+          const h = m.dq0 && m.dq0.bank && m.dq0.bank(0);
+          if (r === 0 && a.rdrf) {
+            const ch = a.rx;
+            if (ch === 13) { on = cur === 'rest for an hour'; n0 = -1; cur = ''; }
+            else if (ch >= 32 && ch < 127) cur += String.fromCharCode(ch);
+          }
+          if (on && h && h[0] === 0x44 && cpu.cyc >= next) {      // (Its actors' states as the rest goes, its game time with them)
+            next = cpu.cyc + 2e6;
+            const { L } = m.dq0.layout(), now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16;
+            if (n0 < 0) n0 = now;
+            for (let k = 0; k < L.nactors; k++) if (h[L.actor + k * L.actorSize + L.aState]) R.during.push({ k, t: now - n0, state: h[L.actor + k * L.actorSize + L.aState] });
+          }
+          return read(r, c);
+        };
+      },
+      check(m, out) {
+        const T = dq0Turns(m), f = [], R = this.R, s = dq0Story(out), rt = T.of('rest for an hour');
+        if (!R.hid.some(v => v > 1)) return ['no bandit hidden before the rest: ' + [...new Set(R.hid)].join(',')];
+        if (!R.during.length) f.push('the rest not watched');
+        const late = R.during.filter(e => e.t > 300 && e.state > 1);     // (Thirty seconds on: its next turn's come)
+        if (late.length) f.push('a bandit hidden as the character rests: ' + JSON.stringify(late.slice(0, 4)));
+        if (!/You settle down to rest for an hour\.[\s\S]*bandit[^.]*coming towards[\s\S]*You stop waiting\./.test(s)) f.push('not seen coming, the rest not stopped: ' + JSON.stringify(s.slice(s.indexOf('> rest for an hour'), s.indexOf('> inventory'))));
+        if (!dq0Ev(rt, 'E_TASK', {}).length) f.push('no E_TASK in the rest');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0robrest', initiative: true, near: ['denizens', 'time'], what: 'Dingus Quest Zero\'s robbers at a sleeper (the user\'s, 2026-11-06: "robbers should come and rob a resting character"; HOUSE.md\'s those that want it, as it rests, for review): a lair of hostile bandits about, the character asleep in the dark: at seed 1 a bandit comes to it and robs it as it lies, unnoticed (the book\'s Legerdemain, its Stealth, against the character\'s Awareness at half asleep: the referee\'s test of it in the minds\' slot, its steps the fewer by half its mastery), its coins alone taken (E_TASK TE_ROBBED, RB_PURSE), the sleep going on, told as it\'s up ("You find your coins gone: someone robbed you as you lay."); at seed 4 one caught at it, nothing taken (no robbery unawares), the sleep stopped ("You wake to find something at your purse!", RB_CAUGHT)',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g", 'douse the torch', 'sleep', 'inventory', 'quit', 'mkdir /ram/h', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/h/theme.txt",
+        "dq0 -p t -s 4 -c /ram/c.hm -T -d /ram/h", 'douse the torch', 'sleep', 'quit', 'echo $status']) },   // (A folder of its own: the first's a life gone on
+                                                // with, its coins gone; quit as it's asked, the fight with the robber not fought)
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], RS_TEST = 4, STEALTH = 4, SOUND = 1, A = dq0Answers(out).filter(a => a.cmd === 'inventory');
+        const gs = T.filter(t => /^dq0 -p t/.test(t.line)), sl = gs.map(g => T.of('sleep', g.k));
+        if (sl.length !== 2 || sl.some(t => t.k < 0) || A.length !== 1) return ['the games not played'];
+        const robs = sl.map(t => [...dq0Ev(t, 'E_TASK', { te: 'TE_ROBBED' }), ...dq0Ev(T[t.k + 1] || t, 'E_TASK', { te: 'TE_ROBBED' })]);
+        const tests = t => ({ them: dq0Rep(t, 'dslot', { kind: RS_TEST, a: STEALTH, actor: v => v > 0, other: v => v !== 0 }), it: dq0Rep(t, 'dslot', { kind: RS_TEST, a: SOUND, actor: 0 }),
+          stalk: dq0Rep(t, 'dslot', { kind: RS_TEST, a: STEALTH, actor: v => v > 0, other: 0 }) });   // (Its sleight of hand, the asker's dice; its stalk, its own)
+        const t0 = tests(sl[0]), t1 = tests(sl[1]), s = dq0Story(out);
+        if (robs[0].length !== 1 || !robs[0][0].purse || robs[0][0].caught || !robs[0][0].asleep) f.push('seed 1: not robbed once unawares as it slept: ' + JSON.stringify(robs[0]));
+        if (!t0.it.length || !t0.them.length) f.push('seed 1: no Legerdemain against its Awareness: ' + t0.them.length + ' and ' + t0.it.length + ' tests');
+        else if (!(t0.it[t0.it.length - 1].steps < 0)) f.push('seed 1: its Awareness asleep not at half: ' + JSON.stringify(t0.it));
+        if (!t0.stalk.length) f.push('seed 1: the robber came at the sleeper not stalking it (no Stealth tested as it began)');
+        if (!/You find your coins gone: someone robbed you as you lay\./.test(s)) f.push('seed 1: the robbery not told as it\'s up');
+        if (/penn/.test(A[0].text)) f.push('seed 1: its pennies not taken: ' + A[0].text);
+        if (!robs[1].length || !robs[1][0].caught || !robs[1][0].asleep || robs[1].some(e => e.purse && !e.caught)) f.push('seed 4: not caught at it as it slept: ' + JSON.stringify(robs[1]));   // (Then the fight; helpless in it, robbed as one is)
+        if (!/You wake to find something at your purse!/.test(s)) f.push('seed 4: the robber caught not told');
+        if (t1.it.length && t1.them.length && !(t1.it[t1.it.length - 1].grade > t1.them[t1.them.length - 1].grade)) f.push('seed 4: caught by the lesser level');
+        if (!/at your purse![\s\S]*You stop sleeping\./.test(s)) f.push('seed 4: the sleep not stopped');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0killrest', initiative: true, near: ['denizens', 'time'], what: 'Dingus Quest Zero\'s killers at a sleeper (HOUSE.md\'s those that want it, as it rests, for review, 2026-11-06): a hand-written theme\'s hostile cultists (killers, kinds.txt\'s k), the character asleep in the dark at seed 1: one comes on and strikes the sleeper as its kind\'s rule says, not standing off, the blow with no defence (the book\'s Ignore, RS_ASLEEP)',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Foes | cultist | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g", 'douse the torch', 'sleep', 'echo $status']) },   // (Dead of it: the game over)
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], RS_ATTACK = 7, sl = T.of('sleep'), s = dq0Story(out);
+        if (sl.k < 0) return ['the game not played'];
+        const all = [sl, ...T.filter(t => t.k > sl.k)];
+        if (!all.some(t => dq0Rep(t, 'slot0', { kind: RS_ATTACK, w2: v => v & 0x80 }).length)) f.push('no blow at the sleeper with no defence (RS_ASLEEP)');
+        if (!/You settle down to sleep for eight hours\.[\s\S]*strikes at you/.test(s)) f.push('the sleeper not struck: ' + JSON.stringify(s.slice(s.indexOf('> sleep'), s.indexOf('> sleep') + 400)));
         return f;
       },
       sdcard: true
@@ -13128,6 +13215,98 @@ module.exports = {
         const bow = sect('BOW'), nobow = sect('NOBOW');
         if (!/You buy [^.]*arrows/.test(bow)) f.push('the scene not set: arrows not bought with the bow kept: ' + bow.slice(-600));
         if (/arrows/.test(nobow.slice(nobow.indexOf('days pass')))) f.push('arrows bought with nothing to shoot them: ' + nobow.slice(-600));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0why', near: ['theme', 'save', 'money'], what: "Dingus Quest Zero's why you came (the plan's step 7: themegen's goals.txt why lines, dq0acct's quest.c; DUNGEON.md's why you came, HOUSE.md's), by scenes: themegen's three rumours (-r) the same for the same seed and another for another, each a place and a reason of a goal kind of its own; at seed 70000 (an artifact) the reason told in the story where \"you came down to try\" was (its patron, the theme's why line), the cup to hand (dq0 -k) and walked out solved; carried on, the patron's reward told as it comes into town (the theme's reward line's words and pennies), its standing in the life's record and told after the account, and the three rumours heard in town, the life's seed's, the first followed (the tests' dq0auto): the next dungeon's region and reason the rumour's (quest.txt in its folder, themegen's part-written theme), its patron in its story; the same life again, the second rumour typed: its region and reason; and the two goal kinds only heard of played through, each by a why line given (dq0 -t), its thing to hand and walked out solved: lore (a codex: carried on, its scholar pays) and a scourge (the kobolds' chief's war standard, in the hills given); and each passing the theme checker at seeds 1-3",
+      init: 't_rc', cycles: 9000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'themegen -q -r 3 -s 12345 -o /ram/q', 'themegen -q -r 3 -s 12345 -o /ram/r', 'cmp /ram/q/rumours.txt /ram/r/rumours.txt', 'echo same $status',
+        'themegen -q -r 3 -s 12346 -o /ram/r', 'cmp /ram/q/rumours.txt /ram/r/rumours.txt', 'echo other $status', 'cat /ram/q/rumours.txt', 'rm -r /ram/q', 'rm -r /ram/r',
+        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/b', 'u', 'echo =NEXT',
+        'dq0 -p t -d /ram/b', 'quit', 'cat /ram/b/d1/theme.txt', 'cat /ram/b/rumours.txt', 'cat /ram/b/d2/quest.txt', 'cat /ram/b/d2/theme.txt', 'xd /ram/b/life.dat', 'rm -r /ram/b',
+        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/e', 'u', 'dq0auto=()', 'echo =SECOND', 'dq0 -p t -d /ram/e', '2', 'quit', 'dq0auto=1',
+        'cat /ram/e/rumours.txt', 'cat /ram/e/d2/quest.txt', 'cat /ram/e/d2/theme.txt', 'rm -r /ram/e',
+        "echo 'why      | lore | scholar | Haldan' > /ram/l.txt",
+        "echo 'why      | scourge | reeve | Osric' > /ram/s.txt", "echo 'region   | the Grey Fells | hills | granite | springs | cold' >> /ram/s.txt",
+        'echo =LORE', 'dq0 -p t -s 70000 -c /ram/c.hm -t /ram/l.txt -k codex -d /ram/l', 'u', 'xd /ram/l/d1/game.dat', 'cat /ram/l/d1/theme.txt', 'dq0 -p t -d /ram/l', 'quit', 'rm -r /ram/l',
+        'echo =SCOURGE', 'dq0 -p t -s 70000 -c /ram/c.hm -t /ram/s.txt -k \'war standard\' -d /ram/s', 'u', 'xd /ram/s/d1/game.dat', 'cat /ram/s/d1/theme.txt', 'rm -r /ram/s',
+        ...[1, 2, 3].flatMap(s => ['themegen -q -s ' + s + ' -t /ram/l.txt -o /ram/x', 'echo lore ' + s + ' st $status', 'grep goal /ram/x/theme.txt',
+          'themegen -q -s ' + s + ' -t /ram/s.txt -o /ram/x', 'echo scourge ' + s + ' st $status', 'grep goal /ram/x/theme.txt']),
+        'echo done']) },
+      expect: ['% echo done'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\r/g, ''), f = [], words = s => s.replace(/\s+/g, ' ').trim();
+        const lines = text => DQ0_MAKE().lines(text, 'theme');                          // (A theme's lines, the format's)
+        const key = (text, k) => lines(text).filter(l => l.key === k);
+        const blocks = text => {                                                        // (Rumours: each a rumour line, then its region and why)
+          const out = [];
+          for (const l of lines(text)) { if (l.key === 'rumour') out.push({ said: l.v[0] }); else if (out.length) out[out.length - 1][l.key] = l.v; }
+          return out;
+        };
+        const between = (a, b) => { const i = o.indexOf(a), j = i < 0 ? -1 : o.indexOf(b, i + a.length); return i < 0 ? '' : o.slice(i, j < 0 ? undefined : j); };
+        // (Rumours by seed)
+        if (!/% echo same \$status\nsame *\n/.test(o)) f.push('the same seed\'s rumours not the same');
+        if (/% echo other \$status\nother *\n/.test(o)) f.push('another seed\'s rumours the same');
+        const R = blocks(saidTheme(out, 'cat /ram/q/rumours.txt'));
+        if (R.length !== 3) f.push(R.length + ' rumours made, not three');
+        if (new Set(R.map(r => r.why && r.why[0])).size !== R.length) f.push('two rumours of one goal kind: ' + R.map(r => r.why && r.why[0]).join(' '));
+        for (const r of R) {
+          if (!r.region || r.region.length !== 5 || !r.why || r.why.length !== 3) f.push('a rumour without its region or why: ' + JSON.stringify(r));
+          if (/%/.test(r.said) || !r.region || !r.said.includes(r.region[0])) f.push('a rumour\'s words without its place, or a slot unfilled: ' + r.said);
+        }
+        // (Seed 70000: the reason told, the reward and the standing, the rumours, the first followed)
+        const t1 = saidTheme(out, 'cat /ram/b/d1/theme.txt'), why1 = key(t1, 'why')[0], rw1 = key(t1, 'reward')[0];
+        if (!why1 || !rw1) return f.concat(['seed 70000\'s theme without its why or reward line']);
+        const story1 = words(between('% dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/b', 'enters the dungeon'));
+        if (!story1.includes(why1.v[2] + ', a collector of old things, has promised good money for the Cup of')) f.push('the reason not told in the story: ' + story1.slice(-300));
+        if (/came down to try|came down to find it/.test(story1)) f.push('"you came down to ..." still told');
+        try { DQ0_MAKE().compile(t1, 'theme.txt', DQ0_BEASTS(), 1); } catch (e) { f.push('its theme.txt isn\'t a theme: ' + e.message); }
+        const acct = words(between('% dq0 -p t -d /ram/b', 'The place\'s history'));
+        if (!acct.includes(words(rw1.v[3]))) f.push('the reward not told: ' + words(rw1.v[3]));
+        if (!acct.includes('pays you ' + rw1.v[0] + ' pennies')) f.push('not paid ' + rw1.v[0] + ' pennies');
+        if (!acct.includes('A few folk in the inns know your name (standing ' + rw1.v[1] + ').')) f.push('the standing not told: ' + acct.slice(0, 600));
+        const life = xdBytes(out, 'xd /ram/b/life.dat');
+        if ((life[20] | life[21] << 8) !== +rw1.v[1]) f.push('the record\'s reputation ' + (life[20] | life[21] << 8) + ', not ' + rw1.v[1]);
+        const B = blocks(saidTheme(out, 'cat /ram/b/rumours.txt'));
+        if (B.length !== 3) f.push(B.length + ' rumours heard, not three');
+        B.forEach((r, i) => { if (!acct.includes((i + 1) + '. ' + words(r.said))) f.push('rumour ' + (i + 1) + ' not told: ' + r.said); });
+        if (!acct.includes('Which will you follow, 1, 2 or 3?')) f.push('not asked which to follow');
+        const follows = (folder, k) => {                                               // (The next dungeon, the k'th rumour's)
+          const q = blocks(saidTheme(out, 'cat ' + folder + '/d2/quest.txt'))[0], t2 = saidTheme(out, 'cat ' + folder + '/d2/theme.txt'), r = B[k];
+          if (!q || !r || q.said !== r.said) return f.push(folder + ': quest.txt not rumour ' + (k + 1) + '\'s');
+          const reg = key(t2, 'region')[0], why = key(t2, 'why')[0];
+          if (!reg || reg.v.join('|') !== r.region.join('|')) f.push(folder + ': the next dungeon\'s region not the rumour\'s: ' + (reg && reg.v.join('|')));
+          if (!why || why.v.join('|') !== r.why.join('|')) f.push(folder + ': the next dungeon\'s why not the rumour\'s: ' + (why && why.v.join('|')));
+          if (!acct2(folder).includes('You set out for ' + r.region[0] + '.')) f.push(folder + ': not told where it sets out for');
+          const s2 = words(between('You set out for ' + r.region[0], 'enters the dungeon'));
+          if (r.why[1] !== 'found' && !s2.includes(r.why[2])) f.push(folder + ': the patron not in the next story: ' + s2.slice(-300));
+        };
+        const acct2 = folder => words(between('% dq0 -p t -d ' + folder, 'The place\'s history'));
+        follows('/ram/b', 0);
+        if (saidTheme(out, 'cat /ram/e/rumours.txt') !== saidTheme(out, 'cat /ram/b/rumours.txt')) f.push('the same life\'s rumours not the same');
+        follows('/ram/e', 1);
+        // (The heard kinds played through: solved, walked out; lore carried on and paid)
+        const solved = cmd => { const b = xdBytes(out, cmd); if (b[20] !== 1 || b[22] !== 1 || !b[23]) f.push(cmd + ': not walked out solved (outcome ' + b[20] + ', done ' + b[22] + ', solved ' + b[23] + ')'); };
+        solved('xd /ram/l/d1/game.dat');
+        solved('xd /ram/s/d1/game.dat');
+        const tl = saidTheme(out, 'cat /ram/l/d1/theme.txt'), ts = saidTheme(out, 'cat /ram/s/d1/theme.txt');
+        if (!key(tl, 'goal')[0] || key(tl, 'goal')[0].v[0] !== 'lore') f.push('-t\'s why lore not a lore goal');
+        if (!key(ts, 'goal')[0] || key(ts, 'goal')[0].v[0] !== 'scourge') f.push('-t\'s why scourge not a scourge goal');
+        const lore = words(between('% echo =LORE', '% echo =SCOURGE')), sc = words(between('% echo =SCOURGE', '% echo done'));
+        if (!/Haldan, a scholar, will pay well for the Codex of/.test(lore)) f.push('lore\'s reason not told');
+        if (!/You lift the Codex of \w+ from where it has lain/.test(lore)) f.push('the codex not told taken up');
+        const rwl = key(tl, 'reward')[0];
+        if (!rwl || !lore.includes(words(rwl.v[3]))) f.push('lore\'s scholar not told paying');
+        if (!/Osric, the reeve of the farms by the Grey Fells, has put a price on the raiders' chief/.test(sc)) f.push('the scourge\'s reason not told');
+        if (!/You take up the Standard of \w+\. Without it the kobolds will scatter/.test(sc)) f.push('the standard not told taken up');
+        for (const k of ['lore', 'scourge']) for (const s of [1, 2, 3]) {
+          if (!new RegExp('% echo ' + k + ' ' + s + ' st \\$status\\n' + k + ' ' + s + ' st *\\n% grep goal /ram/x/theme.txt\\ngoal +\\| ' + k + ' ').test(o)) f.push(k + ' at seed ' + s + ': not made, or the checker refused it');
+        }
+        if (/you (win|lose)|you've (won|lost)/i.test(o)) f.push('words of winning or losing');
+        this.notes = ['rumours: ' + R.map(r => r.why.join('/')).join(', ') + '; 70000\'s: ' + B.map(r => r.why.join('/')).join(', ') + '; paid ' + rw1.v[0] + 'd'];
         return f;
       },
       sdcard: true

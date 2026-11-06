@@ -106,7 +106,9 @@ struct tfaction {                               /* The inhabitants now (the them
     unsigned char   leader;                     /* Its leader's kind (kinds.txt's, 1 ...; 0 none) */
     unsigned char   attitude;                   /* To the character as it first meets it (hub.h's AT_*) */
 };
-enum { G_NONE, G_ARTIFACT, G_EVIL, G_PRISONER, G_THROUGH };   /* The goal's kind (G_NONE: the mission's puzzle alone) */
+enum { G_NONE, G_ARTIFACT, G_EVIL, G_PRISONER, G_THROUGH, G_LORE, G_SCOURGE };   /* The goal's kind (G_NONE: the mission's
+                                                **   puzzle alone; lore a writing found, scourge a raiders' chief's proof
+                                                **   taken: the plan's step 7, goals.txt's) */
 #define TMINTS          8                       /* The mints (2026-10-28, the user's: "each coin should include its
                                                 **   provenance (where it was minted)"): the realms and peoples whose
                                                 **   coins are found here, */
