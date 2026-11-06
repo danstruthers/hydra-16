@@ -22,7 +22,7 @@ static const char* const doing[] = {           /* (By LT_*) */
     "doing anything", "walking", "climbing", "digging", "searching", "waiting", "sleeping", "talking", "battering",
     "fighting", "travelling", "studying the mechanism", "disarming the trap", "picking the lock", "forcing", "heaving at",
     "bending the bars", "winding the winch", "working the pane free", "tracking", "sniffing the air", "filling",
-    "hiding", "tying the rope", "tending the wound", "turning a key", "taking off", "taking off", "reaching into", "holding open", "getting out", "putting on",
+    "hiding", "tying the rope", "tending the wound", "turning a key", "dipping", "taking off", "taking off", "reaching into", "holding open", "getting out", "putting on",
     "letting fall", "letting fall", "putting away", "blowing out", "blowing out", "lighting", "setting down", "taking up", "sharpening",
     "striking a spark", "getting out", "putting away", "taking up", "setting down", "blowing out", "lighting", "dipping",
     "letting fall", "sheathing", "slinging", "setting down", "setting down", "putting away", "setting down", "putting away", "setting down", "taking up"
@@ -119,7 +119,7 @@ static const char* __fastcall__ doing_of (unsigned char k, unsigned char n)
     static const char* const struck[4] = { "battering", "punching", "kicking", "butting" };    /* (By SK_*) */
 
     strcpy (dn, k == LT_BATTER ? struck[n >> 4 & 3] : doing[k < NDOING ? k : 0]);
-    if (n && (k == LT_BATTER || k == LT_FORCE || k == LT_HEAVE || k == LT_FILL || k == LT_HIDE || (k >= LT_PACKOFF && k != LT_KINDLE))) {
+    if (n && (k == LT_BATTER || k == LT_FORCE || k == LT_HEAVE || k == LT_FILL || k == LT_DIP || k == LT_HIDE || (k >= LT_PACKOFF && k != LT_KINDLE))) {
         strcat (dn, " ");
         strcat (dn, noun (n));
     }
@@ -792,13 +792,15 @@ unsigned char __fastcall__ o_stop_kind (const char* word)
                                            LT_SLEEP, LT_SLEEP, LT_TALK, LT_BATTER, LT_BATTER, LT_BATTER, LT_FIGHT,
                                            LT_FIGHT, LT_BATTER, LT_BATTER, LT_BATTER, LT_STUDY, LT_DISARM, LT_PICK,
                                            LT_FORCE, LT_HEAVE, LT_BEND, LT_WIND, LT_TRACK, LT_SNIFF, LT_FILL,
-                                           LT_FILL, LT_FILL, LT_HIDE, LT_TRAVEL, LT_TRAVEL, LT_TRAVEL, LT_TEND, LT_TEND, LT_TEND,
+                                           LT_FILL, LT_DIP, LT_HIDE, LT_TRAVEL, LT_TRAVEL, LT_TRAVEL, LT_TEND, LT_TEND, LT_TEND,
                                            LT_PRISE, LT_PRISE, LT_HONE, LT_HONE };   /* ("working" none: whatever the work is) */
-    unsigned char i;
+    unsigned char i, k;
 
     for (i = 0; i < sizeof kind_; ++i) {
         if (!strcmp (word, word_[i])) {
-            return kind_[i] == LT_FILL && HUB->pc_task.kind == LT_DIPOLD ? LT_DIPOLD : kind_[i];   /* (A dip's the old torch's own) */
+            k = HUB->pc_task.kind;              /* (Filling, soaking, dipping: whichever of them it's at, a lantern's, a
+                                                **   torch's, the old torch's: each its own words, 2026-11-06) */
+            return (kind_[i] == LT_FILL || kind_[i] == LT_DIP) && (k == LT_FILL || k == LT_DIP || k == LT_DIPOLD) ? k : kind_[i];
         }
     }
     return LT_NONE;

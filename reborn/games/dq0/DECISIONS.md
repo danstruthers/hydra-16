@@ -1832,3 +1832,19 @@ Put to the user with the lead's recommendations; the user: "Yes, use your recomm
 - Should every look make only the chunks a line from the eyes reaches (fewer chunks, but lairs placed later, 18 tests to re-baseline)? No, not for now; again only if the pauses of about 2 s a chunk bother the user in play.
 
 **So:** a denizen that wants something of a character at rest comes for it, as a robber comes to rob a sleeper; looks stay as built at 2dc5439d.
+
+## The torch playtest: which thing, the first words (2026-11-06)
+
+The user's playtest, verbatim:
+
+> When I say `drop torch` it says `You reach for the torch.` followed by `Put down.`  I think it was because there was a lit torch on the ground.  Also, I had a lit torch, and I said `drop the spent torch` and it dropped the lit one.  When I said `take spent torch from backpack` it first said `You reach for the torch.` followed by the reach stream.  One other issue was when I was in the dark with the spent torch in my hand I said `light a new torch`; the response was the reach you would expect, but the `You put the torch in your backpack` was concerning because I thought it was putting the newly lit torch in there, but no, it was the spent torch.  One more thing: if I say `put <obj> in backpack` when <obj> is in hand, the response leads with `You reach for the <obj>.`; same if <obj> is not in hand and is not around anywhere.  One last thing: when you dip a torch, one line of the reach is `You set to filling the torch.` which should be `You set to dipping the torch.` or the like.
+
+> If there are many items of the same type around, it can be hard to get the one you want.  If there are three torches, one in hand, one in my backpack on my back, and one on the ground, if I say `pick up the torch` it should take the one I don't already have (from the ground).  But if all three are on the ground, I should get a prompt for which one, with longer descriptions of each, something like `Which one?  1. a torch (lit), 2. a torch (spent), or 3. a torch (almost spent).`
+
+> One other strange thing: I was trying to light a torch that was in one hand, with the tinderbox that was in the other hand, it finished the reach sequence with `You put away the tinderbox.` even though the tinderbox remains in hand.
+
+> If I have no torches in my backpack, but there are some on the floor and I say `take torch`, it first takes off my backpack, then takes a torch from the ground, then puts the backpack back on.  The torch ends up in the backpack.  It doesn't just take it in hand.
+
+> I can't specify `take torch from the floor` or `take torch from the ground`.  It says `You see no [floor|ground] here`.
+
+**So:** the first word follows what will happen (HOUSE.md's a command's first words); a thing is named by what tells it apart; "spent" and "full" choose by state; dipping is its own word; a tool in hand before stays in hand; a plain take goes to a free hand; the floor and the ground are places to take from and put on.

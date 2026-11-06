@@ -199,6 +199,7 @@ go:
             SWPART      99, 27              ; The time believed drifting: an hour's test, a waking (wtime.c: part 76's till 2026-11-04)
             SWPART      100, 9              ; A light renewed (things.c: part 27's till 2026-11-04)
             SWPART      101, 24              ; A thing hidden, the hands swapped (things.c: parts 13's and 48's till 2026-11-04)
+            SWPART      102, 24              ; A thing told apart, what it carries for the UI (things.c, 2026-11-06)
 
             SWFN        time_kept, 99
             SWFN        sky_note, 76
@@ -293,6 +294,9 @@ go:
             SWFN        arrive_b, 93
             SWFN        hid_op, 94
             SWFN        light_now, 92
+            SWFN        ix_make, 102        ; (What it carries, the UI's first words', 2026-11-06)
+            SWFN        name_apart, 102
+            SWFN        tell_apart, 102          ; (A thing told apart by its state, 2026-11-06)
             SWFN        chart_now, 13
             SWFN        at_hand, 4
             SWFN        carried_named, 4

@@ -3242,11 +3242,11 @@ function dq0RestBusyTest() {
 // a carried thing examined, a thing taken with a walk or a pack, a step or a turn with a denizen's things being drawn at
 // wait 0, its answer behind that draw's giving way
 const DQ0_ANSWERS = [['turn left', 'You turn left', 800000], ['turn right', 'You turn right', 1300000],
-  ['step forward', 'You step forward', 1400000], ['inventory', 'You carry', 500000], ['examine the torch', 'You look for the torch', 640000], ['walk to the door ahead to my left', 'You head for', 760000], ['examine the door', 'You head for|A door|Which door', 720000],
+  ['step forward', 'You step forward', 1400000], ['inventory', 'You carry', 500000], ['examine the torch', 'You look at the torch|You look for the torch', 640000], ['walk to the door ahead to my left', 'You head for', 760000], ['examine the door', 'You head for|A door|Which door', 720000],
   ['open the door', 'You try the door|You turn|Which door', 720000], ['close the door', 'You reach for the door|You turn|Which door', 720000], ['listen', 'You listen', 760000], ['bar the door', 'You look at the door|You turn|Which door', 720000],
   ['look', 'You', 650000, 1790000], ['look ahead', 'You peer ahead|You turn', 450000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You', 800000], ['walk to the window', 'You head for', 700000], ['take the bones', 'You look for the bones|You go over to the bones.|You stop', 800000], ['look', 'You', 650000],
-  ['take the sack from the backpack', 'You reach for the sack', 760000], ['put the whetstone in the sack', 'You reach for the whetstone', 800000], ['take the whetstone from the sack', 'You reach for the whetstone', 760000],
-  ['drop the sack', 'You reach for the sack', 650000], ['take the sack', 'You reach for the sack|You look for the sack', 650000], ['assess the sack', 'You look at the sack|You look for the sack', 2000000], ['sit', 'You sit down', 780000], ['stand', 'You get to your feet', 760000], ['wait 1 minute', 'You wait a minute', 760000], ['dig down', 'You look at the floor', 600000]];   // (The first words as they begin, 2026-11-04: dq0firstword's; budgets over what's measured at waits 0, 1 and 2, both paces: assess's 2M its normal pace's at wait 1, 1.9M, some 420,000 else, not diagnosed)   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
+  ['take the sack from the backpack', 'You reach for your backpack', 760000], ['put the whetstone in the sack', 'You reach|You look for the whetstone', 800000], ['take the whetstone from the sack', 'You reach into the sack|You reach for your backpack', 760000],
+  ['drop the sack', 'You put down the sack', 650000], ['take the sack', 'You reach for the sack|You look for the sack', 650000], ['assess the sack', 'You look at the sack|You look for the sack', 2000000], ['sit', 'You sit down', 780000], ['stand', 'You get to your feet', 760000], ['wait 1 minute', 'You wait a minute', 760000], ['dig down', 'You look at the floor', 600000]];   // (The first words as they begin, 2026-11-04: dq0firstword's; budgets over what's measured at waits 0, 1 and 2, both paces: assess's 2M its normal pace's at wait 1, 1.9M, some 420,000 else, not diagnosed)   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
 function dq0AnswerTest(baud) {
   const wait = +(process.env.DQ0ANS_WAIT || 0);   // (Each line typed after 0-2 waits of 2M cycles: the timing moved, for an average)
   const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'];
@@ -3277,6 +3277,9 @@ function dq0AnswerTest(baud) {
   };
 }
 
+const TORCHX = ['inventory', 'drop torch', 'take torch', 'inventory', 'wait 2 hours', 'light a new torch', 'take the spent torch from the ground', 'drop the spent torch',
+  'drop the lit torch', 'take the spent torch from the floor', 'drop torch', 'take the lit torch', 'hold the tinderbox', 'take torch', 'inventory', 'douse the torch', 'light the torch',
+  'inventory', 'take spent torch from backpack', 'put the rope in the backpack', 'put the tinderbox in the backpack', 'dip the spent torch in the oil', 'inventory'];   // (dq0torchwords' lines: the user's playtest, 2026-11-06)
 module.exports = {
   IRQ_OFF_MAX,
   tests: [
@@ -7558,6 +7561,49 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0torchwords', reach: true, near: ['gear'], what: "Dingus Quest Zero's torches by the user's playtest of 2026-11-06 (\"You reach for the torch.\" then \"Put down.\"; \"drop the spent torch\" dropped the lit one; \"You put the torch in your backpack.\" of the spent one; \"You set to filling the torch.\" of a dip; \"You put away the tinderbox.\" of one in hand; a torch taken up went in the pack; \"You see no floor here\"): the first word says what happens (put down; your backpack reached for; looked for, none), a thing named by its state beside another of its kind, spent chooses, a dip's own word, a tool in hand before stays in hand, a torch taken up goes in a free hand and in the pack only with both full (said so), the floor and the ground a place to take from",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...TORCHX, 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
+        let at = 0;
+        for (const l of TORCHX) {
+          let i = o.indexOf('> ' + l + ' ', at);
+          if (i >= 0 && o.startsWith('> ' + l + ' ', i + l.length + 3)) i += l.length + 3;   // (The line as typed, then drawn again)
+          const e = o.indexOf('> ', i + 2);
+          seg.push(i < 0 ? '' : o.slice(i + l.length + 3, e < 0 ? undefined : e));
+          if (i >= 0) at = i + 2;
+        }
+        const said = (k, re, why) => { const n = TORCHX.indexOf(k, typeof why === 'number' ? why : 0); if (!re.test(seg[n])) f.push(k + ': ' + (typeof why === 'string' ? why : re) + ': ' + seg[n].slice(0, 300)); };
+        const not = (k, re, from = 0) => { const n = TORCHX.indexOf(k, from); if (re.test(seg[n])) f.push(k + ': said ' + re + ': ' + seg[n].slice(0, 300)); };
+        this.notes = TORCHX.map((l, i) => l + ': ' + seg[i].slice(0, 160));
+        said('drop torch', /^You put down the (lit |unlit )?torch\./);
+        not('drop torch', /You reach for|Put down\./);
+        said('take torch', /Taken\./);
+        said('inventory', /backpack, worn \(in it: 3 rations, a tinderbox, a torch, a flask of oil\).*a torch, in your/, 3);
+        said('light a new torch', /^You reach for your backpack\./);
+        said('take the spent torch from the ground', /Taken\./);
+        said('drop the spent torch', /^You put down the spent torch\./);
+        said('drop the lit torch', /^You put down the lit torch\./);
+        said('take the spent torch from the floor', /Taken\./);
+        said('drop torch', /^You put down the spent torch\./, TORCHX.indexOf('drop torch', 2));
+        not('drop torch', /Put down\./, 2);
+        said('take torch', /Your hands are full: you put the torch in your backpack\./, TORCHX.indexOf('take torch', 3));
+        not('light the torch', /put away the tinderbox/);
+        said('inventory', /a tinderbox, in your/, TORCHX.indexOf('light the torch'));
+        said('take spent torch from backpack', /^You reach for your backpack\./);
+        said('put the rope in the backpack', /^You look for the rope\./);
+        said('put the tinderbox in the backpack', /^(You reach for your backpack\.|The tinderbox is there already\.)/);
+        not('put the tinderbox in the backpack', /You reach for your backpack\. The tinderbox is there already/);
+        said('dip the spent torch in the oil', /You set to dipping the/);
+        not('dip the spent torch in the oil', /filling/);
+        if (/You see no (floor|ground) here/.test(o)) f.push('the floor not a place: ' + o.match(/.{80}You see no (floor|ground) here/)[0]);
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0stirtyped', near: ['senses', 'denizens'], what: "Dingus Quest Zero's stir as a line's being typed at the turns pace (the life soak's seed 5, 2026-11-04: \"> look at the rat\" answered \"Something stirs.  A giant rat is to your right, 5 feet away, keeping its distance.\" then the look, saying it again: the stir's words after the echo, the told list begun again as the line was taken): its doing changed as the line's first keys come: held for the answer, the look saying it once; a line that doesn't say it (inventory) gets the stir after its answer",
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
@@ -7858,10 +7904,10 @@ module.exports = {
           said('close the door', ['You reach for the door.', 'You close the door.']);
           said('listen', ['You listen.', 'You hear']);
           said('wait 1 minute', ['You wait a minute.']);
-          said('take the sack from the backpack', ['You reach for the sack.', 'You take the sack in your right hand.']);
-          said('put the rope in the sack', ['You reach for the rope.', 'You put the rope in the sack.']);
-          said('take the rope from the sack', ['You reach for the rope.']);
-          said('drop the sack', ['You reach for the sack.', 'Put down.']);
+          said('take the sack from the backpack', ['You reach for your backpack.', 'You take the sack in your right hand.']);
+          said('put the rope in the sack', ['You reach for your backpack.', 'You put the rope in the sack.']);
+          said('take the rope from the sack', ['You reach into the sack.']);
+          if (/Put down\./.test(said('drop the sack', ['You put down the sack.']))) f.push('drop the sack: Put down. after its first words');
           said('take the sack', ['You reach for the sack.', 'Taken.'], o.indexOf('> drop the sack'));
           const none = said('take the pumpkin', ['You look for the pumpkin.', 'You see none of those here.']);
           if (/You reach/.test(none)) f.push('a thing it doesn\'t see reached for: ' + none);

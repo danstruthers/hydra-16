@@ -636,9 +636,10 @@ knives; a pouch or a sack anything that fits).  **Missiles** weigh by the ten (K
 tenth of a pound each, the book's), their bulk too.  The things (dq0w/things.c): held in a hand (hold, wield, ready: two hands at most, a
 two-handed thing or a big one both), stowed in the pack, put in a container (by its room and the weight it bears; a
 container in another, by its own bulk or what it holds, the more; never into itself or what's in it), taken from it
-(into the pack, else a hand), hung from the belt (by its slots; only what hangs), worn and taken off (one of a kind
-worn); the inventory says which hand (both), what's worn, what's in or on what, and the load.  Taking up fills the
-pack first, then a hand.  **The load** (all the character carries, worn or not, its armour too) is the referee's to
+(into a hand, else the pack; by the count, the pack first), hung from the belt (by its slots; only what hangs), worn and taken off (one of a kind
+worn); the inventory says which hand (both), what's worn, what's in or on what, and the load.  Taking up fills a free
+hand first, then the pack (told: "Your hands are full: you put the torch in your backpack."); "take all" and a count ("take 4
+rations") the pack first, then a hand, the rule's first purpose, many things (the user's playtest, 2026-11-06).  **The load** (all the character carries, worn or not, its armour too) is the referee's to
 judge: the things give it with the tools to hand (RS_EQUIP), and the referee makes it HarnMaster's encumbrance (the
 load over the endurance, its physical penalty: the body's tests harder, its move less, so the world's step slower),
 worded on the sheet (the load, the encumbrance) and in the inventory ("You're heavily burdened.").

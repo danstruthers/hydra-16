@@ -283,53 +283,300 @@ void __fastcall__ o_walk_says (const char* name)
 #pragma rodata-name (pop)
 
 /* A command's first words at once, before the world's asked, whose answer's the time (its parts' copies, its chooser through
-** the store; the user's D17, and 2026-11-04: "Word as they begin."): words that hold whatever the world then says.  A thing
-** handled, by the name said (things ()): a thing to take seen out of reach only, its walk over, the same words as ever, the
-** world's IR_NOT_HERE saying none again (said_ahead, o_walk_says); "You reach for the sack."; not seen to take, or asked
-** of, "You look for ..." (the rest: first_word, overlay 17's) */
-#pragma data-name (push, "OV15RODATA")
-#pragma bss-name (push, "OV15RODATA")
-#pragma static-locals (push, on)                /* (Its locals static, in its bank: the code the less) */
+** the store; the user's D17, and 2026-11-04: "Word as they begin."): words that hold whatever the world then says, and say
+** what will happen (the user's playtest, 2026-11-06: "You reach for the torch." of one in hand, in the pack, or nowhere).
+** By what the character carries (the UI bank's ix, the world's: the one its chooser would take, things.c's pick, the
+** state said) and what it sees lying about: in reach, "You reach for the sack."; in the worn pack, "You reach for your
+** backpack."; in a sack, "You reach into the sack."; let go of, "You put down the torch." (all of it said: the world's
+** "Put down." not again); a thing in hand, nothing to reach for, none (its answer's own); out of reach only, its walk
+** over, the same words as ever (said_ahead, o_walk_says); nowhere, "You look for the sack." ("You feel for ..." in the
+** dark).  Named by what tells it apart from another of its kind at hand: "You put down the spent torch.".  The rest
+** (first_word, overlay 17's).  Overlay 20's since 2026-11-06, overlay 15's room */
+#pragma code-name (push, "OV20CODE")
+#pragma rodata-name (push, "OV20RODATA")
+#pragma data-name (push, "OV20RODATA")
+#pragma bss-name (push, "OV20RODATA")
+#pragma local-strings (push, on)
+#pragma static-locals (push, off)               /* (Its locals on the C stack: what's copied from the hub, with the hub in the
+                                                **   window, can't be in this bank) */
+static struct cix* ix;                          /* (What's carried, copied: the world's; o_walk_ahead's, on the C stack) */
+static unsigned char nix, rk[NIX];
+static char* kn;                                /* (A kind's name: the same) */
+
+/* A name said a word of the kind's, or its start, or that word made plural, or the end of a name of one word (the world's
+** named4, things.c's: the chooser's) */
+static unsigned char __fastcall__ word_in (const char* k, const char* w, unsigned char n)
+{
+    for (;;) {
+        if (!strncmp (k, w, n)) {
+            return 1;
+        }
+        if (!(k = strchr (k, ' '))) {
+            return 0;
+        }
+        ++k;
+    }
+}
+
+static unsigned char __fastcall__ named_ (const char* k, const char* w)
+{
+    unsigned char n = strlen (w), m;
+
+    return word_in (k, w, n) || (n > 2 && w[n - 1] == 's' && (word_in (k, w, n - 1) ||
+        (w[n - 2] == 'e' && word_in (k, w, n - 2)))) || (n > 3 && (m = strlen (k)) > n && !strcmp (k + m - n, w));
+}
+
+/* Entry e's kind's name (in kn); whether it's a light */
+static const char* __fastcall__ kname (unsigned char e)
+{
+    hub_mem (KIND_BANK, kn, CATALOGUE[ix[e].kind].name, sizeof CATALOGUE[0].name);
+    return kn;
+}
+
+static unsigned char __fastcall__ alight (unsigned char e)
+{
+    unsigned char f;
+
+    hub_mem (KIND_BANK, &f, &CATALOGUE[ix[e].kind].flags, 1);
+    return f & K_LIGHT;
+}
+
+/* Entry e's state's word (AW_*: the world's aw_of) */
+static unsigned char __fastcall__ state (unsigned char e)
+{
+    unsigned char f = ix[e].flags;
+
+    if (alight (e)) {
+        return f & CX_LIT ? AW_LIT : f & CX_SPENT ? AW_SPENT : AW_UNLIT;
+    }
+    return (f & (CX_SPENT | CX_EMPTY)) == (CX_SPENT | CX_EMPTY) ? AW_EMPTY : AW_NONE;
+}
+
+/* The outermost entry e's in (e, in none) */
+static unsigned char __fastcall__ top (unsigned char e)
+{
+    while (ix[e].up && ix[e].up <= nix) {
+        e = ix[e].up - 1;
+    }
+    return e;
+}
+
+/* The entry the world's chooser would take, of those carried named w, in the state sel says (SL_*, its n times 16), for
+** op (a light lit: not lit, not spent unless a state's said; put out: lit), in entry in less 1 (0: anywhere): held first,
+** then on the body, then the shallower in what it carries, the store's order else; the nth, the other.  0xFF none */
+static unsigned char __fastcall__ ix_pick (const char* w, unsigned char sel, unsigned char op, unsigned char in)
+{
+    unsigned char e, j, f, r, s = sel & 15, n = s == SL_NTH ? sel >> 4 : s == SL_OTHER ? 2 : 1;
+
+    if (!*w) {
+        return 0xFF;
+    }
+    for (e = 0; e < nix; ++e) {
+        f = ix[e].flags;
+        rk[e] = 0xFF;
+        if (!named_ (kname (e), w) || (s == SL_LIT ? !(f & CX_LIT) : sel == SL_NEW ? f & (CX_HELD | CX_LIT) : s == SL_UNLIT ?
+            (f & CX_LIT) || !alight (e) : s == SL_OPEN ? f & CX_SHUT : s == SL_SHUT ? !(f & CX_SHUT) : sel == SL_SPENT ?
+            !(f & CX_SPENT) : sel == SL_FULL ? f & CX_EMPTY : s == SL_EMPTY ? !(f & CX_EMPTY) :
+            op == IO_LIGHT ? (f & CX_LIT) || (!s && (f & CX_SPENT)) : op == IO_DOUSE && !(f & CX_LIT))) {
+            continue;
+        }
+        for (r = 1, j = e; ix[j].up && ix[j].up <= nix && ix[j].up != in; ++r) {
+            j = ix[j].up - 1;
+        }
+        if (in && ix[j].up != in) {
+            continue;                           /* (Not in the one said) */
+        }
+        rk[e] = r == 1 && (f & CX_HELD) ? 0 : r;
+    }
+    for (r = 0; r < 12; ++r) {
+        for (e = 0; e < nix; ++e) {
+            if (rk[e] == r && !--n) {
+                return e;
+            }
+        }
+    }
+    return 0xFF;
+}
+
+/* Entry e's word that tells it apart from another of its kind at hand (carried; lying within reach, lit or not as it's
+** seen), else "" */
+static const char* __fastcall__ apart_of (unsigned char e, unsigned char lit, unsigned char unlit)
+{
+    static const char* const aw[AW_EMPTY + 1] = { "", "lit ", "unlit ", "spent ", "empty " };   /* (Its words in this bank: a
+                                                **   function's, local-strings') */
+    unsigned char a = state (e), j, b = lit | unlit;
+
+    for (j = 0; j < nix; ++j) {
+        if (j != e && ix[j].kind == ix[e].kind) {
+            if (state (j) == a) {
+                return "";
+            }
+            b = 1;
+        }
+    }
+    return b && !(lit && a == AW_LIT) && !(unlit && a != AW_LIT) ? aw[a] : "";
+}
+
+/* A place said where a thing's other would be ("take the torch from the floor", "put it on the ground": the user's
+** playtest, 2026-11-06, "You see no floor here"): where things lie about, not a thing: taken up, put down, of those lying
+** there (the world's chooser leaves out those carried) */
+void o_place_said (void)
+{
+    static const char* const places[] = { "floor", "ground", "bottom", "here" };
+    unsigned char k;
+
+    for (k = 0; k < sizeof places / sizeof places[0]; ++k) {
+        if (!strcmp (cmd.other.word, places[k])) {
+            cmd.other.word[0] = cmd.other.sel = cmd.other.n = 0;
+            cmd.prep = PR_NONE;
+            if (cmd.action == VB_PUT_OBJECT) {
+                cmd.action = VB_DROP_OBJECT;
+            }
+            return;
+        }
+    }
+}
+
+/* The state said, as a word ("the spent torch") */
+static const char* __fastcall__ sel_word (unsigned char sel)
+{
+    return sel == SL_LIT ? "lit " : sel == SL_UNLIT ? "unlit " : sel == SL_SPENT ? "spent " : sel == SL_EMPTY ? "empty " :
+        sel == SL_FULL ? "full " : sel == SL_NEW ? "new " : "";
+}
+
 void __fastcall__ o_walk_ahead (const char* name)
 {
     struct sight* s = sight_get ();
     struct sitem* it;
     const char* v = "reach for";
-    unsigned char k, away = 0, op = walk_op & ~IO_STEPS;
+    const char* w = "";
+    unsigned char k, away = 0, op = walk_op & ~IO_STEPS, lit = 0, unlit = 0, e, y, sel, in = 0;
+    struct cix b[NIX];
+    char nb[sizeof CATALOGUE[0].name];
     static const char ops[] = { IO_GET, IO_DROP, IO_FILL, IO_HIDE, IO_SHUT, IO_THROW, IO_DESCRIBE, IO_INSIDE, 0 };
 
     if (worded) {                               /* (Told once a line: not again as its command's asked again after a step) */
         return;
     }
-    {                                           /* (A thing handled, by its name) */
-        if (*name == '#' || !*name || (!strchr (ops, op) && (op < IO_HOLD || op > IO_DOUSE))) {
-            return;
-        }
-        for (k = s->nitems, it = s->item; k; --k, ++it) {
-            if (strstr (it->name, name)) {
-                away |= it->x - s->x + 1 > 2 || it->y - s->y + 1 > 2 ? 1 : 2;
+    if (*name == '#' || !*name || (!strchr (ops, op) && (op < IO_HOLD || op > IO_DOUSE))) {
+        return;
+    }
+    for (k = s->nitems, it = s->item; k; --k, ++it) {
+        if (strstr (it->name, name)) {
+            if (it->x - s->x + 1 > 2 || it->y - s->y + 1 > 2) {
+                away |= 1;
+            } else {
+                away |= 2;
+                if (it->hid & 4) {              /* (Lit, as it's seen) */
+                    lit = 1;
+                } else {
+                    unlit = 1;
+                }
             }
         }
-        if (op == IO_DESCRIBE || op == IO_INSIDE || (!away && op == IO_GET)) {   /* (Looked at, asked of it: its quality,
-                                                **   its weight ...; way.c's; to take, not seen now: none in reach, or
-                                                **   remembered out of sight.  In the dark, the answer's own) */
+    }
+    sel = cmd.obj.sel | cmd.obj.n << 4;
+    if (op == IO_GET) {                         /* (Taken up: of what it doesn't carry, as ever) */
+        if (!away) {
             if (s->dark) {
                 return;
             }
-            v = cmd.obj.kind || away ? "look at" : "look for";
-        } else if (away == 1) {                 /* (Out of reach only: walked to, if it's to be taken) */
-            if (op == IO_GET && !(cmd.obj.sel | cmd.obj.n)) {
+            v = "look for";
+        } else if (away == 1) {                 /* (Out of reach only: walked to) */
+            if (!(cmd.obj.sel | cmd.obj.n)) {
                 walk_says (name);
                 placing = 0;
                 said_ahead = 1;
             }
             return;
         }
+        goto say;
     }
-    sayf ("\nYou %s the %s.", v, name);
+    ix = b;
+    kn = nb;
+    hub_mem (UI_BANK, &k, &UIREC->ixn, 1);
+    nix = k > NIX ? NIX : k;
+    hub_mem (UI_BANK, b, UIREC->ix, nix * sizeof (struct cix));
+    if (op == IO_TAKE) {                        /* (From the other: in it, if it's carried) */
+        if ((y = ix_pick (cmd.other.word, cmd.other.sel | cmd.other.n << 4, 0, 0)) == 0xFF) {
+            return;                             /* (One lying about: the world's to say) */
+        }
+        in = y + 1;
+    }
+    e = ix_pick (name, sel, op, in);
+    if (op == IO_DESCRIBE || op == IO_INSIDE) { /* (Looked at, asked of it: its quality, its weight ...; way.c's.  In the
+                                                **   dark, the answer's own) */
+        if (s->dark) {
+            return;
+        }
+        v = e != 0xFF || away ? "look at" : "look for";
+        goto say;
+    }
+    if (e == 0xFF) {
+        if (op != IO_DROP && op != IO_HIDE && op != IO_THROW && op != IO_TAKE && away) {
+            if (away == 1) {
+                return;                         /* (Out of reach only: walked to, the world's IR_NOT_HERE) */
+            }
+            goto say;                           /* (Lying within reach) */
+        }
+        v = s->dark ? "feel for" : "look for";  /* (None it carries, nor sees in reach: looked for, then the world's why) */
+        w = sel_word (sel);
+        goto say;
+    }
+    name = kname (e);
+    w = apart_of (e, lit, unlit);
+    y = 0xFF;
+    if (op == IO_STOW || op == IO_PUT) {        /* (Put in the other, the pack: in it already, the world's words, nothing
+                                                **   reached for) */
+        y = op == IO_STOW ? 0xFF : ix_pick (cmd.other.word, cmd.other.sel | cmd.other.n << 4, 0, 0);
+        for (k = 0; op == IO_STOW && k < nix; ++k) {
+            if (ix[k].flags & CX_BACK) {
+                y = k;
+            }
+        }
+        if (y != 0xFF && ix[e].up == y + 1) {
+            return;
+        }
+    }
+    if ((k = top (e)) != e) {                   /* (In something: the pack worn first, or what it's in) */
+        sayf (ix[k].flags & CX_BACK ? "\nYou reach for your %s." : "\nYou reach into the %s.", kname (k));
+        goto told;
+    }
+    if (op == IO_DROP) {
+        if (cmd.n || cmd.obj.sel == SL_ALL || (cmd.flags & CF_HALF)) {
+            return;                             /* (By the count: the world's words) */
+        }
+        sayf ("\nYou put down the %s%s.", w, name);
+        t_flush ();
+        worded = 4;                             /* (All of it said: not "Put down." again) */
+        return;
+    }
+    if (op == IO_STOW || op == IO_PUT) {        /* (Put in the other: the pack worn first, or the other in reach) */
+        if (y != 0xFF && (ix[k = top (y)].flags & CX_BACK)) {
+            sayf ("\nYou reach for your %s.", kname (k));
+            goto told;
+        }
+        if (y != 0xFF && !(ix[y].flags & CX_HELD)) {
+            sayf ("\nYou reach for the %s.", kname (y));
+            goto told;
+        }
+    }
+    if (ix[e].flags & CX_HELD) {
+        if (op != IO_LIGHT && op != IO_DOUSE) {
+            return;                             /* (In hand: nothing to reach for, its answer's own) */
+        }
+        v = "raise";                            /* (A light in hand lit, put out: "You raise the torch.", whether it catches or
+                                                **   not; its answer two seconds off, a look in the new light) */
+    }
+say:
+    sayf ("\nYou %s the %s%s.", v, w, name);
+told:
     t_flush ();
     worded = 1;
 }
 #pragma static-locals (pop)
-#pragma data-name (pop)
+#pragma local-strings (pop)
 #pragma bss-name (pop)
+#pragma data-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (pop)
