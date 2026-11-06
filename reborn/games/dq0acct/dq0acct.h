@@ -1,12 +1,15 @@
 /*
 ** dq0acct.h - (dq0acct) what its main RAM and its overlays share (dq0acct.c: the sheet, what's carried, the money, the words;
 ** body.c, overlay 1: the referee's code, the days at rest; skill.c, overlay 2: the wages, the occupation's skills, practice;
-** sheet.c, overlay 3: the sheet; quest.c, overlay 4: what solving brings, the standing, the rumours, the plan's step 7).  An
-** overlay runs at $8000 in place of the kinds' bank, so none of its code may look at a kind.
+** sheet.c, overlay 3: the sheet; quest.c, overlay 4: what solving brings, the standing, the rumours, the plan's step 7; town.c,
+** overlay 5, a file of its own: the town, the plan's step 11).  An overlay runs at $8000 in place of the kinds' bank, so none of
+** its code may look at a kind.
 */
 
 #ifndef _DQ0ACCT_H
 #define _DQ0ACCT_H
+
+#include "town.h"
 
 #define HEAL_MAX        90                      /* (The healing's days at most: the plan's) */
 #define WEAPON_MAX      70                      /* (No weapon past this by practice: the book's, Skills 18) */
@@ -24,6 +27,7 @@ void __fastcall__ say (const char* s);
 void __fastcall__ sayn (unsigned long v);
 void __fastcall__ amount (unsigned long f);
 void __fastcall__ ask (char* b, unsigned char n);
+void say_flush (void);                          /* (The words so far out on the screen) */
 extern char ans[64];                            /* (A line typed: in the main RAM) */
 extern const char* lib;
 extern const char* top;
@@ -35,7 +39,12 @@ extern unsigned long funds, fee, earned;        /* (What it could pay with, the 
 extern unsigned work_days;
 extern unsigned long cash;                      /* (The money: farthings) */
 extern char town[16];                           /* (Where it comes out to, its inn) */
-extern const char* inn;
+extern char inn[16];
+extern unsigned char rate;                      /* (A day's living, pence: the money's matters') */
+extern unsigned long living;                    /*   and all of it, farthings */
+extern unsigned town_days;                      /* (The days spent in the town, its errands': dq0town's, town.dat's) */
+extern unsigned char town_seen;                 /*   and what the player saw to there itself (TS_*) */
+extern char ob[200];                            /* (The words' buffer, empty between them: town.c's dq0town's arguments) */
 #define NTONGUES        8                       /* (Its tongues and scripts past its own: the plan for the game between dungeons, step 8) */
 extern char tongue[NTONGUES][24];               /* (Its sheet's "language NAME=ML" and "script NAME[=ML]" lines, as they are: sheet.c's;
                                                 **   practised, skill.c's) */
@@ -58,7 +67,6 @@ void o_treat (void);                            /* The physician */
 
 /* skill.c */
 void o_width (void);                            /* The console's width read */
-void o_first (void);                            /* The physician's and the wounds' words */
 unsigned char o_wage (void);                    /* A month's pence */
 void o_tool (void);                             /* A thing it has (ans: its tool's key, 8 its kind, 9 its flags; kind 0 begins): what it can practise with */
 void o_work (void);                             /* The work's words, its bonus practice */
@@ -76,5 +84,17 @@ void o_rumours (void);                          /* The rumours told, one followe
 /* sheet.c */
 unsigned char o_sheet_read (void);             /* The sheet read: 1, or 0 none */
 void o_sheet_write (void);                      /* And written */
+
+/* town.c (overlay 5, its own file: the plan's step 11) */
+extern unsigned long o_t;                       /* (o_date's date) */
+void o_town (void);                             /* The town's name and its inn's (ans[0]: the inn's die) */
+void o_date (void);                             /* Date o_t in words */
+void o_lodging (void);                          /* The days in town, where it lodged, what it came to */
+unsigned char o_town_go (void);                 /* The town (dq0town, run): 1 it ran, town_days and town_seen set */
+void o_first (void);                            /* The physician's and the wounds' words */
+void o_set_out (void);                          /* The road taken from the town, the date on by it; Enter to go on */
+
+/* skill.c's too */
+unsigned char o_needs (void);                   /* A thing (as o_tool's) its calling or its practice needs: never sold unasked */
 
 #endif

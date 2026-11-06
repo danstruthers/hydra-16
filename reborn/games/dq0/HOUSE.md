@@ -3681,7 +3681,7 @@ weapon's version and Strength, a wrecked door, a slip out of a pit.
 
 ## Between dungeons *(new, for review: the plan's steps 4 to 6, 2026-11-04; DUNGEON.md's a character's life; the user's Q4, Q5, Q6, Q7)*
 
-The game rolls it all between the ending and the next dungeon, and tells it in a dozen lines (games/dq0acct).  **Every number here is the house's and for review unless it's marked the book's.**  No town yet: a made-up town and inn name by the seed, nothing to do in them but hear the rumours (the plan's step 7, below).
+The game rolls it all between the ending and the next dungeon, and tells it in a dozen lines (games/dq0acct).  **Every number here is the house's and for review unless it's marked the book's.**  The town it comes into, a menu of errands, is below (the plan's step 11); a character that goes straight on through it has all of this done for it as before.
 
 - **How long:** the days until no wound worse than minor is left, no infection, no shock, no toxin or disease (by the real rolls), at most 90; the road, 2d6 days; a lull, d100: 01-50 1 to 7 days; 51-80 14 to 21; 81-95 30 to 60; 96-00 90 to 180.  All at rest, every wound rolling all the while; work's days after them.
 - **Healing** (the book's, Physician 2-4; the referee's own code told the days): each wound's five-day roll, blood back on the same days, infection's daily roll, shock's watch rolls, venom and disease running their course.  **A character can die of it** (the user's Q5: the roll as it falls): told, its outcome died, the life's account follows; there's no save to go back to.

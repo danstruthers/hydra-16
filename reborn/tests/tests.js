@@ -12889,8 +12889,8 @@ module.exports = {
           'echo =DIES', ...begin('d', 100001, 'a'), ...add('d', 'inj 6 1 3 5 1 2', 'dealt 0'), acct('d'), 'echo st $status', 'xd /ram/d/life.dat',
           'echo =RICH', ...begin('r', 100077, 'a'), acct('r'), 'echo st $status', 'xd /ram/r/kit.dat',
           'echo =BROKE', ...begin('b', 100021, 'p'), 'mkdir /ram/b/d0', 'cp /ram/p/d1/game.dat /ram/b/d0/game.dat', acct('b'), 'echo st $status',
-          'echo =ASK', 'dq0auto=()', ...begin('q', 100077, 'a'), acct('q'), '', '', 'cat /ram/q/pc.hm',
-          'echo =NAMED', ...begin('n', 100077, 'a'), acct('n'), 'swimming', 'sword', '', 'cat /ram/n/pc.hm', 'echo =END', 'echo $status']);
+          'echo =ASK', 'dq0auto=()', ...begin('q', 100077, 'a'), acct('q'), '', '', '', 'cat /ram/q/pc.hm',
+          'echo =NAMED', ...begin('n', 100077, 'a'), acct('n'), '', 'swimming', 'sword', '', 'cat /ram/n/pc.hm', 'echo =END', 'echo $status']);
       })() },
       expect: ['% echo $status'],
       start(m) {                                        // (The sword the rich scene has mended: half its life gone, dulled)
@@ -12958,7 +12958,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0acctgone', outfit: true, near: ['save', 'gear', 'money'], what: "Dingus Quest Zero's time between two dungeons spending nothing on what isn't to hand (the user's, 2026-11-04: \"Skip it\"; HOUSE.md's between dungeons), by scenes on the saved files: a broke character with a spare sword half gone, the knife in its hand, and a quill: the sword sold, no work for the mending of what it sold; it can't practise the sword or the Script it sold the things for, its filled-in answer leaving them out, named refused; one that set out with a bow and arrows buys its arrows back with the bow to shoot them, and none without",
+      name: 'dq0acctgone', outfit: true, near: ['save', 'gear', 'money'], what: "Dingus Quest Zero's time between two dungeons spending nothing on what isn't to hand (the user's, 2026-11-04: \"Skip it\"; HOUSE.md's between dungeons), by scenes on the saved files: a broke character with a spare sword half gone, the knife in its hand, and a quill: the sword sold, no work for the mending of what it sold; it can't practise the sword it sold, its filled-in answer leaving it out, named refused; the quill kept, its Script's (the plan's step 11: never sold unasked, what its practice needs), Script practised by name; one that set out with a bow and arrows buys its arrows back with the bow to shoot them, and none without",
       init: 't_rc', cycles: 2400e6,
       machine: { input: (() => {
         const L = '/sd/0/games/lib/dq0';
@@ -12966,7 +12966,7 @@ module.exports = {
         return dq0TypedAsk(['bind -a /sd/0/games /bin', 'dq0auto=1', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', "echo 'ml swd 40' >> /ram/c.hm", "echo 'ml scr 40' >> /ram/c.hm",
           'hmchar -q -s 5 -u feudal -c hunter -o /ram/r.hm',
           'dq0 -p t -s 3 -c /ram/c.hm -k sword,quill -d /ram/a', 'put the sword in the pack', 'draw the knife', 'inventory', 'quit',
-          'echo =SOLD', 'dq0auto=()', ...begin('z', 100077, 'a'), '/sd/0/games/lib/acct/dq0acct -d /ram/z -l ' + L, 'sword', 'script', '', '', '', 'echo =BOW', 'dq0auto=1',
+          'echo =SOLD', 'dq0auto=()', ...begin('z', 100077, 'a'), '/sd/0/games/lib/acct/dq0acct -d /ram/z -l ' + L, '', 'sword', 'script', '', '', '', 'echo =BOW', 'dq0auto=1',
           'dq0 -p t -s 3 -c /ram/r.hm -k shortbow,arrows -d /ram/b', 'quit', 'dq0 -p t -d /ram/b', 'drop the arrows', 'quit', ...begin('y', 100077, 'b'), '/sd/0/games/lib/acct/dq0acct -d /ram/y -l ' + L,
           'echo =NOBOW', 'dq0 -p t -s 3 -c /ram/r.hm -k shortbow,arrows -d /ram/n', 'quit', 'dq0 -p t -d /ram/n', 'drop the arrows', 'drop the shortbow', 'quit', ...begin('x', 100077, 'n'), '/sd/0/games/lib/acct/dq0acct -d /ram/x -l ' + L, 'echo =END', 'echo $status']);
       })() },
@@ -12994,8 +12994,8 @@ module.exports = {
         if (!/You have nothing to practise sword with./.test(t)) f.push('the sword it sold named, not refused: ' + t.slice(0, 700));
         if (!/In the spare hours you could practise (?![^.]*Sword)[^.]*./.test(t)) f.push('its filled-in answer the sword it sold: ' + t.slice(0, 500));
         if (/You practise for [^.]*Sword/.test(t)) f.push('it practised the sword it sold: ' + t.slice(0, 700));
-        if (!/You sell [^.]*a quill/.test(t)) f.push('the scene not set: the quill not sold: ' + t.slice(0, 500));
-        if (!/You have nothing to practise script with\./.test(t)) f.push('Script named with nothing to write with, not refused: ' + t.slice(0, 700));
+        if (/You sell [^.]*quill/.test(t)) f.push('the quill sold, its Script\'s writing thing: ' + t.slice(0, 500));
+        if (/You have nothing to practise script with\./.test(t) || !/You practise for [^.]*Script/.test(t)) f.push('Script named, its quill kept, not practised: ' + t.slice(0, 700));
         const bow = sect('BOW'), nobow = sect('NOBOW');
         if (!/You buy [^.]*arrows/.test(bow)) f.push('the scene not set: arrows not bought with the bow kept: ' + bow.slice(-600));
         if (/arrows/.test(nobow.slice(nobow.indexOf('days pass')))) f.push('arrows bought with nothing to shoot them: ' + nobow.slice(-600));
@@ -13011,7 +13011,7 @@ module.exports = {
         'themegen -q -r 3 -s 12346 -o /ram/r', 'cmp /ram/q/rumours.txt /ram/r/rumours.txt', 'echo other $status', 'cat /ram/q/rumours.txt', 'rm -r /ram/q', 'rm -r /ram/r',
         'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/b', 'u', 'echo =NEXT',
         'dq0 -p t -d /ram/b', 'quit', 'cat /ram/b/d1/theme.txt', 'cat /ram/b/rumours.txt', 'cat /ram/b/d2/quest.txt', 'cat /ram/b/d2/theme.txt', 'xd /ram/b/life.dat', 'rm -r /ram/b',
-        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/e', 'u', 'dq0auto=()', 'echo =SECOND', 'dq0 -p t -d /ram/e', '2', 'quit', 'dq0auto=1',
+        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/e', 'u', 'dq0auto=()', 'echo =SECOND', 'dq0 -p t -d /ram/e', '5', '2', '', 'quit', 'dq0auto=1',
         'cat /ram/e/rumours.txt', 'cat /ram/e/d2/quest.txt', 'cat /ram/e/d2/theme.txt', 'rm -r /ram/e',
         "echo 'why      | lore | scholar | Haldan' > /ram/l.txt",
         "echo 'why      | scourge | reeve | Osric' > /ram/s.txt", "echo 'region   | the Grey Fells | hills | granite | springs | cold' >> /ram/s.txt",
@@ -13064,7 +13064,7 @@ module.exports = {
           const reg = key(t2, 'region')[0], why = key(t2, 'why')[0];
           if (!reg || reg.v.join('|') !== r.region.join('|')) f.push(folder + ': the next dungeon\'s region not the rumour\'s: ' + (reg && reg.v.join('|')));
           if (!why || why.v.join('|') !== r.why.join('|')) f.push(folder + ': the next dungeon\'s why not the rumour\'s: ' + (why && why.v.join('|')));
-          if (!acct2(folder).includes('You set out for ' + r.region[0] + '.')) f.push(folder + ': not told where it sets out for');
+          if (!acct2(folder).includes('You set out for ' + r.region[0] + ', ')) f.push(folder + ': not told where it sets out for');
           const s2 = words(between('You set out for ' + r.region[0], 'enters the dungeon'));
           if (r.why[1] !== 'found' && !s2.includes(r.why[2])) f.push(folder + ': the patron not in the next story: ' + s2.slice(-300));
         };
@@ -13096,6 +13096,105 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0town', outfit: true, near: ['save', 'money', 'gear', 'theme'], what: "Dingus Quest Zero's town between two dungeons, a menu (the plan's step 11: games/dq0town, dq0acct's town.c; HOUSE.md's between dungeons, the town), by scenes: seed 70000 walked out solved, its knife half gone, carried on with the player asked (no dq0auto): the town's name the name maker's, a paragraph and the list, the temple and the scholar shut; the inn (a day; the rumours heard, Intrigue's one more the same themegen -r 4 makes; three days' rest), the date on by each errand's day; the market (three torches bought at their whole worth, the whetstone sold at half, its money told), the smith (the knife mended at the account's price), who's asking (a patron's offer taken, its rumour followed: quest.txt, the road's days), the account leaving alone what the player saw to, the torches in the next dungeon's pack; the same life again, the same town, left by a rumour named; a broke scribe's account (dq0auto) selling what's spare, never its quill or parchment, and practising its Script",
+      init: 't_rc', cycles: 9000e6,
+      machine: { input: (() => {
+        const L = '/sd/0/games/lib/dq0';
+        const seedOf = (s, n) => { let x = (s + Math.imul(n, 2654435761 | 0)) >>> 0; x = (x ^ (x >>> 15)) >>> 0; x = Math.imul(x, 40503) >>> 0; x = (x ^ (x >>> 13)) >>> 0; return n <= 1 ? s : s < 65536 ? x & 0xFFFF : (x | 0x10000) >>> 0; };
+        const rs = ((seedOf(70000, 2) ^ 0x52554D52) >>> 0).toString();
+        return dq0TypedAsk(['bind -a /sd/0/games /bin', 'dq0auto=1', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'themegen -q -r 4 -s ' + rs + ' -o /ram/q4',
+          'echo =A', 'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/b', 'inventory', 'u', 'dq0auto=()',
+          'dq0 -p t -d /ram/b', '1', '3', '', 'market', 'buy 3 torches', 'sell the whetstone', '', 'mend my knife', '', '4', '2', '', '', 'inventory', 'quit', 'dq0auto=1',
+          'cat /ram/b/rumours.txt', 'cat /ram/q4/rumours.txt', 'cat /ram/b/d2/quest.txt', 'rm -r /ram/b', 'rm -r /ram/q4',
+          'echo =B', 'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/e', 'u', 'dq0auto=()', 'dq0 -p t -d /ram/e', 'leave', 'viash', '', 'quit', 'dq0auto=1',
+          'cat /ram/e/d2/quest.txt', 'rm -r /ram/e',
+          'echo =SCRIBE', 'hmchar -q -s 5 -u feudal -c scribe -o /ram/s.hm', 'dq0 -p t -s 3 -c /ram/s.hm -k sword,quill,parchment -d /ram/a', 'quit',
+          L + '/dq0life -d /ram/z -s 100077', 'cp /ram/a/kit.dat /ram/z/kit.dat', 'cp /ram/a/kit0.dat /ram/z/kit0.dat', 'cp /ram/a/pc.hm /ram/z/pc.hm',
+          '/sd/0/games/lib/acct/dq0acct -d /ram/z -l ' + L, 'echo =END', 'echo $status']);
+      })() },
+      expect: ['% echo $status'],
+      start(m) {                                        // (The knife half gone: the smith's to mend)
+        dq0LineTime(m);
+        dq0Poke(m, [{ g: 1, line: 'inventory', n: 1, call: (h, L) => {
+          const per = Math.floor(0x2000 / L.itemSize), cat = m.dq0.bank(L.catBank);
+          for (let k = 0; cat && k < L.nitems; k++) {
+            const b = m.dq0.bank(L.item0 + Math.floor(k / per)), o = (k % per) * L.itemSize;
+            if (!b || !b[o + L.iKind]) continue;
+            let n = '';
+            for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
+            if (n === 'knife') { const d = b[o + L.iDurMax] | b[o + L.iDurMax + 1] << 8; b[o + L.iDur] = (d >> 1) & 255; b[o + L.iDur + 1] = d >> 9; break; }
+          }
+        } }]);
+      },
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\r/g, ''), f = [], words = s => s.replace(/\s+/g, ' ').trim();
+        const sect = n => { const i = o.indexOf('% echo =' + n), j = o.indexOf('% echo =', i + 3); return i < 0 ? '' : words(o.slice(i, j < 0 ? o.length : j)); };
+        const lines = text => DQ0_MAKE().lines(text, 'theme');
+        const blocks = text => { const r = []; for (const l of lines(text)) { if (l.key === 'rumour') r.push({ said: l.v[0] }); else if (r.length) r[r.length - 1][l.key] = l.v; } return r; };
+        const d = s => { const x = /It is (\d+) (\w+) (\d+)\./.exec(s); return x ? +x[3] * 360 + ['Nuzyael', 'Peonu', 'Kelen', 'Nolus', 'Larane', 'Agrazhar', 'Azura', 'Halane', 'Savor', 'Ilvin', 'Navek', 'Morgat'].indexOf(x[2]) * 30 + +x[1] - 1 : -1; };
+        const money = s => { const x = /You have (\d+)d(?: (\d)f)?;/.exec(s); return x ? +x[1] * 4 + +(x[2] || 0) : -1; };
+        const A = sect('A'), town = A.slice(A.indexOf('% dq0 -p t -d /ram/b'));
+        // The town: a name, a paragraph, the list, what's shut
+        const head = /You walk to (\w+)\. .*?\1, (a [^.]+\.) ([^.]+\.)/.exec(town);
+        if (!head) return f.concat(['no town: ' + town.slice(0, 800)]);
+        for (const p of ['1 The inn: rest; hear what\'s said', '2 The market: buy, sell, haggle', '3 The smith: mend, whet, a new blade', '4 Who\'s asking: patrons and what they offer', '5 Leave for: the places you\'ve heard of', 'The temple and the scholar\'s house are shut to you for now.'])
+          if (!town.includes(p)) f.push('the list without "' + p + '"');
+        // The days: each errand's day on the date, the rest's three
+        const at = [...town.matchAll(/It is \d+ \w+ \d+\. You have [^;]+; your keep so far comes to [^.]+\./g)].map(x => x[0]);
+        if (at.length < 4) return f.concat(['the street not come back to four times: ' + at.length]);
+        if (d(at[1]) - d(at[0]) !== 4) f.push('the inn and three days\' rest not four days on: ' + at[0] + ' / ' + at[1]);
+        if (d(at[2]) - d(at[1]) !== 1 || d(at[3]) - d(at[2]) !== 1) f.push('the market\'s and the smith\'s not a day each: ' + at.slice(1, 4).join(' / '));
+        if (!/You rest 3 days at the [A-Z]/.test(town)) f.push('no rest');
+        if (!/Your time in \w+ comes to 7 days\./.test(town)) f.push('the town\'s days not told as 7: ' + (/Your time in [^.]+\./.exec(town) || [''])[0]);
+        // The inn: the rumours, Intrigue's one more the same as themegen -r 4's
+        const R = blocks(saidTheme(out, 'cat /ram/b/rumours.txt')), Q4 = blocks(saidTheme(out, 'cat /ram/q4/rumours.txt'));
+        if (!/There's talk of other places: 1\. /.test(town)) f.push('no talk at the inn');
+        if (/one more place/.test(town)) {
+          if (R.length !== 4 || Q4.length !== 4 || JSON.stringify(R[3]) !== JSON.stringify(Q4[3])) f.push('Intrigue\'s rumour not themegen -r 4\'s fourth: ' + JSON.stringify(R[3]) + ' / ' + JSON.stringify(Q4[3]));
+          if (JSON.stringify(R.slice(0, 3)) !== JSON.stringify(Q4.slice(0, 3))) f.push('the first three not -r 4\'s');
+        } else if (!/You hear nothing more worth the hearing/.test(town)) f.push('Intrigue\'s listening not told');
+        // The market: bought at the whole worth, sold at half, the money told
+        const torch = /a torch (\d+)d/.exec(town), whet = /a whetstone (\d+)d/.exec(town);
+        if (!torch || !town.includes('You buy 3 torches (' + 3 * torch[1] + 'd)')) f.push('three torches not bought at their worth: ' + town.slice(town.indexOf('For sale'), town.indexOf('For sale') + 300));
+        if (!whet || !town.includes('You sell your whetstone (' + Math.floor(whet[1] / 2) + 'd)')) f.push('the whetstone not sold at half: ' + (/You sell[^.]*\./.exec(town) || [''])[0]);
+        if (torch && whet && money(at[1]) - money(at[2]) !== 4 * (3 * torch[1] - Math.floor(whet[1] / 2))) f.push('the money not on by the market\'s: ' + at[1] + ' / ' + at[2]);
+        // The smith: the knife mended (the account's price: a tenth of its worth a tenth of its life, at most half: its worth then)
+        const mend = /Your knife wants mending, (\d+)d/.exec(town), mended = /The smith mends your knife \((\d+)d\)\./.exec(town);
+        if (!mend || !mended || mend[1] !== mended[1]) f.push('the knife not mended at its price: ' + town.slice(town.indexOf('forge') - 200, town.indexOf('forge') + 300));
+        if (mended && money(at[2]) - money(at[3]) !== 4 * mended[1]) f.push('the mending not paid: ' + at[2] + ' / ' + at[3]);
+        // Who's asking: the patron's offer taken, its rumour followed, the road's days
+        const r2 = R[1];
+        if (!r2 || !r2.why || r2.why[1] === 'found') return f.concat(['the scene not set: rumour 2 not a patron\'s: ' + JSON.stringify(r2)]);
+        if (!town.includes('(' + r2.why[2] + ' asks; ' + r2.region[0] + ',')) f.push('the patron not among who\'s asking: ' + r2.why[2]);
+        if (!town.includes('You give ' + r2.why[2] + ' your word.')) f.push('the offer not taken');
+        const q = blocks(saidTheme(out, 'cat /ram/b/d2/quest.txt'))[0];
+        if (!q || q.said !== r2.said) f.push('quest.txt not the patron\'s rumour: ' + JSON.stringify(q));
+        const road = /You set out for ([^,]+), (\d+) days on the road\./.exec(town);
+        if (!road || road[1] !== r2.region[0]) f.push('not told setting out for the patron\'s place: ' + (road || [''])[0]);
+        // The account after: nothing sold or bought for it (the market seen), nothing mended (the smith), the torches carried
+        const after = town.slice(town.indexOf('Your time in'), town.indexOf('Enter to go on'));
+        if (/You (sell|buy)|mended/.test(after)) f.push('the account did what the player saw to: ' + after.slice(0, 400));
+        const inv = /> inventory You carry ([^>]*)/g, invs = [...o.replace(/\s+/g, ' ').matchAll(inv)].map(x => x[1]);
+        const n = s => { const x = /(\w+) torches/.exec(s || ''); return x ? ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'].indexOf(x[1]) : 0; };
+        if (invs.length < 2 || n(invs[1]) !== n(invs[0]) + 3) f.push('the torches bought not in the next dungeon\'s pack: ' + invs.slice(0, 2).join(' / '));
+        // The same life again: the same town; left by a rumour named
+        const B = sect('B'), tb = B.slice(B.indexOf('% dq0 -p t -d /ram/e'));
+        if (!tb.includes(head[0].slice(head[0].indexOf(head[1] + ',')))) f.push('the same life\'s town not the same: ' + tb.slice(0, 300));
+        const r3 = R.find(r => /viash/i.test(r.region[0])), qb = blocks(saidTheme(out, 'cat /ram/e/d2/quest.txt'))[0];
+        if (!r3 || !qb || qb.said !== r3.said || !tb.includes('You set out for ' + r3.region[0] + ', ' + (2 + [...r3.region[0]].reduce((h, c) => (h * 31 + c.charCodeAt(0)) & 0xFFFF, 0) % 11) + ' days on the road.'))
+          f.push('not left by the rumour named, its road: ' + JSON.stringify(qb) + ' ' + (/You set out[^.]*\./.exec(tb) || [''])[0]);
+        // The broke scribe: its writing things kept
+        const S = sect('SCRIBE');
+        if (!/You sell /.test(S)) f.push('the scene not set: nothing sold: ' + S.slice(-900));
+        if (/You sell [^.]*(quill|parchment)/.test(S)) f.push('the scribe\'s writing things sold: ' + (/You sell[^.]*\./.exec(S) || [''])[0]);
+        if (!/You practise for [^.]*Script/.test(S)) f.push('the scribe not practising its Script: ' + S.slice(-600));
+        if (/you (win|lose)|you've (won|lost)/i.test(o)) f.push('words of winning or losing');
+        this.notes = [head[1] + ' ' + head[2] + '; ' + (/one more place/.test(town) ? 'Intrigue found one more' : 'Intrigue found nothing') + '; ' + (road || [''])[0]];
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0tongues', outfit: true, near: ['save', 'body'], what: "Dingus Quest Zero's tongues and scripts on the sheet (the plan for the game between dungeons, its step 8; HOUSE.md's characters, a character's tongues and scripts), by scenes: a scribe's sheet (hmchar's, seed 5, a Feudal one: the book's 2nd Language and Three Scripts, Character 15: a language line at its skill base once, its native script by its culture, ardic, and two more of the game's own, each at 70 + SB, none twice); a sage's (a language, two scripts); a soldier's (one tongue, no script: \"Scripts: none\") (its other makers': hmchartongues); the scribe's sheet read by the referee (its sheet in the game telling its tongues and scripts at their ML, and its age, the life's record's) and written back with them as the game's quit; the account reading it and writing it back, a script and the second tongue practised by name (named by the player: the book's development rolls, Skills 7; a script with something to write with)",
       init: 't_rc', cycles: 3000e6,
       machine: { input: (() => {
@@ -13106,7 +13205,7 @@ module.exports = {
           'echo =SOLDIER', 'hmchar -q -s 5 -u feudal -c militia -o /ram/m.hm', 'cat /ram/m.hm',
           'echo =GAME', 'cp /ram/s.hm /ram/r.hm', "echo 'wealth 3000' >> /ram/r.hm", 'dq0 -p t -s 3 -c /ram/r.hm -k quill,parchment -d /ram/a', 'sheet', 'quit', 'cat /ram/a/pc.hm',
           'echo =ACCT', 'dq0auto=()', L + '/dq0life -d /ram/b -s 100077', 'cp /ram/a/kit.dat /ram/b/kit.dat', 'cp /ram/a/kit0.dat /ram/b/kit0.dat',
-          'cp /ram/a/pc.hm /ram/b/pc.hm', '/sd/0/games/lib/acct/dq0acct -d /ram/b -l ' + L, 'delvic, khuzdul', '', '', 'cat /ram/b/pc.hm', 'echo =END', 'echo $status']);
+          'cp /ram/a/pc.hm /ram/b/pc.hm', '/sd/0/games/lib/acct/dq0acct -d /ram/b -l ' + L, '', 'delvic, khuzdul', '', '', 'cat /ram/b/pc.hm', 'echo =END', 'echo $status']);
       })() },
       expect: ['% echo $status'],
       start(m) { dq0LineTime(m); },

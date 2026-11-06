@@ -23,6 +23,7 @@
 #include "../dq0/hub.h"
 #include "../dq0/life.h"
 #include "../dq0/theme.h"
+#define TOWN_ROAD
 #include "dq0acct.h"
 
 extern struct life L;
@@ -354,5 +355,8 @@ void o_rumours (void)
     }
     say ("You set out for ");
     say (value_of (c, "region") ? said : "it");
-    say (".\n");
+    say (", ");
+    sayn (c = road_of (said));                  /* (Its road: the town's, town.h's, the date on by it) */
+    say (" days on the road.\n");
+    L.h.date += c;
 }

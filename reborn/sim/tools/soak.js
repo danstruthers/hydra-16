@@ -16,7 +16,8 @@
 //     a run with too few of them to mean anything fails (FIGHT_MIN);
 //     -life D: a character's life soaked, D dungeons ended in one save's folder (dq0 -d) played by the random player, -turns N
 //     (20 here) commands each: the game's death or leaving (the way out opened and the character put by it: a scene's pokes, as
-//     nothing random finds a puzzle's end), or quit and gone on with, the time between answered at random (dq0acct: no dq0auto),
+//     nothing random finds a puzzle's end), or quit and gone on with, the time between answered at random (dq0acct: no dq0auto;
+//     its town, dq0town's menu, each place's words at random, Enter oftenest),
 //     hard mode for some seeds, a hostile theme for some; the record (life.dat) read after each game and judged by what it ended in;
 //     -power N (1): the machine's power-up RAM, so a seed's game is the same each run of one tree (a failure can be chased: until 2026-11-04 its RAM was
 //     random, each run other timings between the tasks, so other words at the player's prompts, so other commands, and it drifted);
@@ -311,7 +312,12 @@ function driven(s, turns, verbose, o) {
     if (inPrompt && (typed[typed.length - 1] === 'quit' || /You\s+are\s+dead\.|The\s+game\s+is\s+over/.test(since))) return undefined;   // (Its last prompt: it's on its way out)
     if (!inPrompt) {                            // (The time between's own question, dq0acct's: answered at random)
       tally.between++;
-      const l = /Enter to go on\s*> $/.test(since) ? r.pick(['', '', '', 'x']) : /follow[^>]*> $/.test(since) ? r.pick(['', '1', '2', '3', 'x', '9']) :   // (The rumours': which to follow)
+      const town = [[/Where to\?[^>]*> $/, ['', '', '', '1', '2', '3', '4', '5', 'inn', 'market', 'buy 2 torches', 'sell the sack', 'mend all', 'rest 3', 'temple', 'xyzzy']],   // (dq0town's: the street's,
+        [/At the inn[^>]*> $/, ['', '', '2', 'a week', 'listen', 'buy a rope']], [/At the market[^>]*> $/, ['', '', 'buy a torch', 'buy 3 rations', 'sell the sack',   //   each place's at random;
+          'sell my dagger', 'haggle for the lantern', 'how much for the rope', 'xyzzy']], [/At the smith[^>]*> $/, ['', '', 'mend all', 'whet my sword', 'buy a knife',   //   Enter oftenest, so it
+          'haggle for a dagger']], [/Whose offer[^>]*> $/, ['', '1', '2', '3', 'take 1']]].find(([re]) => re.test(since));   //   leaves)
+      if (town) { const l = r.pick(town[1]); typed.push(l); return l; }
+      const l = /Enter to go on\s*> $/.test(since) ? r.pick(['', '', '', 'x']) : /follow[^>]*> $/.test(since) ? r.pick(['', '1', '2', '3', '4', 'x', '9', 'viash']) :   // (The rumours': which to follow)
         r.pick(['', '', 'swimming', 'sword', 'sword, dodge', 'dodge and climbing and swimming', 'xyzzy', 'the quick brown fox jumps over the lazy dog, twice over, and more']);
       typed.push(l);
       return l;
