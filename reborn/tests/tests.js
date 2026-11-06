@@ -13004,16 +13004,14 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0tongues', outfit: true, near: ['save', 'body'], what: "Dingus Quest Zero's tongues and scripts on the sheet (the plan for the game between dungeons, its step 8; HOUSE.md's characters, a character's tongues and scripts), by scenes: a scribe's sheet (hmchar's, seed 5, a Feudal one: the book's 2nd Language and Three Scripts, Character 15: a language line at its skill base once, its native script by its culture, ardic, and two more of the game's own, each at 70 + SB, none twice), the same from hmchar.fs; a sage's (a language, two scripts); a soldier's (one tongue, no script: \"Scripts: none\"); hmchar.hl's scribe the same in kind; the scribe's sheet read by the referee (its sheet in the game telling its tongues and scripts at their ML, and its age, the life's record's) and written back with them as the game's quit; the account reading it and writing it back, a script and the second tongue practised by name (named by the player: the book's development rolls, Skills 7; a script with something to write with)",
+      name: 'dq0tongues', outfit: true, near: ['save', 'body'], what: "Dingus Quest Zero's tongues and scripts on the sheet (the plan for the game between dungeons, its step 8; HOUSE.md's characters, a character's tongues and scripts), by scenes: a scribe's sheet (hmchar's, seed 5, a Feudal one: the book's 2nd Language and Three Scripts, Character 15: a language line at its skill base once, its native script by its culture, ardic, and two more of the game's own, each at 70 + SB, none twice); a sage's (a language, two scripts); a soldier's (one tongue, no script: \"Scripts: none\") (its other makers': hmchartongues); the scribe's sheet read by the referee (its sheet in the game telling its tongues and scripts at their ML, and its age, the life's record's) and written back with them as the game's quit; the account reading it and writing it back, a script and the second tongue practised by name (named by the player: the book's development rolls, Skills 7; a script with something to write with)",
       init: 't_rc', cycles: 3000e6,
       machine: { input: (() => {
         const L = '/sd/0/games/lib/dq0';
         return dq0TypedAsk(['bind -a /sd/0/games /bin', 'dq0auto=1',
           'echo =SCRIBE', 'hmchar -q -s 5 -u feudal -c scribe -o /ram/s.hm', 'cat /ram/s.hm',
-          'hmchar.fs -q -s 5 -u feudal -c scribe -o /ram/f.hm', 'cmp /ram/s.hm /ram/f.hm && echo fs same',
           'echo =SAGE', 'hmchar -q -s 5 -u feudal -c sage -o /ram/g.hm', 'cat /ram/g.hm',
           'echo =SOLDIER', 'hmchar -q -s 5 -u feudal -c militia -o /ram/m.hm', 'cat /ram/m.hm',
-          'echo =HYLANG', 'hmchar.hl -q -u feudal -c scribe -o /ram/h.hm', 'cat /ram/h.hm',
           'echo =GAME', 'cp /ram/s.hm /ram/r.hm', "echo 'wealth 3000' >> /ram/r.hm", 'dq0 -p t -s 3 -c /ram/r.hm -k quill,parchment -d /ram/a', 'sheet', 'quit', 'cat /ram/a/pc.hm',
           'echo =ACCT', 'dq0auto=()', L + '/dq0life -d /ram/b -s 100077', 'cp /ram/a/kit.dat /ram/b/kit.dat', 'cp /ram/a/kit0.dat /ram/b/kit0.dat',
           'cp /ram/a/pc.hm /ram/b/pc.hm', '/sd/0/games/lib/acct/dq0acct -d /ram/b -l ' + L, 'delvic, khuzdul', '', '', 'cat /ram/b/pc.hm', 'echo =END', 'echo $status']);
@@ -13036,14 +13034,11 @@ module.exports = {
         const said = /Tongues: common (\d+), ([a-z]+) (\d+)\. Scripts: ardic (\d+), ([a-z]+) (\d+), ([a-z]+) (\d+)\./.exec(sect('SCRIBE'));
         if (!said || +said[1] !== s.ml('lan') || said[2] !== (s.lang[0] || [])[0] || +said[4] !== s.ml('scr') || said[5] !== (s.scr[1] || [])[0])
           f.push('the scribe\'s tongues and scripts said: ' + (said || [])[0]);
-        if (!/\nfs same\n/.test(sect('SCRIBE'))) f.push('hmchar.fs\'s scribe not C\'s');
         const g = sheetOf(sect('SAGE'));
         if (g.lang.length !== 1 || g.scr.length !== 2 || g.scr[0][0] !== 'ardic') f.push('the sage\'s: ' + JSON.stringify(g));
         const so = sheetOf(sect('SOLDIER'));
         if (so.lang.length || so.scr.length || so.ml('scr')) f.push('the soldier\'s: ' + JSON.stringify(so));
         if (!/Tongues: common \d+\. Scripts: none\./.test(sect('SOLDIER'))) f.push('the soldier\'s not said: ' + sect('SOLDIER').slice(0, 300));
-        const h = sheetOf(sect('HYLANG'));
-        if (h.lang.length !== 1 || h.scr.length !== 3 || h.scr[0][0] !== 'ardic' || new Set(h.scr.map(x => x[0])).size !== 3) f.push('hmchar.hl\'s scribe: ' + JSON.stringify(h));
         // The referee's sheet, and the save written back
         const game = sect('GAME').replace(/\s+/g, ' ');
         const gs = /Tongues: common (\d+), ([a-z]+) (\d+)\. Scripts: ardic (\d+), ([a-z]+) (\d+), ([a-z]+) (\d+)\./.exec(game);
@@ -13064,6 +13059,32 @@ module.exports = {
           else if (m2[1] ? +m2[1] !== before[1] || +m2[2] !== now[1] : now[1] !== before[1]) f.push(nm + ' told ' + m2[0] + ', its line ' + JSON.stringify(now) + ' (was ' + before[1] + ')');
         }
         if (b.scr.length !== 3 || b.lang.length !== 1) f.push('the account\'s sheet: ' + JSON.stringify([b.lang, b.scr]));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'hmchartongues', what: "hmchar's tongues and scripts (the plan for the game between dungeons, its step 8; occupations.txt's tongues N and scripts N) from its three makers: a Feudal scribe (seed 5) from C's hmchar and hmchar.fs the same, its profile and file as hmcharCheck has them (a 2nd Language, the native script ardic and two more, none twice); a Viking lexigrapher from both the same (two scripts, the native delvic, no second tongue); hmchar.hl's scribe (its dice its own) a language line and three scripts, the native ardic, none twice",
+      init: 't_rc', cycles: 1600e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\r' + 'ācd /ram; hmchar -q -s 5 -u feudal -c scribe -o x.hm >s.out; cp x.hm s.hm; hmchar.fs -q -s 5 -u feudal -c scribe -o x.hm >f.out\r' +
+        'ācmp s.out f.out && cmp s.hm x.hm && echo scribe same; cat s.out; ' + HM_FILE('s.hm') + '\r' +
+        'āhmchar -q -s 7 -u viking -c lexi -o x.hm >l.out; cp x.hm l.hm; hmchar.fs -q -s 7 -u viking -c lexi -o x.hm >g.out\r' +
+        'ācmp l.out g.out && cmp l.hm x.hm && echo lexigrapher same; cat l.out; ' + HM_FILE('l.hm') + '\r' +
+        'āhmchar.hl -q -u feudal -c scribe -o h.hm >h.out; cat h.out; ' + HM_FILE('h.hm') + '\r' + 'āecho =DONE\r' },
+      expect: ['\n=DONE\n'],
+      check(m, out) {
+        const f = [], o = out.replace(/\r/g, '');
+        const c1 = 'cmp s.out f.out && cmp s.hm x.hm && echo scribe same; cat s.out; ' + HM_FILE('s.hm'), c2 = 'cmp l.out g.out && cmp l.hm x.hm && echo lexigrapher same; cat l.out; ' + HM_FILE('l.hm'), c3 = 'hmchar.hl -q -u feudal -c scribe -o h.hm >h.out; cat h.out; ' + HM_FILE('h.hm');
+        const sc = s => [...s.matchAll(/\nscript ([a-z]+)(?:=\d+)?(?=\n)/g)].map(x => x[1]), lg = s => [...s.matchAll(/\nlanguage [a-z]+=\d+(?=\n)/g)].length;
+        if (!/\nscribe same\n/.test(o)) f.push('hmchar.fs\'s scribe not C\'s');
+        if (!/\nlexigrapher same\n/.test(o)) f.push('hmchar.fs\'s lexigrapher not C\'s');
+        for (const [n, c, nl, ns, nat] of [['the scribe', c1, 1, 3, 'ardic'], ['the lexigrapher', c2, 0, 2, 'delvic'], ['hmchar.hl\'s scribe', c3, 1, 3, 'ardic']]) {
+          const p = hmRun(o, c);
+          if (!p) { f.push(n + ': no file'); continue; }
+          const x = sc('\n' + p.file);
+          if (lg('\n' + p.file) !== nl || x.length !== ns || x[0] !== nat || new Set(x).size !== ns) f.push(n + '\'s tongues and scripts: ' + JSON.stringify(p.file.split('\n').filter(z => /^(language|script) /.test(z))));
+          f.push(...hmcharCheck(p.out, p.file).map(z => n + ': ' + z));
+        }
         return f;
       },
       sdcard: true
