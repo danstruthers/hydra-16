@@ -345,6 +345,8 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   its pack told off and on already, the rest of the line by the lump) */
 #define PL_MORE         2
 #define PL_TOLD         4
+#define PL_ALL          64                      /* ("Take all" under way, its last thing too: what's taken up the pack first,
+                                                **   not a hand, the world's get; PL_MORE, more to come, the pack left off) */
 #define PL_NOFACE        32                     /* (dq0 -I, the tests': no test of courage on facing the character, no weapon broken, their games as they were: 2026-11-03) */
 #define PL_DUSK         16                      /* (dq0 -E, the tests': the game begins at dusk, not at the seed's hour: their games as they were) */
 #define PL_NOFIT        8                       /* (dq0 -F, the tests': the outfit as it's drawn, unfitted to its strength) */

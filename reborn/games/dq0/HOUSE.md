@@ -830,10 +830,29 @@ world's answer follows.  The word is said before the world's asked, and holds wh
   feel the door." in the dark); "You head for the door." from across its room.  None if a turn to it comes first (the turn's
   words are its first), or if it's asked which door.
 - **A thing handled** (hold, stow, put, take from, wear, take off, light, put out, drop, fill, sharpen, hide, tie, untie,
-  open or close a thing, throw): "You reach for the sack."  A thing to take from the floor, "You reach for" only if it's seen in reach; seen only
-  out of reach, its walk ("You go over to the bones."); not seen now, "You look for the bones." (then its walk, if it's remembered, or "You see none of those here."; in the dark, none).
+  open or close a thing, throw) *(2026-11-06: the user's playtest, "You reach for the torch." of one in hand, in the pack or nowhere;
+  new, for review: the words)*: the first word says what will happen, by where the thing is that the world's chooser would take (what
+  the character carries, the world's index of it in the UI's bank, made as what it carries changes; the state said, "the spent torch"):
+  lying within reach, "You reach for the sack."; in the pack on its back, "You reach for your backpack." (then the reach's steps);
+  in a sack it holds or wears, "You reach into the sack."; put in the pack or in a thing in reach, that ("You reach for your
+  backpack."; in it already, "You look for the tinderbox."); let go of, carried, not in anything, "You put down the torch." (all of it said: not "Put down." after it; by the
+  count, the world's words); on the belt or in what hangs from it, "You reach for the dagger."; in hand already, the act's own
+  start ("You raise the torch." to light it or put it out, "You lift the waterskin." for the rest: the answer seconds off, a first
+  word within the fifth of a second all the same); taken from a thing lying in reach, "You reach for the candle."; nowhere it carries or sees,
+  "You look for the rope." ("You feel for the rope." in the dark).  A thing to take from the floor, "You reach for" only if it's
+  seen in reach; seen only out of reach, its walk ("You go over to the bones."); not seen now, "You look for the bones." (then its
+  walk, if it's remembered, or "You see none of those here."; in the dark, none).
 - **A thing looked at closely or asked of** (examine, assess, heft, its lock, its traps, look in it): "You look at the sack." if it's
-  seen; else "You look for the sack."  In the dark, none: the answer's its first words.
+  carried or seen; else "You look for the sack."  In the dark, none: the answer's its first words.
+- **Things told apart** *(2026-11-06: the user's "You put the torch in your backpack." of the spent one as a new one's lit; new,
+  for review)*: a thing named in the things' words, the reach's steps and the first words, beside another of its kind at hand
+  (carried, or lying within reach), is named by its state when no other is in the same state: lit, unlit, spent (a light burnt
+  out), empty (a fuel): "You put the spent torch in your pack.", "You put down the spent torch."  Two in one state keep the plain
+  name ("the other" in a run of steps, as before).
+- **Which thing, by its state** *(2026-11-06)*: "the spent torch" (spent, burnt, burned, used), "the full sack" (full) beside the
+  lit, unlit, new, open, closed and empty already, for every verb, carried or not (a light lit, none said, the one the lighting finds first, as before).  A place said as a thing's other is where things lie: "take the torch from the floor"
+  (the ground, the bottom, here) takes one up, of those not carried; "put the torch on the floor", "drop it on the ground" puts it
+  down.
 - **A denizen swayed, a gift, a trade** (talk, calm, threaten, name, give, buy, sell ...: the denizens' task's to answer): "You look for the rat." ("You feel for ...").
 - **Read, combine**: "You reach for the sack."
 - **A look one way**: "You peer ahead." at once, unless it turns first.
@@ -1142,7 +1161,7 @@ climb's test to hold on).
     climb's: no stopping it part way);
   - the traces read: a track, a minute: "You cast about for tracks." / what it reads; a sniff, 3 seconds: "You sniff
     the air." / what it smells (too dark to see the floor, no nose: told at once);
-  - a light filled, 20 seconds (a torch dipped, 10): "You set to filling the lantern." / "You fill the lantern from
+  - a light filled, 20 seconds (a torch dipped, 10): "You set to filling the lantern.", "You set to dipping the torch." (each its own word: the user's, 2026-11-06) / "You fill the lantern from
     the flask of oil.";
   - a thing hidden, a minute: "You set to hiding the dagger." / "You hide it well enough." (cunningly, after a
     fashion);
@@ -1646,7 +1665,9 @@ hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous li
   hand: items.h's IH_*).  A thing taken up goes to the hand that suits it: a weapon or a tool the main hand, a shield
   (its key "shield") or a light the other, a two-handed thing (the things' rule: two-handed, or 20 pints or more) both;
   the other hand if that one's taken or useless; none free, the pack, else refused ("Your hands are full: stow
-  something, or put it down.").  The kit's torch in the off hand.  Said outright: "hold the sword in my left hand",
+  something, or put it down.").  A thing taken off with no hand free (the pack, a cloak, a helm, a belt, a ring) is set down at its
+  feet, as a drop would, and said so: "Your hands are full: you take off the backpack and set it down at your feet." (the user's playtest,
+  2026-11-06: refused before, its hands full; new, for review).  The kit's torch in the off hand.  Said outright: "hold the sword in my left hand",
   "take the torch in my right hand", "put the dagger in my other hand", "hold the spear in both hands" (any thing
   that isn't two-handed may be held in both: the book has no bonus for it, and none's taken), "in my off hand", "in
   my main hand"; a thing held already moved to it ("You shift the sword to your left hand."); a hand that holds

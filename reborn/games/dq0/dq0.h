@@ -415,11 +415,12 @@ unsigned char __fastcall__ actor_seen (unsigned char b);        /* Part 8: an ev
 unsigned char __fastcall__ lie_words (unsigned char i);   /* Part 8: a thing's place in the room (its sight_copy's) */
 unsigned char reach_go (void);
 unsigned char __fastcall__ tool_out (unsigned char which);    /* Part 19: a thing got out for its use (0 a bandage, 1 food, 2 water), a tool's steps */
-extern unsigned char nap, what_hi, take_more, nosteps;    /* (main.c's) */
+extern unsigned char nap, what_hi, take_more, take_all, nosteps;    /* (main.c's) */
 void step_go (void);                            /* Part 19: a step of the reach begun by the world (IO_STEP's) */
 void __fastcall__ reach_said (unsigned w, unsigned char named);   /* Part 19: the reach's words */
 unsigned char may_den (void);                   /* (sway.c's: the thing named may be a denizen: the denizens asked) */
 extern unsigned char paced;                     /* (pace.c's: a manner said with the last pace: main.c's look at a line) */
+void place_said (void);                         /* (Overlay 20's, sway.c: "from the floor", "on the ground": a place, not a thing) */
 void __fastcall__ walk_ahead (const char* name);    /* (sway.c's: a thing to take seen out of reach: its walk told before the world's asked) */
 #define W_DIG           (PA_CHECK + 2)          /* (walk_says' name, a first word by what's asked: PA_* + 1 a portal's work, sway.c's) */
 #define W_SWAY          (PA_CHECK + 3)

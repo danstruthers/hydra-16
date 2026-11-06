@@ -150,6 +150,7 @@ void rs_did2 (void);                            /* (Part 75's: a step's end, par
 unsigned char __fastcall__ rs_more (unsigned char w);  /* (Part 90's: 0 hands made free for rs_tool, 1 a step's begun; 1 a
                                                 **   step's end, part 86's rs_did's RS_HAND on) */
 #define RF_TELL         0x8000                  /* (| TE_* | its kind times 256: a word to the UI, E_TASK's, b rs_what) */
+extern unsigned rs_wn;                          /* (The thing a step's about: apart's, its words) */
 extern unsigned rs_tool;                        /* (The tool in use; a fire-maker to hand, part 10's flame's) */
 extern unsigned char rs_free;
 extern unsigned char rs_using;                  /* (A tool's: 1 out; 2 caught, a fire-maker's) */
@@ -169,6 +170,10 @@ void held_kinds (void);
 unsigned char __fastcall__ shand_of (unsigned char s);  /* (The hand that holds the thing that strikes: the hub's
                                                 **   pc_shand) */
 void light_now (void);
+void ix_make (void);                            /* (What it carries, for the UI's first words: part 102's) */
+unsigned char __fastcall__ tell_apart (unsigned n);
+unsigned char __fastcall__ doff_feet (unsigned n);  /* (A thing taken off, no hand free: at its feet, part 48's) */
+void __fastcall__ name_apart (unsigned i, char* d);    /* (Its name told apart, into d: part 102's) */  /* (Its state's word, AW_*, beside another of its kind at hand: part 92's) */
 void __fastcall__ go_to (unsigned x, unsigned y);
 
 /* The things' words (kinds.c's said, in the catalogue's bank: % the thing's name, # the other's) */

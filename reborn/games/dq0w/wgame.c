@@ -35,6 +35,7 @@ extern unsigned handled;                        /* (things.c's: the thing a requ
 unsigned take_n;                                /* (things.h's: I_TAKE's thing, its item; 0 none) */
 static unsigned take_x, take_y;                 /*   its square, */
 static unsigned take_fx, take_fy;               /*   and where the walk to it began */
+static unsigned char tk_hand;                   /* (carry's: 2 a hand first, said if it goes in the pack; 0 "take all"'s, the pack first) */
 static unsigned char take_only;                 /*   1: walked over to alone (I_TAKE's a: the UI's command again) */
 static unsigned char done_;                     /* (The rules done, a bit each: the save's, the UI's quest) */
 extern unsigned char bold_;                     /* (dq0w.c's: a pace said outright, for the dark) */
@@ -280,7 +281,8 @@ unsigned char s_take_up (void)
         r = IR_NOT_HERE;
     } else {
         hub_map (0);
-        rs_ok = !(HUB->pc_lump & (PL_NOSTEPS | PL_TOLD));                  /* (Into the worn pack: by the reach's steps, the UI's to take it again,
+        rs_ok = !(HUB->pc_lump & (PL_NOSTEPS | PL_TOLD));
+        tk_hand = HUB->pc_lump & (PL_MORE | PL_ALL) ? 0 : 2;                  /* (Into the worn pack: by the reach's steps, the UI's to take it again,
                                                 **   IR_FIXED's) */
         rs_live = rs_paid = rs_using = rs_free = 0;
         rs_pack = 0;
@@ -288,7 +290,8 @@ unsigned char s_take_up (void)
                                                 **   4's: "take 4 rations", the user's) */
             hub_map (KIND_BANK);
             r = w == IW_PORTAL || (CATALOGUE[k].keeps & KF_FIXED) ? IR_FIXED : !noinit && fumbled (k) ? IR_FUMBLED :
-                carry (n, 0) ? IR_OK : IR_FULL; /* (Engaged, a grope failed: the round wasted, its words) */
+                carry (n, (CATALOGUE[k].form & KF_COUNT) ? 0 : tk_hand) ? IR_OK : IR_FULL; /* (Engaged, a grope failed: the round wasted, its words;
+                                                **   in a hand, the pack with both full or "take all"'s: the user's, 2026-11-06) */
         }
         rs_ok = 0;
         if (rs_st) {
