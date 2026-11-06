@@ -1044,7 +1044,7 @@ static void __fastcall__ mend (const char* w, unsigned char whet)
         say (").\n");
     }
     if (!any && (!*w || !strcmp (w, "all") || !strcmp (w, "everything"))) {
-        say (whet ? "Nothing of yours wants only whetting.\n" : "Nothing of yours wants mending or whetting.\n");
+        say (whet ? "The smith finds nothing that wants only whetting.\n" : "The smith finds nothing to do.\n");
     } else if (!any && thing_named (w) == 0xFF) {
         say ("You have nothing like that.\n");
     } else if (!any && !wants_smith (thing_named (w))) {
