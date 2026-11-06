@@ -228,7 +228,7 @@ static void kit_read (void)
     int fd;
 
     kn = 0;
-    if ((fd = open (in_ (top, "kit.dat"), O_RDONLY)) >= 0) {
+    if ((fd = open (in_ (top, TOWN_KIT), O_RDONLY)) >= 0) {
         while (kn < NOFIT && read (fd, &K[kn], sizeof K[0]) == sizeof K[0]) {
             ++kn;
         }
@@ -238,7 +238,7 @@ static void kit_read (void)
 
 /* ---- The town's words (town.txt: a key's lines, each its values between bars) */
 
-#define TW_N            3072                    /* (The words' bank: town.txt's lines but its notes, then the rumours) */
+#define TW_N            3584                    /* (The words' bank: town.txt's lines but its notes, then the rumours) */
 #define tw              ((char*) 0x8000)
 #define RB_N            (0x2000 - TW_N)
 #define rbuf            ((char*) 0x8000 + TW_N)
@@ -606,14 +606,14 @@ static unsigned char cnt;
 
 static const char* __fastcall__ object (const char* s)
 {
-    static const char* const little[] = { "the ", "a ", "an ", "my ", "some ", "for ", "over ", "about ", "on ", "with ", "of ",
-        "much ", "will ", "you ", "give ", "me ", "is ", "are ", "to ", "at ", "this ", "that ", "these ", "those ", "all " };
-    unsigned char k;
+    unsigned char k, n;
 
     cnt = 1;
-    for (k = 0; k < sizeof little / sizeof little[0]; ) {
-        if (!strncmp (s, little[k], strlen (little[k]))) {
-            s += strlen (little[k]);
+    words_of ("little", 0);                     /* (town.txt's little words) */
+    for (k = 0; k < nv; ) {
+        n = strlen (v[k]);
+        if (!strncmp (s, v[k], n) && s[n] == ' ') {
+            s += n + 1;
             k = 0;
         } else {
             ++k;
@@ -1353,7 +1353,7 @@ int main (int argc, char* argv[])
         command (ans);
     }
     cash_lay ();
-    kit_write ();
+    kit_write (TOWN_KIT);
     if ((fd = open (in_ (top, TOWN_FILE), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0 || write (fd, &tr, sizeof tr) != sizeof tr) {
         fail ("can't write town.dat");
     }

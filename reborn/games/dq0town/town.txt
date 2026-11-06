@@ -14,6 +14,7 @@
 #            what's shut's
 #   prompt   what's asked, in the street, then in each place in order
 #   month    the months' names (the book's calendar's)
+#   little   the little words off the front of what a command names ("sell my dagger", "haggle for the rope")
 kind     | a market town on a river.
 kind     | a hill town of grey stone.
 kind     | a walled town at a crossroads.
@@ -53,3 +54,4 @@ prompt   | At the smith's: mend, whet, buy, or Enter to go back
 prompt   | Whose offer will you take? (a number; Enter to go back)
 prompt   | Which will you follow? (a number; Enter the first)
 month    | Nuzyael | Peonu | Kelen | Nolus | Larane | Agrazhar | Azura | Halane | Savor | Ilvin | Navek | Morgat
+little   | the | a | an | my | some | for | over | about | on | with | of | much | will | you | give | me | is | are | to | at | this | that | these | those | all

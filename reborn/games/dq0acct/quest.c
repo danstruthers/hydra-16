@@ -3,8 +3,9 @@
 ** what solving the dungeon it's come out of brings (its theme's reward line: themegen's, from goals.txt's why lines, or a stand-in's
 ** own), the standing it has told (the life's reputation, life.h's), and the rumours heard in town (themegen -r's, which dq0life runs:
 ** rumours.txt in the save's folder; a clue's, the plan's step 10, from heard.txt, told first and taking a made one's place), the one
-** followed written as quest.txt (dq0life puts it in the next dungeon's folder, and themegen fills it out: dq0 -t's door).  The
-** rumours are told here alone, so the town's inn (the plan's step 11) can take them whole.
+** followed written as quest.txt (dq0life puts it in the next dungeon's folder, and themegen fills it out: dq0 -t's door), its road's
+** days on the date (town.h's road_of).  Asked of the character that goes straight on (the tests' dq0auto); the player's town
+** (dq0town, the plan's step 11) tells them at its inn and follows one itself.
 */
 
 #pragma code-name ("OV4CODE")

@@ -12,7 +12,9 @@
 ** infection, shock, venom and disease by the referee's own code told the days at rest (../dq0harn's course.h, watch.h, the
 ** library's harnheal.c); living, selling, mending, whetting, restocking and work; the month's practice.  It's told in a dozen
 ** lines, and the one question asked (its answer filled in), then Enter: the game clears the screen as it starts.  The rc
-** variable dq0auto (the tests'): nothing waited for, the answers as they're filled in.
+** variable dq0auto (the tests'): nothing waited for, the answers as they're filled in.  The player asked (no dq0auto), the town
+** (dq0town, the plan's step 11: town.c's) comes after the first lines and before the money's matters, which then leave alone what the
+** player saw to there.
 ** Its exit status: 0; 2 the character dead of it (the record says so, dq0life's to tell the life's account); 1 its fault said.
 ** The rules' numbers marked [Suggest] in the plan: HOUSE.md's between dungeons, for the user's review.
 */
@@ -231,14 +233,14 @@ static unsigned char __fastcall__ valuable (const struct kitrec* r)
     return k->craft == AP_JEWEL || k->mat == MT_GOLD || k->mat == MT_SILVER;
 }
 
-static void kit_read (void)
+static void __fastcall__ kit_read (const char* name)
 {
     int fd;
     unsigned char k, armed = 0;
     unsigned long best = 0;
 
     kn = 0;
-    if ((fd = open (in_ (top, "kit.dat"), O_RDONLY)) >= 0) {
+    if ((fd = open (in_ (top, name), O_RDONLY)) >= 0) {
         while (kn < NOFIT && read (fd, &K[kn], sizeof K[0]) == sizeof K[0]) {
             ++kn;
         }
@@ -821,7 +823,7 @@ int main (int argc, char* argv[])
     ans[0] = random (8);
     OV5 (o_town ());
     CATS ();
-    kit_read ();
+    kit_read ("kit.dat");
     names_read (n - 1);
     cash_count ();
     OV4 (o_reward ());                          /* (What solving the dungeon just left brings, its theme's reward line: its pennies
@@ -862,11 +864,12 @@ int main (int argc, char* argv[])
             told = 1;
             first_lines ();
             cash_lay ();
-            kit_write ();
+            kit_write (TOWN_KIT);
             OV5 (told += o_town_go ());
             CATS ();
             memset (gone, 0, sizeof gone);
-            kit_read ();
+            kit_read (TOWN_KIT);
+            remove (path);
             cash_count ();
             nwants = 0;
             wants_read ();
@@ -924,7 +927,7 @@ int main (int argc, char* argv[])
     say_flush ();
     OV3 (o_sheet_write ());
     CATS ();
-    kit_write ();
+    kit_write ("kit.dat");
     L.h.date += passed;
     L.h.flags &= ~LF_BETWEEN;
     life_write ();

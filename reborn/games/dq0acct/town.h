@@ -8,6 +8,8 @@
 #define _TOWN_H
 
 #define TOWN_FILE       "town.dat"
+#define TOWN_KIT        "townkit.dat"           /* (What's carried, handed to the town and back: kit.dat as it was till the account's end, so a
+                                                **   reset in the town tells the time between again, the same) */
 #define TS_MARKET       0x01                    /* (The market's been seen: nothing more sold or bought for it, by the account) */
 #define TS_SMITH        0x02                    /* (The smith's: nothing more mended or whetted for it) */
 

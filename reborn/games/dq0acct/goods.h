@@ -303,8 +303,8 @@ static void __fastcall__ thing_in (unsigned char kind, unsigned char n, const st
     ++kn;
 }
 
-/* kit.dat written, what's gone out of it, each thing's place in the list kept */
-static void kit_write (void)
+/* kit.dat written (or the town's, town.h's TOWN_KIT), what's gone out of it, each thing's place in the list kept */
+static void __fastcall__ kit_write (const char* name)
 {
     static unsigned char to[NOFIT];
     unsigned char k, n = 0;
@@ -313,7 +313,7 @@ static void kit_write (void)
     for (k = 0; k < kn; ++k) {
         to[k] = gone[k] ? 0 : ++n;
     }
-    if ((fd = open (in_ (top, "kit.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
+    if ((fd = open (in_ (top, name), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
         fail ("can't write what's carried");
     }
     for (k = 0; k < kn; ++k) {

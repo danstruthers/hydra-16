@@ -253,7 +253,7 @@ function driven(s, turns, verbose, o) {
   function atShell(m, since) {                  // (A game over: how, told by its words; the record asked after)
     const t = strip(m.out.slice(gameFrom)).replace(/\s+/g, ' ');
     let end = /You are dead\./.test(t) ? 'died' : /\bThe life of /.test(t) ? 'abroad' : /The game is over\./.test(t) ? 'left' : typed[typed.length - 1] === 'quit' ? 'quit' : '';
-    const fault = /dq0(?:life|acct|end)?: [a-z]/.exec(t);
+    const fault = /dq0(?:life|acct|end|town)?: [a-z]/.exec(t);
     if (fault) problems.push('it said: ' + t.slice(fault.index, fault.index + 80));
     if (!end) { problems.push('the game ended by itself after ' + JSON.stringify(typed[typed.length - 1] || '(the start)')); end = 'quit'; }
     ends.push(end);
