@@ -2191,7 +2191,8 @@ ruleset's (the fatigue rested off the referee's).
   scene as dq0restbusy's bandits, 1.6M to 2.9M cycles a game minute, 3.6 to 6.4 minutes of the machine's for the night (more than 37 before).  A step that
   isn't refused and a blow go as ever; the character changing rouses them as ever.
 - **Those that want it, as it rests** *(new, for review; 2026-11-06, the user's "yes, robbers should come and rob a resting character")*:
-  a denizen whose aim is the character or its things doesn't stand off from it at rest (a rest or a sleep, no question put), but acts
+  a denizen whose aim is the character or its things doesn't stand off from it at rest (asleep, or a rest or long wait off its feet,
+  lying, sitting or kneeling; no question put: a wait standing is watchful, and it's as ever), but acts
   on it as its kind's rule says (dq0d's decide and part 20's hid_mind, HM_FILCH; the world's wfight.c, den_rob):
   - **Robbers** (kinds.txt's ways r: kobolds and their lord, bandits and theirs, brown orcs, the orc king) don't lie in wait for one at
     rest, which won't come by them; one hidden as it lies down comes out at once.  Out of hiding, one knows it's there and comes on (before,

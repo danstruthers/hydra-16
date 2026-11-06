@@ -462,6 +462,8 @@ static unsigned pcx, pcy;
 static unsigned char pcs, pclit, pcbusy, pcdead;
 static unsigned char pcrest;                    /* (The character in a long wait or asleep, not asked of: the actors'
                                                 **   idle ways the coarser, decide's and coarse's) */
+static unsigned char pclie;                     /* (At rest: asleep, or a long wait off its feet (lying, sitting, kneeling),
+                                                **   not asked of: robbers come for it, 2026-11-06) */
 static unsigned char pchelp;                    /* (Helpless: in shock, or senseless as it lies, busy till it comes
                                                 **   round; the referee's conditions) */
 static unsigned char pcstay;                    /* (Its stay where it stands, since it came onto the square: its
@@ -2081,7 +2083,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
     } else if (sres[k] && foe && dist == 1) {
         a.face = bearing (ddx, ddy);            /* (A foe beside it: it strikes; the character at rest, unnoticed, a
                                                 **   robber robs it as it lies: part 20's) */
-        d = pcrest ? hid_mind (k | HM_FILCH) : 0xFC;
+        d = pclie ? hid_mind (k | HM_FILCH) : 0xFC;
     } else if (sres[k] && foe && (ag & AG_SHOOTS) && a.sn == pcs && shoots (k, ag)) {
         d = 0xFA;                               /* (A foe it senses further off, a shot: part 2's, slice 4.7's; asked
                                                 **   only of one with a launcher, the part's copy the dearer) */
@@ -2142,7 +2144,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
     hub_map (0);
     HUB->actor[k].attitude = a.attitude;        /* (Its mind's own, as it decides) */
     HUB->actor[k].foe = a.foe;
-    if (!foe || a.doing != DO_COMING || !((K.flags & K_NOSE) || (pcrest && K.mind))) {
+    if (!foe || a.doing != DO_COMING || !((K.flags & K_NOSE) || (pclie && K.mind))) {
         stalk[k] = 0;                           /* (A hunter coming at the character stalks it: its Stealth tested as
                                                 **   it begins, D15's, every actor's; its grade the steps' loudness,
                                                 **   no noise of its own: HOUSE.md's sound and stealth; and any with a
@@ -3472,7 +3474,7 @@ unsigned char __fastcall__ s_hid_mind (unsigned char k)
     if (op == HM_AMBUSH) {                      /* (A robber, just come to sense it, no eye on it: under cover, or in the
                                                 **   dark, lies in wait, unseen; the world's to say if it can; not for one
                                                 **   at rest, which won't come by: it comes on, 2026-11-06) */
-        if (HUB->nolurk || pcrest || a.attitude != AT_HOSTILE || dist < 3 || (HUB->agear[k] & AG_SHOOTS) ||
+        if (HUB->nolurk || pclie || a.attitude != AT_HOSTILE || dist < 3 || (HUB->agear[k] & AG_SHOOTS) ||
             !(p = at (a.sn, a.x, a.y)) || (*p & T_VIS)) {
             return 0;
         }
@@ -3489,7 +3491,7 @@ unsigned char __fastcall__ s_hid_mind (unsigned char k)
     if (!alert[k]) {
         alert[k] = now + LURK_T;
     }
-    if (a.attitude != AT_HOSTILE || now > alert[k] || pcdead || pcrest) {
+    if (a.attitude != AT_HOSTILE || now > alert[k] || pcdead || pclie) {
         alert[k] = 0;
         im.w1 = POS_HIDE | HD_OUT;
         a.doing = DO_WATCH;                     /* (Out, it knows the character's there: it comes on, not lying in wait
@@ -4460,6 +4462,7 @@ int main (int argc, char* argv[])
                                                 **   its pace, slice 4.5's fault: a busy character taken for idle,
                                                 **   one senseless not helpless, struck on, never robbed) */
             pcrest = pcbusy && (HUB->pc_task.kind == LT_WAIT || HUB->pc_task.kind == LT_SLEEP) && !HUB->pc_task.asking;
+            pclie = pcrest && (HUB->pc_task.kind == LT_SLEEP || (HUB->pc_pos & ~POS_CROUCHED));
             pcdead = (HUB->pcsum.cond & C_DEAD) != 0;
             pchelp = (HUB->pcsum.cond & C_STUNNED) || ((HUB->pcsum.cond & C_UNCONSCIOUS) && pcbusy);
             if (!(pclit = HUB->pc_light != 0) && DONE (pcs) && (p = at (pcs, pcx, pcy)) != 0) {
