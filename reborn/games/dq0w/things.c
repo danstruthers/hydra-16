@@ -2500,15 +2500,6 @@ static unsigned char __fastcall__ named4 (const char* k, const char* w)
                                                 **   waterskin, 2026-10-26) */
 }
 
-/* The thing in rec (fetched) named so: by its kind's name (named's), or by the name the character gave it (the UI's
-** "#" and its id: hub.h's struct tname) */
-static unsigned char __fastcall__ is_named (const char* w)
-{
-    char b[6];
-
-    return *w == '#' ? !strcmp (utoa (rec.id, b, 10), w + 1) : named4 (kind_of (rec.kind)->name, w);
-}
-
 /* How thing i lies, for the chooser: how deep it is in others (0: in none), its outermost (on the character, on a
 ** square) in ctop; cnot, it's the one it mustn't be (wnot) or in it */
 static unsigned ctop;
@@ -2574,7 +2565,7 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
     unsigned char* t;
     const struct item* p;
     const struct kind* k;
-    unsigned i = 0, x, y, px, py, dx, dy;
+    unsigned i = 0, x, y, px, py, dx, dy, wid;
     unsigned char m = 0, j, r, d, sn, s = wsel & 15, pw, ps, pk;
 
     afar = 0;
@@ -2587,6 +2578,10 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
     sn = HUB->pc_stratum;
     x = HUB->pc_x;
     y = HUB->pc_y;
+    for (wid = 0, t = (unsigned char*) name + 1; *name == '#' && *t; ++t) {
+        wid = wid * 10 + *t - '0';            /* (A thing by its id: a name given's, a letter's, the UI's "#" and the id;
+                                                **   the records' own looked at, none copied out, 2026-11-06) */
+    }
     p = 0;                                      /* (The store gone through here, not by items (): a kind passed over, or
                                                 **   a free record, some 70 cycles, not 1,400: a thing named answers the
                                                 **   sooner, the user's D17, 2026-11-03; p 0, its bank to be put back) */
@@ -2596,7 +2591,8 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
         }
         pk = p->kind;
         ++p;
-        if (!pk || no[pk] || p[-1].where >= IW_DEN || (p[-1].flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN) {
+        if (!pk || no[pk] || p[-1].where >= IW_DEN || (p[-1].flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN ||
+            (*name == '#' && p[-1].id != wid)) {
             continue;
         }
         p = 0;
@@ -2609,9 +2605,6 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
             }
         }
         fetch (&rec, i);
-        if (*name == '#' && !is_named (name)) {
-            continue;
-        }
         if (d = chain (i), cnot && s != SL_NTH) {
             continue;                           /* (Not the first, nor in it, unless it's the nth said: "the second
                                                 **   sack" of them all, not of the rest) */
@@ -2828,8 +2821,9 @@ unsigned __fastcall__ s_shut_in (unsigned n)
 ** the request's x) and IR_NO (nothing about it changed); or (iq's to 1) it set in the door's brackets, a portal's part
 ** again on iq's square, the bar's side (the world's barred the door): part 35's, the catalogue's bank's room (its
 ** o_handle's through its stub) */
-#pragma code-name (push, "SW4CODE")             /* (Part 4's since 2026-11-03: part 35's room) */
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW103CODE")           /* (Part 103's since 2026-11-06: part 4's room, the letters'; part 4's since
+                                                **   2026-11-03, part 35's room) */
+#pragma rodata-name (push, "SW103RODATA")
 unsigned char s_bar_hand (void)
 {
     unsigned n, best;

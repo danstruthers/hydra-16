@@ -885,6 +885,17 @@ world's answer follows.  The word is said before the world's asked, and holds wh
   ("(lit, 40 minutes left)": the status line has its light's), nor four spaces a level: the list's letters are its time at
   the console's pace (some 1,300 cycles each), and the answer after an inventory at the turns pace's wait 0 came late
   with them (dq0answer's examine, 665,000 cycles of its 640,000).
+- **A letter where a thing's name goes** (the user's design): "drop d", "put d in c", "light a with b", "take d from c",
+  "throw d at the rat", a count before it, "drop 2c"; that thing and no other (not the one most to hand of its kind), its
+  first words its own.  Words work beside them as ever ("drop the spent torch").  A letter is one only after the line's
+  first word (never the verb: "d" alone is down, "i" the inventory), at the line's end or before a word that ends a thing's
+  name ("in", "on", "from", "with", "at", "to", "and", "then", a manner: so "take a torch" is the article's), and not a way
+  straight after a verb of ways ("look d" looks down, "look at d" at the thing); a letter of nothing carried is the word it
+  was.
+- **Nothing named, asked** (the user's design): drop, hold, wield, wear, take off and put away with nothing named ask, with
+  the letters of those it can be done to, in their order: "Drop what? [a, b, d]" (dropped, any; held or wielded, one not in
+  hand; worn, a thing that's worn, not worn now; taken off, one worn; put away, one in hand).  A letter alone answers it
+  ("d": drop d); any other line lets it go, a command of its own.  (Before, "drop" alone dropped the last thing named.)
 
 ## Characters *(hmchar: HarnMaster's character generator)*
 

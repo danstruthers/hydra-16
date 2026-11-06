@@ -719,7 +719,13 @@ carried, given back by the thing's id as it's taken up again; a new one the firs
 go of the longest ago, then aa ... az.  Kept in the save (game.dat's after the shortcuts: letters.c's, part 22's) and in
 kit.dat (struct kitrec's let: the carried-on kit's letters laid on its things as they're made, part 63's).  The inventory
 is a list, one a line (part 11's contents, the inventory's mode: its letter, letter.s's lput; what's in a thing indented by
-hard spaces, term.c's say, two a level; its gathering part 103's, s_inventory, part 11's room).
+hard spaces, term.c's say, two a level; its gathering part 103's, s_inventory, part 11's room).  A letter typed where a thing's
+name goes names that thing (letters.c, overlay 22's, its own: the line's letters made the things' names as it's posted,
+"drop j" parsed as "drop torch", each one's id kept, ldes; the requests' words "#" and the id, des_map, the world's chooser
+by the records' ids, part 4's pick; the resolver's question of several not asked of it; its first words its own, sway.c's
+des_e; a tool named by its letter to hand without the world asked): the grammar the same, the letters never the
+parser's.  A command with nothing named of those done to a thing carried asks with their letters ("Drop what? [a, b,
+d]", o_what_ask), a letter answering it.
 
 **Reach, and things used up** (2026-10-26, the user's: "Handy would be readily available, so in a backpack that is
 being worn is not as readily available as one in a belt pouch"; HOUSE.md's reach, handy tools and things used up):

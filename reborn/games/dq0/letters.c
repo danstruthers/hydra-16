@@ -17,8 +17,10 @@
 ** down, "look at d" the thing); a count before it ("drop 2f") kept.  A command with nothing named asks, with the
 ** letters of those it can be done to ("Drop what? [a, d, f]"), and a letter answers it ("f": "drop f").
 **
-** Its code: the main RAM's what the main code reads (ldes, des_put, des_find); overlay 22's the line's (o_letters_in,
-** o_what_ask); part 22's the save's.
+** Its code: the main RAM's what the main code reads (ldes, desb, desk); overlay 22's the rest of the line's
+** (o_letters_in, o_what_ask, o_des_find, o_des_low, o_des_map); part 22's the save's.  A line's letters made its things'
+** names as it's posted to the parser and only then (main.c's cq_st): a line with no word that may be a letter (one
+** letter, or two an a's, a count before perhaps) let be at once, every command's answer the sooner.
 */
 
 #include <ctype.h>
@@ -36,27 +38,8 @@
 struct ldes ldes[NDES];
 unsigned char ndes;
 
-/* The first of the line's letters, from ldes[k] on, that made word w, its thing known: its place plus 1, or 0 */
-unsigned char __fastcall__ des_find (const char* w, unsigned char k)
-{
-    for (; k < ndes; ++k) {
-        if (ldes[k].id && !strcmp (w, ldes[k].word)) {
-            return k + 1;
-        }
-    }
-    return 0;
-}
-
-/* Word w (a request's name, or its other's: main.c's things) the thing's own if a letter made it, from ldes[k] on: "#"
-** and its id, as a name given is (the world chooses that one: things.c's is_named).  Its place plus 1, or 0 */
-unsigned char __fastcall__ des_put (char* w, unsigned char k)
-{
-    if ((k = des_find (w, k)) != 0) {
-        w[0] = '#';
-        utoa (ldes[k - 1].id, w + 1, 10);
-    }
-    return k;
-}
+char desb[8];                                   /* (A request's word as des_map made it: "#" and an id) */
+unsigned char desk;                             /* (The letter des_map found last: its place plus 1, or 0) */
 
 /* ==== Overlay 22's (its own, 2026-11-06: the designators'): a line's letters made its things' names (every line's, as
 ** it's posted: main.c's main loop); the question asked of a command with nothing named */
@@ -76,6 +59,39 @@ static unsigned char offer[(NLET + 7) / 8];     /* (The letters it offered, a bi
 static char o[INMAX + 32];                      /* (The line made, and the question's words) */
 static char w[16];
 static unsigned char ts[16], tl[16];            /* (The line's words: where each begins, its length) */
+
+/* The first of the line's letters, from ldes[k] on, that made word w, its thing known: its place plus 1, or 0 */
+unsigned char __fastcall__ o_des_find (const char* w, unsigned char k)
+{
+    for (; k < ndes; ++k) {
+        if (ldes[k].id && !strcmp (w, ldes[k].word)) {
+            return k + 1;
+        }
+    }
+    return 0;
+}
+
+/* Is word w a lower-case letter's, its thing carried, for a command done with it (resolve.c's tool_ok: to hand, the world not
+** asked; but a blow's, a dig's, which want its kind)? */
+unsigned char __fastcall__ o_des_low (const char* w)
+{
+    unsigned char k = o_des_find (w, 0);
+
+    return k && ldes[k - 1].low && cmd.action != VB_ATTACK_OBJECT && cmd.action != VB_BREAK_OBJECT && cmd.action != VB_DIG;
+}
+
+/* Word w (a request's name, or its other's: main.c's things) the thing's own if a letter made it, from ldes[k] on: "#"
+** and its id, as a name given is (the world chooses that one: things.c's is_named), in desb; else w.  desk the letter's
+** place plus 1, or 0 */
+const char* __fastcall__ o_des_map (const char* w, unsigned char k)
+{
+    if ((desk = o_des_find (w, k)) == 0) {
+        return w;
+    }
+    desb[0] = '#';
+    utoa (ldes[desk - 1].id, desb + 1, 10);
+    return desb;
+}
 
 /* The UI bank's bytes copied into this bank, by way of the C stack (the two share the window), a piece at a time */
 #pragma static-locals (push, off)
@@ -151,15 +167,13 @@ static unsigned char __fastcall__ in_list (const char* list, const char* s, unsi
     return 0;
 }
 
-/* The line's sum (posted again: the same line) */
+/* The line's key (posted again: the same line): its length, its first letter and its last */
 static unsigned __fastcall__ sum (const char* l)
 {
-    static unsigned s;
+    static unsigned char n;
 
-    for (s = 0; *l; ++l) {
-        s = (s << 1) + (s >> 15) + (unsigned char) *l;
-    }
-    return s;
+    n = strlen (l);
+    return (unsigned) n << 8 ^ (unsigned char) l[0] ^ (unsigned char) (n ? l[n - 1] : 0) << 1;
 }
 
 /* Line l made o (l the queue's first line, term.c's t_next: the lines after it moved): 1, or 0 (no room) */
@@ -191,7 +205,7 @@ void __fastcall__ o_letters_in (char* l)
     static const char* p;
     static unsigned char nt, i, j, e, n, c, nd, loaded;
 
-    for (nt = 0, p = l; *p && nt < sizeof ts; ) {   /* (Its words) */
+    for (nd = nt = 0, p = l; *p && nt < sizeof ts; ) {  /* (Its words; nd, one after the first that may be a letter) */
         if (*p == ' ') {
             ++p;
             continue;
@@ -201,7 +215,19 @@ void __fastcall__ o_letters_in (char* l)
             ++p;
         }
         tl[nt] = p - l - ts[nt];
+        for (c = ts[nt]; isdigit (l[c]); ++c) {
+        }
+        if (nt && ((c = p - l - c) == 1 || (c == 2 && (p[-2] | 0x20) == 'a'))) {
+            nd = 1;                             /* (A letter perhaps: one, or two an a's, a count before it perhaps) */
+        }
         ++nt;
+    }
+    if (!nd && !asked[0]) {
+        if (sum (l) != dsum) {
+            ndes = 0;                           /* (A line of its own, its letters none: at once, before the parser has
+                                                **   it, nothing more done) */
+        }
+        return;
     }
     if (asked[0]) {                             /* (The question's answer: a letter alone, one offered) */
         if (nt == 1 && tl[0] <= 2 && islower (l[ts[0]]) && (j = let_at (l + ts[0], tl[0])) < NLET &&
@@ -219,6 +245,9 @@ void __fastcall__ o_letters_in (char* l)
     }
     o[0] = 0;
     nd = loaded = 0;
+    if (nt && in_list ("alias\0unalias\0say\0yell\0whisper\0shout\0", l + ts[0], tl[0])) {
+        nt = 0;                                 /* (A shortcut's line, words said: their letters as they are) */
+    }
     for (i = 0; i < nt; ++i) {
         if (i) {
             strcat (o, " ");
@@ -251,6 +280,7 @@ void __fastcall__ o_letters_in (char* l)
                 strcat (o, p);
                 ldes[nd].id = lowc[j] & LT_REC ? 0 : lowc[j];   /* (One with no id yet: by its name, the world's to
                                                 **   choose) */
+                ldes[nd].low = 1;
                 strcpy (ldes[nd++].word, p);
                 continue;
             }

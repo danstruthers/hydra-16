@@ -426,14 +426,20 @@ void place_said (void);                         /* (Overlay 20's, sway.c: "from 
 struct ldes {
     unsigned        id;                         /* The thing's id (0: none yet, chosen by its name) */
     char            word[14];                   /* The word its letter was made ("torch") */
+    unsigned char   low;                        /* (1: a lower case's, a thing carried) */
 };
 extern struct ldes ldes[NDES];                  /* (The line's letters' things, in their order) */
 extern unsigned char ndes;
-unsigned char __fastcall__ des_put (char* w, unsigned char k);  /* A request's word made "#" and the id of the thing its
-                                                **   letter named, from ldes[k] on: its place plus 1, or 0 */
-unsigned char __fastcall__ des_find (const char* w, unsigned char k);   /* The first of the line's letters from ldes[k] on
+extern char desb[8];
+extern unsigned char desk;
+const char* __fastcall__ des_map (const char* w, unsigned char k);   /* (Overlay 22's) A request's word made "#" and the
+                                                **   id of the thing its letter named, from ldes[k] on (desb), or w; desk
+                                                **   its place plus 1, or 0 */
+unsigned char __fastcall__ des_find (const char* w, unsigned char k);   /* (Overlay 22's) The first of the line's letters from ldes[k] on
                                                 **   that named a thing by word w: its place plus 1, or 0 */
 #define des_is(w)   des_find ((w), 0)
+unsigned char __fastcall__ des_low (const char* w);   /* (Overlay 22's) A lower case's word, its thing carried, for a thing done with:
+                                                **   1 (resolve.c's tool_ok: to hand) */
 void __fastcall__ letters_in (char* l);         /* (Overlay 22's) The line's letters made its things' names, as it's posted */
 unsigned char what_ask (void);                  /* (Overlay 22's) A command with nothing named asked about ("Drop what?
                                                 **   [a, d, f]"): 1, or 0 */

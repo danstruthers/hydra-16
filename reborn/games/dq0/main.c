@@ -1817,12 +1817,16 @@ void __fastcall__ wset (unsigned char what, unsigned char x, unsigned char y)
 unsigned char __fastcall__ things (unsigned char op, const char* name)
 {
     struct ireq* q = &HUB->ireq;
+    char ib[sizeof q->into];
 
     q->kind = op;
-    strncpy (q->name, name, sizeof q->name - 1);
+    strncpy (q->name, ndes && (unsigned) name < 0x8000 ? des_map (name, 0) : name, sizeof q->name - 1);   /* (A thing
+                                                **   named by its letter: that one, "#" and its id, letters.c's; a name
+                                                **   in the hub's window not, the overlay's there as it's asked) */
     q->name[sizeof q->name - 1] = 0;
     if (ndes) {
-        des_put (q->into, des_put (q->name, 0));   /* (A thing named by its letter: that one, letters.c's) */
+        memcpy (ib, q->into, sizeof ib);
+        strcpy (q->into, des_map (ib, desk));
     }
     said_ahead = 0;
     if (op == (IO_GET | IO_STEPS)) {
@@ -3110,6 +3114,10 @@ int main (int argc, char* argv[])
                                                 **   not after the events and the status line; its answer first) */
             owed = 0;
             fore_sync ();                       /* (The answer's tasks in the foreground meanwhile) */
+            if (!cq_st) {
+                letters_in ((char*) t_next ());     /* (Its letters made its things' names first, as it's posted:
+                                                **   letters.c's) */
+            }
             cq_post (t_next ());                /* (The command parser at work on it at once, while the events and
                                                 **   the status line are seen to: not after them, 2026-10-30) */
         }
@@ -3157,7 +3165,9 @@ int main (int argc, char* argv[])
             cq_drop ();
         }
         if ((l = (char*) t_next ()) != 0 && (!busy || !held)) {
-            letters_in (l);                     /* (Its letters made its things' names first: letters.c's) */
+            if (!cq_st) {
+                letters_in (l);                 /* (Its letters made its things' names first: letters.c's) */
+            }
             cq_post (l);                        /* (The command parser at work on it meanwhile) */
             if (!held) {
                 ntold = 0;                      /* (Its answer: no look's sentence said yet, no harm's state; a

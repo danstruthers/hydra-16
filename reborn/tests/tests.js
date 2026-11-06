@@ -5365,7 +5365,7 @@ module.exports = {
           'You take the dagger in your right hand.', 'You throw your dagger hard at the giant rat', 'You finish the giant rat where it lies.', 'Put down.',
           'Which do you mean: 1. the body ahead', 'the bones ahead to your right, or 3. the pick where you stand?', 'Taken.',
           'Which do you mean: 1. the body ahead', 'or 2. the pick where you stand?', 'You\'ve no hand free for the pick: you put it in your backpack.', 'Your hands are full, and there\'s nowhere to put it.',
-          '(j) a pick (k) a torch (l) a flask of oil', '(m) bones, in your right hand', 'You carry none of those.', 'Your hands are full, and there\'s nowhere to put it.', 'Throw it at what?',
+          '(j) a pick (k) a torch (l) a flask of oil', '(m) bones, in your right hand', 'Drop what? [', 'Your hands are full, and there\'s nowhere to put it.', 'Throw it at what?',
           'You finish the giant rat where it lies.', 'You have no target now.',
           'You have no target.', 'You turn to face north.', 'You come to the wall.', '% echo $status'];
         let at = 0;
@@ -7776,7 +7776,7 @@ module.exports = {
         if (/\(j\) a torch, in your right hand/.test(inv(2)) || !/\(a\) a torch \(lit/.test(inv(2))) f.push('drop j: not the torch in the right hand put down, the lit one kept: ' + inv(2));
         said('take torch', /Taken\./);
         said('put j in b', /^You reach for your backpack\./);
-        if (!/\(b\) a backpack, worn \([a-z]\) 3 rations[^]*\(j\) a torch/.test(inv(5))) f.push('put j in b: the torch not in the pack: ' + inv(5));
+        if (!/\(b\) a backpack, worn \([a-z]\) 3 rations[^]*\(j\) (a torch|two torches)/.test(inv(5))) f.push('put j in b: the torch not in the pack: ' + inv(5));
         said('take j from b', /^You reach for your backpack\./);
         said('light j with a', /torch/);
         said('drop 2c', /You put down 2 rations\./);
@@ -7786,7 +7786,7 @@ module.exports = {
         said('k', /^You put down the (unlit )?torch\.|^You reach for your backpack\./);
         said('take off', /^Take off what\? \[b, e\]/);
         not('look', /You take off/);
-        said('drop the lit torch', /^You put down the lit torch\./);
+        said('drop the lit torch', /^You put down the (lit )?torch\./);   // (Both lit after "light j with a": the plain name)
         const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETCMD],
           LETCMD.map(l => ({ line: l, want: 'You|Taken|Put|Your|It|Drop|Take' })));
         for (const r of tm) {

@@ -157,6 +157,9 @@ ovl_out:
             OVFN        walk_ahead, 20      ; (A command's first words by what it carries: sway.c, 2026-11-06)
             OVFN        letters_in, 22      ; (A line's letters made its things' names: letters.c, 2026-11-06)
             OVFN        what_ask, 22        ; (A command with nothing named asked about: letters.c)
+            OVFN        des_find, 22        ; (A word a letter made: letters.c)
+            OVFN        des_low, 22
+            OVFN        des_map, 22
             OVFN        dots, 3            ; (The game's start's progress: main.c's)
 
 ; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)

@@ -367,7 +367,8 @@ static unsigned char tool_ok (void)
     }
     k = w == cmd.obj.word ? cmd.obj.sel | cmd.obj.n << 4 : cmd.other.sel | cmd.other.n << 4;
     hub_mem (0, &HUB->ireq.sel, &k, 1);         /* (Which of several: the world's to choose) */
-    if (othings (IO_FIND, w, "", 0) != IR_OK) {
+    if (!des_low (w) && othings (IO_FIND, w, "", 0) != IR_OK) {   /* (One named by its letter, carried: to hand, the world
+                                                **   not asked, letters.c's) */
         msg (lb);                               /* ("You have no bar to hand.", "The bar is out of reach: ...") */
         return 0;
     }
