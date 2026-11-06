@@ -72,11 +72,24 @@ unsigned char __fastcall__ sky_ask (unsigned w);    /* (Part 89's: dq0w.c) The d
 #define SA_JUMP         0x0200
 #define SA_END          0x2000
 #define SA_HERE         0x1000
+#define SA_WET          0x4000
 void it_near (void);                              /* The chunks round the character's in the store, as it comes into
                                                 **   one (dq0w.c's see, as it's moved) */
 unsigned char rope (void);                      /* (Part 96's: wrope.c: IO_HIDE's, IO_ROPE) */
 unsigned char __fastcall__ rope2 (unsigned w);  /* (Part 98's: wrope2.c) */
 unsigned char __fastcall__ rope3 (unsigned w);  /* (Part 95's: wrope3.c) */
+unsigned char __fastcall__ well (unsigned w);   /* (Part 103's: wwell.c, a well's shaft, dq0w.rop's: read in first) */
+#define WL_DOWN         0x0000                  /* (The well within reach's shaft, to climb down: its link, 0xFF none, 0xFE
+                                                **   choked, told; */
+#define WL_ROPE         0x2000                  /*   a rope's drop down it, wrope.h's R_*'s: 2, or 0; */
+#define WL_NEAR         0x4000                  /*   part 104's asks: the well within reach, 1 or 0; its shaft, as WL_DOWN's
+                                                **   but untold; its foot there, the window on it: 1 or 0) */
+#define WL_SHAFT        0x6000
+#define WL_FOOT         0x8000
+unsigned char well_put (void);                  /* (Part 104's: wwell2.c, the thing named let fall into a well, down a shaft;
+                                                **   its words the things', IR_*) */
+#define HF_DEEP         0x40                    /* (A fall's, s_fall's: into deep water, three feet or more, the book's;) */
+#define HF_SHALLOW      0x20                    /*   into shallow water: rs.h's GR_*'s, not the referee's HF_*) */
 void __fastcall__ start (const char* dir);      /* (Part 3's: dq0w.c) The world's start, once it's attached */
 void __fastcall__ keep (unsigned char back);    /* The store kept (items.dat), or read back */
 extern unsigned ilim;                           /* (things.c's: the records used, at most) */

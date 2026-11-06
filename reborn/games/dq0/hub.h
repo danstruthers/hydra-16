@@ -554,7 +554,8 @@ enum {
                                                 **   squares searched those nearer than it, squared: the UI's things'
                                                 **   search the same, IO_SEARCH's to) */
     E_HARM,                                     /* who's been harmed (the referee's RS_HARM): w1 its cause (HC_*),
-                                                **   its worst wound's band times 256 (0: unhurt), E_OUT, E_CAUGHT */
+                                                **   its worst wound's band times 256 (0: unhurt), E_OUT, E_CAUGHT; a fall's E_DEEP,
+                                                **   E_SHALLOW, into water */
     E_TRAP,                                     /* A trap and who: w1 its kind (TK_*) and its trigger (TT_*) times
                                                 **   16, what came of it (TO_*) times 256 */
     E_DEN,                                      /* (The denizens' own, their queue's: DENIZENS.md's events) A
@@ -679,12 +680,19 @@ enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's
 #define FF_STOPPED      0x40                    /*   a strike stopped by armour (rs.h's AF_STOPPED, AF_STOPPED_D), */
 #define FF_FUMBLE       0x80                    /*   a weapon fumbled */
 #define I_JUMP          0x80
+#define I_WELL          0x40                    /* (I_CLIMB's: a well named, down its shaft: wwell.c's, 2026-11-06) */
 #define STEP_KEEP       0x100                   /* (I_STEP's: backing up, a step aside) */
 #define E_OUT           0x4000                  /* (E_HARM's: knocked senseless a while) */
+#define E_DEEP          0x1000                  /* (E_HARM's, a fall's: into deep water, shallow: 2026-11-06, a well's foot */
+#define E_SHALLOW       0x2000                  /*   or any shaft's with water at it) */
 #define E_CAUGHT        0x8000                  /*   (and a fall stopped, a hold grabbed) */
 #define E_STOPPED       0x8000                  /*   (an HC_STRUCK's: the blows stopped, the striker too hurt) */
 #define O_FELL          15                      /* (E_ARRIVE's link kind: fallen down a shaft, jumped; a kind of its
                                                 **   own since the long slopes, 8 and 9, 2026-11-02) */
+#define O_WELL          12                      /* (And a well's shaft climbed, down or up; fallen or jumped down it into */
+#define O_WELL_FELL     13                      /*   its water: the user's "a real shaft", 2026-11-06; E_ARRIVE's w1 |
+                                                **   E_MOUTH_LIT, down it, its mouth far above in a lit room) */
+#define E_MOUTH_LIT     0x400
 
 enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO, A_RESUMED,
        A_STOPPED, A_STEPPED };                  /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
@@ -1434,7 +1442,9 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   the UI answering at once, the world's answers its) */
     volatile unsigned char ui_keys;             /* The UI's: a line being typed, from its first key, or entered and held for
                                                 **   the character (else its Enter's ui_cmd): the world's long jobs hold back, ui_long's, a typist's own
-                                                **   time and so no answer's first letter behind one (2026-11-04) */
+                                                **   time and so no answer's first letter behind one (2026-11-04); the
+                                                **   denizens' intents, the minds' deciding and the senses' answers to
+                                                **   them too, three seconds at most while the keys go on (2026-11-06) */
     unsigned char   starting;                   /* The game's still starting (the UI's, till the world's first look):
                                                 **   nothing yet to hear, the sound's naps the longer: the start's
                                                 **   time, 2026-11-03 */
@@ -1954,6 +1964,9 @@ struct wsave {
 **   own chunk.open maker +world
 **   own chunk.air maker +world                                 (Its bad air: AIR_STATE, store.c's, 2026-10-31)
 **   own chunk.aat maker +world
+**   own chunk.wet maker +world                                 (A well's water at its foot: WELL_WET, store.c's, 2026-11-06)
+**   own chunk.wlev maker +world
+**   own chunk.wany maker +world
 **   own bank(CAT_BANK) world                                   (The catalogue: the world's)
 **   own bank(KIND_BANK) world                                  (Its kinds: the world's, the theme's after them)
 **   own banks(KIND_BANK+1,ITEM_BANKS) world                    (The items' places and states)

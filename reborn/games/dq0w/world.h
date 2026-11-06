@@ -175,7 +175,10 @@ enum { PM_WOOD, PM_IRONBOUND, PM_IRON, PM_STONE };
                                                 **   the room it's in its own light or not) */
 #define AIR_STATE       0xF8                    /* (And a chunk's air, its pocket's, on its middle square: tile its air
                                                 **   now, AQ_*, 0 burnt off; elev its aat, 2026-10-31) */
-#define CH_TILE(l)      ((l) < AIR_STATE || (l) == 0xFF)   /* (A square's record: its kind, its floor, its link) */
+#define WELL_WET        0xF7                    /* (And a well's water on its square, the world's as it makes the well's
+                                                **   foot: wwell.c's, 2026-11-06: tile its surface, feet above the datum,
+                                                **   the level of its room's water or its passages', if they had none) */
+#define CH_TILE(l)      ((l) < WELL_WET || (l) == 0xFF)    /* (A square's record: its kind, its floor, its link) */
 /* A window (T_WINDOW, PK_WINDOW) and an arrow slit (T_WINDOW, PK_SLIT, always open) are seen through (the senses'),
 ** but a window's closed shutters; a portcullis (T_DOOR, PK_PORTCULLIS) is seen through, up or down.  A window's glass
 ** and bars are items of their own (a pane, bars: items.h's IW_PORTAL, on its square), as a door's bar is (on the
@@ -318,6 +321,8 @@ struct link {
 #define SKY_DEEP        2                       /* (The deepest stratum a shaft open to the sky reaches: three in all) */
 #define LD_DUG          1
 #define LD_SKY          2
+#define LD_WELL         5                       /* (A well's shaft, LD_DUG's and its own bit: the world's as it's first
+                                                **   wanted, its foot on the stratum below under it: wwell.c's, 2026-11-06) */
 
 struct stratum {
     unsigned char   made, n;

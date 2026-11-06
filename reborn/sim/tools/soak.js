@@ -535,5 +535,9 @@ function main(argv) {
   });
 }
 
-if (require.main === module) main(process.argv.slice(2));
+if (require.main === module) {
+  const bad = require('../../build.js').lastBuildFailed();
+  if (bad) { console.error('the last build failed (' + bad + '): build again (node build.js) before a soak'); process.exit(2); }
+  main(process.argv.slice(2));
+}
 module.exports = { choose, noticed, stream };

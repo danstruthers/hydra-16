@@ -110,7 +110,7 @@ ovl_out:
             OVFN        climb_words, 12     ; (Overlay 1's room, slice 4.4's)
             OVFN        entered, 1
             OVFN        portal_words, 10
-            OVFN        harm_words, 1
+            OVFN        harm_words, 12      ; (Overlay 1's till 2026-11-06: a fall into water's words)
             OVFN        appraise, 1
             OVFN        tell, 14
             OVFN        words, 2
@@ -174,12 +174,12 @@ ovl_out:
             SWPART      3, 19               ; The map (look.c; overlay 14's bank till 2026-11-01)
             SWPART      4, 9                ; The pace, the watchfulness, the state, small moves (pace.c)
             SWPART      5, 10               ; The names given (names.c)
-            SWPART      6, 12               ; The names said (names.c)
+            SWPART      6, 20               ; The names said (names.c; overlay 12's till 2026-11-06)
             SWPART      7, 8                ; The game's arguments, its own theme made (main.c)
             SWPART      8, 3                 ; Where in its room the character is, and the things (look.c)
             SWPART      9, 13               ; The player's shortcuts (alias.c)
             SWPART      10, 18              ; A search, by its form (search.c)
-            SWPART      11, 20              ; The rarer news, worded (main.c); the hands and limbs
+            SWPART      11, 15              ; The rarer news, worded (main.c); the hands and limbs (overlay 15's again, 2026-11-06)
             SWPART      12, 16              ; Wounds over time: first aid, in shock, the body's news (tend.c)
             SWPART      13, 5               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
             SWPART      14, 18              ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
@@ -189,10 +189,10 @@ ovl_out:
             SWPART      18, 18              ; A denizen's door's words (2026-11-02: overlay 3's room)
             SWPART      19, 15              ; The reach's steps (main.c: 2026-11-02, HOUSE.md's reach)
             SWPART      20, 7               ; An ally's errands, gifts (errand.c: part 15's room, 2026-11-03)
-            SWPART      21, 20              ; The record of a life, as a game begins (main.c: 2026-11-04)
-            SWPART      22, 20              ;   and its dungeon's folder found
+            SWPART      21, 12              ; The record of a life, as a game begins (main.c: 2026-11-04; overlay 12's, 2026-11-06)
+            SWPART      22, 12              ;   and its dungeon's folder found
             SWPART      23, 15              ; The limbs' news worded, a hand said (main.c: part 11's till 2026-11-04)
-            SWPART      24, 14              ; The commands seen to less often (main.c: part 2's till 2026-11-04)
+            SWPART      24, 12              ; The commands seen to less often (main.c: part 2's till 2026-11-04; overlay 14's till 2026-11-06)
             SWPART      25, 21              ; A writing read or copied (read.c: the plan's step 9, 2026-11-06)
             SWPART      26, 21              ;   its clue made, a reading's other words
 

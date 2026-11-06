@@ -53,8 +53,11 @@ static struct {
 }                   sreg[NSREG];                /* The regions whose maps are in the banks (sn its stratum plus 1: 0,
                                                 **   the entry free) */
 static unsigned     sstamp;
+void __fastcall__ wet_put (struct chunk* k, unsigned xy, unsigned char tile);  /* (Part 2's, below) */
 
-void changes_init (void)
+#pragma code-name (push, "SW2CODE")           /* (Part 2's since 2026-11-06, once: the main RAM's room, a well's water) */
+#pragma rodata-name (push, "SW2RODATA")
+void s_changes_init (void)
 {
     int b = hy_banks_alloc (SEEN_BANKS + 2);
 
@@ -67,6 +70,26 @@ void changes_init (void)
     }
     nexts = 0;
 }
+
+/* A well's water on square lx, ly (xy's low byte, its high) of chunk k, its surface tile: its room's level, else its
+** passages', if it had none (the world's WELL_WET record: dq0w/wwell.c's, store.c's for the chunk in the cache) */
+void __fastcall__ s_wet_put (struct chunk* k, unsigned xy, unsigned char tile)
+{
+    struct room* r;
+    unsigned char i, lx = (unsigned char) xy, ly = xy >> 8;
+
+    for (i = k->nrooms, r = k->room; i && ((unsigned char) (lx - r->x) >= r->w || (unsigned char) (ly - r->y) >= r->h);
+        --i, ++r) {
+    }
+    i = i ? k->nrooms - i : NROOMS;
+    k->wet[ly][lx >> 3] |= 1 << (lx & 7);
+    if (k->wlev[i] == WL_NONE) {
+        k->wlev[i] = tile;
+    }
+    k->wany = 1;
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 static struct seen* __fastcall__ seen_at (unsigned char i)
 {
@@ -119,6 +142,10 @@ static void __fastcall__ change_put (struct chunk* k, unsigned char lx, unsigned
                 r->flags = (r->flags & ~R_LIT) | tile;
             }
         }
+        return;
+    }
+    if (link == WELL_WET) {                     /* (A well's water on its square, tile its surface: part 2's, 2026-11-06) */
+        wet_put (k, lx | ly << 8, tile);
         return;
     }
     k->tile[ly][lx] = (k->tile[ly][lx] & (T_SEEN | T_DRAWN)) | tile;

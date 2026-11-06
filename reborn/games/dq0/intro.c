@@ -87,8 +87,12 @@ void __fastcall__ o_climb_words (unsigned char how, unsigned char feet)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* Harm's words: what came of it (w: an E_HARM's, its cause and the worst wound's band), the referee's words of the
-** wounds (in lb), and what they've left the character in (cond: its conditions, rs.h's C_*) */
+/* Harm's words: what came of it (w: an E_HARM's, its cause and the worst wound's band; a fall into water, E_DEEP,
+** E_SHALLOW), the referee's words of the wounds (in lb), and what they've left the character in (cond: its conditions,
+** rs.h's C_*).  Overlay 12's since 2026-11-06 (overlay 1's room, the water's words) */
+#pragma code-name (push, "OV12CODE")
+#pragma rodata-name (push, "OV12RODATA")
+#pragma local-strings (push, on)
 void __fastcall__ o_harm_words (unsigned w, unsigned cond)
 {
     static const char* const self[3] = {        /* (Blows at a thing gone wrong: by the worst wound's band) */
@@ -109,10 +113,12 @@ void __fastcall__ o_harm_words (unsigned w, unsigned cond)
         say (" You snatch at a hold as you go, and it holds: you hang there, and climb on.");
         return;
     } else if (!band) {
-        say ((w & 0xFF) == HC_FALL ? " You land, shaken, but unhurt." : " It does you no harm.");
+        say ((w & 0xFF) != HC_FALL ? " It does you no harm." : w & E_DEEP ? " You plunge into the water, shaken, but unhurt." :
+            w & E_SHALLOW ? " You come down in the shallows with a splash, shaken, but unhurt." : " You land, shaken, but unhurt.");
         return;
     } else {
-        say ((w & 0xFF) == HC_FALL ? " You land hard: " : " It hurts you: ");
+        say ((w & 0xFF) != HC_FALL ? " It hurts you: " : w & E_DEEP ? " You plunge into the water: " :
+            w & E_SHALLOW ? " You come down in the shallows with a splash: " : " You land hard: ");
         say (lb);
         say (".");
     }
@@ -125,6 +131,9 @@ void __fastcall__ o_harm_words (unsigned w, unsigned cond)
     }
     state_words ((unsigned char) cond);         /* (Its state: task.c's) */
 }
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* What came of working a door, into lb (fixt.c's, to say: what it shows told with it, an opening's; overlay 10's,
 ** 2026-10-22: this one's room) */

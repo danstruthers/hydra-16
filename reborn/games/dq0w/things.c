@@ -55,7 +55,7 @@ unsigned __fastcall__ bulk_of (unsigned i);
 unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);
 void about (void);
 void list (void);                               /* Part 11 */
-void inventory (void);                          /* Part 103 */
+void inventory (void);                          /* Part 105 */
 void __fastcall__ wear (const char* key, unsigned char by);
 unsigned char search (void);                    /* Part 46 */
 unsigned char seek (void);
@@ -77,7 +77,7 @@ void __fastcall__ look_on (unsigned n);         /* Part 39 */
 unsigned char __fastcall__ describe (const char* name);    /* Part 40 */
 unsigned __fastcall__ shut_in (unsigned n);     /* Part 35 */
 unsigned __fastcall__ s_shut_in (unsigned n);
-void __fastcall__ many (char* b, unsigned n, unsigned char k);    /* Part 103 */
+void __fastcall__ many (char* b, unsigned n, unsigned char k);    /* Part 105 */
 void __fastcall__ s_many (char* b, unsigned n, unsigned char k);  /*   (its own, there) */
 unsigned char bar_hand (void);                  /* Part 35 */
 unsigned char __fastcall__ hold_in (unsigned n, unsigned char want);    /* Part 48 */
@@ -2202,6 +2202,13 @@ unsigned char s_serve (void)
         pc_cut = 1;
         rs_for (RF_CUT);
         break;
+    case IO_PUT:
+        if (!strcmp (iq.into, "well") || !strcmp (iq.into, "shaft")) {   /* (Into a well, down a shaft or a hole: part
+                                                **   104's, read in first: 2026-11-06) */
+            look_more (0, LM_ROPES);
+            iq.result = well_put ();
+            break;
+        }
     default:                                    /* (A thing handled: IO_HOLD ...) */
         afar = 0;
         k = iq.kind;
@@ -2821,9 +2828,9 @@ unsigned __fastcall__ s_shut_in (unsigned n)
 ** the request's x) and IR_NO (nothing about it changed); or (iq's to 1) it set in the door's brackets, a portal's part
 ** again on iq's square, the bar's side (the world's barred the door): part 35's, the catalogue's bank's room (its
 ** o_handle's through its stub) */
-#pragma code-name (push, "SW103CODE")           /* (Part 103's since 2026-11-06: part 4's room, the letters'; part 4's since
+#pragma code-name (push, "SW105CODE")           /* (Part 105's since 2026-11-06: part 4's room, the letters'; part 4's since
                                                 **   2026-11-03, part 35's room) */
-#pragma rodata-name (push, "SW103RODATA")
+#pragma rodata-name (push, "SW105RODATA")
 unsigned char s_bar_hand (void)
 {
     unsigned n, best;
@@ -3091,10 +3098,10 @@ unsigned char __fastcall__ s_moved (unsigned char op)
 }
 
 /* How many of kind k, in words, into b: "a sack", "two sacks", "12 sacks"; a lot counted (KF_COUNT), its count in
-** digits, "4 rations"; one of a lot, "a ration", "a penny" (part 103's since 2026-11-06, part 35's room: through its
-** stub; an inventory's alike the quicker, part 103 the smaller to swap in) */
-#pragma code-name (push, "SW103CODE")
-#pragma rodata-name (push, "SW103RODATA")
+** digits, "4 rations"; one of a lot, "a ration", "a penny" (part 105's since 2026-11-06, part 35's room: through its
+** stub; an inventory's alike the quicker, part 105 the smaller to swap in) */
+#pragma code-name (push, "SW105CODE")
+#pragma rodata-name (push, "SW105RODATA")
 void __fastcall__ s_many (char* b, unsigned n, unsigned char k)
 {
     static const char* const few[11] = { "no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
@@ -4742,9 +4749,9 @@ void s_list (void)
     put (" lb.");
 }
 
-#pragma code-name (push, "SW103CODE")
-#pragma rodata-name (push, "SW103RODATA")
-/* What the character carries listed (IO_LIST): gathered first, then worded by part 11's s_list (part 103's, part 11's
+#pragma code-name (push, "SW105CODE")
+#pragma rodata-name (push, "SW105RODATA")
+/* What the character carries listed (IO_LIST): gathered first, then worded by part 11's s_list (part 105's, part 11's
 ** room: the letters, 2026-11-06; a part of its own, its swaps the shorter) */
 void s_inventory (void)
 {

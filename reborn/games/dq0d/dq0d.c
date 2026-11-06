@@ -271,7 +271,13 @@ struct den {
                                                 **   their rounds, every event waking them) */
 static unsigned char gw;                        /* (Waiting for it: main's, and tend's between actors) */
 static unsigned long gwt;                       /* (Since when) */
-static unsigned char gsq;                       /* (Its command line's: the parser's request's seq, each line's own) */
+static unsigned char gsq, gcm;                  /* (Its command line's: the parser's request's seq, each line's own;
+                                                **   the UI's ui_cmd as it began: a command's answer begun, the next
+                                                **   line's keys a hold of their own) */
+#define UI_HOLD         (HUB->ui_cmd | HUB->ui_keys)    /* (A command in hand, or a line being typed from its first key
+                                                **   (dq0hold's, the world's long jobs' too, 2026-11-06: a mind's
+                                                **   deciding no longer under way as its Enter comes), GIVE_WAY at
+                                                **   most while the keys go on, then the command its own GIVE_WAY) */
 #define DN_MAGIC        0x4E44                  /* "DN": dens.dat's */
 struct head {
     unsigned        magic;
@@ -539,7 +545,7 @@ static unsigned char __fastcall__ lair_add (unsigned char n, unsigned char k, un
     L.sn = n;
     L.kind = k;
     L.link = 0xFF;
-    if ((K.flags & K_WAYS) && (u = j + (n == 0)) < s->nlinks && (lq = &s->link[u])->dug != LD_SKY) {   /* (No shaft open to the sky) */
+    if ((K.flags & K_WAYS) && (u = j + (n == 0)) < s->nlinks && !((lq = &s->link[u])->dug & (LD_SKY | LD_WELL) & ~LD_DUG)) {   /* (No shaft open to the sky, nor a well's) */
         L.link = u;
         L.cx = (lq->x - s->x0) / CW;
         L.cy = (lq->y - s->y0) / CW;
@@ -3208,7 +3214,7 @@ static unsigned char roam (void)
             }
             continue;
         }
-        if (hub_map (0), !turns && HUB->ui_cmd && gw != 2) {
+        if (hub_map (0), !turns && UI_HOLD && gw != 2) {
             roam_at = now;                      /* (The UI's command in hand: the rest after its answer, as tend's
                                                 **   actors; their days are part 9's) */
             break;
@@ -3296,7 +3302,7 @@ static void tend (void)
         fresh = 10;
         nonear = 0;
     }
-    if (fresh && !nonear && (hub_map (0), turns || !HUB->ui_cmd || gw == 2)) {
+    if (fresh && !nonear && (hub_map (0), turns || !UI_HOLD || gw == 2)) {
         --fresh;
         again |= nearby ();                     /* (Part 13's: not while the UI's command is in hand at the real
                                                 **   paces; none left near to place, not asked again till the
@@ -3311,7 +3317,7 @@ static void tend (void)
     lnow = now;
     for (k = 0, q = HUB->actor; k < NACTORS; ++k, ++q) {
         hub_map (0);
-        if (!turns && HUB->ui_cmd && gw != 2) {
+        if (!turns && UI_HOLD && gw != 2) {
             break;                              /* (The UI's command come in meanwhile, as they decide, though not
                                                 **   seen yet: the rest decide next time round, its answer first) */
         }
@@ -3350,7 +3356,7 @@ static void tend (void)
         }
         owe = 1;
     }
-    if (owe && (hub_map (0), turns || !HUB->ui_cmd || gw == 2)) {
+    if (owe && (hub_map (0), turns || !UI_HOLD || gw == 2)) {
         owe = 0;                                /* (The denizens near made actors: not while the UI's command is in hand
                                                 **   at the real paces, part 11's swap off its answer's path) */
         enlist_near ();
@@ -4431,12 +4437,14 @@ int main (int argc, char* argv[])
         turns = !HUB->tpr;
         g = HUB->den_go;
         act = !turns || g != gone;              /* (At the turns pace, only in its turn: the world's word, den_go) */
-        if (HUB->cq.seq != gsq) {
+        if (HUB->cq.seq != gsq || HUB->ui_cmd != gcm) {
             gsq = HUB->cq.seq;                  /* (A new line: given way to again, though the last's outlasted
-                                                **   the wait, its command not let go in between) */
+                                                **   the wait, its command not let go in between; the next line's
+                                                **   keys as the last's answer's begun) */
+            gcm = HUB->ui_cmd;
             gw = 0;
         }
-        if (!turns && HUB->ui_cmd && gw != 2) {
+        if (!turns && UI_HOLD && gw != 2) {
             if (!gw) {
                 gw = 1;                         /* (At the real paces, the UI's command in hand answered first: the
                                                 **   minds wait, three seconds at most) */
@@ -4445,7 +4453,7 @@ int main (int argc, char* argv[])
                 gw = 2;                         /* (Waited long enough: on, till the command's let go) */
             }
             act = gw == 2;
-        } else if (!HUB->ui_cmd) {
+        } else if (!UI_HOLD) {
             gw = 0;
         }
         if (act || hub_posted (&HUB->sway)) {

@@ -556,6 +556,20 @@ function buildBoth(opt = {}) {
   return r;
 }
 
+// The last build's failure kept (obj/build.failed, its error), so no test, tier or soak runs on the images it left
+// behind, the last good build's (sim/test.js's and soak.js's built check, 2026-11-06: the lead's, 47 tests run on a
+// stale dq0); a good build takes it away.  A C, assembler or linker error fails the build (run's: their tools' status)
+function failed(why) {
+  const f = at('obj', 'build.failed');
+  if (why === null) { if (fs.existsSync(f)) fs.unlinkSync(f); return; }
+  mkdir(at('obj'));
+  fs.writeFileSync(f, why + '\n');
+}
+function lastBuildFailed() {
+  const f = at('obj', 'build.failed');
+  return fs.existsSync(f) ? fs.readFileSync(f, 'utf8').split('\n')[0] : null;
+}
+
 if (require.main === module) {
   const a = process.argv.slice(2), opt = {};
   if (a[0] === 'prog') {
@@ -569,7 +583,8 @@ if (require.main === module) {
     else if (a[i] === '--quiet') opt.quiet = true;
     else { console.error('usage: node build.js [--clock 1|2] [--acia rockwell|wdc] [--quiet]'); process.exit(2); }
   }
-  try { buildBoth(opt); } catch (e) { console.error('build: ' + e.message); process.exit(1); }
+  try { buildBoth(opt); } catch (e) { failed(e.message); console.error('build: ' + e.message); process.exit(1); }
+  failed(null);
 }
 
-module.exports = { build, buildBoth, buildModule, readManifest, hwtest, prog, clib, cprog, headroom };
+module.exports = { build, buildBoth, buildModule, readManifest, hwtest, prog, clib, cprog, headroom, lastBuildFailed };

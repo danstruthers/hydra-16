@@ -363,7 +363,9 @@ for anyone who reads it (the lights', the denizens', the senses').
 
 - **Water:** a **well** where the stratum has water (for now from the stratum's seed and the region, till the plan
   has its water): in a domestic suite's kitchen, or a well room of its own in the stores'; a cistern where the
-  cellars want one.  A well is a fixed thing (its stone curb) on its room's floor.
+  cellars want one.  A well is a fixed thing (its stone curb) on its room's floor.  Its shaft a real one (2026-11-06, the user's "a real shaft": HOUSE.md's a well's shaft): down to
+  water at its foot on the stratum below, made as it's first wanted, climbed as any shaft is; one in four a cistern, some
+  with a passage on to the halls below, some coming out in their roof.
 - **Flat and straight:** a built stratum's ground is level (the plan's rock lies flat under it), so its rooms and
   passages are flat, one floor; its zones one plane each, never sloping, all at the room's floor, but a hall's
   **dais** (its last zone two feet up, a step along its front).  Passages run straight between their doors, a
@@ -719,7 +721,7 @@ carried, given back by the thing's id as it's taken up again; a new one the firs
 go of the longest ago, then aa ... az.  Kept in the save (game.dat's after the shortcuts: letters.c's, part 22's) and in
 kit.dat (struct kitrec's let: the carried-on kit's letters laid on its things as they're made, part 63's).  The inventory
 is a list, one a line (part 11's contents, the inventory's mode: its letter, letter.s's lput; what's in a thing indented by
-hard spaces, term.c's say, two a level; its gathering part 103's, s_inventory, part 11's room).  A letter typed where a thing's
+hard spaces, term.c's say, two a level; its gathering part 105's, s_inventory, part 11's room).  A letter typed where a thing's
 name goes names that thing (letters.c, overlay 22's, its own: the line's letters made the things' names as it's posted,
 "drop j" parsed as "drop torch", each one's id kept, ldes; the requests' words "#" and the id, des_map, the world's chooser
 by the records' ids, part 4's pick; the resolver's question of several not asked of it; its first words its own, sway.c's

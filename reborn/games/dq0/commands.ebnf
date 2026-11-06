@@ -67,8 +67,9 @@
 (* ---- Handling things (question 2: CLOSE and OPEN are actions) ---- *)
 <get>            ::= <GET> [ <object> ] [ <from-phrase> ] [ <hand-phrase> ] | <GET> <object> <off-phrase> | <GET> <object> "up"   (* bare: the last thing named, else things near (question 8); "pick the sword up"; "take the torch in my right hand" (slice 4.1b) *)
 <drop>           ::= <DROP> [ <object> ] | "put" <object> "down" | "shrug" <object> "off"   (* bare: the last thing named *)
+                   | <DROP> <thing> ( "into" | "in" | "inside" | "down" ) <object>   (* "drop the dagger into the well", "down the shaft": put in it (2026-11-06) *)
 <put>            ::= <PUT> <thing> <put-prep> <object> | <PUT> <thing> <hand-phrase>   (* "put the bar back in its brackets": back, a way, passed over; "put the dagger in my other hand": held there (slice 4.1b) *)
-<put-prep>       ::= "in" | "into" | "inside" | "on" | "onto" | "on top of" | "under" | "against"
+<put-prep>       ::= "in" | "into" | "inside" | "on" | "onto" | "on top of" | "under" | "against" | "down"   (* "down the shaft": in it, 2026-11-06 *)
 <use>            ::= <USE> <object> [ ( "on" | "with" ) <object> ]
 <equip>          ::= <EQUIP> [ <object> ] [ <hand-phrase> ]   (* bare: the last thing named; "wield the sword in my left hand" *)
 (* ---- The hands (added 2026-10-22, slice 4.1b): the hand a thing goes in, or the one that holds what strikes ---- *)
@@ -95,6 +96,7 @@
 <USING>          ::= "with" | "using"                (* what it's done with: an instrument, to hand (2026-10-22) *)
 <grapple>        ::= <GRAPPLE> <object> | <THROW> <object> | "put" <object> "in" [ "a" ] ( "head" "lock" | "headlock" )   (* a grapple maneuver: the object is engaged; "toss" and "throw" a creature are grapples too *)
 <throw>          ::= <THROW> [ <throwing> ] <at-phrase>          (* at something: a target *)
+                   | <THROW> [ <throwing> ] ( "into" | "in" | "down" ) <object>   (* "throw the dagger into the well", "down the shaft": let fall in it (2026-11-06) *)
                    | <THROW> [ <throwing> ] <throw-dir>
                    | <THROW>          (* in a direction: a floor square, distance asked *)
 <throwing>       ::= <manner> [ <object> ] | <object> [ <manner> ]   (* "throw hard the apple", "throw the apple hard" *)
@@ -105,7 +107,7 @@
 <at-phrase>      ::= ( "at" | "toward" | "towards" | "to" | "on" ) <object>
 
 (* ---- Other actions ---- *)
-<jump>           ::= <JUMP> [ <direction> | ( "over" | "onto" ) <object> ]
+<jump>           ::= <JUMP> [ <direction> [ <object> ] | ( "over" | "onto" | "into" | "in" ) <object> ]   (* "jump into the well", "jump down the well" (2026-11-06) *)
 <say>            ::= <SAY> <quoted-text> | <VOLUME-SAY> <quoted-text> [ "!" ]   (* yell, scream, whisper *)
 <tell>           ::= <TELL> <object> [ "to" | "about" ] ( <quoted-text> | <object> | <phrase> | <errand> ) | <TELL> <object> "that" <text> { <text> }   (* "tell the goblin that the bridge is out" *)
 <errand>         ::= ( "fetch" | "bring" | "retrieve" ) [ "me" ] <object> | ( "follow" | "come" ) [ "me" ] "at" <number> [ "space" | "spaces" | "square" | "squares" ]
@@ -256,7 +258,8 @@
 <enter>          ::= "enter" [ <object> ]
 <leave>          ::= <LEAVE> [ <object> | <direction> ]
 <LEAVE>          ::= "exit" | "go" "out" | "go" "outside"
-<climb>          ::= <CLIMB> [ <direction> ] [ <object> ] | <CLIMB> ( "over" | "onto" | "into" | "through" ) <object>
+<climb>          ::= <CLIMB> [ <direction> ] [ <object> ] | <CLIMB> ( "over" | "onto" | "into" | "in" | "through" ) <object>
+                   | <CLIMB> "out" [ "of" <object> ]   (* "climb out", "climb out of the well": up it (2026-11-06) *)
 <CLIMB>          ::= "climb"
 <dig>            ::= <DIG> [ <direction> | "for" <object> | <object> ] [ <USING> <object> ]   (* "dig down", "dig the wall",
                                                    "dig for treasure", "dig down with the pick" *)

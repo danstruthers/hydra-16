@@ -193,7 +193,7 @@ plays them as HarnMaster's referee does.
   senseless or in shock is a miss, not the Ignore table's tactical advantage: it can't take one.  (fight.c's
   attack.)  Why: the advantage is an action, and it has none.
 - **A window's sill is climbed through** with a Climbing test; a critical failure is a slip and a fall.  (wwin.c.)
-- **A shaft is climbed as a ledge is** (What shows the sky, below, 2026-11-03), a thing dropped where one goes down falls down it.
+- **A shaft is climbed as a ledge is** (What shows the sky, below, 2026-11-03), a thing dropped where one goes down falls down it.  A well's too (A well's shaft, below, 2026-11-06), into its water.
 - **A pit is climbed out of** as a ledge is, but a slip ends the climb (D13's: the character carries on, below).
   (wtrap.c, dq0w.c.)
 - **Rope and grapples** (the user's A16, "Queue rope rules"; the book gives the help alone, Skills 8's "good climbing gear", 10 to 20 points of EML; all the rest *(new, for review)*; wrope.c, wrope2.c, wrope3.c, dq0w.c's part 97; those parts' overlays a file of their own, dq0w.rop, read as a climb, a dig or a rope first wants them, some 3M cycles once (a dig's own part too, 84, and a journey's, 55), none of the start's):
@@ -811,9 +811,14 @@ as its Enter comes and a command's first letter isn't behind one.  They are a de
 behind them in the ring), the traces' journal taken in, the lights' minute with its sconces and the time of day it
 believes, the map making's things, and a look about as a body falls: each a tenth of a second of the world's time or
 more.  Those that can stop part way do (a denizen's things between sections, the journal, the map making's things, the sconces
-between their passes, the senses' sound pulse for an Enter), and the first of them all look at the keys as they fall due.  A denizen's plain intents, its steps and blows, wait for the keys not at all, and for an Enter a quarter second at most,
-as before; nor do the character's own doings wait (a step of its walk, its own look), being the answers.  So typing holds
-no one still.  A long line typed slowly or a steady typist can't starve them: three seconds at most (600 ticks,
+between their passes, the senses' sound pulse for an Enter), and the first of them all look at the keys as they fall due.  *(2026-11-06, new, for review: the denizens held too.)*  The denizens' own work holds back from the first key as
+well, so none of it shares the CPU with an Enter's parse: a denizen's intents (its steps and blows, not only its things),
+the minds deciding (dq0d, 30 tenths at most, GIVE_WAY's), and the senses' answer to a mind's ask (dq0p, 600 ticks, its
+KEY_HOLD; it had copied its part 6 in as an Enter came, 90,000 cycles of an answer's first letter); the Enter's command then
+holds them again, its own three seconds for the minds, half a second for the senses, a quarter second for the intents.
+The character's walk doesn't wait for keys: its next step waits only from an Enter till that line's command is given, a
+quarter second at most (ui_first's), and never for a blow; its own look is the answer.  So typing holds the denizens still
+three seconds at most.  A long line typed slowly or a steady typist can't starve them: three seconds at most (600 ticks,
 dq0w.c's KEY_HOLD, from the first one held back), then a pass of the world's loop goes free and whatever's due runs through, the keys not
 stopping it.  An Enter does, its answer first, but once: the next free pass runs through an Enter too (that one answer behind
 it), or a steady typist's Enters would stop a denizen's things every time, drawn again from the start.  Then they hold back again.  A line emptied (Ctrl-U, Backspace) lets them go at once.  At the turns pace nothing holds back: that
@@ -3229,6 +3234,64 @@ plan's and the links': a chunk made again is byte-identical, dq0pure's); a test'
   stronger on a stratum with one; its **drip**: under a shaft open to the sky a little noise of water (the background's,
   2). **Rain and weather**: not yet; their place is what's here (a square under or beside one of these is where rain would
   reach, the same check; overcast its light alone); sounds from above, not yet.
+
+## A well's shaft *(2026-11-06: the user's "A real shaft", DECISIONS.md's climbing down a well; everything else the house's, (new, for review))*
+
+The user's (2026-11-06): "A real shaft": a narrow shaft down to water, climbed with a rope tied to the curb by the rope and
+climbing rules, the bottom in the water, some wells with a way on (a cistern, a passage to a lower level).  A well's shaft is
+a shaft as any other (What shows the sky's climbing a shaft, Rope and grapples, Climbing and falling): only its depth to its
+water, the water at its foot and where it comes out are its own.  (dq0w/wwell.c and wwell2.c, parts 103 and 104, dq0w.rop's; dq0w.c's parts 2, 89, 93
+and 97; the maker's changes.c.)
+
+- **What it is**: a well's curb (the maker's, a kitchen's or a well room's where its region has water under it) is the head
+  of a shaft to the stratum below, its foot the square under it there.  It's made as it's first wanted (climbed down, a rope
+  let down it, a thing put in it): a link of both strata, as a dug shaft's (world.h's LD_WELL), the stratum below grown round
+  it if no one's been there yet; its foot's squares and its water the change records', from the stratum's seed and the square
+  alone, so the same seed and the same commands make the same well.  A test's scene, the environment's dq0well (rc's), says its
+  kind where the rock lies under it: "0" a sump, "1" a cistern, "2" a sump with a way on, "3" a cistern with one.  Its head is no change of its square: the curb's there,
+  and the look tells the well, not a shaft in the floor.
+- **Its depth**: the drop between the strata, as any shaft's between strata (30 to 70 feet), the climb ending at its
+  water.  Its width changes nothing: braced across it a climber has holds a sheer face hasn't, but its stones are wet and
+  slimed; its climb is any shaft's, no easier and no harder.
+- **Its water**: where the rock lies under it, a sump **6 to 13 feet deep** (over a man's head: swimming, the water's own
+  rules, below), its surface the stratum's own level (its datum).  **One well in four** opens at its foot into a **cistern**:
+  the nine squares round its foot all under the same water.
+- **A way on**: **one cistern in two, one sump in three**, a passage on: up out of the water to the halls nearest along one of
+  the four ways (the first by its seed that reaches them through solid rock, two squares of it or more, twelve at most, a room's
+  or a passage's wall at their edge broken through as a tunnel dug through one is), its
+  floor rising **2 feet a square** (a step's, so it's walked, swum, waded) from the water's floor to the halls', the water
+  standing at the halls' floor (shallower where the way's short: 2 feet for each of its squares).
+- **Into the halls below**: where the square under it is a room's floor or a passage's, the shaft comes out in its roof, its
+  foot a **pool 2 feet deep** there (wading); the halls themselves its way on.
+- **Choked**: anything else under it (a wall, a stair, a door), the stratum below not reaching under it (grown already, its
+  bounds elsewhere), no link left on either stratum (eight a stratum, those kept free for shafts dug among them), or past the
+  strata the hub can hold without a save folder: "Far down, the well's shaft narrows to a crack the water seeps through:
+  there's no climbing down it."  A thing put in a choked well lodges where it narrows (on the curb's square).
+- **Climbing it**: "climb down the well", "go down the well", "climb into the well", "enter the well", or "d" with the well
+  within reach and no other way down in the room (a stairway's taken first); walked over to first if it's out of reach.  A
+  round at a time, a Climbing test each (up out of deep water, a round that finds no hold ends the climb: a swimmer can't
+  cling on, and "u" tries again); a rope tied to the curb ("tie the rope to the well": it holds a rope, fixed where it
+  stands) and let down its shaft, 3 steps the better on its length, from either end.  Out: "u", "climb out", "climb up the
+  rope" at its foot; out at the top on the floor beside the curb.  "Jump into the well", "jump down the well": a fall of its
+  height.
+- **A fall into it** (a slip down it, a slip climbing up it, a jump), or down any shaft with water at its foot: the book's
+  landing surfaces, into deep water (3 feet or more) 3d6 off the fall's impact, shallow water 2d6 off (Skills 8's); told so
+  ("You plunge into the water: ...", "You come down in the shallows with a splash: ...", unhurt "..., shaken, but unhurt."),
+  not "You land hard"; then "You come up in the water at the foot of the well."
+- **At its foot**: in its water, told and swum as any water is (its depth's band, swimming tests a minute, a torch put out as it
+  swims, going under, drowning: HOUSE.md's water); "You climb down the well, into the water at its foot.", and if the room
+  above is lit (its sconces), "Far above, its mouth shows as a small ring of light."; in the dark above, nothing.  The look
+  there tells it so: "Above you the well's shaft rises to its mouth, far overhead." (the mouth's light only as it comes down:
+  the senses' room)  What was put in it lies there.
+- **A thing put in it** ("put the dagger in the well", "drop the dagger into the well", "throw the dagger into the well",
+  "drop the dagger down the well": down a thing is into it, the parser's), within reach: let fall from the curb to its foot,
+  no time taken: "You let the dagger fall into the well. A moment, and you hear a splash far below."  Down any shaft going
+  down within reach the same ("drop the rope down the shaft", "down the hole"): "You let the rope fall down the shaft. A
+  moment, and you hear it land far below." (a splash where its foot's in water).
+- **The denizens**: as at any shaft, none climbs down or up it on its own (the minds climb nowhere but with the character; an
+  ally coming along as it comes along by any way), and none sets a lair at its foot.  *Not yet:* a denizen throwing someone
+  in, a splash heard by the denizens, the water's level
+  shared with other water in its chunk (a stream's running depth where one runs).
 
 ## Poison, bad air and disease *(2026-10-31: the user's words, DECISIONS.md's; the book's where it speaks, drafted for the user to review)*
 
