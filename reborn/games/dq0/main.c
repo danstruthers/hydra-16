@@ -577,6 +577,7 @@ void s_save_game (void)
         write (fd, &sv, sizeof sv);
         names_keep (fd, 0);                     /* (The names given: the theme bank's) */
         alias_keep (fd, 0);                     /* (The shortcuts: the theme bank's too) */
+        letters_keep (fd, 0);                   /* (The letters: the UI bank's, letters.c) */
         close (fd);
     }
 }
@@ -594,8 +595,7 @@ static void __fastcall__ load_names (void)
     if (fd >= 0) {
         read (fd, &sv, sizeof sv);
     }
-    names_keep (fd, 1);
-    alias_keep (fd, 1);
+    keeps_back (fd);                            /* (The names, the shortcuts, the letters: letters.c's, part 22's) */
     if (fd >= 0) {
         close (fd);
     }
@@ -695,8 +695,7 @@ static void __fastcall__ start_world (unsigned long seed, const char* file, unsi
         load_names ();
         HUB->resume = 1;
     } else {
-        names_keep (-1, 1);                     /* (No names given yet) */
-        alias_keep (-1, 1);                     /* (No shortcuts) */
+        keeps_back (-1);                        /* (No names given yet, no shortcuts, no letters) */
     }
     start ("dq0m", T_MAKER, libdir);            /* (Its maker, its senses, its world: the world's item store first,
                                                 **   the things asked as the game starts, till it's begun) */

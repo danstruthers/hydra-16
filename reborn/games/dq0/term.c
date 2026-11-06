@@ -388,7 +388,7 @@ void __fastcall__ say (const char* s)
                 t_flush ();
             }
             c = *w;
-            ob[on] = c;
+            ob[on] = c == '\t' ? ' ' : c;       /* (A hard space: the inventory's list's indent, 2026-11-06) */
             ++on;
             ++w;
             ++col;

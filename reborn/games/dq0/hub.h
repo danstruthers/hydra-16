@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     53                    /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     54                    /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -71,7 +71,8 @@
                                                 **   (SW_COIN ...), SW_BUY ... SW_ENTERTAIN, OR_OPEN ..., SR_WONT ...;
                                                 **   39, a room searched whole: SF_ROOM, SF_TRAPS, WB_SEARCH, RSW_*, RC_*,
                                                 **   IOS_*; 53, LT_DIP, SL_SPENT, SL_FULL, the UI bank's ix (what's
-                                                **   carried: the UI's first words), a thing told apart, AW_*) */
+                                                **   carried: the UI's first words), a thing told apart, AW_*; 54, the letters: the UI bank's low and
+                                                **   cap, struct cix's let, NLET, LT_REC, struct ucap, CW_*) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -1628,6 +1629,7 @@ enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY };      /* The look's kinds: a look abo
 #define NIX             40
 struct cix {
     unsigned char   kind, up, flags;            /* (kind: its place in ixks, its kinds; 0xFF past them) */
+    unsigned char   let;                        /* (Its letter: its place in the UI bank's low plus 1; 0 none) */
 };
 #define CX_HELD         0x01                    /* (In a hand) */
 #define CX_WORN         0x02                    /* (Worn) */
@@ -1646,12 +1648,29 @@ struct cixk {                                   /* (The kinds of what it carries
 enum { AW_NONE, AW_LIT, AW_UNLIT, AW_SPENT, AW_EMPTY };   /* (A thing told apart from another of its kind at hand by its
                                                 **   state: the world's apart, "the spent torch", the user's, 2026-11-06) */
 
+/* The designators (the user's design, 2026-11-06: DECISIONS.md's designators): a letter for a thing carried or worn
+** (lower case, the UI bank's low: the world's), a capital for a thing in sight (the UI bank's cap: the UI's), shown in
+** brackets, "(a) a torch", "(C) a sack"; a letter typed where a thing's name goes names it (letters.c: the line's
+** letters made the things' names before it's parsed, each one's id the world's to choose by).  A letter's text, by its
+** place n: 0 ... 25 one letter, 26 ... 51 two, the first an a (or an A) */
+#define NLET            52
+#define LT_REC          0x8000                  /* (A low entry's: a thing with no id yet, by its record's number) */
+struct ucap {
+    unsigned        id;                         /* The thing's id (0: the capital free) */
+    unsigned char   what;                       /* CW_*: a thing's; a denizen's (the plan's step 4: its id the
+                                                **   denizen's, its did) */
+    unsigned        t;                          /* When it was last told or named (the clock's minutes: the longest
+                                                **   ago given up first) */
+};
+enum { CW_NONE, CW_THING, CW_DEN };
+
 /* The UI's bank's records (UI_BANK) */
 struct uirec {
     char            map[MAP_H][MAP_W + 1];      /* The map's rows (the maker's, as the UI asks: mapq; maplay their
                                                 **   squares' layers) */
-    char            things_text[800];           /* The things' words for the UI (what's carried: ireq's reply; said in pieces
-                                                **   of lb's size, list_say's: a soldier's kit runs past 400), and
+    char            things_text[1024];          /* The things' words for the UI (what's carried: ireq's reply; said in pieces
+                                                **   of lb's size, list_say's: a soldier's kit runs past 400, its list
+                                                **   one a line with their letters past 700), and
                                                 **   the UI's to the things (dq0 -k's: the things more) */
     unsigned        before[SEE_ITEMS + SEE_DENS];   /* What it saw as the command began (resolve.c's): the things' numbers,
                                                 **   the denizens' first letters; a walk over for it tells only what's
@@ -1669,6 +1688,23 @@ struct uirec {
     struct cix      ix[NIX];                    /*   and each, */
     unsigned char   ixk;                        /*   and their kinds, how many, */
     struct cixk     ixks[NIXK];                 /*   and each */
+    unsigned        low[NLET];                  /* The letters of what the character carries (the user's designators,
+                                                **   2026-11-06: "lower-case letters for items carried/worn"): each
+                                                **   letter's thing, a, b ... z, then aa ... az (its id; its record's
+                                                **   number | LT_REC while it has none; 0 the letter free), given as it
+                                                **   first comes to the character, kept while it's carried, given back
+                                                **   as it's taken up again; a new one, of a ... z the first free, else
+                                                **   the one whose thing was let go of longest ago, then of aa ... az
+                                                **   (the world's: things.c's ix_make);
+                                                **   kept in the save (game.dat, the UI's) and in kit.dat (struct
+                                                **   kitrec's let) */
+    unsigned        lowt[NLET];                 /*   and when each one's thing was last carried (the clock's tenths
+                                                **   over 1024: the world's, as it makes ix) */
+    struct ucap     cap[NLET];                  /* The capitals of what the character's seen (the UI's: A ... Z, then
+                                                **   AA ... AZ), given as each is first told, kept while it's
+                                                **   remembered: given up only as a new one's wanted and none is free,
+                                                **   the one told longest ago that isn't in sight; a thing put down its
+                                                **   own again.  Kept in the save (game.dat's) */
 };
 enum { ML_NOW, ML_KEPT, ML_DRAWN, ML_PC, ML_COMPASS };   /* (A map's square: seen now; remembered; drawn on the map
                                                 **   carried; the character; the compass) */
@@ -1938,6 +1974,9 @@ struct wsave {
 **   own uirec.ix world
 **   own uirec.ixk world
 **   own uirec.ixks world
+**   own uirec.low world +ui                                    (The letters of what it carries: the save's, the UI's)
+**   own uirec.lowt world +ui
+**   own uirec.cap ui                                           (The capitals of what it's seen)
 **   own uirec.tread world                                      (The traces read: I_TRACE's reply)
 **   own uirec.trtext world                                     (Their words)
 **   own bank(WORLD_BANK) maker                                 (The cache's table)

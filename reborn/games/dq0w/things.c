@@ -55,6 +55,7 @@ unsigned __fastcall__ bulk_of (unsigned i);
 unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);
 void about (void);
 void list (void);                               /* Part 11 */
+void inventory (void);                          /* Part 103 */
 void __fastcall__ wear (const char* key, unsigned char by);
 unsigned char search (void);                    /* Part 46 */
 unsigned char seek (void);
@@ -198,7 +199,7 @@ unsigned char things_req (void)
         strcpy (tbuf, HUB->ireq.name);          /* (Copied: the hub's window moves) */
         wear (tbuf, HUB->ireq.to);
     } else if (k == IO_LIST) {
-        list ();
+        inventory ();
     } else if (k == IO_TOOLS) {
         tools ();                               /* (Part 10's alone, as every thing handled tells the referee what's to
                                                 **   hand) */
@@ -1946,10 +1947,22 @@ void __fastcall__ s_name_apart (unsigned i, char* d)
 /* What the character carries, for the UI's first words (the UI bank's ix, struct cix's: the store's order), made as what
 ** it carries changes (light_now's, serve's) */
 #pragma bss-name (push, "SW102RODATA")        /* (Part 102's image's, wanted only as it's made: the main RAM's room) */
-static unsigned ixi[NIX];
-static struct cix ixc[NIX];
+unsigned ixi[NIX];                              /* (Each one's record, */
+unsigned ixd[NIX];                              /*   its key in the letters, its id or its record's | LT_REC, */
+struct cix ixc[NIX];                            /*   its words for the UI: letter.s's too) */
 static unsigned char ixkk[NIXK];
 #pragma bss-name (pop)
+
+/* Each thing it carries its letter (the user's designators, 2026-11-06: hub.h's low): its own, kept while it's carried
+** and given back as it's taken up again; one that's had none, of a ... z the first free, else the one whose thing it
+** let go of longest ago (that one's given up), and only then of aa ... az the same way; by its id, by its record's
+** number till it has one.  In the store's order: those that come together, the kit, in its order (letter.s's, in
+** assembly: part 102's room) */
+extern unsigned char ixl_n;
+extern unsigned ixl_t;
+extern struct cix* ixl_old;
+void __fastcall__ ix_letters (unsigned* low);
+
 void s_ix_make (void)
 {
     const struct kind* k;
@@ -1963,6 +1976,7 @@ void s_ix_make (void)
     }
     for (m = 0; m < n; ++m) {
         fetch (&rec, ixi[m]);
+        ixd[m] = rec.id ? rec.id : ixi[m] | LT_REC;
         k = kind_of (rec.kind);
         f = (rec.flags & I_HELD ? CX_HELD : 0) | (rec.flags & I_WORN ? CX_WORN : 0) | (rec.flags & I_LIT ? CX_LIT : 0) |
             ((k->flags & K_CONTAINER) || (k->keeps & KF_ON) ? CX_HOLDS | CX_EMPTY : 0) |
@@ -1995,7 +2009,12 @@ void s_ix_make (void)
         }
         ixc[m].kind = f < j ? f : 0xFF;
     }
+    hub_map (0);
+    ixl_t = (unsigned) (HUB->now >> 10);        /* (The clock's stamp: some 100 seconds a step) */
+    ixl_n = n;
+    ixl_old = UIREC->ix;
     hub_map (UI_BANK);
+    ix_letters (UIREC->low);
     UIREC->ixn = n;
     UIREC->ixk = j;
     memcpy (UIREC->ix, ixc, n * sizeof (struct cix));
@@ -2138,7 +2157,7 @@ unsigned char s_serve (void)
         iq.result = throw_at (iq.name);
         break;
     case IO_LIST:
-        list ();
+        inventory ();
         break;
     case IO_HANDS:
         bar_hand ();                            /* (Part 4's: part 10's room) */
@@ -4139,6 +4158,10 @@ static void __fastcall__ kit_put (unsigned i, unsigned char in)
     ke.o.flags = kr.flags & I_LIT ? TF_LIT : 0;
     ke.o.mat = kr.mat;
     memcpy (&ke.wear, &kr.wear, KIT_ITEM);      /* (Each thing as it is: the plan's step 3) */
+    hub_map (UI_BANK);                          /* (And its letter: hub.h's designators, 2026-11-06) */
+    for (r = 0; r < NLET && UIREC->low[r] != (kr.id ? kr.id : i | LT_REC); ++r) {
+    }
+    ke.let = r < NLET ? r + 1 : 0;
     write (kfd, &ke, sizeof ke);
     hub_map (KIND_BANK);
     if (kqn < KQ && (CATALOGUE[kr.kind].flags & (K_CONTAINER | K_BELT) || CATALOGUE[kr.kind].keeps & KF_ON)) {
@@ -4445,6 +4468,13 @@ static unsigned char tw_n;                      /* (How many alike told together
 static unsigned tw_sum;                         /* (A lot's count with its others' told with it: 0 its own) */
 static struct item tw;                          /* (The thing worded, copied out, and its kind's record: the main */
 static const struct kind* twk;                  /*   RAM's, many's call swapping this part out and in again) */
+static unsigned char lmode;                     /* (The words a list in a sentence, look in's, 1: "a candle and two
+                                                **   chisels", not "(in it: ...)"; the inventory's, 2: one a line) */
+
+/* Thing i's letter (tw its record: hub.h's designators, the UI bank's low), "(c) ", put (letter.s's lput, in assembly:
+** part 11's room) */
+void __fastcall__ lput (unsigned key, unsigned* low);
+#define let_put(i)      (hub_map (UI_BANK), lput (tw.id ? tw.id : (i) | LT_REC, UIREC->low))
 
 /* A thing in words (tw, twk its kind's): its kind, how many, and what anyone can see of its state (its make and worth
 ** are an appraiser's to judge) */
@@ -4552,8 +4582,6 @@ static unsigned next_in (void)
 #pragma static-locals (pop)
 
 /* Each thing at where, x worded, and what's in it, or on it */
-static unsigned char lmode;                     /* (The words a list in a sentence, look in's: "a candle and two
-                                                **   chisels", not "(in it: ...)") */
 static unsigned char lsig, lkf, lwo, ln, lin;
 static const struct kind* cl_k;
 static struct item* cl_p;
@@ -4650,9 +4678,13 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
                 }
             }
         }
-        if (!depth) {
-            put (first ? "You carry " : "; ");
-        } else if (lmode && depth == 1) {
+        if (lmode == 2) {                       /* (The inventory: a list, one a line, what's in a thing under it, each
+                                                **   with its letter, the user's, 2026-11-06) */
+            put (first && !depth ? "You carry:\n" : "\n");
+            put ("\t\t\t\t\t\t" + (depth < 3 ? 6 - 2 * depth : 0));   /* (Hard spaces, two a level: term.c's say;
+                                                **   the answer's letters the fewer at the console's pace) */
+            let_put (i);
+        } else if (depth == 1) {
             put (first ? "" : ", ");
         } else {
             put (first ? (cl_k = kind_at (x), cl_k->flags & K_BELT || cl_k->keeps & KF_ON) ? " (on it: " : " (in it: " :
@@ -4678,17 +4710,34 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
             contents (IW_ITEM, i, depth + 1);
         }
     }
-    if (!first && depth && !(lmode && depth == 1)) {
+    if (!first && lmode == 1 && depth > 1) {
         put (")");
     }
-    if (!depth) {
-        put (first ? "You carry nothing." : ".");
+    if (!depth && first) {
+        put ("You carry nothing.");
     }
 }
 
 void s_list (void)
 {
     char b[6];
+
+    text_new ();
+    lmode = 2;
+    contents (IW_ACTOR, 0, 0);
+    lmode = 0;
+    put ("\nIn all, ");                         /* (Its load: the referee's encumbrance of it, the UI's to word) */
+    put (utoa ((load_qp + WT_LB / 2) / WT_LB, b, 10));   /* (As it was last weighed, the referee's load, the one path:
+                                                **   a weapon's version and all, 2026-11-03) */
+    put (" lb.");
+}
+
+#pragma code-name (push, "SW103CODE")
+#pragma rodata-name (push, "SW103RODATA")
+/* What the character carries listed (IO_LIST): gathered first, then worded by part 11's s_list (part 103's, part 11's
+** room: the letters, 2026-11-06; a part of its own, its swaps the shorter) */
+void s_inventory (void)
+{
     unsigned i = 0;
 #define d       ln                              /* (contents' own, j too, free before it: the main RAM's room) */
 #define k       gm
@@ -4723,13 +4772,10 @@ void s_list (void)
     }
 #undef d
 #undef k
-    text_new ();
-    contents (IW_ACTOR, 0, 0);
-    put (" In all, ");                          /* (Its load: the referee's encumbrance of it, the UI's to word) */
-    put (utoa ((load_qp + WT_LB / 2) / WT_LB, b, 10));   /* (As it was last weighed, the referee's load, the one path:
-                                                **   a weapon's version and all, 2026-11-03) */
-    put (" lb.");
+    list ();
 }
+#pragma rodata-name (pop)
+#pragma code-name (pop)
 
 /* What's in thing n (or on it, hanging from it) worded as a list, alike told together ("a candle, two chisels":
 ** part 36's inside, its words in a sentence) */
@@ -6403,10 +6449,17 @@ void s_kit (void)
                         item_at (i)->wear = ((struct kitrec*) tbuf)->wear;
                         memcpy (&item_at (i)->dur, &((struct kitrec*) tbuf)->dur, KIT_STATE);
                     }
+                    if ((k = ((struct kitrec*) tbuf)->let - 1) < NLET) {
+                        box = item_at (i)->id;  /* (Its letter as it was: hub.h's designators, by its id, or by its
+                                                **   record's number till it has one) */
+                        hub_map (UI_BANK);
+                        UIREC->low[k] = box ? box : i | LT_REC;
+                    }
                     ++i;
                 }
             }
             close (ost.kept);
+            box = 0;
         } else if (--k) {                       /* (Its weapons their version: the referee's, by its Strength, D13's;
                                                 **   the character's alone, on it) */
             for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {

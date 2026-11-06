@@ -866,6 +866,26 @@ world's answer follows.  The word is said before the world's asked, and holds wh
   1.4M, its way worked out first; a word before it would be said on every move, and "You set off" can't be said till the
   way's known); a door gone over for traps (about a million: the pace's words looked for first in "search"); a blow's walk over ("You go over to the giant rat.", 1.1M); "name the rat Bob" (2.6M: its names' parts first); "help" (a million: the card); "stop" with nothing to stop, the map, a pace set (to 780,000: the answer itself, no word that reads well).
 
+## Letters for things *(2026-11-06: the user's designators, DECISIONS.md's; new, for review: how a letter's given and given back, what the list shows)*
+
+- **A letter for each thing carried or worn** (the user's: "lower-case letters for items carried/worn (one or two
+  characters)"): a ... z, then aa ... az.  Given as the thing first comes to the character (taken up, got out of a body or
+  a chest, made; several at once, the kit, in the store's order), kept while it's carried, in a pack or a pouch too, and
+  given back if the same thing (its own number) is taken up again.  A new thing takes, of a ... z, a letter never given,
+  else the one whose thing was let go of the longest ago (that thing's letter given up); only with all 26 carried, aa ...
+  az the same way.  A thing not its own yet (a carried-on kit's, before it's made its own) keeps its letter by its record
+  till it has its number.
+- **Kept**: in the save, and into the next dungeon (kit.dat): a thing carried out has its letter there; a thing bought
+  between dungeons a new one.
+- **The inventory a list, one a line** (the user's answer): "You carry:", then each thing on a line, its letter in
+  brackets, "(a) a torch (lit), in your right hand", "(c) a backpack, worn"; what's in a thing under it, indented two
+  spaces a level, "  (d) a torch (spent)"; things alike told together under the first one's letter with their count, "(g)
+  two torches" (each has its own letter all the same: the others' shown as they're told apart), a lot counted one thing,
+  "(f) 3 rations"; the burden line after it ("In all, 11 lb.", "You're a little burdened.").  Not a light's minutes left
+  ("(lit, 40 minutes left)": the status line has its light's), nor four spaces a level: the list's letters are its time at
+  the console's pace (some 1,300 cycles each), and the answer after an inventory at the turns pace's wait 0 came late
+  with them (dq0answer's examine, 665,000 cycles of its 640,000).
+
 ## Characters *(hmchar: HarnMaster's character generator)*
 
 - **Every occupation the book lists, and one of the player's own** (the user's, 2026-10-20).  hmchar offers the

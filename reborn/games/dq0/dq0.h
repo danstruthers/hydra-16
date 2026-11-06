@@ -454,6 +454,10 @@ const char* __fastcall__ names_say (const char* s); /* Part 6: words with the th
                                                 **   ("Linda, your sword"): in the main RAM */
 void __fastcall__ names_look (unsigned char after); /* Part 6: a look's things named marked (0, before its words); the
                                                 **   room's name in them (1, after) */
+void __fastcall__ letters_keep (int fd, unsigned char back);    /* Part 22: the letters (hub.h's designators) written to
+                                                **   the save (back 0), read back (1; fd -1: none) */
+void __fastcall__ keeps_back (int fd);          /* Part 22: the names, the shortcuts and the letters read back from the
+                                                **   save (fd -1: none, a new game's) */
 void __fastcall__ names_keep (int fd, unsigned char back);  /* Part 6: the names written to the save (back 0), read
                                                 **   from it (1; fd -1: none) */
 unsigned char __fastcall__ room_named (const char* text);  /* Part 6: a room whose name is in text: its entry's

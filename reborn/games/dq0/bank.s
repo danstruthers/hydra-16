@@ -229,6 +229,8 @@ ovl_out:
             SWFN        args, 7
             SWFN        between, 21         ; (The record of a life, as a game begins: part 1's bank's room, 2026-11-04)
             SWFN        life_dir, 22
+            SWFN        letters_keep, 22    ; (The letters kept: letters.c, 2026-11-06)
+            SWFN        keeps_back, 22      ; (The names, the shortcuts, the letters read back: part 1's room)
             SWFN        read_cmd, 25        ; (A writing read or copied, its clues kept: read.c, the plan's steps 9, 10)
             SWFN        clue_make, 26
             SWFN        clues_kept, 26

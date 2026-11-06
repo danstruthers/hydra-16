@@ -3296,6 +3296,8 @@ function dq0AnswerTest(baud) {
 const TORCHX = ['inventory', 'drop torch', 'take torch', 'inventory', 'wait 2 hours', 'light a new torch', 'take the spent torch from the ground', 'drop the spent torch',
   'drop the lit torch', 'take the spent torch from the floor', 'drop torch', 'take the lit torch', 'hold the tinderbox', 'take torch', 'inventory', 'douse the torch', 'light the torch',
   'inventory', 'take spent torch from backpack', 'put the rope in the backpack', 'put the tinderbox in the backpack', 'dip the spent torch in the oil', 'inventory'];   // (dq0torchwords' lines: the user's playtest, 2026-11-06)
+const LETTERX = [['inventory', 'drop the pick', 'inventory', 'take the pick', 'inventory', 'quit'],   // (dq0letters' lines: a game, carried on, the
+  ['inventory', 'drop the hatchet', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u'], ['inventory', 'quit']];   //   next dungeon)
 module.exports = {
   IRQ_OFF_MAX,
   tests: [
@@ -5361,7 +5363,7 @@ module.exports = {
           'You take the dagger in your right hand.', 'You throw your dagger hard at the giant rat', 'You finish the giant rat where it lies.', 'Put down.',
           'Which do you mean: 1. the body ahead', 'the bones ahead to your right, or 3. the pick where you stand?', 'Taken.',
           'Which do you mean: 1. the body ahead', 'or 2. the pick where you stand?', 'You\'ve no hand free for the pick: you put it in your backpack.', 'Your hands are full, and there\'s nowhere to put it.',
-          'a pick, a torch, a flask of oil);', 'bones, in your right hand', 'You carry none of those.', 'Your hands are full, and there\'s nowhere to put it.', 'Throw it at what?',
+          '(j) a pick (k) a torch (l) a flask of oil', '(m) bones, in your right hand', 'You carry none of those.', 'Your hands are full, and there\'s nowhere to put it.', 'Throw it at what?',
           'You finish the giant rat where it lies.', 'You have no target now.',
           'You have no target.', 'You turn to face north.', 'You come to the wall.', '% echo $status'];
         let at = 0;
@@ -5518,7 +5520,7 @@ module.exports = {
         const spent = s => dq0Carried(s).filter(i => !free.includes(i.name)).reduce((a, i) => a + price(i), 0);
         const money = s => dq0Carried(s).filter(i => i.name === 'pennies').reduce((a, i) => a + i.qty, 0);
         if (s1 && spent(s1) + 4 * money(s1) > 4 * w5) f.push('the hunter: spent ' + spent(s1) / 4 + 'd and kept ' + money(s1) + ', more than its wealth ' + w5);
-        if (!/You carry clothes, worn; sandals, worn; a backpack, worn \(in it:/.test(story)) f.push('the hunter\'s inventory not its outfit: ' + story.slice(story.indexOf('You carry'), story.indexOf('You carry') + 200));
+        if (!/You carry: \(a\) clothes, worn \(b\) sandals, worn \(c\) a backpack, worn \(\w+\) two torches/.test(story)) f.push('the hunter\'s inventory not its outfit: ' + story.slice(story.indexOf('You carry'), story.indexOf('You carry') + 200));
         // seed 8's thief: its tools and mapping things handy, its club and dagger
         const s2 = game('dq0 -p t -s 3 -c /ram/t.hm -T', 'the thief');
         kit(s2, 'the thief', 'sandals');
@@ -7304,7 +7306,7 @@ module.exports = {
         const c0 = s.indexOf('> dig north with the chisel'), c1 = s.indexOf('> stop', c0);
         if (!/You get out the chisel\..*You get out the hammer\./.test(s.slice(c0, c1))) f.push('hammer and chisel not both got out: ' + s.slice(c0, c0 + 600));
         if ((s.slice(c0, c1).match(/Your pick would do this better/g) || []).length !== 1) f.push('the better tool not told once');
-        if (!/a hammer, in your left hand; a chisel, in your right hand/.test(s.slice(c1, c1 + 500))) f.push('stopped: hammer and chisel not in hand');
+        if (!/a hammer, in your left hand \(\w+\) a chisel, in your right hand/.test(s.slice(c1, c1 + 500))) f.push('stopped: hammer and chisel not in hand');
         after('> hold the rope', /You lay the torch on the ground, still burning\./, 'a lit torch not laid down');
         after('> look', /At your feet lie a lit torch/, 'the torch laid not told lit');
         const l0 = s.indexOf('> light the torch');
@@ -7684,7 +7686,7 @@ module.exports = {
         said('drop torch', /^You put down the (lit |unlit )?torch\./);
         not('drop torch', /You reach for|Put down\./);
         said('take torch', /Taken\./);
-        said('inventory', /backpack, worn \(in it: 3 rations, a tinderbox, a torch, a flask of oil\).*a torch, in your/, 3);
+        said('inventory', /backpack, worn \(\w+\) 3 rations \(\w+\) a tinderbox \(\w+\) a torch \(\w+\) a flask of oil.*a torch, in your/, 3);
         said('light a new torch', /^You reach for your backpack\./);
         said('take the spent torch from the ground', /Taken\./);
         said('drop the spent torch', /^You put down the spent torch\./);
@@ -7708,6 +7710,41 @@ module.exports = {
           if (!/^(inventory|wait)/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         if (/You see no (floor|ground) here/.test(o)) f.push('the floor not a place: ' + o.match(/.{80}You see no (floor|ground) here/)[0]);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0letters', outfit: true, reach: true, near: ['gear', 'save'], what: "Dingus Quest Zero's designators, step 1 (the user's design, 2026-11-06, DECISIONS.md's): the inventory a list, one a line, what's in a thing under it, each thing its letter in brackets, the burden line kept; a thing put down and taken up again its letter back; the letters kept in the save (quit, carried on with dq0 -d) and into the next dungeon (kit.dat); the inventory's first letter within the user's 720,000 cycles",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,pick -d /ram/q', ...LETTERX[0],
+        'dq0 -d /ram/q', ...LETTERX[1], 'dq0 -p t -s 259 -d /ram/q', ...LETTERX[2], 'echo $status']) },
+      start(m) { this.timer = dq0Timer(m); },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], raw = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').replace(/\r/g, '');
+        const invs = raw.split('You carry:\n').slice(1).map(t => t.slice(0, t.indexOf('In all, ') < 0 ? 0 : t.indexOf('In all, ')));
+        const lets = t => { const r = {}; for (const l of t.split('\n')) { const x = /^ *\(([a-z]{1,2})\) ([^(,]*[^(, ])/.exec(l); if (x) r[x[2]] = x[1]; else if (l.trim()) r['?' + l.trim()] = '?'; } return r; };
+        this.notes = invs.map(t => t.replace(/\n/g, ' / ').slice(0, 600));
+        if (invs.length !== 5) return ['not five inventories: ' + invs.length];
+        const L = invs.map(lets);
+        for (const [i, l] of L.entries()) for (const k of Object.keys(l)) if (k[0] === '?') f.push('inventory ' + (i + 1) + ': a line with no letter: ' + k.slice(1));
+        if (!/\n {2}\(\w+\) /.test(invs[0])) f.push('what\'s in a thing not under it, indented: ' + invs[0].slice(0, 300));
+        if (!/a torch \(lit\), in your left hand/.test(invs[0])) f.push('the torch lit not told so: ' + invs[0].slice(0, 300));
+        if (!(raw.split('In all, ').length > 5)) f.push('the burden line not kept');
+        const same = (a, b, what, keys) => { for (const k of keys || Object.keys(L[a])) if (L[b][k] !== undefined && L[a][k] !== L[b][k]) f.push(what + ': ' + k + ' (' + L[a][k] + ') now (' + L[b][k] + ')'); };
+        if (!L[0]['a pick'] || L[1]['a pick'] || L[2]['a pick'] !== L[0]['a pick']) f.push('the pick put down and taken up again not its letter back: ' + [0, 1, 2].map(i => L[i]['a pick']).join(', '));
+        same(0, 2, 'taken up again');
+        same(2, 3, 'carried on (the save)');
+        if (Object.keys(L[3]).length < 10) f.push('the save\'s inventory short: ' + invs[3].slice(0, 300));
+        same(3, 4, 'the next dungeon (kit.dat)', ['a pick', 'clothes', 'a backpack', 'a belt', 'a pouch', 'a tinderbox', 'a rope', 'a sack']);
+        if (!['a pick', 'clothes', 'a backpack'].every(k => L[4][k])) f.push('the next dungeon\'s inventory not the kit: ' + invs[4].slice(0, 300));
+        const tm = this.timer(['dq0auto=1', 'bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,pick -d /ram/q', ...LETTERX[0]],
+          LETTERX[0].filter(l => l === 'inventory').map(l => ({ line: l, want: 'You carry' })));
+        for (const r of tm) {
+          this.notes.push(r.line + ': first letter ' + r.first + ', whole ' + r.whole);
+          if (r.first === null || r.first > 720000) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+        }
         return f;
       },
       sdcard: true
@@ -7772,7 +7809,7 @@ module.exports = {
         if (!look || !/giant rat/.test(look.text)) f.push('the look doesn\'t say the rat: the scene not set');
         else if ((look.text.match(/A giant rat is /g) || []).length !== 1) f.push('the rat told more than once in the look\'s answer: ' + look.text);
         if (look && /Something stirs/.test(look.text.slice(0, look.text.indexOf('You are ') < 0 ? 0 : look.text.indexOf('You are ')))) f.push('the stir told before the look: ' + look.text);
-        if (!inv || !/You carry .*Something stirs/.test(inv.text)) f.push('the stir not told after the inventory: ' + (inv ? inv.text : ''));
+        if (!inv || !/You carry[\s\S]*Something stirs/.test(inv.text)) f.push('the stir not told after the inventory: ' + (inv ? inv.text : ''));
         return f;
       },
       sdcard: true
@@ -8410,8 +8447,8 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        inTurn(o, ['> walk to the door behind me', 'You head for the door.', '> i', 'You carry a torch (lit), in your left hand; a backpack, worn (in it: 3 rations, a tinderbox, a basket, a heap of sand,',
-          'a sword, a torch, a flask of oil); a belt, worn (on it: a pouch (in it: 12 pennies), a dagger, a waterskin (empty)); a table, in both hands. In all, 60 lb.', '> drop table', 'You put down the table.',
+        inTurn(o, ['> walk to the door behind me', 'You head for the door.', '> i', 'You carry: (a) a torch (lit), in your left hand (b) a backpack, worn (c) 3 rations (d) a tinderbox (k) a basket (l) a heap of sand',
+          '(q) a sword (r) a torch (s) a flask of oil (e) a belt, worn (f) a pouch (g) 12 pennies (h) a dagger (i) a waterskin (empty) (j) a table, in both hands In all, 60 lb.', '> drop table', 'You put down the table.',
           '> put the candle on the table', 'You put the candle on the table.', '> look', 'At your feet lies a table. On the table lies a candle.',
           '> take the candle from the table', 'You take the candle from the table. It\'s in your hand.', '> stow the candle', 'You stow the candle in your backpack.', '> wear cloak', 'You put on the cloak.',
           '> hold basket', 'You take the basket in your right hand.', '> put sand in basket', 'The basket won\'t keep the heap of sand: it would run out.',
@@ -8421,8 +8458,8 @@ module.exports = {
           'The backpack won\'t go inside itself.', '> take the cloak off', 'You take off the cloak. It\'s in your hand.', '> stow cloak',
           'You stow the cloak in your backpack.', '> name my sword Linda', 'You name your sword Linda.', '> name the dagger as linda', 'That name is taken by your sword.',
           '> name the dagger Torch', 'That name is taken by a kind of thing (torch).', '> name the dagger kobold', 'That name is taken by a kind of creature (kobold).',
-          '> name the dagger north', 'That name is taken: it\'s a word your commands need.', '> i', 'a candle, Linda, your sword, a torch, a flask of oil);',
-          'a waterskin (empty), a quiver (in it: an arrow)). In all, 20 lb.', '> examine the moon', 'You see no moon here.', '> take off my coat', 'You aren\'t wearing any coat.',
+          '> name the dagger north', 'That name is taken: it\'s a word your commands need.', '> i', '(n) a candle (q) Linda, your sword (r) a torch (s) a flask of oil',
+          '(i) a waterskin (empty) (o) a quiver (p) an arrow In all, 20 lb.', '> examine the moon', 'You see no moon here.', '> take off my coat', 'You aren\'t wearing any coat.',
           '> foo', 'I don\'t know how to foo.', '> status', 'Pace: a walk (40 feet a round). Watching: nothing in particular. Condition: unhurt; a little burdened (encumbrance 1); penalties: universal 0, physical 1. Light: your torch (20 feet).',
           '> jog', 'Pace: a jog (80 feet a round). Watching: nothing in particular.', '> search for traps as I go',
           'Pace: a jog, held to a slow walk while you search as you go (20 feet a round). Watching: for traps and hidden doors as you go.', '> stop searching',
@@ -10501,7 +10538,7 @@ module.exports = {
         const a = T.of('attack the rat with the sword in my left hand');
         if (!dq0Ev(a, 'E_FIGHT', { who: 0 }).length) f.push('the rat not struck at with the sword (' + dq0Evs(a) + ')');
         if (!a.after || a.after.pc.strike !== K.KI_SWORD + 3 || a.after.pc.shand !== H.L) f.push('the blow not the sword in its left hand: pc_strike ' + (a.after && a.after.pc.strike) + ', pc_shand ' + (a.after && a.after.pc.shand));
-        inTurn(s, ['> i', 'You carry a torch (lit), in your left hand;', 'a sword, in your right hand.',
+        inTurn(s, ['> i', 'You carry: (a) a torch (lit), in your left hand', '(j) a sword, in your right hand In all',
           '> swap hands', 'You change hands: the sword in your left, the torch in your right.',
           '> hold the sword in my right hand', 'Your right hand holds the torch.', '> drop the torch', 'You put down the',
           '> put the sword in my other hand', 'You shift the sword to your right hand.',
@@ -10510,8 +10547,8 @@ module.exports = {
           '> take the lit torch in my left hand', 'Your left hand holds the spear.',
           '> hold the spear in my left hand', 'You shift the spear to your left hand.',
           '> take the lit torch in my right hand', 'You take the lit torch in your right hand.',
-          '> i', 'You carry a torch (lit), in your right hand;', 'a spear, in your left hand',
-          '> i', 'You carry a torch (lit), in your right hand;', 'a sword, in your left hand.',
+          '> i', 'You carry: (a) a torch (lit), in your right hand', '(k) a spear, in your left hand',
+          '> i', 'You carry: (a) a torch (lit), in your right hand', '(j) a sword, in your left hand In all',
           '> attack the rat with the sword in my left hand', 'You shift the sword to your left hand.', 'You strike at the giant rat with your sword'], f, 'the words: ');
         return f;
       },
@@ -10613,7 +10650,7 @@ module.exports = {
         const games = []; for (let i = s.indexOf('% dq0 '); i >= 0; i = s.indexOf('% dq0 ', i + 1)) games.push(i);
         const seg = (g, line, n = 1) => { const e = '> ' + line + ' > ' + line; let i = games[g - 1]; for (let k = 0; k < n && i >= 0; k++) i = s.indexOf(e, i + 1);
           if (i < 0) { f.push('game ' + g + ': "' + line + '" not answered'); return ''; } const j = s.indexOf(' > ', i + e.length); return s.slice(i + e.length, j < 0 ? s.length : j); };
-        const has = (g, line, w, n) => { if (!seg(g, line, n).includes(w)) f.push('game ' + g + ', ' + line + ': not told ' + w + ': ' + seg(g, line, n).slice(0, 400)); };
+        const has = (g, line, w, n) => { if (!(w.test ? w.test(seg(g, line, n)) : seg(g, line, n).includes(w))) f.push('game ' + g + ', ' + line + ': not told ' + w + ': ' + seg(g, line, n).slice(0, 400)); };
         const never = (g, line, w, n) => { if (seg(g, line, n).includes(w)) f.push('game ' + g + ', ' + line + ': told ' + w); };
         const gk = {}; T.forEach((t, k) => { if (/^dq0 /.test(t.line)) gk[Object.keys(gk).length + 1] = k; });
         const dt = (g, line, tenths, n = 1) => { let k = gk[g], t; for (let i = 0; i < n; i++) { t = T.of(line, k); k = t.k + 1; } const d = t.at && t.after ? t.after.now - t.at.now : null; if (d !== tenths) f.push('game ' + g + ', ' + line + ' (' + n + '): ' + d + ' tenths, not ' + tenths); };
@@ -10679,7 +10716,7 @@ module.exports = {
         const games = []; for (let i = s.indexOf('% dq0 '); i >= 0; i = s.indexOf('% dq0 ', i + 1)) games.push(i);
         const seg = (g, line, n = 1) => { const e = '> ' + line + ' > ' + line; let i = games[g - 1]; for (let k = 0; k < n && i >= 0; k++) i = s.indexOf(e, i + 1);
           if (i < 0) { f.push('game ' + g + ': "' + line + '" not answered'); return ''; } const j = s.indexOf(' > ', i + e.length); return s.slice(i + e.length, j < 0 ? s.length : j); };
-        const has = (g, line, w, n) => { if (!seg(g, line, n).includes(w)) f.push('game ' + g + ', ' + line + ': not told ' + w + ': ' + seg(g, line, n).slice(0, 400)); };
+        const has = (g, line, w, n) => { if (!(w.test ? w.test(seg(g, line, n)) : seg(g, line, n).includes(w))) f.push('game ' + g + ', ' + line + ': not told ' + w + ': ' + seg(g, line, n).slice(0, 400)); };
         const never = (g, line, w, n) => { if (seg(g, line, n).includes(w)) f.push('game ' + g + ', ' + line + ': told ' + w); };
         const gk = {}; T.forEach((t, k) => { if (/^dq0 /.test(t.line)) gk[Object.keys(gk).length + 1] = k; });
         const dt = (g, line, tenths, n = 1) => { let k = gk[g], t; for (let i = 0; i < n; i++) { t = T.of(line, k); k = t.k + 1; } const d = t.at && t.after ? t.after.now - t.at.now : null; if (d !== tenths) f.push('game ' + g + ', ' + line + ' (' + n + '): ' + d + ' tenths, not ' + tenths); };
@@ -10705,7 +10742,7 @@ module.exports = {
         has(6, 'search the iron pot', 'It\'s closed');
         dt(6, 'search the iron pot', 600);
         has(6, 'sharpen the torch', 'can\'t be filled or sharpened');
-        has(6, 'inventory', 'a torch (lit)');
+        has(6, 'inventory', 'a torch (lit');
         dt(6, 'drop the hammer', 1);
         has(7, 'examine the wall', 'That\'s a door');
         never(7, 'examine the wall', 'bare rock');
@@ -10758,7 +10795,7 @@ module.exports = {
         if (enc.length !== 4) f.push('status told ' + enc.length + ' times, not 4');
         enc.forEach((e, i) => { if (e > 2) f.push('character ' + (i + 1) + ' starts at encumbrance ' + e); });
         const inv = [...s.matchAll(/> inventory > inventory (.*?) > quit/g)].map(x => x[1]);
-        inv.forEach((t, i) => { for (const w of ['clothes', 'backpack', 'belt', 'tinderbox', 'rations', 'waterskin', '(lit)', 'In all,']) if (!t.includes(w)) f.push('inventory ' + (i + 1) + ': no ' + w + ': ' + t.slice(0, 500)); });
+        inv.forEach((t, i) => { for (const w of ['clothes', 'backpack', 'belt', 'tinderbox', 'rations', 'waterskin', '(lit', 'In all,']) if (!t.includes(w)) f.push('inventory ' + (i + 1) + ': no ' + w + ': ' + t.slice(0, 500)); });
         if (inv[4] && inv[4].length <= 400) f.push('the long inventory only ' + inv[4].length + ' letters: not the case it means: ' + inv[4]);
         return f;
       },
@@ -10834,7 +10871,7 @@ module.exports = {
           if (i < 0) { f.push('game ' + g + ': "' + line + '" not answered'); return ''; } const j = s.indexOf(' > ', i + e.length); return s.slice(i + e.length, j < 0 ? s.length : j); };
         const order = (g, line, want, n) => inTurn(seg(g, line, n), want, f, 'game ' + g + ', ' + line + ': ');
         const never = (g, line, w, n) => { if (seg(g, line, n).includes(w)) f.push('game ' + g + ', ' + line + ': told ' + w); };
-        const has = (g, line, w, n) => { if (!seg(g, line, n).includes(w)) f.push('game ' + g + ', ' + line + ': not told ' + w + ': ' + seg(g, line, n).slice(0, 400)); };
+        const has = (g, line, w, n) => { if (!(w.test ? w.test(seg(g, line, n)) : seg(g, line, n).includes(w))) f.push('game ' + g + ', ' + line + ': not told ' + w + ': ' + seg(g, line, n).slice(0, 400)); };
         const gk = {}; T.forEach((t, k) => { if (/^dq0 /.test(t.line)) gk[Object.keys(gk).length + 1] = k; });
         const dt = (g, line, tenths) => { const t = T.of(line, gk[g]); const d = t.at && t.after ? t.after.now - t.at.now : null; if (d !== tenths) f.push('game ' + g + ', ' + line + ': ' + d + ' tenths, not ' + tenths); };
         const steps = 'You take off your backpack';
@@ -10864,9 +10901,9 @@ module.exports = {
         has(2, 'light a new torch', 'You light the new torch from the burning one.', 2);   // (The one in its other hand, 2026-11-03)
         never(2, 'light a new torch', 'You get out', 2);
         has(2, 'inventory', 'a sword, in your right hand');
-        has(2, 'inventory', 'a torch (lit), in your left hand', 2);
+        has(2, 'inventory', /a torch \(lit[^)]*\), in your left hand/, 2);
         has(3, 'inventory', 'a torch, in your right hand');
-        has(3, 'inventory', 'a torch (lit), in your left hand');
+        has(3, 'inventory', /a torch \(lit[^)]*\), in your left hand/);
         has(4, 'inventory', 'a torch, in your right hand');
         // (A tool: a pick from the pack, the dig, stopped: the pack off told)
         order(5, 'dig down', ['You take off your backpack, and set it down at your feet.', 'You reach into the backpack.', 'You get out the pick.', 'You dig with your pick']);
@@ -10887,29 +10924,29 @@ module.exports = {
         // (A torch redipped: the preferred order; a sword in the other hand; no spare)
         const pref = ['You get out the new torch.', 'You light the new torch from the burning one.', 'You blow out the old torch.', 'You set the new torch down at your feet.', 'You get out the flask of oil.', 'You set to dipping the old torch.', 'You soak the torch in the flask of oil.', 'You put away the flask of oil.', 'You put away the old torch.', 'You take up the new torch.', 'You put your backpack back on.'];
         order(8, 'refresh the torch', [steps, ...pref]);
-        has(8, 'inventory', 'a torch (lit), in your left hand');
+        has(8, 'inventory', /a torch \(lit[^)]*\), in your left hand/);
         order(9, 'redip the torch', ['You set the sword down at your feet.', steps, ...pref.slice(0, 9), 'You take up the new torch.', 'You take up the sword.', 'You put your backpack back on.']);
         has(9, 'inventory', 'a sword, in your right hand');
         order(10, 'dip the torch', ['You go to blow out the torch: that will leave you in the dark.', steps, 'You get out the flask of oil.', 'You set to dipping the torch.', 'You put away the flask of oil.', 'You get out the tinderbox.', 'You strike a spark.', 'You light the torch.', 'You put away the tinderbox.', 'You put your backpack back on.']);
         if (!/You soak the torch|oil spills/.test(seg(10, 'dip the torch'))) f.push('dipped in the dark: neither soaked nor spilt');
-        has(10, 'inventory', 'a torch (lit)');
+        has(10, 'inventory', 'a torch (lit');
         // (Two lit, the one with the most room the old: blown out, set by the new; a spent one: nothing to blow out, kept to its end; each named)
         const dipped = ['You set to dipping the old torch.', 'You soak the torch in the flask of oil.', 'You put away the flask of oil.'];
         order(13, 'dip the torch', ['You blow out the old torch.', 'You set the new torch down at your feet.', steps, 'You get out the flask of oil.', ...dipped, 'You put away the old torch.', 'You take up the new torch.', 'You put your backpack back on.']);
-        has(13, 'inventory', 'a torch (lit), in your left hand');
+        has(13, 'inventory', /a torch \(lit[^)]*\), in your left hand/);
         order(14, 'dip the torch', ['You set the new torch down at your feet.', steps, 'You get out the flask of oil.', ...dipped, 'You take up the new torch.', 'You put your backpack back on.']);
         if (seg(14, 'dip the torch').includes('You blow out')) f.push('game 14: a spent torch blown out');
         has(14, 'inventory', 'a torch, in your left hand');
-        has(14, 'inventory', 'a torch (lit), in your right hand');
+        has(14, 'inventory', /a torch \(lit[^)]*\), in your right hand/);
         order(18, 'dip the torch', ['You blow out the old torch.', 'You set the new torch down at your feet.', 'You get out the flask of oil.', ...dipped, 'You take up the new torch.']);
         if (seg(18, 'dip the torch').includes('backpack')) f.push('game 18: the pack touched, the flask in the pouch');
         has(18, 'inventory', 'a torch, in your');
-        has(18, 'inventory', 'a torch (lit), in your');
+        has(18, 'inventory', /a torch \(lit[^)]*\), in your/);
         // (A run of handlings on one line: the pack off once, on once; a walk off between: on first, the rest by the lump, untold)
         order(15, 'take all', ['You take off your backpack', 'You hold the backpack open.', 'Taken.', 'Taken.', 'Taken.', 'You put your backpack back on.']);
         has(15, 'inventory', 'a backpack, worn');
         order(16, 'take all', [steps, 'You hold the backpack open.', 'Taken.', 'Taken.', 'You put your backpack back on.', 'You go over to the tinderbox.', 'Taken.']);
-        has(16, 'inventory', 'a backpack, worn (in it: 3 rations, a tinderbox');
+        has(16, 'inventory', /a backpack, worn \(\w+\) 3 rations \(\w+\) a tinderbox/);
         // (A kind past 127, its top bit the UI's: named as it's begun and as it's stopped)
         inTurn(s.slice(games[16], games[17]), ['You set to sharpening the mang.', 'You stop sharpening the mang.', 'Your backpack lies at your feet.'], f, 'game 17: ');
         // (A whetstone: the routine's use, sharpened, a sharp one told; none carried, told)
@@ -10954,7 +10991,7 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const s = dq0Story(out), f = [];
-        inTurn(s, ['> dip the torch', 'You go to blow out the torch: that will leave you in the dark.', 'Keep blowing out the torch?', 'You stop blowing out the torch.', '> inventory', 'a torch (lit)'], f);
+        inTurn(s, ['> dip the torch', 'You go to blow out the torch: that will leave you in the dark.', 'Keep blowing out the torch?', 'You stop blowing out the torch.', '> inventory', 'a torch (lit'], f);
         return f;
       },
       sdcard: true
@@ -11011,7 +11048,7 @@ module.exports = {
         if (d && (d.flags & DQ0_I.HELD)) f.push('the dagger taken into its useless hand');
         const sw = thing(T.of('swap hands'), 'torch');
         if (!sw || (sw.sn & 3) !== 2) f.push('the torch moved into its useless hand');
-        inTurn(s, ['> i', 'You carry a torch (lit), in your right hand;', '> hold the dagger in my left hand', 'Your left arm is useless.',
+        inTurn(s, ['> i', 'You carry: (a) a torch (lit), in your right hand', '> hold the dagger in my left hand', 'Your left arm is useless.',
           '> hold the pick', 'Your left arm is useless. You can\'t hold the pick in one hand.', '> swap hands', 'Your left arm is useless.'],
           f, 'the words: ');
         return f;
@@ -12427,9 +12464,9 @@ module.exports = {
         const games = o.split(/% dq0 -p t -s 3 -c \/ram\/\w\.hm/).slice(1);
         const inv = g => { const i = games[g].indexOf('You carry'); return i < 0 ? '' : games[g].slice(i, games[g].indexOf('In all', i)); };
         const a = inv(0), b = inv(1), c = inv(2), d = inv(3);
-        if (!/a lantern \(lit\), in your left hand/.test(a) || !/two flasks of oil/.test(a) || /torch/.test(a)) f.push('160 pennies: not a lantern lit and two flasks, no torch: ' + a);
+        if (!/a lantern \(lit[^)]*\), in your left hand/.test(a) || !/two flasks of oil/.test(a) || /torch/.test(a)) f.push('160 pennies: not a lantern lit and two flasks, no torch: ' + a);
         for (const [s, w] of [[b, 'a poor serf'], [c, 'a slave'], [d, 'a serf of 80 pennies']]) {
-          if (!/a torch \(lit\), in your left hand/.test(s) || !/two torches/.test(s) || !/a flask of oil/.test(s) || /lantern/.test(s)) f.push(w + ': not a torch lit, two spare and a flask: ' + s);
+          if (!/a torch \(lit[^)]*\), in your left hand/.test(s) || !/two torches/.test(s) || !/a flask of oil/.test(s) || /lantern/.test(s)) f.push(w + ': not a torch lit, two spare and a flask: ' + s);
         }
         for (const [s, w] of [[a, '160 pennies'], [b, 'a poor serf'], [c, 'a slave'], [d, 'a serf of 80 pennies']]) {
           if (!/a tinderbox/.test(s)) f.push(w + ': no tinderbox: ' + s);
@@ -12493,7 +12530,7 @@ module.exports = {
           'You blow out the old torch.', 'You let the old torch fall.', 'You take up the sword.', 'You put your backpack back on.'], f, 'a new torch: ');
         if (/tinderbox/.test(games[0].slice(0, games[0].indexOf('You carry')))) f.push('a new torch lit with one burning: the tinderbox touched');
         const inv = games[0].slice(games[0].indexOf('You carry'));
-        if (!/a torch \(lit\), in your left hand/.test(inv) || !/a sword, in your right hand/.test(inv)) f.push('after it, not a torch lit and the sword each in its own hand: ' + inv.slice(0, 400));
+        if (!/a torch \(lit[^)]*\), in your left hand/.test(inv) || !/a sword, in your right hand/.test(inv)) f.push('after it, not a torch lit and the sword each in its own hand: ' + inv.slice(0, 400));
         const t0 = T.of('light a new torch'), secs = t0.at && t0.after ? t0.after.now - t0.at.now : 0;
         if (!(secs >= 60)) f.push('a new torch\'s steps took ' + secs + ' tenths, not their time');
         if (!/You let the torch fall\./.test(games[1]) || !/You strike a spark\./.test(games[1])) f.push('the old one spent: not let fall and the tinderbox\'s steps: ' + games[1].slice(-900));
@@ -12518,7 +12555,7 @@ module.exports = {
         if (!/You lay the torch on the ground, still burning\./.test(o)) f.push('the torch in hand not laid down lit');
         if (!/You get out the hammer\./.test(o)) f.push('the hammer not got out');   // (dq0 -k's chisel in hand already)
         if (/get out the shovel/.test(o)) f.push('the shovel got out for a chisel\'s work');
-        if (!/(a hammer, in your [a-z]+ hand; a chisel, in your [a-z]+ hand|a chisel, in your [a-z]+ hand; a hammer, in your [a-z]+ hand)/.test(o)) f.push('stopped, not both in hand');
+        if (!/(a hammer, in your [a-z]+ hand \(\w+\) a chisel, in your [a-z]+ hand|a chisel, in your [a-z]+ hand \(\w+\) a hammer, in your [a-z]+ hand)/.test(o)) f.push('stopped, not both in hand');
         if (!/At your feet lies? a lit torch/.test(o)) f.push('the torch not told lying lit');
         const digs = T.filter(t => t.line === 'dig north');
         if (!digs[1] || !dq0Ev(digs[1], 'E_DIG', { how: 'D_NO_TOOL' }).length) f.push('no hammer, not refused');
@@ -13105,7 +13142,7 @@ module.exports = {
         need('RICH', /You have your [^.(]*sword[^.(]* mended/, 'the sword not mended');
         const kit = xdBytes(sect('RICH'), 'xd /ram/r/kit.dat');
         let sw = null;
-        for (let i = 0; i + 22 <= kit.length; i += 22) if (kit[i] === 25) sw = { wear: kit[i + 7], dur: kit[i + 13] | kit[i + 14] << 8, max: kit[i + 15] | kit[i + 16] << 8 };
+        for (let i = 0; i + 23 <= kit.length; i += 23) if (kit[i] === 25) sw = { wear: kit[i + 7], dur: kit[i + 13] | kit[i + 14] << 8, max: kit[i + 15] | kit[i + 16] << 8 };
         if (!sw || sw.wear !== 0 || !sw.max || sw.dur !== sw.max) f.push('the sword in the kit not made whole: ' + JSON.stringify(sw));
         // The broke: spare goods, never the named
         need('BROKE', /You sell /, 'nothing sold');
@@ -13342,7 +13379,7 @@ module.exports = {
         // The account after: nothing sold or bought for it (the market seen), nothing mended (the smith), the torches carried
         const after = town.slice(town.indexOf('Your time in'), town.indexOf('Enter to go on'));
         if (/You (sell|buy)|mended/.test(after)) f.push('the account did what the player saw to: ' + after.slice(0, 400));
-        const inv = /> inventory You carry ([^>]*)/g, invs = [...o.replace(/\s+/g, ' ').matchAll(inv)].map(x => x[1]);
+        const inv = /> inventory You carry:? ([^>]*)/g, invs = [...o.replace(/\s+/g, ' ').matchAll(inv)].map(x => x[1]);
         const n = s => { const x = /(\w+) torches/.exec(s || ''); return x ? ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'].indexOf(x[1]) : 0; };
         if (invs.length < 2 || n(invs[1]) !== n(invs[0]) + 3) f.push('the torches bought not in the next dungeon\'s pack: ' + invs.slice(0, 2).join(' / '));
         // The same life again: the same town; left by a rumour named

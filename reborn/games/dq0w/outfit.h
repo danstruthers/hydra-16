@@ -46,10 +46,11 @@ enum { PL_NONE, PL_WORN, PL_HAND, PL_OFF, PL_BOTH, PL_BELT, PL_POUCH, PL_PACK, P
 struct ofit {
     unsigned char   kind, qty, quality, place, in, flags, mat;
 };
-/* A thing carried, as kit.dat keeps it (the save's folder's, part 40's: one after another, 22 bytes each, NOFIT at most): an
-** outfit's entry, then struct item's own fields, wear to shut as they lie there.  A carried-on game makes each from its entry (part
-** 57's: coins at the money-changer's cut), then lays its wear, its life, its version and its fuel on it as it was (part 63's: no
-** new life, no new fuel, no new edge; dur_max 0, a thing not made its own yet; coins none, their mints the old region's).  The plan's step 3 */
+/* A thing carried, as kit.dat keeps it (the save's folder's, part 40's: one after another, 23 bytes each, NOFIT at most): an
+** outfit's entry, then struct item's own fields, wear to shut as they lie there, then its letter.  A carried-on game makes each from
+** its entry (part 57's: coins at the money-changer's cut), then lays its wear, its life, its version and its fuel on it as it was
+** (part 63's: no new life, no new fuel, no new edge; dur_max 0, a thing not made its own yet; coins none, their mints the old
+** region's), and its letter (hub.h's designators: the user's, 2026-11-06, kept between dungeons).  The plan's step 3 */
 struct kitrec {
     struct ofit     o;
     unsigned char   wear, hide;
@@ -59,8 +60,10 @@ struct kitrec {
     unsigned char   size, thick;
     unsigned        fuel;
     unsigned char   shut;
+    unsigned char   let;                        /* (Its letter's place in the UI bank's low plus 1; 0 none: a thing
+                                                **   bought between dungeons) */
 };
-#define KIT_ITEM        (sizeof (struct kitrec) - sizeof (struct ofit))
+#define KIT_ITEM        (sizeof (struct kitrec) - sizeof (struct ofit) - 1)   /* (struct item's own fields, wear to shut) */
 #define KIT_STATE       9                       /* (Its dur to its shut, laid on the thing) */
 #define MONEY_CUT       15                      /* (A money-changer's, in hundredths: the game's, s_mix_worth's: HOUSE.md's) */
 #define NOFIT           64

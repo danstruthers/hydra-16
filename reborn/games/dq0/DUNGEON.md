@@ -711,6 +711,16 @@ arrows; its qty how many, its weight each one's times it) is split for part of i
 where it goes; fewer there than asked, as many as there are, told.  The inventory, the look, a look in, tell things
 alike together ("two sacks"), and those on one square in one sentence.
 
+**Letters for things** (2026-11-06, the user's designators: DECISIONS.md's; HOUSE.md's letters for things): each thing the
+character carries or wears has a letter, a ... z then aa ... az (the UI bank's low, hub.h's designators: each letter's
+thing by its id, or its record's number | LT_REC till it has one; lowt when each one's thing was last carried), given as
+what it carries is made for the UI (things.c's ix_make, part 102's: letter.s's ix_letters, in assembly), kept while it's
+carried, given back by the thing's id as it's taken up again; a new one the first never given of a ... z, else the one let
+go of the longest ago, then aa ... az.  Kept in the save (game.dat's after the shortcuts: letters.c's, part 22's) and in
+kit.dat (struct kitrec's let: the carried-on kit's letters laid on its things as they're made, part 63's).  The inventory
+is a list, one a line (part 11's contents, the inventory's mode: its letter, letter.s's lput; what's in a thing indented by
+hard spaces, term.c's say, two a level; its gathering part 103's, s_inventory, part 11's room).
+
 **Reach, and things used up** (2026-10-26, the user's: "Handy would be readily available, so in a backpack that is
 being worn is not as readily available as one in a belt pouch"; HOUSE.md's reach, handy tools and things used up):
 how readily a thing comes to hand is where it is, one rule for every taking out, putting away, look in, search and

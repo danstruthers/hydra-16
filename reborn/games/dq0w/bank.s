@@ -198,8 +198,9 @@ go:
             SWPART      98, 30              ; A rope untied, looked at (wrope2.c)
             SWPART      99, 27              ; The time believed drifting: an hour's test, a waking (wtime.c: part 76's till 2026-11-04)
             SWPART      100, 9              ; A light renewed (things.c: part 27's till 2026-11-04)
-            SWPART      101, 24              ; A thing hidden, the hands swapped (things.c: parts 13's and 48's till 2026-11-04)
+            SWPART      101, 15              ; A thing hidden, the hands swapped (things.c: parts 13's and 48's till 2026-11-04)
             SWPART      102, 24              ; A thing told apart, what it carries for the UI (things.c, 2026-11-06)
+            SWPART      103, 18              ; What it carries listed: gathered first (things.c, 2026-11-06: part 11's room)
 
             SWFN        time_kept, 99
             SWFN        sky_note, 76
@@ -296,6 +297,7 @@ go:
             SWFN        hid_op, 94
             SWFN        light_now, 92
             SWFN        ix_make, 102        ; (What it carries, the UI's first words', 2026-11-06)
+            SWFN        inventory, 103      ; (What it carries listed: gathered, then part 11's words, 2026-11-06)
             SWFN        name_apart, 102
             SWFN        tell_apart, 102          ; (A thing told apart by its state, 2026-11-06)
             SWFN        chart_now, 13
