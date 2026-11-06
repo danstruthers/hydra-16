@@ -223,7 +223,8 @@ function createRecorder() {
         else if (e.te === 'TE_BREAK') { e.by = (e.b & 0x3F) - 1; e.how = ['back', 'flight', 'run'][w >> 8]; delete e.task; }   // (A disengage's)
         else if (e.te === 'TE_FREE') e.none = ['engaged', 'near', 'way'][e.b];   // (None: not engaged, nothing near to flee, no way back)
         else if (e.te === 'TE_LOW' || e.te === 'TE_OUT') { e.lamp = e.b; e.seen = !!(w >> 8 & 0x40); e.task = name('LT_NONE', w >> 8 & 0x3F); }   // (A light's kind; one lying there seen)
-        else if (e.te === 'TE_ROBBED') e.by = e.b - 1;                     // (The robber: its entry)
+        else if (e.te === 'TE_ROBBED') { e.by = e.b - 1; e.purse = !!(w & 0x100); e.caught = !!(w & 0x200); e.asleep = !!(w & 0x400); delete e.task; }   // (The robber: its entry; at
+                                                                   //   rest, 2026-11-06: RB_PURSE, RB_CAUGHT, RB_ASLEEP)
         else if (e.te === 'TE_FETCHED') { e.by = (e.b & 15) - 1; e.ft = name('FT_TOOK', e.b >> 4); e.thing = w >> 8; delete e.task; }   // (An errand's, a gift's: slice 4.8's)
         else if (e.te === 'TE_BEGUN' || e.te === 'TE_ASK_SHORT') e.what = e.b;   // (A timed work's, a battering's: what it's done to)
         else e.named = name('LT_NONE', e.b);

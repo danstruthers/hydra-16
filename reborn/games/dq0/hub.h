@@ -334,6 +334,10 @@ enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, T_COMMA
 #define DG_SPADE        0x04                    /*   a shovel, a spade or a mattock it carries) */
 #define RB_HIDE         1                       /* (I_ROB's x[2]: the takings hidden at its home, */
 #define RB_HOARD        2                       /*   or put in its faction's hoard there) */
+#define RB_PURSE        1                       /* (I_ROB's x[3]: the character at rest robbed unawares, its coins
+                                                **   alone (the book's Legerdemain: a purse cut), the mind's; */
+#define RB_CAUGHT       2                       /*   caught at it (its Awareness the better), nothing taken; */
+#define RB_ASLEEP       4                       /*   the world's, to the UI: E_TASK TE_ROBBED's w1 high byte, asleep) */
 struct msg {
     unsigned char   kind;                       /* I_* or E_* */
     unsigned char   who;                        /* The actor (0: the character) */
@@ -438,7 +442,10 @@ enum {
                                                 **   stratum: or where it stands), a round's work; E_TASK TE_ROBBED;
                                                 **   x[2] RB_HOARD, w1 w2 its faction's leader's home (its hoard
                                                 **   there, b its kind's faction: the takings in it), RB_HIDE, hidden
-                                                **   at its home (kinds.txt's keeps), 2026-10-27; a FE_ROB.  Or (a,
+                                                **   at its home (kinds.txt's keeps), 2026-10-27; a FE_ROB; x[3]
+                                                **   RB_PURSE, the character at rest robbed unawares, its coins
+                                                **   alone, | RB_CAUGHT, caught at it: nothing, its rest stopped
+                                                **   (2026-11-06; TE_ROBBED's w1 high byte the how).  Or (a,
                                                 **   slice 4.8's) an ally's errand: FE_TAKE, t the thing fetched taken
                                                 **   up where it lies (w1, w2), its own then; FE_GIVE, handed to
                                                 **   the character; FE_GIFT, the character's thing t given it, taken;

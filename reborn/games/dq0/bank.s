@@ -97,6 +97,7 @@ ovl_out:
             OVFN        blow, 6             ; (A blow worded and its end: blows.c's since 2026-11-03, the main RAM's room)
             OVFN        dig_words, 19
             OVFN        task_words, 3
+            OVFN        robbed, 15          ; (A robbery's words: task.c's, overlay 3's room, 2026-11-06)
             OVFN        beat_words, 16          ; (A walk's beats: task.c's, overlay 3's room, 2026-11-01)
             OVFN        stop_kind, 7
             OVFN        answer_of, 7

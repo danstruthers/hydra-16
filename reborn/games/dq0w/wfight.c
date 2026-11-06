@@ -397,13 +397,14 @@ static unsigned char mine (void)
 ** the load left (RS_EQUIP 2, as the UI's to_hand tells it a thing handled: the keys of the tools it still carries, each
 ** after its mark and with its quality, things.c's tools; their weight, weight_in's: the user's, 2026-10-22, "Weight
 ** should be recounted immediately after a robbery"), the UI the robbery (E_TASK TE_ROBBED, b the robber plus 1), if
-** anything was taken */
+** anything was taken.  Or (x[3] RB_PURSE, 2026-11-06) the character at rest robbed unawares, its coins alone; or
+** caught at it (RB_CAUGHT), nothing taken, its long task stopped hard; told either way, w1's high byte the how */
 #define WSLOT           (HUB->slot[SLOT_WORLD])
 void __fastcall__ s_den_rob (const struct msg* q)
 {
     struct msg m;                               /* (On the C stack: the main RAM's room, 2026-10-29) */
     unsigned i, n, x, y, box;
-    unsigned char kind, f, how, fac;
+    unsigned char kind, f, how, fac, pur;
     unsigned char* s;
 
     if (q->a) {
@@ -430,10 +431,12 @@ void __fastcall__ s_den_rob (const struct msg* q)
             break;
         }
     }
-    for (n = 0, i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
+    pur = q->x[3];                              /* (The character at rest robbed unawares: its coins alone, a purse cut;
+                                                **   caught at it, nothing, its rest stopped: the mind's, 2026-11-06) */
+    for (n = 0, i = 0; !(pur & RB_CAUGHT) && (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
         kind = ip->kind;
         f = ip->flags;
-        if (!mine () || (kind != KI_PENNIES && kind != KI_FARTHINGS && kind != KI_CROWNS && ((f & (I_HELD | I_LIT)) != I_HELD))) {
+        if (!mine () || (kind != KI_PENNIES && kind != KI_FARTHINGS && kind != KI_CROWNS && (pur || (f & (I_HELD | I_LIT)) != I_HELD))) {
             continue;
         }
         reach_from (i);                         /* (Its reach, the robber's: HOUSE.md's, every actor's) */
@@ -460,15 +463,20 @@ void __fastcall__ s_den_rob (const struct msg* q)
     }
     rtime = roff = 0;
     rsteps = rbody = 0;
-    if (n) {
-        equip_now ();                           /* (What's to hand now, and its load: the referee's, at once, part
+    if (n || (pur & RB_CAUGHT)) {
+        if (n) {
+            equip_now ();                       /* (What's to hand now, and its load: the referee's, at once, part
                                                 **   49's) */
-        light_now ();                           /* (Its light, a torch taken; what it carries, the UI's first words') */
+            light_now ();                       /* (Its light, a torch taken; what it carries, the UI's first words') */
+        }
         hub_map (0);
-    m.kind = E_TASK;
+        if (pur & RB_CAUGHT) {
+            pc_hit = 1;                         /* (Caught at it: its long task stopped, hard) */
+        }
+        m.kind = E_TASK;
         m.who = 0;
         m.b = bk + 1;
-        m.w1 = TE_ROBBED;
+        m.w1 = TE_ROBBED | (pur | (HUB->pc_task.kind == LT_SLEEP ? RB_ASLEEP : 0)) << 8;   /* (How, to the UI) */
         m.t = HUB->now;
         hub_event (&m);
         ++HUB->den_seq;

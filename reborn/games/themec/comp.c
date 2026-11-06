@@ -31,7 +31,9 @@ static const char* const purposes[] = { "halls", "keep", "temple", "cellars", "c
 static const char* const did[] = { "built", "ruined", "reused", 0 };
 static const char* const endings[] = { "abandoned", "conquered", "collapsed", "flooded", "cursed", "held", 0 };
 static const char* const works[] = { "keep", "temple", "mine", "tomb", "town", "hold", 0 };
-static const char* const goals[] = { "none", "artifact", "evil", "prisoner", "through", 0 };
+static const char* const goals[] = { "none", "artifact", "evil", "prisoner", "through", "lore", "scourge", 0 };
+static const char* const told[] = { "seed", "region", "why", "reward", 0 };   /* (The file's to read, the record none of
+                                                **   them: the history's, why it came, what solving brings) */
 static const char* const ends[] = { "-", "escaped", "ruled", "died", "left", 0 };
 static const char* const uses[TUSES] = { "kitchen", "pantry", "barracks", "armoury", "chapel", "bedchamber", "solar",
     "well room", "cistern", "gatehouse", "guardroom", "workshop" };
@@ -487,8 +489,8 @@ const char* __fastcall__ comp_line (struct line* l)
             return "an ending: escaped, ruled, died or left";
         }
         T->end[x & 3] = text (v[1]);
-    } else if (!strcmp (k, "seed") || !strcmp (k, "region")) {
-        /* (The history's, the file's to read: nothing in the record) */
+    } else if (find (told, k) >= 0) {
+        /* (The history's, why it came, its reward: the file's to read, nothing in the record) */
     } else if (!strcmp (k, "people")) {
         if (npeoples >= 8 || l->n < 4 || atoi (v[2]) < 1 || atoi (v[2]) > 8 || strlen (v[0]) > 15) {
             return "a people: name, what, tongue (1-8), builds";
@@ -505,7 +507,7 @@ const char* __fastcall__ comp_line (struct line* l)
         mint_line (l);
     } else if (!strcmp (k, "goal")) {
         if ((x = find (goals, v[0])) < 1 || l->n < 3 || !*v[1] || atoi (v[2]) > 255) {
-            return "a goal: artifact, evil, prisoner or through; name; stratum; guardians";
+            return "a goal: a goal kind; name; stratum; guardians";
         }
         T->goal = x;
         T->goal_sn = atoi (v[2]);
