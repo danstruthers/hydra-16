@@ -434,6 +434,9 @@ void make (void)
         strcat (rname, " ");
         strcat (rname, noun);
     }
+    if (rmode) {
+        return;                                 /* (A rumour's: its place and its goal kind are all it tells) */
+    }
     make_strata ();
     if (given[GR_STRATA]) {
         ns = 0;

@@ -1509,7 +1509,9 @@ game's tasks (themegen and its bank programs, dq0life, dq0acct, dq0end): none of
   account (dq0end: "Standing 4.").
 - **The rumours, between dungeons:** a life of a real game's (its seed 65,536 or more: the stand-ins' lives hear none, their dungeons
   being no history's) has themegen make three rumours as the time between begins (themegen -r 3, dq0life's: by the life's seed and the
-  next dungeon's number, so the same life hears the same ones), each a place (a region: its name, land, rock, water, climate) and a
+  next dungeon's number, so the same life hears the same ones: some 39M cycles, 11 s on the board, its dots shown after "Dingus Quest
+  Zero is starting", each rumour's history made only as far as its place and its goal kind; a real game's carry-on 385M from Enter to
+  the first prompt in all, its next dungeon's history made too), each a place (a region: its name, land, rock, water, climate) and a
   reason (a goal kind each its own, the heard ones too: lore and scourge come only so), written as part-written themes in the save's
   folder (rumours.txt: each a rumour line, the words heard, then its region and why lines).  After the account, dq0acct tells them
   ("In Kelford there's talk of other places: 1. ...") and asks which to follow; Enter, anything not one of them, or the tests' dq0auto

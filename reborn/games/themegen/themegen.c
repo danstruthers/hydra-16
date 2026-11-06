@@ -600,11 +600,11 @@ int main (int argc, char* argv[])
     step ();
     goal = child (2, "goalgen.bp", "_make");
     step ();
+    if (rmode) {
+        return rumours (hist, goal);            /* (No lines of a theme's: linegen not loaded) */
+    }
     lines = child (3, "linegen.bp", "_make");
     step ();
-    if (rmode) {
-        return rumours (hist, goal);
-    }
     if (!tfile && outdir && (fd = open (strcpy (qpath, in (outdir, "quest.txt")), O_RDONLY)) >= 0) {
         close (fd);                             /* (The rumour followed: its region, why it came) */
         tfile = qpath;

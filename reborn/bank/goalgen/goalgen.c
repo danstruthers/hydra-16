@@ -210,6 +210,13 @@ void make (void)
     struct era* g;
 
     gwl = -1;
+    if (rmode && gk != 0xFF) {                  /* (A rumour's: its reason, its patron, its lines; the goal's made with the
+                                                **   dungeon) */
+        goal_line = tg_find (TK_GOAL, 0, gk);
+        why_pick ();
+        rumour ();
+        return;
+    }
     if (gk == 0xFF) {                           /* (A hand-written theme's own puzzle: its name the deeps') */
         strcpy (gmission, "escape");
         strcpy (title, "the Deeps of ");
@@ -280,9 +287,5 @@ void make (void)
         strncpy (title, W, sizeof title - 1);
     }
     why_pick ();                                /* (Why it came: none of the history's dice) */
-    if (rmode) {
-        rumour ();
-    } else {
-        goal_slots ();
-    }
+    goal_slots ();
 }

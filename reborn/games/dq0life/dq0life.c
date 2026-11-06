@@ -144,7 +144,7 @@ static void record_write (void)
 }
 
 /* A program in the lib folder run on this folder (the system's SPAWN itself, as hub_run does: hy_spawn's argv wants the heap), waited for:
-** its status, or -1.  with_lib: -l lib too; 2, themegen's rumours (-r 3, the seed: the plan's step 7), -o for -d */
+** its status, or -1.  with_lib: -l lib too; 2, themegen's rumours (-r 3, the seed, -p its dots: the plan's step 7), -o for -d */
 static int __fastcall__ run (const char* lib, const char* name, unsigned char with_lib)
 {
     static char p[64], a[128];
@@ -155,6 +155,7 @@ static int __fastcall__ run (const char* lib, const char* name, unsigned char wi
     strcat (p, name);
     if (with_lib == 2) {
         strcpy (q, "-q");
+        strcpy (q += 3, "-p");                  /* (Its dots: no silence, as the game's start has none) */
         strcpy (q += 3, "-r");
         strcpy (q += 3, "3");
         strcpy (q += 2, "-s");
