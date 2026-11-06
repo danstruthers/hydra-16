@@ -366,7 +366,7 @@ static const char lies[6][18] = { "in the mountains", "in the hills", "in the wo
     "on the plains" };
 
 /* Its place and its reason told (the place a wrong reading's, wr) */
-static void __fastcall__ place_said (unsigned char wr)
+static void __fastcall__ clue_place_said (unsigned char wr)
 {
     if (K.place[0]) {
         sayf ("  It tells of %s, where %s %s.", wr ? K.wrong : K.place, K.people[0] ? K.people : "its makers",
@@ -431,7 +431,7 @@ told:
         } else {
             msg (K.words);
         }
-        place_said (g == G_CF);                 /* (A wrong reading told as confidently as a right one) */
+        clue_place_said (g == G_CF);            /* (A wrong reading told as confidently as a right one) */
         if (g == G_CS && here) {
             more_said ();
         }
