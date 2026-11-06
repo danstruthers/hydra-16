@@ -3210,14 +3210,16 @@ function dq0AskHeldTest() {
 // 136 on the tree before it: "hung" after "rest", none hung: robbers lying in wait a second at a time, or a hunter stuck on a scent
 // asking each second, 93,000 and 440,000 cycles a time, kept the rest to ten-second slices, 4.9G cycles of it, 23 minutes on the
 // board).  At the turns pace (a long wait's the same at the real paces), dq0lurk's bandits about in the dark: its cycles a minute
-// of game time within budget
+// of game time within budget.  Since 2026-11-06 (the user's: robbers come and rob a resting character) none lies in wait for one
+// at rest, and those that reach it rob it: the scene a sleep, the character's Awareness 5, so one robs it unawares and it sleeps
+// on, the rest of the band about it (an awake rest's seen them coming in the cell's light, and stopped, a third of a minute in)
 function dq0RestBusyTest() {
   const MAX = 3400000;   // (Cycles a game minute of the rest: 1.63M or 2.87M now, by the power-up; more than 16M before, a game not over in 8,000M)
-  const lines = ['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
-    'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'douse the torch', 'wait', 'wait', 'wait', 'rest', 'quit', 'echo $status'];
+  const lines = ['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml awa 5 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
+    'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'douse the torch', 'wait', 'wait', 'wait', 'sleep', 'quit', 'echo $status'];
   return {
     name: 'dq0restbusy', near: ['time', 'denizens'], initiative: true,
-    what: 'Dingus Quest Zero\'s long rest with hostile folk about that lie in wait or can\'t reach it (seeds 326 and 136 of the fight soak, the delays\' round): robbers hidden in the dark as an eight-hour rest goes: thirty times the while between their decisions, its cycles a game minute within budget',
+    what: 'Dingus Quest Zero\'s long rest with hostile folk about that lie in wait or can\'t reach it (seeds 326 and 136 of the fight soak, the delays\' round): robbers about in the dark as an eight-hour sleep goes (since 2026-11-06 one comes and robs it unawares, and it sleeps on): thirty times the while between their decisions, its cycles a game minute within budget',
     init: 't_rc', cycles: 3000e6,
     machine: { input: lines.map(l => '\u0101' + l + '\r').join('') },
     expect: ['% echo $status'],
@@ -3229,7 +3231,7 @@ function dq0RestBusyTest() {
           const ch = a.rx;
           if (ch === 13) {
             const h = m.dq0 && m.dq0.bank && m.dq0.bank(0);
-            if (h && h[0] === 0x44) { const { L } = m.dq0.layout(), now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16; if (cur === 'rest') { R.t0 = cpu.cyc; R.n0 = now; } if (cur === 'quit') { R.t1 = cpu.cyc; R.n1 = now; } }
+            if (h && h[0] === 0x44) { const { L } = m.dq0.layout(), now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16; if (cur === 'sleep') { R.t0 = cpu.cyc; R.n0 = now; } if (cur === 'quit') { R.t1 = cpu.cyc; R.n1 = now; } }
             cur = '';
           } else if (ch >= 32 && ch < 127) cur += String.fromCharCode(ch);
         }
@@ -6444,6 +6446,91 @@ module.exports = {
       check(m, out) {
         const f = [];
         if (!m.lurked.some(v => v > 1)) f.push('no bandit hid: ' + [...new Set(m.lurked)].join(',') + ' ' + dq0Story(out).slice(-700));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0lurkrest', initiative: true, near: ['denizens', 'time'], what: 'Dingus Quest Zero\'s robbers lying in wait for a character that lies down to rest (the user\'s, 2026-11-06: "robbers should come and rob a resting character"; HOUSE.md\'s those that want it, as it rests, for review): dq0lurk\'s bandits about in the dark, one hidden as the character waits; the character rests for an hour: the hidden one comes out at once and comes on (before, its two minutes up, it hid again at its next turn, a whole night by a resting character: dq0restbusy\'s scene), none hidden as the rest goes, the rest stopped as the character sees it coming in the cell\'s light',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g", 'douse the torch', ...Array(12).fill('wait'), 'rest for an hour', 'inventory', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {
+        const R = this.R = { hid: [], during: [] }, a = m.acia, cpu = m.cpu;
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 12, call: (h, L, K, at) => { for (let k = 0; k < L.nactors; k++) R.hid.push(h[at(k) + L.aState]); } }]);
+        const read = a.read;
+        let cur = '', on = false, next = 0, n0 = -1;
+        a.read = (r, c) => {
+          const h = m.dq0 && m.dq0.bank && m.dq0.bank(0);
+          if (r === 0 && a.rdrf) {
+            const ch = a.rx;
+            if (ch === 13) { on = cur === 'rest for an hour'; n0 = -1; cur = ''; }
+            else if (ch >= 32 && ch < 127) cur += String.fromCharCode(ch);
+          }
+          if (on && h && h[0] === 0x44 && cpu.cyc >= next) {      // (Its actors' states as the rest goes, its game time with them)
+            next = cpu.cyc + 2e6;
+            const { L } = m.dq0.layout(), now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16;
+            if (n0 < 0) n0 = now;
+            for (let k = 0; k < L.nactors; k++) if (h[L.actor + k * L.actorSize + L.aState]) R.during.push({ k, t: now - n0, state: h[L.actor + k * L.actorSize + L.aState] });
+          }
+          return read(r, c);
+        };
+      },
+      check(m, out) {
+        const T = dq0Turns(m), f = [], R = this.R, s = dq0Story(out), rt = T.of('rest for an hour');
+        if (!R.hid.some(v => v > 1)) return ['no bandit hidden before the rest: ' + [...new Set(R.hid)].join(',')];
+        if (!R.during.length) f.push('the rest not watched');
+        const late = R.during.filter(e => e.t > 300 && e.state > 1);     // (Thirty seconds on: its next turn's come)
+        if (late.length) f.push('a bandit hidden as the character rests: ' + JSON.stringify(late.slice(0, 4)));
+        if (!/You settle down to rest for an hour\.[\s\S]*bandit[^.]*coming towards[\s\S]*You stop waiting\./.test(s)) f.push('not seen coming, the rest not stopped: ' + JSON.stringify(s.slice(s.indexOf('> rest for an hour'), s.indexOf('> inventory'))));
+        if (!dq0Ev(rt, 'E_TASK', {}).length) f.push('no E_TASK in the rest');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0robrest', initiative: true, near: ['denizens', 'time'], what: 'Dingus Quest Zero\'s robbers at a sleeper (the user\'s, 2026-11-06: "robbers should come and rob a resting character"; HOUSE.md\'s those that want it, as it rests, for review): a lair of hostile bandits about, the character asleep in the dark: at seed 1 a bandit comes to it and robs it as it lies, unnoticed (the book\'s Legerdemain, its Stealth, against the character\'s Awareness at half asleep: the referee\'s test of it in the minds\' slot, its steps the fewer by half its mastery), its coins alone taken (E_TASK TE_ROBBED, RB_PURSE), the sleep going on, told as it\'s up ("You find your coins gone: someone robbed you as you lay."); at seed 4 one caught at it, nothing taken (no robbery unawares), the sleep stopped ("You wake to find something at your purse!", RB_CAUGHT)',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g", 'douse the torch', 'sleep', 'inventory', 'quit', 'mkdir /ram/h', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/h/theme.txt",
+        "dq0 -p t -s 4 -c /ram/c.hm -T -d /ram/h", 'douse the torch', 'sleep', 'quit', 'echo $status']) },   // (A folder of its own: the first's a life gone on
+                                                // with, its coins gone; quit as it's asked, the fight with the robber not fought)
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], RS_TEST = 4, STEALTH = 4, SOUND = 1, A = dq0Answers(out).filter(a => a.cmd === 'inventory');
+        const gs = T.filter(t => /^dq0 -p t/.test(t.line)), sl = gs.map(g => T.of('sleep', g.k));
+        if (sl.length !== 2 || sl.some(t => t.k < 0) || A.length !== 1) return ['the games not played'];
+        const robs = sl.map(t => [...dq0Ev(t, 'E_TASK', { te: 'TE_ROBBED' }), ...dq0Ev(T[t.k + 1] || t, 'E_TASK', { te: 'TE_ROBBED' })]);
+        const tests = t => ({ them: dq0Rep(t, 'dslot', { kind: RS_TEST, a: STEALTH, actor: v => v > 0, other: v => v !== 0 }), it: dq0Rep(t, 'dslot', { kind: RS_TEST, a: SOUND, actor: 0 }),
+          stalk: dq0Rep(t, 'dslot', { kind: RS_TEST, a: STEALTH, actor: v => v > 0, other: 0 }) });   // (Its sleight of hand, the asker's dice; its stalk, its own)
+        const t0 = tests(sl[0]), t1 = tests(sl[1]), s = dq0Story(out);
+        if (robs[0].length !== 1 || !robs[0][0].purse || robs[0][0].caught || !robs[0][0].asleep) f.push('seed 1: not robbed once unawares as it slept: ' + JSON.stringify(robs[0]));
+        if (!t0.it.length || !t0.them.length) f.push('seed 1: no Legerdemain against its Awareness: ' + t0.them.length + ' and ' + t0.it.length + ' tests');
+        else if (!(t0.it[t0.it.length - 1].steps < 0)) f.push('seed 1: its Awareness asleep not at half: ' + JSON.stringify(t0.it));
+        if (!t0.stalk.length) f.push('seed 1: the robber came at the sleeper not stalking it (no Stealth tested as it began)');
+        if (!/You find your coins gone: someone robbed you as you lay\./.test(s)) f.push('seed 1: the robbery not told as it\'s up');
+        if (/penn/.test(A[0].text)) f.push('seed 1: its pennies not taken: ' + A[0].text);
+        if (!robs[1].length || !robs[1][0].caught || !robs[1][0].asleep || robs[1].some(e => e.purse && !e.caught)) f.push('seed 4: not caught at it as it slept: ' + JSON.stringify(robs[1]));   // (Then the fight; helpless in it, robbed as one is)
+        if (!/You wake to find something at your purse!/.test(s)) f.push('seed 4: the robber caught not told');
+        if (t1.it.length && t1.them.length && !(t1.it[t1.it.length - 1].grade > t1.them[t1.them.length - 1].grade)) f.push('seed 4: caught by the lesser level');
+        if (!/at your purse![\s\S]*You stop sleeping\./.test(s)) f.push('seed 4: the sleep not stopped');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0killrest', initiative: true, near: ['denizens', 'time'], what: 'Dingus Quest Zero\'s killers at a sleeper (HOUSE.md\'s those that want it, as it rests, for review, 2026-11-06): a hand-written theme\'s hostile cultists (killers, kinds.txt\'s k), the character asleep in the dark at seed 1: one comes on and strikes the sleeper as its kind\'s rule says, not standing off, the blow with no defence (the book\'s Ignore, RS_ASLEEP)',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Foes | cultist | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g", 'douse the torch', 'sleep', 'echo $status']) },   // (Dead of it: the game over)
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], RS_ATTACK = 7, sl = T.of('sleep'), s = dq0Story(out);
+        if (sl.k < 0) return ['the game not played'];
+        const all = [sl, ...T.filter(t => t.k > sl.k)];
+        if (!all.some(t => dq0Rep(t, 'slot0', { kind: RS_ATTACK, w2: v => v & 0x80 }).length)) f.push('no blow at the sleeper with no defence (RS_ASLEEP)');
+        if (!/You settle down to sleep for eight hours\.[\s\S]*strikes at you/.test(s)) f.push('the sleeper not struck: ' + JSON.stringify(s.slice(s.indexOf('> sleep'), s.indexOf('> sleep') + 400)));
         return f;
       },
       sdcard: true
