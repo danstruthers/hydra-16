@@ -37,7 +37,8 @@ enum { LO_NONE, LO_SOLVED, LO_LEFT, LO_DIED };  /* (A dungeon's outcome: not ove
 /* The head of a dungeon's game.dat (the UI's: main.c's the save, its versions there), what dq0life reads of it too: the dungeon's
 ** end */
 #define SAVE_MAGIC      0x5144                  /* "DQ" */
-#define SAVE_VER        42
+#define SAVE_VER        43                      /* (43: the theme's record, theme.dat, its peoples' tongues and scripts:
+                                                **   step 9's, 2026-11-06) */
 struct quest {                                  /* The game's theme and its end (kept in the save) */
     unsigned char   theme;                      /* The theme's number (the save's: the one it began with) */
     unsigned char   done;                       /* The game's ending (theme.h's END_*: 0 not yet) */
