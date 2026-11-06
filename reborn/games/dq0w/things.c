@@ -2751,6 +2751,9 @@ static unsigned char __fastcall__ get (unsigned n)
     }
     fetch (&rec, n);
     k = kind_of (rec.kind);
+    if (k->form & KF_COUNT) {
+        h = 0;                                  /* (A lot counted, coins, rations, arrows: the pack first, with others alike) */
+    }
     rbody = 1;                                  /* (Its reach: lying within reach, a grope engaged, HOUSE.md's) */
     return rec.where == IW_PORTAL ? IR_FIXED : k->keeps & KF_FIXED ? IR_NO :
         !noinit && fumbled (rec.kind) ? IR_FUMBLED : carry (n, h) ? IR_OK : rs_st ? IR_NO : IR_FULL;  /* (A portal's part: lifted

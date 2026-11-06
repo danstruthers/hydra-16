@@ -1819,6 +1819,9 @@ unsigned char __fastcall__ things (unsigned char op, const char* name)
     strncpy (q->name, name, sizeof q->name - 1);
     q->name[sizeof q->name - 1] = 0;
     said_ahead = 0;
+    if (op == (IO_GET | IO_STEPS)) {
+        HUB->pc_lump = (HUB->pc_lump & ~PL_MORE) | (take_more ? PL_MORE : 0);   /* ("Take all": its first too, the pack first) */
+    }
     if (op & IO_STEPS) {
         walk_op = op;
         walk_ahead (name);                      /* (Its first words told now, the world's answer some 700,000 cycles off
@@ -2748,7 +2751,7 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
     }
     t[0] = 0;
     if ((unsigned char) w == TE_BEGUN && step_aw && k > LT_PACKDOWN && k != LT_PACKON && (k < LT_GETNEW || k > LT_LETOLD) &&
-        k < LT_DOWN2) {
+        k < LT_DOWN2 && k != LT_LETBURN && k != LT_LAYLIT && k != LT_LAYLIT2) {   /* (Not "the lit torch ... still burning") */
         strcpy (t, aw[step_aw]);                /* (Told apart from another of its kind at hand: "You put the spent torch in
                                                 **   your pack.", the world's apart, the user's playtest, 2026-11-06) */
     }

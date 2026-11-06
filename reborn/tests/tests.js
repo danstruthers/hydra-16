@@ -3259,7 +3259,7 @@ const DQ0_ANSWERS = [['turn left', 'You turn left', 800000], ['turn right', 'You
   ['open the door', 'You try the door|You turn|Which door', 720000], ['close the door', 'You reach for the door|You turn|Which door', 720000], ['listen', 'You listen', 760000], ['bar the door', 'You look at the door|You turn|Which door', 720000],
   ['look', 'You', 650000, 1790000], ['look ahead', 'You peer ahead|You turn', 450000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You', 800000], ['walk to the window', 'You head for', 700000], ['take the bones', 'You look for the bones|You go over to the bones.|You stop', 800000], ['look', 'You', 650000],
   ['take the sack from the backpack', 'You reach for your backpack', 760000], ['put the whetstone in the sack', 'You reach|You look for the whetstone', 800000], ['take the whetstone from the sack', 'You reach into the sack|You reach for your backpack', 760000],
-  ['drop the sack', 'You put down the sack', 650000], ['take the sack', 'You reach for the sack|You look for the sack', 650000], ['assess the sack', 'You look at the sack|You look for the sack', 2000000], ['sit', 'You sit down', 780000], ['stand', 'You get to your feet', 760000], ['wait 1 minute', 'You wait a minute', 760000], ['dig down', 'You look at the floor', 600000]];   // (The first words as they begin, 2026-11-04: dq0firstword's; budgets over what's measured at waits 0, 1 and 2, both paces: assess's 2M its normal pace's at wait 1, 1.9M, some 420,000 else, not diagnosed)   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
+  ['drop the sack', 'You put down the|You reach for your backpack', 650000], ['take the sack', 'You reach for the sack|You look for the sack', 650000], ['assess the sack', 'You look at the sack|You look for the sack', 2000000], ['sit', 'You sit down', 780000], ['stand', 'You get to your feet', 760000], ['wait 1 minute', 'You wait a minute', 760000], ['dig down', 'You look at the floor', 600000]];   // (The first words as they begin, 2026-11-04: dq0firstword's; budgets over what's measured at waits 0, 1 and 2, both paces: assess's 2M its normal pace's at wait 1, 1.9M, some 420,000 else, not diagnosed)   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
 function dq0AnswerTest(baud) {
   const wait = +(process.env.DQ0ANS_WAIT || 0);   // (Each line typed after 0-2 waits of 2M cycles: the timing moved, for an average)
   const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'];
@@ -5141,7 +5141,7 @@ module.exports = {
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out), { L, K } = m.dq0.layout();
         if (!m.take) return ['the scene not set: no bandit near, or no open square beside the character'];
-        if (!/> drop the sword[^>]*Put down./.test(s)) f.push('the sword not put down');
+        if (!/> drop the sword[^>]*(Put down\.|You put down the sword\.)/.test(s)) f.push('the sword not put down');
         const picks = T.flatMap(t => [...t.events, ...t.dens]).filter(e => e.kind === 'E_BEAT' && e.beat === 'WB_PICKS' && e.b === m.take.k + 1);
         if (!picks.length) f.push('the bandit never took up a thing (E_BEAT WB_PICKS)');
         if (!/The bandit snatches up its sword\./.test(s)) f.push('not told "The bandit snatches up its sword."');
@@ -8886,7 +8886,7 @@ module.exports = {
         dq0Poke(m, [{ g: 2, line: 'sharpen the sword', n: 1, wear: { sword: 200 } }]);
         dq0OnWords(m, [{ g: 1, line: 'lift the pane', n: 1, words: 'You set to working the pane free.', text: 'stop digging\rstop freeing\r' },
           { g: 2, line: 'sharpen the sword', n: 1, words: 'You set to sharpening', text: 'stop dipping\rstop sharpening\r' },
-          { g: 3, line: 'dip the torch', n: 1, words: 'You set to filling', text: 'stop dipping\r' }]);
+          { g: 3, line: 'dip the torch', n: 1, words: 'You set to dipping', text: 'stop dipping\r' }]);
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -8895,9 +8895,9 @@ module.exports = {
         if (!/You aren't digging: you're working the pane free\./.test(G[0])) f.push('the pane: a stop naming another not refused');
         if (/I don't understand/.test(G[0] + G[1] + G[2])) f.push('a stop word not understood');
         if (/The pane comes free/.test(G[0])) f.push('the pane: not stopped');
-        if (!/You aren't filling: you're sharpening the sword\./.test(G[1])) f.push('sharpening: a stop naming another not refused');
+        if (!/You aren't dipping: you're sharpening the sword\./.test(G[1])) f.push('sharpening: a stop naming another not refused');
         if (/You put a fresh edge/.test(G[1])) f.push('sharpening: not stopped');
-        if (/You aren't filling|You aren't doing anything/.test(G[2])) f.push('dipping: refused');
+        if (/You aren't (filling|dipping)|You aren't doing anything/.test(G[2])) f.push('dipping: refused');
         if (/You soak the torch/.test(G[2])) f.push('dipping: not stopped');
         return f;
       },
@@ -10768,7 +10768,7 @@ module.exports = {
         has(8, 'inventory', 'a torch (lit), in your left hand');
         order(9, 'redip the torch', ['You set the sword down at your feet.', steps, ...pref.slice(0, 9), 'You take up the new torch.', 'You take up the sword.', 'You put your backpack back on.']);
         has(9, 'inventory', 'a sword, in your right hand');
-        order(10, 'dip the torch', ['You go to blow out the torch: that will leave you in the dark.', steps, 'You get out the flask of oil.', 'You set to filling the torch.', 'You put away the flask of oil.', 'You get out the tinderbox.', 'You strike a spark.', 'You light the torch.', 'You put away the tinderbox.', 'You put your backpack back on.']);
+        order(10, 'dip the torch', ['You go to blow out the torch: that will leave you in the dark.', steps, 'You get out the flask of oil.', 'You set to dipping the torch.', 'You put away the flask of oil.', 'You get out the tinderbox.', 'You strike a spark.', 'You light the torch.', 'You put away the tinderbox.', 'You put your backpack back on.']);
         if (!/You soak the torch|oil spills/.test(seg(10, 'dip the torch'))) f.push('dipped in the dark: neither soaked nor spilt');
         has(10, 'inventory', 'a torch (lit)');
         // (Two lit, the one with the most room the old: blown out, set by the new; a spent one: nothing to blow out, kept to its end; each named)

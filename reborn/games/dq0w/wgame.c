@@ -230,7 +230,7 @@ unsigned char s_take_up (void)
                                                 **   4's: "take 4 rations", the user's) */
             hub_map (KIND_BANK);
             r = w == IW_PORTAL || (CATALOGUE[k].keeps & KF_FIXED) ? IR_FIXED : !noinit && fumbled (k) ? IR_FUMBLED :
-                carry (n, tk_hand) ? IR_OK : IR_FULL; /* (Engaged, a grope failed: the round wasted, its words;
+                carry (n, (CATALOGUE[k].form & KF_COUNT) ? 0 : tk_hand) ? IR_OK : IR_FULL; /* (Engaged, a grope failed: the round wasted, its words;
                                                 **   in a hand, the pack with both full or "take all"'s: the user's, 2026-11-06) */
         }
         rs_ok = 0;
