@@ -230,7 +230,7 @@ unsigned char o_town_go (void)
     *p = 0;
     strcpy (path, lib);
     strcat (path, "/../acct/dq0town");
-    tr.days = tr.seen = tr.road = 0;
+    memset (&tr, 0, sizeof tr);
     r.a = 0;                                    /* (Its fds: this one's 0, 1 and 2) */
     r.r[0] = (unsigned) path;
     r.r[1] = (unsigned) ob;
@@ -254,6 +254,19 @@ unsigned char o_town_go (void)
     }
     town_days = tr.days;
     town_seen = tr.seen;
+    town_taught = tr.taught;                    /* (The scholar's house's: the months with a master, the script studied, what
+                                                **   was opened, the plan's step 12) */
+    strcpy (town_study, tr.study);
+    for (ok = 0; ok < TOWN_LEARNT && tr.learnt[ok][0]; ++ok) {
+        if (ntongues == NTONGUES) {             /* (The scholar's won't teach past it: never cut short) */
+            say ("There's no more room on your sheet for ");
+            say (tr.learnt[ok]);
+            say (".\n");
+            continue;
+        }
+        strcpy (tongue[ntongues], tr.learnt[ok][0] == '*' ? "script " : "language ");
+        strcat (tongue[ntongues++], tr.learnt[ok] + (tr.learnt[ok][0] == '*'));
+    }
     return 1;
 }
 

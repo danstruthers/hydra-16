@@ -156,6 +156,7 @@ static void __fastcall__ made (unsigned char r)
             cand[nm++] = k;                     /* (The realms about, not the region's own: where it points) */
         }
     }
+    K.ago = ago;                                /* (Its age: the scholar's, a dead tongue's) */
     col = ago < 3 ? 0 : ago < 10 ? 1 : 2;       /* (Modern, middle, ancient: centuries; carved stone and metal the younger) */
     if (col && (mat == MT_STONE || mat == MT_IRON || mat == MT_BRONZE || mat == MT_STEEL || mat == MT_SILVER || mat == MT_GOLD)) {
         --col;

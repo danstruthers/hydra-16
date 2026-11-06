@@ -332,11 +332,20 @@ static void __fastcall__ choose (unsigned char sk)
     }
 }
 
-/* The answer filled in: those it used most, then its occupation's, then its best */
+/* The answer filled in: the script it studied in the library first (the scholar's house's, the plan's step 12: its native one
+** the Script skill, else its line's), then those it used most, then its occupation's, then its best */
 static void choose_filled (void)
 {
     unsigned char k, b, m;
 
+    if (town_study[0]) {
+        for (k = 0; k < ntongues && !(tongue[k][0] == 's' && !strncmp (tongue[k] + 7, town_study, strlen (town_study)) &&
+            (!tongue[k][7 + strlen (town_study)] || tongue[k][7 + strlen (town_study)] == '=')); ++k) {
+        }
+        if (k < ntongues) {
+            choose (strchr (tongue[k], '=') ? HARN_NSKILLS + k : HARN_SCR);
+        }
+    }
     while (nchosen < 3) {
         b = 0xFF;
         m = 0;
@@ -464,6 +473,8 @@ void o_practice (void)
     unsigned char mon = passed / 30, k, sk, was_ml[3], tries = 0;
     unsigned r;
 
+    mon = mon > town_taught ? mon - town_taught : 0;    /* (A month with a master is the month's practice: the book's, Skills
+                                                **   11, a new script's 30 points, a tongue's whole month) */
     if (!mon) {
         return;
     }

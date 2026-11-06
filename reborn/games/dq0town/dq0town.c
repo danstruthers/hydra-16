@@ -18,6 +18,8 @@
 **                    its condition to sell; Rhetoric's haggling, a quarter or a tenth, never past two thirds)
 **   the smith        a day; mend, whet (the account's prices: goods.h's), a new blade
 **   who's asking     a day; the patrons among the rumours (a why line's, not a stranger's find), an offer taken: set out for it
+**   the scholar's    a day; a program of its own (dq0schol, the plan's step 12: a writing read by a scribe or a sage, studied in
+**                    the library, a master's month, the other skills), run with what it needs, town.dat handed to it and back
 **   leave for        the places heard of, each its road and days; one followed (quest.txt, the account's own way)
 ** What's done is the player's: the account (dq0acct) leaves alone what it saw to here (the market seen, nothing more sold or bought
 ** for it; the smith, nothing more mended or whetted), and does the rest as ever (selling, mending, restocking "just happen", the
@@ -47,7 +49,6 @@
 #define CAT             ((const struct kind*) 0x8000)
 #define K               ((struct kitrec*) (0x8000 + KI_COUNT * sizeof (struct kind)))
 #define PENNY           4UL                     /* (Farthings) */
-#define TOWN_DAYS       200                     /* (The days in town at most: then it sets out) */
 #define TOWN_ASKS       60                      /* (And the lines typed: the soak's random answers end) */
 #define REST_MAX        60                      /* (A rest at the inn, at most) */
 
@@ -164,6 +165,9 @@ static void __fastcall__ amount (unsigned long f)
     }
 }
 
+#pragma code-name (push, "OV1CODE")             /* (The overlay's: dq0town.cfg's OV1, its own bank, the main RAM's room) */
+#pragma rodata-name (push, "OV1RODATA")
+#pragma bss-name (push, "OV1BSS")
 /* A line typed, lower case, its spaces trimmed (ans): asked on a line of its own, then the game's "> " */
 static void __fastcall__ ask (const char* prompt)
 {
@@ -195,7 +199,13 @@ static void __fastcall__ ask (const char* prompt)
     memmove (ans, s, strlen (s) + 1);
     ++asks;
 }
+#pragma bss-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (pop)
 
+#pragma code-name (push, "OV1CODE")             /* (The overlay's: dq0town.cfg's OV1, its own bank, the main RAM's room) */
+#pragma rodata-name (push, "OV1RODATA")
+#pragma bss-name (push, "OV1BSS")
 /* The console's width (dq0acct's o_width) */
 static void width_read (void)
 {
@@ -217,6 +227,9 @@ static void width_read (void)
         }
     }
 }
+#pragma bss-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (pop)
 
 /* ---- What's carried, its money and its worth (the account's own) */
 
@@ -245,10 +258,14 @@ static void kit_read (void)
 static unsigned char b_cat;
 #define WORDS()         hy_bank (b_cat + 1)
 #define KINDS()         hy_bank (b_cat)
+#define OV(x)           (hy_bank (b_cat + 2), x)        /* (The overlay's code called, the kinds put back after it: KINDS) */
 static unsigned twn;
 static char* v[40];
 static unsigned char nv;
-static char line[320];
+static char said[360];                          /* (A rumour's value, value_of's; and a line of town.txt's, words_of's, v's: never
+                                                **   both at once; and a program's arguments, run's: the main RAM's room, the plan's
+                                                **   step 12) */
+#define line    said
 
 /* The n'th line of key (0 the first): its values in v (nv of them, their spaces trimmed); 0 none */
 static unsigned char __fastcall__ words_of (const char* key, unsigned char n)
@@ -311,7 +328,9 @@ static void __fastcall__ say_sub (const char* s)
     }
 }
 
-/* One of a key's lines by the dice, its first value said */
+/* One of a key's lines by the dice, its first value said (a second, a kind's "big": the town's a big one) */
+static unsigned char big;
+
 static void __fastcall__ say_one (const char* key)
 {
     unsigned char n = lines_of (key);
@@ -319,6 +338,7 @@ static void __fastcall__ say_one (const char* key)
     if (n && words_of (key, random (n))) {
         say_sub (v[0]);
         say (" ");
+        big |= nv > 1;
     }
 }
 
@@ -327,7 +347,6 @@ static void __fastcall__ say_one (const char* key)
 #define RUMOURS         4
 static unsigned rused, rat[RUMOURS], rto[RUMOURS];
 static unsigned char nr, nmade;                 /* (How many, and how many of them rumours.txt's) */
-static char said[360];
 
 static void __fastcall__ heard (const char* name)
 {
@@ -424,6 +443,9 @@ static unsigned char __fastcall__ value_of (unsigned char k, const char* key, un
     return got;
 }
 
+#pragma code-name (push, "OV1CODE")             /* (The overlay's: dq0town.cfg's OV1, its own bank, the main RAM's room) */
+#pragma rodata-name (push, "OV1RODATA")
+#pragma bss-name (push, "OV1BSS")
 /* The life's seed for dungeon n's (dq0life's seed_of): the rumours' seed, themegen -r's */
 static unsigned long __fastcall__ seed_of (unsigned long s, unsigned n)
 {
@@ -438,16 +460,59 @@ static unsigned long __fastcall__ seed_of (unsigned long s, unsigned n)
     x ^= x >> 13;
     return s < 65536UL ? x & 0xFFFF : x | 0x10000UL;
 }
+#pragma bss-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (pop)
+
+#pragma code-name (push, "OV1CODE")             /* (The overlay's: dq0town.cfg's OV1, its own bank, the main RAM's room) */
+#pragma rodata-name (push, "OV1RODATA")
+#pragma bss-name (push, "OV1BSS")
+/* A program of the game's run (lib's, prog its name past it), its arguments in said (each 0-ended, an empty one last), waited
+** for: its exit status, or -1 */
+static int __fastcall__ run (const char* prog)
+{
+    static struct hy_regs r;
+
+    word_out ();
+    out_flush ();
+    strcpy (path, lib);
+    strcat (path, prog);
+    r.a = 0;
+    r.r[0] = (unsigned) path;
+    r.r[1] = (unsigned) said;
+    if (hy_call (HY_SPAWN, &r)) {
+        return -1;
+    }
+    r.r[0] = 0;
+    return hy_call (HY_WAIT, &r) ? -1 : r.x;
+}
+#pragma bss-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (pop)
+
+#pragma code-name (push, "OV1CODE")             /* (The overlay's: dq0town.cfg's OV1, its own bank, the main RAM's room) */
+#pragma rodata-name (push, "OV1RODATA")
+#pragma bss-name (push, "OV1BSS")
+/* An argument more (its flag, its value) at q: the next's place */
+static char* __fastcall__ arg (char* q, const char* flag, const char* v)
+{
+    strcpy (q, flag);
+    q += strlen (q) + 1;
+    strcpy (q, v);
+    return q + strlen (q) + 1;
+}
+#pragma bss-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (pop)
 
 /* One more rumour (the inn's Intrigue): the files' next if they have one, else themegen's (-r with one more, -a the kinds made: the
 ** same one dq0life's themegen -r would have made next), its dots shown; 1 one more */
 static unsigned char rumour_more (void)
 {
     static const char* const kinds[] = { "artifact", "evil", "prisoner", "through", "lore", "scourge" };
-    static struct hy_regs r;
-    static char a[160];
     unsigned char k, j, mask = 0, was = nr;
-    char* q = a;
+    char* q = said;
+    unsigned long s;
 
     if (was >= RUMOURS || L.h.seed < 65536UL) {
         return 0;                               /* (A stand-in's life hears none) */
@@ -466,22 +531,15 @@ static unsigned char rumour_more (void)
     strcpy (q += strlen (q) + 1, "-a");
     utoa (mask, q += 3, 10);
     strcpy (q += strlen (q) + 1, "-s");
-    ultoa (seed_of (L.h.seed, L.h.dungeon) ^ 0x52554D52UL, q += 3, 10);
+    OV (s = seed_of (L.h.seed, L.h.dungeon));
+    KINDS ();
+    ultoa (s ^ 0x52554D52UL, q += 3, 10);
     strcpy (q += strlen (q) + 1, "-o");
     strcpy (q += 3, top);
     q += strlen (q) + 1;
     *q = 0;
-    word_out ();
-    out_flush ();
-    strcpy (path, lib);
-    strcat (path, "/../../themegen");
-    r.a = 0;
-    r.r[0] = (unsigned) path;
-    r.r[1] = (unsigned) a;
-    if (!hy_call (HY_SPAWN, &r)) {
-        r.r[0] = 0;
-        hy_call (HY_WAIT, &r);
-    }
+    OV (run ("/../../themegen"));
+    KINDS ();
     say ("\n");
     rumours_read ();
     return nr > was;
@@ -759,7 +817,7 @@ static void today (void)
 
 /* ---- The places */
 
-enum { P_STREET, P_INN, P_MARKET, P_SMITH, P_ASKING, P_LEAVE, P_SHUT };
+enum { P_STREET, P_INN, P_MARKET, P_SMITH, P_ASKING, P_SCHOLAR, P_LEAVE, P_SHUT };
 
 /* Where a word goes: a place's number or its name, or a word that's done there; P_STREET none */
 static unsigned char __fastcall__ place_of (const char* w)
@@ -1124,11 +1182,75 @@ static void leave_list (void)
     }
 }
 
+#pragma code-name (push, "OV1CODE")             /* (The overlay's: dq0town.cfg's OV1, its own bank, the main RAM's room) */
+#pragma rodata-name (push, "OV1RODATA")
+#pragma bss-name (push, "OV1BSS")
+/* town.dat written (wr), or read back (town.h's: the account's, and the scholar's house's to it and back) */
+static void __fastcall__ tr_io (unsigned char wr)
+{
+    int fd;
+
+    if ((fd = open (in_ (top, TOWN_FILE), wr ? O_WRONLY | O_CREAT | O_TRUNC : O_RDONLY, 0644)) < 0 ||
+        (wr ? write (fd, &tr, sizeof tr) : read (fd, &tr, sizeof tr)) != sizeof tr) {
+        fail (wr ? "can't write town.dat" : "can't read town.dat");
+    }
+    close (fd);
+}
+#pragma bss-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (pop)
+
+#pragma code-name (push, "OV1CODE")             /* (The overlay's: dq0town.cfg's OV1, its own bank, the main RAM's room) */
+#pragma rodata-name (push, "OV1RODATA")
+#pragma bss-name (push, "OV1BSS")
+/* The scholar's house (the plan's step 12): dq0schol run, its first command (what was typed in the street, if it was one of its
+** own) handed to it, and town.dat to it and back (the money in it, whether it's a big town, the writings carried: scholar's), its
+** days, what's left of the money, what a master taught, the script studied; the rumours heard again after it (a writing read
+** better, heard.txt's) */
+static void __fastcall__ o_scholar (const char* first)
+{
+    char* q;
+
+    q = arg (arg (arg (said, "-d", top), "-l", lib), "-t", town);
+    if (*first) {
+        q = arg (q, "-x", first);               /* (No empty one: it'd end them) */
+    }
+    *q = 0;
+    tr_io (1);
+    if (run ("/../acct/dq0schol")) {
+        fail ("the scholar's house failed");
+    }
+    tr_io (0);
+}
+#pragma bss-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (pop)
+
+static void __fastcall__ scholar (const char* first)
+{
+    unsigned char k, n = 0;
+
+    tr.money = cash;
+    tr.big = big;
+    memset (tr.clue, 0, sizeof tr.clue);
+    for (k = 0; k < kn; ++k) {                  /* (Its writings carried: an old writing's and a copy's clues, their fuel) */
+        if (!gone[k] && (K[k].o.kind == KI_WRITING || K[k].o.kind == KI_COPY) && n < 8) {
+            tr.clue[n++] = K[k].fuel;
+        }
+    }
+    OV (o_scholar (first));
+    KINDS ();
+    cash = tr.money;
+    rumours_read ();
+}
+
 /* ---- The town */
 
 static unsigned char here;                        /* (Where it is: P_*) */
 
-/* Into place p: its day (each visit), its words */
+/* Into place p: its day (each visit), its words (the scholar's house, first its first command: "" none) */
+static const char* first = "";
+
 static void __fastcall__ go (unsigned char p)
 {
     static const char* const keys[] = { 0, "inn", "market", "smith", "asking" };
@@ -1142,10 +1264,12 @@ static void __fastcall__ go (unsigned char p)
     }
     here = p;
     nh = 0;
-    if (p != P_LEAVE) {
+    if (p < P_LEAVE) {
         days_pass (1);
-        say_one (keys[p]);                      /* (The place's words, one by the dice; a day) */
-        say ("\n");
+        if (p < P_SCHOLAR) {
+            say_one (keys[p]);                  /* (The place's words, one by the dice; a day: the scholar's, its own) */
+            say ("\n");
+        }
     }
     switch (p) {
     case P_INN:
@@ -1161,6 +1285,11 @@ static void __fastcall__ go (unsigned char p)
         break;
     case P_ASKING:
         asking ();
+        break;
+    case P_SCHOLAR:
+        scholar (first);
+        here = P_STREET;                        /* (Its own questions asked: back in the street after it) */
+        menu ();
         break;
     case P_LEAVE:
         leave_list ();
@@ -1213,6 +1342,12 @@ static void __fastcall__ command (char* l)
     }
     if (p == P_STREET) {
         say ("There's nothing like that to do here: a number or a place's name, or Enter to go back.\n");
+        return;
+    }
+    if (p == P_SCHOLAR) {
+        first = w && (*l < '1' || *l > '9') ? l : "";   /* (A command of its own, done there: "read the plaque") */
+        go (p);
+        first = "";
         return;
     }
     if (p != here && (p == P_SHUT || !w || (*l >= '1' && *l <= '9'))) {
@@ -1294,10 +1429,18 @@ int main (int argc, char* argv[])
         fail ("no record of the life");
     }
     close (fd);
-    if ((fd = hy_banks_alloc (2)) < 0) {
+    if ((fd = hy_banks_alloc (3)) < 0) {
         fail ("no banks");
     }
     b_cat = fd;
+    strcpy (path, lib);                         /* (The overlay, its bank after the words') */
+    strcat (path, "/../acct/dq0town.ovl");
+    if ((fd = open (path, O_RDONLY)) < 0) {
+        fail ("no overlay");
+    }
+    hy_bank (b_cat + 2);
+    read (fd, (void*) 0x8000, 0x2000);
+    close (fd);
     KINDS ();
     strcpy (path, lib);
     strcat (path, "/dq0w.cat");
@@ -1324,7 +1467,8 @@ int main (int argc, char* argv[])
         KINDS ();
     }
     close (fd);
-    width_read ();
+    OV (width_read ());
+    KINDS ();
     rseed ((L.h.seed ^ 0x544F574EUL) + L.h.dungeon * 40503UL);  /* ("TOWN": the same life, the same town and errands) */
     kit_read ();
     cash_count ();
@@ -1335,7 +1479,9 @@ int main (int argc, char* argv[])
         if (!here) {
             today ();
         }
-        ask (words_of ("prompt", here) ? v[0] : "");
+        words_of ("prompt", here);             /* (Its prompt: in line, v[0]) */
+        OV (ask (nv ? v[0] : ""));
+        KINDS ();
         if (asks > TOWN_ASKS || tr.days >= TOWN_DAYS) {
             say ("The days go by, and at last you set out.\n");
             here = P_LEAVE;
@@ -1359,10 +1505,8 @@ int main (int argc, char* argv[])
     }
     cash_lay ();
     kit_write (TOWN_KIT);
-    if ((fd = open (in_ (top, TOWN_FILE), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0 || write (fd, &tr, sizeof tr) != sizeof tr) {
-        fail ("can't write town.dat");
-    }
-    close (fd);
+    OV (tr_io (1));
+    KINDS ();
     say ("\n");
     word_out ();
     out_flush ();

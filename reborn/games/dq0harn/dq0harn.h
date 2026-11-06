@@ -10,13 +10,21 @@
 /* dq0harn.c (and limbs.c's, overlay 5's: health_of, limbs_of, cond_of, rise_of) */
 extern harn_char pc;                            /* The character */
 extern char name[16], calling[20];
-#define TONGUES_N       56
+#define TONGUE_LINES    8                       /* (Its tongues and scripts past its own, at most: the book's most, a Save-K'nor
+                                                **   cleric's church tongue, two more tongues, its church script, a second and
+                                                **   its native one, Character 23, six; and room for what a master teaches,
+                                                **   the scholar's, the plan's step 12.  The account's and the scholar's too:
+                                                **   a sheet with more is refused, loudly, never cut short) */
+#define TONGUE_MOST     14                      /* (A line's most in the store: " *sunglyph=100", a name of 8 letters at most,
+                                                **   history.txt's) */
+#define TONGUES_N       (8 + TONGUE_LINES * TONGUE_MOST)
 extern char tongues[TONGUES_N];                 /* Its tongues and scripts (the plan for the game between dungeons, its
                                                 **   step 8): each a word after a space, a tongue as the denizens name it
                                                 **   ("khuzdul=12"; the first, "common", its own, the Language skill's), a
                                                 **   script a * before it ("*delvic=83"; "*ardic", its native one, the
                                                 **   Script skill's): its file's "language NAME=ML" and "script NAME[=ML]"
-                                                **   lines (hmchar's), written back as they are */
+                                                **   lines (hmchar's), written back as they are; one that won't fit, its first
+                                                **   byte '!', and the sheet's refused (RS_LOAD_PC's result 2) */
 extern unsigned char age;                       /* Its age in years (0: not known, no life's record: dq0 -d's) */
 extern char* tp;                               /* The words into a reply: where the next goes, */
 extern char* tend;                              /*   and the end */

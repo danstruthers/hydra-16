@@ -2,22 +2,24 @@
 # step 11; HOUSE.md's between dungeons, the town).  A line a key and its values between bars (a value's spaces trimmed); a key's
 # lines one picked by the town's dice where there are several.  Slots: %T the town's name, %I its inn's ("the Ram").  The words
 # the house's, for review; nothing here is the book's.
-#   kind     what the town is (after its name: "Velmor, a market town.")
+#   kind     what the town is (after its name: "Velmor, a market town."), and "big" after it for a big town (the scholar's house
+#            has a sage there who reads a dead tongue: the plan's step 12)
 #   sight    a sentence of it
 #   place    the menu: its number, its name, what's done there (dq0town knows them by their numbers: 1 the inn, 2 the market,
-#            3 the smith, 4 who's asking, 5 leave for)
-#   shut     what's not open yet (the temple, the plan's step 13; the scholar, step 12)
+#            3 the smith, 4 who's asking, 5 the scholar's house, 6 leave for)
+#   shut     what's not open yet (the temple, the plan's step 13)
 #   inn, market, smith, asking   a place's words as the character comes into it (one picked)
 #   goods    what the market sells (the catalogue's kinds, by their names: at their whole worth)
 #   blades   what the smith sells: a new blade
 #   words    the words that go to each place (a command's first word, or the place's number or name), the places in order, then
 #            what's shut's
-#   prompt   what's asked, in the street, then in each place in order
+#   prompt   what's asked, in the street, then in each place in order (the scholar's house's its own, dq0schol's scholar.txt:
+#            its line here only keeps the places' order)
 #   month    the months' names (the book's calendar's)
 #   little   the little words off the front of what a command names ("sell my dagger", "haggle for the rope")
-kind     | a market town on a river.
+kind     | a market town on a river. | big
 kind     | a hill town of grey stone.
-kind     | a walled town at a crossroads.
+kind     | a walled town at a crossroads. | big
 kind     | a mining town under bare fells.
 kind     | a ferry town on a wide, slow river.
 kind     | a town of drovers and wool merchants.
@@ -29,8 +31,9 @@ place    | 1 | The inn | rest; hear what's said
 place    | 2 | The market | buy, sell, haggle
 place    | 3 | The smith | mend, whet, a new blade
 place    | 4 | Who's asking | patrons and what they offer
-place    | 5 | Leave for | the places you've heard of
-shut     | The temple and the scholar's house are shut to you for now.
+place    | 5 | The scholar's house | a writing read; the library; a master
+place    | 6 | Leave for | the places you've heard of
+shut     | The temple is shut to you for now.
 inn      | The common room of %I is loud with drovers and carters.
 inn      | At %I a fire burns low, and a few old men nurse their ale.
 inn      | %T's travellers crowd the benches at %I.
@@ -45,13 +48,15 @@ words    | 1 inn tavern rest sleep listen hear rumours rumour talk
 words    | 2 market buy sell haggle bargain price how what goods
 words    | 3 smith forge mend repair whet sharpen oil blade blades
 words    | 4 who asking patron patrons offer offers take accept agree
-words    | 5 leave go road follow travel set
-words    | temple scholar library priest sage
+words    | 5 scholar scholar's scholars library sage scribe study read learn teach master folklore astrology heraldry reckon mathematics
+words    | 6 leave go road follow travel set
+words    | temple priest
 prompt   | Where to? (a number or a name; Enter to leave)
 prompt   | At the inn: rest (how many days), or Enter to go back
 prompt   | At the market: buy, sell, haggle, or Enter to go back
 prompt   | At the smith's: mend, whet, buy, or Enter to go back
 prompt   | Whose offer will you take? (a number; Enter to go back)
+prompt   | (the scholar's house: its own)
 prompt   | Which will you follow? (a number; Enter the first)
 month    | Nuzyael | Peonu | Kelen | Nolus | Larane | Agrazhar | Azura | Halane | Savor | Ilvin | Navek | Morgat
 little   | the | a | an | my | some | for | over | about | on | with | of | much | will | you | give | me | is | are | to | at | this | that | these | those | all

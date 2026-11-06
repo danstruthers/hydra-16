@@ -19,6 +19,8 @@
 #include "../dq0harn/dq0harn.h"
 #include "dq0acct.h"
 
+typedef char ntongues_fit[NTONGUES == TONGUE_LINES ? 1 : -1];   /* (The account holds what the referee does) */
+
 static char own[2000];                          /* (The sheet's other lines, each 0-ended: put back as they were) */
 static unsigned ownn;
 #pragma bss-name ("OV3RODATA")
@@ -78,9 +80,14 @@ static void __fastcall__ own_line (char* l)
         /* (The line itself kept: its rolls stand) */
     }
     if (!strncmp (l, "language ", 9) || !strncmp (l, "script ", 7)) {
-        if (ntongues < NTONGUES) {              /* (Its tongues and scripts: practised, skill.c's; written back after the rest) */
-            strncpy (tongue[ntongues++], l, sizeof tongue[0] - 1);
+        if (ntongues == NTONGUES) {             /* (More than the game can hold: refused, never cut short) */
+            static const char full[] = "dq0acct: more tongues and scripts on the sheet than the game can hold\n";
+
+            write (2, full, sizeof full - 1);
+            exit (1);
         }
+        strncpy (tongue[ntongues++], l, sizeof tongue[0] - 1);  /* (Its tongues and scripts: practised, skill.c's; written
+                                                **   back after the rest) */
         return;
     }
     if (!strncmp (l, "name ", 5)) {

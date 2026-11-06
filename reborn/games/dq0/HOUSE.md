@@ -874,7 +874,14 @@ world's answer follows.  The word is said before the world's asked, and holds wh
   83, delvic 83, sunglyph 83."; one with none open, "Scripts: none."); C's hmchar, hmchar.fs and hmchar.hl alike (the
   same dice from C and HyForth; hylang's can't be seeded).  The referee keeps them (dq0harn.h's tongues), says them on
   the sheet at their ML (the line after its skills), and writes them back into the save; the account reads them and
-  writes them back, and practises them (Between dungeons, below).  The sheet gives the character's age, the life's
+  writes them back, and practises them (Between dungeons, below).  **Eight past its own at most** *(new, for review:
+  2026-11-06, the plan's step 12)*: the book's most is six (a Save-K'nor cleric's church tongue, a second and a third
+  tongue, its church script, a second script and its native one, Character 23; hmchar's scribe has four), and two more
+  for what masters teach (the scholar's house, below).  The referee's store holds eight of the longest (a name of eight
+  letters, a mastery of three figures: 120 bytes, 56 till now, when a scribe with three scripts and a second tongue
+  could lose one as its masteries grew); a sheet with more is refused aloud, never cut short: the game won't start ("dq0:
+  too many tongues and scripts in its file"), the account and the scholar's house stop with their fault said, and a
+  master won't teach a ninth.  The sheet gives the character's age, the life's
   record's (as its dungeon began: "born 12 Peonu (Aralius), aged 23").
 - **The player's own occupation is 11 points** (the user's: the book's 55 are worth 1 to 21 points, 11 their median
   and their mean, a point opening a skill at its OML and a point for each SB more).  A point opens a skill at its
@@ -3759,9 +3766,9 @@ calendar, no town.  (games/dq0town, a program of its own; dq0acct's town.c.)
 - **When:** as the character comes into town after a dungeon, its account's first lines told (the days between, the walk, what it's
   paid, the physician, the wounds), before the money's matters: the town is a menu, and the account's rest follows it.  Only when the
   player's asked: the tests' dq0auto passes it by, straight on.  A town is a name (the name maker's, the men's tongue's, by the life's seed
-  and the dungeon's number), a paragraph (what kind of town, a sight of it: town.txt's, by the town's dice) and the list: 1 the inn, 2 the
-  market, 3 the smith, 4 who's asking, 5 leave for; "The temple and the scholar's house are shut to you for now." (the plan's steps 13
-  and 12).  A number or a place's name goes there; a command goes to the place it's done in ("sell my dagger" from the street goes to the
+  and the dungeon's number), a paragraph (what kind of town, a sight of it: town.txt's, by the town's dice; two kinds of the six big
+  towns, a market town on a river and a walled town at a crossroads) and the list: 1 the inn, 2 the market, 3 the smith, 4 who's asking,
+  5 the scholar's house (the plan's step 12, below), 6 leave for; "The temple is shut to you for now." (the plan's step 13).  A number or a place's name goes there; a command goes to the place it's done in ("sell my dagger" from the street goes to the
   market, and sells); Enter goes back to the street, and in the street leaves.  The same life's seed and the same commands, the same town
   and errands.
 - **Time:** each visit to a place a day (the inn, the market, the smith, who's asking); a rest at the inn the days asked (60 at most).  The
@@ -3831,8 +3838,8 @@ dq0life's clues carried out.)
   " ...", and "The rest you can't make out, but it speaks of some place in the hills."; a critical failure, a wrong
   reading told just as confidently: its words with the theme's own things' names swapped about (in its own dungeon),
   and another place and reason.
-- **Read once** *(new, for review)*: what was read is kept (the clue's), and a writing read again tells the same,
-  untested; a better reading waits for the scholar and the library (step 12).
+- **Read once** *(new, for review)*: what was read is kept (the clue's), and a writing read again in a dungeon tells the
+  same, untested; a better reading is the scholar's house's and the library's (below).
 - **No puzzle needs reading** (the user's Q9): a read rule never solves anything (its effect always none), and the theme
   checker proves each mission's ending by the other rules alone (make.js's, themec's); a writing's a hint.
 - **The place it names** *(new, for review: the one-link clue, the user's Q10)*: one of the realms about (the theme's
@@ -3863,6 +3870,74 @@ dq0life's clues carried out.)
   marshes.", its region still the true one; a wrong reading's the wrong place.  A new life clears the clues and the
   rumour.
 
+## The scholar's house *(new, for review: the plan for the game between dungeons, its section 4 and step 12, 2026-11-06)*
+
+The user's words (the plan's section 4): "collect clues and take them back to a library or to a scholar ... Each clue might be in a
+unique script that needs a specialist to help decipher, or time in the library if the character is literate", and "that makes scribes
+and scholars viable character classes".  The rest, and every number, is the house's unless it's marked the book's.  The words are
+games/dq0schol/scholar.txt's and the program's.  (games/dq0schol, a program of its own run by the town: HOUSE.md's town above.)
+
+- **Its writings:** as it comes in, the house tells what it has to show and what it knows of, the latest nine: "Your writings: 1 the
+  journal; 2 a copy of the grave slab; 3 the worn plaque, left where you read it."  A writing is shown by its number or a word of it
+  ("read 1", "have the journal read").  Only what's carried can be read here (the old writing, or a copy: the better condition of the
+  two); one left behind can still be asked of (the other skills, below).  A visit is a day, as every place in town; what's done in it
+  takes its own days on top, days at rest as the town's are.
+- **A scribe reads it** ("read 1"): a scribe's day is 3d (the book's scribe's 66d a month, Character 13, over its 24 working days),
+  for 1 to 3 days (a d3).  A writing in a dead tongue (its era 10 centuries ago or more: the book's Ancient column, Treasure 8, its
+  tongue's old form, whoever speaks it now) wants a sage: three times the day, 9d, for 2d4 days, and only in a big town ("No one in
+  Samvind reads the old ostari of the journal: the sages of a bigger town might.").  Its mastery 45 + 4d10 (a sage 50 + 4d10), the
+  writing's condition on it, five points a step (step 9's).  **Its roll is hidden** (the book's: "the GM should make the roll
+  secretly", Skills 5; its analysis, Skills 20): the reading's told, never its grade, so a failure can't be told from a success.
+  "Colest, a sage, keeps the journal 5 days and asks 45d; then reads it to you: (its words) It tells of the Sindsaman Strands,
+  where the Houshani laid others of their dead."  A success, the place and the reason; a critical success a line more, true and
+  small: "Colest says too that the hand is the Houshani's, of some 26 centuries ago, and the place it names lies some 5 days' road
+  from here." (the place's road the town's own, Leave for's); a failure as confident, its estimate further out (Skills 20's): the
+  land right, under the realm a wrong reading names ("the Sanendan Strands"); a critical failure a wrong reading, another place and
+  reason (step 9's).  The words are given whole every time: no "the rest you can't make out".
+- **A second opinion:** "read 1" again, another scribe, another reading, at the same price (its own days); as many as the money
+  holds.
+- **Honesty:** each scribe's Morality, 3d6 (the book's attribute, Character 9), by the book's bands: corruptible (8-10) or worse sells
+  a copy on; unscrupulous (5-7) or worse asks half again (5d a day, a sage 14d), as plainly as an honest one asks its price;
+  diabolical (3-4) tells a wrong reading as confidently, whatever it read.  **What a copy sold on does:** talk in the street, told
+  at the next visit to the house ("There's talk in the street of an old journal like yours: someone has been selling copies of it."),
+  once a writing; nothing more yet: no one gets to the place first, and the place is no worse for it.
+- **The library**, for one who knows the writing's script and its tongue (the book has no rule): "study 1" (or "study the journal
+  for 2 weeks"), a penny a day, a week at a time, the reading test of step 9 each week (the masteries' average, the condition, five
+  points a step; no penalty, the house's: it reads at a table at leisure), four weeks unless it's told, eight at most; it stops as it's
+  read (a success or a critical failure, told alike) or as the money or the town's days run out.  "You study the journal in the
+  library, a penny a day, and in the third week you make it out: ..."; four failed weeks, a piece of it, step 9's words.  None for one
+  who can't read ("You can't read: the library's no use to you. A scribe could read the journal for you."), nor for a script or a
+  tongue it hasn't (told which: "a master could teach you them, or a scribe read it for you").  **The month's practice** puts the
+  script studied first in its filled-in answer (Between dungeons' question): its native one the Script skill, another its line.
+- **A master's month** ("learn delvic", "learn sindarin"): the book's, Skills 11: a new script is opened at 70 + its skill base after
+  a month's teaching by a master (the book's ML 90 or more), the month's 30 points spent on it; a foreign tongue after a month's
+  teaching, all other development forfeit, at its skill base once (an alien family's, as hmchar's second tongue: the game's tongues
+  have no families).  So the month's practice is forfeit for each month with a master.  The price a sage's month, 84d (Character 13).
+  "You study starric for a month with Master Selmen (84d): you can read and write it now (starric 82)."; a tongue, "You learn sindarin
+  for a month from Hedrin, who was raised speaking it (84d): you speak a little of it now (sindarin 11)."  A big town's masters teach
+  the game's six scripts and its tongues (scholar.txt's); another town's, ardic alone.  Two masters a stay at most, and eight past its
+  own on the sheet (above).  The sheet's line written by the account as it ends ("script starric=82"), and the store's.
+- **Reading again:** a reading here (a scribe's, the library's) is kept if it's better than the clue's (a critical success's, a
+  success's, a failure's, a critical failure's, unread, in that order): the clue's record (its reading, its line more), and
+  heard.txt's rumour with it (the one-link clue's: "The journal you had read tells of the Sindsaman Strands, ..."; a piece's only where
+  heard.txt has none or a piece); the town's inn and its Leave for tell it first after the visit.  A worse one undoes nothing; it's
+  told all the same (what a second opinion is).  A writing read again in a later dungeon tells the record's reading (step 9's).
+- **The other skills**, once each a writing, its own mastery if it has the skill open (a day in the library, 1d), else a sage's
+  (3d, a day, its roll hidden: 45 + 4d10): a success tells something true and small of what the clue's record holds; else nothing
+  ("You can make nothing of it."):
+  - **Folklore** (unread: the legend behind it): its people, what they made, where they went on to ("The old tales know of the Houshani,
+    who laid their dead in tombs, and say they went on down to the coast.": the land of the place it names);
+  - **Mathematics** (ledgers, tallies: a writing named a tally, a ledger, a journal or a map, scholar.txt's): the place's road ("Its
+    reckonings come to a road: the place it speaks of lies some 5 days from here.");
+  - **Astrology** (dates): its age ("By the signs on it, it was made some 26 centuries ago.");
+  - **Heraldry** (whose seal, who built it): its people, and the realm of the place it names ("The marks on it are the Houshani's own,
+    and it bears the device of the Sindsaman lords.").
+  - **Law** is left out: no writing of the game's is a charter or a deed (the history's clues are plaques, slabs, tally stones, ledgers,
+    rune pillars; the stand-ins' a tablet, a scroll, a map scrap), and the clue's record holds no grant, owner or boundary to tell.
+- **The same life's seed and the same commands, the same scholars, prices and readings** (the dice the life's and the days in town so
+  far).  The tests set scenes with the rc variable dq0sg (each number a roll's in turn: a scribe's Morality, then its grade; a week's
+  grade; a skill's grade).
+
 ## Decided, not yet built
 
 What the user has decided and no section's rule holds yet.  Most that's decided and waits is in its own section's *Not
@@ -3878,8 +3953,8 @@ built, then its line here goes:
 
 **The game between dungeons** (the user's, 2026-11-03: A8, A18, A20; the plan's steps 1 to 7 and 11 built: How a dungeon ends, Between dungeons, the town, above; the plan outside the repository): what
 takes a character to a dungeon in the first place, a random time between dungeons, with healing auto-rolled, weapons and gear maintained
-at a cost, food and housing paid for, and skills by the book past 30 days (all built); clues taken to a library or a scholar (step 12: reading itself and the clues carried out are built, Reading
-and clues, above), languages and scripts known, scribes
+at a cost, food and housing paid for, and skills by the book past 30 days (all built); clues taken to a library or a scholar (step 12: built, the scholar's house, above; reading itself and the clues carried out,
+Reading and clues), languages and scripts known, scribes
 and scholars as characters.
 
 - **A theme's own tests name a purpose** (the user's, 2026-10-20), as the rest of the game's do, which each
