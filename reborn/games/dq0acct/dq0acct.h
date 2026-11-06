@@ -70,8 +70,8 @@ extern signed char rw_stand;                    /*   the standing, */
 extern char rw_thing[16];                       /*   a thing (a kind's name: "" none) */
 void o_reward (void);                           /* What the dungeon just left brings (its theme's reward line, if solved) */
 void o_reward_say (void);                       /*   told */
-void o_standing (void);                         /* The standing in words */
-unsigned char o_rumours (void);                 /* The rumours told, one followed (quest.txt): 1; 0 none heard */
+void o_standing (void);                         /* The standing in words (the account's last sentence's end) */
+void o_rumours (void);                          /* The rumours told, one followed (quest.txt); none heard, Enter to go on */
 
 /* sheet.c */
 unsigned char o_sheet_read (void);             /* The sheet read: 1, or 0 none */

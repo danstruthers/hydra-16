@@ -220,10 +220,11 @@ void o_standing (void)
         " Your name is known in the inns hereabouts", " Your name is known across the land", " Your name is spoken of far and wide" };
     int r = L.h.reputation;
 
+    say (".");
     say (fame[r <= 0 ? 0 : r <= 2 ? 1 : r <= 5 ? 2 : r <= 9 ? 3 : 4]);
     say (" (standing ");
     sayn (r < 0 ? 0 : r);
-    say (").");
+    say (").\n");
 }
 
 /* ---- The rumours */
@@ -316,8 +317,8 @@ static unsigned char __fastcall__ value_of (unsigned char k, const char* key)
 }
 
 /* The rumours told (a clue's first, then themegen's: three at most), one followed (asked: Enter, the tests' dq0auto or anything not
-** one of them takes the first), written as quest.txt for the next dungeon: 1; 0 none heard (then nothing's asked here) */
-unsigned char o_rumours (void)
+** one of them takes the first), written as quest.txt for the next dungeon; none heard (a stand-in's life), Enter to go on */
+void o_rumours (void)
 {
     unsigned char k, c;
 
@@ -325,7 +326,9 @@ unsigned char o_rumours (void)
     heard ("heard.txt");
     heard ("rumours.txt");
     if (!nr) {
-        return 0;
+        say ("Enter to go on");
+        ask (ans, sizeof ans);
+        return;
     }
     say ("\nIn ");
     say (town);
@@ -352,5 +355,4 @@ unsigned char o_rumours (void)
     say ("You set out for ");
     say (value_of (c, "region") ? said : "it");
     say (".\n");
-    return 1;
 }

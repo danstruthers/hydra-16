@@ -1042,10 +1042,8 @@ static void last_lines (void)
     say_date (d);
     say (", and you are ");
     sayn (LIFE_AGE (&L.h, d, pc.att[HARN_BD]));
-    say (".");
-    OV4 (o_standing ());                        /* (The standing: the life's reputation, the plan's step 7) */
+    OV4 (o_standing ());                        /* (The sentence's end, the standing: the life's reputation, the plan's step 7) */
     CATS ();
-    say ("\n");
 }
 
 static void dead_lines (void)
@@ -1064,21 +1062,6 @@ static void dead_lines (void)
     say (".\n");
     word_out ();
     out_flush ();
-}
-
-/* What solving the dungeon just left brings (quest.c's, its theme's reward line): its pennies into the money, its standing into the
-** life's reputation, a thing given (a kind of the catalogue's, by its name: a ring) put in its pouch, made new */
-static void reward (void)
-{
-    unsigned char k;
-
-    OV4 (o_reward ());                          /* (Its pennies and its standing, there) */
-    CATS ();
-    for (k = 0; *rw_thing && k < KI_COUNT && strcmp (CAT[k].name, rw_thing); ++k) {
-    }
-    if (*rw_thing && k < KI_COUNT) {
-        coin_add (k, 1);
-    }
 }
 
 static unsigned char __fastcall__ lull (void)
@@ -1160,7 +1143,15 @@ int main (int argc, char* argv[])
     kit_read ();
     names_read (n - 1);
     cash_count ();
-    reward ();
+    OV4 (o_reward ());                          /* (What solving the dungeon just left brings, its theme's reward line: its pennies
+                                                **   into the money and its standing into the life's reputation, there; a thing
+                                                **   given, a kind of the catalogue's by its name, a ring, put in its pouch, made new) */
+    CATS ();
+    for (i = *rw_thing ? 0 : KI_COUNT; i < KI_COUNT && strcmp (CAT[i].name, rw_thing); ++i) {
+    }
+    if (i < KI_COUNT) {
+        coin_add (i, 1);
+    }
     funds = cash + sell_total ();
     /* The wounds first: the bleeding bound, the physician; then the days they take, the road, the lull, all at rest */
     OV1 (o_note ());
@@ -1217,13 +1208,9 @@ int main (int argc, char* argv[])
     OV2 (o_practice ());
     CATS ();
     last_lines ();
-    OV4 (i = o_rumours ());                     /* (Where next: the rumours heard, one followed; asked before anything's
-                                                **   written, so a reset tells the time between again, the same) */
+    OV4 (o_rumours ());                         /* (Where next: the rumours heard, one followed, or Enter to go on; asked
+                                                **   before anything's written, so a reset tells the time between again, the same) */
     CATS ();
-    if (!i) {
-        say ("Enter to go on");
-        ask (ans, sizeof ans);
-    }
     word_out ();
     out_flush ();
     OV3 (o_sheet_write ());
