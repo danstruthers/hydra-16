@@ -884,6 +884,7 @@ static void rs_cut (void)
     HUB->rs_nout = 0;
     rs_pack = 0;
     rs_after_on = rs_do = rs_paid = rs_live = rs_keep = rs_using = rs_redo = rs_free = 0;
+    ix_make ();                                 /* (What it carries now, the pack off at its feet: the UI's first words') */
 }
 
 /* A tool's next step (rs_tool: the user's, 2026-11-02, "grope (take the tinder box), grope (to use the tinder box,
@@ -2004,39 +2005,11 @@ void s_ix_make (void)
         UIREC->ixks[f].flags = k->flags;
         memcpy (UIREC->ixks[f].name, k->name, sizeof k->name);
     }
+    hub_map (0);                                /* (The hub's header back in the window: rs_cut's caller's events) */
 }
 
 #pragma rodata-name (pop)
 #pragma code-name (pop)
-
-/* A thing worn taken off with no hand free and no room in the pack (the doff's SA_HANDS, the catalogue's bank's, its room none):
-** set down at the character's feet, said so, as "drop" would (the user's playtest, 2026-11-06: "take off the backpack" refused
-** with its hands full, "drop backpack" not): the pack, a cloak, a helm, a belt, a ring alike.  Its time the doff's */
-static unsigned char __fastcall__ doff_feet (unsigned n)
-{
-    struct item* p;
-    unsigned x, y;
-    unsigned char sn;
-
-    hub_map (0);
-    sn = HUB->pc_stratum;
-    x = HUB->pc_x;
-    y = HUB->pc_y;
-    p = item_at (n);
-    p->where = IW_SQUARE;
-    p->sn = sn;
-    p->x = x;
-    p->y = y;
-    p->flags &= ~(I_HELD | I_WORN);
-    dropped = n;
-    sky_ask (n);                                /* (On a shaft's head: it falls, part 17's) */
-    text_new ();
-    put ("Your hands are full: you take off the ");
-    put (kind_of (item_kind (n))->name);
-    put (" and set it down at your feet.");
-    took = 50;
-    return IR_OK;
-}
 
 /* The character's light: the brightest lit thing it carries (in a hand, worn, hung from its belt: one stowed is
 ** put out), into the hub, named (its minutes left the lights' burning's: part 27's); and its map making with it; what
@@ -6074,6 +6047,35 @@ static unsigned char __fastcall__ hand_for (unsigned n, unsigned char want)
     hwhy = h & hdead ? HW_LIMB : !(h & hused) ? 0 : want ? HW_TAKEN : HW_FULL;
     hside = h & (hwhy == HW_LIMB ? hdead : hused);
     return hwhy ? 0 : h;
+}
+
+/* A thing worn taken off with no hand free and no room in the pack (the doff's SA_HANDS, the catalogue's bank's, its room none):
+** set down at the character's feet, said so, as "drop" would (the user's playtest, 2026-11-06: "take off the backpack" refused
+** with its hands full, "drop backpack" not): the pack, a cloak, a helm, a belt, a ring alike.  Its time the doff's */
+unsigned char __fastcall__ s_doff_feet (unsigned n)
+{
+    struct item* p;
+    unsigned x, y;
+    unsigned char sn;
+
+    hub_map (0);
+    sn = HUB->pc_stratum;
+    x = HUB->pc_x;
+    y = HUB->pc_y;
+    p = item_at (n);
+    p->where = IW_SQUARE;
+    p->sn = sn;
+    p->x = x;
+    p->y = y;
+    p->flags &= ~(I_HELD | I_WORN);
+    dropped = n;
+    sky_ask (n);                                /* (On a shaft's head: it falls, part 17's) */
+    text_new ();
+    put ("Your hands are full: you take off the ");
+    put (kind_of (item_kind (n))->name);
+    put (" and set it down at your feet.");
+    took = 50;
+    return IR_OK;
 }
 
 /* The hand thing n would go in, the one that suits it (carry's: a thing taken up, its hand first, else the pack); 0

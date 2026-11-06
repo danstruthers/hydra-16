@@ -217,6 +217,7 @@ go:
             SWFN        swap, 101
             SWFN        hands_now, 48
             SWFN        hand_free, 48
+            SWFN        doff_feet, 48       ; (A thing taken off, no hand free: at its feet, 2026-11-06)
             SWFN        held_kinds, 48
             SWFN        shand_of, 48
             SWFN        equip_now, 49

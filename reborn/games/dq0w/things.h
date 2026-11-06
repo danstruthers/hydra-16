@@ -172,6 +172,7 @@ unsigned char __fastcall__ shand_of (unsigned char s);  /* (The hand that holds 
 void light_now (void);
 void ix_make (void);                            /* (What it carries, for the UI's first words: part 102's) */
 unsigned char __fastcall__ tell_apart (unsigned n);
+unsigned char __fastcall__ doff_feet (unsigned n);  /* (A thing taken off, no hand free: at its feet, part 48's) */
 void __fastcall__ name_apart (unsigned i, char* d);    /* (Its name told apart, into d: part 102's) */  /* (Its state's word, AW_*, beside another of its kind at hand: part 92's) */
 void __fastcall__ go_to (unsigned x, unsigned y);
 
