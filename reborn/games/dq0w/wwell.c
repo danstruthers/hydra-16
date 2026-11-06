@@ -131,19 +131,22 @@ static unsigned char __fastcall__ wl_at (unsigned char m)
 }
 
 /* A way on from the foot heading W_H (the four's), its first square W_E squares off (a cistern's edge before it): all rock
-** to the halls along it, two squares of it or more past the foot's own (WELL_REACH at most): so many, the halls' floor
-** in *z; or 0 */
+** to the halls along it, or to a room's wall with its floor behind it (the wall broken through, as a tunnel dug through
+** one is), two squares of it or more past the foot's own (WELL_REACH at most): so many, the halls' floor in *z; or 0 */
 static unsigned char __fastcall__ wl_way (signed char* z)
 {
     static unsigned char m, t;
 
     for (m = 1; m < W_E + WELL_REACH; ++m) {
-        if ((t = wl_at (m)) == T_FLOOR || t == T_CORR) {
+        if ((t = wl_at (m)) == T_WALL && ((t = wl_at (m + 1)) == T_FLOOR || t == T_CORR)) {
+            ++m;                                /* (Through a room's wall, or a passage's, into it) */
+        }
+        if (t == T_FLOOR || t == T_CORR) {
             *z = C->elev[cy_][cx_];
             return m >= W_E + 2 ? m - W_E : 0;
         }
         if (t != T_ROCK) {
-            return 0;                           /* (Outside, a wall, a door, a stair: not broken into) */
+            return 0;                           /* (Outside, a door, a stair, walls: not broken into) */
         }
     }
     return 0;

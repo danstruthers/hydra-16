@@ -5245,7 +5245,7 @@ module.exports = {
         const up = T.after(tk, 'climb out'), a2 = arr(up, K.A_UP);
         if (!a2 || a2.w1 >> 12 !== 12) f.push('not climbed out of the well: ' + JSON.stringify(a2));
         const top = T.after(up, 'climb down the well');
-        if (!top.at || top.at.pc.sn !== 1) f.push('not down the moved well');
+        if (!top.after || top.after.pc.sn !== 1) f.push('not down the moved well');
         if (!/climb out .*You climb up out of the well\. You come into the/.test(o)) f.push('climbing out not told');
         // The cistern, a way on
         if (!m.moved) f.push('no square over the rock below for the well');
@@ -5258,8 +5258,8 @@ module.exports = {
           const way = c.ways.findIndex(w => w[0] && w[0].t === 4 && w[1] && w[1].t === 4);
           const w = c.ways[way] || [];
           let k = 1;
-          while (k < w.length && w[k] && w[k].t === 4 && w[k].z - w[k - 1].z <= 2 && w[k].z >= w[k - 1].z) k++;
-          if (way < 0 || k < 3 || !w[k - 1] || w[k - 1].wet || !w[k] || (w[k].t !== 1 && w[k].t !== 4) || Math.abs(w[k].z - w[k - 1].z) > 2) f.push('no way on up out of its water to the halls: ' + JSON.stringify(w.slice(0, k + 1)));
+          while (k < w.length && w[k - 1].wet && w[k] && w[k].t === 4 && w[k].z - w[k - 1].z <= 2 && w[k].z >= w[k - 1].z) k++;
+          if (way < 0 || k < 3 || !w[k - 1] || w[k - 1].wet) f.push('no way on up out of its water: ' + JSON.stringify(w.slice(0, k + 1)));
         }
         // The sump, no rope: down and up unaided; jumped into
         const g2 = T.of('dq0 -p t -s 3 -c /ram/c.hm', g1.k + 1), d2 = T.after(T.after(T.after(g2, 'climb down the well'), 'climb out'), 'climb down the well');

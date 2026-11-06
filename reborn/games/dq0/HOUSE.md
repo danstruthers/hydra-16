@@ -3180,7 +3180,8 @@ and 97; the maker's changes.c.)
   rules, below), its surface the stratum's own level (its datum).  **One well in four** opens at its foot into a **cistern**:
   the nine squares round its foot all under the same water.
 - **A way on**: **one cistern in two, one sump in three**, a passage on: up out of the water to the halls nearest along one of
-  the four ways (the first by its seed that reaches them through solid rock, two squares of it or more, twelve at most), its
+  the four ways (the first by its seed that reaches them through solid rock, two squares of it or more, twelve at most, a room's
+  or a passage's wall at their edge broken through as a tunnel dug through one is), its
   floor rising **2 feet a square** (a step's, so it's walked, swum, waded) from the water's floor to the halls', the water
   standing at the halls' floor (shallower where the way's short: 2 feet for each of its squares).
 - **Into the halls below**: where the square under it is a room's floor or a passage's, the shaft comes out in its roof, its
