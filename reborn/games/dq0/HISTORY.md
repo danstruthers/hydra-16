@@ -44,7 +44,7 @@ when and why each piece was decided, in the user's words, DECISIONS.md's.
 ### The history
 
 themegen's dice are the game's seed's; names are namegen's, by a people's tongue (six: the dwarves' hard, the men's
-round, the elves' soft, the hill-men's rough, the kobolds' yapping, the sun-priests' hissing).
+round, the elves' soft, the hill-men's rough, the kobolds' yapping, the sun-priests' hissing). Each people's tongue has its word, the referee's (what its folk speak, and a character's "language" lines name: khuzdul, common, sindarin, hethrin, kobold, ostari) and its script, the game's own (G3: delvic, ardic, starric, hethric, clawmark, sunglyph), in history.txt's people lines and so in the theme's (2026-11-06, the plan for the game between dungeons, its step 8: for its reading and its clues, steps 9 and 10, to find by an era's people).
 
 - **The region:** a land (mountains, hills, forest, marsh, coast, plain), its rock, its water, its climate; its name
   the oldest people's (the Kharum Hills).

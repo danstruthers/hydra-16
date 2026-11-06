@@ -221,6 +221,7 @@ ovl_out:
             SWFN        stress, 3           ; (What a skill's used under, 2026-11-03)
             SWFN        pace_set, 3         ; (The main RAM's room for it)
             SWFN        side, 3
+            SWFN        age_get, 3          ; (Its age, the sheet's: the plan for the game between dungeons, step 8)
 
 ; The dice by who asks (rshouse.h's RS_HOUSE_DICE: ../dq0/dice.inc), overlay 7's, through its stub (OVFN's, by hand)
             .export     _dice_to

@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <dice.h>
 #include <harn.h>
 #include "../dq0/hub.h"
 #include "../dq0/rs.h"
@@ -96,7 +97,7 @@ static void __fastcall__ trade_line (char* l)
             ++l;
         }
         e = l + strcspn (l, ",");
-        n = strcspn (l, "/,");
+        n = strncmp (l, "scripts ", 8) ? strcspn (l, "/,") : 6;    /* ("scripts N": Script, its native's) */
         for (k = 0; k < HARN_NSKILLS; ++k) {
             if (strlen (harn_skills[k].name) == n && same_ci (harn_skills[k].name, l, n)) {
                 if (pc.ml[k]) {
@@ -176,12 +177,87 @@ void o_tool (void)
     }
 }
 
+/* ---- Its tongues and scripts past its own (the plan for the game between dungeons, its step 8: its sheet's "language NAME=ML" and
+** "script NAME=ML" lines, sheet.c's tongue): each practised as a skill is, its number HARN_NSKILLS on (the j-th line's HARN_NSKILLS + j),
+** its development roll the book's (Skills 7: d100 and its skill base over its ML, as harn_develop's), its skill base Language's or
+** Script's; a script wants something to write with, as Script does (Skills 11), a tongue nothing */
+
+static const char* __fastcall__ tongue_word (unsigned char j)
+{
+    return tongue[j] + (tongue[j][0] == 's' ? 7 : 9);
+}
+
+/* The tongue or script a word begins (n letters): its line's number, or 0xFF */
+static unsigned char __fastcall__ tongue_named (const char* l, unsigned char n)
+{
+    unsigned char j;
+    const char* t;
+
+    for (j = 0; j < ntongues; ++j) {
+        t = tongue_word (j);
+        if (strcspn (t, "=") >= n && same_ci (t, l, n)) {
+            return j;
+        }
+    }
+    return 0xFF;
+}
+
+static char word[12];
+
+static const char* __fastcall__ sk_name (unsigned char sk)
+{
+    const char* t;
+    unsigned char k;
+
+    if (sk < HARN_NSKILLS) {
+        return harn_skills[sk].name;
+    }
+    t = tongue_word (sk - HARN_NSKILLS);
+    for (k = 0; t[k] && t[k] != '=' && k < sizeof word - 1; ++k) {
+        word[k] = t[k];
+    }
+    word[k] = 0;
+    return word;
+}
+
+static unsigned char __fastcall__ ml_of (unsigned char sk)
+{
+    const char* t;
+
+    if (sk < HARN_NSKILLS) {
+        return pc.ml[sk];
+    }
+    t = strchr (tongue[sk - HARN_NSKILLS], '=');
+    return t ? atoi (t + 1) : 0;
+}
+
+static void __fastcall__ grow (unsigned char sk)
+{
+    char* t;
+    unsigned char ml, sb;
+
+    if (sk < HARN_NSKILLS) {
+        harn_develop (&pc, sk);
+        return;
+    }
+    t = tongue[sk - HARN_NSKILLS];
+    sb = harn_get_sb (&pc, *t == 's' ? HARN_SCR : HARN_LAN);
+    ml = ml_of (sk);
+    if (ml < 100 + sb && d100 () + sb > ml) {
+        utoa (ml + 1, strchr (t, '=') + 1, 10);
+    }
+}
+
 /* ---- Practice (the book's, Skills 7: 30 points a whole month, ten a roll; no weapon past 70, Skills 18; Script wants writing
 ** things, Skills 11; a weapon wants one of its kind, the house's: lacks, above) */
 
 static unsigned char __fastcall__ can_practise (unsigned char sk)
 {
-    if (sk >= HARN_NSKILLS || !pc.ml[sk] || sk == HARN_INI || sk == HARN_DGE || harn_skills[sk].group == HARN_RELIGION) {
+    if (sk >= HARN_NSKILLS) {                   /* (A tongue or a script past its own, its line's) */
+        sk -= HARN_NSKILLS;
+        return sk < ntongues && strchr (tongue[sk], '=') && !(tongue[sk][0] == 's' && lacks[HARN_SCR]);
+    }
+    if (!pc.ml[sk] || sk == HARN_INI || sk == HARN_DGE || harn_skills[sk].group == HARN_RELIGION) {
         return 0;
     }
     if (sk >= HARN_AXE && sk <= HARN_WHP && pc.ml[sk] >= WEAPON_MAX) {
@@ -248,7 +324,7 @@ static void choose_filled (void)
 /* The three said: each word the skill it begins (the first that fits), open and to be practised; 1 all understood */
 static unsigned char __fastcall__ choose_said (char* l)
 {
-    unsigned char k, n;
+    unsigned char k, n, j;
 
     nchosen = 0;
     while (*l) {
@@ -262,9 +338,15 @@ static unsigned char __fastcall__ choose_said (char* l)
                 break;
             }
         }
-        if (k == HARN_NSKILLS) {
+        j = 0xFF;
+        if (k == HARN_NSKILLS && (j = tongue_named (l, n)) != 0xFF && can_practise (HARN_NSKILLS + j)) {
+            choose (HARN_NSKILLS + j);          /* (A tongue or a script of its own past its native ones) */
+        } else if (k == HARN_NSKILLS) {
             l[n] = 0;
             for (k = 0; k < HARN_NSKILLS && !(lacks[k] && pc.ml[k] && strlen (harn_skills[k].name) >= n && same_ci (harn_skills[k].name, l, n)); ++k) {
+            }
+            if (j != 0xFF && tongue[j][0] == 's' && lacks[HARN_SCR]) {
+                k = 0;                          /* (A script, nothing to write with) */
             }
             say (k < HARN_NSKILLS ? "You have nothing to practise " : "You can't practise ");
             say (l);
@@ -341,7 +423,7 @@ void o_practice (void)
     }
     say ("In the spare hours you could practise ");
     for (k = 0; k < nchosen; ++k) {
-        say (harn_skills[chosen[k]].name);
+        say (sk_name (chosen[k]));
         say (k + 2 < nchosen ? ", " : k + 2 == nchosen ? " and " : ". ");
     }
     say ("Enter takes them, or name your three");
@@ -359,11 +441,11 @@ void o_practice (void)
         say ("Enter takes the ones you've got, or name your three");
     }
     for (k = 0; k < nchosen; ++k) {
-        was_ml[k] = pc.ml[chosen[k]];
+        was_ml[k] = ml_of (chosen[k]);
     }
     for (r = 0; r < 3 * mon; ++r) {             /* (Three rolls a whole month, one after another: Skills 7) */
         if (can_practise (chosen[r % nchosen])) {
-            harn_develop (&pc, chosen[r % nchosen]);
+            grow (chosen[r % nchosen]);
         }
     }
     say ("You practise for ");
@@ -373,12 +455,12 @@ void o_practice (void)
     say (" rolls): ");
     for (k = 0; k < nchosen; ++k) {
         sk = chosen[k];
-        say (harn_skills[sk].name);
+        say (sk_name (sk));
         say (" ");
-        if (pc.ml[sk] > was_ml[k]) {
+        if (ml_of (sk) > was_ml[k]) {
             sayn (was_ml[k]);
             say (" to ");
-            sayn (pc.ml[sk]);
+            sayn (ml_of (sk));
         } else {
             say ("no better");
         }
