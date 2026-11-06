@@ -499,7 +499,11 @@ void __fastcall__ o_walk_ahead (const char* name)
     hub_mem (UI_BANK, b, UIREC->ix, nix * sizeof (struct cix));
     if (op == IO_TAKE) {                        /* (From the other: in it, if it's carried) */
         if ((y = ix_pick (cmd.other.word, cmd.other.sel | cmd.other.n << 4, 0, 0)) == 0xFF) {
-            return;                             /* (One lying about: the world's to say) */
+            for (k = s->nitems, it = s->item; k && (!strstr (it->name, cmd.other.word) || it->x - s->x + 1 > 2 ||
+                it->y - s->y + 1 > 2); --k, ++it) {
+            }
+            sayf (k ? "\nYou reach into the %s." : s->dark ? "\nYou feel for the %s." : "\nYou look for the %s.", cmd.other.word);
+            goto told;                          /* (Not carried: lying in reach, reached into; else looked for) */
         }
         in = y + 1;
     }
