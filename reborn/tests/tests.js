@@ -2082,6 +2082,8 @@ const DQ0_REPEATS = [
   { what: /^You find (?:a trap|a door)[^.]*\.$/, why: 'a room searched whole\'s finds, each told as it\'s found: two plates, two doors' },
   { what: /^You hear /, why: 'a sound heard each time it\'s made (main.c\'s heard: half a minute apart the same way, five seconds any; a search\'s or a wait\'s minute hears several)' },
   { what: /^You go over to the .+\.$/, why: '"take all"\'s things, walked over to each in turn: two heaps of potsherds, each its walk (the soak\'s seed 21)' },
+  { what: /^(?:The [a-z ]+|[A-Z][a-z]+) (?:snores|says something to its fellow|rallies its fellows|raises the alarm)\.$/,
+    why: 'a sound made each time, seen as it\'s made as one heard is told each time ("You hear": main.c\'s heard weighs both, half a minute apart the same way): a sleeper seen snoring twice in a long check (the soak\'s seed 11, 2026-11-06)' },
   { what: /^(?:The wall to your (?:left|right) ends|A wall begins to your (?:left|right)|You feel a door to your (?:left|right)|You feel your way on|The way bends|The way turns (?:left|right))\.$/,
     why: 'a walk by feel, its beats as it goes: a wall can end more than once along a winding way, more than one door felt, each its own (the soak\'s seeds 149, 200, by feel: told three times)' },
   { what: /^(The passage turns (left|right)|The passage bends away [a-z-]+|You go through a doorway|You go on down the passage|The way (rises|falls away))\.$/,
