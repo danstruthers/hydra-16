@@ -73,7 +73,11 @@
 #             the dwarves' are; h hard to pass outside its land; or -)
 #   people   a people of its history (8 at most): its name (15 letters at most), what they are (dwarves, men,
 #             elves, kobolds ...: the game's own), their tongue (namegen's, 1-8), how they build (hewn, dressed,
-#             brick, timber, rough)
+#             brick, timber, rough); and, if it says them, their tongue's word (the referee's, what their folk
+#             speak and a character's "language" lines name: khuzdul, common, sindarin, hethrin, kobold, ostari,
+#             themegen's history.txt's) and their script (what their writings are in, a character's "script" lines:
+#             delvic, ardic, starric, hethric, clawmark, sunglyph), 8 letters at most each (the plan for the game
+#             between dungeons, its step 8: for its reading and its clues)
 #   era       an age of its history, oldest first (6 at most, numbered from 1): its people (a people's name), what
 #             they made (keep, temple, mine, tomb, town, hold), how it ended (abandoned, conquered, collapsed,
 #             flooded, cursed; or held, theirs still), how long ago (centuries), what was left (nothing, stores,
@@ -123,7 +127,7 @@ mint     | Ostmark | Ostmarkan | now | -
 mint     | Belloc | Bellocan | now | h
 mint     | Kharzad | Kharzadan | now | gp
 mint     | the hill-kings | hill-king | 1 | -
-people   | hill-kings | men | 3 | dressed
+people   | hill-kings | men | 3 | dressed | hethrin | hethric
 era      | hill-kings | tomb | abandoned | 9 | the dead | Aldric, last of the kings under the hill, was laid in his
            crypt with his crown and his seal, and the hill was shut after him.
 

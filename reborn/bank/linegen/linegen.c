@@ -296,6 +296,10 @@ static void hist_lines (void)
         valn (r->tongue);
         strcpy (w, D.v[2]);
         val (w);
+        strcpy (w, D.v[5]);                     /* (Its tongue's word and its script: the plan for the game between */
+        val (w);                                /*   dungeons, its step 8) */
+        strcpy (w, D.v[6]);
+        val (w);
         end_line ();
     }
     for (e = 0, r = er; e < ne; ++e, ++r) {

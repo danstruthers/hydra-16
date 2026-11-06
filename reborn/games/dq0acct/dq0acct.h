@@ -36,6 +36,10 @@ extern unsigned work_days;
 extern unsigned long cash;                      /* (The money: farthings) */
 extern char town[16];                           /* (Where it comes out to, its inn) */
 extern const char* inn;
+#define NTONGUES        8                       /* (Its tongues and scripts past its own: the plan for the game between dungeons, step 8) */
+extern char tongue[NTONGUES][24];               /* (Its sheet's "language NAME=ML" and "script NAME[=ML]" lines, as they are: sheet.c's;
+                                                **   practised, skill.c's) */
+extern unsigned char ntongues;
 
 /* Each injury's: the wound it was as the account began, in was (0xFF one come since) */
 struct wwas {

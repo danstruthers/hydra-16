@@ -80,7 +80,7 @@ function checkGoal(g, lines, beasts) {
 function build({ dir, objdir, say = () => {} }) {
   const beasts = dq0.bestiary(path.join(dir, '..', 'dq0'));
   const hist = read(dir, 'history.txt'), goals = read(dir, 'goals.txt');
-  const need = { people: 5, land: 5, work: 3, name: 3, built: 2, reused: 2, noun: 2, ended: 2, clue: 10, rooms: 9,
+  const need = { people: 7, land: 5, work: 3, name: 3, built: 2, reused: 2, noun: 2, ended: 2, clue: 10, rooms: 9,
     uses: 13, light: 2, folk: 2, now: 2, open: 1, ago: 1 };
   for (const l of hist) {
     if (!(l.key in need)) throw new Error(`history.txt: line ${l.n}: no key ${l.key}`);

@@ -24,7 +24,7 @@ mint     | Scarholt | Scarholtan | now | l
 mint     | Brannoch | Brannochan | now | -
 mint     | Ostmark | Ostmarkan | now | h
 mint     | Kharzad | Kharzadan | now | gp
-people   | warren-kin | kobolds | 5 | rough
+people   | warren-kin | kobolds | 5 | rough | kobold | clawmark
 era      | warren-kin | mine | held | 0 | stores | The kobolds came up through the old diggings and took the
            ruin above for their own, and they keep it still.
 
