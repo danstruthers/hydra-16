@@ -11,7 +11,8 @@
 **              life's for it
 **   -l         the game's lib folder: dq0acct's (none, the time between isn't told)
 ** By the record there and its dungeon's game.dat: one ended with the character alive, the next dungeon begun (its time between,
-** dq0acct's); a dungeon past the first with no game (the character died in it before anything was kept: there's no save to go back
+** dq0acct's; before it, a life of a real game's, its seed past the stand-ins', has themegen make the rumours heard in town, the plan's
+** step 7: the one followed, quest.txt, dq0acct's, goes into the new dungeon's folder, for themegen to fill out); a dungeon past the first with no game (the character died in it before anything was kept: there's no save to go back
 ** to but its start), that dungeon begun again, the record as it is; else (none, one of another version, one ended in its death, one
 ** whose life's over) a new life, a life that's over kept in lives.dat first.
 ** Its exit status 0; 2 the character dead between the dungeons (told; the game's not to begin); or 1 (its fault said).
@@ -81,24 +82,24 @@ static unsigned long __fastcall__ seed_of (unsigned long s, unsigned n)
     return s < 65536UL ? x & 0xFFFF : x | 0x10000UL;
 }
 
-/* A theme written by hand left in the save's folder (theme.txt: dq0d's THEME_FILE, the factions' lines) is the new dungeon's:
-** moved into its folder */
-static void theme_in (void)
+/* A theme written by hand left in the save's folder (theme.txt: dq0d's THEME_FILE, the factions' lines) is the new dungeon's, and
+** so is the rumour followed (quest.txt, dq0acct's: a part-written theme, themegen's to fill out): moved into its folder */
+static void __fastcall__ theme_in (const char* name)
 {
     int in, out, n;
 
-    if ((in = open (in_ (top, "theme.txt"), O_RDONLY)) < 0) {
+    if ((in = open (in_ (top, name), O_RDONLY)) < 0) {
         return;
     }
-    if ((out = open (in_ (dir, "theme.txt"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
-        die ("can't write the dungeon's theme.txt");
+    if ((out = open (in_ (dir, name), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
+        die ("can't write the dungeon's theme");
     }
     while ((n = read (in, buf, sizeof buf)) > 0) {
         write (out, buf, n);
     }
     close (out);
     close (in);
-    remove (in_ (top, "theme.txt"));
+    remove (in_ (top, name));
 }
 
 static void __fastcall__ dungeon_dir (unsigned n)
@@ -143,16 +144,24 @@ static void record_write (void)
 }
 
 /* A program in the lib folder run on this folder (the system's SPAWN itself, as hub_run does: hy_spawn's argv wants the heap), waited for:
-** its status, or -1 */
+** its status, or -1.  with_lib: -l lib too; 2, themegen's rumours (-r 3, the seed: the plan's step 7), -o for -d */
 static int __fastcall__ run (const char* lib, const char* name, unsigned char with_lib)
 {
-    static char p[64], a[96];
+    static char p[64], a[128];
     static struct hy_regs r;
     char* q = a;
 
     strcpy (p, lib);
     strcat (p, name);
-    strcpy (q, "-d");
+    if (with_lib == 2) {
+        strcpy (q, "-q");
+        strcpy (q += 3, "-r");
+        strcpy (q += 3, "3");
+        strcpy (q += 2, "-s");
+        ultoa (seed_of (L.h.seed, L.h.dungeon) ^ 0x52554D52UL, q += 3, 10);
+        q += strlen (q) + 1;
+    }
+    strcpy (q, with_lib == 2 ? "-o" : "-d");
     q += 3;
     strcpy (q, top);
     q += strlen (q) + 1;
@@ -178,6 +187,11 @@ static void __fastcall__ between (const char* lib)
 {
     int t, fd;
 
+    remove (in_ (top, "rumours.txt"));          /* (The rumours of the next places: a life of a real game's, its seed past the stand-ins',
+                                                **   themegen's from its seed and the next dungeon's number; heard in town, dq0acct's) */
+    if (L.h.seed >= 65536UL) {
+        run (lib, "/../../themegen", 2);
+    }
     t = run (lib, "/../acct/dq0acct", 1);
     if (t != 0 && t != 2) {
         die ("the time between failed");
@@ -263,6 +277,7 @@ int main (int argc, char* argv[])
             close (fd);
         }
         remove (in_ (top, "kit0.dat"));
+        remove (in_ (top, "quest.txt"));        /* (A rumour followed by the life that's over) */
         if (!given) {
             seed = hy_time () ^ hy_ticks ();
         }
@@ -283,7 +298,8 @@ int main (int argc, char* argv[])
     }
     dungeon_dir (L.h.dungeon);
     mkdir (dir, 0755);
-    theme_in ();
+    theme_in ("theme.txt");
+    theme_in ("quest.txt");
     record_write ();
     return 0;
 }

@@ -311,7 +311,8 @@ function driven(s, turns, verbose, o) {
     if (inPrompt && (typed[typed.length - 1] === 'quit' || /You\s+are\s+dead\.|The\s+game\s+is\s+over/.test(since))) return undefined;   // (Its last prompt: it's on its way out)
     if (!inPrompt) {                            // (The time between's own question, dq0acct's: answered at random)
       tally.between++;
-      const l = /Enter to go on\s*> $/.test(since) ? r.pick(['', '', '', 'x']) : r.pick(['', '', 'swimming', 'sword', 'sword, dodge', 'dodge and climbing and swimming', 'xyzzy', 'the quick brown fox jumps over the lazy dog, twice over, and more']);
+      const l = /Enter to go on\s*> $/.test(since) ? r.pick(['', '', '', 'x']) : /follow[^>]*> $/.test(since) ? r.pick(['', '1', '2', '3', 'x', '9']) :   // (The rumours': which to follow)
+        r.pick(['', '', 'swimming', 'sword', 'sword, dodge', 'dodge and climbing and swimming', 'xyzzy', 'the quick brown fox jumps over the lazy dog, twice over, and more']);
       typed.push(l);
       return l;
     }

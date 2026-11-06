@@ -80,7 +80,9 @@ round, the elves' soft, the hill-men's rough, the kobolds' yapping, the sun-prie
   kinds live in; its lair one of them (the dead's a stratum of the cursed era's, the kobolds' their deepest mine); its
   number its kinds' lairs' groups; the kobolds' leader one of their own.
 - **The goal** (goals.txt): one of the goal kinds, picked first so the history fits it (an evil's needs an era that
-  ended cursed; a prisoner's, kobolds holding mines, in mountains or hills, else an artifact's).  Where its stratum is
+  ended cursed; a prisoner's or a scourge's, kobolds holding mines, in mountains or hills, else an artifact's): one of the
+  four a history picks by itself, or the one a rumour followed gives (a theme's why line; the kinds only heard of, lore and
+  scourge, come that way: the plan's step 7).  Where its stratum is
   is its kind's: built (a stratum an era that's ended built or made its own), cursed (the cursed era's), lair (the
   kobolds' lair), deep (the deepest).  Its era is its stratum's; its guardians the strongest faction there (the dead,
   the kobolds, the beasts, the spiders, the rats; a prisoner's its captors); its things one of each role its kind
@@ -96,9 +98,18 @@ round, the elves' soft, the hill-men's rough, the kobolds' yapping, the sun-prie
 
 goals.txt has a block a kind, its slots filled as the history's made (%A the goal's name, %N the era's great one, %S
 its stratum's name, %g its guardians in words ...): its things (role a, b: a kind's line and a name), a far exit's
-names, its title, its name (called), and the theme lines it adds (its kinds, its pieces with their era and
-guardians, its rules with their words, its story's words, the way out's lock and opened words, its endings).  More
-kinds are more blocks.
+names, its title, its name (called), its reasons (why lines, the plan's step 7), and the theme lines it adds (its kinds,
+its pieces with their era and guardians, its rules with their words, its story's words, the way out's lock and opened
+words, its endings).  More kinds are more blocks; a kind marked heard is made only when a rumour (or a theme's why line)
+asks for it.
+
+**Why the character came** (the plan's step 7): each kind has its reasons, a why line each (two with someone who asks,
+and a stranger's find), one picked by the seed (none of the history's dice: the same seed the same dungeon as before
+them), or the one a rumour followed names.  A reason has the words a rumour has of it (heard between two dungeons: %R the
+region, %Q the one who asks, nothing the dungeon hasn't made yet), why the character came (%Y, in the story where "you
+came down to try" was), and what solving brings: the pennies the one who asked pays (a range, the seed picks: %D), the
+standing it earns, a thing given (a kind of the catalogue's: a ring), and the words that tell it.  The theme says them in
+its why and reward lines, which the account between dungeons reads (dq0acct).
 
 | kind     | mission | where  | its things                     | done by                                                    |
 |----------|---------|--------|--------------------------------|------------------------------------------------------------|
@@ -106,6 +117,8 @@ kinds are more blocks.
 | evil     | rule    | cursed | a relic; the curse's altar or idol; an old scroll | the relic laid on the altar: the curse broken, the game won where it's done |
 | prisoner | escape  | lair   | the shackles' key; the prisoner, chained | the key used on the chains: the prisoner shows a way out |
 | through  | escape  | deep   | an old map                     | a far exit on the deepest stratum, open from the start, the way in fallen in |
+| lore (heard) | escape | built | a writing (a chronicle, a codex, a testament); a torn leaf of a library's list | the writing taken up (its words never needed: a hint at most, Q9) |
+| scourge (heard) | escape | lair | the raiders' chief's standard, skull drum or totem, kept in the kobolds' lair | the thing taken up: the raids end |
 
 The way out's words, shut and open, and the endings' (escaped, ruled, died) are the kind's.  A far exit is a way out
 (O_WAY_OUT) the maker puts on the goal's stratum as its plan's grown, as far from its way in as it finds; the world

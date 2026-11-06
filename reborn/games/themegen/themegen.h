@@ -45,6 +45,16 @@ extern unsigned char gs, ge, gg, gu, geu;       /* Its stratum, its era, its gua
 extern char gA[40], gB[40], gM[12], ga[16], gb[16], title[32], gmission[8];
 extern int ga_line, gb_line, goal_line;         /* (Its things' lines, its goal line, in the data) */
 extern unsigned long seed;                      /* (The seed it's made from) */
+extern char gwhy[12], gQ[16];                   /* Why the character came, given (a theme's why line: a rumour's): its
+                                                **   reason's name and its patron (gQ "" none: goalgen's pick, the seed's) */
+extern int gwl;                                 /* (Its why line in the data, goalgen's pick: -1 none) */
+extern char gD[16];                             /* What the patron pays, in words (%D), */
+extern unsigned gpence;                         /*   its pennies */
+void region_line (void);                        /* The region's line emitted (a theme's, a rumour's) */
+extern const char* gsl[58];                     /* (The goal's slots, goalgen's: linegen's to put back, in sl) */
+extern char gs_s[4], gu_s[4], ge_s[4], geu_s[4], gx_s[4], gg_w[16];     /* (Their numbers' and words' room) */
+extern unsigned char rmode;                     /* Making rumours (themegen -r): a rumour's lines, not a theme's; any goal
+                                                **   kind, the heard ones too (goals.txt's) */
 unsigned char __fastcall__ era_now (unsigned char k);   /* Stratum k's era now (its last layer built or reused's) */
 unsigned char __fastcall__ lives (unsigned char b, unsigned char k);    /* The bestiary's kind b can live in k */
 int __fastcall__ work_of (const char* s);       /* WK_*, or -1 */

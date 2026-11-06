@@ -190,7 +190,9 @@ unsigned char __fastcall__ read_line (struct line* l, char* t)
 
 /* ---- The data file: its index here, its text in banks of the program's own */
 
-#define TGMAX           256
+#ifndef TGMAX
+#define TGMAX           320                     /* (The data's lines at most: themegen.dat's, make.js checks) */
+#endif
 unsigned tg_lines;
 unsigned char tg_key[TGMAX];
 static unsigned tg_off[TGMAX];

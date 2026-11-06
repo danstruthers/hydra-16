@@ -11,10 +11,12 @@
             .forceimport    _name_of, _nbeasts, _ne, _nf, _noun, _ns, _pick, _purpose_of, _purpose_words, _rand32
             .forceimport    _rname, _rock, _seed, _sl, _st, _tg_count, _tg_find, _tg_get, _tg_key, _tg_lines, _title
             .forceimport    _peoples, _pk_era, _pk_lead
+            .forceimport    _gwhy, _gQ, _rmode, _gwl, _gD, _gpence, _region_line, _gsl, _gs_s, _gu_s, _ge_s, _geu_s
+            .forceimport    _gx_s, _gg_w
             .forceimport    _val, _valn, _water, _work_of, _works, _wused, _beasts, _erp, _stp, _fap, _beastp, _Dp
             .forceimport    _strncat, _strncmp, _ultoa, ___bzero, _strlen, _strcpy, _strcat, _strcmp, _strchr, _strstr
             .forceimport    _strncpy, _memcpy, _memset, _atoi, _write
             .forceimport    bnegax, bnegeax, decax2, decsp7, incax4, incax5, incax7, incax8, inceaxy, laddeq1, ldaxidx
             .forceimport    ldeaxi, leaaxsp, regsave, shleax1, shleax4, shreax1, tosadda0, tosdiva0, tosicmp0
             .forceimport    tosmoda0, tosmulax, tosudiva0, tosumoda0, tosumulax, axlong, tosumuleax, shlax1
-            .forceimport    utsteax, incax3, ldeaxidx, pushwidx, shlaxy
+            .forceimport    utsteax, incax3, ldeaxidx, pushwidx, shlaxy, tosumodeax, steax0sp, shreax3, shreax4

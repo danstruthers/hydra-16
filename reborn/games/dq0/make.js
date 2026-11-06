@@ -28,7 +28,7 @@ const USES = ['kitchen', 'pantry', 'barracks', 'armoury', 'chapel', 'bedchamber'
 const DID = ['built', 'ruined', 'reused'];                          // theme.h's TL_*
 const ENDINGS = ['abandoned', 'conquered', 'collapsed', 'flooded', 'cursed', 'held'];   // EN_*
 const WORKS = ['keep', 'temple', 'mine', 'tomb', 'town', 'hold'];   // W_*
-const GOALS = ['none', 'artifact', 'evil', 'prisoner', 'through'];  // G_*
+const GOALS = ['none', 'artifact', 'evil', 'prisoner', 'through', 'lore', 'scourge'];  // G_*
 const AT = { h: 0, u: 1, w: 2, i: 3, f: 4 };                        // hub.h's AT_*
 
 // A theme's file read: its lines, each its key and its values (a line begun with a space goes on with the last: its
@@ -209,6 +209,15 @@ function compile(text, f, beasts, count) {
         break;
       // ---- The history (HISTORY.md): the record keeps what the engine builds by; the rest is the file's to read
       case 'seed': case 'region': break;
+      // ---- Why the character came, and what solving brings (the plan's step 7): the file's to read (dq0acct's), not the record's
+      case 'why':
+        if (GOALS.indexOf(v[0]) < 1 || !v[1]) bad(l, 'why: its goal kind, its reason, its patron');
+        break;
+      case 'reward':
+        if (v.length < 4 || !/^\d+$/.test(v[0]) || +v[0] > 9999 || !/^-?\d$/.test(v[1]) || !v[2] || !v[3]) {
+          bad(l, 'a reward: its pennies (9999 at most), its standing (-9 to 9), a thing (a kind of the catalogue\'s, or -), its words');
+        }
+        break;
       case 'people':
         if (peoples.length >= TPEOPLES || v.length < 4 || !(+v[2] >= 1 && +v[2] <= 8)) bad(l, 'a people: name, what, tongue (1-8), builds');
         peoples.push({ name: v[0], tongue: +v[2] });
@@ -265,7 +274,7 @@ function compile(text, f, beasts, count) {
       }
       case 'goal': {
         const g = GOALS.indexOf(v[0]);
-        if (g < 1 || !v[1] || !(+v[2] >= 0 && +v[2] <= 255)) bad(l, 'a goal: artifact, evil, prisoner or through; its name; its stratum; its guardians');
+        if (g < 1 || !v[1] || !(+v[2] >= 0 && +v[2] <= 255)) bad(l, 'a goal: ' + GOALS.slice(1).join(', ') + '; its name; its stratum; its guardians');
         t.goal = { kind: g, name: v[1], sn: +v[2], guard: v[3] && v[3] !== '-' ? v[3] : null, l };
         break;
       }
@@ -371,4 +380,4 @@ function build({ dir, objdir, say = () => {} }) {
   return { overlays: n, themes: themes.length, words: themes.map(t => t.used) };
 }
 
-module.exports = { build, compile, check, bestiary, THEME_SIZE, HEAD };
+module.exports = { build, compile, check, bestiary, lines, THEME_SIZE, HEAD };

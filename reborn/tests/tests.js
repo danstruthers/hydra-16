@@ -12991,6 +12991,98 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0why', near: ['theme', 'save', 'money'], what: "Dingus Quest Zero's why you came (the plan's step 7: themegen's goals.txt why lines, dq0acct's quest.c; DUNGEON.md's why you came, HOUSE.md's), by scenes: themegen's three rumours (-r) the same for the same seed and another for another, each a place and a reason of a goal kind of its own; at seed 70000 (an artifact) the reason told in the story where \"you came down to try\" was (its patron, the theme's why line), the cup to hand (dq0 -k) and walked out solved; carried on, the patron's reward told as it comes into town (the theme's reward line's words and pennies), its standing in the life's record and told after the account, and the three rumours heard in town, the life's seed's, the first followed (the tests' dq0auto): the next dungeon's region and reason the rumour's (quest.txt in its folder, themegen's part-written theme), its patron in its story; the same life again, the second rumour typed: its region and reason; and the two goal kinds only heard of played through, each by a why line given (dq0 -t), its thing to hand and walked out solved: lore (a codex: carried on, its scholar pays) and a scourge (the kobolds' chief's war standard, in the hills given); and each passing the theme checker at seeds 1-3",
+      init: 't_rc', cycles: 9000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'themegen -q -r 3 -s 12345 -o /ram/q', 'themegen -q -r 3 -s 12345 -o /ram/r', 'cmp /ram/q/rumours.txt /ram/r/rumours.txt', 'echo same $status',
+        'themegen -q -r 3 -s 12346 -o /ram/r', 'cmp /ram/q/rumours.txt /ram/r/rumours.txt', 'echo other $status', 'cat /ram/q/rumours.txt', 'rm -r /ram/q', 'rm -r /ram/r',
+        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/b', 'u', 'echo =NEXT',
+        'dq0 -p t -d /ram/b', 'quit', 'cat /ram/b/d1/theme.txt', 'cat /ram/b/rumours.txt', 'cat /ram/b/d2/quest.txt', 'cat /ram/b/d2/theme.txt', 'xd /ram/b/life.dat', 'rm -r /ram/b',
+        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/e', 'u', 'dq0auto=()', 'echo =SECOND', 'dq0 -p t -d /ram/e', '2', 'quit', 'dq0auto=1',
+        'cat /ram/e/rumours.txt', 'cat /ram/e/d2/quest.txt', 'cat /ram/e/d2/theme.txt', 'rm -r /ram/e',
+        "echo 'why      | lore | scholar | Haldan' > /ram/l.txt",
+        "echo 'why      | scourge | reeve | Osric' > /ram/s.txt", "echo 'region   | the Grey Fells | hills | granite | springs | cold' >> /ram/s.txt",
+        'echo =LORE', 'dq0 -p t -s 70000 -c /ram/c.hm -t /ram/l.txt -k codex -d /ram/l', 'u', 'xd /ram/l/d1/game.dat', 'cat /ram/l/d1/theme.txt', 'dq0 -p t -d /ram/l', 'quit', 'rm -r /ram/l',
+        'echo =SCOURGE', 'dq0 -p t -s 70000 -c /ram/c.hm -t /ram/s.txt -k \'war standard\' -d /ram/s', 'u', 'xd /ram/s/d1/game.dat', 'cat /ram/s/d1/theme.txt', 'rm -r /ram/s',
+        ...[1, 2, 3].flatMap(s => ['themegen -q -s ' + s + ' -t /ram/l.txt -o /ram/x', 'echo lore ' + s + ' st $status', 'grep goal /ram/x/theme.txt',
+          'themegen -q -s ' + s + ' -t /ram/s.txt -o /ram/x', 'echo scourge ' + s + ' st $status', 'grep goal /ram/x/theme.txt']),
+        'echo done']) },
+      expect: ['% echo done'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\r/g, ''), f = [], words = s => s.replace(/\s+/g, ' ').trim();
+        const lines = text => DQ0_MAKE().lines(text, 'theme');                          // (A theme's lines, the format's)
+        const key = (text, k) => lines(text).filter(l => l.key === k);
+        const blocks = text => {                                                        // (Rumours: each a rumour line, then its region and why)
+          const out = [];
+          for (const l of lines(text)) { if (l.key === 'rumour') out.push({ said: l.v[0] }); else if (out.length) out[out.length - 1][l.key] = l.v; }
+          return out;
+        };
+        const between = (a, b) => { const i = o.indexOf(a), j = i < 0 ? -1 : o.indexOf(b, i + a.length); return i < 0 ? '' : o.slice(i, j < 0 ? undefined : j); };
+        // (Rumours by seed)
+        if (!/% echo same \$status\nsame *\n/.test(o)) f.push('the same seed\'s rumours not the same');
+        if (/% echo other \$status\nother *\n/.test(o)) f.push('another seed\'s rumours the same');
+        const R = blocks(saidTheme(out, 'cat /ram/q/rumours.txt'));
+        if (R.length !== 3) f.push(R.length + ' rumours made, not three');
+        if (new Set(R.map(r => r.why && r.why[0])).size !== R.length) f.push('two rumours of one goal kind: ' + R.map(r => r.why && r.why[0]).join(' '));
+        for (const r of R) {
+          if (!r.region || r.region.length !== 5 || !r.why || r.why.length !== 3) f.push('a rumour without its region or why: ' + JSON.stringify(r));
+          if (/%/.test(r.said) || !r.region || !r.said.includes(r.region[0])) f.push('a rumour\'s words without its place, or a slot unfilled: ' + r.said);
+        }
+        // (Seed 70000: the reason told, the reward and the standing, the rumours, the first followed)
+        const t1 = saidTheme(out, 'cat /ram/b/d1/theme.txt'), why1 = key(t1, 'why')[0], rw1 = key(t1, 'reward')[0];
+        if (!why1 || !rw1) return f.concat(['seed 70000\'s theme without its why or reward line']);
+        const story1 = words(between('% dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/b', 'enters the dungeon'));
+        if (!story1.includes(why1.v[2] + ', a collector of old things, has promised good money for the Cup of')) f.push('the reason not told in the story: ' + story1.slice(-300));
+        if (/came down to try|came down to find it/.test(story1)) f.push('"you came down to ..." still told');
+        try { DQ0_MAKE().compile(t1, 'theme.txt', DQ0_BEASTS(), 1); } catch (e) { f.push('its theme.txt isn\'t a theme: ' + e.message); }
+        const acct = words(between('% dq0 -p t -d /ram/b', 'The place\'s history'));
+        if (!acct.includes(words(rw1.v[3]))) f.push('the reward not told: ' + words(rw1.v[3]));
+        if (!acct.includes('pays you ' + rw1.v[0] + ' pennies')) f.push('not paid ' + rw1.v[0] + ' pennies');
+        if (!acct.includes('A few folk in the inns know your name (standing ' + rw1.v[1] + ').')) f.push('the standing not told: ' + acct.slice(0, 600));
+        const life = xdBytes(out, 'xd /ram/b/life.dat');
+        if ((life[20] | life[21] << 8) !== +rw1.v[1]) f.push('the record\'s reputation ' + (life[20] | life[21] << 8) + ', not ' + rw1.v[1]);
+        const B = blocks(saidTheme(out, 'cat /ram/b/rumours.txt'));
+        if (B.length !== 3) f.push(B.length + ' rumours heard, not three');
+        B.forEach((r, i) => { if (!acct.includes((i + 1) + '. ' + words(r.said))) f.push('rumour ' + (i + 1) + ' not told: ' + r.said); });
+        if (!acct.includes('Which will you follow, 1, 2 or 3?')) f.push('not asked which to follow');
+        const follows = (folder, k) => {                                               // (The next dungeon, the k'th rumour's)
+          const q = blocks(saidTheme(out, 'cat ' + folder + '/d2/quest.txt'))[0], t2 = saidTheme(out, 'cat ' + folder + '/d2/theme.txt'), r = B[k];
+          if (!q || !r || q.said !== r.said) return f.push(folder + ': quest.txt not rumour ' + (k + 1) + '\'s');
+          const reg = key(t2, 'region')[0], why = key(t2, 'why')[0];
+          if (!reg || reg.v.join('|') !== r.region.join('|')) f.push(folder + ': the next dungeon\'s region not the rumour\'s: ' + (reg && reg.v.join('|')));
+          if (!why || why.v.join('|') !== r.why.join('|')) f.push(folder + ': the next dungeon\'s why not the rumour\'s: ' + (why && why.v.join('|')));
+          if (!acct2(folder).includes('You set out for ' + r.region[0] + '.')) f.push(folder + ': not told where it sets out for');
+          const s2 = words(between('You set out for ' + r.region[0], 'enters the dungeon'));
+          if (r.why[1] !== 'found' && !s2.includes(r.why[2])) f.push(folder + ': the patron not in the next story: ' + s2.slice(-300));
+        };
+        const acct2 = folder => words(between('% dq0 -p t -d ' + folder, 'The place\'s history'));
+        follows('/ram/b', 0);
+        if (saidTheme(out, 'cat /ram/e/rumours.txt') !== saidTheme(out, 'cat /ram/b/rumours.txt')) f.push('the same life\'s rumours not the same');
+        follows('/ram/e', 1);
+        // (The heard kinds played through: solved, walked out; lore carried on and paid)
+        const solved = cmd => { const b = xdBytes(out, cmd); if (b[20] !== 1 || b[22] !== 1 || !b[23]) f.push(cmd + ': not walked out solved (outcome ' + b[20] + ', done ' + b[22] + ', solved ' + b[23] + ')'); };
+        solved('xd /ram/l/d1/game.dat');
+        solved('xd /ram/s/d1/game.dat');
+        const tl = saidTheme(out, 'cat /ram/l/d1/theme.txt'), ts = saidTheme(out, 'cat /ram/s/d1/theme.txt');
+        if (!key(tl, 'goal')[0] || key(tl, 'goal')[0].v[0] !== 'lore') f.push('-t\'s why lore not a lore goal');
+        if (!key(ts, 'goal')[0] || key(ts, 'goal')[0].v[0] !== 'scourge') f.push('-t\'s why scourge not a scourge goal');
+        const lore = words(between('% echo =LORE', '% echo =SCOURGE')), sc = words(between('% echo =SCOURGE', '% echo done'));
+        if (!/Haldan, a scholar, will pay well for the Codex of/.test(lore)) f.push('lore\'s reason not told');
+        if (!/You lift the Codex of \w+ from where it has lain/.test(lore)) f.push('the codex not told taken up');
+        const rwl = key(tl, 'reward')[0];
+        if (!rwl || !lore.includes(words(rwl.v[3]))) f.push('lore\'s scholar not told paying');
+        if (!/Osric, the reeve of the farms by the Grey Fells, has put a price on the raiders' chief/.test(sc)) f.push('the scourge\'s reason not told');
+        if (!/You take up the Standard of \w+\. Without it the kobolds will scatter/.test(sc)) f.push('the standard not told taken up');
+        for (const k of ['lore', 'scourge']) for (const s of [1, 2, 3]) {
+          if (!new RegExp('% echo ' + k + ' ' + s + ' st \\$status\\n' + k + ' ' + s + ' st *\\n% grep goal /ram/x/theme.txt\\ngoal +\\| ' + k + ' ').test(o)) f.push(k + ' at seed ' + s + ': not made, or the checker refused it');
+        }
+        if (/you (win|lose)|you've (won|lost)/i.test(o)) f.push('words of winning or losing');
+        this.notes = ['rumours: ' + R.map(r => r.why.join('/')).join(', ') + '; 70000\'s: ' + B.map(r => r.why.join('/')).join(', ') + '; paid ' + rw1.v[0] + 'd'];
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0nosave', near: ['save', 'body'], what: "Dingus Quest Zero's words at a death telling the truth about the save (the user's, 2026-11-04: \"Change the words\", no save on arriving; HOUSE.md's death, and the autosave; dq0end's, by what's in the folder), a hunter (hmchar's, seed 5) dying of a grievous bleeding wound with nothing saved: in the first dungeon, nothing to go back to and a new game next (the life told as a life, not so far); in a later dungeon, that dungeon begun again by the same seed, the record not moved on; in hard mode, its own words; none of them saying a save's kept",
       init: 't_rc', cycles: 2600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/q.hm', 'echo \'inj 8 0 3 4 0 1\' >> /ram/c.hm', 'echo \'vol 0 9 0 0 0\' >> /ram/c.hm',

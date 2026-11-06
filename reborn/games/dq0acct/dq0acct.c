@@ -51,7 +51,7 @@ struct sick pd;
 unsigned char afffl, aff_breath;
 unsigned rest_m;
 
-static struct life L;
+struct life L;                                  /* (quest.c's too) */
 static unsigned char kn;
 static unsigned char gone[NOFIT];
 const char* top;
@@ -340,7 +340,7 @@ static void names_read (unsigned n)
 
 /* ---- Money */
 
-static unsigned long cash;                      /* (Farthings) */
+unsigned long cash;                             /* (Farthings: quest.c's too) */
 
 static void cash_count (void)
 {
@@ -459,8 +459,8 @@ static void __fastcall__ coins_say (unsigned char changed)
 static const char* const towns0[] = { "Vel", "Ost", "Har", "Kel", "Dun", "Mar", "Tor", "Wen" };
 static const char* const towns1[] = { "mor", "wick", "ham", "ford", "by", "stead", "mouth", "ley" };
 static const char* const inns[] = { "the Ram", "the Bell", "the Plough", "the Three Keys", "the Black Ox", "the Sheaf", "the Crown", "the Fleece" };
-static const char* inn;
-static char town[16];
+const char* inn;
+char town[16];
 
 /* (The months, the library's harn_month_name's: none of the rest of its names linked) */
 static const char months[12][10] = { "Nuzyael", "Peonu", "Kelen", "Nolus", "Larane", "Agrazhar", "Azura", "Halane", "Savor", "Ilvin", "Navek", "Morgat" };
@@ -523,6 +523,7 @@ static unsigned char b_cat;
 #define OV1(x)  (hy_bank (b_cat + 1), x)
 #define OV2(x)  (hy_bank (b_cat + 2), x)
 #define OV3(x)  (hy_bank (b_cat + 3), x)
+#define OV4(x)  (hy_bank (b_cat + 4), x)
 #define CATS()  hy_bank (b_cat)
 
 static unsigned char a_day (void)
@@ -931,6 +932,8 @@ static void first_lines (void)
     say ("You walk to ");
     say (town);
     say (". ");
+    OV4 (o_reward_say ());                      /* (What it's paid for what it did, the plan's step 7) */
+    CATS ();
     if (pc.state != HARN_DEAD) {
         say (lodge[rate]);
         if (rate > 1) {
@@ -1037,7 +1040,10 @@ static void last_lines (void)
     say_date (d);
     say (", and you are ");
     sayn (LIFE_AGE (&L.h, d, pc.att[HARN_BD]));
-    say (".\n");
+    say (".");
+    OV4 (o_standing ());                        /* (The standing: the life's reputation, the plan's step 7) */
+    CATS ();
+    say ("\n");
 }
 
 static void dead_lines (void)
@@ -1056,6 +1062,21 @@ static void dead_lines (void)
     say (".\n");
     word_out ();
     out_flush ();
+}
+
+/* What solving the dungeon just left brings (quest.c's, its theme's reward line): its pennies into the money, its standing into the
+** life's reputation, a thing given (a kind of the catalogue's, by its name: a ring) put in its pouch, made new */
+static void reward (void)
+{
+    unsigned char k;
+
+    OV4 (o_reward ());                          /* (Its pennies and its standing, there) */
+    CATS ();
+    for (k = 0; *rw_thing && k < KI_COUNT && strcmp (CAT[k].name, rw_thing); ++k) {
+    }
+    if (*rw_thing && k < KI_COUNT) {
+        coin_add (k, 1);
+    }
 }
 
 static unsigned char __fastcall__ lull (void)
@@ -1095,7 +1116,7 @@ int main (int argc, char* argv[])
     regs.r[2] = 8;
     regs.r[3] = 0;
     askit = hy_call (HY_ENV_GET, &regs) != 0;
-    if ((b = hy_banks_alloc (4)) < 0) {
+    if ((b = hy_banks_alloc (5)) < 0) {
         fail ("no banks");
     }
     b_cat = b;
@@ -1109,6 +1130,8 @@ int main (int argc, char* argv[])
     hy_bank (b_cat + 2);
     read (fd, (void*) 0x8000, 0x2000);
     hy_bank (b_cat + 3);
+    read (fd, (void*) 0x8000, 0x2000);
+    hy_bank (b_cat + 4);
     read (fd, (void*) 0x8000, 0x2000);
     close (fd);
     OV2 (o_width ());
@@ -1135,6 +1158,7 @@ int main (int argc, char* argv[])
     kit_read ();
     names_read (n - 1);
     cash_count ();
+    reward ();
     funds = cash + sell_total ();
     /* The wounds first: the bleeding bound, the physician; then the days they take, the road, the lull, all at rest */
     OV1 (o_note ());
@@ -1191,6 +1215,13 @@ int main (int argc, char* argv[])
     OV2 (o_practice ());
     CATS ();
     last_lines ();
+    OV4 (i = o_rumours ());                     /* (Where next: the rumours heard, one followed; asked before anything's
+                                                **   written, so a reset tells the time between again, the same) */
+    CATS ();
+    if (!i) {
+        say ("Enter to go on");
+        ask (ans, sizeof ans);
+    }
     word_out ();
     out_flush ();
     OV3 (o_sheet_write ());
@@ -1199,11 +1230,5 @@ int main (int argc, char* argv[])
     L.h.date += passed;
     L.h.flags &= ~LF_BETWEEN;
     life_write ();
-    {
-        static char a[8];
-
-        say ("Enter to go on");
-        ask (a, sizeof a);
-    }
     return 0;
 }

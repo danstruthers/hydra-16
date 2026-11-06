@@ -266,6 +266,9 @@ static void __fastcall__ tell (unsigned char over, unsigned char hard)
     out (last == 1 ? " dungeon, " : " dungeons, ");
     outn (days);
     out (days == 1 ? " day in them. " : " days in them. ");
+    out ("Standing ");                          /* (The life's reputation: what solving earned, dq0acct's, the plan's step 7) */
+    outn (L.h.reputation < 0 ? 0 : L.h.reputation);
+    out (". ");
     if (over) {
         out (L.h.flags & LF_ABROAD ? "Dead between dungeons, " : "Dead, ");
         out ("on day ");

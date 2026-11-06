@@ -13,7 +13,7 @@ const dq0 = require('../dq0/make.js');
 // themegen.c's TK_*: the keys, numbered (a goal block's theme lines from TK_THEME on, by THEME_KEYS)
 const KEYS = { people: 1, land: 2, work: 3, name: 4, built: 5, reused: 6, noun: 7, ended: 8, clue: 9, rooms: 10,
   uses: 11, light: 12, folk: 13, now: 14, open: 15, ago: 16, goal: 20, thing: 21, exit: 22, title: 23, beast: 40,
-  faction: 41, called: 24 };
+  faction: 41, called: 24, why: 25 };
 const TK_THEME = 30, THEME_KEYS = ['kind', 'piece', 'rule', 'story', 'lock', 'opened', 'ending', 'wayin', 'wayout'];
 const WORKS = ['keep', 'temple', 'mine', 'tomb', 'town', 'hold', 'deep'], ENDS = ['abandoned', 'conquered', 'collapsed',
   'flooded', 'cursed', 'held'];
@@ -39,7 +39,7 @@ function read(dir, f) {
 const SLOTS = { R: 'the Kharum Hills', P: 'the Khazrim', K: 'dwarves', N: 'Durnak', X: 'Orth', O: 'the Aldmar men',
   C: '31', W: 'they delved deep', A: 'the Horn of Durnak', a: 'silver horn', B: 'the altar of Durnak', b: 'black altar',
   M: 'Ilsa', S: 'the Deep Works', s: '2', E: '1', G: 'dead', g: 'the dead', U: 'the Undercroft', u: '1', e: '1',
-  T: 'Orth Gate', O: '1' };
+  T: 'Orth Gate', O: '1', Q: 'Haldan', Y: 'Haldan, a scholar, will pay well for it.', D: '87 pennies' };
 const fill = (s, slots) => s.replace(/%(.)/g, (m, c) => (c in slots ? slots[c] : m));
 
 // A goal block's lines made a theme (its slots filled, a header and strata round them) and compiled: throws if
@@ -59,6 +59,22 @@ function checkGoal(g, lines, beasts) {
   const faults = dq0.check(r.t, beasts, 'goals.txt (' + g.v[0] + ')');
   if (faults.length) throw new Error(faults.join('\n'));
   if (!lines.some(l => l.key === 'title') || !lines.some(l => l.key === 'called')) throw new Error('goals.txt: line ' + g.n + ': no title or no called');
+  if (g.v[3] !== undefined && g.v[3] !== 'heard') throw new Error('goals.txt: line ' + g.n + ': its fourth value heard, or none');
+  // Its reasons (the plan's step 7): each a name, the rumour's words (no slot but %R and %Q: the rest aren't made till the
+  // dungeon is), the why (in the story, %Y: so the story has its %Y), the pennies (a range), the standing, a thing, the words
+  const whys = lines.filter(l => l.key === 'why');
+  if (!whys.length) throw new Error('goals.txt: ' + g.v[0] + ': no why line');
+  if (!lines.some(l => l.key === 'story' && l.v[0].includes('%Y'))) throw new Error('goals.txt: ' + g.v[0] + ': its story has no %Y');
+  for (const w of whys) {
+    const bad = s => { throw new Error('goals.txt: line ' + w.n + ': ' + s); };
+    if (w.v.length !== 7) bad('a why: its name, the rumour, the why, the pennies (lo-hi), the standing, a thing (or -), the words');
+    if (/%[^RQ]/.test(w.v[1])) bad('the rumour\'s slots: %R and %Q alone');
+    const r = /^(\d+)-(\d+)$/.exec(w.v[3]);
+    if (!r || +r[1] > +r[2] || +r[2] > 9999) bad('its pennies: lo-hi, 9999 at most');
+    if (!/^-?\d$/.test(w.v[4])) bad('its standing: -9 to 9');
+    if (whys.filter(x => x.v[0] === w.v[0]).length > 1) bad('its name twice in the kind');
+    if (w.v[0].length > 11 || /\s/.test(w.v[0])) bad('its name: a word, 11 letters at most');
+  }
 }
 
 function build({ dir, objdir, say = () => {} }) {
@@ -90,13 +106,15 @@ function build({ dir, objdir, say = () => {} }) {
   for (const k of lines('kinds.txt')) out.push({ key: 'beast', v: [k[1], k[3], ...k[4].split('-'), ...k[5].split('-'), k[6], k[11]] });
   for (const x of lines('factions.txt')) out.push({ key: 'faction', v: [x[0], x[2], x[3]] });
   // The files: themegen.dat, all of it, and bestiary.dat, the bestiary's lines alone (themec's, for its checker)
-  const n = writeData(out, path.join(objdir, '..', 'themegen.dat'));
-  writeData(out.filter(l => l.key === 'beast' || l.key === 'faction'), path.join(objdir, '..', 'bestiary.dat'));
+  const n = writeData(out, path.join(objdir, '..', 'themegen.dat'), 320);
+  writeData(out.filter(l => l.key === 'beast' || l.key === 'faction'), path.join(objdir, '..', 'bestiary.dat'), 64);
   return { lines: out.length, text: n };
 }
 
-// A data file of lines (themegen.dat's format, above): its index, then its text.  OUT: its text's length
-function writeData(out, file) {
+// A data file of lines (themegen.dat's format, above): its index, then its text, max lines at most (data.c's TGMAX, the program's
+// that reads it: themegen's, themec's).  OUT: its text's length
+function writeData(out, file, max) {
+  if (out.length > max) throw new Error(path.basename(file) + ': ' + out.length + ' lines, more than ' + max + ' (data.c\'s TGMAX)');
   const index = [], text = [];
   let off = 0;
   for (const l of out) {
