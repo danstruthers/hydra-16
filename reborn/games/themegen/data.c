@@ -204,7 +204,7 @@ int __fastcall__ tg_load (const char* path)
 {
     static unsigned char b[255];                /* (A READ costs some 24K cycles from a card, whatever its size:
                                                 **   255 bytes at a time, the index's 85 lines) */
-    unsigned i, j, off, n, k;
+    unsigned i, j, n, k;
     unsigned char was = getbank ();
     int fd = open (path, O_RDONLY), first;
 
@@ -226,14 +226,11 @@ int __fastcall__ tg_load (const char* path)
         return -1;
     }
     tg_bank = first;
-    for (off = 0; (n = read (fd, b, sizeof b)) > 0 && n <= sizeof b; off += n) {
-        for (i = 0; i < n; i += k) {            /* (A read across a bank's edge: in two) */
-            k = 0x2000 - (off + i) % 0x2000;
-            if (k > n - i) {
-                k = n - i;
-            }
-            setbank (tg_bank + (off + i) / 0x2000);
-            memcpy ((char*) 0x8000 + (off + i) % 0x2000, b + i, k);
+    for (k = 0; k < 3; ++k) {                   /* (Its text straight into its banks through the window, a READ a bank, not
+                                                **   one each 255 bytes: some 1.7M cycles of a game's start, 2026-11-06) */
+        setbank (tg_bank + k);
+        if (read (fd, (char*) 0x8000, 0x2000) != 0x2000) {
+            break;
         }
     }
     setbank (was);
