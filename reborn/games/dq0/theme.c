@@ -180,18 +180,10 @@ unsigned char __fastcall__ o_puzzle (struct cmd* c)
 {
     unsigned char v = c->action, t, r;
 
-    if (v == VB_READ_OBJECT) {
-        if (!c->obj.word[0]) {
-            msg (c->obj.kind ? "There's nothing written on it." : "Read what?");
-            return Q_TOLD;
-        }
-        hub_mem (SIGHT_BANK, lb, &SIGHT->dark, 1);   /* (Not t: its statics in this bank, in the window) */
-        if (lb[0]) {
-            msg ("You can't see to read.");     /* (In the dark, or blind: none of it, of anything) */
-            return Q_TOLD;
-        }
-        t = TR_READ;
-    } else if (v == VB_COMBINE_OBJECT) {
+    if (v == VB_READ_OBJECT) {                  /* (A writing read, or copied: read.c's, overlay 20, the plan's step 9) */
+        return read_cmd (c);
+    }
+    if (v == VB_COMBINE_OBJECT) {
         if (!c->obj.word[0] || !c->other.word[0]) {
             msg ("Combine what with what? (combine the one with the other)");
             return Q_TOLD;
@@ -217,10 +209,6 @@ unsigned char __fastcall__ o_puzzle (struct cmd* c)
         walk_op = IO_PUT;                       /* (Its first words before this asking: walk_ahead's, sway.c) */
         walk_ahead (c->obj.word);
     }
-    if (t == TR_READ && c->obj.word[0] && othings (IO_LOOK, c->obj.word, "", LM_COND) == IR_NOT_HERE) {
-        reach_go ();                            /* (Out of reach: walked over to first, then again, as any inspecting) */
-        return Q_TOLD;
-    }
     r = othings (IO_PUZZLE, c->obj.word, c->other.word, t);
     if (lb[0]) {
         msg (lb);                               /* (The things' words: one not to hand, one put) */
@@ -237,7 +225,7 @@ unsigned char __fastcall__ o_puzzle (struct cmd* c)
         if (t == TR_COMBINE) {
             msg ("Those don't go together.");
         } else {
-            sayf (t == TR_READ ? "\nThere's nothing written on the %s." : t == TR_OUT ?
+            sayf (t == TR_OUT ?
                 "\nNothing comes of trying the %s on it." : "\nNothing comes of using the %s on the %s.", c->obj.word,
                 c->other.word);
         }
@@ -267,6 +255,9 @@ void __fastcall__ o_ending (unsigned char how)
         theme_named (TN_END, how);
     }
     blank ();
+    if (how != END_DIED) {
+        clues_kept ();                          /* (Its writings' clues kept for dq0life: read.c's, the plan's step 10) */
+    }
     if (savedir && how != END_DIED) {           /* (What's next: D8's, slice 4.4's; after a death, dq0end's, which reads the folder for it) */
         msg ("Your character carries on: start the game again with this save's folder, and go on into a new dungeon.");
     }

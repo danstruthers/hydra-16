@@ -73,6 +73,7 @@ light       thing=VB_LIGHT_OBJECT unsaid=hand aux=IO_LIGHT
 douse       thing=VB_EXTINGUISH_OBJECT unsaid=hand aux=IO_DOUSE
 hide        thing=VB_HIDE unsaid=none skill=P_CONCEAL
 read        thing=VB_READ_OBJECT unsaid=last
+copy        thing=VB_READ_OBJECT unsaid=last skill=P_DRAW     # (A writing copied onto a sheet: read.c's, the plan's step 9)
 use         thing=VB_USE_OBJECT unsaid=last
 combine     thing=VB_COMBINE_OBJECT unsaid=none
 wait        alone=VB_WAIT thing=VB_WAIT unsaid=none task=LT_WAIT
@@ -366,6 +367,8 @@ rebar = bar
 unbar = unbar
 unbolt = unbar
 read = read
+copy = copy
+transcribe = copy
 use = use
 apply = use
 try = use

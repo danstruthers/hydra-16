@@ -228,6 +228,12 @@ void __fastcall__ ending (unsigned char how);   /* Overlay 15: the game's end (E
 extern volatile unsigned char quit;             /* (main.c's) */
 unsigned char __fastcall__ puzzle (struct cmd* c);      /* Overlay 5: a command the puzzle's (Q_*: the world's
                                                 **   judgement, IO_PUZZLE, worded) */
+unsigned char __fastcall__ read_cmd (struct cmd* c);    /* Part 25: a writing read or copied (Q_*: read.c's, the plan for
+                                                **   the game between dungeons, its step 9) */
+void __fastcall__ clue_make (unsigned char r);  /* Part 26: rule r's clue in the dungeon's clues.dat, made if it isn't */
+void clues_kept (void);                         /* Part 26: the dungeon left alive, its writings' clues kept (its step 10) */
+void more_said (void);                          /* Part 26: a critical success's line more (read.c's) */
+void __fastcall__ swapped (unsigned char r);    /* Part 26: a critical failure's words, rule r's writing's, into lb */
 unsigned char __fastcall__ othings (unsigned char op, const char* name, const char* into, unsigned char to);
                                                 /* (main.c's) The things asked (from an overlay: the names in the
                                                 **   main RAM): the result; the request's x in othings_x,
@@ -372,7 +378,7 @@ extern unsigned long heard_at;                  /* (main.c's: when a sound was l
 
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
-extern unsigned char ovbank[20];
+extern unsigned char ovbank[21];               /* (bank.s's OVMAX: overlay 21 the writings' parts, 2026-11-06) */
 unsigned char early (void);                     /* Part 12: before a command's things are looked for (in shock, refused:
                                                 **   2; first aid's, 1; else 0) */
 void tend (void);                               /* Part 12: first aid (VB_TEND) */

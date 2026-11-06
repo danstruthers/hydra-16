@@ -1494,7 +1494,8 @@ are drafts, the user's as they are for now (2026-10-22).
   passage."  A blind character the same, "You can't see." for "It is dark."
 - **Nothing's read in the dark** *(2026-11-02; as built)*: "You can't see to read.", in the dark or blind,
   a tablet's cut letters too (the user, 2026-11-03: "I wouldn't worry about reading tablets in the dark"), before any walk over.
-  In the light anyone reads anything, no skill tested: *left open for now, the user's, 2026-11-03 (A20)*; clues taken to a library or a scholar, each perhaps in a script of its own, are for the plan for the game between dungeons (Decided, not yet built, below).
+  In the light, only one who knows both the writing's tongue and its script reads it (the user's Q9, 2026-11-04: Reading
+  and clues, below; "You can't see to copy anything." the same).
 - **In the dark** is where the character sees nothing by: its own square unseen (no light of its own, no room's own
   light, no lamp lying near lighting it), or blind (the referee's summary, C_BLINDED: the one place a blindness, however
   it comes, will take it).  (dq0w.c's dark.)
@@ -3798,6 +3799,70 @@ calendar, no town.  (games/dq0town, a program of its own; dq0acct's town.c.)
   skill's its occupation's or one it's used since its last rest: Drawing's (chalk and the writing things), Lockcraft's picks, Mining's
   picks, mattocks, shovels and spades, Masonry's chisels, Herblore's herbs, a bow, a sling, a weapon of its skill's kind.
 
+## Reading and clues *(new, for review: the plan for the game between dungeons, its steps 9 and 10, 2026-11-06; the user's Q9 and Q10)*
+
+A **writing** is a theme's kind of thing with a read rule (the history's clues: a worn plaque, a carved slab, a tally stone, a
+grave slab, a ledger, a rune pillar; a stand-in's tablet, scroll or map scrap), or a thing that carries one out of its
+dungeon: an **old writing** (the writing itself, carried) and a **copy** (a sheet written on).  Every number here is the
+house's unless it's marked the book's.  (games/dq0/read.c, the UI's parts 25 and 26; the referee's P_READ, dq0harn.c's part 4;
+dq0life's clues carried out.)
+
+- **What it's in** *(new, for review)*: its people's tongue and script (each people's line in the theme: the history's
+  peoples', their tongue's word and their script, step 8's), the people of the era its piece lies among; a piece no era
+  says, its history's first people's; a theme with no history, common and ardic.
+- **Its condition** (the book's Written Work Condition, Treasure 8: perfect +10, good +5, fair 0, poor -5, very poor -10,
+  rigged -20 more, by its age): its era's centuries, under 3 modern, under 10 middle, else ancient; carved stone and metal
+  (stone, iron, steel, bronze, silver, gold) a column the younger *(new, for review: the book says only that stone keeps
+  better than vellum)*; the d100 the game's seed's and the writing's own, so it's the same each time.  A rigged one (96-00:
+  misleading) is told by another roll's look, 20 the worse.  Told before it's read, but fair: "The marks are worn.",
+  "The marks are worn almost away.", "The marks are clear.", "The marks are as crisp as the day they were made."
+- **Who reads it** (the book's, Skills 11, and the user's Q9: "Yes, no puzzle needs it"): only in the light ("You can't
+  see to read."), and only one who knows both its tongue and its script, by a test at the average of its masteries of
+  the two, less its penalty, and the condition.  Its own tongue (common) is its Language skill's, another its sheet's
+  "language NAME=ML"; its native script its Script skill's, another its "script NAME=ML".  One with no script at all:
+  "You can't read: the marks on the grave slab mean nothing to you."  Not the script: "The grave slab is written in
+  letters you've never learnt."  The script but not the tongue: "You know the letters on the grave slab, but the words
+  they spell are in a tongue you don't speak."  Ten seconds' looking; a reading a minute.
+- **The four grades' words** (the plan's table, on the book's four):
+  a critical success, its words, the place it names and the reason ("It tells of the Sindsaman Fens, where the
+  Houshani laid others of their dead."), and a line more: what the puzzle wants and where it lies, if the maker's put
+  it down ("Under it, in a smaller hand, a line most would miss: the jade cup is what matters here, and it lies in the
+  Barrows."); a success, its words, the place and the reason; a failure, the first half of its words to a word's end,
+  " ...", and "The rest you can't make out, but it speaks of some place in the hills."; a critical failure, a wrong
+  reading told just as confidently: its words with the theme's own things' names swapped about (in its own dungeon),
+  and another place and reason.
+- **Read once** *(new, for review)*: what was read is kept (the clue's), and a writing read again tells the same,
+  untested; a better reading waits for the scholar and the library (step 12).
+- **No puzzle needs reading** (the user's Q9): a read rule never solves anything (its effect always none), and the theme
+  checker proves each mission's ending by the other rules alone (make.js's, themec's); a writing's a hint.
+- **The place it names** *(new, for review: the one-link clue, the user's Q10)*: one of the realms about (the theme's
+  mints of today, not the region's own), a land (mountains, hills, forest, marsh, coast, plain) and one of its words
+  ("the Sindsaman Fens"), the dice the writing's own; the reason, what its people made there again (its era's work: "laid
+  others of their dead"); a wrong reading's another realm's, another land's and another work's.
+- **Copying** ("copy the plaque", "transcribe the slab"): in the light, a sheet (paper or parchment) and a point
+  (charcoal, a pencil, chalk) or a quill and ink, the map's own things, carried anywhere on it; the sheet becomes the copy
+  (no reading needed: marks copied as they stand), ten minutes; the book's Drawing (its Cartography first, as a map's)
+  sets the copy's condition, the later reading's: a critical success perfect, a success good, a failure poor, a critical
+  failure very poor ("a fair copy, every mark as it stands", "a good copy", "a rough copy, some of its marks guessed at",
+  "a poor copy, much of it botched").  None to copy onto: "You have nothing to copy it onto: a sheet, and
+  charcoal, a pencil, or a quill and ink."
+- **Clues carried out** (the plan's step 10; life.h's struct clue): each writing's clue (its tongue, script, condition,
+  a copy's condition, what's written on, its people, its place and the wrong one, its words, how it's been read) is kept
+  in the dungeon's clues.dat as it's read or copied, and all its writings' as the dungeon's left alive.  At the door
+  (the world's kit) a writing carried becomes an old writing, its clue the rule's (the old theme's other things are
+  left behind, as ever).  As the next dungeon begins (dq0life), the clues read or on a thing carried go to the top of the
+  save's folder (clues.dat, one after another), each thing's clue its number there, and it's told: "You came out knowing
+  what the journal says: it tells of ...", "You came out with a piece of what the journal says: some place in the
+  hills.", "You carry out a copy of the journal, unread."  An old writing or a copy read in a later dungeon is read by
+  its clue (its own condition, a copy's the copy's).  Neither read nor carried, a clue's left behind.  The old writing
+  weighs 2 pounds whatever it was *(new, for review)*, a copy nothing; neither's sold between dungeons (no price).
+- **The rumour it makes** (the one-link clue): the first writing read of a dungeon, a whole reading's before a piece's,
+  becomes a rumour heard (heard.txt at the top: its rumour line and its region's, a part-written theme) for the rumours
+  between dungeons (step 7's) to tell first in a made one's place: "The journal you read tells of the Sindsaman Fens,
+  where the Houshani laid others of their dead."; a piece's "What you made out of the journal speaks of some place in the
+  marshes.", its region still the true one; a wrong reading's the wrong place.  A new life clears the clues and the
+  rumour.
+
 ## Decided, not yet built
 
 What the user has decided and no section's rule holds yet.  Most that's decided and waits is in its own section's *Not
@@ -3813,7 +3878,8 @@ built, then its line here goes:
 
 **The game between dungeons** (the user's, 2026-11-03: A8, A18, A20; the plan's steps 1 to 7 and 11 built: How a dungeon ends, Between dungeons, the town, above; the plan outside the repository): what
 takes a character to a dungeon in the first place, a random time between dungeons, with healing auto-rolled, weapons and gear maintained
-at a cost, food and housing paid for, and skills by the book past 30 days (all built); clues taken to a library or a scholar, languages and scripts known, scribes
+at a cost, food and housing paid for, and skills by the book past 30 days (all built); clues taken to a library or a scholar (step 12: reading itself and the clues carried out are built, Reading
+and clues, above), languages and scripts known, scribes
 and scholars as characters.
 
 - **A theme's own tests name a purpose** (the user's, 2026-10-20), as the rest of the game's do, which each
