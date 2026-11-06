@@ -1136,8 +1136,9 @@ unsigned __fastcall__ s_fall (unsigned feet, unsigned char how)
     r->actor = 0;
     r->other = 0;
     r->a = HC_FALL;
-    r->b = m == MAT_EARTH || m == MAT_SOIL ? GR_FLOOR : m == MAT_STONE ? GR_ROCKY : GR_HARD;
-    r->c = how;
+    r->b = how & HF_DEEP ? GR_DEEP_WATER : how & HF_SHALLOW ? GR_SHALLOW_WATER : m == MAT_EARTH || m == MAT_SOIL ?
+        GR_FLOOR : m == MAT_STONE ? GR_ROCKY : GR_HARD;     /* (Into a well's water, its foot's: wwell.c's) */
+    r->c = how & (HF_CLEAR | HF_HOLDS);
     r->w1 = feet;
     r = hub_ask (SLOT_WORLD);
     out = r->result == 1 ? 0xFFFF : r->w2;
@@ -1153,6 +1154,7 @@ static struct {
     unsigned        need, done;                 /* Feet */
     unsigned        x, y;                       /* The square at its top (up) or its foot (down) */
     unsigned char   sh;                         /* (A shaft's: its link and one, the climb's end another stratum) */
+    unsigned char   wet;                        /* (A well's: the water a fall lands in, HF_DEEP, HF_SHALLOW) */
 } cl;
 unsigned char __fastcall__ climb_on (unsigned w);   /* (Part 97's: a round, or what's asked of a climb's rope, CG_*) */
 #define CG_AID          0x8000
@@ -1456,7 +1458,7 @@ static void climb_round_on (void)
     if (g == G_CF) {                            /* (A fall: from as high as it got, up; to the foot, down) */
         t = cl.up ? cl.done : cl.need - cl.done;
         event (E_CLIMB, 0, K_FELL << 8 | t);
-        if ((t = fall (t, HF_CLEAR | HF_HOLDS)) == 0xFFFF) {
+        if ((t = fall (t, HF_CLEAR | HF_HOLDS | (cl.sh ? cl.wet : 0))) == 0xFFFF) {
             climb_round ();                     /* (Caught on the way down: the climb goes on) */
             return;
         }
@@ -1957,6 +1959,28 @@ static unsigned char __fastcall__ shaft_foot (const struct link* lk)
 /* Thing n, just put down: on a square with a shaft down in it, it falls to the shaft's foot (told; a shaft choked, or
 ** a thing with no room in the store below: it lies where it is); any shaft's, a dug one's too */
 #pragma static-locals (push, off)               /* (A stub called: the part copied back, its statics as they were) */
+
+/* The water at the foot of shaft l of the character's stratum, down it or up it (its foot the stratum below's square, or
+** this one's): a fall's landing, the book's deep water (three feet or more) or shallow (HF_DEEP, HF_SHALLOW), or 0: a
+** well's, 2026-11-06, any shaft's alike */
+static unsigned char __fastcall__ shaft_wet (unsigned char l)
+{
+    const struct link* k = &STRATUM (sn_).link[l];
+    unsigned char b = k->kind == O_SHAFT_DOWN ? k->to : sn_, r;
+    signed char d = 0;
+
+    if (b != 0xFF && stratum_in (b) && at (b, k->x, k->y) && WET_BIT (C, cx_, cy_)) {
+        r = room_of (b, k->x, k->y);
+        r = r == 0xFF ? NROOMS : r;
+        d = C->wlev[r];
+        if (!(C->wruns & 1 << r)) {
+            d -= C->elev[cy_][cx_];
+        }
+    }
+    hub_map (0);
+    return d >= 3 ? HF_DEEP : d > 0 ? HF_SHALLOW : 0;
+}
+
 static void __fastcall__ let_fall (unsigned n)
 {
     struct opening* o;
@@ -2037,6 +2061,7 @@ static unsigned char __fastcall__ shaft_go (unsigned w)
     }
     cl.done = 0;
     cl.sh = (unsigned char) w + 1;
+    cl.wet = shaft_wet ((unsigned char) w);     /* (A fall into the water at its foot, a well's: 2026-11-06) */
     if (a) {
         event (E_BEARING, 0, BRG_SKY | (unsigned) SKP_ROPE << 8);
     }
@@ -2052,6 +2077,7 @@ static unsigned char __fastcall__ shaft_go (unsigned w)
 static unsigned char __fastcall__ shaft_end (unsigned char dir)
 {
     static struct link* lk;
+    static unsigned char* p;
 
     lk = &STRATUM (sn_).link[cl.sh - 1];
     cl.sh = 0;
@@ -2071,6 +2097,25 @@ static unsigned char __fastcall__ shaft_end (unsigned char dir)
     move.y = lk->y;
     move.face = HUB->pc_face;
     move.dir = dir ? dir : lk->kind;
+    if (lk->dug == LD_WELL) {                   /* (A well's: told as its own, E_ARRIVE's O_WELL; down, its mouth lit or
+                                                **   not, its room's light; up, out beside its curb) */
+        move.dir = dir ? O_WELL_FELL : O_WELL;
+        if (!cl.up) {
+            if ((dir = room_of (sn_, mx, my)) != 0xFF && (C->room[dir].flags & R_LIT)) {
+                move.dir |= 0x10;
+            }
+        } else {
+            for (dir = 0; dir < 8; dir += 2) {
+                if ((p = at (lk->to, lk->x + head_x[dir], lk->y + head_y[dir])) != 0 && T_PASS (*p) &&
+                    TILE (*p) != T_UP && TILE (*p) != T_DOWN) {
+                    move.x += head_x[dir];
+                    move.y += head_y[dir];
+                    break;
+                }
+            }
+        }
+        hub_map (0);                            /* (The window as it was: the caller's busy, its header) */
+    }
     return 1;
 }
 
@@ -2092,9 +2137,13 @@ static unsigned char __fastcall__ way_here (unsigned w)
     return 0xFF;
 }
 
-/* (Its stub's, the one: SA_HERE a way on its own square; SA_GO a shaft's going; SA_END a climb's end; else thing w let fall) */
+/* (Its stub's, the one: SA_HERE a way on its own square; SA_GO a shaft's going; SA_END a climb's end; SA_WET the water at
+** a shaft's foot; else thing w let fall) */
 unsigned char __fastcall__ s_sky_ask (unsigned w)
 {
+    if (w & SA_WET) {
+        return shaft_wet ((unsigned char) w);
+    }
     if (w & SA_HERE) {
         return way_here (w);
     }
@@ -2224,14 +2273,14 @@ static unsigned char __fastcall__ link_here (unsigned char d, unsigned long* t)
 void __fastcall__ s_climb (unsigned char d)
 {
     unsigned long t;
-    unsigned char l, face, jump = d & I_JUMP;
+    unsigned char l, face, jump = d & I_JUMP, wl = d & I_WELL, k;
     unsigned feet;
     struct link* lk;
 
     here ();
     face = HUB->pc_face;
     paced ();
-    d &= ~I_JUMP;
+    d &= ~(I_JUMP | I_WELL);
     hub_map (0);
     cl.sh = HUB->rhi = 0;
     if (HUB->ropes) {                           /* (A rope here that goes this way, over a ledge or a pit: that way) */
@@ -2254,6 +2303,23 @@ void __fastcall__ s_climb (unsigned char d)
                                                 **   words say, u) */
     }
     l = link_here (d, &t);
+    if (d == DIR_DOWN && (wl || l == 0xFF || t == 0xFFFFFFFFUL)) {   /* (A well within reach, named or the only way down:
+                                                **   its shaft, part 102's, read in first: 2026-11-06) */
+        look_more (0, LM_ROPES);
+        if ((k = well (WL_DOWN)) < 0xFE) {
+            l = k;
+            t = cut = 0;
+        } else if (k == 0xFE || wl) {
+            if (k == 0xFF) {
+                no_way (N_NO_STAIRS);           /* (A well named, none within reach) */
+                return;
+            }
+            hub_map (0);                        /* (Choked: told) */
+            HUB->pc_ready = HUB->now;
+            HUB->pc_going = IDLE;
+            return;
+        }
+    }
     if (l == 0xFF || t == 0xFFFFFFFFUL) {
         if (!start_ledge (d == DIR_UP, face, jump)) { /* (No way up or down here: a ledge ahead, climbed) */
             hub_map (0);
@@ -2315,8 +2381,8 @@ void __fastcall__ s_climb (unsigned char d)
     }
     if (jump && lk->kind == O_SHAFT_DOWN) {     /* (Jumped down the shaft: a fall to its foot, told as fallen) */
         event (E_CLIMB, 0, K_JUMPED << 8 | (feet > 255 ? 255 : feet));
-        t = stept + fall (feet, HF_CLEAR);
-        move.dir = O_FELL;
+        t = stept + fall (feet, HF_CLEAR | sky_ask (SA_WET | l));   /* (Into the water at its foot, a well's: part 89's) */
+        move.dir = lk->dug == LD_WELL ? O_WELL_FELL : O_FELL;
     }
     hub_map (0);
     busy (t);
@@ -2449,9 +2515,14 @@ void s_arrive_b (void)
         }
         barw_ = 0;
     }
-    event (E_ARRIVE, 0, how | first << 8 | (how == A_UP || how == A_DOWN ? (unsigned) move.dir << 12 : 0) |
-        (how == A_WENT_TO && went_cut ? 0x200 : 0));
+    event (E_ARRIVE, 0, how | first << 8 | (how == A_UP || how == A_DOWN ? (unsigned) move.dir << 12 |
+        (move.dir & 0x10 ? E_MOUTH_LIT : 0) : 0) | (how == A_WENT_TO && went_cut ? 0x200 : 0));
     went_cut = 0;
+    if ((how == A_UP || how == A_DOWN) && at (sn_, mx, my) && WET_BIT (C, cx_, cy_)) {
+        wade (0);                               /* (Come into water by a way between strata, a well's foot: its depth told,
+                                                **   swimming, part 73's) */
+    }
+    hub_map (0);
     if (bn) {
         event (E_BEARING, 0, bn);
     }

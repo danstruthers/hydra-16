@@ -190,7 +190,7 @@ go:
             SWPART      90, 13              ; Hands made free, a tool in hand and back (things.c: 2026-11-03)
             SWPART      91, 30              ; A denizen's weapon let fall, or broken (wlimbs.c: 2026-11-03)
             SWPART      92, 5               ; A request of the things served (things.c: part 10's till 2026-11-03)
-            SWPART      93, 19              ; An arrival (dq0w.c: the main RAM's till 2026-11-03)
+            SWPART      93, 24              ; An arrival (dq0w.c: the main RAM's till 2026-11-03; overlay 19's till 2026-11-06)
             SWPART      94, 14              ; Hiding oneself (dq0w.c: 2026-11-04)
             SWPART      95, 29              ; A drop found, a rope put in place, a grapple thrown up (wrope3.c)
             SWPART      96, 29              ; Rope and grapples: tied off, let down (wrope.c: 2026-11-04)
@@ -199,6 +199,7 @@ go:
             SWPART      99, 27              ; The time believed drifting: an hour's test, a waking (wtime.c: part 76's till 2026-11-04)
             SWPART      100, 9              ; A light renewed (things.c: part 27's till 2026-11-04)
             SWPART      101, 24              ; A thing hidden, the hands swapped (things.c: parts 13's and 48's till 2026-11-04)
+            SWPART      102, 31             ; A well's shaft (wwell.c: 2026-11-06, dq0w.rop's)
 
             SWFN        time_kept, 99
             SWFN        sky_note, 76
@@ -258,6 +259,7 @@ go:
             SWFN        rope, 96            ; (Rope and grapples: wrope.c)
             SWFN        rope2, 98
             SWFN        rope3, 95
+            SWFN        well, 102           ; (A well's shaft: wwell.c)
             SWFN        fall, 2
             SWFN        dark_way, 43
             SWFN        dark_end, 44

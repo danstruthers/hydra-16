@@ -536,7 +536,7 @@ static unsigned char __fastcall__ lair_add (unsigned char n, unsigned char k, un
     L.sn = n;
     L.kind = k;
     L.link = 0xFF;
-    if ((K.flags & K_WAYS) && (u = j + (n == 0)) < s->nlinks && (lq = &s->link[u])->dug != LD_SKY) {   /* (No shaft open to the sky) */
+    if ((K.flags & K_WAYS) && (u = j + (n == 0)) < s->nlinks && !((lq = &s->link[u])->dug & (LD_SKY | LD_WELL) & ~LD_DUG)) {   /* (No shaft open to the sky, nor a well's) */
         L.link = u;
         L.cx = (lq->x - s->x0) / CW;
         L.cy = (lq->y - s->y0) / CW;

@@ -165,7 +165,7 @@ ovl_out:
             SWPART      3, 19               ; The map (look.c; overlay 14's bank till 2026-11-01)
             SWPART      4, 9                ; The pace, the watchfulness, the state, small moves (pace.c)
             SWPART      5, 10               ; The names given (names.c)
-            SWPART      6, 12               ; The names said (names.c)
+            SWPART      6, 20               ; The names said (names.c; overlay 12's till 2026-11-06)
             SWPART      7, 8                ; The game's arguments, its own theme made (main.c)
             SWPART      8, 3                 ; Where in its room the character is, and the things (look.c)
             SWPART      9, 13               ; The player's shortcuts (alias.c)
@@ -183,7 +183,7 @@ ovl_out:
             SWPART      21, 20              ; The record of a life, as a game begins (main.c: 2026-11-04)
             SWPART      22, 20              ;   and its dungeon's folder found
             SWPART      23, 15              ; The limbs' news worded, a hand said (main.c: part 11's till 2026-11-04)
-            SWPART      24, 14              ; The commands seen to less often (main.c: part 2's till 2026-11-04)
+            SWPART      24, 20              ; The commands seen to less often (main.c: part 2's till 2026-11-04; overlay 14's till 2026-11-06)
 
             SWFN        errand, 20
             SWFN        trade, 15

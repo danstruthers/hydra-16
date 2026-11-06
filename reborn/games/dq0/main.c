@@ -1187,6 +1187,12 @@ void __fastcall__ s_came (const struct msg* m)
 
     if (k == O_RAMP_DOWN || k == O_RAMP_UP) {
         msg (k == O_RAMP_DOWN ? "You walk down the long slope." : "You trudge up the long slope.");
+    } else if (k == O_WELL || k == O_WELL_FELL) {  /* (A well's shaft: 2026-11-06, the world's wwell.c) */
+        msg (k == O_WELL_FELL ? "You plunge into the water at the foot of the well." : (m->w1 & 0xFF) == A_DOWN ?
+            "You climb down the well, into the water at its foot." : "You climb up out of the well.");
+        if (m->w1 & E_MOUTH_LIT) {
+            sayf (" Far above, its mouth shows as a small ring of light.");
+        }
     } else {
         tell ((m->w1 & 0xFF) == A_DOWN ? (k == O_LADDER_DOWN ? T_YOU_CLIMB_DOWN :
             k == O_SHAFT_DOWN ? T_YOU_CLIMB_DOWN_2 : k == O_FELL ? T_PICK_YOURSELF_UP : T_YOU_GO_DOWN) :
@@ -2295,6 +2301,9 @@ again:
     case VB_MOVE_TOWARD:
     case VB_ENTER:
     case VB_APPROACH_OBJECT:
+        if ((cmd.dir == GO_DOWN || cmd.action == VB_ENTER) && !strcmp (cmd.obj.word, "well")) {
+            goto climb;                         /* ("Go down the well", "enter the well": climbed down) */
+        }
         d = cmd.obj.kind;
         if ((d == OB_WALL || (d >= OB_ROOM && d != OB_PILLAR)) && place_go (&cmd)) {
             return;                             /* (A place in the room: the centre, a side, a corner: part 7's) */
@@ -2328,6 +2337,11 @@ again:
         }
         return;
     case VB_CLIMB:
+climb:
+        if (!strcmp (cmd.obj.word, "well") || (!cmd.obj.word[0] && strstr (cl, "out"))) {
+            rarer (VB_CLIMB);                   /* (A well's shaft, down it or out of it: part 24's, 2026-11-06) */
+            return;
+        }
         if (cmd.obj.kind == OB_WINDOW || cmd.how == HOW_THROUGH) {
             cmd.obj.kind = OB_WINDOW;           /* (Through a window) */
             pa = PA_THROUGH;
@@ -2419,6 +2433,9 @@ portal:
         }
         return;
     case VB_DROP_OBJECT:
+        if (cmd.other.word[0]) {
+            goto put;                           /* ("Drop the dagger into the well": put in it, 2026-11-06) */
+        }
         if (!cmd.obj.word[0]) {
             tell (T_PUT_DOWN_WHAT);
         } else if (d = HUB->pc_light, (pa = things (IO_DROP | IO_STEPS, cmd.obj.word)) == IR_OK) {
@@ -2459,6 +2476,11 @@ portal:
     case VB_GATHER_OBJECT:
     case VB_THROW_OBJECT:                       /* (Thrown at the thing said, or the target: the world's throw, its
                                                 **   words overlay 11's) */
+        if (!strcmp (cmd.other.word, "well")) {
+put:
+            handle (IO_PUT, cmd.obj.word, cmd.other.word, 0);  /* ("Throw the dagger into the well": let fall in it) */
+            return;
+        }
         d = HUB->pc_light;
         if (missiles () == 2) {                 /* (Thrown at a thing: part 13's) */
             after (d, 20, IO_DROP);             /* (Its time; a light thrown, the world's look in the new light) */
@@ -2524,11 +2546,20 @@ unsigned char __fastcall__ s_rarer (unsigned char action)
         intend (I_DIG, d == GO_DOWN ? DIR_DOWN : d + 8);    /* (A heading, 8 on: the world's, a diagonal too) */
         break;
     case VB_JUMP:
-        if (cmd.dir == GO_DOWN) {
-            intend (I_CLIMB, DIR_DOWN | I_JUMP);    /* (Down a ledge, or a shaft: a fall) */
-        } else {
+        if (cmd.dir != GO_DOWN && strcmp (cmd.obj.word, "well")) {
             tell (T_YOU_JUMP_AND);
+            break;
+        }                                       /* (Down a ledge, or a shaft: a fall; into a well) */
+    case VB_CLIMB:                              /* (A well's shaft, down it, or out of it: part 2's, 2026-11-06) */
+        d = action == VB_JUMP ? DIR_DOWN | I_JUMP : strstr (cl, "out") ? DIR_UP : DIR_DOWN;
+        if (!strcmp (cmd.obj.word, "well") && (d & ~I_JUMP) == DIR_DOWN) {
+            if (things (IO_FIND, "well") == IR_NOT_HERE && reach_go ()) {
+                break;                          /* (Seen out of reach: walked over to it first, then again; else the
+                                                **   world's, one within reach, felt in the dark too) */
+            }
+            d |= I_WELL;
         }
+        intend (I_CLIMB, d);
         break;
     case VB_TELL_OBJECT:                        /* (A denizen swayed, an ally asked, a name given: the denizens' */
     case VB_PERSUADE:                           /*   sway the verb's, SW_*) */

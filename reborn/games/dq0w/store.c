@@ -163,6 +163,15 @@ void __fastcall__ s_change (unsigned char sn, unsigned x, unsigned y, unsigned c
                     t->state = tile;
                 }
             }
+        } else if (link == WELL_WET) {          /* (A well's water on its square, tile its surface: its room's level, or
+                                                **   its passages', if they had none: the maker's too, wwell.c's) */
+            i = room_of (sn, x, y);
+            i = i == 0xFF ? NROOMS : i;
+            C->wet[cy_][cx_ >> 3] |= 1 << (cx_ & 7);
+            if (C->wlev[i] == WL_NONE) {
+                C->wlev[i] = tile;
+            }
+            C->wany = 1;
         } else {                                /* (The square: its kind, its floor, and (a link) its opening) */
             *p = (*p & (T_SEEN | T_DRAWN)) | tile;
             C->elev[cy_][cx_] = elev;

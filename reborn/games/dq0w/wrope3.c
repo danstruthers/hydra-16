@@ -156,6 +156,9 @@ static unsigned char __fastcall__ rp_drop (unsigned char up)
     unsigned char r = rp_scan (up);
     int d;
 
+    if (!r && !up) {
+        r = well (WL_ROPE);                     /* (Down a well within reach: part 102's, 2026-11-06) */
+    }
     if (r == 2) {
         r = up ? R_TSN : R_FSN;
         if (!stratum_in (r)) {

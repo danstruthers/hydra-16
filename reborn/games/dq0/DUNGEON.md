@@ -362,7 +362,9 @@ for anyone who reads it (the lights', the denizens', the senses').
 
 - **Water:** a **well** where the stratum has water (for now from the stratum's seed and the region, till the plan
   has its water): in a domestic suite's kitchen, or a well room of its own in the stores'; a cistern where the
-  cellars want one.  A well is a fixed thing (its stone curb) on its room's floor.
+  cellars want one.  A well is a fixed thing (its stone curb) on its room's floor.  Its shaft a real one (2026-11-06, the user's "a real shaft": HOUSE.md's a well's shaft): down to
+  water at its foot on the stratum below, made as it's first wanted, climbed as any shaft is; one in four a cistern, some
+  with a passage on to the halls below, some coming out in their roof.
 - **Flat and straight:** a built stratum's ground is level (the plan's rock lies flat under it), so its rooms and
   passages are flat, one floor; its zones one plane each, never sloping, all at the room's floor, but a hall's
   **dais** (its last zone two feet up, a step along its front).  Passages run straight between their doors, a

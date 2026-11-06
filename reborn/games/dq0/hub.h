@@ -670,12 +670,17 @@ enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's
 #define FF_STOPPED      0x40                    /*   a strike stopped by armour (rs.h's AF_STOPPED, AF_STOPPED_D), */
 #define FF_FUMBLE       0x80                    /*   a weapon fumbled */
 #define I_JUMP          0x80
+#define I_WELL          0x40                    /* (I_CLIMB's: a well named, down its shaft: wwell.c's, 2026-11-06) */
 #define STEP_KEEP       0x100                   /* (I_STEP's: backing up, a step aside) */
 #define E_OUT           0x4000                  /* (E_HARM's: knocked senseless a while) */
 #define E_CAUGHT        0x8000                  /*   (and a fall stopped, a hold grabbed) */
 #define E_STOPPED       0x8000                  /*   (an HC_STRUCK's: the blows stopped, the striker too hurt) */
 #define O_FELL          15                      /* (E_ARRIVE's link kind: fallen down a shaft, jumped; a kind of its
                                                 **   own since the long slopes, 8 and 9, 2026-11-02) */
+#define O_WELL          12                      /* (And a well's shaft climbed, down or up; fallen or jumped down it into */
+#define O_WELL_FELL     13                      /*   its water: the user's "a real shaft", 2026-11-06; E_ARRIVE's w1 |
+                                                **   E_MOUTH_LIT, down it, its mouth far above in a lit room) */
+#define E_MOUTH_LIT     0x400
 
 enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO, A_RESUMED,
        A_STOPPED, A_STEPPED };                  /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
@@ -1878,6 +1883,9 @@ struct wsave {
 **   own chunk.open maker +world
 **   own chunk.air maker +world                                 (Its bad air: AIR_STATE, store.c's, 2026-10-31)
 **   own chunk.aat maker +world
+**   own chunk.wet maker +world                                 (A well's water at its foot: WELL_WET, store.c's, 2026-11-06)
+**   own chunk.wlev maker +world
+**   own chunk.wany maker +world
 **   own bank(CAT_BANK) world                                   (The catalogue: the world's)
 **   own bank(KIND_BANK) world                                  (Its kinds: the world's, the theme's after them)
 **   own banks(KIND_BANK+1,ITEM_BANKS) world                    (The items' places and states)

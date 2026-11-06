@@ -576,7 +576,13 @@ function phraseSem(spec, env, ctx) {
       if (ctx.engaged.includes(value)) return err('ENGAGED');
       return act('VB_RETRIEVE_OBJECT', { object: value, source });
     }
-    case 'drop': return withObj('VB_DROP_OBJECT');
+    case 'drop': {
+      if (!direct[1]) return withObj('VB_DROP_OBJECT');
+      const a = objOf(0), b = objOf(1);     // ("Drop the dagger into the well": put in it, 2026-11-06)
+      if (a.stop) return a.stop;
+      if (b.stop) return b.stop;
+      return act('VB_DROP_OBJECT', { object: a.value, container: b.value });
+    }
     case 'put': {
       if (kidsOf(spec, 'hand-phrase')[0]) {      // (Into a hand: "put the dagger in my other hand", the UI's a hold)
         const h = objOf(0);
@@ -611,6 +617,7 @@ function phraseSem(spec, env, ctx) {
       const td = kidsOf(spec, 'throw-dir')[0];
       const at = kidsOf(spec, 'at-phrase')[0];
       const tw = kidsOf(spec, 'throwing')[0];   // (What's thrown, and how: "hard the apple", "the apple hard")
+      const into = direct[0];                   // ("Throw the dagger into the well": its target, 2026-11-06)
       const mn = kidsOf(tw, 'manner')[0];
       direct.splice(0, direct.length, ...kidsOf(tw, 'object'));
       const manner = mn ? textOf(mn, env) : undefined;
@@ -620,10 +627,10 @@ function phraseSem(spec, env, ctx) {
         if (o.stop) return o.stop;
         return question('DISTANCE', { object: o.value, direction: dirCode(td, env), manner, instrument });
       }
-      if (at) {
+      if (at || into) {
         const o = objOf(0);
         if (o.stop) return o.stop;
-        const t = objRole(findFirst(at, 'object'), env, ctx);
+        const t = objRole(at ? findFirst(at, 'object') : into, env, ctx);
         if (t.stop) return t.stop;
         return act('VB_THROW_OBJECT', { object: o.value, target: t.value, manner, instrument });
       }
@@ -648,7 +655,7 @@ function phraseSem(spec, env, ctx) {
     case 'gather': return direct[0] ? withObj('VB_GATHER_OBJECT') : act('VB_GATHER_OBJECT', {});   // (Slice 4.7's)
     case 'jump': {
       const d = kidsOf(spec, 'direction')[0];
-      if (d) return act('VB_JUMP', { direction: dirCode(d, env) });
+      if (d) return direct[0] ? withObj('VB_JUMP', { direction: dirCode(d, env) }) : act('VB_JUMP', { direction: dirCode(d, env) });
       if (direct[0]) return withObj('VB_JUMP');
       return act('VB_JUMP', {});
     }

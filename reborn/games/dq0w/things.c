@@ -2019,6 +2019,12 @@ unsigned char s_serve (void)
         pc_cut = 1;
         rs_for (RF_CUT);
         break;
+    case IO_PUT:
+        if (!strcmp (iq.into, "well")) {      /* (Into a well: down its shaft, part 102's, read in first: 2026-11-06) */
+            look_more (0, LM_ROPES);
+            iq.result = well (WL_PUT);
+            break;
+        }
     default:                                    /* (A thing handled: IO_HOLD ...) */
         afar = 0;
         k = iq.kind;

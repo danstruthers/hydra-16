@@ -5156,6 +5156,135 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0well', near: ['body', 'map'], meaning: true, what: 'Dingus Quest Zero\'s well a real shaft (the user\'s, 2026-11-06: "A real shaft", DECISIONS.md\'s climbing down a well; HOUSE.md\'s a well\'s shaft, for review), by the world\'s events, the referee\'s tests, the item store and the chunks below, at seed 3\'s kitchen: its well comes out in the roof of a cave below (its foot a pool two feet down in the cave\'s floor, under water): the dagger put in it (its words, the splash; at its foot on the stratum below), the rope tied to the curb and let down its shaft, climbed down by it (its tests 3 steps the better on its length), the dagger there and taken, climbed out (beside the curb); then the well moved by a poke to a square over the rock below (the stratum grown now), each kind a scene (rc\'s dq0well): a cistern with a way on (the nine squares about its foot under water, out of its depth, a passage up out of it, a rise of two feet a square, to the halls); a sump, down and up unaided (the eight about its foot rock), then jumped into: a fall, told as a plunge into the water; that game played again with its lines typed late, the same at the turns pace (-same)',
+      init: 't_rc', cycles: 12000e6,
+      get machine() {
+        const g2 = "dq0 -p t -s 3 -c /ram/c.hm", c2 = ['go to the well', 'climb down the well', 'climb out', 'climb down the well', 'look', 'climb out', 'jump into the well', 'look', 'quit'];
+        const typed = l => 'ā' + l + '\r';
+        return { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml cli 95 >> /ram/c.hm', 'dq0sky=0',
+          'dq0well=3', "dq0 -p t -s 3 -c /ram/c.hm -k 'rope,dagger'", 'go to the well', 'put the dagger in the well', 'tie the rope to the well', 'climb down the well', 'look',
+          'take the dagger', 'climb out', 'climb down the well', 'look', 'climb out', 'quit', 'dq0well=0', g2, ...c2].map(typed).join('') +
+          typed(g2) + c2.map((l, i) => 'ā' + (i ? 'Ā' : 'ĀĀĀ') + l + '\r').join('') + typed('echo $status') };
+      },
+      expect: ['% echo $status'], sdcard: true,
+      start(m) {
+        const [TILE, ELEV, WET] = require('../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, tile)', 'offsetof (struct chunk, elev)', 'offsetof (struct chunk, wet)']);
+        const sq = (sn, x, y) => {                    // (A square of the cache's: its kind, its floor, its water bit; null not there)
+          const st = stratumRec(m, sn), c = st && liveChunks(m, sn)[((x - st.x0) >> 5) + ',' + ((y - st.y0) >> 5)];
+          if (!c || x - st.x0 >= st.w || y - st.y0 >= st.h) return null;
+          const cx = (x - st.x0) & 31, cy = (y - st.y0) & 31;
+          return { t: c[TILE + cy * 32 + cx] & 15, z: c[ELEV + cy * 32 + cx] << 24 >> 24, wet: (c[WET + cy * 4 + (cx >> 3)] >> (cx & 7)) & 1 };
+        };
+        const foot = name => (h, L) => {             // (At the foot: its squares about it, and each way's line of them)
+          const sn = h[L.pcSn], x = h[L.pcX] | h[L.pcX + 1] << 8, y = h[L.pcY] | h[L.pcY + 1] << 8;
+          const r = { name, sn, x, y, wet: h[L.pcWet], swim: h[L.pcSwim], here: sq(sn, x, y), about: [], ways: [] };
+          for (const [dx, dy] of [[0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1]]) r.about.push(sq(sn, x + dx, y + dy));
+          for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) { const w = []; for (let k = 1; k <= 14; k++) w.push(sq(sn, x + dx * k, y + dy * k)); r.ways.push(w); }
+          (m.feet = m.feet || []).push(r);
+        };
+        const move = g => (h, L) => {                // (The well moved to a square of its chunk over solid rock below, the
+          const per = Math.floor(0x2000 / L.itemSize), cat = m.dq0.bank(L.catBank);   //   character beside it)
+          const w16 = (b, o, v) => { b[o] = v & 255; b[o + 1] = v >> 8 & 255; }, r16 = (b, o) => b[o] | b[o + 1] << 8;
+          let wb = null, wo = 0;
+          for (let i = 0; cat && i < L.nitems && !wb; i++) {
+            const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+            if (!b || !b[o + L.iKind] || b[o + L.iSn] !== 0) continue;
+            let n = '';
+            for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
+            if (n === 'well') { wb = b; wo = o; }
+          }
+          if (!wb) return;
+          const wx = r16(wb, wo + L.iX), wy = r16(wb, wo + L.iY), st = stratumRec(m, 0);
+          for (let d = 2; d < 12; d++) for (let dy = -d; dy <= d; dy++) for (let dx = -d; dx <= d; dx++) {
+            const x = wx + dx, y = wy + dy;
+            if (m.moved && m.moved.g === g || ((x - st.x0) >> 5) !== ((wx - st.x0) >> 5) || ((y - st.y0) >> 5) !== ((wy - st.y0) >> 5)) continue;
+            const a = sq(0, x, y);
+            if (!a || a.t !== 1) continue;
+            let rock = true;
+            for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const b = sq(1, x + i, y + j); if (!b || b.t !== 0) rock = false; }
+            if (!rock) continue;
+            for (const [i, j] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
+              const p = sq(0, x + i, y + j);
+              if (m.moved && m.moved.g === g || !p || p.t !== 1 || p.z !== a.z) continue;
+              w16(wb, wo + L.iX, x);
+              w16(wb, wo + L.iY, y);
+              w16(h, L.pcX, x + i);
+              w16(h, L.pcY, y + j);
+              m.moved = { g, from: [wx, wy], to: [x, y], pc: [x + i, y + j] };
+            }
+          }
+        };
+        dq0Poke(m, [{ g: 1, line: 'look', n: 1, call: foot('pool') }, { g: 1, line: 'climb down the well', n: 2, call: move(1) }, { g: 1, line: 'look', n: 2, call: foot('cistern') },
+          { g: 2, line: 'climb down the well', n: 2, call: move(2) }, { g: 2, line: 'look', n: 1, call: foot('sump') }, { g: 3, line: 'climb down the well', n: 2, call: move(3) }]);
+      },
+      check(m, out) {
+        const T = dq0Turns(m), K = m.dq0.layout().K, f = [], o = dq0Story(out), g = m.dq0.games;
+        const climbs = t => t.replies.filter(r => /^slot/.test(r.req) && r.a === K.P_CLIMB).map(r => r.steps);
+        const arr = (t, how) => T.filter(u => u.k >= t.k).flatMap(u => dq0Ev(u, 'E_ARRIVE', {})).find(e => (e.w1 & 0xFF) === how);
+        const at = (s, nm) => s ? s.items.filter(i => i.name === nm && i.where === 'IW_SQUARE') : [];
+        const feet = n => (m.feet || []).find(r => r.name === n);
+        // Into the cave below: the dagger let fall in, the rope, down by it, the pool
+        const g1 = T.of("dq0 -p t -s 3 -c /ram/c.hm -k 'rope,dagger'"), put = T.of('put the dagger in the well', g1.k);
+        if (!/put the dagger in the well You reach for the dagger\. You let the dagger fall into the well\. A moment, and you hear a splash far below\./.test(o)) f.push('the dagger put in: not its words');
+        const dg = at(put.after, 'dagger');
+        if (dg.length !== 1 || dg[0].sn !== 1) f.push('the dagger not at the foot, on the stratum below: ' + JSON.stringify(dg));
+        if (!/You tie the rope to the well and let it down the shaft/.test(o)) f.push('the rope not tied to the curb, let down its shaft');
+        const tie = T.after(put, 'tie the rope to the well');
+        if (at(tie.after, 'tied rope').length !== 1 || !at(tie.after, 'hanging rope').some(i => i.sn === 1)) f.push('the rope in place not at the curb and the foot below');
+        const dn = T.after(tie, 'climb down the well'), cs = climbs(dn);
+        if (!cs.length || !cs.slice(0, 3).every(s => s === 3)) f.push('the climb down not aided by the rope at first: ' + cs);
+        const a1 = arr(dn, K.A_DOWN);
+        if (!a1 || ![12, 13].includes(a1.w1 >> 12)) f.push('not come down a well\'s shaft (E_ARRIVE O_WELL): ' + JSON.stringify(a1));
+        if (!/You (climb down the well, into the water at its foot|plunge into the water at the foot of the well)\./.test(o)) f.push('no words at the foot');
+        const p = feet('pool');
+        if (!p || p.sn !== 1 || !p.here || p.here.t !== 7 || !p.here.wet || !p.about.some(s => s && (s.t === 1 || s.t === 4) && s.z - p.here.z === 2)) f.push('its foot in the cave not a pool two feet down, under water: ' + JSON.stringify(p && [p.sn, p.here, p.about]));
+        const tk = T.after(dn, 'take the dagger');
+        if (!/take the dagger You reach for the dagger\. Taken\./.test(o)) f.push('the dagger not taken at the foot');
+        const up = T.after(tk, 'climb out'), a2 = arr(up, K.A_UP);
+        if (!a2 || a2.w1 >> 12 !== 12) f.push('not climbed out of the well: ' + JSON.stringify(a2));
+        const top = T.after(up, 'climb down the well');
+        if (!top.at || top.at.pc.sn !== 1) f.push('not down the moved well');
+        if (!/climb out .*You climb up out of the well\. You come into the/.test(o)) f.push('climbing out not told');
+        // The cistern, a way on
+        if (!m.moved) f.push('no square over the rock below for the well');
+        const c = feet('cistern');
+        if (!c) f.push('the cistern\'s foot not seen');
+        else {
+          if (c.sn !== 1 || !c.here || c.here.t !== 7 || !c.here.wet) f.push('the cistern\'s foot not a way up under water on the stratum below: ' + JSON.stringify([c.sn, c.here]));
+          if ((c.wet & 0x7F) < 5 || !c.swim) f.push('not swimming at the foot: ' + JSON.stringify([c.wet, c.swim]));
+          if (!c.about.every(s => s && s.t === 4 && s.wet && s.z === c.here.z)) f.push('the cistern\'s eight not under its water: ' + JSON.stringify(c.about));
+          const way = c.ways.findIndex(w => w[0] && w[0].t === 4 && w[1] && w[1].t === 4);
+          const w = c.ways[way] || [];
+          let k = 1;
+          while (k < w.length && w[k] && w[k].t === 4 && w[k].z - w[k - 1].z <= 2 && w[k].z >= w[k - 1].z) k++;
+          if (way < 0 || k < 3 || !w[k - 1] || w[k - 1].wet || !w[k] || (w[k].t !== 1 && w[k].t !== 4) || Math.abs(w[k].z - w[k - 1].z) > 2) f.push('no way on up out of its water to the halls: ' + JSON.stringify(w.slice(0, k + 1)));
+        }
+        // The sump, no rope: down and up unaided; jumped into
+        const g2 = T.of('dq0 -p t -s 3 -c /ram/c.hm', g1.k + 1), d2 = T.after(T.after(T.after(g2, 'climb down the well'), 'climb out'), 'climb down the well');
+        if (!climbs(d2).length || climbs(d2).some(s => s !== 0)) f.push('the sump\'s climb not unaided: ' + climbs(d2));
+        const s = feet('sump');
+        if (!s || s.sn !== 1 || !s.here || s.here.t !== 7 || !s.here.wet || !s.about.every(q => q && q.t === 0) || (s.wet & 0x7F) < 5) f.push('the sump\'s foot not one square of deep water in the rock: ' + JSON.stringify(s && [s.sn, s.here, s.wet, s.about]));
+        const u2 = T.after(T.after(d2, 'look'), 'climb out');
+        if (!climbs(u2).length || !arr(u2, K.A_UP)) f.push('the sump not climbed out of');
+        const j = T.after(u2, 'jump into the well'), fall = j.replies.filter(r => /^slot/.test(r.req) && r.kind === K.RS_HARM && r.a === K.HC_FALL);
+        if (!fall.length) f.push('the jump not a fall');
+        const a3 = arr(j, K.A_DOWN);
+        if (!a3 || a3.w1 >> 12 !== 13) f.push('the jump not into the well (O_WELL_FELL): ' + JSON.stringify(a3));
+        if (!/jump into the well .*You plunge into the water at the foot of the well\./.test(o)) f.push('the plunge not told');
+        this.notes = [JSON.stringify(m.moved) + ' moved; ' + JSON.stringify(fall.map(r => [r.b, r.c, r.w1])) + ' the fall; the climbs ' + [cs, climbs(d2), climbs(u2)].map(x => x.length).join(', ')];
+        // The turns pace: the sump's game again, typed late, the same
+        if (g.length !== 3) f.push('games played: ' + g.length + ', not 3');
+        else {
+          const ev = k => g[k].events.concat(g[k].dens, g[k].replies).map(e => JSON.stringify(Object.assign({}, e, { line: undefined })));
+          const a = ev(1), b = ev(2);
+          let d = 0;
+          while (d < a.length && d < b.length && a[d] === b[d]) d++;
+          if (d < a.length || d < b.length) f.push('the late game not the same, from its event ' + d + ' (of ' + a.length + ' and ' + b.length + '): ' + (a[d] || 'none') + ' / ' + (b[d] || 'none'));
+        }
+        return f;
+      }
+    },
+    {
       name: 'dq0hunger', asks: true, near: ['time'], what: 'Dingus Quest Zero\'s hunger and thirst (slice 4.9: HOUSE.md\'s water, hunger and thirst, the user\'s of 2026-10-21, DECISIONS.md\'s; the referee\'s, rswant.h), by the words told: at seed 3 in the kitchen, nothing near, its torch put out: "eat the rations" at once refused, not hungry; "wait 9 hours", the want\'s first levels told as they come ("You\'re getting thirsty.", "You\'re getting hungry.") and the status line\'s "thirsty"; over to the kitchen\'s well first ("look into the well"), its torch lit again after the wait, "drink" its fill there; "eat the rations" a meal (a day\'s ration begun, five minutes), again refused; "fill the waterskin" at the well (the old kit\'s, empty); its torch put out, "wait 17 hours", "You\'re very thirsty."; "drink from the waterskin" its pints',
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
