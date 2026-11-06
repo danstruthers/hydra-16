@@ -1555,8 +1555,9 @@ the programs run before the game's tasks: none of the game's main RAM, none of i
 - **Intrigue's one more rumour** is made as it's heard: themegen -r 4 -a KINDS (the rumours made already, their goal kinds a bit each:
   themegen goes on from them, so the fourth is the one -r 4 would have made), appended to rumours.txt; some 13M cycles, its dots shown.
 - **The carry-on's time** (seed 70000's, dq0whytime's scene, Enter on the dq0 line to the first prompt, the tests' dq0auto: no town):
-  385.3M cycles before, 387.8M after (the overlay's file and the name maker).  With the town (the player's): 120M to the town's first
-  question, then each errand 2-4M (the inn's Intrigue's rumour 46M), then 285M from leaving to the game's first prompt.
+  385.3M cycles before, 388.8M after (the overlay's file and the name maker; a stand-in's, seed 3, 265.9M to 267.2M).  With the town
+  (the player's, seed 70000): 120M to the town's first question, each errand 2-4M (the inn's Intrigue's rumour 46M), 287M from
+  leaving to the game's first prompt.  dq0starttime (no folder: none of it run) 217.4M and 293.7M.
 
 ## One path for every actor
 
