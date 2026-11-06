@@ -1219,8 +1219,7 @@ static void __fastcall__ command (char* l)
         go (p);                                 /* (A place named: gone to) */
         return;
     }
-    if (p != here && p != P_INN && !(p == P_MARKET && here == P_SMITH && (!strncmp (l, "buy", 3) || !strncmp (l, "haggle", 6) ||
-        !strncmp (l, "bargain", 7) || !strncmp (l, "how", 3) || !strncmp (l, "price", 5)))) {
+    if (p != here && p != P_INN && !(p == P_MARKET && here == P_SMITH && strncmp (l, "sell", 4) && kind_named (o, "blades") != KI_NONE)) {
         go (p);                                 /* (Its errand's place gone to first, then done there) */
         if ((here == P_LEAVE || here == P_ASKING) && *o) {
             chosen (o);                         /* ("follow the second", "take Arlen's offer") */
@@ -1245,6 +1244,12 @@ static void __fastcall__ command (char* l)
             go (P_INN);
         }
         rest (o);
+    } else if (!strncmp (l, "listen", 6) || !strncmp (l, "hear", 4)) {
+        if (here != P_INN) {
+            go (P_INN);
+        } else {
+            inn_ ();                            /* (What's said, told again) */
+        }
     } else if (p != here) {
         go (p);
     } else {
