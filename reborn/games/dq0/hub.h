@@ -333,6 +333,10 @@ enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, T_COMMA
 #define DG_SPADE        0x04                    /*   a shovel, a spade or a mattock it carries) */
 #define RB_HIDE         1                       /* (I_ROB's x[2]: the takings hidden at its home, */
 #define RB_HOARD        2                       /*   or put in its faction's hoard there) */
+#define RB_PURSE        1                       /* (I_ROB's x[3]: the character at rest robbed unawares, its coins
+                                                **   alone (the book's Legerdemain: a purse cut), the mind's; */
+#define RB_CAUGHT       2                       /*   caught at it (its Awareness the better), nothing taken; */
+#define RB_ASLEEP       4                       /*   the world's, to the UI: E_TASK TE_ROBBED's w1 high byte, asleep) */
 struct msg {
     unsigned char   kind;                       /* I_* or E_* */
     unsigned char   who;                        /* The actor (0: the character) */
