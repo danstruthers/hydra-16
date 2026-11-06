@@ -441,7 +441,10 @@ enum {
                                                 **   stratum: or where it stands), a round's work; E_TASK TE_ROBBED;
                                                 **   x[2] RB_HOARD, w1 w2 its faction's leader's home (its hoard
                                                 **   there, b its kind's faction: the takings in it), RB_HIDE, hidden
-                                                **   at its home (kinds.txt's keeps), 2026-10-27; a FE_ROB.  Or (a,
+                                                **   at its home (kinds.txt's keeps), 2026-10-27; a FE_ROB; x[3]
+                                                **   RB_PURSE, the character at rest robbed unawares, its coins
+                                                **   alone, | RB_CAUGHT, caught at it: nothing, its rest stopped
+                                                **   (2026-11-06; TE_ROBBED's w1 high byte the how).  Or (a,
                                                 **   slice 4.8's) an ally's errand: FE_TAKE, t the thing fetched taken
                                                 **   up where it lies (w1, w2), its own then; FE_GIVE, handed to
                                                 **   the character; FE_GIFT, the character's thing t given it, taken;

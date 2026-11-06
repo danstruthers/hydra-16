@@ -435,8 +435,8 @@ void o_brief (void)
 signed char __fastcall__ o_noticing (const struct req* r)
 {
     return house_notice (r, ps.go, ps.watch) - (pc.state == HARN_SHOCK ? 4 : 0) -
-        (HUB->pc_task.kind == LT_SLEEP ? pc.ml[HARN_AWA] / 10 : 0);    /* (Asleep, at half its Awareness: the book's,
-                                                **   Skills 11, in steps of 5 points; 2026-11-06) */
+        (ps.go == 0xFF ? pc.ml[HARN_AWA] / 10 : 0);    /* (Asleep (the referee's 0xFF), at half its Awareness:
+                                                **   the book's, Skills 11, in steps of 5 points; 2026-11-06) */
 }
 
 /* ---- Fatigue (DUNGEON.md: moving; the book's movement fatigue, Combat 6: a level a day walking, one each five
