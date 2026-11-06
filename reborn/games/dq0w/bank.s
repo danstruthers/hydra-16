@@ -296,7 +296,7 @@ go:
             SWFN        light_now, 92
             SWFN        ix_make, 102        ; (What it carries, the UI's first words', 2026-11-06)
             SWFN        name_apart, 102
-            SWFN        tell_apart, 102          ; (A thing told apart by its state, 2026-11-06)
+            SWFN        tell_apart, 102          ; (A thing told apart by its state, 2026-11-06)
             SWFN        chart_now, 13
             SWFN        at_hand, 4
             SWFN        carried_named, 4

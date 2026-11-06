@@ -1664,7 +1664,9 @@ hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous li
   hand: items.h's IH_*).  A thing taken up goes to the hand that suits it: a weapon or a tool the main hand, a shield
   (its key "shield") or a light the other, a two-handed thing (the things' rule: two-handed, or 20 pints or more) both;
   the other hand if that one's taken or useless; none free, the pack, else refused ("Your hands are full: stow
-  something, or put it down.").  The kit's torch in the off hand.  Said outright: "hold the sword in my left hand",
+  something, or put it down.").  A thing taken off with no hand free (the pack, a cloak, a helm, a belt, a ring) is set down at its
+  feet, as a drop would, and said so: "Your hands are full: you take off the backpack and set it down at your feet." (the user's playtest,
+  2026-11-06: refused before, its hands full; new, for review).  The kit's torch in the off hand.  Said outright: "hold the sword in my left hand",
   "take the torch in my right hand", "put the dagger in my other hand", "hold the spear in both hands" (any thing
   that isn't two-handed may be held in both: the book has no bonus for it, and none's taken), "in my off hand", "in
   my main hand"; a thing held already moved to it ("You shift the sword to your left hand."); a hand that holds

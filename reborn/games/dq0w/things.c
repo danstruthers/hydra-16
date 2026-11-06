@@ -2009,6 +2009,35 @@ void s_ix_make (void)
 #pragma rodata-name (pop)
 #pragma code-name (pop)
 
+/* A thing worn taken off with no hand free and no room in the pack (the doff's SA_HANDS, the catalogue's bank's, its room none):
+** set down at the character's feet, said so, as "drop" would (the user's playtest, 2026-11-06: "take off the backpack" refused
+** with its hands full, "drop backpack" not): the pack, a cloak, a helm, a belt, a ring alike.  Its time the doff's */
+static unsigned char __fastcall__ doff_feet (unsigned n)
+{
+    struct item* p;
+    unsigned x, y;
+    unsigned char sn;
+
+    hub_map (0);
+    sn = HUB->pc_stratum;
+    x = HUB->pc_x;
+    y = HUB->pc_y;
+    p = item_at (n);
+    p->where = IW_SQUARE;
+    p->sn = sn;
+    p->x = x;
+    p->y = y;
+    p->flags &= ~(I_HELD | I_WORN);
+    dropped = n;
+    sky_ask (n);                                /* (On a shaft's head: it falls, part 17's) */
+    text_new ();
+    put ("Your hands are full: you take off the ");
+    put (kind_of (item_kind (n))->name);
+    put (" and set it down at your feet.");
+    took = 50;
+    return IR_OK;
+}
+
 /* The character's light: the brightest lit thing it carries (in a hand, worn, hung from its belt: one stowed is
 ** put out), into the hub, named (its minutes left the lights' burning's: part 27's); and its map making with it; what
 ** it carries, for the UI's first words (ix_make) */
@@ -2193,9 +2222,15 @@ unsigned char s_serve (void)
                 reach_to (cont);                /* (Stowed, put, taken from: one, or as many as it says; what it went
                                                 **   in reached into, once) */
             }
+        } else if (k == IO_DOFF && (n = hand_n ? hand_n : carried_named (iq.name)) != 0 && (item_at (n)->flags & I_WORN) &&
+            !(hand_free (n) & ~HF_FIXT)) {
+            iq.result = doff_feet (n);          /* (Taken off, no hand free: at its feet, not refused, nor the pack off for
+                                                **   it; a place said, "put the cloak in the sack", the put's) */
         } else {
             cat_map ();
-            iq.result = o_handle ();
+            if ((iq.result = o_handle ()) == IR_NO && k == IO_DOFF && last_sa == SA_HANDS && !rs_st) {
+                iq.result = doff_feet (handled);    /* (No hand free, no room in the pack: at its feet, as a drop) */
+            }
         }
         hub_map (0);
         HUB->ireq.x = took;

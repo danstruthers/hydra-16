@@ -7713,6 +7713,32 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0doff', near: ['gear'], what: "Dingus Quest Zero's things taken off with both hands full (the user's playtest, 2026-11-06: \"take off the backpack\" refused with its hands full, \"drop backpack\" not): a sword and the torch in hand, a cloak and an iron helm worn (dq0 -k), each taken off with no hand free and no room in the pack set down at the character's feet, said so; the backpack, worn, the same, its things with it; nothing refused; each first letter within the user's 720,000 cycles",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'sword,cloak,iron helm'",
+        'hold the sword', 'wear the cloak', 'wear the iron helm', 'i', 'take off the cloak', 'take off the iron helm', 'take off the backpack', 'i', 'quit', 'echo $status']) },
+      start(m) { this.timer = dq0Timer(m); },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\s+/g, ' ');
+        inTurn(o, ['> take off the cloak', 'Your hands are full: you take off the cloak and set it down at your feet.',
+          '> take off the iron helm', 'Your hands are full: you take off the iron helm and set it down at your feet.',
+          '> take off the backpack', 'Your hands are full: you take off the backpack and set it down at your feet.'], f, 'the words: ');
+        if (/stow something, or put it down/.test(o.slice(o.indexOf('> take off the cloak')))) f.push('a take off refused, its hands full');
+        const inv = o.slice(o.lastIndexOf('> i '));
+        if (/cloak|helm|backpack/.test(inv.slice(0, inv.indexOf('In all')))) f.push('still carried: ' + inv.slice(0, 300));
+        const lines = ['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k sword,cloak,iron helm',
+          'hold the sword', 'wear the cloak', 'wear the iron helm', 'i', 'take off the cloak', 'take off the iron helm', 'take off the backpack'];
+        this.notes = [];
+        for (const r of this.timer(lines, ['take off the cloak', 'take off the iron helm', 'take off the backpack'].map(l => ({ line: l, want: 'You|Your' })))) {
+          this.notes.push(r.line + ': first letter ' + r.first);
+          if (r.first === null || r.first > 720000) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0stirtyped', near: ['senses', 'denizens'], what: "Dingus Quest Zero's stir as a line's being typed at the turns pace (the life soak's seed 5, 2026-11-04: \"> look at the rat\" answered \"Something stirs.  A giant rat is to your right, 5 feet away, keeping its distance.\" then the look, saying it again: the stir's words after the echo, the told list begun again as the line was taken): its doing changed as the line's first keys come: held for the answer, the look saying it once; a line that doesn't say it (inventory) gets the stir after its answer",
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
