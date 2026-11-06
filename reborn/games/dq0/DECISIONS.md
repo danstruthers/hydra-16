@@ -1846,3 +1846,9 @@ Having read it: "I think capital letters for in-the-environment things (items an
 Then, asked: capitals shown "Look and a list" (in the look's sentences and a list of all in sight); the inventory "A list, one a line", replacing the sentence; a thing seen again "Keep it a while" (its capital kept while it's remembered).
 
 **So:** six steps (the doc's), after the torch fixes merge, since both change how a thing is chosen.
+
+### Stowing asks where (2026-11-06)
+
+The user: "To add to the designator work, when stowing something, it should ask where if there is more than one place it could go (pouch(es) or backpack), of course depending on size.  Stowing a weapon with a sheath should choose the sheath if worn."
+
+Made general in the designators plan (step 7): a holder made for the thing (sheath or scabbard for its blade, quiver for arrows) is chosen first when worn and free; otherwise, if more than one place could hold it by size, the question asks with designators.
