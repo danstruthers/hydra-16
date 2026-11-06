@@ -37,6 +37,7 @@
 #include <harn.h>
 #include "../dq0/hub.h"
 #include "../dq0/rs.h"
+#include "../dq0/life.h"
 #include "dq0harn.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
@@ -56,8 +57,10 @@ char tpart[16];                                 /* (RS_TREAT's part said) */
 
 harn_char pc;                                   /* The character */
 char name[16], calling[20];
-static char tongues[32] = " common";             /* The tongues it speaks, a space before each: its own (the game's
-                                                **   stand-in for every character's), and its file's "language" lines */
+char tongues[TONGUES_N] = " common";            /* The tongues it speaks, a space before each: its own (the game's
+                                                **   stand-in for every character's), and its file's "language" lines;
+                                                **   and the scripts it reads and writes, each a * before it, its file's
+                                                **   "script" lines (dq0harn.h's) */
 
 /* ---- Words into a reply (from the overlay too: s may be in the window, where the hub is, so each character's
 ** taken with s's bank in, and put with the hub's) */
@@ -509,12 +512,12 @@ static void __fastcall__ own_line (char* l)
         body_line (l + 5, 1);                   /* (Its venom, its rest toward its healing rolls: heal.c's) */
     } else if (!strncmp (l, "wealth ", 7)) {
         wealth = atoi (l + 7);                  /* (Its family's, hmchar's: RS_OUTFIT's) */
-    } else if (!strncmp (l, "language ", 9) && strlen (tongues) + strlen (l + 8) < sizeof tongues) {
-        strcat (tongues, l + 8);
     } else if (!strcmp (l, "timesense")) {
         HUB->pcsum.timesense = 1;               /* (Absolute timesense: hmchar's, the house's rare trait, 2026-10-31:
                                                 **   the world's, the hub's tb; the hub in the window as the file's
                                                 **   read, its request's) */
+    } else {
+        body_line (l, 4);                       /* (Its "language" and "script" lines: afflict.c's, into tongues) */
     }
 }
 
@@ -556,8 +559,6 @@ void __fastcall__ s_save_pc (struct req* r)
     static char line[48];
     char b[12];
     unsigned char g = HUB->gait, w = HUB->watch;
-    char* p;
-    char* e;
     int fd;
 
     r->result = 1;
@@ -578,7 +579,8 @@ void __fastcall__ s_save_pc (struct req* r)
     harn_write_line (fd, line);
     body_line (line, 0);                        /* (Its venom, its rest: heal.c's) */
     harn_write_line (fd, line);
-    while (body_line (line, 2), line[0]) {      /* (Its skills' growth: slice 4.4's, 2026-11-03) */
+    while (body_line (line, 2), line[0]) {      /* (Its skills' growth: slice 4.4's, 2026-11-03; then its tongues
+                                                **   and its scripts, "language" and "script" lines: afflict.c's) */
         harn_write_line (fd, line);
     }
     strcpy (line, "dealt ");                    /* (What dealt each injury: its words') */
@@ -587,13 +589,6 @@ void __fastcall__ s_save_pc (struct req* r)
     }
     line[g + 6] = 0;
     harn_write_line (fd, line);
-    for (p = tongues + 7; *p; p = e) {             /* (Its tongues but its own: "language" lines) */
-        e = strchr (p + 1, ' ');
-        e = e ? e : p + strlen (p);
-        strcpy (line, "language");
-        strncat (line, p, e - p);
-        harn_write_line (fd, line);
-    }
     if (HUB->pcsum.timesense) {
         harn_write_line (fd, "timesense");      /* (Its trait, kept: the house's) */
     }
@@ -689,8 +684,38 @@ struct pstate ps;
 
 void __fastcall__ pace_set (unsigned char a);
 void __fastcall__ stress (struct req* r);
+void age_get (void);
 #pragma code-name (push, "SW3CODE")             /* (Part 3's: the main RAM's room, 2026-11-03) */
 #pragma rodata-name (push, "SW3RODATA")
+
+/* Its age, for the sheet (the plan for the game between dungeons, its step 8): by the life's record (life.h's, at the
+** top of the save's folder: the year it was born, the day this dungeon began: its age as the dungeon began, LIFE_AGE's),
+** its birthday its sheet's; 0 without a record (no save's folder, dq0 -d's).  The record read into piece, the creatures'
+** sheets' (s_beasts' alone); the days since its birth year began in 16 bits (no long division's code in the main RAM) */
+unsigned char age;
+
+void s_age_get (void)
+{
+    char* path = (char*) piece + sizeof (struct life_head);
+    const struct life_head* h = (const struct life_head*) piece;
+    unsigned d;
+    int fd;
+
+    age = 0;
+    if (!HUB->savedir[0]) {
+        return;
+    }
+    strcpy (path, HUB->savedir);
+    strcat (path, "/../" LIFE_FILE);
+    if ((fd = open (path, O_RDONLY)) < 0) {
+        return;
+    }
+    if (read (fd, piece, sizeof (struct life_head)) == sizeof (struct life_head) && h->magic == LIFE_MAGIC) {
+        d = (unsigned) (h->date - h->born * 360UL);
+        age = d / 360 - (d % 360 < ((pc.att[HARN_BD] >> 8) - 1) * 30 + (pc.att[HARN_BD] & 0xFF) - 1);
+    }
+    close (fd);
+}
 
 void __fastcall__ s_pace_set (unsigned char a)
 {
@@ -975,6 +1000,7 @@ parted:
             put (news);                         /* (What time did to it: heal.c's, told once) */
             news[0] = 0;
         } else {
+            age_get ();                         /* (Its age: part 3's, the life's record) */
             sheet ();
         }
         break;

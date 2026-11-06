@@ -10,7 +10,15 @@
 /* dq0harn.c (and limbs.c's, overlay 5's: health_of, limbs_of, cond_of, rise_of) */
 extern harn_char pc;                            /* The character */
 extern char name[16], calling[20];
-extern char* tp;                                /* The words into a reply: where the next goes, */
+#define TONGUES_N       56
+extern char tongues[TONGUES_N];                 /* Its tongues and scripts (the plan for the game between dungeons, its
+                                                **   step 8): each a word after a space, a tongue as the denizens name it
+                                                **   ("khuzdul=12"; the first, "common", its own, the Language skill's), a
+                                                **   script a * before it ("*delvic=83"; "*ardic", its native one, the
+                                                **   Script skill's): its file's "language NAME=ML" and "script NAME[=ML]"
+                                                **   lines (hmchar's), written back as they are */
+extern unsigned char age;                       /* Its age in years (0: not known, no life's record: dq0 -d's) */
+extern char* tp;                               /* The words into a reply: where the next goes, */
 extern char* tend;                              /*   and the end */
 void __fastcall__ put (const char* s);          /* (From the overlay too: s may be in the window) */
 void __fastcall__ putn (int v);

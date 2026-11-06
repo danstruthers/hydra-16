@@ -1832,3 +1832,7 @@ Put to the user with the lead's recommendations; the user: "Yes, use your recomm
 - Should every look make only the chunks a line from the eyes reaches (fewer chunks, but lairs placed later, 18 tests to re-baseline)? No, not for now; again only if the pauses of about 2 s a chunk bother the user in play.
 
 **So:** a denizen that wants something of a character at rest comes for it, as a robber comes to rob a sleeper; looks stay as built at 2dc5439d.
+
+## Climbing down a well (2026-11-06)
+
+The user, in play: "What about climbing down a well?"  A well was only its curb (drink, fill, a rope tied, "The well's shaft drops away into the dark."), nothing below.  Asked what a well's shaft should be, the user chose "A real shaft": a narrow shaft down to water, climbed with a rope tied to the curb by the rope and climbing rules, the bottom in the water, some wells with a way on (a cistern, a passage to a lower level).

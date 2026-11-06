@@ -60,6 +60,8 @@ char path[96];
 char calling[20];
 char who[20];
 unsigned char used[HARN_NSKILLS];
+char tongue[NTONGUES][24];
+unsigned char ntongues;
 char ans[64];
 unsigned char askit;                            /* (Waited for: not the tests' dq0auto) */
 

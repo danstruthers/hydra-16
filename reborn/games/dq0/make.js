@@ -211,6 +211,7 @@ function compile(text, f, beasts, count) {
       case 'seed': case 'region': break;
       case 'people':
         if (peoples.length >= TPEOPLES || v.length < 4 || !(+v[2] >= 1 && +v[2] <= 8)) bad(l, 'a people: name, what, tongue (1-8), builds');
+        if (v.slice(4, 6).some(w => !/^[a-z]{1,8}$/.test(w))) bad(l, 'a people\'s tongue and script: a word each, 8 letters at most');
         peoples.push({ name: v[0], tongue: +v[2] });
         break;
       case 'era': {

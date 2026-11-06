@@ -10,7 +10,10 @@
 #
 # The keys:
 #   people   what a people is (its name made by namegen, in its tongue), its tongue (namegen's: 1-6), how it
-#            builds, the lands it lives in, and what it makes (the works below)
+#            builds, the lands it lives in, what it makes (the works below), its tongue's word (the referee's: what
+#            the denizens speak and a character's "language" lines name, 8 letters at most) and its script (the
+#            game's own, G3: what its writings are in, a character's "script" lines, 8 letters at most; the plan
+#            for the game between dungeons, its step 8)
 #   land     a land, the words for a region of it (one picked: a plural, the region's name said as "the Kharum
 #            Hills"), its rocks, its waters, its climates
 #   work     what a people makes: the strata it leaves, from the top down, each a purpose and its styles
@@ -30,12 +33,12 @@
 #   open     the story's first words
 #   ago      how long ago an era ended, in words (%C the centuries)
 
-people   | dwarves | 1 | hewn | mountains hills | hold mine keep tomb
-people   | men | 2 | dressed | hills forest plain coast marsh mountains | keep temple town tomb
-people   | elves | 3 | dressed | forest coast hills | temple hold tomb
-people   | hill-men | 4 | rough | hills plain marsh mountains forest | keep tomb
-people   | kobolds | 5 | rough | mountains hills | mine
-people   | sun-priests | 6 | brick | plain marsh coast hills forest | temple tomb
+people   | dwarves | 1 | hewn | mountains hills | hold mine keep tomb | khuzdul | delvic
+people   | men | 2 | dressed | hills forest plain coast marsh mountains | keep temple town tomb | common | ardic
+people   | elves | 3 | dressed | forest coast hills | temple hold tomb | sindarin | starric
+people   | hill-men | 4 | rough | hills plain marsh mountains forest | keep tomb | hethrin | hethric
+people   | kobolds | 5 | rough | mountains hills | mine | kobold | clawmark
+people   | sun-priests | 6 | brick | plain marsh coast hills forest | temple tomb | ostari | sunglyph
 
 land     | mountains | Peaks Crags Mountains | granite basalt slate | springs river | cold mild
 land     | hills | Hills Downs Fells | limestone sandstone chalk | springs river | mild cold wet

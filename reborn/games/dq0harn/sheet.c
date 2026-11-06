@@ -306,6 +306,39 @@ static const unsigned char shown[] = {
     HARN_MOR
 };
 
+/* Its tongues and scripts, each at its ML (the plan for the game between dungeons, its step 8: tongues, dq0harn.h's):
+** "Tongues: common 62, khuzdul 12. Scripts: ardic 83, delvic 83." (none open, "Scripts: none.") */
+static void tongues_said (void)
+{
+    const char* p;
+    const char* e;
+    char b[12];
+    unsigned char s, n, k;
+
+    put ("Tongues:");
+    for (s = 0; s < 2; ++s) {
+        for (n = 0, p = tongues; *p; p = e) {
+            e = strchr (++p, ' ');
+            e = e ? e : p + strlen (p);
+            if ((*p == '*') == s) {
+                p += s;
+                for (k = 0; p + k < e && p[k] != '=' && k < sizeof b - 1; ++k) {
+                    b[k] = p[k];
+                }
+                b[k] = 0;
+                k = p[k] == '=' ? atoi (p + k + 1) : pc.ml[s ? HARN_SCR : HARN_LAN];
+                if (k) {
+                    put (n++ ? ", " : " ");
+                    put (b);
+                    put (" ");
+                    putn (k);
+                }
+            }
+        }
+        put (s ? n ? ".\n" : " none.\n" : ". Scripts:");
+    }
+}
+
 void o_sheet (void)
 {
     unsigned char k;
@@ -325,7 +358,12 @@ void o_sheet (void)
     put (harn_month_name (pc.att[HARN_BD] >> 8));
     put (" (");
     put (harn_sunsign_name (pc.att[HARN_SS]));
-    put (").\n");
+    put (")");
+    if (age) {                                  /* (Its age: the life's record, part 3's age_get) */
+        put (", aged ");
+        putn (age);
+    }
+    put (".\n");
     for (k = 0; k < sizeof shown; ++k) {
         put (harn_attr_name (shown[k]));
         put (" ");
@@ -357,6 +395,7 @@ void o_sheet (void)
         }
     }
     put (".\n");
+    tongues_said ();
     if (!pc.ninj) {
         put ("No injuries");
     } else {

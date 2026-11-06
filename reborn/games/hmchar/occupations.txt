@@ -16,10 +16,13 @@
 ;
 ; A skill: SKILL/N, opened at SB times N; SKILL alone, at its OML (Script: the native script, 70 + SB); Ritual/N, the
 ; character's deity's ritual skill; weapons N/M, N weapons chosen (Axe ... Blowgun), each at its OML plus M times SB;
-; crafts N/M, N crafts chosen (Agriculture ... Woodcraft), each at SB times M.  An automatic skill listed takes the
-; occupation's OML, not the two added (Character 16); a skill listed twice, the higher.
+; crafts N/M, N crafts chosen (Agriculture ... Woodcraft), each at SB times M; tongues N, N tongues, the native and
+; N - 1 more (the book's 2nd Language: the maker's choice, at its SB once, Skills 11's alien family); scripts N, N
+; scripts, the native (as Script) and N - 1 more (the book's Two Scripts, Three Scripts: rolled from the game's own, each
+; at 70 + SB, Skills 11).  An automatic skill listed takes the occupation's OML, not the two added (Character 16); a
+; skill listed twice, the higher.
 ;
-; Left out: a second language and more scripts (harn.h has one Language and one Script), the specialties (each is its
+; Left out: a cleric's church tongue and script (Character 23), the specialties (each is its
 ; skill: Ratcraft and Dogcraft Animalcraft, Horsecraft too, Needlework Textilecraft, a lance Polearm, a falchion or a
 ; longknife Sword, a hartbow Bow, a roundshield Shield ...), the temple tongues, the military units' option skills; the
 ; mages (Character 25: their skills come with magic, later); a soldier's unit by its culture only (the book's
@@ -39,8 +42,8 @@ Laborer             | 1 | Intrigue/4
 Longshoreman        | 1 | Intrigue/4, Seamanship/3
 Prostitute/Pimp     | 1 | Lovecraft/4, Intrigue/4, Dagger/4
 Ratter              | 3 | Animalcraft/5, Net/3, Club/5, Herblore/2
-Sage/Tutor          | 5 | Folklore/5, Mathematics/2, Script
-Scribe              | 5 | Drawing/3, Mathematics/2, Script
+Sage/Tutor          | 5 | Folklore/5, Mathematics/2, tongues 2, scripts 2
+Scribe              | 5 | Drawing/3, Mathematics/2, tongues 2, scripts 3
 Teamster            | 2 | Riding/4, Animalcraft/3, Whip/3, Woodcraft/3
 Thatcher            | 4 | Climbing/5, Woodcraft/4, Engineering/2
 Toymaker            | 5 | Woodcraft/5, Lockcraft/3, Drawing/3, Hidework/3
@@ -57,13 +60,13 @@ Embalmer            | 7 | Embalming/4, Woodcraft/3, Alchemy/2, Perfumery/2, Scri
 Glassworker         | 7 | Glassworking/4, Ceramics/3, Alchemy/2, Script
 Harper/Skald        | 7 | Singing/5, Folklore/5, Oratory/4, Musician/4, Woodcraft/3, Script
 Hideworker          | 5 | Hidework/5, Textilecraft/3, Alchemy/2
-Innkeeper           | 5 | Brewing/5, Cookery/4, Rhetoric/4, Intrigue/4, Script
+Innkeeper           | 5 | Brewing/5, Cookery/4, Rhetoric/4, Intrigue/4, tongues 2, Script
 Jeweler             | 7 | Jewelcraft/4, Metalcraft/3, Mining/2, Script
-Lexigrapher         | 5 | Hidework/5, Inkcraft/4, Drawing/3, Script
-Litigant            | 7 | Law/4, Oratory/5, Rhetoric/5, Intrigue/5, Script
+Lexigrapher         | 5 | Hidework/5, Inkcraft/4, Drawing/3, scripts 2
+Litigant            | 7 | Law/4, Oratory/5, Rhetoric/5, Intrigue/5, tongues 2, Script
 Locksmith           | 6 | Lockcraft/4, Metalcraft/3, Woodcraft/3, Script
 Mason               | 7 | Masonry/4, Woodcraft/4, Engineering/3, Mathematics/2, Script
-Mercantyler         | 6 | Rhetoric/5, Intrigue/5, Mathematics/3, Law/2, weapons 1/0, Script
+Mercantyler         | 6 | Rhetoric/5, Intrigue/5, Mathematics/3, Law/2, weapons 1/0, tongues 2, Script
 Metalsmith          | 6 | Metalcraft/4, Mining/2, Weaponcraft/2
 Miller/Millwright   | 6 | Milling/4, Engineering/3, Agriculture/3, Script
 Miner               | 6 | Mining/4, Engineering/3, Woodcraft/3, Metalcraft/2, Jewelcraft/1
@@ -83,7 +86,7 @@ Weaponcrafter       | 7 | Weaponcraft/4, weapons 2/0, Metalcraft/3, Fletching/3,
 Woodcrafter         | 7 | Woodcraft/5, Metalcraft/2, Hidework/3
 
 [noble] Noble (Character 15; a knight is a soldier):
-Herald              | 5 | Heraldry/4, Oratory/4, Rhetoric/4, Intrigue/5, Drawing/4, Script, Riding, Polearm, Sword, Axe, Dagger, Shield, Dancing
+Herald              | 5 | Heraldry/4, Oratory/4, Rhetoric/4, Intrigue/5, Drawing/4, tongues 2, Script, Riding, Polearm, Sword, Axe, Dagger, Shield, Dancing
 [noble Female]
 Lady                | 7 | Intrigue/5, Folklore/4, Textilecraft/3, Dancing/3, Heraldry/3, Astrology/2, Drawing/3
 
