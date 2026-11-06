@@ -2185,7 +2185,7 @@ unsigned char s_serve (void)
         break;
     case IO_PUT:
         if (!strcmp (iq.into, "well") || !strcmp (iq.into, "shaft")) {   /* (Into a well, down a shaft or a hole: part
-                                                **   102's, read in first: 2026-11-06) */
+                                                **   104's, read in first: 2026-11-06) */
             look_more (0, LM_ROPES);
             iq.result = well_put ();
             break;
