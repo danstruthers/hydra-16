@@ -1823,3 +1823,12 @@ Put to the user after the life soak's faults, with their answers:
 - A first-dungeon death before any save says "Your last save is kept" and nothing is: save on arriving, or change the words? "Change the words".
 
 **So:** the world's long jobs wait from the first key typed until the first word is out, measured so the world isn't starved; infection left as it is until it's been played; no time goes on repairs out of reach; the words at a death tell the truth about the save, and no save is made on arriving.
+
+## After the long delays (2026-11-06)
+
+Put to the user with the lead's recommendations; the user: "Yes, use your recommendations on the two outstanding questions".
+
+- Robbers hiding 3 squares from a resting character re-hide for hours rather than come and rob it: should they come and rob? Yes.
+- Should every look make only the chunks a line from the eyes reaches (fewer chunks, but lairs placed later, 18 tests to re-baseline)? No, not for now; again only if the pauses of about 2 s a chunk bother the user in play.
+
+**So:** a denizen that wants something of a character at rest comes for it, as a robber comes to rob a sleeper; looks stay as built at 2dc5439d.
