@@ -91,6 +91,10 @@ grab the sword	VB_RETRIEVE_OBJECT	object=sword	near=sword	grab
 pick up the sword	VB_RETRIEVE_OBJECT	object=sword	near=sword	pick up is one token
 get the sword from the chest	VB_RETRIEVE_OBJECT	object=sword;source=chest	near=sword,chest	from a source
 take the lamp off the hook	VB_RETRIEVE_OBJECT	object=lamp;source=hook	near=lamp,hook	from, with 'off'
+take the torch from the floor	VB_RETRIEVE_OBJECT	object=torch;source=floor	near=torch	the floor a source: the UI takes it up (the user's playtest, 2026-11-06)
+take torch from the ground	VB_RETRIEVE_OBJECT	object=torch;source=ground	near=torch	the ground the same
+take the spent torch from the backpack	VB_RETRIEVE_OBJECT	object=torch;source=backpack	near=torch	a state said (spent), from a source
+drop the spent torch	VB_DROP_OBJECT	object=torch	near=torch	a state said: spent (2026-11-06)
 take	VB_RETRIEVE_OBJECT	object=sword	last=sword	bare take, last named (question 8)
 take	ERROR:NOTHING_HERE	-	-	bare take, nothing near (question 8)
 take all	VB_RETRIEVE_OBJECT	object=all-near	near=sword,rat	take all
@@ -387,6 +391,7 @@ refresh the torch	VB_FILL_OBJECT	object=torch	near=torch	refresh is fill
 redip the torch	VB_FILL_OBJECT	object=torch	near=torch	redip is fill
 sharpen the sword	VB_FILL_OBJECT	object=sword	near=sword	sharpen is fill: a whetstone's (2026-11-02)
 read the sign	VB_READ_OBJECT	object=sign	near=sign	read
+copy the sign	VB_READ_OBJECT	object=sign	near=sign	copy
 taste the potion	VB_TASTE_OBJECT	object=potion	near=potion	taste
 touch the wall	VB_TOUCH_OBJECT	object=wall	near=wall	touch
 feel the wall	VB_TOUCH_OBJECT	object=wall	near=wall	feel, a synonym of touch

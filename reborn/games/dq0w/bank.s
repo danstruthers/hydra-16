@@ -190,7 +190,7 @@ go:
             SWPART      90, 13              ; Hands made free, a tool in hand and back (things.c: 2026-11-03)
             SWPART      91, 30              ; A denizen's weapon let fall, or broken (wlimbs.c: 2026-11-03)
             SWPART      92, 5               ; A request of the things served (things.c: part 10's till 2026-11-03)
-            SWPART      93, 24              ; An arrival (dq0w.c: the main RAM's till 2026-11-03; overlay 19's till 2026-11-06)
+            SWPART      93, 15              ; An arrival (dq0w.c: the main RAM's till 2026-11-03; overlay 19's till 2026-11-06)
             SWPART      94, 14              ; Hiding oneself (dq0w.c: 2026-11-04)
             SWPART      95, 29              ; A drop found, a rope put in place, a grapple thrown up (wrope3.c)
             SWPART      96, 29              ; Rope and grapples: tied off, let down (wrope.c: 2026-11-04)
@@ -199,8 +199,9 @@ go:
             SWPART      99, 27              ; The time believed drifting: an hour's test, a waking (wtime.c: part 76's till 2026-11-04)
             SWPART      100, 9              ; A light renewed (things.c: part 27's till 2026-11-04)
             SWPART      101, 24              ; A thing hidden, the hands swapped (things.c: parts 13's and 48's till 2026-11-04)
-            SWPART      102, 31             ; A well's shaft (wwell.c: 2026-11-06, dq0w.rop's)
-            SWPART      103, 31             ; A thing let fall down a well, a shaft (wwell2.c: 2026-11-06)
+            SWPART      102, 24              ; A thing told apart, what it carries for the UI (things.c, 2026-11-06)
+            SWPART      103, 31             ; A well's shaft (wwell.c: 2026-11-06, dq0w.rop's)
+            SWPART      104, 31             ; A thing let fall down a well, a shaft (wwell2.c: 2026-11-06)
 
             SWFN        time_kept, 99
             SWFN        sky_note, 76
@@ -218,6 +219,7 @@ go:
             SWFN        swap, 101
             SWFN        hands_now, 48
             SWFN        hand_free, 48
+            SWFN        doff_feet, 48       ; (A thing taken off, no hand free: at its feet, 2026-11-06)
             SWFN        held_kinds, 48
             SWFN        shand_of, 48
             SWFN        equip_now, 49
@@ -260,8 +262,8 @@ go:
             SWFN        rope, 96            ; (Rope and grapples: wrope.c)
             SWFN        rope2, 98
             SWFN        rope3, 95
-            SWFN        well, 102           ; (A well's shaft: wwell.c)
-            SWFN        well_put, 103       ; (A thing let fall down it: wwell2.c)
+            SWFN        well, 103           ; (A well's shaft: wwell.c)
+            SWFN        well_put, 104       ; (A thing let fall down it: wwell2.c)
             SWFN        fall, 2
             SWFN        dark_way, 43
             SWFN        dark_end, 44
@@ -297,6 +299,9 @@ go:
             SWFN        arrive_b, 93
             SWFN        hid_op, 94
             SWFN        light_now, 92
+            SWFN        ix_make, 102        ; (What it carries, the UI's first words', 2026-11-06)
+            SWFN        name_apart, 102
+            SWFN        tell_apart, 102          ; (A thing told apart by its state, 2026-11-06)
             SWFN        chart_now, 13
             SWFN        at_hand, 4
             SWFN        carried_named, 4

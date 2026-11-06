@@ -78,15 +78,15 @@ void it_near (void);                              /* The chunks round the charac
 unsigned char rope (void);                      /* (Part 96's: wrope.c: IO_HIDE's, IO_ROPE) */
 unsigned char __fastcall__ rope2 (unsigned w);  /* (Part 98's: wrope2.c) */
 unsigned char __fastcall__ rope3 (unsigned w);  /* (Part 95's: wrope3.c) */
-unsigned char __fastcall__ well (unsigned w);   /* (Part 102's: wwell.c, a well's shaft, dq0w.rop's: read in first) */
+unsigned char __fastcall__ well (unsigned w);   /* (Part 103's: wwell.c, a well's shaft, dq0w.rop's: read in first) */
 #define WL_DOWN         0x0000                  /* (The well within reach's shaft, to climb down: its link, 0xFF none, 0xFE
                                                 **   choked, told; */
 #define WL_ROPE         0x2000                  /*   a rope's drop down it, wrope.h's R_*'s: 2, or 0; */
-#define WL_NEAR         0x4000                  /*   part 103's asks: the well within reach, 1 or 0; its shaft, as WL_DOWN's
+#define WL_NEAR         0x4000                  /*   part 104's asks: the well within reach, 1 or 0; its shaft, as WL_DOWN's
                                                 **   but untold; its foot there, the window on it: 1 or 0) */
 #define WL_SHAFT        0x6000
 #define WL_FOOT         0x8000
-unsigned char well_put (void);                  /* (Part 103's: wwell2.c, the thing named let fall into a well, down a shaft;
+unsigned char well_put (void);                  /* (Part 104's: wwell2.c, the thing named let fall into a well, down a shaft;
                                                 **   its words the things', IR_*) */
 #define HF_DEEP         0x40                    /* (A fall's, s_fall's: into deep water, three feet or more, the book's;) */
 #define HF_SHALLOW      0x20                    /*   into shallow water: rs.h's GR_*'s, not the referee's HF_*) */
@@ -163,6 +163,7 @@ void rs_did2 (void);                            /* (Part 75's: a step's end, par
 unsigned char __fastcall__ rs_more (unsigned char w);  /* (Part 90's: 0 hands made free for rs_tool, 1 a step's begun; 1 a
                                                 **   step's end, part 86's rs_did's RS_HAND on) */
 #define RF_TELL         0x8000                  /* (| TE_* | its kind times 256: a word to the UI, E_TASK's, b rs_what) */
+extern unsigned rs_wn;                          /* (The thing a step's about: apart's, its words) */
 extern unsigned rs_tool;                        /* (The tool in use; a fire-maker to hand, part 10's flame's) */
 extern unsigned char rs_free;
 extern unsigned char rs_using;                  /* (A tool's: 1 out; 2 caught, a fire-maker's) */
@@ -182,6 +183,10 @@ void held_kinds (void);
 unsigned char __fastcall__ shand_of (unsigned char s);  /* (The hand that holds the thing that strikes: the hub's
                                                 **   pc_shand) */
 void light_now (void);
+void ix_make (void);                            /* (What it carries, for the UI's first words: part 102's) */
+unsigned char __fastcall__ tell_apart (unsigned n);
+unsigned char __fastcall__ doff_feet (unsigned n);  /* (A thing taken off, no hand free: at its feet, part 48's) */
+void __fastcall__ name_apart (unsigned i, char* d);    /* (Its name told apart, into d: part 102's) */  /* (Its state's word, AW_*, beside another of its kind at hand: part 92's) */
 void __fastcall__ go_to (unsigned x, unsigned y);
 
 /* The things' words (kinds.c's said, in the catalogue's bank: % the thing's name, # the other's) */

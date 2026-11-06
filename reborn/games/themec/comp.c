@@ -15,7 +15,6 @@ unsigned char R[THEME_SIZE];
 static unsigned words;
 static const char* err;
 static unsigned char nstrata, npeoples, dens_set;
-static char sname[TSTRATA][20], sstyle[TSTRATA][3];
 static unsigned char spurp[TSTRATA];
 static char pname[8][16];
 static unsigned char ptongue[8];
@@ -443,8 +442,10 @@ const char* __fastcall__ comp_line (struct line* l)
         if (strlen (v[0]) >= 20) {
             return "a stratum's name too long";
         }
-        strcpy (sname[nstrata], v[0]);
-        strcpy (sstyle[nstrata], v[1]);
+        strcpy (T->stratum[nstrata], v[0]);    /* (Into the record at once, the last again past it at the end: the
+                                                **   main RAM's room, 2026-11-06) */
+        T->style[nstrata][0] = strchr (styles, v[1][0]) - styles;
+        T->style[nstrata][1] = strchr (styles, v[1][strlen (v[1]) - 1]) - styles;
         spurp[nstrata++] = x;
     } else if (!strcmp (k, "rooms")) {
         if (l->n != 8) {
@@ -496,6 +497,10 @@ const char* __fastcall__ comp_line (struct line* l)
             return "a people: name, what, tongue (1-8), builds";
         }
         strcpy (pname[npeoples], v[0]);
+        if (l->n > 5) {                         /* (Its tongue's and its script's words: reading's, step 9's) */
+            put (v[4], T->ptongue[npeoples] - (char*) R, 9);
+            put (v[5], T->pscript[npeoples] - (char*) R, 9);
+        }
         ptongue[npeoples++] = atoi (v[2]);
     } else if (!strcmp (k, "era")) {
         era_line (l);
@@ -534,9 +539,11 @@ const char* comp_end (void)
     }
     for (k = 0; k < TSTRATA; ++k) {
         s = k < nstrata ? k : nstrata - 1;
-        memcpy (T->stratum[k], sname[s], strlen (sname[s]));
-        T->style[k][0] = strchr (styles, sstyle[s][0]) - styles;
-        T->style[k][1] = strchr (styles, sstyle[s][strlen (sstyle[s]) - 1]) - styles;
+        if (k != s) {
+            memcpy (T->stratum[k], T->stratum[s], sizeof T->stratum[k]);
+            T->style[k][0] = T->style[s][0];
+            T->style[k][1] = T->style[s][1];
+        }
         T->purpose[k] = spurp[s];
         for (i = 0, y = T->layer[k]; i < T->nlayers[k]; ++i, ++y) {
             if (y->did != TL_RUINED) {
@@ -653,7 +660,8 @@ unsigned char comp_check (void)
     } while (more);
     for (k = 0, r = T->rule; k < T->nrules; ++k, ++r) {
         if (can (r)) {
-            ends |= 1 << r->effect;
+            ends |= 1 << r->effect;             /* (A read rule's effect always none, rule_line's: the puzzle proved
+                                                **   solvable unread, a writing a hint alone: step 9's, Q9) */
         } else {
             fault (T->kind[r->a].name, "its rule can't be done: its things aren't to be had");
         }

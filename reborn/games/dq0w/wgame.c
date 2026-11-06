@@ -27,12 +27,15 @@ extern unsigned char pmode;                     /* (dq0w.c's: the legs' way said
 extern unsigned char go_near;                   /* (dq0w.c's: a walk's end as near as it gets, or beside it, 2) */
 extern unsigned char nobear;                    /* (dq0w.c's: dq0 -N, the tests', its bearings never tested) */
 #include "work.h"
+#include "../dq0/life.h"                        /* (The clues' CLUE_*: the plan's steps 9, 10) */
+extern unsigned handled;                        /* (things.c's: the thing a request handled last) */
 
 #pragma local-strings (on)
 
 unsigned take_n;                                /* (things.h's: I_TAKE's thing, its item; 0 none) */
 static unsigned take_x, take_y;                 /*   its square, */
 static unsigned take_fx, take_fy;               /*   and where the walk to it began */
+static unsigned char tk_hand;                   /* (carry's: 2 a hand first, said if it goes in the pack; 0 "take all"'s, the pack first) */
 static unsigned char take_only;                 /*   1: walked over to alone (I_TAKE's a: the UI's command again) */
 static unsigned char done_;                     /* (The rules done, a bit each: the save's, the UI's quest) */
 extern unsigned char bold_;                     /* (dq0w.c's: a pace said outright, for the dark) */
@@ -117,11 +120,43 @@ static void __fastcall__ took (unsigned char k)
     }
 }
 
+/* What a writing's copied with, anything the character carries (its things, and what's in them: the catalogue's keys, a map's,
+** HOUSE.md's reading and clues): a sheet ("sheet": paper, parchment; its number in sheet_n), and a point that draws ("draw":
+** charcoal, a pencil, chalk) or a quill and ink: 1, or 0 */
+static unsigned sheet_n;
+static unsigned char copy_with (void)
+{
+    static unsigned i, j;
+    static unsigned char has, k;
+    static const char* t;
+
+    sheet_n = has = 0;
+    for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
+        for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {
+        }
+        if (item_at (j)->where != IW_ACTOR || item_at (j)->x) {
+            continue;                           /* (Another's: a denizen's, or in a thing that lies about) */
+        }
+        k = item_at (i)->kind;
+        hub_map (KIND_BANK);
+        t = CATALOGUE[k].tool;
+        if (!strcmp (t, "sheet")) {
+            sheet_n = i;
+            has |= 1;
+        } else {
+            has |= !strcmp (t, "draw") ? 2 : !strcmp (t, "quill") ? 4 : !strcmp (t, "ink") ? 8 : 0;
+        }
+    }
+    return sheet_n && ((has & 2) || (has & 12) == 12);
+}
+
 /* The hub's ireq, IO_PUZZLE's, answered (but its state, the caller's): its verb's rule for the things named looked
 ** for, by their kinds, and done (its result PZ_*, x the rule); 1 if what lies about has changed (a thing put) */
 unsigned char s_puzzle (void)
 {
     static unsigned char v, a, b, r, res, changed, on, k;
+    static unsigned ox;
+    struct item* p;
 
     hub_map (0);
     v = HUB->ireq.to;
@@ -135,7 +170,33 @@ unsigned char s_puzzle (void)
     b = 0xFF;
     if (v == TR_OUT && !near_out ()) {
         res = PZ_FAR;
-    } else if ((a = found (an)) != 0xFF && (v == TR_READ || v == TR_OUT || (b = found (bn)) != 0xFF)) {
+    } else if ((a = found (an)) == 0xFE && v == TR_READ) {
+        p = item_at (handled);                  /* (An old writing, a copy: its clue, by its fuel, the UI's to read:
+                                                **   life.h's, the plan's step 10) */
+        if (p->kind == KI_WRITING || p->kind == KI_COPY) {
+            res = PZ_OLD;
+            ox = p->fuel;
+        } else {
+            res = PZ_NONE;
+        }
+    } else if (a != 0xFF && v == TR_COPY) {     /* (A writing copied onto a sheet handy, with a point that draws, or a quill
+                                                **   and ink: the sheet made a copy, its clue CLUE_HERE | CLUE_COPY | the
+                                                **   rule; PZ_NO, nothing to copy it onto; the copier's test the UI's) */
+        res = PZ_NONE;
+        if (a != 0xFE && (r = rule (TR_READ, a, 0xFF)) != 0xFF) {
+            ox = r;
+            res = PZ_NO;
+            if (copy_with ()) {
+                p = item_at (sheet_n);
+                p->kind = KI_COPY;
+                p->fuel = CLUE_HERE | CLUE_COPY | ox;
+                chart_now ();                   /* (The map making's things anew: a sheet gone) */
+                res = PZ_DONE;
+                changed = 1;
+            }
+        }
+        r = 0xFF;
+    } else if (a != 0xFF && (v == TR_READ || v == TR_OUT || (b = found (bn)) != 0xFF)) {
         r = rule (v, a, b);
         if (r == 0xFF && v == TR_COMBINE && (r = rule (v, b, a)) != 0xFF) {
             hub_map (0);                        /* (The one that becomes the whole the rule's first) */
@@ -160,12 +221,12 @@ unsigned char s_puzzle (void)
             res = HUB->ireq.result == IR_OK ? PZ_DONE : PZ_NO;
         }
     }
-    if (res == PZ_DONE) {
+    if (res == PZ_DONE && r != 0xFF) {
         rule_done (r);
     }
     hub_map (0);
     HUB->ireq.result = res;
-    HUB->ireq.x = r;
+    HUB->ireq.x = r != 0xFF || res == PZ_NONE ? r : ox;    /* (An old writing's, a copy's: its clue, its rule) */
     if (res == PZ_FAR) {                        /* (Where the way out is: the UI walks over to it first) */
         HUB->ireq.x = STRATUM (0).link[0].x;
         HUB->ireq.y = STRATUM (0).link[0].y;
@@ -220,7 +281,8 @@ unsigned char s_take_up (void)
         r = IR_NOT_HERE;
     } else {
         hub_map (0);
-        rs_ok = !(HUB->pc_lump & (PL_NOSTEPS | PL_TOLD));                  /* (Into the worn pack: by the reach's steps, the UI's to take it again,
+        rs_ok = !(HUB->pc_lump & (PL_NOSTEPS | PL_TOLD));
+        tk_hand = HUB->pc_lump & (PL_MORE | PL_ALL) ? 0 : 2;                  /* (Into the worn pack: by the reach's steps, the UI's to take it again,
                                                 **   IR_FIXED's) */
         rs_live = rs_paid = rs_using = rs_free = 0;
         rs_pack = 0;
@@ -228,7 +290,8 @@ unsigned char s_take_up (void)
                                                 **   4's: "take 4 rations", the user's) */
             hub_map (KIND_BANK);
             r = w == IW_PORTAL || (CATALOGUE[k].keeps & KF_FIXED) ? IR_FIXED : !noinit && fumbled (k) ? IR_FUMBLED :
-                carry (n, 0) ? IR_OK : IR_FULL; /* (Engaged, a grope failed: the round wasted, its words) */
+                carry (n, (CATALOGUE[k].form & KF_COUNT) ? 0 : tk_hand) ? IR_OK : IR_FULL; /* (Engaged, a grope failed: the round wasted, its words;
+                                                **   in a hand, the pack with both full or "take all"'s: the user's, 2026-11-06) */
         }
         rs_ok = 0;
         if (rs_st) {

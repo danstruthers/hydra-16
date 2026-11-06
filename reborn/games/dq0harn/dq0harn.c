@@ -47,6 +47,7 @@ void __fastcall__ save_pc (struct req* r);
 void __fastcall__ beasts (unsigned char back);
 void __fastcall__ dig_answer (struct req* r);   /* (Part 3's) */
 void __fastcall__ dice_set (struct req* r);
+void __fastcall__ read_test (struct req* r);    /* (Part 4's: a writing read) */
 void __fastcall__ outfit_of (struct req* r);    /* (Overlay 1's: outfit.c, RS_OUTFIT) */
 signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps);    /* (Overlay 3's) */
 signed char __fastcall__ draw_test (signed char steps);     /* (Overlay 3's: a map drawn, slice 4.2's) */
@@ -233,6 +234,8 @@ void __fastcall__ s_dig_answer (struct req* r)
         } else {
             r->grade = test_sk (&pc, sk, r->steps);
         }
+    } else if (r->a == P_READ) {
+        read_test (r);                          /* (A writing read: part 4's, step 9's) */
     } else if (r->a != P_DIG && r->a != P_SWIM) {   /* (Persuading, intimidating, deceiving: main.c's) */
         if (!(sk = speaks (r->text))) {         /* (Words in a tongue it doesn't speak: nothing) */
             r->result = 2;
@@ -678,6 +681,47 @@ static unsigned char __fastcall__ speaks (const char* t)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+/* ---- A writing read (RS_TEST's P_READ, rs.h's: the plan for the game between dungeons, its step 9): part 4's */
+#pragma code-name (push, "SW4CODE")
+#pragma rodata-name (push, "SW4RODATA")
+
+/* Its mastery of a tongue or a script (t: "khuzdul", "*delvic": a word of tongues, dq0harn.h's): 0 none; its own (no ML said)
+** the Language skill's, a script's the Script skill's */
+static unsigned char __fastcall__ known (const char* t)
+{
+    char* p = tongues;
+    unsigned char n = strlen (t);
+
+    while ((p = strstr (p, t)) != 0) {
+        if (p[-1] == ' ' && (!p[n] || p[n] == ' ' || p[n] == '=')) {
+            return p[n] == '=' ? atoi (p + n + 1) : pc.ml[*t == '*' ? HARN_SCR : HARN_LAN];
+        }
+        ++p;
+    }
+    return 0;
+}
+
+/* The writing's tongue and script in the text ("khuzdul *delvic"): only one who knows both reads it (the book's, Skills 11),
+** tested at their masteries' average, less its penalty, its condition's steps (once: the UI keeps what was read, the clue's).
+** Result 1 no script at all, 2 not the tongue, 3 not the script */
+void __fastcall__ s_read_test (struct req* r)
+{
+    unsigned char t, s;
+    int e;
+
+    *strchr (r->text, ' ') = 0;
+    t = known (r->text);
+    s = known (r->text + strlen (r->text) + 1);
+    r->result = !strchr (tongues, '*') ? 1 : !t ? 2 : !s ? 3 : 0;
+    if (!r->result) {
+        e = ((t + s) >> 1) - 5 * harn_get_pp (&pc) + STEP_PCT * (signed char) r->steps;
+        r->grade = grade (harn_test (e));
+    }
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* The character's state in words (RS_DESCRIBE b 3: overlay 1's; a 1, its pace and watchfulness only, the hub's): what
 ** the words need copied for the overlay (the hub's not in the window while it is) */
 struct pstate ps;
@@ -943,8 +987,9 @@ parted:
             r->result = 1;
             break;
         }
-        if ((r->a == P_PERSUADE || r->a == P_INTIMIDATE || r->a == P_DECEIVE) && r->text[0]) {   /* (Words in a
-                                                **   tongue: one it speaks, or nothing: part 3's) */
+        if (((unsigned char) (r->a - P_READ) <= P_INTIMIDATE - P_READ || r->a == P_DECEIVE) && r->text[0]) {   /* (Words in a
+                                                **   tongue: one it speaks, or nothing; a writing read, its tongue and
+                                                **   its script (P_READ, P_LORE with words; P_TRACK never has any): part 3's) */
             goto parted;
         }
         if (r->a <= P_NOTICE_SMELL) {           /* (By its state: its pace, its shock; overlay 1's, in a copy) */

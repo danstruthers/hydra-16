@@ -228,6 +228,12 @@ void __fastcall__ ending (unsigned char how);   /* Overlay 15: the game's end (E
 extern volatile unsigned char quit;             /* (main.c's) */
 unsigned char __fastcall__ puzzle (struct cmd* c);      /* Overlay 5: a command the puzzle's (Q_*: the world's
                                                 **   judgement, IO_PUZZLE, worded) */
+unsigned char __fastcall__ read_cmd (struct cmd* c);    /* Part 25: a writing read or copied (Q_*: read.c's, the plan for
+                                                **   the game between dungeons, its step 9) */
+void __fastcall__ clue_make (unsigned char r);  /* Part 26: rule r's clue in the dungeon's clues.dat, made if it isn't */
+void clues_kept (void);                         /* Part 26: the dungeon left alive, its writings' clues kept (its step 10) */
+void more_said (void);                          /* Part 26: a critical success's line more (read.c's) */
+void __fastcall__ swapped (unsigned char r);    /* Part 26: a critical failure's words, rule r's writing's, into lb */
 unsigned char __fastcall__ othings (unsigned char op, const char* name, const char* into, unsigned char to);
                                                 /* (main.c's) The things asked (from an overlay: the names in the
                                                 **   main RAM): the result; the request's x in othings_x,
@@ -373,7 +379,7 @@ extern unsigned long heard_at;                  /* (main.c's: when a sound was l
 
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
-extern unsigned char ovbank[20];
+extern unsigned char ovbank[21];               /* (bank.s's OVMAX: overlay 21 the writings' parts, 2026-11-06) */
 unsigned char early (void);                     /* Part 12: before a command's things are looked for (in shock, refused:
                                                 **   2; first aid's, 1; else 0) */
 void tend (void);                               /* Part 12: first aid (VB_TEND) */
@@ -410,11 +416,12 @@ unsigned char __fastcall__ actor_seen (unsigned char b);        /* Part 8: an ev
 unsigned char __fastcall__ lie_words (unsigned char i);   /* Part 8: a thing's place in the room (its sight_copy's) */
 unsigned char reach_go (void);
 unsigned char __fastcall__ tool_out (unsigned char which);    /* Part 19: a thing got out for its use (0 a bandage, 1 food, 2 water), a tool's steps */
-extern unsigned char nap, what_hi, take_more, nosteps;    /* (main.c's) */
+extern unsigned char nap, what_hi, take_more, take_all, nosteps;    /* (main.c's) */
 void step_go (void);                            /* Part 19: a step of the reach begun by the world (IO_STEP's) */
 void __fastcall__ reach_said (unsigned w, unsigned char named);   /* Part 19: the reach's words */
 unsigned char may_den (void);                   /* (sway.c's: the thing named may be a denizen: the denizens asked) */
 extern unsigned char paced;                     /* (pace.c's: a manner said with the last pace: main.c's look at a line) */
+void place_said (void);                         /* (Overlay 20's, sway.c: "from the floor", "on the ground": a place, not a thing) */
 void __fastcall__ walk_ahead (const char* name);    /* (sway.c's: a thing to take seen out of reach: its walk told before the world's asked) */
 #define W_DIG           (PA_CHECK + 2)          /* (walk_says' name, a first word by what's asked: PA_* + 1 a portal's work, sway.c's) */
 #define W_SWAY          (PA_CHECK + 3)

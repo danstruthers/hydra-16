@@ -150,6 +150,10 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
                                                 **   iron spike, the same driven in for good; a ring in the wall, a
                                                 **   post, fixed where they stand, a rope's to tie to; a rope in place,
                                                 **   its top's and its foot's: dq0w/wrope.c) */
+    KI_WRITING, KI_COPY,                        /* A writing carried out of its dungeon (a theme's kind with a read rule:
+                                                **   the next theme's numbers are other things') and a copy of one (a sheet
+                                                **   written on): their clue by their fuel (life.h's CLUE_*: the plan for
+                                                **   the game between dungeons, its steps 9 and 10) */
     KI_COUNT };
 #define ROPE_FEET       50                      /* (A coil's length: the house's) */
 #define IO_ROPE         0x20                    /* (IO_HIDE's to: a rope's work, RP_* in its low bits: wrope.c's) */
@@ -341,6 +345,8 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   its pack told off and on already, the rest of the line by the lump) */
 #define PL_MORE         2
 #define PL_TOLD         4
+#define PL_ALL          64                      /* ("Take all" under way, its last thing too: what's taken up the pack first,
+                                                **   not a hand, the world's get; PL_MORE, more to come, the pack left off) */
 #define PL_NOFACE        32                     /* (dq0 -I, the tests': no test of courage on facing the character, no weapon broken, their games as they were: 2026-11-03) */
 #define PL_DUSK         16                      /* (dq0 -E, the tests': the game begins at dusk, not at the seed's hour: their games as they were) */
 #define PL_NOFIT        8                       /* (dq0 -F, the tests': the outfit as it's drawn, unfitted to its strength) */
@@ -403,7 +409,7 @@ enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS, LM_KIT, LM_GO, LM
                                                 **   put, IO_PUT's; the way out opened, the hub's way_open): result
                                                 **   PZ_*, x the rule done; the things' words of it in things_text
                                                 **   (a thing not found, put: "" none) */
-enum { PZ_DONE, PZ_NONE, PZ_NO, PZ_FAR };       /* (IO_PUZZLE's: a rule done; none for those kinds; not done, the
+enum { PZ_DONE, PZ_NONE, PZ_NO, PZ_FAR, PZ_OLD };       /* (IO_PUZZLE's: a rule done; none for those kinds; not done, the
                                                 **   things' words why; the way out out of reach) */
 enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE, IR_NO, IR_FIXED, IR_FUMBLED };    /* (IR_NO: refused, the
                                                 **   things' words why; IR_FIXED: a portal's part, in it; IR_FUMBLED:

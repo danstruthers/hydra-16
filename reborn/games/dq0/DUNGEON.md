@@ -146,7 +146,8 @@ by a request or an intent.
   TR_*, and the things named), and the world finds them to hand (the item store's IO_FIND), looks for the theme's
   rule for their kinds, and does it (the things made one, IO_COMBINE's; put, IO_PUT's; the way out opened, the hub's
   way_open, which E_LEFT goes by), keeping the rules done; its reply is how it went (PZ_DONE and the rule, PZ_NONE,
-  PZ_NO with the things' words, PZ_FAR), which theme.c only words (the rule's words, the endings).  **A thing walked
+  PZ_NO with the things' words, PZ_FAR), which theme.c only words (the rule's words, the endings); a read rule's, a writing's, read.c's (the clue's
+  tongue and script, the referee's test, its four grades' words: HOUSE.md's reading and clues; an old writing or a copy, PZ_OLD and its clue).  **A thing walked
   over to** is the world's walk and its taking: a thing out of reach (IO_GET's IR_NOT_HERE, its square and its item)
   is the UI's I_TAKE, and the world walks there (again, as long as the walk gets it nearer: a denizen in the way, a
   trap that stopped it), takes it up as IO_GET would, and tells it (E_TAKEN: taken, the UI then asking its time and
@@ -638,9 +639,10 @@ knives; a pouch or a sack anything that fits).  **Missiles** weigh by the ten (K
 tenth of a pound each, the book's), their bulk too.  The things (dq0w/things.c): held in a hand (hold, wield, ready: two hands at most, a
 two-handed thing or a big one both), stowed in the pack, put in a container (by its room and the weight it bears; a
 container in another, by its own bulk or what it holds, the more; never into itself or what's in it), taken from it
-(into the pack, else a hand), hung from the belt (by its slots; only what hangs), worn and taken off (one of a kind
-worn); the inventory says which hand (both), what's worn, what's in or on what, and the load.  Taking up fills the
-pack first, then a hand.  **The load** (all the character carries, worn or not, its armour too) is the referee's to
+(into a hand, else the pack; by the count, the pack first), hung from the belt (by its slots; only what hangs), worn and taken off (one of a kind
+worn); the inventory says which hand (both), what's worn, what's in or on what, and the load.  Taking up fills a free
+hand first, then the pack (told: "Your hands are full: you put the torch in your backpack."); "take all" and a count ("take 4
+rations") the pack first, then a hand, the rule's first purpose, many things (the user's playtest, 2026-11-06).  **The load** (all the character carries, worn or not, its armour too) is the referee's to
 judge: the things give it with the tools to hand (RS_EQUIP), and the referee makes it HarnMaster's encumbrance (the
 load over the endurance, its physical penalty: the body's tests harder, its move less, so the world's step slower),
 worded on the sheet (the load, the encumbrance) and in the inventory ("You're heavily burdened.").
@@ -1479,6 +1481,13 @@ anything of the game's (it has the CPU and its own RAM; what passes between dung
   cycles from Enter to the first prompt in all).  It reads the sheet, kit.dat, kit0.dat and the kinds (dq0w.cat), and works by the life's seed and the dungeon's number alone: the same seed and answers, the same account.  Its
   healing is the referee's own: games/dq0harn's **course.h** (a toxin's and a disease's course: afflict.c's, moved) and **watch.h** (a watch of the clock: heal.c's), and the library's harnheal.c, each included by both.
   It writes pc.hm, kit.dat and the record's date; LF_BETWEEN in the record says it's yet to run (a reset between: it runs again).  It tells it in a dozen lines, asks its one question, and waits for Enter, as the game clears the screen as it starts (the rc variable dq0auto, the tests': no waiting; the tests' dq0Typed sets it for any game with a folder, dq0TypedAsk not).
+- **The clues** (the plan's steps 9 and 10; HOUSE.md's reading and clues): a writing (a theme's kind with a read rule) has its clue,
+  life.h's struct clue (its people's tongue and script, its condition, the place it names, its words), made by the UI (read.c, parts 25 and
+  26 in overlay 21's bank) as it's read or copied, and for every writing as the dungeon's left alive, in the dungeon's clues.dat; the
+  referee tests a reading (P_READ: the tongue and the script known, their average). The world's kit turns a writing carried into an
+  old writing (KI_WRITING, its fuel CLUE_HERE | its rule; a copy, KI_COPY, a sheet written on, CLUE_COPY too), and dq0life, as the next
+  dungeon begins, moves the clues read or carried to the top's clues.dat (each thing's fuel its number there), tells them, and makes the
+  first one read a rumour (heard.txt: step 7's rumours tell it first).
 - **kit0.dat** (top of the save's folder): what the life set out with, written by the world once, its first save of a life (a new life removes it): what's restocked to.
 - **The life's account** (**games/dq0end**, lib/acct/dq0end, 7K): the dungeons, the days, what was done, told as the character dies: by the UI as a game ends in a death (told its name and occupation, for no sheet's in the folder till the first save), by dq0life if it died between two dungeons; then what's next, by what's in the folder, the tests the next start makes (dq0life's next_is): a game's words at a death are all its.  **What the record holds as it dies:**
   - *Hard mode's death in a dungeon:* the dungeon's days, outcome LO_DIED, or LO_SOLVED if it had solved it (Q2's "died, solved": LD_DIED in the dungeon's flags), the date of its death, LF_OVER.
@@ -1522,14 +1531,44 @@ game's tasks (themegen and its bank programs, dq0life, dq0acct, dq0end): none of
   goal kind, its reason, its patron), the rest of the dungeon its own seed's (its history's seed mixed with the place's name, so
   each rumour's place has its own past).  It's asked before anything's written, so a reset tells
   the time between again, the same.
-- **Ready for what comes:** the town (the plan's step 11) will tell the rumours at its inn: quest.c (dq0acct's overlay 4) is all of it,
-  to move whole.  A clue (step 10) adds or replaces a rumour by writing a block of the same lines to heard.txt in the save's folder:
-  its rumours are told first, ahead of themegen's, three at most.
+- **Ready for what comes:** the town (the plan's step 11, below) tells the rumours at its inn, and follows one from its "Leave for";
+  quest.c's question stays the straight-on character's (the tests' dq0auto).  A clue (step 10) adds or replaces a rumour by writing a
+  block of the same lines to heard.txt in the save's folder: its rumours are told first, ahead of themegen's (three at most in the
+  account's question, four in the town's).
 - **New goal kinds** (goals.txt's, marked heard: a history made without a rumour still picks among the four, so the stand-ins' seeds
   and every seed's first dungeon keep their kinds): **lore**, a writing to find (a chronicle, a codex, a testament, among an era's
   works, hidden; a torn leaf of a library's list hints where: never needed, Q9) taken up and carried out; **scourge**, a raiders'
   chief's standard, skull drum or totem in the kobolds' lair (kobolds the last era, as a prisoner's are), taken up and carried out, the
   raids ended.  Each has its why lines; the theme checker (themec) proves each solvable, as every kind's.
+
+### The town (the plan's step 11, 2026-11-06)
+
+The plan's section 3; the user's Q8 ("A menu"); HOUSE.md's between dungeons, the town, for the rules, words and numbers.  All of it in
+the programs run before the game's tasks: none of the game's main RAM, none of its answer times.
+
+- **A program of its own, games/dq0town** (lib/acct/dq0town, 25K, its words lib/acct/town.txt): the account (dq0acct) has no room for
+  it: its main RAM was at its floor (2109 free), and its overlays sit at the window where the kinds are, so none of their code can look at
+  a kind, and the market and the smith are all kinds.  dq0town has its own main RAM, the kinds and what's carried in a bank at the window
+  as the account has them, its words and the rumours in another (town.txt's lines but its notes, 3.5K; the rumours' files, 4.5K).  The
+  account runs it (SPAWN, as dq0life runs the account) only when the player's asked: the tests' dq0auto passes it by.
+- **Where in the account:** after its first lines (the days, the walk, what's paid, the physician, the wounds) and before its money's
+  matters, so the town's days are the account's days too (the wounds rolling on, the keep, the month's practice) and the account sees to
+  only what the player didn't.  The account hands it what's carried and its money as townkit.dat (kit.dat untouched till the account's
+  end, so a reset in the town tells the time between again, the same), the town's name and its inn's, the days so far, the keep owed so
+  far, a day's keep, Rhetoric's and Intrigue's EMLs (its arguments); it writes back townkit.dat, quest.txt (the place followed) and
+  town.dat (games/dq0acct/town.h: the days, what was seen to, the road), and the account reads them, passes the days, does its money's
+  matters but what was seen to (the market, the smith), and tells the rest: "Your time in Velmor comes to 7 days.", the lodging, the
+  practice, the money, the standing, "You set out for the Homuth Meres, 12 days on the road.", Enter to go on.
+- **The goods' code is shared** (games/dq0acct/goods.h: what's carried, its worth, the market's half, the smith's prices, the money laid
+  as coins), each program its own copy.  The town's name is the name maker's (namegen's code, compiled into the account's overlay 5:
+  dq0acct.ov5, a file of its own read as the account starts, 5.5K, with the wounds' words moved there from overlay 2, the date's and
+  the lodging's words from the main RAM: the account's main RAM 2281 free after it all).
+- **Intrigue's one more rumour** is made as it's heard: themegen -r 4 -a KINDS (the rumours made already, their goal kinds a bit each:
+  themegen goes on from them, so the fourth is the one -r 4 would have made), appended to rumours.txt; some 13M cycles, its dots shown.
+- **The carry-on's time** (seed 70000's, dq0whytime's scene, Enter on the dq0 line to the first prompt, the tests' dq0auto: no town):
+  385.3M cycles before, 388.8M after (the overlay's file and the name maker; a stand-in's, seed 3, 265.9M to 267.2M).  With the town
+  (the player's, seed 70000): 120M to the town's first question, each errand 2-4M (the inn's Intrigue's rumour 46M), 287M from
+  leaving to the game's first prompt.  dq0starttime (no folder: none of it run) 217.4M and 293.7M.
 
 ## One path for every actor
 

@@ -34,6 +34,7 @@
 #include "world.h"
 #include "work.h"
 #include "things.h"
+#include "../dq0/life.h"                        /* (The clues' CLUE_*: kit_put's) */
 #include "wbody.h"
 #include "outfit.h"
 
@@ -484,7 +485,7 @@ static void __fastcall__ place (unsigned n, unsigned char where, unsigned x, uns
 }
 
 /* Thing n carried: into the pack if it fits, else in a hand, the one that suits it (part 48's: hand first, the other
-** way about; and a thing taken from a fixture, a sconce's torch, the user's, 2026-11-03: the hand, the pack only with both
+** way about, and 2 said so as it goes in the pack, the hands full: a thing taken up, the user's, 2026-11-06; and a thing taken from a fixture, a sconce's torch, the user's, 2026-11-03: the hand, the pack only with both
 ** full): 1 in the pack, 2 in a hand, 0 neither (full; or a step of the reach begun first, rs_st) */
 #define HF_FIXT         0x80                    /* (hand_free's: thing n's in a fixture) */
 unsigned char __fastcall__ hand_free (unsigned n);
@@ -504,6 +505,13 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
         }
         place (n, IW_ITEM, pack, 0);
         reach_to (pack);                        /* (Put away: its reach, HOUSE.md's: part 56's) */
+        if (hand_first == 2) {                  /* (Taken up, its hands full: said so, the user's, 2026-11-06) */
+            put ("You've no hand free for the ");
+            put (kind_of (item_kind (n))->name);
+            put (": you put it in your ");
+            put (kind_of (item_kind (pack))->name);
+            put (".");
+        }
         return 1;
     }
     if (h) {
@@ -784,7 +792,7 @@ unsigned char __fastcall__ s_reach_step (unsigned n, unsigned c)
             rs_c = rs_tool;
             rs_do = RS_BACKIN;
             rs_k = LT_PUTAWAY;
-            rs_what = item_kind (rs_tool);
+            rs_what = item_kind (rs_wn = rs_tool);
             rs_t = 20;
             return rs_begin ();
         }
@@ -802,7 +810,7 @@ unsigned char __fastcall__ s_reach_step (unsigned n, unsigned c)
         rs_do = RS_IN;
         rs_k = d ? LT_REACHIN : rs_paid + 1 == nout ? LT_GETOUT : rs_paid + 1 == nout + nd ? LT_OPENUP :
             LT_REACHIN;
-        rs_what = item_kind (rs_k == LT_GETOUT ? n : rs_hit);
+        rs_what = item_kind (rs_wn = rs_k == LT_GETOUT ? n : rs_hit);
         rs_t = 20;
     } else {
         if (!d) {
@@ -828,6 +836,7 @@ unsigned char __fastcall__ s_reach_step (unsigned n, unsigned c)
 ** 82's); 4, it's known empty; 0 none */
 extern char dig_key[9];                         /* (dq0w.c's) */
 unsigned rs_tool;
+unsigned rs_wn;                                 /* (The thing a step's about, told apart in its words: the reply's, apart's) */
 unsigned char s_flame (void)
 {
     unsigned i = 0;
@@ -876,6 +885,7 @@ static void rs_cut (void)
     HUB->rs_nout = 0;
     rs_pack = 0;
     rs_after_on = rs_do = rs_paid = rs_live = rs_keep = rs_using = rs_redo = rs_free = 0;
+    ix_make ();                                 /* (What it carries now, the pack off at its feet: the UI's first words') */
 }
 
 /* A tool's next step (rs_tool: the user's, 2026-11-02, "grope (take the tinder box), grope (to use the tinder box,
@@ -894,6 +904,7 @@ static unsigned char __fastcall__ rs_draw (unsigned char fire)
         rs_c = rs_tool;
         rs_do = RS_HAND;
         rs_k = LT_GETOUT;
+        rs_wn = rs_tool;
         rs_what = rec.kind;
         rs_t = 10;
         return 1;
@@ -1131,7 +1142,7 @@ static unsigned char s_room (void)
     if (o != rs_pack && ++rs_free > 1) {        /* (The other hand's after it: its words not the first's again) */
         t = t == LT_LAYLIT ? LT_LAYLIT2 : t == LT_INPACK ? LT_INPACK2 : t == LT_SETDOWN ? LT_LETFALL : t;
     }
-    rs_what = item_kind (o);
+    rs_what = item_kind (rs_wn = o);
     hub_map (0);
     HUB->rs_place = c;
     rs_c = o;
@@ -1296,7 +1307,7 @@ static unsigned char __fastcall__ rs_set_down (unsigned i)
     rs_do = RS_DROP;
     rs_hand = 0;
     rs_k = LT_SETDOWN;
-    rs_what = item_kind (i);
+    rs_what = item_kind (rs_wn = i);
     if (rs_what == item_kind (rs_old)) {
         rs_redo |= RR_TWO;
         rs_k = LT_DOWNNEW;
@@ -1551,6 +1562,7 @@ static unsigned char rs_after (void)
             rs_c = rs_old;
             rs_do = RS_STOW;
             rs_k = rs_redo & RR_TWO ? LT_PUTOLD : LT_PUTAWAY;
+            rs_wn = rs_old;
             rs_what = rec.kind;
             rs_t = 20;
             return 1;
@@ -1561,7 +1573,7 @@ static unsigned char rs_after (void)
         rs_redo &= rs_redo & RR_D2 ? ~RR_D2 : ~RR_D1;
         rs_c = i;
         rs_do = RS_UP;
-        rs_what = item_kind (i);
+        rs_what = item_kind (rs_wn = i);
         rs_k = rs_two && !(rs_redo & RR_D1) ? LT_UP2 :   /* (The other of two alike) */
             rs_redo & RR_TWO && rs_what == item_kind (rs_old) ? LT_TAKENEW : LT_TAKEUP;
         rs_t = 10;
@@ -1632,8 +1644,10 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         HUB->ireq.item = w;
         return IR_OK;
     case RO_REPLY:
-        if (rs_using & 4) {
-            rs_using = 0;                        /* (In hand before: none to put away) */
+        if ((rs_using & 4) && !rs_st) {
+            rs_using = 0;                        /* (In hand before: none to put away; kept through its steps, the
+                                                **   tinderbox in hand lit with not "put away" at their end: the user's
+                                                **   playtest, 2026-11-06) */
         }
         hub_map (0);
         if (!rs_st && (rs_pack || rs_using) && iq.result != IR_OK) {
@@ -1651,6 +1665,10 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
             rs_ok = HUB->ireq.kind = IO_STEP;
         }
         if (rs_ok == IO_STEP) {
+            w = rs_wn ? tell_apart (rs_wn) : AW_NONE;    /* (Its thing told apart: "You put the spent torch in your pack.") */
+            rs_wn = 0;
+            hub_map (0);
+            HUB->ireq.plural = w;
             HUB->ireq.y = (rs_k == LT_BLOWDARK) | (rs_t == HUB->round ? 2 : 0);    /* (Its question put, the UI's; 2, engaged:
                                                 **   the round's action, no long task for a blow to stop) */
             HUB->pc_ready = HUB->now + rs_t;    /* (Not free till the UI's wait comes: engaged, fwant's, its end not looked at first) */
@@ -1664,7 +1682,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
             rs_ok = 0;                          /* (More on this line to come, "take all": the pack left off, rs_live) */
             return 0;
         }
-        if (HUB->ireq.qty == LT_FILL && (rs_redo & RR_TWO)) {
+        if (HUB->ireq.qty == LT_DIP && (rs_redo & RR_TWO)) {
             HUB->ireq.qty = LT_DIPOLD;
         }
         if (rs_pack || rs_using || (rs_redo & (RR_STOW | RR_D1 | RR_D2 | RR_RELIGHT))) {   /* (The handling done: the pack back on as it's free, past a timed
@@ -1850,8 +1868,153 @@ void s_tools (void)
 /* What's in the character's hands (IO_HANDS: a blow with nothing named, the UI's), their kinds in the request's x, its
 ** main hand's (or a thing's in both), and y, its other's (0 none: held_kinds') */
 
+#pragma code-name (push, "SW102CODE")         /* (Part 102's, 2026-11-06: overlay 5's room, part 92's image's) */
+#pragma rodata-name (push, "SW102RODATA")
+/* ---- A thing told apart (the user's playtest, 2026-11-06: "You put the torch in your backpack." of the spent one as a
+** new one's lit): its state's word (AW_*), the thing in rec: a light lit, burnt out, or neither; a fuel empty */
+static unsigned char aw_of (void)
+{
+    unsigned char e = rec.id && !rec.fuel;
+
+    if (kind_of (rec.kind)->flags & K_LIGHT) {
+        return rec.flags & I_LIT ? AW_LIT : e ? AW_SPENT : AW_UNLIT;
+    }
+    return e && (unsigned char) (rec.kind - KI_OIL) <= KI_PITCH - KI_OIL ? AW_EMPTY : AW_NONE;
+}
+
+/* Thing n's word, if another of its kind is at hand (carried, or lying within reach) and none of those is in its state:
+** "the spent torch" beside a lit one (HOUSE.md's things told apart: the things' words, the reach's steps); else AW_NONE */
+unsigned char __fastcall__ s_tell_apart (unsigned n)
+{
+    struct item sv;                             /* (rec kept for the caller: the catalogue's bank's name_of's) */
+    const struct item* p;
+    unsigned i, j, x, y;
+    unsigned char a, k, sn, b = AW_NONE;
+
+    memcpy (&sv, &rec, sizeof sv);
+    fetch (&rec, n);
+    k = rec.kind;
+    if (!k || !(a = aw_of ())) {
+        goto out;
+    }
+    hub_map (0);
+    sn = HUB->pc_stratum;
+    x = HUB->pc_x;
+    y = HUB->pc_y;
+    p = 0;
+    for (i = 1; i < ihigh; ++i) {               /* (The store gone through as the chooser does: a kind passed over, some
+                                                **   70 cycles) */
+        if (!p || p == (const struct item*) 0x8000 + 0x2000 / sizeof (struct item)) {
+            p = item_at (i);
+        }
+        if ((p++)->kind != k || i == n) {
+            continue;
+        }
+        p = 0;
+        for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {
+        }
+        fetch (&rec, j);
+        if (!on_pc (i) && (rec.where != IW_SQUARE || rec.sn != sn || rec.x - x + 1 > 2 || rec.y - y + 1 > 2)) {
+            continue;                           /* (Not carried, not within reach) */
+        }
+        fetch (&rec, i);
+        if ((rec.flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN) {
+            continue;
+        }
+        if (aw_of () == a) {
+            b = AW_NONE;                        /* (One alike: its state tells them not apart) */
+            break;
+        }
+        b = a;
+    }
+out:
+    memcpy (&rec, &sv, sizeof sv);
+    return b;
+}
+
+/* Thing i's name into d (16 bytes), told apart by its state if it fits: the catalogue's bank's name_of's */
+void __fastcall__ s_name_apart (unsigned i, char* d)
+{
+    static const char* const aw[AW_EMPTY + 1] = { "", "lit ", "unlit ", "spent ", "empty " };
+    const char* w = aw[s_tell_apart (i)];
+    const char* k = kind_of (item_kind (i))->name;
+
+    strcpy (d, strlen (k) + strlen (w) < 16 ? w : "");
+    strcat (d, k);
+}
+
+/* What the character carries, for the UI's first words (the UI bank's ix, struct cix's: the store's order), made as what
+** it carries changes (light_now's, serve's) */
+#pragma bss-name (push, "SW102RODATA")        /* (Part 102's image's, wanted only as it's made: the main RAM's room) */
+static unsigned ixi[NIX];
+static struct cix ixc[NIX];
+static unsigned char ixkk[NIXK];
+#pragma bss-name (pop)
+void s_ix_make (void)
+{
+    const struct kind* k;
+    unsigned i = 0;
+    unsigned char n = 0, m, j, f;
+
+    while (n < NIX && (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
+        if (on_pc (i)) {
+            ixi[n++] = i;
+        }
+    }
+    for (m = 0; m < n; ++m) {
+        fetch (&rec, ixi[m]);
+        k = kind_of (rec.kind);
+        f = (rec.flags & I_HELD ? CX_HELD : 0) | (rec.flags & I_WORN ? CX_WORN : 0) | (rec.flags & I_LIT ? CX_LIT : 0) |
+            ((k->flags & K_CONTAINER) || (k->keeps & KF_ON) ? CX_HOLDS | CX_EMPTY : 0) |
+            ((k->keeps & KF_CLOSES) && (rec.shut & IS_CLOSED) ? CX_SHUT : 0) |
+            ((k->form & KF_BACK) && (rec.flags & I_WORN) ? CX_BACK : 0);
+        ixc[m].kind = rec.kind;
+        ixc[m].up = 0;
+        if (rec.where == IW_ITEM) {
+            for (j = 0; j < n && ixi[j] != rec.x; ++j) {
+            }
+            ixc[m].up = j < n ? j + 1 : 0xFF;
+        }
+        j = aw_of ();
+        ixc[m].flags = f | (j == AW_SPENT ? CX_SPENT : j == AW_EMPTY ? CX_SPENT | CX_EMPTY : 0);
+    }
+    for (m = 0; m < n; ++m) {
+        if ((j = ixc[m].up) != 0 && j != 0xFF) {
+            ixc[j - 1].flags &= ~CX_EMPTY;      /* (Something in it) */
+        }
+    }
+    for (m = j = 0; m < n && j < NIXK; ++m) {   /* (Its kinds, each once) */
+        for (f = 0; f < j && ixkk[f] != ixc[m].kind; ++f) {
+        }
+        if (f == j) {
+            ixkk[j++] = ixc[m].kind;
+        }
+    }
+    for (m = 0; m < n; ++m) {                   /* (Each by its kind's place among them) */
+        for (f = 0; f < j && ixkk[f] != ixc[m].kind; ++f) {
+        }
+        ixc[m].kind = f < j ? f : 0xFF;
+    }
+    hub_map (UI_BANK);
+    UIREC->ixn = n;
+    UIREC->ixk = j;
+    memcpy (UIREC->ix, ixc, n * sizeof (struct cix));
+    for (f = 0; f < j; ++f) {
+        k = kind_of (ixkk[f]);                  /* (Copied out: the UI's bank put back for it) */
+        hub_map (UI_BANK);
+        UIREC->ixks[f].kind = ixkk[f];
+        UIREC->ixks[f].flags = k->flags;
+        memcpy (UIREC->ixks[f].name, k->name, sizeof k->name);
+    }
+    hub_map (0);                                /* (The hub's header back in the window: rs_cut's caller's events) */
+}
+
+#pragma rodata-name (pop)
+#pragma code-name (pop)
+
 /* The character's light: the brightest lit thing it carries (in a hand, worn, hung from its belt: one stowed is
-** put out), into the hub, named (its minutes left the lights' burning's: part 27's); and its map making with it */
+** put out), into the hub, named (its minutes left the lights' burning's: part 27's); and its map making with it; what
+** it carries, for the UI's first words (ix_make) */
 void s_light_now (void)
 {
     char lamp[14];
@@ -1873,6 +2036,7 @@ void s_light_now (void)
             }
         }
     }
+    ix_make ();
     hub_map (0);
     HUB->pc_light = best;
     strcpy (HUB->pc_lamp, lamp);
@@ -2039,9 +2203,15 @@ unsigned char s_serve (void)
                 reach_to (cont);                /* (Stowed, put, taken from: one, or as many as it says; what it went
                                                 **   in reached into, once) */
             }
+        } else if (k == IO_DOFF && (n = hand_n ? hand_n : carried_named (iq.name)) != 0 && (item_at (n)->flags & I_WORN) &&
+            !(hand_free (n) & ~HF_FIXT)) {
+            iq.result = doff_feet (n);          /* (Taken off, no hand free: at its feet, not refused, nor the pack off for
+                                                **   it; a place said, "put the cloak in the sack", the put's) */
         } else {
             cat_map ();
-            iq.result = o_handle ();
+            if ((iq.result = o_handle ()) == IR_NO && k == IO_DOFF && last_sa == SA_HANDS && !rs_st) {
+                iq.result = doff_feet (handled);    /* (No hand free, no room in the pack: at its feet, as a drop) */
+            }
         }
         hub_map (0);
         HUB->ireq.x = took;
@@ -2058,6 +2228,8 @@ unsigned char s_serve (void)
         iq.kind == IO_THROW || (iq.kind >= IO_HOLD && iq.kind <= IO_NAME))) {   /* (Out of reach: nothing's moved yet) */
         s_light_now ();                         /* (Its light: what it holds lit) */
         changed |= iq.result == IR_OK;
+    } else if (iq.result == IR_OK && (iq.kind == IO_FILL || iq.kind == IO_SHUT || iq.kind == IO_USE)) {
+        ix_make ();                             /* (A light filled, a thing closed, one used up: the UI's first words') */
     }
     if (iq.result == IR_OK && (iq.kind == IO_GET || (iq.kind >= IO_HOLD && iq.kind <= IO_DOUSE))) {
         hub_map (0);
@@ -2355,6 +2527,22 @@ static unsigned char __fastcall__ chain (unsigned i)
 ** is); seen_d how far off, in squares; csum how many there were to choose from, all told (a lot its count) */
 #define NCAND           8
 static unsigned char look_q;                    /* (A look's asking: s_look_pick's) */
+
+/* Thing i (in rec, its kind k) not in the state SL_EMPTY's three say: empty (a container or a surface with nothing in or
+** on it, a fuel burnt), spent (a light or a fuel burnt out: the user's "drop the spent torch", 2026-11-06), full (the
+** rest of those): 1 */
+static unsigned char __fastcall__ unlike (unsigned i, const struct kind* k)
+{
+    unsigned char e = rec.id && !rec.fuel;
+
+    if ((k->flags & K_CONTAINER) || (k->keeps & KF_ON)) {
+        e = !items (0, IN_X | IN_ITEM, i);
+    } else if ((unsigned char) (rec.kind - KI_OIL) > KI_PITCH - KI_OIL && !(wsel == SL_SPENT && (k->flags & K_LIGHT))) {
+        return 1;                               /* (Neither a container nor a fuel, nor a light said spent) */
+    }
+    return wsel == SL_FULL ? e : !e;
+}
+
 static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigned char* no);
 #pragma static-locals (push, off)
 unsigned __fastcall__ s_pick (const char* name, unsigned char how)
@@ -2454,8 +2642,9 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
         if (s == SL_LIT ? !(rec.flags & I_LIT) : wsel == SL_NEW ? rec.flags & (I_HELD | I_LIT) : s == SL_UNLIT ? (rec.flags &
             I_LIT) || !(k->flags & K_LIGHT) :
             s == SL_OPEN ? !(k->keeps & KF_CLOSES) || (rec.shut & IS_CLOSED) : s == SL_SHUT ? !(rec.shut & IS_CLOSED) :
-            s == SL_EMPTY && (!((k->flags & K_CONTAINER) || (k->keeps & KF_ON)) || items (0, IN_X | IN_ITEM, i))) {
-            continue;                           /* (Not in the state said: "the lit torch", "the empty sack") */
+            s == SL_EMPTY && unlike (i, k)) {
+            continue;                           /* (Not in the state said: "the lit torch", "the empty sack", "the spent
+                                                **   torch") */
         }
         csum += rec.qty;
         if (m == NCAND) {                       /* (The best NCAND kept, by how much to hand, the store's order else) */
@@ -2581,6 +2770,7 @@ static unsigned char __fastcall__ get (unsigned n)
 {
     const struct kind* k;
     unsigned x, y, i;
+    unsigned char h;
 
     for (i = n; item_at (i)->where == IW_ITEM; i = item_at (i)->x) {
     }                                           /* (On a surface: the surface's square) */
@@ -2588,6 +2778,8 @@ static unsigned char __fastcall__ get (unsigned n)
     hub_map (0);
     x = HUB->pc_x;
     y = HUB->pc_y;
+    h = iq.count || (HUB->pc_lump & (PL_MORE | PL_ALL)) ? 0 : 2;   /* (In a hand, the pack with both full; by the count, "take all", the
+                                                **   pack first: the user's, 2026-11-06) */
     HUB->ireq.x = rec.x;                        /* (Where it is: IR_NOT_HERE's, IR_FIXED's; and which, I_TAKE's) */
     HUB->ireq.y = rec.y;
     HUB->ireq.item = n;
@@ -2596,9 +2788,12 @@ static unsigned char __fastcall__ get (unsigned n)
     }
     fetch (&rec, n);
     k = kind_of (rec.kind);
+    if (k->form & KF_COUNT) {
+        h = 0;                                  /* (A lot counted, coins, rations, arrows: the pack first, with others alike) */
+    }
     rbody = 1;                                  /* (Its reach: lying within reach, a grope engaged, HOUSE.md's) */
     return rec.where == IW_PORTAL ? IR_FIXED : k->keeps & KF_FIXED ? IR_NO :
-        !noinit && fumbled (rec.kind) ? IR_FUMBLED : carry (n, 0) ? IR_OK : rs_st ? IR_NO : IR_FULL;  /* (A portal's part: lifted
+        !noinit && fumbled (rec.kind) ? IR_FUMBLED : carry (n, h) ? IR_OK : rs_st ? IR_NO : IR_FULL;  /* (A portal's part: lifted
                                                 **   out first, the world's; a theme's altar, never: its words the
                                                 **   handling's; engaged, a grope failed: the round wasted) */
 }
@@ -3924,8 +4119,22 @@ static char kp[56];
 /* Thing i (ip's record), in entry in less one (0: on the character), listed */
 static void __fastcall__ kit_put (unsigned i, unsigned char in)
 {
+    unsigned char r;
+
     memcpy (&kr, ip, sizeof kr);
-    if (kn >= NOFIT || kr.kind == KI_KEY || (kr.kind >= KI_THEME && kr.kind < KI_THEME + NTKINDS)) {
+    if (kr.kind >= KI_THEME && kr.kind < KI_THEME + NTKINDS) {    /* (A writing, the theme's kind a read rule's: an old
+                                                **   writing, its clue the rule's, life.h's, the plan's step 10) */
+        hub_map (THEME_BANK);
+        for (r = 0; r < THEME->nrules && r < NRULES && (THEME->rule[r].verb != TR_READ ||
+            THEME->rule[r].a != kr.kind - KI_THEME); ++r) {
+        }
+        if (r >= THEME->nrules || r >= NRULES) {
+            return;
+        }
+        kr.kind = KI_WRITING;
+        kr.fuel = CLUE_HERE | r;
+    }
+    if (kn >= NOFIT || kr.kind == KI_KEY) {
         return;
     }
     ke.o.kind = kr.kind;
@@ -4656,7 +4865,8 @@ unsigned char s_fill (void)
     hub_map (0);
     HUB->ireq.x = takes == FU_OIL ? 200 : 100;
     if (!(iq.to & IO_DONE)) {
-        HUB->ireq.qty = LT_FILL;                /* (Begun: its first words the UI's; two torches, part 86's the old) */
+        HUB->ireq.qty = takes & FU_PITCH ? LT_DIP : LT_FILL;   /* (Begun: its first words the UI's, a torch dipped, a lantern
+                                                **   filled; two torches, part 86's the old) */
         HUB->ireq.item = l.kind;
         return IR_OK;
     }
@@ -4996,10 +5206,11 @@ static unsigned char __fastcall__ yes (unsigned char n, unsigned char t)
     return IR_OK;
 }
 
-/* A thing's kind's name, as it's said (x: the thing's, else the other's) */
+/* A thing's kind's name, as it's said (x: the thing's, else the other's), told apart by its state from another of its
+** kind at hand ("the spent torch": apart's, the user's playtest, 2026-11-06), if that fits */
 static void __fastcall__ name_of (unsigned i, unsigned char x)
 {
-    strcpy (x ? xn : yn, KIND (i)->name);
+    m2 (name_apart, i, (unsigned) (x ? xn : yn));
 }
 
 /* Thing n put somewhere (where, x: items.h's), as it's flagged (held, worn, or neither), no longer hidden (nor
@@ -5172,7 +5383,7 @@ static unsigned char take_from (void)
     if (B (m1 (on_pc, c))) {
         return hold (n);
     }
-    if (!(r = B (m2 (carry, n, 0)))) {
+    if (!(r = B (m2 (carry, n, !iq.count)))) {   /* (In a hand, the pack only with both full or by the count: the user's, 2026-11-06) */
         return rs_st ? IR_NO : no (SA_HANDS);   /* (A step of the reach first: part 85's) */
     }
     say (SA_TAKE);
@@ -5858,6 +6069,35 @@ static unsigned char __fastcall__ hand_for (unsigned n, unsigned char want)
     hwhy = h & hdead ? HW_LIMB : !(h & hused) ? 0 : want ? HW_TAKEN : HW_FULL;
     hside = h & (hwhy == HW_LIMB ? hdead : hused);
     return hwhy ? 0 : h;
+}
+
+/* A thing worn taken off with no hand free and no room in the pack (the doff's SA_HANDS, the catalogue's bank's, its room none):
+** set down at the character's feet, said so, as "drop" would (the user's playtest, 2026-11-06: "take off the backpack" refused
+** with its hands full, "drop backpack" not): the pack, a cloak, a helm, a belt, a ring alike.  Its time the doff's */
+unsigned char __fastcall__ s_doff_feet (unsigned n)
+{
+    struct item* p;
+    unsigned x, y;
+    unsigned char sn;
+
+    hub_map (0);
+    sn = HUB->pc_stratum;
+    x = HUB->pc_x;
+    y = HUB->pc_y;
+    p = item_at (n);
+    p->where = IW_SQUARE;
+    p->sn = sn;
+    p->x = x;
+    p->y = y;
+    p->flags &= ~(I_HELD | I_WORN);
+    dropped = n;
+    sky_ask (n);                                /* (On a shaft's head: it falls, part 17's) */
+    text_new ();
+    put ("Your hands are full: you take off the ");
+    put (kind_of (item_kind (n))->name);
+    put (" and set it down at your feet.");
+    took = 50;
+    return IR_OK;
 }
 
 /* The hand thing n would go in, the one that suits it (carry's: a thing taken up, its hand first, else the pack); 0

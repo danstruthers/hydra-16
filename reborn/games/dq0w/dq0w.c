@@ -2312,7 +2312,7 @@ void __fastcall__ s_climb (unsigned char d)
     }
     l = link_here (d, &t);
     if (d == DIR_DOWN && (wl || l == 0xFF || t == 0xFFFFFFFFUL)) {   /* (A well within reach, named or the only way down:
-                                                **   its shaft, part 102's, read in first: 2026-11-06) */
+                                                **   its shaft, part 103's, read in first: 2026-11-06) */
         look_more (0, LM_ROPES);
         if ((k = well (WL_DOWN)) < 0xFE) {
             l = k;

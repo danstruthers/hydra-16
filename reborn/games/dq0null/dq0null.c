@@ -275,7 +275,7 @@ static unsigned char __fastcall__ speaks (const char* t)
     unsigned char n = strlen (t);
 
     while ((p = strstr (p, t)) != 0) {
-        if (p[-1] == ' ' && (!p[n] || p[n] == ' ')) {
+        if (p[-1] == ' ' && (!p[n] || p[n] == ' ' || p[n] == '=')) {
             return 1;
         }
         ++p;
@@ -773,6 +773,14 @@ static void __fastcall__ answer (struct req* r)
             (r->a == P_PICKLOCK && !r->actor && !has ("picks"))) {
             r->result = 1;                      /* (No magic; no lockpicks: the character's, a robber's kind its own, as the
                                                 **   HarnMaster referee's, 2026-11-02) */
+            break;
+        }
+        if (r->a == P_READ && r->text[0]) {     /* (A writing read: its tongue and its script known, the flat odds: rs.h's,
+                                                **   step 9's) */
+            *strchr (r->text, ' ') = 0;
+            r->result = !strchr (tongues, '*') ? 1 : !speaks (r->text) ? 2 : !speaks (r->text + strlen (r->text) + 1) ? 3 : 0;
+            r->grade = flat (r->steps);
+            *tp = 0;
             break;
         }
         if ((r->a == P_PERSUADE || r->a == P_INTIMIDATE || r->a == P_DECEIVE) && r->text[0] && !speaks (r->text)) {

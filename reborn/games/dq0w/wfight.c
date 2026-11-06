@@ -467,6 +467,7 @@ void __fastcall__ s_den_rob (const struct msg* q)
         if (n) {
             equip_now ();                       /* (What's to hand now, and its load: the referee's, at once, part
                                                 **   49's) */
+            light_now ();                       /* (Its light, a torch taken; what it carries, the UI's first words') */
         }
         hub_map (0);
         if (pur & RB_CAUGHT) {

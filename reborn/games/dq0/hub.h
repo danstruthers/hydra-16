@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     52                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     53                    /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -70,7 +70,8 @@
                                                 **   AG_SPADE, DO_DIG; 37, the market's: the sway's word2 its coins
                                                 **   (SW_COIN ...), SW_BUY ... SW_ENTERTAIN, OR_OPEN ..., SR_WONT ...;
                                                 **   39, a room searched whole: SF_ROOM, SF_TRAPS, WB_SEARCH, RSW_*, RC_*,
-                                                **   IOS_*) */
+                                                **   IOS_*; 53, LT_DIP, SL_SPENT, SL_FULL, the UI bank's ix (what's
+                                                **   carried: the UI's first words), a thing told apart, AW_*) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -961,7 +962,8 @@ struct cthing {
 };
 enum { SL_THE, SL_ANY, SL_IT, SL_ALL, SL_CLOSEST, SL_LARGEST, SL_SMALLEST, SL_LEAD, SL_NTH, SL_ME,
     SL_OTHER, SL_LIT, SL_UNLIT, SL_OPEN, SL_SHUT, SL_EMPTY,
-    SL_NEW = 28 };                              /* (SL_NEW, "a new torch", "a fresh torch", "another torch" (the user's,
+    SL_NEW = 28, SL_SPENT = 31, SL_FULL = 47 };  /* (SL_SPENT, "the spent torch": a light or a fuel burnt out; SL_FULL,
+                                                **   "the full sack": SL_EMPTY's low bits, the n 1, 2; 2026-11-06) */                              /* (SL_NEW, "a new torch", "a fresh torch", "another torch" (the user's,
                                                 **   2026-11-02): not in a hand, not burning: the world's, its low bits
                                                 **   SL_UNLIT, the request's n 1) */
                                                 /* (Which: the one there is, or the one meant; any one; it, the last
@@ -983,6 +985,7 @@ enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK
        LT_HIDE, LT_TIE, LT_TEND,                /* (LT_TIE: a rope tied off and let down, 2026-11-04; LT_TEND: first aid, a wound treated, the UI's timed work: slice
                                                 **   4.3's) */
        LT_KEY,                                  /* (A door's key turned, got out by a tool's steps first, 2026-11-04) */
+       LT_DIP,                                  /* (A torch dipped: LT_FILL a lantern's, each its own words, 2026-11-06) */
        LT_PACKOFF, LT_PACKDOWN, LT_REACHIN, LT_OPENUP, LT_GETOUT, LT_PACKON, LT_LETFALL, LT_LETBURN, LT_PUTAWAY, LT_BLOWOUT, LT_BLOWDARK, LT_LIGHTFROM, LT_SETDOWN, LT_TAKEUP, LT_HONE,
        LT_KINDLE, LT_GETNEW, LT_PUTOLD, LT_TAKENEW, LT_DOWNNEW, LT_BLOWOLD, LT_LIGHTNEW, LT_DIPOLD, LT_LETOLD,
        LT_SHEATHE, LT_SLING, LT_SCONCE, LT_LAYLIT, LT_INPACK, LT_LAYLIT2, LT_INPACK2, LT_DOWN2, LT_UP2 };   /* (The reach's
@@ -1628,6 +1631,29 @@ enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY };      /* The look's kinds: a look abo
                                                 **   quarter ahead; its own record, WAY_SEEN) */
 #define LF_ARRIVE       0x40                    /* (The look's first: arrived, R_VISITED the senses') */
 
+/* A thing the character carries (the UI bank's ix): its kind, what it's in (that one's entry plus 1; 0 none: held, worn,
+** hung from the belt), its state (CX_*) */
+#define NIX             40
+struct cix {
+    unsigned char   kind, up, flags;            /* (kind: its place in ixks, its kinds; 0xFF past them) */
+};
+#define CX_HELD         0x01                    /* (In a hand) */
+#define CX_WORN         0x02                    /* (Worn) */
+#define CX_LIT          0x04                    /* (Lit) */
+#define CX_SPENT        0x08                    /* (A light or a fuel burnt out: SL_SPENT's) */
+#define CX_EMPTY        0x10                    /* (A container or a surface with nothing in it, a fuel empty) */
+#define CX_SHUT         0x20                    /* (Closed) */
+#define CX_BACK         0x40                    /* (A pack worn on the back: taken off to reach into) */
+#define CX_HOLDS        0x80                    /* (A container or a surface) */
+#define NIXK            24
+struct cixk {                                   /* (The kinds of what it carries: each kind once, its flags, K_*, its name:
+                                                **   the UI's first words read no catalogue, the user's D17) */
+    unsigned char   kind, flags;
+    char            name[14];
+};
+enum { AW_NONE, AW_LIT, AW_UNLIT, AW_SPENT, AW_EMPTY };   /* (A thing told apart from another of its kind at hand by its
+                                                **   state: the world's apart, "the spent torch", the user's, 2026-11-06) */
+
 /* The UI's bank's records (UI_BANK) */
 struct uirec {
     char            map[MAP_H][MAP_W + 1];      /* The map's rows (the maker's, as the UI asks: mapq; maplay their
@@ -1645,6 +1671,12 @@ struct uirec {
                                                 **   with dust. ...") */
     unsigned char   maplay[MAP_H][MAP_W];       /* The map's squares' layers (ML_*: the maker's, with its rows: the UI
                                                 **   colours them, slice 4.2's) */
+    unsigned char   ixn;                        /* What the character carries, for the UI's first words (the world's as
+                                                **   what it carries changes, the store's order: things.c's ix_make; the
+                                                **   user's playtest, 2026-11-06), how many, */
+    struct cix      ix[NIX];                    /*   and each, */
+    unsigned char   ixk;                        /*   and their kinds, how many, */
+    struct cixk     ixks[NIXK];                 /*   and each */
 };
 enum { ML_NOW, ML_KEPT, ML_DRAWN, ML_PC, ML_COMPASS };   /* (A map's square: seen now; remembered; drawn on the map
                                                 **   carried; the character; the compass) */
@@ -1913,6 +1945,10 @@ struct wsave {
 **   own uirec.map maker +ui
 **   own uirec.maplay maker +ui                                 (Its squares' layers: slice 4.2's)
 **   own uirec.things_text world +ui
+**   own uirec.ixn world                                        (What it carries: the UI's first words, 2026-11-06)
+**   own uirec.ix world
+**   own uirec.ixk world
+**   own uirec.ixks world
 **   own uirec.tread world                                      (The traces read: I_TRACE's reply)
 **   own uirec.trtext world                                     (Their words)
 **   own bank(WORLD_BANK) maker                                 (The cache's table)

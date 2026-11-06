@@ -22,7 +22,7 @@
                    | <target> | <wait> | <rest> | <stop> | <naming> | <meta>
                    | <step> | <pace-set> | <charge> | <light> | <extinguish> | <posture> | <pretend>
                    | <enter> | <leave> | <climb> | <dig> | <wake> | <hide> | <sneak>
-                   | <knock> | <push> | <pull> | <give> | <lock> | <unlock> | <fill> | <dip> | <read> | <taste> | <touch>
+                   | <knock> | <push> | <pull> | <give> | <lock> | <unlock> | <fill> | <dip> | <read> | <copy> | <taste> | <touch>
                    | <defend> | <flee> | <follow> | <where> | <again>
                    | <knock-out> | <engage> | <disengage> | <pass>
                    | <pray> | <intervene> | <invoke> | <learn-invocation> | <fasting>
@@ -287,6 +287,7 @@
 <fill>           ::= "fill" <object> [ <from-phrase> | "with" <object> ]   (* "fill the lantern", "fill the lantern with oil" (a light renewed, slice 4.1's) *)
 <dip>            ::= ( "dip" | "soak" ) <object> [ ( "in" | "into" ) <object> ]   (* "dip the torch in the oil", "soak the torch in pitch"; "dip the torch": the first fuel carried *)
 <read>           ::= "read" [ <object> ]   (* bare: the last thing named *)
+<copy>           ::= ( "copy" | "transcribe" ) [ <object> ]   (* a writing copied onto a sheet (the plan's step 9: Drawing's); bare: the last thing named *)
 <taste>          ::= "taste" <object>
 <touch>          ::= ( "touch" | "feel" ) <object>
 (* ---- Defence, fleeing and following ---- *)

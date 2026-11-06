@@ -27,6 +27,7 @@
 #include "../dq0/hub.h"
 #include "../dq0/life.h"
 #include "../dq0/theme.h"
+#include "../dq0w/outfit.h"                 /* (kit.dat's struct kitrec: the clues carried out) */
 
 #define TOP_MAX         31                      /* (The hub's savedir holds 38: this, then "/d65535") */
 #define YEAR0           720                     /* (The year a life begins: the house's, the book's own world's reckoning) */
@@ -233,6 +234,132 @@ static void ended (void)
     L.h.dungeon = n + 1;
 }
 
+/* ---- The clues carried out (the plan's step 10; life.h's): dungeon n's (its folder's clues.dat, the UI's, a record a rule) that
+** were read, or that are on a thing it carries (kit.dat: an old writing, a copy, its fuel CLUE_HERE | the rule, CLUE_COPY too, made
+** its clue's number at the top), added to the top's clues.dat, and told; the first read of them a rumour heard (heard.txt, at the
+** top: the one-link clue, a part-written theme begun by its rumour line, the place it names its region; step 7's rumours tell it
+** first, in a made one's place) */
+
+static struct clue K;
+static struct kitrec kt;
+static const char* const landk[6] = { "mountains | granite | springs | cold", "hills | limestone | springs | mild",
+    "forest | sandstone | river | mild", "marsh | sandstone | lake | wet", "coast | chalk | sea | wet", "plain | chalk | river | dry" };
+static const char* const lies[6] = { "in the mountains", "in the hills", "in the woods", "in the marshes", "on the coast",
+    "on the plains" };
+static const char* const works[6] = { "raised another keep", "built another temple", "dug other mines", "laid others of their dead",
+    "built another town", "carved another hold" };
+
+static void __fastcall__ out (const char* s)
+{
+    write (1, s, strlen (s));
+}
+
+/* What clue K says of its place (wr: as a wrong reading has it) into buf: "the Ostmarkan Fells, where the hill-kings ..." */
+static void __fastcall__ place_in (unsigned char wr)
+{
+    strcpy (buf, wr ? K.wrong : K.place);
+    strcat (buf, ", where ");
+    strcat (buf, K.people[0] ? K.people : "its makers");
+    strcat (buf, " ");
+    strcat (buf, works[((K.work & 15) + wr) % 6]);
+}
+
+static void __fastcall__ clues_out (unsigned n)
+{
+    static char heard[240];
+    int fd, kf, tf;
+    unsigned base = 0, at;
+    unsigned char r, st, carried, best = 0;
+
+    remove (in_ (top, "heard.txt"));          /* (The last time's rumour, heard then: a new one only of a clue read now) */
+    dungeon_dir (n);
+    if ((fd = open (in_ (dir, CLUES_FILE), O_RDONLY)) < 0) {
+        return;
+    }
+    if ((tf = open (in_ (top, CLUES_FILE), O_RDWR | O_CREAT, 0644)) < 0) {
+        close (fd);
+        return;
+    }
+    while (read (tf, &K, CLUE_SIZE) == CLUE_SIZE) {
+        ++base;                                 /* (Those carried out before: the new ones after them) */
+    }
+    kf = open (in_ (top, "kit.dat"), O_RDWR);
+    heard[0] = 0;
+    for (r = 0; r < 8 && read (fd, &K, CLUE_SIZE) == CLUE_SIZE; ++r) {
+        if (!K.state) {
+            continue;
+        }
+        carried = 0;
+        if (kf >= 0) {                          /* (On a thing carried: its fuel its number at the top now) */
+            lseek (kf, 0, SEEK_SET);
+            for (at = 0; read (kf, &kt, sizeof kt) == sizeof kt; ++at) {
+                if ((kt.o.kind == KI_WRITING || kt.o.kind == KI_COPY) && (kt.fuel & (CLUE_HERE | 0xFF)) == (CLUE_HERE | r)) {
+                    carried |= kt.fuel & CLUE_COPY ? 2 : 1;
+                    kt.fuel = (kt.fuel & CLUE_COPY) | (base + 1);
+                    lseek (kf, (long) at * sizeof kt, SEEK_SET);
+                    write (kf, &kt, sizeof kt);
+                }
+            }
+        }
+        st = K.state & ~CL_MORE;
+        if (st == CL_UNREAD && !carried) {
+            continue;                           /* (Neither read nor carried: left behind) */
+        }
+        K.dungeon = n;
+        K.carried = carried;
+        write (tf, &K, CLUE_SIZE);
+        ++base;
+        if (st == CL_PIECE) {
+            out ("You came out with a piece of what the ");
+            out (K.thing);
+            out (" says: some place ");
+            out (lies[(K.land & 15) % 6]);
+            out (".\n");
+        } else if (st != CL_UNREAD) {
+            place_in (st == CL_WRONG);
+            out ("You came out knowing what the ");
+            out (K.thing);
+            out (" says: it tells of ");
+            out (buf);
+            out (".\n");
+        } else {
+            out (carried & 1 ? "You carry out the " : "You carry out a copy of the ");
+            out (K.thing);
+            out (", unread.\n");
+        }
+        if (st > CL_UNREAD && K.place[0] && (!best || (best == CL_PIECE && st != CL_PIECE))) {
+            best = st;                          /* (The rumour heard: a reading's, a whole one's before a piece's) */
+            strcpy (heard, "rumour   | ");
+            if (st == CL_PIECE) {
+                strcat (heard, "What you made out of the ");
+                strcat (heard, K.thing);
+                strcat (heard, " speaks of some place ");
+                strcat (heard, lies[(K.land & 15) % 6]);
+            } else {
+                strcat (heard, "The ");
+                strcat (heard, K.thing);
+                strcat (heard, " you read tells of ");
+                place_in (st == CL_WRONG);
+                strcat (heard, buf);
+            }
+            strcat (heard, ".\nregion   | ");
+            strcat (heard, st == CL_WRONG ? K.wrong : K.place);
+            strcat (heard, " | ");
+            strcat (heard, landk[(st == CL_WRONG ? K.work >> 4 : K.land & 15) % 6]);
+            strcat (heard, "\n");
+        }
+    }
+    close (fd);
+    close (tf);
+    if (kf >= 0) {
+        close (kf);
+    }
+    if (heard[0] && (fd = open (in_ (top, "heard.txt"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
+        write (fd, heard, strlen (heard));
+        close (fd);
+    }
+}
+
 int main (int argc, char* argv[])
 {
     unsigned long seed = 0;
@@ -263,6 +390,7 @@ int main (int argc, char* argv[])
     if (i == WH_NEXT || i == WH_AGAIN) {
         if (i == WH_NEXT) {
             ended ();
+            clues_out (L.h.dungeon - 1);        /* (Its clues carried out: the plan's step 10) */
             L.h.flags |= LF_BETWEEN;
             record_write ();
         }
@@ -278,6 +406,8 @@ int main (int argc, char* argv[])
             close (fd);
         }
         remove (in_ (top, "kit0.dat"));
+        remove (in_ (top, CLUES_FILE));         /* (The clues and the rumour of the life that's over) */
+        remove (in_ (top, "heard.txt"));
         remove (in_ (top, "quest.txt"));        /* (A rumour followed by the life that's over) */
         if (!given) {
             seed = hy_time () ^ hy_ticks ();

@@ -56,6 +56,7 @@ const char* cl;                                 /* (The command's line, s_comman
 unsigned char harm_told;                        /* (The states a harm's words told in this answer: intro.c's) */
 unsigned char autogo;                           /* (dq0 -a: every soft question answered yes, unasked: the tests') */
 unsigned char what_hi;                          /* (The thing's kind's top bit, the long task's what its other seven: task.c's noun) */
+unsigned char take_all;                         /* ("Take all" under way, its last thing too: the pack first, resolve.c's) */
 unsigned char take_more;                        /* ("Take all": things still to come after this one, resolve.c's) */
 unsigned char nosteps;                   /* (dq0 -J: the reach's steps none, the tests') */
 static unsigned char noinit;                    /* (dq0 -I: no engage initiative test, no grope's: the tests') */
@@ -901,6 +902,7 @@ unsigned char reach;                            /* (5: a step of the reach under
                                                 **   out again, its end; 6: walking over for a command the world carries
                                                 **   out as it gets there: a thing taken, a blow) */
 unsigned char said_ahead;                       /* (A walk over told as the thing's asked for, walk_ahead's: not told again) */
+unsigned char step_aw;                        /* (A step's thing told apart, its AW_*: step_go's, s_reach_said's) */
 unsigned char walk_op, worded;                  /* (The things' request it's asked for, IO_*; its first word told this line: walk_ahead's) */
 unsigned char placing;                          /* (A place in the room walked to: place_go's, or a walk told as it began,
                                                 **   walk_says': its arrival not "over to it") */
@@ -1824,6 +1826,10 @@ unsigned char __fastcall__ things (unsigned char op, const char* name)
     strncpy (q->name, name, sizeof q->name - 1);
     q->name[sizeof q->name - 1] = 0;
     said_ahead = 0;
+    if (op == (IO_GET | IO_STEPS)) {
+        HUB->pc_lump = (HUB->pc_lump & ~(PL_MORE | PL_ALL)) | (take_more ? PL_MORE : 0) | (take_all ? PL_ALL : 0);   /* ("Take
+                                                **   all": its first and last too, the pack first) */
+    }
     if (op & IO_STEPS) {
         walk_op = op;
         walk_ahead (name);                      /* (Its first words told now, the world's answer some 700,000 cycles off
@@ -2281,6 +2287,7 @@ void __fastcall__ s_command (char* l)
     if (strstr (l, "hand")) {
         hand_said ();                           /* (A hand said: part 11's, slice 4.1b's) */
     }
+    place_said ();                              /* ("From the floor", "on the ground": sway.c's, overlay 20) */
     if (resolve () != RV_ON) {                  /* (Its things found, its unsaid filled; or a question asked) */
         return;
     }
@@ -2435,7 +2442,7 @@ portal:
         } else if (d = HUB->pc_light, (pa = things (IO_DROP | IO_STEPS, cmd.obj.word)) == IR_OK) {
             if (*tt ()) {
                 msg (lb);                       /* (By the count: "You put down two sacks.", the world's) */
-            } else {
+            } else if (worded != 4) {           /* ("You put down the torch." said already, its first words: sway.c's) */
                 tell (T_PUT_DOWN);
             }
             after (d, 1, IO_DROP);              /* (No time: let fall, HOUSE.md's reach; the world's reach owed
@@ -2703,6 +2710,7 @@ void s_step_go (void)
     n = HUB->ireq.item;
     t = HUB->ireq.x;
     what_hi = n & 0x80;
+    step_aw = HUB->ireq.plural <= AW_EMPTY ? HUB->ireq.plural : 0;                 /* (Its thing told apart, AW_*: s_reach_said's) */
     took = 0;                                   /* (Its line under way: the next line held may stop a fight in its turn) */
     HUB->pc_lump = (HUB->pc_lump & ~PL_MORE) | (take_more ? PL_MORE : 0);
     if (k) {
@@ -2759,7 +2767,9 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
         "\nYou lay the %s down too, still lit.", "\nYou put the %s in your pack too.",
         "\nYou set the other %s down.", "\nYou take up the other %s."
     };
-    char t[sizeof CATALOGUE[0].name];
+    static const char* const aw[AW_EMPTY + 1] = { "", "lit ", "unlit ", "spent ", "empty " };
+    char t[sizeof CATALOGUE[0].name + 8];
+    unsigned char k = w >> 8;
 
     if ((unsigned char) w == TE_KINDLED) {
         msg (named ? "It catches." : "It doesn't catch.");
@@ -2773,7 +2783,14 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
     if ((unsigned char) w != TE_PACKED) {
         what_hi = named & 0x80;
     }
-    hub_mem (KIND_BANK, t, CATALOGUE[named].name, sizeof t);
+    t[0] = 0;
+    if ((unsigned char) w == TE_BEGUN && step_aw && k > LT_PACKDOWN && k != LT_PACKON && (k < LT_GETNEW || k > LT_LETOLD) &&
+        k < LT_DOWN2 && k != LT_LETBURN && k != LT_LAYLIT && k != LT_LAYLIT2) {   /* (Not "the lit torch ... still burning") */
+        strcpy (t, aw[step_aw]);                /* (Told apart from another of its kind at hand: "You put the spent torch in
+                                                **   your pack.", the world's apart, the user's playtest, 2026-11-06) */
+    }
+    step_aw = 0;
+    hub_mem (KIND_BANK, t + strlen (t), CATALOGUE[named].name, sizeof CATALOGUE[0].name);
     sayf ((unsigned char) w == TE_FUMBLE ? "\nYou fumble for your %s." : (unsigned char) w == TE_PACKED ? (w >> 8 ?     /* (w's high byte: where it lies) */
         " Your %s lies at your feet." : " Your %s is in your hand.") : first[(w >> 8) - LT_PACKOFF], t);
 }
