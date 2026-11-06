@@ -34,6 +34,7 @@
 #include "world.h"
 #include "work.h"
 #include "things.h"
+#include "../dq0/life.h"                        /* (The clues' CLUE_*: kit_put's) */
 #include "wbody.h"
 #include "outfit.h"
 
@@ -3917,8 +3918,22 @@ static char kp[56];
 /* Thing i (ip's record), in entry in less one (0: on the character), listed */
 static void __fastcall__ kit_put (unsigned i, unsigned char in)
 {
+    unsigned char r;
+
     memcpy (&kr, ip, sizeof kr);
-    if (kn >= NOFIT || kr.kind == KI_KEY || (kr.kind >= KI_THEME && kr.kind < KI_THEME + NTKINDS)) {
+    if (kr.kind >= KI_THEME && kr.kind < KI_THEME + NTKINDS) {    /* (A writing, the theme's kind a read rule's: an old
+                                                **   writing, its clue the rule's, life.h's, the plan's step 10) */
+        hub_map (THEME_BANK);
+        for (r = 0; r < THEME->nrules && r < NRULES && (THEME->rule[r].verb != TR_READ ||
+            THEME->rule[r].a != kr.kind - KI_THEME); ++r) {
+        }
+        if (r >= THEME->nrules || r >= NRULES) {
+            return;
+        }
+        kr.kind = KI_WRITING;
+        kr.fuel = CLUE_HERE | r;
+    }
+    if (kn >= NOFIT || kr.kind == KI_KEY) {
         return;
     }
     ke.o.kind = kr.kind;

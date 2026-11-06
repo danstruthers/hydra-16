@@ -91,8 +91,10 @@
 #             a way out there, open from the start); its guardians (a faction's name, or -)
 #   and a piece's line two more values, if it has them: its era (it lies among that era's works: 1 ...; or -,
 #   anywhere) and its guardians (a faction's name: their lair by it, popgen's; or -).
+# A read rule's thing is a writing (HOUSE.md's reading and clues): read only in the light by one who knows its era's people's
+# tongue and script (their people line's), it never solves anything (no effect: a hint, the user's Q9).
 # The theme checker (make.js's, themegen's) holds every theme to it: every goal reachable (each rule's things to be
-# had, the mission's ending a rule can bring about), a way out to be had by the legs alone (wayin or wayout, a sky shaft
+# had, the mission's ending a rule other than a read rule can bring about: solvable unread), a way out to be had by the legs alone (wayin or wayout, a sky shaft
 # by dice, and perhaps out of reach, not counted) with words for leaving, every faction placed (each one's kinds living
 # in its strata).
 

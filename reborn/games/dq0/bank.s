@@ -15,7 +15,7 @@
             .include    "ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 20                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
+OVMAX       = 21                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
@@ -184,6 +184,8 @@ ovl_out:
             SWPART      22, 20              ;   and its dungeon's folder found
             SWPART      23, 15              ; The limbs' news worded, a hand said (main.c: part 11's till 2026-11-04)
             SWPART      24, 14              ; The commands seen to less often (main.c: part 2's till 2026-11-04)
+            SWPART      25, 21              ; A writing read or copied (read.c: the plan's step 9, 2026-11-06)
+            SWPART      26, 21              ;   its clue made, a reading's other words
 
             SWFN        errand, 20
             SWFN        trade, 15
@@ -225,6 +227,11 @@ ovl_out:
             SWFN        args, 7
             SWFN        between, 21         ; (The record of a life, as a game begins: part 1's bank's room, 2026-11-04)
             SWFN        life_dir, 22
+            SWFN        read_cmd, 25        ; (A writing read or copied, its clues kept: read.c, the plan's steps 9, 10)
+            SWFN        clue_make, 26
+            SWFN        clues_kept, 26
+            SWFN        more_said, 26
+            SWFN        swapped, 26
             SWFN        reach_go, 13
             SWFN        step_go, 19
             SWFN        tool_out, 19

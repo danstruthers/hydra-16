@@ -146,7 +146,8 @@ by a request or an intent.
   TR_*, and the things named), and the world finds them to hand (the item store's IO_FIND), looks for the theme's
   rule for their kinds, and does it (the things made one, IO_COMBINE's; put, IO_PUT's; the way out opened, the hub's
   way_open, which E_LEFT goes by), keeping the rules done; its reply is how it went (PZ_DONE and the rule, PZ_NONE,
-  PZ_NO with the things' words, PZ_FAR), which theme.c only words (the rule's words, the endings).  **A thing walked
+  PZ_NO with the things' words, PZ_FAR), which theme.c only words (the rule's words, the endings); a read rule's, a writing's, read.c's (the clue's
+  tongue and script, the referee's test, its four grades' words: HOUSE.md's reading and clues; an old writing or a copy, PZ_OLD and its clue).  **A thing walked
   over to** is the world's walk and its taking: a thing out of reach (IO_GET's IR_NOT_HERE, its square and its item)
   is the UI's I_TAKE, and the world walks there (again, as long as the walk gets it nearer: a denizen in the way, a
   trap that stopped it), takes it up as IO_GET would, and tells it (E_TAKEN: taken, the UI then asking its time and
@@ -1477,6 +1478,13 @@ anything of the game's (it has the CPU and its own RAM; what passes between dung
   cycles from Enter to the first prompt in all).  It reads the sheet, kit.dat, kit0.dat and the kinds (dq0w.cat), and works by the life's seed and the dungeon's number alone: the same seed and answers, the same account.  Its
   healing is the referee's own: games/dq0harn's **course.h** (a toxin's and a disease's course: afflict.c's, moved) and **watch.h** (a watch of the clock: heal.c's), and the library's harnheal.c, each included by both.
   It writes pc.hm, kit.dat and the record's date; LF_BETWEEN in the record says it's yet to run (a reset between: it runs again).  It tells it in a dozen lines, asks its one question, and waits for Enter, as the game clears the screen as it starts (the rc variable dq0auto, the tests': no waiting; the tests' dq0Typed sets it for any game with a folder, dq0TypedAsk not).
+- **The clues** (the plan's steps 9 and 10; HOUSE.md's reading and clues): a writing (a theme's kind with a read rule) has its clue,
+  life.h's struct clue (its people's tongue and script, its condition, the place it names, its words), made by the UI (read.c, parts 25 and
+  26 in overlay 21's bank) as it's read or copied, and for every writing as the dungeon's left alive, in the dungeon's clues.dat; the
+  referee tests a reading (P_READ: the tongue and the script known, their average). The world's kit turns a writing carried into an
+  old writing (KI_WRITING, its fuel CLUE_HERE | its rule; a copy, KI_COPY, a sheet written on, CLUE_COPY too), and dq0life, as the next
+  dungeon begins, moves the clues read or carried to the top's clues.dat (each thing's fuel its number there), tells them, and makes the
+  first one read a rumour (heard.txt: step 7's rumours tell it first).
 - **kit0.dat** (top of the save's folder): what the life set out with, written by the world once, its first save of a life (a new life removes it): what's restocked to.
 - **The life's account** (**games/dq0end**, lib/acct/dq0end, 7K): the dungeons, the days, what was done, told as the character dies: by the UI as a game ends in a death (told its name and occupation, for no sheet's in the folder till the first save), by dq0life if it died between two dungeons; then what's next, by what's in the folder, the tests the next start makes (dq0life's next_is): a game's words at a death are all its.  **What the record holds as it dies:**
   - *Hard mode's death in a dungeon:* the dungeon's days, outcome LO_DIED, or LO_SOLVED if it had solved it (Q2's "died, solved": LD_DIED in the dungeon's flags), the date of its death, LF_OVER.

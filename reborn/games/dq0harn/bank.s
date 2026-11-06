@@ -206,6 +206,7 @@ ovl_out:
             SWPART      1, 4                ; hmchar's file read and written (harnfile.c), the creatures' sheets kept
             SWPART      2, 5                ; The names (harnname.c), the tool a dig takes, a test's dice fixed
             SWPART      3, 4                ; A dig's tool, the tests' own (part 2's room, 2026-11-03)
+            SWPART      4, 8                ; A writing read (the plan's step 9, 2026-11-06)
 
             SWFN        load_pc, 1
             SWFN        save_pc, 1
@@ -222,6 +223,7 @@ ovl_out:
             SWFN        pace_set, 3         ; (The main RAM's room for it)
             SWFN        side, 3
             SWFN        age_get, 3          ; (Its age, the sheet's: the plan for the game between dungeons, step 8)
+            SWFN        read_test, 4        ; (A writing read: the plan's step 9)
 
 ; The dice by who asks (rshouse.h's RS_HOUSE_DICE: ../dq0/dice.inc), overlay 7's, through its stub (OVFN's, by hand)
             .export     _dice_to

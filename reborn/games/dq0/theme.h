@@ -41,7 +41,7 @@
 #define _THEME_H
 
 #define THEME_SIZE      0x1000                  /* A theme's bytes in dq0t.dat (its record, then its words) */
-#define THEME_HEAD      1595                    /* (struct theme's: make.js lays it out the same) */
+#define THEME_HEAD      1739                    /* (struct theme's: make.js lays it out the same) */
 #define NTKINDS         8                       /* Its own kinds of things, */
 #define KI_THEME        120                     /*   the catalogue's from here to KI_THEME + NTKINDS - 1 (items.h's
                                                 **   KI_HIGH on after them, 2026-10-27: a theme's kinds held to 127) */
@@ -62,7 +62,8 @@ struct trule {
     unsigned char   effect;                     /* TE_* */
     unsigned        words;                      /* What's told as it's done (an offset of the theme's words) */
 };
-enum { TR_READ, TR_COMBINE, TR_PUT, TR_OUT, TR_TAKE };
+enum { TR_READ, TR_COMBINE, TR_PUT, TR_OUT, TR_TAKE, TR_COPY };   /* (TR_COPY: IO_PUZZLE's alone, no rule's: a writing copied onto
+                                                **   a sheet, the plan's step 9) */
 enum { TE_NONE, TE_OPEN, TE_RULE };             /* Nothing more; the way out opened; the place ruled and the way out
                                                 **   opened: either, the dungeon solved, to be walked out of (Q2) */
 #define TM_ESCAPE       0x01                    /* The mission: to escape, */
@@ -81,6 +82,7 @@ enum { P_HALLS, P_KEEP, P_TEMPLE, P_CELLARS, P_CRYPT, P_WORKS };  /* A stratum's
 /* ---- The history (HISTORY.md) */
 #define TLAYERS         3                       /* A stratum's layers of history, at most */
 #define TERAS           6                       /* The eras, */
+#define TPEOPLES        8                       /*   the peoples, */
 #define TFACTIONS       8                       /*   the factions */
 struct tlayer {                                 /* A stratum's layer (oldest first) */
     unsigned char   era;                        /* Its era (1 ...: the theme's; 0 none said) */
@@ -180,6 +182,10 @@ struct theme {
     struct tmint    mint[TMINTS];
     unsigned char   exit_sn;                    /* Another way out's stratum (1 ...: the wayout line's, a through goal's
                                                 **   goal_sn; 0 none): a stair to the daylight, the maker's, open */
+    char            ptongue[TPEOPLES][9];       /* Each people's tongue (the theme file's people line's word: "khuzdul";
+                                                **   "" not said, common), an era's by its people: what its writings say, */
+    char            pscript[TPEOPLES][9];       /*   and its script ("delvic"; "" not said, ardic): what they're written in
+                                                **   (the plan for the game between dungeons, its step 9: reading) */
 };
 #define THEME           ((struct theme*) 0x8000)    /* (In the hub's theme bank) */
 typedef char theme_head[sizeof (struct theme) == THEME_HEAD ? 1 : -1];

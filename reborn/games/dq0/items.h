@@ -150,6 +150,10 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
                                                 **   iron spike, the same driven in for good; a ring in the wall, a
                                                 **   post, fixed where they stand, a rope's to tie to; a rope in place,
                                                 **   its top's and its foot's: dq0w/wrope.c) */
+    KI_WRITING, KI_COPY,                        /* A writing carried out of its dungeon (a theme's kind with a read rule:
+                                                **   the next theme's numbers are other things') and a copy of one (a sheet
+                                                **   written on): their clue by their fuel (life.h's CLUE_*: the plan for
+                                                **   the game between dungeons, its steps 9 and 10) */
     KI_COUNT };
 #define ROPE_FEET       50                      /* (A coil's length: the house's) */
 #define IO_ROPE         0x20                    /* (IO_HIDE's to: a rope's work, RP_* in its low bits: wrope.c's) */
@@ -403,7 +407,7 @@ enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS, LM_KIT, LM_GO, LM
                                                 **   put, IO_PUT's; the way out opened, the hub's way_open): result
                                                 **   PZ_*, x the rule done; the things' words of it in things_text
                                                 **   (a thing not found, put: "" none) */
-enum { PZ_DONE, PZ_NONE, PZ_NO, PZ_FAR };       /* (IO_PUZZLE's: a rule done; none for those kinds; not done, the
+enum { PZ_DONE, PZ_NONE, PZ_NO, PZ_FAR, PZ_OLD };       /* (IO_PUZZLE's: a rule done; none for those kinds; not done, the
                                                 **   things' words why; the way out out of reach) */
 enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE, IR_NO, IR_FIXED, IR_FUMBLED };    /* (IR_NO: refused, the
                                                 **   things' words why; IR_FIXED: a portal's part, in it; IR_FUMBLED:

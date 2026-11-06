@@ -13064,6 +13064,73 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0reading', outfit: true, near: ['save', 'body'], what: "Dingus Quest Zero's writings read, copied and carried out (the plan for the game between dungeons, its steps 9 and 10; HOUSE.md's reading and clues), by scenes: the crypt's stone tablet (the hill-kings', hethrin in hethric) at a soldier's feet (no script: it can't read), a scribe's (the script, not the tongue), a hill-man's (the tongue, not the script); one with both (the referee's test at their masteries' average and the condition, the book's Skills 11 and Treasure 8) in four games, each grade's words by its dice (a success the words, the place and the reason; a failure half of it, the land, the condition told; a critical success a line more, what the puzzle wants; a critical failure the words' names swapped about and another place, told as confidently), read again the same, untested; a copy made on paper with charcoal (Drawing's test, its words), read, the tablet read after it the same, nothing left to copy onto, nothing copied in the dark; the soldier's puzzle done unread (the crown on the throne: no puzzle needs reading); the Cup of Rowon's journal (seed 70000, the Houshani's, ostari in sunglyph) read and copied and the dungeon left with them in a save's folder: dq0life telling what was read as the next begins, the clue's rumour (heard.txt: its place's region), the old writing and the copy read in the next dungeon by their clues",
+      init: 't_rc', cycles: 6000e6,
+      machine: { input: dq0TypedAsk(['bind -a /sd/0/games /bin', 'dq0auto=1',
+        'hmchar -q -s 5 -u feudal -c militia -o /ram/m.hm', 'hmchar -q -s 5 -u feudal -c scribe -o /ram/s.hm',
+        'cp /ram/m.hm /ram/t.hm', "echo 'language hethrin=60' >> /ram/t.hm", "echo 'script ardic' >> /ram/t.hm",
+        'cp /ram/m.hm /ram/r.hm', "echo 'language hethrin=50' >> /ram/r.hm", "echo 'script hethric=50' >> /ram/r.hm",
+        'cp /ram/m.hm /ram/r9.hm', "echo 'language hethrin=95' >> /ram/r9.hm", "echo 'script hethric=95' >> /ram/r9.hm",
+        'echo =SOLDIER', 'dq0 -p t -s 3 -c /ram/m.hm -T -T', 'read the tablet', 'quit',
+        'echo =SCRIBE', 'dq0 -p t -s 3 -c /ram/s.hm -T -T', 'read the tablet', 'quit',
+        'echo =HILLMAN', 'dq0 -p t -s 3 -c /ram/t.hm -T -T', 'read the tablet', 'quit',
+        ...[8, 12, 17, 21].flatMap(n => ['echo =G' + n, 'rm /ram/clues.dat', 'dq0 -p t -s ' + n + ' -c /ram/' + (n === 8 ? 'r9' : 'r') + '.hm -T -T', 'read the tablet', 'read the tablet', 'quit']),
+        'echo =COPY', 'rm /ram/clues.dat', "dq0 -p t -s 3 -c /ram/r.hm -T -T -k 'paper,charcoal'", 'copy the tablet', 'read the copy', 'read the tablet', 'copy the tablet',
+        'douse the torch', 'copy the tablet', 'quit',
+        'echo =UNREAD', "dq0 -p t -s 3 -c /ram/m.hm -k 'iron crown,throne'", 'drop the throne', 'put the crown on the throne', 'quit',
+        'echo =QUEST', 'cp /ram/m.hm /ram/q.hm', "echo 'language ostari=90' >> /ram/q.hm", "echo 'script sunglyph=90' >> /ram/q.hm",
+        "dq0 -p t -s 70000 -c /ram/q.hm -d /ram/a -k 'journal,paper,charcoal'", 'read the journal', 'copy the journal', 'u', 'u',
+        'echo =NEXT', 'dq0 -p t -c /ram/q.hm -d /ram/a', 'read the old writing', 'read the copy', 'quit',
+        'echo =HEARD', 'cat /ram/a/heard.txt', 'echo =END', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').replace(/\r/g, '');
+        const sect = n => { const i = o.indexOf('% echo =' + n + '\n'), j = o.indexOf('% echo =', i + 3); return i < 0 ? '' : o.slice(i, j < 0 ? o.length : j).replace(/\s+/g, ' '); };
+        const has = (n, s, what) => { if (!(s instanceof RegExp ? s.test(sect(n)) : sect(n).includes(s))) f.push(what + ': ' + sect(n).slice(-600)); };
+        const not = (n, s, what) => { if (s instanceof RegExp ? s.test(sect(n)) : sect(n).includes(s)) f.push(what + ': ' + sect(n).slice(-600)); };
+        const TABLET = 'Here lies Aldric, king under the hill. His seal was broken at his death';
+        // Who can't read it
+        has('SOLDIER', "You can't read: the marks on the stone tablet mean nothing to you.", 'the soldier (no script) read it');
+        has('SCRIBE', "You know the letters on the stone tablet, but the words they spell are in a tongue you don't speak.", 'the scribe (the script, not the tongue)');
+        has('HILLMAN', "The stone tablet is written in letters you've never learnt.", 'the hill-man (the tongue, not the script)');
+        for (const n of ['SOLDIER', 'SCRIBE', 'HILLMAN']) not(n, TABLET, n.toLowerCase() + ' read the words');
+        // The four grades, each twice the same (read once)
+        const twice = (n, w) => { if (sect('G' + n).split(w).length < 3) f.push('G' + n + ' read again not the same: ' + sect('G' + n).slice(-900)); };
+        has('G8', new RegExp(TABLET.replace(/[.]/g, '\\.') + '[^>]*It tells of the \\w+ \\w+, where the hill-kings laid others of their dead\\.'), 'a success: the words, the place and the reason');
+        not('G8', 'smaller hand', 'a success told a line more');
+        has('G12', 'The marks are worn almost away.', 'the condition not told');
+        has('G12', /the sun's \.\.\. The rest you can't make out, but it speaks of some place (in|on) the \w+\./, 'a failure: half of it and the land');
+        not('G12', 'It tells of', 'a failure told the place');
+        has('G17', /It tells of the \w+ \w+, where the hill-kings laid others of their dead\. Under it, in a smaller hand, a line most would miss: the king's seal is what matters here\./, 'a critical success: the line more');
+        has('G21', /It tells of the \w+ \w+, where the hill-kings built another town\./, 'a critical failure: another place, another reason');
+        not('G21', TABLET, 'a critical failure: the words as they are');
+        has('G21', 'Here lies Aldric', 'a critical failure: not the tablet\'s words at all');
+        twice(8, 'It tells of the');
+        twice(12, "can't make out");
+        twice(17, 'smaller hand');
+        twice(21, 'built another town');
+        // The copy
+        has('COPY', /You copy the marks of the (stone )?tablet onto your sheet, line by line: (a fair copy, every mark as it stands|a good copy|a rough copy, some of its marks guessed at|a poor copy, much of it botched)\./, 'the copy not made');
+        const cp = sect('COPY').split('> read the copy')[2] || '', tb = sect('COPY').split('> read the tablet')[2] || '';
+        if (!cp.includes('Here lies Aldric') && !/can't make out/.test(cp)) f.push('the copy not read: ' + cp.slice(0, 400));
+        const words = x => (/The tablet is cut[^>]*/.exec(x) || [''])[0].replace(/[\s\d]+$/, '');   // (Less the status line's figures after it)
+        if (!words(cp) || words(tb) !== words(cp)) f.push('the tablet read after its copy not the same: ' + tb.slice(0, 400));
+        has('COPY', 'You have nothing to copy it onto: a sheet, and charcoal, a pencil, or a quill and ink.', 'a second copy, no sheet left');
+        has('COPY', "You can't see to copy anything.", 'copied in the dark');
+        // A puzzle done unread
+        has('UNREAD', 'You set the iron crown upon the throne.', 'the soldier\'s crown not set on the throne (a puzzle done unread)');
+        // Carried out
+        has('QUEST', 'The journal is a seeker\'s, Efost\'s', 'the journal not read by an ostari reader in sunglyph');
+        has('QUEST', /You copy the marks of the journal onto your sheet/, 'the journal not copied');
+        has('NEXT', /You came out (knowing what the journal says: it tells of the \w+ \w+, where (the Houshani|its makers) [a-z ]+\.|with a piece of what the journal says: some place (in|on) the \w+\.)/, 'dq0life not telling the clue carried out');
+        has('NEXT', 'Efost', 'the old writing not read in the next dungeon');
+        if ((sect('NEXT').match(/Efost/g) || []).length < 2) f.push('the copy not read in the next dungeon: ' + sect('NEXT').slice(-800));
+        has('HEARD', /rumour \| (The journal you read tells of the \w+ \w+, where|What you made out of the journal speaks of some place) [^|]*region \| the \w+ \w+ \| (mountains|hills|forest|marsh|coast|plain) \|/, 'the clue\'s rumour (heard.txt)');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'hmchartongues', what: "hmchar's tongues and scripts (the plan for the game between dungeons, its step 8; occupations.txt's tongues N and scripts N) from its three makers: a Feudal scribe (seed 5) from C's hmchar and hmchar.fs the same, its profile and file as hmcharCheck has them (a 2nd Language, the native script ardic and two more, none twice); a Viking lexigrapher from both the same (two scripts, the native delvic, no second tongue); hmchar.hl's scribe (its dice its own) a language line and three scripts, the native ardic, none twice",
       init: 't_rc', cycles: 1600e6,
       machine: { input: 'ābind -a /sd/0/games /bin\r' + 'ācd /ram; hmchar -q -s 5 -u feudal -c scribe -o x.hm >s.out; cp x.hm s.hm; hmchar.fs -q -s 5 -u feudal -c scribe -o x.hm >f.out\r' +

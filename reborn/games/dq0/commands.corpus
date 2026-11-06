@@ -387,6 +387,7 @@ refresh the torch	VB_FILL_OBJECT	object=torch	near=torch	refresh is fill
 redip the torch	VB_FILL_OBJECT	object=torch	near=torch	redip is fill
 sharpen the sword	VB_FILL_OBJECT	object=sword	near=sword	sharpen is fill: a whetstone's (2026-11-02)
 read the sign	VB_READ_OBJECT	object=sign	near=sign	read
+copy the sign	VB_READ_OBJECT	object=sign	near=sign	copy
 taste the potion	VB_TASTE_OBJECT	object=potion	near=potion	taste
 touch the wall	VB_TOUCH_OBJECT	object=wall	near=wall	touch
 feel the wall	VB_TOUCH_OBJECT	object=wall	near=wall	feel, a synonym of touch
