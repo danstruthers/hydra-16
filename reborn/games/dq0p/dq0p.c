@@ -153,8 +153,36 @@ unsigned char __fastcall__ num (const char* s);
 ** on the answer's priority (the senses in the foreground meanwhile, the kernel's TASKFORE); answered as the answer's
 ** begun, after GIVE_WAY ticks at most, or at once if the UI's asked the minds something (the sway: it waits on them).
 ** The mind waits on it in its hub_call, and carries on as it's answered; at the turns pace never (the minds have no
-** turn while a command's given): 2026-11-01 */
-static unsigned char held;
+** turn while a command's given): 2026-11-01.  Held from a line's first key too (the hub's ui_keys: dq0hold's, the
+** world's long jobs', 2026-11-06: the senses' part copied in and a mind's ask answered as an Enter came, 90,000 cycles
+** of an answer's first letter), KEY_HOLD ticks at most while the keys go on, then answered till the line's Enter (its
+** command's GIVE_WAY its own, the parser's request's seq a new line's) or the keys let go */
+#define KEY_HOLD        600
+static unsigned char held, hst, hsq, hcm;       /* (Held; the hold's state: 0 none, 1 since ht0, 2 run out; its line's,
+                                                **   and the UI's ui_cmd as it began: dq0d.c's gsq, gcm) */
+static unsigned ht0;
+
+static unsigned char sense_held (void)
+{
+    hub_map (0);
+    if (!HUB->tpr || !(HUB->ui_cmd | HUB->ui_keys) || HUB->sway.state == REQ_POSTED) {
+        hst = 0;                                /* (Nothing in hand, the turns pace, or the UI's asked the minds) */
+        return 0;
+    }
+    if (HUB->cq.seq != hsq || HUB->ui_cmd != hcm) {
+        hsq = HUB->cq.seq;                      /* (A new line entered: its command's own hold; a line's keys as the
+                                                **   last's answer's begun, theirs) */
+        hcm = HUB->ui_cmd;
+        hst = 0;
+    }
+    if (!hst) {
+        hst = 1;
+        ht0 = hy_ticks ();
+    } else if (hst == 1 && (unsigned) (hy_ticks () - ht0) >= (HUB->ui_cmd ? GIVE_WAY : KEY_HOLD)) {
+        hst = 2;
+    }
+    return hst == 1;
+}
 
 int main (int argc, char* argv[])
 {
@@ -166,7 +194,10 @@ int main (int argc, char* argv[])
     for (;;) {
         hub_map (0);
         if (held) {
-            hy_sleep_ticks (1);                 /* (A denizen's ask held: looked at again each tick) */
+            hy_sem_wait (HUB->sem[T_SENSES], 8);    /* (A denizen's ask held: looked at again each eighth tick, or
+                                                **   at once as the world asks a look: no tick's wake of its own
+                                                **   in an answer's time, a held line's two percent of the CPU,
+                                                **   2026-11-06) */
         } else {
             hy_sem_acquire (HUB->sem[T_SENSES]);    /* (Waiting costs nothing) */
         }
@@ -200,8 +231,7 @@ int main (int argc, char* argv[])
                                                 **   be in the next command's answer, 2026-11-01) */
             }
         }
-        held = hub_posted (&HUB->dsense) && HUB->tpr && HUB->ui_cmd && held < GIVE_WAY &&
-            HUB->sway.state != REQ_POSTED ? held + 1 : 0;
+        held = hub_posted (&HUB->dsense) && sense_held ();
         if (!held && hub_posted (&HUB->dsense)) {   /* (A denizen's senses, its mind asking: sense.c's; after the
                                                 **   character's look, if both are asked: its answer first, the sound
                                                 **   layer's pulse, the dearer, after it) */

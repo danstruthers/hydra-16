@@ -4467,13 +4467,20 @@ void s_stopped (void)
 
 
 /* The character's long task as the clock goes: its part done, if it's a wait; its work, if there's any (part 23's:
-** a walk's next square come, a blow or a wound to see to) */
+** a walk's next square come, a blow or a wound to see to).  Its next step gives way to a line entered since it began
+** till the line's command is given (the hub's ui_keys, Enter to the line taken, and ui_giving), at the real paces,
+** ui_first's quarter second at most: its step done, the line answered, then on (dq0hold's, 2026-11-06); not a blow */
+static unsigned char tsq;                       /* (The parser's request's seq as it began: its own line's) */
 static void stepping (void)
 {
     unsigned char k;
 
     hub_map (0);
-    if (!(k = HUB->pc_task.kind) || HUB->pc_task.asking) {
+    if (!(k = HUB->pc_task.kind)) {
+        tsq = HUB->cq.seq;
+        return;
+    }
+    if (HUB->pc_task.asking || (!pc_hit && tsq != HUB->cq.seq && (HUB->ui_keys | HUB->ui_giving) && ui_first ())) {
         return;
     }
     if ((k == LT_WAIT || k == LT_SLEEP || k == LT_SEARCH || k >= LT_STUDY || lwork) && !HUB->pc_task.mins) {
@@ -6907,6 +6914,28 @@ unsigned char ui_long (void)
     return keys_hold () || ui_first ();
 }
 
+/* The denizens' intents held for a line being typed too (dq0hold's, 2026-11-06), as the minds and the senses hold:
+** from the first key KEY_HOLD ticks at most, then on till its Enter (its command's hold ui_first's) or the keys let
+** go; not keys_hold's free pass and hold again, the denizens three seconds behind at most, not slowed while the keys
+** go on.  1, held */
+static unsigned char dst;
+static unsigned dt0;
+static unsigned char den_held (void)
+{
+    hub_map (0);
+    if ((HUB->pace & 3) == 3 || !HUB->ui_keys || HUB->ui_cmd) {
+        dst = 0;
+        return ui_first ();
+    }
+    if (!dst) {
+        dst = 1;
+        dt0 = hy_ticks ();
+    } else if ((unsigned) (hy_ticks () - dt0) >= KEY_HOLD) {
+        dst = 2;
+    }
+    return dst == 1;
+}
+
 int main (int argc, char* argv[])
 {
     static struct msg m;
@@ -6946,11 +6975,13 @@ int main (int argc, char* argv[])
                                                 **   giving way as a command comes; 160,000 cycles of the world's and a
                                                 **   part's swap, on whichever answer it fell: 2026-11-03) */
         }
-        if (DEN_INTENTS () && !ui_first () && (HUB->di[HUB->di_tail].kind != I_KIT || !keys_hold ())) {
+        if (DEN_INTENTS () && !den_held ()) {
             den_intents ();                     /* (The denizens' intents carried out; not while the UI's command is
-                                                **   in hand at the real paces, its answer first: ui_first's; nor a
-                                                **   denizen's things, those behind them after, while a line's typed:
-                                                **   keys_hold's, none of it its parts' swaps each time round) */
+                                                **   in hand at the real paces, its answer first: ui_first's; nor while
+                                                **   a line's typed, from its first key three seconds at most: den_held's,
+                                                **   none of it its parts' swaps each time round, nor its news told as
+                                                **   the Enter comes (a denizen's things only, keys_hold's, till
+                                                **   2026-11-06: dq0hold's, the senses' and the minds' with it) */
         }
         while (hub_take (&m)) {
             intent (&m);
@@ -7067,8 +7098,11 @@ int main (int argc, char* argv[])
             things ();                          /* (The UI's: the things; after the clock's moved on for an intent,
                                                 **   so the denizens see it moved, as before the things were here) */
         }
-        hub_sleep (move.on || was_busy ? 2 : 4);  /* (Nothing under way: asleep on the doorbell, an intent
-                                                **   waking it at once; the clock on from the ticks gone) */
+        hub_sleep (uf ? 8 : move.on || was_busy ? 2 : 4);  /* (Nothing under way: asleep on the doorbell, an intent
+                                                **   waking it at once; the clock on from the ticks gone.  The UI's
+                                                **   command in hand at the real paces: its jobs and its steps held
+                                                **   (ui_first's), the longer, its requests and intents waking it as
+                                                **   ever: fewer passes of its own in the answer's time, 2026-11-06) */
     }
     event (E_BYE, 0, 0);
     return 0;

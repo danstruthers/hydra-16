@@ -811,9 +811,14 @@ as its Enter comes and a command's first letter isn't behind one.  They are a de
 behind them in the ring), the traces' journal taken in, the lights' minute with its sconces and the time of day it
 believes, the map making's things, and a look about as a body falls: each a tenth of a second of the world's time or
 more.  Those that can stop part way do (a denizen's things between sections, the journal, the map making's things, the sconces
-between their passes, the senses' sound pulse for an Enter), and the first of them all look at the keys as they fall due.  A denizen's plain intents, its steps and blows, wait for the keys not at all, and for an Enter a quarter second at most,
-as before; nor do the character's own doings wait (a step of its walk, its own look), being the answers.  So typing holds
-no one still.  A long line typed slowly or a steady typist can't starve them: three seconds at most (600 ticks,
+between their passes, the senses' sound pulse for an Enter), and the first of them all look at the keys as they fall due.  *(2026-11-06, new, for review: the denizens held too.)*  The denizens' own work holds back from the first key as
+well, so none of it shares the CPU with an Enter's parse: a denizen's intents (its steps and blows, not only its things),
+the minds deciding (dq0d, 30 tenths at most, GIVE_WAY's), and the senses' answer to a mind's ask (dq0p, 600 ticks, its
+KEY_HOLD; it had copied its part 6 in as an Enter came, 90,000 cycles of an answer's first letter); the Enter's command then
+holds them again, its own three seconds for the minds, half a second for the senses, a quarter second for the intents.
+The character's walk doesn't wait for keys: its next step waits only from an Enter till that line's command is given, a
+quarter second at most (ui_first's), and never for a blow; its own look is the answer.  So typing holds the denizens still
+three seconds at most.  A long line typed slowly or a steady typist can't starve them: three seconds at most (600 ticks,
 dq0w.c's KEY_HOLD, from the first one held back), then a pass of the world's loop goes free and whatever's due runs through, the keys not
 stopping it.  An Enter does, its answer first, but once: the next free pass runs through an Enter too (that one answer behind
 it), or a steady typist's Enters would stop a denizen's things every time, drawn again from the start.  Then they hold back again.  A line emptied (Ctrl-U, Backspace) lets them go at once.  At the turns pace nothing holds back: that

@@ -3016,13 +3016,19 @@ function dq0JobsTest() {
 // made due just after its first key, another just after the first's run: each held about KEY_HOLD ticks (keys_hold's: 600,
 // 10.7M cycles), each run though the keys go on, none starved; the line let go by Ctrl-U, a job at once; "inventory" typed
 // fast with both due from its first key: neither before its first letter, both after it.  At the turns pace nothing held,
-// the same typing and a job run with the keys on the line: a turns-pace game turns on no one's typing
+// the same typing and a job run with the keys on the line: a turns-pace game turns on no one's typing.  The denizens' own
+// work held the same way (2026-11-06): no mind deciding (dq0d), no senses' answer to its ask (dq0p) and no intents of
+// theirs carried out (the world's) in the long line's first HELD cycles of keys nor from inventory's first key to its first
+// letter; some of it run as the long line's keys go on past LIMIT
 function dq0HoldTest() {
   const LONG = 'look about the room for a while', LINE = 'inventory', WANT = 'You carry', MAX = 720000, HELD = 8000000, LIMIT = 16000000, FREE = 1200000;
   const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl'];
   const slow = [...LONG].join('Ā');
+  // (At the normal pace the long line let go part way, as the denizens are about (seed 3's: a mind deciding, the senses and
+  // their intents some 30M cycles on), and typed again from its "room": a line's first key as they're at it, its hold theirs)
+  const slow1 = [...LONG.slice(0, 14)].join('Ā') + 'Ā\x15Ā' + [...LONG.slice(15)].join('Ā');
   const lines = [...pre, 'dq0 -p n -s 3 -c /ram/c.hm -T', LINE, 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'quit', 'echo $status'];
-  const input = pre.map(l => 'ā' + l + '\r').join('') + 'ā' + lines[3] + '\r' + 'ā' + slow + 'Ā\x15ĀĀ' + LINE + '\rā' + 'quit\r' + 'ā' + lines[6] + '\r' + 'ā' + slow + '\x15Ā' + 'quit\rāecho $status\r';
+  const input = pre.map(l => 'ā' + l + '\r').join('') + 'ā' + lines[3] + '\r' + 'ā' + slow1 + 'Ā\x15ĀĀ' + LINE + '\rā' + 'quit\r' + 'ā' + lines[6] + '\r' + 'ā' + slow + '\x15Ā' + 'quit\rāecho $status\r';
   return {
     name: 'dq0hold', what: 'Dingus Quest Zero\'s world\'s long jobs waiting from a line\'s first key to its answer\'s first word at the real paces, three seconds at most while keys go on (the user\'s "hold back"): the lights\' minute and the traces\' journal made due as a long line is typed slowly, as it\'s let go, and as a line\'s typed fast; at the turns pace not held',
     meaning: true, outfit: true,
@@ -3035,10 +3041,15 @@ function dq0HoldTest() {
       const at = n => parseInt(new RegExp('^al ([0-9A-F]+) \\.' + n + '$', 'm').exec(lbl)[1], 16);
       const due = at('_burn_due'), trn = at('_tr_n'), burn = at('_burns_now'), flush = at('_tr_flush');
       const a = m.acia, cpu = m.cpu, step = cpu.step.bind(cpu), read = a.read, R = this.R = {};
+      // (The background's own work, each run's cycle at the normal pace: a mind deciding, the senses answering a mind's ask,
+      // the denizens' intents carried out, by their first addresses in their tasks: dq0d, dq0p, the world)
+      const atIn = (p, n) => parseInt(new RegExp('^al ([0-9A-F]+) \\.' + n + '$', 'm').exec(fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', p, p + '.lbl'), 'latin1'))[1], 16);
+      const BG = [['decide', 'dq0d', 2, '_decide'], ['sense', 'dq0p', 6, '_sense_actor'], ['intents', 'dq0w', 1, '_den_intents']].map(([k, p, t, n]) => ({ k, t, pc: atIn(p, n) }));
+      const runs = this.runs = { decide: [], sense: [], intents: [] };
       let world = -1, game = 0, typed = '';
       const plan = [], wants = { burn: null, trace: null };
       // (A job made due so many cycles from now, and looked for by its first address, every run of it its name's)
-      const go = (name, what, delay) => { world = m.dq0.bank(0)[12 + 1]; plan.push({ name, what, at: cpu.cyc + delay }); };
+      const go = (name, what, delay) => { world = m.dq0.bank(0)[12 + 1]; BG.forEach(b => { b.task = game === 1 ? m.dq0.bank(0)[12 + b.t] : -1; }); plan.push({ name, what, at: cpu.cyc + delay }); };
       a.read = (r, t) => {
         if (r === 0 && a.rdrf) {
           const c = a.rx;
@@ -3052,6 +3063,7 @@ function dq0HoldTest() {
             typed = '';
           } else {
             typed += String.fromCharCode(c);
+            if (typed.length === 1 && game === 1) R['key' + typed] = a.rxAt;   // (A line's first key: the long line's, inventory's)
             if (typed === 'l') go(game === 1 ? 'held1' : 'turns', 'burn', 100000);
             if (typed === 'i' && game === 1) { go('fastburn', 'burn', 100000); go('fasttrace', 'trace', 100000); }
           }
@@ -3074,6 +3086,8 @@ function dq0HoldTest() {
             if (n === 'held1') go('held2', 'trace', 400000);
           }
         }
+        for (const b of BG) if (m.T === b.task && cpu.PC === b.pc) runs[b.k].push(c);
+        for (const k of ['l', 'r', 'i']) if (R['key' + k] && !R['seen' + k] && m.dq0.bank(0)[m.dq0.layout().L.uiKeys]) R['seen' + k] = c;   // (The first key as the UI has it)
         return step(v);
       };
     },
@@ -3099,6 +3113,20 @@ function dq0HoldTest() {
         if (!(R[n] && R[n].ran)) f.push(n + ': made due as the line was typed, never run');
         else if (r.first !== null && R[n].ran - R.enter < r.first) f.push(n + ': run ' + (R[n].ran - R.enter) + ' cycles after Enter, before its first letter at ' + r.first);
       }
+      // (The denizens' own work held as well, 2026-11-06: a mind deciding, the senses answering its ask, their intents carried
+      // out, none from the first key the UI has till HELD cycles on, the long line typed slowly, nor from inventory's first key
+      // to its first letter; and some of it run as the long line's keys went on past LIMIT, three seconds the most it's held)
+      const runs = this.runs, inn = (k, a, b) => runs[k].filter(c => c >= a && c < b).length, end = R.enter + r.first;
+      let ran = 0;
+      for (const k of Object.keys(runs)) {
+        const slow = inn(k, R.seenl, R.seenl + HELD), again = inn(k, R.seenr, R.seenr + HELD), fast = inn(k, R.seeni, end);
+        ran += inn(k, R.seenl + LIMIT, R.letgo1);
+        notes.push(k + ': ' + runs[k].length + ' runs; the long line\'s keys, its first ' + HELD + ' cycles ' + slow + ', after ' + LIMIT + ' ' + inn(k, R.seenl + LIMIT, R.letgo1) + '; typed again from its "room" as the denizens are about, its first ' + HELD + ' cycles ' + again + '; inventory\'s first key to its first letter ' + fast + ', after it ' + inn(k, end, Infinity));
+        if (!R.seenl || slow) f.push(k + ': ' + slow + ' run(s) in the long line\'s first ' + HELD + ' cycles of keys: not held back');
+        if (!R.seenr || again) f.push(k + ': ' + again + ' run(s) in the first ' + HELD + ' cycles of the line typed again: not held back');
+        if (!R.seeni || r.first === null || fast) f.push(k + ': ' + fast + ' run(s) from inventory\'s first key to its first letter: not held back');
+      }
+      if (!ran) f.push('the denizens\' work: none run as the long line\'s keys went on past ' + LIMIT + ' cycles: starved');
       return f;
     },
     sdcard: true
