@@ -13098,7 +13098,7 @@ module.exports = {
         'themegen -q -r 3 -s 12346 -o /ram/r', 'cmp /ram/q/rumours.txt /ram/r/rumours.txt', 'echo other $status', 'cat /ram/q/rumours.txt', 'rm -r /ram/q', 'rm -r /ram/r',
         'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/b', 'u', 'echo =NEXT',
         'dq0 -p t -d /ram/b', 'quit', 'cat /ram/b/d1/theme.txt', 'cat /ram/b/rumours.txt', 'cat /ram/b/d2/quest.txt', 'cat /ram/b/d2/theme.txt', 'xd /ram/b/life.dat', 'rm -r /ram/b',
-        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/e', 'u', 'dq0auto=()', 'echo =SECOND', 'dq0 -p t -d /ram/e', '5', '2', '', 'quit', 'dq0auto=1',
+        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/e', 'u', 'dq0auto=()', 'echo =SECOND', 'dq0 -p t -d /ram/e', '6', '2', '', 'quit', 'dq0auto=1',
         'cat /ram/e/rumours.txt', 'cat /ram/e/d2/quest.txt', 'cat /ram/e/d2/theme.txt', 'rm -r /ram/e',
         "echo 'why      | lore | scholar | Haldan' > /ram/l.txt",
         "echo 'why      | scourge | reeve | Osric' > /ram/s.txt", "echo 'region   | the Grey Fells | hills | granite | springs | cold' >> /ram/s.txt",
