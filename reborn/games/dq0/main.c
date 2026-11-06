@@ -1821,6 +1821,9 @@ unsigned char __fastcall__ things (unsigned char op, const char* name)
     q->kind = op;
     strncpy (q->name, name, sizeof q->name - 1);
     q->name[sizeof q->name - 1] = 0;
+    if (ndes) {
+        des_put (q->into, des_put (q->name, 0));   /* (A thing named by its letter: that one, letters.c's) */
+    }
     said_ahead = 0;
     if (op == (IO_GET | IO_STEPS)) {
         HUB->pc_lump = (HUB->pc_lump & ~(PL_MORE | PL_ALL)) | (take_more ? PL_MORE : 0) | (take_all ? PL_ALL : 0);   /* ("Take
@@ -2284,8 +2287,10 @@ void __fastcall__ s_command (char* l)
         hand_said ();                           /* (A hand said: part 11's, slice 4.1b's) */
     }
     place_said ();                              /* ("From the floor", "on the ground": sway.c's, overlay 20) */
-    if (resolve () != RV_ON) {                  /* (Its things found, its unsaid filled; or a question asked) */
-        return;
+    if (((cmd.flags & CF_UNSAID) && what_ask ()) || resolve () != RV_ON) {
+        return;                                 /* (Nothing named, of a thing carried: which, asked by their letters,
+                                                **   letters.c's; its things found, its unsaid filled; or a question
+                                                **   asked) */
     }
 again:
     HUB->ireq.sel = cmd.obj.sel | cmd.obj.n << 4;  /* (Which of several, how many: the things' requests', the */
@@ -3152,6 +3157,7 @@ int main (int argc, char* argv[])
             cq_drop ();
         }
         if ((l = (char*) t_next ()) != 0 && (!busy || !held)) {
+            letters_in (l);                     /* (Its letters made its things' names first: letters.c's) */
             cq_post (l);                        /* (The command parser at work on it meanwhile) */
             if (!held) {
                 ntold = 0;                      /* (Its answer: no look's sentence said yet, no harm's state; a

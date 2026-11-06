@@ -378,7 +378,7 @@ extern unsigned long heard_at;                  /* (main.c's: when a sound was l
 
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
-extern unsigned char ovbank[21];               /* (bank.s's OVMAX: overlay 21 the writings' parts, 2026-11-06) */
+extern unsigned char ovbank[22];               /* (bank.s's OVMAX: overlay 21 the writings' parts, 22 the designators', 2026-11-06) */
 unsigned char early (void);                     /* Part 12: before a command's things are looked for (in shock, refused:
                                                 **   2; first aid's, 1; else 0) */
 void tend (void);                               /* Part 12: first aid (VB_TEND) */
@@ -421,6 +421,22 @@ void __fastcall__ reach_said (unsigned w, unsigned char named);   /* Part 19: th
 unsigned char may_den (void);                   /* (sway.c's: the thing named may be a denizen: the denizens asked) */
 extern unsigned char paced;                     /* (pace.c's: a manner said with the last pace: main.c's look at a line) */
 void place_said (void);                         /* (Overlay 20's, sway.c: "from the floor", "on the ground": a place, not a thing) */
+/* letters.c: the designators (hub.h's), a line's letters made its things' names */
+#define NDES        2
+struct ldes {
+    unsigned        id;                         /* The thing's id (0: none yet, chosen by its name) */
+    char            word[14];                   /* The word its letter was made ("torch") */
+};
+extern struct ldes ldes[NDES];                  /* (The line's letters' things, in their order) */
+extern unsigned char ndes;
+unsigned char __fastcall__ des_put (char* w, unsigned char k);  /* A request's word made "#" and the id of the thing its
+                                                **   letter named, from ldes[k] on: its place plus 1, or 0 */
+unsigned char __fastcall__ des_find (const char* w, unsigned char k);   /* The first of the line's letters from ldes[k] on
+                                                **   that named a thing by word w: its place plus 1, or 0 */
+#define des_is(w)   des_find ((w), 0)
+void __fastcall__ letters_in (char* l);         /* (Overlay 22's) The line's letters made its things' names, as it's posted */
+unsigned char what_ask (void);                  /* (Overlay 22's) A command with nothing named asked about ("Drop what?
+                                                **   [a, d, f]"): 1, or 0 */
 void __fastcall__ walk_ahead (const char* name);    /* (sway.c's: a thing to take seen out of reach: its walk told before the world's asked) */
 #define W_DIG           (PA_CHECK + 2)          /* (walk_says' name, a first word by what's asked: PA_* + 1 a portal's work, sway.c's) */
 #define W_SWAY          (PA_CHECK + 3)

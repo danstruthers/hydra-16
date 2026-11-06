@@ -318,9 +318,10 @@ static unsigned char __fastcall__ find_thing (struct cthing* t, unsigned char wh
 {
     unsigned char k;
 
-    if (t->kind || t->x || t->sel == SL_ME || t->sel == SL_IT || (!t->word[0] && t->sel == SL_THE) ||
+    if (t->kind || t->x || t->sel == SL_ME || t->sel == SL_IT || (!t->word[0] && t->sel == SL_THE) || des_is (t->word) ||
         !gather (t->word, what)) {
-        return 1;                               /* (A fixture, found already, the character, nothing, none it sees) */
+        return 1;                               /* (A fixture, found already, the character, nothing, one named by its
+                                                **   letter, none it sees) */
     }
     for (k = 0; k < nc && !cd[k]; ++k) {
     }

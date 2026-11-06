@@ -3296,6 +3296,8 @@ function dq0AnswerTest(baud) {
 const TORCHX = ['inventory', 'drop torch', 'take torch', 'inventory', 'wait 2 hours', 'light a new torch', 'take the spent torch from the ground', 'drop the spent torch',
   'drop the lit torch', 'take the spent torch from the floor', 'drop torch', 'take the lit torch', 'hold the tinderbox', 'take torch', 'inventory', 'douse the torch', 'light the torch',
   'inventory', 'take spent torch from backpack', 'put the rope in the backpack', 'put the tinderbox in the backpack', 'dip the spent torch in the oil', 'inventory'];   // (dq0torchwords' lines: the user's playtest, 2026-11-06)
+const LETCMD = ['inventory', 'drop j', 'inventory', 'take torch', 'put j in b', 'inventory', 'take j from b', 'light j with a', 'drop 2c', 'look d',
+  'drop', 'k', 'take off', 'look', 'drop the lit torch', 'inventory'];   // (dq0letcmd's lines)
 const LETTERX = [['inventory', 'drop the pick', 'inventory', 'take the pick', 'inventory', 'quit'],   // (dq0letters' lines: a game, carried on, the
   ['inventory', 'drop the hatchet', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u'], ['inventory', 'quit']];   //   next dungeon)
 module.exports = {
@@ -7744,6 +7746,52 @@ module.exports = {
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first + ', whole ' + r.whole);
           if (r.first === null || r.first > 720000) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0letcmd', reach: true, near: ['gear', 'parser'], what: "Dingus Quest Zero's designators, step 2 (the user's design, 2026-11-06, DECISIONS.md's): a thing's letter where its name goes (drop j, put j in b, take j from b, light j with a, drop 2c), that thing and no other (the spare torch in the pack, not the one in hand), its first words its own; a letter not one where it's a way (look d) or an article (take a torch); a command with nothing named asks with the letters that fit (Drop what? [...]), one key answers; a line that isn't an answer lets it go; words still work beside them (drop the lit torch); each first letter within the user's 720,000 cycles",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETCMD, 'quit', 'echo $status']) },
+      start(m) { this.timer = dq0Timer(m); },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
+        let at = 0;
+        for (const l of LETCMD) {
+          let i = o.indexOf('> ' + l + ' ', at);
+          if (i >= 0 && o.startsWith('> ' + l + ' ', i + l.length + 3)) i += l.length + 3;
+          const e = o.indexOf('> ', i + 2);
+          seg.push(i < 0 ? '' : o.slice(i + l.length + 3, e < 0 ? undefined : e));
+          if (i >= 0) at = i + 2;
+        }
+        const said = (k, re, from = 0) => { const n = LETCMD.indexOf(k, from); if (!re.test(seg[n])) f.push(k + ': not ' + re + ': ' + seg[n].slice(0, 300)); };
+        const not = (k, re, from = 0) => { const n = LETCMD.indexOf(k, from); if (re.test(seg[n])) f.push(k + ': said ' + re + ': ' + seg[n].slice(0, 300)); };
+        const inv = k => seg[LETCMD.indexOf('inventory', k)] || '';
+        this.notes = LETCMD.map((l, i) => l + ': ' + seg[i].slice(0, 200));
+        said('inventory', /\(j\) a torch, in your right hand/);
+        said('drop j', /^You put down the (unlit )?torch\./);
+        if (/\(j\) a torch, in your right hand/.test(inv(2)) || !/\(a\) a torch \(lit/.test(inv(2))) f.push('drop j: not the torch in the right hand put down, the lit one kept: ' + inv(2));
+        said('take torch', /Taken\./);
+        said('put j in b', /^You reach for your backpack\./);
+        if (!/\(b\) a backpack, worn \([a-z]\) 3 rations[^]*\(j\) a torch/.test(inv(5))) f.push('put j in b: the torch not in the pack: ' + inv(5));
+        said('take j from b', /^You reach for your backpack\./);
+        said('light j with a', /torch/);
+        said('drop 2c', /You put down 2 rations\./);
+        said('look d', /^You look down|floor|Above|below/i);
+        not('look d', /You put|You take/);
+        said('drop', /^Drop what\? \[a, b, [a-z, ]+\]/);
+        said('k', /^You put down the (unlit )?torch\.|^You reach for your backpack\./);
+        said('take off', /^Take off what\? \[b, e\]/);
+        not('look', /You take off/);
+        said('drop the lit torch', /^You put down the lit torch\./);
+        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETCMD],
+          LETCMD.map(l => ({ line: l, want: 'You|Taken|Put|Your|It|Drop|Take' })));
+        for (const r of tm) {
+          this.notes.push(r.line + ': first letter ' + r.first);
+          if (!/^(inventory|wait)/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },

@@ -322,6 +322,26 @@ static void __fastcall__ from_ui (void* to, const void* from, unsigned n)
     }
 }
 
+/* The entry a letter named word w by (letters.c's ldes: its id, the entry whose letter's thing has it, the UI bank's low),
+** or 0xFF: the thing itself, not the one most to hand (the user's designators, 2026-11-06) */
+static unsigned char __fastcall__ des_e (const char* w)
+{
+    unsigned low[NLET];
+    unsigned char k, j;
+
+    for (k = 0; k < ndes; ++k) {
+        if (ldes[k].id && !strcmp (w, ldes[k].word)) {
+            hub_mem (UI_BANK, low, UIREC->low, sizeof low);
+            for (j = 0; j < NLET && low[j] != ldes[k].id; ++j) {
+            }
+            for (k = 0; k < nix && ix[k].let != j + 1; ++k) {
+            }
+            return k < nix ? k : 0xFF;
+        }
+    }
+    return 0xFF;
+}
+
 /* A name said a word of the kind's, or its start, or that word made plural, or the end of a name of one word (the world's
 ** named4, things.c's: the chooser's) */
 static unsigned char __fastcall__ word_in (const char* k, const char* w, unsigned char n)
@@ -518,7 +538,8 @@ void __fastcall__ o_walk_ahead (const char* name)
     nck = k > NIXK ? NIXK : k;
     from_ui (ck, UIREC->ixks, nck * sizeof (struct cixk));
     if (op == IO_TAKE) {                        /* (From the other: in it, if it's carried) */
-        if ((y = ix_pick (cmd.other.word, cmd.other.sel | cmd.other.n << 4, 0, 0)) == 0xFF) {
+        if ((y = des_e (cmd.other.word)) == 0xFF && (y = ix_pick (cmd.other.word, cmd.other.sel | cmd.other.n << 4, 0, 0)) ==
+            0xFF) {
             for (k = s->nitems, it = s->item; k && (!strstr (it->name, cmd.other.word) || it->x - s->x + 1 > 2 ||
                 it->y - s->y + 1 > 2); --k, ++it) {
             }
@@ -529,7 +550,9 @@ void __fastcall__ o_walk_ahead (const char* name)
         }
         in = y + 1;
     }
-    e = ix_pick (name, sel, op, in);
+    if ((e = des_e (name)) == 0xFF) {          /* (Named by its letter: that one, letters.c's) */
+        e = ix_pick (name, sel, op, in);
+    }
     if (op == IO_DESCRIBE || op == IO_INSIDE) { /* (Looked at, asked of it: its quality, its weight ...; way.c's.  In the
                                                 **   dark, the answer's own) */
         if (s->dark) {
@@ -557,7 +580,8 @@ void __fastcall__ o_walk_ahead (const char* name)
     y = 0xFF;
     if (op == IO_STOW || op == IO_PUT) {        /* (Put in the other, the pack: in it already, the world's words, nothing
                                                 **   reached for) */
-        y = op == IO_STOW ? 0xFF : ix_pick (cmd.other.word, cmd.other.sel | cmd.other.n << 4, 0, 0);
+        y = op == IO_STOW ? 0xFF : (y = des_e (cmd.other.word)) != 0xFF ? y : ix_pick (cmd.other.word, cmd.other.sel |
+            cmd.other.n << 4, 0, 0);
         for (k = 0; op == IO_STOW && k < nix; ++k) {
             if (ix[k].flags & CX_BACK) {
                 y = k;

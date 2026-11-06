@@ -15,7 +15,7 @@
             .include    "ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 21                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
+OVMAX       = 22                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
@@ -155,6 +155,8 @@ ovl_out:
             OVFN        may_den, 16         ; (The thing named may be a denizen: sway.c, 2026-11-03)
             OVFN        place_said, 20      ; ("From the floor": a place, not a thing, 2026-11-06)
             OVFN        walk_ahead, 20      ; (A command's first words by what it carries: sway.c, 2026-11-06)
+            OVFN        letters_in, 22      ; (A line's letters made its things' names: letters.c, 2026-11-06)
+            OVFN        what_ask, 22        ; (A command with nothing named asked about: letters.c)
             OVFN        dots, 3            ; (The game's start's progress: main.c's)
 
 ; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)
