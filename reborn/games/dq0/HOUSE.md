@@ -134,7 +134,8 @@ plays them as HarnMaster's referee does.
   spell of digging two levels, a climb's round a thirtieth of one, a blow a hundredth.  Each is charged as it's done
   (after its own test: a spell's Mining, a round's Climbing, a blow), a spell given up part way for the part of it
   done; a level more is asked of as the work goes on, soft ("You're tiring.  Keep digging?"), as a walk's is (a
-  climb's, answered no, goes on: there's no stopping part way up).  Swimming the same (a minute's swim: slice
+  climb's, answered no, goes on: there's no stopping part way up; not off the ground yet, no hold found, it's stopped as
+  any task is, at a well's foot say: *(new, 2026-11-06, for review)*).  Swimming the same (a minute's swim: slice
   4.9's).  The null ruleset tires the character nothing.  (dq0w.c's arrive, stop and s_batter_on; sheet.c's o_spent, WORK.)  Why:
   the book's rate; a run's (a level each two minutes) would leave one spell of digging five levels down, every
   physical test 25 the worse.

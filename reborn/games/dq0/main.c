@@ -2338,17 +2338,11 @@ again:
         return;
     case VB_CLIMB:
 climb:
-        if (!strcmp (cmd.obj.word, "well") || (!cmd.obj.word[0] && strstr (cl, "out"))) {
-            rarer (VB_CLIMB);                   /* (A well's shaft, down it or out of it: part 24's, 2026-11-06) */
-            return;
-        }
-        if (cmd.obj.kind == OB_WINDOW || cmd.how == HOW_THROUGH) {
-            cmd.obj.kind = OB_WINDOW;           /* (Through a window) */
+        if (rarer (VB_CLIMB) == 0x80) {         /* (Part 24's since 2026-11-06, a well's: 0x80 through a window) */
+            cmd.obj.kind = OB_WINDOW;
             pa = PA_THROUGH;
             goto portal;
         }
-        intend (I_CLIMB, cmd.dir == GO_DOWN || (cmd.dir == 0xFF && cmd.obj.lies == GO_DOWN) ? DIR_DOWN : DIR_UP);
-                                                /* ("climb down the ladder": the way where the thing lies) */
         return;
     case VB_FACE_DIRECTION:
         if (cmd.dir > H_NW) {
@@ -2550,8 +2544,15 @@ unsigned char __fastcall__ s_rarer (unsigned char action)
             tell (T_YOU_JUMP_AND);
             break;
         }                                       /* (Down a ledge, or a shaft: a fall; into a well) */
-    case VB_CLIMB:                              /* (A well's shaft, down it, or out of it: part 2's, 2026-11-06) */
+    case VB_CLIMB:                              /* (Up or down, a well's shaft down or out of it (2026-11-06); through a
+                                                **   window, 0x80: part 2's portal) */
         d = action == VB_JUMP ? DIR_DOWN | I_JUMP : strstr (cl, "out") ? DIR_UP : DIR_DOWN;
+        if (action == VB_CLIMB && strcmp (cmd.obj.word, "well") && (cmd.obj.word[0] || !strstr (cl, "out"))) {
+            if (cmd.obj.kind == OB_WINDOW || cmd.how == HOW_THROUGH) {
+                return 0x80;                    /* (Through a window) */
+            }
+            d = cmd.dir == GO_DOWN || (cmd.dir == 0xFF && cmd.obj.lies == GO_DOWN) ? DIR_DOWN : DIR_UP;
+        }                                       /* ("climb down the ladder": the way where the thing lies) */
         if (!strcmp (cmd.obj.word, "well") && (d & ~I_JUMP) == DIR_DOWN) {
             if (things (IO_FIND, "well") == IR_NOT_HERE && reach_go ()) {
                 break;                          /* (Seen out of reach: walked over to it first, then again; else the

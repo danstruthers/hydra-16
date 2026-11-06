@@ -4835,7 +4835,8 @@ void __fastcall__ s_task_word (const struct msg* m)
     } else if (m->a && m->a != k && (m->a != LT_WALK || k != LT_TRAVEL)) {
         evb = m->a;                             /* (The one named: its b; "stop walking", a journey's leg too) */
         event (E_TASK, 0, TE_NOT | k << 8);
-    } else if (k == LT_CLIMB) {
+    } else if (k == LT_CLIMB && (unsigned char) cl.done) {     /* (Not off the ground yet, at a well's foot, say: stopped as any task is,
+                                                **   2026-11-06) */
         event (E_TASK, 0, TE_CANT | k << 8);   /* (Part way up: no stopping; asked, "no", it goes on all the same) */
         if (HUB->pc_task.asking) {
             go_on ();
