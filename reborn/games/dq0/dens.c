@@ -207,14 +207,15 @@ static void __fastcall__ keep (unsigned char n)
     heard_was = heard;
 }
 
-/* A look's denizens, added to lb (seen.c's, after the things it sees), as there's room in it (a look's said so far
-** counted) */
+/* A look's denizens, added to lb (seen.c's, after the things it sees), as there's room in it (what's in it now: a
+** look streamed has said the rest, lb_said; its whole length counted till 2026-11-06, the things' capitals left a
+** long look's denizens out, dq0inhab's rats) */
 void o_den_words (void)
 {
     unsigned char i;
 
     group ();
-    for (i = 0; i < nnow && lbn + (lbe - lb) < sizeof lb - 80; ++i) {
+    for (i = 0; i < nnow && lbe - lb < sizeof lb - 80; ++i) {
         tell_one (&now_[i]);
     }
     add (heard ? " You hear something close behind you." : "");

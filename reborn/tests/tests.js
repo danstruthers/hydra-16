@@ -2882,7 +2882,9 @@ function dq0OvlBanks(m) {
     for (let k = 0; k < n; k++) {
       const b = m.taskBankMem(t, m.taskRam[t][parseInt(lbl[1], 16) + k]), w = want(k);
       let d = -1;
-      const end = name === 'dq0' && k === 4 ? 0x1000 : 0x2000;  // (dq0's fifth: its second half the theme's, read in as it starts: theme.h's THEME_PLACE)
+      const data = name === 'dq0' && k === 21 && /^OV22BSS\s+00([89A-F][0-9A-F]{3})/m.exec(fs.readFileSync(path.join(root, 'obj', 'games', name, name + '.map'), 'latin1'));
+      const end = name === 'dq0' && k === 4 ? 0x1000 : data ? parseInt(data[1], 16) - 0x8000 : 0x2000;  // (dq0's fifth: its second half the theme's, read in
+                                                // as it starts: theme.h's THEME_PLACE; its 22nd's data, OV22BSS, last: the designators', written as it goes)
       for (let i = 0; i < end && d < 0; i++) if (!b || b[i] !== w[i]) d = i;
       if (d >= 0) { bad++; out.push(name + '\'s overlay ' + (k + 1) + ' not as ld65 made it, from $' + (0x8000 + d).toString(16).toUpperCase()); }
     }

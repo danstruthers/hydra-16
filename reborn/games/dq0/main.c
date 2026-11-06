@@ -889,7 +889,7 @@ static void fore_sync (void)
     }
 }
 
-static unsigned char cq_st;                     /* The line posted to the command parser: none (0), its reply not
+unsigned char cq_st;                            /* The line posted to the command parser: none (0), its reply not
                                                 **   taken (CQ_OUT), or taken (CQ_IN: its struct cmd in CMD_BANK) */
 #define CQ_OUT      1
 #define CQ_IN       2
@@ -1823,16 +1823,12 @@ void __fastcall__ wset (unsigned char what, unsigned char x, unsigned char y)
 unsigned char __fastcall__ things (unsigned char op, const char* name)
 {
     struct ireq* q = &HUB->ireq;
-    char ib[sizeof q->into];
 
     q->kind = op;
-    strncpy (q->name, ndes && (unsigned) name < 0x8000 ? des_map (name, 0) : name, sizeof q->name - 1);   /* (A thing
-                                                **   named by its letter: that one, "#" and its id, letters.c's; a name
-                                                **   in the hub's window not, the overlay's there as it's asked) */
+    strncpy (q->name, name, sizeof q->name - 1);
     q->name[sizeof q->name - 1] = 0;
     if (ndes) {
-        memcpy (ib, q->into, sizeof ib);
-        strcpy (q->into, des_map (ib, desk));
+        des_req (name);                         /* (A thing named by its letter: that one, "#" and its id, letters.c's) */
     }
     said_ahead = 0;
     if (op == (IO_GET | IO_STEPS)) {
@@ -2296,7 +2292,7 @@ void __fastcall__ s_command (char* l)
     if (strstr (l, "hand")) {
         hand_said ();                           /* (A hand said: part 11's, slice 4.1b's) */
     }
-    place_said ();                              /* ("From the floor", "on the ground": sway.c's, overlay 20) */
+    place_said ();                              /* ("From the floor", "on the ground": sway.c's, overlay 14) */
     if (((cmd.flags & CF_UNSAID) && what_ask ()) || resolve () != RV_ON) {
         return;                                 /* (Nothing named, of a thing carried: which, asked by their letters,
                                                 **   letters.c's; its things found, its unsaid filled; or a question
@@ -3146,10 +3142,8 @@ int main (int argc, char* argv[])
                                                 **   not after the events and the status line; its answer first) */
             owed = 0;
             fore_sync ();                       /* (The answer's tasks in the foreground meanwhile) */
-            if (!cq_st) {
-                letters_in ((char*) t_next ());     /* (Its letters made its things' names first, as it's posted:
-                                                **   letters.c's) */
-            }
+            letters_in ((char*) t_next ());     /* (Its letters made its things' names first, as it's posted: letters.c's;
+                                                **   not again, cq_st) */
             cq_post (t_next ());                /* (The command parser at work on it at once, while the events and
                                                 **   the status line are seen to: not after them, 2026-10-30) */
         }
@@ -3197,9 +3191,7 @@ int main (int argc, char* argv[])
             cq_drop ();
         }
         if ((l = (char*) t_next ()) != 0 && (!busy || !held)) {
-            if (!cq_st) {
-                letters_in (l);                 /* (Its letters made its things' names first: letters.c's) */
-            }
+            letters_in (l);                     /* (Its letters made its things' names first: letters.c's) */
             cq_post (l);                        /* (The command parser at work on it meanwhile) */
             if (!held) {
                 ntold = 0;                      /* (Its answer: no look's sentence said yet, no harm's state; a

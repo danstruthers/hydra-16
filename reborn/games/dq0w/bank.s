@@ -190,7 +190,7 @@ go:
             SWPART      90, 13              ; Hands made free, a tool in hand and back (things.c: 2026-11-03)
             SWPART      91, 30              ; A denizen's weapon let fall, or broken (wlimbs.c: 2026-11-03)
             SWPART      92, 5               ; A request of the things served (things.c: part 10's till 2026-11-03)
-            SWPART      93, 15              ; An arrival (dq0w.c: the main RAM's till 2026-11-03; overlay 19's till 2026-11-06)
+            SWPART      93, 26              ; An arrival (dq0w.c: the main RAM's till 2026-11-03; overlay 19's, then 15's, till 2026-11-06)
             SWPART      94, 14              ; Hiding oneself (dq0w.c: 2026-11-04)
             SWPART      95, 29              ; A drop found, a rope put in place, a grapple thrown up (wrope3.c)
             SWPART      96, 29              ; Rope and grapples: tied off, let down (wrope.c: 2026-11-04)
@@ -198,11 +198,11 @@ go:
             SWPART      98, 30              ; A rope untied, looked at (wrope2.c)
             SWPART      99, 27              ; The time believed drifting: an hour's test, a waking (wtime.c: part 76's till 2026-11-04)
             SWPART      100, 9              ; A light renewed (things.c: part 27's till 2026-11-04)
-            SWPART      101, 15              ; A thing hidden, the hands swapped (things.c: parts 13's and 48's till 2026-11-04)
+            SWPART      101, 18              ; A thing hidden, the hands swapped (things.c: parts 13's and 48's till 2026-11-04; overlay 18's, 2026-11-06)
             SWPART      102, 24              ; A thing told apart, what it carries for the UI (things.c, 2026-11-06)
             SWPART      103, 31             ; A well's shaft (wwell.c: 2026-11-06, dq0w.rop's)
             SWPART      104, 31             ; A thing let fall down a well, a shaft (wwell2.c: 2026-11-06)
-            SWPART      105, 3               ; What it carries listed: gathered first (things.c, 2026-11-06: part 11's room)
+            SWPART      105, 15              ; What it carries listed: gathered first (things.c, 2026-11-06: part 11's room; overlay 15's, 3's room)
 
             SWFN        time_kept, 99
             SWFN        sky_note, 76

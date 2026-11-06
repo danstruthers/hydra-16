@@ -148,7 +148,7 @@ void lb_said (void);                            /* (A look's words said, lbsaid.
 
 unsigned char __fastcall__ pace_cmd (const char* l);   /* 1 if it was one of them, carried out (else the command's;
                                                 **   but a pace said with a move set first) */
-unsigned char __fastcall__ pacing (const char* l);     /* Overlay 9 (pace.c): 0 if line l can't be one of them (none
+unsigned char __fastcall__ pacing (const char* l);     /* Overlay 16 (pace.c): 0 if line l can't be one of them (none
                                                 **   of the words pace_cmd acts on: its part not copied in) */
 unsigned char __fastcall__ travel_go (const char* l);  /* The command's move to a place the character knows ("go back
                                                 **   to the Mausoleum", the parser's cmd): its journey (I_TRAVEL), 1;
@@ -431,11 +431,10 @@ struct ldes {
 };
 extern struct ldes ldes[NDES];                  /* (The line's letters' things, in their order) */
 extern unsigned char ndes;
-extern char desb[8];
-extern unsigned char desk;
-const char* __fastcall__ des_map (const char* w, unsigned char k);   /* (Overlay 22's) A request's word made "#" and the
-                                                **   id of the thing its letter named, from ldes[k] on (desb), or w; desk
-                                                **   its place plus 1, or 0 */
+extern unsigned char cq_st;                     /* (main.c's: the line posted to the parser already, letters_in's) */
+void __fastcall__ des_req (const char* w);      /* (Overlay 22's) A request's name and its other (the hub's ireq, main.c's
+                                                **   things; w its name as asked) made "#" and the id of the thing a
+                                                **   letter named, if one did */
 unsigned char __fastcall__ des_find (const char* w, unsigned char k);   /* (Overlay 22's) The first of the line's letters from ldes[k] on
                                                 **   that named a thing by word w: its place plus 1, or 0 */
 #define des_is(w)   des_find ((w), 0)

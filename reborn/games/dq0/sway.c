@@ -167,7 +167,7 @@ void __fastcall__ o_sway_words (const struct sway* s)
 /* The thing named may be a denizen, by what's in the hub (the first three letters of the word in an actor's name, or one
 ** the player has named: the denizens' own meant is the judge), so that they're asked: they're the background, and an
 ** answer waiting on one of their minds' turns took a second and more (dq0answer's, 2026-11-03: "examine the torch") */
-#pragma code-name (push, "OV16CODE")            /* (Overlay 16's since 2026-11-04, overlay 17's room) */
+#pragma code-name (push, "OV14CODE")            /* (Overlay 14's since 2026-11-06, 16's room; 16's since 2026-11-04, 17's) */
 unsigned char o_may_den (void)
 {
     char nm[sizeof HUB->actor[0].name + 1];     /* (On the C stack: hub_mem's, with the hub in the window) */
@@ -456,26 +456,6 @@ static const char* __fastcall__ apart_of (unsigned char e, unsigned char lit, un
     return b && !(lit && a == AW_LIT) && !(unlit && a != AW_LIT) ? aw[a] : "";
 }
 
-/* A place said where a thing's other would be ("take the torch from the floor", "put it on the ground": the user's
-** playtest, 2026-11-06, "You see no floor here"): where things lie about, not a thing: taken up, put down, of those lying
-** there (the world's chooser leaves out those carried) */
-void o_place_said (void)
-{
-    static const char* const places[] = { "floor", "ground", "bottom", "here" };
-    unsigned char k;
-
-    for (k = 0; k < sizeof places / sizeof places[0]; ++k) {
-        if (!strcmp (cmd.other.word, places[k])) {
-            cmd.other.word[0] = cmd.other.sel = cmd.other.n = 0;
-            cmd.prep = PR_NONE;
-            if (cmd.action == VB_PUT_OBJECT) {
-                cmd.action = VB_DROP_OBJECT;
-            }
-            return;
-        }
-    }
-}
-
 /* The state said, as a word ("the spent torch") */
 static const char* __fastcall__ sel_word (unsigned char sel)
 {
@@ -632,5 +612,31 @@ told:
 #pragma local-strings (pop)
 #pragma bss-name (pop)
 #pragma data-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (pop)
+
+#pragma code-name (push, "OV14CODE")
+#pragma rodata-name (push, "OV14RODATA")
+#pragma local-strings (push, on)
+/* A place said where a thing's other would be ("take the torch from the floor", "put it on the ground": the user's
+** playtest, 2026-11-06, "You see no floor here"): where things lie about, not a thing: taken up, put down, of those lying
+** there (the world's chooser leaves out those carried).  Overlay 14's since 2026-11-06 (overlay 20's room) */
+void o_place_said (void)
+{
+    static const char* const places[] = { "floor", "ground", "bottom", "here" };
+    unsigned char k;
+
+    for (k = 0; k < sizeof places / sizeof places[0]; ++k) {
+        if (!strcmp (cmd.other.word, places[k])) {
+            cmd.other.word[0] = cmd.other.sel = cmd.other.n = 0;
+            cmd.prep = PR_NONE;
+            if (cmd.action == VB_PUT_OBJECT) {
+                cmd.action = VB_DROP_OBJECT;
+            }
+            return;
+        }
+    }
+}
+#pragma local-strings (pop)
 #pragma rodata-name (pop)
 #pragma code-name (pop)

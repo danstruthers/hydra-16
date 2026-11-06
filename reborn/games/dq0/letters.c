@@ -25,8 +25,8 @@
 ** need not be in sight, the world's to find by its id).  The denizens (the plan's step 4) take theirs from the same
 ** capitals (CW_DEN), given before the things' in a look, so those seen first are A, B ...
 **
-** Its code: the main RAM's what the main code reads (ldes, desb, desk, capb); overlay 22's the rest of the line's
-** (o_letters_in, o_what_ask, o_des_find, o_des_low, o_des_map) and the capitals' (o_cap_of, o_around); part 22's the
+** Its code: the main RAM's what the main code reads (ldes, capb); overlay 22's the rest of the line's
+** (o_letters_in, o_what_ask, o_des_find, o_des_low, o_des_req) and the capitals' (o_cap_of, o_around); part 22's the
 ** save's.  A line's letters made its things' names as it's posted to the parser and only then (main.c's cq_st): a line
 ** with no word that may be a letter (one letter, or two an a's, a count before perhaps) let be at once.
 */
@@ -40,6 +40,11 @@
 #include "dq0.h"
 #include "hub.h"
 
+#undef islower                                  /* (Their own: ctype's two not in the main RAM, overlay 22's alone) */
+#define islower(c)  ((unsigned char) ((c) - 'a') < 26)
+#undef isupper
+#define isupper(c)  ((unsigned char) ((c) - 'A') < 26)
+
 #pragma static-locals (on)                      /* (Its locals static: the code the less; nothing here is reentered) */
 
 /* ==== The main RAM's: the line's letters, made its things' names (o_letters_in's), for the requests and the resolver */
@@ -47,15 +52,12 @@ struct ldes ldes[NDES];
 unsigned char ndes;
 char capb[6];                                   /* (A capital's words, "(C) ": o_cap_of's, for overlay 12's look) */
 
-char desb[8];                                   /* (A request's word as des_map made it: "#" and an id) */
-unsigned char desk;                             /* (The letter des_map found last: its place plus 1, or 0) */
-
 /* ==== Overlay 22's (its own, 2026-11-06: the designators'): a line's letters made its things' names (every line's, as
 ** it's posted: main.c's main loop); the question asked of a command with nothing named */
 #pragma code-name (push, "OV22CODE")
 #pragma rodata-name (push, "OV22RODATA")
-#pragma data-name (push, "OV22RODATA")
-#pragma bss-name (push, "OV22RODATA")
+#pragma data-name (push, "OV22BSS")
+#pragma bss-name (push, "OV22BSS")
 #pragma local-strings (push, on)
 
 static struct cix ix[NIX];                      /* (What's carried, copied in: the world's, ix_make's) */
@@ -69,10 +71,14 @@ static char o[INMAX + 32];                      /* (The line made, and the quest
 static char w[16];
 static unsigned char ts[16], tl[16];            /* (The line's words: where each begins, its length) */
 static struct ucap capc[NLET];                  /* (The UI bank's cap, copied in) */
-static unsigned char cseq, cnew = 1;            /* (The look they're copied for, sight_copy's seq; 1, none yet) */
+static unsigned char cseq, cmade;               /* (The look they're copied for, sight_copy's seq; 1, once copied) */
 static unsigned sid[SEE_ITEMS];                 /* (The things in sight: their ids, */
 static unsigned char skind[SEE_ITEMS];          /*   their kinds) */
 static unsigned cnow;                           /* (The clock's stamp: its tenths over 1024) */
+static char desb[16];                           /* (A request's word as des_req made it: "#" and an id; its other's) */
+static unsigned char desk;                      /* (The letter des_put found last: its place plus 1, or 0) */
+static void __fastcall__ to_hub (unsigned char bank, void* to, const void* from, unsigned n);
+static void __fastcall__ from_hub (unsigned char bank, void* to, const void* from, unsigned n);
 static char* __fastcall__ let_text (char* b, unsigned char j, char a);
 
 /* The first of the line's letters, from ldes[k] on, that made word w, its thing known: its place plus 1, or 0 */
@@ -95,23 +101,34 @@ unsigned char __fastcall__ o_des_low (const char* w)
     return k && ldes[k - 1].low && cmd.action != VB_ATTACK_OBJECT && cmd.action != VB_BREAK_OBJECT && cmd.action != VB_DIG;
 }
 
-/* Word w (a request's name, or its other's: main.c's things) the thing's own if a letter made it, from ldes[k] on: "#"
-** and its id, as a name given is (the world chooses that one: things.c's is_named), in desb; else w.  desk the letter's
-** place plus 1, or 0 */
-const char* __fastcall__ o_des_map (const char* w, unsigned char k)
+/* Word w the thing's own if a letter made it, from ldes[k] on: "#" and its id, as a name given is (the world chooses
+** that one: things.c's chooser), into the hub's to (its request's); desk the letter's place plus 1, or 0 */
+static void __fastcall__ des_put (char* to, const char* w, unsigned char k)
 {
-    if ((desk = o_des_find (w, k)) == 0) {
-        return w;
+    if ((desk = o_des_find (w, k)) != 0) {
+        desb[0] = '#';
+        utoa (ldes[desk - 1].id, desb + 1, 10);
+        to_hub (0, to, desb, strlen (desb) + 1);
     }
-    desb[0] = '#';
-    utoa (ldes[desk - 1].id, desb + 1, 10);
-    return desb;
 }
 
-/* This bank's bytes copied into the UI bank (to_ui), or a hub bank's into this bank (from_hub), by way of the C stack (the
+/* A request's name and its other (the hub's ireq: main.c's things, its words copied in already) each its thing's own
+** if a letter made it; its name w as it was asked (none in the hub's window: this bank's there as it's asked) */
+void __fastcall__ o_des_req (const char* w)
+{
+    desk = 0;
+    if ((unsigned) w < 0x8000) {
+        des_put (HUB->ireq.name, w, 0);
+    }
+    from_hub (0, desb, HUB->ireq.into, sizeof desb);
+    des_put (HUB->ireq.into, desb, desk);
+}
+
+/* This bank's bytes copied into a hub bank (to_hub), or a hub bank's into this bank (from_hub), by way of the C stack (the
 ** two share the window), a piece at a time */
 #pragma static-locals (push, off)
-static void __fastcall__ to_ui (void* to, const void* from, unsigned n)
+#define to_ui(t, f, n)      to_hub (UI_BANK, (t), (f), (n))
+static void __fastcall__ to_hub (unsigned char bank, void* to, const void* from, unsigned n)
 {
     char t[64];
     unsigned char k;
@@ -119,7 +136,7 @@ static void __fastcall__ to_ui (void* to, const void* from, unsigned n)
     while (n) {
         k = n > sizeof t ? sizeof t : n;
         memcpy (t, from, k);
-        hub_mem (UI_BANK, to, t, k);
+        hub_mem (bank, to, t, k);
         to = (char*) to + k;
         from = (const char*) from + k;
         n -= k;
@@ -163,10 +180,10 @@ static void caps_load (void)
     unsigned long t;
     unsigned char k;
 
-    if (!cnew && cseq == sight_copy.seq) {
+    if (cmade && cseq == sight_copy.seq) {
         return;
     }
-    cnew = 0;
+    cmade = 1;
     cseq = sight_copy.seq;
     for (k = 0; k < sight_copy.nitems; ++k) {
         hub_mem (ITEM_BANK (sight_copy.item[k].n), &it, ITEM_AT (sight_copy.item[k].n), sizeof it);
@@ -382,6 +399,9 @@ void __fastcall__ o_letters_in (char* l)
     static unsigned char nt, i, j, e, n, c, nd, loaded, up, ok;
     static unsigned id;
 
+    if (cq_st) {
+        return;                                 /* (Posted already: its letters made names then) */
+    }
     for (nd = nt = 0, p = l; *p && nt < sizeof ts; ) {  /* (Its words; nd, one after the first that may be a letter) */
         if (*p == ' ') {
             ++p;
@@ -422,8 +442,9 @@ void __fastcall__ o_letters_in (char* l)
     }
     o[0] = 0;
     nd = loaded = 0;
-    if (nt && in_list ("alias\0unalias\0say\0yell\0whisper\0shout\0", l + ts[0], tl[0])) {
-        nt = 0;                                 /* (A shortcut's line, words said: their letters as they are) */
+    if (nt && in_list ("alias\0unalias\0say\0yell\0whisper\0shout\0where\0what\0who\0how\0why\0when\0", l + ts[0], tl[0])) {
+        nt = 0;                                 /* (A shortcut's line, words said, a question: their letters as they are,
+                                                **   "where am i") */
     }
     for (i = 0; i < nt; ++i) {
         if (i) {

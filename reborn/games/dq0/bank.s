@@ -152,14 +152,14 @@ ovl_out:
             OVFN        time_ui, 16         ; (The time of day believed, worded: time.c, 2026-10-31)
             OVFN        say_raw, 16         ; (A line as it is, the map's: term.c, the main RAM's room)
             OVFN        t_status, 16        ; (The status line drawn: term.c, the main RAM's room, 2026-11-03)
-            OVFN        may_den, 16         ; (The thing named may be a denizen: sway.c, 2026-11-03)
-            OVFN        place_said, 20      ; ("From the floor": a place, not a thing, 2026-11-06)
+            OVFN        may_den, 14         ; (The thing named may be a denizen: sway.c, 2026-11-03)
+            OVFN        place_said, 14      ; ("From the floor": a place, not a thing, 2026-11-06)
             OVFN        walk_ahead, 20      ; (A command's first words by what it carries: sway.c, 2026-11-06)
             OVFN        letters_in, 22      ; (A line's letters made its things' names: letters.c, 2026-11-06)
             OVFN        what_ask, 22        ; (A command with nothing named asked about: letters.c)
             OVFN        des_find, 22        ; (A word a letter made: letters.c)
             OVFN        des_low, 22
-            OVFN        des_map, 22
+            OVFN        des_req, 22
             OVFN        cap_of, 22          ; (A thing in sight's capital, the look's: letters.c)
             OVFN        around, 22          ; (What's in sight listed: letters.c)
             OVFN        dots, 3            ; (The game's start's progress: main.c's)
