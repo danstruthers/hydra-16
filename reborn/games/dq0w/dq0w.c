@@ -3158,6 +3158,11 @@ void s_begin (void)
     body_at = HUB->now | 1;
     if (HUB->resume) {                          /* (Carried on: the save's strata, the change records' generation,
                                                 **   the maker's seen maps back) */
+        rseed (HUB->seed ^ HUB->now ^ 0x52534D45UL);    /* (Its dice from the game's seed and its clock: unseeded, a
+                                                **   carried-on game's first roll (a thing let fall, where it lies) was
+                                                **   the library's, from the real clock and the ticks, and the turns
+                                                **   pace no longer the seed's and the commands' alone: the life soak's
+                                                **   -same, seed 11, 2026-11-06) */
         move.how = A_RESUMED;
         move.sn = HUB->pc_stratum;
         move.x = HUB->pc_x;
@@ -4470,7 +4475,8 @@ void s_stopped (void)
 ** a walk's next square come, a blow or a wound to see to).  Its next step gives way to a line entered since it began
 ** till the line's command is given (the hub's ui_keys, Enter to the line taken, and ui_giving), at the real paces,
 ** ui_first's quarter second at most: its step done, the line answered, then on (dq0hold's, 2026-11-06); not a blow */
-static unsigned char tsq;                       /* (The parser's request's seq as it began: its own line's) */
+static unsigned char tsq;                       /* (The parser's request's seq as it began, or as an intent was last
+                                                **   taken: its own line's, never held for it: main's) */
 static void stepping (void)
 {
     unsigned char k;
@@ -6984,6 +6990,8 @@ int main (int argc, char* argv[])
                                                 **   2026-11-06: dq0hold's, the senses' and the minds' with it) */
         }
         while (hub_take (&m)) {
+            tsq = HUB->cq.seq;                  /* (The line whose intent it is: a task it begins not held for it,
+                                                **   stepping's; a task begun in the pass its line came in, 2026-11-06) */
             intent (&m);
             was_busy = 1;
         }
