@@ -254,7 +254,9 @@ enum { U_VERB, U_YET, U_CANT, U_NOTE };         /* (A verb the game doesn't know
 unsigned char refused (void);                   /* Overlay 1: a thing named that its verb would pass over,
                                                 **   refused (refuse.c's o_refused: 1) */
 extern const char* cl;                          /* The command's line (main.c's) */
-unsigned char __fastcall__ qual_ok (const char* name, const char* w);   /* Overlay 1: the word said before w fits name */
+unsigned char __fastcall__ name_is (const char* name, const char* w);   /* (nameis.s's, the main RAM's) Word w names
+                                                **   name: the one rule (the world's named's), the word said before it
+                                                **   in the line too */
 unsigned char __fastcall__ parts_in (unsigned char op);    /* Overlay 6 (parts.c's): the line typed queued in its
                                                 **   parts, 0 no room (PO_LINE); */
 #define PO_LINE     0

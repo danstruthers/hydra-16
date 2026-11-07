@@ -525,7 +525,7 @@ static void new_words (void)
     for (i = n = 0, j = 0; i < s->nitems; ++i) {
         for (k = 0; k < SEE_ITEMS && before[k] != s->item[i].n; ++k) {
         }
-        if (s->item[i].hid & 2 ? j : k == SEE_ITEMS && !(cmd.obj.word[0] && strstr (s->item[i].name, cmd.obj.word))) {
+        if (s->item[i].hid & 2 ? j : k == SEE_ITEMS && !(cmd.obj.word[0] && name_is (s->item[i].name, cmd.obj.word))) {
             memcpy (&s->item[n++], &s->item[i], sizeof s->item[0]);
             j = 1;                              /* (One on the surface before it told with that, and only so) */
         } else {

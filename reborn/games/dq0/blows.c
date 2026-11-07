@@ -338,7 +338,7 @@ unsigned char __fastcall__ o_fight_target (struct cmd* c)
         hub_mem (0, &q, &HUB->actor[k], sizeof q);
         dx = q.x - pc.x;
         dy = q.y - pc.y;
-        if (q.state && q.name[0] && q.sn == pc.sn && (!*w || strstr (q.name, w)) &&
+        if (q.state && q.name[0] && q.sn == pc.sn && name_is (q.name, w) &&
             (dir > H_NW || bearing (dx, dy) == dir)) {
             nigh = dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1;
             if (!c->obj.x) {

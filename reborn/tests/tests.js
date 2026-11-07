@@ -2190,6 +2190,40 @@ function dq0ClosestTest() {
     sdcard: true
   };
 }
+// One name match (COMMANDS-CRITIQUE.md's §5.1 step F, 2026-11-07): the UI's choosers ask the world's rule of a name
+// (a word of it or its start, a plural, the end of a name: "pack" a backpack; the word before it, "black", "giant", in
+// the name too: nameis.s's name_is, the world's things.c's named).  At seed 3, the backpack put down at the character's
+// feet: "target the pack" and "target the bon" find the backpack and the bones, as the world's "examine the pack" does
+// (the resolver's own rule, whole words, saw no pack, no bon: "You see no pack here."); "target the black rat" none (a
+// qualifier not in the rats' name), "target the giant rats" a rat (the one still in sight).  DQ0_NAMEMATCH=1 prints the answers
+function dq0NameMatchTest() {
+  const lines = ['drop the backpack', 'examine the pack', 'target the pack', 'target the bon', 'target the black rat',
+    'target the giant rats'];
+  return {
+    name: 'dq0namematch', near: ['parser'], what: 'Dingus Quest Zero\'s one name match: "pack" names the backpack to ' +
+      'the UI\'s resolver as to the world ("target the pack", "examine the pack"), "bon" the bones; "the black rat" none ' +
+      'of the giant rats',
+    init: 't_rc', cycles: 300e6 + lines.length * 40e6,
+    machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+      'dq0 -p t -s 3 -c /ram/c.hm -T', ...lines, 'quit', 'echo $status']) },
+    expect: ['% echo $status'],
+    check(m) {
+      const A = dq0Answers(m.out), f = [], a = l => (A.find(x => x.cmd === l) || { text: '(no answer)' }).text;
+      if (process.env.DQ0_NAMEMATCH) for (const l of lines) console.log(l + ' => ' + a(l));
+      if (!/backpack/.test(a('examine the pack'))) f.push('"examine the pack": the world found no backpack: ' + a('examine the pack').slice(0, 120));
+      if (!/^Your target: the backpack\./.test(a('target the pack')))
+        f.push('"target the pack": the resolver found no backpack (its own rule): ' + a('target the pack').slice(0, 120));
+      if (!/^Your target: the bones\./.test(a('target the bon')))
+        f.push('"target the bon": the resolver found no bones (a word\'s start): ' + a('target the bon').slice(0, 120));
+      if (!/^You see no rat here\./.test(a('target the black rat')))
+        f.push('"target the black rat": not none (the qualifier): ' + a('target the black rat').slice(0, 120));
+      if (!/^(?:Your target: the giant rat\.|Which one\? \(.\) the giant rat)/.test(a('target the giant rats')))
+        f.push('"target the giant rats": not the rats asked about: ' + a('target the giant rats').slice(0, 120));
+      return f;
+    },
+    sdcard: true
+  };
+}
 // A thing carried named by its state, chosen by the UI (sway.c's ix_pick, for the first words) and made the one the
 // world's asked of (its id: sway.c's bind), as the world's own chooser would choose it (pick_ and unlike: the UI's
 // flags s_ix_make's, the same tests; COMMANDS-CRITIQUE.md's step C, 2026-11-07).  At seed 3 the pack holds potsherds,
@@ -5673,6 +5707,7 @@ module.exports = {
     },
     dq0SweepTest(),
     dq0ClosestTest(),
+    dq0NameMatchTest(),
     dq0StateSelTest(),
     {
       name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), one the grammar has but the game doesn\'t do yet ("grapple": you can\'t, yet); a gift the game takes since slice 4.8 ("give the torch to the rat": the rat out of reach, or out of sight); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',

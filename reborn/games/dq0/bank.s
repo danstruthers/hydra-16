@@ -90,7 +90,6 @@ ovl_out:
             OVFN        help, 1
             OVFN        unknown, 1          ; (refuse.c's since 2026-11-06)
             OVFN        refused, 1
-            OVFN        qual_ok, 1
             OVFN        parts_in, 6
             OVFN        alias_said, 4
             OVFN        sway_words, 15

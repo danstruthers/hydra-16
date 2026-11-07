@@ -53,7 +53,7 @@ static unsigned char kseq = 1;                 /* (The hub's ui_keys as a line's
 const char* const pacename[4] = { "relaxed", "normal", "menacing", "turns" };
 
 static unsigned char asking;                    /* (A long task's soft question put, the answer awaited) */
-const char* cl;                                 /* (The command's line, s_command's: chores' words of it; help.c's) */
+const char* cl;                                 /* (The command's line, s_command's: chores' words of it; nameis.s's) */
 unsigned char harm_told;                        /* (The states a harm's words told in this answer: intro.c's) */
 unsigned char autogo;                           /* (dq0 -a: every soft question answered yes, unasked: the tests') */
 unsigned char what_hi;                          /* (The thing's kind's top bit, the long task's what its other seven: task.c's noun) */

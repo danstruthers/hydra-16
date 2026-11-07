@@ -166,7 +166,8 @@ void __fastcall__ o_sway_words (const struct sway* s)
 
 /* The thing named may be a denizen, by what's in the hub (the first three letters of the word in an actor's name, or one
 ** the player has named: the denizens' own meant is the judge), so that they're asked: they're the background, and an
-** answer waiting on one of their minds' turns took a second and more (dq0answer's, 2026-11-03: "examine the torch") */
+** answer waiting on one of their minds' turns took a second and more (dq0answer's, 2026-11-03: "examine the torch").
+** Looser than the one rule (main.c's name_is, 2026-11-07), as it's only a maybe: a denizen it names has those letters */
 #pragma code-name (push, "OV14CODE")            /* (Overlay 14's since 2026-11-06, 16's room; 16's since 2026-11-04, 17's) */
 unsigned char o_may_den (void)
 {
@@ -364,29 +365,6 @@ static void __fastcall__ bind (const char* w, unsigned char e)
     ++ndes;
 }
 
-/* A name said a word of the kind's, or its start, or that word made plural, or the end of a name of one word (the world's
-** named4, things.c's: the chooser's) */
-static unsigned char __fastcall__ word_in (const char* k, const char* w, unsigned char n)
-{
-    for (;;) {
-        if (!strncmp (k, w, n)) {
-            return 1;
-        }
-        if (!(k = strchr (k, ' '))) {
-            return 0;
-        }
-        ++k;
-    }
-}
-
-static unsigned char __fastcall__ named_ (const char* k, const char* w)
-{
-    unsigned char n = strlen (w), m;
-
-    return word_in (k, w, n) || (n > 2 && w[n - 1] == 's' && (word_in (k, w, n - 1) ||
-        (w[n - 2] == 'e' && word_in (k, w, n - 2)))) || (n > 3 && (m = strlen (k)) > n && !strcmp (k + m - n, w));
-}
-
 /* Entry e's kind's place among those looked up (its name and flags read from the catalogue once a command); its name;
 ** whether it's a light */
 static const char* __fastcall__ kname (unsigned char e)
@@ -430,7 +408,7 @@ static unsigned char __fastcall__ ix_pick (const char* w, unsigned char sel, uns
         return 0xFF;
     }
     for (e = 0; e < nck; ++e) {
-        cm[e] = named_ (ck[e].name, w);         /* (The word asked of each kind once) */
+        cm[e] = name_is (ck[e].name, w);        /* (The word asked of each kind once: the one rule, the world's, main.c's) */
     }
     for (e = 0; e < nix; ++e) {
         f = ix[e].flags;
@@ -505,7 +483,7 @@ void __fastcall__ o_walk_ahead (const char* name)
         return;
     }
     for (k = s->nitems, it = s->item; k; --k, ++it) {
-        if (strstr (it->name, name)) {
+        if (name_is (it->name, name)) {         /* (The one rule, the world's chooser's: main.c's) */
             if (it->x - s->x + 1 > 2 || it->y - s->y + 1 > 2) {
                 away |= 1;
             } else {
@@ -551,7 +529,7 @@ void __fastcall__ o_walk_ahead (const char* name)
     if (op == IO_TAKE) {                        /* (From the other: in it, if it's carried) */
         if ((y = des_e (cmd.other.word)) == 0xFF && (y = ix_pick (cmd.other.word, cmd.other.sel | cmd.other.n << 4, 0, 0)) ==
             0xFF) {
-            for (k = s->nitems, it = s->item; k && (!strstr (it->name, cmd.other.word) || it->x - s->x + 1 > 2 ||
+            for (k = s->nitems, it = s->item; k && (!name_is (it->name, cmd.other.word) || it->x - s->x + 1 > 2 ||
                 it->y - s->y + 1 > 2); --k, ++it) {
             }
             sayf (k ? "\nYou reach for the %s." : s->dark ? "\nYou feel for the %s." : "\nYou look for the %s.", k ? name :

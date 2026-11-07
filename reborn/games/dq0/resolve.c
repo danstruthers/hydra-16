@@ -72,31 +72,6 @@ static unsigned char __fastcall__ apart (unsigned x, unsigned y)
     return x > 255 ? 255 : x;
 }
 
-/* Does name have word w as one of its words ("giant rat": "rat"; "iron key": "key", "keys"; "bones": "bone")? */
-static unsigned char __fastcall__ has (const char* name, const char* w)
-{
-    unsigned char n = strlen (w), m;
-    const char* p = name;
-
-    if (!n) {
-        return 1;
-    }
-    m = n > 1 && w[n - 1] == 's' ? n - 1 : n;  /* (The word a plural: its name's word without the s) */
-    while (*p) {
-        if ((!strncmp (p, w, n) && (p[n] == 0 || p[n] == ' ' || (p[n] == 's' && p[n + 1] == 0))) ||
-            (m < n && !strncmp (p, w, m) && (p[m] == 0 || p[m] == ' '))) {
-            return 1;
-        }
-        while (*p && *p != ' ') {
-            ++p;
-        }
-        while (*p == ' ') {
-            ++p;
-        }
-    }
-    return 0;
-}
-
 /* One found: its name, square, size, whether it's a denizen */
 static void __fastcall__ add (const char* name, unsigned x, unsigned y, unsigned char size, unsigned char den)
 {
@@ -122,15 +97,15 @@ static unsigned char __fastcall__ gather (const char* w, unsigned char what)
     nc = 0;
     if (what & 1) {
         for (i = 0; i < s->nitems; ++i) {
-            if (!(s->item[i].hid & 1) && has (s->item[i].name, w) && qual_ok (s->item[i].name, w)) {    /* (Not one it hid: it knows where those are,
-                                                **   but they're out of sight) */
+            if (!(s->item[i].hid & 1) && name_is (s->item[i].name, w)) {    /* (Not one it hid: it knows where those are,
+                                                **   but they're out of sight; its name by the one rule, main.c's) */
                 add (s->item[i].name, s->item[i].x, s->item[i].y, s->item[i].hid >> 4, 0);
             }
         }
     }
     if (what & 2) {
         for (i = 0; i < s->ndens; ++i) {
-            if (*w ? has (s->den[i].name, w) && qual_ok (s->den[i].name, w) : s->den[i].doing != DO_DOWN) {
+            if (*w ? name_is (s->den[i].name, w) : s->den[i].doing != DO_DOWN) {
                 add (s->den[i].name, s->den[i].x, s->den[i].y, 5, s->den[i].doing == DO_DOWN ? 3 : 1);
             }
         }
@@ -532,7 +507,7 @@ unsigned char o_resolve (void)
             drx == s->rx && dry == s->ry && cmd.obj.word[0]) {
             for (k = 0; k < ndens; ++k) {       /* (Gone from sight: where it was last seen, in this room, if not
                                                 **   beside it) */
-                if (has (dens[k].name, cmd.obj.word) && apart (dens[k].x, dens[k].y) > 1) {
+                if (name_is (dens[k].name, cmd.obj.word) && apart (dens[k].x, dens[k].y) > 1) {
                     cmd.obj.x = dens[k].x;
                     cmd.obj.y = dens[k].y;
                     break;

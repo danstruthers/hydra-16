@@ -84,7 +84,7 @@ static unsigned char patient (void)
         }
     }
     for (k = 0; k < NACTORS; ++k, ++p) {
-        if (p->state && p->name[0] && strstr (p->name, w)) {
+        if (p->state && p->name[0] && name_is (p->name, w)) {
             dx = (int) p->x - (int) HUB->pc_x;
             dy = (int) p->y - (int) HUB->pc_y;
             if (p->sn != HUB->pc_stratum || dx < -1 || dx > 1 || dy < -1 || dy > 1) {

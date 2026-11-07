@@ -295,12 +295,15 @@ static unsigned cont;                           /* (What a thing was put in or o
 static void __fastcall__ say (unsigned char n);   /* (The catalogue's bank's: its words, SA_*) */
 
 /* A name said: a word of the kind's ("key" an iron key; "sword" a broken one too), or its start; or that word made
-** plural ("sacks", "torches": "drop two sacks"; the catalogue's bank's code's; the main RAM's since 2026-11-04,
-** the swap study's: part 10 copied thousands of times for it and on_pc) */
+** plural ("sacks", "torches": "drop two sacks"); or the end of the name, a word longer than 3 ("pack" a backpack, "skin"
+** a waterskin, 2026-10-26).  The one rule (COMMANDS-CRITIQUE.md's 5.1 step F, 2026-11-07): the chooser's (its copy,
+** part 4's named4, gone into this), the light's, the market's, the search's; the UI's main.c's name_is, the same.  ""
+** names any (the chooser asks none with it).  (The catalogue's bank's code's; the main RAM's since 2026-11-04, the swap
+** study's: part 10 copied thousands of times for it and on_pc) */
 static unsigned char __fastcall__ word_of (const char* k, const char* w, unsigned char n)
 {
     for (;;) {
-        if (!strncmp (k, w, n)) {
+        if ((*k == *w || !n) && !strncmp (k, w, n)) {
             return 1;
         }
         if (!(k = strchr (k, ' '))) {
@@ -312,10 +315,10 @@ static unsigned char __fastcall__ word_of (const char* k, const char* w, unsigne
 
 unsigned char __fastcall__ named (const char* k, const char* w)
 {
-    unsigned char n = strlen (w);
+    unsigned char n = strlen (w), m;
 
     return word_of (k, w, n) || (n > 2 && w[n - 1] == 's' && (word_of (k, w, n - 1) ||
-        (w[n - 2] == 'e' && word_of (k, w, n - 2))));
+        (w[n - 2] == 'e' && word_of (k, w, n - 2)))) || (n > 3 && (m = strlen (k)) > n && !strcmp (k + m - n, w));
 }
 
 
@@ -2528,31 +2531,6 @@ unsigned char __fastcall__ s_throw_at (const char* name)
 #pragma rodata-name (push, "SW4RODATA")
 #pragma static-locals (push, on)              /* (None called again before it's done: their code the less) */
 
-/* A name said: a word of the kind's ("key" an iron key; "sword" a broken one too), or its start; or that word made
-** plural ("sacks", "torches": "drop two sacks"; part 10's named, a copy: the chooser's, every record's, no swap) */
-static unsigned char __fastcall__ word_of4 (const char* k, const char* w, unsigned char n)
-{
-    for (;;) {
-        if (*k == *w && !strncmp (k, w, n)) {
-            return 1;
-        }
-        if (!(k = strchr (k, ' '))) {
-            return 0;
-        }
-        ++k;
-    }
-}
-
-static unsigned char __fastcall__ named4 (const char* k, const char* w)
-{
-    unsigned char n = strlen (w), m;
-
-    return word_of4 (k, w, n) || (n > 2 && w[n - 1] == 's' && (word_of4 (k, w, n - 1) ||
-        (w[n - 2] == 'e' && word_of4 (k, w, n - 2)))) || (n > 3 && (m = strlen (k)) > n && !strcmp (k + m - n, w));    /* (Or the end
-                                                **   of a name of one word and another: "pack" a backpack, "skin" a
-                                                **   waterskin, 2026-10-26) */
-}
-
 /* How thing i lies, for the chooser: how deep it is in others (0: in none), its outermost (on the character, on a
 ** square) in ctop; cnot, it's the one it mustn't be (wnot) or in it */
 static unsigned ctop;
@@ -2655,7 +2633,8 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
         if (*name != '#') {                     /* (A kind's name asked where it lies, once a kind: nothing copied out,
                                                 **   a thing named its first letter the sooner, the user's D17) */
             hub_map (KIND_BANK);
-            if (!named4 ((const char*) kinds + ((unsigned) pk << 5) + ((unsigned) pk << 2) + pk, name)) {
+            if (!*name || !named ((const char*) kinds + ((unsigned) pk << 5) + ((unsigned) pk << 2) + pk, name)) {   /* (The
+                                                **   main RAM's named, the one rule, no swap; "" names none here) */
                 no[pk] = 1;
                 continue;
             }
