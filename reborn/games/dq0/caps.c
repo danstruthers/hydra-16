@@ -449,6 +449,29 @@ static void __fastcall__ thing_said (unsigned char k, unsigned n, unsigned char 
 ** worded as the inventory words it, told, "Which one? (E) a torch (lit), (F) a torch (spent)"; the command's line and its
 ** thing's word kept, with each choice's words and capital (the UI bank's which_*), for its answer (letters.c's
 ** which_in: a capital, a number, or a word of its state, "spent", re-runs it on that one) */
+/* Thing id's lower-case letter (the UI bank's low: what's carried), its place; NLET none */
+static unsigned char __fastcall__ low_of (unsigned id)
+{
+    static unsigned u[NLET];
+    static unsigned char j;
+
+    from_ui (u, UIREC->low, sizeof u);
+    for (j = 0; j < NLET && u[j] != id; ++j) {
+    }
+    return j;
+}
+
+/* Lower-case letter j's text, at b: its end */
+static char* __fastcall__ low_text (char* b, unsigned char j)
+{
+    char* e = let_text (b, j);
+
+    for (; *b; ++b) {
+        *b |= 0x20;
+    }
+    return e;
+}
+
 void o_which_ask (void)
 {
     static char* p;
@@ -460,6 +483,30 @@ void o_which_ask (void)
     caps_load ();
     from_ui (o, UIREC->things_text, sizeof o);
     o[sizeof o - 1] = 0;
+    if (*o == 'W') {                            /* (Stowed: where, the designators' step 7) */
+        np = o + 1;
+        kd = low_of (num ());                   /* ("put j in", the answer's letter after it) */
+        strcpy (lb, "put ");
+        if (kd < NLET) {
+            low_text (lb + 4, kd);
+        } else {
+            strcat (lb, cmd.obj.word);
+        }
+        strcat (lb, " in");
+        to_ui (UIREC->which_l, lb, strlen (lb) + 1);
+        strcpy (lb, "Stow it where?");
+        for (k = 0, p = (char*) np; k < 4 && (e = strchr (p, '|')) != 0; ++k, p = e + 1) {
+            np = p;
+            let_name (kd = low_of (num ()));    /* (Each place carried, by its letter: its kind's name) */
+            strcat (lb, k ? ", (" : " (");
+            low_text (lb + strlen (lb), kd);
+            strcat (strcat (lb, ") the "), wb);
+            wb[sizeof UIREC->which_w[0] - 1] = kd;
+            to_ui (UIREC->which_w[k], wb, sizeof UIREC->which_w[0]);
+        }
+        k |= 0x80;
+        goto asked;
+    }
     strcpy (lb, "Which one?");
     for (k = 0, p = o; k < 4 && (e = strchr (p, '|')) != 0; ++k, p = e + 1) {
         np = p;
@@ -476,6 +523,7 @@ void o_which_ask (void)
     }
     to_ui (UIREC->which_l, cl, strlen (cl) + 1);
     to_ui (UIREC->which_o, cmd.obj.word, sizeof UIREC->which_o);
+asked:
     to_ui (&UIREC->which_n, &k, 1);
     which_on = 1;
     msg (lb);

@@ -567,12 +567,8 @@ void __fastcall__ o_walk_ahead (const char* name)
     if (op == IO_STOW || op == IO_PUT) {        /* (Put in the other, the pack: in it already, the world's words, nothing
                                                 **   reached for) */
         y = op == IO_STOW ? 0xFF : (y = des_e (cmd.other.word)) != 0xFF ? y : ix_pick (cmd.other.word, cmd.other.sel |
-            cmd.other.n << 4, 0, 0);
-        for (k = 0; op == IO_STOW && k < nix; ++k) {
-            if (ix[k].flags & CX_BACK) {
-                y = k;
-            }
-        }
+            cmd.other.n << 4, 0, 0);    /* (Stowed: where, the world's to choose, a sheath, a pouch, the pack, or
+                                                **   ask, the designators' step 7: the thing's own first words) */
         if (y != 0xFF && ix[e].up == y + 1) {
             v = s->dark ? "feel for" : "look for";  /* (In it already: looked for, and found there) */
             goto say;

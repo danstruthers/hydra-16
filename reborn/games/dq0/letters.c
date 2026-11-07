@@ -320,6 +320,13 @@ static unsigned char __fastcall__ which_in (char* l)
     from_ui (o, UIREC->which_w[k], sizeof UIREC->which_w[0]);
     j = o[sizeof UIREC->which_w[0] - 1];
     from_ui (o, UIREC->which_l, INMAX + 1);
+    if (n & 0x80) {                             /* ("put j in" and its letter: "put j in f") */
+        if (j >= NLET) {
+            return 0;
+        }
+        let_text (strcat (o, " ") + strlen (o), j, 'a');
+        goto put;
+    }
     from_ui (w, UIREC->which_o, sizeof w);
     w[sizeof w - 1] = 0;
     len = strlen (w);
@@ -331,6 +338,7 @@ static unsigned char __fastcall__ which_in (char* l)
     i = let_text (w, j, 'A') - w;
     memmove (p + i, p + len, strlen (p + len) + 1);
     memcpy (p, w, i);
+put:
     if (!line_put (l)) {
         return 0;
     }

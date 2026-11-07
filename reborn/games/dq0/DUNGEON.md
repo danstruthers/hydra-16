@@ -746,7 +746,10 @@ the UI gives each its capital and asks, "Which one? (E) a torch (lit), (F) a tor
 line kept (the UI bank's which_*); a capital, a number or a state word answers it, the line made again with that one's
 capital where its thing's word was (letters.c's which_in).  The first words "You look them over." when several lie in
 reach.  Several letters in a line ("drop d e f", "take B C", step 6) each their own line, in turn; "letter d as t" swaps
-two letters (the UI bank's low and lowt, and ix: caps.c's).
+two letters (the UI bank's low and lowt, and ix: caps.c's).  Stowing (step 7): a stow with no place said, a holder made
+for the thing's family worn on the belt and free taken first (part 35's stow_where: the request made a put into it by its
+id); two or more places it fits (the pack, a pouch on the belt), IR_WHICH, "Stow it where? (b) the backpack, (f) the
+pouch", a letter answering it ("put h in f").
 
 **Reach, and things used up** (2026-10-26, the user's: "Handy would be readily available, so in a backpack that is
 being worn is not as readily available as one in a belt pouch"; HOUSE.md's reach, handy tools and things used up):

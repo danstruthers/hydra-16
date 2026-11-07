@@ -3336,6 +3336,8 @@ const LETDENS = ['look', 'around', 'look at B', 'talk to C', 'attack C', 'attack
 const LETWHICH = ['drop j', 'pick up the torch', 'inventory', 'drop j', 'drop a', 'drop k', 'take the torch', 'F', 'take the torch', '2', 'inventory',
   'drop j', 'take torch', 'lit', 'inventory'];   // (dq0letwhich's lines)
 const LETSEVERAL = ['drop j', 'drop h i', 'look', 'take E F', 'inventory', 'letter h as t', 'inventory', 'drop t', 'letter q as r'];   // (dq0letseveral's lines)
+const LETSTOW = ['drop j', 'hold the dagger', 'stow the dagger', 'f', 'hang l', 'drop 1g', 'stow the pennies', 'l', 'inventory', 'hold i', 'stow i',
+  'hang the sheath', 'hold the dagger', 'stow the dagger', 'inventory'];   // (dq0letstow's lines)
 const LETTERX = [['inventory', 'drop the pick', 'inventory', 'take the pick', 'inventory', 'quit'],   // (dq0letters' lines: a game, carried on, the
   ['inventory', 'drop the hatchet', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u'], ['inventory', 'quit']];   //   next dungeon)
 module.exports = {
@@ -8134,6 +8136,43 @@ module.exports = {
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first);
           if (!/^(inventory|look)$/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0letstow', reach: true, near: ['gear', 'parser'], what: "Dingus Quest Zero's designators, step 7 (the user's, 2026-11-06: \"when stowing something, it should ask where if there is more than one place it could go (pouch(es) or backpack), of course depending on size.  Stowing a weapon with a sheath should choose the sheath if worn.\"): a dagger stowed with the backpack and a pouch on the belt to take it, asked (Stow it where? (b) the backpack, (f) the pouch), one key answering it; a coin with two pouches and the pack, asked of the three; a waterskin too big for any pouch, stowed in the pack without asking; the sheath hung on the belt, the dagger stowed in it without asking; each first letter within the user's 720,000 cycles",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSTOW, 'quit', 'echo $status']) },
+      start(m) { this.timer = dq0Timer(m); },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
+        let at = 0;
+        for (const l of LETSTOW) {
+          let i = o.indexOf('> ' + l + ' ', at);
+          if (i >= 0 && o.startsWith('> ' + l + ' ', i + l.length + 3)) i += l.length + 3;
+          const e = o.indexOf('> ', i + 2);
+          seg.push(i < 0 ? '' : o.slice(i + l.length + 3, e < 0 ? undefined : e));
+          if (i >= 0) at = i + 2;
+        }
+        this.notes = LETSTOW.map((l, i) => l + ': ' + seg[i].slice(0, 300));
+        const said = (k, re, from = 0) => { const n = LETSTOW.indexOf(k, from); if (!re.test(seg[n])) f.push(k + ': not ' + re + ': ' + seg[n].slice(0, 300)); };
+        const not = (k, re, from = 0) => { const n = LETSTOW.indexOf(k, from); if (re.test(seg[n])) f.push(k + ': said ' + re + ': ' + seg[n].slice(0, 300)); };
+        said('stow the dagger', /^You lift the dagger\. Stow it where\? \(b\) the backpack, \(f\) the pouch $/);
+        said('f', /You put the dagger in the pouch\./);
+        said('stow the pennies', /Stow it where\? \(b\) the backpack, \(f\) the pouch, \(l\) the pouch $/);
+        said('l', /in the pouch\./);
+        said('inventory', /\(l\) a pouch \([a-z]\) (a penny|\d+ pennies)/);
+        not('stow i', /Stow it where/);
+        said('stow i', /backpack/);
+        said('stow the dagger', /^You lift the dagger\. You put the dagger in the sheath\./, 12);
+        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSTOW],
+          LETSTOW.map(l => ({ line: l, want: 'You|Taken|Your|Put|Stow' })));
+        for (const r of tm) {
+          this.notes.push(r.line + ': first letter ' + r.first);
+          if (!/^(inventory|look|drop 1g)$/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },

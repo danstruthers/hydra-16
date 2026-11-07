@@ -1936,6 +1936,10 @@ static void __fastcall__ handle (unsigned char op, const char* x, const char* y,
     if (things (op | IO_STEPS, x) == IR_NOT_HERE && reach_go ()) {
         return;                                 /* (Out of reach: walked over to it first, then again) */
     }
+    if (HUB->ireq.result == IR_WHICH) {
+        which_ask ();                           /* (Stowed: where, asked, caps.c's) */
+        return;
+    }
     msg (tt ());
     if (HUB->ireq.result == IR_OK) {
         after (was, HUB->ireq.x, op);

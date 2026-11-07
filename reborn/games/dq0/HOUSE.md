@@ -939,6 +939,13 @@ world's answer follows.  The word is said before the world's asked, and holds wh
   letters: d's thing is t's now and t's d's ("Your torch is (t) now. Your rope is (d)."); a letter of nothing carried,
   "You have nothing by that letter.".  *(New, for review:)* "drop d and e" isn't one of these: a line's parts are split
   as it's typed, and "e" alone is east.
+- **Stowing asks where** (the user's: "when stowing something, it should ask where if there is more than one place it
+  could go (pouch(es) or backpack), of course depending on size.  Stowing a weapon with a sheath should choose the sheath
+  if worn."; the plan's step 7): "stow" (put away) with no place said: a holder made for the thing, worn on the belt and
+  free, takes it without asking (a sheath a knife or a dagger, a scabbard a sword, a quiver arrows); else, if more than
+  one of the places worn could hold it (the backpack, a pouch on the belt: its size, its weight, what it keeps; one
+  tied shut not), "Stow it where? (b) the backpack, (f) the pouch", and one key answers ("f": put it in the pouch); one
+  place only, there, no question.
 
 ## Characters *(hmchar: HarnMaster's character generator)*
 

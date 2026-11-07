@@ -265,6 +265,7 @@ go:
             SWFN        rope3, 95
             SWFN        well, 103           ; (A well's shaft: wwell.c)
             SWFN        well_put, 104       ; (A thing let fall down it: wwell2.c)
+            SWFN        stow_where, 74      ; (Stowed with no place said: where, things.c's, the designators' step 7)
             SWFN        fall, 2
             SWFN        dark_way, 43
             SWFN        dark_end, 44

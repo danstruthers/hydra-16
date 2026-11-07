@@ -3048,6 +3048,74 @@ static unsigned char which (void)
 }
 #pragma bss-name (pop)
 
+/* ---- Stowed, no place said (the user's, 2026-11-06: "when stowing something, it should ask where if there is more than
+** one place it could go (pouch(es) or backpack), of course depending on size.  Stowing a weapon with a sheath should
+** choose the sheath if worn."; the designators' step 7): of the containers the character wears (the pack, what hangs
+** from its belt), not shut, that thing n fits in (its size, its weight, its family: fits'), a holder made for its family
+** (a sheath a knife's, a scabbard a sword's, a quiver arrows': its kind's slots) first, without asking; else two or more
+** that keep anything, IR_WHICH, the thing's id and each place's id in the text for the UI to ask where ("W12|30|31|");
+** one, that one (the request made a put into it, "#" and its id; the pack's, a stow as ever); none, as ever */
+#pragma code-name (push, "SW74CODE")            /* (Part 74's: part 35's room, overlay 19's; not dq0w.rop's, part 104's,
+                                                **   read in only as a rope's first wanted) */
+#pragma rodata-name (push, "SW74RODATA")
+#pragma static-locals (push, off)               /* (Its locals the C stack's: the catalogue's o_fits calls parts, this one
+                                                **   copied in again after, its own data as it was) */
+unsigned char s_stow_where (void)
+{
+    const struct item* p;
+    const struct kind* k;
+    unsigned c[NWHICH], n, i;
+    unsigned char m, f, s;
+    char b[6];
+
+    about ();                                   /* (Before the chooser: a part's call copies this one in again, its data
+                                                **   as it was) */
+    if (!(n = pick (iq.name, HW_HAND))) {
+        return 0;
+    }
+    f = kind_at (n)->slots;
+    for (m = 0, i = 1; i < ihigh; ++i) {
+        p = item_at (i);
+        if (i == n || !p->kind || !p->id || (p->shut & IS_CLOSED) || (i != pack && (!belt || p->where != IW_ITEM ||
+            p->x != belt))) {
+            continue;                           /* (Not the pack, nor hanging from its belt) */
+        }
+        k = kind_at (i);
+        s = k->slots;                           /* (Kept: the kind's copy o_fits's to use again) */
+        if (!(k->flags & K_CONTAINER) || (k->keeps & KF_ON) || (cat_map (), o_fits (n, i))) {
+            continue;
+        }
+        if (f && s == f) {                      /* (Made for its family, worn and free: first) */
+            m = 1;
+            c[0] = i;
+            break;
+        }
+        if (!s && m < NWHICH) {
+            c[m++] = i;
+        }
+    }
+    if (m > 1) {
+        text_new ();
+        put ("W");
+        put (utoa (item_at (n)->id, b, 10));
+        for (f = 0; f < m; ++f) {
+            put ("|");
+            put (utoa (item_at (c[f])->id, b, 10));
+        }
+        put ("|");
+        return IR_WHICH;
+    }
+    if (m && c[0] != pack) {
+        iq.kind = IO_PUT;                       /* (Into that one: a put, by its id) */
+        iq.into[0] = '#';
+        utoa (item_at (c[0])->id, iq.into + 1, 10);
+    }
+    return 0;
+}
+#pragma static-locals (pop)
+#pragma rodata-name (pop)
+#pragma code-name (pop)
+unsigned char stow_where (void);                /* (Part 104's: its stub) */
 
 #define STRIP_T         100
 unsigned char __fastcall__ s_moved (unsigned char op)
@@ -3062,6 +3130,9 @@ unsigned char __fastcall__ s_moved (unsigned char op)
         if (!(HUB->pc_lump & (PL_MORE | PL_ALL)) && which ()) {
             return IR_WHICH;                    /* (Several that differ: which, asked) */
         }
+    }
+    if (op == IO_STOW && !iq.count && stow_where ()) {
+        return IR_WHICH;                        /* (Several places it fits: where, asked) */
     }
     want = iq.count == CT_ALL ? 0xFFFF : iq.count;
     got = t = 0;
