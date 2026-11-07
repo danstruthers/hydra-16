@@ -204,17 +204,22 @@ static int find_dirs (void)
 ** (ovlpack.js): packed, a bank on its own (LZ4's block), read and unpacked in place by the unpack library
 ** (modules/unpack, ovunpack.inc: 2026-10-31), the linker's fill ($FF) put back after its bytes, so each bank's as ld65
 ** made it.  The game's start's first words before it (the screen not made yet: 2026-10-30, the start's progress
-** shown) */
-
+** shown), and a dot halfway (the overlays read in two runs: the screen's silence under its 36M cycles, 2026-11-06,
+** the designators' overlay 23) */
+#define OVHALF      12
 static void __fastcall__ ovl_load (int fd)
 {
     int first;
-    unsigned char w = getbank ();
+    unsigned char w = getbank (), k;
 
     write (1, "Dingus Quest Zero is starting ...", 33);
     if (fd >= 0 && (first = hy_banks_alloc (sizeof ovbank)) >= 0) {
         ovbank[0] = first;                      /* (The rest after it: ovl_unpack's) */
-        if (!ovl_unpack (fd | (sizeof ovbank << 8))) {
+        if (!ovl_unpack (fd | (OVHALF << 8)) && (write (1, ".", 1), ovbank[0] = first + OVHALF,
+            !ovl_unpack (fd | ((sizeof ovbank - OVHALF) << 8)))) {
+            for (k = 0; k < sizeof ovbank; ++k) {
+                ovbank[k] = first + k;          /* (The second run's in the first's places: each its own again) */
+            }
             setbank (w);
             close (fd);
             return;
@@ -959,14 +964,13 @@ void status (void)
 static unsigned dplace;
 unsigned long heard_at;
 unsigned char lsn;                              /* (A listen, or a sniff, under way: way.c's) */
-static unsigned char heard_rel = 0xFF;
+unsigned char heard_rel = 0xFF;
 char heard_what[20];
 
 
 static void heard (void)
 {
     static struct msg m;
-    unsigned dx, dy;
     unsigned char rel;
 
     while (!quit && hub_dnext (&dplace, &m)) {   /* (Dead of a blow: the end told once, the rest of its round's untold) */
@@ -983,27 +987,11 @@ static void heard (void)
             }
             continue;
         }
-        if (m.kind != E_DEN || !m.b || (m.x[2] && m.a < DE_RALLY) || m.x[0] != HUB->pc_stratum) {
-            continue;                           /* (A rally told seen too: its words, part 14's; a snore, a word on
-                                                **   watch, the day's) */
+        if (m.kind == E_DEN && m.b && !(m.x[2] && m.a < DE_RALLY) && m.x[0] == HUB->pc_stratum &&
+            (rel = den_heard (&m)) < 8) {       /* (Weighed: caps.c's, the main RAM's room; a rally told seen too: its
+                                                **   words, part 14's; a snore, a word on watch, the day's) */
+            noise_told (&m, rel);               /* (Told: part 14's, from the main code, the hub in the window after) */
         }
-        dx = m.w1 - HUB->pc_x;
-        dy = m.w2 - HUB->pc_y;
-        rel = (bearing ((int) dx, (int) dy) - HUB->pc_face) & 7;
-        dx = (int) dx < 0 ? -dx : dx;
-        dy = (int) dy < 0 ? -dy : dy;
-        dx = (dx > dy ? dx : dy) + 4 * (m.x[3] & 15) + 2 * (m.x[3] >> 4);
-        if ((lsn & 1) && ((rel + 1) & 7) < 3) {
-            dx >>= 1;                           /* (Listened for, that way: twice as far) */
-        }
-        if (dx * 2 > (m.b > HUB->pc_mask ? m.b - HUB->pc_mask : 0) * (HUB->pcsum.hearing + 3) ||   /* (The
-                                                **   background masking it: slice 4.5's) */
-            m.t < heard_at + (rel == heard_rel ? 300 : 50)) {
-            continue;
-        }
-        heard_at = m.t;
-        heard_rel = rel;
-        noise_told (&m, rel);                   /* (Told: part 14's, the main RAM's room) */
     }
 }
 
@@ -2032,6 +2020,8 @@ void __fastcall__ s_take (const char* name)
         lift (taking);
     } else if (r == IR_NO) {
         msg (tt ());                            /* (A theme's altar, its throne: fixed where it stands) */
+    } else if (r == IR_WHICH) {
+        which_ask ();                           /* (Several that differ: which, asked, caps.c's) */
     } else {
         s_took_up (r | was << 8);
     }
@@ -3254,7 +3244,7 @@ int main (int argc, char* argv[])
                                                 **   word with the world spared, the user's D17) */
             }
             if (k == NL_NONE && !strcmp (l, "around")) {
-                around ();                      /* (What's in sight listed, its capitals: letters.c's) */
+                around ();                      /* (What's in sight listed, its capitals: caps.c's) */
                 k = NL_DONE;
             }
             if (k == NL_NONE && names_n && (f & NI_THING) && (t = names_subst (l)) != 0) {

@@ -162,6 +162,8 @@ ovl_out:
             OVFN        cap_of, 23          ; (A thing in sight's capital, the look's: caps.c, overlay 22's till 2026-11-06)
             OVFN        around, 23          ; (What's in sight listed: caps.c)
             OVFN        den_caps, 23        ; (The denizens' capitals, the look's: caps.c)
+            OVFN        which_ask, 23       ; (A take's which asked: caps.c, the designators' step 5)
+            OVFN        den_heard, 23       ; (A denizen's sound weighed: main.c's heard, the main RAM's room)
             OVFN        heard_words, 23     ; (A denizen heard: caps.c, overlay 9's till 2026-11-06, its room for the capitals)
             OVFN        dots, 3            ; (The game's start's progress: main.c's)
 

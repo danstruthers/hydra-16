@@ -374,7 +374,10 @@ unsigned char __fastcall__ look_way (unsigned char action);  /* Part 6: "look no
 void focus_words (void);                        /* Overlay 13: a look one way's words, into lb (words.c's) */
 extern unsigned char lsn;                       /* (main.c's: a listen, 1 one way, 2 about; 0, none) */
 void __fastcall__ bg_words (unsigned char what);    /* Part 11 (main.c's): the background heard, the draught felt */
-extern unsigned long heard_at;                  /* (main.c's: when a sound was last told) */
+extern unsigned long heard_at;                  /* (main.c's: when a sound was last told, */
+extern unsigned char heard_rel;                 /*   and the way it came) */
+unsigned char __fastcall__ den_heard (const struct msg* m);   /* (Overlay 23's) A denizen's sound weighed: its way if it's
+                                                **   heard (REL8), to be told; else 0xFF */
 
 /* ---- bank.s */
 
@@ -434,6 +437,9 @@ struct ldes {
 extern struct ldes ldes[NDES];                  /* (The line's letters' things, in their order) */
 extern unsigned char ndes;
 extern unsigned char den_meant;                 /* (The actor a capital named: its sway's, deal's; letters.c's) */
+extern unsigned char t_taken;                   /* (term.c's: the lines taken out of the queue) */
+extern unsigned char which_on;                  /* (A take's which asked: its answer letters.c's which_in; caps.c's) */
+void which_ask (void);                          /* (Overlay 23's) A take's which asked (the world's IR_WHICH) */
 extern unsigned char cq_st;                     /* (main.c's: the line posted to the parser already, letters_in's) */
 void __fastcall__ des_req (const char* w);      /* (Overlay 22's) A request's name and its other (the hub's ireq, main.c's
                                                 **   things; w its name as asked) made "#" and the id of the thing a

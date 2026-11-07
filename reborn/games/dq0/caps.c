@@ -29,8 +29,9 @@ static unsigned sid[SEE_ITEMS + SEE_DENS];      /* (The things in sight: their i
 static unsigned char skind[SEE_ITEMS];          /*   the things' kinds) */
 static unsigned char nsid;
 static unsigned cnow;                           /* (The clock's stamp: its tenths over 1024) */
-static char o[80];                              /* ("around"'s line) */
+static char o[160];                             /* ("around"'s line; the choices of a which asked) */
 static char w[8];
+static char wb[32];                             /* (A thing in words: thing_said's; a carried one's name) */
 static const char* const rel[8] = {             /* (The ways, as the character faces) */
     "ahead", "ahead to your right", "to your right", "behind you to your right", "behind you",
     "behind you to your left", "to your left", "ahead to your left"
@@ -320,3 +321,110 @@ void __fastcall__ o_heard_words (unsigned char what, unsigned char rel_)
     strcat (lb, rel[rel_ & 7]);
     strcat (lb, ".");
 }
+
+/* The number at p (its digits; the library's atoi in the main RAM): its value; p past it and the space after */
+static const char* np;
+static unsigned __fastcall__ num (void)
+{
+    static unsigned v;
+
+    for (v = 0; *np >= '0' && *np <= '9'; ++np) {
+        v = v * 10 + *np - '0';
+    }
+    ++np;
+    return v;
+}
+
+/* A thing of kind k, n of them, in state f (WS_*) in words, as the inventory's (things.c's words): "a torch (lit)", "6
+** arrows", "a flask of oil (empty)", into w8 (the C stack's: the catalogue's bank in the window as its kind's read) */
+#pragma static-locals (push, off)
+static void __fastcall__ thing_said (unsigned char k, unsigned n, unsigned char f)
+{
+    static const char* const sw[5] = { " (lit)", " (spent)", " (nearly spent)", " (burning low)", " (empty)" };
+    struct kind c;
+    unsigned char i;
+
+    hub_mem (KIND_BANK, &c, CATALOGUE + k, sizeof c);
+    if (n > 1) {
+        strcat (utoa (n, wb, 10), " ");
+    } else {
+        strcpy (wb, c.flags & K_PLURAL ? "some " : strchr ("aeiou", c.name[0]) ? "an " : "a ");
+    }
+    strcat (wb, c.name);
+    for (i = 0; i < 5; ++i) {
+        if (f & 1 << i) {
+            strcat (wb, sw[i]);
+        }
+    }
+}
+#pragma static-locals (pop)
+
+/* A take asked which (the world's IR_WHICH, the designators' step 5: the user's playtest, 2026-11-06, "if all three are
+** on the ground, I should get a prompt for which one, with longer descriptions of each"): the choices the world put in
+** the text ("12 7 1 1|13 7 1 2|": each its id, its kind, its count and its state, WS_*) each given its capital and
+** worded as the inventory words it, told, "Which one? (E) a torch (lit), (F) a torch (spent)"; the command's line and its
+** thing's word kept, with each choice's words and capital (the UI bank's which_*), for its answer (letters.c's
+** which_in: a capital, a number, or a word of its state, "spent", re-runs it on that one) */
+void o_which_ask (void)
+{
+    static char* p;
+    static char* e;
+    static unsigned id, n;
+    static unsigned char k, kd, f;
+
+    sight_get ();
+    caps_load ();
+    from_ui (o, UIREC->things_text, sizeof o);
+    o[sizeof o - 1] = 0;
+    strcpy (lb, "Which one?");
+    for (k = 0, p = o; k < 4 && (e = strchr (p, '|')) != 0; ++k, p = e + 1) {
+        np = p;
+        id = num ();
+        kd = num ();
+        n = num ();
+        f = num ();
+        thing_said (kd, n, f);
+        cap_text (strcat (lb, k ? ", " : " ") + strlen (lb), kd = cap_give (id, CW_THING, kd));
+        strcat (lb, wb);
+        wb[sizeof UIREC->which_w[0] - 2] = 0;
+        wb[sizeof UIREC->which_w[0] - 1] = kd;  /* (Its capital in the last byte: which_in's) */
+        to_ui (UIREC->which_w[k], wb, sizeof UIREC->which_w[0]);
+    }
+    to_ui (UIREC->which_l, cl, strlen (cl) + 1);
+    to_ui (UIREC->which_o, cmd.obj.word, sizeof UIREC->which_o);
+    to_ui (&UIREC->which_n, &k, 1);
+    which_on = 1;
+    msg (lb);
+}
+
+/* A denizen's sound (an E_DEN: main.c's heard, the main RAM's room, 2026-11-06) weighed: heard (how far, the walls and
+** doors between, the background masking it, its hearing; listened for that way, twice as far), not so soon again from the
+** same way: its way (REL8), main.c's to tell (part 14's noise_told, from the main code: a part's hub_map leaves the hub in
+** the window, not this bank); else 0xFF */
+#pragma static-locals (push, off)
+unsigned char __fastcall__ o_den_heard (const struct msg* m)
+{
+    unsigned pc[2], dx, dy;
+    unsigned char mask, hear, rel;
+
+    hub_mem (0, pc, &HUB->pc_x, sizeof pc);
+    hub_mem (0, &mask, &HUB->pc_mask, 1);
+    hub_mem (0, &hear, &HUB->pcsum.hearing, 1);
+    dx = m->w1 - pc[0];
+    dy = m->w2 - pc[1];
+    rel = (bearing ((int) dx, (int) dy) - pc_face) & 7;
+    dx = (int) dx < 0 ? -dx : dx;
+    dy = (int) dy < 0 ? -dy : dy;
+    dx = (dx > dy ? dx : dy) + 4 * (m->x[3] & 15) + 2 * (m->x[3] >> 4);
+    if ((lsn & 1) && ((rel + 1) & 7) < 3) {
+        dx >>= 1;                               /* (Listened for, that way: twice as far) */
+    }
+    if (dx * 2 > (m->b > mask ? m->b - mask : 0) * (hear + 3) ||   /* (The background masking it: slice 4.5's) */
+        m->t < heard_at + (rel == heard_rel ? 300 : 50)) {
+        return 0xFF;
+    }
+    heard_at = m->t;
+    heard_rel = rel;
+    return rel;
+}
+#pragma static-locals (pop)

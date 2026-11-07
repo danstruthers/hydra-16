@@ -50,6 +50,8 @@
 /* ==== The main RAM's: the line's letters, made its things' names (o_letters_in's), for the requests and the resolver */
 struct ldes ldes[NDES];
 unsigned char ndes;
+unsigned char which_on;                         /* (A take's which asked, caps.c's o_which_ask: the next line its answer
+                                                **   perhaps, which_in) */
 unsigned char den_meant;                        /* (The actor a capital named, plus 1, | SWA_MEANT; 0 none: the sway's,
                                                 **   main.c's deal: "talk to B") */
 char capb[6];                                   /* (A capital's words, "(C) ": o_cap_of's, for overlay 12's look) */
@@ -249,13 +251,14 @@ static unsigned char __fastcall__ in_list (const char* list, const char* s, unsi
     return 0;
 }
 
-/* The line's key (posted again: the same line): its length, its first letter and its last */
+/* The line's key (posted again: the same line, not taken out of the queue since, term.c's t_taken; a line the same
+** typed after it, not): its length, its first letter and its last */
 static unsigned __fastcall__ sum (const char* l)
 {
     static unsigned char n;
 
     n = strlen (l);
-    return (unsigned) n << 8 ^ (unsigned char) l[0] ^ (unsigned char) (n ? l[n - 1] : 0) << 1;
+    return ((unsigned) n << 8 | t_taken) ^ (unsigned char) l[0] ^ (unsigned char) (n ? l[n - 1] : 0) << 1;
 }
 
 /* Line l made o (l the queue's first line, term.c's t_next: the lines after it moved): 1, or 0 (no room) */
@@ -276,6 +279,62 @@ static unsigned char __fastcall__ line_put (char* l)
     return 1;
 }
 
+/* Line l the answer to a take's which (caps.c's o_which_ask; the UI bank's which_*): one word, a capital of one of the
+** choices, its number, or a word of its state alone among them ("spent", "lit"): l made the command asked about, that
+** one's capital where its thing's word was ("take the torch": "take the F"), its letters made names as any line's, 1;
+** else 0, the question let go */
+typedef char which_fits[sizeof UIREC->which_l == INMAX + 1 ? 1 : -1];
+void __fastcall__ o_letters_in (char* l);
+static unsigned char __fastcall__ which_in (char* l)
+{
+    static char* p;
+    static unsigned char n, k, i, j, len;
+
+    for (p = l; *p == ' '; ++p) {
+    }
+    for (len = 0; p[len] && p[len] != ' '; ++len) {
+    }
+    for (i = len; p[i] == ' '; ++i) {
+    }
+    if (!len || p[i]) {
+        return 0;                               /* (Not one word: a line of its own) */
+    }
+    from_ui (&n, &UIREC->which_n, 1);
+    k = 0xFF;
+    j = len <= 2 && (n & 0x80 ? islower (*p) : isupper (*p)) ? let_at (p, len) : NLET;   /* (Stowed, where: a lower-case
+                                                **   letter; which, a capital) */
+    for (i = 0; i < (n & 0x7F); ++i) {
+        from_ui (o, UIREC->which_w[i], sizeof UIREC->which_w[0]);
+        if (j < NLET ? (unsigned char) o[sizeof UIREC->which_w[0] - 1] == j : len == 1 && *p == '1' + i) {
+            k = i;                              /* ("F", "2") */
+        } else if (j == NLET && len > 2 && strstr (o, p)) {
+            k = k == 0xFF ? i : 0xFE;           /* ("spent": the one whose words have it, it alone) */
+        }
+    }
+    if (k >= (n & 0x7F)) {
+        return 0;
+    }
+    from_ui (o, UIREC->which_w[k], sizeof UIREC->which_w[0]);
+    j = o[sizeof UIREC->which_w[0] - 1];
+    from_ui (o, UIREC->which_l, INMAX + 1);
+    from_ui (w, UIREC->which_o, sizeof w);
+    w[sizeof w - 1] = 0;
+    len = strlen (w);
+    for (p = o + strlen (o); p > o && (strncmp (p, w, len) || (p[-1] != ' ') || (p[len] && p[len] != ' ')); --p) {
+    }
+    if (p == o || j >= NLET) {
+        return 0;                               /* (Its word not in it: let go) */
+    }
+    i = let_text (w, j, 'A') - w;
+    memmove (p + i, p + len, strlen (p + len) + 1);
+    memcpy (p, w, i);
+    if (!line_put (l)) {
+        return 0;
+    }
+    o_letters_in (l);                           /* (Its letter made its thing's name, as any line's) */
+    return 1;
+}
+
 /* Line l's letters made its things' names (its every line's, as it's posted, before the parser has it); the answer to
 ** the question asked (a letter alone, one it offered) made its command ("d": "drop d") first */
 void __fastcall__ o_letters_in (char* l)
@@ -293,6 +352,12 @@ void __fastcall__ o_letters_in (char* l)
         return;                                 /* (Posted already: its letters made names then) */
     }
     den_meant = 0;
+    if (which_on) {
+        which_on = 0;
+        if (which_in (l)) {
+            return;                             /* (The answer: the command asked about, on that one) */
+        }
+    }
     for (nd = nt = 0, p = l; *p && nt < sizeof ts; ) {  /* (Its words; nd, one after the first that may be a letter) */
         if (*p == ' ') {
             ++p;

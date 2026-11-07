@@ -2573,8 +2573,11 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
     const struct item* p;
     const struct kind* k;
     unsigned i = 0, x, y, px, py, dx, dy, wid;
-    unsigned char m = 0, j, r, d, sn, s = wsel & 15, pw, ps, pk;
+    unsigned char m = 0, j, r, d, sn, s = wsel & 15, pw, ps, pk, all = wsel == SL_WHICH;
 
+    if (all) {
+        s = 0;                                  /* (Every one: which's, part 35's) */
+    }
     afar = 0;
     csum = 0;
     hand_n = 0;
@@ -2677,6 +2680,12 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
         }
     }
     look_q = 0;
+    if (all) {
+        for (j = 0; j < m; ++j) {               /* (Their numbers, the most to hand first, in tbuf: which's) */
+            ((unsigned*) tbuf)[j] = c[j].n;
+        }
+        return m;
+    }
     j = s == SL_NTH ? wsel >> 4 : s == SL_OTHER && !wnot ? 2 : 1;
     if (!j || j > m) {
         return 0;
@@ -2983,6 +2992,63 @@ static void take_keep (void)
     take_cnt = iq.count;
 }
 
+/* ---- Which one (the user's playtest, 2026-11-06: "if all three are on the ground, I should get a prompt for which one,
+** with longer descriptions of each"; the designators' step 5): of those lying about that a take's name fits (none
+** chosen by a selector, a count, a letter, "take all"), all found in one pass (pick's SL_WHICH, their numbers in
+** tbuf), each one's kind, count and state as the inventory's words tell them (lit; spent, nearly spent, burning low; empty),
+** those alike once: two or more that differ, each one's id, kind, count and state (WS_*) into the text for the UI to
+** word and ask ("12 7 1 1|13 7 1 2|"), IR_WHICH; else 0 (one, or all alike: the chooser's, as ever) */
+#define NWHICH          4
+#pragma bss-name (push, "SW35RODATA")           /* (Its locals the part's own: the main RAM's room) */
+static unsigned char which (void)
+{
+    static unsigned id[NWHICH], q[NWHICH];
+    static unsigned char kd[NWHICH], st[NWHICH];
+    static unsigned char j, m, n, k, f;
+    static char b[6];
+
+    wsel = SL_WHICH;
+    n = (unsigned char) pick (iq.name, HW_GONE);
+    wsel = 0;                                   /* (As it was: none said, s_moved's; this part's data copied in again by
+                                                **   the chooser's call) */
+    for (j = m = 0; j < n; ++j) {
+        fetch (&rec, ((unsigned*) tbuf)[j]);
+        if (!rec.id) {
+            return 0;                           /* (One not its own yet: the chooser's) */
+        }
+        f = rec.flags & I_LIT ? WS_LIT : 0;
+        if (rec.fuel <= BURN_LOW && burn_of (rec.kind)) {   /* (A light or a fuel, low or burnt out: words.c's) */
+            f |= !(kind_of (rec.kind)->flags & K_LIGHT) ? (rec.fuel ? 0 : WS_EMPTY) : !rec.fuel ? WS_SPENT : f ? WS_LOW :
+                WS_NEARLY;
+        }
+        for (k = 0; k < m && (kd[k] != rec.kind || q[k] != rec.qty || st[k] != f); ++k) {
+        }
+        if (k == m && m < NWHICH) {             /* (Not alike one found already: a choice) */
+            id[m] = rec.id;
+            kd[m] = rec.kind;
+            q[m] = rec.qty;
+            st[m++] = f;
+        }
+    }
+    if (m < 2) {
+        return 0;
+    }
+    text_new ();
+    for (k = 0; k < m; ++k) {
+        put (utoa (id[k], b, 10));
+        put (" ");
+        put (utoa (kd[k], b, 10));
+        put (" ");
+        put (utoa (q[k], b, 10));
+        put (" ");
+        put (utoa (st[k], b, 10));
+        put ("|");
+    }
+    return IR_WHICH;
+}
+#pragma bss-name (pop)
+
+
 #define STRIP_T         100
 unsigned char __fastcall__ s_moved (unsigned char op)
 {
@@ -2991,6 +3057,12 @@ unsigned char __fastcall__ s_moved (unsigned char op)
     unsigned n;
     char b[24];
 
+    if (op == IO_GET && !iq.count && !wsel && *iq.name != '#') {
+        hub_map (0);
+        if (!(HUB->pc_lump & (PL_MORE | PL_ALL)) && which ()) {
+            return IR_WHICH;                    /* (Several that differ: which, asked) */
+        }
+    }
     want = iq.count == CT_ALL ? 0xFFFF : iq.count;
     got = t = 0;
     times = away = 0;

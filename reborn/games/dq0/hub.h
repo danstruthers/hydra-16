@@ -1723,6 +1723,12 @@ struct uirec {
                                                 **   remembered: given up only as a new one's wanted and none is free,
                                                 **   the one told longest ago that isn't in sight; a thing put down its
                                                 **   own again.  Kept in the save (game.dat's) */
+    char            which_l[101];               /* A take asked which of (the world's IR_WHICH: the designators' step 5,
+                                                **   the UI's): its line (dq0.h's INMAX), */
+    char            which_o[16];                /*   its thing's word, */
+    unsigned char   which_n;                    /*   how many it asked of, */
+    char            which_w[4][24];             /*   and each one's words (the inventory's: "a torch (spent)"), its
+                                                **   capital in the last byte */
 };
 enum { ML_NOW, ML_KEPT, ML_DRAWN, ML_PC, ML_COMPASS };   /* (A map's square: seen now; remembered; drawn on the map
                                                 **   carried; the character; the compass) */

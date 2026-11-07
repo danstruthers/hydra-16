@@ -411,10 +411,15 @@ enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS, LM_KIT, LM_GO, LM
                                                 **   (a thing not found, put: "" none) */
 enum { PZ_DONE, PZ_NONE, PZ_NO, PZ_FAR, PZ_OLD };       /* (IO_PUZZLE's: a rule done; none for those kinds; not done, the
                                                 **   things' words why; the way out out of reach) */
-enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE, IR_NO, IR_FIXED, IR_FUMBLED };    /* (IR_NO: refused, the
-                                                **   things' words why; IR_FIXED: a portal's part, in it; IR_FUMBLED:
+#define SL_WHICH        0x7F                    /* (The chooser's every one of a name, the world's own: its step 5's which) */
+enum { WS_LIT = 1, WS_SPENT = 2, WS_NEARLY = 4, WS_LOW = 8, WS_EMPTY = 16 };   /* (IR_WHICH's choices' states: "(lit)",
+                                                **   "(spent)", "(nearly spent)", "(burning low)", "(empty)") */
+enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE, IR_NO, IR_FIXED, IR_FUMBLED, IR_WHICH };    /* (IR_NO: refused,
+                                                **   the things' words why; IR_FIXED: a portal's part, in it; IR_FUMBLED:
                                                 **   IO_GET's, I_TAKE's, engaged, a grope failed: the round wasted,
-                                                **   the things' words) */
+                                                **   the things' words; IR_WHICH: IO_GET's, several lying about that
+                                                **   differ, the choices in the text, "id kind count state|" each
+                                                **   (WS_*), for the UI to ask which: the designators' step 5) */
 
 /* What the character carries, for the UI to word (IO_LIST's): each thing, how deep it's in others, its state */
 #define NCARRY          16

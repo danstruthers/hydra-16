@@ -469,7 +469,7 @@ void __fastcall__ o_walk_ahead (const char* name)
     struct sitem* it;
     const char* v = "reach for";
     const char* w = "";
-    unsigned char k, away = 0, op = walk_op & ~IO_STEPS, lit = 0, unlit = 0, e, y, sel, in = 0;
+    unsigned char k, away = 0, op = walk_op & ~IO_STEPS, lit = 0, unlit = 0, e, y, sel, in = 0, many = 0;
     char nb[sizeof CATALOGUE[0].name];
     static const char ops[] = { IO_GET, IO_DROP, IO_FILL, IO_HIDE, IO_SHUT, IO_THROW, IO_DESCRIBE, IO_INSIDE, 0 };
 
@@ -485,6 +485,7 @@ void __fastcall__ o_walk_ahead (const char* name)
                 away |= 1;
             } else {
                 away |= 2;
+                ++many;
                 if (it->hid & 4) {              /* (Lit, as it's seen) */
                     lit = 1;
                 } else {
@@ -495,6 +496,11 @@ void __fastcall__ o_walk_ahead (const char* name)
     }
     sel = cmd.obj.sel | cmd.obj.n << 4;
     if (op == IO_GET) {                         /* (Taken up: of what it doesn't carry, as ever) */
+        if (many > 1 && !sel && !ndes) {
+            sayf ("\nYou look them over."); /* (Several in reach, none chosen, nor by its letter: which, perhaps, the
+                                                **   world's to ask; true whatever it answers, at once) */
+            goto told;
+        }
         if (!away) {
             if (s->dark) {
                 return;

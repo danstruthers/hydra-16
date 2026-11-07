@@ -913,6 +913,27 @@ world's answer follows.  The word is said before the world's asked, and holds wh
   and the rest taken ("There are only 3 there; you take them all.", "...; you take both.", "There is only one there; you
   take it."), as for a count of any name ("take 5 rations"); put down, "You have only 2; you put down both."  A count by
   the letter of one of several alike (not a lot) takes that one, then others of its kind, the most to hand.
+- **Denizens lettered first** (the user's: "capital letters for in-the-environment things (items and denizens ...) with
+  denizens numbered first (designators only for seen items or creatures)"; the plan's step 4): each denizen seen (not one
+  only heard behind the character; an ally behind it, yes) takes a capital from the same A ... Z, AA ... AZ as the things,
+  given before the things' at each look, so those in sight are A, B ...; kept while it's remembered, given up as a
+  thing's is.  *(New, for review:)* told before its words in the look and as it stirs, those alike together their
+  capitals together: "(B) A giant rat is ahead, 10 feet away.", "(A, C) Two giant rats are ahead to your left, 15 feet
+  away."; in "around" first, one a line, "(A) a giant rat, ahead to your left, 15 feet away", an ally by its name, one
+  too far off to make out "something".  A capital where a denizen's name goes: "attack B", "throw the knife at A", "walk
+  toward A", "look at A" (how it seems, the one meant: the denizens' task told which), "talk to A", "target A".
+  *(New, for review:)* one gone from sight refused, "You can't see that one now."; "look at" a denizen now looks it over
+  as "examine" does (before, "look at the rat" looked at the rations: a thing whose name begins the same).
+- **Which one?** (the user's playtest: "if all three are on the ground, I should get a prompt for which one, with longer
+  descriptions of each"; the plan's step 5): "take", "pick up" with a name that several things lying about fit, that
+  differ by what the inventory would say of them (their kind, how many, lit, spent, nearly spent, burning low, empty),
+  and none chosen otherwise (a state said, "the spent torch"; a selector, "the closest"; a count; a letter), asks,
+  each different one once with its capital: "Which one? (E) a torch (lit), (F) a torch".  Things alike are never asked
+  about: the one most to hand is taken, as ever.  Answered by its capital ("F"), its number ("2"), or a word of its
+  state that's its alone ("lit"): the command asked about again, on that one.  Any other line lets the question go.  A
+  thing already carried is never taken up ("pick up the torch" with one in hand, one in the pack, one on the ground
+  takes the ground's).  *(New, for review:)* only taking asks (the other verbs choose the one most to hand, as before);
+  several lying in reach, the first words "You look them over." (true whatever comes: a question, or one taken).
 
 ## Characters *(hmchar: HarnMaster's character generator)*
 
