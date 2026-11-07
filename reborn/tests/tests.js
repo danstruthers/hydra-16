@@ -2219,6 +2219,11 @@ function dq0NameMatchTest() {
         f.push('"target the black rat": not none (the qualifier): ' + a('target the black rat').slice(0, 120));
       if (!/^(?:Your target: the giant rat\.|Which one\? \(.\) the giant rat)/.test(a('target the giant rats')))
         f.push('"target the giant rats": not the rats asked about: ' + a('target the giant rats').slice(0, 120));
+      return f;
+    },
+    sdcard: true
+  };
+}
 // "take all" and "it" carry the thing, not its word (COMMANDS-CRITIQUE.md's §5.1 step B, 2026-11-07): each thing "take
 // all" lists taken by its id (resolve.c's taken_next, letters.c's des_add), and the thing last named kept with its id
 // where that's known (a letter's, the resolver's choice, the first words' bound: resolve.c's it_is), so the world
