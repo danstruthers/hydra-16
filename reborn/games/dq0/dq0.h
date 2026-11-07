@@ -442,6 +442,7 @@ struct ldes {
 };
 extern struct ldes ldes[NDES];                  /* (The line's letters' things, in their order) */
 extern unsigned char ndes;
+extern unsigned it_id;                          /* (The last thing named's id, "it"'s, if it's known: resolve.c's) */
 extern unsigned char den_meant;                 /* (The actor a capital named: its sway's, deal's; letters.c's) */
 extern unsigned char t_taken;                   /* (term.c's: the lines taken out of the queue) */
 extern unsigned char which_on;                  /* (A take's which asked: its answer letters.c's which_in; caps.c's) */
@@ -451,6 +452,9 @@ void __fastcall__ des_req (const char* w);      /* (Overlay 22's) A request's na
                                                 **   things; w its name as asked) made "#" and the id of the thing a
                                                 **   letter named, if one did */
 void __fastcall__ des_seen (const struct cthing* t);     /* (Overlay 22's) A seen thing the resolver chose, by its id */
+unsigned __fastcall__ des_add (const char* w, unsigned n);   /* (Overlay 24's, letters.c) Word w's thing the line's handle: id n
+                                                **   if it's carried or in sight ("it"), or the store's record n | LT_REC
+                                                **   ("take all"); its id, 0 none.  n 0: its handle's id.  (w in the main RAM) */
 unsigned char __fastcall__ des_thing (struct cthing* t);   /* (Overlay 22's) Thing t named by a letter: 0 not; 1 so (a
                                                 **   denizen's in sight found: its name, its square); 2 a denizen's out
                                                 **   of sight, refused */

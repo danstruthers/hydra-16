@@ -5,7 +5,8 @@
 **   - an answer to its question ("Which one? (C) the sword ahead, (D) the shield to your left": which.c's): a number,
 **     a way ("left"), a selector ("the closest"), a name ("shield"): the command asked about made again, on that one
 **     (the user's answer 13); any other line lets the question go;
-**   - "it" ("take it", "them"): the last thing named, of any kind (the user's answer 7);
+**   - "it" ("take it", "them"): the last thing named, of any kind (the user's answer 7); that thing by its id where
+**     it's known and it's still carried or seen (it_is), not chosen again by its name;
 **   - a thing unsaid, its verb's (commands.verbs' unsaid): the last thing named (drop, put ...); that, else the things
 **     near (take: one taken, several asked which, none said so: answer 8); the target (attack, throw);
 **   - which of several of those it sees: the closest (the lead: the closest), the largest, the smallest, the second
@@ -14,7 +15,7 @@
 **     target"; as it's down while others fight on; as it's dropped or thrown away; as it's out of sight; as the world's
 **     events make the character turn: a denizen come into sight, a blow from one it doesn't see, a trap set off,
 **     main.c's untarget);
-**   - "take all": each thing it sees lying about, taken in turn (taken_next);
+**   - "take all": each thing it sees lying about, taken in turn, each by its id (taken_next);
 **   - a thing's aspect asked, its thing unsaid ("check its condition", "examine the lock"): the last thing named;
 **   - what it's done with ("with the bar", "using the pick": the instrument, the user's, 2026-10-22): to hand
 **     (carried, or lying within reach: the things' IO_FIND, as a fill's fuel and a door's bar are), else refused,
@@ -54,7 +55,9 @@ static unsigned char ch[NASK] = { 0 };          /*   the heading it lies (0xFF: 
 static unsigned char cs[NASK] = { 0 };          /*   its size (an item's; a denizen's 5), */
 static unsigned char cd[NASK] = { 0 };          /*   and whether it's a denizen (1) and down (2) */
 static unsigned char nc = 0;
+static unsigned char ci[NASK] = { 0 };          /* (The things found's places in the sight record: items', gather's) */
 static char all[NASK][NAMELEN] = { { 0 } };     /* "take all": the things still to take up, */
+static unsigned allid[NASK] = { 0 };            /*   each one's id (each taken by it, not chosen again by its name), */
 static unsigned char nall = 0, iall = 0;        /*   how many, the next */
 static struct sden dens[SEE_DENS] = { { 0 } };  /* The denizens last seen at a command (a new one: the target let go;
                                                 **   remembered: "go to the rat", gone from sight, where it was), */
@@ -100,6 +103,7 @@ static unsigned char __fastcall__ gather (const char* w, unsigned char what)
             if (!(s->item[i].hid & 1) && name_is (s->item[i].name, w)) {    /* (Not one it hid: it knows where those are,
                                                 **   but they're out of sight; its name by the one rule, main.c's) */
                 add (s->item[i].name, s->item[i].x, s->item[i].y, s->item[i].hid >> 4, 0);
+                ci[nc - 1] = i;                 /* (Items first, SEE_ITEMS of them at most: each one added) */
             }
         }
     }
@@ -157,6 +161,16 @@ static void __fastcall__ found (struct cthing* t, unsigned char k)
                                                 **   asked of, letters.c's, 2026-11-07; one alone, the world's
                                                 **   rules, what's in hand first) */
     }
+}
+
+/* Thing t made the last thing named ("it"), and that thing the one the world's asked of, by its id, where it's known
+** (it_id: a letter's, the resolver's choice, the first words' bound, sway.c's bind) and it's still carried or in
+** sight (letters.c's des_add: the line's handle, as a letter's is); else by its name, the world's to choose
+** (COMMANDS-CRITIQUE.md's 5.1, step B, 2026-11-07) */
+static void __fastcall__ it_is (struct cthing* t)
+{
+    memcpy (t, &last, sizeof last);
+    des_add (t->word, it_id);
 }
 
 /* Is thing t (a denizen's, or a thing's found) still among those it sees?  Its entry found's (k), or 0xFF */
@@ -387,10 +401,10 @@ unsigned char o_resolve (void)
             msg ("You haven't named anything yet.");
             return RV_DONE;
         }
-        memcpy (&cmd.obj, &last, sizeof last);
+        it_is (&cmd.obj);                       /* (By its id, if it's known: step B's) */
     }
     if (cmd.other.sel == SL_IT && !cmd.other.word[0]) {
-        memcpy (&cmd.other, &last, sizeof last);
+        it_is (&cmd.other);
     }
     if (cmd.action == VB_DIG) {
         hub_mem (0, &HUB->dig_kind, "", 1);     /* (None named, the best to hand) */
@@ -401,7 +415,7 @@ unsigned char o_resolve (void)
     if (cmd.aux && (a == VB_EXAMINE_LOCALE || (a == VB_EXAMINE_OBJECT && (cmd.flags & CF_UNSAID))) && !cmd.obj.kind &&
         last.word[0] && !last.kind) {           /* (An aspect asked, nothing named: "check its condition", the last
                                                 **   thing named) */
-        memcpy (&cmd.obj, &last, sizeof last);
+        it_is (&cmd.obj);
         cmd.action = a = VB_EXAMINE_OBJECT;
         cmd.flags &= ~CF_UNSAID;
     }
@@ -458,12 +472,12 @@ unsigned char o_resolve (void)
         switch (cmd.dflt) {
         case DF_LAST:
             if (last.word[0] && !last.kind) {
-                memcpy (&cmd.obj, &last, sizeof last);
+                it_is (&cmd.obj);
             }
             break;
         case DF_NEAR:
             if (last.word[0] && !last.kind && gather (last.word, 1)) {
-                memcpy (&cmd.obj, &last, sizeof last);    /* ("examine book", then "take": the book) */
+                it_is (&cmd.obj);               /* ("examine book", then "take": the book) */
             } else if (!gather ("", 1)) {
                 msg ("There's nothing here to take.");
                 return RV_DONE;
@@ -493,6 +507,10 @@ unsigned char o_resolve (void)
                     }
                 }
                 strcpy (all[nall], cn[n]);
+                allid[nall] = des_add (strcpy (cmd.obj.word, cn[n]), s->item[ci[n]].n | LT_REC);   /* (Its id, the
+                                                **   first's the line's handle: the world asked of that one, not to
+                                                **   choose again by its name, step B's; its word in the main RAM, for
+                                                **   overlay 24's) */
                 cx[n] = cy[n] = 0xFFFF;
             }
             iall = 1;
@@ -536,16 +554,21 @@ unsigned char o_resolve (void)
 named:
     if (cmd.obj.word[0] || cmd.obj.kind) {
         memcpy (&last, &cmd.obj, sizeof last);  /* (The last thing named: "it") */
+        it_id = des_add (cmd.obj.word, 0);      /* (Its id, if a handle has it: a letter's, the resolver's choice; the
+                                                **   first words' bound to come, sway.c's bind) */
     }
     return a == VB_TARGET_SET ? RV_DONE : RV_ON;
 }
 
-/* Overlay 11: "take all"'s next thing to take up, into w ("": none) */
+/* Overlay 11: "take all"'s next thing to take up, into w ("": none); its id the handle the world's asked of as it's
+** taken (the line's own let go: "take all" has none, a letter or a choice; step B's, 2026-11-07) */
 void __fastcall__ o_taken_next (char* w)
 {
     *w = 0;
     if (iall < nall) {
-        strcpy (w, all[iall++]);
+        ndes = 0;
+        strcpy (w, all[iall]);
+        des_add (w, allid[iall++]);
     }
     take_more = iall < nall;
 }

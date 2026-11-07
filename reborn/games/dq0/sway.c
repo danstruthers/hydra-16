@@ -363,6 +363,9 @@ static void __fastcall__ bind (const char* w, unsigned char e)
     strncpy (ldes[ndes].word, w, sizeof ldes[0].word - 1);
     ldes[ndes].word[sizeof ldes[0].word - 1] = 0;
     ++ndes;
+    if (!strcmp (w, cmd.obj.word)) {
+        it_id = id;                             /* ("it" this one too: resolve.c's, step B's) */
+    }
 }
 
 /* Entry e's kind's place among those looked up (its name and flags read from the catalogue once a command); its name;

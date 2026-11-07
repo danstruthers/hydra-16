@@ -50,6 +50,8 @@
 /* ==== The main RAM's: the line's letters, made its things' names (o_letters_in's), for the requests and the resolver */
 struct ldes ldes[NDES];
 unsigned char ndes;
+unsigned it_id;                                 /* (The last thing named's id, "it"'s: 0 not known; resolve.c's, sway.c's
+                                                **   bind) */
 unsigned char which_on;                         /* (A take's which asked, caps.c's o_which_ask: the next line its answer
                                                 **   perhaps, which_in) */
 unsigned char den_meant;                        /* (The actor a capital named, plus 1, | SWA_MEANT; 0 none: the sway's,
@@ -616,6 +618,78 @@ unsigned char o_what_ask (void)
 }
 
 #pragma local-strings (pop)
+#pragma bss-name (pop)
+#pragma data-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (pop)
+
+/* ==== Overlay 24's (its room: COMMANDS-CRITIQUE.md's 5.1, step B, 2026-11-07): "it" and "take all" by their things'
+** ids, the line's handles as a letter's are */
+#pragma code-name (push, "OV24CODE")
+#pragma rodata-name (push, "OV24RODATA")
+#pragma data-name (push, "OV24BSS")
+#pragma bss-name (push, "OV24BSS")
+
+#pragma static-locals (push, off)
+/* The store's record n's thing's id (by way of the C stack: the store's bank in the window as it's read) */
+static unsigned __fastcall__ rec_id (unsigned n)
+{
+    unsigned id;
+
+    hub_mem (ITEM_BANK (n), &id, &ITEM_AT (n)->id, sizeof id);
+    return id;
+}
+
+/* Is id n a letter's, its thing carried (the UI bank's low)? */
+static unsigned char __fastcall__ carried (unsigned n)
+{
+    unsigned low[NLET];
+    unsigned char k;
+
+    hub_mem (UI_BANK, low, UIREC->low, sizeof low);
+    for (k = 0; k < NLET && low[k] != n; ++k) {
+    }
+    return k < NLET;
+}
+#pragma static-locals (pop)
+
+/* Word w's thing made the line's handle, as a letter's is (its "#" and id in the world's requests, des_req), by n: an id,
+** if that thing's still carried or in sight ("it": resolve.c's it_id); or, | LT_REC, the store's record n's ("take all"'s:
+** each one's id as it's listed); not if the word has a handle already, or there's no room.  Its id (0: none, or gone; by
+** its name, the world's to choose, as ever).  n 0: the id of the word's handle, a thing's (0 none: resolve.c's it_id) */
+unsigned __fastcall__ o_des_add (const char* w, unsigned n)
+{
+    static const struct sitem* q;
+    static struct ldes* d;
+    static unsigned id;
+    static unsigned char k, h;
+
+    for (d = ldes, h = ndes; h && strcmp (d->word, w); --h, ++d) {   /* (The word's handle, if it has one: h) */
+    }
+    if (!n) {
+        return h && d->id < CAP_DEN (0) ? d->id : 0;
+    }
+    id = 0;
+    if (n & LT_REC) {
+        id = rec_id (n & ~LT_REC);
+    } else if (carried (n)) {
+        id = n;
+    } else {
+        for (q = sight_copy.item, k = sight_copy.nitems; k; --k, ++q) {   /* (Lying in sight) */
+            if (rec_id (q->n) == n) {
+                id = n;
+            }
+        }
+    }
+    if (id && !h && ndes < NDES && strlen (w) < sizeof d->word) {
+        d->id = id;
+        d->low = 0;
+        strcpy (d->word, w);
+        ++ndes;
+    }
+    return id;
+}
+
 #pragma bss-name (pop)
 #pragma data-name (pop)
 #pragma rodata-name (pop)
