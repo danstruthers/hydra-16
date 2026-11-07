@@ -15,6 +15,10 @@
 #include "hub.h"
 #include "tell.h"
 
+unsigned pick_x, pick_y;                        /* (A door's or an opening's square chosen in answer to choose.c's
+                                                **   question: letters.c's which_in sets it, choose.c's o_pick takes it;
+                                                **   here, the main RAM's, 2026-11-07) */
+
 #pragma code-name ("OV3CODE")
 #pragma rodata-name ("OV3RODATA")
 

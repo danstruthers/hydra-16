@@ -2038,8 +2038,6 @@ void __fastcall__ s_take (const char* name)
 /* A thing it sees, the parser's (its kind, | PICK_TELL to say so if there's none; and the heading it lies, if one
 ** was said): 1, its square in tx, ty; 0, none; 2, several and none ahead, which asked (overlay 7's pick) */
 unsigned tx, ty;
-unsigned pick_x, pick_y;                        /* (A door's or an opening's square chosen in answer to choose.c's
-                                                **   question: letters.c's which_in sets it, o_pick takes it; 2026-11-07) */
 #define find(obj, orel) pick ((obj), (orel))
 unsigned char news_due;                         /* (The body's news held as it sleeps: part 12's) */
 

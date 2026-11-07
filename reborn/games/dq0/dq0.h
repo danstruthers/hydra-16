@@ -464,7 +464,7 @@ unsigned char __fastcall__ cap_index (unsigned id, unsigned char what, unsigned 
 void __fastcall__ which_put (unsigned char k, const char* w, unsigned x, unsigned y, unsigned char h);   /* (Overlay 24's,
                                                 **   which.c) choose.c's question's choice k */
 void __fastcall__ which_place (unsigned char n);   /* (Overlay 24's) choose.c's question, asked in lb, made which_in's */
-extern unsigned pick_x, pick_y;                 /* (A door's or an opening's square chosen in answer: o_pick's to take; main.c's) */
+extern unsigned pick_x, pick_y;                 /* (A door's or an opening's square chosen in answer: o_pick's to take; task.c's) */
 void __fastcall__ which_seen (unsigned char r, unsigned char n);    /* (Overlay 24's, which.c) The resolver's question, its choices in
                                                 **   the UI bank's which_w, by capitals (role r's thing) */
 void __fastcall__ den_caps (unsigned char m);   /* (Overlay 23's) The denizens in sight of mask m their capitals, "(A, B) ",
