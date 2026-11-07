@@ -3128,12 +3128,6 @@ unsigned char __fastcall__ s_moved (unsigned char op)
     unsigned n;
     char b[24];
 
-    if (op == IO_GET && !iq.count && !wsel && *iq.name != '#') {
-        hub_map (0);
-        if (!(HUB->pc_lump & (PL_MORE | PL_ALL)) && which ()) {
-            return IR_WHICH;                    /* (Several that differ: which, asked) */
-        }
-    }
     if (op == IO_STOW && !iq.count && stow_where ()) {
         return IR_WHICH;                        /* (Several places it fits: where, asked) */
     }
@@ -3155,6 +3149,15 @@ unsigned char __fastcall__ s_moved (unsigned char op)
     for (;;) {
         wforce = 0;
         n = op == IO_TAKE && !win ? 0 : pick (iq.name, mode);
+        if (op == IO_GET && !times && n && csum > item_at (n)->qty && !iq.count && !wsel && *iq.name != '#') {
+            hub_map (0);                        /* (Several of the name lying about, all told: which, perhaps; one, as
+                                                **   ever, no second pass of the store nor the parts' swaps for it: a
+                                                **   take's answer as quick as it was, 2026-11-06) */
+            if (!(HUB->pc_lump & (PL_MORE | PL_ALL)) && which ()) {
+                return IR_WHICH;                /* (Several that differ: which, asked) */
+            }
+            n = pick (iq.name, mode);           /* (All alike: the chooser's, as ever; rec and the rest its again) */
+        }
         if (!times && iq.count == CT_HALF) {
             want = csum > 1 ? csum >> 1 : 1;    /* (Half of all there are: a lot's count, or the things alike) */
         }
