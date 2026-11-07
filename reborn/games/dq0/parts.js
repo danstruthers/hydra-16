@@ -51,6 +51,7 @@ function wanted(compiled, own, extra) {
         const p = /^SW(\d+)CODE$/.exec(seg);
         if (p && !defined.has(m[1])) defined.set(m[1], +p[1]);
       }
+      if (/^\s*\.(import|dbg)\b/.test(l)) continue;     // (The compiler's imports of all it names, not its uses)
       for (const [, n] of l.replace(/;.*/, '').matchAll(/\b_(\w+)\b/g)) used.add(n);
     }
   }
@@ -100,7 +101,8 @@ function cfg(text, list, file) {
 // non-SW segments loaded into it) leaves; a bank whose wishers don't fit it, the fewest bytes moved out (the smallest
 // part enough to make room; or the biggest, and again); those, the biggest first, each put in the bank of its wish's
 // file with the least room that holds it (the same file: one read later, dq0w.rop's, keeps its own).  text: the task's config; sizes: Map segment → its bytes (all the objects').
-// OUT: { at: Map part → its bank, moved: [{ n, from, to, size }] }; throws, a part no bank has room for
+// OUT: { at: Map part → its bank, moved: [{ n, from, to, size }], room: Map bank → its bytes left, file: Map bank → its
+// file }; throws, a part no bank has room for
 function banks(text, list, sizes, file) {
   const block = k => (text.split(new RegExp('^' + k + '\\s*\\{', 'm'))[1] || '').split('}')[0];
   const cap = new Map(), fileOf = new Map(), room = new Map();
@@ -137,7 +139,7 @@ function banks(text, list, sizes, file) {
     room.set(k, room.get(k) - size(p));
     moved.push({ n: p.n, from: p.ov, to: k, size: size(p) });
   }
-  return { at, moved };
+  return { at, moved, room, file: fileOf };
 }
 
 // banks()'s rules held, each build (make's): a bank too full moves out its smallest part that makes room, not the

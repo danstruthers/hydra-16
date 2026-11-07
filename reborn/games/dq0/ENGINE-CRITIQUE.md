@@ -112,6 +112,19 @@ build.js checks them afterwards.
 
    The partsChecked and headroom checks in build.js already compute half of this. Today a human solves that packing
    problem each time a part fills.
+
+   *Built 2026-11-07 (games/dq0/pack.js, parts.js's banks).* The build reads each function's and table's bytes from
+   the assembler's listing and what each refers to from the compiler's output, and groups them into pieces that
+   can move: a stubbed function and what only it reaches. Calls are routed by part, so a function moved is its pragma
+   alone. A part past the swap area moves out the piece with the fewest calls to the rest of it, to the part with
+   the most calls to the piece whose bank has room, within the same file of banks. It doesn't move a piece whose
+   calls across the new boundary would carry a pointer, one that stores an address in a global the other side
+   reads, or one that assembly touches. A bank too full moves its smallest sufficient part to another bank. What
+   it can't do: split a part that's one big function (the world's part 6, s_blows, 3,630 bytes); judge swap
+   depth where the static estimate is already past SWDEPTH (the world's is 29 against 12, because its main loop
+   serves requests as it waits); or make room in banks that are full (the world is bound by its banks, not its
+   parts: one bank has more than 1,100 bytes free). Measured: with dq0d's and the world's parts squeezed
+   (DQ0_PACK_SQUEEZE), ten functions moved and the whole suite passed.
 3. **Copy leaf helpers by rule, not by hand.** Mark small pure helpers (distance, abs, chunk lookup, a table) as
    *part-local*, and have the build compile a private copy into each part that calls them. The copying the codebase
    already does by hand becomes one source and N mechanical copies, with no `made9`/`span68` names.
@@ -466,7 +479,7 @@ Ranked by how much each unlocks, and arranged so the game keeps working througho
 
 | # | Change | What it unlocks | Size |
 |---|---|---|---|
-| 1 | **Generated placement** (§1.1): parts.txt, the stubs and the config's SWn lines made by the build. *Done 2026-11-06 (games/dq0/parts.js), every task.* Then the automatic packer (§1.2; its first half done 2026-11-07: the parts' banks chosen by the build, parts.txt's bank a wish) and part-local leaf copies (§1.3) | ends "moved for room" churn; a function moved is its pragma alone; dispatch can be organised by meaning | medium, then large |
+| 1 | **Generated placement** (§1.1): parts.txt, the stubs and the config's SWn lines made by the build. *Done 2026-11-06 (games/dq0/parts.js), every task.* Then the automatic packer (§1.2: *done 2026-11-07*, the parts' banks chosen by the build, parts.txt's bank a wish; the calls routed by part; a part past the swap area has its pieces moved out by the build, games/dq0/pack.js) and part-local leaf copies (§1.3) | ends "moved for room" churn; a function moved is its pragma alone; dispatch can be organised by meaning | medium, then large |
 | 2 | **Shared helpers in paged ROM** (§1.4, §4): line of sight, path finding, chunk lookup, name matching, the keyed hash and dice | one line of sight and one router (they disagree today); one copy to keep. Small room gains (measured: a few hundred bytes a task) | medium |
 | 3 | **The hub schema and generated headers/inc/JS/ownership** (§2) | typed payloads; no hand-synced constants; cheaper tests | medium |
 | 4 | **Handles, the scope table, the action table** (COMMANDS §4.1–4.4 and §3.1 here) | consistent commands; one intent shape for PC and denizens | large (the command plan's steps) |

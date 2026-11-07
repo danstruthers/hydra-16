@@ -30,7 +30,11 @@
 ; s_name a part defines and something uses: parts.txt's "stub NAME n" for one the C doesn't show) into
 ; obj/games/TASK/parts.inc, which bank.s .includes after this, and the config's SWn areas and segments (NAME.cfg's
 ; #@SWMEMORY, #@SWSEGMENTS, #@SW n: a part's segments placed among its bank's others).  A function moved from part to
-; part is its pragma alone; a new part, a line of parts.txt.
+; part is its pragma alone (2026-11-07: the calls routed by part, games/dq0/pack.js's route: s_name called from
+; outside its part made name, its stub's; name called from inside it made s_name, no stub's work; so either name does,
+; anywhere); a new part, a line of parts.txt.  A part past the area (__SWAPSIZE__) has pieces moved out by the build
+; (pack.js's plan: a function its stub calls and what only it reaches; none whose calls would carry a pointer, none
+; that assembly has a hand in), listed in the room table; a bank too full, parts moved to another (parts.js's banks).
 
             .zeropage
 swapped:    .res        1                   ; The part in the area now (0: none)
