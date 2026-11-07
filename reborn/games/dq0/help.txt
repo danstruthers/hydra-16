@@ -13,8 +13,8 @@ The puzzle's pieces: read (a tablet), combine the one with the other, put the on
 Several at once: north then east; open the door; go through it; take the sword and the shield (each in turn); drop rope, torch and sack; put the rope and the torch in the sack; take and drop the pick. Stopped, the rest of the line goes with it.
 Pace: creep (sneak), walk slowly, walk, jog, run, sprint (set pace to jog; run north); search for traps as you go (move carefully), listen as you go, map as you go; stop searching (listening, mapping, running).
 Going: a way word alone walks straight on till something stops it (f, n ...); go through the door, leave; go to (approach, head for) anything you've seen here: the pot, the rat, the door, the centre, the far left corner; cross the room.
-Small moves: step forward, move left one space, go north 20 feet, back up two squares (a square 5 feet). Look north, listen at the door; stop.
-Fights: attack the rat (hit, fight), with what you hold; defend (dodge, block, counter, none, best); disengage (back away), flee (run away), pass.
+Small moves: step forward, move left one space, go north 20 feet, back up two squares (a square 5 feet). Look north, listen at the door; stop (halt, enough): at once, whatever you're at, the pack where it was left.
+Fights: attack the rat (hit, fight), with what you hold; defend (dodge, block, counter, none, best); disengage (back away), flee (run away), pass; a flight or a disengage typed as you're busy breaks off what you're at, at once.
 Names: name my sword Linda (or name the sword as Linda), then drop Linda, attack the rat with Linda; call this room the Mausoleum; forget the name Linda.
 Shortcuts: alias nd is north then dig down makes nd stand for that line (words typed after nd go after its line); alias nd shows it, alias lists them and the game's own words, unalias nd removes it.
 With the denizens: talk to the kobold, persuade, deceive, threaten; calm, befriend (an animal); examine one (how it seems); an ally's requests: follow me, stay here, tell Grub to wait, fetch the key, open the door, dismiss it; name the rat Grub.

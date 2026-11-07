@@ -1276,6 +1276,27 @@ climb's test to hold on).
   sniffing, filling, hiding) names it, and a name that isn't the task's is refused ("You aren't digging: you're walking."; none under way, "You aren't doing anything to stop.").  What's
   imposed can't be stopped: senseless, a fall under way.  A question's answered yes by "y", "yes", "go on", "carry
   on", "continue", or "keep" and anything ("keep at it", "keep kicking").
+- **Breaking off at once** *(2026-11-06: the user's, DECISIONS.md's a line typed during a reach: "`stop` and other similar
+  commands should be acted on immediately, but others could be held until after the reach"; new, for review: the words,
+  "halt" a stop, the pack's place)*: the lines that break off are the parser's meanings, not a list of words: a stop
+  ("stop", "halt", "enough", "stop digging" ...), a flight ("flee", "escape", "run away") and a disengage ("disengage",
+  "back away", "back off", "break off", "withdraw", "retreat").  Typed while the character's busy at any long task (a
+  walk, a search, a dig, a wait or a sleep, a timed work, a journey, a fight, a reach's steps: taking the pack off,
+  getting a thing out, the pack going back on, a tool's use), each is acted on at once, never held for the task's end:
+  a stop ends it where it stands; a flight or a disengage ends it the same way, then is carried out (a flight with
+  nothing near to flee from says so, the task ended all the same).  A reach ends between its steps, never part way
+  through one: a step not finished hasn't happened, those before it have, and nothing's put back.  What's told: the
+  step stopped, its own words ("You stop getting out the rations.", "You stop searching."; engaged, a step the round's
+  action and no long task, the same: "You stop taking off the backpack.", the pack still on its back), or between two
+  handlings ("take all"'s), "You stop there."; then where the pack was left, "Your backpack is in your hand." or "Your
+  backpack lies at your feet.", and a tool out, "Your pick is in your hand."  A flight takes what's in its hands with it, the pack
+  too if it's in a hand; a pack at its feet is left there (taken up again by "take the pack", "put on the pack").  A
+  list's later parts, a "take all"'s later things and the rest of the line go with it, as a stop's do (Lists, under
+  Reach); lines typed after it are kept.  A climb part way up still can't be stopped ("There's no stopping part way
+  up"): a flight typed then waits for the climb's end.  **Every other line waits** for the long task's end, a reach's
+  last step (the pack back on) included, then runs; the free commands (what it carries, the sheet, the map, the help,
+  a look about, its state, a stance) answer at once as ever, the reach going on.  "halt" alone is the character's stop
+  now, no more an ally's; an ally's told "stay", or "tell the dog to halt".
 - **What stopping costs**: a walk stops where the character is; a dig keeps the feet dug (the change record: a hole
   half dug stays half dug), and the part of its spell done tires; battering keeps the harm done; a search cut short
   covers the squares nearest first as far as it went, each at the full chance, and a wait rests for the part done; a

@@ -600,7 +600,8 @@ come	VB_ALLY_COME	-	-	an ally called
 come here	VB_ALLY_COME	-	-	come here
 heel	VB_ALLY_COME	-	-	heel
 stay	VB_ALLY_STAY	-	-	an ally told to stay
-halt	VB_ALLY_STAY	-	-	halt
+halt	VB_STOP	task=current	-	halt is a stop (2026-11-06: the stop's kind, at once)
+enough	VB_STOP	task=current	-	a stop, at once (2026-11-06)
 dismiss the dog	VB_ALLY_DISMISS	target=dog	near=dog	an ally dismissed
 sheet	VB_META_SHEET	-	-	the character sheet
 skills	VB_META_SHEET	-	-	skills an alias of sheet

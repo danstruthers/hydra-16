@@ -914,7 +914,8 @@ or a shaft can be jumped down (jump down: a fall of its height).
   or by a hostile denizen coming into sight within 30 feet ("You stop walking"); anything else new (a denizen seen
   for the first time in the task, the first sound heard) asks, soft: "Keep waiting?", the clock still at the turns
   pace till it's answered, yes going on, no stopping it, and any other command stopping it and then carried out.
-  "stop" stops it, and "stop digging" (walking, waiting ...) names it, a task that isn't the one refused ("You aren't
+  "stop" ("halt", "enough") stops it at once, a reach between its steps too, and a flight or a disengage typed as it goes
+  breaks it off at once and then runs (HOUSE.md's breaking off at once, 2026-11-06; every other line waits for its end), and "stop digging" (walking, waiting ...) names it, a task that isn't the one refused ("You aren't
   walking: you're digging"); a climb can't be stopped part way, and struck or hurt it's a test to keep the grip, a
   fall if it fails.  (dq0 -a, the tests': every question answered yes, unasked.)  A search is one too, a minute,
   "Searching about..." as it begins and what it finds told as it ends (cut short, only the squares nearest as far as
