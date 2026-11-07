@@ -122,7 +122,6 @@ ovl_out:
             OVFN        seen_words, 12
             OVFN        pick, 7
             OVFN        choose, 7
-            OVFN        answer, 11
             OVFN        resolve, 11
             OVFN        taken_next, 11
             OVFN        throw_words, 10
@@ -165,6 +164,9 @@ ovl_out:
             OVFN        cap_of, 23          ; (A thing in sight's capital, the look's: caps.c, overlay 22's till 2026-11-06)
             OVFN        around, 23          ; (What's in sight listed: caps.c)
             OVFN        den_caps, 23        ; (The denizens' capitals, the look's: caps.c)
+            OVFN        which_seen, 24      ; (The resolver's question, by capitals: which.c, 2026-11-07)
+            OVFN        cap_index, 23       ; (A thing's or a denizen's capital: caps.c, for which.c)
+            OVFN        which_way, 24       ; (An answer by where its choice lies: which.c, 2026-11-07)
             OVFN        which_ask, 23       ; (A take's which asked: caps.c, the designators' step 5)
             OVFN        den_heard, 23       ; (A denizen's sound weighed: main.c's heard, the main RAM's room)
             OVFN        heard_words, 23     ; (A denizen heard: caps.c, overlay 9's till 2026-11-06, its room for the capitals)

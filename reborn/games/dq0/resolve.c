@@ -2,7 +2,7 @@
 ** resolve.c - (overlay 11) the things a command names found among those the character perceives, and the thing its
 ** verb takes when none is said (the plan's command interpreter: defaults, it, selectors, the target, questions only
 ** when it's unclear).  main.c calls it with the parser's command (cmd: hub.h's struct cmd) before it's carried out:
-**   - an answer to its question ("Which do you mean: 1. the sword ahead, or 2. the shield to your left?"): a number,
+**   - an answer to its question ("Which one? (C) the sword ahead, (D) the shield to your left": which.c's): a number,
 **     a way ("left"), a selector ("the closest"), a name ("shield"): the command asked about made again, on that one
 **     (the user's answer 13); any other line lets the question go;
 **   - "it" ("take it", "them"): the last thing named, of any kind (the user's answer 7);
@@ -48,9 +48,6 @@ static const char* const relname[8] = {
 
 static struct cthing last = { 0 };              /* The last thing named ("it") */
 static struct cthing target = { 0 };            /* The target (its word "": none) */
-static struct cmd kept = { 0 };                 /* The command a question was asked about, */
-static unsigned char asked = 0;                 /*   its choices (0: none asked), */
-static unsigned char role = 0;                  /*   the thing it asked about (0 the command's, 1 the other), */
 static char cn[NASK][NAMELEN] = { { 0 } };      /* The things found: each one's name, */
 static unsigned cx[NASK] = { 0 }, cy[NASK] = { 0 };   /*   its square, */
 static unsigned char ch[NASK] = { 0 };          /*   the heading it lies (0xFF: where the character stands), */
@@ -203,12 +200,6 @@ static unsigned char __fastcall__ seen (const struct cthing* t)
     return nc == 1 ? 0 : 0xFF;                  /* (One of its name, moved: that one) */
 }
 
-/* How far choice k lies to the character's right, across the way it faces (less: its left) */
-static int __fastcall__ side (unsigned char k)
-{
-    return head_x[pc_face] * ((int) cy[k] - sight_copy.y) - head_y[pc_face] * ((int) cx[k] - sight_copy.x);
-}
-
 /* Entry j and the one before it, of a list of words or of bytes, swapped */
 static void __fastcall__ swap (unsigned* p)
 {
@@ -225,12 +216,14 @@ static void __fastcall__ swapc (unsigned char* p)
     p[-1] = u;
 }
 
-/* The question, which of those found: "Which do you mean: 1. the sword ahead, or 2. the sword to your left?", the
+/* The question, which of those found, asked by the designators (which.c's o_which_seen: "Which one? (C) the sword
+** ahead, (D) the sword to your left"; the answer letters.c's which_in, 2026-11-07), the
 ** command kept, the thing it's about its role */
+#pragma static-locals (push, off)
 static void __fastcall__ ask_which (unsigned char r)
 {
     unsigned char k, j;
-    char b[NAMELEN];
+    char b[24];                                 /* (On the C stack: copied out to the UI bank) */
 
     for (k = 1; k < nc; ++k) {                  /* (In their order: a few, a simple sort, the ties as they were) */
         for (j = k; j && order (j) < order (j - 1); --j) {
@@ -244,77 +237,19 @@ static void __fastcall__ ask_which (unsigned char r)
             swapc (cd + j);
         }
     }
-    strcpy (lb, "Which do you mean:");
-    for (k = 0; k < nc; ++k) {
-        strcat (lb, k ? (k + 1 == nc ? ", or " : ", ") : " ");
-        b[0] = '1' + k;
-        b[1] = 0;
-        strcat (lb, b);
-        strcat (lb, ". the ");
-        strcat (lb, cn[k]);
-        strcat (lb, " ");
-        strcat (lb, ch[k] == 0xFF ? "where you stand" : relname[(ch[k] - pc_face) & 7]);
-        for (j = 0; j < nc; ++j) {              /* (Another the same way: how far off each is; as far, which side) */
-            if (j != k && ch[j] == ch[k] && ch[k] != 0xFF) {
-                if (apart (cx[j], cy[j]) == apart (cx[k], cy[k])) {
-                    strcat (lb, side (k) < side (j) ? ", on the left" : ", on the right");
-                } else {
-                    strcat (lb, ", ");
-                    strcat (lb, utoa (5 * apart (cx[k], cy[k]), b, 10));
-                    strcat (lb, " feet off");
-                }
-                break;
-            }
-        }
+    for (k = 0; k < nc && k < 4; ++k) {          /* (Each choice for the question, the UI bank's which_w: caps.c's, by capitals) */
+        memset (b, 0, sizeof b);
+        strcpy (b, cn[k]);
+        *(unsigned*) (b + 15) = cx[k];
+        *(unsigned*) (b + 17) = cy[k];
+        b[19] = ch[k];
+        b[20] = cd[k] & 1;
+        hub_mem (UI_BANK, UIREC->which_w[k], b, sizeof b);
     }
-    strcat (lb, "?");
-    msg (lb);
-    memcpy (&kept, &cmd, sizeof kept);
-    asked = nc;
-    role = r;
+    which_seen (r, k);                          /* ("Which one? (A) the giant rat ahead ...": its answer letters.c's which_in,
+                                                **   the command made again on that one's capital: 2026-11-07) */
 }
-
-/* The line an answer to the question?  Then cmd the command asked about, on the one chosen: 1; else 0 (the question
-** let go) */
-static unsigned char answered (void)
-{
-    unsigned char n = asked, k = 0xFF, j, d, bd = 0xFF;
-
-    asked = 0;
-    if (!n) {
-        return 0;
-    }
-    nc = n;
-    if (!(cmd.flags & CF_NOVERB)) {
-        return 0;                               /* (A command of its own: "attack the closest rat") */
-    }
-    if (cmd.obj.sel == SL_CLOSEST || cmd.obj.sel == SL_LARGEST || cmd.obj.sel == SL_SMALLEST || cmd.obj.sel == SL_NTH ||
-        cmd.obj.sel == SL_LEAD) {
-        k = choose_one (cmd.obj.sel, cmd.obj.n);    /* ("the closest", "the second") */
-    } else if (cmd.n && cmd.n <= n && !cmd.obj.word[0]) {
-        k = cmd.n - 1;                          /* ("2") */
-    } else if (cmd.obj.word[0]) {
-        for (j = 0; j < n && k == 0xFF; ++j) {  /* ("the shield") */
-            if (has (cn[j], cmd.obj.word)) {
-                k = j;
-            }
-        }
-    } else if (cmd.dir <= H_NW) {
-        for (j = 0; j < n; ++j) {               /* ("left": the nearest that way) */
-            if (ch[j] == cmd.dir && (d = apart (cx[j], cy[j])) < bd) {
-                bd = d;
-                k = j;
-            }
-        }
-    }
-    if (k == 0xFF) {
-        return 0;
-    }
-    memcpy (&cmd, &kept, sizeof cmd);
-    found (role ? &cmd.other : &cmd.obj, k);
-    cmd.flags &= ~CF_UNSAID;                    /* (Its thing said now: the one chosen) */
-    return 1;
-}
+#pragma static-locals (pop)
 
 /* Thing t (the command's, or its other) found among those it sees, by its word and its selector (what: items 1,
 ** denizens 2, both 3): 1 found (or not one it sees, or several of the name and none chosen: the command's to see
@@ -424,18 +359,6 @@ static unsigned char has_target (void)
     target.x = cx[k];                           /* (Where it is now) */
     target.y = cy[k];
     return k + 1;
-}
-
-/* Overlay 11: the line (cmd) an answer to the question asked (chosen: choose.c's, a fixture's, already answered: the
-** question let go)?  Then cmd the command asked about, on the one chosen: 1; else 0 */
-unsigned char __fastcall__ o_answer (unsigned char chosen)
-{
-    if (chosen || !asked) {
-        asked = 0;
-        return 0;
-    }
-    hub_mem (SIGHT_BANK, &sight_copy, SIGHT, sizeof sight_copy);   /* (Only if one was asked: the copy's cost) */
-    return answered ();
 }
 
 /* Overlay 11: the command (cmd) resolved: it, its unsaid thing, which of several, the target.  RV_ON: carried on

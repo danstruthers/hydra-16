@@ -1730,6 +1730,10 @@ struct uirec {
     char            which_w[4][24];             /*   and each one's words (the inventory's: "a torch (spent)"), its
                                                 **   capital in the last byte */
 };
+#define WN_STOW         0x80                    /* (which_n's: a stow's where, lower-case letters; */
+#define WN_SEEN         0x40                    /*   the resolver's, of things and denizens seen: each which_w its name,
+                                                **   its square at 15, its way at 19, 1 at 20 a denizen's; caps.c's
+                                                **   o_which_seen, 2026-11-07) */
 enum { ML_NOW, ML_KEPT, ML_DRAWN, ML_PC, ML_COMPASS };   /* (A map's square: seen now; remembered; drawn on the map
                                                 **   carried; the character; the compass) */
 

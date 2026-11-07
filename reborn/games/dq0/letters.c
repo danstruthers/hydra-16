@@ -314,6 +314,7 @@ static unsigned char __fastcall__ line_put (char* l)
 ** one's capital where its thing's word was ("take the torch": "take the F"), its letters made names as any line's, 1;
 ** else 0, the question let go */
 typedef char which_fits[sizeof UIREC->which_l == INMAX + 1 ? 1 : -1];
+
 void __fastcall__ o_letters_in (char* l);
 static unsigned char __fastcall__ which_in (char* l)
 {
@@ -321,6 +322,10 @@ static unsigned char __fastcall__ which_in (char* l)
     static unsigned char n, k, i, j, len;
 
     for (p = l; *p == ' '; ++p) {
+    }
+    if (!strncmp (p, "the ", 4)) {
+        for (p += 4; *p == ' '; ++p) {          /* ("the shield", "the closest") */
+        }
     }
     for (len = 0; p[len] && p[len] != ' '; ++len) {
     }
@@ -331,9 +336,15 @@ static unsigned char __fastcall__ which_in (char* l)
     }
     from_ui (&n, &UIREC->which_n, 1);
     k = 0xFF;
-    j = len <= 2 && (n & 0x80 ? islower (*p) : isupper (*p)) ? let_at (p, len) : NLET;   /* (Stowed, where: a lower-case
+    j = len <= 2 && (n & WN_STOW ? islower (*p) : isupper (*p)) ? let_at (p, len) : NLET;   /* (Stowed, where: a lower-case
                                                 **   letter; which, a capital) */
-    for (i = 0; i < (n & 0x7F); ++i) {
+    if (n & WN_SEEN) {
+        k = which_way (p, len, n & 0x3F);          /* (The resolver's, of things seen: "left", "north", "closest") */
+        if (k < 0xFE) {
+            goto chosen;
+        }
+    }
+    for (i = 0; i < (n & 0x3F); ++i) {
         from_ui (o, UIREC->which_w[i], sizeof UIREC->which_w[0]);
         if (j < NLET ? (unsigned char) o[sizeof UIREC->which_w[0] - 1] == j : len == 1 && *p == '1' + i) {
             k = i;                              /* ("F", "2") */
@@ -341,13 +352,14 @@ static unsigned char __fastcall__ which_in (char* l)
             k = k == 0xFF ? i : 0xFE;           /* ("spent": the one whose words have it, it alone) */
         }
     }
-    if (k >= (n & 0x7F)) {
+    if (k >= (n & 0x3F)) {
         return 0;
     }
+chosen:
     from_ui (o, UIREC->which_w[k], sizeof UIREC->which_w[0]);
     j = o[sizeof UIREC->which_w[0] - 1];
     from_ui (o, UIREC->which_l, INMAX + 1);
-    if (n & 0x80) {                             /* ("put j in" and its letter: "put j in f") */
+    if (n & WN_STOW) {                          /* ("put j in" and its letter: "put j in f") */
         if (j >= NLET) {
             return 0;
         }
@@ -356,6 +368,10 @@ static unsigned char __fastcall__ which_in (char* l)
     }
     from_ui (w, UIREC->which_o, sizeof w);
     w[sizeof w - 1] = 0;
+    if (!*w && j < NLET) {                      /* (Its thing unsaid, "take": the capital after it, "take E") */
+        let_text (strcat (o, " ") + strlen (o), j, 'A');
+        goto put;
+    }
     len = strlen (w);
     for (p = o + strlen (o); p > o && (strncmp (p, w, len) || (p[-1] != ' ') || (p[len] && p[len] != ' ')); --p) {
     }

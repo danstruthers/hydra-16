@@ -2263,8 +2263,8 @@ void __fastcall__ s_command (char* l)
     ok = s_cq_cmd (l);                          /* (The command the parser made: dq0c's, the grammar's verdict with
                                                 **   it) */
     pc_face = HUB->pc_face;
-    d = choose (&cmd);                          /* (A choice asked for: this line's, the command again; a fixture's, */
-    d |= answer (d);                            /*   or a thing's) */
+    d = choose (&cmd);                          /* (A fixture's choice asked for: this line's, the command again; a
+                                                **   thing's, a line made again by letters.c's which_in) */
     tx = 0;
     if (!d && parts_in (PO_AGAIN)) {
         return;                                 /* (A list's later part, a thing alone: "take rope and torch") */

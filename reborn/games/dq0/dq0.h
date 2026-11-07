@@ -194,9 +194,6 @@ unsigned char __fastcall__ things (unsigned char op, const char* name);    /* (m
 
 #define RV_ON       0                           /* (resolve's: the command carried on with; seen to, a question */
 #define RV_DONE     1                           /*   asked, the target set, said why not) */
-unsigned char __fastcall__ answer (unsigned char chosen);   /* The command (cmd) an answer to resolve's question?
-                                                **   Then cmd the command asked about, on the one chosen: 1; else 0
-                                                **   (chosen: choose's answered, the question let go) */
 unsigned char resolve (void);                   /* The command (cmd) resolved: RV_ON or RV_DONE */
 void __fastcall__ taken_next (char* w);         /* "Take all"'s next thing to take up, into w ("": none) */
 void __fastcall__ throw_words (unsigned r);     /* A throw told (the things' IO_THROW's result, its TH_* times 256:
@@ -458,6 +455,12 @@ unsigned char __fastcall__ des_thing (struct cthing* t);   /* (Overlay 22's) Thi
 extern char capb[6];
 const char* __fastcall__ cap_of (unsigned char i);  /* (Overlay 23's, caps.c) Thing i in sight's capital, "(C) " (capb), for the
                                                 **   look's words: given as it's first told; "" none */
+unsigned char __fastcall__ which_way (const char* p, unsigned char len, unsigned char n);  /* (Overlay 24's, which.c) An answer by
+                                                **   where its choice lies: its place, 0xFE none that way, 0xFF no way */
+unsigned char __fastcall__ cap_index (unsigned id, unsigned char what, unsigned char kind);  /* (Overlay 23's, caps.c) A thing's
+                                                **   or a denizen's capital, given now if it has none: its place, NLET none */
+void __fastcall__ which_seen (unsigned char r, unsigned char n);    /* (Overlay 24's, which.c) The resolver's question, its choices in
+                                                **   the UI bank's which_w, by capitals (role r's thing) */
 void __fastcall__ den_caps (unsigned char m);   /* (Overlay 23's) The denizens in sight of mask m their capitals, "(A, B) ",
                                                 **   added to lb (dens.c's look) */
 void __fastcall__ around (const char* l);       /* (Overlay 23's: "letter d as t" too) What's in sight listed, its capitals ("around") */

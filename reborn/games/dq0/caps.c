@@ -472,6 +472,14 @@ static char* __fastcall__ low_text (char* b, unsigned char j)
     return e;
 }
 
+/* A thing's capital, or a denizen's (cap_give's, the capitals loaded first): which.c's o_which_seen, the resolver's
+** question (2026-11-07).  Its place, or NLET */
+unsigned char __fastcall__ o_cap_index (unsigned id, unsigned char what, unsigned char kind)
+{
+    caps_load ();
+    return cap_give (id, what, kind);
+}
+
 void o_which_ask (void)
 {
     static char* p;

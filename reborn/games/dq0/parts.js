@@ -124,6 +124,8 @@ function banks(text, list, sizes, file) {
     const in_ = list.parts.filter(p => p.ov === k);     //   makes room, the smallest that's enough, or the biggest and
     let over = in_.reduce((t, p) => t + size(p), 0) - room.get(k);   //   again)
     while (over > 0) {
+      if (!in_.length) throw new Error(file + ': overlay ' + k + '\'s own code and data are ' + (-room.get(k)) +
+        ' bytes past its bank (' + cap.get(k) + '): no part of its to move out (its code smaller, or some of it to another overlay)');
       const by = [...in_].sort((a, b) => size(a) - size(b) || b.n - a.n), p = by.find(q => size(q) >= over) || by[by.length - 1];
       in_.splice(in_.indexOf(p), 1);
       left.push(p);

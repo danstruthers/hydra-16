@@ -5619,11 +5619,11 @@ module.exports = {
       // (Its words checked with the screen's codes and the lines' wrapping taken out, each in its turn)
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const want = ['Which do you mean: 1. the giant rat ahead to your left, on the right, 2. the giant rat ahead to your left, on the ' +
-          'left, or 3. the giant rat ahead?', 'Your target: the giant rat.', 'Your target: the giant rat ahead to your left.',
+        const want = ['Which one? (A) the giant rat ahead to your left, on the right, (C) the giant rat ahead to your left, on the ' +
+          'left, (B) the giant rat ahead', 'Your target: the giant rat.', 'Your target: the giant rat ahead to your left.',
           'You take the dagger in your right hand.', 'You throw your dagger hard at the giant rat', 'You finish the giant rat where it lies.', 'Put down.',
-          'Which do you mean: 1. the body ahead', 'the bones ahead to your right, or 3. the pick where you stand?', 'Taken.',
-          'Which do you mean: 1. the body ahead', 'or 2. the pick where you stand?', 'You\'ve no hand free for the pick: you put it in your backpack.', 'Your hands are full, and there\'s nowhere to put it.',
+          'Which one? (E) the body ahead', 'the bones ahead to your right, (F) the pick where you stand', 'Taken.',
+          'Which one? (E) the body ahead', '(F) the pick where you stand', 'You\'ve no hand free for the pick: you put it in your backpack.', 'Your hands are full, and there\'s nowhere to put it.',
           '(j) a pick (k) a torch (l) a flask of oil', '(m) bones, in your right hand', 'Drop what? [', 'Your hands are full, and there\'s nowhere to put it.', 'Throw it at what?',
           'You finish the giant rat where it lies.', 'You have no target now.',
           'You have no target.', 'You turn to face north.', 'You come to the wall.', '% echo $status'];
@@ -13332,7 +13332,7 @@ module.exports = {
         said('go to the rat', 'You haven\'t seen a rat here.');
         said('approach the pot', 'You go over to the pot.');
         said('walk to the pot', 'You go over to the iron pot.', ['Pace:', 'You go over to it.']);
-        said('head for the pot', 'Which do you mean');
+        said('head for the pot', 'Which one?');
         said('1', 'The iron pot is beside you.');
         said('walk over to the sconce', 'You go over to the sconce.');
         said('examine the sconce', ['You go over to the sconce.', 'The sconce is'], ['A barrel vault', 'by the light of', 'On the iron pot lies']);
