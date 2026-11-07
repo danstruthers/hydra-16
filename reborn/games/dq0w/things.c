@@ -2107,6 +2107,28 @@ static unsigned char __fastcall__ fetch_find (const char* fn)
     return r;
 }
 
+/* A light named that's lit in a hand, none named unlit in a hand: it (HOUSE.md's which is lit, "the one in a hand first,
+** whichever way it's lit", none put away for another: "light the torch" of the one in hand, lit already, said so, not a
+** spare got out of the pack; 2026-11-07, dq0sweep's); else 0 */
+static unsigned __fastcall__ held_lit (void)
+{
+    unsigned n, lit = 0;
+    unsigned char k, f;
+
+    for (n = 1; n < NITEMS; ++n) {
+        k = item_at (n)->kind;
+        f = item_at (n)->flags;
+        if (k && (f & I_HELD) && item_at (n)->where == IW_ACTOR && !item_at (n)->x && (kind_flags (k) & K_LIGHT) &&
+            named (kind_of (k)->name, iq.name)) {
+            if (!(f & I_LIT)) {
+                return 0;
+            }
+            lit = n;
+        }
+    }
+    return lit;
+}
+
 static unsigned char o_handle (void);
 unsigned char s_serve (void)
 {
@@ -2145,6 +2167,17 @@ unsigned char s_serve (void)
         if ((iq.result = moved (iq.kind)) == IR_NO && iq.kind == IO_GET && !rs_st) {
             cat_map ();                         /* (Fixed where it stands: the words why) */
             o_handle ();
+        } else if (iq.result == IR_NONE && iq.kind == IO_GET && (n = carried_named (iq.name)) != 0 &&
+            (item_at (n)->flags & (I_HELD | I_WORN))) {
+            iq.kind = item_at (n)->flags & I_HELD ? IO_HOLD : IO_DON;   /* (None lying about, but in hand or worn: "You
+                                                **   hold the sack in your left hand already.", "You wear the backpack
+                                                **   already.", the hold's and the wear's words, not "none here":
+                                                **   2026-11-07, dq0sweep's) */
+            iq.to = 0;
+            cat_map ();
+            iq.result = o_handle ();
+            iq.kind = IO_GET;
+            hub_map (0);
         }
         break;
     case IO_SHUT:                               /* (A lid, a tie, a stopper, a lock worked: part 4's) */
@@ -2226,6 +2259,11 @@ unsigned char s_serve (void)
             !(hand_free (n) & ~HF_FIXT)) {
             iq.result = doff_feet (n);          /* (Taken off, no hand free: at its feet, not refused, nor the pack off for
                                                 **   it; a place said, "put the cloak in the sack", the put's) */
+        } else if (k == IO_LIGHT && wsel != SL_NEW && *iq.name && *iq.name != '#' && !*iq.into && (n = held_lit ()) != 0) {
+            text_new ();                        /* ("The torch is lit already.": held_lit's) */
+            strcpy (xn, kind_of (item_at (n)->kind)->name);
+            cat_map ();
+            iq.result = no (SA_LIT);
         } else {
             cat_map ();
             if ((iq.result = o_handle ()) == IR_NO && k == IO_DOFF && last_sa == SA_HANDS && !rs_st) {
@@ -5659,7 +5697,7 @@ static unsigned char __fastcall__ light (unsigned char on)
     static unsigned char r, x, fr, f, hh;
 
     c = 0;
-    fr = on && wsel == SL_NEW;                  /* ("Light a new torch", the user's, 2026-11-02: HOUSE.md's */
+    fr = on && wsel == SL_NEW;                 /* ("Light a new torch", the user's, 2026-11-02: HOUSE.md's */
     if (fr && (rs_redo & RR_NEW)) {             /*   a new light lit from the old one, its next step, part 86's) */
         m0 (text_new);
         return B (m1 (reach_do, RO_NEWL));

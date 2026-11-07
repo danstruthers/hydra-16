@@ -2152,8 +2152,12 @@ const SWEEP_VERBS = ['look at', 'examine', 'touch', 'push', 'pull', 'knock on', 
 const SWEEP_GAPS = new Set([
   'look at the stairs', 'examine the stairs',   // (A look at a way the character stands by: the room's words, way.c's)
   'smell the stairs',                            // (A sniff that way: the air's words, not the stairs')
-  'light the torch',                             // (A lit torch in hand: another got out of a pack that's shut, its words the pack's)
 ]);
+const SWEEP_SAID = [                             // (Taken, of a thing worn or in hand; lit, of the torch lit in hand: the
+  ['take the backpack', 'You wear the backpack already.'],    //   hold's and the wear's words, not "You see none of those
+  ['take the sack', 'You hold the sack in your right hand already.'],   //   here."; HOUSE.md's which is lit, not a
+  ['light the torch', 'The torch is lit already.'],           //   spare got out of the pack: 2026-11-07)
+];
 // (Left out: the wall the character faces at the time is the kitchen's trapped door, so "open the wall" opens it and
 // its blade ends the game: the wall made a door, a gap of its own, swept once a thing named is never made another)
 const SWEEP_SKIP = new Set(['open the wall', 'close the wall']);
@@ -2185,6 +2189,10 @@ function dq0SweepTest() {
         if (!ok || process.env.DQ0_SWEEP === 'all') gaps.push(l + ' => ' + A[i].text.slice(0, 110));
         if (!ok && !SWEEP_GAPS.has(l)) f.push('"' + l + '": its thing not named: ' + (A[i].text.slice(0, 140) || '(nothing)'));
         if (ok && SWEEP_GAPS.has(l)) f.push('"' + l + '" names its thing now: take it off SWEEP_GAPS (' + A[i].text.slice(0, 100) + ')');
+      }
+      for (const [l, w] of SWEEP_SAID) {                // (Answers held word for word: a thing carried taken, lit)
+        const a = A.find(x => x.cmd === l);
+        if (a && !a.text.includes(w)) f.push('"' + l + '": not "' + w + '" but: ' + a.text.slice(0, 140));
       }
       if (process.env.DQ0_SWEEP) console.log('dq0sweep gaps (' + gaps.length + ' of ' + lines.length + '):\n' + JSON.stringify(gaps));
       return f;

@@ -416,7 +416,7 @@ static unsigned char __fastcall__ ix_pick (const char* w, unsigned char sel, uns
         if (ix[e].kind >= nck || !cm[ix[e].kind] || (s == SL_LIT ? !(f & CX_LIT) : sel == SL_NEW ? f & (CX_HELD | CX_LIT) : s == SL_UNLIT ?
             (f & CX_LIT) || !alight (e) : s == SL_OPEN ? f & CX_SHUT : s == SL_SHUT ? !(f & CX_SHUT) : sel == SL_SPENT ?
             !(f & CX_SPENT) : sel == SL_FULL ? f & CX_EMPTY : s == SL_EMPTY ? !(f & CX_EMPTY) :
-            op == IO_LIGHT ? (f & CX_LIT) || (!s && (f & CX_SPENT)) : op == IO_DOUSE && !(f & CX_LIT))) {
+            op == IO_LIGHT ? ((f & CX_LIT) && (sel || !(f & CX_HELD))) || (!s && (f & CX_SPENT)) : op == IO_DOUSE && !(f & CX_LIT))) {
             continue;
         }
         for (r = 1, j = e; ix[j].up && ix[j].up <= nix && ix[j].up != in; ++r) {
@@ -425,9 +425,11 @@ static unsigned char __fastcall__ ix_pick (const char* w, unsigned char sel, uns
         if (in && ix[j].up != in) {
             continue;                           /* (Not in the one said) */
         }
-        rk[e] = r == 1 && (f & CX_HELD) ? 0 : r;
+        rk[e] = r == 1 && (f & CX_HELD) ? op == IO_LIGHT && (f & CX_LIT) : r + 1;   /* (A light lit in a hand, none
+                                                **   said: after one unlit in a hand, before any other: "lit already",
+                                                **   the world's held_lit, 2026-11-07) */
     }
-    for (r = 0; r < 12; ++r) {
+    for (r = 0; r < 13; ++r) {
         for (e = 0; e < nix; ++e) {
             if (rk[e] == r && !--n) {
                 return e;
