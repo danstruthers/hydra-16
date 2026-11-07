@@ -25,11 +25,12 @@
 ; world's last three, dq0w.rop's, only at ropes_in: a part called sooner than that belongs in another's bank).
 ;
 ; The parts and the stubs are the build's (2026-11-06: games/dq0/parts.js, ENGINE-CRITIQUE.md's step 2): a task's
-; parts.txt says each part's bank and what it's for; its C's pragmas say which part each function is in; the build
-; makes the SWPART and SWFN lines (a stub for each s_name a part defines and something uses: parts.txt's "stub NAME n"
-; for one the C doesn't show) into obj/games/TASK/parts.inc, which bank.s .includes after this, and the config's SWn
-; areas and segments (NAME.cfg's #@SWMEMORY, #@SWSEGMENTS, #@SW n: a part's segments placed among its bank's others).
-; A function moved from part to part is its pragma alone; a new part, a line of parts.txt.
+; parts.txt says each part's bank (a wish: a bank too full, the build puts it in another of its file's) and what it's
+; for; its C's pragmas say which part each function is in; the build makes the SWPART and SWFN lines (a stub for each
+; s_name a part defines and something uses: parts.txt's "stub NAME n" for one the C doesn't show) into
+; obj/games/TASK/parts.inc, which bank.s .includes after this, and the config's SWn areas and segments (NAME.cfg's
+; #@SWMEMORY, #@SWSEGMENTS, #@SW n: a part's segments placed among its bank's others).  A function moved from part to
+; part is its pragma alone; a new part, a line of parts.txt.
 
             .zeropage
 swapped:    .res        1                   ; The part in the area now (0: none)

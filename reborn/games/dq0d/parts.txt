@@ -1,8 +1,9 @@
-# parts.txt - the denizens' swapped parts (../dq0/swap.inc's: code run in the main RAM's top, a part at a time,
-# copied there from the overlay bank its image is kept in as it's called).  A line a part: its number, its overlay
-# bank (dq0d.cfg's OVn), what it's for.  Which functions are in each is the C's (#pragma code-name "SWnCODE");
-# the stubs and the config's lines for them are the build's (../dq0/parts.js: obj/games/dq0d/parts.inc and
-# dq0d.cfg).  "stub NAME N": a part's stub that the C doesn't show (its assembly's).
+# parts.txt - the denizens' swapped parts (../dq0/swap.inc's: code run in the main RAM's top, a part at a time, copied
+# there from the overlay bank its image is kept in as it's called).  A line a part: its number, its overlay bank
+# (dq0d.cfg's OVn: its wish; a bank too full, the build puts it in another of its file's), what it's for.  Which
+# functions are in each is the C's (#pragma code-name "SWnCODE"); the stubs and the config's lines for them are the
+# build's (../dq0/parts.js: obj/games/dq0d/parts.inc and dq0d.cfg).  "stub NAME N": a part's stub that the C doesn't
+# show (its assembly's).
 1   1   The populations, the records paged: what every call wants
 2   1   The character's ways with a denizen (the UI's sway), and harmed
 3   2   The placing (part 1's till 2026-11-04)

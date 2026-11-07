@@ -95,17 +95,89 @@ function cfg(text, list, file) {
   return text.replace(at('SWMEMORY'), mem.replace(/\n/g, eol)).replace(at('SWSEGMENTS'), rest.map(segs).join('\n').replace(/\n/g, eol));
 }
 
+// The parts' banks, the build's (ENGINE-CRITIQUE.md's packer, its first half: a bank's room no one's to shuffle by
+// hand): parts.txt's bank a part's wish; each bank's room what its own (an overlay's code and data: the config's
+// non-SW segments loaded into it) leaves; a bank whose wishers don't fit it, the fewest bytes moved out (the smallest
+// part enough to make room; or the biggest, and again); those, the biggest first, each put in the bank of its wish's
+// file with the least room that holds it (the same file: one read later, dq0w.rop's, keeps its own).  text: the task's config; sizes: Map segment → its bytes (all the objects').
+// OUT: { at: Map part → its bank, moved: [{ n, from, to, size }] }; throws, a part no bank has room for
+function banks(text, list, sizes, file) {
+  const block = k => (text.split(new RegExp('^' + k + '\\s*\\{', 'm'))[1] || '').split('}')[0];
+  const cap = new Map(), fileOf = new Map(), room = new Map();
+  for (const [, n, f, z] of block('MEMORY').matchAll(/^\s*OV(\d+):\s*file\s*=\s*"([^"]*)"[^;\n]*?\bsize\s*=\s*\$([0-9A-Fa-f]+)/gm)) {
+    cap.set(+n, parseInt(z, 16));
+    fileOf.set(+n, f);
+  }
+  for (const [k, c] of cap) room.set(k, c);
+  for (const [, s, k] of block('SEGMENTS').matchAll(/^\s*(\w+):\s*load\s*=\s*OV(\d+)\b/gm))
+    if (!/^SW\d+(CODE|RODATA)$/.test(s) && room.has(+k)) room.set(+k, room.get(+k) - (sizes.get(s) || 0));
+  const size = p => (sizes.get('SW' + p.n + 'CODE') || 0) + (sizes.get('SW' + p.n + 'RODATA') || 0);
+  const at = new Map(), left = [], moved = [];
+  for (const p of list.parts)
+    if (!cap.has(p.ov)) throw new Error(file + ': part ' + p.n + '\'s bank, OV' + p.ov + ', not a bank of the config\'s');
+  for (const k of cap.keys()) {                         // (A bank too full for its wishers: the least moved out that
+    const in_ = list.parts.filter(p => p.ov === k);     //   makes room, the smallest that's enough, or the biggest and
+    let over = in_.reduce((t, p) => t + size(p), 0) - room.get(k);   //   again)
+    while (over > 0) {
+      const by = [...in_].sort((a, b) => size(a) - size(b) || b.n - a.n), p = by.find(q => size(q) >= over) || by[by.length - 1];
+      in_.splice(in_.indexOf(p), 1);
+      left.push(p);
+      over -= size(p);
+    }
+    for (const p of in_) at.set(p.n, k);
+    room.set(k, room.get(k) - in_.reduce((t, p) => t + size(p), 0));
+  }
+  left.sort((a, b) => size(b) - size(a) || a.n - b.n);
+  for (const p of left) {
+    const fits = [...room].filter(([k, r]) => fileOf.get(k) === fileOf.get(p.ov) && r >= size(p)).sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+    if (!fits.length) throw new Error(file + ': part ' + p.n + ' (' + size(p) + ' bytes) fits no bank of "' + fileOf.get(p.ov) + '": the most room is ' +
+      Math.max(...[...room].filter(([k]) => fileOf.get(k) === fileOf.get(p.ov)).map(([, r]) => r)) + ' (a bank more, or the part smaller)');
+    const [k] = fits[0];
+    at.set(p.n, k);
+    room.set(k, room.get(k) - size(p));
+    moved.push({ n: p.n, from: p.ov, to: k, size: size(p) });
+  }
+  return { at, moved };
+}
+
+// banks()'s rules held, each build (make's): a bank too full moves out its smallest part that makes room, not the
+// wish that filled it; one with a wish no bank of its file can hold fails; one read later keeps to its own file
+function banksChecked() {
+  const text = 'MEMORY {\n    OV1: file = "%O.ovl", start = $8000, size = $1000;\n    OV2: file = "%O.ovl", start = $8000, size = $1000;\n' +
+    '    OV3: file = "%O.rop", start = $8000, size = $1000;\n}\nSEGMENTS {\n    OV1CODE: load = OV1, type = ro;\n}\n';
+  const list = n => ({ parts: n.map((ov, i) => ({ n: i + 1, ov, what: '' })), extra: [] });
+  const sz = o => new Map(Object.entries(o));
+  const r = banks(text, list([1, 1, 1, 3]), sz({ OV1CODE: 2000, SW1CODE: 1000, SW2CODE: 900, SW3CODE: 300, SW4CODE: 4000 }), 't');
+  const ok = r.moved.length === 1 && r.moved[0].n === 3 && r.moved[0].to === 2 && r.at.get(1) === 1 && r.at.get(2) === 1 && r.at.get(4) === 3;
+  let failed = false;
+  try { banks(text, list([3, 3]), sz({ SW1CODE: 3000, SW2CODE: 2000 }), 't'); } catch (e) { failed = /fits no bank of "%O.rop"/.test(e.message); }
+  if (!ok || !failed) throw new Error('games/dq0/parts.js: banks() not as its rules say (banksChecked)');
+}
+
+// Segment sizes from od65's dump of objects' (--dump-segsize): Map segment → its bytes, all of them together
+function segsizes(dump) {
+  const out = new Map();
+  for (const [, s, z] of dump.matchAll(/^\s+(\w+):\s+(\d+)\s*$/gm)) out.set(s, (out.get(s) || 0) + +z);
+  return out;
+}
+
 // The build's: a task with a parts.txt, its C compiled (compiled: OBJDIR's .s of each .c), its parts.inc and its
-// config made in objdir.  OUT: the config's path
-function make({ dir, objdir, compiled, own }) {
+// config made in objdir, each part in its bank (banks(): sizes, its objects' segments but bank.s's; parts.txt's
+// banks as they are without).  The parts put in banks other than parts.txt's are written to OBJDIR/placed.txt (a
+// line each, "n from to size", for the room table: build.js's headroom).  OUT: the config's path
+function make({ dir, objdir, compiled, own, sizes }) {
   const task = path.basename(dir), list = read(path.join(dir, 'parts.txt'));
   const stubs = wanted(compiled, own.filter(f => path.basename(f) !== 'bank.s'), list.extra);
   for (const s of stubs) if (!list.parts.some(p => p.n === s.part))
     throw new Error(task + ': ' + s.name + ' is in part ' + s.part + ', which parts.txt doesn\'t have');
-  fs.writeFileSync(path.join(objdir, 'parts.inc'), inc(task, list, stubs));
-  const src = path.join(dir, task + '.cfg'), out = path.join(objdir, task + '.cfg');
-  fs.writeFileSync(out, cfg(fs.readFileSync(src, 'latin1'), list, src));
+  const src = path.join(dir, task + '.cfg'), out = path.join(objdir, task + '.cfg'), text = fs.readFileSync(src, 'latin1');
+  if (sizes) banksChecked();
+  const placed = sizes ? banks(text, list, sizes, src) : { at: new Map(list.parts.map(p => [p.n, p.ov])), moved: [] };
+  const put = { ...list, parts: list.parts.map(p => ({ ...p, ov: placed.at.get(p.n) })) };
+  fs.writeFileSync(path.join(objdir, 'parts.inc'), inc(task, put, stubs));
+  fs.writeFileSync(out, cfg(text, put, src));
+  fs.writeFileSync(path.join(objdir, 'placed.txt'), placed.moved.map(m => m.n + ' ' + m.from + ' ' + m.to + ' ' + m.size + '\n').join(''));
   return out;
 }
 
-module.exports = { read, wanted, inc, cfg, make };
+module.exports = { read, wanted, inc, cfg, banks, segsizes, make };

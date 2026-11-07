@@ -284,6 +284,10 @@ function headroom(names) {
       hex(top - 1) + (sw.length ? '; the swap area ' + hex(top) + ', ' + sym.__SWAPSIZE__ + ' bytes)' : ')'));
     if (ov.length) rows.push('             overlays (of 8192):  ' + room('overlay', ov, a => size[a]));
     if (sw.length) rows.push('             parts (of ' + sym.__SWAPSIZE__ + '):' + ' '.repeat(Math.max(1, 6 - String(sym.__SWAPSIZE__).length)) + room('part', sw, () => sym.__SWAPSIZE__));
+    const placed = at('obj', 'games', name, 'placed.txt'), moved = fs.existsSync(placed) && own === made ?   // (Parts the build
+      fs.readFileSync(placed, 'latin1').split('\n').filter(Boolean).map(l => l.split(' ')) : [];               //   put in banks
+    if (moved.length) rows.push('             parts not in parts.txt\'s banks (theirs full): ' +                //   not parts.txt's:
+      moved.map(([n, f, t]) => n + ' in ' + t + ', not ' + f).join(', '));                                      //   games/dq0/parts.js)
     if (short.length) lows.push(name + "'s " + short.join(' and '));
   }
   if (lows.length) warns.push('under ' + ROOM_LOW + ' bytes free: ' + lows.join('; '));
@@ -300,11 +304,14 @@ function cprog(dir, objdir, out, extra) {
   let own = path.join(dir, path.basename(dir) + '.cfg'), objs;
   if (fs.existsSync(parts)) {                           // (A game's task whose swapped parts the build makes,
     const src = csources(dir), cs = src.filter(f => f.endsWith('.c')), ss = src.filter(f => f.endsWith('.s'));   //   games/
-    const o = new Map(compileC(cs, objdir, extra).map((x, i) => [cs[i], x]));   //   dq0/parts.js: its C first, then its
-    own = require('./games/dq0/parts.js').make({ dir, objdir, own: ss,          //   parts.inc and config from what the C
-      compiled: cs.map(f => path.join(objdir, path.basename(f, '.c') + '.s')) });   //   made, then its assembly, bank.s's
-    compileC(ss, objdir, extra, ['-I', objdir]).forEach((x, i) => o.set(ss[i], x));   //   .include of parts.inc found in
-    objs = src.map(f => o.get(f));                      //   objdir; the objects in the sources' order)
+    const o = new Map(compileC(cs, objdir, extra).map((x, i) => [cs[i], x]));   //   dq0/parts.js: its C first, and its
+    const rest = ss.filter(f => path.basename(f) !== 'bank.s'), bank = ss.filter(f => path.basename(f) === 'bank.s');   //   assembly
+    compileC(rest, objdir, extra, ['-I', objdir]).forEach((x, i) => o.set(rest[i], x));   //   but bank.s; then its parts.inc
+    const sizes = require('./games/dq0/parts.js').segsizes(execFileSync(OD65, ['--dump-segsize', ...o.values()], { encoding: 'latin1' }));   //   and
+    own = require('./games/dq0/parts.js').make({ dir, objdir, own: ss, sizes,   //   config from what they made (its parts
+      compiled: cs.map(f => path.join(objdir, path.basename(f, '.c') + '.s')) });   //   in banks by their sizes), then bank.s,
+    compileC(bank, objdir, extra, ['-I', objdir]).forEach((x, i) => o.set(bank[i], x));   //   its .include of parts.inc
+    objs = src.map(f => o.get(f));                      //   found in objdir; the objects in the sources' order)
   } else {
     objs = compileC(csources(dir), objdir, extra);
   }

@@ -1,8 +1,8 @@
-# parts.txt - the UI's swapped parts (../dq0/swap.inc's: code run in the main RAM's top, a part at a time,
-# copied there from the overlay bank its image is kept in as it's called).  A line a part: its number, its overlay
-# bank (dq0.cfg's OVn), what it's for.  Which functions are in each is the C's (#pragma code-name "SWnCODE");
-# the stubs and the config's lines for them are the build's (../dq0/parts.js: obj/games/dq0/parts.inc and
-# dq0.cfg).
+# parts.txt - the UI's swapped parts (../dq0/swap.inc's: code run in the main RAM's top, a part at a time, copied
+# there from the overlay bank its image is kept in as it's called).  A line a part: its number, its overlay bank
+# (dq0.cfg's OVn: its wish; a bank too full, the build puts it in another of its file's), what it's for.  Which
+# functions are in each is the C's (#pragma code-name "SWnCODE"); the stubs and the config's lines for them are the
+# build's (../dq0/parts.js: obj/games/dq0/parts.inc and dq0.cfg).
 1   8   The start and the end (main.c): the task's arguments, the world started, the game kept, the world stopped
 2   14  The commands (main.c: the map's bank, overlay 3 full at slice 4.2)
 3   19  The map (look.c; overlay 14's bank till 2026-11-01)
