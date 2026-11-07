@@ -155,7 +155,9 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         parts_in (PO_STOP);                     /* (The rest of its line with it: parts.c's lists, 2026-11-04) */
         if (k != LT_FIGHT || reach < 5) {          /* (A fight begun as the character came free, its line's first step in hand: that stopped, not the step) */
             reach = 0;                          /* (A walk over to a thing stopped: its command dropped; a thing's
-                                                **   timed work stopped: its end dropped, words.c's) */
+                                                **   timed work stopped: its end dropped, words.c's; "take all"'s
+                                                **   later things with it, 2026-11-06) */
+            pending[0] = 0;
         }
     }
     k = p;
@@ -195,10 +197,18 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         sayf ("\nYou aren't %s: you're %s.", doing[named < NDOING ? named : 0], d);
         break;
     case TE_IDLE:
-        msg ("You aren't doing anything to stop.");
         if (reach >= 5) {
-            reach_said (TE_IDLE, 0);            /* (Between two steps of the reach: they stop, part 19's) */
+            if (busy && step_k) {               /* (Engaged, a step a round's action, no long task: that step not done) */
+                sayf ("\nYou stop %s.", doing_of (step_k, step_n));
+            } else {
+                msg ("You stop there.");        /* (Between two steps of the reach: they stop, the pack's place told,
+                                                **   part 19's; "take all"'s later things with them, 2026-11-06) */
+            }
+            pending[0] = 0;
+            reach_said (TE_IDLE, 0);
+            break;
         }
+        msg ("You aren't doing anything to stop.");
         break;
     case TE_CANT:
         msg ("There's no stopping part way up: you cling on and climb.");
@@ -814,7 +824,7 @@ unsigned char __fastcall__ o_stop_kind (const char* word)
 unsigned char __fastcall__ o_answer_of (const char* l)
 {
     static const char* const yes[] = { "y", "yes", "yeah", "ok", "sure", "go on", "carry on", "continue" };
-    static const char* const no[] = { "n", "no", "nope", "stop", "halt" };
+    static const char* const no[] = { "n", "no", "nope", "stop", "halt", "enough" };
     unsigned char i;
 
     if (!strnicmp (l, "keep ", 5)) {
@@ -837,7 +847,10 @@ unsigned char __fastcall__ o_answer_of (const char* l)
 ** once, taking no time (what it carries, its sheet, the map, the help, a stop, its state, a look about, a stance),
 ** or the fight's own as it fights (an attack at a denizen: its target changed, the world's); else 0, held till the
 ** character's free, or 2, held and the fight it's in stopped for it (HOUSE.md's fighting on: a command that takes
-** time takes over, its round out first) */
+** time takes over, its round out first); 3, a line that breaks off (the stop's kind, the user's, 2026-11-06: "`stop`
+** and other similar commands should be acted on immediately"): held, whatever long task it's at stopped for it at
+** once, a reach's steps with it (main's), then carried out.  The class by the parser's meanings, not its words: a stop
+** (stop, halt, enough: carried out at once, 1), a flight or a disengage (flee, escape, run away, back away, withdraw ...) */
 unsigned char __fastcall__ o_free_cmd (const char* l)
 {
     static const unsigned char now_[] = { VB_META_INVENTORY, VB_META_SHEET, VB_META_MAP, VB_META_HELP, VB_META_TIME, VB_STOP,
@@ -851,6 +864,9 @@ unsigned char __fastcall__ o_free_cmd (const char* l)
     }
     if (!strcmp (l, "status")) {
         return 1;
+    }
+    if (a == VB_FLEE || a == VB_DISENGAGE) {
+        return 3;                               /* (Breaks off: any long task, a reach's steps, a fight, a journey) */
     }
     hub_mem (0, &i, &HUB->pc_task.kind, 1);
     if (i == LT_TRAVEL) {

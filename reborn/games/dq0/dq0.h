@@ -134,6 +134,7 @@ enum { PR_NONE, PR_IN, PR_ON, PR_FROM, PR_WITH, PR_AT, PR_TO };    /* (The other
                                                 **   "feel around": search.c's, 2026-10-22) */
 #define SR_NEAR     0x80
 struct cmd;
+struct cthing;
 extern struct cmd cmd;                          /* (main.c's: the command being carried out, cq_cmd's) */
 extern unsigned char pc_face;                   /* (The hub's, copied for the overlays) */
 #define TOLD        24                          /* (A look's sentences said this answer: look.c's told, ntold) */
@@ -332,6 +333,7 @@ unsigned __fastcall__ fight_words (const struct msg* m);    /* Overlay 6: a blow
                                                 **   ring copied into lb's end: FIGHT_LB), into lb: the tenths the
                                                 **   character's knocked senseless for, or 0 */
 #define FIGHT_LB    ((struct fight*) (lb + sizeof lb) - 1)
+void __fastcall__ fight_note (unsigned char n);   /* Overlay 22: a fight's word into lb (blows.c's) */
 unsigned char __fastcall__ fight_target (struct cmd* c);    /* Overlay 6: VB_ATTACK_OBJECT's denizen beside
                                                 **   the character to strike at (its name has the word; it lies that
                                                 **   way): its entry plus 1, or 0 and why not in lb; VB_DEFEND's stance
@@ -339,7 +341,7 @@ unsigned char __fastcall__ fight_target (struct cmd* c);    /* Overlay 6: VB_ATT
                                                 **   FT_THING */
 #define FT_THING    0xFE
 #define FT_CLOSE    0x40                        /* (| the actor plus 1: out of reach, closed with first, I_CLOSE) */
-void __fastcall__ heard_words (unsigned char what, unsigned char rel);  /* Overlay 9: a denizen heard (an E_DEN's
+void __fastcall__ heard_words (unsigned char what, unsigned char rel);  /* Overlay 23 (caps.c; 9 till 2026-11-06): a denizen heard (an E_DEN's
                                                 **   what, | 0x80 muffled, the way it lies as the character faces),
                                                 **   into lb */
 extern char heard_what[20];                     /* Its sound's words (SOUND.md: the sound task's, "a scurrying"; "":
@@ -376,13 +378,17 @@ unsigned char __fastcall__ look_way (unsigned char action);  /* Part 6: "look no
 void focus_words (void);                        /* Overlay 13: a look one way's words, into lb (words.c's) */
 extern unsigned char lsn;                       /* (main.c's: a listen, 1 one way, 2 about; 0, none) */
 void __fastcall__ bg_words (unsigned char what);    /* Part 11 (main.c's): the background heard, the draught felt */
-extern unsigned long heard_at;                  /* (main.c's: when a sound was last told) */
+extern unsigned long heard_at;                  /* (main.c's: when a sound was last told, */
+extern unsigned char heard_rel;                 /*   and the way it came) */
+unsigned char __fastcall__ den_heard (const struct msg* m);   /* (Overlay 23's) A denizen's sound weighed: its way if it's
+                                                **   heard (REL8), to be told; else 0xFF */
 
 /* ---- bank.s */
 
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
-extern unsigned char ovbank[22];               /* (bank.s's OVMAX: overlay 21 the writings' parts, 22 the designators', 2026-11-06) */
+extern unsigned char ovbank[23];               /* (bank.s's OVMAX: overlay 21 the writings' parts, 22 the designators', 23 their
+                                                **   capitals, 2026-11-06) */
 unsigned char early (void);                     /* Part 12: before a command's things are looked for (in shock, refused:
                                                 **   2; first aid's, 1; else 0) */
 void tend (void);                               /* Part 12: first aid (VB_TEND) */
@@ -420,6 +426,9 @@ unsigned char __fastcall__ lie_words (unsigned char i);   /* Part 8: a thing's p
 unsigned char reach_go (void);
 unsigned char __fastcall__ tool_out (unsigned char which);    /* Part 19: a thing got out for its use (0 a bandage, 1 food, 2 water), a tool's steps */
 extern unsigned char nap, what_hi, take_more, take_all, nosteps;    /* (main.c's) */
+extern unsigned char step_k, step_n;            /* (main.c's: the reach's step begun, its kind and thing, till the character's
+                                                **   free: a stop's words, task.c's) */
+extern char pending[16];                        /* (main.c's: a thing to take up as the character's free, "take all"'s next) */
 void step_go (void);                            /* Part 19: a step of the reach begun by the world (IO_STEP's) */
 void __fastcall__ reach_said (unsigned w, unsigned char named);   /* Part 19: the reach's words */
 unsigned char may_den (void);                   /* (sway.c's: the thing named may be a denizen: the denizens asked) */
@@ -434,17 +443,23 @@ struct ldes {
 };
 extern struct ldes ldes[NDES];                  /* (The line's letters' things, in their order) */
 extern unsigned char ndes;
+extern unsigned char den_meant;                 /* (The actor a capital named: its sway's, deal's; letters.c's) */
+extern unsigned char t_taken;                   /* (term.c's: the lines taken out of the queue) */
+extern unsigned char which_on;                  /* (A take's which asked: its answer letters.c's which_in; caps.c's) */
+void which_ask (void);                          /* (Overlay 23's) A take's which asked (the world's IR_WHICH) */
 extern unsigned char cq_st;                     /* (main.c's: the line posted to the parser already, letters_in's) */
 void __fastcall__ des_req (const char* w);      /* (Overlay 22's) A request's name and its other (the hub's ireq, main.c's
                                                 **   things; w its name as asked) made "#" and the id of the thing a
                                                 **   letter named, if one did */
-unsigned char __fastcall__ des_find (const char* w, unsigned char k);   /* (Overlay 22's) The first of the line's letters from ldes[k] on
-                                                **   that named a thing by word w: its place plus 1, or 0 */
-#define des_is(w)   des_find ((w), 0)
+unsigned char __fastcall__ des_thing (struct cthing* t);   /* (Overlay 22's) Thing t named by a letter: 0 not; 1 so (a
+                                                **   denizen's in sight found: its name, its square); 2 a denizen's out
+                                                **   of sight, refused */
 extern char capb[6];
-const char* __fastcall__ cap_of (unsigned char i);  /* (Overlay 22's) Thing i in sight's capital, "(C) " (capb), for the
+const char* __fastcall__ cap_of (unsigned char i);  /* (Overlay 23's, caps.c) Thing i in sight's capital, "(C) " (capb), for the
                                                 **   look's words: given as it's first told; "" none */
-void around (void);                             /* (Overlay 22's) What's in sight listed, its capitals ("around") */
+void __fastcall__ den_caps (unsigned char m);   /* (Overlay 23's) The denizens in sight of mask m their capitals, "(A, B) ",
+                                                **   added to lb (dens.c's look) */
+void __fastcall__ around (const char* l);       /* (Overlay 23's: "letter d as t" too) What's in sight listed, its capitals ("around") */
 unsigned char __fastcall__ des_low (const char* w);   /* (Overlay 22's) A lower case's word, its thing carried, for a thing done with:
                                                 **   1 (resolve.c's tool_ok: to hand) */
 void __fastcall__ letters_in (char* l);         /* (Overlay 22's) The line's letters made its things' names, as it's posted */

@@ -29,7 +29,9 @@ static void __fastcall__ watch_of (harn_char* c, unsigned n)
         return;
     }
     for (k = c->ninj; k--; ) {
-        if ((c->inj[k].flags & HARN_IF_INFECTED) || c->inj[k].hr == EE) {
+        if (((c->inj[k].flags & HARN_IF_INFECTED) || c->inj[k].hr == EE) && c->state != HARN_DEAD) {   /* (Dead of one's
+                                                **   infection: the rest's rolls none, its death not told again: the life
+                                                **   soak's seed 18, 2026-11-06) */
             heal_one (c, k);
         }
     }

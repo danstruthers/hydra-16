@@ -40,6 +40,8 @@ static unsigned char nnow = 0, heard = 0;       /*   so many; one heard close be
 static struct told was[SEE_DENS] = { { 0 } };   /* As they were told last, */
 static unsigned char nwas = 0, heard_was = 0;
 static unsigned char now_m[SEE_DENS] = { 0 }, was_m[SEE_DENS] = { 0 };   /* (A stir's: told the same, now and then) */
+static unsigned char gm[SEE_DENS] = { 0 };      /* (Those of each told now, a bit each: their capitals, letters.c's) */
+static unsigned char gcap = 0;                  /* (The group told now: its capitals said, tell_one's) */
 #define S           sight_copy
 
 /* The words so far said (a look's, streamed), and out: lbsaid.s's, as words.c's are (none a look's said already this
@@ -119,6 +121,7 @@ static void group (void)
     char* n;
 
     nnow = heard = 0;
+    memset (gm, 0, sizeof gm);
     for (i = 0; i < S.ndens; ++i) {
         n = S.den[i].name;
         t.rel = REL8 (bearing (S.den[i].x - S.x, S.den[i].y - S.y), pc_face);
@@ -144,6 +147,7 @@ static void group (void)
                 break;
             }
         }
+        gm[k] |= 1 << i;
         if (k == nnow) {
             *p = t;
             ++nnow;
@@ -158,11 +162,15 @@ static void __fastcall__ named (const struct told* t, unsigned char the)
     add ("\002");                               /* (Its sentence said of nothing, not of the place, as a thing's:
                                                 **   lbsaid.s's, a denizen told as it stirs, a walk stopped by it a
                                                 **   step on, not told again in the look there) */
+    add (" ");
+    if (gcap) {
+        den_caps (gcap);                        /* (Their capitals, "(A) ", "(A, B) ": letters.c's, the user's
+                                                **   designators, given before the things') */
+    }
     if (t->name[0] && t->name[0] < 'a') {
-        add (" ");
         add (t->name);
     } else if (t->n > 1) {
-        add (the ? " The " : " ");
+        add (the ? "The " : "");
         add (the ? few[t->n] : count[t->n]);
         add (" ");
         if (t->name[0]) {
@@ -171,9 +179,9 @@ static void __fastcall__ named (const struct told* t, unsigned char the)
             add ("things");
         }
     } else if (!t->name[0]) {
-        add (" Something");
+        add ("Something");
     } else {
-        add (the ? " The " : strchr ("aeiou", t->name[0]) ? " An " : " A ");
+        add (the ? "The " : strchr ("aeiou", t->name[0]) ? "An " : "A ");
         add (t->name);
     }
 }
@@ -185,7 +193,9 @@ static void __fastcall__ tell_one (const struct told* t)
 {
     unsigned char many = t->n > 1, g = t->gear;
 
+    gcap = gm[t - now_];
     named (t, 0);
+    gcap = 0;
     if (g & AG_MAIL) {                          /* ("A dwarf in mail, armed, is ...": 2026-10-29) */
         add (" in mail");
         g &= AG_ARMED;
@@ -305,30 +315,4 @@ void o_stir_words (void)
         add (" You hear something close behind you.");
     }
     keep (nnow);
-}
-
-/* A denizen heard, not seen (main.c's heard: one of the denizens' events), into lb, in its sound's words (the sound
-** task's, SOUND.md: heard_what) if it has them: "You hear a scurrying to your right.", "You hear a muffled squeak
-** behind you." (what | 0x80: walls or a door between); else "You hear something moving behind you to your left." */
-void __fastcall__ o_heard_words (unsigned char what, unsigned char rel)
-{
-    if (heard_what[0]) {
-        strcpy (lb, "You hear ");
-        if (what & 0x80) {
-            if (heard_what[0] == 'a' && heard_what[1] == ' ') {
-                strcat (lb, "a muffled ");      /* ("a muffled squeak") */
-                strcat (lb, heard_what + 2);
-            } else {
-                strcat (lb, "muffled ");
-                strcat (lb, heard_what);
-            }
-        } else {
-            strcat (lb, heard_what);
-        }
-        strcat (lb, " ");
-    } else {
-        strcpy (lb, (what & 0x7F) == DE_NOISE ? "You hear a noise " : "You hear something moving ");
-    }
-    strcat (lb, relname[rel & 7]);
-    strcat (lb, ".");
 }

@@ -2573,8 +2573,11 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
     const struct item* p;
     const struct kind* k;
     unsigned i = 0, x, y, px, py, dx, dy, wid;
-    unsigned char m = 0, j, r, d, sn, s = wsel & 15, pw, ps, pk;
+    unsigned char m = 0, j, r, d, sn, s = wsel & 15, pw, ps, pk, all = wsel == SL_WHICH;
 
+    if (all) {
+        s = 0;                                  /* (Every one: which's, part 35's) */
+    }
     afar = 0;
     csum = 0;
     hand_n = 0;
@@ -2677,6 +2680,12 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
         }
     }
     look_q = 0;
+    if (all) {
+        for (j = 0; j < m; ++j) {               /* (Their numbers, the most to hand first, in tbuf: which's) */
+            ((unsigned*) tbuf)[j] = c[j].n;
+        }
+        return m;
+    }
     j = s == SL_NTH ? wsel >> 4 : s == SL_OTHER && !wnot ? 2 : 1;
     if (!j || j > m) {
         return 0;
@@ -2983,6 +2992,134 @@ static void take_keep (void)
     take_cnt = iq.count;
 }
 
+/* ---- Which one (the user's playtest, 2026-11-06: "if all three are on the ground, I should get a prompt for which one,
+** with longer descriptions of each"; the designators' step 5): of those lying about that a take's name fits (none
+** chosen by a selector, a count, a letter, "take all"), all found in one pass (pick's SL_WHICH, their numbers in
+** tbuf), each one's kind, count and state as the inventory's words tell them (lit; spent, nearly spent, burning low; empty),
+** those alike once: two or more that differ, each one's id, kind, count and state (WS_*) into the text for the UI to
+** word and ask ("12 7 1 1|13 7 1 2|"), IR_WHICH; else 0 (one, or all alike: the chooser's, as ever) */
+#define NWHICH          4
+#pragma bss-name (push, "SW35RODATA")           /* (Its locals the part's own: the main RAM's room) */
+static unsigned char which (void)
+{
+    static unsigned id[NWHICH], q[NWHICH];
+    static unsigned char kd[NWHICH], st[NWHICH];
+    static unsigned char j, m, n, k, f;
+    static char b[6];
+
+    wsel = SL_WHICH;
+    n = (unsigned char) pick (iq.name, HW_GONE);
+    wsel = 0;                                   /* (As it was: none said, s_moved's; this part's data copied in again by
+                                                **   the chooser's call) */
+    for (j = m = 0; j < n; ++j) {
+        fetch (&rec, ((unsigned*) tbuf)[j]);
+        if (!rec.id) {
+            return 0;                           /* (One not its own yet: the chooser's) */
+        }
+        f = rec.flags & I_LIT ? WS_LIT : 0;
+        if (rec.fuel <= BURN_LOW && burn_of (rec.kind)) {   /* (A light or a fuel, low or burnt out: words.c's) */
+            f |= !(kind_of (rec.kind)->flags & K_LIGHT) ? (rec.fuel ? 0 : WS_EMPTY) : !rec.fuel ? WS_SPENT : f ? WS_LOW :
+                WS_NEARLY;
+        }
+        for (k = 0; k < m && (kd[k] != rec.kind || q[k] != rec.qty || st[k] != f); ++k) {
+        }
+        if (k == m && m < NWHICH) {             /* (Not alike one found already: a choice) */
+            id[m] = rec.id;
+            kd[m] = rec.kind;
+            q[m] = rec.qty;
+            st[m++] = f;
+        }
+    }
+    if (m < 2) {
+        return 0;
+    }
+    text_new ();
+    for (k = 0; k < m; ++k) {
+        put (utoa (id[k], b, 10));
+        put (" ");
+        put (utoa (kd[k], b, 10));
+        put (" ");
+        put (utoa (q[k], b, 10));
+        put (" ");
+        put (utoa (st[k], b, 10));
+        put ("|");
+    }
+    return IR_WHICH;
+}
+#pragma bss-name (pop)
+
+/* ---- Stowed, no place said (the user's, 2026-11-06: "when stowing something, it should ask where if there is more than
+** one place it could go (pouch(es) or backpack), of course depending on size.  Stowing a weapon with a sheath should
+** choose the sheath if worn."; the designators' step 7): of the containers the character wears (the pack, what hangs
+** from its belt), not shut, that thing n fits in (its size, its weight, its family: fits'), a holder made for its family
+** (a sheath a knife's, a scabbard a sword's, a quiver arrows': its kind's slots) first, without asking; else two or more
+** that keep anything, IR_WHICH, the thing's id and each place's id in the text for the UI to ask where ("W12|30|31|");
+** one, that one (the request made a put into it, "#" and its id; the pack's, a stow as ever); none, as ever */
+#pragma code-name (push, "SW74CODE")            /* (Part 74's: part 35's room, overlay 19's; not dq0w.rop's, part 104's,
+                                                **   read in only as a rope's first wanted) */
+#pragma rodata-name (push, "SW74RODATA")
+#pragma static-locals (push, off)               /* (Its locals the C stack's: the catalogue's o_fits calls parts, this one
+                                                **   copied in again after, its own data as it was) */
+unsigned char s_stow_where (void)
+{
+    const struct item* p;
+    const struct kind* k;
+    unsigned c[NWHICH], n, i;
+    unsigned char m, f, s, z;
+    char b[6];
+
+    about ();                                   /* (Before the chooser: a part's call copies this one in again, its data
+                                                **   as it was) */
+    if (!(n = pick (iq.name, HW_HAND))) {
+        return 0;
+    }
+    f = kind_at (n)->slots;
+    z = kind_at (n)->seen;                      /* (Its size, as it's made out: a pouch holds nothing much bigger than
+                                                **   itself, a sword not, whatever its pints) */
+    for (m = 0, i = 1; i < ihigh; ++i) {
+        p = item_at (i);
+        if (i == n || !p->kind || !p->id || (p->shut & IS_CLOSED) || (i != pack && (!belt || p->where != IW_ITEM ||
+            p->x != belt))) {
+            continue;                           /* (Not the pack, nor hanging from its belt) */
+        }
+        k = kind_at (i);
+        s = k->slots;                           /* (Kept: the kind's copy o_fits's to use again) */
+        if (!(k->flags & K_CONTAINER) || (k->keeps & KF_ON) || (i != pack && !s && z > k->seen + 1) ||
+            (cat_map (), o_fits (n, i))) {
+            continue;
+        }
+        if (f && s == f) {                      /* (Made for its family, worn and free: first) */
+            m = 1;
+            c[0] = i;
+            break;
+        }
+        if (!s && m < NWHICH) {
+            c[m++] = i;
+        }
+    }
+    if (m > 1) {
+        text_new ();
+        put ("W");
+        put (utoa (item_at (n)->id, b, 10));
+        for (f = 0; f < m; ++f) {
+            put ("|");
+            put (utoa (item_at (c[f])->id, b, 10));
+        }
+        put ("|");
+        return IR_WHICH;
+    }
+    if (m && c[0] != pack) {
+        iq.kind = IO_PUT;                       /* (Into that one: a put, by its id) */
+        iq.into[0] = '#';
+        utoa (item_at (c[0])->id, iq.into + 1, 10);
+    }
+    return 0;
+}
+#pragma static-locals (pop)
+#pragma rodata-name (pop)
+#pragma code-name (pop)
+unsigned char stow_where (void);                /* (Part 104's: its stub) */
+
 #define STRIP_T         100
 unsigned char __fastcall__ s_moved (unsigned char op)
 {
@@ -2991,6 +3128,9 @@ unsigned char __fastcall__ s_moved (unsigned char op)
     unsigned n;
     char b[24];
 
+    if (op == IO_STOW && !iq.count && stow_where ()) {
+        return IR_WHICH;                        /* (Several places it fits: where, asked) */
+    }
     want = iq.count == CT_ALL ? 0xFFFF : iq.count;
     got = t = 0;
     times = away = 0;
@@ -3009,6 +3149,15 @@ unsigned char __fastcall__ s_moved (unsigned char op)
     for (;;) {
         wforce = 0;
         n = op == IO_TAKE && !win ? 0 : pick (iq.name, mode);
+        if (op == IO_GET && !times && n && csum > item_at (n)->qty && !iq.count && !wsel && *iq.name != '#') {
+            hub_map (0);                        /* (Several of the name lying about, all told: which, perhaps; one, as
+                                                **   ever, no second pass of the store nor the parts' swaps for it: a
+                                                **   take's answer as quick as it was, 2026-11-06) */
+            if (!(HUB->pc_lump & (PL_MORE | PL_ALL)) && which ()) {
+                return IR_WHICH;                /* (Several that differ: which, asked) */
+            }
+            n = pick (iq.name, mode);           /* (All alike: the chooser's, as ever; rec and the rest its again) */
+        }
         if (!times && iq.count == CT_HALF) {
             want = csum > 1 ? csum >> 1 : 1;    /* (Half of all there are: a lot's count, or the things alike) */
         }

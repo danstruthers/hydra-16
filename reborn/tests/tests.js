@@ -2939,9 +2939,9 @@ function dq0OvlBanks(m) {
     for (let k = 0; k < n; k++) {
       const b = m.taskBankMem(t, m.taskRam[t][parseInt(lbl[1], 16) + k]), w = want(k);
       let d = -1;
-      const data = name === 'dq0' && k === 21 && /^OV22BSS\s+00([89A-F][0-9A-F]{3})/m.exec(fs.readFileSync(path.join(root, 'obj', 'games', name, name + '.map'), 'latin1'));
+      const data = name === 'dq0' && (k === 21 || k === 22) && new RegExp('^OV' + (k + 1) + 'BSS\\s+00([89A-F][0-9A-F]{3})', 'm').exec(fs.readFileSync(path.join(root, 'obj', 'games', name, name + '.map'), 'latin1'));
       const end = name === 'dq0' && k === 4 ? 0x1000 : data ? parseInt(data[1], 16) - 0x8000 : 0x2000;  // (dq0's fifth: its second half the theme's, read in
-                                                // as it starts: theme.h's THEME_PLACE; its 22nd's data, OV22BSS, last: the designators', written as it goes)
+                                                // as it starts: theme.h's THEME_PLACE; its 22nd's and 23rd's data, OV22BSS, OV23BSS, last: the designators', written as it goes)
       for (let i = 0; i < end && d < 0; i++) if (!b || b[i] !== w[i]) d = i;
       if (d >= 0) { bad++; out.push(name + '\'s overlay ' + (k + 1) + ' not as ld65 made it, from $' + (0x8000 + d).toString(16).toUpperCase()); }
     }
@@ -3383,10 +3383,16 @@ function dq0AnswerTest(baud) {
 const TORCHX = ['inventory', 'drop torch', 'take torch', 'inventory', 'wait 2 hours', 'light a new torch', 'take the spent torch from the ground', 'drop the spent torch',
   'drop the lit torch', 'take the spent torch from the floor', 'drop torch', 'take the lit torch', 'hold the tinderbox', 'take torch', 'inventory', 'douse the torch', 'light the torch',
   'inventory', 'take spent torch from backpack', 'put the rope in the backpack', 'put the tinderbox in the backpack', 'dip the spent torch in the oil', 'inventory'];   // (dq0torchwords' lines: the user's playtest, 2026-11-06)
-const LETSIGHT = ['drop j', 'drop c', 'drop b', 'look', 'around', 'take 5C', 'drop c', 'around', 'take 2C', 'drop rations', 'take torch from B', 'drop k',
-  'take D', 'around', 'inventory'];   // (dq0letsight's lines)
+const LETSIGHT = ['drop j', 'drop c', 'drop b', 'look', 'around', 'take 5F', 'drop c', 'around', 'take 2F', 'drop rations', 'take torch from E', 'drop k',
+  'take G', 'around', 'inventory'];   // (dq0letsight's lines: the rats seen first, A, B, C, 2026-11-06's step 4)
 const LETCMD = ['inventory', 'drop j', 'inventory', 'take torch', 'put j in b', 'inventory', 'take j from b', 'light j with a', 'drop 2c', 'look d',
   'drop', 'k', 'take off', 'look', 'drop the lit torch', 'inventory'];   // (dq0letcmd's lines)
+const LETDENS = ['look', 'around', 'look at B', 'talk to C', 'attack C', 'attack A', 'around'];   // (dq0letdens' lines)
+const LETWHICH = ['drop j', 'pick up the torch', 'inventory', 'drop j', 'drop a', 'drop k', 'take the torch', 'F', 'take the torch', '2', 'inventory',
+  'drop j', 'take torch', 'lit', 'inventory'];   // (dq0letwhich's lines)
+const LETSEVERAL = ['drop j', 'drop h i', 'look', 'take E F', 'inventory', 'letter h as t', 'inventory', 'drop t', 'letter q as r'];   // (dq0letseveral's lines)
+const LETSTOW = ['drop j', 'hold the dagger', 'stow the dagger', 'f', 'hang l', 'drop 1g', 'stow the pennies', 'l', 'inventory', 'hold i', 'stow i',
+  'hang the sheath', 'hold the dagger', 'stow the dagger', 'inventory'];   // (dq0letstow's lines)
 const LETTERX = [['inventory', 'drop the pick', 'inventory', 'take the pick', 'inventory', 'quit'],   // (dq0letters' lines: a game, carried on, the
   ['inventory', 'drop the hatchet', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u'], ['inventory', 'quit']];   //   next dungeon)
 module.exports = {
@@ -6195,7 +6201,7 @@ module.exports = {
       name: 'dq0equip', meaning: true, what: 'Dingus Quest Zero\'s things handled (the world\'s item store, dq0w/things.c), by where each one is and its state (held, worn, lit: the store\'s records) and what the world said to each (ireq\'s result: done or refused): a kit of things more (dq0 -k, commas between: a table held in both hands, the rest in the pack); a table put down and a candle put on it, taken from it again; a cloak worn and taken off; a basket held that won\'t keep sand, a waterskin that won\'t take a dagger, a quiver hung on the belt and arrows put in it, a candle that won\'t hang, a dagger not taken in hand with the hands full, the pack not into the basket that\'s in it; then down to a dark place: the torch put out (dark), a candle lit (out of the pack into a hand: light), the torch lit, put down lit (its light lies about it, the room still seen with the candle out), taken up again (their words: dq0wordsthings)',
       init: 't_rc', cycles: 1200e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k table,basket,sand,cloak,candle,quiver,arrows',
-        'drop table', 'put the candle on the table', 'look', 'take the candle from the table', 'stow the candle', 'wear cloak', 'hold basket', 'put sand in basket',
+        'drop table', 'put the candle on the table', 'look', 'take the candle from the table', 'stow the candle', 'b', 'wear cloak', 'hold basket', 'put sand in basket',
         'put the dagger in the waterskin', 'hang the quiver on my belt', 'put arrows in quiver', 'hang the candle', 'wield the dagger', 'stow basket',
         'put the backpack in the basket', 'take the cloak off', 'stow cloak', 'd', 'douse the torch', 'light the candle', 'light torch',
         'drop the torch', 'douse candle', 'look', 'get torch', 'quit', 'echo $status']) },
@@ -6212,7 +6218,8 @@ module.exports = {
         if (!dq0Here(dt.after).some(i => i.name === 'table')) f.push('the table not put down');
         if (holder(put('put the candle on the table', 'IO_PUT', 'IR_OK'), 'candle') !== 'table') f.push('the candle not on the table');
         if (holder(put('take the candle from the table', 'IO_TAKE', 'IR_OK'), 'candle') === 'table') f.push('the candle not taken from the table');
-        if (holder(put('stow the candle', 'IO_STOW', 'IR_OK'), 'candle') !== 'backpack') f.push('the candle not stowed in the pack');
+        put('stow the candle', 'IO_STOW', 'IR_WHICH');   // (The pack or the pouch: asked where, the designators' step 7, its answer the pack)
+        if (holder(put('b', 'IO_PUT', 'IR_OK'), 'candle') !== 'backpack') f.push('the candle not stowed in the pack');
         flags(put('wear cloak', 'IO_DON', 'IR_OK'), 'cloak', I.WORN, 0, 'worn');
         flags(put('hold basket', 'IO_HOLD', 'IR_OK'), 'basket', I.HELD, 0, 'held');
         if (holder(put('put sand in basket', 'IO_PUT', 'IR_NO'), 'heap of sand') !== 'backpack') f.push('the sand moved into the basket');
@@ -8037,24 +8044,192 @@ module.exports = {
         }
         this.notes = LETSIGHT.map((l, i) => l + ': ' + seg[i].slice(0, 400));
         const said = (k, re, from = 0) => { const n = LETSIGHT.indexOf(k, from); if (!re.test(seg[n])) f.push(k + ': not ' + re + ': ' + seg[n].slice(0, 300)); };
-        said('look', /At your feet lie \(B\) a backpack, \(C\) 3 rations and \(D\) a torch\./);
-        said('look', /\(A\) some bones/);
-        said('around', /^\(B\) a backpack, at your feet \(C\) 3 rations, at your feet \(D\) a torch, at your feet \(A\) some bones, ahead to your right/);
-        said('take 5C', /There are only 3 there; you take them all\./);
+        said('look', /At your feet lie \(E\) a backpack, \(F\) 3 rations and \(G\) a torch\./);
+        said('look', /\(D\) some bones/);
+        // (A ... C the giant rats', seen as the game starts: the denizens' capitals first, step 4's)
+        said('around', /\(E\) a backpack, at your feet \(F\) 3 rations, at your feet \(G\) a torch, at your feet \(D\) some bones, ahead to your right/);
+        said('take 5F', /There are only 3 there; you take them all\./);
         said('drop c', /^You put down/, 6);                   // (Taken up, its letter again)
-        said('around', /\(C\) 3 rations, at your feet/, 6);  // (Put down again: its old capital)
-        said('take 2C', /You take 2 rations\./);
-        said('take torch from B', /torch/);
-        if (/You see no|none of those|hands are full/.test(seg[LETSIGHT.indexOf('take torch from B')])) f.push('take torch from B: not taken: ' + seg[LETSIGHT.indexOf('take torch from B')]);
-        said('take D', /Taken\./);
-        said('around', /\(E\) a torch, at your feet/, 12);  // (The spare put down: a capital of its own)
-        if (/\(D\)/.test(seg[LETSIGHT.indexOf('around', 12)])) f.push('the torch taken up still told in sight: ' + seg[LETSIGHT.indexOf('around', 12)]);
+        said('around', /\(F\) 3 rations, at your feet/, 6);  // (Put down again: its old capital)
+        said('take 2F', /You take 2 rations\./);
+        said('take torch from E', /torch/);
+        if (/You see no|none of those|hands are full/.test(seg[LETSIGHT.indexOf('take torch from E')])) f.push('take torch from E: not taken: ' + seg[LETSIGHT.indexOf('take torch from E')]);
+        said('take G', /Taken\./);
+        said('around', /\(H\) a torch, at your feet/, 12);  // (The spare put down: a capital of its own)
+        if (/\(G\)/.test(seg[LETSIGHT.indexOf('around', 12)])) f.push('the torch taken up still told in sight: ' + seg[LETSIGHT.indexOf('around', 12)]);
         said('inventory', /\(j\) a torch, in your right hand/);
         const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETSIGHT],
           LETSIGHT.map(l => ({ line: l, want: 'You|Taken|Put|There|(' })));
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first);
           if (!/^(inventory|look|around)/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0letdens', near: ['denizens', 'parser'], what: "Dingus Quest Zero's designators, step 4 (the user's design, 2026-11-06, DECISIONS.md's: \"denizens numbered first\"): at seed 3 (-T) three giant rats in sight, each a capital before the things' (the bones'), shown in the look's sentences ((A, C) Two giant rats ... (B) A giant rat ...) and in around, one a line with where it is; a capital where a denizen's name goes (look at B: how it seems, the one named, the denizens' task told which; talk to C); two rats told apart and each attacked by its letter (the scene set: both senseless beside the character, A to its left, C to its right: attack C finishes C and not A, then attack A finishes A); a capital kept while it's remembered (B still B); each first letter within the user's 720,000 cycles",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', ...LETDENS, 'quit', 'echo $status']) },
+      start(m) {
+        this.timer = dq0Timer(m);
+        const self = this;
+        self.dead = {};
+        // (The capital's actor: its record the UI bank's cap's id, CAP_DEN's, the actor's record the byte after its name)
+        const capk = (h, L, at, c) => { const u = m.dq0.bank(L.uiBank), o = L.uCap + c * L.ucapSize, id = u[o] | u[o + 1] << 8;
+          return id >= 0xFF00 && u[o + 2] === 2 ? [...Array(L.nactors).keys()].find(j => h[at(j) + L.aName] && h[at(j) + L.aName + 12] === (id & 255)) : undefined; };
+        const wary = (h, L) => { for (let k = 0; k < L.nactors; k++) if (h[L.actor + k * L.actorSize + L.aName]) h[L.actor + k * L.actorSize + L.aAttitude] = 2; };
+        const pa = { g: 1, line: 'attack C', n: 1, beside: 0, senseless: 6000 }, pc = { g: 1, line: 'attack C', n: 1, beside: 0, senseless: 6000 };
+        const pb = { g: 1, line: 'attack C', n: 1, senseless: 60000 };   // (B out of it, senseless where it is: no fight for the test's words)
+        const at0 = { g: 1, line: 'attack C', n: 1, call: (h, L, K, at) => { wary(h, L); pa.k = capk(h, L, at, 0); pb.k = capk(h, L, at, 1); pc.k = capk(h, L, at, 2); pa.beside = (h[L.pcFace] + 6) & 7; pc.beside = (h[L.pcFace] + 2) & 7; self.ka = pa.k; self.kc = pc.k; } };
+        const note = (line, n = 1) => ({ g: 1, line, n, call: (h, L, K, at, named) => { wary(h, L); self.dead[line] = [self.ka, self.kc].map(k => k === undefined ? '?' : named(k) ? 'up' : 'gone'); } });
+        dq0Poke(m, ['look', 'around', 'look at B', 'talk to C'].map(line => ({ g: 1, line, n: 1, call: wary })).concat([at0, pa, pb, pc, note('attack A'), note('around', 2), note('quit')]));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
+        let at = 0;
+        for (const l of LETDENS) {
+          let i = o.indexOf('> ' + l + ' ', at);
+          if (i >= 0 && o.startsWith('> ' + l + ' ', i + l.length + 3)) i += l.length + 3;
+          const e = o.indexOf('> ', i + 2);
+          seg.push(i < 0 ? '' : o.slice(i + l.length + 3, e < 0 ? undefined : e));
+          if (i >= 0) at = i + 2;
+        }
+        this.notes = LETDENS.map((l, i) => l + ': ' + seg[i].slice(0, 400)).concat(['actors A, C after each: ' + JSON.stringify(this.dead)]);
+        const said = (k, re, from = 0) => { const n = LETDENS.indexOf(k, from); if (!re.test(seg[n])) f.push(k + ': not ' + re + ': ' + seg[n].slice(0, 300)); };
+        said('look', /\(A, C\) Two giant rats are ahead to your left, 15 feet away\. \(B\) A giant rat is ahead, 10 feet away\./);
+        said('look', /\(D\) some bones/);
+        said('around', /^\(A\) a giant rat, ahead to your left, 15 feet away \(B\) a giant rat, ahead, 10 feet away \(C\) a giant rat, ahead to your left, 15 feet away \(D\) some bones, ahead to your right/);
+        said('look at B', /^The giant rat seems wary of you\./);
+        said('talk to C', /words won't reach it/);
+        said('attack C', /You finish the giant rat where it lies\./);
+        said('attack A', /You finish the giant rat where it lies\./);
+        said('around', /\(D\) some bones, ahead to your right/, 6);   // (A thing's capital kept; the rats finished gone from it)
+        if (/\((A|C)\) a giant rat/.test(seg[6])) f.push('around: a rat finished still told: ' + seg[6]);
+        const d = this.dead;
+        if (!d['attack A'] || d['attack A'][0] !== 'up' || d['attack A'][1] !== 'gone') f.push('attack C: not C finished and A left: ' + JSON.stringify(d));
+        if (!d['around'] || d['around'][0] !== 'gone') f.push('attack A: A not finished: ' + JSON.stringify(d));
+        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', ...LETDENS],
+          LETDENS.map(l => ({ line: l, want: 'You|The|(' })));
+        for (const r of tm) {
+          this.notes.push(r.line + ': first letter ' + r.first);
+          // (A blow's words the fight's, its first a status line's: as "attack the rat"'s)
+          if (!/^(look|around|attack .)$/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0letwhich', reach: true, near: ['gear', 'parser'], what: "Dingus Quest Zero's designators, step 5 (the user's playtest, 2026-11-06: \"If there are three torches, one in hand, one in my backpack on my back, and one on the ground, if I say pick up the torch it should take the one I don't already have (from the ground).  But if all three are on the ground, I should get a prompt for which one, with longer descriptions of each\"): the user's three torches, one taken up from the ground; three on the ground, two of them alike, asked about once a description (Which one? (E) a torch (lit), (F) a torch: the world's IR_WHICH, the inventory's words, each its capital), answered by its capital (F), by its number (2), by a word of its state (lit), each re-running the command on that one; no first words before the question; each first letter within the user's 720,000 cycles",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETWHICH, 'quit', 'echo $status']) },
+      start(m) { this.timer = dq0Timer(m); },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
+        let at = 0;
+        for (const l of LETWHICH) {
+          let i = o.indexOf('> ' + l + ' ', at);
+          if (i >= 0 && o.startsWith('> ' + l + ' ', i + l.length + 3)) i += l.length + 3;
+          const e = o.indexOf('> ', i + 2);
+          seg.push(i < 0 ? '' : o.slice(i + l.length + 3, e < 0 ? undefined : e));
+          if (i >= 0) at = i + 2;
+        }
+        this.notes = LETWHICH.map((l, i) => l + ': ' + seg[i].slice(0, 300));
+        const said = (k, re, from = 0) => { const n = LETWHICH.indexOf(k, from); if (!re.test(seg[n])) f.push(k + ': not ' + re + ': ' + seg[n].slice(0, 300)); };
+        said('pick up the torch', /Taken\./);
+        said('inventory', /\(a\) a torch \(lit\), in your left hand[^]*\(k\) a torch[^]*\(j\) a torch, in your right hand/);   // (The ground's taken: the pack's and the hand's kept)
+        said('take the torch', /^You look them over\. Which one\? \(E\) a torch \(lit\), \(F\) a torch $/);   // (Three: two alike asked of once)
+        said('F', /^You reach for the torch\. Taken\./);
+        said('take the torch', /^You look them over\. Which one\? \(E\) a torch \(lit\), \(G\) a torch $/, 8);
+        said('2', /^You reach for the torch\. Taken\./);
+        said('inventory', /\(j\) a torch, in your left hand \([a-z]\) a torch, in your right hand/, 10);
+        said('take torch', /^You look them over\. Which one\? \(E\) a torch \(lit\), \(F\) a torch $/);
+        said('lit', /^You reach for the torch\. Taken\./);
+        said('inventory', /a torch \(lit\), in your left hand/, 14);
+        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETWHICH],
+          LETWHICH.map(l => ({ line: l, want: 'You|Taken|Which' })));
+        for (const r of tm) {
+          this.notes.push(r.line + ': first letter ' + r.first);
+          if (!/^(inventory)$/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0letseveral', reach: true, near: ['gear', 'parser'], what: "Dingus Quest Zero's designators, step 6 (the user's design, 2026-11-06): several letters in a line, each its own command in turn (drop h i: the dagger, then the waterskin; take E F, by their capitals); letter h as t swaps two of the character's letters (Your dagger is (t) now.), the inventory after it so, the new letter naming the thing (drop t); a letter of nothing carried told so; each first letter within the user's 720,000 cycles",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSEVERAL, 'quit', 'echo $status']) },
+      start(m) { this.timer = dq0Timer(m); },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
+        let at = 0;
+        for (const l of LETSEVERAL) {
+          let i = o.indexOf('> ' + l + ' ', at);
+          if (i >= 0 && o.startsWith('> ' + l + ' ', i + l.length + 3)) i += l.length + 3;
+          const e = o.indexOf('> ', i + 2);
+          seg.push(i < 0 ? '' : o.slice(i + l.length + 3, e < 0 ? undefined : e));
+          if (i >= 0) at = i + 2;
+        }
+        this.notes = LETSEVERAL.map((l, i) => l + ': ' + seg[i].slice(0, 300));
+        const said = (k, re, from = 0) => { const n = LETSEVERAL.indexOf(k, from); if (!re.test(seg[n])) f.push(k + ': not ' + re + ': ' + seg[n].slice(0, 300)); };
+        const not = (k, re, from = 0) => { const n = LETSEVERAL.indexOf(k, from); if (re.test(seg[n])) f.push(k + ': said ' + re + ': ' + seg[n].slice(0, 300)); };
+        said('drop h i', /You put down the dagger\.[^]*You put down the waterskin\./);
+        said('look', /At your feet lie \(E\) a dagger, \(F\) a waterskin and \(G\) a torch\./);
+        said('take E F', /You reach for the dagger\.[^]*You reach for the waterskin\./);
+        said('inventory', /\(i\) a waterskin[^]*\(h\) a dagger, in your right hand/);   // (Taken up again: their letters back)
+        said('letter h as t', /^Your dagger is \(t\) now\. ?$/);
+        said('inventory', /\(t\) a dagger/, 6);
+        not('inventory', /\(h\)/, 6);
+        said('drop t', /Put down\.|You put down the dagger/);
+        said('letter q as r', /^You have nothing by that letter\./);
+        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSEVERAL],
+          LETSEVERAL.map(l => ({ line: l, want: 'You|Taken|Your|Put|Stow' })));
+        for (const r of tm) {
+          this.notes.push(r.line + ': first letter ' + r.first);
+          if (!/^(inventory|look)$/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0letstow', reach: true, near: ['gear', 'parser'], what: "Dingus Quest Zero's designators, step 7 (the user's, 2026-11-06: \"when stowing something, it should ask where if there is more than one place it could go (pouch(es) or backpack), of course depending on size.  Stowing a weapon with a sheath should choose the sheath if worn.\"): a dagger stowed with the backpack and a pouch on the belt to take it, asked (Stow it where? (b) the backpack, (f) the pouch), one key answering it; a coin with two pouches and the pack, asked of the three; a waterskin too big for any pouch, stowed in the pack without asking; the sheath hung on the belt, the dagger stowed in it without asking; each first letter within the user's 720,000 cycles",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSTOW, 'quit', 'echo $status']) },
+      start(m) { this.timer = dq0Timer(m); },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
+        let at = 0;
+        for (const l of LETSTOW) {
+          let i = o.indexOf('> ' + l + ' ', at);
+          if (i >= 0 && o.startsWith('> ' + l + ' ', i + l.length + 3)) i += l.length + 3;
+          const e = o.indexOf('> ', i + 2);
+          seg.push(i < 0 ? '' : o.slice(i + l.length + 3, e < 0 ? undefined : e));
+          if (i >= 0) at = i + 2;
+        }
+        this.notes = LETSTOW.map((l, i) => l + ': ' + seg[i].slice(0, 300));
+        const said = (k, re, from = 0) => { const n = LETSTOW.indexOf(k, from); if (!re.test(seg[n])) f.push(k + ': not ' + re + ': ' + seg[n].slice(0, 300)); };
+        const not = (k, re, from = 0) => { const n = LETSTOW.indexOf(k, from); if (re.test(seg[n])) f.push(k + ': said ' + re + ': ' + seg[n].slice(0, 300)); };
+        said('stow the dagger', /^You lift the dagger\. Stow it where\? \(b\) the backpack, \(f\) the pouch $/);
+        said('f', /You put the dagger in the pouch\./);
+        said('stow the pennies', /Stow it where\? \(b\) the backpack, \(f\) the pouch, \(l\) the pouch $/);
+        said('l', /in the pouch\./);
+        said('inventory', /\(l\) a pouch \([a-z]\) (a penny|\d+ pennies)/);
+        not('stow i', /Stow it where/);
+        said('stow i', /backpack/);
+        said('stow the dagger', /^You lift the dagger\. You put the dagger in the sheath\./, 12);
+        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSTOW],
+          LETSTOW.map(l => ({ line: l, want: 'You|Taken|Your|Put|Stow' })));
+        for (const r of tm) {
+          this.notes.push(r.line + ': first letter ' + r.first);
+          if (!/^(inventory|look|drop 1g)$/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },
@@ -8750,7 +8925,7 @@ module.exports = {
       name: 'dq0wordsthings', what: 'Dingus Quest Zero\'s words, a test about wording alone: the things\', the names\', the pace\'s and the help\'s, in one game (seed 3, dq0 -T, a kit of things more: dq0 -k): a portcullis and a door behind, told apart by how far off each is; what\'s carried listed (worn, held in both hands, in and on what, the load: the kit\'s rations a pound each, slice 4.1\'s counted lots; the arrows one arrow); a table put down and a candle put on it, taken from it; a cloak worn and taken off, a basket held, the sand it won\'t keep, the waterskin that won\'t take a dagger, a quiver hung and arrows put in it, a candle that won\'t hang, hands full, the pack not into the basket in it; a sword named Linda (shown so in what\'s carried, no mark of its number), names that clash refused with why; a thing that isn\'t there, a coat not worn, a word the game doesn\'t know; the status (pace, watching, condition, light); a jog, held to a slow walk while it searches; a run set as it goes, its look as it ends a brief one (no ceiling), going on at it unsaid; the help (dq0equip\'s, dq0items\', dq0names\', dq0talk\'s, dq0choose\'s, dq0pace\'s and dq0steps\' words)',
       init: 't_rc', cycles: 1000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k table,basket,sand,cloak,candle,quiver,arrows,sword',
-        'face north and east', 'walk to the door behind me', 'i', 'drop table', 'put the candle on the table', 'look', 'take the candle from the table', 'stow the candle',
+        'face north and east', 'walk to the door behind me', 'i', 'drop table', 'put the candle on the table', 'look', 'take the candle from the table', 'stow the candle', 'b',
         'wear cloak', 'hold basket', 'put sand in basket', 'put the dagger in the waterskin', 'hang the quiver on my belt', 'put arrows in quiver', 'hang the candle',
         'wield the dagger', 'stow basket', 'put the backpack in the basket', 'take the cloak off', 'stow cloak', 'name my sword Linda', 'name the dagger as linda',
         'name the dagger Torch', 'name the dagger kobold', 'name the dagger north', 'i', 'examine the moon', 'take off my coat', 'foo', 'status', 'jog',
@@ -8761,7 +8936,7 @@ module.exports = {
         inTurn(o, ['> walk to the door behind me', 'You head for the door.', '> i', 'You carry: (a) a torch (lit), in your left hand (b) a backpack, worn (c) 3 rations (d) a tinderbox (k) a basket (l) a heap of sand',
           '(q) a sword (r) a torch (s) a flask of oil (e) a belt, worn (f) a pouch (g) 12 pennies (h) a dagger (i) a waterskin (empty) (j) a table, in both hands In all, 60 lb.', '> drop table', 'You put down the table.',
           '> put the candle on the table', 'You put the candle on the table.', '> look', 'At your feet lies a table. On the table lies a candle.',
-          '> take the candle from the table', 'You take the candle from the table. It\'s in your hand.', '> stow the candle', 'You stow the candle in your backpack.', '> wear cloak', 'You put on the cloak.',
+          '> take the candle from the table', 'You take the candle from the table. It\'s in your hand.', '> stow the candle', 'Stow it where? (b) the backpack, (f) the pouch', '> b', 'You stow the candle in your backpack.', '> wear cloak', 'You put on the cloak.',
           '> hold basket', 'You take the basket in your right hand.', '> put sand in basket', 'The basket won\'t keep the heap of sand: it would run out.',
           '> put the dagger in the waterskin', 'The dagger won\'t go in the waterskin.', '> hang the quiver on my belt', 'You hang the quiver from your belt.',
           '> put arrows in quiver', 'You put the arrows in the quiver.', '> hang the candle', 'The candle won\'t hang from a belt.', '> wield the dagger',
@@ -10874,7 +11049,7 @@ module.exports = {
         'drop the pack', 'take the tinderbox from the backpack', 'drop the tinderbox', 'put on the pack', 'drop the torch',
         'take off the pack', 'look in the pack', 'put on the pack', 'quit',
         'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'drop the sword', 'wait']) +
-        'hold the dagger\rstow the dagger\rdrop the backpack\rtake the rations from the backpack\rquit\r' + dq0Typed(['echo $status']) },
+        'hold the dagger\rput the dagger in the backpack\rdrop the backpack\rtake the rations from the backpack\rquit\r' + dq0Typed(['echo $status']) },   // (Put in the pack, said: a stow asks where, the pouch or the pack, the designators' step 7)
       start(m) {
         dq0Poke(m, [{ g: 2, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } }]);   // (The ghoul steady: hub.h's AM_STEADY)
       },
@@ -10925,7 +11100,7 @@ module.exports = {
         // (The worn pack: its steps a round each, dq0packsteps': off, held open, the stowing, on; and from the pack on the ground, a level)
         const steps = late.flatMap(t => dq0Rep(t, 'ireq', { kind: 'IO_STEP' }));
         if (steps.length < 2 || steps.some(r => r.x !== 100)) f.push('engaged, the steps not a round each: ' + JSON.stringify(steps.map(r => [r.qty, r.x])));
-        if (!late.some(t => rep(t, 'IO_STOW'))) f.push('the dagger not stowed in the fight');
+        if (!late.some(t => rep(t, 'IO_PUT'))) f.push('the dagger not put in the pack in the fight');
         if (!late.some(t => rep(t, 'IO_TAKE'))) f.push('the rations not taken from the pack on the ground in the fight');
         if (!late.some(t => rep(t, 'IO_DROP'))) f.push('the pack not dropped in the fight');
         const hw = (m.hearts || []).find(h => h.g === 2 && h.line === 'wait');
@@ -11303,6 +11478,107 @@ module.exports = {
       check(m, out) {
         const s = dq0Story(out), f = [];
         inTurn(s, ['> dip the torch', 'You go to blow out the torch: that will leave you in the dark.', 'Keep blowing out the torch?', 'You stop blowing out the torch.', '> inventory', 'a torch (lit'], f);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0reachstop', reach: true, meaning: true, near: ['gear'], what: 'Dingus Quest Zero\'s lines that break off, acted on at once during any long task and a reach\'s steps, every other line held till its end (the user\'s, 2026-11-06, DECISIONS.md\'s a line typed during a reach: "`stop` and other similar commands should be acted on immediately, but others could be held until after the reach"; HOUSE.md\'s breaking off at once), at seed 3 (dq0 -T), each line typed as a step\'s words are told: an ordinary line ("drop the rations") typed as the pack comes off waits till the pack\'s back on; "halt" (a stop now) as the rations are got out: stopped there, the pack left at its feet, said, no ally\'s words; a flight as the worn pack\'s searched: the search stopped, the pack in hand said, then the flight; "enough" in a search of the room: stopped; a flight as a pick from the pack digs: the dig stopped, the pack at its feet and the pick in hand said; an ordinary line ("turn around") in "take all" runs after its last thing and the pack back on, a stop there ends it, its later things not taken; a flight in a list\'s first part lets its later parts go; an ordinary line as a fire-maker from the pack is struck waits for the torch lit and the pack back on.  And the class kept by the parser\'s meanings: every word commands.verbs gives stop, flee or disengage is one parts.c\'s list takes at once ahead of a list\'s later parts',
+      init: 't_rc', cycles: 7000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'take the rations from the backpack', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'take the rations from the backpack', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'search the backpack', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'search the room', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k pick', 'dig down', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'take the tinderbox from the backpack', 'drop the tinderbox', 'take the rations from the backpack', 'drop the rations', 'take all', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'take the tinderbox from the backpack', 'drop the tinderbox', 'take the rations from the backpack', 'drop the rations', 'take all', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'take the tinderbox from the backpack and take the flask from the backpack', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'douse the torch', 'light the torch', 'inventory', 'quit', 'echo $status']) },
+      start(m) {
+        dq0OnWords(m, [{ g: 1, line: 'take the rations from the backpack', n: 1, words: 'You take off your backpack', text: 'drop the rations\r' },
+          { g: 2, line: 'take the rations from the backpack', n: 1, words: 'You get out the', text: 'halt\r' },
+          { g: 3, line: 'search the backpack', n: 1, words: 'You search the backpack', text: 'flee\r' },
+          { g: 4, line: 'search the room', n: 1, words: 'You work along', text: 'enough\r' },
+          { g: 5, line: 'dig down', n: 1, words: 'You dig with your', text: 'flee\r' },
+          { g: 6, line: 'take all', n: 1, words: 'Taken.', text: 'turn around\r' },
+          { g: 7, line: 'take all', n: 1, words: 'Taken.', text: 'stop\r' },
+          { g: 8, line: 'take the tinderbox from the backpack and take the flask from the backpack', n: 1, words: 'You get out the tinderbox', text: 'flee\r' },
+          { g: 9, line: 'light the torch', n: 1, words: 'You strike a spark', text: 'turn left\r' }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const s = dq0Story(out), f = [], gs = [];
+        for (let i = s.indexOf('% dq0 '); i >= 0; i = s.indexOf('% dq0 ', i + 1)) gs.push(i);
+        const game = g => s.slice(gs[g - 1], gs[g] === undefined ? s.length : gs[g]);
+        // (A game's story from its line to its inventory's answer)
+        const upto = (g, line) => { const t = game(g), a = t.indexOf('> ' + line + ' > ' + line), b = t.indexOf('> inventory', a); return a < 0 ? '' : t.slice(a, b < 0 ? t.length : b); };
+        const inv = g => { const t = game(g), a = t.indexOf('> inventory > inventory'); return a < 0 ? '' : t.slice(a, t.indexOf('> quit', a)); };
+        const order = (g, line, want) => inTurn(upto(g, line), want, f, 'game ' + g + ', ' + line + ': ');
+        const never = (g, line, w) => { if (upto(g, line).includes(w)) f.push('game ' + g + ', ' + line + ': told ' + w); };
+        // (An ordinary line waits for the pack back on)
+        order(1, 'take the rations from the backpack', ['You take off your backpack', 'drop the rations', 'You get out the rations.', 'You take the rations in your right hand.', 'You put your backpack back on.', 'You put down the rations.']);
+        // (halt: a stop, at once, the pack where it was left)
+        order(2, 'take the rations from the backpack', ['You get out the rations.', 'halt', 'You stop getting out the rations.', 'Your backpack lies at your feet.']);
+        never(2, 'take the rations from the backpack', 'You put your backpack back on.');
+        never(2, 'take the rations from the backpack', 'no ally');
+        if (/\(b\) a backpack, worn/.test(inv(2))) f.push('game 2: the pack back on after the halt');
+        // (A flight in a search of the pack: stopped, the pack in hand told, then the flight)
+        order(3, 'search the backpack', ['You search the backpack', 'flee', 'You stop searching.', 'Your backpack is in your hand.', 'You see nothing to flee from.']);
+        never(3, 'search the backpack', 'You put your backpack back on.');
+        if (!inv(3).includes('a backpack, in your right hand')) f.push('game 3: the pack not left in its hand: ' + inv(3));
+        order(4, 'search the room', ['You work along', 'enough', 'You stop searching.']);
+        never(4, 'search the room', 'over the whole room');
+        order(5, 'dig down', ['You dig with your pick', 'flee', 'You stop digging.', 'Your backpack lies at your feet.', 'Your pick is in your hand.', 'You see nothing to flee from.']);
+        never(5, 'dig down', 'You put away the pick.');
+        // ("take all": an ordinary line after its last thing and the pack on; a stop ends it there)
+        order(6, 'take all', ['Taken.', 'turn around', 'Taken.', 'You put your backpack back on.', 'You turn around']);
+        order(7, 'take all', ['Taken.', 'stop', 'You stop', 'Your backpack is in your hand.']);
+        never(7, 'take all', 'You reach for the tinderbox.');
+        if (inv(7).includes('tinderbox')) f.push('game 7: "take all" went on after the stop: ' + inv(7));
+        // (A list's later part let go with a flight)
+        order(8, 'take the tinderbox from the backpack and take the flask from the backpack', ['You get out the tinderbox.', 'flee', 'You stop getting out the tinderbox.', 'Your backpack lies at your feet.', 'You see nothing to flee from.']);
+        never(8, 'take the tinderbox from the backpack and take the flask from the backpack', 'flask of oil');
+        // (A fire-maker from the pack: an ordinary line after the torch lit and the pack on)
+        order(9, 'light the torch', ['You strike a spark.', 'turn left', 'You light the torch.', 'You put away the tinderbox.', 'You put your backpack back on.', 'You turn left']);
+        // (The class by the parser's meanings: every word for stop, flee or disengage taken at once ahead of a list's parts, parts.c's)
+        const root = path.join(__dirname, '..', 'games', 'dq0'), verbs = fs.readFileSync(path.join(root, 'commands.verbs'), 'latin1'), pc = fs.readFileSync(path.join(root, 'parts.c'), 'latin1');
+        const said = ['stop', 'flee', 'disengage'];
+        for (const l of verbs.slice(verbs.indexOf('[words]')).split(/\r?\n/)) { const w = /^([a-z ]+?) = (stop|flee|disengage)\b/.exec(l); if (w && !said.includes(w[1])) said.push(w[1]); }
+        const list = n => { const r = new RegExp('static const char ' + n + '\\[\\] = "([^"]*)"').exec(pc); return r ? r[1].split('\\0').filter(Boolean) : []; };
+        const one = list('brks'), two = list('brk2');
+        for (const p of said) { const w = p.split(' '); if (w.length === 1 ? !one.includes(p) : !(two.includes(w[0]) && ['away', 'off'].includes(w[1]))) f.push('"' + p + '" breaks off (commands.verbs) but parts.c\'s list doesn\'t take it at once'); }
+        if (!said.includes('halt') || !said.includes('enough')) f.push('halt and enough not the stop\'s in commands.verbs');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0reachflee', reach: true, near: ['gear', 'fight'], what: 'Dingus Quest Zero\'s flight typed during a reach engaged (HOUSE.md\'s breaking off at once; the user\'s, 2026-11-06, "`stop` and other similar commands should be acted on immediately"): at seed 7 the ghoul engaging it (set steady, dq0packgrope\'s scene), "take the rations from the backpack" typed ahead, each step a round; "flee" typed as the pack comes off: that step stopped, not done (the pack still worn), the rations not got out, then the flight from the ghoul, before any further step; "stop" typed the same: the step stopped, no further step, the reach over',
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T", 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait']) +
+        'take the rations from the backpack\r' + dq0Typed(['inventory', 'quit',
+        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T", 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait']) +
+        'take the rations from the backpack\r' + dq0Typed(['inventory', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } }, { g: 2, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } }]);
+        dq0OnWords(m, [{ g: 1, line: 'take the rations from the backpack', n: 1, words: 'You take off your backpack', text: 'flee\r' },
+          { g: 2, line: 'take the rations from the backpack', n: 1, words: 'You take off your backpack', text: 'stop\r' }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const s = dq0Story(out), f = [], gs = [];
+        for (let i = s.indexOf('% dq0 '); i >= 0; i = s.indexOf('% dq0 ', i + 1)) gs.push(i);
+        const game = g => s.slice(gs[g - 1], gs[g] === undefined ? s.length : gs[g]);
+        const after = (g, w) => { const t = game(g), a = t.indexOf(w); return a < 0 ? '' : t.slice(a, t.indexOf('> inventory', a)); };
+        const fl = after(1, 'flee > flee');
+        inTurn(fl, ['You stop taking off the backpack.', 'You break away from the ghoul.'], f, 'the flight: ');
+        if (/You get out the rations|You put your backpack back on/.test(fl.slice(0, fl.indexOf('You break away')))) f.push('a step after the flight was typed: ' + fl.slice(0, 600));
+        const st = after(2, 'stop > stop');
+        inTurn(st, ['You stop taking off the backpack.'], f, 'the stop: ');
+        if (/You get out the rations|You put your backpack back on/.test(st)) f.push('a step after the stop: ' + st.slice(0, 600));
+        for (const g of [1, 2]) { const t = game(g), i = t.slice(t.indexOf('> inventory > inventory')); if (!/\(b\) a backpack, worn/.test(i) || /rations \(\w+\), in your|rations, in your/.test(i)) f.push('game ' + g + ': the pack not still worn, or the rations got out: ' + i.slice(0, 300)); }
         return f;
       },
       sdcard: true

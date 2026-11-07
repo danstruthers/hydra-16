@@ -913,6 +913,40 @@ world's answer follows.  The word is said before the world's asked, and holds wh
   and the rest taken ("There are only 3 there; you take them all.", "...; you take both.", "There is only one there; you
   take it."), as for a count of any name ("take 5 rations"); put down, "You have only 2; you put down both."  A count by
   the letter of one of several alike (not a lot) takes that one, then others of its kind, the most to hand.
+- **Denizens lettered first** (the user's: "capital letters for in-the-environment things (items and denizens ...) with
+  denizens numbered first (designators only for seen items or creatures)"; the plan's step 4): each denizen seen (not one
+  only heard behind the character; an ally behind it, yes) takes a capital from the same A ... Z, AA ... AZ as the things,
+  given before the things' at each look, so those in sight are A, B ...; kept while it's remembered, given up as a
+  thing's is.  *(New, for review:)* told before its words in the look and as it stirs, those alike together their
+  capitals together: "(B) A giant rat is ahead, 10 feet away.", "(A, C) Two giant rats are ahead to your left, 15 feet
+  away."; in "around" first, one a line, "(A) a giant rat, ahead to your left, 15 feet away", an ally by its name, one
+  too far off to make out "something".  A capital where a denizen's name goes: "attack B", "throw the knife at A", "walk
+  toward A", "look at A" (how it seems, the one meant: the denizens' task told which), "talk to A", "target A".
+  *(New, for review:)* one gone from sight refused, "You can't see that one now."; "look at" a denizen now looks it over
+  as "examine" does (before, "look at the rat" looked at the rations: a thing whose name begins the same).
+- **Which one?** (the user's playtest: "if all three are on the ground, I should get a prompt for which one, with longer
+  descriptions of each"; the plan's step 5): "take", "pick up" with a name that several things lying about fit, that
+  differ by what the inventory would say of them (their kind, how many, lit, spent, nearly spent, burning low, empty),
+  and none chosen otherwise (a state said, "the spent torch"; a selector, "the closest"; a count; a letter), asks,
+  each different one once with its capital: "Which one? (E) a torch (lit), (F) a torch".  Things alike are never asked
+  about: the one most to hand is taken, as ever.  Answered by its capital ("F"), its number ("2"), or a word of its
+  state that's its alone ("lit"): the command asked about again, on that one.  Any other line lets the question go.  A
+  thing already carried is never taken up ("pick up the torch" with one in hand, one in the pack, one on the ground
+  takes the ground's).  *(New, for review:)* only taking asks (the other verbs choose the one most to hand, as before);
+  several lying in reach, the first words "You look them over." (true whatever comes: a question, or one taken).
+- **Several at once, and swapping** (the plan's step 6): "drop d e f", "take B C": each letter its own command, in turn,
+  as "drop d", "drop e", "drop f" typed one after another; "all" as ever.  "letter d as t" swaps two of the character's
+  letters: d's thing is t's now and t's d's ("Your torch is (t) now. Your rope is (d)."); a letter of nothing carried,
+  "You have nothing by that letter.".  *(New, for review:)* "drop d and e" isn't one of these: a line's parts are split
+  as it's typed, and "e" alone is east.
+- **Stowing asks where** (the user's: "when stowing something, it should ask where if there is more than one place it
+  could go (pouch(es) or backpack), of course depending on size.  Stowing a weapon with a sheath should choose the sheath
+  if worn."; the plan's step 7): "stow" (put away) with no place said: a holder made for the thing, worn on the belt and
+  free, takes it without asking (a sheath a knife or a dagger, a scabbard a sword, a quiver arrows); else, if more than
+  one of the places worn could hold it (the backpack, a pouch on the belt: its size, its weight, what it keeps; one
+  tied shut not; *(new, for review:)* a pouch nothing much bigger than itself, by how far off each is made out: a dagger,
+  a candle, coins, yes; a torch, a sword, a sack, no), "Stow it where? (b) the backpack, (f) the pouch", and one key answers ("f": put it in the pouch); one
+  place only, there, no question.
 
 ## Characters *(hmchar: HarnMaster's character generator)*
 
@@ -1242,6 +1276,27 @@ climb's test to hold on).
   sniffing, filling, hiding) names it, and a name that isn't the task's is refused ("You aren't digging: you're walking."; none under way, "You aren't doing anything to stop.").  What's
   imposed can't be stopped: senseless, a fall under way.  A question's answered yes by "y", "yes", "go on", "carry
   on", "continue", or "keep" and anything ("keep at it", "keep kicking").
+- **Breaking off at once** *(2026-11-06: the user's, DECISIONS.md's a line typed during a reach: "`stop` and other similar
+  commands should be acted on immediately, but others could be held until after the reach"; new, for review: the words,
+  "halt" a stop, the pack's place)*: the lines that break off are the parser's meanings, not a list of words: a stop
+  ("stop", "halt", "enough", "stop digging" ...), a flight ("flee", "escape", "run away") and a disengage ("disengage",
+  "back away", "back off", "break off", "withdraw", "retreat").  Typed while the character's busy at any long task (a
+  walk, a search, a dig, a wait or a sleep, a timed work, a journey, a fight, a reach's steps: taking the pack off,
+  getting a thing out, the pack going back on, a tool's use), each is acted on at once, never held for the task's end:
+  a stop ends it where it stands; a flight or a disengage ends it the same way, then is carried out (a flight with
+  nothing near to flee from says so, the task ended all the same).  A reach ends between its steps, never part way
+  through one: a step not finished hasn't happened, those before it have, and nothing's put back.  What's told: the
+  step stopped, its own words ("You stop getting out the rations.", "You stop searching."; engaged, a step the round's
+  action and no long task, the same: "You stop taking off the backpack.", the pack still on its back), or between two
+  handlings ("take all"'s), "You stop there."; then where the pack was left, "Your backpack is in your hand." or "Your
+  backpack lies at your feet.", and a tool out, "Your pick is in your hand."  A flight takes what's in its hands with it, the pack
+  too if it's in a hand; a pack at its feet is left there (taken up again by "take the pack", "put on the pack").  A
+  list's later parts, a "take all"'s later things and the rest of the line go with it, as a stop's do (Lists, under
+  Reach); lines typed after it are kept.  A climb part way up still can't be stopped ("There's no stopping part way
+  up"): a flight typed then waits for the climb's end.  **Every other line waits** for the long task's end, a reach's
+  last step (the pack back on) included, then runs; the free commands (what it carries, the sheet, the map, the help,
+  a look about, its state, a stance) answer at once as ever, the reach going on.  "halt" alone is the character's stop
+  now, no more an ally's; an ally's told "stay", or "tell the dog to halt".
 - **What stopping costs**: a walk stops where the character is; a dig keeps the feet dug (the change record: a hole
   half dug stays half dug), and the part of its spell done tires; battering keeps the harm done; a search cut short
   covers the squares nearest first as far as it went, each at the full chance, and a wait rests for the part done; a

@@ -103,7 +103,7 @@ unsigned char finds;                            /* (Things a search turned up, t
 struct ireq judged;                             /* (A thing looked at closely: what it is, for the appraiser: way.c's,
                                                 **   part 6's, examine) */
 struct portal viewed;                           /* (A portal looked at closely: the world's record of it) */
-static char pending[16];                        /* A thing to take up as the character's free (a portal's part lifted
+char pending[16];                        /* A thing to take up as the character's free (a portal's part lifted
                                                 **   out; one the world's walk found fixed: E_TAKEN's) */
 static char taking[16];                         /* (The thing taken up last named) */
 static char lifting[16];                        /* (A portal's part being lifted out, to take up after) */
@@ -204,17 +204,22 @@ static int find_dirs (void)
 ** (ovlpack.js): packed, a bank on its own (LZ4's block), read and unpacked in place by the unpack library
 ** (modules/unpack, ovunpack.inc: 2026-10-31), the linker's fill ($FF) put back after its bytes, so each bank's as ld65
 ** made it.  The game's start's first words before it (the screen not made yet: 2026-10-30, the start's progress
-** shown) */
-
+** shown), and a dot halfway (the overlays read in two runs: the screen's silence under its 36M cycles, 2026-11-06,
+** the designators' overlay 23) */
+#define OVHALF      12
 static void __fastcall__ ovl_load (int fd)
 {
     int first;
-    unsigned char w = getbank ();
+    unsigned char w = getbank (), k;
 
     write (1, "Dingus Quest Zero is starting ...", 33);
     if (fd >= 0 && (first = hy_banks_alloc (sizeof ovbank)) >= 0) {
         ovbank[0] = first;                      /* (The rest after it: ovl_unpack's) */
-        if (!ovl_unpack (fd | (sizeof ovbank << 8))) {
+        if (!ovl_unpack (fd | (OVHALF << 8)) && (write (1, ".", 1), ovbank[0] = first + OVHALF,
+            !ovl_unpack (fd | ((sizeof ovbank - OVHALF) << 8)))) {
+            for (k = 0; k < sizeof ovbank; ++k) {
+                ovbank[k] = first + k;          /* (The second run's in the first's places: each its own again) */
+            }
             setbank (w);
             close (fd);
             return;
@@ -905,6 +910,7 @@ unsigned char reach;                            /* (5: a step of the reach under
                                                 **   out again, its end; 6: walking over for a command the world carries
                                                 **   out as it gets there: a thing taken, a blow) */
 unsigned char said_ahead;                       /* (A walk over told as the thing's asked for, walk_ahead's: not told again) */
+unsigned char step_k, step_n;                   /* (dq0.h's) */
 unsigned char step_aw;                        /* (A step's thing told apart, its AW_*: step_go's, s_reach_said's) */
 unsigned char walk_op, worded;                  /* (The things' request it's asked for, IO_*; its first word told this line: walk_ahead's) */
 unsigned char placing;                          /* (A place in the room walked to: place_go's, or a walk told as it began,
@@ -959,14 +965,13 @@ void status (void)
 static unsigned dplace;
 unsigned long heard_at;
 unsigned char lsn;                              /* (A listen, or a sniff, under way: way.c's) */
-static unsigned char heard_rel = 0xFF;
+unsigned char heard_rel = 0xFF;
 char heard_what[20];
 
 
 static void heard (void)
 {
     static struct msg m;
-    unsigned dx, dy;
     unsigned char rel;
 
     while (!quit && hub_dnext (&dplace, &m)) {   /* (Dead of a blow: the end told once, the rest of its round's untold) */
@@ -983,27 +988,11 @@ static void heard (void)
             }
             continue;
         }
-        if (m.kind != E_DEN || !m.b || (m.x[2] && m.a < DE_RALLY) || m.x[0] != HUB->pc_stratum) {
-            continue;                           /* (A rally told seen too: its words, part 14's; a snore, a word on
-                                                **   watch, the day's) */
+        if (m.kind == E_DEN && m.b && !(m.x[2] && m.a < DE_RALLY) && m.x[0] == HUB->pc_stratum &&
+            (rel = den_heard (&m)) < 8) {       /* (Weighed: caps.c's, the main RAM's room; a rally told seen too: its
+                                                **   words, part 14's; a snore, a word on watch, the day's) */
+            noise_told (&m, rel);               /* (Told: part 14's, from the main code, the hub in the window after) */
         }
-        dx = m.w1 - HUB->pc_x;
-        dy = m.w2 - HUB->pc_y;
-        rel = (bearing ((int) dx, (int) dy) - HUB->pc_face) & 7;
-        dx = (int) dx < 0 ? -dx : dx;
-        dy = (int) dy < 0 ? -dy : dy;
-        dx = (dx > dy ? dx : dy) + 4 * (m.x[3] & 15) + 2 * (m.x[3] >> 4);
-        if ((lsn & 1) && ((rel + 1) & 7) < 3) {
-            dx >>= 1;                           /* (Listened for, that way: twice as far) */
-        }
-        if (dx * 2 > (m.b > HUB->pc_mask ? m.b - HUB->pc_mask : 0) * (HUB->pcsum.hearing + 3) ||   /* (The
-                                                **   background masking it: slice 4.5's) */
-            m.t < heard_at + (rel == heard_rel ? 300 : 50)) {
-            continue;
-        }
-        heard_at = m.t;
-        heard_rel = rel;
-        noise_told (&m, rel);                   /* (Told: part 14's, the main RAM's room) */
     }
 }
 
@@ -1026,7 +1015,7 @@ static unsigned char events (void)          /* (How many there were) */
             break;
         case E_READY:
             if (m.who == 0) {
-                busy = 0;
+                busy = step_k = 0;
                 placing = 0;                    /* (Its walk's over, whatever its legs, wherever stopped) */
                 asking = 0;                     /* (A fight's question, its fight over as it asked: let go) */
                 heard ();                       /* (What came before it, told before the prompt: a blow's words;
@@ -1948,6 +1937,10 @@ static void __fastcall__ handle (unsigned char op, const char* x, const char* y,
     if (things (op | IO_STEPS, x) == IR_NOT_HERE && reach_go ()) {
         return;                                 /* (Out of reach: walked over to it first, then again) */
     }
+    if (HUB->ireq.result == IR_WHICH) {
+        which_ask ();                           /* (Stowed: where, asked, caps.c's) */
+        return;
+    }
     msg (tt ());
     if (HUB->ireq.result == IR_OK) {
         after (was, HUB->ireq.x, op);
@@ -2032,6 +2025,8 @@ void __fastcall__ s_take (const char* name)
         lift (taking);
     } else if (r == IR_NO) {
         msg (tt ());                            /* (A theme's altar, its throne: fixed where it stands) */
+    } else if (r == IR_WHICH) {
+        which_ask ();                           /* (Several that differ: which, asked, caps.c's) */
     } else {
         s_took_up (r | was << 8);
     }
@@ -2058,7 +2053,9 @@ unsigned char __fastcall__ s_deal (unsigned char how)
 {
     struct sway* s = &HUB->sway;
 
-    s->kind = how & ~SW_QUIET;
+    if ((s->kind = how & ~SW_QUIET) <= SW_GIVE) {
+        s->actor = den_meant;                   /* (The one a capital named: that one, letters.c's) */
+    }
     strcpy (s->word, cmd.obj.word);
     s->prep = cmd.prep;
     strcpy (s->word2, cmd.other.word);
@@ -2416,11 +2413,17 @@ portal:
         barw = pa == PA_BAR && things (IO_BAR, "") == IR_NO ? HUB->ireq.x : 0;    /* (The widest bar to hand) */
         work (pa, cmd.obj.kind);
         return;
+    case VB_OBSERVE_OBJECT:                     /* (A thing looked at from here: a denizen as it's examined, "look at
+                                                **   B", the user's designators, 2026-11-06; else chores', way.c's) */
     case VB_EXAMINE_OBJECT:                     /* (A thing looked at closely: judged, by the craft that knows it; a */
     case VB_EXAMINE_LOCALE:                     /*   portal, or its part if it's not there; else the room) */
         if (!cmd.obj.kind && may_den () && deal (SW_LOOK | SW_QUIET) != SR_NONE) {
             gear_look ();                       /* (A denizen it sees: how it seems, then its things as the eyes
                                                 **   make them out from here, part 11's) */
+            return;
+        }
+        if (cmd.action == VB_OBSERVE_OBJECT) {
+            look_way (VB_OBSERVE_OBJECT);
             return;
         }
         if ((pa = look_way (VB_EXAMINE_OBJECT)) != 0) {
@@ -2800,6 +2803,10 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
     }
     if ((unsigned char) w != TE_PACKED) {
         what_hi = named & 0x80;
+    }
+    if ((unsigned char) w == TE_BEGUN) {
+        step_k = k;                             /* (The step under way: a stop's words, task.c's TE_IDLE) */
+        step_n = named | 0x80;                  /* (Its kind, task.c's noun: the top bit what_hi's) */
     }
     t[0] = 0;
     if ((unsigned char) w == TE_BEGUN && step_aw && k > LT_PACKDOWN && k != LT_PACKON && (k < LT_GETNEW || k > LT_LETOLD) &&
@@ -3231,8 +3238,16 @@ int main (int argc, char* argv[])
                 intend2 (k == 1 ? I_GO_ON : I_STOP, !k, 0);     /* (A command's stop: a fight fought on after it) */
             }
             if (l && busy && (held = !k || (k = at_once (l)) != 1)) {
-                if ((took = k == 2) != 0) {
-                    intend2 (I_STOP, 1, 0);     /* (A fight taken over: its round out, then the command) */
+                if ((took = k >= 2) != 0) {
+                    intend2 (I_STOP, 1, 0);     /* (A fight taken over: its round out, then the command; a line that
+                                                **   breaks off, its long task stopped at once, task.c's free_cmd 3) */
+                    hub_map (0);
+                    if (k == 3 && reach >= 5 && (!HUB->pc_task.kind || HUB->pc_task.kind == LT_FIGHT)) {
+                        took = HUB->pc_task.kind;   /* (No fight to stop now: fighting on begun after, stopped for it) */
+                        task_words (TE_IDLE, 0);    /* (A reach's step with no long task to stop, engaged a round's
+                                                **   action, or a fight between its steps: the reach ends where it
+                                                **   stands, the pack's place told, then the line) */
+                    }
                 }
                 HUB->ui_cmd = 0;                /* (Held: the next waits for the character, not parsed again) */
                 l = 0;
@@ -3255,8 +3270,9 @@ int main (int argc, char* argv[])
                                                 **   door", walking plainly: nothing to change, three parts' swaps and a
                                                 **   word with the world spared, the user's D17) */
             }
-            if (k == NL_NONE && !strcmp (l, "around")) {
-                around ();                      /* (What's in sight listed, its capitals: letters.c's) */
+            if (k == NL_NONE && !strncmp (l, "around", 6)) {
+                around (l);                     /* (What's in sight listed, its capitals; or two letters swapped:
+                                                **   caps.c's) */
                 k = NL_DONE;
             }
             if (k == NL_NONE && names_n && (f & NI_THING) && (t = names_subst (l)) != 0) {

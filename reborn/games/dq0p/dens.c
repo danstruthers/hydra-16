@@ -16,6 +16,9 @@
 #define sact            (*(struct actor*) sactb)
 extern unsigned char sactb[SACT];               /* (A body, copied out of the hub's header: sense.c's) */
 static unsigned sig[NACTORS];                   /* (Each body as it was seen: its record, what it's doing) */
+typedef char sden_fits[offsetof (struct actor, den) - offsetof (struct actor, x) == offsetof (struct sden, den) ? 1 : -1];
+                                                /* (Its square, doing, name and record copied whole: the record its
+                                                **   capital's, the user's designators) */
 
 unsigned char dens_seen (void)
 {

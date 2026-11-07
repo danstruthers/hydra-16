@@ -732,7 +732,24 @@ seen, A ... Z then AA ... AZ (the UI bank's cap: its id, its kind, when last tol
 first told (seen.c's one, o_cap_of; "around", o_around, one a line with where it is), kept while remembered, given up
 only as a new one's wanted and none is free, the one told longest ago that isn't in sight; typed, it names its thing as a
 letter does (the catalogue's name of its kind; "take 5C" its count, part 35's: fewer there told, "There are only 3
-there; you take them all."; by the letter of one of several alike, the rest by its kind's name).
+there; you take them all."; by the letter of one of several alike, the rest by its kind's name).  The capitals are
+overlay 23's since 2026-11-06 (caps.c: overlay 22's room), and the denizens take theirs from the same ones (the plan's
+step 4), given before the things' at each look (caps_load: each one seen, not heard only behind; its id CAP_DEN's, the
+actor's record, struct sden's den), told before its words in the look and as it stirs, alike ones' together ("(A, C) Two
+giant rats are ahead to your left", dens.c's den_caps), and first in "around"; typed, a denizen's capital is its name for
+the parser and the resolver finds it in sight by its record (o_des_thing: its square, so the blow, the throw, the walk
+go to that one; the sway told which, den_meant, SWA_MEANT), one out of sight refused.  "look at" a denizen looks it over
+as "examine" does.  Which one (step 5): a take whose name several things lying about fit, that differ by the inventory's
+words (their kind, count, lit, spent, nearly spent, burning low, empty), none chosen otherwise, gets IR_WHICH from the
+world (part 35's which: the chooser's every one in one pass, pick's SL_WHICH), each choice's id, kind, count and state;
+the UI gives each its capital and asks, "Which one? (E) a torch (lit), (F) a torch" (caps.c's o_which_ask), the command's
+line kept (the UI bank's which_*); a capital, a number or a state word answers it, the line made again with that one's
+capital where its thing's word was (letters.c's which_in).  The first words "You look them over." when several lie in
+reach.  Several letters in a line ("drop d e f", "take B C", step 6) each their own line, in turn; "letter d as t" swaps
+two letters (the UI bank's low and lowt, and ix: caps.c's).  Stowing (step 7): a stow with no place said, a holder made
+for the thing's family worn on the belt and free taken first (part 74's stow_where: the request made a put into it by its
+id); two or more places it fits (the pack, a pouch on the belt), IR_WHICH, "Stow it where? (b) the backpack, (f) the
+pouch", a letter answering it ("put h in f").
 
 **Reach, and things used up** (2026-10-26, the user's: "Handy would be readily available, so in a backpack that is
 being worn is not as readily available as one in a belt pouch"; HOUSE.md's reach, handy tools and things used up):
@@ -897,7 +914,8 @@ or a shaft can be jumped down (jump down: a fall of its height).
   or by a hostile denizen coming into sight within 30 feet ("You stop walking"); anything else new (a denizen seen
   for the first time in the task, the first sound heard) asks, soft: "Keep waiting?", the clock still at the turns
   pace till it's answered, yes going on, no stopping it, and any other command stopping it and then carried out.
-  "stop" stops it, and "stop digging" (walking, waiting ...) names it, a task that isn't the one refused ("You aren't
+  "stop" ("halt", "enough") stops it at once, a reach between its steps too, and a flight or a disengage typed as it goes
+  breaks it off at once and then runs (HOUSE.md's breaking off at once, 2026-11-06; every other line waits for its end), and "stop digging" (walking, waiting ...) names it, a task that isn't the one refused ("You aren't
   walking: you're digging"); a climb can't be stopped part way, and struck or hurt it's a test to keep the grip, a
   fall if it fails.  (dq0 -a, the tests': every question answered yes, unasked.)  A search is one too, a minute,
   "Searching about..." as it begins and what it finds told as it ends (cut short, only the squares nearest as far as
