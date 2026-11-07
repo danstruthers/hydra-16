@@ -118,8 +118,12 @@ build.js checks them afterwards.
 4. **A shared-helpers ROM library.** The LZ4 unpacker already lives in a paged-ROM shared library, so the mechanism
    exists. Put the engine's common leaf code there: distance and bearing, chunk-cache lookup, the square accessor
    (at.s), slant, the deterministic hash and dice (§5), name matching, `num`, word-list helpers, the generic
-   record-page code (§6). Every task and every part could call it with no swap cost. That probably frees more main
-   RAM and part space than any other single change, because those helpers are exactly what keeps being copied.
+   record-page code (§6). Every task and every part could call it with no swap cost.
+   *Measured later (2026-11-06), and smaller than first thought:* the copied helpers are tens of bytes to about 150
+   each (dq0d's `made16` 151, dq0p's `fz`/`fz6` 53 each, the `ovl_load`s about 80 and run once), a few hundred bytes a
+   task. What fills the overlays is the features' own code, not the copies. So the library is worth having for
+   correctness (one line of sight, one path finder, one keyed dice: §4) and for having one copy to keep, not for room.
+   Room comes from placement (points 1 and 2) and from data in place of per-feature code (§3).
    *Measured cost (base/kernel/sys.s, docs/09-programming/libraries.md):* an XCALL is about 120 cycles, plus whatever
    state the caller saves around it. That suits routines that do real work per call: line of sight, path finding,
    chunk lookup, name matching, keyed dice, paging. The tiny hot ones (`apart` and `abs`, ~30 cycles, called in
@@ -462,8 +466,8 @@ Ranked by how much each unlocks, and arranged so the game keeps working througho
 
 | # | Change | What it unlocks | Size |
 |---|---|---|---|
-| 1 | **Shared helpers in paged ROM** (§1.4, §4): distance, bearing, chunk lookup, square access, the hash and dice, name matching, num, ovl_load | deletes most of the hand-made copies; frees part and main-RAM space for everything after | medium |
-| 2 | **The placement manifest and generated stubs/cfg** (§1.1); later the automatic packer (§1.2) and part-local leaf copies (§1.3) | ends "moved for room" churn; dispatch can be organised by meaning | medium, then large |
+| 1 | **Generated placement** (§1.1): parts.txt, the stubs and the config's SWn lines made by the build. *Done 2026-11-06 (games/dq0/parts.js), every task.* Then the automatic packer (§1.2) and part-local leaf copies (§1.3) | ends "moved for room" churn; a function moved is its pragma alone; dispatch can be organised by meaning | medium, then large |
+| 2 | **Shared helpers in paged ROM** (§1.4, §4): line of sight, path finding, chunk lookup, name matching, the keyed hash and dice | one line of sight and one router (they disagree today); one copy to keep. Small room gains (measured: a few hundred bytes a task) | medium |
 | 3 | **The hub schema and generated headers/inc/JS/ownership** (§2) | typed payloads; no hand-synced constants; cheaper tests | medium |
 | 4 | **Handles, the scope table, the action table** (COMMANDS §4.1–4.4 and §3.1 here) | consistent commands; one intent shape for PC and denizens | large (the command plan's steps) |
 | 5 | **Narration as data** (§3.2) | removes the 33 wording functions, `told` ×6, most SA_ refusals; first words for free; denizen actions worded alike | large, migratable one action at a time |

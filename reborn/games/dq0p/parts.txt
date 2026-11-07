@@ -1,0 +1,11 @@
+# parts.txt - the senses' swapped parts (../dq0/swap.inc's: code run in the main RAM's top, a part at a time,
+# copied there from the overlay bank its image is kept in as it's called).  A line a part: its number, its overlay
+# bank (dq0p.cfg's OVn), what it's for.  Which functions are in each is the C's (#pragma code-name "SWnCODE");
+# the stubs and the config's lines for them are the build's (../dq0/parts.js: obj/games/dq0p/parts.inc and
+# dq0p.cfg).
+1   1   A look's squares seen (view.c, cast.s), its walk felt, its lamps (things.c)
+2   2   What the character perceives made (sight.c)
+3   3   A look one way's own record (way.c)
+4   3   What the character keeps of a look (view.c's kept: slice 4.2's)
+5   4   The sound layer's pulse (sound.c, pulse.s: slice 4.5's)
+6   4   The denizens' senses answered, the sound layer read (sense.c, sound.c)

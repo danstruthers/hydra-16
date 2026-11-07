@@ -22,24 +22,4 @@ _ovbank:    .res        4           ; The parts' images' banks (dq0p.cfg's OV1 .
 
             .include    "../dq0/swap.inc"
 
-            SWPART      1, 1                ; A look's squares seen (view.c, cast.s), its walk felt, its lamps (things.c)
-            SWPART      2, 2                ; What the character perceives made (sight.c)
-            SWPART      3, 3                ; A look one way's own record (way.c)
-            SWPART      4, 3                ; What the character keeps of a look (view.c's kept: slice 4.2's)
-            SWPART      5, 4                ; The sound layer's pulse (sound.c, pulse.s: slice 4.5's)
-            SWPART      6, 4                ; The denizens' senses answered, the sound layer read (sense.c, sound.c)
-
-            SWFN        view, 1
-            SWFN        felt, 4
-            SWFN        things_lamps, 1
-            SWFN        lamp_on, 1
-            SWFN        perceive, 2
-            SWFN        way_seen, 3
-            SWFN        kept, 4
-            SWFN        pulse, 5
-            SWFN        sense_actor, 6
-            SWFN        snd_mask, 6
-            SWFN        zones_seen, 6
-            SWFN        num, 3              ; (An argument's number: the main RAM's room, 2026-11-01)
-            SWFN        light_init, 3       ; (The light layer begun: the main RAM's room, 2026-11-01)
-            SWFN        hub_attach, 3       ; (The hub attached, as it starts: the main RAM's room, 2026-11-06)
+            .include    "parts.inc"         ; (The parts and their stubs, the build's: parts.txt, ../dq0/parts.js)

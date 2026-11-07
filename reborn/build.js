@@ -118,7 +118,7 @@ function cflags() {
 }
 
 // C and assembly sources into objdir (a .c: cc65 makes its .s there, then ca65).  OUT: the objects
-function compileC(files, objdir, extra = []) {
+function compileC(files, objdir, extra = [], asExtra = []) {
   mkdir(objdir);
   const fl = cflags();
   return files.map(f => {
@@ -128,7 +128,7 @@ function compileC(files, objdir, extra = []) {
       s = path.join(objdir, name + '.s');
       run(CC65, [...fl.cc, ...extra, '-o', s, f]);
     }
-    run(CA65, [...fl.as, '-l', path.join(objdir, name + '.lst'), '-o', o, s]);
+    run(CA65, [...fl.as, ...asExtra, '-l', path.join(objdir, name + '.lst'), '-o', o, s]);
     return o;
   });
 }
@@ -249,7 +249,8 @@ function headroom(names) {
   const rows = [], faults = [], warns = [], lows = [], hex = n => '$' + n.toString(16).toUpperCase();
   const byNumber = (a, b) => parseInt(a[0].slice(2)) - parseInt(b[0].slice(2));
   for (const name of names) {
-    const map = at('obj', 'games', name, name + '.map'), own = at('games', name, name + '.cfg');
+    const map = at('obj', 'games', name, name + '.map'), made = at('obj', 'games', name, name + '.cfg'),   // (A task's made
+      own = fs.existsSync(at('games', name, 'parts.txt')) && fs.existsSync(made) ? made : at('games', name, name + '.cfg');   //   config, parts.js's)
     if (!fs.existsSync(map) || !isC(at('games', name))) continue;   // (An assembly program's room: its own, hyx2.cfg's)
     const m = fs.readFileSync(map, 'latin1'), cfg = fs.readFileSync(fs.existsSync(own) ? own : at('sdk', 'c', 'hydra.cfg'), 'latin1');
     const seg = {}, sym = {}, size = {}, load = {}, run = {};
@@ -295,8 +296,18 @@ function headroom(names) {
 // map and labels in objdir); or with the folder's own NAME.cfg, if it has one (a game's, with its overlays: files
 // beside out that the cfg names).  OUT: its image
 function cprog(dir, objdir, out, extra) {
-  const name = path.basename(out).replace(/\.hyx$/, ''), own = path.join(dir, path.basename(dir) + '.cfg');
-  const objs = compileC(csources(dir), objdir, extra);
+  const name = path.basename(out).replace(/\.hyx$/, ''), parts = path.join(dir, 'parts.txt');
+  let own = path.join(dir, path.basename(dir) + '.cfg'), objs;
+  if (fs.existsSync(parts)) {                           // (A game's task whose swapped parts the build makes,
+    const src = csources(dir), cs = src.filter(f => f.endsWith('.c')), ss = src.filter(f => f.endsWith('.s'));   //   games/
+    const o = new Map(compileC(cs, objdir, extra).map((x, i) => [cs[i], x]));   //   dq0/parts.js: its C first, then its
+    own = require('./games/dq0/parts.js').make({ dir, objdir, own: ss,          //   parts.inc and config from what the C
+      compiled: cs.map(f => path.join(objdir, path.basename(f, '.c') + '.s')) });   //   made, then its assembly, bank.s's
+    compileC(ss, objdir, extra, ['-I', objdir]).forEach((x, i) => o.set(ss[i], x));   //   .include of parts.inc found in
+    objs = src.map(f => o.get(f));                      //   objdir; the objects in the sources' order)
+  } else {
+    objs = compileC(csources(dir), objdir, extra);
+  }
   if (fs.existsSync(own)) partsChecked(csources(dir), objdir);
   run(LD65, ['-C', fs.existsSync(own) ? own : at('sdk', 'c', 'hydra.cfg'), '-o', out, '-m', path.join(objdir, name + '.map'), '-Ln', path.join(objdir, name + '.lbl'),
     ...objs, at('obj', 'sdk', 'c', 'hydra.lib')]);

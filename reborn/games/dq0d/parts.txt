@@ -1,0 +1,29 @@
+# parts.txt - the denizens' swapped parts (../dq0/swap.inc's: code run in the main RAM's top, a part at a time,
+# copied there from the overlay bank its image is kept in as it's called).  A line a part: its number, its overlay
+# bank (dq0d.cfg's OVn), what it's for.  Which functions are in each is the C's (#pragma code-name "SWnCODE");
+# the stubs and the config's lines for them are the build's (../dq0/parts.js: obj/games/dq0d/parts.inc and
+# dq0d.cfg).  "stub NAME N": a part's stub that the C doesn't show (its assembly's).
+1   1   The populations, the records paged: what every call wants
+2   1   The character's ways with a denizen (the UI's sway), and harmed
+3   2   The placing (part 1's till 2026-11-04)
+4   2   The records kept; the start (the kinds read in, popgen loaded); an actor made, retired, killed, an ally come along
+5   3   The senses' own: a hunter's stalk, a scent followed, one drawn on (slice 4.5's)
+6   3   Morale: the field and the bonds, an actor's kin dismayed (2026-10-30)
+7   3   Succession (2026-10-30)
+8   4   Their bodies: their want, the water, a hurt one's rest, a cornered one's dart (2026-10-31); a lair's home room, a robber's way, one first met
+9   4   The day: schedules, sleep, meals, work, watches, leisure (2026-10-31); the records by it, an actor's plan
+10  5   The actors' day kept (their plan, part 9's), their coarse moves, a body found on the rounds, a pastime let go (2026-10-31)
+11  7   The denizens near enlisted (2026-10-31: the main RAM's room; small, cheap to swap in, not while the UI's command is in hand)
+12  5   The tunnellers: a way dug (slice 4.11's, 2026-11-01); their work's, the builders' (overlay 6's, 2026-11-02)
+13  5   The lairs near placed (2026-11-01: the main RAM's room; small, cheap to swap in, each time round after a move)
+14  5   Doors worked (Phase 3C's one path, 2026-11-02)
+15  6   The tunnellers' work: mines, burrows; the builders (2026-11-02)
+16  6   Gifts, the market, entertaining (2026-11-02: seldom called, apart from the busy parts)
+17  5   The ways followed (2026-11-02)
+18  7   A way found (2026-11-02)
+19  6   A body found on a record's rounds (2026-11-02)
+20  7   Hiding oneself (2026-11-04)
+21  2   A region read in, one put out (part 3's till 2026-11-04)
+22  4   Their bodies' rarer: a lair's home room, a robber's way, a dart, rest, depth, what they've eaten, one first met (part 8's till 2026-11-04)
+23  2   The task's start (the kinds read in, popgen loaded: part 4's till 2026-11-04)
+stub slant 11
