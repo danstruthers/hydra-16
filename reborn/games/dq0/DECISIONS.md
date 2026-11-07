@@ -1946,3 +1946,11 @@ The carried thing the first words choose is now the world's with a state said to
 - **Not to light or put out.**  The world's lighting doesn't choose by its chooser but by the name ("light a new torch" lets the old one in hand fall by its name); given the id, it put the spent torch in the pack instead.  That's what failed dq0torchwords when this was first tried, not the flags.  So a light lit or put out with a state said is still the world's to choose.
 - **Test dq0statesel:** potsherds before a pot of pitch in the pack, "drop the full pot" puts down the pitch (with the old flags the UI chose the sherds and the world, given them, said "You carry none of those."); "drop the open basket" puts nothing down; "drop the spent torch" is the one burnt out in hand.
 - **Room:** the UI's overlay 20 has 2,876 bytes free (73 used by this), the world's part 102 931 (60 used).  The start 225.8M cycles at seed 1 (its budget 226M).
+
+### The doors' "Which door?" the same question (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's §5.1, step E)
+
+The user: "Finish up 5.1, please, on parallel threads."  (Steps B and F are being done alongside, separately.)
+
+- **The question about doors and openings is now asked and answered the same way as the things'.**  Before: "Which door: 1. the door ahead to your left (closed), 2. the one to your right (open), or 3. ...?", answered only by a number or a way, and only when the answer read as a move.  Now: "Which door? (1) the door ahead to your left (closed), (2) the one to your right (open), (3) ...", answered by the same reader as the things' question: a number, a way ("left", "north"), "closest", or a word of one choice's alone ("open", "double", "barred").  The answer makes the command again as it was typed, its door chosen.
+- **Not lettered.**  Giving doors and openings capitals would change every room's words ("a door (G) ahead"); the designators' design gave capitals to things and denizens only.  So doors are numbered in the question, and nothing else about them changed.  If you want them lettered too, that's a small step from here.
+- **Room:** choose.c's own answer and kept command are gone (overlay 7: 40 bytes free to 255); the new code is in overlay 24.

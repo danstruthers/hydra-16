@@ -179,3 +179,33 @@ unsigned char __fastcall__ o_which_way (const char* p, unsigned char len, unsign
     }
     return k;
 }
+
+/* choose.c's question of doors and openings (o_pick's, several of a kind and none ahead: "Which door? (1) the door ahead
+** to your left (closed), (2) the one to your right (open)"), asked in lb by choose.c, its choices put here as it words
+** them (o_which_put: choice k's words w, a few to answer it by, "door closed"; its square, its way) and the question
+** then made the one which_in answers (o_which_place: n of them; the line kept, cl, made again as it was, the chosen
+** square main.c's pick_x and pick_y, which o_pick takes).  which_n | WN_PLACE (2026-11-07, step E: choose.c's own
+** answer, its kept command, gone) */
+void __fastcall__ o_which_put (unsigned char k, const char* w, unsigned x, unsigned y, unsigned char h)
+{
+    memset (o, 0, WSIZE);
+    strncpy (o, w, 14);
+    WAT (o, 15) = x;
+    WAT (o, 17) = y;
+    o[19] = h;
+    o[WSIZE - 1] = NLET;
+    to_ui (UIREC->which_w[k], o, WSIZE);
+}
+
+void __fastcall__ o_which_place (unsigned char n)
+{
+    static unsigned char k;
+
+    hub_mem (UI_BANK, UIREC->which_l, cl, strlen (cl) + 1);
+    k = 0;
+    to_ui (UIREC->which_o, &k, 1);
+    k = n | WN_PLACE;
+    to_ui (&UIREC->which_n, &k, 1);
+    which_on = 1;
+    msg (lb);
+}

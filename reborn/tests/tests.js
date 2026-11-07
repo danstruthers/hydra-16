@@ -8972,7 +8972,7 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\([A-Z]{1,2}\) /g, '').replace(/\s+/g, ' '), f = [];
-        inTurn(o, ['% dq0 -p t -s 4', '> open door Which door: 1. the door ahead to your right (open), 2. the one to your right (closed, barred), or 3. the one behind you to your right (closed)?',
+        inTurn(o, ['% dq0 -p t -s 4', '> open door Which door? (1) the door ahead to your right (open), (2) the one to your right (closed, barred), (3) the one behind you to your right (closed)',
           '> 3', 'You turn to face north.', 'You open the door, revealing a passage, 15 feet of it.', '> look You are on the right side of a long, narrow bedchamber',
           'There is a door ahead (open), one to your left (open) and one ahead to your left (closed, barred).', '> take the bar',
           'You lift the bar out of its brackets, and set it down.', 'Taken.', '> i', 'a bar, in your right hand', '% dq0 -p t -s 12', '> examine the window',
@@ -9577,7 +9577,7 @@ module.exports = {
         if (ans.length !== 3) return ['the doors not chosen: ' + ans.length];
         want.forEach(([l, x, ev, re], i) => {
           const a = ans[i];
-          if (!/Which door: 1\. the door ahead to your right \(closed\), or 2\. the one behind you to your right \(open\)\?/.test(G[i])) f.push(l + ': not asked which');
+          if (!/Which door\? \(1\) the door ahead to your right \(closed\), \(2\) the one behind you to your right \(open\)/.test(G[i])) f.push(l + ': not asked which');
           if (!/You head for the door\./.test(G[i])) f.push(l + ': not told it heads for the door');
           if (!a.at || a.at.pc.x !== 32722 || a.at.pc.y !== 32724) f.push(l + ': not from the passage, off its wall');
           if (!a.after || a.after.pc.x !== x || a.after.pc.y !== 32724) f.push(l + ': not walked to beside it: ' + (a.after && [a.after.pc.x, a.after.pc.y]));
@@ -13361,9 +13361,9 @@ module.exports = {
         said('go to the centre', 'You are in the middle of a kitchen');
         said('cross the room', 'You are');
         said('go across the room', ['You']);
-        said('leave', 'Which exit:');
-        said('go outside', 'Which exit:');            // (A plain phrasing, the rules': 2026-11-02)
-        said('go out', 'Which exit:');
+        said('leave', 'Which exit?');
+        said('go outside', 'Which exit?');            // (A plain phrasing, the rules': 2026-11-02)
+        said('go out', 'Which exit?');
         said('go to the rat', 'You haven\'t seen a rat here.');
         said('approach the pot', 'You go over to the pot.');
         said('walk to the pot', 'You go over to the iron pot.', ['Pace:', 'You go over to it.']);
@@ -13378,7 +13378,7 @@ module.exports = {
         said('go to the sconce', 'You go over to the sconce.');
         said('go to the window', 'You haven\'t seen a window here.');
         said('go to the rat', 'You go over to the rat.', 'You haven\'t seen');
-        said('bar the door', 'Which door: 1. the door ahead to your left (closed, barred)');    // (Its bar plain on this side, the look's words too: the user's)
+        said('bar the door', 'Which door? (1) the door ahead to your left (closed, barred)');    // (Its bar plain on this side, the look's words too: the user's)
         said('look at the door ahead to my left', 'it\'s barred');
         said('go to the door ahead to my left', 'There is a door ahead (closed, barred).');
         said('unbar the door', 'You lift the bar out of its brackets');

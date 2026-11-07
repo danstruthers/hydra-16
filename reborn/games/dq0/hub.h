@@ -1739,6 +1739,8 @@ struct uirec {
                                                 **   capital in the last byte */
 };
 #define WN_STOW         0x80                    /* (which_n's: a stow's where, lower-case letters; */
+#define WN_PLACE        0x20                    /* (choose.c's, of doors and openings: each which_w a few words, its
+                                                **   square at 15, its way at 19; which.c's o_which_place, 2026-11-07) */
 #define WN_SEEN         0x40                    /*   the resolver's, of things and denizens seen: each which_w its name,
                                                 **   its square at 15, its way at 19, 1 at 20 a denizen's; caps.c's
                                                 **   o_which_seen, 2026-11-07) */

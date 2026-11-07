@@ -38,14 +38,10 @@ static const char* const relname[8] = {
 static const char* const thing[] = { "", "door", "passage", "stairway", "ladder", "shaft", "ledge", "way out", "wall",
     "window", "trap", "portcullis", "exit", "corner", "pillar" };   /* (OB_ROOM's: leaving it, way.c's) */
 
-static struct cmd* cur = 0;                     /* The command being carried out (main.c's: choose's) */
-static struct cmd kept = { 0 };                 /* The command a choice was asked for, */
-static unsigned char asked = 0;                 /*   its choices (0: none asked), */
+static struct cmd kept = { 0 };                 /* The blow asked about (wielded's) */
 static unsigned px[NPICK] = { 0 }, py[NPICK] = { 0 };   /*   each one's square, */
 static unsigned char ph[NPICK] = { 0 };         /*   the heading it lies, */
 static unsigned char pi[NPICK] = { 0 };         /*   and its record (a door's, or ndoors on: an opening's) */
-static unsigned cx = 0, cy = 0;                 /* The one chosen, for the command again (cx 0: none; till the
-                                                **   next) */
 static unsigned char tasked = 0;                /* A blow's question put (kept the blow, its other thing the better
                                                 **   one carried) */
 unsigned char __fastcall__ o_answer_of (const char* l);    /* (This overlay's: task.c's) */
@@ -78,7 +74,7 @@ static int __fastcall__ side (unsigned char k, unsigned char ahead)
 }
 
 /* Choice k in words, added to lb: "the door ahead to your left (closed)" (and how far, if another lies the same way) */
-static void __fastcall__ named (unsigned char k, unsigned char n)
+static void __fastcall__ named (unsigned char k, unsigned char n, char* wd)
 {
     static const char* const open[8] = {
         "stairway up", "stairway down", "ladder up", "ladder down", "window", "shaft overhead", "shaft in the floor",
@@ -89,11 +85,11 @@ static void __fastcall__ named (unsigned char k, unsigned char n)
     const char* w;
     char b[6];
 
-    add (k ? (k + 1 == n ? ", or " : ", ") : " ");
+    add (k ? ", (" : " (");
     b[0] = '1' + k;
     b[1] = 0;
     add (b);
-    add (". the ");
+    add (") the ");
     if (i < s->ndoors) {
         r = s->door[i].rel;
         st = s->door[i].state;
@@ -105,6 +101,8 @@ static void __fastcall__ named (unsigned char k, unsigned char n)
             (s->open[i - s->ndoors].kind & 15) == O_SKYSHAFT ? "shaft overhead" : open[s->open[i - s->ndoors].kind & 7] :
             open[s->open[i - s->ndoors].kind & 7];
     }
+    strncpy (wd, w, 14);                        /* (Its words for which_in: the noun, its state) */
+    wd[14] = 0;
     add (k && w == first ? "one" : w);           /* ("the door ..., the one ...") */
     first = k ? first : w;
     add (" ");
@@ -123,6 +121,7 @@ static void __fastcall__ named (unsigned char k, unsigned char n)
         }
     }
     if (i < s->ndoors && !(r & MOUTH)) {
+        strncat (wd, st == DOORWAY ? " doorway" : st & PS_WRECKED ? " broken" : st & PS_OPEN ? " open" : " closed", 14 - strlen (wd));
         add (st == DOORWAY ? " (a doorway)" : st & PS_WRECKED ? " (broken down)" : s->door[i].kind == PK_PORTCULLIS ?
              (st & PS_OPEN ? " (raised)" : " (down)") : st & PS_OPEN ? " (open)" : st & PS_BARRED_ ? " (closed, barred)" :
              st & PS_LOCKED_ ? " (closed, locked)" : " (closed)");
@@ -174,6 +173,7 @@ unsigned char __fastcall__ o_pick (unsigned char obj, unsigned char orel)
     struct sight* s = &sight_copy;
     unsigned char i, k, h, r, n = 0, how = obj & (PICK_TELL | PICK_ANY), best = 0xFF, bd = 0xFF, fit = 0, bars = 0;
     unsigned x, y;
+    char wd[16];                                /* (A choice's words: on the C stack, for which.c) */
 
     obj &= ~(PICK_TELL | PICK_ANY);
     hub_mem (SIGHT_BANK, s, SIGHT, sizeof *s);  /* (The senses' record as it is now; in the copy, those it remembers,
@@ -212,7 +212,7 @@ again:
             continue;                           /* (Not that way: first exactly as the look's words have it; none, any
                                                 **   on that side, "the door on the left" ahead of it to its left) */
         }
-        if (cx && x == cx && y == cy) {         /* (The one chosen from the list) */
+        if (pick_x && x == pick_x && y == pick_y) {   /* (The one chosen in answer to the question: which_in's) */
             best = n;
         }
         px[n] = x;
@@ -247,14 +247,13 @@ again:
             sort (n);
             strcpy (lb, "Which ");
             add (thing[obj]);
-            add (":");
-            for (k = 0; k < n; ++k) {
-                named (k, n);
-            }
             add ("?");
-            msg (lb);
-            memcpy (&kept, cur, sizeof kept);
-            asked = n;
+            for (k = 0; k < n && k < 4; ++k) {   /* ("Which door? (1) the door ahead to your left (closed), (2) ...":
+                                                **   asked as the things' are, which.c's, answered by which_in, 2026-11-07) */
+                named (k, n, wd);
+                which_put (k, wd, px[k], py[k], ph[k]);
+            }
+            which_place (k);
             return 2;
         }
     }
@@ -275,17 +274,13 @@ static void __fastcall__ wielded (struct cmd* c)
     }
 }
 
-/* A command (main.c's, the parser's, before it's carried out): if a choice was asked, a number (1 ...) or a way
-** ("left", "the one on the right": the nearest that way) chooses one, and the command asked about is carried out on
-** it (c made it again; o_pick gives that one); any other command lets the choice go.  A blow's question answered
-** (cl's line: yes, no), the blow kept made again; any other command lets it go */
+/* A command (main.c's, the parser's, before it's carried out): a blow's question answered (cl's line: yes, no), the
+** blow kept made again; any other command lets it go.  (A door's or an opening's question is which.c's, answered by
+** letters.c's which_in, the line made again, its square chosen in pick_x and pick_y: 2026-11-07) */
 unsigned char __fastcall__ o_choose (struct cmd* c)
 {
-    unsigned char n = asked, k = 0xFF, j, d, bd = 0xFF;
+    unsigned char j;
 
-    cur = c;
-    asked = 0;
-    cx = 0;
     strike = SK_BEST;                           /* (What a blow strikes with: the verb's, or the thing named, resolve.c's,
                                                 **   or what's in its hands, wield's) */
     shand = 0;                                  /* (No hand said yet: main.c's hand_said; nothing to take in hand
@@ -300,25 +295,6 @@ unsigned char __fastcall__ o_choose (struct cmd* c)
             } else {
                 c->other.word[0] = 0;           /* (No: bare-handed) */
             }
-            return 1;
-        }
-    }
-    if (n && (c->action == VB_MOVE_DIRECTION || c->action == VB_MOVE_TOWARD) && !c->obj.kind) {
-        if (c->n && c->n <= n && !c->obj.word[0]) {
-            k = c->n - 1;
-        } else if (c->dir <= H_NW) {
-            for (j = 0; j < n; ++j) {
-                if (ph[j] == c->dir && (d = apart (px[j], py[j])) < bd) {
-                    bd = d;
-                    k = j;
-                }
-            }
-        }
-        if (k != 0xFF) {
-            memcpy (c, &kept, sizeof kept);
-            cx = px[k];
-            cy = py[k];
-            wielded (c);
             return 1;
         }
     }

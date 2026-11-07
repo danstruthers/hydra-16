@@ -320,6 +320,7 @@ static unsigned char __fastcall__ which_in (char* l)
 {
     static char* p;
     static unsigned char n, k, i, j, len;
+    static unsigned wx, wy;
 
     for (p = l; *p == ' '; ++p) {
     }
@@ -338,13 +339,14 @@ static unsigned char __fastcall__ which_in (char* l)
     k = 0xFF;
     j = len <= 2 && (n & WN_STOW ? islower (*p) : isupper (*p)) ? let_at (p, len) : NLET;   /* (Stowed, where: a lower-case
                                                 **   letter; which, a capital) */
-    if (n & WN_SEEN) {
-        k = which_way (p, len, n & 0x3F);          /* (The resolver's, of things seen: "left", "north", "closest") */
+    if (n & (WN_SEEN | WN_PLACE)) {
+        k = which_way (p, len, n & 0x1F);          /* (The resolver's, of things seen; choose.c's, of doors: "left",
+                                                **   "north", "closest") */
         if (k < 0xFE) {
             goto chosen;
         }
     }
-    for (i = 0; i < (n & 0x3F); ++i) {
+    for (i = 0; i < (n & 0x1F); ++i) {
         from_ui (o, UIREC->which_w[i], sizeof UIREC->which_w[0]);
         if (j < NLET ? (unsigned char) o[sizeof UIREC->which_w[0] - 1] == j : len == 1 && *p == '1' + i) {
             k = i;                              /* ("F", "2") */
@@ -352,13 +354,18 @@ static unsigned char __fastcall__ which_in (char* l)
             k = k == 0xFF ? i : 0xFE;           /* ("spent": the one whose words have it, it alone) */
         }
     }
-    if (k >= (n & 0x3F)) {
+    if (k >= (n & 0x1F)) {
         return 0;
     }
 chosen:
     from_ui (o, UIREC->which_w[k], sizeof UIREC->which_w[0]);
     j = o[sizeof UIREC->which_w[0] - 1];
+    wx = *(unsigned*) (o + 15);                 /* (A door's or an opening's square: WN_PLACE's) */
+    wy = *(unsigned*) (o + 17);
     from_ui (o, UIREC->which_l, INMAX + 1);
+    if (n & WN_PLACE) {
+        goto put;                               /* (The line as it was, its door chosen: pick_x, pick_y) */
+    }
     if (n & WN_STOW) {                          /* ("put j in" and its letter: "put j in f") */
         if (j >= NLET) {
             return 0;
@@ -386,6 +393,10 @@ put:
         return 0;
     }
     o_letters_in (l);                           /* (Its letter made its thing's name, as any line's) */
+    if (n & WN_PLACE) {
+        pick_x = wx;                            /* (For o_pick, as the line's carried out: choose.c's) */
+        pick_y = wy;
+    }
     return 1;
 }
 
@@ -406,6 +417,7 @@ void __fastcall__ o_letters_in (char* l)
         return;                                 /* (Posted already: its letters made names then) */
     }
     den_meant = 0;
+    pick_x = 0;                                 /* (A door chosen: for the line made again only, which_in's) */
     if (which_on) {
         which_on = 0;
         if (which_in (l)) {
