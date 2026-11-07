@@ -117,7 +117,7 @@ const NEAR = {
     'dq0disengage', 'dq0strike', 'dq0engage', 'dq0fighton', 'dq0flee', 'dq0batter', 'dq0battering', 'dq0break', 'dq0harm',
     'dq0rules', 'dq0rather', 'dq0dens'],
   parser: ['dq0cmd', 'dq0parse', 'dq0alias', 'dq0words', 'dq0wordsfix', 'dq0wordsthings', 'dq0choose', 'dq0prompt',
-    'dq0answer', 'dq0several', 'dq0walkwords', 'dq0talk', 'dq0rather', 'dq0names'],
+    'dq0answer', 'dq0several', 'dq0walkwords', 'dq0talk', 'dq0rather', 'dq0names', 'dq0sweep'],
   map: ['dq0', 'dq0deep', 'dq0fog', 'dq0mapturn', 'dq0dig', 'dq0dug', 'dq0vast', 'dq0lookway', 'dq0layers', 'dq0plan',
     'dq0gate', 'dq0start0', 'dq0start1', 'dq0bearing', 'dq0travel', 'dq0stairtrap', 'dq0traps', 'dq0pure', 'dq0rebar',
     'dq0portc', 'dq0break', 'dq0soak', 'dq0kept', 'dq0steps', 'dq0walkwords'],

@@ -2299,6 +2299,9 @@ void __fastcall__ s_command (char* l)
                                                 **   letters.c's; its things found, its unsaid filled; or a question
                                                 **   asked) */
     }
+    if (refused ()) {
+        return;                                 /* (A thing named its verb would pass over: refused, said back: refuse.c's) */
+    }
 again:
     HUB->ireq.sel = cmd.obj.sel | cmd.obj.n << 4;  /* (Which of several, how many: the things' requests', the */
     HUB->ireq.osel = cmd.other.sel | cmd.other.n << 4;  /*   world's to choose, slice 4.1's: "the second sack") */
@@ -2521,7 +2524,14 @@ put:
             }
             return;
         }
-        msg (lb);
+        HUB->ireq.into[0] = 0;                  /* (A blow, no foe of that name: a thing of it to hand, refused, */
+        HUB->ireq.to = 0;                       /*   said back, "You can't kick the pot."; else the fight's words, */
+        if (cmd.action == VB_ATTACK_OBJECT && cmd.obj.word[0] && !cmd.obj.kind &&   /* lb's (IO_FIND's IR_NO: none */
+            things (IO_FIND, cmd.obj.word) == IR_OK) {   /* such, or seen out of reach, its words in the things') */
+            unknown (U_CANT);
+        } else {
+            msg (lb);
+        }
         return;
     default:                                    /* (The rest that want nothing but their action; and those the game
                                                 **   doesn't do yet: its verb, as typed) */

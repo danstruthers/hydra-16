@@ -88,7 +88,8 @@ ovl_out:
 ; The overlays' functions (dq0.h has them with their overlays)
             OVFN        title, 1
             OVFN        help, 1
-            OVFN        unknown, 1
+            OVFN        unknown, 1          ; (refuse.c's since 2026-11-06)
+            OVFN        refused, 1
             OVFN        qual_ok, 1
             OVFN        parts_in, 6
             OVFN        alias_said, 4

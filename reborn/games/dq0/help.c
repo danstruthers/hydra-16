@@ -1,6 +1,6 @@
 /*
 ** help.c - (overlay 1, overlay 6's till 2026-10-28: its room for parts.c's) the commands listed (help, "?"): the game's lib folder's help.txt, each line a paragraph (a line
-** begun with # not said); and a verb the game doesn't know, or doesn't do yet, said back as typed (main.c's command)
+** begun with # not said).  (A verb the game doesn't know, or doesn't do yet, said back: refuse.c's since 2026-11-06)
 */
 
 #pragma code-name ("OV1CODE")
@@ -85,17 +85,4 @@ unsigned char __fastcall__ o_qual_ok (const char* name, const char* w)
     }
     q[n + 1] = 0;
     return !strncmp (name, q + 1, n) || strstr (name, q) != 0;
-}
-
-/* The command's first word said: "I don't know how to bribe." (f 0: no verb of the game's), or one the game has but
-** doesn't do yet, "You can't eat in this game yet." (f 1) */
-void __fastcall__ o_unknown (unsigned char f)
-{
-    unsigned char d;
-
-    for (d = 0; cl[d] && cl[d] != ' ' && d < 15; ++d) {
-        lb[d] = cl[d];
-    }
-    lb[d] = 0;
-    sayf (f ? "\nYou can't %s in this game yet." : "\nI don't know how to %s.", lb);
 }

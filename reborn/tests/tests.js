@@ -2137,6 +2137,61 @@ function dq0Answers(out) {
   res.push({ cmd, text: ans.join(' ').replace(/\s+/g, ' ').trim() });
   return res;
 }
+// The action x kind sweep (COMMANDS-CRITIQUE.md, 4.6): every verb typed at every kind of thing in one scene, the
+// kitchen at seed 3 (the pot and the well on the floor, the sconce on the wall, the stairs up, the wall; the backpack
+// worn, the torch in hand, the sack carried: -k sack), and one rule held: the answer to a line that names a thing
+// names it too (done to it, or refused for it: never the verb done to nothing, or to something else, unsaid).  The
+// cells that break the rule now are listed (SWEEP_GAPS): a new one fails the test, and so does a listed one that
+// keeps the rule now (take it off the list).  A look or an examine answered with the place's own words ("You are in
+// ...") breaks it too, whatever they name (the stairs named only as the room's).  The verbs that would end the scene
+// (climb the well: down its shaft) come last.  DQ0_SWEEP=1: the gaps, with their answers; DQ0_SWEEP=all: every answer.
+const SWEEP_THINGS = [['pot', /pot/], ['backpack', /pack/], ['torch', /torch/], ['sack', /sack/], ['sconce', /sconce/],
+  ['stairs', /stair/], ['wall', /wall/], ['well', /well/]];
+const SWEEP_VERBS = ['look at', 'examine', 'touch', 'push', 'pull', 'knock on', 'kick', 'smell', 'taste', 'read', 'sit on',
+  'search', 'light', 'open', 'close', 'take', 'climb'];
+const SWEEP_GAPS = new Set([
+  'look at the stairs', 'examine the stairs',   // (A look at a way the character stands by: the room's words, way.c's)
+  'smell the stairs',                            // (A sniff that way: the air's words, not the stairs')
+  'light the torch',                             // (A lit torch in hand: another got out of a pack that's shut, its words the pack's)
+]);
+// (Left out: the wall the character faces at the time is the kitchen's trapped door, so "open the wall" opens it and
+// its blade ends the game: the wall made a door, a gap of its own, swept once a thing named is never made another)
+const SWEEP_SKIP = new Set(['open the wall', 'close the wall']);
+function dq0SweepLines() {
+  const out = [];
+  for (const [t] of SWEEP_THINGS) for (const v of SWEEP_VERBS) if (!SWEEP_SKIP.has(v + ' the ' + t)) out.push(v + ' the ' + t);
+  return out;
+}
+function dq0SweepTest() {
+  const lines = dq0SweepLines();
+  return {
+    name: 'dq0sweep', what: 'Dingus Quest Zero\'s commands swept, every verb at every kind of thing ' +
+      '(COMMANDS-CRITIQUE.md\'s action x kind sweep): at seed 3, the kitchen\'s pot, well, sconce, stairs and wall, the ' +
+      'backpack worn, the torch in hand and a sack carried, ' + lines.length + ' lines; the answer to each names its thing ' +
+      '(done to it, or refused for it), the known gaps listed (SWEEP_GAPS: none new, none mended and still listed)',
+    init: 't_rc', cycles: 400e6 + lines.length * 30e6,
+    machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+      'dq0 -p t -s 3 -c /ram/c.hm -k sack', ...lines, 'quit', 'echo $status']) },
+    expect: ['% echo $status'],
+    check(m) {
+      const f = [], A = dq0Answers(m.out), re = new Map(SWEEP_THINGS), gaps = [];
+      let from = 0;
+      for (const l of lines) {
+        const i = A.findIndex((a, k) => k >= from && a.cmd === l);
+        if (i < 0) { f.push('no answer to "' + l + '" (the game ended before it?)'); break; }
+        from = i + 1;
+        const thing = l.slice(l.lastIndexOf(' ') + 1), place = /^(look at|examine) /.test(l) && /You are in /.test(A[i].text),
+          ok = re.get(thing).test(A[i].text) && !place;
+        if (!ok || process.env.DQ0_SWEEP === 'all') gaps.push(l + ' => ' + A[i].text.slice(0, 110));
+        if (!ok && !SWEEP_GAPS.has(l)) f.push('"' + l + '": its thing not named: ' + (A[i].text.slice(0, 140) || '(nothing)'));
+        if (ok && SWEEP_GAPS.has(l)) f.push('"' + l + '" names its thing now: take it off SWEEP_GAPS (' + A[i].text.slice(0, 100) + ')');
+      }
+      if (process.env.DQ0_SWEEP) console.log('dq0sweep gaps (' + gaps.length + ' of ' + lines.length + '):\n' + JSON.stringify(gaps));
+      return f;
+    },
+    sdcard: true
+  };
+}
 function dq0Repeats(name, out) {
   const found = [];
   for (const a of dq0Answers(out)) {
@@ -5544,6 +5599,7 @@ module.exports = {
       },
       sdcard: true
     },
+    dq0SweepTest(),
     {
       name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), one the grammar has but the game doesn\'t do yet ("grapple": you can\'t, yet); a gift the game takes since slice 4.8 ("give the torch to the rat": the rat out of reach, or out of sight); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',
       init: 't_rc', cycles: 1500e6,
@@ -5555,7 +5611,7 @@ module.exports = {
       // (Its words checked with the screen's codes and the lines' wrapping taken out, each in its turn)
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const want = ['> bribe the rat I don\'t know how to bribe.', '> grapple the rat You can\'t grapple in this game yet.',
+        const want = ['> bribe the rat I don\'t know how to bribe.', '> grapple the rat You can\'t grapple the rat in this game yet.',
           '> give the torch to the rat', '> ? Moving: north,', 'Several at once: north then east;',
           '> examine the torch carefully', '> status Pace: a walk', 'Watching: nothing in particular.',
           '> drop pick then take it You reach for your backpack. Put down.', 'You reach for the pick. You\'ve no hand free for the pick: you put it in your backpack.', '> drop pick; take it You reach for your backpack. Put down. You reach for the pick. You\'ve no hand free for the pick: you put it in your backpack.',
@@ -12995,7 +13051,7 @@ module.exports = {
         said('go to the pit', 'You go over to the trap.', ['You go over to it.', 'You can\'t go that way.']);
         said('go to the ledge', 'You haven\'t seen a ledge here.');
         said('go to the ledge', 'at a ledge ahead');
-        said('read the door', 'There\'s nothing written on it.');
+        said('read the door', 'There\'s nothing written on the door.');
         said('read the sconce', ['You go over to the sconce.', 'There\'s nothing written on the sconce.']);   // (Walked over to first, as any inspecting)
         said('read the sconce', 'You can\'t see to read.', 'You go over');   // (In the dark, nothing's read: where it lies or not)
         said('examine the door ahead', 'You head for the door.', 'You haven\'t seen');   // (The side said from where it was: gone to, it's that one; or a denizen in the way, the null referee's dice)

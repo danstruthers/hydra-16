@@ -250,8 +250,11 @@ void __fastcall__ dots (unsigned char k);       /* (Overlay 6's) The game's star
 extern unsigned char starting;                  /*   while it starts (main.c's) */
 void __fastcall__ entered (unsigned char resumed);  /* Overlay 1: the character come into the dungeon */
 void help (void);                               /* Overlay 1 (help.c's): the commands, listed (help.txt) */
-void __fastcall__ unknown (unsigned char f);    /* Overlay 1: a verb the game doesn't know (f 0), or doesn't do yet
-                                                **   (f 1), said back from the command's line (cl) */
+void __fastcall__ unknown (unsigned char f);    /* Overlay 1: a command refused, said back from its line (cl): f U_* */
+enum { U_VERB, U_YET, U_CANT, U_NOTE };         /* (A verb the game doesn't know; one it doesn't do yet, or not to that
+                                                **   yet; one that can't be done to that; nothing written on it) */
+unsigned char refused (void);                   /* Overlay 1: a thing named that its verb would pass over,
+                                                **   refused (refuse.c's o_refused: 1) */
 extern const char* cl;                          /* The command's line (main.c's) */
 unsigned char __fastcall__ qual_ok (const char* name, const char* w);   /* Overlay 1: the word said before w fits name */
 unsigned char __fastcall__ parts_in (unsigned char op);    /* Overlay 6 (parts.c's): the line typed queued in its
