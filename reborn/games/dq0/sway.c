@@ -436,9 +436,10 @@ static unsigned char __fastcall__ ix_pick (const char* w, unsigned char sel, uns
         f = ix[e].flags;
         rk[e] = 0xFF;
         if (ix[e].kind >= nck || !cm[ix[e].kind] || (s == SL_LIT ? !(f & CX_LIT) : sel == SL_NEW ? f & (CX_HELD | CX_LIT) : s == SL_UNLIT ?
-            (f & CX_LIT) || !alight (e) : s == SL_OPEN ? f & CX_SHUT : s == SL_SHUT ? !(f & CX_SHUT) : sel == SL_SPENT ?
-            !(f & CX_SPENT) : sel == SL_FULL ? f & CX_EMPTY : s == SL_EMPTY ? !(f & CX_EMPTY) :
-            op == IO_LIGHT ? ((f & CX_LIT) && (sel || !(f & CX_HELD))) || (!s && (f & CX_SPENT)) : op == IO_DOUSE && !(f & CX_LIT))) {
+            (f & CX_LIT) || !alight (e) : s == SL_OPEN ? !(ck[ix[e].kind].flags & CK_CLOSES) || (f & CX_SHUT) : s == SL_SHUT ? !(f & CX_SHUT) :
+            sel == SL_SPENT ? !(f & (CX_SPENT | CX_EMPTY)) : sel == SL_FULL ? (f & (CX_FILLS | CX_EMPTY)) != CX_FILLS : s == SL_EMPTY ?
+            !(f & CX_EMPTY) : op == IO_LIGHT ? ((f & CX_LIT) && (sel || !(f & CX_HELD))) || (!s && (f & (CX_SPENT | CX_LIT)) ==
+            CX_SPENT) : op == IO_DOUSE && !(f & CX_LIT))) {
             continue;
         }
         for (r = 1, j = e; ix[j].up && ix[j].up <= nix && ix[j].up != in; ++r) {
@@ -561,12 +562,15 @@ void __fastcall__ o_walk_ahead (const char* name)
         in = y + 1;
     }
     if ((e = des_e (name)) == 0xFF && (e = ix_pick (name, sel, op, in)) != 0xFF && (op == IO_DROP || (op >= IO_HOLD &&
-        op <= IO_DOUSE && op != IO_TAKE)) && ((y = sel & 15) == SL_THE || y == SL_ANY || y == SL_NTH || y == SL_OTHER) &&
-        !(op == IO_LIGHT && (ix[e].flags & CX_LIT)) && (!cmd.other.word[0] || ((op == IO_PUT || op == IO_STOW) &&
-        strcmp (cmd.other.word, name)))) {
+        op <= IO_DOUSE && op != IO_TAKE)) && ((y = sel & 15) <= SL_ANY || y == SL_NTH || y == SL_OTHER ||
+        (y > SL_OTHER && op < IO_LIGHT)) && !(op == IO_LIGHT && (ix[e].flags & CX_LIT)) && (!cmd.other.word[0] ||
+        ((op == IO_PUT || op == IO_STOW) && strcmp (cmd.other.word, name)))) {
         bind (name, e);                         /* (Chosen here, the first words', and made final: the world's asked of
                                                 **   that one, COMMANDS-CRITIQUE.md's §5.1 step C, 2026-11-07; a state
-                                                **   said, "the spent torch", the world's, which knows it the better; and
+                                                **   said too, "the spent torch", its flags the chooser's, s_ix_make's,
+                                                **   but to light or put out: the world's light ()
+                                                **   chooses by the name, not pick_, "light a new
+                                                **   torch" its old one let fall by it;
                                                 **   another named, "the torch in the sconce", "the sack in the sack",
                                                 **   the world's, but a put's of another name) */
     }

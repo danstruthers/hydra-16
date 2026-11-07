@@ -2190,6 +2190,40 @@ function dq0ClosestTest() {
     sdcard: true
   };
 }
+// A thing carried named by its state, chosen by the UI (sway.c's ix_pick, for the first words) and made the one the
+// world's asked of (its id: sway.c's bind), as the world's own chooser would choose it (pick_ and unlike: the UI's
+// flags s_ix_make's, the same tests; COMMANDS-CRITIQUE.md's step C, 2026-11-07).  At seed 3 the pack holds potsherds,
+// a pot of pitch and a basket, the sherds first: "the full pot" is the pitch (the sherds are neither a container nor
+// a fuel: the old flags took them, and the world, given their id, found no full pot); "the open basket" is none (a
+// basket doesn't close); "the spent torch" is the one burnt out in hand, not the spare in the pack.  DQ0_STATESEL=1
+// prints the answers
+function dq0StateSelTest() {
+  const lines = ['drop the full pot', 'drop the open basket', 'wait 2 hours', 'drop the spent torch', 'i'];
+  return {
+    name: 'dq0statesel', near: ['parser', 'gear'], what: 'Dingus Quest Zero\'s state said of a thing carried, chosen ' +
+      'once (the UI\'s choice the world\'s, as the world would choose): "drop the full pot" of potsherds and a pot of ' +
+      'pitch in the pack puts down the pitch; "drop the open basket" finds none; "drop the spent torch" the one burnt ' +
+      'out in hand, not the spare',
+    init: 't_rc', cycles: 300e6 + lines.length * 60e6,
+    machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+      'dq0 -p t -s 3 -c /ram/c.hm -k potsherds,pitch,basket -T', ...lines, 'quit', 'echo $status']) },
+    expect: ['% echo $status'],
+    check(m) {
+      const A = dq0Answers(m.out), f = [], a = l => (A.find(x => x.cmd === l) || { text: '(no answer)' }).text;
+      if (process.env.DQ0_STATESEL) for (const l of lines) console.log(l + ' => ' + a(l));
+      if (!/^You (reach for your backpack\.|put down the pot of pitch\.)[\s\S]*Put down\./.test(a('drop the full pot')) || /sherds/.test(a('drop the full pot')))
+        f.push('"drop the full pot": not the pot of pitch put down: ' + a('drop the full pot').slice(0, 160));
+      if (/Put down|You put down/.test(a('drop the open basket')))
+        f.push('"drop the open basket": a basket put down (it doesn\'t close): ' + a('drop the open basket').slice(0, 160));
+      if (!/^You put down the spent torch\./.test(a('drop the spent torch')))
+        f.push('"drop the spent torch": not the one in hand put down at once: ' + a('drop the spent torch').slice(0, 160));
+      if (!/potsherds/.test(a('i')) || /pot of pitch/.test(a('i')) || !/a torch \(lit\)|a torch,|a torch \(/.test(a('i')))
+        f.push('what\'s carried after: ' + a('i').slice(0, 300));
+      return f;
+    },
+    sdcard: true
+  };
+}
 function dq0SweepTest() {
   const lines = dq0SweepLines();
   return {
@@ -5639,6 +5673,7 @@ module.exports = {
     },
     dq0SweepTest(),
     dq0ClosestTest(),
+    dq0StateSelTest(),
     {
       name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), one the grammar has but the game doesn\'t do yet ("grapple": you can\'t, yet); a gift the game takes since slice 4.8 ("give the torch to the rat": the rat out of reach, or out of sight); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',
       init: 't_rc', cycles: 1500e6,

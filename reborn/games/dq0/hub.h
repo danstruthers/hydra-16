@@ -1649,17 +1649,25 @@ struct cix {
 #define CX_HELD         0x01                    /* (In a hand) */
 #define CX_WORN         0x02                    /* (Worn) */
 #define CX_LIT          0x04                    /* (Lit) */
-#define CX_SPENT        0x08                    /* (A light or a fuel burnt out: SL_SPENT's) */
+#define CX_SPENT        0x08                    /* (A light or a fuel burnt out, a light lit with none left too; not a
+                                                **   container: the world's chooser's, its unlike's) */
 #define CX_EMPTY        0x10                    /* (A container or a surface with nothing in it, a fuel empty) */
-#define CX_SHUT         0x20                    /* (Closed) */
+#define CX_SHUT         0x20                    /* (Closed: its shut's IS_CLOSED, whatever its kind) */
 #define CX_BACK         0x40                    /* (A pack worn on the back: taken off to reach into) */
-#define CX_HOLDS        0x80                    /* (A container or a surface) */
+#define CX_FILLS        0x80                    /* (A container, a surface, a fuel: said full or empty) */
+                                                /* (The state said of a thing carried, as the world's chooser has it, pick_'s
+                                                **   and unlike's, 2026-11-07: lit, CX_LIT; unlit, a light not CX_LIT; new,
+                                                **   neither CX_HELD nor CX_LIT; open, its kind CK_CLOSES, not CX_SHUT;
+                                                **   shut, CX_SHUT; empty, CX_EMPTY; spent, CX_SPENT or CX_EMPTY; full,
+                                                **   CX_FILLS, not CX_EMPTY) */
 #define NIXK            24
 struct cixk {                                   /* (The kinds of what it carries: each kind once, its flags, K_*, its name:
                                                 **   the UI's first words read no catalogue, the user's D17) */
     unsigned char   kind, flags;
     char            name[14];
 };
+#define CK_CLOSES       0x02                    /* (In a cixk's flags, in K_BELT's place: the kind closes, its keeps'
+                                                **   KF_CLOSES: "the open sack"; the UI reads no K_BELT) */
 enum { AW_NONE, AW_LIT, AW_UNLIT, AW_SPENT, AW_EMPTY };   /* (A thing told apart from another of its kind at hand by its
                                                 **   state: the world's apart, "the spent torch", the user's, 2026-11-06) */
 

@@ -661,7 +661,7 @@ A survey of the code after designators steps 4–7 found **six choosers** decidi
 3. **"largest" and "smallest"** exist only in the resolver.
 4. **The state selectors differ** between `ix_pick` and the world. "open": the world also needs the kind to close.
    "full": the world rejects anything that's not a container. "spent": the world also takes an empty container. So
-   the first words can name a different thing from the one the world takes.
+   the first words can name a different thing from the one the world takes. *Fixed 2026-11-07* (step C).
 5. **The guess at the world's "which?"** ("You look them over.") counts only things in reach, matched by `strstr`.
    The world counts remembered and out-of-reach ones too, matched by its own rule, and needs two that differ.
 6. **Six name-matching rules:** whole word with plural; prefix and suffix; `strstr`; the first three letters for a
@@ -688,7 +688,7 @@ world would choose by name only for what the UI can't see (things remembered in 
 |---|---|---|---|
 | A | **The resolver's choice of several travels** as the thing's id (letters.c's `des_seen` adds it to the line's handles, as a letter's is). *Done 2026-11-07, test dq0closest.* A single candidate still leaves the choice to the world, whose rule puts what's in hand first | — | 1, part of 3 |
 | B | **"it" and "take all" carry ids:** `last` keeps the handle, and "take all" queues ids | the by-name re-requests | 8, 12 |
-| C | **One chooser for things**, in the UI, over carried (`ix`) and seen (`sight_copy`) together, ranked by the world's order (held, then carried by depth, then lying by distance), honouring every selector, with the state selectors decided by the kind's flags (`ix_make` to send the flags the world uses). *Its first half done 2026-11-07:* the carried thing the first words choose (sway.c's `ix_pick`) is made final, its id sent as a letter's is (sway.c's `bind`), for put down, hold, stow, put, wear, take off, light and put out; not with a state said ("the spent torch": the world knows the state better), nor with another thing named ("the torch in the sconce", "the sack in the sack") but a put's of another name | resolve.c's item gathering, sway.c's `ix_pick` and the "look them over" guess | 2, 3, 4, 5, 7, 9 |
+| C | **One chooser for things**, in the UI, over carried (`ix`) and seen (`sight_copy`) together, ranked by the world's order (held, then carried by depth, then lying by distance), honouring every selector, with the state selectors decided by the kind's flags (`ix_make` to send the flags the world uses). *Its first half done 2026-11-07:* the carried thing the first words choose (sway.c's `ix_pick`) is made final, its id sent as a letter's is (sway.c's `bind`), for put down, hold, stow, put, wear, take off, light and put out. *With a state said too, 2026-11-07* ("the spent torch", "the full pot", "the open sack"): `s_ix_make` sends the flags the world's chooser tests (`pick_`'s and `unlike`'s), so `ix_pick`'s state tests are the world's (test dq0statesel); but not to light or put out, as the world's `light` chooses by the name and not by `pick_` ("light a new torch" lets the old one fall by its name). Not with another thing named ("the torch in the sconce", "the sack in the sack") but a put's of another name | resolve.c's item gathering, sway.c's `ix_pick` and the "look them over" guess | 2, 3, 4, 5, 7, 9 |
 | D | **One "which?"**: one state, one wording (capitals, as caps.c's), one answer parser (a capital, a number, a way, a state word, a name), used by the thing chooser, choose.c and the world's IR_WHICH. *Done for things and denizens 2026-11-07:* the resolver's question is asked by the designators' capitals (which.c, overlay 24: "Which one? (A) the giant rat ahead to your left, on the right, (C) …"), answered by letters.c's which_in (a capital, its number, a way, "closest", a name or state word, "the" before it), the command made again on the chosen capital; the resolver's own question and kept command gone (overlay 11: 7 bytes free to 1,097). Doors and openings (choose.c's numbered question) wait for step E, as they have no capitals yet | resolve.c's `ask_which` and `answered`; choose.c's question and answer | 10, 11 |
 | E | **Features in the same list:** choose.c's doors and openings as entries, perhaps lettered after the denizens, so stairs and doors are chosen and asked about the same way | choose.c's `pick` as a separate chooser | §3.4's |
 | F | **One name match** (the world's rule: word prefix, plurals, suffix of a one-word name; qualifiers checked), shared by all | the other five | 6 |
@@ -697,7 +697,9 @@ world would choose by name only for what the UI can't see (things remembered in 
 carried (its `ix`, every entry with an id). Things lying about can't be chosen finally by the UI: the sight record
 holds six, and the world's chooser also sees things remembered in the dark and things on a surface. And a second
 copy of what's carried, made in another overlay, cost the first words some 30,000 cycles, past the user's 720,000:
-so the choice is made final where the first words already make it (sway.c), not in a chooser of its own. Overlay
+so the choice is made final where the first words already make it (sway.c), not in a chooser of its own. The
+state selectors, bound, broke dq0torchwords not by the flags (which disagreed too, and agree now) but by "light a new torch": the world's
+`light` lets the old torch in hand fall only if it's of the name asked, and "#id" names none. Overlay
 24 is added (part 6's image moved into it by the bank packer as overlay 20 grew), for step D.
 
 **Room.** Steps C and D should remove more code than they add (resolve.c's gathering, `choose_one`, `ask_which` and

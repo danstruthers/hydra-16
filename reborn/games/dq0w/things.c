@@ -1979,9 +1979,19 @@ void s_ix_make (void)
         ixd[m] = rec.id ? rec.id : ixi[m] | LT_REC;
         k = kind_of (rec.kind);
         f = (rec.flags & I_HELD ? CX_HELD : 0) | (rec.flags & I_WORN ? CX_WORN : 0) | (rec.flags & I_LIT ? CX_LIT : 0) |
-            ((k->flags & K_CONTAINER) || (k->keeps & KF_ON) ? CX_HOLDS | CX_EMPTY : 0) |
-            ((k->keeps & KF_CLOSES) && (rec.shut & IS_CLOSED) ? CX_SHUT : 0) |
-            ((k->form & KF_BACK) && (rec.flags & I_WORN) ? CX_BACK : 0);
+            (rec.shut & IS_CLOSED ? CX_SHUT : 0) | ((k->form & KF_BACK) && (rec.flags & I_WORN) ? CX_BACK : 0);
+        j = rec.id && !rec.fuel;                /* (Its state as the chooser's unlike has it, 2026-11-07: a container or
+                                                **   a surface empty as nothing's in it, below; a fuel burnt, empty and
+                                                **   spent; a light burnt out, lit or not, spent: the UI's state said
+                                                **   chooses as the world does, its choice made final, sway.c's bind) */
+        if ((k->flags & K_CONTAINER) || (k->keeps & KF_ON)) {
+            f |= CX_FILLS | CX_EMPTY;
+        } else if ((unsigned char) (rec.kind - KI_OIL) <= KI_PITCH - KI_OIL) {
+            f |= j ? CX_FILLS | CX_EMPTY | CX_SPENT : CX_FILLS;
+        } else if (j && (k->flags & K_LIGHT)) {
+            f |= CX_SPENT;
+        }
+        ixc[m].flags = f;
         ixc[m].kind = rec.kind;
         ixc[m].up = 0;
         if (rec.where == IW_ITEM) {
@@ -1989,8 +1999,6 @@ void s_ix_make (void)
             }
             ixc[m].up = j < n ? j + 1 : 0xFF;
         }
-        j = aw_of ();
-        ixc[m].flags = f | (j == AW_SPENT ? CX_SPENT : j == AW_EMPTY ? CX_SPENT | CX_EMPTY : 0);
     }
     for (m = 0; m < n; ++m) {
         if ((j = ixc[m].up) != 0 && j != 0xFF) {
@@ -2022,7 +2030,7 @@ void s_ix_make (void)
         k = kind_of (ixkk[f]);                  /* (Copied out: the UI's bank put back for it) */
         hub_map (UI_BANK);
         UIREC->ixks[f].kind = ixkk[f];
-        UIREC->ixks[f].flags = k->flags;
+        UIREC->ixks[f].flags = (k->flags & ~CK_CLOSES) | (k->keeps & KF_CLOSES ? CK_CLOSES : 0);
         memcpy (UIREC->ixks[f].name, k->name, sizeof k->name);
     }
     hub_map (0);                                /* (The hub's header back in the window: rs_cut's caller's events) */
