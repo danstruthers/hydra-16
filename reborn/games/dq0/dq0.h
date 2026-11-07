@@ -387,8 +387,8 @@ unsigned char __fastcall__ den_heard (const struct msg* m);   /* (Overlay 23's) 
 
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
-extern unsigned char ovbank[23];               /* (bank.s's OVMAX: overlay 21 the writings' parts, 22 the designators', 23 their
-                                                **   capitals, 2026-11-06) */
+extern unsigned char ovbank[24];               /* (bank.s's OVMAX: overlay 21 the writings' parts, 22 the designators', 23 their
+                                                **   capitals, 2026-11-06; 24 the things' chooser, 2026-11-07) */
 unsigned char early (void);                     /* Part 12: before a command's things are looked for (in shock, refused:
                                                 **   2; first aid's, 1; else 0) */
 void tend (void);                               /* Part 12: first aid (VB_TEND) */

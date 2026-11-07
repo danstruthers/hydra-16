@@ -342,6 +342,28 @@ static unsigned char __fastcall__ des_e (const char* w)
     return 0xFF;
 }
 
+/* The carried thing entry e, the first words' choice for word w, made the one the world's asked of: its id the line's
+** (letters.c's ldes, its "#" and id in the request: des_req), as a letter's is; the world doesn't choose again (the
+** chooser survey's disagreements, COMMANDS-CRITIQUE.md's §5.1 step C, 2026-11-07).  One with no id yet, the world's */
+static void __fastcall__ bind (const char* w, unsigned char e)
+{
+    unsigned low[NLET];
+    unsigned id;
+
+    if (!ix[e].let || ndes >= NDES) {
+        return;
+    }
+    hub_mem (UI_BANK, low, UIREC->low, sizeof low);
+    if (!(id = low[ix[e].let - 1]) || (id & LT_REC)) {
+        return;
+    }
+    ldes[ndes].id = id;
+    ldes[ndes].low = 1;
+    strncpy (ldes[ndes].word, w, sizeof ldes[0].word - 1);
+    ldes[ndes].word[sizeof ldes[0].word - 1] = 0;
+    ++ndes;
+}
+
 /* A name said a word of the kind's, or its start, or that word made plural, or the end of a name of one word (the world's
 ** named4, things.c's: the chooser's) */
 static unsigned char __fastcall__ word_in (const char* k, const char* w, unsigned char n)
@@ -538,8 +560,15 @@ void __fastcall__ o_walk_ahead (const char* name)
         }
         in = y + 1;
     }
-    if ((e = des_e (name)) == 0xFF) {          /* (Named by its letter: that one, letters.c's) */
-        e = ix_pick (name, sel, op, in);
+    if ((e = des_e (name)) == 0xFF && (e = ix_pick (name, sel, op, in)) != 0xFF && (op == IO_DROP || (op >= IO_HOLD &&
+        op <= IO_DOUSE && op != IO_TAKE)) && ((y = sel & 15) == SL_THE || y == SL_ANY || y == SL_NTH || y == SL_OTHER) &&
+        !(op == IO_LIGHT && (ix[e].flags & CX_LIT)) && (!cmd.other.word[0] || ((op == IO_PUT || op == IO_STOW) &&
+        strcmp (cmd.other.word, name)))) {
+        bind (name, e);                         /* (Chosen here, the first words', and made final: the world's asked of
+                                                **   that one, COMMANDS-CRITIQUE.md's §5.1 step C, 2026-11-07; a state
+                                                **   said, "the spent torch", the world's, which knows it the better; and
+                                                **   another named, "the torch in the sconce", "the sack in the sack",
+                                                **   the world's, but a put's of another name) */
     }
     if (op == IO_DESCRIBE || op == IO_INSIDE) { /* (Looked at, asked of it: its quality, its weight ...; way.c's.  In the
                                                 **   dark, the answer's own) */

@@ -688,10 +688,17 @@ world would choose by name only for what the UI can't see (things remembered in 
 |---|---|---|---|
 | A | **The resolver's choice of several travels** as the thing's id (letters.c's `des_seen` adds it to the line's handles, as a letter's is). *Done 2026-11-07, test dq0closest.* A single candidate still leaves the choice to the world, whose rule puts what's in hand first | — | 1, part of 3 |
 | B | **"it" and "take all" carry ids:** `last` keeps the handle, and "take all" queues ids | the by-name re-requests | 8, 12 |
-| C | **One chooser for things**, in the UI, over carried (`ix`) and seen (`sight_copy`) together, ranked by the world's order (held, then carried by depth, then lying by distance), honouring every selector, with the state selectors decided by the kind's flags (`ix_make` to send the flags the world uses) | resolve.c's item gathering, sway.c's `ix_pick` and the "look them over" guess | 2, 3, 4, 5, 7, 9 |
+| C | **One chooser for things**, in the UI, over carried (`ix`) and seen (`sight_copy`) together, ranked by the world's order (held, then carried by depth, then lying by distance), honouring every selector, with the state selectors decided by the kind's flags (`ix_make` to send the flags the world uses). *Its first half done 2026-11-07:* the carried thing the first words choose (sway.c's `ix_pick`) is made final, its id sent as a letter's is (sway.c's `bind`), for put down, hold, stow, put, wear, take off, light and put out; not with a state said ("the spent torch": the world knows the state better), nor with another thing named ("the torch in the sconce", "the sack in the sack") but a put's of another name | resolve.c's item gathering, sway.c's `ix_pick` and the "look them over" guess | 2, 3, 4, 5, 7, 9 |
 | D | **One "which?"**: one state, one wording (capitals, as caps.c's), one answer parser (a capital, a number, a way, a state word, a name), used by the thing chooser, choose.c and the world's IR_WHICH | resolve.c's `ask_which` and `answered`; choose.c's question and answer | 10, 11 |
 | E | **Features in the same list:** choose.c's doors and openings as entries, perhaps lettered after the denizens, so stairs and doors are chosen and asked about the same way | choose.c's `pick` as a separate chooser | §3.4's |
 | F | **One name match** (the world's rule: word prefix, plurals, suffix of a one-word name; qualifiers checked), shared by all | the other five | 6 |
+
+**What step C taught (2026-11-07).** The UI can be the final chooser only for what it sees completely: what's
+carried (its `ix`, every entry with an id). Things lying about can't be chosen finally by the UI: the sight record
+holds six, and the world's chooser also sees things remembered in the dark and things on a surface. And a second
+copy of what's carried, made in another overlay, cost the first words some 30,000 cycles, past the user's 720,000:
+so the choice is made final where the first words already make it (sway.c), not in a chooser of its own. Overlay
+24 is added (part 6's image moved into it by the bank packer as overlay 20 grew), for step D.
 
 **Room.** Steps C and D should remove more code than they add (resolve.c's gathering, `choose_one`, `ask_which` and
 `answered`; choose.c's question; sway.c's guess). But old and new must run side by side while each case moves over,

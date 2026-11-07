@@ -1919,3 +1919,12 @@ A survey found six choosers deciding what a name means, and twelve ways they dis
 - **Now** the resolver's choice of several is sent as that thing's id (letters.c's des_seen adds it to the line's handles, as a letter's is), and the world takes that one: "take the closest torch" takes the lit one at once.  Test dq0closest (it fails on the old code with the "Which one?").
 - **One candidate alone** is still left to the world, whose rule puts what's in hand first: "light the torch" with one lying about and one lit in hand is still "The torch is lit already." (the sweep caught this when every choice was sent).
 - **Next** (§5.1's order of work): "it" and "take all" carrying ids; then one chooser for things in the UI, over what's carried and what's seen together, which will need a staging overlay bank.
+
+### The carried thing chosen once (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's §5.1, step C's first half)
+
+The user approved a staging overlay bank (overlay 24) and step C.  What's built:
+
+- **The thing carried that the first words choose is the one the world is asked of.**  The UI already chooses a carried thing to say its first words at once ("You reach for your backpack."), by a copy of the world's ranking; then it sent the world the name, and the world chose again by its own.  Now that choice goes as the thing's id, as a letter's does, for put down, hold, stow, put in or on, wear, take off, light and put out.  The two can't name different things any more.
+- **Left to the world:** a state said ("the spent torch": the world knows the state better; the UI's flags call a lit torch with no fuel left not spent, the world's spent); another thing named ("put out the torch in the sconce", "put the sack in the sack": the world's rule that a thing isn't put in itself goes by the names); a lit thing to light ("The torch is lit already.", the world's words).  The suite caught all three.
+- **Not done, and why:** a chooser of its own in overlay 24 copied what's carried a second time and made the first words 30,000 cycles slower, past the user's 720,000 for a first letter (dq0torchwords); so the choice is made final in sway.c, where the first words already make it.  Things lying about stay the world's to choose: the UI's sight record holds only six of them, and the world also chooses among things remembered in the dark.
+- **Overlay 24** is in the game, empty of code for now; the bank packer moved part 6's image into it when overlay 20 grew by this change.  It's for step D (one "which?" question).

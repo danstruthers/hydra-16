@@ -1817,9 +1817,6 @@ unsigned char __fastcall__ things (unsigned char op, const char* name)
     q->kind = op;
     strncpy (q->name, name, sizeof q->name - 1);
     q->name[sizeof q->name - 1] = 0;
-    if (ndes) {
-        des_req (name);                         /* (A thing named by its letter: that one, "#" and its id, letters.c's) */
-    }
     said_ahead = 0;
     if (op == (IO_GET | IO_STEPS)) {
         HUB->pc_lump = (HUB->pc_lump & ~(PL_MORE | PL_ALL)) | (take_more ? PL_MORE : 0) | (take_all ? PL_ALL : 0);   /* ("Take
@@ -1830,6 +1827,10 @@ unsigned char __fastcall__ things (unsigned char op, const char* name)
         walk_ahead (name);                      /* (Its first words told now, the world's answer some 700,000 cycles off
                                                 **   and more, its parts' copies and its chooser: the user's D17,
                                                 **   2026-11-03; the user's, 2026-11-04: a word as it begins, sway.c's) */
+    }
+    if (ndes) {
+        des_req (name);                         /* (A thing named by its letter, or chosen by the first words: that one,
+                                                **   "#" and its id, letters.c's; after them, sway.c's bind) */
     }
     hub_call (q, T_WORLD);                      /* (Asleep till the world rings with the reply) */
     q->state = REQ_FREE;
