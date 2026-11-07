@@ -49,6 +49,7 @@
 unsigned long now;                              /* The game's time, as the world's clock last said */
 unsigned char pc_face;                          /* (The character's facing, copied for the overlays) */
 unsigned char pace = 0xFF, paused;
+static unsigned char kseq = 1;                 /* (The hub's ui_keys as a line's typed: odd, each line's own) */
 const char* const pacename[4] = { "relaxed", "normal", "menacing", "turns" };
 
 static unsigned char asking;                    /* (A long task's soft question put, the answer awaited) */
@@ -3127,7 +3128,10 @@ int main (int argc, char* argv[])
             } else if (k == CH_RESIZE) {
                 t_init ();
             } else {
-                HUB->ui_keys = 1;               /* (A key: the world's long jobs hold back, ui_first's, its echo and
+                if (!HUB->ui_keys) {
+                    kseq += 2;                  /* (A line's first key: its own, the holds begun again for it) */
+                }
+                HUB->ui_keys = kseq;            /* (A key: the world's long jobs hold back, ui_first's, its echo and
                                                 **   an Enter's words already behind none) */
                 t_key (k);
                 quick = 25;                     /* (A line being typed: its Enter looked for twice as often, the
@@ -3147,7 +3151,7 @@ int main (int argc, char* argv[])
             cq_post (t_next ());                /* (The command parser at work on it at once, while the events and
                                                 **   the status line are seen to: not after them, 2026-10-30) */
         }
-        HUB->ui_keys = inn || t_next ();        /* (Keys still on the line typed, or a line entered held for the
+        HUB->ui_keys = inn ? kseq : t_next () != 0; /* (Keys still on the line typed, or a line entered held for the
                                                 **   character, its first word still to come; else its Enter's ui_cmd now, or none) */
         k = events ();
         heard ();

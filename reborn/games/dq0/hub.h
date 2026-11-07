@@ -1440,7 +1440,9 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned char ui_cmd;              /* The UI's: a line taken and its command in hand (its words not yet
                                                 **   all out): the senses' look gives way to it a while (dq0prompt:
                                                 **   the UI answering at once, the world's answers its) */
-    volatile unsigned char ui_keys;             /* The UI's: a line being typed, from its first key, or entered and held for
+    volatile unsigned char ui_keys;             /* The UI's: a line being typed, from its first key (odd, each line's
+                                                **   own: a hold begun again as it changes, a line typed again after the
+                                                **   last let go though the gap went unseen, 2026-11-06), or entered and held for
                                                 **   the character (else its Enter's ui_cmd): the world's long jobs hold back, ui_long's, a typist's own
                                                 **   time and so no answer's first letter behind one (2026-11-04); the
                                                 **   denizens' intents, the minds' deciding and the senses' answers to

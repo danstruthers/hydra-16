@@ -158,7 +158,7 @@ unsigned char __fastcall__ num (const char* s);
 ** of an answer's first letter), KEY_HOLD ticks at most while the keys go on, then answered till the line's Enter (its
 ** command's GIVE_WAY its own, the parser's request's seq a new line's) or the keys let go */
 #define KEY_HOLD        600
-static unsigned char held, hst, hsq, hcm;       /* (Held; the hold's state: 0 none, 1 since ht0, 2 run out; its line's,
+static unsigned char held, hst, hsq, hcm, hks;       /* (Held; the hold's state: 0 none, 1 since ht0, 2 run out; its line's,
                                                 **   and the UI's ui_cmd as it began: dq0d.c's gsq, gcm) */
 static unsigned ht0;
 
@@ -169,7 +169,8 @@ static unsigned char sense_held (void)
         hst = 0;                                /* (Nothing in hand, the turns pace, or the UI's asked the minds) */
         return 0;
     }
-    if (HUB->cq.seq != hsq || HUB->ui_cmd != hcm) {
+    if (HUB->cq.seq != hsq || HUB->ui_cmd != hcm || HUB->ui_keys != hks) {
+        hks = HUB->ui_keys;                     /* (A line typed again: its own hold, hub.h's ui_keys) */
         hsq = HUB->cq.seq;                      /* (A new line entered: its command's own hold; a line's keys as the
                                                 **   last's answer's begun, theirs) */
         hcm = HUB->ui_cmd;

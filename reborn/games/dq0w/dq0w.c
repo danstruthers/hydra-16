@@ -5032,7 +5032,9 @@ unsigned char s_dark_way (void)
         }
     }
     hub_map (0);
-    if (lim_ == 250) {
+    if (lim_ == 250 && npath) {                 /* (Not a walk of no steps: a close-in's later leg already where it can
+                                                **   get, "You run northeast into the dark." told again for nothing, the
+                                                **   fight soak's seed 31, 2026-11-06) */
         event (E_BEAT, 0, WB_FEEL | (unsigned) (h0 | rush_ << 4) << 8);
     }
     return 0;
@@ -6945,8 +6947,7 @@ static unsigned char den_held (void)
 int main (int argc, char* argv[])
 {
     static struct msg m;
-    static unsigned char uf;
-    unsigned char was_busy = 0, dseq = 0, took;
+    static unsigned char uf, was_busy, dseq, took;  /* (Static: the main RAM's room, 2026-11-06) */
 
     if (argc < 4 || ovl_load (argv[3]) || wstart (argv)) {
         return 1;                               /* (Attached, and started: part 3's) */
@@ -6992,8 +6993,14 @@ int main (int argc, char* argv[])
         while (hub_take (&m)) {
             tsq = HUB->cq.seq;                  /* (The line whose intent it is: a task it begins not held for it,
                                                 **   stepping's; a task begun in the pass its line came in, 2026-11-06) */
+            if (m.kind != I_ASK) {
+                was_busy = 1;                   /* (Its E_READY as it's free; but a sound's question (I_ASK, the UI's
+                                                **   as a task goes) none, the task's own has it: one come as a step's
+                                                **   time was up made a second E_READY, the step asked for and told
+                                                **   twice, the soak's seed 141, 2026-11-06.  A question's yes, I_GO_ON,
+                                                **   comes only as its task is paused, asking: its E_READY still to come) */
+            }
             intent (&m);
-            was_busy = 1;
         }
         if (hub_posted (&HUB->wreq)) {
             answer ();                          /* (The UI's: the save, a close look) */

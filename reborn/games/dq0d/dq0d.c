@@ -271,7 +271,7 @@ struct den {
                                                 **   their rounds, every event waking them) */
 static unsigned char gw;                        /* (Waiting for it: main's, and tend's between actors) */
 static unsigned long gwt;                       /* (Since when) */
-static unsigned char gsq, gcm;                  /* (Its command line's: the parser's request's seq, each line's own;
+static unsigned char gsq, gcm, gks;             /* (Its command line's: the parser's request's seq, each line's own;
                                                 **   the UI's ui_cmd as it began: a command's answer begun, the next
                                                 **   line's keys a hold of their own) */
 #define UI_HOLD         (HUB->ui_cmd | HUB->ui_keys)    /* (A command in hand, or a line being typed from its first key
@@ -4437,7 +4437,8 @@ int main (int argc, char* argv[])
         turns = !HUB->tpr;
         g = HUB->den_go;
         act = !turns || g != gone;              /* (At the turns pace, only in its turn: the world's word, den_go) */
-        if (HUB->cq.seq != gsq || HUB->ui_cmd != gcm) {
+        if (HUB->cq.seq != gsq || HUB->ui_cmd != gcm || HUB->ui_keys != gks) {
+            gks = HUB->ui_keys;                 /* (A line typed again: its own hold, hub.h's ui_keys) */
             gsq = HUB->cq.seq;                  /* (A new line: given way to again, though the last's outlasted
                                                 **   the wait, its command not let go in between; the next line's
                                                 **   keys as the last's answer's begun) */
