@@ -3065,7 +3065,7 @@ unsigned char s_stow_where (void)
     const struct item* p;
     const struct kind* k;
     unsigned c[NWHICH], n, i;
-    unsigned char m, f, s;
+    unsigned char m, f, s, z;
     char b[6];
 
     about ();                                   /* (Before the chooser: a part's call copies this one in again, its data
@@ -3074,6 +3074,8 @@ unsigned char s_stow_where (void)
         return 0;
     }
     f = kind_at (n)->slots;
+    z = kind_at (n)->seen;                      /* (Its size, as it's made out: a pouch holds nothing much bigger than
+                                                **   itself, a sword not, whatever its pints) */
     for (m = 0, i = 1; i < ihigh; ++i) {
         p = item_at (i);
         if (i == n || !p->kind || !p->id || (p->shut & IS_CLOSED) || (i != pack && (!belt || p->where != IW_ITEM ||
@@ -3082,7 +3084,8 @@ unsigned char s_stow_where (void)
         }
         k = kind_at (i);
         s = k->slots;                           /* (Kept: the kind's copy o_fits's to use again) */
-        if (!(k->flags & K_CONTAINER) || (k->keeps & KF_ON) || (cat_map (), o_fits (n, i))) {
+        if (!(k->flags & K_CONTAINER) || (k->keeps & KF_ON) || (i != pack && !s && z > k->seen + 1) ||
+            (cat_map (), o_fits (n, i))) {
             continue;
         }
         if (f && s == f) {                      /* (Made for its family, worn and free: first) */

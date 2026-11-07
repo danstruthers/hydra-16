@@ -747,7 +747,7 @@ line kept (the UI bank's which_*); a capital, a number or a state word answers i
 capital where its thing's word was (letters.c's which_in).  The first words "You look them over." when several lie in
 reach.  Several letters in a line ("drop d e f", "take B C", step 6) each their own line, in turn; "letter d as t" swaps
 two letters (the UI bank's low and lowt, and ix: caps.c's).  Stowing (step 7): a stow with no place said, a holder made
-for the thing's family worn on the belt and free taken first (part 35's stow_where: the request made a put into it by its
+for the thing's family worn on the belt and free taken first (part 74's stow_where: the request made a put into it by its
 id); two or more places it fits (the pack, a pouch on the belt), IR_WHICH, "Stow it where? (b) the backpack, (f) the
 pouch", a letter answering it ("put h in f").
 

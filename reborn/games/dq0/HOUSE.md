@@ -944,7 +944,8 @@ world's answer follows.  The word is said before the world's asked, and holds wh
   if worn."; the plan's step 7): "stow" (put away) with no place said: a holder made for the thing, worn on the belt and
   free, takes it without asking (a sheath a knife or a dagger, a scabbard a sword, a quiver arrows); else, if more than
   one of the places worn could hold it (the backpack, a pouch on the belt: its size, its weight, what it keeps; one
-  tied shut not), "Stow it where? (b) the backpack, (f) the pouch", and one key answers ("f": put it in the pouch); one
+  tied shut not; *(new, for review:)* a pouch nothing much bigger than itself, by how far off each is made out: a dagger,
+  a candle, coins, yes; a torch, a sword, a sack, no), "Stow it where? (b) the backpack, (f) the pouch", and one key answers ("f": put it in the pouch); one
   place only, there, no question.
 
 ## Characters *(hmchar: HarnMaster's character generator)*

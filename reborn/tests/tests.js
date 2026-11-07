@@ -6145,7 +6145,7 @@ module.exports = {
       name: 'dq0equip', meaning: true, what: 'Dingus Quest Zero\'s things handled (the world\'s item store, dq0w/things.c), by where each one is and its state (held, worn, lit: the store\'s records) and what the world said to each (ireq\'s result: done or refused): a kit of things more (dq0 -k, commas between: a table held in both hands, the rest in the pack); a table put down and a candle put on it, taken from it again; a cloak worn and taken off; a basket held that won\'t keep sand, a waterskin that won\'t take a dagger, a quiver hung on the belt and arrows put in it, a candle that won\'t hang, a dagger not taken in hand with the hands full, the pack not into the basket that\'s in it; then down to a dark place: the torch put out (dark), a candle lit (out of the pack into a hand: light), the torch lit, put down lit (its light lies about it, the room still seen with the candle out), taken up again (their words: dq0wordsthings)',
       init: 't_rc', cycles: 1200e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k table,basket,sand,cloak,candle,quiver,arrows',
-        'drop table', 'put the candle on the table', 'look', 'take the candle from the table', 'stow the candle', 'wear cloak', 'hold basket', 'put sand in basket',
+        'drop table', 'put the candle on the table', 'look', 'take the candle from the table', 'stow the candle', 'b', 'wear cloak', 'hold basket', 'put sand in basket',
         'put the dagger in the waterskin', 'hang the quiver on my belt', 'put arrows in quiver', 'hang the candle', 'wield the dagger', 'stow basket',
         'put the backpack in the basket', 'take the cloak off', 'stow cloak', 'd', 'douse the torch', 'light the candle', 'light torch',
         'drop the torch', 'douse candle', 'look', 'get torch', 'quit', 'echo $status']) },
@@ -6162,7 +6162,8 @@ module.exports = {
         if (!dq0Here(dt.after).some(i => i.name === 'table')) f.push('the table not put down');
         if (holder(put('put the candle on the table', 'IO_PUT', 'IR_OK'), 'candle') !== 'table') f.push('the candle not on the table');
         if (holder(put('take the candle from the table', 'IO_TAKE', 'IR_OK'), 'candle') === 'table') f.push('the candle not taken from the table');
-        if (holder(put('stow the candle', 'IO_STOW', 'IR_OK'), 'candle') !== 'backpack') f.push('the candle not stowed in the pack');
+        put('stow the candle', 'IO_STOW', 'IR_WHICH');   // (The pack or the pouch: asked where, the designators' step 7, its answer the pack)
+        if (holder(put('b', 'IO_PUT', 'IR_OK'), 'candle') !== 'backpack') f.push('the candle not stowed in the pack');
         flags(put('wear cloak', 'IO_DON', 'IR_OK'), 'cloak', I.WORN, 0, 'worn');
         flags(put('hold basket', 'IO_HOLD', 'IR_OK'), 'basket', I.HELD, 0, 'held');
         if (holder(put('put sand in basket', 'IO_PUT', 'IR_NO'), 'heap of sand') !== 'backpack') f.push('the sand moved into the basket');
@@ -8868,7 +8869,7 @@ module.exports = {
       name: 'dq0wordsthings', what: 'Dingus Quest Zero\'s words, a test about wording alone: the things\', the names\', the pace\'s and the help\'s, in one game (seed 3, dq0 -T, a kit of things more: dq0 -k): a portcullis and a door behind, told apart by how far off each is; what\'s carried listed (worn, held in both hands, in and on what, the load: the kit\'s rations a pound each, slice 4.1\'s counted lots; the arrows one arrow); a table put down and a candle put on it, taken from it; a cloak worn and taken off, a basket held, the sand it won\'t keep, the waterskin that won\'t take a dagger, a quiver hung and arrows put in it, a candle that won\'t hang, hands full, the pack not into the basket in it; a sword named Linda (shown so in what\'s carried, no mark of its number), names that clash refused with why; a thing that isn\'t there, a coat not worn, a word the game doesn\'t know; the status (pace, watching, condition, light); a jog, held to a slow walk while it searches; a run set as it goes, its look as it ends a brief one (no ceiling), going on at it unsaid; the help (dq0equip\'s, dq0items\', dq0names\', dq0talk\'s, dq0choose\'s, dq0pace\'s and dq0steps\' words)',
       init: 't_rc', cycles: 1000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k table,basket,sand,cloak,candle,quiver,arrows,sword',
-        'face north and east', 'walk to the door behind me', 'i', 'drop table', 'put the candle on the table', 'look', 'take the candle from the table', 'stow the candle',
+        'face north and east', 'walk to the door behind me', 'i', 'drop table', 'put the candle on the table', 'look', 'take the candle from the table', 'stow the candle', 'b',
         'wear cloak', 'hold basket', 'put sand in basket', 'put the dagger in the waterskin', 'hang the quiver on my belt', 'put arrows in quiver', 'hang the candle',
         'wield the dagger', 'stow basket', 'put the backpack in the basket', 'take the cloak off', 'stow cloak', 'name my sword Linda', 'name the dagger as linda',
         'name the dagger Torch', 'name the dagger kobold', 'name the dagger north', 'i', 'examine the moon', 'take off my coat', 'foo', 'status', 'jog',
@@ -8879,7 +8880,7 @@ module.exports = {
         inTurn(o, ['> walk to the door behind me', 'You head for the door.', '> i', 'You carry: (a) a torch (lit), in your left hand (b) a backpack, worn (c) 3 rations (d) a tinderbox (k) a basket (l) a heap of sand',
           '(q) a sword (r) a torch (s) a flask of oil (e) a belt, worn (f) a pouch (g) 12 pennies (h) a dagger (i) a waterskin (empty) (j) a table, in both hands In all, 60 lb.', '> drop table', 'You put down the table.',
           '> put the candle on the table', 'You put the candle on the table.', '> look', 'At your feet lies a table. On the table lies a candle.',
-          '> take the candle from the table', 'You take the candle from the table. It\'s in your hand.', '> stow the candle', 'You stow the candle in your backpack.', '> wear cloak', 'You put on the cloak.',
+          '> take the candle from the table', 'You take the candle from the table. It\'s in your hand.', '> stow the candle', 'Stow it where? (b) the backpack, (f) the pouch', '> b', 'You stow the candle in your backpack.', '> wear cloak', 'You put on the cloak.',
           '> hold basket', 'You take the basket in your right hand.', '> put sand in basket', 'The basket won\'t keep the heap of sand: it would run out.',
           '> put the dagger in the waterskin', 'The dagger won\'t go in the waterskin.', '> hang the quiver on my belt', 'You hang the quiver from your belt.',
           '> put arrows in quiver', 'You put the arrows in the quiver.', '> hang the candle', 'The candle won\'t hang from a belt.', '> wield the dagger',
@@ -10992,7 +10993,7 @@ module.exports = {
         'drop the pack', 'take the tinderbox from the backpack', 'drop the tinderbox', 'put on the pack', 'drop the torch',
         'take off the pack', 'look in the pack', 'put on the pack', 'quit',
         'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'drop the sword', 'wait']) +
-        'hold the dagger\rstow the dagger\rdrop the backpack\rtake the rations from the backpack\rquit\r' + dq0Typed(['echo $status']) },
+        'hold the dagger\rput the dagger in the backpack\rdrop the backpack\rtake the rations from the backpack\rquit\r' + dq0Typed(['echo $status']) },   // (Put in the pack, said: a stow asks where, the pouch or the pack, the designators' step 7)
       start(m) {
         dq0Poke(m, [{ g: 2, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } }]);   // (The ghoul steady: hub.h's AM_STEADY)
       },
@@ -11043,7 +11044,7 @@ module.exports = {
         // (The worn pack: its steps a round each, dq0packsteps': off, held open, the stowing, on; and from the pack on the ground, a level)
         const steps = late.flatMap(t => dq0Rep(t, 'ireq', { kind: 'IO_STEP' }));
         if (steps.length < 2 || steps.some(r => r.x !== 100)) f.push('engaged, the steps not a round each: ' + JSON.stringify(steps.map(r => [r.qty, r.x])));
-        if (!late.some(t => rep(t, 'IO_STOW'))) f.push('the dagger not stowed in the fight');
+        if (!late.some(t => rep(t, 'IO_PUT'))) f.push('the dagger not put in the pack in the fight');
         if (!late.some(t => rep(t, 'IO_TAKE'))) f.push('the rations not taken from the pack on the ground in the fight');
         if (!late.some(t => rep(t, 'IO_DROP'))) f.push('the pack not dropped in the fight');
         const hw = (m.hearts || []).find(h => h.g === 2 && h.line === 'wait');
