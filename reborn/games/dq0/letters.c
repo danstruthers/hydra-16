@@ -50,6 +50,8 @@
 /* ==== The main RAM's: the line's letters, made its things' names (o_letters_in's), for the requests and the resolver */
 struct ldes ldes[NDES];
 unsigned char ndes;
+unsigned char den_meant;                        /* (The actor a capital named, plus 1, | SWA_MEANT; 0 none: the sway's,
+                                                **   main.c's deal: "talk to B") */
 char capb[6];                                   /* (A capital's words, "(C) ": o_cap_of's, for overlay 12's look) */
 
 /* ==== Overlay 22's (its own, 2026-11-06: the designators'): a line's letters made its things' names (every line's, as
@@ -70,11 +72,7 @@ static unsigned char offer[(NLET + 7) / 8];     /* (The letters it offered, a bi
 static char o[INMAX + 32];                      /* (The line made, and the question's words) */
 static char w[16];
 static unsigned char ts[16], tl[16];            /* (The line's words: where each begins, its length) */
-static struct ucap capc[NLET];                  /* (The UI bank's cap, copied in) */
-static unsigned char cseq, cmade;               /* (The look they're copied for, sight_copy's seq; 1, once copied) */
-static unsigned sid[SEE_ITEMS];                 /* (The things in sight: their ids, */
-static unsigned char skind[SEE_ITEMS];          /*   their kinds) */
-static unsigned cnow;                           /* (The clock's stamp: its tenths over 1024) */
+static struct ucap c1;                          /* (A capital typed: the UI bank's cap's, copied in) */
 static char desb[16];                           /* (A request's word as des_req made it: "#" and an id; its other's) */
 static unsigned char desk;                      /* (The letter des_put found last: its place plus 1, or 0) */
 static void __fastcall__ to_hub (unsigned char bank, void* to, const void* from, unsigned n);
@@ -92,6 +90,40 @@ unsigned char __fastcall__ o_des_find (const char* w, unsigned char k)
     return 0;
 }
 
+/* Thing t (the command's, or its other: resolve.c's find_thing) named by a letter?  0 not; 1 so, a thing's (the world's
+** to find by its id), or a denizen's in sight (t its name and its square, found: the user's designators, 2026-11-06,
+** "attack B"); 2 a denizen's not in sight now, refused, told */
+unsigned char __fastcall__ o_des_thing (struct cthing* t)
+{
+    static const struct sden* q;
+    static const struct ldes* d;
+    static unsigned char k;
+
+    if (!(k = o_des_find (t->word, 0))) {
+        return 0;
+    }
+    if ((d = ldes + k - 1)->id < CAP_DEN (0)) {
+        return 1;
+    }
+    for (q = sight_copy.den; q < sight_copy.den + sight_copy.ndens; ++q) {
+        if (CAP_DEN (q->den) == d->id) {
+            strcpy (t->word, q->name);
+            t->x = q->x;
+            t->y = q->y;
+            t->sel = SL_THE;
+            for (k = 0; k < NACTORS; ++k) {     /* (Its actor: the sway's, main.c's deal) */
+                from_hub (0, desb, HUB->actor[k].name, sizeof HUB->actor[0].name + 1);
+                if (desb[0] && (unsigned char) desb[sizeof HUB->actor[0].name] == q->den) {
+                    den_meant = (k + 1) | SWA_MEANT;
+                }
+            }
+            return 1;
+        }
+    }
+    msg ("You can't see that one now.");
+    return 2;
+}
+
 /* Is word w a lower-case letter's, its thing carried, for a command done with it (resolve.c's tool_ok: to hand, the world not
 ** asked; but a blow's, a dig's, which want its kind)? */
 unsigned char __fastcall__ o_des_low (const char* w)
@@ -105,7 +137,8 @@ unsigned char __fastcall__ o_des_low (const char* w)
 ** that one: things.c's chooser), into the hub's to (its request's); desk the letter's place plus 1, or 0 */
 static void __fastcall__ des_put (char* to, const char* w, unsigned char k)
 {
-    if ((desk = o_des_find (w, k)) != 0) {
+    if ((desk = o_des_find (w, k)) != 0 && ldes[desk - 1].id < CAP_DEN (0)) {   /* (Not a denizen's: the resolver's,
+                                                **   o_des_thing) */
         desb[0] = '#';
         utoa (ldes[desk - 1].id, desb + 1, 10);
         to_hub (0, to, desb, strlen (desb) + 1);
@@ -169,150 +202,6 @@ static void ix_load (void)
     }
     from_ui (ix, UIREC->ix, nix * sizeof (struct cix));
     from_ui (lowc, UIREC->low, sizeof lowc);
-}
-
-/* The things in sight (sight_copy's, as the look's words or the list of them have it): their ids and kinds; the clock's
-** stamp; the capitals copied in: once a look */
-#pragma static-locals (push, off)
-static void caps_load (void)
-{
-    struct item it;
-    unsigned long t;
-    unsigned char k;
-
-    if (cmade && cseq == sight_copy.seq) {
-        return;
-    }
-    cmade = 1;
-    cseq = sight_copy.seq;
-    for (k = 0; k < sight_copy.nitems; ++k) {
-        hub_mem (ITEM_BANK (sight_copy.item[k].n), &it, ITEM_AT (sight_copy.item[k].n), sizeof it);
-        sid[k] = it.id;
-        skind[k] = it.kind;
-    }
-    hub_mem (0, &t, &HUB->now, sizeof t);
-    cnow = (unsigned) (t >> 10);
-    from_ui (capc, UIREC->cap, sizeof capc);
-}
-#pragma static-locals (pop)
-
-/* Thing id's capital (what: CW_THING; the denizens', step 4's, CW_DEN; kind its kind): its own, told again now; else a new
-** one, of A ... Z the first free, else the one told longest ago (6 stamps at least, some ten minutes) that isn't in sight,
-** then of AA ... AZ the same way (the UI bank's written).  Its place, or NLET (none) */
-static unsigned char __fastcall__ cap_give (unsigned id, unsigned char what, unsigned char kind)
-{
-    static unsigned char j, e, b, k;
-    static unsigned o, d;
-
-    if (!id) {
-        return NLET;
-    }
-    for (j = 0; j < NLET && (capc[j].id != id || capc[j].what != what); ++j) {
-    }
-    for (e = 0; j == NLET && e < NLET; e += NLET / 2) {
-        for (b = NLET, o = 5, j = e; j < e + NLET / 2 && capc[j].id; ++j) {
-            for (k = 0; k < sight_copy.nitems && sid[k] != capc[j].id; ++k) {
-            }
-            if (k == sight_copy.nitems && (d = cnow - capc[j].t) > o) {
-                o = d;                          /* (Told the longest ago, a while ago, not in sight) */
-                b = j;
-            }
-        }
-        if (j == e + NLET / 2) {
-            j = b;
-        }
-    }
-    if (j < NLET && (capc[j].id != id || capc[j].t != cnow)) {
-        capc[j].id = id;
-        capc[j].what = what;
-        capc[j].kind = kind;
-        capc[j].t = cnow;
-        to_ui (UIREC->cap + j, capc + j, sizeof capc[0]);
-    }
-    return j;
-}
-
-/* Thing i of those in sight (sight_copy's) its capital, "(C) ", into capb (the main RAM's): the look's words', seen.c's
-** one (overlay 12's); "" none */
-const char* __fastcall__ o_cap_of (unsigned char i)
-{
-    static unsigned char j;
-
-    caps_load ();
-    capb[0] = 0;
-    if (i < sight_copy.nitems && (j = cap_give (sid[i], CW_THING, skind[i])) < NLET) {
-        capb[0] = '(';
-        strcat (let_text (capb + 1, j, 'A'), ") ");
-    }
-    return capb;
-}
-
-/* What's in sight listed, one a line, its capital and where it is ("around", the user's "a list of all in sight":
-** "(C) a torch (lit), at your feet", "(D) an iron pot, ahead to your left, 15 feet away", "(E) a candle, on the table";
-** one too far off to make out by its size, "(F) something small, ahead, 40 feet away").  The denizens' to come (the
-** plan's step 4) */
-void o_around (void)
-{
-    static const char* const rel[8] = {
-        "ahead", "ahead to your right", "to your right", "behind you to your right", "behind you",
-        "behind you to your left", "to your left", "ahead to your left"
-    };
-    static const struct sitem* q;
-    static unsigned char i, j, k, d, sz;
-    static int dx, dy;
-
-    sight_get ();
-    caps_load ();
-    if (!sight_copy.nitems) {
-        msg ("You see nothing lying about.");
-        return;
-    }
-    for (i = 0; i < sight_copy.nitems; ++i) {
-        q = sight_copy.item + i;
-        o[0] = 0;
-        if ((j = cap_give (sid[i], CW_THING, skind[i])) < NLET) {
-            o[0] = '(';
-            strcat (let_text (o + 1, j, 'A'), ") ");
-        }
-        dx = q->x - sight_copy.x;
-        dy = q->y - sight_copy.y;
-        dx = dx < 0 ? -dx : dx;
-        dy = dy < 0 ? -dy : dy;
-        d = dx > dy ? dx : dy;
-        sz = q->hid >> 4;
-        if (!(q->hid & 1) && d > 1 + sight_copy.eye / 2 + sz) {   /* (Too far off to make out: by its size, seen.c's) */
-            strcat (o, sz <= 2 ? "something small" : sz >= 5 ? "something large" : "something");
-        } else {
-            strcat (o, q->qty > 1 ? utoa (q->qty, w, 10) : q->plural ? "some" : strchr ("aeiou", q->name[0]) ? "an" : "a");
-            strcat (o, " ");
-            strcat (o, q->name);
-            if (q->hid & 4) {
-                strcat (o, " (lit)");
-            }
-        }
-        strcat (o, ", ");
-        if (q->hid & 2) {                       /* (On the thing before it) */
-            for (k = i; k && (sight_copy.item[k].hid & 2); --k) {
-            }
-            strcat (strcat (o, "on the "), sight_copy.item[k].name);
-        } else {
-            strcat (o, q->hid & 1 ? "hidden " : "");
-            if (q->rel == 0xFF) {
-                strcat (o, "at your feet");
-            } else {
-                strcat (o, rel[q->rel & 7]);
-                if (d > 1) {
-                    strcat (strcat (strcat (o, ", "), utoa (5 * d, w, 10)), " feet away");
-                }
-            }
-        }
-        if (i) {
-            say ("\n");
-            say (o);
-        } else {
-            msg (o);
-        }
-    }
 }
 
 /* The letter text t (n letters) names: its place, 0 ... NLET - 1; or NLET (none) */
@@ -396,12 +285,14 @@ void __fastcall__ o_letters_in (char* l)
     static const char ways[] = "go\0walk\0run\0move\0sprint\0crawl\0sneak\0step\0turn\0face\0look\0peer\0climb\0dig\0"
         "head\0jump\0swim\0flee\0";
     static const char* p;
+    static const struct sden* dq;
     static unsigned char nt, i, j, e, n, c, nd, loaded, up, ok;
     static unsigned id;
 
     if (cq_st) {
         return;                                 /* (Posted already: its letters made names then) */
     }
+    den_meant = 0;
     for (nd = nt = 0, p = l; *p && nt < sizeof ts; ) {  /* (Its words; nd, one after the first that may be a letter) */
         if (*p == ' ') {
             ++p;
@@ -463,17 +354,28 @@ void __fastcall__ o_letters_in (char* l)
             j = let_at (p + c, n - c);
             ok = 0;
             if (j < NLET && up) {
-                from_ui (capc + j, UIREC->cap + j, sizeof capc[0]);   /* (Its capital alone: the line's the sooner
-                                                **   to the parser) */
+                from_ui (&c1, UIREC->cap + j, sizeof c1);   /* (Its capital alone: the line's the sooner to the
+                                                **   parser) */
             } else if (j < NLET && !loaded) {
                 ix_load ();
                 loaded = 1;
             }
-            if (j < NLET && up && capc[j].id && capc[j].what == CW_THING) {   /* (A capital: a thing seen, its kind's
+            if (j < NLET && up && c1.id && c1.what == CW_THING) {   /* (A capital: a thing seen, its kind's
                                                 **   name from the catalogue's) */
-                id = capc[j].id;
+                id = c1.id;
                 ok = 1;
-                from_hub (KIND_BANK, w, CATALOGUE[capc[j].kind].name, sizeof CATALOGUE[0].name);
+                from_hub (KIND_BANK, w, CATALOGUE[c1.kind].name, sizeof CATALOGUE[0].name);
+            } else if (j < NLET && up && c1.what == CW_DEN) {   /* (A denizen seen: its name as last seen, the
+                                                **   resolver's to find, o_des_thing; out of sight, any word) */
+                id = c1.id;
+                ok = 1;
+                strcpy (w, "creature");
+                for (dq = sight_copy.den; dq < sight_copy.den + sight_copy.ndens; ++dq) {
+                    if (CAP_DEN (dq->den) == id) {
+                        strcpy (w, dq->name);
+                        *w |= 0x20;             /* ("grub": an ally's name, the parser's case) */
+                    }
+                }
             } else if (j < NLET && !up && (e = let_e (j)) < nix && ix[e].kind < NIXK) {
                 id = lowc[j] & LT_REC ? 0 : lowc[j];    /* (One with no id yet: by its name, the world's to choose) */
                 ok = 1;

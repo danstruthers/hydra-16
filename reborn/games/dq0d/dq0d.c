@@ -4239,8 +4239,9 @@ void s_sway (void)
 
     hub_map (0);
     memcpy (&sw, &HUB->sway, sizeof sw);
-    if (sw.kind > SW_GIVE) {
-        n = sw.actor;                           /* (The market's: its actor found, plus 1, 2026-11-02) */
+    if (sw.kind > SW_GIVE || (sw.actor & SWA_MEANT)) {
+        n = sw.actor & ~SWA_MEANT;              /* (The market's: its actor found, plus 1, 2026-11-02; or the one a
+                                                **   capital named, the user's designators, 2026-11-06: "talk to B") */
     }
     sw.result = SR_OK;
     sw.grade = 0;

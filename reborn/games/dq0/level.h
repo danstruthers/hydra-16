@@ -83,8 +83,10 @@ struct sight {
     unsigned        x, y;                       /* Its square */
     unsigned char   ndens;                      /* The denizens it sees: each one's square, what it's doing (DO_*),
                                                 **   its name (the hub's actor's, as it lies there) */
-    struct sden { unsigned x, y; unsigned char doing; char name[12]; unsigned char gear; } den[SEE_DENS];
-                                                /* (gear: the hub's agear, its things at a look, AG_*: 2026-10-27) */
+    struct sden { unsigned x, y; unsigned char doing; char name[12]; unsigned char den, gear; } den[SEE_DENS];
+                                                /* (den: the actor's record, the denizens' task's: its capital's,
+                                                **   the user's designators, 2026-11-06; gear: the hub's agear, its
+                                                **   things at a look, AG_*: 2026-10-27) */
     unsigned char   ntraps;                     /* The traps it knows of and sees (world.h's TK_*, TT_*, TS_*) */
     struct { unsigned char rel, kind, trigger, state; } trap[SEE_TRAPS];
     unsigned        rx, ry;                     /* A room's: its floor's northwest square (the room known by it: the

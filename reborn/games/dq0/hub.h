@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     54                    /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     55                    /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -72,7 +72,8 @@
                                                 **   39, a room searched whole: SF_ROOM, SF_TRAPS, WB_SEARCH, RSW_*, RC_*,
                                                 **   IOS_*; 53, LT_DIP, SL_SPENT, SL_FULL, the UI bank's ix (what's
                                                 **   carried: the UI's first words), a thing told apart, AW_*; 54, the letters: the UI bank's low and
-                                                **   cap, struct cix's let, NLET, LT_REC, struct ucap, CW_*) */
+                                                **   cap, struct cix's let, NLET, LT_REC, struct ucap, CW_*;
+                                                **   55, the denizens' capitals: struct sden's den) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -1203,8 +1204,10 @@ struct sway {
     unsigned        item, ix, iy;               /* (The UI's: a thing to fetch, its item and where it lies; a gift's
                                                 **   worth in farthings, ix, and 1 if it's food, iy; slice 4.8's) */
     unsigned char   actor;                      /* (The reply's: the actor it was, plus 1; the market's request: the
-                                                **   one the goods were found on, plus 1) */
+                                                **   one the goods were found on, plus 1; another's, the one a
+                                                **   capital named, plus 1, | SWA_MEANT: the UI's den_meant) */
 };
+#define SWA_MEANT       0x80
 #define SW_COIN(s)      (((unsigned*) (s)->word2)[0])   /* (The market's, in word2, its words the UI's own: the */
 #define SW_ITS(s)       (((unsigned*) (s)->word2)[1])   /*   character's pennies and the actor's, their counts: */
 #define SW_NCOIN(s)     ((s)->word2[4])                 /*   2026-11-02, the denizens' main RAM's room) */
@@ -1676,6 +1679,8 @@ struct ucap {
                                                 **   ago given up first) */
 };
 enum { CW_NONE, CW_THING, CW_DEN };
+#define CAP_DEN(r)      (0xFF00U | (r))         /* (A denizen's capital's id: its actor's record, struct sden's den; never
+                                                **   a thing's, under 0x8000, nor a thing's record's, LT_REC's) */
 
 /* The UI's bank's records (UI_BANK) */
 struct uirec {

@@ -15,7 +15,7 @@
             .include    "ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 22                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
+OVMAX       = 23                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
@@ -117,7 +117,6 @@ ovl_out:
             OVFN        list_say, 16        ; (What's carried told, in pieces: words.c, 2026-11-03)
             OVFN        more, 16            ; (The commands past main.c's chores: words.c's, overlay 2's room, 2026-11-01)
             OVFN        stir_words, 9
-            OVFN        heard_words, 9
             OVFN        den_words, 9
             OVFN        seen_words, 12
             OVFN        pick, 7
@@ -157,11 +156,13 @@ ovl_out:
             OVFN        walk_ahead, 20      ; (A command's first words by what it carries: sway.c, 2026-11-06)
             OVFN        letters_in, 22      ; (A line's letters made its things' names: letters.c, 2026-11-06)
             OVFN        what_ask, 22        ; (A command with nothing named asked about: letters.c)
-            OVFN        des_find, 22        ; (A word a letter made: letters.c)
+            OVFN        des_thing, 22       ; (A thing a letter named, a denizen's found: letters.c)
             OVFN        des_low, 22
             OVFN        des_req, 22
-            OVFN        cap_of, 22          ; (A thing in sight's capital, the look's: letters.c)
-            OVFN        around, 22          ; (What's in sight listed: letters.c)
+            OVFN        cap_of, 23          ; (A thing in sight's capital, the look's: caps.c, overlay 22's till 2026-11-06)
+            OVFN        around, 23          ; (What's in sight listed: caps.c)
+            OVFN        den_caps, 23        ; (The denizens' capitals, the look's: caps.c)
+            OVFN        heard_words, 23     ; (A denizen heard: caps.c, overlay 9's till 2026-11-06, its room for the capitals)
             OVFN        dots, 3            ; (The game's start's progress: main.c's)
 
 ; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)

@@ -2884,9 +2884,9 @@ function dq0OvlBanks(m) {
     for (let k = 0; k < n; k++) {
       const b = m.taskBankMem(t, m.taskRam[t][parseInt(lbl[1], 16) + k]), w = want(k);
       let d = -1;
-      const data = name === 'dq0' && k === 21 && /^OV22BSS\s+00([89A-F][0-9A-F]{3})/m.exec(fs.readFileSync(path.join(root, 'obj', 'games', name, name + '.map'), 'latin1'));
+      const data = name === 'dq0' && (k === 21 || k === 22) && new RegExp('^OV' + (k + 1) + 'BSS\\s+00([89A-F][0-9A-F]{3})', 'm').exec(fs.readFileSync(path.join(root, 'obj', 'games', name, name + '.map'), 'latin1'));
       const end = name === 'dq0' && k === 4 ? 0x1000 : data ? parseInt(data[1], 16) - 0x8000 : 0x2000;  // (dq0's fifth: its second half the theme's, read in
-                                                // as it starts: theme.h's THEME_PLACE; its 22nd's data, OV22BSS, last: the designators', written as it goes)
+                                                // as it starts: theme.h's THEME_PLACE; its 22nd's and 23rd's data, OV22BSS, OV23BSS, last: the designators', written as it goes)
       for (let i = 0; i < end && d < 0; i++) if (!b || b[i] !== w[i]) d = i;
       if (d >= 0) { bad++; out.push(name + '\'s overlay ' + (k + 1) + ' not as ld65 made it, from $' + (0x8000 + d).toString(16).toUpperCase()); }
     }
@@ -3328,10 +3328,11 @@ function dq0AnswerTest(baud) {
 const TORCHX = ['inventory', 'drop torch', 'take torch', 'inventory', 'wait 2 hours', 'light a new torch', 'take the spent torch from the ground', 'drop the spent torch',
   'drop the lit torch', 'take the spent torch from the floor', 'drop torch', 'take the lit torch', 'hold the tinderbox', 'take torch', 'inventory', 'douse the torch', 'light the torch',
   'inventory', 'take spent torch from backpack', 'put the rope in the backpack', 'put the tinderbox in the backpack', 'dip the spent torch in the oil', 'inventory'];   // (dq0torchwords' lines: the user's playtest, 2026-11-06)
-const LETSIGHT = ['drop j', 'drop c', 'drop b', 'look', 'around', 'take 5C', 'drop c', 'around', 'take 2C', 'drop rations', 'take torch from B', 'drop k',
-  'take D', 'around', 'inventory'];   // (dq0letsight's lines)
+const LETSIGHT = ['drop j', 'drop c', 'drop b', 'look', 'around', 'take 5F', 'drop c', 'around', 'take 2F', 'drop rations', 'take torch from E', 'drop k',
+  'take G', 'around', 'inventory'];   // (dq0letsight's lines: the rats seen first, A, B, C, 2026-11-06's step 4)
 const LETCMD = ['inventory', 'drop j', 'inventory', 'take torch', 'put j in b', 'inventory', 'take j from b', 'light j with a', 'drop 2c', 'look d',
   'drop', 'k', 'take off', 'look', 'drop the lit torch', 'inventory'];   // (dq0letcmd's lines)
+const LETDENS = ['look', 'around', 'look at B', 'talk to C', 'attack C', 'attack A', 'around'];   // (dq0letdens' lines)
 const LETTERX = [['inventory', 'drop the pick', 'inventory', 'take the pick', 'inventory', 'quit'],   // (dq0letters' lines: a game, carried on, the
   ['inventory', 'drop the hatchet', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u'], ['inventory', 'quit']];   //   next dungeon)
 module.exports = {
@@ -7981,24 +7982,78 @@ module.exports = {
         }
         this.notes = LETSIGHT.map((l, i) => l + ': ' + seg[i].slice(0, 400));
         const said = (k, re, from = 0) => { const n = LETSIGHT.indexOf(k, from); if (!re.test(seg[n])) f.push(k + ': not ' + re + ': ' + seg[n].slice(0, 300)); };
-        said('look', /At your feet lie \(B\) a backpack, \(C\) 3 rations and \(D\) a torch\./);
-        said('look', /\(A\) some bones/);
-        said('around', /^\(B\) a backpack, at your feet \(C\) 3 rations, at your feet \(D\) a torch, at your feet \(A\) some bones, ahead to your right/);
-        said('take 5C', /There are only 3 there; you take them all\./);
+        said('look', /At your feet lie \(E\) a backpack, \(F\) 3 rations and \(G\) a torch\./);
+        said('look', /\(D\) some bones/);
+        // (A ... C the giant rats', seen as the game starts: the denizens' capitals first, step 4's)
+        said('around', /\(E\) a backpack, at your feet \(F\) 3 rations, at your feet \(G\) a torch, at your feet \(D\) some bones, ahead to your right/);
+        said('take 5F', /There are only 3 there; you take them all\./);
         said('drop c', /^You put down/, 6);                   // (Taken up, its letter again)
-        said('around', /\(C\) 3 rations, at your feet/, 6);  // (Put down again: its old capital)
-        said('take 2C', /You take 2 rations\./);
-        said('take torch from B', /torch/);
-        if (/You see no|none of those|hands are full/.test(seg[LETSIGHT.indexOf('take torch from B')])) f.push('take torch from B: not taken: ' + seg[LETSIGHT.indexOf('take torch from B')]);
-        said('take D', /Taken\./);
-        said('around', /\(E\) a torch, at your feet/, 12);  // (The spare put down: a capital of its own)
-        if (/\(D\)/.test(seg[LETSIGHT.indexOf('around', 12)])) f.push('the torch taken up still told in sight: ' + seg[LETSIGHT.indexOf('around', 12)]);
+        said('around', /\(F\) 3 rations, at your feet/, 6);  // (Put down again: its old capital)
+        said('take 2F', /You take 2 rations\./);
+        said('take torch from E', /torch/);
+        if (/You see no|none of those|hands are full/.test(seg[LETSIGHT.indexOf('take torch from E')])) f.push('take torch from E: not taken: ' + seg[LETSIGHT.indexOf('take torch from E')]);
+        said('take G', /Taken\./);
+        said('around', /\(H\) a torch, at your feet/, 12);  // (The spare put down: a capital of its own)
+        if (/\(G\)/.test(seg[LETSIGHT.indexOf('around', 12)])) f.push('the torch taken up still told in sight: ' + seg[LETSIGHT.indexOf('around', 12)]);
         said('inventory', /\(j\) a torch, in your right hand/);
         const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETSIGHT],
           LETSIGHT.map(l => ({ line: l, want: 'You|Taken|Put|There|(' })));
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first);
           if (!/^(inventory|look|around)/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0letdens', near: ['denizens', 'parser'], what: "Dingus Quest Zero's designators, step 4 (the user's design, 2026-11-06, DECISIONS.md's: \"denizens numbered first\"): at seed 3 (-T) three giant rats in sight, each a capital before the things' (the bones'), shown in the look's sentences ((A, C) Two giant rats ... (B) A giant rat ...) and in around, one a line with where it is; a capital where a denizen's name goes (look at B: how it seems, the one named, the denizens' task told which; talk to C); two rats told apart and each attacked by its letter (the scene set: both senseless beside the character, A to its left, C to its right: attack C finishes C and not A, then attack A finishes A); a capital kept while it's remembered (B still B); each first letter within the user's 720,000 cycles",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', ...LETDENS, 'quit', 'echo $status']) },
+      start(m) {
+        this.timer = dq0Timer(m);
+        const self = this;
+        self.dead = {};
+        // (The capital's actor: its record the UI bank's cap's id, CAP_DEN's, the actor's record the byte after its name)
+        const capk = (h, L, at, c) => { const u = m.dq0.bank(L.uiBank), o = L.uCap + c * L.ucapSize, id = u[o] | u[o + 1] << 8;
+          return id >= 0xFF00 && u[o + 2] === 2 ? [...Array(L.nactors).keys()].find(j => h[at(j) + L.aName] && h[at(j) + L.aName + 12] === (id & 255)) : undefined; };
+        const wary = (h, L) => { for (let k = 0; k < L.nactors; k++) if (h[L.actor + k * L.actorSize + L.aName]) h[L.actor + k * L.actorSize + L.aAttitude] = 2; };
+        const pa = { g: 1, line: 'attack C', n: 1, beside: 0, senseless: 6000 }, pc = { g: 1, line: 'attack C', n: 1, beside: 0, senseless: 6000 };
+        const at0 = { g: 1, line: 'attack C', n: 1, call: (h, L, K, at) => { wary(h, L); pa.k = capk(h, L, at, 0); pc.k = capk(h, L, at, 2); pa.beside = (h[L.pcFace] + 6) & 7; pc.beside = (h[L.pcFace] + 2) & 7; self.ka = pa.k; self.kc = pc.k; } };
+                const note = (line, n = 1) => ({ g: 1, line, n, call: (h, L, K, at, named) => { wary(h, L); self.dead[line] = [self.ka, self.kc].map(k => k === undefined ? '?' : named(k) ? 'up' : 'gone'); } });
+        dq0Poke(m, ['look', 'around', 'look at B', 'talk to C'].map(line => ({ g: 1, line, n: 1, call: wary })).concat([at0, pa, pc, note('attack A'), note('around', 2), note('quit')]));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
+        let at = 0;
+        for (const l of LETDENS) {
+          let i = o.indexOf('> ' + l + ' ', at);
+          if (i >= 0 && o.startsWith('> ' + l + ' ', i + l.length + 3)) i += l.length + 3;
+          const e = o.indexOf('> ', i + 2);
+          seg.push(i < 0 ? '' : o.slice(i + l.length + 3, e < 0 ? undefined : e));
+          if (i >= 0) at = i + 2;
+        }
+        this.notes = LETDENS.map((l, i) => l + ': ' + seg[i].slice(0, 400)).concat(['actors A, C after each: ' + JSON.stringify(this.dead)]);
+        const said = (k, re, from = 0) => { const n = LETDENS.indexOf(k, from); if (!re.test(seg[n])) f.push(k + ': not ' + re + ': ' + seg[n].slice(0, 300)); };
+        said('look', /\(A, C\) Two giant rats are ahead to your left, 15 feet away\. \(B\) A giant rat is ahead, 10 feet away\./);
+        said('look', /\(D\) some bones/);
+        said('around', /^\(A\) a giant rat, ahead to your left, 15 feet away \(B\) a giant rat, ahead, 10 feet away \(C\) a giant rat, ahead to your left, 15 feet away \(D\) some bones, ahead to your right/);
+        said('look at B', /^The giant rat seems wary of you\./);
+        said('talk to C', /words won't reach it/);
+        said('attack C', /You finish the giant rat where it lies\./);
+        said('attack A', /You finish the giant rat where it lies\./);
+        said('around', /^\(D\) some bones, ahead to your right/, 6);   // (A thing's capital kept; the rats finished gone from it)
+        if (/\((A|C)\) a giant rat/.test(seg[6])) f.push('around: a rat finished still told: ' + seg[6]);
+        const d = this.dead;
+        if (!d['attack A'] || d['attack A'][0] !== 'up' || d['attack A'][1] !== 'gone') f.push('attack C: not C finished and A left: ' + JSON.stringify(d));
+        if (!d['around'] || d['around'][0] !== 'gone') f.push('attack A: A not finished: ' + JSON.stringify(d));
+        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', ...LETDENS],
+          LETDENS.map(l => ({ line: l, want: 'You|The|(' })));
+        for (const r of tm) {
+          this.notes.push(r.line + ': first letter ' + r.first);
+          // (A blow's words the fight's, its first a status line's: as "attack the rat"'s)
+          if (!/^(look|around|attack .)$/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },

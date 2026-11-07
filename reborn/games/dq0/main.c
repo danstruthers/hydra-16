@@ -2058,7 +2058,9 @@ unsigned char __fastcall__ s_deal (unsigned char how)
 {
     struct sway* s = &HUB->sway;
 
-    s->kind = how & ~SW_QUIET;
+    if ((s->kind = how & ~SW_QUIET) <= SW_GIVE) {
+        s->actor = den_meant;                   /* (The one a capital named: that one, letters.c's) */
+    }
     strcpy (s->word, cmd.obj.word);
     s->prep = cmd.prep;
     strcpy (s->word2, cmd.other.word);
@@ -2413,11 +2415,17 @@ portal:
         barw = pa == PA_BAR && things (IO_BAR, "") == IR_NO ? HUB->ireq.x : 0;    /* (The widest bar to hand) */
         work (pa, cmd.obj.kind);
         return;
+    case VB_OBSERVE_OBJECT:                     /* (A thing looked at from here: a denizen as it's examined, "look at
+                                                **   B", the user's designators, 2026-11-06; else chores', way.c's) */
     case VB_EXAMINE_OBJECT:                     /* (A thing looked at closely: judged, by the craft that knows it; a */
     case VB_EXAMINE_LOCALE:                     /*   portal, or its part if it's not there; else the room) */
         if (!cmd.obj.kind && may_den () && deal (SW_LOOK | SW_QUIET) != SR_NONE) {
             gear_look ();                       /* (A denizen it sees: how it seems, then its things as the eyes
                                                 **   make them out from here, part 11's) */
+            return;
+        }
+        if (cmd.action == VB_OBSERVE_OBJECT) {
+            look_way (VB_OBSERVE_OBJECT);
             return;
         }
         if ((pa = look_way (VB_EXAMINE_OBJECT)) != 0) {
