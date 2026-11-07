@@ -451,6 +451,7 @@ extern unsigned char cq_st;                     /* (main.c's: the line posted to
 void __fastcall__ des_req (const char* w);      /* (Overlay 22's) A request's name and its other (the hub's ireq, main.c's
                                                 **   things; w its name as asked) made "#" and the id of the thing a
                                                 **   letter named, if one did */
+void __fastcall__ des_seen (const struct cthing* t);     /* (Overlay 22's) A seen thing the resolver chose, by its id */
 unsigned char __fastcall__ des_thing (struct cthing* t);   /* (Overlay 22's) Thing t named by a letter: 0 not; 1 so (a
                                                 **   denizen's in sight found: its name, its square); 2 a denizen's out
                                                 **   of sight, refused */

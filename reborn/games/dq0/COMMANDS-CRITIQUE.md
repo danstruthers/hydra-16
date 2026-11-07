@@ -638,6 +638,65 @@ another layer. Steps 1–3 are what the designator work needs anyway. Merge them
 | 8 | **Roles from the grammar** (§4.2). Designators recognised by position, case kept for one- and two-letter words; `scan()` and the `strstr(cl…)` readers retired; one noun-phrase rule with chains of locatives and possessives | the letter collisions properly (§4.8 point 5), `<object>`/`<thing>`, "I don't understand" versus "not yet" | medium (assembly) |
 | 9 | **The chain resolver** (§4.9's stretch goal): locative chains and possessives read against the tree, path down then location | `put the trophy in the trophy case on the top shelf`, `the sack in my left hand` | small, once 6b and 8 are in |
 
+### 5.1 The one resolver, against the code as it stands (2026-11-07)
+
+A survey of the code after designators steps 4–7 found **six choosers** deciding what a name means, not four:
+
+| Chooser | Chooses among | Its rule for several | Asks "which?" |
+|---|---|---|---|
+| resolve.c (overlay 11) | things lying about and denizens in sight (`sight_copy`) | nearest, or largest, smallest, nth by selector | for move, approach, target and throw-at only |
+| choose.c (overlay 7) | doors, openings, passages (`door[]`, `open[]`) | the one directly ahead | a numbered list; answered only by a number or a way |
+| letters.c (overlay 22) | carried things (lower case), things and denizens seen (capitals) | exact: a letter is one id | "Drop what? [a, d, f]" |
+| caps.c (overlay 23) | gives the capitals; words the world's "which one?" | none: the world chose | "Which one? (E) a torch (lit), (F) a torch" |
+| sway.c's `ix_pick` | carried things, to say the first words at once | a copy of the world's ranking, carried things only | no |
+| the world's `pick` (dq0w/things.c) | the item store: carried, lying about, remembered | held 0, carried 1 + depth, lying 8 + distance; nth | returns IR_WHICH for caps.c to word |
+
+**Where they disagree**, each with a case a player can hit:
+
+1. **The resolver's choice was erased.** It found the thing, then sent the world the bare name with the selector
+   reset, and the world chose again. "take the closest torch", with a lit one at your feet and an unlit one a step
+   off, asked "Which one?". *Fixed 2026-11-07* (step A below).
+2. **"the second" has three orders:** the resolver's left to right by heading (and only if a denizen is among the
+   candidates), the world's by most to hand, and `ix_pick`'s by carried rank only.
+3. **"largest" and "smallest"** exist only in the resolver.
+4. **The state selectors differ** between `ix_pick` and the world. "open": the world also needs the kind to close.
+   "full": the world rejects anything that's not a container. "spent": the world also takes an empty container. So
+   the first words can name a different thing from the one the world takes.
+5. **The guess at the world's "which?"** ("You look them over.") counts only things in reach, matched by `strstr`.
+   The world counts remembered and out-of-reach ones too, matched by its own rule, and needs two that differ.
+6. **Six name-matching rules:** whole word with plural; prefix and suffix; `strstr`; the first three letters for a
+   denizen. "pack" finds the backpack in the world but nothing in the resolver.
+7. **A capital for a thing lying about** words its first words from a carried thing of that name.
+8. **"it" keeps a word, not the thing:** "drop it" after a letter asks the world by name.
+9. **The instrument's selector is overwritten** by the object's ("… with the other sword").
+10. **Four "which?" answer parsers**, each with its own state: the resolver's (selector, number, name, way),
+    choose.c's (number or way, and only for moves), letters.c's `which_in` (capital, digit, state word), and
+    `what_ask`'s (one letter).
+11. **Attacking one of several denizens** isn't asked about; blows.c takes the first adjacent one in table order.
+12. **"take all"** lists the things nearest first, then takes each by name, so the world may take a different one.
+
+**Why the UI must stay the chooser.** The first words are said at once, before the world's answer arrives some 2M
+cycles later (D17: "Word as they begin."). So the UI can't ask the world to choose first. It doesn't need to: it
+already has what it needs. What's carried is in the UI bank's `ix`, each with its letter and so its id through
+`low[]`. What's seen is in `sight_copy`'s items, each with its store record and so its id. The plan is for the UI's
+choice to be final, sent as a handle: `#id` for a thing, the actor slot for a denizen, the square for a feature. The
+world would choose by name only for what the UI can't see (things remembered in the dark) and for the minds.
+
+**The order of work:**
+
+| # | Step | Retires | Fixes |
+|---|---|---|---|
+| A | **The resolver's choice of several travels** as the thing's id (letters.c's `des_seen` adds it to the line's handles, as a letter's is). *Done 2026-11-07, test dq0closest.* A single candidate still leaves the choice to the world, whose rule puts what's in hand first | — | 1, part of 3 |
+| B | **"it" and "take all" carry ids:** `last` keeps the handle, and "take all" queues ids | the by-name re-requests | 8, 12 |
+| C | **One chooser for things**, in the UI, over carried (`ix`) and seen (`sight_copy`) together, ranked by the world's order (held, then carried by depth, then lying by distance), honouring every selector, with the state selectors decided by the kind's flags (`ix_make` to send the flags the world uses) | resolve.c's item gathering, sway.c's `ix_pick` and the "look them over" guess | 2, 3, 4, 5, 7, 9 |
+| D | **One "which?"**: one state, one wording (capitals, as caps.c's), one answer parser (a capital, a number, a way, a state word, a name), used by the thing chooser, choose.c and the world's IR_WHICH | resolve.c's `ask_which` and `answered`; choose.c's question and answer | 10, 11 |
+| E | **Features in the same list:** choose.c's doors and openings as entries, perhaps lettered after the denizens, so stairs and doors are chosen and asked about the same way | choose.c's `pick` as a separate chooser | §3.4's |
+| F | **One name match** (the world's rule: word prefix, plurals, suffix of a one-word name; qualifiers checked), shared by all | the other five | 6 |
+
+**Room.** Steps C and D should remove more code than they add (resolve.c's gathering, `choose_one`, `ask_which` and
+`answered`; choose.c's question; sway.c's guess). But old and new must run side by side while each case moves over,
+and the UI's banks are full, so step C will likely need a staging overlay bank, as overlay 23 was for the designators.
+
 Two decisions recorded in the docs would need revisiting:
 
 - **"The choosers stay two" (DUNGEON.md, 2026-11-04).** Keep two choosers for *minds* (by want, TW_*) versus

@@ -159,6 +159,7 @@ ovl_out:
             OVFN        letters_in, 22      ; (A line's letters made its things' names: letters.c, 2026-11-06)
             OVFN        what_ask, 22        ; (A command with nothing named asked about: letters.c)
             OVFN        des_thing, 22       ; (A thing a letter named, a denizen's found: letters.c)
+            OVFN        des_seen, 22        ; (A thing the resolver chose, by its id: letters.c, 2026-11-07)
             OVFN        des_low, 22
             OVFN        des_req, 22
             OVFN        cap_of, 23          ; (A thing in sight's capital, the look's: caps.c, overlay 22's till 2026-11-06)

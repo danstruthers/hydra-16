@@ -180,6 +180,11 @@ static void __fastcall__ found (struct cthing* t, unsigned char k)
     t->x = cx[k];
     t->y = cy[k];
     t->sel = SL_THE;
+    if (nc > 1) {
+        des_seen (t);                           /* (Chosen of several lying about: that one, by its id, the world's
+                                                **   asked of, letters.c's, 2026-11-07; one alone, the world's
+                                                **   rules, what's in hand first) */
+    }
 }
 
 /* Is thing t (a denizen's, or a thing's found) still among those it sees?  Its entry found's (k), or 0xFF */

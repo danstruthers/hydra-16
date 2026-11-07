@@ -126,6 +126,33 @@ unsigned char __fastcall__ o_des_thing (struct cthing* t)
     return 2;
 }
 
+/* Thing t, one the character sees lying about, chosen by the resolver (resolve.c's found: by a selector, "the closest
+** torch"; an answer to its question; a default): its id made the line's as a letter's is, so each request of the world
+** names that one ("#" and its id, des_req), not its word for the world to choose again by its own rules (the chooser
+** survey's first disagreement, COMMANDS-CRITIQUE.md's handles travel: 2026-11-07).  A denizen's, or one with no id
+** yet, let be */
+void __fastcall__ o_des_seen (const struct cthing* t)
+{
+    static const struct sitem* q;
+    static struct item it;
+
+    if (ndes >= NDES || o_des_find (t->word, 0)) {
+        return;
+    }
+    for (q = sight_copy.item; q < sight_copy.item + sight_copy.nitems; ++q) {
+        if (q->x == t->x && q->y == t->y && !strcmp (q->name, t->word)) {
+            from_hub (ITEM_BANK (q->n), &it, ITEM_AT (q->n), sizeof it);
+            if (it.id) {
+                ldes[ndes].id = it.id;
+                ldes[ndes].low = 0;
+                strcpy (ldes[ndes].word, t->word);
+                ++ndes;
+            }
+            return;
+        }
+    }
+}
+
 /* Is word w a lower-case letter's, its thing carried, for a command done with it (resolve.c's tool_ok: to hand, the world not
 ** asked; but a blow's, a dig's, which want its kind)? */
 unsigned char __fastcall__ o_des_low (const char* w)

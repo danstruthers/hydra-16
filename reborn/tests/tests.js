@@ -2166,6 +2166,30 @@ function dq0SweepLines() {
   for (const [t] of SWEEP_THINGS) for (const v of SWEEP_VERBS) if (!SWEEP_SKIP.has(v + ' the ' + t)) out.push(v + ' the ' + t);
   return out;
 }
+// A thing the resolver chose of several lying about made the one the world's asked of (its id, letters.c's des_seen:
+// COMMANDS-CRITIQUE.md's handles travel, 2026-11-07): at seed 3 a torch put down lit where the character stands and
+// one unlit a step behind; "take the closest torch" takes the lit one at its feet, not asked which (the world, given
+// the name alone, saw two that differ and asked again); DQ0_CLOSEST=1 prints the answers
+function dq0ClosestTest() {
+  const lines = ['drop the unlit torch', 'step forward', 'drop the lit torch', 'take the closest torch', 'i'];
+  return {
+    name: 'dq0closest', near: ['parser'], what: 'Dingus Quest Zero\'s resolver\'s choice of several kept (handles travel): "take the ' +
+      'closest torch" of a lit one at the character\'s feet and an unlit one a step off takes the lit one, no "Which one?"',
+    init: 't_rc', cycles: 300e6 + lines.length * 40e6,
+    machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+      'dq0 -p t -s 3 -c /ram/c.hm -k torch -T', ...lines, 'quit', 'echo $status']) },
+    expect: ['% echo $status'],
+    check(m) {
+      const A = dq0Answers(m.out), f = [], a = l => (A.find(x => x.cmd === l) || { text: '(no answer)' }).text;
+      if (process.env.DQ0_CLOSEST) for (const l of lines) console.log(l + ' => ' + a(l));
+      if (!/Taken\./.test(a('take the closest torch')) || /Which one/.test(a('take the closest torch')))
+        f.push('"take the closest torch": not taken at once (its id the world\'s, des_seen\'s): ' + a('take the closest torch').slice(0, 120));
+      if (!/a torch \(lit\), in your (left|right) hand/.test(a('i'))) f.push('not the lit one taken: ' + a('i').slice(0, 160));
+      return f;
+    },
+    sdcard: true
+  };
+}
 function dq0SweepTest() {
   const lines = dq0SweepLines();
   return {
@@ -5614,6 +5638,7 @@ module.exports = {
       sdcard: true
     },
     dq0SweepTest(),
+    dq0ClosestTest(),
     {
       name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), one the grammar has but the game doesn\'t do yet ("grapple": you can\'t, yet); a gift the game takes since slice 4.8 ("give the torch to the rat": the rat out of reach, or out of sight); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',
       init: 't_rc', cycles: 1500e6,
