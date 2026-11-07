@@ -103,7 +103,7 @@ unsigned char finds;                            /* (Things a search turned up, t
 struct ireq judged;                             /* (A thing looked at closely: what it is, for the appraiser: way.c's,
                                                 **   part 6's, examine) */
 struct portal viewed;                           /* (A portal looked at closely: the world's record of it) */
-static char pending[16];                        /* A thing to take up as the character's free (a portal's part lifted
+char pending[16];                        /* A thing to take up as the character's free (a portal's part lifted
                                                 **   out; one the world's walk found fixed: E_TAKEN's) */
 static char taking[16];                         /* (The thing taken up last named) */
 static char lifting[16];                        /* (A portal's part being lifted out, to take up after) */
@@ -910,6 +910,7 @@ unsigned char reach;                            /* (5: a step of the reach under
                                                 **   out again, its end; 6: walking over for a command the world carries
                                                 **   out as it gets there: a thing taken, a blow) */
 unsigned char said_ahead;                       /* (A walk over told as the thing's asked for, walk_ahead's: not told again) */
+unsigned char step_k, step_n;                   /* (dq0.h's) */
 unsigned char step_aw;                        /* (A step's thing told apart, its AW_*: step_go's, s_reach_said's) */
 unsigned char walk_op, worded;                  /* (The things' request it's asked for, IO_*; its first word told this line: walk_ahead's) */
 unsigned char placing;                          /* (A place in the room walked to: place_go's, or a walk told as it began,
@@ -1014,7 +1015,7 @@ static unsigned char events (void)          /* (How many there were) */
             break;
         case E_READY:
             if (m.who == 0) {
-                busy = 0;
+                busy = step_k = 0;
                 placing = 0;                    /* (Its walk's over, whatever its legs, wherever stopped) */
                 asking = 0;                     /* (A fight's question, its fight over as it asked: let go) */
                 heard ();                       /* (What came before it, told before the prompt: a blow's words;
@@ -2793,6 +2794,10 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
     if ((unsigned char) w != TE_PACKED) {
         what_hi = named & 0x80;
     }
+    if ((unsigned char) w == TE_BEGUN) {
+        step_k = k;                             /* (The step under way: a stop's words, task.c's TE_IDLE) */
+        step_n = named | 0x80;                  /* (Its kind, task.c's noun: the top bit what_hi's) */
+    }
     t[0] = 0;
     if ((unsigned char) w == TE_BEGUN && step_aw && k > LT_PACKDOWN && k != LT_PACKON && (k < LT_GETNEW || k > LT_LETOLD) &&
         k < LT_DOWN2 && k != LT_LETBURN && k != LT_LAYLIT && k != LT_LAYLIT2) {   /* (Not "the lit torch ... still burning") */
@@ -3223,8 +3228,16 @@ int main (int argc, char* argv[])
                 intend2 (k == 1 ? I_GO_ON : I_STOP, !k, 0);     /* (A command's stop: a fight fought on after it) */
             }
             if (l && busy && (held = !k || (k = at_once (l)) != 1)) {
-                if ((took = k == 2) != 0) {
-                    intend2 (I_STOP, 1, 0);     /* (A fight taken over: its round out, then the command) */
+                if ((took = k >= 2) != 0) {
+                    intend2 (I_STOP, 1, 0);     /* (A fight taken over: its round out, then the command; a line that
+                                                **   breaks off, its long task stopped at once, task.c's free_cmd 3) */
+                    hub_map (0);
+                    if (k == 3 && reach >= 5 && (!HUB->pc_task.kind || HUB->pc_task.kind == LT_FIGHT)) {
+                        took = HUB->pc_task.kind;   /* (No fight to stop now: fighting on begun after, stopped for it) */
+                        task_words (TE_IDLE, 0);    /* (A reach's step with no long task to stop, engaged a round's
+                                                **   action, or a fight between its steps: the reach ends where it
+                                                **   stands, the pack's place told, then the line) */
+                    }
                 }
                 HUB->ui_cmd = 0;                /* (Held: the next waits for the character, not parsed again) */
                 l = 0;

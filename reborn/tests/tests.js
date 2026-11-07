@@ -11427,6 +11427,107 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0reachstop', reach: true, meaning: true, near: ['gear'], what: 'Dingus Quest Zero\'s lines that break off, acted on at once during any long task and a reach\'s steps, every other line held till its end (the user\'s, 2026-11-06, DECISIONS.md\'s a line typed during a reach: "`stop` and other similar commands should be acted on immediately, but others could be held until after the reach"; HOUSE.md\'s breaking off at once), at seed 3 (dq0 -T), each line typed as a step\'s words are told: an ordinary line ("drop the rations") typed as the pack comes off waits till the pack\'s back on; "halt" (a stop now) as the rations are got out: stopped there, the pack left at its feet, said, no ally\'s words; a flight as the worn pack\'s searched: the search stopped, the pack in hand said, then the flight; "enough" in a search of the room: stopped; a flight as a pick from the pack digs: the dig stopped, the pack at its feet and the pick in hand said; an ordinary line ("turn around") in "take all" runs after its last thing and the pack back on, a stop there ends it, its later things not taken; a flight in a list\'s first part lets its later parts go; an ordinary line as a fire-maker from the pack is struck waits for the torch lit and the pack back on.  And the class kept by the parser\'s meanings: every word commands.verbs gives stop, flee or disengage is one parts.c\'s list takes at once ahead of a list\'s later parts',
+      init: 't_rc', cycles: 7000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'take the rations from the backpack', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'take the rations from the backpack', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'search the backpack', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'search the room', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k pick', 'dig down', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'take the tinderbox from the backpack', 'drop the tinderbox', 'take the rations from the backpack', 'drop the rations', 'take all', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'take the tinderbox from the backpack', 'drop the tinderbox', 'take the rations from the backpack', 'drop the rations', 'take all', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'take the tinderbox from the backpack and take the flask from the backpack', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'douse the torch', 'light the torch', 'inventory', 'quit', 'echo $status']) },
+      start(m) {
+        dq0OnWords(m, [{ g: 1, line: 'take the rations from the backpack', n: 1, words: 'You take off your backpack', text: 'drop the rations\r' },
+          { g: 2, line: 'take the rations from the backpack', n: 1, words: 'You get out the', text: 'halt\r' },
+          { g: 3, line: 'search the backpack', n: 1, words: 'You search the backpack', text: 'flee\r' },
+          { g: 4, line: 'search the room', n: 1, words: 'You work along', text: 'enough\r' },
+          { g: 5, line: 'dig down', n: 1, words: 'You dig with your', text: 'flee\r' },
+          { g: 6, line: 'take all', n: 1, words: 'Taken.', text: 'turn around\r' },
+          { g: 7, line: 'take all', n: 1, words: 'Taken.', text: 'stop\r' },
+          { g: 8, line: 'take the tinderbox from the backpack and take the flask from the backpack', n: 1, words: 'You get out the tinderbox', text: 'flee\r' },
+          { g: 9, line: 'light the torch', n: 1, words: 'You strike a spark', text: 'turn left\r' }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const s = dq0Story(out), f = [], gs = [];
+        for (let i = s.indexOf('% dq0 '); i >= 0; i = s.indexOf('% dq0 ', i + 1)) gs.push(i);
+        const game = g => s.slice(gs[g - 1], gs[g] === undefined ? s.length : gs[g]);
+        // (A game's story from its line to its inventory's answer)
+        const upto = (g, line) => { const t = game(g), a = t.indexOf('> ' + line + ' > ' + line), b = t.indexOf('> inventory', a); return a < 0 ? '' : t.slice(a, b < 0 ? t.length : b); };
+        const inv = g => { const t = game(g), a = t.indexOf('> inventory > inventory'); return a < 0 ? '' : t.slice(a, t.indexOf('> quit', a)); };
+        const order = (g, line, want) => inTurn(upto(g, line), want, f, 'game ' + g + ', ' + line + ': ');
+        const never = (g, line, w) => { if (upto(g, line).includes(w)) f.push('game ' + g + ', ' + line + ': told ' + w); };
+        // (An ordinary line waits for the pack back on)
+        order(1, 'take the rations from the backpack', ['You take off your backpack', 'drop the rations', 'You get out the rations.', 'You take the rations in your right hand.', 'You put your backpack back on.', 'You put down the rations.']);
+        // (halt: a stop, at once, the pack where it was left)
+        order(2, 'take the rations from the backpack', ['You get out the rations.', 'halt', 'You stop getting out the rations.', 'Your backpack lies at your feet.']);
+        never(2, 'take the rations from the backpack', 'You put your backpack back on.');
+        never(2, 'take the rations from the backpack', 'no ally');
+        if (/\(b\) a backpack, worn/.test(inv(2))) f.push('game 2: the pack back on after the halt');
+        // (A flight in a search of the pack: stopped, the pack in hand told, then the flight)
+        order(3, 'search the backpack', ['You search the backpack', 'flee', 'You stop searching.', 'Your backpack is in your hand.', 'You see nothing to flee from.']);
+        never(3, 'search the backpack', 'You put your backpack back on.');
+        if (!inv(3).includes('a backpack, in your right hand')) f.push('game 3: the pack not left in its hand: ' + inv(3));
+        order(4, 'search the room', ['You work along', 'enough', 'You stop searching.']);
+        never(4, 'search the room', 'over the whole room');
+        order(5, 'dig down', ['You dig with your pick', 'flee', 'You stop digging.', 'Your backpack lies at your feet.', 'Your pick is in your hand.', 'You see nothing to flee from.']);
+        never(5, 'dig down', 'You put away the pick.');
+        // ("take all": an ordinary line after its last thing and the pack on; a stop ends it there)
+        order(6, 'take all', ['Taken.', 'turn around', 'Taken.', 'You put your backpack back on.', 'You turn around']);
+        order(7, 'take all', ['Taken.', 'stop', 'You stop', 'Your backpack is in your hand.']);
+        never(7, 'take all', 'You reach for the tinderbox.');
+        if (inv(7).includes('tinderbox')) f.push('game 7: "take all" went on after the stop: ' + inv(7));
+        // (A list's later part let go with a flight)
+        order(8, 'take the tinderbox from the backpack and take the flask from the backpack', ['You get out the tinderbox.', 'flee', 'You stop getting out the tinderbox.', 'Your backpack lies at your feet.', 'You see nothing to flee from.']);
+        never(8, 'take the tinderbox from the backpack and take the flask from the backpack', 'flask of oil');
+        // (A fire-maker from the pack: an ordinary line after the torch lit and the pack on)
+        order(9, 'light the torch', ['You strike a spark.', 'turn left', 'You light the torch.', 'You put away the tinderbox.', 'You put your backpack back on.', 'You turn left']);
+        // (The class by the parser's meanings: every word for stop, flee or disengage taken at once ahead of a list's parts, parts.c's)
+        const root = path.join(__dirname, '..', 'games', 'dq0'), verbs = fs.readFileSync(path.join(root, 'commands.verbs'), 'latin1'), pc = fs.readFileSync(path.join(root, 'parts.c'), 'latin1');
+        const said = ['stop', 'flee', 'disengage'];
+        for (const l of verbs.slice(verbs.indexOf('[words]')).split(/\r?\n/)) { const w = /^([a-z ]+?) = (stop|flee|disengage)\b/.exec(l); if (w && !said.includes(w[1])) said.push(w[1]); }
+        const list = n => { const r = new RegExp('static const char ' + n + '\\[\\] = "([^"]*)"').exec(pc); return r ? r[1].split('\\0').filter(Boolean) : []; };
+        const one = list('brks'), two = list('brk2');
+        for (const p of said) { const w = p.split(' '); if (w.length === 1 ? !one.includes(p) : !(two.includes(w[0]) && ['away', 'off'].includes(w[1]))) f.push('"' + p + '" breaks off (commands.verbs) but parts.c\'s list doesn\'t take it at once'); }
+        if (!said.includes('halt') || !said.includes('enough')) f.push('halt and enough not the stop\'s in commands.verbs');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0reachflee', reach: true, near: ['gear', 'fight'], what: 'Dingus Quest Zero\'s flight typed during a reach engaged (HOUSE.md\'s breaking off at once; the user\'s, 2026-11-06, "`stop` and other similar commands should be acted on immediately"): at seed 7 the ghoul engaging it (set steady, dq0packgrope\'s scene), "take the rations from the backpack" typed ahead, each step a round; "flee" typed as the pack comes off: that step stopped, not done (the pack still worn), the rations not got out, then the flight from the ghoul, before any further step; "stop" typed the same: the step stopped, no further step, the reach over',
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T", 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait']) +
+        'take the rations from the backpack\r' + dq0Typed(['inventory', 'quit',
+        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T", 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait']) +
+        'take the rations from the backpack\r' + dq0Typed(['inventory', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } }, { g: 2, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } }]);
+        dq0OnWords(m, [{ g: 1, line: 'take the rations from the backpack', n: 1, words: 'You take off your backpack', text: 'flee\r' },
+          { g: 2, line: 'take the rations from the backpack', n: 1, words: 'You take off your backpack', text: 'stop\r' }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const s = dq0Story(out), f = [], gs = [];
+        for (let i = s.indexOf('% dq0 '); i >= 0; i = s.indexOf('% dq0 ', i + 1)) gs.push(i);
+        const game = g => s.slice(gs[g - 1], gs[g] === undefined ? s.length : gs[g]);
+        const after = (g, w) => { const t = game(g), a = t.indexOf(w); return a < 0 ? '' : t.slice(a, t.indexOf('> inventory', a)); };
+        const fl = after(1, 'flee > flee');
+        inTurn(fl, ['You stop taking off the backpack.', 'You break away from the ghoul.'], f, 'the flight: ');
+        if (/You get out the rations|You put your backpack back on/.test(fl.slice(0, fl.indexOf('You break away')))) f.push('a step after the flight was typed: ' + fl.slice(0, 600));
+        const st = after(2, 'stop > stop');
+        inTurn(st, ['You stop taking off the backpack.'], f, 'the stop: ');
+        if (/You get out the rations|You put your backpack back on/.test(st)) f.push('a step after the stop: ' + st.slice(0, 600));
+        for (const g of [1, 2]) { const t = game(g), i = t.slice(t.indexOf('> inventory > inventory')); if (!/\(b\) a backpack, worn/.test(i) || /rations \(\w+\), in your|rations, in your/.test(i)) f.push('game ' + g + ': the pack not still worn, or the rations got out: ' + i.slice(0, 300)); }
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0usedup', what: 'Dingus Quest Zero\'s handy tools and things used up (the user\'s, 2026-10-23: "Ink, pencils, charcoal, etc., should be used up eventually.  A pot of ink might last a really long time, as might a pencil, but a chunk of charcoal or chalk would be used up faster"; mapping\'s things "handy and equipped"; HOUSE.md\'s reach, handy tools and things used up, and the map kept), by the hub\'s map making (pc_chart, pc_map), the item store (the chalk\'s fuel: minutes of drawing left), the world\'s events and the words: at seed 3 (dq0 -T, dq0 -k paper,chalk: the paper in hand, the chalk in the worn pack) mapping as it goes with its chalk not handy: no map begun, what they\'re in the hub\'s (pc_chart, CH_PACKED: the backpack), told once as it looks ("Your drawing things are in your backpack.", not again the next look); the chalk put in the pouch on its belt, handy: the map begun (pc_chart CH_DRAW, pc_map), each drawing (a walk across the room and back, mapping on paper) two minutes off the chalk (three hours: the catalogue\'s burns, FU_DRAW), till it\'s spent: gone, told ("Your chalk is worn to nothing.", E_BEAT\'s WB_SPENT, its kind), the map making without it (no CH_DRAW)',
       init: 't_rc', cycles: 4000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',

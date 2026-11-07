@@ -273,10 +273,15 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
     return fl & (!aname ? FF_A_DOWN : !dname ? FF_D_DOWN : 0) ? f->out : 0;
 }
 
-/* A word of a fight's, into lb: the stance taken (rs.h's D_*), or why there's no blow (FN_*) */
+/* A word of a fight's, into lb: the stance taken (rs.h's D_*), or why there's no blow (FN_*).  Overlay 22's since
+** 2026-11-06 (overlay 6's room: a line that breaks off, parts.c's): fight_note */
 enum { FN_AWAY = 5, FN_NONE_LIKE, FN_NONE };
+#define note    fight_note
 
-static void __fastcall__ note (unsigned char n)
+#pragma code-name (push, "OV22CODE")
+#pragma rodata-name (push, "OV22RODATA")
+#pragma local-strings (push, on)
+void __fastcall__ o_fight_note (unsigned char n)
 {
     static const char* const say[8] = {
         "You will defend yourself as best you can.", "You will block.", "You will dodge.",
@@ -286,6 +291,9 @@ static void __fastcall__ note (unsigned char n)
 
     strcpy (lb, say[n & 7]);
 }
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The character's stance (the hub's pc_stance, rs.h's D_*: the referee's defence for it, the world's to set: wset)
 ** set by its word (dodge, block, counter, none; else the best), told in lb */

@@ -234,7 +234,7 @@
 <WAIT>       ::= "wait"
 <REST>       ::= "rest"
 <SLEEP>      ::= "sleep"
-<STOP>       ::= "stop"
+<STOP>       ::= "stop" | "halt" | "enough"     (* 2026-11-06: the stop's kind, acted on at once *)
 <NAME>       ::= "name" | "call"
 <ALIAS>      ::= "alias"
 <UNALIAS>    ::= "unalias" | "forget alias"
@@ -352,7 +352,7 @@
 <calm>            ::= "calm" <object>
 <befriend>        ::= "befriend" <object>
 <approach>        ::= "approach" <thing>                      (* up to it *)
-<ally>            ::= ( "come" | "heel" | "stay" | "halt" ) [ "here" ] | "dismiss" <object>   (* an ally's request *)
+<ally>            ::= ( "come" | "heel" | "stay" ) [ "here" ] | "dismiss" <object>   (* an ally's request *)
 
 (* ---- Psionic talents (HarnMaster core, Psionics: latent until found; the GM generates them) ---- *)
 <talk>            ::= "talk" [ "to" | "with" ] <object> [ "about" <text> { <text> } ]   (* a conversation: VB_TELL_OBJECT *)

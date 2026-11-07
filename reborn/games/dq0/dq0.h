@@ -330,6 +330,7 @@ unsigned __fastcall__ fight_words (const struct msg* m);    /* Overlay 6: a blow
                                                 **   ring copied into lb's end: FIGHT_LB), into lb: the tenths the
                                                 **   character's knocked senseless for, or 0 */
 #define FIGHT_LB    ((struct fight*) (lb + sizeof lb) - 1)
+void __fastcall__ fight_note (unsigned char n);   /* Overlay 22: a fight's word into lb (blows.c's) */
 unsigned char __fastcall__ fight_target (struct cmd* c);    /* Overlay 6: VB_ATTACK_OBJECT's denizen beside
                                                 **   the character to strike at (its name has the word; it lies that
                                                 **   way): its entry plus 1, or 0 and why not in lb; VB_DEFEND's stance
@@ -422,6 +423,9 @@ unsigned char __fastcall__ lie_words (unsigned char i);   /* Part 8: a thing's p
 unsigned char reach_go (void);
 unsigned char __fastcall__ tool_out (unsigned char which);    /* Part 19: a thing got out for its use (0 a bandage, 1 food, 2 water), a tool's steps */
 extern unsigned char nap, what_hi, take_more, take_all, nosteps;    /* (main.c's) */
+extern unsigned char step_k, step_n;            /* (main.c's: the reach's step begun, its kind and thing, till the character's
+                                                **   free: a stop's words, task.c's) */
+extern char pending[16];                        /* (main.c's: a thing to take up as the character's free, "take all"'s next) */
 void step_go (void);                            /* Part 19: a step of the reach begun by the world (IO_STEP's) */
 void __fastcall__ reach_said (unsigned w, unsigned char named);   /* Part 19: the reach's words */
 unsigned char may_den (void);                   /* (sway.c's: the thing named may be a denizen: the denizens asked) */
