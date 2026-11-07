@@ -745,7 +745,8 @@ world (part 35's which: the chooser's every one in one pass, pick's SL_WHICH), e
 the UI gives each its capital and asks, "Which one? (E) a torch (lit), (F) a torch" (caps.c's o_which_ask), the command's
 line kept (the UI bank's which_*); a capital, a number or a state word answers it, the line made again with that one's
 capital where its thing's word was (letters.c's which_in).  The first words "You look them over." when several lie in
-reach.
+reach.  Several letters in a line ("drop d e f", "take B C", step 6) each their own line, in turn; "letter d as t" swaps
+two letters (the UI bank's low and lowt, and ix: caps.c's).
 
 **Reach, and things used up** (2026-10-26, the user's: "Handy would be readily available, so in a backpack that is
 being worn is not as readily available as one in a belt pouch"; HOUSE.md's reach, handy tools and things used up):

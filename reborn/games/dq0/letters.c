@@ -261,13 +261,16 @@ static unsigned __fastcall__ sum (const char* l)
     return ((unsigned) n << 8 | t_taken) ^ (unsigned char) l[0] ^ (unsigned char) (n ? l[n - 1] : 0) << 1;
 }
 
-/* Line l made o (l the queue's first line, term.c's t_next: the lines after it moved): 1, or 0 (no room) */
+/* Line l made o (l the queue's first line, term.c's t_next: the lines after it moved): 1, or 0 (no room); o several
+** lines, olen its bytes (line_put's own, else) */
+static unsigned olen;
 static unsigned char __fastcall__ line_put (char* l)
 {
     static unsigned a, b;
 
     a = strlen (l) + 1;
-    b = strlen (o) + 1;
+    b = olen ? olen : strlen (o) + 1;
+    olen = 0;
     if (b > INMAX + 1 || (l == queue && qlen + b - a > QMAX)) {
         return 0;
     }
@@ -345,7 +348,7 @@ void __fastcall__ o_letters_in (char* l)
         "head\0jump\0swim\0flee\0";
     static const char* p;
     static const struct sden* dq;
-    static unsigned char nt, i, j, e, n, c, nd, loaded, up, ok;
+    static unsigned char nt, i, j, e, n, c, nd, loaded, up, ok, ns;
     static unsigned id;
 
     if (cq_st) {
@@ -358,7 +361,7 @@ void __fastcall__ o_letters_in (char* l)
             return;                             /* (The answer: the command asked about, on that one) */
         }
     }
-    for (nd = nt = 0, p = l; *p && nt < sizeof ts; ) {  /* (Its words; nd, one after the first that may be a letter) */
+    for (ns = nd = nt = 0, p = l; *p && nt < sizeof ts; ) {  /* (Its words; nd, one after the first that may be a letter) */
         if (*p == ' ') {
             ++p;
             continue;
@@ -372,6 +375,7 @@ void __fastcall__ o_letters_in (char* l)
         }
         if (nt && ((c = p - l - c) == 1 || (c == 2 && (p[-2] | 0x20) == 'a'))) {
             nd = 1;                             /* (A letter perhaps: one, or two an a's, a count before it perhaps) */
+            ++ns;
         }
         ++nt;
     }
@@ -396,12 +400,35 @@ void __fastcall__ o_letters_in (char* l)
         }
         asked[0] = 0;
     }
-    o[0] = 0;
-    nd = loaded = 0;
-    if (nt && in_list ("alias\0unalias\0say\0yell\0whisper\0shout\0where\0what\0who\0how\0why\0when\0", l + ts[0], tl[0])) {
+    if (nt && in_list ("alias\0unalias\0say\0yell\0whisper\0shout\0where\0what\0who\0how\0why\0when\0letter\0around\0", l + ts[0], tl[0])) {
+        if (l[ts[0]] == 'l') {                  /* ("letter d as t": "around"'s, caps.c's, the main RAM's room) */
+            strcat (strcpy (o, "around "), l);
+            line_put (l);
+            return;
+        }
         nt = 0;                                 /* (A shortcut's line, words said, a question: their letters as they are,
                                                 **   "where am i") */
     }
+    if (nt > 2 && ns + 1 == nt && !in_list (ways, l + ts[0], tl[0])) {
+        for (p = (char*) o, i = 1; i < nt && p + tl[0] + tl[i] + 2 < o + sizeof o; ++i) {   /* (Several letters, "drop d e f",
+                                                **   "take B C": a line each, "drop d", "drop e" ..., the user's
+                                                **   designators, 2026-11-06) */
+            memcpy ((char*) p, l + ts[0], tl[0]);
+            p += tl[0];
+            *(char*) p++ = ' ';
+            memcpy ((char*) p, l + ts[i], tl[i]);
+            p += tl[i];
+            *(char*) p++ = 0;
+        }
+        olen = p - o;
+        if (i == nt && line_put (l)) {
+            o_letters_in (l);                   /* (The first of them, as any line's) */
+            return;
+        }
+        olen = 0;
+    }
+    o[0] = 0;
+    nd = loaded = 0;
     for (i = 0; i < nt; ++i) {
         if (i) {
             strcat (o, " ");

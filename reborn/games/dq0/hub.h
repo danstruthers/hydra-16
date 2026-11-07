@@ -1998,7 +1998,7 @@ struct wsave {
 **   own uirec.maplay maker +ui                                 (Its squares' layers: slice 4.2's)
 **   own uirec.things_text world +ui
 **   own uirec.ixn world                                        (What it carries: the UI's first words, 2026-11-06)
-**   own uirec.ix world
+**   own uirec.ix world +ui                                     (Its letters swapped: "letter d as t", caps.c's)
 **   own uirec.ixk world
 **   own uirec.ixks world
 **   own uirec.low world +ui                                    (The letters of what it carries: the save's, the UI's)

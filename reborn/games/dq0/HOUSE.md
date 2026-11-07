@@ -934,6 +934,11 @@ world's answer follows.  The word is said before the world's asked, and holds wh
   thing already carried is never taken up ("pick up the torch" with one in hand, one in the pack, one on the ground
   takes the ground's).  *(New, for review:)* only taking asks (the other verbs choose the one most to hand, as before);
   several lying in reach, the first words "You look them over." (true whatever comes: a question, or one taken).
+- **Several at once, and swapping** (the plan's step 6): "drop d e f", "take B C": each letter its own command, in turn,
+  as "drop d", "drop e", "drop f" typed one after another; "all" as ever.  "letter d as t" swaps two of the character's
+  letters: d's thing is t's now and t's d's ("Your torch is (t) now. Your rope is (d)."); a letter of nothing carried,
+  "You have nothing by that letter.".  *(New, for review:)* "drop d and e" isn't one of these: a line's parts are split
+  as it's typed, and "e" alone is east.
 
 ## Characters *(hmchar: HarnMaster's character generator)*
 

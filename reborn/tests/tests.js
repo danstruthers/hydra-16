@@ -3335,6 +3335,7 @@ const LETCMD = ['inventory', 'drop j', 'inventory', 'take torch', 'put j in b', 
 const LETDENS = ['look', 'around', 'look at B', 'talk to C', 'attack C', 'attack A', 'around'];   // (dq0letdens' lines)
 const LETWHICH = ['drop j', 'pick up the torch', 'inventory', 'drop j', 'drop a', 'drop k', 'take the torch', 'F', 'take the torch', '2', 'inventory',
   'drop j', 'take torch', 'lit', 'inventory'];   // (dq0letwhich's lines)
+const LETSEVERAL = ['drop j', 'drop h i', 'look', 'take E F', 'inventory', 'letter h as t', 'inventory', 'drop t', 'letter q as r'];   // (dq0letseveral's lines)
 const LETTERX = [['inventory', 'drop the pick', 'inventory', 'take the pick', 'inventory', 'quit'],   // (dq0letters' lines: a game, carried on, the
   ['inventory', 'drop the hatchet', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u'], ['inventory', 'quit']];   //   next dungeon)
 module.exports = {
@@ -8095,6 +8096,44 @@ module.exports = {
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first);
           if (!/^(inventory)$/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0letseveral', reach: true, near: ['gear', 'parser'], what: "Dingus Quest Zero's designators, step 6 (the user's design, 2026-11-06): several letters in a line, each its own command in turn (drop h i: the dagger, then the waterskin; take E F, by their capitals); letter h as t swaps two of the character's letters (Your dagger is (t) now.), the inventory after it so, the new letter naming the thing (drop t); a letter of nothing carried told so; each first letter within the user's 720,000 cycles",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSEVERAL, 'quit', 'echo $status']) },
+      start(m) { this.timer = dq0Timer(m); },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
+        let at = 0;
+        for (const l of LETSEVERAL) {
+          let i = o.indexOf('> ' + l + ' ', at);
+          if (i >= 0 && o.startsWith('> ' + l + ' ', i + l.length + 3)) i += l.length + 3;
+          const e = o.indexOf('> ', i + 2);
+          seg.push(i < 0 ? '' : o.slice(i + l.length + 3, e < 0 ? undefined : e));
+          if (i >= 0) at = i + 2;
+        }
+        this.notes = LETSEVERAL.map((l, i) => l + ': ' + seg[i].slice(0, 300));
+        const said = (k, re, from = 0) => { const n = LETSEVERAL.indexOf(k, from); if (!re.test(seg[n])) f.push(k + ': not ' + re + ': ' + seg[n].slice(0, 300)); };
+        const not = (k, re, from = 0) => { const n = LETSEVERAL.indexOf(k, from); if (re.test(seg[n])) f.push(k + ': said ' + re + ': ' + seg[n].slice(0, 300)); };
+        said('drop h i', /You put down the dagger\.[^]*You put down the waterskin\./);
+        said('look', /At your feet lie \(E\) a dagger, \(F\) a waterskin and \(G\) a torch\./);
+        said('take E F', /You reach for the dagger\.[^]*You reach for the waterskin\./);
+        said('inventory', /\(i\) a waterskin[^]*\(h\) a dagger, in your right hand/);   // (Taken up again: their letters back)
+        said('letter h as t', /^Your dagger is \(t\) now\. ?$/);
+        said('inventory', /\(t\) a dagger/, 6);
+        not('inventory', /\(h\)/, 6);
+        said('drop t', /Put down\.|You put down the dagger/);
+        said('letter q as r', /^You have nothing by that letter\./);
+        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSEVERAL],
+          LETSEVERAL.map(l => ({ line: l, want: 'You|Taken|Your|Put|Stow' })));
+        for (const r of tm) {
+          this.notes.push(r.line + ': first letter ' + r.first);
+          if (!/^(inventory|look)$/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },

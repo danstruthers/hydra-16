@@ -237,17 +237,101 @@ static void __fastcall__ where_put (unsigned char r)
     }
 }
 
+/* A letter of what's carried typed at t (a ... z, aa ... az, as letters.c's let_at): its place, or NLET */
+static unsigned char __fastcall__ low_at (const char* t)
+{
+    if (t[0] < 'a' || t[0] > 'z') {
+        return NLET;
+    }
+    if (t[1] <= ' ') {
+        return t[0] - 'a';
+    }
+    return t[0] == 'a' && t[1] >= 'a' && t[1] <= 'z' && t[2] <= ' ' ? NLET / 2 + t[1] - 'a' : NLET;
+}
+
+/* Letter j's thing's name (what's carried, the UI bank's ix: its kind's), "torch", into wb; 0, none carried */
+static unsigned char __fastcall__ let_name (unsigned char j)
+{
+    static struct cix e;
+    static unsigned char k, n;
+
+    from_ui (&n, &UIREC->ixn, 1);
+    for (k = 0; k < n && k < NIX; ++k) {
+        from_ui (&e, UIREC->ix + k, sizeof e);
+        if (e.let == j + 1 && e.kind < NIXK) {
+            from_ui (wb, UIREC->ixks[e.kind].name, sizeof UIREC->ixks[0].name);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* "letter d as t" (the user's designators, 2026-11-06: two of its letters swapped): d's thing t's, t's d's (the UI bank's
+** low and lowt, and what's carried, ix: the world's from them as it makes ix again), told: "Your torch is (t) now." and
+** " Your rope is (d)."; d one of nothing carried: "You have nothing lettered d." */
+static void __fastcall__ swap_letters (const char* l)
+{
+    static unsigned u[2];
+    static struct cix e;
+    static unsigned char d, t, k, n, x;
+
+    for (l += 7; *l == ' '; ++l) {
+    }
+    d = low_at (l);
+    for (; *l > ' '; ++l) {
+    }
+    for (; *l == ' '; ++l) {
+    }
+    if (!strncmp (l, "as ", 3) || !strncmp (l, "to ", 3)) {
+        l += 3;
+    }
+    t = low_at (l);
+    if (d >= NLET || t >= NLET || !let_name (d)) {
+        msg (d >= NLET || t >= NLET ? "Swap which letters? (letter d as t)" : "You have nothing by that letter.");
+        return;
+    }
+    for (k = 0; k < 2; ++k) {                   /* (low, then lowt) */
+        from_ui (u, (k ? UIREC->lowt : UIREC->low) + d, 2);
+        from_ui (u + 1, (k ? UIREC->lowt : UIREC->low) + t, 2);
+        to_ui ((k ? UIREC->lowt : UIREC->low) + d, u + 1, 2);
+        to_ui ((k ? UIREC->lowt : UIREC->low) + t, u, 2);
+    }
+    from_ui (&n, &UIREC->ixn, 1);
+    for (k = 0; k < n && k < NIX; ++k) {        /* (What's carried as the UI has it, till the world makes it again) */
+        from_ui (&e, UIREC->ix + k, sizeof e);
+        x = e.let == d + 1 ? t + 1 : e.let == t + 1 ? d + 1 : 0;
+        if (x) {
+            e.let = x;
+            to_ui (UIREC->ix + k, &e, sizeof e);
+        }
+    }
+    for (k = 0; k < 2; ++k) {                   /* ("Your torch is (t) now.", " Your rope is (d).") */
+        if (let_name (k ? d : t)) {
+            strcat (strcat (strcpy (o + (k ? strlen (o) : 0), k ? " Your " : "Your "), wb), " is (");
+            for (n = strlen (o), let_text (o + n, k ? d : t); o[n]; ++n) {
+                o[n] |= 0x20;
+            }
+            strcat (o, k ? ")." : ") now.");
+        }
+    }
+    msg (o);
+}
+
 /* What's in sight listed, one a line, its capital and where it is ("around", the user's "a list of all in sight"): the
 ** denizens seen first, "(A) a giant rat, ahead to your left, 15 feet away", "(B) Grub, behind you, 5 feet away", one too
 ** far off to make out "(C) something, ahead, 40 feet away"; then the things, "(D) a torch (lit), at your feet", "(E) an
 ** iron pot, ahead to your left, 15 feet away", "(F) a candle, on the table"; one too far off to make out by its size,
 ** "(G) something small, ahead, 40 feet away" */
-void o_around (void)
+void __fastcall__ o_around (const char* l)
 {
     static const struct sitem* q;
     static const struct sden* n;
     static unsigned char i, k, sz;
 
+    if (l[6]) {
+        swap_letters (l + 7);                   /* ("letter d as t": letters.c's "around letter d as t") */
+        return;
+    }
     sight_get ();
     caps_load ();
     for (any = 0, n = sight_copy.den; n < sight_copy.den + sight_copy.ndens; ++n) {

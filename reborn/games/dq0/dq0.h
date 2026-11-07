@@ -452,7 +452,7 @@ const char* __fastcall__ cap_of (unsigned char i);  /* (Overlay 23's, caps.c) Th
                                                 **   look's words: given as it's first told; "" none */
 void __fastcall__ den_caps (unsigned char m);   /* (Overlay 23's) The denizens in sight of mask m their capitals, "(A, B) ",
                                                 **   added to lb (dens.c's look) */
-void around (void);                             /* (Overlay 23's) What's in sight listed, its capitals ("around") */
+void __fastcall__ around (const char* l);       /* (Overlay 23's: "letter d as t" too) What's in sight listed, its capitals ("around") */
 unsigned char __fastcall__ des_low (const char* w);   /* (Overlay 22's) A lower case's word, its thing carried, for a thing done with:
                                                 **   1 (resolve.c's tool_ok: to hand) */
 void __fastcall__ letters_in (char* l);         /* (Overlay 22's) The line's letters made its things' names, as it's posted */

@@ -3243,8 +3243,9 @@ int main (int argc, char* argv[])
                                                 **   door", walking plainly: nothing to change, three parts' swaps and a
                                                 **   word with the world spared, the user's D17) */
             }
-            if (k == NL_NONE && !strcmp (l, "around")) {
-                around ();                      /* (What's in sight listed, its capitals: caps.c's) */
+            if (k == NL_NONE && !strncmp (l, "around", 6)) {
+                around (l);                     /* (What's in sight listed, its capitals; or two letters swapped:
+                                                **   caps.c's) */
                 k = NL_DONE;
             }
             if (k == NL_NONE && names_n && (f & NI_THING) && (t = names_subst (l)) != 0) {
