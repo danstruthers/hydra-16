@@ -1868,3 +1868,9 @@ The user's playtest, verbatim:
 > I can't specify `take torch from the floor` or `take torch from the ground`.  It says `You see no [floor|ground] here`.
 
 **So:** the first word follows what will happen (HOUSE.md's a command's first words); a thing is named by what tells it apart; "spent" and "full" choose by state; dipping is its own word; a tool in hand before stays in hand; a plain take goes to a free hand; the floor and the ground are places to take from and put on.
+
+### A line typed during a reach (2026-11-06)
+
+Asked whether a line typed while a reach's steps are still going (the pack going back on, without a question) should run between the reach's steps or wait for them all, the user: "I think that `stop` and other similar commands should be acted on immediately, but others could be held until after the reach."
+
+**So:** the commands that halt or break off (stop, and its kind: halt, enough, flee and the like) act at once, between the reach's steps; every other line waits until the reach is done, as now.
