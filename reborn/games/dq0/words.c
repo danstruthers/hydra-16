@@ -479,8 +479,8 @@ void o_words (void)
         felt_words (FW_NEW);                    /* (A walk over for a command just done: only what's new: overlay 17's) */
         return;
     }
-    if (sight_close & 32) {
-        felt_words (FW_NEW);                    /* (A walk over for a command just done: only what's new: overlay 17's) */
+    if (sight_close & 64) {
+        opening (sight_close & 3);              /* (One opening looked at, the room look's words of it: way.c's opened) */
         return;
     }
     if (sight_close & 8) {

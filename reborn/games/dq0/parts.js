@@ -100,7 +100,9 @@ function cfg(text, list, file) {
 // hand): parts.txt's bank a part's wish; each bank's room what its own (an overlay's code and data: the config's
 // non-SW segments loaded into it) leaves; a bank whose wishers don't fit it, the fewest bytes moved out (the smallest
 // part enough to make room; or the biggest, and again); those, the biggest first, each put in the bank of its wish's
-// file with the least room that holds it (the same file: one read later, dq0w.rop's, keeps its own).  text: the task's config; sizes: Map segment → its bytes (all the objects').
+// file with the least room that holds it (the same file: one read later, dq0w.rop's, keeps its own); with none, room
+// made in one (2026-11-07): a smaller part moved out of it to another bank with room for it, the smallest that's
+// enough.  text: the task's config; sizes: Map segment → its bytes (all the objects').
 // OUT: { at: Map part → its bank, moved: [{ n, from, to, size }], room: Map bank → its bytes left, file: Map bank → its
 // file }; throws, a part no bank has room for
 function banks(text, list, sizes, file) {
@@ -113,6 +115,7 @@ function banks(text, list, sizes, file) {
   for (const [k, c] of cap) room.set(k, c);
   for (const [, s, k] of block('SEGMENTS').matchAll(/^\s*(\w+):\s*load\s*=\s*OV(\d+)\b/gm))
     if (!/^SW\d+(CODE|RODATA)$/.test(s) && room.has(+k)) room.set(+k, room.get(+k) - (sizes.get(s) || 0));
+  const base = new Map(room);                           // (Each bank's room before any part's in it)
   const size = p => (sizes.get('SW' + p.n + 'CODE') || 0) + (sizes.get('SW' + p.n + 'RODATA') || 0);
   const at = new Map(), left = [], moved = [];
   for (const p of list.parts)
@@ -130,14 +133,55 @@ function banks(text, list, sizes, file) {
     room.set(k, room.get(k) - in_.reduce((t, p) => t + size(p), 0));
   }
   left.sort((a, b) => size(b) - size(a) || a.n - b.n);
-  for (const p of left) {
-    const fits = [...room].filter(([k, r]) => fileOf.get(k) === fileOf.get(p.ov) && r >= size(p)).sort((a, b) => a[1] - b[1] || a[0] - b[0]);
-    if (!fits.length) throw new Error(file + ': part ' + p.n + ' (' + size(p) + ' bytes) fits no bank of "' + fileOf.get(p.ov) + '": the most room is ' +
-      Math.max(...[...room].filter(([k]) => fileOf.get(k) === fileOf.get(p.ov)).map(([, r]) => r)) + ' (a bank more, or the part smaller)');
-    const [k] = fits[0];
+  const same = p => [...room].filter(([k]) => fileOf.get(k) === fileOf.get(p.ov));
+  const put = (p, k) => {
+    const was = moved.findIndex(m => m.n === p.n);
+    if (was >= 0) moved.splice(was, 1);
     at.set(p.n, k);
     room.set(k, room.get(k) - size(p));
-    moved.push({ n: p.n, from: p.ov, to: k, size: size(p) });
+    if (k !== p.ov) moved.push({ n: p.n, from: p.ov, to: k, size: size(p) });
+  };
+  const redone = new Set();                            // (The files whose parts were all placed again)
+  for (const p of left) {
+    if (redone.has(fileOf.get(p.ov))) continue;
+    const fits = same(p).filter(([, r]) => r >= size(p)).sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+    if (fits.length) {
+      put(p, fits[0][0]);
+      continue;
+    }
+    let best = null;                                    // (No bank with room: one made, a smaller part moved out of it
+    for (const [b, r] of same(p)) {                     //   to another with room for it, the smallest that's enough)
+      for (const q of list.parts) {
+        if (at.get(q.n) !== b || r + size(q) < size(p)) continue;
+        const c = same(p).filter(([k, x]) => k !== b && x >= size(q)).sort((x, y) => x[1] - y[1] || x[0] - y[0])[0];
+        if (c && (!best || size(q) < size(best.q) || (size(q) === size(best.q) && b < best.b))) best = { q, b, c: c[0] };
+      }
+    }
+    if (!best) {                                        // (None: every part of the file placed again, the biggest first,
+      const f = fileOf.get(p.ov), mine = list.parts.filter(q => fileOf.get(q.ov) === f);   //   each in the bank with the
+      const free = new Map([...base].filter(([k]) => fileOf.get(k) === f));               //   least room that holds it)
+      const place = new Map();
+      for (const q of [...mine].sort((a, b) => size(b) - size(a) || a.n - b.n)) {
+        const c = [...free].filter(([, x]) => x >= size(q)).sort((x, y) => x[1] - y[1] || x[0] - y[0])[0];
+        if (!c) throw new Error(file + ': part ' + p.n + ' (' + size(p) + ' bytes) fits no bank of "' + f + '", not even with its parts all ' +
+          'placed again: ' + [...base].filter(([k]) => fileOf.get(k) === f).reduce((t, [, x]) => t + x, 0) + ' bytes for them, ' +
+          mine.reduce((t, x) => t + size(x), 0) + ' wanted (a bank more, or the parts smaller)');
+        place.set(q.n, c[0]);
+        free.set(c[0], c[1] - size(q));
+      }
+      for (const q of mine) {
+        const was = moved.findIndex(m => m.n === q.n);
+        if (was >= 0) moved.splice(was, 1);
+        at.set(q.n, place.get(q.n));
+        if (place.get(q.n) !== q.ov) moved.push({ n: q.n, from: q.ov, to: place.get(q.n), size: size(q) });
+      }
+      for (const [k, x] of free) room.set(k, x);
+      redone.add(f);
+      continue;
+    }
+    room.set(best.b, room.get(best.b) + size(best.q));
+    put(best.q, best.c);
+    put(p, best.b);
   }
   return { at, moved, room, file: fileOf };
 }
@@ -153,7 +197,13 @@ function banksChecked() {
   const ok = r.moved.length === 1 && r.moved[0].n === 3 && r.moved[0].to === 2 && r.at.get(1) === 1 && r.at.get(2) === 1 && r.at.get(4) === 3;
   let failed = false;
   try { banks(text, list([3, 3]), sz({ SW1CODE: 3000, SW2CODE: 2000 }), 't'); } catch (e) { failed = /fits no bank of "%O.rop"/.test(e.message); }
-  if (!ok || !failed) throw new Error('games/dq0/parts.js: banks() not as its rules say (banksChecked)');
+  const t3 = 'MEMORY {\n    OV1: file = "o", size = $3E8;\n    OV2: file = "o", size = $3E8;\n    OV3: file = "o", size = $3E8;\n}\nSEGMENTS {\n}\n';
+  const r3 = banks(t3, list([1, 1, 2, 2, 3]), sz({ SW1CODE: 500, SW2CODE: 200, SW3CODE: 950, SW4CODE: 400, SW5CODE: 750 }), 't');
+  const made = r3.at.get(4) === 1 && r3.at.get(2) === 3 && r3.at.get(1) === 1 && r3.moved.length === 2;   // (Room made:
+  const t4 = 'MEMORY {\n    OV1: file = "o", size = $3E8;\n    OV2: file = "o", size = $3E8;\n}\nSEGMENTS {\n}\n';   // (No swap
+  const r4 = banks(t4, list([1, 1, 2, 2, 1]), sz({ SW1CODE: 600, SW2CODE: 350, SW3CODE: 550, SW4CODE: 400, SW5CODE: 100 }), 't');   //   makes
+  const all = [1, 2, 1, 2, 2].every((k, i) => r4.at.get([1, 3, 4, 2, 5][i]) === [1, 2, 1, 2, 2][i]);   //   room: all again)
+  if (!ok || !failed || !made || !all) throw new Error('games/dq0/parts.js: banks() not as its rules say (banksChecked)');   //   4 in 1, 2 out to 3)
 }
 
 // Segment sizes from od65's dump of objects' (--dump-segsize): Map segment → its bytes, all of them together

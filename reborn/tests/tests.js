@@ -2149,14 +2149,14 @@ const SWEEP_THINGS = [['pot', /pot/], ['backpack', /pack/], ['torch', /torch/], 
   ['stairs', /stair/], ['wall', /wall/], ['well', /well/]];
 const SWEEP_VERBS = ['look at', 'examine', 'touch', 'push', 'pull', 'knock on', 'kick', 'smell', 'taste', 'read', 'sit on',
   'search', 'light', 'open', 'close', 'take', 'climb'];
-const SWEEP_GAPS = new Set([
-  'look at the stairs', 'examine the stairs',   // (A look at a way the character stands by: the room's words, way.c's)
-  'smell the stairs',                            // (A sniff that way: the air's words, not the stairs')
-]);
+const SWEEP_GAPS = new Set([]);                 // (None left, 2026-11-07: the stairs looked at, examined, sniffed toward)
 const SWEEP_SAID = [                             // (Taken, of a thing worn or in hand; lit, of the torch lit in hand: the
   ['take the backpack', 'You wear the backpack already.'],    //   hold's and the wear's words, not "You see none of those
   ['take the sack', 'You hold the sack in your right hand already.'],   //   here."; HOUSE.md's which is lit, not a
   ['light the torch', 'The torch is lit already.'],           //   spare got out of the pack: 2026-11-07)
+  ['look at the stairs', 'You stand by the stairs up to the way out. The way out is shut fast.'],   // (An opening
+  ['examine the stairs', 'You stand by the stairs up to the way out.'],    //   looked at: its own words, way.c's opened)
+  ['smell the stairs', 'You sniff toward the stairway.'],
 ];
 // (Left out: the wall the character faces at the time is the kitchen's trapped door, so "open the wall" opens it and
 // its blade ends the game: the wall made a door, a gap of its own, swept once a thing named is never made another)
@@ -8378,7 +8378,7 @@ module.exports = {
       // 36M cycles, 10 s at 3.58 MHz; 25M now, the longest (the UI's overlays read, before the screen's made).  The
       // help's line: after the first look's words, only the status line's and the prompt after it.  And every task's
       // overlays in their banks at the first prompt as ld65 made them (dq0OvlBanks))
-      starts: [{ seed: 1, max: 225e6 }, { seed: 123456789, max: 305e6 }], quiet: 36e6,    // (2026-11-03: dq0w's new overlay, and two kinds more, to load: 241.3M, 321.0M, -K's; with the outfits, as a game's played, 249.7M and 332.7M; then the margins' pass, DUNGEON.md's: 219.7M, 298.8M)
+      starts: [{ seed: 1, max: 226e6 }, { seed: 123456789, max: 305e6 }], quiet: 36e6,    // (2026-11-03: dq0w's new overlay, and two kinds more, to load: 241.3M, 321.0M, -K's; with the outfits, as a game's played, 249.7M and 332.7M; then the margins' pass, DUNGEON.md's: 219.7M, 298.8M; 2026-11-07, the designators merged: 224.7M, 301.9M; the stairs looked at, way.c's opened: 225.3M, 302.5M, seed 1's budget 226M for review)
       start(m) {
         const a = m.acia, read = a.read, shown = a.shown, self = this;
         let typed = '', g = null, tail = '', esc = 0, text = '';

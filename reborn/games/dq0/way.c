@@ -185,6 +185,37 @@ static unsigned char __fastcall__ judged_as (unsigned char ex)
     return 1;
 }
 
+/* An opening looked at, or examined (stairs, a ladder, a shaft, the way out: "look at the stairs", COMMANDS-CRITIQUE.md's
+** step 6, 2026-11-07): the one meant (choose.c's pick, which asked of several), worded as the room's look words it (words.c's
+** opening: "You see a stairway leading down, ahead to your left."), not the room again: 1, told or asked; 0, none of
+** those in sight now (one remembered: the look about's) */
+#define OPENS       0x00B8                      /* (OB_STAIRS, OB_LADDER, OB_SHAFT, OB_WAY_OUT) */
+static const char* const way_noun[12] = { "", "door", "passage", "stairway", "ladder", "shaft", "", "way out", "",
+    "window", "", "portcullis" };               /* (WAY_OBJ's, each by its OB_*: a sniff toward it named) */
+static unsigned char opened (void)
+{
+    struct sight* s;
+    unsigned char i;
+
+    if (pick (cmd.obj.kind | PICK_TELL, cmd.obj.lies) != 1) {
+        return 1;                               /* (None, told; or which, asked) */
+    }
+    s = sight_get ();
+    for (i = 0; i < s->nopen && (s->open[i].x != tx || s->open[i].y != ty); ++i) {
+    }
+    if (i >= s->nopen) {
+        return 0;
+    }
+    sight_close = 64 | i;
+    words ();
+    sight_close = 0;
+    msg (lb + 1);
+    if ((s->open[i].kind & ~O_DAYLIT) == O_WAY_OUT) {
+        way_words ();                           /* (The way out: shut, the theme's lock's words; or open) */
+    }
+    return 1;
+}
+
 /* A thing, a portal, the room looked at closely, or the aspects asked of it (main.c's VB_EXAMINE_OBJECT,
 ** VB_EXAMINE_LOCALE: a denizen's its own; a portal gone over for traps, main.c's door work): 0, or that door work,
 ** PA_CHECK */
@@ -222,7 +253,7 @@ static unsigned char examine (void)
     } else if (k == OB_WALL) {
         walk_says ((const char*) W_DIG);
         intend2 (I_TRACE, TRC_WALL, 0);         /* (The wall ahead, its rock: the world's words, slice 4.10's) */
-    } else {
+    } else if (!((OPENS >> (k & 15)) & 1) || !opened ()) {
         look (2);                               /* (A close look about: the room's figures) */
     }
     return 0;
@@ -315,6 +346,9 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
     }
     k = action == VB_LISTEN ? 1 : action == VB_SMELL ? 4 : 0;
     h = cmd.dir;                                /* (A way: "look north", "listen left") */
+    if (!k && h > H_NW && action == VB_OBSERVE_OBJECT && ((OPENS >> (cmd.obj.kind & 15)) & 1) && opened ()) {
+        return 0;                               /* ("Look at the stairs": them, not the way they lie) */
+    }
     if (h > H_NW) {
         if ((WAY_OBJ >> (cmd.obj.kind & 15)) & 1) {     /* (The one it sees) */
             if (pick (cmd.obj.kind | PICK_TELL, cmd.obj.lies) != 1) {
@@ -341,6 +375,10 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
         return 0;
     }
     if (k == 4) {
+        if (cmd.obj.kind) {                 /* (A way's only: refuse.c's M_WAYS) */
+            sayf ("\nYou sniff toward the %s.", way_noun[cmd.obj.kind & 15]);   /* ("Smell the stairs": named, its
+                                                **   answer the air's that way: 2026-11-07, dq0sweep's) */
+        }
         bg_words (2);                           /* (The draught, the air's: part 11's, slice 4.5's) */
         intend2 (I_TRACE, TRC_SMELL | (unsigned) h << 8, WAY_T);   /* (The world's: the smell read, worded, then
                                                 **   its time) */
