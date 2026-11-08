@@ -2060,7 +2060,7 @@ function inTurn(o, want, f, name = '') {
 // twice, its trap twice: the look told it twice).  sim/test.js's dq0 check, in every dq0 test (HUBOWN=0 too)
 const DQ0_REPEATS = [
   { what: /^You reach for the [a-z ]+\.$/, why: 'a thing handled, each command of a line (or typed ahead) its own first word: dq0firstword holds it to once a command' },
-  { what: /^(Put down\.|You fumble for the sword\.|You see none of those here\.|You carry none of those\.|Taken\.)/, tests: /^dq0engage$/, why: 'its lines typed ahead, one answer' },
+  { what: /^(Put down\.|You fumble for the sword\.|You see none of those here\.|You see no [a-z ]+ here\.|You carry none of those\.|You have no [a-z ]+\.|Taken\.)/, tests: /^dq0engage$/, why: 'its lines typed ahead, one answer' },
   { what: /^The [a-z ]+ (unslings|draws) its [a-z ]+\.$/,
     why: 'several of a kind readying their weapons in one answer, each one\'s told (slice 4.7\'s: three elves unslinging their hartbows)' },
   { what: /^Your hold gives way, \d+ feet up: you fall\.$/, why: 'a climb\'s holds given way and caught, each told as it comes, the climb on from the same height (dq0rope\'s grapple, 2026-11-06)' },
@@ -5802,7 +5802,7 @@ module.exports = {
           at = i + w.length;
         }
         if (/examine the torch carefully[^>]*I don't understand that/.test(o)) f.push('"examine the torch carefully" not understood');
-        if (!/> give the torch to the rat (?:You look for the torch\. )?(The giant rat is too far off: you'd need to be within reach\.|You see no rat here\.)/.test(o)) {
+        if (!/> give the torch to the rat (?:You look for the torch\. )?(The giant rat is out of reach: go up to it first\.|You see no rat here\.)/.test(o)) {
           f.push('the gift not answered as one out of reach (' + (o.match(/> give the torch to the rat[^>]*/) || [''])[0] + ')');
         }
         return f;
@@ -6785,7 +6785,7 @@ module.exports = {
         if (hid(c1) !== 3) f.push('crept to beside the cask: its hiding ' + hid(c1) + ', not 3');
         if (hid(c2) !== 0) f.push('crept out into the light: still hidden');
         if (!/There's no cover here/.test(s)) f.push('crept into the open: not told');
-        if (!/You see none of those here/.test(s)) f.push('a thing not there named: not told');
+        if (!/You see no(ne of those| [a-z ]+) here/.test(s)) f.push('a thing not there named: not told');
         const c4 = T.after(c2, 'hide behind the cask');
         if (hid(c4) !== 3) f.push('behind the cask, walked over to: its hiding ' + hid(c4) + ', not 3');
         return f;
@@ -8737,7 +8737,7 @@ module.exports = {
           said('take the rope from the sack', ['You reach into the sack.']);
           if (/Put down\./.test(said('drop the sack', ['You put down the sack.']))) f.push('drop the sack: Put down. after its first words');
           said('take the sack', ['You reach for the sack.', 'Taken.'], o.indexOf('> drop the sack'));
-          const none = said('take the pumpkin', ['You look for the pumpkin.', 'You see none of those here.']);
+          const none = said('take the pumpkin', ['You look for the pumpkin.', 'You see no pumpkin here.']);
           if (/You reach/.test(none)) f.push('a thing it doesn\'t see reached for: ' + none);
           said('dig down', ['You look at the floor.', 'flagstones']);
           said('look at the floor', ['You look at the floor.', 'The floor here']);
@@ -13501,7 +13501,7 @@ module.exports = {
         said('read the sconce', ['You go over to the sconce.', 'There\'s nothing written on the sconce.']);   // (Walked over to first, as any inspecting)
         said('read the sconce', 'You can\'t see to read.', 'You go over');   // (In the dark, nothing's read: where it lies or not)
         said('examine the door ahead', 'You head for the door.', 'You haven\'t seen');   // (The side said from where it was: gone to, it's that one; or a denizen in the way, the null referee's dice)
-        if (!/A door of |can't get any nearer/.test((ans.filter(y => y.cmd === 'examine the door ahead')[0] || { text: '' }).text)) f.push('examine the door ahead: not examined, gone to');
+        if (!/A door of |can't get near enough/.test((ans.filter(y => y.cmd === 'examine the door ahead')[0] || { text: '' }).text)) f.push('examine the door ahead: not examined, gone to');
         const r = T.of('go to the closest rat');
         if (r.k < 0) f.push('no rat gone to');
         dq0Never(f, r, 'E_FIGHT', { who: 0, def: -1 }, 'a blow struck, going up to a rat');

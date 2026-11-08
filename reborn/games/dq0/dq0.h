@@ -248,10 +248,20 @@ void __fastcall__ dots (unsigned char k);       /* (Overlay 6's) The game's star
 extern unsigned char starting;                  /*   while it starts (main.c's) */
 void __fastcall__ entered (unsigned char resumed);  /* Overlay 1: the character come into the dungeon */
 void help (void);                               /* Overlay 1 (help.c's): the commands, listed (help.txt) */
-void __fastcall__ unknown (unsigned char f);    /* Overlay 1: a command refused, said back from its line (cl): f U_* */
-enum { U_VERB, U_YET, U_CANT, U_NOTE };         /* (A verb the game doesn't know; one it doesn't do yet, or not to that
-                                                **   yet; one that can't be done to that; nothing written on it) */
-unsigned char refused (void);                   /* Overlay 1: a thing named that its verb would pass over,
+void __fastcall__ unknown (unsigned char f);    /* Overlay 24: a command refused, said back from its line (cl): f U_* */
+enum { U_VERB, U_YET, U_CANT, U_NOTE, U_WHAT,   /* (A verb the game doesn't know; one it doesn't do yet, or not to that
+                                                **   yet; one that can't be done to that; nothing written on it; nothing
+                                                **   named, "Take what?") */
+    A_SEE_NO, A_SEE_NONE, A_HAVE_NO, A_CARRY_NONE, A_NO_TAKE, A_UNSEEN, A_UNSEEN_WAY, A_FAR, A_NEARER, A_COUNT };
+#define A_LB        0x80                        /* (say_no's a |: added to lb, not said) */
+void __fastcall__ say_no (unsigned char a, const char* w);   /* Overlay 24 (refuse.c's): a refusal said, the one
+                                                **   wording of its meaning (U_*, A_*: "You see no %s here.",
+                                                **   "You have no %s.", "%s is out of reach: go up to it first.",
+                                                **   "You haven't seen a(n) %s here." ...), w its thing's name put in
+                                                **   (0: "it"; the main RAM's, not an overlay's own); A_SEE_NO's and
+                                                **   A_HAVE_NO's with no name to say (none, a "#"), their nameless
+                                                **   forms */
+unsigned char refused (void);                   /* Overlay 24: a thing named that its verb would pass over,
                                                 **   refused (refuse.c's o_refused: 1) */
 extern const char* cl;                          /* The command's line (main.c's) */
 unsigned char __fastcall__ name_is (const char* name, const char* w);   /* (nameis.s's, the main RAM's) Word w names

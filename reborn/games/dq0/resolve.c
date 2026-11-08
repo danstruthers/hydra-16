@@ -439,7 +439,7 @@ unsigned char o_resolve (void)
             return RV_DONE;
         }
         if (seen (&cmd.obj) == 0xFF) {
-            sayf ("\nYou see no %s here.", cmd.obj.word);
+            say_no (A_SEE_NO, cmd.obj.word);
             return RV_DONE;
         }
         memcpy (&target, &cmd.obj, sizeof target);
@@ -481,7 +481,7 @@ unsigned char o_resolve (void)
             if (last.word[0] && !last.kind && gather (last.word, 1)) {
                 it_is (&cmd.obj);               /* ("examine book", then "take": the book) */
             } else if (!gather ("", 1)) {
-                msg ("There's nothing here to take.");
+                say_no (A_NO_TAKE, 0);
                 return RV_DONE;
             } else if (nc == 1) {
                 found (&cmd.obj, 0);
@@ -499,7 +499,7 @@ unsigned char o_resolve (void)
     } else {
         if (a == VB_RETRIEVE_OBJECT && cmd.obj.sel == SL_ALL && !cmd.obj.word[0]) {
             if (!gather ("", 1)) {              /* ("take all": everything it sees lying about, in turn) */
-                msg ("There's nothing here to take.");
+                say_no (A_NO_TAKE, 0);
                 return RV_DONE;
             }
             for (nall = 0; nall < nc; ++nall) { /* (The nearest first: those in reach before those walked to) */
@@ -599,13 +599,17 @@ void __fastcall__ o_throw_words (unsigned r)
         sayf ("\nThe %s isn't a thing you can throw.", w);
         return;
     case IR_NOT_HERE:
-        sayf ("\nYou see no %s here.", cmd.other.word);
+        say_no (A_SEE_NO, cmd.other.word);
         return;
     case IR_FULL:
         msg ("Throw it at what? (throw the dagger at the rat; or name a target: target the rat)");
         return;
     default:
-        msg (cmd.obj.word[0] ? "You carry none of those." : "You have nothing in your hands to throw.");
+        if (cmd.obj.word[0]) {
+            say_no (A_HAVE_NO, cmd.obj.word);
+        } else {
+            msg ("You have nothing in your hands to throw.");
+        }
     }
 }
 

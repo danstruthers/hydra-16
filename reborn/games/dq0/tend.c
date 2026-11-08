@@ -88,7 +88,7 @@ static unsigned char patient (void)
             dx = (int) p->x - (int) HUB->pc_x;
             dy = (int) p->y - (int) HUB->pc_y;
             if (p->sn != HUB->pc_stratum || dx < -1 || dx > 1 || dy < -1 || dy > 1) {
-                sayf ("\nYou'd have to be beside the %s.", w);
+                say_no (A_FAR, w);
             } else if (p->attitude < AT_FRIENDLY && p->doing != DO_DOWN) {
                 sayf ("\nThe %s won't let you near its wounds.", w);
             } else {
@@ -97,7 +97,7 @@ static unsigned char patient (void)
             return 0xFF;
         }
     }
-    sayf ("\nYou see no %s here.", w);
+    say_no (A_SEE_NO, w);
     return 0xFF;
 }
 

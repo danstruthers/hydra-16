@@ -236,7 +236,7 @@ static unsigned char examine (void)
             return 0;
         }
         if (!k) {
-            sayf ("\nYou see no %s here.", cmd.obj.word);
+            say_no (A_SEE_NO, cmd.obj.word);
             return 0;
         }
     }
@@ -284,7 +284,7 @@ void go_thing (void)
             return;
         }
         if (k != IR_NOT_HERE) {
-            sayf ("\nYou haven't seen a%s %s here.", strchr ("aeiou", *cmd.obj.word) ? "n" : "", cmd.obj.word);
+            say_no (A_UNSEEN, cmd.obj.word);
             return;
         }
         x = HUB->ireq.x;

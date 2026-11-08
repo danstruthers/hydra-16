@@ -112,7 +112,7 @@ unsigned char s_search_go (void)
             if (d) {
                 sayf ("\nYou feel about you, but there's no %s within reach.", w);
             } else {
-                tell (T_YOU_SEE_NONE);
+                say_no (A_SEE_NO, w);
             }
             return 0;
         }

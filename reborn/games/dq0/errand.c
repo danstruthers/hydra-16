@@ -94,7 +94,7 @@ unsigned char s_trade (void)
     q->to = 1;                                  /* (The character's: sold, or haggled over as it's sold) */
     sell = h != SW_BUY && h != SW_PRICE && things (IO_FETCH, gd) == IR_OK;
     if (!sell && (h == SW_SELL || h == SW_OFFER)) {
-        sayf ("\nYou have no %s.", gd);
+        say_no (A_HAVE_NO, gd);
         return 0;
     }
     if (sell) {
@@ -114,7 +114,11 @@ unsigned char s_trade (void)
         wh[0] |= 0x20;
     }
     if (r == IR_NONE) {
-        sayf (wh[0] ? "\nYou see no %s here." : "\nThere's no one here to trade with.", wh);
+        if (wh[0]) {
+            say_no (A_SEE_NO, wh);
+        } else {
+            msg ("There's no one here to trade with.");
+        }
         return 0;
     }
     if (r == IR_OK) {
@@ -216,7 +220,7 @@ ask:
             h == SW_PRICE || !(S.iy & 1) ? "the" : "your", gd);
         break;
     case SR_FAR:
-        sayf ("\n%s is too far off: you'd need to be within reach.", nm);
+        say_no (A_FAR, nm);
         break;
     case SR_TONGUE:
         sayf ("\n%s doesn't speak any tongue you know: you can't haggle.", nm);
@@ -304,7 +308,7 @@ unsigned char s_errand (void)
         }
         q->to = 1;
         if (things (IO_FETCH, cmd.obj.word) != IR_OK) {
-            sayf ("\nYou have no %s.", cmd.obj.word[0] ? cmd.obj.word : "such thing");
+            say_no (A_HAVE_NO, cmd.obj.word);
             return 0;
         }
         hub_map (0);
@@ -331,8 +335,11 @@ unsigned char s_errand (void)
         }
         q->to = 0;
         if ((r = things (IO_FETCH, cmd.other.word)) != IR_OK) {
-            sayf (r == IR_NONE ? "\nYou see no %s here." : "\nThe %s can't be fetched from where it is.",
-                  cmd.other.word);
+            if (r == IR_NONE) {
+                say_no (A_SEE_NO, cmd.other.word);
+            } else {
+                sayf ("\nThe %s can't be fetched from where it is.", cmd.other.word);
+            }
             return 0;
         }
         hub_map (0);

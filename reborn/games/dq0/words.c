@@ -603,7 +603,7 @@ unsigned char __fastcall__ o_more (unsigned char action)
         if (action == IR_NOT_HERE) {
             reach_go ();                        /* (Out of reach: walked over to first, then again) */
         } else if (action == IR_NONE) {
-            sayf ("\nYou see no %s here.", cmd.obj.word);
+            say_no (A_SEE_NO, cmd.obj.word);
         } else if (action == IR_OK) {           /* (IR_NO: a step of the reach first, part 19's) */
             msg (lb);
             intend2 (I_WAIT, 30, 1);            /* (A look's three seconds) */
@@ -630,7 +630,7 @@ unsigned char __fastcall__ o_more (unsigned char action)
             if (cmd.action != VB_LOCK_OBJECT) {
                 return 0;
             }
-            sayf ("\nYou see no %s here.", cmd.obj.word);
+            say_no (A_SEE_NO, cmd.obj.word);
         } else if (action == IR_NOT_HERE) {
             reach_go ();
         } else {

@@ -451,7 +451,7 @@ static unsigned char __fastcall__ reading (struct cmd* c)
 
     copy = c->skill == P_DRAW + 1;
     if (!c->obj.word[0]) {
-        msg (c->obj.kind ? "There's nothing written on it." : copy ? "Copy what?" : "Read what?");
+        unknown (c->obj.kind ? U_NOTE : U_WHAT);   /* ("There's nothing written on the way out.", "Read what?") */
         return Q_TOLD;
     }
     hub_map (SIGHT_BANK);

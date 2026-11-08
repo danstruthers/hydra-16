@@ -516,7 +516,7 @@ unsigned char __fastcall__ s_names_line (char* l)
     }
     if (one_of (wd[0], "name\0\0\0call\0\0\0rename\0dub\0\0\0\0", 7)) {
         if (nw < 2) {
-            msg ("Name what?");
+            unknown (U_WHAT);
             return NL_DONE;
         }
         return give (l);

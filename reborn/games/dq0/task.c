@@ -231,7 +231,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         }
         break;
     case TE_FAR:
-        sayf ("\nYou can't get near enough to %s.", foe (named, 0));
+        say_no (A_NEARER, foe (named, 0));
         break;
     case TE_AWAY:                               /* (The engage initiative test's: an enemy newly engaged the quicker,
                                                 **   its tactical advantage a disengage) */

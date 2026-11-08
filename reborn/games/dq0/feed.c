@@ -38,14 +38,14 @@ static unsigned char __fastcall__ fed_on (unsigned char eat)
         }
     }
     if (othings (IO_FIND, w, "", 0) != IR_OK) {
-        sayf ("\nYou have no %s.", w);
+        say_no (A_HAVE_NO, w);
         return 0;
     }
     hub_mem (KIND_BANK, key, CATALOGUE[(unsigned char) othings_x].tool, sizeof key);   /* (Its kind: othings', the window put back) */
     if (!strcmp (key, eat ? "food" : "water")) {
         return 1;
     }
-    sayf ("\nYou can't %s the %s.", eat ? "eat" : "drink", w);
+    unknown (U_CANT);
     return 0;
 }
 
@@ -58,7 +58,7 @@ static void __fastcall__ feed_do (unsigned char eat)
     if (!strcmp (cmd.obj.word, "antidote") || !strcmp (cmd.obj.word, "remedy")) {   /* (A remedy taken, 2026-11-02:
                                                 **   HOUSE.md's remedies; the referee's to judge, RT_TAKEN) */
         if (othings (IO_USE, cmd.obj.word[0] == 'a' ? "cure" : "remedy", "", 0) != IR_OK) {   /* (Its key: a tool key's seven letters) */
-            sayf ("\nYou have no %s.", cmd.obj.word);
+            say_no (A_HAVE_NO, cmd.obj.word);
             return;
         }
         sayf ("\nYou drink the %s.", cmd.obj.word);

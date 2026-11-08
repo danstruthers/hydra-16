@@ -62,14 +62,20 @@ void __fastcall__ o_sway_words (const struct sway* s)
         if (h == SW_ORDER && !s->word[0]) {
             add ("You have no ally here to hear you.");
         } else {
-            add ("You see no ");
-            add (s->word[0] ? s->word : "one");
-            add (" here.");
+            if (s->word[0]) {
+                say_no (A_SEE_NO | A_LB, s->word);
+            } else {
+                add ("You see no one here.");
+            }
         }
         return;
     case SR_FAR:
+        if (s->beast || h == SW_GIVE) {
+            say_no (A_FAR | A_LB, s->name);   /* (Out of reach: the refusals' one wording) */
+            return;
+        }
         who (1);
-        add (s->beast || h == SW_GIVE ? " is too far off: you'd need to be within reach." : " is too far off to hear you.");
+        add (" is too far off to hear you.");
         return;
     case SR_TONGUE:
         who (1);

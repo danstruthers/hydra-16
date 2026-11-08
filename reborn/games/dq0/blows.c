@@ -285,11 +285,14 @@ void __fastcall__ o_fight_note (unsigned char n)
 {
     static const char* const say[8] = {
         "You will defend yourself as best you can.", "You will block.", "You will dodge.",
-        "You will strike back first.", "You will not defend yourself.", "It's out of reach: go up to it first.",
+        "You will strike back first.", "You will not defend yourself.", "",
         "There's nothing like that here to fight.", "There's nothing beside you to fight."
     };
 
     strcpy (lb, say[n & 7]);
+    if ((n & 7) == 5) {
+        say_no (A_FAR | A_LB, 0);       /* ("It is out of reach: go up to it first.": the refusals' one wording) */
+    }
 }
 #pragma local-strings (pop)
 #pragma code-name (pop)

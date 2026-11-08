@@ -1422,7 +1422,7 @@ unsigned char __fastcall__ s_hide (const char* w)
         w = cmd.other.word;
         if (*w && !strstr ("shadow shadows dark darkness doorway door corner", w) && (HUB->ireq.to = LM_COND, d = things (IO_LOOK, w)) != IR_OK) {
             if (d != IR_NOT_HERE || !reach_go ()) {
-                tell (T_YOU_SEE_NONE);
+                say_no (A_SEE_NO, w);
             }
             return 0;
         }
@@ -1442,7 +1442,7 @@ unsigned char __fastcall__ s_hide (const char* w)
             intend2 (I_WAIT, 1, 1);             /* (The reach's steps to come: the UI waits for them) */
         }
     } else {
-        tell (T_YOU_CARRY_NONE);
+        say_no (A_HAVE_NO, w);
     }
     return 0;
 }
@@ -1978,7 +1978,7 @@ void __fastcall__ s_lift (const char* name)
             return;
         }
     }
-    tell (T_YOU_SEE_NONE);
+    say_no (A_SEE_NO, name);
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -2002,7 +2002,11 @@ void __fastcall__ s_took_up (unsigned r)
     if ((unsigned char) r == IR_OK && *tt ()) {
         msg (lb);                               /* (By the count: "You take 4 rations.", the world's) */
     } else if ((unsigned char) r != IR_NOT_HERE) {  /* (Out of reach still: the walk's words told why) */
-        tell ((unsigned char) r == IR_OK ? T_TAKEN : (unsigned char) r == IR_FULL ? T_YOUR_HANDS_ARE : T_YOU_SEE_NONE);
+        if ((unsigned char) r == IR_OK || (unsigned char) r == IR_FULL) {
+            tell ((unsigned char) r == IR_OK ? T_TAKEN : T_YOUR_HANDS_ARE);
+        } else {
+            say_no (A_SEE_NO, taking);
+        }
     }
     if ((unsigned char) r == IR_OK) {
         after (r >> 8, 20, IO_GET);
@@ -2448,7 +2452,7 @@ portal:
         if (cmd.prep == PR_FROM) {
             handle (IO_TAKE, cmd.obj.word, cmd.other.word, 0);
         } else if (!cmd.obj.word[0]) {
-            tell (T_TAKE_WHAT);
+            unknown (U_WHAT);
         } else {
             take (cmd.obj.word);
         }
@@ -2458,7 +2462,7 @@ portal:
             goto put;                           /* ("Drop the dagger into the well", "down the shaft": put in it, 2026-11-06) */
         }
         if (!cmd.obj.word[0]) {
-            tell (T_PUT_DOWN_WHAT);
+            unknown (U_WHAT);
         } else if (d = HUB->pc_light, (pa = things (IO_DROP | IO_STEPS, cmd.obj.word)) == IR_OK) {
             if (*tt ()) {
                 msg (lb);                       /* (By the count: "You put down two sacks.", the world's) */
@@ -2470,7 +2474,7 @@ portal:
         } else if (pa == IR_NO) {
             msg (tt ());                        /* (Why not: in a thing closed) */
         } else {
-            tell (T_YOU_CARRY_NONE);
+            say_no (A_HAVE_NO, cmd.obj.word);
         }
         return;
     case VB_HIDE:                               /* (P_CONCEAL: a thing; else oneself: HOUSE.md's) */
@@ -2843,7 +2847,7 @@ unsigned char s_reach_go (void)
     unsigned char r = 1;
 
     if (reach) {
-        msg ("You can't get any nearer to it.");
+        say_no (A_NEARER, 0);
     } else {
         cmd.obj.lies = 0xFF;                    /* (Kept without the side it lay on, said from where it was: it's come to it) */
         hub_map (UI_BANK);

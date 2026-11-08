@@ -231,7 +231,8 @@ again:
     }
     if (!n) {
         if (how & PICK_TELL) {
-            sayf ("\nYou haven't seen a%s %s %s.", *thing[obj] == 'e' ? "n" : "", thing[obj], orel == 0xFF ? "here" : "that way");
+            strcpy (lb, thing[obj]);            /* (Its name in the main RAM: the refusals' overlay's to read) */
+            say_no (orel == 0xFF ? A_UNSEEN : A_UNSEEN_WAY, lb);
         }
         return 0;
     }
