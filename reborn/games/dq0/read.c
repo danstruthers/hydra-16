@@ -463,9 +463,9 @@ static unsigned char __fastcall__ reading (struct cmd* c)
     }
     walk_op = IO_PUT;                           /* (Its first words before this asking: walk_ahead's, sway.c) */
     walk_ahead (c->obj.word);
-    if (othings (IO_LOOK, c->obj.word, "", LM_COND) == IR_NOT_HERE) {
-        reach_go ();                            /* (Out of reach: walked over to first, then again, as any inspecting) */
-        return Q_TOLD;
+    if (othings (IO_LOOK | IO_GO, c->obj.word, "", LM_COND) == IR_GONE) {
+        return Q_TOLD;                          /* (Out of reach: walked over to first, then again, the one path for
+                                                **   things) */
     }
     r = othings (IO_PUZZLE, c->obj.word, "", copy ? TR_COPY : TR_READ);
     x = othings_x;

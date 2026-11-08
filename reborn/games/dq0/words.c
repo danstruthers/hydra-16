@@ -517,6 +517,9 @@ static void __fastcall__ worked (unsigned char action)
     unsigned char k, n;
     unsigned t;
 
+    if (action == IR_GONE) {
+        return;                                 /* (Walked over to first, or which asked: the one path for things) */
+    }
     hub_mem (0, &k, &HUB->ireq.qty, 1);
     hub_mem (0, &n, &HUB->ireq.item, 1);
     hub_mem (0, &t, &HUB->ireq.x, 2);
@@ -589,7 +592,7 @@ unsigned char __fastcall__ o_more (unsigned char action)
         if (strstr (cl, "sharpen") || strstr (cl, "hone") || strstr (cl, "whet")) {
             d |= IO_SHARP;                      /* (A blade's words: a light has no edge, the things') */
         }
-        worked (othings (IO_FILL | IO_STEPS, cmd.obj.word, cmd.other.word, d));
+        worked (othings (IO_FILL | IO_STEPS | IO_GO, cmd.obj.word, cmd.other.word, d));
         break;
     case VB_OBSERVE_IN:                         /* (Looked into a thing, onto it: "look in the sack", "look on the */
                                                 /*   table", "look into the well", the user's, 2026-10-21; the */
@@ -599,10 +602,9 @@ unsigned char __fastcall__ o_more (unsigned char action)
             look_way (VB_OBSERVE_THROUGH);
             break;
         }
-        action = othings (IO_INSIDE | IO_STEPS, cmd.obj.word, "", 0);
-        if (action == IR_NOT_HERE) {
-            reach_go ();                        /* (Out of reach: walked over to first, then again) */
-        } else if (action == IR_NONE) {
+        action = othings (IO_INSIDE | IO_STEPS | IO_GO, cmd.obj.word, "", 0);    /* (The one path for things: out of
+                                                **   reach, walked over to first, then again) */
+        if (action == IR_NONE) {
             say_no (A_SEE_NO, cmd.obj.word);
         } else if (action == IR_OK) {           /* (IR_NO: a step of the reach first, part 19's) */
             msg (lb);
@@ -612,7 +614,7 @@ unsigned char __fastcall__ o_more (unsigned char action)
     case VB_TIE_OBJECT:                         /* (A rope's: the things', wrope.c's, IO_HIDE's shape; a sack's tie, as it's */
     case VB_UNTIE_OBJECT:                       /*   opened or closed) */
         if (hide (HD_ROPE)) {
-            worked (othings (IO_HIDE | IO_STEPS, cmd.obj.word, cmd.other.word,
+            worked (othings (IO_HIDE | IO_STEPS | IO_GO, cmd.obj.word, cmd.other.word,
                 d | IO_ROPE | (action == VB_UNTIE_OBJECT ? RP_UNTIE : cmd.aux)));
             break;
         }
@@ -625,14 +627,12 @@ unsigned char __fastcall__ o_more (unsigned char action)
         if (!cmd.obj.word[0] || cmd.obj.kind) {
             return 0;
         }
-        action = othings (IO_SHUT | IO_STEPS, cmd.obj.word, "", (action == VB_LOCK_OBJECT ? PA_LOCK : cmd.aux) | d);
+        action = othings (IO_SHUT | IO_STEPS | IO_GO, cmd.obj.word, "", (action == VB_LOCK_OBJECT ? PA_LOCK : cmd.aux) | d);
         if (action == IR_NONE) {
             if (cmd.action != VB_LOCK_OBJECT) {
                 return 0;
             }
             say_no (A_SEE_NO, cmd.obj.word);
-        } else if (action == IR_NOT_HERE) {
-            reach_go ();
         } else {
             worked (action);                    /* (Its lock picked, it forced: a timed work) */
         }

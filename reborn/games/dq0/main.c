@@ -1420,29 +1420,45 @@ unsigned char __fastcall__ s_hide (const char* w)
             cmd.obj.word[0] = 0;
         }
         w = cmd.other.word;
-        if (*w && !strstr ("shadow shadows dark darkness doorway door corner", w) && (HUB->ireq.to = LM_COND, d = things (IO_LOOK, w)) != IR_OK) {
-            if (d != IR_NOT_HERE || !reach_go ()) {
+        if (*w && !strstr ("shadow shadows dark darkness doorway door corner", w) && (HUB->ireq.to = LM_COND, d = things (IO_LOOK | IO_GO, w)) != IR_OK) {
+            if (d != IR_GONE) {
                 say_no (A_SEE_NO, w);
             }
             return 0;
         }
         intend2 (I_RISE, POS_HIDE | HD_IN, 0);
-    } else if ((HUB->ireq.to = reach == 4 ? IO_DONE : 0, d = things (IO_HIDE | IO_STEPS, w)) == IR_NO) {
-        return 0;                                 /* (A step of the reach first: part 19's) */
-    } else if (d == IR_OK) {
-        if (reach != 4) {
-            more (VB_HIDE);                     /* (Begun: a minute's work, a timed work, the things' IO_DONE at its
-                                                **   end, words.c's) */
-            return 0;
-        }
-        d = HUB->ireq.qty;
-        tell (d >= 10 ? T_HID_CUNNINGLY : d >= 4 ? T_HID_WELL : T_HID_POORLY);
-        to_hand ();
-        if (HUB->ireq.y >= 0xFD) {
-            intend2 (I_WAIT, 1, 1);             /* (The reach's steps to come: the UI waits for them) */
-        }
     } else {
-        say_no (A_HAVE_NO, w);
+again:  HUB->ireq.to = reach == 4 ? IO_DONE : 0;
+        if ((d = things (IO_HIDE | IO_STEPS | IO_GO, w)) == IR_NONE && reach != 4) {
+            if ((d = things (IO_GET | IO_STEPS | IO_GO, w)) == IR_OK) {
+                *tt () ? msg (lb) : tell (T_TAKEN); /* (One lying about, not carried: taken up first, then hidden, as
+                                                **   HOUSE.md's hiding a thing, put down where it stands at its end; out
+                                                **   of reach, walked over to first and the hide again: the one path for
+                                                **   things, COMMANDS-CRITIQUE.md's §5.2 H) */
+                goto again;
+            }
+            if (d != IR_NONE) {
+                if (d != IR_GONE && *tt ()) {
+                    msg (lb);                   /* (Not taken: the take's words why; a step of the reach, none) */
+                }
+                d = IR_NO;
+            }
+        }
+        if (d == IR_OK) {
+            if (reach != 4) {
+                more (VB_HIDE);                 /* (Begun: a minute's work, a timed work, the things' IO_DONE at its
+                                                **   end, words.c's) */
+                return 0;
+            }
+            d = HUB->ireq.qty;
+            tell (d >= 10 ? T_HID_CUNNINGLY : d >= 4 ? T_HID_WELL : T_HID_POORLY);
+            to_hand ();
+            if (HUB->ireq.y >= 0xFD) {
+                intend2 (I_WAIT, 1, 1);         /* (The reach's steps to come: the UI waits for them) */
+            }
+        } else if (d != IR_NO && d != IR_GONE) {    /* (IR_NO: a step of the reach first, part 19's) */
+            say_no (A_HAVE_NO, w);
+        }
     }
     return 0;
 }
@@ -1519,11 +1535,12 @@ unsigned char s_hold_first (void)
         HUB->ireq.sel = cmd.other.sel | cmd.other.n << 4;   /* ("With the other sword": the instrument's own selector, not
                                                 **   the target's: COMMANDS-CRITIQUE.md's §5.1 disagreement 9) */
     }
-    r = things (IO_HOLD | IO_STEPS, hold_w);
+    r = things (IO_HOLD | IO_STEPS | IO_GO, hold_w);
     HUB->ireq.sel = s;
-    if (HUB->ireq.kind == IO_STEP) {
+    if (HUB->ireq.kind == IO_STEP || r == IR_GONE) {
         return 0;                               /* (A step of the reach first, HOUSE.md's: the blow asked again after it, hold_w
-                                                **   still said; 2026-11-04) */
+                                                **   still said; 2026-11-04; out of reach, walked over to it first, the
+                                                **   one path for things) */
     }
     t = HUB->ireq.x;
     hold_w[0] = 0;
@@ -1814,11 +1831,17 @@ void __fastcall__ wset (unsigned char what, unsigned char x, unsigned char y)
     hub_back (b);
 }
 
-/* ---- The things (items.h): a request to the world's item store, waited for: its result */
+/* ---- The things (items.h): a request to the world's item store, waited for: its result.  With IO_GO, every verb's
+** one path for a thing (COMMANDS-CRITIQUE.md's §5.2 H): out of reach, walked over to first and the command again
+** (reach_go: walk_a's walk); several that differ, which asked (caps.c's which_ask); either, IR_GONE.  The words and
+** the time the verb's own.  (The request by its fixed address, its flag a static: the main RAM's room, 2026-11-07) */
+#define q   (&HUB->ireq)
 unsigned char __fastcall__ things (unsigned char op, const char* name)
 {
-    struct ireq* q = &HUB->ireq;
+    static unsigned char go;                    /* (Nothing it calls asks the things again before it's read) */
 
+    go = op & IO_GO;
+    op ^= go;
     q->kind = op;
     strncpy (q->name, name, sizeof q->name - 1);
     q->name[sizeof q->name - 1] = 0;
@@ -1842,8 +1865,20 @@ unsigned char __fastcall__ things (unsigned char op, const char* name)
     if (q->kind == IO_STEP) {
         step_go ();                             /* (A step of the reach begun, HOUSE.md's: part 19's) */
     }
-    return q->result;
+    op = q->result;
+    if (go) {
+        if (op == IR_WHICH) {
+            which_ask ();
+            return IR_GONE;
+        }
+        if (op == IR_NOT_HERE && reach_go ()) {
+            return IR_GONE;
+        }
+    }
+    walk_a = 1;                                 /* (Not walked: the next walk's the command kept's again) */
+    return op;
 }
+#undef q
 
 /* The things asked from an overlay (theme.c's): the hub's header put in the window for it, then the overlay back */
 unsigned othings_x;
@@ -1940,12 +1975,9 @@ static void __fastcall__ handle (unsigned char op, const char* x, const char* y,
 
     strcpy (HUB->ireq.into, y);
     HUB->ireq.to = on | shand;                  /* (A hold's: the hand said, slice 4.1b's) */
-    if (things (op | IO_STEPS, x) == IR_NOT_HERE && reach_go ()) {
-        return;                                 /* (Out of reach: walked over to it first, then again) */
-    }
-    if (HUB->ireq.result == IR_WHICH) {
-        which_ask ();                           /* (Stowed: where, asked, caps.c's) */
-        return;
+    if (things (op | IO_STEPS | IO_GO, x) == IR_GONE) {
+        return;                                 /* (Out of reach: walked over to it first, then again; stowed: where,
+                                                **   asked) */
     }
     msg (tt ());
     if (HUB->ireq.result == IR_OK) {
@@ -2014,30 +2046,22 @@ void __fastcall__ s_took_up (unsigned r)
     }
 }
 
-/* A thing taken up, by its name (out of reach, the world walks over to it first, and takes it up: I_TAKE; a portal's
-** part lifted out first; one fixed where it stands, the things' words) */
+/* A thing taken up, by its name: the one path for things (things' IO_GO: out of reach, the world walks over to it
+** first and takes it up as it gets there, reach_go's walk_a 0, E_TAKEN's; several that differ, which asked); a
+** portal's part lifted out first; one fixed where it stands, the things' words */
 void __fastcall__ s_take (const char* name)
 {
-    static struct msg m;
-    unsigned char was = HUB->pc_light, r = things (IO_GET | IO_STEPS, name);
+    unsigned char was = HUB->pc_light, r;
 
-    strcpy (taking, name);
+    strcpy (taking, name);                      /* (name may be pending, cleared) */
     pending[0] = 0;
-    if (r == IR_NOT_HERE) {
-        reach = 6;                              /* (Walked over for it: its arrival's words short, E_ARRIVE's) */
-        walk_says (taking);                     /* (name may be pending, cleared) */
-        m.kind = I_TAKE;
-        m.w1 = HUB->ireq.x;
-        m.w2 = HUB->ireq.y;
-        m.t = HUB->ireq.item;
-        sent (&m);
-    } else if (r == IR_FIXED) {
+    walk_a = 0;
+    r = things (IO_GET | IO_STEPS | IO_GO, taking);
+    if (r == IR_FIXED) {
         lift (taking);
     } else if (r == IR_NO) {
         msg (tt ());                            /* (A theme's altar, its throne: fixed where it stands) */
-    } else if (r == IR_WHICH) {
-        which_ask ();                           /* (Several that differ: which, asked, caps.c's) */
-    } else {
+    } else if (r != IR_GONE) {
         s_took_up (r | was << 8);
     }
 }
@@ -2463,7 +2487,7 @@ portal:
         }
         if (!cmd.obj.word[0]) {
             unknown (U_WHAT);
-        } else if (d = HUB->pc_light, (pa = things (IO_DROP | IO_STEPS, cmd.obj.word)) == IR_OK) {
+        } else if (d = HUB->pc_light, (pa = things (IO_DROP | IO_STEPS | IO_GO, cmd.obj.word)) == IR_OK) {
             if (*tt ()) {
                 msg (lb);                       /* (By the count: "You put down two sacks.", the world's) */
             } else if (worded != 4) {           /* ("You put down the torch." said already, its first words: sway.c's) */
@@ -2473,11 +2497,11 @@ portal:
                                                 **   for one got out first) */
         } else if (pa == IR_NO) {
             msg (tt ());                        /* (Why not: in a thing closed) */
-        } else {
+        } else if (pa != IR_GONE) {             /* (The one path for things: several, which asked) */
             say_no (A_HAVE_NO, cmd.obj.word);
         }
         return;
-    case VB_HIDE:                               /* (P_CONCEAL: a thing; else oneself: HOUSE.md's) */
+    case VB_HIDE:                              /* (P_CONCEAL: a thing; else oneself: HOUSE.md's) */
         hide (cmd.obj.word);
         return;
     case VB_SWAP_HANDS:                         /* (The hands' and limbs': part 11's, slice 4.1b's; */
@@ -2592,7 +2616,7 @@ unsigned char __fastcall__ s_rarer (unsigned char action)
             d = cmd.dir == GO_DOWN || (cmd.dir == 0xFF && cmd.obj.lies == GO_DOWN) ? DIR_DOWN : DIR_UP;
         }                                       /* ("climb down the ladder": the way where the thing lies) */
         if (!strcmp (cmd.obj.word, "well") && (d & ~I_JUMP) == DIR_DOWN) {
-            if (things (IO_FIND, "well") == IR_NOT_HERE && reach_go ()) {
+            if (things (IO_FIND | IO_GO, "well") == IR_GONE) {
                 break;                          /* (Seen out of reach: walked over to it first, then again; else the
                                                 **   world's, one within reach, felt in the dark too) */
             }
@@ -2837,32 +2861,40 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
 /* A command whose thing is out of reach (the things' IR_NOT_HERE, the puzzle's PZ_FAR: where it is in the hub's ireq,
 ** its words not said): walked over to it first (I_TAKE's walk alone), the command kept and carried out again as the
 ** character's free (HOUSE.md's out of reach, walked to first); 1 if so, or if it's the command again and the thing's
-** out of reach still (told) */
+** out of reach still (told).  The one walk over (COMMANDS-CRITIQUE.md's §5.2 I), by walk_a, I_TAKE's a: 1, the
+** command kept and again; 0, a take's, the world taking it up as it gets there (E_TAKEN: reach 6, its arrival's
+** words short); 2, a "go to" (way.c's go_thing), walked on as it gets nearer, nothing after */
 static struct msg pm;                           /* (reach_go's, place_go's) */
 static unsigned char pm_kind = I_TAKE;          /* (reach_go's walk: door_go's I_GOTO, to the door's square) */
+unsigned char walk_a = 1;
 
 unsigned char s_reach_go (void)
 {
     unsigned b = hub_here ();
-    unsigned char r = 1;
+    unsigned char r = 1, a = walk_a;
 
-    if (reach) {
+    walk_a = 1;
+    if (reach && a == 1) {
         say_no (A_NEARER, 0);
     } else {
-        cmd.obj.lies = 0xFF;                    /* (Kept without the side it lay on, said from where it was: it's come to it) */
-        hub_map (UI_BANK);
-        memcpy (&UIREC->kept, &cmd, sizeof cmd);
+        if (a == 1) {
+            cmd.obj.lies = 0xFF;                /* (Kept without the side it lay on, said from where it was: it's come to it) */
+            hub_map (UI_BANK);
+            memcpy (&UIREC->kept, &cmd, sizeof cmd);
+        }
         hub_map (0);
-        walk_says (0);
+        walk_says (a ? 0 : taking);             /* (A take's: its name, "take all"'s next perhaps) */
         pm.kind = pm_kind;
         pm.who = 0;
-        pm.a = 1;
+        pm.a = a;
         pm.w1 = HUB->ireq.x;
         pm.w2 = HUB->ireq.y;
         pm.t = HUB->ireq.item;
         if ((r = hub_send (&pm)) != 0) {
             busy = 1;
-            reach = 1;
+            if (a < 2) {
+                reach = a ? 1 : 6;
+            }
             t_prompt (0);
         }
     }

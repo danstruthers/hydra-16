@@ -188,6 +188,10 @@ unsigned char wield (void);                     /* (Part 9's, choose.c's) A blow
                                                 **   its hands what strikes, 1; a better thing carried asked about, 2 */
 unsigned char __fastcall__ things (unsigned char op, const char* name);    /* (main.c's) The things asked, from the
                                                 **   main code or a part */
+#define IO_GO       0x80                        /* (things' op |: one path for things, COMMANDS-CRITIQUE.md's §5.2 H: out
+                                                **   of reach, walked over to first, the command again (reach_go); several
+                                                **   that differ, which asked (which_ask): either, IR_GONE, nothing more to do) */
+#define IR_GONE     (IR_WHICH + 1)
 
 /* ---- resolve.c (overlay 11): the command's things found among those the character perceives, its unsaid filled (it,
 ** the last thing named, the things near, the target), which of several; of several it must be one of, which, asked */
@@ -433,6 +437,9 @@ unsigned char __fastcall__ den_seen (unsigned x, unsigned y);   /* Part 8: an ac
 unsigned char __fastcall__ actor_seen (unsigned char b);        /* Part 8: an event's actor seen (b: 0 the character) */                /* Part 8: the character's place in the room, and the room's size */
 unsigned char __fastcall__ lie_words (unsigned char i);   /* Part 8: a thing's place in the room (its sight_copy's) */
 unsigned char reach_go (void);
+extern unsigned char walk_a;                    /* (main.c's: reach_go's next walk, I_TAKE's a: 1, the command kept and
+                                                **   again; 0, the world takes it up as it gets there, take's; 2, gone to,
+                                                **   nothing after, a "go to": way.c's) */
 unsigned char __fastcall__ tool_out (unsigned char which);    /* Part 19: a thing got out for its use (0 a bandage, 1 food, 2 water), a tool's steps */
 extern unsigned char nap, what_hi, take_more, take_all, nosteps;    /* (main.c's) */
 extern unsigned char step_k, step_n;            /* (main.c's: the reach's step begun, its kind and thing, till the character's

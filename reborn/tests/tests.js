@@ -2322,6 +2322,37 @@ function dq0LeftoversTest() {
     sdcard: true
   };
 }
+// One path for things (COMMANDS-CRITIQUE.md's §5.2 step H, 2026-11-07): every verb that acts on a thing asks the
+// world the same way (main.c's things with IO_GO: out of reach, walked over to first and the command again; several
+// that differ, which asked).  At seed 3 the bones lie beside the character: "hide the bones" said "You carry none of
+// those." (the hide looked only at what's carried); now they're taken up first, then hidden, as HOUSE.md's hiding a
+// thing (where it stands, the thing put down at its end).  Then the dagger put down and the character gone over to the
+// window, "hide the dagger" walks back to it first (said "You carry none of those." too), takes it and hides it.
+// DQ0_ONEPATH=1 prints the answers
+function dq0OnePathTest() {
+  const lines = ['around', 'hide the bones', 'i', 'drop the dagger', 'go to the window', 'look', 'hide the dagger', 'inventory'];
+  return {
+    name: 'dq0onepath', near: ['parser'], what: 'Dingus Quest Zero\'s one path for things: "hide the bones" of bones ' +
+      'lying beside the character takes them up first and hides them (not "You carry none of those."); "hide the ' +
+      'dagger" of one out of reach walks over to it first, as any verb at a thing out of reach',
+    init: 't_rc', cycles: 300e6 + lines.length * 60e6,
+    machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+      'dq0 -p t -s 3 -c /ram/c.hm -T', ...lines, 'quit', 'echo $status']) },
+    expect: ['% echo $status'],
+    check(m) {
+      const A = dq0Answers(m.out), f = [], a = l => (A.find(x => x.cmd === l) || { text: '(no answer)' }).text;
+      if (process.env.DQ0_ONEPATH) for (const l of lines) console.log(l + ' => ' + a(l));
+      if (!/bones/.test(a('around'))) f.push('no bones in sight: ' + a('around').slice(0, 160));
+      if (/carry none/.test(a('hide the bones')) || !/hid/i.test(a('hide the bones')))
+        f.push('"hide the bones", lying beside it: not taken up and hidden: ' + a('hide the bones').slice(0, 160));
+      if (/bones/.test(a('i'))) f.push('the bones carried still after the hide: ' + a('i').slice(0, 200));
+      if (!/go over to the/.test(a('hide the dagger')) || !/hid/i.test(a('hide the dagger')))
+        f.push('"hide the dagger", out of reach: not walked over to and hidden: ' + a('hide the dagger').slice(0, 200));
+      return f;
+    },
+    sdcard: true
+  };
+}
 function dq0SweepTest(opt = {}) {
   const name = opt.name || 'dq0sweep', gapsOf = opt.gaps || SWEEP_GAPS, saidOf = opt.said || SWEEP_SAID, lines = dq0SweepLines(opt.verbs);
   return {
@@ -5776,6 +5807,7 @@ module.exports = {
     dq0ItTest(),
     dq0StateSelTest(),
     dq0LeftoversTest(),
+    dq0OnePathTest(),
     {
       name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), one the grammar has but the game doesn\'t do yet ("grapple": you can\'t, yet); a gift the game takes since slice 4.8 ("give the torch to the rat": the rat out of reach, or out of sight); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',
       init: 't_rc', cycles: 1500e6,

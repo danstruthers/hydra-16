@@ -141,12 +141,9 @@ static unsigned char __fastcall__ looked (unsigned char mode, unsigned char t)
         return 0;
     }
     HUB->ireq.to = mode;
-    if ((r = things (IO_LOOK, cmd.obj.word)) == IR_NOT_HERE) {
-        reach_go ();
-        return 1;
-    }
-    if (r != IR_OK) {
-        return 0;
+    if ((r = things (IO_LOOK | IO_GO, cmd.obj.word)) != IR_OK) {
+        return r == IR_GONE;                    /* (The one path for things: out of reach, walked over to first, then
+                                                **   again) */
     }
     msg (tt ());
     intend2 (I_WAIT, t, 1);
@@ -165,12 +162,8 @@ static unsigned char __fastcall__ judged_as (unsigned char ex)
         return 0;
     }
     HUB->ireq.to = 1;                           /* (Out of reach: walked over to first) */
-    if ((g = things (IO_DESCRIBE, cmd.obj.word)) == IR_NOT_HERE) {
-        reach_go ();
-        return 1;
-    }
-    if (g != IR_OK) {
-        return 0;
+    if ((g = things (IO_DESCRIBE | IO_GO, cmd.obj.word)) != IR_OK) {
+        return g == IR_GONE;                    /* (Out of reach: walked over to first, then again) */
     }
     memcpy (&judged, &HUB->ireq, sizeof judged);
     HUB->slot[SLOT_UI].w1 = judged.item;        /* (Its number: the first answer kept till the skill improves, the
@@ -287,8 +280,6 @@ void go_thing (void)
             say_no (A_UNSEEN, cmd.obj.word);
             return;
         }
-        x = HUB->ireq.x;
-        y = HUB->ireq.y;
     } else if (x - HUB->pc_x + 1 <= 2 && y - HUB->pc_y + 1 <= 2) {
         sayf ("\nThe %s is beside you.", cmd.obj.word);
         return;
@@ -297,14 +288,17 @@ void go_thing (void)
             if (a->state && a->x == x && a->y == y && a->sn == HUB->pc_stratum) {
                 walk_says (cmd.obj.word);
                 intend_a = k + 1;
-                intend2 (I_CLOSE, 1, 0);
+                intend2 (I_CLOSE, 1, 0);        /* (A denizen's own: up to it as it moves, its walk not a thing's) */
                 return;
             }
         }
+        HUB->ireq.x = x;
+        HUB->ireq.y = y;
     }
-    walk_says (cmd.obj.word);                   /* (Told at once, the user's D17) */
-    intend_a = 2;
-    intend2 (I_TAKE, x, y);
+    HUB->ireq.item = 0;
+    walk_a = 2;                                 /* (The one walk over, main.c's reach_go: told at once, the user's D17;
+                                                **   walked on as it gets nearer, nothing after) */
+    reach_go ();
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
