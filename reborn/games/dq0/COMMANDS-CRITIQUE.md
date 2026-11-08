@@ -739,6 +739,25 @@ A survey of the dispatch after §5.1 (every verb, where it's handled, what it as
 | K | **Refusals as data:** one table of answers with the thing's name put in ("You see no %s here.", out of reach, "<verb> what?"), refuse.c's rows its first part. *Done 2026-11-07:* refuse.c's `said[]` (overlay 24 now, overlay 1's room) is the one table, U_* then A_* (dq0.h): the line's refusals, "You see no %s here.", "You have no %s." (each with a nameless form, said when there's no name to put in), "There's nothing here to take.", "You haven't seen a(n) %s here." / "that way.", "%s is out of reach: go up to it first.", "You can't get near enough to %s.", and "%s what?" from the line; said by `say_no (a, w)` (or `unknown (U_*)` from the line), or added to lb (A_LB: the sway's words, a blow's note). Thirty-five sites in fourteen files call it in place; five wordings of out of reach became two (reach, and getting near); "You see none of those here." and "You carry none of those." name the thing now; "Take what?", "Put down what?", "Read what?", "Copy what?", "Name what?" are the line's verb with "what?", as "Drop what? [...]" was already. Left as they are: the questions with a hint or another shape ("Throw it at what? ...", "Give it to whom?", "Fetch what?", "Name it what?", "Use what, and on what? ...", "Combine what with what? ..."), the "Which one?" headings (a question's start, its choices after), talking range ("... is too far off to hear you."), and §4.5's per-action rows (the U_* rows of refuse.c's rules[] are what there is of them) | the same refusal worded many ways |
 | L | **The dispatch table:** verb → handler by meaning, with the kinds of thing each takes; the chain by size (`chores`, `more`, `rarer`) retired | the split by size; the unreachable cases |
 
+**Step L, the dispatch table, as planned (2026-11-07).** After H to K, each verb is one handler and the per-class
+paths are shared. L then replaces the chain cut by size with one table read by meaning:
+
+- **A row a verb** (`VB_*`): its handler's number, the kinds of thing it takes (a carried thing, a thing lying about,
+  a denizen, the feature kinds as refuse.c's masks are, a direction, nothing), its request (`IO_*`, `PA_*`, `I_*`:
+  today's `cmd.aux`), and its refusals for a word and for a kind (refuse.c's `rules[]`, folded in). About four bytes
+  a row, some 130 rows: in an overlay, not the main RAM.
+- **One dispatcher** in `s_command`'s place: the row found; a thing named that the row doesn't take refused from the
+  row (step K's table); else its handler called through a table of the handlers' stubs (main-RAM addresses, so a
+  pointer to each is good whichever part or overlay the handler's in).
+- **Handlers by meaning**, each a function of its own: the things' verbs (H's path), the features' (J's), moving,
+  the denizens' (the sway verbs, the fight), the body's, the meta commands. Where each lives is the build's: its
+  pragma and the packer, not "the room left in part 2". `chores`, `more` and `rarer` go.
+- **Verbs with no handler** (42 today) get their row's refusal, "not yet", by the same path, and adding one is a row
+  and a function.
+- **Order:** first the table and dispatcher calling today's cases unchanged (the switch's cases made functions); then
+  refuse.c's rows into the table; then the cases moved into files by meaning, one group at a time, the suite after
+  each.
+
 Odd answers the sweeps don't catch (they name the thing, but read oddly), for review: "tie the torch" says "You can't
 close the torch." (a tie is a container's, worked as its lid); "wear the torch" says "You hold the lit torch in your
 left hand already." (a thing for the hand, held).
