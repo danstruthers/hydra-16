@@ -1995,18 +1995,17 @@ static void __fastcall__ handle (unsigned char op, const char* x, const char* y,
 void __fastcall__ s_lift (const char* name)
 {
     struct sight* s = sight_get ();
-    unsigned char i, d;
+    unsigned char i;
 
     for (i = 0; i < s->ndoors; ++i) {
         if (!(s->door[i].rel & MOUTH) && s->door[i].x - HUB->ireq.x + 1 <= 2 && s->door[i].y - HUB->ireq.y + 1 <= 2) {
-            d = bearing ((int) s->door[i].x - HUB->pc_x, (int) s->door[i].y - HUB->pc_y);
-            if (d != HUB->pc_face) {
-                intend (I_TURN, d);
-            }
             strcpy (lifting, name);
-            tx = s->door[i].x;                  /* (That one) */
+            tx = s->door[i].x;                  /* (That one: found by its part's square, faced, the feature path's) */
             ty = s->door[i].y;
-            work (PA_LIFT, s->door[i].kind == PK_WINDOW ? OB_WINDOW : OB_DOOR);
+            i = s->door[i].kind == PK_WINDOW ? OB_WINDOW : OB_DOOR;
+            cmd.obj.lies = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y);
+            feature (0, FW_NONE);
+            work (PA_LIFT, i);
             return;
         }
     }
@@ -2358,23 +2357,22 @@ again:
             return;                             /* (A place in the room: the centre, a side, a corner: part 7's) */
         }
         if (cmd.obj.kind && cmd.action != VB_MOVE_DIRECTION) {   /* (A thing: up to it, or through it) */
-            if (find (cmd.obj.kind | PICK_TELL, cmd.obj.lies) != 1) {
-                return;                         /* (None, told; or which, asked) */
-            }
-            if (cmd.obj.kind == OB_WINDOW && (cmd.how == HOW_THROUGH || cmd.action == VB_ENTER)) {
+            d = cmd.how == HOW_THROUGH || cmd.action == VB_ENTER;
+            if (d && cmd.obj.kind == OB_WINDOW) {
+                if (find (OB_WINDOW | PICK_TELL, cmd.obj.lies) != 1) {
+                    return;                     /* (None, told; or which, asked) */
+                }
                 pa = PA_THROUGH;                /* (Climbed through) */
                 goto portal;
-            } else if ((cmd.how == HOW_THROUGH || cmd.action == VB_ENTER) &&
-                (cmd.obj.kind == OB_DOOR || cmd.obj.kind == OB_PASSAGE)) {
-                if (!door_go ()) {
-                    if (!reach) {
-                        walk_says (0);          /* (Its first words at once; walked up to first, told as that began) */
-                    }
-                    intend (I_GO, bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y));
+            }
+            d = d && (cmd.obj.kind == OB_DOOR || cmd.obj.kind == OB_PASSAGE);    /* (Through it: walked up to first,
+                                                **   its first words told as that began; else up to it, its own walk) */
+            if (feature (cmd.obj.kind | PICK_TELL, d ? (reach ? FG_GO | FW_NONE : FG_GO) : FG_GO | FG_FAR)) {
+                if (d) {
+                    intend (I_GO, cmd.obj.lies);
+                } else {
+                    intend2 (I_GOTO, tx, ty);
                 }
-            } else {
-                walk_says (0);                  /* (Told at once) */
-                intend2 (I_GOTO, tx, ty);
             }
         } else if (cmd.dir == GO_UP || cmd.dir == GO_DOWN) {
             intend (I_CLIMB, cmd.dir == GO_UP ? DIR_UP : DIR_DOWN);    /* (Up or down: the stairs, a ladder) */
@@ -2426,23 +2424,10 @@ climb:
             cmd.obj.kind = OB_PORTC;            /* ("Bend the bars": a portcullis's, with no window there) */
         }
 portal:
-        if (cmd.obj.kind && (d = find (cmd.obj.kind, cmd.obj.lies)) == 2) {
-            return;                             /* (Which, asked) */
+        if (!feature (cmd.obj.kind, pa + 1)) {
+            return;                             /* (Found, walked up to, its blow's thing in hand, faced, its first words:
+                                                **   part 13's; or which, asked; walked up to first, then again) */
         }
-        if (cmd.obj.kind && d) {
-            if (door_go ()) {
-                return;                         /* (Round a bend: walked up to first, then again, part 13's) */
-            }
-            cmd.obj.lies = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y);    /* (The one it sees: faced) */
-        }
-        if (hold_w[0] && (!cmd.obj.kind || d) && !hold_first ()) {
-            return;                             /* (A blow's thing in hand first, its door seen: no hand for
-                                                **   it, why not told) */
-        }
-        if (cmd.obj.lies <= H_NW && cmd.obj.lies != HUB->pc_face) {
-            intend (I_TURN, cmd.obj.lies);      /* (The door that way: faced first) */
-        }
-        walk_says ((const char*) (pa + 1));     /* (Its first words at once, the world's answer some 2M cycles off: sway.c's) */
         HUB->ireq.to = 0;
         barw = pa == PA_BAR && things (IO_BAR, "") == IR_NO ? HUB->ireq.x : 0;    /* (The widest bar to hand) */
         work (pa, cmd.obj.kind);
@@ -2865,7 +2850,7 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
 ** command kept and again; 0, a take's, the world taking it up as it gets there (E_TAKEN: reach 6, its arrival's
 ** words short); 2, a "go to" (way.c's go_thing), walked on as it gets nearer, nothing after */
 static struct msg pm;                           /* (reach_go's, place_go's) */
-static unsigned char pm_kind = I_TAKE;          /* (reach_go's walk: door_go's I_GOTO, to the door's square) */
+static unsigned char pm_kind = I_TAKE;          /* (reach_go's walk: feature's I_GOTO, to the door's square) */
 unsigned char walk_a = 1;
 
 unsigned char s_reach_go (void)
@@ -2903,27 +2888,58 @@ unsigned char s_reach_go (void)
     return r;
 }
 
-/* A door, a window or a portcullis meant (find's tx, ty) that the world's door work can't reach from
-** here: it works one beside the character by the four ways, and one on the walls of the room it stands in; one round a
-** bend, diagonal to it, or down a passage beyond the room is walked up to first (I_GOTO: it ends before it), then the
-** command again (the user's, 2026-10-20: "any action that needs its thing within reach walks over first"): 1 if so, or
-** still out of reach (told) */
-unsigned char s_door_go (void)
+/* A feature meant (a door, a window, a portcullis, a passage, the stairs, a ladder, a shaft, the way out: the one path
+** for them all, each command its own last step, COMMANDS-CRITIQUE.md's §5.2 step J, 2026-11-07): found (obj, its kind
+** | PICK_*: choose.c's pick, which asked of several; none, told if PICK_TELL, else the world's to say why; kind 0, the
+** way cmd.obj.lies says); walked up to first if it's out of reach, then the command again as it's come (the user's,
+** 2026-10-20: "any action that needs its thing within reach walks over first"; I_GOTO, it ends before it): how's FG_NEAR,
+** unless it's beside it, by the squares about it (what the UI does from here: a close look); FG_FAR, never (a look one
+** way, a move's own walk); else as the world's door work reaches (a door, a window, a portcullis beside it by the four
+** ways, or on the walls of the room it stands in: round a bend, diagonal to it, down a passage beyond, walked up to);
+** a blow's thing taken in hand (hold_w, hold_first's); faced (the intent, the world's turn: but FG_GO, a move, turning as
+** it goes); its first words said (how's low bits, walk_says': a portal's work PA_* + 1, W_*; 0 the thing's own; FW_NONE
+** none).  1 to act on it (tx, ty its square, 0 if none found; cmd.obj.lies the way it lies), 2 the same, turned to it
+** first; 0 not (none, which, walked up to first, still out of reach, no hand for its thing: told) */
+unsigned char __fastcall__ s_feature (unsigned char obj, unsigned char how)
 {
-    const struct sight* s = sight_get ();
-    int dx = (int) tx - HUB->pc_x, dy = (int) ty - HUB->pc_y;
+    const struct sight* s;
+    unsigned char k = obj & 15, d = 1, r = 1;
+    int dx, dy;
 
-    if (cmd.obj.kind != OB_DOOR && cmd.obj.kind != OB_WINDOW && cmd.obj.kind != OB_PORTC) {
-        return 0;
+    if (k) {
+        if ((d = pick (obj, cmd.obj.lies)) == 2 || (!d && (obj & PICK_TELL))) {
+            return 0;
+        }
+        if (d) {
+            dx = (int) tx - HUB->pc_x;
+            dy = (int) ty - HUB->pc_y;
+            s = sight_get ();
+            if (!(how & FG_FAR) && (how & FG_NEAR ? (unsigned) (dx + 1) > 2 || (unsigned) (dy + 1) > 2 :
+                (k == OB_DOOR || k == OB_WINDOW || k == OB_PORTC) && dx * dx + dy * dy > 1 && !(s->where == W_ROOM &&
+                tx + 1 >= s->rx && tx <= s->rx + s->rw && ty + 1 >= s->ry && ty <= s->ry + s->rh))) {
+                HUB->ireq.x = tx;
+                HUB->ireq.y = ty;
+                HUB->ireq.item = 0;
+                pm_kind = I_GOTO;
+                s_reach_go ();
+                return 0;
+            }
+            cmd.obj.lies = bearing (dx, dy);
+        }
     }
-    if ((dx * dx + dy * dy) <= 1 || (s->where == W_ROOM && tx + 1 >= s->rx && tx <= s->rx + s->rw && ty + 1 >= s->ry &&
-        ty <= s->ry + s->rh)) {
-        return 0;
+    if (hold_w[0] && d && !hold_first ()) {
+        return 0;                               /* (A blow's thing in hand first, its door seen: no hand for it, why not
+                                                **   told) */
     }
-    HUB->ireq.x = tx;
-    HUB->ireq.y = ty;
-    pm_kind = I_GOTO;
-    return s_reach_go ();
+    if (!(how & FG_GO) && cmd.obj.lies <= H_NW && cmd.obj.lies != HUB->pc_face) {
+        intend_a = cmd.obj.lies;                /* (Faced first: the world's turn, its look) */
+        intend2 (I_TURN, 0, 0);
+        r = 2;
+    }
+    if ((how &= FW_NONE) != FW_NONE) {
+        walk_says ((const char*) how);          /* (Its first words at once, the world's answer some 2M cycles off) */
+    }
+    return r;
 }
 
 #pragma code-name (pop)

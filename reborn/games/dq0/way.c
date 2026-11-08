@@ -52,17 +52,6 @@ unsigned char __fastcall__ things (unsigned char op, const char* name);    /* (m
 extern struct ireq judged;
 extern struct portal viewed;
 
-/* Turned to heading h (a look's, a close look's: the turn's look) */
-static void __fastcall__ turn_to (unsigned char h)
-{
-    struct msg m;
-
-    memset (&m, 0, sizeof m);
-    m.kind = I_TURN;
-    m.a = h;
-    hub_send (&m);
-}
-
 /* A portal it sees looked at closely (the parser's thing, the way it lies): the world's record of it (the hub's
 ** wreq, WQ_EXAMINE: a doorway has none), in words (overlay 4), its aspects as ex asks (EX_*: 0 its plain features;
 ** its quality, judged by the craft that knows its material, the referee's test, P_APPRAISE: AP_WOOD, AP_METAL,
@@ -84,24 +73,15 @@ static void __fastcall__ judge_dice (unsigned k, unsigned ml)
     random (2);
 }
 
-static void __fastcall__ inspect (unsigned char obj, unsigned char orel, unsigned char ex)
+static void __fastcall__ inspect (unsigned char obj, unsigned char ex)
 {
     struct req* r;
     signed char g = 0;
     unsigned k = 0;
 
-    if (pick (obj | PICK_TELL, orel) != 1) {
-        return;
-    }
-    if (tx - HUB->pc_x + 1 > 2 || ty - HUB->pc_y + 1 > 2) {
-        HUB->ireq.x = tx;                       /* (Out of reach, seen or remembered: walked over to first, then again) */
-        HUB->ireq.y = ty;
-        HUB->ireq.item = 0;
-        reach_go ();
-        return;
-    }
-    if (REL_BEHIND (REL8 (g = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y), HUB->pc_face))) {
-        turn_to (g);                            /* (One behind it, that it knows of: turned to, to see it) */
+    if (!feature (obj | PICK_TELL, FG_NEAR | FW_NONE)) {
+        return;                                 /* (Found, walked up to beside it if it's out of reach, seen or remembered,
+                                                **   then again; faced: main.c's feature path) */
     }
     HUB->wreq.kind = WQ_EXAMINE;
     HUB->wreq.x = tx;
@@ -240,7 +220,7 @@ static unsigned char examine (void)
         if (ex & EX_TRAPS) {
             return PA_CHECK;                    /* (Gone over for traps: the world's, main.c's door work) */
         }
-        inspect (k, cmd.obj.lies, ex);
+        inspect (k, ex);
     } else if (ex) {
         msg ("Which thing? Name it (assess the sword, check the chest for traps ...).");
     } else if (k == OB_WALL) {
@@ -305,7 +285,7 @@ void go_thing (void)
 
 unsigned char __fastcall__ s_look_way (unsigned char action)
 {
-    unsigned char h, k;
+    unsigned char h, k, j;
 
     if (action == VB_EXAMINE_OBJECT) {
         return examine ();
@@ -313,11 +293,15 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
     if (action == VB_LEAVE) {                   /* ("Leave", "exit", "leave the room": by the door or the passage's mouth
                                                 **   it means, which, asked; "exit north": that way) */
         tx = 0;
-        k = cmd.obj.kind && cmd.obj.kind != OB_ROOM ? cmd.obj.kind : OB_ROOM;
-        if (cmd.dir > H_NW && pick (k | PICK_TELL, cmd.obj.lies) != 1) {
-            return 0;
+        if (cmd.dir > H_NW) {                   /* (The one meant: found, a door walked up to first, as a move through
+                                                **   it is: main.c's feature path) */
+            if (!feature ((cmd.obj.kind && cmd.obj.kind != OB_ROOM ? cmd.obj.kind : OB_ROOM) | PICK_TELL, FG_GO |
+                FW_NONE)) {
+                return 0;
+            }
+            cmd.dir = cmd.obj.lies;
         }
-        intend_a = tx ? bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y) : cmd.dir;
+        intend_a = cmd.dir;
         intend2 (I_GO, tx, ty);
         return 0;
     }
@@ -343,12 +327,10 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
     if (!k && h > H_NW && action == VB_OBSERVE_OBJECT && ((OPENS >> (cmd.obj.kind & 15)) & 1) && opened ()) {
         return 0;                               /* ("Look at the stairs": them, not the way they lie) */
     }
+    j = 0;
     if (h > H_NW) {
         if ((WAY_OBJ >> (cmd.obj.kind & 15)) & 1) {     /* (The one it sees) */
-            if (pick (cmd.obj.kind | PICK_TELL, cmd.obj.lies) != 1) {
-                return 0;                       /* (None, told; or which, asked) */
-            }
-            h = bearing ((int) (tx - HUB->pc_x), (int) (ty - HUB->pc_y));
+            j = cmd.obj.kind | PICK_TELL;
         } else if (k && h == 0xFF && (k == 4 || !cmd.obj.word[0])) {
             k += k & 1;                         /* ("listen", "sniff", "smell the air": about it) */
         } else {
@@ -358,9 +340,15 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
             return 0;
         }
     }
-    if (h <= H_NW && h != HUB->pc_face) {       /* (Turned to it first: the turn's look) */
-        turn_to (h);
-    } else if (k < 4) {                         /* (Its first words at once, the look's or the listen's 4.8M cycles and
+    if (!j) {
+        cmd.obj.lies = h;                       /* (A way said: that way) */
+    }
+    if (!(j = feature (j, FG_FAR | FW_NONE))) {
+        return 0;                               /* (The one it sees, or the way said: turned to it first, the turn's look,
+                                                **   main.c's feature path; none, told; or which, asked) */
+    }
+    h = cmd.obj.lies;
+    if (j == 1 && k < 4) {                      /* (Its first words at once, the look's or the listen's 4.8M cycles and
                                                 **   more off: the user's, 2026-11-04; turned first, the turn's are) */
         walk_says ((const char*) (k ? W_LISTEN : W_PEER));
     }

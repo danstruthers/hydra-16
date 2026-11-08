@@ -508,7 +508,13 @@ void __fastcall__ walk_says (const char* name);    /* (A walk over told as it be
 unsigned char search_go (void);                 /* (Part 10's) A search begun, by its form (search.c) */
 void __fastcall__ sheet_map (unsigned char what);   /* (Part 3's) The sheet (0), or the map (1) */
 void __fastcall__ list_say (unsigned char first);                           /* (Overlay 16's) What's carried told, the things' words */
-unsigned char door_go (void);                   /* (Part 13's) A door meant, not workable from here, walked up to first */
+unsigned char __fastcall__ feature (unsigned char obj, unsigned char how);   /* (Part 13's) A feature meant (obj: its
+                                                **   kind | PICK_*) found, walked up to, faced, its first words (how:
+                                                **   FG_* | walk_says' name): 1 to act on it, 2 turned to it first */
+#define FG_NEAR         0x80                    /* (feature's how: walked up to unless beside it, a close look's; */
+#define FG_FAR          0x40                    /*   never walked up to, a look's, a move's own walk; */
+#define FG_GO           0x20                    /*   not faced first, a move's: it turns as it goes; */
+#define FW_NONE         0x1F                    /*   no first words: else walk_says' PA_* + 1, W_*, 0 its own) */
 void __fastcall__ search_said (const struct msg* m);   /* (A room searched whole's, as it goes: an E_BEAT's WB_SEARCH) */
 unsigned char __fastcall__ place_go (const struct cmd* c);   /* Part 7: a place in the room walked to */                  /* Part 7: a command's thing out of reach walked over to first */
 void __fastcall__ took_up (unsigned r);         /* Part 2: a thing taken up, or not, told (an E_TAKEN's: IR_*, the

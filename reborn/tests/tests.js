@@ -2353,6 +2353,39 @@ function dq0OnePathTest() {
     sdcard: true
   };
 }
+function dq0FeaturesTest() {
+  const near = ['examine the door to my right', 'look at the door to my right', 'check the door to my right for traps'];
+  const a = ['n', 's', 's', 'e', ...near.flatMap(l => ['face north', l])];
+  const b = ['step west', 's', 'exit the door', '1'];
+  return {
+    name: 'dq0features', near: ['parser', 'map'], what: 'Dingus Quest Zero\'s one path for features (COMMANDS-CRITIQUE.md\'s ' +
+      '§5.2 step J: found, walked up to, faced, its first words, then the command\'s own act): at seed 8, beside a door to its ' +
+      'right, "examine the door to my right" turns to face it as "look at" and "check ... for traps" do (it turned only to ' +
+      'one behind it); at seed 3 in the passage off the cell, "exit the door" by the door beyond the passage walks up to it ' +
+      'first, as "go through the door" does ("You head for the door.", not "You can\'t go that way.")',
+    init: 't_rc', cycles: 1400e6,
+    machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g',
+      'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
+      'dq0 -p t -s 8 -c /ram/c.hm', ...a, 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', ...b, 'quit', 'echo $status']) },
+    expect: ['% echo $status'],
+    check(m, out) {
+      const T = dq0Turns(m), A = dq0Answers(out), f = [], said = l => (A.filter(y => y.cmd === l).pop() || { text: '' }).text;
+      if (process.env.DQ0_FEATURES) for (const y of A) console.log('  > ' + y.cmd + ' => ' + y.text.slice(0, 300));
+      for (const l of near) {
+        const t = T.of(l);
+        if (!t.at || t.at.pc.face !== 0) f.push(l + ': not begun facing north, the door to its right');
+        else if (!t.after || t.after.pc.face !== 2) f.push(l + ': not turned to face the door (east): facing ' + (t.after && t.after.pc.face));
+      }
+      if (!/A door of wood/.test(said(near[0]))) f.push(near[0] + ': not examined: ' + said(near[0]).slice(0, 140));
+      const x = T.of('1'), w = said('1');
+      if (!/Which door\?/.test(said('exit the door'))) f.push('exit the door: not asked which: ' + said('exit the door').slice(0, 140));
+      if (!/You head for the door\./.test(w) || /can't go that way/.test(w)) f.push('exit the door (1): not walked up to it: ' + w.slice(0, 140));
+      if (!x.at || !x.after || x.after.pc.x === x.at.pc.x && x.after.pc.y === x.at.pc.y) f.push('exit the door (1): never moved');
+      return f;
+    },
+    sdcard: true
+  };
+}
 function dq0SweepTest(opt = {}) {
   const name = opt.name || 'dq0sweep', gapsOf = opt.gaps || SWEEP_GAPS, saidOf = opt.said || SWEEP_SAID, lines = dq0SweepLines(opt.verbs);
   return {
@@ -5808,6 +5841,7 @@ module.exports = {
     dq0StateSelTest(),
     dq0LeftoversTest(),
     dq0OnePathTest(),
+    dq0FeaturesTest(),
     {
       name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), one the grammar has but the game doesn\'t do yet ("grapple": you can\'t, yet); a gift the game takes since slice 4.8 ("give the torch to the rat": the rat out of reach, or out of sight); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',
       init: 't_rc', cycles: 1500e6,
