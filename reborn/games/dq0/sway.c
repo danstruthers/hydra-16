@@ -345,7 +345,7 @@ static unsigned char __fastcall__ des_e (const char* w)
 
 /* The carried thing entry e, the first words' choice for word w, made the one the world's asked of: its id the line's
 ** (letters.c's ldes, its "#" and id in the request: des_req), as a letter's is; the world doesn't choose again (the
-** chooser survey's disagreements, COMMANDS-CRITIQUE.md's �5.1 step C, 2026-11-07).  One with no id yet, the world's */
+** chooser survey's disagreements, COMMANDS-CRITIQUE.md's §5.1 step C, 2026-11-07).  One with no id yet, the world's */
 static void __fastcall__ bind (const char* w, unsigned char e)
 {
     unsigned low[NLET];
@@ -475,7 +475,8 @@ void __fastcall__ o_walk_ahead (const char* name)
     struct sitem* it;
     const char* v = "reach for";
     const char* w = "";
-    unsigned char k, away = 0, op = walk_op & ~IO_STEPS, lit = 0, unlit = 0, e, y, sel, in = 0, many = 0;
+    unsigned char k, away = 0, op = walk_op & ~IO_STEPS, lit = 0, unlit = 0, e, y, sel, in = 0, hd, nall = 0, dif = 0;
+    const struct sitem* i0 = 0;
     char nb[sizeof CATALOGUE[0].name];
     static const char ops[] = { IO_GET, IO_DROP, IO_FILL, IO_HIDE, IO_SHUT, IO_THROW, IO_DESCRIBE, IO_INSIDE, 0 };
 
@@ -487,11 +488,16 @@ void __fastcall__ o_walk_ahead (const char* name)
     }
     for (k = s->nitems, it = s->item; k; --k, ++it) {
         if (name_is (it->name, name)) {         /* (The one rule, the world's chooser's: main.c's) */
+            if (!nall++) {
+                i0 = it;                        /* (Those seen, alike or not: the world asks which only of two that
+                                                **   differ, its which: §5.1's disagreement 5, 2026-11-07) */
+            } else if (it->qty != i0->qty || (it->hid & 4) != (i0->hid & 4) || strcmp (it->name, i0->name)) {
+                dif = 1;
+            }
             if (it->x - s->x + 1 > 2 || it->y - s->y + 1 > 2) {
                 away |= 1;
             } else {
                 away |= 2;
-                ++many;
                 if (it->hid & 4) {              /* (Lit, as it's seen) */
                     lit = 1;
                 } else {
@@ -500,9 +506,11 @@ void __fastcall__ o_walk_ahead (const char* name)
             }
         }
     }
-    sel = cmd.obj.sel | cmd.obj.n << 4;
+    sel = op == IO_HOLD && cmd.other.word[0] && !strcmp (name, cmd.other.word) ? cmd.other.sel | cmd.other.n << 4 :
+        cmd.obj.sel | cmd.obj.n << 4;          /* (A blow's weapon taken in hand, "with the other sword": its own, §5.1's 9) */
     if (op == IO_GET) {                         /* (Taken up: of what it doesn't carry, as ever) */
-        if (many > 1 && !sel && !ndes) {
+        if (dif && !sel && !ndes) {             /* (Several seen that differ: the world's which to ask; alike, the one
+                                                **   it takes reached for) */
             sayf ("\nYou look them over."); /* (Several in reach, none chosen, nor by its letter: which, perhaps, the
                                                 **   world's to ask; true whatever it answers, at once) */
             goto told;
@@ -542,12 +550,15 @@ void __fastcall__ o_walk_ahead (const char* name)
         }
         in = y + 1;
     }
-    if ((e = des_e (name)) == 0xFF && (e = ix_pick (name, sel, op, in)) != 0xFF && (op == IO_DROP || (op >= IO_HOLD &&
+    for (hd = 0; hd < ndes && strcmp (ldes[hd].word, name); ++hd) {
+    }                                           /* (A handle's, a letter's: that thing, carried or not, its
+                                                **   first words; none other of its name's, 2026-11-07) */
+    if ((e = des_e (name)) == 0xFF && hd >= ndes && (e = ix_pick (name, sel, op, in)) != 0xFF && (op == IO_DROP || (op >= IO_HOLD &&
         op <= IO_DOUSE && op != IO_TAKE)) && ((y = sel & 15) <= SL_ANY || y == SL_NTH || y == SL_OTHER ||
         (y > SL_OTHER && op < IO_LIGHT)) && !(op == IO_LIGHT && (ix[e].flags & CX_LIT)) && (!cmd.other.word[0] ||
         ((op == IO_PUT || op == IO_STOW) && strcmp (cmd.other.word, name)))) {
         bind (name, e);                         /* (Chosen here, the first words', and made final: the world's asked of
-                                                **   that one, COMMANDS-CRITIQUE.md's �5.1 step C, 2026-11-07; a state
+                                                **   that one, COMMANDS-CRITIQUE.md's §5.1 step C, 2026-11-07; a state
                                                 **   said too, "the spent torch", its flags the chooser's, s_ix_make's,
                                                 **   but to light or put out: the world's light ()
                                                 **   chooses by the name, not pick_, "light a new

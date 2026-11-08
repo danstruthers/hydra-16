@@ -261,7 +261,9 @@ static unsigned char __fastcall__ find_thing (struct cthing* t, unsigned char wh
         return 1;                               /* (Things alone, the nth, the other, by their state: the world's to
                                                 **   choose, the carried among them, slice 4.1's) */
     }
-    if ((k = choose_one (t->sel, t->n)) != 0xFF) {
+    if ((k = choose_one (t->sel == SL_THE && what == 2 ? SL_CLOSEST : t->sel, t->n)) != 0xFF) {   /* (A blow at one of
+                                                **   several of a name: the nearest, its square the fight's to go by, not
+                                                **   the first in the actors' order: §5.1's disagreement 11, 2026-11-07) */
         found (t, k);
         return 1;
     }

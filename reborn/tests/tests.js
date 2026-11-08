@@ -2292,6 +2292,31 @@ function dq0StateSelTest() {
     sdcard: true
   };
 }
+// §5.1's last disagreements (COMMANDS-CRITIQUE.md, 2026-11-07): a capital for a thing lying about worded as that thing,
+// not a carried one of its name (7: sway.c's first words, its handle's); several alike lying there, "take the sack",
+// no "You look them over." (5: the world asks which only of two that differ); DQ0_LEFTOVERS=1 prints the answers
+function dq0LeftoversTest() {
+  const lines = ['drop the unlit torch', 'around', 'take E', 'drop the sack', 'drop the sack', 'take the sack'];
+  return {
+    name: 'dq0leftovers', near: ['parser'], what: 'Dingus Quest Zero\'s first words of the thing meant: a capital for a ' +
+      'torch lying at the character\'s feet worded as that one, not the lit one in hand; two sacks alike, "take the sack" ' +
+      'reached for, no "You look them over." (the world asks which only of two that differ)',
+    init: 't_rc', cycles: 300e6 + lines.length * 40e6,
+    machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+      'dq0 -p t -s 3 -c /ram/c.hm -T -k \'torch,sack,sack\'', ...lines, 'quit', 'echo $status']) },
+    expect: ['% echo $status'],
+    check(m) {
+      const A = dq0Answers(m.out), f = [], a = l => (A.filter(x => x.cmd === l).pop() || { text: '(no answer)' }).text;
+      if (process.env.DQ0_LEFTOVERS) for (const l of lines) console.log(l + ' => ' + a(l));
+      if (!/\(E\) a torch, at your feet/.test(a('around'))) f.push('the torch put down not E: ' + a('around').slice(0, 160));
+      else if (!/^You reach for the torch\. Taken\./.test(a('take E'))) f.push('"take E": not worded as the torch at its feet: ' + a('take E').slice(0, 120));
+      if (/look them over/.test(a('take the sack')) || !/^You reach for the sack\./.test(a('take the sack')))
+        f.push('"take the sack", two alike: ' + a('take the sack').slice(0, 120));
+      return f;
+    },
+    sdcard: true
+  };
+}
 function dq0SweepTest() {
   const lines = dq0SweepLines();
   return {
@@ -5744,6 +5769,7 @@ module.exports = {
     dq0NameMatchTest(),
     dq0ItTest(),
     dq0StateSelTest(),
+    dq0LeftoversTest(),
     {
       name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), one the grammar has but the game doesn\'t do yet ("grapple": you can\'t, yet); a gift the game takes since slice 4.8 ("give the torch to the rat": the rat out of reach, or out of sight); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',
       init: 't_rc', cycles: 1500e6,
@@ -8508,7 +8534,7 @@ module.exports = {
       // 36M cycles, 10 s at 3.58 MHz; 25M now, the longest (the UI's overlays read, before the screen's made).  The
       // help's line: after the first look's words, only the status line's and the prompt after it.  And every task's
       // overlays in their banks at the first prompt as ld65 made them (dq0OvlBanks))
-      starts: [{ seed: 1, max: 226e6 }, { seed: 123456789, max: 305e6 }], quiet: 36e6,    // (2026-11-03: dq0w's new overlay, and two kinds more, to load: 241.3M, 321.0M, -K's; with the outfits, as a game's played, 249.7M and 332.7M; then the margins' pass, DUNGEON.md's: 219.7M, 298.8M; 2026-11-07, the designators merged: 224.7M, 301.9M; the stairs looked at, way.c's opened: 225.3M, 302.5M, seed 1's budget 226M for review)
+      starts: [{ seed: 1, max: 235e6 }, { seed: 123456789, max: 315e6 }], quiet: 36e6,    // (2026-11-03: dq0w's new overlay, and two kinds more, to load: 241.3M, 321.0M, -K's; with the outfits, as a game's played, 249.7M and 332.7M; then the margins' pass, DUNGEON.md's: 219.7M, 298.8M; 2026-11-07, the designators merged: 224.7M, 301.9M; the stairs looked at, way.c's opened: 225.3M, 302.5M, seed 1's budget 226M for review; then the user, 2026-11-07: "Don't worry too much about the startup time": 235M and 315M, room for the work to come, 225.8M and some 302M then)
       start(m) {
         const a = m.acia, read = a.read, shown = a.shown, self = this;
         let typed = '', g = null, tail = '', esc = 0, text = '';

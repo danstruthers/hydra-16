@@ -657,22 +657,22 @@ A survey of the code after designators steps 4–7 found **six choosers** decidi
    reset, and the world chose again. "take the closest torch", with a lit one at your feet and an unlit one a step
    off, asked "Which one?". *Fixed 2026-11-07* (step A below).
 2. **"the second" has three orders:** the resolver's left to right by heading (and only if a denizen is among the
-   candidates), the world's by most to hand, and `ix_pick`'s by carried rank only.
-3. **"largest" and "smallest"** exist only in the resolver.
+   candidates), the world's by most to hand, and `ix_pick`'s by carried rank only. *Settled 2026-11-07:* a carried thing's nth is the UI's, made final (step C); things lying about, the world's; denizens, the resolver's: one order for each kind.
+3. **"largest" and "smallest"** exist only in the resolver. *Fixed 2026-11-07* (step A: the resolver's choice is the world's).
 4. **The state selectors differ** between `ix_pick` and the world. "open": the world also needs the kind to close.
    "full": the world rejects anything that's not a container. "spent": the world also takes an empty container. So
    the first words can name a different thing from the one the world takes. *Fixed 2026-11-07* (step C).
 5. **The guess at the world's "which?"** ("You look them over.") counts only things in reach, matched by `strstr`.
-   The world counts remembered and out-of-reach ones too, matched by its own rule, and needs two that differ.
+   The world counts remembered and out-of-reach ones too, matched by its own rule, and needs two that differ. *Fixed 2026-11-07:* said only when two seen differ, as the world's which asks (test dq0leftovers).
 6. **Six name-matching rules:** whole word with plural; prefix and suffix; `strstr`; the first three letters for a
    denizen. "pack" finds the backpack in the world but nothing in the resolver. *Fixed 2026-11-07* (step F).
-7. **A capital for a thing lying about** words its first words from a carried thing of that name.
+7. **A capital for a thing lying about** words its first words from a carried thing of that name. *Fixed 2026-11-07:* a handle's word is never worded as another of its name.
 8. **"it" keeps a word, not the thing:** "drop it" after a letter asks the world by name. *Fixed 2026-11-07* (step B).
-9. **The instrument's selector is overwritten** by the object's ("… with the other sword").
+9. **The instrument's selector is overwritten** by the object's ("… with the other sword"). *Fixed 2026-11-07:* the weapon taken in hand by its own selector.
 10. **Four "which?" answer parsers**, each with its own state: the resolver's (selector, number, name, way),
     choose.c's (number or way, and only for moves), letters.c's `which_in` (capital, digit, state word), and
-    `what_ask`'s (one letter).
-11. **Attacking one of several denizens** isn't asked about; blows.c takes the first adjacent one in table order.
+    `what_ask`'s (one letter). *Fixed 2026-11-07* (steps D and E: one reader, which_in; "Drop what? [a, d, f]" keeps its own, a question of a different kind).
+11. **Attacking one of several denizens** isn't asked about; blows.c takes the first adjacent one in table order. *Fixed 2026-11-07:* the resolver chooses the nearest, its square the fight's to go by.
 12. **"take all"** lists the things nearest first, then takes each by name, so the world may take a different one.
     *Fixed 2026-11-07* (step B).
 
@@ -702,6 +702,8 @@ so the choice is made final where the first words already make it (sway.c), not 
 state selectors, bound, broke dq0torchwords not by the flags (which disagreed too, and agree now) but by "light a new torch": the world's
 `light` lets the old torch in hand fall only if it's of the name asked, and "#id" names none. Overlay
 24 is added (part 6's image moved into it by the bank packer as overlay 20 grew), for step D.
+
+**§5.1 done, 2026-11-07.** Every step and every disagreement above is closed or settled, each held by a test (dq0closest, dq0statesel, dq0it, dq0namematch, dq0leftovers, and dq0cmd's and the door tests' questions). Overlay 24 holds the shared question (which.c) and the handles' adder; overlay 11 (resolve.c) went from 7 bytes free to some 1,300, overlay 7 (choose.c) from 40 to 255.
 
 **Room.** Steps C and D should remove more code than they add (resolve.c's gathering, `choose_one`, `ask_which` and
 `answered`; choose.c's question; sway.c's guess). But old and new must run side by side while each case moves over,

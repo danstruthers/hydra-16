@@ -1510,12 +1510,17 @@ void s_gear_look (void)
 
 unsigned char s_hold_first (void)
 {
-    unsigned char r;
+    unsigned char r, s = HUB->ireq.sel;
     unsigned t;
 
     HUB->ireq.into[0] = 0;
     HUB->ireq.to = shand;
+    if (cmd.other.word[0] && !strcmp (hold_w, cmd.other.word)) {
+        HUB->ireq.sel = cmd.other.sel | cmd.other.n << 4;   /* ("With the other sword": the instrument's own selector, not
+                                                **   the target's: COMMANDS-CRITIQUE.md's §5.1 disagreement 9) */
+    }
     r = things (IO_HOLD | IO_STEPS, hold_w);
+    HUB->ireq.sel = s;
     if (HUB->ireq.kind == IO_STEP) {
         return 0;                               /* (A step of the reach first, HOUSE.md's: the blow asked again after it, hold_w
                                                 **   still said; 2026-11-04) */
