@@ -19,6 +19,36 @@
 ** from the water it stands in or a well within reach (the things' IO_FIND), else a pint at a time from its waterskin
 ** (IO_USE, "water": half a minute each), as many as it wants; the referee told (RS_TIME, w1 0: x[14] the meals, | 0x80 a
 ** ration begun, x[15] the pints), its hunger and thirst its own (rswant.h's); not hungry, not thirsty, refused */
+/* The thing named for eating or drinking (cmd.obj's word) one that is: food, a meal; water, a waterskin, the well; or one
+** to hand whose kind's key is food, or water.  1 so, or none named; else 0, refused by its name ("You can't eat the
+** pot.", "You have no apples.": dq0sweep2's, 2026-11-07, the rule that a command's answer names its thing) */
+static unsigned char __fastcall__ fed_on (unsigned char eat)
+{
+    static const char* const ok[] = { "food", "meal", "meals", "water", "waterskin", "well" };
+    char key[8];
+    const char* w = cmd.obj.word;
+    unsigned char k;
+
+    if (!*w) {
+        return 1;
+    }
+    for (k = eat ? 0 : 3; k < (eat ? 3 : 6); ++k) {
+        if (!strcmp (w, ok[k])) {
+            return 1;
+        }
+    }
+    if (othings (IO_FIND, w, "", 0) != IR_OK) {
+        sayf ("\nYou have no %s.", w);
+        return 0;
+    }
+    hub_mem (KIND_BANK, key, CATALOGUE[(unsigned char) othings_x].tool, sizeof key);   /* (Its kind: othings', the window put back) */
+    if (!strcmp (key, eat ? "food" : "water")) {
+        return 1;
+    }
+    sayf ("\nYou can't %s the %s.", eat ? "eat" : "drink", w);
+    return 0;
+}
+
 static void __fastcall__ feed_do (unsigned char eat)
 {
     struct req* r;
@@ -37,10 +67,18 @@ static void __fastcall__ feed_do (unsigned char eat)
         w = 50;
         goto told;
     }
+    if (!fed_on (eat)) {
+        return;
+    }
     hub_map (0);
     w = eat ? HUB->pc_hunger : HUB->pc_thirst;
     if (w < (eat ? 120 : 60)) {
-        msg (eat ? "You're not hungry." : "You're not thirsty.");
+        if (cmd.obj.word[0]) {                  /* (Named: its answer names it) */
+            sayf (eat ? "\nYou're not hungry. You leave the %s be." :
+                "\nYou're not thirsty. You leave the %s be.", cmd.obj.word);
+        } else {
+            msg (eat ? "You're not hungry." : "You're not thirsty.");
+        }
         return;
     }
     if (eat) {

@@ -2161,9 +2161,14 @@ const SWEEP_SAID = [                             // (Taken, of a thing worn or i
 // (Left out: the wall the character faces at the time is the kitchen's trapped door, so "open the wall" opens it and
 // its blade ends the game: the wall made a door, a gap of its own, swept once a thing named is never made another)
 const SWEEP_SKIP = new Set(['open the wall', 'close the wall']);
-function dq0SweepLines() {
+// The second sweep (COMMANDS-CRITIQUE.md's §5.2, 2026-11-07): the other verbs that take a thing, those that leave the scene as
+// it was (none taken up, put down, hidden, put out), each at every kind of thing, the same rule
+const SWEEP2_VERBS = ['eat', 'drink', 'fill', 'look in', 'tie', 'untie', 'wear', 'push', 'pull', 'unlock', 'lock', 'raise',
+  'lower', 'disarm', 'force', 'bend', 'bar'];
+const SWEEP2_GAPS = new Set([]);
+function dq0SweepLines(verbs = SWEEP_VERBS) {
   const out = [];
-  for (const [t] of SWEEP_THINGS) for (const v of SWEEP_VERBS) if (!SWEEP_SKIP.has(v + ' the ' + t)) out.push(v + ' the ' + t);
+  for (const [t] of SWEEP_THINGS) for (const v of verbs) if (!SWEEP_SKIP.has(v + ' the ' + t)) out.push(v + ' the ' + t);
   return out;
 }
 // A thing the resolver chose of several lying about made the one the world's asked of (its id, letters.c's des_seen:
@@ -2317,10 +2322,10 @@ function dq0LeftoversTest() {
     sdcard: true
   };
 }
-function dq0SweepTest() {
-  const lines = dq0SweepLines();
+function dq0SweepTest(opt = {}) {
+  const name = opt.name || 'dq0sweep', gapsOf = opt.gaps || SWEEP_GAPS, saidOf = opt.said || SWEEP_SAID, lines = dq0SweepLines(opt.verbs);
   return {
-    name: 'dq0sweep', what: 'Dingus Quest Zero\'s commands swept, every verb at every kind of thing ' +
+    name, what: (opt.what || '') + 'Dingus Quest Zero\'s commands swept, every verb at every kind of thing ' +
       '(COMMANDS-CRITIQUE.md\'s action x kind sweep): at seed 3, the kitchen\'s pot, well, sconce, stairs and wall, the ' +
       'backpack worn, the torch in hand and a sack carried, ' + lines.length + ' lines; the answer to each names its thing ' +
       '(done to it, or refused for it), the known gaps listed (SWEEP_GAPS: none new, none mended and still listed)',
@@ -2338,14 +2343,14 @@ function dq0SweepTest() {
         const thing = l.slice(l.lastIndexOf(' ') + 1), place = /^(look at|examine) /.test(l) && /You are in /.test(A[i].text),
           ok = re.get(thing).test(A[i].text) && !place;
         if (!ok || process.env.DQ0_SWEEP === 'all') gaps.push(l + ' => ' + A[i].text.slice(0, 110));
-        if (!ok && !SWEEP_GAPS.has(l)) f.push('"' + l + '": its thing not named: ' + (A[i].text.slice(0, 140) || '(nothing)'));
-        if (ok && SWEEP_GAPS.has(l)) f.push('"' + l + '" names its thing now: take it off SWEEP_GAPS (' + A[i].text.slice(0, 100) + ')');
+        if (!ok && !gapsOf.has(l)) f.push('"' + l + '": its thing not named: ' + (A[i].text.slice(0, 140) || '(nothing)'));
+        if (ok && gapsOf.has(l)) f.push('"' + l + '" names its thing now: take it off SWEEP_GAPS (' + A[i].text.slice(0, 100) + ')');
       }
-      for (const [l, w] of SWEEP_SAID) {                // (Answers held word for word: a thing carried taken, lit)
+      for (const [l, w] of saidOf) {                // (Answers held word for word: a thing carried taken, lit)
         const a = A.find(x => x.cmd === l);
         if (a && !a.text.includes(w)) f.push('"' + l + '": not "' + w + '" but: ' + a.text.slice(0, 140));
       }
-      if (process.env.DQ0_SWEEP) console.log('dq0sweep gaps (' + gaps.length + ' of ' + lines.length + '):\n' + JSON.stringify(gaps));
+      if (process.env.DQ0_SWEEP) console.log(name + ' gaps (' + gaps.length + ' of ' + lines.length + '):\n' + JSON.stringify(gaps));
       return f;
     },
     sdcard: true
@@ -5765,6 +5770,7 @@ module.exports = {
       sdcard: true
     },
     dq0SweepTest(),
+    dq0SweepTest({ name: 'dq0sweep2', verbs: SWEEP2_VERBS, gaps: SWEEP2_GAPS, said: [], what: 'The second sweep, the other verbs: ' }),
     dq0ClosestTest(),
     dq0NameMatchTest(),
     dq0ItTest(),

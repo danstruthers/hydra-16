@@ -55,10 +55,13 @@ void __fastcall__ o_unknown (unsigned char f)
 #define WORKED      (BIT (OB_DOOR) | BIT (OB_PORTC) | BIT (OB_WINDOW) | BIT (OB_WAY_OUT) | BIT (OB_TRAP))
 #define SEARCHED    (BIT (OB_DOOR) | BIT (OB_PORTC) | BIT (OB_WINDOW) | BIT (OB_ROOM) | BIT (OB_WALL))
 #define WAYS        0x0ABEu                     /* (way.c's WAY_OBJ: what's looked at, listened at, sniffed at, a way) */
+#define INS         (BIT (OB_DOOR) | BIT (OB_PASSAGE) | BIT (OB_SHAFT) | BIT (OB_WINDOW) | BIT (OB_PORTC))   /* (Looked in) */
 #define W_CLIMB     0x80                        /* (A word refused but a well's, a rope's, a thing's letter) */
+#define W_PART      0x40                        /* (A word refused but a door's or a window's part's, "bar", "bars",
+                                                **   "pane", "shutters", or a letter's: dq0sweep2's, 2026-11-07) */
 #define ROW(a, w, k, m)  (a), (w) << 4 | (k), (m)
-enum { M_NONE, M_CLIMBS, M_WAYS, M_SEARCHED, M_OUT, M_WORKED };
-static const unsigned masks[] = { 0, CLIMBS, WAYS, SEARCHED, BIT (OB_WAY_OUT), WORKED };   /* (The kinds a verb does) */
+enum { M_NONE, M_CLIMBS, M_WAYS, M_SEARCHED, M_OUT, M_WORKED, M_IN };
+static const unsigned masks[] = { 0, CLIMBS, WAYS, SEARCHED, BIT (OB_WAY_OUT), WORKED, INS };   /* (The kinds a verb does) */
 static const unsigned char rules[] = {          /* (A verb; a word's refusal, a kind's; the kinds it does, masks[]'s) */
     ROW (VB_SIT, U_YET, U_YET, M_NONE), ROW (VB_STAND, U_YET, U_YET, M_NONE), ROW (VB_CROUCH, U_YET, U_YET, M_NONE),
     ROW (VB_LIE_DOWN, U_YET, U_YET, M_NONE),         /* (Sitting on a thing, kneeling by it: not yet) */
@@ -69,10 +72,13 @@ static const unsigned char rules[] = {          /* (A verb; a word's refusal, a 
     ROW (VB_LIGHT_OBJECT, 0, U_CANT, M_NONE), ROW (VB_EXTINGUISH_OBJECT, 0, U_CANT, M_NONE), ROW (VB_RETRIEVE_OBJECT, 0, U_CANT, M_NONE),
     ROW (VB_OPEN_OBJECT, 0, U_CANT, M_WORKED), ROW (VB_CLOSE_OBJECT, 0, U_CANT, M_WORKED),    /* (A door's work, a blow) */
     ROW (VB_UNLOCK_OBJECT, 0, U_CANT, M_WORKED), ROW (VB_LOCK_OBJECT, 0, U_CANT, M_WORKED),
-    ROW (VB_FORCE_OBJECT, 0, U_CANT, M_WORKED), ROW (VB_RAISE_OBJECT, 0, U_CANT, M_WORKED),
-    ROW (VB_LOWER_OBJECT, 0, U_CANT, M_WORKED), ROW (VB_BREAK_OBJECT, 0, U_CANT, M_WORKED),
-    ROW (VB_DISARM_OBJECT, 0, U_CANT, M_WORKED), ROW (VB_BAR_OBJECT, 0, U_CANT, M_WORKED),
-    ROW (VB_BEND_OBJECT, 0, U_CANT, M_WORKED), ROW (VB_ATTACK_OBJECT, 0, U_CANT, M_WORKED), 0
+    ROW (VB_FORCE_OBJECT, 0, U_CANT, M_WORKED), ROW (VB_RAISE_OBJECT, U_CANT | (W_PART >> 4), U_CANT, M_WORKED),
+    ROW (VB_LOWER_OBJECT, U_CANT | (W_PART >> 4), U_CANT, M_WORKED), ROW (VB_BREAK_OBJECT, 0, U_CANT, M_WORKED),
+    ROW (VB_DISARM_OBJECT, U_CANT | (W_PART >> 4), U_CANT, M_WORKED), ROW (VB_BAR_OBJECT, U_CANT | (W_PART >> 4), U_CANT, M_WORKED),
+    ROW (VB_BEND_OBJECT, U_CANT | (W_PART >> 4), U_CANT, M_WORKED), ROW (VB_ATTACK_OBJECT, 0, U_CANT, M_WORKED),
+    ROW (VB_EAT_OBJECT, 0, U_CANT, M_NONE), ROW (VB_DRINK, 0, U_CANT, M_NONE), ROW (VB_FILL_OBJECT, 0, U_CANT, M_NONE),
+    ROW (VB_TIE_OBJECT, 0, U_CANT, M_NONE), ROW (VB_UNTIE_OBJECT, 0, U_CANT, M_NONE), ROW (VB_EQUIP_OBJECT, 0, U_CANT, M_NONE),
+    ROW (VB_OBSERVE_IN, 0, U_CANT, M_IN), 0      /* (A feature eaten, drunk, filled, tied, worn, looked in: dq0sweep2's) */
 };
 unsigned char o_refused (void)
 {
@@ -86,9 +92,10 @@ unsigned char o_refused (void)
     }
     if (!*r) {
     } else if (*w) {
-        f = r[1] >> 4 & 7;
-        if ((r[1] & W_CLIMB) && (*w == '#' || !strcmp (w, "well") || strstr (w, "rope"))) {
-            f = 0;
+        f = r[1] >> 4 & 3;
+        if (*w == '#' || ((r[1] & W_CLIMB) && (!strcmp (w, "well") || strstr (w, "rope"))) || ((r[1] & W_PART) &&
+            (strstr (w, "bar") || strstr (w, "pane") || strstr (w, "shutter")))) {
+            f = (r[1] & (W_CLIMB | W_PART)) ? 0 : f;
         }
     } else if (cmd.obj.kind && !(masks[r[2]] >> (cmd.obj.kind & 15) & 1)) {
         f = r[1] & 15;

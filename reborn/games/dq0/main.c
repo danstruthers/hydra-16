@@ -3195,8 +3195,10 @@ int main (int argc, char* argv[])
             shown = hy_ticks ();
             status ();
         }
-        if (!busy && (rebar || pending[0])) {
-            HUB->ui_giving = 1;                 /* (Being given, as a line's command: "take all"'s next thing's two
+        if (!busy && !inn && (rebar || pending[0])) {   /* (Not while a line's being typed: a stop typed during "take
+                                                **   all" acted on before its next thing, the user's rule of a line typed
+                                                **   during a reach, 2026-11-06; dq0reachstop's, 2026-11-07) */
+            HUB->ui_giving = 1;                /* (Being given, as a line's command: "take all"'s next thing's two
                                                 **   intents falling with the clock moved between them or not, 2026-11-04) */
             when_free ();                       /* (A door barred, a thing lifted out: part 14's) */
             hub_map (0);

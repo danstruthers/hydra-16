@@ -709,6 +709,40 @@ state selectors, bound, broke dq0torchwords not by the flags (which disagreed to
 `answered`; choose.c's question; sway.c's guess). But old and new must run side by side while each case moves over,
 and the UI's banks are full, so step C will likely need a staging overlay bank, as overlay 23 was for the designators.
 
+### 5.2 Dispatch, against the code as it stands (2026-11-07)
+
+A survey of the dispatch after §5.1 (every verb, where it's handled, what it asks of the world, every refusal):
+
+- **The chain is cut by size, not meaning.** A command goes `s_command` (part 2, 2,145 bytes) → `chores` → `more`
+  (overlay 16) → `rarer` (part 24) → "You can't … in this game yet."; `missiles`, `look_way`, `search_go`, `hide`
+  and others hang off the switch. Some cases are unreachable (chores' VB_OBSERVE_OBJECT); 42 verbs reach no handler.
+- **The same steps are written over and over, each a little differently:**
+  - a thing: ask the world, walk over if it's out of reach, ask which if several, word it, charge the time. `handle()`
+    does all of it; some fifteen other handlers each do part (drop no "which", take its own walk, hide no reach);
+  - out of reach, then the command again: four implementations (`reach_go`, `door_go`, take's own, `go_thing`'s);
+  - a door or a feature: find it, walk up, face it, first words, act: one full path and seven partial copies, with two
+    ways of turning (an intent, and way.c's own);
+  - refusals: "You see no %s here." built in eight places; "out of reach" worded four ways; a dozen "<verb> what?".
+- **Commands that ignore what they name, beyond the first sweep's verbs** (test dq0sweep2: eat, drink, fill, look in,
+  tie, untie, wear, push, pull, unlock, lock, raise, lower, disarm, force, bend, bar at every kind of thing): 55 of 136
+  lines. "eat the pot" said "You're not hungry."; "raise the pot" "There's no door that way."; "disarm the pot"
+  "There's no trap you know of within reach."; "wear the stairs" "Which thing? Name it …".
+
+**The order of work:**
+
+| # | Step | Fixes |
+|---|---|---|
+| G | **The second sweep, and its gaps closed.** *Done 2026-11-07:* refuse.c's rows for eat, drink, fill, tie, untie, wear and look in at a feature, and for raise, lower, bend, bar and disarm of a thing by its word (but a door's or a window's part: "lift the bar"); feed.c refuses a thing named that isn't food or water, and names it when not hungry or thirsty. dq0sweep2: 0 of 136 | the commands that ignore what they name |
+| H | **One path for things:** every verb that acts on a thing through `handle()`'s steps (the world asked, walked to, which asked, worded, timed) | hide, drop, take, search, look in, fill, read each doing part |
+| I | **One reach:** take's own walk, `go_thing`'s and `place_go`'s made `reach_go`'s | the walk-overs |
+| J | **One path for features:** find, walk up, face (one turn: the intent), first words, act; way.c, `s_lift`, the errand's door through it | the copies of the door path |
+| K | **Refusals as data:** one table of answers with the thing's name put in ("You see no %s here.", out of reach, "<verb> what?"), refuse.c's rows its first part | the same refusal worded many ways |
+| L | **The dispatch table:** verb → handler by meaning, with the kinds of thing each takes; the chain by size (`chores`, `more`, `rarer`) retired | the split by size; the unreachable cases |
+
+Odd answers the sweeps don't catch (they name the thing, but read oddly), for review: "tie the torch" says "You can't
+close the torch." (a tie is a container's, worked as its lid); "wear the torch" says "You hold the lit torch in your
+left hand already." (a thing for the hand, held).
+
 Two decisions recorded in the docs would need revisiting:
 
 - **"The choosers stay two" (DUNGEON.md, 2026-11-04).** Keep two choosers for *minds* (by want, TW_*) versus
