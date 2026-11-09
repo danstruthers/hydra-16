@@ -634,11 +634,14 @@ unsigned char __fastcall__ o_run16 (unsigned char h)
                 return 0;
             }
             say_no (A_SEE_NO, cmd.obj.word);
+        } else if (action == IR_NO && (cmd.action == VB_TIE_OBJECT || cmd.action == VB_UNTIE_OBJECT) && strstr (lb, "can't")) {
+            unknown (U_CANT);                   /* ("Tie the torch": "You can't tie the torch.", its verb the line's, not the
+                                                **   lid's "close" the world worked it as: 2026-11-08) */
         } else {
             worked (action);                    /* (Its lock picked, it forced: a timed work) */
         }
         break;
-    case H_EAT:                                 /* (Eating, drinking: part 12's, slice 4.9's) */
+    case H_EAT:                                /* (Eating, drinking: part 12's, slice 4.9's) */
         feed (action == VB_EAT_OBJECT);
         break;
     case H_HIDDEN:                              /* (A thing hidden, begun: main.c's hide, the things' IO_HIDE) */
