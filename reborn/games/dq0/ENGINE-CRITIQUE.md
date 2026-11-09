@@ -241,6 +241,38 @@ each kind's fields once and generates the rest, without changing the layout (the
 - **What it doesn't do yet:** shrink the vocabulary (stage 3, the critique's actions and outcomes); that's easier once
   every field is declared, as which kinds differ only by name becomes plain in the declaration file.
 
+**Stage 2, the intents done 2026-11-09** (DECISIONS.md's "The messages' payloads, declared").  games/dq0/msgs.def, read
+by hubgen.js in the same pass as the headers: a `struct msg` line, then a line a kind, `I_WAIT  a how; w1 tenths;
+w2(busy) task:8-15@LT_NONE what:1-7 quiet:0`: each slot's fields, a bit range, a one-bit field's constant
+(`keep:8=STEP_KEEP`, checked against the headers), an enum for the tests' names (`@LT_NONE`), a packed slot named whole
+(`w2(busy)`), another form of the same kind (`I_STEP:den`, `I_PORTAL:search`, `I_KIT:dig`, `I_ROB:give` ...) and the
+fields of another included (`< I_DEN`, the denizens' intents' head: doing, face).  Every intent declared: the 31 kinds
+after I_NONE, in 45 forms (and I_DEN's head).  The build writes obj/gen/dq0msg.h (hub.h includes it): an accessor a field
+(`I_WAIT_TASK (m)`, an lvalue for a slot whole), a packer a packed slot (`I_WAIT_W2 (task, what, quiet)`), a builder a
+form (`I_PORTAL_SET (m, who, act, which, x, y, bar, strike, hand)`), checked that each field is in its slot's bits and
+none overlaps another; and the payloads into dq0hub.json, read by `load ().decode` (the tests' decoder).  Every sender
+and receiver of an intent switched: the UI's packed slots by their packers (`intend2 (I_WAIT, t, I_WAIT_W2 (k, n, 1))`)
+and its hand-built messages by the builder or the accessors (main.c, search.c, pace.c: 61 lines), the denizens'
+(dq0d.c: 177), the world's receivers (dq0w.c, wbody.c, wport.c, wtake.c, wfetch.c, wfight.c, wdig.c, wlimbs.c, outfit.c,
+wgame.c, wtrace.c, things.c: 184).  The images came out byte-identical.  The tests' recorder records the intents (the
+UI's ring and the denizens'), each by name (`e.tenths`, `e.task`), in dq0Turns' `intents`; dq0longwait and dq0tend
+read them so.
+
+**Left of stage 2:**
+
+- **The events (E_*, 23 kinds):** declared the same way, with forms chosen by a field's value (E_TASK's b and w1's
+  high byte mean what its TE_* says, E_BEAT's by its WB_*): msgs.def wants a selector (`E_TASK:robbed  w1 te:0-7=
+  TE_ROBBED ...`, the decoder picking the form whose value matches) in place of dq0meaning.js's hand switch.  Their
+  senders are the world's `event (kind, who, w1)` with its globals (evb) and the hand-built ones (wk.m, wport.c's E_DEN,
+  wfetch.c's and wfight.c's E_TASK ...); their receivers the UI's event switch (main.c), the denizens' (E_DEN, E_FIGHT,
+  E_NOISE, E_NOWAY) and the sound's.  The recorder's decode already merges a declared payload into each event; the names
+  must stay clear of the raw slots it keeps at the top (a, b, w1, w2, t, x: the tests read e.w1 and e.b) or the raw
+  move under `raw`, as the intents' are.
+- **The referee's requests (struct req, RS_*):** a `struct req` line in msgs.def, and slots spanning bytes (RS_TIME's
+  x[4..7], x[16..21]: a multi-byte field, `x[4-7]`, the accessor a cast of its first byte's address), the request's
+  fields and its reply's (grade, result, steps, x[] back) declared apart; senders hub_ask's callers (the world, the
+  denizens, the UI), the receiver dq0harn.
+
 ---
 
 ## 3. Every feature is written in five places
@@ -578,7 +610,7 @@ Ranked by how much each unlocks, and arranged so the game keeps working througho
 |---|---|---|---|
 | 1 | **Generated placement** (§1.1): parts.txt, the stubs and the config's SWn lines made by the build. *Done 2026-11-06 (games/dq0/parts.js), every task.* Then the automatic packer (§1.2: *done 2026-11-07*, the parts' banks chosen by the build, parts.txt's bank a wish; the calls routed by part; a part past the swap area has its pieces moved out by the build, games/dq0/pack.js) and part-local leaf copies (§1.3) | ends "moved for room" churn; a function moved is its pragma alone; dispatch can be organised by meaning | medium, then large |
 | 2 | **Shared helpers in paged ROM** (§1.4, §4): line of sight, path finding, chunk lookup, name matching, the keyed hash and dice. *Line of sight done 2026-11-08 as a stage: one line (dq0w/line.inc: sight, fire, air), a shared source assembled into the senses and the world, not yet ROM (it calls the task's own chunk lookup); the look's grid ray the same squares, heights and portal rule (DECISIONS.md's "One line of sight"). The game's library in the paged ROM done 2026-11-09 (modules/dq0lib, each task's games/dq0/dq0lib.inc; DECISIONS.md's "The game's own library in the paged ROM"): the overlays' loading (`OVL_LOAD`, six copies) and `NUM` (atoi's: five copies and dq0m's atoi), the main RAM 88 to 687 bytes freer in every task (the UI 2,128 to 2,307); the line and the chunk lookup's move to it planned in §4 (a fixed zero-page block and callbacks into the task's `at`), to be done with the router. The router done 2026-11-09 the same way: one way-finder and one rule for a square (dq0w/walk.inc), compiled into the world (the character's ways) and the denizens (their ways found), each walker's rules its own (DECISIONS.md's "One way-finder").* Next: the line, the way-finder and the chunk lookup into the ROM library together (§4's plan) | one line of sight and one router (they disagree today); one copy to keep. Small room gains (measured: a few hundred bytes a task) | medium |
-| 3 | **The hub schema and generated headers/inc/JS/ownership** (§2). *Stage 1 done 2026-11-09: nothing written twice (games/dq0/hubgen.js, DECISIONS.md's "The hub's numbers, made by the build"): the headers' names, enums, structs' layouts and the writers' table made by the build with cc65 into obj/gen (dq0hub.json for the make.js files and the tests, an include per assembly file, actions.h from the catalogue); the hand-typed copies and the checks that held them gone, nothing compiled at test time; the images byte-identical.* Next, stage 2: typed payloads for the intents and events (a payload table the same generator reads, §2's) | typed payloads; no hand-synced constants; cheaper tests | medium |
+| 3 | **The hub schema and generated headers/inc/JS/ownership** (§2). *Stage 1 done 2026-11-09: nothing written twice (games/dq0/hubgen.js, DECISIONS.md's "The hub's numbers, made by the build"): the headers' names, enums, structs' layouts and the writers' table made by the build with cc65 into obj/gen (dq0hub.json for the make.js files and the tests, an include per assembly file, actions.h from the catalogue); the hand-typed copies and the checks that held them gone, nothing compiled at test time; the images byte-identical.* *Stage 2, the intents, done 2026-11-09 (DECISIONS.md's "The messages' payloads, declared"): games/dq0/msgs.def, each intent's fields where they sit in struct msg, packed bits as bit ranges; the build's obj/gen/dq0msg.h (an accessor a field, a packer a packed slot, a builder a form) and the tests' decoders (the recorder's intents by name); every sender and receiver of an intent switched (the UI, the denizens, the world); the images byte-identical.* Next: the events (E_*, forms chosen by a field's value), then the referee's requests (struct req, its multi-byte x[]), §2's "Left of stage 2" | typed payloads; no hand-synced constants; cheaper tests | medium |
 | 4 | **Handles, the scope table, the action table** (COMMANDS §4.1–4.4 and §3.1 here). *Mostly done 2026-11-07* (COMMANDS-CRITIQUE.md §5.1: every choice of a thing made once and sent as a handle, one "which?", one name match; §5.2 G–K: both sweeps clean, one path for things and one for features, one walk over, refusals as data); the action table, §5.2's step L, under way | consistent commands; one intent shape for PC and denizens | large (the command plan's steps) |
 | 5 | **Narration as data** (§3.2) | removes the 33 wording functions, `told` ×6, most SA_ refusals; first words for free; denizen actions worded alike | large, migratable one action at a time |
 | 6 | **The step planner and activity stacks** (§3.3, §7) | removes 33 reach LT_ kinds and the continuation chain; containers (COMMANDS §4.9) | medium–large |

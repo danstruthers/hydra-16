@@ -137,7 +137,7 @@ void s_tend (void)
         if (!res) {
             hub_mem (UI_BANK, &UIREC->kept, &cmd, sizeof cmd);
             reach = 3;
-            intend2 (I_WAIT, plan.t, LT_TEND << 8 | 1);
+            intend2 (I_WAIT, plan.t, I_WAIT_W2 (LT_TEND, 0, 1));
         }
         goto out;
     }
@@ -160,7 +160,7 @@ void s_tend (void)
         }
         if (res == 1) {
             reach = 3;                          /* (A bleeder bleeding still: a minute more, the book's) */
-            intend2 (I_WAIT, 600, LT_TEND << 8 | 1);
+            intend2 (I_WAIT, 600, I_WAIT_W2 (LT_TEND, 0, 1));
         }
     }
 out:

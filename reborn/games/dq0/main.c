@@ -1432,7 +1432,7 @@ again:  HUB->ireq.to = reach == 4 ? IO_DONE : 0;
             tell (d >= 10 ? T_HID_CUNNINGLY : d >= 4 ? T_HID_WELL : T_HID_POORLY);
             to_hand ();
             if (HUB->ireq.y >= 0xFD) {
-                intend2 (I_WAIT, 1, 1);         /* (The reach's steps to come: the UI waits for them) */
+                intend2 (I_WAIT, 1, I_WAIT_W2 (0, 0, 1));   /* (The reach's steps to come: the UI waits for them) */
             }
         } else if (d != IR_NO && d != IR_GONE) {    /* (IR_NO: a step of the reach first, part 19's) */
             say_no (A_HAVE_NO, w);
@@ -1525,7 +1525,7 @@ unsigned char s_hold_first (void)
     if (r == IR_OK) {
         msg (tt ());
         to_hand ();
-        intend2 (I_WAIT, t, 1);
+        intend2 (I_WAIT, t, I_WAIT_W2 (0, 0, 1));
     } else if (!strstr (tt (), "already")) {
         msg (tt ());
         return 0;
@@ -1588,11 +1588,11 @@ static void __fastcall__ shot (unsigned char d, unsigned char s)
 
     m.kind = I_ATTACK;
     m.who = 0;
-    m.a = d;
-    m.b = AIM_SHOT | Z_MID | (cmd.action == VB_THROW_OBJECT && (cmd.manner & MN_HARD) ? AIM_HARD : 0);
+    I_ATTACK_FOE (m) = d;
+    I_ATTACK_AIM (m) = AIM_SHOT | Z_MID | (cmd.action == VB_THROW_OBJECT && (cmd.manner & MN_HARD) ? AIM_HARD : 0);
     m.w1 = m.w2 = 0;
-    m.x[1] = s;
-    m.x[2] = 0;                                 /* (Its hand the world's to find) */
+    I_ATTACK_STRIKE (m) = s;
+    I_ATTACK_HAND (m) = 0;                      /* (Its hand the world's to find) */
     if (hub_send (&m)) {
         busy = 1;
         t_prompt (0);
@@ -1704,7 +1704,7 @@ void s_limbs_cmd (void)
         msg (tt ());
         if (t) {
             to_hand ();                         /* (The referee told its hands anew) */
-            intend2 (I_WAIT, t, 1);
+            intend2 (I_WAIT, t, I_WAIT_W2 (0, 0, 1));
         }
     }
 }
@@ -1753,15 +1753,8 @@ void __fastcall__ s_work (unsigned char what, unsigned char obj)
 {
     static struct msg m;
 
-    m.kind = I_PORTAL;
-    m.who = 0;
-    m.a = what;
-    m.b = obj == OB_DOOR || obj == OB_PORTC ? PW_DOOR : obj == OB_WINDOW ? PW_WINDOW : PW_ANY;
-    m.w1 = tx;                                  /* (The one meant, if it was found: else 0, the one it faces) */
-    m.w2 = ty;
-    m.x[0] = barw;
-    m.x[1] = strike;
-    m.x[2] = shand;
+    I_PORTAL_SET (m, 0, what, obj == OB_DOOR || obj == OB_PORTC ? PW_DOOR : obj == OB_WINDOW ? PW_WINDOW : PW_ANY,
+        tx, ty, barw, strike, shand);           /* (The one meant, if it was found: else 0, the one it faces) */
     sent (&m);
 }
 
@@ -1773,11 +1766,11 @@ void __fastcall__ s_intend (unsigned char kind, unsigned char a)
     m.who = 0;
     m.a = a;
     m.w1 = m.w2 = 0;
-    m.x[1] = strike;                            /* (I_ATTACK's: what it strikes with, the hand it's in) */
-    m.x[2] = shand;
+    I_ATTACK_STRIKE (m) = strike;               /* (I_ATTACK's, I_CLOSE's: what it strikes with, the hand it's in) */
+    I_ATTACK_HAND (m) = shand;
     if (kind == I_GO) {                         /* (Through the one meant, if it was found) */
-        m.w1 = tx;
-        m.w2 = ty;
+        I_GO_X (m) = tx;
+        I_GO_Y (m) = ty;
     }
     sent (&m);
 }
@@ -1969,7 +1962,7 @@ void __fastcall__ s_took_up (unsigned r)
     }
     if ((unsigned char) r == IR_FUMBLED) {      /* (Engaged, a grope failed: the things' words, the round wasted) */
         msg (tt ());
-        intend2 (I_WAIT, HUB->round, 1);
+        intend2 (I_WAIT, HUB->round, I_WAIT_W2 (0, 0, 1));
         return;
     }
     if ((unsigned char) r == IR_OK && *tt ()) {
@@ -2216,7 +2209,7 @@ again:
     HUB->ireq.count = cmd.flags & CF_HALF ? CT_HALF : cmd.obj.sel == SL_ALL ? CT_ALL : cmd.n;
     if ((d = puzzle (&cmd)) != Q_NONE) {        /* (The theme's puzzle's: theme.c) */
         if (d >= Q_DONE) {
-            intend2 (I_WAIT, 50, 1);            /* (Its time: the way out opened the world's already) */
+            intend2 (I_WAIT, 50, I_WAIT_W2 (0, 0, 1));   /* (Its time: the way out opened the world's already) */
         }
         return;
     }
@@ -2372,10 +2365,10 @@ void s_step_go (void)
         task_words (TE_BEGUN | (unsigned) k << 8, n);
     }
     if (HUB->ireq.y & 2) {
-        intend2 (I_WAIT, t, 1);                 /* (Engaged: the round's action, a blow no stop of it) */
+        intend2 (I_WAIT, t, I_WAIT_W2 (0, 0, 1));   /* (Engaged: the round's action, a blow no stop of it) */
         return;
     }
-    intend2 (I_WAIT, t, (unsigned) k << 8 | (n & 0x7F) << 1 | 1);
+    intend2 (I_WAIT, t, I_WAIT_W2 (k, n, 1));
     if (k == LT_BLOWDARK) {
         intend2 (I_ASK, TE_ASK_HEARD, 0);       /* (Asked: "no" stops it, the torch still lit) */
     }
@@ -2471,10 +2464,10 @@ unsigned char s_reach_go (void)
         walk_says (a ? 0 : taking);             /* (A take's: its name, "take all"'s next perhaps) */
         pm.kind = pm_kind;
         pm.who = 0;
-        pm.a = a;
-        pm.w1 = HUB->ireq.x;
-        pm.w2 = HUB->ireq.y;
-        pm.t = HUB->ireq.item;
+        I_TAKE_ALONE (pm) = a;                  /* (I_TAKE's, or I_GOTO's to a feature's square: the same) */
+        I_TAKE_X (pm) = HUB->ireq.x;
+        I_TAKE_Y (pm) = HUB->ireq.y;
+        I_TAKE_THING (pm) = HUB->ireq.item;
         if ((r = hub_send (&pm)) != 0) {
             busy = 1;
             if (a < 2) {
@@ -2621,9 +2614,9 @@ unsigned char __fastcall__ s_place_go (const struct cmd* c)
     }
     fc = a == 2 ? fc : !a ? f0 + (f1 - f0) / 2 : a * fa > 0 ? f1 : f0;   /* (Not (f0 + f1) / 2: the frame's squares near */
     rc = b == 2 ? rc : !b ? r0 + (r1 - r0) / 2 : b * ra > 0 ? r1 : r0;   /*   $8000, a sum past 16 bits) */
-    pm.w1 = fy ? rc : fc;
-    pm.w2 = fy ? fc : rc;
-    if (pm.w1 == px && pm.w2 == py) {
+    I_GOTO_X (pm) = fy ? rc : fc;
+    I_GOTO_Y (pm) = fy ? fc : rc;
+    if (I_GOTO_X (pm) == px && I_GOTO_Y (pm) == py) {
         msg ("You're there already.");
         return 1;
     }
@@ -2631,7 +2624,7 @@ unsigned char __fastcall__ s_place_go (const struct cmd* c)
     t_flush ();
     pm.kind = I_GOTO;
     pm.who = 0;
-    pm.a = 1;
+    I_GOTO_NEAR (pm) = 1;
     if (hub_send (&pm)) {
         busy = 1;
         placing = 1;
@@ -2938,7 +2931,7 @@ int main (int argc, char* argv[])
             if (k == NL_NONE && names_n && (f & NI_THING) && (t = names_subst (l)) != 0) {
                 to_hand ();                     /* (The things' names in it made theirs, "#" and the id; a weapon
                                                 **   named taken in hand to strike with: its time, as after ()'s) */
-                intend2 (I_WAIT, t, 1);
+                intend2 (I_WAIT, t, I_WAIT_W2 (0, 0, 1));
             }
             if (cq_again) {
                 cq_again = 0;

@@ -130,14 +130,14 @@ static void __fastcall__ rest (const struct msg* m)
     struct actor q;
     struct item* p;
 
-    if (m->a == FE_DROP) {
+    if (I_ROB_ERRAND (*m) == FE_DROP) {
         while ((n = held (0)) != 0) {
             let_go (n);
         }
-    } else if (m->a == FE_PASS) {               /* (Food handed to a fellow beside it: none held, nothing, no time) */
+    } else if (I_ROB_ERRAND (*m) == FE_PASS) {  /* (Food handed to a fellow beside it: none held, nothing, no time) */
         if ((n = held (1)) != 0) {
             hub_map (0);
-            memcpy (&q, &HUB->actor[m->b - 1], sizeof q);
+            memcpy (&q, &HUB->actor[I_ROB_FELLOW (*m) - 1], sizeof q);
             if (q.state && q.sn == bd.sn && (unsigned) (q.x - bd.x + 1) <= 2 && (unsigned) (q.y - bd.y + 1) <= 2 &&
                 in_hands (q.did) < (q.body == BD_TWO ? 2 : 1)) {
                 k = item_at (n)->kind;
@@ -148,12 +148,12 @@ static void __fastcall__ rest (const struct msg* m)
             }
         }
     } else {                                    /* (FE_THROW: its own, in hand or not) */
-        p = item_at (m->t);
+        p = item_at (I_ROB_THING (*m));
         k = p->kind;
         n = p->where == IW_DEN && p->owner == (unsigned char) bd.did && p->hide == bd.did >> 8;
         hub_map (0);
         if (n) {
-            tk_x = m->t;
+            tk_x = I_ROB_THING (*m);
             bd.ready += 20;
             news ((throw_at (0) == TH_SHORT ? WB_FELL : WB_THREW) | (unsigned) k << 8);
             ++HUB->den_seq;
@@ -213,7 +213,7 @@ void __fastcall__ s_den_take (const struct msg* m)
         rest (m);                               /* (The things' rest: above) */
         return;
     }
-    want = m->a;
+    want = I_TAKE_WANT (*m);
     if ((want & TW_FOOD) && (i = held (1)) != 0) {   /* (Hungry, with food in hand: eaten, five minutes as the character's
                                                 **   meal; a lot one less; its mind told) */
         k = item_at (i)->kind;

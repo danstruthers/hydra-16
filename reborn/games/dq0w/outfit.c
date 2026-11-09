@@ -186,16 +186,16 @@ void __fastcall__ s_den_kit (const struct msg* m)
                                                 **   read from the card, and before anything's made) */
             return;
         }
-        if (k == 3 || !(m->a & 1 << k)) {
+        if (k == 3 || !(I_KIT_DRAW (*m) & 1 << k)) {
             continue;
         }
         ost.rs = ((unsigned) STRATUM (ost.hsn).seed ^ ost.did * 40503U ^ k * 0x3B1DU) | 1;
         b[0] = pre[k];                          /* (Its name in the index: the section's mark and its kind's number) */
-        b[1] = m->x[1];
+        b[1] = I_KIT_DKIND (*m);
         b[2] = 0;
         if (!(off = find (b)) && k == 2) {      /* (No purse of its kind's own: its standing's) */
             strcpy (b, "standing 0");
-            b[9] += m->x[0];
+            b[9] += I_KIT_STANDING (*m);
             off = find (b);
         }
         draw_at (off, MD_ALL);

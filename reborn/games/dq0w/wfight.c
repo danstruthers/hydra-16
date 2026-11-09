@@ -407,14 +407,14 @@ void __fastcall__ s_den_rob (const struct msg* q)
     unsigned char kind, f, how, fac, pur;
     unsigned char* s;
 
-    if (q->a) {
+    if (I_ROB_ERRAND (*q)) {
         den_fetch (q);                          /* (An ally's errand, a gift: part 72's, slice 4.8's) */
         return;
     }
-    x = q->w1;
-    y = q->w2;
-    how = q->x[2];
-    fac = q->b;
+    x = I_ROB_X (*q);
+    y = I_ROB_Y (*q);
+    how = I_ROB_KEEP (*q);
+    fac = I_ROB_FACTION (*q);
     s = at (bd.sn, x, y);
     if (!s || !(TILE (*s) == T_FLOOR || TILE (*s) == T_CORR) ||
         !it_need (bd.sn, (x - STRATUM (bd.sn).x0) >> CW_BITS, (y - STRATUM (bd.sn).y0) >> CW_BITS)) {
@@ -431,7 +431,7 @@ void __fastcall__ s_den_rob (const struct msg* q)
             break;
         }
     }
-    pur = q->x[3];                              /* (The character at rest robbed unawares: its coins alone, a purse cut;
+    pur = I_ROB_PURSE (*q);                     /* (The character at rest robbed unawares: its coins alone, a purse cut;
                                                 **   caught at it, nothing, its rest stopped: the mind's, 2026-11-06) */
     for (n = 0, i = 0; !(pur & RB_CAUGHT) && (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
         kind = ip->kind;

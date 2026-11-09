@@ -322,10 +322,10 @@ void __fastcall__ s_take_go (const struct msg* m)
         took ((unsigned char) m);               /* (things.h's: its one stub) */
         return;
     }
-    take_only = m->a;
-    take_n = m->t ? (unsigned) m->t : 1;        /* (Walked over to alone: its square's, perhaps no thing's) */
-    take_x = m->w1;
-    take_y = m->w2;
+    take_only = I_TAKE_ALONE (*m);
+    take_n = I_TAKE_THING (*m) ? (unsigned) I_TAKE_THING (*m) : 1;   /* (Walked over to alone: its square's, perhaps no thing's) */
+    take_x = I_TAKE_X (*m);
+    take_y = I_TAKE_Y (*m);
     hub_map (0);
     take_fx = HUB->pc_x;
     take_fy = HUB->pc_y;

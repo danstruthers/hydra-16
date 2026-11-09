@@ -268,7 +268,7 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
                                                 **   at a run, four at a sprint; as a search or a map holds it, one) */
             n = HUB->gait <= GA_WALK || (HUB->watch & (WA_TRAPS | WA_MAP)) ? 1 : HUB->gait - GA_WALK + 1;
         }
-        intend2 (I_STEP, d | (keep ? STEP_KEEP : 0), n);
+        intend2 (I_STEP, I_STEP_W1 (d, keep), n);
         return 1;
     }
     return !k;
@@ -313,22 +313,22 @@ unsigned char __fastcall__ s_travel_go (const char* l)
     memset (&m, 0, sizeof m);
     m.kind = I_TRAVEL;
     if (!o && (e = room_named (l)) != 0xFF) {
-        m.b = e;                                /* (A room named: where it is, the names') */
-        m.w1 = named_room.x;
-        m.w2 = named_room.y;
-        m.x[0] = named_room.w;
-        m.x[1] = named_room.h;
-        m.x[2] = named_room.sn;
+        I_TRAVEL_PLACE (m) = e;                 /* (A room named: where it is, the names') */
+        I_TRAVEL_X (m) = named_room.x;
+        I_TRAVEL_Y (m) = named_room.y;
+        I_TRAVEL_W (m) = named_room.w;
+        I_TRAVEL_H (m) = named_room.h;
+        I_TRAVEL_SN (m) = named_room.sn;
     } else if ((!o && (any ("entrance\0start\0started\0began\0beginning\0") || said ("way in") ||
                said ("came in"))) || (o == OB_WAY_OUT && back)) {
-        m.b = TRV_IN;
+        I_TRAVEL_PLACE (m) = TRV_IN;
     } else if (!o || back) {
         for (e = 0; e < 8 + TUSES; ++e) {       /* (A kind of room, its words the theme's: the longest said) */
             hub_mem (THEME_BANK, k, e < 8 ? THEME->room[e] : THEME->uses[e - 8], sizeof k);
             k[sizeof k - 1] = 0;
             if (*k && (n = strlen (k)) > best && said (k)) {
                 best = n;
-                m.b = TRV_KIND | e;
+                I_TRAVEL_PLACE (m) = TRV_KIND | e;
             }
         }
         if (!best) {

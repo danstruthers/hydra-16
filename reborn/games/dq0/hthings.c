@@ -28,7 +28,7 @@ void __fastcall__ s_after (unsigned char was, unsigned t, unsigned char op)
         intend_a = op == IO_LIGHT || HUB->pc_light > was;
         intend2 (I_LIGHT, op == IO_LIGHT ? 0 : t ? t : 1, 0);   /* (Its own time, the handling's; lit, the lighting's) */
     } else {
-        intend2 (I_WAIT, t, 1);
+        intend2 (I_WAIT, t, I_WAIT_W2 (0, 0, 1));
     }
 }
 
@@ -144,7 +144,7 @@ static void __fastcall__ worked (unsigned char action)
     if (action != IR_OK || !k || reach == 4) {
         msg (lb);
         if (action == IR_OK && reach != 4) {
-            intend2 (I_WAIT, t, 1);
+            intend2 (I_WAIT, t, I_WAIT_W2 (0, 0, 1));
         }
         if (action == IR_OK && reach == 4) {    /* (A timed work's end, the reach's steps to come: the UI waits for them;
                                                 **   the torch to light again by its own steps: HOUSE.md's) */
@@ -158,7 +158,7 @@ static void __fastcall__ worked (unsigned char action)
                     hub_mem (UI_BANK, &UIREC->kept, &cmd, sizeof cmd);
                     reach = 5;
                 }
-                intend2 (I_WAIT, 1, 1);
+                intend2 (I_WAIT, 1, I_WAIT_W2 (0, 0, 1));
             }
         }
         return;
@@ -167,7 +167,7 @@ static void __fastcall__ worked (unsigned char action)
     task_words (TE_BEGUN | k << 8, k < LT_PACKOFF ? n | 0x80 : n);    /* (The steps' kinds, 8 bits: a mang sharpened) */
     hub_mem (UI_BANK, &UIREC->kept, &cmd, sizeof cmd);
     reach = 3;
-    intend2 (I_WAIT, t, k << 8 | (n & 0x7F) << 1 | 1);
+    intend2 (I_WAIT, t, I_WAIT_W2 (k, n, 1));
 }
 
 /* The things' timed works, by their handler's number h (H_FILL ... H_HIDDEN): 1 carried out; 0, H_SHUT's: none that
@@ -199,7 +199,7 @@ unsigned char __fastcall__ o_things_work (unsigned char h)
             say_no (A_SEE_NO, cmd.obj.word);
         } else if (action == IR_OK) {           /* (IR_NO: a step of the reach first, part 19's) */
             msg (lb);
-            intend2 (I_WAIT, 30, 1);            /* (A look's three seconds) */
+            intend2 (I_WAIT, 30, I_WAIT_W2 (0, 0, 1));   /* (A look's three seconds) */
         }
         break;
     case H_TIE:                                 /* (A rope's: the things', wrope.c's, IO_HIDE's shape; a sack's tie, as it's

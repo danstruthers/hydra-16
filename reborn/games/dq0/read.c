@@ -411,7 +411,7 @@ static void __fastcall__ read_it (unsigned id, signed char cond, signed char app
         sayf (res == 1 ? "\nYou can't read: the marks on the %s mean nothing to you." : res == 2 ?
             "\nYou know the letters on the %s, but the words they spell are in a tongue you don't speak." :
             "\nThe %s is written in letters you've never learnt.", K.thing);
-        intend2 (I_WAIT, 100, 1);
+        intend2 (I_WAIT, 100, I_WAIT_W2 (0, 0, 1));
         return;
     }
     K.state = g == G_MF ? CL_PIECE : g == G_CF ? CL_WRONG : g == G_CS ? CL_RIGHT | CL_MORE : CL_RIGHT;
@@ -437,7 +437,7 @@ told:
             more_said ();
         }
     }
-    intend2 (I_WAIT, 600, 1);                   /* (A minute's reading) */
+    intend2 (I_WAIT, 600, I_WAIT_W2 (0, 0, 1));   /* (A minute's reading) */
 }
 #pragma static-locals (pop)
 
@@ -493,7 +493,7 @@ static unsigned char __fastcall__ reading (struct cmd* c)
             "a fair copy, every mark as it stands" : g == G_MS ? "a good copy" : g == G_MF ? "a rough copy, some of its marks guessed at" :
             "a poor copy, much of it botched");
         clue_io (CLUE_HERE | x, 1);
-        intend2 (I_WAIT, 6000, 1);              /* (Ten minutes' copying) */
+        intend2 (I_WAIT, 6000, I_WAIT_W2 (0, 0, 1));   /* (Ten minutes' copying) */
         return Q_TOLD;
     }
     if (r != PZ_DONE && r != PZ_OLD) {

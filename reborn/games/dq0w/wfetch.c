@@ -109,14 +109,14 @@ void __fastcall__ s_den_fetch (const struct msg* q)
         fit ();                                 /* (The character's outfit's, s_outfit's: below) */
         return;
     }
-    n = q->t;
-    how = q->a;
+    n = I_ROB_THING (*q);
+    how = I_ROB_ERRAND (*q);
     p = item_at (n);
     kind = p->kind;
     if (how == FE_TAKE) {                       /* (Taken up where it lies: still there, within its reach, by the take
                                                 **   rule) */
         c = take_rule (n);
-        if (c == IR_NOT_HERE && (!kind || tk_x != q->w1 || tk_y != q->w2 || item_at (n)->kind != kind)) {
+        if (c == IR_NOT_HERE && (!kind || tk_x != I_ROB_X (*q) || tk_y != I_ROB_Y (*q) || item_at (n)->kind != kind)) {
             c = 0xFF;                           /* (Gone from where it lay) */
         }
         if (c == IR_OK) {
@@ -134,14 +134,14 @@ void __fastcall__ s_den_fetch (const struct msg* q)
         }
         p = item_at (c);
         if (!kind || p->where != IW_DEN || (p->owner | p->hide << 8) != bd.did ||
-            (q->w1 && q->w1 < item_at (n)->qty && !(n = lot (n, q->w1)))) {
+            (I_ROB_COUNT (*q) && I_ROB_COUNT (*q) < item_at (n)->qty && !(n = lot (n, I_ROB_COUNT (*q))))) {
             hub_map (0);
             return;
         }
         p = item_at (n);
         p->flags &= ~I_HELD;
         if ((unsigned) (bd.x - bpx + 1) > 2 || (unsigned) (bd.y - bpy + 1) > 2 || bd.sn != bps ||
-            !carry (n, q->w2 != 1)) {   /* (Kept: into its pack first, the market's) */
+            !carry (n, I_ROB_KEPT (*q) != 1)) {   /* (Kept: into its pack first, the market's) */
             p = item_at (n);
             p->where = IW_SQUARE;
             p->sn = bd.sn;
@@ -152,7 +152,7 @@ void __fastcall__ s_den_fetch (const struct msg* q)
             told (FT_FEET, kind);
             return;
         }
-        if (q->w2 == 1 && kind == KI_PENNIES) {   /* (Coins kept: joined to a pile of the character's alike, the
+        if (I_ROB_KEPT (*q) == 1 && kind == KI_PENNIES) {   /* (Coins kept: joined to a pile of the character's alike, the
                                                 **   market's, 2026-11-02) */
             for (c = 0; (c = items (c, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
                 if (c != n && item_at (c)->kind == kind && !(item_at (c)->flags & I_NAMED) && on_pc (c) &&
@@ -174,12 +174,12 @@ void __fastcall__ s_den_fetch (const struct msg* q)
             hub_map (0);
             return;
         }
-        if (q->w1 && q->w1 < p->qty && !(n = lot (n, q->w1))) {
+        if (I_ROB_COUNT (*q) && I_ROB_COUNT (*q) < p->qty && !(n = lot (n, I_ROB_COUNT (*q)))) {
             hub_map (0);
             return;
         }
         hold (n);
-        if (q->w2 == 1) {
+        if (I_ROB_KEPT (*q) == 1) {
             item_at (n)->flags &= ~I_HELD;      /* (Kept, not held: the market's, 2026-11-02) */
         }
         equip_now ();

@@ -786,39 +786,39 @@ void __fastcall__ s_place (unsigned char i)
             D.ready = now + random (50);
         }
         den_put (k);
-        im.a = (j && kd == L.kind ? 0 : KT_LAIR) | ((kind_get (kd), KF_NATURE (K.form)) >= NA_FOLK ? KT_ROLE : 0);  /* (Its
+        I_KIT_DRAW (im) = (j && kd == L.kind ? 0 : KT_LAIR) | ((kind_get (kd), KF_NATURE (K.form)) >= NA_FOLK ? KT_ROLE : 0);   /* (Its
                                                 **   lair's own with its first: its stores, its hoard; a beast's den's,
                                                 **   the dead's lair's, 2026-10-29; folk's and the dead's roles; a
                                                 **   theme's leader with its home its own too, its hoard, 2026-10-29) */
-        if (im.a == KT_LAIR && (hub_map (0), HUB->gear & GE_OLD)) {
-            im.a = 0;                           /* (dq0 -K's, the tests': a beast's den none, as before, not even asked
+        if (I_KIT_DRAW (im) == KT_LAIR && (hub_map (0), HUB->gear & GE_OLD)) {
+            I_KIT_DRAW (im) = 0;                /* (dq0 -K's, the tests': a beast's den none, as before, not even asked
                                                 **   of the world) */
         }
-        if (im.a) {                             /* (Its things made, the world's draw by its kind's role and its
+        if (I_KIT_DRAW (im)) {                  /* (Its things made, the world's draw by its kind's role and its
                                                 **   lair's, filed at its home, the outfits' gear) */
-            im.b = K.faction;
-            im.x[0] = 0;
-            im.x[1] = kd;
-            im.x[2] = L.sn;
-            im.w1 = L.hx;
-            im.w2 = L.hy;
-            im.t = D.id;
+            I_KIT_FACTION (im) = K.faction;
+            I_KIT_STANDING (im) = 0;
+            I_KIT_DKIND (im) = kd;
+            I_KIT_SN (im) = L.sn;
+            I_KIT_X (im) = L.hx;
+            I_KIT_Y (im) = L.hy;
+            I_KIT_ID (im) = D.id;
             kitted ();
         }
-        im.x[1] = kd;                           /* (Its scent where it lives, at its lair's home: a passing, its comings
+        I_TROD_TKIND (im) = kd;                 /* (Its scent where it lives, at its lair's home: a passing, its comings
                                                 **   and goings, and its stays, the most: the world's traces told) */
-        im.x[2] = L.sn;
-        im.w1 = L.hx;
-        im.w2 = L.hy;
-        im.a = 0;
-        im.b = 255;
+        I_TROD_SN (im) = L.sn;
+        I_TROD_X (im) = L.hx;
+        I_TROD_Y (im) = L.hy;
+        I_TROD_HOW (im) = 0;
+        I_TROD_STAY (im) = 255;
         trodden ();
     }
     if (kd && (kind_get (kd), K.flags & K_SWEEPS)) {
-        im.x[2] = L.sn;                         /* (A kind that sweeps its floors: the lair's chunk kept swept, the
+        I_SWEPT_SN (im) = L.sn;                 /* (A kind that sweeps its floors: the lair's chunk kept swept, the
                                                 **   world's traces told) */
-        im.w1 = L.hx;
-        im.w2 = L.hy;
+        I_SWEPT_X (im) = L.hx;
+        I_SWEPT_Y (im) = L.hy;
         post (I_SWEPT, 0);
     }
     L.flags |= L_PLACED;
@@ -1048,21 +1048,21 @@ void __fastcall__ s_rob_to (unsigned char k)
 {
     unsigned char i, f = K.faction;
 
-    im.a = FE_ROB;                              /* (A robbery, not an errand: slice 4.8's I_ROB a) */
-    im.x[3] = 0;                                /* (One helpless: what it holds too; at rest, hid_mind's RB_PURSE after) */
-    im.w1 = ahx[k];
-    im.w2 = ahy[k];
-    im.b = f;
+    I_ROB_ERRAND (im) = FE_ROB;                 /* (A robbery, not an errand: slice 4.8's I_ROB a) */
+    I_ROB_PURSE (im) = 0;                       /* (One helpless: what it holds too; at rest, hid_mind's RB_PURSE after) */
+    I_ROB_X (im) = ahx[k];
+    I_ROB_Y (im) = ahy[k];
+    I_ROB_FACTION (im) = f;
     kx_get (akind[k]);
-    im.x[2] = X.keeps == KP_HIDDEN ? RB_HIDE : 0;
+    I_ROB_KEEP (im) = X.keeps == KP_HIDDEN ? RB_HIDE : 0;
     for (i = 0; i < hd.nlairs; ++i) {
         lair_get (i);
         if (L.kind && (L.flags & L_PLACED) && L.sn == a.sn && ((L.flags & L_LEADER) ?
             L_FAC (L.flags) == HUB->actor[k].faction :
             (kx_get (L.kind), X.keeps == KP_LEADER) && (kind_get (L.kind), K.faction == f))) {
-            im.w1 = L.hx;
-            im.w2 = L.hy;
-            im.x[2] = RB_HOARD;
+            I_ROB_X (im) = L.hx;
+            I_ROB_Y (im) = L.hy;
+            I_ROB_KEEP (im) = RB_HOARD;
             break;
         }
     }
@@ -1075,8 +1075,8 @@ void __fastcall__ s_rob_to (unsigned char k)
 
 static void __fastcall__ act (unsigned char kind, unsigned char k)
 {
-    im.x[0] = a.doing;
-    im.x[1] = a.face;
+    I_DEN_DOING (im) = a.doing;
+    I_DEN_FACE (im) = a.face;
     post (kind, k + 1);
 }
 
@@ -1098,11 +1098,11 @@ static unsigned aday[NACTORS];                  /* (Each one's day not asked aga
 static void __fastcall__ rouse (unsigned char k, unsigned w)
 {
     upto[k] = (unsigned) (now >> 8) + UP_T;
-    im.x[0] = 0xFF;
-    im.x[1] = rface;
+    I_ROUSE_DOING (im) = 0xFF;
+    I_ROUSE_FACE (im) = rface;
     rface = 0xFF;
-    im.w1 = w & ~ROUSE_SET;
-    im.w2 = w >> 15;
+    I_ROUSE_TENTHS (im) = w & ~ROUSE_SET;
+    I_ROUSE_WHENEVER (im) = w >> 15;
     post (I_ROUSE, k + 1);
 }
 
@@ -1147,14 +1147,14 @@ void s_met (void)
     if (KF_NATURE (K.form) != NA_FOLK || (kx_get (k), !X.standing)) {
         return;
     }
-    im.a = KT_PURSE;
-    im.b = f;
-    im.x[0] = X.standing;
-    im.x[1] = k;
-    im.x[2] = D.lsn;
-    im.w1 = D.hx;
-    im.w2 = D.hy;
-    im.t = D.id;
+    I_KIT_DRAW (im) = KT_PURSE;
+    I_KIT_FACTION (im) = f;
+    I_KIT_STANDING (im) = X.standing;
+    I_KIT_DKIND (im) = k;
+    I_KIT_SN (im) = D.lsn;
+    I_KIT_X (im) = D.hx;
+    I_KIT_Y (im) = D.hy;
+    I_KIT_ID (im) = D.id;
     kitted ();
 }
 #pragma code-name (pop)
@@ -1192,7 +1192,7 @@ void __fastcall__ s_retire (unsigned char k)
         D.ready = now + 36000;                  /* (An ally left waiting: it waits an hour, then goes its own way) */
     }
     den_put (a.den);
-    im.x[0] = im.x[1] = 0xFF;
+    I_LEAVE_DOING (im) = I_LEAVE_FACE (im) = 0xFF;
     post (I_LEAVE, k + 1);
     settle ();
     HUB->actor[k].name[0] = 0;
@@ -1249,7 +1249,7 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     a.power = s->power;
     a.serve = D.serve;
     a.contact = D.contact;
-    im.b = (s->cond & C_BLEEDING) != 0;
+    I_ENTER_BLEEDING (im) = (s->cond & C_BLEEDING) != 0;
     strcpy (a.name, (i = name_of (D.id)) < NNAMES ? hd.names[i].name : K.name);
     a.kind = D.kind;
     kx_get (D.kind);
@@ -1260,15 +1260,15 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     a.mood = K.flags & K_NOSE ? AM_STALKS : 0;  /* (A hunter by smell comes on stalking, at a walk: decide's stalk) */
     hub_map (0);
     memcpy (HUB->actor[k].name, a.name, sizeof a - offsetof (struct actor, name));
-    im.x[0] = s->cond & C_UNCONSCIOUS ? DO_DOWN : esl ? DO_SLEEP : 0;   /* (Left senseless, and senseless still: it lies
+    I_ENTER_DOING (im) = s->cond & C_UNCONSCIOUS ? DO_DOWN : esl ? DO_SLEEP : 0;   /* (Left senseless, and senseless still: it lies
                                                 **   there) */
-    im.x[1] = a.face;
-    im.x[2] = a.sn;
-    im.x[3] = s->cond >> 12 & 7;                /* (Its legs, the referee's C_MOVE: slice 4.1b's) */
-    im.w1 = a.x;
-    im.w2 = a.y;
-    im.a = a.step;
-    im.t = a.ready;
+    I_ENTER_FACE (im) = a.face;
+    I_ENTER_SN (im) = a.sn;
+    I_ENTER_LEGS (im) = s->cond >> 12 & 7;      /* (Its legs, the referee's C_MOVE: slice 4.1b's) */
+    I_ENTER_X (im) = a.x;
+    I_ENTER_Y (im) = a.y;
+    I_ENTER_STEP (im) = a.step;
+    I_ENTER_READY (im) = a.ready;
     post (I_ENTER, k + 1);
     settle ();
 }
@@ -1489,8 +1489,8 @@ void __fastcall__ s_coarse (unsigned char k, unsigned lim)
         }
         a.x = x;
         a.y = y;
-        im.w1 = (a.face = DH (d)) | STEP_COARSE;
-        im.w2 = 1;
+        I_STEP_WAY (im) = I_STEP_DEN_W1 (a.face = DH (d), 1, 0);
+        I_STEP_SENSE (im) = I_STEP_DEN_W2 (1, 0);
         act (I_STEP, k);
         if ((p = at (a.sn, x, y)) != 0 && (*p & T_VIS)) {
             break;
@@ -2002,12 +2002,12 @@ static void __fastcall__ stayed (unsigned char k)
         stn[k] = nowq;
     } else if ((c = nowq - stn[k]) != 0) {
         stn[k] = nowq;
-        im.x[1] = akind[k];
-        im.x[2] = a.sn;
-        im.w1 = a.x;
-        im.w2 = a.y;
-        im.a = TS_STAY;
-        im.b = c;
+        I_TROD_TKIND (im) = akind[k];
+        I_TROD_SN (im) = a.sn;
+        I_TROD_X (im) = a.x;
+        I_TROD_Y (im) = a.y;
+        I_TROD_HOW (im) = TS_STAY;
+        I_TROD_STAY (im) = c;
         trodden ();
     }
 }
@@ -2188,23 +2188,23 @@ static unsigned char __fastcall__ decide (unsigned char k)
                                                 **   seed 136's soak) */
         }
         lstep[k] = w;
-        im.w1 = d == 0xFB ? STEP_SCENT : DH (d);
-        im.w2 = K.dark ? 1 : 1 | STEP_FEELS;
+        I_STEP_WAY (im) = d == 0xFB ? I_STEP_DEN_W1 (0, 0, 1) : I_STEP_DEN_W1 (DH (d), 0, 0);
+        I_STEP_SENSE (im) = K.dark ? I_STEP_DEN_W2 (1, 0) : I_STEP_DEN_W2 (1, 1);
         if (d == 0xFB) {
-            im.x[2] = knose[akind[k] % SND_KINDS];
+            I_STEP_NOSE (im) = knose[akind[k] % SND_KINDS];
         } else if (!(awater[k] & WA_FLIES) && (w = deep_at (a.sn, a.x + dir_x[d], a.y + dir_y[d])) != 0) {
             wt = 2 * w > (awater[k] & WA_DEEP) ? K.step : K.step >> 1;    /* (Into water: a wade to half its
                                                 **   depth its step half again, deeper (a swim too) twice: a wait
                                                 **   after it, the world's) */
         }
-        im.a = ++steps[k] & 7 || stalk[k] ? DE_MOVED : DE_NOISE;
-        im.b = stalk[k] ? stalk[k] - 1 : steps[k] & 7 ? 1 : 3;
+        I_STEP_HEARD (im) = ++steps[k] & 7 || stalk[k] ? DE_MOVED : DE_NOISE;
+        I_STEP_LOUD (im) = stalk[k] ? stalk[k] - 1 : steps[k] & 7 ? 1 : 3;
         act (I_STEP, k);
     } else if (d == 0xFD) {                     /* (A dash past the character, louder) */
-        im.w1 = dsx;
-        im.w2 = dsy;
-        im.a = DE_MOVED;
-        im.b = 2;
+        I_GOTO_X (im) = dsx;
+        I_GOTO_Y (im) = dsy;
+        I_GOTO_HEARD (im) = DE_MOVED;
+        I_GOTO_LOUD (im) = 2;
         act (I_GOTO, k);
     } else if (d == 0xFA || d == 0xFC) {        /* (A round's blow, or a shot: outnumbering it, later) */
         w = fled[k];                            /* (Fleeing and cornered: at bay, it fights, its courage not asked again) */
@@ -2215,12 +2215,12 @@ static unsigned char __fastcall__ decide (unsigned char k)
         }
         if (w || !fled[k]) {
             a.doing = DO_FIGHT;
-            im.a = 0;
-            im.b = d == 0xFA ? Z_MID | AIM_SHOT : Z_MID;
+            I_ATTACK_FOE (im) = 0;
+            I_ATTACK_AIM (im) = d == 0xFA ? Z_MID | AIM_SHOT : Z_MID;
             act (I_ATTACK, k);
         }
     } else if (a.doing != DO_SLEEP && a.doing != DO_DOWN && HUB->actor[k].pos == POS_PRONE) {
-        im.w1 = POS_STANDING;                   /* (Lying, and up to something else that isn't a step nor a blow (they
+        I_RISE_POS (im) = POS_STANDING;         /* (Lying, and up to something else that isn't a step nor a blow (they
                                                 **   get it up as theirs): up first, the world's Rise, 2026-11-02) */
         act (I_RISE, k);
     }
@@ -2235,7 +2235,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
                                                 **   gone: a broken one's no blow, above; 2026-11-04) */
     }
     if (wt) {
-        im.w1 = wt;
+        I_WAIT_TENTHS (im) = wt;
         act (I_WAIT, k);
     }
     if (!stirs) {
@@ -2328,7 +2328,7 @@ unsigned char __fastcall__ s_door_way (unsigned char k)
                     return 0xFF;
                 }
                 what = st == 2 ? PA_BEND : PA_RAISE;
-                im.t = n++ & 1;
+                I_PORTAL_STEP (im) = n++ & 1;
             } else if (a.body != BD_TWO) {             /* (No hands: a large hostile beast batters it, the house's) */
                 if (a.attitude != AT_HOSTILE || KF_SIZE (K.form) < 5) {
                     return 0xFF;
@@ -2344,12 +2344,12 @@ unsigned char __fastcall__ s_door_way (unsigned char k)
                 st = n = 0;
             } else if (!st && (s & PS_LOCKED)) {
                 what = PA_UNLOCK;               /* (Its key, if it has one: the world's) */
-                im.t = 0;
+                I_PORTAL_STEP (im) = 0;
                 st = 1;
             } else if (st == 1 && (s & PS_LOCKED) && (K_HELP (K) & H_ROBS) && n < 2) {
                 what = PA_UNLOCK;               /* (Picked, a robber's kind's: begun, then done, t 2 | 1, the world's
                                                 **   test by its sheet; 2026-11-02, the house's) */
-                im.t = 2 | n++;
+                I_PORTAL_STEP (im) = 2 | n++;
             } else if (a.attitude != AT_HOSTILE) {
                 return 0xFF;                    /* (Locked or barred against it: no further, round, as it can) */
             }
@@ -2360,7 +2360,7 @@ unsigned char __fastcall__ s_door_way (unsigned char k)
             if (what == 0xFF && st == 2) {      /* (Forced: its strain begun, then its test, twice at most) */
                 if (n < 4) {
                     what = PA_FORCE;
-                    im.t = n++ & 1;
+                    I_PORTAL_STEP (im) = n++ & 1;
                 } else {
                     st = 3;
                     n = 0;
@@ -2371,7 +2371,7 @@ unsigned char __fastcall__ s_door_way (unsigned char k)
                     return 0xFF;
                 }
                 what = PA_BREAK;
-                im.t = n++;
+                I_PORTAL_STEP (im) = n++;
             }
             atry[k] = j | st << 2 | n << 4;
             if (drawn[k] && drawn[k] < DRAWN_N) {
@@ -2399,12 +2399,12 @@ unsigned char __fastcall__ s_door_way (unsigned char k)
                 alert[k] = now + 600;           /* (Alert a while: still, looking about, a minute) */
             }
             what = pc ? PA_LOWER : PA_CLOSE;
-            im.t = 0;
+            I_PORTAL_STEP (im) = 0;
         }
-        im.a = what;
-        im.b = PW_DOOR;
-        im.w1 = x;
-        im.w2 = y;
+        I_PORTAL_ACT (im) = what;
+        I_PORTAL_WHICH (im) = PW_DOOR;
+        I_PORTAL_X (im) = x;
+        I_PORTAL_Y (im) = y;
         a.face = DH (j);
         act (I_PORTAL, k);
         return 0xF8;
@@ -2452,8 +2452,8 @@ unsigned char __fastcall__ s_take_way (unsigned char k)
     }
     if (fled[k]) {                              /* (Broken, in flight: what it holds that's no weapon nor light let fall, by
                                                 **   the character's let fall: 2026-11-04, the house's) */
-        im.a = FE_DROP;
-        im.x[0] = im.x[1] = 0xFF;
+        I_ROB_ERRAND (im) = FE_DROP;
+        I_ROB_DOING (im) = I_ROB_FACE (im) = 0xFF;
         post (I_ROB, k + 1);
         return 0xFF;
     }
@@ -2465,9 +2465,9 @@ unsigned char __fastcall__ s_take_way (unsigned char k)
             }
             x = (unsigned) &HUB->actor[d];
             if (d != k && q->state && q->faction == a.faction && q->sn == a.sn && apart (q->x - a.x, q->y - a.y) <= 1) {
-                im.a = FE_PASS;
-                im.b = d + 1;
-                im.x[0] = im.x[1] = 0xFF;
+                I_ROB_ERRAND (im) = FE_PASS;
+                I_ROB_FELLOW (im) = d + 1;
+                I_ROB_DOING (im) = I_ROB_FACE (im) = 0xFF;
                 post (I_ROB, k + 1);
                 break;
             }
@@ -2494,12 +2494,12 @@ unsigned char __fastcall__ s_take_way (unsigned char k)
     }
 #undef q
 ask:
-    im.a = want;
-    im.b = 0;
-    im.t = 0;
-    im.w1 = a.x;
-    im.w2 = a.y;
-    im.x[0] = im.x[1] = 0xFF;                   /* (Its doing and its face as they are) */
+    I_TAKE_WANT (im) = want;
+    I_TAKE_UNUSED (im) = 0;
+    I_TAKE_THING (im) = 0;
+    I_TAKE_X (im) = a.x;
+    I_TAKE_Y (im) = a.y;
+    I_TAKE_DOING (im) = I_TAKE_FACE (im) = 0xFF;   /* (Its doing and its face as they are) */
     post (I_TAKE, k + 1);
     return 0xFF;
 }
@@ -2711,10 +2711,10 @@ stand:
         if (!(k & 0x80)) {
             return h;
         }
-        im.a = t;
-        im.b = h;
-        im.w1 = tx + head_x[h];                 /* (Its face: the square dug, the door put up, the way walled up) */
-        im.w2 = ty + head_y[h];
+        I_KIT_DRAW (im) = t;
+        I_KIT_HEAD (im) = h;
+        I_KIT_X (im) = tx + head_x[h];          /* (Its face: the square dug, the door put up, the way walled up) */
+        I_KIT_Y (im) = ty + head_y[h];
         if (i < NACTORS) {
             if (a.x != tx || a.y != ty) {       /* (To its stand first) */
                 refx = tx;
@@ -2739,15 +2739,15 @@ stand:
             if (t == KT_DIG) {
                 a.doing = DO_DIG;
             }
-            im.x[2] = g;
+            I_KIT_WITH (im) = g;
             act (I_KIT, i);
             return 0xF9;
         }
         if (D.x != tx || D.y != ty) {
             return 0xF8;                        /* (Beside it, its stand another's: due again a spell on) */
         }
-        im.x[0] = g;                            /* (A record's spell, coarse: the world's, untested) */
-        im.x[2] = sn;
+        I_KIT_TOOLS (im) = g;                   /* (A record's spell, coarse: the world's, untested) */
+        I_KIT_SN (im) = sn;
         kitted ();
         return 0xF9;
     }
@@ -2835,9 +2835,9 @@ unsigned char __fastcall__ s_dig_way (unsigned char k)
     }
     a.face = DH (best);
     a.doing = DO_DIG;
-    im.a = KT_DIG;
-    im.b = a.face;
-    im.x[2] = g;
+    I_KIT_DRAW (im) = KT_DIG;
+    I_KIT_HEAD (im) = a.face;
+    I_KIT_WITH (im) = g;
     act (I_KIT, k);
     return 0xF9;
 }
@@ -3236,10 +3236,10 @@ unsigned char __fastcall__ s_along (unsigned char k)
         x = pcx + head_x[h];
         y = pcy + head_y[h];
         if (open_sq (at (pcs, x, y)) && !taken (k, x, y)) {
-            im.x[0] = im.x[1] = 0xFF;
-            im.x[2] = pcs;
-            im.w1 = x;
-            im.w2 = y;
+            I_CLIMB_DOING (im) = I_CLIMB_FACE (im) = 0xFF;
+            I_CLIMB_SN (im) = pcs;
+            I_CLIMB_X (im) = x;
+            I_CLIMB_Y (im) = y;
             post (I_CLIMB, k + 1);
             settle ();
             sgen[k] = 0;
@@ -3415,7 +3415,7 @@ unsigned char __fastcall__ s_hid_mind (unsigned char k)
             HUB->hlook[k] = lv;                 /* (Once each nearer: not every step of its) */
             g = HUB->pc_hid + (DO_UNAWARE (HUB->actor[k].doing) ? 2 : 0);    /* (About its business, 2 easier) */
             if (h_found (0, k + 1, g, lv)) {
-                im.w1 = POS_HIDE | HD_FOUND;
+                I_RISE_POS (im) = POS_HIDE | HD_FOUND;
                 act (I_RISE, k);
                 return 1;
             }
@@ -3449,9 +3449,9 @@ unsigned char __fastcall__ s_hid_mind (unsigned char k)
         rob_to (k);
         hub_map (0);
         a.doing = DO_WATCH;                     /* (Caught: beside its foe, awake now) */
-        im.x[3] = RB_PURSE | RB_CAUGHT;
+        I_ROB_PURSE (im) = RB_PURSE | RB_CAUGHT;
         if ((signed char) rq.grade <= (signed char) g) {
-            im.x[3] = RB_PURSE;
+            I_ROB_PURSE (im) = RB_PURSE;
             a.doing = DO_FLEE;                  /* (Off with what it takes, to its lair: robs') */
             a.attitude = AT_UNFRIENDLY;
             fled[k] = FLEE_T;
@@ -3467,7 +3467,7 @@ unsigned char __fastcall__ s_hid_mind (unsigned char k)
             return 0;
         }
         hub_map (0);
-        im.w1 = POS_HIDE | HD_IN;
+        I_RISE_POS (im) = POS_HIDE | HD_IN;
         a.doing = DO_WATCH;                     /* (Tried once: no cover, it comes on as it would) */
         alert[k] = 0;                           /* (Its two minutes from its first turn hidden) */
         act (I_RISE, k);
@@ -3481,7 +3481,7 @@ unsigned char __fastcall__ s_hid_mind (unsigned char k)
     }
     if (a.attitude != AT_HOSTILE || now > alert[k] || pcdead || pclie) {
         alert[k] = 0;
-        im.w1 = POS_HIDE | HD_OUT;
+        I_RISE_POS (im) = POS_HIDE | HD_OUT;
         a.doing = DO_WATCH;                     /* (Out, it knows the character's there: it comes on, not lying in wait
                                                 **   again at once, two minutes a time for hours, 2026-11-06) */
         act (I_RISE, k);
@@ -3497,7 +3497,7 @@ unsigned char __fastcall__ s_hid_mind (unsigned char k)
         if ((lv = h_near (dist)) > HUB->hlook[k]) {
             HUB->hlook[k] = lv;
             if (h_found (k + 1, 0, ST_HID (a.state), lv)) {
-                im.w1 = POS_HIDE | HD_SPOT;
+                I_RISE_POS (im) = POS_HIDE | HD_SPOT;
                 act (I_RISE, k);
                 return 0xFF;
             }
@@ -3565,11 +3565,11 @@ unsigned char __fastcall__ s_ally (unsigned char k)
             aorder[k] = OR_FOLLOW;              /* (No way to it: given up) */
             return 0xFE;
         }
-        im.a = aorder[k] == OR_OPEN ? PA_OPEN : aorder[k] == OR_CLOSE ? PA_CLOSE : PA_UNLOCK;
-        im.b = PW_DOOR;
-        im.w1 = x;
-        im.w2 = y;
-        im.t = 0;
+        I_PORTAL_ACT (im) = aorder[k] == OR_OPEN ? PA_OPEN : aorder[k] == OR_CLOSE ? PA_CLOSE : PA_UNLOCK;
+        I_PORTAL_WHICH (im) = PW_DOOR;
+        I_PORTAL_X (im) = x;
+        I_PORTAL_Y (im) = y;
+        I_PORTAL_STEP (im) = 0;
         a.face = bearing (x - a.x, y - a.y);
         act (I_PORTAL, k);
         aorder[k] = OR_FOLLOW;
@@ -3583,9 +3583,9 @@ unsigned char __fastcall__ s_ally (unsigned char k)
         hub_map (0);
         if (w) {                                /* (Brought back: handed over beside the character) */
             if (a.sn == pcs && dist <= 1) {
-                im.a = FE_GIVE;
-                im.t = i;
-                im.w1 = im.w2 = 0;              /* (Whole, into its hand first) */
+                I_ROB_ERRAND (im) = FE_GIVE;
+                I_ROB_THING (im) = i;
+                I_ROB_COUNT (im) = I_ROB_KEPT (im) = 0;   /* (Whole, into its hand first) */
                 act (I_ROB, k);
                 afetch[k] = 0;
                 aorder[k] = OR_FOLLOW;
@@ -3607,10 +3607,10 @@ unsigned char __fastcall__ s_ally (unsigned char k)
                 refy = pcy;
             }
             if (d >= 4) {                       /* (Beside it, or no way nearer: taken up, or tried) */
-                im.a = FE_TAKE;
-                im.w1 = x;
-                im.w2 = y;
-                im.t = i;
+                I_ROB_ERRAND (im) = FE_TAKE;
+                I_ROB_X (im) = x;
+                I_ROB_Y (im) = y;
+                I_ROB_THING (im) = i;
                 act (I_ROB, k);
                 afetch[k] |= FETCH_TRIED;
                 wt = 5;
@@ -3629,9 +3629,9 @@ unsigned char __fastcall__ s_ally (unsigned char k)
     }
     if (d >= 4) {
         if (w && a.sn == pcs && (*at (a.sn, a.x, a.y) & T_VIS)) {
-            im.a = FE_THROW;                    /* (The thing brought back, no way nearer, in the character's sight: thrown
+            I_ROB_ERRAND (im) = FE_THROW;       /* (The thing brought back, no way nearer, in the character's sight: thrown
                                                 **   over, by the character's throw: the world's, 2026-11-04, the house's) */
-            im.t = i;
+            I_ROB_THING (im) = i;
             act (I_ROB, k);
             afetch[k] = 0;
             aorder[k] = OR_FOLLOW;
@@ -3666,10 +3666,10 @@ void __fastcall__ s_aside (unsigned char k)
             continue;
         }
         rouse (k, ROUSE_SET);                   /* (At once, whatever it was about) */
-        im.w1 = H_OF (j);
-        im.w2 = K.dark ? 1 : 1 | STEP_FEELS;
-        im.a = DE_MOVED;
-        im.b = 1;
+        I_STEP_WAY (im) = I_STEP_DEN_W1 (H_OF (j), 0, 0);
+        I_STEP_SENSE (im) = K.dark ? I_STEP_DEN_W2 (1, 0) : I_STEP_DEN_W2 (1, 1);
+        I_STEP_HEARD (im) = DE_MOVED;
+        I_STEP_LOUD (im) = 1;
         a.face = H_OF (j);
         a.doing = DO_FOLLOW;
         act (I_STEP, k);
@@ -3854,17 +3854,17 @@ static void __fastcall__ trade (unsigned char k)
         sw.result = sell ? SR_BROKE : SR_POOR;
         return;
     }
-    im.a = FE_GIFT;                             /* (The payer's coins, or the goods sold: taken, kept) */
-    im.t = sell ? sw.item : c ? SW_FCOIN (&sw) : SW_COIN (&sw);
-    im.w1 = sell ? sw.iy >> 8 : n;
-    im.w2 = 1;
-    im.x[0] = im.x[1] = 0xFF;
+    I_ROB_ERRAND (im) = FE_GIFT;                /* (The payer's coins, or the goods sold: taken, kept) */
+    I_ROB_THING (im) = sell ? sw.item : c ? SW_FCOIN (&sw) : SW_COIN (&sw);
+    I_ROB_COUNT (im) = sell ? sw.iy >> 8 : n;
+    I_ROB_KEPT (im) = 1;
+    I_ROB_DOING (im) = I_ROB_FACE (im) = 0xFF;
     post (I_ROB, k + 1);
-    im.a = FE_GIVE;                             /* (Its own handed over: the goods bought, or its coins) */
-    im.t = sell ? (c ? SW_FITS (&sw) : SW_ITS (&sw)) : sw.item;
-    im.w1 = sell ? n : sw.iy >> 8;
-    im.w2 = 1;
-    im.x[0] = im.x[1] = 0xFF;
+    I_ROB_ERRAND (im) = FE_GIVE;                /* (Its own handed over: the goods bought, or its coins) */
+    I_ROB_THING (im) = sell ? (c ? SW_FITS (&sw) : SW_ITS (&sw)) : sw.item;
+    I_ROB_COUNT (im) = sell ? n : sw.iy >> 8;
+    I_ROB_KEPT (im) = 1;
+    I_ROB_DOING (im) = I_ROB_FACE (im) = 0xFF;
     post (I_ROB, k + 1);
     settle ();
 }
@@ -3934,11 +3934,11 @@ void __fastcall__ s_gift (unsigned char k)
         sw.now = t > AT_HOSTILE ? t - 1 : t;    /* (Insulted: refused) */
     } else {
         sw.now = t >= AT_FRIENDLY ? t : t + m < AT_FRIENDLY ? t + m : AT_FRIENDLY;
-        im.a = FE_GIFT;                         /* (Taken: the world's to hand over, a count of a lot split off) */
-        im.t = sw.item;
-        im.w1 = sw.iy >> 8;
-        im.w2 = 0;
-        im.x[0] = im.x[1] = 0xFF;
+        I_ROB_ERRAND (im) = FE_GIFT;            /* (Taken: the world's to hand over, a count of a lot split off) */
+        I_ROB_THING (im) = sw.item;
+        I_ROB_COUNT (im) = sw.iy >> 8;
+        I_ROB_KEPT (im) = 0;
+        I_ROB_DOING (im) = I_ROB_FACE (im) = 0xFF;
         post (I_ROB, k + 1);
         settle ();
         if (sw.iy & 1) {
@@ -4256,9 +4256,9 @@ void s_sway (void)
         sw.beast = K.mind == M_BEAST;
         sw.actor = k + 1;
         if (sw.kind != SW_LOOK && HUB->pc_hid) {
-            im.w1 = POS_HIDE | HD_FOUND;        /* (Words to one: it knows where it is, HOUSE.md's hiding oneself) */
-            im.x[0] = q->doing;
-            im.x[1] = q->face;
+            I_RISE_POS (im) = POS_HIDE | HD_FOUND;   /* (Words to one: it knows where it is, HOUSE.md's hiding oneself) */
+            I_RISE_DOING (im) = q->doing;
+            I_RISE_FACE (im) = q->face;
             post (I_RISE, k + 1);
         }
         switch (q->doing == DO_DOWN && sw.kind ? 0xFF : sw.kind) {
@@ -4480,8 +4480,8 @@ int main (int argc, char* argv[])
                 gone = g;                       /* (Its turn done, its intents in: the turns pace goes on; at the
                                                 **   others, now and then, the world's bleeding seen to) */
                 done_at = now;
-                im.w1 = g;
-                im.t = now;
+                I_DONE_TURN (im) = g;
+                I_DONE_NOW (im) = now;
                 post (I_DONE, 0);
             }
         }
@@ -5434,11 +5434,11 @@ next:                                           /* (Post r, left by x: its facti
                                                 **   actor) */
     }
     if (ba < NACTORS && HUB->actor[ba].doing < DO_FLEE) {
-        im.x[0] = im.x[1] = 0xFF;               /* (At its post: it rallies its fellows, a shout where it stands) */
-        im.w1 = HUB->actor[ba].x;
-        im.w2 = HUB->actor[ba].y;
-        im.a = DE_RALLY;
-        im.b = RALLY_LOUD;
+        I_GOTO_DOING (im) = I_GOTO_FACE (im) = 0xFF;   /* (At its post: it rallies its fellows, a shout where it stands) */
+        I_GOTO_X (im) = HUB->actor[ba].x;
+        I_GOTO_Y (im) = HUB->actor[ba].y;
+        I_GOTO_HEARD (im) = DE_RALLY;
+        I_GOTO_LOUD (im) = RALLY_LOUD;
         post (I_GOTO, ba + 1);
     }
     if (ob) {
@@ -5929,12 +5929,12 @@ unsigned char __fastcall__ s_wander (unsigned char lim)
             D.y = y;
             D.face = random (4) * 2;
             n = D.sn == pcs && apart (x - pcx, y - pcy) <= ACT_R + 16;    /* (Near the character now) */
-            im.x[1] = D.kind;                   /* (Its passing: the world's traces, kept where it holds the chunk) */
-            im.x[2] = D.sn;
-            im.w1 = x;
-            im.w2 = y;
-            im.a = D.face;
-            im.b = 0;                           /* (A passing, no stay) */
+            I_TROD_TKIND (im) = D.kind;         /* (Its passing: the world's traces, kept where it holds the chunk) */
+            I_TROD_SN (im) = D.sn;
+            I_TROD_X (im) = x;
+            I_TROD_Y (im) = y;
+            I_TROD_HOW (im) = D.face;
+            I_TROD_STAY (im) = 0;               /* (A passing, no stay) */
             trodden ();
             break;
         }
@@ -5997,8 +5997,8 @@ unsigned char __fastcall__ s_daily (unsigned char k)
                 a.x += dir_x[d];                /* (Unseen: a few squares at once, of no time, as coarse's) */
                 a.y += dir_y[d];
                 a.face = DH (d);
-                im.w1 = DH (d) | STEP_COARSE;
-                im.w2 = 1;
+                I_STEP_WAY (im) = I_STEP_DEN_W1 (DH (d), 1, 0);
+                I_STEP_SENSE (im) = I_STEP_DEN_W2 (1, 0);
                 act (I_STEP, k);
             }
             d = j || d == 0xF8 ? 0xFE : 0xFF;   /* (A door on its way worked: way's, 2026-11-02) */
@@ -6016,7 +6016,7 @@ unsigned char __fastcall__ s_daily (unsigned char k)
     }
     hub_map (0);
     if (s == SC_SLEEP && HUB->actor[k].pos == POS_STANDING) {
-        im.w1 = POS_PRONE;                      /* (At its bed: lain down to sleep, prone, the world's; 2026-11-02) */
+        I_RISE_POS (im) = POS_PRONE;            /* (At its bed: lain down to sleep, prone, the world's; 2026-11-02) */
         act (I_RISE, k);
     }
     if (s == SC_WATCH && unf[a.faction & (NFACT - 1)] && found (k)) {
@@ -6039,11 +6039,11 @@ unsigned char __fastcall__ s_daily (unsigned char k)
         d = s - SC_LEISURE + DE_PASTIME;        /* (Its pastime heard: dice rattling, a song, voices ...) */
     }
     if (d != 0xFF) {                            /* (Heard, or seen: where it stands, as a rally's, the world's) */
-        im.x[0] = im.x[1] = 0xFF;
-        im.w1 = a.x;
-        im.w2 = a.y;
-        im.a = d;
-        im.b = d == DE_ALARM ? ALARM_LOUD : d == DE_TALK || d >= DE_PASTIME + PT_TALK ? TALK_LOUD : SNORE_LOUD;
+        I_GOTO_DOING (im) = I_GOTO_FACE (im) = 0xFF;
+        I_GOTO_X (im) = a.x;
+        I_GOTO_Y (im) = a.y;
+        I_GOTO_HEARD (im) = d;
+        I_GOTO_LOUD (im) = d == DE_ALARM ? ALARM_LOUD : d == DE_TALK || d >= DE_PASTIME + PT_TALK ? TALK_LOUD : SNORE_LOUD;
         post (I_GOTO, k + 1);
     }
     wt = (s == SC_SLEEP ? 150 : s == SC_WATCH ? 20 : 100) + random (100);
@@ -6061,11 +6061,11 @@ void __fastcall__ s_roused (unsigned char k, unsigned char was)
     if ((unsigned char) (a.doing - DO_WATCH) >= DO_DOWN - DO_WATCH && dnow != 0xFC && dnow != 0xFA) {
         return;
     }
-    im.x[0] = im.x[1] = 0xFF;
-    im.w1 = a.x;
-    im.w2 = a.y;
-    im.a = was - DO_LEISURE + DE_UP;
-    im.b = 1;
+    I_GOTO_DOING (im) = I_GOTO_FACE (im) = 0xFF;
+    I_GOTO_X (im) = a.x;
+    I_GOTO_Y (im) = a.y;
+    I_GOTO_HEARD (im) = was - DO_LEISURE + DE_UP;
+    I_GOTO_LOUD (im) = 1;
     post (I_GOTO, k + 1);
 }
 #pragma code-name (pop)

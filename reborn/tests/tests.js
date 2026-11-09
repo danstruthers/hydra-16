@@ -2643,32 +2643,34 @@ const TRACE_STEP = 1920000;   // (1950000 for a day, 2026-11-02, part 14's some 
 // What a dq0 test's lines did, by their meaning (Phase 3A: tests cut to meaning, not words): sim/lib/dq0meaning.js's
 // record (m.dq0, in every dq0 test: the world's events, the denizens', the requests' replies, the state each line
 // found as it was entered), a line at a time.  dq0Turns(m): the lines typed (as the serial port gave them, each to its
-// CR), each { k, line, game (the game its events are in, 0 on), events, dens, replies, at (the state the line found),
-// after (the next line's, or the test's end's) }; T.of(line, from): the first turn of that line from turn from on (or
+// CR), each { k, line, game (the game its events are in, 0 on), events, dens, replies, intents (the UI's and the
+// denizens': ring, kind, who and their payloads' fields by name, games/dq0/msgs.def's: e.tenths, e.task), at (the state
+// the line found), after (the next line's, or the test's end's) }; T.of(line, from): the first turn of that line from
+// turn from on (or
 // one of nothing, its k -1), T.after(turn, line): the first of that line after it.  A meaning test (meaning: true)
 // checks only these, and nothing of the ruleset's own (its numbers, its dice's outcomes, its words): the null ruleset
 // runs them too (dq0null's agent's)
 function dq0Turns(m) {
-  const r = m.dq0 || { games: [], lines: [], final: () => null }, all = { events: [], dens: [], replies: [], snaps: [] };   // (None: sim/dl's)
-  r.games.forEach((g, gi) => { for (const k of Object.keys(all)) for (const e of g[k]) all[k].push(Object.assign({ game: gi }, e)); });
+  const r = m.dq0 || { games: [], lines: [], final: () => null }, all = { events: [], dens: [], replies: [], snaps: [], intents: [] };   // (None: sim/dl's)
+  r.games.forEach((g, gi) => { for (const k of Object.keys(all)) for (const e of g[k] || []) all[k].push(Object.assign({ game: gi }, e)); });
   const fin = r.final(), of = (list, k) => list.filter(e => e.line === k + 1);
   // (A dq0 line as the test wrote it: sim/test.js's -F, -K, -N, -I and -a, RULES=NAME's -r NAME, and the dice's offset,
   // -R N (DQ0_ROLLS's, or a test's own: not a game's command), taken off: each once, the last added first, as sim/test.js
   // adds them, so a test's own flag before them is kept (dq0travel's -N; a test's own -R last of its own, taken off)
   const bare = l => !/^dq0( |$)/.test(l) ? l : [/ -R \d+$/, / -E$/, / -F$/, / -K$/, / -N$/, / -J$/, / -I$/, / -a$/, / -r \S+$/, / -R \d+$/].reduce((x, re) => x.replace(re, ''), l);
-  const T = r.lines.map(bare).map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k),
+  const T = r.lines.map(bare).map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k), intents: of(all.intents, k),
     at: all.snaps.find(s => s.line === k + 1) || null }));
   T.forEach((t, k) => {
     t.after = k + 1 < T.length ? T[k + 1].at || fin : fin;
     t.game = t.events.length ? t.events[0].game : t.after ? t.after.game : -1;
   });
-  const none = { k: -1, line: '', events: [], dens: [], replies: [], at: null, after: null, game: -1 };
+  const none = { k: -1, line: '', events: [], dens: [], replies: [], intents: [], at: null, after: null, game: -1 };
   T.of = (line, from = 0) => T.find(t => t.k >= from && t.line === line) || Object.assign({}, none, { line });
   T.after = (t, line) => T.of(line, t.k + 1);
   // (A turn and the one after, as one: a quit with a save folder has its end's events, its save, as the next line's
   // typed, the game's "> " back before it's done)
   T.and = t => { const u = T[t.k + 1]; return t.k < 0 || !u ? t : Object.assign({}, t, { events: [...t.events, ...u.events], dens: [...t.dens, ...u.dens],
-    replies: [...t.replies, ...u.replies], after: u.after }); };
+    replies: [...t.replies, ...u.replies], intents: [...t.intents, ...u.intents], after: u.after }); };
   return T;
 }
 // A turn's events (the world's and the denizens') of a kind, with the fields given (each a value, or a test of it)
@@ -5878,6 +5880,8 @@ module.exports = {
         const w8 = of(a, 'wait 8 hours'), e8 = time(w8);
         if (took(w8) !== 288000) f.push('"wait 8 hours" not eight hours waited: ' + took(w8) + ' tenths');
         if (!e8 || e8.w1 !== 480 || !e8.mins) f.push('"wait 8 hours" not its 480 minutes, in minutes (E_TIME\'s WA_MIN): ' + JSON.stringify(e8));
+        const i8 = (w8.intents || []).find(e => e.kind === 'I_WAIT');   // (The UI's intent, by its payload's names: msgs.def's)
+        if (!i8 || i8.ring !== 'ui' || i8.tenths !== 480 || i8.how !== 1 || i8.task !== 'LT_NONE' || i8.quiet) f.push('"wait 8 hours" not an I_WAIT of 480 minutes (WA_MIN): ' + JSON.stringify(i8));
         if (!w8.after || w8.after.pc.task.len !== 480 || !w8.after.pc.task.mins) f.push('the long task not 480 minutes, in minutes: ' + JSON.stringify(w8.after && w8.after.pc.task));
         if (!/> wait 8 hours You wait eight hours\./.test(o)) f.push('"wait 8 hours" not told "You wait eight hours."');
         if (cyc(w8) > 40e6) f.push('eight hours waited, nothing near, too slow: ' + (cyc(w8) / 1e6).toFixed(1) + 'M cycles (40M at most)');
@@ -10672,6 +10676,8 @@ module.exports = {
         const f = [], s = dq0Story(out), at = s.indexOf('Dingus, Wanderer'), h = at < 0 ? s : s.slice(0, at), n = at < 0 ? '' : s.slice(at);
         if (!/You land hard: a minor bruise to your right shoulder \(M1\)\./.test(h)) return ['no bruise from the fall (the seed\'s): ' + JSON.stringify((h.match(/You land hard[^.]*\./) || [''])[0])];
         if (!/tend my head I don't understand that\./.test(h)) f.push('"tend my head" not refused by the grammar');
+        const tw = dq0Turns(m).of('tend my wounds').intents.find(e => e.kind === 'I_WAIT');   // (Its intent by its payload's
+        if (!tw || tw.task !== 'LT_TEND' || !tw.quiet || !tw.tenths) f.push('"tend my wounds" not a timed work\'s I_WAIT, LT_TEND: ' + JSON.stringify(tw));   //   names, msgs.def's)
         if (!/You hold a cold compress to the minor bruise to your right shoulder \(M1\)\.[^>]*It's (?:well tended|tended|tended, roughly|badly done)\./.test(h))
           f.push('no compress, nor its outcome at its end');
         if (!/Condition: hurt: 1 injury, a minor bruise to your right shoulder \(M1\); all tended/.test(h)) f.push('its state not "all tended"');

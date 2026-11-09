@@ -84,7 +84,7 @@ void __fastcall__ o_blow (const struct msg* m)
     if (c & C_DEAD) {
         ending (END_DIED);                         /* (The game's end, as harm's is) */
     } else if (out) {
-        intend2 (I_WAIT, out, 1);               /* (Out: the time it's senseless) */
+        intend2 (I_WAIT, out, I_WAIT_W2 (0, 0, 1));   /* (Out: the time it's senseless) */
     }
 }
 

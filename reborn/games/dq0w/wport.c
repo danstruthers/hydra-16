@@ -136,17 +136,17 @@ void __fastcall__ s_den_more (const struct msg* m)
     unsigned char* p;
 
     if (m->kind == I_CLIMB) {
-        p = at (m->x[2], m->w1, m->w2);
-        if (p && (TILE (*p) == T_FLOOR || TILE (*p) == T_CORR || TILE (*p) == T_STEPS) && !taken (m->w1, m->w2)) {
-            bd.sn = m->x[2];
-            bd.x = m->w1;
-            bd.y = m->w2;
+        p = at (I_CLIMB_SN (*m), I_CLIMB_X (*m), I_CLIMB_Y (*m));
+        if (p && (TILE (*p) == T_FLOOR || TILE (*p) == T_CORR || TILE (*p) == T_STEPS) && !taken (I_CLIMB_X (*m), I_CLIMB_Y (*m))) {
+            bd.sn = I_CLIMB_SN (*m);
+            bd.x = I_CLIMB_X (*m);
+            bd.y = I_CLIMB_Y (*m);
             bd.ready = HUB->now + 10;
         }
         hub_map (0);
     } else if (m->kind == I_ROB) {
         hub_map (0);
-        if (m->a >= FE_DROP) {
+        if (I_ROB_ERRAND (*m) >= FE_DROP) {
             den_take (m);                       /* (The things' rest, by the character's rules, their own time: part 81's) */
         } else {
             bd.ready += HUB->round;
@@ -158,10 +158,10 @@ void __fastcall__ s_den_more (const struct msg* m)
         den_take (m);                           /* (A thing taken up by the take rule: part 72's) */
     } else if (m->kind == I_RISE) {             /* (Its position, its mind's: lain down to sleep a moment's; up, the
                                                 **   Rise's round, wlimbs.c's den_legs: 2026-11-02) */
-        if (m->w1 & POS_HIDE) {
-            hid_op (HO_DEN | (m->w1 & 7));     /* (Hiding oneself: part 94's) */
-        } else if (m->w1 != POS_STANDING) {
-            bd.pos = m->w1;
+        if (I_RISE_POS (*m) & POS_HIDE) {
+            hid_op (HO_DEN | (I_RISE_POS (*m) & 7));   /* (Hiding oneself: part 94's) */
+        } else if (I_RISE_POS (*m) != POS_STANDING) {
+            bd.pos = I_RISE_POS (*m);
             bd.ready += 10;
         } else if (bd.pos) {
             den_legs ();
@@ -178,8 +178,8 @@ static void __fastcall__ den_portal (const struct msg* m)
     struct work keep;                           /* (The character's work, kept round it: a battering under way) */
     struct portal* q;
     unsigned char* p;
-    unsigned char d, what = m->a, o, was, cut, de = 0, loud = 0, lng, pc;
-    unsigned done, x = m->w1, y = m->w2;
+    unsigned char d, what = I_PORTAL_ACT (*m), o, was, cut, de = 0, loud = 0, lng, pc;
+    unsigned done, x = I_PORTAL_X (*m), y = I_PORTAL_Y (*m);
 
     for (d = 0; d < 4 && (bd.x + dir_x[d] != x || bd.y + dir_y[d] != y); ++d) {
     }
@@ -206,17 +206,17 @@ static void __fastcall__ den_portal (const struct msg* m)
     wk.fx = bd.x;
     wk.fy = bd.y;
     wk.what = what;
-    wk.link = (unsigned char) m->t >> 1;    /* (PA_UNLOCK's: it picks locks, its mind's: wdoor.c's) */
+    wk.link = (unsigned char) I_PORTAL_STEP (*m) >> 1;   /* (PA_UNLOCK's: it picks locks, its mind's: wdoor.c's) */
     lng = what == PA_FORCE || what == PA_RAISE || what == PA_BEND || (what == PA_UNLOCK && wk.link);   /* (Timed
                                                 **   work: begun, then done as it's posted again, t 1) */
-    if (lng && !(m->t & 1)) {
+    if (lng && !(I_PORTAL_STEP (*m) & 1)) {
         wk.plan = 1;                            /* (Begun: its time, its strain heard; its test as it's posted again) */
     } else if (lng && (int) (HUB->dig_t[bk] - (unsigned) HUB->now) > 0) {
         bd.ready += HUB->dig_t[bk] - (unsigned) HUB->now;   /* (Its time not up: on at it) */
         goto back;
     }
     if (what == PA_BREAK) {                     /* (A blow, the next of its battering: at the door as it is) */
-        HUB->pc_task.done = m->t;
+        HUB->pc_task.done = I_PORTAL_STEP (*m);
         pc_cut = 0;
         at (bd.sn, x, y);
         wk.pq = *portal_at (cx_, cy_);
@@ -289,12 +289,12 @@ static void __fastcall__ door_keys (const struct msg* m)
     unsigned i, x0, y0, id;
     unsigned char n = 0, k;
 
-    if (!at (m->x[2], m->w1, m->w2)) {
+    if (!at (I_KIT_SN (*m), I_KIT_X (*m), I_KIT_Y (*m))) {
         hub_map (0);
         return;
     }
-    x0 = m->w1 - cx_;                           /* (The chunk's first square) */
-    y0 = m->w2 - cy_;
+    x0 = I_KIT_X (*m) - cx_;                    /* (The chunk's first square) */
+    y0 = I_KIT_Y (*m) - cy_;
     for (k = C->nportals, q = C->portal; k && n < KEYS_MAX; --k, ++q) {
         if (q->kind == PK_DOOR && (q->state & PS_LOCKED) && q->lock && !(q->state & PS_HIDDEN)) {
             px[n] = x0 + q->x;
@@ -302,7 +302,7 @@ static void __fastcall__ door_keys (const struct msg* m)
         }
     }
     for (k = 0; k < n; ++k) {
-        if (!(i = lay_body (KI_KEY, m->x[2], m->w1, m->w2))) {
+        if (!(i = lay_body (KI_KEY, I_KIT_SN (*m), I_KIT_X (*m), I_KIT_Y (*m)))) {
             break;
         }
         ip = item_at (0);                       /* (Made its own, as an outfit's things are: its number, its make) */
@@ -312,10 +312,10 @@ static void __fastcall__ door_keys (const struct msg* m)
         ip->quality = 4;
         ip->mat = MT_IRON;
         ip->dur = ip->dur_max = 60;
-        id = DOOR_KEY (m->x[2], px[k], py[k]);
+        id = DOOR_KEY (I_KIT_SN (*m), px[k], py[k]);
         ip->where = IW_DEN;
-        ip->owner = (unsigned char) m->t;
-        ip->hide = m->t >> 8;
+        ip->owner = (unsigned char) I_KIT_ID (*m);
+        ip->hide = I_KIT_ID (*m) >> 8;
         ip->size = (unsigned char) id;
         ip->thick = id >> 8;
         hub_map (0);

@@ -348,6 +348,8 @@ struct msg {
     unsigned long   t;                          /* An event's game time */
     unsigned char   x[4];
 };
+#include "dq0msg.h"                             /* (Each kind's fields, by name: the build's, from games/dq0/msgs.def;
+                                                **   the comments below say what they mean, msgs.def where they sit) */
 
 /* Intents: what an actor means to do (the UI's for the character, the denizens' for theirs) */
 enum {

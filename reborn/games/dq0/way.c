@@ -106,7 +106,7 @@ static void __fastcall__ inspect (unsigned char obj, unsigned char ex)
     xs_seed = judge_was;
     msg (lb);
     if (!(ex & (EX_VALUE | EX_WEIGHT)) || (ex & EX_QUALITY)) {
-        intend2 (I_WAIT, ex & (EX_LOCK | EX_COND) ? 20 : 50, 1);
+        intend2 (I_WAIT, ex & (EX_LOCK | EX_COND) ? 20 : 50, I_WAIT_W2 (0, 0, 1));
     }
 }
 
@@ -126,7 +126,7 @@ static unsigned char __fastcall__ looked (unsigned char mode, unsigned char t)
                                                 **   again) */
     }
     msg (tt ());
-    intend2 (I_WAIT, t, 1);
+    intend2 (I_WAIT, t, I_WAIT_W2 (0, 0, 1));
     return 1;
 }
 
@@ -225,7 +225,7 @@ static unsigned char examine (void)
         msg ("Which thing? Name it (assess the sword, check the chest for traps ...).");
     } else if (k == OB_WALL) {
         walk_says ((const char*) W_DIG);
-        intend2 (I_TRACE, TRC_WALL, 0);         /* (The wall ahead, its rock: the world's words, slice 4.10's) */
+        intend2 (I_TRACE, I_TRACE_W1 (TRC_WALL, 0), 0);   /* (The wall ahead, its rock: the world's words, slice 4.10's) */
     } else if (!((OPENS >> (k & 15)) & 1) || !opened ()) {
         look (2);                               /* (A close look about: the room's figures) */
     }
@@ -318,7 +318,7 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
             cmd.dir = cmd.aux ? 0 : GO_DOWN;    /* (TRC_FLOOR's 0) */
             walk_says ((const char*) W_DIG);
         }
-        intend2 (I_TRACE, cmd.aux, 0);          /* (The traces read, the world's: the floor looked at, the Tracking
+        intend2 (I_TRACE, I_TRACE_W1 (cmd.aux, 0), 0);   /* (The traces read, the world's: the floor looked at, the Tracking
                                                 **   test; worded as its E_VIEW comes, V_TRACED) */
         return 0;
     }
@@ -362,14 +362,14 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
                                                 **   answer the air's that way: 2026-11-07, dq0sweep's) */
         }
         bg_words (2);                           /* (The draught, the air's: part 11's, slice 4.5's) */
-        intend2 (I_TRACE, TRC_SMELL | (unsigned) h << 8, WAY_T);   /* (The world's: the smell read, worded, then
+        intend2 (I_TRACE, I_TRACE_W1 (TRC_SMELL, h), WAY_T);   /* (The world's: the smell read, worded, then
                                                 **   its time) */
         return 0;
     }
     heard_at = 0;                               /* (What it hears told, however soon after the last, and noted:
                                                 **   main.c's heard) */
     lsn = k;
-    intend2 (I_WAIT, WAY_T, 1);
+    intend2 (I_WAIT, WAY_T, I_WAIT_W2 (0, 0, 1));
     return 0;
 }
 

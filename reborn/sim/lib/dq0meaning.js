@@ -22,7 +22,7 @@
 function layoutOf(H) {
   const F = (st, f) => H.off(st, f), S = (st, f) => H.size(st, f), Z = st => H.size(st), K = n => H.value(n);
   return {
-  magic: K('HUB_MAGIC'), eqHead: F('struct hub', 'eq_head'), eq: F('struct hub', 'eq'), eqSize: K('EQ_SIZE'), msg: Z('msg'),
+  magic: K('HUB_MAGIC'), iqHead: F('struct hub', 'iq_head'), iq: F('struct hub', 'iq'), iqSize: K('IQ_SIZE'), eqHead: F('struct hub', 'eq_head'), eq: F('struct hub', 'eq'), eqSize: K('EQ_SIZE'), msg: Z('msg'),
   mKind: F('struct msg', 'kind'), mWho: F('struct msg', 'who'), mA: F('struct msg', 'a'), mB: F('struct msg', 'b'),
   mW1: F('struct msg', 'w1'), mW2: F('struct msg', 'w2'), mT: F('struct msg', 't'), mX: F('struct msg', 'x'),
   dqHead: F('struct hub', 'dq_head'), dqSize: K('DQ_SIZE'), denBank: K('DEN_BANK'),
@@ -143,7 +143,7 @@ function constants() {
 let LAYOUT = null;
 function layout() {
   if (LAYOUT) return LAYOUT;
-  const j = { L: layoutOf(require('../../games/dq0/hubgen.js').load()), C: constants() };
+  const H = require('../../games/dq0/hubgen.js').load(), j = { L: layoutOf(H), C: constants() };
   const C = j.C, byName = C.names;
   // (A value's name in the enum a member of which is given, or the value: name('PO_NONE', 1) -> 'PO_OPENED')
   const blockOf = {};
@@ -153,12 +153,12 @@ function layout() {
   const D = j.L, ioDefs = { [D.ioStep]: 'IO_STEP', [D.ioName]: 'IO_NAME', [D.ioTheme]: 'IO_THEME', [D.ioBegin]: 'IO_BEGIN', [D.ioPuzzle]: 'IO_PUZZLE', [D.ioThrow]: 'IO_THROW', [D.ioFill]: 'IO_FILL',
     [D.ioShut]: 'IO_SHUT', [D.ioInside]: 'IO_INSIDE', [D.ioLook]: 'IO_LOOK', [D.ioSeek]: 'IO_SEEK', [D.ioHands]: 'IO_HANDS' };
   const ioName = v => { const n = name('IO_KIT', v); return typeof n === 'number' && ioDefs[v] ? ioDefs[v] : n; };
-  return (LAYOUT = { L: j.L, K: byName, name, ioName });
+  return (LAYOUT = { L: j.L, K: byName, name, ioName, H });
 }
 
 // The recorder (a test's machine's, sim/test.js's instrument)
 function createRecorder() {
-  const { L, K, name, ioName } = layout();
+  const { L, K, name, ioName, H } = layout();
   let m = null, key0 = -1, game = null, enters = 0;
   const games = [];
   const bank = n => m && key0 >= 0 ? m.sharedBanks()[key0 + n] : null;
@@ -207,7 +207,17 @@ function createRecorder() {
       case 'E_FIGHT': e.def = e.a; e.sn = e.x[0]; e.out = e.x[1] === 0xFF ? 'FO_GONE' : e.x[1] === 0xFE ? 'FO_BLED' : name('O_MISS', e.x[1]);
         e.ff = e.x[2]; break;
     }
-    return e;
+    return Object.assign(e, H.decode(b, o, e.kind, den ? 'den' : ''));   // (Its payload's fields, msgs.def's: none of the
+                                                                       //   events' declared yet, ENGINE-CRITIQUE.md's §2)
+  }
+  // An intent's record (struct msg at o of bank b, the ring's: 'ui', the hub's iq, or 'den', its di): its kind, who,
+  // and its payload's fields by name (games/dq0/msgs.def's, the build's decoder: a denizen's its :den form's, if its kind
+  // has one), its slots as they are in raw
+  function intent(b, o, ring) {
+    const kind = name('I_NONE', b[o + L.mKind]);
+    return Object.assign({ line: enters, ring, kind, who: b[o + L.mWho] }, H.decode(b, o, kind, ring === 'den' ? 'den' : ''),
+      { raw: { a: b[o + L.mA], b: b[o + L.mB], w1: w16(b, o + L.mW1), w2: w16(b, o + L.mW2), t: w32(b, o + L.mT),
+        x: Array.from(b.subarray(o + L.mX, o + L.mX + 4)) } });
   }
   // The state as it is now (the hub's records): see the comment at the top
   function snap() {
@@ -352,7 +362,7 @@ function createRecorder() {
       const b = m.sharedBanks()[k];
       if (b && b[0] === (L.magic & 0xFF)) {
         key0 = k;
-        games.push(game = { line: enters, events: [], dens: [], replies: [], snaps: [], tasks: [], eq: 0, dq: 0 });
+        games.push(game = { line: enters, events: [], dens: [], replies: [], snaps: [], tasks: [], intents: [], eq: 0, dq: 0, iq: 0, di: 0 });
       }
       return;
     }
@@ -367,6 +377,11 @@ function createRecorder() {
       game.dq = v;
       const b = bank(L.denBank);
       if (b) game.dens.push(decode(b, ((v - 1) & (L.dqSize - 1)) * L.msg, true));
+    } else if (off === L.iqHead || off === L.diHead) {          // (An intent shown, the UI's or the denizens': its entry
+      const ui = off === L.iqHead, n = ui ? L.iqSize : L.diSize, was = ui ? game.iq : game.di;   //   written whole before)
+      if (v !== (was + 1) % n) return;
+      if (ui) game.iq = v; else game.di = v;
+      game.intents.push(intent(h, (ui ? L.iq : L.diAt) + ((v + n - 1) % n) * L.msg, ui ? 'ui' : 'den'));
     } else if (off === L.pcTask + L.ltDone + 1) {               // (The long task's part done, its high byte written last)
       const kind = name('LT_NONE', h[L.pcTask + L.ltKind]), done = h[off - 1] | v << 8, t = game.tasks[game.tasks.length - 1];
       if (!t || t.kind !== kind || t.done !== done) game.tasks.push({ line: enters, kind, len: w16(h, L.pcTask + L.ltLen), done, cyc: m.cpu.cyc });

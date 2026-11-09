@@ -506,10 +506,10 @@ unsigned __fastcall__ s_traced (const struct msg* m)
     static unsigned char i, j, k, best;
 
     ptread = feet_tread[feet ()];               /* (Part 31's) */
-    how = (unsigned char) m->w1;                /* (The journal taken in first, the chunks round the character too:
+    how = I_TRACE_HOW (*m);                     /* (The journal taken in first, the chunks round the character too:
                                                 **   the caller's, tr_flush) */
-    way = m->w1 >> 8;
-    w = m->w2 ? m->w2 : took[how];
+    way = I_TRACE_SNIFF (*m);
+    w = I_TRACE_TENTHS (*m) ? I_TRACE_TENTHS (*m) : took[how];
     hub_map (0);
     ws = HUB->pc_stratum;
     wx = HUB->pc_x;

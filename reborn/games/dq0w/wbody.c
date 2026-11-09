@@ -191,7 +191,7 @@ void s_den_intents (void)
             bled ();
         }
         if (m.kind == I_DONE) {
-            den_done = m.w1;                    /* (Their turn done: the turns pace goes on) */
+            den_done = I_DONE_TURN (m);         /* (Their turn done: the turns pace goes on) */
             continue;
         }
         any = 1;
@@ -205,11 +205,11 @@ void s_den_intents (void)
                     break;                      /* (The rest after the UI's command's answer, this one again) */
                 }
             } else {
-                bd.kind = m.kind == I_SWEPT ? TK_SWEPT : m.x[1];    /* (Body bd but a copy: none put back) */
-                bd.sn = m.x[2];
-                bd.x = m.w1;
-                bd.y = m.w2;
-                den_trod (m.kind == I_SWEPT ? 0 : (m.a & (7 | TS_STAY)) | TS_NOWAY | (unsigned) m.b << 8);
+                bd.kind = m.kind == I_SWEPT ? TK_SWEPT : I_TROD_TKIND (m);   /* (Body bd but a copy: none put back) */
+                bd.sn = I_TROD_SN (m);
+                bd.x = I_TROD_X (m);
+                bd.y = I_TROD_Y (m);
+                den_trod (m.kind == I_SWEPT ? 0 : (I_TROD_HOW (m) & (7 | TS_STAY)) | TS_NOWAY | (unsigned) I_TROD_STAY (m) << 8);
             }
             continue;
         }
@@ -219,14 +219,14 @@ void s_den_intents (void)
             m.kind = I_WAIT;                    /* (Senseless till it comes round: it does nothing meanwhile, its mind's
                                                 **   intent posted before it fell, or a rouse, no matter; it lies
                                                 **   there, its doing kept, 2026-10-29) */
-            m.w1 = 0;
-            m.x[0] = m.x[1] = 0xFF;
+            I_WAIT_TENTHS (m) = 0;
+            I_WAIT_DOING (m) = I_WAIT_FACE (m) = 0xFF;
         }
-        if (m.x[0] != 0xFF) {
-            bd.doing = m.x[0];
+        if (I_DEN_DOING (m) != 0xFF) {
+            bd.doing = I_DEN_DOING (m);
         }
-        if (m.x[1] != 0xFF) {
-            bd.face = m.x[1];
+        if (I_DEN_FACE (m) != 0xFF) {
+            bd.face = I_DEN_FACE (m);
         }
         if (HUB->tpr && (m.kind == I_STEP || m.kind == I_GOTO || m.kind == I_WAIT || m.kind == I_ATTACK) &&
             bd.ready + CATCHUP < HUB->now) {
@@ -244,12 +244,12 @@ void s_den_intents (void)
             was = bd.doing;
             break;
         case I_STEP:                            /* (A square, by the character's rules: refused, it waits a moment) */
-            if ((m.w1 & STEP_SCENT) && (m.w1 = tr_scent (m.x[2])) > H_NW) {
+            if (I_STEP_SCENT (m) && (I_STEP_WAY (m) = tr_scent (I_STEP_NOSE (m))) > H_NW) {
                 bd.doing = DO_ROAM;             /* (No scent its nose can follow: the trail lost) */
                 bd.ready += 10;
                 break;
             }
-            d = m.w1 & 7;                       /* (Its heading: a diagonal a diagonal way's, slant's) */
+            d = I_STEP_HEAD (m);                /* (Its heading: a diagonal a diagonal way's, slant's) */
             x = bd.x + head_x[d];
             y = bd.y + head_y[d];
             if ((((bd.move & 4) | bd.pos) && den_legs ()) || taken (x, y) || !step8 (bd.sn, bd.x, bd.y, d)) {
@@ -257,7 +257,7 @@ void s_den_intents (void)
                 break;
             }
             o = (unsigned char) apart (bd.x - bpx, bd.y - bpy);
-            if (!(m.w1 & STEP_COARSE)) {        /* (Its time: its step, uphill and steeply down more, on steps more) */
+            if (!I_STEP_COARSE (m)) {           /* (Its time: its step, uphill and steeply down more, on steps more) */
                 z = elev_at (bd.sn, bd.x, bd.y);
                 p = at (bd.sn, x, y);
                 z = C->elev[cy_][cx_] - z;
@@ -270,7 +270,7 @@ void s_den_intents (void)
                     !(bd.mood & (AM_STALKS | AM_HURT)) && bd.heart >= 0) ||
                     (bd.doing == DO_FOLLOW && o > 3)) {
                     s >>= 1;
-                    ++m.b;
+                    ++I_STEP_LOUD (m);
                 }
                 c = s;
                 if (z > 0) {
@@ -283,7 +283,7 @@ void s_den_intents (void)
                 }
                 c += c * (bd.move & 3);         /* (Lame, twice its time; crawling, three times: slice
                                                 **   4.1b's) */
-                if ((m.w2 & STEP_FEELS) && unlit_at (bd.sn, x, y)) {
+                if (I_STEP_FEELS (m) && unlit_at (bd.sn, x, y)) {
                     c <<= 1;                    /* (Its kind no darkvision, a square unlit: it feels its way, at
                                                 **   half its pace, HOUSE.md's walking in the dark) */
                 }
@@ -293,26 +293,26 @@ void s_den_intents (void)
                 eng = bk + 1;                   /* (An enemy come up beside the character: it engages it, the
                                                 **   engage initiative test's, once its body's put back) */
             }
-            den_trod (m.w1 & 7);
+            den_trod (I_STEP_HEAD (m));
             bd.x = x;
             bd.y = y;
-            bd.face = m.w1 & 7;
-            if (!(m.w1 & STEP_COARSE)) {
-                told_den (m.a, m.b);
+            bd.face = I_STEP_HEAD (m);
+            if (!I_STEP_COARSE (m)) {
+                told_den (I_STEP_HEARD (m), I_STEP_LOUD (m));
             }
             break;
         case I_GOTO:                            /* (A dash past the character: a moment's) */
-            if (((m.w1 != bd.x || m.w2 != bd.y) && ((bd.move & 4) | bd.pos) && den_legs ()) ||
-                !open_sq (at (bd.sn, m.w1, m.w2)) ||   /* (One told where it stands, a snore, a shout: not got up for, 2026-11-02) */
-                apart (m.w1 - bd.x, m.w2 - bd.y) > 2 || taken (m.w1, m.w2)) {
+            if (((I_GOTO_X (m) != bd.x || I_GOTO_Y (m) != bd.y) && ((bd.move & 4) | bd.pos) && den_legs ()) ||
+                !open_sq (at (bd.sn, I_GOTO_X (m), I_GOTO_Y (m))) ||   /* (One told where it stands, a snore, a shout: not got up for, 2026-11-02) */
+                apart (I_GOTO_X (m) - bd.x, I_GOTO_Y (m) - bd.y) > 2 || taken (I_GOTO_X (m), I_GOTO_Y (m))) {
                 bd.ready += 10;
                 break;
             }
-            den_trod (bearing ((int) (m.w1 - bd.x), (int) (m.w2 - bd.y)));
-            bd.x = m.w1;
-            bd.y = m.w2;
+            den_trod (bearing ((int) (I_GOTO_X (m) - bd.x), (int) (I_GOTO_Y (m) - bd.y)));
+            bd.x = I_GOTO_X (m);
+            bd.y = I_GOTO_Y (m);
             bd.ready += bd.step;                /* (Its two squares at a jog) */
-            told_den (m.a, m.b);
+            told_den (I_GOTO_HEARD (m), I_GOTO_LOUD (m));
             break;
         case I_RISE:                            /* (Its position, its mind's: part 80's, part 14's room, 2026-11-03) */
         case I_CLIMB:                           /* (The rarer: an ally come along with the character; a robbery; */
@@ -322,16 +322,16 @@ void s_den_intents (void)
             den_more (&m);
             break;
         case I_WAIT:
-            bd.ready += m.w1;
+            bd.ready += I_WAIT_TENTHS (m);
             break;
         case I_ROUSE:
-            if (m.w2 || bd.ready > HUB->now + m.w1) {
-                bd.ready = HUB->now + m.w1;
+            if (I_ROUSE_WHENEVER (m) || bd.ready > HUB->now + I_ROUSE_TENTHS (m)) {
+                bd.ready = HUB->now + I_ROUSE_TENTHS (m);
             }
             break;
         case I_ATTACK:                          /* (A round's blow) */
             bd.ready += HUB->round;
-            den_blow (m.a, m.b);
+            den_blow (I_ATTACK_FOE (m), I_ATTACK_AIM (m));
             break;
         }
         if (bd.doing != was && (!was || !bd.doing)) {

@@ -107,7 +107,7 @@ static void __fastcall__ cut_corner (unsigned x, unsigned y)
 static void __fastcall__ build (const struct msg* m)
 {
     struct portal* q;
-    unsigned x = m->w1, y = m->w2;
+    unsigned x = I_KIT_X (*m), y = I_KIT_Y (*m);
     unsigned char pt, *p;
 
     if ((p = at (bd.sn, x, y)) != 0 && TILE (*p) == T_CORR) {
@@ -145,13 +145,13 @@ void __fastcall__ s_den_dig (const struct msg* m)
     struct dig keep;                            /* (The character's dig, kept round part 1's rock) */
 
     now = (unsigned) HUB->now;
-    h = m->b & 7;
+    h = I_KIT_HEAD (*m) & 7;
     if ((rd = !m->who) != 0) {
-        bd.sn = m->x[2];                        /* (Body bd but a copy, a record's: none put back, I_TROD's way; w1
+        bd.sn = I_KIT_SN (*m);                  /* (Body bd but a copy, a record's: none put back, I_TROD's way; w1
                                                 **   w2 its face, its stand the square before it) */
-        bd.x = m->w1 - head_x[h];
-        bd.y = m->w2 - head_y[h];
-        r1 = m->x[0];
+        bd.x = I_KIT_X (*m) - head_x[h];
+        bd.y = I_KIT_Y (*m) - head_y[h];
+        r1 = I_KIT_TOOLS (*m);
     } else {
         BD_GET ((m->who - 1) & 7);
         if (!bd.state || (bd.doing == DO_DOWN && bd.ready > HUB->now)) {
@@ -159,9 +159,9 @@ void __fastcall__ s_den_dig (const struct msg* m)
         }
         ago = now - HUB->dig_t[bk];
         bd.ready = HUB->now;
-        r1 = m->x[2];                           /* (What it digs with: the best of them for what it's into) */
+        r1 = I_KIT_WITH (*m);                   /* (What it digs with: the best of them for what it's into) */
     }
-    if ((m->a & KT_BUILD) == KT_BUILD) {
+    if ((I_KIT_DRAW (*m) & KT_BUILD) == KT_BUILD) {
         build (m);                              /* (A door put up again, a builder's) */
         goto put;
     }

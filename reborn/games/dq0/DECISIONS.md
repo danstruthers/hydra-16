@@ -2421,3 +2421,73 @@ outfit.h's PL_* and places in outfits.js and dq0w/make.js, themegen.c's TK_*, li
 tables built from world.h's T_PASS (slant.s's t_kinds, cast.s's): the generator can take them as their headers are
 added to its list.  `node sim/tools/commandmatch-test.js --phrases` doesn't link (resolve.c's letters, des_add and
 the rest, not in cmdres.c's stubs: nothing of this change's), and isn't part of the suite or the tiers.
+
+## The messages' payloads, declared (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's §2 and step 3, its second stage: the intents)
+
+Every intent and event travels in one `struct msg { kind, who, a, b, w1, w2, t, x[4] }`, and what each slot meant for
+each kind was written only in hub.h's comments, often packed by hand at both ends (I_WAIT's w2: `k << 8 | (n & 0x7F) <<
+1 | 1` in the UI, `m->w2 >> 8` and `m->w2 >> 1 & 0x7F` in the world).  Stage 2 states each kind's fields once and makes
+the rest from it, the layout untouched; this first part does the intents.
+
+**A declaration file of its own, not a block in hub.h** (games/dq0/msgs.def).  The writers' table lives in a hub.h
+comment because it reads as a table of regions beside the structs it names; a payload table is a grammar of its own
+(slots, bit ranges, constants, enums, forms, inclusions) that would need escaping inside a C comment, and hub.h's long
+comments beside each kind stay what the fields mean, msgs.def where they sit.  It is read by hubgen.js in the same pass
+as the headers (its hash in the cache key), so it is checked against the very structs and constants cc65 compiles.  Its
+syntax (its head says it at length):
+
+    struct msg
+    I_WAIT          a how; w1 tenths; w2(busy) task:8-15@LT_NONE what:1-7 quiet:0
+    I_STEP          w1 head:0-2@H_N keep:8=STEP_KEEP; w2 squares
+    I_STEP:den      < I_DEN; a heard@DE_MOVED; b loud; w1(way) head:0-2@H_N coarse:9=STEP_COARSE scent:10=STEP_SCENT;
+                    w2(sense) one:0 feels:1=STEP_FEELS; x[2] nose
+
+a line a kind (indented lines go on), each slot of the struct then its fields: a name alone is the slot whole, `name:N`
+or `name:N-M` its bits; `=CONST` a one-bit field's constant from the headers (checked to be that bit: the hand names
+STEP_KEEP and the rest stay, tied to the declaration); `@FIRST` an enum whose members name the values in the tests;
+`SLOT(name)` a packed slot named whole too (to test it for none, copy it, or set it by its packer); `KIND:FORM` another
+shape of the same kind (the denizens' I_STEP, a search's I_PORTAL, I_KIT's digs, I_ROB's errands); `< KIND` another's
+fields included (I_DEN, the denizens' intents' head: doing and face, not a kind).  A slot of flags the headers already
+name (I_WAIT's WA_*, I_KIT's KT_*, I_RISE's POS_*) is one field, its slot whole, and the code tests it by those names.
+The same syntax is meant for the events and for struct req (a `struct req` line; its multi-byte x[] wants a slot range).
+
+**What the build makes of it.**  obj/gen/dq0msg.h, which hub.h includes after struct msg (written before cc65 reads
+hub.h, so the pass's own compile sees it): for each field an accessor `I_WAIT_TASK (m)` over a struct (a pointer's `*m`),
+an lvalue when it's the slot whole (`I_GO_X (m) = tx;`); for each packed slot a packer, `I_WAIT_W2 (task, what, quiet)`,
+its fields in the order written (one bit: its bit or none; the lowest field as given, the top one cut by the slot, one
+between masked); for each form a builder, `I_PORTAL_SET (m, who, act, which, x, y, bar, strike, hand)`, setting kind,
+who and each slot it names in the struct's order (a comma expression).  The generator stops the build on a slot the
+struct hasn't, a field past its slot's bits or over another of its form, a name the headers have already, the same
+name meaning two things in two forms, or a constant not its bit.  The macros were tried against cc65 first: `(&m)->`,
+`(*m).` and `m->` are the same code, constant packers fold to their value (`I_WAIT_W2 (0, 0, 1)` is 1), a comma builder
+is the same as its statements; one difference found by the images (a word's low byte as `w1 & 0xFF` loads both bytes,
+`(unsigned char) w1` one), so a field of bits 0-7 of a word is accessed as the byte.  Into dq0hub.json go the payloads
+by offset (`msgs`: each form's fields, offset, bytes, bits, enum), each slot's width held to cc65's; `load ().payload
+(kind, form)` and `load ().decode (bytes, o, kind, form)` read a message's fields by name, a one-bit field a boolean, an
+enum's value its member's name.
+
+**Every intent declared and switched.**  The 31 kinds after I_NONE, in 45 forms.  The UI: its intents go out by
+`intend2 (kind, w1, w2)` and `intend (kind, a)`, slot by slot, which stay (their slots plain values: the meaning is the
+kind's line in msgs.def); a packed slot is made by its packer (`intend2 (I_WAIT, t, I_WAIT_W2 (k, n, 1))`, the quiet
+waits `I_WAIT_W2 (0, 0, 1)`, `I_STEP_W1 (d, keep)`, `I_TRACE_W1 (TRC_SMELL, h)`), and the hand-built messages by the
+builder (s_work's I_PORTAL_SET) or the accessors (s_intend, shot, reach_go's and place_go's walk, search.c's searches,
+pace.c's journey): 61 lines in main.c, search.c, pace.c, way.c, hthings.c, read.c, tend.c, blows.c, feed.c.  The
+denizens (dq0d.c, 177 lines): every `im.SLOT =` is its kind's accessor, the steps' packed slots by their packers.  The
+world (184 lines): the receivers in dq0w.c (intent, intent_few, intent_more, task_word, close_go, fight_go,
+disengage_go, passed, travel_go, a trace's work), wbody.c (the denizens' ring), wport.c, wtake.c, wfetch.c, wfight.c,
+wdig.c, wlimbs.c, outfit.c, wgame.c, wtrace.c, and the world's own I_WAIT (things.c) and I_ASKs.  Left as slots, by
+design: `kind` and `who` (every message's), the generic senders' bodies (intend2's, post's, act's head is I_DEN's), and
+a few clears of slots a form doesn't use (`m.w1 = m.w2 = 0`).
+
+**The tests.**  The recorder (sim/lib/dq0meaning.js) records the intents as the UI's ring (the hub's iq) and the
+denizens' (di) show them: each `{ line, ring, kind, who, ...its fields by name, raw: { a, b, w1, w2, t, x } }`, a
+denizen's by its :den form if its kind has one; dq0Turns gives each turn its `intents`.  dq0longwait reads "wait 8
+hours"'s I_WAIT (`tenths` 480, `how` WA_MIN, `task` LT_NONE), dq0tend "tend my wounds"'s (`task` 'LT_TEND', `quiet`).
+The events' decode merges a declared payload too, so declaring the events needs no change there.
+
+**No behaviour change:** the images came out byte-identical (bin/*, and every program and data file in obj/games; the
+objects differ only in their debug lines, hub.h two lines longer), and the suite passes.
+
+**Left** (ENGINE-CRITIQUE.md's §2, "Left of stage 2"): the events (E_*: forms chosen by a field's value, E_TASK's TE_*,
+E_BEAT's WB_*, in place of dq0meaning.js's hand switch; their names clear of the raw slots the event records keep at the
+top), then the referee's requests (struct req: multi-byte slots, a request's fields and its reply's apart).

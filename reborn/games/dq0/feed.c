@@ -130,7 +130,7 @@ told:
     if (p & RT_TAKEN) {
         body_words ();                          /* (The remedy's work told at once: the referee's news) */
     }
-    intend2 (I_WAIT, w, 1);
+    intend2 (I_WAIT, w, I_WAIT_W2 (0, 0, 1));
 }
 
 void __fastcall__ s_feed (unsigned char eat)

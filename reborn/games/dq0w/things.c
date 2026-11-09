@@ -1715,9 +1715,9 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
     case RO_GO:
         rs_for (RF_TELL | TE_BEGUN | (unsigned) rs_k << 8);
         wk.m.kind = I_WAIT;
-        wk.m.a = 0;
-        wk.m.w1 = rs_t;
-        wk.m.w2 = rs_t == HUB->round ? 1 : (unsigned) rs_k << 8 | (rs_what & 0x7F) << 1 | 1;  /* (Engaged, the round's action) */
+        I_WAIT_HOW (wk.m) = 0;
+        I_WAIT_TENTHS (wk.m) = rs_t;
+        I_WAIT_BUSY (wk.m) = rs_t == HUB->round ? I_WAIT_W2 (0, 0, 1) : I_WAIT_W2 (rs_k, rs_what, 1);   /* (Engaged, the round's action) */
         intent_few (&wk.m);
         return 0;
     }

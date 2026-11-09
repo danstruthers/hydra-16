@@ -277,12 +277,12 @@ static unsigned char __fastcall__ has_role (const struct msg* m)
     if ((OF_INDEX[0] | OF_INDEX[1] << 8) != 0x464F) {
         return 0;
     }
-    if (m->a & KT_PURSE) {
+    if (I_KIT_DRAW (*m) & KT_PURSE) {
         return 1;
     }
     for (n = OF_INDEX[3], q = OF_INDEX + 4; n; --n, q += 5) {
         h = q[0] | q[1] << 8;
-        if (((m->a & KT_ROLE) && h == '#' * 31 + m->x[1]) || ((m->a & KT_LAIR) && h == '&' * 31 + m->x[1])) {
+        if (((I_KIT_DRAW (*m) & KT_ROLE) && h == '#' * 31 + I_KIT_DKIND (*m)) || ((I_KIT_DRAW (*m) & KT_LAIR) && h == '&' * 31 + I_KIT_DKIND (*m))) {
             return 1;
         }
     }
@@ -291,7 +291,7 @@ static unsigned char __fastcall__ has_role (const struct msg* m)
 
 void __fastcall__ s_den_other (const struct msg* m)
 {
-    if (m->a & KT_DIG) {
+    if (I_KIT_DRAW (*m) & KT_DIG) {
         look_more (0, LM_ROPES);                /* (Part 79 read in, the first time: things.c's) */
         den_dig (m);                            /* (Not things: a tunneller's dig, part 79's, slice 4.11's) */
         return;
@@ -306,17 +306,17 @@ void __fastcall__ s_den_other (const struct msg* m)
                                                 **   answer it fell, the user's D17, 2026-11-03: wbody.c's) */
         return;
     }
-    if ((m->a & KT_LAIR) && !(kit_off & 1)) {
+    if ((I_KIT_DRAW (*m) & KT_LAIR) && !(kit_off & 1)) {
         kit_off = 1;
         den_more (m);                           /* (Its lair's locked doors' keys, its first denizen's: part 80's; once,
                                                 **   the kit drawn again if a command comes between: kit_off) */
     }
     if (has_role (m)) {
-        ost.did = m->t;
-        ost.hx = m->w1;
-        ost.hy = m->w2;
-        ost.hsn = m->x[2];
-        ost.fac = m->b;
+        ost.did = I_KIT_ID (*m);
+        ost.hx = I_KIT_X (*m);
+        ost.hy = I_KIT_Y (*m);
+        ost.hsn = I_KIT_SN (*m);
+        ost.fac = I_KIT_FACTION (*m);
         ost.kit = 0;
         hub_map (0);
         if (!ui_long ()) {
@@ -646,16 +646,16 @@ void s_den_equip (void)
 void __fastcall__ s_den_enter (const struct msg* m)
 {
     bd.state = 1;
-    bd.sn = m->x[2];
-    bd.x = m->w1;
-    bd.y = m->w2;
-    bd.ready = m->t;
-    bd.step = m->a;
+    bd.sn = I_ENTER_SN (*m);
+    bd.x = I_ENTER_X (*m);
+    bd.y = I_ENTER_Y (*m);
+    bd.ready = I_ENTER_READY (*m);
+    bd.step = I_ENTER_STEP (*m);
     bd.pos = bd.doing == DO_DOWN ? POS_PRONE : POS_STANDING;   /* (Senseless still, as it was left: lying there) */
     bd.gait = GA_WALK;
-    bd.move = m->x[3];
+    bd.move = I_ENTER_LEGS (*m);
     bd.arm = 0;
-    bleeds = m->b ? bleeds | 1 << bk : bleeds & ~(1 << bk);
+    bleeds = I_ENTER_BLEEDING (*m) ? bleeds | 1 << bk : bleeds & ~(1 << bk);
     hub_map (0);
     if (bd.did && !(HUB->gear & GE_OLD)) {      /* (dq0 -K's: none of their own) */
         it_need (bd.hsn, (bd.hx - STRATUM (bd.hsn).x0) >> CW_BITS, (bd.hy - STRATUM (bd.hsn).y0) >> CW_BITS);

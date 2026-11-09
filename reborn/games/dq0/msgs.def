@@ -1,0 +1,94 @@
+# msgs.def - Dingus Quest Zero's messages' payloads: each kind's fields, where they sit in its struct (ENGINE-CRITIQUE.md's
+# §2, step 3's second stage; DECISIONS.md's "The messages' payloads, declared").  Read by the build (games/dq0/hubgen.js),
+# which writes from it obj/gen/dq0msg.h (hub.h includes it) and the payloads in obj/gen/dq0hub.json (the tests'
+# decoders: hubgen's load ().decode, sim/lib/dq0meaning.js's).  What each field means at length is hub.h's, beside its
+# kind; this is where it sits.  The layout is hub.h's struct msg as it was: nothing here moves a byte.
+#
+#   struct NAME                         the struct the kinds after it travel in (hub.h's: struct msg; later struct req)
+#   KIND[:FORM]  PART; PART ...         a kind's payload: a line indented goes on with the one before
+#     a PART:  SLOT FIELD ...           a slot of the struct (msg's a, b, w1, w2, t, x[0] ... x[3]) and its fields
+#              SLOT(name) FIELD ...     a packed slot, named whole too: KIND_NAME (m) the slot (to test it for none, to
+#                                       copy it, to set it by its packer)
+#              < KIND[:FORM]            another's fields, first (I_DEN's: the denizens' intents' head)
+#     a FIELD: name                     the slot whole: KIND_NAME (m) is the slot, an lvalue
+#              name:N  name:N-M         bit N, bits N to M: KIND_NAME (m) the bits (one bit: in its place, true or not;
+#                                       a word's bits 0-7, its low byte)
+#              ...=CONST                one bit's constant, the headers' (checked: it must be that bit)
+#              ...@FIRST                its values an enum's (FIRST a member): the tests read the member's name
+#   A slot of flags the headers name (WA_*, KT_*, POS_*) is one field, the slot whole, tested by its flags' names.
+#
+# Generated for each form (C macros, costing what the hand-packed code did: the images byte for byte the same):
+#   KIND_FIELD (m)                      a field of message m (a struct: *p for a pointer's)
+#   KIND[_FORM]_SLOT (fields ...)       a packed slot's value, its fields in the order written here (one bit: its bit
+#                                       or none; the slot's lowest field as given, the top one cut by the slot, a
+#                                       field between them masked to its bits)
+#   KIND[_FORM]_SET (m, who, ...)       kind, who and every slot it names set, in the struct's order
+# A FORM is another shape of the same kind (the denizens' I_STEP, a search's I_PORTAL): its own builder and packers,
+# its fields' accessors KIND_FIELD as the kind's (a name in two forms the same field, or the build stops).  The tests'
+# decoder reads a denizen's intent by its :den form, if its kind has one, else by the kind's.
+
+struct msg
+
+# ---- The intents (I_*: an actor's, to the world; the UI's for the character, who 0; the denizens' who the actor's
+# entry plus 1, their ring the hub's di: the :den forms)
+
+I_DEN           x[0] doing@DO_ROAM; x[1] face          # (Not a kind: the denizens' intents' head, what it's doing now
+                                                        #   and the way it faces, 0xFF either as it is)
+I_WAIT          a how; w1 tenths; w2(busy) task:8-15@LT_NONE what:1-7 quiet:0
+                # (a: WA_MIN, WA_SLEEP, WA_REST; w1 tenths, or minutes (WA_MIN); w2: a timed work's long task (LT_*)
+                #   and its thing's kind (0x80 | it, the long task's what), quiet 1 a thing's handling)
+I_WAIT:den      < I_DEN; w1 tenths
+I_GO            a head:0-2@H_N; w1 x; w2 y              # (The door or the mouth that way meant: its square, 0 any)
+I_CLIMB         a way                                   # (DIR_UP, DIR_DOWN | I_JUMP, I_WELL)
+I_CLIMB:den     < I_DEN; w1 x; w2 y; x[2] sn            # (Come along with the character: beside it, its stratum)
+I_TURN          a head:0-2@H_N
+I_LIGHT         a lit; w1 tenths                        # (1 lit, 0 put out; its time, 0 the lighting's)
+I_DIG           a way                                   # (DIR_N ... DIR_W, DIR_DOWN)
+I_PORTAL        a act@PA_OPEN; b which@PW_ANY; w1 x; w2 y; x[0] bar; x[1] strike; x[2] hand
+                # (What's done, to which (a door, a window); the one meant, its square (0: the one it faces); PA_BAR's
+                #   bar's width; what it strikes with, SK_*; the hand it's in, IH_*, 0 the world's to find)
+I_PORTAL:search a act@PA_OPEN; b(which) form:0-3@SF_ABOUT way:4-7; w1 tenths; x[0] bar; x[1] strike
+                # (PA_SEARCH's: the search's form, SF_*, and its way (H_*); its time)
+I_PORTAL:den    < I_DEN; a act@PA_OPEN; b which@PW_ANY; w1 x; w2 y; t step
+                # (A door worked by a denizen: its try (a pick's, a force's, a battering's blow), its low bit begun or done)
+I_GOTO          a near; w1 x; w2 y                      # (a 1: walked to, across the room, the place's)
+I_GOTO:den      < I_DEN; a heard@DE_MOVED; b loud; w1 x; w2 y       # (A dash: what it's heard as, how loud)
+I_STEP          w1 head:0-2@H_N keep:8=STEP_KEEP; w2 squares
+I_STEP:den      < I_DEN; a heard@DE_MOVED; b loud; w1(way) head:0-2@H_N coarse:9=STEP_COARSE scent:10=STEP_SCENT;
+                w2(sense) one:0 feels:1=STEP_FEELS; x[2] nose
+                # (A square: coarse, no time, nothing heard; scent, the heading none: the character's scent's way, by
+                #   its nose; one always (a square); feels, no darkvision: its way felt in the dark)
+I_QUIT          -
+I_ATTACK        a foe; b aim; x[1] strike; x[2] hand    # (The actor struck at plus 1 (the denizens': 0 the character);
+                                                        #   the aim, Z_* | AIM_SHOT, AIM_HARD; as I_PORTAL's)
+I_ATTACK:den    < I_DEN; a foe; b aim
+I_ENTER         < I_DEN; a step; b bleeding; w1 x; w2 y; t ready; x[2] sn; x[3] legs
+I_LEAVE         < I_DEN
+I_ROUSE         < I_DEN; w1 tenths; w2 whenever         # (Free w1 tenths from now; w2 1, whenever it was free)
+I_DONE          w1 turn; t now                          # (who 0: the turn it's done, the clock then)
+I_TAKE          a alone; w1 x; w2 y; t thing            # (Walked over to it and taken up; a 1, walked over to alone)
+I_TAKE:den      < I_DEN; a want; b unused; w1 x; w2 y; t thing      # (Its wants, TW_*: the world's take rule)
+I_STOP          a named@LT_NONE; w1 over                # (The kind named, LT_NONE any; w1 1, a command taking over)
+I_GO_ON         -
+I_ASK           w1 why@TE_STOPPED                       # (TE_ASK_HEARD: a sound the UI heard)
+I_CLOSE         a foe; b aim; w1 walk; x[1] strike; x[2] hand     # (w1 1: walked up to alone, no blow)
+I_LOOK          w1 tenths
+I_DISENGAGE     w1 way; w2 flight                       # (H_*, 0xFF away from them; 1 a flight)
+I_TRACE         w1(form) how:0-7@TRC_FLOOR sniff:8-15; w2 tenths      # (TRC_*; a sniff's way (H_*, 0xFF about it); 0 the world's)
+I_TROD          a how; b stay; w1 x; w2 y; x[1] tkind; x[2] sn  # (who 0: a passing; its face | TS_STAY; the TQs stayed)
+I_SWEPT         w1 x; w2 y; x[2] sn
+I_KIT           a draw; b faction; w1 x; w2 y; t id; x[0] standing; x[1] dkind; x[2] sn
+                # (who 0: a denizen's things made: KT_ROLE, KT_LAIR, KT_PURSE; its lair's home square; its kind)
+I_KIT:dig       < I_DEN; a draw; b head; w1 x; w2 y; x[2] with      # (An actor's dig (KT_DIG) or build (KT_BUILD): its
+                                                        #   heading, the square dug; what it digs with, DG_*)
+I_KIT:rdig      a draw; b head; w1 x; w2 y; x[0] tools; x[2] sn     # (who 0: a record's spell, untested)
+I_ROB           < I_DEN; a errand@FE_ROB; b faction; w1 x; w2 y; x[2] keep; x[3] purse
+                # (FE_ROB: the takings to w1 w2, RB_HOARD (b's faction's hoard) or RB_HIDE; RB_PURSE, RB_CAUGHT)
+I_ROB:fetch     < I_DEN; a errand@FE_ROB; w1 x; w2 y; t thing       # (FE_TAKE: an ally's errand, where it lies)
+I_ROB:give      < I_DEN; a errand@FE_ROB; w1 count; w2 kept; t thing   # (FE_GIVE, FE_GIFT: a lot's count, 0 all; kept 1)
+I_ROB:rest      < I_DEN; a errand@FE_ROB; b fellow; t thing         # (FE_DROP, FE_PASS (to actor b less 1), FE_THROW)
+I_RISE          w1 pos                                  # (POS_*, or POS_HIDE | HD_*)
+I_RISE:den      < I_DEN; w1 pos
+I_TRAVEL        b place; w1 x; w2 y; x[0] w; x[1] h; x[2] sn       # (The name's entry, TRV_IN, TRV_KIND | a room's kind)
+I_LOAD          -
+I_GATHER        a family                                # (FM_*: 0 any)

@@ -66,10 +66,10 @@ unsigned char s_search_go (void)
         finds = 0;
         m.kind = I_PORTAL;
         m.who = 0;
-        m.a = PA_SEARCH;
-        m.b = SF_ROOM;
-        m.w1 = m.w2 = 0;
-        m.x[0] = m.x[1] = 0;
+        I_PORTAL_ACT (m) = PA_SEARCH;
+        I_PORTAL_WHICH (m) = I_PORTAL_SEARCH_B (SF_ROOM, 0);
+        I_PORTAL_TENTHS (m) = m.w2 = 0;
+        I_PORTAL_BAR (m) = I_PORTAL_STRIKE (m) = 0;
         if (hub_send (&m)) {
             busy = 1;
             t_prompt (0);
@@ -125,11 +125,11 @@ unsigned char s_search_go (void)
     finds = 0xFF;                               /* (Its end awaited: what it finds told, E_PORTAL's) */
     m.kind = I_PORTAL;
     m.who = 0;
-    m.a = PA_SEARCH;
-    m.b = f | h << 4;
-    m.w1 = t;
+    I_PORTAL_ACT (m) = PA_SEARCH;
+    I_PORTAL_WHICH (m) = I_PORTAL_SEARCH_B (f, h);
+    I_PORTAL_TENTHS (m) = t;
     m.w2 = 0;
-    m.x[0] = m.x[1] = 0;
+    I_PORTAL_BAR (m) = I_PORTAL_STRIKE (m) = 0;
     if (hub_send (&m)) {
         busy = 1;
         t_prompt (0);

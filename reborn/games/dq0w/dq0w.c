@@ -3077,21 +3077,21 @@ static unsigned char __fastcall__ of_kind (unsigned char n)
 void __fastcall__ s_travel_go (const struct msg* m)
 {
     struct room* q;
-    unsigned char b = m->b;
+    unsigned char b = I_TRAVEL_PLACE (*m);
 
     memset (&tv, 0, sizeof tv);
     tv.what = b;
     here ();
     hub_map (0);
     tv.sn = sn_;
-    tv.x = m->w1;
-    tv.y = m->w2;
+    tv.x = I_TRAVEL_X (*m);
+    tv.y = I_TRAVEL_Y (*m);
     if (b == TRV_IN) {
         tv.sn = 0;                              /* (The way in: the top stratum's way out, where it began) */
         tv.x = STRATUM (0).link[0].x;
         tv.y = STRATUM (0).link[0].y;
     } else if (!(b & TRV_KIND)) {
-        tv.sn = m->x[2];
+        tv.sn = I_TRAVEL_SN (*m);
     } else if (!of_kind (b & ~TRV_KIND)) {
         trav_end (TE_FORGOT);                   /* (None it remembers) */
         return;
@@ -4400,8 +4400,8 @@ unsigned char s_work_done (void)
         return 0;
     }
     if (w == LW_TRACE) {
-        m.w1 = lw_x;
-        m.w2 = lw_y;
+        I_TRACE_FORM (m) = lw_x;
+        I_TRACE_TENTHS (m) = lw_y;
         tr_flush (0);
         traced (&m);                            /* (Its time spent already: the reading now) */
         return 0;
@@ -4830,8 +4830,8 @@ void __fastcall__ s_task_word (const struct msg* m)
     k = HUB->pc_task.kind;
     if (m->kind == I_ASK) {                     /* (A sound the UI heard: asked, if there's a task going; a fight only
                                                 **   its own, badly hurt or tiring, part 24's) */
-        if (k && !HUB->pc_task.asking && (k != LT_FIGHT || m->w1 != TE_ASK_HEARD)) {
-            ask ((unsigned char) m->w1);
+        if (k && !HUB->pc_task.asking && (k != LT_FIGHT || I_ASK_WHY (*m) != TE_ASK_HEARD)) {
+            ask ((unsigned char) I_ASK_WHY (*m));
         }
         return;
     }
@@ -4843,12 +4843,12 @@ void __fastcall__ s_task_word (const struct msg* m)
         return;
     }
     if (!k) {
-        if (!m->w1) {
-            hid_op (m->a | HO_STOP);            /* (The player's stop, nothing to stop; a command's, nothing said:
+        if (!I_STOP_OVER (*m)) {
+            hid_op (I_STOP_NAMED (*m) | HO_STOP);   /* (The player's stop, nothing to stop; a command's, nothing said:
                                                 **   "stop hiding", out of it: part 94's) */
         }
-    } else if (m->a && m->a != k && (m->a != LT_WALK || k != LT_TRAVEL)) {
-        evb = m->a;                             /* (The one named: its b; "stop walking", a journey's leg too) */
+    } else if (I_STOP_NAMED (*m) && I_STOP_NAMED (*m) != k && (I_STOP_NAMED (*m) != LT_WALK || k != LT_TRAVEL)) {
+        evb = I_STOP_NAMED (*m);                /* (The one named: its b; "stop walking", a journey's leg too) */
         event (E_TASK, 0, TE_NOT | k << 8);
     } else if (k == LT_CLIMB) {
         event (E_TASK, 0, TE_CANT | k << 8);   /* (Part way up: no stopping; asked, "no", it goes on all the same) */
@@ -4862,7 +4862,7 @@ void __fastcall__ s_task_word (const struct msg* m)
             if (HUB->pc_foe) {
                 pc_blow ();
             }
-            if (m->w1) {
+            if (I_STOP_OVER (*m)) {
                 fwant = 2;
             } else {
                 fheld = 0xFF;
@@ -5586,15 +5586,15 @@ void __fastcall__ s_close_go (const struct msg* m)
     unsigned char e;
 
     hub_map (0);
-    if ((e = engager (HUB->pc_x, HUB->pc_y)) != 0 && e != m->a) {
+    if ((e = engager (HUB->pc_x, HUB->pc_y)) != 0 && e != I_CLOSE_FOE (*m)) {
         evb = e | TE_STILL;
         event (E_TASK, 0, TE_ENGAGED);
         return;
     }
-    pfoe = m->a;
-    paim = m->w1 ? AIM_NONE : m->b;             /* (w1: walked up to, no blow: "go to the rat", the UI's) */
-    pstrike = m->x[1];
-    pshand = m->x[2] ? m->x[2] : shand_of (pstrike);
+    pfoe = I_CLOSE_FOE (*m);
+    paim = I_CLOSE_WALK (*m) ? AIM_NONE : I_CLOSE_AIM (*m);   /* (w1: walked up to, no blow: "go to the rat", the UI's) */
+    pstrike = I_CLOSE_STRIKE (*m);
+    pshand = I_CLOSE_HAND (*m) ? I_CLOSE_HAND (*m) : shand_of (pstrike);
     pfd = 0xFF;
     s_close_on ();
 }
@@ -5786,24 +5786,24 @@ static void __fastcall__ fight_blow (unsigned char k)
 ** changed, struck at as the character's next free; else struck now, a round of its time, and fought on after it */
 void __fastcall__ s_fight_go (const struct msg* m)
 {
-    pshand = m->x[2] ? m->x[2] : shand_of (m->x[1]);    /* (The hand that holds it: said, else the main hand's
+    pshand = I_ATTACK_HAND (*m) ? I_ATTACK_HAND (*m) : shand_of (I_ATTACK_STRIKE (*m));   /* (The hand that holds it: said, else the main hand's
                                                 **   first, slice 4.1b's) */
     hub_map (0);
-    HUB->pc_strike = m->x[1];
+    HUB->pc_strike = I_ATTACK_STRIKE (*m);
     HUB->pc_shand = pshand;
-    HUB->pc_aim = m->b & ~AIM_SHOT;
-    pshoot = (m->b & AIM_SHOT) != 0;            /* (A shot or a throw: part 65's, fought on as a blow is) */
+    HUB->pc_aim = I_ATTACK_AIM (*m) & ~AIM_SHOT;
+    pshoot = (I_ATTACK_AIM (*m) & AIM_SHOT) != 0;   /* (A shot or a throw: part 65's, fought on as a blow is) */
     fheld = 0;
     if (HUB->pc_task.kind == LT_FIGHT && !pc_cut) {
-        HUB->pc_task.foe = m->a;
+        HUB->pc_task.foe = I_ATTACK_FOE (*m);
         fsaid = 1;
         return;
     }
-    if (!pshoot && swatted (m->a)) {
+    if (!pshoot && swatted (I_ATTACK_FOE (*m))) {
         return;                                 /* (A soft thing's: one attempt, no fight) */
     }
-    fight_begin (m->a | TE_QUIET);
-    fight_blow (m->a);
+    fight_begin (I_ATTACK_FOE (*m) | TE_QUIET);
+    fight_blow (I_ATTACK_FOE (*m));
 }
 
 #define FW_RUN          0x80                    /* (fwant's: a flight's run on, as it's free: disengage_go's) */
@@ -5865,7 +5865,7 @@ over:
             if (!HUB->tpr) {
                 q.kind = I_ASK;                 /* (The clock still at the turns pace till it's answered: then the
                                                 **   blow) */
-                q.w1 = TE_ASK_HURT;
+                I_ASK_WHY (q) = TE_ASK_HURT;
                 task_word (&q);
                 return 2;
             }
@@ -5876,7 +5876,7 @@ over:
             ftired = 0;
             if (!HUB->tpr) {
                 q.kind = I_ASK;
-                q.w1 = TE_ASK_TIRED;
+                I_ASK_WHY (q) = TE_ASK_TIRED;
                 task_word (&q);
                 return 2;
             }
@@ -6107,7 +6107,7 @@ void __fastcall__ s_disengage_go (const struct msg* m)
     hub_map (0);
     x = HUB->pc_x;
     y = HUB->pc_y;
-    f = m->w2 != 0;
+    f = I_DISENGAGE_FLIGHT (*m) != 0;
     e = zone_step (x, y, x, y);                 /* (The enemy engaging it, part 24's: a close-in's target beside it,
                                                 **   that one) */
     if (!(e = e == 0xFF ? pfoe : e & 0x3F)) {
@@ -6118,7 +6118,7 @@ void __fastcall__ s_disengage_go (const struct msg* m)
         }
         f = 2;                                  /* (A run from one not engaging it) */
     }
-    h = m->w1;
+    h = I_DISENGAGE_WAY (*m);
     if (h > H_NW) {                             /* (Away from it: the nearest way open) */
         hub_map (0);
         h = bearing ((int) x - HUB->actor[(e - 1) & 7].x, (int) y - HUB->actor[(e - 1) & 7].y);
@@ -6153,13 +6153,13 @@ void __fastcall__ s_passed (const struct msg* m)
     unsigned t;
 
     hub_map (0);
-    if (m->w2 || (m->a & WA_SLEEP) || !zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y)) {
+    if (I_WAIT_BUSY (*m) || (I_WAIT_HOW (*m) & WA_SLEEP) || !zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y)) {
         return;
     }
     hub_map (0);
     t = HUB->round;
-    if (!(m->a & WA_MIN) && m->w1 && m->w1 < t) {
-        t = m->w1;                              /* (A wait of less than a round said) */
+    if (!(I_WAIT_HOW (*m) & WA_MIN) && I_WAIT_TENTHS (*m) && I_WAIT_TENTHS (*m) < t) {
+        t = I_WAIT_TENTHS (*m);                 /* (A wait of less than a round said) */
     }
     free_at += t;
     spend (GA_WORK, t);
@@ -6243,17 +6243,17 @@ static void __fastcall__ intent (struct msg* m)
     }
     switch (m->kind) {
     case I_GO:
-        tgx = m->w1;
-        tgy = m->w2;
-        go (m->a & 7);
-        set_out ((m->a & 7) | 16);
+        tgx = I_GO_X (*m);
+        tgy = I_GO_Y (*m);
+        go (I_GO_HEAD (*m));
+        set_out (I_GO_HEAD (*m) | 16);
         break;
     case I_CLIMB:
-        climb (m->a);
+        climb (I_CLIMB_WAY (*m));
         break;
     case I_STEP:
-        step_to (m->w1 & 7, m->w2, (m->w1 & STEP_KEEP) != 0);
-        set_out ((m->w1 & 7) | 8);
+        step_to (I_STEP_HEAD (*m), I_STEP_SQUARES (*m), I_STEP_KEEP (*m) != 0);
+        set_out (I_STEP_HEAD (*m) | 8);
         break;
     case I_WAIT:
     case I_TURN:
@@ -6308,25 +6308,25 @@ void __fastcall__ s_intent_few (struct msg* m)
                                                 **   then, and its time written there, 2026-11-04, the life soak's seed 71) */
     switch (m->kind) {
     case I_WAIT:                                /* (w1 tenths, or minutes, WA_MIN's: a long wait's, a sleep's) */
-        t = m->a & WA_MIN ? (unsigned long) m->w1 * 600 : m->w1 ? m->w1 : HUB->round;
+        t = I_WAIT_HOW (*m) & WA_MIN ? (unsigned long) I_WAIT_TENTHS (*m) * 600 : I_WAIT_TENTHS (*m) ? I_WAIT_TENTHS (*m) : HUB->round;
         busy (t);
-        if (m->w2 >> 8) {                       /* (A timed work of the UI's, the things': its long task, its end
+        if (I_WAIT_TASK (*m)) {                 /* (A timed work of the UI's, the things': its long task, its end
                                                 **   the UI's as the character's free, not stopped) */
             if (HUB->pc_hid) {
                 hid_op (HO_END | HW_OUT);
             }
-            task (m->w2 >> 8, m->w1);
-            HUB->pc_task.what = 0x80 | (m->w2 >> 1 & 0x7F);
+            task (I_WAIT_TASK (*m), I_WAIT_TENTHS (*m));
+            HUB->pc_task.what = 0x80 | I_WAIT_WHAT (*m);
             break;
         }
         pc_waited = 1;                          /* (Its eyes looked to as it ends: the senses') */
         burn_ask |= TS_ASK;                     /* (And the time it believes, as it begins and ends: part 76's) */
-        if ((m->a & WA_SLEEP) && (HUB->pc_pos == POS_STANDING || HUB->pc_pos == POS_CROUCHED)) {
+        if ((I_WAIT_HOW (*m) & WA_SLEEP) && (HUB->pc_pos == POS_STANDING || HUB->pc_pos == POS_CROUCHED)) {
             HUB->pc_pos = POS_PRONE;            /* (A sleeper lies down, every actor's: its load borne no more, up by
                                                 **   the Rise as it goes on, the user's, 2026-11-03) */
         }
-        if (!m->w2 && t > HUB->round) {
-            task_for ((m->a & (WA_SLEEP | WA_REST)) == WA_SLEEP ? LT_SLEEP : LT_WAIT, t);  /* (A wait longer than a round,
+        if (!I_WAIT_BUSY (*m) && t > HUB->round) {
+            task_for ((I_WAIT_HOW (*m) & (WA_SLEEP | WA_REST)) == WA_SLEEP ? LT_SLEEP : LT_WAIT, t);   /* (A wait longer than a round,
                                                 **   or a sleep: a long task, in minutes past 100 of them; a rest awake) */
             if (HUB->pc_task.kind == LT_SLEEP) {
                 looked (0);                     /* (Its eyes shut: the senses' look sees nothing as it sleeps, HOUSE.md's) */
@@ -6336,13 +6336,13 @@ void __fastcall__ s_intent_few (struct msg* m)
         }
         free_at = HUB->now;                     /* (Waiting: rest; engaged, a pass: part 26's) */
         passed (m);
-        if (!m->w2) {
-            evb = m->a;                         /* (Its unit and its sleep, for the words: E_TIME's b) */
-            event (E_TIME, 0, m->w1 ? m->w1 : HUB->round);
+        if (!I_WAIT_BUSY (*m)) {
+            evb = I_WAIT_HOW (*m);              /* (Its unit and its sleep, for the words: E_TIME's b) */
+            event (E_TIME, 0, I_WAIT_TENTHS (*m) ? I_WAIT_TENTHS (*m) : HUB->round);
         }
         break;
     case I_TURN:
-        HUB->pc_face = m->a & 7;
+        HUB->pc_face = I_TURN_HEAD (*m);
         busy (stept);
         view (V_FACING);                        /* (Its first words told at once, the look after: V_TURNED's) */
         see (0);
@@ -6495,7 +6495,7 @@ void __fastcall__ s_intent_more (struct msg* m)
 
     memcpy (&lw_m, m, sizeof lw_m);             /* (Kept: a tool's reach first, things.c's part 83) */
     if (HUB->pc_hid && m->kind != I_ATTACK && m->kind != I_CLOSE && m->kind != I_LOOK && m->kind != I_TRACE &&
-        m->kind != I_RISE && !(m->kind == I_PORTAL && (m->a == PA_CHECK || m->a == PA_SEARCH))) {
+        m->kind != I_RISE && !(m->kind == I_PORTAL && (I_PORTAL_ACT (*m) == PA_CHECK || I_PORTAL_ACT (*m) == PA_SEARCH))) {
         hid_op (HO_END | HW_OUT);               /* (Doing a thing: out of hiding, HOUSE.md's; a look, a blow, a position,
                                                 **   a walk its own) */
     }
@@ -6505,13 +6505,13 @@ void __fastcall__ s_intent_more (struct msg* m)
         HUB->quit = 1;
         break;
     case I_GOTO:                                /* (Here since 2026-11-04: the main RAM's room) */
-        go_near = m->a;
-        go_to (m->w1, m->w2);
+        go_near = I_GOTO_NEAR (*m);
+        go_to (I_GOTO_X (*m), I_GOTO_Y (*m));
         go_near = 0;
         break;
     case I_DIG:
         look_more (0, LM_ROPES);                /* (The dig's own part read in, the first time: things.c's) */
-        start_dig (m->a);
+        start_dig (I_DIG_WAY (*m));
         break;
     case I_TAKE:
         take_go (m);                            /* (Walked over to it, then taken up: wgame.c) */
@@ -6520,24 +6520,24 @@ void __fastcall__ s_intent_more (struct msg* m)
         close_go (m);                           /* (Walked up to it, then struck: part 23's) */
         break;
     case I_PORTAL:
-        k = m->x[2] ? m->x[2] : shand_of (m->x[1]);
+        k = I_PORTAL_HAND (*m) ? I_PORTAL_HAND (*m) : shand_of (I_PORTAL_STRIKE (*m));
         hub_map (0);
-        HUB->pc_strike = m->x[1];               /* (What it strikes with: the parser's; its hand, said or found) */
+        HUB->pc_strike = I_PORTAL_STRIKE (*m);  /* (What it strikes with: the parser's; its hand, said or found) */
         HUB->pc_shand = k;
-        want_ = m->b;
-        tgx = m->w1;
-        tgy = m->w2;
-        barw_ = m->x[0];
-        door_work (m->a);
+        want_ = I_PORTAL_WHICH (*m);
+        tgx = I_PORTAL_X (*m);
+        tgy = I_PORTAL_Y (*m);
+        barw_ = I_PORTAL_BAR (*m);
+        door_work (I_PORTAL_ACT (*m));
         break;
     case I_LIGHT:
         burn_ask = 1;                           /* (Its light's minutes left, the hub's, at once: part 27's) */
-        busy (m->w1 ? m->w1 : 3 * stept);
+        busy (I_LIGHT_TENTHS (*m) ? I_LIGHT_TENTHS (*m) : 3 * stept);
         see (0);
-        view (m->a ? V_LIT : V_DARK);
+        view (I_LIGHT_LIT (*m) ? V_LIT : V_DARK);
         break;
     case I_LOOK:
-        look_way (m->w1);                       /* (A look one way: part 3's) */
+        look_way (I_LOOK_TENTHS (*m));          /* (A look one way: part 3's) */
         break;
     case I_ATTACK:                              /* (A round's blow, struck: at once; at the turns pace, as the clock
                                                 **   moves on, the denizens' slice's first: turns_run; then fought on,
@@ -6551,14 +6551,14 @@ void __fastcall__ s_intent_more (struct msg* m)
         busy (load_go ());
         break;
     case I_GATHER:
-        gath_op (GO_GATHER, m->a);
+        gath_op (GO_GATHER, I_GATHER_FAMILY (*m));
         break;
     case I_RISE:                                /* (Getting up, or down: part 50's; hiding oneself: part 94's) */
-        if (m->w1 & POS_HIDE) {
+        if (I_RISE_POS (*m) & POS_HIDE) {
             hid_op (HO_GO);                     /* (Hiding oneself: part 94's) */
             break;
         }
-        legs (0x80 | m->w1);
+        legs (0x80 | I_RISE_POS (*m));
         break;
     case I_TRAVEL:                              /* (A journey to a place named: part 54's) */
         look_more (0, LM_ROPES);                /* (Its part read in, the first time: things.c's) */
@@ -6567,7 +6567,7 @@ void __fastcall__ s_intent_more (struct msg* m)
     case I_TRACE:
         tr_flush (0);                           /* (The traces read, the journal taken in first, then the time it
                                                 **   takes: parts 28's, 29's) */
-        k = (unsigned char) m->w1;
+        k = I_TRACE_HOW (*m);
         hub_map (SIGHT_BANK);
         d = SIGHT->dark;
         hub_map (0);
@@ -6579,12 +6579,12 @@ void __fastcall__ s_intent_more (struct msg* m)
             break;
         }
         if (k != TRC_FLOOR && (k == TRC_SMELL ? HUB->pcsum.smell != 0 : !d)) {
-            busy (m->w2 ? m->w2 : k == TRC_SMELL ? 30 : 600);   /* (A track's minute, a sniff's three seconds: a
+            busy (I_TRACE_TENTHS (*m) ? I_TRACE_TENTHS (*m) : k == TRC_SMELL ? 30 : 600);   /* (A track's minute, a sniff's three seconds: a
                                                 **   timed work, its test, the reading, at its end: work_done's;
                                                 **   too dark to see the floor, no nose, told at once) */
             lwork = LW_TRACE;
-            lw_x = m->w1;
-            lw_y = m->w2;
+            lw_x = I_TRACE_FORM (*m);
+            lw_y = I_TRACE_TENTHS (*m);
             k = k == TRC_SMELL ? LT_SNIFF : LT_TRACK;   /* (Begun, as part 12's begun: its first words told) */
             task (k, went);
             HUB->pc_task.what = 0;
@@ -7084,7 +7084,7 @@ int main (int argc, char* argv[])
                                                 **   "You're tiring.  Keep digging?", part 23's; a battering's bare
                                                 **   part stopped short of hurting it, its question) */
             m.kind = I_ASK;
-            m.w1 = pc_tired;
+            I_ASK_WHY (m) = pc_tired;
             pc_tired = 0;
             task_word (&m);
         }
