@@ -267,6 +267,8 @@ unsigned char __fastcall__ othings (unsigned char op, const char* name, const ch
                                                 **   main RAM): the result; the request's x in othings_x,
                                                 **   the things' words in lb */
 extern unsigned othings_x;
+extern char nil[1];                             /* ("", in the main RAM: an overlay's name for othings, whose own "" is in its bank,
+                                                **   swapped out as othings reads it: main.c's, 2026-11-08) */
 void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsigned n);    /* (main.c's) Bytes
                                                 **   between a hub's bank and the main RAM, from an overlay */
 
