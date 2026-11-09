@@ -15,10 +15,13 @@ const REGS = { 0xFFF0: 'T', 0xFFF2: 'V', 0xFFF3: 'W' };
 const STORE_ABS = { 0x8D: 'sta', 0x8E: 'stx', 0x8C: 'sty', 0x9C: 'stz' };
 const STORE_IDX = { 0x9D: 'sta ,x', 0x99: 'sta ,y', 0x9E: 'stz ,x' };
 
-// [{ offset, register, op }] for each store to T, V or W in the image
+// [{ offset, register, op }] for each store to T, V or W in the image.  A byte just after a branch's opcode is taken for
+// its offset, not an opcode of its own (a bcc back $99 bytes before an inc $57FF read as "sta $FFEE,y": dq0's, 2026-11-07)
+const BRANCH = new Set([0x10, 0x30, 0x50, 0x70, 0x80, 0x90, 0xB0, 0xD0, 0xF0]);
 function storesToRegisters(data, load = 0xA000) {
   const finds = [];
   for (let i = 0; i + 2 < data.length; i++) {
+    if (i && BRANCH.has(data[i - 1])) continue;
     const op = data[i], addr = data[i + 1] | (data[i + 2] << 8);
     if (STORE_ABS[op] && REGS[addr]) finds.push({ at: load + i, register: REGS[addr], op: STORE_ABS[op] });
     else if (STORE_IDX[op] && addr >= 0xFFE1 && addr <= 0xFFF3)
