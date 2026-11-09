@@ -2241,3 +2241,112 @@ that take cc65's arguments into it; the hub cache's search as the library's `CS_
 the senses' main RAM and the world's part 65, for some 150 cycles a line (3%).  Left for now: neither task is short of
 room, the one line is already one source, and the router (step 2's next) needs the same contract of callbacks into
 `at` from the ROM, so it's best designed once, for both.
+
+## One way-finder (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's §4 and step 2, its second part)
+
+ENGINE-CRITIQUE.md's §4 listed the step rule and the way-finding as copies that might disagree: chunk.c's `step_ok`,
+the world's `step_by` (its own copy), ways.inc (the same source, compiled into the world and the senses), the minds'
+`open_sq` and `taken`; the minds' `route` (a search) and `step_for` (greedy), the world's `ways`, `s_go_to`,
+`s_path_ways`, `s_ways_go`, `s_step_to`.  What each decided before:
+
+- **A step, a step at a time** (chunk.c's `step_ok`, slant.s's `slant`: the world's walks and steps, a denizen's body's
+  step as the world carries it out, wbody.c, the minds' steps): a square can be stood on if its kind can (T_PASS: not
+  rock, a wall, a window, a pit, a cut; rubble, steps, a stairway's square can), a door's only if open and not hidden;
+  a rise or fall of STEP_MAX feet, STAIR_MAX on steps at either end; a diagonal only a diagonal way's, past two corners
+  neither of which can be stood on (cornk: rock, a wall, a door, a window, a pit), one of them cut.  One source
+  already, compiled into each task.
+- **The minds' steps** (dq0d.c's `step_for`, `s_coarse`, `s_way`, three copies of one test): that rule, and the square
+  within its reach of home, no one on it (`taken`: the character, where it's going, another actor, a denizen out near
+  it), no water deeper than it wades unless it swims or flies, no bad air (`wades`).
+- **The minds' way found** (`route`, part 18: a search over a 32-square field from the mark): the same kinds, heights
+  and corners, a shut door a way for hands (worked as it gets there: door_way), not for a beast, a hidden one none;
+  **no notice of water or bad air**; a diagonal past a door's corner refused once that door's square had been reached
+  (the order the search came to it), let through before; and its fields **shared by every walker** bound for the
+  same mark, whatever its rules.
+- **The character's ways** (dq0w.c's `s_ways_go` and `step_by`, part 21: a search over the room's floor and walls, or
+  25 squares about it in a passage): the same kinds, heights and corners (its own copy); a door's square a way in a
+  room whatever its state (hidden too), none along a passage, open or shut; no square a denizen stands on, nor one
+  with a trap it knows of, a hidden trap the way's first; its times by its pace.
+- **The character's straight walk across a room** (`across`, part 33): any of the eight headings over the room's
+  floor, a diagonal over open floor and past corners too; a door straight on opened if it's handled one.
+- **The placing's `open_sq`** (where a denizen is put, an ally come along, a cornered one's dart): only floor, a
+  passage, steps.
+
+So they agreed on slopes, steps, rubble, windows, pits and the diagonal ways' corners everywhere a player can reach
+(the world's copy of the rule was the rule).  They disagreed on water and bad air: **a denizen's way led into water
+deeper than it wades, or a pocket of bad air, where its steps won't go**, and it stood at the edge for good (its way's
+next step refused, the greedy step no nearer, the same way found again); a beast could follow a field found for one
+with hands to a shut door; and the diagonal past a door's corner hung on the search's order.
+
+**What's built.** One source, dq0w/walk.inc (C), compiled into the world (dq0w.c's part 21) and the denizens (dq0d.c's
+part 18), not yet the paged ROM (it reads the chunks through each task's own `at`; it goes there with the chunk
+lookup, as the line does):
+
+- `wk_cell (t, q)`: a square's cell by the rule, for the walker's rules (`wk_rules`): WK_HANDS, a shut door (not a
+  hidden one) a way, to be worked as it gets there; WK_NODOOR, no door's square a way.  The rule with neither is
+  `step_ok`'s.  What else a walker leaves out its reader takes off the cell as it reads the squares in: the
+  character's, a denizen's square and a trap it knows of (a hidden trap marked, WC_TRAP); a denizen's, water deeper
+  than it wades and bad air (dq0d's `wet_ok`, `wades`'s own test) and a chunk not made.
+- `wk_search ()`: the one search over a grid of 32 by 32 cells (a chunk's squares, the world's; a field about the
+  actor and its mark, the denizens'), the floors beside them, from the cells queued, the four ways then the diagonal
+  ways, the step's rise (STEP_MAX, STAIR_MAX on steps) and the diagonal's corners checked there, the first way to each
+  square kept (the way it was come into); within a box (the room's, the world's), stopped at a square (the actor's,
+  the denizens').  The world's times and its traps on the way by WK_REACHED, its hook.
+- **The world**: `s_ways_go` reads the room's squares in (the character's rules: WK_HANDS in a room, WK_NODOOR along a
+  passage) and searches; `step_by` gone; the ways' bank laid out anew (cells, floors, times, traps, a 512-entry
+  queue, then the path and the travel's legs as before).
+- **The denizens**: `route` reads the field's squares in by the actor's rules and searches; each field kept with the
+  rules it was found by (WKEY: its water's, its hands), a field shared only by walkers whose rules are the same; the
+  minds' one test of a step, `legal` (the rule) and `may` (its reach, no one there, `wades`), in place of their three
+  copies in `step_for`, `s_coarse` and `s_way`.
+- Unchanged, on purpose: `step_ok` and `slant` (the rule a step at a time, and already one source); ways.inc (the
+  same source in the world and the senses: a passage's breadth, the ways on); `open_sq` (a stricter rule: where one is
+  put, not where it may step); `across`'s diagonals over open floor (a straight walk, the character's own; see below).
+
+**What a player sees change:**
+
+- *A denizen goes round water deeper than it wades, and round bad air*, where its way led it in and it stood at the
+  edge for good.  (dq0route: a hostile dwarf miner four squares off across the guardroom, a pocket of bad air on the
+  square between, comes round it to the character; on the old code it stood beside the pocket, two squares off, for
+  the three minutes the test waits.)
+- *A beast doesn't follow a way found for one with hands*: one bound for the same mark finds its own (round, or none:
+  its greedy step then, as before), not a way through a shut door it can't open.  The fields are found more often
+  where walkers of different kinds go for the same mark (each at most every ten seconds, as before).
+- *A diagonal way past a door's corner* is a denizen's way whatever order its squares were found in, as its step
+  already allowed.
+- *The character's ways*: unchanged but for one thing no player could see before: a hidden door's square is no longer
+  a square of the room's ways (every caller had left hidden doors out already).
+- Timing: the world's search now reads the room's squares once (each square's denizen and trap looked up once, not
+  once for each of its eight neighbours) and searches the cells; the first letter of a walk's answer is a little
+  later, the whole a little sooner (below).  As cycles move, so do the turns' dice in long fights: dq0antidote's
+  adders bit the character senseless a third time within one answer ("Everything goes black again." told twice: the
+  game's own wording, blows.c's harm_told, "again" after the first), which the repeats' check (DQ0_REPEATS) now lets
+  pass with the fight's other falls.
+- Left as they were (a difference kept): the character's straight walk across a room (`across`) goes diagonally over
+  open floor, and between two corners in a cavern, which neither a denizen's step nor anyone's way does (a diagonal is
+  a diagonal way's only); a dart and an ally come along want floor, a passage or steps (`open_sq`), not rubble nor a
+  stairway's square.
+
+**Test dq0route** (tests.js's `dq0RouteTest`): seed 1, dq0line's scene (the dwarf miners' guardroom), the character's
+lantern lit; a dwarf miner made hostile four squares off along a row of floor (the others sent off: dq0Alone), a pocket
+of bad air poked into the chunk on the square halfway (its reach 0: that square alone); three minutes waited.  The
+dwarf must come within a square of the character and never stand in the pocket.  On the old code: it stood at
+32708,32795, the pocket's edge, every time it was looked at ("the dwarf never came round the pocket of bad air").
+
+**Performance** (cycles; the same games on the old build and the new):
+
+| | Old | New |
+|---|---|---|
+| A denizen's decision (`decide`, a call: dq0denportc, its 15,219 decisions the same / dq0tunnel / dq0atbay) | 97,446 / 53,868 / 106,511 | 97,810 / 54,121 / 105,730 (+0.4%, +0.5%, -0.7%) |
+| Its step (`step_for`, a call: the same three) | 5,671 / 6,516 / 6,917 | 5,737 / 6,426 / 7,148 (`may` and `legal` called, not inline) |
+| A walk's answer (dq0answer: "walk to the door ahead to my left", "walk to the window"), its first letter | 623,716 / 481,606 | 633,207 / 488,461 (+1.5%: the room's squares read in first) |
+| The same, the whole answer | 5,926,259 / 5,902,481 | 5,717,516 / 5,669,342 (-4%) |
+
+The start (dq0starttime): seed 1 226.8M cycles to 227.2M, seed 123456789 302.2M to 305.2M (+1%: by the tasks, the
+world +0.6M, the denizens +1.9M, in their own doings as the start's timing moved, more dice thrown and intents posted:
+no way is found in the start).
+
+**Room:** the world's main RAM 2,536 to 2,471 bytes free (the ways' lookups, way's and path_ways', by the new layout);
+its part 21 1,641 to 1,402 free.  The denizens' main RAM 2,399 to 2,348 (`legal`, `may`, `wet_ok`: the three copies
+of the step test gone from step_for's, s_coarse's and s_way's), part 18 95 to 89, part 17 2,718 to 2,870.  The senses
+unchanged (2,435).

@@ -2071,8 +2071,8 @@ const DQ0_REPEATS = [
     why: 'a climb\'s rounds, each told as it ends (a long climb: many rounds to an answer, some the same)' },
   { what: /^(?:(The|A) .* |Something )(bites|claws|strikes|swings|lunges|thrusts|shoots|throws)\b.*\bat you\b|^You (strike|swing|thrust|punch|kick|lunge|shoot|throw)\b|^(?:Your|Its) [a-z]+ strikes .* instead\b/,
     why: 'a fight\'s rounds, each blow told as it falls (attack: the rounds till it ends, the same words some of them; in the dark "Something", unseen: dq0traces\' rats)' },
-  { what: /^(?:You get to your feet|You fall|You hear something fall|The [a-z ]+ (?:gets to its feet|scrambles to its feet|coils itself up again|rights itself|flutters up again|rises again|falls|goes down|is thrown down|is flipped onto its back|drops to the floor|sinks to the floor))\.$/,
-    why: 'a fight\'s falls and risings, each fall told as it falls and each rise as it gets up (a long fight: a creature down twice, a stumble\'s, a leg\'s wound\'s, up each time; dq0missile\'s rat; every fall told since 2026-10-30)' },
+  { what: /^(?:You get to your feet|You fall|Everything goes black again|You hear something fall|The [a-z ]+ (?:gets to its feet|scrambles to its feet|coils itself up again|rights itself|flutters up again|rises again|falls|goes down|is thrown down|is flipped onto its back|drops to the floor|sinks to the floor))\.$/,
+    why: 'a fight\'s falls and risings, each fall told as it falls and each rise as it gets up (a long fight: a creature down twice, a stumble\'s, a leg\'s wound\'s, up each time; dq0missile\'s rat; every fall told since 2026-10-30; the character knocked senseless a third time in one answer, "again" again: blows.c\'s harm_told, dq0antidote\'s adders since 2026-11-09)' },
   { what: /^The [a-z ]+ (?:struggles|scrabbles|writhes|flails its legs|flaps|wavers), but can't (?:get up|right itself|rise)\.$/,
     why: 'creatures down: each told once as it lies there (2026-11-02), so only two of a name in one answer, or one wounded between (dq0downonce holds it to that)' },
   { what: /^You turn to (?:something|the [a-z ]+)\.$/,
@@ -2362,6 +2362,97 @@ function dq0LineTest() {
       if (!rs.length) f.push('the dwarf\'s senses never asked as it watched');
       else if (!rs.every(r => r.res & (SN_SEEN | SN_LOOK)))
         f.push('the dwarf the character sees through the bars wouldn\'t see it (no SN_LOOK): ' + JSON.stringify(rs.map(r => r.res)));
+      return f;
+    },
+    sdcard: true
+  };
+}
+// One router (ENGINE-CRITIQUE.md's §4, step 2's second part, 2026-11-09): a denizen's way found (dq0w/walk.inc's
+// search, dq0d's route) by the same rules its steps go by.  At seed 1, dq0line's scene: the character come into the
+// dwarf miners' guardroom, its lantern lit; a dwarf miner made hostile four squares ahead across the room's floor, the
+// others sent off, and a pocket of bad air poked into the chunk on the square halfway between them (its middle there,
+// its reach none: that square alone).  A denizen keeps out of bad air, as out of water deeper than it wades (dq0d's
+// wades): its greedy step stops short of the pocket, and its way round is found.  Till 2026-11-09 the way (route) took
+// no notice of the air nor the water: it led through the pocket, that step was refused, and the dwarf stood at the
+// pocket's edge, the character two squares off, for good.  DQ0_ROUTE=1 prints where it was
+function dq0RouteTest() {
+  const lines = ['open the door', 'go through it', 'light the lantern', 'wait 1 minute', 'wait 1 minute', 'wait 1 minute', 'look'];
+  return {
+    name: 'dq0route', near: ['denizens'], what: 'Dingus Quest Zero\'s one router (ENGINE-CRITIQUE.md\'s §4): a hostile ' +
+      'dwarf miner four squares off across a room, a pocket of bad air on the square between, goes round it to the ' +
+      'character (its way found by the rule its steps go by: no deeper water than it wades, no bad air), not stopped at its edge',
+    init: 't_rc', cycles: 600e6 + lines.length * 80e6,
+    machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+      "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -k lantern -T -d /ram/g',
+      ...lines, 'quit', 'echo $status']) },
+    start(m) {
+      const [AIR, AX, AY, AR, TILE] = require('../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, air)',
+        'offsetof (struct chunk, ax)', 'offsetof (struct chunk, ay)', 'offsetof (struct chunk, ar)', 'offsetof (struct chunk, tile)']);
+      const u16 = (h, o) => h[o] | h[o + 1] << 8;
+      // (The chunk of square x, y of stratum sn in the hub's cache: its bank's bytes, its offset there, and the square's)
+      const chunk = (sn, x, y) => {
+        const S = stratumRec(m, sn), w = m.dq0.bank(WORLD_BANK_N);
+        if (!S || !w) return null;
+        const cx = (x - S.x0) >> 5, cy = (y - S.y0) >> 5;
+        for (let c = 0; c < 24; c++) {
+          const sl = CSLOT_AT + c * 8;
+          if (!w[sl] || w[sl + 1] !== sn || (w[sl + 2] | w[sl + 3] << 8) !== cx || (w[sl + 4] | w[sl + 5] << 8) !== cy) continue;
+          return { b: m.dq0.bank(5 + Math.floor(c / 3)), o: (c % 3) * 0xAA0, lx: (x - S.x0) & 31, ly: (y - S.y0) & 31 };
+        }
+        return null;
+      };
+      const tile = (sn, x, y) => { const c = chunk(sn, x, y); return c ? c.b[c.o + TILE + c.ly * 32 + c.lx] & 15 : -1; };
+      const where = (h, L, at) => {
+        const r = m.route;
+        if (!r || r.none) return;
+        r.seen.push({ x: u16(h, at(r.k) + L.aX), y: u16(h, at(r.k) + L.aY), px: u16(h, L.pcX), py: u16(h, L.pcY), on: h[at(r.k) + L.aName] !== 0 });
+      };
+      const scene = (h, L, K, at, named) => {
+        const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'dwarf miner');
+        if (k === undefined) return;
+        const sn = h[L.pcSn], px = u16(h, L.pcX), py = u16(h, L.pcY), DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0];
+        // (The way of the four with four squares of floor straight on and a row of floor beside them, its face's first)
+        const floor = (j, s, n) => [...Array(n).keys()].every(i => tile(sn, px + (i + 1) * DX[j] + s * DY[j], py + (i + 1) * DY[j] - s * DX[j]) === 1);
+        const f = [0, 1, 2, 3].map(j => (j + (h[L.pcFace] >> 1)) & 3).find(j => floor(j, 0, 4) && (floor(j, 1, 3) || floor(j, -1, 3)));
+        if (f === undefined) { m.route = { none: true }; return; }
+        const dx = DX[f], dy = DY[f], x = px + 4 * dx, y = py + 4 * dy, mx = px + 2 * dx, my = py + 2 * dy;
+        const o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aName + 12]), w16 = (p, v) => { h[p] = v & 255; h[p + 1] = v >> 8 & 255; };
+        dq0Alone(m, h, L, K, at, k);
+        w16(o + L.aX, x); w16(o + L.aY, y);
+        h[o + L.aSn] = sn;
+        h[o + L.aAttitude] = K.AT_HOSTILE;
+        h[o + L.aDoing] = K.DO_WATCH;
+        R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8;
+        R.mem[q + R.SN] = sn;
+        R.mem[q + R.ATTITUDE] = K.AT_HOSTILE;
+        h[L.denSeq] = h[L.denSeq] + 1 & 255;
+        const c = chunk(sn, mx, my);
+        if (c) { c.b[c.o + AIR] = 0x13; c.b[c.o + AX] = c.lx; c.b[c.o + AY] = c.ly; c.b[c.o + AR] = 0; }
+        // (The squares ahead, and each side's, for the scene's premise)
+        const side = s => [1, 2, 3].map(i => tile(sn, px + i * dx + s * dy, py + i * dy - s * dx));
+        m.route = { k, x, y, px, py, mx, my, chunk: !!c, ahead: [1, 2, 3, 4].map(i => tile(sn, px + i * dx, py + i * dy)), left: side(1), right: side(-1), seen: [] };
+      };
+      dq0Poke(m, [{ g: 1, line: 'wait 1 minute', n: 1, call: scene },
+        { g: 1, line: 'wait 1 minute', n: 2, call: (h, L, K, at) => where(h, L, at) },
+        { g: 1, line: 'wait 1 minute', n: 3, call: (h, L, K, at) => where(h, L, at) },
+        { g: 1, line: 'look', n: 1, call: (h, L, K, at) => where(h, L, at) },
+        { g: 1, line: 'quit', n: 1, call: (h, L, K, at) => where(h, L, at) }]);
+    },
+    expect: ['% echo $status'],
+    check(m) {
+      const f = [], r = m.route, T_FLOOR = 1;
+      if (!r) return ['the scene not set: no dwarf miner to make hostile'];
+      if (r.none) return ['not the scene: no four squares of floor straight on from the character, a row of floor beside them'];
+      const near = r.seen.map(s => Math.max(Math.abs(s.x - s.px), Math.abs(s.y - s.py)));
+      this.notes = ['the dwarf put at ' + r.x + ',' + r.y + ', the character at ' + r.px + ',' + r.py + ', the pocket at ' + r.mx + ',' + r.my +
+        '; ahead ' + JSON.stringify(r.ahead) + ', left ' + JSON.stringify(r.left) + ', right ' + JSON.stringify(r.right) + '; then ' +
+        r.seen.map(s => s.x + ',' + s.y + (s.on ? '' : ' (gone)')).join(' / ')];
+      if (process.env.DQ0_ROUTE) console.log(this.notes[0]);
+      if (!r.chunk || r.ahead.join() !== [T_FLOOR, T_FLOOR, T_FLOOR, T_FLOOR].join() ||
+        !(r.left.every(t => t === T_FLOOR) || r.right.every(t => t === T_FLOOR)))
+        f.push('not the scene (four squares of floor ahead, a row of floor beside them): ' + this.notes[0]);
+      if (r.seen.some(s => s.x === r.mx && s.y === r.my)) f.push('the dwarf walked into the bad air: ' + this.notes[0]);
+      if (!near.some(n => n <= 1)) f.push('the dwarf never came round the pocket of bad air to the character (its way led through it): ' + this.notes[0]);
       return f;
     },
     sdcard: true
@@ -5910,6 +6001,7 @@ module.exports = {
     dq0ItTest(),
     dq0StateSelTest(),
     dq0LeftoversTest(),
+    dq0RouteTest(),
     dq0LineTest(),
     dq0OnePathTest(),
     dq0FeaturesTest(),

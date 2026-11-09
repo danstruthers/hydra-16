@@ -272,8 +272,8 @@ Some copies have no memory-placement reason at all (§1 covers the ones that do)
 | Chebyshev distance | `apart` in dq0d/apart.s, dq0p/sense.c, dq0p/sound.c, dq0w/wbody.c, wdig.c, wport.c, dq0/choose.c, dens.c, resolve.c, seen.c; `span`×3 in wshoot.c; inline in dq0w.c and things.c (~16) |
 | Chunk-cache lookup | dq0d ×4, dq0p/light.c, dq0m/map.c, dq0m/changes.c, dq0w/chunk.c, dq0w.c, wkept.c (≥9) |
 | Line of sight / line of fire | dq0p/eyes.c `clear_line`, dq0p/cast.s ray casting, dq0w/wshoot.c `passes` with its own portal rules (3, possibly disagreeing). *Made one, 2026-11-08: dq0w/line.inc's `line` (below)* |
-| Step legality | chunk.c `step_ok`, dq0w.c `step_by` (re-implemented), ways.inc ×2, dq0d's `open_sq` and `taken` |
-| Path finding | dq0d `route` (BFS) and `step_for` (greedy); dq0w `ways`, `s_go_to`, `s_path_ways`, `s_ways_go`, `s_step_to` |
+| Step legality | chunk.c `step_ok`, dq0w.c `step_by` (re-implemented), ways.inc ×2, dq0d's `open_sq` and `taken`. *Made one, 2026-11-09: dq0w/walk.inc's `wk_cell` and its step (below); `step_by` gone; the minds' three copies one `legal` and `may`* |
+| Path finding | dq0d `route` (BFS) and `step_for` (greedy); dq0w `ways`, `s_go_to`, `s_path_ways`, `s_ways_go`, `s_step_to`. *Made one, 2026-11-09: dq0w/walk.inc's `wk_search`, the world's `s_ways_go` and the denizens' `route` both its (below)* |
 | Name matching | things.c `named`, `named4`, `a_word`, `word` ×2; resolve.c `has`; dq0d `called`; lower-casing loops ×4 in the UI |
 | Dice and hash | the SDK's `rseed`/`random`, plus dq0m's own xorshift `dr` ×3 (fixtures.c, sconce.c, pass.c), three `wh` hashes (caves, plan, sky), seed constants 40503, 2654435761, 69069, 7919 |
 | Overlay loading | `ovl_load` in dq0d, dq0p, dq0m, dq0w, dq0harn (5, near-identical). *Made one, 2026-11-09: the game's library's `OVL_LOAD` (modules/dq0lib), the UI's too* |
@@ -323,6 +323,22 @@ Two of these are correctness risks, not just size:
 - **Path finding in five-plus places.** A denizen and the PC route differently through the same doors, and every
   fix to door, slope, water or rubble rules has to be made in each copy. One router in the shared library, with
   each walker's rules as a cost table, removes that.
+  *Done 2026-11-09, as a shared source (DECISIONS.md's "One way-finder"):* the copies did disagree, though less than
+  feared (slopes, steps, rubble and the diagonal ways' corners were the same everywhere a player can reach). The
+  denizens' way (`route`) took no notice of water deeper than a walker wades or of bad air, which its steps refuse,
+  so a denizen bound round a pool or a pocket of bad air was led into it and stood at its edge for good (test
+  dq0route); its fields were shared by walkers with other rules (a beast following a field found for hands through a
+  shut door); a diagonal past a door's corner was let through or not by the order its squares were reached. Now one
+  source, dq0w/walk.inc (C: `wk_cell`, the rule for a square by the walker's rules; `wk_search`, the search over a
+  grid of cells, the step's rise, steps and diagonal corners), is compiled into the world's part 21 (`s_ways_go`: the
+  character's ways across a room or about a passage) and the denizens' part 18 (`route`); each walker's differences
+  are its rules (WK_HANDS: a shut door a way; WK_NODOOR: none) and what its reader leaves out (the character: a
+  denizen's square, a trap it knows of; a denizen: deep water, bad air, a chunk not made), and the world's times its
+  pace's (WK_REACHED). The rule a step at a time stays chunk.c's `step_ok` and slant.s's `slant` (the same rule);
+  the minds' three copies of the step test are one (`legal`, `may`). Left: the character's straight walk across a
+  room (`across`) takes diagonals over open floor, and between two corners, by its own rule (a walk, not a way
+  found); the placing's `open_sq` is a stricter rule on purpose (where a denizen is put, not where it may step). Not
+  yet in the paged ROM, for the line's reason: it reads the chunks through each task's own `at`.
 
 ---
 
@@ -521,7 +537,7 @@ Ranked by how much each unlocks, and arranged so the game keeps working througho
 | # | Change | What it unlocks | Size |
 |---|---|---|---|
 | 1 | **Generated placement** (§1.1): parts.txt, the stubs and the config's SWn lines made by the build. *Done 2026-11-06 (games/dq0/parts.js), every task.* Then the automatic packer (§1.2: *done 2026-11-07*, the parts' banks chosen by the build, parts.txt's bank a wish; the calls routed by part; a part past the swap area has its pieces moved out by the build, games/dq0/pack.js) and part-local leaf copies (§1.3) | ends "moved for room" churn; a function moved is its pragma alone; dispatch can be organised by meaning | medium, then large |
-| 2 | **Shared helpers in paged ROM** (§1.4, §4): line of sight, path finding, chunk lookup, name matching, the keyed hash and dice. *Line of sight done 2026-11-08 as a stage: one line (dq0w/line.inc: sight, fire, air), a shared source assembled into the senses and the world, not yet ROM (it calls the task's own chunk lookup); the look's grid ray the same squares, heights and portal rule (DECISIONS.md's "One line of sight"). The game's library in the paged ROM done 2026-11-09 (modules/dq0lib, each task's games/dq0/dq0lib.inc; DECISIONS.md's "The game's own library in the paged ROM"): the overlays' loading (`OVL_LOAD`, six copies) and `NUM` (atoi's: five copies and dq0m's atoi), the main RAM 88 to 687 bytes freer in every task (the UI 2,128 to 2,307); the line and the chunk lookup's move to it planned in §4 (a fixed zero-page block and callbacks into the task's `at`), to be done with the router.* The router next | one line of sight and one router (they disagree today); one copy to keep. Small room gains (measured: a few hundred bytes a task) | medium |
+| 2 | **Shared helpers in paged ROM** (§1.4, §4): line of sight, path finding, chunk lookup, name matching, the keyed hash and dice. *Line of sight done 2026-11-08 as a stage: one line (dq0w/line.inc: sight, fire, air), a shared source assembled into the senses and the world, not yet ROM (it calls the task's own chunk lookup); the look's grid ray the same squares, heights and portal rule (DECISIONS.md's "One line of sight"). The game's library in the paged ROM done 2026-11-09 (modules/dq0lib, each task's games/dq0/dq0lib.inc; DECISIONS.md's "The game's own library in the paged ROM"): the overlays' loading (`OVL_LOAD`, six copies) and `NUM` (atoi's: five copies and dq0m's atoi), the main RAM 88 to 687 bytes freer in every task (the UI 2,128 to 2,307); the line and the chunk lookup's move to it planned in §4 (a fixed zero-page block and callbacks into the task's `at`), to be done with the router. The router done 2026-11-09 the same way: one way-finder and one rule for a square (dq0w/walk.inc), compiled into the world (the character's ways) and the denizens (their ways found), each walker's rules its own (DECISIONS.md's "One way-finder").* Next: the line, the way-finder and the chunk lookup into the ROM library together (§4's plan) | one line of sight and one router (they disagree today); one copy to keep. Small room gains (measured: a few hundred bytes a task) | medium |
 | 3 | **The hub schema and generated headers/inc/JS/ownership** (§2) | typed payloads; no hand-synced constants; cheaper tests | medium |
 | 4 | **Handles, the scope table, the action table** (COMMANDS §4.1–4.4 and §3.1 here). *Mostly done 2026-11-07* (COMMANDS-CRITIQUE.md §5.1: every choice of a thing made once and sent as a handle, one "which?", one name match; §5.2 G–K: both sweeps clean, one path for things and one for features, one walk over, refusals as data); the action table, §5.2's step L, under way | consistent commands; one intent shape for PC and denizens | large (the command plan's steps) |
 | 5 | **Narration as data** (§3.2) | removes the 33 wording functions, `told` ×6, most SA_ refusals; first words for free; denizen actions worded alike | large, migratable one action at a time |
