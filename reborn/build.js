@@ -529,7 +529,8 @@ function build(opt = {}) {
   // The base: the kernel (../base/bin/bios.bin), its BIOS ROM ours too
   const baseBuilt = base.build(Object.assign({}, opt, { noReport: true }));
   apigen.generate(ROOT);
-  mkdir(at('bin'));
+  if (fs.existsSync(at('games', 'dq0', 'hubgen.js'))) hubNumbers(say);   // (The hub's numbers, before the test RAM
+  mkdir(at('bin'));                                                       //   programs (t_rules reads hub.h) and the games)
   fs.copyFileSync(atBase('bin', 'bios.bin'), at('bin', 'bios.bin'));
 
   // The C library (the C programs need it), the modules, the test modules and the test RAM programs
@@ -562,7 +563,6 @@ function build(opt = {}) {
   }
   for (const d of fs.readdirSync(at('sdk', 'c', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory()))
     samples['c/' + d.name] = ram(at('sdk', 'c', 'samples', d.name), at('obj', 'samples', 'c'));
-  if (fs.existsSync(at('games', 'dq0', 'hubgen.js'))) hubNumbers(say);   // (The hub's numbers, before the games)
   if (fs.existsSync(at('games')))                       // The games (games/NAME: on the SD card), each a C program,
     for (const d of fs.readdirSync(at('games'), { withFileTypes: true }).filter(d => d.isDirectory())) {   //   and its make.js's
       games[d.name] = ram(at('games', d.name), at('obj', 'games'));                                         //   data files, if
