@@ -1137,14 +1137,14 @@ unsigned __fastcall__ s_fall (unsigned feet, unsigned char how)
     r->kind = RS_HARM;
     r->actor = 0;
     r->other = 0;
-    r->a = HC_FALL;
-    r->b = how & HF_DEEP ? GR_DEEP_WATER : how & HF_SHALLOW ? GR_SHALLOW_WATER : m == MAT_EARTH || m == MAT_SOIL ?
+    RS_HARM_CAUSE (*r) = HC_FALL;
+    RS_HARM_GROUND (*r) = how & HF_DEEP ? GR_DEEP_WATER : how & HF_SHALLOW ? GR_SHALLOW_WATER : m == MAT_EARTH || m == MAT_SOIL ?
         GR_FLOOR : m == MAT_STONE ? GR_ROCKY : GR_HARD;     /* (Into a well's water, its foot's: wwell.c's) */
-    r->c = how & (HF_CLEAR | HF_HOLDS);
-    r->w1 = feet;
+    RS_HARM_HOW (*r) = how & (HF_CLEAR | HF_HOLDS);
+    RS_HARM_FEET (*r) = feet;
     r = hub_ask (SLOT_WORLD);
-    out = r->result == 1 ? 0xFFFF : r->w2;
-    event (E_HARM, 0, HC_FALL | r->b << 8 | (r->result == 1 ? E_CAUGHT : 0) | (r->w2 ? E_OUT : 0) |
+    out = RS_HARM_CAUGHT (*r) == 1 ? 0xFFFF : RS_HARM_OUT (*r);
+    event (E_HARM, 0, HC_FALL | RS_HARM_BAND (*r) << 8 | (RS_HARM_CAUGHT (*r) == 1 ? E_CAUGHT : 0) | (RS_HARM_OUT (*r) ? E_OUT : 0) |
         (how & HF_DEEP ? E_DEEP : how & HF_SHALLOW ? E_SHALLOW : 0));
     harm_fx ();                                 /* (What it dropped, fallen prone: part 49's, slice 4.1b's) */
     hub_map (0);
@@ -3401,20 +3401,20 @@ static signed char test_dig (void)
     r = &HUB->slot[SLOT_WORLD];
     r->kind = RS_TEST;
     r->actor = 0;
-    r->a = P_DIG;
-    r->b = dig.done < DIG_TOP ? dig.mat : MAT_STONE;     /* (Through the floor: the stratum's rock) */
-    r->steps = 0;
+    RS_TEST_PURPOSE (*r) = P_DIG;
+    RS_TEST_MAT (*r) = dig.done < DIG_TOP ? dig.mat : MAT_STONE;     /* (Through the floor: the stratum's rock) */
+    RS_TEST_STEPS (*r) = 0;
     strcpy (r->text, HUB->dig_name);            /* (The tool named, or "" the best to hand) */
     r = hub_ask (SLOT_WORLD);
-    g = r->grade;
-    made = r->result ? 0xFF : r->w1;
-    if (rk && !r->result) {                     /* (The rock's hardness: the rate in it, every ruleset's, HOUSE.md's
+    g = RS_TEST_GRADE (*r);
+    made = RS_TEST_CANT (*r) ? 0xFF : RS_TEST_RATE (*r);
+    if (rk && !RS_TEST_CANT (*r)) {                     /* (The rock's hardness: the rate in it, every ruleset's, HOUSE.md's
                                                 **   rock's kinds and hardness) */
         made = (unsigned char) ((unsigned char) (made * rk_quarters[rk_hard[rk]] + 3) >> 2);
     }
     evb = dig.done & 3;                           /* (Its tool and its wear, for the next event: E_DIG's) */
     strncpy (HUB->dig_tool[evb], r->text, sizeof HUB->dig_tool[0] - 1);
-    HUB->dig_wear[evb] = r->w2;
+    HUB->dig_wear[evb] = RS_TEST_WEAR (*r);
     evb |= rk << 4 | n;
     r->state = REQ_FREE;
     return g;
@@ -3695,12 +3695,12 @@ unsigned char __fastcall__ s_pc_dig (unsigned char w)
         r = &HUB->slot[SLOT_WORLD];
         r->kind = RS_TEST;
         r->actor = 0;
-        r->a = P_DIG;
-        r->b = dig.mat;
-        r->steps = RS_DIG_QUERY;
+        RS_TEST_PURPOSE (*r) = P_DIG;
+        RS_TEST_MAT (*r) = dig.mat;
+        RS_TEST_STEPS (*r) = RS_DIG_QUERY;
         strcpy (r->text, HUB->dig_name);
         r = hub_ask (SLOT_WORLD);
-        n = r->result;
+        n = RS_TEST_CANT (*r);
         r->state = REQ_FREE;
         st = 0;
         strcpy (HUB->dig_better, r->text + DIG_BETTER);    /* (A better one to hand than the one named: told once, as
@@ -3842,15 +3842,15 @@ static void roof_harm (void)
     HUB->slot[SLOT_WORLD].kind = RS_HARM;
     HUB->slot[SLOT_WORLD].actor = 0;
     HUB->slot[SLOT_WORLD].other = 0;
-    HUB->slot[SLOT_WORLD].a = HC_STRIKE;
-    HUB->slot[SLOT_WORLD].b = AS_BLUNT;
-    HUB->slot[SLOT_WORLD].c = 1;
-    HUB->slot[SLOT_WORLD].w1 = 0;
-    HUB->slot[SLOT_WORLD].w2 = Z_HIGH;
+    RS_HARM_CAUSE (HUB->slot[SLOT_WORLD]) = HC_STRIKE;
+    RS_HARM_ASPECT (HUB->slot[SLOT_WORLD]) = AS_BLUNT;
+    RS_HARM_DICE (HUB->slot[SLOT_WORLD]) = 1;
+    RS_HARM_IMPACT (HUB->slot[SLOT_WORLD]) = 0;
+    RS_HARM_ZONE (HUB->slot[SLOT_WORLD]) = Z_HIGH;
     HUB->slot[SLOT_WORLD].text[0] = 0;
     hub_ask (SLOT_WORLD);
-    out = HUB->slot[SLOT_WORLD].w2;
-    event (E_HARM, 0, HC_STRIKE | HUB->slot[SLOT_WORLD].b << 8 | (out ? E_OUT : 0));
+    out = RS_HARM_OUT (HUB->slot[SLOT_WORLD]);
+    event (E_HARM, 0, HC_STRIKE | RS_HARM_BAND (HUB->slot[SLOT_WORLD]) << 8 | (out ? E_OUT : 0));
     hub_map (0);
     HUB->slot[SLOT_WORLD].state = REQ_FREE;
     harm_fx ();
@@ -5078,15 +5078,15 @@ static unsigned __fastcall__ struck (unsigned char b, unsigned char c, unsigned 
     r->kind = RS_HARM;
     r->actor = 0;
     r->other = 0;
-    r->a = HC_STRIKE;
-    r->b = b & 3;
-    r->c = c;
-    r->w1 = w1;
-    r->w2 = b >> 5;
+    RS_HARM_CAUSE (*r) = HC_STRIKE;
+    RS_HARM_ASPECT (*r) = b & 3;
+    RS_HARM_DICE (*r) = c;
+    RS_HARM_IMPACT (*r) = w1;
+    RS_HARM_ZONE (*r) = b >> 5;
     r->text[0] = 0;
     r = hub_ask (SLOT_WORLD);
-    out = r->w2;
-    event (E_HARM, 0, HC_STRIKE | r->b << 8 | (out ? E_OUT : 0));
+    out = RS_HARM_OUT (*r);
+    event (E_HARM, 0, HC_STRIKE | RS_HARM_BAND (*r) << 8 | (out ? E_OUT : 0));
     harm_fx ();                                 /* (What it dropped, fallen prone: part 49's) */
     hub_map (0);
     r->state = REQ_FREE;
@@ -5362,14 +5362,14 @@ void __fastcall__ s_air_harm (unsigned char a, unsigned char b, unsigned char c)
     r = &HUB->slot[SLOT_WORLD];
     r->kind = RS_HARM;
     r->actor = r->other = 0;
-    r->a = a;
-    r->b = b;
-    r->c = c;
-    r->w1 = 0;
-    r->w2 = Z_HIGH;
+    RS_HARM_CAUSE (*r) = a;
+    RS_HARM_ASPECT (*r) = b;
+    RS_HARM_DICE (*r) = c;
+    RS_HARM_IMPACT (*r) = 0;
+    RS_HARM_ZONE (*r) = Z_HIGH;
     r->text[0] = 0;
     r = hub_ask (SLOT_WORLD);
-    b = r->b;
+    b = RS_HARM_BAND (*r);
     r->state = REQ_FREE;
     event (E_HARM, 0, a | b << 8);
     harm_fx ();                                 /* (What it dropped, fallen: part 49's) */
@@ -5475,8 +5475,8 @@ static unsigned __fastcall__ wade_t (unsigned step)
         wsteps = d & WET_RUNS ? -4 : 0;         /* (A stream's current: four steps harder) */
         g = ask_w (RS_TEST, P_SWIM, 0);
         r = &HUB->slot[SLOT_WORLD];             /* (Its reply's w1 its squares, w2 its breath: the slot's still) */
-        sq = r->w1 > 60 ? 60 : (unsigned char) r->w1;
-        HUB->pc_breath = r->w2 > 255 ? 255 : (unsigned char) r->w2;
+        sq = RS_TEST_SQUARES (*r) > 60 ? 60 : (unsigned char) RS_TEST_SQUARES (*r);
+        HUB->pc_breath = RS_TEST_BREATH (*r) > 255 ? 255 : (unsigned char) RS_TEST_BREATH (*r);
         spend (GA_WORK, sq ? 600 : 1800);       /* (A minute's strenuous work; under, three times the book's) */
         hub_map (0);
         HUB->pc_swat = (unsigned) HUB->now + 600;
@@ -5561,11 +5561,11 @@ static unsigned char in_hand (void)
     r = &HUB->slot[SLOT_WORLD];
     r->kind = RS_WIELD;
     r->actor = 0;
-    r->b = 0;
-    r->x[0] = held_k[0];
-    r->x[1] = held_k[1];
+    RS_WIELD_THING (*r) = 0;
+    RS_WIELD_HELD (*r)[0] = held_k[0];
+    RS_WIELD_HELD (*r)[1] = held_k[1];
     r = hub_ask (SLOT_WORLD);
-    s = r->result;
+    s = RS_WIELD_WHICH (*r);
     r->state = REQ_FREE;
     HUB->pc_shand = 0;
     if (!s) {
@@ -5954,11 +5954,11 @@ unsigned char __fastcall__ s_engaged (unsigned char eng, unsigned char def)
     r->kind = RS_CONTEST;
     r->actor = eng;
     r->other = def;
-    r->a = r->b = P_INITIATIVE;
-    r->steps = 0;
-    r->c = 0;
+    RS_CONTEST_PURPOSE (*r) = RS_CONTEST_AGAINST (*r) = P_INITIATIVE;
+    RS_CONTEST_STEPS (*r) = 0;
+    RS_CONTEST_OSTEPS (*r) = 0;
     r = hub_ask (SLOT_WORLD);
-    f = r->result;
+    f = RS_CONTEST_BETTER (*r);
     r->state = REQ_FREE;
     if (f != 2) {
         return 0;                               /* (The engager as quick, or quicker: as it was) */
@@ -6005,11 +6005,11 @@ unsigned char __fastcall__ s_fumble_try (unsigned char k)
     r = &HUB->slot[SLOT_WORLD];
     r->kind = RS_TEST;
     r->actor = 0;
-    r->a = P_GROPE;
-    r->b = 0;
-    r->steps = 0;
+    RS_TEST_PURPOSE (*r) = P_GROPE;
+    RS_TEST_HOW (*r) = 0;
+    RS_TEST_STEPS (*r) = 0;
     r = hub_ask (SLOT_WORLD);
-    g = r->grade;
+    g = RS_TEST_GRADE (*r);
     r->state = REQ_FREE;
     if (G_OK (g)) {
         return 0;
@@ -6378,13 +6378,13 @@ void s_draw_test (void)
     }
     r->kind = RS_TEST;
     r->actor = 0;
-    r->a = P_DRAW;
-    r->b = 0;
-    r->steps = 0;
-    r->result = 0;
+    RS_TEST_PURPOSE (*r) = P_DRAW;
+    RS_TEST_HOW (*r) = 0;
+    RS_TEST_STEPS (*r) = 0;
+    RS_TEST_OPENED (*r) = 0;
     r = hub_ask (SLOT_WORLD);
-    g = r->grade;
-    opened = r->result;
+    g = RS_TEST_GRADE (*r);
+    opened = RS_TEST_OPENED (*r);
     r->state = REQ_FREE;
     HUB->pc_drawn = g;
     if (opened) {

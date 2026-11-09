@@ -936,11 +936,11 @@ static void rs_roll (void)
     hub_map (0);
     HUB->slot[SLOT_WORLD].kind = RS_TEST;
     HUB->slot[SLOT_WORLD].actor = 0;
-    HUB->slot[SLOT_WORLD].a = P_GROPE;
-    HUB->slot[SLOT_WORLD].b = 0;
-    HUB->slot[SLOT_WORLD].steps = rs_what ? -4 : 0;
+    RS_TEST_PURPOSE (HUB->slot[SLOT_WORLD]) = P_GROPE;
+    RS_TEST_HOW (HUB->slot[SLOT_WORLD]) = 0;
+    RS_TEST_STEPS (HUB->slot[SLOT_WORLD]) = rs_what ? -4 : 0;
     hub_ask (SLOT_WORLD);
-    rs_what = G_OK (HUB->slot[SLOT_WORLD].grade);
+    rs_what = G_OK (RS_TEST_GRADE (HUB->slot[SLOT_WORLD]));
     HUB->slot[SLOT_WORLD].state = REQ_FREE;
 }
 
@@ -2495,11 +2495,11 @@ unsigned char __fastcall__ s_throw_at (const char* name)
         r = &HUB->slot[SLOT_WORLD];
         r->kind = RS_TEST;
         r->actor = who;
-        r->a = P_THROW;
-        r->b = 0;
-        r->steps = steps - 4 * band;            /* (20 less a band: 4 steps of 5) */
+        RS_TEST_PURPOSE (*r) = P_THROW;
+        RS_TEST_HOW (*r) = 0;
+        RS_TEST_STEPS (*r) = steps - 4 * band;            /* (20 less a band: 4 steps of 5) */
         r = hub_ask (SLOT_WORLD);
-        g = r->grade;
+        g = RS_TEST_GRADE (*r);
         r->state = REQ_FREE;
         g = G_OK (g) ? TH_HIT : TH_MISS;
     }
@@ -3416,12 +3416,12 @@ static signed char __fastcall__ tested (unsigned char p, signed char steps)
     r = &HUB->slot[SLOT_UI];                    /* (The UI's: it waits on this request meanwhile) */
     r->kind = RS_TEST;
     r->actor = 0;
-    r->a = p;
-    r->b = 0;
-    r->steps = steps;
+    RS_TEST_PURPOSE (*r) = p;
+    RS_TEST_HOW (*r) = 0;
+    RS_TEST_STEPS (*r) = steps;
     r = hub_ask (SLOT_UI);
-    g = r->grade;
-    if (r->result) {
+    g = RS_TEST_GRADE (*r);
+    if (RS_TEST_CANT (*r)) {
         g = -100;                               /* (No tools for it: lockpicks) */
     }
     r->state = REQ_FREE;
@@ -5362,11 +5362,11 @@ unsigned char __fastcall__ s_hide (const char* name)
     r = &HUB->slot[SLOT_UI];                    /* (The UI's: it waits on this request meanwhile) */
     r->kind = RS_TEST;
     r->actor = 0;
-    r->a = P_CONCEAL;
-    r->b = 0;
-    r->steps = 0;
+    RS_TEST_PURPOSE (*r) = P_CONCEAL;
+    RS_TEST_HOW (*r) = 0;
+    RS_TEST_STEPS (*r) = 0;
     r = hub_ask (SLOT_UI);
-    g = r->grade;
+    g = RS_TEST_GRADE (*r);
     r->state = REQ_FREE;
     d = g == G_CS ? 12 : g == G_MS ? 6 : g == G_MF ? 2 : 0;
     item_at (dropped)->flags |= I_HIDDEN | I_KNOWN;
@@ -5908,11 +5908,11 @@ static unsigned char __fastcall__ turned_up (unsigned char touch, unsigned char 
     r = &HUB->slot[SLOT_UI];                    /* (The UI's: it waits on this request meanwhile) */
     r->kind = RS_TEST;
     r->actor = 0;
-    r->a = P_SEARCH;
-    r->b = HIDE_MECHANICAL;
-    r->steps = ease - (signed char) rec.hide - (touch ? 2 : 0);
+    RS_TEST_PURPOSE (*r) = P_SEARCH;
+    RS_TEST_HOW (*r) = HIDE_MECHANICAL;
+    RS_TEST_STEPS (*r) = ease - (signed char) rec.hide - (touch ? 2 : 0);
     r = hub_ask (SLOT_UI);
-    g = r->grade;
+    g = RS_TEST_GRADE (*r);
     r->state = REQ_FREE;
     return g >= G_MS;
 }

@@ -122,10 +122,10 @@ static void __fastcall__ feed_do (unsigned char eat)
 told:
     hub_map (0);
     r = &HUB->slot[SLOT_UI];
-    r->w1 = r->w2 = 0;
-    r->x[0] = r->x[2] = 0;
-    r->x[14] = m;
-    r->x[15] = p | f;
+    RS_TIME_MINUTES (*r) = RS_TIME_BLEEDERS (*r) = 0;
+    RS_TIME_FIGHTING (*r) = RS_TIME_DROWNED (*r) = 0;
+    RS_TIME_MEAL (*r) = m;
+    RS_TIME_DRINK (*r) = p | f;
     ask_b (RS_TIME, 0, 0)->state = REQ_FREE;
     if (p & RT_TAKEN) {
         body_words ();                          /* (The remedy's work told at once: the referee's news) */

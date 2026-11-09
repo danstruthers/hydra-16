@@ -1204,7 +1204,7 @@ void __fastcall__ s_retire (unsigned char k)
 static unsigned char esl;                       /* (Asleep by its day as it comes: enlist_near's, part 9's) */
 void __fastcall__ s_enlist (unsigned char i, unsigned char k)
 {
-    struct rs_summary* s = (struct rs_summary*) rq.x;
+    struct rs_summary* s = (struct rs_summary*) RS_NEW_ACTOR_SUMMARY (rq);
 
     k |= D.flags & D_MET ? 0 : 0x80;          /* (First met: its personal things, met's) */
     D.flags |= D_ACTOR | D_MET;
@@ -1241,8 +1241,8 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     lsx[k] = lsy[k] = 0;
     fled[k] = 0;
     strcpy (rq.text, K.key);
-    rq.w1 = i;
-    rq.c = want_fl (k);                         /* (Its want, and its fatigue levels, part 8's: the referee's) */
+    RS_NEW_ACTOR_RECORD (rq) = i;
+    RS_NEW_ACTOR_WANT (rq) = want_fl (k);                         /* (Its want, and its fatigue levels, part 8's: the referee's) */
     ask (RS_NEW_ACTOR, k + 1, 0);
     a.lead = s->lead;                           /* (Its influence and might, the referee's; its bonds its record's: part
                                                 **   6's morale) */
@@ -3362,10 +3362,10 @@ static struct sway sw;
 ** a marginal failure 1, a critical one 2 */
 unsigned char __fastcall__ s_stalks (unsigned char k)
 {
-    rq.a = P_STEALTH;
-    rq.steps = 0;
+    RS_TEST_PURPOSE (rq) = P_STEALTH;
+    RS_TEST_STEPS (rq) = 0;
     ask (RS_TEST, k + 1, 0);
-    return (signed char) rq.grade > 0 ? 1 : rq.grade == G_MF ? 2 : 3;
+    return (signed char) RS_TEST_GRADE (rq) > 0 ? 1 : RS_TEST_GRADE (rq) == G_MF ? 2 : 3;
 }
 
 /* ---- Hiding oneself (A12, 2026-11-04: HOUSE.md's hiding oneself; the book's Stealth, Skills 9), a look at one hidden
@@ -3378,17 +3378,17 @@ unsigned char __fastcall__ s_stalks (unsigned char k)
 
 static unsigned char __fastcall__ h_found (unsigned char hider, unsigned char looker, unsigned char hid, unsigned char lv)
 {
-    rq.a = P_STEALTH;
-    rq.b = 0;
-    rq.steps = (signed char) (hid - 1 + 4 - 2 * lv);    /* (Its cover's steps; far off 2 easier, near 2 harder, beside it 4) */
+    RS_TEST_PURPOSE (rq) = P_STEALTH;
+    RS_TEST_HOW (rq) = 0;
+    RS_TEST_STEPS (rq) = (signed char) (hid - 1 + 4 - 2 * lv);    /* (Its cover's steps; far off 2 easier, near 2 harder, beside it 4) */
     ask (RS_TEST, hider, RS_ASKER);             /* (Each look its own die) */
-    if (rq.grade != G_MF) {
-        return rq.grade == G_CF;
+    if (RS_TEST_GRADE (rq) != G_MF) {
+        return RS_TEST_GRADE (rq) == G_CF;
     }
-    rq.a = P_NOTICE_SIGHT;
-    rq.steps = 0;
+    RS_TEST_PURPOSE (rq) = P_NOTICE_SIGHT;
+    RS_TEST_STEPS (rq) = 0;
     ask (RS_TEST, looker, looker ? RS_ASKER : 0);
-    return G_OK (rq.grade);
+    return G_OK (RS_TEST_GRADE (rq));
 }
 
 /* How near: 4 beside it, 3 within three squares, 2 within seven, 1 further */
@@ -3438,19 +3438,19 @@ unsigned char __fastcall__ s_hid_mind (unsigned char k)
         if (!(K_HELP (K) & H_ROBS)) {
             return 0xFC;
         }
-        rq.a = P_STEALTH;
-        rq.b = 0;
-        rq.steps = 0;
+        RS_TEST_PURPOSE (rq) = P_STEALTH;
+        RS_TEST_HOW (rq) = 0;
+        RS_TEST_STEPS (rq) = 0;
         ask (RS_TEST, k + 1, RS_ASKER);
-        g = rq.grade;
-        rq.a = P_NOTICE_SOUND;
-        rq.steps = 0;
+        g = RS_TEST_GRADE (rq);
+        RS_TEST_PURPOSE (rq) = P_NOTICE_SOUND;
+        RS_TEST_STEPS (rq) = 0;
         ask (RS_TEST, 0, 0);
         rob_to (k);
         hub_map (0);
         a.doing = DO_WATCH;                     /* (Caught: beside its foe, awake now) */
         I_ROB_PURSE (im) = RB_PURSE | RB_CAUGHT;
-        if ((signed char) rq.grade <= (signed char) g) {
+        if ((signed char) RS_TEST_GRADE (rq) <= (signed char) g) {
             I_ROB_PURSE (im) = RB_PURSE;
             a.doing = DO_FLEE;                  /* (Off with what it takes, to its lair: robs') */
             a.attitude = AT_UNFRIENDLY;
@@ -3743,11 +3743,11 @@ static signed char __fastcall__ words_test (unsigned char k, unsigned char p, un
     }
     r->kind = RS_TEST;
     r->actor = 0;
-    r->a = p;
-    r->b = b;
-    r->steps = st;
+    RS_TEST_PURPOSE (*r) = p;
+    RS_TEST_HOW (*r) = b;
+    RS_TEST_STEPS (*r) = st;
     r = hub_call (r, T_REFEREE);
-    g = r->result == 2 ? 0x7F : r->grade;
+    g = RS_TEST_CANT (*r) == 2 ? 0x7F : RS_TEST_GRADE (*r);
     r->state = REQ_FREE;
     return g;
 }
@@ -3922,11 +3922,11 @@ void __fastcall__ s_gift (unsigned char k)
     r->text[0] = 0;
     r->kind = RS_TEST;
     r->actor = 0;
-    r->a = sw.beast ? P_ANIMALS : P_PERSUADE;
-    r->b = 0;
-    r->steps = st;
+    RS_TEST_PURPOSE (*r) = sw.beast ? P_ANIMALS : P_PERSUADE;
+    RS_TEST_HOW (*r) = 0;
+    RS_TEST_STEPS (*r) = st;
     r = hub_call (r, T_REFEREE);
-    sw.grade = r->grade;
+    sw.grade = RS_TEST_GRADE (*r);
     r->state = REQ_FREE;
     sw.t = 20;
     m = sw.grade == G_CS ? 2 : sw.grade == G_MS ? 1 : 0;
@@ -4132,12 +4132,12 @@ static void __fastcall__ influence (unsigned char k)
     }
     r->kind = RS_TEST;
     r->actor = 0;
-    r->a = p;
-    r->b = 0;
-    r->steps = st;
+    RS_TEST_PURPOSE (*r) = p;
+    RS_TEST_HOW (*r) = 0;
+    RS_TEST_STEPS (*r) = st;
     r = hub_call (r, T_REFEREE);
-    sw.grade = r->grade;
-    p = r->result;
+    sw.grade = RS_TEST_GRADE (*r);
+    p = RS_TEST_CANT (*r);
     r->state = REQ_FREE;
     if (p == 2) {
         sw.result = SR_TONGUE;                  /* (Not one the character speaks) */
@@ -5164,19 +5164,19 @@ static void hearts (void)
 ** (or shaken, a shy kind), it flees; berserk, so its fellows see it */
 static void __fastcall__ courage (unsigned char why)
 {
-    HUB->actor[rj].heart = rq.steps = reckon () / 5;
+    HUB->actor[rj].heart = RS_MORALE_STEPS (rq) = reckon () / 5;
     if (tp.mood & AM_STEADY) {
         return;                                 /* (Steady: untested) */
     }
-    rq.a = why;
-    rq.b = mf;
-    rq.c = mb;
-    rq.w1 = rgone != 0xFF ? rgone : rfallen;
-    rq.w2 = l1 | l2 << 8;
+    RS_MORALE_WHY (rq) = why;
+    RS_MORALE_FIELD (rq) = mf;
+    RS_MORALE_BONDS (rq) = mb;
+    RS_MORALE_FALLEN (rq) = rgone != 0xFF ? rgone : rfallen;
+    RS_MORALE_LEADERS (rq) = RS_MORALE_W2 (l1, l2);
     ask (RS_MORALE, rj + 1, 0);
-    if (rq.result == M_BROKEN || (rq.result == M_CAUTIOUS && (K.flags & K_SHY))) {
+    if (RS_MORALE_STATE (rq) == M_BROKEN || (RS_MORALE_STATE (rq) == M_CAUTIOUS && (K.flags & K_SHY))) {
         fled[rj] = FLEE_T;                      /* (Its doing and its attitude its next turn's: fleeing) */
-    } else if (rq.result == M_BERSERK) {
+    } else if (RS_MORALE_STATE (rq) == M_BERSERK) {
         HUB->actor[rj].mood |= AM_BERSERK;
     }
 }

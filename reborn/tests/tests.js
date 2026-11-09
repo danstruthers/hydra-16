@@ -5765,7 +5765,7 @@ module.exports = {
         if (!s || s.sn !== 1 || !s.here || s.here.t !== 7 || !s.here.wet || !s.about.every(q => q && q.t === 0) || (s.wet & 0x7F) < 5) f.push('the sump\'s foot not one square of deep water in the rock: ' + JSON.stringify(s && [s.sn, s.here, s.wet, s.about]));
         const u2 = T.after(T.after(d2, 'look'), 'climb out');
         if (!climbs(u2).length || !arr(u2, K.A_UP)) f.push('the sump not climbed out of');
-        const j = T.after(u2, 'jump into the well'), fall = j.replies.filter(r => /^slot/.test(r.req) && r.kind === K.RS_HARM && r.a === K.HC_FALL);
+        const j = T.after(u2, 'jump into the well'), fall = j.replies.filter(r => /^slot/.test(r.req) && r.rs === 'RS_HARM' && r.ask.cause === 'HC_FALL');   // (By name: msgs.def's)
         if (!fall.length) f.push('the jump not a fall');
         const a3 = arr(j, K.A_DOWN);
         if (!a3 || a3.w1 >> 12 !== 13) f.push('the jump not into the well (O_WELL_FELL): ' + JSON.stringify(a3));
@@ -5849,8 +5849,8 @@ module.exports = {
         const w = (m.wet || []).find(e => e.line === 'look');
         if (!w || (w.wet & 0x7F) < 5 || !w.swim || !w.breath) f.push('swimming not in the hub (pc_wet, pc_swim, pc_breath): ' + JSON.stringify(w));
         // (Swimming is vigorous for hunger and thirst, whatever its pace: the bodies' time told so, a 2, wtend.c's; HOUSE.md's want, the check of 2026-11-03)
-        const K = m.dq0.layout().K, tm = dq0Turns(m).of('wait 2 minutes').replies.filter(r => /^slot/.test(r.req) && r.kind === K.RS_TIME);
-        if (!tm.length || !tm.every(r => r.a === 2)) f.push('a swimmer\'s time not told as vigorous: ' + JSON.stringify(tm.map(r => r.a)));
+        const K = m.dq0.layout().K, tm = dq0Turns(m).of('wait 2 minutes').replies.filter(r => /^slot/.test(r.req) && r.rs === 'RS_TIME');
+        if (!tm.length || !tm.every(r => r.ask.about === 2)) f.push('a swimmer\'s time not told as vigorous: ' + JSON.stringify(tm.map(r => r.ask.about)));
         this.notes = [JSON.stringify(m.wet)];
         if (f.length) this.notes.push(o.slice(Math.max(0, n - 300), n + 1500));
         return f;
@@ -9866,17 +9866,17 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], o = dq0Story(out), K = m.dq0.layout().K, P_THROW = K.P_THROW;
+        const T = dq0Turns(m), f = [], o = dq0Story(out);
         const pl = T.of('throw the sword at the bones'), hd = T.of('throw the sword hard at the bones');
         if (!pl.at || !hd.at) return ['the throws not typed'];
         const bones = pl.at.items.find(i => i.name === 'bones'), d = Math.max(Math.abs(bones.x - pl.at.pc.x), Math.abs(bones.y - pl.at.pc.y)), band = c => { let b = 0; while (b < 4 && d > c << b) ++b; return b; };
-        const st = t => t.replies.filter(r => r.kind === K.RS_TEST && r.a === P_THROW).map(r => r.steps);
+        const st = t => t.replies.filter(r => r.rs === 'RS_TEST' && r.ask.purpose === 'P_THROW').map(r => r.ask.steps);   // (As asked: msgs.def's)
         const want = [-4 * band(1), -2 - 4 * band(2)];
         this.notes = [d + ' squares from the bones: plain ' + JSON.stringify(st(pl)) + ', hard ' + JSON.stringify(st(hd))];
         if (band(1) === band(2)) f.push('no band to tell the reach by: ' + d + ' squares');
         if (st(pl)[0] !== want[0]) f.push('a plain throw not at its band: ' + JSON.stringify(st(pl)) + ', not ' + want[0]);
         if (st(hd)[0] !== want[1]) f.push('a hard throw not at twice the reach, two steps worse: ' + JSON.stringify(st(hd)) + ', not ' + want[1]);
-        const shot = t => t.replies.filter(r => r.kind === K.RS_ATTACK).map(r => r.steps), a = shot(T.of('throw the sword at the closest rat')), b = shot(T.of('throw the sword hard at the closest rat'));
+        const shot = t => t.replies.filter(r => r.rs === 'RS_ATTACK').map(r => r.ask.steps), a = shot(T.of('throw the sword at the closest rat')), b = shot(T.of('throw the sword hard at the closest rat'));
         if (a.length !== 1 || a[0] !== 0) f.push('thrown at the rat plainly, not no steps: ' + JSON.stringify(a));
         if (b.length !== 1 || b[0] !== -2) f.push('thrown hard at the rat, not two steps worse: ' + JSON.stringify(b));
         inTurn(o, ['You throw your sword at the giant rat', 'You throw your sword hard at the giant rat'], f, 'the rat: ');

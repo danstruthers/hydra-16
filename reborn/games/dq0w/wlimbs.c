@@ -93,9 +93,9 @@ void s_equip_now (void)
     hub_map (0);
     r->kind = RS_EQUIP;
     r->actor = 0;
-    r->a = 2;
-    r->w1 = i;
-    r->w2 = hh;
+    RS_EQUIP_HOW (*r) = 2;
+    RS_EQUIP_LOAD (*r) = i;
+    RS_EQUIP_HELD (*r) = hh;
     HUB->pc_clank = 0xFF;                       /* (Its armour weighed again as it next moves: part 50's, slice 4.5's) */
     hub_ask (SLOT_WORLD)->state = REQ_FREE;
 }
@@ -190,7 +190,7 @@ void s_harm_fx (void)
     static unsigned char k, h, pr;
 
     hub_map (0);
-    e = (const struct rs_effect*) HUB->slot[SLOT_WORLD].x;
+    e = (const struct rs_effect*) RS_HARM_EFFECTS (HUB->slot[SLOT_WORLD]);
     for (h = pr = k = 0; k < RS_EFFECTS && e->kind; ++k, ++e) {
         if (e->target) {
             continue;
@@ -635,8 +635,8 @@ void s_den_equip (void)
     r = &HUB->slot[SLOT_WORLD];
     r->kind = RS_EQUIP;
     r->actor = bk + 1;
-    r->a = 2;
-    r->w1 = r->w2 = 0;
+    RS_EQUIP_HOW (*r) = 2;
+    RS_EQUIP_LOAD (*r) = RS_EQUIP_HELD (*r) = 0;
     hub_ask (SLOT_WORLD)->state = REQ_FREE;
 }
 

@@ -263,16 +263,16 @@ unsigned char s_outfit (void)
     r->actor = 0;
     r->text[0] = 0;
     r = hub_ask (SLOT_UI);
-    if (r->result) {
+    if (RS_OUTFIT_NONE (*r)) {
         r->state = REQ_FREE;
         return 0;
     }
-    ost.budget = r->w1;
-    ost.rs = r->w2 | 1;
-    wv = r->x[2];                               /* (Its weapons' version, by its Strength: the referee's, D13's) */
-    cap = r->x[3] << 2;                         /* (What it bears, a little burdened at most: quarter pounds) */
-    ost.tags = r->x[0] | r->x[1] << 8;
-    ost.level = r->a;
+    ost.budget = RS_OUTFIT_MONEY (*r);
+    ost.rs = RS_OUTFIT_SEED (*r) | 1;
+    wv = RS_OUTFIT_HEFT (*r);                               /* (Its weapons' version, by its Strength: the referee's, D13's) */
+    cap = RS_OUTFIT_BEARS (*r) << 2;                         /* (What it bears, a little burdened at most: quarter pounds) */
+    ost.tags = RS_OUTFIT_TAGS (*r)[0] | RS_OUTFIT_TAGS (*r)[1] << 8;
+    ost.level = RS_OUTFIT_LEVEL (*r);
     if (reply_line (0, "")) {                   /* (Its occupation's section: the culture's own first, NAME/c) */
         k = strlen (b);
         for (first = 0; first < 6 && !(ost.tags & 1u << first); ++first) {

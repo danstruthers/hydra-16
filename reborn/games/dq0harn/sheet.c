@@ -219,13 +219,13 @@ static unsigned char __fastcall__ part_levels (unsigned char part)
 void __fastcall__ o_harm (struct req* r)
 {
     static harn_injury d;
-    struct rs_effect* e = (struct rs_effect*) r->x;
+    struct rs_effect* e = (struct rs_effect*) RS_HARM_EFFECTS (*r);
     unsigned char how = 0, aspect, zone = HARN_MID, n = pc.ninj, w, loc = 0xFF;
     int impact;
 
-    memset (r->x, 0, sizeof r->x);
+    memset (RS_HARM_EFFECTS (*r), 0, sizeof RS_HARM_EFFECTS (*r));
     tend = hurt + sizeof hurt - 1;
-    if (r->a == HC_STRUCK && r->w2) {
+    if (RS_HARM_CAUSE (*r) == HC_STRUCK && RS_HARM_RUN (*r)) {
         tp = hurt + strlen (hurt);              /* (A run of blows: the part's words added to) */
     } else {
         tp = hurt;
@@ -235,13 +235,13 @@ void __fastcall__ o_harm (struct req* r)
         r->result = 1;                          /* (Only the character has a sheet, so far) */
         return;
     }
-    switch (r->a) {
+    switch (RS_HARM_CAUSE (*r)) {
     case HC_FALL:
         room (&pc, 2);                          /* (A wrenched arm's room too: the library's own harn_wound's) */
         n = pc.ninj;
-        impact = harn_fall (&pc, r->w1, r->b, (r->c & HF_CLEAR ? HARN_FALL_CLEAR : 0) |
-            (r->c & HF_HOLDS ? HARN_FALL_HOLDS : 0), &how);
-        r->result = (how & HARN_FALL_CAUGHT) != 0;
+        impact = harn_fall (&pc, RS_HARM_FEET (*r), RS_HARM_GROUND (*r), (RS_HARM_HOW (*r) & HF_CLEAR ? HARN_FALL_CLEAR : 0) |
+            (RS_HARM_HOW (*r) & HF_HOLDS ? HARN_FALL_HOLDS : 0), &how);
+        RS_HARM_CAUGHT (*r) = (how & HARN_FALL_CAUGHT) != 0;
         if ((how & HARN_FALL_WRENCHED) && pc.state == HARN_SHOCK && harn_shock_roll (&pc)) {
             pc.state = HARN_UNCONSCIOUS;        /* (In shock, the wrench's shock roll: o_wound's) */
         }
@@ -251,33 +251,33 @@ void __fastcall__ o_harm (struct req* r)
         aspect = HARN_BLUNT;
         break;
     case HC_STRUCK:                             /* (Its own part, by its blow at a thing: c which, a limb either one) */
-        impact = r->w1;
+        impact = RS_HARM_IMPACT (*r);
         aspect = HARN_BLUNT;
-        loc = r->c | (harn_is_limb (r->c) && dice (1, 2) == 2 ? HARN_RIGHT : 0);
+        loc = RS_HARM_PART (*r) | (harn_is_limb (RS_HARM_PART (*r)) && dice (1, 2) == 2 ? HARN_RIGHT : 0);
         break;
     default:                                    /* (A strike, or fire: its dice, and more, where it's aimed) */
-        impact = dice (r->c, 6) + (int) r->w1;
-        aspect = r->a == HC_FIRE ? HARN_FIRE : r->b & 3;
-        zone = r->w2 == Z_HIGH ? HARN_HIGH : r->w2 == Z_LOW ? HARN_LOW : HARN_MID;
+        impact = dice (RS_HARM_DICE (*r), 6) + (int) RS_HARM_IMPACT (*r);
+        aspect = RS_HARM_CAUSE (*r) == HC_FIRE ? HARN_FIRE : RS_HARM_ASPECT (*r) & 3;
+        zone = RS_HARM_ZONE (*r) == Z_HIGH ? HARN_HIGH : RS_HARM_ZONE (*r) == Z_LOW ? HARN_LOW : HARN_MID;
         break;
     }
-    r->b = 0;
-    r->w2 = 0;
+    RS_HARM_BAND (*r) = 0;
+    RS_HARM_OUT (*r) = 0;
     if (how & HARN_FALL_WRENCHED) {             /* (Grabbing a hold: an arm wrenched, its injury taken) */
         told (&pc.inj[n], HARN_MINOR, e++, BY_ASPECT);
     }
     d.loc = loc != 0xFF ? loc : harn_strike_location (zone);
     d.aspect = aspect;
-    if (r->a == HC_STRIKE || r->a == HC_FIRE) {
+    if (RS_HARM_CAUSE (*r) == HC_STRIKE || RS_HARM_CAUSE (*r) == HC_FIRE) {
         impact -= pc_armour (d.loc, aspect);    /* (The armour there) */
     }
     w = o_wound (&pc, d.loc, aspect, impact, BY_ASPECT);
     if (w & HARN_W_DEAD) {
         told (&d, HARN_KILL, e, BY_ASPECT);
-        r->b = HARN_KILL;
+        RS_HARM_BAND (*r) = HARN_KILL;
     } else if (w & HARN_W_INJURED) {
         told (&pc.inj[pc.ninj - 1], pc.inj[pc.ninj - 1].sev, e, BY_ASPECT);
-        r->b = e->band;
+        RS_HARM_BAND (*r) = e->band;
         if ((w & HARN_W_STUMBLE) && ((w & HARN_W_LIMB) || harn_stumble_roll (&pc, 0))) {
             e->cond |= C_PRONE;                 /* (A leg's: fallen; a grievous one at once, Combat 14) */
         }
@@ -289,13 +289,13 @@ void __fastcall__ o_harm (struct req* r)
             e[1].x[0] = n;
         }
     } else if (how & HARN_FALL_WRENCHED) {
-        r->b = HARN_MINOR;
+        RS_HARM_BAND (*r) = HARN_MINOR;
     }
     if (pc.state == HARN_UNCONSCIOUS) {         /* (Senseless: a shock roll a round to come round) */
-        r->w2 = wake (&pc);
+        RS_HARM_OUT (*r) = wake (&pc);
     }
-    if (r->a == HC_STRUCK) {                    /* (Enough: the referee's say) */
-        r->result = pc.state != HARN_CONSCIOUS || r->w2 || r->b >= HARN_SERIOUS || part_levels (HARN_LOC (loc)) >= 3;
+    if (RS_HARM_CAUSE (*r) == HC_STRUCK) {                    /* (Enough: the referee's say) */
+        RS_HARM_STOP (*r) = pc.state != HARN_CONSCIOUS || RS_HARM_OUT (*r) || RS_HARM_BAND (*r) >= HARN_SERIOUS || part_levels (HARN_LOC (loc)) >= 3;
     }
 }
 

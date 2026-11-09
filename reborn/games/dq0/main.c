@@ -362,8 +362,8 @@ static void load_pc (void)
     char* l;
 
     r = referee (RS_LOAD_PC, 0);
-    if (r->result) {
-        at = (char*) (r->result == 2 ? "dq0: too many tongues and scripts in its file" : "dq0: no character in its file");
+    if (RS_LOAD_PC_BAD (*r)) {
+        at = (char*) (RS_LOAD_PC_BAD (*r) == 2 ? "dq0: too many tongues and scripts in its file" : "dq0: no character in its file");
         t_end ();
         write (2, at, strlen (at));             /* (Said, and its status: refused aloud, never cut short) */
         write (2, "\n", 1);
@@ -376,8 +376,8 @@ static void load_pc (void)
     if ((l = reply_line (&at)) != 0) {
         strncpy (P.occupation, l, sizeof P.occupation - 1);
     }
-    pc_gait = r->a;                             /* (A new game's, the world's to set) */
-    pc_watch = r->b;
+    pc_gait = RS_LOAD_PC_GAIT (*r);                             /* (A new game's, the world's to set) */
+    pc_watch = RS_LOAD_PC_WATCH (*r);
     r->state = REQ_FREE;
 }
 
@@ -664,7 +664,7 @@ static void __fastcall__ start_world (unsigned long seed, const char* file, unsi
     r->kind = RS_HELLO;
     hub_post (r, T_REFEREE);
     waited (r);
-    round = r->w1;                              /* (The ruleset's round, in tenths: the world's to keep) */
+    round = RS_HELLO_ROUND (*r);                              /* (The ruleset's round, in tenths: the world's to keep) */
     l = strchr (r->text, '\n');                 /* (Its name, then its character generator's: none, "") */
     character (file, seed, l ? l + 1 : "");     /* (The character: its file, or the generator's) */
     r->state = REQ_FREE;
@@ -1873,8 +1873,8 @@ void to_hand (void)
 {
     things (IO_TOOLS, "");
     strcpy (HUB->slot[SLOT_UI].text, tt ());
-    HUB->slot[SLOT_UI].w1 = HUB->ireq.x;
-    HUB->slot[SLOT_UI].w2 = HUB->ireq.y;        /* (The hands that hold something: slice 4.1b's) */
+    RS_EQUIP_LOAD (HUB->slot[SLOT_UI]) = HUB->ireq.x;
+    RS_EQUIP_HELD (HUB->slot[SLOT_UI]) = HUB->ireq.y;        /* (The hands that hold something: slice 4.1b's) */
     referee (RS_EQUIP, 2)->state = REQ_FREE;
 }
 

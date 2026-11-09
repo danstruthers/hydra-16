@@ -2573,3 +2573,88 @@ its addresses the same), the UI's main RAM as it was, and the suite passes.
 
 **Left** (ENGINE-CRITIQUE.md's §2, "Left of stage 2"): the referee's requests (struct req: multi-byte slots, a request's
 fields and its reply's apart), being done beside this.
+
+## The referee's requests' payloads, declared (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's §2 and step 3, its second stage: the referee's requests)
+
+The referee is asked in `struct req { RQH; actor, other; steps; a, b, c; w1, w2; x[32]; grade, result; text }`, and
+answers in the same slots: what each meant, the request's and the reply's, was rs.h's comments, and the code at both
+ends read `r->w2`, `r->x[18]`, `*(unsigned long*) (r->x + 4)` by hand.  This part does for the requests what the first
+did for the intents, by the same file and the same generator, extended where requests need it.
+
+**The same file, a second struct.**  msgs.def's `struct NAME` line already named the struct its kinds travel in; a
+`struct req` line after the intents starts the requests, each slot checked against cc65's struct req (its width, an
+array's bounds, its offsets in dq0hub.json).  Four things are new, all in msgs.def's syntax and hubgen.js's reading of
+it, nothing in the parts the events will want:
+
+    RS_HARM         a cause@HC_FALL; b ground@GR_FLOOR; c how; w1 feet  -> result caught; b band; w2 out; x effects
+    RS_TIME         a about; b pc; w1 minutes; w2 bleeders; x[0] fighting; ...; x[16-17] spent; x[18] aff@AK_NONE ...
+                    -> result died; b health@H_FINE; c bound; grade news; w1 dead; w2 out; x[4-7] next
+    RS_ATTACK:thing c run; w2(flags) shy:0; x[0-3] resist[]
+                    -> result(struck) stop:0 part:1 short:2 broke:3; a drop; b aspect@AS_BLUNT; c worst; w1 harm; w2 out
+
+- **A reply after `->`**, a form of its own (`RS_HARM:reply`, `RS_ATTACK:thing_reply`): the referee writes its answer
+  over the request's slots (RS_ATTACK's a is the aim asked and whose fumble it was answered; its w1 the range of a shot
+  and the two healths back), so the two are declared apart, each checked for overlaps on its own, and the accessors of
+  both are the kind's (`RS_HARM_FEET`, `RS_HARM_BAND`: one name, one slot, or the build stops).  A reply with no request
+  before it is a form of a reply alone (`RS_TEST:swim -> grade; w1 squares; w2 breath`: a swim's test is asked as any
+  test is, its reply its own).
+- **Slots spanning bytes**: `x[4-7]` an array's elements spanned, a word for two bytes and a long for four, the accessor
+  a cast of its first byte's address (`RS_TIME_NEXT (m)` is `(*(unsigned long*) ((m).x + 4))`, the cast rswant.h wrote
+  by hand), an lvalue; any other width, or a field written `name[]`, is its bytes, the address (`RS_ATTACK_RESIST (*r)[k]`
+  in the loop that fills them); `x` alone the array whole (a reply's struct rs_effect list, a new actor's struct
+  rs_summary: `(const struct rs_effect*) RS_ATTACK_EFFECTS (*r)`).  Bit fields go in a span of four bytes at most.  The
+  overlap check knows spans: `x[4-7]` and `x[5]` in one form stop the build.  In dq0hub.json a field's seventh
+  element is the events' signed mark (1: their `!` byte, and a signed slot whole, a reply's grade) or 2, a span's bytes
+  (`name[]`), the decoder giving its bytes; the eighth the events' `+K`; a span's offset its first element's, its size
+  the element's times their count.
+- **A slot alone is its field of its own name** (`steps`, `grade`): the reply's grade is a grade, a test's steps steps.
+- **No builder for a request.**  A request is filled slot by slot around what the code computes (the world's blow: the
+  aim, then the creature's heart, then the flags by the two bodies' positions, the missile's afterwards), and a builder
+  sets its slots in the struct's order: the stores would move, and the images with them.  hubgen.js makes a builder only
+  for a struct with a `who` (struct msg).
+
+**Every kind declared.**  All 27 RS_* kinds: 17 with fields, the 10 not asked yet (RS_DROP_ACTOR, RS_TEST_MANY,
+RS_REST, RS_INITIATIVE, RS_EXPERIENCE, RS_POWER, RS_EXPORT, RS_IMPORT, RS_RESTORE, RS_QUIT) a `-`; 60 forms, 35
+requests and 25 replies.  The forms by purpose, cause and target: RS_TEST's `:dig` (b the material; the reply's rate and
+the tool's wear), `:appraise` (b the craft, w1 the thing's number; the craft's mastery back), `:read` (the writing's
+number), and the replies of a swim, the bearings (the drift) and drawing (Drawing opened); RS_ATTACK's `:missile` (b
+the band, c the kind shot, w1 the squares), `:thing` (at RS_THING: the blow's run, the thing's resistances; the harm it
+takes, the part's hurt), `:rise` (O_RISE: still down); RS_HARM's `:strike` (HC_STRIKE, HC_FIRE) and `:struck` (the
+striker's own part); RS_TREAT's `:done`.  Packed slots: RS_ATTACK's flags (w2, `shy:0` beside the RS_* and MS_* flags
+the headers name), its reply's two healths (w1), RS_MORALE's leaders (w2: its band's head, its faction's), RS_TIME's
+meal (x[14]: meals, a ration begun) and drink (x[15]: pints, a remedy taken, foul water), RS_DICE's a (seeded).  The
+names are what rs.h's comments said: RS_TIME's `minutes`, `bleeders`, `fighting`, `drowned`, `aff`, `dose`, `air`,
+`flame`; its reply's `died`, `health`, `bound`, `news`, `dead`, `out`, `next`.
+
+**Every sender and receiver switched.**  The senders, hub_ask's callers: the world (dq0w.c's fall, a dig's test and its
+query, the roof's and the air's harm, a swim's reply, the wield, the engage contest, a grope, a map drawn; things.c's
+tests, wblow.c's blow at a thing, wfight.c's blow, wdig.c, wlimbs.c's RS_EQUIP and the harm's effects, wtend.c's
+RS_TIME, outfit.c's RS_OUTFIT, wrope2.c, wrope3.c, workpart.h's harm's reply), the UI (main.c's character loaded, the
+hello, the things to hand; read.c, tend.c, way.c, feed.c), the denizens (dq0d.c: a new actor, the stealth and notice
+tests, the sway's tests, morale).  The receivers: the HarnMaster referee (dq0harn.c's answer and its own tests, fight.c,
+missile.c, gear.c, heal.c, sheet.c, afflict.c, want.c, outfit.c) with the rulesets' shared rshouse.h and rswant.h, the
+null ruleset's (dq0null.c), and the referee's unit tests (tests/ram/t_rules: RS_DICE's faces and sides, RS_LOAD_PC's
+reply; its other requests are built from rules.txt's slot names, as data).  642 lines: the world's 147, the UI's 32,
+the denizens' 42, the HarnMaster referee's 273 (rshouse.h and rswant.h with it), the null's 138, t_rules's 10.  Left as
+slots, by design: `kind`, `actor`,
+`other`, `text` (every request's: who asks about whom), the generic senders' bodies (the world's `ask_w (kind, a, b)`,
+the UI's `ask_b`, the denizens' `ask`, workpart.h's `harm (a, b, c, w1)` for a fall or a strike alike), and the few
+places an accessor would change the code: the minutes copied byte by byte (`x[16] | x[17] << 8`, rswant.h and
+dq0null.c), dq0harn.c's swim using `result` as scratch, the refusals' `result = 1` and the defaults' `0xFF`.
+
+**The tests.**  The recorder (sim/lib/dq0meaning.js) reads a request as it's posted (its state REQ_POSTED, every slot
+written) and keeps its fields by name; each reply's record gains `rs` (its kind's name), `ask` (the request as it was
+asked, its kind's form) and `reply` (its `:reply` form's), beside the raw slots the tests already read.  dq0well reads
+the jump's fall as `r.ask.cause === 'HC_FALL'`, dq0swim the swimmer's time as `r.ask.about`, dq0hardthrow a throw's
+steps as asked (`r.ask.steps`, not the reply's slot).  A form by a field's value (a dig's `mat`, read as RS_TEST's
+`how`) is not chosen yet: the events' selector (`==`) would do it, but it renames a chosen form's own accessors
+(RS_TEST_MAT to RS_TEST_DIG_MAT, RS_HARM_IMPACT to the strike's and the struck part's), and RS_ATTACK's missile (a bit
+of its flags) and RS_TREAT's done (a 1) have no constant of the headers' to be chosen by.
+
+**No behaviour change:** the images came out byte-identical (bin/*, every program and data file in obj/games, and
+obj/tests/t_rules.hyx), and the suite passes.  The accessors were held to the code they replace: `((*r).b)` is `r->b`,
+`(*(unsigned long*) ((*r).x + 4))` the hand cast, `&RS_TIME_NEXT (*r)` the address memcpy took, `((*r).result & 0x8)`
+`r->result & 8`; RS_MORALE's packer `(l1) | (unsigned) (l2) << 8` the same as the hand's `l1 | l2 << 8`.
+
+**Left** (ENGINE-CRITIQUE.md's §2, "Left of stage 2"): the requests' forms chosen by a field's value, a pass of its
+own (the accessors it renames, the constants it wants).

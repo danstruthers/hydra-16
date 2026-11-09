@@ -84,8 +84,8 @@ static void __fastcall__ harm (unsigned char a, unsigned char b, unsigned char c
     r->b &= a == HC_STRIKE ? 3 : 0xFF;
     r->text[0] = 0;
     r = hub_ask (SLOT_WORLD);
-    wk.tt += r->w2;
-    told (E_HARM, a | r->b << 8 | (r->w2 ? E_OUT : 0), 0);
+    wk.tt += RS_HARM_OUT (*r);
+    told (E_HARM, a | RS_HARM_BAND (*r) << 8 | (RS_HARM_OUT (*r) ? E_OUT : 0), 0);
     harm_fx ();                                 /* (What it dropped, fallen prone: part 49's, slice 4.1b's) */
     hub_map (0);
     r->state = REQ_FREE;
@@ -196,7 +196,7 @@ static void __fastcall__ spring (unsigned char on)
     if (o == TO_SPRUNG && k < TK_GAS) {
         harm (HC_STRIKE, trap_harm[k], trap_dice[k], wk.tq.power);
 #ifdef W_POISON
-        if (k == TK_DARTS && HUB->slot[SLOT_WORLD].b && !((wk.tx ^ wk.ty) & 3)) {
+        if (k == TK_DARTS && RS_HARM_BAND (HUB->slot[SLOT_WORLD]) && !((wk.tx ^ wk.ty) & 3)) {
             HUB->pc_aff = AK_DART;              /* (Poisoned, one dart trap in four by its square, a wound drawn: the
                                                 **   referee told with the bodies' time, at its next minute, part
                                                 **   70's; a door's needle not yet: part 5's room) */

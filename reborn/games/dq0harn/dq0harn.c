@@ -221,41 +221,41 @@ void __fastcall__ s_dig_answer (struct req* r)
     unsigned char sk, m;
     int e;
 
-    if (r->a == P_STEALTH || r->actor) {       /* (Moving quietly; or a creature's own test, a tunneller's dig: its
+    if (RS_TEST_PURPOSE (*r) == P_STEALTH || r->actor) {       /* (Moving quietly; or a creature's own test, a tunneller's dig: its
                                                 **   grade by its sheet, the world's the rest, slice 4.11's) */
         s_quiet_test (r);
-    } else if (r->a == P_APPRAISE) {
-        sk = appraiser[r->b < NAP + 4 ? r->b : 0];
-        if (r->b < NAP) {                       /* (A thing judged, the first answer kept; a performance, a new die) */
-            r->w2 = pc.ml[sk];
-            JUDGE_IN (r->w1, pc.ml[sk])
-            r->grade = test_sk (&pc, sk, r->steps);
+    } else if (RS_TEST_PURPOSE (*r) == P_APPRAISE) {
+        sk = appraiser[RS_TEST_CRAFT (*r) < NAP + 4 ? RS_TEST_CRAFT (*r) : 0];
+        if (RS_TEST_CRAFT (*r) < NAP) {                       /* (A thing judged, the first answer kept; a performance, a new die) */
+            RS_TEST_MASTERY (*r) = pc.ml[sk];
+            JUDGE_IN (RS_TEST_ITEM (*r), pc.ml[sk])
+            RS_TEST_GRADE (*r) = test_sk (&pc, sk, RS_TEST_STEPS (*r));
             JUDGE_OUT
         } else {
-            r->grade = test_sk (&pc, sk, r->steps);
+            RS_TEST_GRADE (*r) = test_sk (&pc, sk, RS_TEST_STEPS (*r));
         }
-    } else if (r->a == P_READ) {
+    } else if (RS_TEST_PURPOSE (*r) == P_READ) {
         read_test (r);                          /* (A writing read: part 4's, step 9's) */
-    } else if (r->a != P_DIG && r->a != P_SWIM) {   /* (Persuading, intimidating, deceiving: main.c's) */
+    } else if (RS_TEST_PURPOSE (*r) != P_DIG && RS_TEST_PURPOSE (*r) != P_SWIM) {   /* (Persuading, intimidating, deceiving: main.c's) */
         if (!(sk = speaks (r->text))) {         /* (Words in a tongue it doesn't speak: nothing) */
-            r->result = 2;
+            RS_TEST_CANT (*r) = 2;
         } else {
-            m = r->a == P_DECEIVE ? HARN_NTR : HARN_RHE;
+            m = RS_TEST_PURPOSE (*r) == P_DECEIVE ? HARN_NTR : HARN_RHE;
             e = pc.ml[m] ? harn_eml (&pc, m) : harn_get_oml (&pc, m) + harn_eml (&pc, m);
-            e += STEP_PCT * (signed char) r->steps;
+            e += STEP_PCT * (signed char) RS_TEST_STEPS (*r);
             if (e > sk) {                       /* (Its EML never past its mastery of the tongue: the book's, Skills 11) */
-                r->steps -= (e - sk + STEP_PCT - 1) / STEP_PCT;
+                RS_TEST_STEPS (*r) -= (e - sk + STEP_PCT - 1) / STEP_PCT;
             }
-            r->grade = test (&pc, r->a, r->steps);
+            RS_TEST_GRADE (*r) = test (&pc, RS_TEST_PURPOSE (*r), RS_TEST_STEPS (*r));
         }
-    } else if (r->a == P_SWIM) {                /* (A minute's swimming, the book's, Skills 10: its squares, by the
+    } else if (RS_TEST_PURPOSE (*r) == P_SWIM) {                /* (A minute's swimming, the book's, Skills 10: its squares, by the
                                                 **   grade's yards (calm water) times its skill index; it sinks at
                                                 **   a critical failure; its breath held Endurance times 10 seconds) */
-        r->grade = test_sk (&pc, HARN_SWI, r->steps);
+        RS_TEST_GRADE (*r) = test_sk (&pc, HARN_SWI, RS_TEST_STEPS (*r));
         r->result = pc.ml[HARN_SWI] < 10 ? 1 : pc.ml[HARN_SWI] / 10;
-        r->w1 = (r->grade == G_CS ? 9 : r->grade == G_MS ? 7 : r->grade == G_MF ? 2 : 0) * r->result * 3 / SQ_FT;
+        RS_TEST_SQUARES (*r) = (RS_TEST_GRADE (*r) == G_CS ? 9 : RS_TEST_GRADE (*r) == G_MS ? 7 : RS_TEST_GRADE (*r) == G_MF ? 2 : 0) * r->result * 3 / SQ_FT;
         r->result = harn_end (&pc);
-        r->w2 = (r->result << 3) + (r->result << 1);    /* (Times ten: no multiplying, the main RAM's) */
+        RS_TEST_BREATH (*r) = (r->result << 3) + (r->result << 1);    /* (Times ten: no multiplying, the main RAM's) */
         r->result = 0;
     } else {
         dig_of (r);
@@ -264,7 +264,7 @@ void __fastcall__ s_dig_answer (struct req* r)
 
 static void __fastcall__ dig_of (struct req* r)
 {
-    unsigned char m = r->b > MAT_SOIL ? MAT_STONE : r->b, t = s_dig_tool (m, r->text), k = digger[t].rate[m],
+    unsigned char m = RS_TEST_MAT (*r) > MAT_SOIL ? MAT_STONE : RS_TEST_MAT (*r), t = s_dig_tool (m, r->text), k = digger[t].rate[m],
         b = s_dig_tool (m, "");
 
     if (r->text[0] && !t) {
@@ -272,18 +272,18 @@ static void __fastcall__ dig_of (struct req* r)
     }
     strcpy (r->text + DIG_BETTER, r->text[0] && digger[b].rate[m] > k ? digger[b].key : "");
     strcpy (r->text, digger[t].key);
-    r->w2 = digger[t].wear[m];
+    RS_TEST_WEAR (*r) = digger[t].wear[m];
     if (!k) {
-        r->result = 1;
-        r->w1 = 0;
-        r->w2 = 0;
+        RS_TEST_CANT (*r) = 1;
+        RS_TEST_RATE (*r) = 0;
+        RS_TEST_WEAR (*r) = 0;
         return;
     }
-    if (r->steps == RS_DIG_QUERY) {
+    if (RS_TEST_STEPS (*r) == RS_DIG_QUERY) {
         return;
     }
-    r->grade = DIG_TESTED (m) ? test (&pc, r->a, r->steps) : G_MS;
-    r->w1 = r->grade == G_CS ? 2 * k : r->grade == G_MS ? k : r->grade == G_MF ? k / 2 : 0;
+    RS_TEST_GRADE (*r) = DIG_TESTED (m) ? test (&pc, RS_TEST_PURPOSE (*r), RS_TEST_STEPS (*r)) : G_MS;
+    RS_TEST_RATE (*r) = RS_TEST_GRADE (*r) == G_CS ? 2 * k : RS_TEST_GRADE (*r) == G_MS ? k : RS_TEST_GRADE (*r) == G_MF ? k / 2 : 0;
 }
 
 #pragma code-name (pop)
@@ -532,21 +532,21 @@ void __fastcall__ s_load_pc (struct req* r)
     int fd;
 
     if (r->kind == RS_HELLO) {
-        r->w1 = 100;                            /* (A round: 10 seconds, Combat 7) */
+        RS_HELLO_ROUND (*r) = 100;                            /* (A round: 10 seconds, Combat 7) */
         put ("HarnMaster 3.5\nhmchar");         /* (Its character generator: hmchar's files, RS_LOAD_PC's) */
         return;
     }
-    r->a = gait;                                /* (Its file's pace and watchfulness: the world's to set) */
-    r->b = watch;
+    RS_LOAD_PC_GAIT (*r) = gait;                                /* (Its file's pace and watchfulness: the world's to set) */
+    RS_LOAD_PC_WATCH (*r) = watch;
     strncpy (path, r->text, sizeof path - 1);
-    r->result = 1;
+    RS_LOAD_PC_BAD (*r) = 1;
     pv.hr = pd.hr = afffl = 0;                 /* (No venom, no sickness, no rest yet: its file's "body" line's; */
     body_line (path, 3);                       /*   no skills used yet, its "body u" lines') */
     rest_m = HUB->pcsum.timesense = 0;
     if ((fd = open (path, O_RDONLY)) < 0) {
         return;
     }
-    r->result = harn_read (fd, &pc, own_line) < 0 ? 1 : *tongues == '!' ? 2 : 0;   /* (2: more tongues and scripts
+    RS_LOAD_PC_BAD (*r) = harn_read (fd, &pc, own_line) < 0 ? 1 : *tongues == '!' ? 2 : 0;   /* (2: more tongues and scripts
                                                 **   than it can hold, refused, the UI's to say so) */
     close (fd);
     develop (0);                                /* (Its might, by its skills) */
@@ -555,8 +555,8 @@ void __fastcall__ s_load_pc (struct req* r)
     put ("\n");
     put (calling);
     status ();
-    r->a = gait;
-    r->b = watch;
+    RS_LOAD_PC_GAIT (*r) = gait;
+    RS_LOAD_PC_WATCH (*r) = watch;
 }
 
 /* The character's sheet written (r's text a path): 0, or 1 */
@@ -567,7 +567,7 @@ void __fastcall__ s_save_pc (struct req* r)
     unsigned char g = HUB->gait, w = HUB->watch;
     int fd;
 
-    r->result = 1;
+    RS_SAVE_FAILED (*r) = 1;
     if ((fd = open (r->text, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
         return;
     }
@@ -599,7 +599,7 @@ void __fastcall__ s_save_pc (struct req* r)
         harn_write_line (fd, "timesense");      /* (Its trait, kept: the house's) */
     }
     close (fd);
-    r->result = 0;
+    RS_SAVE_FAILED (*r) = 0;
 }
 #undef line
 
@@ -716,10 +716,10 @@ void __fastcall__ s_read_test (struct req* r)
     *strchr (r->text, ' ') = 0;
     t = known (r->text);
     s = known (r->text + strlen (r->text) + 1);
-    r->result = !strchr (tongues, '*') ? 1 : !t ? 2 : !s ? 3 : 0;
-    if (!r->result) {
-        e = ((t + s) >> 1) - 5 * harn_get_pp (&pc) + STEP_PCT * (signed char) r->steps;
-        r->grade = grade (harn_test (e));
+    RS_TEST_CANT (*r) = !strchr (tongues, '*') ? 1 : !t ? 2 : !s ? 3 : 0;
+    if (!RS_TEST_CANT (*r)) {
+        e = ((t + s) >> 1) - 5 * harn_get_pp (&pc) + STEP_PCT * (signed char) RS_TEST_STEPS (*r);
+        RS_TEST_GRADE (*r) = grade (harn_test (e));
     }
 }
 
@@ -786,7 +786,7 @@ void __fastcall__ s_pace_set (unsigned char a)
 void __fastcall__ s_stress (struct req* r)
 {
     struct actor* q = HUB->actor;
-    unsigned char k, n = r->kind == RS_TEST && (r->a == P_DISARM || r->a == P_DODGE_HAZARD);
+    unsigned char k, n = r->kind == RS_TEST && (RS_TEST_PURPOSE (*r) == P_DISARM || RS_TEST_PURPOSE (*r) == P_DODGE_HAZARD);
     unsigned dx, dy;
 
     for (k = NACTORS; k; --k, ++q) {
@@ -837,15 +837,15 @@ int __fastcall__ s_fixed (unsigned sides)
 
 void __fastcall__ s_dice_set (struct req* r)
 {
-    if (r->a & 1) {
-        rseed (r->w1);
+    if (RS_DICE_SEEDED (*r)) {
+        rseed (RS_DICE_SEED (*r));
     }
-    r->w1 = drolled;
-    r->c = strlen (dface + dk);
-    memcpy (dface, r->x, DFIX);
+    RS_DICE_ROLLED (*r) = drolled;
+    RS_DICE_UNROLLED (*r) = strlen (dface + dk);
+    memcpy (dface, RS_DICE_FACES (*r), DFIX);
     dk = 0;
-    drep = r->b;
-    memcpy (r->x, dlog, DFIX);
+    drep = RS_DICE_REST (*r);
+    memcpy (RS_DICE_SIDES (*r), dlog, DFIX);
     memset (dlog, 0, DFIX);
     dl = 0;
     drolled = 0;
@@ -884,10 +884,10 @@ signed char __fastcall__ s_side (unsigned char who, unsigned char p, signed char
     }
     q->kind = RS_CONTEST;
     q->actor = who;
-    q->a = p;
-    q->steps = steps;
+    RS_CONTEST_PURPOSE (*q) = p;
+    RS_CONTEST_STEPS (*q) = steps;
     fight (q);
-    return q->grade;
+    return RS_CONTEST_GRADE (*q);
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -900,11 +900,11 @@ signed char __fastcall__ s_side (unsigned char who, unsigned char p, signed char
 void __fastcall__ s_quiet_test (struct req* r)
 {
     if (r->other == RS_ASKER) {
-        r->grade = side (r->actor, r->a, r->steps);
+        RS_TEST_GRADE (*r) = side (r->actor, RS_TEST_PURPOSE (*r), RS_TEST_STEPS (*r));
         return;
     }
     QUIET_IN
-    r->grade = side (r->actor, r->a, r->steps);  /* (The character's, or a creature's by its sheet: a tunneller's
+    RS_TEST_GRADE (*r) = side (r->actor, RS_TEST_PURPOSE (*r), RS_TEST_STEPS (*r));  /* (The character's, or a creature's by its sheet: a tunneller's
                                                 **   dig too, slice 4.11's) */
     QUIET_OUT
 }
@@ -965,10 +965,10 @@ static void __fastcall__ answer (struct req* r)
         load_pc (r);
         break;
     case RS_TEST:
-        if (!r->actor && r->a > P_NOTICE_SMELL) {
+        if (!r->actor && RS_TEST_PURPOSE (*r) > P_NOTICE_SMELL) {
             stress (r);                         /* (A glance's, a sound's, a smell's routine: they're many) */
         }
-        if (r->actor || r->a == P_DIG || r->a == P_STEALTH || r->a == P_APPRAISE || r->a == P_SWIM) {   /* (A creature's
+        if (r->actor || RS_TEST_PURPOSE (*r) == P_DIG || RS_TEST_PURPOSE (*r) == P_STEALTH || RS_TEST_PURPOSE (*r) == P_APPRAISE || RS_TEST_PURPOSE (*r) == P_SWIM) {   /* (A creature's
                                                 **   by its sheet, any test (Phase 3C's: a door forced); judged by the tool to hand that
                                                 **   suits it best; moving quietly, by its own dice; by the craft that
                                                 **   knows the thing: part 3's) */
@@ -976,51 +976,51 @@ parted:
             dig_answer (r);
             break;
         }
-        if (r->a == P_BEARING) {                /* (Its bearings, and the time it keeps (rs.h's TIME_STEPS), by
+        if (RS_TEST_PURPOSE (*r) == P_BEARING) {                /* (Its bearings, and the time it keeps (rs.h's TIME_STEPS), by
                                                 **   their own dice: overlay 5's, bearing.c) */
-            r->grade = bearing_of (r->steps);
-            r->result = bway;
+            RS_TEST_GRADE (*r) = bearing_of (RS_TEST_STEPS (*r));
+            RS_TEST_DRIFT (*r) = bway;
             break;
         }
-        if ((r->a == P_SEARCH || r->a == P_DISARM) && r->b == HIDE_MAGICAL) {   /* (Only by magic: its spells
+        if ((RS_TEST_PURPOSE (*r) == P_SEARCH || RS_TEST_PURPOSE (*r) == P_DISARM) && RS_TEST_HOW (*r) == HIDE_MAGICAL) {   /* (Only by magic: its spells
                                                 **   to come) */
-            r->result = 1;
+            RS_TEST_CANT (*r) = 1;
             break;
         }
-        if (r->a == P_PICKLOCK && !has ("picks")) {    /* (Lockcraft wants its tools: Skills 23) */
-            r->result = 1;
+        if (RS_TEST_PURPOSE (*r) == P_PICKLOCK && !has ("picks")) {    /* (Lockcraft wants its tools: Skills 23) */
+            RS_TEST_CANT (*r) = 1;
             break;
         }
-        if (((unsigned char) (r->a - P_READ) <= P_INTIMIDATE - P_READ || r->a == P_DECEIVE) && r->text[0]) {   /* (Words in a
+        if (((unsigned char) (RS_TEST_PURPOSE (*r) - P_READ) <= P_INTIMIDATE - P_READ || RS_TEST_PURPOSE (*r) == P_DECEIVE) && r->text[0]) {   /* (Words in a
                                                 **   tongue: one it speaks, or nothing; a writing read, its tongue and
                                                 **   its script (P_READ, P_LORE with words; P_TRACK never has any): part 3's) */
             goto parted;
         }
-        if (r->a <= P_NOTICE_SMELL) {           /* (By its state: its pace, its shock; overlay 1's, in a copy) */
+        if (RS_TEST_PURPOSE (*r) <= P_NOTICE_SMELL) {           /* (By its state: its pace, its shock; overlay 1's, in a copy) */
             ps.go = HUB->pc_task.kind == LT_SLEEP ? 0xFF : HUB->pc_going;   /* (0xFF asleep: at half, sheet.c's) */
             ps.watch = HUB->watch;
             memcpy (rq, r, sizeof rq);
-            r->steps += noticing ((struct req*) rq);
+            RS_TEST_STEPS (*r) += noticing ((struct req*) rq);
         }
-        r->grade = r->a == P_DRAW ? draw_test (r->steps) : test (&pc, r->a, r->steps);
+        RS_TEST_GRADE (*r) = RS_TEST_PURPOSE (*r) == P_DRAW ? draw_test (RS_TEST_STEPS (*r)) : test (&pc, RS_TEST_PURPOSE (*r), RS_TEST_STEPS (*r));
         if (drawn_new) {
-            r->result = 1;                      /* (Drawing opened by it: the first map drawn) */
+            RS_TEST_OPENED (*r) = 1;            /* (Drawing opened by it: the first map drawn) */
             drawn_new = 0;
         }
         break;
     case RS_EXERT:                              /* (Its fatigue: its summary anew; result 1, a level more: a long
                                                 **   task's soft question, the world's) */
-        spent_at = r->a;
+        spent_at = RS_EXERT_PACE (*r);
         k = pc.fl;
-        spent (r->w1);
-        r->result = pc.fl > k;
+        spent (RS_EXERT_TENTHS (*r));
+        RS_EXERT_TIRED (*r) = pc.fl > k;
         status ();
         break;
     case RS_EQUIP:
-        if (r->a == 2 && !r->actor) {
+        if (RS_EQUIP_HOW (*r) == 2 && !r->actor) {
             equip_all (r->text);
-            hheld = r->w2;                      /* (The hands that hold something, any thing: slice 4.1b's) */
-            set_load (r->w1);                   /* (And its load: its summary anew) */
+            hheld = RS_EQUIP_HELD (*r);                      /* (The hands that hold something, any thing: slice 4.1b's) */
+            set_load (RS_EQUIP_LOAD (*r));                   /* (And its load: its summary anew) */
             status ();
             break;
         }
@@ -1028,7 +1028,7 @@ parted:
         if (r->actor) {                         /* (An actor's things held and worn: the outfits' gear, gear.c's) */
             den_equip ((r->actor - 1) & 7);
         } else {
-            equip (dtext, r->a);                /* (A tool to hand, or not: skills.c's, the main RAM's room) */
+            equip (dtext, RS_EQUIP_HOW (*r));                /* (A tool to hand, or not: skills.c's, the main RAM's room) */
         }
         break;
 
@@ -1039,13 +1039,13 @@ parted:
         beasts (0);
         break;
     case RS_DESCRIBE:
-        if (r->b == 1) {
+        if (RS_DESCRIBE_WHAT (*r) == 1) {
             brief ();
-        } else if (r->b == 2) {
+        } else if (RS_DESCRIBE_WHAT (*r) == 2) {
             put (hurt);
-        } else if (r->b == 3) {
-            pace_set (r->a);
-        } else if (r->b == 4) {
+        } else if (RS_DESCRIBE_WHAT (*r) == 3) {
+            pace_set (RS_DESCRIBE_BRIEF (*r));
+        } else if (RS_DESCRIBE_WHAT (*r) == 4) {
             put (news);                         /* (What time did to it: heal.c's, told once) */
             news[0] = 0;
         } else {
@@ -1063,11 +1063,11 @@ parted:
         break;
     case RS_CONTEST:                            /* (Each one's test, the actor's first: who did better) */
         stress_lv = 1;                          /* (Two meeting: a foe near) */
-        g = side (r->actor, r->a, r->steps);
-        k = side (r->other, r->b, r->c);
-        r->grade = g;
-        r->c = k;
-        r->result = g > (signed char) k ? 1 : g < (signed char) k ? 2 : 0;
+        g = side (r->actor, RS_CONTEST_PURPOSE (*r), RS_CONTEST_STEPS (*r));
+        k = side (r->other, RS_CONTEST_AGAINST (*r), RS_CONTEST_OSTEPS (*r));
+        RS_CONTEST_GRADE (*r) = g;
+        RS_CONTEST_OGRADE (*r) = k;
+        RS_CONTEST_BETTER (*r) = g > (signed char) k ? 1 : g < (signed char) k ? 2 : 0;
         break;
     default:
         r->result = 0xFF;                       /* (Not yet) */

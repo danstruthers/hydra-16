@@ -45,23 +45,23 @@ void __fastcall__ o_outfit_of (struct req* r)
         lv = roll <= 25 ? 0 : roll <= 75 ? 1 : 2;
         v = purse[c][lv];
     }
-    r->w1 = v * 4;                              /* (Farthings, the world's prices', 2026-10-28) */
-    r->w2 = h;
-    r->a = lv;
+    RS_OUTFIT_MONEY (*r) = v * 4;                              /* (Farthings, the world's prices', 2026-10-28) */
+    RS_OUTFIT_SEED (*r) = h;
+    RS_OUTFIT_LEVEL (*r) = lv;
     v = 1u << culture_tag[pc.culture < 6 ? pc.culture : HARN_FEUDAL] | 1u << (OT_SLAVE + c) | 1u << (OT_POOR + lv) |
         1u << (pc.att[HARN_SX] == HARN_F ? OT_FEMALE : OT_MALE);
-    r->x[0] = v;
-    r->x[1] = v >> 8;
+    RS_OUTFIT_TAGS (*r)[0] = v;
+    RS_OUTFIT_TAGS (*r)[1] = v >> 8;
     k = HEFT_MAX (pc.att[HARN_STR]);
-    r->x[2] = k == 2 ? WV_HEAVY : k ? 0 : WV_LIGHT; /* (Its weapons' version, D13's: the heaviest its Strength wields
+    RS_OUTFIT_HEFT (*r) = k == 2 ? WV_HEAVY : k ? 0 : WV_LIGHT; /* (Its weapons' version, D13's: the heaviest its Strength wields
                                                 **   without penalty, a strong character's heavy) */
     set_load (4000);                            /* (What it bears at encumbrance 2, a little burdened at most, in pounds: its
                                                 **   free pounds, and the load, under two and a half times its Endurance:
                                                 **   the world's to leave the rest out, HOUSE.md's an outfit that fits) */
     v = (carried.cost - carried.wt) / 10 + (5 * harn_end (&pc) - 1) / 2;
-    r->x[3] = v > 255 ? 255 : v;
+    RS_OUTFIT_BEARS (*r) = v > 255 ? 255 : v;
     set_load (0);
-    r->result = 0;
+    RS_OUTFIT_NONE (*r) = 0;
     put (calling);                              /* (Its occupation, then its open skills, the highest first) */
     for (k = 0; k < HARN_NSKILLS; ++k) {
         open[k] = pc.ml[k];

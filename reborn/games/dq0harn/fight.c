@@ -181,7 +181,7 @@ static unsigned char __fastcall__ guard (const struct side* t, unsigned char loc
 void __fastcall__ o_effect (unsigned char target, unsigned char kind, unsigned cond, unsigned char band,
     unsigned char loc, unsigned char aspect)
 {
-    struct rs_effect* e = (struct rs_effect*) R->x + nfx;
+    struct rs_effect* e = (struct rs_effect*) RS_ATTACK_EFFECTS (*R) + nfx;
 
     if (kind == X_DROP && target && aspect != 2) {
         bs.state |= BS_DISARMED;                /* (A creature's weapon let fall: its fists till it takes it up again,
@@ -245,7 +245,7 @@ static unsigned char __fastcall__ is_prone (const struct side* s)
 void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, unsigned char z, unsigned char part,
     char* w, unsigned char stop)
 {
-    unsigned char aspect = aspect_of (s, s == &A ? R->b : AS_BEST), by = dealt (s), loc, f, p, sev, il;
+    unsigned char aspect = aspect_of (s, s == &A ? RS_ATTACK_ASPECT (*R) : AS_BEST), by = dealt (s), loc, f, p, sev, il;
     harn_char* c = t->c;
     harn_injury* j;
     int impact;
@@ -257,7 +257,7 @@ void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, uns
         if (impact >= 1 && arm[0]) {
             strcpy (w, t->who ? "its " : "your ");
             strcat (w, arm);
-            R->c |= stop;
+            RS_ATTACK_AF (*R) |= stop;
         }
         return;
     }
@@ -286,9 +286,9 @@ void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, uns
     if (s->b && !t->who && (by == BY_BITE || by == BY_CLAWS)) {    /* (A venom, a disease: afflict.c's) */
         strcpy (bkey, s->b->key);               /* (Its kind's key into the main RAM: the bestiary's the window's) */
         if (envenom (bkey, loc, impact - p)) {
-            R->c |= AF_NEWS;                    /* (A venomous bite: its venom's course, heal.c's, told after) */
+            RS_ATTACK_AF (*R) |= AF_NEWS;                    /* (A venomous bite: its venom's course, heal.c's, told after) */
             if (out_t) {
-                R->w2 = out_t;                  /* (Its ache's shock: senseless) */
+                RS_ATTACK_OUT (*R) = out_t;                  /* (Its ache's shock: senseless) */
             }
         }
     }
@@ -300,7 +300,7 @@ void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, uns
         o_effect (t->who, X_DROP, 0, 0, p, 0);    /* (An arm's: what it held in that hand dropped, the world's) */
     }
     if (f & HARN_W_DOWN) {
-        R->w2 = knocked_out (c, t->who ? &bs.out : &pc_out, &R->c);    /* (Senseless: the tenths till it comes
+        RS_ATTACK_OUT (*R) = knocked_out (c, t->who ? &bs.out : &pc_out, &RS_ATTACK_AF (*R));    /* (Senseless: the tenths till it comes
                                                 **   round, sheet.c's) */
         o_effect (t->who, X_COND_ON, C_UNCONSCIOUS, 0, 0, 0);
     }
@@ -309,11 +309,11 @@ void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, uns
 /* A fumble roll, or a stumble roll, for side s (which: its bit in the reply's a) */
 static void __fastcall__ mishap (struct side* s, unsigned char stumble, unsigned char which)
 {
-    R->a |= which;
+    RS_ATTACK_WHOSE (*R) |= which;
     if (stumble ? harn_stumble_roll (s->c, 0) : harn_fumble_roll (s->c, 0)) {
         if (stumble) {
             prone (s, 1);
-        } else if ((s == &A || !(R->c & AF_SHIELD)) && (stumble = fumbled (s, s == &A)) != 0) {
+        } else if ((s == &A || !(RS_ATTACK_AF (*R) & AF_SHIELD)) && (stumble = fumbled (s, s == &A)) != 0) {
                                                 /* (A shield's block fumbled: it's strapped on, nothing let go
                                                 **   of: the book's fumble roll the easier for it, Skills 21; the
                                                 **   house's none) */
@@ -339,7 +339,7 @@ static unsigned char defence (void)
             dbt[k] = tnow + 100;                /* (A round's tenths, RS_HELLO's) */
             strcpy (D.word, dshw);
             memcpy (D.imp, dshi, sizeof D.imp);    /* (A fist that meets it struck by the shield, not its sword) */
-            R->c |= AF_SHIELD;
+            RS_ATTACK_AF (*R) |= AF_SHIELD;
             return HARN_BLOCK;
         }
         return D.aml >= D.dodge ? HARN_COUNTER : HARN_DODGE;
@@ -349,34 +349,34 @@ static unsigned char defence (void)
 
 static void attack (void)
 {
-    unsigned char z = R->a == Z_HIGH ? HARN_HIGH : R->a == Z_LOW ? HARN_LOW : HARN_MID, def, al, dl, res, n, k, ab;
-    int mod = STEP_PCT * (signed char) R->steps, dmod = -2 * STEP_PCT * (int) R->c;   /* (Outnumbered: two steps
+    unsigned char z = RS_ATTACK_AIM (*R) == Z_HIGH ? HARN_HIGH : RS_ATTACK_AIM (*R) == Z_LOW ? HARN_LOW : HARN_MID, def, al, dl, res, n, k, ab;
+    int mod = STEP_PCT * (signed char) RS_ATTACK_STEPS (*R), dmod = -2 * STEP_PCT * (int) RS_ATTACK_OUTNUMBERED (*R);   /* (Outnumbered: two steps
                                                 **   worse each one more) */
 
-    R->a = 0;
-    R->c = 0;
+    RS_ATTACK_WHOSE (*R) = 0;
+    RS_ATTACK_AF (*R) = 0;
     if (A.c->state != HARN_CONSCIOUS || (!A.who && pc_out > tnow)) {
-        R->result = 0xFF;                       /* (It can't) */
+        RS_ATTACK_OUTCOME (*R) = 0xFF;                       /* (It can't) */
         return;
     }
     if (is_prone (&A)) {                        /* (Fallen: it gets up, its turn spent; or tries to and stays down,
                                                 **   a: the house's test, gear.c's rise_of, slice 4.1b's; up first,
                                                 **   then its weapon taken up, 2026-10-29) */
-        R->a = !G_OK (rise_of (A.c));
-        R->result = O_RISE;
+        RS_ATTACK_DOWN (*R) = !G_OK (rise_of (A.c));
+        RS_ATTACK_OUTCOME (*R) = O_RISE;
         return;
     }
     if (prones & RS_REARM) {                    /* (Its weapon let fall taken up again, its turn spent: the world's,
                                                 **   slice 4.1b's) */
         bs.state &= ~BS_DISARMED;
-        R->result = O_REARM;
+        RS_ATTACK_OUTCOME (*R) = O_REARM;
         return;
     }
     if (D.who && D.c->state == HARN_UNCONSCIOUS) {
         D.c->state = HARN_DEAD;                 /* (Senseless: finished where it lies) */
         o_effect (D.who, X_DEATH, C_DEAD, HARN_KILL, 0, 0);
-        R->result = O_DISPATCH;
-        R->b = D_NONE;
+        RS_ATTACK_OUTCOME (*R) = O_DISPATCH;
+        RS_ATTACK_DEFENCE (*R) = D_NONE;
         return;
     }
     if (!D.who && pc_out > tnow) {              /* (The character senseless: a killer finishes it where it lies
@@ -385,7 +385,7 @@ static void attack (void)
                                                 **   neck."; any other holds its blow, the minds' to say: one posted
                                                 **   as it fell) */
         if (!(prones & RS_KILLER)) {
-            R->result = 0xFF;
+            RS_ATTACK_OUTCOME (*R) = 0xFF;
             return;
         }
         k = aspect_of (&A, AS_BEST);
@@ -394,12 +394,12 @@ static void attack (void)
         pc_out = 0;
         o_effect (0, X_DEATH, C_DEAD, HARN_KILL, z, k);
         wound_words (line[0], HARN_KILL, z, k, 0, dealt (&A));
-        R->result = O_HIT;
-        R->b = D_NONE;
+        RS_ATTACK_OUTCOME (*R) = O_HIT;
+        RS_ATTACK_DEFENCE (*R) = D_NONE;
         return;
     }
     if (!D.who && pc.state == HARN_SHOCK && !(prones & RS_KILLER)) {
-        R->result = 0xFF;                       /* (In shock, helpless: a blow from any but a killer held too, as one
+        RS_ATTACK_OUTCOME (*R) = 0xFF;                       /* (In shock, helpless: a blow from any but a killer held too, as one
                                                 **   senseless's is: nobody engages one helpless, slice 4.3's) */
         return;
     }
@@ -421,7 +421,7 @@ static void attack (void)
     }
     switch (k) {
     case HARN_R_BLOCK:
-        R->result = O_BLOCKED;
+        RS_ATTACK_OUTCOME (*R) = O_BLOCKED;
         if (D.bare && A.part == 0xFF) {         /* (A bare arm against a weapon: struck, H2) */
             o_strike (&A, &D, 2, 0, HARN_FOREARM, line[0], AF_STOPPED);
         } else if (A.part != 0xFF && !D.bare) { /* (A claw or a bite against a weapon: struck by it) */
@@ -430,19 +430,19 @@ static void attack (void)
                                                 **   1 a weapon, 2 a creature's shield, the world's to word and to make its
                                                 **   pieces) */
             o_effect (n == 1 ? A.who : D.who, X_DROP, 0, 0, fumbled (n == 1 ? &A : &D, n == 1) | 0x80,
-                n == 2 && D.b && (R->c & AF_SHIELD) ? 2 : 1);
+                n == 2 && D.b && (RS_ATTACK_AF (*R) & AF_SHIELD) ? 2 : 1);
         }
         break;
     case HARN_R_AH:
-        R->result = O_HIT;
+        RS_ATTACK_OUTCOME (*R) = O_HIT;
         o_strike (&A, &D, n, z, 0xFF, line[0], AF_STOPPED);
         break;
     case HARN_R_DH:
-        R->result = O_COUNTER_HIT;
+        RS_ATTACK_OUTCOME (*R) = O_COUNTER_HIT;
         o_strike (&D, &A, n, HARN_MID, 0xFF, line[1], AF_STOPPED_D);
         break;
     case HARN_R_BH:
-        R->result = O_BOTH_HIT;
+        RS_ATTACK_OUTCOME (*R) = O_BOTH_HIT;
         o_strike (&A, &D, n, z, 0xFF, line[0], AF_STOPPED);
         o_strike (&D, &A, n, HARN_MID, 0xFF, line[1], AF_STOPPED_D);
         break;
@@ -453,7 +453,7 @@ static void attack (void)
     case HARN_R_DS:
     case HARN_R_BS:
         ab = k == HARN_R_AF || k == HARN_R_AS ? 1 : k == HARN_R_DF || k == HARN_R_DS ? 2 : 3;
-        R->result = k >= HARN_R_AS ? O_STUMBLE : O_FUMBLE;
+        RS_ATTACK_OUTCOME (*R) = k >= HARN_R_AS ? O_STUMBLE : O_FUMBLE;
         if (ab & 1) {
             mishap (&A, k >= HARN_R_AS, 1);
         }
@@ -462,14 +462,14 @@ static void attack (void)
         }
         break;
     case HARN_R_DTA:
-        R->result = O_ADVANTAGE;
-        R->c |= AF_TA;
+        RS_ATTACK_OUTCOME (*R) = O_ADVANTAGE;
+        RS_ATTACK_AF (*R) |= AF_TA;
         break;
     default:
-        R->result = def == HARN_DODGE && al >= HARN_MS ? O_DODGED : O_MISS;    /* (Dodged: a blow that was good) */
+        RS_ATTACK_OUTCOME (*R) = def == HARN_DODGE && al >= HARN_MS ? O_DODGED : O_MISS;    /* (Dodged: a blow that was good) */
         break;
     }
-    R->b = def == HARN_BLOCK ? D_BLOCK : def == HARN_COUNTER ? D_COUNTER : def == HARN_DODGE ? D_DODGE : D_NONE;
+    RS_ATTACK_DEFENCE (*R) = def == HARN_BLOCK ? D_BLOCK : def == HARN_COUNTER ? D_COUNTER : def == HARN_DODGE ? D_DODGE : D_NONE;
 }
 
 /* ---- The requests */
@@ -486,13 +486,13 @@ static unsigned char hd6 (void)
 
 static void new_beast (void)
 {
-    struct rs_summary* s = (struct rs_summary*) R->x;
+    struct rs_summary* s = (struct rs_summary*) RS_NEW_ACTOR_SUMMARY (*R);
     const struct bkind* b;
-    unsigned char k = R->actor - 1, n = R->w1, j;
+    unsigned char k = R->actor - 1, n = RS_NEW_ACTOR_RECORD (*R), j;
     int v, a;
 
     if (k >= NACTORS) {
-        R->result = 1;
+        RS_NEW_ACTOR_BAD (*R) = 1;
         return;
     }
     aden[k] = n;
@@ -501,11 +501,11 @@ static void new_beast (void)
     }
     if (j == NBEASTS) {
         j = 0;
-        R->result = 1;
+        RS_NEW_ACTOR_BAD (*R) = 1;
     }
     b = beast (j);
     sheet_get (n);
-    want_fl (n | (bs.kind != j + 1) << 8, R->c);    /* (Its hunger and thirst's fatigue, the minds'; a new creature
+    want_fl (n | (bs.kind != j + 1) << 8, RS_NEW_ACTOR_WANT (*R));    /* (Its hunger and thirst's fatigue, the minds'; a new creature
                                                 **   rested: tire.c's) */
     if (bs.kind != j + 1) {
         memset (&bs, 0, sizeof bs);
@@ -538,12 +538,12 @@ static unsigned char __fastcall__ courage (const struct bkind* b, signed char st
 {
     unsigned char lv;
 
-    R->grade = G_MS;
+    RS_MORALE_GRADE (*R) = G_MS;
     if (b->flags & BF_MINDLESS) {
         return M_STEADY;                        /* (Bones fear nothing) */
     }
     lv = harn_test (b->ini - 5 * harn_get_pp (&cr) + STEP_PCT * steps);
-    R->grade = lv == HARN_CF ? G_CF : lv == HARN_MF ? G_MF : lv == HARN_MS ? G_MS : G_CS;
+    RS_MORALE_GRADE (*R) = lv == HARN_CF ? G_CF : lv == HARN_MF ? G_MF : lv == HARN_MS ? G_MS : G_CS;
     if (lv == HARN_MF) {
         return M_CAUTIOUS;
     }
@@ -560,10 +560,10 @@ static unsigned char __fastcall__ courage (const struct bkind* b, signed char st
 /* Morale (RS_MORALE): an actor's courage, the result its state (the character's the player's own: steady) */
 static void morale (void)
 {
-    R->result = M_STEADY;
-    R->grade = G_MS;
+    RS_MORALE_STATE (*R) = M_STEADY;
+    RS_MORALE_GRADE (*R) = G_MS;
     if (R->actor) {
-        R->result = courage (unpack (R->actor), (signed char) R->steps);
+        RS_MORALE_STATE (*R) = courage (unpack (R->actor), (signed char) RS_MORALE_STEPS (*R));
     }
 }
 
@@ -582,9 +582,9 @@ static void tested (void)
 {
     const struct bkind* b = unpack (R->actor);
 
-    R->grade = cr.state != HARN_CONSCIOUS ? G_CF : grade (harn_test ((R->a == P_INITIATIVE ? b->ini :
-        5 * cr.att[R->a == P_STEALTH ? HARN_AGL : R->a == P_NOTICE_SIGHT ? HARN_EYE : R->a == P_DIG ? HARN_STR : HARN_DEX]) - 5 * harn_get_pp (&cr) +
-        STEP_PCT * (signed char) R->steps));
+    RS_CONTEST_GRADE (*R) = cr.state != HARN_CONSCIOUS ? G_CF : grade (harn_test ((RS_CONTEST_PURPOSE (*R) == P_INITIATIVE ? b->ini :
+        5 * cr.att[RS_CONTEST_PURPOSE (*R) == P_STEALTH ? HARN_AGL : RS_CONTEST_PURPOSE (*R) == P_NOTICE_SIGHT ? HARN_EYE : RS_CONTEST_PURPOSE (*R) == P_DIG ? HARN_STR : HARN_DEX]) - 5 * harn_get_pp (&cr) +
+        STEP_PCT * (signed char) RS_CONTEST_STEPS (*R)));
 }
 
 /* What a blow left them in, for the world (rs.h's AF_*: the reply's grade as hub.h's FF_*: it keeps it), and the
@@ -592,9 +592,9 @@ static void tested (void)
 ** heart the steps (RS_HEART's: the denizens' field and bonds, HOUSE.md's morale) */
 static void __fastcall__ left (unsigned char shy, signed char heart)
 {
-    const struct rs_effect* e = (const struct rs_effect*) R->x;
+    const struct rs_effect* e = (const struct rs_effect*) RS_ATTACK_EFFECTS (*R);
     const struct side* s = D.who ? &D : &A;     /* (The creature's: the defender's if it's one, a stray's at one) */
-    unsigned char k, f = R->c & (AF_STOPPED | AF_STOPPED_D) ? FF_STOPPED : 0, hurt = 0, m;
+    unsigned char k, f = RS_ATTACK_AF (*R) & (AF_STOPPED | AF_STOPPED_D) ? FF_STOPPED : 0, hurt = 0, m;
 
     for (k = 0; k < RS_EFFECTS && e->kind; ++k, ++e) {
         if (e->kind == X_DEATH) {
@@ -611,7 +611,7 @@ static void __fastcall__ left (unsigned char shy, signed char heart)
         if (m == M_BROKEN || (m == M_CAUTIOUS && shy)) {
             f |= FF_FLEES;
         } else if (m == M_CAUTIOUS) {
-            R->c |= AF_CAUTIOUS;
+            RS_ATTACK_AF (*R) |= AF_CAUTIOUS;
         }
     }
     if (tup && !(f & FF_FLEES) && cr.state == HARN_CONSCIOUS && !(s->b->flags & (BF_FOLK | BF_BIPED | BF_MINDLESS))) {
@@ -622,19 +622,19 @@ static void __fastcall__ left (unsigned char shy, signed char heart)
         }
     }
     if (cond_of (&cr) & C_BLEEDING) {
-        R->c |= AF_BLEEDING;
+        RS_ATTACK_AF (*R) |= AF_BLEEDING;
     }
-    R->grade = f;
+    RS_ATTACK_LEFT (*R) = f;
 }
 
 /* r a copy of the request, in the main RAM (but its text: its words put into it) */
 void __fastcall__ o_fight (struct req* r)
 {
-    unsigned char shy = r->w2 & 1, sb;
+    unsigned char shy = RS_ATTACK_SHY (*r), sb;
     signed char heart = RS_HEART (r);           /* (Read before the reply's effects take its place) */
     unsigned sw;
 
-    prones = r->w2;
+    prones = RS_ATTACK_FLAGS (*r);
     R = r;
     nfx = 0;
     stress_lv = 1;                              /* (A fight: a foe near) */
@@ -660,10 +660,10 @@ void __fastcall__ o_fight (struct req* r)
         hit_thing (r, &A);                      /* (Gear.c's: overlay 3's) */
         return;
     }
-    memset (r->x, 0, sizeof r->x);              /* (RS_ATTACK) */
+    memset (RS_ATTACK_EFFECTS (*r), 0, sizeof RS_ATTACK_EFFECTS (*r));              /* (RS_ATTACK) */
     line[0][0] = line[1][0] = 0;
-    if (r->actor && r->other && !(r->w2 & MS_STRAY)) {
-        r->result = 0xFF;                       /* (Creatures fighting each other: later, with allies; but a missile's
+    if (r->actor && r->other && !(RS_ATTACK_FLAGS (*r) & MS_STRAY)) {
+        RS_ATTACK_OUTCOME (*r) = 0xFF;                       /* (Creatures fighting each other: later, with allies; but a missile's
                                                 **   stray, one struck by another's shot, 2026-10-30) */
         return;
     }
@@ -681,7 +681,7 @@ void __fastcall__ o_fight (struct req* r)
     }
     A.who = r->actor;
     D.who = r->other;
-    if (r->w2 & RS_MISSILE) {                   /* (A missile's: overlay 7's, missile.c; a creature's skill at it its
+    if (RS_ATTACK_FLAGS (*r) & RS_MISSILE) {                   /* (A missile's: overlay 7's, missile.c; a creature's skill at it its
                                                 **   own weapon's, ten less, the house's) */
         if (r->actor) {
             A.aml = A.b->w[0].ml - 5 * harn_get_pp (&cr) - 10;
@@ -689,26 +689,26 @@ void __fastcall__ o_fight (struct req* r)
         if ((sw = shot ()) & SHOT_DROP) {        /* (Its strike, its fumble's drop: overlay 2's, here) */
             o_effect (A.who, X_DROP, 0, 0, A.who ? DH_RIGHT : pc_hand & IH_BOTH, 0);
         } else if (sw) {
-            sb = R->b;
-            R->b = sw >> 12 & 3;                 /* (strike's: the attacker's aspect, its request's b) */
+            sb = RS_ATTACK_ASPECT (*R);
+            RS_ATTACK_ASPECT (*R) = sw >> 12 & 3;                 /* (strike's: the attacker's aspect, its request's b) */
             o_strike (&A, &D, sw >> 8 & 3, sw >> 10 & 3, sw, line[0], AF_STOPPED);
-            R->b = sb;
+            RS_ATTACK_ASPECT (*R) = sb;
         }
     } else {
         heft (&A);                              /* (Their weapons' versions: D13's) */
         heft (&D);
         attack ();
-        if (r->result != 0xFF && !r->actor) {   /* (The character's skill used in it, for its development rolls,
+        if (RS_ATTACK_OUTCOME (*r) != 0xFF && !r->actor) {   /* (The character's skill used in it, for its development rolls,
                                                 **   opened its first time, the book's, Combat 19: its weapon striking;
                                                 **   skills.c's, slice 4.4's) */
             skill_used (A.sk);
         }
     }
-    if (r->result != 0xFF && r->actor && !r->other) {   /* (Or the thing that blocked, its dodge: at it, a shot too) */
-        skill_used (r->b == D_DODGE ? HARN_DGE : r->b != D_NONE ? D.sk : 0xFF);
+    if (RS_ATTACK_OUTCOME (*r) != 0xFF && r->actor && !r->other) {   /* (Or the thing that blocked, its dodge: at it, a shot too) */
+        skill_used (RS_ATTACK_DEFENCE (*r) == D_DODGE ? HARN_DGE : RS_ATTACK_DEFENCE (*r) != D_NONE ? D.sk : 0xFF);
     }
     tup = 0;
-    if (r->result != 0xFF && !(r->w2 & MS_STRAY)) {
+    if (RS_ATTACK_OUTCOME (*r) != 0xFF && !(RS_ATTACK_FLAGS (*r) & MS_STRAY)) {
         tup = r->actor ? worked (r->actor) : worked (r->other);    /* (Its round of the fight, the creature's in it:
                                                 **   strenuous work) */
     }
@@ -719,8 +719,8 @@ void __fastcall__ o_fight (struct req* r)
     put (line[0]);
     put ("\n");
     put (line[1]);
-    r->w1 = health_of (A.c) | health_of (D.c) << 8;
-    if (r->result != 0xFF) {
+    RS_ATTACK_HEALTH (*r) = health_of (A.c) | health_of (D.c) << 8;
+    if (RS_ATTACK_OUTCOME (*r) != 0xFF) {
         left (shy, heart);
     }
     pack ();

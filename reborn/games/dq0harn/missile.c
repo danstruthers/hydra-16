@@ -100,20 +100,20 @@ unsigned o_shot (void)
     int mod, blk = 0, dge = 0, imp;
     unsigned out = 0;
 
-    band = R->b & 3;
-    f = R->w2 >> 8;                             /* (Its MS_*, rs.h's, their high byte: MS_ >> 8 below) */
-    z = R->a == Z_HIGH ? HARN_HIGH : R->a == Z_LOW ? HARN_LOW : HARN_MID;
-    mod = STEP_PCT * (signed char) R->steps;
-    k = R->c;
-    R->a = R->c = 0;
+    band = RS_ATTACK_BAND (*R) & 3;
+    f = RS_ATTACK_FLAGS (*R) >> 8;                             /* (Its MS_*, rs.h's, their high byte: MS_ >> 8 below) */
+    z = RS_ATTACK_AIM (*R) == Z_HIGH ? HARN_HIGH : RS_ATTACK_AIM (*R) == Z_LOW ? HARN_LOW : HARN_MID;
+    mod = STEP_PCT * (signed char) RS_ATTACK_STEPS (*R);
+    k = RS_ATTACK_MISSILE (*R);
+    RS_ATTACK_WHOSE (*R) = RS_ATTACK_AF (*R) = 0;
     if (!(f & (MS_STRAY >> 8)) && (A.c->state != HARN_CONSCIOUS || (!A.who && pc_out > tnow))) {
-        R->result = 0xFF;                       /* (It can't; a stray's struck already, its shooter's own state
+        RS_ATTACK_OUTCOME (*R) = 0xFF;                       /* (It can't; a stray's struck already, its shooter's own state
                                                 **   none of it: both creatures', the sheet the one struck's) */
         return 0;
     }
     if (prones & RS_PRONE_A) {                  /* (Fallen: it gets up first, its turn spent, as a blow's) */
-        R->a = !G_OK (rise_of (A.c));
-        R->result = O_RISE;
+        RS_ATTACK_DOWN (*R) = !G_OK (rise_of (A.c));
+        RS_ATTACK_OUTCOME (*R) = O_RISE;
         return 0;
     }
     for (w = mws; w < mws + NMW && w->kind != k; ++w) {
@@ -200,34 +200,34 @@ unsigned o_shot (void)
     switch (HARN_R_KIND (res)) {
     case HARN_R_WILD:                           /* (Gone wild: the attacker's fumble roll, what it shot with let fall;
                                                 **   a thing thrown gone already) */
-        R->result = O_FUMBLE;
-        R->a = 1;
+        RS_ATTACK_OUTCOME (*R) = O_FUMBLE;
+        RS_ATTACK_WHOSE (*R) = 1;
         if (w < mws + NMW && w->sk != HARN_DAG && w->sk != HARN_AXE && w->sk != HARN_SPR && harn_fumble_roll (A.c, 0)) {
             out = SHOT_DROP;
         }
         break;
     case HARN_R_BLOCK:
-        R->result = O_BLOCKED;
+        RS_ATTACK_OUTCOME (*R) = O_BLOCKED;
         if (D.who && D.dslot) {
-            R->c |= AF_SHIELD;
+            RS_ATTACK_AF (*R) |= AF_SHIELD;
         } else if (!D.who && D.bare) {          /* (A bare arm's: struck, the book's H2) */
             out = SHOT_HIT (2, 0, asp, HARN_FOREARM);
         }
         break;
     case HARN_R_AH:
-        R->result = O_HIT;
+        RS_ATTACK_OUTCOME (*R) = O_HIT;
         loc = harn_strike_location (z);
         if ((f & (MS_COVER >> 8)) && HARN_LOC (loc) > HARN_NECK) {
             strcpy (line[0], "the stone");      /* (Behind cover: "..., but the blow glances off the stone") */
-            R->c |= AF_STOPPED;
+            RS_ATTACK_AF (*R) |= AF_STOPPED;
             break;
         }
         out = SHOT_HIT (n, z, asp, loc);
         break;
     default:
-        R->result = def == HARN_DODGE && al >= HARN_MS ? O_DODGED : O_MISS;
+        RS_ATTACK_OUTCOME (*R) = def == HARN_DODGE && al >= HARN_MS ? O_DODGED : O_MISS;
         break;
     }
-    R->b = def == HARN_BLOCK ? D_BLOCK : def == HARN_DODGE ? D_DODGE : D_NONE;
+    RS_ATTACK_DEFENCE (*R) = def == HARN_BLOCK ? D_BLOCK : def == HARN_DODGE ? D_DODGE : D_NONE;
     return out;
 }

@@ -76,22 +76,22 @@ unsigned s_body_ask (void)
     r->kind = RS_TIME;
     r->actor = 0xFF;
     r->other = 0;
-    r->a = a;
-    r->b = 1;
-    r->w1 = n;
-    r->w2 = bleeds;
-    r->x[0] = x;
-    r->x[2] = HUB->pc_under == 0xFF ? 3 : 0;    /* (Drowned: slice 4.9's) */
-    r->x[18] = HUB->pc_aff;                     /* (Exposed, the air, its flame: 2026-10-31, told once) */
-    r->x[19] = HUB->pc_dose;
-    r->x[20] = HUB->pc_air;
-    r->x[21] = HUB->pc_flm;
+    RS_TIME_ABOUT (*r) = a;
+    RS_TIME_PC (*r) = 1;
+    RS_TIME_MINUTES (*r) = n;
+    RS_TIME_BLEEDERS (*r) = bleeds;
+    RS_TIME_FIGHTING (*r) = x;
+    RS_TIME_DROWNED (*r) = HUB->pc_under == 0xFF ? 3 : 0;    /* (Drowned: slice 4.9's) */
+    RS_TIME_AFF (*r) = HUB->pc_aff;                     /* (Exposed, the air, its flame: 2026-10-31, told once) */
+    RS_TIME_DOSE (*r) = HUB->pc_dose;
+    RS_TIME_AIR (*r) = HUB->pc_air;
+    RS_TIME_FLAME (*r) = HUB->pc_flm;
     HUB->pc_aff = HUB->pc_flm = 0;
     r = hub_ask (SLOT_WORLD);
-    memcpy (&wdue, r->x + 4, 4);
+    memcpy (&wdue, &RS_TIME_NEXT (*r), 4);
     body_due = wdue;
-    w = r->w1 | (unsigned) r->c << 8;
-    a = r->result | r->grade;
+    w = RS_TIME_DEAD (*r) | (unsigned) RS_TIME_BOUND (*r) << 8;
+    a = RS_TIME_DIED (*r) | RS_TIME_NEWS (*r);
     r->state = REQ_FREE;
     if ((a & 8) && HUB->pc_task.kind) {
         pc_tired = TE_ASK_HEARD;                /* (Hungrier, thirstier: its long task asked about, soft, "Keep

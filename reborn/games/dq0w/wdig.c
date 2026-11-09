@@ -232,11 +232,11 @@ spell:
         r = &HUB->slot[SLOT_WORLD];             /* (The referee's: the actor's own test, by its sheet) */
         r->kind = RS_TEST;
         r->actor = bk + 1;
-        r->a = P_DIG;
-        r->b = mat;
-        r->steps = 0;
+        RS_TEST_PURPOSE (*r) = P_DIG;
+        RS_TEST_MAT (*r) = mat;
+        RS_TEST_STEPS (*r) = 0;
         r = hub_ask (SLOT_WORLD);
-        g = r->grade;
+        g = RS_TEST_GRADE (*r);
         r->state = REQ_FREE;
     }
     made = g == G_CS ? 2 * rate : g == G_MS ? rate : g == G_MF ? rate >> 1 : 0;

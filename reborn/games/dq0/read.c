@@ -396,16 +396,16 @@ static void __fastcall__ read_it (unsigned id, signed char cond, signed char app
     q = &HUB->slot[SLOT_UI];
     q->kind = RS_TEST;
     q->actor = 0;
-    q->a = P_READ;
-    q->b = 0;
-    q->steps = cond;
-    q->w1 = id;
+    RS_TEST_PURPOSE (*q) = P_READ;
+    RS_TEST_HOW (*q) = 0;
+    RS_TEST_STEPS (*q) = cond;
+    RS_TEST_ITEM (*q) = id;
     strcpy (q->text, K.tongue[0] ? K.tongue : "common");
     strcat (q->text, " *");
     strcat (q->text, K.script[0] ? K.script : "ardic");
     q = hub_ask (SLOT_UI);
-    g = q->grade;
-    res = q->result;
+    g = RS_TEST_GRADE (*q);
+    res = RS_TEST_CANT (*q);
     q->state = REQ_FREE;
     if (res) {
         sayf (res == 1 ? "\nYou can't read: the marks on the %s mean nothing to you." : res == 2 ?
@@ -486,7 +486,7 @@ static unsigned char __fastcall__ reading (struct cmd* c)
         clue_make (x);                          /* (Made if it isn't: part 26's; this part's statics afresh after it) */
         x = othings_x;
         clue_io (CLUE_HERE | x, 0);
-        g = ask_b (RS_TEST, P_DRAW, 0)->grade;  /* (The book's Drawing, its Cartography first: the referee's) */
+        g = RS_TEST_GRADE (*ask_b (RS_TEST, P_DRAW, 0));  /* (The book's Drawing, its Cartography first: the referee's) */
         HUB->slot[SLOT_UI].state = REQ_FREE;
         K.copy = g == G_CS ? 2 : g == G_MS ? 1 : g == G_MF ? -1 : -2;
         sayf ("\nYou copy the marks of the %s onto your sheet, line by line: %s.", c->obj.word, g == G_CS ?

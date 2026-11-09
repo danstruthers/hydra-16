@@ -36,7 +36,7 @@ function layoutOf(H) {
   slot: F('struct hub', 'slot'), slotSize: Z('req'), nslots: K('NSLOTS'), dslot: F('struct hub', 'dslot'),
   rqKind: F('struct req', 'kind'), rqActor: F('struct req', 'actor'), rqOther: F('struct req', 'other'), rqA: F('struct req', 'a'),
   rqB: F('struct req', 'b'), rqC: F('struct req', 'c'), rqW1: F('struct req', 'w1'), rqW2: F('struct req', 'w2'),
-  rqGrade: F('struct req', 'grade'), rqResult: F('struct req', 'result'), rqSteps: F('struct req', 'steps'),
+  rqGrade: F('struct req', 'grade'), rqResult: F('struct req', 'result'), rqSteps: F('struct req', 'steps'), reqPosted: K('REQ_POSTED'),
   now: F('struct hub', 'now'), quit: F('struct hub', 'quit'), seed: F('struct hub', 'seed'), pcstatus: F('struct hub', 'pcstatus'),
   pcSn: F('struct hub', 'pc_stratum'), pcX: F('struct hub', 'pc_x'), pcY: F('struct hub', 'pc_y'), pcFace: F('struct hub', 'pc_face'),
   pcLight: F('struct hub', 'pc_light'), pcLamp: F('struct hub', 'pc_lamp'), pcsum: F('struct hub', 'pcsum'),
@@ -165,6 +165,7 @@ function createRecorder() {
   let m = null, key0 = -1, game = null, enters = 0;
   const games = [];
   const bank = n => m && key0 >= 0 ? m.sharedBanks()[key0 + n] : null;
+  const rqAt = off => off === L.dslot || (off >= L.slot && off < L.slot + L.nslots * L.slotSize && (off - L.slot) % L.slotSize === 0);   // (A slot of the referee's)
   const w16 = (b, o) => b[o] | b[o + 1] << 8, s8 = v => v << 24 >> 24;
   const w32 = (b, o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0;
   const str = (b, o, n) => { let s = ''; for (let i = 0; i < n && b[o + i]; i++) s += String.fromCharCode(b[o + i]); return s; };
@@ -328,7 +329,7 @@ function createRecorder() {
       const b = m.sharedBanks()[k];
       if (b && b[0] === (L.magic & 0xFF)) {
         key0 = k;
-        games.push(game = { line: enters, events: [], dens: [], replies: [], snaps: [], tasks: [], intents: [], eq: 0, dq: 0, iq: 0, di: 0 });
+        games.push(game = { line: enters, events: [], dens: [], replies: [], snaps: [], tasks: [], intents: [], asked: {}, eq: 0, dq: 0, iq: 0, di: 0 });
       }
       return;
     }
@@ -362,11 +363,15 @@ function createRecorder() {
       else if (off === L.dsenseAt) game.replies.push({ line: enters, req: 'dsense', who: h[L.dsWho], noise: h[L.dsNoise], res: h[L.dsRes],
         cost: h[L.dsCost], now: w16(h, L.hubNow) + w16(h, L.hubNow + 2) * 65536, pc: { x: w16(h, L.pcX), y: w16(h, L.pcY), noise: h[L.pcNoise] },
         x: w16(h, L.actor + h[L.dsWho] * L.actorSize + L.aX), y: w16(h, L.actor + h[L.dsWho] * L.actorSize + L.aY) });
-      else if (off === L.dslot || (off >= L.slot && off < L.slot + L.nslots * L.slotSize && (off - L.slot) % L.slotSize === 0)) {
-        game.replies.push({ line: enters, req: off === L.dslot ? 'dslot' : 'slot' + (off - L.slot) / L.slotSize, kind: h[off + L.rqKind],
+      else if (rqAt(off)) {
+        const rs = name('RS_HELLO', h[off + L.rqKind]);       // (Its request's fields as it was asked, and its reply's, by
+        game.replies.push({ line: enters, req: off === L.dslot ? 'dslot' : 'slot' + (off - L.slot) / L.slotSize, kind: h[off + L.rqKind],   //   name)
           actor: h[off + L.rqActor], other: h[off + L.rqOther], a: h[off + L.rqA], b: h[off + L.rqB], c: h[off + L.rqC],
-          w1: w16(h, off + L.rqW1), w2: w16(h, off + L.rqW2), grade: s8(h[off + L.rqGrade]), result: h[off + L.rqResult], steps: s8(h[off + L.rqSteps]) });
+          w1: w16(h, off + L.rqW1), w2: w16(h, off + L.rqW2), grade: s8(h[off + L.rqGrade]), result: h[off + L.rqResult], steps: s8(h[off + L.rqSteps]),
+          rs, ask: game.asked[off] || {}, reply: H.payload(rs, 'reply') !== H.payload(rs) ? H.decode(h, off, rs, 'reply') : {} });
       }
+    } else if (v === L.reqPosted && rqAt(off)) {               // (A request posted, the referee's: its fields by name, kept
+      game.asked[off] = H.decode(h, off, name('RS_HELLO', h[off + L.rqKind]), '');   //   for its reply's record)
     }
   }
   // (Each line entered: a CR the CPU reads from the serial port, the state it finds kept first; the lines typed, as

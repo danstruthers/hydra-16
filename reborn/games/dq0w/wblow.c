@@ -67,31 +67,31 @@ static unsigned char __fastcall__ batter (unsigned char mat, unsigned char body)
     r->kind = RS_ATTACK;
     r->actor = wk.who;                          /* (The character's blows, or an actor's: wport.c's) */
     r->other = RS_THING;
-    r->c = n;
-    r->w2 = wk.qs == wk.sn + 1 && wk.qx == wk.px && wk.qy == wk.py ? 0 : RS_SHORT;  /* (A bare part's hurt stopped
+    RS_ATTACK_RUN (*r) = n;
+    RS_ATTACK_FLAGS (*r) = wk.qs == wk.sn + 1 && wk.qx == wk.px && wk.qy == wk.py ? 0 : RS_SHORT;  /* (A bare part's hurt stopped
                                                 **   short of, but at the door it was warned at) */
     for (k = 0; k < 4; ++k) {
         i = resist[mat][k];
-        r->x[k] = i - (i && wk.pq.qual <= 3 ? (wk.pq.qual <= 1 && i > 1 ? 2 : 1) : 0);
+        RS_ATTACK_RESIST (*r)[k] = i - (i && wk.pq.qual <= 3 ? (wk.pq.qual <= 1 && i > 1 ? 2 : 1) : 0);
     }
     r = hub_ask (SLOT_WORLD);
-    i = r->w1;
-    wk.tt += r->w2;
-    wk.hb = r->c > wk.hb ? r->c : wk.hb;
-    wk.hw |= (r->w2 ? E_OUT : 0) | (r->result & 1 ? E_STOPPED : 0);
-    if (r->result & 8) {
-        drop_held (r->a | 0x80, 0);             /* (A weapon broken on something hard: the book's Weapon Damage) */
+    i = RS_ATTACK_HARM (*r);
+    wk.tt += RS_ATTACK_OUT (*r);
+    wk.hb = RS_ATTACK_WORST (*r) > wk.hb ? RS_ATTACK_WORST (*r) : wk.hb;
+    wk.hw |= (RS_ATTACK_OUT (*r) ? E_OUT : 0) | (RS_ATTACK_STOP (*r) ? E_STOPPED : 0);
+    if (RS_ATTACK_BROKE (*r)) {
+        drop_held (RS_ATTACK_DROP (*r) | 0x80, 0);             /* (A weapon broken on something hard: the book's Weapon Damage) */
         hub_map (0);
         r = &HUB->slot[SLOT_WORLD];
     }
-    if (r->result & 4) {
+    if (RS_ATTACK_SHORT (*r)) {
         wk.ask = 1;                             /* (Stopped short: asked, the door warned at kept) */
         wk.qs = wk.sn + 1;
         wk.qx = wk.px;
         wk.qy = wk.py;
     }
     r->state = REQ_FREE;
-    if (r->w2) {
+    if (RS_ATTACK_OUT (*r)) {
         bearings_off (BO_OUT);                  /* (Knocked senseless by its own blow's hurt: its bearings astray as
                                                 **   it comes round, part 52's, slice 4.2's) */
     }

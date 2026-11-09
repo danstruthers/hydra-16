@@ -105,14 +105,14 @@ static signed char __fastcall__ house_notice (const struct req* r, unsigned char
     unsigned char g = go & ~GOING_DARK;
     signed char s = 0, p;
 
-    if (r->a == P_NOTICE_SIGHT && r->b == 1 && !(watch & WA_TRAPS)) {
-        s = r->steps - 2;
+    if (RS_TEST_PURPOSE (*r) == P_NOTICE_SIGHT && RS_TEST_HOW (*r) == 1 && !(watch & WA_TRAPS)) {
+        s = RS_TEST_STEPS (*r) - 2;
     }
     if (g && g <= NGAITS) {
         p = by_pace[g - 1];
         s += p > 0 && (go & GOING_DARK) ? 0 : p;
     }
-    if (r->a == P_NOTICE_SOUND && (watch & WA_LISTEN)) {
+    if (RS_TEST_PURPOSE (*r) == P_NOTICE_SOUND && (watch & WA_LISTEN)) {
         s += 2;
     }
     return s;

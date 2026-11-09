@@ -285,11 +285,16 @@ function actionsHeader() {
 //   KIND[:FORM]  [< KIND[:FORM];] SLOT FIELD ...; SLOT FIELD ...      a kind's payload (a line indented goes on)
 // a FIELD name (the slot whole), name:N (bit N) or name:N-M (bits N to M), and @FIRST, an enum's first member, for
 // its value's name in the tests (a name of one bit, a boolean there); then (the events') ! a signed byte, +K stored
-// plus K, ==CONST[,CONST] the form's selector (the form a message is read by, its field's value one of them)
+// plus K, ==CONST[,CONST] the form's selector (the form a message is read by, its field's value one of them).  The
+// referee's requests' (struct req) besides: a SLOT x[4-7], an array's elements spanned (two bytes a word, four a long:
+// the accessor a cast of its first byte's address; else, or a FIELD name[], its bytes, the address), x the array
+// whole; a SLOT alone, its field its own name (steps, grade); a request's reply after its ->, a form of its own
+// (KIND:reply, KIND:FORM_reply); and no builder for a request (filled slot by slot, as the code computes it)
 const TYPE_BITS = { 'unsigned char': 8, 'signed char': 8, 'char': 8, 'unsigned': 16, 'unsigned int': 16, 'int': 16,
   'signed': 16, 'unsigned short': 16, 'short': 16, 'unsigned long': 32, 'long': 32, 'signed long': 32 };
 
-// A struct's slots' widths, by its declarations' types: { slot: { bits, path (the C's), n (an array's length) } }
+// A struct's slots' widths, by its declarations' types: { slot: { bits, path (the C's), n (an array's length), sg
+// (signed) } }
 function slotWidths(body, defs) {
   const out = {};
   for (const decl of split(body.replace(/^[ \t]*#.*$/gm, ''), ';')) {
@@ -300,7 +305,7 @@ function slotWidths(body, defs) {
     for (const x of [first[2], ...parts.slice(1)]) {
       const m = x.trim().match(/^(\w+)\s*(?:\[([^\]]*)\])?$/);
       if (!m) continue;
-      out[m[1]] = { bits, n: m[2] === undefined ? 0 : +(defs[m[2]] !== undefined ? defs[m[2]] : m[2]) };
+      out[m[1]] = { bits, n: m[2] === undefined ? 0 : +(defs[m[2]] !== undefined ? defs[m[2]] : m[2]), sg: /^(signed|int|short|long)/.test(type) };
     }
   }
   return out;
@@ -312,6 +317,14 @@ function msgsRead(text) {
   let struct = null, cur = null;
   const lines = text.split(/\r?\n/);
   const entry = (s, line) => {
+    const r = s.indexOf('->');                                 // (A request's reply after its ->: a form of its own,
+    if (r >= 0) {                                              //   FORM_reply, or reply; none asked, none before it)
+      const head = s.match(/^(\w+)(?::(\w+))?/);
+      if (!head) throw new Error('msgs.def:' + line + ': ' + s);
+      if (s.slice(head[0].length, r).trim()) entry(s.slice(0, r), line);
+      entry(head[1] + ':' + (head[2] ? head[2] + '_' : '') + 'reply ' + s.slice(r + 2), line);
+      return;
+    }
     const parts = s.split(';').map(p => p.trim()), head = parts[0].match(/^(\w+)(?::(\w+))?\s*(.*)$/);
     if (!head) throw new Error('msgs.def:' + line + ': ' + s);
     if (!struct) throw new Error('msgs.def:' + line + ': no struct line before it');
@@ -320,16 +333,18 @@ function msgsRead(text) {
     for (const p of parts) {
       if (!p || p === '-') continue;
       if (p[0] === '<') { f.inc.push(p.slice(1).trim()); continue; }
-      const w = p.split(/\s+/), sl = w.shift().match(/^(\w+(?:\[\d+\])?)(?:\(([a-z]\w*)\))?$/);
+      const w = p.split(/\s+/), sl = w.shift().match(/^(\w+(?:\[\d+(?:-\d+)?\])?)(?:\(([a-z]\w*)\))?$/);
       if (!sl) throw new Error('msgs.def:' + line + ': "' + p + '", a slot?');
       const slot = sl[1];
       if (sl[2]) f.aliases.push({ name: sl[2], slot });         // (A packed slot's whole, by a name: SLOT(name))
+      if (!sl[2] && !w.length && /^[a-z]\w*$/.test(slot)) w.push(slot);   // (A slot alone, its field its name: steps)
       for (const t of w) {
-        const m = t.match(/^([a-z]\w*)(?::(\d+)(?:-(\d+))?)?(!)?(?:\+(\d+))?(?:==(\w+(?:,\w+)*)|=(\w+))?(?:@(\w+(?:,\w+)*|\w+(?:\/\w+)+))?$/);
+        const m = t.match(/^([a-z]\w*)(\[\])?(?::(\d+)(?:-(\d+))?)?(!)?(?:\+(\d+))?(?:==(\w+(?:,\w+)*)|=(\w+))?(?:@(\w+(?:,\w+)*|\w+(?:\/\w+)+))?$/);
         if (!m) throw new Error('msgs.def:' + line + ': "' + t + '", a field?');
-        f.fields.push({ name: m[1], slot, lo: m[2] === undefined ? -1 : +m[2], hi: m[2] === undefined ? -1 : +(m[3] === undefined ? m[2] : m[3]), bit: m[7] || '', en: m[8] || '',
-          signed: !!m[4], plus: m[5] === undefined ? 0 : +m[5], sel: m[6] ? m[6].split(',') : null });   // (The events': a signed byte,
-                                                                                                         //   a value stored plus K, a form's selector)
+        f.fields.push({ name: m[1], slot, lo: m[3] === undefined ? -1 : +m[3], hi: m[3] === undefined ? -1 : +(m[4] === undefined ? m[3] : m[4]), bit: m[8] || '', en: m[9] || '',
+          signed: !!m[5], plus: m[6] === undefined ? 0 : +m[6], sel: m[7] ? m[7].split(',') : null, bytes: !!m[2] });   // (The events': a signed byte,
+                                                                                                         //   a value stored plus K, a form's selector; a
+                                                                                                         //   request's span's bytes)
       }
     }
     forms.push(f);
@@ -357,9 +372,19 @@ function msgsMake(forms, named, defs, names) {
       if (named[f.struct] === undefined) throw new Error('msgs.def:' + f.line + ': no struct ' + f.struct);
       widths[f.struct] = slotWidths(named[f.struct], defs);
     }
-    const m = slot.match(/^(\w+)(?:\[(\d+)\])?$/), w = widths[f.struct][m[1]];
-    if (!w || (m[2] !== undefined) !== (w.n > 0) || (w.n && +m[2] >= w.n)) throw new Error('msgs.def:' + f.line + ': no slot ' + slot + ' in struct ' + f.struct);
-    return { ord: Object.keys(widths[f.struct]).indexOf(m[1]) * 64 + (+m[2] || 0), bits: w.bits, c: m[2] === undefined ? m[1] : m[1] + '[' + m[2] + ']', up: (m[1] + (m[2] || '')).toUpperCase() };
+    const m = slot.match(/^(\w+)(?:\[(\d+)(?:-(\d+))?\])?$/), w = widths[f.struct][m[1]];
+    if (!w || (m[2] !== undefined && !w.n) || (w.n && +(m[3] || m[2] || 0) >= w.n) || +m[3] <= +m[2]) throw new Error('msgs.def:' + f.line + ': no slot ' + slot + ' in struct ' + f.struct);
+    const ord = Object.keys(widths[f.struct]).indexOf(m[1]) * 64 + (+m[2] || 0);
+    if (!w.n || (m[2] !== undefined && m[3] === undefined))     // (A slot, or an array's element)
+      return { ord, bits: w.bits, sg: w.sg, c: m[2] === undefined ? m[1] : m[1] + '[' + m[2] + ']', up: (m[1] + (m[2] || '')).toUpperCase(),
+        base: m[1], first: +m[2] || 0, last: +m[2] || 0, at: m[2] !== undefined };
+    // (An array's elements spanned, x[4-7], or the array whole, x: two bytes a word, four a long, by its first byte's
+    // address, an lvalue; else its first byte's address, a pointer)
+    const first = m[2] === undefined ? 0 : +m[2], last = m[2] === undefined ? w.n - 1 : +m[3], n = (last - first + 1) * w.bits / 8;
+    const p = first ? '((m).' + m[1] + ' + ' + first + ')' : '(m).' + m[1];
+    return { ord, bits: (last - first + 1) * w.bits, c: m[1] + '[' + first + ']', up: (m[1] + (m[2] === undefined ? '' : first + '_' + last)).toUpperCase(),
+      base: m[1], first, last, at: m[2] !== undefined, span: true, ptr: p,
+      acc: n === 2 ? '(*(unsigned*) ' + p + ')' : n === 4 ? '(*(unsigned long*) ' + p + ')' : p };
   };
   const all = f => {                                           // (A form's fields, its included forms' first)
     const out = [];
@@ -383,11 +408,12 @@ function msgsMake(forms, named, defs, names) {
     const fs_ = all(f), P = f.kind + (f.form ? '_' + f.form.toUpperCase() : ''), used = {};
     const fields = fs_.map(x => {
       const s = slotOf(f, x.slot), lo = x.lo < 0 ? 0 : x.lo, hi = x.hi < 0 ? s.bits - 1 : x.hi;
-      if (hi >= s.bits || lo > hi) throw new Error('msgs.def:' + f.line + ': ' + x.name + ' past ' + x.slot + '\'s ' + s.bits + ' bits');
+      if (hi >= s.bits || lo > hi || (s.span && x.lo >= 0 && (s.bits > 32 || x.bytes)) || (x.bytes && !s.span)) throw new Error('msgs.def:' + f.line + ': ' + x.name + ' past ' + x.slot + '\'s ' + s.bits + ' bits');
       const mask = (2 ** (hi - lo + 1) - 1) * 2 ** lo;
-      for (const [n, u] of Object.entries(used)) if (u.slot === x.slot && (u.mask & mask)) throw new Error('msgs.def:' + f.line + ': ' + x.name + ' over ' + n);
+      for (const [n, u] of Object.entries(used)) if (u.slot === x.slot ? u.mask & mask : u.base === s.base && u.first <= s.last && s.first <= u.last)
+        throw new Error('msgs.def:' + f.line + ': ' + x.name + ' over ' + n);
       if (used[x.name]) throw new Error('msgs.def:' + f.line + ': ' + x.name + ' twice');
-      used[x.name] = { slot: x.slot, mask };
+      used[x.name] = { slot: x.slot, mask, base: s.base, first: s.first, last: s.last };
       if (x.signed && (lo || hi !== 7)) throw new Error('msgs.def:' + f.line + ': ' + x.name + ' signed, not bits 0-7');
       if (x.sel && f.fields.indexOf(x) < 0) throw new Error('msgs.def:' + f.line + ': ' + x.name + '\'s selector an included form\'s');
       for (const c of x.sel || []) if (!names.has(c)) throw new Error('msgs.def:' + f.line + ': ' + c + ', not a name of the headers\'');
@@ -400,7 +426,7 @@ function msgsMake(forms, named, defs, names) {
     const kinds = x => byKey.get(f.kind) !== f && all(byKey.get(f.kind) || { inc: [], fields: [] }).some(y => y.name === x.name &&
       y.slot === x.slot && (y.lo < 0 ? 0 : y.lo) === x.lo && (y.hi < 0 ? x.s.bits - 1 : y.hi) === x.hi && y.signed === x.signed && y.plus === x.plus);
     for (const x of fields) {                                 // (Its accessors: the slot whole an lvalue; one bit, the
-      const v = '(m).' + x.s.c, body = x.signed ? '(signed char) ' + v : x.whole ? v : x.lo === x.hi ? v + ' & ' + bit(x) :    //   bit in its place;
+      const v = x.bytes ? x.s.ptr : x.s.acc || '(m).' + x.s.c, body = x.signed ? '(signed char) ' + v : x.whole ? v : x.lo === x.hi ? v + ' & ' + bit(x) :    //   bit in its place;
         !x.lo && x.hi === 7 ? '(unsigned char) ' + v :       //   a word's low byte, the byte (cc65's shorter code);
         (x.lo ? v + ' >> ' + x.lo : v) + (x.top ? '' : ' & ' + hex(2 ** (x.hi - x.lo + 1) - 1));   //   else its bits)
       const A = (sels.length && !x.sel && !kinds(x) ? P : f.kind) + '_' + x.name.toUpperCase();   // (A chosen form's own:
@@ -409,8 +435,8 @@ function msgsMake(forms, named, defs, names) {
     }
     for (const x of f.aliases) {                               // (A packed slot's whole: an lvalue, its packer's to set)
       if (used[x.name]) throw new Error('msgs.def:' + f.line + ': ' + x.name + ' a field\'s name and a slot\'s');
-      const A = (sels.length ? P : f.kind) + '_' + x.name.toUpperCase();
-      def(A, pad('#define ' + A + '(m)', 40) + '((m).' + slotOf(f, x.slot).c + ')', f.line);
+      const A = (sels.length ? P : f.kind) + '_' + x.name.toUpperCase(), s = slotOf(f, x.slot);
+      def(A, pad('#define ' + A + '(m)', 40) + '(' + (s.acc || '(m).' + s.c) + ')', f.line);
     }
     const slots = [...new Set(fields.map(x => x.slot))].sort((p, q) => fields.find(x => x.slot === p).s.ord - fields.find(x => x.slot === q).s.ord);
     const arg = x => x.fixed ? '' : x.name + '_';             // (A form's selector of one value: not an argument, its
@@ -425,15 +451,17 @@ function msgsMake(forms, named, defs, names) {
       if (xs.length === 1 && xs[0].whole) continue;
       def(P + '_' + xs[0].s.up, pad('#define ' + P + '_' + xs[0].s.up + '(' + xs.map(arg).filter(Boolean).join(', ') + ')', 40) + '(' + xs.map(val).join(' | ') + ')', f.line);
     }
-    const sorted = slots.map(sl => fields.filter(x => x.slot === sl));   // (Its builder: kind, who, each slot in turn)
+    const sorted = slots.map(sl => fields.filter(x => x.slot === sl));   // (Its builder: kind, who, each slot in turn;
+                                                                         //   a request none, a struct with no who)
     const args = sorted.flat().map(arg).filter(Boolean), sets = ['(m).kind = ' + f.kind, '(m).who = (who_)'];
     for (const xs of sorted) sets.push('(m).' + xs[0].s.c + ' = ' + (xs.length === 1 && xs[0].whole ? '(' + (xs[0].fixed || xs[0].name + '_') + ')' : P + '_' + xs[0].s.up + ' (' + xs.map(arg).filter(Boolean).join(', ') + ')'));
-    if (names.has(f.kind)) def(P + '_SET', pad('#define ' + P + '_SET(' + ['m', 'who_', ...args].join(', ') + ')', 40) + '(' + sets.join(', ') + ')', f.line);
+    if (names.has(f.kind) && slotWidths(named[f.struct] || '', defs).who) def(P + '_SET', pad('#define ' + P + '_SET(' + ['m', 'who_', ...args].join(', ') + ')', 40) + '(' + sets.join(', ') + ')', f.line);
     res.push({ kind: f.kind, form: f.form, struct: f.struct, sel: sels.length ? { name: sels[0].name, values: sels[0].sel } : null,
-      fields: fields.map(x => ({ name: x.name, slot: x.slot, lo: x.lo, hi: x.hi, bits: x.s.bits, en: x.en, bit: x.bit, signed: x.signed, plus: x.plus })) });
+      fields: fields.map(x => ({ name: x.name, slot: x.slot, lo: x.lo, hi: x.hi, bits: x.s.bits, en: x.en, bit: x.bit, signed: x.signed, plus: x.plus,
+      at: x.s.base + (x.s.at || x.s.span ? '[' + x.s.first + ']' : ''), n: x.s.last - x.s.first + 1, sg: x.bytes ? 2 : x.signed || (x.whole && x.s.sg) ? 1 : 0 })) });
   }
   const text = ['/* dq0msg.h - made by the build (games/dq0/hubgen.js) from games/dq0/msgs.def: not to be edited.  Each message',
-    '** kind\'s fields where they sit in its struct (hub.h\'s struct msg): KIND_FIELD (m) a field of message m (a struct, not',
+    '** kind\'s fields where they sit in its struct (hub.h\'s struct msg, struct req): KIND_FIELD (m) a field of message m (a struct, not',
     '** a pointer: *p for one), an lvalue if it\'s its slot whole (a packed slot\'s name too, msgs.def\'s SLOT(name));',
     '** KIND[_FORM]_SLOT (fields ...) a packed slot\'s value; and',
     '** KIND[_FORM]_SET (m, who, fields ...) a message made, every slot its payload names set, in order */', '',
@@ -503,10 +531,10 @@ function generate(opt) {
   // bytes, lo, hi, enum]; each slot's width held to cc65's)
   j.msgs = {};
   for (const f of msgs.forms) j.msgs[f.kind + (f.form ? ':' + f.form : '')] = { struct: f.struct, fields: f.fields.map(x => {
-    const n = H.size(f.struct, x.slot);
+    const n = H.size(f.struct, x.at) * x.n;                   // (A span's bytes its elements')
     if (n * 8 !== x.bits) throw new Error('hubgen: msgs.def: ' + f.struct + '.' + x.slot + ' is ' + n + ' bytes, not ' + x.bits + ' bits');
     if (x.bit && (x.lo !== x.hi || C[x.bit] !== 2 ** x.lo)) throw new Error('hubgen: msgs.def: ' + f.kind + '\'s ' + x.name + ': ' + x.bit + ' is ' + C[x.bit] + ', not bit ' + x.lo);
-    return x.signed || x.plus ? [x.name, H.off(f.struct, x.slot), n, x.lo, x.hi, x.en, x.signed ? 1 : 0, x.plus] : [x.name, H.off(f.struct, x.slot), n, x.lo, x.hi, x.en];
+    return x.sg || x.plus ? [x.name, H.off(f.struct, x.at), n, x.lo, x.hi, x.en, x.sg, x.plus] : [x.name, H.off(f.struct, x.at), n, x.lo, x.hi, x.en];
   }) };
   for (const f of msgs.forms) if (f.sel) {                    // (A form chosen by a field's value: its values, by number)
     const v = f.sel.values.map(c => C[c]), s = f.fields.find(x => x.name === f.sel.name);
@@ -582,8 +610,9 @@ function wrap(j) {
     },
     // A message's payload (msgs.def's): payload (KIND, FORM) its fields, the form's or else the kind's, or null;
     // decode (BYTES, O, KIND, FORM) the fields of the message at BYTES[O] as { name: value } (a value of an enum's its
-    // member's name, one bit's a boolean), {} for a kind with none declared.  With no FORM of its own (or none of that
-    // name), the form its selector chooses, if one does (the events': E_TASK's by its TE_*), else the kind's
+    // member's name, one bit's a boolean, a signed one's signed, a span's past four bytes or a name[]'s its bytes), {}
+    // for a kind with none declared.  With no FORM of its own (or none of that name), the form its selector chooses, if
+    // one does (the events': E_TASK's by its TE_*), else the kind's; a request's reply its KIND:reply form's
     payload: (kind, form) => (form && j.msgs && j.msgs[kind + ':' + form]) || (j.msgs && j.msgs[kind]) || null,
     decode: (b, o, kind, form) => {
       const field = ([, off, n, lo, hi]) => {
@@ -597,9 +626,10 @@ function wrap(j) {
       const out = {};
       if (!p) return out;
       for (const x of p.fields) {
-        const [name, , , lo, hi, en, signed, plus] = x;
+        const [name, off, n, lo, hi, en, signed, plus] = x;    // (signed: 1 a signed one, 2 a span's bytes)
+        if (n > 4 || signed === 2) { out[name] = Array.from({ length: n }, (_, i) => b[o + off + i]); continue; }
         let v = field(x);
-        if (signed && v >= 2 ** (hi - lo)) v -= 2 ** (hi - lo + 1);
+        if (signed === 1 && v >= 2 ** (hi - lo)) v -= 2 ** (hi - lo + 1);
         if (plus) v -= plus;
         if (en) {                                              // (Its names: an enum's (its member's), or constants, or
           let m;                                               //   words, a/b/c, for 0, 1, 2 ...)

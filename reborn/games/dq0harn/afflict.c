@@ -145,20 +145,20 @@ unsigned char __fastcall__ o_aff_cure (unsigned char power);
 unsigned char __fastcall__ o_aff_time (struct req* r)
 {
     static const unsigned char of[NAK] = { 0, VK_DART, VK_CONTACT, VK_FOOD, VK_FLUX };
-    unsigned m = r->w1;
+    unsigned m = RS_TIME_MINUTES (*r);
     unsigned char k = 0, d = 1, o = 0, n = strlen (news), q = 0, f = 0;
 
     if (r->actor == 0xFF) {                     /* (The world's: what it's exposed to, the air; the UI's, a drink) */
-        k = r->x[18];
-        d = r->x[19];
-        q = r->x[20];
-        f = r->x[21];
-    } else if (r->x[15] & 0x80) {               /* (Still water drunk where it stands: foul, the flux's) */
-        r->x[15] &= 0x7F;
+        k = RS_TIME_AFF (*r);
+        d = RS_TIME_DOSE (*r);
+        q = RS_TIME_AIR (*r);
+        f = RS_TIME_FLAME (*r);
+    } else if (RS_TIME_FOUL (*r)) {               /* (Still water drunk where it stands: foul, the flux's) */
+        RS_TIME_DRINK (*r) &= 0x7F;
         k = AK_FLUX;
-    } else if (r->x[15] & RT_TAKEN) {           /* (A remedy taken, 2026-11-02: HOUSE.md's remedies) */
-        remedy (r->x[15] & 3);
-        r->x[15] = 0;
+    } else if (RS_TIME_TAKEN (*r)) {           /* (A remedy taken, 2026-11-02: HOUSE.md's remedies) */
+        remedy (RS_TIME_DRINK (*r) & 3);
+        RS_TIME_DRINK (*r) = 0;
     }
     if (k && k < NAK) {                         /* (Exposed: a poison taken at once, a disease caught or not) */
         k = of[k];
@@ -175,7 +175,7 @@ unsigned char __fastcall__ o_aff_time (struct req* r)
         }
         o &= 6;
     }
-    o |= aff_course (m, r->a);
+    o |= aff_course (m, RS_TIME_ABOUT (*r));
     levels ();
     return o | (strlen (news) != n ? 2 : 0);
 }

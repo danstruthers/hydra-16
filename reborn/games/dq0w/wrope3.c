@@ -252,11 +252,11 @@ static unsigned char rp_up (void)
     r = &HUB->slot[SLOT_WORLD];
     r->kind = RS_TEST;
     r->actor = 0;
-    r->a = P_THROW;
-    r->b = 0;
-    r->steps = -4 * (signed char) band;         /* (20 less a band) */
+    RS_TEST_PURPOSE (*r) = P_THROW;
+    RS_TEST_HOW (*r) = 0;
+    RS_TEST_STEPS (*r) = -4 * (signed char) band;         /* (20 less a band) */
     r = hub_ask (SLOT_WORLD);
-    g = r->grade;
+    g = RS_TEST_GRADE (*r);
     r->state = REQ_FREE;
     rp_noise (G_OK (g) ? 4 : 5);
     rp_new ();

@@ -95,10 +95,10 @@ static void __fastcall__ inspect (unsigned char obj, unsigned char ex)
     memcpy (&viewed, &HUB->pview, sizeof viewed);
     if (ex & EX_QUALITY) {                      /* (Its quality judged: the appraiser's test, the first answer kept, by
                                                 **   a hash of the door's square: the user's, 2026-11-03) */
-        HUB->slot[SLOT_UI].w1 = tx * 251 + ty;
+        RS_TEST_ITEM (HUB->slot[SLOT_UI]) = tx * 251 + ty;
         r = ask_b (RS_TEST, P_APPRAISE, viewed.mat == PM_STONE ? AP_STONE : viewed.mat == PM_IRON ? AP_METAL : AP_WOOD);
-        g = r->grade;
-        k = r->w2;
+        g = RS_TEST_GRADE (*r);
+        k = RS_TEST_MASTERY (*r);
         r->state = REQ_FREE;
     }
     judge_dice (tx * 251 + ty, k);
@@ -146,11 +146,11 @@ static unsigned char __fastcall__ judged_as (unsigned char ex)
         return g == IR_GONE;                    /* (Out of reach: walked over to first, then again) */
     }
     memcpy (&judged, &HUB->ireq, sizeof judged);
-    HUB->slot[SLOT_UI].w1 = judged.item;        /* (Its number: the first answer kept till the skill improves, the
+    RS_TEST_ITEM (HUB->slot[SLOT_UI]) = judged.item;        /* (Its number: the first answer kept till the skill improves, the
                                                 **   user's, 2026-11-03; the referee's and the words' dice its hash) */
     r = ask_b (RS_TEST, P_APPRAISE, judged.craft);
-    g = r->grade;
-    judge_dice (judged.item, r->w2);
+    g = RS_TEST_GRADE (*r);
+    judge_dice (judged.item, RS_TEST_MASTERY (*r));
     r->state = REQ_FREE;
     appraise (&judged, g, ex);
     xs_seed = judge_was;

@@ -4,7 +4,7 @@
 # decoders: hubgen's load ().decode, sim/lib/dq0meaning.js's).  What each field means at length is hub.h's, beside its
 # kind; this is where it sits.  The layout is hub.h's struct msg as it was: nothing here moves a byte.
 #
-#   struct NAME                         the struct the kinds after it travel in (hub.h's: struct msg; later struct req)
+#   struct NAME                         the struct the kinds after it travel in (hub.h's: struct msg; struct req)
 #   KIND[:FORM]  PART; PART ...         a kind's payload: a line indented goes on with the one before
 #     a PART:  SLOT FIELD ...           a slot of the struct (msg's a, b, w1, w2, t, x[0] ... x[3]) and its fields
 #              SLOT(name) FIELD ...     a packed slot, named whole too: KIND_NAME (m) the slot (to test it for none, to
@@ -20,6 +20,15 @@
 #              ...!  ...+K              a signed byte (bits 0-7); a value stored plus K (an actor's entry plus 1: the
 #                                       tests read it less K, the C as it's stored)
 #   A slot of flags the headers name (WA_*, KT_*, POS_*) is one field, the slot whole, tested by its flags' names.
+# The referee's requests' besides (struct req: the third part):
+#   KIND[:FORM]  PART ... -> PART ...   a request, and after its -> its reply's (written over the same slots): a form
+#                                       of its own, KIND:reply or KIND:FORM_reply (no request before it: a reply's alone)
+#     a SLOT:  x[4-7]                   an array's elements spanned: a word, two bytes; a long, four (the accessor a
+#                                       cast of its first byte's address, an lvalue); else its bytes, the address
+#              x                        the array whole, its bytes (the address: a reply's struct rs_effect ...)
+#     a FIELD: name[]                   a span's bytes, the address, whatever its width (x[0-3] resist[], resist[k])
+#   A SLOT alone is its field of its own name (steps, grade); a request has no builder (its slots filled as the code
+#   computes them, around its words in the text: a builder's order would move bytes).
 #
 # Generated for each form (C macros, costing what the hand-packed code did: the images byte for byte the same):
 #   KIND_FIELD (m)                      a field of message m (a struct: *p for a pointer's)
@@ -170,3 +179,84 @@ E_BEAT:search   b touch; w1 beat:0-7==WB_SEARCH@WB_QUIET rsw:8-15@RSW_BEGUN; w2 
 E_BEARING       w1 brg:0-7@BRG_NONE
 E_BEARING:sky   b sky; w1 brg:0-7==BRG_SKY@BRG_NONE refusal:8-15@SKP_NONE
                 # (The sky seen: b its phase, SKP_*, and what showed it; a shaft's refusal, w1's high byte, b none)
+
+struct req
+
+# ---- The referee's requests (RS_*: rs.h's, to the referee in a slot of the hub's, the world's or the UI's, or the
+# denizens' own, DSLOT; answered by the ruleset's, dq0harn).  A request's fields, then after -> its reply's, written
+# over the same slots (a form of its own: KIND:reply, KIND:FORM_reply).  Every request's own, not declared: kind, actor
+# and other (who asks about whom: 0 the character, else an actor's entry plus 1; RS_THING not an actor), and the text
+# (a request's path or key, a reply's words).  What each means at length is rs.h's, beside its kind
+
+RS_HELLO        -  -> w1 round                          # (The ruleset's round, tenths; its name and generator the text's)
+RS_LOAD_PC      -  -> a gait@GA_CREEP; b watch; result bad
+                # (The file the text's path; the pace and watchfulness it says; 1 no character, 2 too many tongues)
+RS_NEW_ACTOR    c want; w1 record  -> result bad; x summary
+                # (Its key the text; its want and fatigue levels, its record (the denizens'); its struct rs_summary)
+RS_DROP_ACTOR   -
+RS_TEST         a purpose@P_NOTICE_SIGHT; b how; steps  -> grade; result cant
+                # (b by purpose: P_SEARCH's, P_DISARM's HIDE_*; P_NOTICE_SIGHT's 1 a hazard underfoot.  1 it can't (by
+                #   magic alone, no picks), 2 not a tongue it speaks)
+RS_TEST:dig     a purpose@P_NOTICE_SIGHT; b mat@MAT_EARTH; steps  -> grade; result cant; w1 rate; w2 wear
+                # (The tool named the text, the one taken back; steps RS_DIG_QUERY no test; half-feet a spell, its wear)
+RS_TEST:appraise a purpose@P_NOTICE_SIGHT; b craft@AP_WEAPON; w1 item; steps  -> grade; w2 mastery
+                # (The thing's number, its first answer kept; the craft's mastery)
+RS_TEST:read    a purpose@P_NOTICE_SIGHT; b how; w1 item; steps  -> grade; result cant
+                # (A writing's, its tongue and script the text: 1 no script at all, 2 not the tongue, 3 not the script)
+RS_TEST:swim    -> grade; w1 squares; w2 breath         # (A minute's swim: its squares; its breath held, seconds)
+RS_TEST:bearing -> grade; result drift                  # (P_BEARING's: a failure's drift, the world's to make)
+RS_TEST:draw    -> grade; result opened                 # (P_DRAW's: 1 Drawing opened by it)
+RS_TEST_MANY    -
+RS_CONTEST      a purpose@P_NOTICE_SIGHT; b against@P_NOTICE_SIGHT; steps; c osteps  -> grade; c ograde; result better
+                # (The other's purpose and steps (signed); its grade; 1 the actor did better, 2 the other, 0 alike)
+RS_ATTACK       a aim@Z_MID; b aspect@AS_BLUNT; c outnumbered; steps; w2(flags) shy:0; x[0] heart
+                -> result outcome@O_MISS; a whose; b defence@D_AUTO; c af; w1(health) hatt:0-7@H_FINE hdef:8-15@H_FINE;
+                w2 out; grade left; x effects
+                # (A blow.  flags RS_PRONE_A ... RS_ASLEEP, MS_*, shy a shy creature's; heart RS_HEART's.  whose a fumble
+                #   or a stumble was; af AF_*; their healths; the tenths one's out for; left FF_*; its struct rs_effects)
+RS_ATTACK:missile a aim@Z_MID; b band; c missile; steps; w1 range; w2(flags) shy:0
+                # (RS_MISSILE's: its range's band, the kind shot or thrown, the squares; the reply a blow's)
+RS_ATTACK:thing c run; w2(flags) shy:0; x[0-3] resist[]
+                -> result(struck) stop:0 part:1 short:2 broke:3; a drop; b aspect@AS_BLUNT; c worst; w1 harm; w2 out
+                # (At RS_THING: the blow's number in a run, the thing's resistance to blunt, edge, point, fire.  The harm
+                #   it takes, by aspect; a part struck: hurt enough to stop, its band, out for; stopped short; a weapon
+                #   broken, the hands that let go)
+RS_ATTACK:rise  -> result outcome@O_MISS; a down            # (O_RISE: 1 still down)
+RS_HARM         a cause@HC_FALL; b ground@GR_FLOOR; c how; w1 feet  -> result caught; b band; w2 out; x effects
+                # (HC_FALL: how HF_*.  A hold grabbed; the worst wound's band; the tenths it's out for)
+RS_HARM:strike  a cause@HC_FALL; b aspect@AS_BLUNT; c dice; w1 impact; w2 zone@Z_MID     # (HC_STRIKE, HC_FIRE: d6s)
+RS_HARM:struck  a cause@HC_FALL; c part@BP_SKULL; w1 impact; w2 run  -> result stop; b band; w2 out; x effects
+                # (HC_STRUCK: the striker's own part; the blow's number in a run; hurt enough to stop)
+RS_TIME         a about; b pc; w1 minutes; w2 bleeders; x[0] fighting; x[2] drowned; x[8-13] want[];
+                x[14](meal) meals:0-6 ration:7; x[15](drink) pints:0-5 taken:6=RT_TAKEN foul:7; x[16-17] spent;
+                x[18] aff@AK_NONE; x[19] dose; x[20] air; x[21] flame
+                -> result died; b health@H_FINE; c bound; grade news; w1 dead; w2 out; x[4-7] next
+                # (0 at rest, 1 about, 2 at vigorous work; 1 the character's too; the actors bleeding, and fighting, a bit
+                #   each; 3 drowned; the hub's want and the minutes, the referee's own; a meal, a ration begun; pints
+                #   drunk, or a remedy (its kind bits 0-1), foul water; AK_*, its dose, AQ_*, FLM_*.  The character
+                #   dead, its health; those that bound their bleeding, and died; news 2 words, 4 hurt anew, 8 a want's
+                #   level; the tenths senseless; the clock it's next asked at)
+RS_EXERT        a pace; w1 tenths  -> result tired      # (GA_*, GA_WORK, GA_REST, GA_STOOD; 1 a level more)
+RS_REST         -
+RS_TREAT        a done  -> result cant; b wound; c how; w1 tenths; x[0] loc
+                # (other the patient, the text the part.  a 0 planned: the wound, the treatment (TR_*), where, its time;
+                #   1 nothing to treat, 2 not one it can treat itself, 3 no patient)
+RS_TREAT:done   a done; b wound; c how; x[0] loc  -> result undone      # (a 1, done: 1 still bleeding, 2 the plan gone)
+RS_EQUIP        a how; w1 load; w2 held                 # (0 put away, 1 taken up, the key the text; 2 all to hand)
+RS_INITIATIVE   -
+RS_MORALE       a why@MR_NONE; b field; c bonds; steps; w1 fallen; w2(leaders) band:0-7 faction:8-15
+                -> result state@M_STEADY; grade
+RS_EXPERIENCE   -
+RS_DESCRIBE     a brief; b what                         # (0 its sheet, 1 brief, 2 its wounds, 3 its state, 4 time's news)
+RS_POWER        -
+RS_EXPORT       -
+RS_IMPORT       -
+RS_SAVE         -  -> result failed                     # (The text the path)
+RS_RESTORE      -
+RS_QUIT         -
+RS_DICE         a(how) seeded:0; b rest; w1 seed; x faces  -> c unrolled; w1 rolled; x sides
+                # (The faces next, to a 0, and every die's after; seeded anew from w1.  The dice since, the faces
+                #   forced but not rolled, the first ones' sides)
+RS_WIELD        b thing; x[0-1] held[]  -> result which  # (At a thing; the kinds held; 1 x[0]'s, 2 x[1]'s, 0 none)
+RS_OUTFIT       -  -> result none; a level; w1 money; w2 seed; x[0-1] tags[]; x[2] heft; x[3] bears
+                # (0xFF none; its wealth; farthings; its draw's seed; OT_* bits; its weapons' version; quarter pounds)

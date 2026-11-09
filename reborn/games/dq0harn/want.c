@@ -22,7 +22,7 @@ static void __fastcall__ want_say (const char* s)
     }
 }
 
-#define WANT_SAY(s)     (want_say (s), r->grade |= 2)
+#define WANT_SAY(s)     (want_say (s), RS_TIME_NEWS (*r) |= 2)
 #include "../dq0/rswant.h"
 
 /* RS_TIME's (r a copy, the hub's want in it: dq0harn.c's main), after the bodies' time (heal.c's) */
@@ -32,7 +32,7 @@ void __fastcall__ o_want (struct req* r)
 
     if ((k & WANT_DIES) && pc.state != HARN_DEAD) {
         pc.state = HARN_DEAD;
-        r->result = 1;
+        RS_TIME_DIED (*r) = 1;
     }
     k &= ~WANT_DIES;
     if (k > wantfl) {

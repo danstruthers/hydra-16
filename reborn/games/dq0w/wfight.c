@@ -139,26 +139,26 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     r->kind = RS_ATTACK;
     r->actor = att;
     r->other = def;
-    r->a = z & ~FW_FIRST;                       /* (Its aim; FW_FIRST, the engage initiative test's: its words') */
-    r->b = AS_BEST;
-    r->c = 0;
-    r->steps = bd.mood & AM_DRUNK ? (me == att ? -2 : 2) : 0;   /* (In drink, from its leisure's cups: its blows two
+    RS_ATTACK_AIM (*r) = z & ~FW_FIRST;                       /* (Its aim; FW_FIRST, the engage initiative test's: its words') */
+    RS_ATTACK_ASPECT (*r) = AS_BEST;
+    RS_ATTACK_OUTNUMBERED (*r) = 0;
+    RS_ATTACK_STEPS (*r) = bd.mood & AM_DRUNK ? (me == att ? -2 : 2) : 0;   /* (In drink, from its leisure's cups: its blows two
                                                 **   steps worse, struck at two easier; HOUSE.md's, 2026-10-31) */
-    r->x[0] = bd.heart;                         /* (The creature's heart: its courage's steps as it's wounded, the
+    RS_ATTACK_HEART (*r) = bd.heart;                         /* (The creature's heart: its courage's steps as it's wounded, the
                                                 **   denizens' field and bonds, rs.h's RS_HEART) */
     pa = me == att ? bd.pos : HUB->pc_pos;     /* (Their bodies' positions, the world's: prone, the easier struck) */
     pd = me == att ? HUB->pc_pos : bd.pos;
-    r->w2 = bd.timid | (POS_LOW (pa) ? RS_PRONE_A : 0) | (POS_LOW (pd) ? RS_PRONE_D : 0) | (ra ? RS_REARM : 0) |
+    RS_ATTACK_FLAGS (*r) = bd.timid | (POS_LOW (pa) ? RS_PRONE_A : 0) | (POS_LOW (pd) ? RS_PRONE_D : 0) | (ra ? RS_REARM : 0) |
         ((me != att ? bd.doing == DO_SLEEP || (HUB->pc_hid && DO_UNAWARE (bd.doing)) : bd.state > 1) ? RS_ASLEEP : 0);
                                                 /* (A sleeper struck at: no defence, the book's Ignore, 2026-11-02; and
                                                 **   one that hasn't seen a blow from hiding coming, 2026-11-04) */
     if (mshot.kind) {                           /* (A missile's, shot or thrown: wshoot.c's, slice 4.7's) */
         if (mshot.flags & MS_HARD) {
-            r->steps -= 2;
+            RS_ATTACK_STEPS (*r) -= 2;
         }
-        r->c = mshot.kind;
-        r->b = mshot.band;
-        r->w2 = (r->w2 | RS_MISSILE | mshot.flags) & (mshot.flags & MS_STRAY ? ~RS_PRONE_A : 0xFFFF);  /* (A stray's
+        RS_ATTACK_MISSILE (*r) = mshot.kind;
+        RS_ATTACK_BAND (*r) = mshot.band;
+        RS_ATTACK_FLAGS (*r) = (RS_ATTACK_FLAGS (*r) | RS_MISSILE | mshot.flags) & (mshot.flags & MS_STRAY ? ~RS_PRONE_A : 0xFFFF);  /* (A stray's
                                                 **   strike no shooter's: nobody gets up for it) */
     }
     if (HUB->pc_hid || bd.state > 1) {
@@ -166,7 +166,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         hub_map (0);
     }
     r = hub_ask (SLOT_WORLD);
-    if ((out = r->result) == 0xFF) {
+    if ((out = RS_ATTACK_OUTCOME (*r)) == 0xFF) {
         r->state = REQ_FREE;
         return 0xFF;
     }
@@ -177,7 +177,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     }
     if (out == O_RISE) {                        /* (The attacker got up, its turn spent; or tried and is still down,
                                                 **   a: the limbs' news, no blow's record, slice 4.1b's) */
-        if (r->a) {
+        if (RS_ATTACK_DOWN (*r)) {
             r->state = REQ_FREE;
             if (!att && (HUB->pcsum.limbs & (LB_LEG_L | LB_LEG_R)) == (LB_LEG_L | LB_LEG_R)) {
                 limb_news (WB_NOT_UP | 0x100, 0);   /* (The character, no leg to stand on: no blow to come, a prone one's
@@ -199,7 +199,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     }
     fa = pa;                                    /* (Their positions before it: a fall told, below) */
     fd = pd;
-    for (cd = dh = i = 0, e = (const struct rs_effect*) r->x; i < RS_EFFECTS && e->kind; ++i, ++e) {
+    for (cd = dh = i = 0, e = (const struct rs_effect*) RS_ATTACK_EFFECTS (*r); i < RS_EFFECTS && e->kind; ++i, ++e) {
         if (e->kind == X_DROP) {
             if (e->target) {
                 cd = 1 + e->x[1];               /* (The creature's weapon let fall: part 51's; broken, x[1]: 1 its weapon, 2 its shield) */
@@ -227,10 +227,10 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     if (cd) {
         den_word (r->text, !att);               /* (Its weapon's word, the reply's: part 51's) */
     }
-    ff = r->grade;
-    c = r->c;
-    w2 = r->w2;
-    wh = r->a;
+    ff = RS_ATTACK_LEFT (*r);
+    c = RS_ATTACK_AF (*r);
+    w2 = RS_ATTACK_OUT (*r);
+    wh = RS_ATTACK_WHOSE (*r);
     f = FIGHT_AT + fring;                       /* (Its words: the record cleared, then each piece) */
     hub_map (DEN_BANK);
     memset (f, 0, sizeof *f);

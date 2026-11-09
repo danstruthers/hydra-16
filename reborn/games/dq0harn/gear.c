@@ -270,13 +270,13 @@ unsigned char __fastcall__ o_wq_of (const struct side* s, unsigned char att)
 
     if (s->b) {
         k = (s->who - 1) & 7;
-        if (s->part != 0xFF && (att || !(R->c & AF_SHIELD))) {
+        if (s->part != 0xFF && (att || !(RS_ATTACK_AF (*R) & AF_SHIELD))) {
             return 0;
         }
         if (dwr[k] == 0xFF) {
             return 0;
         }
-        if (!att && (R->c & AF_SHIELD)) {
+        if (!att && (RS_ATTACK_AF (*R) & AF_SHIELD)) {
             j = dsh[k];
             q = dsq[k];
         } else {
@@ -470,21 +470,21 @@ void __fastcall__ o_pc_side (struct side* s)
 ** mastery; at a thing the tool that hits it hardest, not a weapon a thing would spoil), put in the reply's words */
 void __fastcall__ o_pc_wield (struct req* q)
 {
-    unsigned char k, j, at = q->b, soft = 2;
+    unsigned char k, j, at = RS_WIELD_THING (*q), soft = 2;
     int v, top;
     const char* key = 0;
 
-    q->result = 0;
+    RS_WIELD_WHICH (*q) = 0;
     for (k = 0; k < 2; ++k) {
-        if (q->x[k]) {
-            kind_in (q->x[k]);
+        if (RS_WIELD_HELD (*q)[k]) {
+            kind_in (RS_WIELD_HELD (*q)[k]);
             if ((j = row_of () == SOFT) < soft) {
                 soft = j;
-                q->result = k + 1;
+                RS_WIELD_WHICH (*q) = k + 1;
             }
         }
     }
-    if (q->result) {
+    if (RS_WIELD_WHICH (*q)) {
         return;
     }
     top = worth (0, at);                        /* (Its bare hands': a fist's) */
@@ -645,11 +645,11 @@ void __fastcall__ o_hit_thing (struct req* q, struct side* s)
 {
     static unsigned char hq[offsetof (struct req, text)];   /* (The harm's request: but its text) */
 #define h   (*(struct req*) hq)
-    unsigned char res[4], k, lv, n, asp = 0, run = q->c, a, pull = q->w2 & RS_SHORT;
+    unsigned char res[4], k, lv, n, asp = 0, run = RS_ATTACK_RUN (*q), a, pull = RS_ATTACK_FLAGS (*q) & RS_SHORT;
     int imp, v, top = -100;
 
-    memcpy (res, q->x, sizeof res);
-    memset (q->x, 0, sizeof q->x);
+    memcpy (res, RS_ATTACK_RESIST (*q), sizeof res);
+    memset (RS_ATTACK_EFFECTS (*q), 0, sizeof RS_ATTACK_EFFECTS (*q));
     if (q->actor) {
         s->part = 0xFF;                         /* (A creature's: its own weapon or body, never hurt by it, the
                                                 **   house's: fight.c's beast_side) */
@@ -665,33 +665,33 @@ void __fastcall__ o_hit_thing (struct req* q, struct side* s)
     lv = harn_test (s->aml);
     n = s->part != 0xFF && lv <= HARN_MF ? 0 : HARN_R_DICE (harn_melee_result (HARN_IGNORE, lv, 0));
     imp = n ? dice (n, 6) + s->imp[asp] : 0;
-    q->w1 = imp > res[asp] ? imp - res[asp] : 0;
-    q->b = asp;
-    q->c = 0;
-    q->w2 = 0;
-    q->result = s->part != 0xFF ? 2 : 0;
+    RS_ATTACK_HARM (*q) = imp > res[asp] ? imp - res[asp] : 0;
+    RS_ATTACK_ASPECT (*q) = asp;
+    RS_ATTACK_WORST (*q) = 0;
+    RS_ATTACK_OUT (*q) = 0;
+    RS_ATTACK_STRUCK (*q) = s->part != 0xFF ? 2 : 0;
     if (!q->actor && !nobreak && n && res[0] && res[1] >= 4 && (v = wq_of (s, 1)) != 0 && dice (3, 6) > v) {
-        q->a = fumbled (s, 1);                  /* (A weapon on something hard (a thing that stands up to blows, iron or
+        RS_ATTACK_DROP (*q) = fumbled (s, 1);                  /* (A weapon on something hard (a thing that stands up to blows, iron or
                                                 **   stone): the book's Weapon Damage, the dice over its quality: broken) */
-        q->result |= 8;
+        RS_ATTACK_STRUCK (*q) |= 8;
     }
     put (s->word);
     if (s->part != 0xFF && lv == HARN_CF) {     /* (Gone wrong: the part hurt; a bare one stopped short of it, asked) */
         a = s->part == HARN_FOOT ? pc_armour (SOLE, 0) : pc_armour (s->part, HARN_BLUNT);
         v = dice (2, 6) + res[0] / 2 - a;
         if (v > 0 && pull && !a) {
-            q->result |= 4;
+            RS_ATTACK_STRUCK (*q) |= 4;
         } else if (v > 0) {
             memset (hq, 0, sizeof hq);
             h.kind = RS_HARM;
-            h.a = HC_STRUCK;
-            h.c = s->part;
-            h.w1 = v;
-            h.w2 = run;
+            RS_HARM_CAUSE (h) = HC_STRUCK;
+            RS_HARM_PART (h) = s->part;
+            RS_HARM_IMPACT (h) = v;
+            RS_HARM_RUN (h) = run;
             harm (&h);
-            q->c = h.b;
-            q->w2 = h.w2;
-            q->result |= h.result;
+            RS_ATTACK_WORST (*q) = RS_HARM_BAND (h);
+            RS_ATTACK_OUT (*q) = RS_HARM_OUT (h);
+            RS_ATTACK_STRUCK (*q) |= RS_HARM_STOP (h);
         }
     }
 #undef h

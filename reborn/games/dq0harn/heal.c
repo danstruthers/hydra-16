@@ -237,16 +237,16 @@ static unsigned char __fastcall__ binds (harn_char* c)
 ** ache: a hard stop), w2 the tenths it's senseless (0) */
 static void __fastcall__ body_time (struct req* r)
 {
-    unsigned m = r->w1;
+    unsigned m = RS_TIME_MINUTES (*r);
     unsigned char k, dead = 0, bound = 0, n = strlen (news), ninj = pc.ninj, u, ag = 0;
 
     out_t = 0;
-    if (r->x[2] == 3 && pc.state != HARN_DEAD) {    /* (Drowned: the world's, slice 4.9's) */
+    if (RS_TIME_DROWNED (*r) == 3 && pc.state != HARN_DEAD) {    /* (Drowned: the world's, slice 4.9's) */
         pc.state = HARN_DEAD;
         nput (" You drown.");
     }
-    if ((!r->actor || r->b) && pc.state != HARN_DEAD) {
-        if (!r->a) {
+    if ((!r->actor || RS_TIME_PC (*r)) && pc.state != HARN_DEAD) {
+        if (!RS_TIME_ABOUT (*r)) {
             rest_m = rest_m + m < rest_m ? 0xFFFF : rest_m + m;    /* (At rest: toward its healing rolls, */
             develop (m);                        /*   and its skills' development rolls: slice 4.4's, skills.c) */
         }
@@ -258,12 +258,12 @@ static void __fastcall__ body_time (struct req* r)
         }
     }
     for (k = 0; k < NACTORS; ++k) {
-        if (r->w2 & 1 << k) {
+        if (RS_TIME_BLEEDERS (*r) & 1 << k) {
             u = aden[k];
             sheet_in (u);
             if (bleed (&cr, m)) {
                 dead |= 1 << k;
-            } else if (!(r->x[0] & 1 << k) && cr.state == HARN_CONSCIOUS && bs.kind &&
+            } else if (!(RS_TIME_FIGHTING (*r) & 1 << k) && cr.state == HARN_CONSCIOUS && bs.kind &&
                 (beast_flags (bs.kind) & BF_FOLK) && binds (&cr)) {
                 bound |= 1 << k;
             }
@@ -281,13 +281,13 @@ static void __fastcall__ body_time (struct req* r)
         }
         sheets_watch (wcount);
     }
-    memcpy (r->x + 4, &wnext, 4);              /* (When it's next to be asked, nothing bleeding: the world's) */
-    r->w1 = dead;
-    r->c = bound;
-    r->w2 = out_t;
-    r->b = health_of (&pc);
-    r->result = pc.state == HARN_DEAD;
-    r->grade = (strlen (news) != n || fresh ? 2 : 0) | (pc.ninj > ninj ? 4 : 0) | ag;   /* (A skill opened as it
+    memcpy (&RS_TIME_NEXT (*r), &wnext, 4);              /* (When it's next to be asked, nothing bleeding: the world's) */
+    RS_TIME_DEAD (*r) = dead;
+    RS_TIME_BOUND (*r) = bound;
+    RS_TIME_OUT (*r) = out_t;
+    RS_TIME_HEALTH (*r) = health_of (&pc);
+    RS_TIME_DIED (*r) = pc.state == HARN_DEAD;
+    RS_TIME_NEWS (*r) = (strlen (news) != n || fresh ? 2 : 0) | (pc.ninj > ninj ? 4 : 0) | ag;   /* (A skill opened as it
                                                 **   was used, news since: told now, slice 4.4's) */
     fresh = 0;
 }
@@ -391,14 +391,14 @@ static void __fastcall__ treat (struct req* r)
         u = aden[(r->other - 1) & 7];
         sheet_in (u);
         if (!bs.kind) {
-            r->result = 3;
+            RS_TREAT_CANT (*r) = 3;
             return;
         }
         c = &cr;
     }
-    if (!r->a) {
+    if (!RS_TREAT_DONE (*r)) {
         if ((k = to_treat (c)) == 0xFF) {
-            r->result = 1;
+            RS_TREAT_CANT (*r) = 1;
             put (tpart[0] && !strstr (tpart, "wound") ? "There's nothing there that wants tending." : c == &pc ?
                 "You have no wounds that want tending." : "It has no wounds that want tending.");
             return;
@@ -406,26 +406,26 @@ static void __fastcall__ treat (struct req* r)
         j = &c->inj[k];
         how = remedy (j);
         if (c == &pc && j->sev >= HARN_GRIEVOUS && how != TR_TOURNIQUET) {
-            r->result = 2;
+            RS_TREAT_CANT (*r) = 2;
             put ("You can't treat a wound so grave yourself.");
             return;
         }
         t = how == TR_TOURNIQUET ? 600 : how == TR_DRESS ? 3000 * j->il : how == TR_SURGERY ? 600 * dice (10, 6) :
             600 * dice (5, 6);
-        r->b = k;
-        r->c = how;
-        r->w1 = t;
-        r->x[0] = j->loc;
+        RS_TREAT_WOUND (*r) = k;
+        RS_TREAT_HOW (*r) = how;
+        RS_TREAT_TENTHS (*r) = t;
+        RS_TREAT_LOC (*r) = j->loc;
         put (begun[how]);
         put (wname (c, k));
         put (".");
         return;
     }
-    k = r->b;
-    how = r->c;
-    if (k >= c->ninj || c->inj[k].loc != r->x[0] || (how == TR_TOURNIQUET) != ((c->inj[k].flags & HARN_IF_BLEEDER) !=
+    k = RS_TREAT_WOUND (*r);
+    how = RS_TREAT_HOW (*r);
+    if (k >= c->ninj || c->inj[k].loc != RS_TREAT_LOC (*r) || (how == TR_TOURNIQUET) != ((c->inj[k].flags & HARN_IF_BLEEDER) !=
         0)) {
-        r->result = 2;
+        RS_TREAT_UNDONE (*r) = 2;
         return;
     }
     j = &c->inj[k];
@@ -436,7 +436,7 @@ static void __fastcall__ treat (struct req* r)
             j->flags &= ~HARN_IF_BLEEDER;
             put ("The bleeding stops.");
         } else {
-            r->result = 1;
+            RS_TREAT_UNDONE (*r) = 1;
             put ("The blood still flows.");
         }
     } else {

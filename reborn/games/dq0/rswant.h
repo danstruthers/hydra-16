@@ -51,42 +51,42 @@ static unsigned __fastcall__ want_less (unsigned v, unsigned n)
 
 static unsigned char __fastcall__ want_of (struct req* r, unsigned long now)
 {
-    unsigned char* x = r->x + WANT_X;
+    unsigned char* x = RS_TIME_WANT (*r);
     unsigned h = x[0] | x[1] << 8, t = x[2] | x[3] << 8, n = r->x[16] | r->x[17] << 8;
     unsigned char w, o = x[4], k, d = 0;
     unsigned long due;
 
-    if (r->a == 2) {
+    if (RS_TIME_ABOUT (*r) == 2) {
         n = want_add (n, n);                    /* (Vigorous work: twice the want) */
     }
     h = want_add (h, n);
     t = want_add (t, n);
-    if (r->x[14] & 0x80) {
+    if (RS_TIME_RATION (*r)) {
         x[5] = 3;                               /* (A day's ration begun: three meals) */
     }
-    for (k = r->x[14] & 0x7F; k; --k) {
+    for (k = RS_TIME_MEALS (*r); k; --k) {
         h = want_less (h, WANT_MEAL);
         x[5] -= x[5] != 0;
     }
-    for (k = r->x[15]; k; --k) {
+    for (k = RS_TIME_DRINK (*r); k; --k) {
         t = want_less (t, WANT_PINT);
     }
     want_till = 0xFFFF;
     w = want_level (h, want_hl) | want_level (t, want_tl) << 4;
     if ((w & 15) > (o & 15)) {
         WANT_SAY (want_words[(w & 15) - 1]);
-        r->grade |= 8;                          /* (A level risen: the world's long task asked, soft) */
+        RS_TIME_NEWS (*r) |= 8;                          /* (A level risen: the world's long task asked, soft) */
     }
     if ((w >> 4) > (o >> 4)) {
         WANT_SAY (want_words[(w >> 4) + 4]);
-        r->grade |= 8;
+        RS_TIME_NEWS (*r) |= 8;
     }
     if ((w & 15) == 5 || (w >> 4) == 5) {
         d = WANT_DIES;
     }
     due = now + (unsigned long) ((want_till >> 1) + 1) * 600;
-    if (due < *(unsigned long*) (r->x + 4)) {
-        *(unsigned long*) (r->x + 4) = due;     /* (Asked again as its next level could come) */
+    if (due < RS_TIME_NEXT (*r)) {
+        RS_TIME_NEXT (*r) = due;     /* (Asked again as its next level could come) */
     }
     x[0] = (unsigned char) h;
     x[1] = h >> 8;

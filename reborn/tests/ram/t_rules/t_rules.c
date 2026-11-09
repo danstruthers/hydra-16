@@ -349,7 +349,7 @@ static void character (void)
     q.kind = RS_LOAD_PC;
     strcpy (q.text, PCFILE);
     ask (&q, &rep);
-    if (rep.result) {
+    if (RS_LOAD_PC_BAD (rep)) {
         fault ("the character not loaded");
     }
 }
@@ -466,31 +466,31 @@ static void request (void)
     memset (&dq, 0, sizeof dq);                 /* (Its dice: the faces, and the seed) */
     dq.kind = RS_DICE;
     if (ddice) {
-        memcpy (dq.x, faces, nd);
-        dq.b = drep;
+        memcpy (RS_DICE_FACES (dq), faces, nd);
+        RS_DICE_REST (dq) = drep;
     }
-    dq.a = seeded;
-    dq.w1 = dseed;
+    RS_DICE_HOW (dq) = seeded;
+    RS_DICE_SEED (dq) = dseed;
     ask (&dq, &dq);
     memcpy (prev, rep.text, sizeof prev);
     ask (&q, &rep);
     memset (&dq, 0, sizeof dq);                 /* (What it rolled) */
     dq.kind = RS_DICE;
     ask (&dq, &dq);
-    rolled = dq.w1;
+    rolled = RS_DICE_ROLLED (dq);
     if (ddice) {
         if (!dmore && rolled != nd) {
             badn ("it rolled %ld dice, not %ld", rolled, nd);
         }
         for (k = 0; k <= nd && k < rolled && k < NDICE; ++k) {    /* (After the faces, a repeated one's) */
-            if ((k < nd || drep) && dq.x[k] != sides[k]) {
-                sprintf (msg, "its die %u a d%u, not a d%u", k + 1, dq.x[k], sides[k]);
+            if ((k < nd || drep) && RS_DICE_SIDES (dq)[k] != sides[k]) {
+                sprintf (msg, "its die %u a d%u, not a d%u", k + 1, RS_DICE_SIDES (dq)[k], sides[k]);
                 bad ();
                 break;
             }
         }
-        if (dq.c) {
-            badn ("%ld of its faces not rolled", dq.c, 0);
+        if (RS_DICE_UNROLLED (dq)) {
+            badn ("%ld of its faces not rolled", RS_DICE_UNROLLED (dq), 0);
         }
     }
     ddice = seeded = 0;

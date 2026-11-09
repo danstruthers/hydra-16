@@ -125,11 +125,11 @@ static unsigned char rp_untie (void)
     r = &HUB->slot[SLOT_WORLD];                 /* (Shaken loose: the Throwing skill's knack) */
     r->kind = RS_TEST;
     r->actor = 0;
-    r->a = P_THROW;
-    r->b = 0;
-    r->steps = 0;
+    RS_TEST_PURPOSE (*r) = P_THROW;
+    RS_TEST_HOW (*r) = 0;
+    RS_TEST_STEPS (*r) = 0;
     r = hub_ask (SLOT_WORLD);
-    g = r->grade;
+    g = RS_TEST_GRADE (*r);
     r->state = REQ_FREE;
     rp_new ();
     if (G_OK (g)) {

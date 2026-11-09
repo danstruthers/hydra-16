@@ -123,11 +123,11 @@ void s_tend (void)
         r = ask_b (RS_TREAT, 0, 0);
         plan.other = k;
         plan.tries = 0;
-        plan.b = r->b;
-        plan.c = r->c;
-        plan.x = r->x[0];
-        plan.t = r->w1;
-        res = r->result;
+        plan.b = RS_TREAT_WOUND (*r);
+        plan.c = RS_TREAT_HOW (*r);
+        plan.x = RS_TREAT_LOC (*r);
+        plan.t = RS_TREAT_TENTHS (*r);
+        res = RS_TREAT_CANT (*r);
         strcpy (lb, r->text);
         r->state = REQ_FREE;
         if (!res && tool_out (0)) {
@@ -142,10 +142,10 @@ void s_tend (void)
         goto out;
     }
     r->other = plan.other;
-    r->c = plan.c;
-    r->x[0] = plan.x;
+    RS_TREAT_HOW (*r) = plan.c;
+    RS_TREAT_LOC (*r) = plan.x;
     r = ask_b (RS_TREAT, 1, plan.b);
-    res = r->result;
+    res = RS_TREAT_UNDONE (*r);
     strcpy (lb, r->text);
     r->state = REQ_FREE;
     if (res != 2) {
