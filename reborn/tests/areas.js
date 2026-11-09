@@ -52,6 +52,7 @@ const rules = [
   ['reborn/modules/numbers/', ['numbers', 'basic', 'forth', 'hylang', 'c', 'layout']],
   ['reborn/modules/play/', ['sound', 'layout']],
   ['reborn/modules/unpack/', ['dq0', 'layout']],                // (The unpack library: the game's overlays read as it starts)
+  ['reborn/modules/dq0lib/', ['dq0', 'layout']],                // (The game's own library: its overlays read, its numbers)
   ['reborn/modules/', ['*']],                                 // (init, rc, cons, kdev, storage, snd, vid, rom.txt)
   ['reborn/spec/asm.def', ['asm', 'basic', 'forth']],
   ['reborn/spec/numbers.def', ['numbers', 'basic', 'forth', 'hylang', 'c']],

@@ -12,7 +12,12 @@
             .import     popa, popax
 
             .include    "zeropage.inc"
-            .include    "ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
+OVL_BANKS   = OVMAX                 ; (The game's library, dq0lib.inc: the overlays' banks, a '.' after the first
+OVL_DOT     = 12                    ;   twelve, the screen's silence under its 36M cycles; the file find_dirs'
+.define     OVL_FILE ""             ;   opened: ovl_load's, num's, dnum's)
+            .include    "dq0lib.inc"
+            .export     _dnum
+_dnum       = _num
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
 OVMAX       = 24                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the

@@ -150,7 +150,6 @@ static unsigned char door_by (void);            /* (Below) */
 static unsigned char nonear;                    /* (None left near to place: nearby's, till the character moves) */
 extern unsigned char ovbank[7];
 static unsigned char __fastcall__ wades (unsigned char w, unsigned char sn, unsigned x, unsigned y);  /* (Below) */
-extern char _SWAP_START__[];
 
 /* ---- The kinds: the data file's (make.js's, from kinds.txt: the game's bestiary), in a bank of their own */
 
@@ -4310,25 +4309,12 @@ void s_sway (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The swapped parts' images read into banks of its own (dir/dq0d.ovl: dq0d.cfg's OV1 ... OV6, as make.js packs
+/* The swapped parts' images read into banks of its own (dir/dq0d.ovl: dq0d.cfg's OV1 ... OV7, as make.js packs
 ** them, ../dq0/ovlpack.js: each bank packed, read and unpacked in place by the unpack library, the linker's fill ($FF)
-** put back after its bytes: ../dq0/ovunpack.inc): 0, or -1 */
-unsigned char __fastcall__ ovl_unpack (unsigned fb);   /* (../dq0/ovunpack.inc: the file's fd, the banks at most) */
-static int __fastcall__ ovl_load (const char* dir)
-{
-    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Its path in the parts' area: none in it yet) */
-    int fd, n;
-
-    strcpy ((char*) b, dir);
-    strcat ((char*) b, "/dq0d.ovl");
-    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (7)) < 0) {
-        return -1;
-    }
-    ovbank[0] = n;                              /* (The rest after it: ovl_unpack's) */
-    n = ovl_unpack (fd | (7 << 8));
-    close (fd);
-    return -n;
-}
+** put back after its bytes), all of it the game's library's (modules/dq0lib, ../dq0/dq0lib.inc: 2026-11-09): 0, or
+** not 0; and a number's digits, its NUM (the task's arguments) */
+unsigned char __fastcall__ ovl_load (const char* dir);
+unsigned char __fastcall__ num (const char* s);
 
 #pragma code-name (push, "SW4CODE")
 #pragma rodata-name (push, "SW4RODATA")
@@ -4338,17 +4324,6 @@ static int __fastcall__ ovl_load (const char* dir)
 ** ones read back: 0, or -1 */
 #pragma code-name (push, "SW23CODE")
 #pragma rodata-name (push, "SW23RODATA")
-
-/* A number's digits (the task's arguments) */
-static unsigned char __fastcall__ num (const char* s)
-{
-    unsigned char n = 0;
-
-    while (*s >= '0' && *s <= '9') {
-        n = n * 10 + *s++ - '0';
-    }
-    return n;
-}
 
 int __fastcall__ s_start (char** argv)
 {

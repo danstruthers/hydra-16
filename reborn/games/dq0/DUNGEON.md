@@ -1446,7 +1446,8 @@ packed, not the game on the ROM disk (2026-10-31, DECISIONS.md).  Now: 208M cycl
   some 164 cycles a byte, not 197 (a file read whole, 305 cycles a byte to 270).  229M and 311M (64 s and 87 s).
 - **The overlays packed** (2026-10-31): each bank on its own in LZ4's block format (ovlpack.js, each task's make.js:
   421K of bytes to 278K), read and unpacked in place by the unpack library (modules/unpack, a library module of the
-  paged ROM: one copy for every task, none of their main RAM but the call's, games/dq0/ovunpack.inc): a bank's packed
+  paged ROM: one copy for every task, none of their main RAM but the call's; called by the game's own library,
+  modules/dq0lib's OVL_LOAD, since 2026-11-09, games/dq0/dq0lib.inc, ovunpack.inc's in each task before): a bank's packed
   bytes read to its end and unpacked from its start, the fill put back after them, so each bank's as ld65 made it (a
   bank that can't be unpacked in place, or doesn't pack smaller, is stored as it is).  ovlpack.js unpacks each file as
   the library does as it makes it, and dq0starttime compares every task's banks with ld65's in the emulator.  208M

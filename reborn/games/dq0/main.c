@@ -163,17 +163,6 @@ char* __fastcall__ env (const char* name, char* buf, unsigned char size)
     return buf;
 }
 
-/* A number, a word's (atoi's, without the C library's atol and ctype: the main RAM's room, 2026-10-30) */
-unsigned __fastcall__ dnum (const char* s)
-{
-    unsigned n = 0;
-
-    while (*s >= '0' && *s <= '9') {
-        n = n * 10 + *s++ - '0';
-    }
-    return n;
-}
-
 /* The game's folder (prog's), and its lib/dq0, if its overlays are there; else the card's: the overlays' file opened
 ** (its fd: ovl_load's, opened once, 2026-10-30) */
 static int find_dirs (void)
@@ -204,30 +193,17 @@ static int find_dirs (void)
 /* ---- The overlays: libdir/dq0.ovl (fd, find_dirs'), an 8K bank each (dq0.cfg's OV1 ...; the file cut after the
 ** last one used: make.js), read into banks of the game's own.  Each bank's bytes in the file as make.js packs them
 ** (ovlpack.js): packed, a bank on its own (LZ4's block), read and unpacked in place by the unpack library
-** (modules/unpack, ovunpack.inc: 2026-10-31), the linker's fill ($FF) put back after its bytes, so each bank's as ld65
-** made it.  The game's start's first words before it (the screen not made yet: 2026-10-30, the start's progress
-** shown), and a dot halfway (the overlays read in two runs: the screen's silence under its 36M cycles, 2026-11-06,
-** the designators' overlay 23) */
-#define OVHALF      12
-static void __fastcall__ ovl_load (int fd)
+** (modules/unpack: 2026-10-31), the linker's fill ($FF) put back after its bytes, so each bank's as ld65 made it; all
+** of it the game's library's (modules/dq0lib's OVL_LOAD, dq0lib.inc's ovl_load: 2026-11-09), the file closed, the
+** window's bank put back.  The game's start's first words before it (the screen not made yet: 2026-10-30, the start's
+** progress shown), and a dot halfway (the overlays read in two runs, a dot after the first twelve banks, bank.s's
+** OVL_DOT: the screen's silence under its 36M cycles, 2026-11-06, the designators' overlay 23) */
+static void __fastcall__ ovl_in (int fd)
 {
-    int first;
-    unsigned char w = getbank (), k;
-
     write (1, "Dingus Quest Zero is starting ...", 33);
-    if (fd >= 0 && (first = hy_banks_alloc (sizeof ovbank)) >= 0) {
-        ovbank[0] = first;                      /* (The rest after it: ovl_unpack's) */
-        if (!ovl_unpack (fd | (OVHALF << 8)) && (write (1, ".", 1), ovbank[0] = first + OVHALF,
-            !ovl_unpack (fd | ((sizeof ovbank - OVHALF) << 8)))) {
-            for (k = 0; k < sizeof ovbank; ++k) {
-                ovbank[k] = first + k;          /* (The second run's in the first's places: each its own again) */
-            }
-            setbank (w);
-            close (fd);
-            return;
-        }
+    if (fd < 0 || ovl_load (fd)) {
+        hy_exits ("dq0: no overlays (lib/dq0/dq0.ovl, the dq0lib and unpack libraries), or no RAM banks");
     }
-    hy_exits ("dq0: no overlays (lib/dq0/dq0.ovl, the unpack library), or no RAM banks");
 }
 
 /* ---- The character: the ruleset's (hmchar's), its file read by the referee */
@@ -2815,7 +2791,7 @@ int main (int argc, char* argv[])
     unsigned char k, f;
     char* l;
 
-    ovl_load (find_dirs ());                    /* (The overlays read in, and the swapped parts with them, first) */
+    ovl_in (find_dirs ());                      /* (The overlays read in, and the swapped parts with them, first) */
     begin (argc, argv);
     while (!quit) {
         hub_map (0);                            /* (The hub at $8000 again: a call may have moved the window) */

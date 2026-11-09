@@ -141,6 +141,13 @@ build.js checks them afterwards.
    state the caller saves around it. That suits routines that do real work per call: line of sight, path finding,
    chunk lookup, name matching, keyed dice, paging. The tiny hot ones (`apart` and `abs`, ~30 cycles, called in
    loops) should stay as build-made part-local copies (point 3), not ROM calls.
+   *Built 2026-11-09 (modules/dq0lib, games/dq0/dq0lib.inc; DECISIONS.md's "The game's own library in the paged ROM"):*
+   a library module of the game's own, found by each task as it starts. Its first entries are the overlays' loading
+   (`OVL_LOAD`: the path, the file, the banks, the unpack library called from it, the file closed) and `NUM`. The room
+   came out more than measured above, because a task's `ovl_load` was what pulled the C library's `open`, `strcat`
+   and the like into the main RAM: the main RAM's free bytes went from 2,128 to 2,307 in the UI, 2,536 to 2,624 in the
+   world, 2,399 to 2,512 in the denizens, 2,435 to 3,122 in the senses, 2,414 to 2,879 in the maker and 2,197 to 2,329
+   in the referee.
 5. **Typed stub calls.** A generated stub can pass a small argument block (or use the C stack, as the copies already
    do), which removes the hidden-parameter globals.
 
@@ -269,8 +276,8 @@ Some copies have no memory-placement reason at all (§1 covers the ones that do)
 | Path finding | dq0d `route` (BFS) and `step_for` (greedy); dq0w `ways`, `s_go_to`, `s_path_ways`, `s_ways_go`, `s_step_to` |
 | Name matching | things.c `named`, `named4`, `a_word`, `word` ×2; resolve.c `has`; dq0d `called`; lower-casing loops ×4 in the UI |
 | Dice and hash | the SDK's `rseed`/`random`, plus dq0m's own xorshift `dr` ×3 (fixtures.c, sconce.c, pass.c), three `wh` hashes (caves, plan, sky), seed constants 40503, 2654435761, 69069, 7919 |
-| Overlay loading | `ovl_load` in dq0d, dq0p, dq0m, dq0w, dq0harn (5, near-identical) |
-| atoi without ctype | `num` ×3 (dq0d, dq0p, dq0w), plus dq0life and dq0end |
+| Overlay loading | `ovl_load` in dq0d, dq0p, dq0m, dq0w, dq0harn (5, near-identical). *Made one, 2026-11-09: the game's library's `OVL_LOAD` (modules/dq0lib), the UI's too* |
+| atoi without ctype | `num` ×3 (dq0d, dq0p, dq0w), plus dq0life and dq0end. *Made one, 2026-11-09: the game's library's `NUM`, for the five tasks and the UI's `dnum` (dq0life and dq0end, RAM programs with some 20K free and no library found, keep theirs)* |
 | Event emitting | `told` ×6 + `told68`, plus 30 hand-built events |
 | Paged caches | §6 |
 
@@ -287,6 +294,32 @@ Two of these are correctness risks, not just size:
   character and anyone is drawn from the character's end, so a denizen sees the character just when the character
   would see it. Not yet in the paged ROM: the line reads the chunks through each task's own `at` (the cache and the
   maker are the task's), which a ROM module can't call back into; that waits for the chunk lookup itself in ROM.
+  *Looked at again 2026-11-09, with the game's library built (modules/dq0lib):* a ROM routine *can* call back into
+  its caller: XCALL leaves the task's RAM and zero page as they are, so a `jsr` to an address the task gave runs the
+  task's own code (its `at`, which may map banks and ask the maker), and XCALLs nest (dq0lib's OVL_LOAD calls the
+  unpack library). The real obstacles are three. (a) The ROM can't link to the task's symbols (`at`, `portal_at`,
+  `cached`, `cx_`, `cy_`, `at_x0`, `at_y0`, `ln_way`), so they must be handed over at run time. (b) The line keeps
+  some 45 bytes over its calls of `at` (its BSS today), and a library has no RAM; the call registers won't do, since
+  `at`'s long way (C, the maker's request) changes them. (c) It reads its arguments off cc65's C stack, whose
+  runtime (`sp`, `pusha`) is at another address in each task. Nor can the chunk lookup go to the ROM whole: `at`'s
+  quick way is some 80 cycles and a look asks it thousands of times, so an XCALL each would more than double it. Its
+  long way, the search of the hub's cache table for a chunk's slot (`find`, `cached`, `made`/`made9`/`made10`/`made16`,
+  map.c's and changes.c's: nine copies or more), is once a chunk and suits the ROM.
+  **The plan.** (1) A zero-page block for the line, fixed, in each task that draws one: `$50-$7F` (the program's zero
+  page is `$22-$7F` and no call touches it; cc65's and the tasks' own end at `$41`), its layout in one include that
+  the ROM module and the tasks both assemble (games/dq0/lnzp.inc): the line's state, and vectors for the callbacks.
+  (2) The task's side, beside dq0lib.inc: `_line`, `_ln_pass` and `_ln_portal` taking cc65's arguments off the C
+  stack into the block and calling the library; and three short callbacks of its own, `ln_at` (sn, x, y from the
+  block: `at`'s pointer, `cx_`, `cy_` into the block), `ln_door` (`portal_at` of that square) and, in the senses,
+  `ln_cached`. (3) The ROM side: line.inc as it is, its BSS the block's names, its `jsr _at` a `jmp (vector)`. (4) The
+  hub cache's search as the library's `CS_FIND` (the world bank, sn, cx, cy: the slot, or none), each task keeping its
+  own bookkeeping (the world's stamp and `inuse`) round it. What it would win: the senses' main RAM some 770 bytes (892
+  of line, less the stubs), the world's some 100 and part 65's 547; for some 150 cycles more a line (a line is
+  4,400-5,000, a denizen's senses some 100,000). **Not done yet**, because it doesn't pay enough now: neither task is
+  short of room (3,122 and 2,624 bytes free, the floor 2,048), the correctness is had already (one source), and the
+  fixed zero-page contract is new here (the numbers library saves and puts back `$70-$7F`; a line calling back into
+  C can't). The router (step 2's next) needs the same contract, callbacks into `at` from the ROM, so it's best
+  designed once for both, with the router.
 - **Path finding in five-plus places.** A denizen and the PC route differently through the same doors, and every
   fix to door, slope, water or rubble rules has to be made in each copy. One router in the shared library, with
   each walker's rules as a cost table, removes that.
@@ -488,7 +521,7 @@ Ranked by how much each unlocks, and arranged so the game keeps working througho
 | # | Change | What it unlocks | Size |
 |---|---|---|---|
 | 1 | **Generated placement** (§1.1): parts.txt, the stubs and the config's SWn lines made by the build. *Done 2026-11-06 (games/dq0/parts.js), every task.* Then the automatic packer (§1.2: *done 2026-11-07*, the parts' banks chosen by the build, parts.txt's bank a wish; the calls routed by part; a part past the swap area has its pieces moved out by the build, games/dq0/pack.js) and part-local leaf copies (§1.3) | ends "moved for room" churn; a function moved is its pragma alone; dispatch can be organised by meaning | medium, then large |
-| 2 | **Shared helpers in paged ROM** (§1.4, §4): line of sight, path finding, chunk lookup, name matching, the keyed hash and dice. *Line of sight done 2026-11-08 as a stage: one line (dq0w/line.inc: sight, fire, air), a shared source assembled into the senses and the world, not yet ROM (it calls the task's own chunk lookup); the look's grid ray the same squares, heights and portal rule (DECISIONS.md's "One line of sight").* The router next | one line of sight and one router (they disagree today); one copy to keep. Small room gains (measured: a few hundred bytes a task) | medium |
+| 2 | **Shared helpers in paged ROM** (§1.4, §4): line of sight, path finding, chunk lookup, name matching, the keyed hash and dice. *Line of sight done 2026-11-08 as a stage: one line (dq0w/line.inc: sight, fire, air), a shared source assembled into the senses and the world, not yet ROM (it calls the task's own chunk lookup); the look's grid ray the same squares, heights and portal rule (DECISIONS.md's "One line of sight"). The game's library in the paged ROM done 2026-11-09 (modules/dq0lib, each task's games/dq0/dq0lib.inc; DECISIONS.md's "The game's own library in the paged ROM"): the overlays' loading (`OVL_LOAD`, six copies) and `NUM` (atoi's: five copies and dq0m's atoi), the main RAM 88 to 687 bytes freer in every task (the UI 2,128 to 2,307); the line and the chunk lookup's move to it planned in §4 (a fixed zero-page block and callbacks into the task's `at`), to be done with the router.* The router next | one line of sight and one router (they disagree today); one copy to keep. Small room gains (measured: a few hundred bytes a task) | medium |
 | 3 | **The hub schema and generated headers/inc/JS/ownership** (§2) | typed payloads; no hand-synced constants; cheaper tests | medium |
 | 4 | **Handles, the scope table, the action table** (COMMANDS §4.1–4.4 and §3.1 here). *Mostly done 2026-11-07* (COMMANDS-CRITIQUE.md §5.1: every choice of a thing made once and sent as a handle, one "which?", one name match; §5.2 G–K: both sweeps clean, one path for things and one for features, one walk over, refusals as data); the action table, §5.2's step L, under way | consistent commands; one intent shape for PC and denizens | large (the command plan's steps) |
 | 5 | **Narration as data** (§3.2) | removes the 33 wording functions, `told` ×6, most SA_ refusals; first words for free; denizen actions worded alike | large, migratable one action at a time |

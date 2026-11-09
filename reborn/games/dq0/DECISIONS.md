@@ -2191,3 +2191,53 @@ seed 123456789 302.4M to 302.7M.
 rules gone).  The senses' main RAM 2,634 to 2,435 (the whole line, in place of clear_line); part 1 1 to 4, part 5 4,028
 to 4,136.  (Written in C first, cc65 made it 1,185 bytes; in assembly it's 766 in the world, 219 of them in the main
 RAM and the line itself in part 65, and 892 in the senses, with the cache's checks.)
+
+## The game's own library in the paged ROM (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's §1.4, §4 and step 2)
+
+ENGINE-CRITIQUE.md's §1.4 wanted the code the tasks each had a copy of in a shared library of the paged ROM, called by
+XCALL (some 120 cycles a call: for routines that do real work, or are called seldom).  Its first contents are the two
+§4 copies that were simplest and safest: the overlays' loading and `num`.
+
+**A module of its own, not an addition to unpack.**  modules/dq0lib (rom.txt, after unpack: a library module,
+HT_LIBRARY, its jump table at `$A030`).  The unpack library is the system's (libraries.md lists it with numbers, math
+and asm: packed banks read from any file, nothing of the game's in it); the game's own code, its overlays' files'
+names, its later line and router, would make it the game's.  The cost is a bank of the paged ROM (a library has its
+own `.cfg`, so the build doesn't pack it beside another module); the ROM has the room.  dq0lib calls unpack by XCALL
+in its turn (found by MODINFO, as the tasks found it before): XCALLs nest, each putting its caller's bank back.
+
+**How a task calls it** (games/dq0/dq0lib.inc, which each task's bank.s includes in place of ovunpack.inc, with
+`OVL_BANKS`, `OVL_DOT` and `OVL_FILE` set before it):
+
+- `unsigned char ovl_load (const char* dir)`: finds the library (MODINFO, its directory's entries read into the parts'
+  area, nothing there yet), keeps its bank and page (two bytes), and calls its `OVL_LOAD`: the path made in the parts'
+  area, the file opened, the banks had (a run), their numbers written to `_ovbank`, the unpack library called, the file
+  closed, the window's bank put back.  0, or not 0.  The UI gives the fd find_dirs opened (its high byte 0) and a `.`
+  after the first twelve banks (`OVL_DOT`: its start's progress, as before).  dq0harn's ovl_in takes its two banks
+  more after it.  Every task calls it first, so the library's found before anything else calls it.
+- `unsigned num (const char* s)`: `NUM`, a number's digits (32 bits in the library, 16 here).  dq0d's, dq0p's (its
+  `s_num` in part 3) and dq0w's `num` and the UI's `dnum` (bank.s: `_dnum = _num`) are gone, and dq0m's `atoi` (with
+  the C library's ctype that came with it).  dq0harn keeps `atoi` for its sheets' numbers; its arguments are `num`'s.
+- Not moved: dq0life's and dq0end's `num` (32-bit): RAM programs with some 20,000 bytes free, which don't find the
+  library (finding it would cost more than their `num`).
+
+**Room** (the main RAM's free bytes, the floor 2,048): the UI 2,128 to 2,307; the world 2,536 to 2,624; the denizens
+2,399 to 2,512; the senses 2,435 to 3,122; the maker 2,414 to 2,879; the referee 2,197 to 2,329.  More than §1.4's
+measure ("a few hundred bytes a task"): a task's `ovl_load` was what brought the C library's `open`, `strcpy`,
+`strcat` and the like into its main RAM, and the senses and the maker used them nowhere else; the maker and the referee
+had a 64-byte path besides.  The parts: the world's part 3 84 to 166 and overlay 1 86 to 168, the denizens' part 23
+2,473 to 2,547 and overlay 2 31 to 105, the senses' part 3 4,966 to 5,048 and overlay 3 2,209 to 2,291 (their `num`s).
+
+**Performance:** the start (dq0starttime) 226.8M cycles to 226.6M at seed 1, 305.9M at seed 123456789; every task's
+banks as ld65 made them (dq0OvlBanks).
+
+**The line of sight and the chunk lookup, looked at, not moved** (ENGINE-CRITIQUE.md's §4 has the plan).  The obstacle
+noted before ("a ROM module can't call back into the task's `at`") isn't the real one: a ROM routine can `jsr` to its
+caller's RAM.  The real ones: the ROM can't link to the task's symbols, so `at` and the rest must be handed over at run
+time; the line keeps some 45 bytes over its calls of `at`, which may change the call registers, and a library has no
+RAM; it reads cc65's C stack, whose runtime is at another address in each task; and `at`'s quick way (some 80 cycles,
+thousands a look) can't be an XCALL.  The plan: a fixed zero-page block for the line (`$50-$7F`: the tasks' own zero
+page ends at `$41`) with the callbacks' vectors, laid out in one include for the ROM and the tasks; stubs in the task
+that take cc65's arguments into it; the hub cache's search as the library's `CS_FIND`.  It would free some 770 bytes of
+the senses' main RAM and the world's part 65, for some 150 cycles a line (3%).  Left for now: neither task is short of
+room, the one line is already one source, and the router (step 2's next) needs the same contract of callbacks into
+`at` from the ROM, so it's best designed once, for both.

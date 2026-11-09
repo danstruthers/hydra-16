@@ -11,7 +11,10 @@
             .import     popa, popax
 
             .include    "zeropage.inc"
-            .include    "../dq0/ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
+OVL_BANKS   = OVMAX                 ; (The game's library, ../dq0/dq0lib.inc: ovl_load, num)
+OVL_DOT     = 0
+.define     OVL_FILE "/dq0harn.ovl"
+            .include    "../dq0/dq0lib.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
 OVMAX       = 8                     ; dq0harn.cfg's overlays (the 4th and 5th the swapped parts' images; the 8th afflict.c's)

@@ -18,7 +18,10 @@
             .import     popax, pushax, _cat_map
 
             .include    "zeropage.inc"
-            .include    "../dq0/ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
+OVL_BANKS   = OVBANKS + 4           ; (The game's library, ../dq0/dq0lib.inc: ovl_load, num; the overlays and
+OVL_DOT     = 0                     ;   the world's own four banks)
+.define     OVL_FILE "/dq0w.ovl"
+            .include    "../dq0/dq0lib.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
 SWDEPTH     = 12                    ; Swapped parts' calls in calls, at most

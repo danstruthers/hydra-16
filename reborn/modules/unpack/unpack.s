@@ -2,7 +2,8 @@
 ; unpack - the unpack library: a file of banks, each packed (LZ4's block format, a bank on its own), read into RAM
 ; banks and unpacked there, in place.  A library module (HT_LIBRARY) of the paged ROM, run in its caller's task
 ; through XCALL: one entry, at $A030.  Dingus Quest Zero's tasks read their overlays with it as they start
-; (games/dq0/ovlpack.js makes the files; games/dq0/ovunpack.inc finds the library and calls it): the card's read the
+; (games/dq0/ovlpack.js makes the files; the game's own library, modules/dq0lib's OVL_LOAD, finds it and calls it,
+; through XCALL in its turn, 2026-11-09: games/dq0/ovunpack.inc's in each task before that): the card's read the
 ; fewer bytes, about 270 cycles each, for about 40 cycles a byte unpacked (2026-10-31: the game's start, two thirds of
 ; it the card's reading).  It has no RAM of its own: its pointers are the call registers (r2-r12), its buffer each
 ; bank itself.

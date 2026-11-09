@@ -25,28 +25,14 @@ const char* libpath;                            /* (The game's lib folder: its b
 #define OVLS    9                               /* Its overlays: built.c, pass.c, caves.c, plan.c, fixtures.c; the
                                                 **   swapped parts' images (../dq0/swap.inc: map.c's, changes.c's);
                                                 **   uses.c; the great caverns (caves.c's cavern); what shows the sky
-                                                **   (sky.c) */
-extern char _SWAP_START__[];
+                                                **   (sky.c: bank.s's OVMAX, dq0lib.inc's OVL_BANKS) */
 
 /* The overlays: dir/dq0m.ovl, an 8K bank each (dq0m.cfg's OV1 ...; the file cut after the last one used, each bank's
 ** bank packed: make.js, ../dq0/ovlpack.js), read and unpacked in place into banks of its own by the unpack library,
-** the linker's fill ($FF) put back after its bytes (../dq0/ovunpack.inc): 0, or -1 */
-unsigned char __fastcall__ ovl_unpack (unsigned fb);   /* (../dq0/ovunpack.inc: the file's fd, the banks at most) */
-static int __fastcall__ ovl_load (const char* dir)
-{
-    static char path[64];
-    int fd, first;
-
-    strcpy (path, dir);
-    strcat (path, "/dq0m.ovl");
-    if ((fd = open (path, O_RDONLY)) < 0 || (first = hy_banks_alloc (OVLS)) < 0) {
-        return -1;
-    }
-    ovbank[0] = first;                          /* (The rest after it: ovl_unpack's) */
-    first = ovl_unpack (fd | (OVLS << 8));
-    close (fd);
-    return -first;
-}
+** the linker's fill ($FF) put back after its bytes, all of it the game's library's (modules/dq0lib, ../dq0/dq0lib.inc:
+** 2026-11-09): 0, or not 0; and a number, an argument's, its NUM (atoi's, without the C library's ctype) */
+unsigned char __fastcall__ ovl_load (const char* dir);
+unsigned char __fastcall__ num (const char* s);
 
 /* Request i answered: the strata's records copied first (the world bank's are the truth), and back if they changed */
 /* The chunks in the cache of strata no longer in the hub's records (their slots made way for another's: M_PLAN's,
@@ -129,7 +115,7 @@ int main (int argc, char* argv[])
 {
     unsigned char i;
 
-    if (argc < 4 || ovl_load (argv[3]) || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
+    if (argc < 4 || ovl_load (argv[3]) || hub_attach (num (argv[1]), num (argv[2]))) {
         return 1;
     }
     libpath = argv[3];

@@ -119,7 +119,6 @@ unsigned char kowed;                            /* (A stratum's populations owed
                                                 **   lights' minute's) */
 static unsigned char pc_down;                   /* (The character senseless: main's, its bearings off as it is) */
 struct work wk;
-extern char _SWAP_START__[];
 unsigned char den_done;                         /* (wbody.h's) */
 unsigned char den_saw;
 unsigned char kit_off;
@@ -3241,17 +3240,9 @@ void s_begin (void)
     }
 }
 
-/* A number, an argument's (atoi's, without the C library's ctype: the main RAM's room, slice 4.2's; part 3's, the
-** start-up's, 2026-10-29) */
-static unsigned char __fastcall__ num (const char* s)
-{
-    unsigned char n = 0;
-
-    while (*s >= '0' && *s <= '9') {
-        n = n * 10 + *s++ - '0';
-    }
-    return n;
-}
+/* A number, an argument's (atoi's, without the C library's ctype): the game's library's NUM (modules/dq0lib,
+** ../dq0/dq0lib.inc: 2026-11-09) */
+unsigned char __fastcall__ num (const char* s);
 
 /* The world begun (main's, its arguments: the hub's segment, its role, its lib folder): attached to the hub, its long
 ** task none yet, started (s_start); 1 if it can't be attached.  Part 3's, as the world's start-up is (the main
@@ -6781,23 +6772,9 @@ unsigned char __fastcall__ wstart (char** argv);   /* (Part 3's: the start-up, a
 
 /* The swapped parts' images read into banks of its own (dir/dq0w.ovl: dq0w.cfg's OV1 ..., 8K each, as make.js
 ** packs them, ../dq0/ovlpack.js: each bank packed, read and unpacked in place by the unpack library, the linker's fill
-** ($FF) put back after its bytes: ../dq0/ovunpack.inc): 0, or -1 */
-unsigned char __fastcall__ ovl_unpack (unsigned fb);   /* (../dq0/ovunpack.inc: the file's fd, the banks at most) */
-static int __fastcall__ ovl_load (const char* dir)
-{
-    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Its path in the parts' area: none in it yet) */
-    int fd, n;
-
-    strcpy ((char*) b, dir);
-    strcat ((char*) b, "/dq0w.ovl");
-    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (OVBANKS + 4)) < 0) {
-        return -1;
-    }
-    ovbank[0] = n;                              /* (The rest after it: ovl_unpack's) */
-    n = ovl_unpack (fd | ((OVBANKS + 4) << 8));
-    close (fd);
-    return -n;
-}
+** ($FF) put back after its bytes), and the world's own four, all of it the game's library's (modules/dq0lib,
+** ../dq0/dq0lib.inc: 2026-11-09): 0, or not 0 */
+unsigned char __fastcall__ ovl_load (const char* dir);
 
 
 int trfd = -1;                                  /* (The traces' kinds' words, kept open: wtrword.c's, trace.h) */

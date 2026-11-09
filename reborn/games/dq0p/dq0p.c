@@ -110,42 +110,9 @@ void give_way (void)
 
 /* The swapped parts' images read into banks of its own (dir/dq0p.ovl: dq0p.cfg's OV1 ..., 8K each, as make.js packs
 ** them, ../dq0/ovlpack.js: each bank packed, read and unpacked in place by the unpack library, the linker's fill ($FF)
-** put back after its bytes: ../dq0/ovunpack.inc): 0, or -1 */
-unsigned char __fastcall__ ovl_unpack (unsigned fb);   /* (../dq0/ovunpack.inc: the file's fd, the banks at most) */
-#define OVBANKS         4
-extern unsigned char ovbank[OVBANKS];
-extern char _SWAP_START__[];
-static int __fastcall__ ovl_load (const char* dir)
-{
-    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Its path in the parts' area: none in it yet) */
-    int fd, n;
-
-    strcpy ((char*) b, dir);
-    strcat ((char*) b, "/dq0p.ovl");
-    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (OVBANKS)) < 0) {
-        return -1;
-    }
-    ovbank[0] = n;                              /* (In a run: n, n + 1 ...: ovl_unpack's) */
-    n = ovl_unpack (fd | (OVBANKS << 8));
-    close (fd);
-    return -n;
-}
-
-/* A number, an argument's (atoi's, without the C library's ctype): part 3's, read in by then (the main RAM's room,
-** 2026-11-01: the denizens' senses held) */
-#pragma code-name (push, "SW3CODE")
-#pragma rodata-name (push, "SW3RODATA")
-unsigned char __fastcall__ s_num (const char* s)
-{
-    unsigned char n = 0;
-
-    while (*s >= '0' && *s <= '9') {
-        n = n * 10 + *s++ - '0';
-    }
-    return n;
-}
-#pragma code-name (pop)
-#pragma rodata-name (pop)
+** put back after its bytes), all of it the game's library's (modules/dq0lib, ../dq0/dq0lib.inc: 2026-11-09): 0, or
+** not 0; and a number, an argument's, its NUM (atoi's, without the C library's ctype) */
+unsigned char __fastcall__ ovl_load (const char* dir);
 unsigned char __fastcall__ num (const char* s);
 
 /* A denizen's senses held (held: the ticks of it) while the UI's command is in hand at the real paces (the hub's

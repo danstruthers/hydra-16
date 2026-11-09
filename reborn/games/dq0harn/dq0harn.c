@@ -1078,23 +1078,15 @@ parted:
 
 /* The overlays: dir/dq0harn.ovl, an 8K bank each (dq0harn.cfg's OV1 ...; the file cut after the last one used, each
 ** bank packed: make.js, ../dq0/ovlpack.js), read and unpacked in place into banks of its own by the unpack library,
-** the linker's fill ($FF) put back after its bytes (../dq0/ovunpack.inc); and a bank for the creatures' sheets
-** (cleared): 0, or -1 */
-unsigned char __fastcall__ ovl_unpack (unsigned fb);   /* (../dq0/ovunpack.inc: the file's fd, the banks at most) */
-static int __fastcall__ ovl_load (const char* dir)
+** the linker's fill ($FF) put back after its bytes, all of it the game's library's (modules/dq0lib, ../dq0/dq0lib.inc:
+** 2026-11-09); and a bank for the creatures' sheets (cleared): 0, or -1.  (And its arguments' numbers, its NUM) */
+unsigned char __fastcall__ ovl_load (const char* dir);
+unsigned char __fastcall__ num (const char* s);
+static int __fastcall__ ovl_in (const char* dir)
 {
-    static char path[64];
-    int fd, first, n;
+    int n;
 
-    strcpy (path, dir);
-    strcat (path, "/dq0harn.ovl");
-    if ((fd = open (path, O_RDONLY)) < 0 || (first = hy_banks_alloc (OVLS)) < 0) {
-        return -1;
-    }
-    ovbank[0] = first;                          /* (The rest after it: ovl_unpack's) */
-    n = ovl_unpack (fd | (OVLS << 8));
-    close (fd);
-    if (n || (n = hy_banks_alloc (2)) < 0) {
+    if (ovl_load (dir) || (n = hy_banks_alloc (2)) < 0) {
         return -1;
     }
     sb = n;
@@ -1118,7 +1110,7 @@ int main (int argc, char* argv[])
 {
     unsigned char s;
 
-    if (argc < 4 || ovl_load (argv[3]) || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
+    if (argc < 4 || ovl_in (argv[3]) || hub_attach (num (argv[1]), num (argv[2]))) {
         return 1;
     }
     rseed (HUB->seed ^ 0x5245);                 /* (Its own dice: the game's seed, and its role) */

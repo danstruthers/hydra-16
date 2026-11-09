@@ -275,7 +275,7 @@ void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsig
 /* ---- The overlays (bank.s: their stubs) */
 
 void title (void);                              /* Overlay 1: the title, the pace asked */
-unsigned char __fastcall__ ovl_unpack (unsigned fb);    /* (ovunpack.inc: the overlays' file's fd, the banks at most) */
+unsigned char __fastcall__ ovl_load (unsigned fd);      /* (dq0lib.inc's: the overlays' file read in, its fd) */
 void __fastcall__ dots (unsigned char k);       /* (Overlay 6's) The game's start's progress (main.c's) */
 extern unsigned char starting;                  /*   while it starts (main.c's) */
 void __fastcall__ entered (unsigned char resumed);  /* Overlay 1: the character come into the dungeon */
@@ -318,7 +318,7 @@ void __fastcall__ robbed (unsigned w, char* who);   /* Overlay 15: a robbery's w
 void __fastcall__ shot_words (unsigned w, unsigned char named);   /* Overlay 1: the missiles' (shots.c: slice 4.7's) */
 void __fastcall__ beat_words (unsigned w);
 void __fastcall__ felt_words (unsigned w);      /* (Overlay 7's) A walk in the dark's beat (task.c's) */
-unsigned __fastcall__ dnum (const char* s);     /* (main.c's) A number, a word's (atoi's) */
+unsigned __fastcall__ dnum (const char* s);     /* (The game's library's NUM: bank.s's, dq0lib.inc) A number, a word's (atoi's) */
 void __fastcall__ turned_says (unsigned char go);                        /* (Overlay 1's) A turn's first words (task.c's, 2026-11-03) */
 void facing_words (void);                       /* (Overlay 7's) The way it believes it faces (task.c's: slice 4.2's) */
 #define FS_CMD      1                           /* (fore_set's: main.c's) */

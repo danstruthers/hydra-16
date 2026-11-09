@@ -3,7 +3,8 @@
 A **library module** is code in the paged ROM that other programs call, in their own tasks, with their own RAM: it has no
 data, BSS or entries of its own.  The system has four: **`numbers`** and **`math`** (the number system every language
 shares), **`asm`** (the W65C02S's instructions: the assembler and the disassembler) and **`unpack`** (packed banks read
-from a file and unpacked in place).  This page is how a library is called, and each of the system's.
+from a file and unpacked in place); and a game may have its own (**`dq0lib`**, Dingus Quest Zero's).  This page is how a
+library is called, and each of them.
 
 ## Contents
 
@@ -12,6 +13,7 @@ from a file and unpacked in place).  This page is how a library is called, and e
 3. [The number libraries](#the-number-libraries): the stored format, calling them, the entries, errors, bases and text
 4. [The asm library](#the-asm-library)
 5. [The unpack library](#the-unpack-library)
+6. [A game's own library: dq0lib](#a-games-own-library-dq0lib)
 
 ---
 
@@ -213,5 +215,23 @@ reads about a third fewer bytes, and the card's reading is most of the start's t
   buffer is needed; the packer (`reborn/games/dq0/ovlpack.js`) stores a bank whose unpacking would write over bytes not
   yet read.  The rest of each bank, from `L` on, is filled with `$FF`, ld65's fill: the banks are as the linker made them.
 * It has no RAM of its own: its pointers are the call registers (`r2`-`r12`), and each bank its buffer.  It leaves the
-  last bank read at `$8000`.  A C program finds it with `MODINFO` and calls it with `XCALL`, as
-  `reborn/games/dq0/ovunpack.inc` does.
+  last bank read at `$8000`.  A program finds it with `MODINFO` and calls it with `XCALL`, as Dingus Quest Zero's own
+  library does ([below](#a-games-own-library-dq0lib)).
+
+---
+
+## A game's own library: dq0lib
+
+**`dq0lib`** (`reborn/modules/dq0lib`) is Dingus Quest Zero's: the code each of its tasks (`dq0`, `dq0w`, `dq0d`,
+`dq0p`, `dq0m`, `dq0harn`) had a copy of, once in the paged ROM.  A task finds it as it starts and keeps its bank and
+page (`reborn/games/dq0/dq0lib.inc`, which each task's `bank.s` includes: `ovl_load`, then a call of each entry an
+`XCALL`, some 120 cycles, so nothing called in a tight loop).
+
+| Entry | In | Out |
+| :---- | :- | :-- |
+| `OVL_LOAD` (`$A030`) | `r0` the folder (or, its high byte 0, its low byte an fd open on the file), `r1` the file's name after it, `r2` a buffer for the path, `r3` the task's table of its banks, `.X` the banks, `.Y` the banks after which a `.` is written (0: none) | `C` = 0, `.A` the first bank; or `C` = 1.  The file closed, the bank register as it was |
+| `NUM` (`$A033`) | `r0` a number's digits | `.A`/`.X` its value's low 16 bits, `r1` its high 16 (32 bits, wrapping) |
+
+`OVL_LOAD` opens the file, takes the banks (a run: `BANKS_ALLOC`'s), writes their numbers to the table, and calls the
+unpack library (`XCALL` from the paged ROM to the paged ROM: the caller's bank is put back after each) to fill them.
+What it keeps over its calls is on the stack: a library has no RAM.
