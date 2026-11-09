@@ -18,7 +18,6 @@
 ** while the rest is worked out; and added at lb's end as it's kept (lbe), not looked for each time.
 */
 
-unsigned char __fastcall__ hide (const char* w);   /* (Part 18's: main.c's) */
 #pragma code-name ("OV2CODE")
 #pragma rodata-name ("OV2RODATA")
 
@@ -507,51 +506,6 @@ void o_words (void)
 #pragma code-name (push, "OV16CODE")
 #pragma rodata-name (push, "OV16RODATA")
 #pragma local-strings (push, on)
-/* A thing worked (the things' IO_FILL, IO_SHUT, IO_HIDE: its words said), its time (the request's x): quietly; a
-** timed work's (HOUSE.md's long tasks: the reply's qty its long task's kind, item its thing's kind), its first words (a
-** long task's begun, task.c's) and a long task of the UI's (I_WAIT's kind), its command kept (the UI bank's) and
-** carried out again as its time's up (main.c's reach 3: its end, 4, the things' IO_DONE, the test made then); done,
-** nothing more */
-static void __fastcall__ worked (unsigned char action)
-{
-    unsigned char k, n;
-    unsigned t;
-
-    if (action == IR_GONE) {
-        return;                                 /* (Walked over to first, or which asked: the one path for things) */
-    }
-    hub_mem (0, &k, &HUB->ireq.qty, 1);
-    hub_mem (0, &n, &HUB->ireq.item, 1);
-    hub_mem (0, &t, &HUB->ireq.x, 2);
-    if (action != IR_OK || !k || reach == 4) {
-        msg (lb);
-        if (action == IR_OK && reach != 4) {
-            intend2 (I_WAIT, t, 1);
-        }
-        if (action == IR_OK && reach == 4) {    /* (A timed work's end, the reach's steps to come: the UI waits for them;
-                                                **   the torch to light again by its own steps: HOUSE.md's) */
-            hub_mem (0, &k, &HUB->ireq.y, 1);
-            if (k >= 0xFD) {
-                if (k == 0xFE) {
-                    cmd.action = VB_LIGHT_OBJECT;
-                    cmd.aux = IO_LIGHT;
-                    cmd.other.word[0] = 0;
-                    cmd.obj.sel = 0;
-                    hub_mem (UI_BANK, &UIREC->kept, &cmd, sizeof cmd);
-                    reach = 5;
-                }
-                intend2 (I_WAIT, 1, 1);
-            }
-        }
-        return;
-    }
-    what_hi = n & 0x80;
-    task_words (TE_BEGUN | k << 8, k < LT_PACKOFF ? n | 0x80 : n);    /* (The steps' kinds, 8 bits: a mang sharpened) */
-    hub_mem (UI_BANK, &UIREC->kept, &cmd, sizeof cmd);
-    reach = 3;
-    intend2 (I_WAIT, t, k << 8 | (n & 0x7F) << 1 | 1);
-}
-
 /* What's carried told (the things' words, IO_LIST's: past lb's size in pieces, each ending at a word's end) */
 void __fastcall__ o_list_say (unsigned char first)
 {
@@ -577,84 +531,6 @@ void __fastcall__ o_list_say (unsigned char first)
     } while (e);
 }
 
-/* Overlay 16's command handlers, by their number h (the dispatch table's H_TIME ... H_TEND, actions.c's; o_more till
-** 2026-11-08, the commands past main.c's chores, part 2 had no room): 1 carried out; 0 not one of its own after all
-** (H_SHUT's: none that closes of that name, a door's work then, main.c's; or "not yet").  The verb the command's */
-unsigned char __fastcall__ o_run16 (unsigned char h)
-{
-    unsigned char d = reach == 4 ? IO_DONE : 0;    /* (A timed work's end: main.c's reach) */
-    unsigned char action = cmd.action;
-
-    switch (h) {
-    case H_TIME:                                /* (The time it believes: time.c's, 2026-10-31) */
-        time_ui (TU_TELL);
-        break;
-    case H_FILL:                                /* (A light renewed, slice 4.1's: "fill the lantern", "dip the torch in
-                                                **   the oil", the things' IO_FILL; its time, quietly: a timed work) */
-        if (strstr (cl, "sharpen") || strstr (cl, "hone") || strstr (cl, "whet")) {
-            d |= IO_SHARP;                      /* (A blade's words: a light has no edge, the things') */
-        }
-        worked (othings (IO_FILL | IO_STEPS | IO_GO, cmd.obj.word, cmd.other.word, d));
-        break;
-    case H_LOOK_IN:                             /* (Looked into a thing, onto it: "look in the sack", "look on the */
-                                                /*   table", "look into the well", the user's, 2026-10-21; the */
-                                                /*   world's IO_INSIDE; a way, "look into the passage", a look */
-                                                /*   that way, way.c's) */
-        if (cmd.obj.kind) {
-            look_way (VB_OBSERVE_THROUGH);
-            break;
-        }
-        action = othings (IO_INSIDE | IO_STEPS | IO_GO, cmd.obj.word, "", 0);    /* (The one path for things: out of
-                                                **   reach, walked over to first, then again) */
-        if (action == IR_NONE) {
-            say_no (A_SEE_NO, cmd.obj.word);
-        } else if (action == IR_OK) {           /* (IR_NO: a step of the reach first, part 19's) */
-            msg (lb);
-            intend2 (I_WAIT, 30, 1);            /* (A look's three seconds) */
-        }
-        break;
-    case H_TIE:                                 /* (A rope's: the things', wrope.c's, IO_HIDE's shape; a sack's tie, as it's
-                                                **   opened or closed) */
-        if (hide (HD_ROPE)) {
-            worked (othings (IO_HIDE | IO_STEPS | IO_GO, cmd.obj.word, cmd.other.word,
-                d | IO_ROPE | (action == VB_UNTIE_OBJECT ? RP_UNTIE : cmd.aux)));
-            break;
-        }
-        cmd.aux = action == VB_UNTIE_OBJECT ? PA_OPEN : PA_CLOSE;
-    case H_SHUT:                                /* (A thing that closes, worked: "open the chest", "untie the sack",
-                                                **   "pick the chest's lock", "force the chest", the user's; the world's
-                                                **   IO_SHUT, a lid, a tie, a stopper, a lock; none of that name, a
-                                                **   door's work: main.c's H_DOOR, 0.  Its verbs the table's TK_CLOSER) */
-        if (!cmd.obj.word[0] || cmd.obj.kind) {
-            return 0;
-        }
-        action = othings (IO_SHUT | IO_STEPS | IO_GO, cmd.obj.word, "", (action == VB_LOCK_OBJECT ? PA_LOCK : cmd.aux) | d);
-        if (action == IR_NONE) {
-            if (cmd.action != VB_LOCK_OBJECT) {
-                return 0;
-            }
-            say_no (A_SEE_NO, cmd.obj.word);
-        } else if (action == IR_NO && (cmd.action == VB_TIE_OBJECT || cmd.action == VB_UNTIE_OBJECT) && strstr (lb, "can't")) {
-            unknown (U_CANT);                   /* ("Tie the torch": "You can't tie the torch.", its verb the line's, not the
-                                                **   lid's "close" the world worked it as: 2026-11-08) */
-        } else {
-            worked (action);                    /* (Its lock picked, it forced: a timed work) */
-        }
-        break;
-    case H_EAT:                                /* (Eating, drinking: part 12's, slice 4.9's) */
-        feed (action == VB_EAT_OBJECT);
-        break;
-    case H_HIDDEN:                              /* (A thing hidden, begun: main.c's hide, the things' IO_HIDE) */
-        worked (IR_OK);
-        break;
-    case H_TEND:                             /* (First aid: part 12's, slice 4.3's) */
-        tend ();
-        break;
-    default:
-        return 0;
-    }
-    return 1;
-}
 #pragma local-strings (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)

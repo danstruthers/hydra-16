@@ -116,7 +116,7 @@ ovl_out:
             OVFN        tell, 14
             OVFN        words, 2
             OVFN        list_say, 16        ; (What's carried told, in pieces: words.c, 2026-11-03)
-            OVFN        run16, 16           ; (Overlay 16's command handlers, by number: words.c's, the dispatch table's)
+            OVFN        things_work, 1      ; (The things' timed works, by number: hthings.c, the dispatch table's, §5.2's step L)
             OVFN        verb_row, 11        ; (A verb's row of the dispatch table: actions.c, §5.2's step L, 2026-11-08)
             OVFN        stir_words, 9
             OVFN        den_words, 9

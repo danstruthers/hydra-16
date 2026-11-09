@@ -21,6 +21,8 @@
 **   resolve.c  (overlay 11) the command's things found among those it perceives, its unsaid filled (it, the
 **              target, the things near), which of several; a throw told
 **   names.c    the names the character gives things, rooms, allies (parts 5 and 6: given, and said)
+**   actions.c  (overlay 11) the dispatch table: a row a verb, its handler, its takes, its refusals, its request
+**   h*.c       the command handlers, by meaning (cmds.h's: the things', the places', moving, the denizens', the self's)
 **
 ** Memory: the program's code and data from $0800 (its BSS must end 768 bytes or more under $7F00: dq0.cfg); the
 ** overlays' code in banks of their own, put in the window at $8000 as they're called (bank.s).  Code in an overlay
@@ -199,25 +201,30 @@ unsigned char __fastcall__ things (unsigned char op, const char* name);    /* (m
 unsigned char resolve (void);                   /* The command (cmd) resolved: RV_ON or RV_DONE */
 
 /* ---- actions.c (overlay 11): the dispatch table, a row a verb (VB_*, actions.h's), COMMANDS-CRITIQUE.md's §5.2 step L:
-** its handler (H_*: main.c's s_command switches on it), the kinds of thing it takes (TK_*), and room for its refusals
-** (refuse.c's rules[], stage 2) and its request (IO_*, PA_*, I_*, where cmd.aux holds one: stage 3).  The handlers by
-** where they are: part 2's (main.c's s_command), overlay 16's (words.c's o_run16), part 24's (main.c's s_run24) */
+** its handler (H_*: main.c's s_command calls its group's entry by it), the kinds of thing it takes (TK_*), its refusals
+** (refuse.c's rules[] till stage 2) and its request (PA_*: a door verb's, put in cmd.aux where the line gave none,
+** stage 3).  The handlers by meaning, a group a file, in their order here (stage 3, 2026-11-08): each group's entry
+** switches on the number; where each is, its pragma's (cmds.h) */
 enum {
     H_NOT_YET,                                  /* (None: "You can't ... in this game yet.", refuse.c's U_YET) */
-    H_NOTHING, H_GO, H_CLIMB, H_FACE, H_DOOR, H_EXAMINE, H_SEARCH, H_TAKE, H_DROP, H_HIDE, H_LIMBS, H_HANDLE,
-    H_MISSILE, H_INVENTORY, H_FIGHT, H_LOOK_WAY, H_FEEL, H_LOOK, H_SHEET, H_WAIT, H_DISENGAGE, H_STOP, H_META,
-    H_HELP, H_QUIT,                             /* (Part 2's) */
-    H_TIME, H_FILL, H_LOOK_IN, H_TIE, H_SHUT, H_HIDDEN, H_EAT, H_TEND,    /* (Overlay 16's: H_SHUT, H_HIDDEN no verb's,
-                                                **   the door's work's and the hide's) */
-    H_DIG, H_JUMP, H_SWAY, H_GIVE               /* (Part 24's; and H_CLIMB's own work there) */
+    H_TAKE, H_DROP, H_HANDLE, H_HIDE, H_EAT,    /* (The things' verbs: hthings.c's things_do) */
+    H_FILL, H_LOOK_IN, H_TIE, H_SHUT, H_HIDDEN, /* (Their timed works: hthings.c's things_work; H_SHUT, H_HIDDEN no
+                                                **   verb's, the door verbs' first and the hide's) */
+    H_DOOR, H_CLIMB, H_EXAMINE, H_SEARCH, H_LOOK_WAY,  /* (The features' and the doors': hplaces.c's) */
+    H_GO, H_FACE, H_JUMP,                       /* (Moving: hmove.c's) */
+    H_FIGHT, H_MISSILE, H_DISENGAGE, H_SWAY, H_GIVE,   /* (The denizens': hdens.c's) */
+    H_NOTHING, H_LIMBS, H_FEEL, H_LOOK, H_WAIT, H_STOP, H_TEND, H_DIG, H_INVENTORY, H_SHEET, H_TIME, H_META, H_HELP,
+    H_QUIT                                      /* (The body's, and the meta commands: hself.c's) */
 };
-#define H_OV16      H_TIME                      /* (Overlay 16's first) */
-#define H_P24       H_DIG                       /* (Part 24's first) */
+#define H_WORK      H_FILL                      /* (Each group's first) */
+#define H_PLACES    H_DOOR
+#define H_MOVING    H_GO
+#define H_DENS      H_FIGHT
+#define H_SELF      H_NOTHING
 #define TK_CLOSER   0x01                        /* (A row's takes: a thing that closes, worked first, H_SHUT's: a
                                                 **   chest, a sack; else a door's) */
-unsigned __fastcall__ verb_row (unsigned char action);  /* A verb's row: its handler, its takes times 256 */
-unsigned char __fastcall__ run16 (unsigned char h); /* Overlay 16's handlers (words.c's): 1 carried out, 0 not one of
-                                                **   its own after all (said "not yet in this game") */
+unsigned __fastcall__ verb_row (unsigned char action);  /* A verb's row: its handler, its takes times 256 (and its
+                                                **   request into cmd.aux, if the line gave none) */
 void __fastcall__ taken_next (char* w);         /* "Take all"'s next thing to take up, into w ("": none) */
 void __fastcall__ throw_words (unsigned r);     /* A throw told (the things' IO_THROW's result, its TH_* times 256:
                                                 **   IR_NOT_HERE, no mark it sees; IR_FULL, none said) */
@@ -354,7 +361,7 @@ void __fastcall__ feed (unsigned char eat);     /* (Part 16's, feed.c: "eat", "d
 void __fastcall__ water_words (unsigned w);     /* Overlay 4 (water.c): the water's news, worded
                                                 **   (an E_BEAT's w1, WB_WATER ... WB_DOUSED: slice 4.9's) */
 void __fastcall__ sky_words (unsigned char p, unsigned char k, const char* w);   /* Overlay 1 (time.c) */
-/* (Part 18's hide, main.c's and words.c's, not term.c's: HD_ROPE: the thing's word a rope's or a grapple's, or none: 1; HD_UP: a grapple or a rope thrown up, carried out: 1) */
+/* (Part 18's hide, main.c's and hthings.c's, not term.c's: HD_ROPE: the thing's word a rope's or a grapple's, or none: 1; HD_UP: a grapple or a rope thrown up, carried out: 1) */
 #define HD_ROPE         ((const char*) 1)
 #define HD_UP           ((const char*) 2)
 unsigned __fastcall__ time_ui (unsigned w);     /* Overlay 16 (time.c): the time of day believed, worded (w TU_TELL,

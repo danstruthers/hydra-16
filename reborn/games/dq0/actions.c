@@ -1,10 +1,11 @@
 /*
 ** actions.c - (overlay 11) the dispatch table (COMMANDS-CRITIQUE.md's §5.2, step L): a row a verb (actions.h's VB_*, in
 ** its order: games/dq0/make.js holds them to it), each the verb's handler (dq0.h's H_*: main.c's s_command calls it by
-** its number, wherever it is) and the kinds of thing it takes (TK_*), and room for what the later stages put in: its
-** refusals, for a word and for a kind (refuse.c's rules[], stage 2), and its request (IO_*, PA_*, I_*, where cmd.aux
-** holds one, stage 3).  Stage 1 (2026-11-08): the handlers are the cases of main.c's s_command, chores and rarer and
-** words.c's more as they were, each verb's by meaning, not by the room its case found.  A verb with no handler
+** its number, wherever it is) and the kinds of thing it takes (TK_*), its refusals, for a word and for a kind
+** (refuse.c's rules[] till stage 2), and its request (PA_*: the door verbs', the same whatever's said, put in cmd.aux
+** where the line gave none, stage 3).  Stage 1 (2026-11-08): the handlers are the cases of main.c's s_command, chores
+** and rarer and words.c's more as they were, each verb's by meaning, not by the room its case found; stage 3 put them
+** in files by meaning (cmds.h's: hthings.c, hplaces.c, hmove.c, hdens.c, hself.c).  A verb with no handler
 ** (H_NOT_YET) says "You can't ... in this game yet."; some of those are seen to before the table, as noted.
 */
 
@@ -21,7 +22,8 @@ struct row {
     unsigned char h;                            /* Its handler (H_*) */
     unsigned char takes;                        /* The kinds of thing it takes (TK_*) */
     unsigned char no;                           /* (Stage 2's: its refusals, a word's and a kind's, refuse.c's) */
-    unsigned char op;                           /* (Stage 3's: its request, where cmd.aux holds one) */
+    unsigned char op;                           /* Its request (PA_*), where the verb's is the same whatever's said:
+                                                **   the door verbs' (stage 3) */
 };
 #define ROW(a, h, t)    { (h), (t), 0, 0 }      /* (a: its verb, for make.js to hold to actions.h's order) */
 
@@ -43,6 +45,7 @@ struct row {
 enum { M_NONE, M_CLIMBS, M_WAYS, M_SEARCHED, M_OUT, M_WORKED, M_IN };
 static const unsigned masks[] = { 0, CLIMBS, WAYS, SEARCHED, BIT (OB_WAY_OUT), WORKED, INS };   /* (The kinds a verb does) */
 #define ROWR(a, h, t, w, k, m)  { (h), (t) | (m) << 4, (w) << 4 | (k), 0 }   /* (A row with its refusals) */
+#define ROWP(a, h, t, w, k, m, p)  { (h), (t) | (m) << 4, (w) << 4 | (k), (p) }   /* (And its request: stage 3) */
 
 static const struct row rows[NACTIONS] = {
     ROW (VB_NONE, H_NOTHING, 0),
@@ -59,8 +62,8 @@ static const struct row rows[NACTIONS] = {
     ROW (VB_USE_OBJECT, H_NOT_YET, 0),          /* (The puzzle's, theme.c's, before the table) */
     ROWR (VB_EQUIP_OBJECT, H_HANDLE, 0, 0, U_CANT, M_NONE),
     ROW (VB_UNEQUIP_OBJECT, H_HANDLE, 0),
-    ROWR (VB_OPEN_OBJECT, H_DOOR, TK_CLOSER, 0, U_CANT, M_WORKED),    /* (A thing that closes: a chest; else a door's work) */
-    ROWR (VB_CLOSE_OBJECT, H_DOOR, TK_CLOSER, 0, U_CANT, M_WORKED),
+    ROWP (VB_OPEN_OBJECT, H_DOOR, TK_CLOSER, 0, U_CANT, M_WORKED, PA_OPEN),    /* (A thing that closes: a chest; else a door's work) */
+    ROWP (VB_CLOSE_OBJECT, H_DOOR, TK_CLOSER, 0, U_CANT, M_WORKED, PA_CLOSE),
     ROW (VB_MOVE_DIRECTION, H_GO, 0),
     ROW (VB_MOVE_TOWARD, H_GO, 0),
     ROW (VB_FACE_DIRECTION, H_FACE, 0),
@@ -108,7 +111,7 @@ static const struct row rows[NACTIONS] = {
     ROW (VB_META_QUIT, H_QUIT, 0),
     ROW (VB_ENTER, H_GO, 0),
     ROW (VB_LEAVE, H_LOOK_WAY, 0),
-    ROWR (VB_CLIMB, H_CLIMB, 0, U_CANT | (W_CLIMB >> 4), U_CANT, M_CLIMBS),                 /* (Part 2's: through a window; else its work part 24's) */
+    ROWR (VB_CLIMB, H_CLIMB, 0, U_CANT | (W_CLIMB >> 4), U_CANT, M_CLIMBS),                 /* (Up or down; through a window, the portal's) */
     ROW (VB_DIG, H_DIG, 0),
     ROW (VB_WAKE, H_NOT_YET, 0),
     ROWR (VB_CROUCH, H_LIMBS, 0, U_YET, U_YET, M_NONE),
@@ -119,8 +122,8 @@ static const struct row rows[NACTIONS] = {
     ROW (VB_PULL_OBJECT, H_NOT_YET, 0),
     ROW (VB_GIVE_OBJECT, H_GIVE, 0),
     ROW (VB_HOLD_OBJECT, H_HANDLE, 0),
-    ROWR (VB_LOCK_OBJECT, H_DOOR, TK_CLOSER, 0, U_CANT, M_WORKED),
-    ROWR (VB_UNLOCK_OBJECT, H_DOOR, TK_CLOSER, 0, U_CANT, M_WORKED),
+    ROWP (VB_LOCK_OBJECT, H_DOOR, TK_CLOSER, 0, U_CANT, M_WORKED, PA_LOCK),
+    ROWP (VB_UNLOCK_OBJECT, H_DOOR, TK_CLOSER, 0, U_CANT, M_WORKED, PA_UNLOCK),
     ROWR (VB_FILL_OBJECT, H_FILL, 0, 0, U_CANT, M_NONE),
     ROWR (VB_READ_OBJECT, H_NOT_YET, 0, 0, U_NOTE, M_OUT),         /* (The puzzle's, theme.c's: read.c's) */
     ROW (VB_TASTE_OBJECT, H_NOT_YET, 0),
@@ -160,12 +163,12 @@ static const struct row rows[NACTIONS] = {
     ROW (VB_FAST_TALK, H_SWAY, 0),
     ROW (VB_TAUNT, H_NOT_YET, 0),
     ROW (VB_JUDGE_SINCERITY, H_NOT_YET, 0),
-    ROWR (VB_BREAK_OBJECT, H_DOOR, 0, 0, U_CANT, M_WORKED),           /* (A door's work alone) */
-    ROWR (VB_RAISE_OBJECT, H_DOOR, 0, U_CANT | (W_PART >> 4), U_CANT, M_WORKED),
-    ROWR (VB_LOWER_OBJECT, H_DOOR, 0, U_CANT | (W_PART >> 4), U_CANT, M_WORKED),
-    ROWR (VB_BEND_OBJECT, H_DOOR, 0, U_CANT | (W_PART >> 4), U_CANT, M_WORKED),
-    ROWR (VB_FORCE_OBJECT, H_DOOR, TK_CLOSER, 0, U_CANT, M_WORKED),
-    ROWR (VB_DISARM_OBJECT, H_DOOR, 0, U_CANT | (W_PART >> 4), U_CANT, M_WORKED),
+    ROWP (VB_BREAK_OBJECT, H_DOOR, 0, 0, U_CANT, M_WORKED, PA_BREAK),           /* (A door's work alone) */
+    ROWP (VB_RAISE_OBJECT, H_DOOR, 0, U_CANT | (W_PART >> 4), U_CANT, M_WORKED, PA_RAISE),
+    ROWP (VB_LOWER_OBJECT, H_DOOR, 0, U_CANT | (W_PART >> 4), U_CANT, M_WORKED, PA_LOWER),
+    ROWP (VB_BEND_OBJECT, H_DOOR, 0, U_CANT | (W_PART >> 4), U_CANT, M_WORKED, PA_BEND),
+    ROWP (VB_FORCE_OBJECT, H_DOOR, TK_CLOSER, 0, U_CANT, M_WORKED, PA_FORCE),
+    ROWP (VB_DISARM_OBJECT, H_DOOR, 0, U_CANT | (W_PART >> 4), U_CANT, M_WORKED, PA_DISARM),
     ROWR (VB_BAR_OBJECT, H_DOOR, 0, U_CANT | (W_PART >> 4), U_CANT, M_WORKED),
     ROW (VB_HANG_OBJECT, H_HANDLE, 0),
     ROW (VB_COMBINE_OBJECT, H_NOT_YET, 0),      /* (The puzzle's, theme.c's) */
@@ -189,11 +192,15 @@ static const struct row rows[NACTIONS] = {
     ROWR (VB_UNTIE_OBJECT, H_TIE, 0, 0, U_CANT, M_NONE)
 };
 
-/* Verb a's row: its handler, its takes times 256 (one past the table: none's) */
+/* Verb a's row: its handler, its takes times 256 (one past the table: none's); its request put in the command's aux,
+** if the line gave none (lock's PA_LOCK: the parser's 0, its handlers' own test of the verb till stage 3) */
 unsigned __fastcall__ o_verb_row (unsigned char a)
 {
     if (a >= NACTIONS) {
         return H_NOT_YET;
+    }
+    if (!cmd.aux) {
+        cmd.aux = rows[a].op;
     }
     return rows[a].h | rows[a].takes << 8;
 }

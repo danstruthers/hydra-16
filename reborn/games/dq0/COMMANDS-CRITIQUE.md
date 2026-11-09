@@ -737,7 +737,7 @@ A survey of the dispatch after §5.1 (every verb, where it's handled, what it as
 | I | **One reach:** take's own walk, `go_thing`'s and `place_go`'s made `reach_go`'s. *Done 2026-11-07:* `reach_go` is the one walk over, by `walk_a` (I_TAKE's a): 1, the command kept and carried out again (every verb, and `door_go`'s I_GOTO); 0, take's (the world takes the thing up as it gets there, E_TAKEN); 2, a "go to" (way.c's `go_thing`: walked on as it gets nearer, nothing after). Take's own message and way.c's own I_TAKE are gone. Kept apart on purpose: a denizen's approach (I_CLOSE, `go_thing`'s and a blow's: up to it as it moves, the fight's), and `place_go` (a place in the room, not a thing: its own words, "You set off across the room.", and nothing after) | the walk-overs |
 | J | **One path for features:** find, walk up, face (one turn: the intent), first words, act; way.c, `s_lift`, the errand's door through it. *Done 2026-11-07, test dq0features:* main.c's `feature` (part 13, `s_door_go`'s place) finds (choose.c's `pick`), walks up if it's out of reach (one test, by what the last step needs: the world's door work reaching, the default; beside it, `FG_NEAR`, for a close look the UI makes itself; never, `FG_FAR`), takes a blow's thing in hand, faces (the intent, `intend2 (I_TURN)`; not for a move, `FG_GO`, which turns as it goes) and says the first words; each command its own last step. Used by the portal path (door verbs, windows climbed through, check for traps, search, attack, climb), the move to or through a door or a passage, leave, way.c's close look (`inspect`) and look, listen and sniff one way (`s_look_way`), and `s_lift` (its door found by the part's square, then faced through it). way.c's own turn (`turn_to`, a bare hub_send) and `inspect`'s own reach test are gone. The errand's door (errand.c) and the blow's "is there a door" (choose.c's `s_wield`) only find: the character doesn't act on it; a look at stairs (way.c's `opened`) only finds, as before (the words say where they lie) | the copies of the door path |
 | K | **Refusals as data:** one table of answers with the thing's name put in ("You see no %s here.", out of reach, "<verb> what?"), refuse.c's rows its first part. *Done 2026-11-07:* refuse.c's `said[]` (overlay 24 now, overlay 1's room) is the one table, U_* then A_* (dq0.h): the line's refusals, "You see no %s here.", "You have no %s." (each with a nameless form, said when there's no name to put in), "There's nothing here to take.", "You haven't seen a(n) %s here." / "that way.", "%s is out of reach: go up to it first.", "You can't get near enough to %s.", and "%s what?" from the line; said by `say_no (a, w)` (or `unknown (U_*)` from the line), or added to lb (A_LB: the sway's words, a blow's note). Thirty-five sites in fourteen files call it in place; five wordings of out of reach became two (reach, and getting near); "You see none of those here." and "You carry none of those." name the thing now; "Take what?", "Put down what?", "Read what?", "Copy what?", "Name what?" are the line's verb with "what?", as "Drop what? [...]" was already. Left as they are: the questions with a hint or another shape ("Throw it at what? ...", "Give it to whom?", "Fetch what?", "Name it what?", "Use what, and on what? ...", "Combine what with what? ..."), the "Which one?" headings (a question's start, its choices after), talking range ("... is too far off to hear you."), and §4.5's per-action rows (the U_* rows of refuse.c's rules[] are what there is of them) | the same refusal worded many ways |
-| L | **The dispatch table:** verb → handler by meaning, with the kinds of thing each takes; the chain by size (`chores`, `more`, `rarer`) retired. *Stage 1 done 2026-11-08* (below): the table, one dispatcher, today's cases its handlers unchanged; stages 2 (refuse.c's rows into it) and 3 (the handlers into files by meaning) to come | the split by size; the unreachable cases |
+| L | **The dispatch table:** verb → handler by meaning, with the kinds of thing each takes; the chain by size (`chores`, `more`, `rarer`) retired. *Done 2026-11-08* (below): stage 1, the table and one dispatcher, the cases its handlers unchanged; stage 2, refuse.c's rows in it; stage 3, the handlers in files by meaning (hthings.c, hplaces.c, hmove.c, hdens.c, hself.c: cmds.h), each group reached by its entry and the handler's number, `run16` and `run24` gone, lock's request its row's | the split by size; the unreachable cases |
 
 **Step L, the dispatch table, as planned (2026-11-07).** After H to K, each verb is one handler and the per-class
 paths are shared. L then replaces the chain cut by size with one table read by meaning:
@@ -803,6 +803,55 @@ sees changed (the whole suite):
   bank's one entry, so a handler moved to another part or overlay moves its `case` to that bank's entry (a new bank's
   entry, one stub). The fourth byte, the request, where an action's `cmd.aux` is the same for every phrase (the door
   verbs' `PA_*`, the handling verbs' `IO_*`), so the handlers needn't read the verb.
+
+**Step L, stage 3, as built (2026-11-08).** The handlers in files by meaning, each group's place its pragma's, nothing a
+player sees changed (the whole suite: all 426 tests pass):
+
+- **The groups** (cmds.h lists them, and what they share): `hthings.c`, the things' verbs (take, drop, handle: hold,
+  stow, put, hang, take from, wear, take off, light, put out; hide; eat and drink) and their timed works (fill, look in,
+  tie and untie, a thing that closes worked, `H_SHUT`, the door verbs' first; a hide begun, `H_HIDDEN`); `hplaces.c`,
+  the features' and the doors' (a door's work, `portal`, which five handlers end in; climb; examine; search; a look,
+  a listen, a sniff one way, a track, leave); `hmove.c`, moving (go, enter, approach; face; jump); `hdens.c`, the
+  denizens' (a blow and the stance, the missiles, disengage and flee, the sway verbs, give and trade); `hself.c`, the
+  body's and the meta commands (the limbs, a feel about, a look, wait, stop, tend, dig; inventory, sheet and map, time,
+  pause and save, help, quit). dq0.h's `H_*` are in that order, a group's numbers together (`H_WORK`, `H_PLACES`,
+  `H_MOVING`, `H_DENS`, `H_SELF` each group's first).
+- **Where each is:** all but the timed works in part 2, the commands' own (s_command's): a handler there costs no copy
+  of a part between the line and its answer, and part 2 had the room (1,059 bytes). The timed works in overlay 1 (words.c's
+  in overlay 16 till now: overlay 16 was 131 bytes from full, overlay 1 had 1,288), through one stub, `things_work`, as
+  `run16` was: the hide (part 18) calls it too, and a part's call into part 2 would cost two copies of a part where an
+  overlay's costs ~100 cycles. A group moved is its pragmas alone: a part's entry is `s_NAME`, called as `NAME`, the
+  build's routing (straight from inside its part, through its stub from outside: one stub, 6 bytes of the main RAM).
+- **The dispatcher** (s_command's end): the row read, then its group's entry by the handler's number, five compares
+  (`self_do`, `dens_do`, `moving_do`, `places_do`, `things_work`, `things_do`; `H_NOT_YET` "not yet"). Each entry
+  switches on the number, as `run16` and `run24` did. No table of stubs: all the part-2 entries are called straight, and
+  one stub is all the overlay's needs.
+- **Gone:** `run16` (overlay 16's entry, its stub) and `run24` (part 24's, `s_run24`, its stub): part 24's handlers
+  (dig, jump and climb, the sway, give) are part 2's now, so a dig, a jump, a climb, a sway, a gift or a trade no
+  longer copies part 24 in and part 2 back (`deal`, the sway's asking, is still part 24's, through its stub, as the
+  examine of a denizen always called it). `do_climb`'s 0x80 (through a window, part 24 back to part 2's portal) is
+  gone with it: the climb works the portal itself.
+- **The request, the rows' fourth byte:** filled for the door verbs, whose `PA_*` is the same whatever's said (open,
+  close, unlock, lock, break, raise, lower, bend, force, disarm; not bar, whose "unbar" is `PA_LIFT`), and `verb_row`
+  puts it in `cmd.aux` when the line gave none. That pays for one verb: lock, whose aux the parser leaves 0, so the door's
+  work and `H_SHUT` each tested the verb (`cmd.action == VB_LOCK_OBJECT ? PA_LOCK : cmd.aux`); both read `cmd.aux` now.
+  Skipped where it doesn't pay: the handling verbs (wear is don or wield, take off doff or stow: `handle` reads
+  `cmd.aux` whatever the row says), the sway verbs (tell is talk or order, trade six ways), search and examine (their
+  aspects).
+- **Found, for review:** an overlay's `""` given to `othings` is in the window, and `othings` puts the hub there before
+  it copies the name: the name read is the hub's byte at that address (overlay 16's was past the hub's header, in the
+  room bank 0 keeps free, where nothing is kept). The timed works moved to overlay 1 give `nil`, an empty name in the main RAM, so
+  where they land doesn't matter. resolve.c's `othings (IO_FIND, w, "", 0)` (overlay 11) is the same case, left as it is.
+- **Room:** the main RAM 2,117 bytes free to 2,128 (`run16`'s and `run24`'s stubs out, `things_work`'s in). Part 2 1,059
+  to 659 (part 24's handlers in, 387 bytes, and the five entries' switches); part 24 3,342 to 3,729; overlay 16 131 to
+  1,073; overlay 1 1,288 to 424 (the timed works); overlay 11 307 to 278 (`verb_row`'s request). Overlays 14 (792 to 392)
+  and 12 (358 to 745) are part 2's and part 24's banks. Part 2's copy costs some 5,000 cycles more (400 bytes), as a
+  command's part is copied back after a call into another part.
+- **What's left:** the shared paths stay where they were, not handlers but what they call: main.c's `things`, `take` and
+  `took_up` (the world's E_TAKEN's too), `hide`'s work (part 18: its words, the rope's test), `feature` and the
+  missiles (part 13), `lift` and `deal` (part 24). The 50 `H_NOT_YET` rows (a verb done is a row and a case in its
+  group). The request byte for the handling verbs, if `handle` ever takes its op from the row (the two verbs whose op
+  varies would keep theirs in the line).
 
 Odd answers the sweeps don't catch (they name the thing, but read oddly), for review: "tie the torch" says "You can't
 close the torch." (a tie is a container's, worked as its lid); "wear the torch" says "You hold the lit torch in your
