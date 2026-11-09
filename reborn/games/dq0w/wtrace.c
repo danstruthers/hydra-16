@@ -51,6 +51,7 @@
 #include "world.h"
 #include "work.h"
 #include "things.h"
+#include "line.h"
 #include "trace.h"
 #include "tstore.h"
 
@@ -451,25 +452,9 @@ static void __fastcall__ found (unsigned x, unsigned y, unsigned char d)
     }
 }
 
-/* Square x, y lets the air through (a smell carried): not rock nor a wall; a door open (or broken down), a
-** portcullis, a grating, an arrow slit, a window its shutters open and no glass in it */
-static unsigned char __fastcall__ airy (unsigned x, unsigned y)
-{
-    static unsigned char* p;
-    static struct portal* q;
-    static unsigned char t;
-
-    if (!(p = at (ws, x, y)) || (t = TILE (*p)) == T_ROCK || t == T_WALL) {
-        return 0;
-    }
-    if ((t == T_DOOR || t == T_WINDOW) && (q = portal_at (cx_, cy_)) != 0) {
-        t = q->kind;
-        return t == PK_PORTCULLIS || t == PK_GRATE || t == PK_SLIT ? 1 : t == PK_WINDOW ?
-            !(q->parts & PP_GLASS) && (!(q->parts & PP_SHUTTERS) || (q->state & PS_OPEN)) :
-            (q->state & (PS_OPEN | PS_WRECKED)) != 0;
-    }
-    return 1;
-}
+/* Square x, y lets the air through (a smell carried: the air's line's, line.inc's): not rock nor a wall; a door open
+** (or broken down), a portcullis, a grating, an arrow slit, a window its shutters open and no glass in it */
+#define airy(x, y)      ln_pass (ws, (x), (y), LN_AIR)
 
 /* The smell about the character: carried from the squares the air reaches, along each way from it as far as the
 ** air goes (SR one way, and half that the ways beside it; about it, SR / 3 every way), each one's records taken in by

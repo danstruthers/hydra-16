@@ -264,7 +264,7 @@ Some copies have no memory-placement reason at all (§1 covers the ones that do)
 |---|---|
 | Chebyshev distance | `apart` in dq0d/apart.s, dq0p/sense.c, dq0p/sound.c, dq0w/wbody.c, wdig.c, wport.c, dq0/choose.c, dens.c, resolve.c, seen.c; `span`×3 in wshoot.c; inline in dq0w.c and things.c (~16) |
 | Chunk-cache lookup | dq0d ×4, dq0p/light.c, dq0m/map.c, dq0m/changes.c, dq0w/chunk.c, dq0w.c, wkept.c (≥9) |
-| Line of sight / line of fire | dq0p/eyes.c `clear_line`, dq0p/cast.s ray casting, dq0w/wshoot.c `passes` with its own portal rules (3, possibly disagreeing) |
+| Line of sight / line of fire | dq0p/eyes.c `clear_line`, dq0p/cast.s ray casting, dq0w/wshoot.c `passes` with its own portal rules (3, possibly disagreeing). *Made one, 2026-11-08: dq0w/line.inc's `line` (below)* |
 | Step legality | chunk.c `step_ok`, dq0w.c `step_by` (re-implemented), ways.inc ×2, dq0d's `open_sq` and `taken` |
 | Path finding | dq0d `route` (BFS) and `step_for` (greedy); dq0w `ways`, `s_go_to`, `s_path_ways`, `s_ways_go`, `s_step_to` |
 | Name matching | things.c `named`, `named4`, `a_word`, `word` ×2; resolve.c `has`; dq0d `called`; lower-casing loops ×4 in the UI |
@@ -279,6 +279,14 @@ Two of these are correctness risks, not just size:
 - **Three lines of sight.** If the senses' line of sight and the world's line of fire disagree, the player can see
   a goblin they can't shoot, or a denizen can sense through something the character can't. One `line(a, b, mode)`
   with modes for sight, fire, sound and scent, in the shared library, makes them agree.
+  *Done 2026-11-08, as a shared source (DECISIONS.md's "One line of sight"):* they did disagree (a lowered portcullis
+  blinded a denizen the character saw through its bars; closed shutters didn't; no heights for a denizen's eyes; three
+  ways of stepping the squares). Now dq0w/line.inc's `line (sn, x, y, tx, ty, mode)` (LN_SIGHT, LN_FIRE, LN_AIR) and
+  its square and portal rules (`ln_pass`, `ln_portal`) are assembled into the senses and the world; cast.s keeps its
+  grid for speed but steps the same squares and heights and asks `ln_portal` of its doors. A line between the
+  character and anyone is drawn from the character's end, so a denizen sees the character just when the character
+  would see it. Not yet in the paged ROM: the line reads the chunks through each task's own `at` (the cache and the
+  maker are the task's), which a ROM module can't call back into; that waits for the chunk lookup itself in ROM.
 - **Path finding in five-plus places.** A denizen and the PC route differently through the same doors, and every
   fix to door, slope, water or rubble rules has to be made in each copy. One router in the shared library, with
   each walker's rules as a cost table, removes that.
@@ -480,7 +488,7 @@ Ranked by how much each unlocks, and arranged so the game keeps working througho
 | # | Change | What it unlocks | Size |
 |---|---|---|---|
 | 1 | **Generated placement** (§1.1): parts.txt, the stubs and the config's SWn lines made by the build. *Done 2026-11-06 (games/dq0/parts.js), every task.* Then the automatic packer (§1.2: *done 2026-11-07*, the parts' banks chosen by the build, parts.txt's bank a wish; the calls routed by part; a part past the swap area has its pieces moved out by the build, games/dq0/pack.js) and part-local leaf copies (§1.3) | ends "moved for room" churn; a function moved is its pragma alone; dispatch can be organised by meaning | medium, then large |
-| 2 | **Shared helpers in paged ROM** (§1.4, §4): line of sight, path finding, chunk lookup, name matching, the keyed hash and dice | one line of sight and one router (they disagree today); one copy to keep. Small room gains (measured: a few hundred bytes a task) | medium |
+| 2 | **Shared helpers in paged ROM** (§1.4, §4): line of sight, path finding, chunk lookup, name matching, the keyed hash and dice. *Line of sight done 2026-11-08 as a stage: one line (dq0w/line.inc: sight, fire, air), a shared source assembled into the senses and the world, not yet ROM (it calls the task's own chunk lookup); the look's grid ray the same squares, heights and portal rule (DECISIONS.md's "One line of sight").* The router next | one line of sight and one router (they disagree today); one copy to keep. Small room gains (measured: a few hundred bytes a task) | medium |
 | 3 | **The hub schema and generated headers/inc/JS/ownership** (§2) | typed payloads; no hand-synced constants; cheaper tests | medium |
 | 4 | **Handles, the scope table, the action table** (COMMANDS §4.1–4.4 and §3.1 here). *Mostly done 2026-11-07* (COMMANDS-CRITIQUE.md §5.1: every choice of a thing made once and sent as a handle, one "which?", one name match; §5.2 G–K: both sweeps clean, one path for things and one for features, one walk over, refusals as data); the action table, §5.2's step L, under way | consistent commands; one intent shape for PC and denizens | large (the command plan's steps) |
 | 5 | **Narration as data** (§3.2) | removes the 33 wording functions, `told` ×6, most SA_ refusals; first words for free; denizen actions worded alike | large, migratable one action at a time |

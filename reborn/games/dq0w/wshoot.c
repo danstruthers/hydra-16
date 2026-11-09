@@ -10,9 +10,10 @@
 ** reach owed: things.c's), or a thing thrown (in hand); the range in squares, its band by the book's ranges (reach_of:
 ** the short's squares, each band twice the last; a thing thrown by the catalogue's throws), the long and the extreme
 ** none for a launcher under a ceiling (the book's restricted ranges: everywhere underground, HOUSE.md's); a clear line
-** (its squares let missiles through: the floor, an open door or a portcullis's bars, an arrow slit, a window without
-** glass or with its shutters open; one that stands in it the line's end, unless the target's as far beyond it again:
-** the book's firing over, Combat 15); the target behind cover (a slit or a window it stands beside, the shot through
+** (a missile's, line.inc's: the squares the shooter's eye's line goes through, no floor above it; they let missiles
+** through: the floor, an open door or a portcullis's bars, an arrow slit, a window without glass or with its shutters
+** open; one that stands in it the line's end, unless the target's as far beyond it again: the book's firing over,
+** Combat 15); the target behind cover (a slit or a window it stands beside, the shot through
 ** it: MS_COVER); aware of it or not (a denizen that hasn't sensed the character; the character not seeing the shooter:
 ** MS_UNAWARE).  Then the referee asked (wfight.c's blow, the missile's settings in mshot: its words, what it did, the
 ** fight told as a blow's, FW_MISSILE), and the missile where it falls: a hit or a block at the target's feet, a miss
@@ -36,6 +37,7 @@
 #include "world.h"
 #include "things.h"
 #include "wbody.h"
+#include "line.h"
 
 #pragma local-strings (on)
 
@@ -86,35 +88,12 @@ static unsigned char __fastcall__ span (int dx, int dy)
     return dx > dy ? (dx > 255 ? 255 : dx) : (dy > 255 ? 255 : dy);
 }
 
-/* ---- The line of fire (lof: no part called) */
+/* ---- The line of fire (lof: no part called: line.inc's line in this part, ln_pass in the main RAM) */
 #pragma bss-name (push, "SW65RODATA")
-static unsigned lx_, ly_;
-static unsigned char lcover, lfree;
+static unsigned char lsn, lme, ltgt, ld, lcover, lback;
 #pragma bss-name (pop)
 
-/* Whether a missile passes square lx_, ly_ of sn: 0 not, 1 it does, 2 through a narrow opening (a slit, a window) */
-static unsigned char __fastcall__ passes (unsigned char sn)
-{
-    unsigned char* p = at (sn, lx_, ly_);
-    unsigned char t;
-    const struct portal* o;
-
-    if (!p || (t = TILE (*p)) == T_ROCK || t == T_WALL) {
-        return lfree;                           /* (A wall's corner: the eye's past it, the line's) */
-    }
-    if ((t == T_DOOR || t == T_WINDOW) && (o = portal_at (cx_, cy_)) != 0) {
-        if (o->kind == PK_SLIT) {
-            return 2;
-        }
-        if (o->kind == PK_WINDOW) {
-            return (o->parts & PP_GLASS) || ((o->parts & PP_SHUTTERS) && !(o->state & PS_OPEN)) ? 0 : 2;
-        }
-        return (o->state & (PS_OPEN | PS_WRECKED)) || o->kind == PK_PORTCULLIS || o->kind == PK_GRATE;
-    }
-    return 1;
-}
-
-/* Someone at lx_, ly_ on sn (the character, an actor) but the shooter and the target (me, tgt: an actor's entry, 0xFE
+/* Someone at ln_x, ln_y on sn (the character, an actor) but the shooter and the target (me, tgt: an actor's entry, 0xFE
 ** the character): 1 */
 static unsigned char __fastcall__ someone (unsigned char sn, unsigned char me, unsigned char tgt)
 {
@@ -122,67 +101,45 @@ static unsigned char __fastcall__ someone (unsigned char sn, unsigned char me, u
     unsigned char k;
 
     hub_map (0);
-    if (me != 0xFE && tgt != 0xFE && sn == HUB->pc_stratum && lx_ == HUB->pc_x && ly_ == HUB->pc_y) {
+    if (me != 0xFE && tgt != 0xFE && sn == HUB->pc_stratum && ln_x == HUB->pc_x && ln_y == HUB->pc_y) {
         return 1;
     }
     for (k = 0; k < NACTORS; ++k, ++a) {
-        if (k != me && k != tgt && a->state && a->sn == sn && a->x == lx_ && a->y == ly_) {
+        if (k != me && k != tgt && a->state && a->sn == sn && a->x == ln_x && a->y == ln_y) {
             return 1;
         }
     }
     return 0;
 }
 
-/* The line from sx, sy to tx, ty on sn (the squares between them, by Bresenham's steps): 0 clear (lcover: the target
-** behind cover, beside a slit or a window the line comes through), SH_LINE (a wall, a door, glass), SH_WAY (someone in
-** it, the target not as far beyond again) */
-static unsigned char __fastcall__ lof1 (unsigned char sn, unsigned sx, unsigned sy, unsigned tx, unsigned ty,
-    unsigned char me, unsigned char tgt)
+/* (line.inc's ln_way for a missile's line: someone in its n-th square (from the target, lback), the target not as far
+** beyond again) */
+static unsigned char __fastcall__ in_way (unsigned char n)
 {
-    signed char dx = (signed char) (tx - sx), dy = (signed char) (ty - sy), ex, ey, err, e2;
-    unsigned char n = 0, d = span (dx, dy), w;
-
-    ex = dx < 0 ? -dx : dx;
-    ey = dy < 0 ? -dy : dy;
-    err = ex - ey;
-    lfree = (*(me == 0xFE ? at (sn, tx, ty) : at (sn, sx, sy)) & T_VIS) != 0;   /* (The denizen seen by the character:
-                                                **   the eye's line, the senses', past a wall's corner; a portal's,
-                                                **   someone's in it still the line's end) */
-    lx_ = sx;
-    ly_ = sy;
-    lcover = 0;
-    for (;;) {
-        e2 = err << 1;
-        if (e2 > -ey) {
-            err -= ey;
-            lx_ += dx < 0 ? -1 : 1;
-        }
-        if (e2 < ex) {
-            err += ex;
-            ly_ += dy < 0 ? -1 : 1;
-        }
-        if (lx_ == tx && ly_ == ty) {
-            return 0;
-        }
-        ++n;
-        if (!(w = passes (sn))) {
-            return SH_LINE;
-        }
-        lcover = w == 2 && n > 1 && span ((int) (tx - lx_), (int) (ty - ly_)) == 1;
-        if (d < 2 * n && someone (sn, me, tgt)) {
-            return SH_WAY;
-        }
-    }
+    return ld < 2 * (lback ? ld - n : n) && someone (lsn, lme, ltgt);
 }
 
-/* The line either way (Bresenham's squares from the other end, past a corner the first way cut: the eye's, a
-** doorway seen across at a slant): 0 clear, else the first way's why */
+/* The line from sx, sy to tx, ty on sn, a missile's (line.inc's: the squares the eye's line goes through, drawn from
+** the character's end if it's at either, from its eyes by its body's position, as its look's; else from the
+** shooter's): 0 clear (lcover: the target behind cover, beside a slit or a window the line comes through), SH_LINE
+** (rock, a wall, a door shut, glass, closed shutters, a floor above the line), SH_WAY (someone in it, the target not
+** as far beyond again) */
 static unsigned char __fastcall__ lof (unsigned char sn, unsigned sx, unsigned sy, unsigned tx, unsigned ty,
     unsigned char me, unsigned char tgt)
 {
-    unsigned char r = lof1 (sn, sx, sy, tx, ty, me, tgt);
+    unsigned char r;
 
-    return r == SH_LINE && !lof1 (sn, tx, ty, sx, sy, tgt, me) ? 0 : r;
+    lsn = sn;
+    lme = me;
+    ltgt = tgt;
+    ld = span ((int) (tx - sx), (int) (ty - sy));
+    hub_map (0);
+    ln_eye = me == 0xFE || tgt == 0xFE ? LN_EYES (HUB->pc_pos) : LN_EYE;
+    ln_way = in_way;
+    r = (lback = tgt == 0xFE) != 0 ? line (sn, tx, ty, sx, sy, LN_FIRE) : line (sn, sx, sy, tx, ty, LN_FIRE);
+    ln_way = 0;
+    lcover = (lback ? ln_first : ln_last) == 2 && ln_n > 1;
+    return r == LN_WAY ? SH_WAY : r ? SH_LINE : 0;
 }
 
 /* ---- What an actor shoots with (arms: the character's, who 0; body bd's, its own, its did's things, IW_DEN, and
@@ -772,24 +729,9 @@ static unsigned char __fastcall__ span68 (int dx, int dy)
     return dx > dy ? (dx > 255 ? 255 : dx) : (dy > 255 ? 255 : dy);
 }
 
-/* Whether a missile goes on through square x, y of sn (as part 65's passes: the floor, a door open, bars, a slit, a
-** window without glass) */
-static unsigned char __fastcall__ on_through (unsigned char sn, unsigned x, unsigned y)
-{
-    unsigned char* p = at (sn, x, y);
-    unsigned char t;
-    const struct portal* o;
-
-    if (!p || (t = TILE (*p)) == T_ROCK || t == T_WALL) {
-        return 0;
-    }
-    if ((t == T_DOOR || t == T_WINDOW) && (o = portal_at (cx_, cy_)) != 0) {
-        return o->kind == PK_SLIT || (o->kind == PK_WINDOW ? !(o->parts & PP_GLASS) && (!(o->parts & PP_SHUTTERS) ||
-            (o->state & PS_OPEN)) : (o->state & (PS_OPEN | PS_WRECKED)) || o->kind == PK_PORTCULLIS || o->kind ==
-            PK_GRATE);
-    }
-    return 1;
-}
+/* Whether a missile goes on through square x, y of sn (a missile's line's, line.inc's: the floor, a door open, bars, a
+** slit, a window without glass) */
+#define on_through(sn, x, y)    ln_pass ((sn), (x), (y), LN_FIRE)
 
 /* Body k (an actor's entry) copied out (bd, bk: BD_GET's), as a call (the part's room) */
 static void __fastcall__ bd_get (unsigned char k)

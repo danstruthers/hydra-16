@@ -5,12 +5,14 @@
 ; lying about lights the squares within its reach that it has a clear line to: things.c's lamps).  Each square of a
 ; row of the view's that can be seen (not rock, within the range, not behind, lit: within the light's reach, a
 ; room's light, a lamp's) is seen if a line from the eyes reaches it with nothing in the way (no wall or rock, no
-; shut door, no floor above the line): Bresenham's line and its heights (ez + (tz - ez) * k / n) as view.c's clear ()
-; had them, worked out a step at a time without dividing; seen, it's marked (G_VIS, G_SEEN), and the walls, doors
-; and windows round it too if it's a room's floor (G_INSIDE), those in the view.  (In C, the squares reached
-; through at () thousands of times, a look took some 1.6 s of the senses' CPU.)  A look one way's range (view.c's
-; v_way: twice a glance's, 31 squares at most) reaches only the quarter ahead (within 45 degrees of the way the
-; character faces) past a glance's (g_o2, its square: g_r2, a glance's own).
+; shut door nor closed shutters, no floor above the line): Bresenham's line and its heights (ez + (tz - ez) * k / n)
+; as view.c's clear () had them, worked out a step at a time without dividing: the eye's line of ../dq0w/line.inc
+; (every other line the game draws, the denizens' sight, a missile's, a smell's), the same squares, heights and rule
+; (its doors and windows by line.inc's ln_portal: rdoors), worked out in the grid; seen, it's marked (G_VIS,
+; G_SEEN), and the walls, doors and windows round it too if it's a room's floor (G_INSIDE), those in the view.  (In
+; C, the squares reached through at () thousands of times, a look took some 1.6 s of the senses' CPU.)  A look one
+; way's range (view.c's v_way: twice a glance's, 31 squares at most) reaches only the quarter ahead (within 45
+; degrees of the way the character faces) past a glance's (g_o2, its square: g_r2, a glance's own).
 ;
 ;   void __fastcall__ cast_row (unsigned char j);   the view's row j (0 to 2 g_r)
 ;   void cast_own (void);                           the character's own square: seen if anything lights it (else
@@ -1096,13 +1098,10 @@ ptrs:
             .export     _v_sn, _v_x0, _v_y0, _v_h, _v_look, _v_lmode, _r_x, _r_y, _r_i0, _r_j0, _r_wi, _r_wj
             .export     _lbk, _bx0, _by0, _bw, _blo, _bhi, _sh_dx, _sh_dy, _sh_w
             .import     _at, _cached, _light_grid, _portal_at, _hub_map, _give_way, _at_bank, _at_chunk
-            .import     _cx_, _cy_, pusha, pushax, incsp2
+            .import     _cx_, _cy_, pusha, pushax, incsp2, _ln_portal
             .importzp   sp
 
-PS_OPEN     = $01                           ; (world.h's: a portal's state, open; its kind a portcullis)
-PK_PORTCULLIS = 2
-P_KIND      = 2                             ; (struct portal's kind, state)
-P_STATE     = 3
+LN_SIGHT    = 0                             ; (line.h's: the eye's line)
 
             .bss
 _v_sn:      .res        1                   ; The stratum, its x0, y0, h
@@ -1225,8 +1224,9 @@ rowg:
             sta         _run_g + 1
             rts
 
-; The doors and windows in piece's rn squares (run_in's G_DOOR): its mark out, and a shut one (but a portcullis)
-; opaque (portal_at (), the chunk in the window: its row rr from at ()'s cy_)
+; The doors and windows in piece's rn squares (run_in's G_DOOR): its mark out, and one the eye's line doesn't pass
+; opaque (a door shut, a window's shutters closed: line.inc's ln_portal, every line's rule; portal_at (), the chunk in
+; the window: its row rr from at ()'s cy_)
 rdoors:
             lda         #0
             sta         ra
@@ -1249,14 +1249,12 @@ rdoors:
             stx         ptr1 + 1
             ora         ptr1 + 1
             beq         @dn
-            ldy         #P_STATE
-            lda         (ptr1),y
-            and         #PS_OPEN
+            lda         ptr1                ; (Its pointer, .X still its high byte)
+            jsr         pushax
+            lda         #LN_SIGHT
+            jsr         _ln_portal
+            tax
             bne         @dn
-            ldy         #P_KIND
-            lda         (ptr1),y
-            cmp         #PK_PORTCULLIS
-            beq         @dn
             ldy         ra
             lda         _piece,y
             ora         #G_OPAQUE

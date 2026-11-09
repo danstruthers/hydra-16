@@ -1188,8 +1188,10 @@ alert those with particularly good sense of smell long before sound or light mig
 ### Seeing, and the map
 
 The senses work out what the character sees (in front of it and to its sides, a clear line in plan and over the floors
-between in height, from its eyes five feet above its floor, within its sight's range, lit: perception as layers, above)
-and keep a record of it in the hub, which the UI words: the place, the openings and where they lie (as it faces) and how
+between in height, from its eyes five feet above its floor, within its sight's range, lit: perception as layers, above;
+the one line the game draws between two squares, dq0w/line.inc's, 2026-11-08: a denizen sees the character along the
+same line, a missile flies along it, a shut door or closed shutters stop it, bars and glass don't stop the eye, glass
+stops a missile and a smell: DECISIONS.md's "One line of sight") and keep a record of it in the hub, which the UI words: the place, the openings and where they lie (as it faces) and how
 far above or below, the other zones of the room, the ways on and whether they climb, the things and the denizens it
 sees.  The UI says it a sentence at a time as it's made (a turn's first words, the way the character now faces, before
 the look); a sentence is told once in an answer (lbsaid.s), and things or denizens alike are told together ("Two giant

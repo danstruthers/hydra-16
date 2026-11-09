@@ -2072,3 +2072,122 @@ The command handlers were where the old chain cut by size had put them: part 2 (
 - **The request byte:** the door verbs' rows carry their `PA_*`, put in `cmd.aux` by `verb_row` when the line gave none: lock's (the parser's 0), so the door's work and `H_SHUT` no longer test the verb for it.  Not filled where it doesn't pay: the handling verbs (wear and take off are two requests each), the sway verbs, search and examine.
 - **Found, for review:** an empty name (`""`) an overlay gives `othings` is read through the window after `othings` has put the hub there: it was overlay 16's address, which falls past the hub's header, in the room bank 0 keeps free, where nothing is kept.  The moved timed works give `nil`, an empty name in the main RAM, so where they land doesn't matter.  resolve.c (overlay 11) does the same with IO_FIND, left as it is.
 - **Room:** the main RAM 2,117 bytes free to 2,128.  Part 2 1,059 to 659, part 24 3,342 to 3,729; overlay 16 131 to 1,073, overlay 1 1,288 to 424, overlay 11 307 to 278.
+
+## One line of sight (2026-11-08, as built, for review: ENGINE-CRITIQUE.md's §4 and step 2, its first part)
+
+ENGINE-CRITIQUE.md's §4 said there were three lines between two squares that might disagree. They did. What each did
+before:
+
+- **The look (dq0p/cast.s's ray, in its grid):** Bresenham's squares from the character's eyes (a step along if
+  2e >= -|dy|, across if 2e <= |dx|), the eyes 5 feet above the floor (3 crouched, kneeling or sitting, 1 prone) and the
+  line ending at the far square's floor.  A square stops it if it is rock or a wall, a shut door or window (any portal
+  not open but a portcullis, cast.s's `rdoors`), or its floor is above the line.  A lowered portcullis is seen through,
+  and so is glass.
+- **A denizen's sight of the character, its smell past the sound layer, the lights the character sees far off
+  (dq0p/eyes.c's `clear_line`):** other squares (from the denizen's end, x and y each truncated, i |dx| / dist), no
+  heights at all, and its own rule: a door square stopped it if its portal wasn't open, *a lowered portcullis too*;
+  *a window never did*, closed shutters and glass included.
+- **A missile's line (dq0w/wshoot.c's `lof`, `passes`):** Bresenham's again but with the ties the other way (2e > -|dy|,
+  2e < |dx|), tried from both ends, no heights, a wall's corner let through when the character saw the target, and its
+  own portal rule: a portcullis's bars and a grate let a missile through, glass and closed shutters didn't.
+
+So a denizen beyond a lowered portcullis could be seen and shot by the character and not see it, and one could see the
+character through closed shutters the character couldn't see through, or over a rise.
+
+**What's built.** One line, dq0w/line.inc (6502 assembly), assembled into the world (dq0w/line.s) and the senses
+(dq0p/line.s), with C's view in line.h:
+
+- `line (sn, x, y, tx, ty, mode)`: 0 clear, else what stopped it.  The modes: **LN_SIGHT** (the eye), **LN_FIRE** (a
+  missile), **LN_AIR** (a smell; no heights, the air fills the place).  Bresenham's squares as cast.s steps them; the
+  line from `ln_eye` feet above the first square's floor to the last square's floor, as cast.s works it out, for the eye
+  and a missile; `ln_way`, if set, asked of each square (the world's: someone standing in the way).
+- `ln_portal (o, mode)` and `ln_pass (sn, x, y, mode)`: one rule for what a square lets through (0 no, 1 yes, 2
+  narrowly: a slit, a window, the world's cover).  No square, rock, a wall: nothing.  A door, a drawbridge, a gate, a
+  hatch: open or broken down.  A portcullis or a grate: bars, up or down, let everything through.  An arrow slit:
+  everything, narrowly.  A window: its shutters closed, nothing; its glass in, the eye alone; else everything, narrowly.
+- **A line between the character and anyone is drawn from the character's end**, from its eyes by its body's position,
+  as its look's lines are.  At a tie Bresenham's squares from one end aren't the same as from the other, so this is
+  what makes a denizen see the character just when the character would see it (the light aside: each side's own light
+  rules are as they were).  A line between two denizens (an ally's throw) is drawn from the shooter.
+- **Its users:** the senses' `s_sense_actor` (a denizen's sight, LN_SIGHT; its smell past the sound layer, LN_AIR),
+  `glows` (the lights far off, LN_SIGHT with LN_CACHED: a chunk not in the cache stops it, none made); the world's line
+  of fire (`lof`, LN_FIRE, someone in the way by `ln_way`, cover by the square beside the target), a missile flying on
+  past its mark (`on_through`: `ln_pass`), a smell's way (wtrace.c's `airy`: `ln_pass`, LN_AIR); the sound layer's
+  doors and windows (sound.c's `kind_of`: `ln_portal`, LN_AIR); and the look's own doors and windows (cast.s's `rdoors`:
+  `ln_portal`, LN_SIGHT).  `clear_line`, `passes`, `lof1` and the copies of the portal rule in sound.c, wtrace.c and
+  part 68 are gone.
+- **The look keeps its grid** (cast.s's ray: thousands of lines a look, reading the grid with no `at`): the same
+  squares, heights and portal rule, worked out there (dq0looks holds the look's every answer to what it was, below).
+- **Not yet in the paged ROM** (ENGINE-CRITIQUE.md's §1.4 wanted it there): the line reads the chunks through each
+  task's own `at` (its cache in the hub's banks, the maker asked for a chunk not made), which a ROM module can't call
+  back into.  It's a stage: one source, assembled into the two tasks that draw lines.  It goes to ROM with the chunk
+  lookup.
+
+**What the game now means by a clear line, mode by mode:**
+
+| | Sight | Fire | Air |
+|---|---|---|---|
+| Rock, a wall, no square | stops | stops | stops |
+| A door shut (a hidden one too) | stops | stops | stops |
+| A door open or broken down | passes | passes | passes |
+| A portcullis or a grate, up or down | passes | passes | passes |
+| An arrow slit | passes | passes (cover) | passes |
+| A window, shutters closed | stops | stops | stops |
+| A window with glass | passes | stops | stops |
+| A window open, or bars alone | passes | passes (cover) | passes |
+| A floor above the line | stops | stops | (no heights) |
+| Someone standing in it | (passes) | stops, unless the target's as far beyond again | (passes) |
+
+**What a player sees change:**
+
+- *A denizen sees through a portcullis's bars*, as the character does: one beyond a lowered portcullis that the
+  character can see (and shoot) now sees the character too.  (dq0denportc's dwarf, drawn to the lowered portcullis,
+  now sees the character through it, heaves it up and comes at it: the game runs on longer, the character knocked
+  out, so its cycle budget went from 3,000M to 7,000M; it passes as before otherwise.)
+- *Where a denizen stands out of the character's sight, it's out of the denizen's too*, so it behaves as one that
+  hasn't seen the character.  (dq0tiring's dig at seed 3: a giant rat in the passage below saw the character before
+  through a door the character's own look didn't, and stayed watching; now it doesn't, wanders in and out of view, and
+  its stirring cut the first ten-minute spell short.  The test now sends the rats off as each dig begins, dq0Alone's,
+  as other scenes do: its subject is the fatigue.)
+- *A denizen no longer sees through a window's closed shutters*, nor does a smell pass them or glass.
+- *A denizen's eyes and a missile are stopped by a floor above the line* (a rise, a ledge, steps), as the look is;
+  and a crouched or prone character's lower eyes see, and are seen, over less.
+- *The squares between are the look's*: at a slant a denizen may now not see the character where it did, or the
+  reverse, just where the character's own look agrees.  At seed 3 (dq0looks's first game) a giant rat in the passage
+  south of the start room, at 32718,32724 with the character at 32723,32722, saw it before through the room's door at
+  32722,32723; from the character's end the line goes through the door at 32720,32723, shut, as the character's own look
+  does, and it no longer does.  Another (32722,32727, the character at 32724,32722) saw it through the door at
+  32723,32723; the character's line cuts the wall's corner at 32724,32723.
+- *A missile's line is the character's look's* when the character shoots or is shot at: one way, from its eyes, no
+  wall's corner let through (the look already decides what it sees), and a floor above the line stops it.  Glass and
+  closed shutters stop a missile as before; bars and slits let it through as before.
+- *The lights far off* are seen by the same line: closed shutters hide one, a portcullis doesn't, a rise does.
+- Unchanged: the look itself (dq0looks: every reply the senses give the same as before up to the first denizen's
+  answer that changed above, in two of its games, both at seed 3, and the rest byte for byte; tests/dq0/looks.ref
+  written again for those two); a sound's way and a smell's trail through doors and windows (the same rule, now ln_portal's); a
+  missile's flight on past its mark.
+
+**Test dq0line** (tests.js's `dq0LineTest`): seed 1's guardroom (dq0tunnel's scene), the portcullis let down, the
+character's lantern lit a step back from the bars, a dwarf miner held four squares off at the far end of the passage
+beyond, the character hidden (its hiding poked, so it's silent: a denizen's hearing answers before its eyes are asked).
+The character sees the dwarf through the bars; the dwarf's senses must say it would see the character (SN_LOOK).  On
+the old code: `its senses [0]` (clear_line stopped at the portcullis): "the dwarf the character sees through the bars
+wouldn't see it".
+
+**Performance** (cycles, the same games on the old build and the new, a profile of the senses' task by routine):
+
+| | Old | New |
+|---|---|---|
+| A look (`view`, seed 3 / seed 7 / seed 3 again) | 355,776 / 295,865 / 378,339 | 355,997 / 296,952 / 379,529 (+0.1-0.4%: `rdoors` calls `ln_portal`) |
+| The lights far off (`glows`, a call) | 46,975 / 48,584 / 48,700 | 47,551 / 49,108 / 49,083 (+1%) |
+| A denizen's senses (`sense_actor`, a call) | 92,610 / 129,342 | 97,689 / 128,929 |
+| One line (`clear_line`, then `line`) | 3,783 / 4,529 | 4,413 / 5,035 (it reads the two ends' floors) |
+
+The start (dq0starttime, its first look and the denizens' first senses in it): seed 1 225.4M cycles to 225.3M,
+seed 123456789 302.4M to 302.7M.
+
+**Room:** the world's main RAM 2,791 to 2,536 bytes free (ln_pass, ln_portal and the line's variables); its part 65
+178 to 227 (the line itself, in place of lof1, lof and passes), part 68 972 to 1,192, part 29 50 to 281 (their portal
+rules gone).  The senses' main RAM 2,634 to 2,435 (the whole line, in place of clear_line); part 1 1 to 4, part 5 4,028
+to 4,136.  (Written in C first, cc65 made it 1,185 bytes; in assembly it's 766 in the world, 219 of them in the main
+RAM and the line itself in part 65, and 892 in the senses, with the cache's checks.)

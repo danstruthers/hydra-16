@@ -5,8 +5,9 @@
 ** off.  A light seen isn't one that lights: its source in view, a glow, is seen far further than it lights, the
 ** further the darker the eyes are used to (a source of brightness b, 2 r + 1 for a light of reach r, the light
 ** layer's, at d squares, is seen if d <= 16 b / (4 + a), a the eyes' level, GLOW_MAX at most), and only against a
-** darker place than itself (the light where the eyes are).  Seeing it is a line from the eyes to it, clear of rock,
-** walls and shut doors.  The rates are the kinds' (kinds.txt's, for the denizens; the character's here, a man's).
+** darker place than itself (the light where the eyes are).  Seeing it is a line from the eyes to it, the eye's
+** (line.inc's: as the look's own, cast.s's), no chunk not in the cache in the way.  The rates are the kinds'
+** (kinds.txt's, for the denizens; the character's here, a man's).
 */
 
 #include <string.h>
@@ -15,6 +16,7 @@
 #include "../dq0w/world.h"
 #include "light.h"
 #include "eyes.h"
+#include "../dq0w/line.h"
 
 #pragma static-locals (on)
 
@@ -59,50 +61,6 @@ unsigned char __fastcall__ glow_reach (const struct eyes* e, unsigned char b)
     return r > GLOW_MAX ? GLOW_MAX : r;
 }
 
-/* A clear line from x, y on stratum sn, dx, dy across (dist squares, the most of them), between: no rock, wall nor
-** shut door on it (the squares a step at a time, dx i / dist toward 0: worked out a step at a time, without dividing;
-** mk 0: a chunk not made is in the way, none made: the cache asked once a chunk) */
-unsigned char __fastcall__ clear_line (unsigned char sn, unsigned x, unsigned y, int dx, int dy, unsigned dist,
-    unsigned char mk)
-{
-    static unsigned char* p;
-    static struct portal* q;
-    static unsigned i, sx, sy, ax, ay, qx, qy, rx, ry, kx, ky, ox, oy;
-    static unsigned char ok;
-
-    ax = dx < 0 ? -dx : dx;
-    ay = dy < 0 ? -dy : dy;
-    qx = qy = rx = ry = 0;
-    kx = 0xFFFF;
-    for (i = 1; i < dist; ++i) {
-        for (rx += ax; rx >= dist; rx -= dist) {   /* (|dx| i / dist, its rest rx) */
-            ++qx;
-        }
-        for (ry += ay; ry >= dist; ry -= dist) {
-            ++qy;
-        }
-        sx = dx < 0 ? x - qx : x + qx;
-        sy = dy < 0 ? y - qy : y + qy;
-        if (!mk) {
-            ox = (sx - STRATUM (sn).x0) >> CW_BITS;   /* (Its chunk in the cache: asked once a chunk) */
-            oy = (sy - STRATUM (sn).y0) >> CW_BITS;
-            if (ox != kx || oy != ky) {
-                kx = ox;
-                ky = oy;
-                ok = cached (sn, sx, sy);
-            }
-            if (!ok) {
-                return 0;
-            }
-        }
-        if (!(p = at (sn, sx, sy)) || !T_CLEAR (*p) ||
-            (TILE (*p) == T_DOOR && (q = portal_at (cx_, cy_)) != 0 && !(q->state & PS_OPEN))) {
-            return 0;
-        }
-    }
-    return 1;
-}
-
 /* The lights the character sees far off (beyond range, the look's), into G: the lit things lying about (the
 ** light layer's lamps), the lit rooms in chunks the cache has; ahead or beside it, a clear line to each (the brightest
 ** two kept) */
@@ -119,7 +77,7 @@ static void __fastcall__ source (unsigned sx, unsigned sy, unsigned char b)
     dy = sy - y_;
     d = (dx < 0 ? -dx : dx) > (dy < 0 ? -dy : dy) ? (dx < 0 ? -dx : dx) : (dy < 0 ? -dy : dy);
     if (d <= range_ || b <= e_ || d > (r = glow_reach (&E[0], b)) || head_x[face_] * dx + head_y[face_] * dy < 0 ||
-        !clear_line (sn_, x_, y_, dx, dy, d, 0)) {
+        line (sn_, x_, y_, sx, sy, LN_SIGHT | LN_CACHED)) {
         return;
     }
     v = b - e_;                                 /* (How it stands out: the brightest kept) */
@@ -151,6 +109,8 @@ void __fastcall__ glows (unsigned char sn, unsigned x, unsigned y, unsigned char
     static unsigned char nr;
 
     give_way ();
+    hub_map (0);
+    ln_eye = LN_EYES (HUB->pc_pos);             /* (Its eyes' height, as the look's: line.inc's lines from them) */
     e_ = light_at (sn, x, y);                   /* (The light where the eyes are: the layer's, its own) */
     if (light && 2 * light + 1 > e_) {
         e_ = 2 * light + 1;

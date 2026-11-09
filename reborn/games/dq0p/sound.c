@@ -22,6 +22,7 @@
 #include "../dq0/level.h"
 #include "../dq0w/world.h"
 #include "light.h"
+#include "../dq0w/line.h"
 
 extern unsigned char at_bank;                   /* (chunk.c's: at ()'s chunk's bank) */
 
@@ -188,19 +189,8 @@ static void __fastcall__ draught (unsigned char sn)
 static unsigned char __fastcall__ kind_of (unsigned char x, unsigned char y)
 {
     static struct portal* q;
-    static unsigned char k;
 
-    if ((q = portal_at (x, y)) != 0) {
-        k = q->kind;
-        if (k == PK_PORTCULLIS || k == PK_GRATE || k == PK_SLIT) {
-            return 0xFE;
-        }
-        if (k == PK_WINDOW ? (q->parts & PP_GLASS) || ((q->parts & PP_SHUTTERS) && !(q->state & PS_OPEN)) :
-            !(q->state & (PS_OPEN | PS_WRECKED))) {
-            return 0xFD;
-        }
-    }
-    return 0xFE;
+    return (q = portal_at (x, y)) != 0 && !ln_portal (q, LN_AIR) ? 0xFD : 0xFE;   /* (The air's way: line.inc's) */
 }
 
 /* A background's source on square x, y (kind b, level l), if there's room */

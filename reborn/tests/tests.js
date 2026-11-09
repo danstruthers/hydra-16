@@ -2297,6 +2297,76 @@ function dq0StateSelTest() {
     sdcard: true
   };
 }
+// One line of sight (ENGINE-CRITIQUE.md's §4, step 2, 2026-11-08): the senses' lines and the world's agree.  At seed
+// 1, dq0tunnel's scene (a hand-written theme's dwarf miners; the character in their guardroom, the portcullis it came
+// in by let down behind it), the character's lantern lit, a step back from the bars; a dwarf miner held (wary,
+// watching) four squares ahead, at the far end of the passage beyond them.  The character sees it through the bars
+// (the look's line, cast.s: a portcullis is seen through, up or down), and a missile would pass them (the world's line
+// of fire, wshoot.c's), so the dwarf would see the character too: the character held hidden as it waits (the hub's
+// pc_hid poked, so silent: the dwarf's hearing, which answers before its eyes are asked, is out of it), dsense's
+// SN_LOOK (it would see it but for that) every time it's asked.  Till 2026-11-08 the denizens' line (eyes.c's
+// clear_line) took a lowered portcullis for a shut door: nothing.  DQ0_LINE=1 prints the replies
+function dq0LineTest() {
+  const lines = ['open the door', 'go through it', 'turn around', 'close the door ahead', 'light the lantern', 'step back',
+    'wait 1 minute', 'wait 1 minute', 'wait 1 minute', 'look'];
+  return {
+    name: 'dq0line', near: ['senses', 'denizens'], what: 'Dingus Quest Zero\'s one line of sight (ENGINE-CRITIQUE.md\'s ' +
+      '§4): a dwarf miner beyond a lowered portcullis, seen by the character through its bars (and in a missile\'s line), ' +
+      'would see the character too',
+    init: 't_rc', cycles: 600e6 + lines.length * 60e6,
+    machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+      "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -k lantern -T -d /ram/g',
+      ...lines, 'quit', 'echo $status']) },
+    start(m) {
+      const scene = (h, L, K, at, named) => {
+        const u16 = o => h[o] | h[o + 1] << 8, w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
+        const px = u16(L.pcX), py = u16(L.pcY), f = h[L.pcFace], dx = [0, 1, 1, 1, 0, -1, -1, -1][f], dy = [-1, -1, 0, 1, 1, 1, 0, -1][f];
+        let k = m.lineK;
+        if (k === undefined) k = m.lineK = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'dwarf miner');
+        if (k === undefined) return;
+        const x = px + 4 * dx, y = py + 4 * dy, o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);
+        dq0Alone(m, h, L, K, at, k);
+        w16(o + L.aX, x); w16(o + L.aY, y);
+        h[o + L.aSn] = h[L.pcSn];
+        h[o + L.aAttitude] = K.AT_WARY;
+        h[o + L.aDoing] = K.DO_WATCH;
+        R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8;
+        R.mem[q + R.SN] = h[L.pcSn];
+        R.mem[q + R.ATTITUDE] = K.AT_WARY;
+        h[L.denSeq] = h[L.denSeq] + 1 & 255;
+        const sn = h[L.pcSn], S = stratumRec(m, sn), tile = (x, y) => {
+          const b = S && liveChunks(m, sn)[((x - S.x0) >> 5) + ',' + ((y - S.y0) >> 5)];
+          return b ? b[443 + ((y - S.y0) & 31) * 32 + ((x - S.x0) & 31)] & 15 : -1;
+        };
+        m.line = { k, x, y, px, py, tiles: [1, 2, 3, 4].map(i => tile(px + i * dx, py + i * dy)) };
+      };
+      const p = [];
+      for (let n = 1; n <= 3; n++) p.push({ g: 1, line: 'wait 1 minute', n, call: (h, L, K, at, named) => { scene(h, L, K, at, named); h[L.pcHid] = 1; } });
+      p.push({ g: 1, line: 'look', n: 1, call: (h, L, K, at, named) => { scene(h, L, K, at, named); h[L.pcHid] = 0; } });
+      dq0Poke(m, p);
+    },
+    expect: ['% echo $status'],
+    check(m) {
+      const T = dq0Turns(m), f = [], SN_SEEN = 1, SN_LOOK = 8, T_FLOOR = 1, T_DOOR = 3, T_CORR = 4, l = m.line;
+      if (!l) return ['the scene not set: no dwarf miner to hold'];
+      dq0Need(f, T.of('close the door ahead'), 'E_PORTAL', { po: 'PO_LOWERED', pk: 'PK_PORTCULLIS' }, 'the portcullis not lowered');
+      if (l.tiles.join() !== [T_FLOOR, T_DOOR, T_CORR, T_CORR].join())
+        f.push('not the scene: the squares ahead ' + JSON.stringify(l.tiles) + ' (a floor, the portcullis, the passage)');
+      const rs = T.filter(t => t.line === 'wait 1 minute').flatMap(t => t.replies).filter(r => r.req === 'dsense' && r.who === l.k &&
+        !r.noise && r.x === l.x && r.y === l.y && r.pc.x === l.px && r.pc.y === l.py);
+      const look = T.of('look'), sees = look.after && look.after.sight && look.after.sight.dens.some(d => d.x === l.x && d.y === l.y);
+      this.notes = ['the dwarf at ' + l.x + ',' + l.y + ', the character at ' + l.px + ',' + l.py + ': its senses ' +
+        JSON.stringify(rs.map(r => r.res)) + '; the character sees it: ' + !!sees];
+      if (process.env.DQ0_LINE) console.log(this.notes[0]);
+      if (!sees) f.push('the character doesn\'t see the dwarf through the lowered portcullis (the scene\'s premise)');
+      if (!rs.length) f.push('the dwarf\'s senses never asked as it watched');
+      else if (!rs.every(r => r.res & (SN_SEEN | SN_LOOK)))
+        f.push('the dwarf the character sees through the bars wouldn\'t see it (no SN_LOOK): ' + JSON.stringify(rs.map(r => r.res)));
+      return f;
+    },
+    sdcard: true
+  };
+}
 // §5.1's last disagreements (COMMANDS-CRITIQUE.md, 2026-11-07): a capital for a thing lying about worded as that thing,
 // not a carried one of its name (7: sway.c's first words, its handle's); several alike lying there, "take the sack",
 // no "You look them over." (5: the world asks which only of two that differ); DQ0_LEFTOVERS=1 prints the answers
@@ -5224,7 +5294,7 @@ module.exports = {
     },
     {
       name: 'dq0denportc', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's portcullis worked by a denizen (2026-11-02: the minds' leftovers of Phase 3C's one path, DENIZENS.md's a portcullis and a lock, HOUSE.md's denizens and doors, for review): dq0tunnel's scene, the dwarf's tries at the portcullis not given up: kept from the character by the portcullis let down (from the character's side, its winch's), it heaves at it from the far side (E_DEN DE_HEAVES, the character's code: wwin.c's heave, P_LIFT by its sheet), and raises it (DE_RAISES) or, held twice, strains at its bars (DE_BENDS), each told seen or heard; its way there found (the minds' ways: a field made, dq0d's rb).  [dq0tunnel's what, for the scene:] Dingus Quest Zero's tunnellers (slice 4.11, 2026-11-01: DENIZENS.md's tunnellers and builders, HOUSE.md's tunnellers, for review): a hand-written theme's dwarf miners (seed 1, south of the start, wary; a miner digs with the tools it carries, kinds.txt's ways m: its pick, outfits.txt's [role khuzmin]), the character in their guardroom, the portcullis it came in by let down behind it ('close the door'); one of them put in the passage beyond it, hostile, drawn on to where it last sensed the character (the scene set as the first wait's typed: the hub's actor and its record, the minds' drawn and last-sensed square poked).  A portcullis it can't raise, no way nearer: it digs its way round it (dq0d's dig_way, a diagonal round the door: nearer as the crow flies; I_KIT's KT_DIG, the world's wdig.c a spell of ten minutes at a time by the character's rules: a pick's rate on the wall, a Strength test by its sheet), its first spell seen through the portcullis (E_DEN's DE_DIG: \"The dwarf miner digs into the wall.\", or heard, a scraping in rock), the hole kept as it goes (DUG), and through (DE_DUG: the square a passage, told seen, \"A fresh tunnel opens ...\", or heard, rock falling); the dwarf come through it after; both referees",
-      init: 't_rc', cycles: 3000e6,
+      init: 't_rc', cycles: 7000e6,   // (2026-11-08, one line of sight: the dwarf sees the character through the bars, heaves the portcullis up and comes at it, knocking it out: the game runs on till it comes round, 6.1G cycles; 3000e6 before)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
         "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7',
         'open the door', 'go through it', 'turn around', 'close the door ahead', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']) },
@@ -5840,6 +5910,7 @@ module.exports = {
     dq0ItTest(),
     dq0StateSelTest(),
     dq0LeftoversTest(),
+    dq0LineTest(),
     dq0OnePathTest(),
     dq0FeaturesTest(),
     {
@@ -13695,6 +13766,11 @@ module.exports = {
         'hmchar -q -s 1 -u feudal -c thief -o /ram/th.hm', 'echo ml lck 95 >> /ram/th.hm',
         ...['!stop', '!' + 'Ā'.repeat(6) + 'stop'].flatMap(st => ['dq0 -p m -s 7 -c /ram/th.hm -a', 'search', 'search', 'search', st, 'quit']), 'echo $status']
         .map(l => (l[0] === '!' ? l.slice(1) : 'ā' + l) + '\r').join('') },
+      start(m) {   // (2026-11-08, one line of sight: seed 3's rats sent off as the digs begin, dq0Alone's: one in the passage
+        // below, out of the character's sight now as the character's out of its, wanders in and out of view, its stirring
+        // stopping the spell short)
+        dq0Poke(m, [1, 2].map(n => ({ g: 1, line: 'dig down', n, call: (h, L, K, at) => dq0Alone(m, h, L, K, at, -1) })));
+      },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], K = m.dq0.layout().K;

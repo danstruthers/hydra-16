@@ -4,8 +4,10 @@
 ** the light where it stands (the light layer's, and the character's own light if it's within its reach), as time's
 ** gone since they were last (eyes.c's adapt, at its kind's rate).  Seen: the character lit (its own light, or the
 ** light layer's where it stands) within the kind's sight, else within its darkvision, the less as its eyes are still
-** used to more light than is there; a line clear between (no rock, wall nor shut door: eyes.c's clear_line, the
-** chunks made for it as they were for the denizens' own); unlit, low (crouched, kneeling, sitting: three quarters as
+** used to more light than is there; a line clear between (the eye's, line.inc's: the character's own look's to
+** it, from the character's eyes, so it sees the character just when the character would see it, the light aside; no
+** rock, wall, shut door nor closed shutters, no floor above it; bars and glass seen through; the chunks made for it
+** as they were for the denizens' own); unlit, low (crouched, kneeling, sitting: three quarters as
 ** far; prone, half: HOUSE.md's body position).  Heard (slices 4.5, 4.6: the sound layer, sound.c's): the character
 ** busy, by how loud it is (the world's pc_noise: its steps by its pace, its armour, its body's position, its Stealth
 ** moving quietly), less the background where the actor is (sound.c's snd_mask), within its loudness times the kind's
@@ -15,8 +17,8 @@
 ** seen far off: carried, in line, within the kind's eyes' reach of it (eyes.c's glow_reach).  Smelt (slice 4.1; the
 ** air, slice 4.5's): within a third of its nose's keenness in still air (squares: a hound's three), downwind the
 ** further, upwind the less or not at all (by the draught's strength: sound.c's snd_wind), the way the air goes (the
-** sound layer's, no shut door on it; past it, a line the air passes).  A far one (beyond all of them) is answered
-** coarsely, no line cast: how far it may go with the answer standing (slack).  The character hidden (the hub's
+** sound layer's, no shut door on it; past it, a line the air passes: line.inc's).  A far one (beyond all of them) is
+** answered coarsely, no line cast: how far it may go with the answer standing (slack).  The character hidden (the hub's
 ** pc_hid: HOUSE.md's hiding oneself): still, no sound of it; in sight's reach, SN_LOOK, not seen: its mind's to test the
 ** look (dq0d's part 20); smelt all the same.
 */
@@ -28,6 +30,7 @@
 #include "../dq0w/world.h"
 #include "light.h"
 #include "eyes.h"
+#include "../dq0w/line.h"
 
 #pragma static-locals (on)
 
@@ -132,14 +135,15 @@ void s_sense_actor (void)
     }
     w = 2 + w < 0 ? 0 : 2 + w;                  /* (The air: its smell carried downwind, held back upwind) */
     nose = nose * w / 2;
-    if ((!res || (pos & PC_HID)) && dist <= m && clear_line (sact.sn, sact.x, sact.y, -dx, -dy, dist, 1)) {
+    ln_eye = LN_EYES (pos & ~PC_HID);           /* (The line between them: the character's look's, from its eyes) */
+    if ((!res || (pos & PC_HID)) && dist <= m && !line (pcs, pcx, pcy, sact.x, sact.y, LN_SIGHT)) {
         res |= pos & PC_HID ? SN_LOOK : SN_SEEN;
     }
     if (!(res & ~SN_LOOK) && dist <= nose) {
         c = snd_cost (sact.x, sact.y);          /* (Smelt along the way the air goes: no shut door on it; past the
                                                 **   sound layer, a line the air passes) */
         if (c != SND_NONE ? !(c & SND_AIR) && SND_COST (c) <= nose :
-            dist > SND_R && clear_line (sact.sn, sact.x, sact.y, -dx, -dy, dist, 1)) {
+            dist > SND_R && !line (pcs, pcx, pcy, sact.x, sact.y, LN_AIR)) {
             res = SN_SMELT;
         }
     }
