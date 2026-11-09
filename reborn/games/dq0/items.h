@@ -305,7 +305,8 @@ enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
     IO_STOW,                                    /* Put in the pack (its room, its weight, what it keeps) */
     IO_PUT,                                     /* Put in into (to 0) or on it (to 1: a surface's; a belt's: hung) */
     IO_TAKE,                                    /* Taken from into: into the pack, else a hand */
-    IO_DON, IO_DOFF,                            /* Worn; taken off (into a hand, else the pack) */
+    IO_DON, IO_DOFF,                            /* Worn (a thing that isn't worn but is held: held, equip's; to
+                                                **   DN_WORN, refused); taken off (into a hand, else the pack) */
     IO_LIGHT, IO_DOUSE,                         /* Lit (a tinderbox carried, or a flame); put out ("": the first) */
     IO_BAR };                                   /* A door's bar to hand (carried, or within reach, not in brackets):
                                                 **   the widest's width back in x (to 0: result IR_NO, x 0 none); or
@@ -398,6 +399,10 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   the character carries, for a gift: IO_DESCRIBE's reply (its worth
                                                 **   in value, a unit's, the appraisal's; its qty, its craft), its item
                                                 **   in item; IR_NONE none */
+#define IO_DON_WORN     (IO_BAR + 16)           /* (No request of the world's: "wear"'s aux, commands.verbs', sent as
+                                                **   IO_DON, to DN_WORN, hthings.c's; 2026-11-09, DECISIONS.md's) */
+#define DN_WORN         0x40                    /* (IO_DON's to: worn, or refused, "You can't wear the sword."; a weapon,
+                                                **   a light not held instead, as equip's are) */
 enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS, LM_KIT, LM_GO, LM_ROPES };   /* (IO_LOOK's: a look at it; a closer look; its
                                                 **   condition; its weight; its lock; gone over for traps; LM_KIT the
                                                 **   world's own, the character's things kept, kit.dat: slice 4.4's; LM_GO, gone to, walking there) */

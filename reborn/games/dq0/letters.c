@@ -591,7 +591,7 @@ unsigned char o_what_ask (void)
             continue;
         }
         f = ix[e].flags;
-        if (a == IO_DON) {
+        if (a == IO_DON || a == IO_DON_WORN) {  /* (Equip's, wear's: one worn not, of a kind that's worn) */
             from_ui (&f, &UIREC->ixks[ix[e].kind].flags, 1);
             f = (f & K_WEAR) && !(ix[e].flags & CX_WORN);
         } else {

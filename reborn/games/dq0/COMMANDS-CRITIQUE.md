@@ -854,8 +854,9 @@ player sees changed (the whole suite: all 426 tests pass):
   varies would keep theirs in the line).
 
 Odd answers the sweeps don't catch (they name the thing, but read oddly), for review: "tie the torch" says "You can't
-close the torch." (a tie is a container's, worked as its lid); "wear the torch" says "You hold the lit torch in your
-left hand already." (a thing for the hand, held).
+close the torch." (a tie is a container's, worked as its lid). ("Wear the torch" said "You hold the lit torch in your
+left hand already." (a thing for the hand, held): since 2026-11-09 "You can't wear the lit torch.", wear its own verb,
+worn only; equip, don and wield as they were: DECISIONS.md's "Wear for what's worn", test dq0wearonly.)
 
 Two decisions recorded in the docs would need revisiting:
 

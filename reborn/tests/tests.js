@@ -3778,6 +3778,8 @@ const LETSIGHT = ['drop j', 'drop c', 'drop b', 'look', 'around', 'take 5F', 'dr
   'take G', 'around', 'inventory'];   // (dq0letsight's lines: the rats seen first, A, B, C, 2026-11-06's step 4)
 const LETCMD = ['inventory', 'drop j', 'inventory', 'take torch', 'put j in b', 'inventory', 'take j from b', 'light j with a', 'drop 2c', 'look d',
   'drop', 'k', 'take off', 'look', 'drop the lit torch', 'inventory'];   // (dq0letcmd's lines)
+const WEARONLY = ['inventory', 'wear the sword', 'wear the torch', 'wear the sack', 'wear', 'k', 'stow the sword', 'equip the sword', 'inventory',
+  'stow the sword', 'wield the sword', 'inventory'];   // (dq0wearonly's lines: k the cloak's letter, the answer to "Wear what? [k]")
 const LETDENS = ['look', 'around', 'look at B', 'talk to C', 'attack C', 'attack A', 'around'];   // (dq0letdens' lines)
 const LETWHICH = ['drop j', 'pick up the torch', 'inventory', 'drop j', 'drop a', 'drop k', 'take the torch', 'F', 'take the torch', '2', 'inventory',
   'drop j', 'take torch', 'lit', 'inventory'];   // (dq0letwhich's lines)
@@ -8660,6 +8662,50 @@ module.exports = {
           this.notes.push(r.line + ': first letter ' + r.first);
           if (r.first === null || r.first > 720000) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0wearonly', near: ['gear', 'parser'], what: "Dingus Quest Zero's wear for what's worn (the user's, 2026-11-09: \"wear\" restricted to articles that can be worn, DECISIONS.md's; commands.verbs' wear, its aux IO_DON_WORN, the world's IO_DON to DN_WORN): a sword and the torch in hand refused (\"You can't wear the sword.\", the catalogue's own words, no weapon taken in hand), as a sack always was; \"wear\" alone asks with the letters of the kinds that are worn, those not worn yet (the cloak's), not the sword's nor the torch's; its letter answers, the cloak put on; wield and equip as they were, the sword taken in hand",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'sword,cloak,sack'",
+        ...WEARONLY, 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
+        let at = 0;
+        for (const l of WEARONLY) {
+          let i = o.indexOf('> ' + l + ' ', at);
+          if (i >= 0 && o.startsWith('> ' + l + ' ', i + l.length + 3)) i += l.length + 3;   // (Its echo, then the line as it's drawn)
+          const e = i < 0 ? -1 : o.indexOf('> ', i + 2);
+          seg.push(i < 0 ? '' : o.slice(i + l.length + 3, e < 0 ? undefined : e));
+          if (i >= 0) at = i + 2;
+        }
+        this.notes = WEARONLY.map((l, i) => l + ': ' + seg[i].slice(0, 300));
+        const said = (k, re) => { const n = WEARONLY.indexOf(k); if (!re.test(seg[n])) f.push(k + ': not ' + re + ': ' + seg[n].slice(0, 300)); };
+        const letter = name => { const r = seg[0].match(new RegExp('\\(([a-z]{1,2})\\) an? ' + name)); return r ? r[1] : null; };
+        const [cloak, sword, torch] = [letter('cloak'), letter('sword'), letter('torch')];
+        if (!cloak || !sword || !torch) return ['inventory: no cloak, sword or torch: ' + seg[0].slice(0, 400)];
+        said('wear the sword', /You can't wear the sword\./);   // (Not held instead: "You hold the sword in your right hand already.")
+        said('wear the torch', /You can't wear the (lit )?torch\./);
+        said('wear the sack', /You can't wear the sack\./);
+        for (const k of ['wear the sword', 'wear the torch']) if (/You (take|hold)/.test(seg[WEARONLY.indexOf(k)])) f.push(k + ': held instead');
+        const ask = (seg[WEARONLY.indexOf('wear')].match(/^Wear what\? \[([a-z, ]+)\]/) || [])[1];
+        if (!ask) f.push('wear: not asked "Wear what? [...]": ' + seg[WEARONLY.indexOf('wear')].slice(0, 200));
+        else {
+          const offer = ask.split(', ');
+          if (!offer.includes(cloak)) f.push('wear: the cloak (' + cloak + ') not offered: ' + ask);
+          if (offer.includes(sword) || offer.includes(torch)) f.push('wear: the sword or the torch offered: ' + ask);
+        }
+        said('k', /You put on the cloak\./);
+        const held = (k, n) => { const s = seg[WEARONLY.indexOf('inventory', n)]; if (!/a sword, in your (left|right) hand/.test(s)) f.push(k + ': the sword not in hand: ' + s.slice(0, 400)); };
+        said('equip the sword', /sword/);
+        held('equip the sword', WEARONLY.indexOf('equip the sword'));
+        said('wield the sword', /sword/);
+        held('wield the sword', WEARONLY.indexOf('wield the sword'));
+        for (const k of ['equip the sword', 'wield the sword']) if (/can't wear/.test(seg[WEARONLY.indexOf(k)])) f.push(k + ': refused as a wear');
+        if (!/a cloak, worn/.test(seg[WEARONLY.lastIndexOf('inventory')])) f.push('the cloak not worn: ' + seg[WEARONLY.lastIndexOf('inventory')].slice(0, 400));
         return f;
       },
       sdcard: true

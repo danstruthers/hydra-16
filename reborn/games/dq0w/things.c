@@ -5599,11 +5599,23 @@ static unsigned in_other (void)
     return n;
 }
 
+/* A thing carried (cr, carry's: 1 into the pack, else a hand; 0 none free), its words (s first, then where it went),
+** its time t; take_from's and doff's (one tail, 2026-11-09: the catalogue's bank's room) */
+static unsigned char cr;
+static unsigned char __fastcall__ carried (unsigned char s, unsigned char t)
+{
+    if (!cr) {
+        return rs_st ? IR_NO : no (SA_HANDS);   /* (A step of the reach first: part 85's) */
+    }
+    say (s);
+    name_of (pack, 0);                          /* (carry's about's) */
+    return yes (cr == 1 ? SA_IN_PACK : SA_IN_HAND, t);
+}
+
 /* Taken from the other thing: into the pack, else a hand (from what's on the character: into a hand) */
 static unsigned char take_from (void)
 {
     static unsigned n;
-    static unsigned char r;
 
     if (!(n = in_other ())) {
         return IR_NO;
@@ -5612,15 +5624,11 @@ static unsigned char take_from (void)
     if (B (m1 (on_pc, c))) {
         return hold (n);
     }
-    if (!(r = B (m2 (carry, n, !iq.count)))) {   /* (In a hand, the pack only with both full or by the count: the user's, 2026-11-06) */
-        return rs_st ? IR_NO : no (SA_HANDS);   /* (A step of the reach first: part 85's) */
-    }
-    say (SA_TAKE);
-    name_of (pack, 0);                          /* (carry's about's) */
-    return yes (r == 1 ? SA_IN_PACK : SA_IN_HAND, 20);
+    cr = B (m2 (carry, n, !iq.count));          /* (In a hand, the pack only with both full or by the count: the user's, 2026-11-06) */
+    return carried (SA_TAKE, 20);
 }
 
-/* Worn (a thing held in the hand, not worn: held) */
+/* Worn (a thing held in the hand, not worn: held, equip's; "wear"'s, to DN_WORN, refused, 2026-11-09) */
 static unsigned char __fastcall__ don (unsigned n)
 {
     static unsigned i;
@@ -5629,7 +5637,7 @@ static unsigned char __fastcall__ don (unsigned n)
     k = B (m1 (item_kind, n));
     kf = KFLAGS (k);
     if (!(kf & K_WEAR)) {
-        return kf & K_HAND ? hold (n) : no (SA_NO_WEAR);
+        return kf & K_HAND && !(iq.to & DN_WORN) ? hold (n) : no (SA_NO_WEAR);
     }
     for (i = 1; i < NITEMS; ++i) {              /* (One of a kind worn: a second pack, a second cloak, no) */
         FETCH (i);
@@ -5647,18 +5655,12 @@ static unsigned char __fastcall__ don (unsigned n)
 /* Taken off: into a hand, else the pack */
 static unsigned char __fastcall__ doff (unsigned n)
 {
-    static unsigned char r;
-
     FETCH (n);
     if (!(o.flags & I_WORN)) {
         return no (SA_NOT_WORN);
     }
-    if (!(r = B (m2 (carry, n, 1)))) {
-        return rs_st ? IR_NO : no (SA_HANDS);
-    }
-    say (SA_DOFF);
-    name_of (pack, 0);
-    return yes (r == 1 ? SA_IN_PACK : SA_IN_HAND, 50);
+    cr = B (m2 (carry, n, 1));
+    return carried (SA_DOFF, 50);
 }
 
 /* ---- Light: a flame to hand (part 10's flame, its room) */

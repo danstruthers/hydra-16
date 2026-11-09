@@ -2658,3 +2658,36 @@ obj/tests/t_rules.hyx), and the suite passes.  The accessors were held to the co
 
 **Left** (ENGINE-CRITIQUE.md's §2, "Left of stage 2"): the requests' forms chosen by a field's value, a pass of its
 own (the accessors it renames, the constants it wants).
+
+## Wear for what's worn (2026-11-09, as built, for review: the user's, "wear" restricted to articles that can be worn)
+
+"Wear" was equip's: commands.verbs' `wear = don`, `don` the verb of `VB_EQUIP_OBJECT` with aux `IO_DON`, the world's
+`IO_DON` (things.c's `don`): a thing of a kind that's worn (the catalogue's `K_WEAR`: clothes, armour, a cloak, a
+backpack, a belt, a bandolier, a shield or a bow slung, a ring, a brooch, a necklace, a mask) put on; one that isn't,
+but is held (`K_HAND`: a sword, a torch, a lantern), taken in hand instead ("wear the sword", "You take the sword in
+your right hand.", or "You hold the sword in your right hand already."); anything else refused, "You can't wear the
+sack." (the catalogue's `SA_NO_WEAR`).  "Wear what? [...]" (letters.c's) already offered only the `K_WEAR` kinds not
+worn.  What's built:
+
+- **Wear is a verb of its own, told apart by its aux.**  commands.verbs' `wear thing=VB_EQUIP_OBJECT unsaid=last
+  aux=IO_DON_WORN`, `wear = wear`; equip, don, put on, ready, wield and brandish as they were.  `IO_DON_WORN` (items.h)
+  is no request of the world's: hthings.c's `H_HANDLE` sends it as `IO_DON` with `to` `DN_WORN`, and the world's `don`
+  refuses a thing that isn't worn whether or not it's held: "You can't wear the sword.", "You can't wear the lit
+  torch.".  letters.c's "Wear what?" takes `IO_DON_WORN` as `IO_DON`.
+- **Why the aux, not an action or a manner.**  The aux is the verb's own value and already tells the handling verbs
+  apart within one action: wield is `VB_EQUIP_OBJECT` too, told from equip by `IO_HOLD`.  A `VB_WEAR_OBJECT` would be
+  a row of the dispatch table, a line of commands.actions, the grammar's, the corpus's and the reference compiler's,
+  and main.c's hand phrase and letters.c's tests of the action, for the same handler and the same request; the corpus
+  ("wear the mail hauberk", `VB_EQUIP_OBJECT`) stays true.  A manner is how a thing's done (`MN_*`, the adverbs'), and
+  no verb sets one.  `IO_WEAR` was taken (a tool's key worn by a body), so the name is `IO_DON_WORN`.
+- **The refusal is the catalogue's, as it was.**  "You can't wear the %." (kinds.c's `said`, `SA_NO_WEAR`) is the
+  world's, said after the thing's found by name, as the sack's always was; refuse.c's `said[]` and `say_no` are the
+  line's refusals, before the world's asked, by a word, and whether a thing's worn is its kind's, which only the world
+  knows of a thing named (one lying about too).  No new words.
+- **Left as they are, for review:** "don" and "put on" (equip's still: a sword donned is taken in hand); "Equip
+  what?" offers only what's worn, as before.  If "don" should be wear's, it's one line: `don = wear`.
+- **Room:** the UI's main RAM 2,307 bytes free, as it was (the changes in overlays and parts).  The world's
+  catalogue bank (its code at most 6,400 bytes, into the outfits' index) was 6,399 and went 6 over; take_from's and
+  doff's tail (carried, into the pack or a hand, its words) made one routine, `carried`: 6,371.
+- **Test:** dq0wearonly (a sword and the torch in hand, a sack: refused; "Wear what? [k]", the cloak's letter alone;
+  the cloak put on by its letter; equip and wield the sword, taken in hand).

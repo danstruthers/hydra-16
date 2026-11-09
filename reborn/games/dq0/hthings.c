@@ -111,8 +111,10 @@ void __fastcall__ s_things_do (unsigned h)
     case H_EAT:                                 /* (Eating, drinking: part 16's, slice 4.9's) */
         feed (cmd.action == VB_EAT_OBJECT);
         break;
-    default:                                    /* (H_HANDLE: a thing handled, the things' request the verb's, IO_*) */
-        handle (cmd.aux, cmd.obj.word, cmd.other.word[0] || cmd.prep != PR_IN ? cmd.other.word : "shaft", cmd.prep == PR_ON);
+    default:                                    /* (H_HANDLE: a thing handled, the things' request the verb's, IO_*;
+                                                **   "wear"'s IO_DON, worn only: DN_WORN, 2026-11-09) */
+        handle (cmd.aux == IO_DON_WORN ? IO_DON : cmd.aux, cmd.obj.word, cmd.other.word[0] || cmd.prep != PR_IN ?
+            cmd.other.word : "shaft", cmd.aux == IO_DON_WORN ? DN_WORN : cmd.prep == PR_ON);
     }                                           /* ("Put the dagger down the shaft", the hole: its kind said, no word) */
 }
 
