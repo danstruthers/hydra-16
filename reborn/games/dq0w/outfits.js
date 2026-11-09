@@ -34,8 +34,9 @@ const TAGS = ['feudal', 'imperial', 'viking', 'tribal', 'sindarin', 'khuzan', 's
   'poor', 'average', 'rich', 'female', 'male'];
 const PLACES = { worn: 1, hand: 2, off: 3, both: 4, belt: 5, pouch: 6, pack: 7, in: 8,
   bed: 9, stash: 10, home: 11, hoard: 12, under: 13 };  // (outfit.h's PL_*: the denizens' from bed on, 2026-10-27)
-const MATS = { wood: 1, iron: 2, steel: 3, bronze: 4, leather: 5, cloth: 6, bone: 7, clay: 8, stone: 9, glass: 10,
-  silver: 11, gold: 15 };                               // (items.h's MT_*: a thing's own, its kind's else)
+const MATS = Object.fromEntries(['wood', 'iron', 'steel', 'bronze', 'leather', 'cloth', 'bone', 'clay', 'stone', 'glass',
+  'silver', 'gold'].map(w => [w, require('../dq0/hubgen.js').load().C['MT_' + w.toUpperCase()]]));   // (items.h's MT_*
+                                                        //   (the build's: ../dq0/hubgen.js): a thing's own, its kind's else)
 const MT_JEWEL = 0xFE;                                  // (A thing's material: Treasure 5's item and material drawn,
                                                         //   outdraw.c's, 2026-10-28)
 const TFLAGS = { lit: 1, full: 2, own: 4, fine: 8 };

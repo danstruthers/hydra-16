@@ -925,7 +925,7 @@ struct rqh {
     RQH;
 };
 
-/* The command parser's request (dq0c, games/dq0c: assembly, its offsets games/dq0c/hub.inc's, held to these below):
+/* The command parser's request (dq0c, games/dq0c: assembly, its offsets the build's from these, hubgen.js's):
 ** the UI's.  Its text is in CMD_BANK at $8000 (len bytes, a 0 after): a line to match (CQ_MATCH), the world's words
 ** (CQ_WORLD: three lists, each 0-ended: the words the world names things by, the names given, the deities'), or
 ** nothing (CQ_NONE: the round trip alone, timed).  The reply's res: 1 the line parses, 0 it doesn't, -1 too long
@@ -1229,7 +1229,7 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   sem[NTASKS];                /* Each task's doorbell */
     unsigned char   task[NTASKS];               /* Each task's number (0: none) */
     unsigned char   beat[NTASKS];               /* Each task's heartbeat: bumped as it works */
-    struct cq       cq;                         /* The command parser's request (dq0c's: hub.inc's offsets) */
+    struct cq       cq;                         /* The command parser's request (dq0c's) */
     /* The clock (the world's: tick, then now, then tick again, so a reader sees it whole: hub_now) */
     volatile unsigned char tick;
     volatile unsigned long now;
@@ -1789,7 +1789,9 @@ struct wsave {
 /* Who writes what (Phase 2: one authority on state).  Each region of the hub has an owner, the one task that writes
 ** it; another changes it by asking the owner (an intent, a request), never by writing it.  The test runner holds the
 ** game to it: every write to the hub's banks in a dq0 test, by the task that made it, checked against these lines
-** (sim/lib/hubown.js reads them; sim/test.js, HUBOWN=1 for every violation and a summary).  A line, its words apart:
+** (the table: the lines between "own:" and "own." below, read by the build, games/dq0/hubgen.js, which works out
+** each region's bytes into obj/gen/dq0hub.json for sim/lib/hubown.js; sim/test.js, HUBOWN=1 for every violation and a
+** summary).  A line, its words apart (a line in the table that isn't one stops the build):
 **   own REGION OWNER [+TASK ...] [2.N:TASK,...] (words)
 ** REGION: hub.FIELD (bank 0's struct hub; FIELD as offsetof takes it, [*] each element), sight.FIELD, uirec.FIELD,
 ** wrec.FIELD (their banks' records), chunk.FIELD (each slot of the chunks' cache), item.FIELD (each item), and
@@ -1815,7 +1817,8 @@ struct wsave {
 ** game carried on the world's to read back, its world.dat: now, the character's place, the strata's records; paused,
 ** WQ_SET; quit, I_QUIT).  The known ones are none: Phase 2's goal for the writer check.
 **
-**   own bank(0) none                                           (The header's room: what no line below names)
+**   own:
+**   own bank(0) none                                        (The header's room: what no line below names)
 **   own hub.magic ui
 **   own hub.version ui
 **   own hub.seg ui
@@ -2037,28 +2040,15 @@ struct wsave {
 **   own wrec.inuse[ASK_DENIZENS] denizens
 **   own wrec.inuse[ASK_SENSES] senses
 **   own wrec.inuse[ASK_UI] ui
+**   own.
 */
 
 #define HUB     ((struct hub*) HUB_WINDOW)
 #define DSLOT   ((struct req*) HUB->dslot)
 #define HUB_FREE        2048                    /* (Bank 0's room kept free, at least) */
 typedef char hub_fits[sizeof (struct hub) + HUB_FREE <= 0x2000 ? 1 : -1];   /* (The header in bank 0) */
-/* What dq0c (assembly) reads of the hub, where it is (games/dq0c/hub.inc's HUBO_* and CQO_*: its make.js holds them
-** to these numbers, and these hold them to the structs) */
-#define HUBO_SEM        4
-#define HUBO_TASK       12
-#define HUBO_BEAT       20
-#define HUBO_CQ         28
-#define HUBO_QUIT       52
-#define CQO_BANK        4
-#define CQO_LEN         5
-#define CQO_RES         7
-#define CQO_FACE        8
-typedef char dq0c_fits[offsetof (struct hub, sem) == HUBO_SEM && offsetof (struct hub, task) == HUBO_TASK &&
-                       offsetof (struct hub, beat) == HUBO_BEAT && offsetof (struct hub, cq) == HUBO_CQ &&
-                       offsetof (struct hub, quit) == HUBO_QUIT && offsetof (struct cq, bank) == CQO_BANK &&
-                       offsetof (struct cq, len) == CQO_LEN && offsetof (struct cq, res) == CQO_RES &&
-                       offsetof (struct cq, face) == CQO_FACE && NTASKS == 8 ? 1 : -1];
+/* (What the assembly reads of the hub, where it is, and the numbers the build's make.js files and the tests want:
+** the build's, from these headers as cc65 lays them out, games/dq0/hubgen.js: obj/gen/dq0hub_*.inc, dq0hub.json) */
 typedef char snd_fit[sizeof (struct sndhead) <= 48 && SND_QUEUE + 1024 + 128 + 512 <= 0x2000 ? 1 : -1];
 typedef char recs_fit[sizeof (struct sight) <= 0x1000 && sizeof (struct uirec) <= 0x2000 &&
                       sizeof (struct wrec) <= 0x2000 ? 1 : -1];

@@ -11,6 +11,7 @@
             .import     _at_sn, _at_x0, _at_y0, _at_w, _at_h, _at_ox, _at_oy, _at_bank, _at_chunk, _at_tile
             .import     _C, _cx_, _cy_
             .importzp   sp, tmp1
+            .include    "dq0hub_at.inc"             ; (world.h's CW: the build's, ../dq0/hubgen.js)
 
             .bss
 qy:         .res        2                   ; (y, kept)
@@ -48,7 +49,7 @@ _at:
             lda         qd + 1
             sbc         _at_ox + 1
             jne         @long
-            cpy         #32                 ; (CW)
+            cpy         #CW
             jcs         @long
             sty         qx
             lda         qy                  ; y - y0, the same
@@ -70,7 +71,7 @@ _at:
             lda         qd + 1
             sbc         _at_oy + 1
             jne         @long
-            cpy         #32
+            cpy         #CW
             jcs         @long
             sty         _cy_
             lda         qx

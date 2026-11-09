@@ -36,20 +36,8 @@
 LN_AIR      = 2                             ; (line.h's: the modes,
 LN_STOP     = 1                             ;   line's answers)
 LN_WAY      = 2
-T_WALL      = 2                             ; (world.h's squares: T_ROCK 0,
-T_DOOR      = 3
-T_WINDOW    = 6
-P_KIND      = 2                             ;   struct portal's kind, state, parts,
-P_STATE     = 3
-P_PARTS     = 8
-PK_WINDOW   = 1                             ;   PK_*,
-PK_PORTCULLIS = 2
-PK_GRATE    = 5
-PK_SLIT     = 7
-PP_GLASS    = $01                           ;   PP_*, PS_*)
-PP_SHUTTERS = $02
-PS_OPEN     = $01
-PS_WRECKED  = $80
+            .include    "dq0hub_line.inc"           ; (world.h's squares, T_*; struct portal's kind, state, parts;
+                                                    ;   PK_*, PP_*, PS_*: the build's, ../dq0/hubgen.js)
 
 ; (The line itself: in the segment its includer set)
 

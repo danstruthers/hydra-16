@@ -2350,3 +2350,74 @@ no way is found in the start).
 its part 21 1,641 to 1,402 free.  The denizens' main RAM 2,399 to 2,348 (`legal`, `may`, `wet_ok`: the three copies
 of the step test gone from step_for's, s_coarse's and s_way's), part 18 95 to 89, part 17 2,718 to 2,870.  The senses
 unchanged (2,435).
+
+## The hub's numbers, made by the build (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's §2 and step 3, its first stage)
+
+ENGINE-CRITIQUE.md's §2 found the hub's numbers kept in step across languages by hand: games/dq0c/hub.inc mirroring
+twenty of hub.h's (held to them by dq0c's make.js), actions.h mirroring the catalogue (held by make.js), struct kind's
+size, the attitudes, a square's feet, the sound's kinds and some sixty of struct theme's offsets typed again in the
+make.js files with nothing holding them, the tests compiling C expressions with cc65 as they ran to find the structs'
+offsets, and the writers' table a comment a test read.  Stage 1 makes each of them come from one place; it doesn't
+yet type the messages' payloads (stage 2) nor change a field of the hub.
+
+**The C headers stay the schema, read as the compiler sees them.**  games/dq0/hubgen.js, called by build.js
+(`hubNumbers`) before the games are built and by `build.js prog`: it reads hub.h and the headers it includes (rs.h,
+level.h, ../dq0w/world.h, items.h, theme.h) with dq0.h and life.h (the command tools' names), and commands.actions.
+Every object-like #define and every enum's member by parsing; every named struct's fields by parsing (a field of a
+struct type, or of an anonymous struct, flattened into its own paths: `tb.at`, `door.rel`, an array's first element;
+a #define among the fields left out); then one C file of `const long vN = (long) (EXPR);` lines, one a name, a
+field's offset and size, an array's element size, a struct's size and each region of the writers' table, compiled by
+the build's own cc65 and read back from its `.dword`s.  A line cc65 can't make a constant of (a #define of code) is
+dropped and the file compiled again: two of 2,166 (KEPT_CLOCK, FIGHT_LB).  2,164 names, 134 enums, 80 structs with
+1,516 fields; some 0.3 s, made again only when an input's hash changes.  No second schema file: the headers are what
+the C is compiled from, so they can't disagree with it, and stage 2's payload table is the place to decide whether a
+declarative file should write the C instead.
+
+**What it writes** (obj/gen, beside apigen's files, on the build's cc65 and ca65 include paths now):
+
+- `dq0hub.json`: the names (`C`), the enums in order, the layouts (`S`: each struct's size, each field's offset, size
+  and dimensions), the writers' map (`own`) and the tasks' names (hub.h's T_*).  `load()` reads it, with `off (struct,
+  path)` (indices numbers or names: `faction[2]`, `mreq[ASK_UI]`), `size`, `words` (an enum's members as words, each
+  checked its value its place) and `value`.  Read by dq0's theme compiler (make.js: struct theme's and struct kind's
+  every offset and length, the TM_*, P_FORT, K_*/KF_*, TR_*, TE_*, END_*, G_THROUGH, TL_RUINED, AT_*, ST_* it typed),
+  dq0w's make.js (struct kind's size, its name's, cap_weight's place, NKINDS, CQ_WORDS) and outfits.js (MT_*), dq0d's
+  (ST_*, AT_*, SND_KINDS, P_*, SQ_FT) and dq0s's (SND_*) make.js, sim/lib/dq0meaning.js (its 400-odd named offsets and
+  the names for its events), sim/lib/hubown.js (the map, the table, the tasks), tests.js (hubown's `evaluate`, nine
+  calls, now offsetof, sizeof and names from the layout; four numbers it had typed) and commandwords.js (its own
+  header parser gone: the names, CQ_REL, CF_*).
+- `dq0hub_NAME.inc`, an assembly include per assembly file, each with the names it uses (hubgen.js's `ASM`: a header's
+  name, `STRUCT.PATH` an offset, `sizeof STRUCT[.PATH]`), `.include`d where its hand-typed lines were: dq0c.s (the
+  hub's places, the request's, its constants: hub.inc's), cmdmean.s (struct cmd's CM_*, struct cthing's T_*, CF_*,
+  CQ_REL), line.inc (T_*, struct portal's kind, state and parts, PK_*, PP_*, PS_*), items.s (struct item's size and
+  four fields, NITEMS, ITEM_BANK (0), ITEM_BANKS), letter.s (NLET, LT_REC, struct cix's size and let: an `.assert`
+  that it's 4, its two shifts), pulse.s (SND_GRID, SND_W), at.s (CW) and lbsaid.s (dq0.h's TOLD).  The hardware's
+  HUB_U and HUB_BANKREG, hub.c's literals, moved from hub.inc into dq0c.s.
+- `actions.h`, from the catalogue: VB_NONE, its [actions] in order (each its `(* *)` words), NACTIONS.  The catalogue
+  has the roles and the result codes, so it is the one list; games/dq0/actions.h is gone, and the C's `#include
+  "actions.h"` finds the build's (VB_OBSERVE_IN's words moved into the catalogue).
+
+**The writers' table** is the block between hub.h's `own:` and `own.` lines, in its comment as before (readable, a line
+a region).  The build reads it (a line in the block that isn't an `own` line, a blank or a line's words going on
+stops the build), works out each region's bytes in the same cc65 pass (the C expressions hubown.js compiled at test
+time) and writes them into the JSON; hubown.js paints them and checks the writes as before.  The map was held to the
+old one byte for byte (26 banks, 231 regions), as were the recorder's offsets and the 1,768 names the old parser found.
+
+**Gone:** games/dq0c/hub.inc and dq0c's make.js checks (hub.inc to hub.h, cmdmean.s to hub.h, actions.h to the
+catalogue), hub.h's HUBO_*/CQO_* and dq0c_fits, actions.h, things.c's (the world's and the senses') store_fits (items.s's
+numbers to the headers), obj/hubown.json and obj/dq0meaning.json (the tests' caches of what they compiled).  Kept: the
+C's own asserts (cmd_fits, theme_head: C to C, for the C), make.js's rowsSame (actions.c's rows are code, held to the
+enum, now the JSON's), dq0c's limits (its make.js to dq0c.s's, the parser's own).
+
+**No behaviour change:** every value the generator gives is the one that was typed (checked as each was replaced), and
+the images came out byte-identical: bin/* (the ROMs, the SD card's image, the page) and the games' programs and data
+in obj/games, 112 files (hydra.lib differs in ar65's file times alone, as it does build to build).  One difference
+that isn't in the images: a theme's kind may now name every material and craft the game has (MT_*: wax, tallow, gold;
+AP_*: rock), the theme compiler's lists being the enums' (they had stopped at `other` and `glass`).  The build took
+1 min 23 s (1 min 27 s before).
+
+**Left** (not the hub's, or not numbers): the denizens' own records in dq0d/make.js (dq0d.c's struct dkind, faction and
+dkx, wtrace.c's struct tkind, lore.h's records: their headers aren't the hub's, and dq0d.c's structs are in a .c),
+outfit.h's PL_* and places in outfits.js and dq0w/make.js, themegen.c's TK_*, line.h's LN_* in line.inc, and the
+tables built from world.h's T_PASS (slant.s's t_kinds, cast.s's): the generator can take them as their headers are
+added to its list.  `node sim/tools/commandmatch-test.js --phrases` doesn't link (resolve.c's letters, des_add and
+the rest, not in cmdres.c's stubs: nothing of this change's), and isn't part of the suite or the tiers.

@@ -20,10 +20,9 @@
             .import     _ixd, _ixi, _ixc, _put, popax
             .importzp   ptr1, ptr2, ptr3
 
-NLET        = 52                    ; (hub.h's)
+            .include    "dq0hub_letter.inc" ; (hub.h's NLET, LT_REC, struct cix's size CIX and its let's place CIX_LET:
+                                    ;   the build's, ../dq0/hubgen.js)
 HALF        = NLET / 2
-LT_REC      = $80                   ; (hub.h's, its high byte)
-CIX         = 4                     ; (struct cix's size; its let the fourth)
 
             .segment    "SW102RODATA"
 _ixl_n:     .res        1           ; The things
@@ -90,7 +89,8 @@ stamp:      tax
 hint:       lda         m
             asl         a
             asl         a
-            ora         #3                  ; (struct cix's let, m * 4 + 3)
+            ora         #CIX_LET            ; (struct cix's let, m * 4 + its place)
+            .assert     CIX = 4, error, "letter.s: struct cix isn't 4 bytes (hint's two shifts)"
             tay
             lda         (ptr3),y
             beq         @no
@@ -168,7 +168,7 @@ _ix_letters:
             lda         _ixi,x              ; (Its id now: the letter it had by its record's number)
             sta         key
             lda         _ixi + 1,x
-            ora         #LT_REC
+            ora         #>LT_REC            ; (Its high byte)
             sta         key + 1
             jsr         find
             cmp         #NLET

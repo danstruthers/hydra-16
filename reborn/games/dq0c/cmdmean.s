@@ -26,34 +26,12 @@
             .export     cm_winit, cm_mean, cm_wthings, cm_w, cm_cmd
             .import     ntok, tokoff, toklen, tokq, toktl, tokth, tokel, tokeh, tokmu, tbuf, nent, lmark
 
-; struct cmd (hub.h): its fields' places, and a thing's (struct cthing) in it
-CM_ACTION   = 0
-CM_FLAGS    = 2
-CM_DIR      = 3
-CM_HOW      = 4
-CM_PREP     = 5
-CM_AUX      = 6
-CM_MANNER   = 7
-CM_ORDER    = 8
-CM_DFLT     = 9
-CM_SKILL    = 10
-CM_TASK     = 11
-CM_N        = 12
-CM_OBJ      = 13
-CM_OTHER    = 37
-CM_SIZE     = 61
-T_KIND      = 0
-T_SEL       = 1
-T_N         = 2
-T_LIES      = 3
-T_WORD      = 8
-WORDMAX     = 15                    ; A word's letters kept (its field's, less the 0)
-CF_NOVERB   = $01                   ; (struct cmd's flags: hub.h's CF_*)
-CF_HALF     = $02
-CF_UNSAID   = $04
-CF_STRANGE  = $08
+; struct cmd (hub.h): its fields' places (CM_*), a thing's (struct cthing: T_*) in it, its flags (CF_*), a way as the
+; character faces (CQ_REL): the build's, from hub.h (games/dq0/hubgen.js)
+.include "dq0hub_cmdmean.inc"
+WORDMAX     = T_WORDSIZE - 1        ; A word's letters kept (its field's, less the 0)
 
-REL         = $10                   ; A way as the character faces (commandwords.js's REL, PART, NONE)
+REL         = CQ_REL                ; A way as the character faces (commandwords.js's REL, PART, NONE)
 PART        = $80                   ; A thing's part ("the bars": the window's)
 NONE        = $FF                   ; No way
 W_WORLD     = 1                     ; An entry's mark: the world names a thing by it (cmdmatch.s's)

@@ -112,8 +112,7 @@ static char tbuf[80];
 ** have their own: make_own's, the recursive ones', light's ...) */
 static struct item rec;
 
-/* (item_at and items are items.s's, in assembly: its store's layout as here) */
-typedef char store_fits[sizeof (struct item) == 25 && ITEM_BANK (0) == 14 && ITEM_BANKS == 2 ? 1 : -1];
+/* (item_at and items are items.s's, in assembly: its store's layout the build's from these headers, dq0hub_items.inc) */
 
 /* A kind's record, copied out of the kinds' bank (into one of four, in turn: an expression may want two at once):
 ** the kinds' bank left in the window */

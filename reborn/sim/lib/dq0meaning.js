@@ -5,9 +5,9 @@
 // position and summary, the denizens near it, the things in the item store, the names given, what it perceives (the
 // senses' record, struct sight), the theme, its long task (the hub's pc_task), the change records in the cache's pages
 // (world.h's: a square's, a portal's state, its harm, a trap's, a chunk stocked, a hole dug part way).  hub.h's
-// structs are laid out by cc65 (hubown.js's evaluate: the build's own compiler, so the offsets are the game's), kept
-// in obj/dq0meaning.json as the headers stand; their enums and constants read from the headers, so an event's numbers
-// come back as names (E_PORTAL, PO_OPENED ...).
+// structs as cc65 laid them out for the build (games/dq0/hubgen.js's obj/gen/dq0hub.json: the build's own compiler, so
+// the offsets are the game's; nothing compiled at test time), and the headers' enums and constants, so an event's
+// numbers come back as names (E_PORTAL, PO_OPENED ...).
 //
 // createRecorder() gives { hook, attach(m), games, final() }: hook is the machine's opt.sharedWrite (sim/test.js
 // chains it with the hub writers' check in every dq0 test), attach(m) once it's booted; games: each game played (a
@@ -16,22 +16,16 @@
 // now (the last snapshot, at the test's end).  sim/test.js puts it on the machine as m.dq0; tests.js's dq0Turns reads
 // it a line at a time.
 'use strict';
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
 
-const ROOT = path.join(__dirname, '..', '..');                // (reborn/)
-const DQ0 = path.join(ROOT, 'games', 'dq0');
-const HEADERS = ['hub.h', 'items.h', 'level.h', 'theme.h', 'rs.h', path.join('..', 'dq0w', 'world.h')];
-
-// The layout's expressions (each a C expression cc65 makes a number of), by name
-const F = (st, f) => 'offsetof (' + st + ', ' + f + ')';
-const S = (st, f) => 'sizeof (((' + st + '*) 0)->' + f + ')';
-const EXPRS = {
-  magic: 'HUB_MAGIC', eqHead: F('struct hub', 'eq_head'), eq: F('struct hub', 'eq'), eqSize: 'EQ_SIZE', msg: 'sizeof (struct msg)',
+// The layout, by name: the build's (games/dq0/hubgen.js, obj/gen/dq0hub.json: hub.h's structs as cc65 lays them out), a
+// field's offset (F), size (S), a struct's size (Z), a header's number (K)
+function layoutOf(H) {
+  const F = (st, f) => H.off(st, f), S = (st, f) => H.size(st, f), Z = st => H.size(st), K = n => H.value(n);
+  return {
+  magic: K('HUB_MAGIC'), eqHead: F('struct hub', 'eq_head'), eq: F('struct hub', 'eq'), eqSize: K('EQ_SIZE'), msg: Z('msg'),
   mKind: F('struct msg', 'kind'), mWho: F('struct msg', 'who'), mA: F('struct msg', 'a'), mB: F('struct msg', 'b'),
   mW1: F('struct msg', 'w1'), mW2: F('struct msg', 'w2'), mT: F('struct msg', 't'), mX: F('struct msg', 'x'),
-  dqHead: F('struct hub', 'dq_head'), dqSize: 'DQ_SIZE', denBank: 'DEN_BANK',
+  dqHead: F('struct hub', 'dq_head'), dqSize: K('DQ_SIZE'), denBank: K('DEN_BANK'),
   ireq: F('struct hub', 'ireq'), irKind: F('struct ireq', 'kind'), irItem: F('struct ireq', 'item'), irTo: F('struct ireq', 'to'),
   irResult: F('struct ireq', 'result'), irName: F('struct ireq', 'name'), irX: F('struct ireq', 'x'), irY: F('struct ireq', 'y'),
   irQty: F('struct ireq', 'qty'), irInto: F('struct ireq', 'into'),
@@ -39,7 +33,7 @@ const EXPRS = {
   swResult: F('struct sway', 'result'), swGrade: F('struct sway', 'grade'), swWas: F('struct sway', 'was'), swNow: F('struct sway', 'now'),
   swName: F('struct sway', 'name'),
   wreq: F('struct hub', 'wreq'), wqKind: F('struct hub', 'wreq.kind'), wqRes: F('struct hub', 'wreq.res'),
-  slot: F('struct hub', 'slot'), slotSize: 'sizeof (struct req)', nslots: 'NSLOTS', dslot: F('struct hub', 'dslot'),
+  slot: F('struct hub', 'slot'), slotSize: Z('req'), nslots: K('NSLOTS'), dslot: F('struct hub', 'dslot'),
   rqKind: F('struct req', 'kind'), rqActor: F('struct req', 'actor'), rqOther: F('struct req', 'other'), rqA: F('struct req', 'a'),
   rqB: F('struct req', 'b'), rqC: F('struct req', 'c'), rqW1: F('struct req', 'w1'), rqW2: F('struct req', 'w2'),
   rqGrade: F('struct req', 'grade'), rqResult: F('struct req', 'result'), rqSteps: F('struct req', 'steps'),
@@ -49,66 +43,66 @@ const EXPRS = {
   gait: F('struct hub', 'gait'), watch: F('struct hub', 'watch'), pcPos: F('struct hub', 'pc_pos'), pcHid: F('struct hub', 'pc_hid'), nolurk: F('struct hub', 'nolurk'), hlook: F('struct hub', 'hlook'), pcGoing: F('struct hub', 'pc_going'),
   pcReady: F('struct hub', 'pc_ready'), hubNow: F('struct hub', 'now'),
   pcChart: F('struct hub', 'pc_chart'), pcChartk: F('struct hub', 'pc_chartk'), pcMap: F('struct hub', 'pc_map'),
-  pcStance: F('struct hub', 'pc_stance'), pcStrike: F('struct hub', 'pc_strike'), pcShand: F('struct hub', 'pc_shand'), pcSkew: F('struct hub', 'pc_skew'), pcLost: F('struct hub', 'pc_lost'), tbAt: F('struct hub', 'tb.at'), tbSkew: F('struct hub', 'tb.skew'), tbSkewHi: F('struct hub', 'tb.skew') + ' + 1', tbUnc: F('struct hub', 'tb.unc'), tbUncHi: F('struct hub', 'tb.unc') + ' + 1', tbSky: F('struct hub', 'tb.sky'), tbHour0: F('struct hub', 'tb.hour0'), tbHow: F('struct hub', 'tb.how'), tbHours: F('struct hub', 'tb.hours'), tbDue: F('struct hub', 'tb.due'), tbDue1: F('struct hub', 'tb.due') + ' + 1', tbDue2: F('struct hub', 'tb.due') + ' + 2', tbDue3: F('struct hub', 'tb.due') + ' + 3', tsense: F('struct hub', 'pcsum.timesense'), wayOpen: F('struct hub', 'way_open'), digTool: F('struct hub', 'dig_tool'),
+  pcStance: F('struct hub', 'pc_stance'), pcStrike: F('struct hub', 'pc_strike'), pcShand: F('struct hub', 'pc_shand'), pcSkew: F('struct hub', 'pc_skew'), pcLost: F('struct hub', 'pc_lost'), tbAt: F('struct hub', 'tb.at'), tbSkew: F('struct hub', 'tb.skew'), tbSkewHi: F('struct hub', 'tb.skew') + 1, tbUnc: F('struct hub', 'tb.unc'), tbUncHi: F('struct hub', 'tb.unc') + 1, tbSky: F('struct hub', 'tb.sky'), tbHour0: F('struct hub', 'tb.hour0'), tbHow: F('struct hub', 'tb.how'), tbHours: F('struct hub', 'tb.hours'), tbDue: F('struct hub', 'tb.due'), tbDue1: F('struct hub', 'tb.due') + 1, tbDue2: F('struct hub', 'tb.due') + 2, tbDue3: F('struct hub', 'tb.due') + 3, tsense: F('struct hub', 'pcsum.timesense'), wayOpen: F('struct hub', 'way_open'), digTool: F('struct hub', 'dig_tool'),
   sCond: F('struct rs_summary', 'cond'), sHealth: F('struct rs_summary', 'health'), sLoad: F('struct rs_summary', 'load'),
-  sSight: F('struct rs_summary', 'sight'), sStep: F('struct rs_summary', 'step'), sGstep: F('struct rs_summary', 'gstep'), ngaits: 'NGAITS',
+  sSight: F('struct rs_summary', 'sight'), sStep: F('struct rs_summary', 'step'), sGstep: F('struct rs_summary', 'gstep'), ngaits: K('NGAITS'),
   sLimbs: F('struct rs_summary', 'limbs'), sLimp: F('struct rs_summary', 'limp'), sNorth: F('struct rs_summary', 'northsense'),
-  actor: F('struct hub', 'actor'), actorSize: 'sizeof (struct actor)', nactors: 'NACTORS', diHead: F('struct hub', 'di_head'), uiKeys: F('struct hub', 'ui_keys'),
-  diTail: F('struct hub', 'di_tail'), diAt: F('struct hub', 'di'), msgSize: 'sizeof (struct msg)', diSize: 'DI_SIZE',
+  actor: F('struct hub', 'actor'), actorSize: Z('actor'), nactors: K('NACTORS'), diHead: F('struct hub', 'di_head'), uiKeys: F('struct hub', 'ui_keys'),
+  diTail: F('struct hub', 'di_tail'), diAt: F('struct hub', 'di'), msgSize: Z('msg'), diSize: K('DI_SIZE'),
   aState: F('struct actor', 'state'), aSn: F('struct actor', 'sn'), aFace: F('struct actor', 'face'), aPos: F('struct actor', 'pos'),
   aX: F('struct actor', 'x'), aY: F('struct actor', 'y'), aDoing: F('struct actor', 'doing'), aName: F('struct actor', 'name'), aArm: F('struct actor', 'arm'), aDropped: F('struct actor', 'dropped'),
   aAttitude: F('struct actor', 'attitude'), aFaction: F('struct actor', 'faction'), aKind: F('struct actor', 'kind'), aDid: F('struct actor', 'did'),
   aReady: F('struct actor', 'ready'), denSeq: F('struct hub', 'den_seq'), agear: F('struct hub', 'agear'), digT: F('struct hub', 'dig_t'),
-  themeBank: 'THEME_BANK', thName: F('struct theme', 'name'), thStratum: F('struct theme', 'stratum'), tstrata: 'TSTRATA',
+  themeBank: K('THEME_BANK'), thName: F('struct theme', 'name'), thStratum: F('struct theme', 'stratum'), tstrata: K('TSTRATA'),
   tSname: F('struct sight', 'sname'),
-  namesAt: '(unsigned) NAMES_AT - 0x8000', tnames: 'TNAMES', tname: 'sizeof (struct tname)', nmWhat: F('struct tname', 'what'),
+  namesAt: K('NAMES_AT') - 0x8000, tnames: K('TNAMES'), tname: Z('tname'), nmWhat: F('struct tname', 'what'),
   nmSn: F('struct tname', 'sn'), nmX: F('struct tname', 'x'), nmY: F('struct tname', 'y'), nmKind: F('struct tname', 'kind'),
   nmName: F('struct tname', 'name'),
-  catBank: 'KIND_BANK', kindSize: 'sizeof (struct kind)', nkinds: 'NKINDS', kFlags: F('struct kind', 'flags'), kWeight: F('struct kind', 'weight'), kForm: F('struct kind', 'form'), kValue: F('struct kind', 'value'),
-  item0: 'ITEM_BANK (0)', itemSize: 'sizeof (struct item)', nitems: 'NITEMS', iKind: F('struct item', 'kind'), iFlags: F('struct item', 'flags'),
+  catBank: K('KIND_BANK'), kindSize: Z('kind'), nkinds: K('NKINDS'), kFlags: F('struct kind', 'flags'), kWeight: F('struct kind', 'weight'), kForm: F('struct kind', 'form'), kValue: F('struct kind', 'value'),
+  item0: K('ITEM_BANK (0)'), itemSize: Z('item'), nitems: K('NITEMS'), iKind: F('struct item', 'kind'), iFlags: F('struct item', 'flags'),
   iWhere: F('struct item', 'where'), iSn: F('struct item', 'sn'), iX: F('struct item', 'x'), iY: F('struct item', 'y'),
   iQty: F('struct item', 'qty'), iId: F('struct item', 'id'), iFuel: F('struct item', 'fuel'), iWear: F('struct item', 'wear'), iShut: F('struct item', 'shut'), iSize: F('struct item', 'size'), iThick: F('struct item', 'thick'),
   iMat: F('struct item', 'mat'), iQuality: F('struct item', 'quality'), iOwner: F('struct item', 'owner'), iDur: F('struct item', 'dur'), iDurMax: F('struct item', 'dur_max'), iHide: F('struct item', 'hide'), pcFuel: F('struct hub', 'pc_fuel'), pcLeft: F('struct hub', 'pc_left'),
-  ioStep: 'IO_STEP', ioName: 'IO_NAME', ioTheme: 'IO_THEME', ioBegin: 'IO_BEGIN', ioPuzzle: 'IO_PUZZLE', ioThrow: 'IO_THROW', ioFill: 'IO_FILL', ioShut: 'IO_SHUT', ioInside: 'IO_INSIDE', ioLook: 'IO_LOOK', ioSeek: 'IO_SEEK',
-  ioHands: 'IO_HANDS', sightBank: 'SIGHT_BANK', tSeq: F('struct sight', 'seq'), tWhere: F('struct sight', 'where'), tDark: F('struct sight', 'dark'),
+  ioStep: K('IO_STEP'), ioName: K('IO_NAME'), ioTheme: K('IO_THEME'), ioBegin: K('IO_BEGIN'), ioPuzzle: K('IO_PUZZLE'), ioThrow: K('IO_THROW'), ioFill: K('IO_FILL'), ioShut: K('IO_SHUT'), ioInside: K('IO_INSIDE'), ioLook: K('IO_LOOK'), ioSeek: K('IO_SEEK'),
+  ioHands: K('IO_HANDS'), sightBank: K('SIGHT_BANK'), tSeq: F('struct sight', 'seq'), tWhere: F('struct sight', 'where'), tDark: F('struct sight', 'dark'),
   tKind: F('struct sight', 'kind'), tSize: F('struct sight', 'size'), tRw: F('struct sight', 'rw'), tRh: F('struct sight', 'rh'), tRx: F('struct sight', 'rx'), tRy: F('struct sight', 'ry'),
   tLit: F('struct sight', 'lit'), tCeil: F('struct sight', 'ceil'), tFirst: F('struct sight', 'first'), tZ: F('struct sight', 'z'),
-  tNdoors: F('struct sight', 'ndoors'), tDoor: F('struct sight', 'door'), tDoorSize: S('struct sight', 'door[0]'), seeDoors: 'SEE_DOORS',
+  tNdoors: F('struct sight', 'ndoors'), tDoor: F('struct sight', 'door'), tDoorSize: S('struct sight', 'door[0]'), seeDoors: K('SEE_DOORS'),
   dRel: F('struct sight', 'door[0].rel'), dState: F('struct sight', 'door[0].state'), dX: F('struct sight', 'door[0].x'),
   dY: F('struct sight', 'door[0].y'), dKind: F('struct sight', 'door[0].kind'), dParts: F('struct sight', 'door[0].parts'),
-  tNopen: F('struct sight', 'nopen'), tOpen: F('struct sight', 'open'), tOpenSize: S('struct sight', 'open[0]'), seeOpen: 'SEE_OPEN',
+  tNopen: F('struct sight', 'nopen'), tOpen: F('struct sight', 'open'), tOpenSize: S('struct sight', 'open[0]'), seeOpen: K('SEE_OPEN'),
   oRel: F('struct sight', 'open[0].rel'), oKind: F('struct sight', 'open[0].kind'),
   tNways: F('struct sight', 'nways'),
-  tNitems: F('struct sight', 'nitems'), tItem: F('struct sight', 'item'), tItemSize: S('struct sight', 'item[0]'), seeItems: 'SEE_ITEMS',
+  tNitems: F('struct sight', 'nitems'), tItem: F('struct sight', 'item'), tItemSize: S('struct sight', 'item[0]'), seeItems: K('SEE_ITEMS'),
   sName: F('struct sight', 'item[0].name'), sQty: F('struct sight', 'item[0].qty'), sRel: F('struct sight', 'item[0].rel'),
   sHid: F('struct sight', 'item[0].hid'),
   tStratum: F('struct sight', 'stratum'), tX: F('struct sight', 'x'), tY: F('struct sight', 'y'),
-  tNdens: F('struct sight', 'ndens'), tDen: F('struct sight', 'den'), tDenSize: S('struct sight', 'den[0]'), seeDens: 'SEE_DENS',
+  tNdens: F('struct sight', 'ndens'), tDen: F('struct sight', 'den'), tDenSize: S('struct sight', 'den[0]'), seeDens: K('SEE_DENS'),
   nX: F('struct sight', 'den[0].x'), nY: F('struct sight', 'den[0].y'), nDoing: F('struct sight', 'den[0].doing'), nName: F('struct sight', 'den[0].name'),
-  tNtraps: F('struct sight', 'ntraps'), tTrap: F('struct sight', 'trap'), tTrapSize: S('struct sight', 'trap[0]'), seeTraps: 'SEE_TRAPS',
+  tNtraps: F('struct sight', 'ntraps'), tTrap: F('struct sight', 'trap'), tTrapSize: S('struct sight', 'trap[0]'), seeTraps: K('SEE_TRAPS'),
   pRel: F('struct sight', 'trap[0].rel'), pKind: F('struct sight', 'trap[0].kind'), pTrigger: F('struct sight', 'trap[0].trigger'),
   pState: F('struct sight', 'trap[0].state'),
-  tNglows: F('struct sight', 'nglows'), tGlow: F('struct sight', 'glow'), tGlowSize: S('struct sight', 'glow[0]'), seeGlows: 'SEE_GLOWS',
+  tNglows: F('struct sight', 'nglows'), tGlow: F('struct sight', 'glow'), tGlowSize: S('struct sight', 'glow[0]'), seeGlows: K('SEE_GLOWS'),
   gRel: F('struct sight', 'glow[0].rel'), gDist: F('struct sight', 'glow[0].dist'), gHow: F('struct sight', 'glow[0].how'),
   tDazzled: F('struct sight', 'dazzled'),
-  wayAt: 'WAY_AT', wNb: F('struct wayseen', 'nbeyond'), wB: F('struct wayseen', 'beyond'), wBSize: 'sizeof (struct beyond)',
-  seeBeyond: 'SEE_BEYOND', bWhat: F('struct beyond', 'what'), bNoun: F('struct beyond', 'noun'), bRel: F('struct beyond', 'rel'),
+  wayAt: K('WAY_AT'), wNb: F('struct wayseen', 'nbeyond'), wB: F('struct wayseen', 'beyond'), wBSize: Z('beyond'),
+  seeBeyond: K('SEE_BEYOND'), bWhat: F('struct beyond', 'what'), bNoun: F('struct beyond', 'noun'), bRel: F('struct beyond', 'rel'),
   bDist: F('struct beyond', 'dist'), bKind: F('struct beyond', 'kind'), bLit: F('struct beyond', 'lit'),
   wNitems: F('struct wayseen', 'nitems'), wItem: F('struct wayseen', 'item'), wNdens: F('struct wayseen', 'ndens'),
   wDen: F('struct wayseen', 'den'), wNglows: F('struct wayseen', 'nglows'), wGlow: F('struct wayseen', 'glow'),
-  uiBank: 'UI_BANK', uCap: F('struct uirec', 'cap'), ucapSize: 'sizeof (struct ucap)', uMap: F('struct uirec', 'map'), mapH: 'MAP_H', mapW: 'MAP_W', uMapLay: F('struct uirec', 'maplay'),
-  uTread: F('struct uirec', 'tread'), uTrtext: F('struct uirec', 'trtext'), trText: 'TR_TEXT', trHow: F('struct tread', 'how'),
+  uiBank: K('UI_BANK'), uCap: F('struct uirec', 'cap'), ucapSize: Z('ucap'), uMap: F('struct uirec', 'map'), mapH: K('MAP_H'), mapW: K('MAP_W'), uMapLay: F('struct uirec', 'maplay'),
+  uTread: F('struct uirec', 'tread'), uTrtext: F('struct uirec', 'trtext'), trText: K('TR_TEXT'), trHow: F('struct tread', 'how'),
   trResult: F('struct tread', 'result'), trGrade: F('struct tread', 'grade'), trFloor: F('struct tread', 'floor'), trDust: F('struct tread', 'dust'),
   trTrod: F('struct tread', 'trod'), trSmoke: F('struct tread', 'smoke'), trNtr: F('struct tread', 'ntr'), trTr: F('struct tread', 'tr'),
-  trailSize: 'sizeof (struct trail)', tlName: F('struct trail', 'name'), tlWhat: F('struct trail', 'what'), tlN: F('struct trail', 'n'),
+  trailSize: Z('trail'), tlName: F('struct trail', 'name'), tlWhat: F('struct trail', 'what'), tlN: F('struct trail', 'n'),
   tlAgo: F('struct trail', 'ago'), tlHead: F('struct trail', 'head'), tlKind: F('struct trail', 'kind'), tlAge: F('struct trail', 'age'), tlStrength: F('struct trail', 'strength'),
-  tjAt: '(unsigned) TJ_AT - 0x8000', tjN: F('struct tjournal', 'n'), tjPn: F('struct tjournal', 'pn'),
-  tjE: F('struct tjournal', 'e'), tjP: F('struct tjournal', 'p'), tsSize: 'sizeof (struct tstep)', njournal: 'NJOURNAL', ntrail: 'NTRAIL',
+  tjAt: K('TJ_AT') - 0x8000, tjN: F('struct tjournal', 'n'), tjPn: F('struct tjournal', 'pn'),
+  tjE: F('struct tjournal', 'e'), tjP: F('struct tjournal', 'p'), tsSize: Z('tstep'), njournal: K('NJOURNAL'), ntrail: K('NTRAIL'),
   tsKind: F('struct tstep', 'kind'), tsSn: F('struct tstep', 'sn'), tsHead: F('struct tstep', 'head'), tsStay: F('struct tstep', 'stay'),
   tsX: F('struct tstep', 'x'), tsY: F('struct tstep', 'y'), tsT: F('struct tstep', 't'),
-  worldBank: 'WORLD_BANK', wCpage: F('struct wrec', 'cpage'), cpSize: 'sizeof (struct cpage)', ncpages: 'NCPAGES',
-  cpUsed: F('struct cpage', 'used'), cpN: F('struct cpage', 'n'), chBank0: 'CHANGE_BANK (0)', chPage: 'CH_PAGE',
-  chSize: 'sizeof (struct change)', chSn: F('struct change', 'sn'), chX: F('struct change', 'x'), chY: F('struct change', 'y'),
+  worldBank: K('WORLD_BANK'), wCpage: F('struct wrec', 'cpage'), cpSize: Z('cpage'), ncpages: K('NCPAGES'),
+  cpUsed: F('struct cpage', 'used'), cpN: F('struct cpage', 'n'), chBank0: K('CHANGE_BANK (0)'), chPage: K('CH_PAGE'),
+  chSize: Z('change'), chSn: F('struct change', 'sn'), chX: F('struct change', 'x'), chY: F('struct change', 'y'),
   chTile: F('struct change', 'tile'), chElev: F('struct change', 'elev'), chLink: F('struct change', 'link'),
   dsenseAt: F('struct hub', 'dsense'), dsenseSize: S('struct hub', 'dsense'),
   // (The sound and the air, slices 4.5 and 4.6: dsense's replies, the character's noise, the background, the draught)
@@ -116,66 +110,40 @@ const EXPRS = {
   dsCost: F('struct hub', 'dsense.cost'), pcNoise: F('struct hub', 'pc_noise'), pcMask: F('struct hub', 'pc_mask'),
   pcBg: F('struct hub', 'pc_bg'), airH: F('struct hub', 'air_h'), airS: F('struct hub', 'air_s'),
   // (Hunger and thirst, the water: slice 4.9's; a sixteen-bit field's high byte its name's Hi, for dq0Poke's hub bytes)
-  pcHunger: F('struct hub', 'pc_hunger'), pcHungerHi: F('struct hub', 'pc_hunger') + ' + 1', pcThirst: F('struct hub', 'pc_thirst'),
-  pcThirstHi: F('struct hub', 'pc_thirst') + ' + 1', pcWant: F('struct hub', 'pc_want'), pcMeals: F('struct hub', 'pc_meals'),
+  pcHunger: F('struct hub', 'pc_hunger'), pcHungerHi: F('struct hub', 'pc_hunger') + 1, pcThirst: F('struct hub', 'pc_thirst'),
+  pcThirstHi: F('struct hub', 'pc_thirst') + 1, pcWant: F('struct hub', 'pc_want'), pcMeals: F('struct hub', 'pc_meals'),
   pcWet: F('struct hub', 'pc_wet'), pcSwim: F('struct hub', 'pc_swim'), pcUnder: F('struct hub', 'pc_under'), pcBreath: F('struct hub', 'pc_breath'),
   pcTask: F('struct hub', 'pc_task'), ltKind: F('struct ltask', 'kind'), ltLen: F('struct ltask', 'len'), ltDone: F('struct ltask', 'done'),
   ltFoe: F('struct ltask', 'foe'), ltMins: F('struct ltask', 'mins'),
-  keptAt: '(unsigned) KEPT_AT - 0x8000', kpN: F('struct kept', 'n'), kpGen: F('struct kept', 'gen'), kpAt: F('struct kept', 'at'),
-  keepSize: 'sizeof (struct keep)', kpSn: F('struct keep', 'sn'), kpRange: F('struct keep', 'range'), kpLive: F('struct keep', 'live'),
+  keptAt: K('KEPT_AT') - 0x8000, kpN: F('struct kept', 'n'), kpGen: F('struct kept', 'gen'), kpAt: F('struct kept', 'at'),
+  keepSize: Z('keep'), kpSn: F('struct keep', 'sn'), kpRange: F('struct keep', 'range'), kpLive: F('struct keep', 'live'),
   kpCx: F('struct keep', 'cx'), kpCy: F('struct keep', 'cy'), kpLid: F('struct keep', 'lid'),
-  wStrata: F('struct wrec', 'strata'), stSize: 'sizeof (struct stratum)', maxstrata: 'MAXSTRATA', stMade: F('struct stratum', 'made'),
+  wStrata: F('struct wrec', 'strata'), stSize: Z('stratum'), maxstrata: K('MAXSTRATA'), stMade: F('struct stratum', 'made'),
   stN: F('struct stratum', 'n'), stX0: F('struct stratum', 'x0'), stY0: F('struct stratum', 'y0'), stW: F('struct stratum', 'w'),
   stH: F('struct stratum', 'h'),
   // (The chunks' cache, the character's memory of each: slice 4.2's travel's, dq0travel's)
-  cacheBank0: 'CACHE_BANK (0)', ncslots: 'NCSLOTS', chunkSize: 'CHUNK_SIZE', wCslot: F('struct wrec', 'cslot'), csSize: 'sizeof (struct cslot)',
+  cacheBank0: K('CACHE_BANK (0)'), ncslots: K('NCSLOTS'), chunkSize: K('CHUNK_SIZE'), wCslot: F('struct wrec', 'cslot'), csSize: Z('cslot'),
   csUsed: F('struct cslot', 'used'), csSn: F('struct cslot', 'sn'), csCx: F('struct cslot', 'cx'), csCy: F('struct cslot', 'cy'),
-  ckNrooms: F('struct chunk', 'nrooms'), ckRoom: F('struct chunk', 'room'), rmSize: 'sizeof (struct room)', rmX: F('struct room', 'x'),
+  ckNrooms: F('struct chunk', 'nrooms'), ckRoom: F('struct chunk', 'room'), rmSize: Z('room'), rmX: F('struct room', 'x'),
   rmY: F('struct room', 'y'), rmW: F('struct room', 'w'), rmH: F('struct room', 'h'), rmFlags: F('struct room', 'flags'), rmKind: F('struct room', 'kind'),
   ckKept: F('struct chunk', 'kept'), kQ: F('struct ckept', 'q'), kM: F('struct ckept', 'm'), kN: F('struct ckept', 'n'), kMap: F('struct ckept', 'map'),
   kDq: F('struct ckept', 'dq'), kDsk: F('struct ckept', 'dsk'), kSk: F('struct ckept', 'sk'), sMapfade: F('struct rs_summary', 'mapfade'),
   sMapmind: F('struct rs_summary', 'mapmind'),
-};
-
-// The headers' enums and #defines with a number: { names: { NAME: value }, blocks: [[NAME ...] an enum's members] }
-function constants() {
-  const names = {}, blocks = [];
-  for (const h of HEADERS) {
-    const text = fs.readFileSync(path.join(DQ0, h), 'latin1').replace(/\/\*[^]*?\*\//g, ' ');
-    for (const k of text.matchAll(/^#define\s+(\w+)\s+\(?(0x[0-9A-Fa-f]+|\d+)\)?\s*$/gm)) names[k[1]] = +k[2];
-    for (const k of text.matchAll(/\benum\s*\{([^}]*)\}/g)) {
-      const block = [];
-      let v = 0;
-      for (const part of k[1].split(',')) {
-        const p = part.trim().match(/^(\w+)(?:\s*=\s*(.+))?$/);
-        if (!p) continue;
-        if (p[2] !== undefined) { const e = p[2].trim(); v = /^(0x[0-9A-Fa-f]+|\d+)$/.test(e) ? +e : names[e] !== undefined ? names[e] : NaN; }
-        names[p[1]] = v;
-        block.push(p[1]);
-        v++;
-      }
-      blocks.push(block);
-    }
-  }
-  return { names, blocks };
+  };
 }
 
-// The layout and the constants (obj/dq0meaning.json, made again as the headers or this file change)
+// The headers' enums and #defines with a number: { names: { NAME: value }, blocks: [[NAME ...] an enum's members] }
+// (the build's: hubgen.js's load ())
+function constants() {
+  const H = require('../../games/dq0/hubgen.js').load();
+  return { names: H.C, blocks: H.enums };
+}
+
+// The layout and the constants
 let LAYOUT = null;
 function layout() {
   if (LAYOUT) return LAYOUT;
-  const hash = crypto.createHash('sha1');
-  for (const h of HEADERS) hash.update(fs.readFileSync(path.join(DQ0, h)));
-  hash.update(fs.readFileSync(__filename));
-  const key = hash.digest('hex'), cache = path.join(ROOT, 'obj', 'dq0meaning.json');
-  let j = null;
-  try { j = JSON.parse(fs.readFileSync(cache, 'utf8')); if (j.key !== key) j = null; } catch (e) { j = null; }
-  if (!j) {
-    const ks = Object.keys(EXPRS), v = require('./hubown.js').evaluate(ks.map(k => EXPRS[k]));
-    j = { key, L: {}, C: constants() };
-    ks.forEach((k, i) => { j.L[k] = v[i]; });
-    try { const t = cache + '.' + process.pid; fs.writeFileSync(t, JSON.stringify(j)); fs.renameSync(t, cache); } catch (e) { /* (Made again next time) */ }
-  }
+  const j = { L: layoutOf(require('../../games/dq0/hubgen.js').load()), C: constants() };
   const C = j.C, byName = C.names;
   // (A value's name in the enum a member of which is given, or the value: name('PO_NONE', 1) -> 'PO_OPENED')
   const blockOf = {};

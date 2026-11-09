@@ -15,8 +15,9 @@
             .export     _fl_dsl, _fl_dsh, _fl_ddl, _fl_ddh, _fl_dcj
             .importzp   ptr1, ptr2, ptr3, ptr4, tmp1, tmp2, tmp3, tmp4, sreg, regsave
 
-GRID        = $8000 + $1100 + 48            ; (hub.h's SND_GRID: SOUND_AT, its head)
-W           = 43                            ; (SND_W)
+            .include    "dq0hub_pulse.inc"          ; (hub.h's SND_GRID, SND_W: the build's, ../dq0/hubgen.js)
+GRID        = SND_GRID                      ; (hub.h's SND_GRID: SOUND_AT, its head)
+W           = SND_W
 QM          = GRID + W * W                  ; (SND_QUEUE: the open squares' queue, 512 of them, each its address)
 QMEND       = QM + 1024
 QDL         = QMEND                         ; (The shut squares', 64: their addresses' low bytes, high)

@@ -22,7 +22,7 @@
 
             .include    "zeropage.inc"
 
-TOLD        = 24                    ; (dq0.h's)
+            .include    "dq0hub_lbsaid.inc" ; (dq0.h's TOLD: the build's, hubgen.js)
 
             .bss
 h:          .res        2           ; A sentence's hash

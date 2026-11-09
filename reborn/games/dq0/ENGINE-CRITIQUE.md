@@ -175,6 +175,29 @@ build.js checks them afterwards.
 - **Who may write what** is a table in hub.h's comments, enforced by a test (hubown.js) that watches the emulator's
   memory writes.
 
+**Stage 1, done 2026-11-09: nothing written twice** (DECISIONS.md's "The hub's numbers, made by the build").  The C
+headers stay the one statement; the build reads them as the compiler sees them and writes what the other languages
+need (games/dq0/hubgen.js, before the games are built: some 0.3 s).  The #defines and enums by parsing, every named
+struct's fields (through nested and anonymous structs) by parsing, and all their values, offsets and sizes from one
+generated C file compiled by the build's cc65 and read back from its assembly.  It writes obj/gen/dq0hub.json (the
+names, the enums, the layouts and the writers' map: read by dq0's theme compiler, dq0w's, dq0d's and dq0s's make.js,
+outfits.js, sim/lib/dq0meaning.js and hubown.js, tests.js's offsets and commandwords.js), one assembly include per
+assembly file (obj/gen/dq0hub_*.inc: dq0c.s, cmdmean.s, line.inc, items.s, letter.s, pulse.s, at.s, lbsaid.s), and
+actions.h from commands.actions (the catalogue the one list; the C finds it in obj/gen).  Gone: games/dq0c/hub.inc and
+the make.js checks that held it and cmdmean.s to hub.h, hub.h's HUBO_*/CQO_* and their assert, actions.h and its check,
+`KIND = 37`, `AT`, `SQ_FT`, `SND_KINDS` and the theme compiler's sixty-odd offsets restated in the make.js files,
+things.c's assert on items.s's numbers, and every cc65 compile at test time (dq0meaning.js's layout, hubown.js's map,
+tests.js's `evaluate`).  The writers' table is the block between hub.h's `own:` and `own.` lines (a line in it that
+isn't one stops the build), its regions' bytes the build's.  The images came out byte-identical.
+
+**What stage 2 (typed payloads) needs from it.**  The generator reads structs, fields, enums and #defines and lays
+them out by cc65 already, so stage 2 adds a declaration, not a mechanism: a table of each intent's and event's payload
+(its fields, their widths and bit fields, in hub.h beside the kinds or in a small file of its own, read the way the
+writers' table is), from which the same pass would write a C header of accessors (obj/gen, as actions.h is now) and the
+JSON's decoders for dq0meaning.js's `decode` (its switch of packed `w1` bits today), and check each payload fits
+`struct msg`.  The vocabulary's numbers (I_*, E_*, ...) are already the JSON's; what's missing is only which fields each
+kind means.
+
 **What I'd do: one schema, with everything else generated from it.**
 
 A single declarative file (or a few) states:
@@ -538,7 +561,7 @@ Ranked by how much each unlocks, and arranged so the game keeps working througho
 |---|---|---|---|
 | 1 | **Generated placement** (§1.1): parts.txt, the stubs and the config's SWn lines made by the build. *Done 2026-11-06 (games/dq0/parts.js), every task.* Then the automatic packer (§1.2: *done 2026-11-07*, the parts' banks chosen by the build, parts.txt's bank a wish; the calls routed by part; a part past the swap area has its pieces moved out by the build, games/dq0/pack.js) and part-local leaf copies (§1.3) | ends "moved for room" churn; a function moved is its pragma alone; dispatch can be organised by meaning | medium, then large |
 | 2 | **Shared helpers in paged ROM** (§1.4, §4): line of sight, path finding, chunk lookup, name matching, the keyed hash and dice. *Line of sight done 2026-11-08 as a stage: one line (dq0w/line.inc: sight, fire, air), a shared source assembled into the senses and the world, not yet ROM (it calls the task's own chunk lookup); the look's grid ray the same squares, heights and portal rule (DECISIONS.md's "One line of sight"). The game's library in the paged ROM done 2026-11-09 (modules/dq0lib, each task's games/dq0/dq0lib.inc; DECISIONS.md's "The game's own library in the paged ROM"): the overlays' loading (`OVL_LOAD`, six copies) and `NUM` (atoi's: five copies and dq0m's atoi), the main RAM 88 to 687 bytes freer in every task (the UI 2,128 to 2,307); the line and the chunk lookup's move to it planned in §4 (a fixed zero-page block and callbacks into the task's `at`), to be done with the router. The router done 2026-11-09 the same way: one way-finder and one rule for a square (dq0w/walk.inc), compiled into the world (the character's ways) and the denizens (their ways found), each walker's rules its own (DECISIONS.md's "One way-finder").* Next: the line, the way-finder and the chunk lookup into the ROM library together (§4's plan) | one line of sight and one router (they disagree today); one copy to keep. Small room gains (measured: a few hundred bytes a task) | medium |
-| 3 | **The hub schema and generated headers/inc/JS/ownership** (§2) | typed payloads; no hand-synced constants; cheaper tests | medium |
+| 3 | **The hub schema and generated headers/inc/JS/ownership** (§2). *Stage 1 done 2026-11-09: nothing written twice (games/dq0/hubgen.js, DECISIONS.md's "The hub's numbers, made by the build"): the headers' names, enums, structs' layouts and the writers' table made by the build with cc65 into obj/gen (dq0hub.json for the make.js files and the tests, an include per assembly file, actions.h from the catalogue); the hand-typed copies and the checks that held them gone, nothing compiled at test time; the images byte-identical.* Next, stage 2: typed payloads for the intents and events (a payload table the same generator reads, §2's) | typed payloads; no hand-synced constants; cheaper tests | medium |
 | 4 | **Handles, the scope table, the action table** (COMMANDS §4.1–4.4 and §3.1 here). *Mostly done 2026-11-07* (COMMANDS-CRITIQUE.md §5.1: every choice of a thing made once and sent as a handle, one "which?", one name match; §5.2 G–K: both sweeps clean, one path for things and one for features, one walk over, refusals as data); the action table, §5.2's step L, under way | consistent commands; one intent shape for PC and denizens | large (the command plan's steps) |
 | 5 | **Narration as data** (§3.2) | removes the 33 wording functions, `told` ×6, most SA_ refusals; first words for free; denizen actions worded alike | large, migratable one action at a time |
 | 6 | **The step planner and activity stacks** (§3.3, §7) | removes 33 reach LT_ kinds and the continuation chain; containers (COMMANDS §4.9) | medium–large |

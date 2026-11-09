@@ -26,6 +26,7 @@ const REB = path.join(__dirname, '..', '..');
 const OUT = path.join(REB, 'obj', 'cmdmatch');
 const GAME = path.join(REB, 'games', 'dq0c');
 const HERE = path.join(__dirname, 'cmdmatch');
+const GEN = path.join(REB, 'obj', 'gen');                       // (The build's: actions.h, dq0hub_*.inc)
 const run = (exe, args, opt = {}) => cp.execFileSync(exe, args, Object.assign({ encoding: 'utf8', maxBuffer: 1 << 26 }, opt));
 
 // The test data, and the corpus from it: each command, its world, and the host's result
@@ -76,7 +77,7 @@ function mean() {
   const { DEFAULT_ALIASES, DEFAULT_ANYWHERE } = require('./commandcompile.js');
   const lines = require('./commandmatch-gen.js').meaningLines(), w = words.load();
   const bin = path.join(OUT, 'cmdmean.bin');
-  run(tool('cl65'), ['--cpu', '65C02', '-t', 'sim65c02', '-O', '-I', OUT, '-I', HERE, '-o', bin, path.join(HERE, 'cmdmean.c'),
+  run(tool('cl65'), ['--cpu', '65C02', '-t', 'sim65c02', '-O', '-I', OUT, '-I', HERE, '--asm-include-dir', GEN, '-o', bin, path.join(HERE, 'cmdmean.c'),
     path.join(GAME, 'cmdmatch.s'), path.join(GAME, 'cmdmean.s'), path.join(HERE, 'cmdmatch_c.s'), path.join(HERE, 'cmdmean_c.s')],
     { cwd: OUT, stdio: ['ignore', 'pipe', 'pipe'] });
   const out = run(tool('sim65'), ['--cpu', '65C02', '-x', '4000000000', bin], { cwd: OUT }).split(/\r?\n/);
@@ -159,7 +160,7 @@ function task() {
   fs.mkdirSync(pc, { recursive: true });
   require(path.join(GAME, 'make.js')).build({ dir: GAME, objdir: path.join(pc, 'dq0c-obj') });   // (pc/dq0c.dat)
   corpusFile(pc);
-  prog('dq0c', ['dq0c.s', 'cmdmatch.s', 'cmdmean.s', 'hub.inc'].map(f => path.join(GAME, f)), pc);
+  prog('dq0c', ['dq0c.s', 'cmdmatch.s', 'cmdmean.s'].map(f => path.join(GAME, f)), pc);
   prog('cmdtask', [path.join(HERE, 'cmdtask.c')], pc, { HYC_CFLAGS: '-I ' + path.join(REB, 'games', 'dq0') });
   return emulate(pc, 'cmdtask').some(l => / 0 differ$/.test(l));
 }
@@ -212,7 +213,7 @@ function phrases() {
   const words = require('./commandwords.js'), V = words.names(), wd = words.load();
   const cases = phraseCases();
   const bin = path.join(OUT, 'cmdres.bin');
-  run(tool('cl65'), ['--cpu', '65C02', '-t', 'sim65c02', '-C', path.join(HERE, 'cmdres.cfg'), '-O', '-I', OUT, '-I', HERE, '-I',
+  run(tool('cl65'), ['--cpu', '65C02', '-t', 'sim65c02', '-C', path.join(HERE, 'cmdres.cfg'), '-O', '-I', OUT, '-I', HERE, '-I', GEN, '--asm-include-dir', GEN, '-I',
     path.join(REB, 'games', 'dq0'), '-o', bin, path.join(HERE, 'cmdres.c'), path.join(GAME, 'cmdmatch.s'), path.join(GAME, 'cmdmean.s'),
     path.join(REB, 'games', 'dq0', 'resolve.c'), path.join(HERE, 'cmdmatch_c.s'), path.join(HERE, 'cmdmean_c.s')],
     { cwd: OUT, stdio: ['ignore', 'pipe', 'pipe'] });

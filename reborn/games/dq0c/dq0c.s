@@ -15,7 +15,10 @@
 .include "hydra.inc"
 .include "hyx2.inc"
 .include "macros.inc"
-.include "hub.inc"
+.include "dq0hub_dq0c.inc"          ; (The hub's places and constants it uses: the build's, from hub.h: games/dq0/hubgen.js)
+
+HUB_U       = $FFF1                 ; The shared RAM's macro-page register, then the bank register (hub.c's hub_map)
+HUB_BANKREG = $00
 
             .macpack    longbranch
 

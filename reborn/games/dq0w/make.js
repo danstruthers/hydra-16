@@ -13,7 +13,8 @@ const outfits = require('./outfits.js');
 const tables = require('../../sim/tools/commandtables.js');
 const { loadRules } = require('../../sim/tools/commandcompile.js');
 
-const KIND = 37;                                        // (items.h's struct kind: its size)
+const H = require('../dq0/hubgen.js').load(), C = H.C;  // (The headers' numbers, the build's: ../dq0/hubgen.js)
+const KIND = H.size('kind'), NAME = H.size('kind', 'name'), CAP_WEIGHT = H.off('kind', 'cap_weight');   // (items.h's struct kind)
 
 // A #define's number from a header
 function define(file, name) {
@@ -37,13 +38,13 @@ function build({ dir, objdir, say = () => {} }) {
   checkOverlays(dir);
   require('../dq0/ovlpack.js').pack(objdir, 'dq0w');      // (Its overlays' file packed: obj/games/dq0w.ovp)
   const games = path.join(dir, '..');
-  const nkinds = define(path.join(games, 'dq0', 'items.h'), 'NKINDS'), ntk = define(path.join(games, 'dq0', 'theme.h'), 'NTKINDS');
+  const nkinds = C.NKINDS;
   const f = path.join(objdir, '..', 'dq0w.hyx.cat');
   const cat = fs.readFileSync(f);
   const names = [];
   for (let k = 0; k < nkinds; k++) {                  // (The theme's eight, theme.h's KI_THEME on, empty here)
-    const r = cat.subarray(k * KIND, k * KIND + 14);
-    names.push(r.subarray(0, r.indexOf(0) < 0 ? 14 : r.indexOf(0)).toString('latin1'));
+    const r = cat.subarray(k * KIND, k * KIND + NAME);
+    names.push(r.subarray(0, r.indexOf(0) < 0 ? NAME : r.indexOf(0)).toString('latin1'));
   }
   // The words, each once, those the parser's dictionary has (a word it hasn't is a thing's name to it anyway: the
   // world's words only mark its own, dq0c's marklist)
@@ -54,16 +55,16 @@ function build({ dir, objdir, say = () => {} }) {
   const text = Buffer.from(words.map(w => w + ' ').join('') + '\0', 'latin1');
   const at = nkinds * KIND, kin = (at + text.length + 63) & ~63;   // (The kinds' part of the file, whole pieces: wfile.c's)
   if (at + text.length > 0x1E3F || kin > 0x1E40) throw new Error('dq0w.cat: the kinds and their words into the outfits\' list (outfit.h\'s OF_N, ' + (at + text.length) + ' bytes)');
-  if (text.length > 1024 - 200) throw new Error('dq0w.cat: the kinds\' words ' + text.length + ' bytes, past the parser\'s room less the theme\'s (hub.h\'s CQ_WORDS)');
+  if (text.length > C.CQ_WORDS - 200) throw new Error('dq0w.cat: the kinds\' words ' + text.length + ' bytes, past the parser\'s room less the theme\'s (hub.h\'s CQ_WORDS)');
   if (cat.length - at > 0x1900) throw new Error('dq0w.cat: the catalogue\'s bank\'s code ' + (cat.length - at) + ' bytes, into the outfits\' index (outfit.h\'s OF_INDEX)');
   // (The world's deities' names in the last two kinds' records, none yet (items.h's GODS_AT), a 0 first, so a name that's empty: dq0d's
   // make's, made first, spaces between, 0-ended; the UI's for the parser, so no file of their own to open as it starts, an
   // open on the card some 700,000 cycles, 2026-11-04)
   const gods = Buffer.from('\0' + fs.readFileSync(path.join(objdir, '..', 'dq0g.txt'), 'latin1') + '\0', 'latin1');
   if (gods.length > 2 * KIND || names[nkinds - 1] || names[nkinds - 2]) throw new Error('dq0w.cat: the deities\' ' + gods.length + ' bytes, or the last two kinds taken (items.h\'s GODS_AT)');
-  if (cat.readUInt16LE(18)) throw new Error('dq0w.cat: the first kind\'s cap_weight not 0 (the kinds\' length goes there)');
+  if (cat.readUInt16LE(CAP_WEIGHT)) throw new Error('dq0w.cat: the first kind\'s cap_weight not 0 (the kinds\' length goes there)');
   const file = Buffer.concat([cat.subarray(0, at), text, Buffer.alloc(kin - at - text.length), cat.subarray(at)]);
-  file.writeUInt16LE(kin, 18);                          // (The kinds' length, in the first's (none's) cap_weight: wfile.c's)
+  file.writeUInt16LE(kin, CAP_WEIGHT);                          // (The kinds' length, in the first's (none's) cap_weight: wfile.c's)
   gods.copy(file, (nkinds - 2) * KIND);
   fs.writeFileSync(f, file);
   // The outfits

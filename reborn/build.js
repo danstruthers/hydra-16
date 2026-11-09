@@ -112,9 +112,18 @@ function buildModule(dir, objdir, defines, ram = false, libs = {}) {
 function cflags() {
   const home = cc65Home(), own = d => fs.existsSync(path.join(home, d)) ? ['-I', path.join(home, d)] : [];
   return {
-    cc: ['-g', '-t', 'none', '--cpu', '65C02', '-O', '-I', at('sdk', 'c', 'include'), ...own('include')],
-    as: ['-g', '--cpu', 'W65C02', '-I', at('sdk', 'asm'), '-I', atBase('sdk', 'asm'), '-I', at('sdk', 'c', 'lib'), '-I', at('sdk', 'c', 'include'), ...own('asminc')],
+    cc: ['-g', '-t', 'none', '--cpu', '65C02', '-O', '-I', at('sdk', 'c', 'include'), ...own('include'), '-I', at('obj', 'gen')],
+    as: ['-g', '--cpu', 'W65C02', '-I', at('sdk', 'asm'), '-I', atBase('sdk', 'asm'), '-I', at('sdk', 'c', 'lib'), '-I', at('sdk', 'c', 'include'), ...own('asminc'),
+      '-I', at('obj', 'gen')],
   };
+}
+
+// Dingus Quest Zero's hub numbers for the other languages (games/dq0/hubgen.js: from the C headers as cc65 sees them,
+// into obj/gen: actions.h, dq0hub.json, the assembly's dq0hub_*.inc), before its tasks and their make.js files
+function hubNumbers(say = () => {}) {
+  const home = cc65Home(), own = d => fs.existsSync(path.join(home, d)) ? ['-I', path.join(home, d)] : [];
+  return require('./games/dq0/hubgen.js').generate({ say, cc65: { bin: CC65, flags: ['-t', 'none', '--cpu', '65C02',
+    '-I', at('sdk', 'c', 'include'), ...own('include'), '-I', at('games', 'dq0'), '-I', at('obj', 'gen')] } });
 }
 
 // C and assembly sources into objdir (a .c: cc65 makes its .s there, then ca65).  OUT: the objects
@@ -493,6 +502,7 @@ function sdk() {
 function prog(dir) {
   dir = path.resolve(dir);
   apigen.generate(ROOT);
+  hubNumbers();
   const name = path.basename(dir), od = at('obj', 'prog', name), bin = path.join(dir, name + '.hyx');
   if (isC(dir)) {
     if (!fs.existsSync(at('obj', 'sdk', 'c', 'hydra.lib'))) clib();
@@ -503,7 +513,7 @@ function prog(dir) {
     fs.writeFileSync(bin, bankProgram(dir, path.dirname(od), []));
     return bin;
   }
-  const objs = assemble(sources(dir), od, [at('sdk', 'asm'), ...base.INCLUDES, dir], ['HYX2_RAM']);
+  const objs = assemble(sources(dir), od, [at('sdk', 'asm'), ...base.INCLUDES, dir, at('obj', 'gen')], ['HYX2_RAM']);
   run(LD65, ['-C', atBase('sdk', 'asm', 'hyx2.cfg'), '-o', bin, '-m', path.join(od, name + '.map'), ...objs]);
   check.checkModule(name, fs.readFileSync(bin), 0x0800);
   return bin;
@@ -552,6 +562,7 @@ function build(opt = {}) {
   }
   for (const d of fs.readdirSync(at('sdk', 'c', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory()))
     samples['c/' + d.name] = ram(at('sdk', 'c', 'samples', d.name), at('obj', 'samples', 'c'));
+  if (fs.existsSync(at('games', 'dq0', 'hubgen.js'))) hubNumbers(say);   // (The hub's numbers, before the games)
   if (fs.existsSync(at('games')))                       // The games (games/NAME: on the SD card), each a C program,
     for (const d of fs.readdirSync(at('games'), { withFileTypes: true }).filter(d => d.isDirectory())) {   //   and its make.js's
       games[d.name] = ram(at('games', d.name), at('obj', 'games'));                                         //   data files, if

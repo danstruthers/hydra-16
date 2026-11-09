@@ -13,31 +13,16 @@ const fs = require('fs');
 const path = require('path');
 
 const GAME = path.join(__dirname, '..', '..', 'games', 'dq0');
-const REL = 0x10, PART = 0x80, NONE = 0xFF;
-const CF_NOVERB = 1, CF_HALF = 2, CF_UNSAID = 4, CF_STRANGE = 8;   // (hub.h's struct cmd's flags)
+const HUB = require('../../games/dq0/hubgen.js').load();     // (hub.h's numbers, the build's: obj/gen/dq0hub.json)
+const REL = HUB.C.CQ_REL, PART = 0x80, NONE = 0xFF;           // (A way as the character faces: hub.h's CQ_REL)
+const { CF_NOVERB, CF_HALF, CF_UNSAID, CF_STRANGE } = HUB.C;  // (hub.h's struct cmd's flags)
 const RF_ORDER = 1, RF_ASPECTS = 2;                           // (A verb's own flags: an ally's request, its order read;
                                                               //   a thing's aspects taken, commands.words' [aspects])
 
-// The names' values: each enum's names in order (dq0.h, hub.h, level.h, items.h, rs.h, actions.h), and the #defines
-// that are numbers
+// The names' values: the headers' enums' members and #defines that are numbers (dq0.h, hub.h and those it includes,
+// actions.h), as the build's cc65 made them (games/dq0/hubgen.js: obj/gen/dq0hub.json)
 function names() {
-  const v = {};
-  for (const f of ['dq0.h', 'hub.h', 'level.h', 'items.h', 'rs.h', 'actions.h']) {
-    const t = fs.readFileSync(path.join(GAME, f), 'latin1').replace(/\/\*[\s\S]*?\*\//g, ' ');
-    for (const [, body] of t.matchAll(/enum\s*\{([^}]*)\}/g)) {
-      let n = 0;
-      for (let item of body.split(',')) {
-        item = item.trim();
-        if (!item) continue;
-        const m = item.match(/^(\w+)\s*(?:=\s*(\w+))?$/);
-        if (!m) continue;
-        if (m[2] !== undefined) n = /^\d+$/.test(m[2]) ? +m[2] : (v[m[2]] !== undefined ? v[m[2]] : n);
-        v[m[1]] = n++;
-      }
-    }
-    for (const [, k, x] of t.matchAll(/^#define\s+(\w+)\s+(0x[0-9A-Fa-f]+|\d+)\s*$/gm)) if (v[k] === undefined) v[k] = +x;
-  }
-  return v;
+  return Object.assign({}, HUB.C);
 }
 
 // The actions' names by number (actions.h's enum: VB_NONE first)

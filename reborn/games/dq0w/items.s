@@ -4,7 +4,7 @@
 ; after one that's in use and where it's asked for (in a thing, on a square ...: a bit of each, IN_*), by the x it's
 ; at (or by its flags), found by going down the banks in assembly (a look about, an inventory, went through every
 ; record in C a few times over: two seconds of an inventory).  hub.h's ITEM_BANK, ITEM_AT and items.h's struct item
-; (things.c checks they're as here).
+; (their numbers the build's, from the headers: dq0hub_items.inc, ../dq0/hubgen.js).
 ;
 ;   struct item* __fastcall__ item_at (unsigned i);                         item i's record, its bank in the window
 ;   unsigned __fastcall__ items (unsigned i, unsigned char in, unsigned x); the next after i (0: none), ip its record
@@ -16,11 +16,10 @@
 .endif
             .importzp   sp, ptr1
 
-REC         = 25                            ; sizeof (struct item)
-PER_BANK    = 327                           ; Records a bank (0x2000 / 25)
-NITEMS      = 654                           ; (ITEM_BANKS of them)
-BANK0       = 14                            ; ITEM_BANK (0): KIND_BANK + 1
-LAST_BANK   = BANK0 + 1
+            .include    "dq0hub_items.inc"          ; (REC sizeof (struct item), NITEMS, BANK0 ITEM_BANK (0), ITEM_BANKS,
+                                                    ;   the fields I_*: the build's, ../dq0/hubgen.js)
+PER_BANK    = $2000 / REC                   ; Records a bank
+LAST_BANK   = BANK0 + ITEM_BANKS - 1
 END         = $8000 + PER_BANK * REC      ; (A bank's records' end)
 IN_X        = $80                           ; items ()'s in: its x is x (else any, but IN_FLAGS)
 IN_FLAGS    = $40                           ;   or its flags and x's low byte not 0 (I_LIT ...)
@@ -134,10 +133,10 @@ _items:
             sta         ptr1
             lda         _ip + 1
             sta         ptr1 + 1
-@look:      ldy         #0                  ; In use,
+@look:      ldy         #I_KIND             ; In use,
             lda         (ptr1),y
             beq         @next
-            ldy         #2                  ;   where it's wanted,
+            ldy         #I_WHERE            ;   where it's wanted,
             lda         (ptr1),y
             and         #7
             tax
@@ -147,12 +146,12 @@ _items:
             bit         want
             bmi         @byx
             bvc         @found
-            ldy         #1                  ;   its flags,
+            ldy         #I_FLAGS            ;   its flags,
             lda         (ptr1),y
             and         xv
             beq         @next
             bne         @found
-@byx:       ldy         #4                  ;   or its x
+@byx:       ldy         #I_X                ;   or its x
             lda         (ptr1),y
             cmp         xv
             bne         @next

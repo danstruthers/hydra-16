@@ -5827,7 +5827,7 @@ module.exports = {
               if (h) {
                 const { L } = m.dq0.layout();
                 m.wet.push({ line: typed, wet: h[L.pcWet], swim: h[L.pcSwim], breath: h[L.pcBreath] });
-                if (typed === 'wait 2 minutes') h[L.pcsum + L.sCond] |= 0x10;   // (rs.h's C_BLEEDING: its time told as it goes, a minute at a time)
+                if (typed === 'wait 2 minutes') h[L.pcsum + L.sCond] |= require('../games/dq0/hubgen.js').load().C.C_BLEEDING;   // (rs.h's C_BLEEDING: its time told as it goes, a minute at a time)
               }
               typed = '';
             } else if (c >= 32) typed += String.fromCharCode(c);
@@ -11200,7 +11200,7 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '');
-        const IS_CLOSED = 1, IS_LOCK = 4;               // (items.h's IS_*)
+        const { IS_CLOSED, IS_LOCK } = require('../games/dq0/hubgen.js').load().C;   // (items.h's IS_*)
         const thing = (st, n) => st && (dq0Carried(st).find(i => i.name === n) || st.items.find(i => i.name === n && i.sn === st.pc.sn));
         const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -k \'table,chisel,chisel,sack,chest,iron pot\'');
         if (!g.after) return ['the first game not begun'];
@@ -11524,7 +11524,7 @@ module.exports = {
           if (r === 0 && a.rdrf) {
             if (a.rx === 13) { if (typed === 'blinded') on = 1; if (/^quit/.test(typed)) on = 0; typed = ''; } else if (a.rx >= 32) typed += String.fromCharCode(a.rx);
             const h = on && m.dq0 && m.dq0.bank(0);
-            if (h) { const { L } = m.dq0.layout(); h[L.pcsum + L.sCond + 1] |= 1; }   // (rs.h's C_BLINDED, its high byte: held on, as dq0blind's)
+            if (h) { const { L } = m.dq0.layout(); h[L.pcsum + L.sCond + 1] |= require('../games/dq0/hubgen.js').load().C.C_BLINDED >> 8; }   // (rs.h's C_BLINDED, its high byte: held on, as dq0blind's)
           }
           return read(r, t);
         };
@@ -13777,7 +13777,7 @@ module.exports = {
             if (a.rx === 13) { if (typed === 'blinded') on = 1; typed = ''; } else if (a.rx >= 32) typed += String.fromCharCode(a.rx);
           }
           const h = on && m.dq0 && m.dq0.bank(0);
-          if (h) { const { L } = m.dq0.layout(); h[L.pcsum + L.sCond + 1] |= 1; }   // (rs.h's C_BLINDED, its high byte)
+          if (h) { const { L } = m.dq0.layout(); h[L.pcsum + L.sCond + 1] |= require('../games/dq0/hubgen.js').load().C.C_BLINDED >> 8; }   // (rs.h's C_BLINDED, its high byte)
           return rd.call(a, r, t);
         };
       },

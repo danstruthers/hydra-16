@@ -2,9 +2,9 @@
 // banks, in a test, by the task that made it, held against the owners' table in games/dq0/hub.h (its "own" lines:
 // each region's owner, those that write it by design, and those that write it still till a move of Phase 2's).
 //
-// map() reads the table and works out its regions' bytes: each region's C expressions (offsetof, sizeof, the banks'
-// numbers) compiled by cc65 into a file of constants and read back (obj/hubown.json keeps the map, made again as the
-// headers change).  createCheck(map) gives { hook, attach(m), result() }: hook is the machine's opt.sharedWrite
+// map() paints the table's regions' bytes, each region's as the build worked it out (games/dq0/hubgen.js: the table
+// read from hub.h's owners block, each region's C expressions, offsetof, sizeof, the banks' numbers, made numbers by
+// cc65 as the game's built; obj/gen/dq0hub.json's own).  createCheck(map) gives { hook, attach(m), result() }: hook is the machine's opt.sharedWrite
 // (machine.js: each write to a shared bank, before it's made); attach(m) gives it the machine once it's booted.  The
 // hub is found as the UI makes it (its magic written at bank 0's start: the hub's banks a run of shared bank IDs
 // from there, the kernel's segment), each game afresh; a write's task is the hub's task[] table's (a role, T_*),
@@ -17,155 +17,53 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
-const { execFileSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..', '..');                // (reborn/)
-const DQ0 = path.join(ROOT, 'games', 'dq0');
-const HEADERS = ['hub.h', 'items.h', 'level.h', 'theme.h', 'rs.h', path.join('..', 'dq0w', 'world.h')];
-const TASKS = ['ui', 'world', 'denizens', 'referee', 'sound', 'maker', 'senses', 'commands'];   // (hub.h's T_*)
+const hubgen = require('../../games/dq0/hubgen.js');
 const PROGS = ['dq0', 'dq0w', 'dq0d', 'dq0' + (process.env.RULES || 'harn'), 'dq0s', 'dq0m', 'dq0p', 'dq0c'];  // (Each
-                                                              //   role's program: the referee's the ruleset's, RULES)
+                                                              //   role's program, hub.h's T_* order: the referee's
+                                                              //   the ruleset's, RULES)
 const TA_NAME = 0x0230;                                       // (A task's name in its RAM: base/sim/run.js's)
 
-// The records a region names (REC.FIELD): their struct, their bank and place (n of them: k's)
-const RECS = { hub: 'struct hub', sight: 'struct sight', uirec: 'struct uirec', wrec: 'struct wrec',
-  chunk: 'struct chunk', item: 'struct item' };
+// The tasks' names (hub.h's T_*, lower case: ui world ...), as the build read them
+const tasks = () => hubgen.load().tasks;
 
-// The table's lines: { region, owner, plus: [task], known: [{ move, task }], line }
+// The table's lines: { region, owner, plus: [task], known: [{ move, task }], line } (the build's: hub.h's owners block)
 function table() {
-  const out = [], text = fs.readFileSync(path.join(DQ0, 'hub.h'), 'latin1').split(/\r?\n/);
-  text.forEach((l, i) => {
-    const k = l.match(/^\*\*   own ((?:hub|sight|uirec|wrec|chunk|item|banks?)\b.*)$/);
-    if (!k) return;
-    const words = k[1].replace(/\s+\(.*$/, '').trim().split(/\s+/), region = words.shift(), owner = words.shift();
-    const e = { region, owner, plus: [], known: [], line: i + 1 };
-    const role = t => { if (!TASKS.includes(t) && t !== 'each' && t !== 'none') throw new Error('hub.h:' + (i + 1) + ': no task ' + t); return t; };
-    role(owner);
-    for (const w of words) {
-      if (w.startsWith('+')) e.plus.push(role(w.slice(1)));
-      else if (/^\d+\.\d+:/.test(w)) { const [move, ts] = w.split(':'); for (const t of ts.split(',')) e.known.push({ move, task: role(t) }); }
-      else throw new Error('hub.h:' + (i + 1) + ': "' + w + '"');
-    }
-    out.push(e);
-  });
-  return out;
+  return hubgen.load().own.lines.map(({ region, owner, plus, known, line }) => ({ region, owner, plus, known, line }));
 }
 
-// A region's arguments, split at their own commas: bank(DEN_BANK,SND_AT,FIGHT_AT) -> ['DEN_BANK', 'SND_AT', 'FIGHT_AT']
-function args(s) {
-  const out = [];
-  let d = 0, cur = '';
-  for (const c of s) {
-    if (c === ',' && !d) { out.push(cur); cur = ''; continue; }
-    if (c === '(' || c === '[') d++;
-    if (c === ')' || c === ']') d--;
-    cur += c;
-  }
-  out.push(cur);
-  return out;
-}
-
-// The C expressions each line wants: { exprs: [string], want(e) -> the values' indices }
-function exprsOf(lines) {
-  const exprs = [], idx = e => { let i = exprs.indexOf(e); if (i < 0) { i = exprs.length; exprs.push(e); } return i; };
-  const base = ['HUB_BANKS', 'NTASKS', 'offsetof (struct hub, task)', 'HUB_MAGIC', 'CACHE_BANK (0)', 'CHUNK_SIZE', 'NCSLOTS',
-    'ITEM_BANK (0)', 'sizeof (struct item)', 'NITEMS'];
-  const B = {}; for (const e of base) B[e] = idx(e);
-  for (const l of lines) {
-    const r = l.region, f = r.match(/^(\w+)\((.*)\)$/);
-    if (f) {
-      const a = args(f[2]);
-      if (f[1] === 'bank' && a.length === 1) l.ex = { kind: 'bank', b: idx(a[0]), n: idx('1') };
-      else if (f[1] === 'bank' && a.length === 3) l.ex = { kind: 'range', b: idx(a[0]), from: idx('(unsigned) (' + a[1] + ')'), to: idx('(unsigned) (' + a[2] + ')') };
-      else if (f[1] === 'banks' && a.length === 2) l.ex = { kind: 'bank', b: idx(a[0]), n: idx(a[1]) };
-      else throw new Error('hub.h:' + l.line + ': ' + r);
-      continue;
-    }
-    const d = r.indexOf('.'), rec = d < 0 ? r : r.slice(0, d), field = d < 0 ? '' : r.slice(d + 1), st = RECS[rec];
-    if (!st) throw new Error('hub.h:' + l.line + ': ' + r);
-    const p = (st + '*') , m = field.match(/^(.*?)\[\*\](.*)$/);
-    if (!field) l.ex = { kind: 'rec', rec, off: idx('0'), size: idx('sizeof (' + st + ')'), stride: idx('1'), count: idx('1') };
-    else if (!m) l.ex = { kind: 'rec', rec, off: idx('offsetof (' + st + ', ' + field + ')'), size: idx('sizeof (((' + p + ') 0)->' + field + ')'),
-      stride: idx('1'), count: idx('1') };
-    else {
-      const el = m[1] + '[0]' + m[2];
-      l.ex = { kind: 'rec', rec, off: idx('offsetof (' + st + ', ' + el + ')'), size: idx('sizeof (((' + p + ') 0)->' + el + ')'),
-        stride: idx('sizeof (((' + p + ') 0)->' + m[1] + '[0])'), count: idx('sizeof (((' + p + ') 0)->' + m[1] + ') / sizeof (((' + p + ') 0)->' + m[1] + '[0])') };
-    }
-  }
-  return { exprs, B };
-}
-
-// The expressions' values, by cc65 (a file of constants: each a .dword in its .s)
+// The values of simple C expressions, by the build's layout of the headers (obj/gen/dq0hub.json: nothing compiled at
+// test time): offsetof (struct S, PATH), sizeof (struct S), a header's name (ITEM_BANK (0) too).  OUT: [value]
 function evaluate(exprs) {
-  const dir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'hubown-'));
-  try {
-    const c = path.join(dir, 'own.c'), s = path.join(dir, 'own.s');
-    fs.writeFileSync(c, '#include <stddef.h>\n#include "hub.h"\n' + exprs.map((e, i) => 'const unsigned long v' + i + ' = (unsigned long) (' + e + ');\n').join(''));
-    const bin = require('../../../base/build.js').tool('cc65');     // (The build's cc65)
-    const home = process.env.CC65_HOME || path.dirname(path.dirname(bin));
-    execFileSync(bin, ['-t', 'none', '--cpu', '65C02', '-I', path.join(ROOT, 'sdk', 'c', 'include'), '-I', path.join(home, 'include'),
-      '-I', DQ0, '-o', s, c], { stdio: ['ignore', 'pipe', 'pipe'] });
-    const v = [], text = fs.readFileSync(s, 'latin1');
-    for (const k of text.matchAll(/^_v(\d+):\s*\.dword\s+\$([0-9a-fA-F]+)/gm)) v[+k[1]] = parseInt(k[2], 16);
-    if (v.length !== exprs.length || v.includes(undefined)) throw new Error('hubown: cc65 gave ' + v.length + ' values of ' + exprs.length);
-    return v;
-  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  const H = hubgen.load();
+  return exprs.map(e => {
+    let m;
+    if ((m = e.match(/^\s*offsetof\s*\(\s*struct\s+(\w+)\s*,\s*([^)]+?)\s*\)\s*$/))) return H.off(m[1], m[2]);
+    if ((m = e.match(/^\s*sizeof\s*\(\s*struct\s+(\w+)\s*\)\s*$/))) return H.size(m[1]);
+    if (H.C[e.trim()] !== undefined) return H.C[e.trim()];
+    throw new Error('hubown.evaluate: ' + e + ' (offsetof, sizeof or a header\'s name)');
+  });
 }
 
 // The map: the table's regions, and each byte of the hub's banks' region.  OUT: { banks, ntasks, taskOff, magic,
 // regions: [{ name, owner, allowed (a mask of roles), known: { role: move }, line }] (regions[0]: none's),
-// at: [Uint16Array(0x2000) a bank: each byte's region] }; kept in obj/hubown.json as the headers stand
+// at: [Uint16Array(0x2000) a bank: each byte's region] }: the build's spans (hubgen.js's), painted line by line
 function map() {
-  const hash = crypto.createHash('sha1');
-  for (const h of HEADERS) hash.update(fs.readFileSync(path.join(DQ0, h)));
-  hash.update(fs.readFileSync(__filename));
-  const key = hash.digest('hex'), cache = path.join(ROOT, 'obj', 'hubown.json');
-  let j = null;
-  try { j = JSON.parse(fs.readFileSync(cache, 'utf8')); if (j.key !== key) j = null; } catch (e) { j = null; }
-  if (!j) {
-    const lines = table(), { exprs, B } = exprsOf(lines), v = evaluate(exprs), V = i => v[i];
-    const c = { banks: V(B['HUB_BANKS']), ntasks: V(B['NTASKS']), taskOff: V(B['offsetof (struct hub, task)']), magic: V(B['HUB_MAGIC']),
-      cache0: V(B['CACHE_BANK (0)']), chunk: V(B['CHUNK_SIZE']), slots: V(B['NCSLOTS']), item0: V(B['ITEM_BANK (0)']),
-      item: V(B['sizeof (struct item)']), items: V(B['NITEMS']) };
-    const BANK = { hub: 0, sight: null, uirec: null, wrec: null };
-    // (Each record's places: [bank, offset] each one; the records in a bank of their own at its start)
-    const places = rec => {
-      if (rec === 'chunk') return Array.from({ length: c.slots }, (_, k) => [c.cache0 + Math.floor(k / 3), (k % 3) * c.chunk]);
-      if (rec === 'item') { const per = Math.floor(0x2000 / c.item); return Array.from({ length: c.items }, (_, i) => [c.item0 + Math.floor(i / per), (i % per) * c.item]); }
-      return [[BANK[rec], 0]];
-    };
-    j = { key, ...c, lines: [] };
-    // (The records' banks: hub.h's, by name)
-    const more = evaluate(['SIGHT_BANK', 'UI_BANK', 'WORLD_BANK']);
-    [BANK.sight, BANK.uirec, BANK.wrec] = more;
-    for (const l of lines) {
-      const x = l.ex, spans = [];                             // ([bank, from, to, element])
-      if (x.kind === 'bank') for (let b = 0; b < V(x.n); b++) spans.push([V(x.b) + b, 0, 0x2000, -1]);
-      else if (x.kind === 'range') spans.push([V(x.b), V(x.from) - 0x8000, V(x.to) - 0x8000, -1]);
-      else for (const [b, o] of places(x.rec)) for (let e = 0; e < V(x.count); e++) {
-        const from = o + V(x.off) + e * V(x.stride);
-        spans.push([b, from, from + V(x.size), V(x.count) > 1 ? e : -1]);
-      }
-      for (const s of spans) if (s[0] < 0 || s[0] >= c.banks || s[1] < 0 || s[2] > 0x2000 || s[1] > s[2]) throw new Error('hub.h:' + l.line + ': ' + l.region + ' outside the hub: bank ' + s[0] + ' $' + s[1].toString(16) + '-$' + s[2].toString(16));
-      j.lines.push({ region: l.region, owner: l.owner, plus: l.plus, known: l.known, line: l.line, spans });
-    }
-    try { const t = cache + '.' + process.pid; fs.writeFileSync(t, JSON.stringify(j)); fs.renameSync(t, cache); } catch (e) { /* (Kept next time) */ }
-  }
+  const j = hubgen.load().own;
   // The regions (an each line's elements apart: each its own owner), painted line by line over those before
   const regions = [{ name: '(no region)', owner: -1, allowed: 0, known: {}, line: 0 }], at = [];
   for (let b = 0; b < j.banks; b++) at.push(new Uint16Array(0x2000));
   for (const l of j.lines) {
     const ids = new Map();
     for (const [b, from, to, e] of l.spans) {
-      const owner = l.owner === 'each' ? (e >= 0 && e < TASKS.length ? e : -1) : TASKS.indexOf(l.owner);
+      const owner = l.owner === 'each' ? (e >= 0 && e < tasks().length ? e : -1) : tasks().indexOf(l.owner);
       const k = l.owner === 'each' ? e : -1;
       if (!ids.has(k)) {
         let allowed = owner >= 0 ? 1 << owner : 0;
-        for (const p of l.plus) allowed |= 1 << TASKS.indexOf(p);
+        for (const p of l.plus) allowed |= 1 << tasks().indexOf(p);
         const known = {};
-        for (const { move, task } of l.known) known[TASKS.indexOf(task)] = move;
+        for (const { move, task } of l.known) known[tasks().indexOf(task)] = move;
         ids.set(k, regions.length);
         regions.push({ name: l.region.replace('[*]', k >= 0 ? '[' + k + ']' : '[*]'), owner, allowed, known, line: l.line });
       }
@@ -218,7 +116,7 @@ function createCheck(M) {
     roles.fill(-1);
     const b = m.sharedBanks()[key0];
     if (!b) return;
-    for (let r = 0; r < M.ntasks && r < TASKS.length; r++) {
+    for (let r = 0; r < M.ntasks && r < tasks().length; r++) {
       const T = b[M.taskOff + r];
       if (T > 0 && T < 16) { roles[T] = r; names[T] = nameOf(T); }
     }
@@ -265,7 +163,7 @@ function createCheck(M) {
   function result() {
     const regions = [...viol.values()].map(e => {
       const g = M.regions[e.r], prog = PROGS[e.role];
-      return { region: g.name, line: g.line, owner: g.owner >= 0 ? TASKS[g.owner] : 'none', writer: TASKS[e.role], count: e.count,
+      return { region: g.name, line: g.line, owner: g.owner >= 0 ? tasks()[g.owner] : 'none', writer: tasks()[e.role], count: e.count,
         pc: where(prog, e.pc), from: where(prog, e.from), at: e.bank + ':$' + (0x8000 + e.off).toString(16).toUpperCase(),
         known: g.known[e.role] || null };
     }).sort((x, y) => x.line - y.line || x.region.localeCompare(y.region, undefined, { numeric: true }) || x.writer.localeCompare(y.writer));
@@ -285,4 +183,4 @@ function judge(res) {
 const line = e => e.region + ' (' + e.owner + '\'s) written by the ' + e.writer + ' ' + e.count + 'x, first at ' + e.pc +
   ' from ' + e.from + ' (' + e.at + ')' + (e.known ? ' [move ' + e.known + ']' : ' [NEW]');
 
-module.exports = { map, createCheck, judge, line, table, evaluate, TASKS, PROGS };
+module.exports = { map, createCheck, judge, line, table, evaluate, get TASKS() { return tasks(); }, PROGS };

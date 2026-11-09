@@ -12,6 +12,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const H = require('../dq0/hubgen.js').load(), C = H.C;   // (The headers' numbers, the build's: ../dq0/hubgen.js)
 
 const WAYS = { s: 0x01, l: 0x02, w: 0x04, a: 0x08, f: 0x20, t: 0x40 };   // dq0d.c's K_SHY, K_LAIR, K_WAYS, K_BOLD, K_LIGHTS, K_SWEEPS
 const K_BONES = 0x10, K_NOSE = 0x80;            //   and K_BONES, K_NOSE (a hunter by smell: its nose 6 or more)
@@ -20,19 +21,19 @@ const HELP = { k: 0x10, r: 0x20, d: 0x40, m: 0x80 };   // Its way with a foe it'
                                                 //   digging (slice 4.11's: dq0d.c's K_DIGS a burrower's claws, K_MINES
                                                 //   a miner's tools)
 const TREC = 64, NOSE_HUNTS = 6;                // (wtrace.c's struct tkind: a kind's traces)
-const STYLES = { b: 0, n: 1, m: 2, x: 3 };      // level.h's ST_*: a bit each
+const STYLES = { b: C.ST_BUILT, n: C.ST_NATURAL, m: C.ST_MINE, x: C.ST_MIXED };   // level.h's ST_*: a bit each
 const MINDS = { m: 0, b: 1, l: 2, a: 3, c: 4 }; // dq0d.c's M_*
-const AT = { h: 0, u: 1, w: 2, i: 3, f: 4 };    // hub.h's AT_*
+const AT = { h: C.AT_HOSTILE, u: C.AT_UNFRIENDLY, w: C.AT_WARY, i: C.AT_INDIFFERENT, f: C.AT_FRIENDLY };   // hub.h's AT_*
 const KREC = 40, FREC = 32, NFACT = 8, NFILE = 16;   // (dq0d.c's: a kind's record, a faction's, a game's factions at
                                                 //   most; the file's: the history's past a stand-in's, 2026-10-29)
 const XREC = 11, DAYS = '-dncw', PASTIMES = 'rdgtskmw', BODIES = ['two', 'four', 'serpent', 'many', 'wings', 'none'], KEEPS = 'bohclH', USES = 'chlvygaskpbreqowitdf';   // (dq0d.c's struct dkx; its KP_*; world.h's U_*)
 const RANKS = { '-': 0, c: 1, l: 2, s: 2 };     // (dq0d.c's RK_*: a kind's rank in its faction, HOUSE.md's morale; a spiritual
                                                 //   leader as a lord)
-const SND_KINDS = 32;                           // (hub.h's: the kinds at most, the first none; the themes' bits)
+const { SND_KINDS } = C;                        // (hub.h's: the kinds at most, the first none; the themes' bits)
 const LANDS = 'mhfscp', CLIMATES = 'ctw';       // lore.h's LA_*, CL_*: a bit each, in order
 const LIGHTS = { '*': 0, d: 1, l: 2 }, NATURES = { a: 0, v: 1, m: 2, f: 3, d: 4 };  // LI_*, NA_*
 const ARMS = ['bite', 'claws', 'sting', 'crush', 'horns', 'talons', 'touch', 'weapon'];  // AR_*: a bit each
-const PURPOSES = ['halls', 'keep', 'temple', 'cellars', 'crypt', 'works'];   // theme.h's P_*
+const PURPOSES = H.words('P_HALLS');           // theme.h's P_*
 const DOMAINS = ['war', 'fire', 'cruelty', 'death', 'undead', 'chaos', 'wealth', 'pleasure', 'bargains', 'beasts',
   'change', 'serpents', 'honour', 'battle', 'protection', 'shadow', 'deceit', 'nightmares', 'thieves', 'healing',
   'harvest', 'mercy', 'courage', 'storms', 'cold', 'knowledge', 'puzzles', 'law', 'dreams', 'magic', 'stars',
@@ -40,7 +41,7 @@ const DOMAINS = ['war', 'fire', 'cruelty', 'death', 'undead', 'chaos', 'wealth',
 const GOOD = ['good', 'neutral', 'evil'], ORDER = ['order', 'balance', 'chaos'];   // TE_*
 const BURIALS = ['none', 'crypt', 'barrow', 'pyre', 'earth'];                       // BU_*
 const LREC = 64;                                // (lore.h's struct people, struct deity)
-const SQ_FT = 5;                                // rs.h's: a square's feet (kinds.txt's distances in feet)
+const { SQ_FT } = C;                            // rs.h's: a square's feet (kinds.txt's distances in feet)
 
 const lines = f => fs.readFileSync(f, 'utf8').split(/\r?\n/).filter(l => l.trim() && !l.startsWith('#'))
   .map(l => l.split('|').map(s => s.trim()));

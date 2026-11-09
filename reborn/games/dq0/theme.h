@@ -41,7 +41,7 @@
 #define _THEME_H
 
 #define THEME_SIZE      0x1000                  /* A theme's bytes in dq0t.dat (its record, then its words) */
-#define THEME_HEAD      1739                    /* (struct theme's: make.js lays it out the same) */
+#define THEME_HEAD      1739                    /* (struct theme's: themec's words after it; make.js's, the build's) */
 #define NTKINDS         8                       /* Its own kinds of things, */
 #define KI_THEME        120                     /*   the catalogue's from here to KI_THEME + NTKINDS - 1 (items.h's
                                                 **   KI_HIGH on after them, 2026-10-27: a theme's kinds held to 127) */
