@@ -208,13 +208,27 @@ unsigned char resolve (void);                   /* The command (cmd) resolved: R
 enum {
     H_NOT_YET,                                  /* (None: "You can't ... in this game yet.", refuse.c's U_YET) */
     H_TAKE, H_DROP, H_HANDLE, H_HIDE, H_EAT,    /* (The things' verbs: hthings.c's things_do) */
+    H_USE, H_PUSH, H_PULL, H_TOUCH, H_TASTE,    /* (The things' verbs to come, the plan's batch B4: each a stub that
+                                                **   says "not yet" till then, 2026-11-09) */
     H_FILL, H_LOOK_IN, H_TIE, H_SHUT, H_HIDDEN, /* (Their timed works: hthings.c's things_work; H_SHUT, H_HIDDEN no
                                                 **   verb's, the door verbs' first and the hide's) */
     H_DOOR, H_CLIMB, H_EXAMINE, H_SEARCH, H_LOOK_WAY,  /* (The features' and the doors': hplaces.c's) */
+    H_KNOCK,                                    /* (B2's, a stub till then) */
     H_GO, H_FACE, H_JUMP,                       /* (Moving: hmove.c's) */
+    H_SWIM, H_FOLLOW,                           /* (B6's, stubs till then) */
     H_FIGHT, H_MISSILE, H_DISENGAGE, H_SWAY, H_GIVE,   /* (The denizens': hdens.c's) */
+    H_CHARGE, H_THROW_WAY, H_ENGAGE, H_SPLIT,   /* (B1's, the fights': stubs till then) */
+    H_SAY,                                      /* (B2's, the noise: a stub till then) */
+    H_WAKE, H_TAUNT, H_ORATE,                   /* (B3's, the minds: stubs till then) */
     H_NOTHING, H_LIMBS, H_FEEL, H_LOOK, H_WAIT, H_STOP, H_TEND, H_DIG, H_INVENTORY, H_SHEET, H_TIME, H_META, H_HELP,
-    H_QUIT                                      /* (The body's, and the meta commands: hself.c's) */
+    H_QUIT,                                     /* (The body's, and the meta commands: hself.c's) */
+    H_STATUS,                                   /* (The character's state told, pace.c's "status": "show status",
+                                                **   "pace" alone, a pace it didn't know) */
+    H_POWERS,                                   /* (Spells, psionics, invocations: refused, true to the character, the
+                                                **   row's request its refusal, A_NO_MAGIC ...) */
+    H_PRETEND,                                  /* (B3's, a stub till then) */
+    H_PRAY, H_FAST,                             /* (B5's, stubs till then) */
+    H_AGAIN                                     /* (B7's, the line: a stub till then) */
 };
 #define H_WORK      H_FILL                      /* (Each group's first) */
 #define H_PLACES    H_DOOR
@@ -284,7 +298,10 @@ void __fastcall__ unknown (unsigned char f);    /* Overlay 24: a command refused
 enum { U_VERB, U_YET, U_CANT, U_NOTE, U_WHAT,   /* (A verb the game doesn't know; one it doesn't do yet, or not to that
                                                 **   yet; one that can't be done to that; nothing written on it; nothing
                                                 **   named, "Take what?") */
-    A_SEE_NO, A_SEE_NONE, A_HAVE_NO, A_CARRY_NONE, A_NO_TAKE, A_UNSEEN, A_UNSEEN_WAY, A_FAR, A_NEARER, A_COUNT };
+    A_SEE_NO, A_SEE_NONE, A_HAVE_NO, A_CARRY_NONE, A_NO_TAKE, A_UNSEEN, A_UNSEEN_WAY, A_FAR, A_NEARER,
+    A_NO_MAGIC, A_NO_PSI, A_NO_GODS, A_NO_GOD,  /* (The powers, H_POWERS's: no spells, no psionics; no invocations of
+                                                **   the character's deity's, its name put in; none, worshipping none) */
+    A_COUNT };
 #define A_LB        0x80                        /* (say_no's a |: added to lb, not said) */
 void __fastcall__ say_no (unsigned char a, const char* w);   /* Overlay 24 (refuse.c's): a refusal said, the one
                                                 **   wording of its meaning (U_*, A_*: "You see no %s here.",

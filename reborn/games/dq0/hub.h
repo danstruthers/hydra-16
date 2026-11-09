@@ -474,6 +474,12 @@ enum {
                                                 **   slice 4.7's): a their family (items.h's FM_*: 0 any), each one
                                                 **   seen within twelve squares walked over to and taken up, into its
                                                 **   carrier (a quiver); E_TASK TE_GATHERED, b how many */
+    I_NOISE,                                    /* A noise made (the plan for the verbs not done yet, 2026-11-09: say,
+                                                **   a knock, a war cry): a its loudness (SOUND.md's: 1 a whisper, 3 a
+                                                **   word said, 6 a yell), b what it is, w1 w2 its square (0: the
+                                                **   character's); heard by its loudness, sleepers woken, others turned
+                                                **   to it.  (The world's to carry out, batch B2's: till then nothing,
+                                                **   its E_READY as any) */
     NINTENTS
 };
 #define AIM_HARD        0x10                    /* (I_ATTACK's b: a throw, thrown hard: twice as far, 10 less) */
@@ -1166,8 +1172,13 @@ enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIE
 ** referee in the UI's slot, lent it while the UI waits): words to sway it (the referee's test, by the kind's mind:
 ** an animal's by P_ANIMALS alone; words want a tongue in common), a request to an ally, a name given to one, a
 ** look at how it seems, a blow (a stand-in for the fights) */
-enum { SW_LOOK, SW_TALK, SW_PERSUADE, SW_DECEIVE, SW_THREATEN, SW_CALM, SW_BEFRIEND, SW_ATTACK, SW_ORDER, SW_NAME,
-       SW_GIVE,                                 /* (SW_GIVE: a gift, slice 4.8's: the thing's worth and food in the
+enum { SW_LOOK, SW_TALK, SW_PERSUADE, SW_DECEIVE, SW_THREATEN, SW_CALM, SW_BEFRIEND,
+       SW_WAKE, SW_TAUNT,                       /* (2026-11-09, the plan for the verbs not done yet, batch B3's: a
+                                                **   sleeper woken, its attitude deciding what follows; one goaded from
+                                                **   its post, a contest of Rhetoric, hostile if it works.  Till then
+                                                **   the denizens' SR_CANT; dq0d.c's cap[] by them) */
+       SW_ATTACK, SW_ORDER, SW_NAME,
+       SW_GIVE,                                /* (SW_GIVE: a gift, slice 4.8's: the thing's worth and food in the
                                                 **   request, the attitude moved by it; taken, the UI's to hand over) */
        SW_BUY, SW_SELL, SW_PRICE, SW_OFFER, SW_HAGGLE,  /* (The market, 2026-11-02: a thing bought from one, sold to
                                                 **   one, its price asked, what it would give, haggled over (order 1:

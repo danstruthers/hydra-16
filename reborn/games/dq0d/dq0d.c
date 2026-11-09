@@ -4087,8 +4087,10 @@ static unsigned char __fastcall__ leads2 (unsigned char k)
 ** swaying goes (a critical success two steps, a success one, a critical failure a step back: a lie found out two, a
 ** threat laughed at hostile) */
 static const signed char att_steps[AT_ALLIED + 1] = { -3, -2, -1, 0, 1, 2 };
-static const unsigned char cap[SW_BEFRIEND + 1] = {
-    0, AT_FRIENDLY, AT_ALLIED, AT_FRIENDLY, AT_WARY, AT_INDIFFERENT, AT_ALLIED
+static const unsigned char cap[SW_TAUNT + 1] = {
+    0, AT_FRIENDLY, AT_ALLIED, AT_FRIENDLY, AT_WARY, AT_INDIFFERENT, AT_ALLIED,
+    0, 0                                        /* (SW_WAKE, SW_TAUNT: not swayed so yet, s_sway's SR_CANT: batch B3's
+                                                **   to set, 2026-11-09) */
 };
 
 static void __fastcall__ influence (unsigned char k)
@@ -4272,6 +4274,10 @@ void s_sway (void)
             break;
         case SW_ORDER:
             order (k);
+            break;
+        case SW_WAKE:                           /* (A sleeper woken, one goaded: the plan's batch B3's, 2026-11-09; */
+        case SW_TAUNT:                          /*   till then it can't) */
+            sw.result = SR_CANT;
             break;
         default:
             if (sw.kind >= SW_GIVE) {

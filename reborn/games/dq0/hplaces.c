@@ -97,12 +97,21 @@ static void do_examine (void)
     }
 }
 
-/* The features' and the doors' commands, by their handler's number (H_DOOR ... H_LOOK_WAY; its takes times 256) */
+/* H_KNOCK (the plan's batch B2, a stub till then): a knock on a door, heard beyond it; on a wall, a hollow sought */
+static void do_knock (void)
+{
+    unknown (U_YET);
+}
+
+/* The features' and the doors' commands, by their handler's number (H_DOOR ... H_KNOCK; its takes times 256) */
 void __fastcall__ s_places_do (unsigned h)
 {
     unsigned char pa;
 
     switch ((unsigned char) h) {
+    case H_KNOCK:
+        do_knock ();
+        break;
     case H_DOOR:
         do_door (h >> 8);
         break;

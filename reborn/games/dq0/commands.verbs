@@ -151,14 +151,11 @@ engage      thing=VB_ENGAGE unsaid=target
 disengage   alone=VB_DISENGAGE way=VB_DISENGAGE
 pray        alone=VB_PRAY thing=VB_PRAY_FOR task=LT_WAIT
 charge      alone=VB_CHARGE
-activate    thing=VB_ACTIVATE unsaid=none
 dispel      thing=VB_DISPEL unsaid=none
 release     thing=VB_RELEASE_PRINCIPLE unsaid=none
 memorize    thing=VB_MEMORIZE unsaid=none
 possess     thing=VB_POSSESS unsaid=none
-sincerity   thing=VB_JUDGE_SINCERITY unsaid=none                     # ("sense a lie from the goblin": judge's till 2026-10-22)
 taunt       thing=VB_TAUNT unsaid=none
-negotiate   alone=VB_NEGOTIATE thing=VB_NEGOTIATE
 untarget    alone=VB_TARGET_CLEAR
 pace        alone=VB_PACE_SHOW thing=VB_SET_PACE
 double      alone=VB_SET_PACE
@@ -204,7 +201,7 @@ back off = disengage
 break off = disengage
 pass the time = wait
 call on = intervene
-sense a lie = sincerity
+sense a lie = examine
 mental bolt = talent
 turn on = light
 turn off = douse
@@ -569,14 +566,14 @@ retreat = disengage
 pass = pass
 pray = pray
 charge = charge
-activate = activate
+activate = use
 dispel = dispel
 release = release
 memorize = memorize
 possess = possess
 judge = judge
 taunt = taunt
-negotiate = negotiate
+negotiate = persuade
 facing = face
 untarget = untarget
 pace = pace

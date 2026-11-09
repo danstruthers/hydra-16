@@ -6045,7 +6045,31 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0alias', what: 'Dingus Quest Zero\'s shortcuts (the user, 2026-10-22: "alias should be for shortcuts, and name for naming things"; alias.c): none made, and the game\'s own words listed; one made ("alias st is status"), used, shown; its replacement asked about (no: kept; yes: replaced); a command\'s word refused ("alias look is ..."), "alias the sword as Linda" sent to name; a game\'s own word made the player\'s ("peer"), then removed, the game\'s own left (can\'t be removed); a shortcut of a shortcut given its line; one of several commands ("status; i"), the words typed after one put after its line; them all listed; the game kept and carried on, the shortcuts with it; one forgotten ("forget alias st")',
+      name: 'dq0notyet', what: 'Dingus Quest Zero\'s verbs not done yet, the shared groundwork (2026-11-09, the plan for them, its batch B0: DECISIONS.md\'s "The verbs not done yet: the rows, the aliases and the powers\' refusals"): the powers refused, true to the character, from the rows (a spell: "You\'ve no magic: you never studied the convocations."; a talent: "You reach for it; nothing stirs."; an invocation, one learnt: "You know no invocations of Peoni\'s.", the character\'s deity the referee\'s, RS_DESCRIBE\'s RD_DEITY, its file\'s att dty 6); the aliases (activate, use\'s: the puzzle\'s words for a use with nothing to use it on; negotiate, persuade\'s; sense a lie, examine\'s); "status" (pace.c\'s, before the table) and "pace" alone (the table\'s H_STATUS, the same words); "sneak north" a creep, then the move (not the pace alone, as it was)',
+      init: 't_rc', cycles: 1000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att dty 6 >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'cast light', 'memorize the light spell', 'telepathy', 'invoke divination', 'learn divination',
+        'activate the torch', 'negotiate with the rat', 'sense a lie from the rat', 'status', 'pace', 'sneak north', 'status', 'quit',
+        'hmchar -q -s 5 -u feudal -c hunter -o /ram/d.hm', 'echo att dty 10 >> /ram/d.hm', 'dq0 -p t -s 3 -c /ram/d.hm -T', 'invoke divination', 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = dq0Story(out), f = [];
+        inTurn(o, ['> cast light You\'ve no magic: you never studied the convocations.',
+          '> memorize the light spell You\'ve no magic: you never studied the convocations.', '> telepathy You reach for it; nothing stirs.',
+          '> invoke divination You know no invocations of Peoni\'s.', '> learn divination You know no invocations of Peoni\'s.',
+          '> activate the torch Use what, and on what?', '> negotiate with the rat', '> sense a lie from the rat The giant rat seems', '> status Pace: a walk',
+          'Watching: nothing in particular.', '> pace Pace: a walk', 'Watching: nothing in particular.', '> sneak north Pace: a creep',
+          'You set off north.', '> status Pace: a creep', '> invoke divination You know no invocations.', '% echo $status'], f);
+        if (/in this game yet/.test(o)) f.push('a "not yet" said: ' + (o.match(/> [^>]*in this game yet/) || [''])[0]);
+        const neg = o.slice(o.indexOf('> negotiate with the rat'), o.indexOf('> sense a lie'));
+        if (!/words won't reach it/.test(neg)) f.push('negotiate not a persuasion (the sway\'s words for an animal): ' + neg);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0alias', what:'Dingus Quest Zero\'s shortcuts (the user, 2026-10-22: "alias should be for shortcuts, and name for naming things"; alias.c): none made, and the game\'s own words listed; one made ("alias st is status"), used, shown; its replacement asked about (no: kept; yes: replaced); a command\'s word refused ("alias look is ..."), "alias the sword as Linda" sent to name; a game\'s own word made the player\'s ("peer"), then removed, the game\'s own left (can\'t be removed); a shortcut of a shortcut given its line; one of several commands ("status; i"), the words typed after one put after its line; them all listed; the game kept and carried on, the shortcuts with it; one forgotten ("forget alias st")',
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept',
         'alias', 'alias st is status', 'st', 'alias st', 'alias st is i', 'no', 'st', 'alias look is status', 'alias the sword as Linda',

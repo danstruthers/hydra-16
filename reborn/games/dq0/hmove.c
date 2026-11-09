@@ -57,10 +57,28 @@ static void do_go (void)
     }
 }
 
-/* Moving, by its handler's number (H_GO ... H_JUMP) */
+/* H_SWIM (the plan's batch B6, a stub till then): swum a way in deep water, treading water, a dive */
+static void do_swim (void)
+{
+    unknown (U_YET);
+}
+
+/* H_FOLLOW (B6's, a stub till then): a denizen seen trailed, a walk re-aimed each round */
+static void do_follow (void)
+{
+    unknown (U_YET);
+}
+
+/* Moving, by its handler's number (H_GO ... H_FOLLOW) */
 void __fastcall__ s_moving_do (unsigned h)
 {
     switch ((unsigned char) h) {
+    case H_SWIM:
+        do_swim ();
+        break;
+    case H_FOLLOW:
+        do_follow ();
+        break;
     case H_GO:
         do_go ();
         break;

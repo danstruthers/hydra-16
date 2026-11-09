@@ -95,10 +95,55 @@ static void do_drop (void)
     }
 }
 
-/* The things' verbs, by their handler's number (H_TAKE ... H_EAT) */
+/* H_USE (the plan's batch B4, a stub till then): a thing used by its kind, after the puzzle's (theme.c's); "activate" */
+static void do_use (void)
+{
+    unknown (U_YET);
+}
+
+/* H_PUSH (B4's, a stub till then): a thing shoved a square, a door pushed open, a portcullis raised */
+static void do_push (void)
+{
+    unknown (U_YET);
+}
+
+/* H_PULL (B4's, a stub till then): a thing dragged a square, a door pulled shut, a bar lifted, a grapple shaken loose */
+static void do_pull (void)
+{
+    unknown (U_YET);
+}
+
+/* H_TOUCH (B4's, a stub till then): a thing examined by touch, in the dark too */
+static void do_touch (void)
+{
+    unknown (U_YET);
+}
+
+/* H_TASTE (B4's, a stub till then): a sip, a lore test naming a vial; food and water fresh or not */
+static void do_taste (void)
+{
+    unknown (U_YET);
+}
+
+/* The things' verbs, by their handler's number (H_TAKE ... H_TASTE) */
 void __fastcall__ s_things_do (unsigned h)
 {
     switch ((unsigned char) h) {
+    case H_USE:
+        do_use ();
+        break;
+    case H_PUSH:
+        do_push ();
+        break;
+    case H_PULL:
+        do_pull ();
+        break;
+    case H_TOUCH:
+        do_touch ();
+        break;
+    case H_TASTE:
+        do_taste ();
+        break;
     case H_TAKE:
         do_take ();
         break;

@@ -109,6 +109,8 @@ I_RISE:den      < I_DEN; w1 pos
 I_TRAVEL        b place; w1 x; w2 y; x[0] w; x[1] h; x[2] sn       # (The name's entry, TRV_IN, TRV_KIND | a room's kind)
 I_LOAD          -
 I_GATHER        a family                                # (FM_*: 0 any)
+I_NOISE         a loud; b what; w1 x; w2 y              # (A noise made: its loudness (1 a whisper, 3 a word, 6 a yell),
+                                                        #   what it is (the batch's to name), its square, 0 the character's)
 
 # ---- The events (E_*: the world's, what's happened; to the UI's ring (the hub's eq) and the denizens' (dq: E_DEN,
 # E_FIGHT, the limbs' E_BEAT); who 0 the character's).  A kind of many meanings has a form for each, chosen by a field's
@@ -247,7 +249,8 @@ RS_INITIATIVE   -
 RS_MORALE       a why@MR_NONE; b field; c bonds; steps; w1 fallen; w2(leaders) band:0-7 faction:8-15
                 -> result state@M_STEADY; grade
 RS_EXPERIENCE   -
-RS_DESCRIBE     a brief; b what                         # (0 its sheet, 1 brief, 2 its wounds, 3 its state, 4 time's news)
+RS_DESCRIBE     a brief; b what                         # (0 its sheet, 1 brief, 2 its wounds, 3 its state, 4 time's news,
+                                                        #   5 its deity's name: RD_DEITY)
 RS_POWER        -
 RS_EXPORT       -
 RS_IMPORT       -

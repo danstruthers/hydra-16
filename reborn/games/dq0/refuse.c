@@ -32,7 +32,12 @@ static const char* const said[A_COUNT] = {
     "\nYou haven't seen %s here.",              /* A_UNSEEN  (a, an put in: a door, a way, a thing to go to) */
     "\nYou haven't seen %s that way.",          /* A_UNSEEN_WAY */
     "\n%s is out of reach: go up to it first.", /* A_FAR     (the put in, a name not capitalised: "The giant rat") */
-    "\nYou can't get near enough to %s."        /* A_NEARER  walked toward, and stopped short */
+    "\nYou can't get near enough to %s.",       /* A_NEARER  walked toward, and stopped short */
+    "\nYou've no magic: you never studied the convocations.",  /* A_NO_MAGIC  a spell (the powers: H_POWERS's) */
+    "\nYou reach for it; nothing stirs.",       /* A_NO_PSI  a talent, psionics */
+    "\nYou know no invocations of %s's.",       /* A_NO_GODS an invocation, a ritual, a god called on: the character's
+                                                **   deity's name put in */
+    "\nYou know no invocations."                /*   worshipping none (no name to put in) */
 };
 
 /* Refusal a (U_*, A_*) said, w its thing's name put in (0: "it"); | A_LB, added to lb, not said (the sway's words, a
@@ -49,7 +54,7 @@ void __fastcall__ o_say_no (unsigned char a, const char* w)
     if (!w) {
         w = "it";
     }
-    if ((a == A_SEE_NO || a == A_HAVE_NO) && (!*w || *w == '#')) {
+    if ((a == A_SEE_NO || a == A_HAVE_NO || a == A_NO_GODS) && (!*w || *w == '#')) {
         ++a;                                    /* (No name to say: the form without one) */
     }
     t[0] = 0;

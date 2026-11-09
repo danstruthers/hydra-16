@@ -92,7 +92,12 @@ enum {
                                                 **   its dice the referee's own, apart from its other tests', so they
                                                 **   roll as they did; one whose species knows north (its summary's
                                                 **   northsense) isn't asked, and never fails */
-    P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
+    P_ACT,                                      /* Acting: dead or asleep feigned, a contest against each that senses
+                                                **   it (the plan for the verbs not done yet, 2026-11-09: pretend) */
+    P_ORATE,                                    /* Oratory: a speech to all in earshot (orate) */
+    P_RITUAL,                                   /* The character's own deity's Ritual: a prayer (HarnMaster's the
+                                                **   deity's own skill; none worshipped, the referee's to refuse) */
+    P_THEME,                                   /* A theme's own, P_THEME + n (named in its data) */
 };
 #define P_READ          P_LORE                  /* A writing read (the plan for the game between dungeons, its step 9):
                                                 **   P_LORE with words, its text "TONGUE *SCRIPT" (the theme's people's:
@@ -444,8 +449,9 @@ enum {
     RS_DESCRIBE,                                /* An actor's sheet, wounds, or a line -> words (b 3: its state, the
                                                 **   hub's pace and watchfulness its first lines; a 1, those only; b 4,
                                                 **   what time did to its body since it was last told: RS_TIME's news,
-                                                **   slice 4.3's) */
-    RS_POWER,                                   /* (Later: spells and psionics, a generic power) */
+                                                **   slice 4.3's; b RD_DEITY, the deity it worships, its name: "" none,
+                                                **   2026-11-09) */
+    RS_POWER,                                  /* (Later: spells and psionics, a generic power) */
     RS_EXPORT,                                  /* The character as a neutral one (struct rs_neutral) */
     RS_IMPORT,                                  /* A neutral character made one of this ruleset's */
     RS_SAVE, RS_RESTORE, RS_QUIT,
@@ -473,6 +479,7 @@ enum {
                                                 **   names, the highest first (each its section's: weapons, tools);
                                                 **   result 0, or 0xFF none (the kit as it was) */
 };
+#define RD_DEITY        5                       /* (RS_DESCRIBE's b: the deity the character worships, its name) */
 enum { OT_FEUDAL, OT_IMPERIAL, OT_VIKING, OT_TRIBAL, OT_SINDARIN, OT_KHUZAN, OT_SLAVE, OT_SERF, OT_UNGUILDED,
     OT_GUILDED, OT_NOBLE, OT_POOR, OT_AVERAGE, OT_RICH, OT_FEMALE, OT_MALE };    /* (RS_OUTFIT's tags: outfits.txt's,
                                                 **   outfits.js's TAGS, in order) */

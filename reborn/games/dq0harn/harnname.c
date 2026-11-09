@@ -14,5 +14,6 @@
 #define harn_sex_name       s_harn_sex_name
 #define harn_month_name     s_harn_month_name
 #define harn_sunsign_name   s_harn_sunsign_name
+#define harn_deity_name     s_harn_deity_name
 
 #include "../../sdk/c/lib/harnname.c"

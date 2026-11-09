@@ -64,10 +64,82 @@ static void do_fight (void)
     }
 }
 
-/* The denizens' commands, by their handler's number (H_FIGHT ... H_GIVE) */
+/* H_CHARGE (the plan's batch B1, the fights', a stub till then): a run at the nearest hostile ahead, a war cry, a blow */
+static void do_charge (void)
+{
+    unknown (U_YET);
+}
+
+/* H_THROW_WAY (B1's, a stub till then): a thing thrown a way, its mark squares along the line */
+static void do_throw_way (void)
+{
+    unknown (U_YET);
+}
+
+/* H_ENGAGE (B1's, a stub till then): closed with a denizen, into its zone, no blow */
+static void do_engage (void)
+{
+    unknown (U_YET);
+}
+
+/* H_SPLIT (B1's, a stub till then): two foes attacked in turn */
+static void do_split (void)
+{
+    unknown (U_YET);
+}
+
+/* H_SAY (the plan's batch B2, the noise's, a stub till then): words said aloud, heard by their loudness (I_NOISE) */
+static void do_say (void)
+{
+    unknown (U_YET);
+}
+
+/* H_WAKE (the plan's batch B3, the minds', a stub till then): oneself woken; a sleeper woken (SW_WAKE) */
+static void do_wake (void)
+{
+    unknown (U_YET);
+}
+
+/* H_TAUNT (B3's, a stub till then): a denizen goaded from its post (SW_TAUNT, P_PERSUADE's contest) */
+static void do_taunt (void)
+{
+    unknown (U_YET);
+}
+
+/* H_ORATE (B3's, a stub till then): a speech to all in earshot (P_ORATE) */
+static void do_orate (void)
+{
+    unknown (U_YET);
+}
+
+/* The denizens' commands, by their handler's number (H_FIGHT ... H_ORATE) */
 void __fastcall__ s_dens_do (unsigned h)
 {
     switch ((unsigned char) h) {
+    case H_CHARGE:
+        do_charge ();
+        break;
+    case H_THROW_WAY:
+        do_throw_way ();
+        break;
+    case H_ENGAGE:
+        do_engage ();
+        break;
+    case H_SPLIT:
+        do_split ();
+        break;
+    case H_SAY:
+        do_say ();
+        break;
+    case H_WAKE:
+        do_wake ();
+        break;
+    case H_TAUNT:
+        do_taunt ();
+        break;
+    case H_ORATE:
+        do_orate ();
+        break;
     case H_FIGHT:
         do_fight ();
         break;

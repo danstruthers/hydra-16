@@ -967,6 +967,8 @@ static void __fastcall__ answer (struct req* r)
         } else if (RS_DESCRIBE_WHAT (*r) == 3) {
             status ();
             state (RS_DESCRIBE_BRIEF (*r));
+        } else if (RS_DESCRIBE_WHAT (*r) == RD_DEITY) {
+            *tp = 0;                            /* (Its deity: none, the null's) */
         } else {
             put (name);
             put (", ");

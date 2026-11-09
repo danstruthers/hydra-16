@@ -314,6 +314,10 @@ static const unsigned char purpose[P_THEME] = {
                                                                         **   first, overlay 3's draw_test) */
     HARN_AWA,                                                           /* Bearings: Awareness, or Mining if
                                                                         **   higher (bearing.c's) */
+    HARN_ACT,                                                           /* Feigning: Acting */
+    HARN_ORA,                                                           /* A speech: Oratory */
+    HARN_RAGR,                                                          /* A prayer: the deity's own Ritual
+                                                                        **   (test's: Agrik's the first) */
 };
 
 /* The referee's own skill (harn.h's a program's own, after the book's: its file's "ml 91 N" line): Drawing's
@@ -395,6 +399,14 @@ static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char
     }
     if (p == P_RISE) {
         return rise_of (c);                     /* (Getting up: the house's test, if any, gear.c's) */
+    }
+    if (p == P_RITUAL) {                        /* (A prayer: its deity's Ritual, Agrik's ... Siem's in harn.h's order;
+                                                **   none worshipped, a critical failure: the UI's to ask first, its
+                                                **   RD_DEITY) */
+        if (c->att[HARN_DTY] >= HARN_NODEITY) {
+            return G_CF;
+        }
+        return test_sk (c, HARN_RAGR + c->att[HARN_DTY], steps);
     }
     return test_sk (c, purpose[p], steps);
 }
@@ -1048,6 +1060,11 @@ parted:
         } else if (RS_DESCRIBE_WHAT (*r) == 4) {
             put (news);                         /* (What time did to it: heal.c's, told once) */
             news[0] = 0;
+        } else if (RS_DESCRIBE_WHAT (*r) == RD_DEITY) {
+            *tp = 0;                            /* (None worshipped: "") */
+            if (pc.att[HARN_DTY] < HARN_NODEITY) {
+                put (harn_deity_name (pc.att[HARN_DTY]));   /* (Its deity's name: part 2's, harnname.c) */
+            }
         } else {
             age_get ();                         /* (Its age: part 3's, the life's record) */
             sheet ();

@@ -16,12 +16,72 @@
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
 
-/* The body's and the meta commands, by their handler's number (H_NOTHING ... H_QUIT) */
+/* H_POWERS: a spell, a talent, an invocation: refused, true to the character (2026-11-09, the user's: the refusal the
+** row's request, A_NO_MAGIC, A_NO_PSI, A_NO_GODS: actions.c's); an invocation's names the character's deity (the
+** referee's, RS_DESCRIBE's RD_DEITY: "" none, its form without a name) */
+static void powers (void)
+{
+    struct req* r;
+
+    lb[0] = 0;
+    if (cmd.aux == A_NO_GODS) {
+        r = ask_b (RS_DESCRIBE, 0, RD_DEITY);
+        strcpy (lb, r->text);
+        r->state = REQ_FREE;
+    }
+    say_no (cmd.aux, lb);
+}
+
+/* H_PRETEND (the plan's batch B3, the minds', a stub till then): dead or asleep feigned, an Acting contest (P_ACT) */
+static void do_pretend (void)
+{
+    unknown (U_YET);
+}
+
+/* H_PRAY (the plan's batch B5, a stub till then): an hour's prayer to the character's deity, a Ritual test (P_RITUAL) */
+static void do_pray (void)
+{
+    unknown (U_YET);
+}
+
+/* H_FAST (B5's, a stub till then): a vow of fasting, eating refused for a day or till "stop" */
+static void do_fast (void)
+{
+    unknown (U_YET);
+}
+
+/* H_AGAIN (the plan's batch B7, the line's, a stub till then): the last line again ("again", "g") */
+static void do_again (void)
+{
+    unknown (U_YET);
+}
+
+/* The body's and the meta commands, by their handler's number (H_NOTHING ... H_AGAIN) */
 void __fastcall__ s_self_do (unsigned h)
 {
     unsigned char d;
 
     switch ((unsigned char) h) {
+    case H_STATUS:                              /* (The character's state: pace.c's "status", described (0); the line in
+                                                **   the main RAM, this part's own gone as part 4 comes in) */
+        strcpy (lb, "status");
+        pace_cmd (lb);
+        break;
+    case H_POWERS:
+        powers ();
+        break;
+    case H_PRETEND:
+        do_pretend ();
+        break;
+    case H_PRAY:
+        do_pray ();
+        break;
+    case H_FAST:
+        do_fast ();
+        break;
+    case H_AGAIN:
+        do_again ();
+        break;
     case H_LIMBS:                               /* (The hands' and limbs': part 11's, slice 4.1b's; the body's position,
                                                 **   slice 4.6's) */
         limbs_cmd ();

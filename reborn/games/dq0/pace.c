@@ -243,7 +243,9 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
         return 0;
     }
     k = (cmd.action == VB_MOVE_DIRECTION || cmd.action == VB_MOVE_TOWARD || cmd.action == VB_ENTER ||
-        cmd.action == VB_APPROACH_OBJECT) && (cmd.dir != 0xFF || cmd.obj.kind || cmd.how);   /* ("walk to the pot") */
+        cmd.action == VB_APPROACH_OBJECT || cmd.action == VB_SNEAK) && (cmd.dir != 0xFF || cmd.obj.kind || cmd.how);
+                                                /* ("walk to the pot"; "sneak north", the pace a creep, then the move:
+                                                **   the command's, H_GO's, 2026-11-09) */
     st = st && (!k || n || g != HUB->gait || wa != HUB->watch);    /* (Said, unless it goes on as it was) */
     mw = HUB->pc_map;
     if (g != 0xFF || wa != HUB->watch) {
