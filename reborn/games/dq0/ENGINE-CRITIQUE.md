@@ -224,6 +224,23 @@ it. With the command critique's model (actions, handles, outcome classes), an in
 The per-feature I_/E_/PO_/D_/WB_ families collapse into the action catalogue plus a shared outcome vocabulary
 (done, refused (reason), partial, interrupted, found, broke …), with a small payload for the numbers. §3 goes further.
 
+**Step 3, stage 2, as planned (2026-11-09): typed message payloads.** Every intent and event travels in one untyped
+`struct msg { kind, who, a, b, w1, w2, t, x[4] }`, and what each field means for each kind lives only in hub.h's
+comments, often packed (I_WAIT's w2: "1 quietly | the long task's kind × 256 | the thing's kind × 2"). Stage 2 states
+each kind's fields once and generates the rest, without changing the layout (the images stay byte-identical):
+
+- **One declaration file** (games/dq0/msgs.def, read by stage 1's generator): a line a kind, naming its fields and
+  where each sits in struct msg, packed bits as bit ranges. For example
+  `I_WAIT  w1 tenths; a min:WA_MIN sleep:WA_SLEEP; w2 quiet:0 what:1-7 task:8-15`.
+- **Generated for C:** an accessor a field (`I_WAIT_TASK (m)`) and a builder a kind (`I_WAIT_SET (m, tenths, quiet,
+  what, task)`), plain macros over the struct, so the code costs nothing more than today's hand-packed shifts.
+- **Generated for JS:** a decoder a kind, for the tests' recorder and dq0meaning.js, so a test reads `e.task`, not
+  `e.w2 >> 8`.
+- **Order:** the intents (I_*, 33 kinds) first: each sender and receiver switched to the accessors, the suite after
+  each family; then the events (E_*, 23); then the referee's requests (struct req's RS_*, its packed x[]).
+- **What it doesn't do yet:** shrink the vocabulary (stage 3, the critique's actions and outcomes); that's easier once
+  every field is declared, as which kinds differ only by name becomes plain in the declaration file.
+
 ---
 
 ## 3. Every feature is written in five places
