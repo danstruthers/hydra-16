@@ -737,7 +737,7 @@ A survey of the dispatch after §5.1 (every verb, where it's handled, what it as
 | I | **One reach:** take's own walk, `go_thing`'s and `place_go`'s made `reach_go`'s. *Done 2026-11-07:* `reach_go` is the one walk over, by `walk_a` (I_TAKE's a): 1, the command kept and carried out again (every verb, and `door_go`'s I_GOTO); 0, take's (the world takes the thing up as it gets there, E_TAKEN); 2, a "go to" (way.c's `go_thing`: walked on as it gets nearer, nothing after). Take's own message and way.c's own I_TAKE are gone. Kept apart on purpose: a denizen's approach (I_CLOSE, `go_thing`'s and a blow's: up to it as it moves, the fight's), and `place_go` (a place in the room, not a thing: its own words, "You set off across the room.", and nothing after) | the walk-overs |
 | J | **One path for features:** find, walk up, face (one turn: the intent), first words, act; way.c, `s_lift`, the errand's door through it. *Done 2026-11-07, test dq0features:* main.c's `feature` (part 13, `s_door_go`'s place) finds (choose.c's `pick`), walks up if it's out of reach (one test, by what the last step needs: the world's door work reaching, the default; beside it, `FG_NEAR`, for a close look the UI makes itself; never, `FG_FAR`), takes a blow's thing in hand, faces (the intent, `intend2 (I_TURN)`; not for a move, `FG_GO`, which turns as it goes) and says the first words; each command its own last step. Used by the portal path (door verbs, windows climbed through, check for traps, search, attack, climb), the move to or through a door or a passage, leave, way.c's close look (`inspect`) and look, listen and sniff one way (`s_look_way`), and `s_lift` (its door found by the part's square, then faced through it). way.c's own turn (`turn_to`, a bare hub_send) and `inspect`'s own reach test are gone. The errand's door (errand.c) and the blow's "is there a door" (choose.c's `s_wield`) only find: the character doesn't act on it; a look at stairs (way.c's `opened`) only finds, as before (the words say where they lie) | the copies of the door path |
 | K | **Refusals as data:** one table of answers with the thing's name put in ("You see no %s here.", out of reach, "<verb> what?"), refuse.c's rows its first part. *Done 2026-11-07:* refuse.c's `said[]` (overlay 24 now, overlay 1's room) is the one table, U_* then A_* (dq0.h): the line's refusals, "You see no %s here.", "You have no %s." (each with a nameless form, said when there's no name to put in), "There's nothing here to take.", "You haven't seen a(n) %s here." / "that way.", "%s is out of reach: go up to it first.", "You can't get near enough to %s.", and "%s what?" from the line; said by `say_no (a, w)` (or `unknown (U_*)` from the line), or added to lb (A_LB: the sway's words, a blow's note). Thirty-five sites in fourteen files call it in place; five wordings of out of reach became two (reach, and getting near); "You see none of those here." and "You carry none of those." name the thing now; "Take what?", "Put down what?", "Read what?", "Copy what?", "Name what?" are the line's verb with "what?", as "Drop what? [...]" was already. Left as they are: the questions with a hint or another shape ("Throw it at what? ...", "Give it to whom?", "Fetch what?", "Name it what?", "Use what, and on what? ...", "Combine what with what? ..."), the "Which one?" headings (a question's start, its choices after), talking range ("... is too far off to hear you."), and §4.5's per-action rows (the U_* rows of refuse.c's rules[] are what there is of them) | the same refusal worded many ways |
-| L | **The dispatch table:** verb → handler by meaning, with the kinds of thing each takes; the chain by size (`chores`, `more`, `rarer`) retired | the split by size; the unreachable cases |
+| L | **The dispatch table:** verb → handler by meaning, with the kinds of thing each takes; the chain by size (`chores`, `more`, `rarer`) retired. *Stage 1 done 2026-11-08* (below): the table, one dispatcher, today's cases its handlers unchanged; stages 2 (refuse.c's rows into it) and 3 (the handlers into files by meaning) to come | the split by size; the unreachable cases |
 
 **Step L, the dispatch table, as planned (2026-11-07).** After H to K, each verb is one handler and the per-class
 paths are shared. L then replaces the chain cut by size with one table read by meaning:
@@ -757,6 +757,50 @@ paths are shared. L then replaces the chain cut by size with one table read by m
 - **Order:** first the table and dispatcher calling today's cases unchanged (the switch's cases made functions); then
   refuse.c's rows into the table; then the cases moved into files by meaning, one group at a time, the suite after
   each.
+
+**Step L, stage 1, as built (2026-11-08).** The table and one dispatcher, today's cases its handlers, nothing a player
+sees changed (the whole suite):
+
+- **The table** is actions.c's `rows[]` (overlay 11, beside the resolver: 738 bytes left there), a row a verb in
+  actions.h's order, 142 rows of four bytes: the handler (`H_*`, dq0.h), the kinds of thing it takes (`TK_*`), and two
+  bytes kept for the later stages, its refusals (stage 2) and its request (stage 3). Each row is written
+  `ROW (VB_*, H_*, TK_*)`; games/dq0/make.js holds the rows to actions.h's order (the build stops if they differ, as
+  dq0c's make.js holds actions.h to the catalogue). `verb_row (a)` (an overlay stub) reads one: the handler, and the
+  takes times 256.
+- **The dispatcher** is the end of `s_command` (part 2): after the resolver, refuse.c and the puzzle, the row read and
+  a switch on its handler number. Part 2's handlers are called straight; overlay 16's through one stub, `run16 (h)`
+  (words.c's, `more` till now); part 24's through one, `run24 (h)` (main.c's, `rarer` till now). Each of those two
+  switches on the handler number, not the verb. No table of addresses: a stub a handler would cost the main RAM 6
+  or 11 bytes each (some 35 handlers), and a switch on ~25 numbers costs the answer nothing that shows.
+- **The handlers:** part 2's are s_command's cases and chores', made functions where they're more than a call
+  (`do_go`, `do_climb`, `do_face`, `do_door`, `do_examine`, `do_take`, `do_drop`, `do_missile`, `do_inventory`,
+  `do_fight`, `do_feel`; and `do_portal`, the door's work that five of them end in, the old `portal:` label, and
+  `do_put`, the old `put:`), the one-call ones left as a line of the switch (look one way, wait, stop, help ...).
+  Overlay 16's: the time, fill, look in, tie (falling into the shut as before), eat and drink, tend, and two with no
+  verb of their own, `H_SHUT` (a thing that closes, first for the door verbs whose row has `TK_CLOSER`: open, close,
+  unlock, lock, force) and `H_HIDDEN` (a hide begun, the hide's own). Part 24's: dig, jump and climb (one body, as
+  before), the sway verbs, give and trade.
+- **`chores` is gone**, its cases part 2's handlers. **`more` and `rarer` dispatch nothing now**: called only for
+  their own handlers' numbers, by the table, so which function sees a verb is its row's, not the order they were
+  tried in. 50 verbs' rows say `H_NOT_YET` ("You can't ... in this game yet."): the survey's 42, and 8 seen to before
+  the table (the pace's step, set pace and pace; the target's three, resolve.c's; use, read and combine, the puzzle's),
+  as noted in their rows.
+- **Unreachable cases dropped:** chores' `VB_OBSERVE_OBJECT` (s_command's examine case took it first); more's open,
+  close, unlock, force and lock as verbs (s_command's door case took them; their work is `H_SHUT`, which the door
+  handler calls as before) and its `VB_HIDE` (s_command's hide took it; its work is `H_HIDDEN`); rarer's `VB_CLIMB` as
+  a verb (s_command's climb took it; its work is part 24's `H_CLIMB`).
+- **Room:** the main RAM 2,133 bytes free to 2,122 (the one new stub, `verb_row`; `more` and `rarer` became `run16`
+  and `run24`). Part 2 905 to 1,059 (the switch on ~25 handler numbers, not ~70 verbs, and chores' gone); part 24 3,238
+  to 3,342; overlay 11 1,367 to 738 (the table); overlay 16 146 to 184.
+- **What stage 2 needs:** refuse.c's `rules[]` folded into the rows' third byte (a word's refusal, a kind's: `U_*`, four
+  bits each) and the takes byte (the kinds a verb does, its `masks[]` index, three bits, beside `TK_CLOSER`), and
+  `refused ()` asked from the row (`verb_row` giving all four bytes, or refused's test moved to overlay 11, the row at
+  hand). `W_CLIMB`'s and `W_PART`'s exceptions are bits of the takes too.
+- **What stage 3 needs:** the handlers moved into files by meaning (the things', the features', moving, the denizens',
+  the body's, the meta commands). A handler moved is its pragma and its number's place: `run16` and `run24` are each a
+  bank's one entry, so a handler moved to another part or overlay moves its `case` to that bank's entry (a new bank's
+  entry, one stub). The fourth byte, the request, where an action's `cmd.aux` is the same for every phrase (the door
+  verbs' `PA_*`, the handling verbs' `IO_*`), so the handlers needn't read the verb.
 
 Odd answers the sweeps don't catch (they name the thing, but read oddly), for review: "tie the torch" says "You can't
 close the torch." (a tie is a container's, worked as its lid); "wear the torch" says "You hold the lit torch in your

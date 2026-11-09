@@ -53,7 +53,7 @@ static unsigned char kseq = 1;                 /* (The hub's ui_keys as a line's
 const char* const pacename[4] = { "relaxed", "normal", "menacing", "turns" };
 
 static unsigned char asking;                    /* (A long task's soft question put, the answer awaited) */
-const char* cl;                                 /* (The command's line, s_command's: chores' words of it; nameis.s's) */
+const char* cl;                                 /* (The command's line, s_command's: its handlers' words of it; nameis.s's) */
 unsigned char harm_told;                        /* (The states a harm's words told in this answer: intro.c's) */
 unsigned char autogo;                           /* (dq0 -a: every soft question answered yes, unasked: the tests') */
 unsigned char what_hi;                          /* (The thing's kind's top bit, the long task's what its other seven: task.c's noun) */
@@ -1388,7 +1388,7 @@ unsigned char __fastcall__ s_hide (const char* w)
         }
         cmd.action = VB_TIE_OBJECT;
         cmd.aux = RP_THROW;
-        more (VB_TIE_OBJECT);
+        run16 (H_TIE);
         return 1;
     }
     if ((unsigned) w >= HW_WORDS) {
@@ -1446,7 +1446,7 @@ again:  HUB->ireq.to = reach == 4 ? IO_DONE : 0;
         }
         if (d == IR_OK) {
             if (reach != 4) {
-                more (VB_HIDE);                 /* (Begun: a minute's work, a timed work, the things' IO_DONE at its
+                run16 (H_HIDDEN);               /* (Begun: a minute's work, a timed work, the things' IO_DONE at its
                                                 **   end, words.c's) */
                 return 0;
             }
@@ -1812,7 +1812,7 @@ void __fastcall__ work (unsigned char what, unsigned char obj);
 void __fastcall__ intend (unsigned char kind, unsigned char a);
 void __fastcall__ lift (const char* name);      /* (Part 24's: the commands' rarer, part 2's till 2026-11-04, the swap study's) */
 unsigned char __fastcall__ deal (unsigned char how);
-unsigned char __fastcall__ rarer (unsigned char action);
+unsigned char __fastcall__ run24 (unsigned char h);    /* (Part 24's command handlers, by number: the table's) */
 #define work    s_work
 #define intend  s_intend
 
@@ -2108,70 +2108,6 @@ unsigned char __fastcall__ s_deal (unsigned char how)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The commands that want nothing but their action: 1 if it was one of them, carried out */
-static unsigned char __fastcall__ chores (unsigned char action)
-{
-    switch (action) {
-    case VB_OBSERVE_DIRECTION:                  /* (Looked, listened, sniffed one way, or at a thing, through it: */
-    case VB_OBSERVE_OBJECT:                     /*   way.c's, part 6; */
-    case VB_OBSERVE_THROUGH:
-    case VB_LISTEN:
-    case VB_SMELL:
-    case VB_LEAVE:                              /*   the way out of a room, 2026-11-02; */
-    case VB_TRACK:                              /*   the traces read, slice 4.1's: the floor looked at, a track) */
-        look_way (action);
-        break;
-    case VB_OBSERVE_LOCALE:                     /* (In the dark, or blind, the character free, its hands: what's told at
-                                                **   once, then the feel around, search.c's: the user's, 2026-11-03) */
-    case VB_FIND_OBJECT:
-        if (!busy && !(HUB->pcsum.cond & C_STUNNED) && sight_get ()->dark) {
-            if (action == VB_OBSERVE_LOCALE) {
-                look (0);
-            }
-            cmd.aux = SR_FOR;
-            search_go ();
-            break;
-        }
-        /* Fall through */
-    case VB_OBSERVE_AROUND:
-    case VB_WHERE:
-        look (0);
-        break;
-    case VB_META_MAP:
-        sheet_map (1);
-        break;
-    case VB_WAIT:                               /* (A round, or as long as it says: "wait 10 minutes"; engaged, */
-    case VB_PASS:                               /*   "pass": a round given up, defending; a sleep or a rest, a */
-    case VB_SLEEP:                              /*   night's or as long as it says: task.c's) */
-        wait_go (action);
-        break;
-    case VB_DISENGAGE:                          /* (Away from the foes engaging it, the book's disengage; a flight */
-    case VB_FLEE:                               /*   at a run once free: the world's) */
-        intend2 (I_DISENGAGE, cmd.dir, action == VB_FLEE);
-        break;
-    case VB_STOP:                               /* (The long task: "stop", "stop digging") */
-        intend (I_STOP, stop_kind (cmd.obj.word));
-        break;
-    case VB_META_SHEET:
-        sheet_map (0);
-        break;
-    case VB_META_PAUSE:
-    case VB_META_SAVE:
-        meta (action);                          /* (Paused, or kept: overlay 3's) */
-        break;
-    case VB_META_HELP:
-        help ();
-        break;
-    case VB_META_QUIT:
-        quit = 1;
-        break;
-    default:
-        return more (action) || rarer (action);  /* (The rest: overlay 2's, slice 4.1's on: the light's, the traces';
-                                                **   part 24's, the rarer) */
-    }
-    return 1;
-}
-
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -2270,11 +2206,252 @@ void s_cq_drop (void)
     cq_st = 0;
 }
 
+/* ---- The command handlers of part 2 (COMMANDS-CRITIQUE.md's §5.2 step L: the dispatch table's, actions.c's, a verb's
+** by its meaning; s_command's own cases till 2026-11-08, and chores'), each called by its number (H_*) from s_command;
+** overlay 16's are words.c's (run16), part 24's below (run24).  A handler's work as it was, case by case */
+
+/* A portal worked (pa: PA_*; cmd.obj.kind a door, a window, or either): found, walked up to, its blow's thing in hand,
+** faced, its first words (part 13's feature; or which, asked; walked up to first, then again), then the world's work */
+static void __fastcall__ do_portal (unsigned char pa)
+{
+    if (!feature (cmd.obj.kind, pa + 1)) {
+        return;
+    }
+    HUB->ireq.to = 0;
+    barw = pa == PA_BAR && things (IO_BAR, "") == IR_NO ? HUB->ireq.x : 0;    /* (The widest bar to hand) */
+    work (pa, cmd.obj.kind);
+}
+
+/* H_CLIMB: up or down, a well's shaft down or out of it (part 24's work); through a window (0x80), the portal's */
+static void do_climb (void)
+{
+    if (run24 (H_CLIMB) == 0x80) {
+        cmd.obj.kind = OB_WINDOW;
+        do_portal (PA_THROUGH);
+    }
+}
+
+/* H_GO: a way, a thing gone up to or through, a place in the room */
+static void do_go (void)
+{
+    unsigned char d;
+
+    if ((cmd.dir == GO_DOWN || cmd.action == VB_ENTER) && !strcmp (cmd.obj.word, "well")) {
+        do_climb ();                            /* ("Go down the well", "enter the well": climbed down) */
+        return;
+    }
+    d = cmd.obj.kind;
+    if ((d == OB_WALL || (d >= OB_ROOM && d != OB_PILLAR)) && place_go (&cmd)) {
+        return;                                 /* (A place in the room: the centre, a side, a corner: part 7's) */
+    }
+    if (cmd.obj.kind && cmd.action != VB_MOVE_DIRECTION) {   /* (A thing: up to it, or through it) */
+        d = cmd.how == HOW_THROUGH || cmd.action == VB_ENTER;
+        if (d && cmd.obj.kind == OB_WINDOW) {
+            if (find (OB_WINDOW | PICK_TELL, cmd.obj.lies) == 1) {
+                do_portal (PA_THROUGH);         /* (Climbed through; or none, told; or which, asked) */
+            }
+            return;
+        }
+        d = d && (cmd.obj.kind == OB_DOOR || cmd.obj.kind == OB_PASSAGE);    /* (Through it: walked up to first,
+                                                **   its first words told as that began; else up to it, its own walk) */
+        if (feature (cmd.obj.kind | PICK_TELL, d ? (reach ? FG_GO | FW_NONE : FG_GO) : FG_GO | FG_FAR)) {
+            if (d) {
+                intend (I_GO, cmd.obj.lies);
+            } else {
+                intend2 (I_GOTO, tx, ty);
+            }
+        }
+    } else if (cmd.dir == GO_UP || cmd.dir == GO_DOWN) {
+        intend (I_CLIMB, cmd.dir == GO_UP ? DIR_UP : DIR_DOWN);    /* (Up or down: the stairs, a ladder) */
+    } else if (cmd.dir != 0xFF) {
+        intend (I_GO, cmd.dir);
+    } else {
+        missiles ();                            /* (Anything else it has seen, or which way: way.c's go_thing,
+                                                **   part 13's, the action a move: no stub of its own, the main RAM's) */
+    }
+}
+
+/* H_FACE: a turn */
+static void do_face (void)
+{
+    if (cmd.dir > H_NW) {
+        tell (T_WHICH_WAY_LEFT);
+    } else if (cmd.dir == HUB->pc_face) {
+        sayf ("\nYou face %s already.", head_name[believed (cmd.dir)]);
+    } else {
+        intend (I_TURN, cmd.dir);
+    }
+}
+
+/* H_DOOR: a door's work, the verb's (PA_*: its aux); a thing that closes first, of a verb that takes one (the row's
+** TK_CLOSER: a chest, a sack, a flask, overlay 16's H_SHUT) */
+static void __fastcall__ do_door (unsigned char takes)
+{
+    unsigned char pa;
+
+    if (!cmd.obj.kind && (takes & TK_CLOSER) && run16 (H_SHUT)) {
+        return;
+    }
+    pa = cmd.action == VB_LOCK_OBJECT ? PA_LOCK : cmd.aux;
+    if (pa == PA_RAISE && cmd.obj.word[0]) {
+        pa = PA_LIFT;                           /* ("Lift the bar": a portal's part lifted out) */
+    } else if (pa == PA_RAISE || pa == PA_LOWER) {
+        cmd.obj.kind = OB_PORTC;
+    } else if (cmd.obj.kind == OB_WINDOW && !strcmp (cmd.obj.word, "bars") &&
+        !find (OB_WINDOW | PICK_ANY, cmd.obj.lies)) {
+        cmd.obj.kind = OB_PORTC;                /* ("Bend the bars": a portcullis's, with no window there) */
+    }
+    do_portal (pa);
+}
+
+/* H_EXAMINE: a thing looked at from here (a denizen as it's examined, "look at B", the user's designators, 2026-11-06;
+** else way.c's); a thing looked at closely (judged, by the craft that knows it; a portal, or its part if it's not there;
+** else the room) */
+static void do_examine (void)
+{
+    unsigned char pa;
+
+    if (!cmd.obj.kind && may_den () && deal (SW_LOOK | SW_QUIET) != SR_NONE) {
+        gear_look ();                           /* (A denizen it sees: how it seems, then its things as the eyes
+                                                **   make them out from here, part 11's) */
+        return;
+    }
+    if (cmd.action == VB_OBSERVE_OBJECT) {
+        look_way (VB_OBSERVE_OBJECT);
+        return;
+    }
+    if ((pa = look_way (VB_EXAMINE_OBJECT)) != 0) {
+        do_portal (pa);                         /* (A thing, a portal, the room, its aspects: part 6's, way.c; a door
+                                                **   gone over for traps, the world's) */
+    }
+}
+
+/* H_TAKE: a thing taken up, or taken from another */
+static void do_take (void)
+{
+    if (cmd.prep == PR_FROM) {
+        handle (IO_TAKE, cmd.obj.word, cmd.other.word, 0);
+    } else if (!cmd.obj.word[0]) {
+        unknown (U_WHAT);
+    } else {
+        take (cmd.obj.word);
+    }
+}
+
+/* A thing put in another, or let fall in it ("drop the dagger into the well", "down the shaft", 2026-11-06; "throw
+** the dagger into the well") */
+static void do_put (void)
+{
+    handle (IO_PUT, cmd.obj.word, cmd.other.word[0] ? cmd.other.word : "shaft", 0);
+}
+
+/* H_DROP: a thing put down */
+static void do_drop (void)
+{
+    unsigned char d, pa;
+
+    if (cmd.other.word[0] || cmd.prep == PR_IN) {
+        do_put ();
+        return;
+    }
+    if (!cmd.obj.word[0]) {
+        unknown (U_WHAT);
+    } else if (d = HUB->pc_light, (pa = things (IO_DROP | IO_STEPS | IO_GO, cmd.obj.word)) == IR_OK) {
+        if (*tt ()) {
+            msg (lb);                           /* (By the count: "You put down two sacks.", the world's) */
+        } else if (worded != 4) {               /* ("You put down the torch." said already, its first words: sway.c's) */
+            tell (T_PUT_DOWN);
+        }
+        after (d, 1, IO_DROP);                  /* (No time: let fall, HOUSE.md's reach; the world's reach owed
+                                                **   for one got out first) */
+    } else if (pa == IR_NO) {
+        msg (tt ());                            /* (Why not: in a thing closed) */
+    } else if (pa != IR_GONE) {                 /* (The one path for things: several, which asked) */
+        say_no (A_HAVE_NO, cmd.obj.word);
+    }
+}
+
+/* H_MISSILE: the missiles (part 13's, slice 4.7's; a throw at a denizen too): shot, loaded, gathered, thrown at the
+** thing said or the target (the world's throw, its words overlay 11's); thrown into a well, let fall in it */
+static void do_missile (void)
+{
+    unsigned char d;
+
+    if (!strcmp (cmd.other.word, "well") || (cmd.prep == PR_IN && !cmd.other.word[0])) {
+        do_put ();
+        return;
+    }
+    d = HUB->pc_light;
+    if (missiles () == 2) {                     /* (Thrown at a thing: part 13's) */
+        after (d, 20, IO_DROP);                 /* (Its time; a light thrown, the world's look in the new light) */
+    }
+}
+
+/* H_INVENTORY: what's carried, and its load */
+static void do_inventory (void)
+{
+    unsigned char d;
+
+    list_say (1);
+    things (IO_LIST, "");
+    list_say (0);
+    if ((d = HUB->pcsum.load) != 0) {
+        tell (T_BURDENED - 1 + d);              /* (Its load, as the referee has it: its encumbrance) */
+    }
+}
+
+/* H_FIGHT: a blow at a denizen beside it (overlay 6's choice), or closed with first; the stance set (the referee's
+** defence for the character); a blow at a thing, broken by it */
+static void do_fight (void)
+{
+    unsigned char d;
+
+    if ((d = fight_target (&cmd)) == FT_THING) {
+        do_portal (PA_BREAK);                   /* (A blow at a thing: broken by it) */
+        return;
+    }
+    if (d) {
+        if (!hold_w[0] || hold_first ()) {      /* (Its thing in hand first, slice 4.1b's) */
+            if (d & FT_CLOSE) {
+                reach = 6;                      /* (Closed with first, its arrival's words short) */
+                walk_says (0);
+                intend (I_CLOSE, d & 0x0F);
+                return;
+            }
+            intend (I_ATTACK, d);               /* (Beside it: d its number alone) */
+        }
+        return;
+    }
+    HUB->ireq.into[0] = 0;                      /* (A blow, no foe of that name: a thing of it to hand, refused, */
+    HUB->ireq.to = 0;                           /*   said back, "You can't kick the pot."; else the fight's words, */
+    if (cmd.action == VB_ATTACK_OBJECT && cmd.obj.word[0] && !cmd.obj.kind &&   /* lb's (IO_FIND's IR_NO: none */
+        things (IO_FIND, cmd.obj.word) == IR_OK) {   /* such, or seen out of reach, its words in the things') */
+        unknown (U_CANT);
+    } else {
+        msg (lb);
+    }
+}
+
+/* H_FEEL: a look about, or a search for a thing; in the dark, or blind, the character free, its hands: what's told at
+** once, then the feel around (search.c's: the user's, 2026-11-03) */
+static void do_feel (void)
+{
+    if (!busy && !(HUB->pcsum.cond & C_STUNNED) && sight_get ()->dark) {
+        if (cmd.action == VB_OBSERVE_LOCALE) {
+            look (0);
+        }
+        cmd.aux = SR_FOR;
+        search_go ();
+        return;
+    }
+    look (0);
+}
+
 /* A command, the parser's, carried out: by its action (actions.h's VB_*), the verb's own value its aux (the things'
-** request, a door's work, the denizens' sway: commands.verbs') */
+** request, a door's work, the denizens' sway: commands.verbs'): its handler the dispatch table's (actions.c's verb_row) */
 void __fastcall__ s_command (char* l)
 {
-    struct req* r;
+    unsigned h;
     unsigned char d, pa;
     signed char ok;
 
@@ -2342,242 +2519,121 @@ again:
         }
         return;
     }
-    switch (cmd.action) {
-    case VB_NONE:
+    h = verb_row (cmd.action);                  /* (Its row of the dispatch table: its handler, the kinds it takes, times
+                                                **   256; actions.c's, overlay 11, §5.2's step L) */
+    switch ((unsigned char) h) {
+    case H_NOTHING:
         return;
-    case VB_MOVE_DIRECTION:
-    case VB_MOVE_TOWARD:
-    case VB_ENTER:
-    case VB_APPROACH_OBJECT:
-        if ((cmd.dir == GO_DOWN || cmd.action == VB_ENTER) && !strcmp (cmd.obj.word, "well")) {
-            goto climb;                         /* ("Go down the well", "enter the well": climbed down) */
-        }
-        d = cmd.obj.kind;
-        if ((d == OB_WALL || (d >= OB_ROOM && d != OB_PILLAR)) && place_go (&cmd)) {
-            return;                             /* (A place in the room: the centre, a side, a corner: part 7's) */
-        }
-        if (cmd.obj.kind && cmd.action != VB_MOVE_DIRECTION) {   /* (A thing: up to it, or through it) */
-            d = cmd.how == HOW_THROUGH || cmd.action == VB_ENTER;
-            if (d && cmd.obj.kind == OB_WINDOW) {
-                if (find (OB_WINDOW | PICK_TELL, cmd.obj.lies) != 1) {
-                    return;                     /* (None, told; or which, asked) */
-                }
-                pa = PA_THROUGH;                /* (Climbed through) */
-                goto portal;
-            }
-            d = d && (cmd.obj.kind == OB_DOOR || cmd.obj.kind == OB_PASSAGE);    /* (Through it: walked up to first,
-                                                **   its first words told as that began; else up to it, its own walk) */
-            if (feature (cmd.obj.kind | PICK_TELL, d ? (reach ? FG_GO | FW_NONE : FG_GO) : FG_GO | FG_FAR)) {
-                if (d) {
-                    intend (I_GO, cmd.obj.lies);
-                } else {
-                    intend2 (I_GOTO, tx, ty);
-                }
-            }
-        } else if (cmd.dir == GO_UP || cmd.dir == GO_DOWN) {
-            intend (I_CLIMB, cmd.dir == GO_UP ? DIR_UP : DIR_DOWN);    /* (Up or down: the stairs, a ladder) */
-        } else if (cmd.dir != 0xFF) {
-            intend (I_GO, cmd.dir);
-        } else {
-            missiles ();                        /* (Anything else it has seen, or which way: way.c's go_thing,
-                                                **   part 13's, the action a move: no stub of its own, the main RAM's) */
-        }
+    case H_GO:
+        do_go ();
         return;
-    case VB_CLIMB:
-climb:
-        if (rarer (VB_CLIMB) == 0x80) {         /* (Part 24's since 2026-11-06, a well's: 0x80 through a window) */
-            cmd.obj.kind = OB_WINDOW;
-            pa = PA_THROUGH;
-            goto portal;
-        }
+    case H_CLIMB:
+        do_climb ();
         return;
-    case VB_FACE_DIRECTION:
-        if (cmd.dir > H_NW) {
-            tell (T_WHICH_WAY_LEFT);
-        } else if (cmd.dir == HUB->pc_face) {
-            sayf ("\nYou face %s already.", head_name[believed (cmd.dir)]);
-        } else {
-            intend (I_TURN, cmd.dir);
-        }
+    case H_FACE:
+        do_face ();
         return;
-    case VB_OPEN_OBJECT:                        /* (A door's work: the verb's, PA_*) */
-    case VB_CLOSE_OBJECT:
-    case VB_UNLOCK_OBJECT:
-    case VB_LOCK_OBJECT:                        /* (A door locked with its key: Phase 3C's) */
-    case VB_FORCE_OBJECT:
-    case VB_RAISE_OBJECT:
-    case VB_LOWER_OBJECT:
-    case VB_BREAK_OBJECT:
-    case VB_DISARM_OBJECT:
-    case VB_BAR_OBJECT:
-    case VB_BEND_OBJECT:
-        if (!cmd.obj.kind && more (cmd.action)) {
-            return;                             /* (A thing that closes: a chest, a sack, a flask: overlay 2's) */
-        }
-        pa = cmd.action == VB_LOCK_OBJECT ? PA_LOCK : cmd.aux;
-        if (pa == PA_RAISE && cmd.obj.word[0]) {
-            pa = PA_LIFT;                       /* ("Lift the bar": a portal's part lifted out) */
-        } else if (pa == PA_RAISE || pa == PA_LOWER) {
-            cmd.obj.kind = OB_PORTC;
-        } else if (cmd.obj.kind == OB_WINDOW && !strcmp (cmd.obj.word, "bars") &&
-            !find (OB_WINDOW | PICK_ANY, cmd.obj.lies)) {
-            cmd.obj.kind = OB_PORTC;            /* ("Bend the bars": a portcullis's, with no window there) */
-        }
-portal:
-        if (!feature (cmd.obj.kind, pa + 1)) {
-            return;                             /* (Found, walked up to, its blow's thing in hand, faced, its first words:
-                                                **   part 13's; or which, asked; walked up to first, then again) */
-        }
-        HUB->ireq.to = 0;
-        barw = pa == PA_BAR && things (IO_BAR, "") == IR_NO ? HUB->ireq.x : 0;    /* (The widest bar to hand) */
-        work (pa, cmd.obj.kind);
+    case H_DOOR:
+        do_door (h >> 8);
         return;
-    case VB_OBSERVE_OBJECT:                     /* (A thing looked at from here: a denizen as it's examined, "look at
-                                                **   B", the user's designators, 2026-11-06; else chores', way.c's) */
-    case VB_EXAMINE_OBJECT:                     /* (A thing looked at closely: judged, by the craft that knows it; a */
-    case VB_EXAMINE_LOCALE:                     /*   portal, or its part if it's not there; else the room) */
-        if (!cmd.obj.kind && may_den () && deal (SW_LOOK | SW_QUIET) != SR_NONE) {
-            gear_look ();                       /* (A denizen it sees: how it seems, then its things as the eyes
-                                                **   make them out from here, part 11's) */
-            return;
-        }
-        if (cmd.action == VB_OBSERVE_OBJECT) {
-            look_way (VB_OBSERVE_OBJECT);
-            return;
-        }
-        if ((pa = look_way (VB_EXAMINE_OBJECT)) != 0) {
-            goto portal;                        /* (A thing, a portal, the room, its aspects: part 6's, way.c; a door
-                                                **   gone over for traps, the world's) */
-        }
+    case H_EXAMINE:
+        do_examine ();
         return;
-    case VB_SEARCH:                             /* (A search, a long task, by its form: what it finds told as it ends,
+    case H_SEARCH:                              /* (A search, a long task, by its form: what it finds told as it ends,
                                                 **   the walls' and the things', E_PORTAL's; search.c's, part 9; a door
                                                 **   gone over for traps, the world's) */
         if ((pa = search_go ()) != 0) {
-            goto portal;
+            do_portal (pa);
         }
         return;
-    case VB_RETRIEVE_OBJECT:
-        if (cmd.prep == PR_FROM) {
-            handle (IO_TAKE, cmd.obj.word, cmd.other.word, 0);
-        } else if (!cmd.obj.word[0]) {
-            unknown (U_WHAT);
-        } else {
-            take (cmd.obj.word);
-        }
+    case H_TAKE:
+        do_take ();
         return;
-    case VB_DROP_OBJECT:
-        if (cmd.other.word[0] || cmd.prep == PR_IN) {
-            goto put;                           /* ("Drop the dagger into the well", "down the shaft": put in it, 2026-11-06) */
-        }
-        if (!cmd.obj.word[0]) {
-            unknown (U_WHAT);
-        } else if (d = HUB->pc_light, (pa = things (IO_DROP | IO_STEPS | IO_GO, cmd.obj.word)) == IR_OK) {
-            if (*tt ()) {
-                msg (lb);                       /* (By the count: "You put down two sacks.", the world's) */
-            } else if (worded != 4) {           /* ("You put down the torch." said already, its first words: sway.c's) */
-                tell (T_PUT_DOWN);
-            }
-            after (d, 1, IO_DROP);              /* (No time: let fall, HOUSE.md's reach; the world's reach owed
-                                                **   for one got out first) */
-        } else if (pa == IR_NO) {
-            msg (tt ());                        /* (Why not: in a thing closed) */
-        } else if (pa != IR_GONE) {             /* (The one path for things: several, which asked) */
-            say_no (A_HAVE_NO, cmd.obj.word);
-        }
+    case H_DROP:
+        do_drop ();
         return;
-    case VB_HIDE:                              /* (P_CONCEAL: a thing; else oneself: HOUSE.md's) */
+    case H_HIDE:                                /* (P_CONCEAL: a thing; else oneself: HOUSE.md's) */
         hide (cmd.obj.word);
         return;
-    case VB_SWAP_HANDS:                         /* (The hands' and limbs': part 11's, slice 4.1b's; */
-    case VB_STAND:                              /*   the body's position, slice 4.6's) */
-    case VB_SIT:
-    case VB_CROUCH:
-    case VB_LIE_DOWN:
+    case H_LIMBS:                               /* (The hands' and limbs': part 11's, slice 4.1b's; the body's position,
+                                                **   slice 4.6's) */
         limbs_cmd ();
         return;
-    case VB_HOLD_OBJECT:                        /* (A thing handled: the things' request the verb's, IO_*) */
-    case VB_EQUIP_OBJECT:
-    case VB_UNEQUIP_OBJECT:
-    case VB_PUT_OBJECT:
-    case VB_HANG_OBJECT:
-    case VB_LIGHT_OBJECT:
-    case VB_EXTINGUISH_OBJECT:
+    case H_HANDLE:                              /* (A thing handled: the things' request the verb's, IO_*) */
         handle (cmd.aux, cmd.obj.word, cmd.other.word[0] || cmd.prep != PR_IN ? cmd.other.word : "shaft", cmd.prep == PR_ON);
         return;                                 /* ("Put the dagger down the shaft", the hole: its kind said, no word) */
-    case VB_SHOOT_OBJECT:                       /* (The missiles: part 11's, slice 4.7's; a throw at a denizen too) */
-    case VB_LOAD_OBJECT:
-    case VB_GATHER_OBJECT:
-    case VB_THROW_OBJECT:                       /* (Thrown at the thing said, or the target: the world's throw, its
-                                                **   words overlay 11's) */
-        if (!strcmp (cmd.other.word, "well") || (cmd.prep == PR_IN && !cmd.other.word[0])) {
-put:
-            handle (IO_PUT, cmd.obj.word, cmd.other.word[0] ? cmd.other.word : "shaft", 0);  /* ("Throw the dagger into the well": let fall in it) */
-            return;
-        }
-        d = HUB->pc_light;
-        if (missiles () == 2) {                 /* (Thrown at a thing: part 13's) */
-            after (d, 20, IO_DROP);             /* (Its time; a light thrown, the world's look in the new light) */
-        }
+    case H_MISSILE:
+        do_missile ();
         return;
-    case VB_META_INVENTORY:
-        list_say (1);
-        things (IO_LIST, "");
-        list_say (0);
-        if ((d = HUB->pcsum.load) != 0) {
-            tell (T_BURDENED - 1 + d);          /* (Its load, as the referee has it: its encumbrance) */
-        }
+    case H_INVENTORY:
+        do_inventory ();
         return;
-    case VB_ATTACK_OBJECT:                      /* (A blow at a denizen beside it, overlay 6's choice; or the stance */
-    case VB_DEFEND:                             /*   set, the referee's defence for the character) */
-        if ((d = fight_target (&cmd)) == FT_THING) {
-            pa = PA_BREAK;                      /* (A blow at a thing: broken by it) */
-            goto portal;
-        }
-        if (d) {
-            if (!hold_w[0] || hold_first ()) {  /* (Its thing in hand first, slice 4.1b's) */
-                if (d & FT_CLOSE) {
-                    reach = 6;                  /* (Closed with first, its arrival's words short) */
-                    walk_says (0);
-                    intend (I_CLOSE, d & 0x0F);
-                    return;
-                }
-                intend (I_ATTACK, d);           /* (Beside it: d its number alone) */
-            }
-            return;
-        }
-        HUB->ireq.into[0] = 0;                  /* (A blow, no foe of that name: a thing of it to hand, refused, */
-        HUB->ireq.to = 0;                       /*   said back, "You can't kick the pot."; else the fight's words, */
-        if (cmd.action == VB_ATTACK_OBJECT && cmd.obj.word[0] && !cmd.obj.kind &&   /* lb's (IO_FIND's IR_NO: none */
-            things (IO_FIND, cmd.obj.word) == IR_OK) {   /* such, or seen out of reach, its words in the things') */
-            unknown (U_CANT);
-        } else {
-            msg (lb);
-        }
+    case H_FIGHT:
+        do_fight ();
         return;
-    default:                                    /* (The rest that want nothing but their action; and those the game
-                                                **   doesn't do yet: its verb, as typed) */
-        if (!chores (cmd.action)) {
-            unknown (1);
-        }
+    case H_LOOK_WAY:                            /* (Looked, listened, sniffed one way, or through a thing: way.c's, part
+                                                **   17; the way out of a room, 2026-11-02; the traces read, slice 4.1's:
+                                                **   the floor looked at, a track) */
+        look_way (cmd.action);
         return;
+    case H_FEEL:
+        do_feel ();
+        return;
+    case H_LOOK:
+        look (0);
+        return;
+    case H_SHEET:                               /* (The map, or the sheet: part 3's) */
+        sheet_map (cmd.action == VB_META_MAP);
+        return;
+    case H_WAIT:                                /* (A round, or as long as it says: "wait 10 minutes"; engaged, "pass": a
+                                                **   round given up, defending; a sleep or a rest, a night's or as long as
+                                                **   it says: task.c's) */
+        wait_go (cmd.action);
+        return;
+    case H_DISENGAGE:                           /* (Away from the foes engaging it, the book's disengage; a flight at a
+                                                **   run once free: the world's) */
+        intend2 (I_DISENGAGE, cmd.dir, cmd.action == VB_FLEE);
+        return;
+    case H_STOP:                                /* (The long task: "stop", "stop digging") */
+        intend (I_STOP, stop_kind (cmd.obj.word));
+        return;
+    case H_META:                                /* (Paused, or kept: overlay 3's) */
+        meta (cmd.action);
+        return;
+    case H_HELP:
+        help ();
+        return;
+    case H_QUIT:
+        quit = 1;
+        return;
+    }
+    if ((unsigned char) h >= H_P24) {           /* (Part 24's, the sway's, a dig's, a jump's) */
+        d = run24 (h);
+    } else {                                    /* (Overlay 16's: a thing filled, tied, looked in, eaten; the time; and
+                                                **   H_NOT_YET, none) */
+        d = (unsigned char) h >= H_OV16 && run16 (h);
+    }
+    if (!d) {
+        unknown (1);                            /* (Those the game doesn't do yet: its verb, as typed) */
     }
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
 /* ==== Part 24: the commands seen to less often (part 2's till 2026-11-04, the swap study's: part 2 is half this task's
-** copies, a stay in it runs a tenth of it) */
+** copies, a stay in it runs a tenth of it).  Its command handlers, by their number h (the dispatch table's H_DIG ...
+** H_GIVE, and H_CLIMB's work: s_rarer till 2026-11-08, past chores and more): 1 carried out (0x80, H_CLIMB's: through
+** a window, part 2's portal); 0 none of its own */
 #undef work
 #undef intend
 #pragma code-name (push, "SW24CODE")
 #pragma rodata-name (push, "SW24RODATA")
-unsigned char __fastcall__ s_rarer (unsigned char action)
+unsigned char __fastcall__ s_run24 (unsigned char h)
 {
     unsigned char d;
 
-    switch (action) {
-    case VB_DIG:
+    switch (h) {
+    case H_DIG:
         d = cmd.dir;
         if (d != GO_DOWN && d > H_NW) {
             tell (T_DIG_WHICH_WAY);
@@ -2586,15 +2642,15 @@ unsigned char __fastcall__ s_rarer (unsigned char action)
         walk_says ((const char*) W_DIG);
         intend (I_DIG, d == GO_DOWN ? DIR_DOWN : d + 8);    /* (A heading, 8 on: the world's, a diagonal too) */
         break;
-    case VB_JUMP:
+    case H_JUMP:
         if (cmd.dir != GO_DOWN && strcmp (cmd.obj.word, "well")) {
             tell (T_YOU_JUMP_AND);
             break;
         }                                       /* (Down a ledge, or a shaft: a fall; into a well) */
-    case VB_CLIMB:                              /* (Up or down, a well's shaft down or out of it (2026-11-06); through a
-                                                **   window, 0x80: part 2's portal) */
-        d = action == VB_JUMP ? DIR_DOWN | I_JUMP : strstr (cl, "out") ? DIR_UP : DIR_DOWN;
-        if (action == VB_CLIMB && strcmp (cmd.obj.word, "well") && (cmd.obj.word[0] || !strstr (cl, "out"))) {
+    case H_CLIMB:                               /* (Up or down, a well's shaft down or out of it (2026-11-06); through a
+                                                **   window, 0x80: part 2's portal.  "Go down the well" too, a move's) */
+        d = h == H_JUMP ? DIR_DOWN | I_JUMP : strstr (cl, "out") ? DIR_UP : DIR_DOWN;
+        if (h == H_CLIMB && strcmp (cmd.obj.word, "well") && (cmd.obj.word[0] || !strstr (cl, "out"))) {
             if (cmd.obj.kind == OB_WINDOW || cmd.how == HOW_THROUGH) {
                 return 0x80;                    /* (Through a window) */
             }
@@ -2609,26 +2665,13 @@ unsigned char __fastcall__ s_rarer (unsigned char action)
         }
         intend (I_CLIMB, d);
         break;
-    case VB_TELL_OBJECT:                        /* (A denizen swayed, an ally asked, a name given: the denizens' */
-    case VB_PERSUADE:                           /*   sway the verb's, SW_*) */
-    case VB_DECEIVE:
-    case VB_FAST_TALK:
-    case VB_THREATEN:
-    case VB_INTIMIDATE:
-    case VB_CALM:
-    case VB_BEFRIEND:
-    case VB_ORDER:
-    case VB_ALLY_COME:
-    case VB_ALLY_STAY:
-    case VB_ALLY_DISMISS:
-    case VB_NAME_OBJECT:
-    case VB_NAME_PLACE:
+    case H_SWAY:                                /* (A denizen swayed, an ally asked, a name given: the denizens' sway
+                                                **   the verb's, SW_*) */
         if (errand ()) {                        /* (A thing to fetch found first, a gift's: part 15's, slice 4.8's) */
             s_deal (cmd.aux);
         }
         break;
-    case VB_TRADE:                              /* (The market, entertaining: part 15's whole, 2026-11-02) */
-    case VB_GIVE_OBJECT:
+    case H_GIVE:                                /* (A gift; the market, entertaining: part 15's whole, 2026-11-02) */
         if (errand ()) {
             s_deal (SW_GIVE);
         }

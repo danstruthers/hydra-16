@@ -89,8 +89,6 @@ extern unsigned char hard;                      /* Hard mode (dq0 -H, D7's setti
 extern unsigned char plain;                     /* The map in plain letters, no colours (the player's: "colour off",
                                                 **   pace.c's; kept with the game: main.c's save) */
 extern const char* savedir;                     /* (main.c's: dq0 -d's, the save's folder) */
-unsigned char __fastcall__ more (unsigned char action);  /* Overlay 2 (words.c's): the commands chores hasn't, as
-                                                **   they come (slice 4.1's on): 1 if it was one, carried out */
 void __fastcall__ meta (unsigned char action);  /* Overlay 3 (task.c's): VB_META_PAUSE, the game paused; VB_META_SAVE,
                                                 **   kept, if it's kept (-d) */
 extern const char* const pacename[4];
@@ -199,6 +197,27 @@ unsigned char __fastcall__ things (unsigned char op, const char* name);    /* (m
 #define RV_ON       0                           /* (resolve's: the command carried on with; seen to, a question */
 #define RV_DONE     1                           /*   asked, the target set, said why not) */
 unsigned char resolve (void);                   /* The command (cmd) resolved: RV_ON or RV_DONE */
+
+/* ---- actions.c (overlay 11): the dispatch table, a row a verb (VB_*, actions.h's), COMMANDS-CRITIQUE.md's §5.2 step L:
+** its handler (H_*: main.c's s_command switches on it), the kinds of thing it takes (TK_*), and room for its refusals
+** (refuse.c's rules[], stage 2) and its request (IO_*, PA_*, I_*, where cmd.aux holds one: stage 3).  The handlers by
+** where they are: part 2's (main.c's s_command), overlay 16's (words.c's o_run16), part 24's (main.c's s_run24) */
+enum {
+    H_NOT_YET,                                  /* (None: "You can't ... in this game yet.", refuse.c's U_YET) */
+    H_NOTHING, H_GO, H_CLIMB, H_FACE, H_DOOR, H_EXAMINE, H_SEARCH, H_TAKE, H_DROP, H_HIDE, H_LIMBS, H_HANDLE,
+    H_MISSILE, H_INVENTORY, H_FIGHT, H_LOOK_WAY, H_FEEL, H_LOOK, H_SHEET, H_WAIT, H_DISENGAGE, H_STOP, H_META,
+    H_HELP, H_QUIT,                             /* (Part 2's) */
+    H_TIME, H_FILL, H_LOOK_IN, H_TIE, H_SHUT, H_HIDDEN, H_EAT, H_TEND,    /* (Overlay 16's: H_SHUT, H_HIDDEN no verb's,
+                                                **   the door's work's and the hide's) */
+    H_DIG, H_JUMP, H_SWAY, H_GIVE               /* (Part 24's; and H_CLIMB's own work there) */
+};
+#define H_OV16      H_TIME                      /* (Overlay 16's first) */
+#define H_P24       H_DIG                       /* (Part 24's first) */
+#define TK_CLOSER   0x01                        /* (A row's takes: a thing that closes, worked first, H_SHUT's: a
+                                                **   chest, a sack; else a door's) */
+unsigned __fastcall__ verb_row (unsigned char action);  /* A verb's row: its handler, its takes times 256 */
+unsigned char __fastcall__ run16 (unsigned char h); /* Overlay 16's handlers (words.c's): 1 carried out, 0 not one of
+                                                **   its own after all (said "not yet in this game") */
 void __fastcall__ taken_next (char* w);         /* "Take all"'s next thing to take up, into w ("": none) */
 void __fastcall__ throw_words (unsigned r);     /* A throw told (the things' IO_THROW's result, its TH_* times 256:
                                                 **   IR_NOT_HERE, no mark it sees; IR_FULL, none said) */

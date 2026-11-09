@@ -577,24 +577,26 @@ void __fastcall__ o_list_say (unsigned char first)
     } while (e);
 }
 
-/* The commands that want nothing but their action, past main.c's chores (its default's: part 2 has no room): 1 if
-** it was one of them, carried out; each slice's own cases here, its work in its own part or overlay */
-unsigned char __fastcall__ o_more (unsigned char action)
+/* Overlay 16's command handlers, by their number h (the dispatch table's H_TIME ... H_TEND, actions.c's; o_more till
+** 2026-11-08, the commands past main.c's chores, part 2 had no room): 1 carried out; 0 not one of its own after all
+** (H_SHUT's: none that closes of that name, a door's work then, main.c's; or "not yet").  The verb the command's */
+unsigned char __fastcall__ o_run16 (unsigned char h)
 {
     unsigned char d = reach == 4 ? IO_DONE : 0;    /* (A timed work's end: main.c's reach) */
+    unsigned char action = cmd.action;
 
-    switch (action) {
-    case VB_META_TIME:                          /* (The time it believes: time.c's, 2026-10-31) */
+    switch (h) {
+    case H_TIME:                                /* (The time it believes: time.c's, 2026-10-31) */
         time_ui (TU_TELL);
         break;
-    case VB_FILL_OBJECT:                        /* (A light renewed, slice 4.1's: "fill the lantern", "dip the torch in
+    case H_FILL:                                /* (A light renewed, slice 4.1's: "fill the lantern", "dip the torch in
                                                 **   the oil", the things' IO_FILL; its time, quietly: a timed work) */
         if (strstr (cl, "sharpen") || strstr (cl, "hone") || strstr (cl, "whet")) {
             d |= IO_SHARP;                      /* (A blade's words: a light has no edge, the things') */
         }
         worked (othings (IO_FILL | IO_STEPS | IO_GO, cmd.obj.word, cmd.other.word, d));
         break;
-    case VB_OBSERVE_IN:                         /* (Looked into a thing, onto it: "look in the sack", "look on the */
+    case H_LOOK_IN:                             /* (Looked into a thing, onto it: "look in the sack", "look on the */
                                                 /*   table", "look into the well", the user's, 2026-10-21; the */
                                                 /*   world's IO_INSIDE; a way, "look into the passage", a look */
                                                 /*   that way, way.c's) */
@@ -611,19 +613,18 @@ unsigned char __fastcall__ o_more (unsigned char action)
             intend2 (I_WAIT, 30, 1);            /* (A look's three seconds) */
         }
         break;
-    case VB_TIE_OBJECT:                         /* (A rope's: the things', wrope.c's, IO_HIDE's shape; a sack's tie, as it's */
-    case VB_UNTIE_OBJECT:                       /*   opened or closed) */
+    case H_TIE:                                 /* (A rope's: the things', wrope.c's, IO_HIDE's shape; a sack's tie, as it's
+                                                **   opened or closed) */
         if (hide (HD_ROPE)) {
             worked (othings (IO_HIDE | IO_STEPS | IO_GO, cmd.obj.word, cmd.other.word,
                 d | IO_ROPE | (action == VB_UNTIE_OBJECT ? RP_UNTIE : cmd.aux)));
             break;
         }
         cmd.aux = action == VB_UNTIE_OBJECT ? PA_OPEN : PA_CLOSE;
-    case VB_OPEN_OBJECT:                        /* (A thing that closes, worked: "open the chest", "untie the */
-    case VB_CLOSE_OBJECT:                       /*   sack", "pick the chest's lock", "force the chest", the */
-    case VB_UNLOCK_OBJECT:                      /*   user's; the world's IO_SHUT, a lid, a tie, a stopper, a */
-    case VB_FORCE_OBJECT:                       /*   lock; none of that name, a door's work: main.c's, 0) */
-    case VB_LOCK_OBJECT:
+    case H_SHUT:                                /* (A thing that closes, worked: "open the chest", "untie the sack",
+                                                **   "pick the chest's lock", "force the chest", the user's; the world's
+                                                **   IO_SHUT, a lid, a tie, a stopper, a lock; none of that name, a
+                                                **   door's work: main.c's H_DOOR, 0.  Its verbs the table's TK_CLOSER) */
         if (!cmd.obj.word[0] || cmd.obj.kind) {
             return 0;
         }
@@ -637,14 +638,13 @@ unsigned char __fastcall__ o_more (unsigned char action)
             worked (action);                    /* (Its lock picked, it forced: a timed work) */
         }
         break;
-    case VB_EAT_OBJECT:                         /* (Eating, drinking: part 12's, slice 4.9's) */
-    case VB_DRINK:
+    case H_EAT:                                 /* (Eating, drinking: part 12's, slice 4.9's) */
         feed (action == VB_EAT_OBJECT);
         break;
-    case VB_HIDE:                               /* (A thing hidden, begun: main.c's hide, the things' IO_HIDE) */
+    case H_HIDDEN:                              /* (A thing hidden, begun: main.c's hide, the things' IO_HIDE) */
         worked (IR_OK);
         break;
-    case VB_TEND:                               /* (First aid: part 12's, slice 4.3's) */
+    case H_TEND:                             /* (First aid: part 12's, slice 4.3's) */
         tend ();
         break;
     default:

@@ -368,7 +368,19 @@ function check(t, beasts, f) {
   return faults.map(s => f + ': ' + s);
 }
 
+// The dispatch table's rows (actions.c's ROW (VB_*, ...)) held to actions.h's actions: one a verb, in its order
+function rowsSame(dir) {
+  const h = fs.readFileSync(path.join(dir, 'actions.h'), 'latin1').replace(/\/\*[\s\S]*?\*\//g, ' ');
+  const want = h.match(/enum\s*\{([^}]*)\}/)[1].split(',').map(s => s.trim()).filter(Boolean).slice(0, -1);
+  const c = fs.readFileSync(path.join(dir, 'actions.c'), 'latin1').replace(/\/\*[\s\S]*?\*\//g, ' ');
+  const have = [...c.matchAll(/\bROW\s*\(\s*(VB_\w+)/g)].map(m => m[1]);
+  const at = want.findIndex((n, k) => have[k] !== n);
+  if (at >= 0 || have.length !== want.length) throw new Error('games/dq0/actions.c\'s rows and actions.h differ' +
+    (at >= 0 ? ': ' + want[at] + ' (actions.c has ' + (have[at] || 'none') + ')' : ': ' + have.length + ' rows'));
+}
+
 function build({ dir, objdir, say = () => {} }) {
+  rowsSame(dir);
   const n = require('./ovlpack.js').pack(objdir, 'dq0').banks;
   const beasts = bestiary(dir);
   const files = fs.readdirSync(path.join(dir, 'themes')).filter(t => t.endsWith('.txt')).sort();
