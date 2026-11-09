@@ -174,9 +174,14 @@ enum { GA_CREEP, GA_SLOW, GA_WALK, GA_JOG, GA_RUN, GA_SPRINT, NGAITS };
 enum { H_FINE, H_HURT, H_BADLY, H_CRITICAL, H_DOWN, H_DEAD };
 
 /* ---- How an attack came out, for the words (O_DISPATCH: a helpless one finished; O_RISE: the attacker, fallen,
-** only got to its feet, or tried, a 1, and is still down; O_REARM: the attacker took up its weapon again, RS_REARM) */
+** only got to its feet, or tried, a 1, and is still down; O_REARM: the attacker took up its weapon again, RS_REARM).
+** A grapple's (RS_GRAPPLE, 2026-11-09): O_HOLD the defender seized and held, O_SLIP not (it twisted free); O_THROWN
+** thrown down (prone, its hurt the effects'), O_PINNED pinned (prone, held), O_CHOKED choked (senseless, if it is, the
+** effects'), O_RESISTS the throw, pin or choke failed (still held); the held one's try: O_FREE broken free,
+** O_STRUGGLES still held; O_LETGO the world's own, no referee's (the hold let go: the player's, or moved apart) */
 enum { O_MISS, O_DODGED, O_BLOCKED, O_HIT, O_BOTH_HIT, O_COUNTER_HIT, O_FUMBLE, O_STUMBLE, O_ADVANTAGE, O_CRIT,
-    O_DISPATCH, O_RISE, O_REARM };
+    O_DISPATCH, O_RISE, O_REARM, O_HOLD, O_SLIP, O_THROWN, O_PINNED, O_CHOKED, O_RESISTS, O_FREE, O_STRUGGLES,
+    O_LETGO };
 
 /* ---- Defences: the stance the player sets (the ruleset decides what each means; auto: its best; HarnMaster's: a
 ** round's defences, a block or a dodge each once a round, a counterstrike only on D_COUNTER: HOUSE.md) */
@@ -247,6 +252,20 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
                                                 **   effects take its place: the creature's heart, its morale's
                                                 **   steps (the hub's actor's: the denizens' field and bonds, HOUSE.md's
                                                 **   morale), its courage tested with them as it's wounded) */
+#define RS_GRAPPLE      0x1000                  /* (RS_ATTACK's w2: a grapple, not a blow (HarnMaster's grappling,
+                                                **   2026-11-09: HOUSE.md's grappling): a the move (GM_*), c the hold
+                                                **   as it stands (GH_PIN | the rounds it's been choked); a hold the
+                                                **   attacker's Unarmed against the defender's Dodge or Unarmed; a
+                                                **   throw, a pin, a choke (from a hold), and the held one's try to
+                                                **   break free (GM_BREAK: the holder the defender), against its
+                                                **   Unarmed or Strength.  The reply a blow's: its outcome O_HOLD ...
+                                                **   O_STRUGGLES, a throw's hurt and fall, a pin's fall (X_COND_ON
+                                                **   C_PRONE), a choke's senselessness (C_UNCONSCIOUS, w2 the tenths
+                                                **   out), its words the same four lines, the third a throw's hurt) */
+enum { GM_NONE, GM_HOLD, GM_THROW, GM_PIN, GM_CHOKE, GM_LETGO, GM_BREAK };   /* (A grapple's move: commands.verbs'
+                                                **   aux, the hub's I_ATTACK's b with AIM_GRAPPLE; GM_LETGO the world's
+                                                **   own, no referee's) */
+#define GH_PIN          0x80                    /* (RS_GRAPPLE's c: the defender pinned, not only held) */
 #define MS_UNAWARE      0x100
 #define MS_COVER        0x200
 #define MS_STRAY        0x400

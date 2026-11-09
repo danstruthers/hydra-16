@@ -639,6 +639,39 @@ course, first aid and healing (Wounds over time); courage in a fight (Morale).
   the Endurance; badly hurt under two thirds; critical past that; down when senseless or in shock.  (dq0harn.c's
   health_of.)
 
+## Grappling *(2026-11-09: the user's "full HarnMaster grappling rules: grapple attacks, holds, throws, pins, chokes, breaking free"; as built, for review: DECISIONS.md's)*
+
+- **A grapple is an unarmed attack at a denizen beside the character** (the book's, Combat 8-10: a melee attack at
+  one engaged): "grapple the goblin", "wrestle it", "hold the goblin" (a denizen beside of that name: else a thing
+  held, as ever), "tackle it" and "throw the goblin" (a throw), "pin it", "choke it" ("strangle", "throttle"); one
+  out of reach, "go up to it first".  Its bare hands, its Unarmed skill (opened by it, as a weapon's is).  Each
+  is a round, fought on as a blow is till its move is done: a hold first if it doesn't hold it already, then the move.
+  Holding one, the character doesn't fight on by itself (a hostile one striking at it isn't fought back unasked): its
+  next move is the player's.  Of several of a name beside it, the one it grappled last ("choke the rat": the one pinned).
+  "Let go" ("let go of the goblin") lets go; so does moving off (a walk, a step, a climb, a flight, closing with
+  another: "You let go of the goblin.").  (blows.c's grapple; the world's wfight.c; the referee's grapple.c,
+  RS_ATTACK's RS_GRAPPLE.)
+- **Every move an opposed test,** the attacker's against the defender's: the attacker wins only by a success better
+  than the defender's level (the defender has the ties); a size's difference two steps (the bigger the better: the
+  character's 4, a giant rat's 2); one that can't resist (senseless, in shock, asleep, unaware) doesn't test.
+  - **A hold:** Unarmed against the defender's Unarmed or Dodge, the better (a prone one four steps the easier, as a
+    blow's).  "You seize the giant rat and hold it fast." or "...but it twists free."
+  - **From a hold, a throw, a pin or a choke:** Unarmed against its Unarmed or Strength (five times), the better.
+    Thrown: it falls (its next turn getting up, the book's Rise), and the fall hurts it, two dice of blunt impact
+    (the sizes' difference a point a die) at a place the middle's strike table gives, its armour off it; the hold's
+    let go as it's thrown.  Pinned: it's laid down and held there.  Choked (a pinned one two steps the easier): its
+    Endurance tested (three times it), ten less each round it's been choked before in this hold; failed, it falls
+    senseless (the book's shock rolls till it comes round, a minute at least), and the hold's let go.  Bones that move have no breath
+    to stop.  Failed: "The giant rat resists your hold.", still held.
+- **Held, a denizen can't move:** anything its mind sends but a wait or a blow (a step, a dash, getting up, a climb,
+  a door, a thing taken) is instead its try to break free, its round: its Unarmed or Strength, the better, against
+  the holder's Unarmed (pinned, four steps the worse, and a blow too is a try): "The giant rat struggles in your
+  grip." or "...breaks free of your grip."  Held but not pinned, it strikes as it would, four steps the worse.
+- **Let go as either falls senseless or dies,** or the held one's gone or apart (it can't walk away; the character
+  can).  A hold isn't kept in a saved game.  The denizens don't grapple the character, yet.
+- **The null ruleset's,** simply: a flat test at the steps for every move (the held one's, pinned, four steps the
+  worse); a throw and a pin lay it down unhurt; the third round of a choke leaves it senseless a minute.
+
 ## Throwing
 
 - **Anything thrown at a thing or a place goes by Throwing** (P_THROW), whatever it is, at the book's missile ranges (Combat 15): a

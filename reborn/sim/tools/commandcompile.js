@@ -134,7 +134,7 @@ const ATTACK_MANNER = { slash: 'edge', slice: 'edge', chop: 'edge', swing: 'edge
   thump: 'blunt', club: 'blunt', stab: 'point', poke: 'point', pierce: 'point', punch: 'unarmed', kick: 'unarmed',
   headbutt: 'unarmed', bite: 'unarmed', elbow: 'unarmed', knee: 'unarmed', slap: 'unarmed', butt: 'unarmed' };
 const POSTURE = { SIT: 'VB_SIT', STAND: 'VB_STAND', 'LIE-DOWN': 'VB_LIE_DOWN', CROUCH: 'VB_CROUCH' };
-const GRAPPLE_MANEUVER = { grapple: 'grapple', wrestle: 'wrestle', tackle: 'tackle', pin: 'pin', choke: 'choke',
+const GRAPPLE_MANEUVER = { grapple: 'grapple', wrestle: 'wrestle', tackle: 'tackle', pin: 'pin', choke: 'choke', strangle: 'choke', throttle: 'choke', let: 'release',
   hold: 'hold', grab: 'grab', put: 'headlock', toss: 'throw', throw: 'throw', chuck: 'throw', hurl: 'throw', sling: 'throw', t: 'throw' };
 const LOOK_PREP_ACTION = { through: 'VB_OBSERVE_THROUGH', around: 'VB_OBSERVE_AROUND', for: 'VB_FIND_OBJECT',
   in: 'VB_OBSERVE_IN', into: 'VB_OBSERVE_IN', inside: 'VB_OBSERVE_IN', on: 'VB_OBSERVE_IN' };   // (Into a thing, onto it)
@@ -835,6 +835,7 @@ function phraseSem(spec, env, ctx) {
     }
     case 'grapple': {
       const o = objOf(0);
+      if (wordsOf(spec, env)[0] === 'let') return act('VB_GRAPPLE_OBJECT', o.stop ? { maneuver: 'release' } : { object: o.value, maneuver: 'release' });   // ("let go": the hold let go, 2026-11-09)
       if (o.stop) return o.stop;
       if (!ctx.engaged.includes(o.value)) return err('NOT_ENGAGED');
       return act('VB_GRAPPLE_OBJECT', { object: o.value, maneuver: own(GRAPPLE_MANEUVER, wordsOf(spec, env)[0]) });

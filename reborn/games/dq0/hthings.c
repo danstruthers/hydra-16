@@ -158,6 +158,9 @@ void __fastcall__ s_things_do (unsigned h)
         break;
     default:                                    /* (H_HANDLE: a thing handled, the things' request the verb's, IO_*;
                                                 **   "wear"'s IO_DON, worn only: DN_WORN, 2026-11-09) */
+        if (cmd.action == VB_HOLD_OBJECT && grip_go (GM_HOLD | GT_TRY)) {
+            break;                              /* ("Hold the goblin": a denizen beside, held, a grapple's) */
+        }
         handle (cmd.aux == IO_DON_WORN ? IO_DON : cmd.aux, cmd.obj.word, cmd.other.word[0] || cmd.prep != PR_IN ?
             cmd.other.word : "shaft", cmd.aux == IO_DON_WORN ? DN_WORN : cmd.prep == PR_ON);
     }                                           /* ("Put the dagger down the shaft", the hole: its kind said, no word) */

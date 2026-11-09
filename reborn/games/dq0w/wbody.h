@@ -83,6 +83,17 @@ void den_intents (void);                        /* (Part 14) The denizens' inten
 void pc_blow (void);                            /* (Part 15) The character's blow at the actor it's posted (the hub's
                                                 **   pc_foe) */
 void __fastcall__ den_blow (unsigned char def, unsigned char z);  /* (Part 15) Body bd's blow at def (I_ATTACK's) */
+extern unsigned char grip;                      /* (wfight.c's: the actor the character holds, plus 1, | GH_PIN pinned;
+                                                **   0 none: HOUSE.md's grappling, 2026-11-09) */
+#define GRIP_OF(g)      ((g) & 0x0F)
+void __fastcall__ grip_off (unsigned char told);    /* (Part 37) The hold let go (told 1: "You let go of ...", or
+                                                **   none held; 0 quietly) */
+void __fastcall__ grip_held (struct msg* m);    /* (Part 106) Body bd's intent m, if it's held: its try to break free */
+struct gleft {                                  /* (A blow's, for grip_left: its attacker, defender, aim, what it left */
+    unsigned char   att, def, z, ff;            /*   them in) */
+};
+extern struct gleft glf;
+void __fastcall__ grip_left (unsigned char out);    /* (Part 106) The hold as a blow left it (glf's; how it came out) */
 void __fastcall__ den_rob (const struct msg* m);    /* (Part 15) The character robbed by body bd, what it takes
                                                 **   put down at m's w1, w2, or in its faction's hoard there, or hidden
                                                 **   there (I_ROB's) */

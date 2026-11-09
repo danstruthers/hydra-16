@@ -79,7 +79,7 @@ static const struct row rows[NACTIONS] = {
     ROW (VB_JUMP, H_JUMP, 0),
     ROW (VB_SWIM, H_SWIM, 0),
     ROWR (VB_ATTACK_OBJECT, H_FIGHT, 0, 0, U_CANT, M_WORKED),
-    ROW (VB_GRAPPLE_OBJECT, H_NOT_YET, 0),
+    ROW (VB_GRAPPLE_OBJECT, H_FIGHT, 0),       /* (A grapple's move, its aux GM_*: blows.c's grapple, HOUSE.md's) */
     ROW (VB_THROW_OBJECT, H_MISSILE, 0),
     ROW (VB_SHOOT_OBJECT, H_MISSILE, 0),
     ROW (VB_LOAD_OBJECT, H_MISSILE, 0),

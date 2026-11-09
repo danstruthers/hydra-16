@@ -2075,6 +2075,8 @@ const DQ0_REPEATS = [
     why: 'a fight\'s falls and risings, each fall told as it falls and each rise as it gets up (a long fight: a creature down twice, a stumble\'s, a leg\'s wound\'s, up each time; dq0missile\'s rat; every fall told since 2026-10-30; the character knocked senseless a third time in one answer, "again" again: blows.c\'s harm_told, dq0antidote\'s adders since 2026-11-09)' },
   { what: /^The [a-z ]+ (?:struggles|scrabbles|writhes|flails its legs|flaps|wavers), but can't (?:get up|right itself|rise)\.$/,
     why: 'creatures down: each told once as it lies there (2026-11-02), so only two of a name in one answer, or one wounded between (dq0downonce holds it to that)' },
+  { what: /^(?:You grapple with .+, but it twists free|You choke .+|(?:The [a-z ]+|Something) (?:struggles in your grip|resists your hold))\.$/,
+    why: 'a grapple fought on (HOUSE.md\'s grappling, 2026-11-09): each round\'s try told as it comes, a hold missed, a choke, a held one\'s struggle, the same words some of them' },
   { what: /^You turn to (?:something|the [a-z ]+)\.$/,
     why: 'a fight\'s turns to a foe, each told as it turns (fighting on: struck from another side again and again; in the dark "something": dq0scent\'s rats, their dice by who asks, 2026-10-30)' },
   { what: /^(?:You (?:look over|poke through|go through|feel over|feel through) the .+|You find nothing in the .+|Your hands find nothing in the .+|There's nothing (?:in|on) the .+|It's closed: you go over the outside of it|(?:It's|They're) made of .+|You stop short: just ahead is a trap, .+)\.$/,
@@ -6012,7 +6014,7 @@ module.exports = {
     dq0OnePathTest(),
     dq0FeaturesTest(),
     {
-      name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), one the grammar has but the game doesn\'t do yet ("grapple": you can\'t, yet); a gift the game takes since slice 4.8 ("give the torch to the rat": the rat out of reach, or out of sight); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',
+      name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), a grapple at a rat out of reach (since 2026-11-09, HOUSE.md\'s grappling: "go up to it first"; till then the grammar\'s and not yet the game\'s); a gift the game takes since slice 4.8 ("give the torch to the rat": the rat out of reach, or out of sight); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T',
         'bribe the rat', 'grapple the rat', 'give the torch to the rat', '?', 'examine the torch carefully', 'status', 'drop pick then take it',
@@ -6022,7 +6024,7 @@ module.exports = {
       // (Its words checked with the screen's codes and the lines' wrapping taken out, each in its turn)
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const want = ['> bribe the rat I don\'t know how to bribe.', '> grapple the rat You can\'t grapple the rat in this game yet.',
+        const want = ['> bribe the rat I don\'t know how to bribe.', '> grapple the rat',
           '> give the torch to the rat', '> ? Moving: north,', 'Several at once: north then east;',
           '> examine the torch carefully', '> status Pace: a walk', 'Watching: nothing in particular.',
           '> drop pick then take it You reach for your backpack. Put down.', 'You reach for the pick. You\'ve no hand free for the pick: you put it in your backpack.', '> drop pick; take it You reach for your backpack. Put down. You reach for the pick. You\'ve no hand free for the pick: you put it in your backpack.',
@@ -6037,6 +6039,9 @@ module.exports = {
           at = i + w.length;
         }
         if (/examine the torch carefully[^>]*I don't understand that/.test(o)) f.push('"examine the torch carefully" not understood');
+        if (!/> grapple the rat (?:The giant rat is out of reach: go up to it first\.|There's nothing like that here to fight\.)/.test(o)) {
+          f.push('the grapple not answered as one out of reach (' + (o.match(/> grapple the rat[^>]*/) || [''])[0] + ')');   // (A grapple's since 2026-11-09, HOUSE.md's grappling: at one beside)
+        }
         if (!/> give the torch to the rat (?:You look for the torch\. )?(The giant rat is out of reach: go up to it first\.|You see no rat here\.)/.test(o)) {
           f.push('the gift not answered as one out of reach (' + (o.match(/> give the torch to the rat[^>]*/) || [''])[0] + ')');
         }
@@ -9768,6 +9773,59 @@ module.exports = {
         const lk = T.of('look');
         if (!lk.after || !lk.after.sight || lk.after.sight.items.filter(i => i.name === 'body').length < 2) f.push('their bodies not seen');
         if (!lk.after || !(lk.after.sum.health > 0)) f.push('the character not hurt by their blows');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0grapple', what: 'Dingus Quest Zero\'s grappling (HOUSE.md\'s grappling, 2026-11-09: the user\'s "full HarnMaster grappling rules"; the referee\'s RS_ATTACK RS_GRAPPLE, dq0harn/grapple.c; the world\'s hold, wfight.c\'s grip), by the blows told (E_FIGHT: who, at whom, how it came out, O_HOLD ... O_LETGO; what it left them in), the actors\' places and positions and the words, the referee\'s dice the commands\' at seed 5\'s giant rats (down the ladder, beside one; the character\'s Unarmed 80, its Stamina and Will 99; the rats set hurt, dq0Poke\'s, the book\'s rat dodging at 90): "wrestle the rat" fought on till it\'s held ("You seize the giant rat and hold it fast."), the fight over then (the next move the player\'s: no fist fight after it); the rat, made wary and shy (dq0Poke\'s, as the first wait\'s typed: it would keep its distance), held where it is as it tries to walk away, each try a struggle ("The giant rat struggles in your grip."), till it breaks free ("...breaks free of your grip.") and goes; a second game\'s "throw the rat", a hold and then a throw ("You throw the giant rat to the ground", the fall\'s hurt, laid down), the hold let go as it\'s thrown ("let go": "You aren\'t holding anyone."), then "wrestle the rat" and "let go" ("You let go of the giant rat."); a third\'s "pin the rat" (pinned, laid down), then "choke the rat", the one pinned, till it falls senseless ("You choke the giant rat. It falls senseless.")',
+      init: 't_rc', cycles: 1600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml una 80 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -T',
+        'd', 'wait', 'go right', 'wrestle the rat', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit',
+        'dq0 -p t -s 5 -c /ram/c.hm -T', 'd', 'wait', 'go right', 'throw the rat', 'let go', 'wrestle the rat', 'let go', 'quit',
+        'dq0 -p t -s 5 -c /ram/c.hm -T', 'd', 'wait', 'go right', 'pin the rat', 'choke the rat', 'quit', 'echo $status']) },
+      start(m) {        // (Every rat hurt as it's come beside, each game; the first game's made wary and shy as the first wait after the hold's typed: AT_WARY, DO_SHY)
+        dq0Poke(m, [1, 2, 3].flatMap(g => [0, 1, 2, 3].map(k => ({ g, line: 'go right', n: 1, k, hurt: 8 }))).concat([0, 1, 2, 3].map(k => ({ g: 1, line: 'wait', n: 2, k, set: { attitude: 2, doing: 3 } }))));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = dq0Story(out), FF_D_DOWN = 4, POS_PRONE = 1, game = 'dq0 -p t -s 5 -c /ram/c.hm -T';
+        const fights = t => dq0Ev(t, 'E_FIGHT'), at = (t, k) => t.after && t.after.actors.find(a => a.k === k);
+        const g1 = T.of(game), q1 = T.after(g1, 'quit'), g2 = T.after(q1, game), q2 = T.after(g2, 'quit'), g3 = T.after(q2, game);
+        if (g3.k < 0) return ['the games not played'];
+        // (A hold, the fight over with it; the rat held where it is as it tries to go, struggling, till it's free and goes)
+        const w = T.after(g1, 'wrestle the rat'), hold = fights(w).find(e => e.who === 0 && e.out === 'O_HOLD');
+        if (!hold) return ['no hold (' + dq0Evs(w) + ')'];
+        const k = hold.def - 1, after = fights(w).slice(fights(w).indexOf(hold) + 1);
+        if (after.some(e => e.who === 0)) f.push('the character fought on after its hold (' + dq0Evs(w) + ')');
+        const waits = T.filter(t => t.k > w.k && t.k < q1.k), free = waits.findIndex(t => fights(t).some(e => e.who === k + 1 && e.out === 'O_FREE'));
+        const struggles = waits.slice(0, free < 0 ? waits.length : free + 1).flatMap(fights).filter(e => e.who === k + 1 && e.out === 'O_STRUGGLES');
+        const p0 = at(w, k);
+        if (!struggles.length) f.push('the held rat not struggling as it tried to go (' + waits.map(dq0Evs).join('; ') + ')');
+        if (free < 0) f.push('the rat never broke free (' + waits.map(dq0Evs).join('; ') + ')');
+        else {
+          if (waits.slice(0, free + 1).some(t => !at(t, k) || !p0 || at(t, k).x !== p0.x || at(t, k).y !== p0.y)) f.push('the held rat moved');
+          if (!waits.slice(free + 1).some(t => at(t, k) && (at(t, k).x !== p0.x || at(t, k).y !== p0.y))) f.push('the rat broken free not gone off');
+        }
+        inTurn(o, ['You seize the giant rat and hold it fast.', 'The giant rat struggles in your grip.', 'The giant rat breaks free of your grip.'], f, 'the hold\'s words: ');
+        // (A throw: a hold, then thrown down, hurt, the hold let go with it; a hold on another, let go)
+        const th = T.after(g2, 'throw the rat'), thrown = fights(th).find(e => e.who === 0 && e.out === 'O_THROWN');
+        if (!thrown || !fights(th).some(e => e.who === 0 && e.out === 'O_HOLD' && e.def === thrown.def)) f.push('no hold and throw (' + dq0Evs(th) + ')');
+        else if (!at(th, thrown.def - 1) || at(th, thrown.def - 1).pos !== POS_PRONE) f.push('the rat thrown not lying there');
+        const l1 = T.after(th, 'let go'), w2 = T.after(l1, 'wrestle the rat'), l2 = T.after(w2, 'let go');
+        dq0Need(f, l1, 'E_FIGHT', { who: 0, out: 'O_LETGO', def: 0 }, 'nothing held let go of, not told so');
+        const h2 = fights(w2).find(e => e.who === 0 && e.out === 'O_HOLD');
+        if (!h2) f.push('no second hold (' + dq0Evs(w2) + ')');
+        else dq0Need(f, l2, 'E_FIGHT', { who: 0, out: 'O_LETGO', def: h2.def }, 'the hold not let go');
+        const g2o = o.slice(o.indexOf('> throw the rat'));
+        inTurn(g2o, ['You throw the giant rat to the ground: a ', '> let go', 'You aren\'t holding anyone.', '> let go', 'You let go of the giant rat.'], f, 'the throw\'s words: ');
+        // (A pin, laid down; a choke of the one pinned, senseless)
+        const pn = T.after(g3, 'pin the rat'), pin = fights(pn).find(e => e.who === 0 && e.out === 'O_PINNED');
+        if (!pin) return f.concat(['no pin (' + dq0Evs(pn) + ')']);
+        if (!at(pn, pin.def - 1) || at(pn, pin.def - 1).pos !== POS_PRONE) f.push('the rat pinned not lying there');
+        const ch = T.after(pn, 'choke the rat'), down = fights(ch).find(e => e.who === 0 && e.out === 'O_CHOKED' && (e.ff & FF_D_DOWN));
+        if (!down || down.def !== pin.def || fights(ch).some(e => e.who === 0 && e.out === 'O_HOLD')) f.push('the rat pinned not choked senseless, held as it was (' + dq0Evs(ch) + ')');
+        inTurn(o.slice(o.lastIndexOf('> pin the rat')), ['You pin the giant rat to the ground.', '> choke the rat', 'You choke the giant rat. It falls senseless.'], f, 'the pin\'s and the choke\'s words: ');
         return f;
       },
       sdcard: true

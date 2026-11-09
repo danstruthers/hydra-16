@@ -36,6 +36,7 @@ void __fastcall__ handle (unsigned char op, const char* x, const char* y, unsign
 void put_in (void);                             /* (hthings.c's: a thing put in another, or let fall in a well) */
 void __fastcall__ portal (unsigned char pa);    /* (hplaces.c's: a portal worked) */
 void __fastcall__ climb (unsigned char h);      /* (hplaces.c's: up or down, H_CLIMB's and a jump's) */
+unsigned char __fastcall__ grip_go (unsigned char g);  /* (hdens.c's: a grapple's move sent, HOUSE.md's grappling) */
 
 /* main.c's */
 void __fastcall__ work (unsigned char what, unsigned char obj);

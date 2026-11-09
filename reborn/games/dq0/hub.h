@@ -483,7 +483,10 @@ enum {
     NINTENTS
 };
 #define AIM_HARD        0x10                    /* (I_ATTACK's b: a throw, thrown hard: twice as far, 10 less) */
-#define AIM_SHOT        0x40                    /* (I_ATTACK's b, | the aim: a shot or a throw, not a blow (slice
+#define AIM_GRAPPLE     0x08                    /* (I_ATTACK's b: a grapple, | its move, rs.h's GM_*: the referee's
+                                                **   RS_GRAPPLE; GM_LETGO the hold let go, GM_BREAK a held denizen's
+                                                **   try to break free, the world's: HOUSE.md's grappling, 2026-11-09) */
+#define AIM_SHOT        0x40                   /* (I_ATTACK's b, | the aim: a shot or a throw, not a blow (slice
                                                 **   4.7's: the world's missiles, the referee's RS_MISSILE), the
                                                 **   UI's with x[1] SK_OF the launcher's kind or the thing
                                                 **   thrown's; a denizen's, its mind's, with what it carries) */

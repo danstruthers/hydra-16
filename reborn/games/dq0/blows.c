@@ -13,6 +13,7 @@
 #include "hub.h"
 #include "rs.h"
 #include "dq0.h"
+#include "cmds.h"
 
 static char* t;                                 /* (Where the next words go in lb) */
 static const char* line[4];                     /* The referee's lines: the attacker's weapon, the defender's, what the
@@ -155,6 +156,8 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
         add (" instead");
         struck (2, 0);
         add (".");
+    } else if (out >= O_HOLD) {
+        grip_words (out);                       /* (A grapple's: overlay 19's, 2026-11-09) */
     } else if (out == O_DISPATCH) {
         add ("You finish ");
         who (dname, 0);
@@ -371,3 +374,118 @@ unsigned char __fastcall__ o_fight_target (struct cmd* c)
     return 0;
 }
 
+/* ---- Grappling (HOUSE.md's grappling, 2026-11-09: the user's "full HarnMaster grappling"): overlay 19's, through their
+** stubs (overlay 6's room) */
+#pragma code-name (push, "OV19CODE")
+#pragma rodata-name (push, "OV19RODATA")
+#pragma local-strings (push, on)
+
+/* A grapple's words at t (rs.h's O_HOLD ... O_LETGO): the other in it its name, % ("the giant rat", "something" if
+** it isn't seen), @ at the start ("The giant rat"): the character's move's defender, the held one's own try's
+** attacker; a throw's hurt after it, the referee's third line */
+void __fastcall__ o_grip_words (unsigned char out)
+{
+    static const char* const say[] = {
+        "You seize % and hold it fast.", "You grapple with %, but it twists free.", "You throw % to the ground",
+        "You pin % to the ground.", "You choke %.", "@ resists your hold.", "@ breaks free of your grip.",
+        "@ struggles in your grip.", "You let go of %."
+    };
+    const char* s = say[out - O_HOLD];
+    const char* n = out == O_FREE || out == O_STRUGGLES ? aname : dname;
+    char c;
+
+    if (!n) {
+        s = "You aren't holding anyone.";       /* (O_LETGO's, none held) */
+    }
+    while ((c = *s++) != 0) {
+        if (c == '%' || c == '@') {
+            strcpy (t, *n == '?' ? (c == '@' ? "Something" : "something") : c == '@' ? "The " : "the ");
+            if (*n != '?') {
+                strcat (t, n);
+            }
+            t += strlen (t);
+        } else {
+            *t++ = c;
+        }
+    }
+    *t = 0;
+    if (out == O_THROWN) {
+        if (*line[2] == 'a' && line[2][1] == ' ') {
+            strcpy (t, ": ");
+            strcat (t, line[2]);
+            t += strlen (t);
+        }
+        strcpy (t++, ".");
+    }
+}
+
+/* VB_GRAPPLE_OBJECT's (and a hold's, a throw's at a denizen, | GT_TRY): move g (rs.h's GM_*) at the denizen beside the
+** character named (its name has the command's word; the target's, none said), sent (I_ATTACK, b AIM_GRAPPLE | g: the
+** world's to strike, the referee's RS_GRAPPLE, fought on till the move's done), with its bare hands (SK_PUNCH: its
+** Unarmed); none beside, why not said (one out of reach: "go up to it first", HarnMaster's grapple a melee attack at
+** one engaged).  "Let go": the hold let go, the world's.  GR_SEND | the actor plus 1 (0 none: a let go), its intent's
+** b in intend_a; GR_SAID, why not in lb; GT_TRY's 0 if none of that name is beside, nothing said */
+static unsigned char gk;                        /* (The denizen grappled last, plus 1) */
+static char an[sizeof HUB->actor[0].name];      /* (One of the name out of reach) */
+
+unsigned char __fastcall__ o_grapple (unsigned char g)
+{
+    struct actor q;                             /* (On the C stack) */
+    unsigned char sn, k, f, away = 0;
+    unsigned px, py;
+    const char* w = cmd.obj.word;
+    const char* s;
+
+    if (g == GM_HOLD) {                         /* (The grapple verb's: its move the word's, the line's first: pin;
+                                                **   choke, strangle, throttle; tackle; else a hold) */
+        for (s = cl; *s == ' '; ++s) {
+        }
+        k = *s | 0x20;
+        g = k == 'p' ? GM_PIN : k == 'c' || k == 's' || (k == 't' && (s[1] | 0x20) == 'h') ? GM_CHOKE : k == 't' ?
+            GM_THROW : GM_HOLD;
+    }
+    if (g == GM_LETGO) {
+        k = 0;
+        goto sent;
+    }
+    if ((g & GT_TRY) && (!*w || cmd.obj.kind)) {
+        return 0;
+    }
+    hub_mem (0, &sn, (const void*) &HUB->pc_stratum, 1);
+    hub_mem (0, &px, (const void*) &HUB->pc_x, 2);
+    hub_mem (0, &py, (const void*) &HUB->pc_y, 2);
+    for (f = k = 0; k < NACTORS; ++k) {
+        hub_mem (0, &q, &HUB->actor[k], sizeof q);
+        if (q.state && q.name[0] && q.sn == sn && name_is (q.name, w)) {
+            if ((unsigned) (q.x - px + 1) > 2 || (unsigned) (q.y - py + 1) > 2) {
+                away = 1;
+                memcpy (an, q.name, sizeof an);   /* (Its name, said: "The giant rat is out of reach") */
+            } else if (!f || k + 1 == gk) {
+                f = k + 1;                      /* (The first beside; the one grappled last before it, the one held:
+                                                **   "choke the rat" the rat it pinned) */
+            }
+        }
+    }
+    if (f) {
+        strike = SK_PUNCH;                      /* (Its bare hands: its Unarmed, the referee's) */
+        gk = k = f;
+        goto sent;
+    }
+    if (g & GT_TRY) {
+        return 0;
+    }
+    if (away) {
+        *lb = 0;
+        say_no (A_FAR | A_LB, an);              /* ("The giant rat is out of reach: go up to it first.") */
+    } else {
+        fight_note (*w ? 6 : 7);                /* ("There's nothing like that here to fight.") */
+    }
+    return GR_SAID;
+sent:
+    intend_a = AIM_GRAPPLE | (g & 7);           /* (Sent by the caller, hdens.c's grip_go: an intent maps the hub into
+                                                **   the window, an overlay's) */
+    return k | GR_SEND;
+}
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)

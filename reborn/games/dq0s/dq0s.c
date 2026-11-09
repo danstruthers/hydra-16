@@ -397,7 +397,8 @@ static void listen (void)
             (unsigned char) (E_DEN_DE (m) - DE_ROOF) <= DE_WALLS - DE_ROOF) {
             heard (m.who, WORLD (E_DEN_DE (m) == DE_ROOF ? WS_SMASH : WS_BLOW), E_DEN_LOUD (m), E_DEN_SX (m) - px,
                 E_DEN_SY (m) - py, E_DEN_BETWEEN (m));
-        } else if (m.kind == E_FIGHT && E_FIGHT_SN (m) == sn && E_FIGHT_OUT (m) < FO_BLED) {   /* (A blow: landing, or not) */
+        } else if (m.kind == E_FIGHT && E_FIGHT_SN (m) == sn && E_FIGHT_OUT (m) < O_LETGO) {   /* (A blow: landing, or not; a grapple's
+                                                **   scuffle, but a hold let go) */
             heard (m.who, WORLD (E_FIGHT_OUT (m) == O_HIT || E_FIGHT_OUT (m) == O_BOTH_HIT ||
                 E_FIGHT_OUT (m) == O_COUNTER_HIT || E_FIGHT_OUT (m) == O_DISPATCH ? WS_HIT : WS_SWISH), E_FIGHT_LOUD (m),
                 E_FIGHT_SX (m) - px, E_FIGHT_SY (m) - py, 0);

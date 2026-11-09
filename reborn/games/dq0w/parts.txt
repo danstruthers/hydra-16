@@ -109,5 +109,6 @@
 103 31  A well's shaft (wwell.c: 2026-11-06, dq0w.rop's)
 104 31  A thing let fall down a well, a shaft (wwell2.c: 2026-11-06)
 105 15  What it carries listed: gathered first (things.c, 2026-11-06: part 11's room; overlay 15's, 3's room)
+106 8   Grappling: the hold kept, a held one's try to break free (wfight.c: 2026-11-09, part 15's room; its let go part 37's)
 stub start 3
 stub begin 3

@@ -288,6 +288,13 @@ extern struct side A, D;
 extern struct req* R;
 extern unsigned char nfx, prones;
 extern char line[2][72];
+void __fastcall__ effect (unsigned char target, unsigned char kind, unsigned cond, unsigned char band,
+    unsigned char loc, unsigned char aspect);   /* (fight.c's, through its stub) An effect of the reply's */
+void __fastcall__ strike (struct side* s, struct side* t, unsigned char n, unsigned char z, unsigned char part,
+    char* w, unsigned char stop);               /* (fight.c's, through its stub) Side s strikes side t: n dice */
+
+/* grapple.c (overlay 9): grappling (RS_ATTACK's RS_GRAPPLE: fight.c's, its sides made; HOUSE.md's grappling) */
+void grip (void);
 
 /* gear.c (overlay 3): the character's weapons and armour */
 void __fastcall__ hit_thing (struct req* q, struct side* s);   /* A blow at a thing (RS_ATTACK at RS_THING: fight.c's,

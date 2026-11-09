@@ -25,7 +25,10 @@
 
 #define LOUD_FIGHT      5
 
-static unsigned char fring;                     /* (The fights' ring's next) */
+unsigned char fring;                            /* (The fights' ring's next: part 106's too) */
+unsigned char grip;                             /* (wbody.h's: the actor the character holds, plus 1, | GH_PIN) */
+unsigned char gchoke;                           /* (The rounds it's been choked, the hold as it stands: the referee's) */
+struct gleft glf;                               /* (wbody.h's: a blow's, for part 106's grip_left) */
 struct mshot mshot;                             /* (wbody.h's: a blow's missile, wshoot.c's) */
 extern unsigned char pc_cut;                    /* (work.h's) */
 extern unsigned char pshoot;                    /* (wshoot.c's: the character's fight a missile's) */
@@ -77,6 +80,9 @@ static void died (void)
 {
     bd.state = 0;
     bleeds &= ~(1 << bk);
+    if (GRIP_OF (grip) == bk + 1) {
+        grip = 0;                               /* (Held: let go, dead) */
+    }
     den_strip (lay_body (bd.remains, bd.sn, bd.x, bd.y));     /* (Its things on its body: part 51's) */
     den_saw = 1;
 }
@@ -127,7 +133,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     struct fight* f;
     unsigned char ff, c, out, me, wh, n, i, dh, cd, ra;
     unsigned w2;
-    unsigned char pa, pd, fa, fd;
+    unsigned char pa, pd, fa, fd, g;
     const struct rs_effect* e;
 
     me = bk + 1;
@@ -152,6 +158,17 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         ((me != att ? bd.doing == DO_SLEEP || (HUB->pc_hid && DO_UNAWARE (bd.doing)) : bd.state > 1) ? RS_ASLEEP : 0);
                                                 /* (A sleeper struck at: no defence, the book's Ignore, 2026-11-02; and
                                                 **   one that hasn't seen a blow from hiding coming, 2026-11-04) */
+    g = z & AIM_GRAPPLE ? z & 7 : GM_NONE;      /* (A grapple: its move, HOUSE.md's grappling, 2026-11-09) */
+    if (g) {
+        if (g != GM_BREAK && GRIP_OF (grip) != def) {
+            g = GM_HOLD;                        /* (Not held yet: a hold taken first) */
+        }
+        RS_ATTACK_MOVE (*r) = g;
+        RS_ATTACK_HOLD (*r) = (grip & GH_PIN) | gchoke;
+        RS_ATTACK_FLAGS (*r) |= RS_GRAPPLE;
+    } else if (att && GRIP_OF (grip) == att) {
+        RS_ATTACK_STEPS (*r) -= 4;              /* (Held: its blows four steps the worse, the house's) */
+    }
     if (mshot.kind) {                           /* (A missile's, shot or thrown: wshoot.c's, slice 4.7's) */
         if (mshot.flags & MS_HARD) {
             RS_ATTACK_STEPS (*r) -= 2;
@@ -270,6 +287,17 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     if (c & AF_BLEEDING) {
         bleeds |= 1 << bk;
     }
+    if (g | grip) {
+        glf.att = att;                          /* (The hold as it left it: part 106's) */
+        glf.def = def;
+        glf.z = z;
+        glf.ff = ff;
+        grip_left (out);
+        if (g) {
+            fa = pa;                            /* (A throw's, a pin's fall its own words) */
+            fd = pd;
+        }
+    }
     told (att, def, out, ff);
     if (pa == POS_PRONE && fa != POS_PRONE && !(ff & (FF_A_DOWN | FF_A_DEAD))) {
         fell (att);                             /* (Every fall told as it falls, after the blow's words: a stumble's, a
@@ -334,6 +362,10 @@ void __fastcall__ s_den_blow (unsigned char def, unsigned char z)
         pc_shot (PS_DEN);                       /* (Its shot or its throw: part 67's, 2026-10-30) */
         return;
     }
+    if (z & AIM_GRAPPLE) {
+        blow (bk + 1, def, z);                  /* (Held, its try to break free: no weapon drawn for it) */
+        return;
+    }
     if (z & AIM_FIRE) {                         /* (A missile's blow, mshot set: wshoot.c's, part 65's; the character's
                                                 **   at actor def, else body bd's at the character; how it came out
                                                 **   bev's, told: 0xFF none) */
@@ -375,6 +407,102 @@ void s_pc_blow (void)
     BD_PUT ();
     ++HUB->den_seq;                             /* (Changed: the world looks again at what the character sees) */
 }
+
+/* ==== Part 106 (2026-11-09: part 15's room): grappling (HOUSE.md's grappling, the user's "full HarnMaster grappling":
+** the hold the character has on a denizen, grip, kept as the blows leave it, a held one's intents its tries to break
+** free, the hold let go) */
+#pragma code-name (push, "SW106CODE")
+#pragma rodata-name (push, "SW106RODATA")
+
+/* The hold as a blow left it (blow's: glf its attacker, defender, aim and what it left them in; out how it came out):
+** a grapple's (the aim's AIM_GRAPPLE) held, pinned, choked, thrown free, broken free; the character's done with its
+** move, its fight over (the world's pc_cut: the hold got, a hold's own; the throw, the pin, the one choked senseless);
+** and let go, the holder or the held senseless or dead */
+void __fastcall__ s_grip_left (unsigned char out)
+{
+    if (glf.z & AIM_GRAPPLE) {
+        if (out == O_HOLD) {
+            grip = glf.def;
+            gchoke = 0;
+        } else if (out == O_PINNED) {
+            grip |= GH_PIN;
+        } else if (out == O_CHOKED) {
+            ++gchoke;
+        } else if (out == O_THROWN || out == O_FREE) {
+            grip = 0;
+        }
+        if (!glf.att && (out == O_THROWN || out == O_PINNED || (out == O_HOLD && (glf.z & 7) == GM_HOLD) ||
+            (glf.ff & FF_D_DOWN))) {
+            pc_cut = 1;
+        }
+    }
+    if (((glf.ff & (FF_A_DOWN | FF_A_DEAD)) && (!glf.att || glf.att == GRIP_OF (grip))) ||
+        ((glf.ff & (FF_D_DOWN | FF_D_DEAD)) && (!glf.def || glf.def == GRIP_OF (grip)))) {
+        grip = 0;
+    }
+}
+
+/* Body bd's intent m (part 14's), if it's the one the character holds: gone, or apart, let go; else anything but a
+** wait, or a blow while it isn't pinned, made its try to break free, its round */
+void __fastcall__ s_grip_held (struct msg* m)
+{
+    if (GRIP_OF (grip) != bk + 1) {
+        return;
+    }
+    if (m->kind == I_LEAVE || m->kind == I_ENTER || !bd.state || bd.sn != bps || (unsigned) (bd.x - bpx + 1) > 2 ||
+        (unsigned) (bd.y - bpy + 1) > 2) {
+        grip = 0;
+    } else if (m->kind != I_WAIT && m->kind != I_ROUSE && (m->kind != I_ATTACK || (grip & GH_PIN))) {
+        m->kind = I_ATTACK;
+        I_ATTACK_FOE (*m) = 0;
+        I_ATTACK_AIM (*m) = AIM_GRAPPLE | GM_BREAK;
+    }
+}
+
+#pragma code-name (push, "SW37CODE")              /* (Part 37's, the intents': part 106's room in its bank) */
+#pragma rodata-name (push, "SW37RODATA")
+/* The hold let go (the player's "let go", or the character moved apart from the one it holds): told t 1 (E_FIGHT
+** O_LETGO, its defender the one let go, the ring's record its name alone; none held, none: "You aren't holding
+** anyone."), else quietly.  Its event as told's (part 15's), no blow at the character in it */
+void __fastcall__ s_grip_off (unsigned char t)
+{
+    unsigned char k = GRIP_OF (grip);
+    char nm[sizeof HUB->actor[0].name];         /* (On the C stack: the hub's not in the window as it's written) */
+    struct actor* a;
+    struct fight* f;
+
+    grip = 0;
+    if (!t) {
+        return;
+    }
+    hub_map (0);
+    a = &HUB->actor[(k - 1) & 7];
+    memcpy (nm, a->name, sizeof nm);
+    bev.kind = E_FIGHT;
+    bev.who = 0;
+    E_FIGHT_DEF (bev) = k;
+    E_FIGHT_LOUD (bev) = 0;
+    E_FIGHT_SX (bev) = a->x;
+    E_FIGHT_SY (bev) = a->y;
+    bev.t = HUB->now;
+    E_FIGHT_SN (bev) = a->sn;
+    E_FIGHT_OUT (bev) = O_LETGO;
+    E_FIGHT_FF (bev) = 0;
+    E_FIGHT_WORDS (bev) = fring;
+    f = FIGHT_AT + fring;
+    hub_map (DEN_BANK);
+    memset (f, 0, sizeof *f);
+    if (k) {
+        memcpy (f->def, nm, sizeof f->def);
+    }
+    hub_map (0);
+    hub_devent (&bev);
+    fring = (fring + 1) % NFIGHTS;
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ==== Part 69's (part 15's room, 2026-10-29; part 67's till 2026-10-30, the missiles' room: dq0w.cfg's SW69): a robbery */
 #pragma code-name ("SW69CODE")

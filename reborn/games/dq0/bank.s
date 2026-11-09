@@ -169,6 +169,8 @@ ovl_out:
             OVFN        des_low, 22
             OVFN        des_req, 22
             OVFN        cap_of, 23          ; (A thing in sight's capital, the look's: caps.c, overlay 22's till 2026-11-06)
+            OVFN        grapple, 19         ; (Grappling: a grapple's move sent, its words: blows.c, 2026-11-09)
+            OVFN        grip_words, 19
             OVFN        around, 23          ; (What's in sight listed: caps.c)
             OVFN        den_caps, 23        ; (The denizens' capitals, the look's: caps.c)
             OVFN        which_seen, 24      ; (The resolver's question, by capitals: which.c, 2026-11-07)

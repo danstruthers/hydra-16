@@ -17,7 +17,7 @@ OVL_DOT     = 0
             .include    "../dq0/dq0lib.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 8                     ; dq0harn.cfg's overlays (the 4th and 5th the swapped parts' images; the 8th afflict.c's)
+OVMAX       = 9                     ; dq0harn.cfg's overlays (the 4th and 5th the swapped parts' images; the 8th afflict.c's; the 9th grapple.c's)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 DEPTH       = 16                    ; Overlay calls in calls, at most
 
@@ -200,6 +200,9 @@ ovl_out:
             OVFN        set_load, 7
             OVFN        equip, 7            ; (The main RAM's room, D13's)
             OVFN        heft, 7             ; (A weapon's version, D13's: skills.c)
+            OVFN        grip, 9             ; (Grappling: grapple.c, 2026-11-09)
+            OVFN        effect, 2           ; (Its calls of fight.c's)
+            OVFN        strike, 2
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0harn.cfg's SWAP, a part at a time,
 ; copied there from overlay 4's bank as it's called)

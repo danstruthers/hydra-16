@@ -1787,8 +1787,9 @@ static unsigned char fought (void)
             dismay (k | g << 4);                /* (Its kin's courage, how it fell in the high bits: part 6's; bled to
                                                 **   death too, a fall all the same) */
         }
-        if (E_FIGHT_OUT (m) != FO_BLED && !m.who) {
-            harmed (k);                         /* (Its own, and their foes, think again of the character; its
+        if (E_FIGHT_OUT (m) != FO_BLED && E_FIGHT_OUT (m) != O_LETGO && !m.who) {   /* (Not a hold let go: HOUSE.md's
+                                                **   grappling, 2026-11-09) */
+            harmed (k);                       /* (Its own, and their foes, think again of the character; its
                                                 **   wound seen) */
         }
         if (f & (att ? FF_D_DEAD : FF_A_DEAD)) {

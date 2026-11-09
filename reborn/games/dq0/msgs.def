@@ -218,6 +218,8 @@ RS_ATTACK       a aim@Z_MID; b aspect@AS_BLUNT; c outnumbered; steps; w2(flags) 
                 #   or a stumble was; af AF_*; their healths; the tenths one's out for; left FF_*; its struct rs_effects)
 RS_ATTACK:missile a aim@Z_MID; b band; c missile; steps; w1 range; w2(flags) shy:0
                 # (RS_MISSILE's: its range's band, the kind shot or thrown, the squares; the reply a blow's)
+RS_ATTACK:grapple a move@GM_NONE; c(hold) choked:0-6 pinned:7=GH_PIN; steps; w2(flags) shy:0
+                # (RS_GRAPPLE's: the move; the hold as it stands, the rounds choked; the reply a blow's)
 RS_ATTACK:thing c run; w2(flags) shy:0; x[0-3] resist[]
                 -> result(struck) stop:0 part:1 short:2 broke:3; a drop; b aspect@AS_BLUNT; c worst; w1 harm; w2 out
                 # (At RS_THING: the blow's number in a run, the thing's resistance to blunt, edge, point, fire.  The harm

@@ -5900,8 +5900,9 @@ over:
         pshoot = 1;                             /* (None beside it, its auto-target range set: a hostile within it
                                                 **   shot at, what it shoots with taken, part 67's; 2026-10-30) */
     }
-    if (!k || (HUB->pcsum.cond & C_STUNNED)) {
-        return idle ? 3 : 0;                    /* (None; or it's in shock, in no state to fight) */
+    if (!k || grip || (HUB->pcsum.cond & C_STUNNED)) {
+        return idle ? 3 : 0;                    /* (None; or it's in shock, in no state to fight; or it holds one, its
+                                                **   next move the player's: HOUSE.md's grappling) */
     }
     fight_begin (h & 2 ? k | TE_STILL : k);    /* (A hostile engaging it: fought back, at the middle, with what it
                                                 **   holds; after a command that took a fight over, turned to) */
@@ -6237,6 +6238,9 @@ static void __fastcall__ intent (struct msg* m)
     free_at = HUB->now;
 #define MOVES   (1UL << I_GO | 1UL << I_CLIMB | 1UL << I_GOTO | 1UL << I_STEP | 1UL << I_TAKE | 1UL << I_CLOSE | \
                  1UL << I_DISENGAGE | 1UL << I_TRAVEL)
+    if ((MOVES >> m->kind & 1) && grip) {
+        grip_off (1);                           /* (Moving off: the hold let go, told; HOUSE.md's grappling) */
+    }
     if ((MOVES >> m->kind & 1) && (HUB->pc_pos || (HUB->pcsum.cond & C_MOVE) || pmode) && legs (L_GO)) {
         return;                                 /* (Prone, its legs not whole: up first, or crawling; or no move:
                                                 **   part 50's, slice 4.1b's) */
@@ -6542,6 +6546,10 @@ void __fastcall__ s_intent_more (struct msg* m)
     case I_ATTACK:                              /* (A round's blow, struck: at once; at the turns pace, as the clock
                                                 **   moves on, the denizens' slice's first: turns_run; then fought on,
                                                 **   part 24's) */
+        if (I_ATTACK_AIM (*m) == (AIM_GRAPPLE | GM_LETGO)) {
+            grip_off (1);                       /* (The hold let go: HOUSE.md's grappling, 2026-11-09) */
+            break;
+        }
         fight_go (m);
         break;
     case I_DISENGAGE:

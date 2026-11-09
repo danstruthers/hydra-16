@@ -552,6 +552,31 @@ static unsigned char __fastcall__ tired (unsigned char n, unsigned char w)
     return sround[n] / TIRE_N;
 }
 
+/* A grapple (RS_GRAPPLE: HOUSE.md's grappling, 2026-11-09), the null's simple way: a flat test at the steps (the held
+** one's try, pinned, four steps the worse); a throw and a pin lay it down (no hurt), the third round of a choke leaves it
+** senseless a minute */
+static void __fastcall__ grapple (struct req* r)
+{
+    struct rs_effect* e = (struct rs_effect*) RS_ATTACK_EFFECTS (*r);
+    unsigned char m = RS_ATTACK_MOVE (*r), h = RS_ATTACK_HOLD (*r), o;
+    signed char g = flat (RS_ATTACK_STEPS (*r) - (m == GM_BREAK && (h & GH_PIN) ? 4 : 0));
+
+    o = m == GM_BREAK ? (G_OK (g) ? O_FREE : O_STRUGGLES) : !G_OK (g) ? (m == GM_HOLD ? O_SLIP : O_RESISTS) :
+        m == GM_HOLD ? O_HOLD : m == GM_THROW ? O_THROWN : m == GM_PIN ? O_PINNED : O_CHOKED;
+    RS_ATTACK_OUTCOME (*r) = o;
+    e->target = r->other;
+    if (o == O_THROWN || o == O_PINNED) {
+        e->kind = X_COND_ON;
+        e->cond = C_PRONE;
+    } else if (o == O_CHOKED && (h & ~GH_PIN) >= 2) {
+        e->kind = X_COND_ON;
+        e->cond = C_UNCONSCIOUS;
+        RS_ATTACK_LEFT (*r) = FF_D_DOWN;
+        RS_ATTACK_OUT (*r) = 600;
+    }
+    put ("\n\n\n");
+}
+
 static void __fastcall__ attack (struct req* r)
 {
     struct rs_effect* e = (struct rs_effect*) RS_ATTACK_EFFECTS (*r);
@@ -585,6 +610,10 @@ static void __fastcall__ attack (struct req* r)
     }
     dw = d ? &sheet[aden[(d - 1) & 7]] : &wounds;
     t = d ? BTOUGH : TOUGH;
+    if (mw & RS_GRAPPLE) {
+        grapple (r);
+        goto healths;
+    }
     if (!(mw & MS_STRAY)) {
         st += a ? -tired (aden[(a - 1) & 7], 0) : tired (aden[(d - 1) & 7], 0);    /* (A creature tired, the worse at
                                                 **   it: a step a level, attacking or defending) */
@@ -649,6 +678,7 @@ static void __fastcall__ attack (struct req* r)
         }
     }
     put ("\n");
+healths:
     RS_ATTACK_HEALTH (*r) = health (a ? sheet[aden[(a - 1) & 7]] : wounds, a ? BTOUGH : TOUGH) | health (*dw, t) << 8;
 }
 

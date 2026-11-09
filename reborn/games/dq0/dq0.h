@@ -392,6 +392,15 @@ unsigned __fastcall__ fight_words (const struct msg* m);    /* Overlay 6: a blow
                                                 **   character's knocked senseless for, or 0 */
 #define FIGHT_LB    ((struct fight*) (lb + sizeof lb) - 1)
 void __fastcall__ fight_note (unsigned char n);   /* Overlay 22: a fight's word into lb (blows.c's) */
+unsigned char __fastcall__ grapple (unsigned char g);  /* Overlay 19 (blows.c's): a grapple's move (rs.h's GM_*) at the
+                                                **   denizen beside named (cmd.obj): GR_SEND | its foe (I_ATTACK's,
+                                                **   intend_a its AIM_GRAPPLE b), or GR_SAID why not (lb); | GT_TRY:
+                                                **   only if one's there (else 0, nothing said): HOUSE.md's grappling,
+                                                **   hdens.c's grip_go sends it */
+#define GT_TRY      0x80
+#define GR_SEND     0x40
+#define GR_SAID     0x20
+void __fastcall__ grip_words (unsigned char out);   /* Overlay 19 (blows.c's): a grapple's words (O_HOLD ...) */
 unsigned char __fastcall__ fight_target (struct cmd* c);    /* Overlay 6: VB_ATTACK_OBJECT's denizen beside
                                                 **   the character to strike at (its name has the word; it lies that
                                                 **   way): its entry plus 1, or 0 and why not in lb; VB_DEFEND's stance

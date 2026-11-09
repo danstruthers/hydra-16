@@ -697,7 +697,11 @@ void __fastcall__ o_fight (struct req* r)
     } else {
         heft (&A);                              /* (Their weapons' versions: D13's) */
         heft (&D);
-        attack ();
+        if (RS_ATTACK_FLAGS (*r) & RS_GRAPPLE) {
+            grip ();                            /* (A grapple: grapple.c's, overlay 9's, 2026-11-09) */
+        } else {
+            attack ();
+        }
         if (RS_ATTACK_OUTCOME (*r) != 0xFF && !r->actor) {   /* (The character's skill used in it, for its development rolls,
                                                 **   opened its first time, the book's, Combat 19: its weapon striking;
                                                 **   skills.c's, slice 4.4's) */

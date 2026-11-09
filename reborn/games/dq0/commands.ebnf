@@ -94,7 +94,7 @@
 (* ---- Fighting ---- *)
 <attack>         ::= <ATTACK> [ <thing> [ <USING> <object> [ <hand-phrase> ] ] ]   (* bare: the target, else the nearest foe; "attack the rat with the dagger in my left hand" *)
 <USING>          ::= "with" | "using"                (* what it's done with: an instrument, to hand (2026-10-22) *)
-<grapple>        ::= <GRAPPLE> <object> | <THROW> <object> | "put" <object> "in" [ "a" ] ( "head" "lock" | "headlock" )   (* a grapple maneuver: the object is engaged; "toss" and "throw" a creature are grapples too *)
+<grapple>        ::= <GRAPPLE> <object> | <THROW> <object> | "put" <object> "in" [ "a" ] ( "head" "lock" | "headlock" ) | "let" "go" [ "of" <object> ]   (* a grapple maneuver: the object is engaged; "toss" and "throw" a creature are grapples too *)
 <throw>          ::= <THROW> [ <throwing> ] <at-phrase>          (* at something: a target *)
                    | <THROW> [ <throwing> ] ( "into" | "in" | "down" ) <object>   (* "throw the dagger into the well", "down the shaft": let fall in it (2026-11-06) *)
                    | <THROW> [ <throwing> ] <throw-dir>
@@ -210,7 +210,7 @@
 <EQUIP>      ::= "equip" | "put on"
 <UNEQUIP>    ::= "doff" | "take off" | "put away"
 <ATTACK>     ::= "fight" | "slash" | "bash" | "stab" | "punch" | "kick" | "bite" | "headbutt" | "elbow" | "knee" | "slap" | "butt"
-<GRAPPLE>    ::= "grapple" | "wrestle" | "tackle" | "pin" | "choke"
+<GRAPPLE>    ::= "grapple" | "wrestle" | "tackle" | "pin" | "choke" | "strangle" | "throttle"
 <THROW>      ::= "t" | "sling"
 <SHOOT>      ::= "fire"
 <LOAD>       ::= "draw"

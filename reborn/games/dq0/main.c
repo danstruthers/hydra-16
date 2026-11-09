@@ -1768,8 +1768,10 @@ void __fastcall__ s_intend (unsigned char kind, unsigned char a)
     m.kind = kind;
     m.who = 0;
     m.a = a;
+    m.b = intend_a;                             /* (I_ATTACK's aim, a grapple's: blows.c's, 2026-11-09) */
+    intend_a = 0;
     m.w1 = m.w2 = 0;
-    I_ATTACK_STRIKE (m) = strike;               /* (I_ATTACK's, I_CLOSE's: what it strikes with, the hand it's in) */
+    I_ATTACK_STRIKE (m) = strike;              /* (I_ATTACK's, I_CLOSE's: what it strikes with, the hand it's in) */
     I_ATTACK_HAND (m) = shand;
     if (kind == I_GO) {                         /* (Through the one meant, if it was found) */
         I_GO_X (m) = tx;

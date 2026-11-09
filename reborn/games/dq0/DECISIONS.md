@@ -2710,3 +2710,79 @@ Fifty verbs' rows in the dispatch table (actions.c) said `H_NOT_YET`, "You can't
 - **Room**: part 2 (the handlers) has 237 bytes left of 659 (the stubs and the refusals' asking: some 17 bytes a stub), overlay 24 (the refusals) 132 of 292, part 4 (pace.c) 13 of 17; dq0's main RAM unchanged (2,307 bytes free), dq0harn's 2,203 (the stub and the Ritual's test), dq0null's 5,453.
 - **The corpus**: no lines added.  commandcorpus.js checks the corpus's form and that each action has a case; its expected actions are the grammar's (commands.ebnf), not the meaning commands.verbs gives, so the aliases change nothing there and the rows-only verbs and the powers have their cases already.
 - **Test dq0notyet**: the refusals' words (a spell, a talent, an invocation invoked and learnt, the deity's name and none), the aliases (activate, negotiate, sense a lie), "status" and "pace", and "sneak north" a creep and a move.
+
+## Grappling (2026-11-09, as built, for review: the verbs plan's B1g, the user's "full HarnMaster grappling")
+
+The user, of the 50 verbs the game answered "not in this game yet": grappling gets HarnMaster's full rules, "grapple
+attacks, holds, throws, pins, chokes, breaking free", by the Unarmed skill, the referee gaining them.  VB_GRAPPLE_OBJECT
+was an H_NOT_YET row.  HOUSE.md's grappling has the rules as built; this is how, and where it's simpler than the book.
+
+**How it's carried.**  A grapple is a blow of another kind, so it rides the fight machinery whole: the UI sends
+I_ATTACK with its b `AIM_GRAPPLE | GM_*` (the move: hold, throw, pin, choke; the world's own GM_LETGO and GM_BREAK);
+the world strikes it as a blow (wfight.c's blow: the same slot, ring, E_FIGHT, effects, morale, senselessness, death),
+asking the referee RS_ATTACK with RS_GRAPPLE in its flags and the move in its a (msgs.def's new form,
+`RS_ATTACK:grapple a move; c(hold) choked:0-6 pinned:7=GH_PIN`); the reply is a blow's, its outcome one of nine new
+O_* (O_HOLD ... O_STRUGGLES, and the world's O_LETGO), so the UI words it (blows.c's grip_words, overlay 19) and the
+denizens and the sound task take it as they take a blow.  The character fights it on as it fights a blow, round after
+round, till its move is done (held, thrown, pinned, choked senseless: then its fight ends, the world's pc_cut), a hold
+first if it doesn't hold that one already.  While it holds one, the character doesn't fight on by itself (the world's
+fighting on, begun by a hostile one striking at it, isn't begun): the next move, a throw, a pin, a choke, a blow, a
+let go, is the player's, or a hold would be beaten out of its hands by its own fists.  No new request kind, no new handler id (the row is H_FIGHT's, the
+handler's first test the verb: the shared files' edits kept small, B0's in parallel).
+
+**Who holds whom** is the world's (wfight.c's grip: the actor plus 1, GH_PIN; the rounds choked): one hold, the
+character's.  A held denizen's intent (wbody.c's, through part 15's grip_held: part 14 has no room) is its try to
+break free, its round, if it's anything but a wait or (not pinned) a blow: so it never walks away, and whatever its
+mind wanted (to flee, to keep off, to rise) becomes the struggle.  Held but not pinned, its blows are four steps the
+worse.  Let go: as either is knocked senseless or dies (the blow's, the bleeding's), as the held one leaves or is found
+apart (its next intent), as the character moves off (the world's intent: a walk, a step, a dash, a climb, a take, a
+close-in, a disengage, travel: told, "You let go of the giant rat."), at "let go".
+
+**The referee** (dq0harn's grapple.c, a new overlay, the ninth: the others full; its two calls of fight.c's through
+new stubs) tests each move as an opposed test, and the null ruleset answers each with a flat test.
+
+**Where it's simpler than the book, and why:**
+
+- **The book's grappling tables aren't in the repo** (no rulebook text: only the house's notes), so the moves are
+  built from HarnMaster's grappling as the brief gives it, each an opposed test in the book's levels (CS, MS, MF, CF:
+  the attacker's success must beat the defender's level; the defender has the ties) rather than a grappling table
+  of outcomes.  Why: the opposed test is the book's general rule for one skill against another (Skills 5), and it
+  needs no table the repo doesn't hold.
+- **A hold is Unarmed against Unarmed or Dodge, the better;** a throw, a pin or a choke Unarmed against Unarmed or
+  Strength (five times), the better; breaking free the held one's Unarmed or Strength against the holder's Unarmed.
+  The book weighs Strength in grappling; five times it is the house's way of making an attribute a skill's peer (as
+  the house's Stealth, a dig's).
+- **Size two steps a difference,** both ways (the bigger the better), where the book bars throwing a much bigger foe
+  outright.  Why: no table of what can be thrown; two steps keeps a bear hard and a rat easy.
+- **A creature's Unarmed is its own attack's mastery** (its sheet's first weapon, its penalty off it): the bestiary
+  keeps no Unarmed.  So a sword-armed bandit grapples at its sword's skill.
+- **The throw's fall is two dice of blunt impact** (the sizes' difference a point a die) at a place the middle's strike
+  table gives, its armour off it, as a blow's strike is; the book's fall impact by height isn't used (a throw is a
+  fall from standing, too short for the falling table's bands).  The hold is let go as it's thrown (the thrower
+  doesn't fall with it), so a thrown foe's next turn is its getting up, the book's Rise.
+- **A choke is an Endurance test** (three times it) each round it's choked, ten less for each round before in this
+  hold, a pinned one two steps the easier to choke; failed, it's knocked senseless as a blow's shock does (the book's
+  shock rolls till it comes round, a minute at least: an unhurt one would come round the next round).  The book's fatigue from a choke isn't kept: the creatures' fatigue is tire.c's,
+  by the clock, and a level more a round would knock it out no sooner.  Bones that move (BF_MINDLESS) can't be
+  choked.
+- **A pin** lays it down and holds it there; pinned, it can't strike (its blow too is a try to break free), four steps
+  the worse to break free; the book's further holds from a pin (a lock, a choke's ease) are only the choke's two steps.
+- **Held, its blows four steps the worse;** its dodge as ever.  The book's penalties for the held are by the hold;
+  four steps is the house's one figure.
+- **One hold at a time,** the character's: the denizens don't grapple the character (the brief's optional part, left:
+  their minds would need a move to choose, and the character's intents a break-free of their own); a second hold on
+  another lets the first go.
+- **Grappling needs the foe beside the character** (out of reach: "go up to it first"), no close-in as a blow has: the
+  grammar's own note ("the target must be engaged"), the book's a melee attack at one engaged.
+- **A hold isn't kept in a saved game** (the world's own, not the save's): a game kept and taken up again has no hold.
+- **The words "grapple", "wrestle", "tackle", "pin", "choke", "strangle", "throttle" are one verb** (commands.verbs'
+  grapple), its move read from the line's first word (blows.c's grapple: p a pin; c, s and th a choke; t a throw;
+  else a hold), as commands.aliases says a manoeuvre is: dq0c's records were full (255: five verbs made 258).  The
+  grammar (commands.ebnf) gained "let go [of X]", "strangle" and "throttle"; sim/tools/commandcompile.js the same.  "Hold
+  the goblin" and "throw the goblin" are a grapple when a denizen of that name is beside the character (else a thing
+  held, a thing thrown, as ever); "let go" ("let go of the goblin") a verb of two words.  "Release the goblin" stays
+  VB_RELEASE_PRINCIPLE's (a principle released, the magic's), its row B5's.
+
+**The images** grew by the overlay (dq0harn.ovl's ninth bank), two of the UI's stubs, two of the referee's; the world's
+part 15 the rest (its room's).  The tests: dq0grapple (a hold, a walk away failing, breaking free, a throw, a pin, a
+choke to senselessness, "let go"); dq0rules' grappling cases; dq0parse's "grapple the rat" no longer "not yet".

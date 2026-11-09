@@ -232,6 +232,9 @@ void s_den_intents (void)
             bd.ready + CATCHUP < HUB->now) {
             bd.ready = HUB->now - CATCHUP;      /* (Fallen behind the clock: a few seconds made up at most) */
         }
+        if (grip) {
+            grip_held (&m);                     /* (Held by the character: its try to break free, part 15's) */
+        }
         switch (m.kind) {
         case I_ENTER:                           /* (A denizen come near the character: its body's from its record,
                                                 **   its things: part 60's) */

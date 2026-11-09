@@ -2394,7 +2394,7 @@ case the spear and her sword (her left, her off hand: a block of 80) both fumble
 set now=31000
 dice 100:100 100:95 6:6 6:6 6:6 6:6 6:6 6:6
 ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
-want result=O_FUMBLE a=3 e0.kind=X_DROP e0.target=1 e0.loc=DH_RIGHT e1.kind=X_DROP e1.target=0 e1.loc=DH_LEFT
+want result=O_FUMBLE a=3 e0.kind=X_DROP e0.loc=DH_RIGHT e1.kind=X_DROP e1.target=0 e1.loc=DH_LEFT
 char
 inj 7 2 3 4 0 8
 end
@@ -2996,3 +2996,74 @@ case a kobold: Initiative 50, size 3, its spear 60 (its kin the small orc's)
 dice
 ask NEW_ACTOR actor=1 w1=35 text="kobold"
 want result=0 new.morale=50 new.power=33
+
+# ---- Grappling (HOUSE.md's grappling, 2026-11-09, the user's "full HarnMaster grappling": RS_ATTACK's RS_GRAPPLE,
+# grapple.c): each move an opposed test, the attacker's die first, the defender's second, the attacker winning only by a
+# success better than the defender's (a failure of its own: the defender's die not rolled); a size's difference two
+# steps (she's 4, a rat 2: her moves ten points the better, its own the worse).  Her Unarmed 40; a rat's its bite's 75,
+# its Dodge 90 (each rat a fresh sheet: a throw's hurt, a choke's black-out its own)
+
+char
+end
+set now=970000 stance=D_AUTO
+dice
+ask NEW_ACTOR actor=1 w1=50 text="rat"
+want result=0
+case a hold on a rat: her Unarmed 40 and two sizes, 60; its Dodge 90 the better of its bite's 75: her 12 against its 96, held
+dice 100:12 100:96 ...
+ask ATTACK actor=0 other=1 a=GM_HOLD w2=RS_GRAPPLE
+want result=O_HOLD b=D_DODGE e0.kind=X_NONE
+case the same, its 40 a critical success, the better: it twists free
+dice 100:12 100:40 ...
+ask ATTACK actor=0 other=1 a=GM_HOLD w2=RS_GRAPPLE
+want result=O_SLIP b=D_DODGE
+case her own a critical failure (75): no hold
+dice 100:75 ...
+ask ATTACK actor=0 other=1 a=GM_HOLD w2=RS_GRAPPLE
+want result=O_SLIP
+case the rat asleep (RS_ASLEEP): no defence, her success enough
+dice 100:12 ...
+ask ATTACK actor=0 other=1 a=GM_HOLD w2=RS_GRAPPLE|RS_ASLEEP
+want result=O_HOLD b=D_NONE
+case pinned from the hold (against its bite's 75, the better of it and its Strength's): laid down, held
+dice 100:12 100:96 ...
+ask ATTACK actor=0 other=1 a=GM_PIN w2=RS_GRAPPLE
+want result=O_PINNED e0.kind=X_COND_ON e0.cond=C_PRONE
+case the pin failed: it resists, nothing more
+dice 100:12 100:40 ...
+ask ATTACK actor=0 other=1 a=GM_PIN w2=RS_GRAPPLE
+want result=O_RESISTS e0.kind=X_NONE
+case choked, pinned (two steps the easier), its Endurance's test passed (3): choked, no more
+dice 100:12 100:96 100:3 ...
+ask ATTACK actor=0 other=1 a=GM_CHOKE c=GH_PIN w2=RS_GRAPPLE
+want result=O_CHOKED e0.kind=X_NONE
+case the rat's try to break free (GM_BREAK, she the holder): its bite's 75, two sizes less, 55, against her Unarmed 40: its 12 against her 96, free
+dice 100:12 100:96 ...
+ask ATTACK actor=1 other=0 a=GM_BREAK w2=RS_GRAPPLE
+want result=O_FREE
+case pinned (GH_PIN), four steps the worse, 35: its 40 a critical failure, still held
+dice 100:40 ...
+ask ATTACK actor=1 other=0 a=GM_BREAK c=GH_PIN w2=RS_GRAPPLE
+want result=O_STRUGGLES
+case its try against her better (its 12 a marginal success, her 30 a critical one): still held
+dice 100:12 100:30 ...
+ask ATTACK actor=1 other=0 a=GM_BREAK w2=RS_GRAPPLE
+want result=O_STRUGGLES
+case a second rat thrown from a hold: laid down, and the fall's hurt (two dice of blunt impact, the sizes' two a die: 3, 3 and 4), at its thorax (50)
+dice
+ask NEW_ACTOR actor=2 w1=51 text="rat"
+dice 100:12 100:96 6:3 6:3 100:50 ...
+ask ATTACK actor=0 other=2 a=GM_THROW w2=RS_GRAPPLE
+want result=O_THROWN e0.kind=X_COND_ON e0.cond=C_PRONE e1.kind=X_WOUND e1.loc=BP_CHEST text~"to its thorax"
+case a third choked the fourth round (its Endurance's test thirty points the worse: 96 a failure): senseless
+dice
+ask NEW_ACTOR actor=3 w1=52 text="rat"
+dice 100:12 100:96 100:96 ...
+ask ATTACK actor=0 other=3 a=GM_CHOKE c=3 w2=RS_GRAPPLE
+want result=O_CHOKED e0.kind=X_COND_ON e0.cond=C_UNCONSCIOUS
+case bones that move choked: no breath to stop, it resists, no test of it
+dice
+ask NEW_ACTOR actor=4 w1=53 text="skel"
+dice ...
+ask ATTACK actor=0 other=4 a=GM_CHOKE w2=RS_GRAPPLE
+want result=O_RESISTS

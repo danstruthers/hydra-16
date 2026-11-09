@@ -92,6 +92,11 @@ attack      thing=VB_ATTACK_OBJECT unsaid=target aux=SK_BEST
 punch       thing=VB_ATTACK_OBJECT unsaid=target aux=SK_PUNCH
 kick        thing=VB_ATTACK_OBJECT unsaid=target aux=SK_KICK
 headbutt    thing=VB_ATTACK_OBJECT unsaid=target aux=SK_HEAD
+grapple     thing=VB_GRAPPLE_OBJECT unsaid=target aux=GM_HOLD            # (new, 2026-11-09: HarnMaster's grappling,
+letgo       alone=VB_GRAPPLE_OBJECT thing=VB_GRAPPLE_OBJECT aux=GM_LETGO #   HOUSE.md's: its move the word's, blows.c's
+                                                                         #   grapple (one verb: dq0c's records full); the
+                                                                         #   hold let go.  "Hold" and "throw" a denizen
+                                                                         #   beside a grapple's too: the handlers')
 defend      thing=VB_DEFEND unsaid=none aux=D_AUTO
 dodge       alone=VB_DEFEND thing=VB_DEFEND aux=D_DODGE
 block       alone=VB_DEFEND thing=VB_DEFEND aux=D_BLOCK
@@ -427,6 +432,15 @@ punch = punch
 kick = kick
 headbutt = headbutt
 butt = headbutt
+grapple = grapple
+wrestle = grapple
+tackle = grapple
+pin = grapple
+choke = grapple
+strangle = grapple
+throttle = grapple
+let go of = letgo
+let go = letgo
 defend = defend
 dodge = dodge
 parry = block

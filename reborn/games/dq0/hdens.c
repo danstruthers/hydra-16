@@ -16,6 +16,18 @@
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
 
+/* A grapple's move g (rs.h's GM_*, | GT_TRY: blows.c's grapple, overlay 19's: HOUSE.md's grappling, 2026-11-09) sent
+** (I_ATTACK, its b AIM_GRAPPLE | the move), or why not said; GT_TRY's none beside, 0, nothing said */
+unsigned char __fastcall__ grip_go (unsigned char g)
+{
+    if ((g = grapple (g)) & GR_SEND) {
+        intend (I_ATTACK, g & 0x0F);
+    } else if (g) {
+        msg (lb);
+    }
+    return g;
+}
+
 /* H_MISSILE: the missiles (part 13's, slice 4.7's; a throw at a denizen too): shot, loaded, gathered, thrown at the
 ** thing said or the target (the world's throw, its words overlay 11's); thrown into a well, let fall in it */
 static void do_missile (void)
@@ -25,6 +37,9 @@ static void do_missile (void)
     if (!strcmp (cmd.other.word, "well") || (cmd.prep == PR_IN && !cmd.other.word[0])) {
         put_in ();
         return;
+    }
+    if (cmd.action == VB_THROW_OBJECT && grip_go (GM_THROW | GT_TRY)) {
+        return;                                 /* ("Throw the goblin": a denizen beside, thrown, a grapple's) */
     }
     d = HUB->pc_light;
     if (missiles () == 2) {                     /* (Thrown at a thing: part 13's) */
@@ -141,6 +156,10 @@ void __fastcall__ s_dens_do (unsigned h)
         do_orate ();
         break;
     case H_FIGHT:
+        if (cmd.action == VB_GRAPPLE_OBJECT) {
+            grip_go (cmd.aux);                  /* (A grapple's move: blows.c's, HOUSE.md's grappling) */
+            break;
+        }
         do_fight ();
         break;
     case H_MISSILE:
