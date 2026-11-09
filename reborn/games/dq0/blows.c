@@ -94,11 +94,11 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
                                                 **   name: the senses' last look, a step behind it) */
     static char at[12];
     struct fight* f = FIGHT_LB;
-    unsigned char out = m->x[1], fl = m->x[2], pc = !m->who, k;
+    unsigned char out = E_FIGHT_OUT (*m), fl = E_FIGHT_FF (*m), pc = !m->who, k;
     const char* aw;
     char* s;
 
-    hub_mem (DEN_BANK, f, FIGHT_AT + m->x[3] % NFIGHTS, sizeof *f);
+    hub_mem (DEN_BANK, f, FIGHT_AT + E_FIGHT_WORDS (*m) % NFIGHTS, sizeof *f);
     hub_mem (SIGHT_BANK, &n, &SIGHT->ndens, 1);
     s = pc || (f->which & FW_STRAY) ? f->def : f->att;     /* (A stray's: the one it struck, seen or not) */
     if (*s) {

@@ -275,8 +275,8 @@ void __fastcall__ s_sky_seen (unsigned char kind)
         T.told = p;
         memset (&e, 0, sizeof e);               /* (All of it: an event's every byte the same game's, whatever the RAM held) */
         e.kind = E_BEARING;
-        e.b = p | src;
-        e.w1 = BRG_SKY;
+        E_BEARING_SKY_SKY (e) = p | src;
+        e.w1 = E_BEARING_SKY_W1 (SKP_NONE);
         e.t = HUB->now;
         hub_event (&e);
     }

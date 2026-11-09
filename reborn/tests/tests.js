@@ -4575,12 +4575,12 @@ module.exports = {
         dq0Need(f, d, 'E_ARRIVE', { how: 'A_DOWN', first: true }, 'not down the shaft to the stratum below');
         if (!d.after || d.after.pc.sn !== 1) f.push('not on the stratum below');
         if (dug(s1) !== 2) f.push('the shovel dug the earth floor\'s two feet in ' + dug(s1) + ' spells, not 2 (a foot and a half a spell)');
-        dq0Need(f, s1, 'E_DIG', { how: 'D_NO_TOOL', feet: 1 + 1 }, 'the shovel not stopped by the rock (MAT_STONE)');
+        dq0Need(f, s1, 'E_DIG', { how: 'D_NO_TOOL', into: 1 + 1 }, 'the shovel not stopped by the rock (MAT_STONE)');
         tool(s1, 'shovel');
         dq0Need(f, sw, 'E_DIG', { how: 'D_NO_TOOL' }, 'the sword not refused by the flags');
         if (spells(sw).length) f.push('the sword dug at the flags');
         if (spells(h1).length) f.push('bare hands dug at the hard-packed earth');
-        dq0Need(f, h1, 'E_DIG', { how: 'D_NO_TOOL', feet: 0 + 1 }, 'bare hands not refused by the hard-packed earth (MAT_EARTH)');
+        dq0Need(f, h1, 'E_DIG', { how: 'D_NO_TOOL', into: 0 + 1 }, 'bare hands not refused by the hard-packed earth (MAT_EARTH)');
         return f;
       },
       sdcard: true
@@ -12716,7 +12716,7 @@ module.exports = {
         for (const [gi, g, how] of [[0, 1, 'seen'], [1, 2, 'heard']]) {
           const e = last(g), b0 = e && e.acts.find(a => a.k === 0), b1 = e && e.acts.find(a => a.k === 1), r = rallies(gi);
           if (!b0 || !(b0.mood & AM_LEADS) || b0.rank !== 1 || !b0.prom || (b1 && ((b1.mood & AM_LEADS) || b1.rank))) f.push('game ' + g + ': the more influential not at the black orc\'s post over the mightier: ' + JSON.stringify(e && e.acts));
-          if (r.length !== 1 || r[0].who !== 1 || r[0].seen !== (how === 'seen')) f.push('game ' + g + ': not one rally by it, ' + how + ': ' + JSON.stringify(r));
+          if (r.length !== 1 || r[0].who !== 1 || !!r[0].seen !== (how === 'seen')) f.push('game ' + g + ': not one rally by it, ' + how + ': ' + JSON.stringify(r));
           if (!(how === 'seen' ? /The small orc rallies its fellows\./ : /You hear a rallying shout/).test(st[gi] || '')) f.push('game ' + g + ': the rally ' + how + ' not told');
         }
         const e3 = H.find(x => x.g === 3 && x.line === 'wait' && x.n === 2), act = k => e3 && e3.acts.find(a => a.k === k), c3 = act(3), c4 = act(4), c0 = act(0) || act(1);

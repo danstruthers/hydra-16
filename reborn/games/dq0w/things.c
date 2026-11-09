@@ -3565,10 +3565,10 @@ unsigned char s_shut_work (void)
             m.kind = E_NOISE;                   /* (Loud: a lock burst, or a lid wrenched at, ten seconds' of it, its
                                                 **   test at its end) */
             m.who = 0;
-            m.a = 6;
-            m.b = NZ_WORK;
-            m.w1 = HUB->pc_x;
-            m.w2 = HUB->pc_y;
+            E_NOISE_LOUD (m) = 6;
+            E_NOISE_WHAT (m) = NZ_WORK;
+            E_NOISE_SX (m) = HUB->pc_x;
+            E_NOISE_SY (m) = HUB->pc_y;
             m.t = HUB->now;
             hub_event (&m);
             t = 100;

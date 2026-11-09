@@ -117,9 +117,9 @@ static void __fastcall__ room_lit (unsigned char sn, unsigned x, unsigned y, uns
     hub_map (0);
     memset (&m, 0, sizeof m);
     m.kind = E_LIGHT;
-    m.a = sn;
-    m.w1 = x;
-    m.w2 = y;
+    E_LIGHT_SN (m) = sn;
+    E_LIGHT_SX (m) = x;
+    E_LIGHT_SY (m) = y;
     m.t = HUB->now;
     hub_event (&m);
 }
@@ -244,9 +244,9 @@ static void __fastcall__ room_lit71 (unsigned char sn, unsigned x, unsigned y, u
     hub_map (0);
     memset (&m, 0, sizeof m);
     m.kind = E_LIGHT;
-    m.a = sn;
-    m.w1 = x;
-    m.w2 = y;
+    E_LIGHT_SN (m) = sn;
+    E_LIGHT_SX (m) = x;
+    E_LIGHT_SY (m) = y;
     m.t = HUB->now;
     hub_event (&m);
 }

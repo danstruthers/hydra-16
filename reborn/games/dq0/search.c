@@ -152,19 +152,19 @@ void __fastcall__ s_search_said (const struct msg* m)
         "\nYou feel over the walls and the floor about you." };
     static const char* const thing[4] = { "\nYou look over the %s.", "\nYou poke through the %s.", "\nYou go through the %s.",
         "\nYou go through the %s." };
-    unsigned char w = m->w1 >> 8, t = m->b, s = w >> 4;
+    unsigned char w = E_BEAT_SEARCH_RSW (*m), t = E_BEAT_SEARCH_TOUCH (*m), s = w >> 4;
     const char* q;
 
     w &= 15;
     if (w == RSW_CORNER) {                      /* (By the north it believes in: each wall its own) */
         sayf (t ? "\nYou turn the corner, and feel along the %s wall." : "\nYou turn the corner, and work along the %s wall.",
-            head_name[believed (m->w2 << 1)]);
+            head_name[believed (E_BEAT_SEARCH_DETAIL (*m) << 1)]);
     } else if (w < RSW_END) {
         say (t ? felt[w] : lit[w]);
     } else if (w == RSW_DONE) {
         msg ("You've been over the whole room.");
     } else if (w == RSW_THING) {
-        hub_mem (KIND_BANK, lb, CATALOGUE[(unsigned char) m->w2].name, sizeof CATALOGUE[0].name);
+        hub_mem (KIND_BANK, lb, CATALOGUE[(unsigned char) E_BEAT_SEARCH_DETAIL (*m)].name, sizeof CATALOGUE[0].name);
         q = strstr (lb, " of ");
         if (t) {
             sayf (s == RC_PLAIN ? "\nYou feel over the %s." : "\nYou feel through the %s.", q && s == RC_HEAP ? q + 4 : lb);
@@ -173,8 +173,8 @@ void __fastcall__ s_search_said (const struct msg* m)
         }
     } else {
         HUB->ireq.to = (w == RSW_END ? IOS_THING : IOS_FLOOR) | (t ? SF_TOUCH : 0);
-        HUB->ireq.item = HUB->ireq.x = m->w2;
-        HUB->ireq.y = m->x[0] | (unsigned) m->x[1] << 8;
+        HUB->ireq.item = HUB->ireq.x = E_BEAT_SEARCH_DETAIL (*m);
+        HUB->ireq.y = E_BEAT_SEARCH_MX (*m) | (unsigned) E_BEAT_SEARCH_MY (*m) << 8;
         if (things (IO_SEARCH, "")) {
             q = tt ();
             msg (*q == ' ' ? q + 1 : q);

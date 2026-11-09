@@ -2491,3 +2491,85 @@ objects differ only in their debug lines, hub.h two lines longer), and the suite
 **Left** (ENGINE-CRITIQUE.md's §2, "Left of stage 2"): the events (E_*: forms chosen by a field's value, E_TASK's TE_*,
 E_BEAT's WB_*, in place of dq0meaning.js's hand switch; their names clear of the raw slots the event records keep at the
 top), then the referee's requests (struct req: multi-byte slots, a request's fields and its reply's apart).
+
+## The events' payloads, declared (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's §2 and step 3, its second stage: the events)
+
+The intents' mechanism (the entry above) carried over to the events (E_*), the world's news to the UI, the denizens
+and the sound task, in the same struct msg.  What an event's slots mean often hangs on one of them: E_TASK's b and
+w1's high byte are the enemy's entry for TE_ENGAGED, the light's kind for TE_LOW, the robber and how for TE_ROBBED, the
+errand's outcome for TE_FETCHED; E_BEAT's high byte is a side, a heading and a gait, a thing's kind or a search's step
+by its WB_*.  dq0meaning.js's hand switch (forty lines of `if (e.te === ...)`) was where that was written down.
+
+**A selector, `FIELD==CONST[,CONST]`.**  A form of a kind (msgs.def's `KIND:FORM`, as the intents' :den forms) is chosen
+by a field's value:
+
+    E_TASK          b named@LT_NONE; w1 te:0-7@TE_STOPPED task:8-15@LT_NONE
+    E_TASK:engaged  b by:0-5+1 quiet:6=TE_QUIET still:7=TE_STILL; w1 te:0-7==TE_ENGAGED,TE_FAR,TE_AWAY,TE_FIGHT@TE_STOPPED
+                    task:8-15@LT_NONE
+    E_TASK:robbed   b by+1; w1 te:0-7==TE_ROBBED@TE_STOPPED purse:8 caught:9 asleep:10
+
+`==` and not `=`: a one-bit field's `=CONST` is already its constant (`quiet:6=TE_QUIET`), checked to be that bit; a
+selector names the field's value.  The tests' decoder (hubgen's `load ().decode`) reads an event by the first form whose
+selector its field matches, else by the kind's own form (E_TASK's: TE_NOT's named, and the rest).  One selector a form,
+of the form's own fields (not an included one's), none on a kind's own form; its values the headers' names, held to the
+field's bits.  In the JSON a form has `sel: [field, [values]]`; the C has no use for it (the code tests the field).
+
+**Its accessors, `KIND_FORM_FIELD`.**  The intents' rule is a name the same field in every form of a kind; the events'
+forms reuse names for different bits (E_TASK's `task` is w1's high byte, but TE_LOW's and TE_OUT's its low six bits, two
+flags above; `by` is b's low six bits, or four, or all of it), and the tests read them by those names.  So a chosen
+form's field is `KIND_FORM_FIELD` (`E_TASK_LIGHT_TASK`, `E_TASK_ROBBED_BY`), unless the kind's own form has it the same,
+slot and bits (`E_TASK_TE`, `E_TASK_TASK`, `E_BEAT_WHOSE`); its packers and builder are the form's as before
+(`E_TASK_LIGHT_W1`).  A selector of one value isn't an argument: its constant is in its place
+(`E_TASK_ROBBED_W1 (purse, caught, asleep)`, `E_BEARING_SKY_W1 (refusal)`), so a sender can't build a form with another
+form's value; of several, it is (`E_TASK_ENGAGED_W1 (TE_FAR, LT_NONE)`).
+
+**Three more marks, for what the hand switch worked out.**  `!` a signed byte (E_LEDGE's rise: the C accessor
+`(signed char) (m).w1`, the tests' value negative); `+K` a value stored plus K (an actor's entry plus 1: the C reads and
+writes it as stored, the tests read it less K: `by`, the entry); `@A,B` and `@a/b/c`, names of several kinds (E_FIGHT's
+out, `@O_MISS,FO_GONE,FO_BLED,FO_BOUND`: the referee's O_* or the world's FO_*; TE_BREAK's how and TE_FREE's none,
+`@back/flight/run`, words for 0, 1, 2, where the headers have no names).
+
+**Every event declared:** the 21 kinds after E_NONE (the critique's 23 counted E_NONE and NEVENTS), in 41 forms:
+E_TASK in ten (its own; engaged, hurt, nofoe, break, free, light, robbed, fetched, begun), E_BEAT in nine (its own; feel,
+met, hit, thing, limb, rise, swat, search), E_HARM:struck, E_DIG:notool, E_BEARING:sky.  The field names are the hand
+switch's where the tests read them (te, task, by, still, quiet, lamp, seen, ft, beat, side, thing, fa, head, gait, de,
+def, out, ff, how, feet ...); a square's x and y are `sx` and `sy`.  Not declared: E_PORTAL's a and b (a search's reach,
+an opening's what and room), E_TASK's b for the forms not given (TE_NO_SHOT's why, a journey's place: `named` as
+before), E_BEAT's high byte for the water's and the walk's own beats (WB_WATER, WB_POSED: `side`, as before).
+
+**The tests' records keep the raw slots at the top (the choice the critique left open).**  The intents' records moved
+them under `raw`; the events' tests read `e.a`, `e.b`, `e.w1`, `e.w2`, `e.t` in some forty places (a denizen's DE_* by
+`e.a`, a dug square by `e.w1`, an event's time by `e.t`, a fall's whose by `e.b`), so the events keep them where they
+were, and no field of an event is named as a slot is (kind, who, a, b, w1, w2, t, x, line, den: dq0meaning.js's layout
+stops on one).  The hand switch was kept beside the declared decoder for one run of the suite, every field it gave held
+to the new one's.  The differences: fields it set where they meant nothing (E_BEAT's fa, thing, head and gait on every
+beat past WB_FEEL, whatever it was; E_HARM's stopped on a fall; E_DIG's feet for D_NO_TOOL, what it's into, now
+`into`); `by`, which the fights' and the robberies' tests read, first named otherwise (named so again); and values the better for it (E_DEN's
+`seen` and TE_NO_FOE's `shock` the byte, not a boolean; E_BEARING's `brg` named with a refusal in w1's high byte;
+E_FIGHT's FO_BOUND named).  Three test reads changed for them (dq0dig's two of D_NO_TOOL, `into`, dq0succession's `!!seen`);
+then the hand switch went: dq0meaning.js's decode is the slots and `H.decode`.
+
+**Switched:** 239 lines.  The world's senders (155: dq0w.c's `event (kind, who, w1)` by the packers, `E_CLIMB_W1
+(K_BEGUN, cl.need)`, `E_TASK_W1 (why, HUB->pc_task.kind)`, `E_BEAT_THING_W1 (WB_SPENT, upk)`, the evb of a form by its
+packer, `evb = E_TASK_ENGAGED_B (e, 0, 1)`; the hand-built ones by the accessors, `E_DEN_SX (m) = x`, and the packers:
+wport.c's, wbody.c's and wdig.c's E_DEN, wfight.c's E_FIGHT and TE_ROBBED, wfetch.c's TE_FETCHED, wlimbs.c's, wroom.inc's
+WB_SEARCH, the E_NOISEs, E_LIGHTs, E_VIEWs, E_LEFT, E_TAKEN, wtime.c's sky).  The UI's receivers (60: main.c's events
+and heard, s_came, s_limb_words, s_news, s_noise_told; blows.c's fight words, caps.c's den_heard, search.c's
+search_said).  The denizens' (dq0d.c, 10: E_NOWAY's N_DEN, E_NOISE, E_DEN, E_FIGHT), the sound task's (dq0s.c, 13) and
+the senses' light layer (light.c, 1).
+
+**Left as they were, by design or by the code they'd cost:** an argument that is a word whole (`task_words (m.w1, m.b)`,
+`beat_words (m.w1)`, `trap_words`, `harm_words`, `pose_words`, `water_words`, rs_tell's and told's w: their callees read
+it by hand), a whole-word test (`m.w1 == N_SHUT`, `m->w1 != PO_NOTHING`, `m->w1 == BRG_LOST`), and the shapes cc65
+codes otherwise: the low byte as `w1 & 0xFF` inside a `||` or a `?:` or as an argument (the accessor's cast is shorter
+code, so the images would change: E_ARRIVE's A_UP or A_DOWN, dig_words' and climb_words' feet), a field between two
+others unmasked (E_HARM's band, WB_HIT's fa, WB_FEEL's head, E_PORTAL's pk, TE_ROBBED's and TE_OUT's flags packed by
+hand: the packer masks it), and E_ARRIVE's sender (its link and flags by conditions).  The tests read nothing new; the
+recorder's events are what they were, by declaration.
+
+**No behaviour change:** the images came out byte-identical (bin/*, and every program and data file in obj/games: 154
+files; the .s files the same less their .dbg lines; dq0's .lbl differs in one function's local labels' numbers alone,
+its addresses the same), the UI's main RAM as it was, and the suite passes.
+
+**Left** (ENGINE-CRITIQUE.md's §2, "Left of stage 2"): the referee's requests (struct req: multi-byte slots, a request's
+fields and its reply's apart), being done beside this.

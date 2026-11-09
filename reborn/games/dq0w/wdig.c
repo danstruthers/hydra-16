@@ -70,19 +70,19 @@ static void __fastcall__ told (unsigned char what, unsigned char loud, unsigned 
     unsigned char* p;
     unsigned e;
 
-    bev.w1 = what == DE_DUG || what >= DE_HANGS ? dx : bd.x;
-    bev.w2 = what == DE_DUG || what >= DE_HANGS ? dy : bd.y;
+    E_DEN_SX (bev) = what == DE_DUG || what >= DE_HANGS ? dx : bd.x;
+    E_DEN_SY (bev) = what == DE_DUG || what >= DE_HANGS ? dy : bd.y;
     e = apart (bd.x - bpx, bd.y - bpy) >> 2;
-    bev.x[3] = e > 15 ? 15 : e;
-    p = at (bd.sn, bev.w1, bev.w2);
-    bev.x[2] = (p && (*p & T_VIS)) || (loud & 0x80);   /* (Seen: a dug square as it was seen, before it changed) */
+    E_DEN_BETWEEN (bev) = e > 15 ? 15 : e;
+    p = at (bd.sn, E_DEN_SX (bev), E_DEN_SY (bev));
+    E_DEN_SEEN (bev) = (p && (*p & T_VIS)) || (loud & 0x80);   /* (Seen: a dug square as it was seen, before it changed) */
     loud &= 0x7F;
     bev.kind = E_DEN;
     bev.who = bk + 1;
-    bev.a = what;
-    bev.b = loud;
-    bev.x[0] = bd.sn;
-    bev.x[1] = bd.kind;
+    E_DEN_DE (bev) = what;
+    E_DEN_LOUD (bev) = loud;
+    E_DEN_SN (bev) = bd.sn;
+    E_DEN_DKIND (bev) = bd.kind;
     hub_map (0);
     bev.t = HUB->now;
     hub_devent (&bev);

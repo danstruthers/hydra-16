@@ -107,7 +107,7 @@ void __fastcall__ s_limb_news (unsigned w, unsigned char b)
     hub_map (0);
     lm.kind = E_BEAT;
     lm.who = 0;
-    lm.b = b;
+    E_BEAT_WHOSE (lm) = b;
     lm.w1 = w;
     lm.t = HUB->now;
     hub_devent (&lm);
@@ -163,8 +163,8 @@ void __fastcall__ s_drop_held (unsigned char h, unsigned char ring)
         }
         lm.kind = E_BEAT;
         lm.who = 0;
-        lm.b = 0;                               /* (The character's: else the actor's plus 1) */
-        lm.w1 = (bk ? WB_BROKE : WB_DROP) | (unsigned) k << 8;
+        E_BEAT_WHOSE (lm) = 0;             /* (The character's: else the actor's plus 1) */
+        lm.w1 = E_BEAT_LIMB_W1 (bk ? WB_BROKE : WB_DROP, k);
         lm.t = HUB->now;
         if (ring) {
             hub_devent (&lm);

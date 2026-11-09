@@ -188,9 +188,9 @@ void __fastcall__ s_change (unsigned char sn, unsigned x, unsigned y, unsigned c
     hub_map (0);
     if (link != TRAP_STATE && link != PORTAL_HARM && link != STOCKED && link != AIR_STATE) {
         lm.kind = E_LIGHT;
-        lm.a = sn;
-        lm.w1 = x;
-        lm.w2 = y;
+        E_LIGHT_SN (lm) = sn;
+        E_LIGHT_SX (lm) = x;
+        E_LIGHT_SY (lm) = y;
         lm.t = HUB->now;
         hub_event (&lm);
     }

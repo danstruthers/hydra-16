@@ -36,11 +36,11 @@ static void __fastcall__ rs_say (unsigned char what, unsigned char b, unsigned w
     m.kind = E_BEAT;
     m.who = 0;
     m.a = 0;
-    m.b = b;
-    m.w1 = WB_SEARCH | what << 8;
-    m.w2 = w2;
-    m.x[0] = (unsigned char) y;
-    m.x[1] = y >> 8;
+    E_BEAT_SEARCH_TOUCH (m) = b;
+    m.w1 = E_BEAT_SEARCH_W1 (what);
+    E_BEAT_SEARCH_DETAIL (m) = w2;
+    E_BEAT_SEARCH_MX (m) = (unsigned char) y;
+    E_BEAT_SEARCH_MY (m) = y >> 8;
     m.t = HUB->now;
     hub_event (&m);
 }
@@ -265,7 +265,7 @@ unsigned char __fastcall__ s_room_on (unsigned char go)
         return rs_end ();                       /* (Stopped: told.  Its stops done are kept already) */
     }
     if (blocked || (rs_on == RP_TRAP && !(wk.m.kind == E_TRAP && wk.m.w1 >> 8 == TO_NOTICED))) {
-        event (E_TASK, 0, TE_STOPPED | LT_SEARCH << 8);   /* (A denizen in its way; a trap set off, told) */
+        event (E_TASK, 0, E_TASK_W1 (TE_STOPPED, LT_SEARCH));   /* (A denizen in its way; a trap set off, told) */
         return rs_end ();
     }
     if (rs_on == RP_TRAP) {

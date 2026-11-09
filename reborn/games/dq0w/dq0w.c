@@ -678,7 +678,7 @@ unsigned char __fastcall__ s_felt_stop (unsigned char h)
 
     hub_map (0);
     if (k) {
-        event (E_BEAT, 0, WB_FELT | k << 8);
+        event (E_BEAT, 0, E_BEAT_MET_W1 (WB_FELT, k));
         HUB->pc_face = h;
         HUB->pc_ready = HUB->now;
         HUB->pc_going = IDLE;
@@ -1248,7 +1248,7 @@ static unsigned char __fastcall__ pit_climb (unsigned char face)
     if (HUB->ropes) {
         climb_go (CG_HERE);
     }
-    event (E_CLIMB, 0, K_BEGUN << 8 | cl.need);
+    event (E_CLIMB, 0, E_CLIMB_W1 (K_BEGUN, cl.need));
     task (LT_CLIMB, cl.need);
     climb_round ();
     return 1;
@@ -1278,7 +1278,7 @@ static unsigned char __fastcall__ start_ledge (unsigned char up, unsigned char f
     cl.y = ny;
     hub_map (0);
     if (jump && !up) {                          /* (Jumped: a fall to its foot) */
-        event (E_CLIMB, 0, K_JUMPED << 8 | (cl.need > 255 ? 255 : cl.need));
+        event (E_CLIMB, 0, E_CLIMB_W1 (K_JUMPED, cl.need > 255 ? 255 : cl.need));
         HUB->pc_x = nx;
         HUB->pc_y = ny;
         busy (stept + fall (cl.need, HF_CLEAR));
@@ -1288,7 +1288,7 @@ static unsigned char __fastcall__ start_ledge (unsigned char up, unsigned char f
     if (HUB->ropes) {
         climb_go (CG_HERE);
     }
-    event (E_CLIMB, 0, K_BEGUN << 8 | (cl.need > 255 ? 255 : cl.need));
+    event (E_CLIMB, 0, E_CLIMB_W1 (K_BEGUN, cl.need > 255 ? 255 : cl.need));
     task (LT_CLIMB, cl.need);
     climb_round ();
     return 1;
@@ -1345,7 +1345,7 @@ static unsigned char __fastcall__ rope_ready (unsigned x, unsigned y)
         HUB->rhi = h;
     }
     if (s) {
-        event (E_BEARING, 0, BRG_SKY | (unsigned) s << 8);
+        event (E_BEARING, 0, E_BEARING_SKY_W1 (s));
     }
     return r;
 }
@@ -1363,7 +1363,7 @@ static unsigned char __fastcall__ climb_go_ (unsigned w)
     }
     if (w & CG_HERE) {
         if (rope_ready (mx, my)) {
-            event (E_BEARING, 0, BRG_SKY | (unsigned) SKP_ROPE << 8);
+            event (E_BEARING, 0, E_BEARING_SKY_W1 (SKP_ROPE));
         }
         return 0;
     }
@@ -1399,8 +1399,8 @@ static unsigned char __fastcall__ climb_go_ (unsigned w)
         cl.y = my + head_y[h];
         HUB->pc_face = h;
         rope_ready (mx, my);
-        event (E_BEARING, 0, BRG_SKY | (unsigned) SKP_ROPE << 8);
-        event (E_CLIMB, 0, K_BEGUN << 8 | k);
+        event (E_BEARING, 0, E_BEARING_SKY_W1 (SKP_ROPE));
+        event (E_CLIMB, 0, E_CLIMB_W1 (K_BEGUN, k));
         task (LT_CLIMB, k);
         climb_round ();
         return 0xFF;
@@ -1449,7 +1449,7 @@ static void climb_round_on (void)
     if (cl_hold) {                              /* (Struck or hurt part way: a test to keep its grip, HOUSE.md's) */
         cl_hold = 0;
         if (g == G_MS || g == G_CS) {
-            event (E_CLIMB, 0, K_HELD << 8 | (cl.need - cl.done > 255 ? 255 : cl.need - cl.done));
+            event (E_CLIMB, 0, E_CLIMB_W1 (K_HELD, cl.need - cl.done > 255 ? 255 : cl.need - cl.done));
             climb_round ();
             return;
         }
@@ -1460,7 +1460,7 @@ static void climb_round_on (void)
     }
     if (g == G_CF) {                            /* (A fall: from as high as it got, up; to the foot, down) */
         t = cl.up ? cl.done : cl.need - cl.done;
-        event (E_CLIMB, 0, K_FELL << 8 | t);
+        event (E_CLIMB, 0, E_CLIMB_W1 (K_FELL, t));
         if ((t = fall (t, HF_CLEAR | HF_HOLDS | (cl.sh ? cl.wet : 0))) == 0xFFFF) {
             climb_round ();                     /* (Caught on the way down: the climb goes on) */
             return;
@@ -1484,12 +1484,12 @@ static void climb_round_on (void)
                                                 **   the player's to say what next: D13's, slice 4.4's) */
         cl.up = 2;                              /* (Its top kept: climbed again, pit_climb's) */
         cl.done = HUB->rhi = 0;
-        event (E_CLIMB, 0, K_SLID << 8 | (cl.need > 255 ? 255 : cl.need));
+        event (E_CLIMB, 0, E_CLIMB_W1 (K_SLID, cl.need > 255 ? 255 : cl.need));
         see (0);
         return;
     }
     if (g == G_MF && !cl.done && cl.up == 1 && (HUB->pc_wet & 0x7F) >= 5) {
-        event (E_CLIMB, 0, K_NOHOLD << 8 | (cl.need > 255 ? 255 : cl.need));
+        event (E_CLIMB, 0, E_CLIMB_W1 (K_NOHOLD, cl.need > 255 ? 255 : cl.need));
         HUB->rhi = 0;                           /* (Up out of deep water, a well's foot: no hold found, the climb ends, a
                                                 **   swimmer can't cling on; the player's to try again: 2026-11-06) */
         see (0);
@@ -1499,7 +1499,7 @@ static void climb_round_on (void)
     cl.done = g == G_CS ? cl.done + 20 : g == G_MS ? cl.done + 10 : cl.done > 5 ? cl.done - 5 : 0;
     HUB->pc_task.done = cl.done < cl.need ? cl.done : cl.need;
     if (cl.done < cl.need) {
-        event (E_CLIMB, 0, t << 8 | (cl.need - cl.done > 255 ? 255 : cl.need - cl.done));
+        event (E_CLIMB, 0, E_CLIMB_W1 (t, cl.need - cl.done > 255 ? 255 : cl.need - cl.done));
         climb_round ();
         return;
     }
@@ -1512,7 +1512,7 @@ static void climb_round_on (void)
     }
     HUB->pc_x = cl.x;
     HUB->pc_y = cl.y;
-    event (E_CLIMB, 0, (cl.up ? K_UP : K_DOWN) << 8);
+    event (E_CLIMB, 0, E_CLIMB_W1 (cl.up ? K_UP : K_DOWN, 0));
     see (0);
 }
 
@@ -2018,7 +2018,7 @@ static void __fastcall__ let_fall (unsigned n)
         if (it_need (lk->to, (x - b->x0) >> CW_BITS, (y - b->y0) >> CW_BITS)) {
             item_at (n)->sn = lk->to;
             hub_map (0);
-            event (E_BEARING, 0, BRG_SKY | (unsigned) SKP_LET_FALL << 8);
+            event (E_BEARING, 0, E_BEARING_SKY_W1 (SKP_LET_FALL));
         }
     }
     hub_map (0);
@@ -2052,7 +2052,7 @@ static unsigned char __fastcall__ shaft_go (unsigned w)
     }
     hub_map (0);
     if (r) {
-        event (E_BEARING, 0, BRG_SKY | (unsigned) r << 8);
+        event (E_BEARING, 0, E_BEARING_SKY_W1 (r));
         HUB->pc_ready = HUB->now;
         HUB->pc_going = IDLE;
         return 1;
@@ -2073,9 +2073,9 @@ static unsigned char __fastcall__ shaft_go (unsigned w)
     cl.sh = (unsigned char) w + 1;
     cl.wet = shaft_wet ((unsigned char) w);     /* (A fall into the water at its foot, a well's: 2026-11-06) */
     if (a) {
-        event (E_BEARING, 0, BRG_SKY | (unsigned) SKP_ROPE << 8);
+        event (E_BEARING, 0, E_BEARING_SKY_W1 (SKP_ROPE));
     }
-    event (E_CLIMB, 0, K_BEGUN << 8 | (cl.need > 255 ? 255 : cl.need));
+    event (E_CLIMB, 0, E_CLIMB_W1 (K_BEGUN, cl.need > 255 ? 255 : cl.need));
     task (LT_CLIMB, cl.need);
     climb_round ();
     return 1;
@@ -2390,7 +2390,7 @@ void __fastcall__ s_climb (unsigned char d)
         lk->kind == O_SHAFT_UP ? 3 : 1) / (d == DIR_UP ? 1 : 2);
     }
     if (jump && lk->kind == O_SHAFT_DOWN) {     /* (Jumped down the shaft: a fall to its foot, told as fallen) */
-        event (E_CLIMB, 0, K_JUMPED << 8 | (feet > 255 ? 255 : feet));
+        event (E_CLIMB, 0, E_CLIMB_W1 (K_JUMPED, feet > 255 ? 255 : feet));
         t = stept + fall (feet, HF_CLEAR | sky_ask (SA_WET | l));   /* (Into the water at its foot, a well's: part 89's) */
         move.dir = lk->dug == LD_WELL ? O_WELL_FELL : O_FELL;
     }
@@ -2774,7 +2774,7 @@ static void __fastcall__ trav_end (unsigned char te)
     trav = 0;
     if (te) {
         evb = tv.what | (tv.legs ? TRV_ON : 0);
-        event (E_TASK, 0, te | LT_TRAVEL << 8);
+        event (E_TASK, 0, E_TASK_W1 (te, LT_TRAVEL));
     }
     hub_map (0);
     HUB->pc_ready = HUB->now;
@@ -2991,7 +2991,7 @@ static unsigned char leg (void)
     }
     if (!tv.legs) {
         evb = tv.what;
-        event (E_TASK, 0, TE_BEGUN | LT_TRAVEL << 8);  /* ("You head back toward the Mausoleum.") */
+        event (E_TASK, 0, E_TASK_W1 (TE_BEGUN, LT_TRAVEL));  /* ("You head back toward the Mausoleum.") */
     }
     if ((tgx = room_of (sn_, mx, my) != 0xFF ? tex : 0) == 0 && !step8 (sn_, mx, my, teh)) {
         at (sn_, tex, tey);                     /* (A passage's door that way, shut: open it first, as a room's that
@@ -3429,9 +3429,9 @@ static void __fastcall__ noise (unsigned char loud)
     hub_map (0);
     m.kind = E_NOISE;
     m.who = 0;
-    m.a = loud;
-    m.w1 = HUB->pc_x;
-    m.w2 = HUB->pc_y;
+    E_NOISE_LOUD (m) = loud;
+    E_NOISE_SX (m) = HUB->pc_x;
+    E_NOISE_SY (m) = HUB->pc_y;
     m.t = HUB->now;
     hub_event (&m);
 }
@@ -3483,13 +3483,13 @@ static void shaft_through (void)
     b = &STRATUM (sn_ + 1);
     if (b->made && (dig.x - b->x0 >= b->w || dig.y - b->y0 >= b->h)) {
         hub_map (0);
-        event (E_DIG, 0, D_SOLID << 8);
+        event (E_DIG, 0, E_DIG_W1 (D_SOLID, 0));
         return;
     }
     l = add_link (sn_, O_SHAFT_DOWN, sn_ + 1, dig.x, dig.y);
     if (l == 0xFF) {
         hub_map (0);
-        event (E_DIG, 0, D_SOLID << 8);
+        event (E_DIG, 0, E_DIG_W1 (D_SOLID, 0));
         return;
     }
     sync_strata ();
@@ -3511,7 +3511,7 @@ static void shaft_through (void)
         change (sn_ + 1, dig.x, dig.y, T_UP, z, u);
     }
     hub_map (0);
-    event (E_DIG, 0, D_THROUGH << 8 | 1);
+    event (E_DIG, 0, E_DIG_W1 (D_THROUGH, 1));
     see (0);
 }
 
@@ -3732,7 +3732,7 @@ unsigned char __fastcall__ s_pc_dig (unsigned char w)
             evb = (dig.mat + 1) | st;
             dig_no (D_NO_TOOL << 8 | evb);
         } else if (HUB->dig_better[0] && !rs_live) {
-            event (E_DIG, 0, D_BETTER << 8);    /* (Once: not each time it's asked again, a tool's steps done) */
+            event (E_DIG, 0, E_DIG_W1 (D_BETTER, 0));    /* (Once: not each time it's asked again, a tool's steps done) */
         }
         return n;
     }
@@ -3910,7 +3910,7 @@ void s_dig_on (void)
     HUB->pc_task.done = dig.done;
     noise (6);
     if (l & 0x10) {
-        event (E_DIG, 0, D_FOUND << 8 | l & 3); /* (Its facing dug off: the door behind it, a find) */
+        event (E_DIG, 0, E_DIG_W1 (D_FOUND, l & 3)); /* (Its facing dug off: the door behind it, a find) */
         see (0);
         return;
     }
@@ -3919,10 +3919,10 @@ void s_dig_on (void)
     }
     if (dig.done < dig.need) {
         dig_kept (0);                           /* (The feet dug kept: stopped, it goes on from here) */
-        event (E_DIG, 0, (g == G_CS || g == G_MS ? D_GOOD : g == G_MF ? D_POOR : g == 0x7F ? D_ROOF : D_SLIP) << 8 |
-            (dig.need - dig.done > 510 ? 255 : (dig.need - dig.done + 1) / 2));
+        event (E_DIG, 0, E_DIG_W1 (g == G_CS || g == G_MS ? D_GOOD : g == G_MF ? D_POOR : g == 0x7F ? D_ROOF : D_SLIP,
+            dig.need - dig.done > 510 ? 255 : (dig.need - dig.done + 1) / 2));
         if (l & 1) {
-            event (E_DIG, 0, D_PORTAL << 8 | 0xFE);   /* (Asked after it, soft) */
+            event (E_DIG, 0, E_DIG_W1 (D_PORTAL, 0xFE));   /* (Asked after it, soft) */
         }
         if (g == 0x7F && dig.d != DIR_DOWN) {
             roof_harm ();                       /* (A tunnel's roof come down on the digger too; a shaft's sides
@@ -3942,7 +3942,7 @@ void s_dig_on (void)
             cut_corner (mx, dig.y);
         }
         hub_map (0);
-        event (E_DIG, 0, D_THROUGH << 8);
+        event (E_DIG, 0, E_DIG_W1 (D_THROUGH, 0));
         see (0);
         return;
     }
@@ -3981,8 +3981,8 @@ unsigned char __fastcall__ s_dig_kept (unsigned char begin)
         dig.done = rec.tile;
     }
     hub_map (0);
-    event (E_DIG, 0, dig.done ? D_AGAIN << 8 | (dig.need - dig.done > 510 ? 255 : (dig.need - dig.done + 1) / 2) :
-        D_BEGUN << 8 | (dig.need > 510 ? 255 : dig.need / 2));     /* (Told in feet: to go, or of it) */
+    event (E_DIG, 0, dig.done ? E_DIG_W1 (D_AGAIN, dig.need - dig.done > 510 ? 255 : (dig.need - dig.done + 1) / 2) :
+        E_DIG_W1 (D_BEGUN, dig.need > 510 ? 255 : dig.need / 2));     /* (Told in feet: to go, or of it) */
     task (LT_DIG, dig.need);
     HUB->pc_task.done = dig.done;
     return 0;
@@ -4140,7 +4140,7 @@ void __fastcall__ s_worked (unsigned long t)
         cl.y = wk.fy;
         HUB->pc_x = tx_;                        /* (At the pit's foot) */
         HUB->pc_y = ty_;
-        event (E_CLIMB, 0, K_BEGUN << 8 | cl.need);
+        event (E_CLIMB, 0, E_CLIMB_W1 (K_BEGUN, cl.need));
         climb_round ();
         t += t ? ROUND_T : 0;
     }
@@ -4215,7 +4215,7 @@ static void __fastcall__ begun (unsigned char k, unsigned char what)
     HUB->pc_task.what = what;
     pc_cut = 0;
     evb = what;
-    event (E_TASK, 0, TE_BEGUN | k << 8);
+    event (E_TASK, 0, E_TASK_W1 (TE_BEGUN, k));
 }
 
 #define RS_HOUSE_SWING  door_swing
@@ -4515,7 +4515,7 @@ static void __fastcall__ halt (unsigned char why)
         pfoe = 0;
         gath = 0;
         went_cut = move.how == A_WENT_TO;       /* (Not got there: its arrival not told as over to it) */
-        event (E_TASK, 0, why | HUB->pc_task.kind << 8);
+        event (E_TASK, 0, E_TASK_W1 (why, HUB->pc_task.kind));
         HUB->pc_task.kind = LT_NONE;            /* (Its task over, told: a blow after it no second stop) */
     }
 }
@@ -4542,7 +4542,7 @@ static void __fastcall__ stop (unsigned char why)
     if (why != TE_OUT) {
         evb = HUB->pc_task.what;                /* (Its words: what it was done to; a light's its kind) */
     }
-    event (E_TASK, 0, why | HUB->pc_task.kind << 8);
+    event (E_TASK, 0, E_TASK_W1 (why, HUB->pc_task.kind));
 }
 
 static void __fastcall__ ask (unsigned char why)
@@ -4555,7 +4555,7 @@ static void __fastcall__ ask (unsigned char why)
     if (!evb) {
         evb = HUB->pc_task.what;                /* (Its words: what it's done to; a fight's its health) */
     }
-    event (E_TASK, 0, why | HUB->pc_task.kind << 8);
+    event (E_TASK, 0, E_TASK_W1 (why, HUB->pc_task.kind));
 }
 
 /* Something new seen as it goes: a hostile within 30 feet stops it (6 squares), anything else asks; 1 if so */
@@ -4700,7 +4700,7 @@ static unsigned char __fastcall__ beat (unsigned x, unsigned y, unsigned char h)
     }
     pz = z;
     pquiet = 0;
-    event (E_BEAT, 0, b | s << 8);
+    event (E_BEAT, 0, E_BEAT_W1 (b, s));
     return 1;
 }
 
@@ -4838,7 +4838,7 @@ void __fastcall__ s_task_word (const struct msg* m)
     if (m->kind == I_GO_ON) {
         if (HUB->pc_task.asking) {
             go_on ();
-            event (E_TASK, 0, TE_ON | k << 8);
+            event (E_TASK, 0, E_TASK_W1 (TE_ON, k));
         }
         return;
     }
@@ -4849,9 +4849,9 @@ void __fastcall__ s_task_word (const struct msg* m)
         }
     } else if (I_STOP_NAMED (*m) && I_STOP_NAMED (*m) != k && (I_STOP_NAMED (*m) != LT_WALK || k != LT_TRAVEL)) {
         evb = I_STOP_NAMED (*m);                /* (The one named: its b; "stop walking", a journey's leg too) */
-        event (E_TASK, 0, TE_NOT | k << 8);
+        event (E_TASK, 0, E_TASK_W1 (TE_NOT, k));
     } else if (k == LT_CLIMB) {
-        event (E_TASK, 0, TE_CANT | k << 8);   /* (Part way up: no stopping; asked, "no", it goes on all the same) */
+        event (E_TASK, 0, E_TASK_W1 (TE_CANT, k));   /* (Part way up: no stopping; asked, "no", it goes on all the same) */
         if (HUB->pc_task.asking) {
             go_on ();
         }
@@ -4998,7 +4998,7 @@ unsigned char s_dark_way (void)
             pthi = bigi[j];
             if (!n) {
                 known (pthi);
-                event (E_BEAT, 0, WB_THING | bigk[j] << 8);
+                event (E_BEAT, 0, E_BEAT_THING_W1 (WB_THING, bigk[j]));
                 move.on = pcut = 0;
                 HUB->pc_face = h;
                 HUB->pc_ready = HUB->now;
@@ -5045,7 +5045,7 @@ unsigned char s_tripped (void)
     wsteps = -(4 + (pheavy ? 4 : 2) + (prush >= GA_SPRINT ? 4 : prush >= GA_RUN ? 2 : 0));
     g = test_w (P_STUMBLE, 0);
     hub_map (0);
-    event (E_BEAT, 0, (G_OK (g) ? WB_STUMBLE : WB_TRIP) | pthk << 8);
+    event (E_BEAT, 0, E_BEAT_THING_W1 (G_OK (g) ? WB_STUMBLE : WB_TRIP, pthk));
     if (!G_OK (g)) {
         hub_map (0);
         HUB->pc_pos = POS_PRONE;                /* (Fallen over it: prone, slice 4.1b's) */
@@ -5123,7 +5123,7 @@ unsigned char __fastcall__ s_dark_end (unsigned char how)
     }
     if (pcut) {
         known44 (pthi);
-        event (E_BEAT, 0, WB_THING | (pcut - 1) << 8);
+        event (E_BEAT, 0, E_BEAT_THING_W1 (WB_THING, pcut - 1));
         pcut = 0;
         return how;
     }
@@ -5134,7 +5134,7 @@ unsigned char __fastcall__ s_dark_end (unsigned char how)
     move.ledge = 0;                             /* (Its ledge felt: no E_LEDGE, its height unseen) */
     hub_map (0);
     if (!prush) {
-        event (E_BEAT, 0, WB_FELT | k << 8);
+        event (E_BEAT, 0, E_BEAT_MET_W1 (WB_FELT, k));
         return how;
     }
     if (k != FA_DROP && k != FA_PIT) {          /* (Run into it) */
@@ -5142,10 +5142,10 @@ unsigned char __fastcall__ s_dark_end (unsigned char how)
         if (k == FA_DOOR || k == FA_BARS) {
             wk.m.kind = E_NOISE;                /* (A thump: the denizens hear it; the work's event, its room) */
             wk.m.who = 0;
-            wk.m.a = 2 + prush;
-            wk.m.b = NZ_BLOW;
-            wk.m.w1 = HUB->pc_x;
-            wk.m.w2 = HUB->pc_y;
+            E_NOISE_LOUD (wk.m) = 2 + prush;
+            E_NOISE_WHAT (wk.m) = NZ_BLOW;
+            E_NOISE_SX (wk.m) = HUB->pc_x;
+            E_NOISE_SY (wk.m) = HUB->pc_y;
             wk.m.t = HUB->now;
             hub_event (&wk.m);
             wk.m.b = 0;
@@ -5158,11 +5158,11 @@ unsigned char __fastcall__ s_dark_end (unsigned char how)
     wsteps = edge_[(prush - GA_WALK) & 3];      /* (At the edge: stopped short, or over it) */
     if (G_OK (test_w (P_DODGE_HAZARD, 0))) {
         hub_map (0);
-        event (E_BEAT, 0, WB_SHORT | k << 8);
+        event (E_BEAT, 0, E_BEAT_MET_W1 (WB_SHORT, k));
         return how;
     }
     hub_map (0);
-    event (E_BEAT, 0, WB_OFF | k << 8);
+    event (E_BEAT, 0, E_BEAT_MET_W1 (WB_OFF, k));
     x = mx + head_x[d];
     y = my + head_y[d];
     z = elev_at (sn_, mx, my) - elev_at (sn_, x, y);
@@ -5190,7 +5190,7 @@ unsigned char __fastcall__ s_dark_end (unsigned char how)
         cl.done = 0;
         cl.x = mx;
         cl.y = my;
-        event (E_CLIMB, 0, K_BEGUN << 8 | feet);
+        event (E_CLIMB, 0, E_CLIMB_W1 (K_BEGUN, feet));
         climb_round ();
         if (out) {
             busy (out + ROUND_T);
@@ -5424,9 +5424,9 @@ static void air_here (void)
         hub_map (0);
         am.kind = E_NOISE;                      /* (As loud as anything: the denizens hear it) */
         am.who = 0;
-        am.a = 9;
-        am.w1 = x = HUB->pc_x;
-        am.w2 = y = HUB->pc_y;
+        E_NOISE_LOUD (am) = 9;
+        E_NOISE_SX (am) = x = HUB->pc_x;
+        E_NOISE_SY (am) = y = HUB->pc_y;
         am.t = HUB->now;
         hub_event (&am);
         k = ((unsigned char*) &HUB->now)[2] & 0x7F;
@@ -5545,7 +5545,7 @@ static unsigned char __fastcall__ swatted (unsigned char k)
         return 0;
     }
     busy (HUB->round);
-    event (E_BEAT, 0, WB_SWAT | k << 8);
+    event (E_BEAT, 0, E_BEAT_SWAT_W1 (k));
     return 1;
 }
 
@@ -5587,8 +5587,8 @@ void __fastcall__ s_close_go (const struct msg* m)
 
     hub_map (0);
     if ((e = engager (HUB->pc_x, HUB->pc_y)) != 0 && e != I_CLOSE_FOE (*m)) {
-        evb = e | TE_STILL;
-        event (E_TASK, 0, TE_ENGAGED);
+        evb = E_TASK_ENGAGED_B (e, 0, 1);
+        event (E_TASK, 0, E_TASK_ENGAGED_W1 (TE_ENGAGED, LT_NONE));
         return;
     }
     pfoe = I_CLOSE_FOE (*m);
@@ -5654,8 +5654,8 @@ unsigned char s_close_on (void)
         }
     }
     pfoe = 0;
-    evb = k + 1;
-    event (E_TASK, 0, TE_FAR);
+    evb = E_TASK_ENGAGED_B (k + 1, 0, 0);
+    event (E_TASK, 0, E_TASK_ENGAGED_W1 (TE_FAR, LT_NONE));
     return 0;
 }
 
@@ -5755,7 +5755,7 @@ static void __fastcall__ fight_begin (unsigned char k)
     fsaid = 0;
     pc_cut = 0;
     evb = k;
-    event (E_TASK, 0, TE_FIGHT | LT_FIGHT << 8);
+    event (E_TASK, 0, E_TASK_ENGAGED_W1 (TE_FIGHT, LT_FIGHT));
 }
 
 /* Its blow at k: the character busy its round, the blow posted (the hub's pc_foe) and struck, at the real paces at
@@ -5831,7 +5831,7 @@ unsigned char __fastcall__ s_fight_on (unsigned char idle)
         if (HUB->pcsum.cond & C_STUNNED) {      /* (In shock, come round: in no state to fight, the referee's; the
                                                 **   fight over, told) */
             evb = 1;
-            event (E_TASK, 0, TE_NO_FOE | LT_FIGHT << 8);
+            event (E_TASK, 0, E_TASK_NOFOE_W1 (LT_FIGHT));
 over:
             HUB->pc_task.foe = 0;
             return 0;
@@ -5849,14 +5849,14 @@ over:
                                                 **   its words enough, "You finish the giant rat where it lies.") */
                 if (HUB->pc_task.done > 1) {
                     evb = pshoot << 1;          /* (A missile's: "No foe is left in your sights.") */
-                    event (E_TASK, 0, TE_NO_FOE | LT_FIGHT << 8);
+                    event (E_TASK, 0, E_TASK_NOFOE_W1 (LT_FIGHT));
                 }
                 HUB->pc_task.foe = 0;
                 fwant = 0;
                 return 0;
             }
-            evb = k | TE_STILL;
-            event (E_TASK, 0, TE_FIGHT | LT_FIGHT << 8);
+            evb = E_TASK_ENGAGED_B (k, 0, 1);
+            event (E_TASK, 0, E_TASK_ENGAGED_W1 (TE_FIGHT, LT_FIGHT));
         }
         fsaid = 0;
         if ((h = HUB->pcsum.health) > fhurt && h >= H_BADLY && h <= H_CRITICAL) {
@@ -5869,7 +5869,7 @@ over:
                 task_word (&q);
                 return 2;
             }
-            event (E_TASK, 0, TE_ASK_HURT | LT_FIGHT << 8);     /* (The blows on as it asks) */
+            event (E_TASK, 0, E_TASK_HURT_W1 (LT_FIGHT));     /* (The blows on as it asks) */
         }
         if (ftired) {                           /* (A level more tired: asked as a hurt's is, the blows on as it
                                                 **   asks; the clock still at the turns pace) */
@@ -5880,7 +5880,7 @@ over:
                 task_word (&q);
                 return 2;
             }
-            event (E_TASK, 0, TE_ASK_TIRED | LT_FIGHT << 8);
+            event (E_TASK, 0, E_TASK_W1 (TE_ASK_TIRED, LT_FIGHT));
         }
         fight_blow (k);                         /* (A missile weapon's, to come: its next missile taken first) */
         return 2;
@@ -5968,7 +5968,7 @@ unsigned char __fastcall__ s_engaged (unsigned char eng, unsigned char def)
             pfoe = 0;                           /* (Backed away: a close-in on it given up, the player's to say
                                                 **   what next) */
             evb = def;
-            event (E_TASK, 0, TE_AWAY);
+            event (E_TASK, 0, E_TASK_ENGAGED_W1 (TE_AWAY, LT_NONE));
         }
         pc_hit = 0;                             /* (Its walk stopped already: a blow at it first no stop more) */
         return f;
@@ -6113,7 +6113,7 @@ void __fastcall__ s_disengage_go (const struct msg* m)
     if (!(e = e == 0xFF ? pfoe : e & 0x3F)) {
         if (!f || !(e = near_foe12 ())) {
             evb = f;                            /* (Not engaged; or a flight with none near to flee) */
-            event (E_TASK, 0, TE_FREE);
+            event (E_TASK, 0, E_TASK_FREE_W1 (LT_NONE));
             return;
         }
         f = 2;                                  /* (A run from one not engaging it) */
@@ -6126,7 +6126,7 @@ void __fastcall__ s_disengage_go (const struct msg* m)
         }
         if (k == sizeof off) {
             evb = 2;                            /* (No way back open) */
-            event (E_TASK, 0, TE_FREE);
+            event (E_TASK, 0, E_TASK_FREE_W1 (LT_NONE));
             return;
         }
         h = n;
@@ -6134,8 +6134,8 @@ void __fastcall__ s_disengage_go (const struct msg* m)
     hub_map (0);
     n = HUB->pcsum.gstep[GA_WALK];
     n = f == 2 ? 250 : 1 + HUB->round / (n ? n : 10);    /* (A square, a half-move more: the walk's squares a round) */
-    evb = e;
-    event (E_TASK, 0, TE_BREAK | (unsigned) f << 8);
+    evb = E_TASK_BREAK_B (e);
+    event (E_TASK, 0, E_TASK_BREAK_W1 (f));
     fleeh = h;
     fwant |= f == 1 ? FW_RUN | 1 : 1;           /* (Free of them, a flight's run on: fight_on's; engaged still,
                                                 **   fought on) */
@@ -6423,7 +6423,7 @@ unsigned char __fastcall__ s_use_up (unsigned n, unsigned char by)
     }
     up->kind = 0;
     hub_map (0);
-    event (E_BEAT, 0, WB_SPENT | upk << 8);
+    event (E_BEAT, 0, E_BEAT_THING_W1 (WB_SPENT, upk));
     return 1;
 }
 
@@ -6590,7 +6590,7 @@ void __fastcall__ s_intent_more (struct msg* m)
             HUB->pc_task.what = 0;
             pc_cut = 0;
             evb = 0;
-            event (E_TASK, 0, TE_BEGUN | k << 8);
+            event (E_TASK, 0, E_TASK_W1 (TE_BEGUN, k));
             break;
         }
         busy (traced (m));
@@ -7734,7 +7734,7 @@ void __fastcall__ s_hid_op (unsigned char op)
                     HUB->pc_task.what = 0;
                     pc_cut = 0;
                     evb = 0;
-                    event (E_TASK, 0, TE_BEGUN | LT_HIDE << 8);
+                    event (E_TASK, 0, E_TASK_W1 (TE_BEGUN, LT_HIDE));
                     return;
                 }
             }
@@ -7918,23 +7918,24 @@ void s_burns_now (void)
             continue;                           /* (An actor's: the denizens' lights, to come) */
         }
         lm.kind = E_LIGHT;                      /* (One lying there: the light layer about it out of date) */
-        lm.a = ws;
-        lm.w1 = wx;
-        lm.w2 = wy;
+        E_LIGHT_SN (lm) = ws;
+        E_LIGHT_SX (lm) = wx;
+        E_LIGHT_SY (lm) = wy;
         hub_map (0);
         lm.t = HUB->now;
         hub_event (&lm);
-        if (lm.a == HUB->pc_stratum && (sq = at (lm.a, lm.w1, lm.w2)) != 0 && (*sq & T_VIS)) {
+        if (E_LIGHT_SN (lm) == HUB->pc_stratum && (sq = at (E_LIGHT_SN (lm), E_LIGHT_SX (lm), E_LIGHT_SY (lm))) != 0 &&
+            (*sq & T_VIS)) {
             hub_map (0);
             evb = q.kind;                       /* ("The torch gutters and goes out.": one it sees) */
-            event (E_TASK, 0, TE_OUT | (unsigned) TO_SEEN << 8);
+            event (E_TASK, 0, E_TASK_LIGHT_W1 (TE_OUT, LT_NONE, 1, 0));
             seen = 1;
         }
     }
     if (low && !more) {
         hub_map (0);
         evb = low;
-        event (E_TASK, 0, TE_LOW);              /* ("Your torch is burning low.": the last lit it carries; one of two,
+        event (E_TASK, 0, E_TASK_LIGHT_W1 (TE_LOW, LT_NONE, 0, 0));              /* ("Your torch is burning low.": the last lit it carries; one of two,
                                                 **   once the other is too, or out) */
     }
     if (d) {

@@ -338,16 +338,16 @@ static unsigned wplace, dplace;                 /* (Its places in each queue) */
 /* A world's event's sound (the character's own: on its square), or 0xFF */
 static unsigned char __fastcall__ world_sound (const struct msg* m)
 {
-    unsigned char o = m->w1;
+    unsigned char o = E_PORTAL_PO (*m);
 
     if (m->who) {
         return 0xFF;
     }
     switch (m->kind) {
     case E_NOISE:                               /* (Work's, a dig's; or a blow's, a battering's: each heard) */
-        return WORLD (m->b == NZ_BLOW ? WS_BLOW : WS_DIG);
+        return WORLD (E_NOISE_WHAT (*m) == NZ_BLOW ? WS_BLOW : WS_DIG);
     case E_TRAP:
-        return m->w1 >> 8 == TO_SPRUNG ? WORLD (WS_TRAP) : 0xFF;
+        return E_TRAP_TO (*m) == TO_SPRUNG ? WORLD (WS_TRAP) : 0xFF;
     case E_PORTAL:
         if (o == PO_OPENED || o == PO_FORCED || o == PO_UNBARRED) {
             return WORLD (WS_OPEN);
@@ -380,21 +380,27 @@ static void listen (void)
     py = HUB->pc_y;
     while (hub_next (&wplace, &m)) {
         if ((n = world_sound (&m)) != 0xFF) {
-            heard (0, n, m.kind == E_NOISE ? m.a : 9, 0, 0, 0);
+            heard (0, n, m.kind == E_NOISE ? E_NOISE_LOUD (m) : 9, 0, 0, 0);
         }
         hub_map (0);
     }
     while (hub_dnext (&dplace, &m)) {
-        if (m.kind == E_DEN && m.b && m.x[0] == sn && (m.a == DE_MOVED || m.a == DE_NOISE)) {
-            heard (m.who, m.x[1] % SND_KINDS * 2 + (m.a == DE_NOISE), m.b, m.w1 - px, m.w2 - py, m.x[3]);
-        } else if (m.kind == E_DEN && m.b && m.x[0] == sn && (unsigned char) (m.a - DE_DIG) <= DE_DIGS - DE_DIG) {
-            heard (m.who, WORLD (m.a == DE_DUG ? WS_SMASH : WS_DIG), m.b, m.w1 - px, m.w2 - py, m.x[3]);
+        if (m.kind == E_DEN && E_DEN_LOUD (m) && E_DEN_SN (m) == sn && (E_DEN_DE (m) == DE_MOVED || E_DEN_DE (m) == DE_NOISE)) {
+            heard (m.who, E_DEN_DKIND (m) % SND_KINDS * 2 + (E_DEN_DE (m) == DE_NOISE), E_DEN_LOUD (m), E_DEN_SX (m) - px,
+                E_DEN_SY (m) - py, E_DEN_BETWEEN (m));
+        } else if (m.kind == E_DEN && E_DEN_LOUD (m) && E_DEN_SN (m) == sn &&
+            (unsigned char) (E_DEN_DE (m) - DE_DIG) <= DE_DIGS - DE_DIG) {
+            heard (m.who, WORLD (E_DEN_DE (m) == DE_DUG ? WS_SMASH : WS_DIG), E_DEN_LOUD (m), E_DEN_SX (m) - px,
+                E_DEN_SY (m) - py, E_DEN_BETWEEN (m));
                                                 /* (A tunneller's spell, its way through: slice 4.11's rest) */
-        } else if (m.kind == E_DEN && m.b && m.x[0] == sn && (unsigned char) (m.a - DE_ROOF) <= DE_WALLS - DE_ROOF) {
-            heard (m.who, WORLD (m.a == DE_ROOF ? WS_SMASH : WS_BLOW), m.b, m.w1 - px, m.w2 - py, m.x[3]);
-        } else if (m.kind == E_FIGHT && m.x[0] == sn && m.x[1] < FO_BLED) {   /* (A blow: landing, or not) */
-            heard (m.who, WORLD (m.x[1] == O_HIT || m.x[1] == O_BOTH_HIT || m.x[1] == O_COUNTER_HIT ||
-                m.x[1] == O_DISPATCH ? WS_HIT : WS_SWISH), m.b, m.w1 - px, m.w2 - py, 0);
+        } else if (m.kind == E_DEN && E_DEN_LOUD (m) && E_DEN_SN (m) == sn &&
+            (unsigned char) (E_DEN_DE (m) - DE_ROOF) <= DE_WALLS - DE_ROOF) {
+            heard (m.who, WORLD (E_DEN_DE (m) == DE_ROOF ? WS_SMASH : WS_BLOW), E_DEN_LOUD (m), E_DEN_SX (m) - px,
+                E_DEN_SY (m) - py, E_DEN_BETWEEN (m));
+        } else if (m.kind == E_FIGHT && E_FIGHT_SN (m) == sn && E_FIGHT_OUT (m) < FO_BLED) {   /* (A blow: landing, or not) */
+            heard (m.who, WORLD (E_FIGHT_OUT (m) == O_HIT || E_FIGHT_OUT (m) == O_BOTH_HIT ||
+                E_FIGHT_OUT (m) == O_COUNTER_HIT || E_FIGHT_OUT (m) == O_DISPATCH ? WS_HIT : WS_SWISH), E_FIGHT_LOUD (m),
+                E_FIGHT_SX (m) - px, E_FIGHT_SY (m) - py, 0);
         }
     }
     hub_map (0);

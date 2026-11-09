@@ -1676,22 +1676,22 @@ static void hear (void)
     for (;;) {
         hub_map (0);
         if (hub_next (&wplace, &m)) {           /* (The world's: a noise of the character's, on its stratum) */
-            if (m.kind == E_NOWAY && (unsigned char) m.w1 == N_DEN) {
-                aside (m.w1 >> 8 & 7);          /* (One in its way: aside, if it will: D10's) */
+            if (m.kind == E_NOWAY && E_NOWAY_WHY (m) == N_DEN) {
+                aside (E_NOWAY_ACTOR (m) & 7);          /* (One in its way: aside, if it will: D10's) */
             }
             if (m.kind != E_NOISE) {
                 continue;
             }
             src = 0;
             sn = pcs;
-            loud = m.a;
+            loud = E_NOISE_LOUD (m);
         } else if (hub_dnext (&dplace, &m)) {   /* (The denizens': an actor's, not heard by itself) */
-            if (m.kind != E_DEN || !m.b) {
+            if (m.kind != E_DEN || !E_DEN_LOUD (m)) {
                 continue;
             }
             src = m.who;
-            sn = m.x[0];
-            loud = m.b;
+            sn = E_DEN_SN (m);
+            loud = E_DEN_LOUD (m);
         } else {
             break;
         }
@@ -1775,11 +1775,11 @@ static unsigned char fought (void)
             continue;
         }
         n = 1;
-        f = m.x[2];
-        att = m.a;                              /* (The one struck an actor: the character's blow, or a stray's
+        f = E_FIGHT_FF (m);
+        att = E_FIGHT_DEF (m);                              /* (The one struck an actor: the character's blow, or a stray's
                                                 **   between two actors, 2026-10-30; else the one striking) */
         k = ((att ? att : m.who) - 1) & 7;      /* (The actor in it: the character fights them one at a time) */
-        if (m.x[1] != FO_BLED && (f & FF_FLEES)) {
+        if (E_FIGHT_OUT (m) != FO_BLED && (f & FF_FLEES)) {
             fled[k] = FLEE_T;                   /* (Broken: it flees, and won't seek the fight again) */
             HUB->actor[k].attitude = AT_UNFRIENDLY;
         }
@@ -1787,7 +1787,7 @@ static unsigned char fought (void)
             dismay (k | g << 4);                /* (Its kin's courage, how it fell in the high bits: part 6's; bled to
                                                 **   death too, a fall all the same) */
         }
-        if (m.x[1] != FO_BLED && !m.who) {
+        if (E_FIGHT_OUT (m) != FO_BLED && !m.who) {
             harmed (k);                         /* (Its own, and their foes, think again of the character; its
                                                 **   wound seen) */
         }

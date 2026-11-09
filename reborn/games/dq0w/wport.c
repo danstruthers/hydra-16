@@ -90,18 +90,18 @@ static void __fastcall__ told (unsigned char what, unsigned char loud, unsigned 
 
     m.kind = E_DEN;
     m.who = bk + 1;
-    m.a = what;
-    m.b = loud;
-    m.w1 = x;
-    m.w2 = y;
+    E_DEN_DE (m) = what;
+    E_DEN_LOUD (m) = loud;
+    E_DEN_SX (m) = x;
+    E_DEN_SY (m) = y;
     e = apart (x - bpx, y - bpy) >> 2;
-    m.x[3] = e > 15 ? 15 : e;
+    E_DEN_BETWEEN (m) = e > 15 ? 15 : e;
     p = at (bd.sn, x, y);
-    m.x[2] = p && (*p & T_VIS);
+    E_DEN_SEEN (m) = p && (*p & T_VIS);
     p = at (bd.sn, bd.x, bd.y);
-    m.x[2] |= p && (*p & T_VIS);
-    m.x[0] = bd.sn;
-    m.x[1] = bd.kind;
+    E_DEN_SEEN (m) |= p && (*p & T_VIS);
+    E_DEN_SN (m) = bd.sn;
+    E_DEN_DKIND (m) = bd.kind;
     hub_map (0);
     m.t = HUB->now;
     hub_devent (&m);

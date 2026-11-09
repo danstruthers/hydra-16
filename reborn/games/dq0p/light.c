@@ -104,7 +104,7 @@ void light_events (void)
         if (m->kind == E_LIGHT) {
             ++lgen;
             ++sgen;                             /* (The sound layer out of date too: sound.c's) */
-            stale (m->a, m->w1, m->w2, LREACH);
+            stale (E_LIGHT_SN (*m), E_LIGHT_SX (*m), E_LIGHT_SY (*m), LREACH);
         }
     }
 }

@@ -49,8 +49,8 @@ static void __fastcall__ told (unsigned char how, unsigned char kind)
     hub_map (0);
     m.kind = E_TASK;
     m.who = 0;
-    m.b = bk + 1 | how << 4;
-    m.w1 = TE_FETCHED | (unsigned) kind << 8;
+    m.b = E_TASK_FETCHED_B (bk + 1, how);
+    m.w1 = E_TASK_FETCHED_W1 (kind);
     m.t = HUB->now;
     hub_event (&m);
     ++HUB->den_seq;

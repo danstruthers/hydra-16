@@ -550,16 +550,16 @@ unsigned char __fastcall__ o_den_heard (const struct msg* m)
     hub_mem (0, pc, &HUB->pc_x, sizeof pc);
     hub_mem (0, &mask, &HUB->pc_mask, 1);
     hub_mem (0, &hear, &HUB->pcsum.hearing, 1);
-    dx = m->w1 - pc[0];
-    dy = m->w2 - pc[1];
+    dx = E_DEN_SX (*m) - pc[0];
+    dy = E_DEN_SY (*m) - pc[1];
     rel = (bearing ((int) dx, (int) dy) - pc_face) & 7;
     dx = (int) dx < 0 ? -dx : dx;
     dy = (int) dy < 0 ? -dy : dy;
-    dx = (dx > dy ? dx : dy) + 4 * (m->x[3] & 15) + 2 * (m->x[3] >> 4);
+    dx = (dx > dy ? dx : dy) + 4 * (E_DEN_BETWEEN (*m) & 15) + 2 * (E_DEN_BETWEEN (*m) >> 4);
     if ((lsn & 1) && ((rel + 1) & 7) < 3) {
         dx >>= 1;                               /* (Listened for, that way: twice as far) */
     }
-    if (dx * 2 > (m->b > mask ? m->b - mask : 0) * (hear + 3) ||   /* (The background masking it: slice 4.5's) */
+    if (dx * 2 > (E_DEN_LOUD (*m) > mask ? E_DEN_LOUD (*m) - mask : 0) * (hear + 3) ||   /* (The background masking it: slice 4.5's) */
         m->t < heard_at + (rel == heard_rel ? 300 : 50)) {
         return 0xFF;
     }

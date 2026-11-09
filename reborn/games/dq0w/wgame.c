@@ -114,7 +114,7 @@ static void __fastcall__ took (unsigned char k)
         rule_done (r);
         m.kind = E_LEFT;
         m.who = m.a = m.b = 0;
-        m.w1 = EL_RULE + r;
+        E_LEFT_END (m) = EL_RULE + r;
         m.t = HUB->now;
         hub_event (&m);
     }
@@ -308,8 +308,8 @@ unsigned char s_take_up (void)
     hub_map (0);
     wk.m.kind = E_TAKEN;                        /* (Told: the work's event record) */
     wk.m.a = 0;
-    wk.m.w1 = r;
-    wk.m.w2 = was;
+    E_TAKEN_IR (wk.m) = r;
+    E_TAKEN_LIT (wk.m) = was;
     wk.m.t = HUB->now;
     hub_event (&wk.m);
     return r == IR_OK || r == IR_FUMBLED;      /* (A fumble's round the UI's to wait, as a thing taken's time) */

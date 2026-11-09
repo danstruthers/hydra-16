@@ -958,7 +958,7 @@ static void heard (void)
             continue;
         }
         if (m.kind == E_BEAT) {
-            if ((unsigned char) m.w1 == WB_DRAWS || actor_seen (m.b)) {
+            if (E_BEAT_BEAT (m) == WB_DRAWS || actor_seen (E_BEAT_WHOSE (m))) {
                 news (&m);                      /* (A fight's limbs' news, after its blow's words: part 11's, a thing
                                                 **   let go of, a fall; another's only if it's seen, not in the dark
                                                 **   or out of sight; a weapon drawn to strike, beside it, as its blow
@@ -966,7 +966,7 @@ static void heard (void)
             }
             continue;
         }
-        if (m.kind == E_DEN && m.b && !(m.x[2] && m.a < DE_RALLY) && m.x[0] == HUB->pc_stratum &&
+        if (m.kind == E_DEN && E_DEN_LOUD (m) && !(E_DEN_SEEN (m) && E_DEN_DE (m) < DE_RALLY) && E_DEN_SN (m) == HUB->pc_stratum &&
             (rel = den_heard (&m)) < 8) {       /* (Weighed: caps.c's, the main RAM's room; a rally told seen too: its
                                                 **   words, part 14's; a snore, a word on watch, the day's) */
             noise_told (&m, rel);               /* (Told: part 14's, from the main code, the hub in the window after) */
@@ -981,14 +981,14 @@ static unsigned char events (void)          /* (How many there were) */
 
     while (!quit && hub_next (&place, &m)) {
         ++n;
-        if (!m.who && (busy | owed) && (m.kind != E_VIEW || m.w1 != V_STIR)) {
+        if (!m.who && (busy | owed) && (m.kind != E_VIEW || E_VIEW_WHY (m) != V_STIR)) {
             HUB->ui_cmd = owed = 0;             /* (The character's news: a command's answer begun, its intent out;
                                                 **   not a denizen stirring, the background's, held till after it) */
         }
         switch (m.kind) {
         case E_TIME:
             if (m.who == 0) {
-                time_said (m.w1, m.b);          /* ("Time passes.", "You wait eight hours.": task.c's) */
+                time_said (E_TIME_TENTHS (m), E_TIME_HOW (m));   /* ("Time passes.", "You wait eight hours.": task.c's) */
             }
             break;
         case E_READY:
@@ -1018,10 +1018,10 @@ static unsigned char events (void)          /* (How many there were) */
                 if ((m.w1 & 0xFF) == A_DOWN || (m.w1 & 0xFF) == A_UP) {
                     came (&m);                  /* (Come into a stratum: told and kept, part 6's) */
                 }
-                k = m.w1 & 0xFF;
+                k = E_ARRIVE_HOW (m);
                 if (k == A_CROSSED) {
                     tell (T_YOU_CROSS_THE);
-                } else if (k == A_WENT_TO && !placing && !(m.w1 & 0x200)) {   /* (0x200: stopped short) */
+                } else if (k == A_WENT_TO && !placing && !E_ARRIVE_HALTED (m)) {   /* (Stopped short) */
                     tell (T_YOU_GO_OVER);
                 }
                 if (HUB->pc_task.kind == LT_TRAVEL) {
@@ -1043,7 +1043,7 @@ static unsigned char events (void)          /* (How many there were) */
             break;
         case E_VIEW:
             if (m.who == 0) {
-                if (m.w1 == V_STIR) {
+                if (E_VIEW_WHY (m) == V_STIR) {
                     if ((t_next () || inn || HUB->ui_cmd) && (HUB->tpr || !busy)) {
                         stirs = 1;              /* (A line typed or its answer owed, at the real paces: told after its answer, main's,
                                                 **   the background's news not in its way, 2026-10-30; or one being
@@ -1056,19 +1056,19 @@ static unsigned char events (void)          /* (How many there were) */
                     }
                     break;
                 }
-                if ((m.w1 & ~1) == V_FACING) {  /* (A turn's first words, as it's begun: out at once, its look
+                if ((E_VIEW_WHY (m) & ~1) == V_FACING) {  /* (A turn's first words, as it's begun: out at once, its look
                                                 **   after, V_TURNED's; a step's or a walk's, V_SETOFF's: b its way) */
-                    turned_says (m.b);
+                    turned_says (E_VIEW_WAY (m));
                     t_flush ();
                     break;
                 }
-                look ((unsigned char) m.w1 & (V_LOOKED | V_TRACED));  /* (A look one way's own words: way.c's;
+                look ((unsigned char) E_VIEW_WHY (m) & (V_LOOKED | V_TRACED));  /* (A look one way's own words: way.c's;
                                                 **   the traces read, words.c's) */
             }
             break;
         case E_TASK:                            /* (The long task's: stopped, asked, refused; slice 4.0's) */
             if (m.who == 0) {
-                if ((unsigned char) m.w1 == TE_BODY) {
+                if (E_TASK_TE (m) == TE_BODY) {
                     heard ();                   /* (The blow that brought it told first: a venomous bite's) */
                 }
                 k = task_words (m.w1, m.b);
@@ -1096,7 +1096,7 @@ static unsigned char events (void)          /* (How many there were) */
             break;
         case E_BEAT:                            /* (A walk's, as it goes; the limbs', part 11's: slice 4.1b's) */
             if (m.who == 0) {
-                if ((unsigned char) m.w1 >= WB_DROP) {
+                if (E_BEAT_BEAT (m) >= WB_DROP) {
                     news (&m);
                 } else {
                     beat_words (m.w1);
@@ -1107,8 +1107,8 @@ static unsigned char events (void)          /* (How many there were) */
             if (m.who != 0) {
                 break;
             }
-            if ((m.w1 & 0xFF) == N_DEN) {
-                strcpy (lb, HUB->actor[(m.w1 >> 8) & 7].name);  /* (A denizen's: its name, for overlay 4) */
+            if (E_NOWAY_WHY (m) == N_DEN) {
+                strcpy (lb, HUB->actor[E_NOWAY_ACTOR (m) & 7].name);  /* (A denizen's: its name, for overlay 4) */
                 den_way ();
             } else if (m.w1 == N_SHUT) {
                 way_words ();                   /* (The theme's: its lock) */
@@ -1135,12 +1135,12 @@ static unsigned char events (void)          /* (How many there were) */
             break;
         case E_TAKEN:                           /* (A thing walked over to and taken up: the world's, I_TAKE) */
             if (m.who == 0) {
-                took_up (m.w1 | m.w2 << 8);
+                took_up (E_TAKEN_IR (m) | E_TAKEN_LIT (m) << 8);
             }
             break;
         case E_LEFT:                            /* (Out of the dungeon, solved or not; a take rule done: theme.c's) */
             if (m.who == 0) {
-                ending ((unsigned char) m.w1);
+                ending ((unsigned char) E_LEFT_END (m));
             }
             break;
         }
@@ -1155,14 +1155,14 @@ static unsigned char events (void)          /* (How many there were) */
 #pragma rodata-name (push, "SW6RODATA")
 void __fastcall__ s_came (const struct msg* m)
 {
-    unsigned char k = m->w1 >> 12;
+    unsigned char k = E_ARRIVE_LINK (*m);
 
     if (k == O_RAMP_DOWN || k == O_RAMP_UP) {
         msg (k == O_RAMP_DOWN ? "You walk down the long slope." : "You trudge up the long slope.");
     } else if (k == O_WELL || k == O_WELL_FELL) {  /* (A well's shaft: 2026-11-06, the world's wwell.c) */
         msg (k == O_WELL_FELL ? "You come up in the water at the foot of the well." : (m->w1 & 0xFF) == A_DOWN ?
             "You climb down the well, into the water at its foot." : "You climb up out of the well.");
-        if (m->w1 & E_MOUTH_LIT) {
+        if (E_ARRIVE_MOUTH (*m)) {
             sayf (" Far above, its mouth shows as a small ring of light.");
         }
     } else {
@@ -1216,14 +1216,14 @@ void __fastcall__ s_limb_words (const struct msg* m)
     static const char* const bfall[NBODIES] = { "\nThe %s falls.", "\nThe %s goes down.", "\nThe %s is thrown down.",
         "\nThe %s is flipped onto its back.", "\nThe %s drops to the floor.", "\nThe %s sinks to the floor." };
     char kn[sizeof CATALOGUE[0].name];
-    unsigned char k = (unsigned char) m->w1 - WB_DROP, b;
+    unsigned char k = E_BEAT_BEAT (*m) - WB_DROP, b;
     const char* s;
 
     if (k == WB_POSED - WB_DROP) {              /* (The body's position as it said, slice 4.6's: part 13's) */
         pose_words (m->w1);
         return;
     }
-    if ((m->b & 0x80) && actor_seen (m->b) == 2) {
+    if ((E_BEAT_WHOSE (*m) & 0x80) && actor_seen (E_BEAT_WHOSE (*m)) == 2) {
         msg ("You hear something fall.");      /* (A fall unseen, near: the world's b | 0x80, part 8's, 2026-10-30) */
         return;
     }
@@ -1231,27 +1231,29 @@ void __fastcall__ s_limb_words (const struct msg* m)
         water_words (m->w1);                    /* (Overlay 4's, water.c's) */
         return;
     }
-    hub_mem (KIND_BANK, kn, CATALOGUE[m->w1 >> 8].name, sizeof kn);
+    hub_mem (KIND_BANK, kn, CATALOGUE[E_BEAT_LIMB_THING (*m)].name, sizeof kn);
     if (k >= WB_EATS - WB_DROP) {
         sayf (k == WB_EATS - WB_DROP ? "\nThe %s eats its %s." : k == WB_HANDS - WB_DROP ? "\nThe %s hands its %s to its fellow." :
             k == WB_THREW - WB_DROP ? "\nThe %s throws you its %s." : "\nThe %s throws you its %s; it falls short.",
-            HUB->actor[(m->b - 1) & 7].name, kn);
+            HUB->actor[(E_BEAT_WHOSE (*m) - 1) & 7].name, kn);
         return;
     }
     if (k == WB_BROKE - WB_DROP) {
-        sayf (m->b ? "\nThe %s's %s breaks!" : "\nYour %s breaks!", m->b ? HUB->actor[(m->b - 1) & 7].name : kn, kn);
+        sayf (E_BEAT_WHOSE (*m) ? "\nThe %s's %s breaks!" : "\nYour %s breaks!",
+            E_BEAT_WHOSE (*m) ? HUB->actor[(E_BEAT_WHOSE (*m) - 1) & 7].name : kn, kn);
         return;
     }
     k = (k == WB_RISEN - WB_DROP || k == WB_NOT_UP - WB_DROP) && m->w1 >> 8 ?
-        (WB_NO_RUN - WB_DROP + 1) * 2 + k - (WB_RISEN - WB_DROP) : k * 2 + (m->b != 0);
+        (WB_NO_RUN - WB_DROP + 1) * 2 + k - (WB_RISEN - WB_DROP) : k * 2 + (E_BEAT_WHOSE (*m) != 0);
     if (k < sizeof lwords / sizeof lwords[0] && (s = lwords[k]) != 0) {
-        if (m->b && (k == (WB_RISEN - WB_DROP) * 2 + 1 || k == (WB_NOT_UP - WB_DROP) * 2 + 1 || k == (WB_FALLEN - WB_DROP) * 2 + 1)) {
-            b = HUB->actor[(m->b - 1) & 7].body;    /* (A creature's getting up, failing to, falling, worded by its
+        if (E_BEAT_WHOSE (*m) && (k == (WB_RISEN - WB_DROP) * 2 + 1 || k == (WB_NOT_UP - WB_DROP) * 2 + 1 ||
+            k == (WB_FALLEN - WB_DROP) * 2 + 1)) {
+            b = HUB->actor[(E_BEAT_WHOSE (*m) - 1) & 7].body;    /* (A creature's getting up, failing to, falling, worded by its
                                                 **   body: "The cave adder coils itself up again", kinds.txt's) */
             b = b < NBODIES ? b : BD_TWO;
             s = k == (WB_RISEN - WB_DROP) * 2 + 1 ? brise[b] : k == (WB_NOT_UP - WB_DROP) * 2 + 1 ? bnoup[b] : bfall[b];
         }
-        sayf (s, m->b ? HUB->actor[(m->b - 1) & 7].name : kn, kn);
+        sayf (s, E_BEAT_WHOSE (*m) ? HUB->actor[(E_BEAT_WHOSE (*m) - 1) & 7].name : kn, kn);
     }
 }
 #pragma code-name (pop)
@@ -1265,7 +1267,7 @@ void __fastcall__ s_news (const struct msg* m)
 
     switch (m->kind) {
     case E_BEAT:
-        if ((unsigned char) m->w1 == WB_SEARCH) {
+        if (E_BEAT_BEAT (*m) == WB_SEARCH) {
             search_said (m);                    /* (A room searched whole's: search.c's) */
             break;
         }
@@ -1273,14 +1275,15 @@ void __fastcall__ s_news (const struct msg* m)
         break;
     case E_BEARING:                             /* (Its bearings: lost, known, or set right, a room it knows; the sky
                                                 **   seen, the time it believes, time.c's) */
-        if ((unsigned char) m->w1 == BRG_SKY) {
-            time_ui (TU_SKY | (m->w1 >> 8 ? m->w1 & 0xFF00 : m->b << 8));   /* (A shaft's refusal's, its high byte) */
+        if (E_BEARING_BRG (*m) == BRG_SKY) {
+            time_ui (TU_SKY | (E_BEARING_SKY_REFUSAL (*m) ? m->w1 & 0xFF00 : E_BEARING_SKY_SKY (*m) << 8));   /* (A shaft's
+                                                **   refusal's, its high byte) */
             break;
         }
         tell (m->w1 == BRG_LOST ? T_LOST_BEARINGS : T_BEARINGS_BACK);
         break;
     case E_DIG:
-        k = m->w1 >> 8;
+        k = E_DIG_HOW (*m);
         if (k == D_BEGUN || k == D_AGAIN) {
             dug_with[0] = 0;
         } else if (k != D_PORTAL && k != D_BETTER) {
@@ -1294,11 +1297,11 @@ void __fastcall__ s_news (const struct msg* m)
         dig_words (k, m->w1 & 0xFF);
         break;
     case E_LEDGE:
-        k = (signed char) m->w1 > 0 ? (signed char) m->w1 : -(signed char) m->w1;
-        climb_words ((signed char) m->w1 > 0 ? CW_RISES : CW_FALLS, k);
+        k = E_LEDGE_RISE (*m) > 0 ? E_LEDGE_RISE (*m) : -E_LEDGE_RISE (*m);
+        climb_words (E_LEDGE_RISE (*m) > 0 ? CW_RISES : CW_FALLS, k);
         break;
     case E_CLIMB:
-        climb_words (m->w1 >> 8, m->w1 & 0xFF);
+        climb_words (E_CLIMB_HOW (*m), m->w1 & 0xFF);
         break;
     case E_HARM:                                /* (The referee's words of its wounds, then the UI's of it all) */
         r = ask_b (RS_DESCRIBE, 0, 2);
@@ -1318,7 +1321,7 @@ void __fastcall__ s_news (const struct msg* m)
         if (!finds || m->w1 != PO_NOTHING) {
             fixt_words (m);
         }
-        k = m->w1;                              /* (A part lifted out: now taken up) */
+        k = E_PORTAL_PO (*m);                   /* (A part lifted out: now taken up) */
         if (lifting[0] && (k == PO_LIFTED || k == PO_PANE_OUT || k == PO_BARS_OUT)) {
             strcpy (pending, lifting);
         }
@@ -3034,49 +3037,49 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
     static const char* n;
 
     hub_map (DEN_BANK);                         /* (Its sound's words: the sound task's, if it's put them there) */
-    memcpy (heard_what, SND_AT + (m->x[1] % SND_KINDS * 2 + (m->a == DE_NOISE)) * SND_REC, sizeof heard_what);
+    memcpy (heard_what, SND_AT + (E_DEN_DKIND (*m) % SND_KINDS * 2 + (E_DEN_DE (*m) == DE_NOISE)) * SND_REC, sizeof heard_what);
     hub_map (0);
     heard_what[sizeof heard_what - 1] = 0;
-    if (m->a >= DE_RALLY) {                     /* (A successor at its post rallying its fellows, HOUSE.md's morale; a
+    if (E_DEN_DE (*m) >= DE_RALLY) {                     /* (A successor at its post rallying its fellows, HOUSE.md's morale; a
                                                 **   sleeper's snore, those on watch talking, the alarm raised, the
                                                 **   day's, 2026-10-31; a pastime heard (dice rattling, singing), or let
                                                 **   go as its denizen rises to act, seen, leisure's, tell.c's words:
                                                 **   seen, by its name, else heard) */
-        if (m->a == DE_DIGS) {
+        if (E_DEN_DE (*m) == DE_DIGS) {
             return;                             /* (A tunneller's spells after its first: told as it began) */
         }
-        if (m->a >= DE_PASTIME && m->a < DE_DIG) {
-            if (m->x[2] ? m->a < DE_UP : m->a >= DE_UP) {
+        if (E_DEN_DE (*m) >= DE_PASTIME && E_DEN_DE (*m) < DE_DIG) {
+            if (E_DEN_SEEN (*m) ? E_DEN_DE (*m) < DE_UP : E_DEN_DE (*m) >= DE_UP) {
                 return;                         /* (One seen at its pastime: the look's words say it) */
             }
-            tell ((m->a - DE_PASTIME - PT_DICE + T_PAST_HEARD) | TELL_COPY);
+            tell ((E_DEN_DE (*m) - DE_PASTIME - PT_DICE + T_PAST_HEARD) | TELL_COPY);
             n = heard_what;
-        } else if (m->a >= DE_OPENS) {
-            door_words (m->a);                  /* (A door worked by a denizen, Phase 3C's: its words below) */
+        } else if (E_DEN_DE (*m) >= DE_OPENS) {
+            door_words (E_DEN_DE (*m));                  /* (A door worked by a denizen, Phase 3C's: its words below) */
             n = lb + 340;
             strcpy (heard_what, n + strlen (n) + 1);
         } else {
-            n = m->a == DE_RALLY ? "rallies its fellows\0a rallying shout" : m->a == DE_SNORE ? "snores\0snoring" :
-                m->a == DE_TALK ? "says something to its fellow\0voices" : m->a == DE_DIG ?
-                "digs into the wall\0a scraping in rock" : m->a == DE_DUG ? "\0rock falling" :
+            n = E_DEN_DE (*m) == DE_RALLY ? "rallies its fellows\0a rallying shout" : E_DEN_DE (*m) == DE_SNORE ?
+                "snores\0snoring" : E_DEN_DE (*m) == DE_TALK ? "says something to its fellow\0voices" : E_DEN_DE (*m) == DE_DIG ?
+                "digs into the wall\0a scraping in rock" : E_DEN_DE (*m) == DE_DUG ? "\0rock falling" :
                 "raises the alarm\0a shout of alarm";  /* (A tunneller's spell begun, its way through: slice
                                                 **   4.11's) */
             strcpy (heard_what, n + strlen (n) + 1);
         }
-        if (m->x[2] && m->a == DE_DUG) {
+        if (E_DEN_SEEN (*m) && E_DEN_DE (*m) == DE_DUG) {
             heard_words (0, rel);               /* (Its way through seen: where, the heard words' way's) */
             strcpy (lb + 300, lb + 10 + strlen (heard_what));
             sayf ("\nA fresh tunnel opens %s Spoil lies heaped by it.", lb + 300);
             return;
         }
-        if (m->x[2]) {
+        if (E_DEN_SEEN (*m)) {
             strcpy (lb + 300, HUB->actor[(m->who - 1) & (NACTORS - 1)].name);   /* (Its name, at the line's far end:
                                                 **   sayf's lb its own) */
             sayf (lb[300] >= 'a' ? "\nThe %s %s." : "\n%s %s.", lb + 300, n);
             return;
         }
     }
-    heard_words (m->a | (m->x[3] ? 0x80 : 0), rel);
+    heard_words (E_DEN_DE (*m) | (E_DEN_BETWEEN (*m) ? 0x80 : 0), rel);
     msg (lb);
     if (busy && HUB->pc_task.kind && !asked) {
         asked = 1;                              /* (The first sound heard as a long task goes: asked, the world's to

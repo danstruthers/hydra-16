@@ -284,7 +284,8 @@ function actionsHeader() {
 //   struct NAME                                    the struct the kinds after it travel in
 //   KIND[:FORM]  [< KIND[:FORM];] SLOT FIELD ...; SLOT FIELD ...      a kind's payload (a line indented goes on)
 // a FIELD name (the slot whole), name:N (bit N) or name:N-M (bits N to M), and @FIRST, an enum's first member, for
-// its value's name in the tests (a name of one bit, a boolean there)
+// its value's name in the tests (a name of one bit, a boolean there); then (the events') ! a signed byte, +K stored
+// plus K, ==CONST[,CONST] the form's selector (the form a message is read by, its field's value one of them)
 const TYPE_BITS = { 'unsigned char': 8, 'signed char': 8, 'char': 8, 'unsigned': 16, 'unsigned int': 16, 'int': 16,
   'signed': 16, 'unsigned short': 16, 'short': 16, 'unsigned long': 32, 'long': 32, 'signed long': 32 };
 
@@ -324,9 +325,11 @@ function msgsRead(text) {
       const slot = sl[1];
       if (sl[2]) f.aliases.push({ name: sl[2], slot });         // (A packed slot's whole, by a name: SLOT(name))
       for (const t of w) {
-        const m = t.match(/^([a-z]\w*)(?::(\d+)(?:-(\d+))?)?(?:=(\w+))?(?:@(\w+))?$/);
+        const m = t.match(/^([a-z]\w*)(?::(\d+)(?:-(\d+))?)?(!)?(?:\+(\d+))?(?:==(\w+(?:,\w+)*)|=(\w+))?(?:@(\w+(?:,\w+)*|\w+(?:\/\w+)+))?$/);
         if (!m) throw new Error('msgs.def:' + line + ': "' + t + '", a field?');
-        f.fields.push({ name: m[1], slot, lo: m[2] === undefined ? -1 : +m[2], hi: m[2] === undefined ? -1 : +(m[3] === undefined ? m[2] : m[3]), bit: m[4] || '', en: m[5] || '' });
+        f.fields.push({ name: m[1], slot, lo: m[2] === undefined ? -1 : +m[2], hi: m[2] === undefined ? -1 : +(m[3] === undefined ? m[2] : m[3]), bit: m[7] || '', en: m[8] || '',
+          signed: !!m[4], plus: m[5] === undefined ? 0 : +m[5], sel: m[6] ? m[6].split(',') : null });   // (The events': a signed byte,
+                                                                                                         //   a value stored plus K, a form's selector)
       }
     }
     forms.push(f);
@@ -385,23 +388,34 @@ function msgsMake(forms, named, defs, names) {
       for (const [n, u] of Object.entries(used)) if (u.slot === x.slot && (u.mask & mask)) throw new Error('msgs.def:' + f.line + ': ' + x.name + ' over ' + n);
       if (used[x.name]) throw new Error('msgs.def:' + f.line + ': ' + x.name + ' twice');
       used[x.name] = { slot: x.slot, mask };
-      return { ...x, lo, hi, s, whole: lo === 0 && hi === s.bits - 1, top: hi === s.bits - 1 };
+      if (x.signed && (lo || hi !== 7)) throw new Error('msgs.def:' + f.line + ': ' + x.name + ' signed, not bits 0-7');
+      if (x.sel && f.fields.indexOf(x) < 0) throw new Error('msgs.def:' + f.line + ': ' + x.name + '\'s selector an included form\'s');
+      for (const c of x.sel || []) if (!names.has(c)) throw new Error('msgs.def:' + f.line + ': ' + c + ', not a name of the headers\'');
+      return { ...x, lo, hi, s, whole: lo === 0 && hi === s.bits - 1, top: hi === s.bits - 1, fixed: x.sel && x.sel.length === 1 ? x.sel[0] : '' };
     });
+    const sels = fields.filter(x => x.sel);                    // (A form chosen by a field's value: one field, and the
+    if (sels.length > 1 || (sels.length && !f.form)) throw new Error('msgs.def:' + f.line + ': a selector ' + (f.form ? 'twice' : 'of a kind\'s own form'));   //   kind's own form, none)
     out.push('', '/* ' + f.kind + (f.form ? ':' + f.form : '') + ' (msgs.def:' + f.line + ') */');
     const bit = x => x.bit || hex(2 ** x.lo);                  // (A one-bit field's bit: its constant's name, or its value)
+    const kinds = x => byKey.get(f.kind) !== f && all(byKey.get(f.kind) || { inc: [], fields: [] }).some(y => y.name === x.name &&
+      y.slot === x.slot && (y.lo < 0 ? 0 : y.lo) === x.lo && (y.hi < 0 ? x.s.bits - 1 : y.hi) === x.hi && y.signed === x.signed && y.plus === x.plus);
     for (const x of fields) {                                 // (Its accessors: the slot whole an lvalue; one bit, the
-      const v = '(m).' + x.s.c, body = x.whole ? v : x.lo === x.hi ? v + ' & ' + bit(x) :    //   bit in its place;
+      const v = '(m).' + x.s.c, body = x.signed ? '(signed char) ' + v : x.whole ? v : x.lo === x.hi ? v + ' & ' + bit(x) :    //   bit in its place;
         !x.lo && x.hi === 7 ? '(unsigned char) ' + v :       //   a word's low byte, the byte (cc65's shorter code);
         (x.lo ? v + ' >> ' + x.lo : v) + (x.top ? '' : ' & ' + hex(2 ** (x.hi - x.lo + 1) - 1));   //   else its bits)
-      def(f.kind + '_' + x.name.toUpperCase(), pad('#define ' + f.kind + '_' + x.name.toUpperCase() + '(m)', 40) + '(' + body + ')', f.line);
+      const A = (sels.length && !x.sel && !kinds(x) ? P : f.kind) + '_' + x.name.toUpperCase();   // (A chosen form's own:
+                                                              //   KIND_FORM_FIELD, unless the kind's own form has it the same)
+      def(A, pad('#define ' + A + '(m)', 40) + '(' + body + ')', f.line);
     }
     for (const x of f.aliases) {                               // (A packed slot's whole: an lvalue, its packer's to set)
       if (used[x.name]) throw new Error('msgs.def:' + f.line + ': ' + x.name + ' a field\'s name and a slot\'s');
-      def(f.kind + '_' + x.name.toUpperCase(), pad('#define ' + f.kind + '_' + x.name.toUpperCase() + '(m)', 40) + '((m).' + slotOf(f, x.slot).c + ')', f.line);
+      const A = (sels.length ? P : f.kind) + '_' + x.name.toUpperCase();
+      def(A, pad('#define ' + A + '(m)', 40) + '((m).' + slotOf(f, x.slot).c + ')', f.line);
     }
     const slots = [...new Set(fields.map(x => x.slot))].sort((p, q) => fields.find(x => x.slot === p).s.ord - fields.find(x => x.slot === q).s.ord);
-    const val = x => {                                         // (A field's part of its slot's value: one bit, its bit
-      const a = '(' + x.name + '_)';                           //   or none; the bottom one as given, the top one cut by
+    const arg = x => x.fixed ? '' : x.name + '_';             // (A form's selector of one value: not an argument, its
+    const val = x => {                                         //   constant in its place.  A field's part of its slot's value: one bit, its bit
+      const a = '(' + (x.fixed || x.name + '_') + ')';         //   or none; the bottom one as given, the top one cut by
       if (x.lo === x.hi && !x.whole) return '(' + a + ' ? ' + bit(x) + ' : 0)';   //   the slot, one between masked)
       if (!x.lo) return a;
       return (x.top ? (x.s.bits > 8 ? '(unsigned' + (x.s.bits > 16 ? ' long' : '') + ') ' : '') + a : '(' + a + ' & ' + hex(2 ** (x.hi - x.lo + 1) - 1) + ')') + ' << ' + x.lo;
@@ -409,13 +423,14 @@ function msgsMake(forms, named, defs, names) {
     for (const sl of slots) {                                  // (A packed slot's packer: its fields, in their order)
       const xs = fields.filter(x => x.slot === sl);
       if (xs.length === 1 && xs[0].whole) continue;
-      def(P + '_' + xs[0].s.up, pad('#define ' + P + '_' + xs[0].s.up + '(' + xs.map(x => x.name + '_').join(', ') + ')', 40) + '(' + xs.map(val).join(' | ') + ')', f.line);
+      def(P + '_' + xs[0].s.up, pad('#define ' + P + '_' + xs[0].s.up + '(' + xs.map(arg).filter(Boolean).join(', ') + ')', 40) + '(' + xs.map(val).join(' | ') + ')', f.line);
     }
     const sorted = slots.map(sl => fields.filter(x => x.slot === sl));   // (Its builder: kind, who, each slot in turn)
-    const args = sorted.flat().map(x => x.name + '_'), sets = ['(m).kind = ' + f.kind, '(m).who = (who_)'];
-    for (const xs of sorted) sets.push('(m).' + xs[0].s.c + ' = ' + (xs.length === 1 && xs[0].whole ? '(' + xs[0].name + '_)' : P + '_' + xs[0].s.up + ' (' + xs.map(x => x.name + '_').join(', ') + ')'));
+    const args = sorted.flat().map(arg).filter(Boolean), sets = ['(m).kind = ' + f.kind, '(m).who = (who_)'];
+    for (const xs of sorted) sets.push('(m).' + xs[0].s.c + ' = ' + (xs.length === 1 && xs[0].whole ? '(' + (xs[0].fixed || xs[0].name + '_') + ')' : P + '_' + xs[0].s.up + ' (' + xs.map(arg).filter(Boolean).join(', ') + ')'));
     if (names.has(f.kind)) def(P + '_SET', pad('#define ' + P + '_SET(' + ['m', 'who_', ...args].join(', ') + ')', 40) + '(' + sets.join(', ') + ')', f.line);
-    res.push({ kind: f.kind, form: f.form, struct: f.struct, fields: fields.map(x => ({ name: x.name, slot: x.slot, lo: x.lo, hi: x.hi, bits: x.s.bits, en: x.en, bit: x.bit })) });
+    res.push({ kind: f.kind, form: f.form, struct: f.struct, sel: sels.length ? { name: sels[0].name, values: sels[0].sel } : null,
+      fields: fields.map(x => ({ name: x.name, slot: x.slot, lo: x.lo, hi: x.hi, bits: x.s.bits, en: x.en, bit: x.bit, signed: x.signed, plus: x.plus })) });
   }
   const text = ['/* dq0msg.h - made by the build (games/dq0/hubgen.js) from games/dq0/msgs.def: not to be edited.  Each message',
     '** kind\'s fields where they sit in its struct (hub.h\'s struct msg): KIND_FIELD (m) a field of message m (a struct, not',
@@ -491,8 +506,13 @@ function generate(opt) {
     const n = H.size(f.struct, x.slot);
     if (n * 8 !== x.bits) throw new Error('hubgen: msgs.def: ' + f.struct + '.' + x.slot + ' is ' + n + ' bytes, not ' + x.bits + ' bits');
     if (x.bit && (x.lo !== x.hi || C[x.bit] !== 2 ** x.lo)) throw new Error('hubgen: msgs.def: ' + f.kind + '\'s ' + x.name + ': ' + x.bit + ' is ' + C[x.bit] + ', not bit ' + x.lo);
-    return [x.name, H.off(f.struct, x.slot), n, x.lo, x.hi, x.en];
+    return x.signed || x.plus ? [x.name, H.off(f.struct, x.slot), n, x.lo, x.hi, x.en, x.signed ? 1 : 0, x.plus] : [x.name, H.off(f.struct, x.slot), n, x.lo, x.hi, x.en];
   }) };
+  for (const f of msgs.forms) if (f.sel) {                    // (A form chosen by a field's value: its values, by number)
+    const v = f.sel.values.map(c => C[c]), s = f.fields.find(x => x.name === f.sel.name);
+    if (v.some(x => x === undefined || x >= 2 ** (s.hi - s.lo + 1))) throw new Error('hubgen: msgs.def: ' + f.kind + ':' + f.form + '\'s ' + f.sel.values + '?');
+    j.msgs[f.kind + ':' + f.form].sel = [f.sel.name, v];
+  }
   H = wrap(j);
   // The assembly files
   for (const [k, list] of Object.entries(ASM)) {
@@ -517,6 +537,8 @@ function generate(opt) {
 // H.size (STRUCT) its size, H.size (STRUCT, PATH) a field's (less its indices given: "door" all, "door[0]" one);
 // H.dims (STRUCT, PATH) its dimensions' element sizes; H.value (SPEC) ASM's specs'
 function wrap(j) {
+  const sels = {};                                             // (Each kind's forms chosen by a field's value)
+  for (const [k, q] of Object.entries(j.msgs || {})) if (q.sel) (sels[k.split(':')[0]] = sels[k.split(':')[0]] || []).push(q);
   const rec = (s, p) => {
     const S = j.S[String(s).replace(/^struct\s+/, '')];
     if (!S) throw new Error('dq0hub: no struct ' + s);
@@ -540,7 +562,7 @@ function wrap(j) {
     return { S, f: last, off, n };
   };
   const H = {
-    C: j.C, enums: j.enums, own: j.own, tasks: j.tasks, S: j.S,
+    C: j.C, enums: j.enums, own: j.own, tasks: j.tasks, S: j.S, msgs: j.msgs || {},
     off: (s, p) => rec(s, p).off,
     size: (s, p) => { const r = rec(s, p); return p === undefined ? r.S.size : r.n ? r.f[1 + r.n] : r.f[1]; },
     dims: (s, p) => rec(s, p).f.slice(2),
@@ -560,17 +582,33 @@ function wrap(j) {
     },
     // A message's payload (msgs.def's): payload (KIND, FORM) its fields, the form's or else the kind's, or null;
     // decode (BYTES, O, KIND, FORM) the fields of the message at BYTES[O] as { name: value } (a value of an enum's its
-    // member's name, one bit's a boolean), {} for a kind with none declared
+    // member's name, one bit's a boolean), {} for a kind with none declared.  With no FORM of its own (or none of that
+    // name), the form its selector chooses, if one does (the events': E_TASK's by its TE_*), else the kind's
     payload: (kind, form) => (form && j.msgs && j.msgs[kind + ':' + form]) || (j.msgs && j.msgs[kind]) || null,
     decode: (b, o, kind, form) => {
-      const p = H.payload(kind, form), out = {};
-      if (!p) return out;
-      for (const [name, off, n, lo, hi, en] of p.fields) {
+      const field = ([, off, n, lo, hi]) => {
         let v = 0;
         for (let i = n - 1; i >= 0; i--) v = v * 256 + b[o + off + i];
-        v = Math.floor(v / 2 ** lo) % 2 ** (hi - lo + 1);
-        if (en) {
-          const e = j.enums.find(x => x.includes(en)), m = e && e.find(x => j.C[x] === v);
+        return Math.floor(v / 2 ** lo) % 2 ** (hi - lo + 1);
+      };
+      let p = form && j.msgs && j.msgs[kind + ':' + form];
+      if (!p && sels[kind]) p = sels[kind].find(q => q.sel[1].includes(field(q.fields.find(x => x[0] === q.sel[0]))));
+      p = p || H.payload(kind, '');
+      const out = {};
+      if (!p) return out;
+      for (const x of p.fields) {
+        const [name, , , lo, hi, en, signed, plus] = x;
+        let v = field(x);
+        if (signed && v >= 2 ** (hi - lo)) v -= 2 ** (hi - lo + 1);
+        if (plus) v -= plus;
+        if (en) {                                              // (Its names: an enum's (its member's), or constants, or
+          let m;                                               //   words, a/b/c, for 0, 1, 2 ...)
+          if (en.includes('/')) m = en.split('/')[v];
+          else for (const c of en.split(',')) {
+            const e = j.enums.find(y => y.includes(c));
+            m = e ? e.find(y => j.C[y] === v) : j.C[c] === v ? c : undefined;
+            if (m !== undefined) break;
+          }
           out[name] = m === undefined ? v : m;
         } else out[name] = hi === lo ? !!v : v;
       }

@@ -124,17 +124,17 @@ static void __fastcall__ told_den (unsigned char what, unsigned char loud)
 {
     unsigned char* p;
 
-    bev.x[3] = loud ? between () : 0;
+    E_DEN_BETWEEN (bev) = loud ? between () : 0;
     p = at (bd.sn, bd.x, bd.y);
-    bev.x[2] = p && (*p & T_VIS);
+    E_DEN_SEEN (bev) = p && (*p & T_VIS);
     bev.kind = E_DEN;
     bev.who = bk + 1;
-    bev.a = what;
-    bev.b = loud;
-    bev.w1 = bd.x;
-    bev.w2 = bd.y;
-    bev.x[0] = bd.sn;
-    bev.x[1] = bd.kind;
+    E_DEN_DE (bev) = what;
+    E_DEN_LOUD (bev) = loud;
+    E_DEN_SX (bev) = bd.x;
+    E_DEN_SY (bev) = bd.y;
+    E_DEN_SN (bev) = bd.sn;
+    E_DEN_DKIND (bev) = bd.kind;
     hub_map (0);
     bev.t = HUB->now;
     hub_devent (&bev);

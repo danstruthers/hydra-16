@@ -187,7 +187,7 @@ unsigned __fastcall__ s_tr_words (unsigned w)
     memcpy (&UIREC->tread, &R, sizeof R);       /* (Its trails as worded) */
     hub_map (0);
     ev.kind = E_VIEW;
-    ev.w1 = V_TRACED;
+    E_VIEW_WHY (ev) = V_TRACED;
     ev.t = HUB->now;
     hub_event (&ev);
     return w;

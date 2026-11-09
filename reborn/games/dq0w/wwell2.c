@@ -109,7 +109,7 @@ unsigned char s_well_put (void)
     strcpy (UIREC->trtext, b);
     hub_map (0);
     m.kind = E_VIEW;
-    m.w1 = V_TRACED;
+    E_VIEW_WHY (m) = V_TRACED;
     m.t = HUB->now;
     hub_event (&m);
     HUB->ireq.x = 0;                            /* (No time: let fall, as a thing put down) */

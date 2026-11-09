@@ -14,7 +14,11 @@
 #              name:N  name:N-M         bit N, bits N to M: KIND_NAME (m) the bits (one bit: in its place, true or not;
 #                                       a word's bits 0-7, its low byte)
 #              ...=CONST                one bit's constant, the headers' (checked: it must be that bit)
-#              ...@FIRST                its values an enum's (FIRST a member): the tests read the member's name
+#              ...@FIRST                its values an enum's (FIRST a member): the tests read the member's name;
+#              ...@A,B,C  ...@a/b/c     or the enums' of A, B (or A, B the constants themselves), or words for 0, 1, 2
+#              ...==CONST[,CONST]       the form's selector: a FORM of the kind is the one whose field has that value
+#              ...!  ...+K              a signed byte (bits 0-7); a value stored plus K (an actor's entry plus 1: the
+#                                       tests read it less K, the C as it's stored)
 #   A slot of flags the headers name (WA_*, KT_*, POS_*) is one field, the slot whole, tested by its flags' names.
 #
 # Generated for each form (C macros, costing what the hand-packed code did: the images byte for byte the same):
@@ -24,8 +28,12 @@
 #                                       field between them masked to its bits)
 #   KIND[_FORM]_SET (m, who, ...)       kind, who and every slot it names set, in the struct's order
 # A FORM is another shape of the same kind (the denizens' I_STEP, a search's I_PORTAL): its own builder and packers,
-# its fields' accessors KIND_FIELD as the kind's (a name in two forms the same field, or the build stops).  The tests'
-# decoder reads a denizen's intent by its :den form, if its kind has one, else by the kind's.
+# its fields' accessors KIND_FIELD as the kind's (a name in two forms the same field, or the build stops).  A form
+# chosen by a selector (the events': E_TASK:robbed  w1 te:0-7==TE_ROBBED ...) has its own accessors, KIND_FORM_FIELD
+# (E_TASK_ROBBED_PURSE), but for its selector and a field the kind's own form has the same (E_TASK_TE, E_TASK_TASK);
+# a selector of one value is no argument of its packer or builder, its constant in its place (E_TASK_ROBBED_W1 (purse,
+# caught, asleep)).  The tests' decoder reads a denizen's intent by its :den form, if its kind has one, else by the
+# kind's; an event by the form its selector chooses, else by the kind's.
 
 struct msg
 
@@ -92,3 +100,73 @@ I_RISE:den      < I_DEN; w1 pos
 I_TRAVEL        b place; w1 x; w2 y; x[0] w; x[1] h; x[2] sn       # (The name's entry, TRV_IN, TRV_KIND | a room's kind)
 I_LOAD          -
 I_GATHER        a family                                # (FM_*: 0 any)
+
+# ---- The events (E_*: the world's, what's happened; to the UI's ring (the hub's eq) and the denizens' (dq: E_DEN,
+# E_FIGHT, the limbs' E_BEAT); who 0 the character's).  A kind of many meanings has a form for each, chosen by a field's
+# value (FIELD==CONST: E_TASK's by its TE_*, E_BEAT's by its WB_*), the kind's own its fields for any other value.  The
+# tests' event records keep the slots raw beside the fields (e.a, e.b, e.w1, e.w2, e.t, e.x: sim/lib/dq0meaning.js's),
+# so no field of an event is named as a slot is, nor kind, who, line or den.  A square's x and y are sx and sy.
+
+E_TIME          b(how) mins:0=WA_MIN asleep:1=WA_SLEEP rest:2=WA_REST; w1 tenths
+                # (The time passed, tenths, or minutes (mins); b the character's wait's, its I_WAIT's a)
+E_READY         -
+E_BYE           -
+E_ARRIVE        w1 how:0-7@A_WALKED first:8 halted:9 mouth:10=E_MOUTH_LIT link:12-15
+                # (First: the first time there; halted, A_WENT_TO's: stopped short; up or down, the link's kind (O_*),
+                #   mouth a well's, its mouth lit far above)
+E_NOWAY         w1 why:0-7@N_NO_EXIT actor:8-15                     # (N_DEN: the actor in the way)
+E_VIEW          b way; w1 why@V_TURNED                  # (V_FACING, V_SETOFF: b the way it turns, sets off)
+E_DIG           b(spell) tool:0-1 fresh:3 rock:4-7; w1 how:8-15@D_BEGUN feet:0-7
+                # (The feet to go; a spell's b its tool's place (the hub's dig_tool), the rock (RK_*), fresh new to it)
+E_DIG:notool    w1 how:8-15==D_NO_TOOL@D_BEGUN into:0-4 lit:5=DN_LIT hands:6=DN_HANDS
+                # (What it's into, MAT_* + 1; a light in hand, a chisel and a hammer not both in hand: b the same)
+E_NOISE         a loud; b what@NZ_WORK; w1 sx; w2 sy   # (How loud, 0-9; what made it; its square)
+E_LEDGE         w1 rise:0-7!                            # (Its rise, a fall less; past LEDGE_MET, what a walk met)
+E_CLIMB         w1 how:8-15@K_BEGUN feet:0-7
+E_PORTAL        w1 po:0-7@PO_NONE pk:8-14@PK_DOOR shows:15=PO_SHOWS
+                # (What came of it, the portal's kind, an opening's view told with it; a search's a its reach)
+E_HARM          w1 hc:0-7@HC_FALL band:8-10 deep:12=E_DEEP shallow:13=E_SHALLOW out:14=E_OUT caught:15=E_CAUGHT
+                # (Its cause, its worst wound's band (0 unhurt), knocked senseless; a fall's into water, stopped)
+E_HARM:struck   w1 hc:0-7==HC_STRUCK@HC_FALL band:8-10 out:14=E_OUT stopped:15=E_STOPPED     # (The striker too hurt)
+E_TRAP          w1 tk:0-3@TK_PIT tt:4-5@TT_PLATE touch:7 to:8-15@TO_SPRUNG    # (Touch: found by it, in the dark)
+E_DEN           a de@DE_MOVED; b loud; w1 sx; w2 sy; x[0] sn; x[1] dkind; x[2] seen; x[3] between
+                # (who the actor plus 1: what it did, how loud, its square, stratum and kind; seen, the character
+                #   sees the square; the walls and the shut doors between, a loud one's: SOUND.md)
+E_LEFT          w1 end                                  # (EL_WAY, EL_SKY; EL_RULE + a theme's take rule)
+E_FIGHT         a def; b loud; w1 sx; w2 sy; x[0] sn; x[1] out@O_MISS,FO_GONE,FO_BLED,FO_BOUND; x[2] ff; x[3] words
+                # (who the attacker, def the defender (0 the character, else the actor plus 1), at the attacker's
+                #   square; how it came out (O_*, FO_*), what it left them in (FF_*), its words in the ring, FIGHT_AT)
+E_LIGHT         a sn; w1 sx; w2 sy
+E_TAKEN         w1 ir@IR_OK; w2 lit                     # (How it went; the light carried before, the hub's pc_light)
+E_TASK          b named@LT_NONE; w1 te:0-7@TE_STOPPED task:8-15@LT_NONE
+                # (What came of the long task, its kind; b, TE_NOT's: the kind the stop named; the rest's below)
+E_TASK:engaged  b by:0-5+1 quiet:6=TE_QUIET still:7=TE_STILL; w1 te:0-7==TE_ENGAGED,TE_FAR,TE_AWAY,TE_FIGHT@TE_STOPPED
+                task:8-15@LT_NONE                       # (The enemy, its entry plus 1)
+E_TASK:hurt     b health@H_FINE; w1 te:0-7==TE_ASK_HURT@TE_STOPPED task:8-15@LT_NONE
+E_TASK:nofoe    b shock; w1 te:0-7==TE_NO_FOE@TE_STOPPED task:8-15@LT_NONE  # (In shock, in no state to fight)
+E_TASK:break    b by:0-5+1; w1 te:0-7==TE_BREAK@TE_STOPPED how:8-15@back/flight/run
+E_TASK:free     b none@engaged/near/way; w1 te:0-7==TE_FREE@TE_STOPPED task:8-15@LT_NONE
+E_TASK:light    b lamp; w1 te:0-7==TE_LOW,TE_OUT@TE_STOPPED task:8-13@LT_NONE seen:14 another:15
+                # (The light's kind; one it sees lying there, another of its name lit still: TO_SEEN, TO_ANOTHER)
+E_TASK:robbed   b by+1; w1 te:0-7==TE_ROBBED@TE_STOPPED purse:8 caught:9 asleep:10     # (RB_PURSE ... RB_ASLEEP)
+E_TASK:fetched  b by:0-3+1 ft:4-7@FT_TOOK; w1 te:0-7==TE_FETCHED@TE_STOPPED thing:8-15
+E_TASK:begun    b what; w1 te:0-7==TE_BEGUN,TE_ASK_SHORT@TE_STOPPED task:8-15@LT_NONE  # (What it's done to)
+E_BEAT          b whose; w1 beat:0-7@WB_QUIET side:8-15@WS_AHEAD
+                # (A walk's beat, its side; the body's and the limbs' whose, 0 the character, else the actor plus 1)
+E_BEAT:feel     w1 beat:0-7==WB_FEEL@WB_QUIET head:8-10 gait:12-15      # (Set out on in the dark, faster than
+                                                        #   feeling its way: gait)
+E_BEAT:met      w1 beat:0-7==WB_FELT,WB_OFF,WB_SHORT@WB_QUIET fa:8-15@FA_NONE
+E_BEAT:hit      w1 beat:0-7==WB_HIT@WB_QUIET fa:8-11@FA_NONE gait:12-15
+E_BEAT:thing    w1 beat:0-7==WB_THING,WB_TRIP,WB_STUMBLE,WB_SPENT,WB_CRUTCH@WB_QUIET thing:8-15     # (A thing's kind, the catalogue's)
+E_BEAT:limb     b whose; w1 beat:0-7==WB_DROP,WB_PICKS,WB_DRAWS,WB_READIES,WB_BROKE,WB_EATS,WB_HANDS,WB_THREW,WB_FELL@WB_QUIET
+                thing:8-15
+                # (The limbs': b whose, 0 the character, else the actor plus 1, | 0x80 a fall unseen; the thing's kind)
+E_BEAT:rise     b whose; w1 beat:0-7==WB_RISEN,WB_NOT_UP@WB_QUIET already:8     # (On its feet already; no leg to
+                                                        #   stand on)
+E_BEAT:swat     w1 beat:0-7==WB_SWAT@WB_QUIET foe:8-15+1
+E_BEAT:search   b touch; w1 beat:0-7==WB_SEARCH@WB_QUIET rsw:8-15@RSW_BEGUN; w2 detail; x[0] mx; x[1] my
+                # (A room searched whole, as it goes: by touch; detail, a thing's item or kind, the block's (its
+                #   middle mx, my), as RSW_* says)
+E_BEARING       w1 brg:0-7@BRG_NONE
+E_BEARING:sky   b sky; w1 brg:0-7==BRG_SKY@BRG_NONE refusal:8-15@SKP_NONE
+                # (The sky seen: b its phase, SKP_*, and what showed it; a shaft's refusal, w1's high byte, b none)

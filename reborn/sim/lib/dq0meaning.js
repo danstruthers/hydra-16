@@ -153,6 +153,9 @@ function layout() {
   const D = j.L, ioDefs = { [D.ioStep]: 'IO_STEP', [D.ioName]: 'IO_NAME', [D.ioTheme]: 'IO_THEME', [D.ioBegin]: 'IO_BEGIN', [D.ioPuzzle]: 'IO_PUZZLE', [D.ioThrow]: 'IO_THROW', [D.ioFill]: 'IO_FILL',
     [D.ioShut]: 'IO_SHUT', [D.ioInside]: 'IO_INSIDE', [D.ioLook]: 'IO_LOOK', [D.ioSeek]: 'IO_SEEK', [D.ioHands]: 'IO_HANDS' };
   const ioName = v => { const n = name('IO_KIT', v); return typeof n === 'number' && ioDefs[v] ? ioDefs[v] : n; };
+  // (An event's record keeps its slots raw beside its fields by name: no field of an event's named as a slot is)
+  for (const [k, p] of Object.entries(H.msgs)) for (const [n] of k.startsWith('E_') ? p.fields : [])
+    if (['kind', 'who', 'a', 'b', 'w1', 'w2', 't', 'x', 'line', 'den'].includes(n)) throw new Error('msgs.def: ' + k + '\'s ' + n + ', a slot\'s name in its record');
   return (LAYOUT = { L: j.L, K: byName, name, ioName, H });
 }
 
@@ -165,50 +168,13 @@ function createRecorder() {
   const w16 = (b, o) => b[o] | b[o + 1] << 8, s8 = v => v << 24 >> 24;
   const w32 = (b, o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0;
   const str = (b, o, n) => { let s = ''; for (let i = 0; i < n && b[o + i]; i++) s += String.fromCharCode(b[o + i]); return s; };
-  // An event's record (a ring's entry: struct msg at o of bank b), its numbers named by its kind
+  // An event's record (a ring's entry: struct msg at o of bank b; den, the denizens' ring's): its slots as they are, and
+  // its payload's fields by name (games/dq0/msgs.def's, the build's decoder: the form its selector chooses, E_TASK's by its
+  // TE_*, else the kind's), beside them (none named as a slot is: layout's check)
   function decode(b, o, den) {
     const e = { line: enters, kind: name('E_NONE', b[o + L.mKind]), who: b[o + L.mWho], a: b[o + L.mA], b: b[o + L.mB],
       w1: w16(b, o + L.mW1), w2: w16(b, o + L.mW2), t: w32(b, o + L.mT), x: Array.from(b.subarray(o + L.mX, o + L.mX + 4)), den };
-    const w = e.w1;
-    switch (e.kind) {
-      case 'E_ARRIVE': e.how = name('A_WALKED', w & 0xFF); e.first = !!(w & 0x100); e.link = w >> 12; break;
-      case 'E_NOWAY': e.why = name('N_NO_EXIT', w & 0xFF); e.actor = w >> 8; break;
-      case 'E_VIEW': e.why = name('V_TURNED', w); break;
-      case 'E_TIME': e.mins = !!(e.b & 1); e.asleep = !!(e.b & 2); break;     // (I_WAIT's a: WA_MIN, WA_SLEEP)
-      case 'E_DIG': e.how = name('D_BEGUN', w >> 8); e.feet = w & 0xFF; break;
-      case 'E_CLIMB': e.how = name('K_BEGUN', w >> 8); e.feet = w & 0xFF; break;
-      case 'E_LEDGE': e.rise = s8(w & 0xFF); break;
-      case 'E_PORTAL': e.po = name('PO_NONE', w & 0xFF); e.pk = name('PK_DOOR', w >> 8 & 0x7F); if (w & 0x8000) e.shows = true; break;
-      case 'E_HARM': e.hc = name('HC_FALL', w & 0xFF); e.band = w >> 8 & 7; e.out = !!(w & 0x4000); e.caught = !!(w & 0x8000);
-        e.stopped = e.hc === 'HC_STRUCK' && e.caught; break;          // (E_CAUGHT a fall's, E_STOPPED a blow's)
-      case 'E_TRAP': e.tk = name('TK_PIT', w & 15); e.tt = name('TT_PLATE', w >> 4 & 3); e.to = name('TO_SPRUNG', w >> 8);
-        e.touch = !!(w & 0x80); break;                               // (Found by touch, in the dark: 2026-10-22)
-      case 'E_TAKEN': e.ir = name('IR_OK', w & 0xFF); break;
-      case 'E_TASK': e.te = name('TE_STOPPED', w & 0xFF); e.task = name('LT_NONE', w >> 8);
-        if (e.te === 'TE_ENGAGED' || e.te === 'TE_FAR' || e.te === 'TE_AWAY' || e.te === 'TE_FIGHT') { e.by = (e.b & 0x3F) - 1; e.still = !!(e.b & 0x80); e.quiet = !!(e.b & 0x40); }
-        else if (e.te === 'TE_ASK_HURT') e.health = name('H_FINE', e.b);   // (Fighting on's: the band it's come to;
-        else if (e.te === 'TE_NO_FOE') e.shock = !!e.b;                    //   its end, in shock or none left)
-        else if (e.te === 'TE_BREAK') { e.by = (e.b & 0x3F) - 1; e.how = ['back', 'flight', 'run'][w >> 8]; delete e.task; }   // (A disengage's)
-        else if (e.te === 'TE_FREE') e.none = ['engaged', 'near', 'way'][e.b];   // (None: not engaged, nothing near to flee, no way back)
-        else if (e.te === 'TE_LOW' || e.te === 'TE_OUT') { e.lamp = e.b; e.seen = !!(w >> 8 & 0x40); e.task = name('LT_NONE', w >> 8 & 0x3F); }   // (A light's kind; one lying there seen)
-        else if (e.te === 'TE_ROBBED') { e.by = e.b - 1; e.purse = !!(w & 0x100); e.caught = !!(w & 0x200); e.asleep = !!(w & 0x400); delete e.task; }   // (The robber: its entry; at
-                                                                   //   rest, 2026-11-06: RB_PURSE, RB_CAUGHT, RB_ASLEEP)
-        else if (e.te === 'TE_FETCHED') { e.by = (e.b & 15) - 1; e.ft = name('FT_TOOK', e.b >> 4); e.thing = w >> 8; delete e.task; }   // (An errand's, a gift's: slice 4.8's)
-        else if (e.te === 'TE_BEGUN' || e.te === 'TE_ASK_SHORT') e.what = e.b;   // (A timed work's, a battering's: what it's done to)
-        else e.named = name('LT_NONE', e.b);
-        break;
-      case 'E_BEARING': e.brg = name('BRG_NONE', w); break;
-      case 'E_BEAT': e.beat = name('WB_QUIET', w & 0xFF); e.side = name('WS_AHEAD', w >> 8);
-        if ((w & 0xFF) >= K.WB_FEEL) {                         // (The dark's, 2026-10-22: what's met, FA_*, a thing's
-          e.fa = name('FA_NONE', w >> 8 & 7); e.thing = w >> 8; e.head = w >> 8 & 7; e.gait = w >> 12;   //   kind, a heading
-        }                                                          //   and its gait faster than feeling its way)
-        break;
-      case 'E_DEN': e.de = name('DE_MOVED', e.a); e.sn = e.x[0]; e.seen = !!e.x[2]; break;
-      case 'E_FIGHT': e.def = e.a; e.sn = e.x[0]; e.out = e.x[1] === 0xFF ? 'FO_GONE' : e.x[1] === 0xFE ? 'FO_BLED' : name('O_MISS', e.x[1]);
-        e.ff = e.x[2]; break;
-    }
-    return Object.assign(e, H.decode(b, o, e.kind, den ? 'den' : ''));   // (Its payload's fields, msgs.def's: none of the
-                                                                       //   events' declared yet, ENGINE-CRITIQUE.md's §2)
+    return Object.assign(e, H.decode(b, o, e.kind, ''));
   }
   // An intent's record (struct msg at o of bank b, the ring's: 'ui', the hub's iq, or 'den', its di): its kind, who,
   // and its payload's fields by name (games/dq0/msgs.def's, the build's decoder: a denizen's its :den form's, if its kind

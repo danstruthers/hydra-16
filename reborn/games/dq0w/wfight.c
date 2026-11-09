@@ -58,15 +58,15 @@ static void __fastcall__ told (unsigned char att, unsigned char def, unsigned ch
     }
     bev.kind = E_FIGHT;
     bev.who = att;
-    bev.a = def;
-    bev.b = LOUD_FIGHT;
-    bev.w1 = bd.x;
-    bev.w2 = bd.y;
+    E_FIGHT_DEF (bev) = def;
+    E_FIGHT_LOUD (bev) = LOUD_FIGHT;
+    E_FIGHT_SX (bev) = bd.x;
+    E_FIGHT_SY (bev) = bd.y;
     bev.t = HUB->now;
-    bev.x[0] = bd.sn;
-    bev.x[1] = out;
-    bev.x[2] = f;
-    bev.x[3] = fring;
+    E_FIGHT_SN (bev) = bd.sn;
+    E_FIGHT_OUT (bev) = out;
+    E_FIGHT_FF (bev) = f;
+    E_FIGHT_WORDS (bev) = fring;
     hub_devent (&bev);
     fring = (fring + 1) % NFIGHTS;
 }
@@ -475,7 +475,7 @@ void __fastcall__ s_den_rob (const struct msg* q)
         }
         m.kind = E_TASK;
         m.who = 0;
-        m.b = bk + 1;
+        E_TASK_ROBBED_BY (m) = bk + 1;
         m.w1 = TE_ROBBED | (pur | (HUB->pc_task.kind == LT_SLEEP ? RB_ASLEEP : 0)) << 8;   /* (How, to the UI) */
         m.t = HUB->now;
         hub_event (&m);

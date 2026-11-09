@@ -305,7 +305,7 @@ unsigned char __fastcall__ s_well (unsigned w)
         strcpy (UIREC->trtext, "Far down, the well's shaft narrows to a crack the water seeps through: there's no climbing down it.");
         hub_map (0);
         m.kind = E_VIEW;
-        m.w1 = V_TRACED;
+        E_VIEW_WHY (m) = V_TRACED;
         m.t = HUB->now;
         hub_event (&m);
         return 0xFE;
