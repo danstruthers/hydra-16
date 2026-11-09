@@ -761,6 +761,8 @@ paths are shared. L then replaces the chain cut by size with one table read by m
 **Step L, stage 1, as built (2026-11-08).** The table and one dispatcher, today's cases its handlers, nothing a player
 sees changed (the whole suite):
 
+**Step L, stage 2, as built (2026-11-08).** refuse.c's rules[] folded into the rows: each row's third byte its refusals (a word's, its high four bits with W_CLIMB and W_PART; a kind's, its low four), its takes' high four bits which of masks[] the verb does; o_refused beside the table in overlay 11, a row found by its verb at once, not a list searched (31 verbs' refusals; refuse.c keeps only the words, its said[] and o_unknown: overlay 24 196 bytes the freer). Behaviour unchanged, the suite's proof.
+
 - **The table** is actions.c's `rows[]` (overlay 11, beside the resolver: 738 bytes left there), a row a verb in
   actions.h's order, 142 rows of four bytes: the handler (`H_*`, dq0.h), the kinds of thing it takes (`TK_*`), and two
   bytes kept for the later stages, its refusals (stage 2) and its request (stage 3). Each row is written

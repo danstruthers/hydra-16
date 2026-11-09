@@ -2057,3 +2057,7 @@ Which function carried out a verb depended on where there had been room: `s_comm
 - **Nothing a player sees changes** (the whole suite).  The cycles: the row costs an overlay call (~100 cycles) and the switch fewer compares than the old chain (which went through `chores`, an overlay call to `more` and a part swap to `rarer` before "not yet").  A verb of part 24's (a dig, a sway) no longer calls overlay 16 first.
 - **Room:** the main RAM 2,133 bytes free to 2,122 (`verb_row`'s stub).  Part 2 905 to 1,059, part 24 3,238 to 3,342, overlay 16 146 to 184, overlay 11 1,367 to 738 (the table, 568 bytes).
 - **For review:** the two bank entries (`run16`, `run24`) are where stage 3 will meet the question of a handler moved between banks: its `case` moves to the new bank's entry.  And whether the table should hold stub addresses after all once stage 3 has the handlers in few banks.
+
+### The dispatch table, stage 2: the refusals in the rows (2026-11-08, as built: COMMANDS-CRITIQUE.md's §5.2, step L)
+
+refuse.c's list of refusals by verb is now part of the dispatch table: each verb's row says what it refuses for a thing named by a word and for a feature of the place, and which features the verb does.  One table says what a verb does, what it takes and what it refuses.  Nothing a player sees changed (the whole suite passes).
