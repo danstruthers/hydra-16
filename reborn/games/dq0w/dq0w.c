@@ -636,6 +636,8 @@ static unsigned char __fastcall__ unknown_ (unsigned char t)
 unsigned char __fastcall__ ahead (unsigned char h);     /* (Part 45's stubs) */
 unsigned char __fastcall__ felt_stop (unsigned char h);
 void __fastcall__ no_exit (unsigned char h);
+unsigned char __fastcall__ braced (unsigned char sn, unsigned x, unsigned y);   /* (Part 109's, wdrag.c: a chest against
+                                                **   the door there, the chunk's window on its square after) */
 
 #pragma code-name (push, "SW45CODE")
 #pragma rodata-name (push, "SW45RODATA")
@@ -843,8 +845,8 @@ static unsigned __fastcall__ door_on (unsigned nx, unsigned ny)
     unsigned char s, d;
 
     if (TILE (C->tile[cy_][cx_]) != T_DOOR || !(o = portal_at (cx_, cy_)) || (o->state & PS_OPEN) || o->kind != PK_DOOR ||
-        !(o->parts & PP_KNOWN) || (o->state & (PS_LOCKED | PS_BARRED | PS_WARDED | PS_HIDDEN))) {
-        return 0;
+        !(o->parts & PP_KNOWN) || (o->state & (PS_LOCKED | PS_BARRED | PS_WARDED | PS_HIDDEN)) || braced (sn_, nx, ny)) {
+        return 0;                               /* (Braced: a chest against it, wdrag.c's: not opened as it goes) */
     }
     s = o->state;
     d = o->parts;

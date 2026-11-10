@@ -213,9 +213,9 @@ void __fastcall__ o_fixt_words (const struct msg* m)
         "The bars buckle and break under your blows: there's a gap to get through.",
         "Its bars are forced apart, and it's jammed where it is: there's a gap to get through."
     };
-    static const char* const keyed[PO_IS_LOCKED + 1 - PO_KEYED] = {     /* (A door's key, Phase 3C's) */
+    static const char* const keyed[PO_BLOCKED + 1 - PO_KEYED] = {       /* (A door's key, Phase 3C's) */
         "You unlock it with its key.", "You lock it with its key.", "You have no key that fits its lock.",
-        "It's locked already."
+        "It's locked already.", "Something heavy stands against it: it won't open."   /* (PO_BLOCKED: the verbs plan's B4) */
     };
     unsigned w = m->w1;
     unsigned char out = w & 0xFF, kind = w >> 8 & 7;

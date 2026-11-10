@@ -112,5 +112,6 @@
 106 8   Grappling: the hold kept, a held one's try to break free (wfight.c: 2026-11-09, part 15's room; its let go part 37's)
 107 3   Where a thing's worn: its place, the room there, its words; which, asked by place (wworn.c: 2026-11-10)
 108 3   The textiles: a cloth torn up for bandages, washed (wcloth.c: 2026-11-10, HOUSE.md's bandages)
+109 29  A heavy thing shoved or dragged a square, a door braced by it, a thing tasted (wdrag.c: 2026-11-10, the verbs plan's B4)
 stub start 3
 stub begin 3

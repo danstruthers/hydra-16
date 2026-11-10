@@ -447,6 +447,20 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   the textiles' part 107, wcloth.c) */
 #define IO_WASH         (IO_BAR + 18)           /* A textile carried washed (name) at running water or a well: soiled
                                                 **   or bloody made worn, never clean; as IO_RIP's (wcloth.c) */
+#define IO_DRAG         (IO_BAR + 19)           /* (IO_BAR + 17, 18 the textiles') A heavy thing lying
+                                                **   about (name: a chest, a table, a cask, a body: the catalogue's bulk
+                                                **   DRAG_BULK or more, not fixed) shoved a square away from the
+                                                **   character (to DG_PUSH) or dragged a square toward it (DG_PULL: the
+                                                **   UI steps it back a square after), Strength against its weight (the
+                                                **   referee's P_FORCE), a noise of 3: its words in things_text, its time
+                                                **   in x (tenths), y the heading it moved (0xFF: it didn't budge);
+                                                **   IR_NOT_HERE out of reach (where it lies in x, y), IR_NO refused (the
+                                                **   words why).  To DG_TASTE: the thing named to hand tasted (a sip,
+                                                **   nothing used up): its kind in x, what's in it (its first thing's
+                                                **   kind, 0 none) in y, that one's wear in qty (water's from still
+                                                **   water: the flux's).  dq0w/wdrag.c's, the verbs plan's B4 */
+enum { DG_PUSH, DG_PULL, DG_TASTE };
+#define DRAG_BULK      40                      /* (Pints: a thing that big is shoved, not carried about: furniture) */
 enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS, LM_KIT, LM_GO, LM_ROPES };   /* (IO_LOOK's: a look at it; a closer look; its
                                                 **   condition; its weight; its lock; gone over for traps; LM_KIT the
                                                 **   world's own, the character's things kept, kit.dat: slice 4.4's; LM_GO, gone to, walking there) */

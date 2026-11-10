@@ -199,11 +199,7 @@ unsigned char __fastcall__ o_puzzle (struct cmd* c)
     } else if ((v == VB_PUT_OBJECT || v == VB_HANG_OBJECT || v == VB_USE_OBJECT) && c->obj.word[0] && c->other.word[0]) {
         t = TR_PUT;
     } else {
-        if (v == VB_USE_OBJECT) {
-            msg ("Use what, and on what? (use the key on the way out ...)");
-            return Q_TOLD;
-        }
-        return Q_NONE;
+        return Q_NONE;                          /* (A use of one thing: hthings.c's, by its kind, the verbs plan's B4) */
     }
     if (t != TR_OUT) {
         walk_op = IO_PUT;                       /* (Its first words before this asking: walk_ahead's, sway.c) */
@@ -219,15 +215,14 @@ unsigned char __fastcall__ o_puzzle (struct cmd* c)
     if (r == PZ_FAR) {
         reach_go ();                            /* (Walked over to it first, then again) */
     } else if (r == PZ_NONE) {
-        if (t == TR_PUT && v != VB_USE_OBJECT) {
-            return Q_NONE;                      /* (A thing put as any other) */
+        if (t == TR_PUT) {
+            return Q_NONE;                      /* (A thing put as any other; a use on another the puzzle has no rule
+                                                **   for, hthings.c's, by its kind: the verbs plan's B4) */
         }
         if (t == TR_COMBINE) {
             msg ("Those don't go together.");
         } else {
-            sayf (t == TR_OUT ?
-                "\nNothing comes of trying the %s on it." : "\nNothing comes of using the %s on the %s.", c->obj.word,
-                c->other.word);
+            sayf ("\nNothing comes of trying the %s on it.", c->obj.word);
         }
     }
     return Q_TOLD;

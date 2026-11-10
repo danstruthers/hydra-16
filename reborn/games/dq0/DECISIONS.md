@@ -3064,3 +3064,61 @@ nothing kept a cloth's cleanliness; bandages one kind, MT_CLOTH.  s_tools sent e
   a bloody bandage in the pack (the days' soiling dq0rules': the denizens wake a sleeper here); wash refused with
   no water, done at running water, worn), dq0rules' dressings (the bonus by linen, hemp, soiled linen, none; the
   sheet's words; a day's soiling, two; a change and its refusals; the five-day roll's +5 and -10).
+
+## The things' verbs: use, push, pull, touch, taste (2026-11-10, as built, for review: the verbs plan's B4)
+
+Five rows that said "not yet" (B0's stubs in hthings.c) now do something in the world.  The user's rule: each verb a
+meaningful action; push and pull include moving furniture.  What's built:
+
+- **Use** (and "activate", its alias).  The theme's puzzle is still asked first (theme.c's o_puzzle: its rules for the
+  thing, or for the thing on another; the way out).  What it has no rule for is no longer "Use what, and on what?" nor
+  "Nothing comes of using ..." but the handler's, by the thing's kind (the things' IO_FIND): a bandage tends (the
+  thing it's used on its patient or its place: "use the bandage on my arm" is "tend my arm"); food is eaten; a
+  waterskin, a vial, an antidote, a remedy is drunk; a light is lit; a tinderbox lights what it's used on; a key or the
+  lockpicks unlock what they're used on, none said the door (the one there is, or "Which door?"); a rope or a grapple
+  is tied (to what it's used on, or what's nearest that holds); a whetstone sharpens what it's used on, none said the
+  blade in hand ("Sharpen what?" with none); a thing held in a hand (a weapon, a tool) is wielded.  Anything else:
+  "You can't see how to use the X.", or with another "Nothing comes of using the X on the Y."  Each is that verb's own
+  command carried out (hthings.c's as_verb: the action changed, its row's handler called), so its words, its timed work
+  and its walk over first are the verb's.  **Rip is the materials' batch's:** a TODO at the head of the routing marks
+  where "use the knife on the cloak" goes (VB_RIP_OBJECT, IO_RIP), before the kinds.
+- **Push, pull.**  A door pushed opens, pulled closes (a window's shutters alike); a portcullis pushed is raised,
+  pulled is lowered (the winch loosed); a door's bar pulled is lifted out (the word "bar" first: the resolver makes it its door) (PA_LIFT), pushed is set in its brackets
+  (PA_BAR); a rope pulled is untied, so from below a grapple is shaken loose (wrope2.c's, HOUSE.md's rule); there are
+  no levers.  Anything else named is furniture, the world's new **IO_DRAG** (dq0w/wdrag.c): a thing lying about whose
+  kind is 40 pints or more (DRAG_BULK) and isn't fixed (a chest, a table, a cask, a body) is shoved a square away from
+  the character (on its own square, the way it faces), or dragged a square toward it, the character stepping back a
+  square (I_STEP, its facing kept).  Out of reach, walked over to first.  Strength against its weight, what's in it
+  too (P_FORCE, two steps the better, a step the worse each 10 pounds: an empty chest one step worse), five seconds,
+  a noise of 3 (E_NOISE, heard whether or not it moves); failed, "You strain at the chest, but it won't budge."  It
+  goes only where a walker could step (step8's), not into a doorway, not onto anyone, not onto another heavy thing;
+  smaller things: "The pot isn't a thing to shove about: pick it up.", a fixed one "The well is fixed where it stands." (each answer names its thing, the sweeps' rule)
+- **A shoved thing blocks a door.**  A door is a T_DOOR square with its portal; furniture is an item on a square.  A
+  heavy thing on either square that leads through a door (the four ways from it: the walls' have none) braces it shut:
+  opening it, by anyone (the character, a denizen: wdoor.c's PA_OPEN, a new PO_BLOCKED, "Something heavy stands
+  against it: it won't open."), or a known door opened as a walk goes through (dq0w.c's door_on), is refused till it's
+  moved.  Told as it's shoved there ("It stands against the door.").  **For review:** the maker's own chests and tables
+  beside a door brace it too (a chest stands where it stands, whoever put it there); forcing a braced door isn't
+  refused (its lock or bar bursts, it stays shut); a heavy thing can't be shoved into a doorway, so passage is
+  blocked only by the door kept shut, not by a chest in an open doorway (walks don't treat things as obstacles).
+- **Touch** ("feel" is its word too).  In the dark, a wall, the floor or nothing named: the felt words, a feel about
+  (H_FEEL's: "It is dark. You feel ... Your hands find ...").  Else the thing examined (H_EXAMINE), which the hands do
+  in the dark as the eyes do in the light (its make, its state, its lock).  For review: its first words are the look's.
+- **Taste**: a sip, not a dose (the world's IO_DRAG with DG_TASTE: the thing to hand, what's in it, that one's wear;
+  nothing used up; told "You taste the X. ...": a thing in a pack or a sack isn't, only a vessel's liquid).  An antidote or a remedy: a Lore test (P_LORE) names it and what it's for ("a theriac, an
+  antidote against poisons and venoms"; "a physician's draught, a remedy against disease"), failed "Bitter, and
+  strange: you can't tell what it's for."  Water (a waterskin's, or the water it stands in): fresh, or "Flat and
+  stale: still water, not fresh. It may carry the flux." (the water's wear, still water's mark, feed.c's).  Food:
+  "still good" (nothing goes off in this game).  An empty vessel: "There's nothing in it to taste."
+- **The flux, decided:** a taste of still water doesn't risk it.  The house's flux is caught by drinking (a draught, the
+  referee's RS_TIME drink with its foul mark); a sip is too little, and a taste is how the character finds out before it
+  drinks.  So tasting tells, and drinking risks.
+- **Room.**  The UI's handlers are part 29's (27 as built, the merge's number) (hthings.c, part 2 full: its five stubs one call now); theme.c's overlay 5
+  smaller.  fixt.c's overlay 4 had a byte free: alias.c's o_alias_said moved to overlay 12 for PO_BLOCKED's words.  The
+  world's IO_DRAG and the brace are part 109's (107 as built, the merge's number; wdrag.c, 2,600 bytes), in a new overlay bank, the world's 29th in
+  dq0w.ovl (the rope file's three now OV30-OV32: OVBANKS 32; ropes_in reads the last three as ever): no bank of either
+  file had room.  Main RAM free: the UI's 2,237 (2,272 before: the part's stub, things_use's), the world's 2,465 (2,483: the stubs drag, braced), the others as they were; part 2 169 of 659 (its five stubs gone), part 27 2,050 bytes; the world's catalogue bank untouched (things.c's serve a case more, part 92).
+- **Test dq0things**: use routed to each kind; a door pushed open and pulled shut; a chest shoved against a door, the
+  door refused, the chest dragged away and the door opened; a portcullis pulled down; a bar pulled out; a grapple's
+  rope pulled from below; touch in the dark; taste an antidote, a remedy, an empty vial, and still water.
+  dq0notyet's "activate the torch" now lights it (the use's).

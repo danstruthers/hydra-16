@@ -98,7 +98,7 @@ ovl_out:
             OVFN        refused, 11
             OVFN        say_no, 24          ; (The refusals' one table: refuse.c's, step K of COMMANDS-CRITIQUE.md's 5.2)
             OVFN        parts_in, 6
-            OVFN        alias_said, 4
+            OVFN        alias_said, 12      ; (Overlay 4's till 2026-11-10: its room)
             OVFN        sway_words, 15
             OVFN        walk_says, 17       ; (A walk's first words: sway.c's, no part's swap, the user's D17)
             OVFN        blow, 6             ; (A blow worded and its end: blows.c's since 2026-11-03, the main RAM's room)

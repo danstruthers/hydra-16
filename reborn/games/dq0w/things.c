@@ -2143,6 +2143,7 @@ static unsigned __fastcall__ held_lit (void)
 }
 
 static unsigned char o_handle (void);
+unsigned char drag (void);                      /* (Part 109's: wdrag.c, IO_DRAG) */
 unsigned char s_serve (void)
 {
     unsigned char changed = 0, k;
@@ -2216,6 +2217,9 @@ unsigned char s_serve (void)
         break;
     case IO_FETCH:                              /* (A thing for an ally to fetch, or a gift: slice 4.8's) */
         iq.result = fetch_find (iq.name);
+        break;
+    case IO_DRAG:                               /* (A heavy thing shoved, dragged; a thing tasted: part 109's, wdrag.c) */
+        changed = (iq.result = drag ()) == IR_OK && iq.to != DG_TASTE;
         break;
     case IO_USE:                                /* (A thing used up by its key: a bandage, first aid's, part 70's; by the
                                                 **   steps, got out for its use, a tool's, part 85's: IR_NO a step first) */

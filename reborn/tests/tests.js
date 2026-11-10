@@ -3780,6 +3780,9 @@ const LETSIGHT = ['drop j', 'drop c', 'drop b', 'look', 'around', 'take 5F', 'dr
   'take G', 'around', 'inventory'];   // (dq0letsight's lines: the rats seen first, A, B, C, 2026-11-06's step 4)
 const LETCMD = ['inventory', 'drop j', 'inventory', 'take torch', 'put j in b', 'inventory', 'take j from b', 'light j with a', 'drop 2c', 'look d',
   'drop', 'k', 'take off', 'look', 'drop the lit torch', 'inventory'];   // (dq0letcmd's lines)
+const THINGSV = ['go to the door ahead', 'back up', 'drop the chest', 'push the chest', 'open the door', 'pull the chest', 'open the door', 'pull the door',
+  'push the door', 'pull the portcullis', 'use the iron key on the chest', 'use the rations', 'use the waterskin', 'use the torch', 'use the bandages', 'use the dagger',
+  'use the whetstone on the dagger', 'taste the antidote', 'taste the remedy', 'taste the vial', 'use the antidote', 'douse the torch', 'feel the wall', 'touch the chest'];   // (dq0things' first game's lines)
 const WEARONLY = ['inventory', 'wear the sword', 'wear the torch', 'wear the sack', 'wear', 'k', 'stow the sword', 'equip the sword', 'inventory',
   'stow the sword', 'wield the sword', 'inventory'];   // (dq0wearonly's lines: k the cloak's letter, the answer to "Wear what? [k]")
 const WORN = ['inventory', 'wear the ring on my left hand', 'wear the ring on my left hand', 'put on the ring on my left hand', 'don the ring on my left hand',
@@ -6072,7 +6075,55 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0notyet', what: 'Dingus Quest Zero\'s verbs not done yet, the shared groundwork (2026-11-09, the plan for them, its batch B0: DECISIONS.md\'s "The verbs not done yet: the rows, the aliases and the powers\' refusals"): the powers refused, true to the character, from the rows (a spell: "You\'ve no magic: you never studied the convocations."; a talent: "You reach for it; nothing stirs."; an invocation, one learnt: "You know no invocations of Peoni\'s.", the character\'s deity the referee\'s, RS_DESCRIBE\'s RD_DEITY, its file\'s att dty 6); the aliases (activate, use\'s: the puzzle\'s words for a use with nothing to use it on; negotiate, persuade\'s; sense a lie, examine\'s); "status" (pace.c\'s, before the table) and "pace" alone (the table\'s H_STATUS, the same words); "sneak north" a creep, then the move (not the pace alone, as it was)',
+      name: 'dq0things', near: ['gear', 'parser'], what: 'Dingus Quest Zero\'s things\' verbs (the verbs plan\'s B4, 2026-11-10: DECISIONS.md\'s "The things\' verbs: use, push, pull, touch, taste"): use routed by the thing\'s kind, after the puzzle\'s (food eaten, a waterskin drunk, a light lit, a bandage tending, a blade wielded, a whetstone sharpening the blade it\'s used on, a key unlocking the chest it\'s used on, an antidote drunk); a chest dropped, shoved a square against a door (Strength against its weight: the character strong), the door refused ("Something heavy stands against it"), the chest dragged back (the character stepping back), the door opened; a door pulled shut and pushed open; a portcullis pulled down; the pantry door\'s bar pulled out of its brackets; a grapple\'s rope pulled from below, shaken loose; touch in the dark (the felt words), a chest touched; taste: an antidote and a remedy named by Lore, an empty vial, still water (the pool it stands in, a waterskin filled there)',
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att str 20 >> /ram/c.hm', 'echo ml lor 95 >> /ram/c.hm',
+        "dq0 -p t -s 3 -c /ram/c.hm -T -k 'chest,iron key,antidote,remedy,vial,whetstone,bandages'", ...THINGSV, 'quit',
+        'dq0 -p t -s 15 -c /ram/c.hm', 'go to the door ahead to my left', 'pull the bar', 'quit',
+        'echo ml cli 90 >> /ram/c.hm', 'echo ml thr 95 >> /ram/c.hm', 'dq0sky=1', 'dq0hour=12', "dq0 -p t -s 2 -c /ram/c.hm -T -k 'rope,grapple'",
+        'go to the shaft', 'throw the grapple up', 'pull the rope', 'quit', 'dq0sky=0',
+        'mkdir /ram/g', "dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g -k 'waterskin'", 'd', 'n', 'taste the water', 'fill the waterskin', 'taste the waterskin', 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], ans = dq0Answers(out), g = {};
+        const said = (line, want, not) => {           // (Each line's answer, the nth of it in turn)
+          const n = g[line] = (g[line] || 0) + 1, a = ans.filter(y => y.cmd === line)[n - 1], x = a ? a.text : '';
+          for (const w of [].concat(want)) if (!(w instanceof RegExp ? w.test(x) : x.includes(w))) f.push(line + ' (' + n + '): not ' + w + ': ' + x.slice(0, 240));
+          for (const w of [].concat(not || [])) if (x.includes(w)) f.push(line + ' (' + n + '): "' + w + '" told: ' + x.slice(0, 240));
+        };
+        const no = ['in this game yet', 'Use what', 'can\'t see how', 'Nothing comes of'];
+        said('use the rations', 'You\'re not hungry. You leave the rations be.', no);
+        said('use the waterskin', /You're not thirsty|You drink/, no);
+        said('use the torch', 'The torch is lit already.', no);
+        said('use the bandages', /wounds|tend/, no);
+        said('use the dagger', 'You take the dagger in your', no);
+        said('use the whetstone on the dagger', 'The dagger is as sharp as it will go.', no);
+        said('use the iron key on the chest', /chest/, no);
+        said('use the antidote', 'You drink the antidote.', no);
+        said('push the chest', ['You set your shoulder to the chest and shove it a square away.', 'It stands against the door.']);
+        said('open the door', 'Something heavy stands against it: it won\'t open.', 'You open the door');
+        said('pull the chest', 'You take hold of the chest and drag it toward you, stepping back.');
+        said('open the door', 'You open the door');
+        said('pull the door', 'You close the door.');
+        said('push the door', 'You open the door');
+        said('pull the portcullis', 'the portcullis crashes down');
+        said('taste the antidote', 'an antidote against poisons and venoms');
+        said('taste the remedy', 'a remedy against disease');
+        said('taste the vial', 'There\'s nothing in it to taste.');
+        said('feel the wall', ['It is dark.', 'You feel']);
+        said('touch the chest', 'The chest is', 'I don\'t understand');
+        said('pull the bar', 'You lift the bar out of its brackets');
+        said('pull the rope', 'You shake the rope');
+        said('taste the water', 'still water, not fresh');
+        said('taste the waterskin', 'still water, not fresh');
+        if (/in this game yet/.test(dq0Story(out))) f.push('a "not yet" said');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0notyet', what: 'Dingus Quest Zero\'s verbs not done yet, the shared groundwork (2026-11-09, the plan for them, its batch B0: DECISIONS.md\'s "The verbs not done yet: the rows, the aliases and the powers\' refusals"): the powers refused, true to the character, from the rows (a spell: "You\'ve no magic: you never studied the convocations."; a talent: "You reach for it; nothing stirs."; an invocation, one learnt: "You know no invocations of Peoni\'s.", the character\'s deity the referee\'s, RS_DESCRIBE\'s RD_DEITY, its file\'s att dty 6); the aliases (activate, use\'s: a light used is lit, the things\' batch B4\'s, 2026-11-10; negotiate, persuade\'s; sense a lie, examine\'s); "status" (pace.c\'s, before the table) and "pace" alone (the table\'s H_STATUS, the same words); "sneak north" a creep, then the move (not the pace alone, as it was)',
       init: 't_rc', cycles: 1000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att dty 6 >> /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'cast light', 'memorize the light spell', 'telepathy', 'invoke divination', 'learn divination',
@@ -6085,7 +6136,7 @@ module.exports = {
         inTurn(o, ['> cast light You\'ve no magic: you never studied the convocations.',
           '> memorize the light spell You\'ve no magic: you never studied the convocations.', '> telepathy You reach for it; nothing stirs.',
           '> invoke divination You know no invocations of Peoni\'s.', '> learn divination You know no invocations of Peoni\'s.',
-          '> activate the torch Use what, and on what?', '> negotiate with the rat', '> sense a lie from the rat The giant rat seems', '> status Pace: a walk',
+          '> activate the torch', 'The torch is lit already.', '> negotiate with the rat', '> sense a lie from the rat The giant rat seems', '> status Pace: a walk',
           'Watching: nothing in particular.', '> pace Pace: a walk', 'Watching: nothing in particular.', '> sneak north Pace: a creep',
           'You set off north.', '> status Pace: a creep', '> invoke divination You know no invocations.', '% echo $status'], f);
         if (/in this game yet/.test(o)) f.push('a "not yet" said: ' + (o.match(/> [^>]*in this game yet/) || [''])[0]);

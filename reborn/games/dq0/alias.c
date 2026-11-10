@@ -35,8 +35,9 @@ unsigned char __fastcall__ alias_hit (const char* l)
     return alias_bits[h >> 3 & 7] & 1 << (h & 7);
 }
 
-#pragma code-name (push, "OV4CODE")             /* ---- Overlay 4: a line's first look */
-#pragma rodata-name (push, "OV4RODATA")
+#pragma code-name (push, "OV12CODE")            /* ---- Overlay 12: a line's first look (overlay 4's till 2026-11-10:
+                                                **   its room, a door blocked's words) */
+#pragma rodata-name (push, "OV12RODATA")
 
 /* A line the shortcuts' own: "alias ...", "unalias ...", "forget alias ..." (its start: the part makes sure) */
 unsigned char __fastcall__ o_alias_said (const char* l)

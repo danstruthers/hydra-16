@@ -95,55 +95,16 @@ static void do_drop (void)
     }
 }
 
-/* H_USE (the plan's batch B4, a stub till then): a thing used by its kind, after the puzzle's (theme.c's); "activate" */
-static void do_use (void)
-{
-    unknown (U_YET);
-}
-
-/* H_PUSH (B4's, a stub till then): a thing shoved a square, a door pushed open, a portcullis raised */
-static void do_push (void)
-{
-    unknown (U_YET);
-}
-
-/* H_PULL (B4's, a stub till then): a thing dragged a square, a door pulled shut, a bar lifted, a grapple shaken loose */
-static void do_pull (void)
-{
-    unknown (U_YET);
-}
-
-/* H_TOUCH (B4's, a stub till then): a thing examined by touch, in the dark too */
-static void do_touch (void)
-{
-    unknown (U_YET);
-}
-
-/* H_TASTE (B4's, a stub till then): a sip, a lore test naming a vial; food and water fresh or not */
-static void do_taste (void)
-{
-    unknown (U_YET);
-}
+void __fastcall__ things_use (unsigned char h);    /* (Part 29's, below: use, push, pull, touch, taste) */
 
 /* The things' verbs, by their handler's number (H_TAKE ... H_TASTE) */
 void __fastcall__ s_things_do (unsigned h)
 {
+    if ((unsigned char) h >= H_USE && (unsigned char) h <= H_TASTE) {
+        things_use ((unsigned char) h);         /* (The verbs plan's B4: part 29's, part 2 full) */
+        return;
+    }
     switch ((unsigned char) h) {
-    case H_USE:
-        do_use ();
-        break;
-    case H_PUSH:
-        do_push ();
-        break;
-    case H_PULL:
-        do_pull ();
-        break;
-    case H_TOUCH:
-        do_touch ();
-        break;
-    case H_TASTE:
-        do_taste ();
-        break;
     case H_TAKE:
         do_take ();
         break;
@@ -165,6 +126,237 @@ void __fastcall__ s_things_do (unsigned h)
             cmd.obj.word,                       /* ("Wash" a cloth washed: rip's verb, its request the word's) */ cmd.other.word[0] || cmd.prep != PR_IN ?
             cmd.other.word : "shaft", cmd.aux == IO_DON_WORN ? DN_WORN : cmd.prep == PR_ON);
     }                                           /* ("Put the dagger down the shaft", the hole: its kind said, no word) */
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ---- The things' verbs the plan's batch B4 built (2026-11-10, DECISIONS.md's "The things' verbs: use, push, pull, touch,
+** taste"): part 29's, part 2 full.  Its strings are its own: each said (msg, sayf, say_no copy it) before any other part's
+** called, none kept across a call */
+#pragma code-name (push, "SW29CODE")
+#pragma rodata-name (push, "SW29RODATA")
+
+/* The command carried out as verb v's, aux its request (0: the row's), the same things: its handler the dispatch table's
+** (main.c's s_command's), its command kept as that verb's (a timed work's end, a walk over first: that verb again) */
+static void __fastcall__ as_verb (unsigned char v, unsigned char aux)
+{
+    unsigned h;
+
+    cmd.action = v;
+    cmd.aux = aux;
+    h = verb_row (v);
+    if ((unsigned char) h >= H_SELF) {
+        self_do (h);
+    } else if ((unsigned char) h >= H_PLACES) {
+        places_do (h);
+    } else if ((unsigned char) h >= H_WORK) {
+        things_work ((unsigned char) h);
+    } else {
+        things_do (h);
+    }
+}
+
+/* H_USE ("use", "activate"): the theme's puzzle's first (theme.c's: its rules for the thing, or for the thing on another);
+** none, the thing's kind says what using it is: a bandage tends (a wound, or the place said: "use the bandage on my
+** arm"), food is eaten, a vial, a waterskin, an antidote, a remedy drunk, a light lit, a tinderbox lights the thing it's
+** used on, a key or the lockpicks unlock what they're used on (none said, the door ahead), a rope or a grapple is tied
+** (to what it's used on), a whetstone sharpens the blade it's used on (none said, the one in hand), a thing held in a
+** hand (a weapon, a tool) is taken in hand */
+static void do_use (void)
+{
+    char key[8];
+    unsigned char k, f;
+    char* w = cmd.obj.word;
+
+    if (!*w) {
+        unknown (U_WHAT);
+        return;
+    }
+    /* TODO (the materials' batch: VB_RIP_OBJECT, IO_RIP): a blade used on a cloth thing ("use the knife on the cloak") is a
+    ** rip, routed here before the kinds below, as_verb (VB_RIP_OBJECT, IO_RIP) with the cloth the thing ripped */
+    if (othings (IO_FIND, w, "", 0) != IR_OK) {
+        say_no (A_HAVE_NO, w);
+        return;
+    }
+    k = (unsigned char) othings_x;
+    hub_mem (KIND_BANK, key, CATALOGUE[k].tool, sizeof key);
+    hub_mem (KIND_BANK, &f, &CATALOGUE[k].flags, 1);
+    if (k == KI_BANDAGES) {                     /* (Tend: its patient or its place the thing it's used on, "" the
+                                                **   character's worst; the bandages' own batch to say more) */
+        strcpy (w, cmd.other.word);
+        cmd.other.word[0] = 0;
+        as_verb (VB_TEND, 0);
+    } else if (!strcmp (key, "food")) {
+        as_verb (VB_EAT_OBJECT, 0);
+    } else if (k == KI_WATERSKIN || k == KI_VIAL || k == KI_ANTIDOTE || k == KI_REMEDY || !strcmp (key, "water")) {
+        if (k >= KI_ANTIDOTE) {
+            strcpy (w, k == KI_ANTIDOTE ? "antidote" : "remedy");   /* (feed.c's remedies, by their words) */
+        }
+        as_verb (VB_DRINK, 0);
+    } else if (f & K_LIGHT) {
+        cmd.other.word[0] = 0;
+        as_verb (VB_LIGHT_OBJECT, IO_LIGHT);
+    } else if (k == KI_TINDERBOX || k == KI_KEY || k == KI_LOCKPICKS || k == KI_WHETSTONE) {
+        if (cmd.other.word[0] || cmd.other.kind) {
+            memcpy (&cmd.obj, &cmd.other, sizeof cmd.obj);   /* (The thing it's used on: lit, unlocked, sharpened) */
+        } else if (k == KI_KEY || k == KI_LOCKPICKS) {
+            strcpy (w, "door");                 /* (None said: the door there, or which, asked) */
+            cmd.obj.kind = OB_DOOR;
+            cmd.obj.lies = 0xFF;
+        } else if (k == KI_WHETSTONE) {         /* (None said: the blade in hand, not the light) */
+            things (IO_HANDS, nil);
+            k = HUB->ireq.x;
+            f = HUB->ireq.y;
+            hub_mem (KIND_BANK, key, &CATALOGUE[k].flags, 1);
+            if (*key & K_LIGHT) {
+                k = f;
+            }
+            if (!k) {
+                msg ("Sharpen what? (use the whetstone on the blade)");
+                return;
+            }
+            hub_mem (KIND_BANK, w, CATALOGUE[k].name, sizeof CATALOGUE[0].name);
+            k = KI_WHETSTONE;
+        } else {
+            *w = 0;                             /* (The light to hand) */
+        }
+        cmd.other.word[0] = 0;
+        cmd.other.kind = 0;
+        if (k == KI_WHETSTONE) {
+            strcpy (cmd.other.word, "whetstone");
+            as_verb (VB_FILL_OBJECT, IO_SHARP);
+        } else {
+            as_verb (k == KI_TINDERBOX ? VB_LIGHT_OBJECT : VB_UNLOCK_OBJECT, k == KI_TINDERBOX ? IO_LIGHT : 0);
+        }
+    } else if (k == KI_ROPE || k == KI_GRAPPLE) {
+        as_verb (VB_TIE_OBJECT, 0);             /* (To the thing it's used on, or what's nearest that holds) */
+    } else if (f & K_HAND) {
+        as_verb (VB_EQUIP_OBJECT, IO_HOLD);     /* (A weapon, a tool: taken in hand, wield's) */
+    } else if (cmd.other.word[0]) {
+        sayf ("\nNothing comes of using the %s on the %s.", w, cmd.other.word);
+    } else {
+        sayf ("\nYou can't see how to use the %s.", w);
+    }
+}
+
+/* H_PUSH, H_PULL: a door pushed open, pulled shut (a window's shutters alike); a portcullis pushed up, pulled down; a
+** door's bar pushed home in its brackets, pulled out of them (PA_LIFT); a rope pulled, untied (from below, its grapple
+** shaken loose: wrope2.c's); a heavy thing shoved a square, dragged a square and the character back a square (the
+** world's IO_DRAG, wdrag.c's).  There are no levers */
+static void __fastcall__ do_shove (unsigned char pull)
+{
+    char* w = cmd.obj.word;
+    unsigned char k = cmd.obj.kind, r;
+    unsigned t;
+
+    if (strstr (w, "bar")) {
+        portal (pull ? PA_LIFT : PA_BAR);       /* (A door's bar: its door the kind, the resolver's) */
+    } else if (k == OB_DOOR || k == OB_WINDOW || k == OB_PORTC) {
+        portal (k == OB_PORTC ? (pull ? PA_LOWER : PA_RAISE) : pull ? PA_CLOSE : PA_OPEN);
+    } else if (!*w) {
+        unknown (U_WHAT);
+    } else if (strstr (w, "rope")) {
+        if (pull) {
+            as_verb (VB_UNTIE_OBJECT, 0);
+        } else {
+            unknown (U_CANT);
+        }
+    } else if (HUB->ireq.to = pull, (r = things (IO_DRAG | IO_GO, w)) == IR_NONE) {
+        say_no (A_SEE_NO, w);
+    } else if (r != IR_GONE) {                  /* (Out of reach: walked over to it first, then again) */
+        k = HUB->ireq.y;
+        t = HUB->ireq.x;
+        msg (tt ());
+        if (r == IR_OK) {
+            if (pull && k != 0xFF) {
+                intend2 (I_STEP, I_STEP_W1 (k, 1), 1);  /* (Back a square, the way it came, its facing kept) */
+            } else {
+                intend2 (I_WAIT, t, I_WAIT_W2 (0, 0, 1));
+            }
+        }
+    }
+}
+
+/* H_TOUCH ("touch", "feel"): in the dark, nothing said or a wall, the floor: the felt words, a feel about (H_FEEL's);
+** else the thing examined, by touch in the dark (its make, its state: a close look's, as the hands find them) */
+static void do_touch (void)
+{
+    unsigned char k = cmd.obj.kind;
+
+    if ((!cmd.obj.word[0] || k == OB_WALL || k == OB_ROOM) && sight_get ()->dark) {
+        as_verb (VB_OBSERVE_LOCALE, 0);
+    } else if (!cmd.obj.word[0] && !k) {
+        unknown (U_WHAT);
+    } else {
+        as_verb (VB_EXAMINE_OBJECT, 0);
+    }
+}
+
+/* H_TASTE: a sip, not a dose (nothing used up, no remedy taken, no flux caught: DECISIONS.md's): an antidote or a remedy
+** named by a lore test (the referee's P_LORE), water fresh or still (its wear: from still water), food still good (none
+** goes off in this game); the water it stands in, still or running.  Three seconds */
+static void do_taste (void)
+{
+    struct req* r;
+    char key[8];
+    unsigned char k, c, f;
+    const char* s;
+
+    if (!cmd.obj.word[0]) {
+        unknown (U_WHAT);
+        return;
+    }
+    HUB->ireq.to = DG_TASTE;
+    if (HUB->pc_wet && !strcmp (cmd.obj.word, "water")) {
+        k = c = KI_WATER;                       /* (The water it stands in: still, the flux's, feed.c's) */
+        f = (unsigned char) (HUB->pc_wet - 1) < 0x7F;
+    } else if (things (IO_DRAG, cmd.obj.word) == IR_OK) {
+        k = HUB->ireq.x;
+        c = HUB->ireq.y;
+        f = HUB->ireq.qty;
+    } else {
+        say_no (A_HAVE_NO, cmd.obj.word);
+        return;
+    }
+    hub_mem (KIND_BANK, key, &CATALOGUE[k].keeps, 1);
+    if (!(*key & KF_LIQUID)) {
+        c = 0;                                  /* (What's in a pack, a sack: not tasted, the vessel's own alone) */
+    }
+    f = c ? f : *key & KF_LIQUID ? 2 : f;       /* (An empty vessel: 2) */
+    hub_mem (KIND_BANK, key, CATALOGUE[c ? c : k].tool, sizeof key);
+    if (c == KI_ANTIDOTE || k == KI_ANTIDOTE || k == KI_REMEDY) {
+        r = ask_b (RS_TEST, P_LORE, 0);         /* (Lore: what's in it known by its taste) */
+        f = G_OK (RS_TEST_GRADE (*r));
+        r->state = REQ_FREE;
+        s = !f ? "Bitter, and strange: you can't tell what it's for." : k == KI_REMEDY ?
+            "Sharp and herby: a physician's draught, a remedy against disease." :
+            "Bitter with rue and wormwood: a theriac, an antidote against poisons and venoms.";
+    } else if (c == KI_WATER || k == KI_WATER) {
+        s = f ? "Flat and stale: still water, not fresh. It may carry the flux." : "Cold and clean: fresh water.";
+    } else if (!strcmp (key, "food")) {
+        s = "It tastes as it should: it's still good.";
+    } else if (!c && f == 2) {
+        s = "There's nothing in it to taste.";
+    } else {
+        s = "It tastes of nothing you'd care to eat.";
+    }
+    sayf ("\nYou taste the %s. %s", cmd.obj.word, s);   /* (Its answer names its thing: the sweeps') */
+    intend2 (I_WAIT, 30, I_WAIT_W2 (0, 0, 1));
+}
+
+/* The verbs plan's B4's, by their handler's number (H_USE ... H_TASTE) */
+void __fastcall__ s_things_use (unsigned char h)
+{
+    if (h == H_USE) {
+        do_use ();
+    } else if (h <= H_PULL) {
+        do_shove (h == H_PULL);
+    } else if (h == H_TOUCH) {
+        do_touch ();
+    } else {
+        do_taste ();
+    }
 }
 
 #pragma code-name (pop)
@@ -231,7 +423,8 @@ unsigned char __fastcall__ o_things_work (unsigned char h)
     switch (h) {
     case H_FILL:                                /* (A light renewed, slice 4.1's: "fill the lantern", "dip the torch in
                                                 **   the oil", the things' IO_FILL; its time, quietly: a timed work) */
-        if (strstr (cl, "sharpen") || strstr (cl, "hone") || strstr (cl, "whet")) {
+        if (cmd.aux == IO_SHARP || strstr (cl, "sharpen") || strstr (cl, "hone") || strstr (cl, "whet")) {   /* (IO_SHARP:
+                                                **   "use the whetstone", part 29's) */
             d |= IO_SHARP;                      /* (A blade's words: a light has no edge, the things') */
         }
         worked (othings (IO_FILL | IO_STEPS | IO_GO, cmd.obj.word, cmd.other.word, d));

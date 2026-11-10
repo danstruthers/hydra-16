@@ -913,9 +913,11 @@ enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARR
        PO_GAP, PO_JAMMED,                       /*   a portcullis's bars broken through, its bars forced apart (it
                                                 **   won't move); */
        PO_SOFT,
-       PO_KEYED, PO_KEY_LOCKED, PO_NO_KEY, PO_IS_LOCKED };  /* (A door's key, every actor's, Phase 3C's: unlocked
+       PO_KEYED, PO_KEY_LOCKED, PO_NO_KEY, PO_IS_LOCKED,   /* (A door's key, every actor's, Phase 3C's: unlocked
                                                 **   with its key, locked with it, no key that fits (a lock), locked
-                                                **   already) */                               /*   a blow at it with a soft thing, one attempt, no harm (the thing
+                                                **   already) */
+       PO_BLOCKED };                            /* (A heavy thing stands against it, beside it on its way through: it
+                                                **   won't open, every actor's; the verbs plan's B4, wdrag.c's braced) */                               /*   a blow at it with a soft thing, one attempt, no harm (the thing
                                                 **   the hub's pc_strike's, the user's, 2026-10-22) */
 #define PO_SHOWS        0x8000                  /* (E_PORTAL's w1, an opening's: what it shows beyond told with it, as
                                                 **   the look after it found it, 2026-10-22: a what, WB_*, | 4 lit; b

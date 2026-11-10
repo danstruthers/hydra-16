@@ -33,6 +33,7 @@
 
 extern unsigned char burn_ask;                  /* (things.h's) */
 unsigned door_key (void);                       /* (Part 80's, wport.c: a key that fits it, the actor's) */
+unsigned char __fastcall__ braced (unsigned char sn, unsigned x, unsigned y);   /* (Part 109's, wdrag.c) */
 
 void s_doors (void)
 {
@@ -60,6 +61,8 @@ void s_doors (void)
             wk.tt += 2 * st;
             if (wk.pq.state & PS_OPEN) {
                 out = PO_IS_OPEN;
+            } else if (wk.pq.kind == PK_DOOR && braced (wk.sn, wk.px, wk.py)) {
+                out = PO_BLOCKED;               /* (A chest shoved against it, either side: wdrag.c's, the verbs plan's B4) */
             } else if ((wk.pq.state & PS_BARRED) && !mine) {
                 out = PO_BARRED;                /* (Barred from the far side) */
                 goto found;
