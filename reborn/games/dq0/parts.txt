@@ -29,3 +29,4 @@
 24  12  The commands seen to less often (main.c: part 2's till 2026-11-04; overlay 14's till 2026-11-06)
 25  21  A writing read or copied (read.c: the plan's step 9, 2026-11-06)
 26  21  its clue made, a reading's other words
+27  25  Prayer, fasting, swimming, following (hself.c, hmove.c: the verbs plan's B5, B6, 2026-11-10)

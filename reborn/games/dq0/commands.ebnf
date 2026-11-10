@@ -115,7 +115,7 @@
 <cast>           ::= <CAST> [ <det> ] [ <spell-word> ] [ "spell" ] [ <at-phrase> ]       (* "concentrate" alone: the spell in use *)
 <eat>            ::= <EAT> <object>
 <drink>          ::= <DRINK> [ "from" <object> | <object> ]
-<swim>           ::= <SWIM> [ <move-dir> ]
+<swim>           ::= <SWIM> [ <move-dir> ] | "dive" | "tread" "water"   (* alone in deep water: treading water a minute; "dive", "swim down": under on purpose (2026-11-10) *)
 <find>           ::= <FIND> <object>                            (* question 10: FIND locates a known thing *)
 <search>         ::= <SEARCH> [ <around> ] [ "for" ] [ <thing> ] | <SEARCH> [ <thing> ] "for" "traps"
                    | <SEARCH> [ <around> ] ( "on" | "in" ) <thing> | <SEARCH> [ "the" ] ( <compass> | <LR> ) "wall"
@@ -294,7 +294,7 @@
 <defend>         ::= <DEFEND> | "defend" [ <DEFEND> | "none" | "counter" | "best" ]   (* a stance for the next blow: dodge, block, parry, duck *)
 <DEFEND>         ::= "dodge" | "block" | "parry" | "duck"
 <flee>           ::= ( "flee" | "escape" | "run" "away" ) [ <direction> ]
-<follow>         ::= ( "follow" | "tail" ) <object>
+<follow>         ::= ( "follow" | "tail" ) <object>             (* a denizen trailed; "follow me" the allies' come (2026-11-10) *)
 (* ---- Repeating and place ---- *)
 <again>          ::= <AGAIN>                                    (* repeat the last command *)
 <AGAIN>          ::= "again"
@@ -321,7 +321,7 @@
 <invoke>          ::= ( "invoke" | "perform" | "chant" ) <INVOCATION> [ "on" ] [ <object> ] [ "to" <DEITY> ]   (* clerics perform a ritual; the deity acts *)
 <INVOCATION>      ::= "divination" | "baptism" | "passage" "of" "the" "soul" | "consecration" | "exorcism" | "curse" | "blessing" | "balefire"
 <learn-invocation> ::= "learn" <INVOCATION> [ "from" <object> ]  (* from a mentor or scripture; 5 piety per circle *)
-<fasting>         ::= "fast"                                       (* a day of fasting: piety accrues each day *)
+<fasting>         ::= "fast" | "break" "my" "fast"                 (* a day of fasting: piety accrues each day; "break my fast" (or "stop fasting") ends the vow (2026-11-10) *)
 (* ---- Baptism is the invocation that converts a willing convert: "baptise", "convert" ---- *)
 <baptise>         ::= ( "baptise" | "baptize" | "convert" ) <object> [ "to" <DEITY> ]
 (* ---- Magic (HarnMaster Magic: memorization, learning, research, dispelling, countering) ---- *)

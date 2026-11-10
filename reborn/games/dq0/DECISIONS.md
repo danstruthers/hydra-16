@@ -2786,3 +2786,73 @@ new stubs) tests each move as an opposed test, and the null ruleset answers each
 **The images** grew by the overlay (dq0harn.ovl's ninth bank), two of the UI's stubs, two of the referee's; the world's
 part 15 the rest (its room's).  The tests: dq0grapple (a hold, a walk away failing, breaking free, a throw, a pin, a
 choke to senselessness, "let go"); dq0rules' grappling cases; dq0parse's "grapple the rat" no longer "not yet".
+
+## Prayer, fasting, swimming and following (2026-11-10, as built, for review: the verbs plan's B5 and B6)
+
+Five of the verbs that said "not yet" now do something in the world: pray and pray for (one handler, `H_PRAY`), fast
+(`H_FAST`), swim (`H_SWIM`) and follow (`H_FOLLOW`).  Their work is a part of its own, part 27 (hself.c's and hmove.c's
+`SW27CODE` blocks), because part 2 has no room.  Part 2 keeps the stubs, each now a call.  What's built:
+
+- **Pray** (the user's): to the character's own HarnMaster deity, named by the referee (`RS_DESCRIBE`, b `RD_DEITY`).
+  "You kneel and pray to Peoni." begins a timed work of an hour (`I_WAIT` with `LT_WAIT`, its command kept: main.c's
+  reach 3).  "stop" or an interruption ends it with no more said than a stopped wait's.  At the hour's end it makes a
+  Ritual test (`P_RITUAL`), and its grade picks a calming line that names the deity, for example "You rise from your
+  prayers, calmer, sure that Peoni has heard you."  The effect is the words alone.  "pray for X" is the same, with no
+  bonus.  A character with no deity prays the hour too ("You kneel and pray, though you know no god to pray to."), and
+  its end has a line of its own, with no test.
+- **Fast** (the user's): "fast" is a vow for a day (864,000 tenths of the clock).  While it holds, eating is refused
+  in feed.c, before anything is looked for, with the hours left and a warning: "You're fasting, with 24 hours of your
+  vow to go: you leave the food be. ("break my fast" ends the vow.)".  Drinking isn't refused.  Hunger counts on as
+  ever (the referee's), and there's no piety effect.  The vow ends with "break my fast", "stop fasting", or a plain
+  "stop" when no long task is under way (H_STOP asks part 27's `fast_stop` first).  Once the day is out, the next meal
+  says "Your day's fast is over." and goes ahead.  *For review:* the vow is kept in the UI's main RAM (4 bytes), so it
+  isn't in a saved game (a game carried on has no vow), as grappling's hold isn't.  Keeping it would need the save's
+  header, `SAVE_VER`, and life.h, which dq0life reads.
+- **Swim** (the plan's default, for review):
+  - With a way or a thing ("swim north", "swim to the far bank") it is a move, `H_GO`'s, and the world's water rules
+    do the rest (wading, swimming out of its depth, `P_SWIM`).  The UI knows only the water where the character stands
+    (the hub's `pc_wet`), not the square beside it.  So "swim north" from dry ground walks north and swims if the water
+    there is deep, rather than asking whether deep water is beside it.
+  - "swim" alone, or "tread water", in water five feet deep or more treads water ("You tread water."), a minute.  The
+    world (`I_WAIT`'s new a bit, `WA_TREAD`) tests the minute's swim at once: dq0w.c's part 73, `swim_still`, makes
+    wade_t's test due.  A critical failure goes under ("You go under!"), and under, a tread comes up ("You come up,
+    gasping.").  This is HOUSE.md's "not yet" of a swim's test as the character treads water, built for this verb
+    only; an ordinary "wait" in deep water still isn't tested.
+  - "dive" or "swim down" goes under on purpose (`WA_DIVE`: the minute's test first, then under, the breath held a
+    minute, `WB_UNDER`, the work three times a swim's).  It is a timed work of a minute (reach 3), and at its end the
+    character strikes out for the surface: a tread of moments, whose test brings it up or keeps it under.  Under past
+    its breath, it drowns, as a sinking does.  "swim up" when under is the same tread.
+  - With shallower water or none: "There's no water deep enough."
+  - The parser: "dive" is swim's word (commands.verbs' [words]), and "tread water" a two-word swim; the grammar has
+    both.  The handler tells a dive by the line's "dive" or the way down.
+- **Follow** (the plan's default, for review):
+  - "follow the X" trails a denizen it sees (the resolver's square, matched to the sight's record: its actor's `den`
+    kept).  It walks after it with the world's close-in, walked alone (`I_CLOSE` w1 1, the world re-aiming it as the
+    denizen moves), and its command is carried out again as each walk ends (main.c's reach 1).
+  - Caught up, it waits a round beside the denizen, and goes on if the denizen goes.  If the denizen stays, the follow
+    ends: "You stop beside the giant rat."
+  - A walk that got nowhere (no way, or no nearer) ends it: "You can't keep up with the giant rat."
+  - Out of sight but within six squares (gone behind it), the character turns to look for it once.  Not found then,
+    or further off, or on another stratum, it's lost: "You've lost the giant rat. ("track" may find its trail.)"
+  - A thing that isn't a denizen: "The sack isn't going anywhere."
+  - "follow me" is the ally's order still.  The parser now gives every "follow X" `VB_FOLLOW_OBJECT` (commands.verbs'
+    `thing=`), and the handler sends "me" (and nothing named) to the sway, as `VB_ALLY_COME`.  "follow" alone is
+    `VB_ALLY_COME` in the parser as before.  The grammar already had "follow X".
+  - *For review:* the world's "You can't get near enough to the giant rat." is told on each leg that falls short of a
+    denizen that keeps its distance.  "tail" stays the grammar's alone: a [words] alias would have been a parser
+    record more.
+- **The parser's records**: 253 of 255, as before.  "dive" shares swim's record, and the two-word phrases ("tread
+  water", "break my fast") are verbs of several words (119 of 255).  The corpus is unchanged at 645 of 660.
+- **Room**:
+  - The banks were full: part 27's 3.1K fitted in none of the 24 overlay banks.  So there is a 25th (dq0.cfg's OV25,
+    bank.s's OVMAX, dq0.h's ovbank), and part 27 wishes for it.  The packer put part 3 there too.
+  - Part 2 has 102 bytes left (110 before).
+  - dq0's main RAM has 2,202 bytes free (2,272 before: the stubs, the new part's record, the vow and the follow's
+    state).  The world's has 2,477 (2,483 before: `swim_still`'s stub).
+- **Tests**:
+  - dq0pray: Peoni's hour twice, the clock an hour on each; the vow, eating refused, "stop", "break my fast",
+    "stop fasting" with none; no deity's prayer.
+  - dq0tread: "swim" out of water and on the landing refused; a tread; a dive and its coming up, the world's beats;
+    "tread water"; "swim south" out.
+  - dq0follow: "follow me" to a befriended rat, the ally's order (SW_ORDER OR_FOLLOW, SR_OK); "follow the sack"
+    refused; a shy rat followed, walked after, and lost.

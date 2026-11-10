@@ -150,7 +150,7 @@ dip         thing=VB_FILL_OBJECT unsaid=last
 taste       thing=VB_TASTE_OBJECT unsaid=last
 touch       thing=VB_TOUCH_OBJECT unsaid=front
 flee        alone=VB_FLEE way=VB_FLEE task=LT_WALK
-follow      alone=VB_ALLY_COME thing=VB_ALLY_COME aux=SW_ORDER
+follow      alone=VB_ALLY_COME thing=VB_FOLLOW_OBJECT aux=SW_ORDER   # (2026-11-10: "follow the rat" trailed; "follow me" the ally's still, hmove.c's)
 again       alone=VB_REPEAT
 engage      thing=VB_ENGAGE unsaid=target
 disengage   alone=VB_DISENGAGE way=VB_DISENGAGE
@@ -192,6 +192,8 @@ slow walk = move
 double time = double
 fast charge = charge
 fast talk = bluff
+tread water = swim
+break my fast = fasting
 short rest = sleep
 short sleep = sleep
 get up = stand
@@ -480,6 +482,7 @@ c = cast
 eat = eat
 drink = drink
 swim = swim
+dive = swim
 find = find
 listen = listen
 smell = smell

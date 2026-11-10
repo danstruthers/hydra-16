@@ -5500,6 +5500,36 @@ static unsigned __fastcall__ wade_t (unsigned step)
     return i > step ? i - step : 0;
 }
 
+/* Swimming where it is (I_WAIT's WA_TREAD, WA_DIVE: the UI's "swim" alone, "dive", 2026-11-10; HOUSE.md's water, its
+** "not yet" of a swim's test treading water): out of its depth, the minute's swim tested now (wade_t's, its time made
+** due: its grade's breath, a minute's strenuous work; a critical failure under, "You go under!"; under, up again,
+** "You come up, gasping."); a dive, under on purpose after it (unless it sank), or deeper if it's under already: its
+** breath held a minute more (past it drowned, the bodies' time), the minute's work three times a swim's, as a sinking's
+** (WB_UNDER, its b 1: the UI's words its own) */
+void __fastcall__ s_swim_still (unsigned char dive)
+{
+    hub_map (0);
+    if (band (HUB->pc_wet) < 3) {
+        return;
+    }
+    if (!dive || !HUB->pc_under) {
+        HUB->pc_swat = (unsigned) HUB->now;
+        wade_t (0);
+        hub_map (0);
+        if (!dive || HUB->pc_under) {
+            return;                             /* (A tread; or the dive's test sank it, under already) */
+        }
+    }
+    if ((HUB->pc_under += 60) > HUB->pc_breath || HUB->pc_under < 60) {
+        HUB->pc_under = 0xFF;                   /* (Drowned: the bodies' time tells the referee, as a sinking's) */
+        body_ask ();
+        return;
+    }
+    spend (GA_WORK, 1200);
+    hub_map (0);
+    event (E_BEAT, 0, WB_UNDER | 0x100);
+}
+
 /* A step's time the more (the water's as it goes on through it, wade_t; WADE_MORE, its own, rubble's): the walk's next
 ** square the later and its end too, so a walk gets all the way, and a step's own time is spent (2026-11-03: dq0streamswim) */
 unsigned __fastcall__ s_wade (unsigned step)
@@ -6304,6 +6334,7 @@ void s_rest_go (void)
     }
 }
 
+void __fastcall__ swim_still (unsigned char dive);   /* (Part 73's) */
 void __fastcall__ s_intent_few (struct msg* m)
 {
     unsigned long t;
@@ -6314,6 +6345,10 @@ void __fastcall__ s_intent_few (struct msg* m)
     case I_WAIT:                                /* (w1 tenths, or minutes, WA_MIN's: a long wait's, a sleep's) */
         t = I_WAIT_HOW (*m) & WA_MIN ? (unsigned long) I_WAIT_TENTHS (*m) * 600 : I_WAIT_TENTHS (*m) ? I_WAIT_TENTHS (*m) : HUB->round;
         busy (t);
+        if (I_WAIT_HOW (*m) & (WA_TREAD | WA_DIVE)) {
+            swim_still (I_WAIT_HOW (*m) & WA_DIVE);   /* (Treading water, a dive: part 73's, 2026-11-10) */
+            hub_map (0);
+        }
         if (I_WAIT_TASK (*m)) {                 /* (A timed work of the UI's, the things': its long task, its end
                                                 **   the UI's as the character's free, not stopped) */
             if (HUB->pc_hid) {

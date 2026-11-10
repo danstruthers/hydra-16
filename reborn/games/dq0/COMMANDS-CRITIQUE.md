@@ -850,9 +850,10 @@ player sees changed (the whole suite: all 426 tests pass):
 - **What's left:** the shared paths stay where they were, not handlers but what they call: main.c's `things`, `take` and
   `took_up` (the world's E_TAKEN's too), `hide`'s work (part 18: its words, the rope's test), `feature` and the
   missiles (part 13), `lift` and `deal` (part 24). The 50 `H_NOT_YET` rows (a verb done is a row and a case in its
-  group): 1 left since 2026-11-09 (grapple's, its own), and 21 verbs whose rows point at a stub of their own that
-  says "not yet" till its batch builds it; the other 28 done (the powers refused, the rows seen to before the table,
-  status and sneak, the three aliases: DECISIONS.md's "The verbs not done yet"). The request byte for the handling verbs, if `handle` ever takes its op from the row (the two verbs whose op
+  group): 1 left since 2026-11-09 (grapple's, its own), and 16 verbs whose rows point at a stub of their own that
+  says "not yet" till its batch builds it; the other 33 done (the powers refused, the rows seen to before the table,
+  status and sneak, the three aliases: DECISIONS.md's "The verbs not done yet"; pray, pray for, fast, swim and follow
+  since 2026-11-10: its "Prayer, fasting, swimming and following"). The request byte for the handling verbs, if `handle` ever takes its op from the row (the two verbs whose op
   varies would keep theirs in the line).
 
 Odd answers the sweeps don't catch (they name the thing, but read oddly), for review: "tie the torch" says "You can't

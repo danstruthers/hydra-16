@@ -67,6 +67,18 @@ static void __fastcall__ feed_do (unsigned char eat)
         w = 50;
         goto told;
     }
+    if (eat && fasting) {                       /* (A vow of fasting, hself.c's: a meal refused till its day's out, or
+                                                **   it's broken; hunger counting on, the referee's: 2026-11-10) */
+        hub_map (0);
+        if (fasting > HUB->now) {
+            w = (unsigned) ((fasting - HUB->now + 35999UL) / 36000UL);
+            sayf ("\nYou're fasting, with %u hour%s of your vow to go: you leave the food be. (\"break my fast\" ends the vow.)",
+                w, w == 1 ? "" : "s");
+            return;
+        }
+        fasting = 0;
+        msg ("Your day's fast is over.");
+    }
     if (!fed_on (eat)) {
         return;
     }

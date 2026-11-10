@@ -52,7 +52,7 @@ struct msg
 I_DEN           x[0] doing@DO_ROAM; x[1] face          # (Not a kind: the denizens' intents' head, what it's doing now
                                                         #   and the way it faces, 0xFF either as it is)
 I_WAIT          a how; w1 tenths; w2(busy) task:8-15@LT_NONE what:1-7 quiet:0
-                # (a: WA_MIN, WA_SLEEP, WA_REST; w1 tenths, or minutes (WA_MIN); w2: a timed work's long task (LT_*)
+                # (a: WA_MIN, WA_SLEEP, WA_REST, WA_TREAD, WA_DIVE; w1 tenths, or minutes (WA_MIN); w2: a timed work's long task (LT_*)
                 #   and its thing's kind (0x80 | it, the long task's what), quiet 1 a thing's handling)
 I_WAIT:den      < I_DEN; w1 tenths
 I_GO            a head:0-2@H_N; w1 x; w2 y              # (The door or the mouth that way meant: its square, 0 any)

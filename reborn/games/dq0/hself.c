@@ -38,16 +38,20 @@ static void do_pretend (void)
     unknown (U_YET);
 }
 
-/* H_PRAY (the plan's batch B5, a stub till then): an hour's prayer to the character's deity, a Ritual test (P_RITUAL) */
+/* H_PRAY (the plan's batch B5, 2026-11-10): an hour's prayer to the character's deity, a Ritual test (P_RITUAL):
+** part 27's, below */
+void pray_go (void);
 static void do_pray (void)
 {
-    unknown (U_YET);
+    pray_go ();
 }
 
-/* H_FAST (B5's, a stub till then): a vow of fasting, eating refused for a day or till "stop" */
+/* H_FAST (B5's): a vow of fasting, eating refused for a day or till "stop" (part 27's, below) */
+void fast_go (void);
+unsigned char fast_stop (void);
 static void do_fast (void)
 {
-    unknown (U_YET);
+    fast_go ();
 }
 
 /* H_AGAIN (the plan's batch B7, the line's, a stub till then): the last line again ("again", "g") */
@@ -105,8 +109,11 @@ void __fastcall__ s_self_do (unsigned h)
                                                 **   it says: task.c's) */
         wait_go (cmd.action);
         break;
-    case H_STOP:                                /* (The long task: "stop", "stop digging") */
-        intend (I_STOP, stop_kind (cmd.obj.word));
+    case H_STOP:                                /* (The long task: "stop", "stop digging"; a fast, "stop fasting", or
+                                                **   "stop" with no long task: part 27's fast_stop) */
+        if (!fast_stop ()) {
+            intend (I_STOP, stop_kind (cmd.obj.word));
+        }
         break;
     case H_TEND:                                /* (First aid: part 12's, slice 4.3's) */
         tend ();
@@ -144,6 +151,107 @@ void __fastcall__ s_self_do (unsigned h)
     case H_QUIT:
         quit = 1;                               /* (H_NOTHING: nothing) */
     }
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ---- Prayer and fasting (the plan's batch B5, 2026-11-10: the user's; DECISIONS.md's "Prayer, fasting, swimming and
+** following"): part 27's, its own (part 2's room; the banks full: overlay 25 its image's), its stubs the build's */
+#pragma code-name (push, "SW27CODE")
+#pragma rodata-name (push, "SW27RODATA")
+
+unsigned long fasting;                          /* (The vow's end, the clock's tenths: 0 none; feed.c's refusal.  The main
+                                                **   RAM's, not kept in a saved game) */
+
+/* A prayer (VB_PRAY, VB_PRAY_FOR the same): to the character's own deity (the referee's RS_DESCRIBE RD_DEITY: "" none),
+** an hour (a timed work, LT_WAIT's: its command kept, main.c's reach 3), its end (reach 4) the Ritual test (P_RITUAL)
+** and a calming line naming the deity, its words alone, no other effect (the user's); with no deity, the hour the same
+** and a line of its own, no test */
+void s_pray_go (void)
+{
+    static const char* const calm[4] = {        /* (By the grade: CF, MF, MS, CS) */
+        "\nYou rise from your prayers. The rites slipped from you and %s seemed far away; still, the quiet hour has eased your mind.",
+        "\nYou rise from your prayers. The words came haltingly, but you feel steadier for the hour given to %s.",
+        "\nYou rise from your prayers, calmer, sure that %s has heard you.",
+        "\nYou rise from your prayers. %s's peace settles on you, deep and sure."
+    };
+    struct req* r;
+    signed char g;
+    char d[20];                                 /* (On the C stack: the deity's name, the slot freed) */
+
+    r = ask_b (RS_DESCRIBE, 0, RD_DEITY);
+    memcpy (d, r->text, sizeof d - 1);
+    d[sizeof d - 1] = 0;
+    r->state = REQ_FREE;
+    if (reach != 4) {
+        if (*d) {
+            sayf ("\nYou kneel and pray to %s.", d);
+        } else {
+            msg ("You kneel and pray, though you know no god to pray to.");
+        }
+        hub_mem (UI_BANK, &UIREC->kept, &cmd, sizeof cmd);
+        reach = 3;
+        intend2 (I_WAIT, 36000U, I_WAIT_W2 (LT_WAIT, 0, 1));   /* (An hour) */
+        return;
+    }
+    if (!*d) {
+        msg ("You rise from your prayers. If anyone heard, no sign of it came; still, the quiet hour has steadied you.");
+        return;
+    }
+    g = RS_TEST_GRADE (*ask_b (RS_TEST, P_RITUAL, 0));
+    HUB->slot[SLOT_UI].state = REQ_FREE;
+    sayf (calm[g == G_CF ? 0 : g == G_MF ? 1 : g == G_MS ? 2 : 3], d);
+}
+
+/* The vow ended ("break my fast", "stop fasting", "stop" with no long task): told; or none to end */
+static void unvow (void)
+{
+    hub_map (0);
+    if (fasting > HUB->now) {
+        msg ("You break your fast: you may eat again.");
+    } else {
+        msg ("You aren't fasting.");
+    }
+    fasting = 0;
+}
+
+/* A vow of fasting (VB_FASTING: "fast"): a day from now no food (feed.c's refusal), hunger counting on as ever (the
+** referee's, rswant.h); "break my fast" (the parser's, the line's word) ends it */
+void s_fast_go (void)
+{
+    unsigned long now;
+
+    if (strstr (cl, "break")) {
+        unvow ();
+        return;
+    }
+    hub_map (0);
+    now = HUB->now;
+    if (fasting > now) {
+        sayf ("\nYou're fasting already, with %u hours of your vow to go.", (unsigned) ((fasting - now + 35999UL) / 36000UL));
+        return;
+    }
+    fasting = now + 864000UL;                   /* (A day) */
+    msg ("You vow to fast for a day: no food shall pass your lips till this hour tomorrow. (\"break my fast\" ends the vow.)");
+}
+
+/* A stop (H_STOP's) that ends the vow: "stop fasting" (said), or "stop" with no long task while it fasts.  1 if so
+** (told), else 0 (the long task's stop, as ever) */
+unsigned char s_fast_stop (void)
+{
+    const char* w = cmd.obj.word;
+
+    if (!strcmp (w, "fasting") || !strcmp (w, "fast")) {
+        unvow ();
+        return 1;
+    }
+    hub_map (0);
+    if (*w || HUB->pc_task.kind || fasting <= HUB->now) {
+        return 0;
+    }
+    unvow ();
+    return 1;
 }
 
 #pragma code-name (pop)

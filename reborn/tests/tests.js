@@ -6074,6 +6074,72 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0pray', what: 'Dingus Quest Zero\'s prayer and fasting (the verbs plan\'s B5, 2026-11-10: the user\'s; DECISIONS.md\'s "Prayer, fasting, swimming and following"), by the words told and the clock: a character of Peoni (its file\'s att dty 6), its torch put out first (an hour\'s burning would stop the prayer): "pray" kneels and prays to Peoni ("You kneel and pray to Peoni."), an hour (the clock 36,000 tenths on), then rises, the deity named in a calming line (its Ritual test\'s, P_RITUAL: words alone); "pray for strength" the same; "fast" a vow ("You vow to fast for a day"), "eat food" refused ("You\'re fasting, with 24 hours of your vow to go: you leave the food be."), "fast" again told so, "stop" (no long task) ends it ("You break your fast"), "eat food" not refused then; "break my fast" ends a second vow; "stop fasting" with none, "You aren\'t fasting."; a second game\'s character of no deity (att dty 10): the hour\'s prayer, "though you know no god to pray to", and its end\'s line of its own',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att dty 6 >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'put out the torch', 'pray', 'pray for strength', 'fast', 'eat food', 'fast', 'stop', 'eat food', 'fast', 'break my fast',
+        'stop fasting', 'quit', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/d.hm', 'echo att dty 10 >> /ram/d.hm', 'dq0 -p t -s 3 -c /ram/d.hm -T',
+        'put out the torch', 'pray', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), o = dq0Story(out), f = [];
+        inTurn(o, ['> pray You kneel and pray to Peoni.', 'You rise from your prayers', 'Peoni', '> pray for strength You kneel and pray to Peoni.',
+          'You rise from your prayers', 'Peoni', '> fast You vow to fast for a day', '> eat food You\'re fasting, with 24 hours of your vow to go: you leave the food be.',
+          '> fast You\'re fasting already, with 24 hours of your vow to go.', '> stop You break your fast: you may eat again.', '> eat food',
+          '> fast You vow to fast for a day', '> break my fast You break your fast: you may eat again.', '> stop fasting You aren\'t fasting.',
+          '> pray You kneel and pray, though you know no god to pray to.', 'You rise from your prayers. If anyone heard, no sign of it came'], f);
+        for (const l of ['pray', 'pray for strength']) {
+          const t = T.of(l);
+          if (!t.at || !t.after || t.after.now - t.at.now < 36000) f.push(l + ': not an hour (' + (t.at && t.at.now) + ' to ' + (t.after && t.after.now) + ')');
+        }
+        const e = o.slice(o.indexOf('> stop You break'), o.indexOf('> fast', o.indexOf('> stop You break')));
+        if (/fasting/.test(e.slice(e.indexOf('> eat food')))) f.push('eating refused after the fast was ended: ' + e);
+        if (/in this game yet/.test(o)) f.push('a "not yet" said');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0tread', near: ['body'], what: 'Dingus Quest Zero\'s swimming in place (the verbs plan\'s B6, 2026-11-10: DECISIONS.md\'s "Prayer, fasting, swimming and following"; HOUSE.md\'s water), by the words, the world\'s beats and the clock: at seed 2 (dq0swim\'s flooded chamber), "swim" on dry ground and on the landing refused ("There\'s no water deep enough."); north into the water, out of its depth; "swim" alone treads water ("You tread water.", a minute, the world\'s swim test as it treads: I_WAIT\'s WA_TREAD); "dive" goes under on purpose ("You take a deep breath and dive under.", the world\'s WB_UNDER), a minute, then strikes out for the surface ("You come up, gasping.", WB_SWIM); "tread water" the same as "swim"; "swim south" a move, out of the water ("You wade out of the water.")',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 2 -c /ram/c.hm -T', 'swim', 'd', 'swim', 'n', 'swim', 'dive', 'tread water', 'swim south', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), o = dq0Story(out), f = [];
+        inTurn(o, ['> swim There\'s no water deep enough.', '> swim There\'s no water deep enough.', 'You\'re out of your depth: you swim.',
+          '> swim You tread water.', '> dive You take a deep breath and dive under.', 'You strike out for the surface.', 'You come up, gasping.',
+          '> tread water You tread water.', '> swim south', 'You wade out of the water.'], f);
+        const sw = T.filter(t => t.line === 'swim')[2], dv = T.of('dive');
+        if (!sw || !sw.at || !sw.after || sw.after.now - sw.at.now < 600) f.push('the tread not a minute');
+        dq0Need(f, dv, 'E_BEAT', { beat: 'WB_UNDER' }, 'the dive not under');
+        dq0Need(f, dv, 'E_BEAT', { beat: 'WB_SWIM' }, 'the dive not come up');
+        if (!dv.at || !dv.after || dv.after.now - dv.at.now < 600) f.push('the dive not a minute under');
+        if (/in this game yet/.test(o)) f.push('a "not yet" said');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0follow', near: ['denizens'], what: 'Dingus Quest Zero\'s following (the verbs plan\'s B6, 2026-11-10: DECISIONS.md\'s "Prayer, fasting, swimming and following"), by the words, the sway\'s replies and the character\'s squares: "follow me" an ally\'s order still (dq0fetch\'s seed 21 rat befriended twice, an ally: SW_ORDER OR_FOLLOW, SR_OK); at seed 5, "follow the sack" refused ("The sack isn\'t going anywhere."); down the ladder, "follow the rat" trails a giant rat that keeps its distance ("You follow the giant rat.", walked after it, the world\'s close-in re-aimed each time, looked round for as it goes behind), till it\'s lost ("You\'ve lost the giant rat.", "track" offered)',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', 'echo ml ani 90 >> /ram/a.hm',
+        'dq0 -p t -s 21 -c /ram/a.hm -T -R 117', 'befriend the rat', 'befriend the rat', 'follow me', 'quit',
+        'dq0 -p t -s 5 -c /ram/a.hm -T', 'follow the sack', 'd', 'wait', 'follow the rat', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), o = dq0Story(out), f = [];
+        const fm = T.of('follow me');
+        if (!dq0Rep(fm, 'sway', { kind: 'SW_ORDER', order: 'OR_FOLLOW', result: 'SR_OK' }).length) f.push('"follow me" not the ally\'s order (' + JSON.stringify(fm.replies.filter(r => r.req === 'sway')) + ')');
+        inTurn(o, ['> follow the sack The sack isn\'t going anywhere.', '> follow the rat You follow the giant rat.', 'You\'ve lost the giant rat. ("track" may find its trail.)'], f);
+        const fr = T.of('follow the rat');
+        if (!fr.at || !fr.after || (fr.at.pc.x === fr.after.pc.x && fr.at.pc.y === fr.after.pc.y)) f.push('not walked after the rat');
+        if (/in this game yet/.test(o)) f.push('a "not yet" said');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0alias', what:'Dingus Quest Zero\'s shortcuts (the user, 2026-10-22: "alias should be for shortcuts, and name for naming things"; alias.c): none made, and the game\'s own words listed; one made ("alias st is status"), used, shown; its replacement asked about (no: kept; yes: replaced); a command\'s word refused ("alias look is ..."), "alias the sword as Linda" sent to name; a game\'s own word made the player\'s ("peer"), then removed, the game\'s own left (can\'t be removed); a shortcut of a shortcut given its line; one of several commands ("status; i"), the words typed after one put after its line; them all listed; the game kept and carried on, the shortcuts with it; one forgotten ("forget alias st")',
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept',
