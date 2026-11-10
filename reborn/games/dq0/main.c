@@ -1475,8 +1475,8 @@ void s_hand_said (void)
     cmd.dir = 0xFF;
     cmd.how = 0;
     cmd.n = 0;
-    if (a == VB_PUT_OBJECT || a == VB_RETRIEVE_OBJECT || a == VB_EQUIP_OBJECT || a == VB_HANG_OBJECT ||
-        a == VB_HOLD_OBJECT) {
+    if (cmd.prep != PR_ON && (a == VB_PUT_OBJECT || a == VB_RETRIEVE_OBJECT || a == VB_EQUIP_OBJECT ||
+        a == VB_HANG_OBJECT || a == VB_HOLD_OBJECT)) {  /* (Not "on my left hand": worn there, worn.c's, 2026-11-10) */
         cmd.action = VB_HOLD_OBJECT;
         cmd.aux = IO_HOLD;
         cmd.prep = 0;

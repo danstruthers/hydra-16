@@ -776,6 +776,7 @@ free 25: shortbow@worn, quiver@belt, arrows@in 12-20
 free 30: cloak@worn
 free: blanket@bed
 free: pouch@belt
+free 40: linen sheet@bed                         ; (Worn places, 2026-11-10: a sheet on a folk bed)
 [role banlord] free make 4 4
 free: clothes@worn
 free: knee boots@worn
@@ -790,6 +791,8 @@ free 40: gauntlets@worn
 free 20: mail cowl@worn
 free: furs@bed
 free: pouch@belt
+free: linen sheet@bed
+free 30: scarf@worn
 [role cultist] free make 2 4
 free: robe@worn
 free: clothes@worn
@@ -809,6 +812,7 @@ free: mace@hand
 free: sandals@worn *50 | knee boots@worn *50
 free: blanket@bed
 free: pouch@belt
+free: linen sheet@bed
 [role skel] free make 1 4
 free: sword@hand *60 | spear@hand *25 | axe@hand *15
 free 70: shroud@worn
@@ -916,10 +920,13 @@ free 20: dice@pouch
 free 90: pennies@pouch 9d6
 free 35: crowns@pouch 1d6
 free 35: jewel@worn 1d6
+free 25: earrings@worn                           ; (Worn places, 2026-11-10: earrings, a scarf)
+free 30: scarf@worn
 [standing 4]
 free 90: pennies@pouch 7d6
 free 30: crowns@pouch 1d3
 free 15: jewel@worn 1d3
+free 20: earrings@worn
 ; (The kobold lord as its tribe, the book's Gargun: Hunters/Tribesmen)
 [purse koblord]
 free 20: pennies@pouch 3d6
@@ -942,6 +949,7 @@ free 90: pennies@pouch 7d6
 free 30: crowns@pouch 1d3
 free 15: jewel@worn 1d3
 free: chest@bed, pennies@in 7d6, iron key@pouch
+free 25: earrings@worn
 ; (A cultist an outlawed cult's lay folk: Brigand/Outlaw, the house's nearest)
 [purse cultist]
 free 75: pennies@pouch 1d6

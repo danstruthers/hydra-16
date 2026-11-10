@@ -10,6 +10,7 @@
 
 #pragma rodata-name ("CATRODATA")
 
+#include <harn.h>
 #include "../dq0/hub.h"
 #include "things.h"
 
@@ -225,6 +226,13 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "old writing", K_HAND, 8, 2, 0, 0, 0, 0, 2, "", MT_OTHER, AP_BOOK, 0 },  /* (A writing carried out of its dungeon, and a
                                                 **   copy of one on a sheet: the plan's steps 9 and 10, 2026-11-06) */
     { "copy", K_HAND, 0, 1, 0, 0, 0, 0, 2, "", MT_CLOTH, AP_BOOK, 0 },
+    { "scarf", K_WEAR, 1, 1, 0, 0, 0, 0, 2, "", MT_CLOTH /* wool */, AP_CLOTH, 24 },   /* (Worn places, the user's,
+                                                **   2026-11-10: a scarf, 6d, worn at the neck, on the head, over the
+                                                **   face; earrings, silver, a pair, in the ears, 40d) */
+    { "earrings", K_WEAR | K_PLURAL, 0, 0, 0, 0, 0, 0, 1, "", MT_SILVER, AP_JEWEL, 160 },
+    { "linen sheet", 0, 6, 4, 0, 0, 0, 0, 4, "", MT_CLOTH /* linen: the materials' split */, AP_CLOTH, 96 },  /* (A folk
+                                                **   bed's, 24d; a towel, 4d) */
+    { "towel", 0, 2, 2, 0, 0, 0, 0, 3, "", MT_CLOTH /* linen: the materials' split */, AP_CLOTH, 16 },
 };
 #pragma rodata-name (pop)
 
@@ -286,9 +294,34 @@ const unsigned char throws[KI_COUNT] = {
     0,                                          /* broken weapon */
     2, 2, 1, 1,                                 /* stone chisel, wood chisel, mattock, spade */
     2, 0, 0, 0, 0, 0,                           /* iron spike; a spike driven, a ring, a post, a rope in place */
-    1, 2                                        /* old writing, copy */
+    1, 2,                                       /* old writing, copy */
+    2, 2, 1, 2                                  /* scarf, earrings, linen sheet, towel */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
+
+/* Where the things worn in more than one place go (HOUSE.md's worn places, the user's, 2026-11-10: "should keep track
+** of where worn"): each such kind, its place unsaid (WP_* in items.h: a HarnMaster location, harn.h's, WP_PAIR a pair;
+** a hand's, the off hand's first, then the other's), the locations it may be worn at (a bit each).  Then how many
+** things worn in those places one place holds (a ring's four a hand, the user's; the neck three, the face one, the
+** ears a pair).  Swapped part 107's (things.c's worn places, wworn.c), not the catalogue's bank's: its room */
+#pragma rodata-name (push, "SW107RODATA")
+#define L(h)    (1 << (h))
+const struct wplace wplaces[NWPLACES] = {
+    { KI_RING, HARN_HAND, L (HARN_HAND) },      /* (By the hand alone: not by the finger, the user's) */
+    { KI_BROOCH, HARN_THORAX, L (HARN_THORAX) | L (HARN_SHOULDER) | L (HARN_NECK) },
+    { KI_NECKLACE, HARN_NECK, L (HARN_NECK) },
+    { KI_PENDANT, HARN_NECK, L (HARN_NECK) },
+    { KI_TALISMAN, HARN_NECK, L (HARN_NECK) | L (HARN_FOREARM) },   /* (A charm on a thong: the neck, the wrist) */
+    { KI_SCARF, HARN_NECK, L (HARN_NECK) | L (HARN_SKULL) | L (HARN_FACE) | L (HARN_ABDOMEN) },
+    { KI_EARRINGS, HARN_SKULL | WP_PAIR, L (HARN_SKULL) }
+};
+#undef L
+const unsigned char wroom[HARN_NLOCATIONS] = {
+    1, 1, 3, 1, 0, 0, 2, 4,                     /* skull (the head; the ears a pair), face, neck, shoulder, upper arm,
+                                                **   elbow, forearm (the wrist), hand */
+    2, 1, 0, 0, 0, 0, 0, 0                      /* thorax (the breast), abdomen (the waist), groin ... foot */
+};
+#pragma rodata-name (pop)
 
 /* The things' words (things.h's SA_*): % the thing's name, # the other's (the pack's, the belt's, a container's) */
 const char* const said[SA_COUNT] = {

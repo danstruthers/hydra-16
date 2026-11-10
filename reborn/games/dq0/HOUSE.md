@@ -1819,6 +1819,29 @@ hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous li
   in your left, the torch in your right."), refused if a thing's in both, or a hand to go to is useless.  A second's
   work each (10 tenths).  What's carried, a look and an examine say which hand ("a torch (lit), in your left hand",
   "Your spear is in both hands.").  (things.c's part 48; main.c's hand_said, limbs_cmd.)
+- **Where a thing's worn** *(the user's, 2026-11-10: "Wearing should extend to rings, necklaces, earrings, and other
+  jewelry, as well as scarves, and should keep track of where worn (as should all worn items that can be worn in more
+  than one place)"; rings by the hand, four a hand, the user's; the rest new, for review: DECISIONS.md's)*: a thing of
+  a kind worn in more than one place is worn at one, a HarnMaster location (and its side; earrings a pair), its item's
+  own (its sn: items.h's WP_*).  The kinds and their places (kinds.c's wplaces), the first each one's place unsaid: a
+  ring the hand; a brooch the breast, a shoulder, the neck; a necklace and a pendant the neck; a talisman the neck, a
+  wrist; a scarf the neck, the head, the face, the waist; earrings the ears.  How many one place holds, of all of them
+  worn there (kinds.c's wroom): a hand four, the neck three, the breast two, a wrist two, the head, the face, the
+  waist, a shoulder and the ears one (the ears a pair).  A ring with no hand said goes on the off hand, then the main
+  hand once that's full ("There's no room left on your hands for the ring."); a place said that's full, or one the
+  thing isn't worn at, refused ("There's no room left on your left hand for the ring.", "You can't wear the ring
+  about your neck.").  Said with wear, don, put on, or put on a part of the body: "wear the ring on my left hand",
+  "don the brooch at my left shoulder", "put the scarf on my head", "wear the scarf over my face", "put the necklace
+  around my neck", "wear the earrings in my ears" (the parts read after "my": head, ears, face, neck, throat,
+  shoulder, breast, chest, waist, hand, finger, wrist; "put the ring on my pack" still a put).  Told by place: the
+  inventory "(j) four rings, on your left hand", "(p) a scarf, over your face"; a look "Your scarf is worn on your
+  head."; a denizen examined "earrings in its ears, a ring on its right hand" (a denizen's place drawn by the thing's
+  own number from those its kind's worn at: the sn of a denizen's thing is the stratum it's filed in); "take off the
+  ring", rings on both hands, asks which by place ("Which one? (E) a ring, on your left hand, (F) a ring, on your right
+  hand"; "right" answers).  Wearing a ring picks one not worn; taking one off, one worn.  Everything else worn (clothes,
+  armour, a cloak, a pack, a belt, a slung shield or bow) is worn the one way, one of a kind, as before.  The place is
+  kept in the save (the item's own) and into the next dungeon (kit.dat's).  No armour: a ring under a gauntlet, a
+  scarf under a helm.  (things.c's don, wworn.c, part 107; worn.c, the UI's.)
 - **The main hand** is the referee's (its summary's limbs: HarnMaster's by the medical traits): the right, the left if
   it's left-handed; ambidextrous, the right, with no off hand.  The book's arm missing or deformed (Character 9: no
   work that needs both hands) makes its off arm the useless one, the house's choice of which.  (gear.c's limbs_of.)

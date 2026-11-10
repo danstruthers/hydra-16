@@ -68,10 +68,13 @@
 <get>            ::= <GET> [ <object> ] [ <from-phrase> ] [ <hand-phrase> ] | <GET> <object> <off-phrase> | <GET> <object> "up"   (* bare: the last thing named, else things near (question 8); "pick the sword up"; "take the torch in my right hand" (slice 4.1b) *)
 <drop>           ::= <DROP> [ <object> ] | "put" <object> "down" | "shrug" <object> "off"   (* bare: the last thing named *)
                    | <DROP> <thing> ( "into" | "in" | "inside" | "down" ) <object>   (* "drop the dagger into the well", "down the shaft": put in it (2026-11-06) *)
-<put>            ::= <PUT> <thing> <put-prep> <object> | <PUT> <thing> <hand-phrase>   (* "put the bar back in its brackets": back, a way, passed over; "put the dagger in my other hand": held there (slice 4.1b) *)
+<put>            ::= <PUT> <thing> <put-prep> <object> | <PUT> <thing> <hand-phrase> | <PUT> <thing> <worn-phrase>   (* "put the bar back in its brackets": back, a way, passed over; "put the dagger in my other hand": held there (slice 4.1b) *)
 <put-prep>       ::= "in" | "into" | "inside" | "on" | "onto" | "on top of" | "under" | "against" | "down"   (* "down the shaft": in it, 2026-11-06 *)
 <use>            ::= <USE> <object> [ ( "on" | "with" ) <object> ]
-<equip>          ::= <EQUIP> [ <object> ] [ <hand-phrase> ]   (* bare: the last thing named; "wield the sword in my left hand" *)
+<equip>          ::= <EQUIP> [ <object> ] [ <hand-phrase> | <worn-phrase> ]   (* bare: the last thing named; "wield the sword in my left hand"; "wear the ring on my left hand" *)
+<worn-phrase>    ::= ( "on" | "over" | "around" | "about" | "at" | "in" ) "my" [ "left" | "right" ] ( <object> | "head" | "hand" | "hands" | "face" )   (* where a
+                                                 thing's worn (2026-11-10, the user's): "put the scarf over my face", "wear the earrings
+                                                 in my ears"; the place the UI's to read (worn.c), the world's to keep *)
 (* ---- The hands (added 2026-10-22, slice 4.1b): the hand a thing goes in, or the one that holds what strikes ---- *)
 <hand-phrase>    ::= "in" [ "my" ] ( ( "left" | "right" | "other" | "off" | "main" ) "hand" | "both" "hands" )
 <swap>           ::= ( "swap" | "switch" | "change" ) "hands" | "swap"   (* what's in the hands changed over, left to right *)

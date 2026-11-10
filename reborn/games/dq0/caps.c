@@ -523,6 +523,10 @@ void o_which_ask (void)
         n = num ();
         f = num ();
         thing_said (kd, n, f);
+        if (f & WS_AT) {                        /* (Worn, its place's words after it: "a ring, on your left hand") */
+            *e = 0;
+            strncat (wb, np, sizeof wb - 2 - strlen (wb));
+        }
         cap_text (strcat (lb, k ? ", " : " ") + strlen (lb), kd = cap_give (id, CW_THING, kd));
         strcat (lb, wb);
         wb[sizeof UIREC->which_w[0] - 2] = 0;

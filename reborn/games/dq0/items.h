@@ -154,7 +154,27 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
                                                 **   the next theme's numbers are other things') and a copy of one (a sheet
                                                 **   written on): their clue by their fuel (life.h's CLUE_*: the plan for
                                                 **   the game between dungeons, its steps 9 and 10) */
+    KI_SCARF, KI_EARRINGS, KI_SHEET, KI_TOWEL,  /* (Worn places, the user's, 2026-11-10: a scarf, earrings, worn where
+                                                **   they're put; a linen sheet, a folk bed's; a towel) */
     KI_COUNT };
+/* Where a thing's worn (the user's, 2026-11-10: "should keep track of where worn"; HOUSE.md's worn places): a worn
+** thing's sn, of a kind worn in more than one place (kinds.c's wplaces: rings, jewelry, a scarf), its HarnMaster
+** location (harn.h's HARN_SKULL ... HARN_FOOT), WP_RIGHT its right side (harn.h's HARN_RIGHT), WP_PAIR one of each side
+** (earrings); WP_NONE a thing worn the one way (clothes, a pack: one of a kind) */
+#define WP_LOC          0x0F
+#define WP_AT           0x10                    /* (Its place given: a worn thing's sn without it, 0x20 clear, has none yet,
+                                                **   its kind's own: an outfit's, its sn 0) */
+#define WP_PAIR         0x40
+#define WP_RIGHT        0x80
+#define WP_NONE         0xFF
+#define WP_KIT          0x80                    /* (kit.dat's: a worn thing's place in its ofit's in, WP_KIT | its loc
+                                                **   | WP_PAIR, 0x20 its right side: never a container's entry, NOFIT
+                                                **   at most) */
+struct wplace {                                 /* (kinds.c's wplaces: a kind worn in more than one place) */
+    unsigned char   kind, dflt;                 /* Its kind; its place unsaid (WP_*: a location, WP_PAIR) */
+    unsigned        allow;                      /* The locations it may be worn at (1 << HARN_*) */
+};
+#define NWPLACES        7
 #define ROPE_FEET       50                      /* (A coil's length: the house's) */
 #define IO_ROPE         0x20                    /* (IO_HIDE's to: a rope's work, RP_* in its low bits: wrope.c's) */
 #define RP_OP           0x03
@@ -419,6 +439,8 @@ enum { PZ_DONE, PZ_NONE, PZ_NO, PZ_FAR, PZ_OLD };       /* (IO_PUZZLE's: a rule 
 #define SL_WHICH        0x7F                    /* (The chooser's every one of a name, the world's own: its step 5's which) */
 enum { WS_LIT = 1, WS_SPENT = 2, WS_NEARLY = 4, WS_LOW = 8, WS_EMPTY = 16 };   /* (IR_WHICH's choices' states: "(lit)",
                                                 **   "(spent)", "(nearly spent)", "(burning low)", "(empty)") */
+#define WS_AT           32                      /* (A choice worn somewhere, its place's words after it: ", on your left
+                                                **   hand", the world's worn_which, 2026-11-10) */
 enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE, IR_NO, IR_FIXED, IR_FUMBLED, IR_WHICH };    /* (IR_NO: refused,
                                                 **   the things' words why; IR_FIXED: a portal's part, in it; IR_FUMBLED:
                                                 **   IO_GET's, I_TAKE's, engaged, a grope failed: the round wasted,

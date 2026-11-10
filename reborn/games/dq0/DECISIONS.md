@@ -2856,3 +2856,78 @@ Five of the verbs that said "not yet" now do something in the world: pray and pr
     "tread water"; "swim south" out.
   - dq0follow: "follow me" to a befriended rat, the ally's order (SW_ORDER OR_FOLLOW, SR_OK); "follow the sack"
     refused; a shy rat followed, walked after, and lost.
+
+## Worn places (2026-11-10, as built, for review: the user's, "Wearing should extend to rings, necklaces, earrings, and other jewelry, as well as scarves, and should keep track of where worn")
+
+The user's words: "Wearing should extend to rings, necklaces, earrings, and other jewelry, as well as scarves, and should
+keep track of where worn (as should all worn items that can be worn in more than one place)."  The user's decision:
+rings by the hand only (left or right), up to four a hand, not by the finger.  The design's part (A) (the worn places;
+the bandages and the materials are other work).  What's built:
+
+- **The place is the item's own, its sn.**  A worn thing's sn was used by nothing (a held one's is its hand, IH_*; one
+  on a square's, its stratum).  A worn thing of a kind worn in more than one place keeps its place there (items.h's
+  WP_*): a HarnMaster location (harn.h's HARN_SKULL ... HARN_FOOT, the low four bits), WP_RIGHT its right side (harn.h's
+  HARN_RIGHT, 0x80), WP_PAIR (0x40) a pair (earrings), and WP_AT (0x10) its place given.  WP_AT is the build's, not the
+  design's: an outfit's worn thing is made with sn 0 (outmake.c's: its hand, none), which is HARN_SKULL, "on your head";
+  without the mark a scarf drawn into an outfit would be on its head.  An sn without it (0x20 clear) is its kind's own
+  place.  outmake.c was left as it was: its part (58) has 4 bytes free.  Nothing in the save changes size.
+- **The table is kinds.c's** (its wplaces and wroom), each multi-place kind its place unsaid, the locations it may be
+  worn at (a 16-bit mask), and each location's room (of everything worn there with a place): a ring the hand (four a
+  hand); a brooch the breast (two), a shoulder (one), the neck; a necklace and a pendant the neck (three); a talisman the
+  neck, a wrist (two); a scarf the neck, the head (one), the face (one), the waist (one); earrings the ears (a pair: the
+  head's location with WP_PAIR, so a scarf on the head and earrings don't take each other's room).  The table is linked
+  into part 107's image (its rodata's segment), not the catalogue's bank: that bank's code was 29 bytes from its end.
+  Everything else worn (clothes, armour, a cloak, the mask, a pack, a belt, a bandolier, a slung shield or bow) keeps
+  sn WP_NONE and the one-of-a-kind rule as it was.
+- **The rule's in a swapped part, reached by its stub.**  things.c's don (the catalogue's bank: 6,371 of 6,400 bytes)
+  lost its one-of-a-kind loop to part 107's worn_at (wworn.c: worn already, SA_WORN; one of a kind for the rest; the
+  place said checked and its room counted; unsaid, the kind's own, a ring's the off hand's and then the other's), and
+  sets the item's sn from its answer: the bank's code 6,345 bytes now, the four new kinds' throws included.  Its refusals
+  are the part's own words: "There's no room left on your left hand for the ring.", "There's no room left on your hands
+  for the ring." (unsaid, both full), "You can't wear the ring about your neck.".
+- **Defaults when no place is said:** a ring the off hand (the referee's limbs: the left, the right if left-handed),
+  then the main hand when the off hand has four; a brooch the breast; a necklace, a pendant, a talisman and a scarf the
+  neck; earrings the ears.
+- **Phrasing.**  The grammar's `<worn-phrase>` (commands.ebnf: on, over, around, about, at, in; "my"; left or right; the
+  part, an open noun, or "head", "hand", "hands", "face", which are the grammar's own words) after `<equip>` and `<put>`.
+  The meaning the parser makes of it is uneven ("over" and "head" are little words; "wear the scarf over my face" makes
+  the face the thing), so the UI reads the place from the line as tend.c reads "left" and "right": worn.c's worn_said
+  (overlay 14, sway.c's place_said's first): a wear, a don, a put on or a put whose line has " my " then (left, right)
+  a part of the body (head, ears, ear, face, neck, throat, shoulder, breast, chest, waist, hands, hand, finger, wrist) is
+  a don there, its thing's word the one before the preposition if the parser took the part for it; the other the place
+  in the world's words ("@", the location as a letter, the side l, r or -).  "put the ring on my pack" is still a put.
+  main.c's hand_said no longer makes "on my left hand" a hold (a line with prep on).  "don" and "put on" take a place as
+  "wear" does (their aux IO_DON; wear's DN_WORN refuses a weapon as before).
+- **Display.**  The inventory: ", on your left hand", ", about your neck", ", in your ears", ", over your face", ", at
+  your breast", ", worn" for the rest; alike things worn in one place together ("(j) four rings, on your left hand"),
+  in two places apart.  A look: "Your scarf is worn on your head."  A denizen examined: "It wears earrings in its ears, a
+  ring on its right hand, a belt ...".
+- **Which, by place.**  "take off the ring" with rings worn in two places or more: the world's which (IR_WHICH, as a
+  take's), each place's first by its id, its state WS_AT and the place's words after it; caps.c words it, "Which one? (E)
+  a ring, on your left hand, (F) a ring, on your right hand", and a capital, a number, or "left"/"right" answers.  For
+  it, the UI's first words no longer fix a take off's thing by its own choice (sway.c's bind: not for IO_DOFF), and both
+  choosers (the world's pick_, the UI's ix_pick) put a worn thing last for a wear and an unworn one last for a take off:
+  "wear the ring" with one worn takes another, not "You wear the ring already.".
+- **Denizens.**  A denizen's thing's sn is the stratum it's filed in, so its place isn't kept: it's drawn from the
+  thing's own number (its id) among its kind's places, and its side by the id's second bit; the same each time.  The
+  outfits' jewelry worn (jewel@worn, the talisman, the ring of rank) shows at its place.
+- **kit.dat** keeps the place in its ofit's in (meaningless for a worn thing): WP_KIT (0x80) | the location | WP_PAIR,
+  0x20 its right side; never a container's entry (NOFIT, 64, at most), so outmake, wfetch's fit and dq0acct read it
+  as none.  Part 63 lays it on the thing as the kit's carried on.
+- **New kinds** (items.h's, after KI_COPY; kinds.c's): scarf (6d, worn; MT_CLOTH till the materials' split: wool),
+  earrings (40d, silver, a pair, worn), linen sheet (24d; MT_CLOTH: linen), towel (4d; MT_CLOTH: linen).  outfits.txt:
+  a bandit's bed a linen sheet (40 in 100), a bandit lord's and a priest's always; a scarf for a bandit lord (30); earrings
+  for the people of standing (25), lords (20) and a bandit lord (25), a scarf for the people of standing (30).  A
+  bandit's scarf was left out: its section's 255 bytes (outdraw.c's) were 5 over.  town.txt's market sells the scarf and
+  the towel.
+- **Left for review:** veils and kerchiefs (optional in the design) aren't added; a brooch at the shoulder and a talisman
+  at the wrist are the house's; the place isn't changed by wearing a thing worn already somewhere else ("You wear the
+  ring already."): take it off first.  Taking off by place ("take off the ring on my left hand") isn't read: the which
+  asks instead.
+- **Room:** dq0's main RAM 2,262 bytes free (2,272 before), dq0w's 2,408 (2,483); part 107 2,167 bytes of 3,648; overlay
+  14 153 free.  The build's packer moved parts among the banks to make room.
+- **Tests:** dq0worn (four rings on the left hand by wear, put on and don, a fifth refused; a ring at the neck refused; a
+  ring unsaid on the right hand; a scarf on the head, a necklace around the neck, earrings by default; the inventory and
+  a look by place; "take off the ring" asks which by place, "right" answers; the scarf over the face), dq0wornkit (a
+  ring on each hand and a scarf over the face kept in the save and into the next dungeon), dq0wornden (a bandit's
+  jewelry examined at its places).

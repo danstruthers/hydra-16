@@ -438,6 +438,10 @@ static unsigned char __fastcall__ ix_pick (const char* w, unsigned char sel, uns
         rk[e] = r == 1 && (f & CX_HELD) ? op == IO_LIGHT && (f & CX_LIT) : r + 1;   /* (A light lit in a hand, none
                                                 **   said: after one unlit in a hand, before any other: "lit already",
                                                 **   the world's held_lit, 2026-11-07) */
+        if (op == IO_DON ? f & CX_WORN : op == IO_DOFF && !(f & CX_WORN)) {
+            rk[e] = 9;                          /* (To wear, one not worn first; to take off, one worn: the world's pick_,
+                                                **   the second ring, 2026-11-10) */
+        }
     }
     for (r = 0; r < 13; ++r) {
         for (e = 0; e < nix; ++e) {
@@ -560,7 +564,7 @@ void __fastcall__ o_walk_ahead (const char* name)
     }                                           /* (A handle's, a letter's: that thing, carried or not, its
                                                 **   first words; none other of its name's, 2026-11-07) */
     if ((e = des_e (name)) == 0xFF && hd >= ndes && (e = ix_pick (name, sel, op, in)) != 0xFF && (op == IO_DROP || (op >= IO_HOLD &&
-        op <= IO_DOUSE && op != IO_TAKE)) && ((y = sel & 15) <= SL_ANY || y == SL_NTH || y == SL_OTHER ||
+        op <= IO_DOUSE && op != IO_TAKE && op != IO_DOFF)) && ((y = sel & 15) <= SL_ANY || y == SL_NTH || y == SL_OTHER ||
         (y > SL_OTHER && op < IO_LIGHT)) && !(op == IO_LIGHT && (ix[e].flags & CX_LIT)) && (!cmd.other.word[0] ||
         ((op == IO_PUT || op == IO_STOW) && strcmp (cmd.other.word, name)))) {
         bind (name, e);                         /* (Chosen here, the first words', and made final: the world's asked of
@@ -656,11 +660,13 @@ told:
 /* A place said where a thing's other would be ("take the torch from the floor", "put it on the ground": the user's
 ** playtest, 2026-11-06, "You see no floor here"): where things lie about, not a thing: taken up, put down, of those lying
 ** there (the world's chooser leaves out those carried).  Overlay 14's since 2026-11-06 (overlay 20's room) */
+void worn_said (void);                          /* (worn.c's: a place on the body, "on my left hand", 2026-11-10) */
 void o_place_said (void)
 {
     static const char* const places[] = { "floor", "ground", "bottom", "here" };
     unsigned char k;
 
+    worn_said ();
     for (k = 0; k < sizeof places / sizeof places[0]; ++k) {
         if (!strcmp (cmd.other.word, places[k])) {
             cmd.other.word[0] = cmd.other.sel = cmd.other.n = 0;

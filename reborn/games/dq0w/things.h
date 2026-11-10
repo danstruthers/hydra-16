@@ -251,3 +251,12 @@ extern unsigned char burn_ask;                  /*   (or at once: a light's chan
 #define BA_SCONCES      4                       /*   BA_SCONCES, a minute's second pass, part 27's) */
 #define CLOCK_256       (*(unsigned*) ((unsigned char*) &HUB->now + 1))   /* (The clock in 25.6 seconds, 16 bits: its
                                                 **   tenths' middle bytes, no long division: ipage.c's stamps) */
+/* ---- Where a thing's worn (part 107's: wworn.c, the user's, 2026-11-10; HOUSE.md's worn places) */
+unsigned char __fastcall__ worn_at (unsigned n, unsigned k);  /* (Thing n, of kind k, to be worn: 0, its place in wplace;
+                                                **   else SA_*, or 0xFF its words said: the catalogue's don's) */
+extern unsigned char wplace;
+void __fastcall__ worn_put (unsigned n, unsigned char how);    /* (Where thing n's worn, in words: WH_*) */
+enum { WH_LIST, WH_LOOK, WH_DEN };              /* (The inventory's ", on your left hand" (else ", worn"); a look's
+                                                **   " on your left hand", after "worn"; a denizen's " on its left hand") */
+unsigned char worn_which (void);                /* ("Take off the ring", worn in two places or more: IR_WHICH, asked by
+                                                **   place; else 0) */

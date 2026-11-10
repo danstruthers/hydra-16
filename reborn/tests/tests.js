@@ -3782,7 +3782,25 @@ const LETCMD = ['inventory', 'drop j', 'inventory', 'take torch', 'put j in b', 
   'drop', 'k', 'take off', 'look', 'drop the lit torch', 'inventory'];   // (dq0letcmd's lines)
 const WEARONLY = ['inventory', 'wear the sword', 'wear the torch', 'wear the sack', 'wear', 'k', 'stow the sword', 'equip the sword', 'inventory',
   'stow the sword', 'wield the sword', 'inventory'];   // (dq0wearonly's lines: k the cloak's letter, the answer to "Wear what? [k]")
-const LETDENS = ['look', 'around', 'look at B', 'talk to C', 'attack C', 'attack A', 'around'];   // (dq0letdens' lines)
+const WORN = ['inventory', 'wear the ring on my left hand', 'wear the ring on my left hand', 'put on the ring on my left hand', 'don the ring on my left hand',
+  'wear the ring on my left hand', 'wear the ring on my neck', 'wear the ring', 'inventory', 'put the scarf on my head', 'put the necklace around my neck', 'wear the earrings',
+  'examine the scarf', 'inventory', 'take off the ring', 'right', 'inventory', 'take off the scarf', 'wear the scarf over my face', 'inventory'];   // (dq0worn's lines)
+const WORNKIT = [['wear the ring on my left hand', 'wear the ring on my right hand', 'put the scarf over my face', 'inventory', 'quit'],   // (dq0wornkit's: a game,
+  ['inventory', 'drop the hatchet', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u'], ['inventory', 'quit']];   //   carried on, the next dungeon)
+// (A dq0 game's answers, a line's each: from its echo to the next prompt, the story's colours and boxes gone)
+const dq0Segs = (out, lines) => {
+  const o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
+  let at = 0;
+  for (const l of lines) {
+    let i = o.indexOf('> ' + l + ' ', at);
+    if (i >= 0 && o.startsWith('> ' + l + ' ', i + l.length + 3)) i += l.length + 3;
+    const e = i < 0 ? -1 : o.indexOf('> ', i + 2);
+    seg.push(i < 0 ? '' : o.slice(i + l.length + 3, e < 0 ? undefined : e));
+    if (i >= 0) at = i + 2;
+  }
+  return seg;
+};
+const LETDENS = ['look','around', 'look at B', 'talk to C', 'attack C', 'attack A', 'around'];   // (dq0letdens' lines)
 const LETWHICH = ['drop j', 'pick up the torch', 'inventory', 'drop j', 'drop a', 'drop k', 'take the torch', 'F', 'take the torch', '2', 'inventory',
   'drop j', 'take torch', 'lit', 'inventory'];   // (dq0letwhich's lines)
 const LETSEVERAL = ['drop j', 'drop h i', 'look', 'take E F', 'inventory', 'letter h as t', 'inventory', 'drop t', 'letter q as r'];   // (dq0letseveral's lines)
@@ -8801,6 +8819,91 @@ module.exports = {
         held('wield the sword', WEARONLY.indexOf('wield the sword'));
         for (const k of ['equip the sword', 'wield the sword']) if (/can't wear/.test(seg[WEARONLY.indexOf(k)])) f.push(k + ': refused as a wear');
         if (!/a cloak, worn/.test(seg[WEARONLY.lastIndexOf('inventory')])) f.push('the cloak not worn: ' + seg[WEARONLY.lastIndexOf('inventory')].slice(0, 400));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0worn', near: ['gear', 'parser'], what: "Dingus Quest Zero's worn places (the user's, 2026-11-10: \"Wearing should extend to rings, necklaces, earrings, and other jewelry, as well as scarves, and should keep track of where worn\", DECISIONS.md's): four rings on the left hand, a fifth refused there; a ring where it's never worn refused; a ring unsaid on the right hand once the off hand is full; a scarf put on the head, a necklace put around the neck, earrings in the ears by their kind; the inventory's and a look's words by place; \"take off the ring\" asking which by place, \"right\" answering; the scarf worn over the face",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'ring,ring,ring,ring,ring,ring,necklace,scarf,earrings'",
+        ...WORN, 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], seg = dq0Segs(out, WORN);
+        this.notes = WORN.map((l, i) => l + ': ' + seg[i].slice(0, 300));
+        const said = (i, re) => { if (!re.test(seg[i])) f.push(i + ' ' + WORN[i] + ': not ' + re + ': ' + seg[i].slice(0, 400)); };
+        const not = (i, re) => { if (re.test(seg[i])) f.push(i + ' ' + WORN[i] + ': ' + re + ': ' + seg[i].slice(0, 400)); };
+        for (const i of [1, 2, 3, 4]) said(i, /You put on the ring\./);
+        said(5, /There's no room left on your left hand for the ring\./);
+        said(6, /You can't wear the ring about your neck\./);
+        said(7, /You put on the ring\./);
+        said(8, /\) four rings, on your left hand/);
+        said(8, /\) a ring, on your right hand/);
+        said(9, /You put on the scarf\./);
+        said(10, /You put on the necklace\./);
+        said(11, /You put on the earrings\./);
+        said(12, /Your scarf is worn on your head\./);
+        said(13, /\) a scarf, on your head/);
+        said(13, /\) a necklace, about your neck/);
+        said(13, /\) earrings, in your ears/);
+        said(14, /Which one\? .*\(\w\) a ring, on your left hand/);
+        said(14, /Which one\? .*\(\w\) a ring, on your right hand/);
+        said(15, /You take off the ring\./);
+        said(16, /\) four rings, on your left hand/);
+        not(16, /on your right hand/);
+        said(18, /You put on the scarf\./);
+        said(19, /\) a scarf, over your face/);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0wornkit', outfit: true, near: ['gear', 'save'], what: "Dingus Quest Zero's worn places kept (the user's, 2026-11-10): a ring on each hand and a scarf over the face kept in the save (quit, carried on with dq0 -d: the item store's sn) and into the next dungeon (kit.dat: its ofit's in, WP_KIT's)",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,ring,ring,scarf -d /ram/q', ...WORNKIT[0],
+        'dq0 -d /ram/q', ...WORNKIT[1], 'dq0 -p t -s 259 -d /ram/q', ...WORNKIT[2], 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], invs = dq0Story(out).split('You carry:').slice(1).map(t => t.slice(0, t.indexOf('In all, ') < 0 ? 600 : t.indexOf('In all, ')));
+        this.notes = invs.map(t => t.slice(0, 600));
+        if (invs.length !== 3) return ['not three inventories: ' + invs.length];
+        ['the first game', 'carried on (the save)', 'the next dungeon (kit.dat)'].forEach((w, i) => {
+          for (const re of [/\) a ring, on your left hand/, /\) a ring, on your right hand/, /\) a scarf, over your face/]) if (!re.test(invs[i])) f.push(w + ': not ' + re + ': ' + invs[i].slice(0, 500));
+        });
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0wornden', outfit: true, near: ['gear', 'denizens'], what: "Dingus Quest Zero's worn places, a denizen's (the user's, 2026-11-10): its jewelry at its places, drawn by each thing's own number (its sn the stratum it's filed in), told as it's examined: a bandit's clothes made earrings and its shoes a ring (the scene's), \"earrings in its ears\", \"a ring on its left (or right) hand\"",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm', 'echo ml swd 95 >> /ram/c.hm',
+        'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0hour=128', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'",
+        'drop the staff', 'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'examine the bandit', 'quit', 'echo $status']) },
+      start(m) {   // (At "examine the bandit"'s Enter: every bandit's clothes worn made earrings, its shoes or boots a ring)
+        const jewel = (h, L) => {
+          const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize), K = m.dq0.layout().K;
+          const kname = k => { let n = ''; for (let j = 0; j < 14 && cat[k * L.kindSize + j]; j++) n += String.fromCharCode(cat[k * L.kindSize + j]); return n; };
+          const kind = n => { for (let k = 1; k < 256; k++) if (kname(k) === n) return k; return 0; };
+          const ear = kind('earrings'), ring = kind('ring');
+          for (let i = 0; i < L.nitems; i++) {
+            const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+            if (!b || !b[o + L.iKind] || b[o + L.iWhere] !== K.IW_DEN || !(b[o + L.iFlags] & DQ0_I.WORN)) continue;
+            const n = kname(b[o + L.iKind]);
+            if (n === 'clothes') b[o + L.iKind] = ear;
+            else if (n === 'shoes' || n === 'knee boots') b[o + L.iKind] = ring;
+          }
+        };
+        dq0Poke(m, [{ g: 1, line: 'examine the bandit', n: 1, call: jewel }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = dq0Story(out), i = o.indexOf('> examine the bandit'), w = i < 0 ? '' : o.slice(i, i + 700), f = [];
+        this.notes = [w];
+        if (!/The bandit (?:holds|wears)/.test(w)) return ['the bandit not examined: ' + w];
+        if (!/earrings in its ears/.test(w)) f.push('no earrings in its ears: ' + w);
+        if (!/a ring on its (?:left|right) hand/.test(w)) f.push('no ring on its hand: ' + w);
         return f;
       },
       sdcard: true

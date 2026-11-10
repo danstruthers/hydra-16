@@ -42,7 +42,7 @@ market   | Hucksters cry their wares up and down the street.
 smith    | The smith's forge glows under a lean-to by the gate.
 smith    | The smith looks up from the anvil and wipes his hands.
 asking   | You ask about the inns and the market for anyone who needs a hand.
-goods    | torch | candle | flask of oil | pot of pitch | lantern | tinderbox | rations | waterskin | rope | backpack | sack | pouch | bandages | chalk | paper | parchment | quill | horn of ink | charcoal | crowbar | iron spike | grapple | antidote | remedy | whetstone | blanket | cloak | lockpicks | shovel | pick | hammer | chisel
+goods    | torch | candle | flask of oil | pot of pitch | lantern | tinderbox | rations | waterskin | rope | backpack | sack | pouch | bandages | chalk | paper | parchment | quill | horn of ink | charcoal | crowbar | iron spike | grapple | antidote | remedy | whetstone | blanket | cloak | scarf | towel | lockpicks | shovel | pick | hammer | chisel
 blades   | knife | dagger | shortsword | sword | falchion | hatchet | axe | mace | spear | club | staff
 words    | 1 inn tavern rest sleep listen hear rumours rumour talk
 words    | 2 market buy sell haggle bargain price how what goods

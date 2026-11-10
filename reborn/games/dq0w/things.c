@@ -2252,6 +2252,11 @@ unsigned char s_serve (void)
             iq.result = well_put ();
             break;
         }
+    case IO_DOFF:                               /* (Worn in two places or more, by its word: which, asked by place, part
+                                                **   107's, 2026-11-10) */
+        if (iq.kind == IO_DOFF && (iq.result = worn_which ()) != 0) {
+            break;
+        }
     default:                                    /* (A thing handled: IO_HOLD ...) */
         afar = 0;
         k = iq.kind;
@@ -2666,6 +2671,10 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
                 continue;                       /* (Another's: a denizen's) */
             }
             r = d ? 1 + (d > 6 ? 6 : d) : rec.flags & I_HELD ? 0 : 1;
+            if (iq.kind == IO_DON ? rec.flags & I_WORN : iq.kind == IO_DOFF && !(rec.flags & I_WORN)) {
+                r = 7;                          /* (To wear, one not worn first; to take off, one worn: the second
+                                                **   ring, 2026-11-10) */
+            }
         } else {
             if (how == HW_CARRIED || d > 1 || ps != sn || (dx = px - x + 20) > 40 || (dy = py - y + 20) > 40 ||
                 (d && !(kind_of (pk)->keeps & KF_ON)) || !(t = at (sn, px, py)) || (!(*t & T_VIS) &&
@@ -3829,6 +3838,9 @@ static unsigned char __fastcall__ gthing (unsigned i, const char* pre, unsigned 
     } else {
         put (nm);
     }
+    if ((gr.flags & (I_WORN | I_HELD)) == I_WORN) {
+        worn_put (i, WH_DEN);                   /* (" on its left hand": part 107's, 2026-11-10) */
+    }
     if (c) {
         strcpy (cn, kind_at (c)->name);
         put (" in a ");
@@ -4146,6 +4158,9 @@ static unsigned char __fastcall__ look_at (unsigned n)
     if (rec.where == IW_ACTOR) {
         put (where[rec.flags & I_HELD ? 2 + (rec.sn & IH_BOTH) : !(rec.flags & I_WORN)]);   /* (The hand it's in, its sn:
                                                 **   slice 4.1b's) */
+        if (rec.flags & I_WORN) {
+            worn_put (n, WH_LOOK);              /* (" on your left hand": part 107's, 2026-11-10) */
+        }
     } else if (rec.where == IW_ITEM) {
         q = kind_of (item_at (rec.x)->kind);     /* (What it's in, or on) */
         put (q->keeps & KF_ON || q->flags & K_BELT ? "on " : "in ");
@@ -4344,7 +4359,8 @@ static void __fastcall__ kit_put (unsigned i, unsigned char in)
     ke.o.quality = kr.quality;
     ke.o.place = in ? PL_IN : !(kr.flags & I_HELD) ? PL_WORN : (kr.sn & IH_BOTH) == IH_BOTH ? PL_BOTH :
         kr.sn & kmh ? PL_HAND : PL_OFF;
-    ke.o.in = in;
+    ke.o.in = in ? in : (kr.flags & I_WORN) && (kr.sn & 0x30) == WP_AT ? WP_KIT | (kr.sn & (WP_LOC | WP_PAIR)) |
+        (kr.sn & WP_RIGHT ? 0x20 : 0) : 0;      /* (Worn, its place: WP_KIT's, 2026-11-10) */
     ke.o.flags = kr.flags & I_LIT ? TF_LIT : 0;
     ke.o.mat = kr.mat;
     memcpy (&ke.wear, &kr.wear, KIT_ITEM);      /* (Each thing as it is: the plan's step 3) */
@@ -4772,7 +4788,7 @@ static unsigned next_in (void)
 #pragma static-locals (pop)
 
 /* Each thing at where, x worded, and what's in it, or on it */
-static unsigned char lsig, lkf, lwo, ln, lin;
+static unsigned char lsig, lkf, lwo, ln, lin, lsn;
 static const struct kind* cl_k;
 static struct item* cl_p;
 static struct got* gp;
@@ -4787,7 +4803,8 @@ static unsigned char __fastcall__ alike (unsigned i, unsigned* told, unsigned ch
     static unsigned char r;
 
     cl_p = item_at (jn);
-    r = cl_p->qty == 1 && (cl_p->flags & I_WORN) == lwo && !(cl_p->flags & (I_NAMED | I_HELD)) && sig (cl_p) == lsig;
+    r = cl_p->qty == 1 && (cl_p->flags & I_WORN) == lwo && !(cl_p->flags & (I_NAMED | I_HELD)) && sig (cl_p) == lsig &&
+        (!lwo || cl_p->sn == lsn);              /* (Worn in the same place: two rings on the left hand, 2026-11-10) */
     if (r && lin == 0xFF) {
         nx_n = 0;
         nx_w = IW_ITEM;
@@ -4848,6 +4865,7 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
         } else if (tw.qty == 1 && !(tw.flags & (I_NAMED | I_HELD))) {   /* (One that may have others alike: alike's) */
             lsig = sig (&tw);
             lwo = tw.flags & I_WORN;
+            lsn = tw.sn;
             lin = 0xFF;                         /* (Whether something's in it: alike's to ask) */
             if (ngot != 0xFF) {
                 hub_map (KIND_BANK);            /* (The list's bank in the window once, and again after alike's: an
@@ -4893,8 +4911,11 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
             put (!(jn = next_in ()) ? " (empty)" : item_at (jn)->qty >= twk->cap_bulk ? " (full)" : "");
         }
         if (!depth) {
-            put (tw.flags & I_HELD ? hands_in[tw.sn & IH_BOTH] : tw.flags & I_WORN ? ", worn" : "");  /* (The hand
-                                                **   it's in, its sn: slice 4.1b's) */
+            if (tw.flags & I_WORN) {
+                worn_put (i, WH_LIST);          /* (Where: ", on your left hand", part 107's, 2026-11-10) */
+            } else {
+                put (tw.flags & I_HELD ? hands_in[tw.sn & IH_BOTH] : "");  /* (The hand it's in, its sn: slice 4.1b's) */
+            }
         }
         if (lkf && !(tw.shut & IS_CLOSED)) {    /* (Closed: what's in it not told) */
             contents (IW_ITEM, i, depth + 1);
@@ -5631,7 +5652,6 @@ static unsigned char take_from (void)
 /* Worn (a thing held in the hand, not worn: held, equip's; "wear"'s, to DN_WORN, refused, 2026-11-09) */
 static unsigned char __fastcall__ don (unsigned n)
 {
-    static unsigned i;
     static unsigned char k, kf;
 
     k = B (m1 (item_kind, n));
@@ -5639,16 +5659,16 @@ static unsigned char __fastcall__ don (unsigned n)
     if (!(kf & K_WEAR)) {
         return kf & K_HAND && !(iq.to & DN_WORN) ? hold (n) : no (SA_NO_WEAR);
     }
-    for (i = 1; i < NITEMS; ++i) {              /* (One of a kind worn: a second pack, a second cloak, no) */
-        FETCH (i);
-        if (o.kind == k && o.where == IW_ACTOR && !o.x && (o.flags & I_WORN)) {
-            return no (i == n ? SA_WORN : SA_WEAR_ONE);
-        }
+    if ((k = B (m2 (worn_at, n, k))) != 0) {   /* (Worn already; one of a kind worn, a second cloak; where it's worn, its
+                                                **   room there: part 107's, 2026-11-10, worn places) */
+        return k == 0xFF ? IR_NO : no (k);
     }
     if (B (m2 (reach_step, n, 0))) {
         return IR_NO;
     }
     o_place (n, IW_ACTOR, 0, I_WORN);
+    o.sn = wplace;                              /* (Its place: WP_NONE, one worn the one way) */
+    m2 (store, (unsigned) &o, n);
     return yes (SA_DON, 50);
 }
 
@@ -6640,6 +6660,10 @@ void s_kit (void)
                     if (((struct kitrec*) tbuf)->dur_max && !(kind_at (i)->form & KF_SMALL)) {
                         item_at (i)->wear = ((struct kitrec*) tbuf)->wear;
                         memcpy (&item_at (i)->dur, &((struct kitrec*) tbuf)->dur, KIT_STATE);
+                    }
+                    if ((k = ((struct kitrec*) tbuf)->o.in) & WP_KIT && ((struct kitrec*) tbuf)->o.place == PL_WORN) {
+                        item_at (i)->sn = WP_AT | (k & (WP_LOC | WP_PAIR)) | (k & 0x20 ? WP_RIGHT : 0);   /* (Where it was
+                                                **   worn: kit_put's, 2026-11-10) */
                     }
                     if ((k = ((struct kitrec*) tbuf)->let - 1) < NLET) {
                         box = item_at (i)->id;  /* (Its letter as it was: hub.h's designators, by its id, or by its
