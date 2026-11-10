@@ -1,7 +1,7 @@
 /*
 ** wwell2.c - (dq0w) a thing let fall into a well, or down any shaft or hole within reach (the user's, 2026-11-06: "A real
 ** shaft"; HOUSE.md's a well's shaft): put on the head's square, then down to its foot, its landing heard, a splash in its
-** water.  Swapped part 104's (dq0w.rop's overlay 31, as part 103 is: the things' serve reads it in first), through its
+** water.  Swapped part 104's (dq0w.rop's overlay 32, as part 103 is: the things' serve reads it in first), through its
 ** stub, well_put; the well's own work part 103's, through its stub (well: WL_NEAR, WL_SHAFT, WL_FOOT), what it keeps in
 ** the things' request's copy (iq), wwell.c's W_*.
 */

@@ -1297,7 +1297,7 @@ static unsigned char __fastcall__ start_ledge (unsigned char up, unsigned char f
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 97 (2026-11-04: part 2's till then, its room; overlay 29's, in dq0w.rop, read as it's first wanted: things.c's ropes_in): climbing, a round at a time; a rope's help (the
+/* ==== Part 97 (2026-11-04: part 2's till then, its room; overlay 30's, in dq0w.rop, read as it's first wanted: things.c's ropes_in): climbing, a round at a time; a rope's help (the
 ** user's A16: HOUSE.md's rope and grapples; wrope.c's the rest) */
 #pragma code-name (push, "SW97CODE")
 #pragma rodata-name (push, "SW97RODATA")

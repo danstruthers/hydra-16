@@ -25,8 +25,8 @@
 #include "cmds.h"
 
 #pragma local-strings (on)
-#pragma code-name ("SW27CODE")
-#pragma rodata-name ("SW27RODATA")
+#pragma code-name ("SW28CODE")
+#pragma rodata-name ("SW28RODATA")
 
 extern unsigned char finds;                     /* (main.c's: a search's end awaited) */
 
