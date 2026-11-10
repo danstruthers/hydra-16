@@ -2931,3 +2931,70 @@ the bandages and the materials are other work).  What's built:
   a look by place; "take off the ring" asks which by place, "right" answers; the scarf over the face), dq0wornkit (a
   ring on each hand and a scarf over the face kept in the save and into the next dungeon), dq0wornden (a bandit's
   jewelry examined at its places).
+
+## Words said, a knock, the minds swayed (2026-11-10, as built, for review: the verbs plan's batches B2 and B3)
+
+Six of the stubs (say, knock, wake, taunt, orate, pretend) now do a thing in the world, the user's rule.  Their words are
+minds.c's (the UI's part 27, a part of its own in a new bank, overlay 25: the UI's banks had nowhere 3.8K bytes left,
+part 2 only 110), the minds the denizens' (dq0d.c's part 24, `s_minded`, new: parts 2 and 16 full), the noise the world's.
+
+- **I_NOISE, the world's** (part 37): the intent made the denizens' E_NOISE (its loudness, what it is, its square or
+  the character's), two seconds' work.  The denizens' `hear` took the character's noises already: each actor in hearing
+  (the senses' sound layer, a sleeper's hearing halved) turns to it and stands a while, and a sleeper that hears it is
+  woken (its rouse).  New: words or a knock (E_NOISE's b `NZ_VOICE`, `NZ_KNOCK`, hub.h) draw a foe that hears them on
+  to where they were made (drawn: it comes to look).  The sound task plays no sound for a voice (dq0s.c), a knock a blow's.
+- **say, yell, whisper** (and a line in quotes: y"..." yelled, w"..." whispered, one ending in ! yelled): the words said
+  back ('You say, "hello there"'), the noise 3, 6 or 1.  The words are the line's (cl): the parser keeps none.  A
+  denizen awake, near (within the loudness in squares) and facing the character, is asked as a talk (SW_TALK, the one
+  meant by den_meant), its words said only if it's taken so (a beast, a tongue not shared, as far as it goes: nothing
+  said).  "say" and "yell" with no words the grammar doesn't take, as before.
+- **knock**: on a door (a portcullis, a window), walked up to and faced first (feature's), "You knock on the door.",
+  noise 3, heard beyond it by the sound layer, so a foe comes to look.  Along a wall ("knock on the wall", and the
+  grammar's new "knock on the north wall": commands.ebnf, commandcompile.js), a short search by ear: the world's wall
+  search, half a minute, its b `SF_KNOCK`, the referee asked P_NOTICE_SOUND for each hidden door and door trap in reach,
+  not P_SEARCH (the world's `srch_p`, set by `work`: wtrap.c's part 8 had 10 bytes); noise 2.  On a thing to hand a
+  rap (noise 2); else "You can't knock on ...".  For review: a door hidden by magic is tested by ear as any other (the
+  referee bars only P_SEARCH from those; no room in the world's part 8 to bar it); a wall's side is the heading rounded
+  to the four ways (the search's own rule).
+- **wake**: "wake" alone asleep is a stop (task.c's `free_cmd` takes it at once, as a stop); awake, "You're awake."
+  "wake the bandit": the one of that name beside the character; seen further off, walked over to first (the reach's,
+  the command again as it's there); then SW_WAKE: not asleep, "The bandit isn't asleep."; asleep, roused up and
+  watching, turned to the character, drawn on to it, and its attitude decides what follows: a foe beside it strikes
+  ("You shake the bandit awake. It comes to with a snarl, and turns on you!"), wary and worse "eyes you warily", the rest
+  "blinks up at you".  No test: a shake wakes anyone.  (Not tested: the walk over; in the test's scene the knock had
+  woken the far sleeper first.)
+- **taunt**: SW_TAUNT, a test of Rhetoric (P_PERSUADE; a beast's Animalcraft: one can goad an animal), no tongue wanted
+  (jeers carry, as threats do), within earshot (12 squares, a beast 8), at steps the easier the less it likes the
+  character (indifferent 0, unfriendly +2, friendly -1, an ally -2), its kind's sway, a low mind +1, a cunning one -1;
+  hostile already, as far as that goes.  A success makes it hostile, an ally no more, drawn on to the character from its
+  post (a foe drawn on is before its day's doing in its mind); a failure leaves it as it was ("It ignores your jeers.";
+  a critical failure "It only laughs at you.").  For review: the book's contest is opposed; here the character's test at
+  steps, as persuasion is.
+- **orate** ("orate", "address ..."): noise 4, then one Oratory test (P_ORATE) in the tongue of the nearest minded one
+  awake in earshot (common to a leader, as words are); a tongue the character doesn't speak, the sway's refusal.  The
+  grade is applied to every minded one awake within 12 squares whose tongue it is, as a persuasion's: a critical success
+  two steps, a success one, a critical failure a step back, never past friendly (a speech wins no ally): "You hold forth
+  to those about you, in common. Your words carry: 6 of them seem the friendlier for it."; half a minute.  None to hear,
+  "There's no one here to hear you."  (The hub's sway: SW_PERSUADE with order `SWO_ALL`, the reply's ix those swayed, iy
+  those it reached, word2 the tongue.)
+- **pretend dead or asleep** (the plan's default, for review): a pretence naming death, sleep or senselessness lies
+  prone (I_RISE, unless prone already), then an Acting test (P_ACT) for each foe (unfriendly or hostile) awake that
+  senses the character, the cunning -2, a low mind +1, the mindless +2 (SW_DECEIVE with `SWO_ALL`); then a wait lying
+  still, ten minutes.  The fooled take it for helpless (HOUSE.md's rule, `decide`'s: killers strike, robbers rob, the
+  rest leave) while it lies prone on that square in its wait (dq0d's `pcfeign`); moved, up, the wait over or stopped,
+  the pretence is over till it's feigned again.  Foes that come later, or weren't fooled, see through it.  "The bandit
+  is taken in." / "It isn't taken in." / "No foe is watching you."  Any other pretence ("pretend ignorance") is a
+  deception of the nearest (deceive's own words).  For review: the book would have Acting against each foe's Awareness;
+  here the character's test at steps.
+- **The shared files**: hub.h (`NZ_VOICE`, `NZ_KNOCK`, `SF_KNOCK`, `SWO_ALL`, I_NOISE's comment), msgs.def, cmds.h
+  (`minds`), dq0.cfg (OV25, `#@SW27`), bank.s (OVMAX 25), dq0.h (`ovbank[25]`), parts.txt (27), dq0d/parts.txt (24);
+  dq0d.c's `cap[]` comment (wake and taunt aren't influence's), `s_sway`'s SW_WAKE, SW_TAUNT and `SWO_ALL` sent to
+  `minded`.  sway.c's `tried[]` stays to SW_BEFRIEND: its words are never asked for wake or taunt (minds.c words a reply
+  SR_OK itself, the sway's words only its refusals).
+- **Room**: dq0's main RAM 2,260 free (2,272 before), part 27 495 of 4,352 free, overlay 25 1,269 (the map's part 3 moved
+  there by the packer); dq0d's main RAM 2,184 (2,457: `hear`'s drawing, `decide`'s fooled, the pretence's state), its
+  part 24 2,026, part 2 18; dq0w's 2,482 (part 8 3, part 37 1,869); dq0harn's 2,169, unchanged.
+- **Test dq0noise**: say taken as talk, a whisper heard at 1, a yell at 6 by the bandits about, a quoted line, a knock
+  on the door heard at 3, a knock along the wall, "wake" awake, ignorance feigned (a deception), death feigned (the
+  bandit taken in, robbing the "body"), a hostile sleeper shaken awake, a taunt, a speech; seed 7's hall, its doors made
+  secret, the door found by knocking along the north wall, and a speech with no one to hear it.

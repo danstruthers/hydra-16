@@ -344,8 +344,10 @@ static unsigned char __fastcall__ world_sound (const struct msg* m)
         return 0xFF;
     }
     switch (m->kind) {
-    case E_NOISE:                               /* (Work's, a dig's; or a blow's, a battering's: each heard) */
-        return WORLD (E_NOISE_WHAT (*m) == NZ_BLOW ? WS_BLOW : WS_DIG);
+    case E_NOISE:                               /* (Work's, a dig's; or a blow's, a battering's, a knock's: each heard; a
+                                                **   voice, none: 2026-11-10) */
+        o = E_NOISE_WHAT (*m);
+        return o == NZ_VOICE ? 0xFF : WORLD (o == NZ_BLOW || o == NZ_KNOCK ? WS_BLOW : WS_DIG);
     case E_TRAP:
         return E_TRAP_TO (*m) == TO_SPRUNG ? WORLD (WS_TRAP) : 0xFF;
     case E_PORTAL:

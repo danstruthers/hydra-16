@@ -478,8 +478,8 @@ enum {
                                                 **   a knock, a war cry): a its loudness (SOUND.md's: 1 a whisper, 3 a
                                                 **   word said, 6 a yell), b what it is, w1 w2 its square (0: the
                                                 **   character's); heard by its loudness, sleepers woken, others turned
-                                                **   to it.  (The world's to carry out, batch B2's: till then nothing,
-                                                **   its E_READY as any) */
+                                                **   to it, a foe come to look (b NZ_VOICE, NZ_KNOCK).  The world's: its
+                                                **   E_NOISE, two seconds' work (part 37's, 2026-11-10) */
     NINTENTS
 };
 #define AIM_HARD        0x10                    /* (I_ATTACK's b: a throw, thrown hard: twice as far, 10 less) */
@@ -668,8 +668,10 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_
                                                 **   and its way through (DE_DUG: w1 w2 the square dug, x[2] seen: "A
                                                 **   fresh tunnel opens ..."), its spells after the first (DE_DIGS:
                                                 **   heard by the denizens, not told the player again), slice 4.11's */
-enum { NZ_WORK, NZ_BLOW };                      /* E_NOISE's b: work's (a dig's, a door forced ...), a blow at a thing
-                                                **   (a battering's, each blow: the sound task's) */
+enum { NZ_WORK, NZ_BLOW, NZ_VOICE, NZ_KNOCK };  /* E_NOISE's b: work's (a dig's, a door forced ...), a blow at a thing
+                                                **   (a battering's, each blow: the sound task's); a voice (words said,
+                                                **   a yell, a speech: the sound task's none), a knock (I_NOISE's, 2026-11-10:
+                                                **   a foe that hears either comes to look, the denizens' hear) */
 enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's pc_strike): the best it holds (the
                                                 **   best weapon in its hands, the referee's; else the fists: the UI's
                                                 **   with nothing named, its hands empty), a fist, a foot, the head */
@@ -888,6 +890,8 @@ enum { SF_ABOUT, SF_NEAR, SF_WALL, SF_FLOOR, SF_FOR, SF_ON, SF_ROOM };   /* (PA_
                                                 **   dark, by touch) */
 #define SF_TOUCH        0x08
 #define SF_TRAPS        0x10                    /* (SF_ON's: for traps, said: a thing's traps told) */
+#define SF_KNOCK        0x80                    /* (SF_WALL's, | the heading times 16: knocked along, by ear, P_NOTICE_SOUND,
+                                                **   its hidden doors alone: a knock, 2026-11-10) */
 enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARRED, PO_UNBARRED, PO_PICKED,
        PO_NOT_PICKED, PO_NO_PICKS, PO_NO_LOCK, PO_FORCED, PO_HELD, PO_FOUND, PO_NOTHING,   /* E_PORTAL's (a door's, */
        PO_RAISED, PO_HEAVED, PO_LOWERED, PO_IS_UP, PO_IS_DOWN, PO_NO_WINCH, PO_TOO_HEAVY, PO_NOT_PORTC,   /* a
@@ -1227,6 +1231,10 @@ struct sway {
                                                 **   capital named, plus 1, | SWA_MEANT: the UI's den_meant) */
 };
 #define SWA_MEANT       0x80
+#define SWO_ALL         0x80                    /* (sw.order's, 2026-11-10: to all in earshot, one test: SW_PERSUADE a
+                                                **   speech (orate, P_ORATE), SW_DECEIVE dead or asleep feigned to every foe
+                                                **   that senses it (pretend, P_ACT); the reply's ix those swayed or fooled,
+                                                **   iy those it reached, word2 a speech's tongue) */
 #define SW_COIN(s)      (((unsigned*) (s)->word2)[0])   /* (The market's, in word2, its words the UI's own: the */
 #define SW_ITS(s)       (((unsigned*) (s)->word2)[1])   /*   character's pennies and the actor's, their counts: */
 #define SW_NCOIN(s)     ((s)->word2[4])                 /*   2026-11-02, the denizens' main RAM's room) */

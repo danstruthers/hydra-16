@@ -788,7 +788,7 @@ function phraseSem(spec, env, ctx) {
       const action = r === 'sneak' ? 'VB_SNEAK' : 'VB_FLEE';
       return act(action, { direction: d ? dirCode(d, env) : undefined });
     }
-    case 'knock': return withObj('VB_KNOCK_OBJECT');
+    case 'knock': return direct[0] ? withObj('VB_KNOCK_OBJECT') : act('VB_KNOCK_OBJECT', {});   // ("knock on the north wall": a wall's, as search's)
     case 'push': return withObj('VB_PUSH_OBJECT');
     case 'pull': return withObj('VB_PULL_OBJECT');
     case 'lock': return withTool('VB_LOCK_OBJECT');

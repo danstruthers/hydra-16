@@ -103,28 +103,27 @@ static void do_split (void)
     unknown (U_YET);
 }
 
-/* H_SAY (the plan's batch B2, the noise's, a stub till then): words said aloud, heard by their loudness (I_NOISE) */
+/* H_SAY (the plan's batch B2, the noise's): words said aloud, heard by their loudness (I_NOISE); H_WAKE (B3's, the
+** minds'): oneself woken, a sleeper woken (SW_WAKE); H_TAUNT: a denizen goaded from its post (SW_TAUNT); H_ORATE: a
+** speech to all in earshot (P_ORATE).  minds.c's, part 27 */
 static void do_say (void)
 {
-    unknown (U_YET);
+    minds (H_SAY);
 }
 
-/* H_WAKE (the plan's batch B3, the minds', a stub till then): oneself woken; a sleeper woken (SW_WAKE) */
 static void do_wake (void)
 {
-    unknown (U_YET);
+    minds (H_WAKE);
 }
 
-/* H_TAUNT (B3's, a stub till then): a denizen goaded from its post (SW_TAUNT, P_PERSUADE's contest) */
 static void do_taunt (void)
 {
-    unknown (U_YET);
+    minds (H_TAUNT);
 }
 
-/* H_ORATE (B3's, a stub till then): a speech to all in earshot (P_ORATE) */
 static void do_orate (void)
 {
-    unknown (U_YET);
+    minds (H_ORATE);
 }
 
 /* The denizens' commands, by their handler's number (H_FIGHT ... H_ORATE) */

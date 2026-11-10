@@ -275,7 +275,7 @@
 <sneak>          ::= <SNEAK> [ <direction> ]
 <SNEAK>          ::= "sneak"
 (* ---- Handling and senses ---- *)
-<knock>          ::= "knock" [ "on" ] <object>
+<knock>          ::= "knock" [ "on" ] <object> | "knock" [ "on" | "along" ] [ "the" ] ( <compass> | <LR> ) "wall"   (* "knock on the north wall": along it, by ear (2026-11-10) *)
 <push>           ::= <PUSH> <object>
 <PUSH>           ::= "push"
 <pull>           ::= <PULL> <object>

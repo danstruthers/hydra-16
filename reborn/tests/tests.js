@@ -7918,6 +7918,48 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0noise', outfit: true, near: ['denizens', 'parser'], what: 'Dingus Quest Zero\'s words said aloud, a knock, and the minds swayed (the verbs plan\'s B2 and B3, 2026-11-10: DECISIONS.md\'s "Words said, a knock, the minds swayed"; minds.c, the world\'s I_NOISE, the denizens\' s_minded), by the words, the denizens\' sway and the senses\' answers (dq0trade\'s hand-written theme, its bandits at seed 1; Rhetoric, Oratory and Acting 95): "say" to a bandit beside and facing it, taken as talk (SW_TALK); a whisper heard at loudness 1, a yell at 6 by every bandit in hearing, a line in quotes said; a knock on the door (walked to and faced) heard at 3; a knock along the north wall, a short search by ear; "wake" awake ("You\'re awake."); a hostile bandit asleep beside it shaken awake, turning on it (SW_WAKE); an indifferent one taunted (SW_TAUNT, Rhetoric) made hostile, coming for it; a speech (SW_PERSUADE | SWO_ALL, one Oratory test) swaying those in earshot; ignorance feigned, a tale spun (deceive\'s); death feigned, lying down, the bandit beside taken in (Acting) and treating it as helpless, a robber robbing it; then seed 7\'s hall, its doors made secret (dq0Poke\'s traps), the door behind found by knocking along the north wall, and a speech with no one to hear it',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml rhe 95 >> /ram/c.hm', 'echo ml ora 95 >> /ram/c.hm', 'echo ml act 95 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
+        'say "hello there"', 'whisper "psst"', 'yell "wake up!"', '"Hi"', 'knock on the door', 'knock on the north wall', 'wake', 'pretend ignorance', 'pretend dead',
+        'wake the bandit', 'taunt the bandit', 'orate', 'quit',
+        'echo ml awa 95 >> /ram/c.hm', 'dq0 -p t -s 7 -c /ram/c.hm', 'open the door behind me', 's', 'knock on the north wall', 'orate', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'say "hello there"', n: 1, name: 'bandit', set: { attitude: 3, doing: 1, face: 0 }, beside: 4 },
+          { g: 1, line: 'yell "wake up!"', n: 1, name: 'bandit', set: { attitude: 3, doing: 10 } },
+          { g: 1, line: 'wake the bandit', n: 1, name: 'bandit', set: { attitude: 0, doing: 10 }, beside: 4 },
+          { g: 1, line: 'taunt the bandit', n: 1, name: 'bandit', set: { attitude: 3, doing: 1 }, beside: 4 },
+          { g: 1, line: 'pretend dead', n: 1, name: 'bandit', set: { attitude: 0, doing: 1 }, beside: 4 },
+          { g: 2, line: 'knock on the north wall', n: 1, traps: { hide: 0, plates: true } }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), s = dq0Story(out), f = [];
+        inTurn(s, ['> say "hello there" You say, "hello there" You talk with the bandit.', '> whisper "psst" You whisper, "psst"',
+          '> yell "wake up!" You yell, "wake up!"', '> "Hi" You say, "Hi"', '> knock on the door You knock on the door.',
+          '> knock on the north wall You knock along the north wall, listening for a hollow...', '> wake You\'re awake.',
+          '> pretend ignorance The bandit', '> pretend dead You lie still, feigning death. The bandit is taken in.',
+          'goes through your things as you lie helpless', '> wake the bandit You shake the bandit awake. It comes to with a snarl, and turns on you!',
+          '> taunt the bandit You taunt the bandit. It\'s goaded: it comes for you!', '> orate You hold', 'to those about you, in common.', '> knock on the north wall You knock along the north wall, listening for a hollow...',
+          'You find a door hidden in the wall.', '> orate There\'s no one here to hear you.', '% echo $status'], f);
+        if (/in this game yet/.test(s)) f.push('a "not yet" said: ' + (s.match(/> [^>]*in this game yet/) || [''])[0]);
+        const sw = (line, want, what) => { const t = T.of(line); if (!t || !dq0Rep(t, 'sway', want).length) f.push(what + ' (' + JSON.stringify(t && t.replies.filter(r => r.req === 'sway')) + ')'); };
+        sw('say "hello there"', { kind: 'SW_TALK', result: 'SR_OK' }, 'words to one facing it not taken as talk');
+        sw('wake the bandit', { kind: 'SW_WAKE', result: 'SR_OK', now: 'AT_HOSTILE' }, 'the sleeper not woken');
+        sw('taunt the bandit', { kind: 'SW_TAUNT', result: 'SR_OK', was: 'AT_INDIFFERENT', now: 'AT_HOSTILE' }, 'the bandit not goaded to hostile');
+        sw('orate', { kind: 'SW_PERSUADE', result: 'SR_OK', grade: g => g > 0 }, 'no speech heard');
+        sw('pretend dead', { kind: 'SW_DECEIVE', result: 'SR_OK' }, 'death not feigned to the foes');
+        const heard = (line, loud) => { const t = T.of(line); return t ? dq0Rep(t, 'dsense', { noise: loud }).filter(r => r.res & 2).length : 0; };
+        if (!heard('whisper "psst"', 1)) f.push('the whisper not heard (loudness 1)');
+        if (heard('yell "wake up!"', 6) < 2) f.push('the yell not heard by the bandits about (loudness 6): ' + heard('yell "wake up!"', 6));
+        if (!heard('knock on the door', 3)) f.push('the knock not heard (loudness 3)');
+        sw('pretend ignorance', { kind: 'SW_DECEIVE', order: 'OR_NONE' }, 'ignorance feigned not a deception');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0shieldskill', outfit: true, asks: true, near: ['fight'], what: "Dingus Quest Zero's block improves the thing that blocked (the user's, 2026-11-03: \"A block improves Shield\"): dq0shield's bandit set on the character, sword and round shield held, its stance a block: the block by the shield earns Shield its rolls and Sword none of it; struck at, its own blow, Sword",
       init: 't_rc', cycles: 1200e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml shd 90 >> /ram/c.hm',

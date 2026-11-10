@@ -37,6 +37,7 @@ void put_in (void);                             /* (hthings.c's: a thing put in 
 void __fastcall__ portal (unsigned char pa);    /* (hplaces.c's: a portal worked) */
 void __fastcall__ climb (unsigned char h);      /* (hplaces.c's: up or down, H_CLIMB's and a jump's) */
 unsigned char __fastcall__ grip_go (unsigned char g);  /* (hdens.c's: a grapple's move sent, HOUSE.md's grappling) */
+void __fastcall__ minds (unsigned char h);      /* (minds.c's, part 27: say, knock, wake, taunt, orate, pretend; h H_*) */
 
 /* main.c's */
 void __fastcall__ work (unsigned char what, unsigned char obj);

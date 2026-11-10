@@ -97,10 +97,10 @@ static void do_examine (void)
     }
 }
 
-/* H_KNOCK (the plan's batch B2, a stub till then): a knock on a door, heard beyond it; on a wall, a hollow sought */
+/* H_KNOCK (the plan's batch B2): a knock on a door, heard beyond it; on a wall, a hollow sought (minds.c's, part 27) */
 static void do_knock (void)
 {
-    unknown (U_YET);
+    minds (H_KNOCK);
 }
 
 /* The features' and the doors' commands, by their handler's number (H_DOOR ... H_KNOCK; its takes times 256) */

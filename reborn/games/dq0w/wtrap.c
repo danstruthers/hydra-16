@@ -117,6 +117,7 @@ static unsigned char near_trap (void)
 #define SEARCH_R        3
 static const unsigned char sq_[] = { 9, 4, 1, 0, 1, 4, 9 };    /* (A square's distance off, squared, by its offset) */
 
+extern unsigned char srch_p;                    /* (dq0w.c's: P_SEARCH, or a knock's P_NOTICE_SOUND, work's, 2026-11-10) */
 static void search (void)
 {
     unsigned i, j;
@@ -149,7 +150,7 @@ static void search (void)
             }
             if (((f != SF_WALL && trap_on (i, j, 0)) || (f != SF_FLOOR && trap_on (i, j, 1))) &&
                 (wk.tq.state & TS_HIDDEN)) {
-                if (test (P_SEARCH, wk.tq.state & TS_MAGIC ? HIDE_MAGICAL : HIDE_MECHANICAL,
+                if (test (srch_p, wk.tq.state & TS_MAGIC ? HIDE_MAGICAL : HIDE_MECHANICAL,
                     m - (signed char) wk.tq.hide) > 0 && !wres) {
                     trap_state (wk.tq.state & ~TS_HIDDEN);
                     told (E_TRAP, TO_FOUND << 8 | wk.tq.kind | wk.tq.trigger << 4 | touch << 4, 0);  /* (By touch:
@@ -167,7 +168,7 @@ static void search (void)
                 continue;
             }
             wk.pq = C->portal[k];
-            if (test (P_SEARCH, wk.pq.state & PS_MAGIC ? HIDE_MAGICAL : HIDE_MECHANICAL, m) > 0 && !wres) {
+            if (test (srch_p, wk.pq.state & PS_MAGIC ? HIDE_MAGICAL : HIDE_MECHANICAL, m) > 0 && !wres) {
                 wk.px = i;
                 wk.py = j;
                 door_state (wk.pq.state & ~PS_HIDDEN);

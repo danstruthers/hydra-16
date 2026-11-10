@@ -866,8 +866,8 @@ unsigned char __fastcall__ o_free_cmd (const char* l)
             return 1;
         }
     }
-    if (!strcmp (l, "status")) {
-        return 1;
+    if (!strcmp (l, "status") || (a == VB_WAKE && !cmd.obj.word[0])) {
+        return 1;                               /* ("wake", "wake up": asleep, a stop's, minds.c's, 2026-11-10) */
     }
     if (a == VB_FLEE || a == VB_DISENGAGE) {
         return 3;                               /* (Breaks off: any long task, a reach's steps, a fight, a journey) */

@@ -471,6 +471,11 @@ static unsigned char pclie;                     /* (At rest: asleep, or a long w
                                                 **   not asked of: robbers come for it, 2026-11-06) */
 static unsigned char pchelp;                    /* (Helpless: in shock, or senseless as it lies, busy till it comes
                                                 **   round; the referee's conditions) */
+/* (Dead or asleep feigned, 2026-11-10: lying still where it lay down to it, in its wait, pretend's; begun as it's seen
+** so, over as it isn't: then those fooled, by their Acting contest, part 24's crowd, take it for helpless, HOUSE.md's) */
+static unsigned char pcfeign, fgon;
+static unsigned fgx, fgy;
+static unsigned char fooled[NACTORS];
 static unsigned char pcstay;                    /* (Its stay where it stands, since it came onto the square: its
                                                 **   scent's points more, hub.h's TR_MORE of a passing each TQ) */
 static unsigned char nowq, pcq;                 /* (The TQs gone by, the traces' clock: its low byte; and as the
@@ -1717,6 +1722,11 @@ static void hear (void)
                 sgen[k] = 0;                    /* (It senses again: the character, if it's there to be sensed; not
                                                 **   at another's noise, a fellow's every step: the senses' work
                                                 **   for each, slice 4.5's, a rat's steps a storm of it) */
+                if (E_NOISE_WHAT (m) >= NZ_VOICE) {
+                    lsx[k] = m.w1;              /* (Words, a yell, a knock: a foe comes to look, drawn on to it, */
+                    lsy[k] = m.w2;              /*   2026-11-10) */
+                    drawn[k] = DRAWN_N;
+                }
             }
             rouse (k, 1);
         }
@@ -2082,7 +2092,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
         rng = hungry (k);                       /* (Its want, those that eat: hungry or thirsty, part 8's, its eating,
                                                 **   drinking, hunting, ranging further) */
     }
-    if (foe && pchelp && !(K_HELP (K) & H_KILLS)) {
+    if (foe && (pchelp || (pcfeign && fooled[k])) && !(K_HELP (K) & H_KILLS)) {   /* (Fooled: as helpless, 2026-11-10) */
         foe = 0;                                /* (Its foe down, helpless: by its nature (the user's, 2026-10-21), a
                                                 **   killer strikes on (the referee finishes one senseless); a robber
                                                 **   comes up to it and robs it, then goes; one that only defended
@@ -4090,8 +4100,8 @@ static unsigned char __fastcall__ leads2 (unsigned char k)
 static const signed char att_steps[AT_ALLIED + 1] = { -3, -2, -1, 0, 1, 2 };
 static const unsigned char cap[SW_TAUNT + 1] = {
     0, AT_FRIENDLY, AT_ALLIED, AT_FRIENDLY, AT_WARY, AT_INDIFFERENT, AT_ALLIED,
-    0, 0                                        /* (SW_WAKE, SW_TAUNT: not swayed so yet, s_sway's SR_CANT: batch B3's
-                                                **   to set, 2026-11-09) */
+    0, 0                                        /* (SW_WAKE, SW_TAUNT: not influence's, part 24's provoke: a sleeper
+                                                **   woken, no test; one goaded only down, to hostile, 2026-11-10) */
 };
 
 static void __fastcall__ influence (unsigned char k)
@@ -4216,6 +4226,8 @@ static void __fastcall__ give_name (unsigned char k)
     strcpy (q->name, sw.word2);
 }
 
+void __fastcall__ minded (unsigned char k);    /* (Part 24's, below: woken, goaded; to all in earshot) */
+
 /* The UI's request answered */
 void s_sway (void)
 {
@@ -4246,6 +4258,8 @@ void s_sway (void)
             }
         }
         sw.result = n ? sw.result : SR_NONE;
+    } else if (sw.order & SWO_ALL) {
+        minded (NACTORS);                       /* (To all in earshot: a speech, a pretence: part 24's crowd, 2026-11-10) */
     } else if ((k = n ? n - 1 : meant (sw.word)) == 0xFF) {   /* (The market's: the one the goods were found on) */
         sw.result = SR_NONE;
     } else {
@@ -4276,9 +4290,9 @@ void s_sway (void)
         case SW_ORDER:
             order (k);
             break;
-        case SW_WAKE:                           /* (A sleeper woken, one goaded: the plan's batch B3's, 2026-11-09; */
-        case SW_TAUNT:                          /*   till then it can't) */
-            sw.result = SR_CANT;
+        case SW_WAKE:                           /* (A sleeper woken, one goaded: part 24's provoke, */
+        case SW_TAUNT:                          /*   2026-11-10) */
+            minded (k);
             break;
         default:
             if (sw.kind >= SW_GIVE) {
@@ -4296,6 +4310,218 @@ void s_sway (void)
     hub_reply (&HUB->sway);
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ---- The minds, the verbs plan's batch B3 (2026-11-10, DECISIONS.md's "Words said, a knock, the minds swayed"):
+** s_sway's, part 24's (its own: part 2's room, part 16's swap area full) */
+#pragma code-name (push, "SW24CODE")
+#pragma rodata-name (push, "SW24RODATA")
+#pragma static-locals (push, off)               /* (On the C stack: the main RAM's none) */
+
+/* A test of the character's in the denizens' slot (purpose p, steps st), its words in tongue tg ("": none wanted): the
+** grade, or 0x7F (a tongue it doesn't speak) */
+static signed char __fastcall__ said_test (unsigned char p, signed char st, const char* tg)
+{
+    struct req* r;
+    signed char g;
+
+    hub_map (0);
+    r = DSLOT;
+    strcpy (r->text, tg);
+    r->kind = RS_TEST;
+    r->actor = 0;
+    RS_TEST_PURPOSE (*r) = p;
+    RS_TEST_HOW (*r) = 0;
+    RS_TEST_STEPS (*r) = st;
+    r = hub_call (r, T_REFEREE);
+    g = RS_TEST_CANT (*r) == 2 ? 0x7F : RS_TEST_GRADE (*r);
+    r->state = REQ_FREE;
+    return g;
+}
+
+/* The tongue actor k is spoken to in: common to a leader of its people (kinds.txt's rank, a warden: part 16's leads),
+** else its faction's ("" none) */
+static const char* __fastcall__ tongue_of (unsigned char k)
+{
+    unsigned char f;
+
+    hub_map (0);
+    f = HUB->actor[k].faction & (NFACT - 1);
+    kx_get (akind[k]);
+    kind_get (akind[k]);
+    return X.rank != RK_FILE || (K.key[0] == 's' && K.key[4] == 'w') ? "common" : ftongue[f];
+}
+
+/* A sleeper woken (SW_WAKE: one beside it, the UI's walk over first): shaken awake, up and watching, turned to the
+** character, its mind after it as its attitude has it (a foe beside it strikes; drawn on to it); not asleep, SR_CANT.
+** One goaded (SW_TAUNT: within earshot, as words are): the book's Rhetoric (a beast's Animalcraft), no tongue wanted
+** (jeers carry), at steps the easier the less it likes the character (hostile already, as far as that goes), by its kind's
+** sway and its mind (the low the easier, the cunning the harder); a success makes it hostile, an ally no more, drawn on
+** to the character from its post; a failure leaves it as it was.  Its kind in K (s_sway's) */
+static void __fastcall__ provoke (unsigned char k)
+{
+    struct actor* q;
+
+    hub_map (0);
+    q = &HUB->actor[k];
+    if (sw.kind == SW_WAKE) {
+        if (q->doing != DO_SLEEP) {
+            sw.result = SR_CANT;
+            return;
+        }
+        if (dist > 1) {
+            sw.result = SR_FAR;
+            return;
+        }
+        I_ROUSE_DOING (im) = DO_WATCH;          /* (Awake: s_sway's rouse after, up a while) */
+        I_ROUSE_FACE (im) = bearing (pcx - q->x, pcy - q->y);
+        I_ROUSE_TENTHS (im) = 1;
+        I_ROUSE_WHENEVER (im) = 1;
+        post (I_ROUSE, k + 1);
+        sw.t = 20;
+    } else {
+        if (K.mind == M_MINDLESS) {
+            sw.result = SR_MINDLESS;
+            return;
+        }
+        if (dist > (sw.beast ? 8 : 12)) {
+            sw.result = SR_FAR;
+            return;
+        }
+        if (sw.was == AT_HOSTILE) {
+            sw.result = SR_AS_FAR;
+            return;
+        }
+        sw.grade = said_test (sw.beast ? P_ANIMALS : P_PERSUADE, (signed char) (AT_INDIFFERENT - sw.was) + K.sway +
+            (K.mind == M_LOW) - (K.mind == M_CUNNING), "");
+        sw.t = 50;
+        if (!G_OK (sw.grade)) {
+            return;
+        }
+        hub_map (0);
+        HUB->actor[k].attitude = sw.now = AT_HOSTILE;
+        aorder[k] = OR_NONE;
+    }
+    lsx[k] = pcx;                               /* (Drawn on to the character: woken by it, goaded) */
+    lsy[k] = pcy;
+    drawn[k] = DRAWN_N;
+}
+
+/* Whether actor k hears the character's words to all (sw's: a speech, minded, awake, its faction a tongue; a pretence,
+** a foe awake that senses it), within earshot (twelve squares, as words): how far, or 0xFF.  Its kind in K */
+static unsigned char __fastcall__ hearer (unsigned char k)
+{
+    struct actor* q;
+    unsigned d;
+
+    hub_map (0);
+    q = &HUB->actor[k];
+    if (!q->name[0] || q->sn != pcs || q->doing == DO_DOWN || q->doing == DO_SLEEP ||
+        (d = apart (q->x - pcx, q->y - pcy)) > 12) {
+        return 0xFF;
+    }
+    kind_get (akind[k]);
+    if (sw.kind == SW_DECEIVE) {
+        if (q->attitude > AT_UNFRIENDLY) {
+            return 0xFF;
+        }
+        doze (q);
+        return senses (k) ? d : 0xFF;
+    }
+    return K.mind < M_LOW || !ftongue[q->faction & (NFACT - 1)][0] ? 0xFF : d;
+}
+
+/* To all in earshot (sw.order SWO_ALL), the nearest named in the reply: a speech (SW_PERSUADE, orate): one test of the
+** book's Oratory in the nearest one's tongue, its grade each listener's who speaks that tongue as a persuasion's (a
+** critical success two steps, a success one, a critical failure a step back), as far as friendly (a speech wins no
+** ally); its tongue not the character's, SR_TONGUE; half a minute.  Dead or asleep feigned (SW_DECEIVE, pretend): an
+** Acting test against each foe awake that senses the character (the cunning two steps the harder, the low one the
+** easier, the mindless two), each fooled taking it for helpless while it lies still in its wait where it lay down
+** (pcfeign, decide's: HOUSE.md's helpless rule).  The reply's ix those swayed or fooled, iy those it reached */
+static void crowd (void)
+{
+    struct actor* q;
+    unsigned char k, j = 0xFF, d, t = 0xFF, orate = sw.kind == SW_PERSUADE;
+    signed char g = 0;
+
+    sw.ix = sw.iy = 0;
+    sw.word2[0] = 0;
+    if (!orate) {
+        memset (fooled, 0, sizeof fooled);
+        fgx = pcx;
+        fgy = pcy;
+        fgon = 0;
+    }
+    for (k = 0; k < NACTORS; ++k) {
+        if ((d = hearer (k)) < t) {
+            t = d;
+            j = k;
+        }
+    }
+    if (j == 0xFF) {
+        sw.result = SR_NONE;
+        return;
+    }
+    hub_map (0);
+    strcpy (sw.name, HUB->actor[j].name);
+    sw.was = sw.now = HUB->actor[j].attitude;
+    if (orate) {
+        strcpy (sw.word2, tongue_of (j));
+        g = sw.grade = said_test (P_ORATE, 0, sw.word2);
+        if (g == 0x7F) {
+            sw.result = SR_TONGUE;
+            sw.grade = 0;
+            return;
+        }
+        sw.t = 300;
+    }
+    for (k = 0; k < NACTORS; ++k) {
+        if (hearer (k) == 0xFF) {
+            continue;
+        }
+        if (!orate) {
+            ++sw.iy;
+            if ((fooled[k] = G_OK (said_test (P_ACT, K.mind == M_CUNNING ? -2 : K.mind == M_LOW ? 1 :
+                K.mind == M_MINDLESS ? 2 : 0, ""))) != 0 && !sw.ix++) {
+                hub_map (0);
+                strcpy (sw.name, HUB->actor[k].name);   /* (The first fooled named) */
+            }
+            continue;
+        }
+        if (strcmp (tongue_of (k), sw.word2)) {
+            continue;                           /* (Not its tongue: the words not understood) */
+        }
+        ++sw.iy;
+        hub_map (0);
+        q = &HUB->actor[k];
+        t = q->attitude;
+        d = g == G_CS ? t + 2 : g == G_MS ? t + 1 : g == G_CF && t ? t - 1 : t;
+        if (d > AT_FRIENDLY) {
+            d = t > AT_FRIENDLY ? t : AT_FRIENDLY;
+        }
+        if (d != t) {
+            ++sw.ix;
+            q->attitude = d;
+            if (k == j) {
+                sw.now = d;
+            }
+            rouse (k, 1 | ROUSE_SET);
+            sgen[k] = 0;
+        }
+    }
+}
+
+/* s_sway's: actor k woken or goaded (SW_WAKE, SW_TAUNT); NACTORS, words to all in earshot (sw.order SWO_ALL) */
+void __fastcall__ s_minded (unsigned char k)
+{
+    if (k == NACTORS) {
+        crowd ();
+    } else {
+        provoke (k);
+    }
+}
+#pragma static-locals (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -4440,6 +4666,11 @@ int main (int argc, char* argv[])
             pclie = pcrest && (HUB->pc_task.kind == LT_SLEEP || (HUB->pc_pos & ~POS_CROUCHED));
             pcdead = (HUB->pcsum.cond & C_DEAD) != 0;
             pchelp = (HUB->pcsum.cond & C_STUNNED) || ((HUB->pcsum.cond & C_UNCONSCIOUS) && pcbusy);
+            if ((pcfeign = pcx == fgx && pcy == fgy && HUB->pc_pos == POS_PRONE && HUB->pc_task.kind == LT_WAIT) != 0) {
+                fgon = 1;                       /* (Feigning, seen so: its pretence over as it isn't, 2026-11-10) */
+            } else if (fgon || pcx != fgx || pcy != fgy) {
+                fgx = fgon = 0;
+            }
             if (!(pclit = HUB->pc_light != 0) && DONE (pcs) && (p = at (pcs, pcx, pcy)) != 0) {
                 pclit = (*p & T_VIS) != 0;      /* (Lit where it stands: a room's light, a lamp put down) */
             }

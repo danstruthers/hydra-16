@@ -454,7 +454,7 @@ unsigned char __fastcall__ den_heard (const struct msg* m);   /* (Overlay 23's) 
 
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
-extern unsigned char ovbank[25];               /* (bank.s's OVMAX: overlay 21 the writings' parts, 22 the designators', 23 their
+extern unsigned char ovbank[26];               /* (bank.s's OVMAX: overlay 21 the writings' parts, 22 the designators', 23 their
                                                 **   capitals, 2026-11-06; 24 the things' chooser, 2026-11-07; 25 part 27's,
                                                 **   2026-11-10) */
 unsigned char early (void);                     /* Part 12: before a command's things are looked for (in shock, refused:

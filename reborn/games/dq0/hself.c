@@ -32,10 +32,10 @@ static void powers (void)
     say_no (cmd.aux, lb);
 }
 
-/* H_PRETEND (the plan's batch B3, the minds', a stub till then): dead or asleep feigned, an Acting contest (P_ACT) */
+/* H_PRETEND (the plan's batch B3, the minds'): dead or asleep feigned, an Acting contest (P_ACT); minds.c's, part 27 */
 static void do_pretend (void)
 {
-    unknown (U_YET);
+    minds (H_PRETEND);
 }
 
 /* H_PRAY (the plan's batch B5, 2026-11-10): an hour's prayer to the character's deity, a Ritual test (P_RITUAL):

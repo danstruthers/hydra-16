@@ -4072,6 +4072,8 @@ static struct portal* __fastcall__ door_ahead (unsigned long* tt)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+unsigned char srch_p = P_SEARCH;                /* (A search's test, work's: a knock's by ear, P_NOTICE_SOUND; wtrap.c's) */
+
 /* ==== Part 48: the work done and what came of it (work, worked: a command's, its own part, the main RAM's room for
 ** the hands and limbs, slice 4.1b) */
 #pragma code-name (push, "SW48CODE")
@@ -4088,6 +4090,7 @@ unsigned char __fastcall__ s_work (unsigned char what, unsigned x, unsigned y, u
 
     wk.sn = sn_;
     wk.pd = d;
+    srch_p = d & SF_KNOCK ? P_NOTICE_SOUND : P_SEARCH;  /* (A search's test: a wall knocked along by ear, 2026-11-10) */
     wk.px = x;
     wk.py = y;
     wk.fx = mx;
@@ -4242,7 +4245,7 @@ void __fastcall__ s_door_work (unsigned char what)
             return;
         }
         srch_form = want_ | (dark () ? SF_TOUCH : 0);
-        if ((srch_form & (7 | SF_TOUCH)) == (SF_WALL | SF_TOUCH) && (unsigned char) (ahead (srch_form >> 4) - FA_WALL) >
+        if ((srch_form & (7 | SF_TOUCH)) == (SF_WALL | SF_TOUCH) && (unsigned char) (ahead (srch_form >> 4 & 7) - FA_WALL) >
             FA_BARS - FA_WALL) {
             hub_map (0);
             event (E_BEAT, 0, WB_FELT);         /* (By touch, no wall within reach that way: told, no search) */
@@ -5425,6 +5428,7 @@ static void air_here (void)
         am.kind = E_NOISE;                      /* (As loud as anything: the denizens hear it) */
         am.who = 0;
         E_NOISE_LOUD (am) = 9;
+        E_NOISE_WHAT (am) = NZ_WORK;            /* (Not a voice's: the sound task's, 2026-11-10) */
         E_NOISE_SX (am) = x = HUB->pc_x;
         E_NOISE_SY (am) = y = HUB->pc_y;
         am.t = HUB->now;
@@ -6595,6 +6599,18 @@ void __fastcall__ s_intent_more (struct msg* m)
         break;
     case I_GATHER:
         gath_op (GO_GATHER, I_GATHER_FAMILY (*m));
+        break;
+    case I_NOISE:                               /* (A noise made: words said, a yell, a knock, 2026-11-10: the denizens'
+                                                **   E_NOISE, by its loudness, at its square or the character's; two
+                                                **   seconds' work) */
+        lw_m.kind = E_NOISE;
+        if (!I_NOISE_X (lw_m)) {
+            I_NOISE_X (lw_m) = HUB->pc_x;
+            I_NOISE_Y (lw_m) = HUB->pc_y;
+        }
+        lw_m.t = HUB->now;
+        hub_event (&lw_m);
+        busy (20);
         break;
     case I_RISE:                                /* (Getting up, or down: part 50's; hiding oneself: part 94's) */
         if (I_RISE_POS (*m) & POS_HIDE) {
