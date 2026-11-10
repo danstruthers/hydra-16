@@ -76,8 +76,9 @@ I_STEP:den      < I_DEN; a heard@DE_MOVED; b loud; w1(way) head:0-2@H_N coarse:9
                 # (A square: coarse, no time, nothing heard; scent, the heading none: the character's scent's way, by
                 #   its nose; one always (a square); feels, no darkvision: its way felt in the dark)
 I_QUIT          -
-I_ATTACK        a foe; b aim; x[1] strike; x[2] hand    # (The actor struck at plus 1 (the denizens': 0 the character);
-                                                        #   the aim, Z_* | AIM_SHOT, AIM_HARD; as I_PORTAL's)
+I_ATTACK        a foe; b aim; w1 split; x[1] strike; x[2] hand    # (The actor struck at plus 1 (the denizens': 0 the
+                                                        #   character); the aim, Z_* | AIM_SHOT, AIM_HARD; as I_PORTAL's;
+                                                        #   split, a second struck at by turns, plus 1: B1's, 2026-11-10)
 I_ATTACK:den    < I_DEN; a foe; b aim
 I_ENTER         < I_DEN; a step; b bleeding; w1 x; w2 y; t ready; x[2] sn; x[3] legs
 I_LEAVE         < I_DEN
@@ -88,7 +89,8 @@ I_TAKE:den      < I_DEN; a want; b unused; w1 x; w2 y; t thing      # (Its wants
 I_STOP          a named@LT_NONE; w1 over                # (The kind named, LT_NONE any; w1 1, a command taking over)
 I_GO_ON         -
 I_ASK           w1 why@TE_STOPPED                       # (TE_ASK_HEARD: a sound the UI heard)
-I_CLOSE         a foe; b aim; w1 walk; x[1] strike; x[2] hand     # (w1 1: walked up to alone, no blow)
+I_CLOSE         a foe; b aim; w1 walk; w2 run; x[1] strike; x[2] hand     # (w1 1: walked up to alone, no blow;
+                                                        #   run, a charge's pace, GA_*, 0 the character's own: B1's)
 I_LOOK          w1 tenths
 I_DISENGAGE     w1 way; w2 flight                       # (H_*, 0xFF away from them; 1 a flight)
 I_TRACE         w1(form) how:0-7@TRC_FLOOR sniff:8-15; w2 tenths      # (TRC_*; a sniff's way (H_*, 0xFF about it); 0 the world's)

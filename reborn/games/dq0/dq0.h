@@ -321,6 +321,7 @@ unsigned char __fastcall__ parts_in (unsigned char op);    /* Overlay 6 (parts.c
 #define PO_LINE     0
 #define PO_STOP     1                           /*   the long task stopped: the rest of its line let go; */
 #define PO_AGAIN    2                           /*   the command has no verb: the list's verb put to it, back in the queue: 1 */
+extern char t_last[INMAX + 1];                  /* (term.c's: the last line typed, but one that says "again") */
 extern unsigned char held;                      /* (main.c's: the next line held for the character; | 2, that line let go: its
                                                 **   parse with it) */
 #define QMAX        256                         /* The lines typed ahead (term.c's queue, qlen) */

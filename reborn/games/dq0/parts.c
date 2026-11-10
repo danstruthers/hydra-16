@@ -36,6 +36,8 @@ static const char brks[] = "stop\0halt\0enough\0flee\0escape\0disengage\0withdra
                                                 **   task.c's free_cmd: the parser's stop, flee and disengage, their words in
                                                 **   commands.verbs, kept in step by dq0reachstop's check) */
 static const char brk2[] = "run\0back\0break\0";   /* ("run away", "back away", "back off", "break off") */
+static const char blows[] = "attack\0fight\0hit\0strike\0";   /* ("attack the rat and the goblin": one line, a split
+                                                **   attack, parts_op's: the verbs plan's B1, 2026-11-10) */
 
 /* The line's own, this overlay's data (the main RAM's room): where each part begins in inl, its length, it follows a
 ** list's word ("and", a comma); so many parts */
@@ -115,6 +117,8 @@ static void parts (void)
                     }
                     if (among (i + 5, "then\0\0")) {
                         cut (5);                /* ("and then" the "then"'s) */
+                    } else if (!a && among (0, blows) && among (i + 5, dets)) {
+                                                /* ("attack the rat and the goblin": a split attack, one line) */
                     } else if ((!among (w, ways) || !among (i + 5, ways)) && (!among (w, units) ||
                         (!among (i + 5, nums) && (inl[i + 5] < '0' || inl[i + 5] > '9')))) {
                         cut (5);                /* (Not "north and east": two commands) */
@@ -272,7 +276,8 @@ unsigned char __fastcall__ o_parts_in (unsigned char op)
 
 /* A list's matters (parts_in's): PO_STOP, the long task stopped, or asked about: the rest of its line let go.  PO_AGAIN, the command cl
 ** has no verb, and no way in it ("rope"): a list's later part (after "and", or a comma) has the verb of the part before it
-** put to it, back in the queue: 1 (nothing to say) */
+** put to it, back in the queue: 1 (nothing to say); a blow at two, "attack the rat and the goblin" (one line, parts'),
+** made a split attack (VB_ATTACK_SPLIT, the verbs plan's B1, 2026-11-10) */
 static unsigned char __fastcall__ parts_op (unsigned char op)
 {
     static unsigned d = 0;
@@ -280,6 +285,11 @@ static unsigned char __fastcall__ parts_op (unsigned char op)
 
     if (op == PO_STOP) {
         let_go ();
+        return 0;
+    }
+    if (cmd.action == VB_ATTACK_OBJECT && !cmd.other.word[0] && strstr (cl, " and ")) {
+        cmd.action = VB_ATTACK_SPLIT;           /* (Its thing the parser's last, the second; the first the word before
+                                                **   the "and", hdens.c's split) */
         return 0;
     }
     if (!(cmd.flags & (CF_NOVERB | CF_STRANGE)) || !lnp || qlen < qafter || cmd.dir != 0xFF) {

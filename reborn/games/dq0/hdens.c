@@ -79,28 +79,206 @@ static void do_fight (void)
     }
 }
 
-/* H_CHARGE (the plan's batch B1, the fights', a stub till then): a run at the nearest hostile ahead, a war cry, a blow */
+/* ---- The fights' verbs not done till the plan's batch B1 (2026-11-10, DECISIONS.md's "Charge, a throw a way, engage,
+** a split attack, and again"): part 24's, the commands seen to less often (part 2's room), through its stub fights.  Its
+** words its own, said from it (the main RAM's sayf, msg); its state the part's own (none kept from one command to the
+** next, and no other part called while it's needed) */
+void __fastcall__ fights (unsigned char h);
+#pragma code-name (push, "SW24CODE")
+#pragma rodata-name (push, "SW24RODATA")
+#pragma bss-name (push, "SW24RODATA")
+
+static unsigned char k, d, e, n;
+static int dx, dy;
+
+/* How far a square is, dx, dy away (squares, 0xFE at most) */
+static unsigned char span (void)
+{
+    if (dx < 0) {
+        dx = -dx;
+    }
+    if (dy < 0) {
+        dy = -dy;
+    }
+    if (dy > dx) {
+        dx = dy;
+    }
+    return dx > 0xFE ? 0xFE : dx;
+}
+
+/* H_CHARGE: a run at the nearest hostile denizen it sees ahead (ahead, or ahead to either side), a war cry ("Charge!",
+** I_NOISE, 6, a yell's: the world's to hear, the noise's batch), and a blow as it gets there (I_CLOSE: its walk at a
+** run, "fast charge" a sprint, its run; its engage test the walk's, as it comes into the foe's zone); one beside it
+** struck at once.  None: "There's no foe ahead to charge." (the grammar's ERROR:NO_TARGET) */
+static void charge (void)
+{
+    static struct sight* s;
+    static struct actor* a;
+    static struct sden* q;
+
+    s = sight_get ();
+    hub_map (0);
+    for (e = k = 0, n = 0xFF, a = HUB->actor; k < NACTORS; ++k, ++a) {
+        if (a->state != 1 || a->sn != HUB->pc_stratum || a->attitude != AT_HOSTILE || a->doing == DO_DOWN) {
+            continue;
+        }
+        dx = a->x - HUB->pc_x;
+        dy = a->y - HUB->pc_y;
+        if (((REL8 (bearing (dx, dy), HUB->pc_face) + 1) & 7) > 2 || (d = span ()) >= n) {
+            continue;                           /* (Not ahead, or no nearer) */
+        }
+        for (q = s->den, dx = s->ndens; dx && (q->x != a->x || q->y != a->y); --dx, ++q) {
+        }
+        if (dx) {                               /* (One it sees, the senses' last look's: the nearest) */
+            n = d;
+            e = k + 1;
+        }
+    }
+    if (!e) {
+        msg ("There's no foe ahead to charge.");
+        return;
+    }
+    sayf (n > 1 ? "\n\"Charge!\"  You run at the %s." : "\n\"Charge!\"  You fall on the %s.", HUB->actor[e - 1].name);
+    t_flush ();
+    strike = SK_BEST;                           /* (With the best it holds, an attack's) */
+    shand = 0;
+    intend_a = 6;
+    intend2 (I_NOISE, 0, 0);
+    intend_a = e;
+    if (n > 1) {
+        reach = 6;                              /* (Closed with first, its arrival's words short) */
+        intend2 (I_CLOSE, 0, strstr (cl, "fast") ? GA_SPRINT : GA_RUN);
+    } else {
+        intend2 (I_ATTACK, 0, 0);
+    }
+}
+
+/* H_ENGAGE: closed with a denizen, walked up to into its zone, no blow (I_CLOSE's walk alone: the engage test the
+** walk's, as it comes into the zone; engaged by another, refused, the world's TE_ENGAGED); beside it already, said so;
+** a thing, refused */
+static void engage (void)
+{
+    if ((d = fight_target (&cmd)) == FT_THING) {
+        msg ("You can engage only a creature.");
+    } else if (!d) {
+        msg (lb);                               /* (None of that name it sees: the fight's words) */
+    } else if (!(d & FT_CLOSE)) {
+        sayf ("\nYou're already engaged with the %s.", cmd.obj.word);
+    } else {
+        sayf ("\nYou close with the %s.", cmd.obj.word);
+        t_flush ();
+        intend_a = d & 0x0F;
+        intend2 (I_CLOSE, 1, 0);                /* (Up to it as it moves, no blow) */
+    }
+}
+
+/* H_SPLIT: two denizens beside it attacked by turns ("attack the rat and the goblin", one line, parts.c's: the parser's
+** thing the second, the last named; the first the word before the "and"): the first struck at, the other sent with the
+** blow (I_ATTACK's split), the world's fighting on turning between them while both stand; the other not beside it, the
+** first's an attack alone; the first not beside it, go up to it first */
+static void split (void)
+{
+    static const char* p;
+
+    p = strstr (cl, " and ");
+    e = fight_target (&cmd);                    /* (The second, the parser's thing) */
+    strcpy (lb + 360, cmd.obj.word);
+    memset (&cmd.obj, 0, sizeof cmd.obj);
+    for (n = 0; p && p > cl && p[-1] != ' ' && n < sizeof cmd.obj.word - 1; --p, ++n) {
+    }
+    memcpy (cmd.obj.word, p, n);                /* (The first, by its word) */
+    if ((d = fight_target (&cmd)) == FT_THING || !d) {
+        if (d) {
+            unknown (U_CANT);
+        } else {
+            msg (lb);
+        }
+    } else if (d & FT_CLOSE) {
+        say_no (A_FAR, cmd.obj.word);           /* ("The rat is out of reach: go up to it first.") */
+    } else {
+        if (e == FT_THING || (e & FT_CLOSE) || !((e ^ d) & 0x0F)) {
+            e = 0;                              /* (No other foe beside it: the first alone) */
+        } else {
+            hub_map (0);
+            sayf ("\nYou strike at the %s and the %s by turns.", HUB->actor[d - 1].name, lb + 360);
+        }
+        intend_a = d;
+        intend2 (I_ATTACK, e, 0);
+    }
+}
+
+/* A thing thrown a way ("throw the dagger north", "throw the dagger 3 north": the parser's throw with a heading, no
+** mark: H_MISSILE's, VB_THROW_DIRECTION's row): its mark that many squares along the line (none said, a dozen: as far
+** as it'll go), the world's throw at a place (IO_THROW, the referee's Throwing; stopped short on its line by a wall, a
+** door shut, glass, it falls where it's stopped), told: how far it went */
+static void throw_way (void)
+{
+    unsigned char was = HUB->pc_light;          /* (Not the part's: the things' reach may call another) */
+
+    if (cmd.dir > H_NW) {
+        cmd.dir = HUB->pc_face;                 /* (None said: ahead) */
+    }
+    n = cmd.n ? cmd.n : 12;
+    HUB->ireq.x = HUB->pc_x + head_x[cmd.dir] * n;
+    HUB->ireq.y = HUB->pc_y + head_y[cmd.dir] * n;
+    HUB->ireq.to = cmd.manner;
+    if ((d = things (IO_THROW | IO_STEPS, cmd.obj.word)) != IR_OK) {
+        throw_words (d);                        /* (None carried, not a thing to throw, the reach's step first) */
+        return;
+    }
+    hub_map (0);
+    n = cmd.n ? cmd.n : 12;
+    dx = HUB->ireq.x - HUB->pc_x;
+    dy = HUB->ireq.y - HUB->pc_y;
+    d = span ();
+    sayf ("\nYou throw the %s %s", cmd.obj.word[0] ? cmd.obj.word : "thing", head_name[cmd.dir]);
+    if (!d) {
+        sayf (": it strikes the wall and falls at your feet.");
+    } else {
+        sayf (HUB->ireq.qty == TH_SHORT ? ", but it falls short, %u square%s off." : d < n ?
+            ": it strikes the wall and falls %u square%s off." : ": it lands %u square%s off.", d, d == 1 ? "" : "s");
+    }
+    after (was, 20, IO_DROP);                   /* (Its time; a light thrown, the world's look in the new light) */
+}
+
+void __fastcall__ s_fights (unsigned char h)
+{
+    if (h == H_CHARGE) {
+        charge ();
+    } else if (h == H_ENGAGE) {
+        engage ();
+    } else if (h == H_SPLIT) {
+        split ();
+    } else {
+        throw_way ();
+    }
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma bss-name (pop)
+
+/* H_CHARGE (the plan's batch B1, the fights'): a run at the nearest hostile ahead, a war cry, a blow (part 24's) */
 static void do_charge (void)
 {
-    unknown (U_YET);
+    fights (H_CHARGE);
 }
 
-/* H_THROW_WAY (B1's, a stub till then): a thing thrown a way, its mark squares along the line */
+/* H_THROW_WAY (B1's): a thing thrown a way, its mark squares along the line (part 24's) */
 static void do_throw_way (void)
 {
-    unknown (U_YET);
+    fights (H_THROW_WAY);
 }
 
-/* H_ENGAGE (B1's, a stub till then): closed with a denizen, into its zone, no blow */
+/* H_ENGAGE (B1's): closed with a denizen, into its zone, no blow (part 24's) */
 static void do_engage (void)
 {
-    unknown (U_YET);
+    fights (H_ENGAGE);
 }
 
-/* H_SPLIT (B1's, a stub till then): two foes attacked in turn */
+/* H_SPLIT (B1's): two foes attacked in turn (part 24's) */
 static void do_split (void)
 {
-    unknown (U_YET);
+    fights (H_SPLIT);
 }
 
 /* H_SAY (the plan's batch B2, the noise's): words said aloud, heard by their loudness (I_NOISE); H_WAKE (B3's, the
@@ -162,6 +340,10 @@ void __fastcall__ s_dens_do (unsigned h)
         do_fight ();
         break;
     case H_MISSILE:
+        if (cmd.action == VB_THROW_OBJECT && cmd.dir <= H_NW) {
+            do_throw_way ();                    /* ("Throw the dagger north": a way, not a mark, B1's) */
+            break;
+        }
         do_missile ();
         break;
     case H_DISENGAGE:                           /* (Away from the foes engaging it, the book's disengage; a flight at a

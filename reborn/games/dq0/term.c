@@ -35,7 +35,8 @@ static unsigned char soon;                      /* The next words said the first
                                                 **   the console's a letter at a time) */
 char queue[QMAX];                               /* Lines entered and not yet taken (typed ahead), each ends with a 0 */
 unsigned qlen;                                  /*   (parts.c's too), so many bytes of them */
-static char last[INMAX + 1];                    /* The last line entered (cursor up brings it back) */
+char t_last[INMAX + 1];                         /* The last line entered (cursor up brings it back; "again" runs it
+                                                **   again: hself.c's again_go), but one that says "again" */
 static char sl[128], sn[128];                   /* The status line as it's shown, and as it's to be */
 
 /* ---- Output */
@@ -428,6 +429,24 @@ void __fastcall__ o_say_raw (const char* s)
     blanked = 0;
     newline ();
 }
+
+/* The line typed (inl) one that says "again" or "repeat" (a word of it begun so, the verbs plan's B7, 2026-11-10): 1, not
+** kept as the last line (t_last) to run again */
+unsigned char o_said_again (void)
+{
+    static const char* const w[2] = { "again", "repeat" };
+    const char* p;
+    unsigned char k;
+
+    for (k = 0; k < 2; ++k) {
+        for (p = inl; (p = strstr (p, w[k])) != 0; ++p) {
+            if (p == inl || p[-1] == ' ' || p[-1] == ',' || p[-1] == ';') {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -538,23 +557,29 @@ void t_done (void)
 
 /* A line entered: into the story as the player typed it, then queued for t_line, a line for each of its parts
 ** (parts.c's: "north then east"; no room: the line stays on the line typed, and Enter must be pressed again) */
+unsigned char said_again (void);                /* (Overlay 16's: its stub) */
 static void enter (void)
 {
-    if (inn) {
-        strcpy (last, inl);
+    unsigned char ag = 0;
+
+    if (inn && !(ag = said_again ())) {         /* (A line that
+                                                **   says "again" not kept: the one before it is run again, hself.c's
+                                                **   H_AGAIN, the verbs plan's B7, 2026-11-10; its parts looked at only
+                                                **   if it may, a line's time as it was) */
+        strcpy (t_last, inl);
         if (aliases_n && alias_hit (inl)) {
             alias_expand ();                    /* (A shortcut's word first: its line, the rest after it) */
         }
     }
     if (!parts_in (PO_LINE)) {
-        if (inn) {
-            strcpy (inl, last);                 /* (The line as it was typed, left there) */
+        if (inn && !ag) {
+            strcpy (inl, t_last);               /* (The line as it was typed, left there) */
         }
         return;
     }
     blank ();
     say ("> ");
-    say (inn ? last : inl);
+    say (inn && !ag ? t_last : inl);
     inn = 0;
     inl[0] = 0;
     shown = 0;                                  /* (The line typed drawn again by t_done, once the command's done:
@@ -583,7 +608,7 @@ void __fastcall__ t_key (unsigned char k)
         inl[0] = 0;
         inl_show ();
     } else if (k == CH_CURS_UP) {               /* The last line again */
-        strcpy (inl, last);
+        strcpy (inl, t_last);
         inn = strlen (inl);
         inl_show ();
     } else if (k >= ' ' && k < 0x7F && inn < INMAX) {

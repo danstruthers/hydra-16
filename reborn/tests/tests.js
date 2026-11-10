@@ -10098,6 +10098,62 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0fightverbs', what: 'Dingus Quest Zero\'s fights\' verbs not done till the verbs plan\'s B1 and B7 (2026-11-10, DECISIONS.md\'s "Charge, a throw a way, engage, a split attack, and again"), by the intents sent (I_NOISE, I_CLOSE, I_ATTACK, I_TURN), the blows told (E_FIGHT), the things\' places and the words, at seed 5 (its storeroom, the giant rats down the ladder): "again" with nothing before it ("There\'s nothing to do again."); "charge" with no foe ahead ("There\'s no foe ahead to charge."); a dagger thrown a way, "throw the dagger 1 south" (lands a square south, "it lands 1 square off"), "throw the dagger 3 south" (the storeroom wall two squares south: stopped short by it, "it strikes the wall and falls 1 square off") and "throw the dagger north" (the wall behind: stopped short by it, the world\'s line, "it strikes the wall and falls at your feet"); "turn left", "again", "repeat" (the line run again, three turns: east, north, west); down the ladder, the rats made hostile, turned to face them, "charge" (the war cry, I_NOISE 6; a close-in at a run, I_CLOSE run GA_RUN, or a blow; "\\"Charge!\\""; a blow struck); a second game\'s "engage the rat" (I_CLOSE\'s walk alone, no blow: "You close with the giant rat."), and again ("You\'re already engaged with the giant rat."); a third\'s split attack, two rats beside it (one named a giant bat, dq0Poke\'s), "attack the rat and the bat" (one line: I_ATTACK with its split, "You strike at the giant rat and the giant bat by turns."), the blows fought on at both',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm',
+        'dq0 -p t -s 5 -c /ram/c.hm -T -k dagger', 'again', 'charge', 'throw the dagger 1 south', 'take the dagger', 'throw the dagger 3 south', 'take the dagger', 'throw the dagger north', 'turn left', 'again', 'repeat', 'd', 'wait', 'turn right', 'charge', 'wait', 'wait', 'quit',
+        'dq0 -p t -s 5 -c /ram/c.hm -T', 'd', 'wait', 'engage the rat', 'engage the rat', 'quit',
+        'dq0 -p t -s 5 -c /ram/c.hm -T', 'd', 'wait', 'go right', 'attack the rat and the bat', 'wait', 'wait', 'quit', 'echo $status']) },
+      start(m) {        // (The rats hostile as the charge is typed; the third game's second rat named a giant bat and both put beside it, engaged)
+        const bat = (h, L, K, at, named) => { const ks = [...Array(L.nactors).keys()].filter(j => named(j) === 'giant rat'); if (ks.length > 1) 'giant bat\0'.split('').forEach((c, i) => { h[at(ks[1]) + L.aName + i] = c.charCodeAt(0); }); };
+        dq0Poke(m, [0, 1, 2, 3].map(k => ({ g: 1, line: 'charge', n: 2, k, set: { attitude: 0 }, hurt: 8 }))
+          .concat([0, 1, 2, 3].map(k => ({ g: 3, line: 'go right', n: 1, k, hurt: 8 })))
+          .concat([{ g: 3, line: 'attack the rat and the bat', n: 1, call: bat }, { g: 3, line: 'attack the rat and the bat', n: 1, name: 'giant rat', beside: 'face', engage: true },
+            { g: 3, line: 'attack the rat and the bat', n: 1, name: 'giant bat', beside: 6, engage: true }]));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), o = dq0Story(out), f = [], game = 'dq0 -p t -s 5 -c /ram/c.hm -T';
+        const ui = (t, kind) => t.intents.filter(i => i.ring === 'ui' && i.kind === kind), mine = t => dq0Ev(t, 'E_FIGHT').filter(e => e.who === 0);
+        const g1 = T.of(game + ' -k dagger'), q1 = T.after(g1, 'quit'), g2 = T.after(q1, game), q2 = T.after(g2, 'quit'), g3 = T.after(q2, game);
+        if (g3.k < 0) return ['the games not played'];
+        const o1 = o.slice(o.indexOf('> again'));
+        inTurn(o1, ['> again', 'There\'s nothing to do again.', '> charge', 'There\'s no foe ahead to charge.', '> throw the dagger 1 south', 'You throw the dagger south: it lands 1 square off.', '> throw the dagger 3 south', 'You throw the dagger south: it strikes the wall and falls 1 square off.',
+          '> throw the dagger north', 'You throw the dagger north: it strikes the wall and falls at your feet.'], f, 'the first game\'s words: ');
+        // (A throw a way: two squares along the line; the wall behind, stopped short, at its feet)
+        const dag = s => s && s.items.find(i => i.name === 'dagger' && i.where === 'IW_SQUARE'), t1 = T.after(g1, 'throw the dagger 1 south'), t3 = T.after(t1, 'throw the dagger 3 south'), t2 = T.after(t3, 'throw the dagger north');
+        const d1 = dag(t1.after), d3 = dag(t3.after), d2 = dag(t2.after), p = t1.after && t1.after.pc;
+        if (!d1 || !d3 || !p || d1.x !== p.x || d1.y !== p.y + 1 || d3.x !== p.x || d3.y !== p.y + 1) f.push('the dagger not a square south, thrown one and three (' + JSON.stringify([d1, d3]) + ', ' + JSON.stringify(p) + ')');
+        if (!d2 || !t2.after || d2.x !== t2.after.pc.x || d2.y !== t2.after.pc.y) f.push('the dagger thrown at the wall not at its feet (' + JSON.stringify(d2) + ')');
+        // (Again: the line before run again, repeat the same)
+        const tl = T.after(g1, 'turn left'), a1 = T.after(tl, 'again'), a2 = T.after(a1, 'repeat');
+        const faces = [tl, a1, a2].map(t => t.after && t.after.pc.face), turns = [a1, a2].map(t => ui(t, 'I_TURN').length);
+        if (faces.join() !== '2,0,6' || turns.join() !== '1,1') f.push('"turn left", "again", "repeat" not three turns (faces ' + faces + ', turns sent ' + turns + ')');
+        // (A charge: the war cry, the close-in at a run or the blow, a blow struck)
+        const ch = T.after(T.after(g1, 'turn right'), 'charge'), w1 = T.after(ch, 'wait');
+        const noise = ui(ch, 'I_NOISE'), close = ui(ch, 'I_CLOSE'), blow = ui(ch, 'I_ATTACK');
+        if (noise.length !== 1 || noise[0].loud !== 6) f.push('no war cry (' + JSON.stringify(noise) + ')');
+        if (!(close.length === 1 && close[0].walk === 0 && close[0].run === 4) && blow.length !== 1) f.push('no close-in at a run nor a blow (' + JSON.stringify(ch.intents) + ')');
+        if (!mine(ch).length && !mine(w1).length) f.push('no blow struck in the charge (' + dq0Evs(ch) + '; ' + dq0Evs(w1) + ')');
+        inTurn(o.slice(o.indexOf('> turn right')), ['> charge', '"Charge!"'], f, 'the charge\'s words: ');
+        // (Engage: walked up to, no blow; again, already engaged)
+        const e1 = T.after(g2, 'engage the rat'), e2 = T.after(e1, 'engage the rat'), ec = ui(e1, 'I_CLOSE');
+        if (ec.length !== 1 || ec[0].walk !== 1) f.push('engage not a close-in alone (' + JSON.stringify(e1.intents) + ')');
+        if (mine(e1).length || ui(e2, 'I_CLOSE').length) f.push('a blow struck, or a second close-in (' + dq0Evs(e1) + ')');
+        inTurn(o.slice(o.indexOf('> engage the rat')), ['You close with the giant rat.', '> engage the rat', 'You\'re already engaged with the giant rat.'], f, 'engage\'s words: ');
+        // (A split attack: the blow with its split, both struck at by turns)
+        const sp = T.after(g3, 'attack the rat and the bat'), sa = ui(sp, 'I_ATTACK');
+        if (sa.length !== 1 || !sa[0].split || sa[0].split === sa[0].foe) f.push('no split attack sent (' + JSON.stringify(sp.intents) + ')');
+        else {
+          const defs = [sp, T.after(sp, 'wait')].flatMap(mine).map(e => e.def);
+          if (!defs.includes(sa[0].foe) || !defs.includes(sa[0].split)) f.push('not both struck at (' + defs + ')');
+        }
+        inTurn(o.slice(o.indexOf('> attack the rat and the bat')), ['You strike at the giant rat and the giant bat by turns.'], f, 'the split\'s words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       // (dq0sky=0, 2026-11-03, a scene's: seed 1's straw gone for the skylight, the fight's dice other: another bandit took up the sword the character let fall before its own was taken up; no fault)
       name: 'dq0disarm', asks: true, initiative: true, what: 'Dingus Quest Zero\'s denizens\' limbs: a denizen\'s fumble (slice 4.1b, the brief\'s: "The same rules for every actor with hands and legs: a denizen\'s fumble drops its weapon (the world\'s floor, seen and taken up)"), by the denizens\' events, the item store and the words (HarnMaster\'s dice as they fall here: no -a, no -I, asks and initiative, the game as a search found it): the hand-written theme\'s hostile bandits (dq0robbed\'s, seed 1, south of the start), the character (hmchar seed 23, Dodge 90, Sword 60) its pack dropped (2026-10-26: its armour from it there, the reach\'s times, the dice as a search of the variants found them), in a gambeson and a mail hauberk, blocking, waiting for them: a bandit knocked senseless by its blow ("It falls senseless.", "lying senseless"), doing nothing as it lies there, deaf to words ("talk to the bandit": "The bandit lies senseless: it can\'t hear you.", the denizens\' SR_DOWN, the rouse the talk sends it ignored), its first turn as it comes round getting to its feet (the referee\'s O_RISE, "The bandit gets to its feet.": it fell as it was knocked out, 2026-10-29), and only then fighting on; a bandit\'s sword fumbled (its blow\'s, "The bandit strikes at you with its sword, but fumbles the blow.", or its guard\'s, "; it falters.": since 2026-10-29 its guard\'s, the fight\'s dice another fall), let fall (the world\'s E_BEAT WB_DROP in the denizens\' ring, its kind the sword\'s, its b the bandit\'s entry plus 1: "The bandit drops its sword."), taken up again at its next turn (WB_PICKS, the referee\'s RS_REARM and O_REARM: "The bandit snatches up its sword."), gone from the floor (as many swords in the store after as before).  The scene set (since the dice by who asks, 2026-10-30, the bandits roam with their door open, and come for no one waiting): the character goes into their room, two steps south through the door, and waits there; two games, each in its own folder: -R 21\'s the fumble, -R 48\'s the bandit knocked senseless as it\'s talked to (talked to again as it lies there).  The scene set (since the denizens\' day, 2026-10-31: bandits keep watches, a third asleep): no day (the environment\'s dq0hour=128, rc\'s, before its games: dq0d\'s), every one about as before',
       init: 't_rc', cycles: 1500e6,

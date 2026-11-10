@@ -37,6 +37,7 @@
 #include "../dq0/life.h"                        /* (The clues' CLUE_*: kit_put's) */
 #include "wbody.h"
 #include "outfit.h"
+#include "line.h"                               /* (ln_pass: a thing thrown stopped short, s_throw_at's) */
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
@@ -2449,8 +2450,8 @@ extern unsigned tk_x;
 unsigned char __fastcall__ s_throw_at (const char* name)
 {
     static unsigned char reach, band, d, sn, who;
-    static unsigned px, py, mx, my;
-    static int dx, dy;
+    static unsigned px, py, mx, my, lx, ly, qx, qy;
+    static int dx, dy, ex, ey;
     static signed char steps, g;
     struct req* r;
     unsigned n = 0;
@@ -2488,10 +2489,34 @@ unsigned char __fastcall__ s_throw_at (const char* name)
         my = bpy;
     } else {
         sn = HUB->pc_stratum;
-        px = HUB->pc_x;
-        py = HUB->pc_y;
-        mx = iq.x;
-        my = iq.y;
+        px = mx = HUB->pc_x;
+        py = my = HUB->pc_y;
+        /* (Stopped short on its line by rock, a wall, a door shut, glass: it falls on the last square it gets to,
+        ** ln_pass's, a missile's; the mark the UI's squares along a way, "throw the dagger north", the verbs plan's
+        ** B1, 2026-11-10; a mark it sees as before, its line clear) */
+        dx = iq.x - px;
+        dy = iq.y - py;
+        lx = dx < 0 ? -dx : dx;
+        ly = dy < 0 ? -dy : dy;
+        d = lx > ly ? (lx > 0xFF ? 0xFF : lx) : (ly > 0xFF ? 0xFF : ly);
+        for (ex = ey = 0, band = d; band; --band) {
+            qx = mx;
+            qy = my;
+            if ((ex += lx) * 2 >= d) {
+                ex -= d;
+                qx += dx < 0 ? -1 : 1;
+            }
+            if ((ey += ly) * 2 >= d) {
+                ey -= d;
+                qy += dy < 0 ? -1 : 1;
+            }
+            if (!ln_pass (sn, qx, qy, LN_FIRE)) {
+                break;
+            }
+            mx = qx;
+            my = qy;
+        }
+        hub_map (0);
     }
     dx = mx - px;
     dy = my - py;

@@ -159,6 +159,7 @@ ovl_out:
             OVFN        time_ui, 16         ; (The time of day believed, worded: time.c, 2026-10-31)
             OVFN        say_raw, 16         ; (A line as it is, the map's: term.c, the main RAM's room)
             OVFN        t_status, 16        ; (The status line drawn: term.c, the main RAM's room, 2026-11-03)
+            OVFN        said_again, 16      ; (A line that says "again": term.c, the verbs plan's B7, 2026-11-10)
             OVFN        may_den, 14         ; (The thing named may be a denizen: sway.c, 2026-11-03)
             OVFN        place_said, 14      ; ("From the floor": a place, not a thing, 2026-11-06)
             OVFN        walk_ahead, 20      ; (A command's first words by what it carries: sway.c, 2026-11-06)

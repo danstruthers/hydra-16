@@ -411,7 +411,8 @@ unsigned char __fastcall__ legs (unsigned char op);  /* (Part 50's, one stub, th
 #define L_GO            0x41
 
 
-static unsigned char runs;                      /* (A flight's: at a run, whatever the player's pace: part 24's) */
+static unsigned char runs;                      /* (A flight's: at a run, whatever the player's pace: part 24's; a
+                                                **   charge's close-in, its pace, GA_*: I_CLOSE's run, B1's, 2026-11-10) */
 
 static unsigned char dark (void);
 
@@ -420,7 +421,7 @@ static void paced (void)
     unsigned char dk = dark (), g, w;
 
     hub_map (0);
-    g = runs ? GA_RUN : HUB->gait;
+    g = runs ? runs : HUB->gait;
     w = HUB->watch;
     searching = w & WA_TRAPS;
     if (!dk) {
@@ -5717,6 +5718,9 @@ unsigned char s_close_on (void)
 ** (fight_on's, as it begins one); a setting of the player's widening where it begins ("autoengage with sword at close
 ** range": the zone and a square more, closed with; a missile weapon's bands), fight_foe's; an ally's, by its actor */
 static unsigned char fhurt;                     /* (Its health's band as it began, or as it was last asked of) */
+static unsigned char fsplit;                    /* (A split attack's other foe plus 1, I_ATTACK's split: struck at turn
+                                                **   and turn about with its target while both stand, the verbs plan's
+                                                **   B1, 2026-11-10; 0 none) */
 static unsigned char fsaid;                     /* (The next blow the player's: at its target whatever its state, if
                                                 **   it's within reach, "attack the rat": one senseless finished) */
 
@@ -5853,7 +5857,7 @@ static unsigned char fleeh;                     /* (Its way) */
 unsigned char __fastcall__ s_fight_on (unsigned char idle)
 {
     struct msg q;                               /* (Not static: a part's statics the main RAM's) */
-    static unsigned char k, h;
+    static unsigned char k, h, f;
 
     if (rs_live) {
         return idle ? 3 : 0;                    /* (The reach's steps under way, its command asked again first) */
@@ -5880,6 +5884,15 @@ over:
             }
         }
         h = fight_reach (k = HUB->pc_task.foe);
+        if (fsplit && fight_reach (f = fsplit) == 2) {   /* (A split attack: the other foe struck at by turns while
+                                                **   both stand; its target down, on to the other; the other down,
+                                                **   its target's alone) */
+            fsplit = k;                         /* (Its target down: struck at no more, the other's alone) */
+            k = f;
+            h = 2;
+        } else {
+            fsplit = 0;
+        }
         if (h != 2 && (!h || !fsaid)) {
             if (!(k = fight_foe ())) {          /* (Its target beaten: the next, or none: told, but after a blow alone,
                                                 **   its words enough, "You finish the giant rat where it lies.") */
@@ -6126,7 +6139,7 @@ unsigned char s_flee_on (void)
         return 0;                               /* (Cornered: the disengage enough) */
     }
     fwant = 0;
-    runs = 1;
+    runs = GA_RUN;
     step_to (fleeh, 250, 0);
     runs = 0;
     hub_map (0);
@@ -6176,7 +6189,7 @@ void __fastcall__ s_disengage_go (const struct msg* m)
     fleeh = h;
     fwant |= f == 1 ? FW_RUN | 1 : 1;           /* (Free of them, a flight's run on: fight_on's; engaged still,
                                                 **   fought on) */
-    runs = f == 2;
+    runs = f == 2 ? GA_RUN : 0;
     step_to (h, n, !f);                         /* (Backing away facing the foe; a flight turned to run) */
     runs = 0;
 }
@@ -6602,7 +6615,9 @@ void __fastcall__ s_intent_more (struct msg* m)
         take_go (m);                            /* (Walked over to it, then taken up: wgame.c) */
         break;
     case I_CLOSE:
+        runs = I_CLOSE_RUN (*m);                /* (A charge's: its walk at a run, a sprint, B1's) */
         close_go (m);                           /* (Walked up to it, then struck: part 23's) */
+        runs = 0;
         break;
     case I_PORTAL:
         k = I_PORTAL_HAND (*m) ? I_PORTAL_HAND (*m) : shand_of (I_PORTAL_STRIKE (*m));
@@ -6631,6 +6646,7 @@ void __fastcall__ s_intent_more (struct msg* m)
             grip_off (1);                       /* (The hold let go: HOUSE.md's grappling, 2026-11-09) */
             break;
         }
+        fsplit = I_ATTACK_SPLIT (*m);           /* (A split attack's other foe: fight_on's, B1's) */
         fight_go (m);
         break;
     case I_DISENGAGE:

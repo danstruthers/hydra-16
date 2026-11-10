@@ -850,10 +850,13 @@ player sees changed (the whole suite: all 426 tests pass):
 - **What's left:** the shared paths stay where they were, not handlers but what they call: main.c's `things`, `take` and
   `took_up` (the world's E_TAKEN's too), `hide`'s work (part 18: its words, the rope's test), `feature` and the
   missiles (part 13), `lift` and `deal` (part 24). The 50 `H_NOT_YET` rows (a verb done is a row and a case in its
-  group): 1 left since 2026-11-09 (grapple's, its own), and 5 verbs whose rows point at a stub of their own that
-  says "not yet" till its batch builds it; the other 44 done (the powers refused, the rows seen to before the table,
-  status and sneak, the three aliases: DECISIONS.md's "The verbs not done yet"; pray, pray for, fast, swim and follow
-  since 2026-11-10: its "Prayer, fasting, swimming and following"; say, knock, wake, taunt, orate and pretend, minds.c's: DECISIONS.md's "Words said, a knock, the minds swayed"; use, push, pull, touch and taste, the things' batch B4's, 2026-11-10: DECISIONS.md's "The things' verbs"). The request byte for the handling verbs, if `handle` ever takes its op from the row (the two verbs whose op
+  group): none left (grapple's done since 2026-11-09, its own), and no verb's row points at a stub that says "not yet"
+  any longer: all 50 done since 2026-11-10 (the powers refused, the rows seen to before the table, status and sneak,
+  the three aliases: DECISIONS.md's "The verbs not done yet"; grapple; pray, pray for, fast, swim and follow: its
+  "Prayer, fasting, swimming and following"; say, knock, wake, taunt, orate and pretend, minds.c's: DECISIONS.md's
+  "Words said, a knock, the minds swayed"; use, push, pull, touch and taste, the things' batch B4's: DECISIONS.md's
+  "The things' verbs"; charge, a throw a way, engage, a split attack and again: DECISIONS.md's "Charge, a throw a way,
+  engage, a split attack, and again"). The request byte for the handling verbs, if `handle` ever takes its op from the row (the two verbs whose op
   varies would keep theirs in the line).
 
 Odd answers the sweeps don't catch (they name the thing, but read oddly), for review: "tie the torch" says "You can't

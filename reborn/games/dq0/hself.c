@@ -54,11 +54,39 @@ static void do_fast (void)
     fast_go ();
 }
 
-/* H_AGAIN (the plan's batch B7, the line's, a stub till then): the last line again ("again", "g") */
+/* H_AGAIN (the plan's batch B7, the line's): the last line typed that didn't say "again" run again ("again",
+** "repeat"): its parts queued first, before any typed ahead (parts.c's PO_REPEAT, term.c's t_last), each carried out
+** as the character's free, as if typed */
+void again_go (void);
 static void do_again (void)
 {
-    unknown (U_YET);
+    again_go ();
 }
+
+/* The last line typed that didn't say "again" (term.c's t_last) queued in its parts (parts.c's, as typed: lb keeps the
+** line being typed meanwhile), then put first, before any typed ahead; none, or no room, said so.  Part 24's (part 2's
+** room), through its stub again_go */
+#pragma code-name (push, "SW24CODE")
+#pragma rodata-name (push, "SW24RODATA")
+void s_again_go (void)
+{
+    unsigned d = qlen, e;
+
+    strcpy (lb, inl);
+    strcpy (inl, t_last);
+    e = t_last[0] && parts_in (PO_LINE);
+    strcpy (inl, lb);
+    if (!e) {
+        msg ("There's nothing to do again.");
+        return;
+    }
+    e = qlen - d;
+    memcpy (lb + 128, queue + d, e);
+    memmove (queue + e, queue, d);
+    memcpy (queue, lb + 128, e);
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The body's and the meta commands, by their handler's number (H_NOTHING ... H_AGAIN) */
 void __fastcall__ s_self_do (unsigned h)
