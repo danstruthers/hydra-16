@@ -32,6 +32,14 @@ function checkOverlays(dir) {
   if (!m || +m[1] !== h || ov !== h || !/^_ovbank:\s+\.res\s+OVBANKS \+ 4\b/m.test(s) || !/ovbank\[OVBANKS \+ 4\]/.test(hfile))
     throw new Error('dq0w: the overlays\' count not the same in things.h (' + h + '), bank.s (' + (m ? m[1] : 'none') +
       ', its _ovbank OVBANKS + 4) and dq0w.cfg (' + ov + ')');
+  // Each overlay but its file's last filled out to its 8K (fill = yes): ld65 writes an unfilled one's bytes only, so
+  // every bank after it in its file is read in shifted (2026-11-10: OV28 left unfilled, a 29th .ovl bank after it, and
+  // the parts the build moved there ran garbage, the game stalled at its first step)
+  const banks = [...fs.readFileSync(path.join(dir, 'dq0w.cfg'), 'latin1').matchAll(/^\s*OV(\d+):\s*file\s*=\s*"([^"]*)"([^;\n]*)/gm)];
+  banks.forEach(([, n, f, rest], i) => {
+    if (banks.slice(i + 1).some(b => b[2] === f) && !/\bfill\s*=\s*yes\b/.test(rest))
+      throw new Error('dq0w.cfg: OV' + n + ' not filled (fill = yes), with more of "' + f + '"\'s overlays after it');
+  });
 }
 
 function build({ dir, objdir, say = () => {} }) {
