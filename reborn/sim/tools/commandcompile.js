@@ -869,6 +869,8 @@ function phraseSem(spec, env, ctx) {
     case 'swap': return act('VB_SWAP_HANDS', {});
     // First aid (slice 4.3): its own wounds (none said, or a part of it: the game's), or another's
     case 'tend': return optObj('VB_TEND');
+    // A cloth torn up for bandages, with what's said ("cut up the cloak with the dagger"), or washed (2026-11-10)
+    case 'rip': return withTool('VB_RIP_OBJECT');
     // Religion: prayer, intervention, invocations (performed, not cast); baptism is the invocation that converts.
     case 'pray': {
       const t = topicAfter(spec, env, ['for']);

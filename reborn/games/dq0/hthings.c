@@ -161,7 +161,8 @@ void __fastcall__ s_things_do (unsigned h)
         if (cmd.action == VB_HOLD_OBJECT && grip_go (GM_HOLD | GT_TRY)) {
             break;                              /* ("Hold the goblin": a denizen beside, held, a grapple's) */
         }
-        handle (cmd.aux == IO_DON_WORN ? IO_DON : cmd.aux, cmd.obj.word, cmd.other.word[0] || cmd.prep != PR_IN ?
+        handle (cmd.aux == IO_DON_WORN ? IO_DON : cmd.aux == IO_RIP && strstr (cl, "wash") ? IO_WASH : cmd.aux,
+            cmd.obj.word,                       /* ("Wash" a cloth washed: rip's verb, its request the word's) */ cmd.other.word[0] || cmd.prep != PR_IN ?
             cmd.other.word : "shaft", cmd.aux == IO_DON_WORN ? DN_WORN : cmd.prep == PR_ON);
     }                                           /* ("Put the dagger down the shaft", the hole: its kind said, no word) */
 }

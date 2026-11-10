@@ -124,7 +124,7 @@ const NEAR = {
     'dq0portc', 'dq0break', 'dq0soak', 'dq0kept', 'dq0steps', 'dq0walkwords'],
   gear: ['dq0outfit', 'dq0kit', 'dq0keys', 'dq0lair', 'dq0dens', 'dq0items', 'dq0equip', 'dq0money', 'dq0load', 'dq0usedup',
     'dq0examine', 'dq0inside', 'dq0handy', 'dq0hands', 'dq0shield', 'dq0armour', 'dq0robbed', 'dq0reach', 'dq0several',
-    'dq0names', 'dq0rebar', 'dq0strike'],
+    'dq0names', 'dq0rebar', 'dq0strike', 'dq0rip', 'dq0dress'],
   money: ['dq0whotrades', 'dq0money', 'dq0outfit', 'dq0kit', 'dq0lair', 'dq0dens', 'dq0robbed', 'dq0load'],
   senses: ['dq0looks', 'dq0heard', 'dq0glow', 'dq0dark', 'dq0darksearch', 'dq0light', 'dq0scent', 'dq0traces', 'dq0stay',
     'dq0sound', 'dq0soundx', 'dq0watch', 'dq0lookway', 'dq0kept', 'dq0fog', 'dq0quiet', 'dq0pose'],
@@ -135,7 +135,7 @@ const NEAR = {
   time: ['dq0time', 'dq0longwait', 'dq0tasks', 'dq0timed', 'dq0pace', 'dq0steps', 'dq0tiring', 'dq0watch', 'dq0rather', 'dq0stay',
     'dq0usedup', 'dq0answer', 'dq0jobs', 'dq0hold'],
   body: ['dq0limbs', 'dq0legs', 'dq0hands', 'dq0handy', 'dq0harm', 'dq0tiring', 'dq0senseless', 'dq0helpless', 'dq0disarm', 'dq0venom', 'dq0air', 'dq0tend',
-    'dq0pose', 'dq0quiet'],
+    'dq0pose', 'dq0quiet', 'dq0dress'],
   save: ['dq0save', 'dq0kept', 'dq0soak', 'dq0quest', 'dq0vast'],
   screen: ['dq0vera', 'dq0veraplain', 'dq0veraserial', 'dq0prompt', 'dq0sound', 'dq0soundx', 'dq0answer', 'dq0mapturn'],
 };

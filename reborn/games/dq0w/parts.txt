@@ -111,5 +111,6 @@
 105 15  What it carries listed: gathered first (things.c, 2026-11-06: part 11's room; overlay 15's, 3's room)
 106 8   Grappling: the hold kept, a held one's try to break free (wfight.c: 2026-11-09, part 15's room; its let go part 37's)
 107 3   Where a thing's worn: its place, the room there, its words; which, asked by place (wworn.c: 2026-11-10)
+108 3   The textiles: a cloth torn up for bandages, washed (wcloth.c: 2026-11-10, HOUSE.md's bandages)
 stub start 3
 stub begin 3

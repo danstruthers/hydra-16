@@ -184,6 +184,10 @@ quote       thing=VB_TRADE unsaid=last aux=SW_PRICE                  #   price a
 bid         thing=VB_TRADE unsaid=last aux=SW_OFFER                  #   over; one entertained: sung to, played
 haggle      thing=VB_TRADE alone=VB_TRADE unsaid=last aux=SW_HAGGLE  #   for, danced for, the verb said the skill)
 entertain   thing=VB_TRADE alone=VB_TRADE aux=SW_ENTERTAIN
+rip         thing=VB_RIP_OBJECT unsaid=last aux=IO_RIP               # (new, 2026-11-10: a cloth torn up for bandages,
+                                                                     #   HOUSE.md's bandages; "wash" a cloth washed, the
+                                                                     #   same verb, its request the word's, hthings.c's:
+                                                                     #   one verb, dq0c's records near full)
 
 [words]
 change facing = face
@@ -635,3 +639,23 @@ transmute = talent
 link = link
 orate = orate
 address = orate
+rip = rip
+rip up = rip
+tear = rip
+tear up = rip
+cut up = rip
+wash = rip
+change the bandage on = tend
+change the bandages on = tend
+change the dressing on = tend
+change my bandage on = tend
+change my dressing on = tend
+change the bandage = tend
+change the bandages = tend
+change the dressing = tend
+change my bandage = tend
+change my bandages = tend
+change my dressing = tend
+change bandage = tend
+change bandages = tend
+change dressing = tend

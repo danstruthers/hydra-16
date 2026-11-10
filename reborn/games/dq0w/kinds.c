@@ -54,7 +54,7 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "chest", K_CONTAINER, 120, 80, 60, 400, 0, 0, 7, "", MT_WOOD, AP_WOOD, 80, SS | KF_LID },
     { "skull", 0, 4, 2, 0, 0, 0, 0, 3, "", MT_BONE, AP_BONE, 0 },
     { "broken sword", 0, 12, 2, 0, 0, 0, 0, 4, "blade", MT_IRON, AP_WEAPON, 40 },
-    { "cloak", K_WEAR, 8, 6, 2, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 96 },
+    { "cloak", K_WEAR, 8, 6, 2, 0, 0, 0, 4, "", MT_WOOL, AP_CLOTH, 96 },
     { "potsherds", K_PLURAL, 2, 1, 2, 0, 0, 0, 2, "", MT_CLAY, AP_POTTERY, 0 },
     { "sword", K_HAND | K_HANG, 12, 3, 0, 0, FM_SWORD, 0, 4, "blade", MT_IRON, AP_WEAPON, 600 },  /* (The book's
                                                 **   broadsword) */
@@ -152,7 +152,7 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "tower shield", K_HAND | K_WEAR, 32, 18, 0, 0, 0, 0, 5, "tower", MT_WOOD, AP_WEAPON, 384 },
     { "clothes", K_WEAR | K_PLURAL, 35, 8, 0, 0, 0, 0, 3, "clothes", MT_CLOTH, AP_CLOTH, 704 },  /* (A tunic and
                                                 **   leggings) */
-    { "robe", K_WEAR, 32, 8, 0, 0, 0, 0, 4, "robe", MT_CLOTH, AP_CLOTH, 632 },
+    { "robe", K_WEAR, 32, 8, 0, 0, 0, 0, 4, "robe", MT_WOOL, AP_CLOTH, 632 },
     { "leather vest", K_WEAR, 22, 6, 0, 0, 0, 0, 3, "lvest", MT_LEATHER, AP_ARMOUR, 448 },
     { "kurbul helm", K_WEAR, 4, 2, 0, 0, 0, 0, 2, "khelm", MT_LEATHER, AP_ARMOUR, 80 },
     { "mail cowl", K_WEAR, 16, 2, 0, 0, 0, 0, 2, "mcowl", MT_IRON, AP_ARMOUR, 480 },
@@ -160,13 +160,13 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "scale byrnie", K_WEAR, 123, 10, 0, 0, 0, 0, 4, "sbyrnie", MT_IRON, AP_ARMOUR, 1760 },
     { "great helm", K_WEAR, 35, 6, 0, 0, 0, 0, 3, "ghelm", MT_STEEL, AP_ARMOUR, 1100 },
     { "mail leggings", K_WEAR | K_PLURAL, 88, 8, 0, 0, 0, 0, 3, "mlegs", MT_IRON, AP_ARMOUR, 2640 },
-    { "surcoat", K_WEAR, 21, 6, 0, 0, 0, 0, 4, "surcoat", MT_CLOTH, AP_CLOTH, 424 },
+    { "surcoat", K_WEAR, 21, 6, 0, 0, 0, 0, 4, "surcoat", MT_LINEN, AP_CLOTH, 424 },
     { "hide jerkin", K_WEAR, 40, 10, 0, 0, 0, 0, 3, "hide", MT_LEATHER, AP_HIDE, 240 },     /* (Untanned hide and fur:
                                                 **   quilt's protection, the house's reading of Combat 4) */
-    { "shroud", K_WEAR, 6, 3, 0, 0, 0, 0, 3, "shroud", MT_CLOTH, AP_CLOTH, 16 },            /* (The dead's linen) */
+    { "shroud", K_WEAR, 6, 3, 0, 0, 0, 0, 3, "shroud", MT_LINEN, AP_CLOTH, 16 },            /* (The dead's linen) */
     { "mask", K_WEAR, 4, 2, 0, 0, 0, 0, 2, "", MT_WOOD, AP_WOOD, 24 },
     { "crowbar", K_HAND, 20, 3, 0, 0, 0, 0, 3, "crowbar", MT_IRON, AP_METAL, 36 },
-    { "bandages", K_PLURAL, 1, 1, 0, 0, 0, 0, 1, "bandage", MT_CLOTH, AP_CLOTH, 4, 0, KF_COUNT },
+    { "bandages", K_PLURAL, 1, 1, 0, 0, 0, 0, 1, "bandage", MT_LINEN, AP_CLOTH, 4, 0, KF_COUNT },
     { "letter", K_HAND, 0, 0, 0, 0, 0, 0, 2, "", MT_CLOTH, AP_BOOK, 0 },   /* (Credentials: guild papers, a letter of
                                                 **   introduction, Character 17) */
     { "ring", K_WEAR, 0, 0, 0, 0, 0, 0, 1, "", MT_SILVER, AP_JEWEL, 112 },
@@ -178,7 +178,7 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
                                                 **   UI's as it starts: KI_THEME's) */
     /* (KI_HIGH on, 2026-10-27: the denizens' belongings and valuables; and what's come since) */
     { "furs", K_PLURAL, 40, 20, 8, 0, 0, 0, 4, "", MT_LEATHER, AP_HIDE, 120 },    /* (A lord's bed: a heap of them) */
-    { "blanket", 0, 12, 6, 8, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 192 },
+    { "blanket", 0, 12, 6, 8, 0, 0, 0, 4, "", MT_WOOL, AP_CLOTH, 192 },
     { "cask", K_CONTAINER, 40, 40, 32, 200, 0, 0, 5, "", MT_WOOD, AP_WOOD, 48, KF_LIQUID | KF_STOPPER },   /* (Four
                                                 **   gallons: a band's water) */
     { "crowns", K_PLURAL, 16, 0, 0, 0, 0, 0, 1, "", MT_GOLD, AP_METAL, 960, 0, KF_SMALL | KF_COUNT | KF_TENS },  /* (The
@@ -226,13 +226,13 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "old writing", K_HAND, 8, 2, 0, 0, 0, 0, 2, "", MT_OTHER, AP_BOOK, 0 },  /* (A writing carried out of its dungeon, and a
                                                 **   copy of one on a sheet: the plan's steps 9 and 10, 2026-11-06) */
     { "copy", K_HAND, 0, 1, 0, 0, 0, 0, 2, "", MT_CLOTH, AP_BOOK, 0 },
-    { "scarf", K_WEAR, 1, 1, 0, 0, 0, 0, 2, "", MT_CLOTH /* wool */, AP_CLOTH, 24 },   /* (Worn places, the user's,
+    { "scarf", K_WEAR, 1, 1, 0, 0, 0, 0, 2, "", MT_WOOL, AP_CLOTH, 24 },   /* (Worn places, the user's,
                                                 **   2026-11-10: a scarf, 6d, worn at the neck, on the head, over the
                                                 **   face; earrings, silver, a pair, in the ears, 40d) */
     { "earrings", K_WEAR | K_PLURAL, 0, 0, 0, 0, 0, 0, 1, "", MT_SILVER, AP_JEWEL, 160 },
-    { "linen sheet", 0, 6, 4, 0, 0, 0, 0, 4, "", MT_CLOTH /* linen: the materials' split */, AP_CLOTH, 96 },  /* (A folk
+    { "linen sheet", 0, 6, 4, 0, 0, 0, 0, 4, "", MT_LINEN, AP_CLOTH, 96 },  /* (A folk
                                                 **   bed's, 24d; a towel, 4d) */
-    { "towel", 0, 2, 2, 0, 0, 0, 0, 3, "", MT_CLOTH /* linen: the materials' split */, AP_CLOTH, 16 },
+    { "towel", 0, 2, 2, 0, 0, 0, 0, 3, "", MT_LINEN, AP_CLOTH, 16 },
 };
 #pragma rodata-name (pop)
 

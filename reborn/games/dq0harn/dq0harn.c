@@ -515,6 +515,8 @@ static void __fastcall__ own_line (char* l)
         for (k = 0; k < HARN_INJMAX && l[k + 6]; ++k) {
             pc_by[k] = l[k + 6] & 7;            /* (A digit: BY_* are 0-4) */
         }
+    } else if (!strncmp (l, "dressed ", 8)) {
+        dress_line (l + 8, 0);                  /* (Its dressings: dress.c's pc_dr, overlay 9's) */
     } else if (!strncmp (l, "pace ", 5) && strlen (l) >= 10) {
         gait = l[5] - '0' < NGAITS ? l[5] - '0' : GA_WALK;
         watch = l[7] - '0';
@@ -552,6 +554,7 @@ void __fastcall__ s_load_pc (struct req* r)
     RS_LOAD_PC_WATCH (*r) = watch;
     strncpy (path, r->text, sizeof path - 1);
     RS_LOAD_PC_BAD (*r) = 1;
+    memset (pc_dr, 0, sizeof pc_dr);           /* (No dressings: its file's "dressed" line's) */
     pv.hr = pd.hr = afffl = 0;                 /* (No venom, no sickness, no rest yet: its file's "body" line's; */
     body_line (path, 3);                       /*   no skills used yet, its "body u" lines') */
     rest_m = HUB->pcsum.timesense = 0;
@@ -607,6 +610,11 @@ void __fastcall__ s_save_pc (struct req* r)
     }
     line[g + 6] = 0;
     harn_write_line (fd, line);
+    strcpy (line, "dressed ");                  /* (Its dressings: dress.c's pc_dr, HOUSE.md's bandages) */
+    dress_line (line + 8, 1);
+    if (line[8]) {
+        harn_write_line (fd, line);
+    }
     if (HUB->pcsum.timesense) {
         harn_write_line (fd, "timesense");      /* (Its trait, kept: the house's) */
     }

@@ -146,6 +146,7 @@ VB_META_TIME                                    (* the time of day as the charac
 VB_TRADE                object source           (* the market and entertaining (2026-11-02): bought, sold, a price asked, haggled over, one entertained: the verb's aux, the sway's SW_* *)
 VB_TIE_OBJECT           object support          (* "tie the rope to the ring", "let down the rope", "tie the sack" (2026-11-04) *)
 VB_UNTIE_OBJECT         object                  (* "untie the rope", "untie the sack" *)
+VB_RIP_OBJECT           object instrument       (* a cloth torn up for bandages, "cut up the cloak with the dagger"; washed, "wash the bandages" (2026-11-10): the verb's aux, the word's *)
 
 [results]
 ERROR:NOT_UNDERSTOOD

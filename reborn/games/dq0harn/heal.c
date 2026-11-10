@@ -48,8 +48,9 @@ static void __fastcall__ nput (const char* s)
     strcpy (news + n, s);
 }
 
-/* A wound's words, "the minor cut to your left forearm (M1)" (sheet.c's, the "a" made "the"), of injury k of c's */
-static char ww[56];
+/* A wound's words, "the minor cut to your left forearm (M1)" (sheet.c's, the "a" made "the"), of injury k of c's (its
+** words dress.c's too) */
+char ww[56];
 static const char* __fastcall__ wname (const harn_char* c, unsigned char k)
 {
     const harn_injury* j = &c->inj[k];
@@ -123,8 +124,37 @@ static void __fastcall__ by_drop (unsigned char k)
 {
     for (; k < HARN_INJMAX - 1; ++k) {
         pc_by[k] = pc_by[k + 1];
+        pc_dr[k] = pc_dr[k + 1];                /* (Its dressing gone with it: dress.c's) */
     }
-    pc_by[k] = 0;
+    pc_by[k] = pc_dr[k] = 0;
+}
+
+/* The healing roll's bonus by the dressing on the character's wound k (HOUSE.md's bandages, 2026-11-10): a clean one
+** (its grade 7-9) +5, a fair one none, a soiled one (0-3) -10, the infection the likelier; none, none */
+static signed char __fastcall__ dressed (unsigned char k)
+{
+    unsigned char d = pc_dr[k] & DR_GRADE;
+
+    return !d ? 0 : d >= 8 ? 5 : d >= 5 ? 0 : -10;
+}
+
+/* A day's end: each dressing on a serious or grievous wound of the character's soiled, three grades the worse (its
+** grade plus 1 kept: 1 the filthiest; DR_SOILED, the sheet's word), told as it's soiled (HOUSE.md's bandages: it
+** wants changing) */
+static void soil (void)
+{
+    unsigned char k, d;
+
+    for (k = 0; k < pc.ninj; ++k) {
+        if ((d = pc_dr[k] & DR_GRADE) != 0 && pc.inj[k].sev >= HARN_SERIOUS && !(pc.inj[k].flags & IF_POOL)) {
+            pc_dr[k] = (d > 4 ? d - 3 : 1) | DR_SOILED;
+            if (d > 4 && d <= 7) {
+                nput (" The dressing on ");
+                nput (wname (&pc, k));
+                nput (" is soiled: it wants changing.");
+            }
+        }
+    }
 }
 
 /* A healing roll of c's injury k (the five-day roll, or an infection's daily one: the library's harn_heal_roll; a
@@ -138,7 +168,7 @@ static unsigned char __fastcall__ heal_one (harn_char* c, unsigned char k)
         wname (c, k);                           /* (Its words before: it may be gone after) */
         ww[0] = 'T';
     }
-    h = harn_heal_roll (c, k, 0);
+    h = harn_heal_roll (c, k, c == &pc ? dressed (k) : 0);  /* (Its dressing's: HOUSE.md's bandages) */
     if (c != &pc) {
         if (c->ninj == n) {
             j->flags &= ~HARN_IF_INFECTED;      /* (No infection for creatures: the house's) */
@@ -278,6 +308,9 @@ static void __fastcall__ body_time (struct req* r)
         ++wcount;
         if (pc.state != HARN_DEAD) {
             watch_of (&pc, wcount);
+            if (!(wcount % 6)) {
+                soil ();                        /* (A day's end: its dressings soiled, after its rolls) */
+            }
         }
         sheets_watch (wcount);
     }
@@ -292,167 +325,10 @@ static void __fastcall__ body_time (struct req* r)
     fresh = 0;
 }
 
-/* ---- First aid and treatment (RS_TREAT: Physician 2-3, the Treatment table): the character the healer, the patient
-** itself (other 0) or an actor (its entry plus 1: its sheet's) */
+/* ---- First aid and treatment (RS_TREAT): overlay 9's since 2026-11-10 (dress.c: the dressings', HOUSE.md's bandages;
+** this overlay's room) */
 
-enum { TR_TOURNIQUET, TR_DRESS, TR_COMPRESS, TR_SPLINT, TR_SURGERY };
-
-/* The treatment the book's table suggests for injury j (Physician 3: by its aspect and severity) */
-static unsigned char __fastcall__ remedy (const harn_injury* j)
-{
-    if (j->flags & HARN_IF_BLEEDER) {
-        return TR_TOURNIQUET;
-    }
-    switch (j->aspect & 3) {
-    case HARN_BLUNT:
-        return j->sev == HARN_MINOR ? TR_COMPRESS : j->sev == HARN_SERIOUS ? TR_SPLINT : TR_SURGERY;
-    case HARN_FIRE:
-        return j->sev == HARN_MINOR ? TR_COMPRESS : TR_DRESS;
-    case HARN_EDGE:
-        return j->sev == HARN_MINOR ? TR_DRESS : TR_SURGERY;
-    }
-    return j->sev == HARN_GRIEVOUS ? TR_SURGERY : TR_DRESS;
-}
-
-/* Its bonus (the table's EML modifier, the tourniquet's +50), by what's to hand (the house's: bandages for a dressing,
-** a knife or a dagger and bandages for surgery; none of them, no bonus) */
-static int __fastcall__ bonus (const harn_injury* j, unsigned char how)
-{
-    int b = how == TR_TOURNIQUET ? 50 : treatment[j->aspect & 3][(j->sev ? j->sev : 1) - 1][0];
-
-    if ((how == TR_DRESS && !has ("bandage")) ||
-        (how == TR_SURGERY && (!has ("bandage") || (!has ("knife") && !has ("dagger"))))) {
-        b = 0;
-    }
-    return b;
-}
-
-/* The part said (tpart: "arm", "left leg", "head", "chest" ...) and whether injury j is there (none said: any) */
-static unsigned char __fastcall__ at_part (const harn_injury* j)
-{
-    unsigned char l = HARN_LOC (j->loc), s;
-
-    if (!tpart[0] || strstr (tpart, "wound") || strstr (tpart, "self")) {
-        return 1;
-    }
-    s = !strstr (tpart, "left") && !strstr (tpart, "right") ? 1 : (strstr (tpart, "right") != 0) == ((j->loc &
-        HARN_RIGHT) != 0);
-    return s && (strstr (tpart, harn_location_name (j->loc)) || (strstr (tpart, "arm") && l >= HARN_SHOULDER &&
-        l <= HARN_HAND) || (strstr (tpart, "leg") && l >= HARN_HIP) || (strstr (tpart, "head") && l <= HARN_FACE) ||
-        (strstr (tpart, "body") && l >= HARN_THORAX && l <= HARN_GROIN) || (strstr (tpart, "chest") && l ==
-        HARN_THORAX) || (strstr (tpart, "belly") && l == HARN_ABDOMEN) || (strstr (tpart, "stomach") && l ==
-        HARN_ABDOMEN));
-}
-
-/* The injury of c's to treat first: a bleeder; else the worst untreated (not the lesser hurts, nor a venom's ache), at
-** the part said; 0xFF none */
-static unsigned char __fastcall__ to_treat (const harn_char* c)
-{
-    unsigned char k, best = 0xFF;
-    const harn_injury* j;
-
-    for (k = 0; k < c->ninj; ++k) {
-        j = &c->inj[k];
-        if (!at_part (j) || (j->flags & IF_POOL) || (c == &pc && pc_by[k] == BY_VENOM)) {
-            continue;
-        }
-        if (j->flags & HARN_IF_BLEEDER) {
-            return k;
-        }
-        if (!(j->flags & HARN_IF_TREATED) && (best == 0xFF || j->sev > c->inj[best].sev || (j->sev ==
-            c->inj[best].sev && j->il > c->inj[best].il))) {
-            best = k;
-        }
-    }
-    return best;
-}
-
-static const char* const begun[] = {
-    "You bind a tourniquet tight above ", "You clean and dress ", "You hold a cold compress to ",
-    "You set and splint ", "You clean and stitch "
-};
-
-/* RS_TREAT (r a copy): a 0, planned: the injury (b), the treatment (c), its time (w1 tenths: a tourniquet a minute,
-** a dressing five minutes a level, a compress or a splint 5d6 minutes, surgery 10d6), its first words; result 1
-** nothing to treat, 2 too grave to treat itself (a grievous wound but a bleeder's tourniquet, Physician 2: the house's
-** for the bleeder), 3 the patient isn't one (no sheet).  a 1, done (b, c the plan's, x[0] its place): the Treatment
-** roll (Physician EML, the bonus as to hand: test_sk's, its own penalties), its words; result 1 a bleeder still
-** bleeding (a minute more, the book's), 2 the plan gone (healed, changed); the text's second line, after a newline,
-** the key of what it used up ("bandage": a dressing's, surgery's) */
-static void __fastcall__ treat (struct req* r)
-{
-    harn_char* c = &pc;
-    harn_injury* j;
-    unsigned char k, how, lv, u = 0;
-    signed char g;
-    unsigned t;
-
-    if (r->other) {
-        u = aden[(r->other - 1) & 7];
-        sheet_in (u);
-        if (!bs.kind) {
-            RS_TREAT_CANT (*r) = 3;
-            return;
-        }
-        c = &cr;
-    }
-    if (!RS_TREAT_DONE (*r)) {
-        if ((k = to_treat (c)) == 0xFF) {
-            RS_TREAT_CANT (*r) = 1;
-            put (tpart[0] && !strstr (tpart, "wound") ? "There's nothing there that wants tending." : c == &pc ?
-                "You have no wounds that want tending." : "It has no wounds that want tending.");
-            return;
-        }
-        j = &c->inj[k];
-        how = remedy (j);
-        if (c == &pc && j->sev >= HARN_GRIEVOUS && how != TR_TOURNIQUET) {
-            RS_TREAT_CANT (*r) = 2;
-            put ("You can't treat a wound so grave yourself.");
-            return;
-        }
-        t = how == TR_TOURNIQUET ? 600 : how == TR_DRESS ? 3000 * j->il : how == TR_SURGERY ? 600 * dice (10, 6) :
-            600 * dice (5, 6);
-        RS_TREAT_WOUND (*r) = k;
-        RS_TREAT_HOW (*r) = how;
-        RS_TREAT_TENTHS (*r) = t;
-        RS_TREAT_LOC (*r) = j->loc;
-        put (begun[how]);
-        put (wname (c, k));
-        put (".");
-        return;
-    }
-    k = RS_TREAT_WOUND (*r);
-    how = RS_TREAT_HOW (*r);
-    if (k >= c->ninj || c->inj[k].loc != RS_TREAT_LOC (*r) || (how == TR_TOURNIQUET) != ((c->inj[k].flags & HARN_IF_BLEEDER) !=
-        0)) {
-        RS_TREAT_UNDONE (*r) = 2;
-        return;
-    }
-    j = &c->inj[k];
-    g = test_sk (&pc, HARN_PHY, bonus (j, how) / STEP_PCT);
-    lv = g == G_CF ? HARN_CF : g == G_MF ? HARN_MF : g == G_MS ? HARN_MS : HARN_CS;
-    if (how == TR_TOURNIQUET) {
-        if (HARN_SUCCESS (lv)) {
-            j->flags &= ~HARN_IF_BLEEDER;
-            put ("The bleeding stops.");
-        } else {
-            RS_TREAT_UNDONE (*r) = 1;
-            put ("The blood still flows.");
-        }
-    } else {
-        t = (unsigned) treatment[j->aspect & 3][(j->sev ? j->sev : 1) - 1][2 + lv];
-        j->hr = t & 7;
-        j->flags |= HARN_IF_TREATED | (t & IMP ? HARN_IF_IMPAIR : 0) | (j->hr == EE ? HARN_IF_EE : 0);
-        put (j->hr == EE ? "It's well done: it should mend within the day." : j->hr >= 6 ? "It's well tended." :
-            j->hr == 5 ? "It's tended." : j->hr == 4 ? "It's tended, roughly." : "It's badly done.");
-        if (how == TR_DRESS || how == TR_SURGERY) {
-            put (has ("bandage") ? "\nbandage" : "");
-        }
-    }
-    if (c != &pc) {
-        sheet_out (u);
-    }
-}
+void __fastcall__ treat (struct req* r);        /* (Overlay 9's: its stub) */
 
 /* The body's own dice (as the bearings' are, rshouse.h's): the generator's state swapped for theirs about a time's
 ** work and a venom's rolls, before it and after, so a fight's, a test's, a walk's dice roll as they did whether a

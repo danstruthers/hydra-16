@@ -2998,3 +2998,69 @@ part 2 only 110), the minds the denizens' (dq0d.c's part 24, `s_minded`, new: pa
   on the door heard at 3, a knock along the wall, "wake" awake, ignorance feigned (a deception), death feigned (the
   bandit taken in, robbing the "body"), a hostile sleeper shaken awake, a taunt, a speech; seed 7's hall, its doors made
   secret, the door found by knocking along the north wall, and a speech with no one to hear it.
+
+## Cloth, bandages and dressings (2026-11-10, as built, for review: the user's bandages, the worn-places-and-bandages design's parts M and B, its rip and wash)
+
+The user: "A bandage's location should be known, and different material should have different suitability as bandage
+material.  'rip' and 'tear up' verbs should be allowed to turn a garment, bed sheet, towel, etc. into bandages ...
+differing effectiveness (for material type and cleanliness)."  Decided with the user: no cotton; dressings soil over
+days and are changed; wash, not boil (boiling when there are fires).  HOUSE.md's bandages and dressings has the rules as
+built; this is how, and what's the house's for review.
+
+**What the code said before** (checked): heal.c's treat and bonus asked only `has ("bandage")`, the table's bonus
+whole or none; the reply's "\nbandage" made tend.c ask the world's IO_USE, s_use_key using up the first lot keyed
+"bandage"; harn_heal_roll's bonus always 0; join merged any two lots of a kind whatever their material or wear;
+nothing kept a cloth's cleanliness; bandages one kind, MT_CLOTH.  s_tools sent each tool's quality as its digit.
+
+- **Materials** (items.h): MT_LINEN, MT_WOOL, MT_SILK after MT_GOLD (the numbers before kept: the outfits' file, the
+  stores' records); MT_CLOTH is hemp and sacking (its name "hemp": appraise.c's and things.c's).  Linen: shroud,
+  bandages, surcoat; wool: cloak, blanket, robe; hemp: sack, rope, and what wasn't named (clothes, a gambeson, paper,
+  a net, a letter) *(for review: clothes and the gambeson might be linen or wool)*.  The outfits' file may name them
+  (outfits.js's MATS).  The worn places' scarf, earrings, linen sheet and towel are another branch's kinds: their
+  materials and their yields (wcloth.c's table, commented) on the merge.
+- **Cleanliness is the wear byte**, each band one value as the bandages have it (CL_WORN 64, CL_SOILED 192,
+  CL_BLOODY 255); join's guard: bandages join only of one wear and one material.  Where a cloth's comes from, the
+  house's: found lying in the dungeon (make_own: linen, wool, silk) soiled; a garment torn up worn at best; a shroud, a
+  denizen's bedding, soiled.  *Not built*: don marking a garment worn (don is in the catalogue's bank, 29 bytes free,
+  and the worn places' branch is in it), a denizen's outfit worn as it's made (outmake's part 58 full): the tear's
+  rule stands in for both.
+- **The grade to the referee**: s_tools' digit for a bandage lot is CL_GRADE (items.h: its suitability by its
+  cleanliness), not its quality; the referee's bonus (dress.c's) is the table's times the best bandage's grade over 9;
+  the reply's key carries the grade ("\nbandage9"), and s_use_key reads a digit after a key as the grade wanted (a lot
+  of that grade alone; "water", "food" as before).  A bloody bandage's grade is 0: never used.
+- **The dressing per wound** is the referee's (pc_dr, a byte a wound: its grade plus 1, DR_SOILED once the days have
+  soiled it), kept in step wherever pc_by is (sheet.c's room, heal.c's by_drop), saved as a "dressed" line, each
+  dressing its grade and its wound's location ("dressed :ag"), read back onto the first undressed wound there: the
+  account (dq0acct) keeps the line as it is, and its days at rest heal wounds and move them down, so the location,
+  not the place in the list, finds the wound.  The days between dungeons don't soil it.  The sheet's words "dressed,
+  clean", "dressed", "dressed, poorly", "dressed, soiled": the cloth's name isn't there *(for review: the referee
+  knows only the grade; the material would be a letter in the tools' text, the referee's main RAM's bytes)*.
+- **Soiling** (heal.c): at each day's mark (after that day's rolls) a dressing on a serious or grievous wound three
+  grades the worse, told once it's soiled.  The healing roll's bonus +5 (grade 7-9), 0 (4-6), -10 (0-3): a poor hemp
+  dressing counts as a soiled one.  Creatures: the treatment's bonus alone, no dressing kept.
+- **Changing** rides first aid: tend.c sends the part said with a * before it when the line has "change"
+  (commands.verbs' "change the bandage on", "change my dressing" ... are tend's words: several words each, none a
+  record of dq0c's); the referee's plan TR_CHANGE (RS_TREAT's c 5), five minutes, no treatment roll; its reply's key
+  "bandage9+", the + the old dressing's: s_use_key makes a bandage of the lot it used from, one, bloody, beside it (at
+  the feet if the lot was in hand).  A wound tended without a bandage can be dressed this way too ("You dress ...").
+- **Rip** is one verb, VB_RIP_OBJECT (commands.actions' last line, actions.c's last row: H_HANDLE), aux IO_RIP; "tear",
+  "tear up", "rip up", "cut up" its words.  **Wash** is the same verb, "wash = rip", its request the word's (hthings.c:
+  the line has "wash", IO_WASH), as grapple's moves are: dq0c's word records are at 254 of 255 with rip's, and wash's
+  own verb would be the last.  The world's IO_RIP and IO_WASH are part 107's (wcloth.c, s_textile): the yield table,
+  a blade (the one said, else any carried: a knife's or a sword's family), a minute a bandage with one and two by
+  hand, wool and a gambeson wanting one; the time a timed wait (the handled things' x), not a long task *(for review:
+  a big sheet's sixteen minutes can't be stopped)*.  Wash at running water or a well beside, three minutes, worn.
+- **For "use"** (B4's H_USE, another branch): "use the knife on the cloak" is `handle (IO_RIP, "cloak", "knife", 0)`
+  (s_handle, the UI's part 2); "wash" `handle (IO_WASH, "bandages", "", 0)`; "use the bandage on my arm" is first aid:
+  cmd.action VB_TEND, the part in cmd.obj.word ("arm"; the line's "left", "right" and "change" read by tend.c from cl),
+  then `tend ()` (s_tend's stub, part 12; s_early's 1 for VB_TEND, its own patient found).
+- **Room**: the referee's first aid (remedy, bonus, at_part, to_treat, treat) moved from heal.c (overlay 6) to dress.c
+  (overlay 9) with a copy of the library's Treatment table, and sheet.c's o_spent to overlay 9 (overlay 1's room for
+  the dressing's words and room's step); two new stubs (treat, dress_line).  Main RAM: the referee 2,135 free (2,169
+  before), the world 2,448 (2,483), the UI 2,272 (unchanged); dq0c's records 254 of 255.
+- **Tests**: dq0rip (a worn robe, a leather vest, a rope refused; a wool cloak without a blade refused; a linen
+  surcoat torn by hand into 4, eight minutes; the cloak cut up with the dagger into 6; two worn lots), dq0dress (a
+  dressing, the sheet's "dressed, clean"; another wound's soiled dressing from the file, "dressed, soiled", changed,
+  a bloody bandage in the pack (the days' soiling dq0rules': the denizens wake a sleeper here); wash refused with
+  no water, done at running water, worn), dq0rules' dressings (the bonus by linen, hemp, soiled linen, none; the
+  sheet's words; a day's soiling, two; a change and its refusals; the five-day roll's +5 and -10).

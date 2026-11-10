@@ -157,7 +157,7 @@ ovl_out:
             OVFN        outfit_of, 7        ; (Overlay 1's room, slice 4.4's)
             OVFN        brief, 1
             OVFN        state, 1
-            OVFN        spent, 1
+            OVFN        spent, 9            ; (Overlay 1's room, the dressings': 2026-11-10)
             OVFN        noticing, 1
             OVFN        harm, 1
             OVFN        wound, 1
@@ -201,6 +201,8 @@ ovl_out:
             OVFN        equip, 7            ; (The main RAM's room, D13's)
             OVFN        heft, 7             ; (A weapon's version, D13's: skills.c)
             OVFN        grip, 9             ; (Grappling: grapple.c, 2026-11-09)
+            OVFN        treat, 9            ; (First aid, the dressings: dress.c, 2026-11-10, heal.c's room)
+            OVFN        dress_line, 9       ; (Their file's line: part 1's room)
             OVFN        effect, 2           ; (Its calls of fight.c's)
             OVFN        strike, 2
 

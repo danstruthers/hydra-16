@@ -3,7 +3,10 @@
 ** first aid ("tend my wounds", "bandage my arm", "first aid", "treat the bandit": VB_TEND), the referee's plan for it
 ** (RS_TREAT: the wound, the treatment, its time) carried out as a timed work (LT_TEND: its first words at once, its
 ** outcome as its time's up, the referee's; a bleeder's tourniquet a minute at a time till it holds), a bandage it
-** used up (the things' IO_USE); what a character in shock can't do refused (the book's: rest, be led away, a half
+** used up (the things' IO_USE: "bandage9", a lot of that grade; "bandage9+", the old dressing kept, bloody); a dressing
+** changed ("change the bandage on my arm": the part said a * first, the referee's, HOUSE.md's bandages, 2026-11-10;
+** the things' "use the bandage on my arm" this way too: cmd.action VB_TEND, the part in cmd.obj.word, then tend's
+** stub); what a character in shock can't do refused (the book's: rest, be led away, a half
 ** move, Combat 14); and what time did to its body told (E_TASK's TE_BODY: the referee's words, RS_DESCRIBE b 4's),
 ** held as it sleeps and told as it wakes (main.c's E_READY: news_due).
 */
@@ -118,7 +121,9 @@ void s_tend (void)
             goto out;
         }
         r->other = k;
-        strcpy (r->text, k ? "" : strstr (cl, "left") ? "left " : strstr (cl, "right") ? "right " : "");
+        strcpy (r->text, strstr (cl, "change") ? "*" : "");    /* (A dressing changed: "change the bandage on my arm",
+                                                **   HOUSE.md's bandages, 2026-11-10; the referee's, its plan's) */
+        strcat (r->text, k ? "" : strstr (cl, "left") ? "left " : strstr (cl, "right") ? "right " : "");
         strncat (r->text, k ? "" : cmd.obj.word, 9);
         r = ask_b (RS_TREAT, 0, 0);
         plan.other = k;

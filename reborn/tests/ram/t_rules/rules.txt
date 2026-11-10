@@ -3067,3 +3067,171 @@ ask NEW_ACTOR actor=4 w1=53 text="skel"
 dice ...
 ask ATTACK actor=0 other=4 a=GM_CHOKE w2=RS_GRAPPLE
 want result=O_RESISTS
+
+# ---- The dressings (2026-11-10: HOUSE.md's bandages, the user's "differing effectiveness (for material type and
+# cleanliness)"): the treatment's bonus the table's scaled by the best bandage to hand (its grade the tools' digit, the
+# world's: its cloth's suitability by its cleanliness, linen 9, hemp 3, soiled linen 2: d of 9); the dressing kept on its
+# wound (the sheet's "dressed"), soiled three grades a day on a serious wound (told: it wants changing), changed (five
+# minutes, no new roll, the old one kept, bloody: "bandage9+"); the healing roll's bonus by it (+5 clean, -10 soiled)
+
+char
+ml phy 50
+inj 6 2 2 2 0 0
+end
+case a serious stab dressed with linen bandages (grade 9): the table's 15 whole, three steps; 52 a marginal success, H5
+dice
+ask EQUIP a=2 text=" bandage9 bandage3"
+dice
+ask TREAT a=0 text="left arm"
+want result=0 b=0 c=1 w1=6000 text="You clean and dress the serious stab to your left forearm (S2)."
+dice 100:52
+ask TREAT a=1 b=0 c=1 x0=6
+want result=0 text~"It's tended." text~"bandage9"
+dice
+ask DESCRIBE b=0
+want text~"left forearm S2 (stab), tended, dressed, clean"
+char
+ml phy 50
+inj 6 2 2 2 0 0
+end
+case the same with hemp bandages (grade 3): the table's 15 a third, one step; 52 a marginal failure, H4
+dice
+ask EQUIP a=2 text=" bandage3 bandage0"
+dice
+ask TREAT a=0 text="left arm"
+want result=0 c=1
+dice 100:52
+ask TREAT a=1 b=0 c=1 x0=6
+want result=0 text~"tended, roughly." text~"bandage3"
+dice
+ask DESCRIBE b=0
+want text~"left forearm S2 (stab), tended, dressed, poorly"
+char
+ml phy 50
+inj 6 2 2 2 0 0
+end
+case hemp's one step: 42 a marginal success; soiled linen (grade 2) none, 42 a marginal failure
+dice
+ask EQUIP a=2 text=" bandage3"
+dice
+ask TREAT a=0 text="left arm"
+dice 100:42
+ask TREAT a=1 b=0 c=1 x0=6
+want result=0 text!"roughly" text~"bandage3"
+char
+ml phy 50
+inj 6 2 2 2 0 0
+end
+dice
+ask EQUIP a=2 text=" bandage2"
+dice
+ask TREAT a=0 text="left arm"
+dice 100:42
+ask TREAT a=1 b=0 c=1 x0=6
+want result=0 text~"tended, roughly." text~"bandage2"
+char
+ml phy 50
+inj 6 2 2 2 0 0
+end
+case no bandage to hand: no bonus, nothing used (the line after none)
+dice
+ask EQUIP a=2 text=""
+dice
+ask TREAT a=0 text="left arm"
+dice 100:47
+ask TREAT a=1 b=0 c=1 x0=6
+want result=0 text="It's tended, roughly."
+char
+ml phy 50
+inj 6 2 2 2 5 4
+dressed :ag
+end
+case its dressing kept (its file's "dressed" line: grade 9, at the left forearm): a day on (six watches), soiled three grades (6: dressed); two, soiled (3), told
+dice
+ask EQUIP a=2 text=" bandage9"
+set now=100 hunger=0 thirst=0 want=0x44
+dice ...
+ask TIME w1=1
+dice
+ask DESCRIBE b=4
+dice
+ask DESCRIBE b=0
+want text~"left forearm S2 (stab), tended, dressed, clean"
+set now=864100
+dice ...
+ask TIME w1=1
+dice
+ask DESCRIBE b=0
+want text~"left forearm S2 (stab), tended, dressed" text!"dressed, clean" text!"soiled"
+set now=1728100
+dice ...
+ask TIME w1=1
+dice
+ask DESCRIBE b=4
+want text~"The dressing on the serious stab to your left forearm (S2) is soiled: it wants changing."
+dice
+ask DESCRIBE b=0
+want text~"left forearm S2 (stab), tended, dressed, soiled"
+case "change the bandage on my arm" (the part said a * first): five minutes, no roll, the fresh one on, the old kept
+dice
+ask TREAT a=0 text="*left arm"
+want result=0 b=0 c=5 w1=3000 text="You unwind the old dressing from the serious stab to your left forearm (S2)."
+dice
+ask TREAT a=1 b=0 c=5 x0=6
+want result=0 text~"The fresh dressing is on." text~"bandage9+"
+dice
+ask DESCRIBE b=0
+want text~"left forearm S2 (stab), tended, dressed, clean"
+case none to change at the head; and none clean to put on
+dice
+ask TREAT a=0 text="*head"
+want result=1 text="There's no dressing there to change."
+dice
+ask EQUIP a=2 text=" bandage0"
+dice
+ask TREAT a=0 text="*"
+want result=1 text="You have no clean bandage to put on it."
+char
+ml phy 50
+inj 6 2 1 2 5 4
+dressed :ag
+end
+case five days on, a clean dressing on a minor stab (H5, never soiled): its healing roll 60 and 5; 63 a marginal success, mending
+set now=100
+dice ...
+ask TIME w1=1
+set now=4320100 hunger=0 thirst=0 want=0x44
+dice 100:63 ...
+ask TIME w1=3600
+dice
+ask DESCRIBE b=4
+want text~"The minor stab to your left forearm (M2) is mending."
+char
+ml phy 50
+inj 6 2 1 2 5 4
+end
+case undressed: 60 alone, 63 a marginal failure, no better
+set now=100
+dice ...
+ask TIME w1=1
+set now=4320100 hunger=0 thirst=0 want=0x44
+dice 100:63 ...
+ask TIME w1=3600
+dice
+ask DESCRIBE b=4
+want text~"The minor stab to your left forearm (M2) is no better."
+char
+ml phy 50
+inj 6 2 1 2 5 4
+dressed Bag
+end
+case a soiled dressing (grade 1): 60 less 10, 57 a marginal failure, no better (undressed, mending)
+set now=100
+dice ...
+ask TIME w1=1
+set now=4320100 hunger=0 thirst=0 want=0x44
+dice 100:57 ...
+ask TIME w1=3600
+dice
+ask DESCRIBE b=4
+want text~"The minor stab to your left forearm (M2) is no better."

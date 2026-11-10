@@ -196,7 +196,9 @@ static const struct row rows[NACTIONS] = {
     ROW (VB_META_TIME, H_TIME, 0),
     ROW (VB_TRADE, H_GIVE, 0),
     ROWR (VB_TIE_OBJECT, H_TIE, 0, 0, U_CANT, M_NONE),
-    ROWR (VB_UNTIE_OBJECT, H_TIE, 0, 0, U_CANT, M_NONE)
+    ROWR (VB_UNTIE_OBJECT, H_TIE, 0, 0, U_CANT, M_NONE),
+    ROWR (VB_RIP_OBJECT, H_HANDLE, 0, 0, U_CANT, M_NONE)     /* (A cloth torn up, washed: the things' IO_RIP, IO_WASH,
+                                                **   hthings.c's; HOUSE.md's bandages, 2026-11-10) */
 };
 
 /* Verb a's row: its handler, its takes times 256 (one past the table: none's); its request put in the command's aux,

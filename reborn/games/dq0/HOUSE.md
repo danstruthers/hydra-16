@@ -2450,7 +2450,8 @@ table, the healing roll, the infection's and the shock's rolls); what the house 
   bonus with the treatment to hand.  *The house's*: bandages for a dressing; a knife or a dagger and bandages for
   surgery (no needle and thread in the catalogue yet: the blade and the bandages stand for them); a compress's cold
   water and a splint's stick taken as found; the tourniquet anything to hand (a strip of cloth, a belt), its +50
-  always.  A dressing and surgery use a bandage up if it has one (the things' IO_USE).  The wound's healing rate after
+  always.  A dressing and surgery use a bandage up if it has one (the things' IO_USE), the bonus by the bandage's
+  grade, and the dressing's kept on its wound: Bandages and dressings, below.  The wound's healing rate after
   it (the sheet's "tended"), told plainly ("It's well tended.", "It's tended, roughly.", "It's badly done."); the book's
   one treatment roll a wound.
 - **Treating itself** (Physician 2: one not in shock may treat its own minor and serious wounds, not its grievous
@@ -2501,6 +2502,53 @@ table, the healing roll, the infection's and the shock's rolls); what the house 
 - **The null ruleset's simple way** (dq0null.c): no bleeding, no shock, no venom; first aid five minutes a wound, each
   tended once ("You clean and bind a wound."); a wound healed each seven hours' rest if it's tended, each twenty-one
   hours' if not ("A wound has healed.").
+
+### Bandages and dressings *(2026-11-10: the user's "A bandage's location should be known, and different material should have different suitability as bandage material", "differing effectiveness (for material type and cleanliness)"; dressings soil over days and are changed; wash, not boil.  As built, for review: DECISIONS.md's)*
+
+The book says only that a dressing wants bandages (Physician 3's Treatment table, its bonus the treatment's); what
+the bandage is, and where it goes, are the house's.  (The referee's dq0harn/dress.c, overlay 9: first aid moved there
+from heal.c whole; the world's dq0w/wcloth.c, part 107.)
+
+- **Cloth** (items.h's materials): linen, wool, silk, and hemp and sacking (MT_CLOTH: rope, a sack, paper, clothes,
+  a gambeson).  Linen: a shroud, bandages, a surcoat; wool: a cloak, a blanket, a robe.  The look's words "made of
+  linen"; a cloth's wear "frayed".
+- **A cloth's cleanliness** is its wear (its record's byte, no room more): under 32 clean (bought, the kit), 32-127
+  worn, 128-254 soiled, 255 bloody.  The inventory's "(worn)", "(soiled)", "(bloody)"; a look's the same.  Where it
+  comes from: linen, wool and silk found lying in the dungeon are soiled as they're first made out (make_own's); a
+  garment torn up is worn at best (it's been worn); a shroud, and a denizen's bedding (a faction's, not worn), soiled.
+  Bandages' lots join only of one cloth and one cleanliness (join's: each band's own wear, 0, 64, 192, 255).
+- **A bandage's grade** (0-9, the referee's tool digit, the world's s_tools: "+bandage9"): its cloth's suitability,
+  linen 9, silk 7, wool 5, hemp 3, the rest none, by its cleanliness, clean the whole, worn 0.7, soiled 0.3, bloody
+  none (a linen one worn 6, soiled 2; a wool one clean 5, worn 3; hemp clean 3, worn 2).
+- **The treatment's bonus** (a dressing's, surgery's): the table's, scaled by the best bandage to hand, of 9 (linen
+  the whole, hemp a third, none or bloody nothing).  The dressing uses up a bandage of that grade (the reply's
+  "bandage9", the world's use_key: a lot of that grade).  A tourniquet, a compress, a splint want none.
+- **The dressing kept on its wound** (the referee's pc_dr, a grade a wound, in step with the wounds; its file's
+  "dressed" line, each dressing's grade and where it is, read back onto the first wound there): the sheet's "left
+  forearm S2 (stab), tended, dressed, clean" (grade 7-9), "dressed" (4-6), "dressed, poorly" (a poor cloth's, 0-3),
+  "dressed, soiled" (the days').  Not an inventory item.  The days between dungeons don't soil it (the account's days
+  at rest keep it as it was).
+- **Soiling** *(the user's)*: at each day's mark a dressing on a serious or grievous wound loses three grades (after
+  that day's rolls), told once it's soiled ("The dressing on the serious stab to your left forearm (S2) is soiled: it
+  wants changing."); a minor wound's never.  The healing roll's bonus (the book's none) by the dressing: +5 clean
+  (7-9), none fair, -10 soiled or poor (0-3), so the infection's critical failure the likelier.  Creatures have no
+  dressings kept: their treatment's bonus alone, never infected (as before).
+- **Changing it**: "change the bandage on my arm" ("change the dressing", "change my bandage"; commands.verbs' words
+  for tend, the line's "change" the referee's * on the part said): five minutes as a tend, no new treatment roll, the
+  wound tended that wants a dressing at the part said, one dressed first; the fresh bandage's grade on it ("The fresh
+  dressing is on."); the old one kept, a bloody bandage of its own where the fresh one came from (at its feet, if that
+  was in hand).  None clean to hand: "You have no clean bandage to put on it."
+- **Tearing cloth up** ("rip", "tear", "tear up", "rip up", "cut up" X [with Y]: one verb, VB_RIP_OBJECT, the world's
+  IO_RIP): the cloth made bandages where it is (its kind made bandages, a lot: its material, its make and its
+  cleanliness kept).  How many: a sheet's or a blanket's or a robe's 8, a gambeson's 8, a shroud's, clothes' or a
+  cloak's 6, a surcoat's 4, a towel's 3, a scarf's or a sack's 2, never more than its weight (a quarter pound each).
+  A minute a bandage with a blade (a knife's, a sword's: the one said, else any carried), two by hand; wool and a
+  gambeson only with one ("too stout to tear by hand"); leather refused ("Leather won't do"); rope, net, paper not; one
+  worn, or with things in it, refused ("You'd have to take off the robe first.").  A timed wait, not a long task.
+- **Washing** ("wash X": rip's verb, its request the word's, IO_WASH) at running water or a well beside (not still
+  water: "too foul"), three minutes: a soiled or bloody cloth worn again, never clean ("fit to use again, if not new");
+  of those of its name carried, a soiled one first.  *(The user's: no boiling till there are fires.)*  Wet things aren't
+  kept.
 
 ## Outfits *(2026-10-27: drafted for the user to review)*
 

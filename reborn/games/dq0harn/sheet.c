@@ -119,10 +119,12 @@ static void __fastcall__ room (harn_char* c, unsigned char n)
         memcpy (j, &c->inj[c->ninj], sizeof *j);
         if (c == &pc) {
             pc_by[least] = pc_by[c->ninj];
+            pc_dr[least] = pc_dr[c->ninj];      /* (Its dressing with it: dress.c's) */
         }
     }
     if (c == &pc) {
         memset (pc_by + c->ninj, 0, HARN_INJMAX - c->ninj);
+        memset (pc_dr + c->ninj, 0, HARN_INJMAX - c->ninj);
     }
 }
 
@@ -419,6 +421,13 @@ void o_sheet (void)
         }
         put (j->flags & HARN_IF_BLEEDER ? "), bleeding" : j->flags & HARN_IF_INFECTED ? "), infected" : j->flags &
             HARN_IF_TREATED ? "), tended" : ")");
+        if (pc_dr[k]) {                         /* (Its dressing, by its bandage's grade: "dressed, clean", "dressed",
+                                                **   "dressed, poorly" (hemp), "dressed, soiled" (the days': DR_SOILED),
+                                                **   HOUSE.md's bandages, 2026-11-10) */
+            put (", dressed");
+            put ((pc_dr[k] & DR_GRADE) >= 8 ? ", clean" : (pc_dr[k] & DR_GRADE) >= 5 ? "" : pc_dr[k] & DR_SOILED ?
+                ", soiled" : ", poorly");
+        }
     }
     if (pc.bl) {
         put ("; bloodloss ");
@@ -493,6 +502,8 @@ signed char __fastcall__ o_noticing (const struct req* r)
 #define LEVEL   6000
 #define WORK    2                               /* (Strenuous work's exertion a tenth: a level each five minutes) */
 
+#pragma code-name (push, "OV9CODE")             /* (Overlay 9's: overlay 1's room, the dressings', 2026-11-10) */
+#pragma rodata-name (push, "OV9RODATA")
 void __fastcall__ o_spent (unsigned t)
 {
     static const unsigned char rate[NGAITS] = { 0, 0, 0, 2, 5, 10 };
@@ -553,6 +564,8 @@ void __fastcall__ o_spent (unsigned t)
         }
     }
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The character's state (the status command's: RS_DESCRIBE b 3, ps's): its pace, what it's held to and its feet
 ** a round (the book's rates of its Move, Combat 6; the game's two slower), its watchfulness; then (all of it) its

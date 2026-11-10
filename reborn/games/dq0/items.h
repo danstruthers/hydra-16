@@ -14,9 +14,24 @@
 /* What a thing's made of: its resistance to each kind of harm (0 none ... 9 all but proof: the referee's impact, not a
 ** difficulty), and its toughness (the durability a quarter pound of it gives, at middling quality) */
 enum { MT_NONE, MT_WOOD, MT_IRON, MT_STEEL, MT_BRONZE, MT_LEATHER, MT_CLOTH, MT_BONE, MT_CLAY, MT_STONE, MT_GLASS,
-    MT_SILVER, MT_OTHER, MT_WAX, MT_TALLOW, MT_GOLD, NMATS };   /* (Beeswax and tallow: a candle's, slice 4.1's; gold, the
-                                                **   valuables', 2026-10-27) */
-#define MAT_TOUGH       { 1, 3, 6, 8, 5, 3, 1, 2, 1, 8, 1, 4, 1, 1, 1, 3 }
+    MT_SILVER, MT_OTHER, MT_WAX, MT_TALLOW, MT_GOLD, MT_LINEN, MT_WOOL, MT_SILK, NMATS };   /* (Beeswax and tallow: a
+                                                **   candle's, slice 4.1's; gold, the valuables', 2026-10-27; linen,
+                                                **   wool and silk the cloths, MT_CLOTH hemp and sacking (rope, a sack,
+                                                **   paper): the bandages', 2026-11-10) */
+#define MAT_TOUGH       { 1, 3, 6, 8, 5, 3, 1, 2, 1, 8, 1, 4, 1, 1, 1, 3, 1, 1, 1 }
+#define MT_TEXTILE(m)   ((m) == MT_CLOTH || (m) >= MT_LINEN)    /* (Cloth: torn up for bandages, washed, soiled) */
+#define CL_WORN         64                      /* (A textile's cleanliness, its wear: under 32 clean (new, bought),
+                                                **   32-127 worn, 128-254 soiled, 255 bloody (a dressing taken off);
+                                                **   each band's own, as the bandages' lots have it, these: HOUSE.md's
+                                                **   bandages, 2026-11-10) */
+#define CL_SOILED       192
+#define CL_BLOODY       255
+#define CL_SUIT(m)      ((unsigned char) "\0\0\0\0\0\0\3\0\0\0\0\0\0\0\0\0\11\5\7"[(m) < NMATS ? (m) : 0])   /* (A
+                                                **   cloth's suitability for bandages, 0-9: linen 9, silk 7, wool 5,
+                                                **   hemp and sacking 3, the rest none) */
+#define CL_GRADE(m, w)  (CL_SUIT (m) * ((w) < 32 ? 10 : (w) < 128 ? 7 : (w) < CL_BLOODY ? 3 : 0) / 10)   /* (A bandage's
+                                                **   grade, 0-9, the referee's tool digit: its suitability by its
+                                                **   cleanliness, clean the whole, worn 0.7, soiled 0.3, bloody none) */
 enum { DM_BLUNT, DM_EDGE, DM_POINT, DM_FIRE, DM_COLD, DM_ACID, NDMG };  /* Kinds of harm (the referee's, by aspect) */
 struct material {
     char            name[8];
@@ -423,6 +438,15 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   IO_DON, to DN_WORN, hthings.c's; 2026-11-09, DECISIONS.md's) */
 #define DN_WORN         0x40                    /* (IO_DON's to: worn, or refused, "You can't wear the sword."; a weapon,
                                                 **   a light not held instead, as equip's are) */
+#define IO_RIP          (IO_BAR + 17)           /* A textile carried (name: a cloak, a blanket, a shroud) torn up for
+                                                **   bandages where it is (its kind made KI_BANDAGES, a lot: its
+                                                **   material, its make, its cleanliness kept), with a blade (into: the
+                                                **   one said; "" any carried), wool and quilting only with one, leather
+                                                **   never, nor one worn: its words in things_text, its time in x
+                                                **   (tenths); IR_NO refused, the words why; IR_NONE none (2026-11-10:
+                                                **   the textiles' part 107, wcloth.c) */
+#define IO_WASH         (IO_BAR + 18)           /* A textile carried washed (name) at running water or a well: soiled
+                                                **   or bloody made worn, never clean; as IO_RIP's (wcloth.c) */
 enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS, LM_KIT, LM_GO, LM_ROPES };   /* (IO_LOOK's: a look at it; a closer look; its
                                                 **   condition; its weight; its lock; gone over for traps; LM_KIT the
                                                 **   world's own, the character's things kept, kit.dat: slice 4.4's; LM_GO, gone to, walking there) */

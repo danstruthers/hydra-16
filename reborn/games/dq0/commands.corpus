@@ -584,6 +584,12 @@ let the rope down	VB_TIE_OBJECT	object=rope	near=rope	let down, its word after
 tie the grapple to the rope	VB_TIE_OBJECT	object=grapple;support=rope	near=grapple,rope	one thing
 untie the rope	VB_UNTIE_OBJECT	object=rope	near=rope	untied
 untie the sack	VB_UNTIE_OBJECT	object=sack	near=sack	a tie's
+rip the cloak	VB_RIP_OBJECT	object=cloak	near=cloak	a cloth torn up for bandages (2026-11-10)
+tear up the cloak	VB_RIP_OBJECT	object=cloak	near=cloak	tear up
+cut up the cloak with the dagger	VB_RIP_OBJECT	object=cloak;instrument=dagger	near=cloak,dagger	cut up, a blade said
+wash the bandages	VB_RIP_OBJECT	object=bandages	near=bandages	washed: rip's verb, its request the word's
+change the bandage	VB_TEND	-	-	a dressing changed (2026-11-10)
+change the dressing on the bandit	VB_TEND	object=bandit	near=bandit	another's: the referee's to refuse
 hang the quiver on my belt	VB_HANG_OBJECT	object=quiver;support=belt	near=quiver,belt	hang
 sheathe the sword	VB_HANG_OBJECT	object=sword	near=sword	sheathe an alias of hang
 combine the sunstone with the moonstone	VB_COMBINE_OBJECT	object=sunstone;other=moonstone	near=sunstone,moonstone	combine

@@ -185,6 +185,13 @@ enum { BY_ASPECT, BY_BITE, BY_CLAWS, BY_STING, BY_HORNS, BY_VENOM };   /* (BY_VE
                                                 **   spread, heal.c's) */
 #define BY_ITS          0x80                    /* (wound_words's: to a creature, "to its") */
 extern unsigned char pc_by[HARN_INJMAX];
+extern unsigned char pc_dr[HARN_INJMAX];        /* (The dressing on each of the character's injuries, its bandage's grade
+                                                **   plus 1, 0 none: dress.c's, kept in step with pc_by; its file's
+                                                **   "dressed" line, HOUSE.md's bandages, 2026-11-10) */
+#define DR_GRADE        0x0F                    /* (Its grade plus 1; */
+#define DR_SOILED       0x80                    /*   soiled by the days since it went on, heal.c's) */
+void __fastcall__ dress_line (char* l, unsigned char out);  /* (Overlay 9's, dress.c: its file's "dressed" line read, or
+                                                **   written into l) */
 #define IF_POOL         0x80                    /* (An injury's flags, the referee's own, the library's never: the
                                                 **   lesser hurts past the record's room, folded together: wound's) */
 

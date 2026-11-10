@@ -6475,13 +6475,53 @@ unsigned char __fastcall__ s_use_up (unsigned n, unsigned char by)
 unsigned char __fastcall__ on_pc (unsigned i);  /* (Part 10's stub) */
 unsigned char __fastcall__ s_use_key (const char* key)
 {
-    unsigned i = 0;
-    unsigned char kd;
+    struct item q;
+    unsigned i = 0, j;
+    unsigned char kd, n, g = 0xFF, w, m;
+    char k[8];
 
+    for (n = 0; n < sizeof k - 1 && key[n] >= 'a'; ++n) {
+        k[n] = key[n];                          /* (Its key; a digit after it the grade wanted, a bandage's, the
+                                                **   referee's; a + after that, the old dressing kept, bloody: HOUSE.md's
+                                                **   bandages, 2026-11-10) */
+    }
+    k[n] = 0;
+    if ((unsigned char) (key[n] - '0') <= 9) {
+        g = key[n] - '0';
+    }
     while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
         kd = item_at (i)->kind;
+        w = ip->wear;
+        m = ip->mat;
         hub_map (KIND_BANK);
-        if (!strcmp (CATALOGUE[kd].tool, key) && on_pc (i)) {
+        if (!m) {
+            m = CATALOGUE[kd].mat;
+        }
+        if (!strcmp (CATALOGUE[kd].tool, k) && (g == 0xFF || CL_GRADE (m, w) == g) && on_pc (i)) {
+            if (g != 0xFF && key[n + 1] == '+') {
+                for (j = 1; j < ilim && item_at (j)->kind; ++j) {
+                }
+                if (j < ilim) {                 /* (The old dressing taken off: a bandage of its own, bloody, where the
+                                                **   fresh one came from; none, the store full) */
+                    if (j >= ihigh) {
+                        ihigh = j + 1;
+                    }
+                    memcpy (&q, item_at (i), sizeof q);
+                    q.qty = 1;
+                    q.wear = CL_BLOODY;
+                    q.flags &= ~I_NAMED;
+                    if (q.where == IW_ACTOR) {  /* (Its lot in hand: the old one at its feet) */
+                        hub_map (0);
+                        q.where = IW_SQUARE;
+                        q.sn = HUB->pc_stratum;
+                        q.x = HUB->pc_x;
+                        q.y = HUB->pc_y;
+                        q.flags &= ~(I_HELD | I_WORN);
+                    }
+                    q.id = ++item_at (0)->x;
+                    memcpy (item_at (j), &q, sizeof q);
+                }
+            }
             kd = item_at (i)->wear;             /* (Water's wear: from still water, the flux's, feed.c's) */
             s_use_up (i, 0);
             hub_map (0);

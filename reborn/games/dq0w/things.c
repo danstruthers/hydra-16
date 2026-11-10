@@ -89,7 +89,8 @@ void __fastcall__ mix_join (unsigned i, unsigned n);
 void __fastcall__ mix_words (unsigned i);
 unsigned char __fastcall__ mix_worth (unsigned i);
 void __fastcall__ listed (unsigned n);          /* Part 11 */
-#define HW_CARRIED      1                       /* (pick's how: carried; seen, lying about; either, as far as it sees,
+unsigned char textile (void);                   /* Part 107: a cloth torn up, washed (wcloth.c, 2026-11-10) */
+#define HW_CARRIED      1                      /* (pick's how: carried; seen, lying about; either, as far as it sees,
                                                 **   or to hand, within reach (afar else); in win) */
 #define HW_SEEN         2
 #define HW_ANY          3
@@ -1849,7 +1850,9 @@ void s_tools (void)
                     ' ';
                 strcat (t, m);
                 strcat (t, k->tool);
-                m[0] = '0' + rec.quality;
+                m[0] = '0' + (rec.kind == KI_BANDAGES ? CL_GRADE (rec.mat ? rec.mat : k->mat, rec.wear) : rec.quality);
+                                                /* (A bandage's its grade, its cloth's by its cleanliness: HOUSE.md's
+                                                **   bandages, 2026-11-10) */
                 if (k->craft == AP_WEAPON) {
                     m[1] = rec.size == WV_HEAVY ? 'H' : rec.size ? 'L' : 'M';    /* (Its version: D13's, RS_EQUIP's) */
                     m[2] = "NEEEDDDD"[rec.wear >> 5];   /* (Its edge: dulled, dull: 2026-11-03) */
@@ -2244,6 +2247,10 @@ unsigned char s_serve (void)
     case IO_CUT:
         pc_cut = 1;
         rs_for (RF_CUT);
+        break;
+    case IO_RIP:                                /* (A cloth torn up for bandages, washed: part 107's, wcloth.c) */
+    case IO_WASH:
+        iq.result = textile ();
         break;
     case IO_PUT:
         if (!strcmp (iq.into, "well") || !strcmp (iq.into, "shaft")) {   /* (Into a well, down a shaft or a hole: part
@@ -2997,7 +3004,9 @@ static unsigned __fastcall__ join (unsigned n)
         fetch (&rec, i);
         if (i != n && rec.kind == q.kind && !(rec.flags & (I_NAMED | I_HIDDEN)) && rec.qty + q.qty <= 250 &&
             (rec.flags & (I_HELD | I_WORN)) == (q.flags & (I_HELD | I_WORN)) &&
-            (q.where != IW_SQUARE || (rec.sn == q.sn && rec.y == q.y))) {
+            (q.where != IW_SQUARE || (rec.sn == q.sn && rec.y == q.y)) && (q.kind != KI_BANDAGES ||
+            (rec.wear == q.wear && rec.mat == q.mat))) {     /* (Bandages of a cloth and a cleanliness alone: theirs
+                                                **   each band's own wear, wcloth.c's; HOUSE.md's bandages) */
             if (rec.fuel != q.fuel || rec.size != q.size || rec.thick != q.thick) {
                 mix_join (i, n);                /* (Two piles of coins: their mints' groups merged, part 63's) */
             }
@@ -3832,7 +3841,7 @@ static unsigned char __fastcall__ gthing (unsigned i, const char* pre, unsigned 
         if (life < 7) {
             m = gr.mat;
             put (life < 4 ? ", badly " : ", ");
-            put (m == MT_IRON || m == MT_STEEL ? "rusted" : m == MT_LEATHER ? "cracked" : m == MT_CLOTH ? "frayed" :
+            put (m == MT_IRON || m == MT_STEEL ? "rusted" : m == MT_LEATHER ? "cracked" : MT_TEXTILE (m) ? "frayed" :
                 m == MT_WOOD ? "rotten" : m == MT_SILVER || m == MT_BRONZE ? "tarnished" : "worn");
         }
     } else {
@@ -4208,7 +4217,8 @@ feet:
         }
         if (rec.wear >= 32) {
             word (!(lk.flags & K_BELT) && (lk.slots == FM_SWORD || lk.slots == FM_KNIFE) ?
-                (rec.wear >= 128 ? "dull" : "dulled") : "worn");
+                (rec.wear >= 128 ? "dull" : "dulled") : MT_TEXTILE (rec.mat) && rec.wear >= 128 ? (rec.wear ==
+                CL_BLOODY ? "bloody" : "soiled") : "worn");    /* (A cloth's cleanliness: HOUSE.md's bandages) */
         }
         if (sh & IS_LOCK) {
             word (sh & IS_BURST ? "its lock broken" : "with a lock");
@@ -4508,8 +4518,8 @@ unsigned char __fastcall__ s_look_more (unsigned n, unsigned char mode)
 #pragma rodata-name (push, "SW42RODATA")
 #pragma static-locals (push, on)
 
-static const char matname[NMATS][8] = { "", "wood", "iron", "steel", "bronze", "leather", "cloth", "bone", "clay",
-    "stone", "glass", "silver", "", "beeswax", "tallow", "gold" };
+static const char matname[NMATS][8] = { "", "wood", "iron", "steel", "bronze", "leather", "hemp", "bone", "clay",
+    "stone", "glass", "silver", "", "beeswax", "tallow", "gold", "linen", "wool", "silk" };
 
 /* A word of a list (part 39's word, its own copy) */
 #define word            word42
@@ -4540,7 +4550,8 @@ static void worn_words (void)
     }
     if (rec.wear >= 32) {                       /* (A blade dug with, dulled; a tool worn) */
         word (!(lk.flags & K_BELT) && (lk.slots == FM_SWORD || lk.slots == FM_KNIFE) ?
-            (rec.wear >= 128 ? "its edge dull" : "its edge dulled") : "worn with use");
+            (rec.wear >= 128 ? "its edge dull" : "its edge dulled") : MT_TEXTILE (rec.mat) && rec.wear >= 128 ?
+            (rec.wear == CL_BLOODY ? "bloody" : "soiled") : "worn with use");     /* (A cloth's cleanliness) */
     }
     if (rec.id && (b = burn_of (rec.kind)) != 0) {
         w = b->life * 10;                       /* (A whole one's minutes: the quarters left) */
@@ -4731,7 +4742,8 @@ static void words (void)
     }
     if (tw.wear >= 32) {                        /* (Its wear: a blade dulled, a tool worn) */
         put (!(twk->flags & K_BELT) && (twk->slots == FM_SWORD || twk->slots == FM_KNIFE) ? (tw.wear >= 128 ?
-            " (dull)" : " (dulled)") : " (worn)");
+            " (dull)" : " (dulled)") : MT_TEXTILE (tw.mat) && tw.wear >= 128 ? (tw.wear == CL_BLOODY ? " (bloody)" :
+            " (soiled)") : " (worn)");          /* (A cloth's cleanliness: HOUSE.md's bandages, 2026-11-10) */
     }
     if (c == KF_STOPPER ? tw.id && !(tw.shut & IS_CLOSED) : c && (tw.shut & IS_CLOSED)) {
         put (c == KF_STOPPER ? " (unstoppered)" : " (closed)");    /* (What closes it: a lid, a tie, shut; a stopper
@@ -5189,6 +5201,9 @@ void __fastcall__ s_make_own (unsigned i)
             m = MT_WAX;                         /* (A fine candle beeswax, a common one tallow) */
         }
         q.mat = m;
+    }
+    if (q.where == IW_SQUARE && m >= MT_LINEN) {
+        q.wear = CL_SOILED;                     /* (A cloth found lying in the dungeon soiled: HOUSE.md's bandages) */
     }
     q.dur_max = tough[m] * (k->weight + 4) * (5 + q.quality) / 5;
     q.dur = q.dur_max;

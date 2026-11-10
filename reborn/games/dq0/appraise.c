@@ -25,10 +25,11 @@
 static const struct material mats[NMATS] = {
     { "", { 0, 0, 0, 0, 0, 0 } }, { "wood", { 4, 3, 4, 1, 7, 5 } }, { "iron", { 6, 7, 7, 7, 5, 2 } },
     { "steel", { 7, 8, 8, 8, 6, 3 } }, { "bronze", { 6, 6, 6, 7, 6, 4 } }, { "leather", { 5, 3, 3, 2, 6, 3 } },
-    { "cloth", { 6, 1, 2, 0, 5, 1 } }, { "bone", { 3, 5, 5, 4, 7, 2 } }, { "clay", { 1, 6, 5, 9, 8, 6 } },
+    { "hemp", { 6, 1, 2, 0, 5, 1 } }, { "bone", { 3, 5, 5, 4, 7, 2 } }, { "clay", { 1, 6, 5, 9, 8, 6 } },
     { "stone", { 6, 8, 9, 9, 9, 4 } }, { "glass", { 0, 5, 3, 6, 4, 9 } }, { "silver", { 4, 5, 5, 6, 6, 5 } },
     { "", { 0, 0, 0, 0, 0, 0 } }, { "beeswax", { 2, 1, 1, 0, 3, 2 } }, { "tallow", { 1, 1, 1, 0, 2, 1 } },
-    { "gold", { 3, 4, 4, 6, 6, 9 } },
+    { "gold", { 3, 4, 4, 6, 6, 9 } }, { "linen", { 5, 1, 2, 0, 4, 1 } }, { "wool", { 6, 1, 2, 1, 7, 1 } },
+    { "silk", { 4, 2, 3, 0, 3, 1 } },          /* (The cloths, 2026-11-10: MT_CLOTH hemp and sacking) */
 };
 static const char* const harm[NDMG] = { "blows", "edges", "points", "fire", "cold", "acid" };
 static const char* const make[10] = {

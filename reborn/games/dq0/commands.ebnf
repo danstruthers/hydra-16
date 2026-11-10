@@ -34,7 +34,7 @@
                    | <break> | <raise> | <lower> | <bend> | <force> | <disarm> | <rebar> | <hang> | <tie> | <untie> | <combine>
                    | <appraise>
                    | <deceive> | <threaten> | <calm> | <befriend> | <approach> | <ally>
-                   | <swap> | <tend> | <trade>
+                   | <swap> | <tend> | <trade> | <rip>
 
 (* ---- Observing (question 3: "look at" is a glance; question 4: "take a look" is a look) ---- *)
 <look>           ::= <LOOK> [ <look-target> ] | <LOOK> <object> "over" | <LOOK> "over" <object>   (* "look the torch over":
@@ -81,6 +81,11 @@
 <tend>           ::= <TEND> [ <object> ]       (* first aid (slice 4.3): "tend my wounds", "bandage my left arm", "treat the
                                                  bandit", "first aid"; none said, its own wounds *)
 <TEND>           ::= "tend" [ "to" ] | "treat" | "bandage" | "dress" | "bind" | "staunch" | "first" "aid" [ "to" | "for" ]
+                   | "change" [ "the" | "my" ] ( "bandage" | "bandages" | "dressing" ) [ "on" ]   (* a dressing changed: "change the
+                                                 bandage on my arm" (2026-11-10, HOUSE.md's bandages) *)
+<rip>            ::= <RIP> <object> [ "up" ] [ <USING> <object> ] | "wash" <object>   (* a cloth torn up for bandages, "cut up the
+                                                 cloak with the dagger"; washed, "wash the bandages" (2026-11-10) *)
+<RIP>            ::= ( "rip" | "tear" ) [ "up" ] | "cut" "up"
 <trade>          ::= ( "buy" | "purchase" ) <object> [ "from" <object> ] | "sell" <object> [ "to" <object> ]
                    | "how" "much" [ "will" "you" "give" ] [ "for" | "is" | "are" ] <object> | "what" ( "will" | "would" ) "you" "give" [ "me" ] "for" <object>
                    | ( "haggle" | "bargain" | "barter" ) [ ( "for" | "over" ) <object> ] [ "with" <object> ]

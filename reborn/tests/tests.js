@@ -3787,6 +3787,10 @@ const WORN = ['inventory', 'wear the ring on my left hand', 'wear the ring on my
   'examine the scarf', 'inventory', 'take off the ring', 'right', 'inventory', 'take off the scarf', 'wear the scarf over my face', 'inventory'];   // (dq0worn's lines)
 const WORNKIT = [['wear the ring on my left hand', 'wear the ring on my right hand', 'put the scarf over my face', 'inventory', 'quit'],   // (dq0wornkit's: a game,
   ['inventory', 'drop the hatchet', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u'], ['inventory', 'quit']];   //   carried on, the next dungeon)
+const RIPLINES = ['inventory', 'wear the robe', 'rip the robe', 'rip the leather vest', 'rip the rope', 'drop the dagger', 'rip the cloak',
+  'tear up the surcoat', 'take the dagger', 'cut up the cloak with the dagger', 'inventory', 'examine the bandages'];   // (dq0rip's lines)
+const DRESSLINES = ['inventory', 'put the bandages in the backpack', 'bandage my left arm', 'sheet', 'change the bandage on my right arm', 'inventory', 'sheet',
+  'wash the bandages', 'wash the bandages', 'inventory'];   // (dq0dress's lines)
 // (A dq0 game's answers, a line's each: from its echo to the next prompt, the story's colours and boxes gone)
 const dq0Segs = (out, lines) => {
   const o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
@@ -3800,7 +3804,7 @@ const dq0Segs = (out, lines) => {
   }
   return seg;
 };
-const LETDENS = ['look','around', 'look at B', 'talk to C', 'attack C', 'attack A', 'around'];   // (dq0letdens' lines)
+const LETDENS = ['look', 'around', 'look at B', 'talk to C', 'attack C', 'attack A', 'around'];   // (dq0letdens' lines)
 const LETWHICH = ['drop j', 'pick up the torch', 'inventory', 'drop j', 'drop a', 'drop k', 'take the torch', 'F', 'take the torch', '2', 'inventory',
   'drop j', 'take torch', 'lit', 'inventory'];   // (dq0letwhich's lines)
 const LETSEVERAL = ['drop j', 'drop h i', 'look', 'take E F', 'inventory', 'letter h as t', 'inventory', 'drop t', 'letter q as r'];   // (dq0letseveral's lines)
@@ -11033,6 +11037,59 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0rip', near: ['gear', 'parser'], what: "Dingus Quest Zero's cloth torn up for bandages (the user's, 2026-11-10: \"'rip' and 'tear up' verbs should be allowed to turn a garment, bed sheet, towel, etc. into bandages\"; HOUSE.md's bandages; commands.verbs' rip, its aux IO_RIP, the world's part 107, wcloth.c): a robe worn refused (\"take off the robe first\"), a leather vest refused (not cloth), a rope not torn up; the wool cloak with no blade carried refused (too stout to tear by hand); the linen surcoat torn by hand into 4 bandages (two minutes each: a timed wait of eight minutes and more); the cloak cut up with the dagger taken up again into 6 (a minute each); both lots worn (a garment's cloth, worn at best: its cleanliness kept), each its own lot (linen and wool not joined); the bandages examined, made of wool",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'cloak,surcoat,robe,leather vest,rope'",
+        ...RIPLINES, 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], seg = dq0Segs(out, RIPLINES), said = (k, re, n = RIPLINES.indexOf(k)) => { if (!re.test(seg[n])) f.push(k + ': not ' + re + ': ' + seg[n].slice(0, 300)); };
+        this.notes = RIPLINES.map((l, i) => l + ': ' + seg[i].slice(0, 400));
+        said('rip the robe', /You'd have to take off the robe first\./);
+        said('rip the leather vest', /Leather won't do: the leather vest isn't cloth\./);
+        said('rip the rope', /You can't tear the rope into bandages\./);
+        said('rip the cloak', /The cloak is too stout to tear by hand: you want a blade to cut it\./);
+        said('tear up the surcoat', /You tear the surcoat into 4 bandages\./);
+        said('cut up the cloak with the dagger', /You cut the cloak into 6 bandages\./);
+        const inv = seg[RIPLINES.lastIndexOf('inventory')];
+        if (!/4 bandages \(worn\)/.test(inv) || !/6 bandages \(worn\)/.test(inv)) f.push('the two lots not each its own, worn: ' + inv.slice(0, 500));
+        if (/cloak|surcoat/.test(inv)) f.push('the cloth still carried: ' + inv.slice(0, 500));
+        said('examine the bandages', /wool/);
+        const t = dq0Turns(m), wait = l => ((t.of(l).intents || []).find(e => e.kind === 'I_WAIT') || {}).tenths || 0;
+        if (wait('tear up the surcoat') < 4800) f.push('the surcoat torn by hand not eight minutes: ' + wait('tear up the surcoat'));
+        if (wait('cut up the cloak with the dagger') < 3600 || wait('cut up the cloak with the dagger') >= 4800) f.push('the cloak cut up not six minutes: ' + wait('cut up the cloak with the dagger'));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0dress', near: ['body', 'parser'], what: "Dingus Quest Zero's dressings (the user's, 2026-11-10: \"A bandage's location should be known\", dressings soil over days and are changed, wash, not boil; HOUSE.md's bandages): a serious stab to the left forearm and one to the right, tended, its dressing soiled (the character's file's: its \"dressed\" line; the days' soiling dq0rules'), five clean linen bandages carried, stowed in the pack (the old dressing kept there; one in hand, at its feet); \"bandage my left arm\" a dressing (its grade the best bandage's, 9: the referee's bonus whole), one bandage used up; the sheet's \"dressed, clean\" at the left forearm, \"dressed, soiled\" at the right; \"change the bandage on my right arm\" five minutes, the fresh one on, the old kept, a bloody bandage, the sheet's \"dressed, clean\" at both; washing it with no water about refused; at running water (the hub's pc_wet poked) it's washed, worn, not clean, a lot of its own",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo inj 6 2 2 2 0 0 >> /ram/c.hm', 'echo inj 134 2 2 2 5 4 >> /ram/c.hm', 'echo dressed Eig >> /ram/c.hm', 'echo ml phy 60 >> /ram/c.hm',
+        "dq0 -p t -s 3 -c /ram/c.hm -T -k 'bandages'", ...DRESSLINES, 'quit', 'echo $status']) },
+      start(m) {   // (Five bandages, the kit's one made so; the water at the second wash running)
+        dq0Poke(m, [{ g: 1, line: 'inventory', n: 1, item: { bandages: { qty: 5 } } },
+          { g: 1, line: 'wash the bandages', n: 1, hub: { pcWet: 0 } }, { g: 1, line: 'wash the bandages', n: 2, hub: { pcWet: 0x81 } }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], seg = dq0Segs(out, DRESSLINES), s = dq0Story(out).replace(/\s+/g, ' '), said = (k, re, n = DRESSLINES.indexOf(k)) => { if (!re.test(seg[n])) f.push(k + ' (' + n + '): not ' + re + ': ' + seg[n].slice(0, 300)); };
+        this.notes = DRESSLINES.map((l, i) => l + ': ' + seg[i].slice(0, 400));
+        said('bandage my left arm', /You clean and dress the serious stab to your left forearm \(S2\)\..*It's (?:well tended|tended|tended, roughly|badly done)\./);
+        said('sheet', /left forearm S2 \(stab\), tended, dressed, clean; right forearm S2 \(stab\), tended, dressed, soiled/);
+        said('change the bandage on my right arm', /You unwind the old dressing from the serious stab to your right forearm \(S2\)\..*The fresh dressing is on\./);
+        said('inventory', /3 bandages(?! \((?:worn|soiled|bloody)\))/, 5);
+        said('inventory', /a bandage \(bloody\)/, 5);
+        said('sheet', /left forearm S2 \(stab\), tended, dressed, clean; right forearm S2 \(stab\), tended, dressed, clean/, 6);
+        said('wash the bandages', /There's no running water here, nor a well, to wash the bandages in\./);
+        said('wash the bandages', /You wash the bandages and wring them out: fit to use again, if not new\./, DRESSLINES.lastIndexOf('wash the bandages'));
+        said('inventory', /a bandage \(worn\)/, DRESSLINES.lastIndexOf('inventory'));
+        if (/bloody/.test(seg[DRESSLINES.lastIndexOf('inventory')])) f.push('the bloody bandage not washed');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0finished', what: "Dingus Quest Zero's helpless character and a killer (the user's, 2026-10-21: by its nature, a killer or a predator finishes it, as the character finishes a senseless creature): seed 7's ghoul (down the way at the start), the character poor (Dodge 5, Unarmed 5) and undefended (defend none): the ghoul's claws worded a rake (a creature's own part: HOUSE.md's wounds), its bite a bite, never a gash or a stab; the character knocked senseless, then finished where it lies (the referee's dispatch for a killer, RS_KILLER: \"a mortal deep rake to your neck. You are dead.\"), dead, the game's end",
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
@@ -14971,7 +15028,8 @@ module.exports = {
           const p = hmRun(o, c);
           if (!p) { f.push(n + ': no file'); continue; }
           const x = sc('\n' + p.file);
-          if (lg('\n' + p.file) !== nl || x.length !== ns || x[0] !== nat || new Set(x).size !== ns) f.push(n + '\'s tongues and scripts: ' + JSON.stringify(p.file.split('\n').filter(z => /^(language|script) /.test(z))));
+          // (hmchar.hl's dice unseeded, the order its draw's: the native among them, 2026-11-10, the images' change drew "starric" first)
+          if (lg('\n' + p.file) !== nl || x.length !== ns || (c === c3 ? !x.includes(nat) : x[0] !== nat) || new Set(x).size !== ns) f.push(n + '\'s tongues and scripts: ' + JSON.stringify(p.file.split('\n').filter(z => /^(language|script) /.test(z))));
           f.push(...hmcharCheck(p.out, p.file).map(z => n + ': ' + z));
         }
         return f;
