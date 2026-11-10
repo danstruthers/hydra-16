@@ -3081,7 +3081,9 @@ meaningful action; push and pull include moving furniture.  What's built:
   "You can't see how to use the X.", or with another "Nothing comes of using the X on the Y."  Each is that verb's own
   command carried out (hthings.c's as_verb: the action changed, its row's handler called), so its words, its timed work
   and its walk over first are the verb's.  **Rip is the materials' batch's:** a TODO at the head of the routing marks
-  where "use the knife on the cloak" goes (VB_RIP_OBJECT, IO_RIP), before the kinds.
+  where "use the knife on the cloak" goes (VB_RIP_OBJECT, IO_RIP), before the kinds.  (Wired as the batches merged,
+  2026-11-10: a thing but the bandages used on a thing whose kind is cloth, MT_TEXTILE, is the textiles' IO_RIP, the
+  cloth cut up with it, wcloth.c saying what won't cut; dq0rip's "use the dagger on the towel".)
 - **Push, pull.**  A door pushed opens, pulled closes (a window's shutters alike); a portcullis pushed is raised,
   pulled is lowered (the winch loosed); a door's bar pulled is lifted out (the word "bar" first: the resolver makes it its door) (PA_LIFT), pushed is set in its brackets
   (PA_BAR); a rope pulled is untied, so from below a grapple is shaken loose (wrope2.c's, HOUSE.md's rule); there are

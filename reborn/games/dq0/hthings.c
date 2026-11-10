@@ -162,7 +162,7 @@ static void __fastcall__ as_verb (unsigned char v, unsigned char aux)
 ** arm"), food is eaten, a vial, a waterskin, an antidote, a remedy drunk, a light lit, a tinderbox lights the thing it's
 ** used on, a key or the lockpicks unlock what they're used on (none said, the door ahead), a rope or a grapple is tied
 ** (to what it's used on), a whetstone sharpens the blade it's used on (none said, the one in hand), a thing held in a
-** hand (a weapon, a tool) is taken in hand */
+** hand (a weapon, a tool) is taken in hand; a thing used on a cloth one cuts it up for bandages (rip's) */
 static void do_use (void)
 {
     char key[8];
@@ -173,13 +173,22 @@ static void do_use (void)
         unknown (U_WHAT);
         return;
     }
-    /* TODO (the materials' batch: VB_RIP_OBJECT, IO_RIP): a blade used on a cloth thing ("use the knife on the cloak") is a
-    ** rip, routed here before the kinds below, as_verb (VB_RIP_OBJECT, IO_RIP) with the cloth the thing ripped */
     if (othings (IO_FIND, w, "", 0) != IR_OK) {
         say_no (A_HAVE_NO, w);
         return;
     }
     k = (unsigned char) othings_x;
+    if (k != KI_BANDAGES && cmd.other.word[0] && othings (IO_FIND, cmd.other.word, "", 0) == IR_OK) {
+        hub_mem (KIND_BANK, &f, &CATALOGUE[(unsigned char) othings_x].mat, 1);
+        if (MT_TEXTILE (f)) {                   /* (A thing used on a cloth one, "use the knife on the cloak": a rip,
+                                                **   the cloth cut up with it, the textiles' IO_RIP: wcloth.c's, which
+                                                **   says what won't cut, by hand if it's no blade) */
+            cmd.action = VB_RIP_OBJECT;
+            cmd.aux = IO_RIP;
+            handle (IO_RIP, cmd.other.word, w, 0);
+            return;
+        }
+    }
     hub_mem (KIND_BANK, key, CATALOGUE[k].tool, sizeof key);
     hub_mem (KIND_BANK, &f, &CATALOGUE[k].flags, 1);
     if (k == KI_BANDAGES) {                     /* (Tend: its patient or its place the thing it's used on, "" the

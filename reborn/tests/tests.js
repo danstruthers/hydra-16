@@ -3791,7 +3791,8 @@ const WORN = ['inventory', 'wear the ring on my left hand', 'wear the ring on my
 const WORNKIT = [['wear the ring on my left hand', 'wear the ring on my right hand', 'put the scarf over my face', 'inventory', 'quit'],   // (dq0wornkit's: a game,
   ['inventory', 'drop the hatchet', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u'], ['inventory', 'quit']];   //   carried on, the next dungeon)
 const RIPLINES = ['inventory', 'wear the robe', 'rip the robe', 'rip the leather vest', 'rip the rope', 'drop the dagger', 'rip the cloak',
-  'tear up the surcoat', 'take the dagger', 'cut up the cloak with the dagger', 'inventory', 'examine the bandages'];   // (dq0rip's lines)
+  'tear up the surcoat', 'take the dagger', 'cut up the cloak with the dagger', 'inventory', 'examine the bandages',
+  'use the dagger on the towel'];   // (dq0rip's lines; the last a use's, things' verbs, routed to rip)
 const DRESSLINES = ['inventory', 'put the bandages in the backpack', 'bandage my left arm', 'sheet', 'change the bandage on my right arm', 'inventory', 'sheet',
   'wash the bandages', 'wash the bandages', 'inventory'];   // (dq0dress's lines)
 // (A dq0 game's answers, a line's each: from its echo to the next prompt, the story's colours and boxes gone)
@@ -11090,7 +11091,7 @@ module.exports = {
     {
       name: 'dq0rip', near: ['gear', 'parser'], what: "Dingus Quest Zero's cloth torn up for bandages (the user's, 2026-11-10: \"'rip' and 'tear up' verbs should be allowed to turn a garment, bed sheet, towel, etc. into bandages\"; HOUSE.md's bandages; commands.verbs' rip, its aux IO_RIP, the world's part 107, wcloth.c): a robe worn refused (\"take off the robe first\"), a leather vest refused (not cloth), a rope not torn up; the wool cloak with no blade carried refused (too stout to tear by hand); the linen surcoat torn by hand into 4 bandages (two minutes each: a timed wait of eight minutes and more); the cloak cut up with the dagger taken up again into 6 (a minute each); both lots worn (a garment's cloth, worn at best: its cleanliness kept), each its own lot (linen and wool not joined); the bandages examined, made of wool",
       init: 't_rc', cycles: 1500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'cloak,surcoat,robe,leather vest,rope'",
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'cloak,surcoat,robe,leather vest,rope,towel'",
         ...RIPLINES, 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
@@ -11106,6 +11107,7 @@ module.exports = {
         if (!/4 bandages \(worn\)/.test(inv) || !/6 bandages \(worn\)/.test(inv)) f.push('the two lots not each its own, worn: ' + inv.slice(0, 500));
         if (/cloak|surcoat/.test(inv)) f.push('the cloth still carried: ' + inv.slice(0, 500));
         said('examine the bandages', /wool/);
+        said('use the dagger on the towel', /You cut the towel into 2 bandages\./);
         const t = dq0Turns(m), wait = l => ((t.of(l).intents || []).find(e => e.kind === 'I_WAIT') || {}).tenths || 0;
         if (wait('tear up the surcoat') < 4800) f.push('the surcoat torn by hand not eight minutes: ' + wait('tear up the surcoat'));
         if (wait('cut up the cloak with the dagger') < 3600 || wait('cut up the cloak with the dagger') >= 4800) f.push('the cloak cut up not six minutes: ' + wait('cut up the cloak with the dagger'));
