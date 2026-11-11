@@ -617,6 +617,27 @@ What would change that:
 - **Split tests.js by area** (the areas table exists), with a dq0 test helper that supplies the prelude.
 - **Generate the recorder's offsets from the schema** (§2), not by compiling expressions at test time.
 
+*As built, 2026-11-11 (DECISIONS.md's "The tests: split by area, scenes, the runner"):*
+
+- *Measured first: the dq0 tests were 90% of the suite's CPU time, and in a typical one (dq0parse) the game's start,
+  its first dungeon grown, was 61% of its cycles (254M of 417M); the boot and hmchar another 14%.  Every test also
+  spent about a second making its ROM image.  The runner already ran a process a test, 8 at a time, the longest
+  first, and kept the cores busy to the end.*
+- *tests.js split: tests/suites/*.js by area, tests/suites/dq0/*.js the game's by subject (NEAR's areas), the shared
+  helpers in tests/lib (common.js, dq0.js), tests.js the index.  The selector reads the helper modules, and every
+  test's areas and helpers are what they were.*
+- *Scenes (sim/lib/scenes.js): not a scene file or a saved game, but the emulator's whole machine saved at the prompt
+  waits just before and after a test's first dq0 line, and taken up by the next test that starts the same way.  This
+  is exact, because nothing after a prompt wait reaches the machine while it waits.  It is keyed by the input to
+  there, the images' and the code's sha1; a test with watchers of its own saves its own.  Held to runs without
+  scenes, every dq0 test ends the same to the cycle and the byte, but dq0layers and dq0looks (scene: false).*
+- *The runner: the ROM images kept (obj/imgcache), the longest first by the last run's times, CPU time recorded.*
+- *The whole suite's CPU time: some 4,450 s before; 4,209 s split, with the images kept; 4,012 s with scenes cold (new
+  images: the scenes made as the run goes); 2,899 s warm (the dq0 tests' a third less).  On 8 quiet cores that is about
+  9 minutes before and 6 warm; the runs measured shared the machine with other agents' suites.*
+- *Left: scene constructors (a room declared, not reached by commands) and the recorder's offsets from the schema;
+  the tests' preludes are still written out in each test.*
+
 ---
 
 ## 10. Comments and design documents
@@ -660,7 +681,7 @@ Ranked by how much each unlocks, and arranged so the game keeps working througho
 | 7 | **One region-paged record store** (§6) | one save/restore path | medium |
 | 8 | **The generation placers table and keyed randomness** (§5) | fixtures as data; furniture with compartments | medium |
 | 9 | **Decide on the referee** (§8 a or b), then the skeleton library or the trim | | small–medium |
-| 10 | **Test scenes, tests.js split** (§9) | much faster tests; the action × class sweep | medium |
+| 10 | **Test scenes, tests.js split** (§9). *Done 2026-11-11 (DECISIONS.md's "The tests: split by area, scenes, the runner"): tests.js split into tests/suites by area and tests/suites/dq0 by subject, the helpers in tests/lib; scenes, the emulator's machine saved after the boot and hmchar and after the game's start and taken up by every test that starts the same way, exact to the cycle (sim/lib/scenes.js); the ROM images kept, the runner's order by the last times.  The suite's CPU time some 4,450 s before, 4,012 s cold, 2,899 s warm.* Left: scene constructors, the recorder's offsets from the schema | much faster tests; the action × class sweep | medium |
 | 11 | **Shared meta library and one save record; one theme compiler** (§9) | | small–medium |
 | 12 | **Comments and docs as current reference** (§10) | done gradually, file by file as each is touched | ongoing |
 

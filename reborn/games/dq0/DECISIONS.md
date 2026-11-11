@@ -3290,3 +3290,37 @@ same, letter for letter.
 - **Tested:** all 442 tests pass.  Every dq0 test's output before and after: no sentence of the five functions' said
   differently (the only sentences new or gone are the real-time fights' rolls in dq0antidote and dq0denpace, which go
   by the clock, and lines typed ahead).
+
+## The tests: split by area, scenes, the runner (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's step 10, §9)
+
+The suite took 14 to 17 minutes on the 8-core desktop (442 tests, 8 at a time), and every merge waits on it.  Measured first (obj/testtimes.json, and a dq0 test's lines' cycles one by one):
+
+- **Where the time goes.**  6,809 test-seconds in all (each test's process's wall time, summed); the dq0 tests 6,132 of them (90%), 286 of the 306 billion cycles.  The longest are long for what they do, not their start: dq0hold, dq0housefaults, dq0looks, dq0packsteps (2 to 6 billion cycles, or a watcher on every instruction) take 90 to 140 s each.  A typical dq0 test (dq0parse, 417M cycles, 6.3 s alone): the boot 11M, hmchar 48M, **the game's start (its first dungeon grown) 254M, 61%**, its 20 commands about 100M.  Every test also spent about a second before its first cycle making its ROM image (romimg.build's ROM disk volume, the same for nearly every test), and a fifth of a second loading the runner and tests.js in its own process.
+- **The runner already ran in parallel** (base/sim/test.js: a process a test, -j the cores, the longest started first, the reports in the list's order): 856 s of wall for 6,809 test-seconds is 8 processes busy to the end.  So what's left to win is work, not waiting.
+
+What's built:
+
+- **tests.js split** (tests/suites/*.js by area: the system's, HyForth's, BASIC's, hylang's, the numbers', the sound's, the PC tool's, the screen's, hmchar's; tests/suites/dq0/*.js the game's by subject, by areas.js's NEAR: map, parser, gear, fight, denizens, senses, body, time, save, theme, screen).  The helpers more than one suite uses are in tests/lib/common.js and tests/lib/dq0.js, a suite's own at its top.  tests.js is the index: the suites in order, and the same exports.  Every test's name, fields and functions are as they were (compared one by one against the old file); the order is the suites' (the system's first, then the game's by subject).  The selector reads the helper modules too (select.js: a helper module's line runs the tests whose entries use it, as a suite's own helper's does), and every test's areas and helpers came out the same as from the one file.
+- **Scenes** (sim/lib/scenes.js).  The whole machine (machine.js's state(): its memory, the CPU, the devices, the output so far, the SD card's blocks written) and the test's watchers (the hub's recorder, the hub writers' check) are saved at two points of a test's input: the prompt waits just before and just after its first dq0 line (booted and the character made; the game begun, its first dungeon grown).  The next test whose input is the same up to there is taken up from it.  This is exact, not an approximation: while the input waits for a prompt, nothing after the wait reaches the machine (acia.js looks only at the wait), so the machine at that moment is every such test's.  A scene's key is the input to the point, the images' sha1 (the ROM's, the BIOS's, the SD card's), the seed, the chip, the RAM modules, the core, HUBOWN, and the emulator's and the runners' sources; a rebuild makes new scenes, and obj/scenes keeps the newest 400 (some 0.75 MB each).
+- **Why the machine and not the game's saved games.**  A game carried on (dq0 -d) isn't the same game as one begun: other words, other dice, the start's events missing.  The tests would have to change, and some couldn't.  A snapshot of the emulator changes nothing the test sees, and it skips the boot and hmchar too.
+- **A test's watchers.**  A test with start(m) (dq0Poke and the like) saves scenes of its own (its name and its suite's sources in the key), so its pokes are never left in another test's machine.  It can be taken up from its own or from one a test without watchers saved.  As it's taken up, its watchers are made and given what the serial port gave before the point (each byte read and shown, at its cycle; the hub not there before it was made).  A test with budgets, send, a /pc or a machine of its own is never taken up, nor one marked scene: false.
+- **Held to runs without.**  SCENES_TRACE=DIR writes each dq0 test's cycles, output hash, failures and notes.  For all 292 dq0 tests, cold (173 from their start, 92 taken up at rc's prompt, 27 in the game) and warm (279 in the game): the same, to the cycle and the byte, but for two.  dq0layers and dq0looks have watchers that see the hub's writes as the game grows, which a scene can't give them.  They're scene: false and start from the beginning as before.
+- **The runner** (base/sim/test.js, sim/test.js).  A test's image is kept in obj/imgcache, by its inputs' sha1 (the modules, the init, the hardware test, the BIOS, the ROM disk's files, the image tools' sources): made once and read after.  The parallel runner starts the longest first by each test's last wall time (obj/testtimes.json's `all`), not its cycle budget.  A process for each test stays: no test's state can reach another's.
+
+**Measured** (the whole suite, 442 tests, 8 at a time).  Other agents' suites shared the machine through every run, 1.5 to 4 times over, so the walls are rough.  The CPU-seconds (each test's process's own, now in obj/testtimes.json) hold whatever else runs.
+
+| | CPU-seconds | that, over 8 cores | wall measured |
+|---|---|---|---|
+| before | some 4,450 (the run without scenes, and 0.55 s a test for its image) | 556 s | 856 s (14m 16s) |
+| split, images kept, no scenes (SCENES=0) | 4,209 | 526 s | 1,436 s (the machine 3 times over) |
+| scenes cold (images new: scenes made as the run goes; 93 taken up at rc, 33 in the game) | 4,012 | 502 s | 1,963 s (4 times over) |
+| scenes warm (nothing rebuilt since the last run: 277 of the 292 dq0 tests taken up in the game) | 2,899 | 362 s | 1,256 s |
+
+Warm, the dq0 tests' CPU time is a third less (2,626 s, from 3,929 without scenes); cold, 5% less.  A dq0 test of some 400M cycles (dq0parse) runs in 1.5 s from its scene, 6.2 s from its start.  The longest tests (dq0housefaults, dq0packsteps, dq0hold, dq0looks: 1 to 2.5 minutes each) are long for what they do after their start, so a whole warm run on a quiet machine is bounded by the busiest core, not by the scenes.
+
+**For review:**
+
+- **Cold runs gain less than warm ones.**  After a merge the images are new, so the run is cold, and in a cold run a scene only helps tests that share a start with one run before them (most share the boot and hmchar; few share a dungeon).  The lead's run after the merges is cold, its RULES=null run after it (the same images, another dq0 line, `-r null`) gains only the rc point.  An agent's runs while it works, and every rerun, are warm.
+- **Disk.**  obj/scenes holds some 300 MB at its fullest (400 scenes).
+- **The emulator's snapshot** (base/sim/lib) refuses what it doesn't hold: the VERA, the input controller, the RTC, the sound, a /pc host, CA1's pulses, the debugger's things.  A test using one runs from its start.
+- **Next** (§9's): scene constructors (a room, its things and its denizens declared, not reached by commands), and the recorder's offsets from the schema.
