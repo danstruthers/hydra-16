@@ -24,6 +24,7 @@ DEPTH       = 16                    ; Overlay calls in calls, at most
             .zeropage
 ova:        .res        1           ; (.A and .X kept through a stub)
 ovx:        .res        1
+ovip:       .res        2           ; (Where a stub's numbers are: ovcall's)
 
             .bss
 _ovbank:    .res        OVMAX       ; Overlay n's bank: _ovbank[n - 1] (dq0harn.c's ovl_load sets them)
@@ -140,16 +141,46 @@ ovl_out:
             ldx         ovx
             rts
 
+; A stub's call (its jsr's: the overlay's number and the function's address after it): the overlay put in, its
+; function called, the bank put back, its arguments and its value as they are.  (A stub its call and its numbers, 6
+; bytes: 11 before, its own ldy, jsr ovl_in, jsr and jmp ovl_out; some 30 cycles a call more for the main RAM's
+; room, 2026-11-11: ../dq0/bank.s's)
+ovcall:
+            sta         ova
+            stx         ovx
+            pla                             ; (The stub's jsr: the numbers follow it)
+            sta         ovip
+            pla
+            sta         ovip + 1
+            ldy         #2
+            lda         (ovip),y
+            sta         @go + 1
+            iny
+            lda         (ovip),y
+            sta         @go + 2
+            ldx         ovsp                ; (ovl_in's, here: the bank there kept,
+            lda         BANKREG
+            sta         ovstk,x
+            inc         ovsp
+            ldy         #1                  ;   the overlay's put in)
+            lda         (ovip),y
+            tay
+            lda         _ovbank - 1,y
+            sta         BANKREG
+            lda         ova
+            ldx         ovx
+@go:        jsr         $FFFF
+            jmp         ovl_out
+
 ; A stub: name() calls overlay ov's o_name(), its arguments and its value as they are (.Y isn't an argument of a
 ; function that isn't variadic)
 .macro      OVFN        name, ov
             .export     .ident(.concat("_", .string(name)))
             .import     .ident(.concat("_o_", .string(name)))
 .ident(.concat("_", .string(name))):
-            ldy         #ov
-            jsr         ovl_in
-            jsr         .ident(.concat("_o_", .string(name)))
-            jmp         ovl_out
+            jsr         ovcall
+            .byte       ov
+            .addr       .ident(.concat("_o_", .string(name)))
 .endmacro
 
 ; The overlays' functions (dq0harn.h has them with their overlays)

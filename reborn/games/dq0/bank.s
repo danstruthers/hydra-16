@@ -20,9 +20,10 @@ OVL_DOT     = 12                    ;   twelve, the screen's silence under its 3
 _dnum       = _num
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 26                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
+OVMAX       = 27                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's;
-                                    ;   the 25th part 27's; the 26th part 28's, 2026-11-10)
+                                    ;   the 25th part 27's; the 26th part 28's, 2026-11-10; the
+                                    ;   27th the status line, 2026-11-11)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: a walk's first words spent half their time
@@ -31,6 +32,7 @@ SWFAST      = 1                     ; (The parts copied four pages a pass: a wal
             .zeropage
 ova:        .res        1           ; (.A and .X kept through a stub)
 ovx:        .res        1
+ovip:       .res        2           ; (Where a stub's numbers are: ovcall's)
 
             .bss
 _ovbank:    .res        OVMAX       ; Overlay n's bank: _ovbank[n - 1] (main.c's ovl_load sets them)
@@ -79,16 +81,46 @@ ovl_out:
             ldx         ovx
             rts
 
+; A stub's call (its jsr's: the overlay's number and the function's address after it): the overlay put in, its
+; function called, the bank put back, its arguments and its value as they are.  (A stub its call and its numbers, 6
+; bytes, as the swapped parts' are: 11 before, its own ldy, jsr ovl_in, jsr and jmp ovl_out; some 30 cycles a call
+; more for some 430 bytes of the main RAM, 2026-11-11)
+ovcall:
+            sta         ova
+            stx         ovx
+            pla                             ; (The stub's jsr: the numbers follow it)
+            sta         ovip
+            pla
+            sta         ovip + 1
+            ldy         #2
+            lda         (ovip),y
+            sta         @go + 1
+            iny
+            lda         (ovip),y
+            sta         @go + 2
+            ldx         ovsp                ; (ovl_in's, here: the bank there kept,
+            lda         BANKREG
+            sta         ovstk,x
+            inc         ovsp
+            ldy         #1                  ;   the overlay's put in)
+            lda         (ovip),y
+            tay
+            lda         _ovbank - 1,y
+            sta         BANKREG
+            lda         ova
+            ldx         ovx
+@go:        jsr         $FFFF
+            jmp         ovl_out
+
 ; A stub: name() calls overlay ov's o_name(), its arguments and its value as they are (.Y isn't an argument of a
 ; function that isn't variadic)
 .macro      OVFN        name, ov
             .export     .ident(.concat("_", .string(name)))
             .import     .ident(.concat("_o_", .string(name)))
 .ident(.concat("_", .string(name))):
-            ldy         #ov
-            jsr         ovl_in
-            jsr         .ident(.concat("_o_", .string(name)))
-            jmp         ovl_out
+            jsr         ovcall
+            .byte       ov
+            .addr       .ident(.concat("_o_", .string(name)))
 .endmacro
 
 ; The overlays' functions (dq0.h has them with their overlays)
@@ -158,7 +190,8 @@ ovl_out:
             OVFN        water_words, 4      ; (The water's news, hunger's and thirst's: water.c, slice 4.9's)
             OVFN        time_ui, 16         ; (The time of day believed, worded: time.c, 2026-10-31)
             OVFN        say_raw, 16         ; (A line as it is, the map's: term.c, the main RAM's room)
-            OVFN        t_status, 16        ; (The status line drawn: term.c, the main RAM's room, 2026-11-03)
+            OVFN        t_status, 27        ; (The status line drawn: term.c, the main RAM's room, 2026-11-03; 27's, 2026-11-11)
+            OVFN        status, 27          ; (The status line, as the game is now: main.c's, the main RAM's room, 2026-11-11)
             OVFN        said_again, 16      ; (A line that says "again": term.c, the verbs plan's B7, 2026-11-10)
             OVFN        may_den, 14         ; (The thing named may be a denizen: sway.c, 2026-11-03)
             OVFN        place_said, 14      ; ("From the floor": a place, not a thing, 2026-11-06)

@@ -18,8 +18,12 @@
 
 /* H_POWERS: a spell, a talent, an invocation: refused, true to the character (2026-11-09, the user's: the refusal the
 ** row's request, A_NO_MAGIC, A_NO_PSI, A_NO_GODS: actions.c's); an invocation's names the character's deity (the
-** referee's, RS_DESCRIBE's RD_DEITY: "" none, its form without a name) */
-static void powers (void)
+** referee's, RS_DESCRIBE's RD_DEITY: "" none, its form without a name).  Part 24's, the commands seen to less often,
+** through its stub powers (2026-11-11: part 2's room) */
+void powers (void);
+#pragma code-name (push, "SW24CODE")
+#pragma rodata-name (push, "SW24RODATA")
+void s_powers (void)
 {
     struct req* r;
 
@@ -31,6 +35,8 @@ static void powers (void)
     }
     say_no (cmd.aux, lb);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* H_PRETEND (the plan's batch B3, the minds'): dead or asleep feigned, an Acting contest (P_ACT); minds.c's, part 27 */
 static void do_pretend (void)

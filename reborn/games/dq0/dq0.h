@@ -56,7 +56,8 @@ void blank (void);                              /* An empty line in the story (o
 void t_done (void);                             /* The cursor back to the line typed, and everything out */
 void t_flush (void);                            /* What's said so far out now (the cursor left where it is) */
 void __fastcall__ t_status (const char* left, const char* right);  /* The status line drawn */
-void status (void);                             /* (main.c) The status line, as the game is now */
+void status (void);                             /* (Overlay 27, main.c) The status line, as the game is now */
+void __fastcall__ o_t_status (const char* left, const char* right);  /* (Overlay 27's own: t_status's; left 0, drawn whole next) */
 unsigned char __fastcall__ believed (unsigned char h);  /* (main.c) True heading h, as the character believes it
                                                 **   (its bearings: the hub's pc_skew, slice 4.2's; not an
                                                 **   overlay's, the hub not in the window) */
@@ -455,9 +456,9 @@ unsigned char __fastcall__ den_heard (const struct msg* m);   /* (Overlay 23's) 
 
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
-extern unsigned char ovbank[26];               /* (bank.s's OVMAX: overlay 21 the writings' parts, 22 the designators', 23 their
+extern unsigned char ovbank[27];               /* (bank.s's OVMAX: overlay 21 the writings' parts, 22 the designators', 23 their
                                                 **   capitals, 2026-11-06; 24 the things' chooser, 2026-11-07; 25 part 27's,
-                                                **   2026-11-10) */
+                                                **   2026-11-10; 26 part 28's; 27 the status line, 2026-11-11) */
 unsigned char early (void);                     /* Part 12: before a command's things are looked for (in shock, refused:
                                                 **   2; first aid's, 1; else 0) */
 void tend (void);                               /* Part 12: first aid (VB_TEND) */

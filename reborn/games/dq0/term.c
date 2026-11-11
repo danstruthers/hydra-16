@@ -37,7 +37,6 @@ char queue[QMAX];                               /* Lines entered and not yet tak
 unsigned qlen;                                  /*   (parts.c's too), so many bytes of them */
 char t_last[INMAX + 1];                         /* The last line entered (cursor up brings it back; "again" runs it
                                                 **   again: hself.c's again_go), but one that says "again" */
-static char sl[128], sn[128];                   /* The status line as it's shown, and as it's to be */
 
 /* ---- Output */
 
@@ -199,7 +198,8 @@ static unsigned char both, kbd, whole;          /* (Both; the keyboard; the scre
 
 void s_size (void)
 {
-    static char b[100];
+    char b[100];                                /* (On the C stack: called from the main loop and the start alone, not
+                                                **   deep; the main RAM's room, 2026-11-11) */
     char* p;
     char eb[8];
     int fd, n = 0;
@@ -280,7 +280,7 @@ void s_t_init (void)
     col = gap = 0;
     blanked = 1;
     away = 1;
-    memset (sl, 0, sizeof sl);                  /* (The status line drawn whole) */
+    t_status (0, 0);                            /* (The status line drawn whole) */
     status ();
     inl_show ();
     t_done ();
@@ -311,13 +311,26 @@ void t_end (void)
 ** while it's away from the line typed (the user: the cursor flickered, the line drawn whole each game second); nothing
 ** at all, the cursor left where it is, if nothing has */
 
-#pragma code-name (push, "OV16CODE")            /* (Overlay 16's, through its stub, 2026-11-03: the main RAM's room,
-                                                **   for the parts' quicker copies; nothing of the hub's in it) */
-#pragma rodata-name (push, "OV16RODATA")
+#pragma code-name (push, "OV27CODE")            /* (Overlay 16's, through its stub, 2026-11-03: the main RAM's room,
+                                                **   for the parts' quicker copies; nothing of the hub's in it.  Overlay
+                                                **   27's since 2026-11-11, with main.c's o_status, and the line's two
+                                                **   copies in its bank: the main RAM's room) */
+#pragma rodata-name (push, "OV27RODATA")
+#pragma bss-name (push, "OV27BSS")
+static char sl[128], sn[128];                   /* The status line as it's shown, and as it's to be */
+#pragma bss-name (pop)
+
+/* (left 0: what's shown forgotten, the line drawn whole the next time: s_t_init's) */
 void __fastcall__ o_t_status (const char* left, const char* right)
 {
-    unsigned char n = strlen (left), m = strlen (right), k, a, b;
+    unsigned char n, m, k, a, b;
 
+    if (!left) {
+        memset (sl, 0, sizeof sl);
+        return;
+    }
+    n = strlen (left);
+    m = strlen (right);
     memset (sn, ' ', tw);
     memcpy (sn + 1, left, n < tw - 2 ? n : tw - 2);
     if (m + n + 3 <= tw) {

@@ -30,7 +30,10 @@ void __fastcall__ s_portal (unsigned char pa)
 }
 
 /* Up or down (h: H_CLIMB's; H_JUMP's, down a ledge or a shaft, a fall; into a well): a well's shaft down or out of it
-** (2026-11-06); through a window, the portal's.  "Go down the well" too, a move's.  (rarer's, part 24's, till stage 3) */
+** (2026-11-06); through a window, the portal's.  "Go down the well" too, a move's.  (rarer's, part 24's, till stage 3;
+** part 24's again, 2026-11-11: part 2's room) */
+#pragma code-name (push, "SW24CODE")
+#pragma rodata-name (push, "SW24RODATA")
 void __fastcall__ s_climb (unsigned char h)
 {
     unsigned char d;
@@ -53,6 +56,8 @@ void __fastcall__ s_climb (unsigned char h)
     }
     intend (I_CLIMB, d);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* H_DOOR: a door's work, the verb's (PA_*: its aux, or its row's, lock's); a thing that closes first, of a verb that
 ** takes one (the row's TK_CLOSER: a chest, a sack, a flask, hthings.c's H_SHUT) */

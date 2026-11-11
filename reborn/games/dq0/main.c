@@ -608,7 +608,10 @@ void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsig
 ** for the sound's: the game goes on silent) */
 static void __fastcall__ start (const char* name, unsigned char t, const char* more)
 {
+#pragma bss-name (push, "SW1RODATA")              /* (The part's own: no other part called while it's needed; the
+                                                **   main RAM's room, 2026-11-11) */
     static char path[56];
+#pragma bss-name (pop)
 
     strcpy (path, libdir);
     strcat (path, "/");
@@ -902,26 +905,38 @@ unsigned char __fastcall__ believed (unsigned char h)
     return (h + HUB->pc_skew) & 7;
 }
 
-/* ---- The status line */
+/* ---- The status line (overlay 27's, through its stub status: the main RAM's room, 2026-11-11; the hub read through
+** hub_mem, whatever's in the window as it's called, its left side the name itself, the line drawn by o_t_status, its
+** own overlay's) */
 
-static const char* const posw[] = { "", " PRONE", " CROUCHED", " KNEELING", " SITTING", "", "", "" };
-
-void status (void)
+static char sright[72];                         /* (Its right side, in the main RAM: bar_text's, overlay 3's, writes
+                                                **   it.  Its longest: paused, a fight's words, the state, the facing;
+                                                **   dq0 -m, the minutes) */
+#pragma code-name (push, "OV27CODE")
+#pragma rodata-name (push, "OV27RODATA")
+void o_status (void)
 {
-    static char left[48], right[72];            /* (Its right side's longest: paused, a fight's words, the state, the
-                                                **   facing; dq0 -m, the minutes) */
-    char n[6];
+    static const char* const posw[] = { "", " PRONE", " CROUCHED", " KNEELING", " SITTING", "", "", "" };
+    char* right = sright;
+    struct { unsigned len, done; } t;
+    unsigned char f[3];
+    char n[16];
 
-    strcpy (left, P.name[0] ? P.name : "Dingus Quest Zero");
     strcpy (right, paused ? "PAUSED  " : "");
     if (task_[T_WORLD] > 0) {
-        bar_text (right, bar_done = HUB->pc_task.done, HUB->pc_task.len);   /* (A long task's bar, its part done;
-                                                **   a fight's foe; the light's minutes left: task.c's) */
-        strcat (right, HUB->pcstatus);          /* (The referee's words: "UP 0" ...; prone, said: slice 4.1b's) */
-        strcat (right, posw[HUB->pc_pos & 7]);  /* (Not standing, said: slices 4.1b's, 4.6's) */
+        hub_mem (0, &t, &HUB->pc_task.len, sizeof t);
+        bar_text (right, bar_done = t.done, t.len);   /* (A long task's bar, its part done; a fight's foe; the light's
+                                                **   minutes left: task.c's) */
+        hub_mem (0, n, HUB->pcstatus, sizeof n);
+        strcat (right, n);                      /* (The referee's words: "UP 0" ...; prone, said: slice 4.1b's) */
+        hub_mem (0, f, &HUB->pc_pos, 1);
+        hub_mem (0, f + 1, &HUB->pc_face, 1);
+        hub_mem (0, f + 2, &HUB->pc_lost, 1);
+        strcat (right, posw[f[0] & 7]);         /* (Not standing, said: slices 4.1b's, 4.6's) */
         strcat (right, "  facing ");
-        strcat (right, head_abbr[believed (HUB->pc_face)]);   /* (The way it believes it faces: slice 4.2's) */
-        strcat (right, HUB->pc_lost ? "?  " : "  ");
+        hub_mem (0, n, &HUB->pc_skew, 1);
+        strcat (right, head_abbr[(f[1] + n[0]) & 7]);   /* (The way it believes it faces: slice 4.2's, believed's) */
+        strcat (right, f[2] ? "?  " : "  ");
     }
     if (clock_on) {                             /* (The game's minutes gone, no seconds: for the tests and debugging
                                                 **   alone, the user's, 2026-11-03: the player sees what the character
@@ -929,8 +944,10 @@ void status (void)
         strcat (right, utoa ((unsigned) (now / 600), n, 10));
         strcat (right, " min");
     }
-    t_status (left, right);
+    o_t_status (P.name[0] ? P.name : "Dingus Quest Zero", right);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The world's events, worded */
 

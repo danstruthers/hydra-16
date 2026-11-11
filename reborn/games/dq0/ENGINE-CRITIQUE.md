@@ -151,6 +151,15 @@ build.js checks them afterwards.
 5. **Typed stub calls.** A generated stub can pass a small argument block (or use the C stack, as the copies already
    do), which removes the hidden-parameter globals.
 
+*The UI's room, 2026-11-11 (DECISIONS.md's "The UI's room won back").* The UI's main RAM had 2,069 bytes free against
+the floor of 2,048, part 2 (the commands) 102 bytes and its banks some 4K in pieces. Now: the main RAM 3,378 free,
+part 2 404, and a 27th overlay bank with 7,032 bytes free (room for a new part's image of 3-4K and more). Where it
+came from: the overlays' stubs 6 bytes each, not 11 (a call and its numbers, as the parts' are: ovcall, about 415
+bytes in the UI, 220 in the referee, 80 in the maker: dq0harn 2,135 to 2,341, dq0m 2,879 to 2,940); the status line
+(its words and its two 128-byte copies) out of the main RAM into the 27th bank, reading the hub through hub_mem
+(about 650 bytes); three buffers that only part 1 uses, or that need not outlive a call, made the part's own or the C
+stack's (220); and two of the rarer handlers (the climb, the powers refused) moved from part 2 to part 24.
+
 ---
 
 ## 2. The hub: one big hand-maintained header in place of a schema

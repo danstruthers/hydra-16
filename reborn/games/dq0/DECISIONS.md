@@ -3136,3 +3136,61 @@ Five of the stubs the verbs plan left saying "not yet" (B0's) now do something i
 - **Again** ("again", "repeat"; hself.c's `H_AGAIN`): the last line typed that didn't say "again" is run again, its parts queued first, before any line typed ahead, each carried out as if typed.  term.c's `last` (cursor up's) is `t_last` now, and a line with a word begun "again" or "repeat" isn't kept in it (term.c's `said_again`, overlay 16's), so "north then again" can't run itself for ever.  Nothing typed yet: "There's nothing to do again."  "g" stays give's (commands.verbs' `g = give`), not again's, for review.
 - **Room.**  The handlers' work is part 24's (the commands seen to less often), through two stubs (`fights`, `again_go`): part 2 is 89 bytes from full (110 before); a third stub, `said_again`.  Overlay 6 is 67 bytes from full (183 before: parts.c's split), overlay 16 25 (88).  Part 24's state is the part's own (`bss-name` SW24RODATA: none kept across a call of another part).  The UI's main RAM 2,202 bytes free (2,272 before).  The world: part 24 (fighting on) full, the charge's pace set in part 37 (the intent's).  The UI's banks are close to full (some 4,000 bytes free over all, the most 514 in one): a later batch may need parts moved, or a bank more.
 - **Test dq0fightverbs**: again with nothing, charge with none, the throws (two squares; the wall behind, at its feet), turn left then again and repeat (three turns), a charge (the war cry, the close-in at a run or the blow, a blow struck), engage and already engaged, a split attack (both struck at).
+
+## The UI's room won back (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §1)
+
+The UI (games/dq0) was at the edge: its main RAM 2,069 bytes free against the floor of 2,048, part 2 (the commands'
+handlers) 102 bytes from the swap area's 4,352, its overlay banks some 4K free in pieces of 500 at most.  The ask: at
+least 3,000 bytes of main RAM, a margin in part 2, and room in the banks for a new part of 3-4K.  Nothing the game
+does or says changes; what's built:
+
+- **The overlays' stubs 6 bytes, not 11** (bank.s's OVFN and its new ovcall): a stub is `jsr ovcall` and its two
+  numbers after it (the overlay, the function's address), as the swapped parts' stubs have been since 2026-11-04;
+  ovcall reads them off the return address, puts the overlay in (ovl_in's work, done in it, not called), calls the
+  function, and puts the bank back (ovl_out), its arguments in .A, .X and its value as they were.  93 stubs, some 465
+  bytes, less ovcall's 50.  The cost: some 30 cycles a call more (a stub's work was some 60 before, its function's own
+  aside); with ovl_in called from ovcall it was 60 more, and the start at seed 123456789 took 5M cycles more, a sign how
+  many calls there are.  The same in the referee's (dq0harn, 52 stubs) and the maker's (dq0m, 23) bank.s.
+- **The status line out of the main RAM, into a 27th overlay bank** (dq0.cfg's OV27, filled; bank.s's OVMAX 27; dq0.h's
+  ovbank[27]): main.c's status is o_status (its stub status, called as ever), term.c's o_t_status beside it, and the
+  line as shown and as it's to be (sl, sn: 256 bytes) the bank's own data, last in it (OV27BSS: the overlays' check,
+  dq0OvlBanks, stops there, as at OV22BSS).  An overlay's code can't read the hub in the window, so o_status reads its
+  few bytes through hub_mem (theme.c's way, and bar_text's already); its left side is the character's name itself, not
+  a copy (o_t_status is in the same bank, so the name's literal in it reads right); its right side stays in the main
+  RAM (bar_text, overlay 3's, writes it).  A side effect, for review: called from overlay 3 (a pause, task.c's o_meta)
+  the old status read the hub's fields from the window as it was, overlay 3's bytes, till the next second's redraw;
+  through hub_mem it reads them right.  s_t_init's "draw it whole" is t_status (0, 0).
+- **Buffers that needn't be the main RAM's:** s_size's 100 (the console's settings read as the screen's set up) on
+  the C stack (called from the main loop and the start only, shallow); start's path (56) and hub_spawn's arguments
+  (64) part 1's own (`bss-name` SW1RODATA: nothing else is swapped in while they're used; part 1 207 bytes free to 94).
+  (character's two, part 7's, can't: it calls hub_run and t_init, part 1's, with them.)
+- **Part 2's room:** the climb (s_climb, 229 bytes: hplaces.c, part 24's till stage 3) and the powers refused
+  (s_powers, 73: hself.c) are part 24's, the commands seen to less often, through their stubs.  A climb or a spell
+  refused swaps part 24 in and part 2 back (some 50,000 cycles, under a fiftieth of a second at 3.58 MHz); none of the
+  timed commands (dq0answer's, the letters' tests') is either.
+- **Measured** (the build's room table):
+
+  | | before | after |
+  |---|---|---|
+  | dq0's main RAM | 2,069 | 3,378 |
+  | part 2 | 102 | 404 |
+  | part 24 | 1,520 | 1,218 |
+  | part 1 | 207 | 94 |
+  | overlay 16 (o_t_status's till now) | 842 | 1,179 |
+  | overlay 27 (new) | - | 7,032 |
+  | the overlays' free bytes, all told | 9,834 | 17,090 |
+  | dq0harn's main RAM | 2,135 | 2,341 |
+  | dq0m's main RAM | 2,879 | 2,940 |
+
+  The bank packer placed some parts' images anew as the banks changed (the room table's "parts not in parts.txt's
+  banks"), as it does.  The world (2,336), the denizens (2,184) and the senses (3,122) have no overlay stubs; their
+  room is unchanged.
+- **Not done, for later:** the swap area (4,352) is the biggest part's, part 4's (s_pace_cmd, one piece of 4,339, its
+  pointer argument pinning it), so it can't shrink without splitting that function by hand; main.c's events and main
+  loop (2,240 bytes) read the hub at every turn and stay; names.c's helpers shared by parts 5 and 6 (some 700) would
+  want part-local copies (§1.3) and part 5 has 113 bytes free.
+- **The start** (dq0starttime): seed 1 234.7M cycles to the first prompt, its budget 235M; seed 123456789 310.7M, its
+  budget 315M.  The 27th bank's bytes are read in as it starts, and the stubs' calls cost a little more: seed 1 is
+  0.3M from its budget, so the next bank added (or much more code in this one) will want the budget raised, which the
+  user's said is fine (the start's time isn't a concern).
+- **Tested:** all 442 tests pass.

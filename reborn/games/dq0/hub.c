@@ -325,7 +325,9 @@ int __fastcall__ hub_join (unsigned char task)
 
 int __fastcall__ hub_spawn (const char* path, unsigned char t, const char* more)
 {
+#pragma bss-name (push, "SW1RODATA")              /* (The part's own: the main RAM's room, 2026-11-11) */
     static char args[64];
+#pragma bss-name (pop)
     unsigned char n;
     int s;
 
