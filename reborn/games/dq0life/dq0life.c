@@ -2,7 +2,8 @@
 ** dq0life.c - Dingus Quest Zero between its dungeons (DUNGEON.md's a character's life): run by the game (main.c's s_life) as
 ** it starts with a save's folder and no dungeon going on in it, before anything of the game's.  It keeps the record of the
 ** life (../dq0/life.h; the program's in lib/dq0): a life begun, or the last dungeon's end recorded and the next one begun: its seed, its date, its
-** folder.  What passes between dungeons is dq0acct's, the program beside it (the plan's steps 4 to 6), run from here; the life's
+** folder.  What passes between dungeons is the ruleset's own program's (../dq0/rsmeta.h's table: HarnMaster's dq0acct, the plan's
+** steps 4 to 6; none, the null ruleset's), run from here; the life's
 ** account, as it ends, dq0end's.  It's a program of its own, in no task's way, and small: every new life with a folder reads it.
 **
 ** dq0life -d folder [-s seed] [-l libdir]
@@ -27,6 +28,7 @@
 #include "../dq0/hub.h"
 #include "../dq0/life.h"
 #include "../dq0/theme.h"
+#include "../dq0/rsmeta.h"                   /* (The rulesets' table: each one's program for the time between) */
 #include "../dq0w/outfit.h"                 /* (kit.dat's struct kitrec: the clues carried out) */
 
 #define TOP_MAX         31                      /* (The hub's savedir holds 38: this, then "/d65535") */
@@ -184,8 +186,23 @@ static int __fastcall__ run (const char* lib, const char* name, unsigned char wi
     return hy_call (HY_WAIT, &r) ? -1 : r.x;
 }
 
-/* The time between: dq0acct run on the record as it's been written, the record read again: its date on, or the life over */
-static void __fastcall__ between (const char* lib)
+/* The program a ruleset has for the time between (rsmeta.h's table, by its referee: game.dat's), 0 none */
+static const char* __fastcall__ accounts_of (const char* referee)
+{
+    static const struct rsmeta rs[] = RULESETS;
+    unsigned char k;
+
+    for (k = 0; k < sizeof rs / sizeof rs[0]; ++k) {
+        if (!strcmp (rs[k].referee, referee)) {
+            return rs[k].accounts;
+        }
+    }
+    return 0;
+}
+
+/* The time between: the ruleset's own program for it (accounts_of's: HarnMaster's dq0acct) run on the record as it's been
+** written, the record read again: its date on, or the life over */
+static void __fastcall__ between (const char* lib, const char* acct)
 {
     int t, fd;
 
@@ -194,7 +211,7 @@ static void __fastcall__ between (const char* lib)
     if (L.h.seed >= 65536UL) {
         run (lib, "/../../themegen", 2);
     }
-    t = run (lib, "/../acct/dq0acct", 1);
+    t = run (lib, acct, 1);
     if (t != 0 && t != 2) {
         die ("the time between failed");
     }
@@ -374,6 +391,7 @@ int main (int argc, char* argv[])
     unsigned long seed = 0, b;
     unsigned char i, given = 0;
     const char* lib = 0;
+    const char* acct;
     int fd;
 
     for (i = 1; i < argc; ++i) {
@@ -403,10 +421,10 @@ int main (int argc, char* argv[])
             L.h.flags |= LF_BETWEEN;
             record_write ();
         }
-        /* (The time between, HarnMaster's alone: a game of another ruleset's goes on, as it did) */
-        if (lib && !strcmp (sv.referee, "dq0harn")) {
+        /* (The time between, the ruleset's own program's: a ruleset with none, its game goes on, as it did) */
+        if (lib && (acct = accounts_of (sv.referee)) != 0) {
             b = L.h.date;
-            between (lib);
+            between (lib, acct);
             if (L.h.date != b) {
                 L.h.fast = 0;                   /* (A day or more between: a vow of fasting's day is up, life.h's) */
             }

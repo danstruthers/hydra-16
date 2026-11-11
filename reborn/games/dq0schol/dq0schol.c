@@ -42,11 +42,10 @@
 #include <unistd.h>
 #include <hydra.h>
 #include <dice.h>
-#include <harn.h>
 #include "../dq0/hub.h"
 #include "../dq0/rs.h"
 #include "../dq0/life.h"
-#include "../dq0harn/dq0harn.h"
+#include "../dq0/rsmeta.h"                   /* (The ruleset's sheet: its masteries, rsmeta.c's) */
 #define TOWN_ROAD
 #include "../dq0acct/town.h"
 
@@ -69,7 +68,6 @@
 #define MASTER_MONTH    84                      /* (A master's month: the book's sage's, 84d, Character 13) */
 #define SAGE_DAY        3                       /* (A sage asked one of the other skills: a day's) */
 
-harn_char pc;
 struct life L;
 static struct townrec tr;
 static struct clue K;
@@ -375,75 +373,31 @@ static void __fastcall__ pay (unsigned long f, unsigned n)
     tr.days += n;
 }
 
-/* ---- The sheet: its skills (pc), its tongues and scripts past its own (its "language" and "script" lines, the referee's
+/* ---- The sheet: its skills (the ruleset's, ../dq0/rsmeta.h's meta_line and meta_ml: what it keeps of the sheet's
+** lines, its masteries by what they're for), its tongues and scripts past its own (its "language" and "script" lines, the referee's
 ** store's; and what a master's opened in this stay, town.dat's, in the store's form) */
 
-static char tl[TONGUE_LINES][24];
+static char tl[META_TONGUES][24];
 static unsigned char ntl;
 
 static void __fastcall__ own_line (char* l)
 {
     if (!strncmp (l, "language ", 9) || !strncmp (l, "script ", 7)) {
-        if (ntl == TONGUE_LINES) {
+        if (ntl == META_TONGUES) {
             fail ("more tongues and scripts on the sheet than the game can hold");
         }
         strncpy (tl[ntl++], l, sizeof tl[0] - 1);
     }
 }
 
-/* Key k's place among keys (" a b c "): 0xFF none */
-static unsigned char __fastcall__ key_at (const char* keys, const char* k)
-{
-    unsigned char n = strlen (k), i = 0;
-    const char* p = keys + 1;
-
-    while (*p) {
-        if (!strncmp (p, k, n) && p[n] == ' ') {
-            return i;
-        }
-        p = strchr (p, ' ') + 1;
-        ++i;
-    }
-    return 0xFF;
-}
-
-/* A line of the sheet (hmchar's file, the library's harnfile.c's format): its attributes ("att str 12", in harn.h's order), the
-** masteries this needs ("ml lan 62": Language, Script, Folklore, Mathematics, Astrology, Heraldry), its tongues and scripts; the
-** rest passed over (the library's reader not linked: the main RAM's room) */
-static void __fastcall__ sheet_line (char* l)
-{
-    static const char attrs[] = " sp sx bd ss ht fr owt wt cml str sta dex agl eye hrg sml voi int aur wil mor dty pty end ";
-    static const char mls[] = " lan scr fol mat ast hrl ";
-    static const unsigned char ml_of[6] = { HARN_LAN, HARN_SCR, HARN_FOL, HARN_MAT, HARN_AST, HARN_HRL };
-    unsigned char a = !strncmp (l, "att ", 4), k;
-    char* e;
-
-    if (!a && strncmp (l, "ml ", 3)) {
-        own_line (l);
-        return;
-    }
-    l = strchr (l, ' ') + 1;
-    if (!(e = strchr (l, ' '))) {
-        return;
-    }
-    *e++ = 0;
-    if ((k = key_at (a ? attrs : mls, l)) == 0xFF) {
-        return;
-    }
-    if (a) {
-        pc.att[k] = atoi (e);
-    } else {
-        pc.ml[ml_of[k]] = atoi (e);
-    }
-}
-
+/* The sheet read (the save's pc.hm, a line at a time: the ruleset's, and its tongues and scripts own_line's) */
 static void sheet_read (void)
 {
     static char b[64];
     unsigned char k, i = 0;
     int fd, n, j;
 
-    if ((fd = open (in_ (top, "pc.hm"), O_RDONLY)) < 0) {
+    if ((fd = open (in_ (top, META_SHEET), O_RDONLY)) < 0) {
         fail ("no sheet");
     }
     while ((n = read (fd, b, sizeof b)) > 0) {  /* (Its lines, each in lb) */
@@ -451,7 +405,7 @@ static void sheet_read (void)
             if (b[j] == '\n' || b[j] == '\r') {
                 if (i) {
                     lb[i] = 0;
-                    sheet_line (lb);
+                    meta_line (lb, own_line);
                 }
                 i = 0;
             } else if (i < 80) {
@@ -460,7 +414,7 @@ static void sheet_read (void)
         }
     }
     close (fd);
-    for (k = 0; k < TOWN_LEARNT && tr.learnt[k][0] && ntl < TONGUE_LINES; ++k) {
+    for (k = 0; k < TOWN_LEARNT && tr.learnt[k][0] && ntl < META_TONGUES; ++k) {
         strcpy (tl[ntl], tr.learnt[k][0] == '*' ? "script " : "language ");
         strcat (tl[ntl++], tr.learnt[k] + (tr.learnt[k][0] == '*'));
     }
@@ -474,12 +428,12 @@ static unsigned char __fastcall__ known (const char* t, unsigned char sc)
     const char* p;
 
     if (!sc && !strcmp (t, "common")) {
-        return pc.ml[HARN_LAN];
+        return meta_ml (MK_LANGUAGE);
     }
     for (k = 0; k < ntl; ++k) {
         p = tl[k] + o;
         if ((tl[k][0] == 's') == sc && !strncmp (p, t, n) && (!p[n] || p[n] == '=')) {
-            return p[n] == '=' ? atoi (p + n + 1) : sc ? pc.ml[HARN_SCR] : pc.ml[HARN_LAN];
+            return p[n] == '=' ? atoi (p + n + 1) : meta_ml (sc ? MK_SCRIPT : MK_LANGUAGE);
         }
     }
     return 0;
@@ -953,7 +907,7 @@ static void __fastcall__ learn (const char* w)
         say (" already.\n");
         return;
     }
-    if (ntl >= TONGUE_LINES) {                  /* (Refused, never cut short: the referee's store's, the account's) */
+    if (ntl >= META_TONGUES) {                  /* (Refused, never cut short: the referee's store's, the account's) */
         say ("Your sheet holds all the tongues and scripts the game can keep, eight past your own: you can learn no more.\n");
         return;
     }
@@ -973,7 +927,7 @@ static void __fastcall__ learn (const char* w)
         return;
     }
     pay (MASTER_MONTH * PENNY, 30);
-    ml = sc ? 70 + harn_get_sb (&pc, HARN_SCR) : harn_get_sb (&pc, HARN_LAN);   /* (The book's, Skills 11) */
+    ml = meta_taught (sc ? MK_SCRIPT : MK_LANGUAGE);    /* (The ruleset's: HarnMaster's the book's, Skills 11) */
     e = tr.learnt[k];
     strcpy (e, sc ? "*" : "");
     strcat (e, who);
@@ -1000,7 +954,6 @@ static void __fastcall__ learn (const char* w)
 /* The other skills, once each for a writing: Folklore, Mathematics, Astrology, Heraldry (sk: 0 ... 3) */
 static void __fastcall__ asked (unsigned char i, unsigned char sk)
 {
-    static const unsigned char skill[4] = { HARN_FOL, HARN_MAT, HARN_AST, HARN_HRL };
     unsigned char own, g, k;
     const char* p;
 
@@ -1022,7 +975,7 @@ static void __fastcall__ asked (unsigned char i, unsigned char sk)
             return;
         }
     }
-    own = pc.ml[skill[sk]];
+    own = meta_ml (MK_FOLKLORE + sk);
     if (!time_for (1)) {
         return;
     }

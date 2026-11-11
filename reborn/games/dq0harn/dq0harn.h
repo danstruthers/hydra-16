@@ -8,6 +8,7 @@
 #define _DQ0HARN_H
 
 #include "../dq0/referee.h"                /* (The skeleton's: the words into a reply, what's to hand) */
+#include "../dq0/rsmeta.h"                   /* (The sheet's tongues and scripts, the meta programs' too) */
 
 /* RS_OUTFIT's tags (rs.h's x[0], x[1]): HarnMaster's cultures, classes, wealth and sexes, a bit each, as outfits.txt
 ** words them (outfits.js's TAGS, in order: ../dq0w), the referee's own (2026-11-11: rs.h's once) */
@@ -17,7 +18,7 @@ enum { OT_FEUDAL, OT_IMPERIAL, OT_VIKING, OT_TRIBAL, OT_SINDARIN, OT_KHUZAN, OT_
 /* dq0harn.c (and limbs.c's, overlay 5's: health_of, limbs_of, cond_of, rise_of) */
 extern harn_char pc;                            /* The character */
 extern char name[16], calling[20];
-#define TONGUE_LINES    8                       /* (Its tongues and scripts past its own, at most: the book's most, a Save-K'nor
+#define TONGUE_LINES    META_TONGUES            /* (rsmeta.h's, 8: tongues and scripts past its own: the book's most, a Save-K'nor
                                                 **   cleric's church tongue, two more tongues, its church script, a second and
                                                 **   its native one, Character 23, six; and room for what a master teaches,
                                                 **   the scholar's, the plan's step 12.  The account's and the scholar's too:

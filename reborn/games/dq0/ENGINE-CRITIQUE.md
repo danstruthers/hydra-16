@@ -583,6 +583,28 @@ incremental (`mark_rows`).
 
 Either is fine. The current halfway state costs both ways: the indirection, *and* HarnMaster everywhere.
 
+*Decided 2026-11-11: (a), the user's.  Built the same day (DECISIONS.md's "The referee's skeleton"), in five stages:*
+
+- *rs.h trimmed: the ten requests and struct rs_neutral gone (17 requests); P_ one thing, the purposes (theme.h's
+  SP_*, dq0town's TOWN_*).*
+- *The skeleton, games/dq0/referee.h and games/dq0/rf/ (a shared source each referee compiles where its room is,
+  not the paged ROM: it's C, and nearly all of it was each referee's main RAM already): the main loop, the slots, the
+  dice by who asks, put/putn, tools/equip_all/has, bseed, the creatures' sheets' file; a ruleset is rf_start,
+  rf_begin, rf_answer, rf_sheets.  dq0harn and dq0null both on it; dq0null includes no HarnMaster header.*
+- *The house's rules linked functions (rshouse.h's declarations, rf/dig.c ... rf/air.c; rswant.h and rsair.h gone);
+  what's an expression (HOUSE_SWING, QUIET_IN, JUDGE_IN) a macro.*
+- *HarnMaster's lists behind the referee: OT_* dq0harn.h's, BP_* gone (the locations harn.h's, the referee's own;
+  the engine never read them), the grades a generic scale (G_BADLY, G_FAIL, G_PASS, G_WELL; dq0harn's grade () the
+  mapping), D_COUNTER the ruleset's own stance (D_OWN), C_STUNNED's meaning the ruleset's.*
+- *The meta programs: games/dq0/rsmeta.h, the rulesets' table (each referee's own program for the time between,
+  dq0life's lookup, no "dq0harn" in it) and the sheet as a meta program sees it (meta_line, meta_ml, meta_taught:
+  dq0schol's, HarnMaster's in dq0harn/meta/meta.c).*
+
+*Left: the world's worn places are harn.h's locations (dq0w/kinds.c, items.h's WP_*, worn.c); the UI's word
+"counter" and its "in shock" words; the skill names in outfits.txt's sections and the RS_OUTFIT tags' words
+(HarnMaster's cultures); dq0acct is HarnMaster's own account program (it includes dq0harn's headers, as the
+ruleset's); dq0schol's d100 test is the book's; the bestiary is the referee's (RULESETS.md).*
+
 ---
 
 ## 9. Between dungeons, the build, the tests
@@ -690,7 +712,7 @@ Ranked by how much each unlocks, and arranged so the game keeps working througho
 | 6 | **The step planner and activity stacks** (§3.3, §7) | removes 33 reach LT_ kinds and the continuation chain; containers (COMMANDS §4.9) | medium–large |
 | 7 | **One region-paged record store** (§6) | one save/restore path | medium |
 | 8 | **The generation placers table and keyed randomness** (§5). *Done 2026-11-11, but for the styles (DECISIONS.md's "The placers' table and the keyed dice"): one keyed dice API (games/dq0m/place.c: `dkey (purpose, where)`, `dr (n)`, purposes DP_*, each one's key the one its placer always had, so every seed's dungeon is byte for byte as it was; doors', fixtures.c's and sconce.c's private copies gone; the growers' and the stock's stream seeds made there too, `rstream`); the placers a table (`placers[]`: stage, sites, purpose, the style's odds, what a site mustn't be, a room's use, qualifiers, where, what it makes, a hook) walked by one placer (`place (stage)`): windows and slits, portcullises, room traps, door traps, the rooms' marks, the kitchens' wells, the sconces.* Left: the styles' proportions into the theme (§5's step 3); the growers' layout streams (call order, by design) and the private hashes of caves.c, sky.c, plan.c, uses.c and make.c's mixed third; the doors' placement (the grower's) and the materials, fortification and the portals' make as steps, not rows; the old keys omit the stratum's seed (two strata's chunks at the same place share their fixtures' numbers) | fixtures as data; furniture with compartments | medium |
-| 9 | **Decide on the referee** (§8 a or b), then the skeleton library or the trim | | small–medium |
+| 9 | **Decide on the referee** (§8 a or b), then the skeleton library or the trim. *Decided 2026-11-11, (a), the user's; done the same day (DECISIONS.md's "The referee's skeleton"): rs.h trimmed to the 17 requests made, P_ the purposes alone (SP_*, TOWN_*); the skeleton (games/dq0/referee.h, games/dq0/rf/rf.c and sheets.c: the main loop, slots, dice, words, things to hand, sheets' file) under both referees, a ruleset only rf_start, rf_begin, rf_answer and rf_sheets; the house's rules linked functions (rf/dig.c ... air.c, rshouse.h's declarations); OT_* and the strike locations the referee's, the grades a generic scale, the ruleset's own stance; the meta programs through rsmeta.h (the rulesets' table, the sheet's masteries).* Left: the world's worn places (harn.h's locations), the UI's "counter" and "in shock" words, outfits.txt's skill sections and tags, dq0acct HarnMaster's own | a second ruleset is a referee's answers and, if it wants a time between, its own program | small–medium |
 | 10 | **Test scenes, tests.js split** (§9). *Done 2026-11-11 (DECISIONS.md's "The tests: split by area, scenes, the runner"): tests.js split into tests/suites by area and tests/suites/dq0 by subject, the helpers in tests/lib; scenes, the emulator's machine saved after the boot and hmchar and after the game's start and taken up by every test that starts the same way, exact to the cycle (sim/lib/scenes.js); the ROM images kept, the runner's order by the last times.  The suite's CPU time some 4,450 s before, 4,012 s cold, 2,899 s warm.* Left: scene constructors, the recorder's offsets from the schema | much faster tests; the action × class sweep | medium |
 | 11 | **Shared meta library and one save record; one theme compiler** (§9) | | small–medium |
 | 12 | **Comments and docs as current reference** (§10) | done gradually, file by file as each is touched | ongoing |

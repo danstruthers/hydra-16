@@ -3596,3 +3596,93 @@ Each entry above now says so; what's built:
   194 (353), overlay 8 32 (69), overlay 9 1,683 (1,829).  dq0acct 2,152 (2,264: pc_dr and the line), overlay 1 319
   (1,194), overlay 3 9 (20: its line buffer now path).  dq0life 18,318; dq0null 5,035; the world's main RAM unchanged
   (2,336), its overlay 5 265 (328).  dq0c's records as before; the aliases 1,896 bytes (1,889).
+
+## The referee's skeleton (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §8 and step 9)
+
+**The user's choice, 2026-11-11: option (a), swappable rules are a real goal.**  §8 found the referee interface
+halfway: an indirection the game paid for, and HarnMaster everywhere behind it.  (b) would have said HarnMaster is the
+house system and dq0null a test double.  The user chose (a): a referee skeleton in a library so a ruleset is its
+answers, the interface trimmed, HarnMaster's lists behind the referee, and the meta programs talking to "the ruleset".
+Built in five stages, each its own commit:
+
+- **1. rs.h trimmed, P_ one thing.**  Ten requests no one made (RS_DROP_ACTOR, RS_TEST_MANY, RS_REST,
+  RS_INITIATIVE, RS_EXPERIENCE, RS_POWER, RS_EXPORT, RS_IMPORT, RS_RESTORE, RS_QUIT: each checked, no sender and no
+  answer in any task) and `struct rs_neutral` deleted, with their msgs.def lines; 17 requests left.  The tests that
+  had request numbers typed in (denizens.js's and senses.js's RS_TEST = 4, RS_ATTACK = 7) take them from the layout
+  by name.  `P_` now means only rs.h's purposes: theme.h's stratum purposes are `SP_*` (SP_HALLS ... SP_WORKS,
+  SP_FORT), dq0town's places `TOWN_*`.
+- **2. The skeleton.**  games/dq0/referee.h (the interface) and games/dq0/rf/rf.c, rf/sheets.c.  **Where it lives:
+  a shared C source each referee compiles, not the paged ROM.**  The ROM library (modules/dq0lib) is assembly with no
+  RAM of its own, called by XCALL at some 120 cycles; the skeleton is C, its loop and its `put` called constantly, and
+  nearly all of it was each referee's main RAM already, so moving it to ROM would have meant rewriting it in
+  assembly for little room (dq0harn's whole skeleton is some 1,300 bytes, much of it data and BSS it keeps
+  anyway).  Each referee has a file of its own that #includes the shared one with its #pragmas first
+  (dq0harn/rf.c in its main RAM, dq0harn/rfsheets.c in swapped part 2; dq0null/rf.c), the way hub.c already was.
+  The skeleton: `main` (the hub attached, its dice seeded from the game's and the role, each slot answered as rung,
+  the denizens' slot with DTEXT of text, the dice by who asks: dice.inc's `dice_to`, no DICE_BEGIN/DICE_IN macros),
+  the answer's prologue (tp, tend, result 0), `put`/`putn` (dq0harn's: a string in the window read with its bank),
+  `tools`/`tflag`/`tqual`/`equip_all`/`has` (dq0harn's, with its marks, qualities, versions and cloths: dq0null's
+  `held[]` became `tflag & T_HELD`), `bseed`, `sheets_in` (the creatures' sheets read back once, a game carried on,
+  as a creature's asked for) and the save's order (the character, then the creatures' sheets), `sheets_open`
+  (beasts.dat).  **A ruleset is four functions:** `rf_start` (its arguments, its overlays and banks), `rf_begin`
+  (its own beginning, once its dice are seeded), `rf_answer` (each request; RS_SAVE's the character alone),
+  `rf_sheets` (its creatures' sheets in beasts.dat).  Each referee's own main, prologue, `den_slot`, `sheets_in`,
+  `put`, `putn`, `equip_all`, `has`, `tools` and `bseed` went.  dq0null needs no HarnMaster header (it never
+  included one; it now also has no copy of dq0harn's code), and passes the tests that run it (dq0antidote,
+  dq0air's, dq0dressbetween's null games, dq0outfit's).  dq0null got `getbank`/`setbank` in its dice.s, and `num`
+  as atoi (it doesn't load the game's library).
+- **3. The house's rules as linked functions.**  rshouse.h is declarations; the code once each in games/dq0/rf/:
+  dig.c (`digger`, `house_dig_tool`), notice.c (`house_notice`), state.c (`house_pace`, `house_watching`,
+  `house_light`), bdice.c (`bdice`), want.c (`want_of`, rswant.h's), air.c (`air_of`, rsair.h's).  rswant.h and
+  rsair.h are gone.  Each referee compiles the ones it uses where its room is, a file of its own that #includes the
+  shared one, its #pragmas first: dq0harn's hdig.c (part 3, beside dig_of), hnotice.c (overlay 1, beside sheet.c),
+  hbdice.c (overlay 5, beside bearing.c), hwant.c (overlay 7), hair.c (overlay 8); dq0null's house.c (its main RAM).
+  The macro hooks became the ruleset's functions: `want_say` and `air_say` (its words into its news); AIR_LEVELS
+  went (dq0harn sets `aff_breath` from the house's `air_lv` after `air_of`: they were always equal).  What's an
+  expression stayed a macro, now unconditional: `HOUSE_SWING (k)` (what a thing does swung: the referee's gear.c and
+  the world's two parts each their own use, as before), `QUIET_IN`/`OUT`, `JUDGE_IN`/`OUT`, `DIG_TESTED`.
+- **4. HarnMaster's lists behind the referee.**  The outfit tags (`OT_*`: cultures, classes, wealth, sexes) are
+  dq0harn.h's; rs.h says only that x[0], x[1] are the bits of outfits.txt's tag words, the ruleset's to set.  The
+  strike locations (`BP_*`) are gone from rs.h: nothing outside the referees read them (an effect's x[0] is the
+  ruleset's own number, HarnMaster's harn.h location, the null's 0; the game reads only the words), and t_rules names
+  them for its cases itself.  **The grades are a generic scale:** `G_BADLY`, `G_FAIL`, `G_PASS`, `G_WELL` (were
+  G_CF, G_MF, G_MS, G_CS, HarnMaster's level names), the mapping dq0harn's `grade ()`; renamed everywhere (the UI,
+  the world, the denizens, the maker, both referees, t_rules' cases), the values the same.  **The ruleset's own
+  stance:** `D_COUNTER` is `D_OWN` (HarnMaster's counterstrike; a ruleset with none takes it as D_AUTO).
+  `C_STUNNED`'s meaning is the ruleset's (stunned: in no state to do more than rest or walk slowly away;
+  HarnMaster's shock).
+- **5. The meta programs' interface.**  games/dq0/rsmeta.h: **the rulesets' table** (`RULESETS`: each referee and its
+  own program for the time between dungeons, "/../acct/dq0acct" for dq0harn, none for dq0null) and **the sheet as a
+  meta program sees it** (`meta_line`: a line of the sheet read, what the ruleset keeps of it, the rest to the
+  program's own; `meta_ml (MK_*)`: a mastery by what it's for, MK_LANGUAGE, MK_SCRIPT, MK_FOLKLORE, MK_RECKON,
+  MK_ASTROLOGY, MK_HERALDRY; `meta_taught`: what a master's month opens a tongue or a script at; `META_TONGUES`,
+  `META_SHEET`).  dq0life runs the program the save's ruleset names (`accounts_of (sv.referee)`), not dq0acct when
+  the referee is "dq0harn".  dq0schol includes rsmeta.h, not harn.h nor dq0harn.h: HarnMaster's implementation is
+  dq0harn/meta/meta.c (in a folder of its own, so the referee doesn't compile it), compiled in by dq0schol's rsmeta.c.
+  **dq0acct is HarnMaster's own account program** (the table names it as the ruleset's): it still includes
+  dq0harn's headers, as part of that ruleset.
+
+**Room** (main RAM free, before → after): dq0harn 2,264 → 2,209; dq0null 5,036 → 4,605 (dq0harn's fuller
+`equip_all` and `put`); dq0life 18,318 → 18,198 (the table and its lookup); dq0schol 5,405 → 5,333 (its overlay
+591 → 630); the UI (3,383, 3 less than before stage 1: the request numbers), the world (2,243), the denizens, the
+account and the others as they were; dq0harn's overlays 1 194 → 170, 3 110 → 174, 7 11 → 47, 8 32 → 22, part 2
+1,574 → 1,564.  The start at seed 1: 233.3M cycles (233.9M at stage 2); at 123456789, 310.6M (budgets 245M and
+325M).
+
+**A race found on the way: dq0reachstop.**  Its "halt" and "stop" are typed as a step's words show, at the turns pace;
+whether they land in that step or the next turned on some thousands of cycles between the parser's answer (some 1.3M
+cycles after Enter) and the world's next turn.  Each stage's few cycles flipped it (stage 1 game 7, stage 3 game 2).
+Holding the turns pace while a busy-time line is classified (`ui_giving` from its Enter) didn't help (the step had
+ended before the UI's loop saw the Enter), and holding from the first key is what the turns pace was made not to do;
+left for review (see below).  **So the suite: 444 of 444 at stage 2; 443 at stages 1, 3, 4 and 5, dq0reachstop the one
+(at stage 5 its game 2: "halt" lands in the reach's next step, "You stop there.", the rations taken).**
+
+**For review:**
+- The skeleton is a shared source, not the ROM library: worth moving `equip_all`/`put` to dq0lib only if the
+  referees' main RAM gets short (some 400 bytes in dq0harn).
+- The world's worn places are still harn.h's locations (dq0w/kinds.c, items.h's WP_*, worn.c's words): the largest
+  piece of HarnMaster left in the engine.  The UI's "counter" word and its "in shock" words, outfits.txt's skill
+  sections and tag words, the bestiary (RULESETS.md) are the others.
+- dq0schol's d100 test is still the book's (its own `test`), and its scribes' and sages' figures.
+- dq0reachstop's race: a test that types as words show at the turns pace depends on the parser's speed; it wants a
+  scene that holds the world while the line's parsed, or a pace that waits on a line entered.
