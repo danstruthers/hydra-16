@@ -32,6 +32,7 @@ const { readManifest, hwtest } = require('../build.js');
 const { tests, files: testFiles, helpers: testHelpers, IRQ_OFF_MAX, dq0Check } = require('../tests/tests.js');
 const hubown = require('./lib/hubown.js');
 const scenes = require('./lib/scenes.js');
+const crypto = require('crypto');
 const dq0meaning = require('./lib/dq0meaning.js');
 
 const ROOT = path.join(__dirname, '..');
@@ -48,8 +49,26 @@ function image(t) {
     return fs.readFileSync(path.join(ROOT, '..', 'base', 'obj', b || 'modules', n + '.bin'));
   };
   const mods = [...sys.map(n => ({ file: n, data: bin('modules', n) })), ...own.map(n => ({ file: n, data: own_(n) }))];
-  return romimg.build({ modules: mods, init: t.init, hwtest: hwtest(), bios: images.bios(ROOT, images.built(ROOT)),
-    romfs: romfs.manifest(path.join(ROOT, 'romfs', 'romfs.txt')) }).image;
+  const hw = hwtest(), bios = images.bios(ROOT, images.built(ROOT)), rf = romfs.manifest(path.join(ROOT, 'romfs', 'romfs.txt'));
+  const h = crypto.createHash('sha1').update(imageTools()).update(JSON.stringify([t.init, mods.map(x => [x.file, x.data.length]), rf.map(f => [f.path, f.data.length]), hw ? hw.length : -1]));
+  for (const x of [...mods.map(x => x.data), ...(hw ? [hw] : []), bios, ...rf.map(f => f.data)]) h.update(x);
+  const file = path.join(ROOT, 'obj', 'imgcache', h.digest('hex') + '.bin');
+  if (fs.existsSync(file)) { hydrafs.setNow(0); return fs.readFileSync(file); }   // (As the ROM disk's making leaves hydrafs: its stamps 0)
+  const img = romimg.build({ modules: mods, init: t.init, hwtest: hw, bios, romfs: rf }).image;
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file + '.' + process.pid, img); fs.renameSync(file + '.' + process.pid, file);
+    const all = fs.readdirSync(path.dirname(file)).filter(n => n.endsWith('.bin'));       // (The newest 64 kept)
+    if (all.length > 64) all.map(n => [n, fs.statSync(path.join(path.dirname(file), n)).mtimeMs]).sort((a, b) => a[1] - b[1]).slice(0, all.length - 64)
+      .forEach(([n]) => fs.rmSync(path.join(path.dirname(file), n), { force: true }));
+  } catch (e) { /* (Not kept: made again next time) */ }
+  return img;
+}
+// The image tools' sources (an image kept is theirs: a change to them, every image made again)
+let toolsHash = null;
+function imageTools() {
+  return toolsHash || (toolsHash = crypto.createHash('sha1').update(['tools/romimg.js', '../base/tools/romimg.js', 'tools/romfs.js', 'sim/tools/hydrafs.js']
+    .map(f => fs.readFileSync(path.join(ROOT, f), 'latin1')).join('\0')).digest('hex'));
 }
 
 // A test's PC folder (t.pc: { files: { name: text or bytes (or a function giving them), 'dir/': '' } (or a function

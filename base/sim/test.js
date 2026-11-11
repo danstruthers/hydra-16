@@ -177,19 +177,24 @@ function report(t, r, opt, lbl) {
   return { ok, text: out.join('\n') };
 }
 
-// A test's time noted (opt.times: its name's { ms, mcycles }, the wall time of its run, its process's, and its
-// report's cycles), for obj/testtimes.json (main's, after the tests: the tiers' measures, tests/TESTING.md)
-function times(opt, t, text, ms) {
+// A test's time noted (opt.times: its name's { ms, cpu, mcycles }, the wall time of its run, its process's; the CPU
+// time it took, its process's own (its report's last line, CPU_MARK's: a machine others are busy on stretches the wall
+// time, not this); and its report's cycles), for obj/testtimes.json (main's, after the tests: the tiers' measures,
+// tests/TESTING.md)
+const CPU_MARK = '\u0001cpu ';
+const cpuMs = (u = process.cpuUsage()) => Math.round((u.user + u.system) / 1000);
+function times(opt, t, text, ms, cpu) {
   const c = text.match(/ checks, ([\d.]+)M cycles\)/);
-  if (opt.times) opt.times[t.name] = { ms, mcycles: c ? +c[1] : null, ok: text.startsWith('PASS ') };
+  if (opt.times) opt.times[t.name] = { ms, cpu: cpu === undefined ? null : cpu, mcycles: c ? +c[1] : null, ok: text.startsWith('PASS ') };
 }
 
-// The tests, opt.jobs at a time, each in a process of its own (this file, with --one NAME), the longest (by its
-// cycles) started first; each report shown in the list's order once it and those before it are in.  OUT: (a promise)
-// how many failed
+// The tests, opt.jobs at a time, each in a process of its own (this file, with --one NAME), the longest started first
+// (by its wall time the last time it ran, obj/testtimes.json's; else by its cycles, at some 50M a second); each report
+// shown in the list's order once it and those before it are in.  OUT: (a promise) how many failed
 function parallel(list, opt) {
   const { spawn } = require('child_process');
-  const order = list.map((t, i) => i).sort((x, y) => list[y].cycles - list[x].cycles);
+  const last = lastTimes(), weight = t => last[t.name] && last[t.name].ms > 0 ? last[t.name].ms : t.cycles / 50e3;
+  const order = list.map((t, i) => i).sort((x, y) => weight(list[y]) - weight(list[x]));
   const done = new Array(list.length).fill(null);
   let next = 0, shown = 0, running = 0, failed = 0;
   return new Promise(resolve => {
@@ -210,10 +215,13 @@ function parallel(list, opt) {
         p.on('close', code => {                                 // (A process that ended without its report: a FAIL)
           running--;
           text = text.replace(/\r?\n$/, '');
+          let cpu;                                              // (Its CPU time: its last line, taken off)
+          const k = text.lastIndexOf(CPU_MARK);
+          if (k >= 0) { cpu = +text.slice(k + CPU_MARK.length); text = text.slice(0, k).replace(/\r?\n$/, ''); }
           if (!/^(PASS|FAIL) /.test(text)) text = 'FAIL ' + (t.name + ' ').padEnd(8) + t.what + '\n       ! its process ended (code ' + code + ')' + (text ? '\n' + text : '');
           else if (code !== 0 && text.startsWith('PASS ')) text = 'FAIL' + text.slice(4) + '\n       ! its process ended (code ' + code + ') after its report';   // (Its exit failed)
           done[i] = { ok: code === 0 && text.startsWith('PASS '), text };
-          times(opt, t, text, Date.now() - t0);
+          times(opt, t, text, Date.now() - t0, cpu);
           show();
           start();
         });
@@ -221,6 +229,12 @@ function parallel(list, opt) {
     };
     start();
   });
+}
+
+// Each test's wall time the last time it ran (obj/testtimes.json's all: { name: { ms, mcycles, ok } }), or none
+function lastTimes() {
+  try { const j = JSON.parse(fs.readFileSync(path.join(env.root, 'obj', 'testtimes.json'), 'utf8')); return Object.assign({}, j.tests, j.all); }
+  catch (e) { return {}; }
 }
 
 const USAGE = 'usage: node sim/test.js [NAME ...] [--changed [REF]] [--near AREA,...] [--list] [--build] [-v] [--seed N] [-j N] [--dl] [--modules N]';
@@ -295,7 +309,7 @@ async function main(argv) {
   }
   if (opt.one) {
     const t = tests.find(x => x.name === opt.one), r = report(t, await (opt.dl ? runTestDl : runTest)(t, opt), opt, labels());
-    console.log(r.text);
+    console.log(r.text + '\n' + CPU_MARK + cpuMs());           // (Its CPU time: parallel's, taken off)
     process.exit(r.ok ? 0 : 1);
   }
   if (opt.build) (env.build || (() => require('../build.js').buildBoth({ quiet: true })))();
@@ -311,16 +325,16 @@ async function main(argv) {
   else {
     const lbl = labels();
     for (const t of list) {
-      const s = Date.now(), r = report(t, await (opt.dl ? runTestDl : runTest)(t, opt), opt, lbl);
+      const s = Date.now(), c0 = cpuMs(), r = report(t, await (opt.dl ? runTestDl : runTest)(t, opt), opt, lbl);
       console.log(r.text);
-      times(opt, t, r.text, Date.now() - s);
+      times(opt, t, r.text, Date.now() - s, cpuMs() - c0);
       if (!r.ok) failed++;
     }
   }
-  try {                                                         // (The times: obj/testtimes.json, the last run's)
-    fs.mkdirSync(path.join(env.root, 'obj'), { recursive: true });
+  try {                                                         // (The times: obj/testtimes.json, the last run's; and in
+    fs.mkdirSync(path.join(env.root, 'obj'), { recursive: true });   //   all, each test's last, parallel's order)
     fs.writeFileSync(path.join(env.root, 'obj', 'testtimes.json'), JSON.stringify({ at: new Date().toISOString(), jobs: opt.jobs,
-      wall: Date.now() - t0, rules: process.env.RULES || '', tests: opt.times }, null, 1));
+      wall: Date.now() - t0, rules: process.env.RULES || '', tests: opt.times, all: Object.assign(lastTimes(), opt.times) }, null, 1));
   } catch (e) { /* (No record) */ }
   if (env.summary) env.summary(list, opt);
   console.log((failed ? failed + ' of ' + list.length + ' tests failed' : 'all ' + list.length + ' tests passed') +

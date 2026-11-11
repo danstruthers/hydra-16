@@ -43,7 +43,11 @@ and each test's reason: `node sim/test.js --changed --list`.
 With RULES=NAME and no tests named, the runner still takes only the meaning checks (`meaning: true`). Combined with
 `--changed` or `--near`, it takes the meaning checks among the tests those select.
 
-After a run, `obj/testtimes.json` has each test's wall time and cycles.
+After a run, `obj/testtimes.json` has each test's wall time, CPU time (its process's own: the measure to trust when
+other runs share the machine) and cycles, and in `all` every test's last; the parallel runner starts the longest
+first by them. Each test runs in a process of its own, `-j` (the cores) at a time. A test's ROM image is kept in
+`obj/imgcache` by its inputs' sha1 (the modules, the init, the BIOS, the ROM disk's files, the image tools): made
+once a build, not once a test.
 
 ## Scenes: a dq0 test taken up after its start
 
