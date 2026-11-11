@@ -21,12 +21,12 @@
 #include <hydra.h>
 #include "../dq0/hub.h"
 #include "../dq0/rs.h"
+#include "../dq0/referee.h"
 
 #define BASE            60                      /* A test's chance with no steps, percent */
 #define TOUGH           10                      /* The wounds the character can take (dead at them) */
 #define BTOUGH          6                       /*   and a creature */
 #define NSHEETS         256                     /* (The creatures' records: the denizens' task's numbers) */
-#define NTOOLS          20
 
 static char name[16] = "Dingus", calling[20] = "Wanderer";
 static char tongues[120] = " common";           /* The tongues it speaks, a space before each, and the scripts it
@@ -45,31 +45,8 @@ static unsigned slast[NSHEETS];                 /*   the clock's minute of its l
                                                 **   minutes since) */
 #define TIRE_N          30
 static unsigned char aden[NACTORS];             /* (Each actor's record) */
-static unsigned char restored;
 static char hurt[80];                           /* The last harm's words */
-char tools[NTOOLS][8];                          /* What's to hand (RS_EQUIP's keys), */
-static unsigned char held[NTOOLS];              /*   1 held */
 static const unsigned char step[NGAITS] = { 45, 30, 15, 8, 4, 3 };    /* Tenths a square at each pace */
-
-/* ---- Words into a reply */
-
-static char* tp;
-static char* tend;
-
-static void __fastcall__ put (const char* s)
-{
-    while (*s && tp < tend) {
-        *tp++ = *s++;
-    }
-    *tp = 0;
-}
-
-static void __fastcall__ putn (int v)
-{
-    char b[8];
-
-    put (itoa (v, b, 10));
-}
 
 #define RS_HOUSE_DIG
 #define RS_HOUSE_DIG_TOOL   dig_tool
@@ -77,8 +54,6 @@ static void __fastcall__ putn (int v)
 #define RS_HOUSE_STATE
 #define RS_HOUSE_BEARING
 #define RS_HOUSE_QUIET
-#define RS_HOUSE_DICE                           /* (The dice by who asks: main's) */
-unsigned long bseed;                            /* (The bearings' own dice: rshouse.h's) */
 #include "../dq0/rshouse.h"
 
 static void __fastcall__ want_say (const char* s)
@@ -193,51 +168,6 @@ static void status (void)
     s->mapfade = 40;
 }
 
-/* ---- What's to hand: the keys, each after its mark (held: < in the left hand, > the right, * both; + worn; a space
-** neither) and a digit after it */
-
-static void __fastcall__ equip_all (const char* keys)
-{
-    unsigned char k = 0, n, f, j;
-
-    memset (tools, 0, sizeof tools);
-    while (*keys) {
-        f = *keys == '*' || *keys == '<' || *keys == '>';
-        if (*keys < 'a') {
-            ++keys;
-        }
-        for (n = 0; keys[n] >= 'a'; ++n) {
-        }
-        if (n && n < sizeof tools[0]) {
-            if (k < NTOOLS) {
-                j = k++;
-            } else {                            /* (Full: what's held in the place of a thing carried, 2026-10-27) */
-                for (j = NTOOLS; j && held[j - 1]; --j) {
-                }
-                j = f && j ? j - 1 : NTOOLS;
-            }
-            if (j < NTOOLS) {
-                memset (tools[j], 0, sizeof tools[j]);
-                memcpy (tools[j], keys, n);
-                held[j] = f;
-            }
-        }
-        keys += n;
-        if (*keys >= '0' && *keys <= '9') {
-            ++keys;
-        }
-    }
-}
-
-static unsigned char __fastcall__ has (const char* key)
-{
-    unsigned char k;
-
-    for (k = 0; k < NTOOLS && strcmp (tools[k], key); ++k) {
-    }
-    return k < NTOOLS;
-}
-
 /* What the character strikes with (the hub's pc_strike): its fists, a foot, the head (bare 1), the thing named
 ** (SK_OF: its kind's name, the catalogue's), or the first thing it holds (the words the UI knows: RULESETS.md) */
 static unsigned char bare;
@@ -262,7 +192,7 @@ static const char* weapon (void)
         return "head";
     }
     for (k = 0; s == SK_BEST && k < NTOOLS; ++k) {
-        if (tools[k][0] && held[k]) {
+        if (tools[k][0] && (tflag[k] & T_HELD)) {
             bare = 0;
             return tools[k];
         }
@@ -400,17 +330,11 @@ static void __fastcall__ save_pc (struct req* r)
     RS_SAVE_FAILED (*r) = 0;
 }
 
-/* The creatures' sheets read back (back) or written, in the save folder's beasts.dat */
-static void __fastcall__ sheets (unsigned char back)
+/* The creatures' sheets read back (back) or written, in the save folder's beasts.dat (the skeleton's rf_sheets: the
+** file opened by its sheets_open) */
+void __fastcall__ rf_sheets (unsigned char back)
 {
-    static char path[56];
-
-    if (!HUB->savedir[0]) {
-        return;
-    }
-    strcpy (path, HUB->savedir);
-    strcat (path, "/beasts.dat");
-    if ((fd = back ? open (path, O_RDONLY) : open (path, O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
+    if ((fd = sheets_open (back)) >= 0) {
         if (back) {
             read (fd, sheet, sizeof sheet);
             read (fd, sround, sizeof sround);   /* (A save before them: none, rested) */
@@ -421,14 +345,6 @@ static void __fastcall__ sheets (unsigned char back)
             write (fd, slast, sizeof slast);
         }
         close (fd);
-    }
-}
-
-static void sheets_in (void)
-{
-    if (HUB->resume && !restored) {
-        restored = 1;
-        sheets (1);
     }
 }
 
@@ -519,7 +435,7 @@ static unsigned char pc_shield (void)
     unsigned char k, j;
 
     for (k = 0; k < NTOOLS; ++k) {
-        if (tools[k][0] && held[k] && (j = shield_key (tools[k], strlen (tools[k]))) != 0) {
+        if (tools[k][0] && (tflag[k] & T_HELD) && (j = shield_key (tools[k], strlen (tools[k]))) != 0) {
             return j;
         }
     }
@@ -716,17 +632,14 @@ static void __fastcall__ state (unsigned char a)
 
 /* ---- A request answered */
 
-static unsigned tlim = REQ_TEXT;
-
-static void __fastcall__ answer (struct req* r)
+/* (The skeleton's rf_answer, ../dq0/referee.h's: tp and tend at its text, its result 0; the creatures' sheets read back
+** before a creature's asked for, written after the character, the skeleton's) */
+void __fastcall__ rf_answer (struct req* r)
 {
     unsigned char k, m, t;
     unsigned long xt;
     signed char g;
 
-    tp = r->text;
-    tend = r->text + tlim - 1;
-    r->result = 0;
     switch (r->kind) {
     case RS_HELLO:
         RS_HELLO_ROUND (*r) = 100;                            /* (A round: 10 seconds, the game's clock's) */
@@ -737,7 +650,6 @@ static void __fastcall__ answer (struct req* r)
         status ();
         break;
     case RS_NEW_ACTOR:
-        sheets_in ();
         if ((k = r->actor - 1) >= NACTORS) {
             RS_NEW_ACTOR_BAD (*r) = 1;
             break;
@@ -962,7 +874,7 @@ static void __fastcall__ answer (struct req* r)
             }
             if (k < NTOOLS) {
                 strncpy (tools[k], r->text, sizeof tools[k] - 1);
-                held[k] = 0;
+                tflag[k] = 0;
             }
         } else {
             for (k = 0; k < NTOOLS; ++k) {
@@ -981,9 +893,7 @@ static void __fastcall__ answer (struct req* r)
         status ();
         break;
     case RS_SAVE:
-        save_pc (r);
-        sheets_in ();
-        sheets (0);
+        save_pc (r);                            /* (The creatures' sheets after it: the skeleton's) */
         break;
     case RS_DESCRIBE:
         if (RS_DESCRIBE_WHAT (*r) == 1) {                        /* (The map's panel: a line) */
@@ -1024,36 +934,19 @@ static void __fastcall__ answer (struct req* r)
     }
 }
 
-int main (int argc, char* argv[])
+/* Its start (the skeleton's rf_start: its arguments SEG ROLE), its beginning (nothing of its own), and its arguments'
+** numbers (atoi's: no game's library here) */
+unsigned char __fastcall__ rf_start (int argc, char* argv[])
 {
-    unsigned char s;
+    (void) argv;
+    return argc < 3;
+}
 
-    if (argc < 3 || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
-        return 1;
-    }
-    rseed (HUB->seed ^ 0x5245);                 /* (Its own dice: the game's seed, and its role) */
-    hub_map (0);
-    DICE_BEGIN
-    for (;;) {
-        hy_sem_acquire (HUB->sem[T_REFEREE]);
-        hub_map (0);
-        if (HUB->quit) {
-            break;
-        }
-        for (s = 0; s < NSLOTS; ++s) {
-            if (hub_posted (&HUB->slot[s])) {
-                DICE_IN (s)
-                answer (&HUB->slot[s]);
-                hub_reply (&HUB->slot[s]);
-            }
-        }
-        if (hub_posted (DSLOT)) {               /* (The denizens' task's, its own: DTEXT of its text) */
-            tlim = DTEXT;
-            DICE_IN (NSLOTS)
-            answer (DSLOT);
-            tlim = REQ_TEXT;
-            hub_reply (DSLOT);
-        }
-    }
-    return 0;
+void rf_begin (void)
+{
+}
+
+unsigned __fastcall__ num (const char* s)
+{
+    return atoi (s);
 }

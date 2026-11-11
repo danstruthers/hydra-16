@@ -19,7 +19,6 @@
 #include "../dq0/rs.h"
 #include "dq0harn.h"
 
-unsigned long bseed;                            /* (The bearings' dice: rshouse.h's) */
 unsigned char bway;                             /* (A failure's d8 less one, 0-7: the world's, a drift's way, or where
                                                 **   a north astray lies) */
 

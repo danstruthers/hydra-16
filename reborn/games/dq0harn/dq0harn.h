@@ -7,6 +7,8 @@
 #ifndef _DQ0HARN_H
 #define _DQ0HARN_H
 
+#include "../dq0/referee.h"                /* (The skeleton's: the words into a reply, what's to hand) */
+
 /* dq0harn.c (and limbs.c's, overlay 5's: health_of, limbs_of, cond_of, rise_of) */
 extern harn_char pc;                            /* The character */
 extern char name[16], calling[20];
@@ -26,10 +28,6 @@ extern char tongues[TONGUES_N];                 /* Its tongues and scripts (the 
                                                 **   lines (hmchar's), written back as they are; one that won't fit, its first
                                                 **   byte '!', and the sheet's refused (RS_LOAD_PC's result 2) */
 extern unsigned char age;                       /* Its age in years (0: not known, no life's record: dq0 -d's) */
-extern char* tp;                               /* The words into a reply: where the next goes, */
-extern char* tend;                              /*   and the end */
-void __fastcall__ put (const char* s);          /* (From the overlay too: s may be in the window) */
-void __fastcall__ putn (int v);
 unsigned __fastcall__ cond_of (const harn_char* c);        /* Its conditions (rs.h's C_*) */
 unsigned char __fastcall__ limbs_of (const harn_char* c);  /* Its limbs (rs.h's LB_*), each one's hurt in lhurt */
 signed char __fastcall__ rise_of (const harn_char* h);  /* (Overlay 5's, limbs.c's) Getting up, prone: its grade (the
@@ -52,7 +50,6 @@ extern unsigned char hheld;                     /* (The character's hands that h
                                                 **   breakdown never a flight, the house's, 2026-10-29) */
 #define conditions()    cond_of (&pc)           /* The character's */
 unsigned char __fastcall__ health_of (const harn_char* c); /* Its health (rs.h's H_*) */
-unsigned char __fastcall__ has (const char* key);   /* A tool to hand, by its key ("pick") */
 extern struct kind wk;                          /* A thing's kind, the catalogue's (the hub's pc_strike's, SK_OF;
                                                 **   RS_WIELD's, each held in turn), */
 void __fastcall__ kind_in (unsigned char k);    /*   copied in (from an overlay too: the window put back) */
@@ -69,20 +66,6 @@ extern struct pstate ps;
 extern unsigned tired, rested;                  /* The character's exertion toward the next fatigue level, its rest
                                                 **   toward the next gone (sheet.c's units) */
 extern unsigned char spent_at;
-#define NTOOLS  20
-extern char tools[NTOOLS][8];                   /* What's to hand (RS_EQUIP's): each one's key, */
-extern unsigned char tflag[NTOOLS];             /*   T_HELD, T_WORN, */
-extern unsigned char tqual[NTOOLS];             /*   its quality (0-9) */
-#define TQ_LIGHT 0x10                           /* (tqual's high bits: a weapon's version, light; heavy; none average:
-                                                **   D13's, the book's custom weapons, Combat 3) */
-#define TQ_HEAVY 0x20
-#define TQ_DULLED 0x40                          /* (tqual's top bits: its edge dulled, a point less cutting harm; dull, */
-#define TQ_DULL  0x80                           /*   two: the house's, the user's, 2026-11-03) */
-#define TQ_HEFT(q)      ((q) & TQ_LIGHT ? 0 : (q) & TQ_HEAVY ? 2 : 1)
-#define T_HELD  0x01
-#define T_WORN  0x02
-#define T_LEFT  0x04                            /* (Held in the left hand: RS_EQUIP's marks, slice 4.1b's) */
-#define T_RIGHT 0x08                            /*   the right; both, a thing in both hands */
 extern unsigned long tnow;                      /* (The clock, the hub's, as a request's answered) */
 extern unsigned char stance;                    /* (The character's stance, the hub's pc_stance, the same) */
 extern unsigned long gseed;                     /* (The game's seed) */

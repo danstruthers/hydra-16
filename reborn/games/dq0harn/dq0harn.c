@@ -44,7 +44,6 @@
 
 void __fastcall__ load_pc (struct req* r);      /* (Part 1's stubs: bank.s's) */
 void __fastcall__ save_pc (struct req* r);
-void __fastcall__ beasts (unsigned char back);
 void __fastcall__ dig_answer (struct req* r);   /* (Part 3's) */
 void __fastcall__ dice_set (struct req* r);
 void __fastcall__ read_test (struct req* r);    /* (Part 4's: a writing read) */
@@ -63,95 +62,13 @@ char tongues[TONGUES_N] = " common";            /* The tongues it speaks, a spac
                                                 **   and the scripts it reads and writes, each a * before it, its file's
                                                 **   "script" lines (dq0harn.h's) */
 
-/* ---- Words into a reply (from the overlay too: s may be in the window, where the hub is, so each character's
-** taken with s's bank in, and put with the hub's) */
+/* ---- The words into a reply (put, putn) and what's to hand (tools, equip_all, has): the skeleton's (../dq0/rf/rf.c,
+** rf.c's).  Digging judged by what's to hand: a skill used, the one versed in it takes out the tool that suits the job
+** best (the user's: a shovel in earth, a pick in stone; a sword digs earth too, poorly, and dulls).  The book has no
+** rules for digging: the game's own, every referee's (../dq0/rshouse.h's table: a tool's feet a spell of work by what
+** it's into, and its wear) */
 
-char* tp;                                       /* Where the next goes, */
-char* tend;                                     /*   and the end */
-
-void __fastcall__ put (const char* s)
-{
-    unsigned char b = getbank (), h, c;
-
-    hub_map (0);
-    h = getbank ();
-    for (;;) {
-        setbank (b);
-        c = *s++;
-        setbank (h);
-        if (!c || tp >= tend) {
-            break;
-        }
-        *tp++ = c;
-    }
-    *tp = 0;
-    setbank (b);
-}
-
-void __fastcall__ putn (int v)
-{
-    char b[8];
-
-    put (itoa (v, b, 10));
-}
-
-/* ---- What's to hand (the keys of the tools the character carries, all of them: the UI's, from the things), and
-** digging judged by it: a skill used, the one versed in it takes out the tool that suits the job best (the user's: a
-** shovel in earth, a pick in stone; a sword digs earth too, poorly, and dulls).  The book has no rules for digging:
-** the game's own, every referee's (../dq0/rshouse.h's table: a tool's feet a spell of work by what it's into, and
-** its wear) */
-
-char tools[NTOOLS][8];
-unsigned char tflag[NTOOLS], tqual[NTOOLS];
 unsigned wealth;                                /* (The family's wealth, its file's "wealth" line: 0 none) */
-
-/* All that's to hand, anew: the keys in the text, each after its mark (held: < in the left hand, > the right, * both;
-** + worn; a space neither) and its quality after it (a digit), a weapon's version after that (L light, H heavy, none
-** average: tqual's high bits, TQ_*, D13's), a bandage's cloth (R hemp, S linen, T wool, U silk: DR_MAT's) */
-static void __fastcall__ equip_all (const char* keys)
-{
-    unsigned char k = 0, n, f, j;
-
-    memset (tools, 0, sizeof tools);
-    while (*keys) {
-        j = NTOOLS;
-        f = *keys == '*' ? T_HELD | T_LEFT | T_RIGHT : *keys == '<' ? T_HELD | T_LEFT : *keys == '>' ? T_HELD | T_RIGHT :
-            *keys == '+' ? T_WORN : 0;
-        if (*keys < 'a') {
-            ++keys;
-        }
-        for (n = 0; keys[n] >= 'a'; ++n) {
-        }
-        if (n && n < sizeof tools[0]) {
-            if (k < NTOOLS) {
-                j = k++;
-            } else {                            /* (Full, an outfit's many things: what's held or worn in the place of
-                                                **   a thing carried, what fights first, 2026-10-27) */
-                for (j = NTOOLS; j && tflag[j - 1]; --j) {
-                }
-                j = f && j ? j - 1 : NTOOLS;
-            }
-            if (j < NTOOLS) {
-                memset (tools[j], 0, sizeof tools[j]);
-                memcpy (tools[j], keys, n);
-                tflag[j] = f;
-                tqual[j] = keys[n] >= '0' && keys[n] <= '9' ? keys[n] - '0' : 4;
-            }
-        }
-        keys += n;
-        if (*keys >= '0' && *keys <= '9') {
-            ++keys;
-        }
-        while (*keys >= 'A' && *keys <= 'Z') {
-            if (j < NTOOLS) {
-                tqual[j] |= *keys == 'L' ? TQ_LIGHT : *keys == 'H' ? TQ_HEAVY : *keys == 'D' ? TQ_DULL : *keys == 'E' ? TQ_DULLED :
-                    (unsigned char) (*keys - 'R') < 4 ? (*keys - 'Q') << 4 : 0;     /* (A bandage's cloth, R ... U: DR_MAT's,
-                                                **   dress.c's, the user's, 2026-11-11) */
-            }
-            ++keys;
-        }
-    }
-}
 
 /* The load the character carries, its equipment as harn.h has it (skills.c's set_load: one entry, its encumbering
 ** part, past its free pounds, D13's), so its encumbrance (EP) is the book's on it; and its skills used since their
@@ -161,19 +78,6 @@ unsigned char stress_lv;
 unsigned char nobreak;                          /* (dq0 -I's, the tests': no weapon broken) */
 unsigned char pc_might;
 unsigned char fresh;
-
-/* A tool equipped (Lockcraft's picks) */
-unsigned char __fastcall__ has (const char* key)
-{
-    unsigned char k;
-
-    for (k = 0; k < NTOOLS; ++k) {
-        if (!strcmp (tools[k], key)) {
-            return 1;
-        }
-    }
-    return 0;
-}
 
 /* A thing's kind, the catalogue's (in the hub's bank: the thing that strikes, the hub's pc_strike's; RS_WIELD's, each
 ** held in turn), copied into wk; the window put back (gear.c's, the overlay's, too) */
@@ -197,7 +101,6 @@ static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char
 #define RS_HOUSE_DIG
 #define RS_HOUSE_DIG_TOOL   s_dig_tool
 #define RS_HOUSE_QUIET                          /* (Moving quietly's own dice: s_quiet_test's) */
-#define RS_HOUSE_DICE                           /* (The dice by who asks: main's) */
 #include "../dq0/rshouse.h"
 
 /* A dig's test (RS_TEST's P_DIG): judged by the tool to hand that suits it best, its rate a spell at a marginal
@@ -654,19 +557,15 @@ void __fastcall__ sheet_put (unsigned char n)
 #pragma code-name (push, "SW2CODE")             /* (Part 2's: part 1's room, 2026-10-27) */
 #pragma rodata-name (push, "SW2RODATA")
 
-/* The bank written to the save folder's beasts.dat (back 1: read from it, or cleared: none there; 2: cleared) */
-void __fastcall__ s_beasts (unsigned char back)
+/* The bank written to the save folder's beasts.dat (back 1: read from it, or cleared: none there; 2: cleared): the
+** skeleton's rf_sheets (../dq0/referee.h's; the file opened by its sheets_open, rfsheets.c's, part 2's too) */
+void __fastcall__ s_rf_sheets (unsigned char back)
 {
-    static char path[56];
     unsigned off;
-    int fd = -1;
+    int fd;
 
     memset (piece, 0, sizeof piece);
-    if (back < 2 && HUB->savedir[0]) {
-        strcpy (path, HUB->savedir);
-        strcat (path, "/beasts.dat");
-        fd = back ? open (path, O_RDONLY) : open (path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    }
+    fd = back < 2 ? sheets_open (back) : -1;
     for (off = 0; off < 0x2000 + BBODIES; off += sizeof piece) {     /* (The sheets, then their bodies: fb's) */
         if (!back) {
             bread (off < 0x2000 ? sb : fb, (char*) 0x8000 + (off & 0x1FFF), piece, sizeof piece);
@@ -761,7 +660,7 @@ void age_get (void);
 /* Its age, for the sheet (the plan for the game between dungeons, its step 8): by the life's record (life.h's, at the
 ** top of the save's folder: the year it was born, the day this dungeon began: its age as the dungeon began, LIFE_AGE's),
 ** its birthday its sheet's; 0 without a record (no save's folder, dq0 -d's).  The record read into piece, the creatures'
-** sheets' (s_beasts' alone); the days since its birth year began in 16 bits (no long division's code in the main RAM) */
+** sheets' (s_rf_sheets' alone); the days since its birth year began in 16 bits (no long division's code in the main RAM) */
 unsigned char age;
 
 void s_age_get (void)
@@ -880,17 +779,6 @@ void __fastcall__ s_dice_set (struct req* r)
 /* ---- A request answered */
 
 static unsigned char rq[offsetof (struct req, text)];  /* (A request's copy, for the overlay: but its text) */
-static unsigned tlim = REQ_TEXT;                /* (Its text's room: the denizens' slot's DTEXT) */
-static unsigned char restored;                  /* (The creatures' sheets read back, a game carried on) */
-
-static void sheets_in (void)
-{
-    if (HUB->resume && !restored) {
-        restored = 1;
-        beasts (1);
-    }
-}
-
 /* One side of two actors' tests (RS_CONTEST): who's test of purpose p, at the steps: the character's here (one
 ** senseless, or in shock, tests nothing: a critical failure), a creature's by its sheet (overlay 2's, in a copy) */
 signed char __fastcall__ side (unsigned char who, unsigned char p, signed char steps);
@@ -933,18 +821,16 @@ void __fastcall__ s_quiet_test (struct req* r)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-static void __fastcall__ answer (struct req* r)
+/* A request answered (the skeleton's rf_answer, ../dq0/referee.h's: tp and tend at its text, its result 0; the
+** creatures' sheets read back before a creature's asked for, written after the character's, the skeleton's) */
+void __fastcall__ rf_answer (struct req* r)
 {
     unsigned char k, m, t;
     signed char g;
 
-    tp = r->text;
-    tend = r->text + tlim - 1;
-    r->result = 0;
     stress_lv = 0;                              /* (A skill's use here routine, but as it's found below: skills.c's) */
     switch (r->kind) {
     case RS_NEW_ACTOR:                          /* (The fights': overlay 2's, in a copy, as the harm's) */
-        sheets_in ();
         strncpy (bkey, r->text, sizeof bkey - 1);
     case RS_ATTACK:
     case RS_MORALE:
@@ -1056,9 +942,7 @@ parted:
 
     case RS_SAVE:                               /* (The sheet into the save: hmchar's format, its own lines; and the
                                                 **   creatures', beasts.dat) */
-        save_pc (r);
-        sheets_in ();
-        beasts (0);
+        save_pc (r);                            /* (The creatures', after it: the skeleton's) */
         break;
     case RS_DESCRIBE:
         if (RS_DESCRIBE_WHAT (*r) == 1) {
@@ -1108,7 +992,6 @@ parted:
 ** the linker's fill ($FF) put back after its bytes, all of it the game's library's (modules/dq0lib, ../dq0/dq0lib.inc:
 ** 2026-11-09); and a bank for the creatures' sheets (cleared): 0, or -1.  (And its arguments' numbers, its NUM) */
 unsigned char __fastcall__ ovl_load (const char* dir);
-unsigned char __fastcall__ num (const char* s);
 static int __fastcall__ ovl_in (const char* dir)
 {
     int n;
@@ -1121,45 +1004,15 @@ static int __fastcall__ ovl_in (const char* dir)
     return 0;
 }
 
-/* The denizens' task's request (its own slot, DSLOT), if it's posted: answered (DTEXT of its text) */
-static void den_slot (void)
+/* Its start (the skeleton's rf_start: its arguments SEG ROLE DIR, its overlays read in, the creatures' banks had), and
+** its beginning, its dice seeded (rf_begin: its own skill, the creatures' sheets cleared) */
+unsigned char __fastcall__ rf_start (int argc, char* argv[])
 {
-    hub_map (0);
-    if (hub_posted (DSLOT)) {
-        tlim = DTEXT;
-        answer (DSLOT);
-        tlim = REQ_TEXT;
-        hub_reply (DSLOT);
-    }
+    return argc < 4 || ovl_in (argv[3]);
 }
 
-int main (int argc, char* argv[])
+void rf_begin (void)
 {
-    unsigned char s;
-
-    if (argc < 4 || ovl_in (argv[3]) || hub_attach (num (argv[1]), num (argv[2]))) {
-        return 1;
-    }
-    rseed (HUB->seed ^ 0x5245);                 /* (Its own dice: the game's seed, and its role) */
     harn_own_skills (own, 1);                   /* (Its own skill: Cartography) */
-    beasts (2);
-    hub_map (0);
-    DICE_BEGIN
-    for (;;) {
-        hy_sem_acquire (HUB->sem[T_REFEREE]);   /* (Waiting costs nothing) */
-        hub_map (0);
-        if (HUB->quit) {
-            break;
-        }
-        for (s = 0; s < NSLOTS; ++s) {
-            if (hub_posted (&HUB->slot[s])) {
-                DICE_IN (s)
-                answer (&HUB->slot[s]);
-                hub_reply (&HUB->slot[s]);
-            }
-        }
-        DICE_IN (NSLOTS)
-        den_slot ();
-    }
-    return 0;
+    rf_sheets (2);
 }
