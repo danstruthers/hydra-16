@@ -36,8 +36,7 @@
 #define DIG_LOUD        6                       /* A spell's noise (the character's, dq0w.c's noise (6)) */
 #define DUG_LOUD        7                       /* The way through: the spoil falling */
 
-#include "../dq0/rshouse.h"                   /* (Its rates alone: RS_DIG_PICK, RS_DIG_SHOVEL) */
-#define DIG_TESTED(m)   ((m) != MAT_EARTH && (m) != MAT_SOIL)   /* (As rshouse.h's: earth dug at the tool's rate) */
+#include "../dq0/rshouse.h"                   /* (Its rates alone: RS_DIG_PICK, RS_DIG_SHOVEL, DIG_TESTED) */
 
 unsigned char __fastcall__ dig_kept (unsigned char begin);   /* (Part 19's: a DUG record looked up, rec's) */
 extern struct change rec;                       /* (store.c's) */

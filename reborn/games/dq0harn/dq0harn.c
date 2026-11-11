@@ -39,6 +39,7 @@
 #include "../dq0/rs.h"
 #include "../dq0/life.h"
 #include "dq0harn.h"
+#include "../dq0/rshouse.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
@@ -95,13 +96,9 @@ void __fastcall__ kind_in (unsigned char k)
 #pragma code-name (push, "SW3CODE")
 #pragma rodata-name (push, "SW3RODATA")
 
-/* The tool to hand that suits the material best (rshouse.h's, s_dig_tool: its digger's number); the table part 2's
-** alone (the main RAM's room, 2026-10-27) */
+/* The tool to hand that suits the material best (rshouse.h's house_dig_tool: its digger's number); it and the table part
+** 3's, hdig.c (the main RAM's room, 2026-10-27) */
 static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char steps);
-#define RS_HOUSE_DIG
-#define RS_HOUSE_DIG_TOOL   s_dig_tool
-#define RS_HOUSE_QUIET                          /* (Moving quietly's own dice: s_quiet_test's) */
-#include "../dq0/rshouse.h"
 
 /* A dig's test (RS_TEST's P_DIG): judged by the tool to hand that suits it best, its rate a spell at a marginal
 ** success (earth's untested: the tool's rate), its key and its wear in the reply */
@@ -169,8 +166,8 @@ void __fastcall__ s_dig_answer (struct req* r)
 
 static void __fastcall__ dig_of (struct req* r)
 {
-    unsigned char m = RS_TEST_MAT (*r) > MAT_SOIL ? MAT_STONE : RS_TEST_MAT (*r), t = s_dig_tool (m, r->text), k = digger[t].rate[m],
-        b = s_dig_tool (m, "");
+    unsigned char m = RS_TEST_MAT (*r) > MAT_SOIL ? MAT_STONE : RS_TEST_MAT (*r), t = house_dig_tool (m, r->text), k = digger[t].rate[m],
+        b = house_dig_tool (m, "");
 
     if (r->text[0] && !t) {
         k = 0;                                  /* (Named, and no digger) */
@@ -802,7 +799,7 @@ signed char __fastcall__ s_side (unsigned char who, unsigned char p, signed char
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* Moving quietly's test (RS_TEST's P_STEALTH: slice 4.6's), by its own dice (rshouse.h's RS_HOUSE_QUIET's: the game's
+/* Moving quietly's test (RS_TEST's P_STEALTH: slice 4.6's), by its own dice (rshouse.h's QUIET_IN's: the game's
 ** as they stand, mixed, and put back after), so the game's other tests roll as they did: the character's, or a
 ** creature's by its sheet (a hunter's stalk, the denizens'); part 2's, the main RAM's room */
 #pragma code-name (push, "SW3CODE")

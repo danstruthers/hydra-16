@@ -3,7 +3,7 @@
 ** the book's way with them (Physician 4: a poison an infection whose intervals are shortened to the toxin, a disease a
 ** Contagion Index and a healing rate, its recovery rolled daily on the Infection table, gone at H6, dead at H0; the
 ** HarnWorld Bestiary's venoms, its grave-wight's grave rot), one course for each, two at once: a toxin (a venom, a
-** poison: pv) and a disease (pd); and the air it breathes (rsair.h's, every ruleset's).  Its symptoms the book's special
+** poison: pv) and a disease (pd); and the air it breathes (rf/air.c's, every ruleset's).  Its symptoms the book's special
 ** penalty to physical skills, as fatigue levels held (afffl: in the universal penalty, every test's; not rested off
 ** till it's over, as the want's aren't).  Moved from heal.c's overlay 7 (its venoms, the status's words, the save's line)
 ** with the venom's course and dice as they were.
@@ -50,11 +50,15 @@ static void __fastcall__ nput (const char* s)  /* (heal.c's nput, overlay 8's ow
 struct venom pv;                                /* (The character's toxin: dq0harn.h's) */
 struct sick pd;                                 /* (Its disease) */
 unsigned char afffl;                            /* (Its symptoms' and its breath's fatigue levels, held) */
-unsigned char aff_breath;                       /* (Its breath's, rsair.h's: among them) */
+unsigned char aff_breath;                       /* (Its breath's, rf/air.c's: among them) */
 
-#define AIR_SAY(s)      nput (s)
-#define AIR_LEVELS(n)   (aff_breath = (n))
-#include "../dq0/rsair.h"
+#include "../dq0/rshouse.h"                   /* (The air: rshouse.h's air_of, hair.c's, this overlay's) */
+
+/* Words into the news (rshouse.h's air_say: the house's air) */
+void __fastcall__ air_say (const char* s)
+{
+    nput (s);
+}
 
 /* A disease's exposure (kind k, its index less d steps the worse: a dose): the book's test, its Contagion Index times
 ** the Endurance (95 at most), failed caught; nothing told (it shows on its incubation's end) */
@@ -136,7 +140,7 @@ unsigned char __fastcall__ o_envenom (const char* key, unsigned char loc, int im
 }
 
 /* RS_TIME's for the character (heal.c's body_time, r a copy): what it's exposed to now (x[18], its dose x[19]), the
-** air it breathes (x[20], its flame x[21]: rsair.h's), its toxin's course for w1 minutes at what it's about (a: its
+** air it breathes (x[20], its flame x[21]: rf/air.c's), its toxin's course for w1 minutes at what it's about (a: its
 ** interval at rest, half that about, a quarter at vigorous work, the bestiary's), its disease's (shown after its
 ** incubation, then daily); the grade's bits (2 news, 4 worse: a hard stop) */
 signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps);    /* (Overlay 5's stub) */
@@ -171,7 +175,8 @@ unsigned char __fastcall__ o_aff_time (struct req* r)
         }
     }
     if (q || f || air_lv || air_co) {
-        o = air_of (q, f, m);                   /* (The air: rsair.h's) */
+        o = air_of (q, f, m);                   /* (The air: rshouse.h's; its breath's levels its air_lv) */
+        aff_breath = air_lv;
         if (o & 1) {
             pc.state = HARN_DEAD;
         }

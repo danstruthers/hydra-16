@@ -48,26 +48,19 @@ static unsigned char aden[NACTORS];             /* (Each actor's record) */
 static char hurt[80];                           /* The last harm's words */
 static const unsigned char step[NGAITS] = { 45, 30, 15, 8, 4, 3 };    /* Tenths a square at each pace */
 
-#define RS_HOUSE_DIG
-#define RS_HOUSE_DIG_TOOL   dig_tool
-#define RS_HOUSE_NOTICE
-#define RS_HOUSE_STATE
-#define RS_HOUSE_BEARING
-#define RS_HOUSE_QUIET
-#include "../dq0/rshouse.h"
+#include "../dq0/rshouse.h"                   /* (The house's rules, every referee's: house.c's, ../dq0/rf/) */
 
-static void __fastcall__ want_say (const char* s)
+/* Words into the news (rshouse.h's want_say and air_say: the house's hunger and thirst, and air) */
+void __fastcall__ want_say (const char* s)
 {
     if (strlen (news) + strlen (s) < sizeof news) {
         strcat (news, s);
     }
 }
-#define WANT_SAY(s)     (want_say (s), RS_TIME_NEWS (*r) = 2)
-#include "../dq0/rswant.h"                 /* (Hunger and thirst, every ruleset's: slice 4.9's) */
-
-#define AIR_SAY(s)      (want_say (s))
-#define AIR_LEVELS(n)
-#include "../dq0/rsair.h"                   /* (The air it breathes, every ruleset's: 2026-10-31) */
+void __fastcall__ air_say (const char* s)
+{
+    want_say (s);
+}
 
 /* ---- Its afflictions, the simple way (2026-10-31: HOUSE.md's poison and disease, the null ruleset's): a poison taken
 ** sickens it a while (a dart's or a smear's half an hour a point of its dose, spoiled food's two hours), a disease
@@ -666,12 +659,12 @@ void __fastcall__ rf_answer (struct req* r)
                                                 **   a tunneller's, its grade alone, by its own dice as moving
                                                 **   quietly's, the world's the rest: slice 4.11's) */
             m = RS_TEST_MAT (*r) > MAT_SOIL ? MAT_STONE : RS_TEST_MAT (*r);
-            t = dig_tool (m, r->text);
+            t = house_dig_tool (m, r->text);
             k = digger[t].rate[m];
             if (r->text[0] && !t) {
                 k = 0;                          /* (Named, and no digger) */
             }
-            g = dig_tool (m, "");
+            g = house_dig_tool (m, "");
             strcpy (r->text + DIG_BETTER, r->text[0] && digger[(unsigned char) g].rate[m] > k ? digger[(unsigned char) g].key : "");
             strcpy (r->text, digger[t].key);
             RS_TEST_WEAR (*r) = digger[t].wear[m];
@@ -782,7 +775,7 @@ void __fastcall__ rf_answer (struct req* r)
         RS_CONTEST_BETTER (*r) = g > (signed char) RS_CONTEST_OGRADE (*r) ? 1 : g < (signed char) RS_CONTEST_OGRADE (*r) ? 2 : 0;
         *tp = 0;
         break;
-    case RS_TIME:                               /* (Its minutes for hunger and thirst, rswant.h's, before its
+    case RS_TIME:                               /* (Its minutes for hunger and thirst, rf/want.c's, before its
                                                 **   reply's w1; no bleeding: none dies of it; a wound healed by its
                                                 **   rest, a tended one's eight hours, an untended one's a day: slice
                                                 **   4.3's simple way) */
@@ -819,7 +812,7 @@ void __fastcall__ rf_answer (struct req* r)
         }
         RS_TIME_HEALTH (*r) = health (wounds, TOUGH);
         RS_TIME_NEXT (*r) = HUB->now + 36000UL;
-        memcpy (RS_TIME_WANT (*r), &HUB->pc_hunger, 6);    /* (Hunger and thirst, rswant.h's: no fatigue, the null
+        memcpy (RS_TIME_WANT (*r), &HUB->pc_hunger, 6);    /* (Hunger and thirst, rf/want.c's: no fatigue, the null
                                                 **   ruleset's, but dead of it) */
         if (want_of (r, HUB->now) & WANT_DIES) {
             RS_TIME_DIED (*r) = 1;
@@ -828,7 +821,7 @@ void __fastcall__ rf_answer (struct req* r)
         RS_TIME_MINUTES (*r) = r->x[16] | r->x[17] << 8;
         g = strlen (news);
         aff_null (r);                           /* (Its afflictions, the simple way; the air it breathes, every
-                                                **   ruleset's: rsair.h's, dead of it) */
+                                                **   ruleset's: rf/air.c's, dead of it) */
         if (RS_TIME_AIR (*r) || RS_TIME_FLAME (*r) || air_lv || air_co) {
             k = air_of (RS_TIME_AIR (*r), RS_TIME_FLAME (*r), RS_TIME_MINUTES (*r));
             if (k & 1) {

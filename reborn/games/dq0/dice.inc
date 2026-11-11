@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; dice.inc - (the referees': rshouse.h's RS_HOUSE_DICE, a referee's .s includes it) the dice by who asks: each
+; dice.inc - (the referees': referee.h's dice_to, a referee's .s includes it) the dice by who asks: each
 ; requester's own stream of dice.h's generator (xorshift.s's xs_seed), the world's slot's (0: the game's own, as the
 ; referee began), the UI's (1) and the denizens' (2: DSLOT), swapped in as each answer begins, so a game's dice go by
 ; its seed and its commands, not by the order the tasks' requests reach the referee.  In assembly, and in an overlay if

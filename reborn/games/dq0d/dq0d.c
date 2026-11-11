@@ -1627,7 +1627,7 @@ unsigned char s_depth (void)
 #pragma rodata-name (pop)
 
 /* Record D (its kind K's) made actor k: its want the actor's (aate, adrank), and its want's fatigue levels back (the
-** referee's, RS_NEW_ACTOR's c: HarnMaster's, the character's rswant.h's): none hungry or thirsty, then 1, 2 and 4 for
+** referee's, RS_NEW_ACTOR's c: HarnMaster's, the character's rf/want.c's): none hungry or thirsty, then 1, 2 and 4 for
 ** each of hunger and thirst; the dead none */
 unsigned char __fastcall__ s_want_fl (unsigned char k)
 {

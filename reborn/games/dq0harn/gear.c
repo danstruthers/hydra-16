@@ -106,7 +106,6 @@ static int __fastcall__ eml (harn_char* c, unsigned char sk)
 }
 
 /* What a thing swung does, by its kind's data (rshouse.h's: the house's, every ruleset's) */
-#define RS_HOUSE_SWING  swing
 #include "../dq0/rshouse.h"
 
 /* The weapon a thing is (its kind, wk): the table's by its key; else what the book treats a thing swung as, by the
@@ -120,7 +119,7 @@ static unsigned char row_of (void)
             return j;
         }
     }
-    j = swing (&wk);
+    j = HOUSE_SWING (&wk);
     return j == IM_SOFT ? SOFT : j == IM_LIGHT ? STICK : CLUB;
 }
 

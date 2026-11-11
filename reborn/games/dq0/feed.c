@@ -1,6 +1,6 @@
 /*
 ** feed.c - (dq0, swapped part 16: swap.inc) eating and drinking, the UI's part (slice 4.9: HOUSE.md's water, hunger and
-** thirst): "eat", "drink", the world's things asked (IO_USE, IO_FIND), the referee told (rswant.h's)
+** thirst): "eat", "drink", the world's things asked (IO_USE, IO_FIND), the referee told (rf/want.c's)
 */
 
 #include <string.h>
@@ -18,7 +18,7 @@
 ** a third of a day's ration: one used up as a day's begun, the things' IO_USE by its key, "food"); "drink" its fill
 ** from the water it stands in or a well within reach (the things' IO_FIND), else a pint at a time from its waterskin
 ** (IO_USE, "water": half a minute each), as many as it wants; the referee told (RS_TIME, w1 0: x[14] the meals, | 0x80 a
-** ration begun, x[15] the pints), its hunger and thirst its own (rswant.h's); not hungry, not thirsty, refused */
+** ration begun, x[15] the pints), its hunger and thirst its own (rf/want.c's); not hungry, not thirsty, refused */
 /* The thing named for eating or drinking (cmd.obj's word) one that is: food, a meal; water, a waterskin, the well; or one
 ** to hand whose kind's key is food, or water.  1 so, or none named; else 0, refused by its name ("You can't eat the
 ** pot.", "You have no apples.": dq0sweep2's, 2026-11-07, the rule that a command's answer names its thing) */

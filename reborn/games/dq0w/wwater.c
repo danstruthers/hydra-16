@@ -4,7 +4,7 @@
 ** and its rooms' levels), for its wading and swimming (dq0w.c's part 73, s_wade); a waterskin filled where there's water
 ** (the water it stands in, or a well within reach: the things' IO_FILL, part 27's fill first asking here).  Eating and
 ** drinking are the UI's (the things' IO_USE: a day's ration, a pint, by their keys) and the referee's (hunger and
-** thirst, rswant.h's).
+** thirst, rf/want.c's).
 */
 
 #include <stddef.h>

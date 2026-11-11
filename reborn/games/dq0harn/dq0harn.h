@@ -204,7 +204,6 @@ unsigned char __fastcall__ beast_flags (unsigned char kind);   /* (A sheet's kin
 /* heal.c (overlay 6): wounds over time (slice 4.3) */
 #define NEWS_N          120
 void __fastcall__ want (struct req* r);         /* (Overlay 7's, want.c: hunger and thirst, RS_TIME's, r a copy) */
-#define WANT_X          8                       /* (rswant.h's: the request's x, the hub's want) */
 extern unsigned char wantfl;                    /* (Its fatigue from want: the world's hunger and thirst, RS_TIME's
                                                 **   x[1], slice 4.9's; not rested off) */
 extern char news[NEWS_N];                       /* (What time did to the character, in words: RS_DESCRIBE b 4's) */
@@ -224,7 +223,7 @@ struct sick {                                   /* (Its disease: its healing rat
 extern struct sick pd;
 extern unsigned char afffl;                     /* (Its afflictions' fatigue levels: its symptoms', its breath's; held,
                                                 **   not rested off) */
-extern unsigned char aff_breath;                /* (Its breath's among them: bad air, rsair.h's) */
+extern unsigned char aff_breath;                /* (Its breath's among them: bad air, rf/air.c's) */
 extern unsigned rest_m;                         /* (Its rest toward its healing rolls, minutes: RS_TIME's at rest) */
 void __fastcall__ body_req (struct req* r);     /* RS_HARM, RS_TIME, RS_TREAT (r a copy) */
 unsigned char __fastcall__ envenom (const char* key, unsigned char loc, int impact);   /* (fight.c's: a venomous

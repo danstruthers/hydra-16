@@ -244,7 +244,7 @@ ovcall:
 
             .include    "parts.inc"         ; (The parts and their stubs, the build's: parts.txt, ../dq0/parts.js)
 
-; The dice by who asks (rshouse.h's RS_HOUSE_DICE: ../dq0/dice.inc), overlay 7's, through its stub (OVFN's, by hand)
+; The dice by who asks (referee.h's dice_to: ../dq0/dice.inc), overlay 7's, through its stub (OVFN's, by hand)
             .export     _dice_to
 _dice_to:   ldy         #7
             jsr         ovl_in

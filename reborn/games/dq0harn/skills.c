@@ -22,8 +22,7 @@
 #include "../dq0/rs.h"
 #include "dq0harn.h"
 
-#define RS_HOUSE_QUIET                          /* (The rolls' own dice, the game's put back after: QUIET_IN) */
-#include "../dq0/rshouse.h"
+#include "../dq0/rshouse.h"                   /* (The rolls' own dice, the game's put back after: QUIET_IN) */
 
 #define NIGHT           480                     /* (A night's rest, minutes: the book's night's sleep, Skills 6) */
 

@@ -53,6 +53,7 @@
 #include "../dq0/hub.h"
 #include "hub0.h"
 #include "world.h"
+#include "../dq0/rshouse.h"                   /* (The house's: what a thing swung does) */
 #include "work.h"
 #include "things.h"
 
@@ -4240,9 +4241,11 @@ static void __fastcall__ begun (unsigned char k, unsigned char what)
     event (E_TASK, 0, E_TASK_W1 (TE_BEGUN, k));
 }
 
-#define RS_HOUSE_SWING  door_swing
-#include "../dq0/rshouse.h"
-#undef RS_HOUSE_SWING
+/* What a thing swung does (rshouse.h's HOUSE_SWING, the house's: part 12's own) */
+static unsigned char __fastcall__ door_swing (const struct kind* k)
+{
+    return HOUSE_SWING (k);
+}
 
 void __fastcall__ s_door_work (unsigned char what)
 {
@@ -5441,7 +5444,7 @@ static void air_here (void)
     hub_map (0);
     HUB->pc_air = q;
     HUB->pc_flm = f | FLM_NEW;
-    body_ask ();                                /* (Its words: the referee's, rsair.h's) */
+    body_ask ();                                /* (Its words: the referee's, rf/air.c's) */
     if (f & FLM_BURST) {
         hub_map (0);
         am.kind = E_NOISE;                      /* (As loud as anything: the denizens hear it) */
@@ -5574,10 +5577,11 @@ unsigned char s_close_on (void);
 static void __fastcall__ fight_begin (unsigned char k);
 static void __fastcall__ fight_blow (unsigned char k);
 
-/* What a thing swung does (rshouse.h's, the house's) */
-#define RS_HOUSE_SWING  fight_swing
-#include "../dq0/rshouse.h"
-#undef RS_HOUSE_SWING
+/* What a thing swung does (rshouse.h's HOUSE_SWING, the house's: this part's own) */
+static unsigned char __fastcall__ fight_swing (const struct kind* k)
+{
+    return HOUSE_SWING (k);
+}
 
 /* The thing named that strikes (the hub's pc_strike) a soft one (the house's: the user's, 2026-10-22, "if it is
 ** something soft ... it should reply with something like 'You attempt to batter the door with the noodle, but it seems

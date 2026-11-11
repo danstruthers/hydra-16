@@ -1,5 +1,5 @@
 /*
-** want.c - (dq0harn, overlay 7) hunger and thirst (slice 4.9: HOUSE.md's water, hunger and thirst, rswant.h's house
+** want.c - (dq0harn, overlay 7) hunger and thirst (slice 4.9: HOUSE.md's water, hunger and thirst, rf/want.c's house
 ** rules), HarnMaster's way with them: the want's fatigue levels (the book's fatigue, in every test's universal
 ** penalty) not rested off till it eats or drinks (wantfl, sheet.c's rest), dead of it
 */
@@ -13,7 +13,8 @@
 #include "../dq0/rs.h"
 #include "dq0harn.h"
 
-static void __fastcall__ want_say (const char* s)
+/* Words into the news (rshouse.h's want_say: the house's hunger and thirst, hwant.c's, this overlay's) */
+void __fastcall__ want_say (const char* s)
 {
     unsigned char n = strlen (news);
 
@@ -22,8 +23,7 @@ static void __fastcall__ want_say (const char* s)
     }
 }
 
-#define WANT_SAY(s)     (want_say (s), RS_TIME_NEWS (*r) |= 2)
-#include "../dq0/rswant.h"
+#include "../dq0/rshouse.h"
 
 /* RS_TIME's (r a copy, the hub's want in it: dq0harn.c's main), after the bodies' time (heal.c's) */
 void __fastcall__ o_want (struct req* r)

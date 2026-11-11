@@ -242,7 +242,7 @@ hands, a denizen's as a shovel is (its agear's AG_SPADE).
   for what it's into is told as the dig's begun, once, not each spell ("Your pick would do this better, but you set to it
   with the knife as you said.").  *(The house's, for review:)* what's named no use on it, or no digger at all, no time
   spent, the better told of ("Your knife won't dig stone. Your pick would.").  None named, the best to hand, as ever.  (The
-  referee's P_DIG, its text the name, both referees: rshouse.h's RS_HOUSE_DIG_TOOL; the world's part 84.)  **The kind**
+  referee's P_DIG, its text the name, both referees: rshouse.h's house_dig_tool; the world's part 84.)  **The kind**
   (the user's: any tool named where a better's carried): the others swept 2026-11-03: a dig is the one task the game
   chooses among tools by how well they do.  A blow strikes with what's named already (Fights).  Sharpening has the
   whetstone alone, a lock its key or its lockpicks: another thing named is refused, not passed over for them ("You have
@@ -530,7 +530,7 @@ course, first aid and healing (Wounds over time); courage in a fight (Morale).
     **A weapon may break** (the book's Weapon Damage, Combat 12, every actor's): on a Block, weapon against weapon or shield (a bare part struck instead, H2, as ever), the lower Weapon Quality tested first (the attacker's at a tie), the other only if
     that holds: three dice over it and it's destroyed; on a blow at something hard (iron, stone: what its edge can't bite, the door's wood not; the character's, a creature's own is never hurt by it) the same, the weapon alone.  Quality: the book's table (a sword's 12, a dagger's 11, a club's 9, a kite shield's 14)
     *(new, for review: and its make, its quality 0-9 read as the book's table's �4 about 5; a tool, none: no test)*; by their own die, the game's others roll as they did; none on the book's optional partial damage.  **Broken**: "Your sword breaks!", "The bandit's sword breaks!"; it falls as a "broken weapon" (useless: soft to swing, a farthing's scrap), so no blow's made with it; a creature to its fists.  (gear.c's row_of, o_pc_side, o_pc_wield;
-    rshouse.h's RS_HOUSE_SWING; choose.c's wield; resolve.c's tool_ok; dq0w.c's door_work, swatted, in_hand.)
+    rshouse.h's HOUSE_SWING; choose.c's wield; resolve.c's tool_ok; dq0w.c's door_work, swatted, in_hand.)
 - **A creature defends** by dodging, or by counterstriking if it's better at that, as the book advises for animals;
   one holding a shield blocks with it if that's the best of the three, once a round (2026-10-29: the denizens' gear's,
   below; fight.c's defence).
@@ -1961,7 +1961,7 @@ the game (world.dat).  Every ruleset's but the test itself (the referee's).  Eac
 - **The test** (rs.h's P_BEARING): Awareness, or Mining if the character's is the higher (a miner knows tunnels).  The
   book has no skill of direction: an Intelligence roll was the other candidate, but keeping count of the turns is
   attention more than reasoning; Survival is the outdoors' (the sun, the stars), of no use below.  Its dice the
-  bearings' own (rshouse.h's RS_HOUSE_BEARING), so the game's other tests roll as they would without it.  (dq0harn's
+  bearings' own (rshouse.h's bdice), so the game's other tests roll as they would without it.  (dq0harn's
   bearing.c; dq0null's flat odds.)
 - **When it's asked:** at a move's end, after a walk along a passage that bent (each turn between two of the
   passage's squares a bend: the walk's beats' WB_TURN), or across a room in the dark (felt across, not seen: two of
@@ -2899,7 +2899,7 @@ roll (SOUND.md's rule, D9: tuned by ear later), and tests Stealth where the book
   critical success 0 (no one hears it), a marginal one 1, a marginal failure 2 (as a walk), a critical failure 3.
   Low the easier: crouched a step, prone two (the book's cover).  The grade is secret, as the GM's roll; nothing's
   told of it.  The null ruleset's flat odds the same way.  The test has dice of its own (rshouse.h's
-  RS_HOUSE_QUIET, as the
+  rshouse.h's QUIET_IN, as the
   bearings' have), so the game's other tests roll as they did whether anyone creeps or stalks.
 - **The denizens' stealth** *(for review)*: a hostile hunter by smell (its nose 6 or more, kinds.txt's: K_NOSE)
   coming at the character stalks it: its Stealth tested as it begins (the denizens' slot, RS_TEST with the actor:
@@ -3158,7 +3158,7 @@ The book has an ally fetch nothing and says little of gifts: Rhetoric "in the ta
   to revive it, so it's death at once rather than the book's Endurance times 20 seconds.  Coming up again is told
   ("You come up, gasping.").
 - **Hunger and thirst** *(every ruleset's: the book has none; the user's of 2026-10-21, DECISIONS.md's)*: counted in
-  minutes of want as the bodies' time goes (the referee's, every one's the same rules, rswant.h: the world tells it the
+  minutes of want as the bodies' time goes (the referee's, every one's the same rules, rf/want.c: the world tells it the
   minutes gone, a minute at a time while anything's to tell, else as its next level could come; twice as fast at
   vigorous work: running, fighting, swimming (whatever its pace: wtend.c's pc_swim), digging, climbing).  Thirst: thirsty at 8 hours, very thirsty at 16, parched at 24, dying of it
   at 48, dead at 72.  Hunger: hungry at 8 hours, very hungry at 24, starving at 3 days, wasting away at 10, dead at
@@ -3496,7 +3496,7 @@ incubation, a universal penalty of 20 till healed).  What the house adds, every 
 - **A remedy** *(for review; built 2026-11-02: the market, entertaining and remedies, below)*: an antidote taken makes
   the toxin's rate the better by its power (a theriac 2), the lindworm's numbing venom only by a strong one (afflict.c's
   o_aff_cure, by remedy: "drink the antidote"); a remedy the disease's.
-- **The air** *(every ruleset's, rsair.h; its figures for review)*: blackdamp (stale air, too little in it to breathe:
+- **The air** *(every ruleset's, rf/air.c; its figures for review)*: blackdamp (stale air, too little in it to breathe:
   choke-damp, a mine's CO2), whitedamp (a fire's or a blast's smoke: carbon monoxide, poison that gives no warning),
   firedamp (marsh gas, in the coal and shale beds: it burns).  Strength 1 a little to 3 much.  Blackdamp felt at once:
   1 short of breath (a fatigue level; stale air never kills), 2 gasping (2 levels), dizzy at ten minutes (4), the legs
@@ -3529,7 +3529,7 @@ incubation, a universal penalty of 20 till healed).  What the house adds, every 
   the clock, at need, the plan's); the explosion's harm to those near.
 - **The null ruleset's simple way** (dq0null.c): a poison sickens it a while (a dart's or a smear's half an hour a point
   of its dose, spoiled food's two hours: "You feel sick: there was poison in it.", "The sickness passes."), the flux
-  caught on a flat test shows a day on and lasts three; neither kills; the air rsair.h's, its levels none.
+  caught on a flat test shows a day on and lasts three; neither kills; the air rf/air.c's, its levels none.
 - **What it costs** *(the emulator)*: the air's looked at only as the character steps in a chunk that has a pocket, or
   out of one (part 73's, the water's, swapped in as wading is); the minds' steps a chunk's pocket's test each.
 

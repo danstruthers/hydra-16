@@ -1,18 +1,12 @@
 /*
-** rswant.h - hunger and thirst (slice 4.9: HOUSE.md's water, hunger and thirst, every ruleset's house rules), the
-** referee's to keep, each referee including it where its room is (dq0harn's overlay 7, want.c; dq0null's main), with
-** WANT_SAY (s) its way to put words in its news (RS_DESCRIBE b 4's, the bodies' time's).  Asked with the bodies' time
-** (RS_TIME, the world's: w1 the minutes gone, copied into x[16..17] by the referee before its reply's w1; a what the
-** character was about, 2 vigorous work: twice the want) and as it eats and drinks (RS_TIME, the UI's: w1 0, x[14] the meals eaten, | 0x80 a day's ration begun, x[15] the pints drunk);
-** the hub's want in x[8..13] (pc_hunger, pc_thirst, pc_want, pc_meals: the referee's own, copied in and back by its main
-** code), anew; its levels' rising told (news, grade 2, and 8: the world's long task asked about, soft); the clock's next ask (the reply's x[4..7]) the sooner for its next level.
-** want_of's result: the fatigue levels from want, | WANT_DIES dead of it (its words told)
+** want.c - (the house's rules, ../rshouse.h's) hunger and thirst: the want's levels by the time gone, what's eaten and
+** drunk; its words the ruleset's want_say's
 */
 
-#define WANT_X          8                       /* (The request's x: the hub's want, from pc_hunger on) */
-#define WANT_DIES       0x80
-#define WANT_MEAL       480                     /* (A meal: eight hours of hunger off) */
-#define WANT_PINT       360                     /* (A pint: six hours of thirst off) */
+#include "../hub.h"
+#include "../rs.h"
+#include "../referee.h"
+#include "../rshouse.h"
 
 static const unsigned want_hl[5] = { 480, 1440, 4320, 14400, 43200U };   /* (Hungry 8 hours, very 24, starving 3
                                                 **   days, wasting 10, dead 30) */
@@ -49,7 +43,7 @@ static unsigned __fastcall__ want_less (unsigned v, unsigned n)
     return v > n ? v - n : 0;
 }
 
-static unsigned char __fastcall__ want_of (struct req* r, unsigned long now)
+unsigned char __fastcall__ want_of (struct req* r, unsigned long now)
 {
     unsigned char* x = RS_TIME_WANT (*r);
     unsigned h = x[0] | x[1] << 8, t = x[2] | x[3] << 8, n = r->x[16] | r->x[17] << 8;
@@ -74,19 +68,19 @@ static unsigned char __fastcall__ want_of (struct req* r, unsigned long now)
     want_till = 0xFFFF;
     w = want_level (h, want_hl) | want_level (t, want_tl) << 4;
     if ((w & 15) > (o & 15)) {
-        WANT_SAY (want_words[(w & 15) - 1]);
-        RS_TIME_NEWS (*r) |= 8;                          /* (A level risen: the world's long task asked, soft) */
+        want_say (want_words[(w & 15) - 1]);
+        RS_TIME_NEWS (*r) |= 2 | 8;             /* (News; a level risen: the world's long task asked, soft) */
     }
     if ((w >> 4) > (o >> 4)) {
-        WANT_SAY (want_words[(w >> 4) + 4]);
-        RS_TIME_NEWS (*r) |= 8;
+        want_say (want_words[(w >> 4) + 4]);
+        RS_TIME_NEWS (*r) |= 2 | 8;
     }
     if ((w & 15) == 5 || (w >> 4) == 5) {
         d = WANT_DIES;
     }
     due = now + (unsigned long) ((want_till >> 1) + 1) * 600;
     if (due < RS_TIME_NEXT (*r)) {
-        RS_TIME_NEXT (*r) = due;     /* (Asked again as its next level could come) */
+        RS_TIME_NEXT (*r) = due;                /* (Asked again as its next level could come) */
     }
     x[0] = (unsigned char) h;
     x[1] = h >> 8;

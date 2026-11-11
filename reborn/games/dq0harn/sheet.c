@@ -490,9 +490,8 @@ void o_brief (void)
 ** shock four worse (the book's universal penalty, its injuries' and its fatigue's, is in every test already) (r a
 ** copy; the hub's pace and watchfulness in ps) */
 
-#define RS_HOUSE_NOTICE                         /* (The pace's and the watchfulness's: every referee's) */
-#define RS_HOUSE_STATE
-#include "../dq0/rshouse.h"
+#include "../dq0/rshouse.h"                   /* (The pace's and the watchfulness's, every referee's: hnotice.c's,
+                                                **   this overlay's) */
 
 signed char __fastcall__ o_noticing (const struct req* r)
 {

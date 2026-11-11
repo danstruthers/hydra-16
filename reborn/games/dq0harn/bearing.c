@@ -22,8 +22,7 @@
 unsigned char bway;                             /* (A failure's d8 less one, 0-7: the world's, a drift's way, or where
                                                 **   a north astray lies) */
 
-#define RS_HOUSE_BEARING
-#include "../dq0/rshouse.h"
+#include "../dq0/rshouse.h"                   /* (The bearings' dice, bdice: hbdice.c's, this overlay's) */
 
 /* A skill's mastery for its test (test_sk's, dq0harn.c's: one not opened at its opening level, less its penalty) */
 static int __fastcall__ level (unsigned char sk)

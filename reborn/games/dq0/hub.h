@@ -1574,7 +1574,7 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   ... 4 extreme, 0 off; fighting on with missiles turns to a hostile
                                                 **   within it (2026-10-30: dq0w.c's fight_on, wshoot.c's pc_shot) */
     /* Hunger and thirst (slice 4.9: HOUSE.md's hunger and thirst, every ruleset's), the referee's to count as the
-    ** bodies' time goes (RS_TIME's, the world's: rswant.h, a minute at a time, faster at vigorous work) and to set right
+    ** bodies' time goes (RS_TIME's, the world's: rf/want.c, a minute at a time, faster at vigorous work) and to set right
     ** as the character eats and drinks (RS_TIME's, the UI's: tend.c's feed), its levels' rising its news; kept with
     ** the game (the world's world.dat), shown on the status line once they matter (the UI's) */
     unsigned        pc_hunger, pc_thirst;       /* Minutes of want since it last ate its fill, drank its fill */
