@@ -1996,8 +1996,12 @@ module.exports = {
         const never = (g, line, w) => { if (upto(g, line).includes(w)) f.push('game ' + g + ', ' + line + ': told ' + w); };
         // (An ordinary line waits for the pack back on)
         order(1, 'take the rations from the backpack', ['You take off your backpack', 'drop the rations', 'You get out the rations.', 'You take the rations in your right hand.', 'You put your backpack back on.', 'You put down the rations.']);
-        // (halt: a stop, at once, the pack where it was left)
-        order(2, 'take the rations from the backpack', ['You get out the rations.', 'halt', 'You stop getting out the rations.', 'Your backpack lies at your feet.']);
+        // (halt: a stop, at once, the pack where it was left; the user's, 2026-11-11: the parse of "halt" and the end of the
+        //  short get-out step race at the turns pace, so a stop landing in the step after (the rations taken in hand, then
+        //  "You stop there.") passes too, the pack still left at its feet and nothing after it done)
+        order(2, 'take the rations from the backpack', upto(2, 'take the rations from the backpack').includes('You stop getting out the rations.') ?
+          ['You get out the rations.', 'halt', 'You stop getting out the rations.', 'Your backpack lies at your feet.'] :
+          ['You get out the rations.', 'halt', 'You take the rations in your right hand.', 'You stop there.', 'Your backpack lies at your feet.']);
         never(2, 'take the rations from the backpack', 'You put your backpack back on.');
         never(2, 'take the rations from the backpack', 'no ally');
         if (/\(b\) a backpack, worn/.test(inv(2))) f.push('game 2: the pack back on after the halt');

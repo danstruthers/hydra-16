@@ -3686,3 +3686,6 @@ left for review (see below).  **So the suite: 444 of 444 at stage 2; 443 at stag
 - dq0schol's d100 test is still the book's (its own `test`), and its scribes' and sages' figures.
 - dq0reachstop's race: a test that types as words show at the turns pace depends on the parser's speed; it wants a
   scene that holds the world while the line's parsed, or a pace that waits on a line entered.
+  **The user's, 2026-11-11: accept either step.**  Game 2's check passes the stop landing in the step after the one
+  it was typed in (the rations taken in hand, then "You stop there."), the pack still at its feet and nothing after it
+  done (tests/suites/dq0/gear.js); the game unchanged.
