@@ -64,7 +64,7 @@ unsigned char __fastcall__ s_room_tests (unsigned char touch)
     }
     if (found) {
         wk.m.b = touch != 0;                    /* (By touch: the hands' words, fixt.c's) */
-        told (E_PORTAL, found & 1 ? PO_FOUND : PO_FOUND_TRAP, 0);
+        told (E_PORTAL, (found & 1 ? PO_FOUND : PO_FOUND_TRAP) << 8, 0);
         wk.m.b = 0;
     }
     return found;

@@ -3194,3 +3194,99 @@ does or says changes; what's built:
   0.3M from its budget, so the next bank added (or much more code in this one) will want the budget raised, which the
   user's said is fine (the start's time isn't a concern).
 - **Tested:** all 442 tests pass.
+
+## Narration as data, stage 1 (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §3.2 and step 5, its first stage)
+
+The words of what came of an action were written by hand, a function for each feature (33 of them), each its own
+switch, its own strings and its own state.  This stage builds the generic mechanism, the critique's outcome event, one
+renderer and a phrase table, and moves the first five wording functions onto it.  The words the player sees are the
+same, letter for letter.
+
+- **The outcome event (msgs.def's E_OUTCOME).**  Not a new kind but a head, as I_DEN is the denizens' intents': the
+  outcome events include it (`E_DIG < E_OUTCOME; ...`), and the action is the event's kind.  Its fields: `who` the
+  actor (the struct's own); w1's high byte the outcome, its low byte n1; b n2; x[0-1] the thing done to (obj) and x[2-3]
+  the thing done with (instr), as handles (a thing's id, 0 none).  This is where E_DIG, E_CLIMB and E_TRAP already kept
+  their outcome and their number, so those three needed nothing from the world; E_PORTAL's w1 was the other way round
+  (PO_* low, the portal's kind high) and is now `pk:0-6 shows:7 po:8-15` (hub.h's PO_SHOWS 0x80, not 0x8000; its
+  senders: dq0w.c's three and its revealed, workpart.h's tail and its told's denizen branch (`wk.out = w1 >> 8`),
+  wroom.c's and wtrap.c's searches).  A kind names the head's fields its own way: hubgen.js lets a form's own field take
+  the place of an included one in the same slot and within its bits (E_DIG's `how` is its outcome and `feet` its n1;
+  E_TRAP's tk, tt and touch split n1; E_PORTAL's b is `room`, its search form's `touch`), so the tests read them by the
+  names they always have (dq0dig's `how`, dq0portc's `po` and `pk`) and no test changed.  The JSON's new `outcome` lists
+  the kinds that include the head.  E_PORTAL's a, b and w2 are declared now too (an opening's `what`, `lit`, `room`,
+  `far`; a search's `reach` and `touch`, a form by its po).  **Choice, for review:** the action is the kind, not a byte
+  of its own in a single E_OUTCOME kind.  That keeps the tests, the denizens' and the sound task's switches as they were,
+  and leaves the struct's bytes for the handles; a new action is a kind (an enum member in hub.h) and a msgs.def line.
+  **The handles are always 0 so far:** the world's dig works with the referee's tool names, not item ids, and a portal
+  has no handle yet (COMMANDS-CRITIQUE.md's §4.8: features lettered later); the UI gives the words for them (below).
+- **The phrase table (games/dq0/said.txt), made by the build** (games/dq0/saidgen.js, called by build.js's hubNumbers
+  after hubgen.js, into obj/gen/dq0said.h; made again only when said.txt, saidgen.js or the headers' numbers change).
+  A row is `KIND.OUTCOME[COND] "text"`: `DIG.begun`, `PORTAL.opened[pk=PK_WINDOW,PK_SLIT]`; the outcome's name is its
+  enum member's (msgs.def's `@D_BEGUN` gives the prefix); a kind's own outcomes, rows the UI chooses itself, are declared
+  (`own CLIMB rises falls`: SAID_CLIMB_RISES, a ledge come to).  `+"..."` says on after what's said, else the row is a
+  line of its own (msg's); `once` says it as a look's sentences are.  In the text, in braces: `{feet}` a field by its
+  msgs.def name (`far*SQ_FT`, `feet-121`, `feet>120`), `{feet?a|b|c}` a choice by its value, `{obj}` `{instr}` `{text}`
+  the UI's words (capitalised `{Obj}`; `{instr?a|b}` by whether one's given), `{actor}` `{Actor}` `{s}` "you" or the
+  denizen and the verb's ending, `{arg?...}` the UI's choice, `{a}` "a" or "an" by the word after it, `{rel F}` a
+  heading from the way the character faces, `{room F}` `{light}` the theme's names, `{trap F G}` a trap's name, `{F!...}`
+  said only as F changes (a dig's feet to go), `{forget}`, `{nl}`, and `{@NAME}` a piece (`@reveal`, "..., revealing a
+  passage, 30 feet of it", the four openings' and the windows' rows).  The critique's `%`-names became braces: a
+  template's letters and its codes are told apart without escapes, and choices nest.  123 rows, 11 pieces.
+- **Packed:** a kind's rows its outcome, a condition (a field and the mask of its values), a flag and its text, the
+  text's codes a byte each (a field by its place in a table of its byte, shift, mask and operation, so the renderer
+  reads any kind's fields without knowing the kind), its pieces apart and called; and the 26 words most said (" the ",
+  "portcullis", "shutters", " already" ...), chosen by the build by the bytes they save, a byte each.  7,107 bytes
+  without the words, 5,153 with them: the overlay's room, and the bytes read in as the game starts.
+- **One renderer (games/dq0/said.c, overlay 27: outcome_words).**  It finds the kind's row for the event's outcome (the
+  first whose condition holds, then the one with none; none, nothing said), writes the text into lb, and says it with
+  say, a `{nl}` as msg would, or with lb_said for a `once` row (lbsaid.s's no-sentence-twice rule a row's flag; no row
+  moved yet wants it).  The UI's words for a row are `said_s` (obj, instr, text) and its choice `said_n`, in the main
+  RAM, set by the caller; a field's last value for `{F!...}` is the main RAM's too (4 bytes, zero as the game starts, as
+  dig_words' dig_feet was).  What's worked out for a row stays with its caller, the part that's truly the feature's own:
+  main.c's s_news sets the dig's tool (dug_with) and the tool newly taken up (dig_with, "bare hands" its hands now, set
+  in s_dig_used), and for a dig that won't begin which of six reasons (said_n, by what it carries: s_dig_used, part 14,
+  which already refreshed the tools' list for it) and the better tool's name; a soft thing's name for a blow (PO_SOFT);
+  a ledge's rise made a CLIMB row (`rises`, `falls`).  E_TRAP's words are said from the main loop as trap_words' were
+  (untarget set there).
+- **Moved and deleted:** dig_words (intro.c, overlay 19), climb_words (intro.c, overlay 12), portal_words (intro.c,
+  overlay 10), fixt_words and its shows (fixt.c, overlay 4), trap_words (fixt.c, overlay 10): five of the 33, their stubs
+  gone (dq0.h's CW_RISES and CW_FALLS too).  intro.c keeps the title and harm_words; fixt.c the portal looked at and a
+  denizen in the way.  **The world's told copies:** none could go yet.  Each sends kinds not moved: workpart.h's (in five
+  parts) sends E_NOISE, E_HARM and E_BEAT besides E_PORTAL and E_TRAP; wdig.c's and wport.c's are E_DEN (a denizen's
+  digging, its door work: "denizens worded alike", stage 2), wfetch.c's and wshoot.c's (with told68) E_TASK, wfight.c's
+  E_FIGHT.  Their only change is E_PORTAL's w1.
+- **Room.** Overlay 27 is the renderer's and its table's: said.c some 2,400 bytes of code and the table 5,500, 282 bytes
+  free.  The status line (main.c's o_status, term.c's o_t_status and its two 128-byte copies) moved from it to overlay
+  19, into the room dig_words left (OV19BSS, its data last, dq0.cfg's; the stubs' overlay 19): **for review**, it was
+  put in 27 this morning; 27 is the narration's now, for the stages after this.  The build's room table:
+
+  | | before | after |
+  |---|---|---|
+  | dq0's main RAM | 3,378 | 3,399 |
+  | overlay 27 | 7,032 | 282 |
+  | overlay 19 | 297 | 1,452 |
+  | overlay 4 | 54 | 594 |
+  | overlay 10 | 304 | 49 (part 18's image put there by the packer) |
+  | overlay 12 | 1,263 | 236 (part 17's image put there) |
+  | the overlays' free bytes, all told | 17,090 | 18,138 |
+  | part 14 (s_dig_used) | 1,821 | 1,218 |
+  | part 11 (s_news) | 3,259 | 3,270 |
+  | dq0w's main RAM | 2,336 | 2,336 |
+  | dq0w's part 8 | 3 | 0 (E_PORTAL's packing, a few bytes in a few parts) |
+
+  The packer placed some parts' images anew as the banks' room changed (20 and 25 have 2,898 and 5,111 free now).
+- **The start** (dq0starttime): seed 1 234.1M cycles (234.7M before, budget 235M), seed 123456789 311.0M (310.7M,
+  budget 315M): the words packed, the bytes read in as it starts fewer than the five functions'.
+- **Checked:** the suite's output kept test by test before the change (a temporary dump in sim/test.js, not committed)
+  and after it, its sentences compared: the same, but where the status line's redraws fall.
+- **Left (stage 2 and on):** the other 28 wording functions (task_words, beat_words, harm_words, limb_words,
+  throw_words, fight_words, shot_words, water_words, felt_words, sky_words ...) and the 277 inline strings; the world's
+  told copies as their kinds move; SA_'s refusals as rows; the first words (D17) from a command's *begun* row; the
+  denizens' actions by the same rows with the actor swapped (E_DEN's DE_* as outcomes: `{Actor} dig{s} into the wall.`);
+  the sound task's event-to-sound mapping a column of the table (dq0s.c's world_sound); the handles filled (a dig's tool
+  by its item id, a portal's once features have them) and `{obj}` worded from them.  Overlay 27's 282 bytes won't take
+  much more: the next kinds want the renderer's code smaller (it's cc65's C; in assembly a third of it) or the table
+  in a bank of its own, read through hub_mem.
+- **Tested:** all 442 tests pass.  Every dq0 test's output before and after: no sentence of the five functions' said
+  differently (the only sentences new or gone are the real-time fights' rolls in dq0antidote and dq0denpace, which go
+  by the clock, and lines typed ahead).

@@ -852,7 +852,7 @@ static unsigned __fastcall__ door_on (unsigned nx, unsigned ny)
     s = o->state;
     d = o->parts;
     change (sn_, nx, ny, s | PS_OPEN, d, PORTAL_STATE);
-    event (E_PORTAL, 0, PO_OPENED);
+    event (E_PORTAL, 0, E_PORTAL_W1 (PK_DOOR, 0, PO_OPENED));
     return 2 * stept;
 }
 
@@ -1705,7 +1705,7 @@ void __fastcall__ s_go (unsigned char h)
                 return;
             }
             change (sn_, ox + bx, oy + by, k | PS_OPEN, d, PORTAL_STATE);
-            event (E_PORTAL, 0, PO_OPENED);
+            event (E_PORTAL, 0, E_PORTAL_W1 (PK_DOOR, 0, PO_OPENED));
             bt += 2 * stept;
         }
         if (way (bx, by), cut) {
@@ -4274,7 +4274,7 @@ void __fastcall__ s_door_work (unsigned char what)
     if (!door_ahead (&t)) {
         hub_map (0);
         event (what == PA_DISARM ? E_TRAP : E_PORTAL, 0, what == PA_DISARM ? TO_NONE << 8 : want_ == PW_WINDOW ?
-            PO_NONE | PK_WINDOW << 8 : PO_NONE);
+            E_PORTAL_W1 (PK_WINDOW, 0, PO_NONE) : E_PORTAL_W1 (PK_DOOR, 0, PO_NONE));
         HUB->pc_ready = HUB->now;
         return;
     }
@@ -4368,7 +4368,7 @@ void s_revealed (void)
     wk.m.who = 0;
     wk.m.a = what | lit << 2;
     wk.m.b = kind;
-    wk.m.w1 = wk.open | wk.pq.kind << 8 | (wk.pq.parts & PP_SKY ? 0 : PO_SHOWS);   /* (A window on the surface: its sky
+    wk.m.w1 = (unsigned) wk.open << 8 | wk.pq.kind | (wk.pq.parts & PP_SKY ? 0 : PO_SHOWS);   /* (A window on the surface: its sky
                                                 **   told by part 76's, as it's reckoned) */
     wk.m.w2 = dist;
     wk.m.t = HUB->now;

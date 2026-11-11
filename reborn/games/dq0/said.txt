@@ -1,0 +1,202 @@
+# said.txt - Dingus Quest Zero's phrase table: the words of what came of an action (ENGINE-CRITIQUE.md's §3.2, narration
+# as data).  The world tells an outcome event (msgs.def's outcome events: E_DIG, E_CLIMB, E_PORTAL, E_TRAP, their head
+# E_OUTCOME), and the UI's one renderer (said.c, overlay 27: outcome_words) words it by its row here, chosen by its kind and its
+# outcome.  Made by the build (games/dq0/saidgen.js, after hubgen.js) into obj/gen/dq0said.h: the rows packed, their
+# fields' places in struct msg (msgs.def's, as cc65 lays them out), the names of the UI's own outcomes (SAID_*).
+#
+#   own KIND NAME ...           outcomes of the UI's own for KIND: rows it chooses itself (said_as), numbered after its
+#                               enum's (SAID_KIND_NAME: SAID_CLIMB_RISES)
+#   @NAME "text"                a piece of text, put where a row has {@NAME}
+#   KIND.OUTCOME[COND] "text"   a row: KIND the event's kind less its E_ (DIG: E_DIG); OUTCOME its outcome's name less
+#                               its enum's prefix, in lower case (begun: D_BEGUN), or an own one; [COND] (F=V,V ...: a
+#                               field and its values, the headers' names or numbers under 8) the row's only where the
+#                               field's one of them (such rows tried first, in their order, then the one without)
+#   ... +"text"                 said on after what's said already (else on a line of its own: msg's)
+#   ... once "text"             said as a look's sentences are (lbsaid.s's lb_said): none said twice in an answer
+#   A line begun with a space goes on with the one before it: "text" "text" one text.  In the text, \n a new line, \"
+#   a quote, \\ a backslash, and in braces:
+#       {nl}                    a line of its own here (msg's: a new line if the story's line has words)
+#       {F}                     the event's field F (msgs.def's name for it: {feet}); F-K less K (0 at least), F*K
+#                               times K, F>K 1 if it's more than K, else 0 (K a number or a header's name: far*SQ_FT)
+#       {F?a|b|c}               a, b, c ... by F's value (0, 1, 2 ...; the last for any past them); each may hold braces
+#       {obj} {Obj} {instr} {Instr} {text} {Text}   the words the UI gives (said_s): the thing done to, the thing done
+#                               with, a word of the row's own; capitalised.  {obj?a|b} ...: a if none's given, else b
+#       {actor} {Actor} {s}     "you" or the denizen ("the giant rat", "Grub"); "s" for a denizen, "" for you
+#                               ("open{s}"); {actor?a|b}: a for the character, b for a denizen
+#       {arg} {arg?a|b ...}     the UI's number (said_n): a choice it's made for the row
+#       {a}                     "a", or "an" if the word after it begins with a vowel
+#       {rel F}                 the heading F (H_N ... H_NW), from the way the character faces ("to your left")
+#       {room F} {light}        the theme's names: a room's kind F, the light it has (theme_named's)
+#       {trap F G}              a trap's name, its kind F and its trigger G (words.c's trap_name)
+#       {F!text}                said only if F isn't as it was the last time this was said for the kind (and F kept);
+#                               {forget}: as if it were 0
+#       {@NAME}                 a piece's text
+
+# ---- Digging (E_DIG: how, D_*; feet the feet to go).  The UI gives the tool it's digging with as instr (dug_with), and
+# as text the one it's newly taken up, named once (dig_with: "bare hands" its hands); a better tool told of, text the
+# better one and instr the one named; no tool that bites, its arg the case (main.c's dig_none) and text its tool's word
+
+@togo       "{feet! ({feet?{feet} feet|A foot|{feet} feet} to go.)}"
+@spell      "{text?{nl}|\nYou dig with your {text}. }"
+@mat        "{feet?stone|hard-packed earth|stone|masonry|flagstones|earth|stone}"
+@door       "That's a door: open it, or break it down."
+@window     "That's a window: there's no digging it."
+@bars       "Those are iron bars: they won't dig."
+
+DIG.begun       +"\nYou set to digging: some {feet} feet of it, by the look of it.{forget}"
+DIG.again       "You set to digging again where you left off.{forget}{@togo}"
+DIG.good        +"{@spell}The work goes well.{@togo}"
+DIG.poor        +"{@spell}The work goes slowly.{@togo}"
+DIG.slip        +"{@spell}Your tool slips and turns; little comes of that spell of work.{@togo}"
+DIG.roof        "The rotten rock splits, and part of the roof falls into the hole.{@spell}The work goes slowly.{@togo}"
+DIG.through     "{feet?You break through.|The last of the rock gives way beneath you: the shaft is through.}"
+DIG.better      +"\nYour {text} would do this better, but you set to it with the {instr} as you said."
+DIG.no_tool     +"{arg?\nYour {instr} won't dig {@mat}.{text?| Your {text} would.}"
+                "|\nYour wood chisel doesn't seem to be working on the {@mat}."
+                "|{nl}A chisel and a hammer take both hands."
+                "|{nl}You'd need a hammer to drive the chisel."
+                "|\nYour {text} only scratches at the {@mat}: this isn't getting anywhere."
+                "|\nYou need better tools: your hands make no mark on the {@mat}.}"
+DIG.found       +"\nYour {instr} strikes {feet?wood|iron-bound oak|iron|stone}: a door, behind the facing."
+DIG.portal      "{feet?{@door}|{@window}|{@bars}|{@bars}|{@bars}|{@bars}|{@door}|{@window}|This isn't getting anywhere.}"
+DIG.solid       "Beneath the shaft is only solid rock, with nothing under it to break into."
+
+# ---- Climbing (E_CLIMB: how, K_*; feet the feet to go, or climbed, or fallen).  A ledge come to (E_LEDGE: the UI's
+# rises and falls, its rise the feet; past LEDGE_MET, what a straight walk came to)
+
+own CLIMB rises falls
+
+@met        "\nYou come to {feet-121?the wall|a closed door|a portcullis, down|a drop|a rise|the edge of a pit|a trap you know of}."
+
+CLIMB.rises     +"{feet>120?\nThe floor rises {feet} feet at a ledge ahead: climb it (u) to go on.|{@met}}"
+CLIMB.falls     +"{feet>120?\nThe floor falls {feet} feet at a ledge ahead: climb down it (d) to go on.|{@met}}"
+CLIMB.begun     +"\nYou set to climbing: {feet} feet of it."
+CLIMB.on        +"\nYou climb on ({feet} feet to go)."
+CLIMB.back      +"\nYou slip back a little ({feet} feet to go)."
+CLIMB.nohold    +"\nYou find no hold yet ({feet} feet to go)."
+CLIMB.slid      +"\nYou slip, and slide back down to the pit's floor: {feet} feet to climb (climb up to try again)."
+CLIMB.fell      +"{feet?{nl}Your hold gives way before you're off the ground.|\nYour hold gives way, {feet} feet up: you fall.}"
+CLIMB.jumped    +"\nYou jump, and drop {feet} feet."
+CLIMB.up        "You haul yourself up over the edge."
+CLIMB.down      "You come down to the foot of the ledge."
+CLIMB.held      "You come down to the foot of the ledge."
+
+# ---- A portal worked (E_PORTAL: po, PO_*; pk the portal's kind; an opening's shows, what the look after it found
+# beyond it: "You open the door, revealing a passage, 30 feet of it.").  A blow with a soft thing: instr its name
+
+@reveal     "{shows?|, revealing {what?only darkness beyond|a passage, {far*SQ_FT} feet of it|{a} {room room}{lit?|, {light}}}}"
+
+PORTAL.none[pk=PK_WINDOW,PK_SLIT]       "There's no window that way."
+PORTAL.opened[pk=PK_WINDOW,PK_SLIT]     "You open the shutters{@reveal}."
+PORTAL.closed[pk=PK_WINDOW,PK_SLIT]     "You close the shutters."
+PORTAL.is_open[pk=PK_WINDOW,PK_SLIT]    "The shutters stand open already."
+PORTAL.is_shut[pk=PK_WINDOW,PK_SLIT]    "The shutters are shut already."
+PORTAL.locked[pk=PK_WINDOW,PK_SLIT]     "The shutters are locked."
+PORTAL.barred[pk=PK_WINDOW,PK_SLIT]     "The shutters are barred from the other side."
+PORTAL.unbarred[pk=PK_WINDOW,PK_SLIT]   "You lift the bar and open the shutters{@reveal}."
+PORTAL.no_lock[pk=PK_WINDOW,PK_SLIT]    "There's no lock on them to pick."
+PORTAL.forced[pk=PK_WINDOW,PK_SLIT]     "With a crack the shutters burst open{@reveal}."
+PORTAL.held[pk=PK_WINDOW,PK_SLIT]       "It holds."
+PORTAL.none             "There's no door that way."
+PORTAL.opened           "You open the door{@reveal}."
+PORTAL.closed           "You close the door."
+PORTAL.is_open          "It stands open already."
+PORTAL.is_shut          "It's shut already."
+PORTAL.locked           "It won't open: it's locked."
+PORTAL.barred           "It won't give: it's barred from the other side."
+PORTAL.unbarred         "You lift the bar and open the door{@reveal}."
+PORTAL.picked           "The lock gives with a click."
+PORTAL.not_picked       "The lock defeats you, for now."
+PORTAL.no_picks         "You've nothing to pick a lock with."
+PORTAL.no_lock          "There's no lock on it to pick."
+PORTAL.forced           "With a crack the door bursts open{@reveal}."
+PORTAL.held             "The door holds."
+PORTAL.found[touch=1]   "Your hands find a door hidden in the wall."
+PORTAL.found            "You find a door hidden in the wall."
+PORTAL.nothing[touch=1] "You fumble around in the dark and find nothing."
+PORTAL.nothing          "You find nothing hidden."
+
+PORTAL.raised           "The portcullis grinds up, and catches, raised{@reveal}."
+PORTAL.heaved           "The portcullis rises, and catches, raised{@reveal}."
+PORTAL.lowered          "You loose the winch: the portcullis crashes down."
+PORTAL.is_up            "The portcullis is raised already."
+PORTAL.is_down          "The portcullis is down already."
+PORTAL.no_winch         "Its winch is on the other side: you can't lower it from here."
+PORTAL.too_heavy        "The portcullis won't rise."
+PORTAL.not_portc[pk=PK_PORTCULLIS]  "It's a portcullis: it's raised or lowered."
+PORTAL.not_portc        "That isn't a thing raised or lowered."
+PORTAL.no_shutters      "It has no shutters to open or close."
+PORTAL.bent             "The bars bend apart: there's room to get through."
+PORTAL.bars_hold        "The bars won't give."
+PORTAL.shattered        "The glass shatters with a crash."
+PORTAL.smashed          "The shutters splinter and give way{@reveal}."
+PORTAL.nothing_there    "There's nothing in it to break."
+PORTAL.in_way           "You can't climb through: it's shut, glazed or barred."
+PORTAL.slit             "An arrow slit: only light and arrows pass it, and it's too narrow to climb through."
+PORTAL.climbed          "You get up onto the sill, and through."
+PORTAL.no_climb         "You can't get up onto the sill."
+PORTAL.slipped          "You slip from the sill, and fall."
+PORTAL.not_window       "That isn't a window: walk through it."
+PORTAL.trapped          "There's a trap on that door you know of: disarm it before you open it."
+
+PORTAL.broke_down       "It gives way, and crashes open{@reveal}."
+PORTAL.giving           "It's giving, but it holds yet."
+PORTAL.holding          "It's marked, but it holds."
+PORTAL.no_mark          "Your blows make no mark on it."
+PORTAL.wrecked          "It's broken: it won't shut."
+PORTAL.lifted           "You lift the bar out of its brackets, and set it down."
+PORTAL.bar_far          "The bar's on the far side: you can't get at it from here."
+PORTAL.no_bar           "It isn't barred."
+PORTAL.set_fast         "The bars are set fast in the stone: bend them, or break them, first."
+PORTAL.pane_out         "The pane comes free of its frame, and you lift it out whole."
+PORTAL.bars_out         "You work the bent bars free, and lift them out."
+PORTAL.bars_broken      "The bars break out of the stone with a clang."
+PORTAL.rebarred         "You set the bar in its brackets: the door is barred."
+PORTAL.no_brackets      "There are no brackets for a bar on this side."
+PORTAL.is_barred        "It's barred already."
+PORTAL.shut_first       "It stands open: shut it first, then bar it."
+PORTAL.burst            "It was burst open once: its brackets won't hold a bar now."
+PORTAL.no_bar_held      "You have no bar to put in its brackets (carry one, or set one down by it)."
+PORTAL.bar_short        "That bar is too short to span the door."
+PORTAL.gap              "The bars buckle and break under your blows: there's a gap to get through."
+PORTAL.jammed           "Its bars are forced apart, and it's jammed where it is: there's a gap to get through."
+
+PORTAL.soft[pk=PK_WINDOW,PK_SLIT]   "You attempt to batter the window with the {instr}, but it seems ineffectual."
+PORTAL.soft[pk=PK_PORTCULLIS]       "You attempt to batter the portcullis with the {instr}, but it seems ineffectual."
+PORTAL.soft             "You attempt to batter the door with the {instr}, but it seems ineffectual."
+
+PORTAL.keyed            "You unlock it with its key."
+PORTAL.key_locked       "You lock it with its key."
+PORTAL.no_key           "You have no key that fits its lock."
+PORTAL.is_locked        "It's locked already."
+PORTAL.blocked          "Something heavy stands against it: it won't open."
+
+# ---- A trap (E_TRAP: to, TO_*; tk its kind, tt its trigger, touch found by it in the dark).  A timed work's outcome
+# worded to read alone after its first words
+
+@pit        "The floor gives way beneath you: a pit{tk>1?!|, spikes at its foot!}"
+@set        "{tt?A plate sinks under your foot with a click. |A wire parts against your shin. |As the door opens, something clicks. |}"
+            "{tk-3?Stones crash down from above!|A blade scythes out of the wall!|Darts hiss out of the wall!|A cloud of choking gas billows up!"
+            "|Somewhere near, a bell clangs, loud and long.}"
+@fingers    "{tk>2?Your fingers find the edge of a cover in the floor: |{tt?Your fingers find the edges of a plate set in the floor: "
+            "|Your fingers find a wire stretched across the floor: |Your fingers find a wire that runs to the door: }}{trap tk tt}."
+
+TRAP.sprung             "{tk>2?{@pit}|{@set}}"
+TRAP.dodged             "{tk>2?{@pit}|{@set} You throw yourself clear.}"
+TRAP.resisted           "{tk>2?{@pit}|{@set} You hold your breath and stagger clear of it.}"
+TRAP.choked             "{tk>2?{@pit}|{@set} You choke on it; everything goes black, and you come to some time later.}"
+TRAP.opened             "The pit's cover falls in."
+TRAP.noticed[touch=1]   "{@fingers}"
+TRAP.noticed            "You stop short: just ahead is a trap, {trap tk tt}."
+TRAP.found[touch=1]     "{@fingers}"
+TRAP.found              "You find a trap: {trap tk tt}."
+TRAP.disarmed           "You have it: the trap is disarmed."
+TRAP.not_yet            "The trap defeats you, for now."
+TRAP.fumbled            "Your hand slips: the trap goes off!"
+TRAP.assessed           "You make out how it works: now to disarm it."
+TRAP.puzzled            "You can't make out how it works."
+TRAP.cant               "It's set by magic: you've no means to undo it."
+TRAP.pit                "There's no disarming a pit: you'll have to go round it."
+TRAP.clean              "You go over it carefully, and find no trap."
+TRAP.known              "You know of a trap on it already: {trap tk tt}."
+TRAP.none               "There's no trap you know of within reach."

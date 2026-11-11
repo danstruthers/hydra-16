@@ -44,6 +44,7 @@
 #include "level.h"
 #include "life.h"
 #include "cmds.h"                               /* (The command handlers' shared calls, by meaning) */
+#include "dq0said.h"                            /* (The phrase table's own outcomes: the build's, said.txt's) */
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
@@ -905,15 +906,16 @@ unsigned char __fastcall__ believed (unsigned char h)
     return (h + HUB->pc_skew) & 7;
 }
 
-/* ---- The status line (overlay 27's, through its stub status: the main RAM's room, 2026-11-11; the hub read through
+/* ---- The status line (overlay 19's, through its stub status: the main RAM's room, 2026-11-11, overlay 27's till the
+** outcome events' words came there, the same day; the hub read through
 ** hub_mem, whatever's in the window as it's called, its left side the name itself, the line drawn by o_t_status, its
 ** own overlay's) */
 
 static char sright[72];                         /* (Its right side, in the main RAM: bar_text's, overlay 3's, writes
                                                 **   it.  Its longest: paused, a fight's words, the state, the facing;
                                                 **   dq0 -m, the minutes) */
-#pragma code-name (push, "OV27CODE")
-#pragma rodata-name (push, "OV27RODATA")
+#pragma code-name (push, "OV19CODE")
+#pragma rodata-name (push, "OV19RODATA")
 void o_status (void)
 {
     static const char* const posw[] = { "", " PRONE", " CROUCHED", " KNEELING", " SITTING", "", "", "" };
@@ -1147,7 +1149,8 @@ static unsigned char events (void)          /* (How many there were) */
             break;
         case E_TRAP:
             if (m.who == 0) {
-                trap_words (m.w1);
+                untarget |= E_TRAP_TO (m) == TO_SPRUNG;   /* (Set off: the character turns, its target let go) */
+                outcome_words (&m);              /* (Its words said.txt's: said.c) */
             }
             break;
         case E_TAKEN:                           /* (A thing walked over to and taken up: the world's, I_TAKE) */
@@ -1281,6 +1284,7 @@ void __fastcall__ s_news (const struct msg* m)
 {
     unsigned char k;
     struct req* r;
+    struct msg c;
 
     switch (m->kind) {
     case E_BEAT:
@@ -1299,26 +1303,32 @@ void __fastcall__ s_news (const struct msg* m)
         }
         tell (m->w1 == BRG_LOST ? T_LOST_BEARINGS : T_BEARINGS_BACK);
         break;
-    case E_DIG:
+    case E_DIG:                                 /* (Its words said.txt's, said.c's: the tool it digs with, and the one
+                                                **   newly taken up, named once, the UI's) */
         k = E_DIG_HOW (*m);
+        said_s[1] = dug_with;
+        said_s[2] = dig_with;
         if (k == D_BEGUN || k == D_AGAIN) {
             dug_with[0] = 0;
-        } else if (k != D_PORTAL && k != D_BETTER) {
-            dig_used (m->b | k << 8);               /* (And the rock it's into told: slice 4.10's; D_NO_TOOL's b what
-                                                **   it's into, why told by what it carries, 2026-11-02) */
+        } else if (k != D_PORTAL) {
+            dig_used (m->b | k << 8);           /* (And the rock it's into told: slice 4.10's; D_NO_TOOL's b what it's
+                                                **   into, why told by what it carries, 2026-11-02; a better tool, its
+                                                **   name: their words') */
         }
-        if (k == D_ROOF) {                      /* (Poor rock come down on the hole: slice 4.10's) */
-            msg ("The rotten rock splits, and part of the roof falls into the hole.");
-            k = D_POOR;
+        outcome_words (m);
+        if ((k >= D_GOOD && k <= D_SLIP) || k == D_ROOF) {
+            dig_with[0] = 0;                    /* (Named: once) */
         }
-        dig_words (k, m->w1 & 0xFF);
         break;
-    case E_LEDGE:
+    case E_LEDGE:                               /* (A ledge come to: said.txt's own rows, CLIMB.rises and .falls) */
         k = E_LEDGE_RISE (*m) > 0 ? E_LEDGE_RISE (*m) : -E_LEDGE_RISE (*m);
-        climb_words (E_LEDGE_RISE (*m) > 0 ? CW_RISES : CW_FALLS, k);
+        c.kind = E_CLIMB;
+        c.who = 0;
+        c.w1 = (E_LEDGE_RISE (*m) > 0 ? SAID_CLIMB_RISES : SAID_CLIMB_FALLS) << 8 | k;
+        outcome_words (&c);
         break;
     case E_CLIMB:
-        climb_words (E_CLIMB_HOW (*m), m->w1 & 0xFF);
+        outcome_words (m);
         break;
     case E_HARM:                                /* (The referee's words of its wounds, then the UI's of it all) */
         r = ask_b (RS_DESCRIBE, 0, 2);
@@ -1330,21 +1340,27 @@ void __fastcall__ s_news (const struct msg* m)
         }
         break;
     case E_PORTAL:
+        k = E_PORTAL_PO (*m);
         if (finds == 0xFF) {                    /* (A search's end: the things concealed about it too, as far as the
                                                 **   walls were searched, the part of it done: the world's reach) */
-            HUB->ireq.to = m->a;
+            HUB->ireq.to = E_PORTAL_SEARCH_REACH (*m);
             finds = things (IO_SEARCH, "");
         }
-        if (!finds || m->w1 != PO_NOTHING) {
-            fixt_words (m);
+        if (!finds || k != PO_NOTHING) {
+            if (k == PO_SOFT) {                 /* (A blow with a soft thing, the hub's pc_strike's: its name, the
+                                                **   thing struck with) */
+                hub_mem (KIND_BANK, lb + 300, CATALOGUE[SK_KIND (HUB->pc_strike)].name, sizeof CATALOGUE[0].name);
+                lb[300 + sizeof CATALOGUE[0].name] = 0;
+                said_s[1] = lb + 300;
+            }
+            outcome_words (m);               /* (Its words said.txt's: said.c) */
         }
-        k = E_PORTAL_PO (*m);                   /* (A part lifted out: now taken up) */
         if (lifting[0] && (k == PO_LIFTED || k == PO_PANE_OUT || k == PO_BARS_OUT)) {
             strcpy (pending, lifting);
         }
         lifting[0] = 0;
         rebar |= k == PO_REBARRED;
-        if (finds && (m->w1 == PO_FOUND || m->w1 == PO_NOTHING || m->w1 == PO_FOUND_TRAP)) {
+        if (finds && (k == PO_FOUND || k == PO_NOTHING || k == PO_FOUND_TRAP)) {
             msg (tt ());                        /* (What its search turned up besides) */
             finds = 0;
         }
@@ -1901,7 +1917,10 @@ void to_hand (void)
 ** alone, through its stub: the main RAM's room); bk an E_DIG's b, its how (D_*) times 256.  And the rock a spell's
 ** into (rock.h's RK_*: the b's high four bits, slice 4.10's), told as it's come to (its first spell, or the b's 8: a
 ** new rock): how it looks and how it goes, its name too after a spell that went well (Mining's eye: D_GOOD), and at
-** the first spell that goes well after any that didn't (the user's, 2026-11-03: dug_rock, the rock last named) */
+** the first spell that goes well after any that didn't (the user's, 2026-11-03: dug_rock, the rock last named).  A
+** better tool told of (D_BETTER), or a dig that won't begin (D_NO_TOOL: bk's low byte what it's into, MAT_* + 1): its
+** words' (said.txt's DIG.better, DIG.no_tool) worked out, the tools named (said_s) and why (said_n), by what it
+** carries (HOUSE.md's, 2026-11-02; the user's, 2026-11-03: the thing named, no use on it, the one that would be) */
 char dig_with[16];
 char dig_word[16];                              /* (The thing named to dig with, as said: resolve.c's; the world's dig_kind) */
 static unsigned char dug_rock;
@@ -1915,16 +1934,45 @@ void __fastcall__ s_dig_used (unsigned bk)
     const char* r;
     unsigned char n = bk & 3, i = (unsigned char) bk >> 4, g = bk >> 8 == D_GOOD;
 
-    if (bk >> 8 == D_NO_TOOL) {
-        to_hand ();                             /* (What it carries, fresh, the tools' list: dig_words's why: an overlay
-                                                **   can't, the window its own) */
+    if (bk >> 8 == D_NO_TOOL || bk >> 8 == D_BETTER) {
+        if (bk >> 8 == D_NO_TOOL) {
+            to_hand ();                         /* (What it carries, fresh, the tools' list: its words' why) */
+        }
+        said_s[1] = dig_word;                   /* (The thing named; the better one to hand) */
+        said_s[2] = lb + 160;
+        memcpy (lb + 160, HUB->dig_better, 8);
+        lb[168] = 0;
+        memcpy (lb + 170, HUB->dig_name, 8);
+        lb[178] = 0;
+        said_n = 0;
+        if (bk >> 8 == D_BETTER || (lb[170] && strcmp (lb + 170, "chisel"))) {
+            return;                             /* (The thing named, no use on it: the user's, 2026-11-03) */
+        }
+        hub_mem (UI_BANK, lb + 200, UIREC->things_text, 180);   /* (What it carries) */
+        lb[380] = 0;
+        n = (unsigned char) bk - 1;             /* (What it's into, MAT_*) */
+        n = n != MAT_EARTH && n != MAT_SOIL;    /* (Hard) */
+        r = strstr (lb + 200, "shovel") ? "shovel" : strstr (lb + 200, "spade") ? "spade" : strstr (lb + 200, "mattock") ?
+            "mattock" : strstr (lb + 200, "blade") ? "blade" : strstr (lb + 200, "dagger") ?
+            "dagger" : strstr (lb + 200, "knife") ? "knife" : "";
+        if (n && !strstr (lb + 200, "chisel") && strstr (lb + 200, "woodchi")) {
+            said_n = 1;                         /* (A wood chisel) */
+        } else if (n && strstr (lb + 200, "chisel")) {
+            said_n = strstr (lb + 200, "hammer") ? 2 : 3;   /* (A chisel: a hammer, both hands; none) */
+        } else if (*r) {
+            strcpy (lb + 200, r);               /* (A tool that only scratches it) */
+            said_s[2] = lb + 200;
+            said_n = 4;
+        } else {
+            said_n = 5;                         /* (Its hands) */
+        }
         return;
     }
     HUB->ireq.to = HUB->dig_wear[n];
     things (IO_WEAR, HUB->dig_tool[n]);
     if (strcmp (dug_with, HUB->ireq.name)) {
         strcpy (dug_with, HUB->ireq.name);
-        strcpy (dig_with, dug_with);
+        strcpy (dig_with, strcmp (dug_with, "hands") ? dug_with : "bare hands");   /* (Named once: "your bare hands") */
     }
     if (i && bk >> 8 != D_THROUGH && (dig_with[0] || bk & 8 || (g && dug_rock != i))) {
         if (g) {

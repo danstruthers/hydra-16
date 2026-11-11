@@ -41,7 +41,7 @@ static void __fastcall__ told (unsigned char kind, unsigned w1, unsigned char a)
 #ifdef W_FRONT
     if (wk.who) {                               /* (An actor's work: its outcome kept, the rest wport.c's to tell) */
         if (kind == E_PORTAL) {
-            wk.out = w1;
+            wk.out = w1 >> 8;                   /* (E_PORTAL's po) */
         }
         return;
     }
@@ -218,7 +218,7 @@ static void __fastcall__ tail (unsigned char out)
                                                 **   dq0w.c's revealed, the user's, 2026-10-22) */
         return;
     }
-    told (E_PORTAL, out | wk.pq.kind << 8, 0);
+    told (E_PORTAL, (unsigned) out << 8 | wk.pq.kind, 0);
     if (wk.hb || wk.hw) {
         told (E_HARM, HC_STRUCK | wk.hb << 8 | wk.hw, 0);
     }

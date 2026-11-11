@@ -119,11 +119,14 @@ function cflags() {
 }
 
 // Dingus Quest Zero's hub numbers for the other languages (games/dq0/hubgen.js: from the C headers as cc65 sees them,
-// into obj/gen: actions.h, dq0hub.json, the assembly's dq0hub_*.inc), before its tasks and their make.js files
+// into obj/gen: actions.h, dq0hub.json, the assembly's dq0hub_*.inc), before its tasks and their make.js files; and
+// its phrase table (games/dq0/saidgen.js: said.txt into obj/gen/dq0said.h, by the outcome events' fields)
 function hubNumbers(say = () => {}) {
   const home = cc65Home(), own = d => fs.existsSync(path.join(home, d)) ? ['-I', path.join(home, d)] : [];
-  return require('./games/dq0/hubgen.js').generate({ say, cc65: { bin: CC65, flags: ['-t', 'none', '--cpu', '65C02',
+  const H = require('./games/dq0/hubgen.js').generate({ say, cc65: { bin: CC65, flags: ['-t', 'none', '--cpu', '65C02',
     '-I', at('sdk', 'c', 'include'), ...own('include'), '-I', at('games', 'dq0'), '-I', at('obj', 'gen')] } });
+  require('./games/dq0/saidgen.js').generate(H, say);
+  return H;
 }
 
 // C and assembly sources into objdir (a .c: cc65 makes its .s there, then ca65).  OUT: the objects

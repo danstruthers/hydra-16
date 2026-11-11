@@ -8,7 +8,9 @@
 **              being typed at the bottom, kept whole while the story moves on; sayf, the story's own printf
 **   bank.s     the RAM banks: the window at $8000, bytes between a bank and the main RAM, the overlays' calls
 **   look.c     what the character perceives, in words (the world's record of it, in the hub: level.h); the map
-**   fixt.c     (overlay 4) the fixtures' words: portcullises, windows and slits worked, traps (an E_TRAP's)
+**   fixt.c     (overlay 4) the fixtures' words: a portal looked at, a denizen in the way
+**   said.c     (overlay 27) the outcome events' words (a dig, a climb, a portal worked, a trap): the one renderer of
+**              the phrase table, said.txt (the build's: games/dq0/saidgen.js, obj/gen/dq0said.h)
 **   blows.c    (overlay 6) a fight's words: the blows struck, the wounds, a denizen's fall (an E_FIGHT's)
 **   intro.c    (overlay 1) the title and the pace (the character is hmchar's: a program of its own,
 **              games/hmchar, that main.c runs, and whose file the referee reads)
@@ -331,7 +333,6 @@ extern unsigned qlen;
 struct sway;
 void __fastcall__ sway_words (const struct sway* s);   /* Overlay 6: the character's way with a denizen, the
                                                 **   denizens' task's answer (the hub's sway, copied), into lb */
-void __fastcall__ dig_words (unsigned char how, unsigned char feet);   /* Overlay 1: digging's, how it goes */
 unsigned char __fastcall__ task_words (unsigned w, unsigned char named);   /* Overlay 3: a long task's (task.c) */
 void __fastcall__ robbed (unsigned w, char* who);   /* Overlay 15: a robbery's words (task.c's, 2026-11-06) */
 void __fastcall__ shot_words (unsigned w, unsigned char named);   /* Overlay 1: the missiles' (shots.c: slice 4.7's) */
@@ -364,19 +365,17 @@ void __fastcall__ appraise (const struct ireq* q, signed char g, unsigned char e
 extern char dug_with[16];                       /* The tool a dig took: main.c's */
 extern char dig_with[16];                       /* The tool a dig's taken up, to name (then ""): main.c's */
 extern char dig_word[16];                       /* The thing named to dig with, as said: main.c's */
-void __fastcall__ climb_words (unsigned char how, unsigned char feet); /* Overlay 1: climbing's (a ledge's:
-                                                                        **   CW_*) */
-enum { CW_RISES = 0x40, CW_FALLS };
-void __fastcall__ portal_words (unsigned char out);                     /* Overlay 1: a door worked's, into lb */
 void __fastcall__ harm_words (unsigned w, unsigned cond);               /* Overlay 12: harm's (an E_HARM's w1,
                                                                         **   the conditions; the wounds in lb) */
-void __fastcall__ fixt_words (const struct msg* m);    /* Overlay 4: a portal worked's (an E_PORTAL: a door's,
-                                                **   portal_words; an opening's with what it shows) */
-void __fastcall__ trap_words (unsigned w);      /* Overlay 4: a trap's (an E_TRAP's w1) */
 void __fastcall__ trap_name (unsigned char kind, unsigned char trigger, unsigned char state);  /* Overlay 10: a
                                                 **   trap's name, added to lb */
 void den_way (void);                            /* Overlay 4: a denizen in the way (its name in lb) */
 struct msg;
+void __fastcall__ outcome_words (const struct msg* m);   /* Overlay 27 (said.c): an outcome event worded, its row
+                                                **   of the phrase table (said.txt: by its kind and its outcome; none, nothing said) */
+extern const char* said_s[3];                   /* (said.c's, the main RAM's: the UI's words for a row, the thing done
+                                                **   to, the thing done with, a word of the row's own; 0 or "" none) */
+extern unsigned char said_n;                    /* (A choice of the UI's for a row: its {arg}) */
 struct fight;
 void __fastcall__ feed (unsigned char eat);     /* (Part 16's, feed.c: "eat", "drink", slice 4.9's) */
 void __fastcall__ water_words (unsigned w);     /* Overlay 4 (water.c): the water's news, worded

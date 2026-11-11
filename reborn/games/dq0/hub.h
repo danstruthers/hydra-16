@@ -564,8 +564,8 @@ enum {
                                                 **   (the denizens') */
     E_LEDGE,                                    /* who's come to a ledge: w1 its rise (a signed char: a fall less) */
     E_CLIMB,                                    /* who's climbing: w1 how it goes (K_*) times 256, and the feet to go */
-    E_PORTAL,                                   /* who's worked a door: w1 what came of it (PO_*), and the
-                                                **   portal's kind (PK_*) times 256; a search's a its reach (the
+    E_PORTAL,                                   /* who's worked a door: w1 what came of it (PO_*) times 256, and
+                                                **   the portal's kind (PK_*); a search's a its reach (the
                                                 **   squares searched those nearer than it, squared: the UI's things'
                                                 **   search the same, IO_SEARCH's to) */
     E_HARM,                                     /* who's been harmed (the referee's RS_HARM): w1 its cause (HC_*),
@@ -919,7 +919,7 @@ enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARR
        PO_BLOCKED };                            /* (A heavy thing stands against it, beside it on its way through: it
                                                 **   won't open, every actor's; the verbs plan's B4, wdrag.c's braced) */                               /*   a blow at it with a soft thing, one attempt, no harm (the thing
                                                 **   the hub's pc_strike's, the user's, 2026-10-22) */
-#define PO_SHOWS        0x8000                  /* (E_PORTAL's w1, an opening's: what it shows beyond told with it, as
+#define PO_SHOWS        0x80                    /* (E_PORTAL's w1, an opening's: what it shows beyond told with it, as
                                                 **   the look after it found it, 2026-10-22: a what, WB_*, | 4 lit; b
                                                 **   the room's kind; w2 how far it's seen, squares: the world's
                                                 **   revealed) */

@@ -311,12 +311,13 @@ void t_end (void)
 ** while it's away from the line typed (the user: the cursor flickered, the line drawn whole each game second); nothing
 ** at all, the cursor left where it is, if nothing has */
 
-#pragma code-name (push, "OV27CODE")            /* (Overlay 16's, through its stub, 2026-11-03: the main RAM's room,
+#pragma code-name (push, "OV19CODE")            /* (Overlay 16's, through its stub, 2026-11-03: the main RAM's room,
                                                 **   for the parts' quicker copies; nothing of the hub's in it.  Overlay
-                                                **   27's since 2026-11-11, with main.c's o_status, and the line's two
-                                                **   copies in its bank: the main RAM's room) */
-#pragma rodata-name (push, "OV27RODATA")
-#pragma bss-name (push, "OV27BSS")
+                                                **   27's on 2026-11-11, with main.c's o_status, and the line's two
+                                                **   copies in its bank: the main RAM's room; overlay 19's since, the
+                                                **   room dig_words left there, 27 the outcome events' words') */
+#pragma rodata-name (push, "OV19RODATA")
+#pragma bss-name (push, "OV19BSS")
 static char sl[128], sn[128];                   /* The status line as it's shown, and as it's to be */
 #pragma bss-name (pop)
 

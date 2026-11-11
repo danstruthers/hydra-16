@@ -282,7 +282,10 @@ function actionsHeader() {
 // includes it) and the JSON's msgs (each kind's fields, by offset, for the tests' decoders: load ()'s decode).  Its
 // lines (msgs.def's head says it at length):
 //   struct NAME                                    the struct the kinds after it travel in
-//   KIND[:FORM]  [< KIND[:FORM];] SLOT FIELD ...; SLOT FIELD ...      a kind's payload (a line indented goes on)
+//   KIND[:FORM]  [< KIND[:FORM];] SLOT FIELD ...; SLOT FIELD ...      a kind's payload (a line indented goes on; an
+//                                                  included field its own fields cover, within its bits, theirs: the
+//                                                  outcome events' E_OUTCOME, their kinds' names for it; the JSON's
+//                                                  outcome, the kinds that include it, saidgen.js's)
 // a FIELD name (the slot whole), name:N (bit N) or name:N-M (bits N to M), and @FIRST, an enum's first member, for
 // its value's name in the tests (a name of one bit, a boolean there); then (the events') ! a signed byte, +K stored
 // plus K, ==CONST[,CONST] the form's selector (the form a message is read by, its field's value one of them).  The
@@ -386,14 +389,20 @@ function msgsMake(forms, named, defs, names) {
       base: m[1], first, last, at: m[2] !== undefined, span: true, ptr: p,
       acc: n === 2 ? '(*(unsigned*) ' + p + ')' : n === 4 ? '(*(unsigned long*) ' + p + ')' : p };
   };
-  const all = f => {                                           // (A form's fields, its included forms' first)
-    const out = [];
-    for (const k of f.inc) {
-      const g = byKey.get(k);
+  const all = f => {                                           // (A form's fields, its included forms' first; one of
+    const out = [];                                            //   theirs its own fields take the place of (the outcome
+    for (const k of f.inc) {                                   //   events' head's: E_DIG's how its outcome), left out,
+      const g = byKey.get(k);                                  //   each of its own within that one's bits)
       if (!g) throw new Error('msgs.def:' + f.line + ': no ' + k + ' to include');
       out.push(...all(g));
     }
-    return [...out, ...f.fields];
+    const bits = x => { const w = slotOf(f, x.slot).bits; return [x.lo < 0 ? 0 : x.lo, x.hi < 0 ? w - 1 : x.hi]; };
+    const kept = out.filter(y => {
+      const [ylo, yhi] = bits(y), mine = f.fields.filter(x => x.slot === y.slot && bits(x)[0] <= yhi && ylo <= bits(x)[1]);
+      for (const x of mine) if (bits(x)[0] < ylo || bits(x)[1] > yhi) throw new Error('msgs.def:' + f.line + ': ' + x.name + ' over ' + y.name + ', not within it');
+      return !mine.length;
+    });
+    return [...kept, ...f.fields];
   };
   const macros = new Map(), out = [];
   const def = (name, text, line) => {
@@ -454,7 +463,7 @@ function msgsMake(forms, named, defs, names) {
     const sorted = slots.map(sl => fields.filter(x => x.slot === sl));   // (Its builder: kind, who, each slot in turn;
                                                                          //   a request none, a struct with no who)
     const args = sorted.flat().map(arg).filter(Boolean), sets = ['(m).kind = ' + f.kind, '(m).who = (who_)'];
-    for (const xs of sorted) sets.push('(m).' + xs[0].s.c + ' = ' + (xs.length === 1 && xs[0].whole ? '(' + (xs[0].fixed || xs[0].name + '_') + ')' : P + '_' + xs[0].s.up + ' (' + xs.map(arg).filter(Boolean).join(', ') + ')'));
+    for (const xs of sorted) sets.push((xs[0].s.span ? xs[0].s.acc : '(m).' + xs[0].s.c) + ' = ' + (xs.length === 1 && xs[0].whole ? '(' + (xs[0].fixed || xs[0].name + '_') + ')' : P + '_' + xs[0].s.up + ' (' + xs.map(arg).filter(Boolean).join(', ') + ')'));
     if (names.has(f.kind) && slotWidths(named[f.struct] || '', defs).who) def(P + '_SET', pad('#define ' + P + '_SET(' + ['m', 'who_', ...args].join(', ') + ')', 40) + '(' + sets.join(', ') + ')', f.line);
     res.push({ kind: f.kind, form: f.form, struct: f.struct, sel: sels.length ? { name: sels[0].name, values: sels[0].sel } : null,
       fields: fields.map(x => ({ name: x.name, slot: x.slot, lo: x.lo, hi: x.hi, bits: x.s.bits, en: x.en, bit: x.bit, signed: x.signed, plus: x.plus,
@@ -466,7 +475,9 @@ function msgsMake(forms, named, defs, names) {
     '** KIND[_FORM]_SLOT (fields ...) a packed slot\'s value; and',
     '** KIND[_FORM]_SET (m, who, fields ...) a message made, every slot its payload names set, in order */', '',
     '#ifndef _DQ0MSG_H', '#define _DQ0MSG_H', ...out, '', '#endif', ''].join('\r\n');
-  return { text, forms: res };
+  // (The outcome events: the kinds that include the head, E_OUTCOME: said.txt's, the UI's phrase table's)
+  const outcome = [...new Set(forms.filter(f => f.inc.includes('E_OUTCOME')).map(f => f.kind))];
+  return { text, forms: res, outcome };
 }
 
 // ---- The build's step: OPT { cc65: { bin, flags: [cc65's -t, --cpu, its include folders] }, say }.  OUT: what it
@@ -524,7 +535,7 @@ function generate(opt) {
   }
   for (const n of ['HUB_BANKS', 'NTASKS', 'HUB_MAGIC', 'CHUNK_SIZE', 'NCSLOTS', 'NITEMS', 'SIGHT_BANK', 'UI_BANK', 'WORLD_BANK'])
     if (C[n] === undefined) throw new Error('hubgen: no ' + n + ' in the headers');
-  const j = { key, C, enums: enums.filter(e => e.every(n => C[n] !== undefined)), S, tasks,
+  const j = { key, C, enums: enums.filter(e => e.every(n => C[n] !== undefined)), S, tasks, outcome: msgs.outcome,
     own: ownSpans(own, { at: v, itemSize: v[itemSize], taskOff: v[taskOff] }, C) };
   let H = wrap(j);
   // (The payloads by offset, for the tests' decoders: each kind's form, KIND or KIND:FORM, its fields [name, offset,
@@ -590,7 +601,7 @@ function wrap(j) {
     return { S, f: last, off, n };
   };
   const H = {
-    C: j.C, enums: j.enums, own: j.own, tasks: j.tasks, S: j.S, msgs: j.msgs || {},
+    C: j.C, enums: j.enums, own: j.own, tasks: j.tasks, S: j.S, msgs: j.msgs || {}, outcome: j.outcome || [],
     off: (s, p) => rec(s, p).off,
     size: (s, p) => { const r = rec(s, p); return p === undefined ? r.S.size : r.n ? r.f[1 + r.n] : r.f[1]; },
     dims: (s, p) => rec(s, p).f.slice(2),

@@ -185,7 +185,7 @@ static void search (void)
         wk.tt = 600;
     }
     wk.m.b = touch != 0;                        /* (By touch: the hands' words, fixt.c's) */
-    told (E_PORTAL, found & 1 ? PO_FOUND : found ? PO_FOUND_TRAP : PO_NOTHING, r);
+    told (E_PORTAL, (found & 1 ? PO_FOUND : found ? PO_FOUND_TRAP : PO_NOTHING) << 8, r);
     wk.m.b = 0;
 }
 

@@ -119,6 +119,18 @@ I_NOISE         a loud; b what@NZ_WORK; w1 x; w2 y      # (A noise made: its lou
 # value (FIELD==CONST: E_TASK's by its TE_*, E_BEAT's by its WB_*), the kind's own its fields for any other value.  The
 # tests' event records keep the slots raw beside the fields (e.a, e.b, e.w1, e.w2, e.t, e.x: sim/lib/dq0meaning.js's),
 # so no field of an event is named as a slot is, nor kind, who, line or den.  A square's x and y are sx and sy.
+#
+# The outcome events (ENGINE-CRITIQUE.md's §3.2, narration as data): what came of an action, its kind the action (E_DIG,
+# E_CLIMB, E_PORTAL, E_TRAP), its words the UI's one renderer's (games/dq0/said.c), a row of its phrase table
+# (games/dq0/said.txt) chosen by its kind and its outcome.  Each includes E_OUTCOME, their head: who the actor; w1's high
+# byte the outcome, its low byte n1, a number of the kind's; b n2, another; x[0-1] the thing it's done to (obj) and
+# x[2-3] the thing it's done with (instr), their handles (a thing's id, struct item's; 0 none).  A kind names the head's
+# fields its own way (E_DIG's how its outcome, its feet n1): a field of its own in a slot of the head's, within one
+# field's bits, takes that field's place (E_TRAP's tk, tt and touch, n1's bits).  The phrase table reads them by those
+# names (said.txt's {feet}).
+
+E_OUTCOME       b n2; w1 n1:0-7 outcome:8-15; x[0-1] obj; x[2-3] instr
+                # (Not a kind: the outcome events' head, as I_DEN is the denizens' intents')
 
 E_TIME          b(how) mins:0=WA_MIN asleep:1=WA_SLEEP rest:2=WA_REST; w1 tenths
                 # (The time passed, tenths, or minutes (mins); b the character's wait's, its I_WAIT's a)
@@ -129,19 +141,23 @@ E_ARRIVE        w1 how:0-7@A_WALKED first:8 halted:9 mouth:10=E_MOUTH_LIT link:1
                 #   mouth a well's, its mouth lit far above)
 E_NOWAY         w1 why:0-7@N_NO_EXIT actor:8-15                     # (N_DEN: the actor in the way)
 E_VIEW          b way; w1 why@V_TURNED                  # (V_FACING, V_SETOFF: b the way it turns, sets off)
-E_DIG           b(spell) tool:0-1 fresh:3 rock:4-7; w1 how:8-15@D_BEGUN feet:0-7
+E_DIG           < E_OUTCOME; b(spell) tool:0-1 fresh:3 rock:4-7; w1 how:8-15@D_BEGUN feet:0-7
                 # (The feet to go; a spell's b its tool's place (the hub's dig_tool), the rock (RK_*), fresh new to it)
-E_DIG:notool    w1 how:8-15==D_NO_TOOL@D_BEGUN into:0-4 lit:5=DN_LIT hands:6=DN_HANDS
+E_DIG:notool    < E_OUTCOME; w1 how:8-15==D_NO_TOOL@D_BEGUN into:0-4 lit:5=DN_LIT hands:6=DN_HANDS
                 # (What it's into, MAT_* + 1; a light in hand, a chisel and a hammer not both in hand: b the same)
 E_NOISE         a loud; b what@NZ_WORK; w1 sx; w2 sy   # (How loud, 0-9; what made it; its square)
 E_LEDGE         w1 rise:0-7!                            # (Its rise, a fall less; past LEDGE_MET, what a walk met)
-E_CLIMB         w1 how:8-15@K_BEGUN feet:0-7
-E_PORTAL        w1 po:0-7@PO_NONE pk:8-14@PK_DOOR shows:15=PO_SHOWS
-                # (What came of it, the portal's kind, an opening's view told with it; a search's a its reach)
+E_CLIMB         < E_OUTCOME; w1 how:8-15@K_BEGUN feet:0-7
+E_PORTAL        < E_OUTCOME; a what:0-1@WB_DARK lit:2; b room; w1 pk:0-6@PK_DOOR shows:7=PO_SHOWS po:8-15@PO_NONE; w2 far:0-7
+                # (What came of it, the portal's kind; an opening's view told with it (shows): what the look after it
+                #   found beyond (level.h's WB_*), lit, the room's kind, how far it sees, squares)
+E_PORTAL:search < E_OUTCOME; a reach; b touch; w1 pk:0-6@PK_DOOR po:8-15==PO_FOUND,PO_NOTHING,PO_FOUND_TRAP@PO_NONE
+                # (A search's: its reach (the squares searched those nearer than it, squared: the UI's things' search
+                #   the same, IO_SEARCH's to), by touch)
 E_HARM          w1 hc:0-7@HC_FALL band:8-10 deep:12=E_DEEP shallow:13=E_SHALLOW out:14=E_OUT caught:15=E_CAUGHT
                 # (Its cause, its worst wound's band (0 unhurt), knocked senseless; a fall's into water, stopped)
 E_HARM:struck   w1 hc:0-7==HC_STRUCK@HC_FALL band:8-10 out:14=E_OUT stopped:15=E_STOPPED     # (The striker too hurt)
-E_TRAP          w1 tk:0-3@TK_PIT tt:4-5@TT_PLATE touch:7 to:8-15@TO_SPRUNG    # (Touch: found by it, in the dark)
+E_TRAP          < E_OUTCOME; w1 tk:0-3@TK_PIT tt:4-5@TT_PLATE touch:7 to:8-15@TO_SPRUNG    # (Touch: found by it, in the dark)
 E_DEN           a de@DE_MOVED; b loud; w1 sx; w2 sy; x[0] sn; x[1] dkind; x[2] seen; x[3] between
                 # (who the actor plus 1: what it did, how loud, its square, stratum and kind; seen, the character
                 #   sees the square; the walls and the shut doors between, a loud one's: SOUND.md)
