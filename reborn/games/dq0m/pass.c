@@ -196,18 +196,6 @@ static void __fastcall__ door_in (unsigned char r, unsigned char d)
     dzr = L->elev[dyr - dir_y[d]][dxr - dir_x[d]];
 }
 
-/* A door at (x, y): its square, and its portal (most closed; some locked, some barred from inside the room; wood
-** mostly, some iron-bound, a few iron) */
-/* A door's own dice: from its square and its chunk's place, not the grower's (so its details never move the layout) */
-static unsigned long dh;
-static unsigned char __fastcall__ dr (unsigned char n)
-{
-    dh ^= dh << 13;
-    dh ^= dh >> 17;
-    dh ^= dh << 5;
-    return (unsigned char) ((dh >> 8) % n);
-}
-
 /* The door at (x, y) is a way out of a room a link comes out in (a stairway's, a ladder's: the way in's): never hidden,
 ** so nobody begins shut in */
 static unsigned char __fastcall__ by_link (unsigned char x, unsigned char y)
@@ -232,6 +220,9 @@ static unsigned char __fastcall__ by_link (unsigned char x, unsigned char y)
     return 0;
 }
 
+/* A door at (x, y): its square, and its portal (most closed; some locked, some barred from inside the room; wood
+** mostly, some iron-bound, a few iron).  Its own dice (place.c's, DP_DOOR's: from its square and its chunk's place, not
+** the grower's, so its details never move the layout) */
 static void __fastcall__ door (unsigned char x, unsigned char y, int z)
 {
     struct portal* p;
@@ -249,7 +240,7 @@ static void __fastcall__ door (unsigned char x, unsigned char y, int z)
     if (L->nportals >= NPORTALS) {
         return;
     }
-    dh =((unsigned long) L->cx << 20 ^ (unsigned long) L->cy << 8 ^ (unsigned) x << 5 ^ y) * 2654435761UL + 1;
+    dkey (DP_DOOR, x << 5 | y);
     k = dr (20);
     p = &L->portal[L->nportals++];
     p->x = x;

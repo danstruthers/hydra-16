@@ -344,13 +344,13 @@ static unsigned char __fastcall__ rots (unsigned char k)
 }
 
 /* What room r (arg's low three bits; its die, 0-7, the rest) has lying about: a kind, 0 nothing (rotted away); or
-** (US_SIGN) its use's mark, and (arg's 0x80) a kitchen's well, where there's water */
+** (US_SIGN) its use's mark (a kitchen's well: place.c's row) */
 static unsigned char __fastcall__ thing (unsigned char sign, unsigned char arg)
 {
     unsigned char r = arg & 7, u = L->room[r].kind, k;
 
     if (sign) {
-        k = arg & 0x80 ? (u == U_KITCHEN && uwater ? KI_WELL : 0) : signs[u];
+        k = signs[u];
     } else {
         k = leavings[u][arg >> 3 & 7];
         if (!k) {

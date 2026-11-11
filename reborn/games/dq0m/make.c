@@ -116,7 +116,7 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
     sl->cy = cy;
     sl->stamp = ++WREC->stamp;
     hub_map (0);
-    c = &cb;
+    L = c = &cb;                                /* (The chunk L: place.c's dice's and streams' keys) */
     memset (c, 0, sizeof *c);
     c->sn = sn;
     c->cx = cx;
@@ -130,9 +130,9 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
                                                 **   on the diagonal) */
     if (me.x1 != 0xFF) {                         /* (By its stratum's style, or its part's) */
         if (cstyle == ST_NATURAL) {
-            grow_caves (c, &me, s->seed ^ ((unsigned long) cx << 16 | cy) * 40503UL);
+            grow_caves (c, &me, rstream (RS_GROW));
         } else {
-            grow_built (c, &me, s->seed ^ ((unsigned long) cx << 16 | cy) * 40503UL);
+            grow_built (c, &me, rstream (RS_GROW));
         }
         fixtures (c);                           /* (Its materials, its windows, its traps ...) */
         sky (c, 0);                             /* (Its skylights and windows on the surface: sky.c's) */

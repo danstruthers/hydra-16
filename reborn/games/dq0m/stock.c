@@ -129,6 +129,18 @@ unsigned char __fastcall__ o_coin_mint (unsigned char sn)
 #pragma rodata-name (pop)
 unsigned char __fastcall__ coin_mint (unsigned char sn);    /* (Overlay 5's: overlay 7's room) */
 
+/* Room at of chunk L: a mark of place.c's rows (PR's), on its square (its middle; by its west wall, halfway along),
+** if it's floor: what the row makes (a kitchen's well), or (none) its use's mark (uses.c's) */
+void __fastcall__ o_put_mark (unsigned char at)
+{
+    const struct room* r = &L->room[at];
+    unsigned char lx = PR->where == WH_WEST ? r->x : r->x + r->w / 2, ly = r->y + r->h / 2, k;
+
+    if ((k = PR->kind ? PR->kind : uses (US_SIGN, at)) && TILE (L->tile[ly][lx]) == T_FLOOR) {
+        put_down (k, L->sn, sx0 + lx, sy0 + ly, 1, ST_SHOWN);
+    }
+}
+
 /* The chunk (in the main RAM, the growers' L; its first square x0, y0 in the frame) stocked, listed in sk: two tries
 ** a room, each a thing at the style's odds, at a square of its floor, of a kind its use left; its use's mark, in its
 ** middle (and a kitchen's well, where there's water, by its west wall); the theme's pieces whose place it is; then
@@ -145,7 +157,7 @@ void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
     sk.n = 0;
     sx0 = x0;
     sy0 = y0;
-    rseed (STRATUM (c->sn).seed ^ ((unsigned long) c->cx << 16 | c->cy) * 69069UL ^ 0x5EED);
+    rseed (rstream (RS_STOCK));                 /* (Its stream: place.c's, the stratum's seed and the chunk's place) */
     for (i = 0; i < c->nrooms; ++i) {
         r = &c->room[i];
         for (n = 0; n < 2; ++n) {
@@ -181,16 +193,7 @@ void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
             }
         }
     }
-    for (i = 0; i < c->nrooms; ++i) {           /* (Each room's use's mark, and a kitchen's well: no dice) */
-        r = &c->room[i];
-        for (n = 0; n < 2; ++n) {
-            lx = n ? r->x : r->x + r->w / 2;
-            ly = r->y + r->h / 2;
-            if ((k = uses (US_SIGN, i | (n ? 0x80 : 0))) && TILE (c->tile[ly][lx]) == T_FLOOR) {
-                put_down (k, c->sn, x0 + lx, y0 + ly, 1, ST_SHOWN);
-            }
-        }
-    }
+    place (PG_STOCK);                           /* (Each room's use's mark, and a kitchen's well: place.c's rows) */
     for (i = 0; (ulayer & (SG_HASUNDER | SG_RUINED)) && i < c->nrooms; ++i) {   /* (Its history's: an older layer's
                                                 **   remnants, its rooms' uses' marks; a ruin's debris, bones where it
                                                 **   was taken or cursed, potsherds else) */

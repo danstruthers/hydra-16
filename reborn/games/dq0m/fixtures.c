@@ -11,9 +11,11 @@
 ** way in; its doors stouter (more of them iron-bound, an inch thicker) and fewer of them open.  (Its rooms' sconces,
 ** as it's first stocked, are sconce.c's: their dice these.)
 **
-** Each with its own dice, from the chunk's place and the fixture's (as pass.c's doors' are), so the grower's layout
-** never moves for them; and nothing that would part a chunk's ways: an open pit only where the squares round it
-** are floor, as level as a walk.
+** Each with its own dice, keyed by what it decides, the chunk's place and the fixture's (place.c's dkey: a purpose
+** each), so the grower's layout never moves for them, nor one's numbers for another's; and nothing that would part a
+** chunk's ways: an open pit only where the squares round it are floor, as level as a walk.  What's placed where (the
+** windows, the portcullises, the traps) is place.c's table's rows, these their hooks (put_*); the materials, the
+** fortified stratum's doors and the portals' make are steps of their own.
 **
 ** (Overlay 5, the maker's: make.c calls it through bank.s's stub.)
 */
@@ -26,21 +28,6 @@
 #include "grow.h"
 #include "../dq0w/body.h"
 
-/* The fixtures' dice: from the chunk's place, what's being decided (a), and where (b) */
-static unsigned long dh;
-static void __fastcall__ dseed (unsigned char a, unsigned b)
-{
-    dh = ((unsigned long) L->cx << 20 ^ (unsigned long) L->cy << 8 ^ (unsigned long) a << 28 ^ b) * 2654435761UL + 7;
-}
-
-static unsigned char __fastcall__ dr (unsigned char n)
-{
-    dh ^= dh << 13;
-    dh ^= dh >> 17;
-    dh ^= dh << 5;
-    return (unsigned char) ((dh >> 8) % n);
-}
-
 /* ---- Materials */
 
 static void materials (void)
@@ -52,7 +39,7 @@ static void materials (void)
                                                 **   rest trodden hard) */
     unsigned char* m;
 
-    dseed (1, 0xFF);                            /* (The passages': their floors, the rock, their ceilings) */
+    dkey (DP_MAT,0xFF);                            /* (The passages': their floors, the rock, their ceilings) */
     m = L->mat[NROOMS];
     m[MP_FLOOR] = dr (20) < SP->p_earth + (SP->p_earth ? old : 0) ? earth : bare;
     m[MP_WALL] = MAT_STONE;
@@ -64,7 +51,7 @@ static void materials (void)
             m[MP_WALL] = m[MP_CEIL] = MAT_STONE;
             continue;
         }
-        dseed (1, r);
+        dkey (DP_MAT,r);
         m[MP_FLOOR] = dr (20) < SP->f_earth + (SP->f_earth ? old : 0) ? earth : bare;
         m[MP_WALL] = dr (20) < SP->w_built ? MAT_MASONRY : MAT_STONE;
         m[MP_CEIL] = dr (20) < SP->c_built ? MAT_MASONRY : MAT_STONE;
@@ -93,68 +80,57 @@ static struct portal* __fastcall__ portal (unsigned char x, unsigned char y, uns
     return p;
 }
 
-/* Room r's walls: on each side, a window or a slit (the style's say) where a passage runs beside it */
-static void __fastcall__ windows (unsigned char r)
+/* A room's side (at: the room times 4, and the side), its odds won (or a fortified stratum's defences': slits
+** wherever they cover a way): a window or a slit (the style's say) where a passage runs beside it, from a square of
+** it at random on round it */
+void __fastcall__ o_put_window (unsigned char at)
 {
-    struct room* q = &L->room[r];
+    struct room* q = &L->room[at >> 2];
     struct portal* p;
-    unsigned char d, k, len, x, y, t, fort = ufort && (q->kind == U_GATEHOUSE || q->kind == U_GUARDROOM);
+    unsigned char d = at & 3, k, len, x, y, t, fort = defended (at >> 2);
 
-    for (d = 0; d < 4; ++d) {
-        len = d == DIR_N || d == DIR_S ? q->w : q->h;
-        dseed (2, r << 2 | d);
-        if (dr (20) >= SP->windows && !fort) {  /* (A fortified gate's: slits wherever they cover a way) */
+    len = d == DIR_N || d == DIR_S ? q->w : q->h;
+    for (k = dr (len), t = 0; t < len; ++t, k = k + 1 < len ? k + 1 : 0) {
+        x = d == DIR_N || d == DIR_S ? q->x + k : d == DIR_W ? q->x - 1 : q->x + q->w;
+        y = d == DIR_W || d == DIR_E ? q->y + k : d == DIR_N ? q->y - 1 : q->y + q->h;
+        if (x + dir_x[d] >= CW || y + dir_y[d] >= CW || L->tile[y][x] != T_WALL ||
+            TILE (L->tile[y - dir_y[d]][x - dir_x[d]]) != T_FLOOR ||
+            TILE (L->tile[y + dir_y[d]][x + dir_x[d]]) != T_CORR) {
             continue;
         }
-        for (k = dr (len), t = 0; t < len; ++t, k = k + 1 < len ? k + 1 : 0) {
-            x = d == DIR_N || d == DIR_S ? q->x + k : d == DIR_W ? q->x - 1 : q->x + q->w;
-            y = d == DIR_W || d == DIR_E ? q->y + k : d == DIR_N ? q->y - 1 : q->y + q->h;
-            if (x + dir_x[d] >= CW || y + dir_y[d] >= CW || L->tile[y][x] != T_WALL ||
-                TILE (L->tile[y - dir_y[d]][x - dir_x[d]]) != T_FLOOR ||
-                TILE (L->tile[y + dir_y[d]][x + dir_x[d]]) != T_CORR) {
-                continue;
-            }
-            if (!(p = portal (x, y, fort || dr (20) < SP->slits ? PK_SLIT : PK_WINDOW))) {
-                return;
-            }
-            L->tile[y][x] = T_WINDOW;
-            p->bar = (d + 2) & 3;               /* (Its shutters barred from the room's side) */
-            if (p->kind == PK_WINDOW) {
-                p->parts = (dr (4) < SP->w_glass ? PP_GLASS : 0) | (dr (4) < SP->w_shut ? PP_SHUTTERS : 0) |
-                    (dr (4) < SP->w_bars ? PP_BARS : 0);
-                if ((p->parts & PP_SHUTTERS) && dr (2)) {
-                    p->state = dr (4) ? 0 : PS_BARRED;  /* (Its shutters closed, some barred) */
-                }
-                p->mat = (p->parts & (PP_BARS | PP_SHUTTERS)) == PP_BARS ? PM_IRON : PM_WOOD;   /* (Its shutters',
-                                                **   else its bars') */
-            }
-            break;
+        if (!(p = portal (x, y, fort || dr (20) < SP->slits ? PK_SLIT : PR->kind))) {
+            return;
         }
+        L->tile[y][x] = T_WINDOW;
+        p->bar = (d + 2) & 3;                   /* (Its shutters barred from the room's side) */
+        if (p->kind == PK_WINDOW) {
+            p->parts = (dr (4) < SP->w_glass ? PP_GLASS : 0) | (dr (4) < SP->w_shut ? PP_SHUTTERS : 0) |
+                (dr (4) < SP->w_bars ? PP_BARS : 0);
+            if ((p->parts & PP_SHUTTERS) && dr (2)) {
+                p->state = dr (4) ? 0 : PS_BARRED;  /* (Its shutters closed, some barred) */
+            }
+            p->mat = (p->parts & (PP_BARS | PP_SHUTTERS)) == PP_BARS ? PM_IRON : PM_WOOD;   /* (Its shutters', else
+                                                **   its bars') */
+        }
+        return;
     }
 }
 
-/* Some doors portcullises instead (iron bars: raised, or down), each with its winch on its room's side (its bar's
-** way) */
-static void portcullises (void)
+/* A door (at: its portal), its odds won: a portcullis instead (iron bars: raised, or down), its winch on its room's
+** side (its bar's way) */
+void __fastcall__ o_put_portc (unsigned char at)
 {
-    struct portal* p;
-    unsigned char i, d;
+    struct portal* p = &L->portal[at];
+    unsigned char d;
 
-    for (i = 0; i < L->nportals; ++i) {
-        p = &L->portal[i];
-        dseed (3, p->x << 5 | p->y);
-        if (p->kind != PK_DOOR || (p->state & PS_HIDDEN) || dr (20) >= SP->portc) {
-            continue;
-        }
-        p->kind = PK_PORTCULLIS;
-        p->state = dr (2) ? PS_OPEN : 0;
-        p->lock = 0;
-        p->mat = PM_IRON;
-        p->parts = PP_BARS;
-        for (d = 0; d < 4; ++d) {
-            if (p->x + dir_x[d] < CW && p->y + dir_y[d] < CW && L->tile[p->y + dir_y[d]][p->x + dir_x[d]] == T_FLOOR) {
-                p->bar = d;
-            }
+    p->kind = PR->kind;
+    p->state = dr (2) ? PS_OPEN : 0;
+    p->lock = 0;
+    p->mat = PM_IRON;
+    p->parts = PP_BARS;
+    for (d = 0; d < 4; ++d) {
+        if (p->x + dir_x[d] < CW && p->y + dir_y[d] < CW && L->tile[p->y + dir_y[d]][p->x + dir_x[d]] == T_FLOOR) {
+            p->bar = d;
         }
     }
 }
@@ -202,7 +178,7 @@ static void fortify (void)
         }
     }
     for (i = 0, p = L->portal; i < L->nportals; ++i, ++p) {
-        dseed (7, p->x << 5 | p->y);
+        dkey (DP_FORT, p->x << 5 | p->y);
         if (p->kind == PK_DOOR && !(p->state & PS_HIDDEN)) {
             if (p->mat == PM_WOOD && dr (2)) {
                 p->mat = PM_IRONBOUND;
@@ -229,7 +205,7 @@ static void make (void)
     unsigned char sd = (unsigned char) (s->seed >> 5);
 
     for (i = 0, p = L->portal; i < L->nportals; ++i, ++p) {
-        dseed (6, p->x << 5 | p->y);
+        dkey (DP_MAKE, p->x << 5 | p->y);
         if (p->kind == PK_WINDOW || p->kind == PK_SLIT) {
             w = p->kind == PK_SLIT ? 1 : 2 + dr (2);
             h = 2 + dr (3);
@@ -334,41 +310,37 @@ next:   ;
     return 0xFF;
 }
 
-static void traps (void)
-{
-    static const unsigned char kinds[8] = { TK_COVERED, TK_SPIKED, TK_DEADFALL, TK_BLADE, TK_DARTS, TK_GAS, TK_ALARM,
-        TK_DARTS };
-    unsigned char r, i, k;
-    struct portal* p;
+static const unsigned char kinds[8] = { TK_COVERED, TK_SPIKED, TK_DEADFALL, TK_BLADE, TK_DARTS, TK_GAS, TK_ALARM,
+    TK_DARTS };
 
-    for (r = 0; r < L->nrooms; ++r) {           /* (A room's: a pit, or one set off underfoot) */
-        dseed (4, r);
-        if (dr (20) >= SP->traps || trap_square (r)) {
-            continue;
-        }
-        k = dr (4) < SP->t_pit ? (dr (2) ? TK_PIT : TK_COVERED) : kinds[dr (8)];
-        trap (tx, ty, k, k == TK_PIT || k == TK_COVERED || k == TK_SPIKED || !dr (2) ? TT_PLATE : TT_WIRE);
+/* A room (at), its odds won: a pit, or a trap set off underfoot, where it can be walked round */
+void __fastcall__ o_put_trap (unsigned char at)
+{
+    unsigned char k;
+
+    if (trap_square (at)) {
+        return;
     }
-    for (i = 0; i < L->nportals; ++i) {         /* (A closed door's: set off as it's opened) */
-        p = &L->portal[i];
-        dseed (5, p->x << 5 | p->y);
-        if (p->kind == PK_DOOR && !(p->state & PS_OPEN) && dr (20) < SP->d_trap) {
-            trap (p->x, p->y, kinds[3 + dr (5)], TT_DOOR);
-        }
-    }
+    k = dr (4) < SP->t_pit ? (dr (2) ? TK_PIT : TK_COVERED) : kinds[dr (8)];
+    trap (tx, ty, k, k == TK_PIT || k == TK_COVERED || k == TK_SPIKED || !dr (2) ? TT_PLATE : TT_WIRE);
 }
 
+/* A closed door (at: its portal), its odds won: a trap set off as it's opened */
+void __fastcall__ o_put_dtrap (unsigned char at)
+{
+    struct portal* p = &L->portal[at];
+
+    trap (p->x, p->y, kinds[3 + dr (5)], TT_DOOR);
+}
+
+/* The steps: the materials; the windows and the portcullises (place.c's rows); a fortified stratum's doors; the
+** portals' make; the traps (rows) */
 void __fastcall__ o_fixtures (struct chunk* c)
 {
-    unsigned char r;
-
     L = c;
     materials ();
-    for (r = 0; r < L->nrooms; ++r) {
-        windows (r);
-    }
-    portcullises ();
+    place (PG_WALLS);
     fortify ();
     make ();
-    traps ();
+    place (PG_TRAPS);
 }

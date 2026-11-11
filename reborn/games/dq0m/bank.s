@@ -207,6 +207,15 @@ ovcall:
             OVFN        uses, 7
             OVFN        coin_mint, 5
             OVFN        sky, 9              ; (What shows the sky: sky.c, 2026-11-03)
+            OVFN        place, 9            ; (The placers and the dice's keys: place.c, 2026-11-11)
+            OVFN        dkey, 9
+            OVFN        rstream, 9
+            OVFN        defended, 9
+            OVFN        put_window, 5       ; (The placers' hooks: fixtures.c's, stock.c's)
+            OVFN        put_portc, 5
+            OVFN        put_trap, 5
+            OVFN        put_dtrap, 5
+            OVFN        put_mark, 7
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0m.cfg's SWAP, a part at a time, copied
 ; there from overlay 6's bank as it's called)

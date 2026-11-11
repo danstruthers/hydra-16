@@ -43,13 +43,54 @@ extern struct style sty;
 extern unsigned char cstyle;                    /* (The chunk's style: its stratum's, or a mixed stratum's natural
                                                 **   part's ST_NATURAL: make.c's) */
 
+/* place.c (dr the main RAM's, the rest overlay 9's, bank.s's stubs): the maker's dice, keyed, and its placers
+** (ENGINE-CRITIQUE.md's §5).  A purpose (DP_*):
+** what a number decides, its key's; each one's key the one its placer always had (the doors', pass.c's; the
+** fixtures', fixtures.c's; the sconces' the portals' make's own), so the dungeons are as they were.  A new purpose
+** from DP_SEEDED on (its key the stratum's seed too).  dkey (purpose, where) for chunk L, then dr (n) as often as
+** wanted: 0 to n - 1 */
+enum { DP_DOOR, DP_MAT, DP_WINDOW, DP_PORTC, DP_TRAP, DP_DTRAP, DP_MAKE, DP_FORT, DP_SCONCE, DP_SEEDED, DP_NONE = 0xFF };
+void __fastcall__ dkey (unsigned char p, unsigned b);
+unsigned char __fastcall__ dr (unsigned char n);
+enum { RS_GROW, RS_STOCK };                     /* A stream's (dice.h's rseed, a layout's rolls one after another):
+                                                **   chunk L's grower's, its stock's */
+unsigned long __fastcall__ rstream (unsigned char p);
+
+/* A placer (place.c's placers[]: a row each): its stage (PG_*), its sites (SI_*: a room, a room's side, a door: its
+** dice keyed by the room, room * 4 + side, the door's square), its dice's purpose (DP_NONE none), its odds (a chance
+** in sides of the style's byte at odds; sides 0, always), what a site mustn't be (a room's flags R_*, a door's state
+** PS_*), the use a room must have (U_ANY any), its qualifiers (PQ_*), where in its site it goes (WH_*: its hook's),
+** what it makes (0: its hook's choice), and its hook, called with the site (place.c's PR the row) */
+struct placer {
+    unsigned char   stage, site, purpose, odds, sides, clear, use, flags, where, kind;
+    void __fastcall__ (*put) (unsigned char at);
+};
+enum { PG_WALLS, PG_TRAPS, PG_STOCK, PG_SCONCES, PG_END };  /* Fixtures.c's portals placed, its traps; stock.c's
+                                                **   marks; sconce.c's sconces */
+enum { SI_ROOM, SI_WALL, SI_DOOR };
+#define U_ANY           0xFF
+#define PQ_DEFENCE      0x01                    /* (Always in a fortified stratum's defences: defended's) */
+#define PQ_WATER        0x02                    /* (Only where the chunk has water: uses.c's uwater) */
+enum { WH_WALL, WH_DOOR, WH_FLOOR, WH_MIDDLE, WH_WEST, WH_BYWALL };  /* A room's wall a passage runs beside; a
+                                                **   door's square; its floor, room round it to walk; its middle; by its
+                                                **   west wall, halfway along; its floor beside a wall */
+extern const struct placer* PR;                 /* (The row being placed: its hook's) */
+void __fastcall__ place (unsigned char stage);
+unsigned char __fastcall__ defended (unsigned char r);  /* Room r one of a fortified stratum's defences */
+void __fastcall__ put_window (unsigned char at);    /* (The hooks, bank.s's stubs: fixtures.c's, overlay 5's) */
+void __fastcall__ put_portc (unsigned char at);
+void __fastcall__ put_trap (unsigned char at);
+void __fastcall__ put_dtrap (unsigned char at);
+void __fastcall__ put_mark (unsigned char at);      /* (stock.c's, overlay 7's) */
+void __fastcall__ put_sconce (unsigned char at);    /* (sconce.c's s_put_sconce, part 3's: its stub) */
+
 /* uses.c (overlay 7's): a built stratum's plan of uses (DUNGEON.md: built to a plan) */
 unsigned char __fastcall__ uses (unsigned char step, unsigned char arg);
 enum { US_STYLE, US_PLAN, US_FLOOR, US_THING, US_SIGN, US_UNDER };   /* The style arg's copied into sty (make.c's,
                                                 **   for each chunk); the chunk's rooms given their uses (built.c's,
                                                 **   sorted); their floors and ceilings by them (once they're zoned);
                                                 **   what room arg & 7 has lying about (its die arg >> 3: a kind, or
-                                                **   0), its use's mark (and arg's 0x80, a kitchen's well), the mark
+                                                **   0), its use's mark (place.c's row a kitchen's well), the mark
                                                 **   room arg's use under the chunk's older layer left (stock.c's) */
 extern unsigned char ufort, uwater;             /* (The chunk's stratum fortified (P_FORT), the chunk's water) */
 extern unsigned char ulayer, uruin;             /* (The chunk's layer of its history, theme.h's SG_*; a ruin after

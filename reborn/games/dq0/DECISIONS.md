@@ -3324,3 +3324,93 @@ Warm, the dq0 tests' CPU time is a third less (2,626 s, from 3,929 without scene
 - **Disk.**  obj/scenes holds some 300 MB at its fullest (400 scenes).
 - **The emulator's snapshot** (base/sim/lib) refuses what it doesn't hold: the VERA, the input controller, the RTC, the sound, a /pc host, CA1's pulses, the debugger's things.  A test using one runs from its start.
 - **Next** (§9's): scene constructors (a room, its things and its denizens declared, not reached by commands), and the recorder's offsets from the schema.
+
+## The placers' table and the keyed dice (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §5 and step 8)
+
+The maker placed each fixture in code of its own with dice of its own: the doors their own hash (pass.c), fixtures.c
+its `dseed`/`dr` (windows, portcullises, the fortified doors, the portals' make, the traps from a local array),
+sconce.c a copy of them, and stock.c the rooms' marks and the kitchens' wells in a loop of its own.  This step gives
+the maker one keyed dice API and one table of placers.  **Every seed's dungeon is byte for byte what it was:** the
+maps, the fixtures and their places, the things.
+
+- **The dice (games/dq0m/place.c).**  `dkey (purpose, where)` keys them for chunk L, `dr (n)` rolls (0 to n - 1) as
+  often as the decision wants; a purpose (grow.h's DP_*) is what a number decides: DP_DOOR, DP_MAT, DP_WINDOW,
+  DP_PORTC, DP_TRAP, DP_DTRAP, DP_MAKE, DP_FORT, DP_SCONCE.  **Each purpose's key is defined as its placer's old
+  stream:** `((cx << 20) ^ (cy << 8) ^ (a << 28) ^ where) * 2654435761 + c`, a the old decision's number and c the old
+  constant (the doors' a 0 and c 1: pass.c's own hash was the same formula; the fixtures' c 7).  The old streams were
+  already keyed by place, never by call order, so none had to be kept apart.  DP_SCONCE's key is DP_MAKE's (sconce.c's
+  copy keyed its rooms with fixtures.c's sixth number, the portals' make's): two purposes, one derivation, as it always
+  was.
+  **The old keys are the chunk's place alone**, not the stratum's seed: two strata's chunks at the same place have
+  the same fixtures' numbers (a door on the same square the same lock), as before; kept, for byte-identity.  A purpose
+  from DP_SEEDED on has its stratum's seed and its own number in its key, so a new placer gets fresh numbers that move
+  nothing else and differ from stratum to stratum.  **For review:** whether to move the old purposes onto the seeded
+  key some day (every dungeon would change, and the tests' scenes with it).
+- **The streams (`rstream`).**  The growers' (built.c, caves.c: a layout's rolls one after another, call order by
+  design) and the stock's (stock.c's things lying about) keep their dice.h streams; their seeds are made in place.c
+  now (RS_GROW: the stratum's seed ^ (cx << 16 | cy) * 40503; RS_STOCK: ... * 69069 ^ 0x5EED), as make.c and stock.c
+  made them.  They stay streams: their numbers depend on the order of the layout's work, which a key can't reproduce
+  cheaply.
+- **The placers (`placers[]`, `place (stage)`).**  A row: its stage (PG_WALLS and PG_TRAPS fixtures.c's, PG_STOCK
+  stock.c's, PG_SCONCES sconce.c's), its sites (SI_ROOM; SI_WALL, a room's four sides; SI_DOOR, a portal that's a
+  door), its dice's purpose (DP_NONE none), its odds (a chance in `sides` of a byte of the style, by its offsetof), what
+  a site mustn't be (a room's R_* flags, a door's PS_* state), the room's use it wants (U_ANY any), qualifiers
+  (PQ_DEFENCE: always in a fortified stratum's gatehouse and guardrooms; PQ_WATER: only where the chunk has water),
+  where in the site it goes (WH_*), what it makes (KI_*, PK_*, or 0: the hook's choice) and its hook.  The one placer
+  goes over a stage's rows, each over its sites: the site filtered, its key set, its odds rolled, the hook called.
+  Rows of a stage that follow one another over the same sites are placed site by site (a room's mark, then its well),
+  as the old loops ordered them, so the stock list's order is the same.  Seven rows:
+
+  | row | sites | dice | odds | what it makes |
+  |---|---|---|---|---|
+  | window | a room's side | DP_WINDOW | windows in 20 (a fortified gate's always) | a window or a slit (put_window) |
+  | portcullis | a door, not hidden | DP_PORTC | portc in 20 | a portcullis (put_portc) |
+  | room trap | a room | DP_TRAP | traps in 20 | a pit, or a plate's or a wire's trap (put_trap) |
+  | door trap | a door, closed | DP_DTRAP | d_trap in 20 | a door's trap (put_dtrap) |
+  | mark | a room, its middle | none | always | its use's mark (put_mark: uses.c's) |
+  | well | a kitchen, by its west wall, where there's water | none | always | KI_WELL (put_mark) |
+  | sconce | a room not lit by its own light | DP_SCONCE | its hook's (kept, or built with them) | a sconce and its torch (put_sconce) |
+
+  The well is data now: uses.c's US_SIGN 0x80 case (a kitchen's well where there's water) is gone, the row's use,
+  PQ_WATER and KI_WELL saying it.  The hooks are the old code, each the part that's truly the fixture's own (a
+  window's square along its wall, a trap's square with a walk round it, a sconce's square beside a wall, and their
+  makes).  **Not rows:** the doors (placed by the grower's own stream as it joins the rooms, pass.c; only their
+  details keyed); the materials, the fortified stratum's doors and the portals' make, which are decisions over every
+  room or portal rather than placements: steps of fixtures.c's, between its two stages, with their own purposes.
+- **A C table, not a text file.**  The rows hold hooks and the style's offsets, which a generator would have to write
+  out as C anyway, and seven rows read plainly as C.  If the fixtures grow (COMMANDS's furniture with compartments, a
+  fountain, a shelf), a placers.txt read by the build as said.txt is would be the next step.
+- **Room.**  The placer, the table, `dkey` and `rstream` are overlay 9's (sky.c's, which had the room), called through
+  bank.s's stubs (place, dkey, rstream, defended; the hooks put_window, put_portc, put_trap and put_dtrap in overlay
+  5, put_mark in 7, put_sconce part 3's stub); `dr` is the main RAM's (it's called most).  A hook in another overlay
+  can't read the table in overlay 9, so the row it's called for is copied to the main RAM first (`pr`, PR).  First
+  built all in the main RAM, the placer in cc65's C was 1,477 bytes and left 1,424 free, under the 2,048.  The build's
+  room table:
+
+  | | before | after |
+  |---|---|---|
+  | dq0m's main RAM | 2,940 | 2,737 |
+  | overlay 2 (pass.c) | 623 | 947 |
+  | overlay 5 (fixtures.c) | 28 | 845 |
+  | overlay 6 (the parts' images) | 66 | 508 |
+  | overlay 7 (stock.c, uses.c) | 11 | 165 |
+  | overlay 9 (sky.c, place.c) | 1,908 | 477 |
+  | part 3 (sconce.c) | 2,043 | 2,485 |
+
+  Overlays 1, 3, 4 and 8 and parts 1 and 2 as they were; no other task touched.
+- **The start** (dq0starttime): seed 1 233.8M cycles (234.1M before, budget 235M), seed 123456789 311.4M (311.0M,
+  budget 315M).
+- **Checked byte for byte** (a scratch script, not committed): every run of bytes each task wrote to the hub's shared
+  banks (the maker's chunks into the cache, its stock lists, the seen maps; the world's and the denizens' writes too),
+  hashed, as a sorted list per seed, over 21 seeds (1, 3, 5, 7, 8, 11, 13, 21, 42, 77, 99, 117, 256, 374, 517, 1000,
+  2026, 4242, 31337, 70000, 123456789), each in twelve games (as it is, -T, -T -T, -T -T -T, -M, -A, -D, -V, -P, -M -T,
+  -A -T -T, -V -T -T -T: the top stratum and those under it; built, natural and mixed; the diagonal passages, the
+  rooms at 45 degrees, the great caverns, the long slopes): 252 games, 902 chunks made (8,109 doors, 892 windows, 233
+  slits, 915 portcullises, 770 traps in 489 chunks), 29,202 runs of bytes.  Before and after: the same, every seed.
+- **Left:** the styles' proportions (uses.c's styles[4]) into the theme (§5's step 3); the private hashes that aren't
+  placers' dice (caves.c's caverns, water and rubble, sky.c's skylights, plan.c's water, uses.c's ring, make.c's mixed
+  third) as purposes of `dkey`'s, each defined as its own formula (they'd move nothing, but each wants its own
+  derivation, or the seeded key and new dungeons); the hooks' square-finding as a few shared finders (a square along
+  a wall, one in the open, one by a wall) once more fixtures want the same squares; a text source for the table if it
+  grows.
+- **Tested:** all 442 tests pass.
