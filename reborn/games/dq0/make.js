@@ -24,7 +24,7 @@ const CRAFTS = H.words('AP_WEAPON');                                // rs.h's AP
 const TR = H.words('TR_READ').filter(w => w !== 'copy');            // theme.h's TR_* (TR_COPY no rule's), TE_*
 const TE = { '-': C.TE_NONE, open: C.TE_OPEN, rule: C.TE_RULE };
 const ENDS = { left: C.END_LEFT & 3, escaped: C.END_ESCAPED, ruled: C.END_RULED, died: C.END_DIED };   // theme.h's END_* and 3
-const PURPOSES = H.words('P_HALLS');                                // theme.h's P_*
+const PURPOSES = H.words('SP_HALLS');                                // theme.h's SP_*
 const USES = ['kitchen', 'pantry', 'barracks', 'armoury', 'chapel', 'bedchamber', 'solar', 'well room', 'cistern',
   'gatehouse', 'guardroom', 'workshop'];                            // (The uses' words, the theme's if it has them)
 const DID = H.words('TL_BUILT');                                    // theme.h's TL_*
@@ -244,9 +244,9 @@ function compile(text, f, beasts, count) {
         if (did === C.TL_RUINED) work = ENDINGS.indexOf(v[3]);
         else {
           const p = String(v[3] || '').split(' ');
-          work = PURPOSES.indexOf(p[0]) | (p[1] === 'fortified' || (p[0] === 'keep' && p[1] !== 'open') ? C.P_FORT : 0);
+          work = PURPOSES.indexOf(p[0]) | (p[1] === 'fortified' || (p[0] === 'keep' && p[1] !== 'open') ? C.SP_FORT : 0);
         }
-        if (work < 0 || (did !== C.TL_RUINED && (work & ~C.P_FORT) >= PURPOSES.length)) bad(l, did === C.TL_RUINED ? 'how it was ruined: ' + ENDINGS.join(', ') : 'its purpose');
+        if (work < 0 || (did !== C.TL_RUINED && (work & ~C.SP_FORT) >= PURPOSES.length)) bad(l, did === C.TL_RUINED ? 'how it was ruined: ' + ENDINGS.join(', ') : 'its purpose');
         layers[sn].push({ era, did, work });
         break;
       }
@@ -297,7 +297,7 @@ function compile(text, f, beasts, count) {
     b[T('style[' + k + '][0]')] = STYLES[s[1][0]];
     b[T('style[' + k + '][1]')] = STYLES[s[1][s[1].length - 1]];
     const p = (s[2] || 'halls').split(' ');                         // (Its purpose: a keep fortified, unless open)
-    let purpose = PURPOSES.indexOf(p[0]) | (p[1] === 'fortified' || (p[0] === 'keep' && p[1] !== 'open') ? C.P_FORT : 0);
+    let purpose = PURPOSES.indexOf(p[0]) | (p[1] === 'fortified' || (p[0] === 'keep' && p[1] !== 'open') ? C.SP_FORT : 0);
     for (const y of ls) if (y.did !== C.TL_RUINED) purpose = y.work;          // (Its layers' last built or reused, if it has any)
     b[T('purpose[' + k + ']')] = purpose;
     b[T('nlayers[' + k + ']')] = ls.length;

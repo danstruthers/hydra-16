@@ -7,8 +7,8 @@
 ** request and reply areas), and a character generator (hmchar ...) whose files it reads, the referee's RS_HELLO
 ** naming it (RULESETS.md: what a ruleset answers, and what the game assumes of it).
 **
-** Converting a character between rulesets goes through a neutral character (struct rs_neutral): each ruleset can
-** make one of its own characters (RS_EXPORT) and make its own from one (RS_IMPORT).
+** Only the requests the game makes are here (ENGINE-CRITIQUE.md's section 8, 2026-11-11: ten never asked, and the neutral
+** character for converting between rulesets, gone).
 */
 
 #ifndef _RS_H
@@ -410,9 +410,7 @@ enum {
                                                 **   actor its entry plus 1, the key in the text, w1 its record (the
                                                 **   denizens' task's: its sheet's, kept and saved with the game; made
                                                 **   the first time, the same one after) */
-    RS_DROP_ACTOR,
     RS_TEST,                                    /* An actor, a purpose, steps -> a grade */
-    RS_TEST_MANY,                               /* The same for several (perception) */
     RS_CONTEST,                                 /* Two actors' tests (actor and other: 0 the character, else an
                                                 **   actor's entry plus 1), each its purpose (a the actor's, b the
                                                 **   other's), steps the actor's circumstances, c the other's (a
@@ -442,7 +440,6 @@ enum {
     RS_EXERT,                                  /* Time passed (w1 tenths) moving at a pace (a: GA_*), at strenuous
                                                 **   work (GA_WORK), or standing still (GA_REST): fatigue gained, or
                                                 **   rested off (its summary anew; result 1, a level more) */
-    RS_REST,                                    /* Hours resting: healing, advancement -> effects, words */
     RS_TREAT,                                   /* First aid, a wound treated (slice 4.3's): the character the healer,
                                                 **   other the patient (0 itself, else an actor's entry plus 1), its
                                                 **   text the part said ("left arm", "" any); a 0, planned: b the wound,
@@ -462,18 +459,14 @@ enum {
                                                 **   load, its step) and its tests; an actor's (actor its entry
                                                 **   plus 1, a 2: the world's, its things held and worn, the
                                                 **   outfits' gear, 2026-10-27), its blow and its armour by them */
-    RS_INITIATIVE,                              /* Actors -> each one's delay as a fight starts */
     RS_MORALE,
-    RS_EXPERIENCE,                              /* Something that counts to advancement */
     RS_DESCRIBE,                                /* An actor's sheet, wounds, or a line -> words (b 3: its state, the
                                                 **   hub's pace and watchfulness its first lines; a 1, those only; b 4,
                                                 **   what time did to its body since it was last told: RS_TIME's news,
                                                 **   slice 4.3's; b RD_DEITY, the deity it worships, its name: "" none,
                                                 **   2026-11-09) */
-    RS_POWER,                                  /* (Later: spells and psionics, a generic power) */
-    RS_EXPORT,                                  /* The character as a neutral one (struct rs_neutral) */
-    RS_IMPORT,                                  /* A neutral character made one of this ruleset's */
-    RS_SAVE, RS_RESTORE, RS_QUIT,
+    RS_SAVE,                                    /* The character written (the text its path), and its creatures' sheets
+                                                **   (the save folder's beasts.dat) */
     RS_DICE,                                    /* (A test's: the referee's unit tests, tests/ram/t_rules) Its dice
                                                 **   fixed: x the faces the next dice show, in turn, to a 0, and b
                                                 **   every die's after them (0: the dice as they fall); a 1, its dice
@@ -502,20 +495,5 @@ enum {
 enum { OT_FEUDAL, OT_IMPERIAL, OT_VIKING, OT_TRIBAL, OT_SINDARIN, OT_KHUZAN, OT_SLAVE, OT_SERF, OT_UNGUILDED,
     OT_GUILDED, OT_NOBLE, OT_POOR, OT_AVERAGE, OT_RICH, OT_FEMALE, OT_MALE };    /* (RS_OUTFIT's tags: outfits.txt's,
                                                 **   outfits.js's TAGS, in order) */
-
-/* A neutral character: what carries over between rulesets.  Attributes on a 3-18 scale (HarnMaster's as they are; a
-** d20's: Strength, Dexterity, Constitution, Intelligence, Wisdom, Charisma mapped to the nearest); its abilities as
-** purposes, each a chance in percent; its calling as a word the other ruleset maps to its nearest (warrior, rogue,
-** hunter, healer, scholar, miner ...) */
-struct rs_neutral {
-    char            name[16];
-    char            calling[12];
-    unsigned char   species, female;
-    unsigned char   str, sta, dex, agl, per, intl, wil, cha;    /* 3-18 */
-    unsigned char   ability[P_THEME];           /* Each purpose's chance, percent (0: untrained) */
-    unsigned char   weapon[8];                  /* Weapon families' chances: sword, axe, club, dagger, spear, bow,
-                                                **   sling, unarmed */
-    unsigned char   level;                      /* Experience: 1 a beginner ... (HarnMaster's from its skills) */
-};
 
 #endif

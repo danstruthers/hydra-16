@@ -31,9 +31,10 @@ The two so far:
 
 ## What a ruleset must answer
 
-Each request the game makes today, who makes it, and what of the reply it reads.  A referee may answer more (rs.h
-has requests no one makes yet: RS_TEST_MANY, RS_REST, RS_INITIATIVE, RS_EXPERIENCE, RS_POWER,
-RS_EXPORT, RS_IMPORT, RS_RESTORE, RS_QUIT), and RS_DICE is the referee's unit tests' alone (tests/ram/t_rules: the
+Each request the game makes today, who makes it, and what of the reply it reads: rs.h has these and no others (the
+ten no one made, RS_DROP_ACTOR, RS_TEST_MANY, RS_REST, RS_INITIATIVE, RS_EXPERIENCE, RS_POWER, RS_EXPORT, RS_IMPORT,
+RS_RESTORE and RS_QUIT, and the neutral character, struct rs_neutral, deleted 2026-11-11: ENGINE-CRITIQUE.md's section 8).
+RS_DICE is the referee's unit tests' alone (tests/ram/t_rules: the
 next dice's faces fixed, the dice rolled since said back; dq0harn answers it, a ruleset needn't); one it doesn't know
 it answers with result 0xFF.
 

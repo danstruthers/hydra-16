@@ -192,7 +192,7 @@ static void plan (void)
 
     hub_get (THEME_BANK, &THEME->purpose[L->sn < TSTRATA ? L->sn : TSTRATA - 1], &purpose, 1);
     purpose = layered (purpose);                /* (Its layer's work, a stratum of more than one) */
-    ufort = purpose & P_FORT;
+    ufort = purpose & SP_FORT;
     in = way_in (s);
     ring = 2;
     if (in != 0xFF) {                           /* (Its ring: chunks from the way in's, the farther way) */

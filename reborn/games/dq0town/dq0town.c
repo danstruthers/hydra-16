@@ -817,9 +817,9 @@ static void today (void)
 
 /* ---- The places */
 
-enum { P_STREET, P_INN, P_MARKET, P_SMITH, P_ASKING, P_SCHOLAR, P_LEAVE, P_SHUT };
+enum { TOWN_STREET, TOWN_INN, TOWN_MARKET, TOWN_SMITH, TOWN_ASKING, TOWN_SCHOLAR, TOWN_LEAVE, TOWN_SHUT };
 
-/* Where a word goes: a place's number or its name, or a word that's done there; P_STREET none */
+/* Where a word goes: a place's number or its name, or a word that's done there; TOWN_STREET none */
 static unsigned char __fastcall__ place_of (const char* w)
 {
     unsigned char k, m, n = strcspn (w, " ");
@@ -835,7 +835,7 @@ static unsigned char __fastcall__ place_of (const char* w)
             }
         }
     }
-    return P_STREET;
+    return TOWN_STREET;
 }
 
 static void menu (void)
@@ -1246,7 +1246,7 @@ static void __fastcall__ scholar (const char* first)
 
 /* ---- The town */
 
-static unsigned char here;                        /* (Where it is: P_*) */
+static unsigned char here;                        /* (Where it is: TOWN_*) */
 
 /* Into place p: its day (each visit), its words (the scholar's house, first its first command: "" none) */
 static const char* first = "";
@@ -1255,7 +1255,7 @@ static void __fastcall__ go (unsigned char p)
 {
     static const char* const keys[] = { 0, "inn", "market", "smith", "asking" };
 
-    if (p == P_SHUT) {
+    if (p == TOWN_SHUT) {
         if (words_of ("shut", 0)) {
             say (v[0]);
             say ("\n");
@@ -1264,34 +1264,34 @@ static void __fastcall__ go (unsigned char p)
     }
     here = p;
     nh = 0;
-    if (p < P_LEAVE) {
+    if (p < TOWN_LEAVE) {
         days_pass (1);
-        if (p < P_SCHOLAR) {
+        if (p < TOWN_SCHOLAR) {
             say_one (keys[p]);                  /* (The place's words, one by the dice; a day: the scholar's, its own) */
             say ("\n");
         }
     }
     switch (p) {
-    case P_INN:
+    case TOWN_INN:
         inn_ ();
         break;
-    case P_MARKET:
+    case TOWN_MARKET:
         tr.seen |= TS_MARKET;
         goods_say ("goods", "For sale: ");
         break;
-    case P_SMITH:
+    case TOWN_SMITH:
         tr.seen |= TS_SMITH;
         smith_list ();
         break;
-    case P_ASKING:
+    case TOWN_ASKING:
         asking ();
         break;
-    case P_SCHOLAR:
+    case TOWN_SCHOLAR:
         scholar (first);
-        here = P_STREET;                        /* (Its own questions asked: back in the street after it) */
+        here = TOWN_STREET;                        /* (Its own questions asked: back in the street after it) */
         menu ();
         break;
-    case P_LEAVE:
+    case TOWN_LEAVE:
         leave_list ();
         break;
     }
@@ -1300,12 +1300,12 @@ static void __fastcall__ go (unsigned char p)
 /* An offer taken, a place followed: 1 it was one */
 static unsigned char __fastcall__ chosen (const char* w)
 {
-    unsigned char k = which (w, here == P_ASKING);
+    unsigned char k = which (w, here == TOWN_ASKING);
 
     if (k == 0xFF) {
         return 0;
     }
-    if (here == P_ASKING) {
+    if (here == TOWN_ASKING) {
         value_of (k, "why", 2);
         say ("You give ");
         say (said);
@@ -1325,43 +1325,43 @@ static void __fastcall__ command (char* l)
 
     o = object (w ? w + 1 : "");
     q = place_of (o);
-    if ((!strncmp (l, "go ", 3) || !strncmp (l, "visit ", 6) || !strncmp (l, "enter ", 6)) && q != P_STREET && q != P_LEAVE) {
+    if ((!strncmp (l, "go ", 3) || !strncmp (l, "visit ", 6) || !strncmp (l, "enter ", 6)) && q != TOWN_STREET && q != TOWN_LEAVE) {
         go (q);                                 /* ("go to the market") */
         return;
     }
-    if (here == P_INN && *l >= '0' && *l <= '9') {
+    if (here == TOWN_INN && *l >= '0' && *l <= '9') {
         rest (l);                               /* (The days to rest, asked) */
         return;
     }
-    if ((here == P_LEAVE || here == P_ASKING) && (chosen (l) || (w && chosen (o)))) {
+    if ((here == TOWN_LEAVE || here == TOWN_ASKING) && (chosen (l) || (w && chosen (o)))) {
         return;
     }
-    if (here == P_ASKING && *l >= '1' && *l <= '9') {
+    if (here == TOWN_ASKING && *l >= '1' && *l <= '9') {
         say ("No one's asking that.\n");
         return;
     }
-    if (p == P_STREET) {
+    if (p == TOWN_STREET) {
         say ("There's nothing like that to do here: a number or a place's name, or Enter to go back.\n");
         return;
     }
-    if (p == P_SCHOLAR) {
+    if (p == TOWN_SCHOLAR) {
         first = w && (*l < '1' || *l > '9') ? l : "";   /* (A command of its own, done there: "read the plaque") */
         go (p);
         first = "";
         return;
     }
-    if (p != here && (p == P_SHUT || !w || (*l >= '1' && *l <= '9'))) {
+    if (p != here && (p == TOWN_SHUT || !w || (*l >= '1' && *l <= '9'))) {
         go (p);                                 /* (A place named: gone to) */
         return;
     }
-    if (p != here && p != P_INN && !(p == P_MARKET && here == P_SMITH && strncmp (l, "sell", 4) && kind_named (o, "blades") != KI_NONE)) {
+    if (p != here && p != TOWN_INN && !(p == TOWN_MARKET && here == TOWN_SMITH && strncmp (l, "sell", 4) && kind_named (o, "blades") != KI_NONE)) {
         go (p);                                 /* (Its errand's place gone to first, then done there) */
-        if ((here == P_LEAVE || here == P_ASKING) && *o) {
+        if ((here == TOWN_LEAVE || here == TOWN_ASKING) && *o) {
             chosen (o);                         /* ("follow the second", "take Arlen's offer") */
             return;
         }
     }
-    key = here == P_SMITH ? "blades" : "goods";
+    key = here == TOWN_SMITH ? "blades" : "goods";
     if (!strncmp (l, "buy", 3)) {
         buy (o, key);
     } else if (!strncmp (l, "sell", 4)) {
@@ -1375,13 +1375,13 @@ static void __fastcall__ command (char* l)
     } else if (!strncmp (l, "whet", 4) || !strncmp (l, "sharpen", 7) || !strncmp (l, "oil", 3)) {
         mend (o, 1);
     } else if (!strncmp (l, "rest", 4) || !strncmp (l, "sleep", 5)) {
-        if (here != P_INN) {
-            go (P_INN);
+        if (here != TOWN_INN) {
+            go (TOWN_INN);
         }
         rest (o);
     } else if (!strncmp (l, "listen", 6) || !strncmp (l, "hear", 4)) {
-        if (here != P_INN) {
-            go (P_INN);
+        if (here != TOWN_INN) {
+            go (TOWN_INN);
         } else {
             inn_ ();                            /* (What's said, told again) */
         }
@@ -1484,20 +1484,20 @@ int main (int argc, char* argv[])
         KINDS ();
         if (asks > TOWN_ASKS || tr.days >= TOWN_DAYS) {
             say ("The days go by, and at last you set out.\n");
-            here = P_LEAVE;
+            here = TOWN_LEAVE;
             *ans = 0;
         }
         if (!*ans) {                            /* (Enter: back to the street; there, leave; leaving, the first) */
-            if (here == P_LEAVE) {
+            if (here == TOWN_LEAVE) {
                 if (nr) {
                     follow (0);
                 }
                 done = 1;
             } else if (here) {
-                here = P_STREET;
+                here = TOWN_STREET;
                 menu ();
             } else {
-                go (P_LEAVE);
+                go (TOWN_LEAVE);
             }
             continue;
         }

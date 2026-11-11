@@ -97,7 +97,7 @@ static struct str* __fastcall__ push (unsigned char work, unsigned char sub, con
     s->work = work;
     s->sub = sub;
     strncpy (s->styles, styles, 2);
-    s->purpose = p < 0 ? P_HALLS : p;
+    s->purpose = p < 0 ? SP_HALLS : p;
     return s;
 }
 
@@ -125,7 +125,7 @@ static void make_strata (void)
     ns = 0;
     nd = 1 + random (2);
     for (sub = nd - 1; sub >= 0; --sub) {
-        push (WK_DEEP, sub, "n", P_HALLS);
+        push (WK_DEEP, sub, "n", SP_HALLS);
     }
     for (e = 0, r = er; e < ne; ++e, ++r) {
         data (TK_WORK, works[r->work], 0);
@@ -136,7 +136,7 @@ static void make_strata (void)
                                                 **   kobolds dig their own) */
             r->took = s->work;
             k = purpose_of (D.v[1]);
-            layer (s, e + 1, TL_REUSED, k == 0xFF ? P_HALLS : k);
+            layer (s, e + 1, TL_REUSED, k == 0xFF ? SP_HALLS : k);
             top = ns - 1;
         } else {
             for (sub = n - 1; sub >= 0 && ns < TSTRATA; --sub) {
@@ -294,7 +294,7 @@ static void __fastcall__ take (struct line* l)
     char** v = l->v;
     const char* k = l->key;
     unsigned char i, sn;
-    int p;                                      /* (A purpose: P_FORT its high bit) */
+    int p;                                      /* (A purpose: SP_FORT its high bit) */
     struct era* r;
     struct str* s;
     struct fac* f;
@@ -340,11 +340,11 @@ static void __fastcall__ take (struct line* l)
         memset (s, 0, sizeof *s);
         strncpy (s->name, v[0], 19);
         strncpy (s->styles, v[1], 2);
-        p = l->n > 2 && *v[2] ? purpose_of (v[2]) : P_HALLS;
-        s->purpose = p < 0 ? P_HALLS : p;
+        p = l->n > 2 && *v[2] ? purpose_of (v[2]) : SP_HALLS;
+        s->purpose = p < 0 ? SP_HALLS : p;
         p = s->purpose & 7;
-        s->work = *v[1] == 'n' ? WK_DEEP : *v[1] == 'm' ? W_MINE : p == P_KEEP ? W_KEEP : p == P_TEMPLE ? W_TEMPLE :
-            p == P_CRYPT ? W_TOMB : p == P_CELLARS ? W_TOWN : W_HOLD;
+        s->work = *v[1] == 'n' ? WK_DEEP : *v[1] == 'm' ? W_MINE : p == SP_KEEP ? W_KEEP : p == SP_TEMPLE ? W_TEMPLE :
+            p == SP_CRYPT ? W_TOMB : p == SP_CELLARS ? W_TOWN : W_HOLD;
     } else if (!strcmp (k, "layer") && l->n >= 4 && (sn = atoi (v[0])) < TSTRATA) {
         if ((p = find_word (dids, v[2])) >= 0) {
             layer (&st[sn], atoi (v[1]), p, p == TL_RUINED ? find_word (endings, v[3]) : purpose_of (v[3]));

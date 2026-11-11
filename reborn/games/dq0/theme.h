@@ -75,8 +75,9 @@ enum { TE_NONE, TE_OPEN, TE_RULE };             /* Nothing more; the way out ope
 enum { END_NONE, END_ESCAPED, END_RULED, END_DIED, END_LEFT };   /* (The end[] of each: its number and 3, END_LEFT's the
                                                 **   slot END_NONE never wanted.  Escaped and ruled, solved; left, out
                                                 **   unsolved; died, solved or not as Q.solved says) */
-enum { P_HALLS, P_KEEP, P_TEMPLE, P_CELLARS, P_CRYPT, P_WORKS };  /* A stratum's purpose (DUNGEON.md: built to a plan) */
-#define P_FORT          0x80                    /*   and fortified */
+enum { SP_HALLS, SP_KEEP, SP_TEMPLE, SP_CELLARS, SP_CRYPT, SP_WORKS };  /* A stratum's purpose (DUNGEON.md: built to a
+                                                **   plan; SP_: rs.h's P_ a test's purpose) */
+#define SP_FORT         0x80                    /*   and fortified */
 #define TUSES           12                      /* The uses' words past the rooms' eight (world.h's U_KITCHEN on) */
 
 /* ---- The history (HISTORY.md) */
@@ -87,7 +88,7 @@ enum { P_HALLS, P_KEEP, P_TEMPLE, P_CELLARS, P_CRYPT, P_WORKS };  /* A stratum's
 struct tlayer {                                 /* A stratum's layer (oldest first) */
     unsigned char   era;                        /* Its era (1 ...: the theme's; 0 none said) */
     unsigned char   did;                        /* TL_* */
-    unsigned char   work;                       /* Built or reused: its purpose (P_*, P_FORT); ruined: how (EN_*) */
+    unsigned char   work;                       /* Built or reused: its purpose (SP_*, SP_FORT); ruined: how (EN_*) */
 };
 enum { TL_BUILT, TL_RUINED, TL_REUSED };
 enum { EN_ABANDONED, EN_CONQUERED, EN_COLLAPSED, EN_FLOODED, EN_CURSED, EN_HELD };   /* How an era ended (or not: still held), a work was ruined */
@@ -161,7 +162,7 @@ struct theme {
                                                 **   shut (tried, examined), and open; */
     unsigned        end[4];                     /*   the endings' (END_* and 3) */
     char            uses[TUSES][16];            /* A room's words by its use, past the eight (U_KITCHEN ...) */
-    unsigned char   purpose[TSTRATA];           /* Each stratum's purpose (P_*, P_FORT: its layers' last built or
+    unsigned char   purpose[TSTRATA];           /* Each stratum's purpose (SP_*, SP_FORT: its layers' last built or
                                                 **   reused, the uses' plan's) */
     /* Its history (HISTORY.md) */
     unsigned char   goal, goal_sn, goal_guard;  /* The goal (G_*), its stratum (a far exit's: the way out there), its

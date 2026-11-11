@@ -774,7 +774,7 @@ module.exports = {
                                                 // with, its coins gone; quit as it's asked, the fight with the robber not fought)
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], RS_TEST = 4, STEALTH = 4, SOUND = 1, A = dq0Answers(out).filter(a => a.cmd === 'inventory');
+        const T = dq0Turns(m), f = [], RS_TEST = m.dq0.layout().K.RS_TEST, STEALTH = 4, SOUND = 1, A = dq0Answers(out).filter(a => a.cmd === 'inventory');
         const gs = T.filter(t => /^dq0 -p t/.test(t.line)), sl = gs.map(g => T.of('sleep', g.k));
         if (sl.length !== 2 || sl.some(t => t.k < 0) || A.length !== 1) return ['the games not played'];
         const robs = sl.map(t => [...dq0Ev(t, 'E_TASK', { te: 'TE_ROBBED' }), ...dq0Ev(T[t.k + 1] || t, 'E_TASK', { te: 'TE_ROBBED' })]);
@@ -802,7 +802,7 @@ module.exports = {
         "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g", 'douse the torch', 'sleep', 'echo $status']) },   // (Dead of it: the game over)
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], RS_ATTACK = 7, sl = T.of('sleep'), s = dq0Story(out);
+        const T = dq0Turns(m), f = [], RS_ATTACK = m.dq0.layout().K.RS_ATTACK, sl = T.of('sleep'), s = dq0Story(out);
         if (sl.k < 0) return ['the game not played'];
         const all = [sl, ...T.filter(t => t.k > sl.k)];
         if (!all.some(t => dq0Rep(t, 'slot0', { kind: RS_ATTACK, w2: v => v & 0x80 }).length)) f.push('no blow at the sleeper with no defence (RS_ASLEEP)');

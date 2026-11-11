@@ -221,7 +221,6 @@ RS_LOAD_PC      -  -> a gait@GA_CREEP; b watch; result bad
                 # (The file the text's path; the pace and watchfulness it says; 1 no character, 2 too many tongues)
 RS_NEW_ACTOR    c want; w1 record  -> result bad; x summary
                 # (Its key the text; its want and fatigue levels, its record (the denizens'); its struct rs_summary)
-RS_DROP_ACTOR   -
 RS_TEST         a purpose@P_NOTICE_SIGHT; b how; steps  -> grade; result cant
                 # (b by purpose: P_SEARCH's, P_DISARM's HIDE_*; P_NOTICE_SIGHT's 1 a hazard underfoot.  1 it can't (by
                 #   magic alone, no picks), 2 not a tongue it speaks)
@@ -234,7 +233,6 @@ RS_TEST:read    a purpose@P_NOTICE_SIGHT; b how; w1 item; steps  -> grade; resul
 RS_TEST:swim    -> grade; w1 squares; w2 breath         # (A minute's swim: its squares; its breath held, seconds)
 RS_TEST:bearing -> grade; result drift                  # (P_BEARING's: a failure's drift, the world's to make)
 RS_TEST:draw    -> grade; result opened                 # (P_DRAW's: 1 Drawing opened by it)
-RS_TEST_MANY    -
 RS_CONTEST      a purpose@P_NOTICE_SIGHT; b against@P_NOTICE_SIGHT; steps; c osteps  -> grade; c ograde; result better
                 # (The other's purpose and steps (signed); its grade; 1 the actor did better, 2 the other, 0 alike)
 RS_ATTACK       a aim@Z_MID; b aspect@AS_BLUNT; c outnumbered; steps; w2(flags) shy:0; x[0] heart
@@ -267,24 +265,16 @@ RS_TIME         a about; b pc; w1 minutes; w2 bleeders; x[0] fighting; x[2] drow
                 #   dead, its health; those that bound their bleeding, and died; news 2 words, 4 hurt anew, 8 a want's
                 #   level; the tenths senseless; the clock it's next asked at)
 RS_EXERT        a pace; w1 tenths  -> result tired      # (GA_*, GA_WORK, GA_REST, GA_STOOD; 1 a level more)
-RS_REST         -
 RS_TREAT        a done  -> result cant; b wound; c how; w1 tenths; x[0] loc
                 # (other the patient, the text the part.  a 0 planned: the wound, the treatment (TR_*), where, its time;
                 #   1 nothing to treat, 2 not one it can treat itself, 3 no patient)
 RS_TREAT:done   a done; b wound; c how; x[0] loc  -> result undone      # (a 1, done: 1 still bleeding, 2 the plan gone)
 RS_EQUIP        a how; w1 load; w2 held                 # (0 put away, 1 taken up, the key the text; 2 all to hand)
-RS_INITIATIVE   -
 RS_MORALE       a why@MR_NONE; b field; c bonds; steps; w1 fallen; w2(leaders) band:0-7 faction:8-15
                 -> result state@M_STEADY; grade
-RS_EXPERIENCE   -
 RS_DESCRIBE     a brief; b what                         # (0 its sheet, 1 brief, 2 its wounds, 3 its state, 4 time's news,
                                                         #   5 its deity's name: RD_DEITY)
-RS_POWER        -
-RS_EXPORT       -
-RS_IMPORT       -
 RS_SAVE         -  -> result failed                     # (The text the path)
-RS_RESTORE      -
-RS_QUIT         -
 RS_DICE         a(how) seeded:0; b rest; w1 seed; x faces  -> c unrolled; w1 rolled; x sides
                 # (The faces next, to a 0, and every die's after; seeded anew from w1.  The dice since, the faces
                 #   forced but not rolled, the first ones' sides)

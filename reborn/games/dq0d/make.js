@@ -33,7 +33,7 @@ const { SND_KINDS } = C;                        // (hub.h's: the kinds at most, 
 const LANDS = 'mhfscp', CLIMATES = 'ctw';       // lore.h's LA_*, CL_*: a bit each, in order
 const LIGHTS = { '*': 0, d: 1, l: 2 }, NATURES = { a: 0, v: 1, m: 2, f: 3, d: 4 };  // LI_*, NA_*
 const ARMS = ['bite', 'claws', 'sting', 'crush', 'horns', 'talons', 'touch', 'weapon'];  // AR_*: a bit each
-const PURPOSES = H.words('P_HALLS');           // theme.h's P_*
+const PURPOSES = H.words('SP_HALLS');           // theme.h's SP_*
 const DOMAINS = ['war', 'fire', 'cruelty', 'death', 'undead', 'chaos', 'wealth', 'pleasure', 'bargains', 'beasts',
   'change', 'serpents', 'honour', 'battle', 'protection', 'shadow', 'deceit', 'nightmares', 'thieves', 'healing',
   'harvest', 'mercy', 'courage', 'storms', 'cold', 'knowledge', 'puzzles', 'law', 'dreams', 'magic', 'stars',

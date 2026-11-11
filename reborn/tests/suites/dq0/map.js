@@ -1844,7 +1844,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0gate', meaning: true, what: 'Dingus Quest Zero\'s fortified strata (DUNGEON.md: built to a plan; "Fortified versus not are built differently"): at seed 514 the kobold warren\'s Warren Mouth (its purpose a keep, fortified: theme.h\'s P_FORT), the character beginning in its gatehouse (the room the way in comes out in), told so, a portcullis raised and an arrow slit in its walls; read from the hub\'s cache: the gatehouse\'s every way out a portcullis (none a door, none a bare doorway), murder holes in its vault (R_MURDER), its vault higher than the passages\'',
+      name: 'dq0gate', meaning: true, what: 'Dingus Quest Zero\'s fortified strata (DUNGEON.md: built to a plan; "Fortified versus not are built differently"): at seed 514 the kobold warren\'s Warren Mouth (its purpose a keep, fortified: theme.h\'s SP_FORT), the character beginning in its gatehouse (the room the way in comes out in), told so, a portcullis raised and an arrow slit in its walls; read from the hub\'s cache: the gatehouse\'s every way out a portcullis (none a door, none a bare doorway), murder holes in its vault (R_MURDER), its vault higher than the passages\'',
       init: 't_rc', cycles: 500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 514 -c /ram/c.hm', 'x portcullis', 'quit', 'echo $status']) },
       expect: ['% echo $status'],

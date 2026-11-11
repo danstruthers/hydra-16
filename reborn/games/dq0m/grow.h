@@ -92,7 +92,7 @@ enum { US_STYLE, US_PLAN, US_FLOOR, US_THING, US_SIGN, US_UNDER };   /* The styl
                                                 **   what room arg & 7 has lying about (its die arg >> 3: a kind, or
                                                 **   0), its use's mark (place.c's row a kitchen's well), the mark
                                                 **   room arg's use under the chunk's older layer left (stock.c's) */
-extern unsigned char ufort, uwater;             /* (The chunk's stratum fortified (P_FORT), the chunk's water) */
+extern unsigned char ufort, uwater;             /* (The chunk's stratum fortified (SP_FORT), the chunk's water) */
 extern unsigned char ulayer, uruin;             /* (The chunk's layer of its history, theme.h's SG_*; a ruin after
                                                 **   it, EN_*, or 0xFF: US_PLAN's) */
 unsigned char __fastcall__ layer_at (unsigned char sn, unsigned cx, unsigned cy);  /* Which of stratum sn's layers

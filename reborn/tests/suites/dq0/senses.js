@@ -274,7 +274,7 @@ module.exports = {
         // (Slices 4.5 and 4.6: the rats on its scent stalk it, their Stealth tested, the denizens' slot's, their steps
         // the quieter; every sound's way from the character to a rat no shorter than the line, round the corner longer)
         const g = m.dq0.games[0] || { replies: [], dens: [] }, rs = g.replies.filter(r => r.req === 'dsense' && r.cost !== 255);
-        if (!g.replies.some(r => r.req === 'dslot' && r.kind === 4 && r.a === 4 && r.actor)) f.push("no rat's Stealth tested, stalking");
+        if (!g.replies.some(r => r.req === 'dslot' && r.kind === m.dq0.layout().K.RS_TEST && r.a === 4 && r.actor)) f.push("no rat's Stealth tested, stalking");
         if (!g.dens.some(e => e.kind === 'E_DEN' && e.de === 'DE_MOVED' && e.b === 0)) f.push("no rat's step silent, stalking");
         const short = rs.filter(r => r.cost < Math.max(Math.abs(r.x - r.pc.x), Math.abs(r.y - r.pc.y)));
         if (short.length) f.push("a sound's way shorter than the line: " + JSON.stringify(short[0]));
@@ -325,7 +325,7 @@ module.exports = {
         'step back', 'step forward', 'crouch', 'step back', 'stand', 'walk', 'step forward', 'wait', 'creep', 'step back', 'step forward', 'd', 'step forward', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
-        const T = dq0Turns(m), f = [], STEALTH = 4, RS_TEST = 4;
+        const T = dq0Turns(m), f = [], STEALTH = 4, RS_TEST = m.dq0.layout().K.RS_TEST;
         const tests = t => dq0Rep(t, 'slot0', { kind: RS_TEST, a: STEALTH }), loud = g => g >= 2 ? 0 : g === 1 ? 1 : g === -1 ? 2 : 3;
         const s0 = T.of('step forward'), cr = T.of('creep'), s1 = T.of('step back', cr.k), s2 = T.of('step forward', s1.k), cd = T.of('crouch', s2.k);
         const s3 = T.of('step back', cd.k), wk = T.of('walk', s3.k), s4 = T.of('step forward', wk.k), w = T.of('wait', s4.k), nz = t => t.after ? t.after.pc.noise : -1;
@@ -437,7 +437,7 @@ module.exports = {
         dq0Poke(m, [{ g: 1, line: 'wait 1 minute', n: 1, call: put(0, 2) }, ...[1, 2, 3, 4, 5, 6].map(n => ({ g: 2, line: 'wait', n, call: put(0, n & 1 ? 1 : 2) })), ...[0, 1, 2, 3, 4, 5].map(k => ({ g: 3, line: 'drop the cask', n: 1, k, set: { attitude: 2 } })), { g: 3, line: 'attack', n: 1, call: put(0, 1, { attitude: 0 }) }, { g: 4, line: 'wait 1 minute', n: 1, call: put(0, 1, { state: 3 }) }]);
       },
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), STEALTH = 4, RS_TEST = 4, RS_ATTACK = 7;
+        const T = dq0Turns(m), f = [], s = dq0Story(out), STEALTH = 4, RS_TEST = m.dq0.layout().K.RS_TEST, RS_ATTACK = m.dq0.layout().K.RS_ATTACK;
         const hid = t => t && t.after ? t.after.pc.hid : -1, gs = T.filter(t => /^dq0 -p t/.test(t.line));
         const from = n => gs[n] ? gs[n].k : 0, tests = (a, b) => T.filter(t => t.k >= a && t.k < b).flatMap(t => dq0Rep(t, 'dslot', { kind: RS_TEST, a: STEALTH, actor: 0 }));
         const t0 = tests(from(0), from(1)), t1 = tests(from(1), from(2));

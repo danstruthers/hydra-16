@@ -56,5 +56,5 @@ void __fastcall__ say (const char* s);          /* (Fd 2) */
 const char* __fastcall__ num (unsigned n);      /* A number in words (a static buffer of its own) */
 void __fastcall__ setbank (unsigned char b);
 signed char __fastcall__ find_word (const char* const* list, const char* s);  /* s's place in list (NULL-ended), or -1 */
-int __fastcall__ purpose_of (const char* s);    /* A purpose's words (halls, keep fortified ...): P_*, P_FORT; or -1 */
+int __fastcall__ purpose_of (const char* s);    /* A purpose's words (halls, keep fortified ...): SP_*, SP_FORT; or -1 */
 unsigned char getbank (void);

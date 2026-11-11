@@ -169,9 +169,9 @@ const char* __fastcall__ purpose_words (unsigned char p)
     static char w[20];
 
     strcpy (w, purposes[p & 7]);
-    if ((p & P_FORT) && (p & 7) != P_KEEP) {
+    if ((p & SP_FORT) && (p & 7) != SP_KEEP) {
         strcat (w, " fortified");
-    } else if (!(p & P_FORT) && (p & 7) == P_KEEP) {
+    } else if (!(p & SP_FORT) && (p & 7) == SP_KEEP) {
         strcat (w, " open");
     }
     return w;

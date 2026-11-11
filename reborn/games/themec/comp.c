@@ -403,7 +403,7 @@ const char* __fastcall__ comp_line (struct line* l)
 {
     const char* k = l->key;
     char** v = l->v;
-    int x;                                      /* (A purpose: P_FORT its high bit, so not a signed char) */
+    int x;                                      /* (A purpose: SP_FORT its high bit, so not a signed char) */
     unsigned char i;
     char* c;
     unsigned long m;
@@ -435,7 +435,7 @@ const char* __fastcall__ comp_line (struct line* l)
         if (nstrata >= TSTRATA || l->n < 2 || !*v[1] || strlen (v[1]) > 2 || strspn (v[1], "bnmx") != strlen (v[1])) {
             return "a stratum: a name, and one or two styles";
         }
-        x = l->n > 2 && *v[2] ? purpose_of (v[2]) : P_HALLS;
+        x = l->n > 2 && *v[2] ? purpose_of (v[2]) : SP_HALLS;
         if (x < 0) {
             return "a stratum's purpose: halls, keep, temple, cellars, crypt or works, fortified or open";
         }

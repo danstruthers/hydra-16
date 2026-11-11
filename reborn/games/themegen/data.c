@@ -64,7 +64,7 @@ int __fastcall__ purpose_of (const char* s)
     if ((p = find_word (purposes, w)) < 0 || (sp && strcmp (sp, " fortified") && strcmp (sp, " open"))) {
         return -1;
     }
-    return p | ((sp && !strcmp (sp, " fortified")) || (p == P_KEEP && !(sp && !strcmp (sp, " open"))) ? P_FORT : 0);
+    return p | ((sp && !strcmp (sp, " fortified")) || (p == SP_KEEP && !(sp && !strcmp (sp, " open"))) ? SP_FORT : 0);
 }
 
 /* ---- A theme's lines */
