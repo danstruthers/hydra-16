@@ -84,7 +84,7 @@ static unsigned char* __fastcall__ peek (unsigned char sn, unsigned x, unsigned 
 ** was off, its own way, by its place and its drawing), dleave, a
 ** square left out if its hash is under it (a critical success none, a marginal one in eight, a marginal failure one in
 ** four, a critical one in three) */
-static const unsigned char doffs[5] = { 3, 1, 0, 0, 0 }, dleaves[5] = { 85, 64, 32, 32, 0 };  /* (By the grade, G_CF
+static const unsigned char doffs[5] = { 3, 1, 0, 0, 0 }, dleaves[5] = { 85, 64, 32, 32, 0 };  /* (By the grade, G_BADLY
                                                 **   on: 0 untested, as a marginal success) */
 static void memory (void)
 {

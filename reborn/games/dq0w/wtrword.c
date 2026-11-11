@@ -69,7 +69,7 @@ static void __fastcall__ maker (const struct trail* t, unsigned char smell)
     add (": ");
     add (t->name);
     add (t->n == TP_ONE ? "" : "s");
-    add (R.grade == G_CS ? ", plainly." : smell ? ", by the smell of it." : t->n == TP_ONE ? ", by the look of it." :
+    add (R.grade == G_WELL ? ", plainly." : smell ? ", by the smell of it." : t->n == TP_ONE ? ", by the look of it." :
         ", by the look of them.");
 }
 
@@ -124,7 +124,7 @@ unsigned __fastcall__ s_tr_words (unsigned w)
         t->n = d;
         for (t->ago = TA_NOW; t->ago < TA_LONG && t->age >= ago_at[t->ago]; ++t->ago) {
         }
-        if (R.how == TRC_TRACK && R.grade == G_CF) {
+        if (R.how == TRC_TRACK && R.grade == G_BADLY) {
             t->head ^= t->head <= H_NW ? 4 : 0;     /* (Misread: the way it went wrong, how long ago) */
             t->ago = (t->ago + 2) % 5;
         }
@@ -143,10 +143,10 @@ unsigned __fastcall__ s_tr_words (unsigned w)
     } else if (R.how == TRC_TRACK) {            /* (The Tracking test's: how many, how long ago, which way, whose) */
         if (!R.ntr) {
             add (G_OK (R.grade) ? "You find no tracks here." : "You can make nothing of the floor here.");
-        } else if (R.grade == G_MF) {
+        } else if (R.grade == G_FAIL) {
             add ("The floor's been trodden here, but you can make nothing of the marks.");
         }
-        for (i = 0, t = R.tr; R.grade != G_MF && i < R.ntr; ++i, ++t) {
+        for (i = 0, t = R.tr; R.grade != G_FAIL && i < R.ntr; ++i, ++t) {
             add (i ? " " : "");
             add (many[t->n & 3]);
             add (t->what);

@@ -235,7 +235,7 @@ void s_pray_go (void)
     }
     g = RS_TEST_GRADE (*ask_b (RS_TEST, P_RITUAL, 0));
     HUB->slot[SLOT_UI].state = REQ_FREE;
-    sayf (calm[g == G_CF ? 0 : g == G_MF ? 1 : g == G_MS ? 2 : 3], d);
+    sayf (calm[g == G_BADLY ? 0 : g == G_FAIL ? 1 : g == G_PASS ? 2 : 3], d);
 }
 
 /* The vow ended ("break my fast", "stop fasting", "stop" with no long task): told; or none to end */

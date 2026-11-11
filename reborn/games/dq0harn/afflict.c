@@ -194,7 +194,7 @@ unsigned char __fastcall__ o_aff_time (struct req* r)
 static void __fastcall__ remedy (unsigned char k)
 {
     signed char g = test_sk (&pc, HARN_PHY, 2);
-    unsigned char p = (k == 1 ? 2 : 1) + (g == G_CS) - (g == G_CF);
+    unsigned char p = (k == 1 ? 2 : 1) + (g == G_WELL) - (g == G_BADLY);
 
     if (k == 1 ? !o_aff_cure (p) : !pd.hr || !p) {
         nput (k == 1 ? " It does nothing for you: there's no poison in you that it can reach." :

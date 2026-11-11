@@ -532,7 +532,7 @@ unsigned char __fastcall__ o_wound_drops (const struct side* t, unsigned char lo
 
 /* The character's defences in a round (the user's, 2026-10-20; HOUSE.md's): each thing that blocks blocks one foe a
 ** round (a shield one, a sword another), a bare arm's too, the dodge one; a counterstrike only on command (its stance,
-** D_COUNTER), what it strikes with then spent for the round as a block would be; a foe met this round meets the
+** D_OWN), what it strikes with then spent for the round as a block would be; a foe met this round meets the
 ** same again.  To whom each went (the foe's who, 0 none yet), by the slot in tools of what blocked (BARE_ARM a bare
 ** arm's), the dodge last; and how (HARN_*).  The round from the first blow at it after the last one ended */
 #define DODGED          (BARE_ARM + 1)
@@ -563,7 +563,7 @@ unsigned char __fastcall__ o_pc_defence (struct side* d, unsigned char f, unsign
     for (s = 0; s <= DODGED && used[s] != f; ++s) {
     }
     if (s > DODGED) {                           /* (A foe not met yet this round) */
-        if (stance == D_COUNTER && !used[d->aslot]) {
+        if (stance == D_OWN && !used[d->aslot]) {
             s = d->aslot;
             how = HARN_COUNTER;
         } else {

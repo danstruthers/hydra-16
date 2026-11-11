@@ -253,7 +253,7 @@ RS_ATTACK:rise  -> result outcome@O_MISS; a down            # (O_RISE: 1 still d
 RS_HARM         a cause@HC_FALL; b ground@GR_FLOOR; c how; w1 feet  -> result caught; b band; w2 out; x effects
                 # (HC_FALL: how HF_*.  A hold grabbed; the worst wound's band; the tenths it's out for)
 RS_HARM:strike  a cause@HC_FALL; b aspect@AS_BLUNT; c dice; w1 impact; w2 zone@Z_MID     # (HC_STRIKE, HC_FIRE: d6s)
-RS_HARM:struck  a cause@HC_FALL; c part@BP_SKULL; w1 impact; w2 run  -> result stop; b band; w2 out; x effects
+RS_HARM:struck  a cause@HC_FALL; c part; w1 impact; w2 run  -> result stop; b band; w2 out; x effects
                 # (HC_STRUCK: the striker's own part; the blow's number in a run; hurt enough to stop)
 RS_TIME         a about; b pc; w1 minutes; w2 bleeders; x[0] fighting; x[2] drowned; x[8-13] want[];
                 x[14](meal) meals:0-6 ration:7; x[15](drink) pints:0-5 taken:6=RT_TAKEN foul:7; x[16-17] spent;
@@ -280,4 +280,4 @@ RS_DICE         a(how) seeded:0; b rest; w1 seed; x faces  -> c unrolled; w1 rol
                 #   forced but not rolled, the first ones' sides)
 RS_WIELD        b thing; x[0-1] held[]  -> result which  # (At a thing; the kinds held; 1 x[0]'s, 2 x[1]'s, 0 none)
 RS_OUTFIT       -  -> result none; a level; w1 money; w2 seed; x[0-1] tags[]; x[2] heft; x[3] bears
-                # (0xFF none; its wealth; farthings; its draw's seed; OT_* bits; its weapons' version; quarter pounds)
+                # (0xFF none; its wealth; farthings; its draw's seed; its tags' bits (the ruleset's); its weapons' version; quarter pounds)

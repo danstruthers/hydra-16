@@ -71,202 +71,202 @@ want result=0 a=GA_WALK b=0 text~"Tess" status="UP 0" sum.health=H_FINE sum.load
 case Climbing 45: 45 a critical success, 44 marginal, 46 a marginal failure, 50 critical
 dice 100:45
 ask TEST a=P_CLIMB
-want grade=G_CS
+want grade=G_WELL
 dice 100:44
 ask TEST a=P_CLIMB
-want grade=G_MS
+want grade=G_PASS
 dice 100:46
 ask TEST a=P_CLIMB
-want grade=G_MF
+want grade=G_FAIL
 dice 100:50
 ask TEST a=P_CLIMB
-want grade=G_CF
+want grade=G_BADLY
 
 case Climbing 45: 1 a marginal success, 5 critical, 96 a marginal failure, 100 critical
 dice 100:1
 ask TEST a=P_CLIMB
-want grade=G_MS
+want grade=G_PASS
 dice 100:5
 ask TEST a=P_CLIMB
-want grade=G_CS
+want grade=G_WELL
 dice 100:96
 ask TEST a=P_CLIMB
-want grade=G_MF
+want grade=G_FAIL
 dice 100:100
 ask TEST a=P_CLIMB
-want grade=G_CF
+want grade=G_BADLY
 
 case a step worse (Climbing 40): 40 a critical success, 41 a marginal failure
 dice 100:40
 ask TEST a=P_CLIMB steps=-1
-want grade=G_CS
+want grade=G_WELL
 dice 100:41
 ask TEST a=P_CLIMB steps=-1
-want grade=G_MF
+want grade=G_FAIL
 
 case twelve steps better (105) kept to 95: 95 a critical success, 96 a marginal failure, 100 critical
 dice 100:95
 ask TEST a=P_CLIMB steps=12
-want grade=G_CS
+want grade=G_WELL
 dice 100:96
 ask TEST a=P_CLIMB steps=12
-want grade=G_MF
+want grade=G_FAIL
 dice 100:100
 ask TEST a=P_CLIMB steps=12
-want grade=G_CF
+want grade=G_BADLY
 
 case ten steps worse (-5) kept to 5: 4 a marginal success, 5 critical, 6 a marginal failure, 10 critical
 dice 100:4
 ask TEST a=P_CLIMB steps=-10
-want grade=G_MS
+want grade=G_PASS
 dice 100:5
 ask TEST a=P_CLIMB steps=-10
-want grade=G_CS
+want grade=G_WELL
 dice 100:6
 ask TEST a=P_CLIMB steps=-10
-want grade=G_MF
+want grade=G_FAIL
 dice 100:10
 ask TEST a=P_CLIMB steps=-20
-want grade=G_CF
+want grade=G_BADLY
 
 # Each purpose its skill (HOUSE.md: a purpose names one skill), or an attribute times 5 (Skills 21)
 
 case sight, sound, smell and searching are Awareness (60)
 dice 100:60
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_CS
+want grade=G_WELL
 dice 100:61
 ask TEST a=P_NOTICE_SOUND
-want grade=G_MF
+want grade=G_FAIL
 dice 100:59
 ask TEST a=P_NOTICE_SMELL
-want grade=G_MS
+want grade=G_PASS
 dice 100:61
 ask TEST a=P_SEARCH
-want grade=G_MF
+want grade=G_FAIL
 
 case stealth and concealment are Stealth (40), balance Acrobatics (70), enduring Condition (60), a hazard Dodge (60)
 dice 100:40
 ask TEST a=P_STEALTH
-want grade=G_CS
+want grade=G_WELL
 dice 100:41
 ask TEST a=P_CONCEAL
-want grade=G_MF
+want grade=G_FAIL
 dice 100:70
 ask TEST a=P_BALANCE
-want grade=G_CS
+want grade=G_WELL
 dice 100:71
 ask TEST a=P_BALANCE
-want grade=G_MF
+want grade=G_FAIL
 dice 100:60
 ask TEST a=P_ENDURE
-want grade=G_CS
+want grade=G_WELL
 dice 100:61
 ask TEST a=P_DODGE_HAZARD
-want grade=G_MF
+want grade=G_FAIL
 
 case forcing and lifting STR times 5, poison END times 5, the mind WIL times 5 (all 60)
 dice 100:60
 ask TEST a=P_FORCE
-want grade=G_CS
+want grade=G_WELL
 dice 100:61
 ask TEST a=P_LIFT
-want grade=G_MF
+want grade=G_FAIL
 dice 100:60
 ask TEST a=P_RESIST_POISON
-want grade=G_CS
+want grade=G_WELL
 dice 100:61
 ask TEST a=P_RESIST_POISON
-want grade=G_MF
+want grade=G_FAIL
 dice 100:60
 ask TEST a=P_RESIST_MIND
-want grade=G_CS
+want grade=G_WELL
 dice 100:61
 ask TEST a=P_RESIST_MIND
-want grade=G_MF
+want grade=G_FAIL
 
 case persuading and intimidating are Rhetoric (50), guile Intrigue (not opened: SB 11 times 3, 33)
 dice 100:50
 ask TEST a=P_PERSUADE
-want grade=G_CS
+want grade=G_WELL
 dice 100:51
 ask TEST a=P_INTIMIDATE
-want grade=G_MF
+want grade=G_FAIL
 dice 100:33
 ask TEST a=P_DECEIVE
-want grade=G_MS
+want grade=G_PASS
 dice 100:34
 ask TEST a=P_DECEIVE
-want grade=G_MF
+want grade=G_FAIL
 
 case a skill not opened is tried at its opening level: Jumping SB 12 times 4 (48)
 dice 100:48
 ask TEST a=P_JUMP
-want grade=G_MS
+want grade=G_PASS
 dice 100:49
 ask TEST a=P_JUMP
-want grade=G_MF
+want grade=G_FAIL
 dice 100:45
 ask TEST a=P_JUMP
-want grade=G_CS
+want grade=G_WELL
 
 case Tracking not opened: its SB 11 and Ulandus's 3 (Skills 2), times 2 (28)
 dice 100:28
 ask TEST a=P_TRACK
-want grade=G_MS
+want grade=G_PASS
 dice 100:29
 ask TEST a=P_TRACK
-want grade=G_MF
+want grade=G_FAIL
 
 case Swimming not opened: SB 12 (no Ulandus bonus) times 1 (12); Lore SB 12 times 2 (24)
 dice 100:12
 ask TEST a=P_SWIM
-want grade=G_MS
+want grade=G_PASS
 dice 100:13
 ask TEST a=P_SWIM
-want grade=G_MF
+want grade=G_FAIL
 dice 100:24
 ask TEST a=P_LORE
-want grade=G_MS
+want grade=G_PASS
 dice 100:25
 ask TEST a=P_LORE
-want grade=G_CF
+want grade=G_BADLY
 dice 100:26
 ask TEST a=P_LORE
-want grade=G_MF
+want grade=G_FAIL
 
 case first aid is Physician (not opened: SB 12, 12); animals Animalcraft (SB 11 and Ulandus's 1, 12)
 dice 100:12
 ask TEST a=P_FIRST_AID
-want grade=G_MS
+want grade=G_PASS
 dice 100:13
 ask TEST a=P_FIRST_AID
-want grade=G_MF
+want grade=G_FAIL
 dice 100:12
 ask TEST a=P_ANIMALS
-want grade=G_MS
+want grade=G_PASS
 dice 100:13
 ask TEST a=P_ANIMALS
-want grade=G_MF
+want grade=G_FAIL
 
 case making out a mechanism and disarming are Lockcraft (47), with no tools wanted
 dice 100:47
 ask TEST a=P_ASSESS
-want grade=G_MS
+want grade=G_PASS
 dice 100:48
 ask TEST a=P_DISARM b=HIDE_MECHANICAL
-want grade=G_MF
+want grade=G_FAIL
 dice 100:45
 ask TEST a=P_DISARM b=HIDE_MECHANICAL
-want grade=G_CS
+want grade=G_WELL
 
 case a theme's own purpose is an even chance and the steps (two better: 60)
 dice 100:60
 ask TEST a=P_THEME steps=2
-want grade=G_CS
+want grade=G_WELL
 dice 100:61
 ask TEST a=P_THEME+3 steps=2
-want grade=G_MF
+want grade=G_FAIL
 
 case picking a lock wants lockpicks (Skills 23): none, no test; with them Lockcraft (47)
 dice
@@ -276,10 +276,10 @@ dice
 ask EQUIP a=2 text=" picks4"
 dice 100:47
 ask TEST a=P_PICKLOCK
-want result=0 grade=G_MS
+want result=0 grade=G_PASS
 dice 100:48
 ask TEST a=P_PICKLOCK
-want grade=G_MF
+want grade=G_FAIL
 dice
 ask EQUIP a=2 text=""
 
@@ -300,7 +300,7 @@ ask TEST a=P_INTIMIDATE text="khuzdul"
 want result=2
 dice 100:50
 ask TEST a=P_PERSUADE text="common"
-want result=0 grade=G_CS
+want result=0 grade=G_WELL
 
 # The penalties (Skills 6): universal (the injuries' and the fatigue's levels) on every test, five a point on a
 # skill's EML, a point on an attribute; physical (and the encumbrance) on physical and combat skills and attributes
@@ -311,49 +311,49 @@ ask EQUIP a=2 w1=153
 want sum.load=1
 dice 100:35
 ask TEST a=P_CLIMB
-want grade=G_CS
+want grade=G_WELL
 dice 100:36
 ask TEST a=P_CLIMB
-want grade=G_MF
+want grade=G_FAIL
 dice 100:50
 ask TEST a=P_FORCE
-want grade=G_CS
+want grade=G_WELL
 dice 100:51
 ask TEST a=P_FORCE
-want grade=G_MF
+want grade=G_FAIL
 dice 100:51
 ask TEST a=P_RESIST_POISON
-want grade=G_MF
+want grade=G_FAIL
 dice 100:60
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_CS
+want grade=G_WELL
 dice 100:60
 ask TEST a=P_RESIST_MIND
-want grade=G_CS
+want grade=G_WELL
 
 case a load of 24 lb: Lockcraft (a craft) 47, Dodge (combat) 50, Jumping not opened 38
 dice 100:47
 ask TEST a=P_ASSESS
-want grade=G_MS
+want grade=G_PASS
 dice 100:51
 ask TEST a=P_DODGE_HAZARD
-want grade=G_MF
+want grade=G_FAIL
 dice 100:38
 ask TEST a=P_JUMP
-want grade=G_MS
+want grade=G_PASS
 dice 100:39
 ask TEST a=P_JUMP
-want grade=G_MF
+want grade=G_FAIL
 
 # (HOUSE.md: a skill never opened takes its group's penalty, as an opened one does (the user's, 2026-10-20): a
 # craft's the universal one, so the load's physical penalty would have left Lore 14)
 case a load of 24 lb: Lore not opened, a craft's universal penalty on it (24)
 dice 100:24
 ask TEST a=P_LORE
-want grade=G_MS
+want grade=G_PASS
 dice 100:26
 ask TEST a=P_LORE
-want grade=G_MF
+want grade=G_FAIL
 dice
 ask EQUIP a=2 w1=0
 want sum.load=0
@@ -365,35 +365,35 @@ case an M1 (UP 1): Awareness 55, Climbing 40, Will 55, Lockcraft 42
 want status="UP 1" sum.health=H_HURT
 dice 100:55
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_CS
+want grade=G_WELL
 dice 100:56
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_MF
+want grade=G_FAIL
 dice 100:40
 ask TEST a=P_CLIMB
-want grade=G_CS
+want grade=G_WELL
 dice 100:41
 ask TEST a=P_CLIMB
-want grade=G_MF
+want grade=G_FAIL
 dice 100:55
 ask TEST a=P_RESIST_MIND
-want grade=G_CS
+want grade=G_WELL
 dice 100:43
 ask TEST a=P_ASSESS
-want grade=G_MF
+want grade=G_FAIL
 
 case an M1 and a load of 24 lb (PP 3): Climbing 30, Awareness 55
 dice
 ask EQUIP a=2 w1=153
 dice 100:30
 ask TEST a=P_CLIMB
-want grade=G_CS
+want grade=G_WELL
 dice 100:31
 ask TEST a=P_CLIMB
-want grade=G_MF
+want grade=G_FAIL
 dice 100:55
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_CS
+want grade=G_WELL
 dice
 ask EQUIP a=2 w1=0
 
@@ -404,13 +404,13 @@ case two fatigue levels (UP 2): Awareness 50, Climbing 35
 want status="UP 2" sum.cond&C_FATIGUED=C_FATIGUED
 dice 100:50
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_CS
+want grade=G_WELL
 dice 100:51
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_MF
+want grade=G_FAIL
 dice 100:36
 ask TEST a=P_CLIMB
-want grade=G_MF
+want grade=G_FAIL
 
 # ---- Noticing (HOUSE.md: the pace while noticing, listening, a hazard underfoot, shock)
 
@@ -420,107 +420,107 @@ case noticing as she goes: a creep or a slow walk a step better, a walk as she s
 set going=GA_CREEP+1
 dice 100:65
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_CS
+want grade=G_WELL
 dice 100:66
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_MF
+want grade=G_FAIL
 set going=GA_SLOW+1
 dice 100:65
 ask TEST a=P_NOTICE_SOUND
-want grade=G_CS
+want grade=G_WELL
 set going=GA_WALK+1
 dice 100:60
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_CS
+want grade=G_WELL
 dice 100:61
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_MF
+want grade=G_FAIL
 
 case noticing as she goes: a jog two steps worse, a run four, a sprint six
 set going=GA_JOG+1
 dice 100:50
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_CS
+want grade=G_WELL
 dice 100:51
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_MF
+want grade=G_FAIL
 set going=GA_RUN+1
 dice 100:40
 ask TEST a=P_NOTICE_SMELL
-want grade=G_CS
+want grade=G_WELL
 dice 100:41
 ask TEST a=P_NOTICE_SMELL
-want grade=G_MF
+want grade=G_FAIL
 set going=GA_SPRINT+1
 dice 100:30
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_CS
+want grade=G_WELL
 dice 100:31
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_MF
+want grade=G_FAIL
 
 case feeling the way in the dark: a creep no better, a jog still worse
 set going=GA_CREEP+1|GOING_DARK
 dice 100:61
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_MF
+want grade=G_FAIL
 dice 100:60
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_CS
+want grade=G_WELL
 set going=GA_JOG+1|GOING_DARK
 dice 100:51
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_MF
+want grade=G_FAIL
 
 case a search isn't a notice: her pace doesn't touch it
 set going=GA_SPRINT+1
 dice 100:60
 ask TEST a=P_SEARCH
-want grade=G_CS
+want grade=G_WELL
 set going=0
 
 case listening as she goes: a sound two steps better, a sight not
 set watch=WA_LISTEN
 dice 100:70
 ask TEST a=P_NOTICE_SOUND
-want grade=G_CS
+want grade=G_WELL
 dice 100:71
 ask TEST a=P_NOTICE_SOUND
-want grade=G_MF
+want grade=G_FAIL
 dice 100:61
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_MF
+want grade=G_FAIL
 set watch=0
 
 case a hazard underfoot hidden 3 steps, at a glance: twice that and two more (20)
 dice 100:20
 ask TEST a=P_NOTICE_SIGHT b=1 steps=-3
-want grade=G_CS
+want grade=G_WELL
 dice 100:21
 ask TEST a=P_NOTICE_SIGHT b=1 steps=-3
-want grade=G_MF
+want grade=G_FAIL
 dice 100:50
 ask TEST a=P_NOTICE_SIGHT b=1
-want grade=G_CS
+want grade=G_WELL
 
 case a hazard underfoot hidden 3 steps, searching as she goes: a search's chance (45)
 set watch=WA_TRAPS
 dice 100:45
 ask TEST a=P_NOTICE_SIGHT b=1 steps=-3
-want grade=G_CS
+want grade=G_WELL
 dice 100:46
 ask TEST a=P_NOTICE_SIGHT b=1 steps=-3
-want grade=G_MF
+want grade=G_FAIL
 set watch=0
 
 case a hazard underfoot at a glance, jogging: its eight steps and the jog's two (10)
 set going=GA_JOG+1
 dice 100:10
 ask TEST a=P_NOTICE_SIGHT b=1 steps=-3
-want grade=G_CS
+want grade=G_WELL
 dice 100:11
 ask TEST a=P_NOTICE_SIGHT b=1 steps=-3
-want grade=G_MF
+want grade=G_FAIL
 set going=0
 
 char
@@ -530,13 +530,13 @@ case in shock: a notice four steps worse (40), a search not (60)
 want status="UP 0 SHOCK" sum.health=H_DOWN sum.cond&C_STUNNED=C_STUNNED
 dice 100:40
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_CS
+want grade=G_WELL
 dice 100:41
 ask TEST a=P_NOTICE_SIGHT
-want grade=G_MF
+want grade=G_FAIL
 dice 100:60
 ask TEST a=P_SEARCH
-want grade=G_CS
+want grade=G_WELL
 case in shock: a walk or a crawl at half her Move (Skills 22: 6 of 12, 33 tenths a square), no faster pace
 want sum.step=33 sum.g0=99 sum.g2=33 sum.g3=33 sum.g5=33
 set gait=GA_RUN
@@ -608,13 +608,13 @@ end
 case her first map: Drawing not open, opened at its OML (DEX 12, EYE 13, EYE 13: SB 13, twice it 26), result 1; 21 a marginal success, 27 a marginal failure
 dice 100:21
 ask TEST a=P_DRAW
-want result=1 grade=G_MS
+want result=1 grade=G_PASS
 dice 100:27
 ask TEST a=P_DRAW
-want result=0 grade=G_MF
+want result=0 grade=G_FAIL
 dice 100:26
 ask TEST a=P_DRAW
-want result=0 grade=G_MS
+want result=0 grade=G_PASS
 
 char
 ml dra 60
@@ -622,10 +622,10 @@ end
 case Drawing 60 already: no skill opened, tested at it (59 a marginal success, 61 a failure)
 dice 100:59
 ask TEST a=P_DRAW
-want result=0 grade=G_MS
+want result=0 grade=G_PASS
 dice 100:61
 ask TEST a=P_DRAW
-want result=0 grade=G_MF
+want result=0 grade=G_FAIL
 
 char
 ml dra 60
@@ -634,7 +634,7 @@ end
 case Cartography 70 (the referee's own skill, 91: Drawing's specialty) the one a map's drawn with: 66 a marginal success
 dice 100:66
 ask TEST a=P_DRAW
-want result=0 grade=G_MS
+want result=0 grade=G_PASS
 
 # ---- Paces (Combat 6: a walk half the Move a round, a jog the Move, a run twice it, a sprint three times; HOUSE.md:
 # a creep a third of a walk, a slow walk half)
@@ -1699,10 +1699,10 @@ end
 case a heavy thing in the dark (8 steps: 4 points): a roll of 8 and 4, 12, not over AGL 12: kept
 dice 6:3 6:3 6:2
 ask TEST a=P_STUMBLE steps=-8
-want grade=G_MS
+want grade=G_PASS
 dice 6:3 6:3 6:3
 ask TEST a=P_STUMBLE steps=-8
-want grade=G_MF
+want grade=G_FAIL
 
 # Stumbles (Combat 14): a leg's wound (the table's u) a stumble roll, 3d6 and the physical penalty over AGL prone
 # (Skills 22); a grievous one to a limb an automatic stumble, the limb useless
@@ -1850,7 +1850,7 @@ end
 case bare hands in soft soil: half a foot a spell (1), untested (no dice)
 dice
 ask TEST a=P_DIG b=MAT_SOIL
-want result=0 grade=G_MS w1=1 w2=0 text="hands"
+want result=0 grade=G_PASS w1=1 w2=0 text="hands"
 
 case bare hands in hard-packed earth: no progress, no test (hands only in soft soil)
 dice
@@ -1867,10 +1867,10 @@ dice
 ask EQUIP a=2 text=" shovel4"
 dice
 ask TEST a=P_DIG b=MAT_SOIL
-want result=0 grade=G_MS w1=6 w2=0 text="shovel"
+want result=0 grade=G_PASS w1=6 w2=0 text="shovel"
 dice
 ask TEST a=P_DIG b=MAT_EARTH
-want result=0 grade=G_MS w1=3 w2=0 text="shovel"
+want result=0 grade=G_PASS w1=3 w2=0 text="shovel"
 dice
 ask TEST a=P_DIG b=MAT_STONE
 want result=1
@@ -1883,23 +1883,23 @@ dice
 ask EQUIP a=2 text=" pick4"
 dice 100:29
 ask TEST a=P_DIG b=MAT_STONE
-want grade=G_MS w1=4 w2=1 text="pick"
+want grade=G_PASS w1=4 w2=1 text="pick"
 dice 100:30
 ask TEST a=P_DIG b=MAT_STONE
-want grade=G_CS w1=8
+want grade=G_WELL w1=8
 dice 100:31
 ask TEST a=P_DIG b=MAT_STONE
-want grade=G_MF w1=2
+want grade=G_FAIL w1=2
 dice 100:35
 ask TEST a=P_DIG b=MAT_STONE
-want grade=G_CF w1=0
+want grade=G_BADLY w1=0
 
 case a pick and a shovel: the shovel in earth (untested), the pick in flags (3 feet) and masonry (a foot)
 dice
 ask EQUIP a=2 text=" pick4 shovel4"
 dice
 ask TEST a=P_DIG b=MAT_EARTH
-want grade=G_MS w1=3 text="shovel"
+want grade=G_PASS w1=3 text="shovel"
 dice 100:29
 ask TEST a=P_DIG b=MAT_FLAGS
 want w1=6 w2=1 text="pick"
@@ -1915,7 +1915,7 @@ ask TEST a=P_DIG b=MAT_MASONRY
 want result=1
 dice
 ask TEST a=P_DIG b=MAT_EARTH
-want grade=G_MS w1=3 w2=0 text="shovel"
+want grade=G_PASS w1=3 w2=0 text="shovel"
 
 case a chisel in masonry, asked only (RS_DIG_QUERY: no dice, its hammer the world's to say): it bites; in soil it doesn't
 dice
@@ -1932,7 +1932,7 @@ dice
 ask EQUIP a=2 text="*blade4"
 dice
 ask TEST a=P_DIG b=MAT_EARTH
-want grade=G_MS w1=1 w2=40 text="blade"
+want grade=G_PASS w1=1 w2=40 text="blade"
 dice
 ask TEST a=P_DIG b=MAT_SOIL
 want w1=2 w2=40 text="blade"
@@ -1947,7 +1947,7 @@ dice
 ask EQUIP a=2 text=" pick4"
 dice 100:25
 ask TEST a=P_DIG b=MAT_STONE
-want grade=G_CS w1=8
+want grade=G_WELL w1=8
 dice
 ask EQUIP a=2 text=""
 
@@ -1958,16 +1958,16 @@ end
 case a weapon by Weaponcraft (not opened: SB 12, 12), a book by Lore (24)
 dice 100:12
 ask TEST a=P_APPRAISE b=AP_WEAPON
-want grade=G_MS
+want grade=G_PASS
 dice 100:13
 ask TEST a=P_APPRAISE b=AP_ARMOUR
-want grade=G_MF
+want grade=G_FAIL
 dice 100:24
 ask TEST a=P_APPRAISE b=AP_BOOK
-want grade=G_MS
+want grade=G_PASS
 dice 100:26
 ask TEST a=P_APPRAISE b=AP_BONE
-want grade=G_MF
+want grade=G_FAIL
 
 char
 ml wpn 40
@@ -1975,18 +1975,18 @@ end
 case Weaponcraft opened (40)
 dice 100:40
 ask TEST a=P_APPRAISE b=AP_WEAPON
-want grade=G_CS
+want grade=G_WELL
 dice 100:41
 ask TEST a=P_APPRAISE b=AP_WEAPON
-want grade=G_MF
+want grade=G_FAIL
 
 case stone by Masonry (not opened: SB 12 and Ulandus's 2, 14)
 dice 100:14
 ask TEST a=P_APPRAISE b=AP_STONE
-want grade=G_MS
+want grade=G_PASS
 dice 100:16
 ask TEST a=P_APPRAISE b=AP_STONE
-want grade=G_MF
+want grade=G_FAIL
 
 # ---- Engaging (HOUSE.md: the engage initiative test, the user's, 2026-10-20, the book's optional rule; and a grope
 # while engaged): as two are newly engaged each tests its quickness (P_INITIATIVE: the character's Initiative, a
@@ -2000,24 +2000,24 @@ end
 case quickness: Initiative 55, 55 a critical success, 56 a marginal failure, a step worse (50) 51 one too
 dice 100:55
 ask TEST a=P_INITIATIVE
-want grade=G_CS
+want grade=G_WELL
 dice 100:56
 ask TEST a=P_INITIATIVE
-want grade=G_MF
+want grade=G_FAIL
 dice 100:51
 ask TEST a=P_INITIATIVE steps=-1
-want grade=G_MF
+want grade=G_FAIL
 
 case a grope: Dexterity 12 times 5 (60), 60 a critical success, 59 marginal, 61 a marginal failure
 dice 100:60
 ask TEST a=P_GROPE
-want grade=G_CS
+want grade=G_WELL
 dice 100:59
 ask TEST a=P_GROPE
-want grade=G_MS
+want grade=G_PASS
 dice 100:61
 ask TEST a=P_GROPE
-want grade=G_MF
+want grade=G_FAIL
 
 case a giant rat's sheet (its record 9), made with no die of the referee's
 dice
@@ -2027,23 +2027,23 @@ want result=0
 case she engages the rat: her 56 (a marginal failure) against its Initiative 60's 30 (critical): the rat the quicker (2)
 dice 100:56 100:30
 ask CONTEST actor=0 other=1 a=P_INITIATIVE b=P_INITIATIVE
-want result=2 grade=G_MF c=G_CS
+want result=2 grade=G_FAIL c=G_WELL
 
 case her 1 (a marginal success) against its 61 (a marginal failure): she the quicker (1); both 2 and 3 (marginal) alike (0)
 dice 100:1 100:61
 ask CONTEST actor=0 other=1 a=P_INITIATIVE b=P_INITIATIVE
-want result=1 grade=G_MS
+want result=1 grade=G_PASS
 dice 100:2 100:3
 ask CONTEST actor=0 other=1 a=P_INITIATIVE b=P_INITIATIVE
-want result=0 grade=G_MS c=G_MS
+want result=0 grade=G_PASS c=G_PASS
 
 case the rat engages her: its 61 (MF) against her 50 (CS): she the quicker (2); her steps c, two worse (45): 46 alike (0)
 dice 100:61 100:50
 ask CONTEST actor=1 other=0 a=P_INITIATIVE b=P_INITIATIVE
-want result=2 grade=G_MF c=G_CS
+want result=2 grade=G_FAIL c=G_WELL
 dice 100:61 100:46
 ask CONTEST actor=1 other=0 a=P_INITIATIVE b=P_INITIATIVE c=-2
-want result=0 grade=G_MF
+want result=0 grade=G_FAIL
 
 # ---- The tongues last: a file's "language" lines are kept for good once read (the referee reads one file a game)
 
@@ -2053,7 +2053,7 @@ end
 case a tongue her file names: Rhetoric in it
 dice 100:50
 ask TEST a=P_PERSUADE text="elvish"
-want result=0 grade=G_CS
+want result=0 grade=G_WELL
 dice
 ask TEST a=P_PERSUADE text="khuzdul"
 want result=2
@@ -2085,7 +2085,7 @@ want result=0
 
 # ---- A round's defences (HOUSE.md: the user's, 2026-10-20): the character's defence chosen for each blow at it, a
 # block once a round for each thing that blocks (a bare arm's if it holds none), the dodge once, a counterstrike only
-# on command (its stance, D_COUNTER), what it strikes with then spent for the round; a foe met this round meets the
+# on command (its stance, D_OWN), what it strikes with then spent for the round; a foe met this round meets the
 # same again; none left, none (the reply's b the defence, D_*).  The round from the first blow after the last ended,
 # ten seconds (the hub's now in tenths).  Each blow's first die the rat's bite (75: 81 a marginal failure, 85 a
 # critical one), its second the defence's; the rest the generator's (b doesn't hang on them).  Her Shield 30.
@@ -2162,11 +2162,11 @@ case the third dodged, no block left
 dice 100:81 100:2 ...
 ask ATTACK actor=3 other=0 a=Z_MID b=AS_BEST
 want b=D_DODGE
-set now=4000 stance=D_COUNTER
+set now=4000 stance=D_OWN
 case defend counter: the first rat counterstruck with the sword
 dice 100:81 100:2 ...
 ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
-want b=D_COUNTER
+want b=D_OWN
 case the second: the sword spent, the better of the dodge and the shield
 dice 100:81 100:2 ...
 ask ATTACK actor=2 other=0 a=Z_MID b=AS_BEST
@@ -2416,7 +2416,7 @@ end
 case unhurt: she gets up, no test
 dice
 ask TEST a=P_RISE
-want grade=G_MS
+want grade=G_PASS
 char
 med 14
 end
@@ -2430,10 +2430,10 @@ end
 case a serious wound to her left thigh (3 levels): an Agility test, 60 less 15: 7 up, 96 still down
 dice 100:7
 ask TEST a=P_RISE
-want grade=G_MS
+want grade=G_PASS
 dice 100:96
 ask TEST a=P_RISE
-want grade=G_MF
+want grade=G_FAIL
 case the same, prone in a fight (RS_PRONE_A): her turn getting up (O_RISE), 7 up (a 0), 96 still down (a 1)
 set now=900000
 dice
@@ -2451,7 +2451,7 @@ end
 case both forearms grievously wounded, no good arm: four steps the harder (60, less 40, less 20: 5, the least), 7 down
 dice 100:7
 ask TEST a=P_RISE
-want grade=G_MF
+want grade=G_FAIL
 char
 inj 12 0 3 4 0 8
 inj 140 0 3 4 0 8
@@ -2459,7 +2459,7 @@ end
 case both thighs grievously wounded, no leg to stand on: never, no test; in a fight, still down
 dice
 ask TEST a=P_RISE
-want grade=G_CF
+want grade=G_BADLY
 set now=901000
 dice
 ask NEW_ACTOR actor=1 w1=9 text="rat"
@@ -2508,52 +2508,52 @@ end
 case one bend (4 steps the easier): Awareness 60 and 20, 80: 79 a marginal success, 80 a critical (a multiple of 5)
 dice 100:79
 ask TEST a=P_BEARING steps=4
-want grade=G_MS result=0
+want grade=G_PASS result=0
 dice 100:80
 ask TEST a=P_BEARING steps=4
-want grade=G_CS result=0
+want grade=G_WELL result=0
 case one bend: 81 a marginal failure, its d8 a 1 (result 0); 85 a critical, its d8 a 2 (result 1)
 dice 100:81 8:1
 ask TEST a=P_BEARING steps=4
-want grade=G_MF result=0
+want grade=G_FAIL result=0
 dice 100:85 8:2
 ask TEST a=P_BEARING steps=4
-want grade=G_CF result=1
+want grade=G_BADLY result=1
 case three bends in the dark (6 less 6, less 4: 4 steps the harder): 60 less 20, 40: 40 a critical success, 41 a failure
 dice 100:40
 ask TEST a=P_BEARING steps=-4
-want grade=G_CS
+want grade=G_WELL
 dice 100:41 8:4
 ask TEST a=P_BEARING steps=-4
-want grade=G_MF result=3
+want grade=G_FAIL result=3
 case many bends in the dark: the 5-95 clamp, 5 a critical success, 6 a marginal failure
 dice 100:5
 ask TEST a=P_BEARING steps=-22
-want grade=G_CS
+want grade=G_WELL
 dice 100:6 8:7
 ask TEST a=P_BEARING steps=-22
-want grade=G_MF result=6
+want grade=G_FAIL result=6
 case come round from a fall, or senseless (10 steps the harder): 60 less 50, 10: 10 a critical success, 11 a failure
 dice 100:10
 ask TEST a=P_BEARING steps=-10
-want grade=G_CS
+want grade=G_WELL
 dice 100:11 8:8
 ask TEST a=P_BEARING steps=-10
-want grade=G_MF result=7
+want grade=G_FAIL result=7
 char
 ml min 80
 end
 case a miner (Mining 80, Awareness 60): tested by Mining, the higher, 79 a success at no steps (a dark room crossed)
 dice 100:79
 ask TEST a=P_BEARING
-want grade=G_MS
+want grade=G_PASS
 char
 att sp 2
 end
 case one of the Khuzdul, who live below: north always known (its summary's northsense), no test, no dice
 dice
 ask TEST a=P_BEARING steps=-22
-want grade=G_CS result=0 dice=0 sum.northsense=1
+want grade=G_WELL result=0 dice=0 sum.northsense=1
 char
 end
 case its own dice: her other tests roll as they did, a bearing tested between or not (a strike's words the same)
@@ -2906,7 +2906,7 @@ end
 case Swimming not open ([First Use]): her first swim opens it at its opening level (STA, DEX, AGL 12: SB 12, once it), 12 a marginal success; flagged for the world (C_NEWS) till its next RS_TIME tells it
 dice 100:12
 ask TEST a=P_SWIM
-want grade=G_MS
+want grade=G_PASS
 dice
 ask EQUIP a=2 w1=0
 want sum.cond&C_NEWS=32768
@@ -2932,7 +2932,7 @@ end
 case Climbing 45 tested five times, routine (61, a marginal failure: counted all the same), a night's rest: its one roll 32 and its SB 14 (12, and Ulandus 2) over 45, improved to 46, told
 dice 100:61
 ask TEST a=P_CLIMB
-want grade=G_MF
+want grade=G_FAIL
 dice 100:61
 ask TEST a=P_CLIMB
 dice 100:61

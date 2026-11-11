@@ -75,7 +75,7 @@ struct kitrec {
 struct ost {
     int             fd;                         /* The outfits' file, open */
     unsigned        budget, kept;               /* The money left to spend, and kept */
-    unsigned        tags;                       /* The character's tags (rs.h's OT_*) */
+    unsigned        tags;                       /* The character's tags (outfits.txt's words, the ruleset's bits: RS_OUTFIT's) */
     unsigned        rs;                         /* The draw's die */
     unsigned char   kit;                        /* A denizen's draw (I_KIT's): 1; given way to a command coming, 2, drawn again as
                                                 **   it's answered (the same dice, nothing made yet: a kit's a million cycles,

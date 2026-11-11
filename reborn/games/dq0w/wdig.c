@@ -225,7 +225,7 @@ spell:
     rec.y = dy;
     rec.link = DUG;
     done = dig_kept (2) && rec.elev == way && rec.tile < need ? rec.tile : 0;
-    g = G_MS;
+    g = G_PASS;
     if (!rd && DIG_TESTED (mat)) {
         hub_map (0);
         r = &HUB->slot[SLOT_WORLD];             /* (The referee's: the actor's own test, by its sheet) */
@@ -238,12 +238,12 @@ spell:
         g = RS_TEST_GRADE (*r);
         r->state = REQ_FREE;
     }
-    made = g == G_CS ? 2 * rate : g == G_MS ? rate : g == G_MF ? rate >> 1 : 0;
+    made = g == G_WELL ? 2 * rate : g == G_PASS ? rate : g == G_FAIL ? rate >> 1 : 0;
     if (rk & 0x7F) {
         made = (unsigned char) (made * rk_quarters[rk_hard[rk & 0x7F]] + 3) >> 2;    /* (The rock's hardness: the rate in it,
                                                 **   every ruleset's) */
     }
-    if (g == G_CF && RK_POOR (rk & 0x7F) && done) {
+    if (g == G_BADLY && RK_POOR (rk & 0x7F) && done) {
         done -= done > 4 ? 4 : done;            /* (Poor rock: the roof come down on a spell gone badly, two feet of the
                                                 **   hole filled again, as the character's; the rock showering the
                                                 **   tunneller, told: no harm, the referees keep the character's sheet

@@ -5439,7 +5439,7 @@ unsigned char __fastcall__ s_hide (const char* name)
     r = hub_ask (SLOT_UI);
     g = RS_TEST_GRADE (*r);
     r->state = REQ_FREE;
-    d = g == G_CS ? 12 : g == G_MS ? 6 : g == G_MF ? 2 : 0;
+    d = g == G_WELL ? 12 : g == G_PASS ? 6 : g == G_FAIL ? 2 : 0;
     item_at (dropped)->flags |= I_HIDDEN | I_KNOWN;
     item_at (dropped)->hide = d;
     hub_map (0);
@@ -5986,7 +5986,7 @@ static unsigned char __fastcall__ turned_up (unsigned char touch, unsigned char 
     r = hub_ask (SLOT_UI);
     g = RS_TEST_GRADE (*r);
     r->state = REQ_FREE;
-    return g >= G_MS;
+    return g >= G_PASS;
 }
 
 /* The things lying on the squares within the search's reach (a square's distance off, squared, less than r) that the

@@ -155,7 +155,7 @@ void __fastcall__ s_dig_answer (struct req* r)
                                                 **   a critical failure; its breath held Endurance times 10 seconds) */
         RS_TEST_GRADE (*r) = test_sk (&pc, HARN_SWI, RS_TEST_STEPS (*r));
         r->result = pc.ml[HARN_SWI] < 10 ? 1 : pc.ml[HARN_SWI] / 10;
-        RS_TEST_SQUARES (*r) = (RS_TEST_GRADE (*r) == G_CS ? 9 : RS_TEST_GRADE (*r) == G_MS ? 7 : RS_TEST_GRADE (*r) == G_MF ? 2 : 0) * r->result * 3 / SQ_FT;
+        RS_TEST_SQUARES (*r) = (RS_TEST_GRADE (*r) == G_WELL ? 9 : RS_TEST_GRADE (*r) == G_PASS ? 7 : RS_TEST_GRADE (*r) == G_FAIL ? 2 : 0) * r->result * 3 / SQ_FT;
         r->result = harn_end (&pc);
         RS_TEST_BREATH (*r) = (r->result << 3) + (r->result << 1);    /* (Times ten: no multiplying, the main RAM's) */
         r->result = 0;
@@ -184,8 +184,8 @@ static void __fastcall__ dig_of (struct req* r)
     if (RS_TEST_STEPS (*r) == RS_DIG_QUERY) {
         return;
     }
-    RS_TEST_GRADE (*r) = DIG_TESTED (m) ? test (&pc, RS_TEST_PURPOSE (*r), RS_TEST_STEPS (*r)) : G_MS;
-    RS_TEST_RATE (*r) = RS_TEST_GRADE (*r) == G_CS ? 2 * k : RS_TEST_GRADE (*r) == G_MS ? k : RS_TEST_GRADE (*r) == G_MF ? k / 2 : 0;
+    RS_TEST_GRADE (*r) = DIG_TESTED (m) ? test (&pc, RS_TEST_PURPOSE (*r), RS_TEST_STEPS (*r)) : G_PASS;
+    RS_TEST_RATE (*r) = RS_TEST_GRADE (*r) == G_WELL ? 2 * k : RS_TEST_GRADE (*r) == G_PASS ? k : RS_TEST_GRADE (*r) == G_FAIL ? k / 2 : 0;
 }
 
 #pragma code-name (pop)
@@ -233,7 +233,7 @@ unsigned char drawn_new;                        /* (A skill opened by a map draw
 
 signed char __fastcall__ grade (unsigned char level)
 {
-    static const signed char g[4] = { G_CF, G_MF, G_MS, G_CS };
+    static const signed char g[4] = { G_BADLY, G_FAIL, G_PASS, G_WELL };
 
     return g[level & 3];
 }
@@ -297,7 +297,7 @@ static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char
     if (p == P_STUMBLE) {                       /* (The book's stumble roll, Skills 22: 3d6, the physical penalty and
                                                 **   the circumstances, over Agility a fall; a point of the roll two
                                                 **   steps, the book's darkness 2 points, a heavy obstruction's 2) */
-        return harn_stumble_roll (c, -(int) steps / 2) ? G_MF : G_MS;
+        return harn_stumble_roll (c, -(int) steps / 2) ? G_FAIL : G_PASS;
     }
     if (p == P_RISE) {
         return rise_of (c);                     /* (Getting up: the house's test, if any, gear.c's) */
@@ -306,7 +306,7 @@ static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char
                                                 **   none worshipped, a critical failure: the UI's to ask first, its
                                                 **   RD_DEITY) */
         if (c->att[HARN_DTY] >= HARN_NODEITY) {
-            return G_CF;
+            return G_BADLY;
         }
         return test_sk (c, HARN_RAGR + c->att[HARN_DTY], steps);
     }
@@ -787,7 +787,7 @@ signed char __fastcall__ s_side (unsigned char who, unsigned char p, signed char
 
     tnow = HUB->now;
     if (!who) {
-        return pc.state != HARN_CONSCIOUS || pc_out > tnow ? G_CF : test (&pc, p, steps);
+        return pc.state != HARN_CONSCIOUS || pc_out > tnow ? G_BADLY : test (&pc, p, steps);
     }
     q->kind = RS_CONTEST;
     q->actor = who;

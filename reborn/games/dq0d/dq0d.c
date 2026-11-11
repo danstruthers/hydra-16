@@ -3376,7 +3376,7 @@ unsigned char __fastcall__ s_stalks (unsigned char k)
     RS_TEST_PURPOSE (rq) = P_STEALTH;
     RS_TEST_STEPS (rq) = 0;
     ask (RS_TEST, k + 1, 0);
-    return (signed char) RS_TEST_GRADE (rq) > 0 ? 1 : RS_TEST_GRADE (rq) == G_MF ? 2 : 3;
+    return (signed char) RS_TEST_GRADE (rq) > 0 ? 1 : RS_TEST_GRADE (rq) == G_FAIL ? 2 : 3;
 }
 
 /* ---- Hiding oneself (A12, 2026-11-04: HOUSE.md's hiding oneself; the book's Stealth, Skills 9), a look at one hidden
@@ -3393,8 +3393,8 @@ static unsigned char __fastcall__ h_found (unsigned char hider, unsigned char lo
     RS_TEST_HOW (rq) = 0;
     RS_TEST_STEPS (rq) = (signed char) (hid - 1 + 4 - 2 * lv);    /* (Its cover's steps; far off 2 easier, near 2 harder, beside it 4) */
     ask (RS_TEST, hider, RS_ASKER);             /* (Each look its own die) */
-    if (RS_TEST_GRADE (rq) != G_MF) {
-        return RS_TEST_GRADE (rq) == G_CF;
+    if (RS_TEST_GRADE (rq) != G_FAIL) {
+        return RS_TEST_GRADE (rq) == G_BADLY;
     }
     RS_TEST_PURPOSE (rq) = P_NOTICE_SIGHT;
     RS_TEST_STEPS (rq) = 0;
@@ -3720,7 +3720,7 @@ void __fastcall__ s_regard (unsigned char f, unsigned char pts)
 ** mind (nothing sways the mindless; a beast takes only food), within reach; its steps by its worth to one of its kind's
 ** means (kinds.txt's standing: HOUSE.md's gifts), the book's Rhetoric (a beast's Animalcraft) in the target's
 ** interest, at steps by its attitude and its kind too; a critical success two steps, a success one, a critical failure
-** an insult (a step back, the gift refused: grade G_CF), as far as friendly (a gift doesn't make an ally); taken (but
+** an insult (a step back, the gift refused: grade G_BADLY), as far as friendly (a gift doesn't make an ally); taken (but
 ** refused), the world's to hand over (the UI's), and its faction's regard the more (reputation) */
 #pragma code-name (push, "SW16CODE")            /* (Part 16's since 2026-11-02: part 5's room, the market's beside it;
                                                 **   a part of its own, seldom called) */
@@ -3781,7 +3781,7 @@ static void __fastcall__ entertain (unsigned char k)
     }
     g = sw.grade = words_test (k, P_APPRAISE, NAP + sw.order, (signed char) t - 3 + K.sway, 1);
     sw.t = 600;
-    t = g == G_CS ? t + 2 : g == G_MS ? t + 1 : g == G_CF && t ? t - 1 : t;
+    t = g == G_WELL ? t + 2 : g == G_PASS ? t + 1 : g == G_BADLY && t ? t - 1 : t;
     hub_map (0);
     HUB->actor[k].attitude = sw.now = t < AT_FRIENDLY ? t : AT_FRIENDLY;
 }
@@ -3834,13 +3834,13 @@ static void __fastcall__ trade (unsigned char k)
             return;
         }
         sw.t = 300;
-        if (g == G_CF) {
+        if (g == G_BADLY) {
             sw.result = SR_SPURNED;
             hub_map (0);
             HUB->actor[k].attitude = sw.now = t - 1;
             return;
         }
-        q = g == G_CS ? 25 : g == G_MS ? 10 : 0;
+        q = g == G_WELL ? 25 : g == G_PASS ? 10 : 0;
         p = pct (p, sell ? 100 + q : 100 - q);
     }
     q = 66 + !sell;                             /* (No pump: bought at two thirds or more, sold at two thirds or less) */
@@ -3940,8 +3940,8 @@ void __fastcall__ s_gift (unsigned char k)
     sw.grade = RS_TEST_GRADE (*r);
     r->state = REQ_FREE;
     sw.t = 20;
-    m = sw.grade == G_CS ? 2 : sw.grade == G_MS ? 1 : 0;
-    if (sw.grade == G_CF) {
+    m = sw.grade == G_WELL ? 2 : sw.grade == G_PASS ? 1 : 0;
+    if (sw.grade == G_BADLY) {
         sw.now = t > AT_HOSTILE ? t - 1 : t;    /* (Insulted: refused) */
     } else {
         sw.now = t >= AT_FRIENDLY ? t : t + m < AT_FRIENDLY ? t + m : AT_FRIENDLY;
@@ -4158,7 +4158,7 @@ static void __fastcall__ influence (unsigned char k)
         return;
     }
     sw.t = h == SW_THREATEN ? 50 : 100;
-    m = sw.grade == G_CS ? 2 : sw.grade == G_MS ? 1 : sw.grade != G_CF ? 0 : h == SW_DECEIVE ? -2 :
+    m = sw.grade == G_WELL ? 2 : sw.grade == G_PASS ? 1 : sw.grade != G_BADLY ? 0 : h == SW_DECEIVE ? -2 :
         h == SW_THREATEN ? -AT_ALLIED : -1;
     m += t;
     t = m < 0 ? AT_HOSTILE : m > cap[h] ? cap[h] : m;
@@ -4496,7 +4496,7 @@ static void crowd (void)
         hub_map (0);
         q = &HUB->actor[k];
         t = q->attitude;
-        d = g == G_CS ? t + 2 : g == G_MS ? t + 1 : g == G_CF && t ? t - 1 : t;
+        d = g == G_WELL ? t + 2 : g == G_PASS ? t + 1 : g == G_BADLY && t ? t - 1 : t;
         if (d > AT_FRIENDLY) {
             d = t > AT_FRIENDLY ? t : AT_FRIENDLY;
         }

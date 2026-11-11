@@ -142,7 +142,7 @@ static unsigned char __fastcall__ window (unsigned char what)
     g = test (P_CLIMB, 0, 0);
     wk.through = G_OK (g);
     wk.res = wk.through << 1;                   /* (Somewhere new: the world tells it as arrived) */
-    return wk.through ? PO_CLIMBED : g == G_CF ? PO_SLIPPED : PO_NO_CLIMB;
+    return wk.through ? PO_CLIMBED : g == G_BADLY ? PO_SLIPPED : PO_NO_CLIMB;
 }
 
 void s_portals (void)

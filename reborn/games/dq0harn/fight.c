@@ -469,7 +469,7 @@ static void attack (void)
         RS_ATTACK_OUTCOME (*R) = def == HARN_DODGE && al >= HARN_MS ? O_DODGED : O_MISS;    /* (Dodged: a blow that was good) */
         break;
     }
-    RS_ATTACK_DEFENCE (*R) = def == HARN_BLOCK ? D_BLOCK : def == HARN_COUNTER ? D_COUNTER : def == HARN_DODGE ? D_DODGE : D_NONE;
+    RS_ATTACK_DEFENCE (*R) = def == HARN_BLOCK ? D_BLOCK : def == HARN_COUNTER ? D_OWN : def == HARN_DODGE ? D_DODGE : D_NONE;
 }
 
 /* ---- The requests */
@@ -538,12 +538,12 @@ static unsigned char __fastcall__ courage (const struct bkind* b, signed char st
 {
     unsigned char lv;
 
-    RS_MORALE_GRADE (*R) = G_MS;
+    RS_MORALE_GRADE (*R) = G_PASS;
     if (b->flags & BF_MINDLESS) {
         return M_STEADY;                        /* (Bones fear nothing) */
     }
     lv = harn_test (b->ini - 5 * harn_get_pp (&cr) + STEP_PCT * steps);
-    RS_MORALE_GRADE (*R) = lv == HARN_CF ? G_CF : lv == HARN_MF ? G_MF : lv == HARN_MS ? G_MS : G_CS;
+    RS_MORALE_GRADE (*R) = lv == HARN_CF ? G_BADLY : lv == HARN_MF ? G_FAIL : lv == HARN_MS ? G_PASS : G_WELL;
     if (lv == HARN_MF) {
         return M_CAUTIOUS;
     }
@@ -561,7 +561,7 @@ static unsigned char __fastcall__ courage (const struct bkind* b, signed char st
 static void morale (void)
 {
     RS_MORALE_STATE (*R) = M_STEADY;
-    RS_MORALE_GRADE (*R) = G_MS;
+    RS_MORALE_GRADE (*R) = G_PASS;
     if (R->actor) {
         RS_MORALE_STATE (*R) = courage (unpack (R->actor), (signed char) RS_MORALE_STEPS (*R));
     }
@@ -582,7 +582,7 @@ static void tested (void)
 {
     const struct bkind* b = unpack (R->actor);
 
-    RS_CONTEST_GRADE (*R) = cr.state != HARN_CONSCIOUS ? G_CF : grade (harn_test ((RS_CONTEST_PURPOSE (*R) == P_INITIATIVE ? b->ini :
+    RS_CONTEST_GRADE (*R) = cr.state != HARN_CONSCIOUS ? G_BADLY : grade (harn_test ((RS_CONTEST_PURPOSE (*R) == P_INITIATIVE ? b->ini :
         5 * cr.att[RS_CONTEST_PURPOSE (*R) == P_STEALTH ? HARN_AGL : RS_CONTEST_PURPOSE (*R) == P_NOTICE_SIGHT ? HARN_EYE : RS_CONTEST_PURPOSE (*R) == P_DIG ? HARN_STR : HARN_DEX]) - 5 * harn_get_pp (&cr) +
         STEP_PCT * (signed char) RS_CONTEST_STEPS (*R)));
 }

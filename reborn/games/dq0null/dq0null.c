@@ -123,9 +123,9 @@ static signed char __fastcall__ flat_r (signed char steps, unsigned char r)
 
     c = c < 5 ? 5 : c > 95 ? 95 : c;
     if (r <= c) {
-        return r <= c / 5 ? G_CS : G_MS;
+        return r <= c / 5 ? G_WELL : G_PASS;
     }
-    return r > 100 - (100 - c) / 5 ? G_CF : G_MF;
+    return r > 100 - (100 - c) / 5 ? G_BADLY : G_FAIL;
 }
 
 static signed char __fastcall__ flat (signed char steps)
@@ -374,7 +374,7 @@ static void __fastcall__ harm (struct req* r)
     e->band = RS_HARM_BAND (*r) = n >= 4 ? 3 : n >= 2 ? 2 : 1;
     e->phrase = 1;
     e->cond = wounds >= TOUGH ? C_DEAD : 0;
-    e->x[0] = BP_CHEST;
+    e->x[0] = 0;                                /* (Where: none said, the null's) */
     e->x[1] = AS_BLUNT;
     wound_words (n);
 }
@@ -538,7 +538,7 @@ static void __fastcall__ attack (struct req* r)
         g = flat_r (st - (sh ? 2 : 0), rr = 1 + random (100));
         sh = !G_OK (g) && sh && G_OK (flat_r (st, rr)) ? sh : 0;  /* (Blocked: it would have hit but for it) */
         if ((mw & (RS_MISSILE | MS_STRAY)) == (RS_MISSILE | MS_STRAY)) {
-            g = G_MS;                           /* (A missile's stray: a hit) */
+            g = G_PASS;                           /* (A missile's stray: a hit) */
             sh = 0;
         }
     }
@@ -561,7 +561,7 @@ static void __fastcall__ attack (struct req* r)
         RS_ATTACK_OUTCOME (*r) = O_MISS;
     } else {
         RS_ATTACK_OUTCOME (*r) = O_HIT;
-        n = g == G_CS ? 4 : 2;
+        n = g == G_WELL ? 4 : 2;
         w = *dw + n;
         *dw = w > t ? t : w;
         e->target = d;
@@ -569,7 +569,7 @@ static void __fastcall__ attack (struct req* r)
         e->band = n >= 4 ? 3 : 2;
         e->phrase = 3;
         e->cond = *dw >= t ? C_DEAD : 0;
-        e->x[0] = BP_CHEST;
+        e->x[0] = 0;
         e->x[1] = AS_BLUNT;
         wound_words (n);
         if (*dw >= t) {
@@ -676,19 +676,19 @@ void __fastcall__ rf_answer (struct req* r)
             if (RS_TEST_STEPS (*r) == RS_DIG_QUERY) {
                 break;
             }
-            g = RS_TEST_GRADE (*r) = DIG_TESTED (m) ? flat (RS_TEST_STEPS (*r)) : G_MS;    /* (Earth: the tool's rate, untested) */
-            RS_TEST_RATE (*r) = g == G_CS ? 2 * k : g == G_MS ? k : g == G_MF ? k / 2 : 0;
+            g = RS_TEST_GRADE (*r) = DIG_TESTED (m) ? flat (RS_TEST_STEPS (*r)) : G_PASS;    /* (Earth: the tool's rate, untested) */
+            RS_TEST_RATE (*r) = g == G_WELL ? 2 * k : g == G_PASS ? k : g == G_FAIL ? k / 2 : 0;
             break;
         }
         if (RS_TEST_PURPOSE (*r) == P_RISE) {
-            RS_TEST_GRADE (*r) = G_MS;                    /* (Getting up: always, the null ruleset's, slice 4.1b's) */
+            RS_TEST_GRADE (*r) = G_PASS;                    /* (Getting up: always, the null ruleset's, slice 4.1b's) */
             break;
         }
         if (RS_TEST_PURPOSE (*r) == P_SWIM) {                   /* (A minute's swimming, the flat odds: its squares, a middling
                                                 **   swimmer's; it sinks at a critical failure; its breath two
                                                 **   minutes: slice 4.9's) */
             g = RS_TEST_GRADE (*r) = flat (RS_TEST_STEPS (*r));
-            RS_TEST_SQUARES (*r) = g == G_CS ? 27 : g == G_MS ? 21 : g == G_MF ? 6 : 0;
+            RS_TEST_SQUARES (*r) = g == G_WELL ? 27 : g == G_PASS ? 21 : g == G_FAIL ? 6 : 0;
             RS_TEST_BREATH (*r) = 120;
             break;
         }
@@ -767,7 +767,7 @@ void __fastcall__ rf_answer (struct req* r)
         break;
     case RS_MORALE:
         g = RS_MORALE_GRADE (*r) = flat (RS_MORALE_STEPS (*r));
-        RS_MORALE_STATE (*r) = g == G_CF ? M_BROKEN : g == G_MF ? M_CAUTIOUS : M_STEADY;
+        RS_MORALE_STATE (*r) = g == G_BADLY ? M_BROKEN : g == G_FAIL ? M_CAUTIOUS : M_STEADY;
         break;
     case RS_CONTEST:                            /* (Two flat tests, the actor's first: who did better) */
         g = RS_CONTEST_GRADE (*r) = flat (RS_CONTEST_STEPS (*r));

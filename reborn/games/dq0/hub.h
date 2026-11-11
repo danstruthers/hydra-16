@@ -1068,7 +1068,7 @@ struct req {
     unsigned char   a, b, c;
     unsigned        w1, w2;
     unsigned char   x[32];                      /* By kind: a reply's effects (rs.h's), a summary ... */
-    signed char     grade;                      /* The reply's: G_CF ... G_CS */
+    signed char     grade;                      /* The reply's: G_BADLY ... G_WELL */
     unsigned char   result;
     char            text[REQ_TEXT];             /* A request's path, or a reply's words (lines, a 0 at the end) */
 };

@@ -42,6 +42,12 @@
 #include <hydra.h>
 #include "../../../games/dq0/hub.h"
 
+/* (The HarnMaster referee's strike locations, its effects' x[0]: harn.h's, the book's order, its own since
+** 2026-11-11, rs.h's once; named here for the cases) */
+enum { BP_SKULL, BP_FACE, BP_NECK, BP_SHOULDER, BP_UPPER_ARM, BP_ELBOW, BP_FOREARM, BP_HAND, BP_CHEST, BP_BELLY,
+    BP_GROIN, BP_HIP, BP_THIGH, BP_KNEE, BP_CALF, BP_FOOT };
+#define BP_RIGHT        0x80
+
 #define REFEREE     "/sd/0/games/lib/dq0/dq0harn"
 #define LIBDIR      "/sd/0/games/lib/dq0"
 #define PCFILE      "/ram/t.hm"
@@ -225,7 +231,7 @@ static const struct sym syms[] = {
     S (KI_TORCH), S (KI_DAGGER), S (KI_PICK), S (KI_SHOVEL), S (KI_ROPE), S (KI_CANDLE), S (KI_LANTERN), S (KI_SACK),
     S (KI_CHEST), S (KI_SKULL), S (KI_CLOAK), S (KI_SWORD), S (KI_BASKET), S (KI_CHAIR), S (KI_BAR), S (KI_PANE),
     S (KI_LEATHER_TUNIC), S (KI_HELM), S (KI_MACE), S (KI_SHIELD), S (KI_POT),
-    S (G_CF), S (G_MF), S (G_MS), S (G_CS),
+    S (G_BADLY), S (G_FAIL), S (G_PASS), S (G_WELL),
     S (P_NOTICE_SIGHT), S (P_NOTICE_SOUND), S (P_NOTICE_SMELL), S (P_SEARCH), S (P_STEALTH), S (P_CLIMB), S (P_JUMP),
     S (P_SWIM), S (P_BALANCE), S (P_FORCE), S (P_LIFT), S (P_PICKLOCK), S (P_DISARM), S (P_ENDURE),
     S (P_RESIST_POISON), S (P_RESIST_MIND), S (P_DODGE_HAZARD), S (P_FIRST_AID), S (P_LORE), S (P_TRACK),
@@ -252,7 +258,7 @@ static const struct sym syms[] = {
     S (HC_FALL), S (HC_STRIKE), S (HC_FIRE), S (HC_STRUCK),
     S (AS_BLUNT), S (AS_EDGE), S (AS_POINT), S (AS_FIRE),
     S (Z_MID), S (Z_HIGH), S (Z_LOW), S (AS_BEST),
-    S (D_AUTO), S (D_BLOCK), S (D_DODGE), S (D_COUNTER), S (D_NONE),
+    S (D_AUTO), S (D_BLOCK), S (D_DODGE), S (D_OWN), S (D_NONE),
     S (O_MISS), S (O_DODGED), S (O_BLOCKED), S (O_HIT), S (O_ADVANTAGE), S (O_COUNTER_HIT), S (O_FUMBLE),
     S (O_STUMBLE), S (O_RISE), S (O_REARM), S (RS_PRONE_A), S (RS_PRONE_D), S (RS_REARM),
     S (O_HOLD), S (O_SLIP), S (O_THROWN), S (O_PINNED), S (O_CHOKED), S (O_RESISTS), S (O_FREE), S (O_STRUGGLES),

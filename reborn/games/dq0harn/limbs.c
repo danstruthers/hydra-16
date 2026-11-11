@@ -96,9 +96,9 @@ unsigned __fastcall__ o_cond_of (const harn_char* h)
 }
 
 /* Getting up, prone (the book's Rise, Combat 8: a round; the house's, every actor's, HOUSE.md's prone): its grade
-** (rs.h's G_*): never with no leg to stand on (on two legs, both useless; on four, two or more: G_CF); seriously or
+** (rs.h's G_*): never with no leg to stand on (on two legs, both useless; on four, two or more: G_BADLY); seriously or
 ** grievously wounded, or with no good arm (the user's, 2026-10-22), an Agility test (x5; no good arm four steps the
-** harder); else always (G_MS) */
+** harder); else always (G_PASS) */
 signed char __fastcall__ o_rise_of (const harn_char* h)
 {
     unsigned char l = o_limbs_of (h), legs, arms;
@@ -110,10 +110,10 @@ signed char __fastcall__ o_rise_of (const harn_char* h)
         arms = 0;
     }
     if (legs >= 2) {
-        return G_CF;
+        return G_BADLY;
     }
     if (!(l & LB_HURT) && arms < 2) {
-        return G_MS;
+        return G_PASS;
     }
     return grade (harn_test_attr (h, HARN_AGL, 5, arms < 2 ? 0 : -4 * STEP_PCT));
 }

@@ -389,7 +389,7 @@ static void __fastcall__ read_it (unsigned id, signed char cond, signed char app
     }
     n = K.state & ~CL_MORE;
     if (n > CL_UNREAD) {                        /* (Read before: what was read, the same again, untested) */
-        g = n == CL_PIECE ? G_MF : n == CL_WRONG ? G_CF : K.state & CL_MORE ? G_CS : G_MS;
+        g = n == CL_PIECE ? G_FAIL : n == CL_WRONG ? G_BADLY : K.state & CL_MORE ? G_WELL : G_PASS;
         goto told;
     }
     hub_map (0);
@@ -414,10 +414,10 @@ static void __fastcall__ read_it (unsigned id, signed char cond, signed char app
         intend2 (I_WAIT, 100, I_WAIT_W2 (0, 0, 1));
         return;
     }
-    K.state = g == G_MF ? CL_PIECE : g == G_CF ? CL_WRONG : g == G_CS ? CL_RIGHT | CL_MORE : CL_RIGHT;
+    K.state = g == G_FAIL ? CL_PIECE : g == G_BADLY ? CL_WRONG : g == G_WELL ? CL_RIGHT | CL_MORE : CL_RIGHT;
     clue_io (id, 1);                            /* (Kept first: part 26 called, this part's K is its image's again) */
 told:
-    if (g == G_MF) {                            /* (A piece of it: its first half, to a word's end) */
+    if (g == G_FAIL) {                            /* (A piece of it: its first half, to a word's end) */
         strcpy (lb, K.words);
         for (n = strlen (lb) / 2; n && lb[n] != ' '; --n) {
         }
@@ -425,15 +425,15 @@ told:
         msg (lb);
         sayf ("  The rest you can't make out, but it speaks of some place %s.", lies[(K.land & 15) % 6]);
     } else {
-        if (g == G_CF && here) {
+        if (g == G_BADLY && here) {
             swapped (id);                       /* (Into lb, its record read there; K again after it) */
             clue_io (id, 0);
             msg (lb);
         } else {
             msg (K.words);
         }
-        clue_place_said (g == G_CF);            /* (A wrong reading told as confidently as a right one) */
-        if (g == G_CS && here) {
+        clue_place_said (g == G_BADLY);            /* (A wrong reading told as confidently as a right one) */
+        if (g == G_WELL && here) {
             more_said ();
         }
     }
@@ -488,9 +488,9 @@ static unsigned char __fastcall__ reading (struct cmd* c)
         clue_io (CLUE_HERE | x, 0);
         g = RS_TEST_GRADE (*ask_b (RS_TEST, P_DRAW, 0));  /* (The book's Drawing, its Cartography first: the referee's) */
         HUB->slot[SLOT_UI].state = REQ_FREE;
-        K.copy = g == G_CS ? 2 : g == G_MS ? 1 : g == G_MF ? -1 : -2;
-        sayf ("\nYou copy the marks of the %s onto your sheet, line by line: %s.", c->obj.word, g == G_CS ?
-            "a fair copy, every mark as it stands" : g == G_MS ? "a good copy" : g == G_MF ? "a rough copy, some of its marks guessed at" :
+        K.copy = g == G_WELL ? 2 : g == G_PASS ? 1 : g == G_FAIL ? -1 : -2;
+        sayf ("\nYou copy the marks of the %s onto your sheet, line by line: %s.", c->obj.word, g == G_WELL ?
+            "a fair copy, every mark as it stands" : g == G_PASS ? "a good copy" : g == G_FAIL ? "a rough copy, some of its marks guessed at" :
             "a poor copy, much of it botched");
         clue_io (CLUE_HERE | x, 1);
         intend2 (I_WAIT, 6000, I_WAIT_W2 (0, 0, 1));   /* (Ten minutes' copying) */

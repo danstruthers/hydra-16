@@ -70,11 +70,11 @@ static void disarm (void)
             g = test (P_ASSESS, 0, -(signed char) (wk.tq.power >> 1));
             o = G_OK (g) ? TO_ASSESSED : TO_PUZZLED;
             if (o == TO_ASSESSED) {
-                trap_state (wk.tq.state | TS_ASSESSED | (g == G_CS ? TS_KEEN : 0));
+                trap_state (wk.tq.state | TS_ASSESSED | (g == G_WELL ? TS_KEEN : 0));
             }
         } else {
             g = test (P_DISARM, HIDE_MECHANICAL, -(signed char) (wk.tq.power >> 1) + (wk.tq.state & TS_KEEN ? 2 : 0));
-            o = G_OK (g) ? TO_DISARMED : g == G_CF ? TO_FUMBLED : TO_NOT_YET;
+            o = G_OK (g) ? TO_DISARMED : g == G_BADLY ? TO_FUMBLED : TO_NOT_YET;
         }
     }
     trap_told (o);

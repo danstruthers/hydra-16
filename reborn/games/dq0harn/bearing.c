@@ -55,7 +55,7 @@ signed char __fastcall__ o_bearing_of (signed char steps)
         return g;
     }
     if (pc.att[HARN_SP] == HARN_KHU) {
-        return G_CS;                            /* (It knows north: no test) */
+        return G_WELL;                            /* (It knows north: no test) */
     }
     bdice ();
     g = grade (harn_test ((a > m ? a : m) + STEP_PCT * steps));

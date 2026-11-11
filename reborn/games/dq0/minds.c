@@ -266,7 +266,7 @@ static void taunt (void)
     if (ask_den (SW_TAUNT, 0) == SR_OK) {
         strcpy (lb, "You taunt ");
         who (0);
-        strcat (lb, G_OK (dealt.grade) ? ". It's goaded: it comes for you!" : dealt.grade == G_CF ?
+        strcat (lb, G_OK (dealt.grade) ? ". It's goaded: it comes for you!" : dealt.grade == G_BADLY ?
             ". It only laughs at you." : ". It ignores your jeers.");
         msg (lb);
     }
@@ -288,11 +288,11 @@ static void orate (void)
     } else {
         sayf ("\nYou hold forth to those about you, in %s. ", dealt.word2);
         say (G_OK (dealt.grade) ? (dealt.ix ? "Your words carry:" : "Your words carry, but sway no one further.") :
-            dealt.grade == G_CF ? (dealt.ix ? "Your words go badly:" : "Your words go badly.") : "Your words fall flat.");
+            dealt.grade == G_BADLY ? (dealt.ix ? "Your words go badly:" : "Your words go badly.") : "Your words fall flat.");
         if (dealt.ix == 1) {
-            sayf (" one of them seems %s for it.", dealt.grade == G_CF ? "the colder" : "the friendlier");
+            sayf (" one of them seems %s for it.", dealt.grade == G_BADLY ? "the colder" : "the friendlier");
         } else if (dealt.ix) {
-            sayf (" %u of them seem %s for it.", dealt.ix, dealt.grade == G_CF ? "the colder" : "the friendlier");
+            sayf (" %u of them seem %s for it.", dealt.ix, dealt.grade == G_BADLY ? "the colder" : "the friendlier");
         }
         took ();
     }

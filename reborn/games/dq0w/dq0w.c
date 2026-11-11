@@ -1468,17 +1468,17 @@ static void climb_round_on (void)
     hub_map (0);
     if (cl_hold) {                              /* (Struck or hurt part way: a test to keep its grip, HOUSE.md's) */
         cl_hold = 0;
-        if (g == G_MS || g == G_CS) {
+        if (g == G_PASS || g == G_WELL) {
             event (E_CLIMB, 0, E_CLIMB_W1 (K_HELD, cl.need - cl.done > 255 ? 255 : cl.need - cl.done));
             climb_round ();
             return;
         }
-        g = G_CF;                               /* (Its grip lost: a fall, from as high as it got) */
+        g = G_BADLY;                               /* (Its grip lost: a fall, from as high as it got) */
     }
-    if (g == G_CF && !(cl.up ? cl.done : cl.need - cl.done)) {
-        g = G_MF;                               /* (Not off the ground yet: nothing to fall) */
+    if (g == G_BADLY && !(cl.up ? cl.done : cl.need - cl.done)) {
+        g = G_FAIL;                               /* (Not off the ground yet: nothing to fall) */
     }
-    if (g == G_CF) {                            /* (A fall: from as high as it got, up; to the foot, down) */
+    if (g == G_BADLY) {                            /* (A fall: from as high as it got, up; to the foot, down) */
         t = cl.up ? cl.done : cl.need - cl.done;
         event (E_CLIMB, 0, E_CLIMB_W1 (K_FELL, t));
         if ((t = fall (t, HF_CLEAR | HF_HOLDS | (cl.sh ? cl.wet : 0))) == 0xFFFF) {
@@ -1500,7 +1500,7 @@ static void climb_round_on (void)
         see (0);
         return;
     }
-    if (g == G_MF && cl.done && cl.up == 3) {   /* (A slip climbing out of a pit: the climb ends, back on its floor,
+    if (g == G_FAIL && cl.done && cl.up == 3) {   /* (A slip climbing out of a pit: the climb ends, back on its floor,
                                                 **   the player's to say what next: D13's, slice 4.4's) */
         cl.up = 2;                              /* (Its top kept: climbed again, pit_climb's) */
         cl.done = HUB->rhi = 0;
@@ -1508,15 +1508,15 @@ static void climb_round_on (void)
         see (0);
         return;
     }
-    if (g == G_MF && !cl.done && cl.up == 1 && (HUB->pc_wet & 0x7F) >= 5) {
+    if (g == G_FAIL && !cl.done && cl.up == 1 && (HUB->pc_wet & 0x7F) >= 5) {
         event (E_CLIMB, 0, E_CLIMB_W1 (K_NOHOLD, cl.need > 255 ? 255 : cl.need));
         HUB->rhi = 0;                           /* (Up out of deep water, a well's foot: no hold found, the climb ends, a
                                                 **   swimmer can't cling on; the player's to try again: 2026-11-06) */
         see (0);
         return;
     }
-    t = g != G_MF ? K_ON : cl.done ? K_BACK : K_NOHOLD;   /* (A slip: back, if it's off the ground) */
-    cl.done = g == G_CS ? cl.done + 20 : g == G_MS ? cl.done + 10 : cl.done > 5 ? cl.done - 5 : 0;
+    t = g != G_FAIL ? K_ON : cl.done ? K_BACK : K_NOHOLD;   /* (A slip: back, if it's off the ground) */
+    cl.done = g == G_WELL ? cl.done + 20 : g == G_PASS ? cl.done + 10 : cl.done > 5 ? cl.done - 5 : 0;
     HUB->pc_task.done = cl.done < cl.need ? cl.done : cl.need;
     if (cl.done < cl.need) {
         event (E_CLIMB, 0, E_CLIMB_W1 (t, cl.need - cl.done > 255 ? 255 : cl.need - cl.done));
@@ -2627,12 +2627,12 @@ static unsigned char __fastcall__ btest (signed char steps)
     if (G_OK (g)) {
         return 0;
     }
-    k = g == G_CF ? 2 : 1;
+    k = g == G_BADLY ? 2 : 1;
     if (wres & 1) {
         k = -k;
     }
     HUB->pc_skew = (bast ? wres : HUB->pc_skew + k) & 7;
-    if (g != G_CF || HUB->pc_lost) {
+    if (g != G_BADLY || HUB->pc_lost) {
         return 0;
     }
     HUB->pc_lost = 1;
@@ -2657,7 +2657,7 @@ static signed char __fastcall__ familiar (unsigned char sn, unsigned x, unsigned
     map = HUB->pc_map;
     n = KEPT_KNOWN (sn, x, y);
     if (n && map && C->kept.map == map && !pfeel) {   /* (Seen, so its chunk in the window: KEPT_KNOWN's) */
-        g = C->kept.dq == G_CF ? 0 : C->kept.dq == G_MF ? BEAR_MAP / 2 : BEAR_MAP;
+        g = C->kept.dq == G_BADLY ? 0 : C->kept.dq == G_FAIL ? BEAR_MAP / 2 : BEAR_MAP;
     }
     hub_map (0);
     n = TR_MORE (n);
@@ -2839,7 +2839,7 @@ static unsigned char looked_at (void)
 ** by the north it believes in (turned back by its skew: astray as it's wrong; its memory's by the north it believed in
 ** as it last saw the place, so only as far as its belief's gone since).  How it knows it: 3 seen, 2 by its map,
 ** 1 by its memory, 0 forgotten */
-static const unsigned char doffs54[5] = { 3, 1, 0, 0, 0 };  /* (map.c's doffs: by the grade, G_CF on) */
+static const unsigned char doffs54[5] = { 3, 1, 0, 0, 0 };  /* (map.c's doffs: by the grade, G_BADLY on) */
 static unsigned char where (void)
 {
     unsigned char n, w, g, how, skew, dk;
@@ -3919,7 +3919,7 @@ void s_dig_on (void)
         return;
     }
     l = dig.d == DIR_DOWN ? DIG_TOP : 0;        /* (Where the rock begins) */
-    if (g == G_CF && RK_POOR (rk) && dig.done > l) {
+    if (g == G_BADLY && RK_POOR (rk) && dig.done > l) {
         dig.done -= dig.done - l > 4 ? 4 : dig.done - l;    /* (Poor rock: the roof come down on a spell gone badly,
                                                 **   two feet of the hole in the rock filled again, HOUSE.md's) */
         g = 0x7F;
@@ -3935,11 +3935,11 @@ void s_dig_on (void)
         return;
     }
     if (l & 0x20) {
-        g = G_CF;                               /* (Hidden by magic: it turned the tool) */
+        g = G_BADLY;                               /* (Hidden by magic: it turned the tool) */
     }
     if (dig.done < dig.need) {
         dig_kept (0);                           /* (The feet dug kept: stopped, it goes on from here) */
-        event (E_DIG, 0, E_DIG_W1 (g == G_CS || g == G_MS ? D_GOOD : g == G_MF ? D_POOR : g == 0x7F ? D_ROOF : D_SLIP,
+        event (E_DIG, 0, E_DIG_W1 (g == G_WELL || g == G_PASS ? D_GOOD : g == G_FAIL ? D_POOR : g == 0x7F ? D_ROOF : D_SLIP,
             dig.need - dig.done > 510 ? 255 : (dig.need - dig.done + 1) / 2));
         if (l & 1) {
             event (E_DIG, 0, E_DIG_W1 (D_PORTAL, 0xFE));   /* (Asked after it, soft) */
@@ -6468,7 +6468,7 @@ void s_draw_test (void)
     if (opened) {
         event (E_TASK, 0, TE_LEARNT);           /* ("You start to learn drawing.": the UI's) */
     }
-    q = g == G_CS ? 9 : g == G_MS ? 6 : g == G_MF ? 3 : 0;
+    q = g == G_WELL ? 9 : g == G_PASS ? 6 : g == G_FAIL ? 3 : 0;
     while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
         if (ip->id == id) {
             ip->quality = (ip->quality + q + 1) >> 1;
@@ -7699,7 +7699,7 @@ void s_step_loud (void)
             HUB->pc_qg = l;
         }
         l = HUB->pc_qg;
-        l = (signed char) l == G_CS ? 0 : (signed char) l == G_MS ? 1 : (signed char) l == G_MF ? 2 : 3;
+        l = (signed char) l == G_WELL ? 0 : (signed char) l == G_PASS ? 1 : (signed char) l == G_FAIL ? 2 : 3;
     } else {
         HUB->pc_qp = 0xFF;                      /* (Not moving quietly: tested again as it begins) */
         l = g == GA_WORK ? 3 : g < GA_WALK ? 2 : g;

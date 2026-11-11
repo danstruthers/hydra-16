@@ -30,6 +30,8 @@ const fs = require('fs');
 const VERSION = 5;                                      // (2: a section's flags in its index entry, 2026-10-27; 3: a
                                                         //   thing's material, the denizens' places and sections; 5:
                                                         //   the book's dice, a jewel, 2026-10-28)
+// (The tags: RS_OUTFIT's bits, in this order, the ruleset's to set: HarnMaster's cultures, classes, wealth and sexes,
+// ../dq0harn/dq0harn.h's OT_*)
 const TAGS = ['feudal', 'imperial', 'viking', 'tribal', 'sindarin', 'khuzan', 'slave', 'serf', 'unguilded', 'guilded', 'noble',
   'poor', 'average', 'rich', 'female', 'male'];
 const PLACES = { worn: 1, hand: 2, off: 3, both: 4, belt: 5, pouch: 6, pack: 7, in: 8,

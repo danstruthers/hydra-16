@@ -148,7 +148,7 @@ void __fastcall__ o_sway_words (const struct sway* s)
         add (" the ");
         add (s->word2);
         add (". ");
-        if (s->grade == G_CF) {
+        if (s->grade == G_BADLY) {
             seeming ("It won't take it: it's offended, and seems ", " now.");
             return;
         }
@@ -161,7 +161,7 @@ void __fastcall__ o_sway_words (const struct sway* s)
         if (s->now == AT_ALLIED) {
             add ("It's won over: it will follow you now.");
         } else {
-            seeming (s->grade == G_CS ? "It warms to you: it seems " : "It's swayed: it seems ", " now.");
+            seeming (s->grade == G_WELL ? "It warms to you: it seems " : "It's swayed: it seems ", " now.");
         }
     } else if (s->now == s->was) {
         seeming ("It isn't swayed: it seems ", " still.");

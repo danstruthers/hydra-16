@@ -175,13 +175,13 @@ void __fastcall__ o_portal_look (const struct portal* p, signed char g, unsigned
         return;
     }
     switch (g) {
-    case G_CS:
+    case G_WELL:
         break;
-    case G_MS:
+    case G_PASS:
         q += random (3) - 1;
         body = body * (8 + random (5)) / 10;
         break;
-    case G_MF:
+    case G_FAIL:
         q += random (7) - 3;
         body = body * (4 + random (13)) / 10;
         break;

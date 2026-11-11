@@ -288,7 +288,7 @@ void __fastcall__ o_treat (struct req* r)
         return;
     }
     g = test_sk (&pc, HARN_PHY, bonus (j, how) / STEP_PCT);
-    lv = g == G_CF ? HARN_CF : g == G_MF ? HARN_MF : g == G_MS ? HARN_MS : HARN_CS;
+    lv = g == G_BADLY ? HARN_CF : g == G_FAIL ? HARN_MF : g == G_PASS ? HARN_MS : HARN_CS;
     if (how == TR_TOURNIQUET) {
         if (HARN_SUCCESS (lv)) {
             j->flags &= ~HARN_IF_BLEEDER;

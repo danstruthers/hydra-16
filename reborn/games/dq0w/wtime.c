@@ -128,14 +128,14 @@ static void __fastcall__ woke (unsigned n)
     signed char g;
 
     g = ttest (T.how == TG_OUT ? -10 : -(signed char) (len / 30 > 20 ? 20 : len / 30));
-    u = g == G_CS ? len / 8 : g == G_MS ? len / 4 : g == G_MF ? len / 2 : len;
-    d = g == G_CS ? 0 : g == G_MS ? len / 6 : g == G_MF ? len / 3 : len / 3 * 2;
+    u = g == G_WELL ? len / 8 : g == G_PASS ? len / 4 : g == G_FAIL ? len / 2 : len;
+    d = g == G_WELL ? 0 : g == G_PASS ? len / 6 : g == G_FAIL ? len / 3 : len / 3 * 2;
     if (T.how == TG_OUT && g < 0) {
         d += 30;                                /* (A black-out: an hour, or a minute?) */
     }
     drift ();
     T.unc += u < 15 ? 15 : u;
-    if (g == G_CF && T.unc < TB_LOST) {
+    if (g == G_BADLY && T.unc < TB_LOST) {
         T.unc = TB_LOST;                        /* (No idea how long it was gone: any hour) */
     }
     T.gone = 0;

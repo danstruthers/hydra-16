@@ -264,7 +264,7 @@ static unsigned char rp_up (void)
         R_RUN = 0;
         R_AK = KI_GRAPPLE;
         hub_map (0);
-        R_SLIP = g != G_CS && !((unsigned char) HUB->now & 3);
+        R_SLIP = g != G_WELL && !((unsigned char) HUB->now & 3);
         rp_hang ();
         put ("\nThe grapple flies up and catches, with a clang.");
     } else {

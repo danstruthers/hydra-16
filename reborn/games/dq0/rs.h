@@ -33,12 +33,14 @@
 #define SQ_FT           5
 #define TH_IN           8
 
-/* ---- Grades: how a test went (HarnMaster's levels one for one; a d20's: a natural 1 CF, a miss MF, a hit MS, a
-** natural 20 or a hit by 10 or more CS) */
-#define G_CF            (-2)
-#define G_MF            (-1)
-#define G_MS            1
-#define G_CS            2
+/* ---- Grades: how a test went, the game's own scale of four (2026-11-11: once HarnMaster's levels' names): failed
+** badly, failed, passed, passed well; a ruleset maps its own outcomes onto it, in its referee (HarnMaster's levels one
+** for one, dq0harn's grade (): a critical failure, a marginal failure, a marginal success, a critical success; a d20's
+** a natural 1, a miss, a hit, a natural 20 or a hit by 10 or more) */
+#define G_BADLY         (-2)
+#define G_FAIL          (-1)
+#define G_PASS          1
+#define G_WELL          2
 #define G_OK(g)         ((signed char) (g) > 0)
 
 /* ---- Purposes: what a test is for (the ruleset picks its skill, attribute or save).  A notice (P_NOTICE_*) is the
@@ -150,7 +152,8 @@ enum { GA_CREEP, GA_SLOW, GA_WALK, GA_JOG, GA_RUN, GA_SPRINT, NGAITS };
 #define C_PRONE         0x0001
 #define C_UNCONSCIOUS   0x0002
 #define C_DEAD          0x0004
-#define C_STUNNED       0x0008                  /* (HarnMaster's shock) */
+#define C_STUNNED       0x0008                  /* (Stunned: in no state to do more than rest or walk slowly away, as the
+                                                **   ruleset says when: HarnMaster's shock, its referee's) */
 #define C_BLEEDING      0x0010
 #define C_FATIGUED      0x0020                  /* (Tired, or tiring: rest owed it, RS_EXERT's) */
 #define C_ARM_USELESS   0x0040                  /* (An arm useless, either: the summary's limbs say which) */
@@ -183,9 +186,10 @@ enum { O_MISS, O_DODGED, O_BLOCKED, O_HIT, O_BOTH_HIT, O_COUNTER_HIT, O_FUMBLE, 
     O_DISPATCH, O_RISE, O_REARM, O_HOLD, O_SLIP, O_THROWN, O_PINNED, O_CHOKED, O_RESISTS, O_FREE, O_STRUGGLES,
     O_LETGO };
 
-/* ---- Defences: the stance the player sets (the ruleset decides what each means; auto: its best; HarnMaster's: a
-** round's defences, a block or a dodge each once a round, a counterstrike only on D_COUNTER: HOUSE.md) */
-enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
+/* ---- Defences: the stance the player sets (the ruleset decides what each means; auto: its best; D_OWN the ruleset's
+** own stance, the player's word for it "counter" (HarnMaster's counterstrike: a round's defences, a block or a dodge
+** each once a round, a counterstrike only on D_OWN, HOUSE.md; a ruleset with none of its own takes it as D_AUTO) */
+enum { D_AUTO, D_BLOCK, D_DODGE, D_OWN, D_NONE };
 
 /* ---- An attack (RS_ATTACK): actor strikes at other (0 the character, else an actor's entry plus 1) with what it has
 ** in hand (the character's: RS_EQUIP's, the best weapon held; else its fists) or its own (a creature's claws, bite
@@ -301,14 +305,12 @@ struct rs_effect {
     unsigned char   x[2];
 };
 enum { X_NONE, X_WOUND, X_HEAL, X_COND_ON, X_COND_OFF, X_DEATH, X_DROP, X_EXTRA_ACTION, X_IMPROVED };
-/* (An X_WOUND's cond: the conditions it leaves the actor in; its x[0] where it is, BP_*, and x[1] its aspect, AS_*.
+/* (An X_WOUND's cond: the conditions it leaves the actor in; its x[0] where it is, the ruleset's own (HarnMaster's
+** harn.h's locations; the null ruleset's 0: the game reads only its words), and x[1] its aspect, AS_*.
 ** An X_DROP's x[0] the hands that let go what they held, DH_*: the character's, what it holds there, the world's to put
 ** down, a neighbouring square or the same one; a creature's, its weapon, held in its right) */
 #define DH_LEFT         0x01                    /* (items.h's IH_* the same) */
 #define DH_RIGHT        0x02
-enum { BP_SKULL, BP_FACE, BP_NECK, BP_SHOULDER, BP_UPPER_ARM, BP_ELBOW, BP_FOREARM, BP_HAND, BP_CHEST, BP_BELLY,
-    BP_GROIN, BP_HIP, BP_THIGH, BP_KNEE, BP_CALF, BP_FOOT };
-#define BP_RIGHT        0x80                    /* (A limb's right side) */
 
 /* ---- Harm (RS_HARM): its cause (the request's a), and the rest by cause:
 **   HC_FALL     w1 its height in feet; b the ground it lands on (GR_*); c HF_* (a clear fall; holds to grab)
@@ -316,7 +318,7 @@ enum { BP_SKULL, BP_FACE, BP_NECK, BP_SHOULDER, BP_UPPER_ARM, BP_ELBOW, BP_FOREA
 **               (AS_*), c its dice (d6s), w1 impact more, w2 where it strikes (Z_*)
 **   HC_FIRE     a burn: c its dice, w1 more, w2 where
 **   HC_STRUCK   the actor's own part hurt by its blow at a thing (an RS_ATTACK at RS_THING's: the referee's own):
-**               c the part (BP_HAND, BP_FOOT, BP_SKULL), w1 its impact (its armour off it), w2 the blow's number in a
+**               c the part (the ruleset's own: HarnMaster's harn.h's hand, foot, skull), w1 its impact (its armour off it), w2 the blow's number in a
 **               run of them (0: its words begun anew, else added to); a blunt hit on it, and the reply's result 1 if
 **               it's hurt badly enough to stop (the referee's say)
 ** The reply: its effects (x: up to RS_EFFECTS, X_NONE after the last), b the worst wound's band (0: unhurt), w2 the
@@ -485,15 +487,14 @@ enum {
                                                 **   games/dq0/outfits.txt) -> w1 the money it has to spend (its
                                                 **   family's wealth, the ruleset's: farthings, 2026-10-28), w2 a seed for its draw (the
                                                 **   character's own numbers), a its wealth (0 poor, 1 average, 2
-                                                **   rich), x[0] and x[1] its tags (OT_*: its culture, its class, its
-                                                **   wealth, its sex, a bit each), the text a line its occupation's
+                                                **   rich), x[0] and x[1] its tags (the bits of outfits.txt's tag
+                                                **   words, in outfits.js's TAGS order: its culture, its class, its
+                                                **   wealth, its sex, a bit each, the ruleset's to set: dq0harn.h's
+                                                **   OT_*), the text a line its occupation's
                                                 **   name (its outfit's section), then a line each its open skills'
                                                 **   names, the highest first (each its section's: weapons, tools);
                                                 **   result 0, or 0xFF none (the kit as it was) */
 };
 #define RD_DEITY        5                       /* (RS_DESCRIBE's b: the deity the character worships, its name) */
-enum { OT_FEUDAL, OT_IMPERIAL, OT_VIKING, OT_TRIBAL, OT_SINDARIN, OT_KHUZAN, OT_SLAVE, OT_SERF, OT_UNGUILDED,
-    OT_GUILDED, OT_NOBLE, OT_POOR, OT_AVERAGE, OT_RICH, OT_FEMALE, OT_MALE };    /* (RS_OUTFIT's tags: outfits.txt's,
-                                                **   outfits.js's TAGS, in order) */
 
 #endif

@@ -135,14 +135,14 @@ void __fastcall__ o_appraise (const struct ireq* q, signed char g, unsigned char
         val *= q->qty;
     }
     switch (g) {
-    case G_CS:
+    case G_WELL:
         break;
-    case G_MS:
+    case G_PASS:
         qual += random (3) - 1;
         dur = off (dur, 15);
         val = off (val, 20);
         break;
-    case G_MF:
+    case G_FAIL:
         qual += random (7) - 3;
         dur = off (dur, 50);
         val = off (val, 60);

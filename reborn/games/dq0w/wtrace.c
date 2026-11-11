@@ -558,7 +558,7 @@ unsigned __fastcall__ s_traced (const struct msg* m)
     if (smk > best) {
         best = smk;
     }
-    R.grade = G_MS;
+    R.grade = G_PASS;
     if (how != TRC_FLOOR) {                     /* (The referee's test, the world's slot: Tracking, or a smell noticed,
                                                 **   at steps by the clearest) */
         st = how == TRC_SMELL ? 2 * best - 6 : best - 4;
@@ -566,7 +566,7 @@ unsigned __fastcall__ s_traced (const struct msg* m)
         R.grade = ask_w (RS_TEST, how == TRC_SMELL ? P_NOTICE_SMELL : P_TRACK, 0);
     }
     R.trod = best >= 4;
-    if (how == TRC_SMELL && R.grade == G_CF) {
+    if (how == TRC_SMELL && R.grade == G_BADLY) {
         nf = smk = 0;                           /* (Nothing noticed) */
     }
     while (R.ntr < NTRAILS) {                   /* (The clearest first: whose, its words, its passings, how long since,

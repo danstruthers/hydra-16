@@ -195,7 +195,7 @@ static void __fastcall__ told (const harn_injury* j, unsigned char sev, struct r
     e->band = sev;
     e->phrase = 1;
     e->cond = conditions ();
-    e->x[0] = j->loc;                           /* (rs.h's BP_* and AS_* are the book's order) */
+    e->x[0] = j->loc;                           /* (Its own location, harn.h's; rs.h's AS_* the book's order) */
     e->x[1] = j->aspect;
     if (hurt[0]) {
         put ("; ");

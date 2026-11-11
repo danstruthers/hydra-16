@@ -209,13 +209,13 @@ ask:
         break;
     case SR_OK:
         if (h == SW_ENTERTAIN) {
-            sayf ("\nYou %s %s. %s", played[S.order & 3], nl, S.now > S.was ? (S.grade == G_CS ?
+            sayf ("\nYou %s %s. %s", played[S.order & 3], nl, S.now > S.was ? (S.grade == G_WELL ?
                 "It's delighted: it seems friendlier now." : "It's pleased: it seems friendlier now.") : S.now < S.was ?
                 "It's bored, and seems the less friendly." : "It isn't moved.");
             break;
         }
         sayf ("\n%s%s%s for %s %s.", nm, h == SW_PRICE ? " asks " : h == SW_OFFER ? " would give you " :
-            h != SW_HAGGLE ? " agrees: " : S.grade == G_CS ? " gives way, and agrees: " : S.grade == G_MS ?
+            h != SW_HAGGLE ? " agrees: " : S.grade == G_WELL ? " gives way, and agrees: " : S.grade == G_PASS ?
             " gives a little, and agrees: " : " won't budge, but agrees: ", pr,
             h == SW_PRICE || !(S.iy & 1) ? "the" : "your", gd);
         break;
