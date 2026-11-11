@@ -78,9 +78,29 @@ static void __fastcall__ by_drop (unsigned char k)
 {
     for (; k < HARN_INJMAX - 1; ++k) {
         pc_by[k] = pc_by[k + 1];
+        pc_dr[k] = pc_dr[k + 1];                /* (Its dressing gone with it, as the referee's heal.c has it) */
         wid[k] = wid[k + 1];
     }
-    pc_by[k] = 0;
+    pc_by[k] = pc_dr[k] = 0;
+}
+
+/* ---- The dressings (the referee's pc_dr, its file's "dressed" line, dq0harn's dressln.h): read as the sheet's read, soiled a
+** day at a time as in the dungeon (a serious or grievous wound's three grades the worse: the user's, 2026-11-11), written back */
+
+#define DRESS_LINE      dress_io
+#include "../dq0harn/dressln.h"
+
+void __fastcall__ o_dress (unsigned char out)
+{
+    if (out) {
+        strcpy (dressed, "dressed ");
+        dress_io (dressed + 8, 1);
+        if (!dressed[8]) {
+            *dressed = 0;
+        }
+    } else if (*dressed) {
+        dress_io (dressed + 8, 0);
+    }
 }
 
 /* A healing roll (heal.c's heal_one, its words the account's own): 1 if it healed whole */
@@ -118,6 +138,12 @@ unsigned char o_day (void)
     if (pc.state != HARN_DEAD) {
         aff_course (1440, 0);
         levels ();
+    }
+    for (k = 0; k < pc.ninj; ++k) {             /* (The day's end: each dressing on a serious or grievous wound soiled, the
+                                                **   referee's heal.c's soil, untold: the sheet says so) */
+        if ((pc_dr[k] & DR_GRADE) && pc.inj[k].sev >= HARN_SERIOUS && !(pc.inj[k].flags & IF_POOL)) {
+            pc_dr[k] = DR_SOIL (pc_dr[k]);
+        }
     }
     ++passed;
     return pc.state != HARN_DEAD;

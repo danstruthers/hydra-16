@@ -56,10 +56,15 @@ struct save {
     unsigned char   outcome;                    /* How it ended (LO_*, from q: solved, else left, else died): the record's */
     struct quest    q;                          /* (Its theme, its puzzle, and its ending: a game done isn't carried
                                                 **   on, but a new one begun) */
-    unsigned char   plain;                      /* (The map in plain letters: the player's, dq0.h's) */
+    unsigned char   plain;                      /* (The map in plain letters, bit 0: the player's, dq0.h's; bits 1-7 a
+                                                **   vow of fasting's time left as it was kept, in FAST_STEPs rounded
+                                                **   up, 0 none: hself.c's fasting, the user's, 2026-11-11) */
 };
 
-#define LF_BETWEEN      0x01                    /* (The record's flags: the time between yet to be told, dq0acct's, the next dungeon's seed and
+#define FAST_STEP       7200UL                  /* (A vow of fasting's time kept in steps of 12 minutes, the clock's tenths:
+                                                **   a day's vow 120 of them, in a byte, save's plain and the head's fast) */
+
+#define LF_BETWEEN      0x01                   /* (The record's flags: the time between yet to be told, dq0acct's, the next dungeon's seed and
                                                 **   folder not begun: dq0life runs it again if it's found so) */
 #define LF_OVER         0x02                    /* The life's over: dead, in hard mode's dungeon or between two; the next start's a new life */
 #define LF_ABROAD       0x04                    /*   dead between two dungeons (dq0acct's), of its wounds' rolls */
@@ -80,7 +85,11 @@ struct life_head {
     int             reputation;                 /* The standing: what solving earns (the theme's reward line, dq0acct's:
                                                 **   the plan's step 7), told in the account and the life's */
     unsigned        clues, thread;              /* (Their offsets in the file, 0 none: the plan's steps 10, 15) */
-    unsigned char   room[6];
+    unsigned char   fast;                       /* A vow of fasting carried into this dungeon (the user's, 2026-11-11): its
+                                                **   end in FAST_STEPs after the midnight that begins date (0 none; 120 at
+                                                **   most), dq0life's from the last dungeon's save as it ended, gone as
+                                                **   the days between pass it; the UI's as the dungeon begins */
+    unsigned char   room[5];
 };
 
 struct life_dungeon {

@@ -302,9 +302,11 @@ static void do_touch (void)
     }
 }
 
-/* H_TASTE: a sip, not a dose (nothing used up, no remedy taken, no flux caught: DECISIONS.md's): an antidote or a remedy
-** named by a lore test (the referee's P_LORE), water fresh or still (its wear: from still water), food still good (none
-** goes off in this game); the water it stands in, still or running.  Three seconds */
+/* H_TASTE: a sip, not a dose (nothing used up, no remedy taken: DECISIONS.md's): an antidote or a remedy named by a lore
+** test (the referee's P_LORE), water fresh or still (its wear: from still water), food still good (none goes off in this
+** game); the water it stands in, still or running.  Still water's sip the flux's risk, a sip's (the user's, 2026-11-11):
+** the referee told it's drunk foul, no pints (RS_TIME's drink 0x80: a tenth of a drink's chance, afflict.c's).  Three
+** seconds */
 static void do_taste (void)
 {
     struct req* r;
@@ -343,6 +345,15 @@ static void do_taste (void)
             "Bitter with rue and wormwood: a theriac, an antidote against poisons and venoms.";
     } else if (c == KI_WATER || k == KI_WATER) {
         s = f ? "Flat and stale: still water, not fresh. It may carry the flux." : "Cold and clean: fresh water.";
+        if (f) {
+            hub_map (0);                        /* (A sip of it: feed.c's drink, foul, no pints) */
+            r = &HUB->slot[SLOT_UI];
+            RS_TIME_MINUTES (*r) = RS_TIME_BLEEDERS (*r) = 0;
+            RS_TIME_FIGHTING (*r) = RS_TIME_DROWNED (*r) = 0;
+            RS_TIME_MEAL (*r) = 0;
+            RS_TIME_DRINK (*r) = 0x80;
+            ask_b (RS_TIME, 0, 0)->state = REQ_FREE;
+        }
     } else if (!strcmp (key, "food")) {
         s = "It tastes as it should: it's still good.";
     } else if (!c && f == 2) {

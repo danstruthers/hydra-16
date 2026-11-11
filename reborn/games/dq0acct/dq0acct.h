@@ -88,6 +88,9 @@ void o_rumours (void);                          /* The rumours told, one followe
 /* sheet.c */
 unsigned char o_sheet_read (void);             /* The sheet read: 1, or 0 none */
 void o_sheet_write (void);                      /* And written */
+extern char dressed[64];                        /* (Its "dressed" line whole, "" none: the sheet's, read and written by
+                                                **   body.c's o_dress) */
+void __fastcall__ o_dress (unsigned char out);  /* (body.c's) The dressings read from it (0), or written into it (1) */
 
 /* town.c (overlay 5, its own file: the plan's step 11) */
 extern unsigned long o_t;                       /* (o_date's date) */

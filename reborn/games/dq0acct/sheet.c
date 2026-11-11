@@ -50,6 +50,10 @@ static void __fastcall__ own_line (char* l)
         }
         return;
     }
+    if (!strncmp (l, "dressed ", 8)) {
+        strncpy (dressed, l, sizeof dressed - 1);   /* (Its dressings: body.c's, soiled by the days) */
+        return;
+    }
     if (!strncmp (l, "body ", 5) && l[5] != 'u') {
         l += 5;
         memset (v, 0, sizeof v);
@@ -119,9 +123,9 @@ unsigned char o_sheet_read (void)
     return ok;
 }
 
+#define line    path                            /* (Its lines made in path, once the file's open: the overlay's room) */
 void o_sheet_write (void)
 {
-    static char line[64];
     char b[8];
     unsigned v[11];
     unsigned i;
@@ -157,9 +161,13 @@ void o_sheet_write (void)
     }
     line[k + 6] = 0;
     harn_write_line (fd, line);
+    if (*dressed) {
+        harn_write_line (fd, dressed);
+    }
     for (k = 0; k < ntongues; ++k) {
         harn_write_line (fd, tongue[k]);
     }
     close (fd);
 }
+#undef line
 

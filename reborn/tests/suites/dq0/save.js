@@ -719,6 +719,47 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0dressbetween', near: ['save', 'body'], what: "Dingus Quest Zero's dressings soiled by the days between dungeons (the user's, 2026-11-11, DECISIONS.md's \"Cloth, bandages and dressings\"): a serious stab to the right forearm, tended, dressed in clean linen (its file's \"dressed :igs\": grade 9, its cloth s), the sheet's \"dressed in linen, clean\"; the crypt solved and walked out of, the game kept (the referee's line written back with its cloth); then (dq0lifeend's way) an infected grievous stab to the left forearm added to the file, a carry-on: the days between (dq0acct's) soil the dressing as the dungeon's do (three grades a day on a serious wound) till the infection kills the character, and the file's line is written back soiled, its cloth kept (a wound the account heals, any it can, is gone by the next dungeon, ninety days at most, so its death is where its sheet is kept)",
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo inj 134 2 2 2 5 4 >> /ram/c.hm', 'echo dressed :igs >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/q', 'sheet', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u',
+        'echo =KEPT', 'cat /ram/q/pc.hm', "echo 'inj 6 1 3 5 1 2' >> /ram/q/pc.hm", 'echo =OFF', 'dq0 -p t -d /ram/q', 'echo =END', 'cat /ram/q/pc.hm', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\r/g, ''), sect = n => { const i = o.indexOf('% echo =' + n), j = o.indexOf('% echo =', i + 3); return i < 0 ? '' : o.slice(i, j < 0 ? o.length : j); };
+        const first = o.slice(o.indexOf('% dq0 -p t -s 3'), o.indexOf('% echo =KEPT')).replace(/\s+/g, ' '), off = sect('OFF').replace(/\s+/g, ' ');
+        if (!/right forearm S2 \(stab\), tended, dressed in linen, clean/.test(first)) f.push('the first sheet: ' + first.slice(first.indexOf('Injuries'), first.indexOf('Injuries') + 200));
+        if (!/\ndressed :igs\n/.test(sect('KEPT'))) f.push('the line not written back with its cloth: ' + sect('KEPT').slice(0, 200));
+        if (!/The infection kills you\./.test(off) || !/ days? pass/.test(off)) f.push('not dead of it between the dungeons: ' + off.slice(0, 400));
+        if (!/\ndressed [B-K]igs\n/.test(sect('END'))) f.push('the line after the days between not soiled, its cloth kept: ' + sect('END').slice(sect('END').indexOf('\ndealt'), sect('END').indexOf('\ndealt') + 80));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0fastkept', near: ['save', 'body'], what: "Dingus Quest Zero's vow of fasting kept (the user's, 2026-11-11, DECISIONS.md's \"Prayer, fasting, swimming and following\"): a vow made, 20 minutes waited, the game quit and carried on: eating still refused (\"You're fasting, with 24 hours of your vow to go\"); the crypt solved and walked out of, dq0life run with no time between told (no -l) and the next dungeon's seed 1 (its hour 1, before the first's 3): the record's fast (life.h's, the head's byte 26) its end after the new date's midnight, 15 to 17 steps of 12 minutes; the next dungeon begun, eating refused with 2 to 4 hours of the vow to go; \"stop\" ends it, eating then not refused",
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/v', 'fast', 'wait 20 minutes', 'quit', 'echo =KEPT',
+        'dq0 -p t -d /ram/v', 'eat food', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u',
+        '/sd/0/games/lib/dq0/dq0life -d /ram/v -s 1', 'echo =LIFE', 'xd /ram/v/life.dat', 'echo =NEXT',
+        'dq0 -p t -d /ram/v', 'eat food', 'stop', 'eat food', 'quit', 'echo =END', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\r/g, ''), sect = n => { const i = o.indexOf('% echo =' + n), j = o.indexOf('% echo =', i + 3); return i < 0 ? '' : o.slice(i, j < 0 ? o.length : j); };
+        const kept = sect('KEPT').replace(/\s+/g, ' '), next = sect('NEXT').replace(/\s+/g, ' ');
+        if (!/> eat food You're fasting, with 24 hours of your vow to go: you leave the food be\./.test(kept)) f.push('the vow not kept in the save: ' + kept.slice(kept.indexOf('> eat food'), kept.indexOf('> eat food') + 200));
+        const a = xdBytes(sect('LIFE'), 'xd /ram/v/life.dat');
+        if (a.length < 544 || a.readUInt16LE(12) !== 2 || a[26] < 15 || a[26] > 17) f.push('the record\'s fast: dungeon ' + (a.length && a.readUInt16LE(12)) + ', fast ' + a[26]);
+        const r = /> eat food You're fasting, with (\d+) hours? of your vow to go: you leave the food be\./.exec(next);
+        if (!r || +r[1] < 2 || +r[1] > 4) f.push('the vow not carried into the next dungeon: ' + next.slice(next.indexOf('> eat food'), next.indexOf('> eat food') + 200));
+        const e = next.slice(next.indexOf('> stop'));
+        if (!/^> stop(?: > stop)? You break your fast: you may eat again\./.test(e) || /fasting/.test(e.slice(e.indexOf('> eat food')))) f.push('the vow carried in not ended by "stop": ' + e.slice(0, 300));
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0hard', near: ['save', 'body'], what: 'Dingus Quest Zero\'s death and its autosave (slice 4.4: D7, death permanent with autosaves before danger as a setting, off hard mode; HOUSE.md\'s the character carries on), by the world\'s events and the words told: a hunter (hmchar\'s, seed 5) given a grievous bleeding wound and its blood near spent (its file\'s lines added), begun by the stairway down (dq0 -T) and down it (kept as it comes into the stratum: the autosave), then a wait: dead of it, the ending\'s words saying its last save is kept, and the game begun again with the folder carried on from that save (resumed, not a new game); the same in hard mode (dq0 -H): no save to go back to, the game begun again a new one (its folder\'s save not taken up)',
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cat /ram/c.hm', 'echo \'inj 8 0 3 4 0 1\' >> /ram/c.hm', 'echo \'vol 0 9 0 0 0\' >> /ram/c.hm',

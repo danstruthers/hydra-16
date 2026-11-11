@@ -444,18 +444,30 @@ void __fastcall__ o_say_raw (const char* s)
     newline ();
 }
 
-/* The line typed (inl) one that says "again" or "repeat" (a word of it begun so, the verbs plan's B7, 2026-11-10): 1, not
+/* The line typed (inl) one that says "again" or "repeat" (a word of it begun so, the verbs plan's B7, 2026-11-10), or
+** "g" as a part's first word (the user's, 2026-11-11: again's, Infocom's; not a letter after a verb, "drop g"): 1, not
 ** kept as the last line (t_last) to run again */
 unsigned char o_said_again (void)
 {
-    static const char* const w[2] = { "again", "repeat" };
+    static const char* const w[3] = { "again", "repeat", "g" };
     const char* p;
+    const char* q;
     unsigned char k;
 
-    for (k = 0; k < 2; ++k) {
+    for (k = 0; k < 3; ++k) {
         for (p = inl; (p = strstr (p, w[k])) != 0; ++p) {
             if (p == inl || p[-1] == ' ' || p[-1] == ',' || p[-1] == ';') {
-                return 1;
+                if (k < 2) {
+                    return 1;
+                }
+                if (!p[1] || p[1] == ' ' || p[1] == ',' || p[1] == ';' || p[1] == '.') {
+                    for (q = p; q > inl && q[-1] == ' '; --q) {
+                    }
+                    if (q == inl || q[-1] == ',' || q[-1] == ';' || q[-1] == '.' ||
+                        (q - inl >= 4 && !strncmp (q - 4, "then", 4))) {
+                        return 1;
+                    }
+                }
             }
         }
     }

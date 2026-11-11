@@ -1829,7 +1829,7 @@ void s_tools (void)
     const struct kind* k;
     unsigned i = 0;
     char* t;
-    unsigned char mh, hh = 0;
+    unsigned char mh, hh = 0, cm;
 
     m[1] = m[3] = 0;
     hub_map (0);
@@ -1853,7 +1853,13 @@ void s_tools (void)
                 strcat (t, k->tool);
                 m[0] = '0' + (rec.kind == KI_BANDAGES ? CL_GRADE (rec.mat ? rec.mat : k->mat, rec.wear) : rec.quality);
                                                 /* (A bandage's its grade, its cloth's by its cleanliness: HOUSE.md's
-                                                **   bandages, 2026-11-10) */
+                                                **   bandages, 2026-11-10; its cloth after it, R hemp, S linen, T wool,
+                                                **   U silk: the referee's dressing's, the user's, 2026-11-11) */
+                if (rec.kind == KI_BANDAGES) {
+                    cm = rec.mat ? rec.mat : k->mat;
+                    m[1] = cm >= MT_LINEN ? 'S' + cm - MT_LINEN : 'R';
+                    m[2] = 0;
+                }
                 if (k->craft == AP_WEAPON) {
                     m[1] = rec.size == WV_HEAVY ? 'H' : rec.size ? 'L' : 'M';    /* (Its version: D13's, RS_EQUIP's) */
                     m[2] = "NEEEDDDD"[rec.wear >> 5];   /* (Its edge: dulled, dull: 2026-11-03) */

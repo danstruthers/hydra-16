@@ -2523,11 +2523,17 @@ from heal.c whole; the world's dq0w/wcloth.c, part 107.)
 - **The treatment's bonus** (a dressing's, surgery's): the table's, scaled by the best bandage to hand, of 9 (linen
   the whole, hemp a third, none or bloody nothing).  The dressing uses up a bandage of that grade (the reply's
   "bandage9", the world's use_key: a lot of that grade).  A tourniquet, a compress, a splint want none.
-- **The dressing kept on its wound** (the referee's pc_dr, a grade a wound, in step with the wounds; its file's
-  "dressed" line, each dressing's grade and where it is, read back onto the first wound there): the sheet's "left
-  forearm S2 (stab), tended, dressed, clean" (grade 7-9), "dressed" (4-6), "dressed, poorly" (a poor cloth's, 0-3),
-  "dressed, soiled" (the days').  Not an inventory item.  The days between dungeons don't soil it (the account's days
-  at rest keep it as it was).
+- **The dressing kept on its wound** (the referee's pc_dr, a grade a wound and its cloth, in step with the wounds; its
+  file's "dressed" line, each dressing's grade, where it is and its cloth, read back onto the first wound there): the
+  sheet names the cloth and how clean it is *(the user's, 2026-11-11)*, "left forearm S2 (stab), tended, dressed in
+  linen, clean" (its grade the cloth's whole), "dressed in linen, worn" (0.7 of it or more), "dressed in linen,
+  soiled" (less: as it went on, or by the days); the cloth is the bandage's, the world's tools' letter after its grade
+  ("+bandage9S": R hemp, S linen, T wool, U silk), the first lot of the best grade, the one the world uses up.  A
+  dressing kept from before its cloth was (an old file's) is said by its grade as it was: "dressed, clean" (7-9),
+  "dressed" (4-6), "dressed, poorly" (0-3), "dressed, soiled" (the days').  Not an inventory item.  The days between
+  dungeons soil it as the dungeon's do *(the user's, 2026-11-11)*: the account's each day (dq0acct's body.c, at rest,
+  on the road, in town), the line read and written back by the account; no word of it in the account, the sheet says
+  so; a fresh one is put on in the next dungeon ("change the bandage", bandages bought in town).
 - **Soiling** *(the user's)*: at each day's mark a dressing on a serious or grievous wound loses three grades (after
   that day's rolls), told once it's soiled ("The dressing on the serious stab to your left forearm (S2) is soiled: it
   wants changing."); a minor wound's never.  The healing roll's bonus (the book's none) by the dressing: +5 clean
@@ -3479,7 +3485,7 @@ incubation, a universal penalty of 20 till healed).  What the house adds, every 
   factions to say who uses them); food that's spoiled (the book's critical failure tasting it: food found, the market's).
 - **The diseases** *(for review)*: the flux (still water drunk where it stands: a pool, a puddle, a cistern; or from a
   waterskin filled from it, the same risk at each drinking: the user's, 2026-11-03, the skin's water marked, and a skin
-  topped up with it foul all through, *the house's*; a stream's running water and a well's clean; C5/H4, a day's incubation), rat-bite fever (a giant rat's bite that wounds: C5/H4,
+  topped up with it foul all through, *the house's*; a stream's running water and a well's clean; a sip of it, "taste the water", a tenth of a drink's dose: the Contagion test only one time in ten (d100 10 or under), *the user's, 2026-11-11*; C5/H4, a day's incubation), rat-bite fever (a giant rat's bite that wounds: C5/H4,
   two days), grave rot (a ghoul's bite or claws that wound, the bestiary's grave-wight's: C4/H4, seven hours).  Caught,
   nothing's told (the character doesn't know it's caught something) till its incubation's over: "Your belly gripes and
   cramps: you have the flux.", "A fever's on you, and the old bite throbs.", "A wound the ghoul gave you festers: a

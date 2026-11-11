@@ -286,7 +286,7 @@
 <pull>           ::= <PULL> <object>
 <PULL>           ::= "pull"
 <give>           ::= <GIVE> <object> ( "to" | "for" ) <object> | <GIVE> <object> <object>   (* "give the bandit 5 pennies", "offer the orc my dagger": the one given it first (2026-11-02) *)
-<GIVE>           ::= "g"
+<GIVE>           ::= "give"                                     (* spelt out: "g" is again's (the user's, 2026-11-11) *)
 <grab>           ::= ( "grab" | "hold" ) <object> [ <from-phrase> ] [ <hand-phrase> ]   (* a grapple when the object is engaged; else a get, or a carry for hold; "hold the spear in both hands" *)
 <lock>           ::= "lock" <thing> [ <USING> <object> ]
 <unlock>         ::= "unlock" <thing> [ <USING> <object> ]
@@ -304,7 +304,7 @@
 <flee>           ::= ( "flee" | "escape" | "run" "away" ) [ <direction> ]
 <follow>         ::= ( "follow" | "tail" ) <object>             (* a denizen trailed; "follow me" the allies' come (2026-11-10) *)
 (* ---- Repeating and place ---- *)
-<again>          ::= <AGAIN>                                    (* repeat the last command *)
+<again>          ::= <AGAIN>                                    (* repeat the last command; "repeat" and "g" its aliases *)
 <AGAIN>          ::= "again"
 <where>          ::= "where" "am" "i"
 

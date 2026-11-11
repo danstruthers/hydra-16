@@ -189,7 +189,16 @@ extern unsigned char pc_dr[HARN_INJMAX];        /* (The dressing on each of the 
                                                 **   plus 1, 0 none: dress.c's, kept in step with pc_by; its file's
                                                 **   "dressed" line, HOUSE.md's bandages, 2026-11-10) */
 #define DR_GRADE        0x0F                    /* (Its grade plus 1; */
-#define DR_SOILED       0x80                    /*   soiled by the days since it went on, heal.c's) */
+#define DR_MAT          0x70                    /*   its cloth, DM_* times 16 (0 not known: a file's from before it was
+                                                **   kept), the tools' letter's (the world's s_tools, R ... U): the
+                                                **   user's, 2026-11-11, the sheet's "dressed in linen, soiled"; */
+#define DR_SOILED       0x80                    /*   soiled by the days since it went on, heal.c's, and dq0acct's days
+                                                **   between dungeons, the user's, 2026-11-11) */
+enum { DM_NONE, DM_HEMP, DM_LINEN, DM_WOOL, DM_SILK };  /* (A dressing's cloth: the tools' letter less 'Q', the "dressed"
+                                                **   line's less 'q') */
+#define DR_SOIL(d)      (((d) & DR_GRADE) > 4 ? ((d) & (DR_GRADE | DR_MAT)) - 3 | DR_SOILED : ((d) & DR_MAT) | 1 | DR_SOILED)
+                                                /* (A dressing a day the more soiled: three grades the worse, 1 the
+                                                **   filthiest, its cloth kept) */
 void __fastcall__ dress_line (char* l, unsigned char out);  /* (Overlay 9's, dress.c: its file's "dressed" line read, or
                                                 **   written into l) */
 #define IF_POOL         0x80                    /* (An injury's flags, the referee's own, the library's never: the

@@ -106,7 +106,9 @@ static unsigned char __fastcall__ remedy (const harn_injury* j)
 }
 
 /* The best bandage to hand: its grade, the tools' digit (0-9: its cloth's suitability by its cleanliness, the world's;
-** none, 0) */
+** none, 0); its cloth in bmat (DR_MAT's: the tools' letter, dq0harn.c's equip_all; the first of that grade's, the lot
+** the world uses up, s_use_key's) */
+static unsigned char bmat;
 static unsigned char best (void)
 {
     unsigned char k, d = 0;
@@ -114,6 +116,7 @@ static unsigned char best (void)
     for (k = 0; k < NTOOLS; ++k) {
         if (!strcmp (tools[k], "bandage") && (tqual[k] & 15) > d) {
             d = tqual[k] & 15;
+            bmat = tqual[k] & DR_MAT;
         }
     }
     return d > 9 ? 9 : d;
@@ -281,7 +284,7 @@ void __fastcall__ o_treat (struct req* r)
         }
         put ("The fresh dressing is on.");
         used (d, pc_dr[k]);
-        pc_dr[k] = d + 1;
+        pc_dr[k] = d + 1 | bmat;                /* (Its cloth too: the sheet's) */
         return;
     }
     g = test_sk (&pc, HARN_PHY, bonus (j, how) / STEP_PCT);
@@ -303,7 +306,7 @@ void __fastcall__ o_treat (struct req* r)
         if ((how == TR_DRESS || how == TR_SURGERY) && d) {
             used (d, 0);                        /* (A bandage on it, its dressing: kept, the character's) */
             if (c == &pc) {
-                pc_dr[k] = d + 1;
+                pc_dr[k] = d + 1 | bmat;
             }
         }
     }
@@ -312,33 +315,5 @@ void __fastcall__ o_treat (struct req* r)
     }
 }
 
-/* ---- The character's file's "dressed" line (part 1's, harnfile's: its room), after the word: its dressings, each its
-** grade plus 1 (a digit, ':' 10; soiled, a letter, 'B' 1) and where it is (two letters, its location's high four bits and low: "8af"); read (out
-** 0: each the first wound there undressed's, its injuries read before it: the account's days at rest may have healed
-** some), or written into l (out 1: "" none) */
-void __fastcall__ o_dress_line (char* l, unsigned char out)
-{
-    unsigned char k, g;
-
-    if (out) {
-        for (k = 0; k < pc.ninj; ++k) {
-            if (pc_dr[k]) {
-                *l++ = (pc_dr[k] & DR_SOILED ? 'A' : '0') + (pc_dr[k] & DR_GRADE);
-                *l++ = 'a' + (pc.inj[k].loc >> 4);
-                *l++ = 'a' + (pc.inj[k].loc & 15);
-            }
-        }
-        *l = 0;
-        return;
-    }
-    for (; l[0] && l[1] && l[2]; l += 3) {
-        g = (l[1] - 'a') << 4 | (l[2] - 'a');
-        for (k = 0; k < pc.ninj && (pc.inj[k].loc != g || pc_dr[k]); ++k) {
-        }
-        if (k < pc.ninj && (unsigned char) (l[0] - '1') < 10) {
-            pc_dr[k] = l[0] - '0';
-        } else if (k < pc.ninj && (unsigned char) (l[0] - 'B') < 10) {
-            pc_dr[k] = (l[0] - 'A') | DR_SOILED;
-        }
-    }
-}
+#define DRESS_LINE      o_dress_line
+#include "dressln.h"                            /* (The character's file's "dressed" line: dq0acct's too) */

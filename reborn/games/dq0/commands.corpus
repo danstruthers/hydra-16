@@ -406,6 +406,7 @@ run north	VB_MOVE_DIRECTION	direction=N;pace=run	-	run is still a move
 follow the goblin	VB_FOLLOW_OBJECT	object=goblin	near=goblin	follow
 again	VB_REPEAT	-	-	repeat the last command
 repeat	VB_REPEAT	-	-	repeat, a synonym of again
+g	VB_REPEAT	-	-	g, again's (Infocom's; the user's, 2026-11-11)
 where am I	VB_WHERE	-	-	where am I
 eat the rations then north	VB_SEQUENCE	steps=VB_EAT_OBJECT,VB_MOVE_DIRECTION;1.object=rations;2.direction=N	near=rations	two steps, in order
 take the sword then wait	VB_SEQUENCE	steps=VB_RETRIEVE_OBJECT,VB_WAIT;1.object=sword;2.duration=1min	near=sword	a take, then a wait

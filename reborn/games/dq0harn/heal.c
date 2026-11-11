@@ -147,7 +147,7 @@ static void soil (void)
 
     for (k = 0; k < pc.ninj; ++k) {
         if ((d = pc_dr[k] & DR_GRADE) != 0 && pc.inj[k].sev >= HARN_SERIOUS && !(pc.inj[k].flags & IF_POOL)) {
-            pc_dr[k] = (d > 4 ? d - 3 : 1) | DR_SOILED;
+            pc_dr[k] = DR_SOIL (pc_dr[k]);      /* (Its cloth kept: the sheet's) */
             if (d > 4 && d <= 7) {
                 nput (" The dressing on ");
                 nput (wname (&pc, k));

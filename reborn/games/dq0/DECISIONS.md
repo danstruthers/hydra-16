@@ -2805,9 +2805,9 @@ Five of the verbs that said "not yet" now do something in the world: pray and pr
   vow to go: you leave the food be. ("break my fast" ends the vow.)".  Drinking isn't refused.  Hunger counts on as
   ever (the referee's), and there's no piety effect.  The vow ends with "break my fast", "stop fasting", or a plain
   "stop" when no long task is under way (H_STOP asks part 27's `fast_stop` first).  Once the day is out, the next meal
-  says "Your day's fast is over." and goes ahead.  *For review:* the vow is kept in the UI's main RAM (4 bytes), so it
-  isn't in a saved game (a game carried on has no vow), as grappling's hold isn't.  Keeping it would need the save's
-  header, `SAVE_VER`, and life.h, which dq0life reads.
+  says "Your day's fast is over." and goes ahead.  The vow is kept in the UI's main RAM (4 bytes); as built it wasn't
+  in a saved game.  *The user's, 2026-11-11: a vow in force is carried in the save,* through save and restore and the
+  time between dungeons, till its day is up or "stop" (below, "The user's review of five defaults").
 - **Swim** (the plan's default, for review):
   - With a way or a thing ("swim north", "swim to the far bank") it is a move, `H_GO`'s, and the world's water rules
     do the rest (wading, swimming out of its depth, `P_SWIM`).  The UI knows only the water where the character stands
@@ -3032,9 +3032,10 @@ nothing kept a cloth's cleanliness; bandages one kind, MT_CLOTH.  s_tools sent e
   soiled it), kept in step wherever pc_by is (sheet.c's room, heal.c's by_drop), saved as a "dressed" line, each
   dressing its grade and its wound's location ("dressed :ag"), read back onto the first undressed wound there: the
   account (dq0acct) keeps the line as it is, and its days at rest heal wounds and move them down, so the location,
-  not the place in the list, finds the wound.  The days between dungeons don't soil it.  The sheet's words "dressed,
-  clean", "dressed", "dressed, poorly", "dressed, soiled": the cloth's name isn't there *(for review: the referee
-  knows only the grade; the material would be a letter in the tools' text, the referee's main RAM's bytes)*.
+  not the place in the list, finds the wound.  As built the days between dungeons didn't soil it, and the sheet's
+  words were "dressed, clean", "dressed", "dressed, poorly", "dressed, soiled", the cloth not named.  *The user's,
+  2026-11-11: the sheet names the cloth and its cleanliness ("dressed in linen, soiled"), and the days between
+  dungeons soil it as the dungeon's do* (below, "The user's review of five defaults").
 - **Soiling** (heal.c): at each day's mark (after that day's rolls) a dressing on a serious or grievous wound three
   grades the worse, told once it's soiled.  The healing roll's bonus +5 (grade 7-9), 0 (4-6), -10 (0-3): a poor hemp
   dressing counts as a soiled one.  Creatures: the treatment's bonus alone, no dressing kept.
@@ -3099,8 +3100,9 @@ meaningful action; push and pull include moving furniture.  What's built:
   heavy thing on either square that leads through a door (the four ways from it: the walls' have none) braces it shut:
   opening it, by anyone (the character, a denizen: wdoor.c's PA_OPEN, a new PO_BLOCKED, "Something heavy stands
   against it: it won't open."), or a known door opened as a walk goes through (dq0w.c's door_on), is refused till it's
-  moved.  Told as it's shoved there ("It stands against the door.").  **For review:** the maker's own chests and tables
-  beside a door brace it too (a chest stands where it stands, whoever put it there); forcing a braced door isn't
+  moved.  Told as it's shoved there ("It stands against the door.").  The maker's own chests and tables beside a door
+  brace it too (a chest stands where it stands, whoever put it there): *the user's, 2026-11-11, reviewed and kept.*
+  **For review:** forcing a braced door isn't
   refused (its lock or bar bursts, it stays shut); a heavy thing can't be shoved into a doorway, so passage is
   blocked only by the door kept shut, not by a chest in an open doorway (walks don't treat things as obstacles).
 - **Touch** ("feel" is its word too).  In the dark, a wall, the floor or nothing named: the felt words, a feel about
@@ -3112,9 +3114,9 @@ meaningful action; push and pull include moving furniture.  What's built:
   strange: you can't tell what it's for."  Water (a waterskin's, or the water it stands in): fresh, or "Flat and
   stale: still water, not fresh. It may carry the flux." (the water's wear, still water's mark, feed.c's).  Food:
   "still good" (nothing goes off in this game).  An empty vessel: "There's nothing in it to taste."
-- **The flux, decided:** a taste of still water doesn't risk it.  The house's flux is caught by drinking (a draught, the
-  referee's RS_TIME drink with its foul mark); a sip is too little, and a taste is how the character finds out before it
-  drinks.  So tasting tells, and drinking risks.
+- **The flux:** as built, a taste of still water didn't risk it (a sip too little; tasting told, drinking risked).
+  *The user's, 2026-11-11: a sip can bring on the flux,* at a sip's small dose (below, "The user's review of five
+  defaults").
 - **Room.**  The UI's handlers are part 29's (27 as built, the merge's number) (hthings.c, part 2 full: its five stubs one call now); theme.c's overlay 5
   smaller.  fixt.c's overlay 4 had a byte free: alias.c's o_alias_said moved to overlay 12 for PO_BLOCKED's words.  The
   world's IO_DRAG and the brace are part 109's (107 as built, the merge's number; wdrag.c, 2,600 bytes), in a new overlay bank, the world's 29th in
@@ -3133,7 +3135,7 @@ Five of the stubs the verbs plan left saying "not yet" (B0's) now do something i
 - **A throw a way** ("throw the dagger north", "throw the dagger 3 north", "throw the dagger hard south"): the parser makes these `VB_THROW_OBJECT` with a heading (no grammar makes `VB_THROW_DIRECTION`), so `H_MISSILE` passes a throw with a heading to `H_THROW_WAY`, whose row stays for the action.  The mark is that many squares along the line (none said, a dozen: as far as it'll go), then the world's throw at a place (`IO_THROW`, the referee's Throwing).  **The world stops a thrown thing short on its line** (things.c's `s_throw_at`, the character's throws: each square from it to the mark asked of `ln_pass`, a missile's: rock, a wall, a door shut, glass stop it; it falls on the last square it got to).  That's every throw of the character's, at a thing too (one seen through glass now falls at the glass); a denizen's throw is as it was.  Words: "You throw the dagger south: it lands 2 squares off.", "...: it strikes the wall and falls 4 squares off.", "...: it strikes the wall and falls at your feet.", ", but it falls short, 9 squares off." (past its extreme range).  ("The wall" for a door shut too, for review.)
 - **Engage** ("engage the rat"): `I_CLOSE` with its walk alone (w1 1, "go to the rat"'s), no blow; the engage test the walk's; engaged by another on the way, the world's refusal (`TE_ENGAGED`).  Beside it already: "You're already engaged with the giant rat."  A door, a window, a portcullis: "You can engage only a creature."; none of that name: the fight's words.
 - **A split attack** ("attack the rat and the goblin"; attack, fight, hit, strike): parts.c no longer cuts such a line in two at its "and" (a blow's verb first, a determiner after the "and"), and `parts_op` (its `PO_AGAIN` look at every command) makes the parser's attack in a line with " and " and no "with" `VB_ATTACK_SPLIT`.  The parser's thing is the last named (the second); the first is the word before the "and".  Both beside it: one `I_ATTACK` with a new field, `split` (w1: the second, plus 1), "You strike at the giant rat and the giant bat by turns."; the world's fighting on (`fsplit`) strikes at the other each round while both stand (its target down, the other's alone; the other down, its target's).  The second not beside it, the first is attacked alone; the first not beside it, "The rat is out of reach: go up to it first."  For review: a close-in to the first, then the split, would want `I_CLOSE` to carry the second too; two of one name can't be told apart by name (the second word finds the same one: the first's attack alone); "punch the rat and the goblin" is still two attacks (a blow's own word not among the split's).
-- **Again** ("again", "repeat"; hself.c's `H_AGAIN`): the last line typed that didn't say "again" is run again, its parts queued first, before any line typed ahead, each carried out as if typed.  term.c's `last` (cursor up's) is `t_last` now, and a line with a word begun "again" or "repeat" isn't kept in it (term.c's `said_again`, overlay 16's), so "north then again" can't run itself for ever.  Nothing typed yet: "There's nothing to do again."  "g" stays give's (commands.verbs' `g = give`), not again's, for review.
+- **Again** ("again", "repeat"; hself.c's `H_AGAIN`): the last line typed that didn't say "again" is run again, its parts queued first, before any line typed ahead, each carried out as if typed.  term.c's `last` (cursor up's) is `t_last` now, and a line with a word begun "again" or "repeat" isn't kept in it (term.c's `said_again`, overlay 16's), so "north then again" can't run itself for ever.  Nothing typed yet: "There's nothing to do again."  As built "g" stayed give's (commands.verbs' `g = give`); *the user's, 2026-11-11: "g" is again's* (Infocom's), give spelt out (below, "The user's review of five defaults").
 - **Room.**  The handlers' work is part 24's (the commands seen to less often), through two stubs (`fights`, `again_go`): part 2 is 89 bytes from full (110 before); a third stub, `said_again`.  Overlay 6 is 67 bytes from full (183 before: parts.c's split), overlay 16 25 (88).  Part 24's state is the part's own (`bss-name` SW24RODATA: none kept across a call of another part).  The UI's main RAM 2,202 bytes free (2,272 before).  The world: part 24 (fighting on) full, the charge's pace set in part 37 (the intent's).  The UI's banks are close to full (some 4,000 bytes free over all, the most 514 in one): a later batch may need parts moved, or a bank more.
 - **Test dq0fightverbs**: again with nothing, charge with none, the throws (two squares; the wall behind, at its feet), turn left then again and repeat (three turns), a charge (the war cry, the close-in at a run or the blow, a blow struck), engage and already engaged, a split attack (both struck at).
 
@@ -3537,3 +3539,60 @@ world's told () copies that only sent events.  The words the player sees are the
   The rows' bank has 1,912 bytes left.  The next bank, when it's needed, is a line in dq0.cfg (OV29, no parts) and
   said_b choosing the bank by the row's place.
 - **Tested:** all 442 tests pass.
+
+## The user's review of five defaults (2026-11-11, the user's)
+
+The user reviewed defaults this file had marked "for review" and asked for five of them changed; two more were kept.
+Each entry above now says so; what's built:
+
+- **"g" is again's** (Infocom's convention), no longer give's.  commands.aliases: "g again" (beside "repeat again"),
+  "hand give" and "offer give" (they were "hand g", "offer g": g was give's root), "give g" gone; commands.verbs'
+  [words] "g = again" in place of "g = give" (the same record: dq0c's records as they were); commands.ebnf's
+  `<GIVE> ::= "give"`.  Give must be spelt out ("give", "hand", "offer").  Nothing else read "g" as give (the grammar's
+  `<GIVE>` was its only use; letters.c makes a lone "g" after a verb a carried thing's letter, "drop g", as before).
+  term.c's `said_again` (overlay 16) keeps a line out of `t_last` when "g" is a part's first word (the line's start,
+  after "," ";" "." or "then"), so "g" runs the line before it, never itself; a "g" elsewhere ("drop g") is kept.
+  The corpus has "g" (VB_REPEAT).
+- **A vow of fasting is carried in the save.**  No file grows and `SAVE_VER` stays 45: game.dat's header byte `plain`
+  had one bit used (the map in plain letters); its bits 1-7 now hold the vow's time left as the game was kept, in
+  steps of 12 minutes rounded up (life.h's `FAST_STEP`, 7,200 tenths: a day 120 steps), 0 none (an old save's).  As a
+  game's carried on, the vow is set again on the clock it's carried on with.  Between dungeons: life.dat's head had six
+  bytes of room; one is now `fast`, the vow's end in steps after the midnight that begins the head's date, dq0life's
+  (`ended`: from the ended dungeon's save and its clock, world.dat's), 0 if it's over by then, and 0 once the time
+  between (dq0acct's) has moved the date on a day or more (a day's vow can't outlast a whole day more).  The UI takes
+  what's left of it after the hour the next dungeon begins (its seed's, as dq0life reckons it).  "stop" and "break my
+  fast" end it as before.  Test dq0fastkept.
+- **A sip can bring on the flux.**  Tasting still water (the water it stands in, or a skin filled from it) tells the
+  referee it's drunk foul with no pints (RS_TIME's drink 0x80: hthings.c's taste, as feed.c's drink tells it).  The
+  figure: *a sip is a tenth of a drink's dose, so the Contagion test comes only one time in ten* (d100, 10 or under:
+  afflict.c; then the drink's own test, CI 5 times Endurance), some 2-5% where a drink is 25-50%; the null ruleset the
+  same, one in ten (`random (10)`).  Spoiled food doesn't exist yet (nothing goes off in this game: HOUSE.md's "not
+  yet"), so tasting food stays "still good"; when it does, its taste takes the same tenth.  The world's DG_TASTE is
+  unchanged (it reports the wear).  Tests: dq0rules' three sip cases (a miss, its one die; the tenth come and caught;
+  a pint from the UI, no tenth's roll), dq0things' sips (the referee told, the antidote's taste not).
+- **The sheet names a dressing's cloth.**  pc_dr's spare bits 4-6 hold its cloth (dq0harn.h's `DR_MAT`, `DM_HEMP`
+  ... `DM_SILK`; 0 not known).  The world's tools text gives a bandage's cloth after its grade ("bandage9S": R hemp,
+  S linen, T wool, U silk; things.c's s_tools), the referee's equip_all keeps it in tqual's high bits, and the dressing
+  takes the cloth of the best bandage (the first lot of that grade, the one the world uses up).  The sheet: "dressed in
+  linen, clean" (the grade its cloth's whole), "worn" (0.7 of it or more), "soiled" (less, as it went on or by the
+  days: linen worn after a day, soiled after two).  The "dressed" line, compatibly: a letter after a dressing's place,
+  'q' plus its DM_* (r, s, t, u), none for a cloth not known; a line without it reads as before and its sheet's words
+  are the old ones.  One reader and writer for the referee and the account (dq0harn/dressln.h); dq0life, dq0end,
+  dq0schol and dq0town don't read it, nor any test's decoder.  Tests: dq0rules' four cloth cases, dq0dress's words.
+- **The days between dungeons soil dressings.**  Every day between passes through dq0acct's `o_day` (at rest, on the
+  road, the lull, the town's days, the work's), and there each dressing on a serious or grievous wound loses three
+  grades, its cloth kept (`DR_SOIL`, the referee's heal.c's the same).  The account now reads the "dressed" line into
+  its own pc_dr (sheet.c keeps the line whole in the main RAM's `dressed`; body.c reads and writes it, overlay 1:
+  overlay 3 had 20 bytes) and keeps it in step as wounds heal and go (`by_drop`).  Untold in the account: the next
+  dungeon's sheet says it.  The town sells bandages, and "change the bandage" in the dungeon puts a fresh one on as
+  before.  Test dq0dressbetween (a serious stab dressed in clean linen, four days between, soiled to grade 1, its cloth
+  kept, the line written back as the account ends in an infection's death: the account heals what it can before the
+  next dungeon, up to ninety days, so a dressed wound seldom lasts to it).
+- **Kept, reviewed:** generated chests brace doors (the maker's own chests and tables beside a door brace it, as a
+  shoved one does: "The things' verbs"); and the looser hmchartongues check (hmchar.hl's native script among its
+  scripts, not first: its dice can't be seeded; the cloth branch's change) is accepted.
+- **Room:** dq0's main RAM 3,386 free (3,399 before); part 1 406 (the packer moved s_size to part 12), overlay 16
+  418 (1,179), part 29 1,647 (1,804), part 14 1,097 (1,218).  The referee 2,264 (2,341: the tools' cloth), overlay 1
+  194 (353), overlay 8 32 (69), overlay 9 1,683 (1,829).  dq0acct 2,152 (2,264: pc_dr and the line), overlay 1 319
+  (1,194), overlay 3 9 (20: its line buffer now path).  dq0life 18,318; dq0null 5,035; the world's main RAM unchanged
+  (2,336), its overlay 5 265 (328).  dq0c's records as before; the aliases 1,896 bytes (1,889).

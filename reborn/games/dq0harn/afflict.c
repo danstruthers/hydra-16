@@ -153,9 +153,11 @@ unsigned char __fastcall__ o_aff_time (struct req* r)
         d = RS_TIME_DOSE (*r);
         q = RS_TIME_AIR (*r);
         f = RS_TIME_FLAME (*r);
-    } else if (RS_TIME_FOUL (*r)) {               /* (Still water drunk where it stands: foul, the flux's) */
+    } else if (RS_TIME_FOUL (*r)) {               /* (Still water drunk where it stands: foul, the flux's; a sip of it,
+                                                **   no pints, the taste's: a tenth of the dose, so the Contagion test
+                                                **   only one time in ten, d100 at 10 or under, the user's, 2026-11-11) */
+        k = (RS_TIME_DRINK (*r) & 0x3F) || HARN_SUCCESS (harn_test (10)) ? AK_FLUX : 0;
         RS_TIME_DRINK (*r) &= 0x7F;
-        k = AK_FLUX;
     } else if (RS_TIME_TAKEN (*r)) {           /* (A remedy taken, 2026-11-02: HOUSE.md's remedies) */
         remedy (RS_TIME_DRINK (*r) & 3);
         RS_TIME_DRINK (*r) = 0;

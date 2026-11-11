@@ -107,7 +107,7 @@ unsigned wealth;                                /* (The family's wealth, its fil
 
 /* All that's to hand, anew: the keys in the text, each after its mark (held: < in the left hand, > the right, * both;
 ** + worn; a space neither) and its quality after it (a digit), a weapon's version after that (L light, H heavy, none
-** average: tqual's high bits, TQ_*, D13's) */
+** average: tqual's high bits, TQ_*, D13's), a bandage's cloth (R hemp, S linen, T wool, U silk: DR_MAT's) */
 static void __fastcall__ equip_all (const char* keys)
 {
     unsigned char k = 0, n, f, j;
@@ -144,7 +144,9 @@ static void __fastcall__ equip_all (const char* keys)
         }
         while (*keys >= 'A' && *keys <= 'Z') {
             if (j < NTOOLS) {
-                tqual[j] |= *keys == 'L' ? TQ_LIGHT : *keys == 'H' ? TQ_HEAVY : *keys == 'D' ? TQ_DULL : *keys == 'E' ? TQ_DULLED : 0;
+                tqual[j] |= *keys == 'L' ? TQ_LIGHT : *keys == 'H' ? TQ_HEAVY : *keys == 'D' ? TQ_DULL : *keys == 'E' ? TQ_DULLED :
+                    (unsigned char) (*keys - 'R') < 4 ? (*keys - 'Q') << 4 : 0;     /* (A bandage's cloth, R ... U: DR_MAT's,
+                                                **   dress.c's, the user's, 2026-11-11) */
             }
             ++keys;
         }

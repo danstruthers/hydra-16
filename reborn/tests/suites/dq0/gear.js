@@ -150,6 +150,11 @@ module.exports = {
         said('pull the rope', 'You shake the rope');
         said('taste the water', 'still water, not fresh');
         said('taste the waterskin', 'still water, not fresh');
+        // (A sip of still water the flux's risk, the user's, 2026-11-11: the referee told it's drunk foul, no pints (a tenth of
+        // a drink's chance, afflict.c's; dq0rules' sips); a taste of the antidote, no time asked with a drink)
+        const T = dq0Turns(m), sip = l => T.of(l).replies.filter(r => r.rs === 'RS_TIME' && r.ask.foul && !r.ask.pints && !r.ask.taken);
+        for (const l of ['taste the water', 'taste the waterskin']) if (sip(l).length !== 1) f.push(l + ': not a sip of foul water told the referee (' + sip(l).length + ')');
+        if (T.of('taste the antidote').replies.some(r => r.rs === 'RS_TIME' && (r.ask.foul || r.ask.pints))) f.push('taste the antidote: a drink told the referee');
         if (/in this game yet/.test(dq0Story(out))) f.push('a "not yet" said');
         return f;
       },
@@ -1347,7 +1352,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0dress', near: ['body', 'parser'], what: "Dingus Quest Zero's dressings (the user's, 2026-11-10: \"A bandage's location should be known\", dressings soil over days and are changed, wash, not boil; HOUSE.md's bandages): a serious stab to the left forearm and one to the right, tended, its dressing soiled (the character's file's: its \"dressed\" line; the days' soiling dq0rules'), five clean linen bandages carried, stowed in the pack (the old dressing kept there; one in hand, at its feet); \"bandage my left arm\" a dressing (its grade the best bandage's, 9: the referee's bonus whole), one bandage used up; the sheet's \"dressed, clean\" at the left forearm, \"dressed, soiled\" at the right; \"change the bandage on my right arm\" five minutes, the fresh one on, the old kept, a bloody bandage, the sheet's \"dressed, clean\" at both; washing it with no water about refused; at running water (the hub's pc_wet poked) it's washed, worn, not clean, a lot of its own",
+      name: 'dq0dress', near: ['body', 'parser'], what: "Dingus Quest Zero's dressings (the user's, 2026-11-10: \"A bandage's location should be known\", dressings soil over days and are changed, wash, not boil; HOUSE.md's bandages): a serious stab to the left forearm and one to the right, tended, its dressing soiled (the character's file's: its \"dressed\" line; the days' soiling dq0rules'), five clean linen bandages carried, stowed in the pack (the old dressing kept there; one in hand, at its feet); \"bandage my left arm\" a dressing (its grade the best bandage's, 9: the referee's bonus whole), one bandage used up; the sheet's \"dressed in linen, clean\" at the left forearm (its cloth named: the user's, 2026-11-11), \"dressed, soiled\" at the right (the file's line from before cloths were kept: its grade's words); \"change the bandage on my right arm\" five minutes, the fresh one on, the old kept, a bloody bandage, the sheet's \"dressed in linen, clean\" at both; washing it with no water about refused; at running water (the hub's pc_wet poked) it's washed, worn, not clean, a lot of its own",
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo inj 6 2 2 2 0 0 >> /ram/c.hm', 'echo inj 134 2 2 2 5 4 >> /ram/c.hm', 'echo dressed Eig >> /ram/c.hm', 'echo ml phy 60 >> /ram/c.hm',
         "dq0 -p t -s 3 -c /ram/c.hm -T -k 'bandages'", ...DRESSLINES, 'quit', 'echo $status']) },
@@ -1360,11 +1365,11 @@ module.exports = {
         const f = [], seg = dq0Segs(out, DRESSLINES), s = dq0Story(out).replace(/\s+/g, ' '), said = (k, re, n = DRESSLINES.indexOf(k)) => { if (!re.test(seg[n])) f.push(k + ' (' + n + '): not ' + re + ': ' + seg[n].slice(0, 300)); };
         this.notes = DRESSLINES.map((l, i) => l + ': ' + seg[i].slice(0, 400));
         said('bandage my left arm', /You clean and dress the serious stab to your left forearm \(S2\)\..*It's (?:well tended|tended|tended, roughly|badly done)\./);
-        said('sheet', /left forearm S2 \(stab\), tended, dressed, clean; right forearm S2 \(stab\), tended, dressed, soiled/);
+        said('sheet', /left forearm S2 \(stab\), tended, dressed in linen, clean; right forearm S2 \(stab\), tended, dressed, soiled/);
         said('change the bandage on my right arm', /You unwind the old dressing from the serious stab to your right forearm \(S2\)\..*The fresh dressing is on\./);
         said('inventory', /3 bandages(?! \((?:worn|soiled|bloody)\))/, 5);
         said('inventory', /a bandage \(bloody\)/, 5);
-        said('sheet', /left forearm S2 \(stab\), tended, dressed, clean; right forearm S2 \(stab\), tended, dressed, clean/, 6);
+        said('sheet', /left forearm S2 \(stab\), tended, dressed in linen, clean; right forearm S2 \(stab\), tended, dressed in linen, clean/, 6);
         said('wash the bandages', /There's no running water here, nor a well, to wash the bandages in\./);
         said('wash the bandages', /You wash the bandages and wring them out: fit to use again, if not new\./, DRESSLINES.lastIndexOf('wash the bandages'));
         said('inventory', /a bandage \(worn\)/, DRESSLINES.lastIndexOf('inventory'));

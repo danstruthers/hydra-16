@@ -25,8 +25,8 @@ creep sneak
 tiptoe sneak
 shove push
 drag pull
-hand g
-offer g
+hand give
+offer give
 carry hold
 feign pretend
 fake pretend
@@ -45,6 +45,7 @@ prepare c
 concentrate c
 ask tell
 repeat again
+g again
 look closely x
 *north n
 *south s
@@ -78,7 +79,6 @@ scream yell
 shout yell
 examine x
 cast c
-give g
 hide h
 jump j
 move walk

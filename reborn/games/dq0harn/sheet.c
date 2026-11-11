@@ -343,7 +343,9 @@ static void tongues_said (void)
 
 void o_sheet (void)
 {
-    unsigned char k;
+    static const char* const cloth[4] = { "hemp", "linen", "wool", "silk" };    /* (DM_*'s, dq0harn.h's: its */
+    static const unsigned char suit[4] = { 3, 9, 5, 7 };                        /*   suitability, items.h's CL_SUIT) */
+    unsigned char k, d, g, m;
     const harn_injury* j;
     char b[20];
 
@@ -421,12 +423,24 @@ void o_sheet (void)
         }
         put (j->flags & HARN_IF_BLEEDER ? "), bleeding" : j->flags & HARN_IF_INFECTED ? "), infected" : j->flags &
             HARN_IF_TREATED ? "), tended" : ")");
-        if (pc_dr[k]) {                         /* (Its dressing, by its bandage's grade: "dressed, clean", "dressed",
-                                                **   "dressed, poorly" (hemp), "dressed, soiled" (the days': DR_SOILED),
-                                                **   HOUSE.md's bandages, 2026-11-10) */
+        if ((d = pc_dr[k]) != 0) {              /* (Its dressing: its cloth and how clean it is, "dressed in linen,
+                                                **   soiled" (the user's, 2026-11-11: clean, worn or soiled by its
+                                                **   grade, its cloth's whole, 0.7 or less, items.h's CL_GRADE, as it
+                                                **   went on or as the days soiled it, three grades a day: linen
+                                                **   worn after a day, soiled after two); a cloth not known (a file's
+                                                **   from before it was kept), by its grade alone: "dressed, clean",
+                                                **   "dressed", "dressed, poorly", "dressed, soiled" (HOUSE.md's
+                                                **   bandages, 2026-11-10) */
             put (", dressed");
-            put ((pc_dr[k] & DR_GRADE) >= 8 ? ", clean" : (pc_dr[k] & DR_GRADE) >= 5 ? "" : pc_dr[k] & DR_SOILED ?
-                ", soiled" : ", poorly");
+            g = (d & DR_GRADE) - 1;
+            if ((m = (d & DR_MAT) >> 4) != 0) {
+                put (" in ");
+                put (cloth[m - 1]);
+                m = suit[m - 1];
+                put (g < m * 7 / 10 ? ", soiled" : g < m ? ", worn" : ", clean");
+            } else {
+                put (g >= 7 ? ", clean" : g >= 4 ? "" : d & DR_SOILED ? ", soiled" : ", poorly");
+            }
         }
     }
     if (pc.bl) {

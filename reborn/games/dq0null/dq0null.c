@@ -878,7 +878,9 @@ static void __fastcall__ answer (struct req* r)
         r->x[17] = RS_TIME_MINUTES (*r) >> 8;
         if (r->actor != 0xFF) {                 /* (The UI's: a drink of still water, the flux's; no air, nothing else,
                                                 **   2026-10-31) */
-            RS_TIME_AFF (*r) = RS_TIME_FOUL (*r) ? AK_FLUX : RS_TIME_TAKEN (*r) ? (RS_TIME_DRINK (*r) & 1 ? AK_CURE : AK_REMEDY) : 0;
+            RS_TIME_AFF (*r) = RS_TIME_FOUL (*r) ? ((RS_TIME_DRINK (*r) & 0x3F) || random (10) == 0 ? AK_FLUX : 0) :
+                RS_TIME_TAKEN (*r) ? (RS_TIME_DRINK (*r) & 1 ? AK_CURE : AK_REMEDY) : 0;  /* (A sip of it, no pints, the
+                                                **   taste's: a tenth of a drink's chance, 2026-11-11) */
             RS_TIME_DOSE (*r) = 1;
             RS_TIME_AIR (*r) = RS_TIME_FLAME (*r) = 0;
         }

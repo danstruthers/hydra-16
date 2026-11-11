@@ -558,6 +558,9 @@ void s_save_game (void)
     sv.outcome = Q.solved ? LO_SOLVED : Q.done == END_LEFT ? LO_LEFT : Q.done ? LO_DIED : LO_NONE;
     sv.q = Q;
     sv.plain = plain;
+    if (fasting > HUB->now) {                   /* (A vow of fasting, its time left in FAST_STEPs: life.h's) */
+        sv.plain |= (unsigned char) ((fasting - HUB->now + FAST_STEP - 1) / FAST_STEP) << 1;
+    }
     if ((fd = open (save_at ("game.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
         write (fd, &sv, sizeof sv);
         names_keep (fd, 0);                     /* (The names given: the theme bank's) */
@@ -2722,13 +2725,14 @@ unsigned char __fastcall__ s_args (int argc, char* argv[])
 /* The game begun: its arguments, a game kept carried on, the title, the character, the world started */
 void __fastcall__ s_begin (int argc, char* argv[])
 {
-    unsigned char n = life (args (argc, argv));
+    unsigned char n = life (args (argc, argv)), v = 0;
 
     if (n == LF_GOING) {                        /* (A game kept there: carried on) */
         resumed = 1;
         seed = sv.seed;
         Q = sv.q;
-        plain = sv.plain;
+        plain = sv.plain & 1;
+        v = sv.plain >> 1;                      /* (A vow of fasting's time left: the user's, 2026-11-11) */
         hard = sv.pace >> 7;                    /* (Its hard mode its save's: slice 4.4's) */
         if (pace == 0xFF) {
             pace = sv.pace & 0x7F;
@@ -2737,6 +2741,11 @@ void __fastcall__ s_begin (int argc, char* argv[])
     } else if (n == LF_NEXT) {
         file = save_path ("../pc.hm");          /* (Its character carried on, into a new dungeon: D8's; its kit, the
                                                 **   world's kit.dat, its outfit) */
+        v = ((struct life_head*) lb)->fast;     /* (A vow of fasting carried in, its end after the date's midnight:
+                                                **   what's left of it after the hour it begins, its seed's, as
+                                                **   dq0life reckons it) */
+        n = (unsigned char) ((unsigned) seed % 24 * 5);
+        v = v > n ? v - n : 0;
     }
     if (!resumed) {                             /* (Its ruleset's referee: a game carried on keeps its own) */
         strcpy (sv.referee, "dq0");             /* (strncpy, not strncat: the library's in the main RAM) */
@@ -2752,6 +2761,9 @@ void __fastcall__ s_begin (int argc, char* argv[])
     n = history (seed);                         /* (The game's own theme, or a stand-in's: which) */
     dots (2);                                   /* (Its tasks started: told, a dot as each's waited for) */
     start_world (seed, file, n);                /* (The character with it: its file, or the ruleset's generator) */
+    if (v) {
+        fasting = HUB->now + v * FAST_STEP;     /* (The vow kept, on the clock as it's begun) */
+    }
     status ();
     story (resumed);                            /* (The theme's) */
     blank ();

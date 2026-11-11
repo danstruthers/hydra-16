@@ -47,6 +47,9 @@ typedef char bank_fits[KI_COUNT * 37 + NOFIT * 22 <= 0x2000 ? 1 : -1];
 
 harn_char pc;
 unsigned char pc_by[HARN_INJMAX];
+unsigned char pc_dr[HARN_INJMAX];               /* (Its wounds' dressings, the referee's, read from its "dressed" line,
+                                                **   soiled as the days pass, written back: body.c's) */
+char dressed[64];                               /* (The "dressed" line, as read and as written: sheet.c's) */
 char news[NEWS_N];
 struct venom pv;
 struct sick pd;
@@ -817,6 +820,7 @@ int main (int argc, char* argv[])
         life_write ();
         return 0;
     }
+    OV1 (o_dress (0));                          /* (Its dressings, its wounds read: soiled by the days, body.c's) */
     n = L.h.dungeon;
     seed = L.h.seed + n * 2654435761UL;
     rseed (seed ? seed : 1);
@@ -887,6 +891,7 @@ int main (int argc, char* argv[])
     }
     if (!more) {                                /* (Dead of it: the outcome died, the record the life's end; dq0life tells it) */
         dead_lines ();
+        OV1 (o_dress (1));
         OV3 (o_sheet_write ());
         CATS ();
         L.h.date += passed;
@@ -927,6 +932,7 @@ int main (int argc, char* argv[])
     }
     CATS ();
     say_flush ();
+    OV1 (o_dress (1));
     OV3 (o_sheet_write ());
     CATS ();
     kit_write ("kit.dat");

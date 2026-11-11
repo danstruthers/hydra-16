@@ -2751,6 +2751,51 @@ ask DESCRIBE b=4
 want text=""
 char
 end
+case a sip of foul water (the UI's taste: still water, no pints, x15 0x80; the user's, 2026-11-11): a tenth of a drink's dose, the Contagion test only one time in ten; 11, past the 10, none: that one die alone rolled, no Contagion test; a day on nothing shows
+set hunger=0 thirst=0 want=0x44
+dice 100:11
+ask TIME w1=0 x15=0x80
+want result=0 grade=0
+set hunger=0 thirst=0 want=0x44
+dice
+ask TIME w1=1440 actor=255 b=1
+want grade=0
+dice
+ask DESCRIBE b=4
+want text=""
+char
+end
+case a sip of foul water, its one time in ten come (10), then the Contagion test as a drink's: 70 against 60 fails, caught, nothing told; a day on it shows
+set hunger=0 thirst=0 want=0x44
+dice 100:10 100:70
+ask TIME w1=0 x15=0x80
+want result=0 grade=0
+dice
+ask DESCRIBE b=4
+want text=""
+set hunger=0 thirst=0 want=0x44
+dice
+ask TIME w1=1440 actor=255 b=1
+want result=0 grade=6
+dice
+ask DESCRIBE b=4
+want text~"you have the flux"
+char
+end
+case a foul drink of a pint from the UI (x15 0x81): the Contagion test at once, no tenth's roll first: 70 against 60 fails, caught; a day on it shows
+set hunger=0 thirst=0 want=0x44
+dice 100:70
+ask TIME w1=0 x15=0x81
+want result=0 grade=0
+set hunger=0 thirst=0 want=0x44
+dice
+ask TIME w1=1440 actor=255 b=1
+want result=0 grade=6
+dice
+ask DESCRIBE b=4
+want text~"you have the flux"
+char
+end
 case thick blackdamp come into with a torch lit (the world's: put out), her breath short at once: no dice
 set hunger=0 thirst=0 want=0
 dice
@@ -3235,3 +3280,60 @@ ask TIME w1=3600
 dice
 ask DESCRIBE b=4
 want text~"The minor stab to your left forearm (M2) is no better."
+char
+ml phy 50
+inj 6 2 2 2 0 0
+end
+case the tools' cloth too (the user's, 2026-11-11: the world's letter after a bandage's grade, R hemp, S linen, T wool, U silk): a serious stab dressed with clean linen (bandage9S, hemp beside it), the sheet's "dressed in linen, clean"; 52 a marginal success, H5
+dice
+ask EQUIP a=2 text=" bandage9S bandage3R"
+dice
+ask TREAT a=0 text="left arm"
+want result=0 c=1
+dice 100:52
+ask TREAT a=1 b=0 c=1 x0=6
+want result=0 text~"It's tended." text~"bandage9"
+dice
+ask DESCRIBE b=0
+want text~"left forearm S2 (stab), tended, dressed in linen, clean"
+case a day on, three grades soiled, its cloth kept: linen's worn (6); two, soiled (3), told
+set now=100 hunger=0 thirst=0 want=0x44
+dice ...
+ask TIME w1=1
+set now=864100
+dice ...
+ask TIME w1=1
+dice
+ask DESCRIBE b=0
+want text~"left forearm S2 (stab), tended, dressed in linen, worn"
+set now=1728100
+dice ...
+ask TIME w1=1
+dice
+ask DESCRIBE b=4
+want text~"The dressing on the serious stab to your left forearm (S2) is soiled: it wants changing."
+dice
+ask DESCRIBE b=0
+want text~"left forearm S2 (stab), tended, dressed in linen, soiled"
+case changed for clean wool (bandage5T, its grade 5): five minutes, the fresh one on, the old kept, "dressed in wool, clean"
+dice
+ask EQUIP a=2 text=" bandage5T"
+dice
+ask TREAT a=0 text="*left arm"
+want result=0 c=5
+dice
+ask TREAT a=1 b=0 c=5 x0=6
+want result=0 text~"The fresh dressing is on." text~"bandage5+"
+dice
+ask DESCRIBE b=0
+want text~"left forearm S2 (stab), tended, dressed in wool, clean"
+char
+ml phy 50
+inj 6 2 2 2 5 4
+inj 134 2 2 2 5 4
+dressed 5agu:ig
+end
+case the file's "dressed" line with a cloth (5agu: grade 4, silk, worn) and one from before cloths were kept (:ig: grade 9, none named): "dressed in silk, worn", and "dressed, clean" as it was
+dice
+ask DESCRIBE b=0
+want text~"left forearm S2 (stab), tended, dressed in silk, worn" text~"right forearm S2 (stab), tended, dressed, clean"

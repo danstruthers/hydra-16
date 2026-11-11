@@ -213,7 +213,7 @@ static void __fastcall__ between (const char* lib)
 static void ended (void)
 {
     unsigned n = L.h.dungeon;
-    unsigned long t = 0;
+    unsigned long t = 0, b;
     int fd;
 
     dungeon_dir (n);
@@ -230,8 +230,17 @@ static void ended (void)
     if (sv.pace >> 7) {
         L.h.flags |= LF_HARD;                   /* (Hard mode goes on with the life, the fight soak's: dq0 -H said once) */
     }
-    L.h.date += (t + ((unsigned) L.h.dseed % 24) * 36000UL) / TENTHS_DAY + 1;
+    t += ((unsigned) L.h.dseed % 24) * 36000UL; /* (The end, after the midnight that began its date) */
+    b = (t / TENTHS_DAY + 1) * TENTHS_DAY;      /*   and the next date's midnight */
+    L.h.date += t / TENTHS_DAY + 1;
     L.h.dungeon = n + 1;
+    L.h.fast = 0;                               /* (A vow of fasting it kept as it ended (its save's plain, life.h's): its
+                                                **   end after the new date's midnight, if it's past it: the user's,
+                                                **   2026-11-11) */
+    t += (sv.plain >> 1) * FAST_STEP;
+    if (sv.plain >> 1 && t > b) {
+        L.h.fast = (unsigned char) ((t - b + FAST_STEP - 1) / FAST_STEP);
+    }
 }
 
 /* ---- The clues carried out (the plan's step 10; life.h's): dungeon n's (its folder's clues.dat, the UI's, a record a rule) that
@@ -362,7 +371,7 @@ static void __fastcall__ clues_out (unsigned n)
 
 int main (int argc, char* argv[])
 {
-    unsigned long seed = 0;
+    unsigned long seed = 0, b;
     unsigned char i, given = 0;
     const char* lib = 0;
     int fd;
@@ -396,7 +405,11 @@ int main (int argc, char* argv[])
         }
         /* (The time between, HarnMaster's alone: a game of another ruleset's goes on, as it did) */
         if (lib && !strcmp (sv.referee, "dq0harn")) {
+            b = L.h.date;
             between (lib);
+            if (L.h.date != b) {
+                L.h.fast = 0;                   /* (A day or more between: a vow of fasting's day is up, life.h's) */
+            }
         }
         L.h.flags &= ~LF_BETWEEN;
     } else {                                    /* (A new life: no kit to take up, its outfit's drawn) */
