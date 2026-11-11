@@ -29,7 +29,7 @@ const romimg = require('../tools/romimg.js');
 const images = require('../../base/tools/images.js');
 const romfs = require('../tools/romfs.js');
 const { readManifest, hwtest } = require('../build.js');
-const { tests, IRQ_OFF_MAX, dq0Check } = require('../tests/tests.js');
+const { tests, files: testFiles, helpers: testHelpers, IRQ_OFF_MAX, dq0Check } = require('../tests/tests.js');
 const hubown = require('./lib/hubown.js');
 const dq0meaning = require('./lib/dq0meaning.js');
 
@@ -265,7 +265,7 @@ runner.setup({ root: ROOT, tests, IRQ_OFF_MAX, image, pcFolder, self: __filename
   build: () => require('../build.js').buildBoth({ quiet: true }),
   runDl: (...a) => require('./dl/bridge.js').runDl(...a),
   areas: require('../tests/areas.js'), ref: 'reborn-game', restrict: meaningOf,
-  testFiles: { 'base/tests/tests.js': require('../../base/tests/tests.js').tests, 'reborn/tests/tests.js': tests } });
+  testFiles: Object.assign({ 'base/tests/tests.js': require('../../base/tests/tests.js').tests }, testFiles), testHelpers });
 
 if (require.main === module) {
   const argv = process.argv.slice(2), k = argv.indexOf('--tier'), bad = require('../build.js').lastBuildFailed();

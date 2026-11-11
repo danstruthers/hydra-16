@@ -17,10 +17,16 @@ the merge base, everything staged or not, and the new files git doesn't ignore.
   tests and those that see the ROM's layout. `tests/mod/t_task` runs the tests that boot `t_task`. The design
   documents (`*.md` in games/, docs/, manual/) run nothing.
 - A path that no rule names runs **every** test. A `word:NAME` rule that matches no test runs every test too.
-- `tests/tests.js` maps by its entries. A changed line inside a test's entry runs that test. A changed line in a
-  helper (a top-level declaration) runs the tests whose entries use that helper, directly or through other helpers.
-  A changed line in the requires or the exports runs every test. A changed comment outside an entry runs nothing.
-  The selector's own test, `tiers`, runs whenever `tests.js` changes.
+- The tests are in suites, by area: `tests/suites/*.js` (the system's, BASIC's, HyForth's, hylang's, the sound's, the
+  PC tool's, the screen's, hmchar's, the numbers') and `tests/suites/dq0/*.js` (the game's, by subject: map, parser,
+  gear, fight, denizens, senses, body, time, save, theme, screen). Their shared helpers are in `tests/lib/common.js`
+  and `tests/lib/dq0.js` (dq0Typed, dq0Turns, dq0Ev, dq0Poke, dq0Check ...); a suite's own helpers are at its top.
+  `tests/tests.js` is the index: the suites in their order, and the exports `sim/test.js` and the tools use.
+- A suite maps by its entries. A changed line inside a test's entry runs that test. A changed line in a helper (a
+  top-level declaration, the suite's own or a helper module's) runs the tests whose entries use that helper, directly
+  or through other helpers. A changed line in the requires or the exports runs every test. A changed comment outside
+  an entry runs nothing. The index (`tests.js`) runs every test. The selector's own test, `tiers`, runs whenever a
+  suite or a helper module changes.
 - A test's areas (`areasOf` in `tests/areas.js`): its modules (`mod:t_rc`), `dq0`, `hmchar`, `sdcard`, `pc`, `c`,
   the languages' and libraries' (`basic`, `forth`, `hylang`, `asm`, `numbers`, `sound`: by the words in its entry
   and its helpers), `layout`, a test's own `area: [...]`, and the game's finer areas.
@@ -94,7 +100,7 @@ missed. The `tiers` test checks the selector itself:
 
 - The tests files read as entries.
 - Sample paths map to the tests they must run, and not to the tests they mustn't (`CASES` in `tests/areas.js`).
-- tests.js's lines map to their entries, their helpers' tests, or every test.
+- The suites' and the helper modules' lines map to their entries, their helpers' tests, or every test.
 - Every area a rule names is some test's.
 - `NEAR`'s names are tests.
 

@@ -23,7 +23,8 @@ const base = require('../../base/tests/areas.js');
 // The paths: from the repository's top.  Most specific first
 const rules = [
   // The tests' own files
-  ['reborn/tests/tests.js', ['entries', 'tiers']],
+  ['reborn/tests/tests.js', ['*']],                           // (The index: the suites, their order)
+  [/^reborn\/tests\/(?:suites|lib)\/.*\.js$/, ['entries', 'tiers']],   // (The suites, by entry; their shared helpers, by the entries using them)
   ['reborn/tests/areas.js', ['*']],
   ['reborn/tests/TESTING.md', ['none']],
   [/^reborn\/tests\/mod\/([^/]+)\//, ['mod:$1']],
@@ -164,13 +165,13 @@ const GRAMMAR = [/^reborn\/games\/dq0\/commands\./, /^reborn\/games\/dq0c\//, /^
 
 // The selector's own check (the tiers test's: nothing a tier skips can break silently): the tests files read as
 // entries, every test with its text; paths to the tests they run (CASES: '*' every test, 'none' none, or the tests
-// that must run, has, and those that mustn't, not; a NAME* every test of that start); lines of tests.js to their
-// tests; every area a rule names some test's; NEAR's names tests.  OUT: { failures, notes }
+// that must run, has, and those that mustn't, not; a NAME* every test of that start); lines of the suites and their
+// helper modules to their tests; every area a rule names some test's; NEAR's names tests.  OUT: { failures, notes }
 const CASES = [
   ['base/kernel/sched.s', '*'], ['base/sim/lib/cpu65c02.js', '*'], ['base/tests/tests.js', { has: ['tiers'], not: ['dq0'] }],
   ['reborn/modules/rc/rc.s', '*'], ['reborn/modules/cons/cons.s', '*'], ['reborn/sim/test.js', '*'], ['reborn/tools/romimg.js', '*'],
   ['reborn/build.js', '*'], ['reborn/sdk/asm/include/hydra.inc', '*'], ['reborn/tests/areas.js', '*'], ['base/sim/select.js', '*'],
-  ['a/path/no/rule/names.txt', '*'], ['reborn/tests/newfile.js', '*'],
+  ['a/path/no/rule/names.txt', '*'], ['reborn/tests/newfile.js', '*'], ['reborn/tests/tests.js', '*'],
   ['reborn/games/dq0w/wfight.c', { has: ['dq0*', 'hmchar*'], not: ['boot', 'basic', 'forth', 'hylang', 'rc', 'race', 'base'] }],
   ['reborn/games/dq0/commands.ebnf', { has: ['dq0*'], not: ['boot', 'basic'] }],
   ['reborn/bank/popgen/popgen.c', { has: ['dq0*', 'dq0popgen'], not: ['boot'] }],
@@ -198,9 +199,9 @@ const CASES = [
 function selfCheck() {
   const path = require('path'), sel = require('../../base/sim/select.js');
   const top = path.join(__dirname, '..', '..');
-  const bt = require('../../base/tests/tests.js').tests.map(t => Object.assign(t, { system: 'base' })), rt = require('./tests.js').tests;
+  const bt = require('../../base/tests/tests.js').tests.map(t => Object.assign(t, { system: 'base' })), idx = require('./tests.js'), rt = idx.tests;
   const tests = [...bt, ...rt], failures = [], notes = [];
-  const tt = sel.testTexts(top, { 'base/tests/tests.js': bt, 'reborn/tests/tests.js': rt });
+  const tt = sel.testTexts(top, Object.assign({ 'base/tests/tests.js': bt }, idx.files), idx.helpers);
   if (!tt.ok) failures.push('a tests file not read as entries (select.js parseTests): --changed runs every test for it');
   const unread = tests.filter(t => !tt.texts.has(t.name)).map(t => t.name);
   if (unread.length) failures.push('no entry found for ' + unread.join(', ') + ' (select.js parseTests)');
@@ -214,20 +215,25 @@ function selfCheck() {
     for (const p of want.has) { const t = tests.filter(t => match(p, t.name)); if (!t.length || t.some(x => !run.has(x.name))) failures.push(file + ': not all of ' + p + ' run'); }
     for (const p of want.not) if (tests.some(t => match(p, t.name) && run.has(t.name))) failures.push(file + ': ' + p + ' run');
   }
-  // tests.js's lines: an entry's its test's; a helper's the tests that use it; the header's comment none; the
-  // exports' and the requires every test's
-  const p = tt.parsed['reborn/tests/tests.js'];
-  if (p) {
-    const line = re => p.lines.findIndex(l => re.test(l)) + 1, names = re => [...sel.namesForLines(p, [line(re)]).names].sort().join(' ');
-    const one = (re, want, what) => { const r = sel.namesForLines(p, [line(re)]); const got = r.all ? '*' : [...r.names].sort().join(' '); if (!want(got, r)) failures.push('tests.js\'s ' + what + ': ' + (got.length > 80 ? got.slice(0, 80) + '...' : got || 'none')); };
-    one(/^      name: 'dq0shield'/, g => g === 'dq0shield', 'dq0shield\'s entry');
-    one(/^function hylangCard/, g => /\bhysuite1\b/.test(g) && /\bhyhydra\b/.test(g) && !/\bdq0\b/.test(g), 'hylangCard (a helper)');
-    one(/^const DQ0_ANSWERS/, g => g === 'dq0answer', 'DQ0_ANSWERS (a helper of a test made by code)');
-    one(/^\/\/ tests\.js - /, (g, r) => !r.all && !g, 'header comment');
-    one(/^const fs = require/, (g, r) => !!r.all, 'require line');
-    one(/^  IRQ_OFF_MAX,/, (g, r) => !!r.all, 'exports');
-    if (!names(/^      name: 'tiers'/).includes('tiers')) failures.push('tests.js\'s tiers entry not read');
-  }
+  // The suites' lines (suites/, lib/: tests.js's index's files and helpers): an entry's its test's; a helper's the tests
+  // that use it (a suite's own, or a helper module's); a header's comment none; the exports' and the requires every test's
+  const parsed = [...Object.keys(idx.files), ...idx.helpers].map(f => [f, tt.parsed[f]]).filter(([, p]) => p);
+  const at = (re, only) => { for (const [f, p] of parsed) if (!only || only.test(f)) { const k = p.lines.findIndex(l => re.test(l)); if (k >= 0) return { f, p, n: k + 1 }; } return null; };
+  const one = (re, want, what, only) => {
+    const w = at(re, only);
+    if (!w) { failures.push('the suites\' ' + what + ': no such line'); return; }
+    const r = sel.namesForLines(w.p, [w.n]), got = r.all ? '*' : [...r.names].sort().join(' ');
+    if (!want(got, r)) failures.push(w.f + '\'s ' + what + ': ' + (got.length > 80 ? got.slice(0, 80) + '...' : got || 'none'));
+  };
+  one(/^      name: 'dq0shield'/, g => g === 'dq0shield', 'dq0shield\'s entry');
+  one(/^function hylangCard/, g => /\bhysuite1\b/.test(g) && /\bhyhydra\b/.test(g) && !/\bdq0\b/.test(g), 'hylangCard (a shared helper)');
+  one(/^const DQ0_ANSWERS/, g => g === 'dq0answer', 'DQ0_ANSWERS (a helper of a test made by code)');
+  one(/^function dq0Poke/, g => /\bdq0cmd\b/.test(g) && /\bdq0shield\b/.test(g) && !/\bboot\b|\bbasic\b|\bdq0parse\b/.test(g), 'dq0Poke (a dq0 helper)');
+  one(/^\/\/ \w+\.js - /, (g, r) => !r.all && !g, 'header comment', /suites\/dq0\//);
+  one(/^\/\/ \w+\.js - /, (g, r) => !r.all && !g, 'header comment', /lib\//);
+  one(/^const fs = require/, (g, r) => !!r.all, 'require line', /suites\//);
+  one(/^module\.exports = \{/, (g, r) => !!r.all, 'exports', /lib\//);
+  one(/^      name: 'tiers'/, g => /\btiers\b/.test(g), 'tiers entry');
   // Every area a rule names, some test's; NEAR's names, tests
   const sets = tests.map(of), special = a => ['*', 'none', 'entries', 'dl'].includes(a) || /^word:|\$/.test(a);
   for (const r of rules) for (const a of r[1]) if (!special(a) && !sets.some(s => s.has(a))) failures.push('rule ' + r[0] + ': no test of area ' + a);

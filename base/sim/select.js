@@ -20,7 +20,7 @@
 //
 // From Node:
 //   changedFiles(top, ref)              { ref, base, files }: base the merge base's commit, files the paths changed
-//   parseTests(file, tests)             a tests file's entries: { items, texts (name -> its entry's text and its
+//   parseTests(file, tests, shared)     a tests file's entries: { items, texts (name -> its entry's text and its
 //                                       helpers'), lineOf(n) -> { item | decls | global | none } }, or null
 //   select(tests, ctx)                  { run: Map(name -> [why]), changed: [{ file, areas }] }; ctx: { files, rules,
 //                                       areasOf, texts, entries(file) -> { names, all } }
@@ -59,6 +59,75 @@ const IDENT = /[A-Za-z_$][\w$]*/g;
 const idents = s => new Set(s.match(IDENT) || []);
 const isComment = l => /^\s*(\/\/.*)?$/.test(l);
 
+// A file's top-level declarations before line ex (const, let, var, function, class; a comment just before one its
+// own), each { from, to, start, names, text, uses }: uses, the declarations its text names, its own file's first, then
+// the helper modules' (shared: name -> a helper module's declaration, or none).  A line that only takes a helper
+// module's names (const { a, b } = require(...)) isn't one: they're the module's.  OUT: { decls, byName, lookup }
+function declsOf(lines, ex, shared) {
+  const decls = [];
+  for (let i = 0; i < ex; i++) {
+    if (shared && /^(?:const|let|var)\s+\{\s*$/.test(lines[i])) {   // (const {, names on the lines after, } = require(...))
+      let j = i + 1;
+      while (j < ex && !/^\}/.test(lines[j])) j++;
+      const names = lines.slice(i + 1, j).join(',').split(',').map(x => x.split(':').pop().trim()).filter(Boolean);
+      if (j < ex && /^\}\s*=\s*require\(/.test(lines[j]) && names.every(n => shared.has(n))) {
+        if (decls.length && !decls[decls.length - 1].shut) Object.assign(decls[decls.length - 1], { to: i - 1, shut: true });
+        i = j;
+        continue;
+      }
+    }
+    const d = lines[i].match(/^(?:const|let|var|async function|function|class)\s+(?:\{([^}]*)\}|([A-Za-z_$][\w$]*))/);
+    if (!d) continue;
+    let f = i;
+    while (f - 1 >= 0 && /^\/\//.test(lines[f - 1])) f--;
+    const names = d[1] ? d[1].split(',').map(x => x.split(':').pop().trim()).filter(Boolean) : [d[2]];
+    if (shared && d[1] && /=\s*require\(/.test(lines[i]) && names.every(n => shared.has(n))) {   // (A helper module's names)
+      if (decls.length && !decls[decls.length - 1].shut) Object.assign(decls[decls.length - 1], { to: f - 1, shut: true });
+      continue;
+    }
+    if (!d[1] && /^(const|let|var) /.test(lines[i])) {          // (const A = 1, B = 2: the commas outside brackets)
+      let depth = 0, q = null;
+      for (let k = 0; k < lines[i].length; k++) {
+        const ch = lines[i][k];
+        if (q) { if (ch === '\\') k++; else if (ch === q) q = null; continue; }
+        if (ch === "'" || ch === '"' || ch === '`') q = ch;
+        else if ('([{'.includes(ch)) depth++;
+        else if (')]}'.includes(ch)) depth--;
+        else if (ch === ',' && depth === 0) { const m = lines[i].slice(k + 1).match(/^\s*([A-Za-z_$][\w$]*)\s*=(?![=>])/); if (m) names.push(m[1]); }
+      }
+    }
+    if (decls.length && !decls[decls.length - 1].shut) decls[decls.length - 1].to = f - 1;   // (Its end: the next one's start, or an import's)
+    decls.push({ from: f, to: ex - 1, start: i, names });
+  }
+  const byName = new Map(), lookup = n => byName.get(n) || (shared && shared.get(n)) || null;
+  for (const d of decls) { d.text = lines.slice(d.from, d.to + 1).join('\n'); for (const n of d.names) byName.set(n, d); }
+  for (const d of decls) d.uses = [...idents(d.text)].map(lookup).filter(x => x && x !== d);
+  return { decls, byName, lookup };
+}
+
+// A helper module (the tests files' shared helpers: reborn/tests/lib/*.js): its declarations before its exports, read
+// as a tests file's are (shared: the helper modules' before it), for the tests whose entries use them.  OUT: null (not
+// read), or { lines, decls, byName, items (testTexts's: every tests file's, once they're read), lineOf(n) (1-based)
+// -> { decl } | { global: true } (its requires, its exports: every test's) | { none: true } (a comment, a blank) }
+function parseHelpers(file, shared) {
+  let src;
+  try { src = fs.readFileSync(file, 'utf8'); } catch (e) { return null; }
+  const lines = src.split(/\r?\n/);
+  let ex = lines.findIndex(l => /^module\.exports = \{/.test(l));
+  if (ex < 0) ex = lines.length;
+  const { decls, byName } = declsOf(lines, ex, shared);
+  const inDecl = new Array(lines.length).fill(null);
+  for (const d of decls) for (let i = d.from; i <= d.to; i++) inDecl[i] = d;
+  const lineOf = n => {
+    const i = n - 1;
+    if (i < 0 || i >= lines.length) return { global: true };
+    if (isComment(lines[i])) return { none: true };
+    const stray = /^[^\s}\])]/.test(lines[i]) && !(inDecl[i] && inDecl[i].start === i);
+    return inDecl[i] && !stray ? { decl: inDecl[i] } : { global: true };
+  };
+  return { lines, decls, byName, items: [], lineOf, helper: true };
+}
+
 // A tests file's entries (tests.js: module.exports = { ..., tests: [ an entry an item, 4 spaces in ], ... }; a comment
 // just before an item its own), its helpers (its top-level declarations before the exports: const, let, function,
 // class; a comment just before one its own) and the rest (the exports' other lines: what every test has).  tests: the
@@ -66,7 +135,7 @@ const isComment = l => /^\s*(\/\/.*)?$/.test(l);
 // around it).  OUT: null (not that shape), or { lines, items: [{ from, to, names }], decls: [{ from, to, names, uses }],
 // texts: Map(name -> its entry's text and its helpers', at any depth), lineOf(n) (1-based) -> { item } | { decl } |
 // { global: true } | { none: true } (a comment, a blank), global: the helpers every test has }
-function parseTests(file, tests) {
+function parseTests(file, tests, shared) {
   let src;
   try { src = fs.readFileSync(file, 'utf8'); } catch (e) { return null; }
   const lines = src.split(/\r?\n/);
@@ -88,7 +157,8 @@ function parseTests(file, tests) {
     const text = lines.slice(st.from, to + 1).join('\n'), m = text.match(/^ {4}(?:\},\s*)?\{ ?name: '([^']+)'(?=\s*,)|^ {6}name: '([^']+)'(?=\s*,)/m);
     return { from: st.from, to, text, literal: m ? m[1] || m[2] : null, names: [] };
   });
-  // Their names: a named item its own; those the code makes, the tests between the named ones around them
+  // Their names: a named item its own; those the code makes, the tests between the named ones around them (as many
+  // items as tests there: one each, in order; else each all of them)
   const order = tests.map(t => t.name);
   let at = 0, pending = [];
   for (const it of items) {
@@ -96,39 +166,16 @@ function parseTests(file, tests) {
     const k = order.indexOf(it.literal, at);
     if (k < 0) { it.names = [it.literal]; continue; }
     const made = order.slice(at, k);
-    for (const p of pending) p.names = made;
+    pending.forEach((p, i) => { p.names = pending.length === made.length ? [made[i]] : made; });
     pending = [];
     it.names = [it.literal];
     at = k + 1;
   }
   for (const p of pending) p.names = order.slice(at);
-  // The helpers: the top-level declarations before the exports
-  const decls = [];
-  for (let i = 0; i < ex; i++) {
-    const d = lines[i].match(/^(?:const|let|var|async function|function|class)\s+(?:\{([^}]*)\}|([A-Za-z_$][\w$]*))/);
-    if (!d) continue;
-    let f = i;
-    while (f - 1 >= 0 && /^\/\//.test(lines[f - 1])) f--;
-    const names = d[1] ? d[1].split(',').map(x => x.split(':').pop().trim()).filter(Boolean) : [d[2]];
-    if (!d[1] && /^(const|let|var) /.test(lines[i])) {          // (const A = 1, B = 2: the commas outside brackets)
-      let depth = 0, q = null;
-      for (let k = 0; k < lines[i].length; k++) {
-        const ch = lines[i][k];
-        if (q) { if (ch === '\\') k++; else if (ch === q) q = null; continue; }
-        if (ch === "'" || ch === '"' || ch === '`') q = ch;
-        else if ('([{'.includes(ch)) depth++;
-        else if (')]}'.includes(ch)) depth--;
-        else if (ch === ',' && depth === 0) { const m = lines[i].slice(k + 1).match(/^\s*([A-Za-z_$][\w$]*)\s*=(?![=>])/); if (m) names.push(m[1]); }
-      }
-    }
-    if (decls.length) decls[decls.length - 1].to = f - 1;
-    decls.push({ from: f, to: ex - 1, start: i, names });
-  }
-  const byName = new Map();
-  for (const d of decls) { d.text = lines.slice(d.from, d.to + 1).join('\n'); for (const n of d.names) byName.set(n, d); }
-  for (const d of decls) d.uses = [...idents(d.text)].map(n => byName.get(n)).filter(x => x && x !== d);
+  // The helpers: the top-level declarations before the exports (and the helper modules', shared)
+  const { decls, lookup } = declsOf(lines, ex, shared);
   const closure = text => {
-    const seen = new Set(), todo = [...idents(text)].map(n => byName.get(n)).filter(Boolean);
+    const seen = new Set(), todo = [...idents(text)].map(lookup).filter(Boolean);
     while (todo.length) { const d = todo.pop(); if (seen.has(d)) continue; seen.add(d); todo.push(...d.uses); }
     return seen;
   };
@@ -151,7 +198,7 @@ function parseTests(file, tests) {
     if (inItem[i]) return { item: inItem[i] };
     if (isComment(lines[i])) return { none: true };            // (A comment, a blank: no test's; in an item, the item's)
     const stray = /^[^\s}\])]/.test(lines[i]) && !(inDecl[i] && inDecl[i].start === i);   // (A top-level statement)
-    if (inDecl[i] && !stray) return global.has(inDecl[i]) ? { global: true } : { decl: inDecl[i] };
+    if (inDecl[i] && !stray) return global.has(inDecl[i]) || /=\s*require\(/.test(lines[inDecl[i].start]) ? { global: true } : { decl: inDecl[i] };   // (A require: every test's)
     return { global: true };
   };
   return { lines, items, decls, texts, global, lineOf };
@@ -228,25 +275,34 @@ function select(tests, ctx) {
   return { run, changed };
 }
 
-// The tests files' entries read (files: { path from the top: the tests it makes, in order }).  OUT: { parsed: { path:
-// parseTests's }, texts: Map (name -> text), ok: every file read }
-function testTexts(top, files) {
-  const parsed = {}, texts = new Map();
+// The tests files' entries read (files: { path from the top: the tests it makes, in order }), with the helper modules
+// their entries use (helpers: [path from the top], in the order they require each other: their helpers each entry's,
+// and a line of theirs the tests whose entries use it, as a tests file's own helper's are).  OUT: { parsed: { path:
+// parseTests's or parseHelpers's }, texts: Map (name -> text), ok: every file read }
+function testTexts(top, files, helpers = []) {
+  const parsed = {}, texts = new Map(), shared = new Map();
+  for (const rel of helpers) {
+    const h = parseHelpers(path.join(top, rel), shared);
+    parsed[rel] = h;
+    if (h) for (const [n, d] of h.byName) shared.set(n, d);
+  }
   for (const [rel, list] of Object.entries(files)) {
-    const p = parseTests(path.join(top, rel), list);
+    const p = parseTests(path.join(top, rel), list, shared);
     parsed[rel] = p;
     if (p) for (const [k, v] of p.texts) texts.set(k, v);
   }
+  const items = Object.keys(files).flatMap(rel => parsed[rel] ? parsed[rel].items : []);
+  for (const rel of helpers) if (parsed[rel]) parsed[rel].items = items;
   return { parsed, texts, ok: Object.values(parsed).every(Boolean) };
 }
 
 // A test's areas, the system's (areas: { rules, areasOf(t, text) }), its text the entry's (null: not read)
 const areasFn = (areas, tt) => t => areas.areasOf(t, tt.ok && tt.texts.has(t.name) ? tt.texts.get(t.name) : null);
 
-// What changed since ref, and the tests it affects.  o: { top, ref, tests, files (testTexts's), areas, dl }.  OUT:
+// What changed since ref, and the tests it affects.  o: { top, ref, tests, files and helpers (testTexts's), areas, dl }.  OUT:
 // { ref, base, files, run, changed } (changedFiles's and select's)
 function forChanges(o) {
-  const ch = changedFiles(o.top, o.ref), tt = testTexts(o.top, o.files);
+  const ch = changedFiles(o.top, o.ref), tt = testTexts(o.top, o.files, o.helpers);
   const sel = select(o.tests, { files: ch.files, rules: o.areas.rules, areasOf: areasFn(o.areas, tt), texts: tt.ok ? tt.texts : null,
     dl: o.dl, entries: f => entriesChanged(o.top, ch.base, f, tt.parsed[f]) });
   return Object.assign(ch, sel);
@@ -254,11 +310,11 @@ function forChanges(o) {
 
 // The tests of the areas named (or the tests named), for --near.  OUT: { list, unknown: the words that named none }
 function near(o, words) {
-  const tt = testTexts(o.top, o.files), of = areasFn(o.areas, tt), unknown = [];
+  const tt = testTexts(o.top, o.files, o.helpers), of = areasFn(o.areas, tt), unknown = [];
   const sets = new Map(o.tests.map(t => [t.name, of(t)]));
   const list = o.tests.filter(t => words.some(w => t.name === w || sets.get(t.name).has(w)));
   for (const w of words) if (!o.tests.some(t => t.name === w || sets.get(t.name).has(w))) unknown.push(w);
   return { list, unknown };
 }
 
-module.exports = { topOf, changedFiles, areasOfPath, parseTests, entriesChanged, namesForLines, select, wordRe, testTexts, areasFn, forChanges, near };
+module.exports = { topOf, changedFiles, areasOfPath, parseTests, parseHelpers, entriesChanged, namesForLines, select, wordRe, testTexts, areasFn, forChanges, near };

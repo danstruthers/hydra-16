@@ -31,7 +31,8 @@
 // self (the file a test's process runs: its --one), instrument(t, opt) (or none: a test's own watch on the machine,
 // { boot: its boot's options, attach(m) as it's booted, judge(m) -> { failures, notes } }, sim/lib's emulator's
 // alone), summary(list, opt) (after the tests, before the count), areas (its tests/areas.js: { rules, areasOf }),
-// testFiles (its tests files: { path from the repository's top: the tests it makes }), ref (--changed's default),
+// testFiles (its tests files: { path from the repository's top: the tests it makes }), testHelpers (the helper modules
+// their entries use: [path from the top]: select.js's testTexts), ref (--changed's default),
 // restrict(list, opt) (the list when no NAME's given, the system's narrowing of it: HydraOS's RULES=NAME, the meaning
 // checks) }; then main(argv).  After the tests, obj/testtimes.json: each one's wall time and cycles.
 // The emulator runs as fast as the host can, never paced to the Hydra's clock (run.js -i is): the cycles a test
@@ -47,7 +48,7 @@ const { readManifest, hwtest } = require('../build.js');
 const BASE = path.join(__dirname, '..');
 // The system the tests are run for (setup): the base's own, unless a system on it says otherwise
 const env = { root: BASE, tests: null, IRQ_OFF_MAX: 200, image: null, build: null, pcFolder: null, runDl: null, self: __filename,
-  instrument: null, summary: null, areas: null, testFiles: null, ref: 'reborn-game', restrict: null };
+  instrument: null, summary: null, areas: null, testFiles: null, testHelpers: null, ref: 'reborn-game', restrict: null };
 function setup(e) { Object.assign(env, e); }
 const baseTests = () => require('../tests/tests.js').tests.map(t => Object.assign(t, { system: 'base' }));
 
@@ -222,7 +223,7 @@ const USAGE = 'usage: node sim/test.js [NAME ...] [--changed [REF]] [--near AREA
 function selectorOf(tests, opt) {
   const sel = require('./select.js'), top = sel.topOf(env.root);
   const files = env.testFiles || { [path.relative(top, path.join(BASE, 'tests', 'tests.js')).split(path.sep).join('/')]: tests };
-  return { sel, o: { top, tests, files, areas: env.areas || require('../tests/areas.js'), dl: !!opt.dl } };
+  return { sel, o: { top, tests, files, helpers: env.testHelpers || [], areas: env.areas || require('../tests/areas.js'), dl: !!opt.dl } };
 }
 
 // The tests to run: the NAMEs and --near's (or all), the system's narrowing (restrict) when no NAME's given, then of
