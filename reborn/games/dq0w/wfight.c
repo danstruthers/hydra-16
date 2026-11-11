@@ -30,7 +30,6 @@ unsigned char grip;                             /* (wbody.h's: the actor the cha
 unsigned char gchoke;                           /* (The rounds it's been choked, the hold as it stands: the referee's) */
 struct gleft glf;                               /* (wbody.h's: a blow's, for part 106's grip_left) */
 struct mshot mshot;                             /* (wbody.h's: a blow's missile, wshoot.c's) */
-extern unsigned char pc_cut;                    /* (work.h's) */
 extern unsigned char pshoot;                    /* (wshoot.c's: the character's fight a missile's) */
 #pragma bss-name (push, "SW15RODATA")
 static char wb[32];                             /* (A blow's words on their way to the ring, a piece at a time: part
@@ -42,7 +41,7 @@ static char wb[32];                             /* (A blow's words on their way 
 #pragma rodata-name ("SW15RODATA")
 
 extern unsigned char pc_hit;                    /* (dq0w.c's: a blow at the character stops its long task, hard) */
-extern unsigned char fwant, flast;              /* (dq0w.c's fighting on: a blow at it, looked at as it's free; whose) */
+extern unsigned char flast;                     /* (dq0w.c's: who struck at the character last; act.fight fighting on's) */
 unsigned __fastcall__ weight_in (unsigned where, unsigned x);  /* (Part 10's, things.c's: what's on the character
                                                 **   weighs, quarter pounds) */
 
@@ -54,7 +53,7 @@ static void __fastcall__ told (unsigned char att, unsigned char def, unsigned ch
     if (!def) {
         pc_hit = 1;
         if (HUB->pc_pos != POS_PRONE || (HUB->pcsum.limbs & (LB_LEG_L | LB_LEG_R)) != (LB_LEG_L | LB_LEG_R)) {
-            fwant |= 1;                         /* (A hostile one fought, fighting on's, as the character's free; but not
+            act.fight |= 1;                         /* (A hostile one fought, fighting on's, as the character's free; but not
                                                 **   one down with no leg to stand on: no blow to come, its word said) */
         }
         flast = att;
@@ -200,7 +199,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
                 limb_news (WB_NOT_UP | 0x100, 0);   /* (The character, no leg to stand on: no blow to come, a prone one's
                                                 **   round its getting up.  Its fight over, its round out, the player's to
                                                 **   say what next: a crawl, a throw; 2026-11-04) */
-                pc_cut = 1;
+                act.cut = 1;
                 return 0;
             }
             if (me != att || !(bd.move & BM_NOT_UP)) {   /* (A creature's told once as it lies there: the round's
@@ -416,7 +415,7 @@ void s_pc_blow (void)
 
 /* The hold as a blow left it (blow's: glf its attacker, defender, aim and what it left them in; out how it came out):
 ** a grapple's (the aim's AIM_GRAPPLE) held, pinned, choked, thrown free, broken free; the character's done with its
-** move, its fight over (the world's pc_cut: the hold got, a hold's own; the throw, the pin, the one choked senseless);
+** move, its fight over (the world's act.cut: the hold got, a hold's own; the throw, the pin, the one choked senseless);
 ** and let go, the holder or the held senseless or dead */
 void __fastcall__ s_grip_left (unsigned char out)
 {
@@ -433,7 +432,7 @@ void __fastcall__ s_grip_left (unsigned char out)
         }
         if (!glf.att && (out == O_THROWN || out == O_PINNED || (out == O_HOLD && (glf.z & 7) == GM_HOLD) ||
             (glf.ff & FF_D_DOWN))) {
-            pc_cut = 1;
+            act.cut = 1;
         }
     }
     if (((glf.ff & (FF_A_DOWN | FF_A_DEAD)) && (!glf.att || glf.att == GRIP_OF (grip))) ||

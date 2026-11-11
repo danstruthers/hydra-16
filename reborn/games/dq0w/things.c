@@ -668,9 +668,9 @@ unsigned __fastcall__ s_reach_done (unsigned char said)
 ** as it stands), the world changed at each's end; stopped part way (hard, soft or the player's), the world stays as it
 ** got, the pack off told.  The handlers call reach_step just before they change anything, past their refusals: it
 ** begins the next step owed, and they answer nothing done (IR_NO, no words): the reply's IO_STEP, main.c's things' the
-** UI's first words and wait (a long task of the step's kind, the world's lwork LW_REACH), the command kept and asked
+** UI's first words and wait (a long task of the step's kind, the world's act.work LW_REACH), the command kept and asked
 ** again as it's up (reach 5, 6); with none owed the handling goes on, its levels paid, as it was.  After the handling
-** the pack goes back on as the character's free (rs_after_on, lwork's: the world's own step).  An intent's
+** the pack goes back on as the character's free (rs_after_on, act.work's: the world's own step).  An intent's
 ** tool the same by the world alone (reach_do with its keys: lw_m asked again).  The requests that don't ask for the
 ** steps (IO_STEPS: a blow's weapon, a denizen's) keep the lump, reach_done's */
 #pragma code-name (push, "SW85CODE")
@@ -747,8 +747,8 @@ static unsigned char rs_begin (void)
         rstep.time = HUB->round;
     }
 go:
-    pc_cut = 0;
-    lwork = LW_REACH;
+    act.cut = 0;
+    act.work = LW_REACH;
     if ((rs_ok & 3) == 2) {
         reach_do (RO_GO);
     } else {
@@ -998,7 +998,7 @@ unsigned char __fastcall__ s_rs_for (unsigned n)
                 }
                 if (rs_pack || rs_using) {
                     rs_after_on = 1;
-                    pc_cut = 0;
+                    act.cut = 0;
                 }
             }
             return f;
@@ -1607,7 +1607,7 @@ static unsigned char rs_spill (void)
 
 /* What the reach's steps want of this part, by w: RO_*, or an intent's tool's keys.  RO_ASK a request by the steps taken
 ** up; RO_REPLY its reply made (1: a step's, no more); RO_END a step's time up, or the character free after its handling
-** (lwork's): stopped first, the sequence over, told; a step's change made, 0 (the UI's to ask again), or 2 (an intent
+** (act.work's): stopped first, the sequence over, told; a step's change made, 0 (the UI's to ask again), or 2 (an intent
 ** asked again); its handling done, the pack back on, the world's own step, 2; a timed work's end still to come, or the
 ** pack not where it was (a denizen's taken it), 0.  RO_GO the world's own step begun (its intent kept: lw_m); RO_FUMBLED a
 ** step's grope failed.  Keys (an intent's tool got out first, a dig's, a door's lock's): 1 if a step's begun; 0 got out,
@@ -1674,7 +1674,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
             HUB->ireq.plural = w;
             HUB->ireq.y = (rstep.say == SV_BLOWDARK) | (rstep.time == HUB->round ? 2 : 0);    /* (Its question put, the UI's; 2, engaged:
                                                 **   the round's action, no long task for a blow to stop) */
-            HUB->pc_ready = HUB->now + rstep.time;    /* (Not free till the UI's wait comes: engaged, fwant's, its end not looked at first) */
+            HUB->pc_ready = HUB->now + rstep.time;    /* (Not free till the UI's wait comes: engaged, act.fight's, its end not looked at first) */
             HUB->ireq.x = rstep.time;
             HUB->ireq.qty = rstep.say;
             HUB->ireq.item = rstep.what;
@@ -1692,8 +1692,8 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
                                                 **   work's end if that's what's begun) */
             rs_after_on = (iq.kind == IO_SHUT || iq.kind == IO_FILL || iq.kind == IO_HIDE) && iq.result == IR_OK && HUB->ireq.qty ?
                 2 : 1;
-            pc_cut = 0;
-            lwork = LW_REACH;
+            act.cut = 0;
+            act.work = LW_REACH;
             if (rs_after_on == 1 && (iq.kind == IO_SHUT || iq.kind == IO_FILL || iq.kind == IO_HIDE)) {
                 HUB->ireq.y = rs_redo & RR_RELIGHT ? 0xFE : 0xFD;   /* (A timed work's end: more to come, the UI to wait
                                                 **   for it; and the torch to light again, words.c's worked) */
@@ -1722,12 +1722,12 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         intent_few (&wk.m);
         return 0;
     }
-    if (pc_cut) {                               /* (RO_END) */
+    if (act.cut) {                               /* (RO_END) */
         if (HUB->pc_task.kind != LT_FIGHT) {
             rs_for (RF_CUT);
             return 0;
         }
-        pc_cut = 0;                             /* (A fight begun as it came free, its line a step in hand, stopped: that the stop, not the step) */
+        act.cut = 0;                             /* (A fight begun as it came free, its line a step in hand, stopped: that the stop, not the step) */
     }
     w = 0;
     if (rstep.edge != SE_IN && rstep.edge != SE_TRY && rstep.edge) {   /* (What it changes changed) */
@@ -2255,7 +2255,7 @@ unsigned char s_serve (void)
     case IO_BEGIN:
         break;
     case IO_CUT:
-        pc_cut = 1;
+        act.cut = 1;
         rs_for (RF_CUT);
         break;
     case IO_RIP:                                /* (A cloth torn up for bandages, washed: part 107's, wcloth.c) */

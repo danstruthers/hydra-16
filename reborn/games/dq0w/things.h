@@ -9,6 +9,7 @@ unsigned __fastcall__ items (unsigned i, unsigned char in, unsigned x);  /* The 
                                                 **   one of in's places (IN_*), at x (IN_X) or with one of x's flags
                                                 **   (IN_FLAGS): its number (0: none), ip its record, in the window */
 extern struct item* ip;
+#include "activity.h"                           /* (What the character's doing: struct pc_activity, act) */
 #define IN_SQUARE       (1 << IW_SQUARE)
 #define IN_ACTOR        (1 << IW_ACTOR)
 #define IN_ITEM         (1 << IW_ITEM)
@@ -118,7 +119,6 @@ void __fastcall__ take_go (const struct msg* m);    /* (Part 16) I_TAKE's walk b
                                                 **   its take rule, if it has one */
 unsigned char take_up (void);                   /* (Part 16) Its thing taken up, the walk done: 0 not (E_READY to
                                                 **   tell), 1 taken (the UI's to go on), 2 walking on to it */
-extern unsigned take_n;                         /* (I_TAKE's thing, its item: 0 none) */
 unsigned char take_rest (void);                 /* (Part 4: things.c) A count to take up, walked over to first, taken
                                                 **   as it gets there (IR_NONE: none) */
 unsigned char __fastcall__ fumbled (unsigned char k);  /* (dq0w.c's part 25) A grope while engaged, a thing of kind
@@ -183,10 +183,9 @@ unsigned char __fastcall__ rs_more (unsigned char w);  /* (Part 90's: 0 hands ma
 extern unsigned rs_tool;                        /* (The tool in use; a fire-maker to hand, part 10's flame's) */
 extern unsigned char rs_free;
 extern unsigned char rs_using;                  /* (A tool's: 1 out; 2 caught, a fire-maker's) */
-#define LW_REACH        0xFE                    /* (lwork's: a step of the reach, its end RO_END's) */
+#define LW_REACH        0xFE                    /* (act.work's: a step of the reach, its end RO_END's) */
 extern unsigned rs_pack;                        /* (The pack off for this handling) */
 extern unsigned char rs_ok, rs_st, rs_paid, rs_after_on, rs_live;
-extern unsigned char lwork;
 extern unsigned lw_x, lw_y;                     /* (dq0w.c's: a timed work's square; a redip's, things.c's rs_old, rs_down) */
 extern unsigned char den_saw;                   /* (wbody.h's: the world to look about again) */
 extern struct msg lw_m;

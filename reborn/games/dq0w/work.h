@@ -7,6 +7,8 @@
 #ifndef _WORK_H
 #define _WORK_H
 
+#include "activity.h"
+
 /* ---- dq0w.c's digging (the character's, parts 1, 19, 25; a tunneller's rock asked of part 1 too, wdig.c's) */
 struct dig {
     unsigned char   d;                          /* DIR_N ... DIR_W, DIR_DOWN */
@@ -84,8 +86,8 @@ extern struct work wk;
 #define BLOWS           12                      /* (A battering's blows at most: its long task's length) */
 #define BLOW_T          30                      /* (A blow's time, tenths: its strenuous work, the referee's to tire
                                                 **   the character by) */
-extern unsigned char pc_cut;                    /* (The character's long task stopped, hard or by the player: dq0w.c's;
-                                                **   a battering's blows given up, wblow.c's) */
+/* (act.cut, activity.h's: the character's long task stopped, hard or by the player; a battering's blows given up,
+** wblow.c's) */
 
 void doors (void);                              /* (Part 5's) A door worked, or a window's shutters */
 void blows (void);                              /* (Part 6's) A portal broken by blows: begun, or its next blow */

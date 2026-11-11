@@ -3689,3 +3689,86 @@ left for review (see below).  **So the suite: 444 of 444 at stage 2; 443 at stag
   **The user's, 2026-11-11: accept either step.**  Game 2's check passes the stop landing in the step after the one
   it was typed in (the rations taken in hand, then "You stop there."), the pack still at its feet and nothing after it
   done (tests/suites/dq0/gear.js); the game unchanged.
+
+## The step planner and the activity stack (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §3.3, §7 and step 6)
+
+**What the survey found.**  The reach's steps were already planned from the containment tree, lazily: each time a
+handling is asked (the UI's command again, after a step's wait), things.c's `s_reach_step` walks the thing's
+containers out from the hand (`rs_walk`) and begins the next step owed (a pack on the back off, a level reached into,
+held open, the thing got out), and the step's end (`RO_END`, `lwork`'s `LW_REACH`) does what it changes.  So the edges
+were there (`rs_do`, thirteen kinds); what was hand-coded was (1) the step's record, spread over six globals, three
+of them other jobs' scratch bytes aliased (`rs_k` was `nin`, `rs_c` `dropped`, `rs_t` `far_y`); (2) its words: 33 LT_*
+kinds (LT_PACKOFF ... LT_UP2), nine of them a pair's other half picked by a ternary (GETOUT/GETNEW, PUTAWAY/PUTOLD,
+TAKEUP/TAKENEW/UP2, SETDOWN/DOWNNEW, BLOWOUT/BLOWOLD, LIGHTFROM/LIGHTNEW, LETFALL/LETOLD, DIP/DIPOLD); and (3) what's
+done after the work, a bit set (`rs_redo`'s RR_STOW, RR_RELIGHT, RR_D1, RR_D2 with `rs_down`, `rs_down2`, `rs_two`)
+read in `rs_after`'s fixed order.  "What the PC is doing" besides `pc_task.kind`: `move.on` (the walk, a spell of
+digging); the queued continuations `take_n`, `gath`, `pfoe`, `srch`, `lwork`, `trav` (the main loop's free-again
+chain, in that order); the long task's own going on, `fwant` (and LT_BATTER's `batter_on`); its stop, `pc_cut`; and
+two that aren't the character's at all but periodic work, `burn_ask` (the lights' minute) and `chart_late` (the map
+making's late job).
+
+**Built in three stages, each its own commit, the suite whole at each:**
+
+- **(a) The step record and the first queue.**  things.h's `struct step {edge, say, what, thing, apart, time}`; the
+  step under way `rstep` (was `rs_do`, `rs_k`, `rs_what`, `rs_c`, `rs_wn`, `rs_t`: no more aliased scratch bytes);
+  the edges `SE_*` (were RS_OFF ... RS_SLING, the referee's prefix): a pack taken off, a level reached into, put on,
+  let fall or set down, a spark struck, blown out, lit from another, stowed in the pack, taken up, a tool got out to
+  hand, put back, put in its place (a sconce, a sheath), slung.  **The first family on a queue of step records:**
+  what a redip or a new light sets down to free a hand is taken up again after the work by a step pushed on a stack
+  (`aside[2]`, `naside`) as it's set down and popped as the work's over, the last set down first; the other of two
+  alike marks the first's entry ("You take up the other torch.") as it's pushed.  Gone: RR_D1, RR_D2, `rs_down`,
+  `rs_down2`, `rs_two`.
+- **(b) The step kinds out of LT_*.**  The 33 reach kinds are gone from the LT enum (it ends at LT_DIP).  A step's
+  say is a verb and a word: hub.h's `SV_*` (25 verbs, `LT_STEP` 0x20 set, so a long task's kind past LT_DIP is a
+  step) | `SM_*` (`SM_NEW`, `SM_OLD`, `SM_OTHER`).  The nine variant kinds are a verb and a word (GETNEW is
+  `SV_GETOUT | SM_NEW`, PUTOLD `SV_PUTAWAY | SM_OLD`, UP2 `SV_TAKEUP | SM_OTHER` ...), the ternaries a bit or'd.
+  **The word is the first words' alone:** the long task's kind (I_WAIT's task, `pc_task.kind`) is the verb, as
+  E_TASK's light form carries 6 bits of it (its 14 and 15 its own flags), and the world's own step's TE_BEGUN takes
+  its say from `rstep` (rs_for's RF_TELL is bit 15, SM_OLD's place).  The UI: reach_said's 25 sentences (33 before),
+  the word put into the name the way the AW_* words ("lit", "spent") are and never with them, as before; task.c's
+  doing words by verb (`DOING`); "stop sharpening" names SV_HONE, a dip SV_DIP.  The event bytes are the same but for
+  a step's kind byte.  Kept as verbs of their own, being other sentences: SV_DOWN2 ("You set the other torch down."
+  isn't "down at your feet" with a word), SV_LAYLIT2 and SV_INPACK2 ("too"), SV_OFFDOWN, SV_BLOWDARK, SV_LETBURN; and
+  the other hand's words in s_room (`SV_LAYLIT ? SV_LAYLIT2 : SV_INPACK ? SV_INPACK2 : SV_SETDOWN ? SV_LETFALL`), a
+  verb's choice, not a word's.
+- **(c) The activity.**  games/dq0w/activity.h's `struct pc_activity act`: what's queued after the long task, `take`,
+  `gath`, `foe`, `srch`, `work`, `trav` (were `take_n`, `gath`, `pfoe`, `srch`, `lwork`, `trav`), and the long task's
+  own `fight` (fighting on, was `fwant`) and `cut` (its stop, was `pc_cut`): the flags of four files and two statics
+  in one record, every reader and writer by name (dq0w.c, things.c, wgame.c, wshoot.c, wfight.c, wblow.c, wport.c,
+  wroom.inc).  **The free-again chain is a pop:** dq0w.c's `act_next` takes the first queued, `take` and then the
+  bytes `gath` ... `trav` in their order, each its handler from a table (`next_[]`), where the main loop had
+  `take_n ? take_up () : gath ? ... : trav ? travel_on () : 0`.  LT_BATTER's next blow and fighting on stay after it,
+  the long task's own going on.
+
+**What it isn't yet (for review):**
+- **The queue is an order, not a stack pushed.**  The continuations are set by their own handlers and popped in a
+  fixed order, the chain's.  A real stack (each pushed as it's planned, popped last first) is the same only if no two
+  are ever queued out of that order, and the order matters where two are set at once (a dig's tool put away, `work`, before
+  the journey's next leg, `trav`).  Moving each to a push is the next step, one at a time.
+- **The reach is still planned a step at a time** (each ask walks the tree again), not a whole queue up front: the
+  world changes between steps (a denizen takes the pack, a grope fails) and the handling's own checks come first.
+  The after-work take-ups (stage a's) are the one family queued ahead; the pack put back on and a tool put away
+  (`rs_after_on`, `rs_using`, RR_STOW, RR_RELIGHT) are still flags `rs_after` reads in order.
+- `burn_ask` and `chart_late` are periodic work, not the character's: stage (d), §7's scheduler table, wasn't built.
+- The denizens: their minds post intents the world carries out; `struct pc_activity` and `struct step` don't name
+  the character, so a denizen's record would be the same shape, but none was moved.
+- Containers (COMMANDS-CRITIQUE.md's §4.9): the edges are the planner's; the compartments aren't there (a thing's
+  `where`/`x` its holder alone), so the walk (`rs_walk`, `level_of`) still knows a container by K_CONTAINER, KF_BACK,
+  IS_CLOSED and K_HANG.  With §6b's compartment table the walk reads `(holder, compartment)`, each compartment's
+  `closes` and noun pick the edge (open, reach in) and its words, a row per verb in said.txt (the narration's)
+  rather than reach_said's table.
+
+**The words.**  Every dq0 test's screen was saved before and after each stage (sim/test.js's TXDIR hook, not
+committed) and compared sentence by sentence (the status line and the typing row dropped, wrapped lines joined, the
+order of whole sentences ignored, as the timing noise moves them).  Stage (a): 6 of 294 differ, all noise
+(dq0antidote's real-time fight; dq0jobs' and dq0skykin's denizens met at other moments; dq0stopwords' "Something
+stirs."; an Initiative improvement told in dq0robrest and not in dq0restbusy, a denizen's timing).  Stage (b): 5
+(dq0answer's scurrying, dq0robrest's improvement, dq0skykin, dq0stopwords, and dq0reachstop's race: game 2's "halt"
+lands in the step it was typed in, "You stop getting out the rations.", the side the user accepted on 2026-11-11).
+Stage (c): 10, all noise (dq0antidote's and dq0denpace's real-time fights; dq0answer's, dq0jobs' and dq0mine's sounds heard from denizens met at other moments; dq0skykin; dq0passes' and dq0stopwords' "Something stirs."; dq0robrest's improvement; dq0reachstop's race on the side the user accepted).  No step's words changed: each reach sentence, each word ("the old torch", "the other torch", "the new torch") and each "You stop ..." is said as often as before in every test but dq0reachstop's race.
+
+**Room.**  dq0w main RAM 2,243 → 2,220 (a: the step record and the stack) → 2,220 (b) → 2,188 (c: the pop's table and
+loop, 32 bytes more than the ternary chain); its part 86 234 → 212, 87 2,203 → 2,188; overlays 17 134 → 119, 26
+114 → 92.  The UI (dq0) 3,383 throughout; its overlays 171 bytes freer and its parts 209 at (b) (the sentences;
+ovlpack's placing).  The start at seed 1: 233.3M → 233.5M (a) → 233.7M (b) → 233.2M (c) cycles (245M the budget);
+at 123456789 310.6M → 311.0M (b) → 311.4M (c).

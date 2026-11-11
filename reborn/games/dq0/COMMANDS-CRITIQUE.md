@@ -474,6 +474,8 @@ of the scope table. **Noun phrases, designators, given names (`#id`), "it" and t
   have their own representation.
 - Reaching into carried containers is about 35 hand-written long-task steps (`LT_PACKOFF`, `LT_REACHIN`,
   `LT_OPENUP`, `LT_GETOUT`, `LT_PACKON` …). Each new kind of carrier means new steps and new wording.
+  *(2026-11-11: those kinds are gone, ENGINE-CRITIQUE.md's step 6: a step is a record with an edge kind, `SE_*`, and
+  its words a verb and a word, `SV_*` and `SM_*`; the tree it walks is still the one-receptacle model above.)*
 
 **The model: one tree of holders and compartments.**
 
@@ -633,7 +635,7 @@ another layer. Steps 1–3 are what the designator work needs anyway. Merge them
 | 5 | **The refusal table** (§4.5), and the scattered messages moved into it | consistent wording | medium |
 | 6 | **Features in the scope table**: stairs, walls, wells, sconces, portals become entries with affordances and noun ids; the item-or-feature rule made explicit; optionally lettered (§4.8 point 7). resolve.c, choose.c's naming and things.c's `pick` for words are retired | `take the door` → "fixed", `look at the stairs`, the remaining choosers | medium |
 | 6b | **Compartments** (§4.9): the compartment table in the catalogue, `(holder, compartment)` locations, per-compartment state; existing kinds converted one row each; then furniture (desks, cabinets, cases) added as data | in/on per kind, drawers and shelves, hidden compartments, `b2`/`D3` designators | medium |
-| 6c | **The reach as a path planner** (§4.9): today's `LT_*` reach steps replaced by edge kinds walked from the tree | any carrier or furniture reached the same way, a denizen's too | medium–large |
+| 6c | **The reach as a path planner** (§4.9): today's `LT_*` reach steps replaced by edge kinds walked from the tree. *Under way 2026-11-11 (ENGINE-CRITIQUE.md's step 6, DECISIONS.md's "The step planner and the activity stack"): the `LT_*` reach steps gone, a step a record with its edge (`SE_*`: off, in, on, drop, out, light, stow, up, hand, back in, place, sling) and its words a verb and a word (`SV_*`, `SM_*`); the walk still knows a container by its kind's flags, one level a thing, waiting on 6b's compartments for `(holder, compartment)` and each compartment's `closes` to choose the edge* | any carrier or furniture reached the same way, a denizen's too | medium–large |
 | 7 | **The dispatch table** (§4.4). Cases are moved into handlers one action at a time; the coverage report goes into the build | the remaining combinations | large, but parallelisable |
 | 8 | **Roles from the grammar** (§4.2). Designators recognised by position, case kept for one- and two-letter words; `scan()` and the `strstr(cl…)` readers retired; one noun-phrase rule with chains of locatives and possessives | the letter collisions properly (§4.8 point 5), `<object>`/`<thing>`, "I don't understand" versus "not yet" | medium (assembly) |
 | 9 | **The chain resolver** (§4.9's stretch goal): locative chains and possessives read against the tree, path down then location | `put the trophy in the trophy case on the top shelf`, `the sack in my left hand` | small, once 6b and 8 are in |

@@ -196,7 +196,7 @@ static void __fastcall__ den_portal (const struct msg* m)
     memcpy (&keep, &wk, sizeof wk);
     hub_map (0);
     done = HUB->pc_task.done;
-    cut = pc_cut;
+    cut = act.cut;
     memset (&wk, 0, offsetof (struct work, pq));
     wk.who = bk + 1;
     wk.sn = bd.sn;
@@ -217,7 +217,7 @@ static void __fastcall__ den_portal (const struct msg* m)
     }
     if (what == PA_BREAK) {                     /* (A blow, the next of its battering: at the door as it is) */
         HUB->pc_task.done = I_PORTAL_STEP (*m);
-        pc_cut = 0;
+        act.cut = 0;
         at (bd.sn, x, y);
         wk.pq = *portal_at (cx_, cy_);
         wk.was = 0xFF;                          /* (Four that make no mark, given up: its mind's count) */
@@ -275,7 +275,7 @@ static void __fastcall__ den_portal (const struct msg* m)
 back:
     hub_map (0);
     HUB->pc_task.done = done;
-    pc_cut = cut;
+    act.cut = cut;
     memcpy (&wk, &keep, sizeof wk);
 }
 

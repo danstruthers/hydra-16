@@ -58,7 +58,7 @@
 #include "things.h"
 
 /* The missiles (wshoot.c's, parts 65 and 66: slice 4.7's; their calls wbody.h's) */
-extern unsigned char pshoot, gath;              /* (The character's fight a missile's; a gathering under way) */
+extern unsigned char pshoot;                    /* (The character's fight a missile's) */
 #include "wbody.h"
 #include "trace.h"
 
@@ -108,8 +108,7 @@ void rest_go (void);
 void __fastcall__ travel_go (const struct msg* m);  /* Part 55 */
 unsigned char travel_on (void);
 void way_out (void);                            /* Part 54 */
-#define TRV_TOOL        0xFF                    /* (trav: no journey, a dig's tool to put away, travel_on's) */
-unsigned char trav;                             /* (A journey under way: part 54's, its next leg as the last is done) */
+#define TRV_TOOL        0xFF                    /* (act.trav: no journey, a dig's tool to put away, travel_on's) */
 unsigned char __fastcall__ room_on (unsigned char go);   /* Part 82 (wroom.inc): a room searched whole */
 unsigned char __fastcall__ room_tests (unsigned char touch);   /* Part 83 (wroom.c) */
 void __fastcall__ make_own (unsigned i);        /* (Part 13's) */
@@ -195,9 +194,8 @@ static unsigned long pt0, pbase, pdue;          /* (When it set out; the time a 
                                                 **   its next square comes, stepping's) */
 static void __fastcall__ path_add (unsigned char h, unsigned long t);
 static unsigned pspent;                         /* (A walk's tenths the referee's tired the character by so far) */
-static unsigned char pfoe, paim, pstrike, pfd;  /* (A blow's close-in, I_CLOSE's: its target plus 1, 0 none; the
-                                                **   blow's aim, what it strikes with; how far off it was as the walk
-                                                **   last set out) */
+static unsigned char paim, pstrike, pfd;        /* (A blow's close-in, I_CLOSE's (its target act.foe): the blow's aim,
+                                                **   what it strikes with; how far off it was as the walk last set out) */
 static unsigned char pshand;                    /* (The hand that holds what it strikes with: the hub's pc_shand) */
 
 /* The character busy for t tenths (a long wait's hours too: the clock's and pc_ready's 32 bits): free again at
@@ -254,9 +252,10 @@ static unsigned char seen_now (void)
 /* The character's long task begun (HOUSE.md's long tasks: the hub's pc_task, the UI's bar): its kind, its length in
 ** its own units; what disturbs it from now on (a blow, a wound: pc_hit; a denizen not seen till now: pseen) */
 unsigned char pc_hit;                           /* (A blow at the character, or a wound: wfight.c's too) */
-unsigned char fwant;                            /* (Fighting on's, part 24's: an enemy may engage the character, looked
-                                                **   at as it's free: | 1 a blow at it, wfight.c's, or its walk stopped
-                                                **   in a zone, looked at at once; 2 a command taking over a fight) */
+struct pc_activity act;                         /* (activity.h's: what the character's doing, what's queued after.  Its
+                                                **   fight, fighting on's, part 24's: an enemy may engage the character,
+                                                **   looked at as it's free: | 1 a blow at it, wfight.c's, or its walk
+                                                **   stopped in a zone, looked at at once; 2 a command taking over a fight) */
 unsigned char flast;                            /* (The last to strike at the character, plus 1: wfight.c's) */
 static unsigned char fheld;                     /* (The enemies the player stopped fighting, a bit each: part 24's) */
 static unsigned char pseen;                     /* (The denizens seen as it began, and since) */
@@ -310,7 +309,7 @@ static void __fastcall__ set_off (unsigned long t)
         t = dt_;
     }
     busy (t);
-    task (trav ? LT_TRAVEL : LT_WALK, npath);   /* (A journey's leg a journey's: part 54's) */
+    task (act.trav ? LT_TRAVEL : LT_WALK, npath);   /* (A journey's leg a journey's: part 54's) */
     pnext = 0;
     pquiet = 0;
     pfull = npath;
@@ -335,7 +334,7 @@ static void dens_where (void)
 
     hub_map (0);
     for (k = nden = 0, q = HUB->actor; k < NACTORS; ++k, ++q) {
-        if (q->state && q->sn == HUB->pc_stratum && k + 1 != pfoe) {   /* (Not a close-in's target: walked up to) */
+        if (q->state && q->sn == HUB->pc_stratum && k + 1 != act.foe) {   /* (Not a close-in's target: walked up to) */
             dk[nden] = k;
             dsx[nden] = q->x;
             dsy[nden++] = q->y;
@@ -1712,7 +1711,7 @@ void __fastcall__ s_go (unsigned char h)
                     hub_map (0);
                     if (move.on && move.how == A_WENT_TO) {
                         move.how = A_STEPPED;   /* (A journey's leg: the next leg's refusal says so) */
-                        move.ledge = trav ? 0 : LEDGE_MET + (k == N_CLOSED ? FA_BARS : FA_DOOR);
+                        move.ledge = act.trav ? 0 : LEDGE_MET + (k == N_CLOSED ? FA_BARS : FA_DOOR);
                     }
                     return;
                 }
@@ -2791,7 +2790,7 @@ typedef char trav_fits[CW * CW * 6 + 2 * 512 + 3 * PATH_MAX + 4 * TRAV_LEGS <= 0
 /* The journey's end, or its refusal (te: TE_*, told, b its place, | TRV_ON under way; 0, nothing): the character free */
 static void __fastcall__ trav_end (unsigned char te)
 {
-    trav = 0;
+    act.trav = 0;
     if (te) {
         evb = tv.what | (tv.legs ? TRV_ON : 0);
         event (E_TASK, 0, E_TASK_W1 (te, LT_TRAVEL));
@@ -3022,7 +3021,7 @@ static unsigned char leg (void)
         return 0;
     }
     tgy = tey;                                  /* (A room's door or mouth meant; a passage's way its heading) */
-    trav = 1;                                   /* (On a journey as its leg's walk sets out: its long task a journey's
+    act.trav = 1;                                   /* (On a journey as its leg's walk sets out: its long task a journey's
                                                 **   from its first moment, set_off's, so a line typed as a leg
                                                 **   begins stops it, the UI's free_cmd) */
     go (teh);
@@ -3144,8 +3143,8 @@ void __fastcall__ s_travel_go (const struct msg* m)
 unsigned char s_travel_on (void)
 {
     hub_map (0);
-    if (trav == TRV_TOOL) {
-        trav = 0;
+    if (act.trav == TRV_TOOL) {
+        act.trav = 0;
         return reach_do (RO_END);
     }
     if (HUB->pc_task.kind != LT_TRAVEL || HUB->pc_x != tv.lx || HUB->pc_y != tv.ly || HUB->pc_stratum != tv.sn) {
@@ -3662,7 +3661,7 @@ void __fastcall__ s_start_dig (unsigned char d)
                                                 **   tools: its intent asked again, lw_m) */
     }
     if (rs_after_on) {
-        trav = TRV_TOOL;                        /* (Put away, the pack on, as the dig's over: travel_on's) */
+        act.trav = TRV_TOOL;                        /* (Put away, the pack on, as the dig's over: travel_on's) */
     }
     dig.rock = RK_NONE;
     dig_kept (1);                               /* (Told, begun: on from where it was left, a hole begun before) */
@@ -4186,23 +4185,22 @@ void __fastcall__ s_worked (unsigned long t)
 /* A search's end (the long task's: its time done, or stopped): the walls about it searched, the nearest first as far
 ** as its time went (HOUSE.md: a search cut short covers the part done, wtrap.c's), told (E_PORTAL: the UI's things'
 ** search after it, as far); 0, done */
-static unsigned char srch;
 unsigned char srch_form;                        /* (Its form, SF_*, | SF_TOUCH, | the wall's heading times 16: the
                                                 **   things' search's too, things.c's) */
 #pragma code-name (push, "SW37CODE")           /* (Part 37's, overlay 15's room, 2026-11-02; part 48's till then) */
 #pragma rodata-name (push, "SW37RODATA")
 unsigned char s_searched (void)
 {
-    if (srch == 2) {
+    if (act.srch == 2) {
         return room_on (0);                     /* (A room searched whole: part 82's, stop by stop) */
     }
-    srch = 0;
+    act.srch = 0;
     here ();
     work (PA_SEARCH, NO_SQ, NO_SQ, srch_form);
     wk.tt = 0;                                  /* (Its minute spent already, the long task's) */
     worked (0);
     hid_op (HO_SEARCH);                         /* (One hidden, found by it: part 94's) */
-    return lwork ? work_done () : 0;            /* (A pack off to search it: back on, the reach's) */
+    return act.work ? work_done () : 0;            /* (A pack off to search it: back on, the reach's) */
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -4214,10 +4212,10 @@ unsigned char searched (void);
 ** portcullis heaved up or wound up, bars bent, a pane worked free, a window climbed through; the traces read, a track
 ** or a smell), begun by its part with no test made (wk.plan) and a long task of its kind (LT_*: its first words at
 ** once, TE_BEGUN, its bar its time), done as its time's up (work_done: the test made then, the world changed then,
-** its outcome told then), or stopped first (pc_cut: no outcome, the stop told).  The things' own (a chest's lock, a
+** its outcome told then), or stopped first (act.cut: no outcome, the stop told).  The things' own (a chest's lock, a
 ** light filled) the UI's (I_WAIT's kind) */
-unsigned char lwork;                            /* (What's to be done at its end: PA_*, LW_TRACE, LW_REACH; 0 none) */
-#define LW_TRACE        0xFF
+#define LW_TRACE        0xFF                    /* (act.work's, what's to be done at its end: PA_*, LW_TRACE, LW_HIDE,
+                                                **   LW_REACH; 0 none) */
 #define LW_HIDE         0xFD                    /* (Hiding oneself: part 94's) */
 static unsigned char lw_d;                      /* (Its portal's way from the character, its square: NO_SQ, about it; */
 unsigned lw_x, lw_y;                            /*   a trace's I_TRACE w1 and w2; things.c's rs_old, rs_down) */
@@ -4230,13 +4228,13 @@ struct msg lw_m;                                /* (A trace's; an intent kept th
 #pragma rodata-name (push, "SW12RODATA")
 
 /* The timed work (or a battering) begun: its long task of kind k (the time the character's busy for, its length), its
-** thing's words (what: the long task's), its first words told; its end what x, y, d say (lwork's).  Part 12's (the main
+** thing's words (what: the long task's), its first words told; its end what x, y, d say (act.work's).  Part 12's (the main
 ** RAM's room, 2026-11-02: a trace's its own, part 37's) */
 static void __fastcall__ begun (unsigned char k, unsigned char what)
 {
     task (k, k == LT_BATTER ? BLOWS : went);
     HUB->pc_task.what = what;
-    pc_cut = 0;
+    act.cut = 0;
     evb = what;
     event (E_TASK, 0, E_TASK_W1 (TE_BEGUN, k));
 }
@@ -4277,14 +4275,14 @@ void __fastcall__ s_door_work (unsigned char what)
         t = tgx ? tgx : 600;
         task (LT_SEARCH, t);
         busy (t);
-        srch = 1;
+        act.srch = 1;
         return;
     }
     wk.plan = what == PA_DISARM;                /* (Its test, if it's timed work, at its end: work_done's) */
     if (wk.plan && (p = work (what, NO_SQ, NO_SQ, 0), wk.plan = 0, !p)) {
         worked (0);
         if (wk.task) {                          /* (A trap in reach: its mechanism made out, or disarmed) */
-            lwork = what;
+            act.work = what;
             lw_x = NO_SQ;
             begun (wk.task, 0);
         }
@@ -4316,7 +4314,7 @@ void __fastcall__ s_door_work (unsigned char what)
             return;                             /* (The lockpicks, the door's key, got out first, the world's steps: lw_m
                                                 **   again) */
         }
-        lwork = what;                           /* (The timed work: done as its time's up, work_done) */
+        act.work = what;                           /* (The timed work: done as its time's up, work_done) */
         lw_x = px_;
         lw_y = py_;
         lw_d = pd_;
@@ -4398,16 +4396,16 @@ void s_revealed (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The timed work's end, its time up (the main loop's, as the character's free, lwork's): its test made and its
+/* The timed work's end, its time up (the main loop's, as the character's free, act.work's): its test made and its
 ** outcome told now, what it changes changed now (the work's part again, wk.plan 0: no time more but what came of it,
-** a trap's gas); the traces read now; stopped first (pc_cut), nothing.  The long task over: 2 while it's busy still,
+** a trap's gas); the traces read now; stopped first (act.cut), nothing.  The long task over: 2 while it's busy still,
 ** 0 once it's free */
 unsigned char s_work_done (void)
 {
     struct msg m;                               /* (A trace's: on the C stack, the main RAM's room) */
-    unsigned char w = lwork;
+    unsigned char w = act.work;
 
-    lwork = 0;
+    act.work = 0;
     if (w == LW_REACH) {
         if ((w = reach_do (RO_END)) != 3) {     /* (A step of the reach, things.c's part 83) */
             return w;
@@ -4415,7 +4413,7 @@ unsigned char s_work_done (void)
         intent_more (&lw_m);                    /* (Its tool got out: the dig, the lock, asked again) */
         return 2;
     }
-    if (pc_cut) {
+    if (act.cut) {
         goto last;                              /* (Stopped first: no outcome, the stop told) */
     }
     here ();
@@ -4439,7 +4437,7 @@ unsigned char s_work_done (void)
     }
 last:
     if (rs_after_on) {
-        lwork = LW_REACH;                       /* (A tool's use over: put away, the pack back on: things.c's) */
+        act.work = LW_REACH;                       /* (A tool's use over: put away, the pack back on: things.c's) */
         return 2;
     }
     return 0;
@@ -4508,7 +4506,7 @@ static void stepping (void)
     if (HUB->pc_task.asking || (!pc_hit && tsq != HUB->cq.seq && (HUB->ui_keys | HUB->ui_giving) && ui_first ())) {
         return;
     }
-    if ((k == LT_WAIT || k == LT_SLEEP || k == LT_SEARCH || k >= LT_STUDY || lwork) && !HUB->pc_task.mins) {
+    if ((k == LT_WAIT || k == LT_SLEEP || k == LT_SEARCH || k >= LT_STUDY || act.work) && !HUB->pc_task.mins) {
         HUB->pc_task.done = (unsigned) (HUB->now - pt0);    /* (A timed work's its time, a window's climb's; a
                                                 **   long one's minutes the burning's, part 27's, as they go by) */
     }
@@ -4535,20 +4533,19 @@ static void __fastcall__ halt (unsigned char why)
     HUB->pc_ready = HUB->now;
     HUB->pc_task.asking = 0;
     if (why != 0xFF) {
-        take_n = 0;                             /* (Stopped, hard or by the player: what it walked for dropped, a
+        act.take = 0;                             /* (Stopped, hard or by the player: what it walked for dropped, a
                                                 **   thing to take up, a blow's close-in, a gathering) */
-        pfoe = 0;
-        gath = 0;
+        act.foe = 0;
+        act.gath = 0;
         went_cut = move.how == A_WENT_TO;       /* (Not got there: its arrival not told as over to it) */
         event (E_TASK, 0, E_TASK_W1 (why, HUB->pc_task.kind));
         HUB->pc_task.kind = LT_NONE;            /* (Its task over, told: a blow after it no second stop) */
     }
 }
 
-unsigned char pc_cut;                           /* (work.h's) */
 static void __fastcall__ stop (unsigned char why)
 {
-    pc_cut = 1;
+    act.cut = 1;
     if (pon) {
         halt (why);
         return;
@@ -4760,7 +4757,7 @@ void s_step_on (void)
         pc_hit = 0;                             /* (Struck as it closes with its target, beside it: no stop, the
                                                 **   blow back as it arrives) */
         hub_map (0);
-        halt (pfoe && zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y) == 0xFF ? 0xFF : TE_HIT);
+        halt (act.foe && zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y) == 0xFF ? 0xFF : TE_HIT);
         return;
     }
     dens_where ();
@@ -4798,7 +4795,7 @@ void s_step_on (void)
         HUB->pc_y = y;
         HUB->pc_face = h;
         ++pnext;
-        if (!srch) {                            /* (A room searched whole's leg: its bar its whole time, stepping's) */
+        if (!act.srch) {                            /* (A room searched whole's leg: its bar its whole time, stepping's) */
             HUB->pc_task.done = pnext;
         }
         if ((e = quiet_sq (x, y) ? 0 : zone_step (ox, oy, x, y)) != 0) {    /* (HOUSE.md's engagement, part 24's; no one
@@ -4806,7 +4803,7 @@ void s_step_on (void)
             if (e != 0xFF) {
                 evb = e;                        /* (Come into an enemy's zone, or a square on in one: stopped; a
                                                 **   hostile one fought, part 24's fighting on) */
-                fwant |= 1;
+                act.fight |= 1;
             }
             halt (e == 0xFF ? 0xFF : TE_ENGAGED);   /* (0xFF: a close-in beside its target, the blow as it arrives) */
             engaged (0, e);                     /* (Newly engaged by its walk: the engage initiative test, part 25's) */
@@ -4888,7 +4885,7 @@ void __fastcall__ s_task_word (const struct msg* m)
                 pc_blow ();
             }
             if (I_STOP_OVER (*m)) {
-                fwant = 2;
+                act.fight = 2;
             } else {
                 fheld = 0xFF;
             }
@@ -5290,7 +5287,7 @@ static unsigned char __fastcall__ near_foe (unsigned x, unsigned y)
     unsigned ax, ay;
 
     hub_map (0);
-    a = &HUB->actor[(pfoe - 1) & 7];
+    a = &HUB->actor[(act.foe - 1) & 7];
     if (!a->state || a->sn != HUB->pc_stratum) {
         return 0;
     }
@@ -5319,7 +5316,7 @@ unsigned char __fastcall__ s_zone_step (unsigned ox, unsigned oy, unsigned x, un
         }
     }
     hub_map (0);
-    if (pfoe && near_foe (x, y)) {
+    if (act.foe && near_foe (x, y)) {
         return 0xFF;
     }
     if ((e = engager (x, y)) != 0 && e == engager (ox, oy)) {
@@ -5648,7 +5645,7 @@ void __fastcall__ s_close_go (const struct msg* m)
         event (E_TASK, 0, E_TASK_ENGAGED_W1 (TE_ENGAGED, LT_NONE));
         return;
     }
-    pfoe = I_CLOSE_FOE (*m);
+    act.foe = I_CLOSE_FOE (*m);
     paim = I_CLOSE_WALK (*m) ? AIM_NONE : I_CLOSE_AIM (*m);   /* (w1: walked up to, no blow: "go to the rat", the UI's) */
     pstrike = I_CLOSE_STRIKE (*m);
     pshand = I_CLOSE_HAND (*m) ? I_CLOSE_HAND (*m) : shand_of (pstrike);
@@ -5666,7 +5663,7 @@ unsigned char s_close_on (void)
     struct actor* a;
 
     hub_map (0);
-    k = (pfoe - 1) & 7;
+    k = (act.foe - 1) & 7;
     a = &HUB->actor[k];
     px = HUB->pc_x;
     py = HUB->pc_y;
@@ -5675,7 +5672,7 @@ unsigned char s_close_on (void)
         y = a->y;
         if (beside (px, py, x, y)) {
             hub_map (0);
-            pfoe = 0;
+            act.foe = 0;
             if (paim == AIM_NONE) {
                 return 0;                       /* (Gone up to it, no blow) */
             }
@@ -5703,14 +5700,14 @@ unsigned char s_close_on (void)
             go_to (x, y);                       /* (No way at all: told, the walk's words) */
             go_near = 0;
             if (!move.on) {
-                pfoe = 0;
+                act.foe = 0;
             } else if (leg) {
                 move.how = A_WALKED;            /* (Walked on: "You go over to it." told of its first leg alone) */
             }
             return move.on ? 2 : 0;
         }
     }
-    pfoe = 0;
+    act.foe = 0;
     evb = E_TASK_ENGAGED_B (k + 1, 0, 0);
     event (E_TASK, 0, E_TASK_ENGAGED_W1 (TE_FAR, LT_NONE));
     return 0;
@@ -5720,7 +5717,7 @@ unsigned char s_close_on (void)
 ** target as you can, without actively having to say "attack" each time"): a long task of its own (LT_FIGHT, the
 ** hub's pc_task: its foe the target plus 1, its done the blows struck), begun as the character attacks (I_ATTACK, a
 ** close-in come beside its target) and as a hostile enemy engages it (one striking at it, or one whose zone stops
-** its walk: fwant, looked at as it's free; not one that isn't hostile, a wary rat keeping its distance; not while
+** its walk: act.fight, looked at as it's free; not one that isn't hostile, a wary rat keeping its distance; not while
 ** it's senseless, but as it comes round, if it's engaged still).  As it's free, a blow at its target with what it
 ** holds, while the target's within reach and able; its target beaten (dead, senseless, out of reach), the next
 ** enemy engaging it, turned to (fight_foe: the one that struck at it last, else the first); none, the task over,
@@ -5813,7 +5810,7 @@ static void __fastcall__ fight_begin (unsigned char k)
     HUB->pc_task.foe = k & 0x0F;
     fhurt = HUB->pcsum.health;
     fsaid = 0;
-    pc_cut = 0;
+    act.cut = 0;
     evb = k;
     event (E_TASK, 0, E_TASK_ENGAGED_W1 (TE_FIGHT, LT_FIGHT));
 }
@@ -5826,7 +5823,7 @@ static void __fastcall__ fight_blow (unsigned char k)
 {
     if (!pshoot && swatted (k)) {               /* (Its target changed as it fought, struck with a soft thing: one
                                                 **   attempt, the fight over) */
-        pc_cut = 1;
+        act.cut = 1;
         return;
     }
     busy (HUB->round);
@@ -5854,7 +5851,7 @@ void __fastcall__ s_fight_go (const struct msg* m)
     HUB->pc_aim = I_ATTACK_AIM (*m) & ~AIM_SHOT;
     pshoot = (I_ATTACK_AIM (*m) & AIM_SHOT) != 0;   /* (A shot or a throw: part 65's, fought on as a blow is) */
     fheld = 0;
-    if (HUB->pc_task.kind == LT_FIGHT && !pc_cut) {
+    if (HUB->pc_task.kind == LT_FIGHT && !act.cut) {
         HUB->pc_task.foe = I_ATTACK_FOE (*m);
         fsaid = 1;
         return;
@@ -5866,13 +5863,13 @@ void __fastcall__ s_fight_go (const struct msg* m)
     fight_blow (I_ATTACK_FOE (*m));
 }
 
-#define FW_RUN          0x80                    /* (fwant's: a flight's run on, as it's free: disengage_go's) */
+#define FW_RUN          0x80                    /* (act.fight's: a flight's run on, as it's free: disengage_go's) */
 static unsigned char fleeh;                     /* (Its way) */
 
 /* Fighting on as the character's free (the main loop's, while its long task's LT_FIGHT, or as an enemy may engage it,
-** fwant; idle 1, it wasn't busy: the UI at its prompt): fighting, a blow at its target if it's within reach and able
+** act.fight; idle 1, it wasn't busy: the UI at its prompt): fighting, a blow at its target if it's within reach and able
 ** (or the player's own, at one within reach), else at the next foe, turned to; none, the fight over, told.  Not
-** fighting, a hostile engaging it begins it, told (after a command that took a fight over, fwant 2, turned to).
+** fighting, a hostile engaging it begins it, told (after a command that took a fight over, act.fight 2, turned to).
 ** 2 if it's striking (or asking), 0 if it's done (E_READY), 3 if it was idle and still is */
 unsigned char __fastcall__ s_fight_on (unsigned char idle)
 {
@@ -5884,7 +5881,7 @@ unsigned char __fastcall__ s_fight_on (unsigned char idle)
     }
     hub_map (0);
     if (HUB->pc_task.kind == LT_FIGHT) {
-        if (pc_cut) {
+        if (act.cut) {
             goto over;                          /* (Stopped, the player's or a command's: its round out, told as it
                                                 **   stopped) */
         }
@@ -5921,7 +5918,7 @@ over:
                     event (E_TASK, 0, E_TASK_NOFOE_W1 (LT_FIGHT));
                 }
                 HUB->pc_task.foe = 0;
-                fwant = 0;
+                act.fight = 0;
                 return 0;
             }
             evb = E_TASK_ENGAGED_B (k, 0, 1);
@@ -5954,16 +5951,16 @@ over:
         fight_blow (k);                         /* (A missile weapon's, to come: its next missile taken first) */
         return 2;
     }
-    if (fwant & FW_RUN) {                       /* (A flight disengaged, free of them: a run on that way, part 26's) */
-        fwant &= ~FW_RUN;
+    if (act.fight & FW_RUN) {                       /* (A flight disengaged, free of them: a run on that way, part 26's) */
+        act.fight &= ~FW_RUN;
         if (!engager (HUB->pc_x, HUB->pc_y) && flee_on ()) {
             return 2;
         }
     }
-    if (!((h = fwant) & 1) && idle) {
+    if (!((h = act.fight) & 1) && idle) {
         return 3;
     }
-    fwant = 0;
+    act.fight = 0;
     pshoot = 0;
     if (!(k = fight_foe ()) && HUB->pc_auto && (k = pc_shot (PS_AUTO)) != 0) {
         pshoot = 1;                             /* (None beside it, its auto-target range set: a hostile within it
@@ -6007,7 +6004,7 @@ unsigned char __fastcall__ s_engaged (unsigned char eng, unsigned char def)
     unsigned char k, f, z;
 
     if (def == 0xFF) {
-        def = pfoe;
+        def = act.foe;
     }
     if (def & TE_STILL) {
         return 0;
@@ -6035,7 +6032,7 @@ unsigned char __fastcall__ s_engaged (unsigned char eng, unsigned char def)
     }
     if (def) {
         if ((f = den_first (k, HUB->actor[k].attitude > AT_HOSTILE)) == 2) {
-            pfoe = 0;                           /* (Backed away: a close-in on it given up, the player's to say
+            act.foe = 0;                           /* (Backed away: a close-in on it given up, the player's to say
                                                 **   what next) */
             evb = def;
             event (E_TASK, 0, E_TASK_ENGAGED_W1 (TE_AWAY, LT_NONE));
@@ -6053,7 +6050,7 @@ unsigned char __fastcall__ s_engaged (unsigned char eng, unsigned char def)
     HUB->pc_foe = f;
     HUB->pc_aim = z;
     pc_hit = 1;
-    fwant |= 1;                                 /* (And fought on, a hostile one: part 24's) */
+    act.fight |= 1;                                 /* (And fought on, a hostile one: part 24's) */
     return 1;
 }
 
@@ -6106,7 +6103,7 @@ unsigned char __fastcall__ s_fumble_try (unsigned char k)
 ** ledge, a denizen stops it; another enemy's zone, step_on's), with no blow that round; the only way an engaged one
 ** moves.  The way the player's, else away from the foe engaging it (the nearest way open to that: straight away, half
 ** left or right, then aside; a passage's four alone).  A flight the same, then, free of them, a run on that way
-** (fight_on's, FW_RUN); not engaged, a run from the nearest foe near.  Engaged still after it, fought on (fwant's) */
+** (fight_on's, FW_RUN); not engaged, a run from the nearest foe near.  Engaged still after it, fought on (act.fight's) */
 
 /* The nearest foe within a dozen squares of the character (hostile or unfriendly, on its feet), plus 1; or 0 */
 static unsigned char near_foe12 (void)
@@ -6158,7 +6155,7 @@ unsigned char s_flee_on (void)
     if (!open_to (fleeh)) {
         return 0;                               /* (Cornered: the disengage enough) */
     }
-    fwant = 0;
+    act.fight = 0;
     runs = GA_RUN;
     step_to (fleeh, 250, 0);
     runs = 0;
@@ -6180,7 +6177,7 @@ void __fastcall__ s_disengage_go (const struct msg* m)
     f = I_DISENGAGE_FLIGHT (*m) != 0;
     e = zone_step (x, y, x, y);                 /* (The enemy engaging it, part 24's: a close-in's target beside it,
                                                 **   that one) */
-    if (!(e = e == 0xFF ? pfoe : e & 0x3F)) {
+    if (!(e = e == 0xFF ? act.foe : e & 0x3F)) {
         if (!f || !(e = near_foe12 ())) {
             evb = f;                            /* (Not engaged; or a flight with none near to flee) */
             event (E_TASK, 0, E_TASK_FREE_W1 (LT_NONE));
@@ -6207,7 +6204,7 @@ void __fastcall__ s_disengage_go (const struct msg* m)
     evb = E_TASK_BREAK_B (e);
     event (E_TASK, 0, E_TASK_BREAK_W1 (f));
     fleeh = h;
-    fwant |= f == 1 ? FW_RUN | 1 : 1;           /* (Free of them, a flight's run on: fight_on's; engaged still,
+    act.fight |= f == 1 ? FW_RUN | 1 : 1;           /* (Free of them, a flight's run on: fight_on's; engaged still,
                                                 **   fought on) */
     runs = f == 2 ? GA_RUN : 0;
     step_to (h, n, !f);                         /* (Backing away facing the foe; a flight turned to run) */
@@ -6719,13 +6716,13 @@ void __fastcall__ s_intent_more (struct msg* m)
             busy (I_TRACE_TENTHS (*m) ? I_TRACE_TENTHS (*m) : k == TRC_SMELL ? 30 : 600);   /* (A track's minute, a sniff's three seconds: a
                                                 **   timed work, its test, the reading, at its end: work_done's;
                                                 **   too dark to see the floor, no nose, told at once) */
-            lwork = LW_TRACE;
+            act.work = LW_TRACE;
             lw_x = I_TRACE_FORM (*m);
             lw_y = I_TRACE_TENTHS (*m);
             k = k == TRC_SMELL ? LT_SNIFF : LT_TRACK;   /* (Begun, as part 12's begun: its first words told) */
             task (k, went);
             HUB->pc_task.what = 0;
-            pc_cut = 0;
+            act.cut = 0;
             evb = 0;
             event (E_TASK, 0, E_TASK_W1 (TE_BEGUN, k));
             break;
@@ -6957,7 +6954,7 @@ unsigned char __fastcall__ quiet_sq (unsigned x, unsigned y)
 {
     unsigned char k, *p;
 
-    if (near_sq (x, y) || pfeel || pfoe || HUB->pc_wet || HUB->pc_air) {
+    if (near_sq (x, y) || pfeel || act.foe || HUB->pc_wet || HUB->pc_air) {
         return 0;
     }
     k = (p = at (sn_, x, y)) != 0 && TILE (*p) != T_RUBBLE && !C->wany && !C->air;
@@ -7058,6 +7055,32 @@ static unsigned char den_held (void)
         dst = 2;
     }
     return dst == 1;
+}
+
+/* What's queued after the character's long task (activity.h's), the next popped as it's free, in its order: a thing
+** walked over to, taken up, or walked on to; a gathering's next, part 66's; a blow's close-in: struck, or walked on; a
+** search's end, a room's next stop; a timed work's end (a step of the reach's); a journey's next leg, or its end, part
+** 54's.  What its handler says (2 busy still, 1 looked at, 0 free; batter_on's, fight_on's after it); 0 none queued */
+static unsigned char gath_on (void)
+{
+    return gath_op (GO_ON, 0);
+}
+
+static unsigned char (* const next_[ACT_NEXT]) (void) = { gath_on, close_on, searched, work_done, travel_on };
+
+static unsigned char act_next (void)
+{
+    register unsigned char i;
+
+    if (act.take) {
+        return take_up ();
+    }
+    for (i = 0; i < ACT_NEXT; ++i) {
+        if ((&act.gath)[i]) {
+            return next_[i] ();
+        }
+    }
+    return 0;
 }
 
 int main (int argc, char* argv[])
@@ -7178,21 +7201,17 @@ int main (int argc, char* argv[])
         if (move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
             arrive ();
         }
-        if ((was_busy || (fwant & 1)) && !move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
+        if ((was_busy || (act.fight & 1)) && !move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
             if (pc_waited) {
                 pc_waited = 0;
                 tsense ();                      /* (Its time believed: woken, part 76's, before it's free) */
                 ask_look (LK_EYES);             /* (A wait's end: its eyes, as time's gone, the senses') */
             }
-            took = take_n ? take_up () : gath ? gath_op (GO_ON, 0) : pfoe ? close_on () : srch ? searched () : lwork ?
-                work_done () : trav ? travel_on () : 0;     /* (A thing walked over to: taken up, or walked on to; a
-                                                **   gathering's next, part 66's; a blow's
-                                                **   close-in: struck, or walked on; a timed work's end; a journey's
-                                                **   next leg, or its end, part 54's) */
+            took = act_next ();                 /* (What's queued after its long task, the next popped) */
             if (!took && HUB->pc_task.kind == LT_BATTER) {
                 took = batter_on ();            /* (A battering's next blow, or what came of it told) */
             }
-            if (!took && (HUB->pc_task.kind == LT_FIGHT || fwant)) {
+            if (!took && (HUB->pc_task.kind == LT_FIGHT || act.fight)) {
                 took = fight_on (!was_busy);    /* (Fighting on's next blow, or begun: part 24's; 3, idle still) */
             }
             if (took == 1) {
@@ -7203,7 +7222,7 @@ int main (int argc, char* argv[])
                     turn ();                    /* (The turns pace: the denizens' turn at what's told first, as its
                                                 **   line may come at once: a line typed fast finding them where a slow
                                                 **   one doesn't, 2026-11-04, the life soak's) */
-                    if ((fwant & 1) || HUB->pc_ready > HUB->now) {
+                    if ((act.fight & 1) || HUB->pc_ready > HUB->now) {
                         was_busy = 1;           /* (Struck in it: not free yet, fought on or not, then told) */
                         continue;
                     }
@@ -7866,10 +7885,10 @@ void __fastcall__ s_hid_op (unsigned char op)
                 hub_map (0);
                 if (c == HW_BARE && (h_here () & 7)) {
                     busy (HIDE_T);              /* (Begun, as part 12's begun: its first words told) */
-                    lwork = LW_HIDE;
+                    act.work = LW_HIDE;
                     task (LT_HIDE, went);
                     HUB->pc_task.what = 0;
-                    pc_cut = 0;
+                    act.cut = 0;
                     evb = 0;
                     event (E_TASK, 0, E_TASK_W1 (TE_BEGUN, LT_HIDE));
                     return;

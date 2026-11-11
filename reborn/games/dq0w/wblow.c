@@ -11,7 +11,7 @@
 ** broken glass is left in shards at the character's feet; a door's trap set off as it gives way.  A long task
 ** (HOUSE.md's: a battering, LT_BATTER, its bar the blows struck): begun by work (), then a blow at a time as the
 ** character's free (dq0w.c's batter_on), the harm kept as each lands, what came of them told as they end; stopped,
-** hard or by the player (pc_cut), the harm done so far stays.  Told as it goes (the user's, 2026-10-22: its first
+** hard or by the player (act.cut), the harm done so far stays.  Told as it goes (the user's, 2026-10-22: its first
 ** words dq0w.c's, as it's begun): the first blow that marks it, the one that leaves it giving, every fourth else
 ** (E_BEAT); a bare part's first blow that would hurt it stopped short of it, asked (RS_SHORT, the referee's: "Keep at
 ** it?"), once a door.  A soft thing named that strikes (dq0w.c's door_work: the house's, rshouse.h's) one attempt, no
@@ -58,7 +58,7 @@ static unsigned char __fastcall__ batter (unsigned char mat, unsigned char body)
 
     hub_map (0);
     n = (unsigned char) HUB->pc_task.done;
-    if (n >= BLOWS || pc_cut || (wk.hw & E_STOPPED) || (n >= 4 && h == wk.was)) {
+    if (n >= BLOWS || act.cut || (wk.hw & E_STOPPED) || (n >= 4 && h == wk.was)) {
         return 0;
     }
     HUB->pc_task.done = n + 1;
@@ -184,7 +184,7 @@ void s_blows (void)
         if (wk.what < W_BLOW) {                 /* (Begun: the blows as it's free, a long task, dq0w.c's) */
             wk.was = h;
             wk.what = W_BLOW;
-            pc_cut = 0;
+            act.cut = 0;
             return;
         }
         if (batter (mat, body)) {

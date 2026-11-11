@@ -42,7 +42,6 @@
 #pragma local-strings (on)
 
 unsigned char pshoot;                           /* (The character's fight a missile's: part 24's, I_ATTACK's AIM_SHOT) */
-unsigned char gath;                             /* (A gathering under way: the main loop's, gather_on) */
 extern const unsigned char throws[];            /* (kinds.c's, the catalogue's bank's) */
 unsigned char __fastcall__ on_pc (unsigned i);  /* (Part 10's) */
 unsigned __fastcall__ bulk_in (unsigned x);     /* (Part 10's: what's in x, its bulk) */
@@ -406,10 +405,10 @@ static unsigned char __fastcall__ into_carrier (unsigned n)
 ** within GATHER_D squares, of the family said (FM_*, 0 any), each walked over to and taken up in turn (as a thing
 ** taken up is, things.c's carry: put back in the quiver by the player, "put the arrows in the quiver"), the
 ** nearest first, a lot it can't get to passed by (two at most); none left, told how many (TE_GATHERED, the last's kind
-** times 256, b the count).  As it's free (the main loop's, gath): 2 walking or taking up, 0 done.  Its state the main
+** times 256, b the count).  As it's free (the main loop's, act.gath): 2 walking or taking up, 0 done.  Its state the main
 ** RAM's (kept through the parts it calls) */
 #define GATHER_D        12
-static unsigned char gcount, glast;          /* (gath: the family, FM_*, plus 0x80) */
+static unsigned char gcount, glast;          /* (act.gath: the family, FM_*, plus 0x80) */
 static unsigned char gat;                       /* (Where it was as it last set out, a hash) */
 static unsigned gtried[1];                      /* (The lot passed by) */
 
@@ -425,7 +424,7 @@ static unsigned char gather_on (void)
     for (i = 0; (i = items (i, IN_SQUARE, 0)) != 0; ) {
         x = ip->x;
         y = ip->y;
-        if (ip->sn != sn || (ip->flags & (I_KNOWN | I_HIDDEN)) != I_KNOWN || !missile (ip->kind, gath & 0x7F) ||
+        if (ip->sn != sn || (ip->flags & (I_KNOWN | I_HIDDEN)) != I_KNOWN || !missile (ip->kind, act.gath & 0x7F) ||
             i == gtried[0] ||
             (unsigned) (x - px + GATHER_D) > 2 * GATHER_D || (unsigned) (y - py + GATHER_D) > 2 * GATHER_D) {
             continue;
@@ -438,7 +437,7 @@ static unsigned char gather_on (void)
     }
     hub_map (0);
     if (!n) {
-        gath = 0;
+        act.gath = 0;
         told (TE_GATHERED | (unsigned) glast << 8, gcount);
         return 0;
     }
@@ -475,7 +474,7 @@ unsigned __fastcall__ s_gath_op (unsigned char op, unsigned char a)
     gcount = glast = 0;
     gat = 0xFF;
     memset (gtried, 0, sizeof gtried);
-    gath = a | 0x80;
+    act.gath = a | 0x80;
     return 0;
 }
 

@@ -50,7 +50,7 @@ static unsigned char rs_end (void)
 {
     hub_map (0);
     HUB->watch = (HUB->watch & ~WA_TRAPS) | rs_watch;
-    srch = 0;
+    act.srch = 0;
     return 0;
 }
 
@@ -236,11 +236,11 @@ unsigned char __fastcall__ s_room_on (unsigned char go)
         rs_watch = HUB->watch & WA_TRAPS;
         HUB->watch |= WA_TRAPS;                 /* (A slow walk at most; a trap underfoot at a search's chance: paced's,
                                                 **   the referee's) */
-        srch = 2;
+        act.srch = 2;
         rs_on = RP_WALK;
         rs_side = 0xFF;
         rs_item = 0;
-        pc_cut = 0;
+        act.cut = 0;
         task (LT_SEARCH, 0xFFFF);
         busy (0);
         rs_say (rs_k ? RSW_GOES_ON : RSW_BEGUN, touch, 0, 0);
@@ -261,7 +261,7 @@ unsigned char __fastcall__ s_room_on (unsigned char go)
         }
         hub_map (0);
     }
-    if (pc_cut || HUB->pc_task.kind != LT_SEARCH) {
+    if (act.cut || HUB->pc_task.kind != LT_SEARCH) {
         return rs_end ();                       /* (Stopped: told.  Its stops done are kept already) */
     }
     if (blocked || (rs_on == RP_TRAP && !(wk.m.kind == E_TRAP && wk.m.w1 >> 8 == TO_NOTICED))) {

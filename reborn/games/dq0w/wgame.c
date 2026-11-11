@@ -32,7 +32,6 @@ extern unsigned handled;                        /* (things.c's: the thing a requ
 
 #pragma local-strings (on)
 
-unsigned take_n;                                /* (things.h's: I_TAKE's thing, its item; 0 none) */
 static unsigned take_x, take_y;                 /*   its square, */
 static unsigned take_fx, take_fy;               /*   and where the walk to it began */
 static unsigned char tk_hand;                   /* (carry's: 2 a hand first, said if it goes in the pack; 0 "take all"'s, the pack first) */
@@ -241,7 +240,7 @@ unsigned char s_puzzle (void)
 ** on to it (nearer than it was: a denizen moved out of its way, the walk cut short) */
 unsigned char s_take_up (void)
 {
-    unsigned n = take_n;
+    unsigned n = act.take;
     unsigned char r, was, k, w;
     const struct item* p;
 
@@ -260,7 +259,7 @@ unsigned char s_take_up (void)
                 return 2;
             }
         }
-        take_n = 0;
+        act.take = 0;
         return 0;
     }
     hub_map (0);
@@ -297,14 +296,14 @@ unsigned char s_take_up (void)
         if (rs_st) {
             r = rs_st == 2 ? IR_FUMBLED : IR_FIXED;
             rs_st = 0;
-            lwork = 0;
+            act.work = 0;
         }
         if (r == IR_OK) {
             reach_done (0);                     /* (Its reach owed, things.c's: the UI's wait for it after) */
         }
         light_now ();                           /* (Its light: what it holds lit) */
     }
-    take_n = 0;
+    act.take = 0;
     hub_map (0);
     wk.m.kind = E_TAKEN;                        /* (Told: the work's event record) */
     wk.m.a = 0;
@@ -323,7 +322,7 @@ void __fastcall__ s_take_go (const struct msg* m)
         return;
     }
     take_only = I_TAKE_ALONE (*m);
-    take_n = I_TAKE_THING (*m) ? (unsigned) I_TAKE_THING (*m) : 1;   /* (Walked over to alone: its square's, perhaps no thing's) */
+    act.take = I_TAKE_THING (*m) ? (unsigned) I_TAKE_THING (*m) : 1;   /* (Walked over to alone: its square's, perhaps no thing's) */
     take_x = I_TAKE_X (*m);
     take_y = I_TAKE_Y (*m);
     hub_map (0);
