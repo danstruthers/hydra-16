@@ -92,6 +92,10 @@ function createVia(env) {
     return n;
   };
   v.reset = () => { r.fill(0); v.ifr = 0; v.ier = 0; v.t1On = false; v.t2On = false; v.srLeft = -1; portB(); };   // (Port B: all inputs)
+  // Its state, and put back (machine.js's snapshot): the registers, the timers, CA1's level (what's on its ports, theirs)
+  const F = ['t1', 't1Latch', 't1On', 'ifr', 'ier', 't2', 't2LatchL', 't2On', 'srLeft'];
+  v.state = () => { const s = { r: r.slice(), ca1Level }; for (const k of F) s[k] = v[k]; return s; };
+  v.restore = s => { r.set(s.r); for (const k of F) v[k] = s[k]; ca1Level = s.ca1Level; };
   return v;
 }
 

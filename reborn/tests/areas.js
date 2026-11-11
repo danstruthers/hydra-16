@@ -73,6 +73,7 @@ const rules = [
   // The emulator and its tools: the dq0 tests' watchers, the PC tool's, the danlang emulator (--dl's)
   ['reborn/sim/lib/dq0meaning.js', ['dq0']],
   ['reborn/sim/lib/hubown.js', ['dq0']],
+  ['reborn/sim/lib/scenes.js', ['dq0']],                     // (The dq0 tests' scenes: theirs alone)
   ['reborn/sim/lib/pchost.js', ['pc', 'word:pcHost']],
   ['reborn/sim/lib/pcproto.js', ['pc', 'word:pcHost']],
   ['reborn/sim/lib/xmpeer.js', ['word:createXmodemPeer']],

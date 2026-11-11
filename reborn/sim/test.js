@@ -31,6 +31,7 @@ const romfs = require('../tools/romfs.js');
 const { readManifest, hwtest } = require('../build.js');
 const { tests, files: testFiles, helpers: testHelpers, IRQ_OFF_MAX, dq0Check } = require('../tests/tests.js');
 const hubown = require('./lib/hubown.js');
+const scenes = require('./lib/scenes.js');
 const dq0meaning = require('./lib/dq0meaning.js');
 
 const ROOT = path.join(__dirname, '..');
@@ -96,9 +97,11 @@ const hubDir = path.join(ROOT, 'obj', 'hubown');
 function instrument(t) {
   if (!/^dq0/.test(t.name)) return null;
   const r = dq0meaning.createRecorder(), on = mm => { r.attach(mm); mm.dq0 = r; };   // (What happened: m.dq0, tests.js's dq0Turns)
-  if (HUBOWN === '0') return { boot: { sharedWrite: r.hook }, attach: on, judge: m => ({ failures: dq0Check(t.name, m), notes: [] }) };
+  if (HUBOWN === '0') return { boot: { sharedWrite: r.hook }, attach: on, judge: m => ({ failures: dq0Check(t.name, m), notes: [] }),
+    state: () => ({ r: r.state() }), restore: s => r.restore(s.r) };   // (A scene's: sim/lib/scenes.js)
   const M = hubown.map(), c = hubown.createCheck(M);
-  return { boot: { sharedWrite: (k, o, v, T, pc, W) => { c.hook(k, o, v, T, pc, W); r.hook(k, o, v); } }, attach: mm => { c.attach(mm); on(mm); }, judge: m => {
+  return { boot: { sharedWrite: (k, o, v, T, pc, W) => { c.hook(k, o, v, T, pc, W); r.hook(k, o, v); } }, attach: mm => { c.attach(mm); on(mm); },
+    state: () => ({ r: r.state(), c: c.state() }), restore: s => { r.restore(s.r); c.restore(s.c); }, judge: m => {
     const r = c.result(), { known, fresh } = hubown.judge(r), notes = [], failures = [...fresh.map(e => 'hub: ' + hubown.line(e)), ...dq0Check(t.name, m)];
     try { fs.mkdirSync(hubDir, { recursive: true }); fs.writeFileSync(path.join(hubDir, t.name + '.json'), JSON.stringify(r)); } catch (e) { /* (No summary) */ }
     if (!r.found) return { failures, notes: ['hub writers: no hub made'] };
@@ -262,6 +265,7 @@ function meaningOf(list) {
 }
 
 runner.setup({ root: ROOT, tests, IRQ_OFF_MAX, image, pcFolder, self: __filename, instrument, summary,
+  scenes: (t, tm, prom, opt) => scenes.of(t, tm, prom, opt, images.bios(ROOT, images.built(ROOT)), images.built(ROOT)),
   build: () => require('../build.js').buildBoth({ quiet: true }),
   runDl: (...a) => require('./dl/bridge.js').runDl(...a),
   areas: require('../tests/areas.js'), ref: 'reborn-game', restrict: meaningOf,

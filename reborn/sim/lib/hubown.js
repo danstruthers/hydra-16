@@ -169,7 +169,14 @@ function createCheck(M) {
     }).sort((x, y) => x.line - y.line || x.region.localeCompare(y.region, undefined, { numeric: true }) || x.writer.localeCompare(y.writer));
     return { writes, found: key0 >= 0, regions, stray: [...stray.values()] };
   }
-  return { hook, attach: mm => { m = mm; }, result };
+  // (Its state, and put back: a test scene's, sim/lib/scenes.js)
+  const state = () => ({ key0, dirty, writes, roles: Array.from(roles), names: names.slice(), viol: [...viol], stray: [...stray] });
+  const restore = s => {
+    key0 = s.key0; dirty = s.dirty; writes = s.writes; roles.set(s.roles); names.splice(0, names.length, ...s.names);
+    viol.clear(); for (const [k, v] of s.viol) viol.set(k, v);
+    stray.clear(); for (const [k, v] of s.stray) stray.set(k, v);
+  };
+  return { hook, attach: mm => { m = mm; }, result, state, restore };
 }
 
 // The known violations not to fail a test (the table's: region and writer, by its line) and the new ones.  OUT:

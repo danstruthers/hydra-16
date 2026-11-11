@@ -392,7 +392,14 @@ function createRecorder() {
       return read(r, t);
     };
   }
-  return { hook, attach, games, lines, final: snap, layout: () => layout(), bank };   // (bank: one of the hub's, a tool's)
+  // (Its state, and put back: a test scene's, sim/lib/scenes.js; games and lines kept the same arrays)
+  const state = () => ({ key0, enters, typed, game: game ? games.indexOf(game) : -1, games, lines });
+  const restore = s => {
+    key0 = s.key0; enters = s.enters; typed = s.typed;
+    games.splice(0, games.length, ...s.games); lines.splice(0, lines.length, ...s.lines);
+    game = s.game >= 0 ? games[s.game] : null;
+  };
+  return { hook, attach, games, lines, final: snap, layout: () => layout(), bank, state, restore };   // (bank: one of the hub's, a tool's)
 }
 
 module.exports = { createRecorder, layout, constants };

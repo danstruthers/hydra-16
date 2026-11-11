@@ -622,6 +622,7 @@ module.exports = {
       };
     })(),
     {
+      scene: false,   // (Its watchers keep the looks' replies from the game's first: none taken up, sim/lib/scenes.js)
       name: 'dq0looks', what: 'Dingus Quest Zero\'s looks the same as they were (the look quickened, reborn-game-look: its grid kept and moved, its marks put only where they reach, the store gone through once): eight games at the turns pace (seeds 3, 5, 7, 12, 4, 517: turns, steps, walks, a walk\'s chosen door, a stairway down, a torch put out and lit again, one put down and taken up, a portcullis lowered and raised, a window broken (punched bare-handed, as the old code\'s run struck it: the torch in hand would strike it now, the user\'s, 2026-10-22) and climbed through, a weak-eyed character; each dungeon dry, dq0 -W: the looks before the water, slice 4.9\'s), every reply the senses give (a look\'s, the denizens\' senses\') with the same request, the same record of what the character perceives and the same squares seen and visible in every live chunk as tests/dq0/looks.ref, the old code\'s (DQ0LOOKS=write: written afresh from this run)',
       init: 't_rc', cycles: 3000e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm\rācp /ram/c.hm /ram/w.hm\rāecho att eye 4 >> /ram/w.hm\r' +

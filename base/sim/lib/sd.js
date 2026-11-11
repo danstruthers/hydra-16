@@ -106,6 +106,27 @@ function createSpi(devices, echoes = []) {
       clk = c;
     },
     miso: () => (sel ? sel.miso : 1),
+    // Its state, and put back (machine.js's snapshot): the select, SCLK, each card's transfer and its blocks (its block
+    // device's state() and restore(s): none, and there's no state)
+    state() {
+      if (cards.some(c => c && !c.echo && !(c.store.state && c.store.restore))) return null;
+      return { sel: sel ? sel.dev : -1, clk, cards: cards.map(c => {
+        if (!c) return null;
+        const s = {};
+        for (const k of Object.keys(c)) if (k !== 'store') s[k] = Array.isArray(c[k]) ? c[k].slice() : c[k] && typeof c[k] === 'object' ? { at: c[k].at, data: c[k].data.slice() } : c[k];
+        if (c.store) s.store = c.store.state();
+        return s;
+      }) };
+    },
+    restore(s) {
+      s.cards.forEach((x, dev) => {
+        const c = cards[dev];
+        if (!x || !c) return;
+        for (const k of Object.keys(x)) if (k !== 'store') c[k] = Array.isArray(x[k]) ? x[k].slice() : x[k] && typeof x[k] === 'object' ? { at: x[k].at, data: x[k].data.slice() } : x[k];
+        if (x.store) c.store.restore(x.store);
+      });
+      sel = s.sel >= 0 ? cards[s.sel] : null; clk = s.clk;
+    },
   };
 }
 

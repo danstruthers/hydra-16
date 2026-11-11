@@ -156,6 +156,11 @@ function createAcia(env) {
   a.type = key => a.rxQueue.push(key);                        // A key typed (interactive)
   a.send = bytes => { if (!a.pcQueue.length) a.pcDelay = a.charCycles(); a.pcQueue.push(...bytes); };   // The PC's own bytes
   a.reset = () => { a.cmd = 0; a.ctrl = 0; a.tdre = 1; a.txTimer = 0; a.txHold = null; a.irq = 0; a.rdrf = 0; a.ovr = 0; };
+  // Its state, and put back (machine.js's snapshot): its fields but its ways (and the ways put in their places, a test's
+  // watch on what's read), and the escape sequence it's in
+  const copy = v => Array.isArray(v) ? v.slice() : v && typeof v === 'object' ? Object.assign({}, v) : v;
+  a.state = () => { const s = { esc }; for (const k of Object.keys(a)) if (typeof a[k] !== 'function') s[k] = copy(a[k]); return s; };
+  a.restore = s => { for (const k of Object.keys(s)) if (k !== 'esc') a[k] = copy(s[k]); esc = s.esc; };
   return a;
 }
 

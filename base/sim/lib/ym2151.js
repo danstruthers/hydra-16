@@ -65,6 +65,10 @@ function createYm(env) {
     if (y.resetAt >= 0) n = Math.min(n, Math.max(1, y.resetAt - devCyc));
     return n;
   };
+  // Its state, and put back (machine.js's snapshot): not while it's sounding (opm.js's: none then)
+  y.state = () => opm ? null : { regs: y.regs.slice(), reg: y.reg, busyUntil: y.busyUntil, lost: y.lost, status: y.status, aNext: y.aNext, bNext: y.bNext,
+    keyOns: y.keyOns.slice(), writes: y.writes.map(w => w.slice()), resetAt: y.resetAt, resetMask: y.resetMask };
+  y.restore = s => { Object.assign(y, s, { regs: y.regs, keyOns: s.keyOns.slice(), writes: s.writes.map(w => w.slice()) }); y.regs.set(s.regs); };
   y.reset = () => { y.busyUntil = 0; y.regs.fill(0); y.status = 0; y.aNext = -1; y.bNext = -1; y.resetAt = -1; y.resetMask = 0; if (opm) opm.reset(); };
   return y;
 }

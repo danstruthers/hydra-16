@@ -1745,6 +1745,7 @@ module.exports = {
       sdcard: true
     },
     {
+      scene: false,   // (Its watchers count the loads as the game begins: none taken up, sim/lib/scenes.js)
       name: 'dq0layers', meaning: true, what: 'Dingus Quest Zero\'s dungeon made from its history (Phase 3D, games/dq0/HISTORY.md; D12, the user\'s: "A temple could sit over the ruin of an older keep, say.  I just want the things on the same strata to make sense"): at seed 70018 (a region of its own, themegen\'s) the top stratum the tombs the hill-men built, fallen in, and the temple the sun-priests made of them after (its layers: built, ruined, reused): by the way in (those who came after came in that way) the chunks the maker made the temple\'s (a kitchen or a pantry among them, no main room a crypt), and by the way down (dq0 -T, the far side) the old tombs\' (each main room a crypt, no kitchen nor pantry); stratagen (bank/stratagen, a bank program: a stratum\'s layers chunk by chunk) loaded by themegen (its checker) and by the maker, once for all the maker\'s chunks, and with dq0 -C (the bank programs given up after each request) again and again; then at seed 70008 a keep the conquerors made of an older temple: in a guardroom of the keep\'s by the way in, the temple\'s chapel\'s candle stubs (the older layer\'s mark: a guardroom\'s own use leaves none)',
       init: 't_rc', cycles: 1300e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 70018 -c /ram/c.hm', 'quit',

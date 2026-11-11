@@ -45,6 +45,22 @@ With RULES=NAME and no tests named, the runner still takes only the meaning chec
 
 After a run, `obj/testtimes.json` has each test's wall time and cycles.
 
+## Scenes: a dq0 test taken up after its start
+
+Most dq0 tests boot, make a character and wait while the game grows its first dungeon (some 250M cycles, several
+seconds) before their first command. `sim/lib/scenes.js` saves the whole machine at two points of a test's input, the
+prompt waits just before and just after its first `dq0` line, in `obj/scenes`, and the next test whose input is the
+same up to there is taken up from it instead (its watchers given what the serial port gave before it). A scene's key
+is that input and the ROM's, the BIOS's and the SD card's images (their sha1), the seed, the chip, the modules, the
+core, `HUBOWN`, and the emulator's and the runner's sources: a rebuild makes new ones. A test with `start(m)` saves
+its own (its suite's sources in the key). A test with budgets, `send`, a `/pc`, a machine of its own but the input and
+the SD card, or `scene: false`, is never taken up.
+
+- `SCENES=0`: none (every test from its start, as before). `SCENES=fresh`: none taken up, each saved anew.
+- `SCENES_TRACE=DIR`: each dq0 test's cycles, output hash, failures and notes in `DIR/NAME.json`, to hold a run with
+  scenes to one without (a test taken up must end exactly as it does from its start: the same cycles, the same
+  output; one that doesn't is `scene: false`).
+
 ## The machine's memory: `HYDRA_MODULES`
 
 Each test's machine has three RAM modules (48 banks, 384K a task), as the user's board has (`DEFAULT_MODULES` in

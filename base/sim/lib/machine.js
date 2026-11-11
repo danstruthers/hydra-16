@@ -563,7 +563,49 @@ function createMachine(opt) {
   const taskBankMem = (t, b) => taskBank[t * 256 + b];
   // (The shared segments' banks, as they are: { U * 16 + bank: its bytes }, those ever reached; the dq0 tests read the hub's)
   const sharedBanks = () => sharedBank;
-  Object.assign(m, { cpu, acia, via, i2c, smc, ym, vera, audio, rtc, taskRam, vecRam, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd, taskBankMem, sharedBanks });
+
+  // ---- A snapshot (the tests' scenes: reborn/sim/lib/scenes.js): state(), the whole machine as a run left it (between
+  // two runs: its devices brought up to date); restore(s), put back in a machine made with the same options (its
+  // images, its RAM modules, its cards), which then runs on as the first would have.  Not with what's kept outside it,
+  // or not here (the VERA, the input controller, an I2C memory, the RTC, the sound, a /pc host, CA1's pulses, a card
+  // whose blocks can't say their state, the debugger's and the profile's things): state() gives null then
+  const copy = v => Array.isArray(v) ? v.map(copy) : v instanceof Uint8Array ? v.slice() : v && typeof v === 'object' ? Object.assign({}, v) : v;
+  function state() {
+    if (vera || smc || i2c || rtc || audio || opt.pcHost || ca1Edges.length || breaks.length || calls || opt.pcHist || profileFrom >= 0) return null;
+    const devs = { acia: acia.state(), via: via.state(), ym: ym.state(), spi: spi.state() };
+    if (!devs.ym || !devs.spi) return null;
+    let mem;
+    if (core) { const all = new Uint8Array(core.buf); mem = { low: all.slice(0, core.PROM), high: all.slice(core.VEC) }; }
+    else mem = { taskRam: taskRam.map(r => r.slice()), vec: vecRam.slice(), ring: ring.slice(),
+      task: Object.keys(taskBank).map(k => [+k, taskBank[k].slice()]), shared: Object.keys(sharedBank).map(k => [+k, sharedBank[k].slice()]) };
+    return { core: !!core, mem, regs: [regT, regU, V, regW],
+      cpu: { A: cpu.A, X: cpu.X, Y: cpu.Y, S: cpu.S, P: cpu.P, PC: cpu.PC, lastPC: cpu.lastPC, cyc: cpu.cyc, ioAt: cpu.ioAt, waiting: cpu.waiting, halted: cpu.halted },
+      dev: [devSeen, devNext, viaAt, viaNext, ymNext, veraNext, aciaAt, aciaNext, irqN, irqDirty, ca1At], iOff: [iOffAt, iOffFrom], ringAt: [ringAt, ringN],
+      iOffTop: copy(iOffTop), stackLow: stackLow.slice(), stackLowAt: copy(stackLowAt), out: m.out, devs };
+  }
+  function restore(s) {
+    if (s.core !== !!core) throw new Error('a snapshot of the ' + (s.core ? 'WebAssembly' : 'JS') + ' core\'s');
+    if (core) {
+      const all = new Uint8Array(core.buf);
+      all.set(s.mem.low, 0); all.set(s.mem.high, core.VEC);
+      for (let k = 0; k < 16 * 256; k++) if (coreFlags[k] && !taskBank[k]) taskBanks[k] = taskBank[k] = newBank(0, k);
+      for (let k = 0; k < 256; k++) if (coreFlags[16 * 256 + k] && !sharedBank[k]) sharedBanks_[k] = sharedBank[k] = newBank(1, k);
+    } else {
+      s.mem.taskRam.forEach((r, i) => taskRam[i].set(r)); vecRam.set(s.mem.vec); ring.set(s.mem.ring);
+      for (const [k, b] of s.mem.task) taskBanks[k] = taskBank[k] = Uint8Array.from(b);
+      for (const [k, b] of s.mem.shared) sharedBanks_[k] = sharedBank[k] = Uint8Array.from(b);
+    }
+    [regT, regU, V, regW] = s.regs; T = regT & 15; U = regU & 15; W = regW & 15;
+    Object.assign(cpu, s.cpu);
+    [devSeen, devNext, viaAt, viaNext, ymNext, veraNext, aciaAt, aciaNext, irqN, irqDirty, ca1At] = s.dev;
+    [iOffAt, iOffFrom] = s.iOff; [ringAt, ringN] = s.ringAt;
+    iOffTop.splice(0, iOffTop.length, ...copy(s.iOffTop));
+    s.stackLow.forEach((v, i) => { stackLow[i] = v; }); s.stackLowAt.forEach((v, i) => { stackLowAt[i] = copy(v); });
+    m.out = s.out;
+    acia.restore(s.devs.acia); via.restore(s.devs.via); ym.restore(s.devs.ym); spi.restore(s.devs.spi);
+    quick();
+  }
+  Object.assign(m, { cpu, acia, via, i2c, smc, ym, vera, audio, rtc, taskRam, vecRam, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd, taskBankMem, sharedBanks, state, restore });
   Object.defineProperties(m, {                                // (The pseudo-registers, the trace and the profile's count, as they are now)
     trace: { get: () => {                                     // (The ring, oldest first: [W, T, PC, A, X, Y, S, P] each)
       const out = [];

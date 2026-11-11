@@ -36,7 +36,10 @@ function imageCard(dev, file, blocks) {
   return { dev, blocks, file,
     read: n => written.get(n) || Buffer.concat([n * 512 < base.length ? base.subarray(n * 512, n * 512 + 512) : Buffer.alloc(0)], 512),
     write: (n, b) => written.set(n, Buffer.from(b)),
-    save() { const fd = fs.openSync(file, 'r+'); for (const [n, b] of written) fs.writeSync(fd, b, 0, 512, n * 512); fs.closeSync(fd); } };
+    save() { const fd = fs.openSync(file, 'r+'); for (const [n, b] of written) fs.writeSync(fd, b, 0, 512, n * 512); fs.closeSync(fd); },
+    // (Its blocks written, and put back: a test scene's, sim/lib/scenes.js, the machine's snapshot's)
+    state: () => [...written].map(([n, b]) => [n, Uint8Array.from(b)]),
+    restore(s) { written.clear(); for (const [n, b] of s) written.set(n, Buffer.from(b)); } };
 }
 
 // The rc test's lines, and what each says

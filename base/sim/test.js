@@ -48,7 +48,7 @@ const { readManifest, hwtest } = require('../build.js');
 const BASE = path.join(__dirname, '..');
 // The system the tests are run for (setup): the base's own, unless a system on it says otherwise
 const env = { root: BASE, tests: null, IRQ_OFF_MAX: 200, image: null, build: null, pcFolder: null, runDl: null, self: __filename,
-  instrument: null, summary: null, areas: null, testFiles: null, testHelpers: null, ref: 'reborn-game', restrict: null };
+  instrument: null, summary: null, areas: null, testFiles: null, testHelpers: null, scenes: null, ref: 'reborn-game', restrict: null };
 function setup(e) { Object.assign(env, e); }
 const baseTests = () => require('../tests/tests.js').tests.map(t => Object.assign(t, { system: 'base' }));
 
@@ -91,21 +91,27 @@ function runTest(t, opt) {
     if (t.send && name === t.send.after) m.acia.send(t.send.bytes);
   };
   const pc = t.pc ? env.pcFolder(t, opt) : null, ins = env.instrument ? env.instrument(t, opt) : null;
-  m = boot(Object.assign({ root: env.root, acia: built().acia, prom: image(t), seed: opt.seed, marks: markNames, log, trace: 0,
-    pcWatches: bootDone === undefined ? [] : [{ pc: bootDone, page: 0 }] }, t.machine || {}, pc ? { pcHost: pc.host } : {}, ins ? ins.boot : {}));
+  const prom = image(t), tm = t.machine || {};                // (A getter's, once)
+  const sc = env.scenes ? env.scenes(t, tm, prom, opt) : null;   // (The system's scenes: the test taken up where one like it was left)
+  m = boot(Object.assign({ root: env.root, acia: built().acia, prom, seed: opt.seed, marks: markNames, log, trace: 0,
+    pcWatches: bootDone === undefined ? [] : [{ pc: bootDone, page: 0 }] }, tm, pc ? { pcHost: pc.host } : {}, ins ? ins.boot : {}));
   m.pc = pc;
+  if (sc) sc.watch(m);
   if (ins) ins.attach(m);
-  if (t.start) t.start(m);
+  if (!(sc && sc.restore(m, ins)) && t.start) t.start(m);     // (Put back: its start(m) the scene's, given what came before)
   const done = new RegExp('^' + t.init + ': (PASS|FAIL)', 'm');
   const target = t.expect ? null : done;
   let status = '';
   while (m.cpu.cyc < t.cycles && !m.cpu.halted) {
     m.run(Math.min(t.cycles, m.cpu.cyc + 200000));
+    if (sc) sc.after(m, ins);
     const out = m.out.replace(/\r/g, '');
     if (target) { const r = out.match(target); if (r) { status = r[1]; break; } }
     else if (t.expect.every(e => out.includes(e))) { status = 'PASS'; break; }
   }
-  return judge(t, m, marks, pc, status, ins);
+  const r = judge(t, m, marks, pc, status, ins);
+  if (sc) sc.end(m, r);
+  return r;
 }
 
 // Test t run in the danlang emulator (sim/dl: bridge.js runs it), judged as runTest's is.  OUT: (a promise) runTest's
