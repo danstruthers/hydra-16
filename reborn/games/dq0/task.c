@@ -22,17 +22,22 @@ unsigned pick_x, pick_y;                        /* (A door's or an opening's squ
 #pragma code-name ("OV3CODE")
 #pragma rodata-name ("OV3RODATA")
 
-static const char* const doing[] = {           /* (By LT_*) */
+static const char* const doing[] = {           /* (By LT_*; then by SV_*, a step's verb, from NLT) */
     "doing anything", "walking", "climbing", "digging", "searching", "waiting", "sleeping", "talking", "battering",
     "fighting", "travelling", "studying the mechanism", "disarming the trap", "picking the lock", "forcing", "heaving at",
     "bending the bars", "winding the winch", "working the pane free", "tracking", "sniffing the air", "filling",
-    "hiding", "tying the rope", "tending the wound", "turning a key", "dipping", "taking off", "taking off", "reaching into", "holding open", "getting out", "putting on",
-    "letting fall", "letting fall", "putting away", "blowing out", "blowing out", "lighting", "setting down", "taking up", "sharpening",
-    "striking a spark", "getting out", "putting away", "taking up", "setting down", "blowing out", "lighting", "dipping",
-    "letting fall", "sheathing", "slinging", "setting down", "setting down", "putting away", "setting down", "putting away", "setting down", "taking up"
+    "hiding", "tying the rope", "tending the wound", "turning a key", "dipping",
+    "taking off", "taking off", "putting on", "letting fall", "setting down", "setting down", "setting down", "dipping",
+    "reaching into", "holding open", "getting out", "letting fall", "putting away", "blowing out", "blowing out", "lighting",
+    "setting down", "taking up", "sharpening", "striking a spark", "sheathing", "slinging", "setting down", "putting away",
+    "putting away"
 };
 #define NDOING          (sizeof doing / sizeof doing[0])
-typedef char doing_all[NDOING == LT_UP2 + 1 ? 1 : -1];   /* (Every long task's words: "You stop doing anything the torch", 2026-11-04) */
+#define NLT             (LT_DIP + 1)
+typedef char doing_all[NDOING == NLT + SV_INPACK2 + 1 - SV_OFF ? 1 : -1];   /* (Every long task's words: "You stop doing anything the torch",
+                                                **   2026-11-04) */
+#define DOING(k)        doing[(k) & LT_STEP ? NLT - SV_OFF + ((k) & ~SM_ALL) : (k) < NLT ? (k) : 0]   /* (A step's by its verb: its
+                                                **   word, SM_*, its first words' alone) */
 
 /* An enemy the character's met (E_TASK's b, TE_ENGAGED's, TE_FAR's: its entry plus 1), as it's said: "the giant
 ** rat" (the first letter a capital, cap), or "something" if it isn't seen */
@@ -122,8 +127,9 @@ static const char* __fastcall__ doing_of (unsigned char k, unsigned char n)
 {
     static const char* const struck[4] = { "battering", "punching", "kicking", "butting" };    /* (By SK_*) */
 
-    strcpy (dn, k == LT_BATTER ? struck[n >> 4 & 3] : doing[k < NDOING ? k : 0]);
-    if (n && (k == LT_BATTER || k == LT_FORCE || k == LT_HEAVE || k == LT_FILL || k == LT_DIP || k == LT_HIDE || (k >= LT_PACKOFF && k != LT_KINDLE))) {
+    strcpy (dn, k == LT_BATTER ? struck[n >> 4 & 3] : DOING (k));
+    if (n && (k == LT_BATTER || k == LT_FORCE || k == LT_HEAVE || k == LT_FILL || k == LT_DIP || k == LT_HIDE ||
+              ((k & LT_STEP) && (k & ~SM_ALL) != SV_KINDLE))) {
         strcat (dn, " ");
         strcat (dn, noun (n));
     }
@@ -187,7 +193,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         }
         return p;
     case TE_NOT:
-        sayf ("\nYou aren't %s: you're %s.", doing[named < NDOING ? named : 0], d);
+        sayf ("\nYou aren't %s: you're %s.", DOING (named), d);
         break;
     case TE_IDLE:
         if (reach >= 5) {
@@ -310,7 +316,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
                                                 **   outcome as its time's done, HOUSE.md's long tasks; the user's,
                                                 **   2026-10-22) */
         p = w >> 8;
-        if (p >= LT_PACKOFF) {
+        if (p & LT_STEP) {
             reach_said (w, named);              /* (A step of the reach: part 19's) */
             break;
         }
@@ -804,14 +810,14 @@ unsigned char __fastcall__ o_stop_kind (const char* word)
                                            LT_FIGHT, LT_BATTER, LT_BATTER, LT_BATTER, LT_STUDY, LT_DISARM, LT_PICK,
                                            LT_FORCE, LT_HEAVE, LT_BEND, LT_WIND, LT_TRACK, LT_SNIFF, LT_FILL,
                                            LT_FILL, LT_DIP, LT_HIDE, LT_TRAVEL, LT_TRAVEL, LT_TRAVEL, LT_TEND, LT_TEND, LT_TEND,
-                                           LT_PRISE, LT_PRISE, LT_HONE, LT_HONE };   /* ("working" none: whatever the work is) */
+                                           LT_PRISE, LT_PRISE, SV_HONE, SV_HONE };   /* ("working" none: whatever the work is) */
     unsigned char i, k;
 
     for (i = 0; i < sizeof kind_; ++i) {
         if (!strcmp (word, word_[i])) {
             k = HUB->pc_task.kind;              /* (Filling, soaking, dipping: whichever of them it's at, a lantern's, a
                                                 **   torch's, the old torch's: each its own words, 2026-11-06) */
-            return (kind_[i] == LT_FILL || kind_[i] == LT_DIP) && (k == LT_FILL || k == LT_DIP || k == LT_DIPOLD) ? k : kind_[i];
+            return (kind_[i] == LT_FILL || kind_[i] == LT_DIP) && (k == LT_FILL || k == LT_DIP || k == SV_DIP) ? k : kind_[i];
         }
     }
     return LT_NONE;

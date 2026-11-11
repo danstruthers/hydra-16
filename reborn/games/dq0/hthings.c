@@ -427,10 +427,10 @@ static void __fastcall__ worked (unsigned char action)
         return;
     }
     what_hi = n & 0x80;
-    task_words (TE_BEGUN | k << 8, k < LT_PACKOFF ? n | 0x80 : n);    /* (The steps' kinds, 8 bits: a mang sharpened) */
+    task_words (TE_BEGUN | (unsigned) k << 8, !(k & LT_STEP) ? n | 0x80 : n);    /* (The steps' kinds, 8 bits: a mang sharpened) */
     hub_mem (UI_BANK, &UIREC->kept, &cmd, sizeof cmd);
     reach = 3;
-    intend2 (I_WAIT, t, I_WAIT_W2 (k, n, 1));
+    intend2 (I_WAIT, t, I_WAIT_W2 (k & ~SM_ALL, n, 1));   /* (Its long task the verb: "the old torch" its first words' alone) */
 }
 
 /* The things' timed works, by their handler's number h (H_FILL ... H_HIDDEN): 1 carried out; 0, H_SHUT's: none that

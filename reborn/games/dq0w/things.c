@@ -793,26 +793,26 @@ unsigned char __fastcall__ s_reach_step (unsigned n, unsigned c)
             rs_after_on = 1;
             rstep.thing = rs_tool;
             rstep.edge = SE_BACKIN;
-            rstep.say = LT_PUTAWAY;
+            rstep.say = SV_PUTAWAY;
             rstep.what = item_kind (rstep.apart = rs_tool);
             rstep.time = 20;
             return rs_begin ();
         }
         rstep.edge = SE_ON;
-        rstep.say = LT_PACKON;
+        rstep.say = SV_ON;
         rstep.what = item_kind (rs_pack);
     } else if (rstep.thing) {                          /* (A pack on the back: off first) */
         rs_hand = d ? 0 : rs_for (up ? n : 0);
         rstep.edge = SE_OFF;
-        rstep.say = rs_hand ? LT_PACKOFF : LT_PACKDOWN;
+        rstep.say = rs_hand ? SV_OFF : SV_OFFDOWN;
         rstep.what = item_kind (rstep.thing);
     } else if (rs_paid < nout + nd) {           /* (Each level its own) */
         rs_want = rs_paid < nout ? nout - 1 - rs_paid : nout + nd - 1 - rs_paid;
         rs_walk (rs_paid < nout ? up : c);
         rstep.edge = SE_IN;
-        rstep.say = d ? LT_REACHIN : rs_paid + 1 == nout ? LT_GETOUT : rs_paid + 1 == nout + nd ? LT_OPENUP :
-            LT_REACHIN;
-        rstep.what = item_kind (rstep.apart = rstep.say == LT_GETOUT ? n : rs_hit);
+        rstep.say = d ? SV_IN : rs_paid + 1 == nout ? SV_GETOUT : rs_paid + 1 == nout + nd ? SV_OPEN :
+            SV_IN;
+        rstep.what = item_kind (rstep.apart = rstep.say == SV_GETOUT ? n : rs_hit);
         rstep.time = 20;
     } else {
         if (!d) {
@@ -904,7 +904,7 @@ static unsigned char __fastcall__ rs_draw (unsigned char fire)
         fetch (&rec, rs_tool);
         rstep.thing = rs_tool;
         rstep.edge = SE_HAND;
-        rstep.say = LT_GETOUT;
+        rstep.say = SV_GETOUT;
         rstep.apart = rs_tool;
         rstep.what = rec.kind;
         rstep.time = 10;
@@ -920,7 +920,7 @@ static unsigned char __fastcall__ rs_draw (unsigned char fire)
         return 2;
     }
     rstep.edge = SE_TRY;
-    rstep.say = LT_KINDLE;
+    rstep.say = SV_KINDLE;
     rstep.what = rec.kind;
     rstep.time = 50;
     return 1;
@@ -1012,7 +1012,8 @@ unsigned char __fastcall__ s_rs_for (unsigned n)
         } else if (n == RF_CUT) {
             rs_cut ();
         } else {
-            rs_tell (n & ~RF_TELL);
+            rs_tell ((unsigned char) n == TE_BEGUN ? TE_BEGUN | (unsigned) rstep.say << 8 : n & ~RF_TELL);   /* (A step's
+                                                **   words its own, SM_* its top bits: not RF_TELL's) */
         }
         return 0;
     }
@@ -1104,10 +1105,10 @@ static unsigned char s_room (void)
             }
         }
         d = c ? SE_PLACE : SE_DROP;
-        t = c ? LT_SCONCE : LT_LAYLIT;
+        t = c ? SV_SCONCE : SV_LAYLIT;
     } else if ((k->flags & K_WEAR) && o != rs_pack) {
         d = SE_SLING;
-        t = LT_SLING;
+        t = SV_SLING;
         n = 50;
     } else {
         for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
@@ -1122,7 +1123,7 @@ static unsigned char s_room (void)
         }
         if (c) {
             d = SE_PLACE;
-            t = LT_SHEATHE;
+            t = SV_SHEATHE;
         } else {
             about ();
             i = pack ? pack : rs_pack;          /* (Worn, or off for this at its feet) */
@@ -1132,16 +1133,16 @@ static unsigned char s_room (void)
                     return 1;                   /* (The pack off first, its level) */
                 }
                 d = SE_STOW;
-                t = LT_INPACK;
+                t = SV_INPACK;
             } else {
                 d = SE_DROP;
-                t = LT_SETDOWN;
+                t = SV_SETDOWN;
                 n = 10;
             }
         }
     }
     if (o != rs_pack && ++rs_free > 1) {        /* (The other hand's after it: its words not the first's again) */
-        t = t == LT_LAYLIT ? LT_LAYLIT2 : t == LT_INPACK ? LT_INPACK2 : t == LT_SETDOWN ? LT_LETFALL : t;
+        t = t == SV_LAYLIT ? SV_LAYLIT2 : t == SV_INPACK ? SV_INPACK2 : t == SV_SETDOWN ? SV_LETFALL : t;
     }
     rstep.what = item_kind (rstep.apart = o);
     hub_map (0);
@@ -1309,26 +1310,26 @@ static unsigned char __fastcall__ rs_set_down (unsigned i)
     rstep.thing = i;
     rstep.edge = SE_DROP;
     rs_hand = 0;
-    rstep.say = LT_SETDOWN;
+    rstep.say = SV_SETDOWN;
     rstep.what = item_kind (rstep.apart = i);
     if (rstep.what == item_kind (rs_old)) {
         rs_redo |= RR_TWO;
-        rstep.say = LT_DOWNNEW;
+        rstep.say = SV_SETDOWN | SM_NEW;
     }
     rstep.time = 1;
     rs_redo |= RR_ON;
     if (naside) {                               /* (Taken up again after the work, the last set down first: a step on
                                                 **   the stack aside, its words the other's if it's the first's kind) */
         if (rstep.what == item_kind (aside[0].thing)) {
-            rstep.say = LT_DOWN2;               /* (The other of two alike: its words not the first's again, nor the
+            rstep.say = SV_DOWN2;               /* (The other of two alike: its words not the first's again, nor the
                                                 **   first's as it's taken up) */
-            aside[0].say = LT_UP2;
+            aside[0].say = SV_TAKEUP | SM_OTHER;
         }
         naside = 1;
     }
     sp = &aside[naside++];
     sp->edge = SE_UP;
-    sp->say = LT_TAKEUP;
+    sp->say = SV_TAKEUP;
     sp->thing = i;
     sp->time = 10;
     return rs_go ();
@@ -1360,15 +1361,15 @@ static unsigned char __fastcall__ rs_lit_from (unsigned sp, unsigned old)
     }
     rs_redo |= RR_TWO;
     if (!h && reach_step (sp, 0)) {
-        if (rstep.say == LT_GETOUT) {
-            rstep.say = LT_GETNEW;
+        if (rstep.say == SV_GETOUT) {
+            rstep.say |= SM_NEW;
         }
         return IR_NO;
     }
     rs_hand = h ? h : hand_free (sp) & ~HF_FIXT;
     rstep.thing = sp;
     rstep.edge = SE_LIGHT;
-    rstep.say = LT_LIGHTNEW;
+    rstep.say = SV_LIGHT | SM_NEW;
     rstep.what = item_kind (old);
     rstep.time = 30;
     rs_redo |= RR_ON;
@@ -1394,12 +1395,12 @@ static unsigned char rs_newl (void)
     rs_redo |= RR_ON | RR_TWO;
     if (rec.flags & I_LIT) {
         rstep.edge = SE_OUT;
-        rstep.say = LT_BLOWOLD;
+        rstep.say = SV_BLOWOUT | SM_OLD;
         rstep.time = 10;
     } else {
         rstep.edge = SE_DROP;
         rs_hand = 0;
-        rstep.say = LT_LETOLD;
+        rstep.say = SV_LETFALL | SM_OLD;
         rstep.time = 1;
         item_at (rs_tool)->sn = rec.sn;         /* (The new one in the old one's hand as it falls: a sword set down goes
                                                 **   back in its own) */
@@ -1444,16 +1445,16 @@ static unsigned char __fastcall__ rs_redip (unsigned n)
         rstep.edge = SE_OUT;
         rstep.what = kn;
         rstep.time = 10;
-        rstep.say = LT_BLOWOUT;
+        rstep.say = SV_BLOWOUT;
         rs_redo |= RR_ON;
         if (ot) {
             rs_redo |= RR_STOW;
             if (item_kind (ot) == kn) {         /* (Two of a kind: each step about the one it means) */
                 rs_redo |= RR_TWO;
-                rstep.say = LT_BLOWOLD;
+                rstep.say = SV_BLOWOUT | SM_OLD;
             }
         } else if (!s) {
-            rstep.say = LT_BLOWDARK;
+            rstep.say = SV_BLOWDARK;
             rs_redo |= RR_RELIGHT;
         }
         return rs_go ();
@@ -1565,7 +1566,7 @@ static unsigned char rs_after (void)
         if (rec.kind && (rec.flags & I_HELD) && rs_pack) {   /* (The pack off for it already; else it stays in its hand) */
             rstep.thing = rs_old;
             rstep.edge = SE_STOW;
-            rstep.say = rs_redo & RR_TWO ? LT_PUTOLD : LT_PUTAWAY;
+            rstep.say = rs_redo & RR_TWO ? SV_PUTAWAY | SM_OLD : SV_PUTAWAY;
             rstep.apart = rs_old;
             rstep.what = rec.kind;
             rstep.time = 20;
@@ -1576,8 +1577,8 @@ static unsigned char rs_after (void)
                                                 **   before a sword) */
         rstep = aside[--naside];
         rstep.what = item_kind (rstep.apart = rstep.thing);
-        if (rstep.say == LT_TAKEUP && (rs_redo & RR_TWO) && rstep.what == item_kind (rs_old)) {
-            rstep.say = LT_TAKENEW;             /* (The new one's kind, the old one's: told apart) */
+        if (rstep.say == SV_TAKEUP && (rs_redo & RR_TWO) && rstep.what == item_kind (rs_old)) {
+            rstep.say |= SM_NEW;                /* (The new one's kind, the old one's: told apart) */
         }
         return 1;
     }
@@ -1640,7 +1641,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
             return w;
         }
         HUB->ireq.x = 600;
-        HUB->ireq.qty = LT_HONE;
+        HUB->ireq.qty = SV_HONE;
         w = item_kind (handled);                /* (The item's bank in the window: then the hub's again) */
         hub_map (0);
         HUB->ireq.item = w;
@@ -1671,7 +1672,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
             rstep.apart = 0;
             hub_map (0);
             HUB->ireq.plural = w;
-            HUB->ireq.y = (rstep.say == LT_BLOWDARK) | (rstep.time == HUB->round ? 2 : 0);    /* (Its question put, the UI's; 2, engaged:
+            HUB->ireq.y = (rstep.say == SV_BLOWDARK) | (rstep.time == HUB->round ? 2 : 0);    /* (Its question put, the UI's; 2, engaged:
                                                 **   the round's action, no long task for a blow to stop) */
             HUB->pc_ready = HUB->now + rstep.time;    /* (Not free till the UI's wait comes: engaged, fwant's, its end not looked at first) */
             HUB->ireq.x = rstep.time;
@@ -1685,7 +1686,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
             return 0;
         }
         if (HUB->ireq.qty == LT_DIP && (rs_redo & RR_TWO)) {
-            HUB->ireq.qty = LT_DIPOLD;
+            HUB->ireq.qty = SV_DIP | SM_OLD;   /* (The old torch's: "You set to dipping the old torch.") */
         }
         if (rs_pack || rs_using || (rs_redo & (RR_STOW | RR_RELIGHT)) || naside) {   /* (The handling done: the pack back on as it's free, past a timed
                                                 **   work's end if that's what's begun) */
@@ -1712,11 +1713,12 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         rs_for (RF_CUT);
         return 0;
     case RO_GO:
-        rs_for (RF_TELL | TE_BEGUN | (unsigned) rstep.say << 8);
+        rs_for (RF_TELL | TE_BEGUN);
         wk.m.kind = I_WAIT;
         I_WAIT_HOW (wk.m) = 0;
         I_WAIT_TENTHS (wk.m) = rstep.time;
-        I_WAIT_BUSY (wk.m) = rstep.time == HUB->round ? I_WAIT_W2 (0, 0, 1) : I_WAIT_W2 (rstep.say, rstep.what, 1);   /* (Engaged, the round's action) */
+        I_WAIT_BUSY (wk.m) = rstep.time == HUB->round ? I_WAIT_W2 (0, 0, 1) : I_WAIT_W2 (rstep.say & ~SM_ALL, rstep.what, 1);   /* (Engaged, the round's action; its
+                                                **   long task the verb, its words' word the TE_BEGUN's alone) */
         intent_few (&wk.m);
         return 0;
     }
@@ -5842,7 +5844,7 @@ spare:
                 rstep.thing = c;
                 rstep.edge = SE_DROP;
                 rs_hand = 0;
-                rstep.say = o.flags & I_LIT ? LT_LETBURN : LT_LETFALL;
+                rstep.say = o.flags & I_LIT ? SV_LETBURN : SV_LETFALL;
                 rstep.what = o.kind;
                 rstep.time = 1;
                 if (B (m2 (reach_step, 0, RS_GO))) {

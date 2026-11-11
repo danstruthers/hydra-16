@@ -2370,7 +2370,7 @@ void s_step_go (void)
             hub_map (UI_BANK);
             UIREC->things_text[0] = 0;
             hub_map (0);
-        } else if (k == LT_PACKON || k == LT_PUTAWAY) {    /* (Refused with the pack off: its words first, nothing asked again) */
+        } else if (k == SV_ON || k == SV_PUTAWAY) {    /* (Refused with the pack off: its words first, nothing asked again) */
             reach = 0;
             msg (tt ());
             hub_map (UI_BANK);
@@ -2383,8 +2383,8 @@ void s_step_go (void)
         intend2 (I_WAIT, t, I_WAIT_W2 (0, 0, 1));   /* (Engaged: the round's action, a blow no stop of it) */
         return;
     }
-    intend2 (I_WAIT, t, I_WAIT_W2 (k, n, 1));
-    if (k == LT_BLOWDARK) {
+    intend2 (I_WAIT, t, I_WAIT_W2 (k & ~SM_ALL, n, 1));   /* (Its long task the verb: SM_* its words' alone) */
+    if (k == SV_BLOWDARK) {
         intend2 (I_ASK, TE_ASK_HEARD, 0);       /* (Asked: "no" stops it, the torch still lit) */
     }
 }
@@ -2402,19 +2402,17 @@ unsigned char __fastcall__ s_tool_out (unsigned char which)
 ** the step's first words; the pack left off, stopped part way; the world's own step's grope failed */
 void __fastcall__ s_reach_said (unsigned w, unsigned char named)
 {
-    static const char* const first[LT_UP2 - LT_PACKOFF + 1] = {
-        "\nYou take off your %s.", "\nYou take off your %s, and set it down at your feet.", "\nYou reach into the %s.",
-        "\nYou hold the %s open.", "\nYou get out the %s.", "\nYou put your %s back on.", "\nYou let the %s fall.",
-        "\nYou let the %s fall, still burning.", "\nYou put away the %s.", "\nYou blow out the %s.",
-        "\nYou go to blow out the %s: that will leave you in the dark.", "\nYou light the %s from the burning one.",
-        "\nYou set the %s down at your feet.", "\nYou take up the %s.", "\nYou set to sharpening the %s.", "\nYou strike a spark.",
-        "\nYou get out the new %s.", "\nYou put away the old %s.", "\nYou take up the new %s.", "\nYou set the new %s down at your feet.",
-        "\nYou blow out the old %s.", "\nYou light the new %s from the burning one.", "\nYou set to dipping the old %s.",
-        "\nYou let the old %s fall.", "\nYou sheathe the %s.", "\nYou sling the %s.", "\nYou set the %s in the sconce.",
-        "\nYou lay the %s on the ground, still burning.", "\nYou put the %s in your pack.",
-        "\nYou lay the %s down too, still lit.", "\nYou put the %s in your pack too.",
-        "\nYou set the other %s down.", "\nYou take up the other %s."
+    static const char* const first[SV_INPACK2 - SV_OFF + 1] = {   /* (By SV_*: the verb's words, a word of SM_*'s or AW_*'s in %s) */
+        "\nYou take off your %s.", "\nYou take off your %s, and set it down at your feet.", "\nYou put your %s back on.",
+        "\nYou let the %s fall, still burning.", "\nYou lay the %s on the ground, still burning.",
+        "\nYou lay the %s down too, still lit.", "\nYou set the other %s down.", "\nYou set to dipping the %s.",
+        "\nYou reach into the %s.", "\nYou hold the %s open.", "\nYou get out the %s.", "\nYou let the %s fall.",
+        "\nYou put away the %s.", "\nYou blow out the %s.", "\nYou go to blow out the %s: that will leave you in the dark.",
+        "\nYou light the %s from the burning one.", "\nYou set the %s down at your feet.", "\nYou take up the %s.",
+        "\nYou set to sharpening the %s.", "\nYou strike a spark.", "\nYou sheathe the %s.", "\nYou sling the %s.",
+        "\nYou set the %s in the sconce.", "\nYou put the %s in your pack.", "\nYou put the %s in your pack too."
     };
+    static const char* const sm[4] = { "", "new ", "old ", "other " };   /* (By SM_*: "the old torch") */
     static const char* const aw[AW_EMPTY + 1] = { "", "lit ", "unlit ", "spent ", "empty " };
     char t[sizeof CATALOGUE[0].name + 8];
     unsigned char k = w >> 8;
@@ -2436,15 +2434,18 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
         step_n = named | 0x80;                  /* (Its kind, task.c's noun: the top bit what_hi's) */
     }
     t[0] = 0;
-    if ((unsigned char) w == TE_BEGUN && step_aw && k > LT_PACKDOWN && k != LT_PACKON && (k < LT_GETNEW || k > LT_LETOLD) &&
-        k < LT_DOWN2 && k != LT_LETBURN && k != LT_LAYLIT && k != LT_LAYLIT2) {   /* (Not "the lit torch ... still burning") */
-        strcpy (t, aw[step_aw]);                /* (Told apart from another of its kind at hand: "You put the spent torch in
+    if ((unsigned char) w == TE_BEGUN) {
+        if (k & SM_ALL) {
+            strcpy (t, sm[k >> 6]);             /* ("You put away the old torch.": the step's own word) */
+        } else if (step_aw && (k & ~SM_ALL) >= SV_IN) {   /* (Not "the lit torch ... still burning") */
+            strcpy (t, aw[step_aw]);            /* (Told apart from another of its kind at hand: "You put the spent torch in
                                                 **   your pack.", the world's apart, the user's playtest, 2026-11-06) */
+        }
     }
     step_aw = 0;
     hub_mem (KIND_BANK, t + strlen (t), CATALOGUE[named].name, sizeof CATALOGUE[0].name);
     sayf ((unsigned char) w == TE_FUMBLE ? "\nYou fumble for your %s." : (unsigned char) w == TE_PACKED ? (w >> 8 ?     /* (w's high byte: where it lies) */
-        " Your %s lies at your feet." : " Your %s is in your hand.") : first[(w >> 8) - LT_PACKOFF], t);
+        " Your %s lies at your feet." : " Your %s is in your hand.") : first[(k & ~SM_ALL) - SV_OFF], t);
 }
 
 #pragma local-strings (pop)
