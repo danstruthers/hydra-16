@@ -46,7 +46,7 @@ static void __fastcall__ who (const char* n, unsigned char cap)
 ** harm) after what led to it: ": a serious cut ...", ", but the blow glances off your leather tunic", ", but does no harm"
 ** (by the striker: the character's "do") */
 /* A creature's getting up in a fight (the book's Rise), by its body (hub.h's BD_*, the actor's: kinds.txt's); its fall
-** told after the blow, the world's (E_BEAT's WB_FALLEN: main.c's limb_words, every fall, 2026-10-30) */
+** told after the blow, the world's (E_BEAT's WB_FALLEN: said.txt's BEAT.fallen, every fall, 2026-10-30) */
 static const char* const rises[NBODIES] = { " gets to its feet.", " scrambles to its feet.", " coils itself up again.",
     " rights itself.", " flutters up again.", " rises again." };
 static unsigned char __fastcall__ body_of (unsigned char k)

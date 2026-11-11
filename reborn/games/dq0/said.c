@@ -6,7 +6,8 @@
 ** (and a field's value, a row's condition), its text said as it reads: the event's fields, the UI's words for its
 ** things (said_s), "you" or the denizen, articles, a heading from the way the character faces, the theme's names.
 ** What the UI works out for a row (which of a dig's refusals, a tool's name) its caller's (main.c's s_news); the words
-** here and in said.txt alone.
+** here and in said.txt alone.  The table's rows are overlay 28's (a bank of their own, 2026-11-11: this one's room
+** for the renderer and the kinds to come), read a byte at a time through bank.s's said_b; the rest here.
 */
 
 #pragma code-name ("OV27CODE")
@@ -19,10 +20,15 @@
 #define SAID_TABLE
 #include "dq0said.h"
 
+unsigned char __fastcall__ said_b (const unsigned char* p);    /* (bank.s's: byte p of overlay 28's bank, the rows') */
+#define RB(p)           said_b (p)
+
 /* A text's codes (saidgen.js's SC: the letters as they are, '\n' a new line; the others under SC_END the words most
 ** said, said_dw's) */
 enum { SC_NL = 0x01, SC_END = 0x1E, SC_ALT = 0x1F, SC_NUM = 0x80, SC_CHOOSE = 0xA0, SC_CHANGED = 0xC0, SC_STR = 0xE0,
-       SC_S = 0xE8, SC_A, SC_LIGHT, SC_FORGET, SC_ARG, SC_IF = 0xF0, SC_ROOM = 0xF8, SC_TRAP, SC_REL, SC_PIECE };
+       SC_S = 0xE8, SC_A, SC_LIGHT, SC_FORGET, SC_ARG, SC_SING, SC_WORD, SC_IF = 0xF0, SC_ROOM = 0xF8, SC_TRAP, SC_REL,
+       SC_PIECE,
+       SC_KIND, SC_NAME };
 #define SR_ONCE         1                       /* (A row's flag: said as a look's sentences, none twice an answer) */
 
 /* The UI's words for a row (the main RAM's: its callers set them) */
@@ -36,7 +42,6 @@ static char* sp;                                /* lb's end */
 static unsigned char sk;                        /* Its kind's place (said_kind's) */
 static unsigned art;                            /* An "a" waiting for its word: its place in lb, plus 1; 0 none */
 static unsigned char once;                      /* The row's said as a look's (lb_said) */
-static char an[17];                             /* A denizen's name */
 #pragma bss-name (pop)
 
 /* Field f's value (said_f's: its byte, shift and mask; less K, more than K, times K) */
@@ -56,12 +61,23 @@ static unsigned __fastcall__ fv (unsigned char f)
     return v;
 }
 
+/* Actor n - 1's name, at lb's end and 4 on (room for "the " before it).  (Into lb, the main RAM: hub_mem's bytes go
+** between the hub's bank in the window and the main RAM, not this bank's; stage 1's name in OV27BSS was written into
+** the hub's header, 2026-11-11) */
+static char* __fastcall__ name (unsigned char n)
+{
+    hub_mem (0, sp + 4, HUB->actor[(n - 1) & 7].name, 12);
+    sp[16] = 0;
+    return sp + 4;
+}
+
 /* Past the code at p, and its bytes */
 static const unsigned char* __fastcall__ step (const unsigned char* p)
 {
-    unsigned char c = *p++;
+    unsigned char c = RB (p);
 
-    return c == SC_TRAP ? p + 2 : c >= SC_ROOM ? p + 1 : p;
+    ++p;
+    return c == SC_TRAP ? p + 2 : c >= SC_ROOM || c == SC_WORD ? p + 1 : p;
 }
 
 /* From an alternative's start to the SC_ALT or SC_END after it (the blocks in it passed over) */
@@ -70,7 +86,7 @@ static const unsigned char* __fastcall__ over (const unsigned char* p)
     unsigned char d = 0, c;
 
     for (;; p = step (p)) {
-        c = *p;
+        c = RB (p);
         if (c == SC_ALT || c == SC_END) {
             if (!d) {
                 return p;
@@ -131,7 +147,7 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
     const char* s;
 
     for (;;) {
-        c = *p;
+        c = RB (p);
         if (!c || c == SC_ALT || c == SC_END) {
             return p;
         }
@@ -158,12 +174,12 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
                 *said_s[c - SC_IF]) : fv (c - SC_CHOOSE) > 255 ? 255 : fv (c - SC_CHOOSE);
             for (; v; --v) {
                 q = over (p);
-                if (*q == SC_END) {
+                if (RB (q) == SC_END) {
                     break;                      /* (The last for any past it) */
                 }
                 p = q + 1;
             }
-            for (p = run (p); *p != SC_END; p = over (p + 1)) {
+            for (p = run (p); RB (p) != SC_END; p = over (p + 1)) {
             }
             ++p;
             continue;
@@ -185,12 +201,10 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
                 if (!sm->who) {
                     s = "you";
                 } else {
-                    hub_mem (0, an + 4, HUB->actor[sm->who - 1].name, 12);
-                    an[16] = 0;
-                    s = an + 4;
-                    if (an[4] >= 'a') {
-                        memcpy (an, "the ", 4);
-                        s = an;
+                    s = name (sm->who);
+                    if (*s >= 'a') {
+                        memcpy (sp, "the ", 4);
+                        s = sp;
                     }
                 }
             } else {
@@ -227,23 +241,47 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
             utoa (said_n, sp, 10);
             sp += strlen (sp);
             break;
-        case SC_ROOM:
-            *sp = 0;
-            theme_named (TN_ROOM, fv (*p++ - 1));
-            ended ();
+        case SC_WORD:                           /* (A word said less often: the 27th on, a byte after it) */
+            strcpy (sp, said_dw + said_do[25 + RB (p)]);
+            ++p;
+            sp += strlen (sp);
+            break;
+        case SC_SING:                           /* (The word before it made one: "1 arrow") */
+            if (sp[-1] == 's') {
+                --sp;
+            }
             break;
         case SC_TRAP:
             *sp = 0;
-            trap_name (fv (p[0] - 1), fv (p[1] - 1), 0);    /* (Added to lb: words.c's) */
+            trap_name (fv (RB (p) - 1), fv (RB (p + 1) - 1), 0);    /* (Added to lb: words.c's) */
             p += 2;
             ended ();
             break;
-        case SC_REL:
-            rel (fv (*p++ - 1));
-            break;
-        case SC_PIECE:
-            run (said_rows + said_pc[*p++ - 1]);    /* (A piece's text, said.txt's @NAME) */
-            break;
+        default:                                /* (A code and its field: SC_ROOM, SC_REL, SC_PIECE, SC_KIND, SC_NAME) */
+            v = RB (p) - 1;
+            ++p;
+            switch (c) {
+            case SC_ROOM:
+                *sp = 0;
+                theme_named (TN_ROOM, fv (v));
+                ended ();
+                break;
+            case SC_REL:
+                rel (fv (v));
+                break;
+            case SC_PIECE:
+                run (said_rows + said_pc[v]);   /* (A piece's text, said.txt's @NAME) */
+                break;
+            case SC_KIND:                       /* (A thing's kind's name, the catalogue's) */
+                hub_mem (KIND_BANK, sp, CATALOGUE[fv (v)].name, sizeof CATALOGUE[0].name);
+                sp[sizeof CATALOGUE[0].name] = 0;
+                ended ();
+                break;
+            case SC_NAME:                       /* (An actor's name as it is: the field its entry plus 1) */
+                strcpy (sp, name (fv (v)));
+                ended ();
+                break;
+            }
         }
     }
 }
@@ -253,7 +291,7 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
 void __fastcall__ o_outcome_words (const struct msg* m)
 {
     const unsigned char* p;
-    unsigned char v;
+    unsigned char v, o, n, c;
 
     sm = m;
     for (sk = 0; said_kind[sk] != m->kind; ) {
@@ -261,14 +299,23 @@ void __fastcall__ o_outcome_words (const struct msg* m)
             return;
         }
     }
-    for (p = said_rows + said_at[sk]; *p != 0xFF; p += strlen ((const char*) p + 4) + 5) {
-        if (*p == E_OUTCOME_OUTCOME (*m) && (p[1] == 0xFF || ((v = fv (p[1])) < 8 && p[2] & 1 << v))) {
-            once = p[3] & SR_ONCE;
-            sp = lb;
-            art = 0;
-            run (p + 4);
-            flush ();
-            return;
+    o = fv (said_ko[sk]);                       /* (Its outcome: the head's, or the kind's own field, said.txt's kind) */
+    for (p = said_rows + said_at[sk]; (n = RB (p)) != 0; p += n) {     /* (Each row its length first) */
+        v = RB (p + 1);
+        if (v != o && v != SAID_ANY) {
+            continue;
         }
+        if ((c = RB (p + 2)) != 0xFF) {         /* (Its condition: a field's one value, or the mask of its values) */
+            v = fv (c & 0x1F);
+            if (c & 0x80 ? v != RB (p + 3) : v >= 8 || !(RB (p + 3) & 1 << v)) {
+                continue;
+            }
+        }
+        once = RB (p + 4) & SR_ONCE;
+        sp = lb;
+        art = 0;
+        run (p + 5);
+        flush ();
+        return;
     }
 }

@@ -1202,84 +1202,6 @@ void __fastcall__ s_came (const struct msg* m)
 #pragma code-name (push, "SW11CODE")
 #pragma rodata-name (push, "SW11RODATA")
 
-/* The limbs' news (an E_BEAT's, WB_DROP on: slice 4.1b's), every actor's (b whose: 0 the character, else the actor
-** plus 1; w1's high byte a kind, or for WB_RISEN and WB_NOT_UP 1 if on its feet already, or no leg to stand on),
-** worded: by WB_*, the character's words, then another's (a kind named %s, the actor before it) */
-#pragma code-name (push, "SW23CODE")             /* (Part 23's since 2026-11-04, the swap study's: three in five of part 11's
-                                                **   bytes, one news in fifteen) */
-#pragma rodata-name (push, "SW23RODATA")
-void __fastcall__ s_limb_words (const struct msg* m)
-{
-    static const char* const lwords[] = {
-        "\nYour %s falls from your hand.", "\nThe %s drops its %s.",
-        0, "\nThe %s snatches up its %s.",
-        0, "\nThe %s draws its %s.",               /* (WB_DRAWS: a denizen's weapon from its belt, the outfits') */
-        0, "\nThe %s unslings its %s.",            /* (WB_READIES: its shield from its back, 2026-10-29) */
-        "\nYou get to your feet.", "\nThe %s gets to its feet.",
-        "\nYou struggle, but can't get up.", "\nThe %s struggles, but can't get up.",
-        "\nYou fall.", "\nThe %s falls.",
-        "\nYou limp.", 0,
-        "\nYou hop along on your good leg.", 0,
-        "\nYou lean on the %s and hobble along.", 0,
-        "\nYou crawl.", 0,
-        "\nYou can't move.", 0,
-        "\nYou can't run on one leg.", 0,
-        "\nYou are on your feet already.", "\nYour legs won't bear you."    /* (WB_RISEN, WB_NOT_UP, the one more) */
-    };
-    static const char* const brise[NBODIES] = { "\nThe %s gets to its feet.", "\nThe %s scrambles to its feet.",
-        "\nThe %s coils itself up again.", "\nThe %s rights itself.", "\nThe %s flutters up again.",
-        "\nThe %s rises again." };
-    static const char* const bnoup[NBODIES] = { "\nThe %s struggles, but can't get up.",
-        "\nThe %s scrabbles, but can't get up.", "\nThe %s writhes, but can't right itself.",
-        "\nThe %s flails its legs, but can't right itself.", "\nThe %s flaps, but can't rise.",
-        "\nThe %s wavers, but can't rise." };
-    static const char* const bfall[NBODIES] = { "\nThe %s falls.", "\nThe %s goes down.", "\nThe %s is thrown down.",
-        "\nThe %s is flipped onto its back.", "\nThe %s drops to the floor.", "\nThe %s sinks to the floor." };
-    char kn[sizeof CATALOGUE[0].name];
-    unsigned char k = E_BEAT_BEAT (*m) - WB_DROP, b;
-    const char* s;
-
-    if (k == WB_POSED - WB_DROP) {              /* (The body's position as it said, slice 4.6's: part 13's) */
-        pose_words (m->w1);
-        return;
-    }
-    if ((E_BEAT_WHOSE (*m) & 0x80) && actor_seen (E_BEAT_WHOSE (*m)) == 2) {
-        msg ("You hear something fall.");      /* (A fall unseen, near: the world's b | 0x80, part 8's, 2026-10-30) */
-        return;
-    }
-    if (k >= WB_WATER - WB_DROP && k <= WB_DOUSED - WB_DROP) {  /* (The water's: slice 4.9's) */
-        water_words (m->w1);                    /* (Overlay 4's, water.c's) */
-        return;
-    }
-    hub_mem (KIND_BANK, kn, CATALOGUE[E_BEAT_LIMB_THING (*m)].name, sizeof kn);
-    if (k >= WB_EATS - WB_DROP) {
-        sayf (k == WB_EATS - WB_DROP ? "\nThe %s eats its %s." : k == WB_HANDS - WB_DROP ? "\nThe %s hands its %s to its fellow." :
-            k == WB_THREW - WB_DROP ? "\nThe %s throws you its %s." : "\nThe %s throws you its %s; it falls short.",
-            HUB->actor[(E_BEAT_WHOSE (*m) - 1) & 7].name, kn);
-        return;
-    }
-    if (k == WB_BROKE - WB_DROP) {
-        sayf (E_BEAT_WHOSE (*m) ? "\nThe %s's %s breaks!" : "\nYour %s breaks!",
-            E_BEAT_WHOSE (*m) ? HUB->actor[(E_BEAT_WHOSE (*m) - 1) & 7].name : kn, kn);
-        return;
-    }
-    k = (k == WB_RISEN - WB_DROP || k == WB_NOT_UP - WB_DROP) && m->w1 >> 8 ?
-        (WB_NO_RUN - WB_DROP + 1) * 2 + k - (WB_RISEN - WB_DROP) : k * 2 + (E_BEAT_WHOSE (*m) != 0);
-    if (k < sizeof lwords / sizeof lwords[0] && (s = lwords[k]) != 0) {
-        if (E_BEAT_WHOSE (*m) && (k == (WB_RISEN - WB_DROP) * 2 + 1 || k == (WB_NOT_UP - WB_DROP) * 2 + 1 ||
-            k == (WB_FALLEN - WB_DROP) * 2 + 1)) {
-            b = HUB->actor[(E_BEAT_WHOSE (*m) - 1) & 7].body;    /* (A creature's getting up, failing to, falling, worded by its
-                                                **   body: "The cave adder coils itself up again", kinds.txt's) */
-            b = b < NBODIES ? b : BD_TWO;
-            s = k == (WB_RISEN - WB_DROP) * 2 + 1 ? brise[b] : k == (WB_NOT_UP - WB_DROP) * 2 + 1 ? bnoup[b] : bfall[b];
-        }
-        sayf (s, E_BEAT_WHOSE (*m) ? HUB->actor[(E_BEAT_WHOSE (*m) - 1) & 7].name : kn, kn);
-    }
-}
-#pragma code-name (pop)
-#pragma rodata-name (pop)
-void __fastcall__ limb_words (const struct msg* m);
-
 void __fastcall__ s_news (const struct msg* m)
 {
     unsigned char k;
@@ -1292,7 +1214,20 @@ void __fastcall__ s_news (const struct msg* m)
             search_said (m);                    /* (A room searched whole's: search.c's) */
             break;
         }
-        limb_words (m);
+        if (E_BEAT_BEAT (*m) == WB_POSED) {     /* (The body's position as it said, slice 4.6's: part 14's) */
+            pose_words (m->w1);
+            break;
+        }
+        c = *m;                                 /* (The limbs' news, every actor's, and the water's: said.txt's BEAT
+                                                **   rows, limb_words' and water_words' before, 2026-11-11) */
+        if ((k = E_BEAT_WHOSE (*m)) & 0x80 && actor_seen (k) == 2) {
+            c.w1 = SAID_BEAT_UNSEEN;            /* (A fall unseen, near: the world's b | 0x80, part 8's, 2026-10-30) */
+        } else if (k) {
+            k = HUB->actor[(k - 1) & 7].body;   /* (A creature's getting up, failing to, falling, worded by its body:
+                                                **   "The cave adder coils itself up again", kinds.txt's) */
+            said_n = k < NBODIES ? k : BD_TWO;
+        }
+        outcome_words (&c);
         break;
     case E_BEARING:                             /* (Its bearings: lost, known, or set right, a room it knows; the sky
                                                 **   seen, the time it believes, time.c's) */
@@ -1330,11 +1265,18 @@ void __fastcall__ s_news (const struct msg* m)
     case E_CLIMB:
         outcome_words (m);
         break;
-    case E_HARM:                                /* (The referee's words of its wounds, then the UI's of it all) */
+    case E_HARM:                                /* (The referee's words of its wounds (the row's text), then the row's of
+                                                **   it all, said.txt's HARM: harm_words' before, 2026-11-11), its arg 1
+                                                **   if it's dead of it; then the state it's left in, task.c's) */
         r = ask_b (RS_DESCRIBE, 0, 2);
-        strcpy (lb, r->text);
+        strcpy (lb + 200, r->text);             /* (Under 200: the referee's hurt[]) */
         r->state = REQ_FREE;
-        harm_words (m->w1, HUB->pcsum.cond);
+        said_s[2] = lb + 200;
+        said_n = (HUB->pcsum.cond & C_DEAD) != 0;
+        outcome_words (m);
+        if (!said_n && (E_HARM_HC (*m) == HC_STRUCK || (E_HARM_BAND (*m) && !(m->w1 & E_CAUGHT)))) {
+            state_words ((unsigned char) HUB->pcsum.cond);
+        }
         if (HUB->pcsum.cond & C_DEAD) {
             ending (END_DIED);                     /* (The game's end) */
         }

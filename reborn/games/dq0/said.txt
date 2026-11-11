@@ -4,13 +4,17 @@
 # outcome.  Made by the build (games/dq0/saidgen.js, after hubgen.js) into obj/gen/dq0said.h: the rows packed, their
 # fields' places in struct msg (msgs.def's, as cc65 lays them out), the names of the UI's own outcomes (SAID_*).
 #
+#   kind KIND FIELD             KIND (E_KIND) worded here too, its outcome its own field FIELD, not E_OUTCOME's (a kind
+#                               older than the head: E_BEAT's beat, its bytes where they've always been)
 #   own KIND NAME ...           outcomes of the UI's own for KIND: rows it chooses itself (said_as), numbered after its
 #                               enum's (SAID_KIND_NAME: SAID_CLIMB_RISES)
 #   @NAME "text"                a piece of text, put where a row has {@NAME}
 #   KIND.OUTCOME[COND] "text"   a row: KIND the event's kind less its E_ (DIG: E_DIG); OUTCOME its outcome's name less
 #                               its enum's prefix, in lower case (begun: D_BEGUN), or an own one; [COND] (F=V,V ...: a
-#                               field and its values, the headers' names or numbers under 8) the row's only where the
-#                               field's one of them (such rows tried first, in their order, then the one without)
+#                               field and its values, the headers' names or numbers under 8; or one value, any number
+#                               under 256: task=KI_SLING) the row's only where the field's one of them (such rows tried
+#                               first, in their order, then the one without).  OUTCOME any: a row for any outcome the
+#                               kind's other rows don't take (tried after them, the same way)
 #   ... +"text"                 said on after what's said already (else on a line of its own: msg's)
 #   ... once "text"             said as a look's sentences are (lbsaid.s's lb_said): none said twice in an answer
 #   A line begun with a space goes on with the one before it: "text" "text" one text.  In the text, \n a new line, \"
@@ -28,6 +32,9 @@
 #       {rel F}                 the heading F (H_N ... H_NW), from the way the character faces ("to your left")
 #       {room F} {light}        the theme's names: a room's kind F, the light it has (theme_named's)
 #       {trap F G}              a trap's name, its kind F and its trigger G (words.c's trap_name)
+#       {kind F}                the name of the thing's kind F (the catalogue's: "dagger")
+#       {name F}                the name of actor F (its entry plus 1) as it is ("giant rat", "Grub")
+#       {-s}                    the word before it made one: its last s gone ("1 arrow")
 #       {F!text}                said only if F isn't as it was the last time this was said for the kind (and F kept);
 #                               {forget}: as if it were 0
 #       {@NAME}                 a piece's text
@@ -200,3 +207,97 @@ TRAP.pit                "There's no disarming a pit: you'll have to go round it.
 TRAP.clean              "You go over it carefully, and find no trap."
 TRAP.known              "You know of a trap on it already: {trap tk tt}."
 TRAP.none               "There's no trap you know of within reach."
+
+# ---- The body and the limbs (E_BEAT, said.txt's kind: beat, WB_*; whose 0 the character, else the actor plus 1; thing
+# the thing's kind, the catalogue's).  Every actor's: the character's words, else the denizen's by its name; a creature
+# getting up, failing to, falling, by its body (the UI's arg: kinds.txt's body, BD_*).  A fall not seen, near: the UI's
+# own unseen.  (limb_words' before, main.c's part 23, 2026-11-11)
+
+kind BEAT beat
+own BEAT unseen
+
+BEAT.drop           +"{whose?\nYour {kind thing} falls from your hand.|\nThe {name whose} drops its {kind thing}.}"
+BEAT.picks          +"{whose?|\nThe {name whose} snatches up its {kind thing}.}"
+BEAT.draws          +"{whose?|\nThe {name whose} draws its {kind thing}.}"
+BEAT.readies        +"{whose?|\nThe {name whose} unslings its {kind thing}.}"
+BEAT.risen[already=1]   +"\nYou are on your feet already."
+BEAT.risen          +"{whose?\nYou get to your feet.|\nThe {name whose} {arg?gets to its feet|scrambles to its feet"
+                    "|coils itself up again|rights itself|flutters up again|rises again}.}"
+BEAT.not_up[already=1]  +"\nYour legs won't bear you."
+BEAT.not_up         +"{whose?\nYou struggle, but can't get up.|\nThe {name whose} {arg?struggles, but can't get up"
+                    "|scrabbles, but can't get up|writhes, but can't right itself|flails its legs, but can't right itself"
+                    "|flaps, but can't rise|wavers, but can't rise}.}"
+BEAT.fallen         +"{whose?\nYou fall.|\nThe {name whose} {arg?falls|goes down|is thrown down|is flipped onto its back"
+                    "|drops to the floor|sinks to the floor}.}"
+BEAT.limp           +"{whose?\nYou limp.|}"
+BEAT.hop            +"{whose?\nYou hop along on your good leg.|}"
+BEAT.crutch         +"{whose?\nYou lean on the {kind thing} and hobble along.|}"
+BEAT.crawl          +"{whose?\nYou crawl.|}"
+BEAT.stuck          +"{whose?\nYou can't move.|}"
+BEAT.no_run         +"{whose?\nYou can't run on one leg.|}"
+BEAT.broke          +"{whose?\nYour {kind thing} breaks!|\nThe {name whose}'s {kind thing} breaks!}"
+BEAT.eats           +"\nThe {name whose} eats its {kind thing}."
+BEAT.hands          +"\nThe {name whose} hands its {kind thing} to its fellow."
+BEAT.threw          +"\nThe {name whose} throws you its {kind thing}."
+BEAT.fell           +"\nThe {name whose} throws you its {kind thing}; it falls short."
+BEAT.unseen         "You hear something fall."
+
+# ---- The water's (E_BEAT's WB_WATER ... WB_DOUSED, the character's: wet its band, a swim's how; water_words' before,
+# water.c, overlay 4)
+
+BEAT.water          "{wet?You wade out of the water.|You wade into the water, a foot or two deep.|You wade in up to your waist."
+                    "|You're out of your depth: you swim.}"
+BEAT.swim           "{wet?You struggle to keep afloat.|You swim strongly.|You come up, gasping.}"
+BEAT.under          +"{wet?{nl}You go under!|}"
+BEAT.doused         "The water puts out your light."
+
+# ---- Harm (E_HARM, said.txt's kind: hc, HC_*; band the worst wound's, 0 unhurt; a fall's deep, shallow; out, knocked
+# out; caught, a fall stopped by a hold; a blow at a thing's stopped, the striker too hurt).  The UI gives the referee's
+# words of the wounds as text, and its arg 1 if the character's dead of it; its state's words after, the UI's (task.c's
+# state_words: but where nothing's hurt, or it's dead).  (harm_words' before, intro.c, overlay 12)
+
+kind HARM hc
+
+@caught     " You snatch at a hold as you go, and it holds: you hang there, and climb on."
+@tail       "{arg?{out?| Everything goes black; you come to some time later.}|{nl}You are dead.}"
+
+HARM.struck         +"{band?| {band-1?You hurt yourself on it|Something gives as you strike it|You are crushed against it}: "
+                    "{text}.}{stopped?| You stop: you are too hurt to go on.}{@tail}"
+HARM.fall[caught=1] +"{@caught}"
+HARM.fall           +"{band?{deep?{shallow? You land, shaken, but unhurt.| You come down in the shallows with a splash, "
+                    "shaken, but unhurt.}| You plunge into the water, shaken, but unhurt.}|{deep?{shallow? You land hard: "
+                    "| You come down in the shallows with a splash: }| You plunge into the water: }{text}.{@tail}}"
+HARM.any[caught=1]  +"{@caught}"
+HARM.any            +"{band? It does you no harm.| It hurts you: {text}.{@tail}}"
+
+# ---- The long task's (E_TASK, said.txt's kind: te, TE_*).  The missiles' (slice 4.7's: shot why there's none, how many
+# gathered, 1 loaded already; arms the launcher's or the missile's kind: shot_words' before, shots.c, overlay 1); and
+# what's said of no task, no foe, no way, a task stopped or asked about (task_words' own lines before: text what it was
+# doing, "digging", task.c's doing_of)
+
+kind TASK te
+
+@stop       "\nYou stop {text}."
+@keep       "\nKeep {text}?"
+
+TASK.stopped        +"{@stop}"
+TASK.hit            +"{@stop}"
+TASK.near           +"{@stop}"
+TASK.ask_seen       +"{@keep}"
+TASK.ask_heard      +"{@keep}"
+TASK.ask_tired      +"\nYou're tiring.  Keep {text}?"
+
+TASK.no_shot        "{shot?You can't shoot now.|You hold nothing to shoot with.|You have nothing left to shoot."
+                    "|It's out of range.|You have no clear shot at it.|Someone's in the way of your shot."
+                    "|Your mark is gone from sight.|Your hands are full: put something down first.|You can't shoot now.}"
+TASK.gathered       +"{shot?{nl}You find nothing to gather.|\nYou gather up 1 {kind arms}{-s}.|\nYou gather up {shot} {kind arms}.}"
+TASK.readied        +"\nYou take up your {kind arms}."
+TASK.loaded[shot=1] +"\nYour {kind arms} is loaded already."
+TASK.loaded[arms=KI_CROSSBOW]   +"\nYou span the {kind arms} and set a bolt in it."
+TASK.loaded[arms=KI_SLING]      +"\nYou set a stone in your {kind arms}."
+TASK.loaded         +"\nYou nock an arrow to your {kind arms}."
+TASK.cant           "There's no stopping part way up: you cling on and climb."
+TASK.ask_hurt[health=H_BADLY]   +"\nYou're badly hurt.  Keep fighting?"
+TASK.ask_hurt       +"\nYou're critically hurt.  Keep fighting?"
+TASK.no_foe         "{shock?No foe is left beside you.|You're in no state to fight.|No foe is left in your sights.}"
+TASK.free           "{none?You aren't engaged.|You see nothing to flee from.|There's no way back.|You see nothing to flee from.}"

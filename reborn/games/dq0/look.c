@@ -352,7 +352,7 @@ unsigned char __fastcall__ s_den_seen (unsigned x, unsigned y)
 /* An event's actor (b: 0 the character, else the actor plus 1) seen, the senses' last look's (heard()'s: another's
 ** limbs' news told only then, not in the dark or out of sight); the character always.  A fall's (b | 0x80, the world's
 ** WB_FALLEN: every fall told, 2026-10-30) unseen but near, on the character's stratum within FALL_HEARD squares: 2,
-** heard (limb_words': "You hear something fall.") */
+** heard (said.txt's BEAT.unseen: "You hear something fall.") */
 #define FALL_HEARD      8
 unsigned char __fastcall__ s_actor_seen (unsigned char b)
 {

@@ -3413,4 +3413,127 @@ maps, the fixtures and their places, the things.
   derivation, or the seeded key and new dungeons); the hooks' square-finding as a few shared finders (a square along
   a wall, one in the open, one by a wall) once more fixtures want the same squares; a text source for the table if it
   grows.
+
+## Narration as data, stage 2 (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §3.2 and step 5, its second stage)
+
+Stage 1 built the renderer and the phrase table and left overlay 27 with 282 bytes.  This stage makes room for the
+table to grow, moves four more wording functions and seven of task_words' own sentences onto it, and takes out the
+world's told () copies that only sent events.  The words the player sees are the same, letter for letter.
+
+- **Room: the table's rows in a bank of their own (overlay 28), read a byte at a time.**  dq0.cfg's OV28 holds
+  obj/gen/dq0said.h's said_rows alone (OV28RODATA).  The renderer (said.c) stays in overlay 27 with the small tables
+  (the kinds, their fields, where the rows and the pieces begin, the words most said), and reads a row's bytes through
+  bank.s's said_b: 21 bytes of main RAM that put bank 28 in the window, read the byte and put the window back, some 40
+  cycles a byte with the call.  A row now begins with its length, so the renderer steps from row to row without reading
+  their texts.  Before, PORTAL's 2.5K of rows were walked a byte at a time.  **Chosen over** two others:
+  - the renderer in assembly: a third of its 2.4K back, but the table, 5K and growing, is what fills the bank;
+  - the renderer as a swapped part: the window would be free while it runs, but every sentence would cost a part's
+    copy (some tens of thousands of cycles), with part 11 swapped out and back around it.
+
+  **Loaded as the game starts, not lazily.**  Measured: seed 1 234.1M to 234.3M, seed 123456789 311.0M to 310.9M
+  (budgets 235M, 315M).  The first build of this stage, with the same bank and fewer rows, measured 233.5M and 310.6M.
+  The bank adds bytes to read in, but the four functions' code and strings are gone and the texts are packed tighter.
+  Seed 1 rising while seed 123456789 falls is the game's own start, not the loading, which is the same for both.
+
+  **The packer (parts.js's banks) puts no part in a bank whose config line says "no parts"** (OV28's).  The first build
+  had put part 16's image there, so the bank's room went to the parts and not the table.
+- **More words most said.**  The 26 one-byte codes were spent.  The build now goes on choosing words, as SC_WORD and a
+  byte, while one saves any (up to 200; 115 now).  Their letters are in overlay 27 (said_dw 668 bytes, said_do two bytes
+  each).  The rows are 7,565 bytes without them and 6,280 with them.
+- **Kinds older than the head (said.txt's `kind KIND FIELD`).**  E_BEAT, E_HARM and E_TASK keep their bytes where they
+  have always been: their outcome in w1's low byte, not E_OUTCOME's high one.  A `kind` line names the field that is
+  their outcome (`kind BEAT beat`), and the renderer reads each kind's outcome by its field (said_ko).  **For review:**
+  the alternative was to move each onto E_OUTCOME's layout.  That would have changed every sender of three of the
+  world's busiest kinds, and the tests' readings of them, without changing any word said.  The head stays the shape
+  for new actions.  Two forms were declared in msgs.def for the rows' fields: E_BEAT:water (wet, runs) and E_TASK:shot
+  (shot, arms).  Nothing moved; the tests read beat and te as they did.
+- **New template pieces:**
+  - `{kind F}`: a thing's kind's name, from the catalogue (the critique's handles, for a kind: "dagger");
+  - `{name F}`: an actor's name as it is, by a field (E_BEAT's whose);
+  - `{-s}`: the word before made singular ("1 arrow");
+  - a row for any outcome (`HARM.any`), tried after the kind's other rows;
+  - a condition on one value past 7 (`TASK.loaded[arms=KI_CROSSBOW]`).
+- **Moved and deleted:**
+  - limb_words (main.c's part 23): the limbs' news, every actor's, worded by its body;
+  - water_words (water.c, overlay 4: the file is gone);
+  - harm_words (intro.c, overlay 12);
+  - shot_words (shots.c, overlay 1: the file is gone);
+  - their stubs (bank.s's OVFN harm_words, water_words and shot_words) and dq0.h's lines.
+
+  What stays with the callers is what's truly theirs.  s_news (part 11) gives:
+  - the body (the row's arg);
+  - a fall not seen (the UI's own outcome, BEAT.unseen);
+  - the referee's words of the wounds (text, at lb + 200: the referee's hurt[] is under 200 bytes);
+  - whether the character is dead (arg).
+
+  It calls state_words where harm_words did.  A body's position stays pose_words'.
+- **Inline sites moved:** task_words' own sayf and msg sites for TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_HEARD
+  and TE_ASK_TIRED (what it was doing is their text, copied into the main RAM), TE_CANT, TE_ASK_HURT, TE_NO_FOE and
+  TE_FREE, and the missiles' four (TE_NO_SHOT, TE_LOADED, TE_GATHERED, TE_READIED).  That is 48 rows more: 171, and
+  15 pieces.
+- **A stage 1 bug found:** the renderer's denizen name ({actor}) was copied by hub_mem into the overlay's own BSS, which
+  is in the window.  With the hub's bank in the window, the name went into the hub's header, and the renderer read back
+  nothing.  No stage 1 row ever named a denizen (the world tells no actor's portal work), so nothing showed.  The limbs'
+  rows do ("The unslings its buckler."), so the name now goes into lb, in the main RAM.
+- **The world's told () copies.**  Gone:
+  - workpart.h's, in five parts (wdoor.c, wblow.c, wwin.c, wtrap.c, wroom.c): the work's events, E_NOISE, E_HARM,
+    E_BEAT, E_PORTAL and E_TRAP;
+  - wfetch.c's;
+  - wshoot.c's two (told and told68), both E_TASK.
+
+  **One sender:** dq0w.c's event, now the world's and not static, its b in evb.  It now maps the hub's header itself,
+  as each copy did.  Beside it is work_told, the work's sender (wk.m: its a; its w2 the character's y; E_NOISE's w1 its
+  x).  wfetch.c's and wshoot.c's told are now macros of event.  workpart.h's told is work_told, except in the parts that
+  also work an actor's door (W_FRONT: wdoor, wblow, wwin): there told only keeps the actor's outcome, and otherwise calls
+  work_told; it no longer sends anything itself.  dq0w's main RAM went from 2,336 to 2,243 bytes free, the two senders
+  now resident.
+
+  **Left:**
+  - wdig.c's and wport.c's told (E_DEN: a denizen's digging, its door work).  Each works out where, how far and whether
+    seen in its own way, with its own copy of apart.  One resident den_told would cost the world's main RAM some 170
+    bytes more, past its margin over the 2,048 floor.  They go with the denizens' actions worded by the rows (E_DEN's
+    DE_* as outcomes), when E_DEN's shape changes anyway.
+  - wfight.c's told is the only E_FIGHT sender: the blow's record, not a copy.
+- **Room** (the build's table):
+
+  | | before | after |
+  |---|---|---|
+  | dq0's main RAM | 3,399 | 3,396 (said_b) |
+  | overlay 27 (the renderer) | 282 | 4,351 (the rows out; the words most said, 115 now, its) |
+  | overlay 28 (the rows) | - | 1,912 (the rows 6,280 bytes) |
+  | overlay 1 | 369 | 1,118 (shot_words gone) |
+  | overlay 3 | 34 | 440 (task_words' lines) |
+  | overlay 15 | 24 | 1,736 |
+  | overlay 26 | 323 | 4,333 |
+  | overlays 4, 12, 20 | 594, 236, 2,898 | 76, 66, 767 (the packer's: parts 7, 24, 17 placed anew) |
+  | the overlays' free bytes, all told | 18,138 | 28,177 (overlay 28's 1,912 among them) |
+  | part 11 (s_news) | 3,270 | 3,059 (the limbs' and harm's callers) |
+  | part 23 | 2,084 | 4,007 (limb_words gone) |
+  | dq0w's main RAM | 2,336 | 2,243 (event and work_told the world's) |
+  | dq0w's parts 5, 6, 7, 8 (workpart.h's) | 311, 16, 239, 0 | 376, 81, 304, 90 |
+  | dq0w's parts 66, 68 (wshoot.c's), 72 (wfetch.c's) | 2,150, 1,192, 720 | 2,212, 1,227, 775 |
+  | dq0w's overlays' free bytes, all told | 7,044 | 7,571 |
+
+- **Checked:** every test's output was kept before the change and after it (a temporary dump in sim/test.js, not
+  committed), and their sentences compared, the status line and the start's progress left out.  No sentence of the
+  moved words is said differently.  The sentences that are new or gone, in 21 tests, are:
+  - the real-time fight in dq0antidote;
+  - lines typed ahead, landing before or after "Time passes." or "Something stirs.";
+  - three tests whose denizens move on the clock: dq0answer (a rat heard twice less), dq0jobs (a squeak "to your left",
+    not "ahead to your left") and dq0skykin (a cave adder "gone from sight" three times more).  The UI's cycles changed
+    (the renderer's reads, event's mapping), so the world's clock meets the lines typed at other moments.
+
+  The first run of the moved words caught two bugs, both fixed: the name above, and a one-way choice that should have
+  been two (`{stopped?| You stop ...}`).
+- **Left (stage 3 and on):**
+  - the other wording functions (the rest of task_words, beat_words, felt_words, fight_words, sky_words, throw_words,
+    sway_words, state_words, robbed ...) and the inline strings;
+  - wdig.c's and wport.c's told, with E_DEN;
+  - the SA_ refusals as rows;
+  - the first words from a *begun* row;
+  - the denizens' actions by the rows, the actor swapped;
+  - the sound's mapping as a column of the table.
+
+  The rows' bank has 1,912 bytes left.  The next bank, when it's needed, is a line in dq0.cfg (OV29, no parts) and
+  said_b choosing the bank by the row's place.
 - **Tested:** all 442 tests pass.

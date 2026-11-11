@@ -335,7 +335,6 @@ void __fastcall__ sway_words (const struct sway* s);   /* Overlay 6: the charact
                                                 **   denizens' task's answer (the hub's sway, copied), into lb */
 unsigned char __fastcall__ task_words (unsigned w, unsigned char named);   /* Overlay 3: a long task's (task.c) */
 void __fastcall__ robbed (unsigned w, char* who);   /* Overlay 15: a robbery's words (task.c's, 2026-11-06) */
-void __fastcall__ shot_words (unsigned w, unsigned char named);   /* Overlay 1: the missiles' (shots.c: slice 4.7's) */
 void __fastcall__ beat_words (unsigned w);
 void __fastcall__ felt_words (unsigned w);      /* (Overlay 7's) A walk in the dark's beat (task.c's) */
 unsigned __fastcall__ dnum (const char* s);     /* (The game's library's NUM: bank.s's, dq0lib.inc) A number, a word's (atoi's) */
@@ -365,8 +364,6 @@ void __fastcall__ appraise (const struct ireq* q, signed char g, unsigned char e
 extern char dug_with[16];                       /* The tool a dig took: main.c's */
 extern char dig_with[16];                       /* The tool a dig's taken up, to name (then ""): main.c's */
 extern char dig_word[16];                       /* The thing named to dig with, as said: main.c's */
-void __fastcall__ harm_words (unsigned w, unsigned cond);               /* Overlay 12: harm's (an E_HARM's w1,
-                                                                        **   the conditions; the wounds in lb) */
 void __fastcall__ trap_name (unsigned char kind, unsigned char trigger, unsigned char state);  /* Overlay 10: a
                                                 **   trap's name, added to lb */
 void den_way (void);                            /* Overlay 4: a denizen in the way (its name in lb) */
@@ -378,8 +375,6 @@ extern const char* said_s[3];                   /* (said.c's, the main RAM's: th
 extern unsigned char said_n;                    /* (A choice of the UI's for a row: its {arg}) */
 struct fight;
 void __fastcall__ feed (unsigned char eat);     /* (Part 16's, feed.c: "eat", "drink", slice 4.9's) */
-void __fastcall__ water_words (unsigned w);     /* Overlay 4 (water.c): the water's news, worded
-                                                **   (an E_BEAT's w1, WB_WATER ... WB_DOUSED: slice 4.9's) */
 void __fastcall__ sky_words (unsigned char p, unsigned char k, const char* w);   /* Overlay 1 (time.c) */
 /* (Part 18's hide, main.c's and hthings.c's, not term.c's: HD_ROPE: the thing's word a rope's or a grapple's, or none: 1; HD_UP: a grapple or a rope thrown up, carried out: 1) */
 #define HD_ROPE         ((const char*) 1)

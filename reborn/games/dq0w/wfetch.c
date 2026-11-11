@@ -41,20 +41,9 @@ static struct item rec;                         /* (A lot's part split off, a gi
                                                 **   called as it's used; the main RAM's room) */
 #pragma bss-name (pop)
 
-/* Told (E_TASK TE_FETCHED: b the actor plus 1, how times 16; the thing's kind w1's high byte) */
-static void __fastcall__ told (unsigned char how, unsigned char kind)
-{
-    struct msg m;
-
-    hub_map (0);
-    m.kind = E_TASK;
-    m.who = 0;
-    m.b = E_TASK_FETCHED_B (bk + 1, how);
-    m.w1 = E_TASK_FETCHED_W1 (kind);
-    m.t = HUB->now;
-    hub_event (&m);
-    ++HUB->den_seq;
-}
+/* Told (E_TASK TE_FETCHED: b the actor plus 1, how times 16; the thing's kind w1's high byte), by the world's one
+** sender (dq0w.c's event: its copy here gone, 2026-11-11) */
+#define told(how, kind) (evb = E_TASK_FETCHED_B (bk + 1, (how)), event (E_TASK, 0, E_TASK_FETCHED_W1 (kind)), ++HUB->den_seq)
 
 /* Thing n body bd's own, held (filed at its lair's home, as its things are: items.h's IW_DEN) */
 static void __fastcall__ hold (unsigned n)

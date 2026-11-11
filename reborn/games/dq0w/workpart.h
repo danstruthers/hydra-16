@@ -2,7 +2,8 @@
 ** workpart.h - (dq0w) what each of the world's work's parts (wdoor.c, wblow.c, wwin.c, wtrap.c) has of its own: each
 ** part includes it after its #pragma code-name, so each has its copy in its own code (../dq0/swap.inc's rule: no
 ** part's code called from another's but through a stub), only what it says it wants (W_TRAPS, W_HARM, W_PARTS,
-** W_FRONT, W_SPRING): the portal's square in the window, its record and its trap, an event told, the referee's harm,
+** W_FRONT, W_SPRING): the portal's square in the window, its record and its trap, an event told (an actor's kept: the
+** sender dq0w.c's), the referee's harm,
 ** a portal's part moved, a trap set off.
 */
 
@@ -35,25 +36,22 @@ static void __fastcall__ trap_state (unsigned char st)
 }
 #endif
 
-/* An event, the world's (the hub's header in the window after) */
+/* An event, the world's (the hub's header in the window after): its one sender's, dq0w.c's work_told (each part's copy
+** of it gone, 2026-11-11); a part that works an actor's door too keeps only the actor's outcome, untold */
+#ifdef W_FRONT
 static void __fastcall__ told (unsigned char kind, unsigned w1, unsigned char a)
 {
-#ifdef W_FRONT
     if (wk.who) {                               /* (An actor's work: its outcome kept, the rest wport.c's to tell) */
         if (kind == E_PORTAL) {
             wk.out = w1 >> 8;                   /* (E_PORTAL's po) */
         }
         return;
     }
-#endif
-    hub_map (0);
-    wk.m.kind = kind;
-    wk.m.a = a;
-    wk.m.w1 = kind == E_NOISE ? HUB->pc_x : w1;
-    wk.m.w2 = HUB->pc_y;
-    wk.m.t = HUB->now;
-    hub_event (&wk.m);
+    work_told (kind, w1, a);
 }
+#else
+#define told            work_told
+#endif
 
 #define noise(loud)     told (E_NOISE, 0, (loud))
 #define trap_told(o)    told (E_TRAP, (o) << 8 | wk.tq.kind | wk.tq.trigger << 4, 0)

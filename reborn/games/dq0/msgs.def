@@ -127,7 +127,9 @@ I_NOISE         a loud; b what@NZ_WORK; w1 x; w2 y      # (A noise made: its lou
 # x[2-3] the thing it's done with (instr), their handles (a thing's id, struct item's; 0 none).  A kind names the head's
 # fields its own way (E_DIG's how its outcome, its feet n1): a field of its own in a slot of the head's, within one
 # field's bits, takes that field's place (E_TRAP's tk, tt and touch, n1's bits).  The phrase table reads them by those
-# names (said.txt's {feet}).
+# names (said.txt's {feet}).  Kinds older than the head, their outcome a field of their own where it's always been
+# (E_BEAT's beat, E_HARM's hc, E_TASK's te), are worded by the table too: said.txt's kind lines name the field (stage 2,
+# 2026-11-11: their bytes where they were, their senders and the tests' readings as they were).
 
 E_OUTCOME       b n2; w1 n1:0-7 outcome:8-15; x[0-1] obj; x[2-3] instr
                 # (Not a kind: the outcome events' head, as I_DEN is the denizens' intents')
@@ -180,6 +182,9 @@ E_TASK:light    b lamp; w1 te:0-7==TE_LOW,TE_OUT@TE_STOPPED task:8-13@LT_NONE se
 E_TASK:robbed   b by+1; w1 te:0-7==TE_ROBBED@TE_STOPPED purse:8 caught:9 asleep:10     # (RB_PURSE ... RB_ASLEEP)
 E_TASK:fetched  b by:0-3+1 ft:4-7@FT_TOOK; w1 te:0-7==TE_FETCHED@TE_STOPPED thing:8-15
 E_TASK:begun    b what; w1 te:0-7==TE_BEGUN,TE_ASK_SHORT@TE_STOPPED task:8-15@LT_NONE  # (What it's done to)
+E_TASK:shot     b shot; w1 te:0-7==TE_NO_SHOT,TE_LOADED,TE_GATHERED,TE_READIED@TE_STOPPED arms:8-15
+                # (The missiles', slice 4.7's: b why there's no shot (SH_*), how many gathered, 1 loaded already; the
+                #   launcher's or the missile's kind, the catalogue's: said.txt's TASK rows)
 E_BEAT          b whose; w1 beat:0-7@WB_QUIET side:8-15@WS_AHEAD
                 # (A walk's beat, its side; the body's and the limbs' whose, 0 the character, else the actor plus 1)
 E_BEAT:feel     w1 beat:0-7==WB_FEEL@WB_QUIET head:8-10 gait:12-15      # (Set out on in the dark, faster than
@@ -193,6 +198,9 @@ E_BEAT:limb     b whose; w1 beat:0-7==WB_DROP,WB_PICKS,WB_DRAWS,WB_READIES,WB_BR
 E_BEAT:rise     b whose; w1 beat:0-7==WB_RISEN,WB_NOT_UP@WB_QUIET already:8     # (On its feet already; no leg to
                                                         #   stand on)
 E_BEAT:swat     w1 beat:0-7==WB_SWAT@WB_QUIET foe:8-15+1
+E_BEAT:water    w1 beat:0-7==WB_WATER,WB_SWIM,WB_UNDER,WB_DOUSED@WB_QUIET wet:8-9 runs:15
+                # (The water's, the character's: its band, 0 out of it ... 3 out of its depth; a swim's, 1 well, 2 up
+                #   again from under; gone under, 1 drowned; running.  said.txt's BEAT rows)
 E_BEAT:search   b touch; w1 beat:0-7==WB_SEARCH@WB_QUIET rsw:8-15@RSW_BEGUN; w2 detail; x[0] mx; x[1] my
                 # (A room searched whole, as it goes: by touch; detail, a thing's item or kind, the block's (its
                 #   middle mx, my), as RSW_* says)

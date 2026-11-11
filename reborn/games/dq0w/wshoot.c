@@ -352,18 +352,8 @@ unsigned char __fastcall__ s_shot_op (unsigned char op, unsigned char k, unsigne
 #pragma code-name (push, "SW66CODE")
 #pragma rodata-name (push, "SW66RODATA")
 
-static void __fastcall__ told (unsigned w1, unsigned char b)
-{
-    struct msg m;
-
-    m.kind = E_TASK;
-    m.who = 0;
-    m.b = b;
-    m.w1 = w1;
-    hub_map (0);
-    m.t = HUB->now;
-    hub_event (&m);
-}
+/* E_TASK told (w1, b), by the world's one sender (dq0w.c's event: this part's copy and part 68's gone, 2026-11-11) */
+#define told(w1, b)     (evb = (b), event (E_TASK, 0, (w1)))
 
 /* Lot kind k a missile of family f (0: any) */
 static unsigned char __fastcall__ missile (unsigned char k, unsigned char f)
@@ -865,26 +855,13 @@ void __fastcall__ s_mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned 
 }
 
 
-static void __fastcall__ told68 (unsigned w1, unsigned char b)
-{
-    struct msg m;
-
-    m.kind = E_TASK;
-    m.who = 0;
-    m.b = b;
-    m.w1 = w1;
-    hub_map (0);
-    m.t = HUB->now;
-    hub_event (&m);
-}
-
 static unsigned char __fastcall__ missile68 (unsigned char k, unsigned char f)
 {
     return k == KI_ARROWS ? f == FM_ARROW : k == KI_BOLTS ? f == FM_BOLT : k == KI_STONES && f == FM_SHOT;
 }
 
 /* A launcher loaded (I_LOAD: "nock an arrow", "load the crossbow"): the one it holds (else none, SH_NONE), a missile
-** of its family carried (none, SH_SPENT) set to it (its shut's IS_NOCKED; the lot the fewer), told68 (TE_LOADED, its kind
+** of its family carried (none, SH_SPENT) set to it (its shut's IS_NOCKED; the lot the fewer), told (TE_LOADED, its kind
 ** times 256; b 1 if it was already): its time (a bow's or a sling's half a round, a crossbow's a round), 0 none */
 unsigned s_load_go (void)
 {
@@ -899,11 +876,11 @@ unsigned s_load_go (void)
     }
     hub_map (0);
     if (!lk) {
-        told68 (TE_NO_SHOT, SH_NONE);
+        told (TE_NO_SHOT, SH_NONE);
         return 0;
     }
     if (item_at (n)->shut & IS_NOCKED) {
-        told68 (TE_LOADED | (unsigned) lk << 8, 1);
+        told (TE_LOADED | (unsigned) lk << 8, 1);
         return 0;
     }
     f = FAM_OF (lk);
@@ -914,7 +891,7 @@ unsigned s_load_go (void)
         }
     }
     if (!best) {
-        told68 (TE_NO_SHOT, SH_SPENT);
+        told (TE_NO_SHOT, SH_SPENT);
         return 0;
     }
     if (h) {
@@ -927,7 +904,7 @@ unsigned s_load_go (void)
         item_at (best)->kind = 0;
     }
     item_at (n)->shut |= IS_NOCKED;
-    told68 (TE_LOADED | (unsigned) lk << 8, 0);
+    told (TE_LOADED | (unsigned) lk << 8, 0);
     equip_now ();
     hub_map (0);
     return lk == KI_CROSSBOW ? HUB->round : HUB->round / 2;

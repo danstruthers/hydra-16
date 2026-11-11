@@ -93,6 +93,12 @@ void portals (void);                            /* (Part 7's) A portcullis or a 
 void traps (void);                              /* (Part 8's) A trap stepped onto, disarmed; a search */
 void revealed (void);                           /* (Part 41's: dq0w.c) An opening told, with what it shows beyond */
 
+/* dq0w.c's: the world's events told the UI, its one sender (the hub's header in the window after): kind, who, w1 and
+** evb its b (then 0); the work's (wk.m: a, its w2 the character's y, E_NOISE's w1 its x) */
+extern unsigned char evb;
+void __fastcall__ event (unsigned char kind, unsigned char who, unsigned w1);
+void __fastcall__ work_told (unsigned char kind, unsigned w1, unsigned char a);
+
 /* dq0w.c's: the referee asked (kind, a, b; its w1 ww1, its steps wsteps, 0 after): its grade, wres its result */
 signed char __fastcall__ ask_w (unsigned char kind, unsigned char a, unsigned char b);
 extern unsigned char wres;

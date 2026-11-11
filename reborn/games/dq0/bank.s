@@ -8,7 +8,7 @@
 ; swapped parts' calls (swap.inc): code run in the main RAM's top, a part at a time, copied there from its overlay's
 ; bank as it's called.  (bread and bwrite gone, 2026-10-30: ovl_load's alone used one, the main RAM's room)
 
-            .export     _setbank, _getbank, _ovbank
+            .export     _setbank, _getbank, _ovbank, _said_b
             .import     popa, popax
 
             .include    "zeropage.inc"
@@ -20,10 +20,11 @@ OVL_DOT     = 12                    ;   twelve, the screen's silence under its 3
 _dnum       = _num
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 27                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
+OVMAX       = 28                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's;
                                     ;   the 25th part 27's; the 26th part 28's, 2026-11-10; the
-                                    ;   27th the status line, 2026-11-11)
+                                    ;   27th the status line, 2026-11-11; the 28th the phrase table's rows,
+                                    ;   said.txt's, 2026-11-11: said_b)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: a walk's first words spent half their time
@@ -50,6 +51,21 @@ _setbank:
 ; unsigned char getbank (void): the bank at $8000
 _getbank:
             lda         BANKREG
+            ldx         #0
+            rts
+
+; unsigned char __fastcall__ said_b (const unsigned char* p): byte p of overlay 28's bank (the phrase table's rows,
+; said.c's: its own bank, overlay 27's room for the renderer), the window put back as it was.  (Some 40 cycles a byte
+; with its call: a sentence's few hundred bytes read, a row found by the rows' lengths)
+_said_b:
+            sta         ptr1
+            stx         ptr1 + 1
+            ldx         BANKREG
+            lda         _ovbank + 27
+            sta         BANKREG
+            ldy         #0
+            lda         (ptr1),y
+            stx         BANKREG
             ldx         #0
             rts
 
@@ -146,7 +162,6 @@ ovcall:
             OVFN        free_cmd, 7
             OVFN        meta, 7
             OVFN        entered, 1
-            OVFN        harm_words, 12      ; (Overlay 1's till 2026-11-06: a fall into water's words)
             OVFN        appraise, 1
             OVFN        tell, 14
             OVFN        words, 2
@@ -161,7 +176,6 @@ ovcall:
             OVFN        resolve, 11
             OVFN        taken_next, 11
             OVFN        throw_words, 10
-            OVFN        shot_words, 1       ; (The missiles' words: shots.c, slice 4.7's, overlay 15)
             OVFN        trap_name, 10
             OVFN        den_way, 4
             OVFN        portal_look, 4
@@ -182,14 +196,14 @@ ovcall:
             OVFN        sky_words, 1        ; (The sky seen by a window, a skylight, a shaft: time.c, 16's room)
             OVFN        turned_says, 19     ; (A turn's first words: task.c's, the main RAM's room)
             OVFN        fore_set, 13        ; (The answer's tasks in the foreground: main.c's)
-            OVFN        water_words, 4      ; (The water's news, hunger's and thirst's: water.c, slice 4.9's)
             OVFN        time_ui, 16         ; (The time of day believed, worded: time.c, 2026-10-31)
             OVFN        say_raw, 16         ; (A line as it is, the map's: term.c, the main RAM's room)
             OVFN        t_status, 19        ; (The status line drawn: term.c, the main RAM's room, 2026-11-03; 19's, 2026-11-11)
             OVFN        status, 19          ; (The status line, as the game is now: main.c's, the main RAM's room, 2026-11-11)
             OVFN        outcome_words, 27   ; (An outcome event worded, its phrase table's row: said.c, ENGINE-CRITIQUE.md's
                                             ;   narration as data, 2026-11-11: dig_words, climb_words, portal_words,
-                                            ;   fixt_words and trap_words before it)
+                                            ;   fixt_words and trap_words before it; limb_words, water_words,
+                                            ;   harm_words and shot_words, stage 2)
             OVFN        said_again, 16      ; (A line that says "again": term.c, the verbs plan's B7, 2026-11-10)
             OVFN        may_den, 14         ; (The thing named may be a denizen: sway.c, 2026-11-03)
             OVFN        place_said, 14      ; ("From the floor": a place, not a thing, 2026-11-06)

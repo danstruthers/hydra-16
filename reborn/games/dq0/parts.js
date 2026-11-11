@@ -104,13 +104,15 @@ function cfg(text, list, file) {
 // made in one (2026-11-07): a smaller part moved out of it to another bank with room for it, the smallest that's
 // enough.  text: the task's config; sizes: Map segment → its bytes (all the objects').
 // OUT: { at: Map part → its bank, moved: [{ n, from, to, size }], room: Map bank → its bytes left, file: Map bank → its
-// file }; throws, a part no bank has room for
+// file }; throws, a part no bank has room for.  A bank whose MEMORY line's comment says "no parts" is no part's (dq0's OV28,
+// the phrase table's rows: their room kept for them, 2026-11-11)
 function banks(text, list, sizes, file) {
   const block = k => (text.split(new RegExp('^' + k + '\\s*\\{', 'm'))[1] || '').split('}')[0];
-  const cap = new Map(), fileOf = new Map(), room = new Map();
-  for (const [, n, f, z] of block('MEMORY').matchAll(/^\s*OV(\d+):\s*file\s*=\s*"([^"]*)"[^;\n]*?\bsize\s*=\s*\$([0-9A-Fa-f]+)/gm)) {
+  const cap = new Map(), fileOf = new Map(), room = new Map(), closed = new Set();
+  for (const [l, n, f, z] of block('MEMORY').matchAll(/^\s*OV(\d+):\s*file\s*=\s*"([^"]*)"[^;\n]*?\bsize\s*=\s*\$([0-9A-Fa-f]+)[^\n]*/gm)) {
     cap.set(+n, parseInt(z, 16));
     fileOf.set(+n, f);
+    if (/#.*\bno parts\b/.test(l)) closed.add(+n);
   }
   for (const [k, c] of cap) room.set(k, c);
   for (const [, s, k] of block('SEGMENTS').matchAll(/^\s*(\w+):\s*load\s*=\s*OV(\d+)\b/gm))
@@ -135,7 +137,7 @@ function banks(text, list, sizes, file) {
     room.set(k, room.get(k) - in_.reduce((t, p) => t + size(p), 0));
   }
   left.sort((a, b) => size(b) - size(a) || a.n - b.n);
-  const same = p => [...room].filter(([k]) => fileOf.get(k) === fileOf.get(p.ov));
+  const same = p => [...room].filter(([k]) => fileOf.get(k) === fileOf.get(p.ov) && !closed.has(k));
   const put = (p, k) => {
     const was = moved.findIndex(m => m.n === p.n);
     if (was >= 0) moved.splice(was, 1);
@@ -161,7 +163,7 @@ function banks(text, list, sizes, file) {
     }
     if (!best) {                                        // (None: every part of the file placed again, the biggest first,
       const f = fileOf.get(p.ov), mine = list.parts.filter(q => fileOf.get(q.ov) === f);   //   each in the bank with the
-      const free = new Map([...base].filter(([k]) => fileOf.get(k) === f));               //   least room that holds it)
+      const free = new Map([...base].filter(([k]) => fileOf.get(k) === f && !closed.has(k)));   //   least room that holds it)
       const place = new Map();
       for (const q of [...mine].sort((a, b) => size(b) - size(a) || a.n - b.n)) {
         const c = [...free].filter(([, x]) => x >= size(q)).sort((x, y) => x[1] - y[1] || x[0] - y[0])[0];

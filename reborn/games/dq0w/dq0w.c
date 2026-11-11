@@ -142,13 +142,18 @@ static void __fastcall__ advance (unsigned long d)
     __asm__ ("jsr %w", HY_PREEMPT_ON);
 }
 
-static unsigned char evb;                       /* (The next event's b: then 0) */
+/* The world's events told the UI (its ring, the hub's eq): the one sender of them all, the main code's and the parts'
+** alike (ENGINE-CRITIQUE.md's §3: told () was written six times over, wfetch.c's, wshoot.c's twice, workpart.h's in
+** five parts; their copies gone, 2026-11-11).  event: kind, who, w1, and evb its b (then 0); work_told: the work's
+** (wk.m), a its a and its w2 the character's y (E_NOISE's w1 its x) */
+unsigned char evb;                              /* (The next event's b: then 0) */
 extern unsigned char pc_hit;
 unsigned char cl_hold;                          /* (A climb struck or hurt part way: its next test to keep its grip) */
-static void __fastcall__ event (unsigned char kind, unsigned char who, unsigned w1)
+void __fastcall__ event (unsigned char kind, unsigned char who, unsigned w1)
 {
     static struct msg m;
 
+    hub_map (0);                                /* (A part's call: the hub's header wherever its window was) */
     m.kind = kind;
     m.who = who;
     m.b = evb;
@@ -159,6 +164,17 @@ static void __fastcall__ event (unsigned char kind, unsigned char who, unsigned 
     if (kind == E_HARM && !who) {
         pc_hit = 1;                             /* (A wound: its long task stopped, hard) */
     }
+}
+
+void __fastcall__ work_told (unsigned char kind, unsigned w1, unsigned char a)
+{
+    hub_map (0);
+    wk.m.kind = kind;
+    wk.m.a = a;
+    wk.m.w1 = kind == E_NOISE ? HUB->pc_x : w1;
+    wk.m.w2 = HUB->pc_y;
+    wk.m.t = HUB->now;
+    hub_event (&wk.m);
 }
 
 /* What the character sees, changed (E_VIEW's why: V_*), told the UI */

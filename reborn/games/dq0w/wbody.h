@@ -12,6 +12,9 @@ extern unsigned char bk;                        /*   its entry */
 extern unsigned bpx, bpy;                       /*   and the character's square and stratum, as the hub has them */
 extern unsigned char bps;
 extern struct msg bev;                          /* An event told */
+extern unsigned char evb;                       /* (dq0w.c's: the world's events' one sender, work.h's too: kind, who,
+                                                **   w1, evb its b; the hub's header in the window after) */
+void __fastcall__ event (unsigned char kind, unsigned char who, unsigned w1);
 extern unsigned char bleeds;                    /* The bodies bleeding: bit k, entry k */
 extern unsigned bled_at;                        /* When their bloodloss was last reckoned: the clock's low word */
 extern unsigned char den_done;                  /* The denizens' turn they've done (their I_DONE's: the hub's den_go) */
