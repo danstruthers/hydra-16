@@ -141,13 +141,29 @@ unsigned __fastcall__ reach_done (unsigned char said);  /* (What's owed added, i
 extern unsigned rtime, roff, pextra;            /* (What's owed: its time, tenths; the pack taken off for it) */
 extern unsigned char rsteps, rbody;             /* (Its steps, a fight's rounds: its levels; one, on the body) */
 /* The reach's steps (part 84's, 2026-11-02, the user's: each its words, its time, its grope; HOUSE.md's) */
+struct step {                                   /* A step of a long task (ENGINE-CRITIQUE.md's step planner, 3.3): */
+    unsigned char edge;                         /*   what its end does, SE_* (an edge of the tree: a pack taken off, a level
+                                                **   reached into, a thing got out, put back, set down, taken up ...); */
+    unsigned char say;                          /*   its words, the UI's (E_TASK's TE_BEGUN kind, I_WAIT's task); */
+    unsigned char what;                         /*   its thing's kind, as it's said; */
+    unsigned thing;                             /*   the thing it's done to (its handle: the item); */
+    unsigned apart;                             /*   the thing told apart in its words ("the spent torch"; 0 none); */
+    unsigned time;                              /*   its time, tenths (engaged, a round) */
+};
+enum { SE_OFF = 1, SE_IN, SE_ON, SE_DROP, SE_TRY, SE_OUT, SE_LIGHT, SE_STOW, SE_UP, SE_HAND, SE_BACKIN, SE_PLACE, SE_SLING };   /* (A
+                                                **   pack taken off; a level reached into, held open, a thing got out;
+                                                **   a pack put on; a thing let fall, set down; a spark struck; a light
+                                                **   blown out; one lit from another; put in the pack; taken up; a
+                                                **   tool got out to hand; put back; put in its place (a sconce, a
+                                                **   sheath); slung) */
+extern struct step rstep;                       /* (Part 85's: the step under way) */
 unsigned char __fastcall__ reach_step (unsigned n, unsigned c);   /* (Thing n got out, container c reached into: 1 if a
                                                 **   step's begun, the handling to wait, its caller's nothing done;
                                                 **   0 go on.  c RS_TOOL: n a tool, got out, put away after its use) */
 #define RS_TOOL         0xFFFF
 unsigned char __fastcall__ reach_do (unsigned w);   /* (Part 85's: RO_*, or an intent's tool's keys: s_reach_do's) */
 enum { RO_END, RO_ASK, RO_REPLY, RO_FUMBLED, RO_GO, RO_REDIP, RO_SPILL, RO_HONE, RO_NEWL };
-#define RS_GO           0xFFFB                  /* (reach_step's c: the step rs_do, rs_k, rs_what, rs_t, begun, the caller's) */
+#define RS_GO           0xFFFB                  /* (reach_step's c: the step rstep, begun, the caller's) */
 #define RS_FIRE         0xFFFC                  /* (reach_step's c: n a fire-maker, a tool's steps and its tries; 2 empty) */
 #define RS_BACK         0xFFFE                  /* (reach_step's c: the pack back on, its own step) */
 unsigned char __fastcall__ rs_for (unsigned n);  /* (Part 86's: the hand the pack goes in; or RF_*) */
@@ -159,17 +175,16 @@ unsigned char __fastcall__ rs_for (unsigned n);  /* (Part 86's: the hand the pac
 #define RF_DIGGERS      0xFFF5
 #define RF_DOORKEY      0xFFF7
 #define RF_ROLL         0xFFF6                  /* (The dark's test of the hands, its grade's good: 1; in the light 1) */
-void rs_did2 (void);                            /* (Part 75's: a step's end, part 86's rs_did's RS_HAND on) */
+void rs_did2 (void);                            /* (Part 75's: a step's end, part 86's rs_did's SE_HAND on) */
 unsigned char __fastcall__ rs_more (unsigned char w);  /* (Part 90's: 0 hands made free for rs_tool, 1 a step's begun; 1 a
-                                                **   step's end, part 86's rs_did's RS_HAND on) */
-#define RF_TELL         0x8000                  /* (| TE_* | its kind times 256: a word to the UI, E_TASK's, b rs_what) */
-extern unsigned rs_wn;                          /* (The thing a step's about: apart's, its words) */
+                                                **   step's end, part 86's rs_did's SE_HAND on) */
+#define RF_TELL         0x8000                  /* (| TE_* | its kind times 256: a word to the UI, E_TASK's, b rstep.what) */
 extern unsigned rs_tool;                        /* (The tool in use; a fire-maker to hand, part 10's flame's) */
 extern unsigned char rs_free;
 extern unsigned char rs_using;                  /* (A tool's: 1 out; 2 caught, a fire-maker's) */
 #define LW_REACH        0xFE                    /* (lwork's: a step of the reach, its end RO_END's) */
 extern unsigned rs_pack;                        /* (The pack off for this handling) */
-extern unsigned char rs_ok, rs_st, rs_what, rs_paid, rs_after_on, rs_live;
+extern unsigned char rs_ok, rs_st, rs_paid, rs_after_on, rs_live;
 extern unsigned char lwork;
 extern unsigned lw_x, lw_y;                     /* (dq0w.c's: a timed work's square; a redip's, things.c's rs_old, rs_down) */
 extern unsigned char den_saw;                   /* (wbody.h's: the world to look about again) */
