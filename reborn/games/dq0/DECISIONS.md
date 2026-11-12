@@ -4542,3 +4542,110 @@ the player sees changes.
   - The chunks' cache's plain stamp comparison (RTF_PLAIN) made round: a behaviour change, not taken.
   - The old keys' omission of the stratum's seed (dkey's purposes before DP_SEEDED, and these rows too: DH_AIR,
     DH_WET, DH_SKY, DH_VAULT and the rots have none): not taken.  It would change the dungeons.
+
+## The scheduler table, the continuations' stack, the after-work's queue (2026-11-12, as built, for review: ENGINE-CRITIQUE.md's §3.3, §7 and step 6, stages (d) to (f))
+
+The step planner's stages after "The step planner and the activity stack"'s (a) to (c), each its own commit, the suite
+whole at each.
+
+**(d) The scheduler table** (§7).  The world's own work as it falls due was a chain of hand-written checks in main ():
+the chunks stocked, the map making's late work, the traces' journal, the denizens' intents before the intents are
+taken; a look again as a body falls, the denizens' bodies seen, the lights' minute after the clock.  Now each is a row
+of one table, dq0w.c's three columns:
+
+| row | trigger (jobs_due) | gives way (jobs_held) | handler (jobs_run) |
+|---|---|---|---|
+| the chunks stocked | none: every pass, its own look | never | stocks |
+| the map making's late work | chart_late (a thing handled) | ui_long | chart_job: a sconce's light, the map's things |
+| the traces' journal | TR_FLUSH passings journalled | ui_long | trace_job: tr_flush (TF_SOME) |
+| the denizens' intents | some posted (DEN_INTENTS) | den_held | den_intents |
+| a look again | den_saw (a body fallen), not on the move | ui_long | look_job: see (0) |
+| the denizens' bodies | the hub's den_seq changed | uf_held (the UI's command in hand this pass) | dseq_job: dens_seen, V_STIR |
+| the lights' minute | the game begun, and burn_ask or burn_due come | ui_long | burn_job: the sconces' pass, the time believed alone, or burns_now |
+
+jobs.s walks rows first to end: each row's trigger asked, then, if it's due, its give-way rule, then, if it doesn't
+wait, its handler; main () walks the first four before the intents are taken and the last three after the clock and
+the long task's step, where the chain had them.  The order and the short-circuits are the chain's (ui_long and den_held
+keep their own clocks from their first asking: a rule asked only as its row's due, as the chain asked it).  The
+give-way rule is the row's now, not each hook's test; a hook's own looks as it goes (tr_flush's, sconce_lights',
+chart_now's) are as they were.  In assembly for the main RAM's room: cc65's walk of a struct table was 103 bytes and
+the rows 54; the three arrays 42 and jobs.s 66.  Rows a period of their own (burn_due) keep it as their trigger: no
+row's period moved.
+
+**(e) The continuations a stack.**  activity.h's struct pc_activity keeps each continuation's own field (what it
+carries: the thing walked to, the gathering's family, the close-in's target, the search's kind, the timed work's end,
+the journey's leg) and now q[6], nq: their kinds (AK_TAKE ... AK_TRAV) in the order they were planned, the last on top.
+act_plan (act.s) pushes one as its field's set, out of its place first if it was on the stack: at every setter
+(wgame.c's take, wshoot.c's gathering, the close-in in part 37's intent (part 24 had 2 bytes free), a search and a
+room's, the timed work's ends (part 12's work, the trace, hiding, the reach's steps and its after-work in things.c,
+work_done), a journey's leg and the dig's tool after it).  act_next (act.s) pops those on top whose field's been
+cleared since (a stop clears take, foe and gath; a handler clears its own) and hands the top to its handler; none,
+0.  **Held to the chain:** the stack is the chain only if nothing's ever planned out of the chain's order.  A check
+build ran both (the chain's choice used, the stack's compared, a count in the world's RAM read after each test): no
+difference in any of the 286 dq0 tests that run the world, nor in the 32 save-folder games.
+
+**(f) The after-work's planned steps one queue.**  What a redip or a new light owes after its work was two bits and a
+stack, read in a fixed order by rs_after: RR_RELIGHT (the torch to light again, the UI's), RR_STOW (the old one put
+away), then `aside` (what was set down, taken up, the last first).  Now one queue, things.c's aq: each step queued as
+it's planned (rs_queue: AQ_RELIGHT and AQ_STOW once, an AQ_UP as each thing's set down) in its place, above the kinds
+done after it, so the queue is in the order they're done whichever is planned first (the old torch's stowing is planned
+before a thing's set down to free a hand for the spare, and done before it's taken up); rs_after pops it.  RR_STOW and
+RR_RELIGHT gone; the take-ups' step records stay aside's (the queue says when; aside, which thing and its words).  The
+step records themselves on the queue (a struct step a place, shifted as one's put under) cost part 86 296 bytes of its
+212: the bytes' queue costs 195.
+
+**What wasn't done, for review:**
+
+- **`rs_after_on` and `rs_using` stay.**  The tool put back and the pack put on, the after-work's first and last steps,
+  are read from the reach's state, not queued: `rs_using` is the tool's own state as well (out, caught a spark, in hand
+  before it so nothing to put away), and `rs_pack` which pack's off; both are cleared in eight places as a handling
+  begins or is cut, and a queued step for them would have to be cleared with them or kept stale and guarded by them,
+  the same flags read twice.  The pack can also come off part way through the after-work (the torch lit again in the
+  dark wants the tinderbox, and the pack off for it), so its step would go under steps already queued.  `rs_after_on`
+  is the after-work's phase (none, under way, waiting on the UI's relight or a timed work's end), not a step.
+- **The reach isn't planned whole ahead.**  Each ask walks the tree again (s_reach_step): the world changes between
+  steps (a denizen takes the pack, a grope fails, a thing's used up, the dark comes as the torch is blown out), and the
+  handling's own checks come first.  A plan made whole would have to be checked against the world at every step and
+  made again where it's wrong, which is what the walk does now.  The after-work is the part that's planned ahead.
+- **The denizens.**  struct pc_activity and struct step don't name the character, but nothing of a denizen's is on
+  them.  What it would take: the world carries out a denizen's intents at once (den_intents: a step, a door, a blow)
+  and keeps no continuation for one; its walk's next step, its door work's end and its wait are the mind's (dq0d), asked
+  again each turn.  Moving them would mean an activity record per actor in the world's bank (8 actors, some 16 bytes
+  each, not the main RAM), act_plan and act_next taking the actor, and the denizens' long work (a door forced, a lock
+  picked, a pack searched) made timed work with an end the world pops, in place of the mind's asking again: a change in
+  when a denizen's work ends, for the user's word first.
+
+**The words.**  Every dq0 test's screen saved before and after each stage (a hook in sim/test.js, not committed) and
+compared sentence by sentence (the scratch's sent.js).  Stage (d): 7 of 294 differ, all noise (dq0antidote's real-time
+fight; denizens met at other moments in dq0answer, dq0jobs, dq0prompt, dq0stopwords; dq0reachstop's game 2 race, the
+side the user accepted; dq0restbusy's news after its sleep cut off by the quit typed, as dq0robrest's has been).  Stage
+(e): 5 (dq0antidote; dq0answer, dq0jobs, dq0prompt, dq0skykin's denizens).  Stage (f): 4 (dq0antidote; dq0answer, dq0jobs, dq0prompt's denizens).  No reach step's
+words changed: each "You take up the other torch.", "You put the old torch in your pack." and relight question said
+as often as before in every test that has them (dq0newlight, dq0twoalike, dq0torchwords, dq0packsteps, dq0light ...).
+
+**The save folder, byte for byte** (fhash, as "One record store"'s: every save-folder file each task wrote over 32 games,
+8 seeds at four cache sizes, the soak's player): the baseline at four power-ups, each stage's games against all four.
+The baseline's own games vary with the power-up (5 of 32 between its first two), its four together covering each other.
+Stage (d), power-ups 1 and 2: 30 and 31 games one of the baseline's; s1000C1 (both), s5C3 (the first) not.  Stage (e),
+power-up 1: 31, s70000C1 not (s1000C1 and s5C3 the baseline's again).  Stage (f), power-ups 1 and 2: all 32 games, both times, one of the baseline's.  Each
+game that differs is the timing the baseline varies by: its first difference a walk in the dark interrupted by a sound
+a step sooner or later ("You hear a squeak ahead. Keep walking?" where the baseline's "The passage turns left."), or a
+rat seen as a search ends where it wasn't, the start's dots before it one fewer or more; the files after it follow
+from the walk.  Not a job moved: no row's trigger or order changed; the walk's own cycles (some hundreds a pass of the main
+loop more than the inline checks) move where the denizens' task lands against the world's, as the record store's
+lookup did.  For review: whether that timing is acceptable as the record store's was, or wants a pace that doesn't
+hang on cycles.
+
+**Room** (bytes free; before; (d); (e); (f)):
+
+| | before | (d) | (e) | (f) |
+|---|---|---|---|---|
+| dq0w main RAM | 2,236 | 2,118 | 2,093 | 2,088 |
+| dq0w part 86 (the reach's after-work) | 212 | 212 | 206 | 11 |
+| dq0w parts 12, 25, 37, 82 | 1,121, 53, 1,843, 40 | the same | 1,101, 48, 1,833, 35 | the same |
+| dq0w overlays 16, 26 | 139, 85 | the same | 134, 79 | 8, 10 |
+
+The other tasks as they were.  The start at seed 1: 231.5M → 231.8M (d) → 232.0M (e) → 232.2M cycles (245M the budget);
+at 123456789 308.2M → 308.7M → 308.9M → 307.8M.
+
+**The suite:** all 444 pass at each stage.
