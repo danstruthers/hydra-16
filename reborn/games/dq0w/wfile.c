@@ -135,7 +135,7 @@ void s_store_in (void)
     if (!rp_name (path, "rg", rsn, rrx, rry) || (fd = rp_open (path, 2)) < 0) {
         return;
     }
-    for (left = rf.h.n; left && (p = s_store_page ()) != 0xFF; ) {
+    for (left = rpf.h.n; left && (p = s_store_page ()) != 0xFF; ) {
         hub_map (WORLD_BANK);
         q = &WREC->cpage[p];
         q->used = 1;

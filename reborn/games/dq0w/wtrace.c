@@ -20,7 +20,7 @@
 ** the store never fills).  Its chunks in a directory (the world's own paging bank's, after ipage.c's table): those it
 ** holds, each wanted as a passing's or a reading's chunk (the nine round the character's always, as it comes into
 ** one), the one least lately wanted that isn't round the character put out to make room for another: its records
-** written to its region's file in the save folder (trSXXYY.dat, a version of it each time: ../dq0/vfile.inc's, each
+** written to its region's file in the save folder (trSXXYY.dat, a version of it each time: the record store's, each
 ** chunk a group of its own there: its place in the region, its flags, its count) and freed; read again as it's
 ** wanted.  The save writes every chunk changed since (tr_flush's keep); a game carried on begins with none, and reads
 ** them as they're wanted; without a folder, a chunk put out is lost.  A chunk is kept swept (TC_SWEPT) as its keepers

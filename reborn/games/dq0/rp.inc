@@ -3,7 +3,7 @@
 ** file in the save folder, its versions read and written.  Every store that keeps a file compiles it, a call each:
 **   rp_name (path, pre, sn, rx, ry)  path made the region's file's name (pre its two letters: "rg" ...; preSXXYY.dat,
 **                                    a stratum past 15's preSSXXYY.dat): 0, no folder (the hub's savedir "")
-**   rp_open (path, slots)            its newest valid version: its fd past its header (rf.h: its n records), or -1
+**   rp_open (path, slots)            its newest valid version: its fd past its header (rpf.h: its n records), or -1
 **   rp_make (path, slots)            a new version begun (its fd, past its header's room), or -1 (the game not begun)
 **   rp_done (fd, n)                  its header written (n records, the kind's next stamp), it closed
 ** The hub's header in the window after each.
@@ -15,51 +15,51 @@
 
 #include "../dq0/rp.h"
 
-static struct rpf rf;
+static struct rpf rpf;
 
 static int __fastcall__ rp_go (unsigned char op)
 {
     hub_map (WORLD_BANK);
-    rf.gen = WREC->cgen;
+    rpf.gen = WREC->cgen;
     hub_map (0);
-    rf.op = op;
-    rf.kind = &RP_KIND;
-    rf.hub = &HUB->vsaved;
-    return rp_x (&rf);
+    rpf.op = op;
+    rpf.kind = &RP_KIND;
+    rpf.hub = &HUB->vsaved;
+    return rp_x (&rpf);
 }
 
 RP_STATIC int __fastcall__ rp_open (char* path, unsigned char slots)
 {
-    rf.path = path;
-    rf.slots = slots;
+    rpf.path = path;
+    rpf.slots = slots;
     return rp_go (RP_OPEN);
 }
 
 RP_STATIC int __fastcall__ rp_make (char* path, unsigned char slots)
 {
-    rf.path = path;
-    rf.slots = slots;
+    rpf.path = path;
+    rpf.slots = slots;
     return rp_go (RP_MAKE);
 }
 
 RP_STATIC void __fastcall__ rp_done (int fd, unsigned n)
 {
-    rf.fd = fd;
-    rf.h.n = n;
+    rpf.fd = fd;
+    rpf.h.n = n;
     rp_go (RP_DONE);
 }
 
 RP_STATIC unsigned char __fastcall__ rp_name (char* path, const char* pre, unsigned char sn, unsigned char rx,
     unsigned char ry)
 {
-    rf.path = path;
-    rf.pre[0] = pre[0];
-    rf.pre[1] = pre[1];
-    rf.sn = sn;
-    rf.rx = rx;
-    rf.ry = ry;
-    rf.dir = HUB->savedir;
+    rpf.path = path;
+    rpf.pre[0] = pre[0];
+    rpf.pre[1] = pre[1];
+    rpf.sn = sn;
+    rpf.rx = rx;
+    rpf.ry = ry;
+    rpf.dir = HUB->savedir;
     hub_map (0);
-    rf.op = RP_NAME;
-    return rp_x (&rf);
+    rpf.op = RP_NAME;
+    return rp_x (&rpf);
 }

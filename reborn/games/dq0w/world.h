@@ -395,7 +395,7 @@ typedef char change_fits[sizeof (struct change) == 8 && CH_PER_PAGE == 32 ? 1 : 
 ** 1, 2: ".dat", ".da1", ".da2"), its header first (struct vfh: the game's generation, its stamp).  Read: the newest version that's valid, by the hub's vsaved and vbase (the
 ** last save's, or this session's: never one a session wrote and ended without its save); written: over a version
 ** that's neither the save's nor (with three slots: the things', read as they're written) the newest, so a crash
-** loses no more than the save didn't have (vfile.c, every writer's and reader's) */
+** loses no more than the save didn't have (the record store's, ../dq0/rp.h: every writer's and reader's) */
 struct vfh {
     unsigned        magic;                      /* VF_MAGIC */
     unsigned        gen;                        /* The game's (wrec's cgen) */
@@ -404,8 +404,8 @@ struct vfh {
 };
 #define VF_MAGIC        0x4656                  /* "VF" */
 #define VF_BLOCK        0x10000UL               /* (The stamps a session or a save may give: hub.h's vlo to vhi) */
-/* (vfile.inc's calls, its includer's own: vf_name, a region's file's name; vf_open, its newest valid version's fd,
-** past its header; vf_make, a new version begun; vf_done, its header written, and it closed) */
+/* (The record store's calls, ../dq0/rp.inc: rp_name, a region's file's name; rp_open, its newest valid version's fd,
+** past its header; rp_make, a new version begun; rp_done, its header written, and it closed) */
 
 /* A request to the maker (one for each task that asks: the world's, the denizens', the senses', the UI's) */
 struct mreq {

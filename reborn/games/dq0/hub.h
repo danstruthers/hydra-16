@@ -1510,7 +1510,7 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** begins a game and as it keeps one (WQ_SAVE, the save's last step): every file stamped up to vsaved is the last
     ** save's, every one stamped past vbase (this session's floor, the stamps an earlier session may have given at
     ** most) this session's, any other a session's that ended without its save (a crash): never read.  A writer (the
-    ** world, the denizens, the maker) stamps a file past vlo, up to vhi (vfile.c's) */
+    ** world, the denizens, the maker) stamps a file past vlo, up to vhi (the record store's: rp.h) */
     unsigned long   vsaved, vbase, vlo, vhi;
     unsigned char   small;                      /* dq0 -C (the tests'): the caches small, so a short game pages them */
     /* The character's long task (HOUSE.md's long tasks: anything it does that takes more than a round), the world's

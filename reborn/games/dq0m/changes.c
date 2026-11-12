@@ -211,7 +211,7 @@ unsigned char __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y
     }
     hub_map (0);
     if (!had && rp_name (path, "rg", sn, rx, ry) && (fd = rp_open (path, 2)) >= 0) {
-        for (left = rf.h.n; left; left -= m) {    /* (None in the pages: its file's newest version, if this game has
+        for (left = rpf.h.n; left; left -= m) {    /* (None in the pages: its file's newest version, if this game has
                                                 **   one) */
             m = left > 8 ? 8 : left;
             if (read (fd, rb, m * sizeof (struct change)) != m * sizeof (struct change)) {

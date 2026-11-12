@@ -34,8 +34,8 @@
 ** Its records (the lairs, the denizens) are in a bank of its own, a record at a time copied out, a cache (move 2.8:
 ** no fixed count of them): each region's (the frame's, 256 squares each way: a lair's by its chunk's first square, a
 ** denizen's by its square, or, not placed yet, its lair's; no stratum's record wanted to find it) all in it or none, those round the character's always (one each way), the rest in
-** the save folder (dnSXXYY.dat, a version each time it's written: ../dq0/vfile.inc's), read in as they're wanted,
-** put out (the one least lately wanted) as a record's wanted and there's none free; each denizen and each lair known
+** the save folder (dnSXXYY.dat, a version each time it's written), read in as they're wanted, put out (the one least
+** lately wanted: the record store's, ../dq0/rp.h, its table's too) as a record's wanted and there's none free; each denizen and each lair known
 ** by a number of its own, never another's (a name given, a denizen's lair), its record's place the cache's.  Kept
 ** with the game (dq0 -d: the UI asks, the hub's dsave), the save folder's dens.dat: the bank as it is, its regions'
 ** table in its head.
@@ -66,6 +66,7 @@
 #include "../dq0w/world.h"
 #include "lore.h"
 #include "pop.h"
+#include "../dq0/rp.h"
 
 #pragma static-locals (on)                      /* (Its locals static: quicker, and nothing here is reentered) */
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
@@ -4740,25 +4741,23 @@ int main (int argc, char* argv[])
 unsigned char rsn, rrx, rry;                    /* (A region: found, written, read) */
 static unsigned char ksn, krx, kry;             /* (The region at hand: not put out to make room for its own) */
 char vpth[56];
-static struct vfh vf;
 
-/* Region rsn, rrx, rry's entry in the table, or 0xFF (a free one, rfree: 0xFF none) */
+/* Region rsn, rrx, rry's entry in the table, or 0xFF (a free one, rfree: 0xFF none: the record store's) */
+#pragma data-name (push, "SW1RODATA")
+static struct rpt drt = { RP_FIND, NDREG, sizeof hd.reg[0], 0x07, hd.reg, 3 /* (its stamp) */ };
+#pragma data-name (pop)
 unsigned char rfree;
 unsigned char s_reg_find (void)
 {
-    unsigned char k, f = 0xFF, rlim;
+    unsigned char f;
 
     hub_map (0);
-    rlim = HUB->small ? 2 : NDREG;              /* (dq0 -C: two, the tests' put out soon) */
-    for (k = 0, rfree = 0xFF; k < NDREG; ++k) {
-        if (!hd.reg[k].sn) {
-            if (rfree == 0xFF && k < rlim) {
-                rfree = k;
-            }
-        } else if (hd.reg[k].sn == rsn + 1 && hd.reg[k].rx == rrx && hd.reg[k].ry == rry) {
-            f = k;
-        }
-    }
+    drt.nf = HUB->small ? 2 : NDREG;            /* (dq0 -C: two, the tests' put out soon) */
+    drt.k[0] = rsn + 1;
+    drt.k[1] = rrx;
+    drt.k[2] = rry;
+    f = rp_x (&drt);
+    rfree = drt.free;
     return f;
 }
 
@@ -4827,8 +4826,14 @@ void s_dneed (void)
 #pragma code-name (push, "SW21CODE")
 #pragma rodata-name (push, "SW21RODATA")
 
-#define VF_STATIC       static
-#include "../dq0/vfile.inc"
+#pragma bss-name (push, "BSS")
+static struct rpk dn_kind;                      /* (Its versions counted: the main RAM's) */
+#pragma bss-name (pop)
+#pragma bss-name (push, "SW21RODATA")           /* (rp.inc's block, the part's own) */
+#define RP_STATIC       static
+#define RP_KIND         dn_kind
+#include "../dq0/rp.inc"
+#pragma bss-name (pop)
 
 /* The region of the denizen in D (its square's; not placed, its lair's) into rsn, rrx, rry */
 static void den_region (void)
@@ -4869,7 +4874,7 @@ static unsigned char __fastcall__ reg_out (unsigned char k)
             return 0;                           /* (An actor's: kept) */
         }
     }
-    if (!vf_name (vpth, "dn", sn, rx, ry) || (fd = vf_make (vpth, 2)) < 0) {
+    if (!rp_name (vpth, "dn", sn, rx, ry) || (fd = rp_make (vpth, 2)) < 0) {
         return 0;
     }
     for (i = 0, tag = 0; i < hd.nlairs; ++i) {
@@ -4893,7 +4898,7 @@ static unsigned char __fastcall__ reg_out (unsigned char k)
             den_put (i);
         }
     }
-    vf_done (fd, n);
+    rp_done (fd, n);
     hd.reg[k].sn = 0;
     return 1;
 }
@@ -4903,23 +4908,23 @@ static unsigned char __fastcall__ reg_out (unsigned char k)
 /* (make_room's: the lair and the denizen at hand kept, the records put out read through L and D) */
 static struct lair sl;
 static struct den sd;
+#pragma data-name (push, "SW21RODATA")
+static struct rpt dro = { RP_OLDEST, NDREG, sizeof hd.reg[0], 0x07, hd.reg, 3 /* (its stamp) */, RTF_HAND, 0, { 0 }, 0, 0, 0, 0, 0, 1, 2 };   /* (The table: the one made way for) */
+#pragma data-name (pop)
 unsigned char s_make_room (void)
 {
-    unsigned char k, b = 0xFF, cx = pcx >> 8, cy = pcy >> 8, r;
-    unsigned t;
+    unsigned char b;
 
     hub_map (0);
-    r = !HUB->small;                            /* (Those one each way kept; dq0 -C, its own alone) */
-    for (k = 0; k < NDREG; ++k) {
-        if (hd.reg[k].sn && (hd.reg[k].sn != pcs + 1 || (unsigned char) (hd.reg[k].rx - cx + r) > 2 * r ||
-            (unsigned char) (hd.reg[k].ry - cy + r) > 2 * r) &&
-            (hd.reg[k].sn != ksn + 1 || hd.reg[k].rx != krx || hd.reg[k].ry != kry) &&
-            (b == 0xFF || hd.reg[k].stamp - t > 0x8000U)) {
-            b = k;
-            t = hd.reg[k].stamp;
-        }
-    }
-    if (b == 0xFF) {
+    dro.r = !HUB->small;                        /* (Those one each way kept; dq0 -C, its own alone: the record
+                                                **   store's) */
+    dro.vsn = pcs + 1;
+    dro.vx = pcx >> 8;
+    dro.vy = pcy >> 8;
+    dro.k[0] = ksn + 1;
+    dro.k[1] = krx;
+    dro.k[2] = kry;
+    if ((b = rp_x (&dro)) == 0xFF) {
         return 0;
     }
     memcpy (&sl, &L, sizeof L);
@@ -4947,7 +4952,7 @@ unsigned char __fastcall__ s_reg_load (unsigned char sn, unsigned char rx, unsig
     rrx = rx;
     rry = ry;
     reg_add (k);
-    if (vf_name (vpth, "dn", sn, rx, ry) && (fd = vf_open (vpth, 2, &vf)) >= 0) {
+    if (rp_name (vpth, "dn", sn, rx, ry) && (fd = rp_open (vpth, 2)) >= 0) {
         while (read (fd, &tag, 1) == 1) {
             if (tag) {
                 if (read (fd, &D, sizeof D) != sizeof D || (i = rec_new (0)) == 0xFF) {
@@ -4988,35 +4993,6 @@ static void den_region4 (void)
         rrx = D.lrx;
         rry = D.lry;
     }
-}
-
-/* Region rsn, rrx, rry's entry in the table, or 0xFF (a free one, rfree: 0xFF none) */
-unsigned char rfree;
-static unsigned char reg_find4 (void)
-{
-    unsigned char k, f = 0xFF, rlim;
-
-    hub_map (0);
-    rlim = HUB->small ? 2 : NDREG;              /* (dq0 -C: two, the tests' put out soon) */
-    for (k = 0, rfree = 0xFF; k < NDREG; ++k) {
-        if (!hd.reg[k].sn) {
-            if (rfree == 0xFF && k < rlim) {
-                rfree = k;
-            }
-        } else if (hd.reg[k].sn == rsn + 1 && hd.reg[k].rx == rrx && hd.reg[k].ry == rry) {
-            f = k;
-        }
-    }
-    return f;
-}
-
-/* The table's entry for region rsn ... made (its stamp the newest) */
-static void __fastcall__ reg_add4 (unsigned char k)
-{
-    hd.reg[k].sn = rsn + 1;
-    hd.reg[k].rx = rrx;
-    hd.reg[k].ry = rry;
-    hd.reg[k].stamp = ++hd.rstamp;
 }
 
 /* (Part 8's since 2026-10-31: part 4's room, then the main RAM's) The places kept lit (the hub's KEPT_AT) written to the
