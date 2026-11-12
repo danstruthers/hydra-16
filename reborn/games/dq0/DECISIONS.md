@@ -4281,3 +4281,74 @@ after.
 - **The outcomes' enum (LO_*) and the grades' (CL_*) stay in life.h**, as enums: records.def has no enums, and LO_* is
   game.dat's struct save's too.
 - **The generators' files not moved** (above).
+
+## HarnMaster's remnants behind the referee (2026-11-12, as built, for review: ENGINE-CRITIQUE.md's §8 and step 9's "Left:")
+
+The user's decision of 2026-11-11 (§8's option (a)) wants a ruleset to be its answers alone, behind the referee, and
+no HarnMaster in the engine.  "The referee's skeleton" left four pieces outside; three are moved, the fourth is a
+question.  dq0null, the second referee, is the check: it includes no HarnMaster header and now neither does the world.
+
+- **1. The places on the body a thing's worn at are the engine's.**  items.h's `PB_*` (`PB_HEAD`, `PB_FACE`, `PB_NECK`,
+  `PB_SHOULDER`, `PB_UPPERARM`, `PB_ELBOW`, `PB_WRIST`, `PB_HAND`, `PB_BREAST`, `PB_WAIST`, `PB_GROIN`, `PB_HIP`,
+  `PB_THIGH`, `PB_KNEE`, `PB_CALF`, `PB_FOOT`, `NPB`) and `PB_SIDED` (a limb's, a left and a right) in place of harn.h's
+  `HARN_SKULL ... HARN_FOOT`, `HARN_NLOCATIONS` and wworn.c's `sided`; named for what the game says of them (the
+  words were already "head", "wrist", "breast", "waist").  **The numbers are the same**, so an item's `sn` (WP_AT | its
+  place | WP_PAIR | WP_RIGHT) and kit.dat's worn entries (WP_KIT's) read as they did: no save file changes.
+  kinds.c's `wplaces` and `wroom`, wworn.c and the UI's worn.c (its letters A ... P the places) name them; the world's
+  kinds.c and wworn.c include no harn.h (the world now includes no HarnMaster header at all; nor does the UI, the
+  denizens, the senses, the maker).  **The mapping to a ruleset's locations is the referee's:** dq0harn.c's
+  `PB_HARN` (HarnMaster's strike locations in the same order: the head its skull, the wrist its forearm, the breast its
+  thorax, the waist its abdomen; WP_RIGHT its HARN_RIGHT), checked at compile time.  No referee reads a place worn yet
+  (the jewelry worn at places covers nothing; armour is by its kind, the referee's own tables); one that does maps it
+  there.
+- **2. The ruleset's words for its stunned state and its own stance.**  RS_HELLO's text, after its name and its
+  character generator, gives three more lines (rs.h): the words for the state C_STUNNED is (HarnMaster's "in shock"),
+  the word for its own stance, D_OWN ("counter": "" none), and that stance told ("You will strike back first.").  The
+  UI keeps them (main.c's `rs_stun`, `rs_own`, `rs_owns`, the main RAM's 54 bytes) and uses them where it had its own:
+  tend.c's refusals while stunned ("You're " and the words, ": you can do no more than rest, or walk slowly away."),
+  said.txt's HARM.state (" You are {text}." and "still", the words its text: main.c's state_said), blows.c's stance
+  (the word's first letter after dodge's and block's, as 'c' was; o_fight_note's D_OWN sentence the ruleset's), and
+  the help (help.txt's "@own " the word and a comma, help.c's).  dq0harn says "in shock", "counter", "You will strike
+  back first." (part 4's s_hello_words, after part 1's name and generator); dq0null "stunned" (never set) and no stance of its own.  **dq0null's one change:**
+  "defend counter" under it was D_OWN, which it took as D_AUTO, told "You will strike back first."; it's now D_AUTO
+  told as such ("You will defend yourself as best you can."), and its help lists no counter.  No test runs it.
+- **3. The character's outfits are the ruleset's.**  outfits.txt was HarnMaster's through and through where it
+  outfits the character: hmchar's occupations, harn.h's skill names, the book's cultures and classes as tags.  Split:
+  games/dq0harn/outfits.txt (the universal kit, the skills' weapons and tools, the bents, the occupations, the
+  soldiers, the clerics: the character's, by its tags) and games/dq0/outfits.txt (the denizens' roles, lairs, purses,
+  standings, and the format).  **The tags are the ruleset's file's own `tags` line** (its words in RS_OUTFIT's bits'
+  order, dq0harn.h's OT_*), not outfits.js's `TAGS` list: the build names no HarnMaster word.  make.js reads each
+  referee's outfits.txt in rsmeta.h's RULESETS order (those that have one: dq0null has none, its RS_OUTFIT names no
+  occupation and no tags), then the game's, into the one lib/dq0/dq0o.dat: **byte for byte the same file** (the same
+  sections in the same order).
+- **4. dq0acct: not moved (a question, below).**
+
+**The words.**  Every dq0 test's screen saved before and after (sim/test.js's TRANSCRIPTS hook, not committed) and
+compared sentence by sentence (sent.js): 7 of 294 differ, all timing noise: dq0antidote's real-time fight; dq0answer's, dq0jobs' and dq0prompt's denizens met at other moments (a rat 10 or 15 feet off, a squeak ahead or not, "Something stirs."); dq0sway's; dq0reachstop's accepted race (the stop landing a step later); dq0starttime's progress dot landing after "(B) a sconce." (the start's timing).  No sentence of the stunned state, the stance, the help or a place worn changed: "in shock" in the same 10 tests, "You will strike back first." in dq0parse, the places' words as they were.  The save files: nothing written changes (an item's sn and kit.dat's places the same numbers, dq0o.dat the same bytes, RS_HELLO's words not saved).
+
+**Room** (main RAM free, before → after): the UI (dq0) 3,415 → 3,359 (its overlays 1 1,112 → 989, 8 236 → 93, 22
+508 → 536, 28 0 → 7, 29 6,577 → 6,595: the packer's placing; parts 1 406 → 263, 11 2,346 → 2,336, 12 2,214 → 2,193);
+dq0harn 2,209 → 2,189 (its part 4 4,509 → 4,456, put in bank 5 by the packer; part 1 as it was, 108: its bank, shared
+with part 3, was full, so the words are part 4's, asked by rf_answer); dq0null 4,605 → 4,595; dq0w's main RAM as it
+was (2,236; part 107 1,481 → 1,471, overlay 3 247 → 237).  **The start** at seed 1: 231.5M → 234.1M cycles (245M
+the budget); at 123456789, 308.2M → 308.8M (325M).  **The suite:** 444 of 444, before and after.
+
+**For review:**
+- **dq0acct (the question).**  It's the ruleset's own program already, the table's (rsmeta.h's RULESETS: dq0harn's
+  "/../acct/dq0acct"), run by dq0life for dq0harn's games alone; dq0null's games have no time between.  What in it is
+  HarnMaster's: the healing told day by day (body.c: course.h, watch.h, the library's harnheal.c), the month's
+  practice and the wages (skill.c), the sheet read and written (sheet.c, hfile.c: hmchar's format), the physician's
+  words (town.c: harn.h's locations), the living by the sheet's social class and the age by its birthday (dq0acct.c).
+  What isn't: what solving brings, the standing and the rumours (quest.c), the money's matters (living, selling,
+  mending, restocking), the town (dq0town).  Putting more of it "behind the table" means splitting it into a generic
+  account every ruleset's games run and the ruleset's pieces (its healing, its practice, its sheet) through rsmeta.h's
+  functions: a large change to a program whose words and saves must stay the same, and one that only pays when a
+  second ruleset wants a time between dungeons.  **For the user: split dq0acct now (the generic account, rsmeta.h's
+  hooks for the healing, the practice and the sheet), or leave it the ruleset's whole program until a second ruleset
+  wants the time between?**  Not built.
+- One outfits file for the game: a second ruleset with its own `[universal]` and its own tags would clash with
+  dq0harn's in the one dq0o.dat (a section twice, the tags twice: the build fails, loudly).  Then the file wants to be
+  each referee's (lib/dq0/REFEREE's dq0o.dat, the world opening the save's referee's).
+- The bestiary (the creatures' sheets, RULESETS.md) and dq0schol's d100 test are as they were.
+- A ruleset's own stance word is matched by its first letter after dodge's d and block's b/p (and before none's n), as
+  'c' was: a ruleset's word beginning with d, b or p would never be reached.
