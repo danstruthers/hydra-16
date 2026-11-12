@@ -619,7 +619,7 @@ ruleset's); dq0schol's d100 test is the book's; the bestiary is the referee's (R
 
 **The meta programs** pass state through long argv lists and a dozen files in the save folder:
 
-- dq0town takes `-t -i -p -k -h -r -n`; dq0schol gets town.dat's money over argv.
+- dq0town takes `-t -i -p -k -h -r -n`; dq0schol gets town.dat's money over argv (*both gone, 2026-11-11: below*).
 - They copy their helpers: `say`/`sayn`/`amount` ×3 (dq0acct, dq0town, dq0schol; town's and scholar's differ in 6
   of 68 lines), a program launcher ×4 (dq0life `run`, dq0acct `arg`, dq0town `run`/`arg`, dq0/hub.c `hub_run`),
   `words_of` ×2, `value_of` ×2, `num` ×2, `in` (path join) ×3.
@@ -639,6 +639,30 @@ build of the same source), or the JS one is, and the game only reads compiled th
 
 A small `tools/dq0build.js` library (the readers, the schema generator from §2, the placement generator from §1, the
 ovlpack call) makes each task's make.js a short list of declarations.
+
+*As built, 2026-11-11 (DECISIONS.md's "The meta programs' library, their state record, one theme compiler"):*
+
+- *libdq0meta: games/dq0/meta/meta.c, one C source each program compiles in a section at a time (`#define META_WORDS`,
+  `#include "../dq0/meta/meta.c"`), each where the program had it (main RAM or an overlay), the names it reads the
+  program's.  The words (say, sayn, amount, say_flush), width_read, ask, words_of, value_of, the launcher (SPAWN and
+  WAIT: the UI's hub_run and hub_join are its, by name), arg/argn, num, in_, fail, seed_of; the copies' differences
+  parameters (buffer sizes, the bank's hooks, the first value or the n'th).  Kept local: dq0acct's ask, dq0end's and
+  dq0life's words, hmchar's in.  Not the paged ROM's library: no RAM of its own for the words' state, an XCALL stub in
+  each program, and the meta programs (but dq0acct, whose words are where they were) have room to spare.  Every
+  program's words the same; dq0, dq0end, themec and themegen byte for byte the same.*
+- *One state record: games/dq0/records.def (struct between, between.dat), read by hubgen.js: obj/gen/dq0rec.h, its
+  layout in dq0hub.json, the tests' decoder `load ().record ('between', bytes)`.  It replaces dq0town's
+  `-t -i -p -k -h -r -n`, dq0schol's `-t` and `-x`, and town.dat; dq0town and dq0schol take `-d -l` alone
+  (dq0schol's `-t -b -c -w` set the record's fields over the file's, run by hand: the tests' scenes).*
+- *One theme compiler, themec's (C): the game needs one on the Hydra (themegen runs it on every history's theme), so the
+  JS one went (make.js's compile and check).  The build runs themec in the emulator (tools/themec.js: an SD card made for
+  it, its answers kept in obj/themec) for dq0t.dat (make.js's after, once every game's built) and the goal kinds
+  (themegen's make.js); the tests (THEMEC) for what was compiled on the Hydra.  dq0t.dat byte for byte the same.*
+- *tools/dq0build.js: keyLines (dq0's lines, themegen's read), blocks (dq0d's), rows (the one-liner, three times), and
+  packOnly (dq0harn's, dq0m's, dq0p's make.js).  Every output the same.*
+- *Left: the other files the meta programs share (life.dat's struct life is the next for records.def; the kit files are
+  the world's); the schema and placement generators in dq0build.js (§1, §2: still their own files); a host build of
+  themec if a C compiler is ever on the build's machines.*
 
 **The tests:**
 
@@ -722,7 +746,7 @@ Ranked by how much each unlocks, and arranged so the game keeps working througho
 | 8 | **The generation placers table and keyed randomness** (§5). *Done 2026-11-11, but for the styles (DECISIONS.md's "The placers' table and the keyed dice"): one keyed dice API (games/dq0m/place.c: `dkey (purpose, where)`, `dr (n)`, purposes DP_*, each one's key the one its placer always had, so every seed's dungeon is byte for byte as it was; doors', fixtures.c's and sconce.c's private copies gone; the growers' and the stock's stream seeds made there too, `rstream`); the placers a table (`placers[]`: stage, sites, purpose, the style's odds, what a site mustn't be, a room's use, qualifiers, where, what it makes, a hook) walked by one placer (`place (stage)`): windows and slits, portcullises, room traps, door traps, the rooms' marks, the kitchens' wells, the sconces.* Left: the styles' proportions into the theme (§5's step 3); the growers' layout streams (call order, by design) and the private hashes of caves.c, sky.c, plan.c, uses.c and make.c's mixed third; the doors' placement (the grower's) and the materials, fortification and the portals' make as steps, not rows; the old keys omit the stratum's seed (two strata's chunks at the same place share their fixtures' numbers) | fixtures as data; furniture with compartments | medium |
 | 9 | **Decide on the referee** (§8 a or b), then the skeleton library or the trim. *Decided 2026-11-11, (a), the user's; done the same day (DECISIONS.md's "The referee's skeleton"): rs.h trimmed to the 17 requests made, P_ the purposes alone (SP_*, TOWN_*); the skeleton (games/dq0/referee.h, games/dq0/rf/rf.c and sheets.c: the main loop, slots, dice, words, things to hand, sheets' file) under both referees, a ruleset only rf_start, rf_begin, rf_answer and rf_sheets; the house's rules linked functions (rf/dig.c ... air.c, rshouse.h's declarations); OT_* and the strike locations the referee's, the grades a generic scale, the ruleset's own stance; the meta programs through rsmeta.h (the rulesets' table, the sheet's masteries).* Left: the world's worn places (harn.h's locations), the UI's "counter" and "in shock" words, outfits.txt's skill sections and tags, dq0acct HarnMaster's own | a second ruleset is a referee's answers and, if it wants a time between, its own program | small–medium |
 | 10 | **Test scenes, tests.js split** (§9). *Done 2026-11-11 (DECISIONS.md's "The tests: split by area, scenes, the runner"): tests.js split into tests/suites by area and tests/suites/dq0 by subject, the helpers in tests/lib; scenes, the emulator's machine saved after the boot and hmchar and after the game's start and taken up by every test that starts the same way, exact to the cycle (sim/lib/scenes.js); the ROM images kept, the runner's order by the last times.  The suite's CPU time some 4,450 s before, 4,012 s cold, 2,899 s warm.* Left: scene constructors, the recorder's offsets from the schema | much faster tests; the action × class sweep | medium |
-| 11 | **Shared meta library and one save record; one theme compiler** (§9) | | small–medium |
+| 11 | **Shared meta library and one save record; one theme compiler** (§9). *Done 2026-11-11 (DECISIONS.md's "The meta programs' library, their state record, one theme compiler"): libdq0meta (games/dq0/meta/meta.c, a shared C source compiled in by sections: the words, the launcher (the UI's hub_run too), the readers, the paths); one state record (games/dq0/records.def's struct between, read by hubgen.js: dq0rec.h and the tests' decoder) in place of dq0town's seven arguments, dq0schol's two and town.dat; one theme compiler, themec's, run in the emulator by the build (dq0t.dat, the goal kinds) and the tests (tools/themec.js), make.js's compile and check gone; tools/dq0build.js (the make.js files' readers, packOnly); every program's words and every image the same.* Left: life.dat into records.def; the generators into dq0build.js | one place for each helper; the programs' state declared and decoded; one compiler to keep | small–medium |
 | 12 | **Comments and docs as current reference** (§10) | done gradually, file by file as each is touched | ongoing |
 
 Steps 1–3 are infrastructure that make everything after them cheaper and are worth doing first, even though no

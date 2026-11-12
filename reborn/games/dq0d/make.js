@@ -43,31 +43,11 @@ const BURIALS = ['none', 'crypt', 'barrow', 'pyre', 'earth'];                   
 const LREC = 64;                                // (lore.h's struct people, struct deity)
 const { SQ_FT } = C;                            // rs.h's: a square's feet (kinds.txt's distances in feet)
 
-const lines = f => fs.readFileSync(f, 'utf8').split(/\r?\n/).filter(l => l.trim() && !l.startsWith('#'))
-  .map(l => l.split('|').map(s => s.trim()));
+const { rows, blocks } = require('../../tools/dq0build.js');   // (A file's rows, its blocks: the make.js files' readers)
+const lines = f => rows(f, 'utf8');
 
 // A file of keys and values (peoples.txt, deities.txt): its lines, each its key and its values (a line begun with a
 // space goes on with the last: its last value, or with a bar first, more values), in blocks each begun by first
-function blocks(f, first) {
-  const out = [];
-  fs.readFileSync(f, 'latin1').split(/\r?\n/).forEach((l, i) => {
-    if (!l.trim() || l.startsWith('#')) return;
-    const b = out[out.length - 1];
-    if (/^\s/.test(l)) {
-      if (!b || !b.last) throw new Error(`${f}: line ${i + 1}: goes on with nothing`);
-      const t = l.trim();
-      if (t.startsWith('|')) b.last.push(...t.slice(1).split('|').map(s => s.trim()));
-      else b.last[b.last.length - 1] += ' ' + t;
-      return;
-    }
-    const v = l.split('|').map(s => s.trim()), key = v.shift();
-    if (key === first) out.push({ n: i + 1, f: {} });
-    else if (!out.length) throw new Error(`${f}: line ${i + 1}: ${key} before the first ${first}`);
-    out[out.length - 1].f[key] = v;
-    out[out.length - 1].last = v;
-  });
-  return out;
-}
 
 // Letters' bits: each letter's place in set ('*': all)
 const bits = (s, set, what) => s === '*' ? (1 << set.length) - 1 : [...s].reduce((a, c) => {

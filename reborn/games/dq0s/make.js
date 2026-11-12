@@ -10,8 +10,7 @@ const WORLD = ['*dig', '*open', '*shut', '*blow', '*smash', '*chains', '*trap', 
 const WAVES = { p: 0, s: 1, t: 2, n: 3 };       // snd.h's SND_WAVE_*
 const S_USED = 1, S_NOISY = 2;                  // dq0s.c's S_*
 
-const lines = f => fs.readFileSync(f, 'utf8').split(/\r?\n/).filter(l => l.trim() && !l.startsWith('#'))
-  .map(l => l.split('|').map(s => s.trim()));
+const lines = f => require('../../tools/dq0build.js').rows(f, 'utf8');   // (A file's rows: the make.js files' reader)
 
 function build({ dir, objdir, say = () => {} }) {
   const keys = lines(path.join(dir, '..', 'dq0d', 'kinds.txt')).map(f => f[1]);

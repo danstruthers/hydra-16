@@ -18,23 +18,8 @@ const HEAD = H.size('theme');                                       // (struct t
 const T = p => H.off('theme', p), LEN = (s, p) => H.size(s, p);
 
 // A theme's file read: its lines, each its key and its values (a line begun with a space goes on with the last: its
-// last value, or with a bar first, more values)
-function lines(text, f) {
-  const out = [];
-  text.split(/\r?\n/).forEach((l, i) => {
-    if (!l.trim() || l.startsWith('#')) return;
-    if (/^\s/.test(l)) {
-      if (!out.length) throw new Error(`${f}: line ${i + 1}: goes on with nothing`);
-      const v = out[out.length - 1].v, t = l.trim();
-      if (t.startsWith('|')) v.push(...t.slice(1).split('|').map(s => s.trim()));   // (More values)
-      else v[v.length - 1] += ' ' + t;
-      return;
-    }
-    const v = l.split('|').map(s => s.trim());
-    out.push({ key: v.shift(), v, n: i + 1 });
-  });
-  return out;
-}
+// last value, or with a bar first, more values: ../../tools/dq0build.js's keyLines)
+const lines = (text, f) => require('../../tools/dq0build.js').keyLines(text, f);
 
 // The dispatch table's rows (actions.c's ROW (VB_*, ...)) held to actions.h's actions (the build's, from
 // commands.actions): one a verb, in its order

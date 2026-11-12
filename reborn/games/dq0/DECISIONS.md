@@ -3885,3 +3885,66 @@ loop, 32 bytes more than the ternary chain); its part 86 234 → 212, 87 2,203 �
 114 → 92.  The UI (dq0) 3,383 throughout; its overlays 171 bytes freer and its parts 209 at (b) (the sentences;
 ovlpack's placing).  The start at seed 1: 233.3M → 233.5M (a) → 233.7M (b) → 233.2M (c) cycles (245M the budget);
 at 123456789 310.6M → 311.0M (b) → 311.4M (c).
+
+## The meta programs' library, their state record, one theme compiler (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §9 and step 11)
+
+The programs between dungeons (dq0life, dq0acct, dq0town, dq0schol, dq0end; themegen and themec beside them) each had their own copy of the same helpers, passed the town's state to each other through long argument lists and a file of their own, and the theme compiler was written twice, in JS for the build and in C for the Hydra, the tests holding the two to the same bytes.  Four stages, each its own commit:
+
+**1. libdq0meta** (games/dq0/meta/meta.c).  One C source a program compiles in, a section at a time:
+
+    #define META_WORDS
+    #include "../dq0/meta/meta.c"
+    #undef META_WORDS
+
+so each program takes only what it calls and puts each section where it wants it (dq0town's ask, width_read, seed_of and launcher in its overlay 1; dq0acct's width_read in its overlay 2, value_of in 4, the launcher in 5), the names a section reads (path, ans, asks, said, tw, rbuf ...) declared by the program first.  The sections: fail (META_NAME's "NAME: why", exit 1), in_ (a path), num, seed_of, the words by the console's width (say, sayn, amount, say_flush; width and ob, META_WB and META_OB the buffers' sizes), width_read, ask, words_of and words_read (the "key | value" text, META_TEXT_ON/OFF round each reading of it: dq0town's bank), value_of (a rumour's value: the first, or with META_VALUE_N the n'th), and the launcher (META_LAUNCH: the system's SPAWN and WAIT themselves, named META_SPAWN and META_JOIN: the UI's hub_run and hub_join are the library's; META_RUN: meta_run, both; META_ARG, META_ARGN: arg1, arg, argn).  META_LINK, empty or static: shared with the program's other files (dq0acct's words, its overlays call them) or not.
+
+| helper | was in | now |
+|---|---|---|
+| say, sayn, amount, the words' buffer and wrap | dq0acct, dq0town, dq0schol (the town's and the scholar's 6 of 68 lines apart: the buffers' sizes, static or not, say_flush) | META_WORDS (META_WB, META_OB) |
+| the launcher | dq0life run, dq0acct's town.c arg/argn and SPAWN/WAIT, dq0town run and arg, the UI's hub_run and hub_join | META_LAUNCH, META_RUN, META_ARG, META_ARGN |
+| words_of, the text read | dq0town (its bank put in and out), dq0schol | META_KEYS (META_TEXT_ON/OFF, META_LINE, META_TEXT_MAX) |
+| value_of | dq0town (the n'th value), dq0acct's quest.c (the first) | META_VALUE (META_VALUE_N) |
+| num | dq0life, dq0end | META_NUM |
+| in_ / in | dq0life, dq0acct, dq0town, dq0schol, dq0end; themec, themegen | META_PATH |
+| fail / die | dq0life, dq0acct, dq0town, dq0schol | META_FAIL |
+| seed_of | dq0life, dq0town | META_SEED |
+| width_read | dq0acct's o_width, dq0town, dq0schol | META_WIDTH |
+| ask | dq0town, dq0schol | META_ASK |
+
+Kept local, as they differ in what they do: dq0acct's ask (dq0auto, " > "), dq0end's words (its spaces kept, an indent stands), dq0life's out (no wrap), hmchar's in (another signature, under its floor), the rumours' files read (dq0acct's and dq0town's: the town counts themegen's).  Every program's words the same: where the copies differed it's a parameter or the difference did nothing (dq0schol's ask's word_out before out_flush).  One change in what a program does: value_of now stops at a key line with no bar inside the rumour's own lines (dq0town's way; dq0acct's read on past the rumour's end), which no rumour file has.
+
+**Why a shared C source, not the paged ROM's library** (modules/dq0lib).  Measured against what the ROM would save: a ROM call is an XCALL to an assembly entry (dq0lib has no RAM of its own: the words' buffer, their column and the console's width would be the caller's, passed in), its stub in each program (dq0lib.inc, as the tasks have it) some 130 bytes of main RAM, and the helpers here are 100 to 400 bytes a program.  The meta programs aren't the game's tasks: but dq0acct (its main RAM at 2,152, its words in main RAM for its overlays to call, the same as before) they have thousands of bytes to spare, and a shared source puts each helper where its program had it, so nothing moves.  The UI's hub_run and hub_join the library's too, its image byte for byte the same.
+
+**2. One state record** (games/dq0/records.def, struct between, between.dat).  What the account (dq0acct) gives the town (dq0town) was seven arguments (-t -i -p -k -h -r -n: the town, the inn, the days passed, the keep so far, the habit, Rhetoric's and Intrigue's EMLs), the town gave the scholar's house (dq0schol) its name and first command as arguments (-t, -x), and town.dat (struct townrec, in dq0acct/town.h) went from the town to the account and between the town and the house.  Now one record in the save's folder, declared in records.def (a sibling of msgs.def): its fields, their types, what each is, and the file's name, magic and version.  hubgen.js reads it with the headers: it writes obj/gen/dq0rec.h (the struct, BETWEEN_FILE, BETWEEN_MAGIC, BETWEEN_VER and the defines it wants), lays it out with cc65 with the rest (dq0hub.json's S.between) and records each field's type (dq0hub.json's records), so the tests' decoder is the same pass's: `load ().record ('between', bytes)` gives { town, inn, passed, keep, ..., learnt: [..], ok } (a char array its string, an array its numbers, ok the magic and version).  The flow: the account fills it and writes it, runs `dq0town -d folder -l lib`; the town reads it as it starts (none, or another magic or version: it fails, said), writes it before it runs `dq0schol -d folder -l lib` (the first command in it) and reads it back after, and writes it as it's left; the account reads it and removes it.  The scholar's house reads it (none: a stay begun, all 0) and writes it back; its -t, -b, -c, -w (the tests' scenes, run alone) set the town, the town's kind, the money and the writings over the file's, so dq0scholar types what it did.  An old folder's town.dat is passed by (read by nothing now; it was the town's, removed by the account as it read it).  dq0life's (-d, -s, -l), dq0acct's (-d, -l), dq0end's and themegen's arguments are where things are or what to make, not state passed on: as they were.
+
+**3. One theme compiler: themec's (C).**  What uses it: themegen runs it on the Hydra as a game begins (hy_exec in its place) to make a game's theme.dat from the theme.txt it just wrote, the history's, from any seed; a hand-written theme is tried with it from the shell.  So the game needs a compiler on the Hydra, and the only one it can have is the C one: the JS one could be the only compiler only if themegen made the record itself (a compiler in C again).  Kept: themec, games/themec/comp.c.  The build runs it in the emulator (tools/themec.js; no host C compiler is on the build's machines, and the emulator is the build's already: hysnap's snapshot): a paged ROM of the modules and t_rc, an SD card made for the run (themec, bestiary.dat, the themes' texts), "themec -l /sd/0 -o tN.dat tN.txt" typed for each, its status and words read off the console and the records off the card (hydrafs).  Each answer is kept (obj/themec, by the hash of themec, the bestiary, the modules and the text).  Who runs it:
+
+- the build, for the stand-in themes: games/dq0/make.js's after (build.js calls a make.js's after once every game's built: dq0's make.js runs before themec is built), obj/games/dq0t.dat themec's records with their count and file's name put in, as make.js did;
+- the build, for the goal kinds: games/themegen/make.js holds each goal block made a theme to themec (compiled and checked, no record), after it writes bestiary.dat;
+- the tests: tests/lib/dq0.js's THEMEC (themes) where they compiled with make.js's: dq0themegen (themegen -s 3's theme compiled and checked, theme.dat held to its record, byte for byte), dq0history (theme.dat's story), dq0why and dq0handtheme (the theme.txt a theme); dq0themec holds the records compiled on the Hydra to the build's (dq0t.dat's, their count 1 and no file's name: make.js's standIns), the same three, byte for byte.
+
+Gone: make.js's compile and check (some 300 lines) and bestiary.  The stand-ins' records came out byte for byte the same (themec's in the emulator held to make.js's before it went; obj/games/dq0t.dat the same as before), and every image (the paged ROM's chips, the SD card) the same as stage 2's.  The build's time: some 3 s more for the emulator's run (the three stand-ins, measured on a quiet machine; the six goal kinds about as much), nothing when the themes, themec, the bestiary and the modules haven't changed (kept); the whole build 2m 27s.
+
+**4. tools/dq0build.js.**  The readers the make.js files shared by copy: keyLines (the "key | value, indented continuation" reader: dq0/make.js's lines, themegen/make.js's read), blocks (dq0d/make.js's, on keyLines), rows (the one-liner: dq0d's, dq0s's, themegen's bestiary's), and packOnly (dq0harn's, dq0m's and dq0p's make.js, the same three lines: each now `module.exports = require('../../tools/dq0build.js').packOnly('dq0harn')`).  The build's outputs byte for byte the same.
+
+**Room** (bytes free; before, after):
+
+| program | main RAM | overlays |
+|---|---|---|
+| dq0 | 3,415, 3,415 (its image the same) | the same |
+| dq0acct | 2,152, 2,157 | 4: 254, 250; 5: 2,166, 2,008 |
+| dq0life | 18,198, 18,095 | |
+| dq0town | 3,211, 3,379 (its arguments' parsing gone) | 1: 6,493, 6,443 |
+| dq0schol | 5,333, 5,143 (the record's 208 bytes, the first command's 64 among them) | 1: 630, 630 |
+| dq0end | 20,959, 20,959 (the same) | |
+| themec | 902, 902 (the same: under the floor, a warning, as it was) | |
+| themegen | 712, 712 (the same: as above) | |
+| hmchar | 559 (untouched) | |
+
+**Held to:** every dq0 test's transcript before and after each stage, sentence by sentence (the scratch's sent.js, a hook in sim/test.js not kept): RESULTS.  The stand-ins' records, themec's in the emulator against make.js's before it went: the same bytes.  The suite: all 444 tests pass after stage 1 and after stage 4.
+
+**For review:**
+
+- **The record's reach.**  between.dat holds what passes in the town.  The other files the programs share (life.dat, kit.dat, townkit.dat, kit0.dat, clues.dat, heard.txt, rumours.txt, quest.txt, lives.dat) are as they were: life.dat is life.h's struct life (the game's too), the kit files the world's; records.def could declare them next (life.h's struct life is the first candidate, its layout read by the tests by hand now).
+- **The emulator in the build.**  The stand-ins and the goal kinds are compiled in the emulator: a build with themec, the bestiary, a goal or a stand-in changed runs it (some 3 s each); one without reads the kept answers.  A host build of comp.c would be quicker, if a C compiler is ever on the build's machines: the same source (it reads its files with open and read).
+- **The tests' theme oracle** is now the same compiler as the game's: a theme compiled on the Hydra is held to themec's run alone, not to a second compiler's.  What the two compilers' agreement checked before (that each read the format the same) has no second reader to disagree with now; comp.c is the format's statement.

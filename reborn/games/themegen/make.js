@@ -19,22 +19,8 @@ const WORKS = ['keep', 'temple', 'mine', 'tomb', 'town', 'hold', 'deep'], ENDS =
   'flooded', 'cursed', 'held'];
 const BANK = 0x2000;
 
-// A data file's lines (the theme format's: ../dq0/make.js's reader), each { key, v, n }
-function read(dir, f) {
-  const text = fs.readFileSync(path.join(dir, f), 'latin1'), out = [];
-  text.split(/\r?\n/).forEach((l, i) => {
-    if (!l.trim() || l.startsWith('#')) return;
-    if (/^\s/.test(l)) {
-      const v = out[out.length - 1].v, t = l.trim();
-      if (t.startsWith('|')) v.push(...t.slice(1).split('|').map(s => s.trim()));
-      else v[v.length - 1] += ' ' + t;
-      return;
-    }
-    const v = l.split('|').map(s => s.trim());
-    out.push({ key: v.shift(), v, n: i + 1, f });
-  });
-  return out;
-}
+// A data file's lines (the theme format's: ../../tools/dq0build.js's keyLines), each { key, v, n, f }
+const read = (dir, f) => require('../../tools/dq0build.js').keyLines(fs.readFileSync(path.join(dir, f), 'latin1'), f, { f });
 
 const SLOTS = { R: 'the Kharum Hills', P: 'the Khazrim', K: 'dwarves', N: 'Durnak', X: 'Orth', O: 'the Aldmar men',
   C: '31', W: 'they delved deep', A: 'the Horn of Durnak', a: 'silver horn', B: 'the altar of Durnak', b: 'black altar',
@@ -98,8 +84,7 @@ function build({ dir, objdir, bios, say = () => {} }) {
   });
   if (at >= 0) themes.push(checkGoal(goals[at], goals.slice(at + 1)));
   // The bestiary: each kind's key, styles, strata, group, lairs, faction; each faction's attitude and others
-  const lines = f => fs.readFileSync(path.join(dir, '..', 'dq0d', f), 'latin1').split(/\r?\n/)
-    .filter(l => l.trim() && !l.startsWith('#')).map(l => l.split('|').map(s => s.trim()));
+  const lines = f => require('../../tools/dq0build.js').rows(path.join(dir, '..', 'dq0d', f));
   const out = [...hist, ...goals];
   for (const k of lines('kinds.txt')) out.push({ key: 'beast', v: [k[1], k[3], ...k[4].split('-'), ...k[5].split('-'), k[6], k[11]] });
   for (const x of lines('factions.txt')) out.push({ key: 'faction', v: [x[0], x[2], x[3]] });

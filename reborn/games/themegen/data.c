@@ -1,6 +1,6 @@
 /*
-** data.c - (themegen, themec: data.h) a theme's lines read from its file, as ../dq0/make.js reads them; themegen's
-** data file in banks of the program's own, its lines found and copied out (the window put back as it was: a bank
+** data.c - (themegen, themec: data.h) a theme's lines read from its file (the format's reader, as
+** ../../tools/dq0build.js's keyLines); themegen's data file in banks of the program's own, its lines found and copied out (the window put back as it was: a bank
 ** program calls these from it); the bestiary from it.
 */
 
