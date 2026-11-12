@@ -92,8 +92,7 @@ function build({ dir, objdir, bios, say = () => {} }) {
   const n = writeData(out, path.join(objdir, '..', 'themegen.dat'), 320);
   writeData(out.filter(l => l.key === 'beast' || l.key === 'faction'), path.join(objdir, '..', 'bestiary.dat'), 64);
   // The goal kinds' themes compiled and checked by themec (built before this; its checker's bestiary.dat just written)
-  const bad = require('../../tools/themec.js').compile(themes, { out: false, bios }).filter(t => t.status);
-  if (bad.length) throw new Error('the theme compiler (themec):\n  ' + bad.map(t => t.name + ': ' + t.said).join('\n  '));
+  require('../../tools/dq0build.js').themes(themes, { out: false, bios });
   return { lines: out.length, text: n };
 }
 

@@ -118,15 +118,13 @@ function cflags() {
   };
 }
 
-// Dingus Quest Zero's hub numbers for the other languages (games/dq0/hubgen.js: from the C headers as cc65 sees them,
-// into obj/gen: actions.h, dq0hub.json, the assembly's dq0hub_*.inc), before its tasks and their make.js files; and
-// its phrase table (games/dq0/saidgen.js: said.txt into obj/gen/dq0said.h, by the outcome events' fields)
+// Dingus Quest Zero's generated files, before its tasks and their make.js files (tools/dq0build.js's generate: the hub's
+// numbers for the other languages, from the C headers as cc65 sees them, and the records' header, games/dq0/hubgen.js;
+// its phrase table, games/dq0/saidgen.js), cc65 as the C target has it
 function hubNumbers(say = () => {}) {
   const home = cc65Home(), own = d => fs.existsSync(path.join(home, d)) ? ['-I', path.join(home, d)] : [];
-  const H = require('./games/dq0/hubgen.js').generate({ say, cc65: { bin: CC65, flags: ['-t', 'none', '--cpu', '65C02',
+  return require('./tools/dq0build.js').generate({ say, cc65: { bin: CC65, flags: ['-t', 'none', '--cpu', '65C02',
     '-I', at('sdk', 'c', 'include'), ...own('include'), '-I', at('games', 'dq0'), '-I', at('obj', 'gen')] } });
-  require('./games/dq0/saidgen.js').generate(H, say);
-  return H;
 }
 
 // C and assembly sources into objdir (a .c: cc65 makes its .s there, then ca65).  OUT: the objects
@@ -312,52 +310,6 @@ function headroom(names) {
   return { text, faults };
 }
 
-// A game's task whose swapped parts the build makes (games/dq0/parts.js, pack.js; its dir has a parts.txt): its C
-// compiled (cc65), its calls routed by part (pack.js's route: a call into another part its stub's, one inside a
-// part straight), assembled with its assembly but bank.s; each part's bytes (od65's); a part past the swap area
-// (its config's __SWAPSIZE__) has pieces moved out to parts with room (pack.js's plan, apply: the moves listed in
-// OBJDIR/moved.txt, for the room table), its files assembled again; then its parts.inc and config (parts.js's make:
-// the parts in banks by their sizes) and bank.s, its .include of parts.inc found in objdir.  OUT: the objects, in
-// the sources' order
-function swappedParts(dir, objdir, extra = [], P, K, fl) {
-  mkdir(objdir);
-  K.planChecked();
-  const src = csources(dir), cs = src.filter(f => f.endsWith('.c')), ss = src.filter(f => f.endsWith('.s'));
-  const sOf = f => path.join(objdir, path.basename(f, '.c') + '.s'), o = new Map();
-  for (const f of cs) run(CC65, [...fl.cc, ...extra, '-o', sOf(f), f]);
-  const compiled = cs.map(sOf), rest = ss.filter(f => path.basename(f) !== 'bank.s'), bank = ss.filter(f => path.basename(f) === 'bank.s');
-  const asm = () => compileC(compiled, objdir).forEach((x, i) => o.set(cs[i], x));
-  K.route(compiled);
-  asm();
-  compileC(rest, objdir, extra, ['-I', objdir]).forEach((x, i) => o.set(rest[i], x));
-  const dump = () => execFileSync(OD65, ['--dump-segsize', ...o.values()], { encoding: 'latin1' });
-  let text = dump();
-  const cfgText = fs.readFileSync(path.join(dir, path.basename(dir) + '.cfg'), 'latin1');
-  const cap = parseInt((/__SWAPSIZE__:[^;]*value\s*=\s*\$([0-9A-Fa-f]+)/.exec(cfgText) || [])[1] || '0', 16);
-  const list = P.read(path.join(dir, 'parts.txt')), bytes = new Map(list.parts.map(p => [p.n, 0]));
-  const count = () => { for (const k of bytes.keys()) bytes.set(k, 0); for (const [s, z] of P.segsizes(text)) { const m = /^SW(\d+)(CODE|RODATA)$/.exec(s); if (m) bytes.set(+m[1], (bytes.get(+m[1]) || 0) + z); } };
-  count();
-  let moves = [];
-  const squeeze = new Map((process.env.DQ0_PACK_SQUEEZE || '').split(';').map(t => t.split(':')).filter(([t]) => t === path.basename(dir))   // (A test's:
-    .flatMap(([, l]) => (l || '').split(',').map(x => x.split('=').map(Number))));   //   DQ0_PACK_SQUEEZE=TASK:PART=BYTES,...;... parts given less room, the packer made to move)
-  const room = k => Math.min(cap, squeeze.has(k) ? squeeze.get(k) : cap);
-  if (cap && [...bytes].some(([k, b]) => b > room(k))) {
-    const depth = +((/^SWDEPTH\s*=\s*(\d+)/m.exec(bank.length ? fs.readFileSync(bank[0], 'latin1') : '') || [])[1] || 8);
-    const r = K.pieces({ lsts: compiled.map(f => f.replace(/\.s$/, '.lst')), asm: rest, sizes: K.objectSizes(text) });
-    const bk = P.banks(cfgText, list, P.segsizes(text), dir);   // (The banks' room and files, the parts in them as they are)
-    moves = K.plan(r, bytes, room, depth, new Set(bytes.keys()), bk);
-    K.apply(moves, objdir);
-    K.route(compiled);
-    asm();
-    text = dump();
-    count();
-  }
-  fs.writeFileSync(path.join(objdir, 'moved.txt'), moves.map(m => m.piece.id.replace(/^_/, '') + ' ' + m.from + ' ' + m.to + ' ' + m.piece.bytes + '\n').join(''));
-  P.make({ dir, objdir, own: ss, sizes: P.segsizes(text), compiled });
-  compileC(bank, objdir, extra, ['-I', objdir]).forEach((x, i) => o.set(bank[i], x));
-  return src.map(f => o.get(f));
-}
-
 // A C program: dir's .c and .s files, linked with the C library and sdk/c/hydra.cfg into out (a RAM program; its
 // map and labels in objdir); or with the folder's own NAME.cfg, if it has one (a game's, with its overlays: files
 // beside out that the cfg names).  OUT: its image
@@ -365,8 +317,8 @@ function cprog(dir, objdir, out, extra) {
   const name = path.basename(out).replace(/\.hyx$/, ''), parts = path.join(dir, 'parts.txt');
   let own = path.join(dir, path.basename(dir) + '.cfg'), objs;
   if (fs.existsSync(parts)) {                           // (A game's task whose swapped parts the build makes:
-    const P = require('./games/dq0/parts.js'), K = require('./games/dq0/pack.js'), fl = cflags();   //   swappedParts)
-    objs = swappedParts(dir, objdir, extra, P, K, fl);
+    objs = require('./tools/dq0build.js').swappedParts(dir, objdir, extra, { cc65: args => run(CC65, args),   //   tools/
+      od65: args => execFileSync(OD65, args, { encoding: 'latin1' }), compileC, csources, flags: cflags() });   //   dq0build.js's)
     own = path.join(objdir, path.basename(dir) + '.cfg');
   } else {
     objs = compileC(csources(dir), objdir, extra);

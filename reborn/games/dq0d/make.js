@@ -12,7 +12,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const H = require('../dq0/hubgen.js').load(), C = H.C;   // (The headers' numbers, the build's: ../dq0/hubgen.js)
+const H = require('../../tools/dq0build.js').hub(), C = H.C;   // (The headers' numbers, the build's: ../dq0/hubgen.js)
 
 const WAYS = { s: 0x01, l: 0x02, w: 0x04, a: 0x08, f: 0x20, t: 0x40 };   // dq0d.c's K_SHY, K_LAIR, K_WAYS, K_BOLD, K_LIGHTS, K_SWEEPS
 const K_BONES = 0x10, K_NOSE = 0x80;            //   and K_BONES, K_NOSE (a hunter by smell: its nose 6 or more)
@@ -78,7 +78,7 @@ function words(base) {
 }
 
 function build({ dir, objdir, say = () => {} }) {
-  require('../dq0/ovlpack.js').pack(objdir, 'dq0d');    // (Its overlays' file packed: obj/games/dq0d.ovp)
+  require('../../tools/dq0build.js').pack(objdir, 'dq0d');   // (Its overlays' file packed: obj/games/dq0d.ovp)
   const facs = lines(path.join(dir, 'factions.txt')), names = facs.map(f => f[0]);
   const kinds = lines(path.join(dir, 'kinds.txt')), keys = kinds.map(f => f[1]);
   if (facs.length >= NFILE) throw new Error('dq0d/factions.txt: more than ' + (NFILE - 1) + ' factions');

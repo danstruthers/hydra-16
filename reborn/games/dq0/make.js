@@ -12,14 +12,14 @@ const path = require('path');
 
 // The headers' numbers (the build's, from the C as cc65 lays it out: hubgen.js), and struct theme's layout (its
 // fields' offsets: T ('file'))
-const H = require('./hubgen.js').load(), C = H.C;
+const B = require('../../tools/dq0build.js'), H = B.hub(), C = H.C;
 const { THEME_SIZE } = C;                                           // theme.h's
 const HEAD = H.size('theme');                                       // (struct theme's bytes, its words after)
 const T = p => H.off('theme', p), LEN = (s, p) => H.size(s, p);
 
 // A theme's file read: its lines, each its key and its values (a line begun with a space goes on with the last: its
 // last value, or with a bar first, more values: ../../tools/dq0build.js's keyLines)
-const lines = (text, f) => require('../../tools/dq0build.js').keyLines(text, f);
+const lines = (text, f) => B.keyLines(text, f);
 
 // The dispatch table's rows (actions.c's ROW (VB_*, ...)) held to actions.h's actions (the build's, from
 // commands.actions): one a verb, in its order
@@ -35,16 +35,14 @@ function rowsSame(dir) {
 
 function build({ dir, objdir, say = () => {} }) {
   rowsSame(dir);
-  return { overlays: require('./ovlpack.js').pack(objdir, 'dq0').banks };
+  return { overlays: B.pack(objdir, 'dq0') };
 }
 
 // The stand-in themes, by themec in the emulator (tools/themec.js: once every game's built, themec too), each with its
 // file's name (for popgen to read it: theme.h's file) and the count (the file's first's)
 function after({ dir, objdir, bios, say = () => {} }) {
   const files = fs.readdirSync(path.join(dir, 'themes')).filter(t => t.endsWith('.txt')).sort();
-  const made = require('../../tools/themec.js').compile(files.map(t => ({ name: t, text: fs.readFileSync(path.join(dir, 'themes', t), 'latin1') })), { bios });
-  const bad = made.filter(t => t.status || !t.data || t.data.length !== THEME_SIZE);
-  if (bad.length) throw new Error('the theme compiler (themec):\n  ' + bad.map(t => t.name + ': ' + (t.said || 'no record')).join('\n  '));
+  const made = B.themes(files.map(t => ({ name: t, text: fs.readFileSync(path.join(dir, 'themes', t), 'latin1') })), { bios }, THEME_SIZE);
   made.forEach((t, i) => {
     if (files[i].length >= LEN('theme', 'file')) throw new Error(files[i] + ': a stand-in\'s name, 15 letters at most');
     t.data[T('count')] = files.length;

@@ -13,7 +13,7 @@ const outfits = require('./outfits.js');
 const tables = require('../../sim/tools/commandtables.js');
 const { loadRules } = require('../../sim/tools/commandcompile.js');
 
-const H = require('../dq0/hubgen.js').load(), C = H.C;  // (The headers' numbers, the build's: ../dq0/hubgen.js)
+const B = require('../../tools/dq0build.js'), H = B.hub(), C = H.C;  // (The headers' numbers, the build's: ../dq0/hubgen.js)
 const KIND = H.size('kind'), NAME = H.size('kind', 'name'), CAP_WEIGHT = H.off('kind', 'cap_weight');   // (items.h's struct kind)
 
 // A #define's number from a header
@@ -44,7 +44,7 @@ function checkOverlays(dir) {
 
 function build({ dir, objdir, say = () => {} }) {
   checkOverlays(dir);
-  require('../dq0/ovlpack.js').pack(objdir, 'dq0w');      // (Its overlays' file packed: obj/games/dq0w.ovp)
+  B.pack(objdir, 'dq0w');                                 // (Its overlays' file packed: obj/games/dq0w.ovp)
   const games = path.join(dir, '..');
   const nkinds = C.NKINDS;
   const f = path.join(objdir, '..', 'dq0w.hyx.cat');

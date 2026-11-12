@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { SND_KINDS, SND_WORLD, SND_REC, SND_WORDS } = require('../dq0/hubgen.js').load().C;   // hub.h's (the build's)
+const { SND_KINDS, SND_WORLD, SND_REC, SND_WORDS } = require('../../tools/dq0build.js').hub().C;   // hub.h's (the build's)
 const WORLD = ['*dig', '*open', '*shut', '*blow', '*smash', '*chains', '*trap', '*hit', '*swish'];   // dq0s.c's WS_*
 const WAVES = { p: 0, s: 1, t: 2, n: 3 };       // snd.h's SND_WAVE_*
 const S_USED = 1, S_NOISY = 2;                  // dq0s.c's S_*
