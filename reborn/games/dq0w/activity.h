@@ -1,7 +1,7 @@
 /*
 ** activity.h - (dq0w) what the character is doing, and what's to follow as it's free (ENGINE-CRITIQUE.md's 7: one
 ** activity per actor, the step planner's 3.3).  Its long task now is the hub's pc_task (and move.on: a walk, a spell
-** of digging); the reach's step under way things.h's struct step (rstep, its queue aside); what's queued after the
+** of digging); the reach's step under way things.h's struct step (rstep; what's done after it, things.c's aq); what's queued after the
 ** long task is here: each continuation's own field (its thing, its family, its target, its kind of end ...), and a
 ** stack of them as they were planned (q: act_plan pushes one as its field's set, the last planned on top; dq0w.c's
 ** act_next, as the character's free, pops those whose field's been cleared since and hands the top to its handler).

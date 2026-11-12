@@ -683,6 +683,13 @@ struct step rstep;                              /* (The step under way, things.h
 struct step aside[2];                           /* (What was set down to free a hand, a redip's, a new light's: each a step
                                                 **   to take it up again as the work's done, the last set down first) */
 static unsigned char naside;
+static unsigned char aq[4], naq;                /* (The after-work's steps planned, a queue in the order they're done, the
+                                                **   next on top: AQ_*, each queued in its place as it's planned, rs_queue;
+                                                **   popped by rs_after.  The tool put back and the pack put on, its first
+                                                **   and last, are the reach's own state, rs_using's and rs_pack's) */
+enum { AQ_UP = 1, AQ_STOW, AQ_RELIGHT };        /* (What was set down taken up, aside's next; the old torch put away; the
+                                                **   torch lit again, the UI's: each above those of a lower kind, so done
+                                                **   first, an AQ_UP above the AQ_UPs before it) */
 #define rs_hit          lx                      /* (The level wanted, and from the innermost, how far: level_of's bytes, */
 #define rs_want         lw                      /*   not in use across a call) */
 unsigned char rs_ok;                            /* (This request's: 1 by the steps, the UI's; 2 the world's own; | 4, past
@@ -697,9 +704,9 @@ unsigned char rs_using;                          /* (A tool's: 1 out; 2 caught, 
 #define rs_hand         last_sa                 /* (The pack's hand, 0 its feet: a handling's own byte, none as it's waited on) */
 #define rs_keep         lw_m.who                /* (The intent to ask again: its who, 0 as it came, the UI's) */
 #define rs_old          lw_x                    /* (A redip's: the torch, to put away) */
-unsigned char rs_redo;                          /* (A redip's, RR_*: its end's steps) */
-enum { RR_ON = 1, RR_STOW = 2, RR_RELIGHT = 4, RR_DIP = 32, RR_TWO = 64, RR_NEW = 128 };   /* (What it set down to be taken up
-                                                **   again: aside's) */
+unsigned char rs_redo;                          /* (A redip's, RR_*: under way; its words) */
+enum { RR_ON = 1, RR_DIP = 32, RR_TWO = 64, RR_NEW = 128 };   /* (Its steps begun; a dipping's; two alike, told apart; a new
+                                                **   light's) */
 
 /* The containers a reach comes to, out from c (level_of's rule, its own copy: open to the hand, none; a pack on the back,
 ** rstep.thing; any other, or closed, a level): how many, and rs_hit the one rs_want from the innermost */
@@ -886,7 +893,7 @@ static void rs_cut (void)
     hub_map (0);
     HUB->rs_nout = 0;
     rs_pack = 0;
-    rs_after_on = rstep.edge = rs_paid = rs_live = rs_keep = rs_using = rs_redo = rs_free = naside = 0;
+    rs_after_on = rstep.edge = rs_paid = rs_live = rs_keep = rs_using = rs_redo = rs_free = naside = naq = 0;
     ix_make ();                                 /* (What it carries now, the pack off at its feet: the UI's first words') */
 }
 
@@ -1304,6 +1311,22 @@ static unsigned char rs_go (void)
     return reach_step (0, RS_GO) ? IR_NO : IR_OK;
 }
 
+/* An after-work step planned (AQ_*: AQ_STOW, AQ_RELIGHT once): queued in its place, above those of a lower kind */
+static void __fastcall__ rs_queue (unsigned char e)
+{
+    register unsigned char i;
+
+    for (i = naq; e != AQ_UP && i; ) {
+        if (aq[--i] == e) {
+            return;
+        }
+    }
+    for (i = naq++; i && aq[i - 1] > e; --i) {
+        aq[i] = aq[i - 1];
+    }
+    aq[i] = e;
+}
+
 static unsigned char __fastcall__ rs_set_down (unsigned i)
 {
     register struct step* sp;
@@ -1319,6 +1342,9 @@ static unsigned char __fastcall__ rs_set_down (unsigned i)
     }
     rstep.time = 1;
     rs_redo |= RR_ON;
+    if (naside < 2) {
+        rs_queue (AQ_UP);                       /* (A third the second's place: none more to take up) */
+    }
     if (naside) {                               /* (Taken up again after the work, the last set down first: a step on
                                                 **   the stack aside, its words the other's if it's the first's kind) */
         if (rstep.what == item_kind (aside[0].thing)) {
@@ -1439,7 +1465,7 @@ static unsigned char __fastcall__ rs_redip (unsigned n)
             }
         }
         if (!ot && !s && sp) {                  /* (The preferred order: a spare lit from it first) */
-            rs_redo |= RR_STOW;
+            rs_queue (AQ_STOW);
             return rs_lit_from (sp, n);
         }
         rstep.thing = n;                               /* (Put out: by another light, or to the dark, asked first) */
@@ -1449,14 +1475,14 @@ static unsigned char __fastcall__ rs_redip (unsigned n)
         rstep.say = SV_BLOWOUT;
         rs_redo |= RR_ON;
         if (ot) {
-            rs_redo |= RR_STOW;
+            rs_queue (AQ_STOW);
             if (item_kind (ot) == kn) {         /* (Two of a kind: each step about the one it means) */
                 rs_redo |= RR_TWO;
                 rstep.say = SV_BLOWOUT | SM_OLD;
             }
         } else if (!s) {
             rstep.say = SV_BLOWDARK;
-            rs_redo |= RR_RELIGHT;
+            rs_queue (AQ_RELIGHT);
         }
         return rs_go ();
     }
@@ -1552,31 +1578,31 @@ static void rs_did (void)
     store (&rec, n);
 }
 
-/* What's next as a dipping's over, the fuel put away: the torch to light again (2: rs_after_on 2, the UI's IO_LIGHT, then here
-** again); the old one put away; what was set down taken up (1: the step set, RS_GO's); 0 no more */
+/* What's next as a dipping's over, the fuel put away, the after-work's queue popped: the torch to light again (2: rs_after_on
+** 2, the UI's IO_LIGHT, then here again); the old one put away, if it's in a hand and the pack's off for it, else on; what
+** was set down taken up (1: the step set, RS_GO's); 0 no more */
 static unsigned char rs_after (void)
 {
-    if (rs_redo & RR_RELIGHT) {
-        rs_redo &= ~RR_RELIGHT;
-        rs_after_on = 2;
-        return 2;
-    }
-    if (rs_redo & RR_STOW) {
-        rs_redo &= ~RR_STOW;
-        fetch (&rec, rs_old);
-        if (rec.kind && (rec.flags & I_HELD) && rs_pack) {   /* (The pack off for it already; else it stays in its hand) */
-            rstep.thing = rs_old;
-            rstep.edge = SE_STOW;
-            rstep.say = rs_redo & RR_TWO ? SV_PUTAWAY | SM_OLD : SV_PUTAWAY;
-            rstep.apart = rs_old;
-            rstep.what = rec.kind;
-            rstep.time = 20;
-            return 1;
+    while (naq) {
+        if (aq[--naq] == AQ_RELIGHT) {
+            rs_after_on = 2;
+            return 2;
         }
-    }
-    if (naside) {                               /* (The next aside popped: the last set down first, the burning torch
-                                                **   before a sword) */
-        rstep = aside[--naside];
+        if (aq[naq] == AQ_STOW) {
+            fetch (&rec, rs_old);
+            if (rec.kind && (rec.flags & I_HELD) && rs_pack) {   /* (The pack off for it already; else it stays in its hand) */
+                rstep.thing = rs_old;
+                rstep.edge = SE_STOW;
+                rstep.say = rs_redo & RR_TWO ? SV_PUTAWAY | SM_OLD : SV_PUTAWAY;
+                rstep.apart = rs_old;
+                rstep.what = rec.kind;
+                rstep.time = 20;
+                return 1;
+            }
+            continue;
+        }
+        rstep = aside[--naside];                /* (AQ_UP: the next aside popped, the last set down first, the burning
+                                                **   torch before a sword) */
         rstep.what = item_kind (rstep.apart = rstep.thing);
         if (rstep.say == SV_TAKEUP && (rs_redo & RR_TWO) && rstep.what == item_kind (rs_old)) {
             rstep.say |= SM_NEW;                /* (The new one's kind, the old one's: told apart) */
@@ -1623,7 +1649,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         if (rs_after_on == 2) {
             rs_after_on = 0;                          /* (A timed work's end, the torch lit again: its sequence going on) */
         } else if (!rs_live) {
-            rs_paid = rs_using = rs_redo = rs_free = naside = 0;
+            rs_paid = rs_using = rs_redo = rs_free = naside = naq = 0;
             rs_pack = 0;
             HUB->rs_nout = 0;
         }
@@ -1689,7 +1715,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         if (HUB->ireq.qty == LT_DIP && (rs_redo & RR_TWO)) {
             HUB->ireq.qty = SV_DIP | SM_OLD;   /* (The old torch's: "You set to dipping the old torch.") */
         }
-        if (rs_pack || rs_using || (rs_redo & (RR_STOW | RR_RELIGHT)) || naside) {   /* (The handling done: the pack back on as it's free, past a timed
+        if (rs_pack || rs_using || naq) {   /* (The handling done: the pack back on as it's free, past a timed
                                                 **   work's end if that's what's begun) */
             rs_after_on = (iq.kind == IO_SHUT || iq.kind == IO_FILL || iq.kind == IO_HIDE) && iq.result == IR_OK && HUB->ireq.qty ?
                 2 : 1;
@@ -1697,7 +1723,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
             act.work = LW_REACH;
             act_plan (AK_WORK);
             if (rs_after_on == 1 && (iq.kind == IO_SHUT || iq.kind == IO_FILL || iq.kind == IO_HIDE)) {
-                HUB->ireq.y = rs_redo & RR_RELIGHT ? 0xFE : 0xFD;   /* (A timed work's end: more to come, the UI to wait
+                HUB->ireq.y = naq && aq[naq - 1] == AQ_RELIGHT ? 0xFE : 0xFD;   /* (A timed work's end: more to come, the UI to wait
                                                 **   for it; and the torch to light again, words.c's worked) */
             }
         }
@@ -1750,7 +1776,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
             rs_using = 0;                       /* (Used up: the last ration, the last bandage; none to put away) */
             hub_map (0);
         }
-        if (rs_redo) {
+        if (rs_redo || naq) {
             w = rs_after ();
             hub_map (0);
             if (w == 2) {
@@ -2166,7 +2192,7 @@ unsigned char s_serve (void)
         if (rs_after_on == 2) {
             rs_after_on = 0;                    /* (A timed work's end, the torch lit again: its sequence on) */
         } else if (!rs_live) {
-            rs_paid = rs_using = rs_redo = rs_free = naside = 0;
+            rs_paid = rs_using = rs_redo = rs_free = naside = naq = 0;
             rs_pack = 0;
         }
     }
