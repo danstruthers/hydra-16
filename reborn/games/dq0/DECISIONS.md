@@ -4187,3 +4187,97 @@ the senses' caches of their own (none paged to a file) aren't on it; the chunks'
 (RTF_PLAIN) could go round as the others do, a behaviour change (which chunk's made way for after the clock wraps) to
 be taken as one; the item store's `items.dat` and the traces' flush at the save stay each store's; an `rp_save`
 walking every store's dirty entries would want the stores in one task.
+
+## The life's record and the clues declared, the generators driven from one place, one rumours' reader (2026-11-12, as built, for review: ENGINE-CRITIQUE.md's §9 and step 11's "Left")
+
+What step 11 left: life.dat into records.def, the other files the meta programs share where it's clean, and the
+generators into tools/dq0build.js; and the rumours' reader, written twice (dq0acct's quest.c, dq0town).  Every
+program's words and every save-folder file the same; the images' bytes as below.
+
+**1. The records.**  records.def (games/dq0/records.def, read by hubgen.js into obj/gen/dq0rec.h and dq0hub.json's
+records) now declares, beside struct between:
+
+- **struct life** (life.dat): `struct life_head` (the 32-byte head: magic, version, flags, seed, dseed, dungeon,
+  date, born, reputation, clues, thread, fast, room[5]) and `struct life_dungeon` (seed, days, outcome, flags) as
+  structs of no file of their own, and `record life "life.dat" 0x464C 1` their record (h, d[LIFE_DUNGEONS]); with
+  LIFE_DUNGEONS, the head's flags LF_BETWEEN, LF_OVER, LF_ABROAD, LF_HARD and the dungeon's LD_DIED.  lives.dat (the
+  lives over, this record one after another) noted with it.
+- **struct clue** (clues.dat): `record clue "clues.dat"`, a file of records one after another with no head; with
+  CLUE_SIZE, CLUE_WORDS (its words' 342 bytes: was `CLUE_SIZE - 106` in the struct), CL_MORE and the asked bits CA_*.
+  CLUES_FILE is CLUE_FILE now, the record's name's (read.c, dq0life.c, dq0schol.c: three files, seven uses).
+
+records.def's grammar grew three things for them: `struct NAME` (a struct with no file, a field's type for a record
+declared after it), a field's type `struct NAME`, and `record NAME "FILE"` with no magic or version (a headless file
+of records); a record's head may be its first field's struct (life's h).  hubgen's decoder decodes a struct field as its
+own object (an array of them its objects), and ok is the head's magic and version (a headless record's always true).
+
+life.h keeps what isn't a record's layout: the folder's files told, struct save and struct quest (game.dat's head,
+the UI's), the outcomes' enum LO_* (game.dat's too), the thing's fuel for a clue (CLUE_HERE, CLUE_COPY), CLUE_NOCOPY,
+the grades' enum CL_*, the clue's size check (clue_fits), LIVES_FILE, FAST_STEP and the calendar; it includes dq0rec.h.
+No C program had a copy of struct life of its own: they all included life.h, so the hand-written copies were the tests'
+and the soak's, reading life.dat by offset (`a[38]`, `readUInt16LE(12)`, `a[26]`, `0x464C`, `& 2`, `544`).  Now:
+
+- tests/lib/dq0.js's `dq0Life (bytes)`: the decoder's record ({ h, d, ok }, null if the bytes are short of it), its
+  `size ()` and `C (NAME)` (LF_*, LO_*): dq0carry, dq0account, dq0hardon, dq0lifeend, dq0fastkept, dq0nosave
+  and dq0why (the reputation) read their fields by name.  Each check holds the same
+  thing it did.
+- sim/tools/soak.js's lifeRecord: the same decoder; its flags and outcomes by name (LF_OVER, LO_SOLVED, LO_NONE,
+  LIFE_MAGIC).
+
+Left as they are, not clean:
+
+- **kit.dat, kit0.dat, townkit.dat** (dq0w/outfit.h's struct kitrec): the world's.  Its layout is struct item's own
+  fields in their order (KIT_ITEM, KIT_STATE: memcpy'd onto a thing as it's made) and its ofit's `in` holds the worn
+  places' bits (WP_*: the referee2 work's); declared in records.def it would be a copy of struct item's order, held
+  to it by hand.  The tests read kit.dat by offset in one place (dq0account's sword, 23 bytes a record).
+- **heard.txt, rumours.txt, quest.txt**: text, the theme format's (themegen's), not records.
+- **game.dat's struct save**: the UI's save's head, its versions main.c's (SAVE_VER); not a file between the programs
+  but the dungeon's.
+
+**2. The generators driven from tools/dq0build.js.**  What was copied or open-coded across build.js and the make.js
+files, now each one function there:
+
+| | before | now |
+|---|---|---|
+| the headers' numbers (hubgen's load) | dq0, dq0d, dq0s, dq0w make.js and dq0w/outfits.js, each `require('../dq0/hubgen.js').load ()` | `hub ()` |
+| hubgen's generate, then saidgen's | build.js's hubNumbers, the two calls | `generate ({ say, cc65 })` (build.js passes cc65 as the C target has it) |
+| pack.js's and parts.js's driver | build.js's swappedParts (some 45 lines: compile, route, measure, plan, apply, make) | `swappedParts (dir, objdir, extra, tools)`, build.js's cc65, od65, compileC, csources and flags passed in |
+| the overlays' packing (ovlpack.js) | dq0, dq0d, dq0w make.js, packOnly | `pack (objdir, name)` |
+| themec in the emulator, its failures thrown | dq0/make.js's after and themegen/make.js, each its own compile and check | `themes (list, opt, size)` |
+
+Each generator's own work stays in its file (hubgen.js, saidgen.js, parts.js, pack.js, ovlpack.js, tools/themec.js):
+dq0build.js is where they're called from, not their code merged into one file.  Why not moved: saidgen.js is the
+narration work's (narr4's, being edited); hubgen.js's load is the tests' and the sim's (dq0meaning, hubown,
+commandwords, the suites: some twenty requires by path); pack.js has its own command line (node games/dq0/pack.js TASK);
+and every one's comments name its file (parts.txt, bank.s, the cfgs).  A move is a rename the day those settle.
+
+**3. One rumours' reader.**  meta.c's META_HEARD: `heard (name)` (a rumours' file in the save's folder read into rbuf
+after what's there, each block begun by a rumour line noted in rat[], rto[], RUMOURS at most) and `rumours_read ()`
+(heard.txt's, then rumours.txt's, afresh).  The two copies' differences are parameters: META_RB_N (dq0town's RB_N, its
+words' bank; sizeof rbuf the default), META_MADE (dq0town counts rumours.txt's, nmade: themegen -r -a goes on from
+them), META_TEXT_ON/OFF round rbuf's filling (dq0town's WORDS () and KINDS (), as it had).  dq0acct's quest.c joined
+its path itself into path (in_'s same bytes) and used its file's fd: the library's in_ and a local fd.
+
+**Images:** dq0acct's (its main RAM's and overlay 4's code: quest.c's reader now the library's, in_
+and a local fd) and dq0town's (the same length, 1,322 bytes moved: its reader's code where the library's section puts it,
+rumours_read's clearing written apart) changed, and with them the SD card's image and the browser page's; every other
+image byte for byte the same: the UI (dq0), dq0life, dq0schol, dq0end, dq0harn, the world, the denizens and the rest
+(the records' header made from records.def lays out struct life and struct clue as life.h did), the paged ROM's chips
+too.  So the start is as it was (dq0's image the same).
+
+**Room** (bytes free, before → after): dq0acct's main RAM 2,157, 2,157; its overlay 4 250, 279; dq0town's main RAM 3,379, 3,379
+and overlay 1 6,443, 6,443; the others the same, their images being so.
+
+**Held to:** every dq0 test's transcript before and after (294), sentence by sentence (the scratch's sent.js,
+a hook in sim/test.js not kept): none differs.  The save folder's files: the programs that write them, but dq0acct, are
+byte for byte the same images, and dq0acct's change is in its reading of the rumours' files alone (no write); the
+tests' xd of life.dat, kit.dat and the rest in those transcripts the same.  The suite: all 444 tests pass, before and
+after.
+
+**For review:**
+
+- **CLUES_FILE renamed CLUE_FILE** (the record's name, as BETWEEN_FILE and LIFE_FILE are): the UI's read.c touched for
+  it, two lines.
+- **The outcomes' enum (LO_*) and the grades' (CL_*) stay in life.h**, as enums: records.def has no enums, and LO_* is
+  game.dat's struct save's too.
+- **The generators' files not moved** (above).
