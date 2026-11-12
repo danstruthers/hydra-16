@@ -52,6 +52,11 @@ extern unsigned char cstyle;                    /* (The chunk's style: its strat
 enum { DP_DOOR, DP_MAT, DP_WINDOW, DP_PORTC, DP_TRAP, DP_DTRAP, DP_MAKE, DP_FORT, DP_SCONCE, DP_SEEDED, DP_NONE = 0xFF };
 void __fastcall__ dkey (unsigned char p, unsigned b);
 unsigned char __fastcall__ dr (unsigned char n);
+enum { DH_CAVERN, DH_AIR, DH_WET, DH_SKY, DH_PWATER, DH_WELLS, DH_SLOPE, DH_RING, DH_VAULT, DH_ROT, DH_ROTU, DH_MIXED,
+    DH_DIAMOND, DH_N };                         /* A number of its own (place.c's dhash, the main RAM's: each the
+                                                **   hash its maker always had, kept: caves.c's, sky.c's, plan.c's,
+                                                **   uses.c's, make.c's mixed third): a, b, c and the stratum's seed s */
+unsigned __fastcall__ dhash (unsigned char p, unsigned long s, unsigned a, unsigned b, unsigned c);
 enum { RS_GROW, RS_STOCK };                     /* A stream's (dice.h's rseed, a layout's rolls one after another):
                                                 **   chunk L's grower's, its stock's */
 unsigned long __fastcall__ rstream (unsigned char p);

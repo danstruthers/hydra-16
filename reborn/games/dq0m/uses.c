@@ -203,7 +203,7 @@ static void plan (void)
         dx = dx > dy ? dx : dy;
         ring = dx > 4 ? 4 : dx;
     }
-    if (ring && ring < 4 && !((L->cx * 7 + L->cy * 13 + (unsigned char) s->seed) & 3)) {
+    if (ring && ring < 4 && !(dhash (DH_RING, s->seed, L->cx, L->cy, 0) & 3)) {
         ++ring;                                 /* (A few in four the next ring's, for variety) */
     }
     uwater = E->water & RW_WELL;                /* (The water under its region: the plan's, slice 4.9's) */
@@ -297,7 +297,7 @@ static void floors (void)
                 continue;                       /* (The style's, as it was grown: a mine's timbering) */
             }
             h = std + ceils[p->kind][1] + (ceils[p->kind][2] ? area / ceils[p->kind][2] : 0);
-            if (c == C_BARREL && p->kind == U_HALL && area >= 40 && (L->cx + L->cy + r) % 3) {
+            if (c == C_BARREL && p->kind == U_HALL && area >= 40 && dhash (DH_VAULT, 0, L->cx, L->cy, r) % 3) {
                 c = C_CATHEDRAL;                /* (A great hall's pointed vault) */
             } else if (c == C_CATHEDRAL && p->w == p->h && z->w >= 3 && z->h >= 3) {
                 c = C_DOME;                     /* (A square chapel's dome) */
@@ -357,7 +357,7 @@ static unsigned char __fastcall__ thing (unsigned char sign, unsigned char arg)
             return SP->kinds[arg >> 3 & 7];     /* (A chamber's, a cave's: the style's) */
         }
     }
-    if (k && rots (k) && (unsigned char) (L->cx * 5 + L->cy * 3 + arg * 7) % 40 < STRATUM (L->sn).age) {
+    if (k && rots (k) && (unsigned char) dhash (DH_ROT, 0, L->cx, L->cy, arg) % 40 < STRATUM (L->sn).age) {
         k = 0;                                  /* (Gone to dust) */
     }
     return k;
@@ -372,7 +372,7 @@ static unsigned char __fastcall__ under (unsigned char r)
         U_CHAMBER), k = signs[u];
 
     if (!k || k == KI_WELL || u == L->room[r].kind ||
-        (rots (k) && (unsigned char) (L->cx * 3 + L->cy * 5 + r * 11) % 40 < uage)) {
+        (rots (k) && (unsigned char) dhash (DH_ROTU, 0, L->cx, L->cy, r) % 40 < uage)) {
         return 0;
     }
     return k;

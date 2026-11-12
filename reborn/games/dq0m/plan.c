@@ -117,11 +117,7 @@ static unsigned char __fastcall__ way_at (unsigned char len)
 
 static unsigned char __fastcall__ wh (unsigned char n, unsigned k)
 {
-    unsigned h = ((unsigned) STRATUM (n).seed ^ 0x5A17) + k * 40503U;
-
-    h ^= h >> 7;
-    h *= 0x2F1B;
-    return (unsigned char) (h >> 8);
+    return dhash (DH_PWATER, STRATUM (n).seed, k, 0, 0);
 }
 
 void __fastcall__ o_water_plan (unsigned char n)
@@ -133,7 +129,7 @@ void __fastcall__ o_water_plan (unsigned char n)
     for (ry = 0; ry < s->rh; ++ry) {
         for (rx = 0; rx < s->rw; ++rx) {
             rg (n, rx, ry);
-            R.water = (rx * 5 + ry * 3 + (unsigned char) (s->seed >> 8)) % 3 ? RW_WELL : 0;
+            R.water = dhash (DH_WELLS, s->seed, rx, ry, 0) % 3 ? RW_WELL : 0;
             rp ();
         }
     }
@@ -384,7 +380,7 @@ void __fastcall__ o_links_down (unsigned char n)
             if (rg (n, (l->x - s->x0) >> 8, (l->y - s->y0) >> 8)->kind == RG_HALLS) {
                 l->kind = random (10) < 7 ? O_STAIRS_DOWN : O_LADDER_DOWN;
                 if (l->kind == O_STAIRS_DOWN && ((g[0] & GE_RAMP) || ((s->style == ST_NATURAL || s->style == ST_MINE) &&
-                    (unsigned) (l->x * 7 + l->y * 13 + (unsigned) s->seed) % 3 == 0))) {
+                    dhash (DH_SLOPE, s->seed, l->x, l->y, 0) % 3 == 0))) {
                     l->kind = O_RAMP_DOWN;      /* (A natural stratum's or a mine's stairway a long slope one time in
                                                 **   three, by its square's own numbers: slice 4.10's, HOUSE.md's
                                                 **   long slopes) */

@@ -123,8 +123,7 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
     SP = &sty;
     hub_get (0, &HUB->gear, &u, 1);            /* (u its slot's use after: CS_FRESH, or 1) */
     cstyle = (s->style == ST_MIXED || (u & GE_MIXED && s->style == ST_BUILT)) && !me.nland &&
-        (unsigned char) (((const unsigned char*) &s->seed)[1] + (unsigned char) cx * 73 + (unsigned char) cy * 151) %
-        3 == 0 ? ST_NATURAL : s->style;        /* (A third, by the stratum's seed and the chunk's place) */
+        (unsigned char) dhash (DH_MIXED, s->seed, cx, cy, 0) % 3 == 0 ? ST_NATURAL : s->style;        /* (A third, by the stratum's seed and the chunk's place) */
     uses (US_STYLE, cstyle | u << 2);          /* (The style, and the tests' flags: no water, no rubble, the passages
                                                 **   on the diagonal) */
     if (me.x1 != 0xFF) {                         /* (By its stratum's style, or its part's) */

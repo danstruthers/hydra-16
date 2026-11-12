@@ -39,6 +39,52 @@ unsigned char __fastcall__ dr (unsigned char n)
     return (unsigned char) ((dh >> 8) % n);
 }
 
+/* ---- The numbers of their own: what the caves, the sky, the plan, the uses and a mixed stratum decided by a hash of
+** their own (none of the dice's streams), each a purpose (DH_*) whose formula is the one it always had, so the
+** dungeons are as they were: a * m1 + b * m2 + c * m3, plus the stratum's seed's part (its row's: none; its low 16
+** bits; their two halves xor'd; one of its bytes), that xor'd with sx; the sum xor'd with x; then mixed (h ^= h >> 7,
+** h *= 0x2F1B: its high byte), or the sum itself (DH_MIX not set) */
+struct dhrow {
+    unsigned        m1, m2, m3, sx, x;
+    unsigned char   sd;                         /* SD_*, and DH_MIX */
+};
+enum { SD_NONE, SD_LO, SD_FOLD, SD_B0, SD_B1, SD_B2, SD_B3 };
+#define DH_MIX          0x80
+static const struct dhrow dhrows[DH_N] = {
+    { 40503U, 2654, 0, 0x3C5D, 0, SD_FOLD | DH_MIX },  /* DH_CAVERN (caves.c's great caverns: a region's, its
+                                                **   wander, its pillars, a cave's sloping tunnel) */
+    { 57, 23, 101, 0, 0x2C6B, DH_MIX },         /* DH_AIR (caves.c's bad air: the chunk's place and stratum) */
+    { 31, 17, 101, 0, 0x5A5A, DH_MIX },         /* DH_WET (caves.c's water and rubble: the chunk's place, k) */
+    { 31, 17, 101, 0, 0x5B17, DH_MIX },         /* DH_SKY (sky.c's skylights and windows: the chunk's place, k and
+                                                **   the top stratum's seed's low byte, a byte) */
+    { 40503U, 0, 0, 0x5A17, 0, SD_LO | DH_MIX },  /* DH_PWATER (plan.c's streams: k) */
+    { 5, 3, 0, 0, 0, SD_B1 },                   /* DH_WELLS (plan.c's water under a region: its place) */
+    { 7, 13, 0, 0, 0, SD_LO },                  /* DH_SLOPE (plan.c's long slopes: the stairway's square) */
+    { 7, 13, 0, 0, 0, SD_B0 },                  /* DH_RING (uses.c's: a chunk the next ring's) */
+    { 1, 1, 1, 0, 0, SD_NONE },                 /* DH_VAULT (uses.c's great hall's pointed vault: room c) */
+    { 5, 3, 7, 0, 0, SD_NONE },                 /* DH_ROT (uses.c's: what a room has lying about gone to dust) */
+    { 3, 5, 11, 0, 0, SD_NONE },                /* DH_ROTU (uses.c's: the older layer's mark gone to dust) */
+    { 73, 151, 0, 0, 0, SD_B1 },                /* DH_MIXED (make.c's: a mixed stratum's chunk left natural) */
+    { 0, 0, 0, 0, 0, SD_B3 },                   /* DH_DIAMOND (caves.c's: a stratum's passages on the diagonal) */
+};
+
+unsigned __fastcall__ dhash (unsigned char p, unsigned long s, unsigned a, unsigned b, unsigned c)
+{
+    const struct dhrow* q = &dhrows[p];
+    unsigned char d = q->sd & ~DH_MIX;
+    unsigned h;
+
+    h = d == SD_NONE ? 0 : d == SD_LO ? (unsigned) s : d == SD_FOLD ? (unsigned) s ^ (unsigned) (s >> 16) :
+        ((const unsigned char*) &s)[d - SD_B0];
+    h = (a * q->m1 + b * q->m2 + c * q->m3 + (h ^ q->sx)) ^ q->x;
+    if (q->sd & DH_MIX) {
+        h ^= h >> 7;
+        h *= 0x2F1B;
+        h >>= 8;
+    }
+    return h;
+}
+
 struct placer pr;                               /* (The row a hook's called for: PR) */
 const struct placer* PR = &pr;
 

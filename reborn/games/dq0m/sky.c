@@ -162,10 +162,7 @@ static void __fastcall__ sky_open (unsigned char kind, unsigned char sill)
 /* A number of its own, by the chunk's place, the game's seed and k */
 static unsigned char __fastcall__ wh (unsigned char k)
 {
-    Y.h = (L->cx * 31 + L->cy * 17 + (unsigned char) (k + Y.sd) * 101) ^ 0x5B17;
-    Y.h ^= Y.h >> 7;
-    Y.h *= 0x2F1B;
-    return (unsigned char) (Y.h >> 8);
+    return dhash (DH_SKY, 0, L->cx, L->cy, (unsigned char) (k + Y.sd));
 }
 
 /* Room Y.i's walls looked along for a place for a window on the surface: one square deep of wall, the floor inside it, two

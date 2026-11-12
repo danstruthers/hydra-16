@@ -266,7 +266,7 @@ static void __fastcall__ hollow (const struct room* p)
 #pragma code-name (push, "OV8CODE")            /* (Overlay 8's, its own: 3 full) */
 #pragma rodata-name (push, "OV8RODATA")
 struct cav {
-    unsigned        seed;
+    unsigned long   sd;                         /* (Its stratum's seed: dhash's DH_CAVERN) */
     int             x, y;                       /* Its middle, in the chunk's squares (off it as it may be) */
     unsigned char   hw, hh, deep, roof;
     unsigned char   nz[7][7];                   /* The wander's lattice, from 8 squares before the chunk's corner */
@@ -289,11 +289,7 @@ extern unsigned char sx[], sy[];                /* (built.c's stack: idle as a c
 
 static unsigned char __fastcall__ ch (unsigned a, unsigned b)
 {
-    unsigned h = a * 40503U + b * 2654U + V.seed;
-
-    h ^= h >> 7;
-    h *= 0x2F1B;
-    return (unsigned char) (h >> 8);
+    return dhash (DH_CAVERN, V.sd, a, b, 0);
 }
 
 /* Chunk L's region's great cavern: 1 if it has one that reaches the chunk (or a square past its edges), V its
@@ -310,7 +306,7 @@ static unsigned char cv_find (void)
     W.oy = (unsigned) W.ry << 8;
     hub_get (0, &HUB->gear, &V.f, 1);
     V.f &= GE_CAVERN;
-    V.seed = (unsigned) W.s->seed ^ (unsigned) (W.s->seed >> 16) ^ 0x3C5D;
+    V.sd = W.s->seed;
     W.lx = 0xFFFF;
     for (W.i = W.s->nlinks, W.l = W.s->link; W.i; --W.i, ++W.l) {  /* (A way between strata into the region: a dug
                                                 **   one the records', none) */
@@ -545,7 +541,7 @@ static unsigned char __fastcall__ inc_rock (signed char a, signed char b)
 static void incline (void)
 {
     W.s = &STRATUM (L->sn);
-    V.seed = (unsigned) W.s->seed ^ (unsigned) (W.s->seed >> 16) ^ 0x3C5D;
+    V.sd = W.s->seed;
     hub_get (0, &HUB->gear, &V.f, 1);
     if ((!(V.f & GE_RAMP) && (E->nland || ch (L->cx + 0x77, L->cy ^ 0x1234) & 7)) || L->nrooms >= NROOMS ||
         L->nzones >= NZONES) {
@@ -639,7 +635,7 @@ unsigned char __fastcall__ o_cavern (unsigned char m)
 {
     if (m == 2) {
         hub_get (0, &HUB->gear, &V.f, 1);
-        if ((V.f & GE_DIAMOND) || !(((const unsigned char*) &STRATUM (L->sn).seed)[3] % 5)) {
+        if ((V.f & GE_DIAMOND) || !(dhash (DH_DIAMOND, STRATUM (L->sn).seed, 0, 0, 0) % 5)) {
             diamonds ();                        /* (Its passages' strata, pass.c's leg's: a fifth, by the seed) */
         }
         if (cstyle == ST_MINE) {
@@ -843,7 +839,7 @@ void __fastcall__ o_air_pocket (struct chunk* c, const struct edges* e)
 {
 #define AR  (*(struct hy_regs*) sy)            /* (The built grower's stack's room, idle: built.c's) */
 #define b   ((char*) sy + sizeof (struct hy_regs))
-    unsigned h = (c->cx * 57 + c->cy * 23 + c->sn * 101) ^ 0x2C6B, s;
+    unsigned h, s;
     unsigned char k;
     struct room* p;
 
@@ -858,9 +854,7 @@ void __fastcall__ o_air_pocket (struct chunk* c, const struct edges* e)
             tair = 0x80 | (b[0] & 3) << 4 | (b[1] & 3);
         }
     }
-    h ^= h >> 7;
-    h *= 0x2F1B;
-    h >>= 8;
+    h = dhash (DH_AIR, 0, c->cx, c->cy, c->sn);
     if (!c->nrooms || tair == 0x80) {
         return;
     }
@@ -893,11 +887,7 @@ void __fastcall__ o_air_pocket (struct chunk* c, const struct edges* e)
 
 static unsigned char __fastcall__ wh (unsigned char k)
 {
-    unsigned h = (L->cx * 31 + L->cy * 17 + k * 101) ^ 0x5A5A;
-
-    h ^= h >> 7;
-    h *= 0x2F1B;
-    return (unsigned char) (h >> 8);
+    return dhash (DH_WET, 0, L->cx, L->cy, k);
 }
 
 /* Square x, y of the chunk (L) a passage's that may fall in: a passage's, every square beside it a passage's or the
