@@ -172,10 +172,19 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_SCARF, KI_EARRINGS, KI_SHEET, KI_TOWEL,  /* (Worn places, the user's, 2026-11-10: a scarf, earrings, worn where
                                                 **   they're put; a linen sheet, a folk bed's; a towel) */
     KI_COUNT };
+/* The places on the body a thing's worn at (the engine's own, 2026-11-12: ENGINE-CRITIQUE.md's section 8; HarnMaster's
+** harn.h locations till then, the same numbers, so a save's places read as they were): the head (the ears a pair),
+** the face, the neck, a shoulder, an upper arm, an elbow, a wrist (the forearm), a hand, the breast, the waist, the
+** groin, a hip, a thigh, a knee, a calf, a foot.  PB_SIDED: a limb's, the shoulder to the hand and the hip to the foot,
+** a left and a right.  What a place is to a ruleset (a strike location, what armour covers) is its referee's mapping
+** (dq0harn.c's: HarnMaster's locations in the same order) */
+enum { PB_HEAD, PB_FACE, PB_NECK, PB_SHOULDER, PB_UPPERARM, PB_ELBOW, PB_WRIST, PB_HAND, PB_BREAST, PB_WAIST, PB_GROIN,
+    PB_HIP, PB_THIGH, PB_KNEE, PB_CALF, PB_FOOT, NPB };
+#define PB_SIDED(l)     (((l) >= PB_SHOULDER && (l) <= PB_HAND) || (l) >= PB_HIP)
 /* Where a thing's worn (the user's, 2026-11-10: "should keep track of where worn"; HOUSE.md's worn places): a worn
-** thing's sn, of a kind worn in more than one place (kinds.c's wplaces: rings, jewelry, a scarf), its HarnMaster
-** location (harn.h's HARN_SKULL ... HARN_FOOT), WP_RIGHT its right side (harn.h's HARN_RIGHT), WP_PAIR one of each side
-** (earrings); WP_NONE a thing worn the one way (clothes, a pack: one of a kind) */
+** thing's sn, of a kind worn in more than one place (kinds.c's wplaces: rings, jewelry, a scarf), its place on the body
+** (PB_HEAD ... PB_FOOT), WP_RIGHT its right side, WP_PAIR one of each side (earrings); WP_NONE a thing worn the one way
+** (clothes, a pack: one of a kind) */
 #define WP_LOC          0x0F
 #define WP_AT           0x10                    /* (Its place given: a worn thing's sn without it, 0x20 clear, has none yet,
                                                 **   its kind's own: an outfit's, its sn 0) */
@@ -186,8 +195,8 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
                                                 **   | WP_PAIR, 0x20 its right side: never a container's entry, NOFIT
                                                 **   at most) */
 struct wplace {                                 /* (kinds.c's wplaces: a kind worn in more than one place) */
-    unsigned char   kind, dflt;                 /* Its kind; its place unsaid (WP_*: a location, WP_PAIR) */
-    unsigned        allow;                      /* The locations it may be worn at (1 << HARN_*) */
+    unsigned char   kind, dflt;                 /* Its kind; its place unsaid (WP_*: a place, PB_*; WP_PAIR) */
+    unsigned        allow;                      /* The places it may be worn at (1 << PB_*) */
 };
 #define NWPLACES        7
 #define ROPE_FEET       50                      /* (A coil's length: the house's) */

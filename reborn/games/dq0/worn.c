@@ -4,8 +4,8 @@
 ** worn"; HOUSE.md's worn places): "wear the ring on my left hand", "put the scarf on my head", "wear the scarf over my
 ** face", "put the necklace around my neck", "don the brooch at my left shoulder".  A wear, a don, a put on, or a put
 ** whose words say a part of the body after "my" ("put X on my <part>": a don there, not a put in a thing) is a don, its
-** other the place, in the world's words for it ("@" and the place: harn.h's location as a letter, A HARN_SKULL ... P
-** HARN_FOOT; the side said, l or r, else -), the world's things.c's don and part 107's (wworn.c) to judge it
+** other the place, in the world's words for it ("@" and the place: items.h's place on the body as a letter, A PB_HEAD
+** ... P PB_FOOT; the side said, l or r, else -), the world's things.c's don and part 107's (wworn.c) to judge it
 */
 
 #include <string.h>
@@ -16,9 +16,9 @@
 #pragma rodata-name ("OV14RODATA")
 #pragma local-strings (on)
 
-/* The body's parts a thing's worn on, the words read after "my" (and "left", "right"), each 0-ended; their places, harn.h's
-** locations as letters (A the skull, the head and the ears; B the face; C the neck; D the shoulder; G the forearm, the
-** wrist; H the hand; I the thorax, the breast; J the abdomen, the waist) */
+/* The body's parts a thing's worn on, the words read after "my" (and "left", "right"), each 0-ended; their places, items.h's
+** PB_* as letters (A the head and the ears; B the face; C the neck; D the shoulder; G the wrist; H the hand; I the
+** breast; J the waist) */
 static const char parts[] = "head\0ears\0ear\0face\0neck\0throat\0shoulder\0breast\0chest\0waist\0hands\0hand\0finger\0"
     "wrist\0";
 static const char locs[] = "AAABCCDIIJHHHG";

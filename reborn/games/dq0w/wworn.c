@@ -2,8 +2,8 @@
 ** wworn.c - (dq0w, swapped part 107: ../dq0/swap.inc) where a thing's worn (the user's, 2026-11-10: "Wearing should
 ** extend to rings, necklaces, earrings, and other jewelry, as well as scarves, and should keep track of where worn (as
 ** should all worn items that can be worn in more than one place)"; HOUSE.md's worn places).  A thing of a kind worn in
-** more than one place (kinds.c's wplaces) is worn at a place, its record's sn (items.h's WP_*: a HarnMaster location,
-** its right side, a pair), as many there as the place holds (kinds.c's wroom: four rings a hand); its place said (the
+** more than one place (kinds.c's wplaces) is worn at a place, its record's sn (items.h's WP_*: a place on the body,
+** PB_*, its right side, a pair), as many there as the place holds (kinds.c's wroom: four rings a hand); its place said (the
 ** UI's worn.c: the request's into, "@" and the place), else its kind's (a ring the off hand's, then the other's when
 ** that's full).  What's worn another way (clothes, a pack, a belt) is one of a kind, as it was.  Its words where it's
 ** worn: the inventory's, a look's, a denizen's (its place drawn by its own number: a denizen's things' sn is the
@@ -13,7 +13,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <hydra.h>
-#include <harn.h>
 #include "../dq0/hub.h"
 #include "hub0.h"
 #include "../dq0/rs.h"
@@ -55,12 +54,6 @@ static const struct wplace* __fastcall__ wp_of (unsigned char k)
     return 0;
 }
 
-/* Whether location l has two sides (a limb's: the shoulder to the hand, the hip to the foot) */
-static unsigned char __fastcall__ sided (unsigned char l)
-{
-    return (l >= HARN_SHOULDER && l <= HARN_HAND) || l >= HARN_HIP;
-}
-
 /* Thing i's place (WP_*), or WP_NONE (one worn the one way): its sn; a denizen's (its sn its stratum), drawn by its own
 ** number from those its kind's worn at; one with none yet (an outfit's, the kit's), its kind's own, on the left */
 static unsigned char __fastcall__ place_of (unsigned i)
@@ -74,12 +67,12 @@ static unsigned char __fastcall__ place_of (unsigned i)
         return WP_NONE;
     }
     if (den) {
-        for (n = l = 0; l < HARN_NLOCATIONS; ++l) {
+        for (n = l = 0; l < NPB; ++l) {
             n += (w->allow >> l) & 1;
         }
         for (n = id % n, l = 0; !((w->allow >> l) & 1) || n--; ++l) {
         }
-        return l | (w->dflt & WP_PAIR) | (sided (l) && (id & 2) ? WP_RIGHT : 0);
+        return l | (w->dflt & WP_PAIR) | (PB_SIDED (l) && (id & 2) ? WP_RIGHT : 0);
     }
     l = s & WP_LOC;
     return (s & 0x30) != WP_AT || !((w->allow >> l) & 1) || ((s ^ w->dflt) & WP_PAIR) ? w->dflt : s & ~WP_AT;
@@ -92,8 +85,8 @@ static unsigned char __fastcall__ place_of (unsigned i)
 static void __fastcall__ say_at (unsigned char s, unsigned char how)
 {
     static const char* const prep[4] = { "on", "over", "about", "at" };
-    static const unsigned char pi[HARN_NLOCATIONS] = { 0, 1, 2, 0, 0, 3, 0, 0, 3, 2, 0, 0, 0, 0, 0, 0 };
-    static const char* const part[HARN_NLOCATIONS] = { "head", "face", "neck", "shoulder", "arm", "elbow", "wrist",
+    static const unsigned char pi[NPB] = { 0, 1, 2, 0, 0, 3, 0, 0, 3, 2, 0, 0, 0, 0, 0, 0 };
+    static const char* const part[NPB] = { "head", "face", "neck", "shoulder", "arm", "elbow", "wrist",
         "hand", "breast", "waist", "groin", "hip", "thigh", "knee", "calf", "foot" };
     unsigned char l = s & WP_LOC;
 
@@ -103,7 +96,7 @@ static void __fastcall__ say_at (unsigned char s, unsigned char how)
         put ("ears");
         return;
     }
-    if (sided (l) && !(how & SY_BOTH)) {
+    if (PB_SIDED (l) && !(how & SY_BOTH)) {
         put (s & WP_RIGHT ? "right " : "left ");
     }
     put (part[l]);
@@ -152,7 +145,7 @@ unsigned char __fastcall__ s_worn_at (unsigned n, unsigned k)
     l = said ? (iq.into[1] - 'A') & WP_LOC : w->dflt & WP_LOC;
     s = l | (w->dflt & WP_PAIR);
     hub_map (0);
-    t = !sided (l) ? 0 : said == 'l' ? 0 : said == 'r' ? WP_RIGHT : HUB->pcsum.limbs & LB_LEFT ? WP_RIGHT : 0;
+    t = !PB_SIDED (l) ? 0 : said == 'l' ? 0 : said == 'r' ? WP_RIGHT : HUB->pcsum.limbs & LB_LEFT ? WP_RIGHT : 0;
     s |= t;                                     /* (Its side: the one said; else the off hand's, then the other's) */
     if (said && !((w->allow >> l) & 1)) {
         put ("You can't wear the ");
@@ -162,7 +155,7 @@ unsigned char __fastcall__ s_worn_at (unsigned n, unsigned k)
         put (".");
         return 0xFF;
     }
-    t = sided (l) && said != 'l' && said != 'r';
+    t = PB_SIDED (l) && said != 'l' && said != 'r';
     if (worn_n (s) < wroom[l] || (t && worn_n (s ^= WP_RIGHT) < wroom[l])) {
         wplace = s | WP_AT;
         return 0;

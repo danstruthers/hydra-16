@@ -10,7 +10,6 @@
 
 #pragma rodata-name ("CATRODATA")
 
-#include <harn.h>
 #include "../dq0/hub.h"
 #include "things.h"
 
@@ -300,26 +299,26 @@ const unsigned char throws[KI_COUNT] = {
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
 
 /* Where the things worn in more than one place go (HOUSE.md's worn places, the user's, 2026-11-10: "should keep track
-** of where worn"): each such kind, its place unsaid (WP_* in items.h: a HarnMaster location, harn.h's, WP_PAIR a pair;
+** of where worn"): each such kind, its place unsaid (WP_* in items.h: a place on the body, PB_*, WP_PAIR a pair;
 ** a hand's, the off hand's first, then the other's), the locations it may be worn at (a bit each).  Then how many
 ** things worn in those places one place holds (a ring's four a hand, the user's; the neck three, the face one, the
 ** ears a pair).  Swapped part 107's (things.c's worn places, wworn.c), not the catalogue's bank's: its room */
 #pragma rodata-name (push, "SW107RODATA")
 #define L(h)    (1 << (h))
 const struct wplace wplaces[NWPLACES] = {
-    { KI_RING, HARN_HAND, L (HARN_HAND) },      /* (By the hand alone: not by the finger, the user's) */
-    { KI_BROOCH, HARN_THORAX, L (HARN_THORAX) | L (HARN_SHOULDER) | L (HARN_NECK) },
-    { KI_NECKLACE, HARN_NECK, L (HARN_NECK) },
-    { KI_PENDANT, HARN_NECK, L (HARN_NECK) },
-    { KI_TALISMAN, HARN_NECK, L (HARN_NECK) | L (HARN_FOREARM) },   /* (A charm on a thong: the neck, the wrist) */
-    { KI_SCARF, HARN_NECK, L (HARN_NECK) | L (HARN_SKULL) | L (HARN_FACE) | L (HARN_ABDOMEN) },
-    { KI_EARRINGS, HARN_SKULL | WP_PAIR, L (HARN_SKULL) }
+    { KI_RING, PB_HAND, L (PB_HAND) },      /* (By the hand alone: not by the finger, the user's) */
+    { KI_BROOCH, PB_BREAST, L (PB_BREAST) | L (PB_SHOULDER) | L (PB_NECK) },
+    { KI_NECKLACE, PB_NECK, L (PB_NECK) },
+    { KI_PENDANT, PB_NECK, L (PB_NECK) },
+    { KI_TALISMAN, PB_NECK, L (PB_NECK) | L (PB_WRIST) },   /* (A charm on a thong: the neck, the wrist) */
+    { KI_SCARF, PB_NECK, L (PB_NECK) | L (PB_HEAD) | L (PB_FACE) | L (PB_WAIST) },
+    { KI_EARRINGS, PB_HEAD | WP_PAIR, L (PB_HEAD) }
 };
 #undef L
-const unsigned char wroom[HARN_NLOCATIONS] = {
-    1, 1, 3, 1, 0, 0, 2, 4,                     /* skull (the head; the ears a pair), face, neck, shoulder, upper arm,
-                                                **   elbow, forearm (the wrist), hand */
-    2, 1, 0, 0, 0, 0, 0, 0                      /* thorax (the breast), abdomen (the waist), groin ... foot */
+const unsigned char wroom[NPB] = {
+    1, 1, 3, 1, 0, 0, 2, 4,                     /* head (the ears a pair), face, neck, shoulder, upper arm,
+                                                **   elbow, wrist, hand */
+    2, 1, 0, 0, 0, 0, 0, 0                      /* breast, waist, groin ... foot */
 };
 #pragma rodata-name (pop)
 

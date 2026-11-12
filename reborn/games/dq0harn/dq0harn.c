@@ -41,6 +41,17 @@
 #include "dq0harn.h"
 #include "../dq0/rshouse.h"
 
+/* The engine's places on the body (items.h's PB_*: where a thing's worn) as HarnMaster's strike locations (harn.h's):
+** the ruleset's mapping, the identity, the places in its locations' order (the head its skull, the wrist its forearm,
+** the breast its thorax, the waist its abdomen), a limb's right side its HARN_RIGHT; checked here, for any reading of
+** a place worn as a location (what's struck, what's covered) */
+#define PB_HARN(p)      (p)
+typedef char pb_harn_fit[PB_HEAD == HARN_SKULL && PB_FACE == HARN_FACE && PB_NECK == HARN_NECK && PB_SHOULDER ==
+    HARN_SHOULDER && PB_UPPERARM == HARN_UPPERARM && PB_ELBOW == HARN_ELBOW && PB_WRIST == HARN_FOREARM && PB_HAND ==
+    HARN_HAND && PB_BREAST == HARN_THORAX && PB_WAIST == HARN_ABDOMEN && PB_GROIN == HARN_GROIN && PB_HIP == HARN_HIP &&
+    PB_THIGH == HARN_THIGH && PB_KNEE == HARN_KNEE && PB_CALF == HARN_CALF && PB_FOOT == HARN_FOOT && NPB ==
+    HARN_NLOCATIONS && WP_RIGHT == HARN_RIGHT ? 1 : -1];
+
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
 void __fastcall__ load_pc (struct req* r);      /* (Part 1's stubs: bank.s's) */
