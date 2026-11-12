@@ -3,7 +3,8 @@
 // out, so the world reads no more than it needs as it starts); the catalogue's file (obj/games/
 // dq0w.hyx.cat, ld65's: the kinds' 8K, the hub's KIND_BANK, then the catalogue's bank, CAT_BANK) given the words of the
 // kinds' names, each once, after the kinds (items.h's KIND_WORDS: the UI's world words for the command parser, the
-// parser's lists being words); and the outfits (games/dq0/outfits.txt: the character's starting outfits and the
+// parser's lists being words); and the outfits (each ruleset's games/REFEREE/outfits.txt, the referees in
+// games/dq0/rsmeta.h's RULESETS order: the character's starting outfits, the ruleset's; then games/dq0/outfits.txt: the
 // denizens' gear, the outfits' plan's) compiled into the world's data file, obj/games/dq0o.dat (on the card as
 // lib/dq0/dq0o.dat), the kinds by their names in the catalogue as it's linked.
 'use strict';
@@ -76,7 +77,10 @@ function build({ dir, objdir, say = () => {} }) {
   gods.copy(file, (nkinds - 2) * KIND);
   fs.writeFileSync(f, file);
   // The outfits
-  const o = outfits.compile({ src: path.join(games, 'dq0', 'outfits.txt'), names, out: path.join(objdir, '..', 'dq0o.dat'),
+  const referees = [...(/#define\s+RULESETS\s+(.*)/.exec(fs.readFileSync(path.join(games, 'dq0', 'rsmeta.h'), 'latin1')) || ['', ''])[1]
+    .matchAll(/\{\s*"([^"]+)"/g)].map(m => m[1]);   // (The rulesets' referees: their outfits first, those that have one)
+  const o = outfits.compile({ src: [...referees.map(r => path.join(games, r, 'outfits.txt')), path.join(games, 'dq0', 'outfits.txt')],
+    names, out: path.join(objdir, '..', 'dq0o.dat'),
     dens: path.join(games, 'dq0d', 'kinds.txt') });
   say('dq0w.cat: ' + names.filter(Boolean).length + ' kinds, their words ' + text.length + ' bytes; dq0o.dat: ' + o.sections + ' outfits (and ' + o.kinds + ' of the denizens\' kinds), ' + o.bytes + ' bytes');
   return { words: text.length, outfits: o };

@@ -1,5 +1,6 @@
-// outfits.js - (dq0w) the outfits (games/dq0/outfits.txt: the character's starting outfits by occupation, its skills'
-// weapons and tools, the armour by an occupation's bent, the denizens' gear by their kinds) compiled into the world's
+// outfits.js - (dq0w) the outfits (each ruleset's games/REFEREE/outfits.txt: the character's starting outfits by
+// occupation, its skills' weapons and tools, the armour by an occupation's bent, by the ruleset's tags; then
+// games/dq0/outfits.txt: the denizens' gear by their kinds), read in that order, compiled into the world's
 // data file, dq0o.dat (make.js's: the kinds by their names in the catalogue as it's linked), which the world reads into
 // banks of its own as it starts and draws from (dq0w/outfit.c).  The file's layout (outfit.c's, little-endian):
 //
@@ -30,10 +31,6 @@ const fs = require('fs');
 const VERSION = 5;                                      // (2: a section's flags in its index entry, 2026-10-27; 3: a
                                                         //   thing's material, the denizens' places and sections; 5:
                                                         //   the book's dice, a jewel, 2026-10-28)
-// (The tags: RS_OUTFIT's bits, in this order, the ruleset's to set: HarnMaster's cultures, classes, wealth and sexes,
-// ../dq0harn/dq0harn.h's OT_*)
-const TAGS = ['feudal', 'imperial', 'viking', 'tribal', 'sindarin', 'khuzan', 'slave', 'serf', 'unguilded', 'guilded', 'noble',
-  'poor', 'average', 'rich', 'female', 'male'];
 const PLACES = { worn: 1, hand: 2, off: 3, both: 4, belt: 5, pouch: 6, pack: 7, in: 8,
   bed: 9, stash: 10, home: 11, hoard: 12, under: 13 };  // (outfit.h's PL_*: the denizens' from bed on, 2026-10-27)
 const MATS = Object.fromEntries(['wood', 'iron', 'steel', 'bronze', 'leather', 'cloth', 'bone', 'clay', 'stone', 'glass',
@@ -52,18 +49,31 @@ function hash(s) {
   return h;
 }
 
+// The files (src: one, or a list read in its order, the rulesets' first), each line { file, ln, raw }; a file's tags
+// line (tags WORD ...: RS_OUTFIT's bits in this order, the ruleset's to set, before its first section) the words its
+// lines' if, not and TAG*W say
 function compile({ src, names, out, dens }) {
-  if (!fs.existsSync(src)) { if (fs.existsSync(out)) fs.rmSync(out); return { sections: 0, bytes: 0 }; }
+  const srcs = (Array.isArray(src) ? src : [src]).filter(f => fs.existsSync(f));
+  if (!srcs.length) { if (fs.existsSync(out)) fs.rmSync(out); return { sections: 0, bytes: 0 }; }
+  src = srcs.join(', ');
   const kind = new Map(names.map((n, i) => [n, i]).filter(([n]) => n));
-  const lines = fs.readFileSync(src, 'latin1').split(/\r?\n/);
-  const secs = [];
+  const lines = srcs.flatMap(file => fs.readFileSync(file, 'latin1').split(/\r?\n/).map((raw, ln) => ({ file, ln, raw })));
+  const secs = [], TAGS = [];
   let sec = null;
-  const fail = (ln, why) => { throw new Error(src + ':' + (ln + 1) + ': ' + why); };
+  const fail = (ln, why) => { throw new Error(ln.file + ':' + (ln.ln + 1) + ': ' + why); };
   const tagbit = (ln, t) => { const k = TAGS.indexOf(t); if (k < 0) fail(ln, 'no tag ' + t); return k; };
-  lines.forEach((raw, ln) => {
-    const l = raw.replace(/;.*$/, '').trim();
+  let at0 = null;
+  lines.forEach(ln => {
+    if (ln.file !== at0) { at0 = ln.file; sec = null; }   // (A file's lines begin outside any section)
+    const l = ln.raw.replace(/;.*$/, '').trim();
     if (!l) return;
     let m;
+    if (!sec && (m = /^tags\s+(.*)$/.exec(l))) {        // The tags' words, in their bits' order
+      if (TAGS.length) fail(ln, 'tags twice');
+      TAGS.push(...m[1].split(/\s+/));
+      if (TAGS.length > 16) fail(ln, 'more than 16 tags (RS_OUTFIT\'s x[0], x[1])');
+      return;
+    }
     if ((m = /^\[([^\]]+)\]\s*(.*)$/.exec(l))) {          // A section: its name, its header's words
       sec = { name: m[1].trim(), flags: 0, bent: '', keep: 0, make: 0xFF, mdie: 0, pn: 0, pm: 0, lines: [], ln };
       if (secs.some(s => s.name === sec.name)) fail(ln, 'section ' + sec.name + ' twice');
@@ -211,4 +221,4 @@ function compile({ src, names, out, dens }) {
   return { sections: secs.length, kinds: alias.length, bytes: at };
 }
 
-module.exports = { compile, hash, TAGS, PLACES };
+module.exports = { compile, hash, PLACES };

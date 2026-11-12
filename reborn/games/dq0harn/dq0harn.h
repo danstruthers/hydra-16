@@ -10,8 +10,8 @@
 #include "../dq0/referee.h"                /* (The skeleton's: the words into a reply, what's to hand) */
 #include "../dq0/rsmeta.h"                   /* (The sheet's tongues and scripts, the meta programs' too) */
 
-/* RS_OUTFIT's tags (rs.h's x[0], x[1]): HarnMaster's cultures, classes, wealth and sexes, a bit each, as outfits.txt
-** words them (outfits.js's TAGS, in order: ../dq0w), the referee's own (2026-11-11: rs.h's once) */
+/* RS_OUTFIT's tags (rs.h's x[0], x[1]): HarnMaster's cultures, classes, wealth and sexes, a bit each, as its outfits.txt
+** (this folder's) words them in its tags line, in order: the referee's own (2026-11-11: rs.h's once) */
 enum { OT_FEUDAL, OT_IMPERIAL, OT_VIKING, OT_TRIBAL, OT_SINDARIN, OT_KHUZAN, OT_SLAVE, OT_SERF, OT_UNGUILDED,
     OT_GUILDED, OT_NOBLE, OT_POOR, OT_AVERAGE, OT_RICH, OT_FEMALE, OT_MALE };
 

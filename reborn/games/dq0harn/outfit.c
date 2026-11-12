@@ -1,6 +1,6 @@
 /*
 ** outfit.c - (overlay 1, the referee's: called through bank.s's stubs) the character's outfit's makings (rs.h's
-** RS_OUTFIT, the world's as a new game's kit is made: games/dq0/outfits.txt, drawn by the world, dq0w/outfit.c): its
+** RS_OUTFIT, the world's as a new game's kit is made: outfits.txt here, drawn by the world, dq0w/outfit.c): its
 ** occupation, its open skills by their mastery (each one's weapons and tools), its family's wealth by its class
 ** (Character 17: the book's three levels a class, poor, average and rich; hmchar's file's "wealth" line, else rolled
 ** here from the character's own numbers, as hmchar rolls it: a quarter poor, half average, a quarter rich, an outcast
