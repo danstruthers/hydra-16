@@ -215,7 +215,7 @@ module.exports = {
           if (Math.max(Math.abs(e.w1 - m.tun.pc[0]), Math.abs(e.w2 - m.tun.pc[1])) > 3) f.push('dug far from the way round the door: ' + [e.w1, e.w2]);
         }
         if (m.tun.tile(m.tun.door[0], m.tun.door[1]) !== 3) f.push('the door itself dug');
-        if (!/scraping in rock|The dwarf miner digs into the wall/.test(s)) f.push('its digging neither seen nor heard');
+        if (!/scraping in rock|The dwarf miner sets to digging/.test(s)) f.push('its digging neither seen nor heard');
         if (!/A fresh tunnel opens|rock falling/.test(s)) f.push('the way through not told');
         const fin = T.of('quit').at, me = fin && fin.actors.find(a => a.k === m.tun.k);
         if (!me || (me.x === m.tun.beyond[0] && me.y === m.tun.beyond[1])) f.push('the dwarf never came on from beyond the door: ' + JSON.stringify(me));
@@ -293,7 +293,7 @@ module.exports = {
           if (!across && !(w && Math.abs(e.w1 - w.vx) <= Math.abs(w.vw))) f.push('a square dug off the mine: ' + [e.w1, e.w2]);
         }
         if (m.mine.miners.some(x => x.attitude === 0)) f.push('a miner hostile');
-        if (!/scraping in rock|digs into the wall/.test(s)) f.push('the digging neither seen nor heard');
+        if (!/scraping in rock|sets to digging/.test(s)) f.push('the digging neither seen nor heard');
         if (f.length) f.push(JSON.stringify({ mine: m.mine, v, dens: dens.filter(e => e.a).map(e => [e.who, e.a, e.w1, e.w2]) }));
         return f;
       },
@@ -489,7 +489,7 @@ module.exports = {
         const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.tun.k + 1), { K } = m.dq0.layout();
         if (!dens.some(e => e.a === K.DE_HEAVES)) f.push('the dwarf never heaved at the portcullis (E_DEN DE_HEAVES)');
         if (!dens.some(e => e.a === K.DE_RAISES || e.a === K.DE_BENDS)) f.push('the portcullis neither raised nor its bars strained at (DE_RAISES, DE_BENDS)');
-        if (!/The dwarf miner heaves at the portcullis\.|iron scraping/.test(s)) f.push('its heaving neither seen nor heard');
+        if (!/The dwarf miner sets to heaving at the portcullis\.|iron scraping/.test(s)) f.push('its heaving neither seen nor heard');
         for (const e of dens.filter(e => e.a >= K.DE_OPENS)) if (e.w1 !== m.tun.door[0] || e.w2 !== m.tun.door[1]) f.push('a portal worked not the portcullis: ' + [e.a, e.w1, e.w2]);
         const h = m.dq0.bank(0), lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
         if (!m.taskRam[h[12 + 2]][parseInt(/^al ([0-9A-F]+) \._rb$/m.exec(lbl)[1], 16)]) f.push('no way found (dq0d\'s rb: the ways\' bank never had)');
@@ -603,15 +603,15 @@ module.exports = {
         const T = dq0Turns(m), f = [], s = dq0Story(out), { K } = m.dq0.layout();
         if (!m.keyed) return ['the key not made the door\'s: no door ahead, or no iron key carried'];
         if (!m.door) return ['the scene not set: no bandit near, or no door ahead with a floor beyond it: ' + JSON.stringify(m.doorWhy)];
-        if (!/> lock the door[^>]*You lock it with its key\./.test(s)) f.push('"lock the door" not "You lock it with its key."');
+        if (!/> lock the door[^>]*You lock the door with its key\./.test(s)) f.push('"lock the door" not "You lock the door with its key."');
         const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.door.k + 1);
         const strains = dens.filter(e => e.a === K.DE_STRAINS), opens = dens.filter(e => e.a === K.DE_OPENS);
         const picks = dens.filter(e => e.a === K.DE_PICKING), picked = dens.some(e => e.a === K.DE_PICKS);   // (A robber's kind picks it first, 2026-11-02)
         if (!picks.length) f.push('the bandit never worked at the lock (E_DEN DE_PICKING: a robber\'s kind picks first)');
         if (!picked && !strains.length) f.push('the bandit, the lock not picked, never strained at the locked door (E_DEN DE_STRAINS)');
         if (opens.length && !picked && strains.length && opens[0].t < strains[0].t) f.push('the locked door opened before it was picked or forced');
-        if (!/The bandit works at the lock\.|a faint scratching/.test(s)) f.push('its picking neither seen nor heard');
-        if (!picked && !/The bandit strains at the door\.|a door creaking/.test(s)) f.push('its forcing neither seen nor heard');
+        if (!/The bandit sets to picking the lock\.|a faint scratching/.test(s)) f.push('its picking neither seen nor heard');
+        if (!picked && !/The bandit sets to forcing the door\.|a door creaking/.test(s)) f.push('its forcing neither seen nor heard');
         if (!picked && !dens.some(e => e.a === K.DE_BURSTS || e.a === K.DE_BATTERS)) f.push('its forcing neither burst the door nor, held, went on to battering');
         if (process.env.DQ0SHOW) f.push(s.slice(s.indexOf('> lock the door'), s.indexOf('> lock the door') + 2500));
         for (const e of dens.filter(e => e.a >= K.DE_OPENS)) if (e.w1 !== m.door.door[0] || e.w2 !== m.door.door[1]) f.push('a door worked not the one between them: ' + [e.a, e.w1, e.w2]);

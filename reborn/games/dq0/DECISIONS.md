@@ -3649,7 +3649,8 @@ letter for letter.
   - the SA_ refusals as rows, and the first words from a *begun* row: both are the UI's own, not the world's events,
     and want a kind of the UI's (a row keyed by a refusal or a verb) before they move; not built;
   - the denizens' doings that the character does too in other words (shut and close, unlock "with its key"): one
-    wording each, the user's call, then the rows shared;
+    wording each, the user's call, then the rows shared (the user chose one wording: done, "One wording for the player
+    and the denizens" below);
   - wbody.c's told_den, the bodies' step: kept resident in its part for its pace;
   - the sound's mapping as a column of the table (untouched, as asked).
 
@@ -3948,3 +3949,123 @@ Gone: make.js's compile and check (some 300 lines) and bestiary.  The stand-ins'
 - **The record's reach.**  between.dat holds what passes in the town.  The other files the programs share (life.dat, kit.dat, townkit.dat, kit0.dat, clues.dat, heard.txt, rumours.txt, quest.txt, lives.dat) are as they were: life.dat is life.h's struct life (the game's too), the kit files the world's; records.def could declare them next (life.h's struct life is the first candidate, its layout read by the tests by hand now).
 - **The emulator in the build.**  The stand-ins and the goal kinds are compiled in the emulator: a build with themec, the bestiary, a goal or a stand-in changed runs it (some 3 s each); one without reads the kept answers.  A host build of comp.c would be quicker, if a C compiler is ever on the build's machines: the same source (it reads its files with open and read).
 - **The tests' theme oracle** is now the same compiler as the game's: a theme compiled on the Hydra is held to themec's run alone, not to a second compiler's.  What the two compilers' agreement checked before (that each read the format the same) has no second reader to disagree with now; comp.c is the format's statement.
+
+## One wording for the player and the denizens (the user's, 2026-11-11; the choices as built, for review)
+
+**The user's decision:** an action has one wording, the character's and a denizen's, said with the actor swapped
+("You open the door." / "The bandit opens the door.").  Stage 3 shared one row's piece (@open); every other doing the
+character and a denizen both do was worded twice.  Now each is one piece of said.txt, used by the character's row
+(PORTAL's, DIG's, TASK's, BEAT's) and the denizen's (DEN's, BEAT's), and the duplicates are gone.  The player's
+wording was kept where it could take an actor (all but one, a thing dropped); where it couldn't ("The lock gives with a click.", no one doing it),
+the actor was put into it, the player's words kept after it; the denizen's was taken where it was the more exact.
+
+- **The renderer** (said.c, saidgen.js):
+  - `{its}`: the actor's, "your" or "its" (SC_ITS, 0xEF); `{'s}` after `{Actor}`: "r" or "'s" ("Your", "The
+    bandit's": SC_POSS, 0x7F).  Codes, not fields: the table's 31 of 32 fields are as they were.
+  - A kind's actor may be a field of its own: said.txt's `kind BEAT beat whose` (said_ka, a byte a kind): E_BEAT's
+    whose (0 the character, else the actor plus 1), not the event's who.  `{Actor}`, `{s}`, `{its}`, `{'s}` and
+    `{actor?a|b}` read it.
+  - A piece two kinds use is compiled for each (its fields are the kind's), and kept once where the bytes are the same
+    (saidgen.js): @open, @close ... are PORTAL's and DEN's, one copy.
+- **The UI:** task.c's TE_BEGUN gives what's forced or heaved at as obj (noun: "the window"); s_noise_told (part 14)
+  clears obj for a denizen's row (its piece's "the door"); s_news (part 11) gives the character's limbs' rows its
+  body, BD_TWO (said_n 0: it was left as the last row's).
+
+**The pairs, before and after** (the character's row, the denizen's; *chosen* the one now said by both):
+
+| action | the character's, before | a denizen's, before | one wording now (piece) |
+|---|---|---|---|
+| open a door | You open the door{, revealing ...}. | The bandit opens the door. | unchanged (@open, stage 3's) |
+| close a door | You close the door. | The bandit shuts the door. | {Actor} close{s} the door. (@close: the player's) |
+| unlock with its key | You unlock it with its key. | The bandit unlocks the door. | {Actor} unlock{s} the door with its key. (@unlock) |
+| lock with its key | You lock it with its key. | The bandit locks the door. | {Actor} lock{s} the door with its key. (@lock) |
+| bar a door | You set the bar in its brackets: the door is barred. | The bandit drops a bar across the door. | {Actor} set{s} the bar in its brackets: the door is barred. (@bar: the player's) |
+| lift its bar out | You lift the bar out of its brackets, and set it down. | The bandit lifts the door's bar. | {Actor} lift{s} the bar out of its brackets, and set{s} it down. (@lift: the player's) |
+| forcing begun | You set to forcing the door. (TASK.begun's) | The bandit strains at the door. | {Actor} set{s} to forcing {the door}. (@forcing: the player's) |
+| forced | With a crack the door bursts open{, revealing ...}. | The bandit bursts the door open. | With a crack {actor} burst{s} the door open{...}. (@burst) |
+| forcing held | The door holds. | The bandit can't force the door. | The door holds against {actor}. (@held) |
+| broken down by blows | It gives way, and crashes open{, revealing ...}. | The bandit breaks the door down. | {Actor} break{s} the door down: it crashes open{...}. (@broke) |
+| picking begun | You set to picking the lock. (TASK.begun's) | The bandit works at the lock. | {Actor} set{s} to picking the lock. (@picking: the player's) |
+| picked | The lock gives with a click. | The bandit picks the lock. | {Actor} pick{s} the lock: it gives with a click. (@picked) |
+| heaving begun | You set to heaving at the portcullis. | The dwarf heaves at the portcullis. | {Actor} set{s} to heaving at the portcullis. (@heaving: the player's) |
+| winding begun | You set to winding the winch. | The dwarf winds the portcullis's winch. | {Actor} set{s} to winding the winch. (@winding: the player's) |
+| raised (winch, by hand) | The portcullis grinds up, and catches, raised{...}. / The portcullis rises, and catches, raised{...}. | The dwarf raises the portcullis. | {Actor} raise{s} the portcullis (@raise), the character's rows adding ": it grinds up, and catches{...}." / ": it rises, and catches{...}." |
+| lowered | You loose the winch: the portcullis crashes down. | The dwarf lets the portcullis fall. | {Actor} loose{s} the winch: the portcullis crashes down. (@lower: the player's) |
+| bending begun | You set to bending the bars. | The dwarf strains at the bars. | {Actor} set{s} to bending the bars. (@bending: the player's) |
+| bent apart | The bars bend apart: there's room to get through. | The dwarf bends the bars apart. | {Actor} bend{s} the bars apart: there's room to get through. (@bent) |
+| digging begun | You set to digging: some 12 feet of it, by the look of it. | The dwarf miner digs into the wall. | {Actor} set{s} to digging (@digging: the player's; its feet the character's row's) |
+| the roof come down | The rotten rock splits, and part of the roof falls into the hole. | The dwarf miner is showered with rock from the roof. | The rotten rock splits over {actor}, and part of the roof falls into the hole. (@roof) |
+| a thing dropped | Your sword falls from your hand. | The bandit drops its sword. | {Actor} drop{s} {its} {thing}. (BEAT.drop: the denizen's) |
+| a thing broken | Your sword breaks! | The bandit's sword breaks! | {Actor}{'s} {thing} breaks! (BEAT.broke: the same words) |
+| up, not up, fallen | You get to your feet. / You struggle, but can't get up. / You fall. | The bandit gets to its feet. ... (by its body) | {Actor} get{s} to {its} feet ... (BEAT.risen, .not_up, .fallen: the same words; a creature's body its own) |
+
+**The choices, for review:**
+
+- **"with its key", not "with your key".**  The key is the door's (a key fits its own lock alone), and a chest's are
+  said so already ("You unlock the chest with its key.", hthings.c's): "with your key" would have told the door and the
+  chest two ways.  The pronoun is there (`{its}`) if the user wants "your key" / "its key".
+- **The door named, not "it".**  "You unlock it with its key." read after "unlock the door"; a denizen's needs the
+  door named, so the character's names it too ("You unlock the door with its key.").
+- **An impersonal sentence given its actor.**  "The lock gives with a click.", "The door holds.", "With a crack the
+  door bursts open", "It gives way, and crashes open", the portcullis's "grinds up": no one in them to swap.  Each keeps
+  its words and takes the actor: "You pick the lock: it gives with a click.", "The door holds against you.", "With a
+  crack you burst the door open", "You break the door down: it crashes open", "You raise the portcullis: it grinds up,
+  and catches" ("raised" gone: the verb says it).  The shutters' (a window's, the character's alone) are as they were.
+- **A timed work begun is the character's words** ("sets to forcing the door", not "strains at the door"): the
+  character's are said by TASK.begun's rows, now one for each of the five a denizen does too ([task=LT_FORCE],
+  LT_PICK, LT_HEAVE, LT_WIND, LT_BEND), their words the same as the general row's were.
+- **A raise is one doing for a denizen** (E_DEN's DE_RAISES, by the winch or by hand), two for the character: the
+  piece is the clause they share, "{Actor} raise{s} the portcullis", the character's rows adding how it went.
+- **Lifting the bar is PORTAL.lifted's**, not PORTAL.unbarred's ("You lift the bar and open the door"): a denizen lifts
+  a bar on its side first (dq0d.c's PA_LIFT), then opens the door, two doings told each.
+- **A thing dropped is the denizen's words** ("You drop your sword.", not "Your sword falls from your hand."):
+  WB_DROP is a fumble, but also a weapon let go to take up a bow (wshoot.c's), which "falls from your hand" misreads;
+  and the table has no verb agreement by the thing, so the first build's "The soldier's rations falls from its hand."
+  (dq0denhands) read wrong, where "drops its rations" can't.  The player's own words had the same fault for a plural
+  thing ("Your rations falls from your hand.").
+- **A named denizen's limbs** now read "Grub gets to its feet." (was "The Grub gets to its feet.": the row put "The"
+  before the name).
+
+**Not shared** (one side's alone, so one wording already): a rally, a snore, talk, the alarm, a door slammed as its
+denizen flees (the character closes), a denizen's blow at a door (the character's blows are told by what they do:
+"Your blows begin to tell on it."), a door hung, a way walled up, a pastime; a way dug through, told from where it opens
+(its digger may be out of sight: "A fresh tunnel opens ahead to your left."); the denizens' thing snatched up, drawn,
+readied, eaten, handed or thrown (the character's are its commands' replies, not the table's); the character's own
+refusals and its windows.  TASK.away ("Quicker, the rat backs away from you.") and TASK.break ("You back away from the
+rat.") already say the same doing the same way.
+
+- **Room** (the build's table):
+
+  | | before | after |
+  |---|---|---|
+  | dq0's main RAM | 3,415 | 3,415 |
+  | overlay 27 (the renderer, the words most said) | 911 | 695 (SC_ITS, SC_POSS, the actor by kind, said_ka) |
+  | overlay 28 (the rows' first bank) | 6 | 0 (8,192 bytes of rows: the packer fills it, a kind's rows wholly in a bank) |
+  | overlay 29 (their second bank) | 6,499 | 6,577 |
+  | the rows, all told | 9,872 bytes, 257 rows, 19 pieces | 9,807 bytes, 262 rows (TASK.begun's five), 38 pieces (20 shared, kept once), 31 fields |
+  | overlay 3 (task.c: what's forced or heaved at) | 2,121 | 2,081 |
+  | part 11 (s_news: the character's body) | 2,349 | 2,346 |
+  | part 14 (noise_told: obj cleared) | 1,643 | 1,637 |
+  | overlays 15, 18 (the packer's) | 311, 758 | 308, 752 |
+  | dq0w's main RAM | 2,182 | 2,182 (the world untouched) |
+
+- **The start** (dq0starttime): seed 1 234.0M → 233.4M cycles (budget 245M), seed 123456789 310.6M → 311.4M.
+
+- **Checked:** every dq0 test's screen kept before and after (a temporary hook in sim/test.js, not committed), their
+  sentences compared (the status line dropped, wrapped lines joined, the order of whole sentences ignored).  41 of 294
+  differ.  Every sentence new or gone is one of the rewordings above: a door broken down (dq0batter, dq0battering,
+  dq0doorfar, dq0highkinds, dq0strike, dq0wordsfix), forced (dq0moving, dq0pure, dq0timed, dq0traps, dq0watch), locked
+  and unlocked with its key (dq0denkey, dq0foundkey, dq0keysteps), a portcullis raised (dq0portc), bars bent (dq0break),
+  the roof come down on a dig (dq0dig), a thing dropped (the character's, in 19 tests: "You drop your torch."), and the
+  denizens' (dq0allythrow, dq0denportc: "sets to heaving at the portcullis"; dq0denkey: "sets to picking the lock",
+  "sets to forcing the door"; dq0tunnel: "sets to digging").  The rest is the known noise: the real-time fight in
+  dq0denpace; denizens met at other moments (dq0answer, dq0jobs, dq0mine, dq0prompt), dq0answer's a key typed ahead
+  echoed after a sentence's stop ("some bones.."); "Something stirs.".  **The first build** said "The soldier's rations
+  falls from its hand." (dq0denhands): a thing dropped is the denizen's words since (above).
+- **Tests' strings changed** (the words the decision changed, each check's meaning kept): tests/lib/dq0.js's
+  DQ0_REPEATS (a dig's "The rotten rock splits over you ..."; a fumble's "You drop your ...", "... drops its ...", a
+  named one's too); denizens.js (dq0tunnel's and dq0mine's "sets to digging", dq0denportc's "sets to heaving at the
+  portcullis", dq0denkey's "You lock the door with its key.", "sets to picking the lock", "sets to forcing the door");
+  parser.js (dq0wordsfix's "You break the door down: it crashes open"); map.js (dq0foundkey's "You unlock the door with
+  its key", the old words' alternative gone).
+- **Tested:** all 444 tests pass.

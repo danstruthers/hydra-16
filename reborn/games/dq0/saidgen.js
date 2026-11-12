@@ -10,6 +10,8 @@
 // The packed form (said.c reads it):
 //   said_kind[n], said_at[n]   each outcome kind, and where its rows begin in said_rows
 //   said_ko[n]                 each kind's outcome: its field (said_f's)
+//   said_ka[n]                 each kind's actor: its field plus 1 (said.txt's kind line's third word: E_BEAT's whose),
+//                              0 the event's who
 //   said_f[]                   the fields a row reads, five bytes each: its byte's offset in struct msg, the shift and
 //                              the mask that take it out, an operation (SF_*: none, less K, more than K, times K) and K
 //   said_rows[], said_rows2[]  (overlays 28's and 29's: the second linked at $A000, so an offset past 8,192 is its, said_b
@@ -18,14 +20,16 @@
 //                              (SAID_ANY any), its condition's field (0xFF none; | 0x80, the field's one value, else the
 //                              mask of its values, bit V for V) and that value or mask, its flags (SR_ONCE), its text
 //                              (below), 0; then 0.  After the kinds' rows, the pieces (said.txt's @NAME, each kind's its
-//                              own: its fields its), each its text and 0, said_pc[] where each begins
+//                              own: its fields its; two kinds' the same bytes kept once), each its text and 0, said_pc[]
+//                              where each begins
 //   said_dw[], said_do[]       the words most said (chosen here: the bytes they save), and where each begins in
 //                              said_dw: a text's codes 2-8 and 11-29 the first 26, then SC_WORD and a byte, N, the
 //                              26 + N - 1th (the rows' bank's room, and the bytes read in as the game starts)
 //   A text's bytes: the letters as they are ('\n' a new line); SC_NL a line of its own; SC_NUM + F the field F's value;
 //   SC_CHOOSE + F, SC_CHANGED + F a block: its alternatives' texts between SC_ALT, ended by SC_END; SC_STR + 2K (+ 1
 //   capitalised) the UI's word K (obj, instr, text, actor); SC_IF + K a block, a choice by the word K given (actor: a
-//   denizen), SC_IF + 4 by the UI's number; SC_S, SC_A, SC_LIGHT, SC_FORGET, SC_ARG, SC_SING; SC_WORD N; SC_ROOM F, SC_REL F,
+//   denizen), SC_IF + 4 by the UI's number; SC_S, SC_A, SC_LIGHT, SC_FORGET, SC_ARG, SC_SING, SC_ITS ("your", "its"),
+//   SC_POSS (after the actor: "r", "'s"); SC_WORD N; SC_ROOM F, SC_REL F,
 //   SC_TRAP F G, SC_KIND F, SC_NAME F, SC_PIECE P (each F and P there plus 1: no 0 in a text)
 'use strict';
 const fs = require('fs');
@@ -36,9 +40,9 @@ const ROOT = path.join(__dirname, '..', '..');
 const SRC = path.join(__dirname, 'said.txt'), OUT = path.join(ROOT, 'obj', 'gen', 'dq0said.h');
 
 // The codes (said.c's, the same: its SC_*)
-const SC = { NL: 0x01, END: 0x1E, ALT: 0x1F, NUM: 0x80, CHOOSE: 0xA0, CHANGED: 0xC0, STR: 0xE0, S: 0xE8, A: 0xE9,
-  LIGHT: 0xEA, FORGET: 0xEB, ARG: 0xEC, SING: 0xED, IF: 0xF0, ROOM: 0xF8, TRAP: 0xF9, REL: 0xFA, PIECE: 0xFB,
-  KIND: 0xFC, NAME: 0xFD, WORD: 0xEE };
+const SC = { NL: 0x01, END: 0x1E, ALT: 0x1F, POSS: 0x7F, NUM: 0x80, CHOOSE: 0xA0, CHANGED: 0xC0, STR: 0xE0, S: 0xE8,
+  A: 0xE9, LIGHT: 0xEA, FORGET: 0xEB, ARG: 0xEC, SING: 0xED, IF: 0xF0, ROOM: 0xF8, TRAP: 0xF9, REL: 0xFA, PIECE: 0xFB,
+  KIND: 0xFC, NAME: 0xFD, WORD: 0xEE, ITS: 0xEF };
 const WORDS_MAX = 200;                                        // (The words said as SC_WORD and a byte, at most)
 const BANK = 0x2000;                                          // (A bank of the rows': overlays 28 and 29)
 const ANY = 0xFE;                                            // (A row for any outcome: said.c's SAID_ANY)
@@ -93,19 +97,21 @@ function generate(H, say = () => {}) {
   const kind = (k, of, line) => {                             // (An outcome kind: its outcome field, its enum)
     if (!of || !of[5]) throw new Error('saidgen: ' + k + ': no outcome field with its enum (msgs.def\'s @)' + (line ? ' (said.txt:' + line + ')' : ''));
     const pre = of[5].slice(0, of[5].indexOf('_') + 1), e = H.enums.find(x => x.includes(of[5])).filter(n => n.startsWith(pre));
-    return { k, short: k.replace(/^E_/, ''), forms: formsOf(k), of: of[0], pre, members: e, own: [], rows: [], v: H.C[k] };
+    return { k, short: k.replace(/^E_/, ''), forms: formsOf(k), of: of[0], pre, members: e, own: [], rows: [], v: H.C[k],
+      actor: null };
   };
   const kinds = H.outcome.map(k => {                          // (The head's kinds: their field in the head's place)
     const head = H.msgs.E_OUTCOME.fields.find(f => f[0] === 'outcome');
     return kind(k, formsOf(k)[0].fields.find(f => f[1] === head[1] && f[2] === head[2] && f[3] === head[3] && f[4] === head[4]));
   });
-  for (const e of list) {                                     // (`kind SHORT FIELD`: a kind worded by its own outcome
-    const m = e.text === null && e.head.match(/^kind\s+(\w+)\s+(\w+)$/);   //   field, its bytes where they are)
-    if (!m) continue;
+  for (const e of list) {                                     // (`kind SHORT FIELD [ACTOR]`: a kind worded by its own
+    const m = e.text === null && e.head.match(/^kind\s+(\w+)\s+(\w+)(?:\s+(\w+))?$/);   //   outcome field, its bytes
+    if (!m) continue;                                         //   where they are; its actor a field of its own)
     const k = 'E_' + m[1];
     if (!H.msgs[k]) throw new Error('said.txt:' + e.line + ': ' + k + '?');
     if (kinds.some(K => K.k === k)) throw new Error('said.txt:' + e.line + ': ' + k + ' an outcome kind already');
     kinds.push(kind(k, formsOf(k).map(f => f.fields.find(x => x[0] === m[2])).find(x => x), e.line));
+    kinds[kinds.length - 1].actor = m[3] || null;
   }
   const byShort = Object.fromEntries(kinds.map(x => [x.short, x]));
   const pieces = {};
@@ -157,10 +163,16 @@ function generate(H, say = () => {}) {
       pcIx.set(key, -1);
       const o = rowOut;
       rowOut = null;
-      const b = compile(K, pieces[p], line);
-      rowOut = o;
-      pcIx.set(key, pc.length);
-      pc.push({ c: '@' + p + ' (' + K.short + ')', b: [...b, 0] });
+      const b = [...compile(K, pieces[p], line), 0];
+      rowOut = o;                                             // (A piece another kind's compiled to the same bytes:
+      const same = pc.findIndex(x => x.b.length === b.length && x.b.every((v, i) => v === b[i]));   //   that one, a
+      if (same >= 0) {                                        //   wording shared by the character's rows and the
+        pcIx.set(key, same);                                  //   denizens', kept once: the user's, 2026-11-11)
+        pc[same].c = pc[same].c.replace(/\)$/, ', ' + K.short + ')');
+      } else {
+        pcIx.set(key, pc.length);
+        pc.push({ c: '@' + p + ' (' + K.short + ')', b });
+      }
     }
     if (pcIx.get(key) < 0) throw new Error('said.txt:' + line + ': @' + p + ' in itself');
     if (pcIx.get(key) >= 254) throw new Error('saidgen: more than 254 pieces');
@@ -206,6 +218,8 @@ function generate(H, say = () => {}) {
         else if (name === 'light') b.push(SC.LIGHT);
         else if (name === 'forget') b.push(SC.FORGET);
         else if (name === 'arg') b.push(SC.ARG);
+        else if (name === 'its') b.push(SC.ITS);
+        else if (name === "'s") b.push(SC.POSS);
         else if (name === 'room' || name === 'rel' || name === 'kind' || name === 'name') {
           b.push(SC[name.toUpperCase()], field(K, args[0], line) + 1);
         } else if (name === 'trap') b.push(SC.TRAP, field(K, args[0], line) + 1, field(K, args[1], line) + 1);
@@ -336,6 +350,7 @@ function generate(H, say = () => {}) {
   lines.push(('#define SAID_NKINDS').padEnd(40) + kinds.length, ('#define SAID_ANY').padEnd(40) + ANY, '', '#ifdef SAID_TABLE',
     'static const unsigned char said_kind[SAID_NKINDS] = { ' + kinds.map(K => K.v + ' /* ' + K.k + ' */').join(', ') + ' };',
     'static const unsigned char said_ko[SAID_NKINDS] = { ' + kinds.map(K => field(K, K.of, 0) + ' /* ' + K.of + ' */').join(', ') + ' };',
+    'static const unsigned char said_ka[SAID_NKINDS] = { ' + kinds.map(K => K.actor ? field(K, K.actor, 0) + 1 + ' /* ' + K.actor + ' */' : '0').join(', ') + ' };',
     'static const unsigned said_at[SAID_NKINDS] = { ' + kinds.map((K, i) => offs[at[i]]).join(', ') + ' };',
     'static const unsigned said_pc[] = { ' + (pc.length ? pc.map((p, i) => offs[pfirst + i]).join(', ') : '0') + ' };',
     'static const unsigned said_do[] = { ' + (dict.length ? dofs.join(', ') : '0') + ' };',

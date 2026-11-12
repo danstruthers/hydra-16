@@ -25,8 +25,9 @@ unsigned char __fastcall__ said_b (const unsigned char* p);    /* (bank.s's: byt
 
 /* A text's codes (saidgen.js's SC: the letters as they are, '\n' a new line; the others under SC_END the words most
 ** said, said_dw's) */
-enum { SC_NL = 0x01, SC_END = 0x1E, SC_ALT = 0x1F, SC_NUM = 0x80, SC_CHOOSE = 0xA0, SC_CHANGED = 0xC0, SC_STR = 0xE0,
-       SC_S = 0xE8, SC_A, SC_LIGHT, SC_FORGET, SC_ARG, SC_SING, SC_WORD, SC_IF = 0xF0, SC_ROOM = 0xF8, SC_TRAP, SC_REL,
+enum { SC_NL = 0x01, SC_END = 0x1E, SC_ALT = 0x1F, SC_POSS = 0x7F, SC_NUM = 0x80, SC_CHOOSE = 0xA0, SC_CHANGED = 0xC0,
+       SC_STR = 0xE0, SC_S = 0xE8, SC_A, SC_LIGHT, SC_FORGET, SC_ARG, SC_SING, SC_WORD, SC_ITS, SC_IF = 0xF0, SC_ROOM = 0xF8,
+       SC_TRAP, SC_REL,
        SC_PIECE,
        SC_KIND, SC_NAME };
 #define SR_ONCE         1                       /* (A row's flag: said as a look's sentences, none twice an answer) */
@@ -42,6 +43,8 @@ static unsigned char said_last[SAID_NKINDS];    /* Each kind's field last told (
 static const struct msg* sm;                    /* The event being worded */
 static char* sp;                                /* lb's end */
 static unsigned char sk;                        /* Its kind's place (said_kind's) */
+static unsigned char ac;                        /* Its actor: 0 the character, else the actor plus 1 (its who, or its
+                                                **   kind's own field, said_ka's: E_BEAT's whose, 2026-11-11) */
 static unsigned art;                            /* An "a" waiting for its word: its place in lb, plus 1; 0 none */
 static unsigned char once;                      /* The row's said as a look's (lb_said) */
 #pragma bss-name (pop)
@@ -158,6 +161,9 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
             if (c == SC_NL) {
                 flush ();
                 msg ("");                       /* (A line of its own: msg's) */
+            } else if (c == SC_POSS) {          /* (The actor's, after it: "Your", "The bandit's") */
+                strcpy (sp, ac ? "'s" : "r");
+                sp += strlen (sp);
             } else if (c < ' ' && c != '\n') {
                 strcpy (sp, said_dw + said_do[c < '\n' ? c - 2 : c - 4]);    /* (A word most said) */
                 sp += strlen (sp);
@@ -172,7 +178,7 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
             continue;
         }
         if (c < SC_CHANGED || (c >= SC_IF && c < SC_ROOM)) {    /* (A choice: by a field, a word given, the UI's number) */
-            v = c >= SC_IF ? (c == SC_IF + 4 ? said_n : c == SC_IF + 3 ? sm->who != 0 : said_s[c - SC_IF] &&
+            v = c >= SC_IF ? (c == SC_IF + 4 ? said_n : c == SC_IF + 3 ? ac != 0 : said_s[c - SC_IF] &&
                 *said_s[c - SC_IF]) : fv (c - SC_CHOOSE) > 255 ? 255 : fv (c - SC_CHOOSE);
             for (; v; --v) {
                 q = over (p);
@@ -200,10 +206,10 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
         if (c < SC_S) {                         /* (A word the UI's given, or the actor: capitalised, its odd one) */
             v = c - SC_STR;
             if (v >= 6) {
-                if (!sm->who) {
+                if (!ac) {
                     s = "you";
                 } else {
-                    s = name (sm->who);
+                    s = name (ac);
                     if (*s >= 'a') {
                         memcpy (sp, "the ", 4);
                         s = sp;
@@ -223,9 +229,13 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
         }
         switch (c) {
         case SC_S:
-            if (sm->who) {
+            if (ac) {
                 *sp++ = 's';
             }
+            break;
+        case SC_ITS:                            /* (The actor's: "your", "its") */
+            strcpy (sp, ac ? "its" : "your");
+            sp += strlen (sp);
             break;
         case SC_A:
             art = sp - lb + 1;
@@ -302,6 +312,7 @@ void __fastcall__ o_outcome_words (const struct msg* m)
         }
     }
     o = fv (said_ko[sk]);                       /* (Its outcome: the head's, or the kind's own field, said.txt's kind) */
+    ac = said_ka[sk] ? fv (said_ka[sk] - 1) : m->who;   /* (Its actor: its who, or the kind's own field) */
     for (p = said_rows + said_at[sk]; (n = RB (p)) != 0; p += n) {     /* (Each row its length first) */
         v = RB (p + 1);
         if (v != o && v != SAID_ANY) {

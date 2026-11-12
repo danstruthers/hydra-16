@@ -284,6 +284,10 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
             reach_said (w, named);              /* (A step of the reach: part 19's) */
             return 0;
         }
+        if ((p == LT_FORCE || p == LT_HEAVE) && n) {    /* (What's forced or heaved at, its words obj: the piece
+                                                **   every actor's, a denizen's "the door", 2026-11-11) */
+            said_s[0] = strcpy (lb + 340, noun (n));
+        }
         if (p == LT_TRAVEL) {                   /* (A journey: slice 4.2's) */
             strcpy (lb + 300, place (named));
         } else if (p == LT_BATTER && (n & SK_WITH)) {   /* (Struck with the thing named: "with the bar", the hub's

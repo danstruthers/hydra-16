@@ -793,7 +793,7 @@ module.exports = {
           'There is a shuttered window ahead (its shutters open).',
           '% dq0 -p t -s 15', '> examine the door ahead to my left', 'Brackets for a bar are fixed on this side, the bar in them.', '> examine bar',
           '4 feet long, 3 inches thick', '> break the door ahead to my left', 'You take the pick in both hands.', 'You set to battering the door with the pick.',
-          'It gives way, and crashes open', '> look',
+          'You break the door down: it crashes open', '> look',
           'There is a door ahead (broken down).', '> close', 'It\'s broken: it won\'t shut.', '% echo $status'], f);
         return f;
       },

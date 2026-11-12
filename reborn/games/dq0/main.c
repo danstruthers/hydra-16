@@ -1313,6 +1313,7 @@ void __fastcall__ s_news (const struct msg* m)
             break;
         }                                 /* (The limbs' news, every actor's, and the water's: said.txt's BEAT
                                                 **   rows, limb_words' and water_words' before, 2026-11-11) */
+        said_n = BD_TWO;                        /* (The character's body: its rows every actor's, 2026-11-11) */
         if ((k = E_BEAT_WHOSE (*m)) & 0x80 && actor_seen (k) == 2) {
             c.w1 = SAID_BEAT_UNSEEN;            /* (A fall unseen, near: the world's b | 0x80, part 8's, 2026-10-30) */
         } else if (k) {
@@ -3150,6 +3151,7 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
     memcpy (heard_what, SND_AT + (E_DEN_DKIND (*m) % SND_KINDS * 2 + (d == DE_NOISE)) * SND_REC, sizeof heard_what);
     hub_map (0);
     heard_what[sizeof heard_what - 1] = 0;
+    said_s[0] = 0;                              /* (No thing done to: a piece every actor's says "the door") */
     said_s[2] = heard_what;
     if (d >= DE_RALLY) {                        /* (A successor at its post rallying its fellows, HOUSE.md's morale; a
                                                 **   sleeper's snore, those on watch talking, the alarm raised, the

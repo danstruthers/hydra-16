@@ -4,8 +4,9 @@
 # outcome.  Made by the build (games/dq0/saidgen.js, after hubgen.js) into obj/gen/dq0said.h: the rows packed, their
 # fields' places in struct msg (msgs.def's, as cc65 lays them out), the names of the UI's own outcomes (SAID_*).
 #
-#   kind KIND FIELD             KIND (E_KIND) worded here too, its outcome its own field FIELD, not E_OUTCOME's (a kind
-#                               older than the head: E_BEAT's beat, its bytes where they've always been)
+#   kind KIND FIELD [ACTOR]     KIND (E_KIND) worded here too, its outcome its own field FIELD, not E_OUTCOME's (a kind
+#                               older than the head: E_BEAT's beat, its bytes where they've always been); its actor
+#                               its field ACTOR (0 the character, else the actor plus 1), not the event's who
 #   own KIND NAME ...           outcomes of the UI's own for KIND: rows it chooses itself (said_as), numbered after its
 #                               enum's (SAID_KIND_NAME: SAID_CLIMB_RISES)
 #   @NAME "text"                a piece of text, put where a row has {@NAME}
@@ -27,7 +28,10 @@
 #                               with, a word of the row's own; capitalised.  {obj?a|b} ...: a if none's given, else b
 #       {actor} {Actor} {s}     "you" or the denizen ("the giant rat", "Grub"); "s" for a denizen, "" for you
 #                               ("open{s}"); {actor?a|b}: a for the character, b for a denizen.  A row's words are any
-#                               actor's: the denizens' (DEN's) and the character's share them by a piece (@open)
+#                               actor's: one wording an action, the denizens' (DEN's) and the character's sharing it
+#                               by a piece (@open, @close ...: the user's, 2026-11-11).  The actor is the event's who,
+#                               or the kind's own field (said.txt's kind line's third word: E_BEAT's whose)
+#       {its} {'s}              the actor's: "your" or "its"; after {Actor}, "r" or "'s" ("Your", "The bandit's")
 #   A field named in more than one of the kind's forms is the row's outcome's form's (E_BEAT's fa, its met form's or
 #   its hit's), else the kind's own form's (E_TASK's task, 8-15, not its light form's 8-13)
 #       {arg} {arg?a|b ...}     the UI's number (said_n): a choice it's made for the row
@@ -52,13 +56,15 @@
 @door       "That's a door: open it, or break it down."
 @window     "That's a window: there's no digging it."
 @bars       "Those are iron bars: they won't dig."
+@digging    "{Actor} set{s} to digging"
+@roof       "The rotten rock splits over {actor}, and part of the roof falls into the hole"
 
-DIG.begun       +"\nYou set to digging: some {feet} feet of it, by the look of it.{forget}"
+DIG.begun       +"\n{@digging}: some {feet} feet of it, by the look of it.{forget}"
 DIG.again       "You set to digging again where you left off.{forget}{@togo}"
 DIG.good        +"{@spell}The work goes well.{@togo}"
 DIG.poor        +"{@spell}The work goes slowly.{@togo}"
 DIG.slip        +"{@spell}Your tool slips and turns; little comes of that spell of work.{@togo}"
-DIG.roof        "The rotten rock splits, and part of the roof falls into the hole.{@spell}The work goes slowly.{@togo}"
+DIG.roof        "{@roof}.{@spell}The work goes slowly.{@togo}"
 DIG.through     "{feet?You break through.|The last of the rock gives way beneath you: the shaft is through.}"
 DIG.better      +"\nYour {text} would do this better, but you set to it with the {instr} as you said."
 DIG.no_tool     +"{arg?\nYour {instr} won't dig {@mat}.{text?| Your {text} would.}"
@@ -93,9 +99,23 @@ CLIMB.held      "You come down to the foot of the ledge."
 
 # ---- A portal worked (E_PORTAL: po, PO_*; pk the portal's kind; an opening's shows, what the look after it found
 # beyond it: "You open the door, revealing a passage, 30 feet of it.").  A blow with a soft thing: instr its name.
-# A door opened is every actor's (@open: the character's here, a denizen's DEN.opens, the actor swapped)
+# A door's work is every actor's, one wording each (the user's, 2026-11-11): its piece the character's here and a
+# denizen's DEN row, the actor swapped (@open: PORTAL.opened's, DEN.opens's); what the character's look finds beyond
+# (@reveal) the character's alone
 
 @open       "{Actor} open{s} the door"
+@close      "{Actor} close{s} the door"
+@unlock     "{Actor} unlock{s} the door with its key"
+@lock       "{Actor} lock{s} the door with its key"
+@bar        "{Actor} set{s} the bar in its brackets: the door is barred"
+@lift       "{Actor} lift{s} the bar out of its brackets, and set{s} it down"
+@burst      "With a crack {actor} burst{s} the door open"
+@held       "The door holds against {actor}"
+@broke      "{Actor} break{s} the door down: it crashes open"
+@picked     "{Actor} pick{s} the lock: it gives with a click"
+@raise      "{Actor} raise{s} the portcullis"
+@lower      "{Actor} loose{s} the winch: the portcullis crashes down"
+@bent       "{Actor} bend{s} the bars apart: there's room to get through"
 @reveal     "{shows?|, revealing {what?only darkness beyond|a passage, {far*SQ_FT} feet of it|{a} {room room}{lit?|, {light}}}}"
 
 PORTAL.none[pk=PK_WINDOW,PK_SLIT]       "There's no window that way."
@@ -111,26 +131,26 @@ PORTAL.forced[pk=PK_WINDOW,PK_SLIT]     "With a crack the shutters burst open{@r
 PORTAL.held[pk=PK_WINDOW,PK_SLIT]       "It holds."
 PORTAL.none             "There's no door that way."
 PORTAL.opened           "{@open}{@reveal}."
-PORTAL.closed           "You close the door."
+PORTAL.closed           "{@close}."
 PORTAL.is_open          "It stands open already."
 PORTAL.is_shut          "It's shut already."
 PORTAL.locked           "It won't open: it's locked."
 PORTAL.barred           "It won't give: it's barred from the other side."
 PORTAL.unbarred         "You lift the bar and open the door{@reveal}."
-PORTAL.picked           "The lock gives with a click."
+PORTAL.picked           "{@picked}."
 PORTAL.not_picked       "The lock defeats you, for now."
 PORTAL.no_picks         "You've nothing to pick a lock with."
 PORTAL.no_lock          "There's no lock on it to pick."
-PORTAL.forced           "With a crack the door bursts open{@reveal}."
-PORTAL.held             "The door holds."
+PORTAL.forced           "{@burst}{@reveal}."
+PORTAL.held             "{@held}."
 PORTAL.found[touch=1]   "Your hands find a door hidden in the wall."
 PORTAL.found            "You find a door hidden in the wall."
 PORTAL.nothing[touch=1] "You fumble around in the dark and find nothing."
 PORTAL.nothing          "You find nothing hidden."
 
-PORTAL.raised           "The portcullis grinds up, and catches, raised{@reveal}."
-PORTAL.heaved           "The portcullis rises, and catches, raised{@reveal}."
-PORTAL.lowered          "You loose the winch: the portcullis crashes down."
+PORTAL.raised           "{@raise}: it grinds up, and catches{@reveal}."
+PORTAL.heaved           "{@raise}: it rises, and catches{@reveal}."
+PORTAL.lowered          "{@lower}."
 PORTAL.is_up            "The portcullis is raised already."
 PORTAL.is_down          "The portcullis is down already."
 PORTAL.no_winch         "Its winch is on the other side: you can't lower it from here."
@@ -138,7 +158,7 @@ PORTAL.too_heavy        "The portcullis won't rise."
 PORTAL.not_portc[pk=PK_PORTCULLIS]  "It's a portcullis: it's raised or lowered."
 PORTAL.not_portc        "That isn't a thing raised or lowered."
 PORTAL.no_shutters      "It has no shutters to open or close."
-PORTAL.bent             "The bars bend apart: there's room to get through."
+PORTAL.bent             "{@bent}."
 PORTAL.bars_hold        "The bars won't give."
 PORTAL.shattered        "The glass shatters with a crash."
 PORTAL.smashed          "The shutters splinter and give way{@reveal}."
@@ -151,19 +171,19 @@ PORTAL.slipped          "You slip from the sill, and fall."
 PORTAL.not_window       "That isn't a window: walk through it."
 PORTAL.trapped          "There's a trap on that door you know of: disarm it before you open it."
 
-PORTAL.broke_down       "It gives way, and crashes open{@reveal}."
+PORTAL.broke_down       "{@broke}{@reveal}."
 PORTAL.giving           "It's giving, but it holds yet."
 PORTAL.holding          "It's marked, but it holds."
 PORTAL.no_mark          "Your blows make no mark on it."
 PORTAL.wrecked          "It's broken: it won't shut."
-PORTAL.lifted           "You lift the bar out of its brackets, and set it down."
+PORTAL.lifted           "{@lift}."
 PORTAL.bar_far          "The bar's on the far side: you can't get at it from here."
 PORTAL.no_bar           "It isn't barred."
 PORTAL.set_fast         "The bars are set fast in the stone: bend them, or break them, first."
 PORTAL.pane_out         "The pane comes free of its frame, and you lift it out whole."
 PORTAL.bars_out         "You work the bent bars free, and lift them out."
 PORTAL.bars_broken      "The bars break out of the stone with a clang."
-PORTAL.rebarred         "You set the bar in its brackets: the door is barred."
+PORTAL.rebarred         "{@bar}."
 PORTAL.no_brackets      "There are no brackets for a bar on this side."
 PORTAL.is_barred        "It's barred already."
 PORTAL.shut_first       "It stands open: shut it first, then bar it."
@@ -177,8 +197,8 @@ PORTAL.soft[pk=PK_WINDOW,PK_SLIT]   "You attempt to batter the window with the {
 PORTAL.soft[pk=PK_PORTCULLIS]       "You attempt to batter the portcullis with the {instr}, but it seems ineffectual."
 PORTAL.soft             "You attempt to batter the door with the {instr}, but it seems ineffectual."
 
-PORTAL.keyed            "You unlock it with its key."
-PORTAL.key_locked       "You lock it with its key."
+PORTAL.keyed            "{@unlock}."
+PORTAL.key_locked       "{@lock}."
 PORTAL.no_key           "You have no key that fits its lock."
 PORTAL.is_locked        "It's locked already."
 PORTAL.blocked          "Something heavy stands against it: it won't open."
@@ -214,33 +234,33 @@ TRAP.known              "You know of a trap on it already: {trap tk tt}."
 TRAP.none               "There's no trap you know of within reach."
 
 # ---- The body and the limbs (E_BEAT, said.txt's kind: beat, WB_*; whose 0 the character, else the actor plus 1; thing
-# the thing's kind, the catalogue's).  Every actor's: the character's words, else the denizen's by its name; a creature
-# getting up, failing to, falling, by its body (the UI's arg: kinds.txt's body, BD_*).  A fall not seen, near: the UI's
-# own unseen.  (limb_words' before, main.c's part 23, 2026-11-11)
+# the thing's kind, the catalogue's).  Every actor's, its actor whose ({Actor}): a thing dropped or broken, getting up,
+# failing to, falling, one wording, the actor swapped (the user's, 2026-11-11); a creature by its body (the UI's arg:
+# kinds.txt's body, BD_*; the character's BD_TWO).  The denizens' alone: a thing snatched up, drawn, readied, eaten,
+# handed or thrown.  A fall not seen, near: the UI's own unseen.  (limb_words' before, main.c's part 23, 2026-11-11)
 
-kind BEAT beat
+kind BEAT beat whose
 own BEAT unseen
 
-BEAT.drop           +"{whose?\nYour {kind thing} falls from your hand.|\nThe {name whose} drops its {kind thing}.}"
+BEAT.drop           +"\n{Actor} drop{s} {its} {kind thing}."
 BEAT.picks          +"{whose?|\nThe {name whose} snatches up its {kind thing}.}"
 BEAT.draws          +"{whose?|\nThe {name whose} draws its {kind thing}.}"
 BEAT.readies        +"{whose?|\nThe {name whose} unslings its {kind thing}.}"
 BEAT.risen[already=1]   +"\nYou are on your feet already."
-BEAT.risen          +"{whose?\nYou get to your feet.|\nThe {name whose} {arg?gets to its feet|scrambles to its feet"
-                    "|coils itself up again|rights itself|flutters up again|rises again}.}"
+BEAT.risen          +"\n{Actor} {arg?get{s} to {its} feet|scrambles to its feet|coils itself up again|rights itself"
+                    "|flutters up again|rises again}."
 BEAT.not_up[already=1]  +"\nYour legs won't bear you."
-BEAT.not_up         +"{whose?\nYou struggle, but can't get up.|\nThe {name whose} {arg?struggles, but can't get up"
-                    "|scrabbles, but can't get up|writhes, but can't right itself|flails its legs, but can't right itself"
-                    "|flaps, but can't rise|wavers, but can't rise}.}"
-BEAT.fallen         +"{whose?\nYou fall.|\nThe {name whose} {arg?falls|goes down|is thrown down|is flipped onto its back"
-                    "|drops to the floor|sinks to the floor}.}"
+BEAT.not_up         +"\n{Actor} {arg?struggle{s}, but can't get up|scrabbles, but can't get up|writhes, but can't right itself"
+                    "|flails its legs, but can't right itself|flaps, but can't rise|wavers, but can't rise}."
+BEAT.fallen         +"\n{Actor} {arg?fall{s}|goes down|is thrown down|is flipped onto its back|drops to the floor"
+                    "|sinks to the floor}."
 BEAT.limp           +"{whose?\nYou limp.|}"
 BEAT.hop            +"{whose?\nYou hop along on your good leg.|}"
 BEAT.crutch         +"{whose?\nYou lean on the {kind thing} and hobble along.|}"
 BEAT.crawl          +"{whose?\nYou crawl.|}"
 BEAT.stuck          +"{whose?\nYou can't move.|}"
 BEAT.no_run         +"{whose?\nYou can't run on one leg.|}"
-BEAT.broke          +"{whose?\nYour {kind thing} breaks!|\nThe {name whose}'s {kind thing} breaks!}"
+BEAT.broke          +"\n{Actor}{'s} {kind thing} breaks!"
 BEAT.eats           +"\nThe {name whose} eats its {kind thing}."
 BEAT.hands          +"\nThe {name whose} hands its {kind thing} to its fellow."
 BEAT.threw          +"\nThe {name whose} throws you its {kind thing}."
@@ -316,6 +336,15 @@ TASK.free           "{none?You aren't engaged.|You see nothing to flee from.|The
 
 own TASK step bare coins
 
+# A timed work at a door begun, every actor's (the user's, 2026-11-11: the character's here, a denizen's DEN rows): obj
+# what it's done to (task.c's noun), none a denizen's
+
+@forcing    "{Actor} set{s} to forcing {obj?the door|{obj}}"
+@picking    "{Actor} set{s} to picking the lock"
+@heaving    "{Actor} set{s} to heaving at {obj?the portcullis|{obj}}"
+@winding    "{Actor} set{s} to winding the winch"
+@bending    "{Actor} set{s} to bending the bars"
+
 TASK.not            +"\nYou aren't {obj}: you're {text}."
 TASK.idle           +"{arg?{nl}You aren't doing anything to stop.|{nl}You stop there.|{@stop}}"
 TASK.engaged        +"{still?\n{Obj} engages you|\nYou're engaged with {obj}}: you stop {text}."
@@ -339,6 +368,11 @@ TASK.begun[task=LT_STUDY]   +"\nYou study the mechanism."
 TASK.begun[task=LT_TRACK]   +"\nYou cast about for tracks."
 TASK.begun[task=LT_SNIFF]   +"\nYou sniff the air."
 TASK.begun[task=LT_CLIMB]   +"\nYou set to climbing through the window."
+TASK.begun[task=LT_FORCE]   +"\n{@forcing}."
+TASK.begun[task=LT_PICK]    +"\n{@picking}."
+TASK.begun[task=LT_HEAVE]   +"\n{@heaving}."
+TASK.begun[task=LT_WIND]    +"\n{@winding}."
+TASK.begun[task=LT_BEND]    +"\n{@bending}."
 TASK.begun          +"{instr?\nYou set to {text}.|\nYou set to battering {obj} with the {instr}.}"
 TASK.bare           +"\nYou {arg?punch|punch|kick|butt} {obj} with your bare {arg?hands|hands|feet|head}, but stop short of"
                     " hurting yourself."
@@ -420,10 +454,13 @@ HARM.state          +"{arg? You are in shock.| You are still in shock.| You are 
                     "| Your arm still hangs useless.}"
 
 # ---- A denizen's doings, seen or heard (E_DEN, said.txt's kind: de, DE_*; who the actor plus 1).  Seen, its row's
-# first words ({Actor}: "The dwarf miner", "Grub"), the actor swapped into the words every actor's would be (a door
-# opened, @open, the character's PORTAL.opened's); heard (the UI's arg 1, said_q: the words left in lb for the heard
-# words, caps.c's), what it sounds like.  A pastime seen: text its words (tell.c's).  Its way dug through, seen: text
-# where ("ahead to your left.").  (main.c's noise_told and door_words before, parts 14 and 18)
+# first words ({Actor}: "The dwarf miner", "Grub"), the actor swapped into the words every actor's are: one wording an
+# action, the character's own the same piece's (the user's, 2026-11-11: a door's work, PORTAL's; a timed work begun,
+# TASK.begun's; a dig begun and the roof come down, DIG's); heard (the UI's arg 1, said_q: the words left in lb for
+# the heard words, caps.c's), what it sounds like.  A pastime seen: text its words (tell.c's).  Its way dug through,
+# seen: text where ("ahead to your left.").  The rest the denizens' alone (a rally, a snore, its fellows talked to, the
+# alarm, a way dug through told from where it opens, a door slammed as it flees, a blow at a door, a door hung, a way
+# walled up).  (main.c's noise_told and door_words before, parts 14 and 18)
 
 kind DEN de
 
@@ -431,29 +468,29 @@ DEN.rally           +"{arg?\n{Actor} rallies its fellows.|a rallying shout}"
 DEN.snore           +"{arg?\n{Actor} snore{s}.|snoring}"
 DEN.talk            +"{arg?\n{Actor} says something to its fellow.|voices}"
 DEN.alarm           +"{arg?\n{Actor} raise{s} the alarm.|a shout of alarm}"
-DEN.dig             +"{arg?\n{Actor} dig{s} into the wall.|a scraping in rock}"
+DEN.dig             +"{arg?\n{@digging}.|a scraping in rock}"
 DEN.dug             +"{arg?\nA fresh tunnel opens {text} Spoil lies heaped by it.|rock falling}"
 DEN.opens           +"{arg?\n{@open}.|a door opening}"
-DEN.shuts           +"{arg?\n{Actor} shut{s} the door.|a door shutting}"
+DEN.shuts           +"{arg?\n{@close}.|a door shutting}"
 DEN.slams           +"{arg?\n{Actor} slam{s} the door shut.|a door slamming}"
-DEN.unlocks         +"{arg?\n{Actor} unlock{s} the door.|a key in a lock}"
-DEN.locks           +"{arg?\n{Actor} lock{s} the door.|a key in a lock}"
-DEN.bars            +"{arg?\n{Actor} drop{s} a bar across the door.|a bar dropping}"
-DEN.unbars          +"{arg?\n{Actor} lift{s} the door's bar.|a bar scraping}"
-DEN.strains         +"{arg?\n{Actor} strain{s} at the door.|a door creaking}"
-DEN.bursts          +"{arg?\n{Actor} burst{s} the door open.|a door bursting}"
-DEN.holds           +"{arg?\n{Actor} can't force the door.|a door creaking}"
+DEN.unlocks         +"{arg?\n{@unlock}.|a key in a lock}"
+DEN.locks           +"{arg?\n{@lock}.|a key in a lock}"
+DEN.bars            +"{arg?\n{@bar}.|a bar dropping}"
+DEN.unbars          +"{arg?\n{@lift}.|a bar scraping}"
+DEN.strains         +"{arg?\n{@forcing}.|a door creaking}"
+DEN.bursts          +"{arg?\n{@burst}.|a door bursting}"
+DEN.holds           +"{arg?\n{@held}.|a door creaking}"
 DEN.batters         +"{arg?\n{Actor} batter{s} at the door.|blows on a door}"
-DEN.breaks          +"{arg?\n{Actor} break{s} the door down.|a door crashing in}"
-DEN.roof            +"{arg?\n{Actor} is showered with rock from the roof.|rock falling}"
+DEN.breaks          +"{arg?\n{@broke}.|a door crashing in}"
+DEN.roof            +"{arg?\n{@roof}.|rock falling}"
 DEN.hangs           +"{arg?\n{Actor} hang{s} a new door.|hammering}"
 DEN.walls           +"{arg?\n{Actor} wall{s} up the way.|stones being laid}"
-DEN.winds           +"{arg?\n{Actor} wind{s} the portcullis's winch.|a winch cranking}"
-DEN.heaves          +"{arg?\n{Actor} heave{s} at the portcullis.|iron scraping}"
-DEN.raises          +"{arg?\n{Actor} raise{s} the portcullis.|chains rattling}"
-DEN.lowers          +"{arg?\n{Actor} let{s} the portcullis fall.|iron crashing down}"
-DEN.bends           +"{arg?\n{Actor} strain{s} at the bars.|iron groaning}"
-DEN.bent            +"{arg?\n{Actor} bend{s} the bars apart.|iron groaning}"
-DEN.picking         +"{arg?\n{Actor} work{s} at the lock.|a faint scratching}"
-DEN.picks           +"{arg?\n{Actor} pick{s} the lock.|a lock clicking}"
+DEN.winds           +"{arg?\n{@winding}.|a winch cranking}"
+DEN.heaves          +"{arg?\n{@heaving}.|iron scraping}"
+DEN.raises          +"{arg?\n{@raise}.|chains rattling}"
+DEN.lowers          +"{arg?\n{@lower}.|iron crashing down}"
+DEN.bends           +"{arg?\n{@bending}.|iron groaning}"
+DEN.bent            +"{arg?\n{@bent}.|iron groaning}"
+DEN.picking         +"{arg?\n{@picking}.|a faint scratching}"
+DEN.picks           +"{arg?\n{@picked}.|a lock clicking}"
 DEN.any             +"\n{Actor} {text}."

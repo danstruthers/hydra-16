@@ -950,7 +950,7 @@ module.exports = {
         if (!n) f.push('no found key in the games');
         if (JSON.stringify(m.found[1].map(e => e.key)) !== JSON.stringify(m.found[4].map(e => e.key))) f.push('the same game, other keys');
         const T = dq0Turns(m), K = m.dq0.layout().K, g1 = T.of('dq0 -p t -s 2 -c /ram/c.hm -T'), u = T.of('unlock the door ahead', g1.k);
-        if (!/You unlock it with its key./.test(o) && !/You unlock the door with its key/.test(o)) f.push('its door not unlocked by it: ' + o.slice(o.indexOf('> unlock'), o.indexOf('> unlock') + 200));
+        if (!/You unlock the door with its key/.test(o)) f.push('its door not unlocked by it: ' + o.slice(o.indexOf('> unlock'), o.indexOf('> unlock') + 200));
         if (u.replies.some(r => /^slot/.test(r.req) && r.a === K.P_PICKLOCK)) f.push('a Picklock test asked');
         return f;
       },
