@@ -10,6 +10,10 @@
 ;               called, the file closed)
 ;   NUM         a number's digits read (atoi's, without the C library's ctype: dq0d's, dq0p's and dq0w's num, the
 ;               UI's dnum, dq0m's atoi)
+;   RP_*        the record store (ENGINE-CRITIQUE.md's §6 and step 7, 2026-11-11: games/dq0/rp.h, each store's records
+;               paged by region, the save folder's files of them): a file's name, its versions read and written (each
+;               store's copy of vfile.inc before), an entry of a store's table found, and the one to make way (each
+;               store's own loops before)
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -20,6 +24,12 @@
 .assert     * = $A030, lderror, "The dq0lib library's entry isn't right after its header"
             jmp         ovl_load                            ; $A030: DQ_OVL_LOAD
             jmp         num                                 ; $A033: DQ_NUM
+            jmp         rp_name                             ; $A036: RP_NAME (rp.h's)
+            jmp         rp_open                             ; $A039: RP_OPEN
+            jmp         rp_make                             ; $A03C: RP_MAKE
+            jmp         rp_done                             ; $A03F: RP_DONE
+            jmp         rp_find                             ; $A042: RP_FIND
+            jmp         rp_oldest                           ; $A045: RP_OLDEST
 
 BANKREG     = $00                                           ; The task's RAM bank register
 BUF         = $9FE0                                         ; MODINFO's answer (ME_SIZE bytes; then the entry looked
@@ -280,3 +290,966 @@ num:
             lda         r2
             ldx         r2 + 1
             rts
+
+; ---- The record store (games/dq0/rp.h, its C side: ENGINE-CRITIQUE.md's §6, 2026-11-11): what each of the game's
+; stores of records paged by region shares.  Each call is given one block of the caller's (rp.h's struct rpf, a
+; file's; struct rpt, a table's), in r0; its layout below, rp.h's the same (its checks hold the two together).
+
+; A file's block (struct rpf): a region's file in the save folder (DUNGEON.md's no fixed size), in versions, each
+; written whole over a slot that's neither the last save's nor (with three slots) the newest, its header written last
+; (struct vfh: VF_MAGIC, the game's generation, its records, its stamp), so a version cut short is none; read, the
+; newest valid version: one the last save had (stamped up to the hub's vsaved) or this session's (past its vbase),
+; never one a session wrote and ended without its save.  A stamp is past the hub's vlo, the kind's own count from it
+; (rp.h's struct rpk, the caller's main RAM's: each kind's own, as each store's copy of vfile.inc had its own)
+RF_SLOTS    = 1                                             ; The slots (2 or 3: .dat, .da1, .da2)
+RF_PATH     = 2                                             ; (2) The file's name (rp_name's), its last letter its slot
+RF_KIND     = 4                                             ; (2) The kind's count (struct rpk: vlast 4, vcount 2)
+RF_GEN      = 6                                             ; (2) The game's generation (the world bank's cgen)
+RF_HUB      = 8                                             ; (2) The hub's vsaved (then vbase, vlo, vhi: 4 each), in
+                                                            ;   the window as it's called
+RF_H        = 10                                            ; (10) A version's header: the newest's (open), done's
+RF_T        = 20                                            ; (10) A header as it's read
+RF_ST       = 30                                            ; (12) Each slot's stamp, if it's valid
+RF_SAVE     = 42                                            ; The save's version's slot (3: none)
+RF_NEW      = 43                                            ; The newest's (3: none)
+RF_FD       = 44                                            ; The newest's fd ($FF none); done's, the fd given
+RF_K        = 45                                            ; (A slot)
+RF_VFD      = 46                                            ; (An fd)
+RF_DIR      = 47                                            ; (2) name's: the save folder (the hub's savedir)
+RF_PRE      = 49                                            ; (2) name's: the store's two letters
+RF_SN       = 51                                            ; name's: the region's stratum, x and y
+RF_RX       = 52
+RF_RY       = 53
+VF_MAGIC    = $4656                                         ; "VF" (world.h's)
+
+; A table's block (struct rpt): a store's entries, each one's key in its first eight bytes (a mask of them), byte 0
+; not 0 if it's used, a stamp (when it was last wanted) at RT_SO
+RT_N        = 1                                             ; The entries looked at
+RT_SIZE     = 2                                             ; An entry's bytes
+RT_KEY      = 3                                             ; The key's bytes: bit i, byte i
+RT_AT       = 4                                             ; (2) The table (the window's, or the task's RAM)
+RT_SO       = 6                                             ; The stamp's offset
+RT_FLAGS    = 7                                             ; RTF_*
+RT_STAMP    = 8                                             ; (2) find: the clock (++ into the entry found), or 0
+RT_K        = 10                                            ; (8) The key, as an entry has it
+RT_FROM     = 18                                            ; find: the first entry looked at
+RT_NF       = 19                                            ; find: a free one looked for among the first NF
+RT_FREE     = 20                                            ; find's: the first free ($FF none)
+RT_R        = 21                                            ; oldest: the box kept about its centre ($FF none)
+RT_NSN      = 22                                            ;   its stratum's offset in an entry (one byte),
+RT_NX       = 23                                            ;   x's and y's (one byte, or two: RTF_WIDE)
+RT_NY       = 24
+RT_NV       = 25                                            ; (5) its centre: the stratum, x, y (2 each)
+RT_KEEP     = 30                                            ; (2) oldest: the task's routine (.A the entry; .A not
+                                                            ;   0, kept), or 0
+RTF_FREE    = $01                                           ; oldest: a free one first
+RTF_HAND    = $02                                           ; oldest: the key's own kept
+RTF_PLAIN   = $04                                           ; oldest: stamps compared plainly (else round, as they wrap)
+RTF_WIDE    = $08                                           ; the box's x and y two bytes
+
+; A system call (f), .A, .X, r0 and r1 its; the block's pointer (r12) kept over it, .Y not
+.macro SYS f
+            ldy         r12
+            phy
+            ldy         r12 + 1
+            phy
+            jsr         f
+            ply
+            sty         r12 + 1
+            ply
+            sty         r12
+.endmacro
+
+; r12 = the block (r0)
+enter:
+            lda         r0
+            sta         r12
+            lda         r0 + 1
+            sta         r12 + 1
+            rts
+
+; r0 = the block's offset .A
+bufr0:
+            clc
+            adc         r12
+            sta         r0
+            lda         r12 + 1
+            adc         #0
+            sta         r0 + 1
+            rts
+
+; r2 (blk2), r3 (blk3) = the block's offset .A
+blk2:
+            clc
+            adc         r12
+            sta         r2
+            lda         r12 + 1
+            adc         #0
+            sta         r2 + 1
+            rts
+blk3:
+            clc
+            adc         r12
+            sta         r3
+            lda         r12 + 1
+            adc         #0
+            sta         r3 + 1
+            rts
+
+; r2 = slot .A's stamp (RF_ST's)
+st2:
+            asl
+            asl
+            adc         #RF_ST
+            bra         blk2
+
+; r2 = the hub's stamp .A (0 vsaved, 4 vbase, 8 vlo, 12 vhi)
+hubp:
+            ldy         #RF_HUB
+            clc
+            adc         (r12),y
+            sta         r2
+            iny
+            lda         (r12),y
+            adc         #0
+            sta         r2 + 1
+            rts
+
+; r3 = the kind's count
+kind3:
+            ldy         #RF_KIND
+            lda         (r12),y
+            sta         r3
+            iny
+            lda         (r12),y
+            sta         r3 + 1
+            rts
+
+; r0 = the file's name
+pathr0:
+            ldy         #RF_PATH
+            lda         (r12),y
+            sta         r0
+            iny
+            lda         (r12),y
+            sta         r0 + 1
+            rts
+
+; C = 1: the stamp at r2 under the one at r3 (4 bytes, the low first)
+lt4:
+            ldy         #3
+:
+            lda         (r2),y
+            cmp         (r3),y
+            bne         :+
+            dey
+            bpl         :-
+            clc                                             ; (The same)
+            rts
+:
+            bcs         :+
+            sec
+            rts
+:
+            clc
+            rts
+
+; The name's last letter made slot .A's; r0 = the name
+slotname:
+            tax
+            jsr         pathr0
+            ldy         #0
+:
+            lda         (r0),y
+            beq         :+
+            iny
+            bne         :-
+:
+            dey
+            lda         slotch,x
+            sta         (r0),y
+            rts
+slotch:     .byte       "t12"
+
+; .A bytes read from RF_VFD to RF_T + .X: C = 0, all of them
+readt:
+            pha
+            sta         r1
+            stz         r1 + 1
+            txa
+            clc
+            adc         #RF_T
+            jsr         bufr0
+            ldy         #RF_VFD
+            lda         (r12),y
+            SYS         READ
+            bcs         @bad
+            cpx         #0
+            bne         @bad
+            sta         r5
+            pla
+            eor         r5
+            cmp         #1                                  ; (C = 0: the same)
+            rts
+@bad:
+            pla
+            sec
+            rts
+
+; Slot RF_K's version opened, its header read (RF_T): C = 0, it's valid (RF_VFD open past its header); C = 1, it's
+; not there, or not valid (not this game's, or a session's that ended without its save: closed)
+head:
+            ldy         #RF_K
+            lda         (r12),y
+            jsr         slotname
+            lda         #O_READ
+            SYS         OPEN
+            bcs         @no
+            ldy         #RF_VFD
+            sta         (r12),y
+            lda         #6                                  ; (Its chead: magic, gen, n)
+            ldx         #0
+            jsr         readt
+            bcs         @close
+            ldy         #RF_T + 2                           ; Its generation the game's
+            lda         (r12),y
+            ldy         #RF_GEN
+            cmp         (r12),y
+            bne         @close
+            ldy         #RF_T + 3
+            lda         (r12),y
+            ldy         #RF_GEN + 1
+            cmp         (r12),y
+            bne         @close
+            ldy         #RF_T                               ; VF_MAGIC
+            lda         (r12),y
+            cmp         #<VF_MAGIC
+            bne         @close
+            iny
+            lda         (r12),y
+            cmp         #>VF_MAGIC
+            bne         @close
+            lda         #4                                  ; Its stamp: up to vsaved, or past vbase
+            ldx         #6
+            jsr         readt
+            bcs         @close
+            lda         #0
+            jsr         hubp
+            lda         #RF_T + 6
+            jsr         blk3
+            jsr         lt4
+            bcc         @ok
+            lda         #4
+            jsr         hubp
+            jsr         lt4
+            bcs         @ok
+@close:
+            ldy         #RF_VFD
+            lda         (r12),y
+            SYS         CLOSE
+@no:
+            sec
+            rts
+@ok:
+            clc
+            rts
+
+; The file's slots' versions looked at (each one's stamp in RF_ST; the save's version and the newest: RF_SAVE,
+; RF_NEW), the newest left open (RF_FD), its header in RF_H.  OUT: .A = its fd ($FF: none)
+scan:
+            lda         #3
+            ldy         #RF_SAVE
+            sta         (r12),y
+            iny
+            sta         (r12),y                             ; (RF_NEW)
+            lda         #$FF
+            ldy         #RF_FD
+            sta         (r12),y
+            lda         #0
+            ldy         #RF_K
+            sta         (r12),y
+@slot:
+            ldy         #RF_K
+            lda         (r12),y
+            ldy         #RF_SLOTS
+            cmp         (r12),y
+            jcs         @end
+            jsr         head
+            jcs         @next
+            ldy         #RF_K                               ; Its stamp kept
+            lda         (r12),y
+            asl
+            asl
+            adc         #RF_ST
+            jsr         blk3
+            lda         #RF_T + 6
+            jsr         blk2
+            ldy         #3
+:
+            lda         (r2),y
+            sta         (r3),y
+            dey
+            bpl         :-
+            lda         #0                                  ; The save's: up to vsaved, the newest such
+            jsr         hubp
+            lda         #RF_T + 6
+            jsr         blk3
+            jsr         lt4
+            bcs         @newest
+            ldy         #RF_SAVE
+            lda         (r12),y
+            cmp         #3
+            beq         @save
+            jsr         st2
+            jsr         lt4
+            bcc         @newest
+@save:
+            ldy         #RF_K
+            lda         (r12),y
+            ldy         #RF_SAVE
+            sta         (r12),y
+@newest:
+            ldy         #RF_NEW                             ; The newest: kept open, the one before closed
+            lda         (r12),y
+            cmp         #3
+            beq         @new
+            jsr         st2
+            lda         #RF_T + 6
+            jsr         blk3
+            jsr         lt4
+            bcc         @older
+@new:
+            ldy         #RF_K
+            lda         (r12),y
+            ldy         #RF_NEW
+            sta         (r12),y
+            ldy         #RF_FD
+            lda         (r12),y
+            cmp         #$FF
+            beq         :+
+            SYS         CLOSE
+:
+            ldy         #RF_VFD
+            lda         (r12),y
+            ldy         #RF_FD
+            sta         (r12),y
+            lda         #RF_T
+            jsr         blk2
+            lda         #RF_H
+            jsr         blk3
+            ldy         #9
+:
+            lda         (r2),y
+            sta         (r3),y
+            dey
+            bpl         :-
+            bra         @next
+@older:
+            ldy         #RF_VFD
+            lda         (r12),y
+            SYS         CLOSE
+@next:
+            ldy         #RF_K
+            lda         (r12),y
+            inc         a
+            sta         (r12),y
+            jmp         @slot
+@end:
+            ldy         #RF_FD
+            lda         (r12),y
+            rts
+
+; RP_NAME: the save folder's file of a store's region (its two letters, RF_PRE: "rg" ...; preSXXYY.dat, a stratum
+; past 15's preSSXXYY.dat), its slot ".dat", in RF_PATH.  OUT: .A/.X 1, or 0 (no folder: RF_DIR "")
+rp_name:
+            jsr         enter
+            ldy         #RF_PATH
+            lda         (r12),y
+            sta         r3
+            iny
+            lda         (r12),y
+            sta         r3 + 1
+            ldy         #RF_DIR
+            lda         (r12),y
+            sta         r2
+            iny
+            lda         (r12),y
+            sta         r2 + 1
+            lda         (r2)
+            beq         @none
+            ldy         #0
+@dir:
+            lda         (r2),y
+            beq         @sep
+            jsr         put
+            iny
+            bne         @dir
+@sep:
+            lda         #$2F                                ; ('/')
+            jsr         put
+            ldy         #RF_PRE
+            lda         (r12),y
+            jsr         put
+            iny
+            lda         (r12),y
+            jsr         put
+            ldy         #RF_SN
+            lda         (r12),y
+            cmp         #16
+            bcc         @one
+            jsr         hex2
+            bra         @rx
+@one:
+            jsr         hex1
+@rx:
+            ldy         #RF_RX
+            lda         (r12),y
+            jsr         hex2
+            ldy         #RF_RY
+            lda         (r12),y
+            jsr         hex2
+            ldy         #0
+:
+            lda         dat,y
+            jsr         put
+            iny
+            cmp         #0
+            bne         :-
+            lda         #1
+@none:
+            ldx         #0
+            rts
+dat:        .byte       ".dat", 0
+
+hex2:
+            pha
+            lsr
+            lsr
+            lsr
+            lsr
+            jsr         hex1
+            pla
+hex1:
+            and         #15
+            tax
+            lda         hexch,x
+            ; (fall through)
+put:
+            sta         (r3)
+            inc         r3
+            bne         :+
+            inc         r3 + 1
+:
+            rts
+hexch:      .byte       "0123456789abcdef"
+
+; RP_OPEN: the file's newest valid version opened (RF_PATH, RF_SLOTS): .A/.X its fd past its header (RF_H), or -1
+rp_open:
+            jsr         enter
+            jsr         scan
+            cmp         #$FF
+            bne         :+
+            tax
+            rts
+:
+            ldx         #0
+            rts
+
+; RP_MAKE: a new version of the file begun, over a slot that's neither the save's version nor the newest (else, two
+; slots, over the newest), its stamp the kind's next: .A/.X its fd, past the room for its header, or -1 (the hub's
+; vhi 0: the game not begun; or not made)
+rp_make:
+            jsr         enter
+            jsr         scan
+            cmp         #$FF
+            beq         :+
+            SYS         CLOSE
+:
+            ldx         #0                                  ; The slot
+@k:
+            txa
+            ldy         #RF_SAVE
+            cmp         (r12),y
+            beq         @inc
+            ldy         #RF_NEW
+            cmp         (r12),y
+            bne         @got
+@inc:
+            inx
+            bra         @k
+@got:
+            ldy         #RF_SLOTS
+            cmp         (r12),y
+            bcc         @slot
+            ldy         #RF_SAVE                            ; (None free: !save's)
+            lda         (r12),y
+            beq         :+
+            lda         #0
+            bra         @slot
+:
+            lda         #1
+@slot:
+            ldy         #RF_K
+            sta         (r12),y
+            lda         #12                                 ; vhi 0: none
+            jsr         hubp
+            ldy         #3
+            lda         (r2),y
+            dey
+            ora         (r2),y
+            dey
+            ora         (r2),y
+            dey
+            ora         (r2),y
+            jeq         @fail
+            lda         #8                                  ; The kind's count: from vlo, as it's moved on
+            jsr         hubp
+            jsr         kind3
+            ldy         #3
+:
+            lda         (r2),y
+            cmp         (r3),y
+            bne         @moved
+            dey
+            bpl         :-
+            bra         @count
+@moved:
+            ldy         #3
+:
+            lda         (r2),y
+            sta         (r3),y
+            dey
+            bpl         :-
+            lda         #0
+            ldy         #4
+            sta         (r3),y
+            iny
+            sta         (r3),y
+@count:
+            ldy         #4
+            lda         (r3),y
+            inc         a
+            sta         (r3),y
+            bne         :+
+            iny
+            lda         (r3),y
+            inc         a
+            sta         (r3),y
+:
+            ldy         #RF_K                               ; Opened (made, if it isn't there)
+            lda         (r12),y
+            jsr         slotname
+            lda         #O_WRITE | O_TRUNC
+            SYS         OPEN
+            bcc         @open
+            cmp         #E_NOENT
+            bne         @fail
+            jsr         pathr0
+            lda         #O_WRITE | O_TRUNC
+            ldx         #0
+            SYS         CREATE
+            bcs         @fail
+@open:
+            ldy         #RF_VFD
+            sta         (r12),y
+            lda         #0                                  ; (No version till its header's written: done's)
+            ldy         #RF_H
+            sta         (r12),y
+            iny
+            sta         (r12),y
+            jsr         hwrite
+            ldy         #RF_VFD
+            lda         (r12),y
+            ldx         #0
+            rts
+@fail:
+            lda         #$FF
+            tax
+            rts
+
+; RF_H written to RF_VFD
+hwrite:
+            lda         #RF_H
+            jsr         bufr0
+            lda         #10
+            sta         r1
+            stz         r1 + 1
+            ldy         #RF_VFD
+            lda         (r12),y
+            SYS         WRITE
+            rts
+
+; RP_DONE: the version's header written (RF_FD, RF_H's n: its records; its stamp the kind's last), it closed
+rp_done:
+            jsr         enter
+            ldy         #RF_H
+            lda         #<VF_MAGIC
+            sta         (r12),y
+            iny
+            lda         #>VF_MAGIC
+            sta         (r12),y
+            ldy         #RF_GEN
+            lda         (r12),y
+            ldy         #RF_H + 2
+            sta         (r12),y
+            ldy         #RF_GEN + 1
+            lda         (r12),y
+            ldy         #RF_H + 3
+            sta         (r12),y
+            jsr         kind3                               ; Its stamp: vlast + vcount
+            clc
+            ldy         #0
+            lda         (r3),y
+            ldy         #4
+            adc         (r3),y
+            ldy         #RF_H + 6
+            sta         (r12),y
+            ldy         #1
+            lda         (r3),y
+            ldy         #5
+            adc         (r3),y
+            ldy         #RF_H + 7
+            sta         (r12),y
+            ldy         #2
+            lda         (r3),y
+            adc         #0
+            ldy         #RF_H + 8
+            sta         (r12),y
+            ldy         #3
+            lda         (r3),y
+            adc         #0
+            ldy         #RF_H + 9
+            sta         (r12),y
+            ldy         #RF_FD
+            lda         (r12),y
+            ldy         #RF_VFD
+            sta         (r12),y
+            stz         r0
+            stz         r0 + 1
+            stz         r1
+            stz         r1 + 1
+            ldx         #0                                  ; (From the start)
+            SYS         SEEK
+            jsr         hwrite
+            ldy         #RF_VFD
+            lda         (r12),y
+            SYS         CLOSE
+            rts
+
+; r2 = the table, r3 (its low byte) = 0 (the entry), r4 = $FF (found), r5 = $FF (free)
+tstart:
+            ldy         #RT_AT
+            lda         (r0),y
+            sta         r2
+            iny
+            lda         (r0),y
+            sta         r2 + 1
+            stz         r3
+            lda         #$FF
+            sta         r4
+            sta         r5
+            rts
+
+; The next entry
+tnext:
+            ldy         #RT_SIZE
+            lda         (r0),y
+            clc
+            adc         r2
+            sta         r2
+            bcc         :+
+            inc         r2 + 1
+:
+            inc         r3
+            rts
+
+; Z = 1: the entry (r2) has the key
+match:
+            ldy         #RT_KEY
+            lda         (r0),y
+            sta         r7
+            ldx         #0
+@byte:
+            lsr         r7
+            bcc         @skip
+            txa
+            tay
+            lda         (r2),y
+            sta         r8
+            txa
+            clc
+            adc         #RT_K
+            tay
+            lda         (r0),y
+            cmp         r8
+            bne         @no
+@skip:
+            inx
+            lda         r7
+            bne         @byte
+@no:
+            rts                                             ; (Z = 1 from lda r7 = 0: all of it the same)
+
+; RP_FIND: the entry with the key (from RT_FROM on), its stamp made the clock's next (RT_STAMP, if it's given); and
+; the first free one among the first RT_NF (RT_FREE: $FF none).  OUT: .A = the entry, or $FF
+rp_find:
+            jsr         tstart
+@loop:
+            lda         r3
+            ldy         #RT_N
+            cmp         (r0),y
+            bcs         @done
+            ldy         #RT_FROM
+            cmp         (r0),y
+            bcc         @next
+            lda         (r2)
+            bne         @used
+            lda         r5                                  ; Free: the first among the first NF
+            cmp         #$FF
+            bne         @next
+            lda         r3
+            ldy         #RT_NF
+            cmp         (r0),y
+            bcs         @next
+            sta         r5
+            lda         r4
+            cmp         #$FF
+            bne         @done
+            bra         @next
+@used:
+            lda         r4
+            cmp         #$FF
+            bne         @next
+            jsr         match
+            bne         @next
+            lda         r3
+            sta         r4
+            ldy         #RT_STAMP                           ; Its stamp: ++ the clock
+            lda         (r0),y
+            sta         r6
+            iny
+            lda         (r0),y
+            sta         r6 + 1
+            ora         r6
+            beq         @stamped
+            lda         (r6)
+            inc         a
+            sta         (r6)
+            bne         :+
+            ldy         #1
+            lda         (r6),y
+            inc         a
+            sta         (r6),y
+:
+            ldy         #RT_SO
+            lda         (r0),y
+            tay
+            lda         (r6)
+            sta         (r2),y
+            iny
+            phy
+            ldy         #1
+            lda         (r6),y
+            ply
+            sta         (r2),y
+@stamped:
+            lda         r5                                  ; (Done if a free one's found, or none's to be had past it)
+            cmp         #$FF
+            bne         @done
+            lda         r3
+            inc         a
+            ldy         #RT_NF
+            cmp         (r0),y
+            bcs         @done
+@next:
+            jsr         tnext
+            bra         @loop
+@done:
+            lda         r5
+            ldy         #RT_FREE
+            sta         (r0),y
+            lda         r4
+            rts
+
+; RP_OLDEST: the entry least lately wanted (its stamp the oldest: round, as they wrap, or plainly, RTF_PLAIN), but
+; those kept: the key's own (RTF_HAND), those in the box about RT_NV (RT_R each way, on its stratum), those the task's
+; routine keeps (RT_KEEP); a free one first (RTF_FREE).  OUT: .A = the entry, or $FF
+rp_oldest:
+            jsr         tstart
+@loop:
+            lda         r3
+            ldy         #RT_N
+            cmp         (r0),y
+            jcs         @done
+            lda         (r2)
+            bne         @used
+            ldy         #RT_FLAGS
+            lda         (r0),y
+            and         #RTF_FREE
+            beq         @next
+            lda         r3
+            rts
+@used:
+            ldy         #RT_FLAGS
+            lda         (r0),y
+            and         #RTF_HAND
+            beq         :+
+            jsr         match
+            beq         @next
+:
+            ldy         #RT_R
+            lda         (r0),y
+            cmp         #$FF
+            beq         :+
+            jsr         near
+            bcs         @next
+:
+            ldy         #RT_SO                              ; Its stamp (r6): older than the best's (r9)?
+            lda         (r0),y
+            tay
+            lda         (r2),y
+            sta         r6
+            iny
+            lda         (r2),y
+            sta         r6 + 1
+            lda         r4
+            cmp         #$FF
+            beq         @cand
+            ldy         #RT_FLAGS
+            lda         (r0),y
+            and         #RTF_PLAIN
+            beq         @round
+            lda         r6
+            cmp         r9
+            lda         r6 + 1
+            sbc         r9 + 1
+            bcs         @next
+            bra         @cand
+@round:
+            lda         r6                                  ; (Its stamp less the best's past $8000)
+            sec
+            sbc         r9
+            sta         r10
+            lda         r6 + 1
+            sbc         r9 + 1
+            cmp         #$80
+            bcc         @next
+            bne         @cand
+            lda         r10
+            beq         @next
+@cand:
+            ldy         #RT_KEEP + 1
+            lda         (r0),y
+            beq         @take
+            jsr         keep
+            bcs         @next
+@take:
+            lda         r3
+            sta         r4
+            lda         r6
+            sta         r9
+            lda         r6 + 1
+            sta         r9 + 1
+@next:
+            jsr         tnext
+            jmp         @loop
+@done:
+            lda         r4
+            rts
+
+; C = 1: the entry (r2) on the box's stratum, its x and y within RT_R of its centre's
+near:
+            ldy         #RT_NSN
+            lda         (r0),y
+            tay
+            lda         (r2),y
+            ldy         #RT_NV
+            cmp         (r0),y
+            bne         @far
+            ldy         #RT_NX
+            lda         (r0),y
+            ldx         #RT_NV + 1
+            jsr         axis
+            bcc         @far
+            ldy         #RT_NY
+            lda         (r0),y
+            ldx         #RT_NV + 3
+            jmp         axis
+@far:
+            clc
+            rts
+
+; .A = an entry's offset of x or y, .X = the block's of the centre's: C = 1, (its - the centre's + R) up to 2R (two
+; bytes, or one: RTF_WIDE)
+axis:
+            tay
+            lda         (r2),y
+            sta         r7
+            iny
+            lda         (r2),y
+            sta         r7 + 1
+            txa
+            tay
+            lda         r7
+            sec
+            sbc         (r0),y
+            sta         r7
+            iny
+            lda         r7 + 1
+            sbc         (r0),y
+            sta         r7 + 1
+            ldy         #RT_R
+            lda         r7
+            clc
+            adc         (r0),y
+            sta         r7
+            bcc         :+
+            inc         r7 + 1
+:
+            ldy         #RT_FLAGS
+            lda         (r0),y
+            and         #RTF_WIDE
+            bne         :+
+            stz         r7 + 1
+:
+            ldy         #RT_R
+            lda         (r0),y
+            asl
+            sta         r8
+            lda         #0
+            rol
+            sta         r8 + 1
+            lda         r8
+            cmp         r7
+            lda         r8 + 1
+            sbc         r7 + 1
+            rts
+
+; The task's routine (RT_KEEP) asked of the entry (.A, r3's): C = 1, kept (its .A not 0).  r0-r9 kept over it on the
+; stack (its zero page is cc65's, from $22: the call registers are kept only to be sure)
+keep:
+            ldy         #RT_KEEP
+            lda         (r0),y
+            sta         r11
+            iny
+            lda         (r0),y
+            sta         r11 + 1
+            ldx         #0
+:
+            lda         r0,x
+            pha
+            inx
+            cpx         #r10 - r0
+            bcc         :-
+            lda         r3
+            jsr         @call
+            cmp         #1
+            ldx         #r10 - r0 - 1
+:
+            ply
+            sty         r0,x
+            dex
+            bpl         :-
+            rts
+@call:
+            jmp         (r11)

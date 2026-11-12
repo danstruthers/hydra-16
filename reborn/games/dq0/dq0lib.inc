@@ -16,6 +16,9 @@
 ;                                                           file not as it should be).  First: the library found.
 ;                                                           The UI's: (unsigned) fd, the file open (closed here)
 ;   unsigned __fastcall__ num (const char* s)              a number's digits (atoi's, without the C library's ctype)
+;   unsigned __fastcall__ rp_x (void* a)                   the record store's entry a's first byte (rp.h's RP_*),
+;                                                           a its block (struct rpf, struct rpt), in r0: its result
+;                                                           (RP_X defined before it's included: a task with a store)
 
             .export     _ovl_load, _num
             .import     __SWAP_START__
@@ -118,4 +121,15 @@ file:       .byte       OVL_FILE, 0
             sta         dql::r14
             jmp         dql::XCALL
 .endproc
+
+.ifdef RP_X
+            .export     _rp_x
+; rp_x (a): the record store's entry a->op, a in r0
+.proc _rp_x
+            sta         dql::r0
+            stx         dql::r0 + 1
+            lda         (dql::r0)
+            bra         dq0x
+.endproc
+.endif
 .popseg
