@@ -4450,3 +4450,95 @@ grip_words, time.c's sky[] and refuse.c's said[].  The words the player sees are
 
   No moved sentence is said differently in any test.
 - **Tested:** all 444 tests pass.
+
+## The plans' pages on the record store, the private hashes keyed; the styles not moved (2026-11-12, as built, for review: ENGINE-CRITIQUE.md's §5, §6, steps 7 and 8)
+
+Three things were left by "One record store" and "The placers' table and the keyed dice": the maker's plans' pages
+off the record store, the private hashes of caves.c, sky.c, plan.c, uses.c and make.c's mixed third, and the styles'
+proportions in uses.c rather than the theme.  The first two are built; the third is not, and why is below.  Nothing
+the player sees changes.
+
+- **The plans' pages (changes.c's `plt`) on the record store.**  The pages of a plan too big for its bank (plan.c's,
+  more regions than PLAN_MAX, with a save folder: plSS0000.dat, 42 regions a page, 32 pages in the maker's bank, 16
+  with dq0 -C) had their own lookup and their own least-lately-wanted loop.  Now a page is found by `RP_FIND` (its key
+  plt's first three bytes, the stratum and the page; its stamp the clock's next, `plstamp`) and one is made way for by
+  `RP_OLDEST`.  The old loop's choice wasn't quite the others': it took each free entry as it met it and went on,
+  comparing the entries after it with the free one's stale stamp, so it chose the last free entry, unless a used one
+  after it was older than that stale stamp.  `RP_OLDEST`'s `RTF_FREE` takes the *first* free entry, so it would have
+  moved the pages about in the bank (and, once the stamps wrap, which page is written back when).  A flag of the
+  library's, `RTF_EACH` (rp.h, dq0lib.s), takes a free entry as it's met and holds those after it to its stamp: the
+  old loop exactly, in the ROM.  o_pl_put's second search for the page is gone (pl_at's `plk`).  The file stays the
+  plan's own, written in place and not versioned (the plan's grown whole each time its stratum is: there's no older
+  version to keep).
+- **The private hashes, keyed (place.c's `dhash (p, s, a, b, c)`, grow.h's DH_*).**  Thirteen decisions made by
+  hashes of their own are purposes now, each row its old formula: a * m1 + b * m2 + c * m3, plus the stratum's seed's
+  part (none, its low half, its halves xor'd, or one of its bytes) xor'd with a constant, the sum xor'd with another,
+  then mixed (`h ^= h >> 7; h *= 0x2F1B`, its high byte) or left as the sum.
+
+  | purpose | was | decides |
+  |---|---|---|
+  | DH_CAVERN | caves.c's `ch` (its seed `V.seed`, the halves xor'd ^ 0x3C5D) | a region's great cavern, its size, wander, pillars; a cave's sloping tunnel |
+  | DH_AIR | caves.c's air pocket | firedamp, blackdamp and the room it's in |
+  | DH_WET | caves.c's `wh` | a room's water's depth, the rubble, a stream's deep stretch |
+  | DH_SKY | sky.c's `wh` (c the top stratum's seed's low byte plus k, a byte) | skylights and windows on the surface |
+  | DH_PWATER | plan.c's `wh` | where the plan's streams rise |
+  | DH_WELLS, DH_SLOPE | plan.c's water under a region, a stairway a long slope | |
+  | DH_RING, DH_VAULT, DH_ROT, DH_ROTU | uses.c's ring, a great hall's vault, a room's leavings and an older layer's mark gone to dust | |
+  | DH_MIXED | make.c's mixed third | a mixed stratum's chunk left natural |
+  | DH_DIAMOND | caves.c's | a stratum's passages on the diagonal (its seed's top byte) |
+
+  **Not a key of `dkey`'s:** `dkey`'s keys are a 32-bit xorshift seeded from the chunk's place; none of these
+  formulas can be written as one without changing every number, so each keeps its own derivation as a row (the
+  "own derivation" the earlier entry foresaw).  `dhash` is in the main RAM beside `dr`, since its callers are in six
+  overlays and the main RAM.  The files keep their little wrappers (caves.c's `ch` and `wh`, sky.c's and plan.c's
+  `wh`) where a parameter's type truncates its argument, so the truncation stays where it was.  sky.c's `wh` no longer
+  writes `Y.h`, the shafts' stream's state, which it used to clobber; the shafts' function reseeds `Y.h` before
+  every roll, so nothing read it.  **Left as they were:** the streams (sky.c's shafts, plan.c's pieces' and details',
+  the growers' and the stock's: call order by design) and the hashes outside these five files (fixtures.c's,
+  pass.c's).
+- **The styles' proportions: not moved (open question).**  themec can carry them only by taking room from the
+  theme's words.  struct theme is 1,739 bytes and the record is THEME_SIZE, 4,096: the UI copies it into its overlay
+  5's bank at $9000 (4K exactly), and the theme bank's pieces' places sit at $9000 after it.  The words fill the rest
+  (2,357 bytes).  The four styles are 4 × 52 = 208 bytes.  Carried in the head, they cut the words' room to 2,149,
+  and themegen's linegen (bank/linegen) budgets each clue by `THEME_HEAD + words + its words + 64 > THEME_SIZE`.
+  With the head 208 bytes longer, a generated theme within 208 bytes of the room loses a clue it had, and every
+  random () after it shifts: another theme, another dungeon.  Keeping linegen's sum at the old head instead would
+  leave such a theme too big to compile.  The stand-ins use 1,224 to 1,612 bytes; the generated themes weren't
+  measured over enough seeds to say none comes that close.  Ways the user could choose:
+  1. the cost taken (the head grows; the seeds whose themes come within 208 bytes of the room change);
+  2. a theme's own styles only when its text gives them (a `style` line; a mission bit, TM_STYLES, bits 2-5 being
+     free; the table at the record's end, the words' room cut only then).  The house's styles stay the maker's
+     default and no generated theme changes;
+  3. the styles outside the record (a styles file the build makes, the theme naming a set).
+- **Checked.**
+  - The plans' pages: every save-folder file's writes (fhash, as "One record store" did: each OPEN, CREATE, WRITE
+    hashed, SEEK, by file, in order per task) over 48 games: 8 seeds (3, 5, 7, 42, 99, 1000, 31337, 70000), each with
+    -C -T -T -T, -C -T, -T -T, -C, and -T -T -T -T with and without -C.  The last two are the vast stratum's: its plan
+    paged, some 100 to 4,000 plan-page operations a game, -C's making way.  plSS0000.dat's writes are byte for byte
+    the baseline's in all 16, and every file's in 46 games.  Two games (s5C3, s70000C1) were another of their
+    timing's outcomes at the first power-up: the rats met at other moments, a walk in the dark stopped elsewhere.
+    Neither game has a big plan.  This build at the second and third power-ups gave the baseline's bytes; the
+    baseline at seven power-ups never gave this variant.  life.dat is left out (its date the host's clock).
+  - The hashes: a scratch script ran each row against its old formula in 16-bit C arithmetic, 200,000 random inputs
+    each; none differed.  Then the maker's every write to the hub's shared banks (each task's runs of bytes, hashed,
+    a sorted list per game) over 80 games: 8 seeds (1, 3, 7, 42, 259, 1000, 70000, 123456789), each as it is, -T,
+    -T -T -T, -M, -A, -D, -V, -M -T, -A -T -T and -V -T -T -T, a random player's 50 commands and two ways down.  The
+    maker's writes were the same in all 80, and the sentences of all 80 the same.  The other tasks' writes move with
+    the timing; the baseline is the same as itself at one power-up.
+- **Room** (bytes free):
+
+  | | before | after |
+  |---|---|---|
+  | dq0m main RAM | 4,635 | 4,193 (the pages' block 33, dhash and its rows 409) |
+  | dq0m overlays 2, 3, 4, 5 | 947, 527, 51, 845 | 1,175, 596, 62, 915 |
+  | dq0m overlays 6, 7, 8, 9 | 508, 165, 223, 477 | 572, 224, 296, 554 |
+  | dq0lib (ROM) | 2,507 bytes | 2,529 bytes |
+
+  No other task touched.
+- **The start** (dq0starttime): seed 1 231.5M cycles before, 231.7M after; seed 123456789 308.2M before, 309.4M after (budgets 245M and 325M): dhash's generic rows a little slower than the inline formulas, at the maker's first chunks.
+- **The suite:** 444 of 444 (440 run from a copy of the tree, whose four machine tests (hwtest, hwtool, fs, mml) want the repository's own folders and fail there for the baseline as well, run again in the worktree and passed).  Every dq0 test's sentences the same as the baseline's but the known timing noise: dq0antidote's real-time fight, dq0answer's and dq0jobs' rats heard at other moments, dq0robrest's rest ending at another moment (a skill improved, hungry and thirsty, not reached).
+- **Open questions.**
+  - The styles: the three choices above.
+  - The chunks' cache's plain stamp comparison (RTF_PLAIN) made round: a behaviour change, not taken.
+  - The old keys' omission of the stratum's seed (dkey's purposes before DP_SEEDED, and these rows too: DH_AIR,
+    DH_WET, DH_SKY, DH_VAULT and the rots have none): not taken.  It would change the dungeons.
