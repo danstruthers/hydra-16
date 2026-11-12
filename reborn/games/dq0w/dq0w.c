@@ -7083,10 +7083,156 @@ static unsigned char act_next (void)
     return 0;
 }
 
+/* ---- The world's own work as it falls due (ENGINE-CRITIQUE.md's 7: the scheduler table).  Each job a row: its trigger
+** (due: its period's time come, or a flag or a count another's work set; none, each pass), its give-way rule (held: 1,
+** it waits this pass, the UI's command or a line being typed first, D17's; none, it never waits) and its handler.  The
+** main loop walks the early rows before the intents are taken, the late ones after the clock's moved and the long task
+** stepped, each in its order; a row's rule asked only as it's due (ui_long and den_held count the time they hold from
+** their first asking).  The table's columns three arrays, jobs.s's walk (the main RAM's room) */
+
+static unsigned char uf, dseq;                  /* (The UI's command in hand at the real paces, ui_first's, this pass;
+                                                **   the denizens' bodies' sequence last looked at) */
+
+static unsigned char chart_due (void)
+{
+    return chart_late;
+}
+
+/* The map making's state made again, and a sconce's light, as a thing's handled (chart_late's: | 2 the sconce's, | 1
+** the map's things) */
+static void chart_job (void)
+{
+    if (chart_late & 2) {
+        chart_late &= ~2;
+        sconce_lights (1);                      /* (A sconce's light, a thing handled: wkept.c's) */
+    }
+    if (chart_late & 1) {
+        chart_late &= ~1;                       /* (It may give way, and so be late again) */
+        chart_now ();                           /* (The map making's things, as what it carries has changed: part 13's) */
+    }
+}
+
+static unsigned char trace_due (void)
+{
+    return tr_n >= TR_FLUSH;
+}
+
+/* The passings journalled taken into the traces' store: part 28's, giving way as a command comes; 160,000 cycles of
+** the world's and a part's swap, on whichever answer it fell: 2026-11-03 */
+static void trace_job (void)
+{
+    tr_flush (TF_SOME);
+}
+
+static unsigned char den_due (void)
+{
+    return DEN_INTENTS ();
+}
+
+static unsigned char look_due (void)
+{
+    return den_saw && !move.on;
+}
+
+/* A body fallen: looked at again, the things too */
+static void look_job (void)
+{
+    den_saw = 0;
+    see (0);
+}
+
+static unsigned char dseq_due (void)
+{
+    return HUB->den_seq != dseq;
+}
+
+static unsigned char uf_held (void)
+{
+    return uf;
+}
+
+/* The denizens' bodies' changes: what it sees of them, looked at again, the UI told if it sees them otherwise, not on
+** its way somewhere: once stirred's.  Not while the UI's command is in hand at the real paces (uf_held): the senses'
+** look of them after its answer's begun, 2026-11-01 */
+static void dseq_job (void)
+{
+    hub_map (0);
+    dseq = HUB->den_seq;
+    if ((!move.on || move.how == A_DIGGING) && dens_seen ()) {
+        hub_map (0);
+        if (!HUB->pc_task.kind || pon || HUB->pc_task.asking || !task_news ()) {
+            view (V_STIR);                      /* (Something new seen as it digs or waits: told, then asked) */
+        }
+    }
+    hub_map (0);
+}
+
+static unsigned char burn_due_ (void)
+{
+    return HUB->round && (burn_ask || HUB->now >= burn_due);
+}
+
+/* The lights' minute (burn_due: a minute on, a rest's ten; or at once, burn_ask: a light's change, the time it believes
+** alone, TS_ASK, the sconces' pass, BA_SCONCES), once the game's begun (WQ_START's, its clock a game carried on's) */
+static void burn_job (void)
+{
+    if (burn_ask & BA_SCONCES) {                /* (A minute in two passes: the sconces' on their own, a part's swap and
+                                                **   its passes of the store, a command coming between; part 27 not
+                                                **   copied for it, 2026-11-04) */
+        burn_ask &= ~BA_SCONCES;
+        sconce_lights (0xFF);
+    } else if (burn_ask == TS_ASK && HUB->now < burn_due) {
+        HUB->tb.due = 0;                        /* (The time it believes alone, if the burning's look isn't due: no light
+                                                **   looked at, its next look as it was, so nothing else moves for it; a
+                                                **   command in hand, its answer first, at the next look) */
+        burn_ask = 0;
+        if (!HUB->tpr || !HUB->ui_cmd) {
+            tsense ();                          /* (At the real paces; the turns pace's by its clock alone) */
+        }
+    } else {
+        burns_now ();                           /* (The lights burnt down, a game minute's: part 27's; a command's answer
+                                                **   first, some 200,000 cycles of the world's) */
+    }
+    hub_map (0);
+}
+
+/* The table, a row a job, in the order they're walked (row r: each column's [r]) */
+unsigned char (* const jobs_due[]) (void) = {
+    /* Early: before the intents are taken */
+    0,                                          /* (Every pass, its own look: the chunks the maker stocked, stocks) */
+    chart_due,                                  /* (A thing handled: chart_late) */
+    trace_due,                                  /* (TR_FLUSH passings journalled) */
+    den_due,                                    /* (The denizens' intents, as they come) */
+    /* Late: after the clock and the long task's step */
+    look_due,                                   /* (A body fallen, den_saw; not on the move) */
+    dseq_due,                                   /* (The denizens' bodies changed, the hub's den_seq) */
+    burn_due_                                   /* (The lights' minute, burn_due; or at once, burn_ask) */
+};
+unsigned char (* const jobs_held[]) (void) = {
+    0, ui_long, ui_long,
+    den_held,                                   /* (Not while the UI's command is in hand at the real paces, its answer
+                                                **   first: ui_first's; nor while a line's typed, from its first key three
+                                                **   seconds at most: den_held's, none of it its parts' swaps each time
+                                                **   round, nor its news told as the Enter comes (a denizen's things only,
+                                                **   keys_hold's, till 2026-11-06: dq0hold's, the senses' and the minds'
+                                                **   with it) */
+    ui_long, uf_held, ui_long
+};
+void (* const jobs_run[]) (void) = {
+    stocks,                                     /* (Their things put down, marked so) */
+    chart_job, trace_job,
+    den_intents,                                /* (The denizens' intents carried out) */
+    look_job, dseq_job, burn_job
+};
+#define JOBS_EARLY      (0 | 8 << 8)            /* (jobs' rows: the first's offset, the end's times 256, 2 a row) */
+#define JOBS_LATE       (8 | 14 << 8)
+void __fastcall__ jobs (unsigned rows);        /* (jobs.s: the rows from the first to the end, each due run if it
+                                                **   doesn't wait) */
+
 int main (int argc, char* argv[])
 {
     static struct msg m;
-    static unsigned char uf, was_busy, dseq, took;  /* (Static: the main RAM's room, 2026-11-06) */
+    static unsigned char was_busy, took;        /* (Static: the main RAM's room, 2026-11-06) */
 
     if (argc < 4 || ovl_load (argv[3]) || wstart (argv)) {
         return 1;                               /* (Attached, and started: part 3's) */
@@ -7105,30 +7251,8 @@ int main (int argc, char* argv[])
                                                 **   world's own periodic work waits for it, a quarter second at most:
                                                 **   ui_first's; the long jobs, as they fall due, ui_long's: a line being
                                                 **   typed too, and looked at then, this pass perhaps long since begun) */
-        stocks ();                              /* (The chunks the maker stocked: their things put down, marked so) */
-        if (chart_late && !ui_long ()) {
-            if (chart_late & 2) {
-                chart_late &= ~2;
-                sconce_lights (1);              /* (A sconce's light, a thing handled: wkept.c's) */
-            }
-            if (chart_late & 1) {
-                chart_late &= ~1;               /* (It may give way, and so be late again) */
-                chart_now ();                   /* (The map making's things, as what it carries has changed: part 13's) */
-            }
-        }
-        if (tr_n >= TR_FLUSH && !ui_long ()) {
-            tr_flush (TF_SOME);                 /* (The passings journalled taken into the traces' store: part 28's,
-                                                **   giving way as a command comes; 160,000 cycles of the world's and a
-                                                **   part's swap, on whichever answer it fell: 2026-11-03) */
-        }
-        if (DEN_INTENTS () && !den_held ()) {
-            den_intents ();                     /* (The denizens' intents carried out; not while the UI's command is
-                                                **   in hand at the real paces, its answer first: ui_first's; nor while
-                                                **   a line's typed, from its first key three seconds at most: den_held's,
-                                                **   none of it its parts' swaps each time round, nor its news told as
-                                                **   the Enter comes (a denizen's things only, keys_hold's, till
-                                                **   2026-11-06: dq0hold's, the senses' and the minds' with it) */
-        }
+        jobs (JOBS_EARLY);                      /* (The early jobs: the chunks stocked, the map making's, the traces',
+                                                **   the denizens' intents) */
         while (hub_take (&m)) {
             tsq = HUB->cq.seq;                  /* (The line whose intent it is: a task it begins not held for it,
                                                 **   stepping's; a task begun in the pass its line came in, 2026-11-06) */
@@ -7146,45 +7270,7 @@ int main (int argc, char* argv[])
         }
         clock_run ();
         stepping ();                            /* (The long task as the clock goes: a walk a square at a time) */
-        if (den_saw && !move.on && !ui_long ()) {
-            den_saw = 0;                        /* (A body fallen: looked at again, the things too) */
-            see (0);
-        }
-        if (HUB->den_seq != dseq && !uf) {      /* (Not while the UI's command is in hand at the real paces:
-                                                **   the senses' look of them after its answer's begun, 2026-11-01) */
-            hub_map (0);
-            dseq = HUB->den_seq;
-            if ((!move.on || move.how == A_DIGGING) && dens_seen ()) {  /* (The denizens' bodies' changes: what it
-                                                **   sees of them, looked at again, the UI told if it sees them
-                                                **   otherwise, not on its way somewhere: once stirred's) */
-                hub_map (0);
-                if (!HUB->pc_task.kind || pon || HUB->pc_task.asking || !task_news ()) {
-                    view (V_STIR);              /* (Something new seen as it digs or waits: told, then asked) */
-                }
-            }
-            hub_map (0);
-        }
-        if (HUB->round && (burn_ask || HUB->now >= burn_due) && !ui_long ()) {
-            if (burn_ask & BA_SCONCES) {        /* (A minute in two passes: the sconces' on their own, a part's swap and
-                                                **   its passes of the store, a command coming between; part 27 not
-                                                **   copied for it, 2026-11-04) */
-                burn_ask &= ~BA_SCONCES;
-                sconce_lights (0xFF);
-            } else if (burn_ask == TS_ASK && HUB->now < burn_due) {
-                HUB->tb.due = 0;                /* (The time it believes alone, if the burning's look isn't due: no
-                                                **   light looked at, its next look as it was, so nothing else moves
-                                                **   for it; a command in hand, its answer first, at the next look) */
-                burn_ask = 0;
-                if (!HUB->tpr || !HUB->ui_cmd) {
-                    tsense ();                  /* (At the real paces; the turns pace's by its clock alone) */
-                }
-            } else {
-                burns_now ();                   /* (The lights burnt down, a game minute's: part 27's; once the game's
-                                                **   begun, WQ_START's, its clock a game carried on's; a command's
-                                                **   answer first, some 200,000 cycles of the world's) */
-            }
-            hub_map (0);
-        }
+        jobs (JOBS_LATE);                       /* (The late jobs: a body fallen, the denizens' bodies, the lights' minute) */
         if (!((unsigned char) HUB->pcsum.cond & C_UNCONSCIOUS)) {
             pc_down = 0;
         } else if (!pc_down) {
