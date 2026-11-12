@@ -2015,9 +2015,15 @@ module.exports = {
         never(5, 'dig down', 'You put away the pick.');
         // ("take all": an ordinary line after its last thing and the pack on; a stop ends it there)
         order(6, 'take all', ['Taken.', 'turn around', 'Taken.', 'You put your backpack back on.', 'You turn around']);
-        order(7, 'take all', ['Taken.', 'stop', 'You stop', 'Your backpack is in your hand.']);
-        never(7, 'take all', 'You reach for the tinderbox.');
-        if (inv(7).includes('tinderbox')) f.push('game 7: "take all" went on after the stop: ' + inv(7));
+        // (the user's, 2026-11-12, as game 2's: "stop" typed at the first "Taken." races the reach for the next thing at the
+        //  turns pace, so the stop landing one thing later passes too, the tinderbox taken, then stopped, nothing after it)
+        if (!upto(7, 'take all').includes('You reach for the tinderbox.')) {
+          order(7, 'take all', ['Taken.', 'stop', 'You stop', 'Your backpack is in your hand.']);
+          if (inv(7).includes('tinderbox')) f.push('game 7: "take all" went on after the stop: ' + inv(7));
+        } else {
+          order(7, 'take all', ['Taken.', 'stop', 'You reach for the tinderbox.', 'Taken.', 'You stop', 'Your backpack is in your hand.']);
+          if ((upto(7, 'take all').match(/Taken\./g) || []).length > 2) f.push('game 7: "take all" went on past one thing after the stop');
+        }
         // (A list's later part let go with a flight)
         order(8, 'take the tinderbox from the backpack and take the flask from the backpack', ['You get out the tinderbox.', 'flee', 'You stop getting out the tinderbox.', 'Your backpack lies at your feet.', 'You see nothing to flee from.']);
         never(8, 'take the tinderbox from the backpack and take the flask from the backpack', 'flask of oil');

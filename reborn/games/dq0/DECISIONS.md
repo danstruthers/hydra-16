@@ -3803,6 +3803,9 @@ left for review (see below).  **So the suite: 444 of 444 at stage 2; 443 at stag
   **The user's, 2026-11-11: accept either step.**  Game 2's check passes the stop landing in the step after the one
   it was typed in (the rations taken in hand, then "You stop there."), the pack still at its feet and nothing after it
   done (tests/suites/dq0/gear.js); the game unchanged.
+  **The user's, 2026-11-12: game 7 the same.**  Its "stop" typed at "take all"'s first "Taken." may land one thing
+  later (the record store's timing flipped it): the tinderbox reached for and taken, then the stop, the pack in hand,
+  no third thing taken.
 
 ## The step planner and the activity stack (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §3.3, §7 and step 6)
 
