@@ -4,7 +4,7 @@
 'use strict';
 const { card, typed } = require('../../lib/common.js');
 const {
-  xdBytes, saidTheme, DQ0_MAKE, dq0Turns, dq0Rep, dq0Need, dq0Carried, dq0Here, dq0Holder, dq0View, dq0TypedAsk,
+  xdBytes, saidTheme, DQ0_MAKE, dq0Life, dq0Turns, dq0Rep, dq0Need, dq0Carried, dq0Here, dq0Holder, dq0View, dq0TypedAsk,
   dq0Typed, dq0Poke
 } = require('../../lib/dq0.js');
 
@@ -129,25 +129,25 @@ module.exports = {
       },
       check(m, out) {
         const T = dq0Turns(m), f = [], g2 = T.of('dq0 -p t -d /ram/a'), g2b = T.of('dq0 -p t -d /ram/b');
-        const u32 = (b, o) => b.readUInt32LE(o), u16 = (b, o) => b.readUInt16LE(o);
-        const a = xdBytes(out, 'xd /ram/a/life.dat');
+        const a = xdBytes(out, 'xd /ram/a/life.dat'), la = dq0Life(a);
         const ao = out.indexOf('% dq0 -p t -d /ram/a'), acctText = out.slice(ao, out.indexOf('Enter to go on', ao)).replace(/\s+/g, ' ');
-        if (a.length !== 544) f.push('the record not 544 bytes: ' + a.length);
+        if (a.length !== dq0Life.size()) f.push('the record not ' + dq0Life.size() + ' bytes: ' + a.length);
         if (!/\nsame\s*\n/.test(out.replace(/\r/g, ''))) f.push('the same seed and commands, the records not the same');
         if (!/\nkept\s*\n/.test(out.replace(/\r/g, ''))) f.push('quit and begun again, the record changed');
-        if (a.length >= 544) {
-          if (u16(a, 0) !== 0x464C || a[2] !== 1) f.push('the record\'s head: ' + a.slice(0, 4).toString('hex'));
-          if (u32(a, 4) !== 3) f.push('the life\'s seed not 3: ' + u32(a, 4));
-          if (u16(a, 12) !== 2) f.push('not its second dungeon: ' + u16(a, 12));
-          const ds = u32(a, 8);
+        if (la) {
+          const { h, d } = la;
+          if (!la.ok) f.push('the record\'s head: ' + a.slice(0, 4).toString('hex'));
+          if (h.seed !== 3) f.push('the life\'s seed not 3: ' + h.seed);
+          if (h.dungeon !== 2) f.push('not its second dungeon: ' + h.dungeon);
+          const ds = h.dseed;
           if (ds >= 65536 || ds === 3) f.push('the second dungeon\'s seed: ' + ds);
-          if (u32(a, 32) !== 3 || u32(a, 40) !== ds) f.push('the dungeons\' seeds: ' + u32(a, 32) + ', ' + u32(a, 40));
-          if (a[38] !== 1 || a[46] !== 0) f.push('the outcomes: ' + a[38] + ', ' + a[46] + ' (solved, then none yet)');
-          if (u16(a, 36) !== 1) f.push('the first dungeon\'s days: ' + u16(a, 36) + ' (a wait of 1500 minutes)');
-          const d0 = 720 * 360 + 3, date = u32(a, 14), days = date - d0;   // (Seed 3: its hour 3, 25 hours on)
+          if (d[0].seed !== 3 || d[1].seed !== ds) f.push('the dungeons\' seeds: ' + d[0].seed + ', ' + d[1].seed);
+          if (d[0].outcome !== dq0Life.C('LO_SOLVED') || d[1].outcome !== dq0Life.C('LO_NONE')) f.push('the outcomes: ' + d[0].outcome + ', ' + d[1].outcome + ' (solved, then none yet)');
+          if (d[0].days !== 1) f.push('the first dungeon\'s days: ' + d[0].days + ' (a wait of 1500 minutes)');
+          const d0 = 720 * 360 + 3, date = h.date, days = date - d0;   // (Seed 3: its hour 3, 25 hours on)
           const between = /(\d+) days? pass/.exec(acctText), told = between ? +between[1] : 0;   // (The time between's own, told: dq0acct's, HarnMaster's alone; another ruleset's, none)
           if (days !== 2 + told) f.push('the date not on two days (one crossed, the day after it came out) and the days told: ' + days + ', ' + told);
-          const born = u16(a, 18);
+          const born = h.born;
           if (born > 720 - 16 || born < 720 - 25) f.push('its birth year: ' + born);
         }
         // (The folders)
@@ -178,12 +178,12 @@ module.exports = {
         const changed = /\((\d+) penn(?:y|ies)[^)]*once it's changed/.exec(acctText), have = /You have (\d+) penn/.exec(acctText);   // (What the account said it'd come to: its 15% each pile)
         if (!have ? !p1 || Math.abs(p2 - p1 * 0.85) > 2 : (changed ? +changed[1] : +have[1]) !== p2) f.push('the pennies not as the account said, at the 15%: ' + p1 + ' then ' + p2 + ': ' + acctText);
         // (A seed over 65,536)
-        const x1 = xdBytes(out, 'xd /ram/x/life.dat');
-        if (x1.length >= 544 && (u32(x1, 4) !== 123456789 || u32(x1, 8) !== 123456789)) f.push('a new life\'s seed: ' + u32(x1, 4) + ', ' + u32(x1, 8));
-        const x2 = xdBytes(out.slice(out.indexOf('% echo second')), 'xd /ram/x/life.dat');
+        const x1 = xdBytes(out, 'xd /ram/x/life.dat'), l1 = dq0Life(x1);
+        if (l1 && (l1.h.seed !== 123456789 || l1.h.dseed !== 123456789)) f.push('a new life\'s seed: ' + l1.h.seed + ', ' + l1.h.dseed);
+        const x2 = xdBytes(out.slice(out.indexOf('% echo second')), 'xd /ram/x/life.dat'), l2 = dq0Life(x2);
         if (!/\nagain\s*\n/.test(out.replace(/\r/g, ''))) f.push('a dungeon past the first with no game kept: its record not left as it is');
-        if (x1.length !== 544 || x2.length !== 544) f.push('the record, run alone: ' + x1.length + ', ' + x2.length + ' bytes');
-        if (x2.length >= 544 && (u16(x2, 12) !== 2 || u32(x2, 8) < 65536 || u32(x2, 8) === 123456789 || u32(x2, 4) !== 123456789)) f.push('a seed over 65,536, its second dungeon: ' + u32(x2, 8));
+        if (x1.length !== dq0Life.size() || x2.length !== dq0Life.size()) f.push('the record, run alone: ' + x1.length + ', ' + x2.length + ' bytes');
+        if (l2 && (l2.h.dungeon !== 2 || l2.h.dseed < 65536 || l2.h.dseed === 123456789 || l2.h.seed !== 123456789)) f.push('a seed over 65,536, its second dungeon: ' + l2.h.dseed);
         return f;
       },
       sdcard: true
@@ -224,7 +224,6 @@ module.exports = {
       check(m, out) {
         const f = [], o = out.replace(/\r/g, ''), sect = n => { const i = o.indexOf('% echo =' + n), j = o.indexOf('% echo =', i + 3); return i < 0 ? '' : o.slice(i, j < 0 ? o.length : j); };
         const text = n => sect(n).replace(/\s+/g, ' '), days = n => { const r = /(\d+) days? pass/.exec(text(n)); return r ? +r[1] : -1; };
-        const u32 = (b, a) => b.readUInt32LE(a);
         const need = (n, re, w) => { if (!re.test(text(n))) f.push(w + ': ' + text(n).slice(0, 700)); };
         // A wounded character
         need('WOUND', /A physician sees to your left forearm and left knee \(12d\)/, 'no physician (a grievous wound 9d, a serious 3d)');
@@ -234,18 +233,18 @@ module.exports = {
         if (!/\nvol 0 /.test(w)) f.push('its fatigue not clear');
         if (!/\npace \d \d 0\n/.test(w)) f.push('its exertion not clear: ' + w.slice(0, 200));
         if (!/\nst\s*\n/.test(w)) f.push('its status not 0: ' + text('WOUND').slice(0, 800));
-        const wr = xdBytes(sect('WOUND'), 'xd /ram/w/life.dat');
-        if (wr.length >= 544 && days('WOUND') > 0) {
+        const wr = xdBytes(sect('WOUND'), 'xd /ram/w/life.dat'), lw = dq0Life(wr);
+        if (lw && days('WOUND') > 0) {
           const d0 = 720 * 360 + 100003 % 360;
-          if (u32(wr, 14) !== d0 + days('WOUND')) f.push('the date not on by the days: ' + u32(wr, 14) + ', ' + d0 + ', ' + days('WOUND'));
-          if (wr[3] & 1) f.push('the record left as between');
+          if (lw.h.date !== d0 + days('WOUND')) f.push('the date not on by the days: ' + lw.h.date + ', ' + d0 + ', ' + days('WOUND'));
+          if (lw.h.flags & dq0Life.C('LF_BETWEEN')) f.push('the record left as between');
         } else f.push('the record: ' + wr.length + ' bytes, days ' + days('WOUND'));
         if (!/\nsame\s*\n/.test(sect('WOUND2'))) f.push('the same seed, not the same sheet after');
         // One dies of it
         need('DIES', /The infection kills you\. You die on \d+ \w+ \d+, at \d+\./, 'not told as it died');
         if (!/st 2/.test(sect('DIES'))) f.push('its status not 2: ' + text('DIES').slice(0, 300));
-        const dr = xdBytes(sect('DIES'), 'xd /ram/d/life.dat');
-        if (dr.length < 544 || (dr[3] & 6) !== 6) f.push('the record not over: flags ' + dr[3]);
+        const ld = dq0Life(xdBytes(sect('DIES'), 'xd /ram/d/life.dat')), over = dq0Life.C('LF_OVER') | dq0Life.C('LF_ABROAD');
+        if (!ld || (ld.h.flags & over) !== over) f.push('the record not over: flags ' + (ld && ld.h.flags));
         // The rich: what it dropped bought again, no selling
         need('RICH', /You buy a flask of oil/, 'what it dropped (of what it set out with) not restocked');
         if (/You sell/.test(text('RICH'))) f.push('the rich sold things: ' + text('RICH').slice(0, 400));
@@ -664,9 +663,9 @@ module.exports = {
         if (!/Nothing was saved in this dungeon before you died: start the game again with its folder to begin the dungeon again, as you came to it\./.test(later)) f.push('a later dungeon: not its words: ' + later.slice(-500));
         if (!/The life so far of [^:]*: .*solved/.test(later)) f.push('a later dungeon: not the life so far: ' + later.slice(-500));
         dq0Need(f, T.of('dq0 -N -p t -d /ram/q'), 'E_ARRIVE', { how: 'A_START' }, 'a later dungeon: not begun again');
-        const rec = n => xdBytes(sect(n), 'xd /ram/q/life.dat'), head = b => ({ dseed: b.readUInt32LE(8), dungeon: b.readUInt16LE(12) });
+        const rec = n => dq0Life(xdBytes(sect(n), 'xd /ram/q/life.dat')), head = l => l.h;
         const a = rec('OUT'), b = rec('LATER'), c = rec('AGAIN');
-        if (!a.length || !b.length || !c.length) f.push('the records not read');
+        if (!a || !b || !c) f.push('the records not read');
         else {
           if (head(a).dungeon !== 2 || head(c).dungeon !== 2) f.push('the record moved on: ' + head(a).dungeon + ', ' + head(c).dungeon);
           if (head(a).dseed !== head(b).dseed || head(a).dseed !== head(c).dseed) f.push('not the same dungeon\'s seed: ' + JSON.stringify([head(a), head(b), head(c)]));
@@ -685,7 +684,8 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], o = out.replace(/\r/g, ''), first = n => { const i = o.indexOf('% echo =' + n), r = /\n[0-9a-f]+ +((?:[0-9a-f]{2} ){4})/.exec(o.slice(i, i + 200)); return r ? r[1].trim().split(' ').map(x => parseInt(x, 16)) : []; };
-        if (!(first('LIFE')[3] & 8)) f.push('the record not hard mode\'s: ' + first('LIFE'));
+        const life = dq0Life(xdBytes(out, 'xd /ram/q/life.dat'));
+        if (!life || !(life.h.flags & dq0Life.C('LF_HARD'))) f.push('the record not hard mode\'s: ' + first('LIFE'));
         if (!(first('GAME')[3] & 0x80)) f.push('the next dungeon\'s save not hard mode\'s: ' + first('GAME'));
         return f;
       },
@@ -708,12 +708,12 @@ module.exports = {
         if (!/Dead between dungeons, on /.test(tx)) f.push('its end not told: ' + tx.slice(0, 500));
         if (/The dungeon is being made ready|enters the dungeon/.test(tx)) f.push('the game begun all the same');
         if (!/st\s*\n/.test(off)) f.push('dq0\'s status not 0');
-        const a = xdBytes(off, 'xd /ram/q/life.dat');
-        if (a.length < 544 || (a[3] & 6) !== 6 || a[38] !== 1) f.push('the record: flags ' + a[3] + ', outcome ' + a[38]);
-        const n = sect('NEW'), b = xdBytes(n, 'xd /ram/q/life.dat');
-        if (b.length < 544 || b[3] !== 0 || b.readUInt16LE(12) !== 1) f.push('not a new life: ' + b.slice(0, 16).toString('hex'));
+        const a = dq0Life(xdBytes(off, 'xd /ram/q/life.dat')), over = dq0Life.C('LF_OVER') | dq0Life.C('LF_ABROAD');
+        if (!a || (a.h.flags & over) !== over || a.d[0].outcome !== dq0Life.C('LO_SOLVED')) f.push('the record: flags ' + (a && a.h.flags) + ', outcome ' + (a && a.d[0].outcome));
+        const n = sect('NEW'), bb = xdBytes(n, 'xd /ram/q/life.dat'), b = dq0Life(bb);
+        if (!b || b.h.flags !== 0 || b.h.dungeon !== 1) f.push('not a new life: ' + bb.slice(0, 16).toString('hex'));
         if (!/lives\.dat/.test(n)) f.push('the life that was not kept in lives.dat');
-        if (!/544/.test(n)) f.push('lives.dat not one record: ' + n.slice(-200));
+        if (!n.includes(String(dq0Life.size()))) f.push('lives.dat not one record: ' + n.slice(-200));
         return f;
       },
       sdcard: true
@@ -749,8 +749,8 @@ module.exports = {
         const f = [], o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\r/g, ''), sect = n => { const i = o.indexOf('% echo =' + n), j = o.indexOf('% echo =', i + 3); return i < 0 ? '' : o.slice(i, j < 0 ? o.length : j); };
         const kept = sect('KEPT').replace(/\s+/g, ' '), next = sect('NEXT').replace(/\s+/g, ' ');
         if (!/> eat food You're fasting, with 24 hours of your vow to go: you leave the food be\./.test(kept)) f.push('the vow not kept in the save: ' + kept.slice(kept.indexOf('> eat food'), kept.indexOf('> eat food') + 200));
-        const a = xdBytes(sect('LIFE'), 'xd /ram/v/life.dat');
-        if (a.length < 544 || a.readUInt16LE(12) !== 2 || a[26] < 15 || a[26] > 17) f.push('the record\'s fast: dungeon ' + (a.length && a.readUInt16LE(12)) + ', fast ' + a[26]);
+        const a = dq0Life(xdBytes(sect('LIFE'), 'xd /ram/v/life.dat'));
+        if (!a || a.h.dungeon !== 2 || a.h.fast < 15 || a.h.fast > 17) f.push('the record\'s fast: dungeon ' + (a && a.h.dungeon) + ', fast ' + (a && a.h.fast));
         const r = /> eat food You're fasting, with (\d+) hours? of your vow to go: you leave the food be\./.exec(next);
         if (!r || +r[1] < 2 || +r[1] > 4) f.push('the vow not carried into the next dungeon: ' + next.slice(next.indexOf('> eat food'), next.indexOf('> eat food') + 200));
         const e = next.slice(next.indexOf('> stop'));

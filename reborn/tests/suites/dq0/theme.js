@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { card, typed } = require('../../lib/common.js');
 const {
-  xdBytes, saidTheme, DQ0_MAKE, THEMEC, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, O_WAY_OUT, O_NOWHERE, stratumRec,
+  xdBytes, saidTheme, DQ0_MAKE, dq0Life, THEMEC, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, O_WAY_OUT, O_NOWHERE, stratumRec,
   dq0Made, dq0Story, dq0Turns, dq0Ev, dq0Rep, dq0Need, dq0Carried, dq0Here, DQ0_I, dq0Typed, dq0Poke
 } = require('../../lib/dq0.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
@@ -115,8 +115,8 @@ module.exports = {
         if (!acct.includes(words(rw1.v[3]))) f.push('the reward not told: ' + words(rw1.v[3]));
         if (!acct.includes('pays you ' + rw1.v[0] + ' pennies')) f.push('not paid ' + rw1.v[0] + ' pennies');
         if (!acct.includes('A few folk in the inns know your name (standing ' + rw1.v[1] + ').')) f.push('the standing not told: ' + acct.slice(0, 600));
-        const life = xdBytes(out, 'xd /ram/b/life.dat');
-        if ((life[20] | life[21] << 8) !== +rw1.v[1]) f.push('the record\'s reputation ' + (life[20] | life[21] << 8) + ', not ' + rw1.v[1]);
+        const life = dq0Life(xdBytes(out, 'xd /ram/b/life.dat'));
+        if (!life || life.h.reputation !== +rw1.v[1]) f.push('the record\'s reputation ' + (life && life.h.reputation) + ', not ' + rw1.v[1]);
         const B = blocks(saidTheme(out, 'cat /ram/b/rumours.txt'));
         if (B.length !== 3) f.push(B.length + ' rumours heard, not three');
         B.forEach((r, i) => { if (!acct.includes((i + 1) + '. ' + words(r.said))) f.push('rumour ' + (i + 1) + ' not told: ' + r.said); });

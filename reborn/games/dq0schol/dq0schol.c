@@ -298,7 +298,7 @@ static unsigned char __fastcall__ clue_io (unsigned char i, unsigned char wr)
     int fd;
     unsigned char ok = 0;
 
-    if ((fd = open (in_ (top, CLUES_FILE), wr ? O_RDWR : O_RDONLY)) >= 0) {
+    if ((fd = open (in_ (top, CLUE_FILE), wr ? O_RDWR : O_RDONLY)) >= 0) {
         lseek (fd, (long) crec[i] * CLUE_SIZE, SEEK_SET);
         ok = wr ? write (fd, &K, CLUE_SIZE) == CLUE_SIZE : read (fd, &K, CLUE_SIZE) == CLUE_SIZE;
         close (fd);
@@ -331,7 +331,7 @@ static void clues_read (void)
     unsigned char h, k;
 
     ncl = 0;
-    if ((fd = open (in_ (top, CLUES_FILE), O_RDONLY)) < 0) {
+    if ((fd = open (in_ (top, CLUE_FILE), O_RDONLY)) < 0) {
         return;
     }
     for (r = 0; read (fd, &K, CLUE_SIZE) == CLUE_SIZE; ++r) {

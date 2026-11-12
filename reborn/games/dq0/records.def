@@ -1,16 +1,19 @@
 # records.def - Dingus Quest Zero's records in a save's folder that its programs between dungeons pass to each other,
 # declared once (ENGINE-CRITIQUE.md's sections 2 and 9, step 11; DECISIONS.md's "The meta programs' library, their
 # state record, one theme compiler").  Read by the build (games/dq0/hubgen.js), which writes from it obj/gen/dq0rec.h
-# (each record's struct, its file's name, its magic and version: the C's #include "dq0rec.h") and each record's layout
+# (each record's struct, its file's name, its magic and version: the C's #include "dq0rec.h", life.h's) and each record's layout
 # and fields in obj/gen/dq0hub.json (the tests' decoder: hubgen's load ().record (NAME, BYTES)).
 #
 #   define NAME VALUE                   a number the records want (a #define in dq0rec.h)
 #   record NAME "FILE" MAGIC VERSION    a record: struct NAME, in the save's folder's FILE; NAME_FILE, NAME_MAGIC and
 #                                       NAME_VER (upper case) its #defines; its first two fields its magic and its
 #                                       version, a record of another magic or version none (read as if it weren't there)
+#   record NAME "FILE"                  a file of NAME records one after another, no head (no magic, no version)
+#   struct NAME                         a struct of no file of its own, a record's field's type (declared before it)
 #     TYPE FIELD[DIM]...  WHAT          a field, indented: a C type (char, signed char, unsigned char, unsigned, int,
-#                                       unsigned long, long), its name and dimensions (a number or a NAME defined),
-#                                       what it is (the header's comment)
+#                                       unsigned long, long, or "struct NAME", a struct's declared above), its name
+#                                       and dimensions (a number or a NAME defined), what it is (the header's comment);
+#                                       a record's first field may be a struct whose first two are its magic and version
 #     # WORDS                           a comment of the header's, before the fields after it
 
 define BETWEEN_LEARNT   2               # What masters teach in a town's stay, at most: a month each
@@ -49,3 +52,95 @@ record between "between.dat" 0x5442 1
     char            study[10]                   # The script studied in the library ("" none): practised first
     char            learnt[BETWEEN_LEARNT][16]  # What a master opened, as the referee's store has it ("*delvic=81",
                                                 #   "sindarin=11"): the account's to put on the sheet ("" none)
+
+# ---- The record of a life (DUNGEON.md's a character's life; the plan for the game between dungeons, its step 3)
+
+define LIFE_DUNGEONS    64              # The dungeons a life's record has room for (one past the last not recorded)
+define LF_BETWEEN       0x01            # (The head's flags) the time between yet to be told (dq0acct's): dq0life runs it again
+define LF_OVER          0x02            # The life's over: dead, in hard mode's dungeon or between two; the next start's a new life
+define LF_ABROAD        0x04            #   dead between two dungeons (dq0acct's), of its wounds' rolls
+define LF_HARD          0x08            # Hard mode's life: its dungeon's save said so as it ended, the next's kept so (the UI's)
+define LD_DIED          0x01            # (A dungeon's flags: it died in it, hard mode's; its outcome still LO_SOLVED if it was, Q2's)
+
+# The head of life.dat, 32 bytes: all the UI reads of it (as a game starts), and the referee (the character's age)
+struct life_head
+    unsigned        magic                       # LIFE_MAGIC
+    unsigned char   version                     # LIFE_VER
+    unsigned char   flags                       # LF_*
+    unsigned long   seed                        # The life's: dungeon n's comes from it and n (dq0life's)
+    unsigned long   dseed                       # This dungeon's (its record's too: the UI reads only the head)
+    unsigned        dungeon                     # Which it's in: 1 on, its folder d1 ...
+    unsigned long   date                        # The day this dungeon began (LIFE_YEAR's and the like's): the game's
+                                                #   clock starts afresh in each; the hour's its seed's, as ever (dq0d's s_hour)
+    unsigned        born                        # The year the character was born, its birthday its sheet's (harn.h's
+                                                #   HARN_BD: month and day, no year; Character 3 leaves the year to the GM)
+    int             reputation                  # The standing: what solving earns (the theme's reward line, dq0acct's:
+                                                #   the plan's step 7), told in the account and the life's
+    unsigned        clues                       # (The clues' offset in the file, 0 none: the plan's step 10)
+    unsigned        thread                      # (The thread's, 0 none: the plan's step 15)
+    unsigned char   fast                        # A vow of fasting carried into this dungeon (the user's, 2026-11-11): its
+                                                #   end in FAST_STEPs after the midnight that begins date (0 none; 120 at
+                                                #   most), dq0life's from the last dungeon's save as it ended, gone as the
+                                                #   days between pass it; the UI's as the dungeon begins
+    unsigned char   room[5]
+
+# A dungeon's line in the record (0 past the last dungeon)
+struct life_dungeon
+    unsigned long   seed                        # Its seed
+    unsigned        days                        # The whole days it took, by the game's clock: set as the next begins
+    unsigned char   outcome                     # LO_* (life.h's): set as the next begins, or (hard mode) as it dies in it
+    unsigned char   flags                       # LD_*
+
+# The record of a life: life.dat, a small file at the top of the save's folder (dq0 -d; life.h has the folder's other
+# files), read only as a game starts, by the UI (its head) and by dq0life (all of it), and by the account (dq0acct), the
+# town (dq0town), the scholar's house (dq0schol) and the life's account (dq0end); no main RAM during play.  The head, then
+# LIFE_DUNGEONS lines of 8 (a dungeon past the last not recorded): 544 bytes, whatever's been done.  What later steps
+# add (the clues, the thread) goes after it, each found by its offset in the head (0: none), so nothing here moves.
+# lives.dat: the lives over in the folder, each this record as it ended, one after another (dq0life's).
+record life "life.dat" 0x464C 1
+    struct life_head    h                       # (Its magic and version its head's)
+    struct life_dungeon d[LIFE_DUNGEONS]        # (Dungeon n's: d[n - 1])
+
+# ---- The clues (the plan for the game between dungeons, its steps 9 and 10)
+
+define CLUE_SIZE        448             # A clue's record's bytes (life.h holds struct clue to it)
+define CLUE_WORDS       342             # What it says: the record's bytes less its other fields' 106
+define CL_MORE          0x80            # (state's) a critical success's reading: more told
+define CA_FOLKLORE      0x01            # (asked's: the other skills asked of it, once each)
+define CA_MATHS         0x02
+define CA_STARS         0x04
+define CA_HERALDRY      0x08
+define CA_TOLD          0x40            # (A copy sold on, its talk told)
+define CA_SOLD          0x80            # (A copy sold on by a dishonest scribe: talk in the street, nothing more yet)
+
+# Each writing of a dungeon's theme (a kind of its own with a read rule): a record in clues.dat, one after another, no
+# head.  In the dungeon's folder by its rule (record r its rule r: the UI's, as it's read or copied, and as the dungeon's
+# left alive); at the top of the save's folder, what the life has carried out of its dungeons (dq0life's, as the next
+# begins: those read, those carried or copied; the scholar's house, dq0schol, reads and marks them).  A thing that
+# carries one, an old writing (items.h's KI_WRITING) or a copy (KI_COPY), has its fuel CLUE_HERE | its rule while it's in
+# its own dungeon (CLUE_COPY too, a copy), else its number at the top (from 1): life.h's
+record clue "clues.dat"
+    unsigned char   state                       # life.h's CL_*, CL_MORE
+    unsigned char   dungeon                     # Where it was found (1 ...)
+    unsigned char   rule                        #   its rule there
+    signed char     cond                        # Its condition (the book's, Treasure 8: steps of 5, 2 perfect ... -2
+                                                #   very poor, 4 less rigged)
+    signed char     copy                        # A copy's (by its copier's Drawing; life.h's CLUE_NOCOPY none)
+    unsigned char   work                        # What its place is (theme.h's W_*; its high four bits the wrong
+                                                #   place's land)
+    unsigned char   land                        # Its land (themegen's history.txt's: 0 mountains, hills, forest, marsh,
+                                                #   coast, plain; its high four bits its apparent condition's steps plus
+                                                #   2: a rigged one's told as another's)
+    unsigned char   carried                     # (In the dungeon's file, the record's check, by the game's seed: read.c's;
+                                                #   at the top, dq0life's: carried out on a thing, 1; a copy, 2)
+    char            tongue[9]                   # What it's in (its people's: "" common, ardic)
+    char            script[9]
+    char            thing[14]                   # What it's written on ("grave slab")
+    char            people[16]                  # Who wrote it ("the hill-kings"; "" unknown)
+    char            place[24]                   # The place it names (the one-link clue's: "the Ostmarkan Fells"),
+    char            wrong[24]                   #   and the place a wrong reading names in its stead
+    unsigned char   ago                         # Its era's centuries (10 or more: the book's Ancient, Treasure 8: its
+                                                #   tongue's old form, a dead one, the scholar's)
+    unsigned char   asked                       # (At the top: the other skills asked of it, once each, CA_*; a copy
+                                                #   sold on, and told: the scholar's, the plan's step 12)
+    char            words[CLUE_WORDS]           # What it says (its theme's rule's words)

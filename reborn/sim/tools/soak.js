@@ -169,13 +169,15 @@ function fightLine(r, seen, things, foe, since) {
     'back away ' + r.pick(['n', 's', 'e', 'w']), 'flee', 'look at the ' + foe, 'look at the body', 'take the closest']);
 }
 
-// The record's head and its dungeons, from an xd's lines since a prompt (life.h's: struct life_head, struct life_dungeon)
+// The record's head and its dungeons, from an xd's lines since a prompt (records.def's struct life, the build's decoder:
+// hubgen.js's record; a record cut short its dungeons' lines past it 0)
+const LIFE = { get C () { return require('../../games/dq0/hubgen.js').load().C; } };   // (Its flags, its outcomes: the headers')
 function lifeRecord(text) {
-  const b = [];
+  const b = [], H = require('../../games/dq0/hubgen.js').load(), size = H.size('life');
   for (const m of text.matchAll(/^\s*[0-9A-Fa-f]{4,8}:?((?: +[0-9A-Fa-f]{2}){1,16})/gm)) for (const x of m[1].trim().split(/ +/)) b.push(parseInt(x, 16));
-  if (b.length < 32) return null;
-  const u16 = o => b[o] | b[o + 1] << 8, u32 = o => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0;
-  return { magic: u16(0), flags: b[3], seed: u32(4), dseed: u32(8), dungeon: u16(12), date: u32(14), out: n => b[32 + (n - 1) * 8 + 6] };
+  if (b.length < H.size('life_head')) return null;
+  const { h, d } = H.record('life', Buffer.concat([Buffer.from(b.slice(0, size)), Buffer.alloc(Math.max(0, size - b.length))]));
+  return { magic: h.magic, flags: h.flags, seed: h.seed, dseed: h.dseed, dungeon: h.dungeon, date: h.date, out: n => d[n - 1] && d[n - 1].outcome };
 }
 
 // A game played again by another machine (-same: another power-up's RAM, so other timings between the tasks) with the same commands and
@@ -275,19 +277,19 @@ function driven(s, turns, verbose, o) {
     if (rc && !inGame) {                        // (The record read, after a game: judged by how the game ended)
       if (o.life) {
         const rec = lifeRecord(strip(m.out.slice(m.lifeFrom || 0)));
-        if (!rec || rec.magic !== 0x464C) problems.push('no record to read after dungeon ' + ends.length + ': ' + since.slice(-120));
+        if (!rec || rec.magic !== LIFE.C.LIFE_MAGIC) problems.push('no record to read after dungeon ' + ends.length + ': ' + since.slice(-120));
         else {
           tally.most = Math.max(tally.most, rec.dungeon);
           const end = ends[ends.length - 1];
           if (expect && expect(rec)) problems.push('the record: ' + expect(rec) + ', after ' + ends.slice(-2).join(', then ') + ' (dungeon ' + rec.dungeon + ', flags ' + rec.flags + ', date ' + rec.date + ')');
           const prev = rec;
-          expect = end === 'left' ? (n => { if (n.out(prev.dungeon) === 1 && !prev.counted) { prev.counted = true; tally.solved++; tally.left--; } return n.flags & 2 ? '' : n.dungeon !== prev.dungeon + 1 ? 'left dungeon ' + prev.dungeon + ', now in ' + n.dungeon : n.date <= prev.date ? 'its date not on' : n.out(prev.dungeon) === 0 ? 'its dungeon\'s end not recorded' : ''; })
+          expect = end === 'left' ? (n => { if (n.out(prev.dungeon) === LIFE.C.LO_SOLVED && !prev.counted) { prev.counted = true; tally.solved++; tally.left--; } return n.flags & LIFE.C.LF_OVER ? '' : n.dungeon !== prev.dungeon + 1 ? 'left dungeon ' + prev.dungeon + ', now in ' + n.dungeon : n.date <= prev.date ? 'its date not on' : n.out(prev.dungeon) === LIFE.C.LO_NONE ? 'its dungeon\'s end not recorded' : ''; })
             : end === 'quit' ? (n => n.dungeon !== prev.dungeon || n.date !== prev.date ? 'quit, and gone on elsewhere: dungeon ' + prev.dungeon + ' to ' + n.dungeon : '')
               : null;
           if (ends.length >= NDUNGEONS) { done = true; typed.push('echo soaked'); return 'echo soaked'; }
-          if (end === 'died' && !!hard !== !!(rec.flags & 2)) problems.push('the record after a death' + (hard ? ' in hard mode: its life not over' : ': its life over, with a save to go back to'));
-          if (end === 'abroad' && !(rec.flags & 2)) problems.push('the record after a death between dungeons: its life not over');
-          if (rec.flags & 2) { tally.lives++; who = ''; expect = n => n.dungeon !== 1 ? 'a life over, and the next not begun at dungeon 1' : ''; pending.push(begin()); }
+          if (end === 'died' && !!hard !== !!(rec.flags & LIFE.C.LF_OVER)) problems.push('the record after a death' + (hard ? ' in hard mode: its life not over' : ': its life over, with a save to go back to'));
+          if (end === 'abroad' && !(rec.flags & LIFE.C.LF_OVER)) problems.push('the record after a death between dungeons: its life not over');
+          if (rec.flags & LIFE.C.LF_OVER) { tally.lives++; who = ''; expect = n => n.dungeon !== 1 ? 'a life over, and the next not begun at dungeon 1' : ''; pending.push(begin()); }
           else if (end === 'died' && rec.dungeon === 1) { who = ''; pending.push(begin()); }   // (Its first dungeon, maybe nothing kept yet: a new life then, its character to say)
           else {
             if (end === 'left' && r.chance(0.3))   // (Wounds carried out, a scene's: the time between's healing, a death of them among its rolls: dq0account's lines)

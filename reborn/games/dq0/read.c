@@ -65,7 +65,7 @@ static int __fastcall__ here_at (unsigned char n, unsigned char wr)
     } else {
         strcpy (path, "/ram");
     }
-    strcat (path, "/" CLUES_FILE);
+    strcat (path, "/" CLUE_FILE);
     if ((fd = open (path, wr ? O_RDWR | O_CREAT : O_RDONLY, 0644)) >= 0) {
         lseek (fd, (unsigned) n * CLUE_SIZE, SEEK_SET);
     }
@@ -333,7 +333,7 @@ static int __fastcall__ clues_at (unsigned char top, unsigned n, unsigned char w
     } else {
         strcpy (path, "/ram");
     }
-    strcat (path, "/" CLUES_FILE);
+    strcat (path, "/" CLUE_FILE);
     if ((fd = open (path, wr ? O_RDWR | O_CREAT : O_RDONLY, 0644)) >= 0) {
         lseek (fd, (unsigned) n * CLUE_SIZE, SEEK_SET);
     }

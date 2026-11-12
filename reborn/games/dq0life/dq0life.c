@@ -256,10 +256,10 @@ static void __fastcall__ clues_out (unsigned n)
 
     remove (in_ (top, "heard.txt"));          /* (The last time's rumour, heard then: a new one only of a clue read now) */
     dungeon_dir (n);
-    if ((fd = open (in_ (dir, CLUES_FILE), O_RDONLY)) < 0) {
+    if ((fd = open (in_ (dir, CLUE_FILE), O_RDONLY)) < 0) {
         return;
     }
-    if ((tf = open (in_ (top, CLUES_FILE), O_RDWR | O_CREAT, 0644)) < 0) {
+    if ((tf = open (in_ (top, CLUE_FILE), O_RDWR | O_CREAT, 0644)) < 0) {
         close (fd);
         return;
     }
@@ -394,7 +394,7 @@ int main (int argc, char* argv[])
             close (fd);
         }
         remove (in_ (top, "kit0.dat"));
-        remove (in_ (top, CLUES_FILE));         /* (The clues and the rumour of the life that's over) */
+        remove (in_ (top, CLUE_FILE));         /* (The clues and the rumour of the life that's over) */
         remove (in_ (top, "heard.txt"));
         remove (in_ (top, "quest.txt"));        /* (A rumour followed by the life that's over) */
         if (!given) {

@@ -11,7 +11,7 @@
 **     lives.dat        the lives over in this folder: each one's record as it ended
 **     rumours.txt      the rumours heard between two dungeons (themegen -r's, dq0life runs it: part-written themes, each begun by its
 **                      rumour line; a real game's life alone, its seed 65,536 or more)
-**     clues.dat        the clues the life has carried out of its dungeons (struct clue, below: dq0life's; each dungeon's own
+**     clues.dat        the clues the life has carried out of its dungeons (records.def's struct clue: dq0life's; each dungeon's own
 **                      in its folder, the UI's)
 **     heard.txt        the rumour a clue read makes (dq0life's: a part-written theme begun by its rumour line, the plan's
 **                      step 10; the rumours between dungeons, step 7's, tell it first)
@@ -19,18 +19,15 @@
 **     d1, d2 ...       each dungeon's own folder (game.dat, world.dat, theme.txt, quest.txt, the change records ...), all of them
 **                      kept; the hub's savedir, in the game, is the dungeon's
 **
-** The file: the head, 32 bytes, then LIFE_DUNGEONS records of 8 (all 0 past the last dungeon; a dungeon past the last record
-** not recorded), 544 bytes in all, whatever's been done.  What later steps add (the clues, the thread) goes after that, each
-** found by its offset in the head (0: none), so nothing here moves.
+** The record itself (struct life: its head, struct life_head, and its dungeons' lines, struct life_dungeon; LIFE_FILE,
+** LIFE_MAGIC, LIFE_VER, LIFE_DUNGEONS, the flags LF_* and LD_*) is declared in records.def, with the other records the
+** programs between dungeons pass to each other: the build's obj/gen/dq0rec.h, included here.
 */
 
 #ifndef _LIFE_H
 #define _LIFE_H
 
-#define LIFE_FILE       "life.dat"
-#define LIFE_MAGIC      0x464C                  /* "LF" */
-#define LIFE_VER        1
-#define LIFE_DUNGEONS   64
+#include "dq0rec.h"                             /* (struct life, life.dat's: records.def's) */
 
 enum { LO_NONE, LO_SOLVED, LO_LEFT, LO_DIED };  /* (A dungeon's outcome: not over yet; the three ends) */
 
@@ -64,91 +61,16 @@ struct save {
 #define FAST_STEP       7200UL                  /* (A vow of fasting's time kept in steps of 12 minutes, the clock's tenths:
                                                 **   a day's vow 120 of them, in a byte, save's plain and the head's fast) */
 
-#define LF_BETWEEN      0x01                   /* (The record's flags: the time between yet to be told, dq0acct's, the next dungeon's seed and
-                                                **   folder not begun: dq0life runs it again if it's found so) */
-#define LF_OVER         0x02                    /* The life's over: dead, in hard mode's dungeon or between two; the next start's a new life */
-#define LF_ABROAD       0x04                    /*   dead between two dungeons (dq0acct's), of its wounds' rolls */
-#define LF_HARD         0x08                    /* Hard mode's life: its dungeon's save said so as it ended, the next's kept so (the UI's) */
-#define LD_DIED         0x01                    /* (A dungeon's: it died in it, hard mode's; its outcome still LO_SOLVED if it was, Q2's) */
-
-struct life_head {
-    unsigned        magic;
-    unsigned char   version;
-    unsigned char   flags;                      /* LF_* */
-    unsigned long   seed;                       /* The life's: dungeon n's comes from it and n (dq0life's) */
-    unsigned long   dseed;                      /* This dungeon's (its record's too: the UI reads only the head) */
-    unsigned        dungeon;                    /* Which it's in: 1 on, its folder d1 ... */
-    unsigned long   date;                       /* The day this dungeon began (LIFE_YEAR's and the like's): the game's clock
-                                                **   starts afresh in each; the hour's its seed's, as ever (dq0d's s_hour) */
-    unsigned        born;                       /* The year the character was born, its birthday its sheet's (harn.h's
-                                                **   HARN_BD: month and day, no year; Character 3 leaves the year to the GM) */
-    int             reputation;                 /* The standing: what solving earns (the theme's reward line, dq0acct's:
-                                                **   the plan's step 7), told in the account and the life's */
-    unsigned        clues, thread;              /* (Their offsets in the file, 0 none: the plan's steps 10, 15) */
-    unsigned char   fast;                       /* A vow of fasting carried into this dungeon (the user's, 2026-11-11): its
-                                                **   end in FAST_STEPs after the midnight that begins date (0 none; 120 at
-                                                **   most), dq0life's from the last dungeon's save as it ended, gone as
-                                                **   the days between pass it; the UI's as the dungeon begins */
-    unsigned char   room[5];
-};
-
-struct life_dungeon {
-    unsigned long   seed;                       /* Its seed */
-    unsigned        days;                       /* The whole days it took, by the game's clock: set as the next begins */
-    unsigned char   outcome;                    /* LO_*: set as the next begins, or (hard mode) as it dies in it */
-    unsigned char   flags;                      /* LD_* */
-};
-
-struct life {
-    struct life_head    h;
-    struct life_dungeon d[LIFE_DUNGEONS];       /* (Dungeon n's: d[n - 1]) */
-};
-
-/* The clues (the plan for the game between dungeons, its steps 9 and 10): each writing of a dungeon's theme (a kind of its own with a
-** read rule), a record of CLUE_SIZE bytes in clues.dat, the dungeon's folder's by its rule (record r its rule r: the UI's, as it's
-** read or copied, and as the dungeon's left alive); at the top of the save's folder, one after another, what the life has carried out
-** of its dungeons (dq0life's, as the next begins: those read, those carried or copied).  A thing that carries one: an old writing
-** (items.h's KI_WRITING), a copy (KI_COPY), its fuel CLUE_HERE | its rule while it's in its own dungeon (CLUE_COPY too, a copy),
-** else its number at the top (from 1) */
-#define CLUES_FILE      "clues.dat"
-#define CLUE_SIZE       448
+/* The clues (the plan for the game between dungeons, its steps 9 and 10): struct clue, clues.dat's records, CLUE_SIZE bytes each
+** (CLUE_FILE, CLUE_WORDS, CL_MORE, CA_*), is records.def's (dq0rec.h).  A thing that carries one, an old writing (items.h's
+** KI_WRITING) or a copy (KI_COPY): its fuel CLUE_HERE | its rule while it's in its own dungeon (CLUE_COPY too, a copy), else
+** its number at the top of the save's folder (from 1) */
 #define CLUE_HERE       0x8000
 #define CLUE_COPY       0x4000
 #define CLUE_NOCOPY     (-128)                  /* (copy's: none made) */
-enum { CL_NONE, CL_UNREAD, CL_RIGHT, CL_PIECE, CL_WRONG };      /* (How it's been read: no record; not read; the three grades'
-                                                **   words: a success's, a failure's, a critical failure's; a critical
-                                                **   success's the right one and CL_MORE) */
-#define CL_MORE         0x80
-struct clue {
-    unsigned char   state;                      /* CL_*, CL_MORE */
-    unsigned char   dungeon;                    /* Where it was found (1 ...) */
-    unsigned char   rule;                       /*   its rule there */
-    signed char     cond, copy;                 /* Its condition (the book's, Treasure 8: steps of 5, 2 perfect ... -2
-                                                **   very poor, 4 less rigged), and a copy's (by its copier's Drawing;
-                                                **   CLUE_NOCOPY none) */
-    unsigned char   work, land;                 /* What its place is (theme.h's W_*; its high four bits the wrong place's
-                                                **   land), its land (themegen's history.txt's: 0 mountains, hills,
-                                                **   forest, marsh, coast, plain; its high four bits its apparent
-                                                **   condition's steps plus 2: a rigged one's told as another's) */
-    unsigned char   carried;                    /* (In the dungeon's file, the record's check, by the game's seed: read.c's;
-                                                **   at the top, dq0life's: carried out on a thing, 1; a copy, 2) */
-    char            tongue[9], script[9];       /* What it's in (its people's: "" common, ardic) */
-    char            thing[14];                  /* What it's written on ("grave slab") */
-    char            people[16];                 /* Who wrote it ("the hill-kings"; "" unknown) */
-    char            place[24];                  /* The place it names (the one-link clue's: "the Ostmarkan Fells"), */
-    char            wrong[24];                  /*   and the place a wrong reading names in its stead */
-    unsigned char   ago;                        /* Its era's centuries (10 or more: the book's Ancient, Treasure 8: its
-                                                **   tongue's old form, a dead one, the scholar's) */
-    unsigned char   asked;                      /* (At the top: the other skills asked of it, once each, CA_*; a copy sold
-                                                **   on, and told: the scholar's, the plan's step 12) */
-    char            words[CLUE_SIZE - 106];     /* What it says (its theme's rule's words) */
-};
-#define CA_FOLKLORE     0x01
-#define CA_MATHS        0x02
-#define CA_STARS        0x04
-#define CA_HERALDRY     0x08
-#define CA_TOLD         0x40                    /* (A copy sold on, its talk told) */
-#define CA_SOLD         0x80                    /* (A copy sold on by a dishonest scribe: talk in the street, nothing more yet) */
+enum { CL_NONE, CL_UNREAD, CL_RIGHT, CL_PIECE, CL_WRONG };      /* (How it's been read, its state: no record; not read; the
+                                                **   three grades' words: a success's, a failure's, a critical failure's;
+                                                **   a critical success's the right one and CL_MORE) */
 typedef char clue_fits[sizeof (struct clue) == CLUE_SIZE ? 1 : -1];
 
 #define LIVES_FILE      "lives.dat"             /* (The lives over in this folder, each record as it ended, one after another: dq0life's, as a

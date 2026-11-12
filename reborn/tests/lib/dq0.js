@@ -101,6 +101,13 @@ function saidTheme(out, cmd) {
   return at < 0 ? '' : o.slice(at + cmd.length + 3, end < 0 ? undefined : end + 1);
 }
 const DQ0_MAKE = () => require('../../games/dq0/make.js');
+// A life's record (life.dat: records.def's struct life) from its bytes (xdBytes'): the build's decoder's { h: its head's
+// fields, d: [each dungeon's], ok: its magic and version }, or null short of the record; dq0Life.size () its bytes,
+// dq0Life.C (NAME) a number of the headers' (records.def's LF_*, LD_*; life.h's LO_*)
+const dq0Hub = () => require('../../games/dq0/hubgen.js').load();
+function dq0Life(b) { const H = dq0Hub(); return b.length >= H.size('life') ? H.record('life', b) : null; }
+dq0Life.size = () => dq0Hub().size('life');
+dq0Life.C = name => { const v = dq0Hub().C[name]; if (v === undefined) throw new Error('dq0Life.C: no ' + name); return v; };
 // A theme's text compiled and checked by the game's one theme compiler, themec, in the emulator (tools/themec.js): each
 // of themes ({ name, text }) its { status, said, data, words }
 const THEMEC = themes => require('../../tools/themec.js').compile(themes);
@@ -884,7 +891,7 @@ const WORN = ['inventory', 'wear the ring on my left hand', 'wear the ring on my
 
 module.exports = {
   CHUNK_SIZE, CK_TILE, CK_ROOM, T_ROCK, T_FLOOR, T_WALL, T_CORR, T_WINDOW, cacheBanks, cacheChunks, caveReport,
-  PK_PORTCULLIS, T_DOOR, T_STEPS, xdBytes, saidTheme, DQ0_MAKE, THEMEC, builtChunks, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N,
+  PK_PORTCULLIS, T_DOOR, T_STEPS, xdBytes, saidTheme, DQ0_MAKE, dq0Life, THEMEC, builtChunks, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N,
   CSLOT_AT, liveChunks, O_WAY_OUT, O_NOWHERE, stratumRec, dq0Made, chunkDiff, dq0StatusRows, dq0Story, inTurn,
   DQ0_REPEATS, dq0Answers, dq0Repeats, dq0Doubled, dq0Lost, dq0Check, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need,
   dq0Never, dq0Carried, dq0Here, dq0Named, dq0Thing, dq0Holder, dq0View, DQ0_I, passings, dq0TypedAsk, dq0Typed,

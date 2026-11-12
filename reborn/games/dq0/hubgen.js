@@ -14,8 +14,8 @@
 //     dq0w's, dq0d's, dq0s's), sim/lib's recorder and writers' check, tests.js's offsets (hubown.evaluate) and the
 //     command tools (commandwords.js) use it;
 //   - obj/gen/dq0rec.h: the save folder's records the programs between dungeons pass to each other (records.def: each
-//     one's struct, its file, its magic and version), their layouts in dq0hub.json too (load ().record: the tests'
-//     decoder);
+//     one's struct, its file, its magic and version: between.dat, life.dat, clues.dat; the structs they're made of),
+//     their layouts in dq0hub.json too (load ().record: the tests' decoder);
 //   - obj/gen/dq0hub_NAME.inc: an assembly file's names (ASM below: each consumer the names it uses, each a number
 //     of the headers', a field's offset or a size), .included where its hand-typed copies were.
 // The values come from cc65 itself: a C file of `const long vN = (long) (EXPR);`, one for each name, field and size,
@@ -583,10 +583,17 @@ function generate(opt) {
 }
 
 // ---- records.def read: { defines: [{ name, value, what }], records: [{ name, file, magic, version, what: [its
-// comment's lines], fields: [{ type, name, dims (the C's: "[16]"), what: [lines], before: [a comment's lines] }] }] }
+// comment's lines], fields: [{ type, name, dims (the C's: "[16]"), what: [lines], before: [a comment's lines] }] }] }:
+// a record's and a struct's both, in the file's order (a struct's file null), a field's type a struct's ("struct
+// life_head") only one declared before it
 function recordsRead(text) {
   const defines = [], records = [], TYPES = ['char', 'signed char', 'unsigned char', 'unsigned', 'int', 'unsigned long', 'long'];
   let rec = null, field = null, note = [], what = [];
+  const head = r => {                                          // (A record's head: its first two fields its magic and
+    const f = r.fields;                                        //   version, or its first a struct's whose are)
+    if (f.length && f[0].type.startsWith('struct ')) return head(records.find(x => 'struct ' + x.name === f[0].type));
+    return f.length >= 2 && f[0].name === 'magic' && f[1].name === 'version';
+  };
   text.split(/\r?\n/).forEach((raw, i) => {
     const at = 'records.def:' + (i + 1) + ': ', c = raw.indexOf('#'), body = (c < 0 ? raw : raw.slice(0, c)).trim();
     const com = c < 0 ? '' : raw.slice(c + 1).trim();
@@ -603,19 +610,22 @@ function recordsRead(text) {
       rec = null; what = [];
       return;
     }
-    if ((m = body.match(/^record\s+([a-z]\w*)\s+"([^"]+)"\s+(0x[0-9A-Fa-f]+|\d+)\s+(\d+)$/))) {
-      records.push(rec = { name: m[1], file: m[2], magic: Number(m[3]), version: +m[4], what, fields: [] });
+    if ((m = body.match(/^record\s+([a-z]\w*)\s+"([^"]+)"(?:\s+(0x[0-9A-Fa-f]+|\d+)\s+(\d+))?$/)) || (m = body.match(/^struct\s+([a-z]\w*)$/))) {
+      if (rec && rec.magic !== null && !head(rec)) throw new Error('hubgen: records.def: ' + rec.name + '\'s first fields not its magic and its version');
+      if (records.some(r => r.name === m[1])) throw new Error('hubgen: ' + at + m[1] + ' declared twice');
+      records.push(rec = { name: m[1], file: m[2] || null, magic: m[3] ? Number(m[3]) : null, version: m[3] ? +m[4] : null, what, fields: [] });
       what = []; field = null; note = [];
       return;
     }
-    if (!rec || !/^\s/.test(raw)) throw new Error('hubgen: ' + at + raw.trim() + ': a define, a record or a field?');
-    m = body.match(/^((?:(?:un)?signed\s+)?(?:char|long|int)|unsigned)\s+([a-z_]\w*)((?:\[(?:\d+|[A-Z_]\w*)\])*)$/);
-    if (!m || !TYPES.includes(m[1].replace(/\s+/g, ' '))) throw new Error('hubgen: ' + at + raw.trim() + ': a field (a type, a name, its dimensions)?');
-    if ((!rec.fields.length && m[2] !== 'magic') || (rec.fields.length === 1 && m[2] !== 'version'))
-      throw new Error('hubgen: ' + at + rec.name + '\'s first fields not its magic and its version');
-    rec.fields.push(field = { type: m[1].replace(/\s+/g, ' '), name: m[2], dims: m[3], what: com ? [com] : [], before: note });
+    if (!rec || !/^\s/.test(raw)) throw new Error('hubgen: ' + at + raw.trim() + ': a define, a record, a struct or a field?');
+    m = body.match(/^((?:(?:un)?signed\s+)?(?:char|long|int)|unsigned|struct\s+[a-z]\w*)\s+([a-z_]\w*)((?:\[(?:\d+|[A-Z_]\w*)\])*)$/);
+    const type = m && m[1].replace(/\s+/g, ' ');
+    if (!m || !(TYPES.includes(type) || records.some(r => !r.file && 'struct ' + r.name === type)))
+      throw new Error('hubgen: ' + at + raw.trim() + ': a field (a type, or a struct declared before it; a name, its dimensions)?');
+    rec.fields.push(field = { type, name: m[2], dims: m[3], what: com ? [com] : [], before: note });
     note = [];
   });
+  if (rec && rec.magic !== null && !head(rec)) throw new Error('hubgen: records.def: ' + rec.name + '\'s first fields not its magic and its version');
   return { defines, records };
 }
 
@@ -629,8 +639,9 @@ function recordsHeader({ defines, records }) {
     const up = r.name.toUpperCase();
     L.push('');
     if (r.what.length) L.push('/* ' + r.what.join('\r\n** ') + ' */');
-    L.push(pad('#define ' + up + '_FILE', 32) + '"' + r.file + '"', pad('#define ' + up + '_MAGIC', 32) + '0x' + r.magic.toString(16).toUpperCase(),
-      pad('#define ' + up + '_VER', 32) + r.version, 'struct ' + r.name + ' {');
+    if (r.file) L.push(pad('#define ' + up + '_FILE', 32) + '"' + r.file + '"');
+    if (r.magic !== null) L.push(pad('#define ' + up + '_MAGIC', 32) + '0x' + r.magic.toString(16).toUpperCase(), pad('#define ' + up + '_VER', 32) + r.version);
+    L.push('struct ' + r.name + ' {');
     for (const f of r.fields) {
       for (const n of f.before) L.push('    /* ' + n + ' */');
       L.push(pad('    ' + pad(f.type, 16) + f.name + f.dims + ';', 48) + (f.what.length ? '/* ' + f.what.join(' ') + ' */' : '').trimEnd());
@@ -697,24 +708,35 @@ function wrap(j) {
     // A save folder's record (records.def's): record (NAME, BYTES, O) the record at BYTES[O] as { field: value } (a char
     // array's its string, to its first 0, an array of them its strings; another array its numbers; a signed type's
     // signed), and ok: whether its magic and version are its record's
+    // A field of a struct of records.def's its own { field: value } (an array of them, its objects), and a record's
+    // magic and version, ok's, its head's if its first field is a struct (life's h)
     record: (name, b, o = 0) => {
       const r = j.records && j.records[name];
-      if (!r) throw new Error('dq0hub: no record ' + name);
+      if (!r || !r.file) throw new Error('dq0hub: no record ' + name);
       const num = (at, n, sg) => {
         let v = 0;
-        for (let i = n - 1; i >= 0; i--) v = v * 256 + b[o + at + i];
+        for (let i = n - 1; i >= 0; i--) v = v * 256 + b[at + i];
         return sg && v >= 2 ** (8 * n - 1) ? v - 2 ** (8 * n) : v;
       };
-      const str = (at, n) => { let s = ''; for (let i = 0; i < n && b[o + at + i]; i++) s += String.fromCharCode(b[o + at + i]); return s; };
-      const out = {};
-      for (const [f, type] of r.fields) {
-        const [at, size, ...dims] = j.S[name].f[f], sg = !/unsigned/.test(type) && type !== 'char';
-        const each = (a, n, d) => Array.from({ length: n / d[0] }, (_, i) =>   // (An array's elements: each its own
-          d.length > 1 ? each(a + i * d[0], d[0], d.slice(1)) : type === 'char' ? str(a + i * d[0], d[0]) : num(a + i * d[0], d[0], sg));   //   array's, or
-        out[f] = !dims.length ? num(at, size, sg) : type === 'char' ? (dims.length === 1 ? str(at, size) : each(at, size, dims.slice(0, -1)))   //   its
-          : each(at, size, dims);                                                                                                        //   value)
-      }
-      out.ok = out.magic === r.magic && out.version === r.version;
+      const str = (at, n) => { let s = ''; for (let i = 0; i < n && b[at + i]; i++) s += String.fromCharCode(b[at + i]); return s; };
+      const struct = (s, base) => {
+        const out = {};
+        for (const [f, type] of j.records[s].fields) {
+          const [off, size, ...dims] = j.S[s].f[f], at = base + off, sg = !/unsigned/.test(type) && type !== 'char';
+          const sub = type.startsWith('struct ') && type.slice(7);
+          const one = (a, n) => sub ? struct(sub, a) : num(a, n, sg);
+          const each = (a, n, d) => Array.from({ length: n / d[0] }, (_, i) =>   // (An array's elements: each its own
+            d.length > 1 ? each(a + i * d[0], d[0], d.slice(1)) : type === 'char' ? str(a + i * d[0], d[0]) : one(a + i * d[0], d[0]));   //   array's, or
+          out[f] = !dims.length ? one(at, size) : type === 'char' ? (dims.length === 1 ? str(at, size) : each(at, size, dims.slice(0, -1)))   //   its
+            : each(at, size, dims);                                                                                                      //   value)
+        }
+        return out;
+      };
+      const out = struct(name, o);
+      let h = out;
+      if (r.magic === null) return Object.assign(out, { ok: true });   // (A file of records, no head: clues.dat)
+      for (let s = name; j.records[s].fields[0][1].startsWith('struct ');) { h = h[j.records[s].fields[0][0]]; s = j.records[s].fields[0][1].slice(7); }
+      out.ok = h.magic === r.magic && h.version === r.version;
       return out;
     },
     payload: (kind, form) => (form && j.msgs && j.msgs[kind + ':' + form]) || (j.msgs && j.msgs[kind]) || null,
