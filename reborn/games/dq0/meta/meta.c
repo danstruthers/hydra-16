@@ -28,6 +28,11 @@
 **   META_VALUE     value_of (k, key[, n]): rumour k's line of key (rbuf[rat[k]] to rbuf[rto[k]]: the program's), its
 **                  first value (with META_VALUE_N, its n'th), its indented lines joined, into said[]: 1, or 0 none;
 **                  META_TEXT_ON/OFF as above
+**   META_HEARD     heard (name): a rumours' file in the save's folder (top/name: META_PATH's in_) read into rbuf[]
+**                  after what's there (rused; META_RB_N its size, sizeof rbuf unless the program says), each rumour
+**                  in it (a block begun by a rumour line) noted (rat[], rto[], nr: RUMOURS at most; with META_MADE,
+**                  those of rumours.txt counted, nmade); rumours_read (): heard.txt's, then rumours.txt's, afresh;
+**                  META_TEXT_ON/OFF round rbuf's filling
 **   META_LAUNCH    the program launcher, the system's SPAWN and WAIT themselves (hy_spawn's argv wants the heap and
 **                  stdio): META_SPAWN (path, args) a program started, its arguments each 0-ended, an empty one after
 **                  them: its task, or -1; META_JOIN (task) waited for: its status, or -1 (the names meta_spawn,
@@ -243,7 +248,7 @@ META_LINK void __fastcall__ ask (const char* prompt)
 }
 #endif
 
-#if defined META_KEYS || defined META_VALUE
+#if defined META_KEYS || defined META_VALUE || defined META_HEARD
 #ifndef META_TEXT_ON
 #define META_TEXT_ON()
 #define META_TEXT_OFF()
@@ -382,6 +387,56 @@ META_LINK unsigned char __fastcall__ value_of (unsigned char k, const char* key)
     said[m] = 0;
     META_TEXT_OFF ();
     return got;
+}
+#endif
+
+#ifdef META_HEARD
+#ifndef META_RB_N
+#define META_RB_N       (sizeof rbuf)
+#endif
+/* A rumours' file in the save's folder read in after what's there, its rumours (blocks begun by a rumour line) noted while
+** there's room */
+META_LINK void __fastcall__ heard (const char* name)
+{
+    unsigned at = rused, p;
+    int fd, k;
+
+    if ((fd = open (in_ (top, name), O_RDONLY)) < 0) {
+        return;
+    }
+    META_TEXT_ON ();
+    while (rused < META_RB_N - 1 && (k = read (fd, rbuf + rused, META_RB_N - 1 - rused)) > 0) {
+        rused += k;
+    }
+    close (fd);
+    rbuf[rused] = 0;
+    for (p = at; p < rused; ++p) {
+        if ((p == at || rbuf[p - 1] == '\n') && !strncmp (rbuf + p, "rumour", 6) && (rbuf[p + 6] == ' ' || rbuf[p + 6] == '|')) {
+            if (nr && rto[nr - 1] > p) {
+                rto[nr - 1] = p;
+            }
+            if (nr == RUMOURS) {
+                break;
+            }
+            rat[nr] = p;
+            rto[nr++] = rused;
+#ifdef META_MADE
+            nmade += *name == 'r';
+#endif
+        }
+    }
+    META_TEXT_OFF ();
+}
+
+/* The rumours heard read afresh: a clue's (heard.txt) first, then themegen's (rumours.txt) */
+META_LINK void rumours_read (void)
+{
+    rused = nr = 0;
+#ifdef META_MADE
+    nmade = 0;
+#endif
+    heard ("heard.txt");
+    heard ("rumours.txt");
 }
 #endif
 

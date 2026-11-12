@@ -188,47 +188,16 @@ static void __fastcall__ say_one (const char* key)
 static unsigned rused, rat[RUMOURS], rto[RUMOURS];
 static unsigned char nr, nmade;                 /* (How many, and how many of them rumours.txt's) */
 
-static void __fastcall__ heard (const char* name)
-{
-    unsigned at = rused, p;
-    int fd, k;
-
-    if ((fd = open (in_ (top, name), O_RDONLY)) < 0) {
-        return;
-    }
-    WORDS ();
-    while (rused < RB_N - 1 && (k = read (fd, rbuf + rused, RB_N - 1 - rused)) > 0) {
-        rused += k;
-    }
-    close (fd);
-    rbuf[rused] = 0;
-    for (p = at; p < rused; ++p) {
-        if ((p == at || rbuf[p - 1] == '\n') && !strncmp (rbuf + p, "rumour", 6) && (rbuf[p + 6] == ' ' || rbuf[p + 6] == '|')) {
-            if (nr && rto[nr - 1] > p) {
-                rto[nr - 1] = p;
-            }
-            if (nr == RUMOURS) {
-                break;
-            }
-            rat[nr] = p;
-            rto[nr++] = rused;
-            nmade += *name == 'r';
-        }
-    }
-    KINDS ();
-}
-
-static void rumours_read (void)
-{
-    rused = nr = nmade = 0;
-    heard ("heard.txt");
-    heard ("rumours.txt");
-}
-
-/* Rumour k's line of key: its n'th value (its lines joined) into said: 1, or 0 none (the library's) */
+/* The rumours' files read (rumours_read: heard.txt's, then rumours.txt's, those of rumours.txt counted, nmade; rbuf in
+** the words' bank, WORDS () and KINDS () round it), and rumour k's line of key: its n'th value (its lines joined) into
+** said: 1, or 0 none (the library's) */
+#define META_HEARD
+#define META_MADE
+#define META_RB_N       RB_N
 #define META_VALUE
 #define META_VALUE_N
 #include "../dq0/meta/meta.c"
+#undef META_HEARD
 #undef META_VALUE
 
 #pragma code-name (push, "OV1CODE")             /* (The overlay's: dq0town.cfg's OV1, its own bank, the main RAM's room) */

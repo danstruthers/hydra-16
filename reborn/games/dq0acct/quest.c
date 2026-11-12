@@ -237,41 +237,13 @@ static unsigned rused, rat[RUMOURS], rto[RUMOURS];
 static unsigned char nr;
 static char said[480];
 
-/* A file in the save's folder read in after what's there, its rumours (blocks begun by a rumour line) noted while there's room */
-static void __fastcall__ heard (const char* name)
-{
-    unsigned at = rused, p;
-    int k;
-
-    strcpy (path, top);
-    strcat (path, "/");
-    strcat (path, name);
-    if ((fd = open (path, O_RDONLY)) < 0) {
-        return;
-    }
-    while (rused < sizeof rbuf - 1 && (k = read (fd, rbuf + rused, sizeof rbuf - 1 - rused)) > 0) {
-        rused += k;
-    }
-    close (fd);
-    rbuf[rused] = 0;
-    for (p = at; p < rused; ++p) {
-        if ((p == at || rbuf[p - 1] == '\n') && !strncmp (rbuf + p, "rumour", 6) && (rbuf[p + 6] == ' ' || rbuf[p + 6] == '|')) {
-            if (nr && rto[nr - 1] > p) {
-                rto[nr - 1] = p;
-            }
-            if (nr == RUMOURS) {
-                break;
-            }
-            rat[nr] = p;
-            rto[nr++] = rused;
-        }
-    }
-}
-
-/* Rumour k's line of key (value_of (k, key): the first value of it, its lines joined) into said: 1, or 0 none (the meta
-** programs' library's, ../dq0/meta/meta.c) */
+/* The rumours' files read (rumours_read: heard.txt's, then rumours.txt's, each block begun by a rumour line noted while
+** there's room), and rumour k's line of key (value_of (k, key): the first value of it, its lines joined) into said: 1, or
+** 0 none (the meta programs' library's, ../dq0/meta/meta.c) */
+#define META_HEARD
 #define META_VALUE
 #include "../dq0/meta/meta.c"
+#undef META_HEARD
 #undef META_VALUE
 
 /* The rumours told (a clue's first, then themegen's: three at most), one followed (asked: Enter, the tests' dq0auto or anything not
@@ -280,9 +252,7 @@ void o_rumours (void)
 {
     unsigned char k, c;
 
-    rused = nr = 0;
-    heard ("heard.txt");
-    heard ("rumours.txt");
+    rumours_read ();
     if (!nr) {
         say ("Enter to go on");
         ask (ans, sizeof ans);
