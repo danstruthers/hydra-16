@@ -70,7 +70,7 @@ unsigned char o_mended (void);                  /* Nothing worse than minor left
 void o_treat (void);                            /* The physician */
 
 /* skill.c */
-void o_width (void);                            /* The console's width read */
+void width_read (void);                         /* The console's width read (../dq0/meta/meta.c's, in the overlay) */
 unsigned char o_wage (void);                    /* A month's pence */
 void o_tool (void);                             /* A thing it has (ans: its tool's key, 8 its kind, 9 its flags; kind 0 begins): what it can practise with */
 void o_work (void);                             /* The work's words, its bonus practice */

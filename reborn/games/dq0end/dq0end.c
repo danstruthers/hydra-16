@@ -28,23 +28,11 @@ static struct save sv;
 static char path[56], dir[40];
 static const char* top;
 
-static const char* __fastcall__ in_ (const char* folder, const char* name)
-{
-    strcpy (path, folder);
-    strcat (path, "/");
-    strcat (path, name);
-    return path;
-}
-
-static unsigned long __fastcall__ num (const char* s)
-{
-    unsigned long n = 0;
-
-    for (; *s >= '0' && *s <= '9'; ++s) {
-        n = n * 10 + *s - '0';
-    }
-    return n;
-}
+#define META_PATH                               /* (The meta programs' library, ../dq0/meta/meta.c: a path, a number) */
+#define META_NUM
+#include "../dq0/meta/meta.c"
+#undef META_PATH
+#undef META_NUM
 
 static void __fastcall__ dungeon_dir (unsigned n)
 {

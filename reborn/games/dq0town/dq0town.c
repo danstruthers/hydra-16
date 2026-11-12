@@ -68,165 +68,28 @@ static struct townrec tr;
 static char ans[64];
 static unsigned char asks;
 
-static void __fastcall__ fail (const char* why)
-{
-    write (2, "dq0town: ", 9);
-    write (2, why, strlen (why));
-    write (2, "\n", 1);
-    exit (1);
-}
+/* ---- The meta programs' library (../dq0/meta/meta.c): the fault said, a path, the words by the console's width */
 
-static const char* __fastcall__ in_ (const char* folder, const char* name)
-{
-    strcpy (path, folder);
-    strcat (path, "/");
-    strcat (path, name);
-    return path;
-}
-
-/* ---- Words, by the console's width (dq0acct's) */
-
-static unsigned char width = 79, col;
-static char wb[64], ob[128];
-static unsigned char wn, on;
-
-static void out_flush (void)
-{
-    if (on) {
-        write (1, ob, on);
-        on = 0;
-    }
-}
-
-static void __fastcall__ out_c (char c)
-{
-    if (on == sizeof ob) {
-        out_flush ();
-    }
-    ob[on++] = c;
-}
-
-static void word_out (void)
-{
-    unsigned char k;
-
-    if (!wn) {
-        return;
-    }
-    if (col && col + wn + 1 > width) {
-        out_c ('\n');
-        col = 0;
-    } else if (col) {
-        out_c (' ');
-        ++col;
-    }
-    for (k = 0; k < wn; ++k) {
-        out_c (wb[k]);
-    }
-    col += wn;
-    wn = 0;
-}
-
-static void __fastcall__ say (const char* s)
-{
-    for (; *s; ++s) {
-        if (*s == ' ') {
-            word_out ();
-        } else if (*s == '\n') {
-            word_out ();
-            out_c ('\n');
-            col = 0;
-        } else if (wn < sizeof wb) {
-            wb[wn++] = *s;
-        }
-    }
-}
-
-static void __fastcall__ sayn (unsigned long v)
-{
-    char b[12];
-
-    say (ultoa (v, b, 10));
-}
-
-/* An amount, in farthings: "22d", "22d 1f", "3f" */
-static void __fastcall__ amount (unsigned long f)
-{
-    if (f >= PENNY || !f) {
-        sayn (f / PENNY);
-        say ("d");
-    }
-    if (f % PENNY) {
-        if (f >= PENNY) {
-            say (" ");
-        }
-        sayn (f % PENNY);
-        say ("f");
-    }
-}
+#define META_NAME       "dq0town"
+#define META_WB         64
+#define META_OB         128
+#define META_FAIL
+#define META_PATH
+#define META_WORDS
+#include "../dq0/meta/meta.c"
+#undef META_FAIL
+#undef META_PATH
+#undef META_WORDS
 
 #pragma code-name (push, "OV1CODE")             /* (The overlay's: dq0town.cfg's OV1, its own bank, the main RAM's room) */
 #pragma rodata-name (push, "OV1RODATA")
 #pragma bss-name (push, "OV1BSS")
-/* A line typed, lower case, its spaces trimmed (ans): asked on a line of its own, then the game's "> " */
-static void __fastcall__ ask (const char* prompt)
-{
-    int k;
-    char* s;
-
-    say (prompt);
-    say ("\n");
-    out_flush ();
-    write (1, "> ", 2);
-    ans[0] = 0;
-    if ((k = read (0, ans, sizeof ans - 1)) > 0) {
-        ans[k] = 0;
-        ans[strcspn (ans, "\r\n")] = 0;
-    }
-    col = 0;
-    for (s = ans; *s; ++s) {
-        if (*s >= 'A' && *s <= 'Z') {
-            *s |= 0x20;
-        } else if (*s == '\t' || *s == ',' || *s == '.' || *s == '?' || *s == '!') {
-            *s = ' ';
-        }
-    }
-    for (s = ans + strlen (ans); s > ans && s[-1] == ' '; --s) {
-    }
-    *s = 0;
-    for (s = ans; *s == ' '; ++s) {
-    }
-    memmove (ans, s, strlen (s) + 1);
-    ++asks;
-}
-#pragma bss-name (pop)
-#pragma rodata-name (pop)
-#pragma code-name (pop)
-
-#pragma code-name (push, "OV1CODE")             /* (The overlay's: dq0town.cfg's OV1, its own bank, the main RAM's room) */
-#pragma rodata-name (push, "OV1RODATA")
-#pragma bss-name (push, "OV1BSS")
-/* The console's width (dq0acct's o_width) */
-static void width_read (void)
-{
-    static char b[100];
-    char* p;
-    int fd, n = 0;
-
-    if ((fd = open ("/dev/consctl", O_RDONLY)) >= 0) {
-        n = read (fd, b, sizeof b - 1);
-        close (fd);
-    }
-    b[n > 0 ? n : 0] = 0;
-    for (p = b; p; p = strchr (p, '\n')) {
-        if (*p == '\n') {
-            ++p;
-        }
-        if (!strncmp (p, "size ", 5) && atoi (p + 5) >= 40) {
-            width = atoi (p + 5) > 80 ? 79 : atoi (p + 5) - 1;
-        }
-    }
-}
+/* A line typed (ans: lower case, its spaces trimmed); the console's width */
+#define META_ASK
+#define META_WIDTH
+#include "../dq0/meta/meta.c"
+#undef META_ASK
+#undef META_WIDTH
 #pragma bss-name (pop)
 #pragma rodata-name (pop)
 #pragma code-name (pop)
@@ -267,40 +130,14 @@ static char said[360];                          /* (A rumour's value, value_of's
                                                 **   step 12) */
 #define line    said
 
-/* The n'th line of key (0 the first): its values in v (nv of them, their spaces trimmed); 0 none */
-static unsigned char __fastcall__ words_of (const char* key, unsigned char n)
-{
-    unsigned p = 0, e;
-    unsigned char k = strlen (key);
-    char* s;
-
-    WORDS ();
-    for (; p < twn; p = e + 1) {
-        for (e = p; e < twn && tw[e] != '\n'; ++e) {
-        }
-        if (strncmp (tw + p, key, k) || (tw[p + k] != ' ' && tw[p + k] != '|') || n--) {
-            continue;
-        }
-        memcpy (line, tw + p, e - p < sizeof line - 1 ? e - p : sizeof line - 1);
-        KINDS ();
-        line[e - p < sizeof line - 1 ? e - p : sizeof line - 1] = 0;
-        for (nv = 0, s = strchr (line, '|'); s && nv < sizeof v / sizeof v[0]; s = strchr (s, '|')) {
-            *s++ = 0;
-            while (*s == ' ') {
-                ++s;
-            }
-            v[nv++] = s;
-        }
-        for (k = 0; k < nv; ++k) {
-            for (s = v[k] + strlen (v[k]); s > v[k] && (s[-1] == ' ' || s[-1] == '\r'); --s) {
-            }
-            *s = 0;
-        }
-        return nv;
-    }
-    KINDS ();
-    return nv = 0;
-}
+/* The n'th line of key (words_of: its values in v), and town.txt read (words_read): the library's, in the words' bank */
+#define META_TEXT_ON()  WORDS ()
+#define META_TEXT_OFF() KINDS ()
+#define META_LINE       line
+#define META_TEXT_MAX   TW_N
+#define META_KEYS
+#include "../dq0/meta/meta.c"
+#undef META_KEYS
 
 /* A key's lines: how many */
 static unsigned char __fastcall__ lines_of (const char* key)
@@ -385,121 +222,33 @@ static void rumours_read (void)
     heard ("rumours.txt");
 }
 
-/* Rumour k's line of key: its n'th value (its lines joined) into said: 1, or 0 none */
-static unsigned char __fastcall__ value_of (unsigned char k, const char* key, unsigned char n)
-{
-    const char* p = rbuf + rat[k];
-    const char* e = rbuf + rto[k];
-    unsigned char len = strlen (key), got = 0, i;
-    unsigned m = 0;
-
-    WORDS ();
-    for (; p < e; ) {
-        if (got) {
-            if (*p != ' ' && *p != '\t') {
-                break;
-            }
-            while (*p == ' ' || *p == '\t') {
-                ++p;
-            }
-            if (m && m < sizeof said - 1) {
-                said[m++] = ' ';
-            }
-        } else if (!strncmp (p, key, len) && (p[len] == ' ' || p[len] == '|')) {
-            for (i = 0; i <= n && p; ++i) {
-                p = strchr (p + 1, '|');
-            }
-            if (!p || p >= e) {
-                break;
-            }
-            got = 1;
-            ++p;
-            while (*p == ' ') {
-                ++p;
-            }
-        } else {
-            for (; p < e && *p != '\n'; ++p) {
-            }
-            ++p;
-            continue;
-        }
-        for (; p < e && *p != '\n' && *p != '\r' && *p != '|'; ++p) {
-            if (m < sizeof said - 1) {
-                said[m++] = *p;
-            }
-        }
-        if (n) {
-            break;                              /* (A value past the first: its line alone) */
-        }
-        for (; p < e && *p != '\n'; ++p) {
-        }
-        ++p;
-    }
-    while (m && said[m - 1] == ' ') {
-        --m;
-    }
-    said[m] = 0;
-    KINDS ();
-    return got;
-}
+/* Rumour k's line of key: its n'th value (its lines joined) into said: 1, or 0 none (the library's) */
+#define META_VALUE
+#define META_VALUE_N
+#include "../dq0/meta/meta.c"
+#undef META_VALUE
 
 #pragma code-name (push, "OV1CODE")             /* (The overlay's: dq0town.cfg's OV1, its own bank, the main RAM's room) */
 #pragma rodata-name (push, "OV1RODATA")
 #pragma bss-name (push, "OV1BSS")
-/* The life's seed for dungeon n's (dq0life's seed_of): the rumours' seed, themegen -r's */
-static unsigned long __fastcall__ seed_of (unsigned long s, unsigned n)
-{
-    unsigned long x;
+/* The life's seed for dungeon n's (dq0life's seed_of): the rumours' seed, themegen -r's; a program run, and its arguments
+** (the library's) */
+#define META_SEED
+#define META_RUN
+#define META_ARG
+#include "../dq0/meta/meta.c"
+#undef META_SEED
+#undef META_RUN
+#undef META_ARG
 
-    if (n <= 1) {
-        return s;
-    }
-    x = s + n * 2654435761UL;
-    x ^= x >> 15;
-    x *= 40503UL;
-    x ^= x >> 13;
-    return s < 65536UL ? x & 0xFFFF : x | 0x10000UL;
-}
-#pragma bss-name (pop)
-#pragma rodata-name (pop)
-#pragma code-name (pop)
-
-#pragma code-name (push, "OV1CODE")             /* (The overlay's: dq0town.cfg's OV1, its own bank, the main RAM's room) */
-#pragma rodata-name (push, "OV1RODATA")
-#pragma bss-name (push, "OV1BSS")
 /* A program of the game's run (lib's, prog its name past it), its arguments in said (each 0-ended, an empty one last), waited
 ** for: its exit status, or -1 */
 static int __fastcall__ run (const char* prog)
 {
-    static struct hy_regs r;
-
-    word_out ();
-    out_flush ();
+    say_flush ();
     strcpy (path, lib);
     strcat (path, prog);
-    r.a = 0;
-    r.r[0] = (unsigned) path;
-    r.r[1] = (unsigned) said;
-    if (hy_call (HY_SPAWN, &r)) {
-        return -1;
-    }
-    r.r[0] = 0;
-    return hy_call (HY_WAIT, &r) ? -1 : r.x;
-}
-#pragma bss-name (pop)
-#pragma rodata-name (pop)
-#pragma code-name (pop)
-
-#pragma code-name (push, "OV1CODE")             /* (The overlay's: dq0town.cfg's OV1, its own bank, the main RAM's room) */
-#pragma rodata-name (push, "OV1RODATA")
-#pragma bss-name (push, "OV1BSS")
-/* An argument more (its flag, its value) at q: the next's place */
-static char* __fastcall__ arg (char* q, const char* flag, const char* v)
-{
-    strcpy (q, flag);
-    q += strlen (q) + 1;
-    strcpy (q, v);
-    return q + strlen (q) + 1;
+    return meta_run (path, said);
 }
 #pragma bss-name (pop)
 #pragma rodata-name (pop)
@@ -1407,7 +1156,7 @@ static void __fastcall__ rest (const char* w);
 int main (int argc, char* argv[])
 {
     unsigned char i;
-    int fd, n, k;
+    int fd;
 
     for (i = 1; i + 1 < argc; i += 2) {
         switch (argv[i][1]) {
@@ -1453,19 +1202,7 @@ int main (int argc, char* argv[])
     if ((fd = open (path, O_RDONLY)) < 0) {
         fail ("no town.txt");
     }
-    for (i = 1; (n = read (fd, said, sizeof said)) > 0; ) {   /* (Its lines but its notes: i at a line's start, 2 in a note) */
-        WORDS ();
-        for (k = 0; k < n && twn < TW_N - 1; ++k) {
-            if (i == 1 && said[k] == '#') {
-                i = 2;
-            }
-            if (i != 2 && said[k] != '\r') {
-                tw[twn++] = said[k];
-            }
-            i = said[k] == '\n' ? 1 : i == 2 ? 2 : 0;
-        }
-        KINDS ();
-    }
+    words_read (fd);
     close (fd);
     OV (width_read ());
     KINDS ();
@@ -1508,7 +1245,6 @@ int main (int argc, char* argv[])
     OV (tr_io (1));
     KINDS ();
     say ("\n");
-    word_out ();
-    out_flush ();
+    say_flush ();
     return 0;
 }

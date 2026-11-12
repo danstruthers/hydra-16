@@ -428,17 +428,13 @@ void end_line (void)
 /* ---- Its arguments; the bank programs called */
 
 static char path[64], expath[64], bp[5][48];
-static const char* __fastcall__ in (const char* dir, const char* name)
-{
-    strcpy (path, dir);
-    strcat (path, "/");
-    strcat (path, name);
-    return path;
-}
+#define META_PATH                               /* (A path: the meta programs' library's, ../dq0/meta/meta.c) */
+#include "../dq0/meta/meta.c"
+#undef META_PATH
 
 static struct bank_fn* __fastcall__ child (unsigned char k, const char* file, const char* entry)
 {
-    struct bank_fn* h = bank_fn_ (strcpy (bp[k], in (lib, file)), entry);
+    struct bank_fn* h = bank_fn_ (strcpy (bp[k], in_ (lib, file)), entry);
 
     if (!h) {
         say ("themegen: its bank program ");
@@ -519,7 +515,7 @@ static int __fastcall__ rumours (struct bank_fn* hist, struct bank_fn* goal)
         return 1;
     }
     mkdir (outdir, 0755);
-    if ((ofd = open (in (outdir, "rumours.txt"), O_WRONLY | O_CREAT | (amask ? O_APPEND : O_TRUNC), 0644)) < 0) {
+    if ((ofd = open (in_ (outdir, "rumours.txt"), O_WRONLY | O_CREAT | (amask ? O_APPEND : O_TRUNC), 0644)) < 0) {
         say ("themegen: can't write rumours.txt there\n");
         return 1;
     }
@@ -598,13 +594,13 @@ int main (int argc, char* argv[])
         strcpy (lib, gamedir);
         strcat (lib, "/lib/dq0");
     }
-    if (tg_load (in (lib, "themegen.dat"))) {
+    if (tg_load (in_ (lib, "themegen.dat"))) {
         say ("themegen: its data (lib/dq0/themegen.dat) not found\n");
         return 1;
     }
     bestiary ();
     step ();
-    bank_setup (strcpy (expath, in (lib, "themegen.exp")), 0x60, 16);
+    bank_setup (strcpy (expath, in_ (lib, "themegen.exp")), 0x60, 16);
     namer = child (0, "namegen.bp", "_name");
     step ();
     hist = child (1, "histgen.bp", "_make");
@@ -616,7 +612,7 @@ int main (int argc, char* argv[])
     }
     lines = child (3, "linegen.bp", "_make");
     step ();
-    if (!tfile && outdir && (fd = open (strcpy (qpath, in (outdir, "quest.txt")), O_RDONLY)) >= 0) {
+    if (!tfile && outdir && (fd = open (strcpy (qpath, in_ (outdir, "quest.txt")), O_RDONLY)) >= 0) {
         close (fd);                             /* (The rumour followed: its region, why it came) */
         tfile = qpath;
     }
@@ -628,7 +624,7 @@ int main (int argc, char* argv[])
     }
     if (outdir) {
         mkdir (outdir, 0755);
-        if ((ofd = open (strcpy (txt, in (outdir, "theme.txt")), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
+        if ((ofd = open (strcpy (txt, in_ (outdir, "theme.txt")), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
             say ("themegen: can't write theme.txt there\n");
             return 1;
         }
@@ -653,10 +649,10 @@ int main (int argc, char* argv[])
     targs[2] = "-l";
     targs[3] = lib;
     targs[4] = "-o";
-    targs[5] = strcpy (dat, in (outdir, "theme.dat"));
+    targs[5] = strcpy (dat, in_ (outdir, "theme.dat"));
     targs[6] = txt;
     targs[7] = 0;
-    hy_exec (in (gamedir, "themec"), targs);
+    hy_exec (in_ (gamedir, "themec"), targs);
     say ("themegen: themec can't be run\n");
     return 1;
 }

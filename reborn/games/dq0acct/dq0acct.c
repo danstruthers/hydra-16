@@ -70,111 +70,22 @@ unsigned char ntongues;
 char ans[64];
 unsigned char askit;                            /* (Waited for: not the tests' dq0auto) */
 
-static void __fastcall__ fail (const char* why)
-{
-    write (2, "dq0acct: ", 9);
-    write (2, why, strlen (why));
-    write (2, "\n", 1);
-    exit (1);
-}
+/* ---- The meta programs' library (../dq0/meta/meta.c): the fault said, a path; the words by the console's width (say,
+** sayn, amount, say_flush, width and ob: the overlays' too, dq0acct.h's) */
 
-static const char* __fastcall__ in_ (const char* folder, const char* name)
-{
-    strcpy (path, folder);
-    strcat (path, "/");
-    strcat (path, name);
-    return path;
-}
-
-/* ---- Words, by the console's width */
-
-unsigned char width = 79;
-static unsigned char col;
-static char wb[96];
-char ob[200];
-static unsigned char wn, on;
-
-static void out_flush (void)
-{
-    if (on) {
-        write (1, ob, on);
-        on = 0;
-    }
-}
-
-static void __fastcall__ out_c (char c)
-{
-    if (on == sizeof ob) {
-        out_flush ();
-    }
-    ob[on++] = c;
-}
-
-static void word_out (void)
-{
-    unsigned char k;
-
-    if (!wn) {
-        return;
-    }
-    if (col && col + wn + 1 > width) {
-        out_c ('\n');
-        col = 0;
-    } else if (col) {
-        out_c (' ');
-        ++col;
-    }
-    for (k = 0; k < wn; ++k) {
-        out_c (wb[k]);
-    }
-    col += wn;
-    wn = 0;
-}
-
-void __fastcall__ say (const char* s)
-{
-    for (; *s; ++s) {
-        if (*s == ' ') {
-            word_out ();
-        } else if (*s == '\n') {
-            word_out ();
-            out_c ('\n');
-            col = 0;
-        } else if (wn < sizeof wb) {
-            wb[wn++] = *s;
-        }
-    }
-}
-
-void __fastcall__ sayn (unsigned long v)
-{
-    char b[12];
-
-    say (ultoa (v, b, 10));
-}
-
-/* An amount, in farthings: "22d", "22d 1f", "3f" */
-void __fastcall__ amount (unsigned long f)
-{
-    if (f >= PENNY || !f) {
-        sayn (f / PENNY);
-        say ("d");
-    }
-    if (f % PENNY) {
-        if (f >= PENNY) {
-            say (" ");
-        }
-        sayn (f % PENNY);
-        say ("f");
-    }
-}
-
-/* The words so far out on the screen */
-void say_flush (void)
-{
-    word_out ();
-    out_flush ();
-}
+#define META_NAME       "dq0acct"
+#define META_WB         96
+#define META_OB         200
+#define META_FAIL
+#define META_PATH
+#include "../dq0/meta/meta.c"
+#undef META_FAIL
+#undef META_PATH
+#undef META_LINK
+#define META_LINK
+#define META_WORDS
+#include "../dq0/meta/meta.c"
+#undef META_WORDS
 
 /* A line typed (b, 0-ended, its end of line gone); with the tests' dq0auto, none: "" */
 void __fastcall__ ask (char* b, unsigned char n)
@@ -805,7 +716,7 @@ int main (int argc, char* argv[])
         read (fd, (void*) 0x8000, 0x2000);
     }
     close (fd);
-    OV2 (o_width ());
+    OV2 (width_read ());
     CATS ();
     strcpy (path, lib);
     strcat (path, "/dq0w.cat");

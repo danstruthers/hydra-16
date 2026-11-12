@@ -20,13 +20,9 @@
 #include "comp.h"
 
 static char path[64];
-static const char* __fastcall__ in (const char* dir, const char* name)
-{
-    strcpy (path, dir);
-    strcat (path, "/");
-    strcat (path, name);
-    return path;
-}
+#define META_PATH                               /* (A path: the meta programs' library's, ../dq0/meta/meta.c) */
+#include "../dq0/meta/meta.c"
+#undef META_PATH
 
 int main (int argc, char* argv[])
 {
@@ -65,7 +61,7 @@ int main (int argc, char* argv[])
             strcpy (lib, path);
         }
     }
-    if (tg_load (in (lib, "bestiary.dat"))) {
+    if (tg_load (in_ (lib, "bestiary.dat"))) {
         say ("themec: no lib/dq0/bestiary.dat\n");
         return 1;
     }

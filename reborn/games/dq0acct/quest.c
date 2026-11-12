@@ -268,55 +268,11 @@ static void __fastcall__ heard (const char* name)
     }
 }
 
-/* Rumour k's line of key (the first value of it, its lines joined) into said: 1, or 0 none */
-static unsigned char __fastcall__ value_of (unsigned char k, const char* key)
-{
-    const char* p = rbuf + rat[k];
-    const char* e = rbuf + rto[k];
-    unsigned n = strlen (key), m = 0;
-    unsigned char got = 0;
-
-    for (; p < e; ) {
-        if (got) {
-            if (*p != ' ' && *p != '\t') {
-                break;
-            }
-            while (*p == ' ' || *p == '\t') {
-                ++p;
-            }
-            if (m && m < sizeof said - 1) {
-                said[m++] = ' ';
-            }
-        } else if (!strncmp (p, key, n) && (p[n] == ' ' || p[n] == '|')) {
-            if (!(p = strchr (p, '|'))) {
-                break;
-            }
-            got = 1;
-            ++p;
-            while (*p == ' ') {
-                ++p;
-            }
-        } else {
-            for (; p < e && *p != '\n'; ++p) {
-            }
-            ++p;
-            continue;
-        }
-        for (; p < e && *p != '\n' && *p != '\r' && *p != '|'; ++p) {
-            if (m < sizeof said - 1) {
-                said[m++] = *p;
-            }
-        }
-        for (; p < e && *p != '\n'; ++p) {
-        }
-        ++p;
-    }
-    while (m && said[m - 1] == ' ') {
-        --m;
-    }
-    said[m] = 0;
-    return got;
-}
+/* Rumour k's line of key (value_of (k, key): the first value of it, its lines joined) into said: 1, or 0 none (the meta
+** programs' library's, ../dq0/meta/meta.c) */
+#define META_VALUE
+#include "../dq0/meta/meta.c"
+#undef META_VALUE
 
 /* The rumours told (a clue's first, then themegen's: three at most), one followed (asked: Enter, the tests' dq0auto or anything not
 ** one of them takes the first), written as quest.txt for the next dungeon; none heard (a stand-in's life), Enter to go on */

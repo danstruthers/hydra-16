@@ -303,25 +303,14 @@ unsigned char __fastcall__ hub_dnext (unsigned* place, struct msg* m)
 #pragma rodata-name (push, "SW1RODATA")
 /* ---- A task of the game's: path, given the segment and its role (and more, a word or none) */
 
-static struct hy_regs r;
-
-/* A program started: path, its arguments (each ended by a 0, and an empty one after them): its task, or -1.  (hydra.h's
-** hy_spawn, without the stdio it takes in to write its buffers out first: the UI has none) */
-int __fastcall__ hub_run (const char* path, const char* args)
-{
-    r.a = 0;                                    /* (Its fds: this one's 0, 1 and 2) */
-    r.r[0] = (unsigned) path;
-    r.r[1] = (unsigned) args;
-    return hy_call (HY_SPAWN, &r) ? -1 : r.a;
-}
-
-/* A task waited for (hy_wait's, no message): its exit status, or -1 */
-int __fastcall__ hub_join (unsigned char task)
-{
-    r.a = task;
-    r.r[0] = 0;
-    return hy_call (HY_WAIT, &r) ? -1 : r.x;
-}
+/* A program started (hub_run: its task, or -1) and waited for (hub_join: its exit status, or -1): the meta programs' launcher
+** (meta/meta.c's: the system's SPAWN and WAIT themselves, without the stdio hy_spawn takes in: the UI has none) */
+#define META_LINK
+#define META_SPAWN      hub_run
+#define META_JOIN       hub_join
+#define META_LAUNCH
+#include "meta/meta.c"
+#undef META_LAUNCH
 
 int __fastcall__ hub_spawn (const char* path, unsigned char t, const char* more)
 {

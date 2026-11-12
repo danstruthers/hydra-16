@@ -21,26 +21,10 @@
 #include "dq0acct.h"
 
 /* The console's width, for the words */
-void o_width (void)
-{
-    static char b[100];
-    char* p;
-    int fd, n = 0;
-
-    if ((fd = open ("/dev/consctl", O_RDONLY)) >= 0) {
-        n = read (fd, b, sizeof b - 1);
-        close (fd);
-    }
-    b[n > 0 ? n : 0] = 0;
-    for (p = b; p; p = strchr (p, '\n')) {
-        if (*p == '\n') {
-            ++p;
-        }
-        if (!strncmp (p, "size ", 5) && atoi (p + 5) >= 40) {
-            width = atoi (p + 5) > 80 ? 79 : atoi (p + 5) - 1;
-        }
-    }
-}
+#define META_LINK
+#define META_WIDTH
+#include "../dq0/meta/meta.c"
+#undef META_WIDTH
 
 /* ---- The wages (the book's incomes, Character 13: a month's pence by the occupation's first letters; else by its class) */
 

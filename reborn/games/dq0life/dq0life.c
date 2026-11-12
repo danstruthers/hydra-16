@@ -43,47 +43,24 @@ static char path[56], dir[40];
 static char buf[256];
 static const char* top;
 
-static void __fastcall__ die (const char* why)
-{
-    write (2, "dq0life: ", 9);
-    write (2, why, strlen (why));
-    write (2, "\n", 1);
-    exit (1);
-}
-
-static const char* __fastcall__ in_ (const char* folder, const char* name)
-{
-    strcpy (path, folder);
-    strcat (path, "/");
-    strcat (path, name);
-    return path;
-}
-
-static unsigned long __fastcall__ num (const char* s)
-{
-    unsigned long n = 0;
-
-    for (; *s >= '0' && *s <= '9'; ++s) {
-        n = n * 10 + *s - '0';
-    }
-    return n;
-}
-
-/* Dungeon n's seed, by the life's: the life's own the first's (a game begun with dq0 -s has that seed's dungeon); a seed under
-** 65,536 goes on with seeds under it (the stand-in themes': main.c's history), one over goes on over it */
-static unsigned long __fastcall__ seed_of (unsigned long s, unsigned n)
-{
-    unsigned long x;
-
-    if (n <= 1) {
-        return s;
-    }
-    x = s + n * 2654435761UL;
-    x ^= x >> 15;
-    x *= 40503UL;
-    x ^= x >> 13;
-    return s < 65536UL ? x & 0xFFFF : x | 0x10000UL;
-}
+/* The meta programs' library (../dq0/meta/meta.c): the fault said, a path, a number, dungeon n's seed by the life's, a
+** program run and its arguments */
+#define META_NAME       "dq0life"
+#define META_FAIL
+#define META_PATH
+#define META_NUM
+#define META_SEED
+#define META_RUN
+#define META_ARG
+#define META_ARGN
+#include "../dq0/meta/meta.c"
+#undef META_FAIL
+#undef META_PATH
+#undef META_NUM
+#undef META_SEED
+#undef META_RUN
+#undef META_ARG
+#undef META_ARGN
 
 /* A theme written by hand left in the save's folder (theme.txt: dq0d's THEME_FILE, the factions' lines) is the new dungeon's, and
 ** so is the rumour followed (quest.txt, dq0acct's: a part-written theme, themegen's to fill out): moved into its folder */
@@ -95,7 +72,7 @@ static void __fastcall__ theme_in (const char* name)
         return;
     }
     if ((out = open (in_ (dir, name), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
-        die ("can't write the dungeon's theme");
+        fail ("can't write the dungeon's theme");
     }
     while ((n = read (in, buf, sizeof buf)) > 0) {
         write (out, buf, n);
@@ -141,7 +118,7 @@ static void record_write (void)
     int fd;
 
     if ((fd = open (in_ (top, LIFE_FILE), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0 || write (fd, &L, sizeof L) != sizeof L) {
-        die ("can't write the record of the life");
+        fail ("can't write the record of the life");
     }
     close (fd);
 }
@@ -151,39 +128,19 @@ static void record_write (void)
 static int __fastcall__ run (const char* lib, const char* name, unsigned char with_lib)
 {
     static char p[64], a[128];
-    static struct hy_regs r;
     char* q = a;
 
     strcpy (p, lib);
     strcat (p, name);
-    if (with_lib == 2) {
-        strcpy (q, "-q");
-        strcpy (q += 3, "-p");                  /* (Its dots: no silence, as the game's start has none) */
-        strcpy (q += 3, "-r");
-        strcpy (q += 3, "3");
-        strcpy (q += 2, "-s");
-        ultoa (seed_of (L.h.seed, L.h.dungeon) ^ 0x52554D52UL, q += 3, 10);
-        q += strlen (q) + 1;
+    if (with_lib == 2) {                        /* (Its dots: no silence, as the game's start has none) */
+        q = argn (arg (arg1 (arg1 (q, "-q"), "-p"), "-r", "3"), "-s", seed_of (L.h.seed, L.h.dungeon) ^ 0x52554D52UL);
     }
-    strcpy (q, with_lib == 2 ? "-o" : "-d");
-    q += 3;
-    strcpy (q, top);
-    q += strlen (q) + 1;
+    q = arg (q, with_lib == 2 ? "-o" : "-d", top);
     if (with_lib) {
-        strcpy (q, "-l");
-        q += 3;
-        strcpy (q, lib);
-        q += strlen (q) + 1;
+        q = arg (q, "-l", lib);
     }
     *q = 0;
-    r.a = 0;                                    /* (Its fds: this one's 0, 1 and 2) */
-    r.r[0] = (unsigned) p;
-    r.r[1] = (unsigned) a;
-    if (hy_call (HY_SPAWN, &r)) {
-        return -1;
-    }
-    r.r[0] = 0;
-    return hy_call (HY_WAIT, &r) ? -1 : r.x;
+    return meta_run (p, a);
 }
 
 /* The program a ruleset has for the time between (rsmeta.h's table, by its referee: game.dat's), 0 none */
@@ -213,7 +170,7 @@ static void __fastcall__ between (const char* lib, const char* acct)
     }
     t = run (lib, acct, 1);
     if (t != 0 && t != 2) {
-        die ("the time between failed");
+        fail ("the time between failed");
     }
     if ((fd = open (in_ (top, LIFE_FILE), O_RDONLY)) >= 0) {
         read (fd, &L, sizeof L);
@@ -403,11 +360,11 @@ int main (int argc, char* argv[])
         } else if (!strcmp (argv[i], "-l") && i + 1 < argc) {
             lib = argv[++i];
         } else {
-            die ("usage: dq0life -d folder [-s seed] [-l libdir]");
+            fail ("usage: dq0life -d folder [-s seed] [-l libdir]");
         }
     }
     if (!top || strlen (top) > TOP_MAX) {
-        die ("the save's folder's name is too long");
+        fail ("the save's folder's name is too long");
     }
     mkdir (top, 0755);                          /* (It may be there already) */
     i = next_is ();

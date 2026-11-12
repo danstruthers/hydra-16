@@ -188,21 +188,15 @@ void o_lodging (void)
 
 static struct townrec tr;
 
-/* An argument more in ob (after p): its flag and its value; the next's place */
-static char* __fastcall__ arg (char* p, const char* flag, const char* v)
-{
-    strcpy (p, flag);
-    p += strlen (p) + 1;
-    strcpy (p, v);
-    return p + strlen (p) + 1;
-}
-
-static char* __fastcall__ argn (char* p, const char* flag, unsigned long v)
-{
-    char b[12];
-
-    return arg (p, flag, ultoa (v, b, 10));
-}
+/* An argument more in ob (after p): its flag and its value, or a number; the next's place; dq0town run and waited for (the
+** meta programs' library's, ../dq0/meta/meta.c) */
+#define META_ARG
+#define META_ARGN
+#define META_RUN
+#include "../dq0/meta/meta.c"
+#undef META_ARG
+#undef META_ARGN
+#undef META_RUN
 
 /* dq0town run (SPAWN itself, as dq0life runs this: its arguments in main RAM), waited for, and town.dat read: 1 it ran.  What it's
 ** told: the folder, the lib, the town's name and its inn's, the days gone by, its keep owed so far and a day's by its class (the
@@ -210,7 +204,6 @@ static char* __fastcall__ argn (char* p, const char* flag, unsigned long v)
 unsigned char o_town_go (void)
 {
     static const unsigned char habits[5] = { 1, 1, 2, 3, 8 };
-    static struct hy_regs r;
     unsigned char h = habits[pc.social < 5 ? pc.social : 2], ok;
     char* p = ob;
     int fd;
@@ -231,14 +224,7 @@ unsigned char o_town_go (void)
     strcpy (path, lib);
     strcat (path, "/../acct/dq0town");
     memset (&tr, 0, sizeof tr);
-    r.a = 0;                                    /* (Its fds: this one's 0, 1 and 2) */
-    r.r[0] = (unsigned) path;
-    r.r[1] = (unsigned) ob;
-    if (hy_call (HY_SPAWN, &r)) {
-        return 0;
-    }
-    r.r[0] = 0;
-    if (hy_call (HY_WAIT, &r) || r.x) {
+    if (meta_run (path, ob)) {
         return 0;
     }
     strcpy (path, top);

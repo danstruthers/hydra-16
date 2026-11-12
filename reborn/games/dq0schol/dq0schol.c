@@ -80,157 +80,23 @@ static char path[96];
 static char ans[64];
 static unsigned char asks;
 
-static void __fastcall__ fail (const char* why)
-{
-    write (2, "dq0schol: ", 10);
-    write (2, why, strlen (why));
-    write (2, "\n", 1);
-    exit (1);
-}
+/* ---- The meta programs' library (../dq0/meta/meta.c): the fault said, a path; the words by the console's width, a line
+** typed (ans: lower case, its spaces trimmed), the console's width */
 
-static const char* __fastcall__ in_ (const char* folder, const char* name)
-{
-    strcpy (path, folder);
-    strcat (path, "/");
-    strcat (path, name);
-    return path;
-}
-
-/* ---- Words, by the console's width (dq0town's) */
-
-static unsigned char width = 79, col;
-static char wb[64], ob[128];
-static unsigned char wn, on;
-
-static void out_flush (void)
-{
-    if (on) {
-        write (1, ob, on);
-        on = 0;
-    }
-}
-
-static void __fastcall__ out_c (char c)
-{
-    if (on == sizeof ob) {
-        out_flush ();
-    }
-    ob[on++] = c;
-}
-
-static void word_out (void)
-{
-    unsigned char k;
-
-    if (!wn) {
-        return;
-    }
-    if (col && col + wn + 1 > width) {
-        out_c ('\n');
-        col = 0;
-    } else if (col) {
-        out_c (' ');
-        ++col;
-    }
-    for (k = 0; k < wn; ++k) {
-        out_c (wb[k]);
-    }
-    col += wn;
-    wn = 0;
-}
-
-static void __fastcall__ say (const char* s)
-{
-    for (; *s; ++s) {
-        if (*s == ' ') {
-            word_out ();
-        } else if (*s == '\n') {
-            word_out ();
-            out_c ('\n');
-            col = 0;
-        } else if (wn < sizeof wb) {
-            wb[wn++] = *s;
-        }
-    }
-}
-
-static void __fastcall__ sayn (unsigned long v)
-{
-    char b[12];
-
-    say (ultoa (v, b, 10));
-}
-
-/* An amount, in farthings: "22d", "22d 1f", "3f" */
-static void __fastcall__ amount (unsigned long f)
-{
-    if (f >= PENNY || !f) {
-        sayn (f / PENNY);
-        say ("d");
-    }
-    if (f % PENNY) {
-        if (f >= PENNY) {
-            say (" ");
-        }
-        sayn (f % PENNY);
-        say ("f");
-    }
-}
-
-/* A line typed, lower case, its spaces trimmed (ans): asked on a line of its own, then the game's "> " */
-static void __fastcall__ ask (const char* prompt)
-{
-    int k;
-    char* s;
-
-    say (prompt);
-    say ("\n");
-    word_out ();
-    out_flush ();
-    write (1, "> ", 2);
-    ans[0] = 0;
-    if ((k = read (0, ans, sizeof ans - 1)) > 0) {
-        ans[k] = 0;
-        ans[strcspn (ans, "\r\n")] = 0;
-    }
-    col = 0;
-    for (s = ans; *s; ++s) {
-        if (*s >= 'A' && *s <= 'Z') {
-            *s |= 0x20;
-        } else if (*s == '\t' || *s == ',' || *s == '.' || *s == '?' || *s == '!') {
-            *s = ' ';
-        }
-    }
-    for (s = ans + strlen (ans); s > ans && s[-1] == ' '; --s) {
-    }
-    *s = 0;
-    for (s = ans; *s == ' '; ++s) {
-    }
-    memmove (ans, s, strlen (s) + 1);
-    ++asks;
-}
-
-/* The console's width (dq0acct's o_width) */
-static void width_read (void)
-{
-    static char b[100];
-    char* p;
-    int fd, n = 0;
-
-    if ((fd = open ("/dev/consctl", O_RDONLY)) >= 0) {
-        n = read (fd, b, sizeof b - 1);
-        close (fd);
-    }
-    b[n > 0 ? n : 0] = 0;
-    for (p = b; p; p = strchr (p, '\n')) {
-        if (*p == '\n') {
-            ++p;
-        }
-        if (!strncmp (p, "size ", 5) && atoi (p + 5) >= 40) {
-            width = atoi (p + 5) > 80 ? 79 : atoi (p + 5) - 1;
-        }
-    }
-}
+#define META_NAME       "dq0schol"
+#define META_WB         64
+#define META_OB         128
+#define META_FAIL
+#define META_PATH
+#define META_WORDS
+#define META_ASK
+#define META_WIDTH
+#include "../dq0/meta/meta.c"
+#undef META_FAIL
+#undef META_PATH
+#undef META_WORDS
+#undef META_ASK
+#undef META_WIDTH
 
 /* ---- Its words (scholar.txt: a key's lines, each its values between bars) */
 
@@ -240,37 +106,11 @@ static char* v[16];
 static unsigned char nv;
 static char lb[400];
 
-/* The n'th line of key (0 the first): its values in v (nv of them, their spaces trimmed); 0 none */
-static unsigned char __fastcall__ words_of (const char* key, unsigned char n)
-{
-    unsigned p = 0, e;
-    unsigned char k = strlen (key);
-    char* s;
-
-    for (; p < twn; p = e + 1) {
-        for (e = p; e < twn && tw[e] != '\n'; ++e) {
-        }
-        if (strncmp (tw + p, key, k) || (tw[p + k] != ' ' && tw[p + k] != '|') || n--) {
-            continue;
-        }
-        memcpy (lb, tw + p, e - p < sizeof lb - 1 ? e - p : sizeof lb - 1);
-        lb[e - p < sizeof lb - 1 ? e - p : sizeof lb - 1] = 0;
-        for (nv = 0, s = strchr (lb, '|'); s && nv < sizeof v / sizeof v[0]; s = strchr (s, '|')) {
-            *s++ = 0;
-            while (*s == ' ') {
-                ++s;
-            }
-            v[nv++] = s;
-        }
-        for (k = 0; k < nv; ++k) {
-            for (s = v[k] + strlen (v[k]); s > v[k] && (s[-1] == ' ' || s[-1] == '\r'); --s) {
-            }
-            *s = 0;
-        }
-        return nv;
-    }
-    return nv = 0;
-}
+/* The n'th line of key (words_of: its values in v), and scholar.txt read (words_read): the library's */
+#define META_TEXT_MAX   sizeof tw
+#define META_KEYS
+#include "../dq0/meta/meta.c"
+#undef META_KEYS
 
 /* One of a key's lines by the dice, its first value said */
 static void __fastcall__ say_one (const char* key)
@@ -1157,7 +997,7 @@ int main (int argc, char* argv[])
     const char* ov[3] = { 0, 0, 0 };
     const char* p;
     unsigned char i;
-    int fd, n, j;
+    int fd, n;
 
     for (i = 1; i + 1 < argc; i += 2) {
         switch (argv[i][1]) {
@@ -1205,17 +1045,7 @@ int main (int argc, char* argv[])
     if ((fd = open (path, O_RDONLY)) < 0) {
         fail ("no scholar.txt");
     }
-    for (i = 1; (n = read (fd, lb, sizeof lb)) > 0; ) {    /* (Its lines but its notes: i at a lb's start, 2 in a note) */
-        for (j = 0; j < n && twn < sizeof tw - 1; ++j) {
-            if (i == 1 && lb[j] == '#') {
-                i = 2;
-            }
-            if (i != 2 && lb[j] != '\r') {
-                tw[twn++] = lb[j];
-            }
-            i = lb[j] == '\n' ? 1 : i == 2 ? 2 : 0;
-        }
-    }
+    words_read (fd);
     close (fd);
     regs.a = 0xFF;                              /* (The rc variable dq0sg, the tests' scenes: ENV_GET itself, getenv's room) */
     regs.r[0] = (unsigned) "dq0sg";
@@ -1249,8 +1079,7 @@ int main (int argc, char* argv[])
         }
         command (ans);
     }
-    word_out ();
-    out_flush ();
+    say_flush ();
     if ((fd = open (in_ (top, TOWN_FILE), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0 || write (fd, &tr, sizeof tr) != sizeof tr) {
         fail ("can't write town.dat");
     }
