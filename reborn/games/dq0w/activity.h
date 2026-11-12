@@ -2,16 +2,18 @@
 ** activity.h - (dq0w) what the character is doing, and what's to follow as it's free (ENGINE-CRITIQUE.md's 7: one
 ** activity per actor, the step planner's 3.3).  Its long task now is the hub's pc_task (and move.on: a walk, a spell
 ** of digging); the reach's step under way things.h's struct step (rstep, its queue aside); what's queued after the
-** long task is here, gathered from the flags that held it, the main loop's free-again chain their order.  The
-** denizens' minds post intents the world carries out the same way, and could keep the same record per actor later.
+** long task is here: each continuation's own field (its thing, its family, its target, its kind of end ...), and a
+** stack of them as they were planned (q: act_plan pushes one as its field's set, the last planned on top; dq0w.c's
+** act_next, as the character's free, pops those whose field's been cleared since and hands the top to its handler).
+** The denizens' minds post intents the world carries out the same way, and could keep the same record per actor
+** later.
 */
 
 #ifndef ACTIVITY_H
 #define ACTIVITY_H
 
 struct pc_activity {
-    /* Queued after the long task, popped in this order as the character's free (dq0w.c's act_next): take first,
-    ** then each byte from gath on, its own handler's (the main loop's next_[], the same order) */
+    /* Queued after the long task (each its kind on q, AK_*, as it's planned: act_plan): */
     unsigned take;                              /* A thing walked over to, to be taken up as it gets there (I_TAKE's
                                                 **   item; 1 the square's alone; 0 none: wgame.c's take_up) */
     unsigned char gath;                         /* A gathering of missiles under way (the family, FM_*, | 0x80:
@@ -28,8 +30,14 @@ struct pc_activity {
                                                 **   free; 2 a command took a fight over; | FW_RUN a flight's run on) */
     unsigned char cut;                          /* Its long task stopped, hard or by the player (work.h's: no outcome,
                                                 **   the stop told) */
+    /* The continuations as they were planned, the last on top (AK_*: each at most once; one whose field's 0 is done,
+    ** popped as it comes to the top) */
+    unsigned char q[6];
+    unsigned char nq;
 };
-#define ACT_NEXT        5                       /* (The bytes gath ... trav, in order: act_next's) */
+enum { AK_TAKE, AK_GATH, AK_FOE, AK_SRCH, AK_WORK, AK_TRAV };  /* (take; then gath ... trav, the bytes in order) */
 extern struct pc_activity act;                  /* (dq0w.c's) */
+void __fastcall__ act_plan (unsigned char k);   /* (act.s's: continuation k planned, its field set: on top of the stack,
+                                                **   out of its place if it was in it) */
 
 #endif

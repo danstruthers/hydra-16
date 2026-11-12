@@ -323,6 +323,7 @@ void __fastcall__ s_take_go (const struct msg* m)
     }
     take_only = I_TAKE_ALONE (*m);
     act.take = I_TAKE_THING (*m) ? (unsigned) I_TAKE_THING (*m) : 1;   /* (Walked over to alone: its square's, perhaps no thing's) */
+    act_plan (AK_TAKE);
     take_x = I_TAKE_X (*m);
     take_y = I_TAKE_Y (*m);
     hub_map (0);

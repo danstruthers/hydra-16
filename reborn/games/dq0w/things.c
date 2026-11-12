@@ -749,6 +749,7 @@ static unsigned char rs_begin (void)
 go:
     act.cut = 0;
     act.work = LW_REACH;
+    act_plan (AK_WORK);
     if ((rs_ok & 3) == 2) {
         reach_do (RO_GO);
     } else {
@@ -1694,6 +1695,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
                 2 : 1;
             act.cut = 0;
             act.work = LW_REACH;
+            act_plan (AK_WORK);
             if (rs_after_on == 1 && (iq.kind == IO_SHUT || iq.kind == IO_FILL || iq.kind == IO_HIDE)) {
                 HUB->ireq.y = rs_redo & RR_RELIGHT ? 0xFE : 0xFD;   /* (A timed work's end: more to come, the UI to wait
                                                 **   for it; and the torch to light again, words.c's worked) */

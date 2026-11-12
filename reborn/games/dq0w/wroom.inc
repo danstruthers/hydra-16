@@ -237,6 +237,7 @@ unsigned char __fastcall__ s_room_on (unsigned char go)
         HUB->watch |= WA_TRAPS;                 /* (A slow walk at most; a trap underfoot at a search's chance: paced's,
                                                 **   the referee's) */
         act.srch = 2;
+        act_plan (AK_SRCH);
         rs_on = RP_WALK;
         rs_side = 0xFF;
         rs_item = 0;

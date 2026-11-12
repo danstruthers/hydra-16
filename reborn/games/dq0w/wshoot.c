@@ -475,6 +475,7 @@ unsigned __fastcall__ s_gath_op (unsigned char op, unsigned char a)
     gat = 0xFF;
     memset (gtried, 0, sizeof gtried);
     act.gath = a | 0x80;
+    act_plan (AK_GATH);
     return 0;
 }
 

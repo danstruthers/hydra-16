@@ -45,6 +45,7 @@
 */
 
 #include <fcntl.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -3021,6 +3022,7 @@ static unsigned char leg (void)
         return 0;
     }
     tgy = tey;                                  /* (A room's door or mouth meant; a passage's way its heading) */
+    act_plan (AK_TRAV);
     act.trav = 1;                                   /* (On a journey as its leg's walk sets out: its long task a journey's
                                                 **   from its first moment, set_off's, so a line typed as a leg
                                                 **   begins stops it, the UI's free_cmd) */
@@ -3662,6 +3664,7 @@ void __fastcall__ s_start_dig (unsigned char d)
     }
     if (rs_after_on) {
         act.trav = TRV_TOOL;                        /* (Put away, the pack on, as the dig's over: travel_on's) */
+        act_plan (AK_TRAV);
     }
     dig.rock = RK_NONE;
     dig_kept (1);                               /* (Told, begun: on from where it was left, a hole begun before) */
@@ -4276,6 +4279,7 @@ void __fastcall__ s_door_work (unsigned char what)
         task (LT_SEARCH, t);
         busy (t);
         act.srch = 1;
+        act_plan (AK_SRCH);
         return;
     }
     wk.plan = what == PA_DISARM;                /* (Its test, if it's timed work, at its end: work_done's) */
@@ -4283,6 +4287,7 @@ void __fastcall__ s_door_work (unsigned char what)
         worked (0);
         if (wk.task) {                          /* (A trap in reach: its mechanism made out, or disarmed) */
             act.work = what;
+            act_plan (AK_WORK);
             lw_x = NO_SQ;
             begun (wk.task, 0);
         }
@@ -4315,6 +4320,7 @@ void __fastcall__ s_door_work (unsigned char what)
                                                 **   again) */
         }
         act.work = what;                           /* (The timed work: done as its time's up, work_done) */
+        act_plan (AK_WORK);
         lw_x = px_;
         lw_y = py_;
         lw_d = pd_;
@@ -4438,6 +4444,7 @@ unsigned char s_work_done (void)
 last:
     if (rs_after_on) {
         act.work = LW_REACH;                       /* (A tool's use over: put away, the pack back on: things.c's) */
+        act_plan (AK_WORK);
         return 2;
     }
     return 0;
@@ -5645,7 +5652,7 @@ void __fastcall__ s_close_go (const struct msg* m)
         event (E_TASK, 0, E_TASK_ENGAGED_W1 (TE_ENGAGED, LT_NONE));
         return;
     }
-    act.foe = I_CLOSE_FOE (*m);
+    act.foe = I_CLOSE_FOE (*m);                /* (Planned: part 37's intent, act_plan, part 24's room) */
     paim = I_CLOSE_WALK (*m) ? AIM_NONE : I_CLOSE_AIM (*m);   /* (w1: walked up to, no blow: "go to the rat", the UI's) */
     pstrike = I_CLOSE_STRIKE (*m);
     pshand = I_CLOSE_HAND (*m) ? I_CLOSE_HAND (*m) : shand_of (pstrike);
@@ -6634,6 +6641,7 @@ void __fastcall__ s_intent_more (struct msg* m)
     case I_CLOSE:
         runs = I_CLOSE_RUN (*m);                /* (A charge's: its walk at a run, a sprint, B1's) */
         close_go (m);                           /* (Walked up to it, then struck: part 23's) */
+        act_plan (AK_FOE);                      /* (Its close-in planned, act.foe, part 24's room) */
         runs = 0;
         break;
     case I_PORTAL:
@@ -6717,6 +6725,7 @@ void __fastcall__ s_intent_more (struct msg* m)
                                                 **   timed work, its test, the reading, at its end: work_done's;
                                                 **   too dark to see the floor, no nose, told at once) */
             act.work = LW_TRACE;
+            act_plan (AK_WORK);
             lw_x = I_TRACE_FORM (*m);
             lw_y = I_TRACE_TENTHS (*m);
             k = k == TRC_SMELL ? LT_SNIFF : LT_TRACK;   /* (Begun, as part 12's begun: its first words told) */
@@ -7057,31 +7066,23 @@ static unsigned char den_held (void)
     return dst == 1;
 }
 
-/* What's queued after the character's long task (activity.h's), the next popped as it's free, in its order: a thing
-** walked over to, taken up, or walked on to; a gathering's next, part 66's; a blow's close-in: struck, or walked on; a
-** search's end, a room's next stop; a timed work's end (a step of the reach's); a journey's next leg, or its end, part
-** 54's.  What its handler says (2 busy still, 1 looked at, 0 free; batter_on's, fight_on's after it); 0 none queued */
+/* What's queued after the character's long task (activity.h's), the next popped as it's free, the last planned first:
+** a thing walked over to, taken up, or walked on to; a gathering's next, part 66's; a blow's close-in: struck, or walked
+** on; a search's end, a room's next stop; a timed work's end (a step of the reach's); a journey's next leg, or its end,
+** part 54's.  What its handler says (2 busy still, 1 looked at, 0 free; batter_on's, fight_on's after it); 0 none
+** queued */
 static unsigned char gath_on (void)
 {
     return gath_op (GO_ON, 0);
 }
 
-static unsigned char (* const next_[ACT_NEXT]) (void) = { gath_on, close_on, searched, work_done, travel_on };
+unsigned char (* const next_[]) (void) = { take_up, gath_on, close_on, searched, work_done, travel_on };
 
-static unsigned char act_next (void)
-{
-    register unsigned char i;
+/* (act.s's: act_plan, and act_next, the top popped; the record's offsets its own, held to activity.h's here) */
+typedef char ACT_AT[offsetof (struct pc_activity, gath) == 2 && offsetof (struct pc_activity, q) == 9 &&
+    offsetof (struct pc_activity, nq) == 15 ? 1 : -1];
 
-    if (act.take) {
-        return take_up ();
-    }
-    for (i = 0; i < ACT_NEXT; ++i) {
-        if ((&act.gath)[i]) {
-            return next_[i] ();
-        }
-    }
-    return 0;
-}
+unsigned char act_next (void);
 
 /* ---- The world's own work as it falls due (ENGINE-CRITIQUE.md's 7: the scheduler table).  Each job a row: its trigger
 ** (due: its period's time come, or a flag or a count another's work set; none, each pass), its give-way rule (held: 1,
@@ -7972,6 +7973,7 @@ void __fastcall__ s_hid_op (unsigned char op)
                 if (c == HW_BARE && (h_here () & 7)) {
                     busy (HIDE_T);              /* (Begun, as part 12's begun: its first words told) */
                     act.work = LW_HIDE;
+                    act_plan (AK_WORK);
                     task (LT_HIDE, went);
                     HUB->pc_task.what = 0;
                     act.cut = 0;
