@@ -1,7 +1,7 @@
 /*
 ** wfile.c - (dq0w) the save folder's files of the change records (store.c's: a region's, rgSXXYY.dat, read in as
-** it's wanted, written back as its pages make way for another's, a version of it each time: vfile.inc's), the save
-** (each region changed since written, then, the save's last step, its versions made the save's: changes.dat's
+** it's wanted, written back as its pages make way for another's, a version of it each time: the record store's,
+** ../dq0/rp.h, its page made room for the store's least lately wanted), the save (each region changed since written, then, the save's last step, its versions made the save's: changes.dat's
 ** stamps), and the game begun (its generation; a new game's folder rid of an old game's region files; a session's
 ** stamps, the save's kept, so a crash between a write-back and the next save loses nothing the save had and reads
 ** nothing it didn't); and the item store's (ipage.c's) kept with the game, items.dat, read back as it's begun.  And a
@@ -27,8 +27,12 @@
 #pragma rodata-name (push, "SW18RODATA")
 #pragma bss-name (push, "SW18RODATA")           /* (Its own data, what's wanted only while it runs: the main RAM's room) */
 
-#define VF_STATIC       static
-#include "../dq0/vfile.inc"
+#pragma bss-name (push, "BSS")
+static struct rpk rg_kind;                      /* (Its versions counted: the main RAM's) */
+#pragma bss-name (pop)
+#define RP_STATIC       static
+#define RP_KIND         rg_kind
+#include "../dq0/rp.inc"
 
 void stocks (void);
 void store_in (void);                           /* (Part 18's, through its stub: part 19's store_get) */
@@ -36,7 +40,10 @@ extern unsigned char rsn, rrx, rry;             /* (store.c's: the region wanted
 extern struct change rec;                       /*   the record written, */
 extern struct change buf[8];                    /*   records through the main RAM, */
 extern char path[56];                           /*   a file's name) */
-static struct vfh hd;
+#pragma data-name (push, "SW18RODATA")
+static struct rpt cpt = { RP_OLDEST, NCPAGES, sizeof (struct cpage), 0x0E, WREC->cpage, offsetof (struct cpage, stamp),
+    RTF_FREE | RTF_HAND, 0, { 0 }, 0, 0, 0, 0xFF };     /* (The pages' table: a page made room for) */
+#pragma data-name (pop)
 
 /* The save folder's file name (the hub's savedir: "" none): 0, or its path in path */
 static unsigned char __fastcall__ in_folder (const char* name)
@@ -60,7 +67,7 @@ static void __fastcall__ write_region (unsigned char sn, unsigned char rx, unsig
     unsigned all;
     int fd;
 
-    if (!vf_name (path, "rg", sn, rx, ry) || (fd = vf_make (path, 2)) < 0) {
+    if (!rp_name (path, "rg", sn, rx, ry) || (fd = rp_make (path, 2)) < 0) {
         return;
     }
     for (p = 0, all = 0; p < NCPAGES; ++p) {
@@ -78,7 +85,7 @@ static void __fastcall__ write_region (unsigned char sn, unsigned char rx, unsig
         }
         all += n;
     }
-    vf_done (fd, all);
+    rp_done (fd, all);
 }
 
 /* A page for the region wanted: a free one, or (with a folder) the pages of the region least lately wanted written
@@ -86,19 +93,17 @@ static void __fastcall__ write_region (unsigned char sn, unsigned char rx, unsig
 unsigned char s_store_page (void)
 {
     struct cpage* q;
-    unsigned char p, best = 0xFF, sn, rx, ry, lim;
+    unsigned char p, best, sn, rx, ry;
 
     hub_map (0);
-    lim = HUB->small ? 1 : NCPAGES;             /* (dq0 -C: a page, the tests' write-backs) */
+    cpt.n = HUB->small ? 1 : NCPAGES;           /* (dq0 -C: a page, the tests' write-backs) */
+    cpt.k[1] = rsn;                             /* (The least lately wanted but the region wanted's own, a free one
+                                                **   first: the record store's) */
+    cpt.k[2] = rrx;
+    cpt.k[3] = rry;
     hub_map (WORLD_BANK);
-    for (p = 0, q = WREC->cpage; p < lim; ++p, ++q) {
-        if (!q->used) {
-            return p;
-        }
-        if ((!q->used || q->sn != rsn || q->rx != rrx || q->ry != rry) &&
-            (best == 0xFF || q->stamp - WREC->cpage[best].stamp > 0x8000U)) {
-            best = p;                           /* (The least lately wanted: its stamp the oldest, round) */
-        }
+    if ((best = rp_x (&cpt)) != 0xFF && !WREC->cpage[best].used) {
+        return best;
     }
     if (best == 0xFF || !in_folder ("")) {
         return 0xFF;
@@ -127,10 +132,10 @@ void s_store_in (void)
     unsigned char p, k, i;
     int fd;
 
-    if (!vf_name (path, "rg", rsn, rrx, rry) || (fd = vf_open (path, 2, &hd)) < 0) {
+    if (!rp_name (path, "rg", rsn, rrx, rry) || (fd = rp_open (path, 2)) < 0) {
         return;
     }
-    for (left = hd.n; left && (p = s_store_page ()) != 0xFF; ) {
+    for (left = rf.h.n; left && (p = s_store_page ()) != 0xFF; ) {
         hub_map (WORLD_BANK);
         q = &WREC->cpage[p];
         q->used = 1;
@@ -192,6 +197,9 @@ void s_store_save (void)
 #pragma bss-name (push, "SW19RODATA")
 
 static struct vfh bh;
+#pragma data-name (push, "SW19RODATA")
+static struct rpt cpf = { RP_FIND, NCPAGES, sizeof (struct cpage), 0x0E, WREC->cpage, offsetof (struct cpage, stamp) };
+#pragma data-name (pop)                         /* (The pages' table: a region's pages found, the record store's) */
 
 /* The region wanted's pages looked through for the record of rec's square and kind (the lock held): 2, found (copied
 ** into rec); 1, not there; 0, none of the region's pages in */
@@ -201,12 +209,11 @@ static unsigned char look (void)
     struct change* c;
     unsigned char p, n, had = 0;
 
-    for (p = 0; p < NCPAGES; ++p) {
-        hub_map (WORLD_BANK);
+    cpf.k[1] = rsn;
+    cpf.k[2] = rrx;
+    cpf.k[3] = rry;
+    for (cpf.from = 0; hub_map (WORLD_BANK), (p = rp_x (&cpf)) != 0xFF; cpf.from = p + 1) {
         q = &WREC->cpage[p];
-        if (!q->used || q->sn != rsn || q->rx != rrx || q->ry != rry) {
-            continue;
-        }
         had = 1;
         q->stamp = WREC->cstamp;
         n = q->n;

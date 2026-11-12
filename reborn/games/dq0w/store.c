@@ -27,6 +27,7 @@
 #include "work.h"
 #include "things.h"
 #include "trace.h"
+#include "../dq0/rp.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 #pragma static-locals (on)                      /* (Smaller: none of it's called again before it returns) */
@@ -56,8 +57,10 @@ static struct cpage* __fastcall__ page (unsigned char p)
     return &WREC->cpage[p];
 }
 
-/* Its region the one wanted */
-#define WANTED(q)       ((q)->used && (q)->sn == rsn && (q)->rx == rrx && (q)->ry == rry)
+#pragma data-name (push, "SW38RODATA")
+static struct rpt cpf = { RP_FIND, NCPAGES, sizeof (struct cpage), 0x0E, WREC->cpage, offsetof (struct cpage, stamp) };
+#pragma data-name (pop)                         /* (The pages' table: the region wanted's pages found, the record
+                                                **   store's) */
 
 /* The record (rec) kept: in its region's pages (read in, if they're in its file), over the one of its square it
 ** replaces (its kind and floor, a portal's state, its harm, a trap's state), or after the rest (a page made room
@@ -74,11 +77,12 @@ void s_store_put (void)
     hub_map (0);
     hy_sem_acquire (HUB->change_lock);
     for (tries = 0; ; ++tries) {
-        for (p = 0, room = 0xFF, had = 0; p < NCPAGES; ++p) {
-            q = page (p);
-            if (!WANTED (q)) {
-                continue;
-            }
+        cpf.k[1] = rsn;                         /* (Set again after store_in: this part put out and in, its own data
+                                                **   as its image has it) */
+        cpf.k[2] = rrx;
+        cpf.k[3] = rry;
+        for (cpf.from = 0, room = 0xFF, had = 0; (p = rp_x ((hub_map (WORLD_BANK), &cpf))) != 0xFF; cpf.from = p + 1) {
+            q = &WREC->cpage[p];
             had = 1;
             q->stamp = WREC->cstamp;
             if ((n = q->n) < CH_PER_PAGE) {
