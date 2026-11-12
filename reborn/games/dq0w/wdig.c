@@ -49,44 +49,6 @@ static const unsigned char claws[5] = { 2, 0, 0, 0, 4 };    /* (A burrower's cla
                                                 **   earth, the house's; no rock, shale too hard for them, the
                                                 **   user's, 2026-11-03: "Soft rock only") */
 
-static unsigned __fastcall__ apart (int ax, int ay)
-{
-    if (ax < 0) {
-        ax = -ax;
-    }
-    if (ay < 0) {
-        ay = -ay;
-    }
-    return ax > ay ? ax : ay;
-}
-
-/* Body bd did what (DE_DIG, DE_DIGS, DE_DUG), how loud: told (E_DEN) at the square dx, dy's (the dug one) or its own, whether
-** the character sees it now (the senses' marks), what lies between (E_DEN's x[3]: the rock carries a pick's knock,
-** whatever the air does, a square of wall for each four between them, the house's); the hub's header in the window
-** after */
-static void __fastcall__ told (unsigned char what, unsigned char loud, unsigned dx, unsigned dy)
-{
-    unsigned char* p;
-    unsigned e;
-
-    E_DEN_SX (bev) = what == DE_DUG || what >= DE_HANGS ? dx : bd.x;
-    E_DEN_SY (bev) = what == DE_DUG || what >= DE_HANGS ? dy : bd.y;
-    e = apart (bd.x - bpx, bd.y - bpy) >> 2;
-    E_DEN_BETWEEN (bev) = e > 15 ? 15 : e;
-    p = at (bd.sn, E_DEN_SX (bev), E_DEN_SY (bev));
-    E_DEN_SEEN (bev) = (p && (*p & T_VIS)) || (loud & 0x80);   /* (Seen: a dug square as it was seen, before it changed) */
-    loud &= 0x7F;
-    bev.kind = E_DEN;
-    bev.who = bk + 1;
-    E_DEN_DE (bev) = what;
-    E_DEN_LOUD (bev) = loud;
-    E_DEN_SN (bev) = bd.sn;
-    E_DEN_DKIND (bev) = bd.kind;
-    hub_map (0);
-    bev.t = HUB->now;
-    hub_devent (&bev);
-}
-
 /* A diagonal's corner, square x, y, cut (T_CUT) if it's rock or a wall: the way through walked corner to corner (as
 ** the character's, dq0w.c's cut_corner) */
 static void __fastcall__ cut_corner (unsigned x, unsigned y)
@@ -114,7 +76,7 @@ static void __fastcall__ build (const struct msg* m)
         if (m->who) {
             bd.ready += 6 * (unsigned long) SPELL;
             den_saw = 1;
-            told (DE_WALLS, 4, x, y);
+            den_told (DE_WALLS, 4, x, y);
         }
     } else if (p && (q = portal_at (cx_, cy_)) != 0 && (q->state & PS_WRECKED)) {
         pt = q->parts;                          /* (Read while its chunk's in the window) */
@@ -123,7 +85,7 @@ static void __fastcall__ build (const struct msg* m)
         if (m->who) {
             bd.ready += SPELL;
             den_saw = 1;                        /* (The world to look about again: the door shut) */
-            told (DE_HANGS, 4, x, y);
+            den_told (DE_HANGS, 4, x, y);
         }
     }
 }
@@ -212,7 +174,7 @@ void __fastcall__ s_den_dig (const struct msg* m)
         bd.face = h;
         HUB->dig_t[bk] = now;
         bd.ready += SPELL;
-        told (DE_DIG, DIG_LOUD, dx, dy);
+        den_told (DE_DIG, DIG_LOUD, bd.x, bd.y);
         goto put;
     }
     if (ago < SPELL) {
@@ -264,7 +226,7 @@ spell:
         HUB->dig_t[bk] = now;                   /* (On: another spell, its noise: heard by the denizens, the
                                                 **   player's told as it began) */
         bd.ready += SPELL;
-        told (roof ? DE_ROOF : DE_DIGS, roof ? DUG_LOUD : DIG_LOUD, dx, dy);
+        den_told (roof ? DE_ROOF : DE_DIGS, roof ? DUG_LOUD : DIG_LOUD, bd.x, bd.y);
         goto put;
     }
     z = elev_at (bd.sn, bd.x, bd.y);            /* (Through: the square a passage at its floor's height) */
@@ -279,7 +241,7 @@ spell:
     bd.doing = DO_ROAM;
     bd.ready += 10;
     den_saw = 1;                                /* (The world to look about again: the new way seen) */
-    told (DE_DUG, DUG_LOUD | (rk & 0x80), dx, dy);
+    den_told (DE_DUG, DUG_LOUD | (rk & DT_SEEN), dx, dy);
 put:
     if (rd) {
         return;                                 /* (A record's: no body to put back) */

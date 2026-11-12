@@ -3540,6 +3540,119 @@ world's told () copies that only sent events.  The words the player sees are the
   said_b choosing the bank by the row's place.
 - **Tested:** all 442 tests pass.
 
+## Narration as data, stage 3 (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §3.2 and step 5, its third stage)
+
+Stage 2 left the rest of task_words, the walk's beats, the denizens' doings and the last two told () copies.  This
+stage moves those onto the phrase table, gives the rows a second bank, takes out the two copies, and words the
+denizens' doings by the same rows as the character's, the actor swapped.  The words the player sees are the same,
+letter for letter.
+
+- **The rows' second bank (overlay 29).**  The rows grew to 9,879 bytes, past one bank.  dq0.cfg's OV29 is a bank of
+  its own ("no parts", so the packer keeps out of it) whose MEMORY line starts at **$A000**: the second half of the
+  rows (said_rows2, OV29RODATA) is linked there, so a row's offset past 8,192 is simply an address past $A000.
+  bank.s's said_b (main RAM, 9 bytes more) reads an address under $A000 from overlay 28's bank, one past it from
+  overlay 29's at that address less $2000.  The renderer is unchanged: it still adds an offset to said_rows.  saidgen
+  places each kind's rows, and each piece, wholly in one bank, the first with room, in their order (bank 28 8,186
+  bytes, bank 29 1,693: DEN's rows and later pieces there).  OVMAX is 29; the game reads one more bank as it starts.
+  **Chosen over** a bank number in each row's offset (said_at would grow a byte a kind, and the renderer would carry
+  the bank through every pointer it walks).
+- **The world's told () copies: none left.**  wdig.c's and wport.c's (E_DEN: a tunneller's dig, a builder's work, a
+  denizen's door work) are one sender, wport.c's `s_den_told` in part 80, called directly there and through its stub
+  (`den_told`) from wdig.c's part 79.  What each copy did its own way are flags in its loud byte: `DT_SEEN` (a dug
+  square seen as it was, before it changed: wdig.c's 0x80 before) and `DT_DOOR` (a door's work: what lies between
+  measured from the door, and seen if the body's own square is: wport.c's).  Its event is on the C stack, as
+  wport.c's was (not wbody.c's bev).  dq0w's main RAM 2,188 → 2,182 (the stub alone); part 79 622 → 929 (its copy out), part 80 181 → 122.
+  **Not resident**, so stage 2's 170 bytes weren't spent.  **Not in part 79, though it was built there first:** part
+  79's bank is overlay 32, one of dq0w.rop's three, read in only at ropes_in; a denizen's door work before that
+  copied an unread bank in and the world hung (dq0allydoor, dq0daily's garrison, dq0builder, dq0hoard).  wbody.c's
+  told_den stays: it's every step's (DE_MOVED), the bodies' own, and a part's copy a step would cost thousands of
+  cycles each.  **E_DEN's shape is unchanged**: the sound task (dq0s) and the denizens read it as before, and the
+  tests' fields are the same.
+- **The denizens' doings worded by the rows** (said.txt's `kind DEN de`: E_DEN worded by its own outcome field, as
+  BEAT, HARM and TASK are).  Each DE_* that's told seen has a row: rally, snore, talk, alarm, dig, dug, and the 23 door
+  and portcullis doings (opens ... picks); a pastime seen is DEN.any, its words tell.c's as before.  A row's
+  `{arg?seen|heard}`: its arg 0 the sentence, "\nThe dwarf miner hangs a new door.", the actor swapped in by `{Actor}`
+  ("The giant rat", "Grub") and the verb's ending by `{s}`; its arg 1 what it sounds like ("hammering"), left in lb by
+  said.c's new `said_q` (the words not said: the caller's), for caps.c's heard words.  **The character's own words and
+  a denizen's share a row's piece where they are the same words:** `@open` is `{Actor} open{s} the door`, PORTAL.opened's
+  ("You open the door, revealing ...") and DEN.opens's ("The bandit opens the door.").  That is the one doing whose
+  words are already the same both ways today: the character "closes" a door where a denizen "shuts" it, unlocks "with
+  its key", lifts a bar "out of its brackets"; making them one would change what the player sees.  The other DEN rows
+  are written for any actor ({Actor} ... {s}), so a row the character comes to share will read right.  main.c's
+  s_door_words (part 18) and noise_told's own strings are gone; noise_told (part 14) keeps the weighing and the heard
+  words' way.
+- **Moved and deleted:**
+  - the rest of task_words' words (task.c, overlay 3): what's not doing, the stop with nothing to stop and between the
+    reach's steps, engaged, backed away, fighting on and turned to, a disengage, a light low and out (its plural, one
+    seen, "One of your torches"), an ally's errand (fetched[]), a timed work begun (a journey, the mechanism, tracks,
+    the air, a climb, battering with a thing), a bare part's blow stopped short, "Keep at it?", a journey there, the
+    way forgotten, lost bearings, astray, elsewhere, drawing learnt.  task_words keeps what's truly its own: the stop
+    (parts_in, reach), the questions and their answer, what the foe, the place, the light are as they're said;
+  - robbed (task.c, overlay 15) and its OVFN stub: its words TASK.robbed and the UI's own TASK.coins, its purse kept
+    in task_words;
+  - the reach's 25 first words by verb (main.c's s_reach_said, part 19: first[]), TASK.step with its verb as its arg
+    (`@steps`, a piece: a row is at most 254 bytes), and the grope, the pack's place, a fire-maker's try (TASK.fumble,
+    .packed, .kindled);
+  - beat_words (task.c, overlay 16) and its stub: a walk's beats (BEAT.quiet ... BEAT.on, a bend's sixteen bearings);
+  - felt_words' dark beats (task.c, overlay 17): a side's wall, setting out in the dark, what the hands meet, a thing
+    underfoot, running into a wall, an edge, a swat, a thing used up.  felt_words keeps the look's two (FW_NEW, FW_TOUCH);
+  - state_words (task.c, overlay 7) and its stub: HARM.state, said by s_news (part 11) as the old loop did;
+  - main.c's s_door_words (part 18).
+
+  The walk's beats now go through news () (part 11), where the limbs' already did: main.c's events() calls news for
+  every E_BEAT of the character's.  In all, 86 rows more: 257 rows of 8 kinds, 20 pieces, 31 fields of 32.
+- **The table's compiler.**  A field named in more than one of a kind's forms is now the row's outcome's form's (E_BEAT's
+  fa, 8-15 in its met form, 8-11 in its hit form), else the kind's own form's (E_TASK's task, 8-15, not its light form's
+  8-13 beside its seen and another bits): the forms' selectors are in the hub's JSON (`sel`).
+- **Room** (the build's table):
+
+  | | before | after |
+  |---|---|---|
+  | dq0's main RAM | 3,383 | 3,415 (said_b 9 bytes more; the stubs of robbed, beat_words and state_words gone) |
+  | overlay 27 (the renderer, the words most said) | 4,351 | 911 (the words most said, 156 now, 115 at stage 2; their letters and the renderer) |
+  | overlay 28 (the rows' first bank) | 1,912 | 6 (8,186 bytes of rows) |
+  | overlay 29 (their second bank: new) | - | 6,499 (1,693 bytes of rows) |
+  | overlay 3 (task_words) | 408 | 2,121 |
+  | overlay 7 (state_words gone) | 387 | 722 |
+  | overlay 10 | 49 | 2,761 (the packer's: part 18's image placed anew) |
+  | overlay 15 (robbed gone) | 175 | 311 |
+  | overlay 16 (beat_words gone) | 865 | 1,672 |
+  | overlay 17 (felt_words' beats gone) | 128 | 329 |
+  | overlays 4, 18, 20 | 1,020, 1,982, 320 | 4,086, 758, 2,898 (the packer's) |
+  | part 11 (s_news: the beats, the state) | 3,061 | 2,349 |
+  | part 14 (noise_told) | 1,097 | 1,643 |
+  | part 18 (door_words gone) | 1,640 | 2,582 |
+  | part 19 (reach_said) | 2,604 | 3,541 |
+  | part 23 | 4,007 | 3,560 (the packer's) |
+  | dq0w's main RAM | 2,188 | 2,182 (den_told's stub) |
+  | dq0w's parts 79, 80 | 622, 181 | 929, 122 |
+  | dq0w's overlays 24, 32 | 291, 1,086 | 232, 1,393 |
+
+- **The start** (dq0starttime): seed 1 233.2M → 234.0M cycles (budget 245M), seed 123456789 311.4M → 310.6M: the one bank more read as it starts, the four functions' code gone.
+- **Checked:** every dq0 test's screen kept before and after (a temporary hook in sim/test.js, not committed), their
+  sentences compared (the status line dropped, wrapped lines joined, the order of whole sentences ignored).
+  8 of 294 differ, all noise: the real-time fights in dq0antidote and dq0denpace (dq0denpace's new run shows the moved
+  rows said right where its fight went another way: "The bandit goes through your things as you lie helpless, and
+  takes what it finds.", "The torch gutters and goes out.", "You fight back against the bandit."); denizens met at
+  other moments as the cycles moved, dq0answer (a scurrying heard once more), dq0jobs (a squeak "to your left" once
+  where it was "ahead to your left"), dq0mine (a muffled scraping heard once less), dq0prompt (a giant rat "to your
+  right", not "ahead to your right", as it goes from sight); dq0passes' "Something stirs." once more; dq0sway, a
+  key typed ahead echoed at a line's end a moment sooner ("behind you._N", not "behind you.N").  No moved sentence is
+  said differently, nor more or less often, in any test.  **The first run caught one fault, fixed:** s_den_told built
+  in part 79 hung the world on a denizen's door work before the ropes were read (above).
+- **Tested:** all 444 tests pass.
+- **Left (stage 4 and on):**
+  - fight_words (blows.c, overlay 6), sway_words, sky_words (time.c's sky[] and its sky2 by what shows the sky: wants
+    E_BEARING's sky byte split, its phase and its opening, two fields), throw_words (resolve.c: a request's reply, not
+    an event: wants the throw an outcome event, or a kind for the UI's own replies), the state's and the facing's
+    sheet, and the other inline strings (s_came, s_pose_words, hide's, the background's);
+  - the SA_ refusals as rows, and the first words from a *begun* row: both are the UI's own, not the world's events,
+    and want a kind of the UI's (a row keyed by a refusal or a verb) before they move; not built;
+  - the denizens' doings that the character does too in other words (shut and close, unlock "with its key"): one
+    wording each, the user's call, then the rows shared;
+  - wbody.c's told_den, the bodies' step: kept resident in its part for its pace;
+  - the sound's mapping as a column of the table (untouched, as asked).
+
 ## The user's review of five defaults (2026-11-11, the user's)
 
 The user reviewed defaults this file had marked "for review" and asked for five of them changed; two more were kept.

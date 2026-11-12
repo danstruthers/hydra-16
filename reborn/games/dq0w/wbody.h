@@ -105,6 +105,12 @@ void __fastcall__ den_fetch (const struct msg* m);  /* (Part 72: wfetch.c) Body 
 void __fastcall__ den_take (const struct msg* m);   /* (Part 81: wtake.c) Body bd's own take, by the take rule (I_TAKE's: a
                                                 **   its wants, TW_*; Phase 3C's one path) */
 void bled (void);                               /* (Part 15) The bleeding's bloodloss, a minute at a time */
+void __fastcall__ den_told (unsigned char what, unsigned char loud, unsigned x, unsigned y);   /* (Part 80: wport.c) Body
+                                                **   bd's doing (DE_*), how loud (0-9, | DT_*), at square x, y, told:
+                                                **   E_DEN, a door worked, a tunneller's, a builder's (wdig.c's) */
+#define DT_SEEN         0x80                    /* (den_told's loud |: seen whatever its square shows now: a dug square */
+#define DT_DOOR         0x40                    /*   as it was; a door's work: what lies between from the door, seen too
+                                                **   if the body's own square is) */
 extern unsigned long body_due;                  /* (Part 70's: the referee's next watch, wtend.c's) */
 unsigned char __fastcall__ den_first (unsigned char k, unsigned char away);    /* (Part 14) Body k's tactical
                                                 **   advantage: backed away (away 1), 2; or its blow first, 1 */

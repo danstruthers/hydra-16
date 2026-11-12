@@ -34,6 +34,8 @@ enum { SC_NL = 0x01, SC_END = 0x1E, SC_ALT = 0x1F, SC_NUM = 0x80, SC_CHOOSE = 0x
 /* The UI's words for a row (the main RAM's: its callers set them) */
 const char* said_s[3];                          /* The thing done to, the thing done with, a word of the row's own */
 unsigned char said_n;                           /* A choice of the UI's for the row ({arg}) */
+unsigned char said_q;                           /* The words left in lb, not said (a denizen's sound's words, heard:
+                                                **   its caller's to use, 2026-11-11) */
 static unsigned char said_last[SAID_NKINDS];    /* Each kind's field last told ({F!...}: a dig's feet to go) */
 
 #pragma bss-name (push, "OV27BSS")              /* (The bank's own, after its code: written as it goes) */
@@ -109,7 +111,7 @@ static void flush (void)
         lb[art] = 'n';
     }
     art = 0;
-    if (lb[0]) {
+    if (lb[0] && !said_q) {
         if (once) {
             lb_said ();
         } else {

@@ -20,11 +20,12 @@ OVL_DOT     = 12                    ;   twelve, the screen's silence under its 3
 _dnum       = _num
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 28                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
+OVMAX       = 29                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's;
                                     ;   the 25th part 27's; the 26th part 28's, 2026-11-10; the
                                     ;   27th the status line, 2026-11-11; the 28th the phrase table's rows,
-                                    ;   said.txt's, 2026-11-11: said_b)
+                                    ;   said.txt's, 2026-11-11: said_b; the 29th
+                                    ;   their second bank, stage 3)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: a walk's first words spent half their time
@@ -56,13 +57,19 @@ _getbank:
 
 ; unsigned char __fastcall__ said_b (const unsigned char* p): byte p of overlay 28's bank (the phrase table's rows,
 ; said.c's: its own bank, overlay 27's room for the renderer), the window put back as it was.  (Some 40 cycles a byte
-; with its call: a sentence's few hundred bytes read, a row found by the rows' lengths)
+; with its call: a sentence's few hundred bytes read, a row found by the rows' lengths).  p past $A000, overlay 29's,
+; the rows' second bank (stage 3, 2026-11-11: dq0.cfg's OV29 linked at $A000), at p less $2000 in it
 _said_b:
             sta         ptr1
-            stx         ptr1 + 1
+            txa
+            ldy         _ovbank + 27
+            cmp         #$A0
+            bcc         :+
+            sbc         #$20               ; (Carry set: past $A000, overlay 29's)
+            ldy         _ovbank + 28
+:           sta         ptr1 + 1
             ldx         BANKREG
-            lda         _ovbank + 27
-            sta         BANKREG
+            sty         BANKREG
             ldy         #0
             lda         (ptr1),y
             stx         BANKREG
@@ -151,14 +158,11 @@ ovcall:
             OVFN        walk_says, 17       ; (A walk's first words: sway.c's, no part's swap, the user's D17)
             OVFN        blow, 6             ; (A blow worded and its end: blows.c's since 2026-11-03, the main RAM's room)
             OVFN        task_words, 3
-            OVFN        robbed, 15          ; (A robbery's words: task.c's, overlay 3's room, 2026-11-06)
-            OVFN        beat_words, 16          ; (A walk's beats: task.c's, overlay 3's room, 2026-11-01)
             OVFN        stop_kind, 7
             OVFN        answer_of, 7
             OVFN        bar_text, 3
             OVFN        wait_go, 13
             OVFN        time_said, 13
-            OVFN        state_words, 7
             OVFN        free_cmd, 7
             OVFN        meta, 7
             OVFN        entered, 1

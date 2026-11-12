@@ -26,7 +26,10 @@
 #       {obj} {Obj} {instr} {Instr} {text} {Text}   the words the UI gives (said_s): the thing done to, the thing done
 #                               with, a word of the row's own; capitalised.  {obj?a|b} ...: a if none's given, else b
 #       {actor} {Actor} {s}     "you" or the denizen ("the giant rat", "Grub"); "s" for a denizen, "" for you
-#                               ("open{s}"); {actor?a|b}: a for the character, b for a denizen
+#                               ("open{s}"); {actor?a|b}: a for the character, b for a denizen.  A row's words are any
+#                               actor's: the denizens' (DEN's) and the character's share them by a piece (@open)
+#   A field named in more than one of the kind's forms is the row's outcome's form's (E_BEAT's fa, its met form's or
+#   its hit's), else the kind's own form's (E_TASK's task, 8-15, not its light form's 8-13)
 #       {arg} {arg?a|b ...}     the UI's number (said_n): a choice it's made for the row
 #       {a}                     "a", or "an" if the word after it begins with a vowel
 #       {rel F}                 the heading F (H_N ... H_NW), from the way the character faces ("to your left")
@@ -89,8 +92,10 @@ CLIMB.down      "You come down to the foot of the ledge."
 CLIMB.held      "You come down to the foot of the ledge."
 
 # ---- A portal worked (E_PORTAL: po, PO_*; pk the portal's kind; an opening's shows, what the look after it found
-# beyond it: "You open the door, revealing a passage, 30 feet of it.").  A blow with a soft thing: instr its name
+# beyond it: "You open the door, revealing a passage, 30 feet of it.").  A blow with a soft thing: instr its name.
+# A door opened is every actor's (@open: the character's here, a denizen's DEN.opens, the actor swapped)
 
+@open       "{Actor} open{s} the door"
 @reveal     "{shows?|, revealing {what?only darkness beyond|a passage, {far*SQ_FT} feet of it|{a} {room room}{lit?|, {light}}}}"
 
 PORTAL.none[pk=PK_WINDOW,PK_SLIT]       "There's no window that way."
@@ -105,7 +110,7 @@ PORTAL.no_lock[pk=PK_WINDOW,PK_SLIT]    "There's no lock on them to pick."
 PORTAL.forced[pk=PK_WINDOW,PK_SLIT]     "With a crack the shutters burst open{@reveal}."
 PORTAL.held[pk=PK_WINDOW,PK_SLIT]       "It holds."
 PORTAL.none             "There's no door that way."
-PORTAL.opened           "You open the door{@reveal}."
+PORTAL.opened           "{@open}{@reveal}."
 PORTAL.closed           "You close the door."
 PORTAL.is_open          "It stands open already."
 PORTAL.is_shut          "It's shut already."
@@ -301,3 +306,154 @@ TASK.ask_hurt[health=H_BADLY]   +"\nYou're badly hurt.  Keep fighting?"
 TASK.ask_hurt       +"\nYou're critically hurt.  Keep fighting?"
 TASK.no_foe         "{shock?No foe is left beside you.|You're in no state to fight.|No foe is left in your sights.}"
 TASK.free           "{none?You aren't engaged.|You see nothing to flee from.|There's no way back.|You see nothing to flee from.}"
+
+# ---- The rest of the long task's (stage 3, 2026-11-11: task_words' sayf and msg lines, robbed's, the reach's own,
+# reach_said's 25 by verb).  The UI gives: obj the foe as it's said ("the giant rat", "something": task.c's foe), or what
+# it's done to; text what it was doing (doing_of), or the journey's place, or a step's thing with its word ("old torch");
+# instr a battering's striker; its arg the UI's choice (a step's verb less SV_OFF, a light's plural, the way told).
+# Its own: step, a step of the reach begun (the verb its arg); bare, a bare part's blow stopped short; coins, robbed
+# unawares as it lay, told as it's up
+
+own TASK step bare coins
+
+TASK.not            +"\nYou aren't {obj}: you're {text}."
+TASK.idle           +"{arg?{nl}You aren't doing anything to stop.|{nl}You stop there.|{@stop}}"
+TASK.engaged        +"{still?\n{Obj} engages you|\nYou're engaged with {obj}}: you stop {text}."
+TASK.away           +"\nQuicker, {obj} backs away from you."
+TASK.fight          +"{still?{quiet?\nYou fight back against {obj}.|}|\nYou turn to {obj}.}"
+TASK.break          +"\nYou {how?back away from|break away from|run from} {obj}."
+TASK.low            +"\nYour {kind lamp} {arg?is|are} burning low."
+TASK.out            +"{arg?\nYour {kind lamp} gutters and goes out|\nYour {kind lamp} gutter and go out"
+                    "|\nThe {kind lamp} gutters and goes out|\nThe {kind lamp} gutter and go out"
+                    "|\nOne of your {kind lamp}s gutters and goes out|\nOne of your {kind lamp}es gutters and goes out}"
+                    "{text?.|: you stop {text}.}"
+TASK.fetched        +"\n{Obj} {ft?picks up the {kind thing}|hands you the {kind thing}|can't find the {kind thing} where it lay"
+                    "|can't carry the {kind thing}|has its hands full: it can't take the {kind thing}"
+                    "|sets the {kind thing} down at your feet|takes the {kind thing}|can't get to the {kind thing}}."
+TASK.robbed         +"{caught?{purse?\n{Obj} goes through your things as you lie helpless, and takes what it finds.|}"
+                    "|{asleep?\nYou catch {obj} at your purse!|\nYou wake to find {obj} at your purse!}}"
+TASK.coins          "You find your coins gone: someone robbed you as you lay."
+TASK.learnt         "You start to learn drawing."
+TASK.begun[task=LT_TRAVEL]  +"\nYou head back toward {text}."
+TASK.begun[task=LT_STUDY]   +"\nYou study the mechanism."
+TASK.begun[task=LT_TRACK]   +"\nYou cast about for tracks."
+TASK.begun[task=LT_SNIFF]   +"\nYou sniff the air."
+TASK.begun[task=LT_CLIMB]   +"\nYou set to climbing through the window."
+TASK.begun          +"{instr?\nYou set to {text}.|\nYou set to battering {obj} with the {instr}.}"
+TASK.bare           +"\nYou {arg?punch|punch|kick|butt} {obj} with your bare {arg?hands|hands|feet|head}, but stop short of"
+                    " hurting yourself."
+TASK.ask_short      +"  Keep at it?"
+TASK.there          +"{arg?\nYou're in {text} already.|\nYou're {text} already.|\nYou're back in {text}.|\nYou're back {text}.}"
+TASK.forgot         +"{arg?\nYou don't remember the way to {text}.|\nYou no longer remember the way to {text}.}"
+TASK.unsure         "You've lost your bearings: you can't tell which way to go."
+TASK.astray         +"\nYou've lost your way: you can't find {text}."
+TASK.elsewhere      +"{text?{nl}You came in on a level above this one.|\n{Text} isn't on this level.}"
+
+# The reach's (HOUSE.md's reach: the world's step planner's steps, a verb SV_* and its word SM_*): a step's first
+# words by its verb (its arg), text its thing with the word that tells it apart ("old torch", "spent torch"); a grope
+# failed; the pack left off as it's stopped part way; a fire-maker's try (reach_said's before, main.c's part 19)
+
+@steps      "{arg?take off your {text}|take off your {text}, and set it down at your feet|put your {text} back on"
+                    "|let the {text} fall, still burning|lay the {text} on the ground, still burning"
+                    "|lay the {text} down too, still lit|set the other {text} down|set to dipping the {text}"
+                    "|reach into the {text}|hold the {text} open|get out the {text}|let the {text} fall|put away the {text}"
+                    "|blow out the {text}|go to blow out the {text}: that will leave you in the dark"
+                    "|light the {text} from the burning one|set the {text} down at your feet|take up the {text}"
+                    "|set to sharpening the {text}|strike a spark|sheathe the {text}|sling the {text}"
+                    "|set the {text} in the sconce|put the {text} in your pack|put the {text} in your pack too}"
+
+TASK.step           +"\nYou {@steps}."
+TASK.fumble         +"\nYou fumble for your {kind named}."
+TASK.packed         +"{task? Your {kind named} is in your hand.| Your {kind named} lies at your feet.}"
+TASK.kindled        "{named?It doesn't catch.|It catches.}"
+
+# ---- A walk's beats as it goes (E_BEAT's WB_QUIET ... WB_SPENT, the character's: beat_words' and felt_words' before,
+# task.c's overlays 16 and 17).  The UI gives its arg: in the dark (1) or not, a passage's bend's bearing (1 plus its
+# sixteenth, by the north the character believes in), a dark walk's heading, a thing's plural, a side's change; obj
+# and instr a swat's foe and the thing swung
+
+@head       "{arg?north|northeast|east|southeast|south|southwest|west|northwest}"
+@pr         "{nl}The passage turns right."
+
+BEAT.quiet          "{arg?You go on down the passage.|You feel your way on.}"
+BEAT.turn           +"{arg?{side?{nl}The way turns right.|{nl}The way turns left.|{nl}The way turns right.|{nl}The way bends.}"
+                    "|{side?{@pr}|{nl}The passage turns left.|{@pr}|\nThe passage bends away {arg?|north|north-northeast"
+                    "|northeast|east-northeast|east|east-southeast|southeast|south-southeast|south|south-southwest"
+                    "|southwest|west-southwest|west|west-northwest|northwest|north-northwest}.}}"
+BEAT.door           "You go through a doorway."
+BEAT.up             "The way rises."
+BEAT.down           "The way falls away."
+BEAT.tells          "Your blows begin to tell on it."
+BEAT.gives          "It's starting to give."
+BEAT.on             "You keep at it."
+BEAT.sides          +"{arg?\nThe wall to your left ends.|\nThe wall to your right ends.|\nYou feel a door to your left."
+                    "|\nYou feel a door to your right.|\nA wall begins to your left.|\nA wall begins to your right.}"
+BEAT.feel           +"{gait?\nYou feel your way {@head}.|\nYou {gait?|sprint|walk|jog|run|sprint} {@head} into the dark.}"
+BEAT.felt           "{fa?Your hands find no wall within reach that way.|Your hands meet a wall.|You feel a door before you."
+                    "|Your hands meet iron bars.|The floor falls away before you.|The floor rises steeply before you."
+                    "|The floor falls away before you: the edge of a pit.}"
+BEAT.thing          +"\nYour foot finds something on the floor: {arg?{a}|some} {kind thing}."
+BEAT.trip           +"\nYou trip over something on the floor ({arg?{a}|some} {kind thing}), and go sprawling; you pick"
+                    " yourself up."
+BEAT.stumble        +"\nYou stumble over something on the floor ({arg?{a}|some} {kind thing}), but keep your feet."
+BEAT.hit            +"\nYou {gait?run headlong|sprint headlong|walk|jog headlong|run headlong|sprint headlong} into"
+                    " {fa?|a wall|a door|iron bars||a rise in the floor|}{gait?!|!|.|!}"
+BEAT.off[fa=FA_PIT]     "The floor drops away under your feet: a pit!"
+BEAT.off            "You blunder over the edge of a drop!"
+BEAT.short[fa=FA_PIT]   "You stop short, teetering, at the edge of a pit."
+BEAT.short          "You stop short, teetering, at the edge of a drop."
+BEAT.swat           +"\nYou swat at {obj} with the {instr}, but it seems ineffectual."
+BEAT.spent[thing=KI_RATIONS]    +"\nThat was the last of your {kind thing}."
+BEAT.spent[thing=KI_BANDAGES]   +"\nThat was the last of your {kind thing}."
+BEAT.spent[thing=KI_WATER]      +"\nYour waterskin is empty."
+BEAT.spent[thing=KI_INK]        +"\nYour {kind thing} is dry."
+BEAT.spent[thing=KI_QUILL]      +"\nYour {kind thing} is worn out."
+BEAT.spent          +"\nYour {kind thing} is worn to nothing."
+
+# ---- The state a harm leaves the character in (HARM's own state: its arg the condition, shock, bleeding, a leg, an
+# arm, times 2, plus 1 told already this answer: "still"; state_words' before, task.c's overlay 7)
+
+own HARM state
+
+HARM.state          +"{arg? You are in shock.| You are still in shock.| You are bleeding badly.| You are still bleeding badly."
+                    "| Your leg won't bear you.| Your leg still won't bear you.| Your arm hangs useless."
+                    "| Your arm still hangs useless.}"
+
+# ---- A denizen's doings, seen or heard (E_DEN, said.txt's kind: de, DE_*; who the actor plus 1).  Seen, its row's
+# first words ({Actor}: "The dwarf miner", "Grub"), the actor swapped into the words every actor's would be (a door
+# opened, @open, the character's PORTAL.opened's); heard (the UI's arg 1, said_q: the words left in lb for the heard
+# words, caps.c's), what it sounds like.  A pastime seen: text its words (tell.c's).  Its way dug through, seen: text
+# where ("ahead to your left.").  (main.c's noise_told and door_words before, parts 14 and 18)
+
+kind DEN de
+
+DEN.rally           +"{arg?\n{Actor} rallies its fellows.|a rallying shout}"
+DEN.snore           +"{arg?\n{Actor} snore{s}.|snoring}"
+DEN.talk            +"{arg?\n{Actor} says something to its fellow.|voices}"
+DEN.alarm           +"{arg?\n{Actor} raise{s} the alarm.|a shout of alarm}"
+DEN.dig             +"{arg?\n{Actor} dig{s} into the wall.|a scraping in rock}"
+DEN.dug             +"{arg?\nA fresh tunnel opens {text} Spoil lies heaped by it.|rock falling}"
+DEN.opens           +"{arg?\n{@open}.|a door opening}"
+DEN.shuts           +"{arg?\n{Actor} shut{s} the door.|a door shutting}"
+DEN.slams           +"{arg?\n{Actor} slam{s} the door shut.|a door slamming}"
+DEN.unlocks         +"{arg?\n{Actor} unlock{s} the door.|a key in a lock}"
+DEN.locks           +"{arg?\n{Actor} lock{s} the door.|a key in a lock}"
+DEN.bars            +"{arg?\n{Actor} drop{s} a bar across the door.|a bar dropping}"
+DEN.unbars          +"{arg?\n{Actor} lift{s} the door's bar.|a bar scraping}"
+DEN.strains         +"{arg?\n{Actor} strain{s} at the door.|a door creaking}"
+DEN.bursts          +"{arg?\n{Actor} burst{s} the door open.|a door bursting}"
+DEN.holds           +"{arg?\n{Actor} can't force the door.|a door creaking}"
+DEN.batters         +"{arg?\n{Actor} batter{s} at the door.|blows on a door}"
+DEN.breaks          +"{arg?\n{Actor} break{s} the door down.|a door crashing in}"
+DEN.roof            +"{arg?\n{Actor} is showered with rock from the roof.|rock falling}"
+DEN.hangs           +"{arg?\n{Actor} hang{s} a new door.|hammering}"
+DEN.walls           +"{arg?\n{Actor} wall{s} up the way.|stones being laid}"
+DEN.winds           +"{arg?\n{Actor} wind{s} the portcullis's winch.|a winch cranking}"
+DEN.heaves          +"{arg?\n{Actor} heave{s} at the portcullis.|iron scraping}"
+DEN.raises          +"{arg?\n{Actor} raise{s} the portcullis.|chains rattling}"
+DEN.lowers          +"{arg?\n{Actor} let{s} the portcullis fall.|iron crashing down}"
+DEN.bends           +"{arg?\n{Actor} strain{s} at the bars.|iron groaning}"
+DEN.bent            +"{arg?\n{Actor} bend{s} the bars apart.|iron groaning}"
+DEN.picking         +"{arg?\n{Actor} work{s} at the lock.|a faint scratching}"
+DEN.picks           +"{arg?\n{Actor} pick{s} the lock.|a lock clicking}"
+DEN.any             +"\n{Actor} {text}."

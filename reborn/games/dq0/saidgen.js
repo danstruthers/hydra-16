@@ -12,7 +12,9 @@
 //   said_ko[n]                 each kind's outcome: its field (said_f's)
 //   said_f[]                   the fields a row reads, five bytes each: its byte's offset in struct msg, the shift and
 //                              the mask that take it out, an operation (SF_*: none, less K, more than K, times K) and K
-//   said_rows[]                (overlay 28's) a kind's rows, each: its length (the bytes to the next), its outcome
+//   said_rows[], said_rows2[]  (overlays 28's and 29's: the second linked at $A000, so an offset past 8,192 is its, said_b
+//                              reading it at $8000 in its own bank; stage 3, 2026-11-11) a kind's rows, wholly in one
+//                              bank, the first with room, each: its length (the bytes to the next), its outcome
 //                              (SAID_ANY any), its condition's field (0xFF none; | 0x80, the field's one value, else the
 //                              mask of its values, bit V for V) and that value or mask, its flags (SR_ONCE), its text
 //                              (below), 0; then 0.  After the kinds' rows, the pieces (said.txt's @NAME, each kind's its
@@ -38,7 +40,8 @@ const SC = { NL: 0x01, END: 0x1E, ALT: 0x1F, NUM: 0x80, CHOOSE: 0xA0, CHANGED: 0
   LIGHT: 0xEA, FORGET: 0xEB, ARG: 0xEC, SING: 0xED, IF: 0xF0, ROOM: 0xF8, TRAP: 0xF9, REL: 0xFA, PIECE: 0xFB,
   KIND: 0xFC, NAME: 0xFD, WORD: 0xEE };
 const WORDS_MAX = 200;                                        // (The words said as SC_WORD and a byte, at most)
-const ANY = 0xFE;                                             // (A row for any outcome: said.c's SAID_ANY)
+const BANK = 0x2000;                                          // (A bank of the rows': overlays 28 and 29)
+const ANY = 0xFE;                                            // (A row for any outcome: said.c's SAID_ANY)
 const OP = { '': 0, '-': 1, '>': 2, '*': 3 };
 const WORDS = ['obj', 'instr', 'text', 'actor'];
 const DICT = [2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29];   // (A word's codes)
@@ -124,11 +127,15 @@ function generate(H, say = () => {}) {
     return Math.max(...K.members.map(n => H.C[n])) + 1 + i;
   };
   const fields = [], fieldIx = new Map();
+  let rowOut = null;                                          // (The row being compiled: its outcome; a piece's none)
   const field = (K, expr, line) => {                          // (A field's descriptor's place, made if new)
     const m = expr.match(/^([a-z]\w*)(?:([-*>])(\w+))?$/);
     if (!m) throw new Error('said.txt:' + line + ': {' + expr + '}?');
-    const at = new Set();
-    for (const f of K.forms) for (const x of f.fields) if (x[0] === m[1]) at.add(x.slice(1, 5).join(','));
+    const at = new Set(), mine = K.forms.filter(f => rowOut !== null && f.sel && f.sel[1].includes(rowOut));
+    for (const fs_ of [mine.length ? mine : K.forms.filter(f => !f.sel), K.forms]) {   // (The row's outcome's form first,
+      for (const f of fs_) for (const x of f.fields) if (x[0] === m[1]) at.add(x.slice(1, 5).join(','));   //   or the
+      if (at.size) break;                                     //   kind's own: then any form's.  E_TASK's task 8-15, not its
+    }                                                         //   light form's 8-13; E_BEAT's fa, its met form's or its hit's)
     if (at.size !== 1) throw new Error('said.txt:' + line + ': ' + K.k + '\'s ' + m[1] + (at.size ? ', in two places' : '?'));
     const [off, , lo, hi] = [...at][0].split(',').map(Number);
     if (lo >> 3 !== hi >> 3) throw new Error('said.txt:' + line + ': ' + m[1] + ' across two bytes');
@@ -148,7 +155,10 @@ function generate(H, say = () => {}) {
     const key = K.k + '@' + p;
     if (!pcIx.has(key)) {
       pcIx.set(key, -1);
+      const o = rowOut;
+      rowOut = null;
       const b = compile(K, pieces[p], line);
+      rowOut = o;
       pcIx.set(key, pc.length);
       pc.push({ c: '@' + p + ' (' + K.short + ')', b: [...b, 0] });
     }
@@ -214,6 +224,7 @@ function generate(H, say = () => {}) {
     const K = byShort[m[1]];
     if (!K) throw new Error('said.txt:' + e.line + ': ' + m[1] + ', not an outcome event\'s kind (msgs.def\'s < E_OUTCOME, or said.txt\'s kind)');
     let cf = 0xFF, mask = 0;
+    rowOut = outVal(K, m[2], e.line);
     if (m[3]) {
       const c = m[3].match(/^([^=]+)=(.+)$/);
       if (!c) throw new Error('said.txt:' + e.line + ': [' + m[3] + ']?');
@@ -224,12 +235,13 @@ function generate(H, say = () => {}) {
       else if (vs.length === 1) { cf |= 0x80; mask = vs[0]; }
       else throw new Error('said.txt:' + e.line + ': [' + m[3] + ']: values past 7, more than one');
     }
-    const out = outVal(K, m[2], e.line);
+    const out = rowOut;
     K.rows.push({ out, cf, mask, flags: m[4] ? 1 : 0, bytes: [...(e.on ? [] : [SC.NL]), ...compile(K, e.text, e.line)],
       name: m[1] + '.' + m[2] + (m[3] ? '[' + m[3] + ']' : ''), cond: !!m[3] });
   }
   // The C: the kinds, the fields, the rows (each kind's with a condition first, in their order, then those without;
   // the rows for any outcome after them, the same way)
+  rowOut = null;                                              // (said_ko's fields below: no row's)
   const hex = v => '0x' + v.toString(16).toUpperCase().padStart(2, '0');
   const rows = [], at = [];
   for (const K of kinds) {
@@ -300,9 +312,20 @@ function generate(H, say = () => {}) {
     if (r.b.length + 1 > 255) throw new Error('saidgen: ' + r.c + ', past 254 bytes packed');
     r.b.unshift(r.b.length + 1);
   }
-  let n = 0;
-  const offs = rows.map(r => { const o = n; n += r.b.length; return o; });
-  if (n > 0x2000) throw new Error('saidgen: the rows ' + n + ' bytes, past their bank\'s 8,192');
+  // (Two banks: overlay 28's from $8000, overlay 29's from $A000 (its MEMORY line's start; a bank of its own, read at
+  // $8000 by said_b): each kind's rows, and each piece, wholly in one, the first that has room, in their order; an
+  // offset past BANK the second bank's)
+  const blocks = [];
+  at.forEach((a, i) => blocks.push(rows.slice(a, i + 1 < at.length ? at[i + 1] : pfirst)));
+  for (let i = pfirst; i < rows.length; i++) blocks.push([rows[i]]);
+  const fill = [0, 0], offOf = new Map(), inBank = [[], []];
+  for (const bl of blocks) {
+    const z = bl.reduce((t, r) => t + r.b.length, 0), k = fill[0] + z <= BANK ? 0 : 1;
+    if (fill[1] + z > BANK && k) throw new Error('saidgen: the rows past their two banks\' 16,384 bytes');
+    for (const r of bl) { offOf.set(r, k * BANK + fill[k]); fill[k] += r.b.length; inBank[k].push(r); }
+  }
+  const n = fill[0] + fill[1];
+  const offs = rows.map(r => offOf.get(r));
   let dn = 0;
   const dofs = dict.map(w => { const o = dn; dn += w.length + 1; return o; });
 
@@ -320,18 +343,23 @@ function generate(H, say = () => {}) {
   const fl = lines.length;
   lines.push('static const unsigned char said_f[] = {');
   fields.forEach((d, i) => lines.push('    ' + d.map(hex).join(', ') + ',' + '    /* ' + i + ' */'));
-  lines.push('};', '#pragma rodata-name (push, "OV28RODATA")      /* (Overlay 28\'s: the rows\' bank, read by said_b) */',
-    'const unsigned char said_rows[] = {');
-  for (const r of rows) {
-    lines.push('    /* ' + r.c + ' */');
-    for (let i = 0; i < r.b.length; i += 16) lines.push('    ' + r.b.slice(i, i + 16).map(hex).join(', ') + ',');
-  }
-  lines.push('};', '#pragma rodata-name (pop)', '#endif', '', '#endif', '');
+  lines.push('};');
+  [['said_rows', 28, 'the rows\' first bank, at $8000'], ['said_rows2', 29, 'their second, at $A000']].forEach(([name, ov, what], k) => {
+    lines.push('#pragma rodata-name (push, "OV' + ov + 'RODATA")      /* (Overlay ' + ov + '\'s: ' + what + ', read by said_b) */',
+      'const unsigned char ' + name + '[] = {');
+    for (const r of inBank[k]) {
+      lines.push('    /* ' + r.c + ' */');
+      for (let i = 0; i < r.b.length; i += 16) lines.push('    ' + r.b.slice(i, i + 16).map(hex).join(', ') + ',');
+    }
+    if (!inBank[k].length) lines.push('    0');
+    lines.push('};', '#pragma rodata-name (pop)');
+  });
+  lines.push('#endif', '', '#endif', '');
   if (fields.length > 32) throw new Error('saidgen: more than 32 fields');
   void fl;
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, lines.join('\r\n'), 'latin1');
-  say('dq0said.h: ' + kinds.reduce((s, K) => s + K.rows.length, 0) + ' rows of ' + kinds.length + ' kinds, ' + n + ' bytes (overlay 28), ' + pc.length + ' pieces, ' + fields.length + ' fields');
+  say('dq0said.h: ' + kinds.reduce((s, K) => s + K.rows.length, 0) + ' rows of ' + kinds.length + ' kinds, ' + n + ' bytes (overlay 28 ' + fill[0] + ', 29 ' + fill[1] + '), ' + pc.length + ' pieces, ' + fields.length + ' fields');
 }
 
 module.exports = { generate };

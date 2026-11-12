@@ -1116,13 +1116,10 @@ static unsigned char events (void)          /* (How many there were) */
                 }
             }
             break;
-        case E_BEAT:                            /* (A walk's, as it goes; the limbs', part 11's: slice 4.1b's) */
+        case E_BEAT:                            /* (A walk's, as it goes; the limbs', part 11's: slice 4.1b's; the walk's
+                                                **   too since 2026-11-11, said.txt's BEAT rows, beat_words' before) */
             if (m.who == 0) {
-                if (E_BEAT_BEAT (m) >= WB_DROP) {
-                    news (&m);
-                } else {
-                    beat_words (m.w1);
-                }
+                news (&m);
             }
             break;
         case E_NOWAY:                           /* (A way refused: told at once, the main RAM's) */
@@ -1205,6 +1202,92 @@ void __fastcall__ s_came (const struct msg* m)
 #pragma code-name (push, "SW11CODE")
 #pragma rodata-name (push, "SW11RODATA")
 
+/* The state a harm leaves the character in (shock, bleeding, a leg or an arm useless: rs.h's C_*, cond its low byte),
+** said.txt's HARM.state: each once an answer, then "still" (a second harm's: a door battered, its trap after; task.c's
+** state_words before, 2026-11-11) */
+static void __fastcall__ state_said (unsigned char cond)
+{
+    static const unsigned char c_[] = { C_STUNNED, C_BLEEDING, C_LEG_USELESS, C_ARM_USELESS };
+    struct msg c;
+    unsigned char i;
+
+    c.kind = E_HARM;
+    c.who = 0;
+    c.w1 = SAID_HARM_STATE;
+    for (i = 0; i < sizeof c_; ++i) {
+        if (cond & c_[i]) {
+            said_n = i * 2 + ((harm_told & c_[i]) != 0);
+            outcome_words (&c);
+        }
+    }
+    harm_told |= cond & ~1;
+}
+
+/* A walk's beat (E_BEAT's WB_QUIET ... WB_SPENT, c a copy), its row's words worked out (said.txt's BEAT rows: the
+** dark, a bend's bearing by the north the character believes in, a dark walk's heading, a thing's plural, a swat's
+** foe and the thing swung, its arg and its words): 0, nothing to say by the rows (said here, or not at all) */
+static unsigned char __fastcall__ beat_arg (struct msg* c)
+{
+    unsigned char b = c->w1 >> 8, k, i, f;
+
+    hub_mem (SIGHT_BANK, &f, &SIGHT->dark, 1);
+    said_n = f;
+    switch ((unsigned char) c->w1) {
+    case WB_TURN:                               /* (In the dark: as its feet go, no passage's name, no bearing; else a
+                                                **   bend's sixteenth, by the north it believes in, plus 1) */
+        if (!f) {
+            said_n = b & 0x10 ? 1 + ((b + (HUB->pc_skew << 1)) & 15) : 1;
+        } else {
+            said_n = 0;
+        }
+        break;
+    case WB_CROSS:                              /* (A room crossed to a door, a passage: "You cross the room."; in the
+                                                **   dark, no room's told) */
+        if (!f) {
+            tell (T_YOU_CROSS_THE);
+        }
+        return 0;
+    case WB_SIDES:                              /* (A dark walk, as what its hands find on either side changes: its low
+                                                **   four bits now, left then right; its high four as they were) */
+        for (k = 0; k < 2; ++k, b >>= 2) {
+            f = (b >> 4) & 3;
+            i = b & 3;
+            if (f != i && (!i || i == 2 || f != 2)) {
+                said_n = (!i ? 0 : i == 2 ? 2 : 4) + k;
+                outcome_words (c);
+            }
+        }
+        return 0;
+    case WB_FEEL:                               /* (The way by the north it believes in: slice 4.2's) */
+        if (reach == 2) {                       /* (Its command again, walked over first: told as the walk began) */
+            return 0;
+        }
+        worded = 2;                             /* (Its way told: not "You set off south." after it: facing_words') */
+        said_n = (b + HUB->pc_skew) & 7;
+        break;
+    case WB_THING:
+    case WB_TRIP:
+    case WB_STUMBLE:
+        hub_mem (KIND_BANK, &k, &CATALOGUE[b].flags, 1);
+        said_n = (k & K_PLURAL) != 0;
+        break;
+    case WB_SWAT:                               /* (A blow at a denizen with a soft thing: its name, the thing the hub's
+                                                **   pc_strike's) */
+        strcpy (lb + 300, HUB->actor[(b - 1) & 7].name);
+        said_s[0] = lb + 340;
+        strcpy (lb + 340, lb[300] >= 'a' ? "the " : "");
+        strcat (lb + 340, lb + 300);
+        hub_mem (KIND_BANK, lb + 370, CATALOGUE[SK_KIND (HUB->pc_strike)].name, sizeof CATALOGUE[0].name);
+        lb[370 + sizeof CATALOGUE[0].name] = 0;
+        said_s[1] = lb + 370;
+        break;
+    case WB_SPENT:                              /* (A thing used up, its kind: HOUSE.md's things used up; a remedy drunk
+                                                **   told as it's drunk, 2026-11-02) */
+        return b < KI_ANTIDOTE;
+    }
+    return 1;
+}
+
 void __fastcall__ s_news (const struct msg* m)
 {
     unsigned char k;
@@ -1221,7 +1304,14 @@ void __fastcall__ s_news (const struct msg* m)
             pose_words (m->w1);
             break;
         }
-        c = *m;                                 /* (The limbs' news, every actor's, and the water's: said.txt's BEAT
+        c = *m;
+        if (E_BEAT_BEAT (*m) < WB_DROP) {       /* (A walk's beat as it goes, in the dark or not: said.txt's BEAT rows,
+                                                **   beat_words' and felt_words' before, task.c's, 2026-11-11) */
+            if (beat_arg (&c)) {
+                outcome_words (&c);
+            }
+            break;
+        }                                 /* (The limbs' news, every actor's, and the water's: said.txt's BEAT
                                                 **   rows, limb_words' and water_words' before, 2026-11-11) */
         if ((k = E_BEAT_WHOSE (*m)) & 0x80 && actor_seen (k) == 2) {
             c.w1 = SAID_BEAT_UNSEEN;            /* (A fall unseen, near: the world's b | 0x80, part 8's, 2026-10-30) */
@@ -1278,7 +1368,7 @@ void __fastcall__ s_news (const struct msg* m)
         said_n = (HUB->pcsum.cond & C_DEAD) != 0;
         outcome_words (m);
         if (!said_n && (E_HARM_HC (*m) == HC_STRUCK || (E_HARM_BAND (*m) && !(m->w1 & E_CAUGHT)))) {
-            state_words ((unsigned char) HUB->pcsum.cond);
+            state_said ((unsigned char) HUB->pcsum.cond);
         }
         if (HUB->pcsum.cond & C_DEAD) {
             ending (END_DIED);                     /* (The game's end) */
@@ -2398,27 +2488,24 @@ unsigned char __fastcall__ s_tool_out (unsigned char which)
     return things (IO_USE | IO_STEPS, keys[which]) != IR_OK;
 }
 
-/* The reach's words (task.c's: w an E_TASK's, TE_BEGUN with a step's kind; TE_PACKED, TE_FUMBLE; named its thing's kind):
-** the step's first words; the pack left off, stopped part way; the world's own step's grope failed */
+/* The reach's words (task.c's: w an E_TASK's, TE_BEGUN with a step's kind; TE_PACKED, TE_FUMBLE, TE_KINDLED; named its
+** thing's kind): the step's first words; the pack left off, stopped part way; the world's own step's grope failed; a
+** fire-maker's try.  Their words said.txt's TASK rows (TASK.step by its verb, its text the thing with its word: a word
+** of SM_*'s or AW_*'s; 2026-11-11, its 25 sentences here before) */
 void __fastcall__ s_reach_said (unsigned w, unsigned char named)
 {
-    static const char* const first[SV_INPACK2 - SV_OFF + 1] = {   /* (By SV_*: the verb's words, a word of SM_*'s or AW_*'s in %s) */
-        "\nYou take off your %s.", "\nYou take off your %s, and set it down at your feet.", "\nYou put your %s back on.",
-        "\nYou let the %s fall, still burning.", "\nYou lay the %s on the ground, still burning.",
-        "\nYou lay the %s down too, still lit.", "\nYou set the other %s down.", "\nYou set to dipping the %s.",
-        "\nYou reach into the %s.", "\nYou hold the %s open.", "\nYou get out the %s.", "\nYou let the %s fall.",
-        "\nYou put away the %s.", "\nYou blow out the %s.", "\nYou go to blow out the %s: that will leave you in the dark.",
-        "\nYou light the %s from the burning one.", "\nYou set the %s down at your feet.", "\nYou take up the %s.",
-        "\nYou set to sharpening the %s.", "\nYou strike a spark.", "\nYou sheathe the %s.", "\nYou sling the %s.",
-        "\nYou set the %s in the sconce.", "\nYou put the %s in your pack.", "\nYou put the %s in your pack too."
-    };
     static const char* const sm[4] = { "", "new ", "old ", "other " };   /* (By SM_*: "the old torch") */
     static const char* const aw[AW_EMPTY + 1] = { "", "lit ", "unlit ", "spent ", "empty " };
     char t[sizeof CATALOGUE[0].name + 8];
     unsigned char k = w >> 8;
+    struct msg c;
 
+    c.kind = E_TASK;
+    c.who = 0;
+    c.b = named;
+    c.w1 = w;
     if ((unsigned char) w == TE_KINDLED) {
-        msg (named ? "It catches." : "It doesn't catch.");
+        outcome_words (&c);
         return;
     }
     if ((unsigned char) w == TE_IDLE) {
@@ -2432,20 +2519,20 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
     if ((unsigned char) w == TE_BEGUN) {
         step_k = k;                             /* (The step under way: a stop's words, task.c's TE_IDLE) */
         step_n = named | 0x80;                  /* (Its kind, task.c's noun: the top bit what_hi's) */
-    }
-    t[0] = 0;
-    if ((unsigned char) w == TE_BEGUN) {
+        t[0] = 0;
         if (k & SM_ALL) {
             strcpy (t, sm[k >> 6]);             /* ("You put away the old torch.": the step's own word) */
         } else if (step_aw && (k & ~SM_ALL) >= SV_IN) {   /* (Not "the lit torch ... still burning") */
             strcpy (t, aw[step_aw]);            /* (Told apart from another of its kind at hand: "You put the spent torch in
                                                 **   your pack.", the world's apart, the user's playtest, 2026-11-06) */
         }
+        hub_mem (KIND_BANK, t + strlen (t), CATALOGUE[named].name, sizeof CATALOGUE[0].name);
+        said_s[2] = t;
+        said_n = (k & ~SM_ALL) - SV_OFF;
+        c.w1 = SAID_TASK_STEP;
     }
     step_aw = 0;
-    hub_mem (KIND_BANK, t + strlen (t), CATALOGUE[named].name, sizeof CATALOGUE[0].name);
-    sayf ((unsigned char) w == TE_FUMBLE ? "\nYou fumble for your %s." : (unsigned char) w == TE_PACKED ? (w >> 8 ?     /* (w's high byte: where it lies) */
-        " Your %s lies at your feet." : " Your %s is in your hand.") : first[(k & ~SM_ALL) - SV_OFF], t);
+    outcome_words (&c);
 }
 
 #pragma local-strings (pop)
@@ -3050,58 +3137,51 @@ void s_when_free (void)
 #pragma code-name (push, "SW14CODE")
 #pragma rodata-name (push, "SW14RODATA")
 
-/* A denizen's sound heard (heard's, its weighing the main code's: m its event, rel which way it is), told: in the
-** sound's words, the sound task's if it's put them there; its long task paused at the first (part 14's: seldom, the
-** main RAM's room) */
-void __fastcall__ door_words (unsigned char a);  /* (Below, part 19's: a denizen's door's words) */
+/* A denizen's sound heard, or its doing seen (heard's, its weighing the main code's: m its event, rel which way it is),
+** told: seen, said.txt's DEN row (its actor swapped into the row's words: "The dwarf opens the door.", the character's
+** own words for it the same row's, @open); heard, in the sound's words, the sound task's if it's put them there, else
+** the DEN row's (its arg 1: the words left in lb, said_q, "a door opening"); its long task paused at the first (part
+** 14's: seldom, the main RAM's room; main.c's door_words, part 18's, and its own strings before, 2026-11-11) */
 void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
 {
-    static const char* n;
+    unsigned char d = E_DEN_DE (*m);
 
     hub_map (DEN_BANK);                         /* (Its sound's words: the sound task's, if it's put them there) */
-    memcpy (heard_what, SND_AT + (E_DEN_DKIND (*m) % SND_KINDS * 2 + (E_DEN_DE (*m) == DE_NOISE)) * SND_REC, sizeof heard_what);
+    memcpy (heard_what, SND_AT + (E_DEN_DKIND (*m) % SND_KINDS * 2 + (d == DE_NOISE)) * SND_REC, sizeof heard_what);
     hub_map (0);
     heard_what[sizeof heard_what - 1] = 0;
-    if (E_DEN_DE (*m) >= DE_RALLY) {                     /* (A successor at its post rallying its fellows, HOUSE.md's morale; a
+    said_s[2] = heard_what;
+    if (d >= DE_RALLY) {                        /* (A successor at its post rallying its fellows, HOUSE.md's morale; a
                                                 **   sleeper's snore, those on watch talking, the alarm raised, the
                                                 **   day's, 2026-10-31; a pastime heard (dice rattling, singing), or let
                                                 **   go as its denizen rises to act, seen, leisure's, tell.c's words:
-                                                **   seen, by its name, else heard) */
-        if (E_DEN_DE (*m) == DE_DIGS) {
+                                                **   seen, by its name, else heard; a tunneller's, a door worked, Phase
+                                                **   3C's, a portcullis, a lock picked, 2026-11-02) */
+        if (d == DE_DIGS) {
             return;                             /* (A tunneller's spells after its first: told as it began) */
         }
-        if (E_DEN_DE (*m) >= DE_PASTIME && E_DEN_DE (*m) < DE_DIG) {
-            if (E_DEN_SEEN (*m) ? E_DEN_DE (*m) < DE_UP : E_DEN_DE (*m) >= DE_UP) {
+        if (d >= DE_PASTIME && d < DE_DIG) {
+            if (E_DEN_SEEN (*m) ? d < DE_UP : d >= DE_UP) {
                 return;                         /* (One seen at its pastime: the look's words say it) */
             }
-            tell ((E_DEN_DE (*m) - DE_PASTIME - PT_DICE + T_PAST_HEARD) | TELL_COPY);
-            n = heard_what;
-        } else if (E_DEN_DE (*m) >= DE_OPENS) {
-            door_words (E_DEN_DE (*m));                  /* (A door worked by a denizen, Phase 3C's: its words below) */
-            n = lb + 340;
-            strcpy (heard_what, n + strlen (n) + 1);
+            tell ((d - DE_PASTIME - PT_DICE + T_PAST_HEARD) | TELL_COPY);   /* (Its words: DEN.any's text) */
         } else {
-            n = E_DEN_DE (*m) == DE_RALLY ? "rallies its fellows\0a rallying shout" : E_DEN_DE (*m) == DE_SNORE ?
-                "snores\0snoring" : E_DEN_DE (*m) == DE_TALK ? "says something to its fellow\0voices" : E_DEN_DE (*m) == DE_DIG ?
-                "digs into the wall\0a scraping in rock" : E_DEN_DE (*m) == DE_DUG ? "\0rock falling" :
-                "raises the alarm\0a shout of alarm";  /* (A tunneller's spell begun, its way through: slice
-                                                **   4.11's) */
-            strcpy (heard_what, n + strlen (n) + 1);
+            said_n = said_q = 1;                /* (What it sounds like: the row's heard words, into lb) */
+            outcome_words (m);
+            said_q = 0;
+            strcpy (heard_what, lb);
         }
-        if (E_DEN_SEEN (*m) && E_DEN_DE (*m) == DE_DUG) {
-            heard_words (0, rel);               /* (Its way through seen: where, the heard words' way's) */
-            strcpy (lb + 300, lb + 10 + strlen (heard_what));
-            sayf ("\nA fresh tunnel opens %s Spoil lies heaped by it.", lb + 300);
-            return;
-        }
+        said_n = 0;
         if (E_DEN_SEEN (*m)) {
-            strcpy (lb + 300, HUB->actor[(m->who - 1) & (NACTORS - 1)].name);   /* (Its name, at the line's far end:
-                                                **   sayf's lb its own) */
-            sayf (lb[300] >= 'a' ? "\nThe %s %s." : "\n%s %s.", lb + 300, n);
+            if (d == DE_DUG) {                  /* (Its way through seen: where, the heard words' way's) */
+                heard_words (0, rel);
+                said_s[2] = strcpy (lb + 300, lb + 10 + strlen (heard_what));
+            }
+            outcome_words (m);
             return;
         }
     }
-    heard_words (E_DEN_DE (*m) | (E_DEN_BETWEEN (*m) ? 0x80 : 0), rel);
+    heard_words (d | (E_DEN_BETWEEN (*m) ? 0x80 : 0), rel);
     msg (lb);
     if (busy && HUB->pc_task.kind && !asked) {
         asked = 1;                              /* (The first sound heard as a long task goes: asked, the world's to
@@ -3110,32 +3190,6 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
     }
 }
 
-/* A door worked by a denizen (E_DEN's a, DE_OPENS ...: Phase 3C's one path; a portcullis, a lock picked, 2026-11-02), its words into lb + 340: what it's seen
-** doing (after its name), then what's heard (heard_what's: 19 letters at most).  Part 18 (noise_told's: 2026-11-02, overlay 3 full, these a rare few) */
-#pragma code-name (push, "SW18CODE")
-#pragma rodata-name (push, "SW18RODATA")
-void __fastcall__ s_door_words (unsigned char a)
-{
-    static const char* const said[DE_PICKS + 1 - DE_OPENS] = {
-        "opens the door\0a door opening", "shuts the door\0a door shutting", "slams the door shut\0a door slamming",
-        "unlocks the door\0a key in a lock", "locks the door\0a key in a lock",
-        "drops a bar across the door\0a bar dropping", "lifts the door's bar\0a bar scraping",
-        "strains at the door\0a door creaking", "bursts the door open\0a door bursting",
-        "can't force the door\0a door creaking", "batters at the door\0blows on a door",
-        "breaks the door down\0a door crashing in", "is showered with rock from the roof\0rock falling",
-        "hangs a new door\0hammering", "walls up the way\0stones being laid",
-        "winds the portcullis's winch\0a winch cranking", "heaves at the portcullis\0iron scraping",
-        "raises the portcullis\0chains rattling", "lets the portcullis fall\0iron crashing down",
-        "strains at the bars\0iron groaning", "bends the bars apart\0iron groaning",
-        "works at the lock\0a faint scratching", "picks the lock\0a lock clicking"
-    };
-    const char* s = said[a - DE_OPENS];
-
-    strcpy (lb + 340, s);
-    strcpy (lb + 341 + strlen (s), s + strlen (s) + 1);
-}
-#pragma code-name (pop)
-#pragma rodata-name (pop)
 
 /* The body's position as the character said (E_BEAT WB_POSED's w1: the position times 256, | 0x8000 there already).
 ** Part 12's since 2026-10-31 (part 14's bank, overlay 3, full) */

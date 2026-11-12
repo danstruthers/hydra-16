@@ -40,17 +40,6 @@
 
 unsigned char __fastcall__ on_pc (unsigned i);  /* (Part 10's) */
 
-static unsigned __fastcall__ apart (int ax, int ay)
-{
-    if (ax < 0) {
-        ax = -ax;
-    }
-    if (ay < 0) {
-        ay = -ay;
-    }
-    return ax > ay ? ax : ay;
-}
-
 /* A key that fits the door the work's on (wk's sn, px, py) carried by the work's actor (wk.who: the character, on it
 ** or in what it carries; else body bd's own, IW_DEN): its number, or 0 */
 unsigned s_door_key (void)
@@ -80,26 +69,44 @@ static const unsigned char de_of[PO_HELD + 1] = {
     DE (DE_HOLDS, 7)
 };
 
-/* Body bd's event (DE_* what, how loud), at the door's square x, y (E_DEN: seen if the door or the body is; what lies
-** between for those who hear it, as a tunneller's: wdig.c's) */
-static void __fastcall__ told (unsigned char what, unsigned char loud, unsigned x, unsigned y)
+static unsigned __fastcall__ apart (int ax, int ay)
+{
+    if (ax < 0) {
+        ax = -ax;
+    }
+    if (ay < 0) {
+        ay = -ay;
+    }
+    return ax > ay ? ax : ay;
+}
+
+/* Body bd did what (DE_*), how loud (its low six bits): told (E_DEN) at square x, y (the dug one, a door's, or its own),
+** whether the character sees it now (the senses' marks: that square's; DT_SEEN, a dug square as it was seen, before it
+** changed; DT_DOOR, a door's work, the body's own square's too), what lies between (E_DEN's x[3]: the rock carries a
+** pick's knock, whatever the air does, a square of wall for each four between them, the house's; from the body, or
+** a door's work's from the door); the hub's header in the window after.  The one sender of a denizen's door work and a
+** tunneller's and a builder's (wdig.c's, part 79's, through its stub: each its own copy before, 2026-11-11, narration
+** as data's stage 3; here, not part 79: its bank dq0w.rop's, read in only at ropes_in); its event on the C stack */
+void __fastcall__ s_den_told (unsigned char what, unsigned char loud, unsigned x, unsigned y)
 {
     struct msg m;
     unsigned char* p;
     unsigned e;
 
+    E_DEN_SX (m) = x;
+    E_DEN_SY (m) = y;
+    e = loud & DT_DOOR ? apart (x - bpx, y - bpy) >> 2 : apart (bd.x - bpx, bd.y - bpy) >> 2;
+    E_DEN_BETWEEN (m) = e > 15 ? 15 : e;
+    p = at (bd.sn, x, y);
+    E_DEN_SEEN (m) = (p && (*p & T_VIS)) || (loud & DT_SEEN);
+    if (loud & DT_DOOR) {
+        p = at (bd.sn, bd.x, bd.y);
+        E_DEN_SEEN (m) |= p && (*p & T_VIS);
+    }
     m.kind = E_DEN;
     m.who = bk + 1;
     E_DEN_DE (m) = what;
-    E_DEN_LOUD (m) = loud;
-    E_DEN_SX (m) = x;
-    E_DEN_SY (m) = y;
-    e = apart (x - bpx, y - bpy) >> 2;
-    E_DEN_BETWEEN (m) = e > 15 ? 15 : e;
-    p = at (bd.sn, x, y);
-    E_DEN_SEEN (m) = p && (*p & T_VIS);
-    p = at (bd.sn, bd.x, bd.y);
-    E_DEN_SEEN (m) |= p && (*p & T_VIS);
+    E_DEN_LOUD (m) = loud & ~(DT_SEEN | DT_DOOR);
     E_DEN_SN (m) = bd.sn;
     E_DEN_DKIND (m) = bd.kind;
     hub_map (0);
@@ -270,7 +277,7 @@ static void __fastcall__ den_portal (const struct msg* m)
         den_saw = 1;                            /* (The world to look about again: what the door shows, or hides) */
     }
     if (de) {
-        told (de, loud, x, y);
+        s_den_told (de, loud | DT_DOOR, x, y);    /* (Seen if the door or the body is: the one sender, above) */
     }
 back:
     hub_map (0);

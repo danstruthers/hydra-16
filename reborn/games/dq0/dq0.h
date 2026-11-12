@@ -334,9 +334,7 @@ struct sway;
 void __fastcall__ sway_words (const struct sway* s);   /* Overlay 6: the character's way with a denizen, the
                                                 **   denizens' task's answer (the hub's sway, copied), into lb */
 unsigned char __fastcall__ task_words (unsigned w, unsigned char named);   /* Overlay 3: a long task's (task.c) */
-void __fastcall__ robbed (unsigned w, char* who);   /* Overlay 15: a robbery's words (task.c's, 2026-11-06) */
-void __fastcall__ beat_words (unsigned w);
-void __fastcall__ felt_words (unsigned w);      /* (Overlay 7's) A walk in the dark's beat (task.c's) */
+void __fastcall__ felt_words (unsigned w);      /* (Overlay 17's) The look's in the dark: FW_NEW, FW_TOUCH (task.c's) */
 unsigned __fastcall__ dnum (const char* s);     /* (The game's library's NUM: bank.s's, dq0lib.inc) A number, a word's (atoi's) */
 void __fastcall__ turned_says (unsigned char go);                        /* (Overlay 1's) A turn's first words (task.c's, 2026-11-03) */
 void facing_words (void);                       /* (Overlay 7's) The way it believes it faces (task.c's: slice 4.2's) */
@@ -352,7 +350,6 @@ unsigned char __fastcall__ answer_of (const char* l);     /*   and a question's 
 void __fastcall__ bar_text (char* s, unsigned done, unsigned len);  /* (Overlay 3) */
 void __fastcall__ wait_go (unsigned char action);   /* (Overlay 13) A wait, a sleep or a rest begun (task.c's) */
 void __fastcall__ time_said (unsigned w, unsigned char b);  /* (Overlay 13) Time passed, told: E_TIME's */
-void __fastcall__ state_words (unsigned char cond);
 unsigned char __fastcall__ free_cmd (const char* l);   /* Overlay 7: a line typed as the character's busy, carried
                                                 **   out at once (1), held (0), or held and its fight stopped for it
                                                 **   (2) */
@@ -373,6 +370,7 @@ void __fastcall__ outcome_words (const struct msg* m);   /* Overlay 27 (said.c):
 extern const char* said_s[3];                   /* (said.c's, the main RAM's: the UI's words for a row, the thing done
                                                 **   to, the thing done with, a word of the row's own; 0 or "" none) */
 extern unsigned char said_n;                    /* (A choice of the UI's for a row: its {arg}) */
+extern unsigned char said_q;                    /* (1: a row's words left in lb, not said: its caller's) */
 struct fight;
 void __fastcall__ feed (unsigned char eat);     /* (Part 16's, feed.c: "eat", "drink", slice 4.9's) */
 void __fastcall__ sky_words (unsigned char p, unsigned char k, const char* w);   /* Overlay 1 (time.c) */
