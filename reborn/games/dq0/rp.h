@@ -3,8 +3,9 @@
 ** store"): what the game's stores of records paged by region share, in the paged ROM's library once (modules/dq0lib:
 ** RP_*), each store keeping only its own logic.  The stores: the change records (../dq0w/store.c, wfile.c: rg), the
 ** strata's (../dq0w/sfile.c: st), the traces (../dq0w/wtrace.c, wtrfile.c: tr), the things (../dq0w/ipage.c: it), the
-** denizens' (../dq0d/dq0d.c: dn), the seen maps (../dq0m/changes.c: sm, and the change records read: rg), the chunks'
-** cache (../dq0w/chunk.c, every reader's, and ../dq0m/make.c's: the hub's, not a file's).
+** denizens' (../dq0d/dq0d.c: dn), the seen maps (../dq0m/changes.c: sm, and the change records read: rg), the big
+** plans' pages (../dq0m/changes.c: plt, its file pl, not versioned), the chunks' cache (../dq0w/chunk.c, every
+** reader's, and ../dq0m/make.c's: the hub's, not a file's).
 **
 ** One file-naming scheme and one save-and-restore path (rp.inc's rp_name, rp_open, rp_make, rp_done): a region's file
 ** in the save folder (preSXXYY.dat), written whole as a new version each time, read as the newest valid version (by the
@@ -82,6 +83,8 @@ struct rpt {
 #define RTF_HAND        0x02                    /* oldest: the key's own kept */
 #define RTF_PLAIN       0x04                    /* oldest: stamps compared plainly (else round, as they wrap) */
 #define RTF_WIDE        0x08                    /* the box's x and y two bytes (else one) */
+#define RTF_EACH        0x10                    /* oldest: each free entry taken as it's met, its stamp the one those
+                                                **   after it are held to (the plans' pages' own way) */
 
 /* A region's file of chunks' groups (the things', the traces': each chunk's records a group, its header first, its
 ** place in the region its first byte, its count at no): RP_GROUPS reads the groups in (in) past, each but the chunk

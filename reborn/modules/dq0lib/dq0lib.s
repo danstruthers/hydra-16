@@ -347,6 +347,7 @@ RTF_FREE    = $01                                           ; oldest: a free one
 RTF_HAND    = $02                                           ; oldest: the key's own kept
 RTF_PLAIN   = $04                                           ; oldest: stamps compared plainly (else round, as they wrap)
 RTF_WIDE    = $08                                           ; the box's x and y two bytes
+RTF_EACH    = $10                                           ; oldest: each free one taken as it's met
 
 ; A system call (f), .A, .X, r0 and r1 its; the block's pointer (r12) kept over it, .Y not
 .macro SYS f
@@ -1124,7 +1125,9 @@ rp_find:
 
 ; RP_OLDEST: the entry least lately wanted (its stamp the oldest: round, as they wrap, or plainly, RTF_PLAIN), but
 ; those kept: the key's own (RTF_HAND), those in the box about RT_NV (RT_R each way, on its stratum), those the task's
-; routine keeps (RT_KEEP); a free one first (RTF_FREE).  OUT: .A = the entry, or $FF
+; routine keeps (RT_KEEP); a free one first (RTF_FREE), or each free one taken as it's met, its stamp the one the
+; entries after it are held to (RTF_EACH: the last free one, unless one after it is older than its stamp: the plans'
+; pages' own way).  OUT: .A = the entry, or $FF
 rp_oldest:
             jsr         tstart
 @loop:
@@ -1137,9 +1140,22 @@ rp_oldest:
             ldy         #RT_FLAGS
             lda         (r0),y
             and         #RTF_FREE
-            beq         @next
+            beq         :+
             lda         r3
             rts
+:
+            lda         (r0),y
+            and         #RTF_EACH
+            beq         @next
+            ldy         #RT_SO                              ; (Taken: its stamp the best's)
+            lda         (r0),y
+            tay
+            lda         (r2),y
+            sta         r6
+            iny
+            lda         (r2),y
+            sta         r6 + 1
+            bra         @take
 @used:
             ldy         #RT_FLAGS
             lda         (r0),y

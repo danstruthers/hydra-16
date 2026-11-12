@@ -450,14 +450,19 @@ void __fastcall__ seen_over (struct chunk* k)
 
 /* ---- The big plans (plan.c's: more regions than PLAN_MAX, a save folder): each a file (plSS0000.dat), its regions in
 ** order, PL_PER to a page, the pages in the maker's own bank (plb, PL_PAGES of them), the least lately wanted written
-** back (if it's changed) to make room for another */
+** back (if it's changed) to make room for another.  Their table the record store's (../dq0/rp.h: a page found,
+** RP_FIND; one made way for, RP_OLDEST, RTF_EACH: a free one as it's met, the last, as the table always chose); the
+** file the plan's own, written in place (not versioned: the plan's grown whole each time its stratum is) */
 #define PL_PER          42                      /* (Regions a page: 252 bytes) */
 #define PL_BYTES        (PL_PER * sizeof (struct region))
 #define PL_PAGES        32
-static struct { unsigned char sn; unsigned page; unsigned char dirty; unsigned stamp; } plt[PL_PAGES];
+static struct plpage { unsigned char sn; unsigned page; unsigned char dirty; unsigned stamp; } plt[PL_PAGES];
 static unsigned plstamp;
 static unsigned char plbuf[PL_BYTES];
 static unsigned char plim = PL_PAGES;           /* (The pages used: dq0 -C's 16, its plan's pages made way for soon) */
+static unsigned char plk;                       /* (The page pl_at found or read in) */
+static struct rpt plq = { RP_FIND, PL_PAGES, sizeof plt[0], 0x07, plt, offsetof (struct plpage, stamp),
+    RTF_EACH, &plstamp, { 0 }, 0, 0, 0, 0xFF };
 
 /* Stratum sn's plan's file's name, in path (0: no save folder): the window put back after (rp_name leaves the hub's
 ** header in it; the paging's code is an overlay's) */
@@ -509,19 +514,17 @@ static void __fastcall__ pl_back (unsigned char k)
 static char* __fastcall__ pl_at (unsigned char sn, unsigned idx)
 {
     unsigned page = idx / PL_PER;
-    unsigned char k, b = 0;
+    unsigned char k;
     int fd, n;
 
-    for (k = 0; k < plim; ++k) {
-        if (plt[k].sn == sn + 1 && plt[k].page == page) {
-            break;
-        }
-        if (plt[k].stamp - plt[b].stamp > 0x8000U || !plt[k].sn) {
-            b = k;
-        }
-    }
-    if (k == plim) {
-        k = b;
+    plq.op = RP_FIND;
+    plq.n = plim;
+    plq.k[0] = sn + 1;
+    plq.k[1] = page;
+    plq.k[2] = page >> 8;
+    if ((k = rp_x (&plq)) == 0xFF) {            /* (Found: its stamp the clock's next) */
+        plq.op = RP_OLDEST;
+        k = rp_x (&plq);
         pl_back (k);
         memset (plbuf, 0, PL_BYTES);
         if ((fd = pl_fd (sn, 0)) >= 0) {
@@ -531,8 +534,9 @@ static char* __fastcall__ pl_at (unsigned char sn, unsigned idx)
         bwrite (plb, (char*) 0x8000 + k * 256, plbuf, PL_BYTES);
         plt[k].sn = sn + 1;
         plt[k].page = page;
+        plt[k].stamp = ++plstamp;
     }
-    plt[k].stamp = ++plstamp;
+    plk = k;
     return (char*) 0x8000 + k * 256 + (idx % PL_PER) * sizeof (struct region);
 }
 
@@ -549,12 +553,9 @@ void __fastcall__ o_pl_put (unsigned char sn, unsigned idx, const struct region*
 {
     unsigned w = hub_here ();
     char* a = pl_at (sn, idx);
-    unsigned char k;
 
     bwrite (plb, a, from, sizeof *from);
-    for (k = 0; k < PL_PAGES && (plt[k].sn != sn + 1 || plt[k].page != idx / PL_PER); ++k) {
-    }
-    plt[k].dirty = 1;
+    plt[plk].dirty = 1;
     hub_back (w);
 }
 
