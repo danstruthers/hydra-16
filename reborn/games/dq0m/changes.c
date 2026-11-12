@@ -2,12 +2,12 @@
 ** changes.c - (dq0m) what's changed in the dungeon laid over a chunk each time it's made again (DUNGEON.md: changing
 ** the dungeon): the change records (world.h's), the world's to write (dq0w/store.c), read here only: its region's in
 ** the hub's change pages, or, if none of them are there, in its file in the save folder (rgSXXYY.dat, its newest
-** valid version: ../dq0/vfile.inc's), under the hub's change_lock.  And the squares the character has seen, each
+** valid version: the record store's, ../dq0/rp.h), under the hub's change_lock.  And the squares the character has seen, each
 ** chunk's as a map of bits (and those on the map it draws, T_DRAWN, and its memory of the chunk, struct chunk's kept:
 ** DUNGEON.md, the map kept), kept as the cache makes way for the chunk and laid over it when it's made again, in banks
 ** of the maker's own, a cache of them by region (move 2.8: no fixed count of them; the plan's region, 8 by 8 chunks,
 ** all its maps in the banks or none, those least lately wanted written to the save folder, smSXXYY.dat, a version
-** each time, and read back as they're wanted: without a folder, the oldest map made way for), and in the save
+** each time, the record store's, and read back as they're wanted: without a folder, the oldest map made way for), and in the save
 ** (seen.dat: the maps in the banks and their regions' table: the UI asks, M_SAVE; back as the game's carried on,
 ** M_RESTORE).  And the plans too big for their half of a plan bank (PLAN_MAX regions: plan.c's), paged to the save
 ** folder (plSS0000.dat, their regions in order) through a bank of the maker's own.
@@ -24,8 +24,10 @@
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
-#define VF_STATIC       static
-#include "../dq0/vfile.inc"
+static struct rpk sm_kind;                      /* (The seen maps' versions counted) */
+#define RP_STATIC       static
+#define RP_KIND         sm_kind
+#include "../dq0/rp.inc"
 
 #define SEEN_BANKS      4                       /* (A map 271 bytes: 30 to a bank, 120 in all, as there were) */
 #define SEEN_PER_BANK   (0x2000 / sizeof (struct seen))
@@ -53,6 +55,8 @@ static struct {
 }                   sreg[NSREG];                /* The regions whose maps are in the banks (sn its stratum plus 1: 0,
                                                 **   the entry free) */
 static unsigned     sstamp;
+static struct rpt srt = { RP_FIND, NSREG, sizeof sreg[0], 0x07, sreg, 3, RTF_HAND, 0, { 0 }, 0, 0, 0, 0xFF };
+                                                /* (Its table, the record store's: a region found, one made way for) */
 void __fastcall__ wet_put (struct chunk* k, unsigned xy, unsigned char tile);  /* (Part 2's, below) */
 
 #pragma code-name (push, "SW2CODE")           /* (Part 2's since 2026-11-06, once: the main RAM's room, a well's water) */
@@ -180,7 +184,7 @@ static unsigned char __fastcall__ over (struct chunk* k, unsigned x, unsigned y,
 ** from the hub's change pages, else from its file (the window as it was after): 1 if it's been stocked */
 unsigned char __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y)
 {
-    static struct vfh hd;
+    static struct rpt cpf = { RP_FIND, NCPAGES, sizeof (struct cpage), 0x0E, WREC->cpage, offsetof (struct cpage, stamp) };
     struct cpage* q;
     unsigned w = hub_here ();
     unsigned char stocked = 0, p, i, m, had = 0, sn = k->sn, rx, ry;
@@ -191,12 +195,11 @@ unsigned char __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y
     ry = (y - STRATUM (sn).y0) >> 8;
     hub_map (0);
     hy_sem_acquire (HUB->change_lock);
-    for (p = 0; p < NCPAGES; ++p) {
-        hub_map (WORLD_BANK);
+    cpf.k[1] = sn;                              /* (Its region's pages: the record store's) */
+    cpf.k[2] = rx;
+    cpf.k[3] = ry;
+    for (cpf.from = 0; (p = rp_x ((hub_map (WORLD_BANK), &cpf))) != 0xFF; cpf.from = p + 1) {
         q = &WREC->cpage[p];
-        if (!q->used || q->sn != sn || q->rx != rx || q->ry != ry) {
-            continue;
-        }
         had = 1;
         for (i = 0, left = q->n; left; i += m, left -= m) {
             m = left > 8 ? 8 : left;
@@ -207,8 +210,8 @@ unsigned char __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y
         }
     }
     hub_map (0);
-    if (!had && vf_name (path, "rg", sn, rx, ry) && (fd = vf_open (path, 2, &hd)) >= 0) {
-        for (left = hd.n; left; left -= m) {    /* (None in the pages: its file's newest version, if this game has
+    if (!had && rp_name (path, "rg", sn, rx, ry) && (fd = rp_open (path, 2)) >= 0) {
+        for (left = rf.h.n; left; left -= m) {    /* (None in the pages: its file's newest version, if this game has
                                                 **   one) */
             m = left > 8 ? 8 : left;
             if (read (fd, rb, m * sizeof (struct change)) != m * sizeof (struct change)) {
@@ -242,20 +245,24 @@ static unsigned char __fastcall__ lim (unsigned char regions)
     return HUB->small ? (regions ? 1 : 2) : regions ? NSREG : NSEEN;
 }
 
+/* srt's key the region at hand (rsn ...), its entry asked for (op: RP_FIND, RP_OLDEST) */
+static unsigned char __fastcall__ sreg_ask (unsigned char op)
+{
+    srt.op = op;
+    srt.k[0] = rsn + 1;
+    srt.k[1] = rrx;
+    srt.k[2] = rry;
+    return rp_x (&srt);
+}
+
 /* Region rsn ...'s entry in the table, or 0xFF; a free one in sfree (0xFF none) */
 static unsigned char sreg_find (void)
 {
-    unsigned char k, f = 0xFF, n = lim (1);
+    unsigned char f;
 
-    for (k = 0, sfree = 0xFF; k < NSREG; ++k) {
-        if (!sreg[k].sn) {
-            if (sfree == 0xFF && k < n) {
-                sfree = k;
-            }
-        } else if (sreg[k].sn == rsn + 1 && sreg[k].rx == rrx && sreg[k].ry == rry) {
-            f = k;
-        }
-    }
+    srt.nf = lim (1);
+    f = sreg_ask (RP_FIND);
+    sfree = srt.free;
     return f;
 }
 
@@ -271,18 +278,12 @@ static unsigned char __fastcall__ of_hand (unsigned char i)
 ** maps), its maps' places freed, the entry too: 1, or 0 (none, or no folder) */
 static unsigned char sroom (void)
 {
-    unsigned char k, b = 0xFF, i, sn = rsn, rx = rrx, ry = rry;
-    unsigned t, n = 0;
+    unsigned char b, i, sn = rsn, rx = rrx, ry = rry;
+    unsigned n = 0;
     int fd;
 
-    for (k = 0; k < NSREG; ++k) {
-        if (sreg[k].sn && (sreg[k].sn != sn + 1 || sreg[k].rx != rx || sreg[k].ry != ry) &&
-            (b == 0xFF || sreg[k].stamp - t > 0x8000U)) {
-            b = k;
-            t = sreg[k].stamp;
-        }
-    }
-    if (b == 0xFF || !vf_name (path, "sm", sreg[b].sn - 1, sreg[b].rx, sreg[b].ry) || (fd = vf_make (path, 2)) < 0) {
+    b = sreg_ask (RP_OLDEST);
+    if (b == 0xFF || !rp_name (path, "sm", sreg[b].sn - 1, sreg[b].rx, sreg[b].ry) || (fd = rp_make (path, 2)) < 0) {
         return 0;
     }
     rsn = sreg[b].sn - 1;
@@ -296,7 +297,7 @@ static unsigned char sroom (void)
             ++n;
         }
     }
-    vf_done (fd, n);
+    rp_done (fd, n);
     sreg[b].sn = 0;
     rsn = sn;
     rrx = rx;
@@ -325,7 +326,6 @@ static unsigned char sreg_need (void)
 {
     unsigned char k, i;
     int fd;
-    static struct vfh h;
     static struct seen m;
 
     if ((k = sreg_find ()) != 0xFF) {
@@ -340,7 +340,7 @@ static unsigned char sreg_need (void)
     sreg[k].rx = rrx;
     sreg[k].ry = rry;
     sreg[k].stamp = ++sstamp;
-    if (vf_name (path, "sm", rsn, rrx, rry) && (fd = vf_open (path, 2, &h)) >= 0) {
+    if (rp_name (path, "sm", rsn, rrx, rry) && (fd = rp_open (path, 2)) >= 0) {
         while (read (fd, &m, sizeof m) == sizeof m && (i = spot ()) != 0xFF) {
             memcpy (seen_at (i), &m, sizeof m);
         }
@@ -459,12 +459,12 @@ static unsigned plstamp;
 static unsigned char plbuf[PL_BYTES];
 static unsigned char plim = PL_PAGES;           /* (The pages used: dq0 -C's 16, its plan's pages made way for soon) */
 
-/* Stratum sn's plan's file's name, in path (0: no save folder): the window put back after (vf_name leaves the hub's
+/* Stratum sn's plan's file's name, in path (0: no save folder): the window put back after (rp_name leaves the hub's
 ** header in it; the paging's code is an overlay's) */
 static unsigned char __fastcall__ pl_name (unsigned char sn)
 {
     unsigned w = hub_here ();
-    unsigned char k = vf_name (path, "pl", sn, 0, 0);
+    unsigned char k = rp_name (path, "pl", sn, 0, 0);
 
     hub_back (w);
     return k;
