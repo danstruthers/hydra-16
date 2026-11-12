@@ -4069,3 +4069,118 @@ rat.") already say the same doing the same way.
   parser.js (dq0wordsfix's "You break the door down: it crashes open"); map.js (dq0foundkey's "You unlock the door with
   its key", the old words' alternative gone).
 - **Tested:** all 444 tests pass.
+
+## One record store (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §6 and step 7)
+
+**What the survey found.**  Not five stores paging by region but seven, in three tasks, and each its own table, its
+own least-lately-wanted loop and its own copy of vfile.inc (the one thing they shared: the save folder's versions):
+
+- the world's: the change records (store.c, wfile.c: `rgSXXYY.dat`, pages of the hub's change banks, their table
+  the world bank's `cpage`), the strata's records (sfile.c: `stSS.dat`, a slot each), the traces (wtrace.c,
+  wtrfile.c: `trSXXYY.dat`, a directory of chunks, `THD`'s `ch`), the item store's paging (ipage.c: `itSXXYY.dat`,
+  `IPG`'s `r`); the traces and the things both keep a region's file of chunks' groups (each its own `others ()`);
+- the denizens': their regions (dq0d.c: `dnSXXYY.dat`, `hd`'s `reg`, and an unused copy of its lookup in part 4);
+- the maker's: the seen maps (changes.c: `smSXXYY.dat`, `sreg`), the change records as it lays them over a chunk
+  (rg read), the big plans' file's name (`plSS0000.dat`); and the chunks' cache's slot for a new chunk (make.c's
+  `pick`);
+- every reader of the chunks (chunk.c's `find`: the world's, the denizens', the senses'): the cache's lookup.
+
+The UI has none.  Their eviction agreed (the least lately wanted, its 16-bit stamp the oldest, round as it wraps,
+`s - t > 0x8000`), but for the chunks' cache, which compares plainly (`<`): kept as it was (RTF_PLAIN), as changing it
+would change which chunk is made way for once the clock wraps, and so the seen maps' writes.  What each keeps besides
+differs: a free entry first or not, the one at hand, a box about the character (two chunks each way, one, or a region
+each way; with dq0 -C none, or only its own), an actor's things (ipage's `kept_for`), a slot a task's reading or one
+stocked and not yet marked (the cache's).
+
+**What's built: the record store in the paged ROM's library** (modules/dq0lib's `RP_*`, games/dq0/rp.h its C side,
+dq0lib.inc's `rp_x`: a block of the caller's a call, its first byte the entry):
+
+- **One file-naming scheme and one save-and-restore path** (`RP_NAME`, `RP_OPEN`, `RP_MAKE`, `RP_DONE`; games/dq0/rp.inc
+  the four calls in C, `rp_name`, `rp_open`, `rp_make`, `rp_done`, a swapped part's copy as vfile.inc's was): a
+  region's file `preSXXYY.dat`, written whole as a new version over a slot that's neither the save's nor (three slots)
+  the newest, its header last; read as the newest valid version by the hub's vsaved and vbase.  The save is the
+  stamps moved on (wfile.c's `store_commit`, unchanged).  **Each kind's count its own** (`struct rpk`: vlast,
+  vcount, the main RAM's), as each store's copy of vfile.inc had its own, so every stamp, and so every file's bytes,
+  is as it was; one count a task would have given the same files other stamps.
+- **One lookup** (`RP_FIND`): an entry by its key (a mask of an entry's first eight bytes, as the tables are laid out:
+  their layouts, in items.dat, seen.dat and dens.dat, unchanged), its stamp made the clock's next if the store wants
+  it, a free one among the first n, from an entry on (a region's pages one after another).
+- **One eviction policy** (`RP_OLDEST`): the least lately wanted, round or plainly, but the key's own (`RTF_HAND`), a
+  box about a centre (`r` each way, one byte or two, on its stratum: the near rule each store had), and those the
+  store's own routine keeps (a callback into the caller's code, from the ROM: ipage's `kept_k`, make.c's `busy`); a
+  free one first (`RTF_FREE`).
+- **A region's file of chunks' groups** (`RP_GROUPS`): the groups read past, each but the chunk at hand's copied into
+  the new version, or to the chunk at hand's: the things' and the traces' `others ()`.
+
+Each store keeps only its own logic: what its records are and where (pages, buckets, a bank of denizens, maps), what
+a record replaces, what's kept besides (the regions known to have no things, an actor's region), the records read,
+renumbered and written.  `rp_dirty`, `rp_flush` and `rp_save` as ENGINE-CRITIQUE.md drew them aren't calls: what's
+dirty and when it's written is each store's (the pages' `dirty`, the traces' `TC_DIRTY`, the things written as a
+chunk goes out), and the save is the stamps' commit, already one.
+
+**Where it lives, and why the ROM.**  The paged ROM's library (§1.4), not a C source compiled into each task: vfile.inc
+was compiled six times (four of the world's parts, the denizens' part 21, the maker's main RAM), and with it the C
+library's file calls it took in; the tables' loops a dozen times.  In the ROM they're one copy and no task's room: the
+library is assembly, its scratch the caller's block (a part's own data, or the main RAM for a table read in play),
+its kernel calls its own (the fds the cc65 library's, the same numbers).  Its bank has room.  The cost is an XCALL
+each call (some 120 cycles), nothing beside a file's work.
+
+**Measured.**
+
+- **The chunks' cache** (the one called in play: a reader's `at` the long way, as its square's in another chunk than
+  its last): the world's `find`, entry to return, in a game of seed 5's (34 calls): median 1,195 cycles before, 1,326
+  after (least 619 and 1,084: the XCALL and the block made), 0.06M and 0.08M cycles of a 461M game.  RP_FIND built
+  for it: the key's bytes as offset and value pairs in the call registers first, an entry some 60 cycles to the C
+  loop's some 155, so the ROM's quicker on a long search and slower by its call on a short one.  dq0lookway 357.0M
+  cycles to 358.0M, dq0travel 2,727.6M to 2,728.8M.
+- **The start** (dq0starttime): 234.0M cycles at seed 1 before (310.6M at 123456789), 232.3M after (308.6M); the
+  maker's main RAM's code the less.
+- **Room** (bytes free):
+
+  | | before | after |
+  |---|---|---|
+  | dq0w main RAM | 2,182 | 2,236 |
+  | dq0w part 17 (ipage.c's table) | 1,222 | 1,529 |
+  | dq0w part 18 (wfile.c's files) | 422 | 1,791 |
+  | dq0w part 19 | 638 | 654 |
+  | dq0w part 20 (ipage.c's files) | 120 | 1,518 |
+  | dq0w part 22 (sfile.c) | 1,554 | 2,811 |
+  | dq0w part 28 (wtrace.c's store) | 483 | 682 |
+  | dq0w part 30 (wtrfile.c) | 329 | 1,713 |
+  | dq0w part 38 (store.c's put) | 1,860 | 1,853 |
+  | dq0d main RAM | 2,184 | 2,379 |
+  | dq0d part 1 / part 21 | 811 / 897 | 907 / 2,369 |
+  | dq0m main RAM | 2,737 | 4,635 |
+  | dq0p main RAM | 3,122 | 3,176 |
+
+  The world's overlays as the packer placed the parts (7: 130 to 2,897, 10: 328 to 1,712, 21: 48 to 1,725; 17: 119
+  to 22, 27: 114 to 23); the UI, the referee and the rest as they were.
+
+**Checked byte for byte** (a scratch script, not committed): every save-folder file each task wrote (each OPEN,
+CREATE, WRITE's bytes hashed, SEEK, by file: the kernel's fd table, TA_FD, read at each call to name an fd), in order
+per task, over 32 games: 8 seeds (3, 5, 7, 42, 99, 1000, 31337, 70000), each with -C -T -T -T, -C -T, -T -T and -C (the
+small caches, so every store makes way; strata below), a save folder, a fixed random player's commands (the soak's
+`choose`, its own stream, not the game's words: the same commands whatever the timing), quit, carried on and saved
+twice: some 1,200 to 2,500 region files' versions a game.  The baseline itself isn't the same at each power-up (the
+tasks' timing: a walk in the dark interrupted by a sound a step sooner or later, so its later commands land
+elsewhere), so it was run at four power-ups; each stage's every game is one of the four's byte for byte (life.dat left
+out: its date the host's clock).  One game at stages 5 and 6 was another of its timing's outcomes (that build at
+another power-up gave the baseline's bytes); at the end, 31 games the first power-up's, one the third's.  The
+sentences (the transcripts, by sentence) the same but that one's.
+
+**The suite: 443 of 444; dq0reachstop's race flipped (for review).**  Its game 7 types "stop" as "take all"'s first
+"Taken." shows, at the turns pace, and wants the take ended before the next thing (the tinderbox) is reached for.
+That's the race "The referee's skeleton" found (whether a line typed as a step's words show lands in that step or the
+next turns on some thousands of cycles; the user accepted either step for its game 2, not yet for game 7).  From
+stage 6 on (the denizens' regions on the record store) the next thing's reached for first ("You reach for the
+tinderbox. Taken. You stop there."), at five power-ups of five; the baseline, and this build with dq0d.c alone put back
+as it was, pass at five of five.  Not a change of what the denizens do: their files, every other store's and the
+sentences of the 32 games are the same; their work's timing is (the regions' lookup and the part it's in quicker), and
+with it how soon the UI goes on to the next thing.  Not made to pass: neither the test loosened nor a delay put in.
+Wanted: the user's word on game 7 as on game 2, or a pace that waits on a line typed as words show.
+
+**Left.**  The plans' pages (changes.c's `plt`, its own least-lately-wanted loop over a file that isn't versioned) and
+the senses' caches of their own (none paged to a file) aren't on it; the chunks' cache's plain comparison
+(RTF_PLAIN) could go round as the others do, a behaviour change (which chunk's made way for after the clock wraps) to
+be taken as one; the item store's `items.dat` and the traces' flush at the save stay each store's; an `rp_save`
+walking every store's dirty entries would want the stores in one task.
