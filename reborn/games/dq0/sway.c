@@ -12,162 +12,36 @@
 #include "dq0.h"
 #include "hub.h"
 
-/* How it seems (hub.h's AT_*) */
-static const char* const seems[AT_ALLIED + 1] = {
-    "hostile", "unfriendly", "wary of you", "indifferent to you", "friendly", "your ally"
-};
-
-/* What the character does, each way of swaying one (SW_TALK ...: "You talk with" the giant rat ...) */
-static const char* const tried[SW_BEFRIEND + 1] = {
-    "", "You talk with ", "You try to win over ", "You spin a tale to ", "You threaten ", "You speak softly to ",
-    "You coax "
-};
-
-/* An ally's request done: one ally's, then several's (OR_FOLLOW ...) */
-static const char* const done1[3] = { " follows you.", " waits here.", " goes its own way." };
-static const char* const done2[3] = { " follow you.", " wait here.", " go their own way." };
-
-static const struct sway* S;
-
-/* The one it's about, into lb: "Grub" (a name of its own), or "the giant rat" ("The" to start a sentence, c) */
-static void __fastcall__ who (unsigned char c)
+/* What the denizens' task answered (the hub's sway, copied into the main RAM: main.c's deal) to words that would sway
+** one, told: said.txt's SWAY rows, the UI's own kind (UK_SWAY; sway_words' words before, 2026-11-12: narration as data,
+** stage 4).  Here what's the sway's own: the one it's about as it's said ("the giant rat", "Grub"), how its attitude
+** moved; one not seen, an animal out of reach, the refusals' */
+void __fastcall__ o_sway_said (const struct sway* s)
 {
-    if (S->name[0] < 'A' || S->name[0] > 'Z') {
-        strcat (lb, c ? "The " : "the ");
-    }
-    strcat (lb, S->name);
-}
+    struct msg c;
+    unsigned char h = s->kind, r = s->result;
 
-static void __fastcall__ add (const char* s)
-{
-    strcat (lb, s);
-}
-
-/* "It seems wary of you now." */
-static void __fastcall__ seeming (const char* before, const char* after)
-{
-    add (before);
-    add (seems[S->now]);
-    add (after);
-}
-
-void __fastcall__ o_sway_words (const struct sway* s)
-{
-    unsigned char h = s->kind;
-
-    S = s;
     lb[0] = 0;
-    switch (s->result) {
-    case SR_NONE:
-        if (h == SW_ORDER && !s->word[0]) {
-            add ("You have no ally here to hear you.");
-        } else {
-            if (s->word[0]) {
-                say_no (A_SEE_NO | A_LB, s->word);
-            } else {
-                add ("You see no one here.");
-            }
-        }
-        return;
-    case SR_FAR:
-        if (s->beast || h == SW_GIVE) {
-            say_no (A_FAR | A_LB, s->name);   /* (Out of reach: the refusals' one wording) */
-            return;
-        }
-        who (1);
-        add (" is too far off to hear you.");
-        return;
-    case SR_TONGUE:
-        who (1);
-        add (" doesn't speak any tongue you know.");
-        return;
-    case SR_BEAST:
-        who (1);
-        add (" is an animal: words won't reach it (calm it, or befriend it).");
-        return;
-    case SR_MINDLESS:
-        who (1);
-        add (" pays no heed: there's no mind in it to sway.");
-        return;
-    case SR_DOWN:
-        who (1);
-        add (" lies senseless: it can't hear you.");
-        return;
-    case SR_AS_FAR:
-        who (1);
-        seeming (" seems ", " already: that won't move it further.");
-        return;
-    case SR_NOT_ALLY:
-        who (1);
-        add (h == SW_NAME ? " isn't friendly enough to take a name from you." :
-             " isn't your ally.");
-        return;
-    case SR_CANT:
-        if (h == SW_GIVE) {
-            who (1);
-            add (" has no use for it.");        /* (A beast offered what isn't food: slice 4.8's) */
-        } else if (h == SW_NAME) {
-            add (s->word2[0] ? "You've given names enough." : "Name it what?");
-        } else if (s->order) {
-            who (1);
-            add (" doesn't know how to do that.");
-        } else {
-            add ("Ask it to do what? (follow me, wait, open the door, go home)");
-        }
+    if ((r == SR_NONE && s->word[0]) || (r == SR_FAR && (s->beast || h == SW_GIVE))) {
+        say_no (r == SR_NONE ? A_SEE_NO | A_LB : A_FAR | A_LB, r == SR_NONE ? s->word : s->name);
+        msg (lb);
         return;
     }
-    switch (h) {
-    case SW_LOOK:
-        who (1);
-        seeming (" seems ", ".");
-        return;
-    case SW_NAME:
-        who (1);
-        add (" is ");
-        add (s->word2);
-        add (" now.");
-        return;
-    case SW_ORDER:
-        if (s->order >= OR_FETCH) {             /* (An errand: slice 4.8's, one ally's; at a door, 2026-11-02) */
-            who (1);
-            add (s->order > OR_FETCH ? " goes to the door" : " goes to fetch the ");
-            add (s->word2);
-            add (".");
-        } else if (s->name[0]) {
-            who (1);
-            add (done1[(s->order - OR_FOLLOW) % 3]);
-        } else {
-            add ("Your allies");
-            add (done2[(s->order - OR_FOLLOW) % 3]);
-        }
-        return;
+    said_s[0] = lb + 300;                       /* (The main RAM's, before the sway's copy at lb's end) */
+    lb[300] = 0;
+    if (s->name[0]) {
+        strcpy (lb + 300, s->name[0] < 'A' || s->name[0] > 'Z' ? "the " : "");
+        strcat (lb + 300, s->name);
     }
-    if (h == SW_GIVE) {                         /* (A gift: slice 4.8's) */
-        add ("You offer ");
-        who (0);
-        add (" the ");
-        add (s->word2);
-        add (". ");
-        if (s->grade == G_BADLY) {
-            seeming ("It won't take it: it's offended, and seems ", " now.");
-            return;
-        }
-    } else {
-        add (tried[h]);                         /* (Words: the referee's test, and what came of it) */
-        who (0);
-        add (". ");
-    }
-    if (s->now > s->was) {
-        if (s->now == AT_ALLIED) {
-            add ("It's won over: it will follow you now.");
-        } else {
-            seeming (s->grade == G_WELL ? "It warms to you: it seems " : "It's swayed: it seems ", " now.");
-        }
-    } else if (s->now == s->was) {
-        seeming ("It isn't swayed: it seems ", " still.");
-    } else {
-        seeming ("It goes badly: it seems ", " now.");
-    }
+    said_s[2] = s->word2;
+    said_n = h == SW_GIVE && s->grade == G_BADLY ? 5 : s->now > s->was ? (s->now == AT_ALLIED ? 0 : s->grade == G_WELL ?
+        1 : 2) : s->now == s->was ? 3 : 4;
+    c.kind = UK_SWAY;
+    c.who = 0;
+    c.a = s->order;
+    c.b = s->now;
+    c.w1 = r << 8 | h;
+    outcome_words (&c);
 }
 
 /* The thing named may be a denizen, by what's in the hub (the first three letters of the word in an actor's name, or one

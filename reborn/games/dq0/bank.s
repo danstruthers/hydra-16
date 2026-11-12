@@ -154,7 +154,7 @@ ovcall:
             OVFN        say_no, 24          ; (The refusals' one table: refuse.c's, step K of COMMANDS-CRITIQUE.md's 5.2)
             OVFN        parts_in, 6
             OVFN        alias_said, 12      ; (Overlay 4's till 2026-11-10: its room)
-            OVFN        sway_words, 15
+            OVFN        sway_said, 15
             OVFN        walk_says, 17       ; (A walk's first words: sway.c's, no part's swap, the user's D17)
             OVFN        blow, 6             ; (A blow worded and its end: blows.c's since 2026-11-03, the main RAM's room)
             OVFN        task_words, 3
@@ -179,7 +179,7 @@ ovcall:
             OVFN        choose, 7
             OVFN        resolve, 11
             OVFN        taken_next, 11
-            OVFN        throw_words, 10
+            OVFN        throw_said, 10
             OVFN        trap_name, 10
             OVFN        den_way, 4
             OVFN        portal_look, 4
@@ -189,7 +189,6 @@ ovcall:
             OVFN        way_words, 5
             OVFN        ending, 15
             OVFN        puzzle, 5
-            OVFN        fight_words, 6
             OVFN        fight_target, 6
             OVFN        fight_note, 22      ; (A fight's word: blows.c's, overlay 6's room, 2026-11-06)
             OVFN        pacing, 16
@@ -197,7 +196,6 @@ ovcall:
             OVFN        focus_words, 13
             OVFN        felt_words, 17
             OVFN        facing_words, 19
-            OVFN        sky_words, 1        ; (The sky seen by a window, a skylight, a shaft: time.c, 16's room)
             OVFN        turned_says, 19     ; (A turn's first words: task.c's, the main RAM's room)
             OVFN        fore_set, 13        ; (The answer's tasks in the foreground: main.c's)
             OVFN        time_ui, 16         ; (The time of day believed, worded: time.c, 2026-10-31)
@@ -221,7 +219,6 @@ ovcall:
             OVFN        des_req, 22
             OVFN        cap_of, 23          ; (A thing in sight's capital, the look's: caps.c, overlay 22's till 2026-11-06)
             OVFN        grapple, 19         ; (Grappling: a grapple's move sent, its words: blows.c, 2026-11-09)
-            OVFN        grip_words, 19
             OVFN        around, 23          ; (What's in sight listed: caps.c)
             OVFN        den_caps, 23        ; (The denizens' capitals, the look's: caps.c)
             OVFN        which_seen, 24      ; (The resolver's question, by capitals: which.c, 2026-11-07)

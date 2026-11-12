@@ -208,6 +208,30 @@ E_BEARING       w1 brg:0-7@BRG_NONE
 E_BEARING:sky   b sky; w1 brg:0-7==BRG_SKY@BRG_NONE refusal:8-15@SKP_NONE
                 # (The sky seen: b its phase, SKP_*, and what showed it; a shaft's refusal, w1's high byte, b none)
 
+# ---- The UI's own kinds (UK_*: dq0.h's; no world's event, the UI's words of its own, a row of said.txt's each:
+# narration as data, stage 4, 2026-11-12).  The UI fills one on the C stack and has it worded (said.c's outcome_words),
+# its outcome E_OUTCOME's place; never in the hub
+
+UK_THROW        < E_OUTCOME; w1 ir:8-15@IR_OK how:0-1@TH_HIT hard:2
+                # (A throw told: how it went, IR_*; how it came out, TH_*; thrown hard.  obj the thing, text the mark)
+UK_SKY          < E_OUTCOME; w1 phase:8-15@SKP_NONE shows:0-7@SKS_WAY
+                # (The sky seen: its phase, a shaft's refusal, a rope's; what shows it.  text the time in words)
+UK_SWAY         < E_OUTCOME; a order@OR_NONE; b now@AT_HOSTILE; w1 res:8-15@SR_OK how:0-7@SW_LOOK
+                # (A sway's answer: its result, its kind, the attitude now, an ally's request.  obj the one it's about
+                #   ("the giant rat", "Grub"; "" none), text a name given or a thing to fetch; arg the attitude's move)
+UK_FIGHT        < E_OUTCOME; a(ff) adown:0 adead:1 ddown:2 ddead:3 flees:4; b(which) f1:0 f2:1 stray:2 thrown:3
+                missile:4 shield:5 again:6 first:7; w1 out:8-15@O_MISS wk:0-2 hard:3 black:4;
+                w2(lines) s2:0-1 s3:2-3 au:4 du:5
+                # (A blow (an E_FIGHT, its record's): who the attacker; how it came out (O_*; the UI's own gone, bled,
+                #   bound for FO_*); what it left them in (FF_*); the record's which (FW_*: whose a fumble, a stumble);
+                #   the attacker's weapon's word (0 another, 1 foot, 2 head, 3 bite, 4 claws, 5 none); thrown hard; a
+                #   black-out told already; the strikes' lines, the third and the fourth (0 none, 1 a wound, 2 the armour
+                #   that stopped it); the attacker, the defender not seen.  w4 the attacker's name, obj the
+                #   defender's (none: the character), instr the weapon, w5 the defender's, w6 and text the strikes';
+                #   arg the attacker's body)
+UK_NO           < E_OUTCOME; w1 no:8-15@U_VERB
+                # (A refusal, refuse.c's say_no: U_*, A_*.  text the thing's name, as it's put in)
+
 struct req
 
 # ---- The referee's requests (RS_*: rs.h's, to the referee in a slot of the hub's, the world's or the UI's, or the

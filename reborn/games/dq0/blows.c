@@ -1,9 +1,10 @@
 /*
-** blows.c - (overlay 6) a fight's words: a blow struck (an E_FIGHT: the character's at a denizen, or one's at it), how
-** it came out (rs.h's O_*), what the strikes did (the referee's words: the wounds, or the armour that stopped them),
-** and what it left them in (fallen, senseless, dead, fleeing): "You strike at the giant rat with your sword: a
-** serious cut to its left thigh (S2). The giant rat falls senseless."  Into lb, for main.c to say (the blow's record
-** copied into lb's last FIGHT_LB bytes: the words never as long as the rest).
+** blows.c - (overlay 6) a fight's blow told (an E_FIGHT: the character's at a denizen, or one's at it): its words
+** said.txt's FIGHT rows, the UI's own kind (UK_FIGHT; fight_words' and grip_words' before, 2026-11-12: narration as
+** data, stage 4), "You strike at the giant rat with your sword: a serious cut to its left thigh (S2). The giant rat
+** falls senseless."  Here what's the blow's own: its record read (copied into lb's last FIGHT_LB bytes: the words never
+** as long as the rest), who's seen, the referee's four lines cut apart and told what they are (a wound, the armour that
+** stopped it), the attacker's weapon's word.  And the stance, a blow's target, a grapple's.
 */
 
 #pragma code-name ("OV6CODE")
@@ -14,41 +15,10 @@
 #include "rs.h"
 #include "dq0.h"
 #include "cmds.h"
+#include "dq0said.h"
 
-static char* t;                                 /* (Where the next words go in lb) */
-static const char* line[4];                     /* The referee's lines: the attacker's weapon, the defender's, what the
-                                                **   attacker's strike did, what the defender's did */
-static const char* aname;                       /* The attacker's name, the defender's (0: the character) */
-static const char* dname;
-
-static void __fastcall__ add (const char* s)
-{
-    strcpy (t, s);
-    t += strlen (t);
-}
-
-/* One of them: "you" (or "You"), "the giant rat" (or "The") */
-static void __fastcall__ who (const char* n, unsigned char cap)
-{
-    if (!n) {
-        add (cap ? "You" : "you");
-        return;
-    }
-    if (*n == '?') {
-        add (cap ? "Something" : "something");  /* (Not seen) */
-        return;
-    }
-    add (cap ? "The " : "the ");
-    add (n);
-}
-
-/* A strike's words (its line: a wound, "a ..."; or the armour that stopped it, "your ...", "its ..."; or none: no
-** harm) after what led to it: ": a serious cut ...", ", but the blow glances off your leather tunic", ", but does no harm"
-** (by the striker: the character's "do") */
-/* A creature's getting up in a fight (the book's Rise), by its body (hub.h's BD_*, the actor's: kinds.txt's); its fall
-** told after the blow, the world's (E_BEAT's WB_FALLEN: said.txt's BEAT.fallen, every fall, 2026-10-30) */
-static const char* const rises[NBODIES] = { " gets to its feet.", " scrambles to its feet.", " coils itself up again.",
-    " rights itself.", " flutters up again.", " rises again." };
+/* A creature's body (hub.h's BD_*, the actor's: kinds.txt's), for its getting up in a fight (the book's Rise: said.txt's
+** @rises, its fall told after the blow, the world's E_BEAT WB_FALLEN) */
 static unsigned char __fastcall__ body_of (unsigned char k)
 {
     unsigned char b;
@@ -57,30 +27,21 @@ static unsigned char __fastcall__ body_of (unsigned char k)
     return b < NBODIES ? b : BD_TWO;
 }
 
-static void __fastcall__ struck (unsigned char n, unsigned char you)
+/* A strike's line told (UK_FIGHT's s2, s3): 1 a wound ("a serious cut ..."), 2 the armour that stopped it ("your leather
+** tunic", "its ..."), 0 none (no harm) */
+static unsigned char __fastcall__ struck (const char* l)
 {
-    const char* l = line[n];
-
-    if (*l == 'a' && l[1] == ' ') {
-        add (": ");
-        add (l);
-    } else if (*l) {
-        add (", but the blow glances off ");    /* (Whatever its number: "your clothes", 2026-11-04) */
-        add (l);
-    } else {
-        add (you ? ", but do no harm" : ", but does no harm");
-    }
+    return *l == 'a' && l[1] == ' ' ? 1 : *l ? 2 : 0;
 }
 
 /* A blow (an E_FIGHT: the character's, or one at it), worded; the character dead of it, the game's end; knocked
 ** senseless, it waits it out (main.c's till 2026-11-03: the main RAM's room) */
-unsigned __fastcall__ o_fight_words (const struct msg* m);
+unsigned __fastcall__ o_fight_said (const struct msg* m);
 void __fastcall__ o_blow (const struct msg* m)
 {
-    unsigned out = o_fight_words (m);
+    unsigned out = o_fight_said (m);
     unsigned char c;
 
-    msg (lb);
     hub_mem (0, &c, (const void*) &HUB->pcsum.cond, 1);
     if (c & C_DEAD) {
         ending (END_DIED);                         /* (The game's end, as harm's is) */
@@ -89,12 +50,19 @@ void __fastcall__ o_blow (const struct msg* m)
     }
 }
 
-unsigned __fastcall__ o_fight_words (const struct msg* m)
+/* Blow m told (UK_FIGHT, said.txt's FIGHT rows): the tenths the character's knocked senseless for, or 0 */
+#pragma static-locals (push, off)               /* (Its event on the C stack, the main RAM: the words' overlay reads it) */
+unsigned __fastcall__ o_fight_said (const struct msg* m)
 {
     static unsigned char n;                     /* (What the character sees: whether it sees the denizen, or one of its
                                                 **   name: the senses' last look, a step behind it) */
     static char at[12];
+    static const char* line[4];                 /* (The referee's lines: the attacker's weapon, the defender's, what the
+                                                **   attacker's strike did, what the defender's did) */
+    static const char* aname;                   /* (The attacker's name, the defender's: 0 the character) */
+    static const char* dname;
     struct fight* f = FIGHT_LB;
+    struct msg c;
     unsigned char out = E_FIGHT_OUT (*m), fl = E_FIGHT_FF (*m), pc = !m->who, k;
     const char* aw;
     char* s;
@@ -115,8 +83,6 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
                                                 **   go) */
         }
     }
-    t = lb;
-    *t = 0;
     aname = f->att[0] ? f->att : 0;
     dname = f->def[0] ? f->def : 0;
     f->text[sizeof f->text - 1] = 0;
@@ -130,151 +96,35 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
         }
     }
     aw = line[0];
-    if (out == FO_GONE) {
-        who (dname, 1);                         /* ("The giant rat", or "Something" if it isn't seen) */
-        add (" is out of reach.");
-        return 0;
+    said_s[0] = dname;                          /* (Its words, the main RAM's: the record's, in lb) */
+    said_s[1] = aw;
+    said_s[2] = line[3];
+    said_s[3] = aname;
+    said_s[4] = line[1];
+    said_s[5] = line[2];
+    said_n = pc ? BD_TWO : body_of (m->who);    /* (Its getting up: @rises) */
+    c.kind = UK_FIGHT;
+    c.who = m->who;
+    c.a = fl;
+    c.b = f->which;
+    k = out == FO_GONE ? SAID_FIGHT_GONE : out == FO_BLED ? SAID_FIGHT_BLED : out == FO_BOUND ? SAID_FIGHT_BOUND :
+        out != O_RISE && (f->which & FW_STRAY) ? SAID_FIGHT_STRAY : out;
+    c.w1 = k << 8 | (!*aw ? 5 : !strcmp (aw, "foot") ? 1 : !strcmp (aw, "head") ? 2 : !strcmp (aw, "bite") ? 3 :
+        !strcmp (aw, "claws") ? 4 : 0) | (pc && (cmd.manner & MN_HARD) ? 8 : 0) | (harm_told & C_UNCONSCIOUS ? 16 : 0);
+    c.w2 = struck (line[2]) | struck (line[3]) << 2 | (aname && *aname == '?' ? 16 : 0) | (dname && *dname == '?' ? 32 : 0);
+    outcome_words (&c);
+    if ((k >= SAID_FIGHT_GONE && k != SAID_FIGHT_STRAY) || k == O_RISE) {
+        return 0;                               /* (No blow: nothing left in) */
     }
-    if (out == FO_BLED || out == FO_BOUND) {
-        who (aname, 1);
-        add (out == FO_BLED ? " collapses, bled white." : " binds its bleeding wound.");
-        return 0;
-    }
-    if (out == O_RISE) {
-        who (aname, 1);
-        add (pc ? " get to your feet." : rises[body_of (m->who)]);
-        return 0;
-    }
-    if (f->which & FW_STRAY) {                  /* (A miss's stray at one beside the mark, after the miss's words:
-                                                **   "Your shot strikes the bandit instead: a minor ...", "Its dagger
-                                                **   strikes you instead, but the blow glances off your mail hauberk",
-                                                **   2026-10-30) */
-        add (pc ? "Your " : "Its ");
-        add (f->which & FW_THROWN ? aw : "shot");
-        add (" strikes ");
-        who (dname, 0);
-        add (" instead");
-        struck (2, 0);
-        add (".");
-    } else if (out >= O_HOLD) {
-        grip_words (out);                       /* (A grapple's: overlay 19's, 2026-11-09) */
-    } else if (out == O_DISPATCH) {
-        add ("You finish ");
-        who (dname, 0);
-        add (" where it lies.");
-    } else {
-        if (f->which & FW_FIRST) {
-            add ("Quicker, ");                  /* (A tactical advantage's blow, struck first: the engage initiative
-                                                **   test's, "Quicker, the giant rat bites at you") */
-        }
-        who (aname, !(f->which & FW_FIRST));    /* (The blow: "You strike at the giant rat with your sword", "The
-                                                **   ghoul claws at you", "The kobold strikes at you with its spear") */
-        if (f->which & FW_THROWN) {             /* (A missile's, slice 4.7's: "You throw your dagger at the giant
-                                                **   rat", "You shoot at the bandit with your shortbow", "The kobold
-                                                **   shoots at you with its sling") */
-            add (pc ? " throw your " : " throws its ");
-            add (aw);
-            add (pc && (cmd.manner & MN_HARD) ? " hard at " : " at ");
-            who (dname, 0);
-        } else if (f->which & FW_MISSILE) {
-            add (pc ? " shoot at " : " shoots at ");
-            who (dname, 0);
-            if (*aw) {
-                add (pc ? " with your " : " with its ");
-                add (aw);
-            }
-        } else if (pc && !strcmp (aw, "foot")) {
-            add (" kick at ");                  /* ("You kick at the giant rat") */
-            who (dname, 0);
-        } else if (pc) {
-            add (strcmp (aw, "head") ? " strike at " : " butt at ");
-            who (dname, 0);
-            add (" with your ");
-            add (aw);
-        } else if (!*aw) {
-            add (" strikes at you");            /* (A ruleset that names no weapon: the null one's) */
-        } else if (!strcmp (aw, "bite") || !strcmp (aw, "claws")) {
-            add (*aw == 'b' ? " bites at you" : " claws at you");
-        } else {
-            add (" strikes at you with its ");
-            add (aw);
-        }
-        switch (out) {
-        case O_MISS:
-            add (pc ? ", and miss" : ", and misses");
-            break;
-        case O_DODGED:
-            add (pc ? "; it dodges" : "; you dodge");
-            break;
-        case O_BLOCKED:
-            add (pc ? "; it fends off the blow" : "; you fend it off with your ");
-            if (pc && (f->which & FW_SHIELD)) {
-                add (" with its ");            /* (Its shield's block: "with its buckler", 2026-10-29) */
-            }
-            if (!pc || (f->which & FW_SHIELD)) {
-                add (line[1]);
-            }
-            if (*line[2]) {                     /* (A bare arm struck as it blocked) */
-                struck (2, pc);
-            } else if (*line[3]) {              /* (A claw, a bite, struck by what blocked it) */
-                add (pc ? "; it strikes you as it does" : "; your blow lands on it");
-                struck (3, 0);
-            }
-            break;
-        case O_HIT:
-            struck (2, pc);
-            break;
-        case O_COUNTER_HIT:
-            add (pc ? "; it strikes back" : "; you strike back");   /* (A counterstrike: "back", not "first", for a
-                                                **   blow struck first, the engage initiative test's, may meet one) */
-            struck (3, !pc);
-            break;
-        case O_BOTH_HIT:
-            add (pc ? "; you strike each other. Your blow" : "; you strike each other. Its blow");
-            struck (2, 0);
-            add (pc ? "; its" : "; yours");
-            struck (3, 0);
-            break;
-        case O_FUMBLE:
-        case O_STUMBLE:
-            k = f->which;
-            if (k & 1) {
-                add (out != O_FUMBLE ? (pc ? ", but stumble" : ", but stumbles") : f->which & FW_MISSILE ?
-                    (pc ? ", but your shot goes wild" : ", but its shot goes wild") :
-                    pc ? ", but fumble the blow" : ", but fumbles the blow");
-            }
-            if (k & 2) {
-                add (out == O_FUMBLE ? (pc ? "; it falters" : "; you fumble your guard") :
-                    pc ? "; it stumbles" : "; you stumble");
-            }
-            break;
-        case O_ADVANTAGE:
-            add (pc ? "; it slips inside your guard" : "; you see an opening");
-            break;
-        }
-        add (".");
-    }
-    if (fl & (FF_A_DEAD | FF_D_DEAD)) {         /* (What it left them in: the character's, its name none; both
-                                                **   actors a stray's) */
-        add (" ");
-        aw = fl & FF_A_DEAD ? aname : dname;
-        who (aw, 1);
-        add (aw ? " falls dead." : " are dead.");
-    } else if ((fl & (FF_A_DOWN | FF_D_DOWN)) && !(f->which & FW_AGAIN)) {
-        if (!(fl & FF_A_DOWN ? aname : dname)) {   /* (The character's: once an answer, then "again", as a harm's state
-                                                **   is, harm_told's: a second fall senseless in a long fight's
+    if (!(fl & (FF_A_DEAD | FF_D_DEAD)) && (fl & (FF_A_DOWN | FF_D_DOWN)) && !(f->which & FW_AGAIN) &&
+        !(fl & FF_A_DOWN ? aname : dname)) {
+        harm_told |= C_UNCONSCIOUS;             /* (The character's black-out: once an answer, then "again", as a harm's
+                                                **   state is, harm_told's: a second fall senseless in a long fight's
                                                 **   answer, 2026-10-30) */
-            add (harm_told & C_UNCONSCIOUS ? " Everything goes black again." : " Everything goes black.");
-            harm_told |= C_UNCONSCIOUS;
-        } else {
-            add (" It falls senseless.");
-        }
-    }
-    if (fl & FF_FLEES) {
-        add (" It flees.");
     }
     return fl & (!aname ? FF_A_DOWN : !dname ? FF_D_DOWN : 0) ? f->out : 0;
 }
+#pragma static-locals (pop)
 
 /* A word of a fight's, into lb: the stance taken (rs.h's D_*), or why there's no blow (FN_*).  Overlay 22's since
 ** 2026-11-06 (overlay 6's room: a line that breaks off, parts.c's): fight_note */
@@ -380,45 +230,6 @@ unsigned char __fastcall__ o_fight_target (struct cmd* c)
 #pragma code-name (push, "OV19CODE")
 #pragma rodata-name (push, "OV19RODATA")
 #pragma local-strings (push, on)
-
-/* A grapple's words at t (rs.h's O_HOLD ... O_LETGO): the other in it its name, % ("the giant rat", "something" if
-** it isn't seen), @ at the start ("The giant rat"): the character's move's defender, the held one's own try's
-** attacker; a throw's hurt after it, the referee's third line */
-void __fastcall__ o_grip_words (unsigned char out)
-{
-    static const char* const say[] = {
-        "You seize % and hold it fast.", "You grapple with %, but it twists free.", "You throw % to the ground",
-        "You pin % to the ground.", "You choke %.", "@ resists your hold.", "@ breaks free of your grip.",
-        "@ struggles in your grip.", "You let go of %."
-    };
-    const char* s = say[out - O_HOLD];
-    const char* n = out == O_FREE || out == O_STRUGGLES ? aname : dname;
-    char c;
-
-    if (!n) {
-        s = "You aren't holding anyone.";       /* (O_LETGO's, none held) */
-    }
-    while ((c = *s++) != 0) {
-        if (c == '%' || c == '@') {
-            strcpy (t, *n == '?' ? (c == '@' ? "Something" : "something") : c == '@' ? "The " : "the ");
-            if (*n != '?') {
-                strcat (t, n);
-            }
-            t += strlen (t);
-        } else {
-            *t++ = c;
-        }
-    }
-    *t = 0;
-    if (out == O_THROWN) {
-        if (*line[2] == 'a' && line[2][1] == ' ') {
-            strcpy (t, ": ");
-            strcat (t, line[2]);
-            t += strlen (t);
-        }
-        strcpy (t++, ".");
-    }
-}
 
 /* VB_GRAPPLE_OBJECT's (and a hold's, a throw's at a denizen, | GT_TRY): move g (rs.h's GM_*) at the denizen beside the
 ** character named (its name has the command's word; the target's, none said), sent (I_ATTACK, b AIM_GRAPPLE | g: the

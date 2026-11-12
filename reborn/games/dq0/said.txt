@@ -1,4 +1,4 @@
-# said.txt - Dingus Quest Zero's phrase table: the words of what came of an action (ENGINE-CRITIQUE.md's §3.2, narration
+# said.txt - Dingus Quest Zero's phrase table: the words of what came of an action (ENGINE-CRITIQUE.md's Â§3.2, narration
 # as data).  The world tells an outcome event (msgs.def's outcome events: E_DIG, E_CLIMB, E_PORTAL, E_TRAP, their head
 # E_OUTCOME), and the UI's one renderer (said.c, overlay 27: outcome_words) words it by its row here, chosen by its kind and its
 # outcome.  Made by the build (games/dq0/saidgen.js, after hubgen.js) into obj/gen/dq0said.h: the rows packed, their
@@ -242,13 +242,15 @@ TRAP.none               "There's no trap you know of within reach."
 kind BEAT beat whose
 own BEAT unseen
 
+@rises      "{arg?get{s} to {its} feet|scrambles to its feet|coils itself up again|rights itself|flutters up again"
+            "|rises again}"
+
 BEAT.drop           +"\n{Actor} drop{s} {its} {kind thing}."
 BEAT.picks          +"{whose?|\nThe {name whose} snatches up its {kind thing}.}"
 BEAT.draws          +"{whose?|\nThe {name whose} draws its {kind thing}.}"
 BEAT.readies        +"{whose?|\nThe {name whose} unslings its {kind thing}.}"
 BEAT.risen[already=1]   +"\nYou are on your feet already."
-BEAT.risen          +"\n{Actor} {arg?get{s} to {its} feet|scrambles to its feet|coils itself up again|rights itself"
-                    "|flutters up again|rises again}."
+BEAT.risen          +"\n{Actor} {@rises}."
 BEAT.not_up[already=1]  +"\nYour legs won't bear you."
 BEAT.not_up         +"\n{Actor} {arg?struggle{s}, but can't get up|scrabbles, but can't get up|writhes, but can't right itself"
                     "|flails its legs, but can't right itself|flaps, but can't rise|wavers, but can't rise}."
@@ -495,3 +497,161 @@ DEN.bent            +"{arg?\n{@bent}.|iron groaning}"
 DEN.picking         +"{arg?\n{@picking}.|a faint scratching}"
 DEN.picks           +"{arg?\n{@picked}.|a lock clicking}"
 DEN.any             +"\n{Actor} {text}."
+
+# ==== The UI's own kinds (dq0.h's UK_*, msgs.def's: no world's event, the UI's words of its own; narration as data,
+# stage 4, 2026-11-12).  The UI fills one and has it worded, as an outcome event is
+
+# ---- A throw told (UK_THROW: ir, IR_*; how, TH_*; hard; obj the thing thrown, "it" none named; text the mark).  No
+# mark seen, none carried: the refusals' (say_no's).  (resolve.c's throw_words before, overlay 10)
+
+THROW.ok            +"\nYou throw the {obj}{hard?| hard} at the {text}{how?: it strikes it.|, and miss: it lands beside it."
+                    "|, but it's too far: it falls short.}"
+THROW.no            +"\nThe {obj} isn't a thing you can throw."
+THROW.full          "Throw it at what? (throw the dagger at the rat; or name a target: target the rat)"
+THROW.none          "You have nothing in your hands to throw."
+
+# ---- The sky seen (UK_SKY: phase, SKP_*; shows, SKS_*, what shows it, SKS_WAY the sky's own; text the time in words,
+# time.c's), and a shaft's refusals, a rope's (own tore, far).  (time.c's sky and sky_words before, overlays 16 and 1)
+
+own SKY tore far
+
+@fall       "{shows?|comes in at the window|falls from the skylight above|falls from the shaft above"
+            "|falls from far up the shaft above}"
+@where      "{shows?|at the window|in the skylight above|at the top of the shaft above|far up the shaft above}"
+@judge      ": it's {text}, you judge."
+@north      ": it's {text}, and you know which way north lies now."
+
+SKY.none            +"\n"
+SKY.dawn            +"\n{shows?Grey light shows above|Grey light {@fall}}: it's dawn, or near it."
+SKY.day             +"\n{shows?Daylight shows above|Pale daylight {@fall}}: it's day."
+SKY.dusk            +"\n{shows?The light above is fading|Fading light {@fall}}: it's dusk."
+SKY.night           +"\n{shows?Above, it's dark|Stars show {@where}}: it's night."
+SKY.sun             +"\n{shows?You see the sun in the sky|The sun shows {@where}}{@judge}"
+SKY.stars           +"\n{shows?You see the stars|Stars show {@where}}{@judge}"
+SKY.high            +"\n{shows?You see the sun high overhead|The sun stands high {@where}}: it's about midday."
+SKY.low             +"\n{shows?You see the sun low in the sky|The sun shows low {@where}}, but you can't tell east from west:"
+                    " you take it for {text}."
+SKY.sun_watched     +"\nYou watch the sun a while{shows?| {@where}}, its slow way across the sky{@north}"
+SKY.stars_watched   +"\nYou watch the stars a while{shows?| {@where}} as they wheel{@north}"
+SKY.too_high        +"\nThe shaft's mouth is too high to reach."
+SKY.choked          +"\nThe shaft is choked with fallen rock a little way down."
+SKY.let_fall        +"\nIt falls away down the shaft, and you hear it land far below."
+SKY.rope            +"\nYou take hold of the rope."
+SKY.tore            +"\nYou put your weight on the rope: the grapple tears loose and comes clattering down."
+SKY.far             +"\nThe rope's end hangs out of reach."
+
+# ---- The character's ways with a denizen (UK_SWAY: res, SR_*; how, SW_*; now, AT_*, how it seems; order, OR_*; obj the
+# one it's about, "the giant rat", "Grub", "" none named (an order's to every ally); text a name given, a thing to fetch;
+# arg how its attitude moved: 0 won over, 1 warmed, 2 swayed, 3 not, 4 badly, 5 a gift spurned).  One not seen, one an
+# animal out of reach: the refusals' (say_no's).  (sway.c's sway_words before, overlay 15)
+
+@seems      "{now?hostile|unfriendly|wary of you|indifferent to you|friendly|your ally}"
+@moved      "{arg?It's won over: it will follow you now.|It warms to you: it seems {@seems} now."
+            "|It's swayed: it seems {@seems} now.|It isn't swayed: it seems {@seems} still."
+            "|It goes badly: it seems {@seems} now.|It won't take it: it's offended, and seems {@seems} now.}"
+
+SWAY.none[how=SW_ORDER]     "You have no ally here to hear you."
+SWAY.none                   "You see no one here."
+SWAY.far                    "{Obj} is too far off to hear you."
+SWAY.tongue                 "{Obj} doesn't speak any tongue you know."
+SWAY.beast                  "{Obj} is an animal: words won't reach it (calm it, or befriend it)."
+SWAY.mindless               "{Obj} pays no heed: there's no mind in it to sway."
+SWAY.down                   "{Obj} lies senseless: it can't hear you."
+SWAY.as_far                 "{Obj} seems {@seems} already: that won't move it further."
+SWAY.not_ally[how=SW_NAME]  "{Obj} isn't friendly enough to take a name from you."
+SWAY.not_ally               "{Obj} isn't your ally."
+SWAY.cant[how=SW_GIVE]      "{Obj} has no use for it."
+SWAY.cant[how=SW_NAME]      "{text?Name it what?|You've given names enough.}"
+SWAY.cant                   "{order?Ask it to do what? (follow me, wait, open the door, go home)"
+                            "|{Obj} doesn't know how to do that.}"
+SWAY.any[how=SW_LOOK]       "{Obj} seems {@seems}."
+SWAY.any[how=SW_NAME]       "{Obj} is {text} now."
+SWAY.any[how=SW_ORDER]      "{order?|{obj?Your allies follow|{Obj} follows} you.|{obj?Your allies wait|{Obj} waits} here."
+                            "|{obj?Your allies go their|{Obj} goes its} own way.|{Obj} goes to fetch the {text}."
+                            "|{Obj} goes to the door{text}.}"
+SWAY.any[how=SW_GIVE]       "You offer {obj} the {text}. {@moved}"
+SWAY.any                    "{how?|You talk with|You try to win over|You spin a tale to|You threaten|You speak softly to"
+                            "|You coax|} {obj}. {@moved}"
+
+# ---- A blow (UK_FIGHT, an E_FIGHT's record worded: out, O_*, the UI's own gone, bled, bound for FO_*, and stray, a
+# miss's stray at one beside the mark; who the attacker, {actor?the character's|a denizen's}; w4 the attacker's name,
+# obj the defender's (none the character: "you"), "The giant rat", "Something" not seen (au, du); instr the attacker's
+# weapon (wk: 1 a foot, 2 a head, 3 a bite, 4 claws, 5 none named); w5 what the defender fended it off with; w6 and text
+# the strikes' lines (s2, s3: 1 a wound, "a serious cut to its left thigh (S2)", 2 the armour that stopped it, "your
+# leather tunic", 0 no harm); then what it left them in (adead ... flees), a black-out told once an answer (black); arg
+# the attacker's body.  A grapple's (O_HOLD ... O_LETGO): the character's hold.  (blows.c's fight_words and grip_words
+# before, overlays 6 and 19)
+
+own FIGHT gone bled bound stray
+
+@A          "{w4?You|{au?The {w4}|Something}}"
+@a          "{w4?you|{au?the {w4}|something}}"
+@D          "{obj?You|{du?The {obj}|Something}}"
+@d          "{obj?you|{du?the {obj}|something}}"
+@st2        "{s2?, but does no harm|: {w6}|, but the blow glances off {w6}}"
+@st2y       "{s2?{actor?, but do no harm|, but does no harm}|: {w6}|, but the blow glances off {w6}}"
+@st3        "{s3?, but does no harm|: {text}|, but the blow glances off {text}}"
+@st3n       "{s3?{actor?, but does no harm|, but do no harm}|: {text}|, but the blow glances off {text}}"
+@strike     " strike at {@d} with your {instr}"
+@its        " strikes at you with its {instr}"
+@blow       "{first?{@A}|Quicker, {@a}}{thrown?{missile?{actor?{wk?{@strike}| kick at {@d}| butt at {@d} with your {instr}"
+            "|{@strike}}|{wk?{@its}|{@its}|{@its}| bites at you| claws at you| strikes at you}}"
+            "|{actor? shoot at | shoots at }{@d}{instr?| with {its} {instr}}}"
+            "|{actor? throw your | throws its }{instr}{hard? at | hard at }{@d}}"
+@black      "{w4?{black? Everything goes black.| Everything goes black again.}| It falls senseless.}"
+@blackd     "{obj?{black? Everything goes black.| Everything goes black again.}| It falls senseless.}"
+@after      "{adead?{ddead?{again?{adown?{ddown?|{@blackd}}|{@black}}|}| {@D} {obj?are|falls} dead.}"
+            "| {@A} {w4?are|falls} dead.}{flees?| It flees.}"
+
+FIGHT.gone              "{@D} is out of reach."
+FIGHT.bled              "{@A} collapses, bled white."
+FIGHT.bound             "{@A} binds its bleeding wound."
+FIGHT.rise              "{@A} {@rises}."
+FIGHT.stray             "{actor?Your |Its }{thrown?shot|{instr}} strikes {@d} instead{@st2}.{@after}"
+FIGHT.hold              "{obj?You aren't holding anyone.|You seize {@d} and hold it fast.}{@after}"
+FIGHT.slip              "{obj?You aren't holding anyone.|You grapple with {@d}, but it twists free.}{@after}"
+FIGHT.thrown            "{obj?You aren't holding anyone.|You throw {@d} to the ground}{s2?|: {w6}|}.{@after}"
+FIGHT.pinned            "{obj?You aren't holding anyone.|You pin {@d} to the ground.}{@after}"
+FIGHT.choked            "{obj?You aren't holding anyone.|You choke {@d}.}{@after}"
+FIGHT.resists           "{obj?You aren't holding anyone.|{@D} resists your hold.}{@after}"
+FIGHT.free              "{w4?You aren't holding anyone.|{@A} breaks free of your grip.}{@after}"
+FIGHT.struggles         "{w4?You aren't holding anyone.|{@A} struggles in your grip.}{@after}"
+FIGHT.letgo             "{obj?You aren't holding anyone.|You let go of {@d}.}{@after}"
+FIGHT.dispatch          "You finish {@d} where it lies.{@after}"
+FIGHT.miss              "{@blow}{actor?, and miss|, and misses}.{@after}"
+FIGHT.dodged            "{@blow}{actor?; it dodges|; you dodge}.{@after}"
+FIGHT.blocked           "{@blow}{actor?; it fends off the blow{shield?| with its {w5}}|; you fend it off with your {w5}}"
+                        "{s2?{s3?|{actor?; it strikes you as it does|; your blow lands on it}{@st3}}|{@st2y}}.{@after}"
+FIGHT.hit               "{@blow}{@st2y}.{@after}"
+FIGHT.counter_hit       "{@blow}{actor?; it strikes back|; you strike back}{@st3n}.{@after}"
+FIGHT.both_hit          "{@blow}{actor?; you strike each other. Your blow|; you strike each other. Its blow}{@st2}"
+                        "{actor?; its|; yours}{@st3}.{@after}"
+FIGHT.fumble            "{@blow}{f1?|{missile?{actor?, but fumble the blow|, but fumbles the blow}"
+                        "|{actor?, but your shot goes wild|, but its shot goes wild}}}"
+                        "{f2?|{actor?; it falters|; you fumble your guard}}.{@after}"
+FIGHT.stumble           "{@blow}{f1?|{actor?, but stumble|, but stumbles}}{f2?|{actor?; it stumbles|; you stumble}}.{@after}"
+FIGHT.advantage         "{@blow}{actor?; it slips inside your guard|; you see an opening}.{@after}"
+FIGHT.any               "{@blow}.{@after}"
+
+# ---- A refusal (UK_NO: no, U_*, A_*: refuse.c's say_no, the one wording of its meaning; text the thing's name as it's
+# put in, "a door", "The giant rat"; a name not to be said, its nameless form, the next).  (refuse.c's said before,
+# overlay 24)
+
+NO.U_VERB           +"\nI don't know how to {text}."
+NO.U_YET            +"\nYou can't {text} in this game yet."
+NO.U_CANT           +"\nYou can't {text}."
+NO.U_NOTE           +"\nThere's nothing written on {text}."
+NO.U_WHAT           +"\n{text} what?"
+NO.A_SEE_NO         +"\nYou see no {text} here."
+NO.A_SEE_NONE       +"\nYou see none of those here."
+NO.A_HAVE_NO        +"\nYou have no {text}."
+NO.A_CARRY_NONE     +"\nYou carry none of those."
+NO.A_NO_TAKE        +"\nThere's nothing here to take."
+NO.A_UNSEEN         +"\nYou haven't seen {text} here."
+NO.A_UNSEEN_WAY     +"\nYou haven't seen {text} that way."
+NO.A_FAR            +"\n{text} is out of reach: go up to it first."
+NO.A_NEARER         +"\nYou can't get near enough to {text}."
+NO.A_NO_MAGIC       +"\nYou've no magic: you never studied the convocations."
+NO.A_NO_PSI         +"\nYou reach for it; nothing stirs."
+NO.A_NO_GODS        +"\nYou know no invocations of {text}'s."
+NO.A_NO_GOD         +"\nYou know no invocations."

@@ -69,8 +69,7 @@ static unsigned char __fastcall__ ask_den (unsigned char how, unsigned char orde
     s->state = REQ_FREE;
     lb[0] = 0;
     if (!(how & SW_QUIET) && dealt.result != SR_OK && dealt.result != SR_CANT) {
-        sway_words (&dealt);
-        msg (lb);
+        sway_said (&dealt);
     }
     return dealt.result;
 }
@@ -151,8 +150,7 @@ static void say_aloud (void)
             cmd.obj.word[0] = 0;
             if (ask_den (SW_TALK | SW_QUIET, 0) == SR_OK) {   /* (Taken as talk: its words; a beast's, a tongue
                                                 **   not its own, nothing) */
-                sway_words (&dealt);
-                msg (lb);
+                sway_said (&dealt);
                 took ();
             }
             den_meant = 0;
@@ -283,8 +281,7 @@ static void orate (void)
     if ((r = ask_den (SW_PERSUADE | SW_QUIET, SWO_ALL)) == SR_NONE) {
         msg ("There's no one here to hear you.");
     } else if (r != SR_OK) {
-        sway_words (&dealt);                    /* (The nearest's tongue not the character's) */
-        msg (lb);
+        sway_said (&dealt);                     /* (The nearest's tongue not the character's) */
     } else {
         sayf ("\nYou hold forth to those about you, in %s. ", dealt.word2);
         say (G_OK (dealt.grade) ? (dealt.ix ? "Your words carry:" : "Your words carry, but sway no one further.") :

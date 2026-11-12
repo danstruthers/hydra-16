@@ -42,12 +42,14 @@ const SRC = path.join(__dirname, 'said.txt'), OUT = path.join(ROOT, 'obj', 'gen'
 // The codes (said.c's, the same: its SC_*)
 const SC = { NL: 0x01, END: 0x1E, ALT: 0x1F, POSS: 0x7F, NUM: 0x80, CHOOSE: 0xA0, CHANGED: 0xC0, STR: 0xE0, S: 0xE8,
   A: 0xE9, LIGHT: 0xEA, FORGET: 0xEB, ARG: 0xEC, SING: 0xED, IF: 0xF0, ROOM: 0xF8, TRAP: 0xF9, REL: 0xFA, PIECE: 0xFB,
-  KIND: 0xFC, NAME: 0xFD, WORD: 0xEE, ITS: 0xEF };
+  KIND: 0xFC, NAME: 0xFD, WORD: 0xEE, ITS: 0xEF, STR2: 0xFE };
+const FMAX = 126;                                            // (Fields at most: a condition's byte its index, | 0x80 one value, 0xFF none;
+                                                              //   SC_NUM, SC_CHOOSE, SC_CHANGED + 31 and a byte past the 31st, 2026-11-12)
 const WORDS_MAX = 200;                                        // (The words said as SC_WORD and a byte, at most)
 const BANK = 0x2000;                                          // (A bank of the rows': overlays 28 and 29)
 const ANY = 0xFE;                                            // (A row for any outcome: said.c's SAID_ANY)
 const OP = { '': 0, '-': 1, '>': 2, '*': 3 };
-const WORDS = ['obj', 'instr', 'text', 'actor'];
+const WORDS = ['obj', 'instr', 'text', 'actor'], MORE = ['w4', 'w5', 'w6'];   // (The UI's words; its fourth to sixth, said_s[3-5]: SC_STR2's)
 const DICT = [2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29];   // (A word's codes)
 
 // said.txt read: its entries ({ head, texts: [{ text, on }], line }), a line begun with a space going on with the last
@@ -96,8 +98,8 @@ function generate(H, say = () => {}) {
   const formsOf = k => Object.keys(H.msgs).filter(n => n === k || n.startsWith(k + ':')).map(n => H.msgs[n]);
   const kind = (k, of, line) => {                             // (An outcome kind: its outcome field, its enum)
     if (!of || !of[5]) throw new Error('saidgen: ' + k + ': no outcome field with its enum (msgs.def\'s @)' + (line ? ' (said.txt:' + line + ')' : ''));
-    const pre = of[5].slice(0, of[5].indexOf('_') + 1), e = H.enums.find(x => x.includes(of[5])).filter(n => n.startsWith(pre));
-    return { k, short: k.replace(/^E_/, ''), forms: formsOf(k), of: of[0], pre, members: e, own: [], rows: [], v: H.C[k],
+    const all = H.enums.find(x => x.includes(of[5])), pre = of[5].slice(0, of[5].indexOf('_') + 1), e = all.filter(n => n.startsWith(pre));
+    return { k, short: k.replace(/^(E|UK)_/, ''), forms: formsOf(k), of: of[0], pre, members: e, all, own: [], rows: [], v: H.C[k],
       actor: null };
   };
   const kinds = H.outcome.map(k => {                          // (The head's kinds: their field in the head's place)
@@ -128,6 +130,8 @@ function generate(H, say = () => {}) {
     if (name === 'any') return ANY;
     const c = K.pre + name.toUpperCase();
     if (K.members.includes(c)) return H.C[c];
+    if (name === name.toUpperCase() && K.all.includes(name)) return H.C[name];   // (Any of its enum's by its name: UK_NO's
+                                                              //   A_SEE_NO, its enum's U_* first)
     const i = K.own.indexOf(name);
     if (i < 0) throw new Error('said.txt:' + line + ': ' + K.short + '.' + name + '? (no ' + c + ', nor an own one)');
     return Math.max(...K.members.map(n => H.C[n])) + 1 + i;
@@ -152,7 +156,7 @@ function generate(H, say = () => {}) {
     }
     const d = [off + (lo >> 3), lo & 7, 2 ** (hi - lo + 1) - 1, OP[m[2] || ''], k], s = d.join(',');
     if (!fieldIx.has(s)) { fieldIx.set(s, fields.length); fields.push(d); }
-    if (fieldIx.get(s) >= 32) throw new Error('saidgen: more than 32 fields');
+    if (fieldIx.get(s) >= FMAX) throw new Error('saidgen: more than ' + FMAX + ' fields');
     return fieldIx.get(s);
   };
   const pc = [], pcIx = new Map();
@@ -191,9 +195,10 @@ function generate(H, say = () => {}) {
         const m = text.slice(i + 1).match(/^([^?!}]*)([?!}])/);
         if (!m) throw new Error('said.txt:' + line + ': a brace not closed');
         i += 1 + m[0].length;
-        const [name, ...args] = m[1].trim().split(/\s+/), lc = name.toLowerCase(), w = WORDS.indexOf(lc);
+        const [name, ...args] = m[1].trim().split(/\s+/), lc = name.toLowerCase(), w = WORDS.indexOf(lc), w2 = MORE.indexOf(lc);
+        const fc = (code, f) => f < 31 ? [code + f] : [code + 31, f];   // (A field's code: past the 31st, its byte after)
         const block = (code) => {                             // (Alternatives, or a text said only if, to its })
-          b.push(code);
+          b.push(...[].concat(code));
           for (;;) {
             b.push(...seq(m[2] === '?' ? '|}' : '}'));
             if (text[i] === '}') { i++; break; }
@@ -205,12 +210,14 @@ function generate(H, say = () => {}) {
         if (name[0] === '@') { b.push(SC.PIECE, piece(K, name.slice(1), line) + 1); continue; }
         if (m[2] === '?') {
           if (w >= 0 && name === lc) block(SC.IF + w);
+          else if (w2 >= 0 && name === lc) block(SC.IF + 5 + w2);
           else if (name === 'arg') block(SC.IF + 4);
-          else block(SC.CHOOSE + field(K, name, line));
+          else block(fc(SC.CHOOSE, field(K, name, line)));
           continue;
         }
-        if (m[2] === '!') { block(SC.CHANGED + field(K, name, line)); continue; }
+        if (m[2] === '!') { block(fc(SC.CHANGED, field(K, name, line))); continue; }
         if (w >= 0) b.push(SC.STR + 2 * w + (name === lc ? 0 : 1));
+        else if (w2 >= 0) b.push(SC.STR2, 2 * (3 + w2) + (name === lc ? 0 : 1));
         else if (name === 'nl') b.push(SC.NL);
         else if (name === 's') b.push(SC.S);
         else if (name === 'a') b.push(SC.A);
@@ -223,7 +230,7 @@ function generate(H, say = () => {}) {
         else if (name === 'room' || name === 'rel' || name === 'kind' || name === 'name') {
           b.push(SC[name.toUpperCase()], field(K, args[0], line) + 1);
         } else if (name === 'trap') b.push(SC.TRAP, field(K, args[0], line) + 1, field(K, args[1], line) + 1);
-        else b.push(SC.NUM + field(K, name, line));
+        else b.push(...fc(SC.NUM, field(K, name, line)));
       }
       return b;
     };
@@ -279,7 +286,7 @@ function generate(H, say = () => {}) {
       const c = b[i], letter = c === 0x0A || (c >= 0x20 && c < 0x7F);
       if (letter && a < 0) a = i;
       if (!letter && a >= 0) { out.push([a, i]); a = -1; }
-      if ((c >= SC.ROOM && c <= SC.NAME) || c === SC.WORD) i += c === SC.TRAP ? 2 : 1;
+      if (c >= SC.ROOM || c === SC.WORD || c === SC.NUM + 31 || c === SC.CHOOSE + 31 || c === SC.CHANGED + 31) i += c === SC.TRAP ? 2 : 1;
     }
     if (a >= 0) out.push([a, i]);
     return out;
@@ -370,7 +377,7 @@ function generate(H, say = () => {}) {
     lines.push('};', '#pragma rodata-name (pop)');
   });
   lines.push('#endif', '', '#endif', '');
-  if (fields.length > 32) throw new Error('saidgen: more than 32 fields');
+  if (fields.length > FMAX) throw new Error('saidgen: more than ' + FMAX + ' fields');
   void fl;
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, lines.join('\r\n'), 'latin1');

@@ -580,37 +580,37 @@ void __fastcall__ o_taken_next (char* w)
 #pragma data-name (push, "OV10RODATA")
 #pragma local-strings (push, on)
 
-/* Overlay 10: a throw told (the things' IO_THROW's result r, how it went, TH_*, times 256): "You throw the dagger hard
-** at the giant rat: it strikes it." */
-void __fastcall__ o_throw_words (unsigned r)
+/* Overlay 10: a throw told (the things' IO_THROW's result r, how it went, TH_*, times 256): said.txt's THROW rows, the
+** UI's own kind (UK_THROW: "You throw the dagger hard at the giant rat: it strikes it."); no mark seen, none carried, the
+** refusals' (throw_words' words before, 2026-11-12: narration as data, stage 4) */
+void __fastcall__ o_throw_said (unsigned r)
 {
-    static const char* const how[3] = { ": it strikes it.", ", and miss: it lands beside it.",
-        ", but it's too far: it falls short." };
-    const char* w = cmd.obj.word[0] ? cmd.obj.word : "it";
+    struct msg c;
 
     switch ((unsigned char) r) {
-    case IR_OK:
-        sayf ("\nYou throw the %s%s at the %s%s", w, cmd.manner & MN_HARD ? " hard" : "", cmd.other.word,
-            how[r >> 8 & 3]);
-        return;
     case IR_FIXED:                              /* (A step of the reach first: part 19's) */
-        return;
-    case IR_NO:
-        sayf ("\nThe %s isn't a thing you can throw.", w);
         return;
     case IR_NOT_HERE:
         say_no (A_SEE_NO, cmd.other.word);
         return;
+    case IR_OK:
+    case IR_NO:
     case IR_FULL:
-        msg ("Throw it at what? (throw the dagger at the rat; or name a target: target the rat)");
-        return;
+        break;
     default:
         if (cmd.obj.word[0]) {
             say_no (A_HAVE_NO, cmd.obj.word);
-        } else {
-            msg ("You have nothing in your hands to throw.");
+            return;
         }
+        r = IR_NONE;
     }
+    said_s[0] = cmd.obj.word[0] ? cmd.obj.word : strcpy (lb + 396, "it");   /* (The main RAM's: the words'
+                                                **   renderer's overlay 27 in the window, not this one) */
+    said_s[2] = cmd.other.word;
+    c.kind = UK_THROW;
+    c.who = 0;
+    c.w1 = (unsigned char) r << 8 | (r >> 8 & 3) | (cmd.manner & MN_HARD ? 4 : 0);
+    outcome_words (&c);
 }
 
 #pragma local-strings (pop)

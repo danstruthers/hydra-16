@@ -29,11 +29,14 @@ enum { SC_NL = 0x01, SC_END = 0x1E, SC_ALT = 0x1F, SC_POSS = 0x7F, SC_NUM = 0x80
        SC_STR = 0xE0, SC_S = 0xE8, SC_A, SC_LIGHT, SC_FORGET, SC_ARG, SC_SING, SC_WORD, SC_ITS, SC_IF = 0xF0, SC_ROOM = 0xF8,
        SC_TRAP, SC_REL,
        SC_PIECE,
-       SC_KIND, SC_NAME };
+       SC_KIND, SC_NAME, SC_STR2 };
+#define SC_FX           31                      /* (SC_NUM, SC_CHOOSE, SC_CHANGED + 31: the field's a byte after it, the 32nd
+                                                **   on: the table's fields past 31, 2026-11-12) */
 #define SR_ONCE         1                       /* (A row's flag: said as a look's sentences, none twice an answer) */
 
 /* The UI's words for a row (the main RAM's: its callers set them) */
-const char* said_s[3];                          /* The thing done to, the thing done with, a word of the row's own */
+const char* said_s[6];                          /* The thing done to, the thing done with, a word of the row's own;
+                                                **   three more ({w4} {w5} {w6}: a blow's names and lines, 2026-11-12) */
 unsigned char said_n;                           /* A choice of the UI's for the row ({arg}) */
 unsigned char said_q;                           /* The words left in lb, not said (a denizen's sound's words, heard:
                                                 **   its caller's to use, 2026-11-11) */
@@ -52,7 +55,7 @@ static unsigned char once;                      /* The row's said as a look's (l
 /* Field f's value (said_f's: its byte, shift and mask; less K, more than K, times K) */
 static unsigned __fastcall__ fv (unsigned char f)
 {
-    const unsigned char* d = said_f + f * 5;
+    const unsigned char* d = said_f + f * 5u;
     unsigned char v = ((const unsigned char*) sm)[d[0]] >> d[1] & d[2];
 
     switch (d[3]) {
@@ -82,7 +85,7 @@ static const unsigned char* __fastcall__ step (const unsigned char* p)
     unsigned char c = RB (p);
 
     ++p;
-    return c == SC_TRAP ? p + 2 : c >= SC_ROOM || c == SC_WORD ? p + 1 : p;
+    return c == SC_TRAP ? p + 2 : c >= SC_ROOM || c == SC_WORD || (c >= SC_NUM && c < SC_STR && (c & 0x1F) == SC_FX) ? p + 1 : p;
 }
 
 /* From an alternative's start to the SC_ALT or SC_END after it (the blocks in it passed over) */
@@ -147,7 +150,7 @@ static void __fastcall__ rel (unsigned char h)
 /* A text said, from p to its end (0), or to the SC_ALT or SC_END that ends its alternative: there */
 static const unsigned char* __fastcall__ run (const unsigned char* p)
 {
-    unsigned char c, v;
+    unsigned char c, v, f;
     const unsigned char* q;
     const char* s;
 
@@ -172,14 +175,24 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
             }
             continue;
         }
+        if (c < SC_STR && (c & 0x1F) == SC_FX) {
+            f = RB (p);                         /* (Past the 31st field: its byte) */
+            ++p;
+        } else {
+            f = c & 0x1F;
+        }
         if (c < SC_CHOOSE) {
-            utoa (fv (c - SC_NUM), sp, 10);
+            utoa (fv (f), sp, 10);
             sp += strlen (sp);
             continue;
         }
         if (c < SC_CHANGED || (c >= SC_IF && c < SC_ROOM)) {    /* (A choice: by a field, a word given, the UI's number) */
-            v = c >= SC_IF ? (c == SC_IF + 4 ? said_n : c == SC_IF + 3 ? ac != 0 : said_s[c - SC_IF] &&
-                *said_s[c - SC_IF]) : fv (c - SC_CHOOSE) > 255 ? 255 : fv (c - SC_CHOOSE);
+            if (c >= SC_IF) {
+                v = c - SC_IF;
+                v = v == 4 ? said_n : v == 3 ? ac != 0 : (s = said_s[v > 4 ? v - 2 : v]) && *s;
+            } else {
+                v = fv (f) > 255 ? 255 : fv (f);
+            }
             for (; v; --v) {
                 q = over (p);
                 if (RB (q) == SC_END) {
@@ -193,7 +206,7 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
             continue;
         }
         if (c < SC_STR) {                       /* (Said only if the field's not as it was last told) */
-            v = fv (c - SC_CHANGED);
+            v = fv (f);
             if (v != said_last[sk]) {
                 said_last[sk] = v;
                 p = run (p);
@@ -203,9 +216,13 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
             ++p;
             continue;
         }
-        if (c < SC_S) {                         /* (A word the UI's given, or the actor: capitalised, its odd one) */
-            v = c - SC_STR;
-            if (v >= 6) {
+        if (c < SC_S || c == SC_STR2) {         /* (A word the UI's given, or the actor: capitalised, its odd one; its
+                                                **   fourth to sixth, SC_STR2's, the byte after it) */
+            if (c == SC_STR2) {
+                v = RB (p);
+                ++p;
+                s = said_s[v >> 1];
+            } else if ((v = c - SC_STR) >= 6) {
                 if (!ac) {
                     s = "you";
                 } else {
@@ -319,7 +336,7 @@ void __fastcall__ o_outcome_words (const struct msg* m)
             continue;
         }
         if ((c = RB (p + 2)) != 0xFF) {         /* (Its condition: a field's one value, or the mask of its values) */
-            v = fv (c & 0x1F);
+            v = fv (c & 0x7F);
             if (c & 0x80 ? v != RB (p + 3) : v >= 8 || !(RB (p + 3) & 1 << v)) {
                 continue;
             }

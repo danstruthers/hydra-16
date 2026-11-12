@@ -223,7 +223,7 @@ static void throw_way (void)
     HUB->ireq.y = HUB->pc_y + head_y[cmd.dir] * n;
     HUB->ireq.to = cmd.manner;
     if ((d = things (IO_THROW | IO_STEPS, cmd.obj.word)) != IR_OK) {
-        throw_words (d);                        /* (None carried, not a thing to throw, the reach's step first) */
+        throw_said (d);                         /* (None carried, not a thing to throw, the reach's step first) */
         return;
     }
     hub_map (0);

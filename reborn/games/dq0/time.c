@@ -13,6 +13,7 @@
 #include <string.h>
 #include "dq0.h"
 #include "hub.h"
+#include "dq0said.h"
 
 #pragma code-name ("OV16CODE")
 #pragma rodata-name ("OV16RODATA")
@@ -26,15 +27,6 @@ static const char* const hname[12] = {
 static const char* const part[8] = {            /* (The day's parts, three hours each from midnight) */
     "the middle of the night", "the small hours", "early morning", "morning", "midday", "afternoon", "evening",
     "night"
-};
-static const char* const sky[] = {              /* (The sky seen, by its phase: SKP_DAWN ...) */
-    "Grey light shows above: it's dawn, or near it.", "Daylight shows above: it's day.",
-    "The light above is fading: it's dusk.", "Above, it's dark: it's night.",
-    "You see the sun in the sky: it's %s, you judge.", "You see the stars: it's %s, you judge.",
-    "You see the sun high overhead: it's about midday.",
-    "You see the sun low in the sky, but you can't tell east from west: you take it for %s.",
-    "You watch the sun a while, its slow way across the sky: it's %s, and you know which way north lies now.",
-    "You watch the stars a while as they wheel: it's %s, and you know which way north lies now."
 };
 static const char untils[] = "midnight\0dawn\0daybreak\0sunrise\0morning\0noon\0midday\0afternoon\0dusk\0sunset\0"
     "evening\0nightfall\0night\0";
@@ -126,6 +118,7 @@ static unsigned until (void)
 unsigned __fastcall__ o_time_ui (unsigned w)
 {
     struct tbelief t;
+    struct msg c;
     unsigned char p = w >> 8, k;
 
     switch ((unsigned char) w) {
@@ -136,66 +129,24 @@ unsigned __fastcall__ o_time_ui (unsigned w)
         hub_mem (0, &t, &HUB->tb, sizeof t);
         k = p >> 4;
         p &= 15;
-        say ("\n");
-        if (p > SKP_STARS_WATCHED || !p) {
-            sky_words (p, k, cw);               /* (A shaft's refusal, a rope's: SKP_GAVE ..., a phase of none) */
-        } else {
+        if (!p) {                               /* (A rope's: SKP_GAVE, SKP_NO_ROPE, a phase of none) */
+            p = !k ? SKP_NONE : k == 1 ? SAID_SKY_TORE : SAID_SKY_FAR;
+        } else if (p <= SKP_STARS_WATCHED) {
             if (p == SKP_LOW) {
                 strcpy (cw, part[day_believed (&t) / 180]);
             } else {
                 clock_words (day_believed (&t), 0);
             }
-            if (k) {
-                sky_words (p, k, cw);
-            } else {
-                sayf (sky[p - SKP_DAWN], cw);
-            }
         }
+        said_s[2] = cw;                         /* (The main RAM's) */
+        c.kind = UK_SKY;                        /* (Its words said.txt's SKY rows, the UI's own kind, 2026-11-12: what
+                                                **   shows it, k, SKS_*; a shaft's refusals, p past SKP_STARS_WATCHED) */
+        c.who = 0;
+        c.w1 = p << 8 | k;
+        outcome_words (&c);
         break;
     case TU_UNTIL:
         return until ();
     }
     return 0;
 }
-
-/* The sky seen by a window on the surface, a skylight, a shaft (k, SKS_*; w, the time in words), a shaft's refusals
-** (p past SKP_STARS_WATCHED): overlay 1's, 16's room (HOUSE.md's what shows the sky) */
-#pragma code-name (push, "OV1CODE")
-#pragma rodata-name (push, "OV1RODATA")
-void __fastcall__ o_sky_words (unsigned char p, unsigned char k, const char* w)
-{
-    static const char* const sky2[] = {             /* (The same, shown by a window, a skylight, a shaft: the first of its
-                                                    **   %s's, the place's words, HOUSE.md's what shows the sky) */
-        "Grey light %s: it's dawn, or near it.", "Pale daylight %s: it's day.", "Fading light %s: it's dusk.",
-        "Stars show %s: it's night.", "The sun shows %s: it's %s, you judge.", "Stars show %s: it's %s, you judge.",
-        "The sun stands high %s: it's about midday.",
-        "The sun shows low %s, but you can't tell east from west: you take it for %s.",
-        "You watch the sun a while %s, its slow way across the sky: it's %s, and you know which way north lies now.",
-        "You watch the stars a while %s as they wheel: it's %s, and you know which way north lies now."
-    };
-    static const char* const fall[4] = {            /* (SKS_WINDOW on: the light's) */
-        "comes in at the window", "falls from the skylight above", "falls from the shaft above", "falls from far up the shaft above"
-    };
-    static const char* const where[4] = {           /* (The sky's) */
-        "at the window", "in the skylight above", "at the top of the shaft above", "far up the shaft above"
-    };
-    static const char* const shafts[] = {           /* (SKP_TOO_HIGH on) */
-        "The shaft's mouth is too high to reach.",
-        "The shaft is choked with fallen rock a little way down.", "It falls away down the shaft, and you hear it land far below.",
-        "You take hold of the rope.", "You put your weight on the rope: the grapple tears loose and comes clattering down.",
-        "The rope's end hangs out of reach."
-    };
-    if (!p) {
-        if (!k) {
-            return;
-        }
-        p = SKP_ROPE + k;
-    }
-    if (p > SKP_STARS_WATCHED) {
-        say (shafts[p - SKP_TOO_HIGH]);
-    } else {
-        sayf (sky2[p - SKP_DAWN], p <= SKP_DUSK ? fall[k - 1] : where[k - 1], w);
-    }
-}
-#pragma code-name (pop)
-#pragma rodata-name (pop)

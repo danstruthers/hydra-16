@@ -1726,7 +1726,7 @@ unsigned char s_missiles (void)
         } else {
             d = cmd.other.word[0] ? IR_NOT_HERE : IR_FULL;   /* (No mark it sees; none said) */
         }
-        throw_words (d | HUB->ireq.qty << 8);
+        throw_said (d | HUB->ireq.qty << 8);
         return d == IR_OK ? 2 : 1;
     case VB_SHOOT_OBJECT:
         if (cmd.prep == PR_AT) {                /* ("fire the bow at the rat") */
@@ -2154,8 +2154,7 @@ unsigned char __fastcall__ s_deal (unsigned char how)
     memcpy (&dealt, s, sizeof dealt);
     s->state = REQ_FREE;
     if (!(how & SW_QUIET) || dealt.result != SR_NONE) {
-        sway_words (&dealt);
-        msg (lb);
+        sway_said (&dealt);
     }
     if (dealt.t) {
         intend2 (I_WAIT, dealt.t, 0);

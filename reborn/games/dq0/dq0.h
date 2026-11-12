@@ -246,8 +246,8 @@ enum {
 unsigned __fastcall__ verb_row (unsigned char action);  /* A verb's row: its handler, its takes times 256 (and its
                                                 **   request into cmd.aux, if the line gave none) */
 void __fastcall__ taken_next (char* w);         /* "Take all"'s next thing to take up, into w ("": none) */
-void __fastcall__ throw_words (unsigned r);     /* A throw told (the things' IO_THROW's result, its TH_* times 256:
-                                                **   IR_NOT_HERE, no mark it sees; IR_FULL, none said) */
+void __fastcall__ throw_said (unsigned r);      /* A throw told (the things' IO_THROW's result, its TH_* times 256:
+                                                **   IR_NOT_HERE, no mark it sees; IR_FULL, none said): THROW's rows */
 extern unsigned char untarget;                  /* (main.c's: the target let go at the next command: the character
                                                 **   made to turn, by a trap set off, a blow from one it doesn't see) */
 
@@ -334,8 +334,8 @@ extern unsigned char held;                      /* (main.c's: the next line held
 extern char queue[QMAX];
 extern unsigned qlen;
 struct sway;
-void __fastcall__ sway_words (const struct sway* s);   /* Overlay 6: the character's way with a denizen, the
-                                                **   denizens' task's answer (the hub's sway, copied), into lb */
+void __fastcall__ sway_said (const struct sway* s);    /* Overlay 15: the character's way with a denizen, the
+                                                **   denizens' task's answer (the hub's sway, copied), told (SWAY's rows) */
 unsigned char __fastcall__ task_words (unsigned w, unsigned char named);   /* Overlay 3: a long task's (task.c) */
 void __fastcall__ felt_words (unsigned w);      /* (Overlay 17's) The look's in the dark: FW_NEW, FW_TOUCH (task.c's) */
 unsigned __fastcall__ dnum (const char* s);     /* (The game's library's NUM: bank.s's, dq0lib.inc) A number, a word's (atoi's) */
@@ -370,13 +370,16 @@ void den_way (void);                            /* Overlay 4: a denizen in the w
 struct msg;
 void __fastcall__ outcome_words (const struct msg* m);   /* Overlay 27 (said.c): an outcome event worded, its row
                                                 **   of the phrase table (said.txt: by its kind and its outcome; none, nothing said) */
-extern const char* said_s[3];                   /* (said.c's, the main RAM's: the UI's words for a row, the thing done
-                                                **   to, the thing done with, a word of the row's own; 0 or "" none) */
+extern const char* said_s[6];                   /* (said.c's, the main RAM's: the UI's words for a row, the thing done
+                                                **   to, the thing done with, a word of the row's own; three more, {w4}
+                                                **   {w5} {w6}; 0 or "" none) */
+enum { UK_THROW = 0x80, UK_SKY, UK_SWAY, UK_FIGHT, UK_NO };   /* (The UI's own kinds, worded by said.txt's rows as an
+                                                **   outcome event is: no world's event, never in the hub; msgs.def's,
+                                                **   narration as data's stage 4, 2026-11-12) */
 extern unsigned char said_n;                    /* (A choice of the UI's for a row: its {arg}) */
 extern unsigned char said_q;                    /* (1: a row's words left in lb, not said: its caller's) */
 struct fight;
 void __fastcall__ feed (unsigned char eat);     /* (Part 16's, feed.c: "eat", "drink", slice 4.9's) */
-void __fastcall__ sky_words (unsigned char p, unsigned char k, const char* w);   /* Overlay 1 (time.c) */
 /* (Part 18's hide, main.c's and hthings.c's, not term.c's: HD_ROPE: the thing's word a rope's or a grapple's, or none: 1; HD_UP: a grapple or a rope thrown up, carried out: 1) */
 #define HD_ROPE         ((const char*) 1)
 #define HD_UP           ((const char*) 2)
@@ -384,9 +387,6 @@ unsigned __fastcall__ time_ui (unsigned w);     /* Overlay 16 (time.c): the time
                                                 **   "time"; TU_SKY | its phase times 256, the sky seen; TU_UNTIL, a
                                                 **   wait's minutes "until dawn", "watch the sun", 0 none said) */
 enum { TU_TELL, TU_SKY, TU_UNTIL };
-unsigned __fastcall__ fight_words (const struct msg* m);    /* Overlay 6: a blow (an E_FIGHT; its record from the
-                                                **   ring copied into lb's end: FIGHT_LB), into lb: the tenths the
-                                                **   character's knocked senseless for, or 0 */
 #define FIGHT_LB    ((struct fight*) (lb + sizeof lb) - 1)
 void __fastcall__ fight_note (unsigned char n);   /* Overlay 22: a fight's word into lb (blows.c's) */
 unsigned char __fastcall__ grapple (unsigned char g);  /* Overlay 19 (blows.c's): a grapple's move (rs.h's GM_*) at the
@@ -397,7 +397,6 @@ unsigned char __fastcall__ grapple (unsigned char g);  /* Overlay 19 (blows.c's)
 #define GT_TRY      0x80
 #define GR_SEND     0x40
 #define GR_SAID     0x20
-void __fastcall__ grip_words (unsigned char out);   /* Overlay 19 (blows.c's): a grapple's words (O_HOLD ...) */
 unsigned char __fastcall__ fight_target (struct cmd* c);    /* Overlay 6: VB_ATTACK_OBJECT's denizen beside
                                                 **   the character to strike at (its name has the word; it lies that
                                                 **   way): its entry plus 1, or 0 and why not in lb; VB_DEFEND's stance

@@ -12,42 +12,22 @@
 #pragma bss-name ("OV24BSS")                    /* (Its working values in its overlay's bank, not the main RAM's) */
 #pragma static-locals (on)
 
+static unsigned char f;                         /* (say_no's: into lb, not said) */
+
 #include <string.h>
 #include "dq0.h"
 #include "hub.h"
 #include "actions.h"
 
-/* The refusals, by U_* and A_* (dq0.h's): one wording a meaning, %s the thing's name, or the line's words */
-static const char* const said[A_COUNT] = {
-    "\nI don't know how to %s.",                /* U_VERB    no verb of the game's (the line's first word) */
-    "\nYou can't %s in this game yet.",         /* U_YET     a verb the game doesn't do yet, or not to such a thing */
-    "\nYou can't %s.",                          /* U_CANT    a thing the verb can't be done to (the line) */
-    "\nThere's nothing written on %s.",         /* U_NOTE    (the line after its verb) */
-    "\n%s what?",                               /* U_WHAT    nothing named: "Take what?", "Pick up what?" (the line) */
-    "\nYou see no %s here.",                    /* A_SEE_NO  none of that name in sight */
-    "\nYou see none of those here.",            /*   its name not to be said (none, or a handle's "#") */
-    "\nYou have no %s.",                        /* A_HAVE_NO none of that name carried */
-    "\nYou carry none of those.",               /*   its name not to be said */
-    "\nThere's nothing here to take.",          /* A_NO_TAKE */
-    "\nYou haven't seen %s here.",              /* A_UNSEEN  (a, an put in: a door, a way, a thing to go to) */
-    "\nYou haven't seen %s that way.",          /* A_UNSEEN_WAY */
-    "\n%s is out of reach: go up to it first.", /* A_FAR     (the put in, a name not capitalised: "The giant rat") */
-    "\nYou can't get near enough to %s.",       /* A_NEARER  walked toward, and stopped short */
-    "\nYou've no magic: you never studied the convocations.",  /* A_NO_MAGIC  a spell (the powers: H_POWERS's) */
-    "\nYou reach for it; nothing stirs.",       /* A_NO_PSI  a talent, psionics */
-    "\nYou know no invocations of %s's.",       /* A_NO_GODS an invocation, a ritual, a god called on: the character's
-                                                **   deity's name put in */
-    "\nYou know no invocations."                /*   worshipping none (no name to put in) */
-};
-
-/* Refusal a (U_*, A_*) said, w its thing's name put in (0: "it"); | A_LB, added to lb, not said (the sway's words, a
-** blow's note).  w copied first, so it may be lb, or any of the main RAM's (not another overlay's: its bank's out) */
+/* Refusal a (U_*, A_*: dq0.h's) said, w its thing's name put in (0: "it"); | A_LB, into lb, not said (the sway's words, a
+** blow's note: lb empty, every caller's).  w copied first, so it may be lb, or any of the main RAM's (not another
+** overlay's: its bank's out).  Its words said.txt's NO rows, the UI's own kind (UK_NO), one wording a meaning: "You see
+** no %s here.", "You have no %s.", "%s is out of reach: go up to it first." ... (refuse.c's said[] before, 2026-11-12) */
+#pragma static-locals (push, off)               /* (Its event on the C stack, the main RAM: the words' overlay reads it) */
 void __fastcall__ o_say_no (unsigned char a, const char* w)
 {
     static char t[64];
-    static const char* p;
-    static char* q;
-    static unsigned char f;
+    struct msg c;
 
     f = a & A_LB;
     a &= ~A_LB;
@@ -67,23 +47,18 @@ void __fastcall__ o_say_no (unsigned char a, const char* w)
     if ((a == A_FAR || a == U_WHAT) && t[0] >= 'a' && t[0] <= 'z') {
         t[0] -= 'a' - 'A';                      /* (A sentence's start) */
     }
-    p = said[a];
-    if (!f) {
-        sayf (p, t);
-        return;
+    said_s[2] = strcpy (lb + 200, t);           /* (The main RAM's: the words' overlay in the window, not this one) */
+    c.kind = UK_NO;
+    c.who = 0;
+    c.w1 = a << 8;
+    said_q = f;
+    outcome_words (&c);
+    said_q = 0;
+    if (f) {
+        memmove (lb, lb + 1, strlen (lb));      /* (Its words alone, its row's new line not) */
     }
-    q = lb + strlen (lb);
-    for (++p; *p; ++p) {
-        if (*p == '%') {
-            strcpy (q, t);
-            q += strlen (q);
-            ++p;
-        } else {
-            *q++ = *p;
-        }
-    }
-    *q = 0;
 }
+#pragma static-locals (pop)
 
 /* A command refused, said back from its line (cl):
 **   U_VERB    no verb of the game's: "I don't know how to bribe." (its first word)
