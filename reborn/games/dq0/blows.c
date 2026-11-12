@@ -288,7 +288,7 @@ void __fastcall__ o_fight_note (unsigned char n)
 {
     static const char* const say[8] = {
         "You will defend yourself as best you can.", "You will block.", "You will dodge.",
-        "You will strike back first.", "You will not defend yourself.", "",
+        rs_owns, "You will not defend yourself.", "",   /* (D_OWN's the ruleset's: RS_HELLO's) */
         "There's nothing like that here to fight.", "There's nothing beside you to fight."
     };
 
@@ -302,13 +302,14 @@ void __fastcall__ o_fight_note (unsigned char n)
 #pragma rodata-name (pop)
 
 /* The character's stance (the hub's pc_stance, rs.h's D_*: the referee's defence for it, the world's to set: wset)
-** set by its word (dodge, block, counter, none; else the best), told in lb */
+** set by its word (dodge, block, the ruleset's own (rs_own, RS_HELLO's: HarnMaster's counter; none, ""), none; else
+** the best: each by its first letter), told in lb */
 static void __fastcall__ stance (const char* w, unsigned char d)
 {
     if (*w) {
         d = *w;
-        d = d == 'd' ? D_DODGE : (d == 'b' && w[1] == 'l') || d == 'p' ? D_BLOCK : d == 'c' ? D_OWN : d == 'n' ?
-            D_NONE : D_AUTO;                    /* (dodge, duck; block, parry; counter; none; best, else) */
+        d = d == 'd' ? D_DODGE : (d == 'b' && w[1] == 'l') || d == 'p' ? D_BLOCK : d == *rs_own ? D_OWN : d == 'n' ?
+            D_NONE : D_AUTO;                    /* (dodge, duck; block, parry; its own; none; best, else) */
     }
     wset (WS_STANCE, d, 0);
     note (d);

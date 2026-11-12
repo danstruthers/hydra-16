@@ -404,7 +404,10 @@ enum {
     RS_HELLO,                                   /* -> its name, its round (tenths), its standard action times; its
                                                 **   text a line its name, a line its character generator (a
                                                 **   program in the game's folder, run NAME -o FILE -s SEED; none:
-                                                **   "", RS_LOAD_PC's path empty, the referee's own character) */
+                                                **   "", RS_LOAD_PC's path empty, the referee's own character); then
+                                                **   the ruleset's words, a line each: the state C_STUNNED is ("in
+                                                **   shock"), the word for its own stance, D_OWN ("counter": "" none),
+                                                **   and that stance told ("You will strike back first.") */
     RS_LOAD_PC,                                 /* A character file -> its name, calling, summary; a and b the pace
                                                 **   and the watchfulness its file says (GA_WALK and 0 if none: the
                                                 **   world's to set, a new game's) */
@@ -484,11 +487,11 @@ enum {
                                                 **   the key of the best it carries for such a blow, if it does better
                                                 **   than its bare hands, in the text ("" none: the UI's to ask) */
     RS_OUTFIT,                                  /* The character's outfit (the world's, a new game's kit: 2026-10-27,
-                                                **   games/dq0/outfits.txt) -> w1 the money it has to spend (its
+                                                **   the ruleset's games/REFEREE/outfits.txt) -> w1 the money it has to spend (its
                                                 **   family's wealth, the ruleset's: farthings, 2026-10-28), w2 a seed for its draw (the
                                                 **   character's own numbers), a its wealth (0 poor, 1 average, 2
-                                                **   rich), x[0] and x[1] its tags (the bits of outfits.txt's tag
-                                                **   words, in outfits.js's TAGS order: its culture, its class, its
+                                                **   rich), x[0] and x[1] its tags (the bits of its outfits.txt's tags
+                                                **   line's words, in that order: its culture, its class, its
                                                 **   wealth, its sex, a bit each, the ruleset's to set: dq0harn.h's
                                                 **   OT_*), the text a line its occupation's
                                                 **   name (its outfit's section), then a line each its open skills'

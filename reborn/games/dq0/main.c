@@ -135,6 +135,11 @@ static void interrupted (int sig)
 
 char gamedir[40], libdir[48];
 
+/* The ruleset's own words (its referee's, RS_HELLO's: rs.h; 2026-11-12, ENGINE-CRITIQUE.md's section 8): its words for
+** the state C_STUNNED is (HarnMaster's "in shock"), its word for its own stance, D_OWN ("counter": "" none), and that
+** stance told ("You will strike back first.") */
+char rs_stun[12], rs_own[10], rs_owns[32];
+
 /* A variable of the environment (the kernel's ENV_GET: this task's) into buf, size bytes at most with its 0 (a list's
 ** words a space between, as getenv gives them): buf, or NULL (it isn't set).  The C library's getenv not wanted: its
 ** 256 bytes' buffer, the main RAM's */
@@ -647,6 +652,7 @@ static void __fastcall__ start_world (unsigned long seed, const char* file, unsi
     unsigned round;
     int w;
     char* l;
+    char* p[4];
 
     if (hub_create (HUB_BANKS)) {
         t_end ();
@@ -672,8 +678,17 @@ static void __fastcall__ start_world (unsigned long seed, const char* file, unsi
     hub_post (r, T_REFEREE);
     waited (r);
     round = RS_HELLO_ROUND (*r);                              /* (The ruleset's round, in tenths: the world's to keep) */
-    l = strchr (r->text, '\n');                 /* (Its name, then its character generator's: none, "") */
-    character (file, seed, l ? l + 1 : "");     /* (The character: its file, or the generator's) */
+    for (l = r->text, k = 0; k < 4; ++k) {      /* (Its name, then its character generator's (none, ""), then its
+                                                **   words, rs.h's: each line cut at its \n) */
+        if (l && (l = strchr (l, '\n')) != 0) {
+            *l++ = 0;
+        }
+        p[k] = l ? l : (char*) "";
+    }
+    strncpy (rs_stun, p[1], sizeof rs_stun - 1);
+    strncpy (rs_own, p[2], sizeof rs_own - 1);
+    strncpy (rs_owns, p[3], sizeof rs_owns - 1);
+    character (file, seed, p[0]);               /* (The character: its file, or the generator's) */
     r->state = REQ_FREE;
     load_pc ();                                 /* (Its senses the referee's, before the world looks through them) */
     if (savedir) {                              /* (The dungeon's folder) */
@@ -1214,6 +1229,7 @@ static void __fastcall__ state_said (unsigned char cond)
     c.kind = E_HARM;
     c.who = 0;
     c.w1 = SAID_HARM_STATE;
+    said_s[2] = rs_stun;                        /* (The ruleset's words for C_STUNNED's state: "in shock") */
     for (i = 0; i < sizeof c_; ++i) {
         if (cond & c_[i]) {
             said_n = i * 2 + ((harm_told & c_[i]) != 0);

@@ -47,9 +47,12 @@ unsigned char s_early (void)
         for (k = 0; k < sizeof may && may[k] != a; ++k) {
         }
         if (k == sizeof may) {
-            msg (a == VB_TELL_OBJECT || (a >= VB_INTIMIDATE && a <= VB_JUDGE_SINCERITY) || a >= VB_DECEIVE &&
-                a <= VB_BEFRIEND ? "You're in shock: you can't string the words together." :
-                "You're in shock: you can do no more than rest, or walk slowly away.");
+            strcpy (lb, "You're ");             /* (The ruleset's words for the state, RS_HELLO's: "in shock") */
+            strcat (lb, rs_stun);
+            strcat (lb, a == VB_TELL_OBJECT || (a >= VB_INTIMIDATE && a <= VB_JUDGE_SINCERITY) || a >= VB_DECEIVE &&
+                a <= VB_BEFRIEND ? ": you can't string the words together." :
+                ": you can do no more than rest, or walk slowly away.");
+            msg (lb);
             r = 2;
         }
     }

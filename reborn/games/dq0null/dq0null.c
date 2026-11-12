@@ -636,7 +636,8 @@ void __fastcall__ rf_answer (struct req* r)
     switch (r->kind) {
     case RS_HELLO:
         RS_HELLO_ROUND (*r) = 100;                            /* (A round: 10 seconds, the game's clock's) */
-        put ("Null\n");                         /* (No character generator: its own character, if no file's given) */
+        put ("Null\n\nstunned\n\n");            /* (No character generator: its own character, if no file's given;
+                                                **   C_STUNNED's words, never set; no stance of its own) */
         break;
     case RS_LOAD_PC:
         load_pc (r);

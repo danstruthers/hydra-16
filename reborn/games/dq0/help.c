@@ -1,6 +1,6 @@
 /*
 ** help.c - (overlay 1, overlay 6's till 2026-10-28: its room for parts.c's) the commands listed (help, "?"): the game's lib folder's help.txt, each line a paragraph (a line
-** begun with # not said).  (A verb the game doesn't know, or doesn't do yet, said back: refuse.c's since 2026-11-06)
+** begun with # not said; "@own " the ruleset's own stance's word, RS_HELLO's).  (A verb the game doesn't know, or doesn't do yet, said back: refuse.c's since 2026-11-06)
 */
 
 #pragma code-name ("OV1CODE")
@@ -18,6 +18,8 @@ void o_help (void)
 {
     static int fd, n, hfd;
     static unsigned k, i;
+    static char* p;
+    char w[sizeof rs_own + 2];
 
     if (!hfd) {
         strcpy (lb, libdir);
@@ -48,7 +50,18 @@ void o_help (void)
             lb[i - 1] = 0;
         }
         if (*lb != '#') {
-            msg (lb);
+            if ((p = strstr (lb, "@own ")) != 0) {   /* (The ruleset's own stance's word and a comma, if it has one:
+                                                **   RS_HELLO's, "counter, ") */
+                *p = 0;
+                msg (lb);
+                if (*rs_own) {
+                    strcpy (w, rs_own);
+                    say (strcat (w, ", "));
+                }
+                say (p + 5);
+            } else {
+                msg (lb);
+            }
         }
         i += i < k;
         memmove (lb, lb + i, k - i);

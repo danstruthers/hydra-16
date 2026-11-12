@@ -43,6 +43,9 @@
 extern char libdir[48];                         /* Its files' directory (the overlays, the world, the themes): its
                                                 **   own directory's lib/dq0, as main.c finds it */
 extern char gamedir[40];                        /* Its own directory (hmchar's too): /sd/0/games on the card */
+extern char rs_stun[12], rs_own[10], rs_owns[32];   /* The ruleset's words (RS_HELLO's, main.c's): its C_STUNNED state
+                                                **   ("in shock"), its own stance's word ("counter": "" none) and that
+                                                **   stance told ("You will strike back first.") */
 
 /* ---- term.c: the screen */
 

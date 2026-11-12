@@ -59,6 +59,7 @@ void __fastcall__ save_pc (struct req* r);
 void __fastcall__ dig_answer (struct req* r);   /* (Part 3's) */
 void __fastcall__ dice_set (struct req* r);
 void __fastcall__ read_test (struct req* r);    /* (Part 4's: a writing read) */
+void hello_words (void);                        /* (Part 4's: RS_HELLO's words) */
 void __fastcall__ outfit_of (struct req* r);    /* (Overlay 1's: outfit.c, RS_OUTFIT) */
 signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps);    /* (Overlay 3's) */
 signed char __fastcall__ draw_test (signed char steps);     /* (Overlay 3's: a map drawn, slice 4.2's) */
@@ -460,7 +461,8 @@ void __fastcall__ s_load_pc (struct req* r)
 
     if (r->kind == RS_HELLO) {
         RS_HELLO_ROUND (*r) = 100;                            /* (A round: 10 seconds, Combat 7) */
-        put ("HarnMaster 3.5\nhmchar");         /* (Its character generator: hmchar's files, RS_LOAD_PC's) */
+        put ("HarnMaster 3.5\nhmchar");         /* (Its character generator: hmchar's files, RS_LOAD_PC's; its
+                                                **   words after them, part 4's: rf_answer's) */
         return;
     }
     RS_LOAD_PC_GAIT (*r) = gait;                                /* (Its file's pace and watchfulness: the world's to set) */
@@ -617,6 +619,13 @@ static unsigned char __fastcall__ speaks (const char* t)
 /* ---- A writing read (RS_TEST's P_READ, rs.h's: the plan for the game between dungeons, its step 9): part 4's */
 #pragma code-name (push, "SW4CODE")
 #pragma rodata-name (push, "SW4RODATA")
+
+/* RS_HELLO's words after its generator's (rs.h's): the state C_STUNNED is, the book's shock (Combat 14); its own stance,
+** D_OWN, the counterstrike, and that stance told (part 1's s_load_pc's, its room's: 2026-11-12) */
+void s_hello_words (void)
+{
+    put ("\nin shock\ncounter\nYou will strike back first.");
+}
 
 /* Its mastery of a tongue or a script (t: "khuzdul", "*delvic": a word of tongues, dq0harn.h's): 0 none; its own (no ML said)
 ** the Language skill's, a script's the Script skill's */
@@ -876,7 +885,11 @@ void __fastcall__ rf_answer (struct req* r)
         memcpy (r, rq, sizeof rq);
         status ();
         break;
-    case RS_HELLO:                              /* (Part 1's, as the game's begun: the main RAM's room, 2026-11-02) */
+    case RS_HELLO:                              /* (Part 1's, as the game's begun: the main RAM's room, 2026-11-02;
+                                                **   its words part 4's, part 1's room) */
+        load_pc (r);
+        hello_words ();
+        break;
     case RS_LOAD_PC:
         load_pc (r);
         break;

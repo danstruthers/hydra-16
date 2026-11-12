@@ -444,12 +444,13 @@ BEAT.spent[thing=KI_INK]        +"\nYour {kind thing} is dry."
 BEAT.spent[thing=KI_QUILL]      +"\nYour {kind thing} is worn out."
 BEAT.spent          +"\nYour {kind thing} is worn to nothing."
 
-# ---- The state a harm leaves the character in (HARM's own state: its arg the condition, shock, bleeding, a leg, an
+# ---- The state a harm leaves the character in (HARM's own state: its arg the condition, shock (its text the ruleset's
+# words for it, RS_HELLO's: "in shock"), bleeding, a leg, an
 # arm, times 2, plus 1 told already this answer: "still"; state_words' before, task.c's overlay 7)
 
 own HARM state
 
-HARM.state          +"{arg? You are in shock.| You are still in shock.| You are bleeding badly.| You are still bleeding badly."
+HARM.state          +"{arg? You are {text}.| You are still {text}.| You are bleeding badly.| You are still bleeding badly."
                     "| Your leg won't bear you.| Your leg still won't bear you.| Your arm hangs useless."
                     "| Your arm still hangs useless.}"
 
