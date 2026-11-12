@@ -992,16 +992,51 @@ match:
             rts                                             ; (Z = 1 from lda r7 = 0: all of it the same)
 
 ; RP_FIND: the entry with the key (from RT_FROM on), its stamp made the clock's next (RT_STAMP, if it's given); and
-; the first free one among the first RT_NF (RT_FREE: $FF none).  OUT: .A = the entry, or $FF
+; the first free one among the first RT_NF (RT_FREE: $FF none).  OUT: .A = the entry, or $FF.  (The chunks' cache's
+; lookup, each time a task's square is in another chunk: the block's numbers and the key's bytes, as offset and value
+; pairs, in the call registers first, so an entry's some 60 cycles)
 rp_find:
             jsr         tstart
+            ldy         #RT_N                               ; r1: the entries, the first looked at; r4 + 1: an
+            lda         (r0),y                              ;   entry's bytes; r5 + 1: NF
+            sta         r1
+            ldy         #RT_FROM
+            lda         (r0),y
+            sta         r1 + 1
+            ldy         #RT_SIZE
+            lda         (r0),y
+            sta         r4 + 1
+            ldy         #RT_NF
+            lda         (r0),y
+            sta         r5 + 1
+            ldy         #RT_KEY                             ; The key: offsets r6-r9, values r10-r13, r3 + 1 of them
+            lda         (r0),y
+            sta         r3 + 1
+            ldx         #0
+            ldy         #0
+@pair:
+            lsr         r3 + 1
+            bcc         @skip
+            tya
+            sta         r6,x
+            phy
+            clc
+            adc         #RT_K
+            tay
+            lda         (r0),y
+            sta         r10,x
+            ply
+            inx
+@skip:
+            iny
+            lda         r3 + 1
+            bne         @pair
+            stx         r3 + 1
 @loop:
             lda         r3
-            ldy         #RT_N
-            cmp         (r0),y
-            bcs         @done
-            ldy         #RT_FROM
-            cmp         (r0),y
+            cmp         r1
+            jcs         @done
+            cmp         r1 + 1
             bcc         @next
             lda         (r2)
             bne         @used
@@ -1009,8 +1044,7 @@ rp_find:
             cmp         #$FF
             bne         @next
             lda         r3
-            ldy         #RT_NF
-            cmp         (r0),y
+            cmp         r5 + 1
             bcs         @next
             sta         r5
             lda         r4
@@ -1021,8 +1055,18 @@ rp_find:
             lda         r4
             cmp         #$FF
             bne         @next
-            jsr         match
+            ldx         r3 + 1
+            beq         @hit
+            ldx         #0
+@match:
+            ldy         r6,x
+            lda         (r2),y
+            cmp         r10,x
             bne         @next
+            inx
+            cpx         r3 + 1
+            bne         @match
+@hit:
             lda         r3
             sta         r4
             ldy         #RT_STAMP                           ; Its stamp: ++ the clock
@@ -1059,12 +1103,18 @@ rp_find:
             bne         @done
             lda         r3
             inc         a
-            ldy         #RT_NF
-            cmp         (r0),y
+            cmp         r5 + 1
             bcs         @done
 @next:
-            jsr         tnext
-            bra         @loop
+            lda         r2
+            clc
+            adc         r4 + 1
+            sta         r2
+            bcc         :+
+            inc         r2 + 1
+:
+            inc         r3
+            jmp         @loop
 @done:
             lda         r5
             ldy         #RT_FREE

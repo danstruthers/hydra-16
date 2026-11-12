@@ -10,6 +10,8 @@ OVL_BANKS   = 7                     ; (The game's library, ../dq0/dq0lib.inc: ov
 OVL_DOT     = 0
 .define     OVL_FILE "/dq0d.ovl"
 RP_X        = 1                     ; (The record store's calls, ../dq0/rp.h's rp_x)
+            .forceimport addeq0sp   ; (popgen's, a bank program's, from this task's runtime: chunk.c's find used it till
+                                    ;   the record store's, 2026-11-11)
             .include    "../dq0/dq0lib.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)

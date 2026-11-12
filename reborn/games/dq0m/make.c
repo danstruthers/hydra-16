@@ -19,6 +19,7 @@
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
 #include "grow.h"
+#include "../dq0/rp.h"
 
 static struct chunk cb;                         /* (A chunk grown in the main RAM: the grower's an overlay) */
 static unsigned stocks;                         /* (The chunks stocked, counted: each list's seq) */
@@ -56,35 +57,33 @@ void __fastcall__ hub_set (unsigned char bank, void* to, unsigned char c, unsign
     hub_back (b);
 }
 
-/* The slot a new chunk goes in: an empty one, or the least lately found that no task is reading, isn't beside the
-** character's chunk, and isn't one stocked that the world hasn't marked yet (CS_FRESH) (the hub's header in the
-** window; the world bank after, the cache's table its) */
+/* Slot k a task's reading (the hub's inuse), or one stocked that the world hasn't marked yet (CS_FRESH): not made way
+** for (the record store's question, as pick asks it: the world bank in the window) */
+static unsigned char __fastcall__ busy (unsigned char k)
+{
+    unsigned char i, b = WREC->cslot[k].used == CS_FRESH;
+
+    for (i = 0; i < NASK; ++i) {
+        b |= WREC->inuse[i] == k;
+    }
+    return b;
+}
+
+/* The slot a new chunk goes in: an empty one, or the least lately found (its stamp the lowest, plainly) that no task
+** is reading, isn't beside the character's chunk, and isn't one stocked that the world hasn't marked yet (CS_FRESH):
+** the record store's (the hub's header in the window; the world bank after, the cache's table its) */
+static struct rpt cpk = { RP_OLDEST, NCSLOTS, sizeof (struct cslot), 0x3E, WREC->cslot, offsetof (struct cslot, stamp),
+    RTF_FREE | RTF_PLAIN | RTF_WIDE, 0, { 0 }, 0, 0, 0, 1, 1, 2, 4, 0, 0, 0, busy };
 static unsigned char pick (void)
 {
-    unsigned char k, best = 0xFF, i, busy, psn = HUB->pc_stratum;
-    struct cslot* c;
-    struct stratum* s = &STRATUM (psn);
-    unsigned pcx = (HUB->pc_x - s->x0) / CW, pcy = (HUB->pc_y - s->y0) / CW;
-    unsigned char lim = HUB->small ? 12 : NCSLOTS;     /* (dq0 -C: twelve slots, the tests' cache made way in soon) */
+    unsigned char best;
+    struct stratum* s = &STRATUM (cpk.vsn = HUB->pc_stratum);
 
+    cpk.vx = (HUB->pc_x - s->x0) / CW;
+    cpk.vy = (HUB->pc_y - s->y0) / CW;
+    cpk.n = HUB->small ? 12 : NCSLOTS;          /* (dq0 -C: twelve slots, the tests' cache made way in soon) */
     hub_map (WORLD_BANK);
-    for (k = 0; k < lim; ++k) {
-        c = &WREC->cslot[k];
-        if (!c->used) {
-            return k;
-        }
-        for (i = 0, busy = 0; i < NASK; ++i) {
-            busy |= WREC->inuse[i] == k;
-        }
-        if (busy || c->used == CS_FRESH || (c->sn == psn && c->cx + 1 >= pcx && c->cx <= pcx + 1 && c->cy + 1 >= pcy &&
-            c->cy <= pcy + 1)) {
-            continue;
-        }
-        if (best == 0xFF || c->stamp < WREC->cslot[best].stamp) {
-            best = k;
-        }
-    }
-    return best == 0xFF ? 0 : best;
+    return (best = rp_x (&cpk)) == 0xFF ? 0 : best;
 }
 
 /* The chunk's style (grow.h's cstyle): its stratum's; but a mixed stratum's (DUNGEON.md's rock and old places,

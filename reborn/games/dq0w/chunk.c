@@ -2,13 +2,15 @@
 ** chunk.c - (the world's, the denizens') the dungeon's squares reached (world.h): a square's chunk found in the
 ** hub's cache and put in the window, or, if it isn't there yet, asked of the maker (games/dq0m), which makes it
 ** (the same chunk whoever asks: the seed's) while this task waits.  The slot found last is this task's in use, which
-** the maker never makes way for; the rest go least lately found first.
+** the maker never makes way for; the rest go least lately found first (the record store's: ../dq0/rp.h, its RP_FIND
+** here, RP_OLDEST the maker's).
 */
 
 #include <string.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
 #include "world.h"
+#include "../dq0/rp.h"
 
 struct stratum strata[MAXSTRATA];
 struct chunk* C;
@@ -67,21 +69,22 @@ void __fastcall__ ask_maker (unsigned char kind, unsigned char sn, unsigned cx, 
     }
 }
 
-/* The slot holding chunk (cx, cy) of stratum sn, or 0xFF: the world bank in the window (the cache's table) */
+/* The slot holding chunk (cx, cy) of stratum sn, or 0xFF: the world bank in the window (the cache's table, the record
+** store's: its stamp the newest, the slot this task's in use) */
+static struct rpt cst = { RP_FIND, NCSLOTS, sizeof (struct cslot), 0x3E, WREC->cslot, offsetof (struct cslot, stamp), 0,
+    &WREC->stamp };
 static unsigned char __fastcall__ find (unsigned char sn, unsigned cx, unsigned cy)
 {
     unsigned char k;
-    struct cslot* s = WREC->cslot;
 
+    cst.k[1] = sn;
+    *(unsigned*) &cst.k[2] = cx;
+    *(unsigned*) &cst.k[4] = cy;
     hub_map (WORLD_BANK);
-    for (k = 0; k < NCSLOTS; ++k, ++s) {
-        if (s->used && s->sn == sn && s->cx == cx && s->cy == cy) {
-            s->stamp = ++WREC->stamp;
-            WREC->inuse[me] = k;
-            return k;
-        }
+    if ((k = rp_x (&cst)) != 0xFF) {
+        WREC->inuse[me] = k;
     }
-    return 0xFF;
+    return k;
 }
 
 /* at () the long way (at.s: its quick way, the chunk found last, in assembly; a look about asks for thousands): the
