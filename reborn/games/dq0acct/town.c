@@ -3,7 +3,8 @@
 ** plan's step 11; HOUSE.md's between dungeons, the town): its name (the name maker's, namegen's, by the life's seed and the
 ** dungeon's number), its inn's; the date in words; where it lodged; the town itself, dq0town (a program of its own, in lib/acct:
 ** the town's menu, its market, its smith, its inn, its patrons, the road), run as the player's asked (the rc variable dq0auto, the
-** tests', passes it by: straight on), and what it says was done there (town.h's town.dat); the road taken from it.
+** tests', passes it by: straight on), and what it says was done there (the time between's record, between.dat: town.h's); the road
+** taken from it.
 */
 
 #pragma code-name ("OV5CODE")
@@ -186,21 +187,20 @@ void o_lodging (void)
 
 /* ---- The town (dq0town) */
 
-static struct townrec tr;
+static struct between tr;
 
-/* An argument more in ob (after p): its flag and its value, or a number; the next's place; dq0town run and waited for (the
+/* An argument more in ob (after p): its flag and its value; the next's place; dq0town run and waited for (the
 ** meta programs' library's, ../dq0/meta/meta.c) */
 #define META_ARG
-#define META_ARGN
 #define META_RUN
 #include "../dq0/meta/meta.c"
 #undef META_ARG
-#undef META_ARGN
 #undef META_RUN
 
-/* dq0town run (SPAWN itself, as dq0life runs this: its arguments in main RAM), waited for, and town.dat read: 1 it ran.  What it's
-** told: the folder, the lib, the town's name and its inn's, the days gone by, its keep owed so far and a day's by its class (the
-** money's matters' habit), its Rhetoric and its Intrigue (their EMLs: the market's haggling, the inn's listening) */
+/* dq0town run (SPAWN itself, as dq0life runs this: its arguments in main RAM), waited for, and the time between's record read: 1
+** it ran.  What it's told, in the record (records.def's struct between, between.dat): the town's name and its inn's, the days gone
+** by, its keep owed so far and a day's by its class (the money's matters' habit), its Rhetoric and its Intrigue (their EMLs: the
+** market's haggling, the inn's listening); its arguments the folder and the lib alone */
 unsigned char o_town_go (void)
 {
     static const unsigned char habits[5] = { 1, 1, 2, 3, 8 };
@@ -209,33 +209,36 @@ unsigned char o_town_go (void)
     int fd;
 
     say_flush ();
-    p = arg (p, "-d", top);
-    p = arg (p, "-l", lib);
-    p = arg (p, "-t", town);
-    p = arg (p, "-i", inn);
-    p = argn (p, "-p", passed);
-    p = argn (p, "-k", fee + (unsigned long) h * passed * PENNY);
-    p = argn (p, "-h", h);
+    memset (&tr, 0, sizeof tr);
+    tr.magic = BETWEEN_MAGIC;
+    tr.version = BETWEEN_VER;
+    strcpy (tr.town, town);
+    strcpy (tr.inn, inn);
+    tr.passed = passed;
+    tr.keep = fee + (unsigned long) h * passed * PENNY;
+    tr.habit = h;
     fd = harn_eml (&pc, HARN_RHE);
-    p = argn (p, "-r", fd < 0 ? 0 : fd);
+    tr.rhet = fd < 0 ? 0 : fd;
     fd = harn_eml (&pc, HARN_NTR);
-    p = argn (p, "-n", fd < 0 ? 0 : fd);
+    tr.intr = fd < 0 ? 0 : fd;
+    if ((ok = (fd = open (in_ (top, BETWEEN_FILE), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) != 0) {
+        ok = write (fd, &tr, sizeof tr) == sizeof tr;
+        close (fd);
+    }
+    p = arg (arg (p, "-d", top), "-l", lib);
     *p = 0;
     strcpy (path, lib);
     strcat (path, "/../acct/dq0town");
-    memset (&tr, 0, sizeof tr);
-    if (meta_run (path, ob)) {
-        return 0;
+    if (ok) {
+        ok = !meta_run (path, ob) && (fd = open (in_ (top, BETWEEN_FILE), O_RDONLY)) >= 0;
     }
-    strcpy (path, top);
-    strcat (path, "/" TOWN_FILE);
-    if ((fd = open (path, O_RDONLY)) < 0) {
-        return 0;
+    if (ok) {
+        ok = read (fd, &tr, sizeof tr) == sizeof tr && tr.magic == BETWEEN_MAGIC && tr.version == BETWEEN_VER;
+        close (fd);
     }
-    ok = read (fd, &tr, sizeof tr) == sizeof tr;
-    close (fd);
-    remove (path);
+    remove (in_ (top, BETWEEN_FILE));
     if (!ok) {
+        memset (&tr, 0, sizeof tr);
         return 0;
     }
     town_days = tr.days;
@@ -243,7 +246,7 @@ unsigned char o_town_go (void)
     town_taught = tr.taught;                    /* (The scholar's house's: the months with a master, the script studied, what
                                                 **   was opened, the plan's step 12) */
     strcpy (town_study, tr.study);
-    for (ok = 0; ok < TOWN_LEARNT && tr.learnt[ok][0]; ++ok) {
+    for (ok = 0; ok < BETWEEN_LEARNT && tr.learnt[ok][0]; ++ok) {
         if (ntongues == NTONGUES) {             /* (The scholar's won't teach past it: never cut short) */
             say ("There's no more room on your sheet for ");
             say (tr.learnt[ok]);

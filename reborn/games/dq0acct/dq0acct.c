@@ -70,21 +70,21 @@ unsigned char ntongues;
 char ans[64];
 unsigned char askit;                            /* (Waited for: not the tests' dq0auto) */
 
-/* ---- The meta programs' library (../dq0/meta/meta.c): the fault said, a path; the words by the console's width (say,
+/* ---- The meta programs' library (../dq0/meta/meta.c): the fault said; a path, the words by the console's width (in_, say,
 ** sayn, amount, say_flush, width and ob: the overlays' too, dq0acct.h's) */
 
 #define META_NAME       "dq0acct"
 #define META_WB         96
 #define META_OB         200
 #define META_FAIL
-#define META_PATH
 #include "../dq0/meta/meta.c"
 #undef META_FAIL
-#undef META_PATH
 #undef META_LINK
 #define META_LINK
+#define META_PATH
 #define META_WORDS
 #include "../dq0/meta/meta.c"
+#undef META_PATH
 #undef META_WORDS
 
 /* A line typed (b, 0-ended, its end of line gone); with the tests' dq0auto, none: "" */

@@ -42,12 +42,13 @@ extern char town[16];                           /* (Where it comes out to, its i
 extern char inn[16];
 extern unsigned char rate;                      /* (A day's living, pence: the money's matters') */
 extern unsigned long living;                    /*   and all of it, farthings */
-extern unsigned town_days;                      /* (The days spent in the town, its errands': dq0town's, town.dat's) */
+extern unsigned town_days;                      /* (The days spent in the town, its errands': dq0town's, between.dat's) */
 extern unsigned char town_seen;                 /*   and what the player saw to there itself (TS_*) */
 extern unsigned char town_taught;               /*   and the months it spent with a master (the scholar's house's, the plan's step
                                                 **   12): the month's practice forfeit for each */
 extern char town_study[10];                     /*   and the script it studied in the library: practised first ("" none) */
 extern char ob[200];                            /* (The words' buffer, empty between them: town.c's dq0town's arguments) */
+const char* __fastcall__ in_ (const char* folder, const char* name);   /* folder/name, in path (../dq0/meta/meta.c's) */
 #define NTONGUES        8                       /* (Its tongues and scripts past its own: the plan for the game between dungeons, step 8;
                                                 **   the referee's store's, dq0harn.h's TONGUE_LINES, sheet.c's check: more refused, loudly) */
 extern char tongue[NTONGUES][24];               /* (Its sheet's "language NAME=ML" and "script NAME[=ML]" lines, as they are: sheet.c's;

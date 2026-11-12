@@ -5,10 +5,11 @@
 ** has no room for it (its main RAM at its floor, its overlays where the kinds are).  Before any of the game's tasks: none of the
 ** game's main RAM, none of its answer times.
 **
-** dq0town -d folder -l libdir -t town -i inn -p days -k keep -h habit -r rhetoric -n intrigue
-**   the save's folder; the game's lib; the town's name and its inn's (the account's: the name maker's, by the life's seed); the days
-**   gone by (whetting's months); its keep so far and a day's (farthings, pence: its class's habit, the money's matters'); its
-**   Rhetoric and its Intrigue (EMLs: the market's haggling, the inn's listening)
+** dq0town -d folder -l libdir
+**   the save's folder; the game's lib.  The rest the account's, in the time between's record (records.def's struct between,
+**   between.dat in the folder, ../dq0acct/town.h's): the town's name and its inn's (the name maker's, by the life's seed); the
+**   days gone by (whetting's months); its keep so far and a day's (farthings, pence: its class's habit, the money's matters');
+**   its Rhetoric and its Intrigue (EMLs: the market's haggling, the inn's listening)
 ** A town is a name, a paragraph and a list (town.txt, beside it: the words); each errand some days, the time going by those days.  A
 ** number or a name goes to a place; inside, the dungeon's words work where they can ("sell my dagger", "haggle for the rope"); Enter
 ** goes back out, and out in the street, leaves:
@@ -19,12 +20,14 @@
 **   the smith        a day; mend, whet (the account's prices: goods.h's), a new blade
 **   who's asking     a day; the patrons among the rumours (a why line's, not a stranger's find), an offer taken: set out for it
 **   the scholar's    a day; a program of its own (dq0schol, the plan's step 12: a writing read by a scribe or a sage, studied in
-**                    the library, a master's month, the other skills), run with what it needs, town.dat handed to it and back
+**                    the library, a master's month, the other skills), run with what it needs, the record (between.dat)
+**                    handed to it and back
 **   leave for        the places heard of, each its road and days; one followed (quest.txt, the account's own way)
 ** What's done is the player's: the account (dq0acct) leaves alone what it saw to here (the market seen, nothing more sold or bought
 ** for it; the smith, nothing more mended or whetted), and does the rest as ever (selling, mending, restocking "just happen", the
-** user's Q7).  Written: kit.dat (its things and money), quest.txt (the place followed), town.dat (town.h's: the days, what was seen
-** to, the road).  The same life's seed and the same commands, the same town and errands.  Its exit status 0, or 1 (its fault said).
+** user's Q7).  Written: kit.dat (its things and money), quest.txt (the place followed), the record (between.dat: the days, what
+** was seen to, the road).  The same life's seed and the same commands, the same town and errands.  Its exit status 0, or 1 (its
+** fault said).
 */
 
 #include <fcntl.h>
@@ -64,7 +67,7 @@ static const char* town;
 static const char* inn;
 static unsigned long keep;
 static unsigned char habit, rhet, intr;
-static struct townrec tr;
+static struct between tr;
 static char ans[64];
 static unsigned char asks;
 
@@ -934,14 +937,15 @@ static void leave_list (void)
 #pragma code-name (push, "OV1CODE")             /* (The overlay's: dq0town.cfg's OV1, its own bank, the main RAM's room) */
 #pragma rodata-name (push, "OV1RODATA")
 #pragma bss-name (push, "OV1BSS")
-/* town.dat written (wr), or read back (town.h's: the account's, and the scholar's house's to it and back) */
+/* The time between's record written (wr), or read (between.dat: the account's, and the scholar's house's to it and back) */
 static void __fastcall__ tr_io (unsigned char wr)
 {
     int fd;
 
-    if ((fd = open (in_ (top, TOWN_FILE), wr ? O_WRONLY | O_CREAT | O_TRUNC : O_RDONLY, 0644)) < 0 ||
-        (wr ? write (fd, &tr, sizeof tr) : read (fd, &tr, sizeof tr)) != sizeof tr) {
-        fail (wr ? "can't write town.dat" : "can't read town.dat");
+    if ((fd = open (in_ (top, BETWEEN_FILE), wr ? O_WRONLY | O_CREAT | O_TRUNC : O_RDONLY, 0644)) < 0 ||
+        (wr ? write (fd, &tr, sizeof tr) : read (fd, &tr, sizeof tr)) != sizeof tr || tr.magic != BETWEEN_MAGIC ||
+        tr.version != BETWEEN_VER) {
+        fail (wr ? "can't write " BETWEEN_FILE : "no record of the time between (" BETWEEN_FILE ")");
     }
     close (fd);
 }
@@ -953,18 +957,16 @@ static void __fastcall__ tr_io (unsigned char wr)
 #pragma rodata-name (push, "OV1RODATA")
 #pragma bss-name (push, "OV1BSS")
 /* The scholar's house (the plan's step 12): dq0schol run, its first command (what was typed in the street, if it was one of its
-** own) handed to it, and town.dat to it and back (the money in it, whether it's a big town, the writings carried: scholar's), its
+** own) handed to it, and the record to it and back (the money in it, whether it's a big town, the writings carried: scholar's), its
 ** days, what's left of the money, what a master taught, the script studied; the rumours heard again after it (a writing read
 ** better, heard.txt's) */
 static void __fastcall__ o_scholar (const char* first)
 {
     char* q;
 
-    q = arg (arg (arg (said, "-d", top), "-l", lib), "-t", town);
-    if (*first) {
-        q = arg (q, "-x", first);               /* (No empty one: it'd end them) */
-    }
+    q = arg (arg (said, "-d", top), "-l", lib);
     *q = 0;
+    strcpy (tr.first, first);
     tr_io (1);
     if (run ("/../acct/dq0schol")) {
         fail ("the scholar's house failed");
@@ -1162,17 +1164,10 @@ int main (int argc, char* argv[])
         switch (argv[i][1]) {
         case 'd': top = argv[i + 1]; break;
         case 'l': lib = argv[i + 1]; break;
-        case 't': town = argv[i + 1]; break;
-        case 'i': inn = argv[i + 1]; break;
-        case 'p': passed = atoi (argv[i + 1]); break;
-        case 'k': keep = atol (argv[i + 1]); break;
-        case 'h': habit = atoi (argv[i + 1]); break;
-        case 'r': rhet = atoi (argv[i + 1]); break;
-        case 'n': intr = atoi (argv[i + 1]); break;
         }
     }
-    if (!top || !lib || !town || !inn) {
-        fail ("usage: dq0town -d folder -l libdir -t town -i inn -p days -k keep -h habit -r rhetoric -n intrigue");
+    if (!top || !lib) {
+        fail ("usage: dq0town -d folder -l libdir");
     }
     if ((fd = open (in_ (top, LIFE_FILE), O_RDONLY)) < 0 || read (fd, &L, sizeof L) != sizeof L) {
         fail ("no record of the life");
@@ -1190,7 +1185,15 @@ int main (int argc, char* argv[])
     hy_bank (b_cat + 2);
     read (fd, (void*) 0x8000, 0x2000);
     close (fd);
+    tr_io (0);                                  /* (The account's record: the town, the inn, the days ...) */
     KINDS ();
+    town = tr.town;
+    inn = tr.inn;
+    passed = tr.passed;
+    keep = tr.keep;
+    habit = tr.habit;
+    rhet = tr.rhet;
+    intr = tr.intr;
     strcpy (path, lib);
     strcat (path, "/dq0w.cat");
     if ((fd = open (path, O_RDONLY)) < 0 || read (fd, (void*) 0x8000, KI_COUNT * sizeof (struct kind)) != KI_COUNT * sizeof (struct kind)) {

@@ -13,6 +13,9 @@
 //     words (an enum's members as words), value (an ASM spec), own, tasks }; the make.js files (dq0's theme compiler,
 //     dq0w's, dq0d's, dq0s's), sim/lib's recorder and writers' check, tests.js's offsets (hubown.evaluate) and the
 //     command tools (commandwords.js) use it;
+//   - obj/gen/dq0rec.h: the save folder's records the programs between dungeons pass to each other (records.def: each
+//     one's struct, its file, its magic and version), their layouts in dq0hub.json too (load ().record: the tests'
+//     decoder);
 //   - obj/gen/dq0hub_NAME.inc: an assembly file's names (ASM below: each consumer the names it uses, each a number
 //     of the headers', a field's offset or a size), .included where its hand-typed copies were.
 // The values come from cc65 itself: a C file of `const long vN = (long) (EXPR);`, one for each name, field and size,
@@ -30,6 +33,7 @@ const DQ0 = __dirname;
 const GEN = path.join(ROOT, 'obj', 'gen');
 const JSON_OUT = path.join(GEN, 'dq0hub.json');
 const MSG_H = path.join(GEN, 'dq0msg.h'), MSGS = path.join(DQ0, 'msgs.def');
+const REC_H = path.join(GEN, 'dq0rec.h'), RECORDS = path.join(DQ0, 'records.def');
 const HEADERS = ['hub.h', 'rs.h', 'level.h', path.join('..', 'dq0w', 'world.h'), 'items.h', 'theme.h', 'dq0.h', 'life.h'];
 const EXTRA = ['ITEM_BANK (0)', 'CACHE_BANK (0)', 'CHANGE_BANK (0)'];   // (Function-like macros' values the others want)
 
@@ -232,7 +236,8 @@ function ownSpans(lines, V, C) {
 // of left out.  OUT: [value or undefined]
 function evaluate(exprs, cc65) {
   const dir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'hubgen-'));
-  const head = '#include <stddef.h>\n#include "dq0.h"\n#include "hub.h"\n', skip = new Set();   // (main.c's order)
+  const head = '#include <stddef.h>\n#include "dq0.h"\n#include "hub.h"\n#include "dq0rec.h"\n', skip = new Set();   // (main.c's order;
+                                                                                                    //   the records')
   try {
     const c = path.join(dir, 'hub.c'), s = path.join(dir, 'hub.s');
     for (let pass = 0; ; pass++) {
@@ -243,8 +248,8 @@ function evaluate(exprs, cc65) {
         break;
       } catch (e) {
         const text = ((e.stderr || '') + (e.stdout || '')).toString(), bad = [];
-        for (const m of text.matchAll(/hub\.c[:(](\d+)\)?:\s*Error/g)) bad.push(+m[1] - 4);   // (The file's line: its
-        if (!bad.length || pass > 100) {                                                       //   expression's, after three)
+        for (const m of text.matchAll(/hub\.c[:(](\d+)\)?:\s*Error/g)) bad.push(+m[1] - 5);   // (The file's line: its
+        if (!bad.length || pass > 100) {                                                       //   expression's, after four)
           fs.copyFileSync(c, path.join(GEN, 'dq0hub_failed.c'));
           throw new Error('hubgen: cc65 (obj/gen/dq0hub_failed.c):\n' + text.trim().split('\n').slice(0, 20).join('\n'));
         }
@@ -489,13 +494,15 @@ function generate(opt) {
   const raw = HEADERS.map(h => fs.readFileSync(path.join(DQ0, h), 'latin1'));
   const hash = crypto.createHash('sha1');
   const msgsText = fs.readFileSync(MSGS, 'latin1');
-  for (const t of [...raw, act, msgsText, fs.readFileSync(__filename, 'latin1')]) hash.update(t);
+  const recs = recordsRead(fs.readFileSync(RECORDS, 'latin1')), recText = recordsHeader(recs);   // (The records' header:
+  if (!fs.existsSync(REC_H) || fs.readFileSync(REC_H, 'latin1') !== recText) fs.writeFileSync(REC_H, recText, 'latin1');   //   before cc65)
+  for (const t of [...raw, act, msgsText, recText, fs.readFileSync(__filename, 'latin1')]) hash.update(t);
   const key = hash.digest('hex'), incs = Object.keys(ASM).map(k => path.join(GEN, 'dq0hub_' + k + '.inc'));
   try {
     const j = JSON.parse(fs.readFileSync(JSON_OUT, 'utf8'));
-    if (j.key === key && [...incs, MSG_H].every(f => fs.existsSync(f))) return (LOADED = wrap(j));
+    if (j.key === key && [...incs, MSG_H, REC_H].every(f => fs.existsSync(f))) return (LOADED = wrap(j));
   } catch (e) { /* (Made again) */ }
-  const texts = [...raw.map(clean), clean(act)];
+  const texts = [...raw.map(clean), clean(act), clean(recText)];
   const { defs, enums } = scan(texts), named = structs(texts);
   const exprs = [], at = new Map(), idx = e => { if (!at.has(e)) { at.set(e, exprs.length); exprs.push(e); } return at.get(e); };
   // (The names: each #define's that isn't code or words, each enum's member)
@@ -536,7 +543,11 @@ function generate(opt) {
   for (const n of ['HUB_BANKS', 'NTASKS', 'HUB_MAGIC', 'CHUNK_SIZE', 'NCSLOTS', 'NITEMS', 'SIGHT_BANK', 'UI_BANK', 'WORLD_BANK'])
     if (C[n] === undefined) throw new Error('hubgen: no ' + n + ' in the headers');
   const j = { key, C, enums: enums.filter(e => e.every(n => C[n] !== undefined)), S, tasks, outcome: msgs.outcome,
-    own: ownSpans(own, { at: v, itemSize: v[itemSize], taskOff: v[taskOff] }, C) };
+    own: ownSpans(own, { at: v, itemSize: v[itemSize], taskOff: v[taskOff] }, C), records: {} };
+  for (const r of recs.records) {                              // (The records: each one's file, magic, version and its
+    if (!S[r.name]) throw new Error('hubgen: records.def: struct ' + r.name + ' not laid out');   //   fields' types, for
+    j.records[r.name] = { file: r.file, magic: r.magic, version: r.version, fields: r.fields.map(f => [f.name, f.type]) };   //   the decoder)
+  }
   let H = wrap(j);
   // (The payloads by offset, for the tests' decoders: each kind's form, KIND or KIND:FORM, its fields [name, offset,
   // bytes, lo, hi, enum]; each slot's width held to cc65's)
@@ -569,6 +580,65 @@ function generate(opt) {
   fs.renameSync(t, JSON_OUT);
   if (opt.say) opt.say('dq0hub.json: ' + Object.keys(C).length + ' names, ' + Object.keys(S).length + ' structs, ' + own.length + ' writers\' lines');
   return (LOADED = H);
+}
+
+// ---- records.def read: { defines: [{ name, value, what }], records: [{ name, file, magic, version, what: [its
+// comment's lines], fields: [{ type, name, dims (the C's: "[16]"), what: [lines], before: [a comment's lines] }] }] }
+function recordsRead(text) {
+  const defines = [], records = [], TYPES = ['char', 'signed char', 'unsigned char', 'unsigned', 'int', 'unsigned long', 'long'];
+  let rec = null, field = null, note = [], what = [];
+  text.split(/\r?\n/).forEach((raw, i) => {
+    const at = 'records.def:' + (i + 1) + ': ', c = raw.indexOf('#'), body = (c < 0 ? raw : raw.slice(0, c)).trim();
+    const com = c < 0 ? '' : raw.slice(c + 1).trim();
+    let m;
+    if (!body) {                                               // (A comment alone: at the left, a record's words to
+      if (c === 0) what = com ? [...what, com] : [];           //   come (a blank one ends them); indented, a field's
+      else if (c > 0 && rec && field && /^#\s{3}/.test(raw.slice(c))) field.what.push(com);   //   going on (#, three
+      else if (c > 0 && rec) { field = null; note.push(com); } //   spaces), or words before the next field
+      else if (c < 0) { what = []; if (!/^\s/.test(raw)) rec = null; }
+      return;
+    }
+    if ((m = body.match(/^define\s+([A-Z_]\w*)\s+(\d+|0x[0-9A-Fa-f]+)$/))) {
+      defines.push({ name: m[1], value: m[2], what: com });
+      rec = null; what = [];
+      return;
+    }
+    if ((m = body.match(/^record\s+([a-z]\w*)\s+"([^"]+)"\s+(0x[0-9A-Fa-f]+|\d+)\s+(\d+)$/))) {
+      records.push(rec = { name: m[1], file: m[2], magic: Number(m[3]), version: +m[4], what, fields: [] });
+      what = []; field = null; note = [];
+      return;
+    }
+    if (!rec || !/^\s/.test(raw)) throw new Error('hubgen: ' + at + raw.trim() + ': a define, a record or a field?');
+    m = body.match(/^((?:(?:un)?signed\s+)?(?:char|long|int)|unsigned)\s+([a-z_]\w*)((?:\[(?:\d+|[A-Z_]\w*)\])*)$/);
+    if (!m || !TYPES.includes(m[1].replace(/\s+/g, ' '))) throw new Error('hubgen: ' + at + raw.trim() + ': a field (a type, a name, its dimensions)?');
+    if ((!rec.fields.length && m[2] !== 'magic') || (rec.fields.length === 1 && m[2] !== 'version'))
+      throw new Error('hubgen: ' + at + rec.name + '\'s first fields not its magic and its version');
+    rec.fields.push(field = { type: m[1].replace(/\s+/g, ' '), name: m[2], dims: m[3], what: com ? [com] : [], before: note });
+    note = [];
+  });
+  return { defines, records };
+}
+
+// dq0rec.h's text, from records.def's
+function recordsHeader({ defines, records }) {
+  const pad = (s, n) => s + ' '.repeat(Math.max(1, n - s.length)), L = [];
+  L.push('/*', '** dq0rec.h - the records in a save\'s folder the programs between dungeons pass to each other: made by the build',
+    '** (games/dq0/hubgen.js) from games/dq0/records.def, not to be edited', '*/', '', '#ifndef _DQ0REC_H', '#define _DQ0REC_H', '');
+  for (const d of defines) L.push(pad(pad('#define ' + d.name, 32) + d.value, 48) + (d.what ? '/* ' + d.what + ' */' : ''));
+  for (const r of records) {
+    const up = r.name.toUpperCase();
+    L.push('');
+    if (r.what.length) L.push('/* ' + r.what.join('\r\n** ') + ' */');
+    L.push(pad('#define ' + up + '_FILE', 32) + '"' + r.file + '"', pad('#define ' + up + '_MAGIC', 32) + '0x' + r.magic.toString(16).toUpperCase(),
+      pad('#define ' + up + '_VER', 32) + r.version, 'struct ' + r.name + ' {');
+    for (const f of r.fields) {
+      for (const n of f.before) L.push('    /* ' + n + ' */');
+      L.push(pad('    ' + pad(f.type, 16) + f.name + f.dims + ';', 48) + (f.what.length ? '/* ' + f.what.join(' ') + ' */' : '').trimEnd());
+    }
+    L.push('};');
+  }
+  L.push('', '#endif', '');
+  return L.join('\r\n').replace(/[ \t]+\r\n/g, '\r\n');
 }
 
 // ---- The numbers read: load () (the build's, obj/gen/dq0hub.json).  H.C.NAME a name's value; H.off (STRUCT, PATH)
@@ -624,6 +694,29 @@ function wrap(j) {
     // member's name, one bit's a boolean, a signed one's signed, a span's past four bytes or a name[]'s its bytes), {}
     // for a kind with none declared.  With no FORM of its own (or none of that name), the form its selector chooses, if
     // one does (the events': E_TASK's by its TE_*), else the kind's; a request's reply its KIND:reply form's
+    // A save folder's record (records.def's): record (NAME, BYTES, O) the record at BYTES[O] as { field: value } (a char
+    // array's its string, to its first 0, an array of them its strings; another array its numbers; a signed type's
+    // signed), and ok: whether its magic and version are its record's
+    record: (name, b, o = 0) => {
+      const r = j.records && j.records[name];
+      if (!r) throw new Error('dq0hub: no record ' + name);
+      const num = (at, n, sg) => {
+        let v = 0;
+        for (let i = n - 1; i >= 0; i--) v = v * 256 + b[o + at + i];
+        return sg && v >= 2 ** (8 * n - 1) ? v - 2 ** (8 * n) : v;
+      };
+      const str = (at, n) => { let s = ''; for (let i = 0; i < n && b[o + at + i]; i++) s += String.fromCharCode(b[o + at + i]); return s; };
+      const out = {};
+      for (const [f, type] of r.fields) {
+        const [at, size, ...dims] = j.S[name].f[f], sg = !/unsigned/.test(type) && type !== 'char';
+        const each = (a, n, d) => Array.from({ length: n / d[0] }, (_, i) =>   // (An array's elements: each its own
+          d.length > 1 ? each(a + i * d[0], d[0], d.slice(1)) : type === 'char' ? str(a + i * d[0], d[0]) : num(a + i * d[0], d[0], sg));   //   array's, or
+        out[f] = !dims.length ? num(at, size, sg) : type === 'char' ? (dims.length === 1 ? str(at, size) : each(at, size, dims.slice(0, -1)))   //   its
+          : each(at, size, dims);                                                                                                        //   value)
+      }
+      out.ok = out.magic === r.magic && out.version === r.version;
+      return out;
+    },
     payload: (kind, form) => (form && j.msgs && j.msgs[kind + ':' + form]) || (j.msgs && j.msgs[kind]) || null,
     decode: (b, o, kind, form) => {
       const field = ([, off, n, lo, hi]) => {

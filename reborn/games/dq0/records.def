@@ -1,0 +1,51 @@
+# records.def - Dingus Quest Zero's records in a save's folder that its programs between dungeons pass to each other,
+# declared once (ENGINE-CRITIQUE.md's sections 2 and 9, step 11; DECISIONS.md's "The meta programs' library, their
+# state record, one theme compiler").  Read by the build (games/dq0/hubgen.js), which writes from it obj/gen/dq0rec.h
+# (each record's struct, its file's name, its magic and version: the C's #include "dq0rec.h") and each record's layout
+# and fields in obj/gen/dq0hub.json (the tests' decoder: hubgen's load ().record (NAME, BYTES)).
+#
+#   define NAME VALUE                   a number the records want (a #define in dq0rec.h)
+#   record NAME "FILE" MAGIC VERSION    a record: struct NAME, in the save's folder's FILE; NAME_FILE, NAME_MAGIC and
+#                                       NAME_VER (upper case) its #defines; its first two fields its magic and its
+#                                       version, a record of another magic or version none (read as if it weren't there)
+#     TYPE FIELD[DIM]...  WHAT          a field, indented: a C type (char, signed char, unsigned char, unsigned, int,
+#                                       unsigned long, long), its name and dimensions (a number or a NAME defined),
+#                                       what it is (the header's comment)
+#     # WORDS                           a comment of the header's, before the fields after it
+
+define BETWEEN_LEARNT   2               # What masters teach in a town's stay, at most: a month each
+define BETWEEN_CLUES    8               # The writings carried the scholar's house is told of, at most
+
+# The time between two dungeons, in the town: written by the account (dq0acct's town.c) before it runs the town
+# (dq0town), which reads it as it starts and writes it before it runs the scholar's house (dq0schol) and as it's left;
+# the scholar's house reads it and writes it back; the account reads it after the town and removes it.  What were
+# dq0town's -t -i -p -k -h -r -n and dq0schol's -t and -x, and town.dat (the old struct townrec: the town's to the
+# account and the scholar's house's to the town and back).  dq0schol -t -b -c -w, by hand (the tests' scenes), set
+# its fields over the file's.
+record between "between.dat" 0x5442 1
+    unsigned        magic                       # BETWEEN_MAGIC
+    unsigned char   version                     # BETWEEN_VER
+    # The account's to the town
+    char            town[16]                    # The town's name (the name maker's, by the life's seed)
+    char            inn[16]                     # Its inn's
+    unsigned        passed                      # The days gone by before the town (whetting's months)
+    unsigned long   keep                        # Its keep so far, farthings (the physician's fee and its living)
+    unsigned char   habit                       # A day's living by its class, pence (the money's matters' habit)
+    unsigned char   rhet                        # Its Rhetoric's EML (the market's haggling)
+    unsigned char   intr                        # Its Intrigue's EML (the inn's listening)
+    # The town's to the account
+    unsigned        days                        # The days spent in town: its errands' and its rests'
+    unsigned char   seen                        # What the player saw to there itself (town.h's TS_*)
+    unsigned char   road                        # The road's days to the place it set out for (0: none)
+    char            whither[28]                 # That place's name ("" none: it goes on as it came)
+    # The town's to the scholar's house and back
+    char            first[64]                   # The first command (what was typed in the street: "" none)
+    unsigned long   money                       # The money, farthings (handed back as it's left)
+    unsigned char   big                         # Whether it's a big town (town.txt's kind: a sage for a dead tongue)
+    unsigned        clue[BETWEEN_CLUES]         # The writings carried: their things' fuel (life.h's: an old writing's
+                                                #   number at the top, a copy's CLUE_COPY too; 0 none)
+    # The scholar's house's to the town and the account
+    unsigned char   taught                      # The months with a master: the month's practice forfeit for each
+    char            study[10]                   # The script studied in the library ("" none): practised first
+    char            learnt[BETWEEN_LEARNT][16]  # What a master opened, as the referee's store has it ("*delvic=81",
+                                                #   "sindarin=11"): the account's to put on the sheet ("" none)

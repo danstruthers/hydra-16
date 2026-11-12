@@ -5,13 +5,14 @@
 ** scholar's house): a program of its own in lib/acct, run by the town (dq0town) as the character goes in, before any of the
 ** game's tasks: none of their main RAM, none of their answer times.
 **
-** dq0schol -d folder -l libdir -t town [-x first] [-b big -c money -w ids]
-**   the save's folder; the game's lib; the town's name; the first command (what was typed in the street); and from town.dat
-**   (dq0town's, town.h's): the money (farthings, handed back as it's left), whether it's a big town (town.txt's kind: a sage for
-**   a dead tongue), the writings carried (their things' fuel, life.h's: an old writing's number at the top, a copy's CLUE_COPY
-**   too); or (-b, -c, -w: a scene's, the tests', run alone) whether it's big (1), the money, the writings' fuel (a space between)
+** dq0schol -d folder -l libdir [-t town -b big -c money -w ids]
+**   the save's folder; the game's lib; and from the time between's record (between.dat: dq0town's, records.def's struct between):
+**   the town's name, the first command (what was typed in the street), the money (farthings, handed back as it's left),
+**   whether it's a big town (town.txt's kind: a sage for a dead tongue), the writings carried (their things' fuel, life.h's:
+**   an old writing's number at the top, a copy's CLUE_COPY too); or (-t, -b, -c, -w: a scene's, the tests', run alone, over
+**   the record's) the town's name, whether it's big (1), the money, the writings' fuel (a space between)
 ** What it works on: the save's top folder's clues.dat (life.h's struct clue: what the life's carried out of its dungeons), its
-** sheet (pc.hm: its skills, its tongues and scripts), the record (life.dat: its seed), town.dat (town.h's: the days in town so
+** sheet (pc.hm: its skills, its tongues and scripts), the record (life.dat: its seed), between.dat (the days in town so
 ** far, read and written back with the days it took here, what it cost, the months with a master, what a master opened, the
 ** script studied), heard.txt (the rumour a writing read makes: rewritten as a writing's read better here).  Its words in
 ** scholar.txt beside it, and below.  The same life's seed and the same commands, the same scholars, prices and readings.
@@ -25,7 +26,7 @@
 **   study 1          the library, for one who knows the writing's script and tongue: a penny a day, a week at a time, the
 **                    reading test of step 9 each week (the masteries' average, the condition: the writing's, a copy's) till
 **                    it's read, four weeks unless it's told ("study 1 for 2 weeks"); the script then the month's practice's
-**                    first (town.dat's study)
+**                    first (between.dat's study)
 **   learn delvic     a master's month: a script opened for good at 70 + its skill base (the book's, Skills 11), a tongue at
 **                    its skill base (an alien family's, Skills 11), a sage's wage (84d a month, Character 13); the month's
 **                    practice forfeit for it (the book's 30 points, a tongue's whole month)
@@ -69,7 +70,7 @@
 #define SAGE_DAY        3                       /* (A sage asked one of the other skills: a day's) */
 
 struct life L;
-static struct townrec tr;
+static struct between tr;
 static struct clue K;
 static const char* top;
 static const char* lib;
@@ -215,7 +216,7 @@ static void __fastcall__ pay (unsigned long f, unsigned n)
 
 /* ---- The sheet: its skills (the ruleset's, ../dq0/rsmeta.h's meta_line and meta_ml: what it keeps of the sheet's
 ** lines, its masteries by what they're for), its tongues and scripts past its own (its "language" and "script" lines, the referee's
-** store's; and what a master's opened in this stay, town.dat's, in the store's form) */
+** store's; and what a master's opened in this stay, between.dat's, in the store's form) */
 
 static char tl[META_TONGUES][24];
 static unsigned char ntl;
@@ -254,7 +255,7 @@ static void sheet_read (void)
         }
     }
     close (fd);
-    for (k = 0; k < TOWN_LEARNT && tr.learnt[k][0] && ntl < META_TONGUES; ++k) {
+    for (k = 0; k < BETWEEN_LEARNT && tr.learnt[k][0] && ntl < META_TONGUES; ++k) {
         strcpy (tl[ntl], tr.learnt[k][0] == '*' ? "script " : "language ");
         strcat (tl[ntl++], tr.learnt[k] + (tr.learnt[k][0] == '*'));
     }
@@ -308,7 +309,7 @@ static unsigned char __fastcall__ clue_io (unsigned char i, unsigned char wr)
     return ok;
 }
 
-/* What's carried of record r (town.dat's clue list): 1 the writing itself, 2 a copy, both 3 */
+/* What's carried of record r (between.dat's clue list): 1 the writing itself, 2 a copy, both 3 */
 static unsigned char __fastcall__ hand_of (unsigned r)
 {
     unsigned char k, h = 0;
@@ -751,9 +752,9 @@ static void __fastcall__ learn (const char* w)
         say ("Your sheet holds all the tongues and scripts the game can keep, eight past your own: you can learn no more.\n");
         return;
     }
-    for (k = 0; k < TOWN_LEARNT && tr.learnt[k][0]; ++k) {
+    for (k = 0; k < BETWEEN_LEARNT && tr.learnt[k][0]; ++k) {
     }
-    if (k == TOWN_LEARNT) {
+    if (k == BETWEEN_LEARNT) {
         say ("You've had all the teaching you've time for in this stay.\n");
         return;
     }
@@ -993,8 +994,7 @@ static void __fastcall__ command (const char* l)
 int main (int argc, char* argv[])
 {
     static struct hy_regs regs;
-    const char* first = "";
-    const char* ov[3] = { 0, 0, 0 };
+    const char* ov[4] = { 0, 0, 0, 0 };
     const char* p;
     unsigned char i;
     int fd, n;
@@ -1003,24 +1003,33 @@ int main (int argc, char* argv[])
         switch (argv[i][1]) {
         case 'd': top = argv[i + 1]; break;
         case 'l': lib = argv[i + 1]; break;
-        case 't': town = argv[i + 1]; break;
-        case 'x': first = argv[i + 1]; break;
         case 'b': ov[0] = argv[i + 1]; break;
         case 'c': ov[1] = argv[i + 1]; break;
         case 'w': ov[2] = argv[i + 1]; break;
+        case 't': ov[3] = argv[i + 1]; break;
         }
     }
-    if (!top || !lib || !town) {
-        fail ("usage: dq0schol -d folder -l libdir -t town [-x first] [-b big -c money -w ids]");
+    if (!top || !lib) {
+        fail ("usage: dq0schol -d folder -l libdir [-t town -b big -c money -w ids]");
     }
     if ((fd = open (in_ (top, LIFE_FILE), O_RDONLY)) < 0 || read (fd, &L, sizeof L) != sizeof L) {
         fail ("no record of the life");
     }
     close (fd);
-    if ((fd = open (in_ (top, TOWN_FILE), O_RDONLY)) >= 0) {
+    if ((fd = open (in_ (top, BETWEEN_FILE), O_RDONLY)) >= 0) {
         read (fd, &tr, sizeof tr);              /* (The town's so far: none, a stay begun, all 0) */
         close (fd);
     }
+    if (tr.magic != BETWEEN_MAGIC || tr.version != BETWEEN_VER) {
+        memset (&tr, 0, sizeof tr);
+    }
+    if (ov[3]) {
+        strncpy (tr.town, ov[3], sizeof tr.town - 1);
+    }
+    if (!*tr.town) {
+        fail ("no town (between.dat's, or -t)");
+    }
+    town = tr.town;
     if (ov[0]) {                                /* (A scene's, run alone: the town's kind, the money, the writings) */
         big = *ov[0] == '1';
     }
@@ -1069,8 +1078,9 @@ int main (int argc, char* argv[])
         say ("\n");
     }
     clues_say ();
-    if (*first) {
-        command (first);                        /* (What was typed in the street: done here) */
+    if (*tr.first) {
+        command (tr.first);                     /* (What was typed in the street: done here) */
+        *tr.first = 0;
     }
     for (;;) {
         ask (words_of ("prompt", 0) ? v[0] : "");
@@ -1080,8 +1090,10 @@ int main (int argc, char* argv[])
         command (ans);
     }
     say_flush ();
-    if ((fd = open (in_ (top, TOWN_FILE), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0 || write (fd, &tr, sizeof tr) != sizeof tr) {
-        fail ("can't write town.dat");
+    tr.magic = BETWEEN_MAGIC;
+    tr.version = BETWEEN_VER;
+    if ((fd = open (in_ (top, BETWEEN_FILE), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0 || write (fd, &tr, sizeof tr) != sizeof tr) {
+        fail ("can't write " BETWEEN_FILE);
     }
     close (fd);
     return 0;
