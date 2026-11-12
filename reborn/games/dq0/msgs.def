@@ -231,6 +231,9 @@ UK_FIGHT        < E_OUTCOME; a(ff) adown:0 adead:1 ddown:2 ddead:3 flees:4; b(wh
                 #   arg the attacker's body)
 UK_NO           < E_OUTCOME; w1 no:8-15@U_VERB
                 # (A refusal, refuse.c's say_no: U_*, A_*.  text the thing's name, as it's put in)
+UK_FIRST        < E_OUTCOME; w1 fs:8-15@FS_THE
+                # (A command's first words, sway.c's: their form, FS_*.  arg the verb, FV_*; w4 the word that tells
+                #   it apart, "spent "; text its name)
 
 struct req
 

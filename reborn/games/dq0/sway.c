@@ -83,6 +83,24 @@ unsigned char o_may_den (void)
 #pragma data-name (push, "OV17RODATA")
 #pragma bss-name (push, "OV17RODATA")
 #pragma static-locals (push, on)                /* (Its locals static, in its bank: the code the less) */
+#pragma static-locals (push, off)
+/* A command's first words told (said.txt's FIRST rows, the UI's own kind: its verb's begun row, the words D17 says at
+** once, 2026-11-12): form f (FS_*), verb v (FV_*), the word that tells it apart w, its name n (copied into the main RAM,
+** for the words' overlay; 0 none) */
+static void __fastcall__ first17 (unsigned char f, unsigned char v, const char* w, const char* n)
+{
+    struct msg c;
+
+    said_s[3] = strcpy (lb + 300, w ? w : "");
+    said_s[2] = strcpy (lb + 340, n ? n : "");
+    said_n = v;
+    c.kind = UK_FIRST;
+    c.who = 0;
+    c.w1 = f << 8;
+    outcome_words (&c);
+}
+#pragma static-locals (pop)
+
 static const char* __fastcall__ port_name (unsigned char k)
 {
     return k == OB_DOOR ? "door" : k == OB_WINDOW ? "window" : "portcullis";
@@ -95,22 +113,22 @@ static const char* __fastcall__ port_name (unsigned char k)
 static void __fastcall__ first_word (unsigned char n)
 {
     const struct sight* s = sight_get ();
-    const char* v = "reach for";
+    unsigned char v = FV_REACH;
     const char* name = cmd.obj.word;
-    const char* a = s->dark ? "feel" : "look at";
+    unsigned char a = s->dark ? FV_FEEL : FV_LOOK_AT;
     unsigned char k = cmd.obj.kind;
 
     if (worded) {
         return;
     }
     if (n >= W_PEER) {
-        msg (n == W_PEER ? "You peer ahead." : "You listen.");
+        first17 (n == W_PEER ? FS_PEER : FS_LISTEN, 0, 0, 0);
         t_flush ();
         worded = 3;
         return;
     }
     if (n == W_SWAY) {
-        v = s->dark ? "feel for" : "look for";
+        v = s->dark ? FV_FEEL_FOR : FV_LOOK_FOR;
         if (!*name) {
             return;
         }
@@ -123,9 +141,9 @@ static void __fastcall__ first_word (unsigned char n)
             return;
         }
         name = port_name (k);
-        v = tx - s->x + 1 > 2 || ty - s->y + 1 > 2 ? "head for" : n == PA_OPEN ? "try" : n == PA_CLOSE ? v : a;
+        v = tx - s->x + 1 > 2 || ty - s->y + 1 > 2 ? FV_HEAD : n == PA_OPEN ? FV_TRY : n == PA_CLOSE ? v : a;
     }
-    sayf ("\nYou %s the %s.", v, name);
+    first17 (FS_THE, v, 0, name);
     t_flush ();
     worded = 1;
 }
@@ -150,11 +168,11 @@ void __fastcall__ o_walk_says (const char* name)
         name = cmd.obj.word;
     }
     if (*name && !k) {
-        sayf ("\nYou go over to the %s.", name);
+        first17 (FS_THE, FV_OVER, 0, name);
     } else if (k == OB_DOOR || k == OB_WINDOW || k == OB_PORTC) {
-        sayf ("\nYou head for the %s.", port_name (k));
+        first17 (FS_THE, FV_HEAD, 0, port_name (k));
     } else {
-        msg ("You go over to it.");
+        first17 (FS_IT, 0, 0, 0);
     }
     t_flush ();                                 /* (Out before the world's walk starts: the user's D17) */
     placing = 1;
@@ -346,6 +364,22 @@ static const char* __fastcall__ apart_of (unsigned char e, unsigned char lit, un
     return b && !(lit && a == AW_LIT) && !(unlit && a != AW_LIT) ? aw[a] : "";
 }
 
+/* A command's first words told (said.txt's FIRST rows, the UI's own kind: its verb's begun row, the words D17 says at
+** once, 2026-11-12): form f (FS_*), verb v (FV_*), the word that tells it apart w, its name n (copied into the main RAM,
+** for the words' overlay; 0 none) */
+static void __fastcall__ first20 (unsigned char f, unsigned char v, const char* w, const char* n)
+{
+    struct msg c;
+
+    said_s[3] = strcpy (lb + 300, w ? w : "");
+    said_s[2] = strcpy (lb + 340, n ? n : "");
+    said_n = v;
+    c.kind = UK_FIRST;
+    c.who = 0;
+    c.w1 = f << 8;
+    outcome_words (&c);
+}
+
 /* The state said, as a word ("the spent torch") */
 static const char* __fastcall__ sel_word (unsigned char sel)
 {
@@ -357,7 +391,7 @@ void __fastcall__ o_walk_ahead (const char* name)
 {
     struct sight* s = sight_get ();
     struct sitem* it;
-    const char* v = "reach for";
+    unsigned char v = FV_REACH;
     const char* w = "";
     unsigned char k, away = 0, op = walk_op & ~IO_STEPS, lit = 0, unlit = 0, e, y, sel, in = 0, hd, nall = 0, dif = 0;
     const struct sitem* i0 = 0;
@@ -395,7 +429,7 @@ void __fastcall__ o_walk_ahead (const char* name)
     if (op == IO_GET) {                         /* (Taken up: of what it doesn't carry, as ever) */
         if (dif && !sel && !ndes) {             /* (Several seen that differ: the world's which to ask; alike, the one
                                                 **   it takes reached for) */
-            sayf ("\nYou look them over."); /* (Several in reach, none chosen, nor by its letter: which, perhaps, the
+            first20 (FS_THEM, 0, 0, 0); /* (Several in reach, none chosen, nor by its letter: which, perhaps, the
                                                 **   world's to ask; true whatever it answers, at once) */
             goto told;
         }
@@ -403,7 +437,7 @@ void __fastcall__ o_walk_ahead (const char* name)
             if (s->dark) {
                 return;
             }
-            v = "look for";
+            v = FV_LOOK_FOR;
         } else if (away == 1) {                 /* (Out of reach only: walked to) */
             if (!(cmd.obj.sel | cmd.obj.n)) {
                 walk_says (name);
@@ -427,8 +461,7 @@ void __fastcall__ o_walk_ahead (const char* name)
             for (k = s->nitems, it = s->item; k && (!name_is (it->name, cmd.other.word) || it->x - s->x + 1 > 2 ||
                 it->y - s->y + 1 > 2); --k, ++it) {
             }
-            sayf (k ? "\nYou reach for the %s." : s->dark ? "\nYou feel for the %s." : "\nYou look for the %s.", k ? name :
-                cmd.other.word);
+            first20 (FS_THE, k ? FV_REACH : s->dark ? FV_FEEL_FOR : FV_LOOK_FOR, 0, k ? name : cmd.other.word);
             goto told;                          /* (Not carried: lying in reach, the thing reached for, in it or on it; else
                                                 **   it looked for) */
         }
@@ -455,7 +488,7 @@ void __fastcall__ o_walk_ahead (const char* name)
         if (s->dark) {
             return;
         }
-        v = e != 0xFF || away ? "look at" : "look for";
+        v = e != 0xFF || away ? FV_LOOK_AT : FV_LOOK_FOR;
         goto say;
     }
     if (e == 0xFF) {
@@ -468,7 +501,7 @@ void __fastcall__ o_walk_ahead (const char* name)
             }
             goto say;                           /* (Lying within reach) */
         }
-        v = s->dark ? "feel for" : "look for";  /* (None it carries, nor sees in reach: looked for, then the world's why) */
+        v = s->dark ? FV_FEEL_FOR : FV_LOOK_FOR;    /* (None it carries, nor sees in reach: looked for, then the world's why) */
         w = sel_word (sel);
         goto say;
     }
@@ -481,42 +514,42 @@ void __fastcall__ o_walk_ahead (const char* name)
             cmd.other.n << 4, 0, 0);    /* (Stowed: where, the world's to choose, a sheath, a pouch, the pack, or
                                                 **   ask, the designators' step 7: the thing's own first words) */
         if (y != 0xFF && ix[e].up == y + 1) {
-            v = s->dark ? "feel for" : "look for";  /* (In it already: looked for, and found there) */
+            v = s->dark ? FV_FEEL_FOR : FV_LOOK_FOR;    /* (In it already: looked for, and found there) */
             goto say;
         }
     }
     if ((k = top (e)) != e && !(ix[k].flags & CX_WORN && !(ix[k].flags & CX_BACK))) {   /* (In something: the pack worn
                                                 **   first, or what it's in; on the belt or in what's on it, worn,
                                                 **   at hand: the thing's own) */
-        sayf (ix[k].flags & CX_BACK ? "\nYou reach for your %s." : "\nYou reach into the %s.", kname (k));
+        first20 (ix[k].flags & CX_BACK ? FS_YOUR : FS_INTO, 0, 0, kname (k));
         goto told;
     }
     if (op == IO_DROP) {
         if (cmd.n || cmd.obj.sel == SL_ALL || (cmd.flags & CF_HALF)) {
             return;                             /* (By the count: the world's words) */
         }
-        sayf ("\nYou put down the %s%s.", w, name);
+        first20 (FS_THE, FV_PUT_DOWN, w, name);
         t_flush ();
         worded = 4;                             /* (All of it said: not "Put down." again) */
         return;
     }
     if (op == IO_STOW || op == IO_PUT) {        /* (Put in the other: the pack worn first, or the other in reach) */
         if (y != 0xFF && (ix[k = top (y)].flags & CX_BACK)) {
-            sayf ("\nYou reach for your %s.", kname (k));
+            first20 (FS_YOUR, 0, 0, kname (k));
             goto told;
         }
         if (y != 0xFF && !(ix[y].flags & CX_HELD)) {
-            sayf ("\nYou reach for the %s.", kname (y));
+            first20 (FS_THE, FV_REACH, 0, kname (y));
             goto told;
         }
     }
     if (ix[e].flags & CX_HELD) {                /* (In hand, nothing to reach for: the act's own start, true whatever comes
                                                 **   of it, the answer some seconds off: a light raised to be lit or put
                                                 **   out, the rest lifted; 2026-11-06) */
-        v = op == IO_LIGHT || op == IO_DOUSE ? "raise" : "lift";
+        v = op == IO_LIGHT || op == IO_DOUSE ? FV_RAISE : FV_LIFT;
     }
 say:
-    sayf ("\nYou %s the %s%s.", v, w, name);
+    first20 (FS_THE, v, w, name);
 told:
     t_flush ();
     worded = 1;

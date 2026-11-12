@@ -655,3 +655,15 @@ NO.A_NO_MAGIC       +"\nYou've no magic: you never studied the convocations."
 NO.A_NO_PSI         +"\nYou reach for it; nothing stirs."
 NO.A_NO_GODS        +"\nYou know no invocations of {text}'s."
 NO.A_NO_GOD         +"\nYou know no invocations."
+
+# ---- A command's first words, at once, before the world's asked (UK_FIRST: fs, FS_*; arg the verb, FV_*; w4 the word that
+# tells it apart, "spent "; text its name): the action's begun row, the user's D17 (sway.c's first_word, walk_says and
+# walk_ahead's sayf before, overlays 17 and 20)
+
+FIRST.the           +"\nYou {arg?reach for|look for|feel for|look at|head for|try|raise|lift|put down|go over to|feel} the {w4}{text}."
+FIRST.your          +"\nYou reach for your {text}."
+FIRST.into          +"\nYou reach into the {text}."
+FIRST.them          +"\nYou look them over."
+FIRST.it            "You go over to it."
+FIRST.peer          "You peer ahead."
+FIRST.listen        "You listen."
