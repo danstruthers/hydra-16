@@ -2,8 +2,8 @@
 ** ipage.c - (dq0w) the item store paged (DUNGEON.md: no fixed size; things.c's store): its records in the hub's item
 ** banks a cache, of the things the character carries (never paged out) and those of the chunks that are in it (a
 ** chunk's things: those lying on its squares, and what's in them or on them), each chunk's all or none; the rest in
-** the save folder, by region (itSXXYY.dat, a version of it each time it's written: vfile.inc's, three slots, the
-** newest read as the next is written), each chunk's things a group of their own there (things.h's struct igroup: its
+** the save folder, by region (itSXXYY.dat, a version of it each time it's written, three slots, the newest read as the
+** next is written: the record store's, ../dq0/rp.h), each chunk's things a group of their own there (things.h's struct igroup: its
 ** place in the region, its count; its things' records, a thing in another its container's place in the group,
 ** renumbered as it's read in), so no count of things limits the dungeon, only the card.  The chunks in the store are
 ** in a table in the world's own bank (things.h's struct ipg): the 25 round the character's (two each way) always
@@ -28,6 +28,7 @@
 #include "hub0.h"
 #include "world.h"
 #include "things.h"
+#include "../dq0/rp.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 #pragma static-locals (on)
@@ -48,6 +49,12 @@ static unsigned char fr;                        /* (A free entry, find's) */
 static unsigned pcx, pcy;                       /* (The character's chunk, and those round it kept: two each way;
                                                 **   dq0 -C's, none) */
 static unsigned char pcs, rad;
+static unsigned char __fastcall__ kept_k (unsigned char k);
+#pragma data-name (push, "SW17RODATA")
+static struct rpt irt = { RP_FIND, NIRES, sizeof (struct ires), 0x3E, IPG->r, offsetof (struct ires, stamp), RTF_HAND | RTF_WIDE,
+    0, { 0 }, 0, NIRES, 0, 0, 1, 2, 4, 0, 0, 0, kept_k };     /* (The table, the record store's: a chunk found, and a
+                                                **   free entry; the one made way for) */
+#pragma data-name (pop)
 
 /* The world's own bank in the window */
 static void own (void)
@@ -67,21 +74,21 @@ static void pc_chunk (void)
 
 /* The table's entry for the chunk at hand (0xFF: none), and a free one (fr: 0xFF none); the world's own bank in the
 ** window after */
+static unsigned char __fastcall__ ask (unsigned char op)
+{
+    irt.op = op;
+    irt.k[1] = esn;
+    *(unsigned*) &irt.k[2] = ecx;
+    *(unsigned*) &irt.k[4] = ecy;
+    own ();
+    return rp_x (&irt);
+}
+
 static unsigned char find (void)
 {
-    struct ires* r;
-    unsigned char k, f = 0xFF;
+    unsigned char f = ask (RP_FIND);
 
-    own ();
-    for (k = 0, fr = 0xFF, r = IPG->r; k < NIRES; ++k, ++r) {
-        if (!r->used) {
-            if (fr == 0xFF) {
-                fr = k;
-            }
-        } else if (f == 0xFF && r->sn == esn && r->cx == ecx && r->cy == ecy) {
-            f = k;
-        }
-    }
+    fr = irt.free;
     return f;
 }
 
@@ -118,6 +125,15 @@ static unsigned char __fastcall__ kept_for (unsigned char sn, unsigned cx, unsig
     return k < NACTORS;
 }
 
+/* Entry k's chunk an actor's things' (the record store's question, as it makes way: the world's own bank in the window
+** after) */
+static unsigned char __fastcall__ kept_k (unsigned char k)
+{
+    struct ires* r = &IPG->r[k];
+
+    return kept_for (r->sn, r->cx, r->cy);
+}
+
 /* A record made free, or a place in the table: the chunk least lately wanted that isn't round the character (nor the
 ** chunk at hand, nor an actor's things') put out (part 20's it_out), its entry free: 1, or 0 (none to put out, or no
 ** folder) */
@@ -126,20 +142,16 @@ static unsigned char __fastcall__ kept_for (unsigned char sn, unsigned cx, unsig
 static unsigned char make_room (void)
 {
     struct ires* r;
-    unsigned char k, b = 0xFF;
+    unsigned char k, b;
     unsigned s, y;
 
     pc_chunk ();
-    own ();
-    for (k = 0, r = IPG->r; k < NIRES; ++k, ++r) {
-        if (r->used && (r->sn != pcs || r->cx - pcx + rad > 2 * rad || r->cy - pcy + rad > 2 * rad) &&
-            (r->sn != esn || r->cx != ecx || r->cy != ecy) && (b == 0xFF || r->stamp - s > 0x8000U) &&
-            !kept_for (r->sn, r->cx, r->cy)) {
-            b = k;
-            s = r->stamp;
-        }
-    }
-    if (b != 0xFF) {
+    irt.r = rad;                                /* (The least lately wanted but those round the character, the chunk
+                                                **   at hand, an actor's things') */
+    irt.vsn = pcs;
+    irt.vx = pcx;
+    irt.vy = pcy;
+    if ((b = ask (RP_OLDEST)) != 0xFF) {
         r = &IPG->r[b];
         k = r->sn;
         s = r->cx;
@@ -277,10 +289,17 @@ void s_it_near (void)
 #pragma rodata-name (push, "SW20RODATA")
 #pragma bss-name (push, "SW20RODATA")
 
-#define VF_STATIC       static
-#include "../dq0/vfile.inc"
+#pragma bss-name (push, "BSS")
+static struct rpk it_kind;                      /* (Its versions counted: the main RAM's) */
+#pragma bss-name (pop)
+#define RP_STATIC       static
+#define RP_KIND         it_kind
+#include "../dq0/rp.inc"
 
-static struct vfh hd;
+#pragma data-name (push, "SW20RODATA")
+static struct rpg rg = { RP_GROUPS, 0, 0, 0, sizeof (struct igroup), offsetof (struct igroup, n), sizeof (struct item),
+    buf };                                      /* (A region's file's groups, the record store's) */
+#pragma data-name (pop)
 static struct igroup g;
 static struct item q;
 static unsigned char hsn, hat;                  /* (The chunk at hand: its stratum, its place in its region, */
@@ -313,7 +332,7 @@ static unsigned char __fastcall__ at_hand (unsigned char sn, unsigned cx, unsign
     hx0 = STRATUM (sn).x0 + (cx << CW_BITS);
     hy0 = STRATUM (sn).y0 + (cy << CW_BITS);
     hat = (cx & 7) | (cy & 7) << 3;
-    return vf_name (path, "it", sn, cx >> 3, cy >> 3);
+    return rp_name (path, "it", sn, cx >> 3, cy >> 3);
 }
 
 /* Thing i's in the chunk at hand: it lies on one of its squares, or it's in (or on) one that does (a denizen's own
@@ -332,24 +351,16 @@ static unsigned char __fastcall__ in_chunk (unsigned i)
 ** at hand's (its group in g: 1, or 0 none) */
 static unsigned char others (void)
 {
-    unsigned k;
+    unsigned char k;
 
-    while (read (in, &g, sizeof g) == sizeof g) {
-        if (g.at == hat && out < 0) {
-            return 1;
-        }
-        if (g.at == hat || out < 0) {
-            lseek (in, (long) g.n * sizeof (struct item), SEEK_CUR);
-            continue;
-        }
-        write (out, &g, sizeof g);
-        for (k = g.n; k; --k) {
-            read (in, buf, sizeof (struct item));
-            write (out, buf, sizeof (struct item));
-        }
-        all += g.n;
-    }
-    return 0;
+    rg.in = in;
+    rg.out = out;
+    rg.at = hat;
+    rg.all = all;
+    k = rp_x (&rg);
+    all = rg.all;
+    memcpy (&g, rg.g, sizeof g);
+    return k;
 }
 
 /* Chunk cx, cy of stratum sn's things written out (its region's file, a new version: every other chunk's group as it
@@ -361,8 +372,8 @@ unsigned char __fastcall__ s_it_out (unsigned char sn, unsigned cx, unsigned cy)
     if (!at_hand (sn, cx, cy)) {
         return 0;
     }
-    in = vf_open (path, 3, &hd);
-    if ((out = vf_make (path, 3)) >= 0) {
+    in = rp_open (path, 3);
+    if ((out = rp_make (path, 3)) >= 0) {
         all = 0;
         if (in >= 0) {
             others ();
@@ -390,7 +401,7 @@ unsigned char __fastcall__ s_it_out (unsigned char sn, unsigned cx, unsigned cy)
             }
             all += m;
         }
-        vf_done (out, all);
+        rp_done (out, all);
         for (k = 0; k < m; ++k) {
             item_at (mget (OUT (k)))->kind = 0;     /* (Their records free) */
         }
@@ -430,7 +441,7 @@ unsigned char __fastcall__ s_it_in (unsigned char sn, unsigned cx, unsigned cy)
     unsigned char ok = 1;
     int f;
 
-    if (!at_hand (sn, cx, cy) || (in = vf_open (path, 3, &hd)) < 0) {
+    if (!at_hand (sn, cx, cy) || (in = rp_open (path, 3)) < 0) {
         return 2;
     }
     out = -1;
