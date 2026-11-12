@@ -1,7 +1,7 @@
 /*
 ** wtrfile.c - (dq0w) the traces' store's files (wtrace.c's: the store): a chunk's records written to its region's
-** file in the save folder (trSXXYY.dat, a version of it each time: ../dq0/vfile.inc's; each chunk a group of its own
-** there), and read back.  Swapped part 30's (../dq0/swap.inc, bank.s's stub tr_file).
+** file in the save folder (trSXXYY.dat, a version of it each time; each chunk a group of its own there: the record
+** store's, ../dq0/rp.h), and read back.  Swapped part 30's (../dq0/swap.inc, bank.s's stub tr_file).
 */
 
 #include <fcntl.h>
@@ -27,10 +27,17 @@
 
 #include "tput.inc"
 
-#define VF_STATIC       static
-#include "../dq0/vfile.inc"
+#pragma bss-name (push, "BSS")
+static struct rpk tr_kind;                      /* (Its versions counted: the main RAM's) */
+#pragma bss-name (pop)
+#define RP_STATIC       static
+#define RP_KIND         tr_kind
+#include "../dq0/rp.inc"
 
-static struct vfh hd;
+#pragma data-name (push, "SW30RODATA")
+static struct rpg rg = { RP_GROUPS, 0, 0, 0, sizeof (struct tgroup), offsetof (struct tgroup, n), sizeof (struct trace),
+    buf };                                      /* (A region's file's groups, the record store's) */
+#pragma data-name (pop)
 static struct tgroup g;
 static unsigned char hat, hh;
 static int in, out;
@@ -41,24 +48,16 @@ static struct trace t;
 ** chunk at hand's (its group in g: 1, or 0 none) */
 static unsigned char others (void)
 {
-    static unsigned k;
+    unsigned char k;
 
-    while (read (in, &g, sizeof g) == sizeof g) {
-        if (g.at == hat && out < 0) {
-            return 1;
-        }
-        if (g.at == hat || out < 0) {
-            lseek (in, (unsigned) (g.n * sizeof (struct trace)), SEEK_CUR);
-            continue;
-        }
-        write (out, &g, sizeof g);
-        for (k = g.n; k; --k) {
-            read (in, buf, sizeof (struct trace));
-            write (out, buf, sizeof (struct trace));
-        }
-        all += g.n;
-    }
-    return 0;
+    rg.in = in;
+    rg.out = out;
+    rg.at = hat;
+    rg.all = all;
+    k = rp_x (&rg);
+    all = rg.all;
+    memcpy (&g, rg.g, sizeof g);
+    return k;
 }
 
 /* The chunk at hand's records (wr 0: counted only; 1, written to out, through the main RAM a record at a time; 2,
@@ -99,13 +98,13 @@ void __fastcall__ s_tr_file (unsigned char h, unsigned char what)
     hy_bank (ovbank[OVBANKS]);
     e = &THD->ch[h - 1];
     hat = (e->cx & 7) | (e->cy & 7) << 3;
-    if (!vf_name (path, "tr", e->sn, e->cx >> 3, e->cy >> 3)) {
+    if (!rp_name (path, "tr", e->sn, e->cx >> 3, e->cy >> 3)) {
         if (what == TF_OUT) {
             records (2);                        /* (No folder: lost) */
         }
         goto done;
     }
-    in = vf_open (path, 3, &hd);
+    in = rp_open (path, 3);
     if (what == TF_IN) {
         if (in >= 0) {
             out = -1;
@@ -126,7 +125,7 @@ void __fastcall__ s_tr_file (unsigned char h, unsigned char what)
         }
         goto done;
     }
-    if ((out = vf_make (path, 3)) >= 0) {
+    if ((out = rp_make (path, 3)) >= 0) {
         all = 0;
         if (in >= 0) {
             others ();
@@ -139,7 +138,7 @@ void __fastcall__ s_tr_file (unsigned char h, unsigned char what)
             records (1);
             all += g.n;
         }
-        vf_done (out, all);
+        rp_done (out, all);
     }
     if (in >= 0) {
         close (in);

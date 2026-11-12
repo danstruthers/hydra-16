@@ -30,6 +30,7 @@
             jmp         rp_done                             ; $A03F: RP_DONE
             jmp         rp_find                             ; $A042: RP_FIND
             jmp         rp_oldest                           ; $A045: RP_OLDEST
+            jmp         rp_groups                           ; $A048: RP_GROUPS
 
 BANKREG     = $00                                           ; The task's RAM bank register
 BUF         = $9FE0                                         ; MODINFO's answer (ME_SIZE bytes; then the entry looked
@@ -1253,3 +1254,174 @@ keep:
             rts
 @call:
             jmp         (r11)
+
+; A region's file of chunks' groups (struct rpg: the things', the traces': each chunk's records a group, its header
+; first, its place in the region at byte 0, its count at RG_NO)
+RG_IN       = 1                                             ; The file read (an fd)
+RG_OUT      = 2                                             ; The version written ($FF: none)
+RG_AT       = 3                                             ; The chunk at hand's place
+RG_GSIZE    = 4                                             ; A group's header's bytes (up to 8)
+RG_NO       = 5                                             ; Its count's offset in it
+RG_RSIZE    = 6                                             ; A record's bytes (up to 255)
+RG_BUF      = 7                                             ; (2) A record's room (the task's RAM)
+RG_ALL      = 9                                             ; (2) The records copied, added to
+RG_G        = 11                                            ; (8) A group's header, as it's read
+
+; RP_GROUPS: the groups in the file (RG_IN) read past, each but the chunk at hand's copied to RG_OUT (their counts
+; added to RG_ALL), or (RG_OUT $FF) to the chunk at hand's: its header in RG_G.  OUT: .A/.X 1, the chunk at hand's
+; found (RG_OUT $FF); 0, the file's end
+rp_groups:
+            jsr         enter
+@group:
+            lda         #RG_G                               ; A group's header
+            jsr         bufr0
+            ldy         #RG_GSIZE
+            lda         (r12),y
+            sta         r1
+            stz         r1 + 1
+            pha
+            ldy         #RG_IN
+            lda         (r12),y
+            SYS         READ
+            ply
+            jcs         @end
+            cpx         #0
+            jne         @end
+            sty         r5
+            cmp         r5
+            jne         @end
+            ldy         #RG_G                               ; The chunk at hand's?
+            lda         (r12),y
+            ldy         #RG_AT
+            cmp         (r12),y
+            php
+            ldy         #RG_OUT
+            lda         (r12),y
+            cmp         #$FF
+            bne         @copy
+            plp
+            bne         @skip
+            lda         #1                                  ; (Found)
+            ldx         #0
+            rts
+@copy:
+            plp
+            bne         @out
+@skip:
+            ldy         #RG_NO                              ; Its records passed: its count times a record's bytes
+            lda         (r12),y
+            clc
+            adc         #RG_G
+            tay
+            lda         (r12),y
+            sta         r2
+            iny
+            lda         (r12),y
+            sta         r2 + 1
+            stz         r0
+            stz         r0 + 1
+            stz         r1
+            stz         r1 + 1
+            ldy         #RG_RSIZE
+            lda         (r12),y
+            sta         r3
+            ldx         #8
+@mul:
+            asl         r0
+            rol         r0 + 1
+            rol         r1
+            asl         r3
+            bcc         :+
+            lda         r0
+            clc
+            adc         r2
+            sta         r0
+            lda         r0 + 1
+            adc         r2 + 1
+            sta         r0 + 1
+            bcc         :+
+            inc         r1
+:
+            dex
+            bne         @mul
+            ldy         #RG_IN
+            lda         (r12),y
+            ldx         #1                                  ; (From where it is)
+            SYS         SEEK
+            jmp         @group
+@out:
+            lda         #RG_G                               ; Copied: its header, then its records
+            jsr         bufr0
+            ldy         #RG_GSIZE
+            lda         (r12),y
+            sta         r1
+            stz         r1 + 1
+            ldy         #RG_OUT
+            lda         (r12),y
+            SYS         WRITE
+            ldy         #RG_NO
+            lda         (r12),y
+            clc
+            adc         #RG_G
+            tay
+            lda         (r12),y                             ; (Its count: r2, added to RG_ALL)
+            sta         r2
+            iny
+            lda         (r12),y
+            sta         r2 + 1
+            ldy         #RG_ALL
+            lda         (r12),y
+            clc
+            adc         r2
+            sta         (r12),y
+            iny
+            lda         (r12),y
+            adc         r2 + 1
+            sta         (r12),y
+@rec:
+            lda         r2
+            ora         r2 + 1
+            jeq         @group
+            lda         r2                                  ; (Kept over the calls: on the stack)
+            pha
+            lda         r2 + 1
+            pha
+            ldy         #RG_IN
+            jsr         @one
+            ldy         #RG_OUT
+            jsr         @one
+            pla
+            sta         r2 + 1
+            pla
+            sta         r2
+            lda         r2
+            bne         :+
+            dec         r2 + 1
+:
+            dec         r2
+            bra         @rec
+@one:
+            phy                                             ; A record read (.Y RG_IN) or written (RG_OUT)
+            ldy         #RG_BUF
+            lda         (r12),y
+            sta         r0
+            iny
+            lda         (r12),y
+            sta         r0 + 1
+            ldy         #RG_RSIZE
+            lda         (r12),y
+            sta         r1
+            stz         r1 + 1
+            ply
+            lda         (r12),y
+            cpy         #RG_IN
+            bne         :+
+            SYS         READ
+            rts
+:
+            SYS         WRITE
+            rts
+@end:
+            lda         #0
+            tax
+            rts

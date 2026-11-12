@@ -54,6 +54,7 @@
 #include "line.h"
 #include "trace.h"
 #include "tstore.h"
+#include "../dq0/rp.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 #pragma static-locals (on)
@@ -83,20 +84,29 @@ static void own (void)
     hy_bank (ovbank[OVBANKS]);
 }
 
+#pragma data-name (push, "SW28RODATA")
+static struct rpt tct = { RP_FIND, NTCH, sizeof (struct tch), 0xF2, THD->ch, offsetof (struct tch, stamp), RTF_FREE | RTF_WIDE,
+    &THD->stamp, { 0 }, 0, 0, 0, 1, 1, 4, 6 };   /* (The directory, the record store's: a chunk found, its stamp the
+                                                **   newest; the one made way for, but the nine round the character) */
+#pragma data-name (pop)
+
+/* The directory asked (op: RP_FIND, RP_OLDEST) of its first n entries, the chunk at hand its key: the entry plus 1, or
+** 0 (the directory in the window after) */
+static unsigned char __fastcall__ ask (unsigned char op, unsigned char n)
+{
+    tct.op = op;
+    tct.n = n;
+    tct.k[1] = rsn;
+    *(unsigned*) &tct.k[4] = rcx;
+    *(unsigned*) &tct.k[6] = rcy;
+    own ();
+    return rp_x (&tct) + 1;
+}
+
 /* The chunk at hand's entry plus 1, or 0 (the directory in the window after) */
 static unsigned char find (void)
 {
-    struct tch* e;
-    unsigned char h;
-
-    own ();
-    for (h = 0, e = THD->ch; h < NTCH; ++h, ++e) {
-        if (e->used && e->sn == rsn && e->cx == rcx && e->cy == rcy) {
-            e->stamp = ++THD->stamp;
-            return h + 1;
-        }
-    }
-    return 0;
+    return ask (RP_FIND, NTCH);
 }
 
 /* The chunk at hand's entry plus 1: found, or made (a place for it: a free one, or the one least lately wanted that
@@ -106,22 +116,16 @@ static unsigned char need (void)
 {
     struct tch* e;
     unsigned char h, best;
-    unsigned st = 0;
 
     if ((h = find ()) != 0) {
         return h;
     }
-    for (best = 0, h = 1, e = THD->ch; h <= lim; ++h, ++e) {
-        if (!e->used) {
-            best = h;
-            break;
-        }
-        if ((e->sn != pcs || e->cx - pcx + 1 > 2 || e->cy - pcy + 1 > 2 || lim < 9) && (!best || e->stamp - st > 0x8000U)) {
-            best = h;
-            st = e->stamp;
-        }
-    }
-    if (!best) {
+    tct.r = lim < 9 ? 0xFF : 1;                 /* (A free one, or the least lately wanted but the nine round the
+                                                **   character's: dq0 -C's, none kept) */
+    tct.vsn = pcs;
+    tct.vx = pcx;
+    tct.vy = pcy;
+    if (!(best = ask (RP_OLDEST, lim))) {
         return 0;
     }
     own ();

@@ -11,7 +11,8 @@
 ** hub's vsaved and vbase: the last save's, or this session's), so the save is the stamps moved on (wfile.c's
 ** store_commit) and a crash loses nothing the save had.  One eviction policy (RP_OLDEST): the entry least lately wanted,
 ** but those kept (the one at hand, a box about the character, those a store's own routine keeps).  One lookup
-** (RP_FIND): an entry by its key, its stamp made the newest.
+** (RP_FIND): an entry by its key, its stamp made the newest.  And one way with a region's file of chunks' groups
+** (RP_GROUPS: the things', the traces').
 **
 ** Each call is rp_x (dq0lib.inc's: an XCALL, some 120 cycles) with a block of the caller's: struct rpf (a file's) or
 ** struct rpt (a table's), its first byte the entry; the ROM's offsets (dq0lib.s's RF_*, RT_*) the same, checked below.
@@ -28,6 +29,7 @@
 #define RP_DONE         0x3F
 #define RP_FIND         0x42
 #define RP_OLDEST       0x45
+#define RP_GROUPS       0x48
 
 unsigned __fastcall__ rp_x (void* a);           /* (dq0lib.inc's) */
 
@@ -81,7 +83,19 @@ struct rpt {
 #define RTF_PLAIN       0x04                    /* oldest: stamps compared plainly (else round, as they wrap) */
 #define RTF_WIDE        0x08                    /* the box's x and y two bytes (else one) */
 
-typedef char rp_fits[offsetof (struct rpf, h) == 10 && offsetof (struct rpf, t) == 20 && offsetof (struct rpf, st) == 30 &&
+/* A region's file of chunks' groups (the things', the traces': each chunk's records a group, its header first, its
+** place in the region its first byte, its count at no): RP_GROUPS reads the groups in (in) past, each but the chunk
+** at hand's (at) copied to out (their counts added to all), or (out 0xFF) to the chunk at hand's, its header in g: 1,
+** found; 0, the file's end */
+struct rpg {
+    unsigned char   op, in, out, at;
+    unsigned char   gsize, no, rsize;           /* A group's header's bytes, its count's offset; a record's bytes */
+    void*           buf;                        /* A record's room (the task's RAM) */
+    unsigned        all;
+    unsigned char   g[8];
+};
+
+typedef char rp_fits[offsetof (struct rpg, buf) == 7 && offsetof (struct rpg, g) == 11 &&offsetof (struct rpf, h) == 10 && offsetof (struct rpf, t) == 20 && offsetof (struct rpf, st) == 30 &&
     offsetof (struct rpf, save) == 42 && offsetof (struct rpf, vfd) == 46 && offsetof (struct rpf, dir) == 47 &&
     offsetof (struct rpf, ry) == 53 && offsetof (struct rpt, k) == 10 && offsetof (struct rpt, from) == 18 &&
     offsetof (struct rpt, r) == 21 && offsetof (struct rpt, vsn) == 25 && offsetof (struct rpt, keep) == 30 ? 1 : -1];
