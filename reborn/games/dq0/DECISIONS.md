@@ -4269,7 +4269,9 @@ too.  So the start is as it was (dq0's image the same).
 and overlay 1 6,443, 6,443; the others the same, their images being so.
 
 **Held to:** every dq0 test's transcript before and after (294), sentence by sentence (the scratch's sent.js,
-a hook in sim/test.js not kept): none differs.  The save folder's files: the programs that write them, but dq0acct, are
+a hook in sim/test.js not kept): none differs.  Byte for byte, 279 the same; 15 (the life's and the town's, whose card
+changed: dq0account, dq0why, dq0life ...) differ only in the progress dots ("The dungeon is being made ready ...", "Nearly
+ready") and the status line's clock as a long wait goes: the SD card's reading times, its image changed.  The save folder's files: the programs that write them, but dq0acct, are
 byte for byte the same images, and dq0acct's change is in its reading of the rumours' files alone (no write); the
 tests' xd of life.dat, kit.dat and the rest in those transcripts the same.  The suite: all 444 tests pass, before and
 after.
