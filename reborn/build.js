@@ -570,8 +570,14 @@ function build(opt = {}) {
     for (const d of fs.readdirSync(at('games'), { withFileTypes: true }).filter(d => d.isDirectory())) {   //   and its make.js's
       games[d.name] = ram(at('games', d.name), at('obj', 'games'));                                         //   data files, if
       const make = at('games', d.name, 'make.js');                                                          //   it has one
-      if (fs.existsSync(make)) require(make).build({ dir: at('games', d.name), objdir: at('obj', 'games', d.name), say });
+      if (fs.existsSync(make)) require(make).build({ dir: at('games', d.name), objdir: at('obj', 'games', d.name), say, bios: fs.readFileSync(at('bin', 'bios.bin')) });
     }
+  if (fs.existsSync(at('games')))                       // (Then each make.js's after, if it has one: what wants
+    for (const d of fs.readdirSync(at('games'), { withFileTypes: true }).filter(d => d.isDirectory())) {   //   another
+      const make = at('games', d.name, 'make.js');                                                          //   game built:
+      if (fs.existsSync(make) && require(make).after)                                                       //   dq0's
+        require(make).after({ dir: at('games', d.name), objdir: at('obj', 'games', d.name), say, bios: fs.readFileSync(at('bin', 'bios.bin')) });   //   themes,
+    }                                                                                                       //   themec's)
   const children = {};                                  // The bank programs (children: bankprog.h), their callers
   for (const [src, od] of [[at('tests', 'bank'), at('obj', 'tests')], [at('bank'), at('obj', 'bank')]])   //   built:
     if (fs.existsSync(src))                                                                                 //   the tests',

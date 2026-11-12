@@ -101,6 +101,9 @@ function saidTheme(out, cmd) {
   return at < 0 ? '' : o.slice(at + cmd.length + 3, end < 0 ? undefined : end + 1);
 }
 const DQ0_MAKE = () => require('../../games/dq0/make.js');
+// A theme's text compiled and checked by the game's one theme compiler, themec, in the emulator (tools/themec.js): each
+// of themes ({ name, text }) its { status, said, data, words }
+const THEMEC = themes => require('../../tools/themec.js').compile(themes);
 function builtChunks(m, sn) {
   const out = [], C = { room: 8, zone: 56, portal: 219, tile: 443, elev: 1467, pceil: 2555 };
   for (const b of cacheBanks(m)) {
@@ -881,7 +884,7 @@ const WORN = ['inventory', 'wear the ring on my left hand', 'wear the ring on my
 
 module.exports = {
   CHUNK_SIZE, CK_TILE, CK_ROOM, T_ROCK, T_FLOOR, T_WALL, T_CORR, T_WINDOW, cacheBanks, cacheChunks, caveReport,
-  PK_PORTCULLIS, T_DOOR, T_STEPS, xdBytes, saidTheme, DQ0_MAKE, builtChunks, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N,
+  PK_PORTCULLIS, T_DOOR, T_STEPS, xdBytes, saidTheme, DQ0_MAKE, THEMEC, builtChunks, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N,
   CSLOT_AT, liveChunks, O_WAY_OUT, O_NOWHERE, stratumRec, dq0Made, chunkDiff, dq0StatusRows, dq0Story, inTurn,
   DQ0_REPEATS, dq0Answers, dq0Repeats, dq0Doubled, dq0Lost, dq0Check, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need,
   dq0Never, dq0Carried, dq0Here, dq0Named, dq0Thing, dq0Holder, dq0View, DQ0_I, passings, dq0TypedAsk, dq0Typed,

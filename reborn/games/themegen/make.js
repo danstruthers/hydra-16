@@ -3,12 +3,12 @@
 // dungeon, by style and stratum, and their factions) made obj/games/themegen.dat, which themegen reads as it starts:
 // "TG", 1, the lines' count (two bytes), each line's key (themegen.c's TK_*) and its place in the text (two bytes),
 // then the text: each line its values' count and its values, each 0-ended, no line across an 8K bank's edge (themegen
-// reads the text into banks of its own).  Each goal kind's lines are held to a theme's (../dq0/make.js's compile,
-// their slots filled), and each piece of the history to the values it should have.
+// reads the text into banks of its own).  Each goal kind's lines are held to a theme's (their slots filled, compiled and
+// checked by the game's theme compiler, themec, in the emulator: tools/themec.js), and each piece of the history to the
+// values it should have.
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const dq0 = require('../dq0/make.js');
 
 // themegen.c's TK_*: the keys, numbered (a goal block's theme lines from TK_THEME on, by THEME_KEYS)
 const KEYS = { people: 1, land: 2, work: 3, name: 4, built: 5, reused: 6, noun: 7, ended: 8, clue: 9, rooms: 10,
@@ -42,9 +42,9 @@ const SLOTS = { R: 'the Kharum Hills', P: 'the Khazrim', K: 'dwarves', N: 'Durna
   T: 'Orth Gate', O: '1', Q: 'Haldan', Y: 'Haldan, a scholar, will pay well for it.', D: '87 pennies' };
 const fill = (s, slots) => s.replace(/%(.)/g, (m, c) => (c in slots ? slots[c] : m));
 
-// A goal block's lines made a theme (its slots filled, a header and strata round them) and compiled: throws if
-// they're not a theme's
-function checkGoal(g, lines, beasts) {
+// A goal block's lines made a theme (its slots filled, a header and strata round them): its { name, text }, for themec;
+// throws if its other lines aren't as they should be
+function checkGoal(g, lines) {
   const things = lines.filter(l => l.key === 'thing');
   const a = things.find(l => l.v[0] === 'a'), b = things.find(l => l.v[0] === 'b');
   const slots = Object.assign({}, SLOTS, a ? { a: a.v[2], A: g.v[0] === 'through' ? SLOTS.A : fill(a.v[1], SLOTS) } : {},
@@ -55,9 +55,6 @@ function checkGoal(g, lines, beasts) {
   for (const t of things) out.push('kind | ' + t.v.slice(2).join(' | '));
   for (const l of lines) if (THEME_KEYS.includes(l.key)) out.push(l.key + ' | ' + fill(l.v.join(' | '), slots));
   if (g.v[0] === 'through') out.push('goal | through | the Far Door | 2 | -');
-  const r = dq0.compile(out.join('\n'), 'goals.txt (' + g.v[0] + ', line ' + g.n + ')', beasts, 1);
-  const faults = dq0.check(r.t, beasts, 'goals.txt (' + g.v[0] + ')');
-  if (faults.length) throw new Error(faults.join('\n'));
   if (!lines.some(l => l.key === 'title') || !lines.some(l => l.key === 'called')) throw new Error('goals.txt: line ' + g.n + ': no title or no called');
   if (g.v[3] !== undefined && g.v[3] !== 'heard') throw new Error('goals.txt: line ' + g.n + ': its fourth value heard, or none');
   // Its reasons (the plan's step 7): each a name, the rumour's words (no slot but %R and %Q: the rest aren't made till the
@@ -75,10 +72,10 @@ function checkGoal(g, lines, beasts) {
     if (whys.filter(x => x.v[0] === w.v[0]).length > 1) bad('its name twice in the kind');
     if (w.v[0].length > 11 || /\s/.test(w.v[0])) bad('its name: a word, 11 letters at most');
   }
+  return { name: 'goals.txt (' + g.v[0] + ', line ' + g.n + ')', text: out.join('\n') };
 }
 
-function build({ dir, objdir, say = () => {} }) {
-  const beasts = dq0.bestiary(path.join(dir, '..', 'dq0'));
+function build({ dir, objdir, bios, say = () => {} }) {
   const hist = read(dir, 'history.txt'), goals = read(dir, 'goals.txt');
   const need = { people: 7, land: 5, work: 3, name: 3, built: 2, reused: 2, noun: 2, ended: 2, clue: 10, rooms: 9,
     uses: 13, light: 2, folk: 2, now: 2, open: 1, ago: 1 };
@@ -91,14 +88,15 @@ function build({ dir, objdir, say = () => {} }) {
   for (const w of WORKS.slice(0, 6)) for (const k of ['built', 'reused', 'noun', 'clue'])
     if (!hist.some(l => l.key === k && l.v[0] === w)) throw new Error(`history.txt: no ${k} line for ${w}`);
   // The goal kinds: each block held to a theme's
+  const themes = [];
   let at = -1;
   goals.forEach((l, i) => {
     if (l.key === 'goal') {
-      if (at >= 0) checkGoal(goals[at], goals.slice(at + 1, i), beasts);
+      if (at >= 0) themes.push(checkGoal(goals[at], goals.slice(at + 1, i)));
       at = i;
     } else if (!(l.key in KEYS) && !THEME_KEYS.includes(l.key)) throw new Error(`goals.txt: line ${l.n}: no key ${l.key}`);
   });
-  if (at >= 0) checkGoal(goals[at], goals.slice(at + 1), beasts);
+  if (at >= 0) themes.push(checkGoal(goals[at], goals.slice(at + 1)));
   // The bestiary: each kind's key, styles, strata, group, lairs, faction; each faction's attitude and others
   const lines = f => fs.readFileSync(path.join(dir, '..', 'dq0d', f), 'latin1').split(/\r?\n/)
     .filter(l => l.trim() && !l.startsWith('#')).map(l => l.split('|').map(s => s.trim()));
@@ -108,6 +106,9 @@ function build({ dir, objdir, say = () => {} }) {
   // The files: themegen.dat, all of it, and bestiary.dat, the bestiary's lines alone (themec's, for its checker)
   const n = writeData(out, path.join(objdir, '..', 'themegen.dat'), 320);
   writeData(out.filter(l => l.key === 'beast' || l.key === 'faction'), path.join(objdir, '..', 'bestiary.dat'), 64);
+  // The goal kinds' themes compiled and checked by themec (built before this; its checker's bestiary.dat just written)
+  const bad = require('../../tools/themec.js').compile(themes, { out: false, bios }).filter(t => t.status);
+  if (bad.length) throw new Error('the theme compiler (themec):\n  ' + bad.map(t => t.name + ': ' + t.said).join('\n  '));
   return { lines: out.length, text: n };
 }
 

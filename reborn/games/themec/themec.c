@@ -1,9 +1,10 @@
 /*
 ** themec.c - Dingus Quest Zero's theme compiler (Phase 3D): a theme (its file, in the format ../dq0/themes/
 ** 1crypt.txt has: one written by hand, or themegen's) compiled into its record (comp.c: theme.h's struct theme and
-** its words, as ../dq0/make.js's compile makes it; the tests hold the two to the same bytes) and checked (the theme
-** checker: every goal reachable, every faction placed).  themegen runs it in its own place (exec) to make a game's
-** theme.dat from its theme.txt; from the shell, a hand-written theme is tried with it.
+** its words) and checked (the theme checker: every goal reachable, every faction placed): the game's one theme compiler.
+** themegen runs it in its own place (exec) to make a game's theme.dat from its theme.txt; from the shell, a hand-written
+** theme is tried with it; the build runs it in the emulator (../../tools/themec.js) for the stand-in themes (dq0t.dat)
+** and the goal kinds, and the tests for what was compiled on the Hydra.
 **
 ** themec [-o record] [-l lib] [-q] theme
 **   -o record  the record written there (a game's theme.dat); without it, the theme only checked

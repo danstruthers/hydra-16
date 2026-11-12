@@ -6,12 +6,10 @@ const fs = require('fs');
 const path = require('path');
 const { card, typed } = require('../../lib/common.js');
 const {
-  xdBytes, saidTheme, DQ0_MAKE, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, O_WAY_OUT, O_NOWHERE, stratumRec,
+  xdBytes, saidTheme, DQ0_MAKE, THEMEC, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, O_WAY_OUT, O_NOWHERE, stratumRec,
   dq0Made, dq0Story, dq0Turns, dq0Ev, dq0Rep, dq0Need, dq0Carried, dq0Here, DQ0_I, dq0Typed, dq0Poke
 } = require('../../lib/dq0.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
-
-const DQ0_BEASTS = () => DQ0_MAKE().bestiary(path.join(TESTS, '..', 'games', 'dq0'));
 
 module.exports = {
   tests: [
@@ -111,7 +109,8 @@ module.exports = {
         const story1 = words(between('% dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/b', 'enters the dungeon'));
         if (!story1.includes(why1.v[2] + ', a collector of old things, has promised good money for the Cup of')) f.push('the reason not told in the story: ' + story1.slice(-300));
         if (/came down to try|came down to find it/.test(story1)) f.push('"you came down to ..." still told');
-        try { DQ0_MAKE().compile(t1, 'theme.txt', DQ0_BEASTS(), 1); } catch (e) { f.push('its theme.txt isn\'t a theme: ' + e.message); }
+        const c1 = THEMEC([{ name: 'theme.txt', text: t1 }])[0];
+        if (c1.status) f.push('its theme.txt isn\'t a theme: ' + c1.said);
         const acct = words(between('% dq0 -p t -d /ram/b', 'The place\'s history'));
         if (!acct.includes(words(rw1.v[3]))) f.push('the reward not told: ' + words(rw1.v[3]));
         if (!acct.includes('pays you ' + rw1.v[0] + ' pennies')) f.push('not paid ' + rw1.v[0] + ' pennies');
@@ -195,15 +194,13 @@ module.exports = {
       expect: ['seed     | 3', 'region   | the ', 'era      | ', 'layer    | ', 'faction  | ', 'goal     | ', 'story    | Under the',
         '% cmp /ram/a/theme.dat /ram/b/theme.dat\n% echo $status\n\n', '% echo done\ndone\n'],
       check(m, out) {
-        const f = [], text = saidTheme(out, 'themegen -s 3'), dq0 = DQ0_MAKE(), beasts = DQ0_BEASTS();
-        let r;
-        try { r = dq0.compile(text, 'themegen -s 3', beasts, 1); } catch (e) { return ['its theme isn\'t one: ' + e.message]; }
-        f.push(...dq0.check(r.t, beasts, 'themegen -s 3'));
+        const f = [], text = saidTheme(out, 'themegen -s 3'), dq0 = DQ0_MAKE(), r = THEMEC([{ name: 'themegen -s 3', text }])[0];
+        if (r.status) return ['its theme isn\'t one, or fails the theme checker: ' + r.said];
         const dat = xdBytes(out, 'xd /ram/a/theme.dat');
         if (dat.length !== dq0.THEME_SIZE) f.push('theme.dat: ' + dat.length + ' bytes, not ' + dq0.THEME_SIZE);
-        else for (let i = 0; i < dat.length; i++) if (dat[i] !== r.data[i]) { f.push('theme.dat: byte ' + i + ' is ' + dat[i] + ', make.js\'s ' + r.data[i]); break; }
+        else for (let i = 0; i < dat.length; i++) if (dat[i] !== r.data[i]) { f.push('theme.dat: byte ' + i + ' is ' + dat[i] + ', themec\'s ' + r.data[i]); break; }
         if (/^\s+\S/m.test(text.split('\n').filter(l => /^[a-z]/.test(l)).join('\n'))) f.push('a line not in the theme format');
-        this.notes = [(text.match(/^theme +\| (.*)/m) || [])[1] + ': ' + text.split('\n').filter(l => /^[a-z]/.test(l)).length + ' lines, ' + (r.used - dq0.HEAD) + ' bytes of words'];
+        this.notes = [(text.match(/^theme +\| (.*)/m) || [])[1] + ': ' + text.split('\n').filter(l => /^[a-z]/.test(l)).length + ' lines, ' + r.words + ' bytes of words'];
         return f;
       },
       sdcard: true
@@ -237,12 +234,12 @@ module.exports = {
       expect: ['the Crypt of the Dead King: ', 'the Drowned Temple: ', 'the Kobold Warren: ', 'the theme checker: no rule that opens the way out can be done', 'the theme checker: no way out: neither wayin nor wayout', 'the theme checker: no ending for leaving',
         'the theme checker: kobolds: none of its kinds lives in its strata', '% echo $status\n1\n'],
       check(m, out) {
-        const f = [], dq0 = DQ0_MAKE(), beasts = DQ0_BEASTS();
-        for (const n of ['1crypt', '2temple', '3warren']) {
-          const r = dq0.compile(fs.readFileSync(path.join(TESTS, '..', 'games', 'dq0', 'themes', n + '.txt'), 'latin1'), n, beasts, 1).data;
+        const f = [], built = DQ0_MAKE().standIns(path.join(TESTS, '..', 'obj', 'games'));
+        for (const [k, n] of ['1crypt', '2temple', '3warren'].entries()) {
+          const r = built[k];
           const dat = xdBytes(out, 'xd /ram/' + n + '.dat');
           if (dat.length !== r.length) { f.push(n + ': ' + dat.length + ' bytes, not ' + r.length); continue; }
-          for (let i = 0; i < r.length; i++) if (dat[i] !== r[i]) { f.push(n + ': byte ' + i + ' is ' + dat[i] + ', make.js\'s ' + r[i]); break; }
+          for (let i = 0; i < r.length; i++) if (dat[i] !== r[i]) { f.push(n + ': byte ' + i + ' is ' + dat[i] + ', the build\'s ' + r[i]); break; }
         }
         return f;
       },
@@ -258,7 +255,7 @@ module.exports = {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\r/g, ''), f = [], dq0 = DQ0_MAKE();
         const text = saidTheme(out, 'cat /ram/h/d1/theme.txt');
         let r;
-        try { r = dq0.compile(text, 'theme.txt', DQ0_BEASTS(), 1); } catch (e) { return ['its theme.txt isn\'t a theme: ' + e.message]; }
+        if ((r = THEMEC([{ name: 'theme.txt', text }])[0]).status) return ['its theme.txt isn\'t a theme: ' + r.said];
         const words = s => s.replace(/\s+/g, ' ').trim(), name = (text.match(/^theme +\| (.*)/m) || [])[1] || '?';
         const story = words(r.data.toString('latin1', r.data.readUInt16LE(776), r.data.indexOf(0, r.data.readUInt16LE(776))));
         const game = words(o.slice(o.indexOf('history is being made'), o.indexOf('enters the dungeon.')));
@@ -418,7 +415,8 @@ module.exports = {
       expect: ['% echo done\ndone\n'],
       check(m, out) {
         const T = dq0Turns(m), f = [], text = saidTheme(out, 'cat /ram/y/d1/theme.txt'), keyed = k => text.split('\n').filter(l => l.startsWith(k.padEnd(9) + '|'));
-        try { DQ0_MAKE().compile(text, 'theme.txt', DQ0_BEASTS(), 1); } catch (e) { f.push('its theme.txt isn\'t a theme: ' + e.message); }
+        const c = THEMEC([{ name: 'theme.txt', text }])[0];
+        if (c.status) f.push('its theme.txt isn\'t a theme: ' + c.said);
         const want = { theme: ['theme    | the Pit of Echoes'], region: ['region   | the Grey Fells | hills | granite | springs | cold'],
           stratum: ['stratum  | the Upper Pit | bx | keep', 'stratum  | the Echoing Deep | n'] };
         for (const [k, w] of Object.entries(want)) if (keyed(k).join('\n') !== w.join('\n')) f.push('its ' + k + ' lines not the ones given: ' + keyed(k).join(' / '));

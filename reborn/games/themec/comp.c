@@ -1,7 +1,8 @@
 /*
 ** comp.c - (themec) a theme's lines compiled into its record (theme.h's struct theme, then its words: THEME_SIZE
-** bytes, R), a line at a time as they're written, as ../dq0/make.js's compile makes it from its file (the tests hold
-** the two to the same bytes); and the theme checker (make.js's check: every goal reachable, every faction placed).
+** bytes, R), a line at a time as they're written: the game's one theme compiler (the build runs it in the emulator,
+** tools/themec.js, for the stand-ins' dq0t.dat and the goal kinds); and the theme checker (every goal reachable, every
+** faction placed).
 */
 
 #include <stdlib.h>
@@ -137,7 +138,7 @@ static unsigned __fastcall__ pounds (const char* s, unsigned max)
 
 /* A kind's line: name, ways, weight (pounds), bulk (pints), how far off it's made out (feet, in fives: the map's
 ** squares), material, craft, worth (pennies, to a farthing: 2.25); a container's room (pints) and the weight it
-** bears (pounds): rs.h's units made of them (the worth farthings), as make.js makes them */
+** bears (pounds): rs.h's units made of them (the worth farthings) */
 static void __fastcall__ kind_line (struct line* l)
 {
     char** v = l->v;
@@ -420,7 +421,7 @@ const char* __fastcall__ comp_line (struct line* l)
             err = "escape, rule or both";
         }
     } else if (!strcmp (k, "start")) {          /* (How the character came in: walked, or fell, TM_FELL: its bearings,
-                                                **   slice 4.2's; make.js holds a stand-in's to the two words) */
+                                                **   slice 4.2's: the two words) */
         R[1] |= *v[0] == 'f' ? TM_FELL : 0;
     } else if (!strcmp (k, "wayin")) {          /* (The way in open behind it: TM_OPEN) */
         R[1] |= TM_OPEN;
@@ -557,7 +558,7 @@ const char* comp_end (void)
         }
     }
     for (k = 0; k < TUSES; ++k) {
-        if (!T->uses[k][0]) {                   /* (By the struct's fields: make.js's numbers move with it) */
+        if (!T->uses[k][0]) {                   /* (By the struct's fields) */
             put (uses[k], (unsigned char*) T->uses[k] - R, sizeof T->uses[0]);
         }
     }
