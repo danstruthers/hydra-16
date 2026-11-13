@@ -409,9 +409,28 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
         'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'drop the torch', 'hold the pick', 'break the door', 'break', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k pick',
         'drop the torch', 'hold the pick', 'break the door']) +
-        'ĀĀĀĀĀstop digging\rstop battering\r' + dq0Typed(['break', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k pick', 'drop the torch', 'break the door ahead with the pick', 'quit',
+        'stop digging\rstop battering\r' + dq0Typed(['break', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k pick', 'drop the torch', 'break the door ahead with the pick', 'quit',
         'dq0 -p t -s 14 -c /ram/c.hm', 'punch the door', 'punch the door', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k \'knee boots\'', 'wear the knee boots',
         'kick the door', 'quit', 'dq0 -p t -s 15 -c /ram/c.hm', 'kick the door ahead to my left', 'quit', 'echo $status']) },
+      start(m) {
+        // (The stop typed as the blows are told, not at a fixed gap after "break the door" (2026-11-13: the gap's
+        // blows as the timing had them, the stop a blow either side of the door's giving): the lines after it held
+        // till "You keep at it." (its fourth blow's words), then typed as they were)
+        const a = m.acia, read = a.read;
+        let g = 0, typed = '', held = null;
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (/^dq0 /.test(typed)) ++g;
+              if (g === 2 && typed === 'break the door' && !held) held = a.rxQueue.splice(0);
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+        dq0OnWords(m, [{ g: 2, line: 'break the door', n: 1, words: 'You keep at it.', call: () => { a.rxQueue.unshift(...held); a.promptFrom = -1; } }]);
+      },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], tasks = m.dq0.games.flatMap(g => g.tasks);
