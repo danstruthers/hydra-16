@@ -17,6 +17,8 @@
 #            its line here only keeps the places' order)
 #   month    the months' names (the book's calendar's)
 #   little   the little words off the front of what a command names ("sell my dagger", "haggle for the rope")
+#   nth, count   which of the town's traders (or smiths) is dealt with today, and how many there are ("Today you deal with
+#            the second of Velmor's four traders.": a town with more than one, price.h's)
 kind     | a market town on a river. | big
 kind     | a hill town of grey stone.
 kind     | a walled town at a crossroads. | big
@@ -59,4 +61,6 @@ prompt   | Whose offer will you take? (a number; Enter to go back)
 prompt   | (the scholar's house: its own)
 prompt   | Which will you follow? (a number; Enter the first)
 month    | Nuzyael | Peonu | Kelen | Nolus | Larane | Agrazhar | Azura | Halane | Savor | Ilvin | Navek | Morgat
+nth      | first | second | third | fourth | fifth | sixth
+count    | one | two | three | four | five | six
 little   | the | a | an | my | some | for | over | about | on | with | of | much | will | you | give | me | is | are | to | at | this | that | these | those | all

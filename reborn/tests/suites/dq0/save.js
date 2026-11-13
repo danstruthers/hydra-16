@@ -417,7 +417,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0scholar', outfit: true, near: ['save', 'money', 'body', 'theme'], what: "Dingus Quest Zero's scholar's house in the town between two dungeons (the plan's step 12: games/dq0schol, run by dq0town; HOUSE.md's the scholar's house), by scenes (the rc variable dq0sg setting a scribe's Morality and its grade, a week's, a skill's): a scribe who reads ostari and sunglyph carries the Cup of Rowon's journal out unread (seed 70000, its copy too), and in the town (the player asked) studies it in the library, a penny a day, a test a week, four failed weeks: a piece of it, heard.txt's rumour a piece's, the month's practice on sunglyph first; the journal then read by sages (its tongue's old form, 26 centuries: a sage's, three times a scribe's day, only in a big town), each grade's reading told and none its grade (a success's place; a failure's as confident, its land right and another realm; a critical failure's another place and reason; a critical success's line more: whose hand, how old, the road), a better reading the clue's and heard.txt's rumour, a worse one undoing nothing; a second opinion asked at once, an unscrupulous one's half again, the copy it sold on talked of in the street at the next visit; a diabolical one's wrong reading told of the copy; Astrology asked once, its centuries the clue's; a small town with no sage for it, a master teaching only ardic; a soldier with no script taught ardic by a master in the town's real menu, a month, 84d: its sheet's script ardic at 70 + its skill base, the month's practice forfeit; and the tongues' store (the referee's, 56 bytes till now): a sheet with eight tongues and scripts past its own read and written back whole, a ninth refused aloud, and a master refusing a ninth",
+      name: 'dq0scholar', outfit: true, near: ['save', 'money', 'body', 'theme'], what: "Dingus Quest Zero's scholar's house in the town between two dungeons (the plan's step 12: games/dq0schol, run by dq0town; HOUSE.md's the scholar's house), by scenes (the rc variable dq0sg setting a scribe's Morality and its grade, a week's, a skill's): a scribe who reads ostari and sunglyph carries the Cup of Rowon's journal out unread (seed 70000, its copy too), and in the town (the player asked) studies it in the library, a penny a day, a test a week, four failed weeks: a piece of it, heard.txt's rumour a piece's, the month's practice on sunglyph first; the journal then read by sages (its tongue's old form, 26 centuries: a sage's, three times a scribe's day as the day's sage of the town's asks it (price.h's: 10d here), only in a big town), each grade's reading told and none its grade (a success's place; a failure's as confident, its land right and another realm; a critical failure's another place and reason; a critical success's line more: whose hand, how old, the road), a better reading the clue's and heard.txt's rumour, a worse one undoing nothing; a second opinion asked at once, an unscrupulous one's half again, the copy it sold on talked of in the street at the next visit; a diabolical one's wrong reading told of the copy; Astrology asked once, its centuries the clue's; a small town with no sage for it, a master teaching only ardic; a soldier with no script taught ardic by a master in the town's real menu, a month, the day's master's price (price.h's: 83d here, the base 84d): its sheet's script ardic at 70 + its skill base, the month's practice forfeit; and the tongues' store (the referee's, 56 bytes till now): a sheet with eight tongues and scripts past its own read and written back whole, a ninth refused aloud, and a master refusing a ninth",
       init: 't_rc', cycles: 14000e6,
       machine: { input: (() => {
         const L = '/sd/0/games/lib/dq0', S = d => '/sd/0/games/lib/acct/dq0schol -d /ram/' + d + ' -l ' + L + ' -t Velmor';
@@ -474,7 +474,7 @@ module.exports = {
         // A second opinion at once: another sage, half again (unscrupulous); the copy it sold on talked of at the next visit
         const g3 = sect('G3'), asks = [...g3.matchAll(/(\w+), a sage, keeps the journal (\d) days? and asks (\d+)d/g)];
         if (asks.length !== 2 || asks[0][1] === asks[1][1]) f.push('no second opinion from another: ' + g3.slice(0, 900));
-        else if (+asks[0][3] !== 9 * asks[0][2] || +asks[1][3] !== 14 * asks[1][2]) f.push('a sage\'s day not 9d, an unscrupulous one\'s not 14d: ' + asks.map(x => x[0]).join(' / '));
+        else if (+asks[0][3] !== 10 * asks[0][2] || +asks[1][3] !== 15 * asks[1][2]) f.push('a sage\'s day not 10d (this town\'s, price.h\'s), an unscrupulous one\'s not 15d: ' + asks.map(x => x[0]).join(' / '));
         const lie = sect('LIE');
         if (!/Your writings: 1 a copy of the journal\. There's talk in the street of an old journal like yours: someone has been selling copies of it\./.test(lie)) f.push('the copy sold on not talked of: ' + lie.slice(0, 500));
         if (!lie.includes('It tells of ' + p0 + ', where the Houshani ' + r0 + '.')) f.push('a diabolical sage\'s reading not the wrong one: ' + lie.slice(lie.indexOf('> read'), lie.indexOf('> read') + 500));
@@ -489,7 +489,7 @@ module.exports = {
         if (!sm.includes('No master in Velmor teaches that: a bigger town\'s might.')) f.push('a small town taught starric');
         // A master's month: ardic opened, the sheet's, no practice that month
         const t = sect('TEACH'), ml = /you can read and write it now \(ardic (\d+)\)/.exec(t);
-        if (!/You study ardic for a month with Master \w+ \(84d\)/.test(t) || !ml) f.push('the soldier not taught ardic: ' + t.slice(t.indexOf('learn ardic'), t.indexOf('learn ardic') + 500));
+        if (!/You study ardic for a month with Master \w+ \(83d\)/.test(t) || !ml) f.push('the soldier not taught ardic: ' + t.slice(t.indexOf('learn ardic'), t.indexOf('learn ardic') + 500));
         if (!ml || !new RegExp('script ardic=' + ml[1] + ' ').test(t.slice(t.lastIndexOf('cat /ram/b/pc.hm')))) f.push('ardic not on the sheet at its mastery: ' + t.slice(t.lastIndexOf('cat /ram/b/pc.hm')));
         if (ml && +ml[1] < 70) f.push('ardic under 70 + its skill base: ' + ml[1]);
         if (!/Your time in \w+ comes to 31 days\./.test(t) || /You practise for/.test(t)) f.push('the month with a master not the month\'s practice: ' + t.slice(t.indexOf('Your time'), t.indexOf('Your time') + 400));
@@ -790,15 +790,15 @@ module.exports = {
         if (!/> haggle for a torch (The trader takes offence|The trader won't move on the price|You talk the price round a little|You talk the price round a good deal)/.test(town)) f.push('no haggling: ' + town.slice(town.indexOf('> haggle'), town.indexOf('> haggle') + 300));
         // The null's rules in its scholar's house: its own lore at its flat chance, a script opened with no mastery
         if (!/> folklore 1 You spend a day in the library over it \(1d\)\./.test(town)) f.push('the folklore not the character\'s own (the null\'s flat chance): ' + town.slice(town.indexOf('> folklore'), town.indexOf('> folklore') + 300));
-        if (!/You study ardic for a month with Master [A-Z][a-z]+ \(84d\): you can read and write it now\./.test(town)) f.push('ardic not taught with no mastery: ' + town.slice(town.indexOf('> learn'), town.indexOf('> learn') + 400));
+        if (!/You study ardic for a month with Master [A-Z][a-z]+ \(83d\): you can read and write it now\./.test(town)) f.push('ardic not taught with no mastery: ' + town.slice(town.indexOf('> learn'), town.indexOf('> learn') + 400));
         if (!/\nscript ardic\n/.test(sheet) || /script ardic=/.test(sheet)) f.push('the sheet not given "script ardic", no figure: ' + sheet.slice(-300));
         // A sage set to Morality 4 and a success: the null's honest, HarnMaster's diabolical
         const sage = s => /a sage, keeps the journal (\d+) days? and asks (\d+)d(?: (\d)f)?; then reads it to you: .*? It tells of ([^,]+), where/.exec(s);
         const a = sage(nul), b = sage(harn);
         if (!a || !b) return f.concat(['no sage\'s reading: ' + nul.slice(0, 600) + ' / ' + harn.slice(0, 600)]);
         const fa = +a[2] * 4 + +(a[3] || 0), fb = +b[2] * 4 + +(b[3] || 0);
-        if (a[1] !== b[1] || fa !== +a[1] * 9 * 4) f.push('the null\'s sage not a sage\'s price (9d a day): ' + a[0]);
-        if (fb !== 56 * +b[1]) f.push('HarnMaster\'s diabolical sage not half again: ' + a[0] + ' / ' + b[0]);
+        if (a[1] !== b[1] || fa !== +a[1] * 10 * 4) f.push('the null\'s sage not a sage\'s price (this town\'s, price.h\'s: 10d a day): ' + a[0]);
+        if (fb !== 60 * +b[1]) f.push('HarnMaster\'s diabolical sage not half again: ' + a[0] + ' / ' + b[0]);
         if (a[4] === b[4]) f.push('the null\'s honest reading the same place as HarnMaster\'s wrong one: ' + a[4]);
         this.notes = [a[0], b[0]];
         return f;

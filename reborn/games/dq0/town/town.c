@@ -18,15 +18,16 @@
 **   the inn          a day; what's said (the rumours heard, rumours.txt and heard.txt, the account's, the plan's step 7; listening, once,
 **                    one more: themegen -r 4 -a, the same rumour -r 4 makes); rest, the days asked
 **   the market       a day; buy, sell, haggle, asked the price: the game's prices (HOUSE.md's the market: whole worth to buy, half by
-**                    its condition to sell; haggling, a quarter or a tenth, never past two thirds)
-**   the smith        a day; mend, whet (the account's prices: goods.h's), a new blade
+**                    its condition to sell; haggling, a quarter or a tenth, never past two thirds), the worth to buy as the
+**                    day's trader asks it (price.h's: one of the town's, each its own, 85 hundredths at least)
+**   the smith        a day; mend, whet (the account's prices: goods.h's), a new blade: as the day's smith asks them
 **   who's asking     a day; the patrons among the rumours (a why line's, not a stranger's find), an offer taken: set out for it
 **   the scholar's    a day; a program of its own (its ruleset's link of ./schol.c, TOWN_SCHOL: the plan's step 12: a writing read by a scribe or a sage, studied in
 **                    the library, a master's month, the other skills), run with what it needs, the record (between.dat)
 **                    handed to it and back
 **   leave for        the places heard of, each its road and days; one followed (quest.txt, the account's own way)
 ** Its tests (haggling, listening) are the ruleset's (meta_test, by the knack's chance in the record: a grade, rs.h's G_*); the rest
-** (the prices, a grade's worth in a haggle, the days) the house's.
+** (the prices, a grade's worth in a haggle, the days) the house's; the sellers' own prices the town's (price.h).
 ** What's done is the player's: the account (dq0acct) leaves alone what it saw to here (the market seen, nothing more sold or bought
 ** for it; the smith, nothing more mended or whetted), and does the rest as ever (selling, mending, restocking "just happen", the
 ** user's Q7).  Written: kit.dat (its things and money), quest.txt (the place followed), the record (between.dat: the days, what
@@ -186,6 +187,17 @@ static void __fastcall__ say_one (const char* key)
         big |= nv > 1;
     }
 }
+
+/* ---- The town's sellers: its traders and smiths, each its own prices (price.h's), one of them dealt with a day (its code the
+** overlay's: OV, its numbers in main RAM) */
+
+#pragma code-name (push, "OV1CODE")
+#pragma rodata-name (push, "OV1RODATA")
+#include "price.h"
+#pragma rodata-name (pop)
+#pragma code-name (pop)
+
+static unsigned char fac = 100;                 /* (The day's seller's hundredths: the market's or the smith's) */
 
 /* ---- The rumours (heard.txt's first, then rumours.txt's, the account's quest.c's way: four at most here, listening's one more) */
 
@@ -446,7 +458,8 @@ static unsigned char __fastcall__ haggled (unsigned char kind, unsigned char sel
 static unsigned long __fastcall__ buy_price (unsigned char kind, unsigned char n)
 {
     unsigned char h = haggled (kind, 0);
-    unsigned long v = (unsigned long) CAT[kind].value * n;
+    unsigned long v = ((unsigned long) CAT[kind].value * fac + 50) / 100 * n;   /* (One at the day's seller's price, to the
+                                                **   farthing) */
 
     if (h != 0xFF) {
         if (!hp[h]) {
@@ -768,10 +781,16 @@ static void __fastcall__ haggle_for (const char* w, const char* key)
     }
 }
 
-/* The smith: what wants seeing to, its prices; mending and whetting (the account's prices: goods.h's) */
+/* The smith: what wants seeing to, its prices; mending and whetting (the account's prices: goods.h's, as the day's smith asks
+** them) */
 static unsigned char __fastcall__ wants_smith (unsigned char i)
 {
     return !gone[i] && owed (&K[i]);
+}
+
+static unsigned long __fastcall__ smith_price (unsigned char i)
+{
+    return rounded (owed (&K[i]) * fac / 100, 1);
 }
 
 static void smith_list (void)
@@ -783,7 +802,7 @@ static void smith_list (void)
             say (any ? "; your " : "Your ");
             say (CAT[K[k].o.kind].name);
             say (mend_price (&K[k]) ? " wants mending, " : " wants whetting, ");
-            amount (rounded (owed (&K[k]), 1));
+            amount (smith_price (k));
             any = 1;
         }
     }
@@ -806,7 +825,7 @@ static void __fastcall__ mend (const char* w, unsigned char whet)
             say (" wants mending, not only whetting.\n");
             continue;
         }
-        p = rounded (owed (&K[k]), 1);
+        p = smith_price (k);
         if (p > cash) {
             say ("You haven't the money for your ");
             say (CAT[K[k].o.kind].name);
@@ -978,6 +997,26 @@ static unsigned char here;                        /* (Where it is: TOWN_*) */
 /* Into place p: its day (each visit), its words (the scholar's house, first its first command: "" none) */
 static const char* first = "";
 
+/* The day's trader (p TOWN_MARKET) or smith (TOWN_SMITH): its prices (85 hundredths at least: never under what the market
+** gives, haggled, so nothing's made buying of one and selling to another), and which it is where there's more than one */
+static void __fastcall__ deal (unsigned char p)
+{
+    OV (fac = local (p - 1));                   /* (PT_TRADER, PT_SMITH) */
+    KINDS ();
+    fac = fac < 85 ? 85 : fac;
+    if (pr_n > 1) {
+        say ("Today you deal with the ");
+        words_of ("nth", 0);
+        say (v[pr_at]);
+        say (" of ");
+        say (town);
+        say ("'s ");
+        words_of ("count", 0);
+        say (v[pr_n - 1]);
+        say (p == TOWN_MARKET ? " traders.\n" : " smiths.\n");
+    }
+}
+
 static void __fastcall__ go (unsigned char p)
 {
     static const char* const keys[] = { 0, "inn", "market", "smith", "asking" };
@@ -1004,10 +1043,12 @@ static void __fastcall__ go (unsigned char p)
         break;
     case TOWN_MARKET:
         tr.seen |= TS_MARKET;
+        deal (p);
         goods_say ("goods", "For sale: ");
         break;
     case TOWN_SMITH:
         tr.seen |= TS_SMITH;
+        deal (p);
         smith_list ();
         break;
     case TOWN_ASKING:

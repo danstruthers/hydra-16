@@ -20,7 +20,8 @@
 **   hired reader's skill and honesty.  The town (games/dq0/town/town.c) and the scholar's house (schol.c) are the
 **   engine's, each linked once per ruleset with these, as the account is (DECISIONS.md's "The town and the scholar's
 **   house: the ruleset's hooks"): HarnMaster's dq0town and dq0schol (../dq0harn/meta), the null's dq0ntown and dq0nschol
-**   (../dq0null/meta).  meta_test is a file of its own (test.c), so the town links it alone.
+**   (../dq0null/meta).  meta_test is a file of its own (test.c), so the town links it alone; meta_price, the prices'
+**   base (the town's sellers' own round it: ../dq0/town/price.h), is in it too.
 */
 
 #ifndef _RSMETA_H
@@ -83,7 +84,7 @@ unsigned char __fastcall__ meta_taught (unsigned char mk);  /* What a master's m
                                                 **   script (MK_SCRIPT) at, by the character's own aptitude; 0 opened with
                                                 **   no mastery (a ruleset with none: its sheet's line the name alone) */
 
-/* ---- The town's and the scholar's house's rules */
+/* ---- The town's and the scholar's house's rules, and their prices */
 
 signed char __fastcall__ meta_test (int chance);    /* A test at chance (a knack in the town's record, a mastery, a hired
                                                 **   reader's skill, its steps added: 0-100 and past either end): its grade,
@@ -97,5 +98,10 @@ enum { MH_LIES, MH_DEAR, MH_SELLS, MH_HONEST }; /* (A hired reader's honesty, wo
 unsigned char __fastcall__ meta_honest (unsigned char set); /* A hired reader's honesty (MH_*): set a figure a test's
                                                 **   scene gave (the rc variable dq0sg's, in the ruleset's own scale), 0xFF
                                                 **   none: the ruleset's dice */
+enum { MP_SCRIBE, MP_DEAD, MP_MASTER, MP_SAGE, MP_LIBRARY, NMP };  /* (The scholar's house's prices: a scribe's working day,
+                                                **   pence; a dead tongue's sage's, so many times that; a master's month; a
+                                                **   sage's day asked one of the other skills; the library's day) */
+extern const unsigned char meta_price[NMP];     /* Their base, the ruleset's (test.c's, so the town links it too): each
+                                                **   seller's own round it, the town's (../dq0/town/price.h) */
 
 #endif

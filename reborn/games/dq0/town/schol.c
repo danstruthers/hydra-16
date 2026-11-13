@@ -21,7 +21,9 @@
 ** scholar.txt beside it, and below.  The same life's seed and the same commands, the same scholars, prices and readings.
 **   read 1           a scribe reads a writing carried (an old writing, a copy: about 3d a working day, some days); a dead
 **                    tongue's (an ancient writing's, the book's Treasure 8: its tongue's old form) a sage, three times the
-**                    price, only in a big town.  Its roll hidden: the reading told, never its grade (the book's, Skills 5:
+**                    price, only in a big town.  Every price here the ruleset's base (meta_price: HarnMaster's the book's) as
+**                    the day's scribe, sage or master asks it (price.h's: the town's own, each its own), the library's alone
+**                    its base.  Its roll hidden: the reading told, never its grade (the book's, Skills 5:
 **                    "the GM should make the roll secretly"; Skills 20's analysis); asked again, another's reading, a second
 **                    opinion, at the same price.  Its skill and its honesty the ruleset's (meta_hired, meta_honest: HarnMaster's
 **                    its Morality, the book's attribute, 3d6, Character 9's bands): one that sells (MH_SELLS) or worse sells a
@@ -32,11 +34,11 @@
 **                    it's read, four weeks unless it's told ("study 1 for 2 weeks"); the script then the month's practice's
 **                    first (between.dat's study)
 **   learn delvic     a master's month: a script or a tongue opened for good, at the ruleset's mastery (meta_taught: HarnMaster's
-**                    a script at 70 + its skill base, a tongue at its skill base, the book's Skills 11; the null's none), a sage's wage (84d a month, Character 13); the month's
+**                    a script at 70 + its skill base, a tongue at its skill base, the book's Skills 11; the null's none), a sage's wage (meta_price's: HarnMaster's 84d a month, Character 13); the month's
 **                    practice forfeit for it (the book's 30 points, a tongue's whole month)
 **   folklore 1, reckon 1, astrology 1, heraldry 1   the other skills, once each for a writing: the character's own (the ruleset's
 **                    mastery, meta_ml), or a sage's
-**                    (3d), a day; each something true and small of what the clue's record holds (HOUSE.md's)
+**                    (meta_price's: 3d), a day; each something true and small of what the clue's record holds (HOUSE.md's)
 ** A better reading replaces the clue's (the place, the reason, the line more), and heard.txt's rumour with it; a worse one
 ** doesn't undo a better.  Its exit status 0, or 1 (its fault said).
 */
@@ -69,10 +71,7 @@
 #define PENNY           4UL                     /* (Farthings) */
 #define ASKS            40                      /* (The lines typed in a visit at most: the soak's random answers end) */
 #define NCL             9                       /* (The writings told, at most: the latest) */
-#define SCRIBE_DAY      3                       /* (A scribe's working day, pence: the book's 66d a month, Character 13, over 24 days) */
-#define DEAD_TIMES      3                       /* (A dead tongue's sage: three times that, the plan's) */
-#define MASTER_MONTH    84                      /* (A master's month: the book's sage's, 84d, Character 13) */
-#define SAGE_DAY        3                       /* (A sage asked one of the other skills: a day's) */
+#define LIBRARY         meta_price[MP_LIBRARY]  /* (The library's day, pence: the ruleset's; its other prices the sellers', price.h's) */
 
 struct life L;
 static struct between tr;
@@ -85,6 +84,17 @@ static const char* town;
 static char path[96];
 static char ans[64];
 static unsigned char asks;
+
+/* ---- The town's sellers (price.h's): a trade's price today, pence (the ruleset's base, as the day's seller asks it: a penny at
+** least) */
+
+#include "price.h"
+
+static unsigned __fastcall__ priced (unsigned base, unsigned char t)
+{
+    base = (base * local (t) + 50) / 100;
+    return base ? base : 1;
+}
 
 /* ---- The meta programs' library (../dq0/meta/meta.c): the fault said, a path; the words by the console's width, a line
 ** typed (ans: lower case, its spaces trimmed), the console's width */
@@ -607,7 +617,7 @@ static void __fastcall__ hire (unsigned char i)
     h = meta_honest (forced ());                /* (Its honesty: the ruleset's; a scene's figure, if one's set) */
     a_name ();
     days = dead ? dice (2, 4) : die (3);
-    rate = (dead ? DEAD_TIMES * SCRIBE_DAY : SCRIBE_DAY) * PENNY;
+    rate = priced (dead ? meta_price[MP_DEAD] * meta_price[MP_SCRIBE] : meta_price[MP_SCRIBE], dead ? PT_SAGE : PT_SCRIBE) * PENNY;
     if (h <= MH_DEAR) {
         rate = (rate * 3 / 2 + PENNY - 1) / PENNY * PENNY;     /* (Dear: half again, to the penny) */
     }
@@ -675,10 +685,10 @@ static void __fastcall__ study (unsigned char i, unsigned char weeks)
     }
     eml = ((t + s) >> 1) + 5 * cond_at (i);
     for (w = 0; w < weeks && w < 8; ) {
-        if (tr.days + 7 > TOWN_DAYS || cash < 7 * PENNY) {
+        if (tr.days + 7 > TOWN_DAYS || cash < 7 * LIBRARY * PENNY) {
             break;
         }
-        pay (7 * PENNY, 7);
+        pay (7 * LIBRARY * PENNY, 7);
         ++w;
         if ((g = test (eml)) != 1) {
             break;
@@ -688,13 +698,22 @@ static void __fastcall__ study (unsigned char i, unsigned char weeks)
         if (!time_for (7)) {
             return;
         }
-        say ("A week in the library is 7d: you haven't the money.\n");
+        say ("A week in the library is ");
+        sayn (7 * LIBRARY);
+        say ("d: you haven't the money.\n");
         return;
     }
     strncpy (tr.study, script_of (), sizeof tr.study - 1);  /* (The month's practice on it first: the account's) */
     say ("You study the ");
     say (K.thing);
-    say (" in the library, a penny a day");
+    say (" in the library, ");
+    if (LIBRARY == 1) {
+        say ("a penny");
+    } else {
+        sayn (LIBRARY);
+        say ("d");
+    }
+    say (" a day");
     if (g != 1) {
         say (", and in the ");
         say (nth[w - 1]);
@@ -709,7 +728,7 @@ static void __fastcall__ study (unsigned char i, unsigned char weeks)
     say ("That's ");
     sayn (w * 7);
     say (" days, ");
-    sayn (w * 7);
+    sayn (w * 7 * LIBRARY);
     say ("d.\n");
     better (i, g, 0);
 }
@@ -718,6 +737,7 @@ static void __fastcall__ study (unsigned char i, unsigned char weeks)
 static void __fastcall__ learn (const char* w)
 {
     unsigned char n = strcspn (w, " "), sc, k, ml;
+    unsigned m;
     char* e;
 
     sc = among ("scripts", w, n) != 0xFF;
@@ -765,13 +785,14 @@ static void __fastcall__ learn (const char* w)
     if (!time_for (30)) {
         return;
     }
-    if (MASTER_MONTH * PENNY > cash) {
+    m = priced (meta_price[MP_MASTER], PT_MASTER);
+    if (m * PENNY > cash) {
         say ("A master asks ");
-        sayn (MASTER_MONTH);
+        sayn (m);
         say ("d for a month's teaching: you haven't the money.\n");
         return;
     }
-    pay (MASTER_MONTH * PENNY, 30);
+    pay (m * PENNY, 30);
     ml = meta_taught (sc ? MK_SCRIPT : MK_LANGUAGE);    /* (The ruleset's: HarnMaster's the book's, Skills 11; 0 no mastery) */
     e = tr.learnt[k];
     strcpy (e, sc ? "*" : "");
@@ -790,7 +811,7 @@ static void __fastcall__ learn (const char* w)
     say (sc ? " for a month with Master " : " for a month from ");
     say (who);
     say (sc ? " (" : ", who was raised speaking it (");
-    sayn (MASTER_MONTH);
+    sayn (m);
     say (sc ? "d): you can read and write it now" : "d): you speak a little of it now");
     if (ml) {
         say (" (");
@@ -806,6 +827,7 @@ static void __fastcall__ learn (const char* w)
 static void __fastcall__ asked (unsigned char i, unsigned char sk)
 {
     unsigned char own, g, k;
+    unsigned d;
     const char* p;
 
     clue_io (i, 0);
@@ -830,20 +852,21 @@ static void __fastcall__ asked (unsigned char i, unsigned char sk)
     if (!time_for (1)) {
         return;
     }
-    if ((own ? PENNY : SAGE_DAY * PENNY) > cash) {
+    d = own ? LIBRARY : priced (meta_price[MP_SAGE], PT_SAGE);
+    if (d * PENNY > cash) {
         say ("You haven't the money.\n");
         return;
     }
-    pay (own ? PENNY : SAGE_DAY * PENNY, 1);
+    pay (d * PENNY, 1);
     if (own) {
-        say ("You spend a day in the library over it (1d). ");
+        say ("You spend a day in the library over it (");
     } else {
         a_name ();
         say (who);
         say (", a sage, spends a day over it for you (");
-        sayn (SAGE_DAY);
-        say ("d). ");
     }
+    sayn (d);
+    say ("d). ");
     g = test (own ? own : meta_hired (0));
     K.asked |= 1 << sk;
     clue_io (i, 1);
