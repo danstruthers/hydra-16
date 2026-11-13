@@ -770,6 +770,42 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0nulltown', near: ['save', 'money'], what: "Dingus Quest Zero's town and scholar's house under the null ruleset (the user's, 2026-11-13, DECISIONS.md's \"The town and the scholar's house: the ruleset's hooks\": the engine's town and scholar's house, games/dq0/town, linked with the null's rules, games/dq0null/meta, as dq0ntown and dq0nschol, the null account's): seed 70000's artifact and its journal to hand (dq0 -r null -k), walked out solved, carried on with the player asked: its account runs its own town, the inn's listening and the market's haggling tested; the scholar's house its own (a folklore asked of the journal done by the character itself at its flat chance, for a penny: the null ruleset has no masteries, every skill its flat chance; a master's month opening ardic with no mastery, said so, and its sheet's line \"script ardic\", no figure); then the scholar's house run alone, a sage set to the same scene by dq0sg (HarnMaster's Morality 4, a success) under each ruleset: the null's sage honest (no Morality: its price a sage's, the journal read right), HarnMaster's diabolical (half again, a wrong reading told as confidently)",
+      init: 't_rc', cycles: 6000e6,
+      machine: { input: (() => {
+        const L = '/sd/0/games/lib/dq0', S = p => '/sd/0/games/lib/acct/' + p + ' -d /ram/n -l ' + L + ' -t Velmor -b 1 -c 4000 -w 1';
+        return dq0TypedAsk(['bind -a /sd/0/games /bin', 'dq0auto=1', "dq0 -r null -p t -s 70000 -k 'jade cup,journal' -d /ram/n", 'look', 'u', 'dq0auto=()',
+          'echo =TOWN', 'dq0 -r null -p t -d /ram/n', '1', '', '2', 'haggle for a torch', '', 'learn ardic', 'folklore 1', '', '', '', '', 'quit', 'dq0auto=1',
+          'echo =SHEET', 'cat /ram/n/pc.hm', 'rm /ram/n/between.dat',
+          'echo =NULL', "dq0sg='4 2'", S('dq0nschol'), 'read 1', '', 'rm /ram/n/between.dat',
+          'echo =HARN', "dq0sg='4 2'", S('dq0schol'), 'read 1', '', 'dq0sg=()', 'echo =END', 'echo $status']);
+      })() },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\r/g, ''), sect = n => { const i = o.indexOf('% echo =' + n), j = o.indexOf('% echo =', i + 3); return i < 0 ? '' : o.slice(i, j < 0 ? o.length : j).replace(/\s+/g, ' '); };
+        const town = sect('TOWN'), sheet = o.slice(o.indexOf('% echo =SHEET'), o.indexOf('% echo =NULL')), nul = sect('NULL'), harn = sect('HARN');
+        if (/dq0n?(acct|town|schol|ntown|nschol): /.test(o)) f.push('a program failed: ' + (/dq0n?\w+: [^\n]*/.exec(o) || [''])[0]);
+        if (!/Where to\?/.test(town)) return ['no town: ' + town.slice(0, 800)];
+        if (!/You keep your ears open a while\.+ ?(Someone in a corner speaks of one more place|You hear nothing more worth the hearing)/.test(town)) f.push('no listening at the inn: ' + town.slice(town.indexOf('talk of'), town.indexOf('talk of') + 600));
+        if (!/> haggle for a torch (The trader takes offence|The trader won't move on the price|You talk the price round a little|You talk the price round a good deal)/.test(town)) f.push('no haggling: ' + town.slice(town.indexOf('> haggle'), town.indexOf('> haggle') + 300));
+        // The null's rules in its scholar's house: its own lore at its flat chance, a script opened with no mastery
+        if (!/> folklore 1 You spend a day in the library over it \(1d\)\./.test(town)) f.push('the folklore not the character\'s own (the null\'s flat chance): ' + town.slice(town.indexOf('> folklore'), town.indexOf('> folklore') + 300));
+        if (!/You study ardic for a month with Master [A-Z][a-z]+ \(84d\): you can read and write it now\./.test(town)) f.push('ardic not taught with no mastery: ' + town.slice(town.indexOf('> learn'), town.indexOf('> learn') + 400));
+        if (!/\nscript ardic\n/.test(sheet) || /script ardic=/.test(sheet)) f.push('the sheet not given "script ardic", no figure: ' + sheet.slice(-300));
+        // A sage set to Morality 4 and a success: the null's honest, HarnMaster's diabolical
+        const sage = s => /a sage, keeps the journal (\d+) days? and asks (\d+)d(?: (\d)f)?; then reads it to you: .*? It tells of ([^,]+), where/.exec(s);
+        const a = sage(nul), b = sage(harn);
+        if (!a || !b) return f.concat(['no sage\'s reading: ' + nul.slice(0, 600) + ' / ' + harn.slice(0, 600)]);
+        const fa = +a[2] * 4 + +(a[3] || 0), fb = +b[2] * 4 + +(b[3] || 0);
+        if (a[1] !== b[1] || fa !== +a[1] * 9 * 4) f.push('the null\'s sage not a sage\'s price (9d a day): ' + a[0]);
+        if (fb !== 56 * +b[1]) f.push('HarnMaster\'s diabolical sage not half again: ' + a[0] + ' / ' + b[0]);
+        if (a[4] === b[4]) f.push('the null\'s honest reading the same place as HarnMaster\'s wrong one: ' + a[4]);
+        this.notes = [a[0], b[0]];
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0fastkept', near: ['save', 'body'], what: "Dingus Quest Zero's vow of fasting kept (the user's, 2026-11-11, DECISIONS.md's \"Prayer, fasting, swimming and following\"): a vow made, 20 minutes waited, the game quit and carried on: eating still refused (\"You're fasting, with 24 hours of your vow to go\"); the crypt solved and walked out of, dq0life run with no time between told (no -l) and the next dungeon's seed 1 (its hour 1, before the first's 3): the record's fast (life.h's, the head's byte 26) its end after the new date's midnight, 15 to 17 steps of 12 minutes; the next dungeon begun, eating refused with 2 to 4 hours of the vow to go; \"stop\" ends it, eating then not refused",
       init: 't_rc', cycles: 2400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',

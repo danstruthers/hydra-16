@@ -165,7 +165,7 @@ void o_workdays (void)
     say (").");
 }
 
-/* ---- The town (dq0town) */
+/* ---- The town (dq0town: its ruleset's link of it, ACCT_TOWN, the link's town.c's: HarnMaster's dq0town, the null's dq0ntown) */
 
 static struct between tr;
 
@@ -204,7 +204,7 @@ unsigned char o_town_go (void)
     p = arg (arg (p, "-d", top), "-l", lib);
     *p = 0;
     strcpy (path, lib);
-    strcat (path, "/../acct/dq0town");
+    strcat (path, "/../acct/" ACCT_TOWN);
     if (ok) {
         ok = !meta_run (path, ob) && (fd = open (in_ (top, BETWEEN_FILE), O_RDONLY)) >= 0;
     }

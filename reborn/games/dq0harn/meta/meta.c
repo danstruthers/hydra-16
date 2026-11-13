@@ -2,11 +2,13 @@
 ** meta.c - (dq0harn's, HarnMaster's) the character's sheet as the programs between dungeons see it (../../dq0/rsmeta.h):
 ** hmchar's file's lines (the library's harnfile.c's format: "att str 12", in harn.h's order; "ml lan 62"), the masteries
 ** a meta program asks for by what they're for, and what a master's teaching opens a tongue or a script at (the book's,
-** Skills 11: a tongue at its skill base, an alien family's; a script at 70 and its skill base).  A meta program compiles
+** Skills 11: a tongue at its skill base, an alien family's; a script at 70 and its skill base); and the scholar's house's
+** hired readers (their skill, the book's EMLs for a scribe and a sage; their honesty, their Morality).  A meta program compiles
 ** it in (dq0schol's rsmeta.c), naming no HarnMaster skill of its own; the library's reader not linked (its room).
 */
 
 #include <stdlib.h>
+#include <dice.h>
 #include <string.h>
 #include <harn.h>
 #include "../../dq0/rsmeta.h"
@@ -64,4 +66,20 @@ unsigned char __fastcall__ meta_ml (unsigned char mk)
 unsigned char __fastcall__ meta_taught (unsigned char mk)
 {
     return mk == MK_SCRIPT ? 70 + harn_get_sb (&pc, HARN_SCR) : harn_get_sb (&pc, HARN_LAN);
+}
+
+/* A hired reader's skill: a scribe's Script EML 45 + 4d10 (a sage of a dead tongue's 50 + 4d10: the house's figures in the
+** book's terms) */
+unsigned char __fastcall__ meta_hired (unsigned char sage)
+{
+    return (sage ? 50 : 45) + dice (4, 10);
+}
+
+/* A hired reader's honesty: its Morality (the book's attribute, 3d6), by Character 9's bands: diabolical (4 or less) lies,
+** unscrupulous (7 or less) asks half again, corruptible (10 or less) sells a copy on */
+unsigned char __fastcall__ meta_honest (unsigned char set)
+{
+    unsigned char m = set != 0xFF ? set : dice (3, 6);
+
+    return m <= 4 ? MH_LIES : m <= 7 ? MH_DEAR : m <= 10 ? MH_SELLS : MH_HONEST;
 }

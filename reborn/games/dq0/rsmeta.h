@@ -13,7 +13,14 @@
 **   The character's sheet for the scholar's house (dq0schol, and any meta program that reads a skill): the masteries
 **   it asks of a ruleset's sheet by what they're for (MK_*), the base a master's teaching opens a tongue or a script
 **   at, the sheet's lines read, the tongues and scripts a sheet holds.  A ruleset gives it as one file a meta program
-**   compiles in (HarnMaster's ../dq0harn/meta/meta.c), so the program names no ruleset's own skills or headers.
+**   compiles in (HarnMaster's ../dq0harn/meta/meta.c, the null's ../dq0null/meta/meta.c), so the program names no
+**   ruleset's own skills or headers.
+**
+**   The town's and the scholar's house's rules (meta_test, meta_hired, meta_honest): a test's dice and its grade, a
+**   hired reader's skill and honesty.  The town (games/dq0/town/town.c) and the scholar's house (schol.c) are the
+**   engine's, each linked once per ruleset with these, as the account is (DECISIONS.md's "The town and the scholar's
+**   house: the ruleset's hooks"): HarnMaster's dq0town and dq0schol (../dq0harn/meta), the null's dq0ntown and dq0nschol
+**   (../dq0null/meta).  meta_test is a file of its own (test.c), so the town links it alone.
 */
 
 #ifndef _RSMETA_H
@@ -73,6 +80,22 @@ void __fastcall__ meta_line (char* l, void __fastcall__ (*own) (char* l));   /* 
                                                 **   other line given to own */
 unsigned char __fastcall__ meta_ml (unsigned char mk);      /* A mastery (0-100 and on; 0 not opened) */
 unsigned char __fastcall__ meta_taught (unsigned char mk);  /* What a master's month opens a tongue (MK_LANGUAGE) or a
-                                                **   script (MK_SCRIPT) at, by the character's own aptitude */
+                                                **   script (MK_SCRIPT) at, by the character's own aptitude; 0 opened with
+                                                **   no mastery (a ruleset with none: its sheet's line the name alone) */
+
+/* ---- The town's and the scholar's house's rules */
+
+signed char __fastcall__ meta_test (int chance);    /* A test at chance (a knack in the town's record, a mastery, a hired
+                                                **   reader's skill, its steps added: 0-100 and past either end): its grade,
+                                                **   rs.h's G_* (G_BADLY, G_FAIL, G_PASS, G_WELL), by the ruleset's dice */
+unsigned char __fastcall__ meta_hired (unsigned char sage); /* A hired reader's skill, a chance for meta_test: a scribe's
+                                                **   (sage 0; a sage asked one of the other skills too), a sage's of a dead
+                                                **   tongue (1); its dice the ruleset's */
+enum { MH_LIES, MH_DEAR, MH_SELLS, MH_HONEST }; /* (A hired reader's honesty, worst first: tells a wrong reading as
+                                                **   confidently; asks half again; sells a copy on; none of it.  Each worse
+                                                **   one does the better ones' too) */
+unsigned char __fastcall__ meta_honest (unsigned char set); /* A hired reader's honesty (MH_*): set a figure a test's
+                                                **   scene gave (the rc variable dq0sg's, in the ruleset's own scale), 0xFF
+                                                **   none: the ruleset's dice */
 
 #endif

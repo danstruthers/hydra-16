@@ -109,10 +109,14 @@ games/lib/acct/dq0acct ../obj/games/dq0acct.hyx ; dq0acct, the time between two 
 games/lib/acct/dq0acct.ovl ../obj/games/dq0acct.hyx.ovl ; (its overlays: the account's two, HarnMaster's four)
 games/lib/acct/dq0nacct ../obj/games/dq0nacct.hyx ; dq0nacct, the same account, the null ruleset's link
 games/lib/acct/dq0nacct.ovl ../obj/games/dq0nacct.hyx.ovl ; (its overlays: the account's two)
-games/lib/acct/dq0town ../obj/games/dq0town.hyx ; dq0town, the town between two dungeons (dq0acct's, as the player's asked)
+games/lib/acct/dq0town ../obj/games/dq0town.hyx ; dq0town, the town between two dungeons (dq0acct's, as the player's asked): the town, HarnMaster's link
 games/lib/acct/dq0town.ovl ../obj/games/dq0town.hyx.ovl ; (its overlay: the plan's step 12)
-games/lib/acct/town.txt ../games/dq0town/town.txt ; (its words)
-games/lib/acct/dq0schol ../obj/games/dq0schol.hyx ; dq0schol, the scholar's house (dq0town's: the plan's step 12)
+games/lib/acct/town.txt ../games/dq0/town/town.txt ; (its words)
+games/lib/acct/dq0schol ../obj/games/dq0schol.hyx ; dq0schol, the scholar's house (dq0town's: the plan's step 12), HarnMaster's link
 games/lib/acct/dq0schol.ovl ../obj/games/dq0schol.hyx.ovl ; (its overlay)
-games/lib/acct/scholar.txt ../games/dq0schol/scholar.txt ; (its words)
+games/lib/acct/scholar.txt ../games/dq0/town/scholar.txt ; (its words)
+games/lib/acct/dq0ntown ../obj/games/dq0ntown.hyx ; dq0ntown, the same town, the null ruleset's link (dq0nacct's)
+games/lib/acct/dq0ntown.ovl ../obj/games/dq0ntown.hyx.ovl ; (its overlay)
+games/lib/acct/dq0nschol ../obj/games/dq0nschol.hyx ; dq0nschol, the same scholar's house, the null ruleset's link (dq0ntown's)
+games/lib/acct/dq0nschol.ovl ../obj/games/dq0nschol.hyx.ovl ; (its overlay)
 games/lib/acct/dq0end ../obj/games/dq0end.hyx ; dq0end, the life's account as it dies

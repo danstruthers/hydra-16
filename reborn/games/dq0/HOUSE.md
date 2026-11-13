@@ -4052,7 +4052,7 @@ work, no figures).
 
 ### The town *(new, for review: the plan's step 11, 2026-11-06; the user's Q8, "A menu"; DUNGEON.md's the town)*
 
-The words (games/dq0town/town.txt) and every number are the house's; the book has the skills (Rhetoric, Intrigue: Skills 11) and the
+The words (games/dq0/town/town.txt) and every number are the house's; the book has the skills (Rhetoric, Intrigue: Skills 11) and the
 calendar, no town.  (games/dq0town, a program of its own; dq0acct's town.c.)
 
 - **When:** as the character comes into town after a dungeon, its account's first lines told (the days between, the walk, what it's
@@ -4167,7 +4167,7 @@ dq0life's clues carried out.)
 The user's words (the plan's section 4): "collect clues and take them back to a library or to a scholar ... Each clue might be in a
 unique script that needs a specialist to help decipher, or time in the library if the character is literate", and "that makes scribes
 and scholars viable character classes".  The rest, and every number, is the house's unless it's marked the book's.  The words are
-games/dq0schol/scholar.txt's and the program's.  (games/dq0schol, a program of its own run by the town: HOUSE.md's town above.)
+games/dq0/town/scholar.txt's and the program's.  (games/dq0/town/schol.c, a program of its own run by the town, linked once per ruleset: HOUSE.md's town above.)
 
 - **Its writings:** as it comes in, the house tells what it has to show and what it knows of, the latest nine: "Your writings: 1 the
   journal; 2 a copy of the grave slab; 3 the worn plaque, left where you read it."  A writing is shown by its number or a word of it
