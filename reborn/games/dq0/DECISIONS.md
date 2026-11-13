@@ -4743,3 +4743,99 @@ overlays 279, 2,582).  dq0life 18,095 to 18,077 (the null's program named).  dq0
   the account.
 - dq0acct keeps its name for HarnMaster's link (the tests and the card name it); a rename to dq0hacct would be symmetric
   but touches every test that runs it.
+
+## Narration as data, stage 5: the world's sentences (the user's, 2026-11-12; as built, for review: ENGINE-CRITIQUE.md's §3.2 and step 5, its fifth stage)
+
+Stage 4 left the world's things' words (dq0w's SA_*, kinds.c's said[]) open.  The user's decision (2026-11-12): move
+them into the phrase table.  The world no longer writes these sentences into things_text: it writes a code and the
+names the sentence needs, and the UI words the code by said.txt's rows, with the renderer every other row uses,
+wherever it reads the text.  kinds.c's said[] and things.c's sentence building are gone.  The words the player sees
+are the same, letter for letter.
+
+- **The coded form (items.h's SAY_AT, SAY_SEP, SA_*).**  A sentence in things_text is `SAY_AT` (0x01), its SA_* |
+  0x80, the thing's name, `SAY_SEP` (0x02), the other's name, `SAY_SEP`.  Both names always, as things.c's say had them
+  (xn and yn: the words asked, then the things' names, "spent torch", "4 rations"; the pack's, the belt's, a
+  container's).  Plain text before and after it stays as it is, so a sentence can follow the world's own words in the
+  same text ("There are only 2. " then a code; a count's "You take 4 rations." after the stowing's code ...).  The
+  enum moved from dq0w's things.h to items.h, the world's and the UI's shared header, so hubgen reads it and said.txt
+  names its rows by it (`SA.stow` is SA_STOW).  The codes are 0x80 and up so no code byte is ever 0, SAY_AT or SAY_SEP.
+- **The world (dq0w).**  things.c's say builds the code in tbuf and puts it (tlist.s's put) where it put the words;
+  last_sa as before (the doff's SA_HANDS test, the count's sentence again).  kinds.c's said[] (55 strings, in the
+  catalogue's bank) gone.
+- **The hold's words coded too (SA_HOLD, SA_SHIFT, SA_HELD).**  part 48's s_hold_in wrote "You take the dagger in
+  your right hand.", "You shift the ... to ..." and "You hold the ... in ... already." as free text; SA_HOLD, SA_HOLD2
+  and SA_HELD were said[]'s, never used ("in your hand", "in both hands", "already" without the hand).  Now SA_HOLD,
+  SA_SHIFT (SA_HOLD2's place) and SA_HELD are those three sentences, the hand's words ("your left hand", "both hands",
+  hand_words') the other name: part 48's hold_said puts the code, the name, then hand_words' words between the
+  separators.  This is what makes the "already" test a code check (below).
+- **The UI's readers.**
+  - **tt () (look.c), and through it every reader of the text as words**: the hthings.c, main.c, way.c and search.c
+    msg (tt ()) lines, `*tt ()` tests, theme.c's othings, and the referee's slot copy (to_hand's RS_EQUIP: the tools'
+    keys).  tt copies the text into lb as before, then calls tt_words (refuse.c, overlay 24): each code in lb is worded
+    where it stood, the text after it read from the hub again after the words.  The renderer needn't write over what
+    it hasn't read: the rest of the text is still the hub's.
+  - **The inventory list (words.c's o_list_say) reads the text raw**, past lb's size in pieces, as before.  IO_LIST's
+    words are the list's own put()s, never a code, so it needs no wording.  The same for main.c's dig (what it carries:
+    the tools' names found in the text, a code's names among them as they were) and caps.c's which (the 'W' form, the
+    choices' list).
+  - **The "already" test (main.c's s_hold_first) is a code check.**  It was `strstr (tt (), "already")`: a blow's
+    weapon already in the hand said to take it in.  Now tt_words keeps the first sentence's code if the text begins
+    with one (tt_sa) and the test is `tt_sa != (SA_HELD | 0x80)`.  The hold's other refusals with "already" in them
+    were none: o_handle's IO_HOLD path refuses with SA_WHAT, SA_NO_SUCH, SA_REACH, SA_SHUT, SA_FIXED, hold_in's held
+    already, why_not's hands and the reach's steps.
+- **The renderer writes into lb, but not only at its start (said.c's said_to).**  A row's words went to lb from its
+  first byte.  said_to (the main RAM's, lb unless a caller says otherwise) is where they go: tt_words points it at the
+  code's place in lb with said_q set (the words left there, not said), then puts it back.  flush and the row's start
+  use it; the rest (the "a"'s "an", the theme's names added, a look's lb_said) is lb's as before, and no SA row uses
+  them.  No other buffer: lb holds the text, and the two names wait at its end (the last 40 bytes) while the sentence
+  is worded.  A code past lb's 250th byte cuts the text there (a sentence's 100 bytes at most, then the names): none of
+  the tests comes near; the text past 399 bytes was cut before as well.
+- **The rows (said.txt's SA, the UI's kind UK_SA: msgs.def's, `w1 sa:8-15@SA_HOLD`).**  55 rows, each said on after
+  what's before it (`+`, no new line), the thing's name `{text}`, the other's `{obj}`.
+- **One wording per action: two pieces shared.**
+  - `@seeno` "You see no {text} here": the refusal's (NO.A_SEE_NO, say_no's) and the world's SA.no_other ("You see no
+    sack here.").  SA_NO_OTHER said the other's name (yn); other () puts the same words (iq.into) in xn just before,
+    and yn holds them too (o_handle's copy, untouched on the way), so the row takes the thing's name like NO's.
+  - `@light` "light the {text}": SA.light ("You light the torch.") and the reach's step (TASK.step's @steps: "You
+    light the spare torch from the burning one.").
+  - The rest have no wording of the same action elsewhere in said.txt: the reach's steps say "take off your pack",
+    "put your pack back on", "put the torch in your pack", "blow out the torch", where the world's say "You take off the
+    cloak.", "You put on the cloak.", "You stow the torch in your backpack.", "You put out the torch."; making them one
+    would change what the player reads.  **Open, for the user:** whether those pairs should be one wording (and which).
+- **Not moved:** the world's other words in things_text (why_not's, the look at a thing's, the doors' and locks',
+  wcloth's, wdrag's, the rope's, the water's, doff_feet's, a count's "You take 4 rations." ...).  They're free text
+  built by the code that knows the case, not SA_* rows; each would be a row of its own, a later stage's.
+- **Room** (the build's table, bytes free):
+
+  | | before | after |
+  |---|---|---|
+  | dq0w's catalogue's bank (CAT: said[] and say's loop gone) | 1,847 | 3,573 |
+  | dq0w main RAM | 2,088 | 2,090 |
+  | dq0w part 48 (s_hold_in, hold_said) | 1,098 | 1,167 |
+  | dq0w overlay 15 (part 48's image) | 299 | 368 |
+  | dq0w overlays 16, 26; part 86 | 8, 10; 11 | the same |
+  | dq0's main RAM | 3,356 | 3,343 (tt_sa, said_to, tt_words' stub, tt's call) |
+  | dq0 overlay 24 (tt_words; the packer's part 6 now there) | 4,136 | 342 |
+  | dq0 overlay 27 (the renderer; the packer's part 3 now there) | 83 | 231 |
+  | dq0 overlay 15 (part 3 no longer there) | 726 | 3,806 |
+  | dq0 overlay 28, 29 (the rows: 55 SA rows, 2 pieces) | 0, 2,506 | 3, 1,431 |
+
+  The packer (pack.js) places parts 3 and 6 by the room it finds, so overlays 15, 24 and 27 moved together: the
+  renderer's code grew 4 bytes (said_to) and its words most said 113 (said_dw chosen again over the new
+  rows), and tt_words is 455 (OV24CODE 3,648 -> 4,103).  The rows' banks have 1,434 bytes left.
+- **The start** (dq0starttime, both builds run at once on one machine): seed 1 232.7M → 231.9M cycles (budget 245M),
+  seed 123456789 308.4M → 308.2M (325M).
+- **Checked:** every dq0 test's screen kept before (the commit before, built in a copy of the tree) and after (a hook
+  in sim/test.js, not committed), their sentences compared (sent.js): 7 of 294 differ, all the known noise: the
+  real-time fight in dq0antidote; denizens met at other moments in dq0answer, dq0mine, dq0prompt, dq0stopwords;
+  dq0reachstop's accepted race (the stop one step later); dq0sway's typed-ahead key echoed a moment later.  No SA
+  sentence is said differently or a different number of times anywhere ("You stow the" 26 and 26, "You put on the"
+  126 and 126, "You light the" 62 and 62, "already" 198 and 198, "You see no" 28 and 28, "Your hands are full: stow"
+  11 and 11 ...; "You take the ... in your" 74 and 75, dq0reachstop's race).  The save folder isn't touched (things_text
+  is the hub's, never saved).
+- **Tested:** all 444 tests pass.
+- **Open, for the user:**
+  - the world's and the reach's wordings of one action that differ (above): one wording each, and which;
+  - the world's other free text in things_text (why_not's "Your hands are full: stow something, or put it down." is
+    SA.hands's words written out a second time; the look at a thing, the locks', the cloth's ...): rows of their own,
+    a later stage, if wanted.
