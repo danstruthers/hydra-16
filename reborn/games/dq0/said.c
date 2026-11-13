@@ -95,8 +95,13 @@ static const unsigned char* __fastcall__ over (const unsigned char* p)
 {
     unsigned char d = 0, c;
 
-    for (;; p = step (p)) {
+    for (;;) {
         c = RB (p);
+        if (c < SC_NUM && c != SC_ALT && c != SC_END) {
+            ++p;                                /* (A letter: step's, its byte not read again; a sentence's first
+                                                **   words the sooner, 2026-11-12) */
+            continue;
+        }
         if (c == SC_ALT || c == SC_END) {
             if (!d) {
                 return p;
@@ -107,6 +112,7 @@ static const unsigned char* __fastcall__ over (const unsigned char* p)
         } else if ((c >= SC_CHOOSE && c < SC_STR) || (c >= SC_IF && c < SC_ROOM)) {
             ++d;
         }
+        p = step (p);
     }
 }
 

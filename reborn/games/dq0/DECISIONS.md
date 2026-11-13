@@ -4954,3 +4954,48 @@ dq0lib.s), no store's now.
 - **Tests.**  No test's expected result changed: none reaches a wrap.  None loosened.
 - **Room and the start:** unchanged (a flag's bit in a table).  The suite: 445 of 445 (the four machine tests, failing
   in a copy of the tree, pass in the worktree).
+
+## A command's first letter the sooner: four costs on its way cut (2026-11-12; as built, for review: D17)
+
+dq0torchwords failed at 25d2b499: "put the tinderbox in the backpack" had its first letter ("You look for the
+tinderbox.") 725,269 cycles after its Enter, past the user's 720,000 (D17); the styles file (088ca38f) had only
+moved the tasks' timing.  The line was 719,230 the commit before: every "look for" line sat near the limit.
+
+- **Where the cycles went.**  A run of the test profiled (the emulator's own profile, opt.profile, keyed by task, the
+  RAM bank at $8000 and the part in the swap area; a scratch hook, not committed), the 725K from Enter: the UI 292K,
+  the parser (dq0c) 168K, the world 105K (its periodic passes, 8K each some 47 a second, then its answer's part
+  copies after the first words were out), the console 80K (the line echoed and the answer), the denizens 27K, the
+  sound 20K, idle 28K.  In order: the UI woken some 20K in; the line split into parts (parts.c) and the echo, 135K
+  before the parser had it; the parser's 200K and more, the UI's names_in and o_pacing between; resolve, walk_ahead's
+  copies and choice, the first words worded (said.c) 470K-640K; then eleven letters at the console's pace (4,368
+  cycles each) before the "Y": the cursor sent again to where it already was (ESC [ 23 ; 36 H) and the new line.
+  Nothing of the world's answer was waited on: the first words are already said before the world is asked
+  (sway.c's walk_ahead, D17).
+- **What was cut, the words the same:**
+  - term.c: a line entered leaves the cursor at the story's place (say's away 2), and the answer's first words go
+    there without sending it there again (enter() no longer sets away 1; t_line and t_prompt set it only if the
+    cursor was on the line typed).  The line typed is still drawn again at t_done (away not 0).  Eight letters fewer
+    before every answer, some 35,000 cycles at the console's pace.
+  - pace.c's o_pacing (a line's first look for the pace's words): each word was compared with the list's 66 words,
+    some 35,000 cycles a command; now a table of each first letter's word lengths (made from pace_words at the
+    first line, in overlay 16's bank) passes over a word none of the list can be.
+  - parts.c's parts(): "then" and "and" looked for only after a space before a t or an a (among's scans at every
+    space before, some 10,000 cycles).
+  - said.c's over(): a plain letter passed with one read of the rows' bank, not two (step's), when an {arg?...}'s
+    alternatives are skipped: the first words' row has eleven.
+- **Measured** (dq0torchwords' lines, cycles from Enter to the first letter, before -> after): put the tinderbox in
+  the backpack 725,269 -> 610,825; put the rope in the backpack 681,280 -> 567,171; take the spent torch from the
+  floor 656,741 -> 582,476; take the spent torch from the ground 649,831 -> 568,552; take spent torch from backpack
+  610,420 -> 541,350; the inventory 275,201 -> 221,900.  Every line 50,000-115,000 sooner.
+- **Not done, for review:** the parser (dq0c's matcher) is the largest single cost, 160,000-170,000 cycles for a "put
+  X in Y" line (commandmatch-test.js: its slowest lines are all of that shape; the average 54,000); a larger rules'
+  cache (256) changed nothing, so it's the grammar's alternatives, not the cache.  The world's, the denizens' and the
+  sound's periodic passes take some 18% of the time while a command is in hand (the world's at the foreground's
+  rank, FS_CMD).  walk_ahead's copies of the carried things (from_ui: through the C stack, twice a byte) and its
+  name match of each kind, some 30,000.  The console's newline is "\r\n", which the console makes "\r\r\n": a letter
+  more a line at its pace.
+- **Checked.**  The suite's transcripts, by sentence, against 25d2b499's: seven differ, all the known timing noise
+  (denizens met at other moments: dq0jobs, dq0mine, dq0skykin, dq0stopwords, dq0sway, dq0robrest; dq0reachstop's
+  race).  No check loosened, no expected string changed.
+- **Room:** dq0's main RAM 3,343 -> 3,338; overlay 6 2,293 -> 2,253, overlay 16 2,271 -> 2,005, overlay 27 231 ->
+  206.  The start: seed 1 232.0M -> 232.4M, 123456789 310.0M -> 309.7M (timing).  The suite: all 446 pass.

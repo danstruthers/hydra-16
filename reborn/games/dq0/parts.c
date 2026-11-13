@@ -108,7 +108,9 @@ static void parts (void)
             if (c == ';' || c == ',') {
                 cut (1);
                 sep = c == ',';
-            } else if (c == ' ') {
+            } else if (c == ' ' && ((w = inl[i + 1] | 0x20) == 't' || w == 'a')) {   /* (Only a word that may be
+                                                **   "then" or "and" looked at: a command's first letter the sooner,
+                                                **   2026-11-12) */
                 if (among (i + 1, "then\0\0")) {
                     cut (5);
                     sep = 0;

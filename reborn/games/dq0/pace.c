@@ -369,11 +369,26 @@ static const char pace_words[] =                /* (Each word after its length: 
     "\004foot\004feet\002ft\004yard\005yards\012autotarget\013auto-target\012autoengage\013auto-engage\010autofire"
     "\011autoshoot\004auto";
 
+#pragma bss-name (push, "OV16RODATA")          /* (In the overlay's bank, as its code: zero as it's read in) */
+static unsigned pl[32];                         /* Each first letter's (its low five bits') words' lengths, a bit each:
+                                                **   pace_words', made at the first line; a word whose letter and
+                                                **   length none has not looked for in them (the list's 66 words
+                                                **   compared with each word of the line, some 35,000 cycles of a
+                                                **   command's first letter, 2026-11-12) */
+static unsigned char pld;                       /*   (made) */
+#pragma bss-name (pop)
+
 unsigned char __fastcall__ o_pacing (const char* l)
 {
     static const char* p;
     static unsigned char n, k, w, words;
 
+    if (!pld) {
+        for (p = pace_words; (k = *p) != 0; p += k + 1) {
+            pl[p[1] & 31] |= 1u << k;
+        }
+        pld = 1;
+    }
     w = 0;
     for (words = 0; ; ++words) {
         while (*l == ' ' || *l == ',' || *l == '.' || *l == '!') {
@@ -401,9 +416,11 @@ unsigned char __fastcall__ o_pacing (const char* l)
             l += n;
             continue;
         }
-        for (p = pace_words; (k = *p) != 0; p += k + 1) {  /* (Each word's length, then its first letter) */
-            if (k == n && p[1] == (*l | 0x20) && !strnicmp (l, p + 1, n)) {
-                return 2;
+        if (n < 16 && (pl[*l & 31] & (1u << n))) {     /* (A word of its letter and its length among them) */
+            for (p = pace_words; (k = *p) != 0; p += k + 1) {  /* (Each word's length, then its first letter) */
+                if (k == n && p[1] == (*l | 0x20) && !strnicmp (l, p + 1, n)) {
+                    return 2;
+                }
             }
         }
         l += n;

@@ -545,7 +545,10 @@ void __fastcall__ t_prompt (unsigned char ready)
 {
     if (ready != t_ready) {
         t_ready = ready;
-        away = 1;                               /* (Drawn again at t_done) */
+        if (!away) {
+            away = 1;                           /* (Drawn again at t_done; the cursor at the story's place left there,
+                                                **   away 2: not sent there again for the next words, 2026-11-12) */
+        }
     }
 }
 
@@ -609,8 +612,9 @@ static void enter (void)
     inn = 0;
     inl[0] = 0;
     shown = 0;                                  /* (The line typed drawn again by t_done, once the command's done:
-                                                **   its "> " a prompt only when the game's ready) */
-    away = 1;
+                                                **   its "> " a prompt only when the game's ready; away 2, say's: the
+                                                **   cursor where the answer's first words go, not sent there again,
+                                                **   eight letters at the console's pace before them, 2026-11-12) */
     t_flush ();                                 /* (Out at once: the answer's words, when they come, the first out) */
     soon = 2;
 }
@@ -668,8 +672,11 @@ char* t_line (void)
     memcpy (taken, queue, n);
     qlen -= n;
     ++t_taken;
-    away = 1;                                   /* (The line typed drawn again at t_done: its prompt as the game
-                                                **   stands, none shown while the line waited, 2026-10-28) */
+    if (!away) {
+        away = 1;                               /* (The line typed drawn again at t_done: its prompt as the game
+                                                **   stands, none shown while the line waited, 2026-10-28; the cursor
+                                                **   at the story's place left there, 2026-11-12) */
+    }
     soon = 1;                                   /* (Its answer's first words out as they're said, whatever went out
                                                 **   since t_done: a stir's words, told as it was typed, 2026-10-30) */
     memmove (queue, queue + n, qlen);
