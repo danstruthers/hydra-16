@@ -462,6 +462,10 @@ static void passage (void)
 /* What the character perceives, in words, into lb (from look.c's copy of the hub's record) */
 void o_words (void)
 {
+    if (starting) {
+        starting = 2;                           /* (The game's first look begun: no more of the start's dots, o_dots';
+                                                **   the user's, 2026-11-13) */
+    }
     *(lbe = lb) = 0;
     lbn = 0;
     S = &sight_copy;

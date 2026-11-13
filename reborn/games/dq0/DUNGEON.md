@@ -1456,9 +1456,9 @@ packed, not the game on the ROM disk (2026-10-31, DECISIONS.md).  Now: 208M cycl
   before its screen's made): "Dingus Quest Zero is starting ..." as the UI's overlays are read; the title; "The place's
   history is being made" and themegen's dots (-p: a dot a step); "The dungeon is being made ready" and a dot each
   second or so as the UI waits on the referee's hello and the world's start (their programs and overlays read); the
-  theme's story and the character's entrance; "Nearly ready" and a dot each second or so till the character's first
-  ready (the denizens started, the world begun, the first look); then "Type help for the commands." with the first
-  prompt, not before the look (main.c's o_dots, starting).
+  theme's story and the character's entrance; "Nearly ready" and a dot each second or so till the first look begins
+  (the denizens started, the world begun; no dot after the look's words, the user's, 2026-11-13); then "Type help for
+  the commands." with the first prompt, not before the look (main.c's o_dots, starting; words.c's o_words).
 - **The margins' pass** (2026-11-03): each bank packed against its task's own main RAM as well (a match's offset reaches
   below the window to the program's code and read-only data, unchanged by then: only its DATA changes before the overlays
   are read, measured): 359K bytes to 325K, no code; the unpack library's token bytes in line; the UI's loop a fifth of a

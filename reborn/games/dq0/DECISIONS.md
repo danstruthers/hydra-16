@@ -5326,3 +5326,27 @@ whether each was only timing, the answer was two yes and one no.
   figures for HarnMaster: a scribe's day 3d, a sage's three times, a master's month 84d); the town sets the local price
   around it by how much there is to choose from: where there's a lot of local competition the range of prices is wider,
   in a smaller market narrower.  To build.
+
+## The start's dot stops at the first look (the user's, 2026-11-13; as built, for review)
+
+The user's answer ("Four answers" above): no dot after the first look's words.  o_dots put a dot each 240 ticks while
+the start was busy, through to the character's first ready; whether one fell between the first look's last sentence
+and the help's line ("(B) a sconce..") was the ticks' phase alone (dq0starttime's transcript, "A knockout's bearings,
+whatever the timing" above).
+
+- **Built:** the first look's words begun is the start's `starting` made 2 (words.c's o_words, overlay 2, where a
+  look's words are made: the first one made the first look's); o_dots (overlay 3) puts no dot while it's 2.  The rest
+  as it was: "Nearly ready ..." and a dot each second or so till the look (no silence over about 10 s: the longest
+  still 24.8M cycles, before the screen's made), the help's line with the first prompt (o_dots's k 1 once the
+  character's ready, `starting` 0 again).  The dots' line ended before the look's words, as before (the look begins
+  a new line where the story's column isn't 0: "Nearly ready ... . . .", then "You are at ...").
+- **Checked:** dq0starttime with its first dq0 line put later (the runner's waits, 2M cycles each, 1 to 8 of them;
+  12 spaces): before, a dot after "(B) a sconce." at 7 waits (14M cycles), none at the others; now none in any, nor
+  as the suite runs it.  Seed 123456789's game had none either way.  The start: seed 1 232.6M -> 232.1M-233.5M over
+  the variants, 123456789 308.0M -> 308.1M-309.9M (timing; budgets 245M and 325M).
+- **What the player sees differently:** no "." after the first look's last sentence; the dots before it as they were.
+- **Room:** dq0's main RAM 3,338 -> 3,338 free (both changes in overlays); overlay 2 42 -> 32, overlay 3 2,073 -> 2,066.
+- **Transcripts** (the suite's, by sentence, sent.js), against 24e9bf99's: 7 differ, all the known noise (dq0answer,
+  dq0jobs, dq0passes, dq0prompt, dq0skykin: denizens met at other moments, "Something stirs."; dq0antidote's real-time
+  fight; dq0engage's last fight, the open question).  dq0starttime the same; its dot's timing gone, it's off the noise
+  list.  The suite: all 447 pass.

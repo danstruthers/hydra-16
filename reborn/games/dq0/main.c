@@ -70,7 +70,8 @@ unsigned char busy = 1;                         /* The character's doing somethi
                                                 **   till the world's started, and says so: E_READY) */
 unsigned char nap = 40;                         /* (main's nap with nothing doing, ticks: o_dots's, a fiftieth once it's started) */
 unsigned char starting;                         /* The game's starting: its progress shown (dots: hub.c's waits,
-                                                **   main's loop), till the character's first ready */
+                                                **   main's loop), till the character's first ready; 2 once its
+                                                **   first look's begun (words.c's): no dots after it */
 unsigned char held;                             /* (A line typed as it's busy, held till it's free; */
 static unsigned char took;                      /*   and the fight it was in stopped for it, once) */
 static unsigned place;                          /* Where this task is in the world's events */
@@ -845,7 +846,8 @@ void __fastcall__ o_fore_set (unsigned char on)
 ** shown; on the board the start is a minute and more, the card's reading most of it).  k 2: the world's tasks being
 ** started (s_begin's), told; 3: the dungeon begun, the character's first look to come, told.  0: a dot as the start
 ** waits on a task's reply (hub.c's hub_wait_t: its doorbell's wait out); 1: main's loop round while the game starts,
-** a dot each second or so; the character ready the first time (its first look told, E_READY), the start over: the
+** a dot each second or so till its first look begins (starting 2, words.c's o_words: no dot after its words, the
+** user's, 2026-11-13); the character ready the first time (its first look told, E_READY), the start over: the
 ** help's line said, with the prompt after it */
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -866,8 +868,8 @@ void __fastcall__ o_dots (unsigned char k)
         blank ();
         tell (T_TYPE_HELP_FOR);
         return;
-    } else if (hy_ticks () - at < 240) {
-        return;
+    } else if (starting == 2 || hy_ticks () - at < 240) {
+        return;                                 /* (Its first look begun: no dot after its words) */
     } else {
         say (".");
     }
