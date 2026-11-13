@@ -4649,3 +4649,97 @@ The other tasks as they were.  The start at seed 1: 231.5M → 231.8M (d) → 23
 at 123456789 308.2M → 308.7M → 308.9M → 307.8M.
 
 **The suite:** all 444 pass at each stage.
+
+## dq0acct split: the account and the ruleset's hooks (the user's, 2026-11-12; as built, for review)
+
+**The user's decision, 2026-11-12:** split dq0acct now.  The time between dungeons is the engine's (the quests and
+rumours, the money's matters, the days passing, between.dat, the hand-off to dq0town); what's the ruleset's rules (its
+healing, its practice and wages, its sheet, its words for a wound's place, its living by station and its birthday) are its
+hooks.  HarnMaster's hooks are HarnMaster's code; dq0null gets minimal ones, and a dq0null game a working time between.
+
+**The mechanism: one source, linked once per ruleset** (the referee skeleton's way, games/dq0/rf/).  Weighed:
+
+- *A program per ruleset run by the account* (a hooks program spawned for its healing, its practice ...): the hooks are
+  called in the middle of the account's own work (a day at rest for each day of the road, the lull, the town and the work;
+  the tools before the money's matters), on state both share (the wounds, the funds and the fee, the days passed); every
+  call would be a spawn and a file each way.  No.
+- *A table of overlays loaded at run time* (lib/acct/dq0harn.ovl, a jump table at $8000): an overlay calls back into the
+  main RAM (say, ask, amount, the C runtime's helpers), so it must be linked against one fixed main; but the main's library
+  modules are whatever all its objects pull in, so the null's overlays and HarnMaster's would want different mains.  Making
+  that hold needs a fixed vector of every runtime helper: fragile, for nothing the linker doesn't already give.
+- *Linked functions per ruleset* (chosen): the account (games/dq0/acct: acct.c its main RAM, quest.c and town.c its two
+  overlays, acct.h, goods.h, town.h) declares its hooks in rsmeta.h (`acct_*`), and each ruleset's account is a link of
+  that source with its own hooks, a program of its own in lib/acct: **dq0acct** (games/dq0acct: HarnMaster's, its name
+  kept, the tests and the card's) and **dq0nacct** (games/dq0nacct: the null ruleset's).  The link's folder is a few
+  one-line files that #include the shared sources, and its .cfg.  rsmeta.h's RULESETS names each ruleset's program
+  ({ "dq0null", "/../acct/dq0nacct" }); dq0life is unchanged but its comment.  It costs a program image per ruleset on the
+  card (dq0nacct's is 19K and two overlays), nothing at run time.
+
+**The hooks** (rsmeta.h, called in the account's order): `acct_sheet_read` / `acct_sheet_write` (the sheet, META_SHEET),
+`acct_wounds` (what's done at once as it comes out: HarnMaster's notes, binds and pays a physician from the account's
+funds into its fee), `acct_mended`, `acct_day` (a day at rest; the account counts the day: `passed` is the account's now,
+not body.c's), `acct_death` (its cause, in words), `acct_rested`, `acct_calling`, `acct_wage`, `acct_habit` (a day's living
+by its station), `acct_birthday` (for LIFE_AGE), `acct_tool` (the things carried, a thing at a time in ans as before: what
+it can practise with, or what its calling needs), `acct_first` (the words of its wounds), `acct_worked` (what the work
+taught, after the account's sentence of the work), `acct_practice`, `acct_town` (its knacks for the market and the inn:
+between.dat's rhet and intr) and `acct_learnt` (what a master opened, on its sheet).  Banks (acct.h): the kinds' bank, then
+the account's two overlays (ACCT_OV_QUEST, ACCT_OV_TOWN), then the ruleset's (ACCT_OV_RS on), one file NAME.ovl (the old
+dq0acct.ov5 is gone: an overlay followed by another is filled).  A hook called from the account's main RAM may put in its
+own overlay and gives the kinds' bank back; the three called from the town overlay (acct_habit, acct_town, acct_learnt) are
+the ruleset's main RAM's and put in none.  The account's segments are named by role (QUESTCODE, TOWNCODE; HarnMaster's
+BODYCODE, SKILLCODE, SHEETCODE, WORDSCODE): each link's .cfg puts them in its OVn.
+
+**What moved where:**
+
+- *The engine's (games/dq0/acct):* dq0acct.c's main, the money's matters, the kit, the goods' and the days' words
+  (acct.c); quest.c as it was; town.c without the wound words, plus the console's width (from skill.c), the names given,
+  the record written, the lull's dice and the work's sentence (from the main RAM, for its room); `dead` for o_lodging (was
+  pc.state); goods.h and town.h (dq0town and dq0schol include them there now).
+- *HarnMaster's (games/dq0harn/acct):* hooks.c (the sheet's names, pc and the rest, in the main RAM; the hooks; the living
+  by social class, the habits table, once now: town.c had its own copy; the EMLs for the town; a tongue learnt), body.c,
+  skill.c (o_work now the lesson alone), sheet.c, hfile.c (as they were, their paths), and words.c (town.c's physician's and
+  wounds' words: harn.h's locations), hacct.h.
+- *The null's (games/dq0null/acct/hooks.c, the main RAM's):* nothing heals (its wounds, the sheet's count, as they were: it
+  heals at rest in the dungeon), no one dies of the days, no physician, no practice, no lesson in the work; its living the
+  middle station's (2d a day), its wage the unguilded's (42d a month: HarnMaster's tables' own defaults for no class), its
+  birthday the year's first day, its knacks in town its tests' flat 60 (dq0null.c's BASE); its sheet read for its calling and
+  its tongues, written back only when a master opened a tongue or a script ("script delvic", "language sindarin", no mastery,
+  eight at most: dq0null.c's load_pc).
+
+**Checked: HarnMaster's games behave as before.**
+
+- The account's words and the save folder's files: 48 lives (16 seeds, stand-ins' and histories', three variants each: dq0auto's
+  straight on, and the player asked, its town, market, inn and scholar's house answered by a script; seven occupations,
+  wealth, skills, kits, the crypt solved) played through three dungeons each, the way out opened by a poke, random wounds put
+  on the sheet before each time between, dq0life run by hand, and before and after it the record (life.dat), kit.dat,
+  kit0.dat, pc.hm and quest.txt dumped.  Every time between that began on the same files in both builds (74 of 96: the rest
+  follow a new life's clock-seeded dungeon, or the game's own timing noise, so begin on other files) said the same words and
+  left the same files, byte for byte: among them 32 deaths of the days, 48 physicians, 27 months' practice (asked and
+  named), 29 spells of work, 18 sales, 15 restockings, 15 rumours followed, 12 towns with the scholar's house.  The suite's
+  dq0account, dq0acctgone, dq0town, dq0scholar, dq0tongues, dq0life, dq0dressbetween and dq0lifeend as before.
+- Every dq0 test's transcript before and after (sent.js): 11 of 294 differ, none in a time between: dq0antidote's real-time
+  fight; dq0answer's, dq0jobs', dq0prompt's, dq0skykin's, dq0stopwords' and dq0dug's denizens met at other moments; dq0mine's
+  scraping heard once more; dq0restbusy's rest ending at another moment (an Initiative improvement, hunger and thirst told);
+  dq0battering's blows' words in another proportion (its blow at a time as the clock goes); dq0starttime's progress dot.  No
+  game's image changed; the card did (dq0acct.ov5 gone, dq0nacct added), so its files are read at other moments.
+- The suite: all 445 pass (444 and dq0nullbetween).  The start: dq0starttime 606.0M cycles to 605.2M (the account isn't in it).
+
+**A test:** dq0nullbetween (tests/suites/dq0/save.js): a null game (seed 70000, its artifact to hand) walked out solved,
+three wounds put on its sheet, carried on: the days told (the road and the lull alone), the reward and the standing, the
+middle station's lodging, the money, the rumours and the first followed; the record on to dungeon 2, its date on, the next
+dungeon begun under the null referee, its sheet the null's with its wounds as they were.
+
+**Room** (bytes free): dq0acct's main RAM 2,157 to 2,297 (its words of the work, the names, the record's writing and the
+lull moved into the town overlay for it: the hooks' calls cost some 400 bytes); its overlays, before body 319, skill 962, sheet
+9, quest 279, town 2,008; after quest 279, town 2,582, body 327, skill 1,543, sheet 65, words 6,783.  dq0nacct 7,349 (its
+overlays 279, 2,582).  dq0life 18,095 to 18,077 (the null's program named).  dq0town, dq0schol and the game's tasks as they were.
+
+**For review / left:**
+
+- dq0town's tests (its haggling, its listening: the book's d100 against an EML) and dq0schol's (its own test, its scribes'
+  and sages' figures; the sheet read through HarnMaster's rsmeta meta.c) are still HarnMaster's: a null game's town runs
+  them with its flat 60 and the null sheet read as HarnMaster's lines.  The town's own ruleset hooks would be the next step.
+- The calendar's month names (o_date's, the library's harn_month_name's names) are the setting's, not the rules': left in
+  the account.
+- dq0acct keeps its name for HarnMaster's link (the tests and the card name it); a rename to dq0hacct would be symmetric
+  but touches every test that runs it.
