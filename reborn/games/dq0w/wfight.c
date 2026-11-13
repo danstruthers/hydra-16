@@ -42,6 +42,7 @@ static char wb[32];                             /* (A blow's words on their way 
 
 extern unsigned char pc_hit;                    /* (dq0w.c's: a blow at the character stops its long task, hard) */
 extern unsigned char flast;                     /* (dq0w.c's: who struck at the character last; act.fight fighting on's) */
+extern unsigned char pc_ko;                     /* (dq0w.c's: the character knocked senseless, main's to see) */
 unsigned __fastcall__ weight_in (unsigned where, unsigned x);  /* (Part 10's, things.c's: what's on the character
                                                 **   weighs, quarter pounds) */
 
@@ -274,9 +275,13 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         bd.pos = POS_PRONE;
         bd.ready = HUB->now + w2;
     }
-    if ((ff & (!def ? FF_D_DOWN : !att ? FF_A_DOWN : 0)) && HUB->pc_ready < HUB->now + w2) {
-        HUB->pc_ready = HUB->now + w2;          /* (The character senseless: busy till it comes round, so nothing's
+    if (ff & (!def ? FF_D_DOWN : !att ? FF_A_DOWN : 0)) {
+        pc_ko = 1;                              /* (Its bearings tested as main next looks, though it's come round
+                                                **   by then: not as the passes fall, 2026-11-13) */
+        if (HUB->pc_ready < HUB->now + w2) {
+            HUB->pc_ready = HUB->now + w2;      /* (The character senseless: busy till it comes round, so nothing's
                                                 **   done meanwhile, however the UI's events come) */
+        }
     }
     if (ff & FF_FLEES) {
         bd.doing = DO_FLEE;                     /* (Broken: it flees) */

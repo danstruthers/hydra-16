@@ -119,6 +119,8 @@ unsigned char kowed;                            /* (A stratum's populations owed
                                                 **   wkept.c's, its kept rooms lit as they're done, kept_late: the
                                                 **   lights' minute's) */
 static unsigned char pc_down;                   /* (The character senseless: main's, its bearings off as it is) */
+unsigned char pc_ko;                            /* (Knocked senseless by a blow, its reply's: wfight.c's latch, main's
+                                                **   to see once, 2026-11-13) */
 struct work wk;
 unsigned char den_done;                         /* (wbody.h's) */
 unsigned char den_saw;
@@ -2737,6 +2739,14 @@ void __fastcall__ s_bearings_off (unsigned feet)
         } else if (W_SLOT.a == HC_FALL && W_SLOT.result != 1) {
             feet = W_SLOT.w1;
         }
+    }
+    if (feet == BO_OUT && !HUB->tb.gone) {      /* (Its time gone from the minute it's seen out, as tsense marks it,
+                                                **   though it's come round before the time it believes is looked
+                                                **   at: 2026-11-13) */
+        if (!(HUB->tb.gone = (unsigned) (HUB->now / 600))) {
+            HUB->tb.gone = 1;
+        }
+        HUB->tb.how = TG_OUT;
     }
     if (KNOWS_NORTH || feet < 10) {
         return;
@@ -7272,14 +7282,16 @@ int main (int argc, char* argv[])
         clock_run ();
         stepping ();                            /* (The long task as the clock goes: a walk a square at a time) */
         jobs (JOBS_LATE);                       /* (The late jobs: a body fallen, the denizens' bodies, the lights' minute) */
-        if (!((unsigned char) HUB->pcsum.cond & C_UNCONSCIOUS)) {
-            pc_down = 0;
+        if (!(((unsigned char) HUB->pcsum.cond & C_UNCONSCIOUS) | pc_ko)) {
+            pc_down = 0;                        /* (A blow's knockout latched as its reply came, wfight.c's: seen
+                                                **   though it's over before this pass looks, 2026-11-13) */
         } else if (!pc_down) {
             bearings_off (BO_OUT);              /* (Knocked senseless: its bearings astray as it comes round, part
                                                 **   52's) */
             /* (And fallen: up again as it comes round, the book's Rise, as every
                                                 **   actor's, 2026-10-29) */
         }
+        pc_ko = 0;
         ++HUB->beat[T_WORLD];
         wait_pace ();                           /* (A long wait at the real paces: as fast as the turns pace goes) */
         if (turns_run ()) {
