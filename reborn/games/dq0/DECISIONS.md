@@ -4919,3 +4919,38 @@ room the same), so themegen's linegen budgets every clue as before and no genera
 - **The suite:** 445 of 445 (dq0styles the new one).  Run from a copy of the tree, four machine tests (hwtest, hwtool,
   fs, mml) want the repository's own folders and fail there for the baseline as well; they pass in the worktree.
   tiers first failed on the new test's variable `db`, a word of asm's area (areas.js's WORDS): renamed.
+
+## The chunks' cache made way for round, as the other stores (the user's, 2026-11-12; as built, for review: ENGINE-CRITIQUE.md's §6, step 7)
+
+"One record store" left one store comparing its stamps plainly: the chunks' cache (make.c's `pick`, RP_OLDEST with
+RTF_PLAIN), kept as it was because changing it would change which chunk is made way for once the clock wraps.  The
+user accepted that change.  `pick`'s block (`cpk`) drops RTF_PLAIN, so RP_OLDEST compares the cache's stamps round,
+as it does for every other store: a stamp is older than the best so far if it less the best is past $8000.  No other
+code compares the cache's stamps: the readers (chunk.c's `find`, RP_FIND) only set a found slot's stamp to the clock's
+next (`wrec.stamp`, the world bank), and make.c sets a new chunk's the same way.  RTF_PLAIN stays in the library (rp.h,
+dq0lib.s), no store's now.
+
+- **What it changes.**  Only which slot is made way for when the stamps being compared span the wrap, and so the seen
+  maps written as a chunk goes out (smSXXYY.dat) and which chunks are made again.  While every stamp is below $8000,
+  plain and round give the same choice: for s and t both in 0 to $7FFF, s - t (mod $10000) is past $8000 exactly when
+  s < t.  The clock starts at 0 with each game's hub and goes up one at each chunk made and each reader's long lookup.
+- **Measured: no game reaches the wrap.**  The clock's every write was watched (a scratch hook in sim/test.js, the
+  world bank's `wrec.stamp`, not committed):
+  - the suite's 286 tests that make a hub: the highest 3,620 (dq0peoples), the median 131, nine in ten under 365;
+  - the 48 save-folder games below (-C's twelve slots, strata down to the fourth): the highest 2,220 (s70000W4).
+
+  Nothing comes within $8000 (32,768), so every choice is the same as before.
+- **Checked.**
+  - Every save-folder file's writes (fhash, as "One record store" did) over the same 48 games (8 seeds, 3, 5, 7, 42,
+    99, 1000, 31337, 70000; each with -C -T -T -T, -C -T, -T -T, -C, and -T -T -T -T with and without -C): the
+    maker's files (the seen maps and the plans' pages, 28,884 operations) the same as the previous commit's in all 48.
+    Three games' other files moved with the timing (the traces' tr file of s1000C1 written 79 times, not 57, and one
+    task with no file at all in s1000W4 and s31337C1 listed or not): RP_OLDEST's round branch takes a few cycles more
+    than the plain one.
+  - The suite's transcripts, by sentence: every test's the same as the previous commit's.
+  - A wrap forced on purpose (the clock and every slot's stamp poked $FF00 on in 8 games with -C) gave the same maker
+    files plainly and round; the poke didn't plainly hold (the clock's writes after it weren't consistent with it), so
+    this proves nothing either way and isn't counted.
+- **Tests.**  No test's expected result changed: none reaches a wrap.  None loosened.
+- **Room and the start:** unchanged (a flag's bit in a table).  The suite: 445 of 445 (the four machine tests, failing
+  in a copy of the tree, pass in the worktree).

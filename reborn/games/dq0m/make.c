@@ -69,11 +69,12 @@ static unsigned char __fastcall__ busy (unsigned char k)
     return b;
 }
 
-/* The slot a new chunk goes in: an empty one, or the least lately found (its stamp the lowest, plainly) that no task
-** is reading, isn't beside the character's chunk, and isn't one stocked that the world hasn't marked yet (CS_FRESH):
-** the record store's (the hub's header in the window; the world bank after, the cache's table its) */
+/* The slot a new chunk goes in: an empty one, or the least lately found (its stamp the oldest, round as the stamps
+** wrap, as the other stores' are: the user's, 2026-11-12) that no task is reading, isn't beside the character's
+** chunk, and isn't one stocked that the world hasn't marked yet (CS_FRESH): the record store's (the hub's header in
+** the window; the world bank after, the cache's table its) */
 static struct rpt cpk = { RP_OLDEST, NCSLOTS, sizeof (struct cslot), 0x3E, WREC->cslot, offsetof (struct cslot, stamp),
-    RTF_FREE | RTF_PLAIN | RTF_WIDE, 0, { 0 }, 0, 0, 0, 1, 1, 2, 4, 0, 0, 0, busy };
+    RTF_FREE | RTF_WIDE, 0, { 0 }, 0, 0, 0, 1, 1, 2, 4, 0, 0, 0, busy };
 static unsigned char pick (void)
 {
     unsigned char best;

@@ -81,7 +81,8 @@ struct rpt {
 };
 #define RTF_FREE        0x01                    /* oldest: a free entry first */
 #define RTF_HAND        0x02                    /* oldest: the key's own kept */
-#define RTF_PLAIN       0x04                    /* oldest: stamps compared plainly (else round, as they wrap) */
+#define RTF_PLAIN       0x04                    /* oldest: stamps compared plainly (else round, as they wrap;
+                                                **   no store's since 2026-11-12, the chunks' cache round too) */
 #define RTF_WIDE        0x08                    /* the box's x and y two bytes (else one) */
 #define RTF_EACH        0x10                    /* oldest: each free entry taken as it's met, its stamp the one those
                                                 **   after it are held to (the plans' pages' own way) */
