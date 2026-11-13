@@ -710,7 +710,7 @@ module.exports = {
         const f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '').replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' ').replace(/ # /g, ' ').replace(/ UP( \d+)?(?= )/g, '');   // (The status line's pieces, as it's drawn between a task's steps, out of the story)
         this.notes = [s.slice(s.indexOf('> hold the sword')).slice(0, 1200), s.slice(-1200)];
         const after = (w, re, what) => { const i = s.indexOf(w); if (i < 0 || !re.test(s.slice(i))) f.push(what + ': ' + s.slice(i, i + 500)); };
-        after('> dig north', /^> dig north( > dig north)? You look at the wall\. You sheathe the sword\. You sling the round shield\. You take off your backpack, and set it down at your feet\. You reach into the backpack\. You get out the pick\./, 'not its hands freed, each told, then the pick got out');
+        after('> dig north', /^> dig north( > dig north)? You look at the wall\. You put the sword in the scabbard\. You sling the round shield\. You take off the backpack, and set it down at your feet\. You reach into the backpack\. You get out the pick\./, 'not its hands freed, each told, then the pick got out');
         after('> stop', /You stop digging\. Your backpack lies at your feet\. Your pick is in your hand\./, 'stopped: not told in hand');
         const inv = s.indexOf('You stop digging'), i2 = s.indexOf('> inventory', inv);
         if (!/a pick, in both hands/.test(s.slice(i2, i2 + 400))) f.push('stopped: the pick not truly in its hands');
@@ -724,7 +724,7 @@ module.exports = {
         after('> look', /At your feet lie a lit torch/, 'the torch laid not told lit');
         const l0 = s.indexOf('> light the torch');
         if (!/You get out the tinderbox\./.test(s.slice(l0)) || !/It catches\./.test(s.slice(l0))) f.push('no tinderbox\'s steps');
-        if (!/You sheathe the sword\./.test(s.slice(l0))) f.push('striking a light: no hand freed first: ' + s.slice(l0, l0 + 600));
+        if (!/You put the sword in the scabbard\./.test(s.slice(l0))) f.push('striking a light: no hand freed first: ' + s.slice(l0, l0 + 600));
         return f;
       },
       sdcard: true
@@ -749,7 +749,7 @@ module.exports = {
         if (games.length !== 5) return ['not five games: ' + games.length];
         const [a, b, c, d, e] = games;
         if (n(a, /You get out the tinderbox\./g) !== 1 || n(a, /put away the tinderbox/g) !== 1) f.push('the tinderbox not out once and back once: ' + a.slice(-900));
-        if (/You put the torch in your pack\./.test(a)) f.push('the torch to light put away for its tinderbox');
+        if (/You stow the torch in your backpack\./.test(a)) f.push('the torch to light put away for its tinderbox');
         if (!/It catches\./.test(a) || !/You light the torch\./.test(a)) f.push('not lit');
         if (n(b, /You get out the tinderbox\./g) !== 1) f.push('hands full, the torch in the pack: the tinderbox out more than once: ' + n(b, /You get out the tinderbox\./g));
         if (!/You light the torch\./.test(b)) f.push('hands full, the torch in the pack: not lit: ' + b.slice(-900));
@@ -1218,7 +1218,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0keysteps', reach: true, outfit: true, near: ['gear'], what: "Dingus Quest Zero's door's key by a tool's steps (2026-11-04, the sweep of the tool's routine, C21: HOUSE.md's every use of a tool): at seed 1 (dq0denkey's door, its key the character's, in its pack): 'lock the door' is 'You take off your backpack', 'You reach into', 'You get out the iron key', 'You set to turning a key', 'You lock it with its key', 'You put away the iron key', 'You put your backpack back on', each a step, in that order; 'unlock the door' the same; a key that doesn't fit is none of it; and 'lock the door' locked already refused at once, no key got out",
+      name: 'dq0keysteps', reach: true, outfit: true, near: ['gear'], what: "Dingus Quest Zero's door's key by a tool's steps (2026-11-04, the sweep of the tool's routine, C21: HOUSE.md's every use of a tool): at seed 1 (dq0denkey's door, its key the character's, in its pack): 'lock the door' is 'You take off the backpack', 'You reach into', 'You get out the iron key', 'You set to turning a key', 'You lock it with its key', 'You put away the iron key', 'You put on the backpack', each a step, in that order; 'unlock the door' the same; a key that doesn't fit is none of it; and 'lock the door' locked already refused at once, no key got out",
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
         "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'iron key'",
@@ -1264,15 +1264,15 @@ module.exports = {
         const i = after('lock the door', 0), j = after('lock the door', i), k = after('unlock the door', j), e = o.indexOf('> quit');
         if (process.env.DQ0SHOW) f.push(o.slice(i - 40, e));
         const inOrder = (t, list, what) => { let p = 0; for (const w of list) { const q = t.indexOf(w, p); if (q < 0) { f.push(what + ': no "' + w + '" in its order: ' + t); return; } p = q; } };
-        const steps = ['You take off your backpack', 'You reach into the backpack', 'You get out the iron key', 'You set to turning a key', 'with its key', 'You put away the iron key', 'You put your backpack back on'];
+        const steps = ['You take off the backpack', 'You reach into the backpack', 'You get out the iron key', 'You set to turning a key', 'with its key', 'You put away the iron key', 'You put on the backpack'];
         inOrder(o.slice(i, j), steps, 'locked');
         inOrder(o.slice(k, e), steps, 'unlocked');
-        if (/You get out|take off your/.test(o.slice(j, k))) f.push('locked already, and still got out: ' + o.slice(j, k));
+        if (/You get out|take off the backpack/.test(o.slice(j, k))) f.push('locked already, and still got out: ' + o.slice(j, k));
         return f;
       },
     },
     {
-      name: 'dq0feedsteps', reach: true, outfit: true, near: ['gear'], what: "Dingus Quest Zero's eating and drinking by a tool's steps (2026-11-04, C21: HOUSE.md's every use of a tool): hungry and thirsty (the referee's clock poked), 'eat' gets its rations out of the worn pack ('You take off your backpack', 'You get out the rations', 'You eat a meal', 'You put away the rations', 'You put your backpack back on'); a ration begun, the next meal none of it; 'drink' from the waterskin at its belt ('You get out the waterskin', no pack off, 'You drink from your waterskin', 'You put away the waterskin')",
+      name: 'dq0feedsteps', reach: true, outfit: true, near: ['gear'], what: "Dingus Quest Zero's eating and drinking by a tool's steps (2026-11-04, C21: HOUSE.md's every use of a tool): hungry and thirsty (the referee's clock poked), 'eat' gets its rations out of the worn pack ('You take off the backpack', 'You get out the rations', 'You eat a meal', 'You put away the rations', 'You put on the backpack'); a ration begun, the next meal none of it; 'drink' from the waterskin at its belt ('You get out the waterskin', no pack off, 'You drink from your waterskin', 'You put away the waterskin')",
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T',
         'wait 8 hours', 'wait 8 hours', 'eat the rations', 'drink', 'quit', 'echo $status']) },
@@ -1284,14 +1284,14 @@ module.exports = {
         const o = dq0Story(out), f = [];
         const i = o.indexOf('> eat the rations'), j = o.indexOf('> drink'), e = o.indexOf('> quit');
         const inOrder = (t, list, what) => { let p = 0; for (const w of list) { const q = t.indexOf(w, p); if (q < 0) { f.push(what + ': no "' + w + '" in its order: ' + t); return; } p = q; } };
-        inOrder(o.slice(i, j), ['You take off your backpack', 'You get out the rations', 'You eat a meal', 'You put away the rations', 'You put your backpack back on'], 'eat');
+        inOrder(o.slice(i, j), ['You take off the backpack', 'You get out the rations', 'You eat a meal', 'You put away the rations', 'You put on the backpack'], 'eat');
         inOrder(o.slice(j, e), ['You get out the waterskin', 'You drink from your waterskin', 'You put away the waterskin'], 'drink');
-        if (/take off your backpack/.test(o.slice(j, e))) f.push('the pack off for what\'s at its belt: ' + o.slice(j, e));
+        if (/take off the backpack/.test(o.slice(j, e))) f.push('the pack off for what\'s at its belt: ' + o.slice(j, e));
         return f;
       },
     },
     {
-      name: 'dq0blowsteps', reach: true, outfit: true, near: ['gear', 'fight'], what: "Dingus Quest Zero's blow's weapon named from the pack, by the steps (2026-11-04, C21: HOUSE.md's reach, a blow's weapon): the character, a rat beside it (dq0dentake's way), 'attack the rat with the pick', the pick in its worn pack: each step told, a round a step engaged ('You take off your backpack', 'You get out the pick', 'You take the pick'), then the blow, struck with the pick; not 'Your hands are full', nor the blow struck with anything else",
+      name: 'dq0blowsteps', reach: true, outfit: true, near: ['gear', 'fight'], what: "Dingus Quest Zero's blow's weapon named from the pack, by the steps (2026-11-04, C21: HOUSE.md's reach, a blow's weapon): the character, a rat beside it (dq0dentake's way), 'attack the rat with the pick', the pick in its worn pack: each step told, a round a step engaged ('You take off the backpack', 'You get out the pick', 'You take the pick'), then the blow, struck with the pick; not 'Your hands are full', nor the blow struck with anything else",
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
         "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k pick',
@@ -1319,7 +1319,7 @@ module.exports = {
         if (m.bandit === undefined) return ['no bandit to set beside it'];
         const i = o.indexOf('> attack the bandit with the pick'), t = o.slice(i, o.indexOf('> quit'));
         const inOrder = list => { let p = 0; for (const w of list) { const q = t.indexOf(w, p); if (q < 0) { f.push('no "' + w + '" in its order: ' + t.slice(0, 900)); return; } p = q; } };
-        inOrder(['You take off your backpack', 'You get out the pick']);
+        inOrder(['You take off the backpack', 'You get out the pick']);
         if (/hands are full/.test(t)) f.push('refused: ' + t.slice(0, 500));
         return f;
       },
@@ -1602,7 +1602,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0handy', reach: true, what: 'Dingus Quest Zero\'s reach, how readily a thing comes to hand (the user\'s, 2026-10-23: "Handy would be readily available, so in a backpack that is being worn is not as readily available as one in a belt pouch.  In a sack, in a backpack is two-containers deep, so should require longer for each level of container.  A backpack on the ground or in hand (not worn) is more readily available ... Searching a worn backpack takes it off first, then if it was on, puts it back on, each taking time.  Just shrugging it off/dropping it before battle should not require time"; HOUSE.md\'s reach, handy tools and things used up), by the clock between one line and the next, the things\' replies (the reach owed in the reply\'s y, tenths) and the words: at seed 3 (dq0 -T, dq0 -k sack: the sack in its main hand) the rations from the worn pack into the sack held (the pack off and on again, 10 seconds, and each level 2: told, "You take off your backpack for it, and put it on again."), the sack stowed in the worn pack, the rations from the sack in it (two deep: 15 seconds), dropped at no time, the pennies from the belt\'s pouch (a quick draw, a second), the worn pack looked in (15 seconds) and searched (its minute: off and on within it), dropped ("drop the pack": no time), the tinderbox taken from it on the ground (a level: 4 seconds), the pack put on ("put on the pack", 5 seconds), its torch put down, the pack taken off and left off ("take off the pack": in both hands), looked in held (5 seconds), put on again; at seed 7 (the ghoul engaging it at once, armoured) a grope in a fight a round a step (the book\'s, Combat 7, a turn): its sword put down first (a hand free: it fumbled it before, a little burdened, till D13\'s free pounds), the dagger drawn from the belt a round, stowed in the worn pack three (off, in, on), the pack dropped, the rations taken from it on the ground a round, each line typed ahead as the wait begins (held, the first taking the fight over as it begins, each after it the fight fought on in between, its round out first), the quit last (the fight taken over by it, not fought to the end): the scene set, the ghoul steady (dq0Poke\'s, at the wait: its mood AM_STEADY, so morale never takes it out of the fight before the lines are done)',
+      name: 'dq0handy', reach: true, what: 'Dingus Quest Zero\'s reach, how readily a thing comes to hand (the user\'s, 2026-10-23: "Handy would be readily available, so in a backpack that is being worn is not as readily available as one in a belt pouch.  In a sack, in a backpack is two-containers deep, so should require longer for each level of container.  A backpack on the ground or in hand (not worn) is more readily available ... Searching a worn backpack takes it off first, then if it was on, puts it back on, each taking time.  Just shrugging it off/dropping it before battle should not require time"; HOUSE.md\'s reach, handy tools and things used up), by the clock between one line and the next, the things\' replies (the reach owed in the reply\'s y, tenths) and the words: at seed 3 (dq0 -T, dq0 -k sack: the sack in its main hand) the rations from the worn pack into the sack held (the pack off and on again, 10 seconds, and each level 2: told, "You take off the backpack for it, and put it on again."), the sack stowed in the worn pack, the rations from the sack in it (two deep: 15 seconds), dropped at no time, the pennies from the belt\'s pouch (a quick draw, a second), the worn pack looked in (15 seconds) and searched (its minute: off and on within it), dropped ("drop the pack": no time), the tinderbox taken from it on the ground (a level: 4 seconds), the pack put on ("put on the pack", 5 seconds), its torch put down, the pack taken off and left off ("take off the pack": in both hands), looked in held (5 seconds), put on again; at seed 7 (the ghoul engaging it at once, armoured) a grope in a fight a round a step (the book\'s, Combat 7, a turn): its sword put down first (a hand free: it fumbled it before, a little burdened, till D13\'s free pounds), the dagger drawn from the belt a round, stowed in the worn pack three (off, in, on), the pack dropped, the rations taken from it on the ground a round, each line typed ahead as the wait begins (held, the first taking the fight over as it begins, each after it the fight fought on in between, its round out first), the quit last (the fight taken over by it, not fought to the end): the scene set, the ghoul steady (dq0Poke\'s, at the wait: its mood AM_STEADY, so morale never takes it out of the fight before the lines are done)',
       init: 't_rc', cycles: 3200e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k sack', 'put the rations in the sack', 'stow the sack', 'take the rations from the sack',
@@ -1644,9 +1644,9 @@ module.exports = {
         if (!pk || (pk.flags & DQ0_I.WORN) || !(pk.flags & DQ0_I.HELD)) f.push('the pack not left off, in a hand: ' + JSON.stringify(pk));
         const on2 = T.after(T.of('look in the pack', g.k), 'put on the pack'), pk2 = on2.after && dq0Thing(on2.after, 'backpack');
         if (!pk2 || !(pk2.flags & DQ0_I.WORN)) f.push('the pack not put on again: ' + JSON.stringify(pk2));
-        inTurn(s, ['> put the rations in the sack', 'You take off your backpack', 'You get out the rations.', 'You hold the sack open.',
-          'You put the rations in the sack.', 'You put your backpack back on.',
-          '> look in the backpack', 'You take off your backpack', 'You hold the backpack open.', 'In the backpack lie', 'You put your backpack back on.', '> drop the pack', 'You put down the backpack.',
+        inTurn(s, ['> put the rations in the sack', 'You take off the backpack', 'You get out the rations.', 'You hold the sack open.',
+          'You put the rations in the sack.', 'You put on the backpack.',
+          '> look in the backpack', 'You take off the backpack', 'You hold the backpack open.', 'In the backpack lie', 'You put on the backpack.', '> drop the pack', 'You put down the backpack.',
           '> put on the pack', 'You put on the backpack.', '> take off the pack', 'You take off the backpack.'], f, 'the words: ');
         // A grope in a fight (the referee's round, 100 tenths: HarnMaster's), its reach a round a step
         const g2 = T.of('dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T');
@@ -1838,21 +1838,21 @@ module.exports = {
         const has = (g, line, w, n) => { if (!(w.test ? w.test(seg(g, line, n)) : seg(g, line, n).includes(w))) f.push('game ' + g + ', ' + line + ': not told ' + w + ': ' + seg(g, line, n).slice(0, 400)); };
         const gk = {}; T.forEach((t, k) => { if (/^dq0 /.test(t.line)) gk[Object.keys(gk).length + 1] = k; });
         const dt = (g, line, tenths) => { const t = T.of(line, gk[g]); const d = t.at && t.after ? t.after.now - t.at.now : null; if (d !== tenths) f.push('game ' + g + ', ' + line + ': ' + d + ' tenths, not ' + tenths); };
-        const steps = 'You take off your backpack';
-        order(1, 'put the rations in the sack', ['You take off your backpack, and set it down at your feet.', 'You get out the rations.', 'You hold the sack open.', 'You put the rations in the sack.', 'You put your backpack back on.']);
+        const steps = 'You take off the backpack';
+        order(1, 'put the rations in the sack', ['You take off the backpack, and set it down at your feet.', 'You get out the rations.', 'You hold the sack open.', 'You put the rations in the sack.', 'You put on the backpack.']);
         dt(1, 'put the rations in the sack', 160);
-        order(1, 'stow the sack', [steps, 'You hold the backpack open.', 'You stow the sack in your backpack.', 'You put your backpack back on.']);
+        order(1, 'stow the sack', [steps, 'You hold the backpack open.', 'You stow the sack in your backpack.', 'You put on the backpack.']);
         dt(1, 'stow the sack', 140);
-        order(1, 'take the rations from the sack', [steps, 'You reach into the backpack.', 'You get out the rations.', 'You take the rations in your right hand.', 'You put your backpack back on.']);
+        order(1, 'take the rations from the sack', [steps, 'You reach into the backpack.', 'You get out the rations.', 'You take the rations in your right hand.', 'You put on the backpack.']);
         dt(1, 'take the rations from the sack', 150);
-        order(1, 'look in the backpack', [steps, 'You hold the backpack open.', 'In the backpack lie', 'You put your backpack back on.']);
+        order(1, 'look in the backpack', [steps, 'You hold the backpack open.', 'In the backpack lie', 'You put on the backpack.']);
         dt(1, 'look in the backpack', 150);
-        order(1, 'search the backpack', [steps, 'You hold the backpack open.', 'You search the backpack', 'You put your backpack back on.']);
+        order(1, 'search the backpack', [steps, 'You hold the backpack open.', 'You search the backpack', 'You put on the backpack.']);
         dt(1, 'search the backpack', 720);
         order(1, 'take the tinderbox from the backpack', ['You get out the tinderbox.', 'You take the tinderbox from the backpack.']);
         never(1, 'take the tinderbox from the backpack', steps);
         dt(1, 'take the tinderbox from the backpack', 40);
-        order(1, 'take the flask from the backpack', ['You take off your backpack.', 'You get out the flask of oil.', 'You take the flask of oil in your right hand.', 'You put your backpack back on.']);
+        order(1, 'take the flask from the backpack', ['You take off the backpack.', 'You get out the flask of oil.', 'You take the flask of oil in your right hand.', 'You put on the backpack.']);
         dt(1, 'take the flask from the backpack', 130);
         // (Stopped part way: the pack off told, in a hand; "put on the pack" finishes it)
         const st = s.slice(s.indexOf('> take the torch from the backpack'), s.indexOf('> inventory', s.indexOf('> take the torch from the backpack')));
@@ -1860,7 +1860,7 @@ module.exports = {
         has(1, 'inventory', 'a backpack, in your', 1);
         has(1, 'put on the pack', 'You put on the backpack.', 2);
         // (A new light)
-        order(2, 'light a new torch', ['You set the sword down at your feet.', 'You take off your backpack, and set it down at your feet.', 'You get out the new torch.', 'You light the new torch from the burning one.', 'You blow out the old torch.', 'You let the old torch fall.', 'You take up the sword.', 'You put your backpack back on.']);
+        order(2, 'light a new torch', ['You set the sword down at your feet.', 'You take off the backpack, and set it down at your feet.', 'You get out the new torch.', 'You light the new torch from the burning one.', 'You put out the old torch.', 'You let the old torch fall.', 'You take up the sword.', 'You put on the backpack.']);
         never(2, 'light a new torch', 'tinderbox');
         has(2, 'light a new torch', 'You light the new torch from the burning one.', 2);   // (The one in its other hand, 2026-11-03)
         never(2, 'light a new torch', 'You get out', 2);
@@ -1870,52 +1870,52 @@ module.exports = {
         has(3, 'inventory', /a torch \(lit[^)]*\), in your left hand/);
         has(4, 'inventory', 'a torch, in your right hand');
         // (A tool: a pick from the pack, the dig, stopped: the pack off told)
-        order(5, 'dig down', ['You take off your backpack, and set it down at your feet.', 'You reach into the backpack.', 'You get out the pick.', 'You dig with your pick']);
+        order(5, 'dig down', ['You take off the backpack, and set it down at your feet.', 'You reach into the backpack.', 'You get out the pick.', 'You dig with your pick']);
         const ds = s.slice(s.indexOf('> stop', games[4]), s.indexOf('> inventory', games[4]));
         inTurn(ds, ['You stop digging.', 'Your backpack lies at your feet.'], f, 'the dig stopped: ');
         // (A fire-maker: from the worn pack, its tries in the dark at 20 less)
-        order(6, 'light the torch', [steps, 'You reach into the backpack.', 'You get out the tinderbox.', 'You strike a spark.', 'It catches.', 'You light the torch.', 'You put away the tinderbox.', 'You put your backpack back on.']);
+        order(6, 'light the torch', [steps, 'You reach into the backpack.', 'You get out the tinderbox.', 'You strike a spark.', 'It catches.', 'You light the torch.', 'You put away the tinderbox.', 'You put on the backpack.']);
         const K = m.dq0.layout().K, tries = T.of('light the torch', gk[6]).replies.filter(r => /^slot/.test(r.req) && r.a === K.P_GROPE);
         if (!tries.length || tries.some(r => r.steps !== -4)) f.push('the tries in the dark not at 20 less: ' + JSON.stringify(tries.map(r => r.steps)));
         order(6, 'light the torch', ['You get out the tinderbox.', 'You strike a spark.', 'It catches.', 'You light the torch.', 'You put away the tinderbox.'], 2);
         never(6, 'light the torch', steps, 2);
-        never(6, 'light the torch', 'You put your backpack back on.', 2);
+        never(6, 'light the torch', 'You put on the backpack.', 2);
         // (Empty: told at its step, put away, on; then at once)
-        order(7, 'light the torch', [steps, 'You get out the tinderbox.', 'The tinderbox is empty.', 'You put away the tinderbox.', 'You put your backpack back on.']);
+        order(7, 'light the torch', [steps, 'You get out the tinderbox.', 'The tinderbox is empty.', 'You put away the tinderbox.', 'You put on the backpack.']);
         never(7, 'light the torch', 'You strike a spark.');
         has(7, 'light the torch', 'The tinderbox is empty.', 2);
         never(7, 'light the torch', steps, 2);
         // (A torch redipped: the preferred order; a sword in the other hand; no spare)
-        const pref = ['You get out the new torch.', 'You light the new torch from the burning one.', 'You blow out the old torch.', 'You set the new torch down at your feet.', 'You get out the flask of oil.', 'You set to dipping the old torch.', 'You soak the torch in the flask of oil.', 'You put away the flask of oil.', 'You put away the old torch.', 'You take up the new torch.', 'You put your backpack back on.'];
+        const pref = ['You get out the new torch.', 'You light the new torch from the burning one.', 'You put out the old torch.', 'You set the new torch down at your feet.', 'You get out the flask of oil.', 'You set to dipping the old torch.', 'You soak the torch in the flask of oil.', 'You put away the flask of oil.', 'You put away the old torch.', 'You take up the new torch.', 'You put on the backpack.'];
         order(8, 'refresh the torch', [steps, ...pref]);
         has(8, 'inventory', /a torch \(lit[^)]*\), in your left hand/);
-        order(9, 'redip the torch', ['You set the sword down at your feet.', steps, ...pref.slice(0, 9), 'You take up the new torch.', 'You take up the sword.', 'You put your backpack back on.']);
+        order(9, 'redip the torch', ['You set the sword down at your feet.', steps, ...pref.slice(0, 9), 'You take up the new torch.', 'You take up the sword.', 'You put on the backpack.']);
         has(9, 'inventory', 'a sword, in your right hand');
-        order(10, 'dip the torch', ['You go to blow out the torch: that will leave you in the dark.', steps, 'You get out the flask of oil.', 'You set to dipping the torch.', 'You put away the flask of oil.', 'You get out the tinderbox.', 'You strike a spark.', 'You light the torch.', 'You put away the tinderbox.', 'You put your backpack back on.']);
+        order(10, 'dip the torch', ['You go to put out the torch: that will leave you in the dark.', steps, 'You get out the flask of oil.', 'You set to dipping the torch.', 'You put away the flask of oil.', 'You get out the tinderbox.', 'You strike a spark.', 'You light the torch.', 'You put away the tinderbox.', 'You put on the backpack.']);
         if (!/You soak the torch|oil spills/.test(seg(10, 'dip the torch'))) f.push('dipped in the dark: neither soaked nor spilt');
         has(10, 'inventory', 'a torch (lit');
         // (Two lit, the one with the most room the old: blown out, set by the new; a spent one: nothing to blow out, kept to its end; each named)
         const dipped = ['You set to dipping the old torch.', 'You soak the torch in the flask of oil.', 'You put away the flask of oil.'];
-        order(13, 'dip the torch', ['You blow out the old torch.', 'You set the new torch down at your feet.', steps, 'You get out the flask of oil.', ...dipped, 'You put away the old torch.', 'You take up the new torch.', 'You put your backpack back on.']);
+        order(13, 'dip the torch', ['You put out the old torch.', 'You set the new torch down at your feet.', steps, 'You get out the flask of oil.', ...dipped, 'You put away the old torch.', 'You take up the new torch.', 'You put on the backpack.']);
         has(13, 'inventory', /a torch \(lit[^)]*\), in your left hand/);
-        order(14, 'dip the torch', ['You set the new torch down at your feet.', steps, 'You get out the flask of oil.', ...dipped, 'You take up the new torch.', 'You put your backpack back on.']);
-        if (seg(14, 'dip the torch').includes('You blow out')) f.push('game 14: a spent torch blown out');
+        order(14, 'dip the torch', ['You set the new torch down at your feet.', steps, 'You get out the flask of oil.', ...dipped, 'You take up the new torch.', 'You put on the backpack.']);
+        if (seg(14, 'dip the torch').includes('You put out')) f.push('game 14: a spent torch blown out');
         has(14, 'inventory', 'a torch, in your left hand');
         has(14, 'inventory', /a torch \(lit[^)]*\), in your right hand/);
-        order(18, 'dip the torch', ['You blow out the old torch.', 'You set the new torch down at your feet.', 'You get out the flask of oil.', ...dipped, 'You take up the new torch.']);
+        order(18, 'dip the torch', ['You put out the old torch.', 'You set the new torch down at your feet.', 'You get out the flask of oil.', ...dipped, 'You take up the new torch.']);
         if (seg(18, 'dip the torch').includes('backpack')) f.push('game 18: the pack touched, the flask in the pouch');
         has(18, 'inventory', 'a torch, in your');
         has(18, 'inventory', /a torch \(lit[^)]*\), in your/);
         // (A run of handlings on one line: the pack off once, on once; a walk off between: on first, the rest by the lump, untold)
-        order(15, 'take all', ['You take off your backpack', 'You hold the backpack open.', 'Taken.', 'Taken.', 'Taken.', 'You put your backpack back on.']);
+        order(15, 'take all', ['You take off the backpack', 'You hold the backpack open.', 'Taken.', 'Taken.', 'Taken.', 'You put on the backpack.']);
         has(15, 'inventory', 'a backpack, worn');
-        order(16, 'take all', [steps, 'You hold the backpack open.', 'Taken.', 'Taken.', 'You put your backpack back on.', 'You go over to the tinderbox.', 'Taken.']);
+        order(16, 'take all', [steps, 'You hold the backpack open.', 'Taken.', 'Taken.', 'You put on the backpack.', 'You go over to the tinderbox.', 'Taken.']);
         has(16, 'inventory', /a backpack, worn \(\w+\) 3 rations \(\w+\) a tinderbox/);
         // (A kind past 127, its top bit the UI's: named as it's begun and as it's stopped)
         inTurn(s.slice(games[16], games[17]), ['You set to sharpening the mang.', 'You stop sharpening the mang.', 'Your backpack lies at your feet.'], f, 'game 17: ');
         // (A whetstone: the routine's use, sharpened, a sharp one told; none carried, told)
         has(11, 'sharpen the sword', 'The sword is as sharp as it will go.');
-        order(11, 'sharpen the sword', [steps, 'You get out the whetstone.', 'You set to sharpening the sword.', 'You put a fresh edge on the sword.', 'You put away the whetstone.', 'You put your backpack back on.'], 2);
+        order(11, 'sharpen the sword', [steps, 'You get out the whetstone.', 'You set to sharpening the sword.', 'You put a fresh edge on the sword.', 'You put away the whetstone.', 'You put on the backpack.'], 2);
         has(12, 'sharpen the sword', 'You have nothing to sharpen the sword with.');
         return f;
       },
@@ -1955,7 +1955,7 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const s = dq0Story(out), f = [];
-        inTurn(s, ['> dip the torch', 'You go to blow out the torch: that will leave you in the dark.', 'Keep blowing out the torch?', 'You stop blowing out the torch.', '> inventory', 'a torch (lit'], f);
+        inTurn(s, ['> dip the torch', 'You go to put out the torch: that will leave you in the dark.', 'Keep putting out the torch?', 'You stop putting out the torch.', '> inventory', 'a torch (lit'], f);
         return f;
       },
       sdcard: true
@@ -1974,7 +1974,7 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'take the tinderbox from the backpack and take the flask from the backpack', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'douse the torch', 'light the torch', 'inventory', 'quit', 'echo $status']) },
       start(m) {
-        dq0OnWords(m, [{ g: 1, line: 'take the rations from the backpack', n: 1, words: 'You take off your backpack', text: 'drop the rations\r' },
+        dq0OnWords(m, [{ g: 1, line: 'take the rations from the backpack', n: 1, words: 'You take off the backpack', text: 'drop the rations\r' },
           { g: 2, line: 'take the rations from the backpack', n: 1, words: 'You get out the', text: 'halt\r' },
           { g: 3, line: 'search the backpack', n: 1, words: 'You search the backpack', text: 'flee\r' },
           { g: 4, line: 'search the room', n: 1, words: 'You work along', text: 'enough\r' },
@@ -1995,26 +1995,26 @@ module.exports = {
         const order = (g, line, want) => inTurn(upto(g, line), want, f, 'game ' + g + ', ' + line + ': ');
         const never = (g, line, w) => { if (upto(g, line).includes(w)) f.push('game ' + g + ', ' + line + ': told ' + w); };
         // (An ordinary line waits for the pack back on)
-        order(1, 'take the rations from the backpack', ['You take off your backpack', 'drop the rations', 'You get out the rations.', 'You take the rations in your right hand.', 'You put your backpack back on.', 'You put down the rations.']);
+        order(1, 'take the rations from the backpack', ['You take off the backpack', 'drop the rations', 'You get out the rations.', 'You take the rations in your right hand.', 'You put on the backpack.', 'You put down the rations.']);
         // (halt: a stop, at once, the pack where it was left; the user's, 2026-11-11: the parse of "halt" and the end of the
         //  short get-out step race at the turns pace, so a stop landing in the step after (the rations taken in hand, then
         //  "You stop there.") passes too, the pack still left at its feet and nothing after it done)
         order(2, 'take the rations from the backpack', upto(2, 'take the rations from the backpack').includes('You stop getting out the rations.') ?
           ['You get out the rations.', 'halt', 'You stop getting out the rations.', 'Your backpack lies at your feet.'] :
           ['You get out the rations.', 'halt', 'You take the rations in your right hand.', 'You stop there.', 'Your backpack lies at your feet.']);
-        never(2, 'take the rations from the backpack', 'You put your backpack back on.');
+        never(2, 'take the rations from the backpack', 'You put on the backpack.');
         never(2, 'take the rations from the backpack', 'no ally');
         if (/\(b\) a backpack, worn/.test(inv(2))) f.push('game 2: the pack back on after the halt');
         // (A flight in a search of the pack: stopped, the pack in hand told, then the flight)
         order(3, 'search the backpack', ['You search the backpack', 'flee', 'You stop searching.', 'Your backpack is in your hand.', 'You see nothing to flee from.']);
-        never(3, 'search the backpack', 'You put your backpack back on.');
+        never(3, 'search the backpack', 'You put on the backpack.');
         if (!inv(3).includes('a backpack, in your right hand')) f.push('game 3: the pack not left in its hand: ' + inv(3));
         order(4, 'search the room', ['You work along', 'enough', 'You stop searching.']);
         never(4, 'search the room', 'over the whole room');
         order(5, 'dig down', ['You dig with your pick', 'flee', 'You stop digging.', 'Your backpack lies at your feet.', 'Your pick is in your hand.', 'You see nothing to flee from.']);
         never(5, 'dig down', 'You put away the pick.');
         // ("take all": an ordinary line after its last thing and the pack on; a stop ends it there)
-        order(6, 'take all', ['Taken.', 'turn around', 'Taken.', 'You put your backpack back on.', 'You turn around']);
+        order(6, 'take all', ['Taken.', 'turn around', 'Taken.', 'You put on the backpack.', 'You turn around']);
         // (the user's, 2026-11-12, as game 2's: "stop" typed at the first "Taken." races the reach for the next thing at the
         //  turns pace, so the stop landing one thing later passes too, the tinderbox taken, then stopped, nothing after it)
         if (!upto(7, 'take all').includes('You reach for the tinderbox.')) {
@@ -2028,7 +2028,7 @@ module.exports = {
         order(8, 'take the tinderbox from the backpack and take the flask from the backpack', ['You get out the tinderbox.', 'flee', 'You stop getting out the tinderbox.', 'Your backpack lies at your feet.', 'You see nothing to flee from.']);
         never(8, 'take the tinderbox from the backpack and take the flask from the backpack', 'flask of oil');
         // (A fire-maker from the pack: an ordinary line after the torch lit and the pack on)
-        order(9, 'light the torch', ['You strike a spark.', 'turn left', 'You light the torch.', 'You put away the tinderbox.', 'You put your backpack back on.', 'You turn left']);
+        order(9, 'light the torch', ['You strike a spark.', 'turn left', 'You light the torch.', 'You put away the tinderbox.', 'You put on the backpack.', 'You turn left']);
         // (The class by the parser's meanings: every word for stop, flee or disengage taken at once ahead of a list's parts, parts.c's)
         const root = path.join(TESTS, '..', 'games', 'dq0'), verbs = fs.readFileSync(path.join(root, 'commands.verbs'), 'latin1'), pc = fs.readFileSync(path.join(root, 'parts.c'), 'latin1');
         const said = ['stop', 'flee', 'disengage'];
@@ -2051,8 +2051,8 @@ module.exports = {
         'take the rations from the backpack\r' + dq0Typed(['inventory', 'quit', 'echo $status']) },
       start(m) {
         dq0Poke(m, [{ g: 1, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } }, { g: 2, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } }]);
-        dq0OnWords(m, [{ g: 1, line: 'take the rations from the backpack', n: 1, words: 'You take off your backpack', text: 'flee\r' },
-          { g: 2, line: 'take the rations from the backpack', n: 1, words: 'You take off your backpack', text: 'stop\r' }]);
+        dq0OnWords(m, [{ g: 1, line: 'take the rations from the backpack', n: 1, words: 'You take off the backpack', text: 'flee\r' },
+          { g: 2, line: 'take the rations from the backpack', n: 1, words: 'You take off the backpack', text: 'stop\r' }]);
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -2062,10 +2062,10 @@ module.exports = {
         const after = (g, w) => { const t = game(g), a = t.indexOf(w); return a < 0 ? '' : t.slice(a, t.indexOf('> inventory', a)); };
         const fl = after(1, 'flee > flee');
         inTurn(fl, ['You stop taking off the backpack.', 'You break away from the ghoul.'], f, 'the flight: ');
-        if (/You get out the rations|You put your backpack back on/.test(fl.slice(0, fl.indexOf('You break away')))) f.push('a step after the flight was typed: ' + fl.slice(0, 600));
+        if (/You get out the rations|You put on the backpack/.test(fl.slice(0, fl.indexOf('You break away')))) f.push('a step after the flight was typed: ' + fl.slice(0, 600));
         const st = after(2, 'stop > stop');
         inTurn(st, ['You stop taking off the backpack.'], f, 'the stop: ');
-        if (/You get out the rations|You put your backpack back on/.test(st)) f.push('a step after the stop: ' + st.slice(0, 600));
+        if (/You get out the rations|You put on the backpack/.test(st)) f.push('a step after the stop: ' + st.slice(0, 600));
         for (const g of [1, 2]) { const t = game(g), i = t.slice(t.indexOf('> inventory > inventory')); if (!/\(b\) a backpack, worn/.test(i) || /rations \(\w+\), in your|rations, in your/.test(i)) f.push('game ' + g + ': the pack not still worn, or the rations got out: ' + i.slice(0, 300)); }
         return f;
       },
@@ -2178,8 +2178,8 @@ module.exports = {
         const f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
         const games = o.split(/% dq0 -p t -s 3 -c \/ram\/c\.hm/).slice(1), T = dq0Turns(m);
         if (games.length !== 4) return ['not four games: ' + games.length];
-        inTurn(games[0], ['You set the sword down at your feet.', 'You take off your backpack', 'You get out the new torch.', 'You light the new torch from the burning one.',
-          'You blow out the old torch.', 'You let the old torch fall.', 'You take up the sword.', 'You put your backpack back on.'], f, 'a new torch: ');
+        inTurn(games[0], ['You set the sword down at your feet.', 'You take off the backpack', 'You get out the new torch.', 'You light the new torch from the burning one.',
+          'You put out the old torch.', 'You let the old torch fall.', 'You take up the sword.', 'You put on the backpack.'], f, 'a new torch: ');
         if (/tinderbox/.test(games[0].slice(0, games[0].indexOf('You carry')))) f.push('a new torch lit with one burning: the tinderbox touched');
         const inv = games[0].slice(games[0].indexOf('You carry'));
         if (!/a torch \(lit[^)]*\), in your left hand/.test(inv) || !/a sword, in your right hand/.test(inv)) f.push('after it, not a torch lit and the sword each in its own hand: ' + inv.slice(0, 400));

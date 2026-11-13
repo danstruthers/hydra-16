@@ -387,16 +387,19 @@ TASK.elsewhere      +"{text?{nl}You came in on a level above this one.|\n{Text} 
 
 # The reach's (HOUSE.md's reach: the world's step planner's steps, a verb SV_* and its word SM_*): a step's first
 # words by its verb (its arg), text its thing with the word that tells it apart ("old torch", "spent torch"); a grope
-# failed; the pack left off as it's stopped part way; a fire-maker's try (reach_said's before, main.c's part 19)
+# failed; the pack left off as it's stopped part way; a fire-maker's try (reach_said's before, main.c's part 19).  A
+# step the world's things also do is said in the world's words, its SA row's piece (@doff, @don, @douse, @put_in,
+# @stow, @light: one wording an action, the world's, the user's, 2026-11-13); obj where it goes (the pack, the sconce,
+# the scabbard: the world's ireq.mat, its kind)
 
-@steps      "{arg?take off your {text}|take off your {text}, and set it down at your feet|put your {text} back on"
+@steps      "{arg?{@doff}|{@doff}, and set it down at your feet|{@don}"
                     "|let the {text} fall, still burning|lay the {text} on the ground, still burning"
                     "|lay the {text} down too, still lit|set the other {text} down|set to dipping the {text}"
                     "|reach into the {text}|hold the {text} open|get out the {text}|let the {text} fall|put away the {text}"
-                    "|blow out the {text}|go to blow out the {text}: that will leave you in the dark"
+                    "|{@douse}|go to {@douse}: that will leave you in the dark"
                     "|{@light} from the burning one|set the {text} down at your feet|take up the {text}"
-                    "|set to sharpening the {text}|strike a spark|sheathe the {text}|sling the {text}"
-                    "|set the {text} in the sconce|put the {text} in your pack|put the {text} in your pack too}"
+                    "|set to sharpening the {text}|strike a spark|{@put_in}|sling the {text}"
+                    "|{@put_in}|{@stow}|{@stow} too}"
 
 TASK.step           +"\nYou {@steps}."
 TASK.fumble         +"\nYou fumble for your {kind named}."
@@ -661,19 +664,26 @@ NO.A_NO_GOD         +"\nYou know no invocations."
 # UI's tt words it here, where it stood in the text: text the thing's name ("spent torch", "4 rations"), obj the
 # other's (the pack's, the belt's, a container's; a hold's, the hand's words: "your left hand", "both hands").  Each
 # said on after what's before it: the text's own words, as they were.  A wording another row has is its piece:
-# @seeno the refusal's (NO.A_SEE_NO), @light a step's (TASK.step's: "You light the torch from the burning one.")
+# @seeno the refusal's (NO.A_SEE_NO); @light, @doff, @don, @douse, @put_in and @stow the reach's steps' too (TASK.step's:
+# "You light the torch from the burning one.", "You take off the backpack.", "You stow the torch in your backpack too."):
+# one wording an action, the world's (the user's, 2026-11-13)
 
 @seeno      "You see no {text} here"
 @light      "light the {text}"
+@doff       "take off the {text}"
+@don        "put on the {text}"
+@douse      "put out the {text}"
+@put_in     "put the {text} in the {obj}"
+@stow       "stow the {text} in your {obj}"
 
 SA.hold             +"You take the {text} in {obj}."
 SA.shift            +"You shift the {text} to {obj}."
 SA.held             +"You hold the {text} in {obj} already."
 SA.hands            +"Your hands are full: stow something, or put it down."
-SA.stow             +"You stow the {text} in your {obj}."
+SA.stow             +"You {@stow}."
 SA.no_pack          +"You have no pack to stow it in."
 SA.there            +"The {text} is there already."
-SA.put_in           +"You put the {text} in the {obj}."
+SA.put_in           +"You {@put_in}."
 SA.put_on           +"You put the {text} on the {obj}."
 SA.hang             +"You hang the {text} from your {obj}."
 SA.no_hang          +"The {text} won't hang from a belt."
@@ -688,17 +698,17 @@ SA.no_room          +"There's no room there for the {text}."
 SA.too_heavy        +"The {obj} won't bear the {text} as well."
 SA.take             +"You take the {text} from the {obj}."
 SA.not_in           +"You find no {text} in the {obj}."
-SA.don              +"You put on the {text}."
+SA.don              +"You {@don}."
 SA.worn             +"You wear the {text} already."
 SA.wear_one         +"You wear a {text} already."
 SA.no_wear          +"You can't wear the {text}."
-SA.doff             +"You take off the {text}."
+SA.doff             +"You {@doff}."
 SA.not_worn         +"You aren't wearing any {text}."
 SA.light            +"You {@light}."
 SA.lit              +"The {text} is lit already."
 SA.no_flame         +"You have nothing to light it with: a tinderbox, or a flame."
 SA.no_light         +"The {text} won't light."
-SA.douse            +"You put out the {text}."
+SA.douse            +"You {@douse}."
 SA.not_lit          +"The {text} isn't lit."
 SA.none_to_light    +"You have nothing to light."
 SA.none_lit         +"You have nothing lit."

@@ -2512,7 +2512,7 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
 {
     static const char* const sm[4] = { "", "new ", "old ", "other " };   /* (By SM_*: "the old torch") */
     static const char* const aw[AW_EMPTY + 1] = { "", "lit ", "unlit ", "spent ", "empty " };
-    char t[sizeof CATALOGUE[0].name + 8];
+    char t[sizeof CATALOGUE[0].name + 8], u[sizeof CATALOGUE[0].name];
     unsigned char k = w >> 8;
     struct msg c;
 
@@ -2544,6 +2544,14 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
         }
         hub_mem (KIND_BANK, t + strlen (t), CATALOGUE[named].name, sizeof CATALOGUE[0].name);
         said_s[2] = t;
+        if ((k &= ~SM_ALL) >= SV_SCONCE || k == SV_SHEATHE) {   /* (Where it goes, its obj: the world's words for it, "You stow
+                                                **   the torch in your backpack.", "You put the sword in the scabbard.": the
+                                                **   world's ireq.mat, its kind; one wording, 2026-11-13) */
+            hub_mem (0, &k, &HUB->ireq.mat, 1);
+            hub_mem (KIND_BANK, u, CATALOGUE[k].name, sizeof CATALOGUE[0].name);
+            said_s[0] = u;
+            k = w >> 8;
+        }
         said_n = (k & ~SM_ALL) - SV_OFF;
         c.w1 = SAID_TASK_STEP;
     }

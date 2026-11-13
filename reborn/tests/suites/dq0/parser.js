@@ -930,7 +930,7 @@ module.exports = {
       },
     },
     {
-      name: 'dq0liststop', reach: true, near: ['parser', 'gear'], what: "Dingus Quest Zero's list stopped (2026-11-04: parts.c, HOUSE.md's lists): by the reach's steps, 'take the rope and the torch' from the worn pack ('drop' first), each thing by its steps in turn ('You take off your backpack' once); 'wait 30 minutes and drop the torch' stopped by 'stop', typed as the wait begins: it's taken at once, not after the look, and the look goes with it (the rest of its line let go); and a line typed after a list stays",
+      name: 'dq0liststop', reach: true, near: ['parser', 'gear'], what: "Dingus Quest Zero's list stopped (2026-11-04: parts.c, HOUSE.md's lists): by the reach's steps, 'take the rope and the torch' from the worn pack ('drop' first), each thing by its steps in turn ('You take off the backpack' once); 'wait 30 minutes and drop the torch' stopped by 'stop', typed as the wait begins: it's taken at once, not after the look, and the look goes with it (the rest of its line let go); and a line typed after a list stays",
       init: 't_rc', cycles: 2000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T',
         'wait 30 minutes and drop the torch', 'quit', 'echo $status']) },

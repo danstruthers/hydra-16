@@ -313,7 +313,9 @@ struct ireq {
     char            name[16];                   /* A thing's name (IO_GET's, IO_DROP's; IO_KIT's things more are in
                                                 **   things_text, commas between) */
     unsigned        x, y;                       /* IR_NOT_HERE's: where it is (and item the thing: I_TAKE's) */
-    unsigned char   craft, quality, mat, plural, qty;   /* IO_DESCRIBE's: what it is (its kind's name in name) */
+    unsigned char   craft, quality, mat, plural, qty;   /* IO_DESCRIBE's: what it is (its kind's name in name); mat a step's
+                                                **   too (IO_STEP's): where it puts its thing, that thing's kind (the
+                                                **   pack, the sconce, the scabbard: its words', main.c's reach_said) */
     unsigned        dur, dur_max, value;
     unsigned char   size, thick;                /*   (and its size, its thickness: the item's) */
     char            into[16];                   /* The other thing's name (IO_PUT's, IO_TAKE's: in it, on it, from it) */

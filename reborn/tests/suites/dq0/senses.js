@@ -803,7 +803,7 @@ module.exports = {
         // (Blind, in a lit room)
         inTurn(seg(2, 'look', 2), ['You can\'t see.', 'You feel about you in the dark...', 'Your hands find'], f, 'blind: ');
         // (Both hands full: the pack)
-        has(3, 'take the torch from the sconce', 'You take off your backpack');
+        has(3, 'take the torch from the sconce', 'You take off the backpack');
         has(3, 'take the torch from the sconce', 'in your backpack');
         // (A plain take of the sconce's: the hand too)
         never(4, 'take the torch', 'backpack');

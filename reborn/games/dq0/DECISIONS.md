@@ -5147,3 +5147,114 @@ two programs).
   A rename is cosmetic (the layout the same), left.
 - *Names:* HarnMaster's links keep dq0town and dq0schol (the tests, the soak and the card name them), as dq0acct kept its
   name; dq0htown/dq0hschol would be symmetric.
+
+## One wording for an action: the world's (the user's, 2026-11-13; as built, for review)
+
+Stage 5 ("Narration as data, stage 5: the world's sentences") left open three actions worded twice: the world's sentence
+(an SA row) and the reach's step (TASK.step's `@steps`).  The user's rule: one wording an action, and the world's wins.
+Each such action is now one piece of said.txt, used by its SA row and by the reach's step; the actor is "You" in both
+(SA's rows and TASK.step both begin "You "), the thing `{text}`, where it goes `{obj}`.  The reach's steps now read in
+the world's words.
+
+- **The pieces (said.txt):** `@doff` "take off the {text}", `@don` "put on the {text}", `@douse` "put out the {text}",
+  `@stow` "stow the {text} in your {obj}", `@put_in` "put the {text} in the {obj}" (beside stage 5's `@light`).
+  SA.doff, SA.don, SA.douse, SA.stow and SA.put_in are "You {@...}."; the steps use the same pieces.
+- **Where it goes, the step's obj (the world, dq0w/things.c's s_room, part 90).**  The world's SA.stow names the pack
+  ("your backpack": a worn container, so a bandolier would be "your bandolier"), SA.put_in the container ("the sconce",
+  "the scabbard", "the sheath", "the quiver").  The step's words knew only the thing (ireq.item's kind).  The hand-freeing
+  planner, as it chooses where the thing goes, now gives that place's kind in the reply's `ireq.mat` (IO_DESCRIBE's byte,
+  unused by IO_STEP; items.h's note): the sconce or the hung container (`c`, SE_PLACE), or the pack (SE_STOW); 0 for
+  any other step.  The UI (main.c's s_reach_said, part 19) names it from the catalogue as obj for the four verbs that
+  use it (SV_SHEATHE, SV_SCONCE, SV_INPACK, SV_INPACK2).  No hub layout changed.
+- **The stop's gerunds (task.c's doing[]):** a step stopped or asked about is said by its gerund ("You stop blowing out
+  the torch.", "Keep blowing out the torch?").  With the steps: SV_BLOWOUT and SV_BLOWDARK "putting out" (was "blowing
+  out"), SV_INPACK and SV_INPACK2 "stowing" (was "putting away").  SV_SHEATHE's "sheathing" and SV_SCONCE's "setting
+  down" left as they were (see below).
+- **The world's own free text, one more:** s_reach_done's "You take off your backpack for it, and put it on again."
+  (a pack off and on for a thing in it, said after the handling's words) is "You take off the backpack for it, and put
+  it on again.", SA.doff's "the".
+
+**The pairs, before and after** (the step's words as the player reads them; the world's row unchanged):
+
+| action | the reach's step, before | the world's (SA row) | now, both |
+|---|---|---|---|
+| a pack taken off (SV_OFF) | You take off your backpack. | You take off the cloak. (SA.doff) | You take off the backpack. (@doff) |
+| ... and set down (SV_OFFDOWN) | You take off your backpack, and set it down at your feet. | (SA.doff) | You take off the backpack, and set it down at your feet. |
+| a pack put on (SV_ON) | You put your backpack back on. | You put on the cloak. (SA.don) | You put on the backpack. (@don) |
+| a light put out (SV_BLOWOUT) | You blow out the old torch. | You put out the torch. (SA.douse) | You put out the old torch. (@douse) |
+| ... to the dark (SV_BLOWDARK) | You go to blow out the torch: that will leave you in the dark. | (SA.douse) | You go to put out the torch: that will leave you in the dark. |
+| stowed in the pack (SV_INPACK, SV_INPACK2) | You put the sword in your pack (too). | You stow the sword in your backpack. (SA.stow) | You stow the sword in your backpack (too). (@stow) |
+| into a hung container (SV_SHEATHE) | You sheathe the sword. | You put the sword in the scabbard. (SA.put_in) | You put the sword in the scabbard. (@put_in) |
+| into a sconce (SV_SCONCE) | You set the torch in the sconce. | You put the torch in the sconce. (SA.put_in) | You put the torch in the sconce. (@put_in) |
+| the pack off for a thing (world's free text) | You take off your backpack for it, and put it on again. | (SA.doff) | You take off the backpack for it, and put it on again. |
+
+The first three rows' actions are the user's; the rest the survey's (below).  A spent or lit thing told apart keeps its
+word ("You stow the spent torch in your backpack.").
+
+**The survey: the rest of the steps, TASK and FIRST rows, against the SA rows.**  Applied above where the world's
+thing does the very same change (the same edge: worn, off, unlit, in the pack, in the container).  Left, each the
+user's to rule on if wanted:
+
+- **SV_SLING "You sling the round shield."** against SA.don ("You put on ...").  The same change (the thing worn), but
+  "sling" says how (a shield on the back to free a hand), and one test (dq0newlight's "the pack slung to come off
+  again", `/You sling the backpack/`) tells a sling from the pack's SV_ON by the word: as "put on" both, that check
+  couldn't be kept.  Left as it is.
+- **SV_PUTAWAY "You put away the iron key."**  The tool back where it came from: the pack (SA.stow's words), a pouch
+  or another container (SA.put_in's), or the pack's after-work (AQ_STOW).  Not one SA row; the place isn't passed.
+  Left; it could take the same `ireq.mat` and choose @stow or @put_in, if the user wants.
+- **SV_GETOUT "You get out the pick."** against SA.take ("You take the pick from the backpack.").  Not the same change:
+  getting out is a level of the reach, the thing not yet in hand (the world's hold follows: "You take the pick in your
+  right hand.").  Left.
+- **SV_TAKEUP "You take up the sword."** against SA.hold ("You take the sword in your right hand.").  Close (from the
+  ground into a hand), but the step's hand isn't known to its words and the row's sentence needs it.  Left.
+- **SV_SETDOWN, SV_LETFALL, SV_LAYLIT (set down, let fall, laid down lit)**: no SA row (a drop's words are the UI's
+  own).  **SV_HONE "set to sharpening"** is the work begun, SA.honed its end.  **SV_IN, SV_OPEN, SV_DIP, SV_KINDLE**:
+  no SA row.  FIRST.into "You reach into the {text}." and SV_IN's "reach into the {text}" already the same words.
+- **TASK rows:** none words an SA row's action (TASK.readied's "You take up your bow." is the missile weapon readied).
+- **The gerunds of SV_SHEATHE, SV_SCONCE** ("sheathing", "setting down") stay: "putting" alone doesn't make a gerund
+  the stop's sentence can use ("You stop putting the sword."), and none of the tests stops one.
+
+- **Tests:** only expected strings this changes, in tests/suites/dq0/gear.js (dq0busyhands, dq0busyloop,
+  dq0newlight, dq0keysteps, dq0feedsteps, dq0blowsteps, dq0handy, dq0packsteps, dq0darklook, dq0liststop,
+  dq0packasks, and dq0reachstop's and dq0reachflee's words they type at; some in the descriptions), parser.js's one
+  description and senses.js's has(): each the same check with the new words for the old ("You take off the
+  backpack", "You put on the backpack", "You put out the old torch", "You go to put out the torch", "Keep putting out",
+  "You stop putting out", "You put the sword in the scabbard", and a never: "You stow the torch in your backpack").
+  dq0keysteps' `/You get out|take off your/` (locked already: nothing got out, no pack off) is `/You get out|take off
+  the backpack/`.  None loosened.
+- **Room** (the build's table, bytes free):
+
+  | | before | after |
+  |---|---|---|
+  | dq0's main RAM | 3,338 | 3,338 |
+  | dq0 part 19 (s_reach_said: obj named) / overlay 15 | 3,541 / 3,806 | 3,429 / 3,694 |
+  | dq0 overlay 3 (task.c's gerunds) | 2,081 | 2,073 |
+  | dq0 overlay 27 (the renderer, the words most said) | 206 | 175 |
+  | dq0 overlay 28, 29 (the rows) | 3, 1,431 | 3, 1,540 |
+  | dq0w's main RAM | 2,090 | 2,090 |
+  | dq0w part 90 (s_room: where it goes) / overlay 13 | 2,153 / 79 | 2,105 / 31 |
+  | dq0w part 56 | 3,029 | 3,030 |
+  | dq0w overlay 17 | 14 | 15 |
+
+- **The start** (dq0starttime): seed 1 232.4M → 232.7M cycles (budget 245M), seed 123456789 309.7M → 309.7M (325M).
+- **Checked:** every dq0 test's screen kept before (this branch's base, built) and after (a hook in sim/test.js, not
+  committed), their sentences compared (sent.js).  81 of 296 differ; with the rewordings above mapped (a copy of sent.js
+  that rewrites the before's sentences the new way), 26.  Of those:
+  - 18 only by the pack's free text, one letter shorter, wrapped at another word ("You take off the backpack for it,
+    and put it on again."): dq0answer, dq0bodies, dq0disengage, dq0equip, dq0fighton, dq0firstword, dq0fog, dq0morale,
+    dq0reach, dq0reading, dq0several, dq0succession, dq0sweep2, dq0throws, dq0travel, dq0usedup, dq0wordsthings,
+    dq0worn (and dq0engage);
+  - the known noise: dq0antidote's real-time fight; dq0engage's fights (looked at separately); dq0jobs', dq0mine's and
+    dq0skykin's denizens met at other moments;
+  - dq0reachstop and dq0reachflee type their lines as given words show ("You take off your backpack", now "the
+    backpack"), so the first baseline, run with the tests already changed, typed them elsewhere.  Run again on the old
+    build with the old tests: dq0reachflee the same; dq0reachstop its accepted race (a stop a thing later: "Taken." 5
+    and 4 times, "You reach for the tinderbox." once and none);
+  - dq0restbusy: its last line ("quit") is typed as the eight-hour sleep ends.  Before, the waking's news ("Your
+    Initiative skill has improved (49).", hungry, thirsty) came between its "q" and "uit"; now the game quits before
+    them.  The same at a second run.  Timing (the start 0.3M cycles later at seed 1): nothing it says is reworded.
+  Each step reworded is said as often before and after: "take off your"/"the" 115 and 115; the pack back on 23 and 20,
+  with the 3 "You put on the backpack." said before by the world; "blow out"/"put out" 7 and 7; "in your pack" 4 and
+  "stow ... in your backpack" 4; "sheathe" 1 and "in the scabbard" 1.  No sconce step is said in the suite.  The save
+  folder isn't touched.
+- **The suite:** all 446 tests pass.

@@ -628,7 +628,7 @@ void __fastcall__ s_reach_from (unsigned n)
 }
 
 /* What's owed, done: added to the character's next spell of time (engaged, a round a step: zone_step's), and, said, a
-** pack taken off for it told ("You take off your backpack for it, and put it on again."); then none owed */
+** pack taken off for it told ("You take off the backpack for it, and put it on again."); then none owed */
 static void rclear (void)
 {
     rtime = roff = 0;
@@ -650,7 +650,7 @@ unsigned __fastcall__ s_reach_done (unsigned char said)
         pextra += t;                            /* (A long task's its own length's instead: the caller's, RD_LONG) */
     }
     if (roff && (said & RD_SAID)) {
-        put (" You take off your ");
+        put (" You take off the ");            /* (The world's words, SA.doff's: 2026-11-13) */
         put (kind_at (roff)->name);
         put (" for it, and put it on again.");
     }
@@ -1152,9 +1152,12 @@ static unsigned char s_room (void)
     if (o != rs_pack && ++rs_free > 1) {        /* (The other hand's after it: its words not the first's again) */
         t = t == SV_LAYLIT ? SV_LAYLIT2 : t == SV_INPACK ? SV_INPACK2 : t == SV_SETDOWN ? SV_LETFALL : t;
     }
+    pair = c || d == SE_STOW ? item_kind (c ? c : i) : 0;   /* (Where it goes, its kind: the step's words', the UI's, "in your
+                                                **   backpack", "in the sconce": one wording, the world's, 2026-11-13) */
     rstep.what = item_kind (rstep.apart = o);
     hub_map (0);
     HUB->rs_place = c;
+    HUB->ireq.mat = pair;
     rstep.thing = o;
     rs_hand = 0;
     rstep.edge = d;

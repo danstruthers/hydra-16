@@ -29,9 +29,9 @@ static const char* const doing[] = {           /* (By LT_*; then by SV_*, a step
     "bending the bars", "winding the winch", "working the pane free", "tracking", "sniffing the air", "filling",
     "hiding", "tying the rope", "tending the wound", "turning a key", "dipping",
     "taking off", "taking off", "putting on", "letting fall", "setting down", "setting down", "setting down", "dipping",
-    "reaching into", "holding open", "getting out", "letting fall", "putting away", "blowing out", "blowing out", "lighting",
-    "setting down", "taking up", "sharpening", "striking a spark", "sheathing", "slinging", "setting down", "putting away",
-    "putting away"
+    "reaching into", "holding open", "getting out", "letting fall", "putting away", "putting out", "putting out", "lighting",
+    "setting down", "taking up", "sharpening", "striking a spark", "sheathing", "slinging", "setting down", "stowing",
+    "stowing"
 };
 #define NDOING          (sizeof doing / sizeof doing[0])
 #define NLT             (LT_DIP + 1)
