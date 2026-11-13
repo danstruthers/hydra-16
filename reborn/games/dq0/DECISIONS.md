@@ -5311,3 +5311,18 @@ whether each was only timing, the answer was two yes and one no.
 - **Room:** dq0w's main RAM 2,090 -> 2,083 (the latch, main's check); part 15 315 -> 310, part 52 2,664 -> 2,592;
   the packer moved parts' images: overlay 10 1,712 -> 893, 14 530 -> 515, 16 8 -> 765.  The start: seed 1 232.4M ->
   232.6M, 123456789 309.7M -> 308.5M (timing).  The suite: all 446 pass.
+
+## Four answers (the user's, 2026-11-13)
+
+- **Turn pace: a denizen's blow lands when it was meant to.**  The world takes a denizen's blow at its intent's time,
+  not at its own clock as it is when it gets to it (wfight.c's pc_ready = now + w2), so a fight doesn't depend on the
+  passes' timing (dq0engage's last fight, "A knockout's bearings, whatever the timing" above).  Some fights will play out
+  differently.  To build.
+- **The start's progress dot stops once the first look begins.**  No dot after the first look's words ("(B) a
+  sconce.."): dq0starttime's timing noise goes.  To build.
+- **The wordings stay as they are.**  "You put the sword in the scabbard." and "You put on the backpack." (the
+  world's wording, "One wording for an action" above), not "sheathe" and "put your backpack back on".  Settled.
+- **Town prices: set by local availability, loosely on the ruleset's.**  The ruleset gives a price's base (the book's
+  figures for HarnMaster: a scribe's day 3d, a sage's three times, a master's month 84d); the town sets the local price
+  around it by how much there is to choose from: where there's a lot of local competition the range of prices is wider,
+  in a smaller market narrower.  To build.
