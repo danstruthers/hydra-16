@@ -262,6 +262,9 @@ static unsigned char rumour_more (void)
     ultoa (s ^ 0x52554D52UL, q += 3, 10);
     strcpy (q += strlen (q) + 1, "-o");
     strcpy (q += 3, top);
+    strcpy (q += strlen (q) + 1, "-l");         /* (Its lib told, as dq0life's: found from its own path's "/../..", it
+                                                **   wasn't, and no rumour came of listening) */
+    strcpy (q += 3, lib);
     q += strlen (q) + 1;
     *q = 0;
     OV (run ("/../../themegen"));
