@@ -16,8 +16,16 @@
 // The generators:
 //   generate ({ say, cc65 })   the build's step before the games (build.js's hubNumbers): the headers' numbers, the
 //                              messages' and the records' headers (hubgen.js: obj/gen's actions.h, dq0hub.json,
-//                              dq0msg.h, dq0rec.h, dq0hub_*.inc), then the phrase table (saidgen.js: dq0said.h).
+//                              dq0msg.h, dq0rec.h, dq0hub_*.inc), then the phrase table (saidgen.js: dq0said.h) and the
+//                              styles file (styles, below: before the games, whose themes themec compiles with it).
 //                              OUT: hub ()'s
+//   styles (H, say)            the styles' proportions, games/dq0/styles.txt's sets, made obj/games/styles.dat (the card's
+//                              lib/dq0/styles.dat: the maker's to read, the set its theme names; themec's, a set's name
+//                              found): its head (the sets, sizeof struct style, the styles a set (level.h's ST_*), a
+//                              name's bytes), each set's name (themec's, read alone), then each set's four struct styles
+//                              (theme.h's, laid out as cc65 has it: H's).  A set begun from another (its line's third value) a copy of it,
+//                              but for the rows it gives; one begun from none gives every field (but slant, the
+//                              chunk's, 0).  OUT: the sets' names
 //   hub ()                     the headers' numbers, as generate made them (hubgen.js's load: obj/gen/dq0hub.json)
 //   swappedParts (dir, objdir, extra, b)
 //                              a task's C with swapped parts (its dir has a parts.txt) compiled and placed: build.js's
@@ -77,7 +85,49 @@ const rows = (file, enc = 'latin1') => fs.readFileSync(file, enc).split(/\r?\n/)
 function generate({ say = () => {}, cc65 }) {
   const H = require(path.join(DQ0, 'hubgen.js')).generate({ say, cc65 });
   require(path.join(DQ0, 'saidgen.js')).generate(H, say);
+  styles(H, say);
   return H;
+}
+
+function styles(H, say = () => {}) {
+  const file = path.join(DQ0, 'styles.txt'), out = path.join(DQ0, '..', '..', 'obj', 'games', 'styles.dat');
+  const ST = H.words('ST_BUILT').length, SIZE = H.size('style'), NAME = H.C.STYLE_NAME, MAX = H.C.STYLE_SETS;   // (theme.h's)
+  const F = Object.entries(H.S.style.f).filter(([k]) => !k.includes('.')).map(([k, f]) => ({ k, at: f[0], n: f[2] ? f[1] / f[2] : 1 }));
+  const sets = [];
+  for (const l of keyLines(fs.readFileSync(file, 'latin1'), file)) {
+    const bad = what => { throw new Error(`games/dq0/styles.txt: line ${l.n}: ${what}`); };
+    if (l.key === 'set') {
+      const from = l.v[1] ? sets.find(s => s.name === l.v[1]) : null;
+      if (!l.v[0] || l.v[0].length >= NAME || sets.some(s => s.name === l.v[0])) bad('a set\'s name, ' + (NAME - 1) + ' letters at most, its own');
+      if (l.v[1] && !from) bad('no set ' + l.v[1] + ' before it');
+      sets.push({ name: l.v[0], n: l.n, b: from ? Buffer.from(from.b) : Buffer.alloc(SIZE * ST), from, given: new Set() });
+      continue;
+    }
+    const s = sets[sets.length - 1], f = F.find(x => x.k === l.key);
+    if (!s) bad('a row before the first set');
+    if (!f || f.k === 'slant') bad('no field ' + l.key + ' of struct style\'s (theme.h)');
+    if (l.v.length !== ST) bad(ST + ' columns (built, natural, mine, mixed), not ' + l.v.length);
+    l.v.forEach((col, st) => {
+      const w = col.split(/\s+/).filter(Boolean);
+      if (w.length !== f.n) bad(f.k + ': ' + f.n + ' value(s) a style, not ' + w.length);
+      w.forEach((x, i) => {
+        const v = /^\d+$/.test(x) ? +x : H.C['KI_' + x.toUpperCase()];
+        if (v === undefined || v > 255) bad(f.k + ': ' + x + '?');
+        s.b[st * SIZE + f.at + i] = v;
+      });
+    });
+    s.given.add(f.k);
+  }
+  if (!sets.length || sets.length > MAX) throw new Error('games/dq0/styles.txt: ' + sets.length + ' sets, not 1 to ' + MAX);
+  for (const s of sets) {
+    const miss = s.from ? [] : F.filter(f => f.k !== 'slant' && !s.given.has(f.k)).map(f => f.k);
+    if (miss.length) throw new Error(`games/dq0/styles.txt: line ${s.n}: set ${s.name}: no ${miss.join(', ')}`);
+  }
+  const names = sets.map(s => { const b = Buffer.alloc(NAME); b.write(s.name, 'latin1'); return b; });
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  fs.writeFileSync(out, Buffer.concat([Buffer.from([sets.length, SIZE, ST, NAME]), ...names, ...sets.map(s => s.b)]));
+  say('styles.dat: ' + sets.length + ' set(s) of styles (' + sets.map(s => s.name).join(', ') + ')');
+  return sets.map(s => s.name);
 }
 
 const hub = () => require(path.join(DQ0, 'hubgen.js')).load();
@@ -133,4 +183,4 @@ function themes(list, opt, size) {
   return made;
 }
 
-module.exports = { keyLines, blocks, rows, generate, hub, swappedParts, pack, packOnly, themes };
+module.exports = { keyLines, blocks, rows, generate, styles, hub, swappedParts, pack, packOnly, themes };

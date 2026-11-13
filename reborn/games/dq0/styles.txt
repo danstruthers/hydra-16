@@ -1,0 +1,86 @@
+# styles.txt - (dq0) the styles' proportions, in sets (ENGINE-CRITIQUE.md's §5, step 3; DECISIONS.md's "The styles'
+# proportions in a styles file, the theme naming a set"): what the maker's growers make in a stratum of each style
+# (DUNGEON.md), and how often.  The build makes it lib/dq0/styles.dat (tools/dq0build.js's styles: theme.h's
+# struct style, a set's four in level.h's ST_* order, then the sets' names), which the maker reads as it makes its
+# first chunk (dq0m/uses.c), the set its theme names: a theme file's styles line (themec's: the set's number in the
+# record's mission, TM_STYLES), or none, the first set, the house's.  A set's number is its place here: a set is
+# added after the others, never put between them, so a theme compiled before still names the one it named.
+#
+# A set: its line (set | its name, 11 letters at most | the set it begins as a copy of, or none), then its rows, each
+# a field of struct style and its values for the four styles, built | natural | mine | mixed (a field of more than
+# one value, its values in a column with spaces between; a thing's kind by items.h's name, KI_ left off, in lower
+# case).  A set begun from another gives only the rows it changes; one begun from none gives every row.  16 sets at
+# most (TM_STYLES's four bits).  Each a chance in so many (its die's sides, as grow.h has it), or weights:
+#   lit          a room built with sconces (lit only if it's kept): in 8, one fewer each stratum down
+#   zones        a long room (6 squares) in zones: in 10;  zones3  three of them (9 squares): in 3
+#   slope        a zone's floor sloping: in 4
+#   ceil         ceilings by kind (flat, barrel, dome, cathedral, sloped, rough): weights, summing to 20
+#   doors        a way out with a door at all (else a doorway): in 20
+#   d_open d_locked d_barred    a door open, locked, barred: in 20
+#   d_hidden     a door hidden: in 15;  d_magic  of those, hidden by magic: in 4
+#   m_wood m_ironbound          a door's wood, iron-bound (the rest iron): in 10
+#   chambers     (caves) chambers along the tunnels: up to, less one;  wide  a tunnel three squares wide: in 3;
+#                glow  a chamber with a glow: in 10
+#   things       a thing in a room (two tries): in 20;  hidden  concealed: in 20;  h_lo h_span  how well: a
+#                difficulty (steps) from h_lo, two more for each of h_span grades
+#   kinds        what's lying about (eight);  hide_kinds  what's concealed (four)
+#   f_earth p_earth             a room's floor bare earth (else flagged; a cave's stone), a chunk's passages': in
+#                20, one more each 4 centuries old
+#   w_built c_built             a room's walls masonry, its ceiling (else the rock): in 20
+#   windows      a room's side with a window, where a passage runs beside it: in 20;  slits  of those, an arrow
+#                slit: in 20;  w_glass w_shut w_bars  a window's glass, shutters, bars: in 4 each
+#   portc        a door a portcullis instead: in 20
+#   traps        a trap in a room: in 20;  t_pit  a pit (open or covered): in 4;  t_hidden  hidden: in 10;
+#                t_magic  of those, by magic: in 10
+#   d_trap       a closed door trapped: in 20
+
+# The house's (the dungeons' since the styles were the maker's own table, uses.c's): purpose-built (rooms and doors,
+# most closed); natural (caves: no doors, unless sentient hands have been at them: the mixed style's); mines
+# (galleries, few doors, timbered); mixed (built into natural)
+set         | house
+#             built           | natural         | mine            | mixed
+lit         | 5               | 1               | 2               | 4
+zones       | 4               | 0               | 2               | 3
+zones3      | 1               | 0               | 0               | 1
+slope       | 1               | 1               | 1               | 1
+ceil        | 6 4 3 2 2 3     | 0 0 0 0 0 20    | 12 4 0 0 2 2    | 4 3 2 1 2 8
+doors       | 20              | 0               | 8               | 10
+d_open      | 8               | 0               | 12              | 8
+d_locked    | 4               | 0               | 2               | 3
+d_barred    | 2               | 0               | 2               | 2
+d_hidden    | 1               | 0               | 1               | 1
+d_magic     | 1               | 0               | 0               | 1
+m_wood      | 6               | 0               | 9               | 6
+m_ironbound | 3               | 0               | 1               | 3
+chambers    | 3               | 3               | 2               | 3
+wide        | 1               | 1               | 1               | 1
+glow        | 1               | 1               | 0               | 1
+things      | 6               | 4               | 5               | 6
+hidden      | 3               | 2               | 2               | 3
+h_lo        | 2               | 0               | 2               | 2
+h_span      | 6               | 4               | 4               | 6
+kinds       | potsherds bones skull candle broken_sword sack rope pennies
+            | bones bones skull potsherds broken_sword pennies rope bones
+            | pick shovel rope candle lantern sack bones potsherds
+            | potsherds bones skull candle broken_sword sack rope pennies
+hide_kinds  | pennies key lockpicks pouch | pennies pennies pouch key | pennies chisel pouch key | pennies key lockpicks pouch
+f_earth     | 6               | 8               | 0               | 6
+p_earth     | 8               | 6               | 0               | 8
+w_built     | 20              | 0               | 0               | 12
+c_built     | 14              | 0               | 0               | 8
+windows     | 6               | 0               | 0               | 3
+slits       | 6               | 0               | 0               | 6
+w_glass     | 2               | 0               | 0               | 2
+w_shut      | 2               | 0               | 0               | 2
+w_bars      | 2               | 0               | 0               | 2
+portc       | 2               | 0               | 0               | 1
+traps       | 3               | 2               | 2               | 3
+t_pit       | 1               | 4               | 3               | 2
+t_hidden    | 8               | 0               | 6               | 8
+t_magic     | 1               | 0               | 0               | 1
+d_trap      | 2               | 0               | 1               | 2
+
+# Open halls: the house's, but every way out a doorway, never a door (so no door's trap or portcullis either): a
+# theme's of open, unguarded places, and the tests' (dq0styles: a theme naming another set gets its proportions)
+set         | open            | house
+doors       | 0               | 0               | 0               | 0

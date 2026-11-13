@@ -72,6 +72,10 @@ enum { TE_NONE, TE_OPEN, TE_RULE };             /* Nothing more; the way out ope
 #define TM_FELL         0x80                    /* (And how the character came in, the theme file's start: come round
                                                 **   below from a fall, its bearings off, slice 4.2's; else walked in by
                                                 **   the way in from the surface, knowing north) */
+#define TM_STYLES       0x3C                    /* (And the set of styles its strata are grown by: lib/dq0/styles.dat's
+                                                **   number (the theme file's styles line, themec's), 0 the first, the
+                                                **   house's: a theme that names none) */
+#define TM_STYLE_SET(m) (((m) & TM_STYLES) >> 2)
 enum { END_NONE, END_ESCAPED, END_RULED, END_DIED, END_LEFT };   /* (The end[] of each: its number and 3, END_LEFT's the
                                                 **   slot END_NONE never wanted.  Escaped and ruled, solved; left, out
                                                 **   unsolved; died, solved or not as Q.solved says) */
@@ -128,7 +132,47 @@ struct tmint {
 #define MW_PAR          0x04                    /*   taken at its worth everywhere (the Khuzdul's, as Azadmere's are), */
 #define MW_HARD         0x08                    /*   hard to pass outside its own land (clipped, debased: Rethem's) */
 
-/* stratagen (bank/stratagen: a bank program, the maker's and themegen's): which of a stratum's layers a chunk of it is
+/* A style's proportions (DUNGEON.md): what the maker's growers make in a stratum of the style, and how often; each a
+** chance in so many (its own die's sides, as noted), or weights.  Not the theme's record's: the styles file's
+** (lib/dq0/styles.dat, the build's from games/dq0/styles.txt: tools/dq0build.js's styles), in sets of four (level.h's
+** ST_* order), the set the theme names (TM_STYLES) the maker's (dq0m/uses.c), each chunk's copied into its sty */
+#define STYLE_SETS      16                      /* (The sets, at most: TM_STYLES's) */
+#define STYLE_NAME      12                      /* (A set's name's bytes in the file, its 0 among them) */
+struct style {
+    unsigned char   lit;                        /* A room built with sconces (lit only if it's kept: fixtures.c's):
+                                                **   in 8, one fewer each stratum down */
+    unsigned char   zones, zones3;              /* A long room (6 squares) in zones: in 10; three (9 squares): in 3 */
+    unsigned char   slope;                      /* A zone's floor sloping: in 4 */
+    unsigned char   ceil[6];                    /* Ceilings by kind (C_FLAT ... C_ROUGH): weights, summing to 20 */
+    unsigned char   doors;                      /* A way out with a door at all (else a doorway): in 20 */
+    unsigned char   d_open, d_locked, d_barred; /* A door open, locked, barred: in 20 */
+    unsigned char   d_hidden, d_magic;          /* A door hidden: in 15; of those, hidden by magic: in 4 */
+    unsigned char   m_wood, m_ironbound;        /* A door's wood, iron-bound (the rest iron): in 10 */
+    unsigned char   chambers;                   /* (Caves) chambers along the tunnels: up to, less one */
+    unsigned char   wide;                       /* (Caves) a tunnel three squares wide: in 3 */
+    unsigned char   glow;                       /* (Caves) a chamber with a glow: in 10 */
+    unsigned char   things;                     /* A thing in a room (two tries): in 20 */
+    unsigned char   hidden;                     /*   concealed: in 20 */
+    unsigned char   h_lo, h_span;               /*   how well: a difficulty (steps) from h_lo, two more for each of
+                                                **   h_span grades */
+    unsigned char   kinds[8];                   /* What's lying about (items.h's KI_*) */
+    unsigned char   hide_kinds[4];              /* What's concealed */
+    unsigned char   f_earth, p_earth;           /* (fixtures.c) A room's floor bare earth (else flagged; a cave's
+                                                **   stone), a chunk's passages': in 20, one more each 4 centuries old */
+    unsigned char   w_built, c_built;           /* A room's walls masonry, its ceiling (else the rock): in 20 */
+    unsigned char   windows, slits;             /* A room's side with a window, where a passage runs beside it: in
+                                                **   20; of those, an arrow slit: in 20 */
+    unsigned char   w_glass, w_shut, w_bars;    /* A window's glass, shutters, bars: in 4 each */
+    unsigned char   portc;                      /* A door a portcullis instead: in 20 */
+    unsigned char   traps, t_pit;               /* A trap in a room: in 20; a pit (open or covered): in 4 */
+    unsigned char   t_hidden, t_magic;          /* A trap hidden: in 10; of those, by magic: in 10 */
+    unsigned char   d_trap;                     /* A closed door trapped: in 20 */
+    unsigned char   slant;                      /* (Not the styles': the chunk's, 0 in the file) its passages on the
+                                                **   diagonal (the user's, 2026-10-31: ways off the compass, step 3;
+                                                **   uses.c's, built.c's) */
+};
+
+/* stratagen (bank/stratagen:a bank program, the maker's and themegen's): which of a stratum's layers a chunk of it is
 ** now, from the layers, the stratum's size in chunks and its way in's chunk, and its seed (HISTORY.md) */
 struct sgq {
     unsigned char   nl;                         /* Its layers, oldest first (fewer than two: none to plan, 0) */

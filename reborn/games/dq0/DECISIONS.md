@@ -4839,3 +4839,83 @@ are the same, letter for letter.
   - the world's other free text in things_text (why_not's "Your hands are full: stow something, or put it down." is
     SA.hands's words written out a second time; the look at a thing, the locks', the cloth's ...): rows of their own,
     a later stage, if wanted.
+
+## The styles' proportions in a styles file, the theme naming a set (the user's, 2026-11-12; as built, for review: ENGINE-CRITIQUE.md's §5, step 8)
+
+The user's choice of the three ways "The plans' pages on the record store ..." set out: the third, the styles outside
+the theme's record.  The record stays as it was (THEME_SIZE, 4,096 bytes, struct theme's 1,739-byte head, the words'
+room the same), so themegen's linegen budgets every clue as before and no generated theme changes.
+
+- **The source: games/dq0/styles.txt.**  Sets of the four styles (built, natural, mine, mixed: level.h's ST_* order),
+  in the theme files' key | value format (tools/dq0build.js's keyLines).  A set's line (`set | name | the set it
+  begins as a copy of`), then its rows: a field of struct style and its four columns (a field of more than one value,
+  ceil, kinds, hide_kinds, its values in a column with spaces between; a thing's kind by items.h's name, KI_ left
+  off, in lower case).  A set begun from another gives only the rows it changes; one begun from none gives every field
+  (but slant, the chunk's own, 0).  The first set is **house**, uses.c's old table field for field, so it's the
+  default.  A second, **open**, begun from house, changes one row: `doors` 0 in every style, so every way out is a
+  doorway and there's no door to trap or make a portcullis of.  It serves a theme of open, unguarded places, and it's
+  the test's.  A set's number is its place in the file, so a set is added after the others and never put between
+  them (a theme.dat compiled before still names the same set).  16 sets at most (TM_STYLES's four bits).
+- **struct style in theme.h** (moved from dq0m/grow.h, unchanged), so the build has its layout from the C (hubgen.js:
+  dq0hub.json's S.style).  It's 53 bytes, not 52 (slant's byte): the four styles 212 bytes, not the 208 the last
+  entry said.  STYLE_SETS 16, STYLE_NAME 12 (a set's name's bytes in the file, its 0 among them).  grow.h includes
+  hub.h for it (built.c, pass.c and fixtures.c had only world.h).
+- **The file: lib/dq0/styles.dat**, made by tools/dq0build.js's `styles (H)`, run in `generate` (build.js's
+  hubNumbers, before the games: themegen's make.js compiles its goal kinds' themes with themec, which wants the file
+  on its card).  Its head four bytes (the sets, sizeof struct style, 4, STYLE_NAME), each set's name (12 bytes), then
+  each set's four structs, laid out by H's offsets.  The generator checks each row's field, its columns and values,
+  and that a set begun from none gives every field.  sdcard.txt installs it as games/lib/dq0/styles.dat.
+- **The theme names its set: one line, `styles | NAME`.**  themec (games/themec/comp.c) looks the name up in its lib
+  folder's styles.dat (themec.c's `styles_of`, read only when a theme has the line) and puts the set's number in the
+  record's mission byte, bits 2 to 5 (theme.h's TM_STYLES, TM_STYLE_SET; they were free: TM_ESCAPE, TM_RULE, TM_OPEN,
+  TM_FELL the rest).  No line, 0: the house's.  So no record's byte changes for a theme that names none: dq0t.dat is
+  byte for byte as it was.  An unknown name is the theme's fault ("styles: no such set").  tools/themec.js puts
+  styles.dat on its card beside bestiary.dat and keys its cache by it.  A hand-written theme (dq0 -t) gives the line
+  with its strata: themegen's groups put `styles` in the strata's group (stratum, layer, styles), whose lines it
+  copies through as given (linegen's emit; histgen's take ignores it).  A hand-written theme that gives a styles line
+  must give its strata too, as with a layer line.  The theme format's note (themes/1crypt.txt) has the key.
+- **The maker reads the set** (dq0m/uses.c): its table gone, a buffer of four styles in the main RAM, filled at the
+  first US_STYLE of the game (the first chunk made, the theme in the hub by then: the world begins the dungeon after
+  the UI's IO_BEGIN, after theme_load).  It reads the theme's mission byte from the hub, opens libpath's styles.dat,
+  checks its head (the struct's size, four styles), seeks past the names to the set (a set past the file's: the first)
+  and reads 212 bytes.  US_STYLE copies the chunk's style from the buffer as before.  No file: every chance nil (a
+  broken install; not hidden behind a copy of the table in the code).
+- **Checked.**
+  - The default set: styles.dat's house set compared with uses.c's old table (its initialisers read from the old
+    source, KI_ names by dq0hub.json): the same 212 bytes.  open differs in three bytes, the built, mine and mixed
+    styles' doors.
+  - The dungeons: the maker's every write to the hub's shared banks (dgen, as the earlier entry did) over 80 games, 8
+    seeds (1, 3, 7, 42, 259, 1000, 70000, 123456789), each as it is, -T, -T -T -T, -M, -A, -D, -V, -M -T, -A -T -T and
+    -V -T -T -T: the same as the baseline's in all 80.  The transcripts of the 80, by sentence, the same in 79; s1MT a
+    timing variant (a walk stopped by a rat a few squares elsewhere, at every power-up of this build, never the
+    baseline's: the maker's file read at its first chunk moves the start some 0.5M cycles, and the soak's player's
+    next words land on another square).
+  - The suite's transcripts, by sentence: every dq0 test's the same as the baseline's but ten.  Six are the known
+    timing noise (dq0antidote's real-time fight; dq0answer's, dq0jobs', dq0mine's, dq0skykin's and dq0stopwords' rats,
+    adders and sounds met at other moments).  dq0dug's rat is met at another moment too, and the baseline itself gives
+    that at another power-up (--seed 2).  Three move with the start's half a million cycles: the same at every power-up
+    of this build (--seed 2, 3), never the baseline's.  dq0starttime: a progress dot after "(B) a sconce.".
+    dq0battering: the same blows and the same door broken down, but its words of progress ("It's starting to give.")
+    after another blow, as the clock goes.  dq0engage: its real-time fights (the ghoul's blows and the character's)
+    rolled in another order. 
+  - The test **dq0styles** (tests/suites/dq0/theme.js; tests/areas.js's theme): the same hand-written theme (its name
+    and one built stratum of halls) at seed 5, without and with `styles | open`.  The styles line is kept in
+    theme.txt and compiles to the set's number (1) in the record's mission.  The top stratum's chunks in the cache as
+    each game quits: 4 and 4 built chunks, 51 doors and portcullises in the first and none in the second (a doorway's
+    square is T_DOOR without a portal, so the test counts portals).  765M cycles.
+- **Room** (bytes free):
+
+  | | before | after |
+  |---|---|---|
+  | dq0m main RAM | 4,193 | 3,932 (the styles' buffer 212, its path 48) |
+  | dq0m overlay 7 (uses.c) | 224 | 190 (the table out, the reader in) |
+  | themec main RAM | 902 | 629 (styles_of, the line) |
+  | themegen main RAM | 712 | 705 (the group's word) |
+
+  themec and themegen were under the 2,048 before (the build's warnings); this takes 273 and 7 more.  No other task
+  touched.
+- **The start** (dq0starttime): seed 1 232.4M cycles before, 232.9M after; seed 123456789 308.5M before, 309.0M after
+  (budgets 245M and 325M): the maker's open and read of styles.dat at its first chunk.
+- **The suite:** 445 of 445 (dq0styles the new one).  Run from a copy of the tree, four machine tests (hwtest, hwtool,
+  fs, mml) want the repository's own folders and fail there for the baseline as well; they pass in the worktree.
+  tiers first failed on the new test's variable `db`, a word of asm's area (areas.js's WORDS): renamed.

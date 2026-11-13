@@ -11,3 +11,5 @@ const char* __fastcall__ comp_line (struct line* l);    /* NULL, or what's wrong
 const char* comp_end (void);                    /* NULL, or what's wrong */
 unsigned comp_used (void);                      /* Its words' end */
 unsigned char comp_check (void);                /* The theme checker: its faults said (fd 2), how many */
+signed char __fastcall__ styles_of (const char* name);   /* (themec.c's) A set of styles' number (lib's styles.dat),
+                                                **   or -1 */

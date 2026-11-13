@@ -8,8 +8,8 @@
 **
 ** themec [-o record] [-l lib] [-q] theme
 **   -o record  the record written there (a game's theme.dat); without it, the theme only checked
-**   -l lib     the game's lib folder (bestiary.dat: the bestiary, themegen's make.js's): default, its own folder's
-**              lib/dq0
+**   -l lib     the game's lib folder (bestiary.dat: the bestiary, themegen's make.js's; styles.dat, the styles' sets,
+**              the build's, read if the theme names one): default, its own folder's lib/dq0
 **   -q         nothing said but its faults
 ** Its exit status 0, or 1 (its faults said: a line's, the checker's).
 */
@@ -20,15 +20,37 @@
 #include <unistd.h>
 #include "comp.h"
 
-static char path[64];
+static char path[64], lib[48];
 #define META_PATH                               /* (A path: the meta programs' library's, ../dq0/meta/meta.c) */
 #include "../dq0/meta/meta.c"
 #undef META_PATH
 
+/* The set of styles named (comp.c's styles line): its number in lib's styles.dat (the build's, with this themec:
+** its head, the sets' names, then the sets), or -1; read only when a theme names one (statics, not the C stack's:
+** the main RAM's room) */
+static unsigned char sh[4], sk;
+static char snm[STYLE_NAME];
+static int sfd;
+signed char __fastcall__ styles_of (const char* s)
+{
+    if ((sfd = open (in_ (lib, "styles.dat"), O_RDONLY)) < 0) {
+        return -1;
+    }
+    read (sfd, sh, 4);
+    for (sk = 0; sk < sh[0]; ++sk) {
+        read (sfd, snm, STYLE_NAME);
+        if (!strcmp (snm, s)) {
+            break;
+        }
+    }
+    close (sfd);
+    return sk < sh[0] ? sk : -1;
+}
+
 int main (int argc, char* argv[])
 {
     static struct line l;
-    static char t[LINE_TEXT], lib[48];
+    static char t[LINE_TEXT];
     const char* out = 0;
     const char* file = 0;
     const char* prog = getenv ("prog");

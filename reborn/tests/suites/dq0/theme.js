@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { card, typed } = require('../../lib/common.js');
 const {
-  xdBytes, saidTheme, DQ0_MAKE, dq0Life, THEMEC, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, O_WAY_OUT, O_NOWHERE, stratumRec,
+  xdBytes, saidTheme, PK_PORTCULLIS, DQ0_MAKE, dq0Life, THEMEC, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, O_WAY_OUT, O_NOWHERE, stratumRec,
   dq0Made, dq0Story, dq0Turns, dq0Ev, dq0Rep, dq0Need, dq0Carried, dq0Here, DQ0_I, dq0Typed, dq0Poke
 } = require('../../lib/dq0.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
@@ -425,6 +425,33 @@ module.exports = {
         if (!s || s.theme !== 'the Pit of Echoes') f.push('the game not in the hand-written theme: ' + (s && s.theme));
         if (!s || !s.strata || s.strata[0] !== 'the Upper Pit') f.push('the top stratum not the one given: ' + (s && s.strata && s.strata[0]));
         this.notes = [text.split('\n').filter(l => /^[a-z]/.test(l)).length + ' lines, ' + keyed('era').length + ' eras, ' + keyed('faction').length + ' factions made'];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0styles', near: ['theme'], meaning: true, what: 'Dingus Quest Zero\'s styles\' proportions in sets (games/dq0/styles.txt, the build\'s lib/dq0/styles.dat; the user\'s, 2026-11-12): a theme naming another set gets that set\'s proportions.  The same hand-written theme (dq0 -t FILE: its name and one built stratum of halls) twice at seed 5, once as it is (the first set, the house\'s: a built stratum\'s every way out a door) and once with "styles | open" (the open set: every way out a doorway); its styles line kept through themegen (theme.txt) and compiled by themec into the record\'s mission (TM_STYLES: the set\'s number, 1); the maker\'s chunks of the top stratum in the hub\'s cache as each game quits: doors (and portcullises, a door\'s) in the first, none in the second (each way out a doorway: its square T_DOOR, but no portal)',
+      init: 't_rc', cycles: 2000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'echo \'theme    | the Open Halls\' > /ram/t.txt', 'echo \'stratum  | the Halls | b | halls\' >> /ram/t.txt',
+        'dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -d /ram/a', 'look', 'quit',
+        'echo \'styles   | open\' >> /ram/t.txt', 'dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -d /ram/b', 'look', 'quit',
+        'cat /ram/b/d1/theme.txt', 'echo done']) },
+      expect: ['% echo done\ndone\n'],
+      start(m) { dq0Made(this, m); },
+      check(m, out) {
+        const PK_DOOR = 0, f = [], g = this.games || [], doors = c => c.portals.filter(p => p.kind === PK_DOOR || p.kind === PK_PORTCULLIS).length;
+        const text = saidTheme(out, 'cat /ram/b/d1/theme.txt'), styles = text.split('\n').filter(l => /^styles\s*\|/.test(l));
+        if (styles.length !== 1 || !/\|\s*open\s*$/.test(styles[0])) f.push('the styles line not kept in theme.txt: ' + JSON.stringify(styles));
+        const c = THEMEC([{ name: 'theme.txt', text }])[0];
+        if (c.status || !c.data) f.push('its theme.txt isn\'t a theme: ' + c.said);
+        else if ((c.data[1] & 0x3C) >> 2 !== 1) f.push('the record\'s set of styles ' + ((c.data[1] & 0x3C) >> 2) + ', not 1 (open)');
+        const [a, b] = [g[0], g[1]].map(x => x ? x.chunks : []);
+        if (a.length < 2 || b.length < 2) f.push('built chunks of the top stratum in the cache: ' + a.length + ' and ' + b.length + ', not two or more each');
+        const nhouse = a.reduce((n, x) => n + doors(x), 0), nopen = b.reduce((n, x) => n + doors(x), 0);
+        if (!nhouse) f.push('no doors in the house\'s set\'s chunks');
+        if (nopen) f.push(nopen + ' door(s) in the open set\'s chunks');
+        this.notes = [a.length + ' and ' + b.length + ' built chunks, ' + nhouse + ' and ' + nopen + ' doors'];
         return f;
       },
       sdcard: true

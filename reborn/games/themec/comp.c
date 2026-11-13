@@ -425,6 +425,11 @@ const char* __fastcall__ comp_line (struct line* l)
         R[1] |= *v[0] == 'f' ? TM_FELL : 0;
     } else if (!strcmp (k, "wayin")) {          /* (The way in open behind it: TM_OPEN) */
         R[1] |= TM_OPEN;
+    } else if (!strcmp (k, "styles")) {         /* (The set of styles its strata are grown by: TM_STYLES) */
+        if ((x = styles_of (v[0])) < 0) {
+            return "no such set";
+        }
+        R[1] = (R[1] & ~TM_STYLES) | x << 2;
     } else if (!strcmp (k, "wayout")) {         /* (Another way out's stratum) */
         if ((x = atoi (v[0])) < 1 || x > 63) {
             return "wayout: 1 to 63";

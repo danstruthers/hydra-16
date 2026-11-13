@@ -71,6 +71,7 @@ games/lib/dq0/stratagen.bp ../obj/bank/stratagen.bp ; (the maker's and themegen'
 games/lib/dq0/dq0m.exp ../obj/games/dq0m.exp ;   (the maker's exports, for it)
 games/themec        ../obj/games/themec.hyx
 games/lib/dq0/bestiary.dat ../obj/games/bestiary.dat
+games/lib/dq0/styles.dat ../obj/games/styles.dat ; the styles' proportions, in sets (games/dq0/styles.txt: the maker's, a theme's set)
 games/lib/dq0/themes/1crypt.txt ../games/dq0/themes/1crypt.txt
 games/lib/dq0/themes/2temple.txt ../games/dq0/themes/2temple.txt
 games/lib/dq0/themes/3warren.txt ../games/dq0/themes/3warren.txt

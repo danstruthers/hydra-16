@@ -8,12 +8,13 @@
 //
 // compile (themes, opt): each theme ({ name, text }) compiled and checked by themec, all in one machine: a paged ROM of
 // the modules (modules/rom.txt's, but hysnap) and t_rc (its init), the ROM disk's files, booted with an SD card of
-// themec, bestiary.dat and the themes' texts; "themec -l /sd/0 -o tN.dat tN.txt" typed for each.  OUT: for each,
+// themec, bestiary.dat, styles.dat (the styles' sets: a theme's styles line) and the themes' texts; "themec -l /sd/0
+// -o tN.dat tN.txt" typed for each.  OUT: for each,
 // { name, status (themec's: 0, or 1 its faults said), said (what it said: its faults, else its name and its words'
 // bytes), data (its record, THEME_SIZE bytes; null if it failed), words (its words' bytes) }.  opt: { root (reborn/),
 // out (false: only checked, no record), bios (the BIOS image: default, the built one) }.  Each answer is kept
-// (obj/themec, by the hash of themec, the bestiary, the image's modules and the text), so a test asking again doesn't
-// boot the machine.
+// (obj/themec, by the hash of themec, the bestiary, the styles, the image's modules and the text), so a test asking
+// again doesn't boot the machine.
 'use strict';
 const fs = require('fs');
 const os = require('os');
@@ -25,11 +26,12 @@ const CYCLES = 3000e6;                                        // (A machine's ru
 function compile(themes, opt = {}) {
   const ROOT = opt.root || path.join(__dirname, '..'), at = (...p) => path.join(ROOT, ...p);
   const themec = fs.readFileSync(at('obj', 'games', 'themec.hyx')), beasts = fs.readFileSync(at('obj', 'games', 'bestiary.dat'));
+  const styles = fs.readFileSync(at('obj', 'games', 'styles.dat'));
   const { readManifest } = require('../../base/build.js');
   const names = readManifest(at('modules', 'rom.txt')).modules.filter(n => n !== 'hysnap');
   const mods = [...names.map(n => ({ file: n, data: fs.readFileSync(at('obj', 'modules', n + '.bin')) })),
     { file: 't_rc', data: fs.readFileSync(at('obj', 'tests', 't_rc.bin')) }];
-  const key = crypto.createHash('sha1').update(themec).update(beasts).update(opt.out === false ? 'check' : 'out');
+  const key = crypto.createHash('sha1').update(themec).update(beasts).update(styles).update(opt.out === false ? 'check' : 'out');
   for (const m of mods) key.update(m.file).update(m.data);
   const base = key.digest('hex'), cache = at('obj', 'themec');
   const keyOf = t => crypto.createHash('sha1').update(base).update(t.text).digest('hex');
@@ -40,7 +42,7 @@ function compile(themes, opt = {}) {
     } catch (e) { return null; }
   });
   const todo = themes.map((t, i) => i).filter(i => !out[i]);
-  if (todo.length) run(todo.map(i => themes[i]), opt, { ROOT, at, themec, beasts, mods }).forEach((r, k) => {
+  if (todo.length) run(todo.map(i => themes[i]), opt, { ROOT, at, themec, beasts, styles, mods }).forEach((r, k) => {
     const i = todo[k];
     out[i] = r;
     try {
@@ -54,7 +56,7 @@ function compile(themes, opt = {}) {
 }
 
 // The machine run on themes (not kept yet): its answers, as compile's
-function run(themes, opt, { ROOT, at, themec, beasts, mods }) {
+function run(themes, opt, { ROOT, at, themec, beasts, styles, mods }) {
   const romimg = require('./romimg.js'), romfs = require('./romfs.js'), hydrafs = require('../sim/tools/hydrafs.js');
   const { hwtest } = require('../../base/build.js'), images = require('../../base/tools/images.js');
   const { boot } = require('../sim/run.js');
@@ -65,6 +67,7 @@ function run(themes, opt, { ROOT, at, themec, beasts, mods }) {
   let v = new hydrafs.Volume(img);
   v.put('themec', themec);
   v.put('bestiary.dat', beasts);
+  v.put('styles.dat', styles);
   themes.forEach((t, i) => v.put('t' + i + '.txt', Buffer.from(t.text, 'latin1')));
   v.close();
   const fd = fs.openSync(img, 'r+');

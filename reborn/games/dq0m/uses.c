@@ -8,8 +8,8 @@
 ** builders'); and what their use left lying about, as the stock asks (a kitchen's pots and bones, a chapel's candle
 ** stubs), the stratum's age rotting what rots.  No dice of the grower's: its layout never moves for them.
 **
-** And the styles' proportions (struct style: a stand-in for the theme's data), the chunk's stratum's copied into
-** make.c's sty (SP) as each chunk is made.
+** And the styles' proportions (theme.h's struct style: the set the theme names, from the styles file), the chunk's
+** stratum's copied into make.c's sty (SP) as each chunk is made.
 **
 ** And the history's layers (theme.h, HISTORY.md): which of its stratum's layers a chunk is now (stratagen's, a bank
 ** program), its purpose that layer's work (a temple's rooms over an older keep's), the older layer under it (its
@@ -22,7 +22,10 @@
 #pragma code-name ("OV7CODE")
 #pragma rodata-name ("OV7RODATA")
 
+#include <fcntl.h>
+#include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include <bankprog.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
@@ -33,31 +36,35 @@ unsigned char ulayer, uruin;                    /* (The chunk's layer, SG_*, and
 static unsigned char unl, upurpose, uage, uring, ua;    /* (Its stratum's layers, the older one's purpose, its
                                                 **   age; the chunk's ring, its main room: US_UNDER's) */
 
-/* The styles' proportions (a stand-in for the theme's data): purpose-built (rooms and doors, most closed); natural
-** (caves: no doors, unless sentient hands have been at them: the mixed style's); mines (galleries, few doors,
-** timbered: built's, for now); mixed (built into natural) */
-static const struct style styles[4] = {
-    /* lit zones z3 slope  ceilings: flat barrel dome cathedral sloped rough   doors open lock bar  hid mag  wood ib
-    ** chambers wide glow  things hidden h_lo h_span  kinds  hide_kinds
-    ** earth: floors passages  masonry: walls ceilings  windows slits glass shutters bars  portcullises  traps pits
-    ** hidden magic  door traps */
-    { 5, 4, 1, 1, { 6, 4, 3, 2, 2, 3 }, 20, 8, 4, 2, 1, 1, 6, 3, 3, 1, 1,      /* built */
-      6, 3, 2, 6, { KI_POTSHERDS, KI_BONES, KI_SKULL, KI_CANDLE, KI_BROKEN_SWORD, KI_SACK, KI_ROPE, KI_PENNIES },
-      { KI_PENNIES, KI_KEY, KI_LOCKPICKS, KI_POUCH },
-      6, 8, 20, 14, 6, 6, 2, 2, 2, 2, 3, 1, 8, 1, 2 },
-    { 1, 0, 0, 1, { 0, 0, 0, 0, 0, 20 }, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 1,      /* natural */
-      4, 2, 0, 4, { KI_BONES, KI_BONES, KI_SKULL, KI_POTSHERDS, KI_BROKEN_SWORD, KI_PENNIES, KI_ROPE, KI_BONES },
-      { KI_PENNIES, KI_PENNIES, KI_POUCH, KI_KEY },
-      8, 6, 0, 0, 0, 0, 0, 0, 0, 0, 2, 4, 0, 0, 0 },
-    { 2, 2, 0, 1, { 12, 4, 0, 0, 2, 2 }, 8, 12, 2, 2, 1, 0, 9, 1, 2, 1, 0,     /* mine */
-      5, 2, 2, 4, { KI_PICK, KI_SHOVEL, KI_ROPE, KI_CANDLE, KI_LANTERN, KI_SACK, KI_BONES, KI_POTSHERDS },
-      { KI_PENNIES, KI_CHISEL, KI_POUCH, KI_KEY },
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 6, 0, 1 },
-    { 4, 3, 1, 1, { 4, 3, 2, 1, 2, 8 }, 10, 8, 3, 2, 1, 1, 6, 3, 3, 1, 1,      /* mixed */
-      6, 3, 2, 6, { KI_POTSHERDS, KI_BONES, KI_SKULL, KI_CANDLE, KI_BROKEN_SWORD, KI_SACK, KI_ROPE, KI_PENNIES },
-      { KI_PENNIES, KI_KEY, KI_LOCKPICKS, KI_POUCH },
-      6, 8, 12, 8, 3, 6, 2, 2, 2, 1, 3, 2, 8, 1, 2 },
-};
+/* The styles' proportions (theme.h's struct style): the set the theme names (its mission's TM_STYLES: 0 the first, the
+** house's), read from the game's lib folder's styles.dat (the build's, from games/dq0/styles.txt: its head, the
+** sets' names, then each set's four) as the first chunk's made, the theme in the hub by then; a set past the file's, its
+** first.  (No file, or not of this struct's size: every chance nil, a broken install's) */
+static struct style styles[4];
+static unsigned char sread;
+static char spath[48];
+
+static void styles_in (void)
+{
+    unsigned char h[4], k;
+    int fd;
+
+    sread = 1;
+    hub_get (THEME_BANK, &THEME->mission, &k, 1);
+    strcpy (spath, libpath);
+    strcat (spath, "/styles.dat");
+    if ((fd = open (spath, O_RDONLY)) < 0) {
+        return;
+    }
+    if (read (fd, h, 4) == 4 && h[1] == sizeof (struct style) && h[2] == 4) {
+        if ((k = TM_STYLE_SET (k)) >= h[0]) {
+            k = 0;
+        }
+        lseek (fd, 4 + h[0] * STYLE_NAME + k * sizeof styles, SEEK_SET);
+        read (fd, styles, sizeof styles);
+    }
+    close (fd);
+}
 
 /* ---- The plan: a chunk's role by its ring from the way in, and the suite of uses a role is */
 
@@ -382,6 +389,9 @@ unsigned char __fastcall__ o_uses (unsigned char step, unsigned char arg)
 {
     switch (step) {
     case US_STYLE:                              /* (arg: the style, the hub's gear times 4: the tests' flags) */
+        if (!sread) {
+            styles_in ();
+        }
         memcpy (&sty, &styles[arg & 3], sizeof sty);
         if (arg & GE_DRY << 2) {
             me.water = 0xFF;                    /* (dq0 -W's, the tests': no water) */

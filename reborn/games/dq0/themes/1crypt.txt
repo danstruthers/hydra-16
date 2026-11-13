@@ -20,6 +20,8 @@
 #             (the top stratum's first); and its purpose, what its builders built it for (DUNGEON.md: built to a
 #             plan): halls, keep, temple, cellars, crypt or works (halls if it's not given), and fortified or open
 #             after it (a keep's fortified, unless it's open; the rest open, unless they're fortified)
+#   styles    the set of styles' proportions its strata are grown by (games/dq0/styles.txt's sets, by name: what a
+#             built, natural, mine or mixed stratum has, and how often); none, the first, the house's
 #   rooms     the eight words for a room, by its kind (the growers': a chamber whose use is lost, a hall, cells, a
 #             vault, a crypt, a gallery, a cave's chamber, a storeroom)
 #   uses      the twelve words for a built room's use past those (a kitchen, a pantry, barracks, an armoury, a
@@ -51,7 +53,7 @@
 # And its history (games/dq0/HISTORY.md): what the dungeon is what's left of.  A hand-written theme may give any of
 # it, or none; a game's own theme is themegen's (games/themegen), which writes all of it, and fills in what a
 # hand-written one (dq0 -t FILE) leaves out: what it gives it gives by groups, each group its lines or themegen's
-# (the region: region; the eras: people, era; the strata: stratum, layer; the words: rooms, uses, light; the
+# (the region: region; the eras: people, era; the strata: stratum, layer, styles; the words: rooms, uses, light; the
 # denizens: denizens, faction; the puzzle: goal, kind, piece, rule, lock, opened, ending), but the head's lines one by
 # one (theme, mission, story, why, reward: a name given, the story made).  The record keeps what the engine builds by
 # (theme.h); the rest is the file's, to read.
