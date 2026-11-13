@@ -5258,3 +5258,56 @@ user's to rule on if wanted:
   "stow ... in your backpack" 4; "sheathe" 1 and "in the scabbard" 1.  No sconce step is said in the suite.  The save
   folder isn't touched.
 - **The suite:** all 446 tests pass.
+
+## A knockout's bearings, whatever the timing (2026-11-13; as built, for review)
+
+Three tests' transcripts had begun to differ from build to build (dq0battering, dq0engage, dq0starttime).  Asked
+whether each was only timing, the answer was two yes and one no.
+
+- **dq0starttime: timing.**  o_dots puts a dot each 240 ticks while the start's busy; whether one falls between the
+  first look's last sentence and the help's line ("(B) a sconce..") is the ticks' phase alone.  12 spaces more on the
+  dq0 line (some 240K cycles) bring the dot; the world's events, the denizens' and the referee's replies the same but
+  for the clock's times.  Not changed (the game's dotting is the user's to decide); the sentence comparer's copy
+  (the scratch's timing/sent.js) takes a trailing ".." as ".".
+- **dq0battering: timing.**  Every blow's harm the same in every run and variant (5,6,2,3,5,4,6,6,6,0,6,0,9,19), the
+  door's giving (WB_GIVES) its 8th blow's, harm 31 to 37 crossing half its body.  "stop battering" was typed a fixed
+  10M cycles after "break the door": at d0e5503c the 8th blow's count was written 25K cycles before the stop's Enter,
+  so the stop came after it ("It's starting to give." then "It's giving, but it holds yet."); a little slower, before
+  it ("It's marked, but it holds.", the resumed run's first blow its "begin to tell", WB_TELLS before WB_GIVES).
+  Now the test types the stop as its blows are told: the lines after "break the door" held till "You keep at it."
+  (its 4th blow's words), then typed as they were (its start(m); the runner's flags still on its dq0 lines).  The
+  stop lands after the 5th blow at every delay tried (0, 2M, 4M cycles, three spaces), the transcript the same.
+  Every check as it was.
+- **dq0engage: a real fault, timing its trigger.**  The world saw the character knocked senseless only by polling the
+  summary's C_UNCONSCIOUS once a main-loop pass (dq0w.c's pc_down).  The referee makes that bit afresh at every
+  request (pc_out > now); a ghoul's blow out for 100 tenths, the next request after the clock had passed its end
+  (the minute's RS_TIME, as the passes fell) cleared it before main looked.  Then nothing of being knocked out
+  happened: no bearings_off (no bearings test, at -N none anyway; the character not put prone by it), no black-out
+  for the time it believes (burn_ask's TS_ASK; tsense marks T.gone only if it sees the bit itself).  The game's
+  dice one stream, the missing test shifted every roll after it: dq0engage's last game a long fight or a short one by
+  the timing alone (2M cycles before its "d", or 4M).
+  - **Built:** wfight.c's blow() latches the character knocked down by a blow's reply (FF_D_DOWN at it, FF_A_DOWN
+    struck by its own), `pc_ko`, where it already made it busy till it comes round; main's check takes the latch with
+    the level (`cond & C_UNCONSCIOUS | pc_ko`), clears it each pass, and stays bearings_off's only caller for it.
+    bearings_off marks the black-out's time gone itself (tb.gone the minute it's seen out, tb.how TG_OUT, if not
+    gone already), as tsense would had it seen the bit: so the time it believes is tested as it comes round
+    (wtime.c's woke) however soon.  The world's own harms (a trap's, a fall's: harm_fx's) go through it too.
+  - **Checked:** dq0engage's last game at 0, 2M, 4M, 6M cycles before its "d" and a space: the black-out's time test
+    in every one (none before at 0, 2M and a space), the requests the same through it.
+  - **Not settled, for review:** the fight after it still splits by the timing: the character's first blow after it
+    comes round at t503 (2M, 4M cycles: the short fight, a gash to the ghoul's knee) or t603 (0, 6M, a space: the
+    long one), the referee's replies the same till then.  The world takes a denizen's blow (its intent's time t) at
+    its own clock as it is when it takes it (wfight.c's pc_ready = now + w2), so the character's free moment moves
+    with the passes.  The turns pace's, the scheduler's (sched's area): not built here.  dq0engage passes either way,
+    its expected strings unchanged; at the suite's timing its words are as they were.
+- **What the player sees differently:** nothing in the suite's words.  The black-out's time test now runs after
+  every knockout: dq0looks' seed 7 trap (darts, "Everything goes black") makes it now and didn't before; its look
+  requests' bytes in game 4 differ (looks.ref regenerated: 29 lines, the request's own bytes; what's seen, the sight
+  bank and the chunks, the same in every line).
+- **Transcripts** (the suite's, by sentence, the copy of sent.js), against d0e5503c's: 8 differ.  dq0battering's
+  intended (the stop after the 5th blow: "It's marked, but it holds.", one "You keep at it." more).  dq0lookfar's
+  rats met at other moments (the game's clock a tenth earlier at its first look: the parts' banks moved by the
+  packer); dq0answer, dq0jobs, dq0mine, dq0skykin, dq0stopwords, dq0reachstop: the known noise.  dq0engage the same.
+- **Room:** dq0w's main RAM 2,090 -> 2,083 (the latch, main's check); part 15 315 -> 310, part 52 2,664 -> 2,592;
+  the packer moved parts' images: overlay 10 1,712 -> 893, 14 530 -> 515, 16 8 -> 765.  The start: seed 1 232.4M ->
+  232.6M, 123456789 309.7M -> 308.5M (timing).  The suite: all 446 pass.
