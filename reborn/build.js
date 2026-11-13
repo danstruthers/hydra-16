@@ -253,8 +253,10 @@ function partsChecked(sources, objdir) {
 // alone, most of it the harn library's), only a warning.  Nothing else of a task's is past its BSS's end: no heap
 // (a dq0 task that takes in malloc fails: cc65's heap runs from the BSS's end to the stack's, over the swap area,
 // and isn't counted), the C stack's least room (__STACKMIN__) above the measure's top, its arguments at TASK_ARGS
-// ($0350).  OUT: { text, faults }
-const HEADROOM = 2048, ROOM_LOW = 512;
+// ($0350).  A program of TOOL_ROOM's its own floor, not HEADROOM: the theme compiler and the theme generator (the
+// user's, 2026-11-13: exempt, as tools run alone between dungeons and by the build, not in play beside the tasks).
+// OUT: { text, faults }
+const HEADROOM = 2048, ROOM_LOW = 512, TOOL_ROOM = { themec: 512, themegen: 512 };
 function headroom(names) {
   const rows = [], faults = [], warns = [], lows = [], hex = n => '$' + n.toString(16).toUpperCase();
   const byNumber = (a, b) => parseInt(a[0].slice(2)) - parseInt(b[0].slice(2));
@@ -289,8 +291,9 @@ function headroom(names) {
       if (s.length) short.push(what + (s.length > 1 ? 's ' : ' ') + s.join(', '));
       return text;
     };
-    if (free < HEADROOM) (task ? faults : warns).push(name + "'s main RAM: " + free + ' bytes free, under ' + HEADROOM);
-    rows.push('  ' + name.padEnd(9) + String(free).padStart(6) + (free < HEADROOM ? '!' : ' ') + ' (' + hex(seg.BSS.end + 1) + '-' +
+    const floor = TOOL_ROOM[name] !== undefined ? TOOL_ROOM[name] : HEADROOM;
+    if (free < floor) (task ? faults : warns).push(name + "'s main RAM: " + free + ' bytes free, under ' + floor);
+    rows.push('  ' + name.padEnd(9) + String(free).padStart(6) + (free < floor ? '!' : ' ') + ' (' + hex(seg.BSS.end + 1) + '-' +
       hex(top - 1) + (sw.length ? '; the swap area ' + hex(top) + ', ' + sym.__SWAPSIZE__ + ' bytes)' : ')'));
     if (ov.length) rows.push('             overlays (of 8192):  ' + room('overlay', ov, a => size[a]));
     if (sw.length) rows.push('             parts (of ' + sym.__SWAPSIZE__ + '):' + ' '.repeat(Math.max(1, 6 - String(sym.__SWAPSIZE__).length)) + room('part', sw, () => sym.__SWAPSIZE__));

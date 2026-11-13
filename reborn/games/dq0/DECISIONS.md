@@ -4999,3 +4999,9 @@ moved the tasks' timing.  The line was 719,230 the commit before: every "look fo
   race).  No check loosened, no expected string changed.
 - **Room:** dq0's main RAM 3,343 -> 3,338; overlay 6 2,293 -> 2,253, overlay 16 2,271 -> 2,005, overlay 27 231 ->
   206.  The start: seed 1 232.0M -> 232.4M, 123456789 310.0M -> 309.7M (timing).  The suite: all 446 pass.
+
+## The theme tools' own floor (the user's, 2026-11-13)
+
+themec (629 bytes of main RAM free) and themegen (705) were under the 2,048 the dq0 tasks keep.  The user's ruling:
+exempt them, as tools run alone (by the build, and between dungeons), not beside the game's tasks in play.
+build.js's TOOL_ROOM gives each its own floor, 512 bytes; the build warns only under it.
