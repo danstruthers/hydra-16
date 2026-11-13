@@ -373,14 +373,16 @@ void __fastcall__ outcome_words (const struct msg* m);   /* Overlay 27 (said.c):
 extern const char* said_s[6];                   /* (said.c's, the main RAM's: the UI's words for a row, the thing done
                                                 **   to, the thing done with, a word of the row's own; three more, {w4}
                                                 **   {w5} {w6}; 0 or "" none) */
-enum { UK_THROW = 0x80, UK_SKY, UK_SWAY, UK_FIGHT, UK_NO, UK_FIRST };   /* (The UI's own kinds, worded by said.txt's rows as an
-                                                **   outcome event is: no world's event, never in the hub; msgs.def's,
-                                                **   narration as data's stage 4, 2026-11-12) */
+enum { UK_THROW = 0x80, UK_SKY, UK_SWAY, UK_FIGHT, UK_NO, UK_FIRST, UK_SA };  /* (The UI's own kinds, worded by said.txt's
+                                                **   rows as an outcome event is: no world's event, never in the hub;
+                                                **   msgs.def's, narration as data's stage 4, 2026-11-12; UK_SA the
+                                                **   world's things' coded words, stage 5's) */
 enum { FS_THE, FS_YOUR, FS_INTO, FS_THEM, FS_IT, FS_PEER, FS_LISTEN };   /* (UK_FIRST's: a command's first words' form, */
 enum { FV_REACH, FV_LOOK_FOR, FV_FEEL_FOR, FV_LOOK_AT, FV_HEAD, FV_TRY, FV_RAISE, FV_LIFT, FV_PUT_DOWN, FV_OVER,
     FV_FEEL };                                  /*   its verb: "You reach for the torch.", sway.c's) */
 extern unsigned char said_n;                    /* (A choice of the UI's for a row: its {arg}) */
 extern unsigned char said_q;                    /* (1: a row's words left in lb, not said: its caller's) */
+extern char* said_to;                           /*   (where in lb: lb itself, but as tt's words are made) */
 struct fight;
 void __fastcall__ feed (unsigned char eat);     /* (Part 16's, feed.c: "eat", "drink", slice 4.9's) */
 /* (Part 18's hide, main.c's and hthings.c's, not term.c's: HD_ROPE: the thing's word a rope's or a grapple's, or none: 1; HD_UP: a grapple or a rope thrown up, carried out: 1) */
@@ -431,7 +433,12 @@ extern unsigned lbn;                            /* (What a look's said of its wo
 extern unsigned char lb_stream;                 /* (A look's words said a sentence at a time, as they're made) */
 extern struct sight sight_copy;
 struct sight* sight_get (void);                 /* The senses' record copied into sight_copy (look.c's): it */
-const char* tt (void);                          /* The things' words (the UI bank's) copied into lb (look.c's): it */
+const char* tt (void);                          /* The things' words (the UI bank's) copied into lb (look.c's), the
+                                                **   world's coded sentences worded (tt_words): it */
+void tt_words (void);                           /* Overlay 24 (refuse.c's): lb's coded sentences (items.h's SAY_AT)
+                                                **   worded by said.txt's SA rows, the text after each read again */
+extern unsigned char tt_sa;                     /* (The things' words' first sentence's SA_* | 0x80, if it's coded:
+                                                **   tt's; else 0) */
 extern unsigned char sight_light;
 extern char sight_lamp[14];                     /* (What gives its light, named: the hub's pc_lamp) */
 extern unsigned char sight_close;               /* (A close look: the room's figures, its size and its ceiling's; 8,

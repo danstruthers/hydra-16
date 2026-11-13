@@ -40,6 +40,8 @@ const char* said_s[6];                          /* The thing done to, the thing 
 unsigned char said_n;                           /* A choice of the UI's for the row ({arg}) */
 unsigned char said_q;                           /* The words left in lb, not said (a denizen's sound's words, heard:
                                                 **   its caller's to use, 2026-11-11) */
+char* said_to = lb;                             /* Where in lb the words go (said_q's: the world's things' words, each
+                                                **   after the text before it, tt's: things.c's, 2026-11-12) */
 static unsigned char said_last[SAID_NKINDS];    /* Each kind's field last told ({F!...}: a dig's feet to go) */
 
 #pragma bss-name (push, "OV27BSS")              /* (The bank's own, after its code: written as it goes) */
@@ -124,7 +126,7 @@ static void flush (void)
             say (lb);
         }
     }
-    sp = lb;
+    sp = said_to;
 }
 
 /* lb's end, after a word another's added to it (theme_named's, trap_name's) */
@@ -342,7 +344,7 @@ void __fastcall__ o_outcome_words (const struct msg* m)
             }
         }
         once = RB (p + 4) & SR_ONCE;
-        sp = lb;
+        sp = said_to;
         art = 0;
         run (p + 5);
         flush ();

@@ -1614,8 +1614,8 @@ unsigned char s_hold_first (void)
         msg (tt ());
         to_hand ();
         intend2 (I_WAIT, t, I_WAIT_W2 (0, 0, 1));
-    } else if (!strstr (tt (), "already")) {
-        msg (tt ());
+    } else if (tt (), tt_sa != (SA_HELD | 0x80)) {     /* (Not held already: said.txt's SA.held, its code) */
+        msg (lb);
         return 0;
     }
     return 1;

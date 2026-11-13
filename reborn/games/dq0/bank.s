@@ -152,6 +152,7 @@ ovcall:
             OVFN        unknown, 24         ; (refuse.c's since 2026-11-06; overlay 24's since 2026-11-07, 1's room)
             OVFN        refused, 11
             OVFN        say_no, 24          ; (The refusals' one table: refuse.c's, step K of COMMANDS-CRITIQUE.md's 5.2)
+            OVFN        tt_words, 24        ; (The world's things' coded words worded: refuse.c's, narration as data's stage 5)
             OVFN        parts_in, 6
             OVFN        alias_said, 12      ; (Overlay 4's till 2026-11-10: its room)
             OVFN        sway_said, 15

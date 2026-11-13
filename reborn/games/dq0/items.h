@@ -495,6 +495,22 @@ enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE, IR_NO, IR_FIXED, IR_FUMBL
                                                 **   differ, the choices in the text, "id kind count state|" each
                                                 **   (WS_*), for the UI to ask which: the designators' step 5) */
 
+/* The world's things' sentences (narration as data, stage 5, the user's, 2026-11-12): the world puts a code in
+** things_text, not the words: SAY_AT, the sentence's SA_* | 0x80, the thing's name, SAY_SEP, the other's (the pack's,
+** the belt's, a container's; a hand's words, "your left hand"), SAY_SEP.  The UI's tt () words it by said.txt's SA rows
+** (said.c, the UI's one renderer: the thing's name its text, the other's its obj), plain text before and after it as
+** it is.  kinds.c's said[] before */
+#define SAY_AT          0x01
+#define SAY_SEP         0x02
+enum {
+    SA_HOLD, SA_SHIFT, SA_HELD, SA_HANDS, SA_STOW, SA_NO_PACK, SA_THERE, SA_PUT_IN, SA_PUT_ON, SA_HANG, SA_NO_HANG,
+    SA_NO_SLOT, SA_NO_BELT, SA_NOT_HOLDER, SA_RUN_OUT, SA_WONT_GO, SA_ITSELF, SA_PUT_OUT, SA_NO_ROOM, SA_TOO_HEAVY,
+    SA_TAKE, SA_NOT_IN, SA_DON, SA_WORN, SA_WEAR_ONE, SA_NO_WEAR, SA_DOFF, SA_NOT_WORN, SA_LIGHT, SA_LIT,
+    SA_NO_FLAME, SA_NO_LIGHT, SA_DOUSE, SA_NOT_LIT, SA_NONE_TO_LIGHT, SA_NONE_LIT, SA_NO_SUCH, SA_NO_OTHER, SA_REACH,
+    SA_WHERE, SA_WHAT, SA_IN_HAND, SA_IN_PACK, SA_FIXED, SA_BURNT, SA_NO_OIL, SA_SHUT, SA_NO_SPARE, SA_EMPTY,
+    SA_TWO_HANDS, SA_SPILT, SA_NO_FILL, SA_NO_STONE, SA_SHARP, SA_HONED
+};
+
 /* What the character carries, for the UI to word (IO_LIST's): each thing, how deep it's in others, its state */
 #define NCARRY          16
 struct carried {

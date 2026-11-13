@@ -234,6 +234,9 @@ UK_NO           < E_OUTCOME; w1 no:8-15@U_VERB
 UK_FIRST        < E_OUTCOME; w1 fs:8-15@FS_THE
                 # (A command's first words, sway.c's: their form, FS_*.  arg the verb, FV_*; w4 the word that tells
                 #   it apart, "spent "; text its name)
+UK_SA           < E_OUTCOME; w1 sa:8-15@SA_HOLD
+                # (The world's things' words, coded in things_text (items.h's SAY_AT): its SA_*.  text the thing's
+                #   name, obj the other's: refuse.c's tt_words, stage 5, 2026-11-12)
 
 struct req
 

@@ -204,15 +204,7 @@ unsigned char __fastcall__ doff_feet (unsigned n);  /* (A thing taken off, no ha
 void __fastcall__ name_apart (unsigned i, char* d);    /* (Its name told apart, into d: part 102's) */  /* (Its state's word, AW_*, beside another of its kind at hand: part 92's) */
 void __fastcall__ go_to (unsigned x, unsigned y);
 
-/* The things' words (kinds.c's said, in the catalogue's bank: % the thing's name, # the other's) */
-enum {
-    SA_HOLD, SA_HOLD2, SA_HELD, SA_HANDS, SA_STOW, SA_NO_PACK, SA_THERE, SA_PUT_IN, SA_PUT_ON, SA_HANG, SA_NO_HANG,
-    SA_NO_SLOT, SA_NO_BELT, SA_NOT_HOLDER, SA_RUN_OUT, SA_WONT_GO, SA_ITSELF, SA_PUT_OUT, SA_NO_ROOM, SA_TOO_HEAVY,
-    SA_TAKE, SA_NOT_IN, SA_DON, SA_WORN, SA_WEAR_ONE, SA_NO_WEAR, SA_DOFF, SA_NOT_WORN, SA_LIGHT, SA_LIT,
-    SA_NO_FLAME, SA_NO_LIGHT, SA_DOUSE, SA_NOT_LIT, SA_NONE_TO_LIGHT, SA_NONE_LIT, SA_NO_SUCH, SA_NO_OTHER, SA_REACH,
-    SA_WHERE, SA_WHAT, SA_IN_HAND, SA_IN_PACK, SA_FIXED, SA_BURNT, SA_NO_OIL, SA_SHUT, SA_NO_SPARE, SA_EMPTY, SA_TWO_HANDS, SA_SPILT, SA_NO_FILL, SA_NO_STONE, SA_SHARP, SA_HONED, SA_COUNT
-};
-extern const char* const said[SA_COUNT];
+/* (The things' words: items.h's SA_*, said.txt's SA rows, coded in things_text: narration as data, stage 5) */
 
 /* ---- The lights burning (slice 4.1's: DUNGEON.md's light, HOUSE.md's burning): how each kind burns, and what renews
 ** it (kinds.c's burns, in the catalogue's bank: a light's whole life and its fuels; a fuel's measure and what it is) */

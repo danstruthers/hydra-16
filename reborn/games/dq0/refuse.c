@@ -60,6 +60,52 @@ void __fastcall__ o_say_no (unsigned char a, const char* w)
 }
 #pragma static-locals (pop)
 
+/* The things' words (things_text, as tt copied them into lb) with the world's coded sentences worded (narration as
+** data, stage 5, the user's, 2026-11-12: kinds.c's said[] the world's before): each code (items.h's SAY_AT, its SA_* |
+** 0x80, the thing's name, SAY_SEP, the other's, SAY_SEP: things.c's say) worded by said.txt's SA rows where it stood,
+** into lb (said_to, said_q: not said), the text after it read again from the hub after its words.  tt_sa the first
+** sentence's code, if the text begins with one (s_hold_first's "held already": a code's, not the words').  A code past
+** TT_AT cuts the text there (lb's room: a sentence's words, and its names kept at lb's end as it's worded) */
+#define TT_AT           250
+#pragma static-locals (push, off)
+void o_tt_words (void)
+{
+    static char* q;
+    static char* e;
+    static char* y;
+    static unsigned r;
+    struct msg c;
+
+    lb[sizeof lb - 1] = 0;
+    tt_sa = lb[0] == SAY_AT ? lb[1] : 0;
+    for (r = 0, q = lb; (e = strchr (q, SAY_AT)) != 0; ) {
+        r += e - q;                             /* (The code's place in the hub's text) */
+        q = e;
+        if (q > lb + TT_AT) {
+            *q = 0;
+            return;
+        }
+        e = strchr (q + 2, SAY_SEP);
+        *e = 0;
+        y = strchr (++e, SAY_SEP);
+        *y = 0;
+        r += ++y - q;                           /* (The hub's text's after it) */
+        said_s[2] = strcpy (lb + sizeof lb - 40, q + 2);    /* (The thing's name: text; the other's: obj) */
+        said_s[0] = strcpy (lb + sizeof lb - 20, e);
+        c.kind = UK_SA;
+        c.who = 0;
+        c.w1 = (unsigned) (q[1] & 0x7F) << 8;
+        said_to = q;
+        said_q = 1;
+        outcome_words (&c);
+        said_q = 0;
+        said_to = lb;
+        q += strlen (q);
+        hub_mem (UI_BANK, q, UIREC->things_text + r, lb + sizeof lb - 1 - q);
+    }
+}
+#pragma static-locals (pop)
+
 /* A command refused, said back from its line (cl):
 **   U_VERB    no verb of the game's: "I don't know how to bribe." (its first word)
 **   U_YET     a verb the game has but doesn't do yet, or not to such a thing yet: "You can't touch the pot in this

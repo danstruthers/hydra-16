@@ -52,10 +52,13 @@ struct sight* sight_get (void)
     return &sight_copy;
 }
 
-/* The things' words (the UI bank's things_text) copied out, into lb */
+/* The things' words (the UI bank's things_text) copied out, into lb: the world's coded sentences worded (tt_words,
+** said.txt's SA rows: narration as data, stage 5, 2026-11-12) */
+unsigned char tt_sa;
 const char* tt (void)
 {
     hub_mem (UI_BANK, lb, UIREC->things_text, sizeof lb);
+    tt_words ();
     return lb;
 }
 

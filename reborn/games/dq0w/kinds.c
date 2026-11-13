@@ -4,8 +4,8 @@
 ** hub's banks: the kinds into their own (KIND_BANK, 2026-10-27: the outfits' room), where they're at $8000 as they're
 ** linked, the words of their names after them (dq0w/make.js's); a kind's record copied out as it's wanted (things.c;
 ** the senses', the UI's, the referee's too).  Its order is items.h's KI_* (the maker lists things by those).  Then,
-** in the catalogue's bank (CAT_BANK, the world's), how the lights burn (burns: slice 4.1's), what's thrown how far,
-** and the things' words (things.h's SA_*), each copied out as it's wanted.
+** in the catalogue's bank (CAT_BANK, the world's), how the lights burn (burns: slice 4.1's), and what's thrown how far,
+** each copied out as it's wanted (the things' words, said[], the UI's said.txt's SA rows since 2026-11-12).
 */
 
 #pragma rodata-name ("CATRODATA")
@@ -321,62 +321,3 @@ const unsigned char wroom[NPB] = {
     2, 1, 0, 0, 0, 0, 0, 0                      /* breast, waist, groin ... foot */
 };
 #pragma rodata-name (pop)
-
-/* The things' words (things.h's SA_*): % the thing's name, # the other's (the pack's, the belt's, a container's) */
-const char* const said[SA_COUNT] = {
-    "You take the % in your hand.",
-    "You take the % in both hands.",
-    "You hold the % already.",
-    "Your hands are full: stow something, or put it down.",
-    "You stow the % in your #.",
-    "You have no pack to stow it in.",
-    "The % is there already.",
-    "You put the % in the #.",
-    "You put the % on the #.",
-    "You hang the % from your #.",
-    "The % won't hang from a belt.",
-    "Your # has no room left to hang the % from.",
-    "You have no belt to hang it from.",
-    "The # won't hold anything.",
-    "The # won't keep the %: it would run out.",
-    "The % won't go in the #.",
-    "The % won't go inside itself.",
-    "Put the % out first.",
-    "There's no room there for the %.",
-    "The # won't bear the % as well.",
-    "You take the % from the #.",
-    "You find no % in the #.",
-    "You put on the %.",
-    "You wear the % already.",
-    "You wear a % already.",
-    "You can't wear the %.",
-    "You take off the %.",
-    "You aren't wearing any %.",
-    "You light the %.",
-    "The % is lit already.",
-    "You have nothing to light it with: a tinderbox, or a flame.",
-    "The % won't light.",
-    "You put out the %.",
-    "The % isn't lit.",
-    "You have nothing to light.",
-    "You have nothing lit.",
-    "You have no % to hand.",
-    "You see no # here.",
-    "The % is out of reach: go over to it first.",
-    "Put the % in what, or on what?",
-    "Which thing? Name it (hold the dagger, put on the cloak ...).",
-    " It's in your hand.",
-    " It's in your #.",
-    "The % is fixed where it stands.",
-    "The % is burnt out.",
-    "The % is out of oil.",
-    "The # is closed.",                        /* (A lid, a tie, a stopper: opened first, the user's) */
-    "You have no other %.",                    /* ("Light a new torch", the user's, 2026-11-02) */
-    "The # is empty.",                         /* (A fire-maker: as it's reached for, or known) */
-    "You need two good hands to dip the %.",   /* (A torch redipped: HOUSE.md's) */
-    "Your hands slip in the dark: oil spills, and the % takes none of it.",
-    "The % can't be filled or sharpened.",
-    "You have nothing to sharpen the % with.",
-    "The % is as sharp as it will go.",
-    "You put a fresh edge on the %.",
-};

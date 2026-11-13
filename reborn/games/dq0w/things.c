@@ -5501,21 +5501,22 @@ static struct item o;                           /* (A record copied out, for the
 #define KFLAGS(k)       B (m1 (kind_flags, k))
 #define FETCH(i)        m2 (fetch, (unsigned) &o, i)
 
+/* Its words (SA_*: items.h's) put in the hub's text, as a code and the two names (said.txt's SA rows the UI's: narration
+** as data, stage 5, the user's, 2026-11-12; kinds.c's said[] the words before) */
 static void __fastcall__ say (unsigned char n)
 {
-    static const char* s;
     static char* d;
 
     last_sa = n;
     d = tbuf;
-    for (s = said[n]; *s; ++s) {                /* (Its words made in the main RAM, then put in the hub's text) */
-        if (*s == '%' || *s == '#') {
-            strcpy (d, *s == '%' ? xn : yn);
-            d += strlen (d);
-        } else {
-            *d++ = *s;
-        }
-    }
+    *d++ = SAY_AT;
+    *d++ = n | 0x80;
+    strcpy (d, xn);
+    d += strlen (d);
+    *d++ = SAY_SEP;
+    strcpy (d, yn);
+    d += strlen (d);
+    *d++ = SAY_SEP;
     *d = 0;
     m1 (put, (unsigned) tbuf);
 }
@@ -6449,6 +6450,20 @@ static void __fastcall__ hand_words (unsigned char h)
     }
 }
 
+/* A hold's words (SA_HOLD, SA_SHIFT, SA_HELD), coded as the catalogue's say codes its own: the thing's name, then the
+** hand's words, h's, the other's (the UI's said.txt's SA rows: "You take the dagger in your right hand.") */
+static void __fastcall__ hold_said (unsigned char c, unsigned char h)
+{
+    tbuf[0] = SAY_AT;
+    tbuf[1] = c | 0x80;
+    tbuf[2] = 0;
+    put (tbuf);
+    put (xn);
+    put ("\2");
+    hand_words (h);
+    put ("\2");
+}
+
 /* Why not, in words (hwhy's) */
 static void why_not (void)
 {
@@ -6492,11 +6507,7 @@ unsigned char __fastcall__ s_hold_in (unsigned n, unsigned char want)
 
     s_hands_now (n);
     if (hcur && (!want || want == hcur || (want == IH_OTHER && hcur == IH_BOTH))) {
-        put ("You hold the ");              /* (Held already: in that hand, or none said) */
-        put (xn);
-        put (" in ");
-        hand_words (hcur);
-        put (" already.");
+        hold_said (SA_HELD, hcur);              /* (Held already: in that hand, or none said) */
         return IR_NO;
     }
     if (!(h = hand_for (n, want))) {
@@ -6520,11 +6531,7 @@ unsigned char __fastcall__ s_hold_in (unsigned n, unsigned char want)
     p->x = 0;
     p->flags = (p->flags & ~(I_HELD | I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | I_HELD;
     p->sn = h;
-    put (hcur ? "You shift the " : "You take the ");
-    put (xn);
-    put (hcur ? " to " : " in ");
-    hand_words (h);
-    put (".");
+    hold_said (hcur ? SA_SHIFT : SA_HOLD, h);
     took = 10;
     return IR_OK;
 }
