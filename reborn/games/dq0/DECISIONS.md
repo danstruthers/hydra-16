@@ -5005,3 +5005,145 @@ moved the tasks' timing.  The line was 719,230 the commit before: every "look fo
 themec (629 bytes of main RAM free) and themegen (705) were under the 2,048 the dq0 tasks keep.  The user's ruling:
 exempt them, as tools run alone (by the build, and between dungeons), not beside the game's tasks in play.
 build.js's TOOL_ROOM gives each its own floor, 512 bytes; the build warns only under it.
+
+## The town and the scholar's house: the ruleset's hooks (the user's, 2026-11-13; as built, for review)
+
+**The user's decision, 2026-11-13:** give the town and the scholar's house ruleset hooks now, in the account's pattern.
+Till now dq0town's haggling and listening tests and dq0schol's d100, its scribes' and sages' figures and its reading of
+the sheet (HarnMaster's meta.c) were HarnMaster's whatever the ruleset: a null game's town ran the book's d100 on the null
+account's flat 60, and its scholar's house read the null sheet as HarnMaster's lines (no masteries: every lore asked of a
+sage, a master's figure worked from attributes its sheet hasn't got).  Now both programs are the engine's, their rules the
+ruleset's hooks (rsmeta.h), HarnMaster's its own code, the null's its own.
+
+**The mechanism: the account's, one source linked once per ruleset.**  The engine's sources moved to games/dq0/town/
+(town.c, dq0town.c as it was; schol.c, dq0schol.c as it was; town.txt and scholar.txt with them, the card's paths
+updated).  Each ruleset's link is a folder of one-line files that #include them, its .cfg (the old one) and its hooks:
+
+| ruleset | its account | its town | its scholar's house | its hooks |
+|---|---|---|---|---|
+| HarnMaster | dq0acct | dq0town (games/dq0town) | dq0schol (games/dq0schol) | games/dq0harn/meta (test.c, meta.c) |
+| null | dq0nacct | dq0ntown (games/dq0ntown) | dq0nschol (games/dq0nschol) | games/dq0null/meta (test.c, meta.c) |
+
+Each link names itself and the next program in the chain with a define: the account's town.c ACCT_TOWN (dq0acct's
+"dq0town", dq0nacct's "dq0ntown"), the town's TOWN_NAME and TOWN_SCHOL, the scholar's house's SCHOL_NAME (its overlay
+file, lib/acct/NAME.ovl, its fault messages' name).  So the account a ruleset's table names runs its own town, which runs
+its own scholar's house: no program asks which ruleset it's under.  HarnMaster's links keep their names (dq0town,
+dq0schol: the tests, the soak and the card name them), as dq0acct did.
+
+Why this and not another way:
+- *The ruleset chosen at run time inside one town program* (both rulesets' hooks linked in, a switch on game.dat's referee):
+  HarnMaster's code in the engine's program and the engine naming rulesets, what the user's 2026-11-11 decision rules out;
+  each new ruleset an edit of the engine.
+- *A hooks program spawned per test* (as the account's entry weighed): a haggle or a week's study would be a spawn and a file
+  each way, and the scholar's house's forced rolls (dq0sg) and dice order would have to cross it.
+- *An overlay of the ruleset's loaded at run time:* the account's reason holds here too (an overlay links against one fixed
+  main, and the main's library modules differ by what each ruleset pulls in: HarnMaster's meta.c the harn library's
+  harn_get_sb, the null's nothing).
+- *Linked functions per ruleset* (chosen): the hooks are a handful of small functions called in the middle of the
+  programs' own work, on their own state; the linker does the choosing.  It costs two program images on the card for the
+  null ruleset (dq0ntown and dq0nschol, each with its 8K overlay), nothing at run time.
+
+**The hooks** (rsmeta.h, a new section, "The town's and the scholar's house's rules"; the sheet's three as they were):
+
+- `meta_test (chance)`: a test at a chance (a knack from the town's record, a mastery, a hired reader's skill, the steps
+  added), its grade rs.h's generic G_* by the ruleset's dice.  The programs keep their 0-3 index (G_BADLY 0 ... G_WELL 3),
+  and the scholar's house its scene's forced grade (dq0sg) before it asks.  HarnMaster's (dq0harn/meta/test.c): the book's
+  d100 against the EML held to 5-95, a critical on a multiple of 5, exactly the two programs' old `test`.  The null's
+  (dq0null/meta/test.c): its referee's flat odds (dq0null.c's flat_r) at the chance, a fine success or a bad failure in the
+  fifth of the band nearest its end.  A file of its own so the town links it alone (the town needs nothing else).
+- `meta_hired (sage)`: a hired reader's skill, a chance for meta_test: HarnMaster's a scribe's 45 + 4d10, a sage's of a
+  dead tongue 50 + 4d10 (the old expressions' figures, their dice in the same place in the stream); the null's its flat 60.
+- `meta_honest (set)`: a hired reader's honesty, the engine's scale (MH_LIES, MH_DEAR, MH_SELLS, MH_HONEST, each worse one
+  doing the better ones' too: a wrong reading told as confidently, half again, a copy sold on).  HarnMaster's: its Morality,
+  3d6 (or the scene's figure, dq0sg's first number, which stays in HarnMaster's own scale), by Character 9's bands (4, 7, 10:
+  the old ones).  The null's: honest (it has no Morality; a scene's figure is still taken from dq0sg, so a scene's numbers
+  line up the same under either ruleset).
+- `meta_taught (mk)`: as before, but 0 now means "opened with no mastery": the scholar's house then writes the record's
+  learnt without "=N" ("*ardic") and says "you can read and write it now." without "(ardic N)".  HarnMaster's never gives 0
+  (70 + a skill base, or a skill base: attributes of 3 and up).  The null's gives 0: its account's acct_learnt puts
+  "script ardic" on its sheet, as it already did.
+- `meta_line`, `meta_ml` (as before).  The null's: every line the program's own (its sheet has no attributes or masteries;
+  its "language"/"script" lines the house's tongue store reads as it did), every mastery its flat 60 (its own tongue, a script
+  on its sheet, the lore, the reckoning, the stars, heraldry): so a null character reads, studies and asks the lore itself, at
+  its flat chance, for a penny, as its referee tests everything at 60.
+
+What stays the engine's (the house's): the prices (a scribe's day 3d, a sage's three times, a master's month 84d, the
+library's penny a day), the days each errand takes and the scribe's days (d3, 2d4), a dead tongue (ten centuries) and the big
+town, a grade's worth in a haggle (a quarter, a tenth, an offence) and the readings' words, the sheet's tongue and script lines'
+form (the referee's store's, both rulesets').  The town's record keeps its rhet and intr fields (between.dat's layout
+unchanged): they're the ruleset's knacks for the market and the inn, set by its acct_town (HarnMaster's Rhetoric and Intrigue
+EMLs, the null's 60), now tested by the ruleset's own meta_test.
+
+**What a null game now gets** (it ran HarnMaster's town and scholar's house before): the inn's listening and the market's
+haggling at its account's flat 60, graded by its own flat odds; in the scholar's house the lore (folklore, reckoning, the
+stars, heraldry) its own at 60 for a penny a day, where HarnMaster's code read no mastery off its sheet and hired a sage for
+3d; its study at 60 and the condition's steps; a sage's or a scribe's reading at 60, and honest (never half again, never a
+copy sold on, never a lie); a master's month opening a tongue or a script with no figure ("You study ardic for a month with
+Master ... (84d): you can read and write it now."; the record's "*ardic", its sheet's "script ardic").
+
+**Checked: HarnMaster's games behave as before** (the acct agent's method: scratch scripts towncmp.js and tcmp.js, after
+its acctcmp.js and cmp3.js).
+
+- 56 lives (two batches of 28: seeds 3, 5, 7, 42, 99, 259, 1000, 4242, 70000 (six times), 70001, 100003 (four), 123456
+  (four), 200003, 314159, 555555, 1234567, 9999999; hmchar's sage, scribe, hunter, thief, miner and militia, Rhetoric,
+  Intrigue, the lore and the tongues' masteries put on the sheet at random, ostari, sunglyph, sindarin, delvic and ardic lines
+  too; the journal, paper and charcoal to hand, copied or not), each played through two dungeons with the account asked
+  (dq0auto off) and the town answered by a script: groups of errands at random (the inn and its listening, the market's
+  haggling for and over things, buying and selling, the smith, who's asking, the scholar's house through the town with its
+  readings, study, masters and lore), then the scholar's house run alone over the same folder twice each time between
+  (dq0schol -t -b -c -w, no dq0sg: its own dice), its readings, studies, masters and lore at random.  Before and after each:
+  life.dat, kit.dat, kit0.dat, pc.hm, clues.dat dumped, and after the account heard.txt and quest.txt, after the scholar's
+  house clues.dat, heard.txt and between.dat.
+- Every time between began on the same files in both builds (112 of 112), and every one said the same words and left the same
+  files, byte for byte; every one of the 224 scholar's houses run alone the same.  Among them (counted in the same transcripts):
+  113 haggles, 67 listenings, 41 sages hired to read, 19 studies in the library, 52 masters' months, 38 lore asked of the
+  character's own mastery and 59 of a sage, 30 lore that found nothing, 37 sales, 57 purchases, 4 copies sold on talked of.
+  (A scribe of a living tongue never came up: no dungeon gave a writing under ten centuries old; its figure, 45 + 4d10, is
+  the sage's asked of the lore, 59 times.  The dungeons played between are timing noise and aren't compared.)
+- Every dq0 test's transcript before (d0e5503c, built in a copy of the tree) and after (a hook in sim/test.js, not
+  committed), by sentence (sent.js): 8 of 296 differ, none in a town or a scholar's house (dq0town's, dq0scholar's,
+  dq0tongues', dq0account's and dq0nullbetween's the same): dq0antidote's and dq0engage's real-time fights; dq0jobs',
+  dq0skykin's and dq0stopwords' denizens met at other moments; dq0reachstop's accepted race; dq0restbusy's rest ending at
+  another moment (an Initiative improvement, hunger and thirst told), as at the account's split; dq0rules' last prompt
+  caught a moment later.  The card has four files more, so its files are read at other moments.
+- The suite: all 447 pass (446 and dq0nulltown).  The start (dq0starttime, the town isn't in it): seed 1 232.4M cycles
+  before, 231.9M after; seed 123456789 309.7M, 308.7M (budgets 245M and 325M): timing.
+
+**A test: dq0nulltown** (tests/suites/dq0/save.js): a null game (seed 70000, its artifact and the journal to hand) walked
+out solved and carried on with the account asked: its account runs dq0ntown (the inn's listening and the market's haggling
+told), the scholar's house its own (the folklore asked of the journal done by the character itself, "You spend a day in the
+library over it (1d).", where HarnMaster's code hired a sage for a null sheet; ardic opened with no figure, said so, its sheet
+given "script ardic"); then the scholar's house run alone twice on the same scene (dq0sg '4 2': HarnMaster's Morality 4, a
+success): the null's sage honest (9d a day, the journal's own place), HarnMaster's diabolical (14d a day, half again; another
+place, told as confidently).
+
+**Room** (main RAM free, the build's table):
+
+| | before | after |
+|---|---|---|
+| dq0town | 3,379 (overlay 6,443) | 3,293 (overlay 6,443) |
+| dq0schol | 5,143 (overlay 630) | 4,981 (overlay 665) |
+| dq0ntown (new) | | 3,188 (overlay 6,443) |
+| dq0nschol (new) | | 9,713 (overlay 665) |
+| dq0acct, dq0nacct, dq0life, the game's tasks | | as they were (2,297; 7,349; 18,077) |
+
+The town's 86 bytes and the scholar's house's 162: the grade's mapping (G_* to the programs' 0-3) and the hooks' calls, and in
+the scholar's house the no-mastery branch.  The card: four files more (dq0ntown and dq0nschol, their overlays; 2 x 8K and the
+two programs).
+
+**For review / open questions:**
+
+- *The prices* (a scribe's day 3d, a sage's three times, a master's month 84d, a sage's day for lore 3d, the library's penny a
+  day) stay the house's, though their figures are the book's (Character 13): a ruleset with its own economy might want them
+  its own.  Not done: they don't depend on the character's sheet, and the account's goods and the market's prices are the
+  house's too.
+- *The null's readers are all honest.*  The null ruleset has no Morality, so the house's dishonest scribes (half again, a copy
+  sold on, a lie) never happen under it.  If the user wants them the house's under any ruleset, the null could roll its own
+  (say its flat odds: a bad failure a liar, a failure dear ...).
+- *dq0sg's honesty figure is in the ruleset's own scale* (HarnMaster's Morality): a test's scene for a null game sets it but
+  it means nothing there.  The engine's MH_* could be the scene's scale instead; the HarnMaster tests' scenes (dq0scholar)
+  would then change their numbers.
+- *The town's record keeps rhet and intr* (records.def's field names, HarnMaster's skills'); they're the ruleset's knacks now.
+  A rename is cosmetic (the layout the same), left.
+- *Names:* HarnMaster's links keep dq0town and dq0schol (the tests, the soak and the card name them), as dq0acct kept its
+  name; dq0htown/dq0hschol would be symmetric.
