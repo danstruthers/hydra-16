@@ -737,6 +737,39 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0nullbetween', near: ['save', 'money'], what: "Dingus Quest Zero's time between two dungeons under the null ruleset (the user's, 2026-11-12, DECISIONS.md's \"dq0acct split\": the engine's account, its ruleset's hooks the null's, games/dq0null/acct; rsmeta.h's table its dq0nacct): seed 70000's artifact to hand (dq0 -r null -k), walked out solved; its sheet given three wounds; carried on: the days pass and are told (the road and the lull alone: nothing heals, no physician, no practice), the reward paid and the standing told, the lodging the middle station's at 2d a day or less, the money told, the rumours heard and the first followed; the record on to its second dungeon, its date on by the days told and the road, the time between done; the next dungeon begun under the null referee, its sheet the null's with its wounds as they were",
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0 -r null -p t -s 70000 -k \'jade cup\' -d /ram/n', 'look', 'u', 'xd /ram/n/life.dat', "echo 'wounds 3' >> /ram/n/pc.hm",
+        'echo =CARRY', 'dq0 -r null -p t -d /ram/n', 'look', 'quit', 'echo =AFTER', 'xd /ram/n/life.dat', 'cat /ram/n/pc.hm', 'ls /ram/n/d2', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\r/g, ''), sect = n => { const i = o.indexOf('% echo =' + n), j = o.indexOf('% echo =', i + 3); return i < 0 ? '' : o.slice(i, j < 0 ? o.length : j); };
+        const carry = sect('CARRY'), acct = carry.slice(0, carry.indexOf('Enter to go on') < 0 ? carry.length : carry.indexOf('Enter to go on')).replace(/\s+/g, ' ');
+        const days = /(\d+) days? pass\. You walk to [A-Z]/.exec(acct);
+        if (!days) return ['no time between told: ' + acct.slice(0, 600)];
+        if (/dq0n?acct: /.test(o)) f.push('the account failed: ' + acct.slice(0, 300));
+        if (/physician|festers|heals|mends|You practise|could practise|The work teaches|You die/.test(acct)) f.push('the null ruleset\'s account healed, practised or killed: ' + acct.slice(0, 600));
+        if (!/You (take a place in the common room at the [A-Z][a-z]+( [A-Z][a-z]+)* \(a bed and a hot meal and a cold: 2d a day|sleep in a hayloft and eat market bread \(1d a day)/.test(acct)) f.push('not the middle station\'s lodging: ' + acct.slice(0, 600));
+        if (!/You have [^.]*\. It is \d+ [A-Z][a-z]+ \d+, and you are \d+\. [^(]*\(standing [1-9]\d*\)\./.test(acct)) f.push('the money, the date, the age or the standing not told: ' + acct.slice(0, 900));
+        if (!/there's talk of other places:[^]*You set out for [^,]+, (\d+) days on the road\./.test(acct)) f.push('no rumour followed: ' + acct.slice(-500));
+        const l1 = dq0Life(xdBytes(o.slice(0, o.indexOf('% echo =CARRY')), 'xd /ram/n/life.dat')), l2 = dq0Life(xdBytes(sect('AFTER'), 'xd /ram/n/life.dat'));
+        const road = /You set out for [^,]+, (\d+) days on the road\./.exec(acct);
+        if (!l1 || !l2) f.push('no record');
+        else {
+          if (l2.h.dungeon !== 2 || l2.d[0].outcome !== dq0Life.C('LO_SOLVED')) f.push('not on to its second dungeon, the first solved: ' + l2.h.dungeon + ', ' + l2.d[0].outcome);
+          if (l2.h.flags & (dq0Life.C('LF_BETWEEN') | dq0Life.C('LF_OVER'))) f.push('the record\'s flags: ' + l2.h.flags);
+          if (road && l2.h.date - l1.h.date < +days[1] + +road[1]) f.push('the date not on by the days told and the road: ' + l1.h.date + ' to ' + l2.h.date + ', ' + days[1] + ' and ' + road[1]);
+          if (!(l2.h.reputation > 0)) f.push('no standing from the reward: ' + l2.h.reputation);
+        }
+        const T = dq0Turns(m);
+        dq0Need(f, T.of('dq0 -r null -p t -d /ram/n'), 'E_ARRIVE', { how: 'A_START' }, 'the next dungeon not begun');
+        const sheet = sect('AFTER');
+        if (!/\nnull 1\n/.test(sheet) || !/\nwounds 3\n/.test(sheet)) f.push('the sheet not the null\'s, its wounds as they were: ' + sheet.slice(sheet.indexOf('null'), sheet.indexOf('null') + 160));
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0fastkept', near: ['save', 'body'], what: "Dingus Quest Zero's vow of fasting kept (the user's, 2026-11-11, DECISIONS.md's \"Prayer, fasting, swimming and following\"): a vow made, 20 minutes waited, the game quit and carried on: eating still refused (\"You're fasting, with 24 hours of your vow to go\"); the crypt solved and walked out of, dq0life run with no time between told (no -l) and the next dungeon's seed 1 (its hour 1, before the first's 3): the record's fast (life.h's, the head's byte 26) its end after the new date's midnight, 15 to 17 steps of 12 minutes; the next dungeon begun, eating refused with 2 to 4 hours of the vow to go; \"stop\" ends it, eating then not refused",
       init: 't_rc', cycles: 2400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',

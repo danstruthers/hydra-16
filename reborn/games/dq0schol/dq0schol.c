@@ -48,7 +48,7 @@
 #include "../dq0/life.h"
 #include "../dq0/rsmeta.h"                   /* (The ruleset's sheet: its masteries, rsmeta.c's) */
 #define TOWN_ROAD
-#include "../dq0acct/town.h"
+#include "../dq0/acct/town.h"
 
 #define roll    ng_roll                         /* (The name maker: themegen's bank program, its code here, as the account's) */
 #define name    ng_name

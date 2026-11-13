@@ -1,6 +1,6 @@
 /*
 ** dressln.h - (dq0harn) the character's file's "dressed" line, read and written: the referee's (dress.c's o_dress_line,
-** overlay 9: part 1's, harnfile's, its room) and the account's between dungeons (../dq0acct's sheet.c, whose days soil
+** overlay 9: part 1's, harnfile's, its room) and the account's between dungeons (HarnMaster's part of the account, acct/body.c, whose days soil
 ** them: the user's, 2026-11-11).  The includer has pc and pc_dr, and names the function DRESS_LINE.
 **
 ** After the word, its dressings, each its grade plus 1 (a digit, ':' 10; soiled, a letter, 'B' 1), where it is (two

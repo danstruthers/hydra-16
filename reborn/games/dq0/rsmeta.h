@@ -1,11 +1,14 @@
 /*
 ** rsmeta.h - Dingus Quest Zero's rulesets as the programs between dungeons see them (ENGINE-CRITIQUE.md's section 8,
-** 2026-11-11: the meta programs talk to "the ruleset" through this, not through a referee's own headers).  Two parts:
+** 2026-11-11: the meta programs talk to "the ruleset" through this, not through a referee's own headers).  Three parts:
 **
-**   The rulesets' table (rulesets[]): each ruleset's referee (dq0 -r NAME's program, game.dat's referee) and the
-**   program of its own that accounts for the time between dungeons (its healing, its skills' growth, the town: lib's
-**   acct folder), or none (the time between isn't told, the game goes on as it did).  dq0life runs the one the save's
-**   ruleset names.
+**   The rulesets' table (rulesets[]): each ruleset's referee (dq0 -r NAME's program, game.dat's referee) and its account
+**   of the time between dungeons (lib's acct folder): the engine's account (games/dq0/acct) linked with that ruleset's
+**   hooks, below.  dq0life runs the one the save's ruleset names.
+**
+**   The ruleset's part of the account (acct_*): what the engine's account asks of the ruleset between two dungeons (its
+**   sheet, its healing, its practice, its living and wages); each ruleset's own code (HarnMaster's games/dq0harn/acct, the
+**   null ruleset's games/dq0null/acct), linked into its account (DECISIONS.md's "dq0acct split").
 **
 **   The character's sheet for the scholar's house (dq0schol, and any meta program that reads a skill): the masteries
 **   it asks of a ruleset's sheet by what they're for (MK_*), the base a master's teaching opens a tongue or a script
@@ -20,10 +23,41 @@
 
 struct rsmeta {
     const char*     referee;                    /* Its referee's program (game.dat's referee: "dq0harn") */
-    const char*     accounts;                   /* Its program for the time between, in lib's folder ("/../acct/dq0acct");
-                                                **   0 none */
+    const char*     accounts;                   /* Its account of the time between, in lib's folder ("/../acct/dq0acct");
+                                                **   0 none (the time between isn't told, the game goes on as it did) */
 };
-#define RULESETS        { { "dq0harn", "/../acct/dq0acct" }, { "dq0null", 0 } }
+#define RULESETS        { { "dq0harn", "/../acct/dq0acct" }, { "dq0null", "/../acct/dq0nacct" } }
+
+/* ---- The ruleset's part of the account (games/dq0/acct/acct.h: what of the account's a hook may use, and which may put
+** in an overlay of the ruleset's own).  Called in this order: acct_sheet_read; acct_wounds, then acct_day for each day
+** till acct_mended or the healing's most, then for the road, the lull, the town's days and the days of work; acct_tool's
+** needs before the money's matters (acct_habit, acct_wage), the things left after; then acct_rested, acct_first (or with
+** the town, before it), acct_worked, acct_practice, acct_sheet_write.  Dead of it (acct_wounds or acct_day 0), acct_death
+** and acct_sheet_write. */
+
+struct between;
+unsigned char acct_sheet_read (void);           /* The character's sheet (META_SHEET) read: 1, or 0 none (nothing to tell) */
+void acct_sheet_write (void);                   /* And written back, as the time between left it */
+unsigned char acct_wounds (void);               /* Its wounds as it comes out: what's done at once (a physician paid from
+                                                **   funds into fee, the account's): 1 alive */
+unsigned char acct_mended (void);               /* Nothing left that a day's rest would better */
+unsigned char acct_day (void);                  /* A day at rest (the account counts it): 1 alive */
+const char* acct_death (void);                  /* What it died of, in words (" The infection kills you.") */
+void acct_rested (void);                        /* Rested, going on into the next dungeon (its fatigue clear) */
+const char* acct_calling (void);                /* Its calling, in words ("" none) */
+unsigned char acct_wage (void);                 /* A month's wage at its calling, pence (the work's: half a master's) */
+unsigned char acct_habit (void);                /* A day's living by its station, pence (1, 2, 3 or 8: the plan's lodgings) */
+unsigned acct_birthday (void);                  /* Its birthday, its month << 8 | its day (life.h's LIFE_AGE's) */
+unsigned char acct_tool (unsigned char needs);  /* A thing carried, told in ans (0-7 its tool's key, 8 its kind, 9 its
+                                                **   flags; kind 0 begins): what it can practise with (needs 0); or (1)
+                                                **   1 if its calling or its practice needs it (never sold unasked) */
+void acct_first (void);                         /* The words of its wounds: what was done, what came of them */
+void acct_worked (void);                        /* What the days of work taught it, after the work's words (work_days) */
+void acct_practice (void);                      /* The months' practice (passed, less town_taught): asked, rolled, told */
+void __fastcall__ acct_town (struct between* t);    /* Its knacks for the town: t's rhet (the market's haggling) and intr
+                                                **   (the inn's listening), 0-100 */
+unsigned char __fastcall__ acct_learnt (const char* what);  /* What a master opened (the record's learnt: "*delvic=81" a
+                                                **   script, "sindarin=11" a tongue) put on its sheet: 1, or 0 no room */
 
 /* ---- The sheet, for the meta programs */
 

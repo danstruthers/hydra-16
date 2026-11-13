@@ -1,22 +1,26 @@
 /*
-** dq0acct.c - Dingus Quest Zero's account of the time between two dungeons (the plan for the game between dungeons, its steps 4
-** to 6; DUNGEON.md's a character's life; HOUSE.md's between dungeons): a program beside dq0life, in lib/acct (with its overlays:
-** the start's time tells where a new file goes, DUNGEON.md's), that dq0life runs as a dungeon's been ended alive and before the next begins.  Before any of the game's tasks: none of the game's
-** main RAM, the CPU its own.  It's HarnMaster's (run for dq0harn's games alone), on the saved files: the sheet (pc.hm), what's
-** carried (kit.dat), what the life set out with (kit0.dat), the record (life.dat).  A program apart from dq0life so a new life's
-** start reads none of it.
+** acct.c - Dingus Quest Zero's account of the time between two dungeons, the engine's (the plan for the game between dungeons,
+** its steps 4 to 6; DUNGEON.md's a character's life; HOUSE.md's between dungeons): its main RAM.  One source, linked once for
+** each ruleset with that ruleset's part of it (../rsmeta.h's acct_* hooks: its sheet, its healing, its practice, its living
+** and wages; acct.h has the banks): HarnMaster's dq0acct, the null ruleset's dq0nacct, each a program in lib/acct (with its
+** overlays: the start's time tells where a new file goes, DUNGEON.md's), that dq0life runs (rsmeta.h's table, by the save's
+** ruleset) as a dungeon's been ended alive and before the next begins.  Before any of the game's tasks: none of the game's main
+** RAM, the CPU its own.  On the saved files: the sheet (pc.hm, the ruleset's), what's carried (kit.dat), what the life set out
+** with (kit0.dat), the record (life.dat).  A program apart from dq0life so a new life's start reads none of it.
 **
-** dq0acct -d folder -l libdir
+** NAME -d folder -l libdir
 ** By the life's seed and the dungeon's number alone (and what's said to its question): the time between, by the plan's three
-** things (the days its wounds take by the real rolls, at most 90; the road; the lull); a physician if there's money; the wounds,
-** infection, shock, venom and disease by the referee's own code told the days at rest (../dq0harn's course.h, watch.h, the
-** library's harnheal.c); living, selling, mending, whetting, restocking and work; the month's practice.  It's told in a dozen
+** things (the days its wounds take, the ruleset's, at most 90; the road; the lull); its wounds the ruleset's, told the days at
+** rest; living, selling, mending, whetting, restocking and work; the month's practice, the ruleset's.  It's told in a dozen
 ** lines, and the one question asked (its answer filled in), then Enter: the game clears the screen as it starts.  The rc
 ** variable dq0auto (the tests'): nothing waited for, the answers as they're filled in.  The player asked (no dq0auto), the town
 ** (dq0town, the plan's step 11: town.c's) comes after the first lines and before the money's matters, which then leave alone what the
 ** player saw to there.
 ** Its exit status: 0; 2 the character dead of it (the record says so, dq0life's to tell the life's account); 1 its fault said.
 ** The rules' numbers marked [Suggest] in the plan: HOUSE.md's between dungeons, for the user's review.
+**
+** The link's own file defines ACCT_NAME (its program's name: its overlays' file, lib/acct/ACCT_NAME.ovl) and ACCT_NOV (its
+** overlays: the account's two and the ruleset's) before it includes this.
 */
 
 #include <fcntl.h>
@@ -26,35 +30,18 @@
 #include <unistd.h>
 #include <hydra.h>
 #include <dice.h>
-#include <harn.h>
-#include "../dq0/hub.h"
-#include "../dq0/rs.h"
-#include "../dq0/life.h"
-#include "../dq0/theme.h"
-#include "../dq0harn/dq0harn.h"
-#include "../dq0w/outfit.h"
-#include "dq0acct.h"
+#include "../hub.h"
+#include "../life.h"
+#include "../theme.h"
+#include "../../dq0w/outfit.h"
+#include "acct.h"
 
 #pragma static-locals (on)
 
-/* A bank of this program's at the window: the kinds (dq0w.cat's first part), what's carried, the sheet's other lines */
+/* A bank of this program's at the window: the kinds (dq0w.cat's first part), what's carried */
 #define CAT             ((const struct kind*) 0x8000)
 #define K               ((struct kitrec*) (0x8000 + KI_COUNT * sizeof (struct kind)))
 typedef char bank_fits[KI_COUNT * 37 + NOFIT * 22 <= 0x2000 ? 1 : -1];
-
-
-/* ---- The sheet: the referee's names (dq0harn.h's), and the lines of the file that are the game's */
-
-harn_char pc;
-unsigned char pc_by[HARN_INJMAX];
-unsigned char pc_dr[HARN_INJMAX];               /* (Its wounds' dressings, the referee's, read from its "dressed" line,
-                                                **   soiled as the days pass, written back: body.c's) */
-char dressed[64];                               /* (The "dressed" line, as read and as written: sheet.c's) */
-char news[NEWS_N];
-struct venom pv;
-struct sick pd;
-unsigned char afffl, aff_breath;
-unsigned rest_m;
 
 struct life L;                                  /* (quest.c's too) */
 static unsigned char kn;
@@ -62,28 +49,21 @@ static unsigned char gone[NOFIT];
 const char* top;
 const char* lib;
 char path[96];
-char calling[20];
-char who[20];
-unsigned char used[HARN_NSKILLS];
-char tongue[NTONGUES][24];
-unsigned char ntongues;
 char ans[64];
 unsigned char askit;                            /* (Waited for: not the tests' dq0auto) */
 
-/* ---- The meta programs' library (../dq0/meta/meta.c): the fault said; a path, the words by the console's width (in_, say,
-** sayn, amount, say_flush, width and ob: the overlays' too, dq0acct.h's) */
+/* ---- The meta programs' library (../meta/meta.c): the fault said, a path, the words by the console's width (fail, in_,
+** say, sayn, amount, say_flush, width and ob: the overlays' too, acct.h's) */
 
-#define META_NAME       "dq0acct"
+#define META_NAME       ACCT_NAME
 #define META_WB         96
 #define META_OB         200
-#define META_FAIL
-#include "../dq0/meta/meta.c"
-#undef META_FAIL
-#undef META_LINK
 #define META_LINK
+#define META_FAIL
 #define META_PATH
 #define META_WORDS
-#include "../dq0/meta/meta.c"
+#include "../meta/meta.c"
+#undef META_FAIL
 #undef META_PATH
 #undef META_WORDS
 
@@ -110,8 +90,8 @@ void __fastcall__ ask (char* b, unsigned char n)
 
 #include "goods.h"
 
-static unsigned named[24];                      /* (The ids of what the player's named: the dungeon's game.dat's) */
-static unsigned char nnamed;
+unsigned named[24];                             /* (The ids of what the player's named: the dungeon's game.dat's, town.c's names_read) */
+unsigned char nnamed;
 static unsigned char kept_blade;                /* (The weapon kept, none in hand: its dearest; 0xFF none) */
 
 static unsigned char __fastcall__ is_named (unsigned id)
@@ -126,7 +106,7 @@ static unsigned char __fastcall__ is_named (unsigned id)
     return 0;
 }
 
-static unsigned char needed[NOFIT];             /* (What its calling or its practice needs: skill.c's o_needs, each thing's) */
+static unsigned char needed[NOFIT];             /* (What its calling or its practice needs: the ruleset's acct_tool, each thing's) */
 
 /* Spare: never what's named, its armour, what's worn, what's in its hand, what's used up (it'd buy it back), a key, what it lights
 ** its light with, nor what holds anything; its weapon if none's in its hand; nor what its calling or its practice needs (its
@@ -176,29 +156,6 @@ static void __fastcall__ kit_read (const char* name)
     }
 }
 
-/* The names given in the dungeon just left (a thing's: its id) */
-static void names_read (unsigned n)
-{
-    static struct tname e;
-    static char d[16];
-    int fd;
-    unsigned char k;
-
-    strcpy (d, "d");
-    utoa (n, d + 1, 10);
-    strcat (d, "/game.dat");
-    if ((fd = open (in_ (top, d), O_RDONLY)) < 0) {
-        return;
-    }
-    lseek (fd, sizeof (struct save), SEEK_SET);
-    for (k = 0; k < TNAMES && nnamed < sizeof named / sizeof named[0] && read (fd, &e, sizeof e) == sizeof e; ++k) {
-        if (e.what == NM_ITEM) {
-            named[nnamed++] = e.x;
-        }
-    }
-    close (fd);
-}
-
 /* ---- Money */
 
 unsigned long cash;                             /* (Farthings: quest.c's too) */
@@ -216,43 +173,29 @@ unsigned long o_t;                              /* (o_date's: the main RAM's, an
 /* ---- The money's matters */
 
 unsigned long funds, fee, earned;
-struct wwas was[HARN_INJMAX];
-unsigned char wid[HARN_INJMAX], nwas;
-unsigned char tended[HARN_INJMAX], ntended, selfnd, unpaid;
 unsigned passed;
+unsigned char dead;
 
 /* The overlays (a bank each, the kinds' put back) */
-static unsigned char b_cat;
+unsigned char acct_b;
 
-#define OV1(x)  (hy_bank (b_cat + 1), x)
-#define OV2(x)  (hy_bank (b_cat + 2), x)
-#define OV3(x)  (hy_bank (b_cat + 3), x)
-#define OV4(x)  (hy_bank (b_cat + 4), x)
-#define OV5(x)  (hy_bank (b_cat + 5), x)
-#define CATS()  hy_bank (b_cat)
+#define QUEST(x)    (hy_bank (acct_b + ACCT_OV_QUEST), x)
+#define TOWN(x)     (hy_bank (acct_b + ACCT_OV_TOWN), x)
 
 static void __fastcall__ say_date (unsigned long t)
 {
     o_t = t;
-    OV5 (o_date ());
-    CATS ();
+    TOWN (o_date ());
+    ACCT_CATS ();
 }
 
+/* A day at rest, the ruleset's, counted: 1 alive */
 static unsigned char a_day (void)
 {
-    unsigned char r;
+    unsigned char r = acct_day ();
 
-    OV1 (r = o_day ());
-    CATS ();
-    return r;
-}
-
-static unsigned char wage_of (void)
-{
-    unsigned char r;
-
-    OV2 (r = o_wage ());
-    CATS ();
+    ++passed;
+    dead = !r;
     return r;
 }
 
@@ -269,8 +212,7 @@ static unsigned long __fastcall__ sell_total (void)
     return t;
 }
 
-static const unsigned char habits[5] = { 1, 1, 2, 3, 8 };    /* (A day's pence by its class: the plan's table) */
-static const unsigned char steps[4] = { 8, 3, 2, 1 };
+static const unsigned char steps[4] = { 8, 3, 2, 1 };  /* (The lodgings, a day's pence: the plan's table) */
 
 unsigned char rate;
 static unsigned char restocks;
@@ -354,13 +296,14 @@ static unsigned long upkeep (void)
 }
 
 /* All the money's matters, by the plan's order: sold what's spare till the wants are met, cheapest first, valuables last, never what
-** it's named; down to rough; work for what's short at half a master's wage, its room and board found (the book's journeyman,
-** Character 13), at most WORK_MAX days; then what it can pay: its living, the mending, the restocking.  No debts.  What the player
-** saw to itself in town is its own: the market seen, nothing sold or bought for it; the smith, nothing mended or whetted */
+** it's named; down to rough; work for what's short at half a master's wage (the ruleset's acct_wage), its room and board found (the
+** book's journeyman, Character 13), at most WORK_MAX days; then what it can pay: its living (a day's by its station, the ruleset's
+** acct_habit), the mending, the restocking.  No debts.  What the player saw to itself in town is its own: the market seen, nothing
+** sold or bought for it; the smith, nothing mended or whetted */
 static void money_matters (void)
 {
     unsigned long need, nowant, v, best;
-    unsigned char k, b, habit = habits[pc.social < 5 ? pc.social : 2], val;
+    unsigned char k, b, habit = acct_habit (), val;
     unsigned char s;
     unsigned w;
 
@@ -394,7 +337,7 @@ static void money_matters (void)
     }
     need = fee + nowant + (unsigned long) rate * passed * PENNY;
     if (cash < need) {
-        w = wage_of ();
+        w = acct_wage ();
         v = ((need - cash) * 15 + w - 1) / w;   /* (A month's w pence at half: w / 15 farthings a day) */
         work_days = v > WORK_MAX ? WORK_MAX : (unsigned) v;
     }
@@ -404,7 +347,7 @@ static void money_matters (void)
             return;
         }
     }
-    earned = (unsigned long) work_days * wage_of () / 15;
+    earned = (unsigned long) work_days * acct_wage () / 15;
     cash += earned;
     cash = cash > fee ? cash - fee : 0;
     if (cash < living) {
@@ -472,28 +415,25 @@ static void money_matters (void)
     }
 }
 
-/* What's carried told to the overlay (skill.c's) a thing at a time: its kind, its flags, its tool's key, for the kinds aren't there
-** with it: what's left to hand to practise with, after the money's matters (o_tool); or (needs) what its calling or its practice
-** needs, before them (o_needs: never sold unasked) */
+/* What's carried told to the ruleset (acct_tool) a thing at a time: its kind, its flags, its tool's key, in ans, for the kinds
+** aren't at the window with the ruleset's overlays: what's left to hand to practise with, after the money's matters; or (needs)
+** what its calling or its practice needs, before them (never sold unasked) */
 static void __fastcall__ tools_note (unsigned char needs)
 {
     unsigned char k;
 
     ans[8] = 0;
-    OV2 (o_tool ());
-    CATS ();
+    acct_tool (0);
     for (k = 0; k < kn; ++k) {
         if (!gone[k]) {
             ans[8] = K[k].o.kind;
             ans[9] = CAT[ans[8]].flags;
             memcpy (ans, CAT[ans[8]].tool, 8);
-            hy_bank (b_cat + 2);
             if (needs) {
-                needed[k] = o_needs ();
+                needed[k] = acct_tool (1);
             } else {
-                o_tool ();
+                acct_tool (0);
             }
-            CATS ();
         }
     }
 }
@@ -524,21 +464,11 @@ static void water_in (void)
     }
 }
 
-static void life_write (void)
-{
-    int fd;
-
-    if ((fd = open (in_ (top, LIFE_FILE), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0 || write (fd, &L, sizeof L) != sizeof L) {
-        fail ("can't write the record of the life");
-    }
-    close (fd);
-}
-
 /* ---- The account */
 
 static unsigned char told;                      /* (Its first lines told before the town, the player's: 1; and the town run, 2) */
 
-/* The days' first lines: what's paid, where it lodged (told after the town, if there's one), the physician, the wounds */
+/* The days' first lines: what's paid, where it lodged (told after the town, if there's one), its wounds (the ruleset's) */
 static void first_lines (void)
 {
     say ("\n");
@@ -546,13 +476,12 @@ static void first_lines (void)
     say (passed == 1 ? " day passes. You walk to " : " days pass. You walk to ");
     say (town);
     say (". ");
-    OV4 (o_reward_say ());                      /* (What it's paid for what it did, the plan's step 7) */
-    hy_bank (b_cat + 5);
+    QUEST (o_reward_say ());                    /* (What it's paid for what it did, the plan's step 7) */
     if (!told) {
-        o_lodging ();
+        TOWN (o_lodging ());
     }
-    o_first ();
-    CATS ();
+    ACCT_CATS ();
+    acct_first ();
     say ("\n");
 }
 
@@ -641,32 +570,27 @@ static void last_lines (void)
     say (". It is ");
     say_date (d);
     say (", and you are ");
-    sayn (LIFE_AGE (&L.h, d, pc.att[HARN_BD]));
-    OV4 (o_standing ());                        /* (The sentence's end, the standing: the life's reputation, the plan's step 7) */
-    CATS ();
+    sayn (LIFE_AGE (&L.h, d, acct_birthday ()));
+    QUEST (o_standing ());                      /* (The sentence's end, the standing: the life's reputation, the plan's step 7) */
+    ACCT_CATS ();
 }
 
 static void dead_lines (void)
 {
     unsigned long d = L.h.date + passed;
+    const char* s;
 
     if (!told) {
         first_lines ();
     }
-    say (news[0] == ' ' ? news + 1 : news);
+    s = acct_death ();
+    say (*s == ' ' ? s + 1 : s);
     say (" You die on ");
     say_date (d);
     say (", at ");
-    sayn (LIFE_AGE (&L.h, d, pc.att[HARN_BD]));
+    sayn (LIFE_AGE (&L.h, d, acct_birthday ()));
     say (".\n");
     say_flush ();
-}
-
-static unsigned char __fastcall__ lull (void)
-{
-    unsigned char r = d100 ();
-
-    return r <= 50 ? die (7) : r <= 80 ? 14 + random (8) : r <= 95 ? 30 + random (31) : 90 + random (91);
 }
 
 static struct hy_regs regs;
@@ -687,7 +611,7 @@ int main (int argc, char* argv[])
         }
     }
     if (!top || !lib) {
-        fail ("usage: dq0acct -d folder -l libdir");
+        fail ("usage: " ACCT_NAME " -d folder -l libdir");
     }
     if ((fd = open (in_ (top, LIFE_FILE), O_RDONLY)) < 0 || read (fd, &L, sizeof L) != sizeof L) {
         fail ("no record of the life");
@@ -699,76 +623,64 @@ int main (int argc, char* argv[])
     regs.r[2] = 8;
     regs.r[3] = 0;
     askit = hy_call (HY_ENV_GET, &regs) != 0;
-    if ((b = hy_banks_alloc (6)) < 0) {
+    if ((b = hy_banks_alloc (ACCT_NOV + 1)) < 0) {
         fail ("no banks");
     }
-    b_cat = b;
-    for (i = 1; i < 6; ++i) {                   /* (The overlays: four in dq0acct.ovl, the town's in dq0acct.ov5) */
-        if (i == 1 || i == 5) {
-            strcpy (path, lib);
-            strcat (path, i == 1 ? "/../acct/dq0acct.ovl" : "/../acct/dq0acct.ov5");
-            close (fd);
-            if ((fd = open (path, O_RDONLY)) < 0) {
-                fail ("no overlays");
-            }
-        }
-        hy_bank (b_cat + i);
+    acct_b = b;
+    strcpy (path, lib);                         /* (The overlays: the account's, then the ruleset's, in ACCT_NAME.ovl) */
+    strcat (path, "/../acct/" ACCT_NAME ".ovl");
+    if ((fd = open (path, O_RDONLY)) < 0) {
+        fail ("no overlays");
+    }
+    for (i = 1; i <= ACCT_NOV; ++i) {
+        hy_bank (acct_b + i);
         read (fd, (void*) 0x8000, 0x2000);
     }
     close (fd);
-    OV2 (width_read ());
-    CATS ();
+    TOWN (width_read ());
+    ACCT_CATS ();
     strcpy (path, lib);
     strcat (path, "/dq0w.cat");
     if ((fd = open (path, O_RDONLY)) < 0 || read (fd, (void*) 0x8000, KI_COUNT * sizeof (struct kind)) != KI_COUNT * sizeof (struct kind)) {
         fail ("no catalogue");
     }
     close (fd);
-    OV3 (i = o_sheet_read ());
-    CATS ();
-    if (!i) {
+    if (!acct_sheet_read ()) {
         L.h.flags &= ~LF_BETWEEN;               /* (No sheet: nothing to tell) */
-        life_write ();
+        TOWN (life_write ());
         return 0;
     }
-    OV1 (o_dress (0));                          /* (Its dressings, its wounds read: soiled by the days, body.c's) */
     n = L.h.dungeon;
     seed = L.h.seed + n * 2654435761UL;
     rseed (seed ? seed : 1);
     random (8);                                 /* (The dice as they were: the town's name the name maker's now, its own) */
     random (8);
     ans[0] = random (8);
-    OV5 (o_town ());
-    CATS ();
+    TOWN (o_town ());
+    ACCT_CATS ();
     kit_read ("kit.dat");
-    names_read (n - 1);
+    TOWN (names_read (n - 1));
+    ACCT_CATS ();
     cash_count ();
-    OV4 (o_reward ());                          /* (What solving the dungeon just left brings, its theme's reward line: its pennies
+    QUEST (o_reward ());                        /* (What solving the dungeon just left brings, its theme's reward line: its pennies
                                                 **   into the money and its standing into the life's reputation, there; a thing
                                                 **   given, a kind of the catalogue's by its name, a ring, put in its pouch, made new) */
-    CATS ();
+    ACCT_CATS ();
     for (i = *rw_thing ? 0 : KI_COUNT; i < KI_COUNT && strcmp (CAT[i].name, rw_thing); ++i) {
     }
     if (i < KI_COUNT) {
         coin_add (i, 1);
     }
     funds = cash + sell_total ();
-    /* The wounds first: the bleeding bound, the physician; then the days they take, the road, the lull, all at rest */
-    OV1 (o_note ());
-    OV1 (more = o_bind ());
-    if (more) {
-        OV1 (o_treat ());
+    /* The wounds first (the ruleset's: what's done at once, a physician); then the days they take, the road, the lull, all at rest */
+    more = acct_wounds ();
+    dead = !more;
+    while (more && !acct_mended () && passed < HEAL_MAX) {
+        more = a_day ();
     }
-    for (;;) {
-        OV1 (i = more && !o_mended () && passed < HEAL_MAX);
-        if (!i) {
-            break;
-        }
-        more = o_day ();
-    }
-    CATS ();
     if (more) {
-        gap = dice (2, 6) + lull ();            /* (Its road, its lull) */
+        TOWN (gap = dice (2, 6) + lull ());     /* (Its road, its lull) */
+        ACCT_CATS ();
     }
     for (; more && gap; --gap) {
         more = a_day ();
@@ -782,8 +694,8 @@ int main (int argc, char* argv[])
             first_lines ();
             cash_lay ();
             kit_write (TOWN_KIT);
-            OV5 (told += o_town_go ());
-            CATS ();
+            TOWN (told += o_town_go ());
+            ACCT_CATS ();
             memset (gone, 0, sizeof gone);
             kit_read (TOWN_KIT);
             remove (path);
@@ -797,58 +709,55 @@ int main (int argc, char* argv[])
         if (more) {
             tools_note (1);
             money_matters ();
-            more = pc.state != HARN_DEAD;
+            more = !dead;
         }
     }
     if (!more) {                                /* (Dead of it: the outcome died, the record the life's end; dq0life tells it) */
         dead_lines ();
-        OV1 (o_dress (1));
-        OV3 (o_sheet_write ());
-        CATS ();
+        acct_sheet_write ();
         L.h.date += passed;
         L.h.flags = (L.h.flags & ~LF_BETWEEN) | LF_OVER | LF_ABROAD;
         --L.h.dungeon;
         if (L.h.dungeon < LIFE_DUNGEONS) {
             L.d[L.h.dungeon].seed = 0;
         }
-        life_write ();
+        TOWN (life_write ());
         return 2;
     }
-    CATS ();
     water_in ();
     tools_note (0);
-    pc.fl = afffl;                              /* (Fatigue clear, but what a sickness holds: the plan's; hunger and thirst
-                                                **   are the world's, begun afresh with the dungeon) */
-    pc.state = HARN_CONSCIOUS;
+    acct_rested ();
     cash_lay ();
     /* It's told (its first lines before the town, if there was one: the rest after it) */
     if (!told) {
         first_lines ();
     } else {
-        OV5 (o_lodging ());
-        CATS ();
+        TOWN (o_lodging ());
+        ACCT_CATS ();
     }
     goods_lines ();
-    OV2 (o_work ());
-    OV2 (o_practice ());
-    CATS ();
+    if (work_days) {                            /* (The days of work, what they earned; what they taught, the ruleset's) */
+        TOWN (o_workdays ());
+        ACCT_CATS ();
+        acct_worked ();
+        say ("\n");
+    }
+    acct_practice ();
     last_lines ();
-    hy_bank (b_cat + 4);                        /* (Where next: the road taken from the town; else the rumours heard, one
+    hy_bank (acct_b + ACCT_OV_QUEST);           /* (Where next: the road taken from the town; else the rumours heard, one
                                                 **   followed, or Enter to go on; asked before anything's written, so a reset
                                                 **   tells the time between again, the same) */
     if (told == 2) {
-        OV5 (o_set_out ());
+        TOWN (o_set_out ());
     } else {
         o_rumours ();
     }
-    CATS ();
+    ACCT_CATS ();
     say_flush ();
-    OV1 (o_dress (1));
-    OV3 (o_sheet_write ());
-    CATS ();
+    acct_sheet_write ();
     kit_write ("kit.dat");
     L.h.date += passed;
     L.h.flags &= ~LF_BETWEEN;
-    life_write ();
+    TOWN (life_write ());
     return 0;
 }

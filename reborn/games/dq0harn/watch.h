@@ -1,6 +1,6 @@
 /*
 ** watch.h - (dq0harn) a watch of the clock passed: the referee's (heal.c's, overlay 6) and what passes between dungeons
-** (../dq0acct's, told the days at rest).  The includer has heal_one, nput, rest_m and REST_ENOUGH, and pc.  Moved from
+** (HarnMaster's part of the account, acct/body.c's, told the days at rest).  The includer has heal_one, nput, rest_m and REST_ENOUGH, and pc.  Moved from
 ** heal.c whole, 2026-11-04.
 */
 

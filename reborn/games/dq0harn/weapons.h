@@ -1,5 +1,5 @@
 /*
-** weapons.h - (dq0harn, and dq0acct's what's to practise with) the referee's table of the weapons.  Included by each, as course.h and watch.h
+** weapons.h - (dq0harn, and its part of the account's what's to practise with, acct/skill.c) the referee's table of the weapons.  Included by each, as course.h and watch.h
 ** are.
 */
 

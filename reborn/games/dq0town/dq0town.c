@@ -7,7 +7,7 @@
 **
 ** dq0town -d folder -l libdir
 **   the save's folder; the game's lib.  The rest the account's, in the time between's record (records.def's struct between,
-**   between.dat in the folder, ../dq0acct/town.h's): the town's name and its inn's (the name maker's, by the life's seed); the
+**   between.dat in the folder, ../dq0/acct/town.h's): the town's name and its inn's (the name maker's, by the life's seed); the
 **   days gone by (whetting's months); its keep so far and a day's (farthings, pence: its class's habit, the money's matters');
 **   its Rhetoric and its Intrigue (EMLs: the market's haggling, the inn's listening)
 ** A town is a name, a paragraph and a list (town.txt, beside it: the words); each errand some days, the time going by those days.  A
@@ -44,7 +44,7 @@
 #include "../dq0/theme.h"
 #include "../dq0w/outfit.h"
 #define TOWN_ROAD
-#include "../dq0acct/town.h"
+#include "../dq0/acct/town.h"
 
 #pragma static-locals (on)
 
@@ -100,7 +100,7 @@ static unsigned char asks;
 /* ---- What's carried, its money and its worth (the account's own) */
 
 #define GOODS_TOWN
-#include "../dq0acct/goods.h"
+#include "../dq0/acct/goods.h"
 
 static void kit_read (void)
 {

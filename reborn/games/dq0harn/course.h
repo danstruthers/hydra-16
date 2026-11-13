@@ -1,6 +1,6 @@
 /*
 ** course.h - (dq0harn) the course of the character's toxin and disease, the referee's (afflict.c's, overlay 8) and what passes
-** between dungeons (../dq0acct's, told the days at rest): the kinds, the book's rolls, a venom's spread, their words (news, by
+** between dungeons (HarnMaster's part of the account, acct/body.c's, told the days at rest): the kinds, the book's rolls, a venom's spread, their words (news, by
 ** the includer's nput).  The includer has pc, pc_by, pv, pd, afffl, aff_breath, wound and nput.  Moved from afflict.c whole,
 ** 2026-11-04; its course as it was.
 */

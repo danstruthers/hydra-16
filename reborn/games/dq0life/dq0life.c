@@ -2,8 +2,8 @@
 ** dq0life.c - Dingus Quest Zero between its dungeons (DUNGEON.md's a character's life): run by the game (main.c's s_life) as
 ** it starts with a save's folder and no dungeon going on in it, before anything of the game's.  It keeps the record of the
 ** life (../dq0/life.h; the program's in lib/dq0): a life begun, or the last dungeon's end recorded and the next one begun: its seed, its date, its
-** folder.  What passes between dungeons is the ruleset's own program's (../dq0/rsmeta.h's table: HarnMaster's dq0acct, the plan's
-** steps 4 to 6; none, the null ruleset's), run from here; the life's
+** folder.  What passes between dungeons is the account's (../dq0/rsmeta.h's table: the engine's account linked
+** with the ruleset's part of it, HarnMaster's dq0acct, the null ruleset's dq0nacct; the plan's steps 4 to 6), run from here; the life's
 ** account, as it ends, dq0end's.  It's a program of its own, in no task's way, and small: every new life with a folder reads it.
 **
 ** dq0life -d folder [-s seed] [-l libdir]
@@ -157,7 +157,7 @@ static const char* __fastcall__ accounts_of (const char* referee)
     return 0;
 }
 
-/* The time between: the ruleset's own program for it (accounts_of's: HarnMaster's dq0acct) run on the record as it's been
+/* The time between: the ruleset's own program for it (accounts_of's: dq0acct, dq0nacct) run on the record as it's been
 ** written, the record read again: its date on, or the life over */
 static void __fastcall__ between (const char* lib, const char* acct)
 {

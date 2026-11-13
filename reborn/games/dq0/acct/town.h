@@ -1,6 +1,6 @@
 /*
-** town.h - (dq0acct, dq0town, dq0schol) the town between two dungeons (the plan's step 11; HOUSE.md's between dungeons, the
-** town): what passes between the account (dq0acct), the town (dq0town) and the scholar's house (dq0schol, the plan's step
+** town.h - (the account, ./acct.h; dq0town, dq0schol) the town between two dungeons (the plan's step 11; HOUSE.md's between dungeons, the
+** town): what passes between the account (dq0acct, dq0nacct: each ruleset's link of it), the town (dq0town) and the scholar's house (dq0schol, the plan's step
 ** 12) is one record in the save's folder, the build's (games/dq0/records.def's struct between, between.dat: obj/gen's
 ** dq0rec.h): written by the account before it runs the town, read by the town as it starts and written back as it's left;
 ** the scholar's house's, written before it's run and read after; read by the account, which passes the days, does what the

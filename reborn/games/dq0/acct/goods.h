@@ -1,5 +1,5 @@
 /*
-** goods.h - (dq0acct, dq0town) what's carried, its money and its worth: the account's and the town's alike (HOUSE.md's between
+** goods.h - (the account, ./acct.c, and dq0town) what's carried, its money and its worth: the account's and the town's alike (HOUSE.md's between
 ** dungeons, the market, the smith), each program its own copy, in its main RAM.  Included once, where these are: the kinds (CAT)
 ** and what's carried (K, kn of it, gone) in a bank at the window; the money (cash, farthings), the days gone by (passed: whetting's
 ** months); say, sayn, fail, in_ and top.
