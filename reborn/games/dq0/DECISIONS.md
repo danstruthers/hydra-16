@@ -5133,7 +5133,8 @@ two programs).
 
 **For review / open questions:**
 
-- *The prices* (a scribe's day 3d, a sage's three times, a master's month 84d, a sage's day for lore 3d, the library's penny a
+- *The prices* (answered 2026-11-13, the user's: the ruleset's base, the town's sellers' own round it; "Town prices, local"
+  below) (a scribe's day 3d, a sage's three times, a master's month 84d, a sage's day for lore 3d, the library's penny a
   day) stay the house's, though their figures are the book's (Character 13): a ruleset with its own economy might want them
   its own.  Not done: they don't depend on the character's sheet, and the account's goods and the market's prices are the
   house's too.
@@ -5350,3 +5351,98 @@ whatever the timing" above).
   dq0jobs, dq0passes, dq0prompt, dq0skykin: denizens met at other moments, "Something stirs."; dq0antidote's real-time
   fight; dq0engage's last fight, the open question).  dq0starttime the same; its dot's timing gone, it's off the noise
   list.  The suite: all 447 pass.
+
+## Town prices, local (the user's, 2026-11-13; as built, for review)
+
+**The user's words:** "Town prices should be determined by local availability, loosely based on what the ruleset dictates (so
+if there is lots of local competition, maybe the range of prices is larger than you would get in a smaller market where the
+range is limited)."  ("Four answers" above.)
+
+**The base, the ruleset's** (rsmeta.h's new `meta_price[NMP]`, in each ruleset's test.c, the one file both the town and the
+scholar's house link): MP_SCRIBE a scribe's working day 3d, MP_DEAD a dead tongue's sage so many times that (3), MP_MASTER a
+master's month 84d, MP_SAGE a sage's day asked one of the other skills 3d, MP_LIBRARY the library's day 1d.  HarnMaster's the
+book's figures (Character 13), as they were hard-coded in schol.c; the null's the same (it has no economy of its own).  The
+market's goods keep their base in the catalogue (the world's worth, dq0w.cat) and the smith's mending and whetting the account's
+(goods.h): neither is the ruleset's yet, and the account itself (straight on: its selling, restocking, mending) prices everything
+at the base as before.  (A ruleset scale for the goods, a percentage in meta_price, would be a few bytes; not built: nothing
+asks for it yet.)
+
+**The local price** (games/dq0/town/price.h, compiled into both programs):
+
+- **How many sellers:** a big town (town.txt's kind, as before: the sage for a dead tongue) has 4 to 6 of each trade (traders,
+  smiths, scribes, sages, masters), any other 1 to 3; the figure by the life's seed and the dungeon's number.
+- **Each one's price:** its hundredths of the base, drawn round 100 by the same, five either way for each seller of its kind in
+  the town: one 95-105, two 90-110, three 85-115, six 70-130.  So a big market's prices go wide (shopping round pays), a small
+  one's stay near the base.
+- **Which one:** one of each is at hand a day (by the town's days so far): another day, maybe another.  Shopping round is coming
+  back another day, each visit a day and its keep, as ever.  No new command and no new question.
+- **Its own numbers:** a 16-bit mix (high bits folded into low and multiplied, twice) of the trade, the seller or the day, the
+  life's seed and the dungeon's number: never the dice, so every roll of the town's and the scholar's house's (haggles,
+  listening, readings, names, honesty) is where it was.
+- **The market and the smith:** "Today you deal with the second of Velmor's four traders." (or "... smiths.") as the place is
+  entered, only where there's more than one (town.txt's new keys nth and count hold the words).  A thing's price is its worth (one
+  of it, to the farthing) at the day's trader's hundredths, then times how many, haggled as before, rounded to the penny as before;
+  the smith's mending and whetting the account's price at the day's smith's.  **Never under 85 hundredths** (the town's alone):
+  what the market gives for a thing is still the account's half its worth by its condition, at most 63 hundredths of the worth
+  haggled, so a trader's price haggled (75 of its own) stays over it at 85 and nothing's made buying of one and selling to
+  another.  A big town's buying range is so 85-130, not 70-130; the smiths are held to it too (one rule for the town).
+- **The scholar's house:** a scribe's day, a dead tongue's sage's, a master's month and a sage's day for lore are the base at the
+  day's scribe's, sage's or master's hundredths, to the penny, a penny at least; dear ones half again of that, as before.  The
+  library's day its base alone (one library); its words keep "a penny a day" when the base is a penny.
+- **Every figure the player sees from the base:** the market's list, "The price of ...", the smith's list, what's paid; a scribe's
+  or sage's "asks ...", "A master asks ...", "(83d)" after a master's month, a lore sage's "(3d)".
+
+**What a player sees differently:** the figures (a lantern 13d where it was 12d; in a big town anywhere from 11d to 16d, by the
+day's trader), a torch or a sack priced in farthings when the day's trader's under 100 hundredths ("a torch 3f"), and the one new
+sentence above.  And what follows from the money: an errand that couldn't be paid for before can be now, or the other way round
+("A master asks 97d for a month's teaching: you haven't the money."), and what comes after it (the days it would have taken, so
+the next visit's words; what's left for the account's living, work and practice; "You have no money" or not).
+
+**Checked:**
+
+- **No roll moved** (the flat build: price.h with every seller at 100 and one of each): towncmp's 28 lives (56 times between,
+  112 scholar's houses run alone) byte for byte the same as before; and the 13 tests of the time between (dq0town,
+  dq0scholar, dq0tongues, dq0reading, dq0account, dq0acctgone, dq0nullbetween, dq0nulltown, dq0life, dq0lifeend,
+  dq0dressbetween, dq0nosave, dq0hardon) the same sentence for sentence.
+- **As built:** the same 28 lives, prices local: of the 56 times between (53 begun on the same files, 3 on files that
+  differed in the money alone), 12 the same byte for byte and 36 the same but for the figures (amounts masked, the new sentence cut, the files' dumps aside); the 8 others, and 7 of the
+  112 scholar's houses, differ only after a price crossed what the money held (a master's month or a sage's reading paid for in
+  one and not the other, a lore sage asked or not) or in the money's own words ("You have no money." / "You have 3 pennies.";
+  "1 penny" / "2 pennies"), and in what that changed next (the days in town, so the scholar's house's greeting by its dice).  The
+  JS replica of price.h (scratch spread.js) gives the same sellers and days as the transcripts (seed 3's Leond, two smiths, the
+  first at 99: its shortsword 89d where it was 90d; seed 70000's second dungeon's small town in dq0town and dq0nulltown, one of each: the
+  lantern 13d, the master 83d).
+- **The tests:** dq0scholar and dq0nulltown named the base's figures; now this town's (seed 70000, its dungeon's): a big town's
+  sage 10d a day (was 9d), a dear one 15d (was 14d), the null's sage 10d a day (60 farthings a day dear, was 56), a master's
+  month 83d (was 84d); their descriptions say so.  dq0town's market checks (three torches at the listed price, the whetstone sold
+  at half its worth) pass unchanged.  The suite: all 447 pass.
+- **Example towns** (spread.js: seed, dungeon; each seller's hundredths; a lantern's base 12d):
+  - seed 70000, dungeon 2, small, one of each: trader 105 (a lantern 13d); smith 99; scribe 3d; sage 9d (lore 3d); master 83d.
+  - seed 3, dungeon 2, small, two: traders 98, 104 (12d, 13d); smiths 99, 110; scribes 3d, 3d; sages 9d, 9d; masters 80d, 89d.
+  - seed 3, dungeon 1, small, three: traders 110, 85, 114 (14d, 11d, 14d); smiths 89, 86, 90; scribes 3d each; sages 10d, 9d, 9d;
+    masters 92d, 97d, 85d.
+  - seed 123456, dungeon 2, big, four: traders 103, 83 (held to 85), 119, 110 (13d, 11d, 15d, 14d); smiths 106, 118, 93, 119;
+    scribes 3d, 4d, 3d, 3d; sages 8d, 8d, 10d, 8d; masters 91d, 91d, 81d, 77d.
+  - seed 70000, dungeon 1, big, six: traders 101, 99, 130, 103, 75 (85), 90 (12d, 12d, 16d, 13d, 11d, 11d); smiths 70 (85), 83
+    (85), 115, 87, 103, 107; scribes 3d, 4d, 3d, 4d, 4d, 2d; sages 11d, 10d, 7d, 12d, 11d, 9d (lore 4d, 3d, 2d, 4d, 4d, 3d);
+    masters 101d, 104d, 109d, 79d, 105d, 100d.
+- **Room:** dq0town's main RAM 3,223 -> 2,883 (its overlay 6,443 -> 6,172: price.h's code there), dq0ntown's 3,118 -> 2,778;
+  dq0schol's 4,981 -> 4,618 (its overlay 665 -> 489), dq0nschol's 9,713 -> 9,350.  No other task's.
+
+**For review / open questions:**
+
+- *What the market gives* for a thing is still the account's (half its worth by its condition) at every trader: varying it by
+  trader too would make buying of one and selling to another pay unless the spread is held to about a tenth.  Built the
+  conservative way (buying varies, selling doesn't, buying never under 85).  The user may want selling local too (with the spread
+  narrower, or a trader buying and selling at one margin), or the floor gone.
+- *The account's own prices* (the character that goes straight on, or what the player left: selling, restocking, mending) are
+  the base, not the town's: the account runs before the town is made (its kind, its size) and has no room to spare.  The same
+  town so prices the same thing two ways depending on whether the player went to the market.
+- *More competition, wider prices* is the user's figure; it isn't cheaper on average (each seller's centred on the base).  A big
+  town's *cheapest* is lower, its dearest higher.
+- *One seller a day, not a choice:* the player can't pick a seller by name; shopping round is visiting again on another day.  A
+  named choice ("buy from Hethin") would want each seller's name (the name maker's, by its own numbers) and words to choose by.
+- *How many of each trade* is one figure for the town (six smiths in a big town as well as six traders); the town's kind gives
+  only big or not.  A size per kind (town.txt's kind lines given a figure) would be the next step.
+- *The base for goods and the smith* stays the world's and the account's; a ruleset with its own economy would want meta_price
+  to scale them too (one more entry each).

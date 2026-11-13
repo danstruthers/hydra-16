@@ -4084,6 +4084,22 @@ calendar, no town.  (games/dq0town, a program of its own; dq0acct's town.c.)
 - **The smith:** what wants seeing to, at the account's prices (mending a tenth of the price a tenth of its life, at most half; whetting
   a hundredth of its price a month), rounded up to the penny: "mend my sword", "whet the dagger", "mend all"; a new blade, town.txt's
   blades at their whole worth, haggled as the market's.
+- **The town's sellers** *(the user's, 2026-11-13: "Town prices should be determined by local availability, loosely based on what
+  the ruleset dictates (so if there is lots of local competition, maybe the range of prices is larger than you would get in a smaller
+  market where the range is limited)"; as built, for review: games/dq0/town/price.h)*: a town has as many traders, smiths, scribes,
+  sages and masters as its size gives: a big town (town.txt's kind) 4 to 6 of each, another 1 to 3, by the life's seed and the
+  dungeon's number.  Each asks its own price, its hundredths of the base drawn round 100, five either way for each of its kind there
+  (one: 95-105; three: 85-115; six: 70-130): where there's more to choose from, the prices go wider.  One of each is at hand a day (by
+  the town's days so far: another day, maybe another), so shopping round is going back another day (each visit a day, and its keep).
+  The market and the smith: "Today you deal with the second of Velmor's four traders." ("... smiths.": only where there's more than
+  one), the goods' worth (the catalogue's) and the smith's mending and whetting (the account's) as that one asks them, never under 85
+  hundredths: what the market gives, at most 63 hundredths of the worth haggled, stays under what any trader asks haggled (75 of its
+  own), so nothing's made buying of one and selling to another.  What the market gives for a thing is as before (the account's, half
+  its worth by its condition), and haggling works on the day's price as before.  The scholar's house: the ruleset's base (rsmeta.h's
+  meta_price: HarnMaster's the book's, below; the null's the same figures) as the day's scribe, sage or master asks it, to the penny,
+  a penny at least; the library's day its base alone (one library).  All of it by the life's seed and the dungeon's number, never the
+  dice: the same life, the same sellers, and every roll of the town's as before.  The account's own selling, restocking and mending
+  (for the character that goes straight on, or what the player left) at the base, as before.
 - **The inn:** what's said there: the rumours (step 7's), each its place and its road; once a town, the book's Intrigue test (its EML)
   listening a while: a success hears one more (the next themegen would have made: a place and a goal kind not heard yet, made then,
   about 13M cycles); a failure nothing more.  A rest: the days typed ("3", "a week").
@@ -4174,7 +4190,8 @@ games/dq0/town/scholar.txt's and the program's.  (games/dq0/town/schol.c, a prog
   ("read 1", "have the journal read").  Only what's carried can be read here (the old writing, or a copy: the better condition of the
   two); one left behind can still be asked of (the other skills, below).  A visit is a day, as every place in town; what's done in it
   takes its own days on top, days at rest as the town's are.
-- **A scribe reads it** ("read 1"): a scribe's day is 3d (the book's scribe's 66d a month, Character 13, over its 24 working days),
+- **A scribe reads it** ("read 1"): a scribe's day is 3d (the book's scribe's 66d a month, Character 13, over its 24 working days;
+  the base: each of the town's scribes asks its own, the town's sellers above),
   for 1 to 3 days (a d3).  A writing in a dead tongue (its era 10 centuries ago or more: the book's Ancient column, Treasure 8, its
   tongue's old form, whoever speaks it now) wants a sage: three times the day, 9d, for 2d4 days, and only in a big town ("No one in
   Samvind reads the old ostari of the journal: the sages of a bigger town might.").  Its mastery 45 + 4d10 (a sage 50 + 4d10), the
@@ -4204,7 +4221,7 @@ games/dq0/town/scholar.txt's and the program's.  (games/dq0/town/schol.c, a prog
 - **A master's month** ("learn delvic", "learn sindarin"): the book's, Skills 11: a new script is opened at 70 + its skill base after
   a month's teaching by a master (the book's ML 90 or more), the month's 30 points spent on it; a foreign tongue after a month's
   teaching, all other development forfeit, at its skill base once (an alien family's, as hmchar's second tongue: the game's tongues
-  have no families).  So the month's practice is forfeit for each month with a master.  The price a sage's month, 84d (Character 13).
+  have no families).  So the month's practice is forfeit for each month with a master.  The price a sage's month, 84d (Character 13; the base: each master its own, the town's sellers above).
   "You study starric for a month with Master Selmen (84d): you can read and write it now (starric 82)."; a tongue, "You learn sindarin
   for a month from Hedrin, who was raised speaking it (84d): you speak a little of it now (sindarin 11)."  A big town's masters teach
   the game's six scripts and its tongues (scholar.txt's); another town's, ardic alone.  Two masters a stay at most, and eight past its
