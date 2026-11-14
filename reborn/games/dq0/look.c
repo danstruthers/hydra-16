@@ -70,6 +70,7 @@ void __fastcall__ look (unsigned char first)
 {
     sight_close = first & 58;                   /* (The theme's words for a place's first sight: later) */
     sight_get ();
+    sight_same (SS_LOOKED);                     /* (What it saw, kept: a light's change compared with it, main.c's E_VIEW) */
     sight_copy.first |= first & 4 ? SIGHT_HURRY : 0;
     sight_light = HUB->pc_light;
     strcpy (sight_lamp, HUB->pc_lamp);
@@ -335,6 +336,35 @@ char where_w[34];
 #pragma rodata-name (push, "SW8RODATA")
 
 #define SC          sight_copy
+
+/* A light lit or put out (E_VIEW's why w: V_LIT, V_DARK) and the place seen as at the last look, by a light of the same
+** name (the senses' record up to the things, summed: where it stands, how much of it's seen, its dark, its own light, its
+** doors, ways and ceiling; not its seq, nor first, the UI's; not what lies about nor the denizens, which a light lit or
+** put out alone doesn't change): 1, no look wanted (the user's, 2026-11-14: a torch lit from another, one of two put
+** out or burnt out, a candle lit by a torch).  w SS_LOOKED: a look's, sight_copy just read, its sum kept */
+static unsigned sight_sum;
+unsigned char __fastcall__ s_sight_same (unsigned char w)
+{
+    unsigned char a = 0, b = 0;
+    const unsigned char* p = &SC.where;
+
+    if (w != SS_LOOKED) {
+        if ((unsigned char) (w - V_LIT) >= 2 || strcmp (HUB->pc_lamp, sight_lamp)) {
+            return 0;
+        }
+        sight_get ();
+    }
+    do {
+        if (p != &SC.first) {
+            b += a += *p;
+        }
+    } while (++p != &SC.nitems);
+    if (w == SS_LOOKED) {
+        sight_sum = a | b << 8;
+        return 0;
+    }
+    return sight_sum == (a | b << 8);
+}
 
 /* An actor's square (x, y) in sight, the senses' last look's (blows.c's: one closed with) */
 unsigned char __fastcall__ s_den_seen (unsigned x, unsigned y)

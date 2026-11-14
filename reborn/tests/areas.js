@@ -128,7 +128,7 @@ const NEAR = {
     'dq0examine', 'dq0inside', 'dq0handy', 'dq0hands', 'dq0shield', 'dq0armour', 'dq0robbed', 'dq0reach', 'dq0several',
     'dq0names', 'dq0rebar', 'dq0strike', 'dq0rip', 'dq0dress'],
   money: ['dq0whotrades', 'dq0money', 'dq0outfit', 'dq0kit', 'dq0lair', 'dq0dens', 'dq0robbed', 'dq0load'],
-  senses: ['dq0looks', 'dq0heard', 'dq0glow', 'dq0dark', 'dq0darksearch', 'dq0light', 'dq0scent', 'dq0traces', 'dq0stay',
+  senses: ['dq0looks', 'dq0heard', 'dq0glow', 'dq0dark', 'dq0darksearch', 'dq0light', 'dq0relight', 'dq0scent', 'dq0traces', 'dq0stay',
     'dq0sound', 'dq0soundx', 'dq0watch', 'dq0lookway', 'dq0kept', 'dq0fog', 'dq0quiet', 'dq0pose'],
   denizens: ['dq0denizens', 'dq0popgen', 'dq0inhab', 'dq0reach', 'dq0sway', 'dq0talk', 'dq0names', 'dq0stay', 'dq0dens',
     'dq0traces', 'dq0lair', 'dq0robbed', 'dq0finished', 'dq0helpless'],

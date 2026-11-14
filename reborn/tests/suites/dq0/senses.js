@@ -1092,6 +1092,53 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0relight', what: 'Dingus Quest Zero\'s look as a light is lit or put out, only if the light it sees by has changed (the user\'s, 2026-11-14: "When you light a new torch from a burning one, it should not re-look since the light state has not changed"; DECISIONS.md\'s "No look when the light\'s the same"): at seed 3 (dq0 -T, the cell dark but for its torch) a second torch held and lit from the burning one, its words and no look; one of the two put out, no look; the other put out, the dark told ("It is dark."); one lit again in the dark, the place seen by it; "light a new torch" and "light the unlit torch with the lit torch" no look; one of two lit burning out ("One of your torches gutters and goes out."), no look; a lantern lit beside the torch, a greater light (its reach, the catalogue\'s: 6 squares to the torch\'s 4), the place seen by it; two torches lit and put down, burning out as it rests, the dark told',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'hold another torch', 'light the torch', 'douse the torch', 'douse the torch', 'light the torch', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'light a new torch', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'hold another torch', 'light the unlit torch with the lit torch', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'wait 20 minutes', 'hold another torch', 'light the torch', 'wait 45 minutes', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k lantern', 'light the lantern', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'hold another torch', 'light the torch', 'drop the torch', 'drop the torch', 'rest for 2 hours', 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out), LOOK = 'You can see part of a cell';
+        const games = []; for (let i = s.indexOf('% dq0 '); i >= 0; i = s.indexOf('% dq0 ', i + 1)) games.push(i);
+        const seg = (g, line, n = 1) => { const e = '> ' + line + ' > ' + line; let i = games[g - 1]; for (let k = 0; k < n && i >= 0; k++) i = s.indexOf(e, i + 1);
+          if (i < 0) { f.push('game ' + g + ': "' + line + '" not answered'); return ''; } const j = s.indexOf(' > ', i + e.length); return s.slice(i + e.length, j < 0 ? s.length : j); };
+        const has = (g, line, w, n) => { if (!seg(g, line, n).includes(w)) f.push('game ' + g + ', ' + line + ' (' + (n || 1) + '): not told ' + w + ': ' + seg(g, line, n).slice(0, 400)); };
+        const never = (g, line, w, n) => { if (seg(g, line, n).includes(w)) f.push('game ' + g + ', ' + line + ' (' + (n || 1) + '): told ' + w); };
+        // (A torch lit from a burning one: its words, no look)
+        has(1, 'light the torch', 'You light the unlit torch.', 1);
+        never(1, 'light the torch', LOOK, 1);
+        // (One of two put out: no look; the last: the dark)
+        has(1, 'douse the torch', 'You put out the torch.', 1);
+        never(1, 'douse the torch', LOOK, 1);
+        has(1, 'douse the torch', 'It is dark.', 2);
+        never(1, 'douse the torch', LOOK, 2);
+        // (Lit in the dark: the place seen by it)
+        has(1, 'light the torch', 'You light the torch.', 2);
+        has(1, 'light the torch', LOOK + ', by the light of your torch.', 2);
+        // (A new torch, one lit with another: no look)
+        has(2, 'light a new torch', 'You light the unlit torch.');
+        never(2, 'light a new torch', LOOK);
+        has(3, 'light the unlit torch with the lit torch', 'You light the unlit torch.');
+        never(3, 'light the unlit torch with the lit torch', LOOK);
+        // (One of two burnt out: no look)
+        never(4, 'light the torch', LOOK);
+        has(4, 'wait 45 minutes', 'One of your torches gutters and goes out.');
+        never(4, 'wait 45 minutes', LOOK);
+        // (A greater light: looked about by it)
+        has(5, 'light the lantern', 'You are at the near end of a long, narrow cell, by the light of your lantern.');
+        // (Lights lying on the floor burnt out, none carried: the dark told)
+        has(6, 'rest for 2 hours', 'It is dark.');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0felt', meaning: true, near: ['senses'], what: 'Dingus Quest Zero feeling its way (the user\'s playtest, 2026-11-02, DECISIONS.md: "It might be better to just say You feel a wall to your left, and nothing to your right"; HOUSE.md\'s feeling your way), by the words: at seed 3 its torch put out in the kitchen it has seen, what its hands find, and the kitchen remembered; walked out of it by the door it knows, along a passage it has never seen: its hands\' words, its feet\'s ("The way turns ..."), nothing of a passage named, no ways told, no slope ahead, no fork; a look and "where am I" the same; a look one way; come back into the kitchen, remembered again; a way not felt never told',
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm', 'douse the torch', 'look',

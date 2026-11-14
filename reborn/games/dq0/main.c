@@ -1110,6 +1110,12 @@ static unsigned char events (void)          /* (How many there were) */
             }
             break;
         case E_VIEW:
+            if (m.who == 0 && sight_same ((unsigned char) E_VIEW_WHY (m))) {
+                break;                          /* (A light lit or put out, but the place seen as at the last look, by a
+                                                **   light of the same name: a torch lit from another, one of two put out
+                                                **   or burnt out, a candle lit by a torch; no look, its own words said, the
+                                                **   user's, 2026-11-14: look.c's) */
+            }
             if (m.who == 0 && out_told) {       /* (Senseless: nothing seen; a look owed (its light changed, out_told 2) as
                                                 **   it comes round, numb's) */
                 out_told |= E_VIEW_WHY (m) != V_STIR ? 2 : 0;

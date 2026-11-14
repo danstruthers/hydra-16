@@ -445,6 +445,9 @@ void tt_words (void);                           /* Overlay 24 (refuse.c's): lb's
 extern unsigned char tt_sa;                     /* (The things' words' first sentence's SA_* | 0x80, if it's coded:
                                                 **   tt's; else 0) */
 extern unsigned char sight_light;
+#define SS_LOOKED   0xFF                        /* (sight_same's: a look's, its sum kept) */
+unsigned char __fastcall__ sight_same (unsigned char w);   /* (A light's change, E_VIEW's why: 1, the place seen as at the
+                                                **   last look; part 8's, look.c's) */
 extern char sight_lamp[14];                     /* (What gives its light, named: the hub's pc_lamp) */
 extern unsigned char sight_close;               /* (A close look: the room's figures, its size and its ceiling's; 8,
                                                 **   a look one way's words) */
