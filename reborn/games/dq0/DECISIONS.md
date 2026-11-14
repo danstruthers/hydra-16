@@ -5953,3 +5953,71 @@ line.s) never knew of them: a closed door stops the eye, whatever is cut in it.
   rule knowing the peeked square (dq0p/cast.s).
 - *Sound and smell* through a grille: a closed door's, as before.
 - *A spy-hole's cover left open* (seen from the far side as a lit hole, an eye at it): not built.
+
+## The hold-back's holes (2026-11-14; as built, for review)
+
+dq0hold (the user's "hold back", 2026-11-04: the world's long jobs and the denizens' work wait from a line's first key,
+three seconds at most while the keys go on) failed at 1bbcfcc4 ("held2: run 176326 cycles after it was due, a line
+being typed: not held back") and at dbdb5554 ("decide: 1 run(s) in the first 8000000 cycles of the line typed again");
+neither change touched the hold.  Each failure was a hole the timing had let through or not; the test's own probes
+(the world's kfree, kt0, burn_ask and dst, the minds' gw and gks, each pass) found four.
+
+- **The minute's passes went free for everything (held2's).**  After KEY_HOLD ticks a pass of the world's main loop
+  goes free (kfree), and it stayed free while burn_ask was set, so a minute begun in it finished its own passes (the
+  sconces', the time it believes).  But every row rode those passes: at 1bbcfcc4 the lights' minute (held1) ran in the
+  free pass, set TS_ASK for its next pass, and the traces' journal made due 400,000 cycles later ran in that pass with
+  the keys on the line (the passes went on some 4M cycles).  **Built:** the free pass's later passes are the minute's
+  alone (dq0w.c's kmore; kburn while the lights' row is walked): keys_hold frees the lights' row in them, holds the rest,
+  and their own hold begins as they're first asked (kt0 begun again as the free pass ends), KEY_HOLD ticks of their own.
+  ui_first's command rule the same (a cut free pass, kfree 2, frees only the lights' row in them).
+- **The free pass given mid-pass (found by the variants).**  keys_hold gave the free pass at whichever ask came first
+  once KEY_HOLD ticks had gone, often a kit's look inside the denizens' intents (outdraw's ui_long), after the early
+  rows; the main loop's top then ended it, so the journal's row (an early row) was never walked free and waited a whole
+  hold more: 15.4M and 16.4M cycles with held2 made due 2M and 1M cycles on (past LIMIT, three seconds).  **Built:** the
+  free pass given at the top of a pass only (main's, kt0's KEY_HOLD gone): every row walked in it.  keys_hold only
+  starts the clock and holds.
+- **The minds' hold for keys by the game's clock (decide's).**  dq0d held for a line being typed GIVE_WAY tenths of
+  hub_now, the game's clock: at the normal pace a round of ten game seconds takes three real ones, so its "three
+  seconds" ran out in about 0.9 s (3.35M cycles in the variants' traces), and a mind decided some 3.4M cycles into a
+  line typed again (dbdb5554's; at 1bbcfcc4 the minds happened to be waiting on a senses' ask, held, and saw the line
+  late).  The world and the senses held KEY_HOLD real ticks.  **Built:** a line's keys held KEY_HOLD (600) real ticks
+  (hy_ticks) in the minds too; a command's give-way (ui_cmd) still GIVE_WAY tenths of the game's clock, as before.
+- **A line typed again not seen between the minds' actors, nor by the intents' hold.**  dq0d looked for a new line
+  (gsq, gcm, gks: its own hold) only at the top of its main loop; tend's checks between actors and before its
+  enlisting read gw alone, so a line let go and typed again while they decided found gw 2 (the last line's hold run
+  out) and the next actor decided.  den_held (the world's, the denizens' intents) had no line of its own: a line let
+  go and typed again before a world's pass saw no keys kept the last's run-out hold.  **Built:** dq0d's held (), the
+  line looked at and the hold reckoned, asked by main and by tend each time (the four places); den_held keeps the
+  line's ui_keys (dks) as the minds' gks and the senses' hks do: a line typed again, held again.
+
+**Not holes.**  Nothing runs the journal outside the table with keys on the line: tr_flush (0)'s other callers are the
+character's own (a trace read, I_TRACE, LW_TRACE's end) and the save's.  The UI's ui_keys (main.c) is set at every key
+and kept while keys are on the line: steady in every trace, from the first key the UI has to the line let go.
+
+**Tests.**  dq0hold passes, unchanged.  Its timing varied (a scratch copy of the test, not committed: held1's poke
+delay, held2's, the typing's pace in 2M-cycle steps, a wait before the first key), the fixed build: 100000/400000 (the
+test's own), 50000/100000, 300000/1000000, 100000/2000000, 100000/4000000, 100000/400000 at two and three steps a key,
+80000/3000000 at two with a 4M wait: all pass, held1 10.8M-13.3M, held2 10.75M-11.4M, no decide, sense or intents run
+in a line's first 8M cycles.  Five more (a 2M, 6M or 8M wait before the first key) fail only as the test's poke of
+burn_due landed while a minute's burns_now was under way (it sets burn_due again as it ends: the job never due, "run
+null"), the test's own race, not the hold's.  Before the last two fixes 300000/1000000 failed (held2 16.4M, too long)
+and the pace of two failed ("decide: 2 run(s) in the first 8000000 cycles of the line typed again").
+
+**What the player sees differently** (the suite's transcripts, by sentence, sent.js, against 1bbcfcc4's, 301
+  each): 7 differ, the known noise alone: denizens met at other moments (dq0answer, dq0jobs, dq0lookfar, dq0mine,
+  dq0prompt, dq0skykin, dq0stopwords: their stirs, a rat or an adder seen or gone a moment apart, a sound one more or
+  less).  No sentence of the game's own changed; only when the denizens move as a line is typed.
+
+**Room:** dq0w's main RAM 2,905 -> 2,818 (the free pass's and the minute's flags, the grant moved to main); dq0d's
+3,030 -> 3,044 (held () one function in place of main's and tend's copies, the ticks); dq0 3,143, dq0p 4,891
+unchanged.  No zero page.  The start: seed 1 232.1M -> 232.5M, 123456789 308.7M -> 308.1M.  D17 (dq0torchwords' 23
+commands' first letters): the slowest 623,224 -> 612,782 cycles, the mean 416,982 -> 421,874.  The suite: all 451 pass.
+
+**Open, for review.**
+- A job come due during a free pass's own pass, before its row is walked, still rides it (one pass: the rows are
+  walked in order); a free pass from its top bounds that to one pass.
+- The minds' command give-way (GIVE_WAY, 30 tenths of the game's clock: some 0.9 s real at the normal pace, 0.6 s at
+  the menacing) is the game's clock still: three game seconds, not real ones.  Left as it was (the transcripts' timing);
+  a real-time give-way like the senses' (GIVE_WAY ticks) is the user's to choose.
+- dq0hold's own poke of burn_due is lost if a minute is under way as it lands (the variants' wait before the first
+  key): the test passes at its timing; a sturdier probe would poke burn_ask.
