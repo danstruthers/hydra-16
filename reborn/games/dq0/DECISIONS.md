@@ -5585,3 +5585,82 @@ queued to be carried out as it comes round; lines typed meanwhile, and lines wai
 - **Only quit and help are taken while knocked out** (inventory, sheet, map, time and look refused).  Settled.
 - **A knocked-out character neither hears nor sees.**  No sounds heard, no denizens seen stirring, nothing sensed
   while senseless; what's around is learnt on coming round (the look on waking).  To build.
+
+## A knocked-out character senses nothing (the user's, 2026-11-14; as built, for review)
+
+The user's decision ("Knocked out: the three questions" above): while the character lies senseless nothing is heard,
+seen or otherwise sensed; what's around is learnt as it comes round.
+
+- **What it was.**  The UI told everything as it came while the character lay OUT: the denizens' sounds ("You hear
+  footsteps to your right.", a hundred "You hear a tapping of picks ..." in dq0tunnel's long black-out), their doings
+  seen ("The bandit slams the door shut."), "Something stirs." and the denizens' comings and goings, the blows at it and
+  between others (dq0deadonce's six shots, each worded, then "You are dead."), a robber at its things ("The bandit goes
+  through your things as you lie helpless, and takes what it finds."), its torch burning low and going out, the look
+  that followed; and the sound task played them.  Nothing was told as it came round (the world's look then only its
+  eyes', LK_EYES: the lights far off).
+- **Built: the UI's gate, by the events' clock.**  `out_told` (main.c; "no line taken" since 2026-11-13) now also means
+  "nothing sensed": set as the knockout's told (blows.c's o_blow, if the world has it out still; a harm's E_OUT, s_news)
+  with `out_until`, the world's pc_ready then (when it comes round).  `numb` (main.c, main RAM) runs on every event the
+  UI reads (events' and heard's loops): an event from out_until on lets it go (come round).  Not the world's pc_out as
+  the UI reads it: at the turns pace the world may be up again before the UI has read what came as it lay, or not yet
+  down (a blow at its coming round's own tenth, dodged, was dropped so); and no E_READY comes if it comes round fighting
+  on (dq0battering: the rise, then a blow).  Struck senseless again as it lies (a blow it doesn't feel, FF_D_DOWN at it),
+  out_until the world's pc_ready again.
+- **What's dropped while senseless:** a denizen's sound or doing (heard's E_DEN: no "You hear ...", no seen doing);
+  another's limbs' news (E_BEAT; its own still told: "You drop your torch." as it falls, part of the black-out); every
+  blow (o_blow: at it, between others, a rise: not worded, nothing about it read); what it sees changing (E_VIEW: a
+  denizen stirring, V_STIR; a look as its light changes, owed: out_told's bit 2); its light burning low or going out
+  (task.c's TE_LOW, as asleep, and TE_OUT); the sounds played (dq0s's listen: the character's stratum taken as none
+  while the hub's pc_out is set, its events read and let go).
+- **As it comes round:** the denizens it sees now, what's changed since it was knocked out (look.c's stir, as a
+  sleeper's waking: "Nothing stirs in sight now.", "Something stirs. (D) A giant rat is ..."; nothing if nothing has),
+  or, if its light changed meanwhile, the place looked at whole (look (0): dq0tunnel's torch gone out as it lay, the
+  guardroom then told lit by its brackets).  Then the world's own (in no state to fight, no foe left beside it).
+- **Harm done as it lies (decided, for review):** a blow landing is **felt only as its result**: not told, its wound on
+  the sheet, the status line and the state as it comes round; the referee's body news (bleeding, venom: TE_BODY) held as
+  a sleeper's is (tend.c's news_due) and **told as it comes round** (its E_READY); a robbery **found as it comes round**
+  (TE_ROBBED with no RB_CAUGHT as it lies: task.c's pursed 2, told with TE_BODY's news then: said.txt's TASK.coins, arg
+  1, "You come round to find someone has been through your things."; the sleeper's own "You find your coins gone:
+  someone robbed you as you lay." its arg 0, unchanged).  A robbery of one helpless but awake (in shock, feigning death)
+  told as before.
+- **Death as it lies:** "You are dead." (blows.c: the blow that kills it unworded), then the game's end as ever
+  (dq0outcold, dq0deadonce, dq0finished, dq0killrest, dq0fighton, dq0armour, dq0disengage, dq0reach, dq0throws).  Dead of
+  its wounds as it lies: the referee's words and "You are dead." as before (tend.c tells a death whatever).
+- **Where the gate is.**  In the UI, not the senses: the senses' denizens record gated on pc_out (tried) left them
+  unseen after it came round till something moved (the world asks the senses about the denizens only as their bodies
+  change, den_seq; and a harm's black-out asks no look as it ends), and a refresh at the eyes' look at a wait's end
+  swallowed a stir (dq0denhands).  The senses' record goes on as ever; the UI reads none of it while senseless, and its
+  own list of what it told (dens.c's) stays as it was at the black-out, the stir as it comes round told against it.  The
+  world unchanged (its main RAM 11 bytes over its floor).
+- **Tests.**  dq0outcold extended: the orcs' game from the black-out to "You are dead." only the line refused, though the
+  orcs strike at it and go about meanwhile (an E_FIGHT at it and an E_DEN in that turn, or the check proves nothing);
+  the rats' game from the black-out to the next prompt only the refusal and one stir (as it comes round), no "fighting
+  you" nor "You hear", and an E_DEN meanwhile (both failed by 320ea131's transcripts).  Changed where this decision
+  changes them: dq0robbed (the robbery found as it comes round, and not seen: "You come round to find someone has been
+  through your things."); dq0finished ("Everything goes black." then "You are dead.", no mortal blow worded);
+  dq0helpless (the adders seen fleeing as it lay: now by their moves, an E_DEN DE_MOVED two squares or more off after
+  the knockout, and not told); dq0denportal (the slam told unless it lay senseless as it was slammed, by the events'
+  times, and then not told).  Every other check as it was.
+- **What the player sees differently** (the suite's transcripts, by sentence, sent.js, against 320ea131's: 39 differ).
+  The known noise alone: dq0jobs, dq0prompt, dq0reachstop, dq0restbusy, dq0skykin, dq0stopwords, dq0sway, dq0tiring;
+  dq0antidote (its real-time fight).  The rest, every one a black-out's: the sounds gone ("You hear ..."), the stirs and
+  the denizens' comings and goings gone, one stir or a look as it comes round in their place (dq0battering, dq0bearing,
+  dq0denportc, dq0faced, dq0features, dq0helpless, dq0inhab, dq0senseless, dq0strike, dq0turnsame, dq0tunnel, dq0throws,
+  dq0reach); the blows at it as it lay gone, "You are dead." on its own (dq0armour, dq0deadonce, dq0disengage, dq0fighton,
+  dq0finished, dq0killrest, dq0outcold); the robbery found as it comes round (dq0denpace, dq0denportal, dq0disarm,
+  dq0hidelook, dq0hoard, dq0peoples, dq0robbed, dq0robrest, dq0shield, dq0shieldskill; their designators given in
+  another order: (G) for (I) ...); the torch burning low and going out as it lay gone (dq0peoples, dq0tunnel).
+  "Everything goes black." (and "again"), "You are dead.", "The game is over." as often as before in every test.
+- **Room:** dq0's main RAM 3,314 -> 3,173 (numb, out_until, the gates in heard and events, the harm's out_until);
+  overlay 3 2,066 -> 2,008, 6 2,227 -> 2,128 (o_blow's), 14 1,473 -> 1,476, 15 335 -> 319 (task.c's), 16 2,005 -> 2,000,
+  27 159 -> 154, 28 0 -> 3, 29 1,545 -> 1,487 (TASK.coins' second form); parts 2 333 -> 336, 11 2,322 -> 2,306, 12 2,193
+  -> 2,188.  dq0s's main RAM 17,529 -> 17,513.  dq0w, dq0p, dq0d unchanged.  The start: seed 1 232.5M -> 233.3M,
+  123456789 309.5M -> 308.7M (timing).  The suite: all 448 pass.
+- **Open, for review.**  (1) A blow landing as it lies told only by its result (no words as it comes round: the status
+  line's and the sheet's); or a word then ("You were struck as you lay.")?  (2) The robbery's words as it comes round
+  (said.txt's TASK.coins, arg 1).  (3) As it comes round, the denizens' stir ("Nothing stirs in sight now.", "Something
+  stirs. ..."), the whole look only if its light changed; or always the whole look?  (4) Its own limbs' news still told
+  as it falls ("You drop your torch."), with the black-out.  (5) The sound task silent by the hub's pc_out as it reads
+  it (a moment early or late at a black-out's edges: the knockout blow's own thud may go unplayed).  (6) "You've begun
+  to learn Club by doing it." still told as it lies (the referee's, not a sense).  (7) The UI's main RAM: 141 bytes of
+  its 314 over the floor spent; numb could go to an overlay but for its call on every event.
