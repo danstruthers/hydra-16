@@ -1175,6 +1175,72 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0portcopen', meaning: true, near: ['map', 'parser'], what: 'Dingus Quest Zero\'s portcullis opened and closed as it\'s raised and lowered (the user\'s, 2026-11-14: "open portcullis doesn\'t actually raise it ... raise portcullis does"; DECISIONS.md\'s "Opening a portcullis"), by the world\'s events, what the character perceives and the words: at seed 514 the kobold warren\'s gatehouse (dq0portc\'s), a strong character (Strength 18); from its winch\'s side the portcullis ahead lowered, opened (wound up, then up and seen up: the same words as raised), closed (let down, seen down: the same words as lowered), raised, and gone through (north, along the passage beyond); from the far side (walked back to it, let down meanwhile: its state poked in the chunks\' cache) heaved up by "open", neither closed nor lowered (its winch on the other side, the same words for both), let down again (poked) and heaved up by "raise", the same words as "open"; and gone back through',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/s.hm', 'echo att str 18 >> /ram/s.hm',
+        'dq0 -p t -s 514 -c /ram/s.hm', 'lower portcullis', 'open the portcullis', 'close the portcullis', 'raise the portcullis', 'n', 's',
+        'open the portcullis', 'close the portcullis', 'lower the portcullis', 'raise the portcullis', 's', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {
+        let n = 0, r = 0;
+        this.poked = [];
+        dq0Where(this, m, l => {   // (The portcullis's square: north of where the character stands to close it; let down
+          // (its state poked) as the character walks back to it from the far side, and before "raise" there)
+          const w = this.where[this.where.length - 1];
+          if (l === 'close the portcullis' && !this.pq) this.pq = [w.sn, w.x, w.y - 1];
+          if ((l === 's' && ++n === 1) || (l === 'raise the portcullis' && ++r === 2)) {
+            const p = this.pq && dq0Portal(m, ...this.pq), ok = !!p && p.kind === PK_PORTCULLIS && (p.b[p.state] & 1) === 1;
+            if (ok) p.b[p.state] &= ~1;
+            this.poked.push(ok);
+          }
+        });
+      },
+      check(m) {
+        const T = dq0Turns(m), f = [], s = m.out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\[[ .]*\]|torch \d+(h\d+)?m?|UP \d+|facing [NSEW]+/g, ' ').replace(/\s+/g, ' ');
+        const seen = (t, open) => t.after && t.after.sight && t.after.sight.doors.some(d => d.kind === 'PK_PORTCULLIS' && (d.state & 1) === open);
+        const lo = T.of('lower portcullis'), op = T.after(lo, 'open the portcullis'), cl = T.after(op, 'close the portcullis'),
+          ra = T.after(cl, 'raise the portcullis'), n = T.after(ra, 'n'), back = T.after(n, 's'), op2 = T.after(back, 'open the portcullis'),
+          cl2 = T.after(op2, 'close the portcullis'), lo2 = T.after(cl2, 'lower the portcullis'), ra2 = T.after(lo2, 'raise the portcullis'), s2 = T.after(ra2, 's');
+        // (What each line's told: the screen's text cut at the prompts, each line's echoes and what follows them, in turn)
+        const chunks = s.split('> ').slice(1), told = new Map();
+        for (let i = T.indexOf(lo), c = 0; i >= 0 && i < T.length; i++) {
+          while (c < chunks.length && !chunks[c].startsWith(T[i].line)) c++;
+          let w = '';
+          for (; c < chunks.length && chunks[c].startsWith(T[i].line); c++) w += ' ' + chunks[c].slice(T[i].line.length);
+          told.set(T[i].k, w.trim());
+        }
+        const said = t => told.get(t.k) || '';
+        dq0Need(f, lo, 'E_PORTAL', { po: 'PO_LOWERED', pk: 'PK_PORTCULLIS' }, 'the portcullis not lowered first');
+        for (const [t, w] of [[op, 'opened'], [ra, 'raised']]) {
+          dq0Need(f, t, 'E_TASK', { te: 'TE_BEGUN' }, 'its winding not begun, ' + w);
+          dq0Need(f, t, 'E_PORTAL', { po: 'PO_RAISED', pk: 'PK_PORTCULLIS' }, 'the portcullis not ' + w + ' by its winch');
+          if (!seen(t, 1)) f.push('the portcullis not seen up, ' + w);
+        }
+        if (!/You set to winding the winch\. You raise the portcullis: it grinds up/.test(said(op))) f.push('"open": not wound up and told raised: ' + JSON.stringify(said(op)));
+        if (said(op) !== said(ra)) f.push('"open" and "raise" told differently: ' + JSON.stringify(said(op)) + ' / ' + JSON.stringify(said(ra)));
+        dq0Need(f, cl, 'E_PORTAL', { po: 'PO_LOWERED', pk: 'PK_PORTCULLIS' }, 'the portcullis not closed (let down)');
+        if (!seen(cl, 0)) f.push('the portcullis not seen down, closed');
+        const loose = x => x.replace(/^.*?(You loose)/, '$1');   // (The lowering's words, after the walk up's first)
+        if (!/^You loose the winch: the portcullis crashes down\.$/.test(loose(said(cl))) || loose(said(cl)) !== loose(said(lo))) f.push('"close" and "lower" told differently: ' + JSON.stringify(said(cl)) + ' / ' + JSON.stringify(said(lo)));
+        dq0Need(f, n, 'E_ARRIVE', {}, 'not gone through the portcullis raised');
+        if (!n.after || !this.pq || !(n.after.pc.y < this.pq[2])) f.push('not gone north through it');
+        if (this.poked.length !== 2 || !this.poked.every(x => x)) f.push('the portcullis not let down from the far side (the poke): ' + JSON.stringify(this.poked));
+        if (!back.after || !this.pq || back.after.pc.x !== this.pq[1] || back.after.pc.y !== this.pq[2] - 1) f.push('not walked back to the portcullis, down, from the far side');
+        for (const [t, w] of [[op2, 'opened'], [ra2, 'raised']]) {
+          dq0Need(f, t, 'E_PORTAL', { po: 'PO_HEAVED', pk: 'PK_PORTCULLIS' }, 'the portcullis not heaved up from the far side, ' + w);
+          if (!t.after || !this.pq || !(t.after.pc.y < this.pq[2])) f.push('not on the far side, ' + w);
+          if (!seen(t, 1)) f.push('the portcullis not seen up from the far side, ' + w);
+        }
+        if (!/^You look at the portcullis\. You set to heaving at the portcullis\. You raise the portcullis: it rises, and catches/.test(said(op2)) || said(op2) !== said(ra2)) f.push('"open" and "raise" told differently from the far side: ' + JSON.stringify(said(op2)) + ' / ' + JSON.stringify(said(ra2)));
+        for (const t of [cl2, lo2]) dq0Need(f, t, 'E_PORTAL', { po: 'PO_NO_WINCH', pk: 'PK_PORTCULLIS' }, '"' + t.line + '" from the far side: not its winch on the other side');
+        if (said(cl2) !== said(lo2) || !/Its winch is on the other side/.test(said(cl2))) f.push('"close" and "lower" told differently from the far side: ' + JSON.stringify(said(cl2)) + ' / ' + JSON.stringify(said(lo2)));
+        dq0Need(f, s2, 'E_ARRIVE', {}, 'not gone back through the portcullis heaved up');
+        if (!s2.after || !this.pq || !(s2.after.pc.y > this.pq[2])) f.push('not back south through it');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0doorfar', near: ['map', 'parser'], what: "Dingus Quest Zero's door beyond the room's walls walked over to (HOUSE.md's out of reach, walked to first: \"close the door\", \"hit the door\", \"kick the door\" not beside it by the four ways, nor on the walls of the room it stands in: dq0's door_go; 2026-11-03, the check of the document), by the words and the hub: at seed 3 out through the cell's doorway into the passage (the rats held off, the scene's), the doors on the cell's wall asked about, one chosen: \"You head for the door.\", walked to beside it, then the command: the open door closed, the closed one battered with the torch, and kicked",
       init: 't_rc', cycles: 1400e6,
       machine: { input: (() => {

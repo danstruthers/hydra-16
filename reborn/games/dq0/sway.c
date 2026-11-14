@@ -141,7 +141,8 @@ static void __fastcall__ first_word (unsigned char n)
             return;
         }
         name = port_name (k);
-        v = tx - s->x + 1 > 2 || ty - s->y + 1 > 2 ? FV_HEAD : n == PA_OPEN ? FV_TRY : n == PA_CLOSE ? v : a;
+        v = tx - s->x + 1 > 2 || ty - s->y + 1 > 2 ? FV_HEAD : k == OB_PORTC ? a : n == PA_OPEN ? FV_TRY : n == PA_CLOSE ?
+            v : a;                              /* (A portcullis opened, closed: as it's raised, lowered, 2026-11-14) */
     }
     first17 (FS_THE, v, 0, name);
     t_flush ();

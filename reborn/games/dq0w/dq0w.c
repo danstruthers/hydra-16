@@ -4320,7 +4320,9 @@ void __fastcall__ s_door_work (unsigned char what)
             return;                             /* (The lockpicks, the door's key, got out first, the world's steps: lw_m
                                                 **   again) */
         }
-        act.work = what;                           /* (The timed work: done as its time's up, work_done) */
+        act.work = what ? what : PA_RAISE;         /* (The timed work: done as its time's up, work_done; a portcullis
+                                                **   opened, PA_OPEN, 0, act.work's none: raised, its only timed
+                                                **   opening, wwin.c's, 2026-11-14) */
         act_plan (AK_WORK);
         lw_x = px_;
         lw_y = py_;
