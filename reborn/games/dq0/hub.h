@@ -1610,6 +1610,10 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned        dig_t[NACTORS];             /* Each actor's spell of digging begun then (the clock's low word: a
                                                 **   tunneller's, I_KIT's KT_DIG, slice 4.11's: the world's; last, the
                                                 **   rest where they were) */
+    volatile unsigned char pc_out;              /* The character lies senseless (the world's: knocked out by a blow or a
+                                                **   harm, till it comes round and is free): no intent of the UI's taken
+                                                **   meanwhile but the quit, and the UI takes no line (2026-11-13, the
+                                                **   user's) */
 };
 #define WANT_HUNGER(w)  ((w) & 0x0F)            /* (pc_want's hunger level, and its thirst's: 0 none, 1 hungry or */
 #define WANT_THIRST(w)  ((w) >> 4)              /*   thirsty, 2 very, 3 starving or parched, 4 dying of it; */
@@ -2018,6 +2022,7 @@ struct wsave {
 **   own hub.pc_flm world
 **   own hub.pc_aff world
 **   own hub.pc_dose world
+**   own hub.pc_out world                                       (Senseless: 2026-11-13)
 **   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)

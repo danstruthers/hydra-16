@@ -35,7 +35,9 @@ static unsigned char __fastcall__ struck (const char* l)
 }
 
 /* A blow (an E_FIGHT: the character's, or one at it), worded; the character dead of it, the game's end; knocked
-** senseless, it waits it out (main.c's till 2026-11-03: the main RAM's room) */
+** senseless, busy till it comes round (the world's: its E_READY then, the hub's pc_out till it does; the UI's wait for it
+** before 2026-11-13, taken at the clock it came to the world, the black-out's end with it), no line taken meanwhile
+** (main.c's out_line) */
 unsigned __fastcall__ o_fight_said (const struct msg* m);
 void __fastcall__ o_blow (const struct msg* m)
 {
@@ -46,7 +48,12 @@ void __fastcall__ o_blow (const struct msg* m)
     if (c & C_DEAD) {
         ending (END_DIED);                         /* (The game's end, as harm's is) */
     } else if (out) {
-        intend2 (I_WAIT, out, I_WAIT_W2 (0, 0, 1));   /* (Out: the time it's senseless) */
+        out_told = 1;
+        hub_mem (0, &c, (const void*) &HUB->pc_out, 1);
+        if (c) {
+            busy = 1;                           /* (Out still, as the world has it: free as it comes round, E_READY) */
+            t_prompt (0);
+        }
     }
 }
 

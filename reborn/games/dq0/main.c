@@ -57,6 +57,8 @@ const char* const pacename[4] = { "relaxed", "normal", "menacing", "turns" };
 static unsigned char asking;                    /* (A long task's soft question put, the answer awaited) */
 const char* cl;                                 /* (The command's line, s_command's: its handlers' words of it; nameis.s's) */
 unsigned char harm_told;                        /* (The states a harm's words told in this answer: intro.c's) */
+unsigned char out_told;                         /* (Knocked senseless, told: no line taken till it comes round, the
+                                                **   world's pc_out; out_line's) */
 unsigned char autogo;                           /* (dq0 -a: every soft question answered yes, unasked: the tests') */
 unsigned char what_hi;                          /* (The thing's kind's top bit, the long task's what its other seven: task.c's noun) */
 unsigned char take_all;                         /* ("Take all" under way, its last thing too: the pack first, resolve.c's) */
@@ -1392,6 +1394,7 @@ void __fastcall__ s_news (const struct msg* m)
         if (HUB->pcsum.cond & C_DEAD) {
             ending (END_DIED);                     /* (The game's end) */
         }
+        out_told |= (m->w1 & E_OUT) != 0;       /* (Knocked senseless: no line taken till it comes round, main's) */
         break;
     case E_PORTAL:
         k = E_PORTAL_PO (*m);
@@ -2180,6 +2183,29 @@ static unsigned char __fastcall__ at_once (const char* l)
 
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
+
+/* A line typed as the character lies senseless, or waiting as it was knocked out (main's, out_told: told so): not
+** taken, nor any behind it, its refusal said once (the user's, 2026-11-13: no commands queued through a black-out, to
+** be carried out as it comes round; "ignore input or not allow it at all when knocked out").  But the quit (held till
+** it comes round, as any line typed as it's busy; the game's end if it dies) and the help (at once).  Come round (the
+** world's pc_out), the lines as ever.  Part 2's: the parser's own */
+void s_out_line (void)
+{
+    hub_map (0);
+    if (!HUB->pc_out) {
+        out_told = 0;
+        return;
+    }
+    if (cq_cmd (t_next ()) > 0 && (cmd.action == VB_META_QUIT || cmd.action == VB_META_HELP)) {
+        return;
+    }
+    while (t_line ()) {
+    }
+    cq_drop ();
+    held = took = 0;
+    HUB->ui_cmd = 0;                            /* (No command in hand: the world's jobs not held for it) */
+    say_no (A_OUT, 0);                          /* ("You lie senseless.") */
+}
 
 /* Nothing: part 2 copied in (main's, while no line's in hand: the next command's part there for it, its copy's 50,000
 ** cycles not between its Enter and its answer) */
@@ -2998,6 +3024,9 @@ int main (int argc, char* argv[])
             HUB->ui_giving = 0;
             hub_ring (T_WORLD);
         }
+        if (out_told && t_next ()) {
+            out_line ();                        /* (Senseless: the line not taken, part 2's) */
+        }
         if (held & 2) {
             held = 0;                           /* (That line let go, parts.c's: its parse with it) */
             cq_drop ();
@@ -3210,9 +3239,9 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
     }
     heard_words (d | (E_DEN_BETWEEN (*m) ? 0x80 : 0), rel);
     msg (lb);
-    if (busy && HUB->pc_task.kind && !asked) {
+    if (busy && HUB->pc_task.kind && !asked && !HUB->pc_out) {
         asked = 1;                              /* (The first sound heard as a long task goes: asked, the world's to
-                                                **   pause it) */
+                                                **   pause it; not as it lies senseless, 2026-11-13) */
         intend2 (I_ASK, TE_ASK_HEARD, 0);
     }
 }

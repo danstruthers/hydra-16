@@ -46,6 +46,7 @@ unsigned long blow_t;                           /* (wbody.h's: a denizen's blow'
 extern unsigned char pc_hit;                    /* (dq0w.c's: a blow at the character stops its long task, hard) */
 extern unsigned char flast;                     /* (dq0w.c's: who struck at the character last; act.fight fighting on's) */
 extern unsigned char pc_ko;                     /* (dq0w.c's: the character knocked senseless, main's to see) */
+extern unsigned char pc_waited;                 /* (dq0w.c's: its eyes and the time it believes looked to as it's free) */
 unsigned __fastcall__ weight_in (unsigned where, unsigned x);  /* (Part 10's, things.c's: what's on the character
                                                 **   weighs, quarter pounds) */
 
@@ -286,8 +287,11 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         bd.ready = bt;
     }
     if (ff & (!def ? FF_D_DOWN : !att ? FF_A_DOWN : 0)) {
-        pc_ko = 1;                              /* (Its bearings tested as main next looks, though it's come round
-                                                **   by then: not as the passes fall, 2026-11-13) */
+        pc_ko = pc_waited = HUB->pc_out = 1;    /* (Its bearings tested as main next looks, though it's come round
+                                                **   by then: not as the passes fall, 2026-11-13.  Senseless: nothing
+                                                **   it means done till it comes round, its long task's stop not
+                                                **   cutting it short, its eyes and the time it believes looked to
+                                                **   then, as a wait's end; the UI's wait for it none, 2026-11-13) */
         if (HUB->pc_ready < bt) {
             HUB->pc_ready = bt;                 /* (The character senseless: busy till it comes round, so nothing's
                                                 **   done meanwhile, however the UI's events come; come round already

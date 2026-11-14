@@ -2735,7 +2735,8 @@ void __fastcall__ s_bearings_off (unsigned feet)
     if (!feet) {
         if (W_SLOT.w2) {
             feet = BO_OUT;
-            pc_down = 1;                        /* (Not again, as main sees it out, if it does) */
+            pc_down = HUB->pc_out = 1;          /* (Not again, as main sees it out, if it does; senseless: nothing
+                                                **   it means done till it comes round, main's) */
         } else if (W_SLOT.a == HC_FALL && W_SLOT.result != 1) {
             feet = W_SLOT.w1;
         }
@@ -4541,13 +4542,22 @@ static void stepping (void)
 static unsigned long pask;                      /* (When the question was put) */
 static unsigned long prem;                      /* (When it was to be free then) */
 
+/* Free now, its long task stopped (halt's, stop's): not as it lies senseless (the hub's pc_out), busy till it comes
+** round (wfight.c's, 2026-11-13) */
+static void free_now (void)
+{
+    if (!HUB->pc_out) {
+        HUB->pc_ready = HUB->now;
+    }
+}
+
 static void __fastcall__ halt (unsigned char why)
 {
     hub_map (0);
     npath = pnext;                              /* (A walk: its way's end where it's got to) */
     move.den = blocked;
     went = (unsigned) (HUB->now - pt0);
-    HUB->pc_ready = HUB->now;
+    free_now ();
     HUB->pc_task.asking = 0;
     if (why != 0xFF) {
         act.take = 0;                             /* (Stopped, hard or by the player: what it walked for dropped, a
@@ -4574,7 +4584,7 @@ static void __fastcall__ stop (unsigned char why)
     }
     move.on = 0;                                /* (A spell of digging given up, or a wait cut short) */
     if (HUB->pc_task.kind != LT_FIGHT) {
-        HUB->pc_ready = HUB->now;               /* (A fight's blow struck: its round out first) */
+        free_now ();                            /* (A fight's blow struck: its round out first) */
     }
     HUB->pc_task.asking = 0;
     pc_hit = 0;                                 /* (A blow taken as it was asked: no second stop after the answer's) */
@@ -6253,7 +6263,8 @@ void __fastcall__ s_passed (const struct msg* m)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-static unsigned char pc_waited;
+unsigned char pc_waited;                        /* (A wait's end, its eyes and the time it believes looked to: the
+                                                **   knockout's too, wfight.c's) */
 
 /* An intent carried out, the UI's: a step, a walk, a climb (each answered at once: the main RAM's); a turn, a wait
 ** and the quit part 53's (intent_few: slice 4.2's, the main RAM's room); the rest part 37's (intent_more) */
@@ -7274,7 +7285,11 @@ int main (int argc, char* argv[])
                                                 **   twice, the soak's seed 141, 2026-11-06.  A question's yes, I_GO_ON,
                                                 **   comes only as its task is paused, asking: its E_READY still to come) */
             }
-            intent (&m);
+            if (!HUB->pc_out || m.kind == I_QUIT) {
+                intent (&m);                    /* (Senseless, nothing it means is done: the UI's line, typed before
+                                                **   it knew, not taken; its E_READY as it comes round.  The quit taken,
+                                                **   whatever: 2026-11-13, the user's) */
+            }
         }
         if (hub_posted (&HUB->wreq)) {
             answer ();                          /* (The UI's: the save, a close look) */
@@ -7300,7 +7315,8 @@ int main (int argc, char* argv[])
         if (move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
             arrive ();
         }
-        if ((was_busy || (act.fight & 1)) && !move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
+        if ((was_busy || (act.fight & 1) || HUB->pc_out) && !move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
+            HUB->pc_out = 0;                    /* (Come round, if it was out: told as it's free, E_READY) */
             if (pc_waited) {
                 pc_waited = 0;
                 tsense ();                      /* (Its time believed: woken, part 76's, before it's free) */

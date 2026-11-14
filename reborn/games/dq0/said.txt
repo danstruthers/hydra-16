@@ -658,6 +658,7 @@ NO.A_NO_MAGIC       +"\nYou've no magic: you never studied the convocations."
 NO.A_NO_PSI         +"\nYou reach for it; nothing stirs."
 NO.A_NO_GODS        +"\nYou know no invocations of {text}'s."
 NO.A_NO_GOD         +"\nYou know no invocations."
+NO.A_OUT            +"\nYou lie senseless."
 
 # ---- The world's things' words (UK_SA: sa, items.h's SA_*: the world's things.c's say, kinds.c's said[] before;
 # narration as data, stage 5, the user's, 2026-11-12).  The world puts a code and two names in things_text, and the

@@ -307,6 +307,7 @@ enum { U_VERB, U_YET, U_CANT, U_NOTE, U_WHAT,   /* (A verb the game doesn't know
     A_SEE_NO, A_SEE_NONE, A_HAVE_NO, A_CARRY_NONE, A_NO_TAKE, A_UNSEEN, A_UNSEEN_WAY, A_FAR, A_NEARER,
     A_NO_MAGIC, A_NO_PSI, A_NO_GODS, A_NO_GOD,  /* (The powers, H_POWERS's: no spells, no psionics; no invocations of
                                                 **   the character's deity's, its name put in; none, worshipping none) */
+    A_OUT,                                      /* (A line typed as it lies senseless: main.c's out_line) */
     A_COUNT };
 #define A_LB        0x80                        /* (say_no's a |: added to lb, not said) */
 void __fastcall__ say_no (unsigned char a, const char* w);   /* Overlay 24 (refuse.c's): a refusal said, the one
@@ -358,6 +359,8 @@ unsigned char __fastcall__ free_cmd (const char* l);   /* Overlay 7: a line type
                                                 **   (2) */
 extern unsigned char autogo;                    /* (main.c's: dq0 -a, every soft question answered yes, unasked) */
 extern unsigned char harm_told;                 /* (The states a harm's words told this answer: main.c's) */
+extern unsigned char out_told;                  /* (main.c's: knocked senseless, told; no line taken till it comes round) */
+void out_line (void);                           /* Part 2 (main.c): a line typed as it lies senseless, refused */
 char* __fastcall__ env (const char* name, char* buf, unsigned char size);  /* The environment's (main.c) */
 void __fastcall__ appraise (const struct ireq* q, signed char g, unsigned char ex);   /* Overlay 1: a thing judged
                                                 **   (its value, its quality, both: ex's EX_*) */

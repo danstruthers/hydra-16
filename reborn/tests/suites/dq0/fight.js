@@ -1732,7 +1732,8 @@ module.exports = {
       init: 't_rc', cycles: 1800e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 14 -o /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g',
         "echo 'faction | Diggers | khuzmin | 0-1 | 29 | - | 0 | h | -' > /ram/g/theme.txt", "echo 'faction | Tribe | arak | 0-1 | 17 | - | 0 | h | Diggers h' >> /ram/g/theme.txt",
-        "dq0 -p t -s 14 -c /ram/c.hm -T -d /ram/g -k 'club'", 'attack', 'wait', 'fight the orc', 'kick the orc', 'echo =END', 'echo $status']) },
+        "dq0 -p t -s 14 -c /ram/c.hm -T -d /ram/g -k 'club'", 'attack', 'wait', 'fight the orc', 'echo =END', 'echo $status']) },   // (Its "kick the orc" gone, 2026-11-13: typed at a
+                                                //   prompt that came as it lay senseless; now none comes till it comes round, and it dies first)
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], T = dq0Turns(m), a = dq0Story(out), FF_D_DEAD = 8;
@@ -1745,6 +1746,44 @@ module.exports = {
         if (k < 0) f.push('the scene not set: no fatal blow in ' + blows.length);
         else if (k < blows.length - 1) f.push('blows at the character after it was dead: ' + (blows.length - k - 1));
         this.notes = [blows.length + ' blows at it, the fatal the ' + (k + 1) + 'th'];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      initiative: true, name: 'dq0outcold', near: ['fight'], what: "Dingus Quest Zero's lines typed as the character lies senseless (the user's, 2026-11-13: \"For knocked out players ... It might be better to just ignore input or not allow it at all when knocked out\"; DECISIONS.md's \"Commands while knocked out\", as built, for review): dq0senseless's rats (seed 3, no defence), a line typed as it's knocked senseless (\"drop the torch\", at \"Everything goes black.\") refused (\"You lie senseless.\"), no intent sent for it, and not carried out as it comes round (the torch still in hand at the quit); and dq0deadonce's orcs (seed 14), a line typed as it falls senseless refused the same, the character dying senseless, the game's end told once and the game gone back to the shell (the latch tried before hung its quit there)",
+      init: 't_rc', cycles: 2800e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml una 5 >> /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', 'defend none', 'wait', 'wait', 'wait', 'quit',
+        'hmchar -q -s 14 -o /ram/d.hm', 'dq0hour=128', 'mkdir /ram/h',
+        "echo 'faction | Diggers | khuzmin | 0-1 | 29 | - | 0 | h | -' > /ram/h/theme.txt", "echo 'faction | Tribe | arak | 0-1 | 17 | - | 0 | h | Diggers h' >> /ram/h/theme.txt",
+        "dq0 -p t -s 14 -c /ram/d.hm -T -d /ram/h -k 'club'", 'attack', 'wait', 'echo =END', 'echo $status']) },
+      start(m) {        // (Each line typed as the black-out's told, the character senseless)
+        dq0OnWords(m, [{ g: 1, line: 'wait', n: 1, words: 'Everything goes black.', text: 'drop the torch\r' },
+          { g: 2, line: 'wait', n: 1, words: 'Everything goes black.', text: 'kick the orc\r' }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], T = dq0Turns(m), a = dq0Story(out), g1 = a.slice(0, a.indexOf('% hmchar -q -s 14')), g2 = a.slice(g1.length);
+        const refused = (g, line) => {
+          const i = g.indexOf('> ' + line), next = i < 0 ? '' : g.slice(i + line.length + 2).trim();
+          if (i < 0) f.push('"' + line + '" not typed');
+          else if (!next.startsWith('You lie senseless.')) f.push('"' + line + '" not refused: ' + next.slice(0, 200));
+          else if (g.indexOf('Everything goes black.') > i) f.push('"' + line + '" typed before the black-out');
+          const t = T.of(line);
+          if (t.k >= 0 && t.intents.some(x => x.ring === 'ui' && x.kind !== 'I_QUIT')) f.push('"' + line + '" sent the world an intent: ' + t.intents.filter(x => x.ring === 'ui').map(x => x.kind).join(', '));
+        };
+        refused(g1, 'drop the torch');
+        if (/You drop|You put down|You let go of the torch/.test(g1)) f.push('the torch dropped as it came round: ' + (g1.match(/[^.]*(?:You drop|You put down|You let go of the torch)[^.]*\./) || [''])[0]);
+        const q = T.of('quit');
+        if (!q.at || !dq0Carried(q.at).some(i => i.name === 'torch')) f.push('the torch not still carried at the quit');
+        if (!/Time passes\./.test(g1.slice(g1.indexOf('You lie senseless.')))) f.push('the waits after it not taken as it came round');
+        refused(g2, 'kick the orc');
+        const over = (g2.match(/The game is over\./g) || []).length, dead = (g2.match(/You are dead\./g) || []).length;
+        if (dead !== 1 || over !== 1) f.push('dying senseless: the death told ' + dead + ' times, the end ' + over);
+        if (g2.indexOf('You are dead.') < g2.indexOf('You lie senseless.')) f.push('not dead senseless (the refusal after the death)');
+        if (!/% echo =END\s+=END/.test(g2)) f.push('the game not gone back to the shell after the death');
+        if (/kick: not found/.test(g2)) f.push('the line typed as it lay senseless left for the shell');
         return f;
       },
       sdcard: true
