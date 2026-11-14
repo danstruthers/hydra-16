@@ -5509,3 +5509,10 @@ as it gets round to it, so a fight doesn't depend on the passes' timing; some fi
 - **Room:** dq0w's main RAM 2,083 -> 2,079 (blow_t); part 15 310 -> 124, part 6 82 -> 55, part 67 1,525 -> 1,482; the
   packer's overlays 3 237 -> 210, 14 515 -> 329, 20 101 -> 58.  dq0harn's main RAM 2,189 -> 2,123 (its tnow).  The
   start: seed 1 232.6M -> 232.7M, 123456789 308.0M -> 308.6M (timing).  The suite: all 447 pass.
+
+## Commands while knocked out: not taken (the user's, 2026-11-13)
+
+A blackout can be long ("drifting in the blackness"), so commands queued during it could pile up and all be carried
+out on waking.  The user's decision: while the character is senseless, input isn't queued; it's ignored or refused.
+Commands already waiting when the character is knocked out go too.  To build (DECISIONS.md's "A denizen's blow at its
+time": the last thing that splits dq0engage's fight by timing).
