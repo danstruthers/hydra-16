@@ -55,7 +55,7 @@ const ASM = {
     T_KIND: 'cthing.kind', T_SEL: 'cthing.sel', T_N: 'cthing.n', T_LIES: 'cthing.lies', T_WORD: 'cthing.word', T_WORDSIZE: 'sizeof cthing.word',
     CF_NOVERB: 'CF_NOVERB', CF_HALF: 'CF_HALF', CF_UNSAID: 'CF_UNSAID', CF_STRANGE: 'CF_STRANGE', CQ_REL: 'CQ_REL',
   },
-  line: {                                                       // games/dq0w/line.inc: the squares, a portal
+  line: {                                                       // modules/dq0lib/line.s: the squares, a portal
     T_WALL: 'T_WALL', T_DOOR: 'T_DOOR', T_WINDOW: 'T_WINDOW', P_KIND: 'portal.kind', P_STATE: 'portal.state', P_PARTS: 'portal.parts',
     PK_WINDOW: 'PK_WINDOW', PK_PORTCULLIS: 'PK_PORTCULLIS', PK_GRATE: 'PK_GRATE', PK_SLIT: 'PK_SLIT',
     PP_GLASS: 'PP_GLASS', PP_SHUTTERS: 'PP_SHUTTERS', PS_OPEN: 'PS_OPEN', PS_WRECKED: 'PS_WRECKED',
@@ -66,7 +66,14 @@ const ASM = {
   },
   letter: { NLET: 'NLET', LT_REC: 'LT_REC', CIX: 'sizeof cix', CIX_LET: 'cix.let' },   // games/dq0w/letter.s
   pulse: { SND_GRID: 'SND_GRID', SND_W: 'SND_W' },              // games/dq0p/pulse.s: the sound's grid
-  at: { CW: 'CW' },                                             // games/dq0w/at.s: a chunk's width
+  at: { CW: 'CW', M_CHUNK: 'M_CHUNK' },                         // games/dq0w/at.s: a chunk's width, the maker's chunk
+  sq: {                                                         // modules/dq0lib/sq.s: the chunks' cache, a stratum, a chunk
+    SS: 'sizeof stratum', SS_X0: 'stratum.x0', SS_Y0: 'stratum.y0', SS_W: 'stratum.w', SS_H: 'stratum.h', WORLD_BANK: 'WORLD_BANK',
+    PLAN_BANKS: 'PLAN_BANKS', NCSLOTS: 'NCSLOTS', CS_SIZE: 'sizeof cslot', CS_STAMP: 'cslot.stamp', W_CSLOT: 'wrec.cslot',
+    W_STAMP: 'wrec.stamp', W_INUSE: 'wrec.inuse', HUB_WINDOW: 'HUB_WINDOW', CHUNK_SIZE: 'CHUNK_SIZE', CH_TILE: 'chunk.tile',
+    CH_NPORTALS: 'chunk.nportals', CH_PORTAL: 'chunk.portal', PO_SIZE: 'sizeof portal', PO_X: 'portal.x', PO_Y: 'portal.y', CW: 'CW',
+  },
+  walk: { CW: 'CW', T_DOOR: 'T_DOOR', T_STEPS: 'T_STEPS', STEP_MAX: 'STEP_MAX', STAIR_MAX: 'STAIR_MAX', PS_HIDDEN: 'PS_HIDDEN', PS_OPEN: 'PS_OPEN' },   // modules/dq0lib/walk.s
   lbsaid: { TOLD: 'TOLD' },                                     // games/dq0/lbsaid.s: a look's sentences kept (dq0.h's)
 };
 

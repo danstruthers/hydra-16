@@ -16,11 +16,13 @@
 ;                                                           file not as it should be).  First: the library found.
 ;                                                           The UI's: (unsigned) fd, the file open (closed here)
 ;   unsigned __fastcall__ num (const char* s)              a number's digits (atoi's, without the C library's ctype)
+;   unsigned __fastcall__ lib_x (unsigned char e)     the library's entry e (its low byte: lnzp.inc's AT_FIND ...),
+;                                                           its arguments in r0-r2 or the zero page's block (lnzp.h)
 ;   unsigned __fastcall__ rp_x (void* a)                   the record store's entry a's first byte (rp.h's RP_*),
 ;                                                           a its block (struct rpf, struct rpt), in r0: its result
 ;                                                           (RP_X defined before it's included: a task with a store)
 
-            .export     _ovl_load, _num
+            .export     _ovl_load, _num, dq0x, _lib_x
             .import     __SWAP_START__
 
 .scope dql
@@ -112,7 +114,8 @@ file:       .byte       OVL_FILE, 0
             ; (fall through)
 .endproc
 
-; The library's entry .A (its low byte) called, .X, .Y and r0-r13 its arguments and its results
+; The library's entry .A (its low byte) called, .X, .Y and r0-r13 its arguments and its results (C's lib_x: ../dq0/lnzp.h)
+_lib_x      = dq0x
 .proc dq0x
             sta         dql::r15
             lda         dq0lib + 1

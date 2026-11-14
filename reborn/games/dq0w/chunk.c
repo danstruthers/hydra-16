@@ -2,34 +2,21 @@
 ** chunk.c - (the world's, the denizens') the dungeon's squares reached (world.h): a square's chunk found in the
 ** hub's cache and put in the window, or, if it isn't there yet, asked of the maker (games/dq0m), which makes it
 ** (the same chunk whoever asks: the seed's) while this task waits.  The slot found last is this task's in use, which
-** the maker never makes way for; the rest go least lately found first (the record store's: ../dq0/rp.h, its RP_FIND
-** here, RP_OLDEST the maker's).
+** the maker never makes way for; the rest go least lately found first (the record store's: ../dq0/rp.h's RP_FIND,
+** RP_OLDEST the maker's).  The lookup itself the game's library's (the paged ROM's AT_FIND, ../dq0/lnzp.h: at.s's
+** at () the long way, 2026-11-14; chunk.c's at_find and find before), the task's chunk state at.s's.
 */
 
 #include <string.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
 #include "world.h"
-#include "../dq0/rp.h"
+#include "../dq0/lnzp.h"
 
 struct stratum strata[MAXSTRATA];
-struct chunk* C;
-unsigned char cx_, cy_;
 
-static unsigned char me;                        /* ASK_WORLD ... */
 static unsigned char shut_ok (void);
-static unsigned char lastk = 0xFF, lsn;         /* The slot at () found last, and what it holds */
-static unsigned lcx, lcy;
-static unsigned char lbank;                     /* (Its bank, its chunk in the window) */
-static struct chunk* lchunk;
-
-/* at ()'s quick way (at.s): the stratum it found last (0xFF: none), its bounds; the chunk, its first square in the
-** stratum's own, its bank, its squares */
-unsigned char at_sn = 0xFF;
-unsigned at_x0, at_y0, at_w, at_h, at_ox, at_oy;
-unsigned char at_bank;
-struct chunk* at_chunk;
-unsigned char* at_tile;
+extern unsigned char at_sn;                     /* (at.s's: at ()'s quick way, the stratum it found last: 0xFF none) */
 
 #ifndef CHUNK_READER
 #pragma code-name (push, "SW3CODE")             /* (The world's: its start's alone, part 3's, s_start's: the main RAM's
@@ -37,7 +24,8 @@ unsigned char* at_tile;
 #endif
 void __fastcall__ chunks_init (unsigned char who)
 {
-    me = who;
+    at_me = who;
+    lz_init ();
     sync_strata ();
 }
 #ifndef CHUNK_READER
@@ -57,7 +45,7 @@ void __fastcall__ ask_maker (unsigned char kind, unsigned char sn, unsigned cx, 
     struct mreq* q;
 
     hub_map (0);
-    q = &HUB->mreq[me];
+    q = &HUB->mreq[at_me];
     q->kind = kind;
     q->sn = sn;
     q->cx = cx;
@@ -67,70 +55,6 @@ void __fastcall__ ask_maker (unsigned char kind, unsigned char sn, unsigned cx, 
     if (kind != M_CHUNK) {
         sync_strata ();
     }
-}
-
-/* The slot holding chunk (cx, cy) of stratum sn, or 0xFF: the world bank in the window (the cache's table, the record
-** store's: its stamp the newest, the slot this task's in use) */
-static struct rpt cst = { RP_FIND, NCSLOTS, sizeof (struct cslot), 0x3E, WREC->cslot, offsetof (struct cslot, stamp), 0,
-    &WREC->stamp };
-static unsigned char __fastcall__ find (unsigned char sn, unsigned cx, unsigned cy)
-{
-    unsigned char k;
-
-    cst.k[1] = sn;
-    *(unsigned*) &cst.k[2] = cx;
-    *(unsigned*) &cst.k[4] = cy;
-    hub_map (WORLD_BANK);
-    if ((k = rp_x (&cst)) != 0xFF) {
-        WREC->inuse[me] = k;
-    }
-    return k;
-}
-
-/* at () the long way (at.s: its quick way, the chunk found last, in assembly; a look about asks for thousands): the
-** square's chunk found in the hub's cache (or made), put in the window, and the square in it; the quick way's set
-** for it */
-unsigned char* __fastcall__ at_find (unsigned char sn, unsigned x, unsigned y)
-{
-    struct stratum* s = &STRATUM (sn);
-    unsigned ox = x - s->x0, oy = y - s->y0, cx, cy;
-    unsigned char k;
-
-    if (ox >= s->w || oy >= s->h) {
-        return 0;
-    }
-    cx = ox >> CW_BITS;
-    cy = oy >> CW_BITS;
-    cx_ = ox & (CW - 1);
-    cy_ = oy & (CW - 1);
-    if (lastk == 0xFF || lsn != sn || lcx != cx || lcy != cy) {
-        if ((k = find (sn, cx, cy)) == 0xFF) {
-            ask_maker (M_CHUNK, sn, cx, cy);
-            k = find (sn, cx, cy);
-        }
-        lastk = k;
-        lsn = sn;
-        lcx = cx;
-        lcy = cy;
-        for (lbank = CACHE_BANK (0); k >= 3; k -= 3) {     /* (CACHE_BANK (k) and CHUNK_AT (k) without dividing or
-                                                **   multiplying: cc65's slow) */
-            ++lbank;
-        }
-        lchunk = (struct chunk*) (0x8000 + (k == 0 ? 0 : k == 1 ? CHUNK_SIZE : 2 * CHUNK_SIZE));
-    }
-    hub_map (lbank);
-    C = lchunk;
-    at_x0 = s->x0;                              /* (The quick way, the next time: this chunk) */
-    at_y0 = s->y0;
-    at_w = s->w;
-    at_h = s->h;
-    at_ox = cx << CW_BITS;
-    at_oy = cy << CW_BITS;
-    at_bank = lbank;
-    at_chunk = C;
-    at_tile = &C->tile[0][0];
-    at_sn = sn;
-    return &C->tile[cy_][cx_];
 }
 
 signed char __fastcall__ elev_at (unsigned char sn, unsigned x, unsigned y)

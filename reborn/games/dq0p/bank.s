@@ -10,7 +10,6 @@
 OVL_BANKS   = 4                     ; (The game's library, ../dq0/dq0lib.inc: ovl_load, num)
 OVL_DOT     = 0
 .define     OVL_FILE "/dq0p.ovl"
-RP_X        = 1                     ; (The record store's calls, ../dq0/rp.h's rp_x: the chunks' cache)
             .include    "../dq0/dq0lib.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)

@@ -17,6 +17,7 @@
 #include "../dq0w/world.h"
 #include "view.h"
 #include "light.h"
+#include "../dq0/lnzp.h"
 
 #pragma static-locals (on)                      /* (Its locals static: the code the less) */
 
@@ -128,24 +129,11 @@ void __fastcall__ light_lamp (unsigned x, unsigned y, unsigned char r)
     }
 }
 
-/* Square x, y of stratum sn in a chunk the cache has (none made for the light: the maker's order the look's) */
+/* Square x, y of stratum sn in a chunk the cache has (none made for the light: the maker's order the look's): the game's
+** library's (../dq0/lnzp.h's ck_at) */
 unsigned char __fastcall__ cached (unsigned char sn, unsigned x, unsigned y)
 {
-    static struct cslot* s;
-    static struct stratum* t;
-    static unsigned cx, cy;
-
-    t = &STRATUM (sn);
-    if ((cx = x - t->x0) >= t->w || (cy = y - t->y0) >= t->h) {
-        return 0;
-    }
-    cx >>= CW_BITS;
-    cy >>= CW_BITS;
-    hub_map (WORLD_BANK);
-    for (k = NCSLOTS, s = WREC->cslot; k && (!s->used || s->sn != sn || s->cx != cx || s->cy != cy); --k, ++s) {
-    }
-    hub_map (0);
-    return k != 0;
+    return ck_at (sn, x, y);
 }
 
 static unsigned char sn_, part_;

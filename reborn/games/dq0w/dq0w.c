@@ -54,6 +54,7 @@
 #include "../dq0/hub.h"
 #include "hub0.h"
 #include "world.h"
+#include "../dq0/lnzp.h"
 #include "../dq0/rshouse.h"                   /* (The house's: what a thing swung does) */
 #include "work.h"
 #include "things.h"
@@ -1900,7 +1901,6 @@ void s_sky_list (void)
     static struct stratum* s;
     static struct link* l;
     static struct opening* o;
-    static struct cslot* c;
     static const signed char dxs[5] = { 0, -16, 16, -16, 16 }, dys[5] = { 0, -16, -16, 16, 16 };
     static unsigned lx[SKY_LAMPS], ly[SKY_LAMPS], x, y, px, py, ox, oy, ax, ay;
     static unsigned char n, k, sn, t;
@@ -1928,10 +1928,7 @@ void s_sky_list (void)
             if (t && ox == ax && oy == ay) {
                 continue;
             }
-            hub_map (WORLD_BANK);
-            for (k = NCSLOTS, c = WREC->cslot; k && (!c->used || c->sn || c->cx != ox || c->cy != oy); --k, ++c) {
-            }
-            if (!k || !at (0, px, py)) {
+            if (!ck_made (0, ox, oy) || !at (0, px, py)) {     /* (In the cache: the game's library's, ../dq0/lnzp.h) */
                 continue;
             }
             for (k = C->nopen, o = C->open; k; --k, ++o) {
@@ -2818,17 +2815,10 @@ static unsigned char looked_at (void)
 {
     struct stratum* s = &STRATUM (tv.sn);
     unsigned cx = (tv.x - s->x0) >> CW_BITS, cy = (tv.y - s->y0) >> CW_BITS;
-    struct cslot* c;
     unsigned char i, j, t = 0;
 
-    if (tv.legs) {
-        hub_map (WORLD_BANK);
-        for (i = 0, c = WREC->cslot; i < NCSLOTS && !(c->used && c->sn == tv.sn && c->cx == cx && c->cy == cy); ++i, ++c) {
-        }
-        hub_map (0);
-        if (i == NCSLOTS) {
-            return 0;                           /* (Not in the cache: not seen) */
-        }
+    if (tv.legs && !ck_made (tv.sn, cx, cy)) {
+        return 0;                               /* (Not in the cache: not seen) */
     }
     at (tv.sn, tv.x, tv.y);
     memcpy (&tv.k, &C->kept, sizeof tv.k);

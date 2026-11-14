@@ -1,17 +1,50 @@
 ; ****************************************************************************
 ; at.s - (the world's; the denizens' and the senses' include it) world.h's at (): a square's chunk in the window and
-; the square in it, the quick way, in assembly: a square of the chunk at () found last (its stratum, its bounds, the
-; chunk's first square, its bank, its squares: chunk.c's at_sn ...), worked out without multiplying, shifting or the
-; C stack (cc65's at () took some 1,500 cycles a square, and a look about asks for thousands); any other, at_find
-; (chunk.c: the hub's cache, or the maker), which sets the quick way for the next.
+; the square in it.  The quick way here, in assembly: a square of the chunk at () found last (its stratum, its bounds,
+; the chunk's first square, its bank, its squares), worked out without multiplying, shifting or the C stack (cc65's
+; at () took some 1,500 cycles a square, and a look about asks for thousands; an XCALL each would double it); any
+; other, the game's library's AT_FIND (the paged ROM's, modules/dq0lib/sq.s: the hub's cache, or the maker), which sets
+; the quick way for the next.  The task's chunk state is here (../dq0/lnzp.inc's struct ats: the quick way's, the long
+; way's, world.h's C, cx_, cy_), with what the library calls back (ask_chunk: ask_maker's) and the zero page's block
+; the library's squares' code keeps (lnzp.inc's LZ: line.h's ln_eye ..., walk.h's wk_* named for the C here).
 
             .macpack    longbranch
-            .export     _at
-            .import     _at_find, _hub_map, incsp3
-            .import     _at_sn, _at_x0, _at_y0, _at_w, _at_h, _at_ox, _at_oy, _at_bank, _at_chunk, _at_tile
-            .import     _C, _cx_, _cy_
+            .export     _at, _C, _cx_, _cy_, _at_me, _lz_init
+            .export     _at_sn, _at_x0, _at_y0, _at_w, _at_h, _at_ox, _at_oy, _at_bank, _at_chunk, _at_tile
+            .exportzp   _lr0, _lr1, _lr2
+            .import     _hub_map, _ask_maker, _strata, _t_kinds, _cornk, _dir_x, _dir_y, dq0x
+            .import     incsp3, pusha, pushax
             .importzp   sp, tmp1
-            .include    "dq0hub_at.inc"             ; (world.h's CW: the build's, ../dq0/hubgen.js)
+            .include    "../dq0/lnzp.inc"
+            .include    "dq0hub_at.inc"             ; (world.h's CW, M_CHUNK: the build's, ../dq0/hubgen.js)
+
+r0          = $02                           ; (The call registers: the library's arguments)
+r1          = $04
+r2          = $06
+_lr0        = r0                            ; (lnzp.h's: C's names for them)
+_lr1        = r1
+_lr2        = r2
+
+            .data
+ats:        .word       ask_chunk, _strata, _t_kinds, _cornk, _dir_x, _dir_y
+_at_me:     .byte       0                   ; (ASK_*: chunks_init's)
+_at_sn:     .byte       $FF                 ; at ()'s quick way: the stratum found last ($FF: none), its bounds; the
+_at_x0:     .word       0                   ;   chunk, its first square in the stratum's own, its bank, its squares
+_at_y0:     .word       0
+_at_w:      .word       0
+_at_h:      .word       0
+_at_ox:     .word       0
+_at_oy:     .word       0
+_at_bank:   .byte       0
+_at_chunk:  .word       0
+_at_tile:   .word       0
+_C:         .word       0                   ; world.h's C, cx_, cy_
+_cx_:       .byte       0
+_cy_:       .byte       0
+            .byte       $FF                 ; (The long way's: the slot found last, none yet; what it holds, its bank
+            .res        ATS_SIZE - ATS_LASTK - 1    ;   and chunk)
+.assert     _at_me - ats = ATS_ME && _at_sn - ats = ATS_SN && _at_x0 - ats = ATS_X0 && _at_tile - ats = ATS_TILE, error, "at.s: struct ats"
+.assert     _C - ats = ATS_C && _cy_ - ats = ATS_CY && _cy_ + 1 - ats = ATS_LASTK, error, "at.s: struct ats"
 
             .bss
 qy:         .res        2                   ; (y, kept)
@@ -103,6 +136,49 @@ _at:
             pla
             jmp         incsp3
 
-@long:      lda         qy                  ; Any other: the long way, its arguments as they were
-            ldx         qy + 1
-            jmp         _at_find
+@long:      lda         qy                  ; Any other: the long way, the library's (sn, x, y: r0, r1, r2)
+            sta         r2
+            lda         qy + 1
+            sta         r2 + 1
+            ldy         #2
+            lda         (sp),y
+            sta         r0
+            dey
+            lda         (sp),y
+            sta         r1 + 1
+            dey
+            lda         (sp),y
+            sta         r1
+            lda         #AT_FIND
+            jsr         dq0x
+            jmp         incsp3
+
+; The library's: the maker asked for chunk r1, r2 of stratum r0 (chunk.c's ask_maker (M_CHUNK, sn, cx, cy))
+ask_chunk:
+            lda         #M_CHUNK
+            jsr         pusha
+            lda         r0
+            jsr         pusha
+            lda         r1
+            ldx         r1 + 1
+            jsr         pushax
+            lda         r2
+            ldx         r2 + 1
+            jmp         _ask_maker
+
+; void lz_init (void): the zero page's block made ready (chunks_init's, as the task starts): the task's chunk state,
+; its hub_map; no ln_way, the eyes standing (line.h's LN_EYE)
+_lz_init:
+            lda         #<ats
+            sta         LZ_ATS
+            lda         #>ats
+            sta         LZ_ATS + 1
+            lda         #<_hub_map
+            sta         LZ_MAP
+            lda         #>_hub_map
+            sta         LZ_MAP + 1
+            stz         LZ_WAY
+            stz         LZ_WAY + 1
+            lda         #5
+            sta         LZ_EYE
+            rts

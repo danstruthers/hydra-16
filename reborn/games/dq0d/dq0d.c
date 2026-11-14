@@ -67,6 +67,7 @@
 #include "lore.h"
 #include "pop.h"
 #include "../dq0/rp.h"
+#include "../dq0/lnzp.h"
 
 #pragma static-locals (on)                      /* (Its locals static: quicker, and nothing here is reentered) */
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
@@ -840,20 +841,6 @@ void __fastcall__ s_place (unsigned char i)
 #pragma code-name (push, "SW13CODE")
 #pragma rodata-name (push, "SW13RODATA")
 
-/* Chunk (cx, cy) of stratum sn made already (in the cache: its table the world bank's; the hub's header in the
-** window after).  Part 13's, and part 9's own copy, made9 (the main RAM's room, 2026-11-02) */
-static unsigned char __fastcall__ made (unsigned char sn, unsigned cx, unsigned cy)
-{
-    struct cslot* q = WREC->cslot;
-    unsigned char k;
-
-    hub_map (WORLD_BANK);
-    for (k = NCSLOTS; k && !(q->used && q->sn == sn && q->cx == cx && q->cy == cy); --k, ++q) {
-    }
-    hub_map (0);
-    return k != 0;
-}
-
 unsigned char s_nearby (void)
 {
     struct stratum* s = &STRATUM (pcs);
@@ -864,7 +851,7 @@ unsigned char s_nearby (void)
     for (i = 0; i < hd.nlairs; ++i) {
         lair_get (i);
         if (L.kind && L.sn == pcs && !(L.flags & L_PLACED) && L.cx + 1 - cx <= 2 && L.cy + 1 - cy <= 2 &&
-            (nonear = 0, made (L.sn, L.cx, L.cy))) {
+            (nonear = 0, ck_made (L.sn, L.cx, L.cy))) {
             minds = xs_seed;
             place (i);                          /* (By the lair's own numbers, the minds' kept: their dice, grow's) */
             xs_seed = minds;
@@ -3036,18 +3023,6 @@ unsigned char __fastcall__ s_wfind (unsigned char k)
     hub_map (0);
     return c;
 }
-static unsigned char __fastcall__ made16 (unsigned char sn, unsigned cx, unsigned cy)   /* (Part 13's made) */
-{
-    struct cslot* q = WREC->cslot;
-    unsigned char k;
-
-    hub_map (WORLD_BANK);
-    for (k = NCSLOTS; k && !(q->used && q->sn == sn && q->cx == cx && q->cy == cy); --k, ++q) {
-    }
-    hub_map (0);
-    return k != 0;
-}
-
 /* A field's first square, one way: the actor's and the mark's between them, near enough; else the actor near its edge */
 static unsigned __fastcall__ rorg (unsigned ax, unsigned tx)
 {
@@ -3108,7 +3083,7 @@ static unsigned char __fastcall__ route (unsigned char k)
             rerow[i] = 0;
             if (x - s->x0 < s->w && y - s->y0 < s->h) {
                 if (!i || !((x - s->x0) & (CW - 1))) {
-                    mk = made16 (a.sn, (x - s->x0) >> CW_BITS, (y - s->y0) >> CW_BITS);
+                    mk = ck_made (a.sn, (x - s->x0) >> CW_BITS, (y - s->y0) >> CW_BITS);
                 }
                 if (mk && (p = at (a.sn, x, y)) != 0) {
                     rerow[i] = C->elev[cy_][cx_];
@@ -5804,18 +5779,6 @@ static unsigned char __fastcall__ pastime (unsigned id)
 /* A room of the chunk home (rhx, rhy, on stratum dsn) is in: of use u, else (u 0xFF) its j'th, round; its square v (a
 ** denizen's number's: each its own place in it; 0xFF its middle) in tx, ty.  0 if there's none, or the chunk isn't
 ** made (never made for it) */
-static unsigned char __fastcall__ made9 (unsigned char sn, unsigned cx, unsigned cy)   /* (Part 13's made) */
-{
-    struct cslot* q = WREC->cslot;
-    unsigned char k;
-
-    hub_map (WORLD_BANK);
-    for (k = NCSLOTS; k && !(q->used && q->sn == sn && q->cx == cx && q->cy == cy); --k, ++q) {
-    }
-    hub_map (0);
-    return k != 0;
-}
-
 static unsigned char __fastcall__ room_at (unsigned char u, unsigned char j, unsigned char v)
 {
     struct stratum* s = &STRATUM (dsn);
@@ -5823,7 +5786,7 @@ static unsigned char __fastcall__ room_at (unsigned char u, unsigned char j, uns
     unsigned ox = rhx - s->x0, oy = rhy - s->y0;
     unsigned char n;
 
-    if (!made9 (dsn, ox >> CW_BITS, oy >> CW_BITS)) {
+    if (!ck_made (dsn, ox >> CW_BITS, oy >> CW_BITS)) {
         return 0;
     }
     ox = rhx - (ox & (CW - 1));
@@ -5848,7 +5811,6 @@ static unsigned char __fastcall__ room_at (unsigned char u, unsigned char j, uns
 ** guardroom, barracks or quarters, the first it has; else its home); else its home.  0 if there's no such room (work,
 ** rounds: about instead) */
 static const unsigned char gather[4] = { U_HALL, U_GUARDROOM, U_BARRACKS, U_QUARTERS };
-static unsigned char __fastcall__ made_at (unsigned char sn, unsigned x, unsigned y);   /* (Below) */
 static unsigned char __fastcall__ target (unsigned char s, unsigned char j, unsigned char v)
 {
     tx = rhx;
@@ -5860,7 +5822,7 @@ static unsigned char __fastcall__ target (unsigned char s, unsigned char j, unsi
             hy_bank (pb);
             s = POP->nowork[D.lid & 31];
             hub_map (0);
-            if (s != (unsigned char) (NOW_U + 1) && made_at (dsn, rhx, rhy)) {
+            if (s != (unsigned char) (NOW_U + 1) && ck_at (dsn, rhx, rhy)) {
                 if (work_dig (0x40 | j) != 0xFF) {
                     return 1;
                 }
@@ -6014,23 +5976,6 @@ unsigned char __fastcall__ s_found (unsigned char k)
 #define RF_STAY         6000                    /* (Ten minutes there, at least) */
 #pragma code-name (push, "SW19CODE")
 #pragma rodata-name (push, "SW19RODATA")
-static unsigned char __fastcall__ made10 (unsigned char sn, unsigned x, unsigned y)   /* (Part 9's made_at) */
-{
-    struct stratum* s = &STRATUM (sn);
-    struct cslot* q = WREC->cslot;
-    unsigned char k;
-
-    if (x - s->x0 >= s->w || y - s->y0 >= s->h) {
-        return 0;
-    }
-    hub_map (WORLD_BANK);
-    for (k = NCSLOTS; k && !(q->used && q->sn == sn && q->cx == (x - s->x0) >> CW_BITS && q->cy == (y - s->y0) >> CW_BITS);
-        --k, ++q) {
-    }
-    hub_map (0);
-    return k != 0;
-}
-
 void s_rfound (void)
 {
     struct den* r = POP->den;
@@ -6086,7 +6031,7 @@ void s_rfound (void)
         for (j = 0; j < 8; ++j) {               /* (A square about the body, its own) */
             x = bx + head_x[(j + i) & 7];
             y = by + head_y[(j + i) & 7];
-            if (made10 (D.sn, x, y) && open_sq (at (D.sn, x, y)) && !taken (0xFF, x, y) && !rec_on (D.sn, x, y)) {
+            if (ck_at (D.sn, x, y) && open_sq (at (D.sn, x, y)) && !taken (0xFF, x, y) && !rec_on (D.sn, x, y)) {
                 hy_bank (pb);
                 r->x = x;
                 r->y = y;
@@ -6099,15 +6044,6 @@ void s_rfound (void)
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-
-/* Square x, y of stratum sn in a chunk that's made already (wander's alone: part 9's since 2026-11-02, the main RAM's
-** room) */
-static unsigned char __fastcall__ made_at (unsigned char sn, unsigned x, unsigned y)
-{
-    struct stratum* s = &STRATUM (sn);
-
-    return x - s->x0 < s->w && y - s->y0 < s->h && made9 (sn, (x - s->x0) >> CW_BITS, (y - s->y0) >> CW_BITS);
-}
 
 /* Record D (its kind's K), out but not an actor, moved by its day as it's due (roam's: lim squares about its home it
 ** may go, 0 none, off its lair's stratum): asleep at its bed or at its meal (its lair's home, or a square beside it),
@@ -6137,7 +6073,7 @@ unsigned char __fastcall__ s_wander (unsigned char lim)
         if (x == D.x && y == D.y) {
             break;                              /* (There already) */
         }
-        if (made_at (D.sn, x, y) && open_sq (at (D.sn, x, y)) && (!deep_at (D.sn, x, y) ||
+        if (ck_at (D.sn, x, y) && open_sq (at (D.sn, x, y)) && (!deep_at (D.sn, x, y) ||
             (kx_get (D.kind), wades (X.water, D.sn, x, y))) && !taken (0xFF, x, y) && !rec_on (D.sn, x, y)) {
             D.x = x;
             D.y = y;
