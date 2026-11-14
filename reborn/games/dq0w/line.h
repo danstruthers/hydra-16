@@ -1,6 +1,7 @@
 /*
-** line.h - (every reader of the chunks) one line between two squares, line.inc's (the world's line.s, the senses'):
-** the senses' and the world's (ENGINE-CRITIQUE.md's §4).  A line between the character and anyone is drawn from the
+** line.h - (every reader of the chunks) one line between two squares, the game's library's (the paged ROM's,
+** modules/dq0lib/line.s; its stubs line.inc's, the world's line.s and the senses'): the senses' and the world's
+** (ENGINE-CRITIQUE.md's §4).  Its variables are the zero page's block's (../dq0/lnzp.inc's LZ: at.s names them).  A line between the character and anyone is drawn from the
 ** character's end, its eyes by its body's position, as its look's own lines are (cast.s's): the same squares and
 ** heights whoever's asking, so a denizen sees the character just when the character would see it (the light aside),
 ** and the character can shoot what it sees
@@ -31,3 +32,10 @@ extern unsigned char ln_n, ln_first, ln_last;   /* (line's: the squares it stepp
 extern unsigned ln_x, ln_y;                     /* (line's: the square it's at, as ln_way is asked) */
 extern unsigned char __fastcall__ (*ln_way) (unsigned char n);  /* (line's: asked of each square (the n-th) the
                                                 **   line passes, if set: not 0, the line stopped there, LN_WAY) */
+#pragma zpsym ("ln_eye")
+#pragma zpsym ("ln_n")
+#pragma zpsym ("ln_first")
+#pragma zpsym ("ln_last")
+#pragma zpsym ("ln_x")
+#pragma zpsym ("ln_y")
+#pragma zpsym ("ln_way")

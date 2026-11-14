@@ -17,6 +17,7 @@
 ;   AT_FIND     the chunk lookup (ENGINE-CRITIQUE.md's §4 and step 2, 2026-11-14: sq.s, its contract with the tasks
 ;   CK_*        ../games/dq0/lnzp.inc's): at ()'s long way (each reader's chunk.c's at_find and find), a chunk in the
 ;               cache or not (the denizens' made, made9, made10, made16, the senses' cached, the world's loops)
+;   LN_*        the one line (line.s: the world's and the senses' dq0w/line.inc before)
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -24,7 +25,7 @@
 
             HYX2_LIBRARY "dq0lib", "HEADER", "ROM"
             .export     rp_find
-            .import     at_find, ck_made, ck_at
+            .import     at_find, ck_made, ck_at, ln_line, ln_pass, ln_portal
 
 .code
 .assert     * = $A030, lderror, "The dq0lib library's entry isn't right after its header"
@@ -40,6 +41,9 @@
             jmp         at_find                             ; $A04B: AT_FIND (../games/dq0/lnzp.inc's: sq.s)
             jmp         ck_made                             ; $A04E: CK_MADE
             jmp         ck_at                               ; $A051: CK_AT
+            jmp         ln_line                             ; $A054: LN_LINE (line.s)
+            jmp         ln_pass                             ; $A057: LN_PASS
+            jmp         ln_portal                           ; $A05A: LN_PORTAL
 
 BANKREG     = $00                                           ; The task's RAM bank register
 BUF         = $9FE0                                         ; MODINFO's answer (ME_SIZE bytes; then the entry looked

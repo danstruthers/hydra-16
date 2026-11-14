@@ -11,7 +11,7 @@
             .macpack    longbranch
             .export     _at, _C, _cx_, _cy_, _at_me, _lz_init
             .export     _at_sn, _at_x0, _at_y0, _at_w, _at_h, _at_ox, _at_oy, _at_bank, _at_chunk, _at_tile
-            .exportzp   _lr0, _lr1, _lr2
+            .exportzp   _lr0, _lr1, _lr2, _ln_eye, _ln_n, _ln_first, _ln_last, _ln_way, _ln_x, _ln_y
             .import     _hub_map, _ask_maker, _strata, _t_kinds, _cornk, _dir_x, _dir_y, dq0x
             .import     incsp3, pusha, pushax
             .importzp   sp, tmp1
@@ -24,6 +24,13 @@ r2          = $06
 _lr0        = r0                            ; (lnzp.h's: C's names for them)
 _lr1        = r1
 _lr2        = r2
+_ln_eye     = LZ_EYE                        ; (line.h's)
+_ln_n       = LZ_N
+_ln_first   = LZ_FIRST
+_ln_last    = LZ_LAST
+_ln_way     = LZ_WAY
+_ln_x       = LZ_LX
+_ln_y       = LZ_LY
 
             .data
 ats:        .word       ask_chunk, _strata, _t_kinds, _cornk, _dir_x, _dir_y
