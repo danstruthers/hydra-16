@@ -176,7 +176,8 @@ out:
 }
 
 /* What time did to its body (E_TASK's TE_BODY: task.c's), the referee's words (RS_DESCRIBE b 4: told once); held
-** while it sleeps, told as it wakes (news_due, main.c's E_READY); 8 if it's dead of it */
+** while it sleeps, told as it wakes (news_due, main.c's E_READY); and as it lies senseless (out_told), told as it
+** comes round (the user's, 2026-11-14: a knocked-out character senses nothing); 8 if it's dead of it */
 unsigned char s_body_words (void)
 {
     unsigned b = hub_here ();
@@ -185,7 +186,7 @@ unsigned char s_body_words (void)
 
     hub_map (0);
     d = (HUB->pcsum.cond & C_DEAD) != 0;
-    if (!d && HUB->pc_task.kind == LT_SLEEP) {
+    if (!d && (HUB->pc_task.kind == LT_SLEEP || out_told)) {
         news_due = 1;
     } else {
         news_due = 0;

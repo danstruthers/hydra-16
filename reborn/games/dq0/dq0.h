@@ -359,7 +359,9 @@ unsigned char __fastcall__ free_cmd (const char* l);   /* Overlay 7: a line type
                                                 **   (2) */
 extern unsigned char autogo;                    /* (main.c's: dq0 -a, every soft question answered yes, unasked) */
 extern unsigned char harm_told;                 /* (The states a harm's words told this answer: main.c's) */
-extern unsigned char out_told;                  /* (main.c's: knocked senseless, told; no line taken till it comes round) */
+extern unsigned char out_told;                  /* (main.c's: knocked senseless, told; no line taken, nothing sensed, till it
+                                                **   comes round) */
+extern unsigned long out_until;                 /* (main.c's: senseless till then, as the world had it at the blow told) */
 void out_line (void);                           /* Part 2 (main.c): a line typed as it lies senseless, refused */
 char* __fastcall__ env (const char* name, char* buf, unsigned char size);  /* The environment's (main.c) */
 void __fastcall__ appraise (const struct ireq* q, signed char g, unsigned char ex);   /* Overlay 1: a thing judged

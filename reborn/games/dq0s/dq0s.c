@@ -377,11 +377,12 @@ static void listen (void)
     hearing = HUB->pcsum.hearing;
     mask = HUB->pc_mask;
     face = HUB->pc_face;
-    sn = HUB->pc_stratum;
+    sn = HUB->pc_out ? 0xFF : HUB->pc_stratum;    /* (Senseless: nothing heard, the user's, 2026-11-14; its events let
+                                                **   go, no stratum's) */
     px = HUB->pc_x;
     py = HUB->pc_y;
     while (hub_next (&wplace, &m)) {
-        if ((n = world_sound (&m)) != 0xFF) {
+        if (sn != 0xFF && (n = world_sound (&m)) != 0xFF) {
             heard (0, n, m.kind == E_NOISE ? E_NOISE_LOUD (m) : 9, 0, 0, 0);
         }
         hub_map (0);

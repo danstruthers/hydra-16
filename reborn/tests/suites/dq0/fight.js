@@ -1143,7 +1143,10 @@ module.exports = {
         if (!/Everything goes black\..*UP \d+ OUT/.test(s)) f.push('OUT not on the status line as it lay senseless');
         const after = all.slice(down + 1).filter(e => e.def === 0);
         if (after.length) f.push('struck at after it fell: ' + after.map(e => e.out).join(', '));
-        if (!/Everything goes black\..*cave adder[^.]*, fleeing\./.test(s)) f.push('the adders not seen fleeing once it was down');
+        const ko = all[down], kt = T.find(t => t.dens.includes(ko) || t.events.includes(ko)), pc = kt && kt.after && kt.after.pc;   // (Unseen as it lay senseless, the user's, 2026-11-14: their going off by their moves)
+        if (!pc || !T.flatMap(t => t.dens).some(e => e.kind === 'E_DEN' && e.de === 'DE_MOVED' && e.t > ko.t && Math.max(Math.abs(e.sx - pc.x), Math.abs(e.sy - pc.y)) >= 2))
+          f.push('the adders not gone off once it was down');
+        if (/Everything goes black\.[^>]*fleeing\./.test(s)) f.push('the adders seen fleeing as it lay senseless');
         if (!/You're in no state to fight\./.test(s)) f.push('not in shock after (no state to fight)');
         const cond = [...s.matchAll(/Condition: [^.]*\./g)].map(x => x[0]);   // (Kept: the game carried on, its words the same, a bite a bite)
         if (cond.length !== 2 || cond[0] !== cond[1]) f.push('its state not the same carried on (what dealt each injury kept): ' + JSON.stringify(cond));
@@ -1152,7 +1155,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0finished', what: "Dingus Quest Zero's helpless character and a killer (the user's, 2026-10-21: by its nature, a killer or a predator finishes it, as the character finishes a senseless creature): seed 7's ghoul (down the way at the start), the character poor (Dodge 5, Unarmed 5) and undefended (defend none): the ghoul's claws worded a rake (a creature's own part: HOUSE.md's wounds), its bite a bite, never a gash or a stab; the character knocked senseless, then finished where it lies (the referee's dispatch for a killer, RS_KILLER: \"a mortal deep rake to your neck. You are dead.\"), dead, the game's end",
+      name: 'dq0finished', what: "Dingus Quest Zero's helpless character and a killer (the user's, 2026-10-21: by its nature, a killer or a predator finishes it, as the character finishes a senseless creature): seed 7's ghoul (down the way at the start), the character poor (Dodge 5, Unarmed 5) and undefended (defend none): the ghoul's claws worded a rake (a creature's own part: HOUSE.md's wounds), its bite a bite, never a gash or a stab; the character knocked senseless, then finished where it lies (the referee's dispatch for a killer, RS_KILLER: its mortal wound unfelt as it lies senseless since 2026-11-14, the user's, \"Everything goes black. You are dead.\"), dead, the game's end",
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
         'dq0 -p t -s 7 -c /ram/c.hm -T', 'defend none', 'd', ...Array(12).fill('wait'), 'echo $status']) },
@@ -1168,8 +1171,9 @@ module.exports = {
         const dead = all.findIndex(e => e.def === 0 && (e.ff & FF_D_DEAD));
         if (down < 0) f.push('the character never knocked senseless');
         if (dead < 0 || dead < down) return [...f, 'the character, senseless, not finished'];
-        if (all[dead].out !== 'O_HIT' || !/The ghoul (?:claws|bites) at you: a mortal deep (?:rake|bite) to your (?:neck|skull)\. You are dead\./.test(s))
-          f.push('not finished where it lay (a mortal wound to its neck): ' + all[dead].out + ' ' + JSON.stringify((s.match(/[^.]*mortal[^.]*\./) || [''])[0]));
+        if (all[dead].out !== 'O_HIT' || !/Everything goes black\.[^.]*You are dead\./.test(s))   // (Its death blow unfelt as it lay senseless, its death told: the user's, 2026-11-14)
+          f.push('not finished where it lay, its death told: ' + all[dead].out + ' ' + JSON.stringify((s.match(/[^.]*black[^.]*\.[^.]*\./) || [''])[0]));
+        if (/mortal/.test(s)) f.push('its death blow felt as it lay senseless: ' + s.match(/[^.]*mortal[^.]*\./)[0]);
         const t = T.find(t => dq0Ev(t, 'E_FIGHT', { def: 0 }).some(e => e.ff & FF_D_DEAD));
         if (t) dq0Need(f, t, 'E_BYE', {}, 'the game not ended by the death');
         return f;
@@ -1177,7 +1181,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0robbed', what: "Dingus Quest Zero's helpless character and a robber (the user's, 2026-10-21: by its nature, a cunning foe may rob it; HOUSE.md's: what it holds, but a light lit, and its pennies, off to its lair, and it goes): a theme's hostile bandits (written by hand: seed 1, south of the start; the character walking on east toward them, as the dice now fall: they keep to their room, watching), the character poor (Dodge 5, Unarmed 5, Dagger 5) and undefended (defend none), a dagger in hand beside its lit torch: struck senseless, robbed (\"The bandit goes through your things as you lie helpless, and takes what it finds.\": E_TASK TE_ROBBED, the robber's), the dagger and its pennies taken off to one square away from it (the bandits' lair's), its torch still in its hand, still lit; no blow at it after; it lives; the referee told its load left at once (the user's, 2026-10-22: \"Weight should be recounted immediately after a robbery\": the world's RS_EQUIP 2 as it's robbed, its load less the dagger and the pennies, the same as the UI's own once it's come round, puts its torch down and takes it up again (since slice 4.3, come round in shock, a thing not taken up in shock: its torch let fall and not taken up, the load's check that one's alone); and its encumbrance the referee's the same).  The scene set (since the denizens' day, 2026-10-31: bandits keep watches, a third asleep): no day (the environment's dq0hour=128, rc's, before its games: dq0d's), every one about as before",
+      name: 'dq0robbed', what: "Dingus Quest Zero's helpless character and a robber (the user's, 2026-10-21: by its nature, a cunning foe may rob it; HOUSE.md's: what it holds, but a light lit, and its pennies, off to its lair, and it goes): a theme's hostile bandits (written by hand: seed 1, south of the start; the character walking on east toward them, as the dice now fall: they keep to their room, watching), the character poor (Dodge 5, Unarmed 5, Dagger 5) and undefended (defend none), a dagger in hand beside its lit torch: struck senseless, robbed (E_TASK TE_ROBBED, the robber's; unseen as it lies senseless, found as it comes round since 2026-11-14: \"You come round to find someone has been through your things.\"), the dagger and its pennies taken off to one square away from it (the bandits' lair's), its torch still in its hand, still lit; no blow at it after; it lives; the referee told its load left at once (the user's, 2026-10-22: \"Weight should be recounted immediately after a robbery\": the world's RS_EQUIP 2 as it's robbed, its load less the dagger and the pennies, the same as the UI's own once it's come round, puts its torch down and takes it up again (since slice 4.3, come round in shock, a thing not taken up in shock: its torch let fall and not taken up, the load's check that one's alone); and its encumbrance the referee's the same).  The scene set (since the denizens' day, 2026-10-31: bandits keep watches, a third asleep): no day (the environment's dq0hour=128, rc's, before its games: dq0d's), every one about as before",
       init: 't_rc', cycles: 1500e6,
       // (-R 1: the dice's offset that gives the game it was written for, since the dice by who asks,
       // 2026-10-30: the same dungeon, other rolls)
@@ -1196,7 +1200,8 @@ module.exports = {
         if (down < 0) return ['the character never knocked senseless'];
         if (robs.length !== 1) f.push('not robbed once: ' + robs.length);
         else if (!q.at.actors.some(a => a.k === robs[0].by && a.name === 'bandit')) f.push('robbed by no bandit: ' + robs[0].by);
-        if (!/The bandit goes through your things as you lie helpless, and takes what it finds\./.test(s)) f.push('the robbery not told');
+        if (!/You come round to find someone has been through your things\./.test(s)) f.push('the robbery not told as it comes round');   // (Unseen as it lay senseless: the user's, 2026-11-14)
+        if (/goes through your things as you lie helpless/.test(s)) f.push('the robbery seen as it lay senseless');
         const now = dq0Carried(q.at), shock = /take the torch You're in shock: you can do no more than rest/.test(s);
         const torch = (shock ? dq0Carried(T.of('drop the torch').at) : now).find(i => i.name === 'torch' && (i.flags & I.HELD));   // (In shock: as it came round)
         if (dq0Named(now, 'dagger').length || dq0Named(now, 'pennies').length) f.push('the dagger or the pennies still carried');
@@ -1751,7 +1756,7 @@ module.exports = {
       sdcard: true
     },
     {
-      initiative: true, name: 'dq0outcold', near: ['fight'], what: "Dingus Quest Zero's lines typed as the character lies senseless (the user's, 2026-11-13: \"For knocked out players ... It might be better to just ignore input or not allow it at all when knocked out\"; DECISIONS.md's \"Commands while knocked out\", as built, for review): dq0senseless's rats (seed 3, no defence), a line typed as it's knocked senseless (\"drop the torch\", at \"Everything goes black.\") refused (\"You lie senseless.\"), no intent sent for it, and not carried out as it comes round (the torch still in hand at the quit); and dq0deadonce's orcs (seed 14), a line typed as it falls senseless refused the same, the character dying senseless, the game's end told once and the game gone back to the shell (the latch tried before hung its quit there)",
+      initiative: true, name: 'dq0outcold', near: ['fight'], what: "Dingus Quest Zero's lines typed as the character lies senseless (the user's, 2026-11-13: \"For knocked out players ... It might be better to just ignore input or not allow it at all when knocked out\"; DECISIONS.md's \"Commands while knocked out\", as built, for review): dq0senseless's rats (seed 3, no defence), a line typed as it's knocked senseless (\"drop the torch\", at \"Everything goes black.\") refused (\"You lie senseless.\"), no intent sent for it, and not carried out as it comes round (the torch still in hand at the quit); and dq0deadonce's orcs (seed 14), a line typed as it falls senseless refused the same, the character dying senseless, the game's end told once and the game gone back to the shell (the latch tried before hung its quit there); and nothing sensed as it lies senseless (the user's, 2026-11-14: DECISIONS.md's \"A knocked-out character senses nothing\"), though the denizens go about and the orcs strike at it: from the black-out to the death only the refusal, then \"You are dead.\"; from the rats' black-out to its coming round only the refusal and, as it comes round, the denizens it sees then",
       init: 't_rc', cycles: 2800e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml una 5 >> /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
         'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', 'defend none', 'wait', 'wait', 'wait', 'quit',
@@ -1784,6 +1789,16 @@ module.exports = {
         if (g2.indexOf('You are dead.') < g2.indexOf('You lie senseless.')) f.push('not dead senseless (the refusal after the death)');
         if (!/% echo =END\s+=END/.test(g2)) f.push('the game not gone back to the shell after the death');
         if (/kick: not found/.test(g2)) f.push('the line typed as it lay senseless left for the shell');
+        // (Nothing sensed as it lies senseless, the user's, 2026-11-14: from the orcs' black-out to its death only the line refused,
+        // though they strike at it and go about meanwhile; from the rats' to its coming round only the line refused and, as it
+        // comes round, the denizens it sees then, once)
+        const lay2 = g2.slice(g2.indexOf('Everything goes black.') + 22, g2.indexOf('You are dead.')).replace('> kick the orc', '').replace('You lie senseless.', '').trim();
+        if (/[.!?]/.test(lay2)) f.push('told as it lay senseless (the orcs): ' + lay2.slice(0, 200));
+        const k2 = T.of('kick the orc');
+        if (!dq0Ev(k2, 'E_FIGHT', { def: 0 }).length || !dq0Ev(k2, 'E_DEN', {}).length) f.push('no blow at it nor a denizen\'s doing as it lay senseless (the orcs): the check proves nothing');
+        const b1 = g1.indexOf('Everything goes black.'), lay1 = g1.slice(b1 + 22, g1.indexOf('> wait', b1)).replace('> drop the torch', '').replace('You lie senseless.', '').trim();
+        if ((lay1.match(/stirs/g) || []).length > 1 || /fighting you|You hear/.test(lay1)) f.push('told as it lay senseless (the rats): ' + lay1.slice(0, 200));
+        if (!dq0Ev(T.of('drop the torch'), 'E_DEN', {}).length) f.push('no denizen\'s doing as it lay senseless (the rats): the check proves nothing');
         return f;
       },
       sdcard: true

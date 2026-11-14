@@ -363,7 +363,7 @@ TASK.fetched        +"\n{Obj} {ft?picks up the {kind thing}|hands you the {kind 
                     "|sets the {kind thing} down at your feet|takes the {kind thing}|can't get to the {kind thing}}."
 TASK.robbed         +"{caught?{purse?\n{Obj} goes through your things as you lie helpless, and takes what it finds.|}"
                     "|{asleep?\nYou catch {obj} at your purse!|\nYou wake to find {obj} at your purse!}}"
-TASK.coins          "You find your coins gone: someone robbed you as you lay."
+TASK.coins          "{arg?You find your coins gone: someone robbed you as you lay.|You come round to find someone has been through your things.}"
 TASK.learnt         "You start to learn drawing."
 TASK.begun[task=LT_TRAVEL]  +"\nYou head back toward {text}."
 TASK.begun[task=LT_STUDY]   +"\nYou study the mechanism."

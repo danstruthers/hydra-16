@@ -200,6 +200,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
                 news_due |= 2;                  /* (At rest still: as it's up) */
                 return 0;
             }
+            said_n = pursed >> 1;
             pursed = 0;
             c.w1 = SAID_TASK_COINS;
             outcome_words (&c);
@@ -236,9 +237,13 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     case TE_ROBBED:                             /* (Helpless, robbed: a robber's way, the denizens'.  At rest, 2026-11-06:
                                                 **   caught at it, or its coins taken unawares, told as it's up) */
         said_s[0] = foe (k == TE_FETCHED ? n & 15 : named, 0);
-        if (k == TE_ROBBED && (w >> 8 & (RB_CAUGHT | RB_PURSE)) == RB_PURSE) {
-            pursed = 1;
+        if (k == TE_ROBBED && !(w >> 8 & RB_CAUGHT) && ((w >> 8 & RB_PURSE) || out_told)) {
+            pursed = out_told ? 2 : 1;          /* (Senseless, robbed: not seen, found as it comes round, the user's,
+                                                **   2026-11-14: TASK.coins' arg 1) */
             news_due |= 2;
+            if (out_told) {
+                return 0;
+            }
         }
         break;
     case TE_FAR:
@@ -246,14 +251,17 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         return 0;
     case TE_LOW:                                /* (A light it carries in its last ten minutes: slice 4.1's; not in its sleep) */
         hub_mem (0, &p, &HUB->pc_task.kind, 1);
-        if (p == LT_SLEEP) {
-            return 0;
+        if (p == LT_SLEEP || out_told) {
+            return 0;                           /* (Nor as it lies senseless: unseen, the user's, 2026-11-14) */
         }
         said_n = lamp (named) != 0;
         break;
     case TE_OUT:                                /* (Its fuel burnt: its own, its only light, its task stopped with
                                                 **   it; or one it sees lying there, TO_SEEN.  Its arg: the light's
                                                 **   plural, one seen (2), one of several of its name (4, 5 "es") */
+        if (out_told) {
+            return 0;                           /* (Senseless: unseen, the place looked at as it comes round, numb's) */
+        }
         p = lamp (named);
         if (one & TO_SEEN) {                    /* (One lying about or in a sconce: told once an answer, a long rest's two
                                                 **   the soak's, 2026-11-04; harm_told's bit, the prone's it doesn't read) */

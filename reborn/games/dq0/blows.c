@@ -37,21 +37,28 @@ static unsigned char __fastcall__ struck (const char* l)
 /* A blow (an E_FIGHT: the character's, or one at it), worded; the character dead of it, the game's end; knocked
 ** senseless, busy till it comes round (the world's: its E_READY then, the hub's pc_out till it does; the UI's wait for it
 ** before 2026-11-13, taken at the clock it came to the world, the black-out's end with it), no line taken meanwhile
-** (main.c's out_line) */
+** (main.c's out_line).  Senseless (out_told, till it comes round: main.c's numb): no blow felt nor heard, a blow at it
+** or between others (the user's, 2026-11-14: a knocked-out character senses nothing; its wounds there as it comes
+** round), but its death: "You are dead.", the game's end; struck senseless again as it lies, out the longer */
 unsigned __fastcall__ o_fight_said (const struct msg* m);
 void __fastcall__ o_blow (const struct msg* m)
 {
-    unsigned out = o_fight_said (m);
+    unsigned out = out_told ? (E_FIGHT_FF (*m) & FF_D_DOWN) && !E_FIGHT_DEF (*m) : o_fight_said (m);
     unsigned char c;
 
     hub_mem (0, &c, (const void*) &HUB->pcsum.cond, 1);
     if (c & C_DEAD) {
+        if (out_told) {
+            msg ("You are dead.");              /* (Dead as it lay: the blow unfelt, its end told) */
+        }
         ending (END_DIED);                         /* (The game's end, as harm's is) */
     } else if (out) {
-        out_told = 1;
         hub_mem (0, &c, (const void*) &HUB->pc_out, 1);
         if (c) {
-            busy = 1;                           /* (Out still, as the world has it: free as it comes round, E_READY) */
+            out_told |= 1;                      /* (Out still, as the world has it: free as it comes round, E_READY;
+                                                **   nothing sensed till then, main.c's numb) */
+            hub_mem (0, &out_until, (const void*) &HUB->pc_ready, 4);
+            busy = 1;
             t_prompt (0);
         }
     }

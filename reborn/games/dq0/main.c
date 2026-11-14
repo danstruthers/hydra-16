@@ -58,7 +58,9 @@ static unsigned char asking;                    /* (A long task's soft question 
 const char* cl;                                 /* (The command's line, s_command's: its handlers' words of it; nameis.s's) */
 unsigned char harm_told;                        /* (The states a harm's words told in this answer: intro.c's) */
 unsigned char out_told;                         /* (Knocked senseless, told: no line taken till it comes round, the
-                                                **   world's pc_out; out_line's) */
+                                                **   world's pc_out; out_line's.  And nothing heard, seen or felt
+                                                **   till it comes round, numb's, 2026-11-14) */
+unsigned long out_until;                        /* (Knocked senseless till then, the blow's tenths after it: blows.c's) */
 unsigned char autogo;                           /* (dq0 -a: every soft question answered yes, unasked: the tests') */
 unsigned char what_hi;                          /* (The thing's kind's top bit, the long task's what its other seven: task.c's noun) */
 unsigned char take_all;                         /* ("Take all" under way, its last thing too: the pack first, resolve.c's) */
@@ -988,24 +990,48 @@ unsigned char heard_rel = 0xFF;
 char heard_what[20];
 
 
+/* The character senseless still as event m came (the user's, 2026-11-14: a knocked-out character senses nothing): out_told
+** (knocked out, told) and m's before the black-out's end (out_until: the world's pc_ready as the knockout was told, when
+** it comes round; by the events' own clock, not the world's pc_out now, which may be up again, or not yet, before the
+** UI's read what came about then); else come round, out_told let go and the denizens it sees told, what's changed since
+** it was knocked out (as a sleeper's waking; no E_READY if it fights on) */
+static void __fastcall__ numb (const struct msg* m)
+{
+    unsigned char k = out_told;
+
+    if (k && m->t >= out_until) {
+        out_told = 0;
+        if (k & 2) {
+            look (0);                           /* (Its light changed as it lay: the place as it is now, those there) */
+        } else {
+            stir ();
+        }
+    }
+}
+
 static void heard (void)
 {
     static struct msg m;
     unsigned char rel;
 
     while (!quit && hub_dnext (&dplace, &m)) {   /* (Dead of a blow: the end told once, the rest of its round's untold) */
+        numb (&m);
         if (m.kind == E_FIGHT) {                /* (The character's, one at it; or a stray's, between two actors) */
             blow (&m);
             continue;
         }
         if (m.kind == E_BEAT) {
-            if (E_BEAT_BEAT (m) == WB_DRAWS || actor_seen (E_BEAT_WHOSE (m))) {
+            if ((E_BEAT_BEAT (m) == WB_DRAWS || actor_seen (E_BEAT_WHOSE (m))) && (!out_told || !E_BEAT_WHOSE (m))) {
                 news (&m);                      /* (A fight's limbs' news, after its blow's words: part 11's, a thing
                                                 **   let go of, a fall; another's only if it's seen, not in the dark
                                                 **   or out of sight; a weapon drawn to strike, beside it, as its blow
-                                                **   is, the outfits' gear) */
+                                                **   is, the outfits' gear; senseless, its own alone: its torch
+                                                **   dropped as it falls) */
             }
             continue;
+        }
+        if (out_told) {
+            continue;                           /* (Senseless: nothing heard nor seen, the user's, 2026-11-14) */
         }
         if (m.kind == E_DEN && E_DEN_LOUD (m) && !(E_DEN_SEEN (m) && E_DEN_DE (m) < DE_RALLY) && E_DEN_SN (m) == HUB->pc_stratum &&
             (rel = den_heard (&m)) < 8) {       /* (Weighed: caps.c's, the main RAM's room; a rally told seen too: its
@@ -1022,6 +1048,7 @@ static unsigned char events (void)          /* (How many there were) */
 
     while (!quit && hub_next (&place, &m)) {
         ++n;
+        numb (&m);                              /* (Come round by it, or senseless still: out_told) */
         if (!m.who && (busy | owed) && (m.kind != E_VIEW || E_VIEW_WHY (m) != V_STIR)) {
             HUB->ui_cmd = owed = 0;             /* (The character's news: a command's answer begun, its intent out;
                                                 **   not a denizen stirring, the background's, held till after it) */
@@ -1083,7 +1110,10 @@ static unsigned char events (void)          /* (How many there were) */
             }
             break;
         case E_VIEW:
-            if (m.who == 0) {
+            if (m.who == 0 && out_told) {       /* (Senseless: nothing seen; a look owed (its light changed, out_told 2) as
+                                                **   it comes round, numb's) */
+                out_told |= E_VIEW_WHY (m) != V_STIR ? 2 : 0;
+            } else if (m.who == 0) {
                 if (E_VIEW_WHY (m) == V_STIR) {
                     if ((t_next () || inn || HUB->ui_cmd) && (HUB->tpr || !busy)) {
                         stirs = 1;              /* (A line typed or its answer owed, at the real paces: told after its answer, main's,
@@ -1394,7 +1424,11 @@ void __fastcall__ s_news (const struct msg* m)
         if (HUB->pcsum.cond & C_DEAD) {
             ending (END_DIED);                     /* (The game's end) */
         }
-        out_told |= (m->w1 & E_OUT) != 0;       /* (Knocked senseless: no line taken till it comes round, main's) */
+        if (m->w1 & E_OUT) {
+            out_told |= 1;                      /* (Knocked senseless: no line taken, nothing sensed, till it comes
+                                                **   round, main's, numb's) */
+            out_until = HUB->pc_ready;
+        }
         break;
     case E_PORTAL:
         k = E_PORTAL_PO (*m);
@@ -2188,12 +2222,12 @@ static unsigned char __fastcall__ at_once (const char* l)
 ** taken, nor any behind it, its refusal said once (the user's, 2026-11-13: no commands queued through a black-out, to
 ** be carried out as it comes round; "ignore input or not allow it at all when knocked out").  But the quit (held till
 ** it comes round, as any line typed as it's busy; the game's end if it dies) and the help (at once).  Come round (the
-** world's pc_out), the lines as ever.  Part 2's: the parser's own */
+** world's pc_out), the lines as ever (out_told let go as the events come round, numb's).
+** Part 2's: the parser's own */
 void s_out_line (void)
 {
     hub_map (0);
     if (!HUB->pc_out) {
-        out_told = 0;
         return;
     }
     if (cq_cmd (t_next ()) > 0 && (cmd.action == VB_META_QUIT || cmd.action == VB_META_HELP)) {
