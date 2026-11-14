@@ -5778,3 +5778,44 @@ an XCALL a door now); the glows' list of chunks near (dq0p/eyes.c: a range, not 
 **Open questions:** none of behaviour.  The zero page's block is a fixed contract: a task that reads the chunks must
 leave `$44-$70` alone (its cfg's ZP ends at `$43`: one more zero-page variable of a task's own would fail its link,
 which is the check).
+
+## Opening a portcullis (the user's, 2026-11-14; as built, for review)
+
+The user's report: "`open portcullis` doesn't actually raise it...it just says `You set to winding the winch.` but it
+doesn't raise. `raise portcullis` does open it, though."
+
+- **The cause.**  "Open" on a portcullis reaches the world as PA_OPEN, which wwin.c's s_portals takes as a raise: the
+  winding (or, from the far side, the heaving) begun as timed work, its long task told ("You set to winding the
+  winch.").  But s_door_work keeps what's to be done at the timed work's end in `act.work`, and PA_OPEN is 0, which
+  `act.work` reads as "none": the long task ran out with nothing done at its end (work_done never called), the
+  portcullis still down, nothing told.  "Raise" (PA_RAISE) never had the trouble.  A door's opening is never timed, so
+  only a portcullis met it; a lowering is at once, so "close" did lower it, but with a door's first words.
+- **The fix.**  dq0w.c's s_door_work keeps a timed PA_OPEN as PA_RAISE (`act.work = what ? what : PA_RAISE`: a
+  portcullis's raising its only timed opening), so the end of the winding or the heaving is a raise's, the same test,
+  change and words.  And the first words (sway.c's first_word): a portcullis opened or closed is told as it's raised or
+  lowered ("You look at the portcullis.", "You feel the portcullis." in the dark), not a door's "You try the
+  portcullis." and "You reach for the portcullis.".
+- **The denizens.**  wport.c's den_portal takes a portcullis's PA_OPEN untimed (its `lng` PA_RAISE's alone), so a
+  denizen's "open" would raise it at once, the winch's half minute and a heave's round not spent; but no denizen sends
+  one: the minds send PA_RAISE (dq0d's mode 1), and an ally's errand ("ask it to open the door") picks a door, a
+  portcullis only where no door is (choose.c's bars).  Left as it is (open question 1).
+- **The test.**  dq0portcopen (seed 514's gatehouse, dq0portc's, a strong character): from the winch's side lowered,
+  opened (wound up, up, seen up), closed (down, seen down), raised and gone through; from the far side (walked back to
+  it, let down meanwhile by a poke of its state) heaved up by "open", neither closed nor lowered (no winch that side),
+  let down again and heaved up by "raise", and gone back through; "open" told word for word as "raise" and "close" as
+  "lower", from both sides.  Against the images before the fix it failed every one of those (the portcullis left down,
+  "The portcullis is down already.").
+- **What the player sees differently.**  "Open the portcullis" now
+  ends its winding or heaving with "You raise the portcullis: it grinds up, and catches ..." (or "it rises, and
+  catches ...") as "raise" does, the portcullis up; its first words "You look at the portcullis." (or "You feel the
+  portcullis.") where they were "You try the portcullis."; "close the portcullis" walked up to first or ahead, "You look
+  at the portcullis." where it was "You reach for the portcullis.".  The suite's transcripts (sent.js, against
+  c1b9a9e1's): 7 differ, all known noise (dq0antidote, dq0jobs, dq0prompt, dq0reachstop, dq0restbusy, dq0robrest,
+  dq0tiring); no test opened or closed a portcullis by those words before.
+- **Room:** dq0w's part 12 1,101 -> 1,096 (its overlay 20 58 -> 53); dq0's overlay 17 2,547 -> 2,540; every main RAM
+  unchanged (dq0 3,173, dq0w 2,059).  The start: seed 1 233.3M -> 233.9M, 123456789 308.7M -> 310.0M (timing: nothing
+  of the start changed).  The suite: all 449 pass.
+- **Open, for review.**  (1) A denizen's PA_OPEN at a portcullis (none sent today; an ally's errand could, where no
+  door is in sight) raises it at once, untimed: make it the minds' PA_RAISE (begun, then posted again), or leave it?
+  (2) "Close the door" at a portcullis (no door in sight, choose.c's bars) keeps a door's first words ("You reach for
+  the door."), named as the player named it.
