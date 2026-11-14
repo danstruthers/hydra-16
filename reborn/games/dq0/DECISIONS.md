@@ -5664,3 +5664,117 @@ seen or otherwise sensed; what's around is learnt as it comes round.
   it (a moment early or late at a black-out's edges: the knockout blow's own thud may go unplayed).  (6) "You've begun
   to learn Club by doing it." still told as it lies (the referee's, not a sense).  (7) The UI's main RAM: 141 bytes of
   its 314 over the floor spent; numb could go to an overlay but for its call on every event.
+
+## The line, the way-finder and the chunk lookup in the paged ROM (2026-11-14, as built, for review: ENGINE-CRITIQUE.md's §4 and step 2's next)
+
+The user's go-ahead, 2026-11-14.  The world had 2,059 bytes of main RAM free against its floor of 2,048, and the next
+features (containers and surfaces) are the world's.  ENGINE-CRITIQUE.md's §4 had the plan (a fixed zero-page block,
+callbacks into the task); the router was to share the contract, so the three went together.  What moved, from each
+task that reads the chunks (the world, the denizens, the senses) into the game's library (modules/dq0lib):
+
+- **The chunk lookup** (sq.s): `AT_FIND`, at ()'s long way (each reader's chunk.c's `at_find` and `find`: the
+  stratum's bounds, the slot found last, the cache's table searched by the record store's `rp_find` with the same key
+  and stamp, the slot this task has in use, the maker asked for a chunk not made, the bank and the chunk by k / 3, the
+  quick way set for the next); `CK_MADE` and `CK_AT`, whether a chunk is in the cache, its stamp left (the denizens'
+  `made`, `made9`, `made10`, `made16`, `made_at`; the senses' `cached`; the world's loops in `s_sky_list`, `looked_at`
+  and wkept.c's `lights`).  at ()'s quick way stays each task's at.s (some 80 cycles a square; a look asks thousands,
+  and an XCALL each would double it): the fast path the plan kept.
+- **The line** (line.s): dq0w/line.inc's line (sight, fire, air), `ln_pass` and `ln_portal`, the same code; its
+  squares read by the library's own at () (sq.s's `sq_at`: the quick way on the task's state, then `AT_FIND`), its
+  doors by `sq_door` (portal_at's), LN_CACHED's chunk by `ck_at`.  dq0w/line.inc is now the tasks' stubs (the C stack's
+  arguments into the block, an XCALL).
+- **The way-finder and its rule for a square** (walk.s): walk.inc's `wk_cell` as `WK_ROW` (a row's squares' cells
+  from their kinds and their door bytes, one XCALL a row), `wk_seed` (`WK_SEED`) and `wk_search` (`WK_SEARCH`).
+  walk.inc is gone; walk.h is its C side.  Each walker's own rules stay its reader's: the world's `s_ways_go` (a
+  denizen's square, a trap it knows of, a hidden trap on the way) and its times by `reached`, called back as each
+  square is reached; the denizens' `route` (water deeper than it wades, bad air, a chunk not made).
+
+**The contract** (games/dq0/lnzp.inc, its C side lnzp.h, walk.h, line.h):
+
+- *A block of the task's zero page*, `$44-$70` (the plan had `$50-$7F`; the tasks' own zero page ends at `$41`/`$43`,
+  so `$44` on, with room to spare to `$7F`).  The program's zero page is `$22-$7F` and the OS never touches it; each
+  reader's cfg now ends its ZP at `$43`, so ld65 can't put anything there.  Kept between calls: the task's chunk state's
+  address, its hub_map (a vector), line.h's `ln_way`, `ln_eye`, `ln_n`, `ln_first`, `ln_last`.  Then the line's
+  arguments and work (its squares, Bresenham's error, the heights, LN_CACHED's chunk), and over the same bytes, never
+  in use at once, the search's (the grid, the floors, the queue, the box, the walker's rules, the square reached).
+  C reads and writes them by name (at.s defines them, the headers `#pragma zpsym` them); the line's `ln_way` and the
+  search's `wk_reach` are vectors there, called back with `jmp (vector)`.
+- *struct ats*, the task's chunk state (at.s's, its RAM): what the library calls back (the maker asked:
+  `ask_chunk`, ask_maker's M_CHUNK), the tables it reads (the strata, t_kinds, cornk, dir_x, dir_y: the task's own, not
+  copied into the ROM), the quick way's (at_sn ... at_tile), world.h's C, cx_, cy_, and the long way's slot found last.
+  at.s's quick way reads it as before, the library through the block's pointer.
+- *The call registers* for the lookup's arguments (r0-r2: C's lr0-lr2, lnzp.h's `ck_made`, `ck_at`), and `lib_x`
+  (dq0lib.inc's dq0x) for an entry whose arguments are in the block (walk.h's `wk_row`, `wk_seed`, `wk_search`).
+- *What the library keeps over a callback*: the block, or the stack (AT_FIND's frame over the maker; the record
+  store's block for `rp_find` built on the stack, not in the task's RAM).  The callbacks are the task's own code in
+  its main RAM or the part that called (the line's `ln_way`, the search's `reached`), run with the library's bank still
+  in at $A000 (each task's bank registers are its own, so the maker's wait in the middle of AT_FIND is safe); hub_map
+  is the one called per square, and changes no call register.
+
+**The same squares, ways and sights.**  Every sentence of the suite's 298 dq0 transcripts is the old build's (a
+transcript of each saved by a hook in sim/test.js, compared sentence by sentence), but the known timing noise:
+dq0antidote's fight, dq0jobs's squeak, dq0restbusy's, dq0skykin's and dq0stopwords's denizens met at other moments,
+dq0reachstop's and dq0tiring's accepted race.  dq0looks gives every reply the same.  A probe of the running games (a
+hook on the emulator's steps, not committed) checked:
+
+- every WK_ROW and WK_SEARCH of the world and the denizens in fourteen tests' games (dq0looks's eight games at seeds 3,
+  5, 7, 12, 4 and 517, dq0answer, dq0travel, dq0doorfar, dq0route, dq0denportc, dq0tunnel, dq0glow, dq0scent,
+  dq0line, dq0allythrow, dq0lookfar, dq0letsight, dq0incline) against a JavaScript copy of walk.inc's C run on the same
+  input (the kinds and door bytes, the walker's rules, the grid, the floors, the queue, the box): 591 rows and 64
+  searches, none differ;
+- every line the senses drew in the same games, old build and new (its squares, mode and eyes as the key; its answer,
+  ln_n, ln_first, ln_last): 271 lines both builds drew, every answer, ln_n and ln_last the same.  ln_first differs on
+  15, each a line stopped at its first square, where the line never sets it (it's what the last line left, BSS's 0
+  before, the block's own now) and nothing reads it (wshoot.c's cover asks it only past one square).
+
+**Performance** (cycles a call, in the calling task, counted by the same probe; dq0looks, dq0answer, dq0denportc,
+dq0glow on each build):
+
+| | Old | New |
+|---|---|---|
+| A line (the senses', 336 and 340 calls) | 6,083 | 5,518 (the library's at () and its own portal_at, no C stack) |
+| ln_portal (the look's doors, cast.s's rdoors: some 1,430 calls) | 107 | 264 (an XCALL each) |
+| at ()'s long way (AT_FIND; a mean, the maker's chunks made in it) | (not counted here; chunk.c's median 1,326, "One record store"'s figure) | 2,021 (the denizens), 3,257 (the senses), 4,049 (the world) |
+| CK_MADE, CK_AT (a chunk in the cache) | (C loops, inline) | 1,700-2,200 |
+| WK_ROW (a row of 32 squares) | (wk_cell, 32 calls of cc65's C) | 3,013-3,149 |
+| WK_SEARCH (a room's ways, the world's) | (cc65's C) | 47,524 |
+
+ln_portal's XCALL is the one path made slower: the look's grid ray asks it of each door it meets, some 150 cycles
+more a door (some 0.2M cycles over these four tests' 1,430 doors).  The looks and the start are within their
+budgets, so it's kept in the library; if a look ever needs it, cast.s can keep its own copy of the rule (some 60
+bytes) as a fast path.  The new AT_FIND's means take in the chunks the maker was asked for; the old long way wasn't
+counted by this probe (cc65's C entry), so the two aren't compared here.
+
+The start (dq0starttime): seed 1 233.3M cycles to 231.0M, seed 123456789 308.7M to 307.7M.  D17 (dq0answer,
+dq0torchwords: the first letter within 720,000 cycles): pass; dq0torchwords's slowest first letter 611,176 cycles before,
+637,110 after (its commands' first letters move by 20,000-30,000 either way between runs: the timing); dq0answer's
+walks' first letters 639,670 / 517,175 before, 644,243 / 510,671 after.
+
+**Room** (bytes free):
+
+| | Before | After |
+|---|---|---|
+| dq0w main RAM | 2,059 | 2,905 |
+| dq0d main RAM | 2,379 | 3,030 |
+| dq0p main RAM | 3,176 | 4,920 |
+| dq0w part 21 (the ways) | 1,402 | 2,198 |
+| dq0w part 65 (the line of fire) | 227 | 763 |
+| dq0w part 34 (wkept.c's lights) | 1,931 | 2,110 |
+| dq0w parts 55, 76 (s_sky_list, looked_at) | 532, 256 | 640, 347 |
+| dq0w part 3 (chunks_init) | 166 | 163 |
+| dq0d part 18 (route) | 89 | 980 |
+| dq0d parts 9, 13, 19 (made9/made_at, made, made10) | 46, 3,376, 1,837 | 356, 3,516, 2,132 |
+| dq0lib (ROM, of 16,384) | 2,529 used | 4,705 used |
+
+By stage: the lookup freed the main RAM of all three (dq0w +610, dq0d +623, dq0p +880: chunk.c's at_find was 597
+bytes of cc65's code and its find 67, its block 35); the line dq0w +207, dq0p +864; the way-finder the parts (walk.inc's
+statics are now the block's, the world's and the denizens' main RAM 29 and 28 bytes the less for its names).
+
+**Left:** the maker's own lookup (dq0m/map.c's `peek`, make.c's choice of a slot: the maker owns the cache and
+isn't short); the look's grid ray (dq0p/cast.s: thousands of lines a look, its own grid, the same rule by `ln_portal`,
+an XCALL a door now); the glows' list of chunks near (dq0p/eyes.c: a range, not a lookup); the world's `across`
+(a straight walk, its own rule, as "One way-finder" left it).
+
+**Open questions:** none of behaviour.  The zero page's block is a fixed contract: a task that reads the chunks must
+leave `$44-$70` alone (its cfg's ZP ends at `$43`: one more zero-page variable of a task's own would fail its link,
+which is the check).
