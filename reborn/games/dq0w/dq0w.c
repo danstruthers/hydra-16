@@ -3329,11 +3329,12 @@ void __fastcall__ s_start (const char* dir)
 #pragma rodata-name (push, "SW22RODATA")
 
 /* A look one way (I_LOOK's: HOUSE.md's looking one way): the senses' look about, and twice as far in the quarter
-** ahead, their own record of it too (LK_WAY), t tenths; told the UI, E_VIEW V_LOOKED */
+** ahead, their own record of it too (LK_WAY; LK_PEEK, t | 0x8000: through the closed door ahead's little window or
+** spy-hole, the user's, 2026-11-14), t tenths; told the UI, E_VIEW V_LOOKED */
 void __fastcall__ s_look_way (unsigned t)
 {
-    busy (t);
-    HUB->look.kind = LK_WAY;
+    busy (t & 0x7FFF);
+    HUB->look.kind = t & 0x8000 ? LK_PEEK : LK_WAY;
     see (0);
     hub_map (0);
     HUB->look.kind = LK_LOOK;
@@ -6675,7 +6676,8 @@ void __fastcall__ s_intent_more (struct msg* m)
         view (I_LIGHT_LIT (*m) ? V_LIT : V_DARK);
         break;
     case I_LOOK:
-        look_way (I_LOOK_TENTHS (*m));          /* (A look one way: part 3's) */
+        look_way (I_LOOK_TENTHS (*m) | (I_LOOK_PEEK (*m) ? 0x8000 : 0));   /* (A look one way: part 22's; through a
+                                                **   door's little window, LK_PEEK) */
         break;
     case I_ATTACK:                              /* (A round's blow, struck: at once; at the turns pace, as the clock
                                                 **   moves on, the denizens' slice's first: turns_run; then fought on,

@@ -26,7 +26,7 @@ static struct beyond* b;                        /* (The opening's entry) */
 static struct { unsigned char rel; signed char dz; unsigned char state; unsigned x, y; unsigned char kind, parts; } d;
 static unsigned ox, oy, rx, ry, px, py;         /* (seen_on's: from ox, oy on od, stratum osn; the character's room's
                                                 **   floor's first square rx, ry; the character's square px, py) */
-static unsigned char osn, od;
+static unsigned char osn, od, fc_;          /* (fc_: the way it faces) */
 
 /* Square p (at ()'s: its chunk's portal_at () for it) one the eye sees past: no rock nor wall, no shut door, no window's
 ** shutters closed (but a portcullis: view.c's, cast.s's rdoors) */
@@ -99,6 +99,23 @@ static unsigned char __fastcall__ ahead (unsigned char noun)
     return 1;
 }
 
+/* Square x, y beyond the door looked through (pk, VP_*'s 1 to 3: the door the square ahead, px + hx, py + hy): past it,
+** within a quarter (a little window's), or within an eighth (a spy-hole's: as far to the side as half the way on); its
+** cover closed, nothing.  (The squares the look marks seen through it the wider cone of a doorway's, the eye beside it:
+** what's told of them, the things and the denizens, this) */
+static unsigned char __fastcall__ beyond (unsigned x, unsigned y, unsigned char pk)
+{
+    int f, l;
+    signed char hx = head_x[fc_], hy = head_y[fc_];
+
+    x -= px + hx;
+    y -= py + hy;
+    f = (int) x * hx + (int) y * hy;
+    l = (int) x * hy - (int) y * hx;
+    l = l < 0 ? -l : l;
+    return pk < 3 && f > 0 && (pk == 1 ? l <= f : 2 * l <= f);
+}
+
 extern const struct sight* sight_rec;           /* (sight.c's: the record made, but its denizens) */
 
 void __fastcall__ s_way_seen (unsigned char sn, unsigned char face)
@@ -106,9 +123,12 @@ void __fastcall__ s_way_seen (unsigned char sn, unsigned char face)
     const struct sight* s = sight_rec;
     const unsigned char* p;
     struct sden* q;
-    unsigned char k, st, on;
+    unsigned char k, st, on, pk = v_way >> 1 & 3;   /* (Looked through a closed door's little window, its spy-hole, VP_*'s
+                                                **   1 to 3: view.c's, the user's, 2026-11-14) */
+    signed char hx = head_x[face], hy = head_y[face];
 
     memset (&W, 0, sizeof W);
+    fc_ = face;
     W.seq = s->seq;
     osn = sn;
     rx = s->rx;
@@ -119,6 +139,25 @@ void __fastcall__ s_way_seen (unsigned char sn, unsigned char face)
                                                 **   windows, passages' mouths; or its passage's doors) */
         memcpy (&d, p, sizeof d);
         st = d.state;
+        if (pk) {                               /* (Its eye at the door's little window, or its spy-hole: that alone) */
+            if (d.x != px + hx || d.y != py + hy || !ahead (pk == 1 ? BN_GRILLE : BN_PEEP)) {
+                continue;
+            }
+            if (pk == 3) {
+                b->what = WB_SHUT;              /* (Its spy-hole's cover on the far side) */
+                continue;
+            }
+            ox = d.x;
+            oy = d.y;
+            od = face;
+            if (face & 1) {                     /* (Looked through at a slant: on straight out of the door's far side,
+                                                **   the way of the two the eye sees past) */
+                od = past (at (sn, d.x + head_x[(face - 1) & 7], d.y + head_y[(face - 1) & 7])) ? (face - 1) & 7 :
+                    (face + 1) & 7;
+            }
+            seen_on ();
+            continue;
+        }
         if (!ahead (d.rel & MOUTH ? BN_PASSAGE : d.kind == PK_PORTCULLIS ? BN_PORTCULLIS : d.kind == PK_WINDOW ?
             BN_WINDOW : d.kind == PK_SLIT ? BN_SLIT : st == DOORWAY ? BN_DOORWAY : st & PS_WRECKED ? BN_BROKEN :
             st & PS_OPEN ? BN_OPEN : BN_DOOR)) {
@@ -140,7 +179,7 @@ void __fastcall__ s_way_seen (unsigned char sn, unsigned char face)
             ox < rx ? H_W : H_E;
         seen_on ();
     }
-    if (s->where == W_PASSAGE) {
+    if (s->where == W_PASSAGE && !pk) {
         for (k = s->nways, p = (const unsigned char*) s->way; k; --k, p += sizeof s->way[0]) {   /* (Its passage's
                                                 **   ways on, ahead) */
             d.rel = *p;
@@ -158,7 +197,8 @@ void __fastcall__ s_way_seen (unsigned char sn, unsigned char face)
     for (k = s->nitems, on = 0, p = (const unsigned char*) s->item; k; --k, p += sizeof s->item[0]) {   /* (The
                                                 **   things ahead, a surface's with it) */
         if (!(((const struct sitem*) p)->hid & 2)) {
-            on = is_ahead (((const struct sitem*) p)->rel);
+            on = pk ? beyond (((const struct sitem*) p)->x, ((const struct sitem*) p)->y, pk) :
+                is_ahead (((const struct sitem*) p)->rel);
         }
         if (on) {
             memcpy (&WAY_SEEN->item[WAY_SEEN->nitems++], p, sizeof s->item[0]);
@@ -166,12 +206,12 @@ void __fastcall__ s_way_seen (unsigned char sn, unsigned char face)
     }
     for (k = s->nglows, p = (const unsigned char*) s->glow; k; --k, p += sizeof s->glow[0]) {   /* (The lights far
                                                 **   off ahead) */
-        if (is_ahead (*p)) {
+        if (!pk && is_ahead (*p)) {
             memcpy (&WAY_SEEN->glow[WAY_SEEN->nglows++], p, sizeof s->glow[0]);
         }
     }
     for (k = SIGHT->ndens, q = SIGHT->den; k; --k, ++q) {     /* (The denizens ahead: dens.c's, the bank's) */
-        if (is_ahead (REL8 (bearing ((int) (q->x - s->x), (int) (q->y - s->y)), face))) {
+        if (pk ? beyond (q->x, q->y, pk) : is_ahead (REL8 (bearing ((int) (q->x - s->x), (int) (q->y - s->y)), face))) {
             memcpy (&WAY_SEEN->den[WAY_SEEN->ndens++], q, sizeof *q);
         }
     }

@@ -64,11 +64,24 @@ void __fastcall__ s_climb (unsigned char h)
 static void __fastcall__ do_door (unsigned char takes)
 {
     unsigned char pa;
+    const char* w;
 
     if (!cmd.obj.kind && (takes & TK_CLOSER) && things_work (H_SHUT)) {
         return;
     }
     pa = cmd.aux;
+    w = cmd.obj.word;
+    if ((pa == PA_OPEN || pa == PA_CLOSE) && (strstr (w, "spy") || strstr (w, "peep") || strstr (w, "grill") ||
+        (cmd.obj.kind == OB_WINDOW && (!strcmp (w, "little") || !strcmp (w, "small"))))) {
+        if (pa == PA_OPEN) {
+            look_way (VB_OBSERVE_THROUGH);      /* ("Open the spy-hole": its cover slid back, looked through; the little
+                                                **   window, open already: way.c's peep, the user's, 2026-11-14) */
+        } else {
+            msg (strstr (w, "spy") || strstr (w, "peep") ? "The spy-hole's cover is closed." :
+                "The little window has no shutter: only its grille.");
+        }
+        return;
+    }
     if (pa == PA_RAISE && cmd.obj.word[0]) {
         pa = PA_LIFT;                           /* ("Lift the bar": a portal's part lifted out) */
     } else if (pa == PA_RAISE || pa == PA_LOWER) {

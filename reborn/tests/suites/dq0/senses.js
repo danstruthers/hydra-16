@@ -8,7 +8,7 @@ const { typed } = require('../../lib/common.js');
 const {
   CHUNK_SIZE, CK_TILE, CK_ROOM, caveReport, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks, stratumRec,
   dq0StatusRows, dq0Story, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried,
-  dq0Here, DQ0_I, passings, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0OnWords, dq0Timer
+  dq0Here, DQ0_I, passings, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0OnWords, dq0Timer, dq0PortalAt
 } = require('../../lib/dq0.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
 
@@ -1217,6 +1217,88 @@ module.exports = {
         if (!(up(t0.after) === 1 && up(te.after) === 2)) f.push('running not tiring a level more: UP ' + up(t0.after) + ', then ' + up(te.after));
         const r0 = T.of('dq0 -p t -s 16 -c /ram/r.hm -T'), rz = T.of('quit', r0.k + 1);
         if (!(up(r0.after) === 2 && up(rz.at) === 1)) f.push('resting ten minutes not a level less tired: UP ' + up(r0.after) + ', then ' + up(rz.at));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0grille', near: ['senses'], what: 'Dingus Quest Zero\'s looking through a door\'s little window (the user\'s, 2026-11-14: "I still can\'t look through a little window in a door"; DECISIONS.md\'s looking through a door\'s little window): at seed 1 the door ahead of the start, closed, given a little window with a grille (its record\'s feat, PF_GRILLE: the chunk poked as "look" is typed), examined; looked through by its names ("the little window", "peer through the grille", "the door", "the window" with no window in the room, "the grille"): its eye at it ("look south" beside it a look that way as ever, not through it), what\'s beyond told ("Through the little window in the door you see ..."), not the room\'s other doors; from the far side the same, walked up to first; then given a spy-hole, its cover on the passage\'s side (its bar\'s, the record\'s): looked through, opened (looked through), closed ("The spy-hole\'s cover is closed."); its cover then on the far side: not seen through ("The spy-hole\'s cover is on the far side: you can\'t see through it."); a spy-hole asked for where there\'s none: "You haven\'t seen a spy-hole here."',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 1 -c /ram/c.hm -T',
+        'look through the spy-hole', 'close the door', 'look', 'turn around', 'turn around', 'examine the door', 'look through the little window',
+        'peer through the grille', 'look through the door', 'look through the window', 'look south', 'close the little window', 'open the door',
+        'go south', 'wait', 'go north', 'look through the grille', 'look through the little window', 'turn left', 'examine the door',
+        'look through the spy-hole', 'open the spy-hole', 'close the spy-hole', 'turn right', 'look through the spy-hole', 'examine the door',
+        'quit', 'echo $status']) },
+      start(m) {
+        const a = m.acia, read = a.read, [FEAT, BAR, STATE, PARTS] = require('../../../sim/lib/hubown.js').evaluate(['offsetof (struct portal, feat)',
+          'offsetof (struct portal, bar)', 'offsetof (struct portal, state)', 'offsetof (struct portal, parts)']), PF_GRILLE = 1, PF_PEEP = 2;
+        let typed = '', n = 0;
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (['look', 'wait', 'turn left', 'turn right'].includes(typed) && m.dq0 && !(m.grille && m.grille.set.includes(typed))) {   // (The door's record poked, as the line's typed: the next look's)
+                const { L } = m.dq0.layout(), h = m.dq0.bank(0), u16 = o => h[o] | h[o + 1] << 8;
+                if (!m.grille) {                // (The door ahead, closed, the start's: the cell's south door)
+                  const px = u16(L.pcX), py = u16(L.pcY), f = h[L.pcFace];
+                  m.grille = { sn: h[L.pcSn], x: px + [0, 1, 1, 1, 0, -1, -1, -1][f], y: py + [-1, -1, 0, 1, 1, 1, 0, -1][f], f, set: [] };
+                }
+                const g = m.grille, P = dq0PortalAt(m, g.sn, g.x, g.y), k = n++;
+                if (P) {
+                  if (k === 0) P.b[P.o + FEAT] = PF_GRILLE;   // (A little window, a grille across it)
+                  if (k === 1) {                // (In the guardroom: shut behind it, not known, so the walk back stops at it)
+                    P.b[P.o + STATE] &= ~1;
+                    P.b[P.o + PARTS] &= ~0x80;
+                  }
+                  if (k >= 2) {                 // (A spy-hole, its cover on the passage's side, then the cell's)
+                    P.b[P.o + FEAT] = PF_PEEP;
+                    P.b[P.o + BAR] = k === 2 ? g.f >> 1 : ((g.f >> 1) + 2) & 3;
+                  }
+                  g.set.push(typed);
+                }
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out), g = m.grille;
+        if (!g || g.set.length !== 4 || g.f & 1) return ['the scene not set: no door ahead at the start, faced square on: ' + JSON.stringify(g)];
+        // (Each answer, in order of the lines, its words: what it must say, what it mustn't)
+        const A = dq0Answers(out).filter(x => x.cmd), see = 'Through the little window in the door you see ', hole = 'Through the spy-hole in the door you see ';
+        const want = [
+          ['look through the spy-hole', ["You haven't seen a spy-hole here."]],
+          ['examine the door', ['A little window is cut in it, a grille across it.']],
+          ['look through the little window', ['You peer ahead.', see + 'a passage, 5 feet of it.']],
+          ['peer through the grille', [see + 'a passage, 5 feet of it.']],
+          ['look through the door', [see + 'a passage, 5 feet of it.']],
+          ['look through the window', [see + 'a passage, 5 feet of it.']],   // (No window in the cell: the door's little one)
+          ['look south', ["You can't see past the door ahead: it's closed."]],   // (A look that way, not asked through it: as ever)
+          ['close the little window', ['The little window has no shutter: only its grille.']],
+          ['look through the grille', ['You turn to face north.', see + 'into the cell.']],   // (The far side: turned to it first)
+          ['look through the little window', [see + 'into the cell.']],
+          ['examine the door', ['A spy-hole is cut in it, its cover on this side.']],
+          ['look through the spy-hole', [hole + 'into the cell.']],
+          ['open the spy-hole', [hole + 'into the cell.']],
+          ['close the spy-hole', ["The spy-hole's cover is closed."]],
+          ['look through the spy-hole', ["The spy-hole's cover is on the far side: you can't see through it."]],
+          ['examine the door', ['A spy-hole is cut in it, its cover on the far side.']]
+        ];
+        let at = 0;
+        for (const [cmd, words] of want) {
+          const i = A.findIndex((x, k) => k >= at && x.cmd === cmd);
+          if (i < 0) { f.push('no answer to "' + cmd + '" (after answer ' + at + ')'); continue; }
+          at = i + 1;
+          inTurn(A[i].text, words, f, cmd + ': ');
+          if (/^(look|peer)/.test(cmd) && cmd !== 'look south' && /can't see past the door/.test(A[i].text)) f.push(cmd + ": the door's little window not looked through: " + A[i].text);
+          if (/^(look|peer)/.test(cmd) && /Through the (little window|spy-hole)/.test(A[i].text) && /You can't see past|Down the passage|Through the (open|door)/.test(A[i].text))
+            f.push(cmd + ': more than the door looked through told: ' + A[i].text);
+        }
+        if (process.env.DQ0SHOW) f.push(s.slice(s.indexOf('> look through the spy-hole')));
         return f;
       },
       sdcard: true

@@ -14,6 +14,13 @@ extern unsigned char v_way;                     /* A look one way (HOUSE.md's lo
                                                 **   things near looked for as far, what's made out twice as far,
                                                 **   its own record made (way.c's) */
 #define WAY_R           31
+#define VP_ASK          8                       /* (v_way's: a look one way through the closed door ahead, asked,
+                                                **   LK_PEEK: the user's, 2026-11-14) */
+#define VP_GRILLE       2                       /* (v_way's more, view.c's, a look one way's at a closed door on the
+                                                **   square ahead: looked through its little window, its grille; */
+#define VP_PEEP         4                       /*   through its spy-hole, its cover on this side; */
+#define VP_COVER        6                       /*   its spy-hole's cover on the far side: nothing seen through it.
+                                                **   The user's, 2026-11-14: way.c's to tell) */
 void __fastcall__ way_seen (unsigned char sn, unsigned char face);  /* A look one way's own record (WAY_SEEN),
                                                 **   after the look's, and its denizens' (part 3's, way.c) */
 void __fastcall__ felt (unsigned char sn, unsigned x, unsigned y, unsigned char d, unsigned char n);   /* A walk's

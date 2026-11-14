@@ -1678,10 +1678,12 @@ enum { HW_BEHIND, HW_HEAP, HW_DOORWAY, HW_RUBBLE, HW_SHADOW, HW_OUT, HW_OPEN, HW
     HW_LIGHT, HW_SEEN, HW_BARE };               /* (The hub's pc_hw says of what: HW_BEHIND, HW_HEAP its kind; HW_FOUND, HW_SPOT, HW_LEAP,
                                                 **   HW_SEEN the actor plus 1) */
 
-enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY };      /* The look's kinds: a look about; the denizens seen looked at again;
-                                                **   the eyes only, as time's gone (the lights seen far off: a wait's);
-                                                **   a look one way (I_LOOK's: a look about, and twice as far in the
-                                                **   quarter ahead; its own record, WAY_SEEN) */
+enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY, LK_PEEK };   /* The look's kinds: a look about; the denizens seen looked at
+                                                **   again; the eyes only, as time's gone (the lights seen far off: a
+                                                **   wait's); a look one way (I_LOOK's: a look about, and twice as far
+                                                **   in the quarter ahead; its own record, WAY_SEEN); the same through
+                                                **   the closed door ahead's little window or spy-hole (I_LOOK's w2:
+                                                **   dq0p's view.c, the user's, 2026-11-14) */
 #define LF_ARRIVE       0x40                    /* (The look's first: arrived, R_VISITED the senses') */
 
 /* A thing the character carries (the UI bank's ix): its kind, what it's in (that one's entry plus 1; 0 none: held, worn,

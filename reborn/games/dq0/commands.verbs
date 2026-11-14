@@ -261,6 +261,7 @@ enter = enter
 approach = approach
 look = look
 peer = look
+peek = look                                 # (new, 2026-11-14: "peek through the spy-hole")
 gaze = look
 gander = look
 examine = examine

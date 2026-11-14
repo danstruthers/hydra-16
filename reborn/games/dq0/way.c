@@ -283,9 +283,68 @@ void go_thing (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+/* A closed door's little window or its spy-hole looked through (the user's, 2026-11-14: "look through the grille",
+** "the little window", "the spy-hole", "look through the door"; "the window" with none seen but a door's): the door
+** meant, its square pick's (pick_x, pick_y: the one with it, the nearest; or the door said, pick's own), the command the
+** door's (OB_DOOR); 2 if it's closed with a little window or a spy-hole in it, to be walked up to (beside it, faced, the
+** look one way looks through it: dq0p's view.c), 1 if not, 0 none (told: none with one; or which door, asked) */
+static unsigned char peep (void)
+{
+    const char* w = cmd.obj.word;
+    const struct sight* s;
+    const struct sdoor* d;
+    unsigned char i, g = 0, n = 0xFF, r = 1;
+    unsigned a, b = 0xFFFF;
+
+    if (strstr (w, "grill")) {
+        g = PF_GRILLE;
+    } else if (strstr (w, "spy") || strstr (w, "peep")) {
+        g = PF_PEEP;
+    } else if (cmd.obj.kind == OB_WINDOW && (!strcmp (w, "little") || !strcmp (w, "small") ||
+        !pick (OB_WINDOW | PICK_ANY, cmd.obj.lies))) {
+        g = PF_GRILLE | 0x80;                   /* ("The little window"; "the window", none seen: a door's, if there's
+                                                **   one, else as ever) */
+    } else if (cmd.action != VB_OBSERVE_THROUGH || cmd.obj.kind != OB_DOOR) {
+        return 1;
+    }
+    s = sight_get ();
+    if (g) {
+        for (i = 0, d = s->door; i < s->ndoors; ++i, ++d) {
+            if (d->kind == PK_DOOR && !(d->rel & MOUTH) && (d->parts & g & 0x7F) && (a = abs ((int) (d->x -
+                s->x)) + abs ((int) (d->y - s->y))) < b) {
+                b = a;
+                n = i;
+            }
+        }
+        if (n == 0xFF) {
+            if (g & 0x80) {
+                return 1;                       /* (No window, no door's: "You haven't seen a window here.", as ever) */
+            }
+            strcpy (lb, g == PF_PEEP ? "spy-hole" : "little window in a door");
+            say_no (A_UNSEEN, lb);
+            return 0;
+        }
+        tx = s->door[n].x;
+        ty = s->door[n].y;
+    } else if (pick (OB_DOOR | PICK_TELL, cmd.obj.lies) != 1) {
+        return 0;                               /* ("Look through the door": none, told; which, asked) */
+    }
+    cmd.obj.kind = OB_DOOR;
+    pick_x = tx;
+    pick_y = ty;
+    for (i = 0, d = s->door; i < s->ndoors; ++i, ++d) {
+        if (d->x == tx && d->y == ty && d->kind == PK_DOOR && d->state != DOORWAY &&
+            !(d->state & (PS_OPEN | PS_WRECKED)) && (d->parts & (PF_GRILLE | PF_PEEP))) {
+            r = 2;
+        }
+    }
+    return r;
+}
+
 unsigned char __fastcall__ s_look_way (unsigned char action)
 {
-    unsigned char h, k, j;
+    unsigned char h, k, j, e = 1;
+    unsigned x0 = pick_x, y0 = pick_y;
 
     if (action == VB_EXAMINE_OBJECT) {
         return examine ();
@@ -327,6 +386,9 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
     if (!k && h > H_NW && action == VB_OBSERVE_OBJECT && ((OPENS >> (cmd.obj.kind & 15)) & 1) && opened ()) {
         return 0;                               /* ("Look at the stairs": them, not the way they lie) */
     }
+    if (!k && h > H_NW && !(e = peep ())) {
+        return 0;                               /* (A closed door's little window, its spy-hole: none, or which) */
+    }
     j = 0;
     if (h > H_NW) {
         if ((WAY_OBJ >> (cmd.obj.kind & 15)) & 1) {     /* (The one it sees) */
@@ -343,7 +405,11 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
     if (!j) {
         cmd.obj.lies = h;                       /* (A way said: that way) */
     }
-    if (!(j = feature (j, FG_FAR | FW_NONE))) {
+    j = feature (j, (e == 2 ? FG_NEAR : FG_FAR) | FW_NONE);   /* (A closed door's little window, its spy-hole:
+                                                **   walked up to first) */
+    pick_x = x0;
+    pick_y = y0;
+    if (!j) {
         return 0;                               /* (The one it sees, or the way said: turned to it first, the turn's look,
                                                 **   main.c's feature path; none, told; or which, asked) */
     }
@@ -353,7 +419,7 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
         walk_says ((const char*) (k ? W_LISTEN : W_PEER));
     }
     if (!k) {
-        intend2 (I_LOOK, WAY_T, 0);             /* (The world's: the senses' look one way, E_VIEW V_LOOKED) */
+        intend2 (I_LOOK, WAY_T, e == 2);        /* (Through the closed door's little window, its spy-hole: LK_PEEK) */             /* (The world's: the senses' look one way, E_VIEW V_LOOKED) */
         return 0;
     }
     if (k == 4) {
@@ -428,6 +494,11 @@ void o_focus_words (void)
         if (told & 1 << i) {
             continue;                           /* (A way into a room told already, with the first) */
         }
+        if (k >= BN_GRILLE && b->what == WB_SHUT) {
+            say (" The spy-hole's cover is on the far side: you can't see through it.");
+            continue;                           /* (A closed door's spy-hole, the eye at it: dq0p's way.c, the user's,
+                                                **   2026-11-14) */
+        }
         if (b->what == WB_SHUT) {
             for (j = i + 1, c = b + 1, n = 0; j < W.nbeyond; ++j, ++c) {   /* (Alike the same way, shut: told once,
                                                 **   "the doors ahead to your left", wherever they come) */
@@ -443,8 +514,13 @@ void o_focus_words (void)
         }
         for (n = 0; i + 1 < W.nbeyond && twin (b); ++n, ++i, ++b) {
         }                                       /* (Alike the same way: told once, "the open doors") */
-        sayf (" %s the %s%s %s you see ", k ? "Through" : "Down", noun[k], !n ? "" : k == BN_PORTCULLIS ? "es" : "s",
-            rel_w[(b->rel + 1) & 3]);
+        if (k >= BN_GRILLE) {                   /* ("Through the little window in the door you see into the guardroom, lit
+                                                **   by torches.") */
+            sayf (" Through the %s in the door you see ", k == BN_GRILLE ? "little window" : "spy-hole");
+        } else {
+            sayf (" %s the %s%s %s you see ", k ? "Through" : "Down", noun[k], !n ? "" : k == BN_PORTCULLIS ? "es" : "s",
+                rel_w[(b->rel + 1) & 3]);
+        }
         if (b->what == WB_DARK) {
             say ("only darkness");
         } else if (b->what == WB_SKY) {

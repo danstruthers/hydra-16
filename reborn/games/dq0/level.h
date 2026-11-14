@@ -172,7 +172,9 @@ struct wayseen {
     struct sglow    glow[SEE_GLOWS];
 };
 enum { WB_DARK, WB_PASSAGE, WB_ROOM, WB_SHUT, WB_SKY };
-enum { BN_PASSAGE, BN_DOORWAY, BN_OPEN, BN_BROKEN, BN_DOOR, BN_PORTCULLIS, BN_WINDOW, BN_SLIT };
+enum { BN_PASSAGE, BN_DOORWAY, BN_OPEN, BN_BROKEN, BN_DOOR, BN_PORTCULLIS, BN_WINDOW, BN_SLIT, BN_GRILLE, BN_PEEP };
+                                                /* (BN_GRILLE, BN_PEEP: a closed door's little window, its spy-hole,
+                                                **   the eye at it: dq0p's view.c, way.c; the user's, 2026-11-14) */
 
 /* The map's window: the stratum round the character, a square a character, drawn by the world into the hub
 ** (struct hub's map), each row's text and its end */

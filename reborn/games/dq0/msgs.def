@@ -91,7 +91,7 @@ I_GO_ON         -
 I_ASK           w1 why@TE_STOPPED                       # (TE_ASK_HEARD: a sound the UI heard)
 I_CLOSE         a foe; b aim; w1 walk; w2 run; x[1] strike; x[2] hand     # (w1 1: walked up to alone, no blow;
                                                         #   run, a charge's pace, GA_*, 0 the character's own: B1's)
-I_LOOK          w1 tenths
+I_LOOK          w1 tenths; w2 peek                     # (w2 1: through the closed door ahead's little window, or its spy-hole)
 I_DISENGAGE     w1 way; w2 flight                       # (H_*, 0xFF away from them; 1 a flight)
 I_TRACE         w1(form) how:0-7@TRC_FLOOR sniff:8-15; w2 tenths      # (TRC_*; a sniff's way (H_*, 0xFF about it); 0 the world's)
 I_TROD          a how; b stay; w1 x; w2 y; x[1] tkind; x[2] sn  # (who 0: a passing; its face | TS_STAY; the TQs stayed)

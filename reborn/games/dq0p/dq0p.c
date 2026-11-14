@@ -186,8 +186,9 @@ int main (int argc, char* argv[])
                 hub_map (SIGHT_BANK);
                 memcpy (&SIGHT->nglows, &G, sizeof G);
             } else {
-                v_way = HUB->look.kind == LK_WAY;   /* (A look one way: twice as far in the quarter ahead, and
-                                                **   what's beyond its openings: way.c's) */
+                v_way = HUB->look.kind == LK_PEEK ? 1 | VP_ASK : HUB->look.kind == LK_WAY;   /* (A look one way:
+                                                **   twice as far in the quarter ahead, and what's beyond its
+                                                **   openings: way.c's; LK_PEEK, through a door's little window) */
                 look ();
             }
             hub_map (0);

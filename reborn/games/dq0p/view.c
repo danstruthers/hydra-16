@@ -494,6 +494,9 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
 {
     static unsigned char range, own, j, k, w;
     static int z;
+    unsigned char* q;
+    struct portal* p;
+    signed char sx, sy;
 
     hub_map (0);
     k = HUB->pc_pos;                            /* (Its eyes by its body's position: crouched, kneeling, sitting three
@@ -546,9 +549,24 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
         stratum (sn);                           /* (The light layer's lamps' lines may have had the grid) */
         view_grid (gx0, gy0, w);                /* The grid; then those not made that the eyes reach made, and it all again */
     } while (v_way && chunks (1));
+    sx = head_x[face];
+    sy = head_y[face];
+    if ((v_way & VP_ASK) && (q = at (sn, x + sx, y + sy)) != 0 &&
+        TILE (*q) == T_DOOR && (p = portal_at (cx_, cy_)) != 0 && p->kind == PK_DOOR &&
+        !(p->state & (PS_OPEN | PS_WRECKED | PS_HIDDEN)) && (p->feat & (PF_GRILLE | PF_PEEP))) {
+        v_way |= p->feat & PF_GRILLE ? VP_GRILLE : head_x[p->bar << 1] * sx + head_y[p->bar << 1] * sy < 0 ? VP_PEEP :
+            VP_COVER;                           /* (A closed door ahead, beside it, a
+                                                **   little window in it or a spy-hole, its cover on the bar's side:
+                                                **   the character's, or the far one; the user's, 2026-11-14) */
+    }
     memset (g_lo, 0xFF, w);                     /* (Each row's marks, cast.s's as it makes them: none yet) */
     memset (g_hi, 0, w);
     hub_map (LOOK_BANK);                        /* (cached ()'s left the header in the window) */
+    if ((v_way & VP_COVER) && (v_way & VP_COVER) != VP_COVER) {
+        GRID[((unsigned) (range + sy) << 7) + ((range + sx) << 1)] &= ~1;    /* (Looked
+                                                **   through, as an open door's: its square not G_OPAQUE, cast.s's; the
+                                                **   grid a look one way's, not kept) */
+    }
     if (own) {
         cast_own ();                            /* (Its own square: seen if anything lights it, else remembered) */
     }
