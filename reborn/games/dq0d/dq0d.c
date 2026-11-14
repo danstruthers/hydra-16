@@ -904,7 +904,7 @@ static unsigned char __fastcall__ deep_at (unsigned char sn, unsigned x, unsigne
 /* Whether one of water ways w may go onto square x, y of stratum sn (no deeper than it wades, or it swims, flies; not
 ** into its chunk's pocket of bad air, 2026-10-31: HOUSE.md's bad air, the maker's air_pocket: the denizens know where
 ** the air's bad, and keep out of it), its chunk looked at once; wet_ok, the square at () found (C, cx_, cy_: a way's
-** search's, route's, as it reads the squares in: walk.inc's, 2026-11-09) */
+** search's, route's, as it reads the squares in: walk.h's, 2026-11-09) */
 static unsigned char __fastcall__ wet_ok (unsigned char w);
 static unsigned char __fastcall__ wades (unsigned char w, unsigned char sn, unsigned x, unsigned y)
 {
@@ -1400,7 +1400,7 @@ static unsigned char __fastcall__ cut_by (unsigned char d)
 
 /* The one test of actor k's (the copy a's) step d (0-7, dir_x's), the minds' (step_for's, the coarse moves', a way's
 ** followed; 2026-11-09: each had its own): the step itself by the world's rule (legal: step_ok's, a diagonal a
-** diagonal way's, slant's: walk.inc's rule, a step at a time), and the square it comes to x, y its own (may: within
+** diagonal way's, slant's: walk.h's rule, a step at a time), and the square it comes to x, y its own (may: within
 ** lim squares of its home, no one on it, no deeper water than it wades nor bad air, wades's) */
 static unsigned char __fastcall__ legal (unsigned char d)
 {
@@ -2848,7 +2848,7 @@ unsigned char __fastcall__ s_dig_way (unsigned char k)
 ** steps can't reach greedily (round a corner, out of a dead end, through a door, along a patrol's rounds, back to the
 ** character an ally lost): found once, a field over the squares about it and its mark (RW_W each way, in the chunks
 ** made: never one made for it), each square's step toward the mark (a search outward from the mark: the world's own
-** way-finder, walk.inc's, by the rule its steps go by, 2026-11-09: the four ways and the diagonal ways past their
+** way-finder, walk.h's, by the rule its steps go by, 2026-11-09: the four ways and the diagonal ways past their
 ** corners, a rise or a fall a step can take; a shut door a way for hands, not a beast's; no water deeper than it
 ** wades, nor bad air, wades's), kept in a bank of the ways' own (NFIELDS fields), shared by every actor bound for the
 ** same mark (the character: within four squares of it) whose rules are the same (its water's, its hands: WKEY) and
@@ -2878,19 +2878,18 @@ struct rhead {
 };
 #define RHEAD           ((struct rhead*) 0x8000)
 #define RBASE           0x8080                  /* (The fields after the head) */
-#define RCELL(f)        ((unsigned char*) RBASE + (f) * RW_N)  /* A square's cell, walk.inc's: the way it was come
+#define RCELL(f)        ((unsigned char*) RBASE + (f) * RW_N)  /* A square's cell, walk.h's: the way it was come
                                                 **   into from the mark (0-7, dir_x's: its step toward the mark the
                                                 **   opposite, ^ 2; 8 the mark) | its steps, its corner; unreached,
-                                                **   RC_SOLID (walk.inc's WC_NEW) and more */
+                                                **   RC_SOLID (walk.h's WC_NEW) and more */
 #define RELEV           ((signed char*) RBASE + NFIELDS * RW_N)    /* (The search's: each square's floor) */
 #define RQUEUE          ((unsigned*) (RBASE + (NFIELDS + 1) * RW_N))
-#define RC_SOLID        0x80                    /* (walk.inc's WC_NEW: no step from it) */
+#define RC_SOLID        0x80                    /* (walk.h's WC_NEW: no step from it) */
 #define WKEY(k)         ((awater[k] & (WA_DEEP | WA_SWIMS | WA_FLIES)) | (a.body == BD_TWO ? 0x40 : 0))  /* (Actor k's
-                                                **   rules (the copy a's): its water's, its hands (walk.inc's
+                                                **   rules (the copy a's): its water's, its hands (walk.h's
                                                 **   WK_HANDS)) */
 typedef char rhead_fits[sizeof (struct rhead) <= RBASE - 0x8000 && RBASE - 0x8000 + (NFIELDS + 1) * RW_N + 2 * RQ_N <= 0x2000 ?
     1 : -1];
-extern const unsigned char cornk[16];           /* (slant.s's: a diagonal's corner by its kind, 0 stood on, 1 not, 2 cut) */
 
 /* Actor k's (the copy a's) step on its way to refx, refy (step_for's: wlim its reach of home; S_TOWARD's): its own
 ** field's, if it's for that mark and reaches it; else (part 18's wfind) another's that does, or (k's high bit: no
@@ -2967,7 +2966,7 @@ unsigned char __fastcall__ s_way (unsigned char k)
 #pragma code-name (push, "SW18CODE")
 #pragma rodata-name (push, "SW18RODATA")
 #pragma bss-name (push, "SW18RODATA")          /* (A row of it read in: the part's own, while it runs) */
-static unsigned char rrow[RW_W];
+static unsigned char rrow[RW_W], rdoor[RW_W];
 static signed char rerow[RW_W];
 #pragma bss-name (pop)
 static unsigned char __fastcall__ route (unsigned char k);
@@ -3031,11 +3030,9 @@ static unsigned __fastcall__ rorg (unsigned ax, unsigned tx)
     return d >= -(RW_W - 2) && d <= RW_W - 2 ? ax + d / 2 - (RW_W / 2 - 1) : d > 0 ? ax - 1 : ax - (RW_W - 2);
 }
 
-/* (The one way-finder, walk.inc's: in the ways' bank, the field's cells, RELEV the floors, RQUEUE its queue) */
-#define WK_EL           RELEV
-#define WK_RING         RQUEUE
-#define WK_REACHED(u, v, e, dz, v8)
-#include "../dq0w/walk.inc"
+/* (The one way-finder, walk.h's, the game's library's: in the ways' bank, the field's cells, RELEV the floors, RQUEUE
+** its queue) */
+#include "../dq0w/walk.h"
 typedef char rq_fits[RQ_N == WK_RN ? 1 : -1];
 
 static unsigned char __fastcall__ route (unsigned char k)
@@ -3043,7 +3040,8 @@ static unsigned char __fastcall__ route (unsigned char k)
     static struct stratum* s;
     static struct rfield* r;
     static unsigned char* p;
-    static unsigned char f, i, j, c, mk, w;
+    static struct portal* o;
+    static unsigned char f, i, j, t, d, mk, w;
     static unsigned ox, oy, x, y, v;
     static int tx, ty;
 
@@ -3071,15 +3069,15 @@ static unsigned char __fastcall__ route (unsigned char k)
     }
     ox = rorg (a.x, refx);
     oy = rorg (a.y, refy);
-    wk_cl = RCELL (f);
     for (j = 0; j < RW_W; ++j) {                /* (Its squares read in, a row at a time: the chunk's bank, then the
-                                                **   ways'), each by the rule, the actor's (walk.inc's wk_cell; no
+                                                **   ways'), each by the rule, the actor's (walk.h's wk_row; no
                                                 **   water deeper than it wades, nor bad air: wades's) */
         y = oy + j;
         mk = 0;
         for (i = 0; i < RW_W; ++i) {
             x = ox + i;
-            c = WC_NEW | WC_CORNER;             /* (Past the stratum, or a chunk not made: none) */
+            t = T_ROCK;                         /* (Past the stratum, or a chunk not made: none, as rock) */
+            d = WD_NONE;
             rerow[i] = 0;
             if (x - s->x0 < s->w && y - s->y0 < s->h) {
                 if (!i || !((x - s->x0) & (CW - 1))) {
@@ -3087,18 +3085,28 @@ static unsigned char __fastcall__ route (unsigned char k)
                 }
                 if (mk && (p = at (a.sn, x, y)) != 0) {
                     rerow[i] = C->elev[cy_][cx_];
-                    c = wk_cell (*p, TILE (*p) == T_DOOR ? portal_at (cx_, cy_) : 0);
-                    if ((c & WC_OPEN) && !wet_ok (w)) {
-                        c &= ~WC_OPEN;
+                    t = *p;
+                    if (TILE (t) == T_DOOR) {
+                        o = portal_at (cx_, cy_);
+                        d = WD_PORTAL (o);
+                    }
+                    if (T_PASS (t) && !wet_ok (w)) {
+                        d |= WD_NO;
                     }
                 }
             }
-            rrow[i] = c;
+            rrow[i] = t;
+            rdoor[i] = d;
         }
+        wk_row (rrow, rdoor, RW_W);
         hy_bank (rb - 1);
-        memcpy (wk_cl + (j << CW_BITS), rrow, RW_W);
+        memcpy (RCELL (f) + (j << CW_BITS), rrow, RW_W);
         memcpy (RELEV + (j << CW_BITS), rerow, RW_W);
     }
+    wk_cl = RCELL (f);
+    wk_el = RELEV;
+    wk_ring = RQUEUE;
+    wk_reach = 0;
     wk_qh = wk_qt = 0;                          /* (The mark, or the edges nearest it, first) */
     tx = (int) (refx - ox);
     ty = (int) (refy - oy);

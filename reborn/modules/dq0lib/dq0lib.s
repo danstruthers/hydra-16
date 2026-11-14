@@ -18,6 +18,8 @@
 ;   CK_*        ../games/dq0/lnzp.inc's): at ()'s long way (each reader's chunk.c's at_find and find), a chunk in the
 ;               cache or not (the denizens' made, made9, made10, made16, the senses' cached, the world's loops)
 ;   LN_*        the one line (line.s: the world's and the senses' dq0w/line.inc before)
+;   WK_*        the one way-finder and its rule for a square (walk.s: dq0w/walk.inc, compiled into the world and the
+;               denizens, before)
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -25,7 +27,7 @@
 
             HYX2_LIBRARY "dq0lib", "HEADER", "ROM"
             .export     rp_find
-            .import     at_find, ck_made, ck_at, ln_line, ln_pass, ln_portal
+            .import     at_find, ck_made, ck_at, ln_line, ln_pass, ln_portal, wk_row, wk_seed, wk_search
 
 .code
 .assert     * = $A030, lderror, "The dq0lib library's entry isn't right after its header"
@@ -44,6 +46,9 @@
             jmp         ln_line                             ; $A054: LN_LINE (line.s)
             jmp         ln_pass                             ; $A057: LN_PASS
             jmp         ln_portal                           ; $A05A: LN_PORTAL
+            jmp         wk_row                              ; $A05D: WK_ROW (walk.s)
+            jmp         wk_seed                             ; $A060: WK_SEED
+            jmp         wk_search                           ; $A063: WK_SEARCH
 
 BANKREG     = $00                                           ; The task's RAM bank register
 BUF         = $9FE0                                         ; MODINFO's answer (ME_SIZE bytes; then the entry looked

@@ -539,12 +539,12 @@ void stopped (void);                            /* (Part 40's) */
 ** to all its squares (its floor and its walls, as big as the chunk lets it be: no fixed room's size) worked out at
 ** once (ways: as the first of them is looked up, part 21's ways_go, a search of the squares a step at a time, the
 ** first way to each found kept, each square's time from the start and the first trap on its way, in the world's own
-** bank), then each way the caller wants to know looked up there (way).  The search walk.inc's (2026-11-09: the
+** bank), then each way the caller wants to know looked up there (way).  The search walk.h's (2026-11-09: the
 ** denizens' ways the same, by the same rule), the character's rules its own: a door a way in a room (to walk up to),
 ** none along a passage; no square a denizen's on, nor one with a trap it knows of; its times by its pace */
 
 #define WAYS_CL         ((unsigned char*) 0x8000)   /* (The ways' bank, the world's own: ovbank[OVBANKS + 1]: the
-                                                **   chunk's squares' cells, walk.inc's: the way each was come into
+                                                **   chunk's squares' cells, walk.h's: the way each was come into
                                                 **   from the one before, WC_WAY's (WC_SEED the start), WC_NEW not
                                                 **   reached; */
 #define WAYS_EL         ((signed char*) (WAYS_CL + CW * CW))   /* its floors, the search's; */
@@ -553,7 +553,7 @@ void stopped (void);                            /* (Part 40's) */
                                                 **   set off: its place in the chunk, y times 32 and x; 0xFFFF none); */
 #define WAYS_Q          (WAYS_TRAP + CW * CW)   /* the search's queue, WK_RN) */
 #define WFROM(i)        (WAYS_CL[i] & WC_NEW ? 0xFF : WAYS_CL[i] & WC_WAY)     /* (The way into square i, or 0xFF) */
-#define WC_NEW          0x80                    /* (walk.inc's) */
+#define WC_NEW          0x80                    /* (walk.h's) */
 #define WC_WAY          0x0F
 typedef char ways_fit[CW * CW * 6 + 2 * 512 <= 0x2000 ? 1 : -1];
 static unsigned char wox, woy, wow, woh;        /* (The ways' room: its walls' first square, its size with them) */
@@ -7381,47 +7381,45 @@ static struct trap* __fastcall__ trap_at21 (unsigned char x, unsigned char y)
     return 0;
 }
 
-/* (The one way-finder, walk.inc's: in the ways' bank; a square reached, its time and the first trap on its way) */
+/* (The one way-finder, walk.h's, the game's library's: in the ways' bank; a square reached, its time and the first
+** trap on its way) */
 #undef WC_NEW
 #undef WC_WAY
-#define WK_EL           WAYS_EL
-#define WK_RING         WAYS_Q
-#define WK_REACHED(u, v, e, dz, v8)     reached (u, v, e, dz, v8)
-static void __fastcall__ reached (unsigned u, unsigned v, unsigned char e, signed char dz, unsigned char v8);
-#include "walk.inc"
+#include "walk.h"
 
-/* Square v reached from u by way e (walk.inc's WK_REACHED), its floor dz above u's: its time from the start (u's and
-** the step's, by the pace: cost's, more on steps; a diagonal seven feet), and the first trap on its way (u's, else
-** its own, WC_TRAP) */
-static void __fastcall__ reached (unsigned u, unsigned v, unsigned char e, signed char dz, unsigned char v8)
+/* Square wk_v reached from wk_u by way wk_e (walk.h's wk_reach), its floor wk_dz above u's: its time from the start
+** (u's and the step's, by the pace: cost's, more on steps; a diagonal seven feet), and the first trap on its way (u's,
+** else its own, WC_TRAP) */
+static void reached (void)
 {
     static unsigned t, c;
 
-    c = cost (dz, (v8 & WC_STEPS) != 0);
-    if (e >= 4) {
+    c = cost (wk_dz, (wk_v8 & WC_STEPS) != 0);
+    if (wk_e >= 4) {
         c += (c << 1) / 5;                      /* (A diagonal: seven feet) */
     }
-    t = WAYS_T[u];
-    WAYS_T[v] = t + c < t || t + c > 0xFFFE ? 0xFFFE : t + c;
-    WAYS_TRAP[v] = (t = WAYS_TRAP[u]) != 0xFFFF ? t : v8 & WC_TRAP ? v : 0xFFFF;
+    t = WAYS_T[wk_u];
+    WAYS_T[wk_v] = t + c < t || t + c > 0xFFFE ? 0xFFFE : t + c;
+    WAYS_TRAP[wk_v] = (t = WAYS_TRAP[wk_u]) != 0xFFFF ? t : wk_v8 & WC_TRAP ? wk_v : 0xFFFF;
 }
 
-/* The ways from (fx, fy) to every square of room r's floor and walls it can walk to (walk.inc's search, a step at a
+/* The ways from (fx, fy) to every square of room r's floor and walls it can walk to (walk.h's search, a step at a
 ** time, in the four ways' order: the first way to each found kept, as the one way's search was), in the ways' bank;
-** the chunk in the window after.  Its squares by the rule (walk.inc's wk_cell), the character's: in a room a door a
+** the chunk in the window after.  Its squares by the rule (walk.h's wk_row), the character's: in a room a door a
 ** way (WK_HANDS: walked up to; one it has handled opened as it goes, across's), along a passage none (WK_NODOOR: the
 ** walk stops at its doors); no square a denizen's on, nor one with a trap it knows of (it goes round), one hidden on
 ** it the way's (WC_TRAP: it stops there, on_way's) */
 #pragma bss-name (push, "SW21RODATA")          /* (A row of squares read in: the part's own, while it runs) */
-static unsigned char wrow[CW];
+static unsigned char wrow[CW], wdoor[CW];
 static signed char werow[CW];
 #pragma bss-name (pop)
 void __fastcall__ s_ways_go (unsigned char r, unsigned char fx, unsigned char fy)
 {
     static struct room* p;
     static struct trap* q;
+    static struct portal* o;
     static unsigned i;
-    static unsigned char x, y, u, c, b;
+    static unsigned char x, y, u, d, b;
 
     if (r == 0xFF) {                            /* (In a passage: the squares within 12 of it, the chunk's: the box kept
                                                 **   in the chunk, its corner never wrapped below it) */
@@ -7438,7 +7436,6 @@ void __fastcall__ s_ways_go (unsigned char r, unsigned char fx, unsigned char fy
     }
     b = ovbank[OVBANKS + 1];
     wk_rules = r == 0xFF ? WK_NODOOR : WK_HANDS;
-    wk_cl = WAYS_CL;
     for (y = woy; (unsigned char) (y - woy) < woh; ++y) {  /* (Its squares read in, a row at a time: the chunk's bank,
                                                 **   then the ways'; past the chunk's edge, none) */
         if (y >= CW) {
@@ -7449,17 +7446,23 @@ void __fastcall__ s_ways_go (unsigned char r, unsigned char fx, unsigned char fy
                 continue;
             }
             u = C->tile[y][x];
-            c = wk_cell (u, TILE (u) == T_DOOR ? portal_at (x, y) : 0);
-            if (c & WC_OPEN) {
+            d = WD_NONE;
+            if (TILE (u) == T_DOOR) {
+                o = portal_at (x, y);
+                d = WD_PORTAL (o);
+            }
+            if (T_PASS (u)) {
                 if (den_on (rx0 + x, ry0 + y) || ((q = trap_at21 (x, y)) != 0 && !(q->state & TS_HIDDEN))) {
-                    c &= ~WC_OPEN;              /* (Nor onto a denizen, nor a trap it knows of: it goes round) */
+                    d |= WD_NO;                 /* (Nor onto a denizen, nor a trap it knows of: it goes round) */
                 } else if (q) {
-                    c |= WC_TRAP;
+                    d |= WD_TRAP;
                 }
             }
-            wrow[x] = c;
+            wrow[x] = u;
+            wdoor[x] = d;
             werow[x] = C->elev[y][x];
         }
+        wk_row (wrow, wdoor, CW);               /* (Their cells, by the rule: the row's whole, those read in used) */
         hy_bank (b);
         for (x = wox; (unsigned char) (x - wox) < wow; ++x) {
             if (x < CW) {
@@ -7471,6 +7474,10 @@ void __fastcall__ s_ways_go (unsigned char r, unsigned char fx, unsigned char fy
         (hub_map) (at_bank);
     }
     hy_bank (b);
+    wk_cl = WAYS_CL;
+    wk_el = WAYS_EL;
+    wk_ring = WAYS_Q;
+    wk_reach = reached;
     wk_x0 = wox;
     wk_y0 = woy;
     wk_w = wow;
