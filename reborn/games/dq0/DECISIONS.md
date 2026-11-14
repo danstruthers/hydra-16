@@ -5516,3 +5516,65 @@ A blackout can be long ("drifting in the blackness"), so commands queued during 
 out on waking.  The user's decision: while the character is senseless, input isn't queued; it's ignored or refused.
 Commands already waiting when the character is knocked out go too.  To build (DECISIONS.md's "A denizen's blow at its
 time": the last thing that splits dq0engage's fight by timing).
+
+## Commands while knocked out (the user's, 2026-11-13; as built, for review)
+
+The user's decision ("Commands while knocked out: not taken" above): while the character lies senseless no line is
+queued to be carried out as it comes round; lines typed meanwhile, and lines waiting as it's knocked out, go.
+
+- **What it was.**  The UI answered a knockout told (a blow's, blows.c's o_blow) with a wait of its own, the black-out's
+  tenths (`I_WAIT`, quiet); the world took every intent as it came, whatever the character's state (dq0w.c's intent:
+  `busy (t)`, pc_ready from its own clock).  So the black-out ended when the UI's wait reached the world plus its
+  tenths, not at the blow's moment plus them: dq0engage's last fight split by it (2M, 4M cycles: the wait taken at t403,
+  the rise t503; 0, 6M, a space: taken at t437 as the turns pace had moved the clock on, the rise t537), not by the
+  typed "wait" as "A denizen's blow at its time" thought.  A line typed in the black-out, or a line the UI sent in the
+  moment between the world's knockout and the UI's telling of it, was taken at once (a step, a wait: pc_ready set
+  afresh, the black-out cut short or stretched).  And a knockout during a long task (a walk, a wait, a search) was cut
+  short by the blow's own hard stop (stop's and halt's `pc_ready = now`), the UI's wait alone keeping it down: a prompt
+  could come while it lay OUT (dq0deadonce's "kick the orc" was typed at one, and carried out: "You struggle, but can't
+  get up.").
+- **Built: the world's.**  The hub's `pc_out` (hub.h, the header's last byte; the world's: owners' table): the
+  character lies senseless.  Set as a blow knocks it out (wfight.c, with pc_ko, the black-out from the blow's moment as
+  before, and pc_waited: its eyes and the time it believes looked to as it comes round, as the UI's wait's end did) and
+  as a harm does (bearings_off's harm path, W_SLOT.w2: a fall's, a trap's, the roof's).  While it's set: no intent of the
+  UI's is taken but I_QUIT (main's loop: dropped, the UI's E_READY still coming as it's free, was_busy); a hard stop
+  (stop, halt: one helper, free_now) leaves pc_ready where the black-out put it.  Cleared as the character is free again
+  (main's free check, which runs for it too, `|| pc_out`: its E_READY as it comes round, though nothing was sent).
+- **Built: the UI's.**  No wait sent for a knockout: busy till the world's E_READY (blows.c, if the world has it out
+  still: else it's come round already).  `out_told` (main.c), set as the knockout's told (a blow's, a harm's E_OUT): while
+  the world has it out, each line entered (or waiting from before, held or behind) is taken and dropped, the parser's
+  reply with it, and refused once (main.c's out_line, part 2's): said.txt's new NO row, "You lie senseless." (say_no's
+  A_OUT).  So the refusal comes after "Everything goes black.", never before it.  A sound heard as it lies senseless
+  asks the world nothing (the long task's I_ASK: dropped anyway).
+- **Taken while senseless:** "quit" (held till it comes round, as any line typed as it's busy: so the game isn't saved
+  mid black-out, which a game carried on would forget: the save has no black-out; dead first, the game's end as ever)
+  and "help" (at once).  Everything else refused, the things that take no time too (what's carried, the sheet, the map,
+  the time, a look about, the state, the pace): it knows nothing as it lies there.  For review.
+- **Death while senseless** ends the game as any death (o_ending, quit; the world's I_QUIT taken whatever pc_out says):
+  dq0leisure, dq0deadonce (now dead before its third line: see below) and dq0outcold's second game.
+- **dq0engage's last game**, at 0, 2M, 4M, 6M cycles before its "d" and a space (the knockout work's variants): one game
+  in all five, sentence for sentence and blow for blow (knocked out at t403, the blow meant at t337: comes round at t437,
+  the rise then, its blow at t537).  Its last fight no longer splits by timing: dq0engage can leave the noise list (its
+  rat game's sightings differed from the last build's once, as any denizens met: not between the variants).
+- **Tests.**  New: dq0outcold (dq0senseless's rats, "drop the torch" typed at "Everything goes black.": refused, no
+  intent, the torch still in hand at the quit, the waits after it taken; dq0deadonce's orcs, "kick the orc" typed at
+  its black-out: refused, the character dead senseless, the end told once, the shell back).  dq0deadonce: its "kick
+  the orc" gone (typed at a prompt that came as it lay OUT; none comes now till it comes round, and it dies first: the
+  line went to the shell, "rc: kick: not found"); every check as it was.  No other input or expected string changed:
+  no other test types a line in a black-out now (their lines typed at the prompt, which comes only as it comes round).
+- **What the player sees differently.**  "You lie senseless." after a line typed as it lies senseless, and no prompt
+  while it's OUT.  Fights after a knockout: the black-out ends at the blow's moment and its tenths, not as the UI's
+  wait came (dq0longwait: one black-out, then "You're badly hurt. Keep fighting?", "You stop fighting." for "Everything
+  goes black again." and "You're in no state to fight."; dq0deadonce: dead senseless).
+- **Transcripts** (the suite's, by sentence, sent.js), against abab4e9e's: 19 differ.  Intended: dq0deadonce (dead senseless, its third line gone), dq0longwait (the fight after its black-out).  After a black-out now of the blow's length, denizens seen or heard at other moments, no blow or word of the character's otherwise: dq0battering, dq0bearing, dq0disarm, dq0hidelook, dq0hoard, dq0robbed, dq0senseless, dq0spiderbite, dq0throws; dq0features (a rat seen, not heard).  dq0engage: its rat game's "watching you" wrapped at another place (the same sentences).  The known noise: dq0antidote, dq0denpace, dq0faced, dq0jobs, dq0skykin, dq0sway.  "You lie senseless." in no test but dq0outcold: no other types a line as it lies out.
+- **Room:** dq0's main RAM 3,338 -> 3,314 (out_told, the gate's call, out_line's stub); its part 2 404 -> 333 (out_line),
+  11 2,350 -> 2,322, 14 1,637 -> 1,632; overlay 6 2,253 -> 2,227 (o_blow); the packer moved part images: overlays 14
+  1,544 -> 1,473, 15 3,694 -> 335, 18 752 -> 747, 24 342 -> 3,673, 27 175 -> 159, 28 3 -> 0, 29 1,540 -> 1,545.  dq0w's
+  main RAM 2,079 -> 2,059 (the intents' guard, the free check's); part 15 124 -> 118, 23 6 -> 18 (free_now), 52 2,592 ->
+  2,589; overlays 11 183 -> 195, 14 329 -> 323, 16 765 -> 762.  The start: seed 1 232.6M -> 232.5M, 123456789 309.2M ->
+  309.5M (timing).  The suite: all 448 pass.
+- **Open, for review.**  (1) The refusal's words, "You lie senseless.", or silence (the user's "ignore input").  (2)
+  What's taken while senseless: quit and help only (the sheet, what's carried, the map refused).  (3) Lines waiting as it's
+  knocked out refused with the same words (after "Everything goes black."), not dropped unsaid.  (4) A line the UI sent
+  in the moment before it learnt of the knockout is dropped by the world unanswered (its echo, then the black-out's words,
+  no refusal).  (5) It still hears as it lies senseless (sounds told, a denizen stirring seen: as before).
