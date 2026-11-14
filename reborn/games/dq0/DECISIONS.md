@@ -5883,3 +5883,73 @@ changed."
   own steps (dq0packsteps' dip in the dark): no look now, the dark never told; or a look whenever a light is lit after
   none was carried?  (5) A sconce's torch gone out in a room lit by its lamps: no look, the sconce's torch shown unlit
   at the next look.
+
+## Looking through a door's little window (the user's, 2026-11-14; as built, for review)
+
+The user: "I still can't look through a little window in a door."  Doors have been made with a little window, a
+grille across it (PF_GRILLE: a door in six), or a spy-hole, its cover on the bar's side (PF_PEEP: a door in six of the
+rest), since 2026-10-15 (dq0m/fixtures.c; DUNGEON.md's a portal's make), and examining one says so ("A little window is
+cut in it, a grille across it."); nothing was built to look through either.  No record asked for it before (DECISIONS.md,
+HISTORY.md, COMMANDS-CRITIQUE.md, DUNGEON.md, the log: the features made and described, no more): the "still" is the
+examine's words promising what the look didn't do.  The line's portal rule ("One line of sight" above, now dq0lib's
+line.s) never knew of them: a closed door stops the eye, whatever is cut in it.
+
+- **What it was** (dq0grille's scene: seed 1, the cell's south door closed beside the character, given a grille, then a
+  spy-hole): "look through the little window", "look through the window": "You haven't seen a window here.";
+  "peer through the grille", "look through the spy-hole": a look about, the word passed over; "look through the
+  door": "You peer ahead.  You can't see past the door ahead: it's closed."; "open the spy-hole": "You look for the
+  spy-hole.  You open the door, revealing a passage, 5 feet of it." (the door opened); "close the spy-hole" closed the
+  door; from the passage at a slant, "There's no door that way."
+- **Built: asked, the eye at it.**  The UI (way.c's `peep`, part 17) decides a look one way is through a door: the door
+  named by its little window or spy-hole, or "look through the door" at one that has either, closed.  It's walked up to
+  first (the feature path's FG_NEAR, where a look one way never walks) and faced, and the world asked with I_LOOK's w2
+  (msgs.def's `peek`): the world's s_look_way (part 22) asks the senses LK_PEEK in place of LK_WAY.  The senses
+  (dq0p/view.c) then, if the square ahead is a closed door with a little window, or a spy-hole whose cover is on the
+  character's side (the bar's, as the world's store.c reckons a side), clear that square's G_OPAQUE in the look's grid
+  once it's made (a look one way's grid isn't kept), so the look's own rays go through it as through an open door;
+  v_way's bits say what (view.h's VP_ASK, VP_GRILLE, VP_PEEP, VP_COVER).  The line is untouched: a look about, a
+  denizen's eyes, a missile, the air, a sound, the lights far off are as they were.  So is a look that way not asked
+  through it: "look south", "look at the door" beside such a door say "You can't see past the door ahead: it's
+  closed." as before (dq0answer's and dq0features's looks ahead, beside doors the maker gave little windows, are
+  unchanged).
+- **What's told** (dq0p/way.c; the UI's way.c, overlay 13): that door alone, none of the place's other openings:
+  "Through the little window in the door you see a passage, 5 feet of it.", "... into the cell.", "... only darkness."
+  (a room, its kind, lit by its own light; a passage, how far; along the way straight out of the door's far side, the
+  one the eye sees past at a slant); then the things and the denizens beyond it, in the glance's words, those past the
+  door within a quarter either side of the way the eye looks (a little window's), or within an eighth (a spy-hole's: no
+  further to the side than half the way on).  The lights far off aren't told.  The squares the rays reach are seen
+  (marked, remembered) as they would be through a doorway from there; only the telling is narrowed.  A spy-hole whose
+  cover is on the far side: "The spy-hole's cover is on the far side: you can't see through it."
+- **The words** (commands.words): grille, grill, spy-hole, spyhole, peephole, peep-hole, a door's parts (OB_DOOR
+  PART); "the little window", "the small window" (the window, its word "little" or "small"); "the window" with no window
+  in sight but a door with a little window; "peek" a look ("peer" was already).  A name picks the nearest door it sees
+  that has one (pick_x, pick_y, for the feature path's pick); none: "You haven't seen a little window in a door here.",
+  "You haven't seen a spy-hole here."
+- **Opened, closed** (hplaces.c's do_door): "open the spy-hole" (or the little window, the grille) is the look through
+  it, the cover slid back for it and let fall after (no state kept); "close the spy-hole": "The spy-hole's cover is
+  closed."; "close the little window", "close the grille": "The little window has no shutter: only its grille."
+- **Test dq0grille** (senses.js): the scene above, from the cell (the door closed, a grille poked into its record):
+  examined; looked through by "the little window", "peer through the grille", "the door", "the window"; "look south"
+  as ever; "close the little window".  Then from the passage (the character gone on to the guardroom, the door poked
+  shut and not known behind it, so the walk back stops at it, at a slant): "look through the grille" (turned to it,
+  "into the cell"), the little window; a spy-hole poked in, its cover on the passage's side: examined, looked through
+  ("into the cell", the rat there), opened, closed; its cover then the cell's side: "The spy-hole's cover is on the far
+  side ...".  Each answer's words checked in order, and none telling more than the door looked through.
+- **What a player sees change:** only the commands above.  Every other test's transcript the same, sentence by
+  sentence, before and after (but the timing noise the record allows).
+- **Room:** the UI's main RAM 3,173 (unchanged); its overlays and parts repacked by the build (part 17 2,221 -> 1,258
+  free, part 2 336 -> 45, overlay 13 5 -> 3,978).  The senses' main RAM 4,920 -> 4,891; s_things_lamps moved by the
+  packer from part 1 (4 free) to part 3.  The world's main RAM 2,905 (unchanged); part 22 2,811 -> 2,793.  dq0c's
+  words 6,092 -> 6,111 of 8,192, its RAM 14,101 -> 14,176 of 14,592.
+
+**Open questions (the user's to decide):**
+
+- *Denizens seeing the character through it.*  Not built.  A denizen's eyes go by the line (ln_portal), which a closed
+  door stops: one beyond the grille the character watches doesn't see it watching.  Building it means the line's
+  portal rule (dq0lib's line.s) letting sight through a closed door's grille, narrowly (and then the character's look
+  about too, from anywhere in the room?), and a spy-hole only with its cover open, a state the door doesn't keep.
+- *Its light through it.*  The character's torch lights what the rays reach through the grille as through a doorway,
+  and through a spy-hole too, which is generous.  Seeing only by the far side's own light would mean the cast's lamp
+  rule knowing the peeked square (dq0p/cast.s).
+- *Sound and smell* through a grille: a closed door's, as before.
+- *A spy-hole's cover left open* (seen from the far side as a lit hole, an eye at it): not built.
