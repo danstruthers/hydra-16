@@ -5819,3 +5819,67 @@ doesn't raise. `raise portcullis` does open it, though."
   door is in sight) raises it at once, untimed: make it the minds' PA_RAISE (begun, then posted again), or leave it?
   (2) "Close the door" at a portcullis (no door in sight, choose.c's bars) keeps a door's first words ("You reach for
   the door."), named as the player named it.
+
+## No look when the light's the same (the user's, 2026-11-14; as built, for review)
+
+The user's report: "When you light a new torch from a burning one, it should not re-look since the light state has not
+changed."
+
+- **What it was.**  Every light lit or put out by the character (hthings.c's s_after: IO_LIGHT, IO_DOUSE, or its carried
+  light changed) is the world's I_LIGHT, and the world answers every one with E_VIEW V_LIT or V_DARK (dq0w.c), as it
+  does a light burning out (V_DARK, the lights' minute).  The UI looked about whole at each (main.c's E_VIEW, look (0)).
+  So a second torch lit from the burning one, "light a new torch" (the old one put out and let fall: things.c's after-work
+  queue), "light the unlit torch with the lit torch", one of two lit put out, one of two burning out ("One of your
+  torches gutters and goes out."), a candle lit beside a torch: each told the whole place again, the same as before.
+- **What the light is, in the game's rules.**  The character's light is the brightest it carries (things.c's
+  s_light_now: the hub's pc_light, a reach in squares, and pc_lamp its name; the catalogue's torch 4, lantern 6, candle 2,
+  candle stubs 1): two torches give no more light than one.  But what it sees by is more than what it carries: a room's
+  own light (a sconce's torch lit: the senses' record's lit), lights lying on the floor (a torch put down burning), all of
+  them the senses'.  A rule on pc_light alone (tried first) lost real changes: a sconce's torch lit or put out with the
+  character's own torch burning (dq0kept, dq0glow, dq0lookway, dq0passes: "lit by smoky tallow lamps" untold) and two
+  torches lying lit burning out with none carried (dq0busyloop: "It is dark." untold).
+- **Built: decided where the look is, by what's seen.**  Each look keeps a sum of the senses' record of the place (look.c's
+  sight_same, SS_LOOKED, as look () reads the record): from where it stands to its ways (its square, its dark, the room's
+  own light, how much of it's seen, its doors, zones, openings, ways and ceiling); not the record's seq nor first (the UI
+  marks it), and not the things lying about nor the denizens (a light lit or put out alone doesn't change them: the old
+  torch let fall by "light a new torch" isn't a new light; the denizens moving have their own stir).  At E_VIEW V_LIT or
+  V_DARK the UI reads the record again (the world's see (0) came before it) and sums it: the same, and the light of the
+  same name (pc_lamp against the last look's, the look's words "by the light of your torch"), no look; else the whole look
+  as before.  The light lit or put out keeps its own words ("You light the unlit torch.", "You light the new torch from the
+  burning one.", "You put out the torch.", "One of your torches gutters and goes out.").  A greater light (a lantern lit
+  beside the torch) sees more: looked at.  The last light put out: dark, "It is dark." as before.  Knocked out, the same
+  test first: no look owed for a light changed but not what's seen.  The world unchanged (its main RAM), E_VIEW sent as
+  ever (the tests that read it, dq0light's, unchanged).
+- **The sum.**  A Fletcher sum (two bytes, mod 256) of the record's bytes in that range: a change it misses (two that
+  cancel) would leave a look out; a change in a slot past the record's counts (a stale door) only gives the look back.
+- **Tests.**  dq0relight (senses.js, areas.js's senses): at seed 3 a second torch held and lit from the burning one (its
+  words, no look); one of two put out (no look); the last put out ("It is dark."); lit in the dark (the place by its
+  light); "light a new torch" and "light the unlit torch with the lit torch" (no look); one of two burning out (no look);
+  a lantern lit beside the torch ("You are at the near end of a long, narrow cell, by the light of your lantern."); two
+  torches lit, put down and burning out as it rests ("It is dark.").  Before the change its no-look checks all fail (the
+  probe's transcript).  No other test's check changed.
+- **What the player sees differently** (the suite's transcripts, by sentence, sent.js, against c1b9a9e1's: 17 differ).
+  The known noise alone: dq0antidote (its real-time fight), dq0jobs, dq0lookfar, dq0prompt, dq0reachstop, dq0skykin,
+  dq0stopwords, dq0sway, dq0tiring.  The rest only lose a look (no sentence added), each where the light lit or put out
+  left the place seen as it was: a second torch lit from the burning one (dq0twoalike, dq0packsteps' "light the
+  torch" with one burning, dq0letcmd's "light j with a"); "light a new torch" (dq0housefaults twice, dq0newlight,
+  dq0packsteps twice: "You light the new torch from the burning one. You put out the old torch. You let the old torch
+  fall."); one of two burning out (dq0packsteps: "One of your torches gutters and goes out."); a torch lit with the
+  lantern burning, candle stubs lit and burnt out with the torch burning (dq0light: the brighter light the same); a
+  torch lit in hand with another lying lit at its feet (dq0busyloop, dq0twoalike: the place seen by it already); a
+  sconce's torch gone out in a room lit by its own lamps (dq0passes: "The torch gutters and goes out.", the room still
+  "lit by smoky tallow lamps"); and a torch put out and lit again inside one command (dq0packsteps' "dip the torch" in
+  the dark: its reach's own steps, the dark never looked at, the place relit as it was last told).  "It is dark." as
+  often as before in every test; every look of a sconce lit or put out, a lantern lit, a torch lit in the dark, kept.
+- **Room:** dq0's main RAM 3,173 -> 3,143 (the E_VIEW test and look ()'s call: the sum itself is part 8's, look.c's
+  s_sight_same); part 8 2,183 -> 2,027, its bank's overlay 3 2,008 -> 1,852.  No other task, overlay or part changed
+  (dq0w, dq0p, dq0d as they were).  The start: seed 1 233.3M -> 233.1M, 123456789 308.7M -> 308.7M.  The suite: all
+  449 pass (dq0relight new).
+- **Open, for review.**  (1) A light of another kind carried but no more seen (a lantern lit while a torch burns, the
+  place already whole): looked at again, its name changed ("by the light of your lantern"); or its own sentence enough?
+  (2) A candle lit beside a torch: no look (the torch the brighter, nothing more seen); the candle's light not worded.
+  (3) "hold another torch" with both hands full lays the lit torch on the ground and tells no look (dq0busyloop), as
+  before: the place lit by the torch at its feet then; unchanged here.  (4) A light put out and lit again by a reach's
+  own steps (dq0packsteps' dip in the dark): no look now, the dark never told; or a look whenever a light is lit after
+  none was carried?  (5) A sconce's torch gone out in a room lit by its lamps: no look, the sconce's torch shown unlit
+  at the next look.
