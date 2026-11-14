@@ -277,8 +277,9 @@ static unsigned char gsq, gcm, gks;             /* (Its command line's: the pars
                                                 **   line's keys a hold of their own) */
 #define UI_HOLD         (HUB->ui_cmd | HUB->ui_keys)    /* (A command in hand, or a line being typed from its first key
                                                 **   (dq0hold's, the world's long jobs' too, 2026-11-06: a mind's
-                                                **   deciding no longer under way as its Enter comes), GIVE_WAY at
-                                                **   most while the keys go on, then the command its own GIVE_WAY) */
+                                                **   deciding no longer under way as its Enter comes), KEY_HOLD
+                                                **   real ticks at most while the keys go on (held's, 2026-11-14),
+                                                **   then the command its own GIVE_WAY) */
 #define DN_MAGIC        0x4E44                  /* "DN": dens.dat's */
 struct head {
     unsigned        magic;
@@ -3139,6 +3140,43 @@ static unsigned char __fastcall__ route (unsigned char k)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+/* The minds held for the UI (UI_HOLD: a command in hand, or a line being typed) at the real paces, GIVE_WAY at most
+** each line's own (gsq, gcm, gks: a new line, a command's answer begun, a line typed again): 1, held.  Asked by main
+** each time round and by tend between its actors, the line looked at each time: a line let go and typed again as
+** they decided, main not round meanwhile, held from its first key, not the last's hold run out (dq0hold's, a mind
+** deciding with the keys on the line, 2026-11-14).  A line's keys held KEY_HOLD real ticks, the world's and the
+** senses' three seconds (not GIVE_WAY's tenths of the game's clock, a command's: at the normal pace a game second is
+** 0.3 of a real one, the keys' hold run out in a second, a mind deciding two seconds into the line, dq0hold's) */
+#define KEY_HOLD        600
+static unsigned gt0;                            /* (Its ticks: a line's keys') */
+static unsigned char held (void)
+{
+    hub_map (0);
+    if (HUB->cq.seq != gsq || HUB->ui_cmd != gcm || HUB->ui_keys != gks) {
+        gks = HUB->ui_keys;                     /* (A line typed again: its own hold, hub.h's ui_keys) */
+        gsq = HUB->cq.seq;                      /* (A new line: given way to again, though the last's outlasted
+                                                **   the wait, its command not let go in between; the next line's
+                                                **   keys as the last's answer's begun) */
+        gcm = HUB->ui_cmd;
+        gw = 0;
+    }
+    if (!turns && UI_HOLD && gw != 2) {
+        if (!gw) {
+            gw = 1;                             /* (At the real paces, the UI's command in hand answered first: the
+                                                **   minds wait, three seconds at most) */
+            gwt = hub_now ();
+            gt0 = hy_ticks ();
+        } else if (HUB->ui_cmd ? hub_now () - gwt > GIVE_WAY : (unsigned) (hy_ticks () - gt0) >= KEY_HOLD) {
+            gw = 2;                             /* (Waited long enough: on, till the command's let go) */
+        }
+        return gw != 2;
+    }
+    if (!UI_HOLD) {
+        gw = 0;
+    }
+    return 0;
+}
+
 /* ---- The denizens away from the character (out, but not actors): moved coarsely, a while at a time, each to a
 ** square of its range about its lair (in a chunk that's made: never made for them), so the dungeon goes on where
 ** the character isn't */
@@ -3191,7 +3229,7 @@ static unsigned char roam (void)
             }
             continue;
         }
-        if (hub_map (0), !turns && UI_HOLD && gw != 2) {
+        if (held ()) {
             roam_at = now;                      /* (The UI's command in hand: the rest after its answer, as tend's
                                                 **   actors; their days are part 9's) */
             break;
@@ -3279,7 +3317,7 @@ static void tend (void)
         fresh = 10;
         nonear = 0;
     }
-    if (fresh && !nonear && (hub_map (0), turns || !UI_HOLD || gw == 2)) {
+    if (fresh && !nonear && !held ()) {
         --fresh;
         again |= nearby ();                     /* (Part 13's: not while the UI's command is in hand at the real
                                                 **   paces; none left near to place, not asked again till the
@@ -3293,10 +3331,10 @@ static void tend (void)
     }
     lnow = now;
     for (k = 0, q = HUB->actor; k < NACTORS; ++k, ++q) {
-        hub_map (0);
-        if (!turns && UI_HOLD && gw != 2) {
+        if (held ()) {
             break;                              /* (The UI's command come in meanwhile, as they decide, though not
-                                                **   seen yet: the rest decide next time round, its answer first) */
+                                                **   seen yet, or a line typed again: the rest decide next time round,
+                                                **   its answer first) */
         }
         if (!q->name[0]) {
             continue;
@@ -3333,7 +3371,7 @@ static void tend (void)
         }
         owe = 1;
     }
-    if (owe && (hub_map (0), turns || !UI_HOLD || gw == 2)) {
+    if (owe && !held ()) {
         owe = 0;                                /* (The denizens near made actors: not while the UI's command is in hand
                                                 **   at the real paces, part 11's swap off its answer's path) */
         enlist_near ();
@@ -4613,25 +4651,8 @@ int main (int argc, char* argv[])
         turns = !HUB->tpr;
         g = HUB->den_go;
         act = !turns || g != gone;              /* (At the turns pace, only in its turn: the world's word, den_go) */
-        if (HUB->cq.seq != gsq || HUB->ui_cmd != gcm || HUB->ui_keys != gks) {
-            gks = HUB->ui_keys;                 /* (A line typed again: its own hold, hub.h's ui_keys) */
-            gsq = HUB->cq.seq;                  /* (A new line: given way to again, though the last's outlasted
-                                                **   the wait, its command not let go in between; the next line's
-                                                **   keys as the last's answer's begun) */
-            gcm = HUB->ui_cmd;
-            gw = 0;
-        }
-        if (!turns && UI_HOLD && gw != 2) {
-            if (!gw) {
-                gw = 1;                         /* (At the real paces, the UI's command in hand answered first: the
-                                                **   minds wait, three seconds at most) */
-                gwt = hub_now ();
-            } else if (hub_now () - gwt > GIVE_WAY) {
-                gw = 2;                         /* (Waited long enough: on, till the command's let go) */
-            }
-            act = gw == 2;
-        } else if (!UI_HOLD) {
-            gw = 0;
+        if (held ()) {
+            act = 0;                            /* (The UI's first: held's) */
         }
         if (act || hub_posted (&HUB->sway)) {
             now = hub_now ();

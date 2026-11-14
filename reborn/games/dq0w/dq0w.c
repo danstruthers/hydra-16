@@ -6998,7 +6998,9 @@ unsigned char __fastcall__ fumbled (unsigned char k)
 ** kernel's foreground with the UI's), a quarter second at most, each line's own; then 0, on with them (wbody.c's
 ** den_intents looks between them).  A long job's free pass (keys_hold's) goes before it, the second time.  The hub's
 ** header in the window */
-static unsigned char kfree, kcut;
+static unsigned char kfree, kcut, kmore, kburn; /* (kmore: the free pass over, the minute's own passes after it still
+                                                **   free, the lights' row's alone (kburn, as it's walked): main's,
+                                                **   dq0hold's hole, 2026-11-14) */
 unsigned char ui_first (void)
 {
     static unsigned t0;
@@ -7009,10 +7011,10 @@ unsigned char ui_first (void)
         t0 = 0;
         return 0;
     }
-    if (kfree == 2) {
-        return 0;
+    if (kfree == 2 && kmore <= kburn) {
+        return 0;                               /* (Not another row's in the minute's own passes: kmore's) */
     }
-    kcut |= kfree;
+    kcut |= kfree & 1;
     if (HUB->cq.seq != sq) {
         sq = HUB->cq.seq;                       /* (Each line's own quarter second: a line typed as the last's answer
                                                 **   was still owed had its kits drawn meanwhile, 2026-10-30) */
@@ -7030,26 +7032,27 @@ unsigned char ui_first (void)
 ** world's time and more; not a denizen's plain intent, a word of the game's own) hold back for a line being typed
 ** too, from its first key (the hub's ui_keys; the turns pace never, the game turning on no one's typing), so none's
 ** under way as its Enter comes.  KEY_HOLD ticks at most from the first one held back, those ticks running on through a
-** line's answer, a steady typist's lines one hold; then a pass of the main loop goes free (kfree, main's): what's
+** line's answer, a steady typist's lines one hold; then a pass of the main loop goes free (kfree, main's, from the
+** pass's top: every row walked in it, 2026-11-14): what's
 ** begun in it isn't stopped by keys; an Enter stops it, its answer first, but that once (kcut): the next free pass
 ** isn't stopped by one either, a kit given way to being drawn again from the start, and a steady typist's Enters
 ** stopping each try for good otherwise (the denizens behind it in the ring with it).  Then they hold back again:
-** late by that, not starved.  1, it waits for the keys (a command's own ui_first's, a quarter second).  The hub's
-** header in the window */
+** late by that, not starved.  A minute begun in it goes free on through its own passes after (the sconces', the time
+** it believes: kmore, the lights' row's alone), the rest held again from the first asked then, KEY_HOLD ticks of their
+** own: not riding the minute's passes, a journal come due as they went flushed with the keys on the line (dq0hold's
+** held2, 2026-11-14).  1, it waits for the keys (a command's own ui_first's, a quarter second).  The hub's header in
+** the window */
 #define KEY_HOLD        600
 static unsigned kt0;
 static unsigned char keys_hold (void)
 {
-    if ((HUB->pace & 3) == 3 || !(HUB->ui_keys | HUB->ui_cmd)) {
-        return 0;
+    if ((HUB->pace & 3) == 3 || !(HUB->ui_keys | HUB->ui_cmd) || (kmore & kburn)) {
+        return 0;                               /* (The minute's own passes: free, its clock not begun by them) */
     }
     if (!kt0) {
-        kt0 = (hy_ticks () - 1) | 1;            /* (ui_first's t0's) */
-    } else if (!kfree && (unsigned) (hy_ticks () - kt0) >= KEY_HOLD) {
-        kfree = 1 + kcut;
-        kcut = 0;
+        kt0 = (hy_ticks () - 1) | 1;            /* (ui_first's t0's; its free pass main's, at the top of a pass) */
     }
-    return !kfree && !HUB->ui_cmd;
+    return (!kfree || kmore) && !HUB->ui_cmd;
 }
 
 /* A long job, as it's due and as it goes: 1, it gives way (a command in hand, or a line being typed) */
@@ -7062,8 +7065,9 @@ unsigned char ui_long (void)
 /* The denizens' intents held for a line being typed too (dq0hold's, 2026-11-06), as the minds and the senses hold:
 ** from the first key KEY_HOLD ticks at most, then on till its Enter (its command's hold ui_first's) or the keys let
 ** go; not keys_hold's free pass and hold again, the denizens three seconds behind at most, not slowed while the keys
-** go on.  1, held */
-static unsigned char dst;
+** go on.  Each line's own (the hub's ui_keys, as the minds' gks and the senses' hks): a line let go and typed again
+** before a pass saw no keys held again, not the last's hold run out, 2026-11-14.  1, held */
+static unsigned char dst, dks;
 static unsigned dt0;
 static unsigned char den_held (void)
 {
@@ -7071,6 +7075,10 @@ static unsigned char den_held (void)
     if ((HUB->pace & 3) == 3 || !HUB->ui_keys || HUB->ui_cmd) {
         dst = 0;
         return ui_first ();
+    }
+    if (HUB->ui_keys != dks) {
+        dks = HUB->ui_keys;                     /* (A line typed again: its own hold) */
+        dst = 0;
     }
     if (!dst) {
         dst = 1;
@@ -7185,6 +7193,7 @@ static void dseq_job (void)
 
 static unsigned char burn_due_ (void)
 {
+    kburn = 1;                                  /* (The lights' row walked: keys_hold's, till the walk's end) */
     return HUB->round && (burn_ask || HUB->now >= burn_due);
 }
 
@@ -7257,11 +7266,24 @@ int main (int argc, char* argv[])
         while (hy_sem_try (HUB->sem[T_WORLD]) == 0) {
         }
         if (!(HUB->ui_keys | HUB->ui_cmd)) {
-            kcut = 0;                           /* (Nothing in hand: all begun again) */
+            kcut = kmore = 0;                   /* (Nothing in hand: all begun again) */
             kfree = kt0 = 0;
-        } else if (kfree && !burn_ask) {
-            kfree = kt0 = 0;                    /* (Its free pass over, a minute's passes all of it: the keys' hold
-                                                **   again, keys_hold's) */
+        } else if (kfree) {
+            if (!kmore) {
+                kt0 = 0;                        /* (Its free pass over: the keys' hold again, keys_hold's, from the
+                                                **   first asked) */
+            }
+            if (!(kmore = burn_ask != 0)) {
+                kfree = 0;                      /* (A minute's passes all of it, its own alone: the rest held, their
+                                                **   hold begun as they're asked, not riding them, 2026-11-14) */
+            }
+        }
+        if (kt0 && (!kfree || kmore) && (unsigned) (hy_ticks () - kt0) >= KEY_HOLD) {
+            kfree = 1 + kcut;                   /* (KEY_HOLD ticks held: this pass free, keys_hold's; from its top, so
+                                                **   every row's walked in it: given mid-pass, a kit's look in the
+                                                **   intents, the rows before it not walked free and held a whole hold
+                                                **   again, dq0hold's, 2026-11-14) */
+            kcut = kmore = 0;
         }
         uf = ui_first ();                       /* (The UI's command in hand at the real paces, its answer first: the
                                                 **   world's own periodic work waits for it, a quarter second at most:
@@ -7291,6 +7313,7 @@ int main (int argc, char* argv[])
         clock_run ();
         stepping ();                            /* (The long task as the clock goes: a walk a square at a time) */
         jobs (JOBS_LATE);                       /* (The late jobs: a body fallen, the denizens' bodies, the lights' minute) */
+        kburn = 0;
         if (!(((unsigned char) HUB->pcsum.cond & C_UNCONSCIOUS) | pc_ko)) {
             pc_down = 0;                        /* (A blow's knockout latched as its reply came, wfight.c's: seen
                                                 **   though it's over before this pass looks, 2026-11-13) */
