@@ -5578,3 +5578,10 @@ queued to be carried out as it comes round; lines typed meanwhile, and lines wai
   knocked out refused with the same words (after "Everything goes black."), not dropped unsaid.  (4) A line the UI sent
   in the moment before it learnt of the knockout is dropped by the world unanswered (its echo, then the black-out's words,
   no refusal).  (5) It still hears as it lies senseless (sounds told, a denizen stirring seen: as before).
+
+## Knocked out: the three questions (the user's, 2026-11-14)
+
+- **"You lie senseless." stays** as the answer to a line typed while knocked out.  Settled.
+- **Only quit and help are taken while knocked out** (inventory, sheet, map, time and look refused).  Settled.
+- **A knocked-out character neither hears nor sees.**  No sounds heard, no denizens seen stirring, nothing sensed
+  while senseless; what's around is learnt on coming round (the look on waking).  To build.
