@@ -332,7 +332,9 @@ void s_den_intents (void)
                 bd.ready = HUB->now + I_ROUSE_TENTHS (m);
             }
             break;
-        case I_ATTACK:                          /* (A round's blow) */
+        case I_ATTACK:                          /* (A round's blow, struck at its moment, its ready as it's taken (part
+                                                **   15's blow_t): not the clock's as the world gets to it, so a fight's
+                                                **   the same whatever the passes' timing; the user's, 2026-11-13) */
             bd.ready += HUB->round;
             den_blow (I_ATTACK_FOE (m), I_ATTACK_AIM (m));
             break;

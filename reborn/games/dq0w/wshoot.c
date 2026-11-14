@@ -571,7 +571,7 @@ static void den_shot (void)
 none:
     hub_map (0);                                /* (Its round given back: free now, nothing done) */
     HUB->agear[bk] = g == AG_NOSHOT ? HUB->agear[bk] | AG_NOSHOT : HUB->agear[bk] & ~AG_SHOOTS;
-    bd.ready = HUB->now;
+    bd.ready = blow_t ? blow_t : HUB->now;      /* (At its blow's moment, its intent's: 2026-11-13) */
 }
 
 /* The character's shot at actor k (part 15's pc_blow, pshoot's: the hub's pc_strike SK_OF what it shoots with,

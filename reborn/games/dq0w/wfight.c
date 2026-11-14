@@ -35,7 +35,10 @@ extern unsigned char pshoot;                    /* (wshoot.c's: the character's 
 static char wb[32];                             /* (A blow's words on their way to the ring, a piece at a time: part
                                                 **   15's image's, to_ring's alone, no part called as it's used; the
                                                 **   main RAM's room, 2026-10-29) */
+static unsigned long bt;                        /* (A blow's moment, as its reply's taken: blow's, no part called
+                                                **   meanwhile) */
 #pragma bss-name (pop)
+unsigned long blow_t;                           /* (wbody.h's: a denizen's blow's moment, its intent's; 0 the clock's) */
 
 #pragma code-name ("SW15CODE")
 #pragma rodata-name ("SW15RODATA")
@@ -152,6 +155,12 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
                                                 **   steps worse, struck at two easier; HOUSE.md's, 2026-10-31) */
     RS_ATTACK_HEART (*r) = bd.heart;                         /* (The creature's heart: its courage's steps as it's wounded, the
                                                 **   denizens' field and bonds, rs.h's RS_HEART) */
+    if (!att || blow_t >= HUB->now) {
+        blow_t = 0;                             /* (Its moment: a denizen's its intent's, when it meant it, not the
+                                                **   clock's as the world got to it (the user's, 2026-11-13), the
+                                                **   referee's too; never after the clock; the character's the clock's) */
+    }
+    RS_ATTACK_WHEN (*r) = blow_t;
     pa = me == att ? bd.pos : HUB->pc_pos;     /* (Their bodies' positions, the world's: prone, the easier struck) */
     pd = me == att ? HUB->pc_pos : bd.pos;
     RS_ATTACK_FLAGS (*r) = bd.timid | (POS_LOW (pa) ? RS_PRONE_A : 0) | (POS_LOW (pd) ? RS_PRONE_D : 0) | (ra ? RS_REARM : 0) |
@@ -269,18 +278,20 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     }
     hub_map (0);
     r->state = REQ_FREE;
+    bt = (blow_t ? blow_t : HUB->now) + w2;     /* (Senseless till then, from its moment, as the referee has it) */
     if (ff & (me == att ? FF_A_DOWN : FF_D_DOWN)) {
         bd.doing = DO_DOWN;                     /* (Senseless: it falls, and lies there till it comes round; up again,
                                                 **   its turn, the book's Rise, 2026-10-29) */
         bd.pos = POS_PRONE;
-        bd.ready = HUB->now + w2;
+        bd.ready = bt;
     }
     if (ff & (!def ? FF_D_DOWN : !att ? FF_A_DOWN : 0)) {
         pc_ko = 1;                              /* (Its bearings tested as main next looks, though it's come round
                                                 **   by then: not as the passes fall, 2026-11-13) */
-        if (HUB->pc_ready < HUB->now + w2) {
-            HUB->pc_ready = HUB->now + w2;      /* (The character senseless: busy till it comes round, so nothing's
-                                                **   done meanwhile, however the UI's events come) */
+        if (HUB->pc_ready < bt) {
+            HUB->pc_ready = bt;                 /* (The character senseless: busy till it comes round, so nothing's
+                                                **   done meanwhile, however the UI's events come; come round already
+                                                **   by the clock, if the blow was meant that long before it: free) */
         }
     }
     if (ff & FF_FLEES) {
@@ -359,6 +370,11 @@ void s_bled (void)
 void __fastcall__ s_den_blow (unsigned char def, unsigned char z)
 {
     hub_map (0);
+    if (!(z & AIM_FIRE)) {
+        blow_t = z & FW_FIRST ? 0 : bd.ready - HUB->round;    /* (Its moment: its intent's, its ready before part
+                                                **   14 put its round on it; the engage test's blow first the clock's.  A
+                                                **   missile's blow, its shot's, set as it was shot) */
+    }
     if (!def && ((unsigned char) HUB->pcsum.cond & C_DEAD)) {
         return;                                 /* (The character dead of a blow this round: no more blows at its body) */
     }

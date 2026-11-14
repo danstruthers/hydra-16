@@ -5446,3 +5446,66 @@ the next visit's words; what's left for the account's living, work and practice;
   only big or not.  A size per kind (town.txt's kind lines given a figure) would be the next step.
 - *The base for goods and the smith* stays the world's and the account's; a ruleset with its own economy would want meta_price
   to scale them too (one more entry each).
+
+## A denizen's blow at its time (the user's, 2026-11-13; as built, for review)
+
+The user's answer ("Four answers" above): the world takes a denizen's blow at its intent's time, not at its own clock
+as it gets round to it, so a fight doesn't depend on the passes' timing; some fights play out differently.
+
+- **What was stamped with the clock.**  A denizen decides as its ready comes (dq0d: `q->ready <= now`), and the world
+  carries its intent out when it gets to it, at the turns pace up to a slice (TURN_SLICE, ten seconds) later.  Its
+  blow's moment is its ready as it's taken (wbody.c's I_ATTACK, before its round is put on it); the clock was used
+  instead in four places: the referee's (dq0harn's tnow: the character's black-out, pc_out, a creature's, bs.out; a
+  defence once a round, dbt[]; the round's, gear.c's rnd_at), the character's free moment as it's knocked senseless
+  (wfight.c's `pc_ready = now + w2`), a denizen's as it is (`bd.ready = now + w2`), and a denizen's shot not taken, its
+  round given back (wshoot.c's den_shot, `bd.ready = now`).
+- **Built.**  A blow's moment (wfight.c's `blow_t`, the main RAM's): s_den_blow takes it as part 14 calls it, body
+  bd's ready less the round it put on it; the engage test's blow first (FW_FIRST) the clock's; a missile's (AIM_FIRE)
+  the shot's, as it was shot.  blow() tells the referee: msgs.def's RS_ATTACK `when` (x[4-7], in every form; wblow.c's
+  blows at a thing 0), and dq0harn's tnow is it for RS_ATTACK, else the clock.  Out till its moment and the tenths
+  out: the character's pc_ready (raised only, as before) and a denizen's ready; den_shot's round given back to its
+  moment.
+  - **The clamp.**  Never after the clock: an intent's ready is never past the clock the minds decided at, and the
+    clock never goes back; if it were, the clock's.  Before it: allowed.  A black-out the world got to after it was
+    over leaves the character free at once (pc_ready never set below what it was), its bearings still tested (pc_ko,
+    "A knockout's bearings" above).  The character's own blows, and a blow at a thing, the clock's.
+  - **Left the clock's.**  The blow's events' times (E_FIGHT's t: the rings in order, the UI's and the minds' readings of
+    them as they were); a blow stopping the character's long task (stop's `pc_ready = now`: the clock can't go back for
+    the work done); a rouse (I_ROUSE, `now + tenths`: the minds' "from now" at their own clock, and the intent carries no
+    time of its own, im.t only the last I_DONE's); the engage test's blow first; the null referee (no black-out clock of
+    its own; its shield once a round by the clock).
+- **Checked: dq0engage's last game**, at 0, 2M, 4M, 6M cycles before its "d" and a space (the knockout work's
+  variants).  Before: 0, 2M and 4M the short fight (its rise t503), 6M and the space the long (t603).  After: the
+  knockout the same in all five (the ghoul's blow meant at t337, taken at t403: out till t437 by the world and the
+  referee alike), but the fight still splits, by another cause: the "wait" typed ahead.  Typed while it lies senseless,
+  it's taken at once (2M, 4M, the space: a round's wait from t403, the black-out within it, its rise t503, the short
+  fight); typed later, as it comes round (0, 6M: from t437, its rise t537, the long one).  The blow's timing-free; what's
+  left is the typed line's ("Tried, not built" below: open, the user's).
+- **dq0antidote and dq0denpace** (the real-time fights the noise list names), at 0, 2M, 4M, 6M cycles before a line
+  and a space before (antidote's "south", denpace's first "wait 1 minute"), at 0, 6M and a space after.
+  dq0antidote: the same in every variant, before and after.  dq0denpace: before, its 6M variant met no bandit at all
+  (the others a fight from t400); after, every variant the same.  Both still differ from build to build in the suite:
+  dq0denpace by the bandits' order of deciding at t100 (before any blow), dq0antidote by its stop a round sooner
+  (t360).  They stay on the noise list.
+- **Tried, not built: a command typed while senseless taken as it comes round.**  A latch set by a blow's knockout at
+  the turns pace (dq0w.c's main: no intent taken while it's set; turns_run going on with one waiting; cleared as the
+  character's free).  dq0engage's five variants then one game, dq0denpace's and dq0antidote's too; but the typed-ahead
+  lines meant something else.  dq0helpless's waits, typed as the adders bit, began after the black-out, not in it, and
+  the character bled to death; and as it died senseless the latch never cleared (no turn for the dead), so dq0leisure,
+  dq0disarm, dq0denportc and dq0deadonce hung at their quit.  A change in what the player's lines do, not the blow's
+  time: the user's to decide.
+- **What the player sees differently: fights.**  The referee judges a blow at its moment, so its round's bookkeeping (a
+  defence once a round) falls otherwise and the dice after it: dq0venom and dq0antidote (cave adders: a dodge for a
+  block at a bite meant at t147, the fight after it another), dq0features (giant rats: no "Everything goes black." now,
+  the fight longer), dq0dulled (giant rats, from t1522), dq0engage's last game (the ghoul's: comes round at t437, the
+  long fight: no "a serious gash to its right knee (S2).", "a minor cut to its left foot (M1)." and "You strike at the
+  ghoul with your sword, but stumble." instead, more dodges and openings).  No expected string changed: every check as
+  it was.
+- **Transcripts** (the suite's, by sentence, the copy of sent.js), against 24e9bf99's: 19 differ.  The fights above (5,
+  and dq0denpace's).  Denizens met at other moments, their fights the same blow for blow (the minds' order of deciding,
+  before any blow): dq0kit, dq0lair, dq0strip, dq0wornden and dq0denportal (the bandits at t151), dq0deadonce,
+  dq0faced, dq0jobs, dq0prompt, dq0stopwords.  A stop's race: dq0reachstop (the known one), dq0tiring ("You stop
+  digging." a pass the other side of a denizen's coming, t15120).  dq0rules: a prompt.
+- **Room:** dq0w's main RAM 2,083 -> 2,079 (blow_t); part 15 310 -> 124, part 6 82 -> 55, part 67 1,525 -> 1,482; the
+  packer's overlays 3 237 -> 210, 14 515 -> 329, 20 101 -> 58.  dq0harn's main RAM 2,189 -> 2,123 (its tnow).  The
+  start: seed 1 232.6M -> 232.7M, 123456789 308.0M -> 308.6M (timing).  The suite: all 447 pass.

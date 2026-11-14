@@ -86,6 +86,8 @@ void den_intents (void);                        /* (Part 14) The denizens' inten
 void pc_blow (void);                            /* (Part 15) The character's blow at the actor it's posted (the hub's
                                                 **   pc_foe) */
 void __fastcall__ den_blow (unsigned char def, unsigned char z);  /* (Part 15) Body bd's blow at def (I_ATTACK's) */
+extern unsigned long blow_t;                    /* (wfight.c's: the moment body bd's blow was meant, its intent's (its
+                                                **   ready as part 14 took it); 0, the clock's: 2026-11-13) */
 extern unsigned char grip;                      /* (wfight.c's: the actor the character holds, plus 1, | GH_PIN pinned;
                                                 **   0 none: HOUSE.md's grappling, 2026-11-09) */
 #define GRIP_OF(g)      ((g) & 0x0F)

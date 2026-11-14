@@ -68,6 +68,7 @@ static unsigned char __fastcall__ batter (unsigned char mat, unsigned char body)
     r->actor = wk.who;                          /* (The character's blows, or an actor's: wport.c's) */
     r->other = RS_THING;
     RS_ATTACK_RUN (*r) = n;
+    RS_ATTACK_WHEN (*r) = 0;                    /* (At the clock as it's asked) */
     RS_ATTACK_FLAGS (*r) = wk.qs == wk.sn + 1 && wk.qx == wk.px && wk.qy == wk.py ? 0 : RS_SHORT;  /* (A bare part's hurt stopped
                                                 **   short of, but at the door it was warned at) */
     for (k = 0; k < 4; ++k) {

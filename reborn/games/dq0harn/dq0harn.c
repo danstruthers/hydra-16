@@ -852,7 +852,8 @@ void __fastcall__ rf_answer (struct req* r)
     case RS_ATTACK:
     case RS_MORALE:
     case RS_WIELD:                              /* (What it would strike with: gear.c's, through fight's) */
-        tnow = HUB->now;
+        tnow = r->kind == RS_ATTACK && RS_ATTACK_WHEN (*r) ? RS_ATTACK_WHEN (*r) : HUB->now;   /* (A blow at its
+                                                **   moment, the world's: a denizen's its intent's, 2026-11-13) */
         nobreak = HUB->pc_lump & PL_NOFACE;
         stance = HUB->pc_stance;
         pc_way = HUB->pc_strike;

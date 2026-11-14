@@ -265,16 +265,17 @@ RS_TEST:bearing -> grade; result drift                  # (P_BEARING's: a failur
 RS_TEST:draw    -> grade; result opened                 # (P_DRAW's: 1 Drawing opened by it)
 RS_CONTEST      a purpose@P_NOTICE_SIGHT; b against@P_NOTICE_SIGHT; steps; c osteps  -> grade; c ograde; result better
                 # (The other's purpose and steps (signed); its grade; 1 the actor did better, 2 the other, 0 alike)
-RS_ATTACK       a aim@Z_MID; b aspect@AS_BLUNT; c outnumbered; steps; w2(flags) shy:0; x[0] heart
+RS_ATTACK       a aim@Z_MID; b aspect@AS_BLUNT; c outnumbered; steps; w2(flags) shy:0; x[0] heart; x[4-7] when
                 -> result outcome@O_MISS; a whose; b defence@D_AUTO; c af; w1(health) hatt:0-7@H_FINE hdef:8-15@H_FINE;
                 w2 out; grade left; x effects
-                # (A blow.  flags RS_PRONE_A ... RS_ASLEEP, MS_*, shy a shy creature's; heart RS_HEART's.  whose a fumble
+                # (A blow.  flags RS_PRONE_A ... RS_ASLEEP, MS_*, shy a shy creature's; heart RS_HEART's; when its
+                #   moment, the clock's tenths (a denizen's its intent's; 0 the clock as it's asked).  whose a fumble
                 #   or a stumble was; af AF_*; their healths; the tenths one's out for; left FF_*; its struct rs_effects)
-RS_ATTACK:missile a aim@Z_MID; b band; c missile; steps; w1 range; w2(flags) shy:0
+RS_ATTACK:missile a aim@Z_MID; b band; c missile; steps; w1 range; w2(flags) shy:0; x[4-7] when
                 # (RS_MISSILE's: its range's band, the kind shot or thrown, the squares; the reply a blow's)
-RS_ATTACK:grapple a move@GM_NONE; c(hold) choked:0-6 pinned:7=GH_PIN; steps; w2(flags) shy:0
+RS_ATTACK:grapple a move@GM_NONE; c(hold) choked:0-6 pinned:7=GH_PIN; steps; w2(flags) shy:0; x[4-7] when
                 # (RS_GRAPPLE's: the move; the hold as it stands, the rounds choked; the reply a blow's)
-RS_ATTACK:thing c run; w2(flags) shy:0; x[0-3] resist[]
+RS_ATTACK:thing c run; w2(flags) shy:0; x[0-3] resist[]; x[4-7] when
                 -> result(struck) stop:0 part:1 short:2 broke:3; a drop; b aspect@AS_BLUNT; c worst; w1 harm; w2 out
                 # (At RS_THING: the blow's number in a run, the thing's resistance to blunt, edge, point, fire.  The harm
                 #   it takes, by aspect; a part struck: hurt enough to stop, its band, out for; stopped short; a weapon
