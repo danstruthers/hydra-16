@@ -20,6 +20,7 @@
 #include "../dq0/hub.h"
 #include "hub0.h"
 #include "world.h"
+#include "../dq0/lnzp.h"
 #include "work.h"
 #include "things.h"
 #include "wbody.h"
@@ -135,9 +136,8 @@ static unsigned char __fastcall__ lights (unsigned char sn, unsigned x0, unsigne
     unsigned char force)
 {
     struct item* p;
-    struct cslot* c;
     unsigned i, x, y;
-    unsigned char s, f, h, k, ch = 0;
+    unsigned char s, f, h, ch = 0;
 
     for (i = 0; (i = items (i, IN_ITEM | IN_FLAGS, I_LIT | I_TENDED)) != 0; ) {
         f = ip->flags;
@@ -169,11 +169,8 @@ static unsigned char __fastcall__ lights (unsigned char sn, unsigned x0, unsigne
             !(force && (h & SC_NOW)))) {
             continue;
         }
-        hub_map (WORLD_BANK);
-        for (k = NCSLOTS, c = WREC->cslot; k && !(c->used && c->sn == s && c->cx == (x - STRATUM (s).x0) >> CW_BITS &&
-            c->cy == (y - STRATUM (s).y0) >> CW_BITS); --k, ++c) {
-        }
-        if (k) {                                /* (Else as it is, seen to with its chunk in the cache again) */
+        if (ck_at (s, x, y)) {                  /* (In the cache, the game's library's: ../dq0/lnzp.h; else as it is,
+                                                **   seen to with its chunk in the cache again) */
             room_lit (s, x, y, h & SC_NOW ? R_LIT : 0);
             item_at (i)->hide = h & SC_NOW ? SC_LIT : 0;
             ch = 1;
