@@ -39,18 +39,25 @@ static const unsigned char yield[][2] = {
 static char nm[16];                             /* (The thing's kind's name, its words') */
 static unsigned t;                              /* (Its time, tenths) */
 
-/* The words into the UI bank's things_text, a, the thing's name, b; the time in the request's x: IR_OK (t), else IR_NO
-** (none).  More put after it as it is (put's, the bank the UI's) */
-static unsigned char __fastcall__ told (const char* a, const char* b)
+/* The words into the UI bank's things_text, coded: sentence sa (said.txt's SA rows, the UI's: narration as data's rest,
+** 2026-11-15), the thing's name, b the other's; the time in the request's x: IR_OK (t), else IR_NO (none) */
+static unsigned char __fastcall__ told (unsigned char sa, const char* b)
 {
+    char c[3];
+
     put_bank = UI_BANK;
     hub_map (UI_BANK);
     tp = UIREC->things_text;
     tpe = tp + sizeof UIREC->things_text - 1;
     *tp = 0;
-    put (a);
+    c[0] = SAY_AT;
+    c[1] = sa | 0x80;
+    c[2] = 0;
+    put (c);
     put (nm);
+    put ("\2");
     put (b);
+    put ("\2");
     hub_map (0);
     HUB->ireq.x = t;
     HUB->ireq.qty = 0;
@@ -113,7 +120,7 @@ unsigned char s_textile (void)
     memcpy (into, HUB->ireq.into, sizeof into);
     t = 0;
     if (!(n = at_hand (nm))) {
-        told ("You have no ", " to hand.");
+        told (SA_NO_SUCH, "");
         return IR_NONE;
     }
     p = item_at (n);
@@ -138,44 +145,42 @@ unsigned char s_textile (void)
     wt = CATALOGUE[k].weight;                   /* (Its weight, quarter pounds: the bandages' most) */
     memcpy (nm, CATALOGUE[k].name, sizeof nm);
     if (!MT_TEXTILE (m)) {
-        return m == MT_LEATHER ? told ("Leather won't do: the ", " isn't cloth.") : told ("You can't do that to the ", ".");
+        return told (m == MT_LEATHER ? SA_LEATHER : SA_NOT_CLOTH, "");
     }
     if (q) {
-        return told ("You'd have to take off the ", " first.");
+        return told (SA_TAKE_OFF_FIRST, "");
     }
     if (items (0, IN_ITEM | IN_X, n)) {
-        return told ("You'd have to empty the ", " first.");
+        return told (SA_EMPTY_FIRST, "");
     }
     if (op == IO_WASH) {
         hub_map (0);
         b = HUB->pc_wet;
         if (!(b & WET_RUNS) && (b || !water_at (1))) {
-            return told (b ? "The water here is too foul to wash the " : "There's no running water here, nor a well, to wash the ",
-                " in.");
+            return told (b ? SA_FOUL : SA_NO_WASH, "");
         }
         p = item_at (n);
         if (p->wear < 128) {
-            return told ("Washing won't make the ", " any cleaner.");
+            return told (SA_CLEAN, "");
         }
         p->wear = CL_WORN;
         t = 1800;                               /* (Three minutes: the house's) */
-        return told ("You wash the ", kf & K_PLURAL ? " and wring them out: fit to use again, if not new." :
-            " and wring it out: fit to use again, if not new.");
+        return told (SA_WASH, kf & K_PLURAL ? "them" : "it");
     }
     if (k == KI_BANDAGES) {
-        return told ("They're ", " already.");
+        return told (SA_BANDAGES, "");
     }
     for (op = 0; op < NYIELD && yield[op][0] != k; ++op) {
     }
     if (op == NYIELD) {
-        return told ("You can't tear the ", " into bandages.");
+        return told (SA_NO_TEAR, "");
     }
     q = yield[op][1] > wt ? wt : yield[op][1];  /* (A bandage a quarter pound: never more than its weight) */
     if ((b = blade (into)) == 0xFFFF) {
-        return told ("You can't cut up the ", " with that.");
+        return told (SA_NO_CUT, "");
     }
     if (!b && (m == MT_WOOL || k == KI_GAMBESON)) {
-        return told ("The ", " is too stout to tear by hand: you want a blade to cut it.");
+        return told (SA_STOUT, "");
     }
     p = item_at (n);
     p->wear = clean_of (p, kf);
@@ -184,11 +189,5 @@ unsigned char s_textile (void)
     p->qty = q;
     p->flags &= ~I_NAMED;
     t = (b ? 600 : 1200) * q;                   /* (A minute a bandage with a blade, two by hand) */
-    told (b ? "You cut the " : "You tear the ", " into ");
-    utoa (q, c, 10);
-    hub_map (UI_BANK);
-    put (c);
-    put (" bandages.");
-    hub_map (0);
-    return IR_OK;
+    return told (b ? SA_CUT : SA_TEAR, utoa (q, c, 10));    /* (The bandages' count, the other's name) */
 }

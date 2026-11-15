@@ -110,6 +110,13 @@ unsigned door_key (void);                       /* (Part 80's, wport.c: a key th
 /* A buffer in the main RAM (the words said, the kit's names, the store kept a piece at a time) */
 static char tbuf[80];
 
+/* A sentence of the world's put after the words so far, coded (items.h's SAY_AT, its SA_* | 0x80, the thing's name a,
+** SAY_SEP, the other's b, SAY_SEP): said.txt's SA rows word it, the UI's (narration as data's rest, 2026-11-15: the
+** parts' own sentences, the locks', the fill's, the hands').  A copy in each part that says one, SAY_PUT (its name):
+** the main RAM's room and its layout as they were (a step's cost, dq0traces': the C library's place) */
+#define SAY_PUT(f)  static void __fastcall__ f (unsigned char sa, const char* a, const char* b) { tbuf[0] = SAY_AT; \
+                    tbuf[1] = sa | 0x80; tbuf[2] = 0; put (tbuf); put (a); put ("\2"); put (b); put ("\2"); }
+
 /* A thing's record, copied out: the one the functions share that call none that wants it while they use it (others
 ** have their own: make_own's, the recursive ones', light's ...) */
 static struct item rec;
@@ -3503,13 +3510,6 @@ unsigned char s_take_rest (void)
 ** time in the request's x (tenths); IR_NONE if there's no such thing.  Picking and forcing timed work (HOUSE.md's long
 ** tasks): begun (its long task's kind in qty, its thing's in item: its first words the UI's), its test made and its
 ** outcome told as it's done (IO_DONE, the UI's as its time's up) */
-static void __fastcall__ say3 (const char* a, const char* b, const char* c)
-{
-    put (a);
-    put (b);
-    put (c);
-}
-
 /* (The list's last ", " made " and ": part 61's and_last, its own copy) */
 static void __fastcall__ and_last36 (char* from)
 {
@@ -3615,10 +3615,10 @@ static unsigned char __fastcall__ key_fits (unsigned id)
     return r;
 }
 
+SAY_PUT (say36)
+
 unsigned char s_shut_work (void)
 {
-    static const char* const opened[3] = { "You open the ", "You untie the ", "You unstopper the " };
-    static const char* const closed[3] = { "You close the ", "You tie the ", "You stopper the " };
     struct msg m;
     const struct kind* k;
     unsigned n, t = 20;                         /* (Its time: a minute's picking, 600, past a char's 255: it was 88
@@ -3651,11 +3651,7 @@ unsigned char s_shut_work (void)
     c = (k->keeps & KF_CLOSES) >> 5;
     s = rec.shut;
     if (!c) {
-        if (k->flags & K_CONTAINER) {
-            say3 ("The ", nm, " has no lid.");
-        } else {
-            say3 (w == PA_CLOSE ? "You can't close the " : "You can't open the ", nm, ".");
-        }
+        say36 (k->flags & K_CONTAINER ? SA_NO_LID : w == PA_CLOSE ? SA_NO_CLOSE : SA_NO_OPEN, nm, "");
         return IR_NO;
     }
     --c;
@@ -3665,35 +3661,35 @@ unsigned char s_shut_work (void)
             return IR_NO;                       /* (Its key got out: a tool's steps) */
         }
         s ^= IS_LOCKED;                         /* (With its own key: no test, a few seconds) */
-        say3 (w == PA_LOCK ? "You lock the " : "You unlock the ", nm, " with its key.");
+        say36 (w == PA_LOCK ? SA_LOCK : SA_UNLOCK, nm, "");
         t = 30;
         lt = 0;
         ok = IR_OK;
         goto done;
     }
     if (w == PA_LOCK) {
-        say3 ("The ", nm, !(s & IS_LOCK) ? " has no lock." : s & IS_BURST ? "'s lock is broken." : s & IS_LOCKED ?
-            " is locked already." : " has a lock, but you have no key to it.");
+        say36 (!(s & IS_LOCK) ? SA_NO_LOCK : s & IS_BURST ? SA_LOCK_BROKE : s & IS_LOCKED ? SA_LOCKED_ALREADY :
+            SA_NO_KEY, nm, "");
         return IR_NO;
     }
     if (w == PA_CLOSE) {
         if (s & IS_CLOSED) {
-            say3 ("The ", nm, " is closed already.");
+            say36 (SA_CLOSED_ALREADY, nm, "");
             return IR_NO;
         }
         s |= IS_CLOSED;
-        say3 (closed[c], nm, c == 1 ? " shut." : ".");
+        say36 (SA_CLOSE + c, nm, "");      /* (Closed, tied shut, stoppered) */
         ok = IR_OK;
     } else if (!(s & IS_CLOSED)) {
-        say3 ("The ", nm, w == PA_UNLOCK && (s & IS_LOCK) ? " isn't locked: it's open." : " is open already.");
+        say36 (w == PA_UNLOCK && (s & IS_LOCK) ? SA_IS_OPEN : SA_OPEN_ALREADY, nm, "");
         return IR_NO;
     } else if (w == PA_UNLOCK) {
         if (!(s & IS_LOCKED)) {
-            say3 ("The ", nm, s & IS_LOCK ? " isn't locked." : " has no lock.");
+            say36 (s & IS_LOCK ? SA_NOT_LOCKED : SA_NO_LOCK, nm, "");
             return IR_NO;
         }
         if ((g = tested (P_PICKLOCK, -1 - (signed char) (rec.quality / 3))) == -100) {
-            put (lt ? "Your key doesn't fit its lock." : "You have nothing to pick its lock with.");
+            say36 (lt ? SA_NO_FIT : SA_NO_PICKS, "", "");
             return IR_NO;
         }
         lt = 0;
@@ -3707,14 +3703,14 @@ unsigned char s_shut_work (void)
             lt = LT_PICK;
         } else if (g > 0) {
             s &= ~IS_LOCKED;
-            say3 ("You pick the lock of the ", nm, ".");
+            say36 (SA_PICKED, nm, "");
         } else {
-            say3 ("You fail to pick the lock of the ", nm, ".");
+            say36 (SA_NOT_PICKED, nm, "");
         }
         ok = IR_OK;
     } else if (s & IS_LOCKED) {
         if (w != PA_FORCE) {
-            say3 ("The ", nm, " is locked.");
+            say36 (SA_LOCKED, nm, "");
             return IR_NO;
         }
         if (!d) {
@@ -3735,15 +3731,15 @@ unsigned char s_shut_work (void)
             lt = LT_FORCE;
         } else if (tested (P_FORCE, (rec.mat == MT_WOOD ? 0 : -2) - (signed char) (rec.quality / 3)) > 0) {
             s = (s & ~(IS_LOCKED | IS_CLOSED)) | IS_BURST;
-            say3 ("You force the ", nm, ", and its lock bursts open");
+            say36 (SA_FORCED, nm, "");      /* (What it shows after it: reveal's words) */
             reveal (n);
         } else {
-            say3 ("The ", nm, " holds: its lock doesn't give.");
+            say36 (SA_NOT_FORCED, nm, "");
         }
         ok = IR_OK;
     } else {
         s &= ~IS_CLOSED;                        /* (Opened; forced open, one not locked: what it shows told) */
-        say3 (opened[c], nm, "");
+        say36 (SA_OPEN + c, nm, "");       /* (Opened, untied, unstoppered: what it shows after it) */
         reveal (n);
         ok = IR_OK;
     }
@@ -5205,12 +5201,7 @@ void __fastcall__ s_listed (unsigned n)
                                                 **   that every minute's look copied) */
 #pragma rodata-name (push, "SW100RODATA")
 
-static void __fastcall__ put3 (const char* a, const char* b, const char* c)
-{
-    put (a);
-    put (b);
-    put (c);
-}
+SAY_PUT (say100)
 
 /* ---- A light renewed (IO_FILL, slice 4.1's: "fill the lantern", "dip the torch in the oil"): the light named
 ** (carried, or within reach) from the fuel named (into: carried, or within reach; "": the first carried that it
@@ -5247,7 +5238,7 @@ unsigned char s_fill (void)
         }
         wsel = bk ? SL_NTH | bk << 4 : iq.sel;
         if (!(n = at_hand (iq.name))) {
-            put (*iq.name ? "You have no such thing." : "Fill what?");
+            say100 (*iq.name ? SA_NO_THING : SA_FILL_WHAT, "", "");
             return IR_NO;
         }
     }
@@ -5260,7 +5251,7 @@ unsigned char s_fill (void)
         return reach_do (RO_HONE);
     }
     if (!(b = burn_of (l.kind)) || !(takes = b->fuels)) {
-        put3 ("The ", ln, " takes no fuel: it burns away.");
+        say100 (SA_NO_FUEL, ln, "");
         return IR_NO;
     }
     room = (give = b->life * 10) > l.fuel ? give - l.fuel : 0;
@@ -5280,22 +5271,22 @@ unsigned char s_fill (void)
         }
     }
     if (!c) {
-        put3 ("You have nothing to fill it with: ", takes & FU_PITCH ? "oil, or pitch" : "a flask of oil", ".");
+        say100 (SA_NO_FUELS, "", takes & FU_PITCH ? "oil, or pitch" : "a flask of oil");
         return IR_NO;
     }
     make_own (c);
     fetch (&f, c);
     strcpy (fn, kind_of (f.kind)->name);
     if ((kind_of (f.kind)->flags & K_LIGHT) || !(b = burn_of (f.kind)) || !(b->fuels & takes)) {
-        put3 ("The ", ln, " won't burn that.");
+        say100 (SA_WONT_BURN, ln, "");
         return IR_NO;
     }
     if (!f.fuel) {
-        put3 ("The ", fn, " is empty.");
+        say100 (SA_EMPTY, "", fn);
         return IR_NO;
     }
     if (!room) {
-        put3 ("The ", ln, " has all it can take.");
+        say100 (SA_FULL, ln, "");
         return IR_NO;
     }
     if (!(iq.to & IO_DONE)) {
@@ -5327,8 +5318,7 @@ unsigned char s_fill (void)
     give = room < f.fuel ? room : f.fuel;
     item_at (n)->fuel = l.fuel + give;
     item_at (c)->fuel = f.fuel - give;
-    put3 (takes == FU_OIL ? "You fill the " : "You soak the ", ln, takes == FU_OIL ? " from the " : " in the ");
-    put3 (fn, give == f.fuel ? ", and it's empty now" : "", ".");
+    say100 ((takes == FU_OIL ? SA_FILL : SA_SOAK) + (give == f.fuel), ln, fn);  /* (Its fuel used up: "and it's empty now") */
     return IR_OK;
 }
 
@@ -6618,6 +6608,8 @@ static unsigned char __fastcall__ hand_for (unsigned n, unsigned char want)
     return hwhy ? 0 : h;
 }
 
+SAY_PUT (say48)
+
 /* A thing worn taken off with no hand free and no room in the pack (the doff's SA_HANDS, the catalogue's bank's, its room none):
 ** set down at the character's feet, said so, as "drop" would (the user's playtest, 2026-11-06: "take off the backpack" refused
 ** with its hands full, "drop backpack" not): the pack, a cloak, a helm, a belt, a ring alike.  Its time the doff's */
@@ -6640,9 +6632,7 @@ unsigned char __fastcall__ s_doff_feet (unsigned n)
     dropped = n;
     sky_ask (n);                                /* (On a shaft's head: it falls, part 17's) */
     text_new ();
-    put ("Your hands are full: you take off the ");
-    put (kind_of (item_kind (n))->name);
-    put (" and set it down at your feet.");
+    say48 (SA_DOFF_FEET, kind_of (item_kind (n))->name, "");
     took = 50;
     return IR_OK;
 }
@@ -6687,31 +6677,21 @@ static void why_not (void)
 {
     const struct kind* k;
 
-    if (hwhy == HW_FULL) {
-        put ("Your hands are full: stow something, or put it down.");
+    const char* h = hword[hside == IH_BOTH ? IH_LEFT : hside];
+
+    if (hwhy == HW_FULL || hwhy == HW_TWO) {
+        say48 (hwhy == HW_FULL ? SA_HANDS : SA_BOTH_HANDS, xn, "");   /* (SA.hands: the same words, one row) */
         return;
     }
-    if (hwhy == HW_TWO) {
-        put ("The ");
-        put (xn);
-        put (" takes both hands.");
-        return;
-    }
-    put ("Your ");
-    put (hword[hside == IH_BOTH ? IH_LEFT : hside]);
     if (hwhy == HW_LIMB) {
-        put (" arm is useless.");
+        say48 (SA_ARM, "", h);
         if (htwo) {
-            put (" You can't hold the ");
-            put (xn);
-            put (" in one hand.");
+            say48 (SA_ONE_HAND, xn, "");
         }
         return;
     }
     k = kind_of (hkind[hside == IH_RIGHT]);
-    put (" hand holds the ");
-    put (k->name);
-    put (".");
+    say48 (SA_HAND_HOLDS, k->name, h);
 }
 
 /* Thing n taken into a hand (IO_HOLD's, the catalogue's bank's hold: from anywhere on the character, or within reach;
@@ -6761,6 +6741,8 @@ unsigned char __fastcall__ s_hold_in (unsigned n, unsigned char want)
 void __fastcall__ hands_now (unsigned n);       /* (Its stub: part 48's) */
 #pragma code-name (push, "SW101CODE")
 #pragma rodata-name (push, "SW101RODATA")
+SAY_PUT (say101)
+
 unsigned char s_swap (void)
 {
     unsigned i = 0, l = 0, r = 0;
@@ -6772,10 +6754,7 @@ unsigned char s_swap (void)
         if (ip->flags & I_HELD) {
             h = ip->sn & IH_BOTH ? ip->sn & IH_BOTH : hmain;
             if (h == IH_BOTH) {
-                strcpy (xn, kind_of (ip->kind)->name);
-                put ("The ");
-                put (xn);
-                put (" takes both your hands.");
+                say101 (SA_BOTH_YOUR, kind_of (ip->kind)->name, "");
                 return IR_NO;
             }
             if (h == IH_LEFT) {
@@ -6786,11 +6765,11 @@ unsigned char s_swap (void)
         }
     }
     if (!l && !r) {
-        put ("Your hands are empty.");
+        say101 (SA_HANDS_EMPTY, "", "");
         return IR_NO;
     }
     if ((l && (hdead & IH_RIGHT)) || (r && (hdead & IH_LEFT))) {
-        put (hdead & IH_RIGHT ? "Your right arm is useless." : "Your left arm is useless.");
+        say101 (SA_ARM, "", hdead & IH_RIGHT ? "right" : "left");
         return IR_NO;
     }
     if (l) {
@@ -6800,15 +6779,10 @@ unsigned char s_swap (void)
         item_at (r)->sn = IH_LEFT;
     }
     if (l && r) {
-        put ("You change hands: the ");
-        put (kind_of (hkind[1])->name);
-        put (" in your left, the ");
-        put (kind_of (hkind[0])->name);
-        put (" in your right.");
+        strcpy (xn, kind_of (hkind[1])->name);  /* (Two names: the left's copied out first, kind_of's one copy) */
+        say101 (SA_CHANGE, xn, kind_of (hkind[0])->name);
     } else {
-        put ("You shift the ");
-        put (kind_of (hkind[!l])->name);
-        put (l ? " to your right hand." : " to your left hand.");
+        say101 (SA_SHIFT, kind_of (hkind[!l])->name, l ? "your right hand" : "your left hand");
     }
     hub_map (0);
     HUB->ireq.x = 10;

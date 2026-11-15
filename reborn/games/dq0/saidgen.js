@@ -14,8 +14,9 @@
 //                              0 the event's who
 //   said_f[]                   the fields a row reads, five bytes each: its byte's offset in struct msg, the shift and
 //                              the mask that take it out, an operation (SF_*: none, less K, more than K, times K) and K
-//   said_rows[], said_rows2[]  (overlays 28's and 29's: the second linked at $A000, so an offset past 8,192 is its, said_b
-//                              reading it at $8000 in its own bank; stage 3, 2026-11-11) a kind's rows, wholly in one
+//   said_rows[], said_rows2[], said_rows3[]   (overlays 28's, 29's and 30's: the second linked at $A000, the third at
+//                              $C000, so an offset past 8,192 is the second's, past 16,384 the third's, said_b reading
+//                              it at $8000 in its own bank; stage 3, 2026-11-11; the third 2026-11-15) a kind's rows, wholly in one
 //                              bank, the first with room, each: its length (the bytes to the next), its outcome
 //                              (SAID_ANY any), its condition's field (0xFF none; | 0x80, the field's one value, else the
 //                              mask of its values, bit V for V) and that value or mask, its flags (SR_ONCE), its text
@@ -46,7 +47,7 @@ const SC = { NL: 0x01, END: 0x1E, ALT: 0x1F, POSS: 0x7F, NUM: 0x80, CHOOSE: 0xA0
 const FMAX = 126;                                            // (Fields at most: a condition's byte its index, | 0x80 one value, 0xFF none;
                                                               //   SC_NUM, SC_CHOOSE, SC_CHANGED + 31 and a byte past the 31st, 2026-11-12)
 const WORDS_MAX = 200;                                        // (The words said as SC_WORD and a byte, at most)
-const BANK = 0x2000;                                          // (A bank of the rows': overlays 28 and 29)
+const BANK = 0x2000, NBANK = 3;                               // (A bank of the rows': overlays 28, 29 and 30)
 const ANY = 0xFE;                                            // (A row for any outcome: said.c's SAID_ANY)
 const OP = { '': 0, '-': 1, '>': 2, '*': 3 };
 const WORDS = ['obj', 'instr', 'text', 'actor'], MORE = ['w4', 'w5', 'w6'];   // (The UI's words; its fourth to sixth, said_s[3-5]: SC_STR2's)
@@ -333,19 +334,19 @@ function generate(H, say = () => {}) {
     if (r.b.length + 1 > 255) throw new Error('saidgen: ' + r.c + ', past 254 bytes packed');
     r.b.unshift(r.b.length + 1);
   }
-  // (Two banks: overlay 28's from $8000, overlay 29's from $A000 (its MEMORY line's start; a bank of its own, read at
-  // $8000 by said_b): each kind's rows, and each piece, wholly in one, the first that has room, in their order; an
-  // offset past BANK the second bank's)
+  // (Three banks: overlay 28's from $8000, overlay 29's from $A000, overlay 30's from $C000 (their MEMORY lines' starts;
+  // each a bank of its own, read at $8000 by said_b): each kind's rows, and each piece, wholly in one, the first that
+  // has room, in their order; an offset past BANK the second bank's, past 2 BANK the third's)
   const blocks = [];
   at.forEach((a, i) => blocks.push(rows.slice(a, i + 1 < at.length ? at[i + 1] : pfirst)));
   for (let i = pfirst; i < rows.length; i++) blocks.push([rows[i]]);
-  const fill = [0, 0], offOf = new Map(), inBank = [[], []];
+  const fill = Array(NBANK).fill(0), offOf = new Map(), inBank = fill.map(() => []);
   for (const bl of blocks) {
-    const z = bl.reduce((t, r) => t + r.b.length, 0), k = fill[0] + z <= BANK ? 0 : 1;
-    if (fill[1] + z > BANK && k) throw new Error('saidgen: the rows past their two banks\' 16,384 bytes');
+    const z = bl.reduce((t, r) => t + r.b.length, 0), k = fill.findIndex(v => v + z <= BANK);
+    if (k < 0) throw new Error('saidgen: the rows past their ' + NBANK + ' banks\' ' + NBANK * BANK + ' bytes');
     for (const r of bl) { offOf.set(r, k * BANK + fill[k]); fill[k] += r.b.length; inBank[k].push(r); }
   }
-  const n = fill[0] + fill[1];
+  const n = fill.reduce((t, v) => t + v, 0);
   const offs = rows.map(r => offOf.get(r));
   let dn = 0;
   const dofs = dict.map(w => { const o = dn; dn += w.length + 1; return o; });
@@ -366,7 +367,7 @@ function generate(H, say = () => {}) {
   lines.push('static const unsigned char said_f[] = {');
   fields.forEach((d, i) => lines.push('    ' + d.map(hex).join(', ') + ',' + '    /* ' + i + ' */'));
   lines.push('};');
-  [['said_rows', 28, 'the rows\' first bank, at $8000'], ['said_rows2', 29, 'their second, at $A000']].forEach(([name, ov, what], k) => {
+  [['said_rows', 28, 'the rows\' first bank, at $8000'], ['said_rows2', 29, 'their second, at $A000'], ['said_rows3', 30, 'their third, at $C000']].forEach(([name, ov, what], k) => {
     lines.push('#pragma rodata-name (push, "OV' + ov + 'RODATA")      /* (Overlay ' + ov + '\'s: ' + what + ', read by said_b) */',
       'const unsigned char ' + name + '[] = {');
     for (const r of inBank[k]) {
@@ -381,7 +382,7 @@ function generate(H, say = () => {}) {
   void fl;
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, lines.join('\r\n'), 'latin1');
-  say('dq0said.h: ' + kinds.reduce((s, K) => s + K.rows.length, 0) + ' rows of ' + kinds.length + ' kinds, ' + n + ' bytes (overlay 28 ' + fill[0] + ', 29 ' + fill[1] + '), ' + pc.length + ' pieces, ' + fields.length + ' fields');
+  say('dq0said.h: ' + kinds.reduce((s, K) => s + K.rows.length, 0) + ' rows of ' + kinds.length + ' kinds, ' + n + ' bytes (overlay 28 ' + fill[0] + ', 29 ' + fill[1] + ', 30 ' + fill[2] + '), ' + pc.length + ' pieces, ' + fields.length + ' fields');
 }
 
 module.exports = { generate };

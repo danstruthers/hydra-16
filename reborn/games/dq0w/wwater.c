@@ -63,14 +63,21 @@ unsigned char __fastcall__ s_water_at (unsigned char well)
 
 /* A waterskin filled (the things' IO_FILL, name: "" the first carried): in the water, or by a well within reach; its
 ** words in the UI bank's things_text, its time in the request's x (a minute); IR_NONE not a waterskin (a light's) */
-static unsigned char __fastcall__ wsaid (const char* s, unsigned t)
+static unsigned char __fastcall__ wsaid (unsigned char s, unsigned t)
 {
+    char c[3];
+
     put_bank = UI_BANK;
     hub_map (UI_BANK);
     tp = UIREC->things_text;
     tpe = tp + sizeof UIREC->things_text - 1;
     *tp = 0;
-    put (s);
+    c[0] = SAY_AT;                              /* (Its words said.txt's SA rows, the UI's, coded, no names: narration
+                                                **   as data's rest, 2026-11-15) */
+    c[1] = s | 0x80;
+    c[2] = 0;
+    put (c);
+    put ("\2\2");
     hub_map (0);
     HUB->ireq.x = t;
     HUB->ireq.qty = 0;
@@ -92,12 +99,12 @@ static unsigned char fill_skin (void)
     hub_map (KIND_BANK);
     cap = CATALOGUE[KI_WATERSKIN].cap_bulk;
     if (items (0, IN_ITEM | IN_X, sk) && ip->kind == KI_WATER && ip->qty >= cap) {
-        return wsaid ("Your waterskin is full already.", 0);    /* (Why it seemed to start empty: the user's,
+        return wsaid (SA_SKIN_FULL, 0);    /* (Why it seemed to start empty: the user's,
                                                 **   2026-11-03) */
     }
     hub_map (0);
     if (!HUB->pc_wet && !water_at (1)) {
-        return wsaid ("There's no water here.", 0);
+        return wsaid (SA_NO_WATER, 0);
     }
     hub_map (0);
     still = (unsigned char) (HUB->pc_wet - 1) < 0x7F;   /* (Still water in it: drunk, the flux's risk, as where it stood:
@@ -108,7 +115,7 @@ static unsigned char fill_skin (void)
         for (i = 1; i < ilim && item_at (i)->kind; ++i) {     /* (Its water drunk: a record for it again) */
         }
         if (i >= ilim) {
-            return wsaid ("There's no water here.", 0);
+            return wsaid (SA_NO_WATER, 0);
         }
         if (i >= ihigh) {
             ihigh = i + 1;
@@ -121,7 +128,7 @@ static unsigned char fill_skin (void)
     }
     p->qty = cap;
     p->wear |= still;
-    return wsaid ("You fill your waterskin.", 600);
+    return wsaid (SA_FILL_SKIN, 600);
 }
 
 /* The part's way in (its stub, water): k W_FILL, a waterskin filled */
