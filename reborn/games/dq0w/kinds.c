@@ -235,6 +235,42 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
 };
 #pragma rodata-name (pop)
 
+/* The holders' compartments (items.h's struct comp: COMMANDS-CRITIQUE.md's §4.9, step 6b, 2026-11-15), at the start of
+** the catalogue's bank (CATCOMP, dq0w.cfg's: $8000 there, where dq0w/make.js finds it), a kind's rows together in its
+** order, compartment 0 first: the kinds that hold things one row each, their records' room, forms, closing and family
+** (make.js holds them the same); a chest two, its inside and its lid's top.  Its prep (CP_IN, CP_ON, CP_HUNG), the
+** forms it keeps and what closes it, its room (pints), the weight it bears (quarter pounds), its family (a belt's
+** slots), its own name (CN_*) */
+#pragma rodata-name (push, "CATCOMP")
+const struct comp comps[] = {
+    { KI_BACKPACK, CP_IN, SS | KF_LID, 32, 160, 0, 0 },
+    { KI_BELT, CP_HUNG, 0, 0, 0, 6, 0 },        /* (Six slots) */
+    { KI_POUCH, CP_IN, SS | KF_TIE, 3, 16, 0, 0 },
+    { KI_WATERSKIN, CP_IN, KF_LIQUID | KF_STOPPER, 4, 20, 0, 0 },
+    { KI_BONES, CP_ON, 0, 20, 200, 0, 0 },      /* (What a skeleton had on it) */
+    { KI_SACK, CP_IN, SS | KF_TIE, 24, 120, 0, 0 },
+    { KI_CHEST, CP_IN, SS | KF_LID, 60, 400, 0, 0 },
+    { KI_CHEST, CP_ON, 0, 20, 200, 0, CN_LID }, /* (Its lid's top: open to the hand, closed or not) */
+    { KI_BASKET, CP_IN, KF_SOLID, 16, 80, 0, 0 },
+    { KI_TABLE, CP_ON, 0, 30, 400, 0, 0 },
+    { KI_CHAIR, CP_ON, 0, 8, 120, 0, 0 },
+    { KI_QUIVER, CP_IN, KF_SOLID, 4, 24, FM_ARROW, 0 },
+    { KI_BODY, CP_ON, 0, 60, 400, 0, 0 },       /* (What a denizen wore and carried) */
+    { KI_POT, CP_IN, SS | KF_LIQUID | KF_LID, 6, 48, 0, 0 },
+    { KI_SCONCE, CP_ON, 0, 3, 8, 0, 0 },        /* (A torch in it: its words "in", things.c's) */
+    { KI_SCABBARD, CP_IN, KF_SOLID, 4, 24, FM_SWORD, 0 },
+    { KI_SHEATH, CP_IN, KF_SOLID, 1, 8, FM_KNIFE, 0 },
+    { KI_BANDOLIER, CP_IN, KF_SOLID, 5, 20, FM_THROWN, 0 },
+    { KI_BOLT_CASE, CP_IN, KF_SOLID, 4, 24, FM_BOLT, 0 },
+    { KI_VIAL, CP_IN, KF_LIQUID | KF_STOPPER, 1, 5, 0, 0 },
+    { KI_CASK, CP_IN, KF_LIQUID | KF_STOPPER, 32, 200, 0, 0 },
+    { 0 }
+};
+#pragma rodata-name (pop)
+
+/* The compartments' own names (CN_*), as a thing's in the catalogue's bank's words */
+const char cnouns[4][7] = { "", "lid", "top", "drawer" };
+
 /* How each light burns (DUNGEON.md: light; HOUSE.md's burning, slice 4.1's): its kind; how long a whole one burns
 ** at middling make, in tens of minutes (a torch an hour, the house rule's; a tallow candle three-quarters of an inch
 ** thick four hours, its make, its thickness and its wax more or less; a lantern's fill of oil, a pint, six hours; a

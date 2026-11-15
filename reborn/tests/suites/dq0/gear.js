@@ -1492,6 +1492,39 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0compart', near: ['gear', 'parser'], what: 'Dingus Quest Zero\'s compartments (COMMANDS-CRITIQUE.md\'s step 6b, 2026-11-15: DECISIONS.md\'s "Compartments: containers and surfaces"): the catalogue\'s compartment table, a chest two, its inside and its lid\'s top; at seed 3 (dq0 -T, a kit of a chest, two chisels and a sack more) the chest set down, a chisel put on it (its record in the chest, its y its compartment, IC_MARK | CP_ON << 4 | 1), seen on it in a look ("On the chest lies a chisel."), looked on, looked in (its inside empty); the sack put in it; the chest closed: the chisel still on it (looked on, examined: "On it lies a chisel.", searched: "On the chest you find a chisel."), taken from it, the sack not ("The chest is closed."), put back on it and the other with it ("On the chest lie two chisels."), one taken off it; the chest opened, revealing the sack alone (not what\'s on it), looked at (each compartment that holds something), searched (its inside, then its top)',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k \'chest,chisel,chisel,sack\'', 'drop chest', 'put the chisel on the chest', 'look', 'look on the chest',
+        'look in the chest', 'put the sack in the chest', 'close the chest', 'look on the chest', 'look in the chest', 'examine the chest',
+        'search the chest', 'take the chisel from the chest', 'take the sack from the chest', 'put the chisel on the chest', 'put the chisel on the chest',
+        'look', 'take the chisel off the chest', 'open the chest', 'look at the chest', 'look on the chest', 'search the chest', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '');
+        const { IC_MARK, CP_ON } = require('../../../games/dq0/hubgen.js').load().C;   // (items.h's)
+        const p = T.of('put the chisel on the chest'), st = p.after;
+        const chest = st && st.items.find(i => i.name === 'chest' && i.where === 'IW_SQUARE');
+        const on = st && chest ? st.items.filter(i => i.name === 'chisel' && i.where === 'IW_ITEM' && i.x === chest.n) : [];
+        if (on.length !== 1 || on[0].y !== (IC_MARK | CP_ON << 4 | 1)) f.push('the chisel not on the chest\'s lid, its compartment 1: ' + JSON.stringify(on));
+        const sk = T.of('put the sack in the chest').after, sack = sk && chest && sk.items.find(i => i.name === 'sack' && i.x === chest.n);
+        if (!sack || sack.y >= IC_MARK) f.push('the sack not in the chest, its compartment 0: ' + JSON.stringify(sack));
+        inTurn(s, ['> put the chisel on the chest', 'You put the chisel on the chest.', '> look', 'At your feet lies a chest. On the chest lies a chisel.',
+          '> look on the chest', 'On the chest lies a chisel.', '> look in the chest', 'The chest is empty.', '> put the sack in the chest',
+          'You put the sack in the chest.', '> close the chest', 'You close the chest.', '> look on the chest', 'On the chest lies a chisel.',
+          '> look in the chest', 'The chest is closed.', '> examine the chest', 'It\'s closed.', 'On it lies a chisel.', '> search the chest',
+          'It\'s closed: you go over the outside of it. On the chest you find a chisel.', '> take the chisel from the chest',
+          'You take the chisel from the chest.', '> take the sack from the chest', 'The chest is closed.', '> put the chisel on the chest',
+          'You put the chisel on the chest.', '> put the chisel on the chest', 'You put the chisel on the chest.', '> look', 'On the chest lie two chisels.',
+          '> take the chisel off the chest', 'You take the chisel from the chest.', '> open the chest', 'You open the chest, revealing a sack.',
+          '> look at the chest', 'In it lies a sack. On it lies a chisel.', '> look on the chest', 'On the chest lies a chisel.', '> search the chest',
+          'In the chest you find a sack. On the chest you find a chisel.'], f, 'the words: ');
+        if (/revealing a sack and a chisel|revealing a chisel/.test(s)) f.push('the chest opened told what\'s on its lid');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0examine', what: 'Dingus Quest Zero\'s things looked at and examined, their aspects asked for, what opening shows, and what a command\'s done with (the user\'s, 2026-10-22: "When examining an item, I want to know about its state ... look [at] item instead of examine should give these things.  Examine gives too many unimportant details (like value)"; "examine value [of] item", "quality [of] item"; "if I open a chest, I should get a \'You open the chest, revealing a pile of gold coins\'"; "hit door with bar hits the door, even if I don\'t have a bar"): at seed 3 (dq0 -T, a kit of a table, two chisels, a sack and a chest more) a look at the table (where, what\'s on it, no appraisal), at the torch (lit), the torch examined (what it\'s made of, its wear, how burnt: no test), the dagger\'s value, its quality, both (the referee\'s appraisal test each, IO_DESCRIBE, only what\'s asked), the backpack hefted (its weight with what\'s in it), the chest looked at closed (with a lock), its lock examined (its make), gone over for traps (none), its condition (the last thing named: "its"); the chest opened (": it\'s empty."), the sack untied (what\'s in it told), the flask unstoppered (how full); a blow with a hammer it hasn\'t got refused ("You have no hammer to hand.", no blow); the door ahead opened (what it shows beyond told with it, the world\'s look after it: "revealing a passage, 30 feet of it"), gone over for traps (the world\'s PA_CHECK: 10 seconds), examined (its plain features, no judgement), judged (its state, the appraisal test), its lock, its condition, its value',
       init: 't_rc', cycles: 2600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',

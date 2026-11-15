@@ -54,7 +54,8 @@ void __fastcall__ s_handle (unsigned char op, const char* x, const char* y, unsi
 ** the dagger into the well") */
 void s_put_in (void)
 {
-    handle (IO_PUT, cmd.obj.word, cmd.other.word[0] ? cmd.other.word : "shaft", 0);
+    handle (IO_PUT, cmd.obj.word, cmd.other.word[0] ? cmd.other.word : "shaft", cmd.prep == PR_ON);   /* ("Drop the
+                                                **   dagger on the chest": on its lid, step 6b's) */
 }
 
 /* H_TAKE: a thing taken up, or taken from another */
@@ -457,8 +458,9 @@ unsigned char __fastcall__ o_things_work (unsigned char h)
             look_way (VB_OBSERVE_THROUGH);
             break;
         }
-        action = othings (IO_INSIDE | IO_STEPS | IO_GO, cmd.obj.word, nil, 0);   /* (The one path for things: out of
-                                                **   reach, walked over to first, then again) */
+        action = othings (IO_INSIDE | IO_STEPS | IO_GO, cmd.obj.word, nil, strstr (cl, " on ") ? 4 : 0);   /* (The one
+                                                **   path for things: out of reach, walked over to first, then again;
+                                                **   "look on the chest", 4: its lid's top, step 6b's) */
         if (action == IR_NONE) {
             say_no (A_SEE_NO, cmd.obj.word);
         } else if (action == IR_OK) {           /* (IR_NO: a step of the reach first, part 19's) */

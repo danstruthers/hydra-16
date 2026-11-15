@@ -63,7 +63,28 @@ static const struct item* __fastcall__ lying (const struct item* q)
         return 0;
     }
     fetch (&s, q->x);
-    return s.where == IW_SQUARE && (kind_of (s.kind)->keeps & KF_ON) ? &s : 0;
+    return s.where == IW_SQUARE && (q->y >= IC_MARK ? IC_PREP (q->y) == CP_ON : kind_of (s.kind)->keeps & KF_ON) ? &s :
+        0;                                      /* (On a chest's lid too: its compartment's prep, items.h's IC_MARK) */
+}
+
+/* Whether kind k has a compartment past its first that things lie on (a chest's lid's top: the catalogue's comps, at the
+** start of its bank, the world's; COMMANDS-CRITIQUE.md's step 6b, 2026-11-15): the kinds that have, a bit each, made
+** from the table the first time (a look's every container asked) */
+static unsigned char lids[32], lids_ok;
+static unsigned char __fastcall__ on_lid (unsigned char k)
+{
+    const struct comp* p;
+
+    if (!lids_ok) {
+        hub_map (CAT_BANK);
+        for (p = (const struct comp*) 0x8000; p->kind; ++p) {
+            if (p != (const struct comp*) 0x8000 && p[-1].kind == p->kind && p->prep == CP_ON) {
+                lids[p->kind >> 3] |= 1 << (p->kind & 7);
+            }
+        }
+        lids_ok = 1;
+    }
+    return lids[k >> 3] & 1 << (k & 7);
 }
 
 /* The records lying on squares near the character (stratum near_sn, 20 squares each way of near_x, near_y), as the
@@ -118,6 +139,7 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
 {
     static struct item q;
     static unsigned char k, listed;
+    static const struct kind* kq;
     static struct item* r;
     static unsigned qx, qy;
     unsigned i = 0, j;
@@ -143,9 +165,17 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
         se.x = q.x;
         se.y = q.y;
         seen_one (s, i, 0);
-        if (kind_of (q.kind)->keeps & KF_ON) {
+        kq = kind_of (q.kind);
+        if (kq->keeps & KF_ON) {
             for (j = 0; s->nitems < SEE_ITEMS && (j = items (j, IN_X | IN_ITEM, i)) != 0; ) {
                 seen_one (s, j, 1);
+            }
+        } else if ((kq->flags & K_CONTAINER) && on_lid (q.kind)) {   /* (What's on a chest's lid, seen with it:
+                                                **   its compartment's) */
+            for (j = 0; s->nitems < SEE_ITEMS && (j = items (j, IN_X | IN_ITEM, i)) != 0; ) {
+                if (item_at (j)->y >= IC_MARK && IC_PREP (item_at (j)->y) == CP_ON) {
+                    seen_one (s, j, 1);
+                }
             }
         }
     }

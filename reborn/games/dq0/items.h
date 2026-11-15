@@ -110,6 +110,34 @@ enum { FM_NONE, FM_SWORD, FM_KNIFE, FM_ARROW, FM_BOLT, FM_SHOT, FM_THROWN };    
                                                 **   knives and daggers, a quiver's arrows, a bolt case's bolts, a
                                                 **   pouch of sling stones, a bandolier's throwing knives) */
 
+/* A holder's compartments (COMMANDS-CRITIQUE.md's §4.9, step 6b, 2026-11-15): every place a thing is put in another, on
+** it, or hung from it is one of that holder's compartments, a row of the catalogue's table (dq0w/kinds.c's comps, at
+** the start of the catalogue's bank, CAT_BANK: the world's to read), a kind's rows together, compartment 0 first: what
+** it is to a thing put there (in, on, hung from), the forms it keeps and what closes it, its room, the weight it bears,
+** the family it keeps, its own name ("lid": a chest's top, on it).  Compartment 0's is its kind's record's own (keeps,
+** cap_bulk, cap_weight, slots: dq0w/make.js holds them the same); a kind with no rows (a theme's) has its record's alone.
+** A thing in another: its record's y IC_MARK | its compartment's prep << 4 | its number (1 on); any other y (an old
+** save's, the stock's, the outfits') compartment 0.  Each compartment's closed bit in its holder's shut (IS_SHUT_C):
+** compartment 0's IS_CLOSED, its lock its own (IS_LOCK ...); 1 to 3, 0x20, 0x40, 0x80, no lock of their own yet */
+struct comp {
+    unsigned char   kind;                       /* Its holder's kind (KI_*; 0, the table's end) */
+    unsigned char   prep;                       /* What it is to a thing put there: CP_IN, CP_ON, CP_HUNG */
+    unsigned char   keeps;                      /* The forms it keeps, what closes it (a kind's keeps': KF_SOLID ...,
+                                                **   KF_LID, KF_TIE, KF_STOPPER; not KF_ON, KF_FIXED) */
+    unsigned char   bulk;                       /* Its room, pints */
+    unsigned        weight;                     /* The weight it bears, quarter pounds */
+    unsigned char   fam;                        /* The family it keeps (FM_*: a scabbard's swords; 0 anything); a
+                                                **   belt's, CP_HUNG, its slots */
+    unsigned char   noun;                       /* Its own name (CN_*: "the lid"; 0 its holder's) */
+};
+enum { CP_IN, CP_ON, CP_HUNG };
+enum { CN_NONE, CN_LID, CN_TOP, CN_DRAWER };     /* (Its own name: dq0w/kinds.c's cnouns, "lid", "top", "drawer") */
+#define NCOMP           4                       /* (A kind's compartments at most: shut's bits) */
+#define IC_MARK         0xFF00u                 /* (A thing in another's y: its compartment given) */
+#define IC_OF(y)        ((unsigned char) ((y) >= IC_MARK ? (y) & 0x0F : 0))     /* (Its compartment, unchecked) */
+#define IC_PREP(y)      ((unsigned char) ((y) >> 4 & 3))   /* (Its prep, where IC_OF's given) */
+#define IS_SHUT_C(c)    ((unsigned char) ((c) ? 0x10 << (c) : IS_CLOSED))   /* (Compartment c's closed bit) */
+
 /* The catalogue's kinds, by number (things.c's order: the maker puts them down by these) */
 enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKIN, KI_RATIONS, KI_TINDERBOX, KI_PICK,
     KI_SHOVEL, KI_LOCKPICKS, KI_CHISEL, KI_ROPE, KI_BONES, KI_PENNIES, KI_KEY, KI_CANDLE, KI_LANTERN, KI_SACK, KI_CHEST,

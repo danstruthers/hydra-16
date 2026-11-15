@@ -169,6 +169,55 @@ const struct burn* __fastcall__ burn_of (unsigned char k)
     return 0;
 }
 
+/* ---- The holders' compartments (COMMANDS-CRITIQUE.md's §4.9, step 6b, 2026-11-15: items.h's struct comp, kinds.c's
+** comps at the start of the catalogue's bank).  Kind k's compartment c copied out into crow: 1; 0 if it has none (c
+** past its last, or a kind that holds nothing); a kind with no rows (a theme's) its record's own, compartment 0.  The
+** kinds' bank, or the catalogue's, left in the window */
+extern const struct comp comps[];
+struct comp crow;
+unsigned char ccomp;                            /* (The compartment a thing's put in: stow's, the catalogue's code's; 0
+                                                **   anywhere else, the pack's, a sheath's ...) */
+unsigned char lv_c;                             /* (level_of's: the compartment of the first container reached into,
+                                                **   reach_to's, handy's; the next's as it goes out) */
+unsigned char rs_cc;                            /* (The compartment a thing's put in, the reach's: stow's, rs_walk's) */
+unsigned char cont_c;                           /* (cont's compartment: stow's, serve's reach_to) */
+unsigned char lst_c = 0xFF;                     /* (listed's: the one compartment's things told, 0xFF all) */
+void cat_map (void);
+unsigned char __fastcall__ o_comp_of (unsigned k, unsigned char c);   /* (The catalogue's bank's, below) */
+unsigned char __fastcall__ comp_of (unsigned k, unsigned char c)
+{
+    cat_map ();
+    return o_comp_of (k, c);
+}
+
+/* The next thing after i in thing x (items ()'s, for the catalogue's bank's code: its two arguments, m2's) */
+unsigned __fastcall__ items_in (unsigned i, unsigned x)
+{
+    return items (i, IN_X | IN_ITEM, x);
+}
+
+/* Thing i's compartment in what it's in (its record's y, IC_MARK's: one its holder has; else 0) */
+unsigned char __fastcall__ icomp (unsigned i)
+{
+    const struct item* p = item_at (i);
+    unsigned char c;
+
+    if (p->where != IW_ITEM || !(c = IC_OF (p->y))) {
+        return 0;
+    }
+    return comp_of (item_at (p->x)->kind, c) ? c : 0;
+}
+
+/* Whether thing i (in another) is in a compartment of it that's closed (a chest's inside, its lid shut; not its lid's
+** top) */
+unsigned char __fastcall__ in_shut (unsigned i)
+{
+    unsigned x = item_at (i)->x;
+    unsigned char c = icomp (i);
+
+    return (item_at (x)->shut & IS_SHUT_C (c)) != 0;
+}
+
 /* The hands a thing wants: both for a two-handed one, or a big one (a macro: its parts' own, 48 and 63, the main
 ** RAM's room) */
 #define TWO(k)          ((k)->flags & K_TWO || (k)->bulk >= 20 ? 2 : 1)
@@ -258,7 +307,12 @@ static void text_new (void)
 /* Item i's record written back (from q); item i's kind (its number) */
 static void __fastcall__ store (const struct item* q, unsigned i)
 {
-    memcpy (item_at (i), q, sizeof *q);
+    struct item* p = item_at (i);
+
+    memcpy (p, q, sizeof *q);
+    if (p->where != IW_ITEM && p->y >= IC_MARK) {
+        p->y = 0;                               /* (Out of a compartment: none kept, items.h's IC_MARK) */
+    }
 }
 
 static unsigned __fastcall__ item_kind (unsigned i)
@@ -351,7 +405,8 @@ static const struct item* __fastcall__ lying (const struct item* q)
         return 0;
     }
     fetch (&s, q->x);
-    return s.where == IW_SQUARE && (kind_of (s.kind)->keeps & KF_ON) ? &s : 0;
+    return s.where == IW_SQUARE && (q->y >= IC_MARK ? IC_PREP (q->y) == CP_ON : kind_of (s.kind)->keeps & KF_ON) ? &s :
+        0;                                      /* (On a chest's lid too: its compartment's prep, items.h's IC_MARK) */
 }
 
 /* Whether thing n can go in c (or on it: a surface; hung from it: a belt): 0, or the words why not (SA_*): the
@@ -509,6 +564,7 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
             return 0;                           /* (A step of the reach first: part 85's) */
         }
         place (n, IW_ITEM, pack, 0);
+        lv_c = 0;
         reach_to (pack);                        /* (Put away: its reach, HOUSE.md's: part 56's) */
         if (hand_first == 2) {                  /* (Taken up, its hands full: said so, the user's, 2026-11-06) */
             put ("You've no hand free for the ");
@@ -557,17 +613,20 @@ static unsigned lx;
 static unsigned char __fastcall__ level_of (unsigned c)
 {
     static const struct kind* k;
-    static unsigned char f;
+    static unsigned char f, cc;
 
+    cc = lv_c;                                  /* (Its compartment reached into: a chest's lid's top open to the hand,
+                                                **   its lid shut or not; then the one c's in, the next level's) */
+    lv_c = icomp (c);
     fetch (&rec, c);
     lw = rec.where;
     lx = rec.x;
     k = kind_of (rec.kind);
     f = k->flags;
-    if (rec.shut & IS_CLOSED) {
+    if (rec.shut & IS_SHUT_C (cc)) {
         return 1;
     }
-    if (!(f & K_CONTAINER) || (f & K_HANG)) {
+    if (!(f & K_CONTAINER) || (f & K_HANG) || (cc && comp_of (rec.kind, cc) && crow.prep != CP_IN)) {
         return 0;
     }
     return !(rec.flags & I_WORN) ? 1 : k->form & KF_BACK ? 2 : 0;
@@ -579,6 +638,7 @@ unsigned __fastcall__ s_handy (unsigned i)
 {
     static unsigned c;
 
+    lv_c = icomp (i);
     for (c = 0; fetch (&rec, i), rec.where == IW_ITEM; ) {
         if (level_of (i = rec.x)) {
             c = i;
@@ -621,6 +681,7 @@ void __fastcall__ s_reach_from (unsigned n)
 {
     fetch (&rec, n);
     if (rec.where == IW_ITEM) {
+        lv_c = icomp (n);
         s_reach_to (rec.x);
     } else if (!(rec.flags & I_HELD)) {
         rbody = 1;
@@ -710,18 +771,22 @@ enum { RR_ON = 1, RR_DIP = 32, RR_TWO = 64, RR_NEW = 128 };   /* (Its steps begu
 
 /* The containers a reach comes to, out from c (level_of's rule, its own copy: open to the hand, none; a pack on the back,
 ** rstep.thing; any other, or closed, a level): how many, and rs_hit the one rs_want from the innermost */
+static unsigned char rs_wc;                     /* (rs_walk's: the compartment of c it comes to first, the next's as it
+                                                **   goes out: a chest's lid's top open to the hand, not a level) */
 static unsigned char __fastcall__ rs_walk (unsigned c)
 {
     register const struct kind* k;
-    unsigned char m = 0;
+    unsigned char m = 0, sh, in;
 
     while (c) {
         fetch (&rec, c);
         k = kind_of (rec.kind);
-        if (!(rec.shut & IS_CLOSED) && (k->flags & K_CONTAINER) && !(k->flags & K_HANG) && (rec.flags & I_WORN) &&
-            (k->form & KF_BACK)) {
+        sh = rec.shut & IS_SHUT_C (rs_wc);
+        in = (k->flags & K_CONTAINER) && !(rs_wc && comp_of (rec.kind, rs_wc) && crow.prep != CP_IN);
+        rs_wc = icomp (c);
+        if (!sh && in && !(k->flags & K_HANG) && (rec.flags & I_WORN) && (k->form & KF_BACK)) {
             rstep.thing = c;
-        } else if ((rec.shut & IS_CLOSED) || ((k->flags & K_CONTAINER) && !(k->flags & K_HANG) && !(rec.flags & I_WORN))) {
+        } else if (sh || (in && !(k->flags & K_HANG) && !(rec.flags & I_WORN))) {
             if (m++ == rs_want) {
                 rs_hit = c;
             }
@@ -792,7 +857,9 @@ unsigned char __fastcall__ s_reach_step (unsigned n, unsigned c)
     if (n && item_at (n)->where == IW_ITEM) {
         up = item_at (n)->x;
     }
+    rs_wc = n ? icomp (n) : 0;
     nout = rs_walk (up);
+    rs_wc = rs_cc;                              /* (Where it's put: stow's compartment, 0 anywhere else) */
     nd = rs_walk (c);
     rstep.time = 50;
     if (d == (unsigned char) RS_BACK) {
@@ -816,6 +883,7 @@ unsigned char __fastcall__ s_reach_step (unsigned n, unsigned c)
         rstep.what = item_kind (rstep.thing);
     } else if (rs_paid < nout + nd) {           /* (Each level its own) */
         rs_want = rs_paid < nout ? nout - 1 - rs_paid : nout + nd - 1 - rs_paid;
+        rs_wc = rs_paid < nout ? (n ? icomp (n) : 0) : rs_cc;
         rs_walk (rs_paid < nout ? up : c);
         rstep.edge = SE_IN;
         rstep.say = d ? SV_IN : rs_paid + 1 == nout ? SV_GETOUT : rs_paid + 1 == nout + nd ? SV_OPEN :
@@ -2315,6 +2383,7 @@ unsigned char s_serve (void)
             took = HUB->round;
         } else if (k >= IO_STOW && k <= IO_TAKE) {
             if ((iq.result = moved (k)) == IR_OK && k != IO_TAKE) {
+                lv_c = cont_c;
                 reach_to (cont);                /* (Stowed, put, taken from: one, or as many as it says; what it went
                                                 **   in reached into, once) */
             }
@@ -2928,12 +2997,14 @@ static unsigned char __fastcall__ get (unsigned n)
 ** hand: part 35's, the catalogue's bank's code's through its stub) */
 unsigned __fastcall__ s_shut_in (unsigned n)
 {
-    const struct item* p;
+    unsigned c;
 
-    while ((p = item_at (n))->where == IW_ITEM) {
-        if (item_at (n = p->x)->shut & IS_CLOSED) {
-            return n;
+    while (item_at (n)->where == IW_ITEM) {
+        c = item_at (n)->x;
+        if (in_shut (n)) {
+            return c;                           /* (Its compartment closed: a chest's inside, not its lid's top) */
         }
+        n = c;
     }
     return 0;
 }
@@ -3069,7 +3140,8 @@ static unsigned __fastcall__ join (unsigned n)
         fetch (&rec, i);
         if (i != n && rec.kind == q.kind && !(rec.flags & (I_NAMED | I_HIDDEN)) && rec.qty + q.qty <= 250 &&
             (rec.flags & (I_HELD | I_WORN)) == (q.flags & (I_HELD | I_WORN)) &&
-            (q.where != IW_SQUARE || (rec.sn == q.sn && rec.y == q.y)) && (q.kind != KI_BANDAGES ||
+            (q.where != IW_SQUARE || (rec.sn == q.sn && rec.y == q.y)) && (q.where != IW_ITEM || IC_OF (rec.y) ==
+            IC_OF (q.y)) && (q.kind != KI_BANDAGES ||  /* (In another, in the same compartment: step 6b's) */
             (rec.wear == q.wear && rec.mat == q.mat))) {     /* (Bandages of a cloth and a cleanliness alone: theirs
                                                 **   each band's own wear, wcloth.c's; HOUSE.md's bandages) */
             if (rec.fuel != q.fuel || rec.size != q.size || rec.thick != q.thick) {
@@ -3477,7 +3549,11 @@ static void __fastcall__ reveal (unsigned n)
         put (full[!rec.fuel ? 0 : rec.fuel >= w ? 5 : 1 + rec.fuel * 4 / w]);
         return;
     }
-    if (!items (0, IN_X | IN_ITEM, n)) {
+    lst_c = comp_of (item_at (n)->kind, 1) ? 0 : 0xFF;    /* (Its inside's alone: not what's on its lid, step 6b's) */
+    for (w = 0; (w = items (w, IN_X | IN_ITEM, n)) != 0 && lst_c != 0xFF && icomp (w); ) {
+    }
+    if (!w) {
+        lst_c = 0xFF;
         put (": it's empty.");
         return;
     }
@@ -3486,6 +3562,7 @@ static void __fastcall__ reveal (unsigned n)
     t0 = tp;
     hub_map (0);
     listed (n);
+    lst_c = 0xFF;
     and_last36 (t0);
     put (".");
 }
@@ -3723,7 +3800,7 @@ unsigned char s_inside (void)
 {
     const struct kind* k;
     unsigned n, j;
-    unsigned char f, kk, on, pl = 0, to = iq.to;
+    unsigned char f, kk, on, pl, to = iq.to, w = iq.to & 4, cc = 0, hk, hs, multi, did = 0;
     char nm[20];
     char* t0;
 
@@ -3750,7 +3827,6 @@ unsigned char s_inside (void)
     if (!to) {
         strcat (nm, k->name);
     }
-    on = kk & KF_ON ? 1 : f & K_BELT ? 2 : 0;
     if (!(f & (K_CONTAINER | K_BELT)) && !(kk & KF_ON)) {
         if (!to) {
             put (rec.kind == KI_WELL ? "The well's shaft drops away into the dark." : "You can't see into ");
@@ -3761,42 +3837,77 @@ unsigned char s_inside (void)
         }
         return IR_OK;
     }
-    if (rec.shut & IS_CLOSED) {
-        put (to ? "It's closed." : "The ");
-        if (!to) {
-            put (nm + 4);
-            put (" is closed.");
+    hk = rec.kind;                              /* (Its compartments, step 6b's: "look on the chest" its lid's top, a
+                                                **   look in its inside, examined each that holds something) */
+    hs = rec.shut;
+    multi = comp_of (hk, 1);
+    for (pl = 1; w && comp_of (hk, pl); ++pl) {
+        if (crow.prep == CP_ON) {
+            cc = pl;
+            break;
         }
-        return IR_OK;
     }
-    if (iq.kind == IO_INSIDE) {
-        if (reach_step (0, n)) {
-            return IR_NO;
+    for (;;) {
+        comp_of (hk, cc);
+        on = crow.prep == CP_ON ? 1 : crow.prep == CP_HUNG ? 2 : 0;
+        pl = 0;
+        if (hs & IS_SHUT_C (cc)) {
+            if (!to || !multi) {
+                put (to ? "It's closed." : "The ");
+                if (!to) {
+                    put (nm + 4);
+                    put (" is closed.");
+                }
+            }
+            goto next;                          /* (Examined, said closed already: the look's) */
         }
-        reach_to (n);                           /* (Its reach, looked into: a pack worn taken off, HOUSE.md's) */
-    }
-    for (j = 0; (j = items (j, IN_X | IN_ITEM, n)) != 0; ) {
-        fetch (&rec, j);
-        pl += 1 + (rec.qty > 1 || (kind_of (rec.kind)->flags & K_PLURAL));
-    }
-    if (!pl) {
-        put (on == 1 ? "There's nothing on " : on == 2 ? "Nothing hangs from " : to ? "It's empty" : "The ");
-        if (on || !to) {
-            put (on ? nm : nm + 4);
+        if (iq.kind == IO_INSIDE && !did) {
+            rs_cc = cc;
+            j = reach_step (0, n);
+            rs_cc = 0;
+            if (j) {
+                return IR_NO;
+            }
+            lv_c = cc;
+            reach_to (n);                       /* (Its reach, looked into: a pack worn taken off, HOUSE.md's) */
+            did = 1;
         }
-        put (on || to ? "." : " is empty.");
-        return IR_OK;
+        for (j = 0; (j = items (j, IN_X | IN_ITEM, n)) != 0; ) {
+            if (!multi || icomp (j) == cc) {
+                fetch (&rec, j);
+                pl += 1 + (rec.qty > 1 || (kind_of (rec.kind)->flags & K_PLURAL));
+            }
+        }
+        if (cc && to && !w) {
+            if (!pl) {
+                goto next;                      /* (Examined: another compartment told if it holds something) */
+            }
+            put (" ");
+        }
+        if (!pl) {
+            put (on == 1 ? "There's nothing on " : on == 2 ? "Nothing hangs from " : to ? "It's empty" : "The ");
+            if (on || !to) {
+                put (on ? nm : nm + 4);
+            }
+            put (on || to ? "." : " is empty.");
+            goto next;
+        }
+        put (on == 1 ? "On " : on == 2 ? "From " : "In ");
+        put (nm);
+        put (on == 2 ? (pl > 1 ? " hang " : " hangs ") : pl > 1 ? " lie " : " lies ");
+        hub_map (UI_BANK);
+        t0 = tp;
+        hub_map (0);
+        lst_c = multi ? cc : 0xFF;              /* (That compartment's alone) */
+        listed (n);
+        lst_c = 0xFF;
+        and_last (t0);
+        put (".");
+next:
+        if (!to || w || !comp_of (hk, ++cc)) {
+            return IR_OK;                       /* (A look in, or on: that one) */
+        }
     }
-    put (on == 1 ? "On " : on == 2 ? "From " : "In ");
-    put (nm);
-    put (on == 2 ? (pl > 1 ? " hang " : " hangs ") : pl > 1 ? " lie " : " lies ");
-    hub_map (UI_BANK);
-    t0 = tp;
-    hub_map (0);
-    listed (n);
-    and_last (t0);
-    put (".");
-    return IR_OK;
 }
 
 /* The theme's kinds (the theme bank's, the UI's: theme.h) into the catalogue, after its own
@@ -4181,11 +4292,14 @@ static unsigned char __fastcall__ look_at (unsigned n)
     }
     ld = seen_d > 99 ? 99 : seen_d;
     for (c = n, cl = 0; (p = item_at (c))->where == IW_ITEM; ) {
-        if (item_at (c = p->x)->shut & IS_CLOSED) {
-            cl = 1;                             /* (In a thing closed: not seen) */
-            px = c;
+        px = p->x;
+        if (in_shut (c)) {
+            cl = 1;                             /* (In a thing closed: not seen; on a chest's lid, seen) */
+            py = px;
         }
+        c = px;
     }                                           /* (Whose: the character's, on it or in what it carries; where it lies) */
+    px = py;
     if (cl) {
         put ("The ");
         put (kind_of (item_at (px)->kind)->name);
@@ -4236,8 +4350,10 @@ static unsigned char __fastcall__ look_at (unsigned n)
             worn_put (n, WH_LOOK);              /* (" on your left hand": part 107's, 2026-11-10) */
         }
     } else if (rec.where == IW_ITEM) {
-        q = kind_of (item_at (rec.x)->kind);     /* (What it's in, or on) */
-        put (q->keeps & KF_ON || q->flags & K_BELT ? "on " : "in ");
+        sh = item_at (rec.x)->kind;             /* (What it's in, or on: its compartment's) */
+        sh = comp_of (sh, icomp (n)) && crow.prep != CP_IN;
+        q = kind_of (item_at (rec.x)->kind);
+        put (sh ? "on " : "in ");
         put (mine ? "your " : "the ");
         put (q->name);
     } else if (rec.where == IW_PORTAL) {
@@ -4289,9 +4405,12 @@ feet:
             word (sh & IS_BURST ? "its lock broken" : "with a lock");
         }
     }
-    c = (lk.flags & (K_CONTAINER | K_BELT) || lk.keeps & KF_ON) && !(sh & IS_CLOSED) && ld <= 1;
+    c = (lk.flags & (K_CONTAINER | K_BELT) || lk.keeps & KF_ON) && (!(sh & IS_CLOSED) || comp_of (rec.kind, 1)) &&
+        ld <= 1;                                /* (Closed, a chest's lid's top still told: step 6b's) */
     if (c && !items (0, IN_X | IN_ITEM, n)) {
-        word (lk.keeps & KF_ON ? "bare" : "empty");
+        if (!(sh & IS_CLOSED)) {
+            word (lk.keeps & KF_ON ? "bare" : "empty");
+        }
         c = 0;
     }
     tq = 0;
@@ -4911,6 +5030,9 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
     while (gcur = gk, nx_n = i, nx_w = where, nx_x = x, (i = next_in ()) != 0) {  /* (From its place: what's in it,
                                                 **   and alike's, looked elsewhere) */
         gk = gcur;
+        if (depth == 1 && lst_c != 0xFF && icomp (i) != lst_c) {
+            continue;                           /* (Another compartment's: listed's lst_c, a chest's lid's top) */
+        }
         fetch (&tw, i);
         twk = kind_of (tw.kind);
         lkf = twk->flags;
@@ -4957,7 +5079,7 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
                 }
             } else {
                 for (jn = i; nx_n = jn, nx_w = where, nx_x = x, (jn = next_in ()) != 0; ) {
-                    if (item_at (jn)->kind == tw.kind) {
+                    if (item_at (jn)->kind == tw.kind && (depth != 1 || lst_c == 0xFF || icomp (jn) == lst_c)) {
                         ln += alike (i, told, &nt);
                     }
                 }
@@ -5504,6 +5626,38 @@ static struct item o;                           /* (A record copied out, for the
 #define KFLAGS(k)       B (m1 (kind_flags, k))
 #define FETCH(i)        m2 (fetch, (unsigned) &o, i)
 
+/* Kind k's compartment c copied out into crow (comp_of's, the main RAM's, here for its room): 1; 0 if it has none (c
+** past its last, or a kind that holds nothing); a kind with no rows (a theme's) its record's own, compartment 0 */
+unsigned char __fastcall__ o_comp_of (unsigned k, unsigned char c)
+{
+    static const struct comp* p;
+    static const struct kind* q;
+
+    for (p = comps; p->kind && p->kind != k; ++p) {
+    }
+    if (p->kind) {
+        for (; c && p->kind == k; ++p, --c) {
+        }
+        if (p->kind != k) {
+            return 0;
+        }
+        memcpy (&crow, p, sizeof crow);
+        return 1;
+    }
+    q = KIND_K (k);
+    if (c || (!(q->flags & (K_CONTAINER | K_BELT)) && !(q->keeps & KF_ON))) {
+        return 0;
+    }
+    crow.kind = k;
+    crow.prep = q->flags & K_BELT ? CP_HUNG : q->keeps & KF_ON ? CP_ON : CP_IN;
+    crow.keeps = q->keeps & ~(KF_ON | KF_FIXED);
+    crow.bulk = q->cap_bulk;
+    crow.weight = q->cap_weight;
+    crow.fam = q->slots;
+    crow.noun = 0;
+    return 1;
+}
+
 /* Its words (SA_*: items.h's) put in the hub's text, as a code and the two names (said.txt's SA rows the UI's: narration
 ** as data, stage 5, the user's, 2026-11-12; kinds.c's said[] the words before) */
 static void __fastcall__ say (unsigned char n)
@@ -5552,7 +5706,27 @@ static void __fastcall__ o_place (unsigned n, unsigned char where, unsigned x, u
     o.where = where;
     o.x = x;
     o.flags = (o.flags & ~(I_HELD | I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | flags;
+    if (where == IW_ITEM && ccomp) {
+        o.y = IC_MARK | crow.prep << 4 | ccomp; /* (Its compartment, its prep: stow's, o_fits' crow) */
+    } else if (o.y >= IC_MARK) {
+        o.y = 0;
+    }
     m2 (store, (unsigned) &o, n);
+}
+
+/* The compartment of holder c a thing's put in, by the prep said (iq's to 1: on it): its first that's on it (or in
+** it), else its first (a sack's "on" its inside, a table's "in" its top, as they always were) */
+static unsigned char __fastcall__ cfor (unsigned c)
+{
+    static unsigned char k, i;
+
+    k = B (m1 (item_kind, c));
+    for (i = 0; B (m2 (comp_of, k, i)); ++i) {
+        if (crow.prep == (iq.to & 1 ? CP_ON : CP_IN)) {
+            return i;
+        }
+    }
+    return 0;
 }
 
 static void __fastcall__ o_flags (unsigned n, unsigned char set, unsigned char clear)
@@ -5562,14 +5736,15 @@ static void __fastcall__ o_flags (unsigned n, unsigned char set, unsigned char c
     m2 (store, (unsigned) &o, n);
 }
 
-/* Whether thing n can go in c (or on it: a surface; hung from it: a belt): 0, or the words why not (SA_*): its
-** form (a basket won't keep sand, nor water; a sack won't keep water), lit (a flame in a pack), its room (a belt's
-** slots), the weight it bears; never into itself, nor into what's in it */
+/* Whether thing n can go in c's compartment ccomp (in it, on it: a surface; hung from it: a belt): 0, or the words why
+** not (SA_*): its form (a basket won't keep sand, nor water; a sack won't keep water), lit (a flame in a pack), its room
+** (a belt's slots), the weight it bears, the compartment's own (crow, comp_of's: left for o_place); never into itself,
+** nor into what's in it */
 static unsigned char __fastcall__ o_fits (unsigned n, unsigned c)
 {
     static const struct kind* k;
-    static unsigned j, bear;
-    static unsigned char kf, form, lit, cf, keeps, room, slots, fam;
+    static unsigned j, bear, b, w;
+    static unsigned char kf, form, lit, cp, keeps, room, slots, fam;
 
     k = KIND (n);
     kf = k->flags;
@@ -5577,40 +5752,46 @@ static unsigned char __fastcall__ o_fits (unsigned n, unsigned c)
     fam = k->slots;
     FETCH (n);
     lit = o.flags & I_LIT;
-    k = KIND (c);
-    cf = k->flags;
-    keeps = k->keeps;
-    room = k->cap_bulk;
-    bear = k->cap_weight;
-    slots = k->slots;
+    if (!B (m2 (comp_of, B (m1 (item_kind, c)), ccomp))) {
+        return SA_NOT_HOLDER;                   /* (It holds nothing) */
+    }
+    cp = crow.prep;
+    keeps = crow.keeps;
+    room = crow.bulk;
+    bear = crow.weight;
+    slots = crow.fam;
     for (j = c; j; j = o.where == IW_ITEM ? o.x : 0) {
         if (j == n) {
             return SA_ITSELF;
         }
         FETCH (j);
     }
-    if (cf & K_BELT) {
+    if (cp == CP_HUNG) {
         m1 (bulk_in, c);
         return !(kf & K_HANG) ? SA_NO_HANG : nin >= slots ? SA_NO_SLOT : 0;
     }
-    if (!(cf & K_CONTAINER)) {
-        if (!(keeps & KF_ON)) {
-            return SA_NOT_HOLDER;
+    if (cp == CP_IN) {
+        if (!(keeps & form) || (slots && fam != slots)) {   /* (A carrier its family's alone: a scabbard a sword's, a
+                                                **   quiver arrows', outfits' kinds.md, 2026-10-27) */
+            return form == KF_SOLID || slots ? SA_WONT_GO : SA_RUN_OUT;
+        } else if (lit) {
+            return SA_PUT_OUT;
         }
-    } else if (!(keeps & form) || (slots && fam != slots)) {    /* (A carrier its family's alone: a scabbard a
-                                                **   sword's, a quiver arrows', outfits' kinds.md, 2026-10-27) */
-        return form == KF_SOLID || slots ? SA_WONT_GO : SA_RUN_OUT;
-    } else if (lit) {
-        return SA_PUT_OUT;
     }
     FETCH (c);
-    if (o.shut & IS_CLOSED) {
+    if (o.shut & IS_SHUT_C (ccomp)) {
         return SA_SHUT;                         /* (Closed: its lid down, its tie tied, its stopper in) */
     }
-    if (m1 (bulk_in, c) + m1 (bulk_of, n) > room) {
+    for (j = 0, b = w = 0; (j = m2 (items_in, j, c)) != 0; ) {
+        if (B (m1 (icomp, j)) == ccomp) {       /* (What's in that compartment alone) */
+            b += m1 (bulk_of, j);
+            w += m1 (weight_of, j);
+        }
+    }
+    if (b + m1 (bulk_of, n) > room) {
         return SA_NO_ROOM;
     }
-    return m2 (weight_in, IW_ITEM, c) + m1 (weight_of, n) > bear ? SA_TOO_HEAVY : 0;
+    return w + m1 (weight_of, n) > bear ? SA_TOO_HEAVY : 0;
 }
 
 /* The other thing (iq's into: carried, or within reach), named in yn: its number; else 0, its words why */
@@ -5648,7 +5829,7 @@ static unsigned char __fastcall__ hold (unsigned n)
 static unsigned char __fastcall__ stow (unsigned n, unsigned char put)
 {
     static unsigned c;
-    static unsigned char r, cf;
+    static unsigned char r, cc;
 
     m0 (about);
     if (!put || !*iq.into) {
@@ -5659,22 +5840,31 @@ static unsigned char __fastcall__ stow (unsigned n, unsigned char put)
     } else if (!(c = other ())) {
         return IR_NO;
     }
+    cc = put && *iq.into ? cfor (c) : 0;        /* (Which of its compartments: in it, on it, as said) */
     FETCH (n);
-    if (o.where == IW_ITEM && o.x == c) {
+    if (o.where == IW_ITEM && o.x == c && B (m1 (icomp, n)) == cc) {
         return no (SA_THERE);
     }
-    if ((r = o_fits (n, c)) != 0) {
+    ccomp = cc;
+    r = o_fits (n, c);
+    ccomp = 0;
+    if (r) {
         return no (r);
     }
-    if (B (m2 (reach_step, n, c))) {
+    rs_cc = cc;                                 /* (The reach's way in: that compartment's, part 56's) */
+    r = B (m2 (reach_step, n, c));
+    rs_cc = 0;
+    if (r) {
         return IR_NO;                           /* (A step of the reach first: part 85's) */
     }
-    cf = KIND (c)->flags;
-    r = KIND (c)->keeps;
+    m2 (comp_of, B (m1 (item_kind, c)), cc);    /* (Its row, crow: its prep, o_place's and the words') */
+    ccomp = cc;
     o_place (n, IW_ITEM, c, 0);
+    ccomp = 0;
     cont = c;
-    return yes (cf & K_BELT ? SA_HANG : (r & KF_ON) && B (m1 (item_kind, c)) != KI_SCONCE ? SA_PUT_ON : c == pack ?
-        SA_STOW : SA_PUT_IN, 20);               /* (A sconce's: in it) */
+    cont_c = cc;
+    return yes (crow.prep == CP_HUNG ? SA_HANG : crow.prep == CP_ON && B (m1 (item_kind, c)) != KI_SCONCE ? SA_PUT_ON :
+        c == pack ? SA_STOW : SA_PUT_IN, 20);   /* (A sconce's: in it) */
 }
 
 /* The thing named (iq's name) in the other thing (iq's into: other's, in c), or on it: its number, named in xn; else
@@ -5683,17 +5873,24 @@ static unsigned c;
 static unsigned in_other (void)
 {
     static unsigned n;
+    static unsigned char s;
 
     if (!(c = other ())) {
         return 0;
     }
     FETCH (c);
-    if (o.shut & IS_CLOSED) {
-        no (SA_SHUT);
+    s = o.shut;
+    if ((s & IS_CLOSED) && !B (m2 (comp_of, o.kind, 1))) {
+        no (SA_SHUT);                           /* (Its one compartment closed: nothing in it looked for) */
         return 0;
     }
     win = c;                                    /* (In it, by name, of several the one the selector says) */
-    if (!(handled = n = m2 (pick, (unsigned) iq.name, HW_IN))) {
+    handled = n = m2 (pick, (unsigned) iq.name, HW_IN);
+    if (n ? s & IS_SHUT_C (B (m1 (icomp, n))) : s & IS_CLOSED) {
+        no (SA_SHUT);                           /* (In one closed: a chest's inside, its lid shut, not on its lid) */
+        return 0;
+    }
+    if (!n) {
         no (SA_NOT_IN);
         return 0;
     }
@@ -6243,9 +6440,12 @@ unsigned char __fastcall__ s_on_it (unsigned n, unsigned char touch)
         }
     }
     on = (lk.keeps & KF_ON) != 0;
+    lst_c = comp_of (rec.kind, 1) ? 0 : 0xFF;   /* (Its compartments each, step 6b's: its inside, then its lid's top) */
+    for (j = 0; (j = items (j, IN_X | IN_ITEM, n)) != 0 && lst_c != 0xFF && icomp (j); ) {
+    }
     if (rec.shut & IS_CLOSED) {
         put (lpl ? "They're closed: you go over the outside of them." : "It's closed: you go over the outside of it.");
-    } else if (items (0, IN_X | IN_ITEM, n)) {
+    } else if (j) {
         put (touch ? "Your hands find " : on ? "On the " : "In the ");
         if (!touch) {
             put (lk.name);
@@ -6267,6 +6467,21 @@ unsigned char __fastcall__ s_on_it (unsigned n, unsigned char touch)
         put (".");
     }
     fetch (&rec, n);
+    for (on = 1; lst_c != 0xFF && (fetch (&rec, n), comp_of (rec.kind, on)); ++on) {   /* (Its other compartments,
+                                                **   each that holds something: a chest's lid's top, open to the hand) */
+        for (j = 0; (j = items (j, IN_X | IN_ITEM, n)) != 0 && icomp (j) != on; ) {
+        }
+        if (j) {
+            comp_of (rec.kind, on);
+            put (crow.prep == CP_ON ? " On the " : " In the ");
+            put (lk.name);
+            put (" you find ");
+            lst_c = on;
+            listed (n);
+            put (".");
+        }
+    }
+    lst_c = 0xFF;
     if (iq.to & IOS_THING) {
         if (rec.mat != MT_OTHER) {
             if ((lk.form & (KF_SMALL | KF_COUNT)) == (KF_SMALL | KF_COUNT)) {

@@ -43,6 +43,36 @@ function checkOverlays(dir) {
   });
 }
 
+// The holders' compartments (kinds.c's comps, items.h's struct comp: CATCOMP, the catalogue's bank's start, so at the
+// kinds' end in the file as ld65 writes it) held to the kinds (2026-11-15, COMMANDS-CRITIQUE.md's step 6b): a kind that
+// holds things (a container, a belt, a surface) has its rows together, in the kinds' order, NCOMP at most, and its first
+// is its record's own (prep by its flags, its keeps but KF_ON and KF_FIXED, cap_bulk, cap_weight, slots); a kind that
+// holds nothing has none.  Their count
+function compsSame(cat, at, nkinds, names) {
+  const K_CONTAINER = 1, K_BELT = 2, KF_ON = 0x10, KF_FIXED = 0x80, CP = H.enums.find(e => e[0] === 'CP_IN');
+  const ROW = H.size('comp'), o = n => H.off('comp', n), f = n => H.off('kind', n), seen = new Map();
+  let r = at, last = 0, rows = 0;
+  for (; cat[r + o('kind')]; r += ROW, ++rows) {
+    const k = cat[r + o('kind')];
+    if (k < last) throw new Error('dq0w.cat: the compartments not in the kinds\' order (' + names[k] + ')');
+    seen.set(k, (seen.get(k) || 0) + 1);
+    if (seen.get(k) > C.NCOMP) throw new Error('dq0w.cat: ' + names[k] + ' has more than NCOMP compartments');
+    last = k;
+    if (seen.get(k) > 1) continue;
+    const q = k * KIND, fl = cat[q + f('flags')], kp = cat[q + f('keeps')];
+    const want = [fl & K_BELT ? CP.indexOf('CP_HUNG') : kp & KF_ON ? CP.indexOf('CP_ON') : CP.indexOf('CP_IN'), kp & ~(KF_ON | KF_FIXED),
+      cat[q + f('cap_bulk')], cat.readUInt16LE(q + f('cap_weight')), cat[q + f('slots')]];
+    const have = [cat[r + o('prep')], cat[r + o('keeps')], cat[r + o('bulk')], cat.readUInt16LE(r + o('weight')), cat[r + o('fam')]];
+    if (want.some((v, i) => v !== have[i])) throw new Error('dq0w.cat: ' + names[k] + '\'s first compartment not its record\'s (prep, keeps, ' +
+      'bulk, weight, family: ' + have.join(' ') + ', its record ' + want.join(' ') + ')');
+  }
+  for (let k = 1; k < nkinds; ++k) {
+    const q = k * KIND, holds = cat[q + f('flags')] & (K_CONTAINER | K_BELT) || cat[q + f('keeps')] & KF_ON;
+    if (names[k] && !!holds !== seen.has(k)) throw new Error('dq0w.cat: ' + names[k] + (holds ? ' holds things but has no compartment' : ' has compartments but holds nothing'));
+  }
+  return rows;
+}
+
 function build({ dir, objdir, say = () => {} }) {
   checkOverlays(dir);
   B.pack(objdir, 'dq0w');                                 // (Its overlays' file packed: obj/games/dq0w.ovp)
@@ -72,6 +102,8 @@ function build({ dir, objdir, say = () => {} }) {
   const gods = Buffer.from('\0' + fs.readFileSync(path.join(objdir, '..', 'dq0g.txt'), 'latin1') + '\0', 'latin1');
   if (gods.length > 2 * KIND || names[nkinds - 1] || names[nkinds - 2]) throw new Error('dq0w.cat: the deities\' ' + gods.length + ' bytes, or the last two kinds taken (items.h\'s GODS_AT)');
   if (cat.readUInt16LE(CAP_WEIGHT)) throw new Error('dq0w.cat: the first kind\'s cap_weight not 0 (the kinds\' length goes there)');
+  const comps = compsSame(cat, at, nkinds, names);
+
   const file = Buffer.concat([cat.subarray(0, at), text, Buffer.alloc(kin - at - text.length), cat.subarray(at)]);
   file.writeUInt16LE(kin, CAP_WEIGHT);                          // (The kinds' length, in the first's (none's) cap_weight: wfile.c's)
   gods.copy(file, (nkinds - 2) * KIND);
@@ -82,7 +114,7 @@ function build({ dir, objdir, say = () => {} }) {
   const o = outfits.compile({ src: [...referees.map(r => path.join(games, r, 'outfits.txt')), path.join(games, 'dq0', 'outfits.txt')],
     names, out: path.join(objdir, '..', 'dq0o.dat'),
     dens: path.join(games, 'dq0d', 'kinds.txt') });
-  say('dq0w.cat: ' + names.filter(Boolean).length + ' kinds, their words ' + text.length + ' bytes; dq0o.dat: ' + o.sections + ' outfits (and ' + o.kinds + ' of the denizens\' kinds), ' + o.bytes + ' bytes');
+  say('dq0w.cat: ' + names.filter(Boolean).length + ' kinds, ' + comps + ' compartments, their words ' + text.length + ' bytes; dq0o.dat: ' + o.sections + ' outfits (and ' + o.kinds + ' of the denizens\' kinds), ' + o.bytes + ' bytes');
   return { words: text.length, outfits: o };
 }
 

@@ -6048,3 +6048,108 @@ build step can print the missing cells").  Both are built; nothing a player sees
 - **Room:** the UI's part 29 1,647 bytes free to 1,659 (as_verb's two requests the rows'); overlay 19 234 to 246; the
   main RAM unchanged (3,143).  The world, the senses unchanged.  The start unchanged (no code on its path).
 - **The suite:** all 451 pass; the transcripts the same, but the known timing noise (nine games' denizens met at other moments, dq0hold's rat among them).
+
+## Compartments: containers and surfaces (2026-11-15; as built, for review: COMMANDS-CRITIQUE.md's §4.9, step 6b; ENGINE-CRITIQUE.md's row 4)
+
+Till now a kind held things one way: `KF_ON` a surface, `K_BELT` slots, else a container, and a thing in another
+recorded only its holder (`IW_ITEM`, x).  A chest couldn't have things in it and on its lid.  The user approved row 4
+finished (2026-11-15), step 6b with it.  What's built:
+
+- **The compartment table** (items.h's `struct comp`, dq0w/kinds.c's `comps`): a row a compartment, a kind's rows
+  together in the kinds' order, compartment 0 first, eight bytes: its holder's kind, its prep (`CP_IN`, `CP_ON`,
+  `CP_HUNG`), the forms it keeps and what closes it (a kind's keeps' bits: `KF_SOLID` ..., `KF_LID`, `KF_TIE`,
+  `KF_STOPPER`), its room (pints), the weight it bears (quarter pounds), its family (a scabbard's swords; a belt's,
+  its slots), its own noun (`CN_*`: "lid", "top", "drawer"; none used to name one yet).  In the catalogue's bank, its
+  own segment first (dq0w.cfg's `CATCOMP`, at $8000 there), 21 rows and an end, 176 bytes.  Read by `comp_of (k, c)`
+  (the main RAM's: the catalogue's bank put in the window, its `o_comp_of` there, the row copied to `crow`), and by the
+  senses for which kinds have a top past their first (dq0p's `on_lid`: a bit a kind, made once).
+- **Every kind that holds things converted, one row each:** backpack, belt, pouch, waterskin, bones, sack, chest,
+  basket, table, chair, quiver, body, iron pot, sconce, scabbard, sheath, bandolier, bolt case, vial, cask.  Compartment
+  0's row is its kind's record's own (prep by its flags, keeps, cap_bulk, cap_weight, slots): dq0w/make.js holds them
+  the same (`compsSame`: the rows in order, NCOMP at most a kind, the first its record's, every kind that holds things
+  has rows and none that doesn't), so the code not yet reading the table reads the same numbers.  A kind with no rows
+  (a theme's) has its record's alone (`comp_of`'s, made from it).  The heaps (a cloak, straw, furs: things hidden
+  under them, `cap_bulk`) aren't compartments.
+- **The chest two:** its inside (lid, lock: as ever) and its lid's top (`CP_ON`, 20 pints, 200 quarter pounds, open
+  to the hand whether the lid's shut or not).  The only kind with a second compartment: the one the critique names
+  that the dungeon already places (vaults, storerooms, quarters, the solar, the armoury).
+- **A thing's place** is its holder and its compartment: `IW_ITEM`, x the holder, and its record's y `IC_MARK` (0xFF00)
+  | its compartment's prep << 4 | its number (1 on).  Any other y is compartment 0: the stock's (its square's y), the
+  outfits', an old save's.  So no record's layout changes, and a thing put anywhere but a second compartment is
+  written byte for byte as before (stow's `o_place` writes the mark; `store`, `place` and `o_place` clear it as a thing
+  leaves).  `icomp (i)` reads it, checked against its holder's rows (a stale mark in a one-compartment holder reads 0).
+  The prep in the mark lets the senses tell a thing on a chest's lid without the table.
+- **Each compartment's state:** its closed bit in its holder's `shut` (`IS_SHUT_C (c)`: compartment 0's `IS_CLOSED`,
+  its lock its own as ever; 1 to 3, 0x20, 0x40, 0x80, free bits); a lock only compartment 0's (one byte a record).
+  Capacity per compartment: `o_fits` reads the compartment's row, its room and weight against what's in that
+  compartment alone (its things summed there, the catalogue's code's, by `items_in`); a thing's weight still all it
+  holds.
+- **The verbs, by the one path for things:**
+  - *put X in / on Y* (and *drop X on Y*, the UI's put_in given its prep): the holder's first compartment that's in
+    (or on) as said, else its first (a sack's "on" its inside, a table's "in" its top, as they always were);
+  - *take X from / out of / off Y*: from any of its compartments that's open (a thing on a shut chest's lid taken; one
+    inside it, "The chest is closed."); a holder of one compartment, closed, refused before it's looked in, as ever;
+  - *look in Y*: compartment 0; *look on Y* (the UI's: " on " in the line, `IO_INSIDE`'s to 4): its first that's on;
+    *look at* / *examine*: compartment 0 as ever, then each other that holds something ("On it lies a chisel."), a
+    shut chest's lid's top told;
+  - *search Y*: its inside (closed: "you go over the outside of it"), then each other that holds something ("On the
+    chest you find a chisel."); a thing's own search (on it, in it) as ever for every other kind;
+  - *open Y*: what it reveals its inside's alone, not what's on its lid;
+  - *look* (the senses): what's on a chest's lid seen with it, as a table's things are ("On the chest lies a chisel.");
+  - *look at X* on a chest: "on the chest" (its compartment's prep);
+  - the reach (part 56's `level_of`, part 85's `rs_walk`): a compartment that isn't `CP_IN` no level, its holder's lid
+    shut or not; the way in a put's compartment's (`rs_cc`), a thing got out its own (`icomp`).
+  - Two lots of a counted thing join only in the same compartment.
+- **What a player sees change** (new behaviour, none of it in an existing game: every sentence differs only where a
+  thing's on a chest):
+  - "put the chisel on the chest": "You put the chisel on the chest." (was "You put the chisel in the chest.", into it);
+    "drop the chisel on the chest" the same;
+  - "look on the chest": "On the chest lies a chisel." / "There's nothing on the chest." (was what's in it, "In the
+    chest lies ...", "The chest is empty.", or "The chest is closed.");
+  - a look: "On the chest lies a chisel." (new: nothing was on a chest);
+  - examined, looked at: "On it lies a chisel." after its inside's words, closed or open (new);
+  - searched: "On the chest you find a chisel." after its inside's words, closed or open (new);
+  - "take the chisel from the chest", the chest closed, the chisel on it: "You take the chisel from the chest."
+    (new: nothing was on a closed chest);
+  - opened: "You open the chest, revealing a sack." (what's on its lid not revealed: new only with something there);
+  - "look at the chisel" on it: "The chisel is on the chest." (new).
+- **Saves:** no record's layout changes.  An old save's things in others read compartment 0, which is where they were;
+  a save made now with a thing on a chest's lid read by an older build puts it inside.
+- **The test dq0compart** (tests/suites/dq0/gear.js): seed 3's kit chest, a chisel on it (its record: in the chest, y
+  `IC_MARK | CP_ON << 4 | 1`), a sack in it, the chest shut and opened, each verb's words.  It fails on the old build
+  ("look on the chest" says what's in it).
+- **Room** (against the dispatch table's rest's build): the world's main RAM 2,818 bytes free to 2,511 (`comp_of`'s
+  call, `icomp`, `in_shut`, `items_in`, `store`'s clearing; the table's walk in the catalogue's bank), the catalogue's
+  bank's code 4,555 to 5,546 bytes of its 6,400; the senses' main RAM 4,891 to 4,431 (`on_lid`, its bits, `lying`'s
+  mark); the UI's main RAM 3,143 unchanged, part 2 45 to 39, overlay 1 2,172 to 2,145, overlay 14 1,185 to 1,179.  The
+  world's parts: 10 1,527 to 1,487, 11 172 to 101, 35 60 to 0, 36 618 to 530, 39 1,529 to 1,464, 47 2,731 to 2,467,
+  61 2,239 to 1,929, 85 2,654 to 2,519, 92 1,312 to 1,306; the packer moved the map's `s_draw_test` from part 56's
+  bank to part 99's (56 2,632 to 2,957, 99 2,911 to 2,513), and the parts' banks among the overlays (5 259 to 142, 7
+  151 to 86, 8 274 to 300, 13 31 to 1,426, 14 498 to 136, 15 368 to 32, 16 762 to 692, 17 1,351 to 133, 22 123 to
+  221, 27 421 to 23, 28 392 to 327).  The timings: dq0traces' step 1,887,857 cycles (5 squares) at the baseline, 1,853,479
+  after the dispatch table's rest, 1,906,964 now (its budget 1,920,000; its spread between builds some 35,000);
+  dq0answer's normal listen's first letter 709,561, 695,411, now 600,809 (a denizens' pass landing before it or not).
+- **The start:** seed 1 232.8M cycles to 233.1M, seed 123456789 307.8M to 308.8M (the world's bigger image read; its
+  budgets 245M and 325M).
+- **The suite:** all 452 pass (dq0compart new).  The transcripts by sentence against the dispatch table's rest's: six
+  differ, all the known timing noise (dq0answer, dq0jobs, dq0lookfar, dq0passes, dq0prompt, dq0skykin: denizens met at
+  other moments).
+- **The save folder, byte for byte** (fhash, as "One record store"'s: every save-folder file each task wrote, by its
+  ops and their bytes hashed, over 32 games: 8 seeds, each -C -T -T -T, -C -T, -T -T and -C, a random player's
+  commands, quit, carried on, saved): all 32 the same as the build before (30 played to their end, two stopping early
+  alike in both).
+- **Open questions (the user's):**
+  - What's on a chest's lid as it's opened: built, it stays there (no code); it would slide off, or the lid be refused
+    till it's cleared.
+  - The lid's top's capacity (20 pints, 200 quarter pounds: the house's guess, a table's chair's between).
+  - Furniture placed by the dungeon (desks, cabinets, cases, shelves): none is placed today, and the maker's tables
+    (dq0m/uses.c) placing a new kind change every seed's dungeon; the table takes a desk as rows (an on top, drawers
+    that close) when it's wanted, but a drawer named by its noun ("open the drawer", "the lid") needs the resolver to
+    match a compartment's noun (the `noun` column is there, unread).
+  - A lock for a compartment past 0 (one shut byte: closed bits for three more, no lock bits); hidden compartments and
+    their finding (a search's test, then known).
+  - The denizens: a robber's reach and a denizen's gear take from any compartment (the denizens' own code unchanged).
+  - Left as they were, compartment 0's state alone: an ally's errand (fetch_find: a thing in something closed), the
+    letters' "the open chest" (SL_OPEN), stow-where's candidates, what's carried nested (a carried chest's lid's
+    things listed "in it").
+  - The backpack's side pocket (the critique's second example): its reach, its tie, a pocket named; not built.
