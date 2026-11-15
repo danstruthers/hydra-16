@@ -33,8 +33,50 @@ function rowsSame(dir) {
     (at >= 0 ? ': ' + want[at] + ' (actions.c has ' + (have[at] || 'none') + ')' : ': ' + have.length + ' rows'));
 }
 
+// The dispatch table's coverage report (COMMANDS-CRITIQUE.md's §4.4, step L's last, 2026-11-15): every verb's cell for
+// each kind of thing a command may name, read from its row (actions.c's ROW, ROWR, ROWP): a thing by its word, each part
+// of the place (OB_*, dq0.h).  A cell is the row's handler's (H, the verb does it: its row's takes,
+// masks[], say which parts), refused by the row (U_*, refuse.c's words, before the handler's asked), or the handler's
+// own (-: the table says nothing, the handler answers as it will; the cells the table doesn't cover yet).  Written to
+// obj/games/dq0cover.txt, a line a verb; the build's log the sums.  Nothing fails on it: a report
+function coverage(dir, objdir) {
+  const src = fs.readFileSync(path.join(dir, 'actions.c'), 'latin1').replace(/\/\*[\s\S]*?\*\//g, ' ');
+  const OB = H.enums.find(e => e[0] === 'OB_NONE'), U = H.enums.find(e => e[0] === 'U_VERB');
+  const bits = t => /^0x/i.test(t.trim()) ? parseInt(t, 16) : [...t.matchAll(/BIT\s*\(\s*(OB_\w+)\s*\)/g)].reduce((m, x) => m | 1 << OB.indexOf(x[1]), 0);
+  const defs = {};
+  for (const m of src.matchAll(/#define\s+(\w+)\s+(\(BIT[^\n]*\)|0x[0-9A-Fa-f]+)u?/g)) defs[m[1]] = bits(m[2]);
+  const masks = /masks\[\]\s*=\s*\{([^}]*)\}/.exec(src)[1].split(',').map(t => t.trim()).map(t => t in defs ? defs[t] : bits(t));
+  const M = /enum\s*\{\s*(M_NONE[^}]*)\}/.exec(src)[1].split(',').map(t => t.trim());
+  const W = { W_CLIMB: 0x80, W_PART: 0x40 };
+  const val = t => { t = (t || '0').trim(); let v = 0;   // (A row's field: names or'd, a refusal shifted)
+    for (const p of t.split('|')) { const q = p.replace(/[()]/g, '').trim(), sh = /^(\w+)\s*>>\s*(\d+)$/.exec(q);
+      v |= sh ? (W[sh[1]] || 0) >> +sh[2] : /^\d+$/.test(q) ? +q : U.includes(q) ? U.indexOf(q) : M.includes(q) ? M.indexOf(q) : 0; }
+    return v; };
+  const rows = [...src.matchAll(/\bROW[RP]?\s*\((.*)\)[\s,]*$/gm)].map(m => m[1].split(',').map(t => t.trim())).filter(r => /^VB_/.test(r[0]));
+  const names = ['word', ...OB.slice(1).map(n => n.slice(3).toLowerCase())], u = n => U[n].slice(2).toLowerCase();
+  const sum = { H: 0, U: 0, '-': 0 }, out = ['# The dispatch table\'s cells (games/dq0/make.js\'s coverage): a verb a line, its handler, then each kind',
+    '# of thing named: H its handler\'s; yet, cant, note refused by its row (U_YET, U_CANT, U_NOTE); - the handler\'s own',
+    '# ' + names.join(' ')];
+  for (const [a, h, t, w, k, m] of rows) {
+    const cells = [];
+    if (h === 'H_POWERS' || h === 'H_NOTHING') {   // (Refused whatever's named; or seen to before the table)
+      out.push(a + ' ' + h + ' ' + (h === 'H_POWERS' ? 'refused, whatever\'s named' : 'seen to before the table'));
+      continue;
+    }
+    const wv = val(w) & 3, kv = val(k), mask = masks[val(m)] || 0;
+    cells.push(wv ? u(wv) : '-');
+    for (let o = 1; o < names.length; ++o) cells.push(mask >> o & 1 ? 'H' : kv ? u(kv) : '-');
+    for (const c of cells) sum[c === 'H' || c === '-' ? c : 'U']++;
+    out.push(a + ' ' + h + ' ' + cells.join(' '));
+  }
+  fs.writeFileSync(path.join(objdir, '..', 'dq0cover.txt'), out.join('\n') + '\n');
+  return 'the dispatch table: ' + rows.length + ' verbs, ' + (sum.H + sum.U + sum['-']) + ' cells: ' + sum.H + ' its handlers\', ' + sum.U +
+    ' refused by their rows, ' + sum['-'] + ' the handlers\' own (obj/games/dq0cover.txt)';
+}
+
 function build({ dir, objdir, say = () => {} }) {
   rowsSame(dir);
+  say(coverage(dir, objdir));
   return { overlays: B.pack(objdir, 'dq0') };
 }
 

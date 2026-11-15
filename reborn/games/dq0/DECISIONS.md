@@ -6021,3 +6021,30 @@ commands' first letters): the slowest 623,224 -> 612,782 cycles, the mean 416,98
   a real-time give-way like the senses' (GIVE_WAY ticks) is the user's to choose.
 - dq0hold's own poke of burn_due is lost if a minute is under way as it lands (the variants' wait before the first
   key): the test passes at its timing; a sturdier probe would poke burn_ask.
+
+## The dispatch table's rest (2026-11-15; as built, for review: COMMANDS-CRITIQUE.md's §5.2, step L; ENGINE-CRITIQUE.md's row 4)
+
+Step L's stages 1 to 3 (2026-11-08) left two things: the handling verbs' requests in their rows ("if `handle` ever
+takes its op from the row"), and §4.4's coverage report ("every cell is handled, refused by design, or missing, and a
+build step can print the missing cells").  Both are built; nothing a player sees changes.
+
+- **The requests in the rows.**  A handling verb whose request is the same whatever's said carries it in its row
+  (actions.c's `ROWP`): put and hang `IO_PUT`, hold `IO_HOLD`, light `IO_LIGHT`, put out `IO_DOUSE`, rip `IO_RIP`;
+  `verb_row` puts it in `cmd.aux` where the line gave none, as the door verbs' `PA_*` were (stage 3).  The parser
+  gives these verbs their request already, so the rows change nothing typed; what they change is a verb carried out
+  as another's (hthings.c's `as_verb`: use's light and its key's unlock), now given 0 and the row's request filled in.
+  Wear (don, or worn only) and take off (doff, or stow) keep theirs in the line: two requests each.
+- **The coverage report** (games/dq0/make.js's `coverage`, run with the build): every verb's row read from actions.c
+  (its handler, its refusals for a word and for a kind, the parts of the place it does: `masks[]`), and a cell
+  written for a thing named by its word and each part of the place (OB_DOOR ... OB_SIDE): `H` its handler's (the row
+  says the verb does it), `yet`, `cant`, `note` refused by the row (U_YET, U_CANT, U_NOTE, refuse.c's words before
+  the handler's asked), or `-` the handler's own (the table says nothing; the handler answers as it will).  The
+  powers' rows say "refused, whatever's named", the rows seen to before the table (resolve.c's, parts.c's, the
+  puzzle's) "seen to before the table".  Written to obj/games/dq0cover.txt, a line a verb; the build's log the sums:
+  143 verbs, 2,074 cells, 91 its handlers', 417 refused by their rows, 1,566 the handlers' own.  Nothing fails on it.
+- **Not built, for review:** §4.4's flags per action (NEEDS_REACH, NEEDS_HELD, NEEDS_LIGHT ...) and a handler per
+  class: the shared paths (main.c's `things`, `feature`, `reach_go`) do those steps for every verb already, and the
+  "-" cells are where a row's refusal would go if the handler's own answer is ever wanted from the table instead.
+- **Room:** the UI's part 29 1,647 bytes free to 1,659 (as_verb's two requests the rows'); overlay 19 234 to 246; the
+  main RAM unchanged (3,143).  The world, the senses unchanged.  The start unchanged (no code on its path).
+- **The suite:** all 451 pass; the transcripts the same, but the known timing noise (nine games' denizens met at other moments, dq0hold's rat among them).

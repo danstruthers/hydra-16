@@ -205,7 +205,7 @@ static void do_use (void)
         as_verb (VB_DRINK, 0);
     } else if (f & K_LIGHT) {
         cmd.other.word[0] = 0;
-        as_verb (VB_LIGHT_OBJECT, IO_LIGHT);
+        as_verb (VB_LIGHT_OBJECT, 0);           /* (Its request the row's, IO_LIGHT) */
     } else if (k == KI_TINDERBOX || k == KI_KEY || k == KI_LOCKPICKS || k == KI_WHETSTONE) {
         if (cmd.other.word[0] || cmd.other.kind) {
             memcpy (&cmd.obj, &cmd.other, sizeof cmd.obj);   /* (The thing it's used on: lit, unlocked, sharpened) */
@@ -236,7 +236,7 @@ static void do_use (void)
             strcpy (cmd.other.word, "whetstone");
             as_verb (VB_FILL_OBJECT, IO_SHARP);
         } else {
-            as_verb (k == KI_TINDERBOX ? VB_LIGHT_OBJECT : VB_UNLOCK_OBJECT, k == KI_TINDERBOX ? IO_LIGHT : 0);
+            as_verb (k == KI_TINDERBOX ? VB_LIGHT_OBJECT : VB_UNLOCK_OBJECT, 0);   /* (The rows' IO_LIGHT, PA_UNLOCK) */
         }
     } else if (k == KI_ROPE || k == KI_GRAPPLE) {
         as_verb (VB_TIE_OBJECT, 0);             /* (To the thing it's used on, or what's nearest that holds) */

@@ -26,7 +26,10 @@ struct row {
     unsigned char takes;                        /* The kinds of thing it takes (TK_*) */
     unsigned char no;                           /* (Stage 2's: its refusals, a word's and a kind's, refuse.c's) */
     unsigned char op;                           /* Its request (PA_*), where the verb's is the same whatever's said:
-                                                **   the door verbs' (stage 3); a power's refusal (A_NO_*, H_POWERS's) */
+                                                **   the door verbs' (stage 3); the handling verbs' whose request is
+                                                **   one (IO_*: put, hang, hold, light, put out, rip: step L's rest,
+                                                **   2026-11-15; wear and take off are two each, the line's); a
+                                                **   power's refusal (A_NO_*, H_POWERS's) */
 };
 #define ROW(a, h, t)    { (h), (t), 0, 0 }      /* (a: its verb, for make.js to hold to actions.h's order) */
 
@@ -61,7 +64,7 @@ static const struct row rows[NACTIONS] = {
     ROW (VB_EXAMINE_LOCALE, H_EXAMINE, 0),
     ROWR (VB_RETRIEVE_OBJECT, H_TAKE, 0, 0, U_CANT, M_NONE),
     ROW (VB_DROP_OBJECT, H_DROP, 0),
-    ROW (VB_PUT_OBJECT, H_HANDLE, 0),
+    ROWP (VB_PUT_OBJECT, H_HANDLE, 0, 0, 0, M_NONE, IO_PUT),
     ROW (VB_USE_OBJECT, H_USE, 0),              /* (The puzzle's first, theme.c's, before the table; B4's) */
     ROWR (VB_EQUIP_OBJECT, H_HANDLE, 0, 0, U_CANT, M_NONE),
     ROW (VB_UNEQUIP_OBJECT, H_HANDLE, 0),
@@ -88,8 +91,8 @@ static const struct row rows[NACTIONS] = {
     ROWP (VB_CAST_SPELL, H_POWERS, 0, 0, 0, M_NONE, A_NO_MAGIC),     /* (Refused: its request the refusal) */
     ROWR (VB_EAT_OBJECT, H_EAT, 0, 0, U_CANT, M_NONE),
     ROWR (VB_DRINK, H_EAT, 0, 0, U_CANT, M_NONE),
-    ROWR (VB_LIGHT_OBJECT, H_HANDLE, 0, 0, U_CANT, M_NONE),
-    ROWR (VB_EXTINGUISH_OBJECT, H_HANDLE, 0, 0, U_CANT, M_NONE),
+    ROWP (VB_LIGHT_OBJECT, H_HANDLE, 0, 0, U_CANT, M_NONE, IO_LIGHT),
+    ROWP (VB_EXTINGUISH_OBJECT, H_HANDLE, 0, 0, U_CANT, M_NONE, IO_DOUSE),
     ROW (VB_FIND_OBJECT, H_FEEL, 0),
     ROWR (VB_SEARCH, H_SEARCH, 0, 0, U_YET, M_SEARCHED),
     ROWR (VB_LISTEN, H_LOOK_WAY, 0, U_YET, U_YET, M_WAYS),
@@ -126,7 +129,7 @@ static const struct row rows[NACTIONS] = {
     ROW (VB_PUSH_OBJECT, H_PUSH, 0),
     ROW (VB_PULL_OBJECT, H_PULL, 0),
     ROW (VB_GIVE_OBJECT, H_GIVE, 0),
-    ROW (VB_HOLD_OBJECT, H_HANDLE, 0),
+    ROWP (VB_HOLD_OBJECT, H_HANDLE, 0, 0, 0, M_NONE, IO_HOLD),
     ROWP (VB_LOCK_OBJECT, H_DOOR, TK_CLOSER, 0, U_CANT, M_WORKED, PA_LOCK),
     ROWP (VB_UNLOCK_OBJECT, H_DOOR, TK_CLOSER, 0, U_CANT, M_WORKED, PA_UNLOCK),
     ROWR (VB_FILL_OBJECT, H_FILL, 0, 0, U_CANT, M_NONE),
@@ -177,7 +180,7 @@ static const struct row rows[NACTIONS] = {
     ROWP (VB_FORCE_OBJECT, H_DOOR, TK_CLOSER, 0, U_CANT, M_WORKED, PA_FORCE),
     ROWP (VB_DISARM_OBJECT, H_DOOR, 0, U_CANT | (W_PART >> 4), U_CANT, M_WORKED, PA_DISARM),
     ROWR (VB_BAR_OBJECT, H_DOOR, 0, U_CANT | (W_PART >> 4), U_CANT, M_WORKED),
-    ROW (VB_HANG_OBJECT, H_HANDLE, 0),
+    ROWP (VB_HANG_OBJECT, H_HANDLE, 0, 0, 0, M_NONE, IO_PUT),
     ROW (VB_COMBINE_OBJECT, H_NOTHING, 0),      /* (The puzzle's, theme.c's, before the table: never here) */
     ROW (VB_APPROACH_OBJECT, H_GO, 0),
     ROW (VB_DECEIVE, H_SWAY, 0),
@@ -197,7 +200,7 @@ static const struct row rows[NACTIONS] = {
     ROW (VB_TRADE, H_GIVE, 0),
     ROWR (VB_TIE_OBJECT, H_TIE, 0, 0, U_CANT, M_NONE),
     ROWR (VB_UNTIE_OBJECT, H_TIE, 0, 0, U_CANT, M_NONE),
-    ROWR (VB_RIP_OBJECT, H_HANDLE, 0, 0, U_CANT, M_NONE)     /* (A cloth torn up, washed: the things' IO_RIP, IO_WASH,
+    ROWP (VB_RIP_OBJECT, H_HANDLE, 0, 0, U_CANT, M_NONE, IO_RIP)     /* (A cloth torn up, washed: the things' IO_RIP, IO_WASH,
                                                 **   hthings.c's; HOUSE.md's bandages, 2026-11-10) */
 };
 
