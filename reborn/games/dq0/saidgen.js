@@ -46,7 +46,8 @@ const SC = { NL: 0x01, END: 0x1E, ALT: 0x1F, POSS: 0x7F, NUM: 0x80, CHOOSE: 0xA0
   KIND: 0xFC, NAME: 0xFD, WORD: 0xEE, ITS: 0xEF, STR2: 0xFE };
 const FMAX = 126;                                            // (Fields at most: a condition's byte its index, | 0x80 one value, 0xFF none;
                                                               //   SC_NUM, SC_CHOOSE, SC_CHANGED + 31 and a byte past the 31st, 2026-11-12)
-const WORDS_MAX = 200;                                        // (The words said as SC_WORD and a byte, at most)
+const WORDS_MAX = 180;                                        // (The words said as SC_WORD and a byte, at most: 180 since
+                                                              //   2026-11-15, overlay 27's room kept, the rows' banks the rest)
 const BANK = 0x2000, NBANK = 3;                               // (A bank of the rows': overlays 28, 29 and 30)
 const ANY = 0xFE;                                            // (A row for any outcome: said.c's SAID_ANY)
 const OP = { '': 0, '-': 1, '>': 2, '*': 3 };
@@ -117,6 +118,14 @@ function generate(H, say = () => {}) {
     kinds[kinds.length - 1].actor = m[3] || null;
   }
   const byShort = Object.fromEntries(kinds.map(x => [x.short, x]));
+  for (const e of list) {                                     // (`last KIND ...`: its rows after the others' and the
+    const m = e.text === null && e.head.match(/^last\s+(.+)$/);   //   pieces, the banks' last room: said seldom, a
+    if (!m) continue;                                         //   few cycles more a byte the least felt, 2026-11-15)
+    for (const n of m[1].trim().split(/\s+/)) {
+      if (!byShort[n]) throw new Error('said.txt:' + e.line + ': last ' + n + ', not an outcome event\'s kind');
+      byShort[n].last = true;
+    }
+  }
   const pieces = {};
   for (const e of list) {                                     // (The pieces and the own outcomes first: used anywhere)
     if (e.head.startsWith('@')) { pieces[e.head.slice(1)] = e.text; continue; }
@@ -240,7 +249,7 @@ function generate(H, say = () => {}) {
     return b;
   };
   for (const e of list) {                                     // (The rows)
-    if (e.head.startsWith('@') || /^(own|kind)\s/.test(e.head)) continue;
+    if (e.head.startsWith('@') || /^(own|kind|last)\s/.test(e.head)) continue;
     const m = e.head.match(/^(\w+)\.(\w+)(?:\[([^\]]+)\])?(\s+once)?$/);
     if (!m || e.text === null) throw new Error('said.txt:' + e.line + ': "' + e.s + '"?');
     const K = byShort[m[1]];
@@ -336,10 +345,12 @@ function generate(H, say = () => {}) {
   }
   // (Three banks: overlay 28's from $8000, overlay 29's from $A000, overlay 30's from $C000 (their MEMORY lines' starts;
   // each a bank of its own, read at $8000 by said_b): each kind's rows, and each piece, wholly in one, the first that
-  // has room, in their order; an offset past BANK the second bank's, past 2 BANK the third's)
-  const blocks = [];
-  at.forEach((a, i) => blocks.push(rows.slice(a, i + 1 < at.length ? at[i + 1] : pfirst)));
+  // has room, in their order, the last kinds' (said.txt's last lines) after the pieces; an offset past BANK the second
+  // bank's, past 2 BANK the third's)
+  const blocks = [], late = [];
+  at.forEach((a, i) => (kinds[i].last ? late : blocks).push(rows.slice(a, i + 1 < at.length ? at[i + 1] : pfirst)));
   for (let i = pfirst; i < rows.length; i++) blocks.push([rows[i]]);
+  blocks.push(...late);                                       // (The `last` kinds' after the pieces)
   const fill = Array(NBANK).fill(0), offOf = new Map(), inBank = fill.map(() => []);
   for (const bl of blocks) {
     const z = bl.reduce((t, r) => t + r.b.length, 0), k = fill.findIndex(v => v + z <= BANK);

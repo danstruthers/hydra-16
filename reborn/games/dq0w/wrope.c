@@ -64,16 +64,17 @@ static unsigned rp_anchor (void)
 static unsigned char __fastcall__ rp_tie (unsigned char done)
 {
     unsigned char k;
+    char b[14];
 
     R_N = *iq.name ? carried_named (iq.name) : rp_carried (KI_ROPE);
     k = R_N ? item_at (R_N)->kind : 0;
     if (k == KI_GRAPPLE) {                      /* (The other way about: the grapple to the rope) */
         if (!(R_N = rp_carried (KI_ROPE))) {
-            return rp_no ("\nYou have no rope to tie it to.");
+            return rp_no (SA_NO_ROPE_TIE);
         }
         strcpy (iq.into, "grapple");
     } else if (k != KI_ROPE) {
-        return rp_no (R_N ? "\nA rope's what's tied off." : "\nYou carry no rope.");
+        return rp_no (R_N ? SA_TIED_OFF : SA_CARRY_NO_ROPE);
     }
     if (*iq.into) {
         R_A = at_hand (iq.into);
@@ -85,14 +86,14 @@ static unsigned char __fastcall__ rp_tie (unsigned char done)
             }
             rope3 (RA_JOIN | R_A);
             rp_new ();
-            put ("\nYou tie the grapple to the rope.");
+            rp_say (SA_TIE_GRAPPLE, "");
             return rp_done (100);
         }
         if (k == KI_SPIKE && on_pc (R_A)) {
             R_SPIKE = R_A;
             R_A = 0;
         } else if (!R_A || !rp_holds (R_A) || !in_reach (R_A)) {
-            return rp_no ("\nThat won't hold a rope.");
+            return rp_no (SA_NO_HOLD_ROPE);
         }
     } else {
         R_SPIKE = R_HAMMER = 0;
@@ -102,18 +103,18 @@ static unsigned char __fastcall__ rp_tie (unsigned char done)
         R_FY = HUB->pc_y;
         if (!(R_A = rp_anchor ())) {            /* (Else its grapple, set over the edge; else a spike driven) */
             if (!rp_in (R_N, KI_GRAPPLE) && !rp_carried (KI_GRAPPLE) && !(R_SPIKE = rp_carried (KI_SPIKE))) {
-                return rp_no ("\nThere's nothing here that would hold a rope: a ring, a post, a spike, something heavy.");
+                return rp_no (SA_NOTHING_HOLDS);
             }
         }
     }
     if (!rope3 (RA_SCAN)) {
-        return rp_no ("\nThere's no drop here to let a rope down.");
+        return rp_no (SA_NO_DROP);
     }
     if (rp_on (R_TSN, R_TX, R_TY)) {
-        return rp_no ("\nThere's a rope tied here already.");
+        return rp_no (SA_TIED_HERE);
     }
     if (R_SPIKE && !(R_HAMMER = rp_carried (KI_HAMMER))) {
-        return rp_no ("\nYou have no hammer to drive the spike with.");
+        return rp_no (SA_NO_HAMMER);
     }
     if (!done) {
         if (reach_step (R_N, RS_TOOL) || (R_HAMMER && reach_step (R_HAMMER, RS_TOOL))) {
@@ -152,10 +153,8 @@ static unsigned char __fastcall__ rp_tie (unsigned char done)
     }
     rope3 (RA_HANG);
     rp_new ();
-    put ("\nYou tie the rope to the ");
-    rp_name (R_AK);
-    put (R_HOW == RK_SHAFT ? " and let it down the shaft: " : " and let it down over the edge: ");
-    put (R_END ? "its end hangs short of the foot." : "it reaches the foot.");
+    rp_name (R_AK, b);                          /* (Its words a row, the kind tied to its name: SA.tie_edge ...) */
+    rp_say ((R_HOW == RK_SHAFT ? SA_TIE_SHAFT : SA_TIE_EDGE) + (R_END != 0), b);
     return rp_done (0);
 }
 

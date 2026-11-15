@@ -78,7 +78,13 @@ void o_tt_words (void)
 
     lb[sizeof lb - 1] = 0;
     tt_sa = lb[0] == SAY_AT ? lb[1] : 0;
-    for (r = 0, q = lb; (e = strchr (q, SAY_AT)) != 0; ) {
+    for (r = 0, q = lb; ; ) {
+        for (e = q; *e && *e != SAY_AT && *e != SAY_AT2; ++e) {
+        }                                       /* (SAY_AT, or SAY_AT2: a code past 127; not the library's strpbrk,
+                                                **   the main RAM's 50 bytes) */
+        if (!*e) {
+            break;
+        }
         r += e - q;                             /* (The code's place in the hub's text) */
         q = e;
         if (q > lb + TT_AT) {
@@ -94,7 +100,7 @@ void o_tt_words (void)
         said_s[0] = strcpy (lb + sizeof lb - 20, e);
         c.kind = UK_SA;
         c.who = 0;
-        c.w1 = (unsigned) (q[1] & 0x7F) << 8;
+        c.w1 = (unsigned) ((q[1] & 0x7F) | (*q == SAY_AT2 ? 0x80 : 0)) << 8;
         said_to = q;
         said_q = 1;
         outcome_words (&c);

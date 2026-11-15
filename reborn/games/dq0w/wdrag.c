@@ -102,14 +102,27 @@ static unsigned char taste (void)
     return IR_OK;
 }
 
-/* A kind's name after the text */
-static void __fastcall__ name (unsigned char k)
+/* A kind's name, the rows' text */
+static const char* __fastcall__ name (unsigned char k)
 {
     static char b[14];
 
     hub_map (KIND_BANK);
-    strcpy (b, CATALOGUE[k].name);
-    put (b);
+    return strcpy (b, CATALOGUE[k].name);
+}
+
+/* A sentence put coded (items.h's SAY_AT2: past 127; its SA_* | 0x80, the thing's name n, SAY_SEP, none, SAY_SEP):
+** said.txt's SA rows word it, the UI's (narration as data's rest, 2026-11-15) */
+static void __fastcall__ dsay (unsigned char sa, const char* n)
+{
+    static char c[3];
+
+    c[0] = sa & 0x80 ? SAY_AT2 : SAY_AT;
+    c[1] = sa | 0x80;
+    c[2] = 0;
+    put (c);
+    put (n);
+    put ("\2\2");
 }
 
 /* From (x, y), heading h: a step's room (step8's), not a doorway, nothing heavy there but the thing, no one on it (the
@@ -179,9 +192,7 @@ unsigned char s_drag (void)
     hub_map (KIND_BANK);
     if (!ok || CATALOGUE[k].bulk < DRAG_BULK || (CATALOGUE[k].keeps & KF_FIXED)) {
         ok = CATALOGUE[k].keeps & KF_FIXED;
-        put ("\nThe ");                         /* (Its answer names its thing: the sweeps') */
-        name (k);
-        put (ok ? " is fixed where it stands." : " isn't a thing to shove about: pick it up.");
+        dsay (ok ? SA_DRAG_FIXED : SA_NO_SHOVE, name (k));     /* (Its answer names its thing: the sweeps') */
         return IR_NO;
     }
     if (dx < -1 || dx > 1 || dy < -1 || dy > 1) {
@@ -206,9 +217,7 @@ unsigned char s_drag (void)
     }
     if (!room_to (ix, iy, h)) {
 none:
-        put (iq.to ? "\nThere's no room behind you to drag the " : "\nThere's no room to shove the ");
-        name (k);
-        put (iq.to ? " back." : " that way.");
+        dsay (iq.to ? SA_NO_ROOM_DRAG : SA_NO_ROOM_SHOVE, name (k));
         return IR_NO;
     }
     hub_map (0);                                /* (The strain heard, whether it moves or not) */
@@ -230,21 +239,17 @@ none:
     ok = G_OK (RS_TEST_GRADE (*r));
     r->state = REQ_FREE;
     if (!ok) {
-        put ("\nYou strain at the ");
-        name (k);
-        put (", but it won't budge.");
+        dsay (SA_STRAIN, name (k));
         h = 0xFF;
     } else {
         p = item_at (D_N);
         x = p->x += head_x[h];
         y = p->y += head_y[h];
-        put (iq.to ? "\nYou take hold of the " : "\nYou set your shoulder to the ");
-        name (k);
-        put (iq.to ? " and drag it toward you, stepping back." : " and shove it a square away.");
+        dsay (iq.to ? SA_DRAG : SA_SHOVE, name (k));
         for (k = DIR_N; k <= DIR_W; ++k) {      /* (Beside a door now: it braces it shut) */
             if ((t = at (D_SN, x + dir_x[k], y + dir_y[k])) != 0 && TILE (*t) == T_DOOR &&
                 (q = portal_at (cx_, cy_)) != 0 && q->kind == PK_DOOR) {
-                put (" It stands against the door.");
+                dsay (SA_AGAINST, "");
                 break;
             }
         }

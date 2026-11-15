@@ -532,6 +532,8 @@ enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE, IR_NO, IR_FIXED, IR_FUMBL
 ** it is.  kinds.c's said[] before */
 #define SAY_AT          0x01
 #define SAY_SEP         0x02
+#define SAY_AT2         0x03                    /* (A code past 127: SAY_AT2, its SA_* | 0x80, the rest as SAY_AT's; the
+                                                **   rope's and the drag's, 2026-11-15) */
 enum {
     SA_HOLD, SA_SHIFT, SA_HELD, SA_HANDS, SA_STOW, SA_NO_PACK, SA_THERE, SA_PUT_IN, SA_PUT_ON, SA_HANG, SA_NO_HANG,
     SA_NO_SLOT, SA_NO_BELT, SA_NOT_HOLDER, SA_RUN_OUT, SA_WONT_GO, SA_ITSELF, SA_PUT_OUT, SA_NO_ROOM, SA_TOO_HEAVY,
@@ -545,10 +547,17 @@ enum {
     SA_NO_THING, SA_FILL_WHAT, SA_NO_FUEL, SA_NO_FUELS, SA_WONT_BURN, SA_FULL, SA_FILL, SA_FILLED, SA_SOAK, SA_SOAKED,
     SA_DOFF_FEET, SA_BOTH_HANDS, SA_ARM, SA_ONE_HAND, SA_HAND_HOLDS, SA_BOTH_YOUR, SA_HANDS_EMPTY, SA_CHANGE,
     SA_LEATHER, SA_NOT_CLOTH, SA_TAKE_OFF_FIRST, SA_EMPTY_FIRST, SA_FOUL, SA_NO_WASH, SA_CLEAN, SA_WASH, SA_BANDAGES,
-    SA_NO_TEAR, SA_NO_CUT, SA_STOUT, SA_CUT, SA_TEAR, SA_SKIN_FULL, SA_NO_WATER, SA_FILL_SKIN
+    SA_NO_TEAR, SA_NO_CUT, SA_STOUT, SA_CUT, SA_TEAR, SA_SKIN_FULL, SA_NO_WATER, SA_FILL_SKIN,
                                                 /* (The world's parts' own sentences, coded by their SAY_PUT: the locks',
                                                 **   the fill's, the hands', the cloth's, the water's; narration as data's
                                                 **   rest, 2026-11-15) */
+    SA_NO_ROPE_TIE, SA_TIED_OFF, SA_CARRY_NO_ROPE, SA_TIE_GRAPPLE, SA_NO_HOLD_ROPE, SA_NOTHING_HOLDS, SA_NO_DROP,
+    SA_TIED_HERE, SA_NO_HAMMER, SA_TIE_EDGE, SA_TIE_EDGE_SHORT, SA_TIE_SHAFT, SA_TIE_SHAFT_SHORT, SA_UNTIE_GRAPPLE,
+    SA_NO_ROPE_HERE, SA_UNTIE_ROPE, SA_KNOT_FAR, SA_SHAKE_LOOSE, SA_SHAKE_FAST, SA_HAVE_NO_ROPE, SA_ROPE_ALONE,
+    SA_NOTHING_ABOVE, SA_CLIMB_UP, SA_ROPE_THERE, SA_TOO_HIGH, SA_CATCHES, SA_NO_CATCH,
+    SA_DRAG_FIXED, SA_NO_SHOVE, SA_NO_ROOM_DRAG, SA_NO_ROOM_SHOVE, SA_STRAIN, SA_DRAG, SA_SHOVE, SA_AGAINST
+                                                /* (The rope's and the drag's: wrope.h's rp_say, wdrag.c's; past 127,
+                                                **   SAY_AT2's) */
 };
 
 /* What the character carries, for the UI to word (IO_LIST's): each thing, how deep it's in others, its state */

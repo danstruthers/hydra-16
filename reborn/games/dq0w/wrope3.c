@@ -222,25 +222,25 @@ static unsigned char rp_up (void)
     R_N = rp_carried (KI_ROPE);
     R_M = rp_carried (KI_GRAPPLE);              /* (Tied on, or not) */
     if (!R_N) {
-        return rp_no ("\nYou have no rope.");
+        return rp_no (SA_HAVE_NO_ROPE);
     }
     if (!R_M) {
-        return rp_no ("\nA rope alone won't catch: it wants a grapple.");
+        return rp_no (SA_ROPE_ALONE);
     }
     if (!rp_drop (1)) {
-        return rp_no ("\nThere's nothing above you here to catch on.");
+        return rp_no (SA_NOTHING_ABOVE);
     }
     if (R_HOW == RK_SKY && R_FEET <= ROPE_REACH) {
-        return rp_no ("\nIts mouth's in reach: climb up.");
+        return rp_no (SA_CLIMB_UP);
     }
     if ((R_HOW != RK_SKY && rp_on (R_TSN, R_TX, R_TY)) || rp_on (R_FSN, R_FX, R_FY)) {
-        return rp_no ("\nThere's a rope there already.");
+        return rp_no (SA_ROPE_THERE);
     }
     d = R_FEET * 2 / 5;
     for (band = 0; band < 4 && d > (GRAPPLE_THROWS << band); ++band) {
     }
     if (band == 4 || R_FEET > ROPE_FEET + ROPE_REACH) {
-        return rp_no ("\nThat's too high to throw it.");
+        return rp_no (SA_TOO_HIGH);
     }
     if (reach_step (R_N, RS_TOOL)) {
         return IR_NO;
@@ -266,9 +266,9 @@ static unsigned char rp_up (void)
         hub_map (0);
         R_SLIP = g != G_WELL && !((unsigned char) HUB->now & 3);
         rp_hang ();
-        put ("\nThe grapple flies up and catches, with a clang.");
+        rp_say (SA_CATCHES, "");
     } else {
-        put ("\nThe grapple flies up, finds nothing to bite on, and clatters back down.");
+        rp_say (SA_NO_CATCH, "");
     }
     hub_map (0);
     return rp_done (HUB->round);

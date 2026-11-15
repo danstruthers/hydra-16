@@ -46,10 +46,24 @@ static void rp_new (void)
     hub_map (0);
 }
 
-static unsigned char __fastcall__ rp_no (const char* s)
+/* A sentence put coded (items.h's SAY_AT, SAY_AT2 past 127; its SA_* | 0x80, the thing's name a, SAY_SEP, none,
+** SAY_SEP): said.txt's SA rows word it, the UI's (narration as data's rest, 2026-11-15) */
+static void __fastcall__ rp_say (unsigned char sa, const char* a)
+{
+    char c[3];
+
+    c[0] = sa & 0x80 ? SAY_AT2 : SAY_AT;
+    c[1] = sa | 0x80;
+    c[2] = 0;
+    put (c);
+    put (a);
+    put ("\2\2");
+}
+
+static unsigned char __fastcall__ rp_no (unsigned char sa)
 {
     rp_new ();
-    put (s);
+    rp_say (sa, "");
     hub_map (0);
     HUB->ireq.qty = 0;
     return IR_NO;
@@ -65,14 +79,11 @@ static unsigned char __fastcall__ rp_done (unsigned t)
 }
 
 #ifndef RP_THROWN
-/* Its kind's name, after the text */
-static void __fastcall__ rp_name (unsigned char k)
+/* Its kind's name, into b (14 bytes) */
+static void __fastcall__ rp_name (unsigned char k, char* b)
 {
-    char b[14];
-
     hub_map (KIND_BANK);
     strcpy (b, CATALOGUE[k].name);
-    put (b);
 }
 #endif
 

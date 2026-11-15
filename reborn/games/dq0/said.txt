@@ -9,6 +9,8 @@
 #                               its field ACTOR (0 the character, else the actor plus 1), not the event's who
 #   own KIND NAME ...           outcomes of the UI's own for KIND: rows it chooses itself (said_as), numbered after its
 #                               enum's (SAID_KIND_NAME: SAID_CLIMB_RISES)
+#   last KIND ...               KIND's rows placed after every other kind's and the pieces, in the rows' last bank with
+#                               room (said seldom: said_b's few cycles more a byte there the least felt)
 #   @NAME "text"                a piece of text, put where a row has {@NAME}
 #   KIND.OUTCOME[COND] "text"   a row: KIND the event's kind less its E_ (DIG: E_DIG); OUTCOME its outcome's name less
 #                               its enum's prefix, in lower case (begun: D_BEGUN), or an own one; [COND] (F=V,V ...: a
@@ -669,6 +671,8 @@ NO.A_OUT            +"\nYou lie senseless."
 # "You light the torch from the burning one.", "You take off the backpack.", "You stow the torch in your backpack too."):
 # one wording an action, the world's (the user's, 2026-11-13)
 
+last SA
+
 @seeno      "You see no {text} here"
 @light      "light the {text}"
 @doff       "take off the {text}"
@@ -720,7 +724,7 @@ SA.where            +"Put the {text} in what, or on what?"
 SA.what             +"Which thing? Name it (hold the dagger, put on the cloak ...)."
 SA.in_hand          +" It's in your hand."
 SA.in_pack          +" It's in your {obj}."
-SA.fixed            +"The {text} is fixed where it stands."
+SA.fixed            +"{@fixed}."
 SA.burnt            +"The {text} is burnt out."
 SA.no_oil           +"The {text} is out of oil."
 SA.shut             +"The {obj} is closed."
@@ -878,3 +882,46 @@ AHEAD.too           +"; the {@ahnoun} {@ahrel} leads there too"
 AHEAD.end           +"."
 AHEAD.glow          +" A {k?light shows|faint glow shows} far off {@ahrel}."
 AHEAD.nothing       +" You see nothing more that way."
+
+# ---- The rope's and the drag's (UK_SA, their codes past 127: items.h's SAY_AT2; wrope.h's rp_say, wdrag.c's dsay; their
+# free text before: narration as data's rest, 2026-11-15).  text the thing's name (what the rope's tied to, the thing
+# shoved), each begun on a line of its own as it was
+
+@tie        "\nYou tie the rope to the {text} and let it down"
+@fixed      "The {text} is fixed where it stands"
+
+SA.no_rope_tie      +"\nYou have no rope to tie it to."
+SA.tied_off         +"\nA rope's what's tied off."
+SA.carry_no_rope    +"\nYou carry no rope."
+SA.tie_grapple      +"\nYou tie the grapple to the rope."
+SA.no_hold_rope     +"\nThat won't hold a rope."
+SA.nothing_holds    +"\nThere's nothing here that would hold a rope: a ring, a post, a spike, something heavy."
+SA.no_drop          +"\nThere's no drop here to let a rope down."
+SA.tied_here        +"\nThere's a rope tied here already."
+SA.no_hammer        +"\nYou have no hammer to drive the spike with."
+SA.tie_edge         +"{@tie} over the edge: it reaches the foot."
+SA.tie_edge_short   +"{@tie} over the edge: its end hangs short of the foot."
+SA.tie_shaft        +"{@tie} the shaft: it reaches the foot."
+SA.tie_shaft_short  +"{@tie} the shaft: its end hangs short of the foot."
+SA.untie_grapple    +"\nYou untie the grapple from the rope: it lies at your feet."
+SA.no_rope_here     +"\nYou see no rope tied here."
+SA.untie_rope       +"\nYou untie the rope, draw it up and coil it at your feet."
+SA.knot_far         +"\nThe knot's far above you, out of reach."
+SA.shake_loose      +"\nYou shake the rope, and the grapple comes loose and clatters down."
+SA.shake_fast       +"\nYou shake the rope, but the grapple holds fast."
+SA.have_no_rope     +"\nYou have no rope."
+SA.rope_alone       +"\nA rope alone won't catch: it wants a grapple."
+SA.nothing_above    +"\nThere's nothing above you here to catch on."
+SA.climb_up         +"\nIts mouth's in reach: climb up."
+SA.rope_there       +"\nThere's a rope there already."
+SA.too_high         +"\nThat's too high to throw it."
+SA.catches          +"\nThe grapple flies up and catches, with a clang."
+SA.no_catch         +"\nThe grapple flies up, finds nothing to bite on, and clatters back down."
+SA.drag_fixed       +"\n{@fixed}."
+SA.no_shove         +"\nThe {text} isn't a thing to shove about: pick it up."
+SA.no_room_drag     +"\nThere's no room behind you to drag the {text} back."
+SA.no_room_shove    +"\nThere's no room to shove the {text} that way."
+SA.strain           +"\nYou strain at the {text}, but it won't budge."
+SA.drag             +"\nYou take hold of the {text} and drag it toward you, stepping back."
+SA.shove            +"\nYou set your shoulder to the {text} and shove it a square away."
+SA.against          +" It stands against the door."

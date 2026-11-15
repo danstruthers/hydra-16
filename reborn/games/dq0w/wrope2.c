@@ -103,10 +103,10 @@ static unsigned char rp_untie (void)
             ip->x = x;
             ip->y = y;
             rp_new ();
-            put ("\nYou untie the grapple from the rope: it lies at your feet.");
+            rp_say (SA_UNTIE_GRAPPLE, "");
             return rp_done (50);
         }
-        return rp_no ("\nYou see no rope tied here.");
+        return rp_no (SA_NO_ROPE_HERE);
     }
     k = ip->kind;
     if (k == KI_TIED) {
@@ -115,11 +115,11 @@ static unsigned char rp_untie (void)
         }
         rp_coil (i);
         rp_new ();
-        put ("\nYou untie the rope, draw it up and coil it at your feet.");
+        rp_say (SA_UNTIE_ROPE, "");
         return rp_done (100);
     }
     if (item_at (i)->hide != KI_GRAPPLE) {
-        return rp_no ("\nThe knot's far above you, out of reach.");
+        return rp_no (SA_KNOT_FAR);
     }
     hub_map (0);
     r = &HUB->slot[SLOT_WORLD];                 /* (Shaken loose: the Throwing skill's knack) */
@@ -133,10 +133,10 @@ static unsigned char rp_untie (void)
     r->state = REQ_FREE;
     rp_new ();
     if (G_OK (g)) {
-        put ("\nYou shake the rope, and the grapple comes loose and clatters down.");
+        rp_say (SA_SHAKE_LOOSE, "");
         rp_loose (i);
     } else {
-        put ("\nYou shake the rope, but the grapple holds fast.");
+        rp_say (SA_SHAKE_FAST, "");
     }
     hub_map (0);
     return rp_done (HUB->round);
@@ -145,7 +145,7 @@ static unsigned char rp_untie (void)
 /* A rope in place, thing n, looked at: what it's tied to, how far it goes (after what's said of it) */
 static void __fastcall__ rp_look (unsigned n)
 {
-    char b[6];
+    char b[6], b2[14];
     unsigned char how, end, k, hold;
 
     if (!n || ((ip = item_at (n))->kind != KI_TIED && ip->kind != KI_HUNG)) {
@@ -157,7 +157,8 @@ static void __fastcall__ rp_look (unsigned n)
     hold = ip->fuel >> 8;
     k = ip->hide;
     put (" It's tied to the ");
-    rp_name (k);
+    rp_name (k, b2);
+    put (b2);
     put (how == RK_SKY ? ", in the mouth of the shaft above: " : how == RK_SHAFT ? ", in the shaft: " :
         how == RK_PIT ? ", over the pit's edge: " : ", over the edge: ");
     put (utoa (hold, b, 10));
