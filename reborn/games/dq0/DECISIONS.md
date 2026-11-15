@@ -6153,3 +6153,175 @@ finished (2026-11-15), step 6b with it.  What's built:
     letters' "the open chest" (SL_OPEN), stow-where's candidates, what's carried nested (a carried chest's lid's
     things listed "in it").
   - The backpack's side pocket (the critique's second example): its reach, its tie, a pocket named; not built.
+
+## Narration as data, the rest (the user's, 2026-11-15; as built, for review: ENGINE-CRITIQUE.md's §3.2 and row 5's Left)
+
+Row 5's last "Left:" note named three things: the world's other free text in things_text, the look's wording with
+fight_note's stances, and the sound's mapping.  The user approved finishing them on 2026-11-15.  This entry is what was
+built, one group a commit with the suite after each, and what was not, and why.  The words the player sees are the
+same, letter for letter (the transcripts below).
+
+**1. The character's own state: a UI kind of its own, UK_SELF (44f0fd01).**  Like stage 4's kinds, never in the hub:
+the UI fills one on the C stack and has it worded.  msgs.def's `UK_SELF < E_OUTCOME; w1 my:8-15@MY_WANT v:0-7` (and the
+head's n2, b): its three fields are shapes the table had already (said_f's rows 0, 7, 14), so overlay 27 pays nothing
+for them.  dq0.h's `MY_*` names the 22 rows (said.txt's SELF section, 24 rows with the noise's and one piece, `@bg`):
+
+| was | now (SELF rows) | where |
+|---|---|---|
+| facing_words' eight sayf lines and its four tables (hunger, thirst, the position, the limbs) | want, limb, limp, pos, hidden, under, swim, deep, facing (the heading's name as text, head_name's) | task.c, overlay 19 |
+| turned_says' four sayf lines and its two tables | step, setoff, face, turn | task.c, overlay 19 |
+| s_pose_words' sayf and its two tables | pose, posed | main.c, part 12 |
+| s_bg_words' three sayf lines, its msg and its three tables | draught, still, heard, behind; the background's words a piece | main.c, part 14 |
+| fight_note's eight stances (its words left in lb) | stance: said_q, the words left in lb as before; D_OWN's the ruleset's (rs_owns) as text; FN_AWAY the refusals' still (say_no's A_LB) | blows.c, overlay 22 |
+| time_told's five sayf lines | time (v: how sure), lost (v: how it lost track, TG_*: the hub's tb.how) | time.c, overlay 16 |
+| heard_words' strcpy and strcat lines (a denizen heard, into lb) | noise: its sound's words as they are, "a muffled" (w4 past the sound's "a "), "muffled", a noise, something moving; its way | caps.c, overlay 23 |
+
+Each row is one of the old say ()s, so the words wrap where they did.  caps.c's locals are static in overlay 23's own
+bank (`static-locals (on)`, `bss-name OV23BSS`): heard_words' event is on the C stack (`static-locals (push, off)`), the
+renderer in overlay 27 reading it there.
+
+**2. The world's parts' own sentences, coded (6da7dccb).**  Stage 5 coded the catalogue's sentences (the world's say,
+SA_*); the parts that built their own still put words into things_text.  Now they put a code too (items.h's form:
+SAY_AT, sa | 0x80, the thing's name, SAY_SEP, the other's, SAY_SEP), each part with its own copy of the coder
+(things.c's `SAY_PUT (name)`, the world's tbuf; wcloth.c's told and wwater.c's wsaid their own lines).  **Why a copy
+each:** the first build had one helper in the world's main RAM (55 bytes in things.o's code), and dq0traces failed: a
+step's cost 1,943,943 cycles, its budget 1,920,000.  Everything linked after things.o moved, the C library's routines
+with it; nothing the helper did ran in a step.  With
+a copy in each part the world's main RAM is byte for byte as it was, and the step costs 1,882,444.  (The cause, most
+likely: the library's routines are called thousands of times a step.)  61 SA_* codes more (items.h, at the enum's end),
+61 SA rows and two pieces (said.txt's new section after SELF, "The world's parts' own sentences"):
+
+- part 36 (things.c's s_shut_work: lids, ties and stoppers, a chest's lock locked, unlocked, picked, forced): its
+  say3 and its two tables gone, 26 rows.  Opened ("You open the chest", "You untie the sack") and forced, the row ends
+  without its full stop as the words did: what it shows (reveal's text) follows it in the text as plain words.
+- part 100 (s_fill: a light filled, a torch soaked): put3 gone, 10 rows; "You fill the lantern from the flask of oil,
+  and it's empty now." two rows (`@fill`, `@soak`), the code chosen by the fuel used up.
+- part 48 (why_not, the hold refused): SA.hands is why_not's "Your hands are full: stow something, or put it down." (the
+  same words were written twice, stage 5's note); "The ... takes both hands.", "Your left arm is useless.", " You can't
+  hold the ... in one hand.", "Your right hand holds the ...".
+- part 101 (s_swap): "Your right arm is useless." is SA.arm, the hold's row; "You shift the ... to your right hand."
+  SA.shift, the hold's row (the hand's words as obj); both hands, empty hands, the change of hands.
+- s_doff_feet (part 74's): one row.
+- wcloth.c (part 108, the cloth torn up and washed): told () codes its sentence; "You have no ... to hand." is
+  SA.no_such, the catalogue's row (the same words); 14 rows more, the bandages' count the other name.
+- wwater.c (part 74, a waterskin filled): three rows.
+
+The rows' text took a third bank: dq0.cfg's OV30 ("no parts"), linked at $C000 as OV29 is at $A000, bank.s's said_b
+choosing it by the address (OVMAX 30), saidgen.js placing each kind's rows and each piece wholly in the first of three
+banks with room.  The SA kind's rows (116 then) are one block, so the kinds moved between the banks.
+
+**3. The look one way: a UI kind of its own, UK_AHEAD (40977004).**  way.c's focus_words ("look north", "look through
+the grille") said its words in a dozen say and sayf lines, its two word tables (rel_w, noun) with them.  Each is a row
+now (said.txt's AHEAD section, 15 rows and two pieces, `@ahnoun` and `@ahrel`), one row a say () as before, so the
+words wrap where they did: the peer ahead, a spy-hole's cover, a closed way not seen past (its plural, "doors",
+"portcullises", and its state, closed, barred, locked, they're closed, its shutters, theirs), the way through and what's
+beyond it (only darkness, the sky up a light well, a passage and its feet, a room by the theme's name, its feet on, its
+light, another way into it), a light far off, nothing more.  msgs.def's `UK_AHEAD < E_OUTCOME; a pl; b rel; w1
+ah:8-15@AH_PEER k:0-7; w2 far:0-7 room:8-15`: one field new to the table (room, w2's high byte: 5 bytes of overlay
+27); the rest the shapes it had.  way.c's statics (ahpl, ahrel, ahfar: overlay 13's bank) carry a row's fields and
+`ah ()` fills the event on the C stack (overlay 13's locals are static, in its bank: `static-locals (push, off)`).
+
+**4. The rope's and the drag's: a second code byte (fc828c2c).**  The SA code was 7 bits (SA_* | 0x80, 128 at most) and
+116 were used.  A code past 127 is put after its own marker, items.h's `SAY_AT2` (0x03), its SA_* | 0x80 after it as
+ever; tt_words finds either (a loop of its own: the library's strpbrk cost the UI's main RAM 50 bytes) and adds 128
+for SAY_AT2's.  The rope's 27 sentences (wrope.c, wrope2.c,
+wrope3.c: tied off, let down, untied, shaken loose, thrown up; wrope.h's rp_say and rp_no, a copy each part as the rest
+of wrope.h) and the drag's 8 (wdrag.c's dsay: fixed, not a thing to shove, no room, the strain, dragged, shoved,
+against the door) are SA rows, past 127; the tie's four by where it's let down and whether it reaches, `@tie` their
+piece.  "The chest is fixed where it stands." is one piece, `@fixed`: the catalogue's SA.fixed and the drag's
+SA.drag_fixed (its new line first).  The SA codes now 151 of 253.  rp_look (the rope looked at) keeps its words
+(below); rp_name now names into its caller's buffer.
+
+**The words most said (saidgen.js's WORDS_MAX 200 -> 180).**  The renderer's dictionary (said_dw, said_do: overlay 27's,
+beside the renderer) grows with the rows' text: overlay 27 had 126 bytes left before this, 8 with the rope's rows.  At
+most 180 words now: overlay 27 has 89 bytes left, the rows' banks paying the rest (some 100 bytes).  The words the
+same; a row's bytes differ.
+
+**The SA kind's rows last (said.txt's `last SA`).**  The rows' banks are read through said_b, a few cycles more a byte
+in the second bank and more in the third.  With the SA kind grown, the first fit put SA in the second bank and pushed
+the denizens' DEN rows (their doings and sounds, said as they come) into the third, and dq0answer's normal-pace listen
+had its first letter at 761,557 cycles (budget 760,000; 687,649 before the rope's rows).  A said.txt line `last KIND`
+places a kind's rows after every other kind's and the pieces (saidgen.js): `last SA`, the world's things' words said
+once an answer, now in overlay 30, BEAT, HARM, TASK and DEN in overlay 29.  The listen's first letter then 524,082.
+
+**Not moved, and why.**
+- **The look's lists**: what's seen lying about (seen.c's items, one, plural), the denizens seen and their stirs
+  (dens.c's tell_one, group, o_stir_words), touch_words' walls felt in the dark, the inventory's list, a thing looked at
+  closely (things.c's look at, LM_AT ... LM_TRAPS), a search's finds.  These aren't sentences but lists made clause by
+  clause: counts and their words ("two iron pots"), plurals ("heaps of sand", "ies", "es"), alike things told
+  together, the designators' capitals, the stream (lbsaid.s's lb_said: none twice in an answer, `\002` a thing's
+  sentence), the room left in lb.  A row a clause would be fragments, the composing still the code's: the words in two
+  places, not one.  **Open, for the user:** a list renderer (a row for the list's frame, the renderer making the
+  list's items and "and") is the way to move them; it's a design of its own.
+- **The worn places' (wworn.c's say_at: "on your left hand", a body part's phrase put into other sentences) and the
+  rope looked at (wrope2.c's rp_look: what it's tied to, how far it goes)**: phrases of a look's and a refusal's, not
+  sentences; with the look's lists.
+- **The well's (wwell.c, wwell2.c: "You let the torch fall into the well. A moment, and you hear a splash far
+  below.")**: its words go to the traces' text (UIREC's trtext, said by E_VIEW's V_TRACED), which tt_words doesn't
+  read; it wants a reader of its own first.
+- **A count's** ("You take 4 rations.", "There are only 3 rations."): the put and take handlers', the containers'
+  work's area now (step 6b); left to it.
+- **The SA_ refusals and the first words from a begun row**: stage 5 made the refusals rows; stage 4 made the first
+  words FIRST rows keyed by the verb.  The world's own begun row for each action, rendered by the UI from the command's
+  handles, still wants each action's begun row declared once (stage 4's note): not built.
+- **The sound's mapping (dq0s's world_sound)**: still not a clean column.  Of its five cases two come from an
+  outcome (E_PORTAL's po, E_TRAP's to); E_NOISE's comes from its what (NZ_*, no rows: it has no words); the denizens'
+  sounds are chosen in dq0s's listen loop by loudness and square, not by an outcome.  The sound task can't read the
+  UI's banks, so a column would need a table of its own made for dq0s, holding half the mapping and leaving the rest
+  in the code.  Left as it is.
+
+**What the player sees.**  Nothing new.  Every dq0 test's screen was kept before (40c7b7a1, built here) and after each
+group (a hook in sim/test.js, not committed), the sentences compared with sent.js: 301 tests each.  Against the
+baseline, after the last group, 8 differ (dq0answer, dq0jobs, dq0lookfar, dq0mine, dq0prompt, dq0robrest, dq0skykin, dq0sway),
+and in the four runs between the groups the same kinds and a few more, all of them the known timing noise:
+- denizens met at other moments (dq0answer, dq0hold, dq0jobs, dq0lookfar, dq0mine, dq0passes, dq0skykin, dq0stopwords:
+  their stirs, a rat or an adder seen or gone a moment apart, a sound heard one time more or fewer); dq0hold is new to
+  the list (the hold-back's test, 10341161): its rat's "gone from sight" a moment apart, as the others';
+- dq0robrest (a rest ending at another moment);
+- dq0sway's typed-ahead key echoed a moment later ("behind you.&O" / "behind you.1O");
+- dq0prompt's typed-ahead turn (below): "You turn to face south." or "You turn left, to face south.", from group to
+  group as the timing moved (group 1 the second, group 2 the first, groups 3 and 4 the second).
+
+No moved sentence is said differently, nor a different number of times, in any test.
+
+**Room** (bytes free, the build's table):
+
+| | before (40c7b7a1) | after the four groups |
+|---|---|---|
+| dq0's main RAM | 3,143 | 3,130 (said_b's third bank and ovbank's byte, 11; groups 1 and 3 a byte each) |
+| dq0 overlay 16 (time_told) | 2,000 | 2,457 |
+| dq0 overlay 18 (part 14's image: s_bg_words) | 747 | 1,140 |
+| dq0 overlay 19 (facing_words, turned_says) | 234 | 769 |
+| dq0 overlay 22 (fight_note) | 536 | 699 |
+| dq0 overlay 23 (heard_words) | 379 | 507 |
+| dq0 overlay 13 (focus_words; part 9 back in its own bank) | 3,978 | 825 |
+| dq0 overlays 15, 20, 24, 26 (the packer's moves: parts 3, 6, 9 and 29) | 319, 3,039, 607, 185 | 3,650, 334, 264, 4,354 |
+| dq0 parts 12 (s_pose_words), 14 (s_bg_words) | 2,188, 1,632 | 2,350, 2,025 |
+| dq0 overlay 27 (the renderer, the dictionary) | 126 | 89 |
+| dq0 overlays 28, 29, 30 (the rows) | 3, 1,487, none | 3, 618, 4,847 |
+| dq0w's main RAM | 2,818 | 2,818 |
+| dq0w parts 36, 48, 74, 100, 101, 108 (the locks', the hands', the water's, the fill's, the swap's, the cloth's) | 618, 1,167, 2,092, 1,954, 2,637, 1,436 | 1,264, 1,329, 2,149, 2,186, 2,752, 2,074 |
+| dq0w parts 95, 96, 98 (the rope's), 109 (the drag's) | 42, 1,301, 1,012, 955 | 299, 1,748, 1,230, 1,309 |
+| dq0w overlays 9, 13, 14, 15, 18, 19, 29, 30, 31 (the parts' images) | 298, 31, 498, 368, 390, 131, 443, 254, 474 | 530, 677, 1,317, 530, 505, 188, 797, 958, 692 |
+| dq0w overlay 3 (the packer's: part 53 there now, not in 14) | 210 | 29 |
+| dq0d, dq0p, dq0s, dq0m, dq0harn | | untouched |
+
+In all: the UI's code banks and parts 3,530 bytes more room, the rows' banks 4,251 less (overlay 30 new, 8,192),
+the world's parts 3,126 more; the main RAMs as they were (dq0's 13 less).
+
+**The start** (dq0starttime; budgets 245M and 325M): seed 1 232.5M before, 232.1M, 232.4M, 233.2M, 232.5M after the
+four groups; seed 123456789 308.1M before, 307.9M, 308.3M, 309.6M, 308.5M.
+
+**Tested:** all 451 tests pass after each group.  dq0traces' step cost (budget 1,920,000): 1,882,444 after group 2,
+1,857,815 after group 3, 1,908,007 after group 4 (the step's cost moves with the layout, 1,842,187 in a
+build of group 4 before `last SA`).
+
+**Open, for the user.**
+- A list renderer for the look's lists (above).
+- The well's words (the traces' text) a reader of their own, then rows; the worn places' phrases with the lists.
+- Overlay 27's room: the dictionary capped at 180 words keeps 89 bytes; the containers' work's rows will take some of
+  it.  A smaller cap (or the dictionary in a bank of its own) is the next lever.
+- dq0prompt's typed-ahead turn (group 1's run): "turn left" and "inventory" typed at once, turned_says reads the
+  command queue as the turn's words are said, and found the inventory's command there before ("You turn to face
+  south.") and the turn's now ("You turn left, to face south."): the old race, moved by the code's timing, not a
+  change of words.  The turn's own event carrying its way as said, read instead of the queue, would end it.
