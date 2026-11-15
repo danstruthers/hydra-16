@@ -744,3 +744,42 @@ FIRST.them          +"\nYou look them over."
 FIRST.it            "You go over to it."
 FIRST.peer          "You peer ahead."
 FIRST.listen        "You listen."
+
+# ---- The character's own state, its body and its bearings (UK_SELF: my, MY_*; v a number or a choice, n2 another; text
+# a heading's name, the time in words).  The status's lines (task.c's facing_words), a turn's and a step's first words
+# (turned_says), a pose (main.c's pose_words), the air and the background heard (bg_words), a stance (blows.c's
+# fight_note: its words left in lb, said_q), the time told (time.c's time_told).  (Their sayf lines before, narration as
+# data's rest, 2026-11-15)
+
+@bg         "{v?|water trickling somewhere near|the wind in a shaft near by|those about you moving}"
+
+SELF.want           +"\nHunger and thirst: {v?not hungry|hungry|very hungry|starving|wasting away with hunger}, "
+                    "{n2?not thirsty|thirsty|very thirsty|parched|dying of thirst}."
+SELF.limb           +"\nYour {v?left arm|right arm|left leg|right leg} is useless."
+SELF.limp           +"\nYou limp."
+SELF.pos            +"\nPosition: {v?|lying down|crouching|kneeling|sitting}."
+SELF.hidden         +"\nYou are hidden."
+SELF.under          +"\nWater: under it, holding your breath."
+SELF.swim           +"\nWater: swimming."
+SELF.deep           +"\nWater: {v} feet deep where you stand."
+SELF.facing         +"\nFacing: {text}{v?|, you think; you've lost your bearings}."
+SELF.step           +"\nYou step {v?forward|ahead to your right|to your right|back to your right|back|back to your left"
+                    "|to your left|ahead to your left}."
+SELF.setoff         +"\nYou set off {text}."
+SELF.face           +"\nYou turn to face {text}."
+SELF.turn           +"\nYou turn {v?|half right|right|well to the right|around|well to the left|left|half left}, to face {text}."
+SELF.pose           +"\nYou {v?|lie down|crouch|kneel|sit down}."
+SELF.posed          +"\nYou are {v?|lying|crouching|kneeling|sitting} already."
+SELF.draught        +"\nYou feel a {v?|faint ||strong }draught from {n2?ahead|ahead to your right|your right|behind you to your right"
+                    "|behind you|behind you to your left|your left|ahead to your left}."
+SELF.still          "The air is still."
+SELF.heard          +"\nYou hear nothing{v?| but {@bg}}."
+SELF.behind         +"\nBehind it all, {@bg}."
+SELF.stance         +"{v?You will defend yourself as best you can.|You will block.|You will dodge.|{text}"
+                    "|You will not defend yourself.||There's nothing like that here to fight.|There's nothing beside you to fight.}"
+SELF.time           +"\nIt{v?'s {text}.|'s about {text}, you think.|'s some time around {text}, you'd guess."
+                    "| must be {text}, you'd guess, but you can't be sure.}"
+SELF.lost           +"\nYou've {v?lost all track of the time down here|no idea how long you slept|no idea how long you lay senseless}"
+                    ": it could be {text}."
+SELF.noise          +"You hear {v?{text}|a muffled {w4}|muffled {text}|a noise|something moving} {n2?ahead|ahead to your right"
+                    "|to your right|behind you to your right|behind you|behind you to your left|to your left|ahead to your left}."

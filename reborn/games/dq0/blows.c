@@ -150,16 +150,19 @@ enum { FN_AWAY = 5, FN_NONE_LIKE, FN_NONE };
 #pragma local-strings (push, on)
 void __fastcall__ o_fight_note (unsigned char n)
 {
-    static const char* const say[8] = {
-        "You will defend yourself as best you can.", "You will block.", "You will dodge.",
-        rs_owns, "You will not defend yourself.", "",   /* (D_OWN's the ruleset's: RS_HELLO's) */
-        "There's nothing like that here to fight.", "There's nothing beside you to fight."
-    };
+    struct msg c;
 
-    strcpy (lb, say[n & 7]);
-    if ((n & 7) == 5) {
+    if ((n &= 7) == FN_AWAY) {
         say_no (A_FAR | A_LB, 0);       /* ("It is out of reach: go up to it first.": the refusals' one wording) */
+        return;
     }
+    said_s[2] = rs_owns;                /* (D_OWN's the ruleset's: RS_HELLO's) */
+    c.kind = UK_SELF;                   /* (Its words said.txt's SELF.stance, left in lb, 2026-11-15) */
+    c.who = 0;
+    c.w1 = MY_STANCE << 8 | n;
+    said_q = 1;
+    outcome_words (&c);
+    said_q = 0;
 }
 #pragma local-strings (pop)
 #pragma code-name (pop)

@@ -237,6 +237,9 @@ UK_FIRST        < E_OUTCOME; w1 fs:8-15@FS_THE
 UK_SA           < E_OUTCOME; w1 sa:8-15@SA_HOLD
                 # (The world's things' words, coded in things_text (items.h's SAY_AT): its SA_*.  text the thing's
                 #   name, obj the other's: refuse.c's tt_words, stage 5, 2026-11-12)
+UK_SELF         < E_OUTCOME; w1 my:8-15@MY_WANT v:0-7
+                # (The character's own state, its body and its bearings, in words: MY_*; v a number or a choice, n2
+                #   another, text a word (a heading's name, the time).  narration as data's rest, 2026-11-15)
 
 struct req
 

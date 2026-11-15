@@ -3295,16 +3295,16 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
 #pragma rodata-name (push, "SW12RODATA")
 void __fastcall__ s_pose_words (unsigned w)
 {
-    static const char pdo[5][10] = { "", "lie down", "crouch", "kneel", "sit down" };
-    static const char pis[5][10] = { "", "lying", "crouching", "kneeling", "sitting" };
-    unsigned char k = (w >> 8) & 7;
+    struct msg c;
 
     if ((w & HW_WORDS) == HW_WORDS) {
         hide ((const char*) w);                 /* (Hiding oneself's: part 10's) */
         return;
     }
-
-    sayf (w & 0x8000 ? "\nYou are %s already." : "\nYou %s.", w & 0x8000 ? pis[k] : pdo[k]);
+    c.kind = UK_SELF;                           /* (Its words said.txt's SELF rows, pose and posed, 2026-11-15) */
+    c.who = 0;
+    c.w1 = (w & 0x8000 ? MY_POSED << 8 : MY_POSE << 8) | (w >> 8 & 7);
+    outcome_words (&c);
 }
 
 #pragma code-name (pop)
@@ -3317,25 +3317,23 @@ void __fastcall__ s_pose_words (unsigned w)
 ** after it), a sniff's start (2: the draught, from where, or the air still) */
 void __fastcall__ s_bg_words (unsigned char what)
 {
-    static const char* const bgw[] = { "", "water trickling somewhere near", "the wind in a shaft near by",
-        "those about you moving" };
-    static const char* const airw[] = { "", "faint ", "", "strong " };
-    static const char* const relname[8] = {
-        "ahead", "ahead to your right", "your right", "behind you to your right", "behind you",
-        "behind you to your left", "your left", "ahead to your left" };
+    struct msg c;
     unsigned char b = HUB->pc_bg & 3;
 
+    c.kind = UK_SELF;                           /* (Its words said.txt's SELF rows, draught, still, heard and behind: the
+                                                **   background's v, 2026-11-15) */
+    c.who = 0;
     if (what == 2) {
-        if (HUB->air_s) {
-            sayf ("\nYou feel a %sdraught from %s.", airw[HUB->air_s & 3], relname[(HUB->air_h + 4 - HUB->pc_face) & 7]);
-        } else {
-            msg ("The air is still.");
-        }
+        c.b = (HUB->air_h + 4 - HUB->pc_face) & 7;
+        c.w1 = HUB->air_s ? MY_DRAUGHT << 8 | (HUB->air_s & 3) : MY_STILL << 8;
     } else if (!what) {
-        sayf (b ? "\nYou hear nothing but %s." : "\nYou hear nothing.", bgw[b]);
+        c.w1 = MY_HEARD << 8 | b;
     } else if (b) {
-        sayf ("\nBehind it all, %s.", bgw[b]);
+        c.w1 = MY_BEHIND << 8 | b;
+    } else {
+        return;
     }
+    outcome_words (&c);
 }
 
 #pragma code-name (pop)

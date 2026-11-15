@@ -378,10 +378,16 @@ void __fastcall__ outcome_words (const struct msg* m);   /* Overlay 27 (said.c):
 extern const char* said_s[6];                   /* (said.c's, the main RAM's: the UI's words for a row, the thing done
                                                 **   to, the thing done with, a word of the row's own; three more, {w4}
                                                 **   {w5} {w6}; 0 or "" none) */
-enum { UK_THROW = 0x80, UK_SKY, UK_SWAY, UK_FIGHT, UK_NO, UK_FIRST, UK_SA };  /* (The UI's own kinds, worded by said.txt's
-                                                **   rows as an outcome event is: no world's event, never in the hub;
-                                                **   msgs.def's, narration as data's stage 4, 2026-11-12; UK_SA the
-                                                **   world's things' coded words, stage 5's) */
+enum { UK_THROW = 0x80, UK_SKY, UK_SWAY, UK_FIGHT, UK_NO, UK_FIRST, UK_SA, UK_SELF };  /* (The UI's own kinds, worded by
+                                                **   said.txt's rows as an outcome event is: no world's event, never in
+                                                **   the hub; msgs.def's, narration as data's stage 4, 2026-11-12; UK_SA
+                                                **   the world's things' coded words, stage 5's; UK_SELF the character's
+                                                **   own state, 2026-11-15) */
+enum { MY_WANT, MY_LIMB, MY_LIMP, MY_POS, MY_HIDDEN, MY_UNDER, MY_SWIM, MY_DEEP, MY_FACING, MY_STEP, MY_SETOFF, MY_FACE,
+    MY_TURN, MY_POSE, MY_POSED, MY_DRAUGHT, MY_STILL, MY_HEARD, MY_BEHIND, MY_STANCE, MY_TIME, MY_LOST, MY_NOISE };
+                                                /* (UK_SELF's: the status's lines, a turn's and a step's first words, a
+                                                **   pose, the air and the background heard, a stance, the time told; a
+                                                **   denizen heard, not seen) */
 enum { FS_THE, FS_YOUR, FS_INTO, FS_THEM, FS_IT, FS_PEER, FS_LISTEN };   /* (UK_FIRST's: a command's first words' form, */
 enum { FV_REACH, FV_LOOK_FOR, FV_FEEL_FOR, FV_LOOK_AT, FV_HEAD, FV_TRY, FV_RAISE, FV_LIFT, FV_PUT_DOWN, FV_OVER,
     FV_FEEL };                                  /*   its verb: "You reach for the torch.", sway.c's) */

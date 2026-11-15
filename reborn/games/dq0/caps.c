@@ -383,28 +383,25 @@ void __fastcall__ o_around (const char* l)
 /* (Overlay 9's till 2026-11-06: its room for the denizens' capitals) A denizen heard, not seen (main.c's heard: one of the denizens' events), into lb, in its sound's words (the sound
 ** task's, SOUND.md: heard_what) if it has them: "You hear a scurrying to your right.", "You hear a muffled squeak
 ** behind you." (what | 0x80: walls or a door between); else "You hear something moving behind you to your left." */
+#pragma static-locals (push, off)               /* (Its event on the C stack, the main RAM: the words' overlay reads it) */
 void __fastcall__ o_heard_words (unsigned char what, unsigned char rel_)
 {
-    if (heard_what[0]) {
-        strcpy (lb, "You hear ");
-        if (what & 0x80) {
-            if (heard_what[0] == 'a' && heard_what[1] == ' ') {
-                strcat (lb, "a muffled ");      /* ("a muffled squeak") */
-                strcat (lb, heard_what + 2);
-            } else {
-                strcat (lb, "muffled ");
-                strcat (lb, heard_what);
-            }
-        } else {
-            strcat (lb, heard_what);
-        }
-        strcat (lb, " ");
-    } else {
-        strcpy (lb, (what & 0x7F) == DE_NOISE ? "You hear a noise " : "You hear something moving ");
-    }
-    strcat (lb, rel[rel_ & 7]);
-    strcat (lb, ".");
+    struct msg c;
+
+    said_s[2] = heard_what;                     /* (Its words said.txt's SELF.noise, left in lb: v its sound's words, as
+                                                **   they are, muffled ("a muffled squeak": w4 past its "a "), or none,
+                                                **   a noise or a thing moving; n2 its way, 2026-11-15) */
+    said_s[3] = heard_what + 2;
+    c.kind = UK_SELF;
+    c.who = 0;
+    c.b = rel_ & 7;
+    c.w1 = MY_NOISE << 8 | (!heard_what[0] ? ((what & 0x7F) == DE_NOISE ? 3 : 4) : !(what & 0x80) ? 0 :
+        heard_what[0] == 'a' && heard_what[1] == ' ' ? 1 : 2);
+    said_q = 1;
+    outcome_words (&c);
+    said_q = 0;
 }
+#pragma static-locals (pop)
 
 /* The number at p (its digits; the library's atoi in the main RAM): its value; p past it and the space after */
 static const char* np;

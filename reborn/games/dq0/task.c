@@ -482,15 +482,24 @@ void __fastcall__ o_felt_words (unsigned w)
 #pragma code-name (push, "OV19CODE")            /* (Overlay 19's since 2026-11-03: overlay 1's room) */
 #pragma rodata-name (push, "OV19RODATA")
 
+/* The character's own words (UK_SELF's row MY_*, w's high byte; v its low, n2 b): said.txt's SELF rows, narration as
+** data's rest, 2026-11-15 */
+static void __fastcall__ my (unsigned w, unsigned char b)
+{
+    struct msg c;
+
+    c.kind = UK_SELF;
+    c.who = 0;
+    c.b = b;
+    c.w1 = w;
+    outcome_words (&c);
+}
+
 /* A turn's first words (V_FACING's: the user's, 2026-11-03, "I guess the turn info is OK keeping both"): said by its way
 ** as it faces ("turn r", the parser's own reply, CQ_REL | n), "You turn right, to face west."; by the compass, or another's
-** reason to turn, "You turn to face west." */
+** reason to turn, "You turn to face west."  (Their words said.txt's SELF rows: step, setoff, face, turn) */
 void __fastcall__ o_turned_says (unsigned char go)
 {
-    static const char* const tw[8] = { "", "half right", "right", "well to the right", "around", "well to the left", "left",
-                                       "half left" };
-    static const char* const st[8] = { "forward", "ahead to your right", "to your right", "back to your right", "back",
-                                       "back to your left", "to your left", "ahead to your left" };
     unsigned char f, d, b[4];
 
     hub_mem (0, &f, &HUB->pc_face, 1);
@@ -501,19 +510,20 @@ void __fastcall__ o_turned_says (unsigned char go)
             return;
         }
         if (go & 8) {
-            sayf ("\nYou step %s.", st[(go - f) & 7]);
+            my (MY_STEP << 8 | ((go - f) & 7), 0);
         } else {
-            sayf ("\nYou set off %s.", head_name[(go + d) & 7]);
+            said_s[2] = head_name[(go + d) & 7];
+            my (MY_SETOFF << 8, 0);
         }
         return;
     }
     hub_mem (CMD_BANK, b, HUB_WINDOW + CQ_CMD, 4);   /* (Its action, its actor, its flags, its way: as it was said) */
-    f = (f + d) & 7;
+    said_s[2] = head_name[(f + d) & 7];
     d = b[3] & 7;
     if (b[0] != VB_FACE_DIRECTION || b[3] == 0xFF || !(b[3] & CQ_REL) || !d) {
-        sayf ("\nYou turn to face %s.", head_name[f]);
+        my (MY_FACE << 8, 0);
     } else {
-        sayf ("\nYou turn %s, to face %s.", tw[b[2] & CF_HALF ? (d == 2 ? 1 : d == 6 ? 7 : d) : d], head_name[f]);
+        my (MY_TURN << 8 | (b[2] & CF_HALF ? (d == 2 ? 1 : d == 6 ? 7 : d) : d), 0);
     }
 }
 
@@ -521,50 +531,45 @@ void __fastcall__ o_turned_says (unsigned char go)
 ** 4.2's bearings, the north it believes in; unsure of it, said so); and first, every referee's, what the hub has of its
 ** body that the referee's Condition hasn't (the user's, 2026-11-03: "When running status, I would like to see my hunger and
 ** thirst state as well"): its hunger and thirst, in the game's words for them; a limb useless, a limp; how it lies, sits or
-** crouches; the water it's in */
+** crouches; the water it's in.  (Their words said.txt's SELF rows) */
 void o_facing_words (void)
 {
-    static const char* const hw[5] = { "not hungry", "hungry", "very hungry", "starving", "wasting away with hunger" };
-    static const char* const tw[5] = { "not thirsty", "thirsty", "very thirsty", "parched", "dying of thirst" };
-    static const char* const pw[8] = { "", "lying down", "crouching", "kneeling", "sitting", "", "", "" };
-    static const char* const lw[4] = { "left arm", "right arm", "left leg", "right leg" };
     unsigned char f, b[2], w;
 
     hub_mem (0, &w, &HUB->pc_want, 1);
-    f = WANT_HUNGER (w);
-    w = WANT_THIRST (w);
-    sayf ("\nHunger and thirst: %s, %s.", hw[f > 4 ? 4 : f], tw[w > 4 ? 4 : w]);
+    my (MY_WANT << 8 | WANT_HUNGER (w), WANT_THIRST (w));
     hub_mem (0, b, &HUB->pcsum.limbs, 1);
     hub_mem (0, b + 1, &HUB->pcsum.limp, 1);
     for (f = 0; f < 4; ++f) {
         if (b[0] & LB_ARM_L << f) {             /* (LB_ARM_L, LB_ARM_R, LB_LEG_L, LB_LEG_R: bits in order) */
-            sayf ("\nYour %s is useless.", lw[f]);
+            my (MY_LIMB << 8 | f, 0);
         }
     }
     if (b[1]) {
-        sayf ("\nYou limp.");
+        my (MY_LIMP << 8, 0);
     }
     hub_mem (0, &f, &HUB->pc_pos, 1);
-    if (pw[f & 7][0]) {
-        sayf ("\nPosition: %s.", pw[f & 7]);
+    if ((f &= 7) != 0 && f <= 4) {              /* (Lying down, crouching, kneeling, sitting) */
+        my (MY_POS << 8 | f, 0);
     }
     hub_mem (0, &f, &HUB->pc_hid, 1);
     if (f) {
-        say ("\nYou are hidden.");
+        my (MY_HIDDEN << 8, 0);
     }
     hub_mem (0, &f, &HUB->pc_wet, 1);
     hub_mem (0, b, &HUB->pc_swim, 1);
     hub_mem (0, b + 1, &HUB->pc_under, 1);
     if (b[1]) {
-        sayf ("\nWater: under it, holding your breath.");
+        my (MY_UNDER << 8, 0);
     } else if (b[0]) {
-        sayf ("\nWater: swimming.");
+        my (MY_SWIM << 8, 0);
     } else if (f & ~WET_RUNS) {
-        sayf ("\nWater: %u feet deep where you stand.", f & ~WET_RUNS);
+        my (MY_DEEP << 8 | (f & ~WET_RUNS), 0);
     }
     hub_mem (0, &f, &HUB->pc_face, 1);
     hub_mem (0, b, &HUB->pc_skew, 2);           /* (pc_skew and pc_lost) */
-    sayf ("\nFacing: %s%s.", head_name[(f + b[0]) & 7], b[1] ? ", you think; you've lost your bearings" : "");
+    said_s[2] = head_name[(f + b[0]) & 7];
+    my (MY_FACING << 8 | b[1], 0);
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)

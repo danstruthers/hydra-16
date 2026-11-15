@@ -67,27 +67,28 @@ static const char* __fastcall__ clock_words (unsigned m, unsigned char q)
     return cw;
 }
 
-/* "time", "what time is it": told as believed, as sure as it is */
+/* "time", "what time is it": told as believed, as sure as it is (its words said.txt's SELF rows, time and lost: v how
+** sure, or how it lost track, TG_*; text the time in words, cw) */
 static void time_told (void)
 {
     struct tbelief t;
+    struct msg c;
     unsigned b;
+    unsigned char v;
 
     hub_mem (0, &t, &HUB->tb, sizeof t);
     b = day_believed (&t);
-    if (t.unc >= TB_LOST) {
-        sayf (t.how == TG_SLEEP ? "\nYou've no idea how long you slept: it could be %s." : t.how == TG_OUT ?
-            "\nYou've no idea how long you lay senseless: it could be %s." :
-            "\nYou've lost all track of the time down here: it could be %s.", part[b / 180]);
-    } else if (t.unc <= 10) {
-        sayf ("\nIt's %s.", clock_words (b, 1));
-    } else if (t.unc <= 45) {
-        sayf ("\nIt's about %s, you think.", clock_words (b, 0));
-    } else if (t.unc <= 150) {
-        sayf ("\nIt's some time around %s, you'd guess.", clock_words (b, 0));
+    v = t.unc <= 10 ? 0 : t.unc <= 45 ? 1 : t.unc <= 150 ? 2 : 3;
+    if (t.unc >= TB_LOST || v == 3) {
+        strcpy (cw, part[b / 180]);
     } else {
-        sayf ("\nIt must be %s, you'd guess, but you can't be sure.", part[b / 180]);
+        clock_words (b, !v);
     }
+    said_s[2] = cw;                             /* (The main RAM's) */
+    c.kind = UK_SELF;
+    c.who = 0;
+    c.w1 = t.unc >= TB_LOST ? MY_LOST << 8 | t.how : MY_TIME << 8 | v;
+    outcome_words (&c);
 }
 
 /* A wait's length by the line (cl): "until dawn" (the minutes till the hour it names, as it believes the time now: the
