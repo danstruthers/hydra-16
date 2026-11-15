@@ -378,11 +378,13 @@ void __fastcall__ outcome_words (const struct msg* m);   /* Overlay 27 (said.c):
 extern const char* said_s[6];                   /* (said.c's, the main RAM's: the UI's words for a row, the thing done
                                                 **   to, the thing done with, a word of the row's own; three more, {w4}
                                                 **   {w5} {w6}; 0 or "" none) */
-enum { UK_THROW = 0x80, UK_SKY, UK_SWAY, UK_FIGHT, UK_NO, UK_FIRST, UK_SA, UK_SELF };  /* (The UI's own kinds, worded by
+enum { UK_THROW = 0x80, UK_SKY, UK_SWAY, UK_FIGHT, UK_NO, UK_FIRST, UK_SA, UK_SELF, UK_AHEAD };  /* (The UI's own kinds, worded by
                                                 **   said.txt's rows as an outcome event is: no world's event, never in
                                                 **   the hub; msgs.def's, narration as data's stage 4, 2026-11-12; UK_SA
                                                 **   the world's things' coded words, stage 5's; UK_SELF the character's
-                                                **   own state, 2026-11-15) */
+                                                **   own state, 2026-11-15; UK_AHEAD a look one way's) */
+enum { AH_PEER, AH_COVER, AH_SHUT, AH_GRILLE, AH_THROUGH, AH_DARK, AH_SKY, AH_PASSAGE, AH_INTO, AH_ON, AH_LIT, AH_TOO,
+    AH_END, AH_GLOW, AH_NOTHING };              /* (UK_AHEAD's: way.c's focus_words, each one of its say ()s before) */
 enum { MY_WANT, MY_LIMB, MY_LIMP, MY_POS, MY_HIDDEN, MY_UNDER, MY_SWIM, MY_DEEP, MY_FACING, MY_STEP, MY_SETOFF, MY_FACE,
     MY_TURN, MY_POSE, MY_POSED, MY_DRAUGHT, MY_STILL, MY_HEARD, MY_BEHIND, MY_STANCE, MY_TIME, MY_LOST, MY_NOISE };
                                                 /* (UK_SELF's: the status's lines, a turn's and a step's first words, a

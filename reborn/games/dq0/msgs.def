@@ -240,6 +240,10 @@ UK_SA           < E_OUTCOME; w1 sa:8-15@SA_HOLD
 UK_SELF         < E_OUTCOME; w1 my:8-15@MY_WANT v:0-7
                 # (The character's own state, its body and its bearings, in words: MY_*; v a number or a choice, n2
                 #   another, text a word (a heading's name, the time).  narration as data's rest, 2026-11-15)
+UK_AHEAD        < E_OUTCOME; a pl; b rel; w1 ah:8-15@AH_PEER k:0-7; w2 far:0-7 room:8-15
+                # (A look one way's words, way.c's focus_words: AH_*; k the opening's noun (BN_*) or a choice, pl its
+                #   plural or a choice, rel its way (0 ahead to the left, 1 ahead, 2 to the right), far its squares,
+                #   room a room's kind or a choice.  narration as data's rest, 2026-11-15)
 
 struct req
 

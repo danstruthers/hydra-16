@@ -852,3 +852,29 @@ SA.tear             +"You tear the {text} into {obj} bandages."
 SA.skin_full        +"Your waterskin is full already."
 SA.no_water         +"There's no water here."
 SA.fill_skin        +"You fill your waterskin."
+
+# ---- A look one way, ahead (UK_AHEAD: ah, AH_*; k the opening's noun, BN_*, or a choice; rel its way, 0 ahead to the
+# left, 1 ahead, 2 ahead to the right; pl its plural ("s", "es") or a choice; far a passage's or a room's squares; room
+# a room's kind, or a closed one's state: closed, barred, locked, they're closed, its shutters, theirs).  Each row one
+# of way.c's say ()s before (focus_words, overlay 13: narration as data's rest, 2026-11-15), so the words wrap where
+# they did
+
+@ahnoun     "{k?passage|doorway|open door|broken door|door|portcullis|window|arrow slit}"
+@ahrel      "{rel?ahead to your left|ahead|ahead to your right}"
+
+AHEAD.peer          "{k?You peer ahead.|You peer ahead into the dark.}"
+AHEAD.cover         +" The spy-hole's cover is on the far side: you can't see through it."
+AHEAD.shut          +" You can't see past the {@ahnoun}{pl?|s|es} {@ahrel}: {room?it's closed|it's barred|it's locked"
+                    "|they're closed|its shutters are closed|their shutters are closed}."
+AHEAD.grille        +" Through the {pl?little window|spy-hole} in the door you see "
+AHEAD.through       +" {k?Down|Through} the {@ahnoun}{pl?|s|es} {@ahrel} you see "
+AHEAD.dark          +"only darkness"
+AHEAD.sky           +"the sky, up a light well"
+AHEAD.passage       +"{k?{pl?{far*SQ_FT} feet of it|{far*SQ_FT} feet of them}|a passage, {far*SQ_FT} feet of it}"
+AHEAD.into          +"into the {room room}"
+AHEAD.on            +", {far*SQ_FT} feet on"
+AHEAD.lit           +", {light}"
+AHEAD.too           +"; the {@ahnoun} {@ahrel} leads there too"
+AHEAD.end           +"."
+AHEAD.glow          +" A {k?light shows|faint glow shows} far off {@ahrel}."
+AHEAD.nothing       +" You see nothing more that way."

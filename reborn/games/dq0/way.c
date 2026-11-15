@@ -457,10 +457,27 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
 #define S           sight_copy
 #define W           (*(struct wayseen*) (lb + sizeof lb - sizeof (struct wayseen)))
 
-static const char rel_w[3][20] = { "ahead to your left", "ahead", "ahead to your right" };
-static const char noun[8][12] = { "passage", "doorway", "open door", "broken door", "door", "portcullis", "window",
-    "arrow slit" };
-typedef char w_fits[sizeof (struct wayseen) <= 300 ? 1 : -1];   /* (In lb's end: its first 100 bytes the theme's names) */
+typedef char w_fits[sizeof (struct wayseen) <= 300 ? 1 : -1];   /* (In lb's end: its first 100 bytes the theme's names,
+                                                **   and the rows' words) */
+static unsigned char ahpl, ahrel;               /* (A row's plural or choice, its way: UK_AHEAD's pl, rel) */
+static unsigned ahfar;                          /* (Its squares, and a room's kind or a choice: far, room) */
+
+/* A look ahead's words: said.txt's AHEAD row w >> 8 (UK_AHEAD: k w's low byte; pl, rel, far and room the statics
+** above), one of focus_words' say ()s before (narration as data's rest, 2026-11-15) */
+#pragma static-locals (push, off)               /* (Its event on the C stack, the main RAM: the words' overlay reads it) */
+static void __fastcall__ ah (unsigned w)
+{
+    struct msg c;
+
+    c.kind = UK_AHEAD;
+    c.who = 0;
+    c.a = ahpl;
+    c.b = ahrel;
+    c.w1 = w;
+    c.w2 = ahfar;
+    outcome_words (&c);
+}
+#pragma static-locals (pop)
 
 /* Openings b and the next alike, the same way, and the same beyond them: told once ("Through the open doors ahead you
 ** see only darkness.", not the open door's twice) */
@@ -481,7 +498,7 @@ void o_focus_words (void)
         W.nbeyond = W.nitems = W.ndens = W.nglows = 0;  /* (Not this record's: a look about came after it) */
     }
     if (worded != 3) {
-        msg (S.dark ? "You peer ahead into the dark." : "You peer ahead.");
+        ah (AH_PEER << 8 | (S.dark != 0));
     }
     for (i = 0, b = W.beyond; i < W.nbeyond; ++i, ++b) {    /* What's beyond the openings ahead (k: the opening,
                                                 **   BN_PASSAGE 0): "You can't see past the door ahead: it's
@@ -495,7 +512,7 @@ void o_focus_words (void)
             continue;                           /* (A way into a room told already, with the first) */
         }
         if (k >= BN_GRILLE && b->what == WB_SHUT) {
-            say (" The spy-hole's cover is on the far side: you can't see through it.");
+            ah (AH_COVER << 8);
             continue;                           /* (A closed door's spy-hole, the eye at it: dq0p's way.c, the user's,
                                                 **   2026-11-14) */
         }
@@ -507,54 +524,56 @@ void o_focus_words (void)
                     ++n;
                 }
             }
-            sayf (" You can't see past the %s%s %s: %s.", noun[k], !n ? "" : k == BN_PORTCULLIS ? "es" : "s",
-                rel_w[(b->rel + 1) & 3], k == BN_WINDOW ? (n ? "their shutters are closed" : "its shutters are closed") :
-                n ? "they're closed" : b->kind & PS_BARRED_ ? "it's barred" : b->kind & PS_LOCKED_ ? "it's locked" : "it's closed");
+            ahpl = !n ? 0 : k == BN_PORTCULLIS ? 2 : 1;     /* ("es", "s") */
+            ahrel = (b->rel + 1) & 3;
+            ahfar = (k == BN_WINDOW ? (n ? 5 : 4) : n ? 3 : b->kind & PS_BARRED_ ? 1 : b->kind & PS_LOCKED_ ? 2 : 0) << 8;
+            ah (AH_SHUT << 8 | k);
             continue;
         }
         for (n = 0; i + 1 < W.nbeyond && twin (b); ++n, ++i, ++b) {
         }                                       /* (Alike the same way: told once, "the open doors") */
         if (k >= BN_GRILLE) {                   /* ("Through the little window in the door you see into the guardroom, lit
                                                 **   by torches.") */
-            sayf (" Through the %s in the door you see ", k == BN_GRILLE ? "little window" : "spy-hole");
+            ahpl = k != BN_GRILLE;              /* (The spy-hole's) */
+            ah (AH_GRILLE << 8);
         } else {
-            sayf (" %s the %s%s %s you see ", k ? "Through" : "Down", noun[k], !n ? "" : k == BN_PORTCULLIS ? "es" : "s",
-                rel_w[(b->rel + 1) & 3]);
+            ahpl = !n ? 0 : k == BN_PORTCULLIS ? 2 : 1;
+            ahrel = (b->rel + 1) & 3;
+            ah (AH_THROUGH << 8 | k);
         }
+        ahfar = b->kind << 8 | b->dist;         /* (Its squares; a room's kind) */
         if (b->what == WB_DARK) {
-            say ("only darkness");
+            ah (AH_DARK << 8);
         } else if (b->what == WB_SKY) {
-            say ("the sky, up a light well");
+            ah (AH_SKY << 8);
         } else if (b->what == WB_PASSAGE) {
-            sayf (k ? "a passage, %u feet of it" : n ? "%u feet of them" : "%u feet of it", SQ_FT * b->dist);
+            ahpl = n != 0;                      /* ("feet of them") */
+            ah (AH_PASSAGE << 8 | k);
         } else {
-            *lb = 0;
-            theme_named (TN_ROOM, b->kind);     /* (The theme's, into lb) */
-            sayf ("into the %s", lb);
+            ah (AH_INTO << 8);                  /* (The room's name the theme's) */
             if (!k) {
-                sayf (", %u feet on", SQ_FT * b->dist);
+                ah (AH_ON << 8);
             }
             if (b->lit) {
-                *lb = 0;
-                theme_named (TN_LIGHT, 0);
-                sayf (", %s", lb);
+                ah (AH_LIT << 8);
             }
             for (j = i + 1, c = b + 1; j < W.nbeyond; ++j, ++c) {  /* (Another way ahead into the same room: told
                                                 **   with it, not the room again, the user's, 2026-10-22) */
                 if (c->what == WB_ROOM && c->kind == b->kind) {
                     told |= 1 << j;
-                    sayf ("; the %s %s leads there too", noun[c->noun], rel_w[(c->rel + 1) & 3]);
+                    ahrel = (c->rel + 1) & 3;
+                    ah (AH_TOO << 8 | c->noun);
                 }
             }
         }
-        say (".");
+        ah (AH_END << 8);
     }
     for (i = 0; i < W.nglows; ++i) {            /* The lights far off ahead */
-        sayf (" A %s far off %s.", W.glow[i].how == GL_LIGHT ? "light shows" : "faint glow shows",
-            rel_w[(W.glow[i].rel + 1) & 3]);
+        ahrel = (W.glow[i].rel + 1) & 3;
+        ah (AH_GLOW << 8 | (W.glow[i].how != GL_LIGHT));
     }
     if (!(W.nbeyond | W.nitems | W.ndens | W.nglows)) {
-        say (" You see nothing more that way.");
+        ah (AH_NOTHING << 8);
     }
     memcpy (&S.nitems, &W.nitems, sizeof S.nitems + sizeof S.item);   /* The things and the denizens ahead, in a */
     memcpy (&S.ndens, &W.ndens, sizeof S.ndens + sizeof S.den);       /*   glance's words (overlay 7's, 9's) */
