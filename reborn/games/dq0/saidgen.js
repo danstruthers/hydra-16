@@ -32,7 +32,10 @@
 //   capitalised) the UI's word K (obj, instr, text, actor); SC_IF + K a block, a choice by the word K given (actor: a
 //   denizen), SC_IF + 4 by the UI's number; SC_S, SC_A, SC_LIGHT, SC_FORGET, SC_ARG, SC_SING, SC_ITS ("your", "its"),
 //   SC_POSS (after the actor: "r", "'s"); SC_WORD N; SC_ROOM F, SC_REL F,
-//   SC_TRAP F G, SC_KIND F, SC_NAME F, SC_PIECE P (each F and P there plus 1: no 0 in a text)
+//   SC_TRAP F G, SC_KIND F, SC_NAME F, SC_PIECE P (each F and P there plus 1: no 0 in a text); SC_EXT X (the look's
+//   lists, 2026-11-16: X 1 the UI's list joined ", " and " and ", 2 joined "; ", 3 joined ", "; 4 the text made more
+//   than one, 5 a people's way; 6 "A", "An" before a vowel).  A field the slot's whole word: its operation SF_WORD
+//   (4), its sixteen bits read (a count past 255)
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -44,7 +47,8 @@ const SRC = path.join(__dirname, 'said.txt'), OUT = path.join(ROOT, 'obj', 'gen'
 // The codes (said.c's, the same: its SC_*)
 const SC = { NL: 0x01, END: 0x1E, ALT: 0x1F, POSS: 0x7F, NUM: 0x80, CHOOSE: 0xA0, CHANGED: 0xC0, STR: 0xE0, S: 0xE8,
   A: 0xE9, LIGHT: 0xEA, FORGET: 0xEB, ARG: 0xEC, SING: 0xED, IF: 0xF0, ROOM: 0xF8, TRAP: 0xF9, REL: 0xFA, PIECE: 0xFB,
-  KIND: 0xFC, NAME: 0xFD, WORD: 0xEE, ITS: 0xEF, STR2: 0xFE };
+  KIND: 0xFC, NAME: 0xFD, WORD: 0xEE, ITS: 0xEF, STR2: 0xFE, EXT: 0xFF };
+const EXT = { list: 1, 'list;': 2, 'list,': 3, plural: 4, people: 5, A: 6 };   // (SC_EXT's: said.c's li, plural, SC_A's)
 const FMAX = 126;                                            // (Fields at most: a condition's byte its index, | 0x80 one value, 0xFF none;
                                                               //   SC_NUM, SC_CHOOSE, SC_CHANGED + 31 and a byte past the 31st, 2026-11-12)
 const WORDS_MAX = 180;                                        // (The words said as SC_WORD and a byte, at most: 180 since
@@ -159,6 +163,12 @@ function generate(H, say = () => {}) {
     }                                                         //   light form's 8-13; E_BEAT's fa, its met form's or its hit's)
     if (at.size !== 1) throw new Error('said.txt:' + line + ': ' + K.k + '\'s ' + m[1] + (at.size ? ', in two places' : '?'));
     const [off, , lo, hi] = [...at][0].split(',').map(Number);
+    if (lo === 0 && hi === 15 && !m[2]) {                     // (A word whole: SF_WORD's, its sixteen bits, a count past
+      const d = [off, 0, 0xFF, 4, 0], s = d.join(',');        //   255: the look's lists, 2026-11-16)
+      if (!fieldIx.has(s)) { fieldIx.set(s, fields.length); fields.push(d); }
+      if (fieldIx.get(s) >= FMAX) throw new Error('saidgen: more than ' + FMAX + ' fields');
+      return fieldIx.get(s);
+    }
     if (lo >> 3 !== hi >> 3) throw new Error('said.txt:' + line + ': ' + m[1] + ' across two bytes');
     let k = 0;
     if (m[2]) {
@@ -229,6 +239,7 @@ function generate(H, say = () => {}) {
         if (m[2] === '!') { block(fc(SC.CHANGED, field(K, name, line))); continue; }
         if (w >= 0) b.push(SC.STR + 2 * w + (name === lc ? 0 : 1));
         else if (w2 >= 0) b.push(SC.STR2, 2 * (3 + w2) + (name === lc ? 0 : 1));
+        else if (Object.hasOwn(EXT, name)) b.push(SC.EXT, EXT[name]);
         else if (name === 'nl') b.push(SC.NL);
         else if (name === 's') b.push(SC.S);
         else if (name === 'a') b.push(SC.A);

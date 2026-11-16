@@ -882,6 +882,49 @@ AHEAD.end           +"."
 AHEAD.glow          +" A {k?light shows|faint glow shows} far off {@ahrel}."
 AHEAD.nothing       +" You see nothing more that way."
 
+# ---- The look's lists (UK_LIST: lf, LF_*, a sentence with a list in it; UK_LI: li, LI_*, each thing in the list, and the
+# words between them: the user's, 2026-11-16).  {list} the UI's list (said_li: the frame's a entries, struct li each,
+# worded by its LI row: its name the text, its capital w4), joined ", " and " and " before the last; {list;} joined
+# "; "; {list,} joined ", ".  {plural} the text made more than one, its first word's before " of " ("iron pots",
+# "heaps of sand"), {people} a people's way, the whole ("giant rats", "dwarves"); {A} "A", "An" before a vowel.  The
+# things lying about (seen.c's items: obj a surface's name, or part 8's words for where they lie, where_w's; at the
+# place, 0 at the character's feet, 1 on the floor its way r, 2 and 3 the same hidden, 4 part 8's, 5 a surface's; pl a
+# verb's plural), the denizens seen, as they stir and gone from sight (dens.c's: d squares off, v what it's doing, its
+# twenty-two, then one more, many keeping their distance), the walls felt in the dark (task.c's touch_words: v blinded;
+# at 1 a room's kind d known, 2 a passage).  Their add ()s and strcat ()s before; the words the same
+
+@rel        "{r?ahead|ahead to your right|to your right|behind you to your right|behind you|behind you to your left"
+            "|to your left|ahead to your left}"
+@n          "{n?|one|two|three|four|five|six}"
+@N          "{n?|One|Two|Three|Four|Five|Six}"
+@doing      "{v?.|, watching you.|, coming towards you.|, keeping its distance.|, following you."
+            "|, waiting.|, digging.|, fighting you.|, fleeing.|, lying senseless.|, asleep.|, eating.|, at work."
+            "|, on watch.|, reading.|, at dice.|, at a board game.|, talking.|, singing.|, drinking."
+            "|, mending its gear.|, whittling.|, keeping their distance.}"
+
+LIST.lie            +"{at?At your feet |On the floor {@rel} |Hidden at your feet |Hidden on the floor {@rel} |{obj}"
+                    "|On the {obj} }{pl?lies|lie} {list}."
+LIST.where          +"{obj}{list}."
+LIST.in             +", {list} in it."
+LIST.packed         +"Your drawing things are in your {obj}."
+LIST.den            +"{list}{mail?| in mail}{g?|, armed,|, armoured,|, armed and armoured,}{pl? is| are} {@rel}, "
+                    "{d*SQ_FT} feet away{@doing}"
+LIST.gone           +"{list}{at?| {@rel}}{pl? is| are} gone from sight."
+LIST.stirs          +"Something stirs."
+LIST.nostir         +"Nothing stirs in sight now."
+LIST.heard          +"You hear something close behind you."
+LIST.touch          +"{v?It is dark|You can't see}. You feel {list;}.{at?| This should be the {room d}."
+                    "| You've been along this passage.}"
+
+LI.thing            +"{w4}{f?{@n} {lit?|lit }{plural}|{@n} {sz?things|small things|large things}|something{sz?| small| large}"
+                    "|{q} {lit?|lit }{text}|{kpl?{a}|some} {lit?|lit }{text}}"
+LI.den              +"{f?{text}|{the?{@N}|The {@n}} {people}|{the?{@N}|The {@n}} things|Something|{the?{A}|The} {text}}"
+LI.touch            +"{tk?nothing|a wall|a door|iron bars} {side?|ahead|to your left|ahead and to your left|to your right"
+                    "|ahead and to your right|to your left and to your right|ahead, to your left and to your right}"
+LI.and              +" and "
+LI.comma            +", "
+LI.semi             +"; "
+
 # ---- The rope's and the drag's (UK_SA, their codes past 127: items.h's SAY_AT2; wrope.h's rp_say, wdrag.c's dsay; their
 # free text before: narration as data's rest, 2026-11-15).  text the thing's name (what the rope's tied to, the thing
 # shoved), each begun on a line of its own as it was

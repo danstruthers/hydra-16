@@ -18,19 +18,6 @@
 #include "hub.h"
 #include "level.h"
 
-static const char* const relname[8] = {
-    "ahead", "ahead to your right", "to your right", "behind you to your right", "behind you",
-    "behind you to your left", "to your left", "ahead to your left"
-};
-static const char* const count[SEE_DENS + 1] = { "", "One", "Two", "Three", "Four" };
-static const char* const few[SEE_DENS + 1] = { "", "one", "two", "three", "four" };
-static const char* const doing[DO_LEISURE + NPAST] = {   /* (After " feet away") */
-    ".", ", watching you.", ", coming towards you.", ", keeping its distance.", ", following you.", ", waiting.",
-    ", digging.", ", fighting you.", ", fleeing.", ", lying senseless.", ", asleep.", ", eating.", ", at work.",
-    ", on watch.", ", reading.", ", at dice.", ", at a board game.", ", talking.", ", singing.", ", drinking.",
-    ", mending its gear.", ", whittling."      /* (At leisure, its pastime: 2026-10-31) */
-};
-
 /* The denizens as they're told, alike ones together: each the way it lies (REL8 as the character faces), how far
 ** (squares), what it's doing (DO_*), its name (as it lies there; all 0: too far to make out), how many */
 struct told { unsigned char rel, d, doing; char name[12]; unsigned char gear, n; };
@@ -63,13 +50,6 @@ static void __fastcall__ add (const char* s)
     lbe = e;
 }
 
-static void __fastcall__ addn (int v)
-{
-    char b[8];
-
-    add (itoa (v, b, 10));
-}
-
 /* Squares from the character to square (x, y): the more of the two ways */
 static unsigned char __fastcall__ apart (unsigned x, unsigned y)
 {
@@ -92,23 +72,6 @@ static unsigned char __fastcall__ differ (unsigned char n)
         }
     } while (--n);
     return 0;
-}
-
-/* A kind's name, more than one: "giant rats", "cave spiders", "dwarves" (added to lb) */
-static void __fastcall__ plural (const char* n)
-{
-    char b[16];
-    unsigned char k = strlen (n), c = k ? n[k - 1] : 0;
-
-    strcpy (b, n);
-    if (c == 'y' && k > 1 && !strchr ("aeiou", n[k - 2])) {
-        strcpy (b + k - 1, "ies");
-    } else if (c == 'f') {
-        strcpy (b + k - 1, "ves");           /* ("dwarves", "elves": the peoples, 2026-10-29) */
-    } else {
-        strcat (b, c == 's' || c == 'x' || c == 'z' || (c == 'h' && k > 1 && strchr ("cs", n[k - 2])) ? "es" : "s");
-    }
-    add (b);
 }
 
 /* The denizens seen, as they're told (none behind the character but an ally; one close behind it heard), alike ones
@@ -155,10 +118,31 @@ static void group (void)
     }
 }
 
-/* Group t named (the: as one told already, "The giant rat"): "A giant rat", "Two giant rats", "Something", "Two
-** things", an ally's name ("Grub") */
-static void __fastcall__ named (const struct told* t, unsigned char the)
+/* A sentence of a denizen's (said.txt's LIST rows: the look's lists, the user's, 2026-11-16): UK_LIST, its form and
+** choice w1, its fields w2 and b, its list the one entry e (on the C stack: said.c's to read, the main RAM's), worded
+** into lb at lbe */
+static void __fastcall__ den_list (struct li* e, unsigned w1, unsigned w2, unsigned char b)
 {
+    struct msg f;
+
+    f.kind = UK_LIST;
+    f.who = 0;
+    f.a = e != 0;
+    f.b = b;
+    f.w1 = w1;
+    f.w2 = w2;
+    said_li = e;
+    list_words (&f);
+}
+
+/* Group t named (the: as one told already, "The giant rat"): "A giant rat", "Two giant rats", "Something", "Two
+** things", an ally's name ("Grub"): list entry d, said.txt's LI.den */
+struct named { struct li e; char nm[12]; };   /* (A denizen's entry, its name copied: said.c's to read, the main RAM's
+                                                **   C stack, not this overlay's bank) */
+static void __fastcall__ named (struct named* d, const struct told* t, unsigned char the)
+{
+    struct li* e = &d->e;
+
     add ("\002");                               /* (Its sentence said of nothing, not of the place, as a thing's:
                                                 **   lbsaid.s's, a denizen told as it stirs, a walk stopped by it a
                                                 **   step on, not told again in the look there) */
@@ -167,46 +151,26 @@ static void __fastcall__ named (const struct told* t, unsigned char the)
         den_caps (gcap);                        /* (Their capitals, "(A) ", "(A, B) ": letters.c's, the user's
                                                 **   designators, given before the things') */
     }
-    if (t->name[0] && t->name[0] < 'a') {
-        add (t->name);
-    } else if (t->n > 1) {
-        add (the ? "The " : "");
-        add (the ? few[t->n] : count[t->n]);
-        add (" ");
-        if (t->name[0]) {
-            plural (t->name);
-        } else {
-            add ("things");
-        }
-    } else if (!t->name[0]) {
-        add ("Something");
-    } else {
-        add (the ? "The " : strchr ("aeiou", t->name[0]) ? "An " : "A ");
-        add (t->name);
-    }
+    e->cap[0] = 0;
+    e->name = strcpy (d->nm, t->name);
+    e->b = t->n;
+    e->w1 = LI_DEN << 8 | (t->name[0] && t->name[0] < 'a' ? 0 : t->n > 1 ? (t->name[0] ? 1 : 2) : !t->name[0] ? 3 : 4) |
+        the << 7;
 }
 
 /* Group t told: "A giant rat is ahead to your left, 15 feet away, watching you."; "Two giant rats are ..."; an ally
-** named: "Grub is behind you, 5 feet away, following you."; "Something is ahead, 40 feet away." */
-static const char* const gwords[4] = { "", ", armed,", ", armoured,", ", armed and armoured," };
+** named: "Grub is behind you, 5 feet away, following you."; "Something is ahead, 40 feet away."; "A dwarf in mail,
+** armed, is ..." (2026-10-29): said.txt's LIST.den */
 static void __fastcall__ tell_one (const struct told* t)
 {
     unsigned char many = t->n > 1, g = t->gear;
+    struct named e;
 
     gcap = gm[t - now_];
-    named (t, 0);
+    named (&e, t, 0);
     gcap = 0;
-    if (g & AG_MAIL) {                          /* ("A dwarf in mail, armed, is ...": 2026-10-29) */
-        add (" in mail");
-        g &= AG_ARMED;
-    }
-    add (gwords[g & 3]);
-    add (many ? " are " : " is ");
-    add (relname[t->rel & 7]);
-    add (", ");
-    addn (SQ_FT * t->d);
-    add (" feet away");
-    add (many && t->doing == DO_SHY ? ", keeping their distance." : doing[t->doing]);
+    den_list (&e.e, LF_DEN << 8 | (many && t->doing == DO_SHY ? DO_LEISURE + NPAST : t->doing),
+        (t->rel & 7) | many << 3 | (g & AG_MAIL ? (g & AG_ARMED) << 8 | 1 << 10 : (g & 3) << 8), t->d);
 }
 
 /* What was told kept: now_'s, its first n */
@@ -228,7 +192,10 @@ void o_den_words (void)
     for (i = 0; i < nnow && lbe - lb < sizeof lb - 80; ++i) {
         tell_one (&now_[i]);
     }
-    add (heard ? " You hear something close behind you." : "");
+    if (heard) {
+        add (" ");
+        den_list (0, LF_HEARD << 8, 0, 0);      /* (" You hear something close behind you.") */
+    }
     keep (i);
 }
 
@@ -237,7 +204,7 @@ static unsigned char stirs = 0;
 static void stirred (void)
 {
     if (!stirs++) {
-        add ("Something stirs.");
+        den_list (0, LF_STIRS << 8, 0, 0);
     }
 }
 
@@ -249,6 +216,7 @@ void o_stir_words (void)
 {
     unsigned char i, k;
     struct told* w;
+    struct named e;
 
     *(lbe = lb) = 0;
     lbn = 0;
@@ -267,7 +235,7 @@ void o_stir_words (void)
         }
     }
     if (!nnow && nwas) {
-        add ("Nothing stirs in sight now.");
+        den_list (0, LF_NOSTIR << 8, 0, 0);
     } else {
         for (i = 0; i < nnow; ++i) {            /* (Come into sight, or doing otherwise, or moved, or more or fewer of
                                                 **   them: each told, and one told before taken as what it was, the
@@ -302,17 +270,14 @@ void o_stir_words (void)
                 }
             }
             stirred ();
-            named (w, 1);                       /* ("The giant rat to your left is gone from sight."; "Grub is ...") */
-            if (!w->name[0] || w->name[0] >= 'a') {
-                add (" ");
-                add (relname[w->rel & 7]);
-            }
-            add (w->n > 1 ? " are gone from sight." : " is gone from sight.");
+            named (&e, w, 1);                   /* ("The giant rat to your left is gone from sight."; "Grub is ...") */
+            den_list (&e.e, LF_GONE << 8, (w->rel & 7) | (w->n > 1) << 3 | (!w->name[0] || w->name[0] >= 'a') << 4, 0);
         }
     }
     if (heard && !heard_was) {
         stirred ();
-        add (" You hear something close behind you.");
+        add (" ");
+        den_list (0, LF_HEARD << 8, 0, 0);
     }
     keep (nnow);
 }

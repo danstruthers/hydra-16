@@ -378,11 +378,31 @@ void __fastcall__ outcome_words (const struct msg* m);   /* Overlay 27 (said.c):
 extern const char* said_s[6];                   /* (said.c's, the main RAM's: the UI's words for a row, the thing done
                                                 **   to, the thing done with, a word of the row's own; three more, {w4}
                                                 **   {w5} {w6}; 0 or "" none) */
-enum { UK_THROW = 0x80, UK_SKY, UK_SWAY, UK_FIGHT, UK_NO, UK_FIRST, UK_SA, UK_SELF, UK_AHEAD };  /* (The UI's own kinds, worded by
+enum { UK_THROW = 0x80, UK_SKY, UK_SWAY, UK_FIGHT, UK_NO, UK_FIRST, UK_SA, UK_SELF, UK_AHEAD, UK_LIST, UK_LI };
+                                                /* (The UI's own kinds, worded by
                                                 **   said.txt's rows as an outcome event is: no world's event, never in
                                                 **   the hub; msgs.def's, narration as data's stage 4, 2026-11-12; UK_SA
                                                 **   the world's things' coded words, stage 5's; UK_SELF the character's
-                                                **   own state, 2026-11-15; UK_AHEAD a look one way's) */
+                                                **   own state, 2026-11-15; UK_AHEAD a look one way's; UK_LIST a
+                                                **   sentence with a list, UK_LI each thing in it: the look's lists,
+                                                **   2026-11-16) */
+enum { LF_LIE, LF_WHERE, LF_IN, LF_PACKED, LF_DEN, LF_GONE, LF_STIRS, LF_NOSTIR, LF_HEARD, LF_TOUCH };
+                                                /* (UK_LIST's: things lying about, by where (seen.c's), in a sconce, the
+                                                **   drawing things packed; a denizen seen, gone from sight, the stirs
+                                                **   (dens.c's); the walls felt in the dark (task.c's touch_words)) */
+enum { LI_THING, LI_DEN, LI_TOUCH, LI_AND, LI_COMMA, LI_SEMI };
+                                                /* (UK_LI's: a thing seen, a denizen, a kind of wall felt and its sides;
+                                                **   the words between them) */
+struct li {                                     /* A list's entry (said.c's li: its fields where a struct msg has them,
+                                                **   msgs.def's UK_LI) */
+    unsigned char   kind, who, a, b;
+    unsigned        w1, w2;
+    char            cap[6];                     /*   its capital ("(C) ": letters.c's), w4 */
+    const char*     name;                       /*   its name, text */
+};
+extern const struct li* said_li;                /* (said.c's: the list a UK_LIST row's {list} says, its a entries) */
+void __fastcall__ list_words (const struct msg* m);    /* Overlay 27 (said.c): a UK_LIST sentence worded into lb at
+                                                **   lbe, not said (the look's: their add ()s' streaming), lbe after it */
 enum { AH_PEER, AH_COVER, AH_SHUT, AH_GRILLE, AH_THROUGH, AH_DARK, AH_SKY, AH_PASSAGE, AH_INTO, AH_ON, AH_LIT, AH_TOO,
     AH_END, AH_GLOW, AH_NOTHING };              /* (UK_AHEAD's: way.c's focus_words, each one of its say ()s before) */
 enum { MY_WANT, MY_LIMB, MY_LIMP, MY_POS, MY_HIDDEN, MY_UNDER, MY_SWIM, MY_DEEP, MY_FACING, MY_STEP, MY_SETOFF, MY_FACE,

@@ -29,7 +29,7 @@ enum { SC_NL = 0x01, SC_END = 0x1E, SC_ALT = 0x1F, SC_POSS = 0x7F, SC_NUM = 0x80
        SC_STR = 0xE0, SC_S = 0xE8, SC_A, SC_LIGHT, SC_FORGET, SC_ARG, SC_SING, SC_WORD, SC_ITS, SC_IF = 0xF0, SC_ROOM = 0xF8,
        SC_TRAP, SC_REL,
        SC_PIECE,
-       SC_KIND, SC_NAME, SC_STR2 };
+       SC_KIND, SC_NAME, SC_STR2, SC_EXT };      /* (SC_EXT X: the look's lists, said.txt's {list} ..., 2026-11-16) */
 #define SC_FX           31                      /* (SC_NUM, SC_CHOOSE, SC_CHANGED + 31: the field's a byte after it, the 32nd
                                                 **   on: the table's fields past 31, 2026-11-12) */
 #define SR_ONCE         1                       /* (A row's flag: said as a look's sentences, none twice an answer) */
@@ -40,6 +40,8 @@ const char* said_s[6];                          /* The thing done to, the thing 
 unsigned char said_n;                           /* A choice of the UI's for the row ({arg}) */
 unsigned char said_q;                           /* The words left in lb, not said (a denizen's sound's words, heard:
                                                 **   its caller's to use, 2026-11-11) */
+const struct li* said_li;                       /* The UI's list ({list}: its frame's a entries; the look's lists,
+                                                **   2026-11-16) */
 char* said_to = lb;                             /* Where in lb the words go (said_q's: the world's things' words, each
                                                 **   after the text before it, tt's: things.c's, 2026-11-12) */
 static unsigned char said_last[SAID_NKINDS];    /* Each kind's field last told ({F!...}: a dig's feet to go) */
@@ -61,6 +63,8 @@ static unsigned __fastcall__ fv (unsigned char f)
     unsigned char v = ((const unsigned char*) sm)[d[0]] >> d[1] & d[2];
 
     switch (d[3]) {
+    case 4:
+        return *(const unsigned*) ((const unsigned char*) sm + d[0]);  /* (A word whole: a count, the look's lists') */
     case 1:
         return v > d[4] ? v - d[4] : 0;
     case 2:
@@ -86,15 +90,22 @@ static char* __fastcall__ name (unsigned char n)
 ** thousands) */
 #define over(p)         ((p) + 1 + RB (p))
 
-/* lb's words so far said (an "a" made "an" first, if its word begins with a vowel), lb begun again */
-static void flush (void)
+/* An "a" waiting made "an", if its word begins with a vowel (a list's each, as it's said: li's) */
+static void an (void)
 {
     *sp = 0;
     if (art && strchr ("aeiou", lb[art + 1])) {
         memmove (lb + art + 1, lb + art, strlen (lb + art) + 1);
         lb[art] = 'n';
+        ++sp;
     }
     art = 0;
+}
+
+/* lb's words so far said (an "a" made "an" first, if its word begins with a vowel), lb begun again */
+static void flush (void)
+{
+    an ();
     if (lb[0] && !said_q) {
         if (once) {
             lb_said ();
@@ -123,6 +134,82 @@ static void __fastcall__ rel (unsigned char h)
         strcat (sp, *sp ? (h < 4 ? " to your right" : " to your left") : (h < 4 ? "to your right" : "to your left"));
     }
     ended ();
+}
+
+/* The row of kind sk for outcome o (the first whose condition holds, or the one with none): its start; 0 none */
+static const unsigned char* __fastcall__ row (unsigned char o)
+{
+    const unsigned char* p;
+    unsigned char v, n, c;
+
+    for (p = said_rows + said_at[sk]; (n = RB (p)) != 0; p += n) {     /* (Each row its length first) */
+        v = RB (p + 1);
+        if (v != o && v != SAID_ANY) {
+            continue;
+        }
+        if ((c = RB (p + 2)) != 0xFF) {         /* (Its condition: a field's one value, or the mask of its values) */
+            v = fv (c & 0x7F);
+            if (c & 0x80 ? v != RB (p + 3) : v >= 8 || !(RB (p + 3) & 1 << v)) {
+                continue;
+            }
+        }
+        return p;
+    }
+    return 0;
+}
+
+/* A kind's word made more than one ({plural}: "iron pots", "heaps of sand", its first word's before " of "; {people}, p
+** 1: the whole, "dwarves"), the text given (said_s[2]) */
+static void __fastcall__ plural (unsigned char p)
+{
+    const char* n = said_s[2];
+    unsigned char k, c;
+
+    if (p) {
+        k = strlen (n);
+    } else {
+        for (k = 0; n[k] && (n[k] != ' ' || n[k + 1] != 'o' || n[k + 2] != 'f' || n[k + 3] != ' '); ++k) {
+        }
+    }
+    c = k ? n[k - 1] : 0;
+    memcpy (sp, n, k);
+    sp += k;
+    if (c == 'y' && k > 1 && !strchr ("aeiou", n[k - 2])) {
+        strcpy (sp - 1, "ies");
+    } else if (p && c == 'f') {
+        strcpy (sp - 1, "ves");                 /* ("dwarves", "elves": the peoples, 2026-10-29) */
+    } else {
+        strcpy (sp, c == 's' || c == 'x' || c == 'z' || (c == 'h' && k > 1 && strchr ("cs", n[k - 2])) ? "es" : "s");
+    }
+    strcat (sp, n + k);
+    sp += strlen (sp);
+}
+
+static const unsigned char* __fastcall__ run (const unsigned char* p);
+
+/* The UI's list (said_li, the frame's a of them), each its UK_LI row by its li ("two iron pots", "a giant rat"; its
+** text its name, w4 its capital), joined (j: 0 ", " and " and " the last; 1 "; "; 2 ", ": said.txt's LI rows too):
+** the look's lists, one renderer for them (the user's, 2026-11-16) */
+static void __fastcall__ li (unsigned char j)
+{
+    const struct msg* f = sm;
+    const struct li* e = said_li;
+    unsigned char k = sk, i, n = f->a;
+
+    for (sk = 0; said_kind[sk] != UK_LI; ++sk) {
+    }
+    for (i = 0; i < n; ++i, ++e) {
+        if (i) {
+            run (row (j == 1 ? LI_SEMI : j == 2 || i + 1 < n ? LI_COMMA : LI_AND) + 5);
+        }
+        sm = (const struct msg*) e;
+        said_s[2] = e->name;
+        said_s[3] = e->cap;
+        run (row (fv (said_ko[sk])) + 5);
+        an ();
+    }
+    sm = f;
+    sk = k;
 }
 
 /* A text said, from p to its end (0), or to the SC_ALT or SC_END that ends its alternative: there */
@@ -288,6 +375,16 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
                 strcpy (sp, name (fv (v)));
                 ended ();
                 break;
+            case SC_EXT:                        /* (The look's lists': a list, a plural, "A") */
+                if (v < 3) {
+                    li (v);
+                } else if (v < 5) {
+                    plural (v - 3);
+                } else {
+                    art = sp - lb + 1;
+                    *sp++ = 'A';
+                }
+                break;
             }
         }
     }
@@ -298,7 +395,6 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
 void __fastcall__ o_outcome_words (const struct msg* m)
 {
     const unsigned char* p;
-    unsigned char v, o, n, c;
 
     sm = m;
     for (sk = 0; said_kind[sk] != m->kind; ) {
@@ -306,24 +402,24 @@ void __fastcall__ o_outcome_words (const struct msg* m)
             return;
         }
     }
-    o = fv (said_ko[sk]);                       /* (Its outcome: the head's, or the kind's own field, said.txt's kind) */
     ac = said_ka[sk] ? fv (said_ka[sk] - 1) : m->who;   /* (Its actor: its who, or the kind's own field) */
-    for (p = said_rows + said_at[sk]; (n = RB (p)) != 0; p += n) {     /* (Each row its length first) */
-        v = RB (p + 1);
-        if (v != o && v != SAID_ANY) {
-            continue;
-        }
-        if ((c = RB (p + 2)) != 0xFF) {         /* (Its condition: a field's one value, or the mask of its values) */
-            v = fv (c & 0x7F);
-            if (c & 0x80 ? v != RB (p + 3) : v >= 8 || !(RB (p + 3) & 1 << v)) {
-                continue;
-            }
-        }
+    if ((p = row (fv (said_ko[sk]))) != 0) {    /* (Its outcome: the head's, or the kind's own field, said.txt's kind) */
         once = RB (p + 4) & SR_ONCE;
         sp = said_to;
         art = 0;
         run (p + 5);
         flush ();
-        return;
     }
+}
+
+/* A sentence with a list (UK_LIST, said_li its entries) worded into lb at lbe, not said (the look's: its words
+** streamed by their callers' add, lbsaid.s's), lbe after it */
+void __fastcall__ o_list_words (const struct msg* m)
+{
+    said_to = lbe;
+    said_q = 1;
+    o_outcome_words (m);
+    said_q = 0;
+    said_to = lb;
+    lbe += strlen (lbe);
 }
