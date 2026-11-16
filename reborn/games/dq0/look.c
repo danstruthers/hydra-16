@@ -58,7 +58,7 @@ unsigned char tt_sa;
 const char* tt (void)
 {
     hub_mem (UI_BANK, lb, UIREC->things_text, sizeof lb);
-    tt_words ();
+    tt_words (UIREC->things_text);
     return lb;
 }
 

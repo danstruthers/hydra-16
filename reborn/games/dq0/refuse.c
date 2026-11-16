@@ -63,12 +63,13 @@ void __fastcall__ o_say_no (unsigned char a, const char* w)
 /* The things' words (things_text, as tt copied them into lb) with the world's coded sentences worded (narration as
 ** data, stage 5, the user's, 2026-11-12: kinds.c's said[] the world's before): each code (items.h's SAY_AT, its SA_* |
 ** 0x80, the thing's name, SAY_SEP, the other's, SAY_SEP: things.c's say) worded by said.txt's SA rows where it stood,
-** into lb (said_to, said_q: not said), the text after it read again from the hub after its words.  tt_sa the first
+** into lb (said_to, said_q: not said), the text after it read again from the hub (t) after its words, or (t 0: a
+** line's, list_say's) kept in lb as they're put before it.  tt_sa the first
 ** sentence's code, if the text begins with one (s_hold_first's "held already": a code's, not the words').  A code past
 ** TT_AT cuts the text there (lb's room: a sentence's words, and its names kept at lb's end as it's worded) */
 #define TT_AT           250
 #pragma static-locals (push, off)
-void o_tt_words (void)
+void __fastcall__ o_tt_words (const char* t)
 {
     static char* q;
     static char* e;
@@ -79,9 +80,9 @@ void o_tt_words (void)
     lb[sizeof lb - 1] = 0;
     tt_sa = lb[0] == SAY_AT ? lb[1] : 0;
     for (r = 0, q = lb; ; ) {
-        for (e = q; *e && *e != SAY_AT && *e != SAY_AT2; ++e) {
-        }                                       /* (SAY_AT, or SAY_AT2: a code past 127; not the library's strpbrk,
-                                                **   the main RAM's 50 bytes) */
+        for (e = q; (unsigned char) *e > SAY_LI; ++e) {
+        }                                       /* (SAY_AT, or SAY_AT2: a code past 127; SAY_LI, a thing's own words; not
+                                                **   the library's strpbrk, the main RAM's 50 bytes) */
         if (!*e) {
             break;
         }
@@ -91,23 +92,45 @@ void o_tt_words (void)
             *q = 0;
             return;
         }
-        e = strchr (q + 2, SAY_SEP);
-        *e = 0;
-        y = strchr (++e, SAY_SEP);
-        *y = 0;
-        r += ++y - q;                           /* (The hub's text's after it) */
-        said_s[2] = strcpy (lb + sizeof lb - 40, q + 2);    /* (The thing's name: text; the other's: obj) */
-        said_s[0] = strcpy (lb + sizeof lb - 20, e);
-        c.kind = UK_SA;
         c.who = 0;
-        c.w1 = (unsigned) ((q[1] & 0x7F) | (*q == SAY_AT2 ? 0x80 : 0)) << 8;
+        if (*q == SAY_LI) {                     /* (A thing's own words, the world's things.c's: said.txt's LI.item, its
+                                                **   count's way, its state, its count, its kind's name) */
+            y = strchr (q + 6, SAY_SEP);
+            *y = 0;
+            r += ++y - q;
+            said_s[2] = strcpy (lb + sizeof lb - 40, q + 6);
+            c.kind = UK_LI;
+            c.w1 = LI_ITEM << 8;
+            c.w2 = (q[4] & 0x7F) | (unsigned) (q[5] & 0x7F) << 7;
+            ((char*) &c.t)[0] = q[1] & 0x7F;    /* (Its form and state: t's bytes, msgs.def's UK_LI; no
+                                                **   long's arithmetic, the library's in the main RAM) */
+            ((char*) &c.t)[1] = q[2] & 0x7F;
+            ((char*) &c.t)[2] = q[3] & 0x7F;
+        } else {
+            e = strchr (q + 2, SAY_SEP);
+            *e = 0;
+            y = strchr (++e, SAY_SEP);
+            *y = 0;
+            r += ++y - q;                       /* (The hub's text's after it) */
+            said_s[2] = strcpy (lb + sizeof lb - 40, q + 2);    /* (The thing's name: text; the other's: obj) */
+            said_s[0] = strcpy (lb + sizeof lb - 20, e);
+            c.kind = UK_SA;
+            c.w1 = (unsigned) ((q[1] & 0x7F) | (*q == SAY_AT2 ? 0x80 : 0)) << 8;
+        }
+        if (!t) {
+            strcpy (lb + TT_AT + 20, y);        /* (The rest of a line, kept: list_say's) */
+        }
         said_to = q;
         said_q = 1;
         outcome_words (&c);
         said_q = 0;
         said_to = lb;
         q += strlen (q);
-        hub_mem (UI_BANK, q, UIREC->things_text + r, lb + sizeof lb - 1 - q);
+        if (t) {
+            hub_mem (UI_BANK, q, t + r, lb + sizeof lb - 1 - q);
+        } else {
+            strcpy (q, lb + TT_AT + 20);
+        }
     }
 }
 #pragma static-locals (pop)

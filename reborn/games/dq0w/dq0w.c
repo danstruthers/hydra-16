@@ -6440,6 +6440,9 @@ void __fastcall__ s_intent_few (struct msg* m)
     case I_TURN:
         HUB->pc_face = I_TURN_HEAD (*m);
         busy (stept);
+        evb = 32 | ((HUB->pc_face + HUB->pc_skew) & 7);  /* (The heading it believes it faces now, | 32: the turn's
+                                                **   words by it, the command queue not read as they're told, the
+                                                **   user's, 2026-11-16) */
         view (V_FACING);                        /* (Its first words told at once, the look after: V_TURNED's) */
         see (0);
         view (V_TURNED);

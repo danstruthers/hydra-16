@@ -302,7 +302,11 @@ unsigned char __fastcall__ s_well (unsigned w)
     }
     if (k == 0xFF) {                            /* (Told as the traces' words are, E_VIEW's V_TRACED: the UI bank's trtext) */
         hub_map (UI_BANK);
-        strcpy (UIREC->trtext, "Far down, the well's shaft narrows to a crack the water seeps through: there's no climbing down it.");
+        UIREC->trtext[0] = SAY_AT2;             /* (Its sentence coded, no names: said.txt's SA rows, the UI's reader
+                                                **   of the traces' words, the user's, 2026-11-16) */
+        UIREC->trtext[1] = SA_WELL_CHOKED | 0x80;
+        UIREC->trtext[2] = UIREC->trtext[3] = SAY_SEP;
+        UIREC->trtext[4] = 0;
         hub_map (0);
         m.kind = E_VIEW;
         E_VIEW_WHY (m) = V_TRACED;

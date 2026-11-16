@@ -245,6 +245,17 @@ UK_AHEAD        < E_OUTCOME; a pl; b rel; w1 ah:8-15@AH_PEER k:0-7; w2 far:0-7 r
                 #   plural or a choice, rel its way (0 ahead to the left, 1 ahead, 2 to the right), far its squares,
                 #   room a room's kind or a choice.  narration as data's rest, 2026-11-15)
 
+UK_LIST         < E_OUTCOME; b d; w1 lf:8-15@LF_LIE v:0-7; w2 r:0-2 pl:3 at:4-7 g:8-9 mail:10
+                # (A sentence with a list, the look's lists (the user's, 2026-11-16): LF_*; a its entries (said_li);
+                #   v a choice, d squares or a room's kind, r a way (REL8), pl a verb's plural, at where or a choice, g
+                #   and mail a denizen's gear.  obj a surface's name, part 8's words for where)
+UK_LI           < E_OUTCOME; a tk:0-1 side:2-4; b n; w1 li:8-15@LI_THING f:0-2 sz:3-4 lit:5 kpl:6 the:7; w2 q;
+                t nf:0-2 pf:3-4 dur:8-9 lt:10 fuel:11-13 wear:16-18 shut:19-20
+                # (A list's entry, struct li: LI_*; f its form, n how many alike, q a count, sz its size made out,
+                #   lit, kpl a plural kind's, the: one told already; tk a kind of wall felt, side its sides; a thing's
+                #   own words, the world's (items.h's SAY_LI): nf how its count is said, pf its noun's form, dur, lt,
+                #   fuel, wear and shut its state.  text its name, w4 its capital)
+
 struct req
 
 # ---- The referee's requests (RS_*: rs.h's, to the referee in a slot of the hub's, the world's or the UI's, or the

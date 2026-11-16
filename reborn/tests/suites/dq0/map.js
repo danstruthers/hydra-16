@@ -1388,7 +1388,7 @@ module.exports = {
         if (tests(e2).length !== 1 || tests(e3).length !== 1 || tests(e4).length !== 1) f.push('east again: not tested each time');
         if (!bear(e4, 'BRG_LOST')) f.push('the third time east: not lost, known (' + dq0Evs(e4) + ')');
         at(e4, 2, 1, 'the third time east, a critical failure');
-        inTurn(s, ['> turn left', 'You turn left, to face northeast.', '> face north', 'You turn to face north.',
+        inTurn(s, ['> turn left', 'You turn to face northeast.', '> face north', 'You turn to face north.',
           '> face northwest', 'You turn to face northwest.', '> f', 'You know this place: your bearings come back to you.',
           'You\'ve lost your bearings: you\'re no longer sure which way is north.', '> status', 'Facing: south, you think'], f, 'the words: ');
         inTurn(dq0StatusRows(out), ['facing SE', 'facing S?'], f, 'the status line: ');
@@ -1400,7 +1400,7 @@ module.exports = {
         const d = T.of('dq0 -p t -s 3 -c /ram/d.hm'), d1 = T.after(d, 'go through the door to the east'), d2 = T.after(d1, 'turn left');
         if (!d1.after || !d1.after.sum.northsense) f.push('the dwarf\'s summary not knowing north');
         if (tests(d1).length || !d1.after || d1.after.pc.skew) f.push('the dwarf tested, or astray (' + JSON.stringify(tests(d1)) + ')');
-        inTurn(s.slice(s.indexOf('-c /ram/d.hm')), ['> turn left', 'You turn left, to face north.'], f, 'the dwarf\'s words: ');
+        inTurn(s.slice(s.indexOf('-c /ram/d.hm')), ['> turn left', 'You turn to face north.'], f, 'the dwarf\'s words: ');
         // Fallen in
         const h = T.of('dq0 -p t -s 4 -c /ram/c.hm -t /ram/t.txt'), hd = T.of('dq0 -p t -s 4 -c /ram/d.hm -t /ram/t.txt');
         if (tests(h).length !== 1) f.push('come round below from a fall: the human not tested as it begins (' + JSON.stringify(tests(h)) + ')');

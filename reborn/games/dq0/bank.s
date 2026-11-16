@@ -214,6 +214,8 @@ ovcall:
                                             ;   narration as data, 2026-11-11: dig_words, climb_words, portal_words,
                                             ;   fixt_words and trap_words before it; limb_words, water_words,
                                             ;   harm_words and shot_words, stage 2)
+            OVFN        list_words, 27      ; (A sentence with a list worded into lb at lbe: said.c, the look's lists,
+                                            ;   2026-11-16)
             OVFN        said_again, 16      ; (A line that says "again": term.c, the verbs plan's B7, 2026-11-10)
             OVFN        may_den, 14         ; (The thing named may be a denizen: sway.c, 2026-11-03)
             OVFN        place_said, 14      ; ("From the floor": a place, not a thing, 2026-11-06)

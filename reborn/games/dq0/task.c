@@ -419,52 +419,36 @@ static void new_words (void)
 
 /* In the dark, what its hands and feet can tell (the look's, every walk's end; the user's, 2026-11-02: HOUSE.md's walking
 ** in the dark): "You feel a wall ahead and to your left; nothing to your right."  No name for the place, no way told,
-** unless it's been on this square before and not forgotten it ("This should be the kitchen.") */
+** unless it's been on this square before and not forgotten it ("This should be the kitchen.").  Its kinds of wall a
+** list, each with its sides (said.txt's LIST.touch and LI.touch: the look's lists, the user's, 2026-11-16) */
 static void touch_words (void)
 {
-    static const char* const kind_w[4] = { "nothing", "a wall", "a door", "iron bars" };
-    static const char* const side_w[3] = { "ahead", "to your left", "to your right" };
     static const unsigned char order_[4] = { 1, 2, 3, 0 };
     struct sight* s = &sight_copy;
-    unsigned char c = s->cmid, i, k, n, m, said = 0;
+    unsigned char c = s->cmid, i, k, n, m;
+    struct li v[4];                             /* (On the C stack: the list, said_li) */
+    struct msg f;
 
     hub_mem (0, &k, (char*) &HUB->pcsum.cond + 1, 1);   /* (C_BLINDED, its high byte: the window's not the hub's here) */
-    strcat (lb, k & C_BLINDED >> 8 ? "You can't see. You feel " : "It is dark. You feel ");
-    for (i = 0; i < 4; ++i) {
+    f.kind = UK_LIST;
+    f.who = 0;
+    f.b = s->kind;
+    f.w1 = LF_TOUCH << 8 | (k & C_BLINDED >> 8 ? 1 : 0);
+    f.w2 = s->cwall ? (s->where == W_ROOM ? 1 << 4 : 2 << 4) : 0;
+    for (i = f.a = 0; i < 4; ++i) {
         k = order_[i];
         for (n = m = 0; m < 3; ++m) {
-            n += TOUCHED (c, m) == k;
+            n |= TOUCHED (c, m) == k ? 1 << m : 0;
         }
-        if (!n) {
-            continue;
-        }
-        if (said++) {
-            strcat (lb, "; ");
-        }
-        strcat (lb, kind_w[k]);
-        for (m = 0; m < 3; ++m) {
-            if (TOUCHED (c, m) == k) {
-                strcat (lb, " ");
-                strcat (lb, side_w[m]);
-                if (--n) {
-                    strcat (lb, n == 1 ? " and" : ",");
-                }
-            }
+        if (n) {
+            v[f.a].cap[0] = 0;
+            v[f.a].w1 = LI_TOUCH << 8;
+            v[f.a++].a = k | n << 2;
         }
     }
-    strcat (lb, ".");
+    said_li = v;
     lbe = lb + strlen (lb);
-    if (s->cwall) {
-        if (s->where == W_ROOM) {
-            strcat (lb, " This should be the ");
-            lbe = lb + strlen (lb);
-            theme_named (TN_ROOM, s->kind);
-            strcat (lb, ".");
-        } else {
-            strcat (lb, " You've been along this passage.");
-        }
-        lbe = lb + strlen (lb);
-    }
+    list_words (&f);
 }
 
 /* A walk over for a command just done (FW_NEW), or what its hands and feet can tell in the dark (FW_TOUCH): the
@@ -495,35 +479,31 @@ static void __fastcall__ my (unsigned w, unsigned char b)
     outcome_words (&c);
 }
 
-/* A turn's first words (V_FACING's: the user's, 2026-11-03, "I guess the turn info is OK keeping both"): said by its way
-** as it faces ("turn r", the parser's own reply, CQ_REL | n), "You turn right, to face west."; by the compass, or another's
-** reason to turn, "You turn to face west."  (Their words said.txt's SELF rows: step, setoff, face, turn) */
+/* A turn's first words (V_FACING's): "You turn to face west.", always, whatever's typed after it (the user's,
+** 2026-11-16: the way it turned, "You turn right, to face west.", was read from the command queue as the words were
+** told, and a command typed after it was found there instead; the event's b now the heading it believes it faces, | 32,
+** the queue not read).  A step's or a walk's (V_SETOFF's: b its way).  (Their words said.txt's SELF rows: step,
+** setoff, face) */
 void __fastcall__ o_turned_says (unsigned char go)
 {
-    unsigned char f, d, b[4];
+    unsigned char f, d;
 
-    hub_mem (0, &f, &HUB->pc_face, 1);
-    hub_mem (0, &d, &HUB->pc_skew, 1);
-    if (go) {                                   /* (A way set out on, V_SETOFF's: 8 a step, by the way it faces; a walk, by
-                                                **   the north it believes in) */
-        if (worded == 2) {
-            return;
-        }
-        if (go & 8) {
-            my (MY_STEP << 8 | ((go - f) & 7), 0);
-        } else {
-            said_s[2] = head_name[(go + d) & 7];
-            my (MY_SETOFF << 8, 0);
-        }
+    if (go & 32) {                              /* (A turn: the heading it believes it faces, the world's) */
+        said_s[2] = head_name[go & 7];
+        my (MY_FACE << 8, 0);
         return;
     }
-    hub_mem (CMD_BANK, b, HUB_WINDOW + CQ_CMD, 4);   /* (Its action, its actor, its flags, its way: as it was said) */
-    said_s[2] = head_name[(f + d) & 7];
-    d = b[3] & 7;
-    if (b[0] != VB_FACE_DIRECTION || b[3] == 0xFF || !(b[3] & CQ_REL) || !d) {
-        my (MY_FACE << 8, 0);
+    if (worded == 2) {                          /* (A way set out on, V_SETOFF's: 8 a step, by the way it faces; a walk,
+                                                **   by the north it believes in) */
+        return;
+    }
+    hub_mem (0, &f, &HUB->pc_face, 1);
+    hub_mem (0, &d, &HUB->pc_skew, 1);
+    if (go & 8) {
+        my (MY_STEP << 8 | ((go - f) & 7), 0);
     } else {
-        my (MY_TURN << 8 | (b[2] & CF_HALF ? (d == 2 ? 1 : d == 6 ? 7 : d) : d), 0);
+        said_s[2] = head_name[(go + d) & 7];
+        my (MY_SETOFF << 8, 0);
     }
 }
 
