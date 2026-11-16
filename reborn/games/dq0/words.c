@@ -472,6 +472,9 @@ void o_words (void)
     if (sight_close & 16) {                     /* (The traces read: the world's words, I_TRACE's, the UI bank's
                                                 **   tread) */
         hub_mem (UI_BANK, lb, UIREC->trtext, sizeof UIREC->trtext);
+        if (*lb < ' ') {
+            tt_words (UIREC->trtext);           /* (Coded, the well's: said.txt's SA rows, the user's, 2026-11-16) */
+        }
         lbe = lb + strlen (lb);
         if (lb_stream) {
             lb_out ();

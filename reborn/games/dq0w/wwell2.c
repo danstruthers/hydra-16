@@ -99,12 +99,12 @@ unsigned char s_well_put (void)
     q->y = W_Y;
     q->flags &= ~(I_HELD | I_WORN);
     k = q->kind;
-    strcpy (b, "You let the ");
+    b[0] = SAY_AT2;                             /* (Its sentence coded, said.txt's SA rows: the well's, the shaft's; it
+                                                **   lodges, a splash, it lands; the user's, 2026-11-16) */
+    b[1] = (SA_WELL_LODGES + (w ? 0 : 3) + (item_at (n)->sn == W_SN ? 0 : wet ? 1 : 2)) | 0x80;
     hub_map (KIND_BANK);
-    strcat (b, CATALOGUE[k].name);
-    strcat (b, w ? " fall into the well." : " fall down the shaft.");
-    strcat (b, item_at (n)->sn == W_SN ? " It lodges a little way down, where the shaft narrows." : wet ?
-        " A moment, and you hear a splash far below." : " A moment, and you hear it land far below.");
+    strcpy (b + 2, CATALOGUE[k].name);
+    strcat (b, "\2\2");
     hub_map (UI_BANK);                          /* (Told as the traces' words are, E_VIEW's V_TRACED: after a reach's step too) */
     strcpy (UIREC->trtext, b);
     hub_map (0);

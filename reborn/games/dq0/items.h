@@ -555,9 +555,13 @@ enum {
     SA_TIED_HERE, SA_NO_HAMMER, SA_TIE_EDGE, SA_TIE_EDGE_SHORT, SA_TIE_SHAFT, SA_TIE_SHAFT_SHORT, SA_UNTIE_GRAPPLE,
     SA_NO_ROPE_HERE, SA_UNTIE_ROPE, SA_KNOT_FAR, SA_SHAKE_LOOSE, SA_SHAKE_FAST, SA_HAVE_NO_ROPE, SA_ROPE_ALONE,
     SA_NOTHING_ABOVE, SA_CLIMB_UP, SA_ROPE_THERE, SA_TOO_HIGH, SA_CATCHES, SA_NO_CATCH,
-    SA_DRAG_FIXED, SA_NO_SHOVE, SA_NO_ROOM_DRAG, SA_NO_ROOM_SHOVE, SA_STRAIN, SA_DRAG, SA_SHOVE, SA_AGAINST
+    SA_DRAG_FIXED, SA_NO_SHOVE, SA_NO_ROOM_DRAG, SA_NO_ROOM_SHOVE, SA_STRAIN, SA_DRAG, SA_SHOVE, SA_AGAINST,
                                                 /* (The rope's and the drag's: wrope.h's rp_say, wdrag.c's; past 127,
                                                 **   SAY_AT2's) */
+    SA_WELL_CHOKED, SA_WELL_LODGES, SA_WELL_SPLASH, SA_WELL_LANDS, SA_SHAFT_LODGES, SA_SHAFT_SPLASH, SA_SHAFT_LANDS
+                                                /* (The well's: wwell.c's, wwell2.c's, in the UI bank's trtext, said as
+                                                **   the traces' words are, E_VIEW's V_TRACED: words.c's reader, the
+                                                **   user's, 2026-11-16; in the order wwell2.c counts them) */
 };
 
 /* What the character carries, for the UI to word (IO_LIST's): each thing, how deep it's in others, its state */

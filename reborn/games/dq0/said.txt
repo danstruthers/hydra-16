@@ -967,3 +967,21 @@ SA.strain           +"\nYou strain at the {text}, but it won't budge."
 SA.drag             +"\nYou take hold of the {text} and drag it toward you, stepping back."
 SA.shove            +"\nYou set your shoulder to the {text} and shove it a square away."
 SA.against          +" It stands against the door."
+
+# ---- The well's (UK_SA, past 127: wwell.c's and wwell2.c's codes in the UI bank's trtext, not the things' text, said as
+# the traces' words are, E_VIEW's V_TRACED: words.c's reader, tt_words of trtext; the user's, 2026-11-16).  text the
+# thing let fall
+
+@fallwell   "You let the {text} fall into the well."
+@fallshaft  "You let the {text} fall down the shaft."
+@lodges     " It lodges a little way down, where the shaft narrows."
+@splash     " A moment, and you hear a splash far below."
+@lands      " A moment, and you hear it land far below."
+
+SA.well_choked      +"Far down, the well's shaft narrows to a crack the water seeps through: there's no climbing down it."
+SA.well_lodges      +"{@fallwell}{@lodges}"
+SA.well_splash      +"{@fallwell}{@splash}"
+SA.well_lands       +"{@fallwell}{@lands}"
+SA.shaft_lodges     +"{@fallshaft}{@lodges}"
+SA.shaft_splash     +"{@fallshaft}{@splash}"
+SA.shaft_lands      +"{@fallshaft}{@lands}"

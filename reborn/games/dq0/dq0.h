@@ -468,8 +468,9 @@ extern struct sight sight_copy;
 struct sight* sight_get (void);                 /* The senses' record copied into sight_copy (look.c's): it */
 const char* tt (void);                          /* The things' words (the UI bank's) copied into lb (look.c's), the
                                                 **   world's coded sentences worded (tt_words): it */
-void tt_words (void);                           /* Overlay 24 (refuse.c's): lb's coded sentences (items.h's SAY_AT)
-                                                **   worded by said.txt's SA rows, the text after each read again */
+void __fastcall__ tt_words (const char* t);     /* Overlay 24 (refuse.c's): lb's coded sentences (items.h's SAY_AT)
+                                                **   worded by said.txt's SA rows, the text after each read again from
+                                                **   the UI bank's t (things_text; trtext, the well's, 2026-11-16) */
 extern unsigned char tt_sa;                     /* (The things' words' first sentence's SA_* | 0x80, if it's coded:
                                                 **   tt's; else 0) */
 extern unsigned char sight_light;

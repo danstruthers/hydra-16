@@ -68,7 +68,7 @@ void __fastcall__ o_say_no (unsigned char a, const char* w)
 ** TT_AT cuts the text there (lb's room: a sentence's words, and its names kept at lb's end as it's worded) */
 #define TT_AT           250
 #pragma static-locals (push, off)
-void o_tt_words (void)
+void __fastcall__ o_tt_words (const char* t)
 {
     static char* q;
     static char* e;
@@ -107,7 +107,7 @@ void o_tt_words (void)
         said_q = 0;
         said_to = lb;
         q += strlen (q);
-        hub_mem (UI_BANK, q, UIREC->things_text + r, lb + sizeof lb - 1 - q);
+        hub_mem (UI_BANK, q, t + r, lb + sizeof lb - 1 - q);
     }
 }
 #pragma static-locals (pop)
