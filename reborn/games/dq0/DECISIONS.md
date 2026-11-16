@@ -6480,3 +6480,144 @@ letter and its whole within theirs (650,000, 1,790,000).
   every row the quicker and give both some margin back.  Not built: the UI's main RAM (3,106) is its tightest room, and
   the user's to weigh.
 - The inventory's answer the slower by its things' rows (above): a cost of one renderer.
+
+## Compartments: the second stage (the user's, 2026-11-16; as built, for review: COMMANDS-CRITIQUE.md's §4.9, step 6b; ENGINE-CRITIQUE.md's row 4)
+
+The user's answers of 2026-11-16 ("Compartments and narration: eight answers", above): every reader of a thing's place
+by its compartment, a lid's top by its chest's size, things on a lid sliding off as it's opened, a compartment named by
+its own name, the backpack's side pocket, locks on compartments past the first, hidden compartments, furniture placed in
+the dungeon.  Built in three commits (the readers; the lid, the four compartment features and the furniture's kinds;
+the furniture placed, after narr6's merge), the suite after each.  What's built:
+
+- **Every reader of a thing's place knows its compartment** (the first commit):
+  - *an ally's errand* (things.c's `fetch_find`): up through each compartment the thing's in that's open (`in_shut`),
+    so a thing on a chest's lid is fetched (it was never found: the chooser's rule below);
+  - *the chooser* (part 4's `pick_`): a thing in another lies there to be seen and taken if its compartment's prep is
+    `CP_ON` (`lying`'s rule; a thing in an old record's mark-less y, by its holder's `KF_ON` as ever): "take the
+    chisel" of one on a chest's lid takes it (it was "You see no chisel here."), a desk's drawer's things not seen;
+  - *"the empty chest"*, *the letters' empty* (`unlike`, `ix_make`'s `CX_EMPTY`): nothing in its first compartment (a
+    chest's inside), what's on its lid not counted; "the open chest" was the first compartment's already;
+  - *where to stow* (part 74's `stow_where`): each candidate's compartment a put by its id goes in (`cfor`'s: its first
+    that's in it), its closed bit and fit by that one (every kind but the new ones the same: its first);
+  - *the nested lists* (part 11's `contents`, the inventory and a list in a sentence): a holder of several
+    compartments' things each open compartment's own, "(in it: a sack) (on it: a chisel)", by its prep; a closed
+    chest's lid's things listed (the inventory under it), not its inside's.  The compartment rides in `contents`'
+    depth's high bits (part 11's room: 15 bytes left), each holder's open compartments the catalogue's bank's
+    (`o_comp_open`: `cfilt`, `cprep`); the main RAM's `comp_open`, `ic_of`.  narr6's list renderer is the wording's
+    owner: here only the "on it"/"in it" choice and which compartment's things;
+  - *the senses* (dq0p's `things_seen`): a surface's things by their compartment's prep (a desk's drawer's not seen).
+- **A lid's top holds by its chest's size**: items.h's `LID_BULK (b)` a quarter of its holder's pints, `LID_WEIGHT (b)`
+  ten quarter pounds a pint of that; dq0w/make.js holds each `CN_LID` row to its kind's bulk.  A chest's 20 pints, 200
+  quarter pounds (as it was: no game changes); a case's 5 and 50.
+- **Things on a lid slide off as it's opened** (or forced open; part 61's `s_slide`, called from part 36's
+  `shut_work`, its room): onto the floor where the chest stands (a carried one's, at the character's feet), told
+  after what opening shows: "You open the chest: it's empty. From the lid a chisel slides onto the floor.", "...
+  From the lid a dagger and a chisel slide onto the floor." (the list the UI's list renderer's, narr6's LI rows, so
+  no capital at its head: the sentence begun before it).  The look told it's changed (serve's `slid`).  "Open the lid" opens
+  the chest.
+- **A compartment named by its own name**: the catalogue's `cnouns` ("lid", "drawer", "side pocket", "false bottom",
+  "secret niche"), each row's `noun` (`CN_*`, its high bits `CC_*`); the one name match, `named`, against them in the
+  chooser (part 4's `pick_`) when a verb takes a compartment (`wcn`: what closes worked, a look in, a put's and a
+  take's other, the UI's other to hand, `IO_FIND`), the compartment named in `wcomp` (`o_comp_named`, the catalogue's
+  bank's).  A take from it looks in that one alone (`wcin`); a put goes in it; the words name it ("You put the chisel in
+  the drawer.", "In the drawer lies a chisel.", "The side pocket is closed.", "You untie the side pocket, revealing a
+  chisel.").  "take the drawer", "drop the pocket": no thing ("You see no pocket here.").
+- **The backpack's side pocket** (its second row: in, tied, 4 pints, 20 quarter pounds): put in, taken from, looked
+  in, tied and untied by its name; reached as its pack is (off the back for it); a kit's open, one found tied.  A
+  stow, "put the coin in the backpack", go in its inside as ever.
+- **Locks on compartments past the first** (`CC_LOCK`: a desk's drawer): opened, closed, locked and unlocked with its
+  holder's key (`key_fits` by its holder's id), picked, forced, by `shut_work`'s one path: a compartment's state made a
+  first compartment's shut byte for it and written back (its closed bit in `shut`, `IS_SHUT_C`; locked and burst in its
+  holder's `fuel`, items.h's `CS_*`: a holder's fuel a light's and a fuel's alone else).  Found on the floor, a drawer
+  is closed and locked one time in three (by its number, no dice, as a chest's lid); the kit's key after a desk its
+  drawer's (`kit_lock`).
+- **Hidden compartments** (`CC_HIDDEN`: a case's false bottom, a desk's secret niche): there one time in two (by the
+  holder's number, as it's made its own: `CS_NONE`), unseen and unnamed till found (`CS_UNSEEN`: not listed, not
+  examined, not named); a search of its holder finds it by the referee's search test (`P_SEARCH`, mechanical, its
+  steps the worse a third of its holder's quality, two more by touch: part 47's `found_c`, as part 46's `turned_up`):
+  "You find a secret niche in the desk.", known from then (`CS_FOUND`).  One reached through its holder's inside
+  (`CC_INNER`: the false bottom) is closed as its holder's closed, opened only with it open ("The case is closed.").
+- **The furniture's kinds** (the catalogue's): a desk (its top, a drawer that locks, a secret niche), a cabinet (its
+  inside behind its doors, its top, a drawer), a case (its inside, lid and lock, its lid's top, a false bottom), shelves
+  (fixed, a surface).  KI_DESK ... KI_SHELVES after the towel.
+- **What the player sees differently** (no existing game's sentence changes but where a thing's on a chest's lid, the
+  furniture's own, and the furniture's presence: the last commit's, below):
+  - a thing on a chest's lid: taken by its name alone ("take the chisel": was "You see no chisel here."); a closed
+    carried chest's lid's things in the inventory; an ally fetches it; "the empty chest" a chest with things on its lid
+    alone ("look in the empty chest": "The chest is empty.");
+  - opening a chest with things on its lid: "You open the chest, revealing a sack. From the lid a chisel slides onto the
+    floor." (was "You open the chest, revealing a sack.", the chisel on the lid still); dq0compart's words changed so
+    (its look at, look on and search after: "In it lies a sack.", "There's nothing on the chest.", "In the chest you
+    find a sack.");
+  - "open the lid" opens the chest (was the door's work: "It has no shutters to open or close."); "put the chisel on the
+    lid": "You put the chisel on the lid."; "look on the lid": "On the chest lies a chisel.";
+  - the side pocket: "You stow the chisel in your side pocket.", "In the side pocket lies a chisel.", "You tie the side
+    pocket shut.", "The side pocket is closed.", "You untie the side pocket, revealing a chisel.", "In its side pocket
+    lies a coin." (a backpack examined, its side pocket holding something);
+  - the furniture's: "The drawer is locked.", "You unlock the drawer with its key.", "You open the drawer: it's
+    empty.", "You put the chisel in the drawer.", "In the drawer lies a chisel.", "You close the drawer.", "You lock the
+    drawer with its key.", "You find a secret niche in the desk.", "In the secret niche you find a dagger.", "You find a
+    false bottom in the case.", "The case is closed." (the false bottom, its case shut), "The false bottom is closed.",
+    "There's no room there for the rope." (a case's lid's top, 5 pints).
+- **Furniture placed in the dungeon** (the last commit, after narr6's merge): a row of the maker's placers (dq0m/place.c's
+  `placers[]`, its stock stage, `o_put_furn`) with a purpose of its own, `DP_FURNITURE` (a seeded one, past
+  `DP_SEEDED`: its key the chunk's place, the room and the stratum's seed, no other placer's rolls moved by it): each
+  room whose use has furniture gets, one time in two, one of its use's two kinds (`furn[]`: quarters a desk or a case,
+  the solar a desk or a cabinet, a vault a case, a chapel a case one time in four, a store, a kitchen and an armoury
+  shelves or a cabinet, a pantry shelves, a hall a cabinet or shelves, a workshop shelves or a desk; a cell, a crypt, a
+  gallery, a cave, a barracks, a well, a cistern, a gatehouse, a guardroom none), on a square of its floor beside a
+  wall (the sconces' way), listed with the stock if the list keeps twelve entries for what comes after it (the theme's
+  pieces, the portals' parts, the sconces).  Nothing is put in its compartments (an open question).  The environment's
+  `dq0furn=0` places none (a test's scene, as `dq0sky`'s: read once by the maker).
+- **The tests touched by the furniture** (each by its scene, no check loosened): dq0rope (seed 5's storeroom: a
+  cabinet beside the character, the rope's tie took it as its anchor, not the spike: `dq0furn=0` for its scene),
+  dq0blind (seed 2's walk in the dark found a set of shelves underfoot on its way and told its way twice:
+  `dq0furn=0`), dq0looks (its looks' hashes against looks.ref, the dungeons as they were: `dq0furn=0`), dq0answer (its
+  normal-pace look ahead past its budget with seed 3's furniture: `dq0furn=0`, its dungeon as it was), dq0traces (its
+  step's cost 1,929,179 cycles with its dungeon's furniture, the store the fuller: `dq0furn=0`, 1,906,100).  New: dq0furniture
+  (seed 14's bedchamber: a case seen as the game begins; the same game with `dq0furn=0`, none).
+- **What changes with the furniture's presence**: every seed's dungeon has furniture in some rooms: the looks name it
+  ("On the floor ahead to your right lie a well and some shelves."), the things' capitals after it move on a letter, a
+  search of a room goes over it, a rope's tie can take a heavy piece as its anchor, the things made their own after it
+  numbered on (a thing's make and wear by its number's dice as ever, so a few things' words shift: "battered", a lock).
+  The transcripts by sentence against the merged base (narr6's merged in, the furniture not yet placed): 98 of the dq0
+  tests' differ, every one where furniture's in sight or its capitals and numbers have moved on (and dq0compart's,
+  dq0lidslide's and dq0compcase's "From the lid ...", below), but the known timing noise (dq0answer, dq0antidote,
+  dq0jobs, dq0lookfar); no sentence of the game's own wording changed.
+- **After narr6's merge** (the list renderer: a thing's words coded, SAY_LI, worded by said.txt's LI.item): the slide's
+  sentence was "A chisel slides off the lid onto the floor.", its first letter made a capital in the text; the list's
+  now the UI's to word, so the sentence leads it: "From the lid a chisel slides onto the floor."  contents()' "(on it:" and
+  "(in it:" choice here as built, narr6's renderer the wording's.
+- **Room** (the world's main RAM, its floor 2,048): 2,511 bytes free at the start, 2,463 after the readers, 2,313 after
+  the second commit (comp_open, ic_of, comp_named, name_comp, wcn, wcomp, wcin, cfilt, cprep, slid; the parts' stubs),
+  the same after the furniture.  The catalogue's bank's code 5,546 of 6,400 (its own count; 5,610 by the map) to 6,158
+  (o_comp_of's company: o_comp_open, o_comp_named, other's and stow's compartments, IO_FIND's).  The world's parts: 4 407
+  to 158, 11 101 to 9, 13 469 to 420, 35 0, 36 1,176 to 578, 47 2,467 to 2,007, 61 1,929 to 461 (s_slide, s_own_comps,
+  kit_lock's), 74 2,149 to 2,081.  The senses' main RAM 4,431 to 4,486 (things_seen's one loop).  The UI's 3,130 unchanged
+  by these (3,106 after narr6's).  The maker's main RAM 3,932 to 3,908 (dq0furn's read, stock's sx0, sy0 shared),
+  overlay 9 554 to 648 and 5 915 to 25 (the packer's).
+- **Timings:** dq0traces' step 1,868,123 cycles at the start, 1,884,499, 1,845,061, then 1,905,482 after narr6's merge and
+  1,906,100 with the furniture (its scene's off; 1,929,179 on); dq0answer's listen 539,160, 543,407, 557,482, 556,582,
+  its normal-pace listen 740,576 at the start, 739,107 after the second commit (a denizens' pass: 771,772 before part
+  4's naming went to the main RAM, name_comp), 628,264 at the end; the start, seed 1, 233.9M, 233.7M, 234.6M, 234.7M;
+  seed 123456789 307.9M, 309.3M, 310.5M, 311.0M.
+- **The suite:** all pass after each commit (454, 458, 460 tests with the merge's and dq0furniture).
+- **Saves:** no record's layout changes.  A holder's compartments' locks and finds in its record's `fuel` (unused by any
+  holder before); an old save's holders read every lock open and every hidden compartment there and unfound.
+- **Open questions (the user's):**
+  - A thing put on a chest's lid while it's open (built: it lies there till the lid's closed and opened again); refused,
+    or slid off at once?
+  - Other lids' tops: a pot's lid, a backpack's flap (built: the chest's and the case's alone have a top).
+  - "The side pocket" typed whole: the parser takes "side" as its own word (a way: "look in the side pocket" is a look
+    that way, and the game ended there in a probe, the UI's way path, worth a look of its own; "close the side pocket"
+    goes to the door's work); "the pocket" names it.  The kinds' bank has no room to make "side" (or "bottom") a name of
+    the world's words (10 bytes over); "put the coin in the side pocket" is understood.  The desk's hidden compartment
+    is "the secret niche" for the same reason ("secret drawer" read as "the drawer"; and a name past 15 letters overruns
+    the world's names, xn and yn).
+  - "case" names a bolt case too (the chooser takes the one most to hand).
+  - Where to stow offering a side pocket as its own choice (built: a holder's first compartment that's in it, as a put
+    by its id goes).
+  - The maker stocking furniture's compartments (a drawer's papers, a case's coins): nothing's put in them yet.
+  - The denizens' reach and gear by compartment (a robber's, a denizen's own): their code unchanged.
+  - A compartment looked at ("look at the drawer"): its holder's look, as ever.
+  - A hidden compartment's difficulty (built: its holder's quality's third, the steps the worse, two more by touch).

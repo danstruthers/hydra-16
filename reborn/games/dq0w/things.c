@@ -4084,7 +4084,7 @@ void __fastcall__ s_own_comps (struct item* q)
 }
 
 /* What's on its lid slid off as it's opened (the user's, 2026-11-16: "Things on a chest's lid slide off when it's opened"),
-** to the floor (its square's; a carried one's, the character's), told: "A chisel slides off the lid onto the floor."; the
+** to the floor (its square's; a carried one's, the character's), told: "From the lid a chisel slides onto the floor."; the
 ** world's look told it's changed (slid) */
 void __fastcall__ s_slide (unsigned n)
 {
@@ -4105,7 +4105,8 @@ void __fastcall__ s_slide (unsigned n)
     if (!pl) {
         return;
     }
-    put (" ");
+    put (" From the lid ");                  /* ("From the lid a chisel slides onto the floor.": its list the
+                                                **   UI's list renderer's, its words lower case) */
     hub_map (UI_BANK);
     t0 = tp;
     hub_map (0);
@@ -4113,12 +4114,7 @@ void __fastcall__ s_slide (unsigned n)
     listed (n);
     lst_c = 0xFF;
     and_last (t0);
-    hub_map (UI_BANK);
-    if (*t0 >= 'a') {
-        *t0 -= 'a' - 'A';                       /* ("A chisel": its first letter a capital) */
-    }
-    hub_map (0);
-    put (pl > 1 ? " slide off the lid onto the floor." : " slides off the lid onto the floor.");
+    put (pl > 1 ? " slide onto the floor." : " slides onto the floor.");
     for (j = n; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {
     }
     hub_map (0);

@@ -23,6 +23,8 @@
 */
 
 #include <stddef.h>
+#include <string.h>
+#include <hydra.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
 #include "grow.h"
@@ -123,6 +125,53 @@ unsigned char __fastcall__ o_defended (unsigned char r)
     return ufort && (u == U_GATEHOUSE || u == U_GUARDROOM);
 }
 
+/* A room's furniture (the user's, 2026-11-16: desks, cabinets, cases, shelves, their compartments the catalogue's):
+** by its use, one of two kinds, or none (each one time in four), on a square of its floor beside a wall (sconce.c's
+** way), listed with the stock (put_down's), if the list keeps room for what's to come after it (the theme's pieces,
+** the portals' parts, the sconces) */
+extern unsigned sx0, sy0;                       /* (stock.c's: the chunk's first square) */
+static unsigned char fenv;                      /* (The environment's dq0furn: 0 not read yet; 1 none said; 2 "0",
+                                                **   none placed, a test's scene's, as sky.c's dq0sky) */
+static struct hy_regs far_;
+static char fnm[8], fval[4];                    /* (In the main RAM: the name, its value) */
+static const unsigned char furn[NUSES][4] = {
+    { 0 }, { KI_CABINET, KI_SHELVES }, { 0 }, { KI_CASE, KI_CASE }, { 0 }, { 0 }, { 0 },   /* (chamber, hall, cell,
+                                                **   vault, crypt, gallery, cave) */
+    { KI_SHELVES, KI_CABINET }, { KI_SHELVES, KI_CABINET }, { KI_SHELVES, KI_SHELVES }, { 0 },   /* (store, kitchen,
+                                                **   pantry, barracks) */
+    { KI_SHELVES, KI_CABINET }, { KI_CASE }, { KI_DESK, KI_CASE }, { KI_DESK, KI_CABINET },   /* (armoury, chapel,
+                                                **   quarters, solar) */
+    { 0 }, { 0 }, { 0 }, { 0 }, { KI_SHELVES, KI_DESK }    /* (well, cistern, gatehouse, guardroom, workshop) */
+};
+static void __fastcall__ o_put_furn (unsigned char i)
+{
+    const struct room* r = &L->room[i];
+    unsigned char n, d, lx, ly, k;
+
+    if (!fenv) {
+        strcpy (fnm, "dq0furn");
+        far_.a = 0xFF;
+        far_.r[0] = (unsigned) fnm;
+        far_.r[1] = (unsigned) fval;
+        far_.r[2] = 3;
+        far_.r[3] = 0;
+        fenv = !hy_call (HY_ENV_GET, &far_) && fval[0] == '0' ? 2 : 1;
+    }
+    if (fenv == 2 || r->kind >= NUSES || !(k = furn[r->kind][dr (4)]) || sk.n + 12 > NSTOCK) {
+        return;
+    }
+    for (n = 0; n < 8; ++n) {
+        d = dr (4);
+        lx = d == DIR_W ? r->x : d == DIR_E ? r->x + r->w - 1 : r->x + dr (r->w);
+        ly = d == DIR_N ? r->y : d == DIR_S ? r->y + r->h - 1 : r->y + dr (r->h);
+        if (lx && ly && lx + 1 < CW && ly + 1 < CW && TILE (L->tile[ly][lx]) == T_FLOOR &&
+            TILE (L->tile[ly + dir_y[d]][lx + dir_x[d]]) == T_WALL) {
+            put_down (k, L->sn, sx0 + lx, sy0 + ly, 1, ST_SHOWN);
+            return;
+        }
+    }
+}
+
 /* The rows, in the order they're placed (a stage's: fixtures.c's, stock.c's, sconce.c's).  A row: its stage, its
 ** sites, its dice's purpose (DP_NONE none), its odds (a chance in sides of the style's field odds: none if sides is
 ** 0), what a site must not be (a room's flags, a door's state), the use a room must have (U_ANY any), its qualifiers
@@ -141,6 +190,9 @@ static const struct placer placers[] = {
     /* A room: its use's mark, in its middle; a kitchen's well, where the chunk has water, by its west wall (no dice) */
     { PG_STOCK, SI_ROOM, DP_NONE, 0, 0, 0, U_ANY, 0, WH_MIDDLE, 0, put_mark },
     { PG_STOCK, SI_ROOM, DP_NONE, 0, 0, 0, U_KITCHEN, PQ_WATER, WH_WEST, KI_WELL, put_mark },
+    /* A room whose use has furniture: one piece, one time in two, of the use's two, on a square of its floor beside a
+    ** wall (its own dice: the user's, 2026-11-16) */
+    { PG_STOCK, SI_ROOM, DP_FURNITURE, 0, 0, 0, U_ANY, 0, WH_BYWALL, 0, o_put_furn },
     /* A room (not one lit by its own light): a sconce, on its floor beside a wall, if it was built with them or it's
     ** kept lit */
     { PG_SCONCES, SI_ROOM, DP_SCONCE, 0, 0, R_LIT, U_ANY, 0, WH_BYWALL, KI_SCONCE, put_sconce },

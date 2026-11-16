@@ -1516,7 +1516,7 @@ module.exports = {
           'It\'s closed: you go over the outside of it. On the chest you find a chisel.', '> take the chisel from the chest',
           'You take the chisel from the chest.', '> take the sack from the chest', 'The chest is closed.', '> put the chisel on the chest',
           'You put the chisel on the chest.', '> put the chisel on the chest', 'You put the chisel on the chest.', '> look', 'On the chest lie two chisels.',
-          '> take the chisel off the chest', 'You take the chisel from the chest.', '> open the chest', 'You open the chest, revealing a sack. A chisel slides off the lid onto the floor.',
+          '> take the chisel off the chest', 'You take the chisel from the chest.', '> open the chest', 'You open the chest, revealing a sack. From the lid a chisel slides onto the floor.',
           '> look at the chest', 'In it lies a sack.', '> look on the chest', 'There\'s nothing on the chest.', '> search the chest',
           'In the chest you find a sack.'], f, 'the words: ');
         if (/revealing a sack and a chisel|revealing a chisel/.test(s)) f.push('the chest opened told what\'s on its lid');
@@ -1545,7 +1545,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0lidslide', near: ['gear'], what: 'Dingus Quest Zero\'s things on a chest\'s lid slide off as it\'s opened (the user\'s, 2026-11-16: DECISIONS.md\'s "Compartments: the second stage"), told as they fall to the floor: at seed 3 (dq0 -T, a kit of a chest, a chisel and a dagger) the chest set down and closed, the chisel and the dagger put on its lid (its top\'s room by its size: items.h\'s LID_BULK, a chest\'s 20 pints); opened: "You open the chest: it\'s empty. A dagger and a chisel slide off the lid onto the floor.", both lying on its square now (IW_SQUARE), nothing on the lid; the chisel put back on it alone, the chest closed and opened again: "A chisel slides off the lid onto the floor."',
+      name: 'dq0lidslide', near: ['gear'], what: 'Dingus Quest Zero\'s things on a chest\'s lid slide off as it\'s opened (the user\'s, 2026-11-16: DECISIONS.md\'s "Compartments: the second stage"), told as they fall to the floor: at seed 3 (dq0 -T, a kit of a chest, a chisel and a dagger) the chest set down and closed, the chisel and the dagger put on its lid (its top\'s room by its size: items.h\'s LID_BULK, a chest\'s 20 pints); opened: "You open the chest: it\'s empty. From the lid a dagger and a chisel slide onto the floor.", both lying on its square now (IW_SQUARE), nothing on the lid; the chisel put back on it alone, the chest closed and opened again: "From the lid a chisel slides onto the floor."',
       init: 't_rc', cycles: 2000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k \'chest,chisel,dagger\'', 'drop the chest', 'close the chest', 'put the chisel on the chest', 'put the dagger on the chest',
@@ -1558,9 +1558,9 @@ module.exports = {
           const t = o && o.items.filter(i => i.name === n && i.id && (i.where === 'IW_SQUARE' || (i.where === 'IW_ITEM' && chest && i.x === chest.n)));
           if (!t || !t.length || t.some(i => i.where !== 'IW_SQUARE' || i.x !== chest.x || i.y !== chest.y)) f.push('the ' + n + ' not slid off onto the chest\'s square: ' + JSON.stringify(t));
         }
-        inTurn(s, ['> open the chest', 'You open the chest: it\'s empty. A dagger and a chisel slide off the lid onto the floor.', '> look on the chest',
+        inTurn(s, ['> open the chest', 'You open the chest: it\'s empty. From the lid a dagger and a chisel slide onto the floor.', '> look on the chest',
           'There\'s nothing on the chest.', '> put the chisel on the chest', 'You put the chisel on the chest.', '> close the chest', 'You close the chest.',
-          '> open the chest', 'You open the chest: it\'s empty. A chisel slides off the lid onto the floor.'], f, 'the words: ');
+          '> open the chest', 'You open the chest: it\'s empty. From the lid a chisel slides onto the floor.'], f, 'the words: ');
         return f;
       },
       sdcard: true
@@ -1625,10 +1625,31 @@ module.exports = {
         const st = T.of('look in the bottom').after, cs = st && st.items.find(i => i.name === 'case');
         if (!cs || !(cs.fuel >> 4 & CS_FOUND)) f.push('the case\'s false bottom not found, its record\'s: ' + JSON.stringify(cs));
         inTurn(s, ['> put the rope on the case', 'There\'s no room there for the rope.', '> put the chisel on the case', 'You put the chisel on the case.',
-          '> close the case', 'You close the case.', '> open the case', 'You open the case: it\'s empty. A chisel slides off the lid onto the floor.'], f, 'the words: ');
+          '> close the case', 'You close the case.', '> open the case', 'You open the case: it\'s empty. From the lid a chisel slides onto the floor.'], f, 'the words: ');
         if ((s.match(/You find a false bottom in the case\./g) || []).length !== 1) f.push('the false bottom not found once by the searches');
         inTurn(s, ['> close the case', 'You close the case.', '> open the bottom', 'The case is closed.', '> open the case', 'You open the case: it\'s empty.',
           '> look in the bottom', 'The false bottom is closed.', '> close the chest', 'You close the chest.', '> put the rope on the chest', 'You put the rope on the chest.'], f, 'the words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0furniture', near: ['gear', 'map'], what: 'Dingus Quest Zero\'s furniture placed in the dungeon (the user\'s, 2026-11-16: DECISIONS.md\'s "Compartments: the second stage"): the maker\'s placers\' row (dq0m/place.c\'s o_put_furn, its own dice, DP_FURNITURE) puts a piece in a room whose use has some, beside a wall: at seed 14 the bedchamber the character begins in (quarters: a desk or a case) has a case, seen at once ("On the floor ahead to your right lies a case."), its record the stock\'s (IW_SQUARE, KI_CASE), gone to and searched; the same game with the environment\'s dq0furn=0 (a test\'s scene, as dq0sky\'s) has none, the bedchamber as it was',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 14 -c /ram/c.hm', 'look', 'go to the case', 'open the case', 'search the case', 'quit',
+        'dq0furn=0', 'dq0 -p t -s 14 -c /ram/c.hm', 'look', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, ''), games = s.split('dq0 -p t -s 14').slice(1);
+        const { KI_CASE, KI_DESK, KI_CABINET, KI_SHELVES } = require('../../../games/dq0/hubgen.js').load().C;   // (items.h's)
+        const furn = st => st ? st.items.filter(i => [KI_CASE, KI_DESK, KI_CABINET, KI_SHELVES].includes(i.kind)) : [];
+        const looks = T.filter(t => t.line === 'look');
+        const a = furn(looks[0] && looks[0].after), b = furn(looks[1] && looks[1].after);
+        if (!a.some(i => i.kind === KI_CASE && i.where === 'IW_SQUARE')) f.push('no case placed at seed 14: ' + JSON.stringify(a));
+        if (b.length) f.push('furniture placed with dq0furn=0: ' + JSON.stringify(b));
+        if (!games[0] || !/On the floor ahead to your right lies a case\./.test(games[0])) f.push('the case not seen as the game begins');
+        if (!games[1] || /a case|a desk|a cabinet|some shelves/.test(games[1])) f.push('furniture seen with dq0furn=0');
         return f;
       },
       sdcard: true

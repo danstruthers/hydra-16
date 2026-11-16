@@ -21,7 +21,7 @@
 
 /* The chunk's things, listed (make.c's to put in the world bank: its first square sx0, sy0, in the frame) */
 struct stock sk;
-static unsigned sx0, sy0;
+unsigned sx0, sy0;                              /* (place.c's furniture's too) */
 
 /* A thing put down on a square (concealed: hide, its difficulty in steps; else ST_SHOWN; or in the one before it,
 ** ST_IN, ST_LIT: a sconce's torch), listed: its entry, or 0 (the list full) */

@@ -17,7 +17,10 @@ extern unsigned char cstyle;                    /* (The chunk's style: its strat
 ** fixtures', fixtures.c's; the sconces' the portals' make's own), so the dungeons are as they were.  A new purpose
 ** from DP_SEEDED on (its key the stratum's seed too).  dkey (purpose, where) for chunk L, then dr (n) as often as
 ** wanted: 0 to n - 1 */
-enum { DP_DOOR, DP_MAT, DP_WINDOW, DP_PORTC, DP_TRAP, DP_DTRAP, DP_MAKE, DP_FORT, DP_SCONCE, DP_SEEDED, DP_NONE = 0xFF };
+enum { DP_DOOR, DP_MAT, DP_WINDOW, DP_PORTC, DP_TRAP, DP_DTRAP, DP_MAKE, DP_FORT, DP_SCONCE, DP_SEEDED,
+    DP_FURNITURE,                               /* (A room's furniture, the user's, 2026-11-16: its own, the stratum's
+                                                **   seed's, no other's rolls moved by it) */
+    DP_NONE = 0xFF };
 void __fastcall__ dkey (unsigned char p, unsigned b);
 unsigned char __fastcall__ dr (unsigned char n);
 enum { DH_CAVERN, DH_AIR, DH_WET, DH_SKY, DH_PWATER, DH_WELLS, DH_SLOPE, DH_RING, DH_VAULT, DH_ROT, DH_ROTU, DH_MIXED,
