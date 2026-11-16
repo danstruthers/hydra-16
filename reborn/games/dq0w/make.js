@@ -58,7 +58,12 @@ function compsSame(cat, at, nkinds, names) {
     seen.set(k, (seen.get(k) || 0) + 1);
     if (seen.get(k) > C.NCOMP) throw new Error('dq0w.cat: ' + names[k] + ' has more than NCOMP compartments');
     last = k;
-    if (seen.get(k) > 1) continue;
+    if (seen.get(k) > 1) {                                // (A lid's top: its room and the weight it bears by its holder's size, items.h's LID_BULK)
+      const CN = H.enums.find(e => e[0] === 'CN_NONE'), b = cat[k * KIND + f('bulk')];
+      if ((cat[r + o('noun')] & 15) === CN.indexOf('CN_LID') && (cat[r + o('bulk')] !== (b >> 2) || cat.readUInt16LE(r + o('weight')) !== (b >> 2) * 10))
+        throw new Error('dq0w.cat: ' + names[k] + '\'s lid\'s top not by its size (' + b + ' pints: LID_BULK, LID_WEIGHT)');
+      continue;
+    }
     const q = k * KIND, fl = cat[q + f('flags')], kp = cat[q + f('keeps')];
     const want = [fl & K_BELT ? CP.indexOf('CP_HUNG') : kp & KF_ON ? CP.indexOf('CP_ON') : CP.indexOf('CP_IN'), kp & ~(KF_ON | KF_FIXED),
       cat[q + f('cap_bulk')], cat.readUInt16LE(q + f('cap_weight')), cat[q + f('slots')]];
@@ -91,6 +96,8 @@ function build({ dir, objdir, say = () => {} }) {
   const g = tables.encodeGrammar(rules, tables.openNames(grammar)), dict = new Set(tables.indexWords(tables.encodeIndex(rules, g), g));
   const seen = new Set(), words = [];
   for (const n of names) for (const w of n.split(' ')) if (w && dict.has(w) && !seen.has(w)) { seen.add(w); words.push(w); }
+  // (The compartments' own names' words not here: the kinds' bank has no room for them, the parser takes a word of its own
+  // grammar's before a name's last as part of it: "the side pocket", "the false bottom")
   const text = Buffer.from(words.map(w => w + ' ').join('') + '\0', 'latin1');
   const at = nkinds * KIND, kin = (at + text.length + 63) & ~63;   // (The kinds' part of the file, whole pieces: wfile.c's)
   if (at + text.length > 0x1E3F || kin > 0x1E40) throw new Error('dq0w.cat: the kinds and their words into the outfits\' list (outfit.h\'s OF_N, ' + (at + text.length) + ' bytes)');

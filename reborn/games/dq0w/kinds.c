@@ -232,6 +232,14 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "linen sheet", 0, 6, 4, 0, 0, 0, 0, 4, "", MT_LINEN, AP_CLOTH, 96 },  /* (A folk
                                                 **   bed's, 24d; a towel, 4d) */
     { "towel", 0, 2, 2, 0, 0, 0, 0, 3, "", MT_LINEN, AP_CLOTH, 16 },
+    { "desk", 0, 200, 100, 30, 400, 0, 0, 7, "", MT_WOOD, AP_WOOD, 240, KF_ON },   /* (Furniture, the user's, 2026-11-16:
+                                                **   a desk's top, a drawer that locks, a secret niche; */
+    { "cabinet", K_CONTAINER, 240, 120, 60, 400, 0, 0, 7, "", MT_WOOD, AP_WOOD, 200, SS | KF_LID },   /*   a cabinet, its
+                                                **   doors, its top, a drawer; */
+    { "case", K_CONTAINER, 40, 20, 12, 80, 0, 0, 4, "", MT_WOOD, AP_WOOD, 120, SS | KF_LID },   /*   a case, its lid and
+                                                **   lock, its lid's top, a false bottom; */
+    { "shelves", K_PLURAL, 120, 60, 40, 300, 0, 0, 7, "", MT_WOOD, AP_WOOD, 96, KF_ON | KF_FIXED },   /*   shelves, on a
+                                                **   wall) */
 };
 #pragma rodata-name (pop)
 
@@ -244,13 +252,15 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
 #pragma rodata-name (push, "CATCOMP")
 const struct comp comps[] = {
     { KI_BACKPACK, CP_IN, SS | KF_LID, 32, 160, 0, 0 },
+    { KI_BACKPACK, CP_IN, SS | KF_TIE, 4, 20, 0, CN_POCKET },   /* (Its side pocket, tied: the user's, 2026-11-16) */
     { KI_BELT, CP_HUNG, 0, 0, 0, 6, 0 },        /* (Six slots) */
     { KI_POUCH, CP_IN, SS | KF_TIE, 3, 16, 0, 0 },
     { KI_WATERSKIN, CP_IN, KF_LIQUID | KF_STOPPER, 4, 20, 0, 0 },
     { KI_BONES, CP_ON, 0, 20, 200, 0, 0 },      /* (What a skeleton had on it) */
     { KI_SACK, CP_IN, SS | KF_TIE, 24, 120, 0, 0 },
     { KI_CHEST, CP_IN, SS | KF_LID, 60, 400, 0, 0 },
-    { KI_CHEST, CP_ON, 0, 20, 200, 0, CN_LID }, /* (Its lid's top: open to the hand, closed or not) */
+    { KI_CHEST, CP_ON, 0, LID_BULK (80), LID_WEIGHT (80), 0, CN_LID },   /* (Its lid's top: open to the hand,
+                                                **   closed or not; its room by its size, 80 pints) */
     { KI_BASKET, CP_IN, KF_SOLID, 16, 80, 0, 0 },
     { KI_TABLE, CP_ON, 0, 30, 400, 0, 0 },
     { KI_CHAIR, CP_ON, 0, 8, 120, 0, 0 },
@@ -264,12 +274,23 @@ const struct comp comps[] = {
     { KI_BOLT_CASE, CP_IN, KF_SOLID, 4, 24, FM_BOLT, 0 },
     { KI_VIAL, CP_IN, KF_LIQUID | KF_STOPPER, 1, 5, 0, 0 },
     { KI_CASK, CP_IN, KF_LIQUID | KF_STOPPER, 32, 200, 0, 0 },
+    { KI_DESK, CP_ON, 0, 30, 400, 0, 0 },       /* (Furniture, the user's, 2026-11-16: a desk's top, */
+    { KI_DESK, CP_IN, SS | KF_LID, 6, 40, 0, CN_DRAWER | CC_LOCK },     /*   its drawer, a lock of its own, */
+    { KI_DESK, CP_IN, SS | KF_LID, 2, 10, 0, CN_SECRET | CC_HIDDEN },   /*   a secret niche, hidden; */
+    { KI_CABINET, CP_IN, SS | KF_LID, 60, 400, 0, 0 },  /*   a cabinet's inside, its doors, */
+    { KI_CABINET, CP_ON, 0, 20, 200, 0, 0 },    /*   its top, */
+    { KI_CABINET, CP_IN, SS | KF_LID, 6, 40, 0, CN_DRAWER },    /*   a drawer; */
+    { KI_CASE, CP_IN, SS | KF_LID, 12, 80, 0, 0 },  /*   a case's inside, its lid and lock, */
+    { KI_CASE, CP_ON, 0, LID_BULK (20), LID_WEIGHT (20), 0, CN_LID },   /*   its lid's top by its size, */
+    { KI_CASE, CP_IN, SS | KF_LID, 2, 10, 0, CN_BOTTOM | CC_HIDDEN | CC_INNER },    /*   a false bottom, hidden,
+                                                **   reached through its inside; */
+    { KI_SHELVES, CP_ON, 0, 40, 300, 0, 0 },    /*   shelves) */
     { 0 }
 };
 #pragma rodata-name (pop)
 
 /* The compartments' own names (CN_*), as a thing's in the catalogue's bank's words */
-const char cnouns[4][7] = { "", "lid", "top", "drawer" };
+const char cnouns[NCN][CN_LEN] = { "", "lid", "", "drawer", "side pocket", "false bottom", "secret niche" };
 
 /* How each light burns (DUNGEON.md: light; HOUSE.md's burning, slice 4.1's): its kind; how long a whole one burns
 ** at middling make, in tens of minutes (a torch an hour, the house rule's; a tallow candle three-quarters of an inch
@@ -330,7 +351,8 @@ const unsigned char throws[KI_COUNT] = {
     2, 2, 1, 1,                                 /* stone chisel, wood chisel, mattock, spade */
     2, 0, 0, 0, 0, 0,                           /* iron spike; a spike driven, a ring, a post, a rope in place */
     1, 2,                                       /* old writing, copy */
-    2, 2, 1, 2                                  /* scarf, earrings, linen sheet, towel */
+    2, 2, 1, 2,                                 /* scarf, earrings, linen sheet, towel */
+    0, 0, 0, 0                                  /* desk, cabinet, case, shelves */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
 

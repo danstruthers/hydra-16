@@ -131,12 +131,36 @@ struct comp {
     unsigned char   noun;                       /* Its own name (CN_*: "the lid"; 0 its holder's) */
 };
 enum { CP_IN, CP_ON, CP_HUNG };
-enum { CN_NONE, CN_LID, CN_TOP, CN_DRAWER };     /* (Its own name: dq0w/kinds.c's cnouns, "lid", "top", "drawer") */
+enum { CN_NONE, CN_LID, CN_TOP, CN_DRAWER, CN_POCKET, CN_BOTTOM, CN_SECRET, NCN };   /* (Its own name: dq0w/kinds.c's
+                                                **   cnouns, "lid", "top", "drawer", "side pocket", "false bottom",
+                                                **   "secret niche": the one name match's, a thing's, things.c's pick) */
+#define CN_LEN          16                      /* (At most 15 letters: a name's room, xn's and yn's) */
+#define CN_MASK         0x0F                    /* (A row's noun's own name, CN_*: its high bits CC_*) */
+#define CC_INNER        0x20                    /* (Reached through its holder's first: a false bottom, closed as that
+                                                **   is, opened only with it open) */
+#define CC_LOCK         0x40                    /* (It has a lock of its own: a drawer's, its holder's key fitting it) */
+#define CC_HIDDEN       0x80                    /* (Hidden till it's found: a false bottom, a secret niche, unseen and
+                                                **   unnamed, a search's to find, the referee's test) */
+/* Each compartment past the first's own state (the user's, 2026-11-16): a holder's record's fuel (a light's and a
+** fuel's alone else), four bits a compartment, 1 to 3: locked, its lock burst, found (a hidden one), none (a hidden one
+** this one hasn't: decided as it's made its own, things.c's make_own) */
+#define CS_LOCKED       1
+#define CS_BURST        2
+#define CS_FOUND        4
+#define CS_NONE         8
+#define CS_AT(c, b)     ((unsigned) (b) << ((c) - 1) * 4)
+#define CS_UNSEEN(n, f, c)  (((n) & CC_HIDDEN) && ((f) >> ((c) - 1) * 4 & (CS_FOUND | CS_NONE)) != CS_FOUND)   /* (Compartment
+                                                **   c, its row's noun n, its holder's fuel f: hidden, not found, or none) */
 #define NCOMP           4                       /* (A kind's compartments at most: shut's bits) */
 #define IC_MARK         0xFF00u                 /* (A thing in another's y: its compartment given) */
 #define IC_OF(y)        ((unsigned char) ((y) >= IC_MARK ? (y) & 0x0F : 0))     /* (Its compartment, unchecked) */
 #define IC_PREP(y)      ((unsigned char) ((y) >> 4 & 3))   /* (Its prep, where IC_OF's given) */
 #define IS_SHUT_C(c)    ((unsigned char) ((c) ? 0x10 << (c) : IS_CLOSED))   /* (Compartment c's closed bit) */
+#define LID_BULK(b)     ((b) / 4)               /* (A lid's top's room, its holder's size b: a quarter of it, its
+                                                **   footprint's; and the weight it bears, ten quarter pounds a pint of
+                                                **   that: the user's, 2026-11-16, "a lid's top holds by its chest's
+                                                **   size"; dq0w/make.js holds each lid's row to it) */
+#define LID_WEIGHT(b)   ((b) / 4 * 10)
 
 /* The catalogue's kinds, by number (things.c's order: the maker puts them down by these) */
 enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKIN, KI_RATIONS, KI_TINDERBOX, KI_PICK,
@@ -199,6 +223,8 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
                                                 **   the game between dungeons, its steps 9 and 10) */
     KI_SCARF, KI_EARRINGS, KI_SHEET, KI_TOWEL,  /* (Worn places, the user's, 2026-11-10: a scarf, earrings, worn where
                                                 **   they're put; a linen sheet, a folk bed's; a towel) */
+    KI_DESK, KI_CABINET, KI_CASE, KI_SHELVES,   /* (Furniture, its compartments the catalogue's comps: the maker's placers
+                                                **   put it in rooms whose use fits, the user's, 2026-11-16) */
     KI_COUNT };
 /* The places on the body a thing's worn at (the engine's own, 2026-11-12: ENGINE-CRITIQUE.md's section 8; HarnMaster's
 ** harn.h locations till then, the same numbers, so a save's places read as they were): the head (the ears a pair),

@@ -1492,7 +1492,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0compart', near: ['gear', 'parser'], what: 'Dingus Quest Zero\'s compartments (COMMANDS-CRITIQUE.md\'s step 6b, 2026-11-15: DECISIONS.md\'s "Compartments: containers and surfaces"): the catalogue\'s compartment table, a chest two, its inside and its lid\'s top; at seed 3 (dq0 -T, a kit of a chest, two chisels and a sack more) the chest set down, a chisel put on it (its record in the chest, its y its compartment, IC_MARK | CP_ON << 4 | 1), seen on it in a look ("On the chest lies a chisel."), looked on, looked in (its inside empty); the sack put in it; the chest closed: the chisel still on it (looked on, examined: "On it lies a chisel.", searched: "On the chest you find a chisel."), taken from it, the sack not ("The chest is closed."), put back on it and the other with it ("On the chest lie two chisels."), one taken off it; the chest opened, revealing the sack alone (not what\'s on it), looked at (each compartment that holds something), searched (its inside, then its top)',
+      name: 'dq0compart', near: ['gear', 'parser'], what: 'Dingus Quest Zero\'s compartments (COMMANDS-CRITIQUE.md\'s step 6b, 2026-11-15: DECISIONS.md\'s "Compartments: containers and surfaces"): the catalogue\'s compartment table, a chest two, its inside and its lid\'s top; at seed 3 (dq0 -T, a kit of a chest, two chisels and a sack more) the chest set down, a chisel put on it (its record in the chest, its y its compartment, IC_MARK | CP_ON << 4 | 1), seen on it in a look ("On the chest lies a chisel."), looked on, looked in (its inside empty); the sack put in it; the chest closed: the chisel still on it (looked on, examined: "On it lies a chisel.", searched: "On the chest you find a chisel."), taken from it, the sack not ("The chest is closed."), put back on it and the other with it ("On the chest lie two chisels."), one taken off it; the chest opened, revealing the sack alone (not what\'s on it), the chisel on its lid sliding off to the floor as it\'s opened (the user\'s, 2026-11-16), looked at, looked on (nothing there now), searched (its inside)',
       init: 't_rc', cycles: 2400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k \'chest,chisel,chisel,sack\'', 'drop chest', 'put the chisel on the chest', 'look', 'look on the chest',
@@ -1516,9 +1516,9 @@ module.exports = {
           'It\'s closed: you go over the outside of it. On the chest you find a chisel.', '> take the chisel from the chest',
           'You take the chisel from the chest.', '> take the sack from the chest', 'The chest is closed.', '> put the chisel on the chest',
           'You put the chisel on the chest.', '> put the chisel on the chest', 'You put the chisel on the chest.', '> look', 'On the chest lie two chisels.',
-          '> take the chisel off the chest', 'You take the chisel from the chest.', '> open the chest', 'You open the chest, revealing a sack.',
-          '> look at the chest', 'In it lies a sack. On it lies a chisel.', '> look on the chest', 'On the chest lies a chisel.', '> search the chest',
-          'In the chest you find a sack. On the chest you find a chisel.'], f, 'the words: ');
+          '> take the chisel off the chest', 'You take the chisel from the chest.', '> open the chest', 'You open the chest, revealing a sack. A chisel slides off the lid onto the floor.',
+          '> look at the chest', 'In it lies a sack.', '> look on the chest', 'There\'s nothing on the chest.', '> search the chest',
+          'In the chest you find a sack.'], f, 'the words: ');
         if (/revealing a sack and a chisel|revealing a chisel/.test(s)) f.push('the chest opened told what\'s on its lid');
         return f;
       },
@@ -1540,6 +1540,95 @@ module.exports = {
         if (!tk || !dq0Carried(tk).some(i => i.name === 'chisel')) f.push('the chisel not taken from the lid by its name');
         inTurn(s, ['> look in the empty chest', 'The chest is empty.', '> put the sack in the chest', 'You put the sack in the chest.', '> look in the empty chest',
           'You see no chest here.'], f, 'the words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0lidslide', near: ['gear'], what: 'Dingus Quest Zero\'s things on a chest\'s lid slide off as it\'s opened (the user\'s, 2026-11-16: DECISIONS.md\'s "Compartments: the second stage"), told as they fall to the floor: at seed 3 (dq0 -T, a kit of a chest, a chisel and a dagger) the chest set down and closed, the chisel and the dagger put on its lid (its top\'s room by its size: items.h\'s LID_BULK, a chest\'s 20 pints); opened: "You open the chest: it\'s empty. A dagger and a chisel slide off the lid onto the floor.", both lying on its square now (IW_SQUARE), nothing on the lid; the chisel put back on it alone, the chest closed and opened again: "A chisel slides off the lid onto the floor."',
+      init: 't_rc', cycles: 2000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k \'chest,chisel,dagger\'', 'drop the chest', 'close the chest', 'put the chisel on the chest', 'put the dagger on the chest',
+        'open the chest', 'look on the chest', 'take the chisel', 'put the chisel on the chest', 'close the chest', 'open the chest', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '');
+        const o = T.of('open the chest').after, chest = o && o.items.find(i => i.name === 'chest' && i.where === 'IW_SQUARE');
+        for (const n of ['chisel', 'dagger']) {
+          const t = o && o.items.filter(i => i.name === n && i.id && (i.where === 'IW_SQUARE' || (i.where === 'IW_ITEM' && chest && i.x === chest.n)));
+          if (!t || !t.length || t.some(i => i.where !== 'IW_SQUARE' || i.x !== chest.x || i.y !== chest.y)) f.push('the ' + n + ' not slid off onto the chest\'s square: ' + JSON.stringify(t));
+        }
+        inTurn(s, ['> open the chest', 'You open the chest: it\'s empty. A dagger and a chisel slide off the lid onto the floor.', '> look on the chest',
+          'There\'s nothing on the chest.', '> put the chisel on the chest', 'You put the chisel on the chest.', '> close the chest', 'You close the chest.',
+          '> open the chest', 'You open the chest: it\'s empty. A chisel slides off the lid onto the floor.'], f, 'the words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0comppocket', near: ['gear', 'parser'], what: 'Dingus Quest Zero\'s backpack\'s side pocket and a compartment named by its own name (the user\'s, 2026-11-16: DECISIONS.md\'s "Compartments: the second stage"): at seed 3 (dq0 -T, a chisel more) the chisel put in the side pocket by its name (the one name match: the catalogue\'s comps\' noun, the chooser\'s; its record in the backpack, its y IC_MARK | CP_IN << 4 | 1), looked in ("In the side pocket lies a chisel."), tied shut, the chisel not taken from it closed ("The side pocket is closed."), untied (what it shows told), the chisel taken out; "take the pocket" not a thing ("You see no pocket here."); the backpack examined, its inside\'s things alone',
+      init: 't_rc', cycles: 2000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k chisel', 'put the chisel in the side pocket', 'look in the pocket', 'close the pocket', 'take the chisel from the pocket',
+        'open the pocket', 'take the chisel from the pocket', 'take the pocket', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '');
+        const { IC_MARK, CP_IN } = require('../../../games/dq0/hubgen.js').load().C;   // (items.h's)
+        const st = T.of('put the chisel in the side pocket').after, pk = st && st.items.find(i => i.name === 'backpack');
+        const ch = st && pk && st.items.find(i => i.name === 'chisel' && i.where === 'IW_ITEM' && i.x === pk.n);
+        if (!ch || ch.y !== (IC_MARK | CP_IN << 4 | 1)) f.push('the chisel not in the side pocket, the backpack\'s compartment 1: ' + JSON.stringify(ch));
+        inTurn(s, ['> put the chisel in the side pocket', 'You stow the chisel in your side pocket.', '> look in the pocket', 'In the side pocket lies a chisel.',
+          '> close the pocket', 'You tie the side pocket shut.', '> take the chisel from the pocket', 'The side pocket is closed.', '> open the pocket',
+          'You untie the side pocket, revealing a chisel.', '> take the chisel from the pocket', 'You take the chisel in your right hand.', '> take the pocket',
+          'You see no pocket here.'], f, 'the words: ');
+        const tk = T.of('open the pocket'), t2 = T.after(tk, 'take the chisel from the pocket').after;
+        if (!t2 || !dq0Carried(t2).some(i => i.name === 'chisel' && i.where === 'IW_ACTOR')) f.push('the chisel not taken out of the side pocket');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0compdesk', near: ['gear'], what: 'Dingus Quest Zero\'s desk (furniture, the user\'s, 2026-11-16: DECISIONS.md\'s "Compartments: the second stage"): a lock on a compartment past the first and a hidden one, by the words and the records; at seed 3 (dq0 -T, a kit of a desk, a key after it, a chisel: the key its drawer\'s, the drawer closed and locked, the kit\'s rule) the desk set down: "open the drawer" refused ("The drawer is locked."), unlocked with its key, opened, the chisel put in it and looked in, closed and locked again (its holder\'s fuel\'s CS_LOCKED, its shut\'s closed bit); its secret niche unnamed till found ("You see no niche here."), found by a search (the referee\'s test: "You find a secret niche in the desk."), a dagger put in it, looked in, found again by a search ("In the secret niche you find a dagger.")',
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k \'desk,key,chisel\'', 'drop the desk', 'drop the torch', 'open the drawer', 'unlock the drawer', 'open the drawer',
+        'put the chisel in the drawer', 'look in the drawer', 'close the drawer', 'lock the drawer', 'open the drawer', 'look in the secret niche', 'search the desk',
+        'put the dagger in the niche', 'look in the niche', 'search the desk', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '');
+        const { CS_LOCKED, IS_SHUT_C1 } = Object.assign({ IS_SHUT_C1: 0x20 }, require('../../../games/dq0/hubgen.js').load().C);   // (items.h's)
+        const st = T.of('lock the drawer').after, dk = st && st.items.find(i => i.name === 'desk');
+        if (!dk || !(dk.fuel & CS_LOCKED) || !(dk.shut & IS_SHUT_C1)) f.push('the desk\'s drawer not closed and locked: ' + JSON.stringify(dk));
+        inTurn(s, ['> open the drawer', 'The drawer is locked.', '> unlock the drawer', 'You unlock the drawer with its key.', '> open the drawer',
+          'You open the drawer: it\'s empty.', '> put the chisel in the drawer', 'You put the chisel in the drawer.', '> look in the drawer', 'In the drawer lies a chisel.',
+          '> close the drawer', 'You close the drawer.', '> lock the drawer', 'You lock the drawer with its key.', '> open the drawer', 'The drawer is locked.',
+          '> look in the secret niche', 'You see no niche here.', '> search the desk', 'You find a secret niche in the desk.', '> put the dagger in the niche',
+          'You put the dagger in the secret niche.', '> look in the niche', 'In the secret niche lies a dagger.', '> search the desk',
+          'In the secret niche you find a dagger.'], f, 'the words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0compcase', near: ['gear'], what: 'Dingus Quest Zero\'s case (furniture, the user\'s, 2026-11-16: DECISIONS.md\'s "Compartments: the second stage"): a lid\'s top by its holder\'s size and a hidden compartment, by the words and the records; at seed 3 (dq0 -T, a kit of a case, a chest, a rope and a chisel) the case set down: the rope too big for its lid\'s top (5 pints, a quarter of its 20: items.h\'s LID_BULK), the chisel put there; the case closed and opened, the chisel sliding off its lid; searched till its false bottom\'s found (the referee\'s search test, a hidden compartment\'s: "You find a false bottom in the case.", its record\'s CS_FOUND), after that known; the case closed, the false bottom closed with it (reached through its inside: "The case is closed."), the case opened and the false bottom still closed; the rope put on the chest\'s lid (20 pints, the chest\'s 80)',
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k \'case,chest,rope,chisel\'', 'drop the case', 'drop the torch', 'put the rope on the case', 'put the chisel on the case',
+        'close the case', 'open the case', 'search the case', 'search the case', 'search the case', 'close the case', 'open the bottom', 'open the case',
+        'look in the bottom', 'close the chest', 'put the rope on the chest', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '');
+        const { CS_FOUND } = require('../../../games/dq0/hubgen.js').load().C;   // (items.h's)
+        const st = T.of('look in the bottom').after, cs = st && st.items.find(i => i.name === 'case');
+        if (!cs || !(cs.fuel >> 4 & CS_FOUND)) f.push('the case\'s false bottom not found, its record\'s: ' + JSON.stringify(cs));
+        inTurn(s, ['> put the rope on the case', 'There\'s no room there for the rope.', '> put the chisel on the case', 'You put the chisel on the case.',
+          '> close the case', 'You close the case.', '> open the case', 'You open the case: it\'s empty. A chisel slides off the lid onto the floor.'], f, 'the words: ');
+        if ((s.match(/You find a false bottom in the case\./g) || []).length !== 1) f.push('the false bottom not found once by the searches');
+        inTurn(s, ['> close the case', 'You close the case.', '> open the bottom', 'The case is closed.', '> open the case', 'You open the case: it\'s empty.',
+          '> look in the bottom', 'The false bottom is closed.', '> close the chest', 'You close the chest.', '> put the rope on the chest', 'You put the rope on the chest.'], f, 'the words: ');
         return f;
       },
       sdcard: true
