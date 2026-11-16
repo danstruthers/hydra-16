@@ -925,6 +925,16 @@ LI.and              +" and "
 LI.comma            +", "
 LI.semi             +"; "
 
+# A thing's own words, the world's (items.h's SAY_LI: things.c's words, the inventory's list, a search's finds, what's in
+# a thing; refuse.c's tt_words, words.c's list_say): its count's way (nf: none, "a", "some", "two", "12", "12 pints of"),
+# its noun's (pf: as it is, more than one, {single} one of a lot's, "ration"), its state; q its count, text its kind's name
+
+@n10        "{q?no|one|two|three|four|five|six|seven|eight|nine|ten}"
+@state      "{dur?| (nearly broken)| (battered)}{lt?| (lit)}{fuel?| (empty)| (spent)| (burning low)| (nearly spent)}"
+            "{wear?| (dull)| (dulled)| (bloody)| (soiled)| (worn)}{shut?| (unstoppered)| (closed)}"
+
+LI.item             +"{nf?|{a} |some |{@n10} |{q} |{q} pints of }{pf?{text}|{plural}|{single}}{@state}"
+
 # ---- The rope's and the drag's (UK_SA, their codes past 127: items.h's SAY_AT2; wrope.h's rp_say, wdrag.c's dsay; their
 # free text before: narration as data's rest, 2026-11-15).  text the thing's name (what the rope's tied to, the thing
 # shoved), each begun on a line of its own as it was

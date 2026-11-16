@@ -34,7 +34,7 @@
 //   SC_POSS (after the actor: "r", "'s"); SC_WORD N; SC_ROOM F, SC_REL F,
 //   SC_TRAP F G, SC_KIND F, SC_NAME F, SC_PIECE P (each F and P there plus 1: no 0 in a text); SC_EXT X (the look's
 //   lists, 2026-11-16: X 1 the UI's list joined ", " and " and ", 2 joined "; ", 3 joined ", "; 4 the text made more
-//   than one, 5 a people's way; 6 "A", "An" before a vowel).  A field the slot's whole word: its operation SF_WORD
+//   than one, 5 a people's way; 6 "A", "An" before a vowel; 7 one of a lot's, "ration").  A field the slot's whole word: its operation SF_WORD
 //   (4), its sixteen bits read (a count past 255)
 'use strict';
 const fs = require('fs');
@@ -48,7 +48,7 @@ const SRC = path.join(__dirname, 'said.txt'), OUT = path.join(ROOT, 'obj', 'gen'
 const SC = { NL: 0x01, END: 0x1E, ALT: 0x1F, POSS: 0x7F, NUM: 0x80, CHOOSE: 0xA0, CHANGED: 0xC0, STR: 0xE0, S: 0xE8,
   A: 0xE9, LIGHT: 0xEA, FORGET: 0xEB, ARG: 0xEC, SING: 0xED, IF: 0xF0, ROOM: 0xF8, TRAP: 0xF9, REL: 0xFA, PIECE: 0xFB,
   KIND: 0xFC, NAME: 0xFD, WORD: 0xEE, ITS: 0xEF, STR2: 0xFE, EXT: 0xFF };
-const EXT = { list: 1, 'list;': 2, 'list,': 3, plural: 4, people: 5, A: 6 };   // (SC_EXT's: said.c's li, plural, SC_A's)
+const EXT = { list: 1, 'list;': 2, 'list,': 3, plural: 4, people: 5, A: 6, single: 7 };   // (SC_EXT's: said.c's li, plural, SC_A's)
 const FMAX = 126;                                            // (Fields at most: a condition's byte its index, | 0x80 one value, 0xFF none;
                                                               //   SC_NUM, SC_CHOOSE, SC_CHANGED + 31 and a byte past the 31st, 2026-11-12)
 const WORDS_MAX = 180;                                        // (The words said as SC_WORD and a byte, at most: 180 since

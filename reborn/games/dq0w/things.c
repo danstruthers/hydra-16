@@ -4874,12 +4874,16 @@ void __fastcall__ lput (unsigned key, unsigned* low);
 #define let_put(i)      (hub_map (UI_BANK), lput (tw.id ? tw.id : (i) | LT_REC, UIREC->low))
 
 /* A thing in words (tw, twk its kind's): its kind, how many, and what anyone can see of its state (its make and worth
-** are an appraiser's to judge) */
+** are an appraiser's to judge).  Coded, the UI's to word (items.h's SAY_LI: how its count is said, its noun's form, its
+** state, its count, its kind's name, SAY_SEP), by said.txt's LI.item: the list renderer's (the look's lists, the user's,
+** 2026-11-16; its words put here before, many's for a count, part 105's) */
 static void words (void)
 {
-    static char b[6];
+    static char b[6];                           /* (Its id's digits: the world's BSS as it was, the step's cost with it,
+                                                **   dq0traces') */
     static unsigned char c;
     static unsigned q;
+    unsigned char f, s, w;
 
     c = twk->keeps & KF_CLOSES;
     if (tw.flags & I_NAMED) {                   /* (A name the character gave it: its id, marked for the UI, "#12 a
@@ -4889,46 +4893,42 @@ static void words (void)
         put (" ");
     }
     q = tw_sum ? tw_sum : tw.qty;
-    if (tw_n > 1 && tw_n < 4 && (tw.kind == KI_TORCH || tw.kind == KI_OIL)) {   /* (The kit's own spares: every character's list,
-                                                **   no part swapped for them, 50K cycles: dq0answer's D17, 2026-11-03) */
-        put (tw_n == 2 ? "two " : "three ");
-        put (tw.kind == KI_TORCH ? "torches" : "flasks of oil");
-    } else if (tw_n > 1 || (q == 1 && (twk->form & KF_COUNT))) {
-        many (tbuf, tw_n > 1 ? tw_n : 1, tw.kind);   /* (Alike, told together; one of a lot, "a ration") */
-        put (tbuf);
+    if (tw_n > 1 || (q == 1 && (twk->form & KF_COUNT))) {   /* (Alike, told together, "two sacks"; one of a lot, "a
+                                                **   ration": as many's words them) */
+        if ((q = tw_n > 1 ? tw_n : 1) == 1) {
+            f = (twk->flags & K_PLURAL && !(twk->form & KF_COUNT) ? LN_SOME : LN_A) | (twk->form & KF_COUNT ? LN_SINGLE :
+                0);
+        } else {
+            f = (q <= 10 && !(twk->form & KF_COUNT) ? LN_FEW : LN_COUNT) | (twk->flags & K_PLURAL ? 0 : LN_PLURAL);
+        }
     } else {
-        if (q > 1) {
-            put (utoa (q, b, 10));
-            put (tw.kind == KI_WATER ? " pints of " : " ");
-        } else if (!(twk->flags & K_PLURAL)) {
-            put (strchr ("aeiou", twk->name[0]) ? "an " : "a ");
-        }
-        put (twk->name);
+        f = q > 1 ? (tw.kind == KI_WATER ? LN_PINTS : LN_COUNT) : twk->flags & K_PLURAL ? 0 : LN_A;
     }
-    if (tw.dur_max) {
-        if (tw.dur * 10 < tw.dur_max) {
-            put (" (nearly broken)");
-        } else if (tw.dur * 3 < tw.dur_max) {
-            put (" (battered)");
-        }
-    }
-    if (tw.flags & I_LIT) {
-        put (" (lit)");
-    }
+    s = !tw.dur_max ? 0 : tw.dur * 10 < tw.dur_max ? 1 : tw.dur * 3 < tw.dur_max ? 2 : 0;   /* (Nearly broken, battered) */
+    s |= tw.flags & I_LIT ? 4 : 0;
     if (tw.id && tw.fuel <= BURN_LOW && (tw.fuel || (twk->flags & K_LIGHT) || (unsigned char) (tw.kind - KI_OIL) <=
         KI_PITCH - KI_OIL) && burn_of (tw.kind)) {  /* (A light spent or low, a fuel empty: slice 4.1's; only a
                                                 **   light's or a fuel's spent, burn_of not asked of the rest) */
-        put (!(twk->flags & K_LIGHT) ? (tw.fuel ? "" : " (empty)") : !tw.fuel ? " (spent)" : tw.flags & I_LIT ? " (burning low)" : " (nearly spent)");
+        s |= (!(twk->flags & K_LIGHT) ? (tw.fuel ? 0 : 1) : !tw.fuel ? 2 : tw.flags & I_LIT ? 3 : 4) << 3;   /* (Empty,
+                                                **   spent, burning low, nearly spent) */
     }
-    if (tw.wear >= 32) {                        /* (Its wear: a blade dulled, a tool worn) */
-        put (!(twk->flags & K_BELT) && (twk->slots == FM_SWORD || twk->slots == FM_KNIFE) ? (tw.wear >= 128 ?
-            " (dull)" : " (dulled)") : MT_TEXTILE (tw.mat) && tw.wear >= 128 ? (tw.wear == CL_BLOODY ? " (bloody)" :
-            " (soiled)") : " (worn)");          /* (A cloth's cleanliness: HOUSE.md's bandages, 2026-11-10) */
-    }
+    w = tw.wear < 32 ? 0 : !(twk->flags & K_BELT) && (twk->slots == FM_SWORD || twk->slots == FM_KNIFE) ? (tw.wear >= 128 ?
+        1 : 2) : MT_TEXTILE (tw.mat) && tw.wear >= 128 ? (tw.wear == CL_BLOODY ? 3 : 4) : 5;   /* (Its wear: a blade dull,
+                                                **   dulled; a cloth bloody, soiled (HOUSE.md's bandages, 2026-11-10);
+                                                **   worn) */
     if (c == KF_STOPPER ? tw.id && !(tw.shut & IS_CLOSED) : c && (tw.shut & IS_CLOSED)) {
-        put (c == KF_STOPPER ? " (unstoppered)" : " (closed)");    /* (What closes it: a lid, a tie, shut; a stopper
-                                                **   out) */
+        w |= c == KF_STOPPER ? 8 : 16;          /* (What closes it: a stopper out; a lid, a tie, shut) */
     }
+    tbuf[0] = SAY_LI;
+    tbuf[1] = f | 0x80;
+    tbuf[2] = s | 0x80;
+    tbuf[3] = w | 0x80;
+    tbuf[4] = q | 0x80;
+    tbuf[5] = q >> 7 | 0x80;
+    tbuf[6] = 0;
+    put (tbuf);
+    put (twk->name);
+    put ("\2");
 }
 
 /* A thing in words, any (part 11's to the others: its record copied, its words put as the text is going) */

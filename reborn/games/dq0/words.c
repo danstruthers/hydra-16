@@ -513,7 +513,9 @@ void o_words (void)
 #pragma code-name (push, "OV16CODE")
 #pragma rodata-name (push, "OV16RODATA")
 #pragma local-strings (push, on)
-/* What's carried told (the things' words, IO_LIST's: past lb's size in pieces, each ending at a word's end) */
+/* What's carried told (the things' words, IO_LIST's): a line at a time, each thing's own words worded (tt_words: the
+** world's SAY_LI, said.txt's LI.item, the look's lists, 2026-11-16; in pieces of lb's size before, each ending at a
+** word's end) */
 void __fastcall__ o_list_say (unsigned char first)
 {
     unsigned off = 9, n;                        /* (Past "You carry": told before the world's asked, the user's D17) */
@@ -524,18 +526,26 @@ void __fastcall__ o_list_say (unsigned char first)
         t_flush ();
         return;
     }
-    do {
-        hub_mem (UI_BANK, lb, UIREC->things_text + off, sizeof lb - 1);
-        lb[sizeof lb - 1] = 0;
-        n = strlen (lb);
-        e = 0;
-        if (n == sizeof lb - 1 && (e = strrchr (lb, ' ')) != 0) {
-            *e = 0;
-            n = e - lb;
+    for (;;) {
+        for (n = 128; ; n = sizeof lb - 1) {    /* (Its line, as the world put it: 128 bytes read first, a line
+                                                **   short, the rest of lb's if not) */
+            hub_mem (UI_BANK, lb, UIREC->things_text + off, n);
+            lb[n] = 0;
+            if (!*lb || (e = strchr (lb + 1, '\n')) != 0 || strlen (lb) < n || n == sizeof lb - 1) {
+                break;
+            }
         }
+        if (!*lb) {
+            break;
+        }
+        if (e) {
+            *e = 0;
+        }
+        n = strlen (lb);
+        tt_words (0);                           /* (Its codes worded, the line's rest kept: not read again) */
         say (lb);
         off += n;
-    } while (e);
+    }
 }
 
 #pragma local-strings (pop)

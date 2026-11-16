@@ -390,9 +390,9 @@ enum { LF_LIE, LF_WHERE, LF_IN, LF_PACKED, LF_DEN, LF_GONE, LF_STIRS, LF_NOSTIR,
                                                 /* (UK_LIST's: things lying about, by where (seen.c's), in a sconce, the
                                                 **   drawing things packed; a denizen seen, gone from sight, the stirs
                                                 **   (dens.c's); the walls felt in the dark (task.c's touch_words)) */
-enum { LI_THING, LI_DEN, LI_TOUCH, LI_AND, LI_COMMA, LI_SEMI };
+enum { LI_THING, LI_DEN, LI_TOUCH, LI_AND, LI_COMMA, LI_SEMI, LI_ITEM };
                                                 /* (UK_LI's: a thing seen, a denizen, a kind of wall felt and its sides;
-                                                **   the words between them) */
+                                                **   the words between them; a thing's own words, the world's: SAY_LI) */
 struct li {                                     /* A list's entry (said.c's li: its fields where a struct msg has them,
                                                 **   msgs.def's UK_LI) */
     unsigned char   kind, who, a, b;

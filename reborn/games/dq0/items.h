@@ -534,6 +534,19 @@ enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE, IR_NO, IR_FIXED, IR_FUMBL
 #define SAY_SEP         0x02
 #define SAY_AT2         0x03                    /* (A code past 127: SAY_AT2, its SA_* | 0x80, the rest as SAY_AT's; the
                                                 **   rope's and the drag's, 2026-11-15) */
+#define SAY_LI          0x04                    /* (A thing's own words, coded (things.c's words: the inventory, a search's
+                                                **   finds, what's in a thing): SAY_LI, how its count is said and its
+                                                **   noun's form (LN_*) | 0x80, its state | 0x80 (bits 0-1 nearly broken,
+                                                **   battered; 2 lit; 3-5 empty, spent, burning low, nearly spent), its
+                                                **   wear | 0x80 (bits 0-2 dull, dulled, bloody, soiled, worn; 3
+                                                **   unstoppered, 4 closed), its count's low seven bits | 0x80 and its
+                                                **   next seven | 0x80, its kind's name, SAY_SEP: worded by said.txt's
+                                                **   LI.item, the UI's list renderer; the look's lists, the user's,
+                                                **   2026-11-16) */
+enum { LN_NONE, LN_A, LN_SOME, LN_FEW, LN_COUNT, LN_PINTS };    /* (SAY_LI's count: none, "a", "some", "two", "12",
+                                                **   "12 pints of") */
+#define LN_PLURAL       8                       /* (Its noun made more than one, "sacks") */
+#define LN_SINGLE       16                      /*   (or one of a lot's, "a ration", "a penny") */
 enum {
     SA_HOLD, SA_SHIFT, SA_HELD, SA_HANDS, SA_STOW, SA_NO_PACK, SA_THERE, SA_PUT_IN, SA_PUT_ON, SA_HANG, SA_NO_HANG,
     SA_NO_SLOT, SA_NO_BELT, SA_NOT_HOLDER, SA_RUN_OUT, SA_WONT_GO, SA_ITSELF, SA_PUT_OUT, SA_NO_ROOM, SA_TOO_HEAVY,

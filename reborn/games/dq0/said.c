@@ -159,12 +159,22 @@ static const unsigned char* __fastcall__ row (unsigned char o)
 }
 
 /* A kind's word made more than one ({plural}: "iron pots", "heaps of sand", its first word's before " of "; {people}, p
-** 1: the whole, "dwarves"), the text given (said_s[2]) */
+** 1: the whole, "dwarves"), or one ({single}, p 2: one of a lot's, "rations" a "ration", "pennies" a "penny", as the
+** world's many words it), the text given (said_s[2]) */
 static void __fastcall__ plural (unsigned char p)
 {
     const char* n = said_s[2];
     unsigned char k, c;
 
+    if (p == 2) {
+        strcpy (sp, n);
+        if ((k = strlen (sp)) > 3) {
+            c = sp[k - 3] == 'i' && sp[k - 2] == 'e';
+            strcpy (sp + k - (c ? 3 : 1), c ? "y" : "");
+        }
+        sp += strlen (sp);
+        return;
+    }
     if (p) {
         k = strlen (n);
     } else {
@@ -378,8 +388,8 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
             case SC_EXT:                        /* (The look's lists': a list, a plural, "A") */
                 if (v < 3) {
                     li (v);
-                } else if (v < 5) {
-                    plural (v - 3);
+                } else if (v != 5) {
+                    plural (v == 6 ? 2 : v - 3);
                 } else {
                     art = sp - lb + 1;
                     *sp++ = 'A';
