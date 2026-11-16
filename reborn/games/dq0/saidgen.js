@@ -27,7 +27,8 @@
 //                              said_dw: a text's codes 2-8 and 11-29 the first 26, then SC_WORD and a byte, N, the
 //                              26 + N - 1th (the rows' bank's room, and the bytes read in as the game starts)
 //   A text's bytes: the letters as they are ('\n' a new line); SC_NL a line of its own; SC_NUM + F the field F's value;
-//   SC_CHOOSE + F, SC_CHANGED + F a block: its alternatives' texts between SC_ALT, ended by SC_END; SC_STR + 2K (+ 1
+//   SC_CHOOSE + F, SC_CHANGED + F a block: its alternatives' texts between SC_ALT, ended by SC_END, each its length
+//   first (a byte: the bytes to its SC_ALT or SC_END, passed over in a read; 2026-11-16); SC_STR + 2K (+ 1
 //   capitalised) the UI's word K (obj, instr, text, actor); SC_IF + K a block, a choice by the word K given (actor: a
 //   denizen), SC_IF + 4 by the UI's number; SC_S, SC_A, SC_LIGHT, SC_FORGET, SC_ARG, SC_SING, SC_ITS ("your", "its"),
 //   SC_POSS (after the actor: "r", "'s"); SC_WORD N; SC_ROOM F, SC_REL F,
@@ -337,6 +338,35 @@ function generate(H, say = () => {}) {
       last = e;
     }
     out.push(...b.slice(last));
+    t.r.b = out;
+  }
+  // (Each alternative of a block (a choice, a text said if changed, a word's choice) its length first, its bytes to the
+  // SC_ALT or SC_END that ends it: the renderer passes over one in a read, not a byte at a time (the look's lists,
+  // 2026-11-16: a denizen's doings, twenty-three of them, some 300 bytes read one at a time, 40,000 cycles a sentence))
+  const width = c => c === SC.TRAP ? 3 : c >= SC.ROOM || c === SC.WORD || (c >= SC.NUM && c < SC.STR && (c & 0x1F) === 31) ? 2 : 1;
+  const opens = c => (c >= SC.CHOOSE && c < SC.STR) || (c >= SC.IF && c < SC.ROOM);
+  const lens = (b, i, out, name) => {                         // (b's bytes from i to the 0, SC_ALT or SC_END that ends
+    while (i < b.length) {                                    //   them, into out, the blocks' alternatives each its
+      const c = b[i];                                         //   length first: where it ended)
+      if (c === 0 || c === SC.ALT || c === SC.END) return i;
+      const w = width(c);
+      out.push(...b.slice(i, i + w));
+      i += w;
+      if (!opens(c)) continue;
+      for (;;) {
+        const alt = [];
+        i = lens(b, i, alt, name);
+        if (alt.length > 254) throw new Error('saidgen: ' + name + ', an alternative past 254 bytes');
+        out.push(alt.length, ...alt, b[i]);
+        if (b[i++] === SC.END) break;
+      }
+    }
+    return i;
+  };
+  for (const t of texts) {
+    const out = t.r.b.slice(0, t.from), e = lens(t.r.b, t.from, out, t.r.c);
+    if (t.r.b[e] !== 0) throw new Error('saidgen: ' + t.r.c + ', a block not closed');
+    out.push(...t.r.b.slice(e));
     t.r.b = out;
   }
   for (const r of rows) if (r.row) {                          // (A row's length first: the next row's found at once)

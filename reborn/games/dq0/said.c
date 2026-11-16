@@ -81,40 +81,10 @@ static char* __fastcall__ name (unsigned char n)
     return sp + 4;
 }
 
-/* Past the code at p, and its bytes */
-static const unsigned char* __fastcall__ step (const unsigned char* p)
-{
-    unsigned char c = RB (p);
-
-    ++p;
-    return c == SC_TRAP ? p + 2 : c >= SC_ROOM || c == SC_WORD || (c >= SC_NUM && c < SC_STR && (c & 0x1F) == SC_FX) ? p + 1 : p;
-}
-
-/* From an alternative's start to the SC_ALT or SC_END after it (the blocks in it passed over) */
-static const unsigned char* __fastcall__ over (const unsigned char* p)
-{
-    unsigned char d = 0, c;
-
-    for (;;) {
-        c = RB (p);
-        if (c < SC_NUM && c != SC_ALT && c != SC_END) {
-            ++p;                                /* (A letter: step's, its byte not read again; a sentence's first
-                                                **   words the sooner, 2026-11-12) */
-            continue;
-        }
-        if (c == SC_ALT || c == SC_END) {
-            if (!d) {
-                return p;
-            }
-            if (c == SC_END) {
-                --d;
-            }
-        } else if ((c >= SC_CHOOSE && c < SC_STR) || (c >= SC_IF && c < SC_ROOM)) {
-            ++d;
-        }
-        p = step (p);
-    }
-}
+/* From an alternative's start (its length, a byte: saidgen.js's, 2026-11-16) to the SC_ALT or SC_END after it, in a
+** read (each byte through said_b before: a block's alternatives some 100 cycles a byte, a long choice's tens of
+** thousands) */
+#define over(p)         ((p) + 1 + RB (p))
 
 /* lb's words so far said (an "a" made "an" first, if its word begins with a vowel), lb begun again */
 static void flush (void)
@@ -208,7 +178,7 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
                 }
                 p = q + 1;
             }
-            for (p = run (p); RB (p) != SC_END; p = over (p + 1)) {
+            for (p = run (p + 1); RB (p) != SC_END; p = over (p + 1)) {
             }
             ++p;
             continue;
@@ -217,7 +187,7 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
             v = fv (f);
             if (v != said_last[sk]) {
                 said_last[sk] = v;
-                p = run (p);
+                p = run (p + 1);
             } else {
                 p = over (p);
             }
