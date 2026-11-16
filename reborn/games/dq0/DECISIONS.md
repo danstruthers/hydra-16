@@ -6343,3 +6343,140 @@ build of group 4 before `last SA`).
 - **A turn always says "You turn to face ..."**, whatever's typed after it: the turn's event carries what it needs,
   the command queue not read as it's told.  To build.
 - **The well's words get a reader of their own**, so they become rows of the table, the words the same.  To build.
+
+## The turn's words, the well's, the look's lists (the user's, 2026-11-16; as built, for review: ENGINE-CRITIQUE.md's §3.2 and row 5's Left)
+
+Three of the eight answers of 2026-11-16 (the entry before): a turn always "You turn to face ...", the look's lists a
+list renderer (the phrases in the table, the words the same), the well's words a reader of their own.  Built a stage a
+commit, the suite after each, with one more before the lists: the renderer passes over a block's alternatives in a read
+(without it the lists' words were over their budgets).  Every dq0 test's screen was kept before and after each stage (a
+hook in sim/test.js, not committed) and compared a sentence at a time (sent.js; and a copy of it that joins a
+paragraph's wrapped lines first, so a sentence re-wrapped by a shorter one before it reads the same).
+
+**1. A turn always "You turn to face ..." (cde43ae0).**  The world's I_TURN puts the heading the character believes it
+faces now (its pc_face and pc_skew) in its E_VIEW V_FACING's b, | 32, and task.c's turned_says words it by that
+(said.txt's SELF.face).  The command queue isn't read as the words are told: it was read to word the way it turned
+("You turn left, to face south.", the parser's CQ_REL), and a command typed after the turn could be found there instead
+(dq0prompt's typed-ahead race: "You turn to face south." or "You turn left, to face south." by the timing).  SELF.turn
+and MY_TURN gone.  **What the player sees:** every "You turn <way>, to face <heading>." (left, right, half left, half
+right, around) is now "You turn to face <heading>.", the heading the same in every test (40 dq0 tests have such a turn).
+The expected strings changed for it alone: dq0answer's two turns ("You turn"), dq0newlight's six, dq0bearing's two,
+dq0reachstop's games 6 and 9 ("You turn to face").
+
+**2. The renderer passes over an alternative in a read (6805c3a7).**  A choice ({F?a|b|c}), a text said if a field's
+changed ({F!...}) and a choice by a word given had their alternatives read a byte at a time through said_b to find the
+one wanted and to pass the rest (said.c's over and step: some 100 cycles a byte).  The lists' first build made a
+denizen's doings a choice of twenty-three and every sentence of a look a row: dq0traces' step cost 1,937,871 cycles
+(budget 1,920,000) and dq0answer's normal-pace listen 904,490 (budget 760,000; a stir told before it).  Now saidgen.js
+puts each alternative's length first (a byte, after the dictionary's packing: its bytes to the SC_ALT or SC_END that
+ends it; one past 254 stops the build) and over is a read, the alternative's start and its length.  Every row is the
+quicker for it: the normal-pace listen 736,302 -> 641,930, the step 1,867,570 -> 1,860,371.  The rows 754 bytes more.
+
+**3. A list renderer for the look's lists (df2fb3e1).**  One renderer, said.c's.  A row's {list} says the UI's list
+(said_li: its frame's a entries, struct li each, its fields where a struct msg has them, so a row reads an entry as it
+reads an event), each entry by its own row (msgs.def's UK_LI: li, LI_*), joined by the table's own words: ", " and
+" and " before the last ({list}), "; " ({list;}), ", " ({list,}).  Its words besides: {plural} (a kind's name made more
+than one, its first word's before " of ", "heaps of sand"), {people} (a people's way, the whole, "dwarves"), {A} ("A",
+"An" before a vowel); an "a" made "an" as each entry is said (a list has several); a field a slot's whole word (a count
+past 255: saidgen's SF_WORD).  A sentence with a list is a UI kind of its own (UK_LIST: lf, LF_*), worded into lb at its
+end by list_words (overlay 27's, through its stub), its caller's add ()s streaming the sentences as before (lbsaid.s's;
+the stream's \002 and a sentence's first space still the caller's).
+- **seen.c's things lying about** (items: at its feet, on the floor its way, hidden, in a corner or against a wall,
+  on a surface, in a sconce): LIST.lie, where, in; each thing LI.thing ("two iron pots", "two lit torches", "a lit
+  torch", "some bones", "5 rations", "three small things", "something large"), its capital its entry's (w4: cap_of's,
+  given in the order it was); the drawing things packed, LIST.packed.  relname, few, plural, addn and one's words gone.
+- **dens.c's denizens** seen, gone from sight, and their stirs (tell_one, named, o_den_words, o_stir_words): LIST.den,
+  gone, stirs, nostir, heard; each LI.den ("Two giant rats", "The two giant rats", "The giant rat", "An adder",
+  "Something", "Two things", "Grub"); the doings a piece (@doing: the twenty-two, and many keeping their distance); its
+  gear and its way fields.  A denizen's name is copied to the C stack first: the renderer reads the main RAM, not overlay
+  9's bank (the first build said its plural from $FF bytes).  relname, count, few, doing, plural and addn gone.
+- **task.c's walls felt in the dark** (touch_words): LIST.touch, its kinds a list joined "; ", each LI.touch with its
+  sides ("a wall ahead, to your left and to your right"), the room known by {room d}.
+- **What the player sees:** nothing new (the transcripts: every dq0 test's sentences the same but the timing noise).
+- **dq0traces' step** 1,860,371 -> 1,913,687 (budget 1,920,000): a look every third square, its things and denizens
+  now said through the table; the step's cost moves with the layout too (1,844,902 after the well's stage, this code
+  the same; 1,871,885 after the world's things'): it's close to its budget, see below.
+
+**4. The well's words, a reader of their own (c851734b).**  wwell.c's "Far down, the well's shaft narrows to a crack the
+water seeps through: there's no climbing down it." and wwell2.c's "You let the torch fall into the well. A moment, and
+you hear a splash far below." (or down the shaft; it lodges a little way down; it lands) were plain words in the UI
+bank's trtext, the traces' text, said by E_VIEW's V_TRACED, which tt_words didn't read.  Now the world codes them as
+the things' sentences are coded (SAY_AT2, items.h's SA_WELL_CHOKED ... SA_SHAFT_LANDS, the thing's name), and words.c's
+reader of the traces' words has tt_words word a coded text: tt_words takes the text it reads again from after a
+code's words (things_text, as tt () reads it; trtext, the well's).  said.txt's seven SA rows and five pieces (@fallwell,
+@fallshaft, @lodges, @splash, @lands), after the rope's and the drag's.  The words the same (dq0well's).  This stage was
+built before the lists first: alone it put dq0answer's normal-pace listen at 761,724 (budget 760,000; 763,549 before
+the alternatives' lengths), a layout's timing, not its words (the listen 628,498 with the lists before it); so it's
+after them.
+
+**5. A thing's own words, the world's, by the same renderer (48cc76c0).**  things.c's words (part 11's: a thing in what's
+carried, a search's finds, what's in a thing or on it, every list the world makes of things) put a thing's words in the
+things' text: "a ", "two ", "12 pints of ", its name made more than one (many's, part 105's), " (lit)", " (battered)",
+" (closed)" ...  Now it puts a code (items.h's SAY_LI: how its count is said and its noun's form, LN_*; its state; its
+wear and what closes it; its count, fourteen bits; its kind's name as it is; SAY_SEP), and the UI words it by said.txt's
+LI.item, the list renderer's ({single}: one of a lot's, "a ration", "a penny", as many said it): tt_words where the
+things' text is read (a search's finds, a thing looked at and what's in it, a container opened), and words.c's
+list_say (the inventory) a line at a time, each line's code worded (tt_words with no text to read again: the line's
+rest kept in lb), not in pieces of lb's size as before.  The names stay plain in the text (the dig's tools are found by
+them, main.c's strstr), so the world's and_last (the last ", " made " and ") and the alike checks work as they did.
+many isn't swapped in for an inventory's alike things now.
+- **What the player sees:** nothing new.
+- **Its cost:** the inventory's whole answer takes longer, each thing worded through the table: dq0answer's inventory
+  1,494,406 -> 2,316,825 cycles to its last letter at the turns pace, 1,796,498 -> 2,693,172 at the normal (no budget;
+  its first letter, "You carry", told before the world's asked, as it was).  Its first build was slower still (some
+  10M: each line had tt_words word every code within its 250 bytes, the rest thrown away; now a line's alone).
+- **The world's BSS as it was:** words' digits keep their static (b[6]) though the code is put from tbuf: without it
+  every BSS variable after it moved six bytes and dq0traces' step cost 1,922,509 (the world's layout, as the rest's
+  first build found: "Narration as data, the rest").
+
+**Not moved, and why.**
+- **The world's lists' joins and frames**: ", " between a container's things, ", and " between a search's finds,
+  and_last's " and " (three copies, parts 36, 61, 62), "In the chest you find ", " (in it: ": still the world's text.
+  Each is put by the world a thing at a time in parts with little room, and the compartments' work is in those lines
+  now (comp2's: "(on it:", "(in it:", a compartment's own).  A list coded whole (its frame a row, its things entries,
+  the joins the renderer's) is the next step: open.
+- **A thing looked at's own sentences** ("Your torch is in your left hand. It's lit, burning low, with a lock."):
+  look_at's; sentences more than a list (its state's words joined ", "); SA rows and a coded state would take them.
+- **caps.c's "Which one?" words** (thing_said: "(E) a torch (lit), (F) a torch (spent)"): the inventory's words but
+  its own way with a count ("6 arrows" where the inventory says "six"); LI.item could word it, a form more.
+- **The worn places' phrases and the rope looked at** (wworn.c's, wrope2.c's), a count's words: as before.
+
+**Room** (bytes free, the build's table):
+
+| | before (8d476fbd, built here) | after the five stages |
+|---|---|---|
+| dq0's main RAM | 3,130 | 3,106 (said_li, list_words' stub, the library's: stage 3, 20; tt ()'s argument: stage 4, 4) |
+| dq0 overlay 2 (words.c: the traces' reader) | 32 | 18 |
+| dq0 overlay 9 (dens.c) | 156 | 1,188 |
+| dq0 overlay 12 (seen.c) | 72 | 614 |
+| dq0 overlay 16 (words.c's list_say) | 2,457 | 2,416 |
+| dq0 overlay 19 (task.c's turned_says) | 769 | 877 |
+| dq0 overlay 24 (refuse.c's tt_words) | 264 | 231 |
+| dq0 overlay 27 (said.c; the packer's: a part image out of it) | 89 | 2,062 |
+| dq0 overlays 28, 29, 30 (the rows) | 3, 618, 4,847 | 1, 6, 3,223 |
+| dq0 overlays 4, 15, 17, 20, parts 21, 23 (the packer's moves) | 4,086, 3,650, 2,540, 346, 4,053, 3,560 | 755, 4,097, 176, 3,039, 3,606, 4,007 |
+| dq0w's main RAM | 2,511 | 2,511 |
+| dq0w part 11 (words), its image overlay 5 | 101, 142 | 249, 290 |
+| dq0w part 53 (I_TURN), its image overlay 3 | 2,829, 29 | 2,815, 15 |
+| dq0w parts 103, 104 (the well's), part 104's image overlay 32 | 920, 2,296, 1,393 | 1,013, 2,501, 1,691 |
+| dq0d, dq0p, dq0s, dq0m, dq0harn | | untouched |
+
+**The start** (dq0starttime; budgets 245M and 325M): seed 1 233.9M at the base (8d476fbd, built here), 232.7M, 234.7M,
+233.8M, 233.1M and 233.6M after the five stages; seed 123456789 307.9M, 309.1M, 308.4M, 308.9M, 309.6M and 309.6M.
+
+**Tested:** all 452 tests pass after each stage.  dq0traces' step (budget 1,920,000): 1,868,123 at the base,
+1,867,570, 1,860,371, 1,913,687, 1,844,902, 1,871,885.  dq0answer's normal-pace listen (budget 760,000): 740,576 at the
+base, 736,302, 641,930, 628,498, 688,475, 735,609 (the turns pace's 539,160 at the base, 556,259 after); a look's first
+letter and its whole within theirs (650,000, 1,790,000).
+
+**Open, for the user.**
+- The world's lists whole (their frames and joins rows, a list coded as one), a thing looked at's sentences, and the
+  "Which one?" words by LI.item: the rest of the look's lists.
+- dq0traces' step and dq0answer's normal-pace listen are near their budgets, and each moves tens of thousands of
+  cycles with the code's layout, not its work: the step 6,313 under its budget after stage 3 and 1,922,509 in a build of
+  stage 5 with the world's BSS six bytes shorter; the listen 761,724 in the well's stage built alone, 735,609 after
+  stage 5.  The renderer reads a text's letters a byte at a time through said_b (some 40 cycles each, with run's loop
+  round it): a run of plain letters copied in one call (an assembly loop in the main RAM, some 40 bytes) would make
+  every row the quicker and give both some margin back.  Not built: the UI's main RAM (3,106) is its tightest room, and
+  the user's to weigh.
+- The inventory's answer the slower by its things' rows (above): a cost of one renderer.
