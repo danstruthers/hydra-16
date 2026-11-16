@@ -6325,3 +6325,21 @@ build of group 4 before `last SA`).
   command queue as the turn's words are said, and found the inventory's command there before ("You turn to face
   south.") and the turn's now ("You turn left, to face south."): the old race, moved by the code's timing, not a
   change of words.  The turn's own event carrying its way as said, read instead of the queue, would end it.
+
+## Compartments and narration: eight answers (the user's, 2026-11-16)
+
+- **Things on a chest's lid slide off when it's opened**, told as they fall to the floor.  To build.
+- **A lid's top holds by its chest's size**: each kind with a lid its own room and weight borne, from its footprint,
+  not one guess for all.  To build.
+- **Furniture is placed in the dungeon** (desks, cabinets, cases, shelves, with their compartments), as the placers'
+  rows; every seed's dungeon changes, accepted.  To build.
+- **All four compartment features are built next**: a compartment named by its noun ("open the drawer", "look on
+  the lid"), locks on compartments other than the first, hidden compartments (a false bottom, a secret drawer) and
+  how a search finds them, the backpack's side pocket.  To build.
+- **Every reader of a thing's place knows its compartment**: an ally's errand fetch, the letters' "the open chest",
+  the choice of where to stow, the nested inventory (a thing on a carried chest's lid "on it", not "in it").  To build.
+- **The look's lists get a list renderer** (what's seen, denizens and their stirs, touch, the inventory, a thing
+  looked at, a search's finds), the phrases in the table, the words the same.  To build.
+- **A turn always says "You turn to face ..."**, whatever's typed after it: the turn's event carries what it needs,
+  the command queue not read as it's told.  To build.
+- **The well's words get a reader of their own**, so they become rows of the table, the words the same.  To build.
