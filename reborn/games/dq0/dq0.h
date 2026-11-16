@@ -485,7 +485,8 @@ unsigned char __fastcall__ look_way (unsigned char action);  /* Part 6: "look no
                                                 **   the door", "sniff" (the command's action, VB_*); VB_NONE: a
                                                 **   listen's or a sniff's end (main.c's E_READY); a thing examined,
                                                 **   its aspects: 0, or a door's work to do (PA_CHECK) */
-void focus_words (void);                        /* Overlay 13: a look one way's words, into lb (words.c's) */
+void __fastcall__ look_ov (unsigned char action);    /* Part 17: look_way's from an overlay, the window put back */
+void focus_words (void);                       /* Overlay 13: a look one way's words, into lb (words.c's) */
 extern unsigned char lsn;                       /* (main.c's: a listen, 1 one way, 2 about; 0, none) */
 void __fastcall__ bg_words (unsigned char what);    /* Part 11 (main.c's): the background heard, the draught felt */
 extern unsigned long heard_at;                  /* (main.c's: when a sound was last told, */

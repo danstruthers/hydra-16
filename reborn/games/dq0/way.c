@@ -439,6 +439,20 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
     return 0;
 }
 
+/* A look one way asked from an overlay's code (hthings.c's H_LOOK_IN, overlay 1: "look into the passage"): look_way's,
+** the hub's header in the window for it, then the window put back as it found it.  Its calls leave the hub's bank in
+** the window (things (), a thing looked at): the overlay's code, returned to there, ran in it (2026-11-16: "look in the
+** far side", "look in the side pocket" ended the game); and the hub's header written as it read, the overlay's bank
+** in the window, written in that instead (othings' way, main.c's) */
+void __fastcall__ s_look_ov (unsigned char action)
+{
+    unsigned w = hub_here ();
+
+    hub_map (0);
+    look_way (action);
+    hub_back (w);
+}
+
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 

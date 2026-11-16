@@ -1589,6 +1589,33 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0sidepocket', near: ['gear', 'parser'], what: 'Dingus Quest Zero\'s side pocket named whole, and a look into a side of the room (2026-11-16: DECISIONS.md\'s "A look in from an overlay, the side pocket named whole"): at seed 3 (dq0 -T, a chisel more) "the side pocket" typed whole (the parser\'s "side" a side of the room, OB_SIDE, its word "pocket": the resolver\'s, the backpack\'s compartment named by its own name, a compartment\'s noun before a way) put into, looked in ("In the side pocket lies a chisel."), tied shut ("You tie the side pocket shut."), looked in closed, untied, the chisel taken from it; "look in the far side" (the look one way asked from overlay 1\'s code, hthings.c\'s H_LOOK_IN: the hub\'s bank left in the window ended the game, its words the world\'s raw text) a look about, the game going on to its look and its quit',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k chisel', 'put the chisel in the side pocket', 'look in the side pocket', 'close the side pocket',
+        'look in the side pocket', 'open the side pocket', 'take the chisel from the side pocket', 'look in the far side', 'look in the side pocket', 'look',
+        'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '');
+        const { IC_MARK, CP_IN } = require('../../../games/dq0/hubgen.js').load().C;   // (items.h's)
+        const st = T.of('put the chisel in the side pocket').after, pk = st && st.items.find(i => i.name === 'backpack');
+        const ch = st && pk && st.items.find(i => i.name === 'chisel' && i.where === 'IW_ITEM' && i.x === pk.n);
+        if (!ch || ch.y !== (IC_MARK | CP_IN << 4 | 1)) f.push('the chisel not in the side pocket, the backpack\'s compartment 1: ' + JSON.stringify(ch));
+        inTurn(s, ['> put the chisel in the side pocket', 'You stow the chisel in your side pocket.', '> look in the side pocket', 'In the side pocket lies a chisel.',
+          '> close the side pocket', 'You tie the side pocket shut.', '> look in the side pocket', 'The side pocket is closed.', '> open the side pocket',
+          'You untie the side pocket, revealing a chisel.', '> take the chisel from the side pocket', 'You take the chisel in your right hand.',
+          '> look in the far side', 'You can see part of a cell', '> look in the side pocket', 'The side pocket is empty.', '> look', 'You can see part of a cell'], f, 'the words: ');
+        const t2 = T.of('take the chisel from the side pocket').after;
+        if (!t2 || !dq0Carried(t2).some(i => i.name === 'chisel' && i.where === 'IW_ACTOR')) f.push('the chisel not taken out of the side pocket');
+        const g = s.slice(s.indexOf('> look in the far side'));
+        if (/<[a-z]+\d/.test(g)) f.push('the world\'s raw text told: ' + (/<[^>]*>[^ ]*/.exec(g) || [''])[0]);
+        if (!/> quit[^%]*% echo/.test(g) || /rc: (look|quit): not found/.test(g)) f.push('the game ended before its quit');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0compdesk', near: ['gear'], what: 'Dingus Quest Zero\'s desk (furniture, the user\'s, 2026-11-16: DECISIONS.md\'s "Compartments: the second stage"): a lock on a compartment past the first and a hidden one, by the words and the records; at seed 3 (dq0 -T, a kit of a desk, a key after it, a chisel: the key its drawer\'s, the drawer closed and locked, the kit\'s rule) the desk set down: "open the drawer" refused ("The drawer is locked."), unlocked with its key, opened, the chisel put in it and looked in, closed and locked again (its holder\'s fuel\'s CS_LOCKED, its shut\'s closed bit); its secret niche unnamed till found ("You see no niche here."), found by a search (the referee\'s test: "You find a secret niche in the desk."), a dagger put in it, looked in, found again by a search ("In the secret niche you find a dagger.")',
       init: 't_rc', cycles: 2600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',

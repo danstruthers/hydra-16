@@ -360,8 +360,9 @@ unsigned char o_resolve (void)
     unsigned before[SEE_ITEMS + SEE_DENS];      /* (UIREC's before: on the C stack, the hub's bank in the window as it's
                                                 **   copied) */
     unsigned char k, n, a = cmd.action;
+    char* p;
 
-    if (reach < 5) {                            /* (A line's own: no run of handlings yet, part 19's) */
+    if (reach < 5) {                           /* (A line's own: no run of handlings yet, part 19's) */
         take_more = take_all = 0;
         hub_mem (0, &HUB->pc_lump, &nosteps, 1);
     }
@@ -397,6 +398,16 @@ unsigned char o_resolve (void)
         memcpy (dens, s->den, sizeof dens);
         drx = s->rx;
         dry = s->ry;
+    }
+    if (cmd.obj.kind == OB_SIDE) {              /* ("The side pocket": the backpack's compartment, a thing's, named by its
+                                                **   own name, not a side of the room, the parser's "side": "look in the
+                                                **   side pocket", "close the side pocket", "take the coin from the side
+                                                **   pocket", 2026-11-16) */
+        p = !strcmp (cmd.obj.word, "pocket") ? cmd.obj.word : !strcmp (cmd.other.word, "pocket") ? cmd.other.word : 0;
+        if (p) {
+            strcpy (p, "side pocket");
+            cmd.obj.kind = 0;
+        }
     }
     if (cmd.obj.sel == SL_IT && !cmd.obj.word[0] && !cmd.obj.kind) {   /* ("it": the last thing named) */
         if (!last.word[0] && !last.kind) {

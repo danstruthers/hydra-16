@@ -455,7 +455,7 @@ unsigned char __fastcall__ o_things_work (unsigned char h)
                                                 /*   world's IO_INSIDE; a way, "look into the passage", a look */
                                                 /*   that way, way.c's) */
         if (cmd.obj.kind) {
-            look_way (VB_OBSERVE_THROUGH);
+            look_ov (VB_OBSERVE_THROUGH);       /* (The window put back as it was: this overlay's, returned to) */
             break;
         }
         action = othings (IO_INSIDE | IO_STEPS | IO_GO, cmd.obj.word, nil, strstr (cl, " on ") ? 4 : 0);   /* (The one
