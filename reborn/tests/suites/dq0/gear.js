@@ -2047,7 +2047,7 @@ module.exports = {
         order(5, 'dig down', ['You dig with your pick', 'flee', 'You stop digging.', 'Your backpack lies at your feet.', 'Your pick is in your hand.', 'You see nothing to flee from.']);
         never(5, 'dig down', 'You put away the pick.');
         // ("take all": an ordinary line after its last thing and the pack on; a stop ends it there)
-        order(6, 'take all', ['Taken.', 'turn around', 'Taken.', 'You put on the backpack.', 'You turn around']);
+        order(6, 'take all', ['Taken.', 'turn around', 'Taken.', 'You put on the backpack.', 'You turn to face']);
         // (the user's, 2026-11-12, as game 2's: "stop" typed at the first "Taken." races the reach for the next thing at the
         //  turns pace, so the stop landing one thing later passes too, the tinderbox taken, then stopped, nothing after it)
         if (!upto(7, 'take all').includes('You reach for the tinderbox.')) {
@@ -2061,7 +2061,7 @@ module.exports = {
         order(8, 'take the tinderbox from the backpack and take the flask from the backpack', ['You get out the tinderbox.', 'flee', 'You stop getting out the tinderbox.', 'Your backpack lies at your feet.', 'You see nothing to flee from.']);
         never(8, 'take the tinderbox from the backpack and take the flask from the backpack', 'flask of oil');
         // (A fire-maker from the pack: an ordinary line after the torch lit and the pack on)
-        order(9, 'light the torch', ['You strike a spark.', 'turn left', 'You light the torch.', 'You put away the tinderbox.', 'You put on the backpack.', 'You turn left']);
+        order(9, 'light the torch', ['You strike a spark.', 'turn left', 'You light the torch.', 'You put away the tinderbox.', 'You put on the backpack.', 'You turn to face']);
         // (The class by the parser's meanings: every word for stop, flee or disengage taken at once ahead of a list's parts, parts.c's)
         const root = path.join(TESTS, '..', 'games', 'dq0'), verbs = fs.readFileSync(path.join(root, 'commands.verbs'), 'latin1'), pc = fs.readFileSync(path.join(root, 'parts.c'), 'latin1');
         const said = ['stop', 'flee', 'disengage'];
@@ -2199,7 +2199,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0newlight', reach: true, near: ['gear'], what: 'Dingus Quest Zero\'s new light lit from the old one (the user\'s, 2026-11-03, DECISIONS.md\'s: "light the new torch from the old one before it is extinguished"; HOUSE.md\'s a new light, for review), by the words in order and the things: "light a new torch" with one burning and a sword in the other hand: the sword set down, the pack off, the new torch got out, lit from the burning one, the old blown out and let fall, the sword taken up, the pack back on; no tinderbox touched; the new one lit in hand, the old unlit at its feet, each step its time (over 6 seconds); with the old one spent, the tinderbox\'s steps as before; a lantern from a torch, by "light the lantern"; and "turn" (the user\'s: "I guess the turn info is OK keeping both"): by its way "You turn right, to face west.", left, half left, half right, around; a compass way as it was',
+      name: 'dq0newlight', reach: true, near: ['gear'], what: 'Dingus Quest Zero\'s new light lit from the old one (the user\'s, 2026-11-03, DECISIONS.md\'s: "light the new torch from the old one before it is extinguished"; HOUSE.md\'s a new light, for review), by the words in order and the things: "light a new torch" with one burning and a sword in the other hand: the sword set down, the pack off, the new torch got out, lit from the burning one, the old blown out and let fall, the sword taken up, the pack back on; no tinderbox touched; the new one lit in hand, the old unlit at its feet, each step its time (over 6 seconds); with the old one spent, the tinderbox\'s steps as before; a lantern from a torch, by "light the lantern"; and "turn" by its way, right, left, half left, half right, around, and by a compass way: "You turn to face west." always (the user\'s, 2026-11-16: whatever\'s typed after it; "You turn right, to face west." before, its way read from the command queue)',
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k sword', 'light a new torch', 'inventory', 'quit',
@@ -2220,7 +2220,7 @@ module.exports = {
         if (!(secs >= 60)) f.push('a new torch\'s steps took ' + secs + ' tenths, not their time');
         if (!/You let the torch fall\./.test(games[1]) || !/You strike a spark\./.test(games[1])) f.push('the old one spent: not let fall and the tinderbox\'s steps: ' + games[1].slice(-900));
         if (!/You light the lantern\./.test(games[2]) || /strike a spark/.test(games[2])) f.push('a lantern not lit from the torch burning: ' + games[2].slice(-600));
-        inTurn(games[3], ['You turn right, to face north.', 'You turn left, to face west.', 'You turn half left, to face southwest.', 'You turn half right, to face west.', 'You turn around, to face east.', 'You turn to face west.'], f, 'turning: ');
+        inTurn(games[3], ['You turn to face north.', 'You turn to face west.', 'You turn to face southwest.', 'You turn to face west.', 'You turn to face east.', 'You turn to face west.'], f, 'turning: ');
         return f;
       },
       sdcard: true

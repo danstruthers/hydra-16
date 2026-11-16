@@ -849,7 +849,7 @@ function dq0Timer(m) {
 // told as it begins, "You carry" before the world's asked): never raised.  Over the user's 720,000 still, by what it takes:
 // a carried thing examined, a thing taken with a walk or a pack, a step or a turn with a denizen's things being drawn at
 // wait 0, its answer behind that draw's giving way
-const DQ0_ANSWERS = [['turn left', 'You turn left', 800000], ['turn right', 'You turn right', 1300000],
+const DQ0_ANSWERS = [['turn left', 'You turn', 800000], ['turn right', 'You turn', 1300000],
   ['step forward', 'You step forward', 1400000], ['inventory', 'You carry', 500000], ['examine the torch', 'You look at the torch|You look for the torch', 640000], ['walk to the door ahead to my left', 'You head for', 760000], ['examine the door', 'You head for|A door|Which door', 720000],
   ['open the door', 'You try the door|You turn|Which door', 720000], ['close the door', 'You reach for the door|You turn|Which door', 720000], ['listen', 'You listen', 760000], ['bar the door', 'You look at the door|You turn|Which door', 720000],
   ['look', 'You', 650000, 1790000], ['look ahead', 'You peer ahead|You turn', 450000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You', 800000], ['walk to the window', 'You head for', 700000], ['take the bones', 'You look for the bones|You go over to the bones.|You stop', 800000], ['look', 'You', 650000],
