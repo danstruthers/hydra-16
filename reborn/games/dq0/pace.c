@@ -359,7 +359,9 @@ unsigned char __fastcall__ s_travel_go (const char* l)
 ** not s_pace_cmd's: the pace's part and the commands' not swapped for it, some 100,000 cycles, 2026-11-06).
 ** s_pace_cmd's words that matter: a pace's (paces), "status", the colours', the watchfulness's (without one, wa is the
 ** hub's), a small move's, a count's unit (a count is only a square's with one, or a figure at the end); so a word it comes
-** to match must be here too */
+** to match must be here too.  "Listen" alone, 0: the listen's, never s_pace_cmd's (its watchfulness only with a move's
+** word or "listening"; the pace's part and the commands' swapped for it each time, some 70,000 cycles of its first
+** words, 2026-11-16) */
 static const char pace_words[] =                /* (Each word after its length: no strlen of each, each time) */
     "\005creep\010creeping\005sneak\010sneaking\006tiptoe\005crawl\003hop\007quietly\012stealthily\006slowly"
     "\004slow\004walk\007walking\006normal\010normally\007quickly\003jog\007jogging\004trot\007briskly\003run"
@@ -381,7 +383,7 @@ static unsigned char pld;                       /*   (made) */
 unsigned char __fastcall__ o_pacing (const char* l)
 {
     static const char* p;
-    static unsigned char n, k, w, words;
+    static unsigned char n, k, w, words, ls;
 
     if (!pld) {
         for (p = pace_words; (k = *p) != 0; p += k + 1) {
@@ -389,12 +391,15 @@ unsigned char __fastcall__ o_pacing (const char* l)
         }
         pld = 1;
     }
-    w = 0;
+    w = ls = 0;
     for (words = 0; ; ++words) {
         while (*l == ' ' || *l == ',' || *l == '.' || *l == '!') {
             ++l;
         }
         if (!*l) {
+            if (ls) {
+                return words > 1 ? 2 : 0;       /* ("Listen" alone: the command's) */
+            }
             return !w || words > 1 ? w : 2;     /* ("Walk" first and the only one of them, more said after it, "walk to the
                                                 **   door": 1, none of its work to do if it's walking plainly (main.c's: its
                                                 **   parts' swaps and a word with the world, all a walk's first words were
@@ -419,7 +424,11 @@ unsigned char __fastcall__ o_pacing (const char* l)
         if (n < 16 && (pl[*l & 31] & (1u << n))) {     /* (A word of its letter and its length among them) */
             for (p = pace_words; (k = *p) != 0; p += k + 1) {  /* (Each word's length, then its first letter) */
                 if (k == n && p[1] == (*l | 0x20) && !strnicmp (l, p + 1, n)) {
-                    return 2;
+                    if (n != 6 || (*l | 0x20) != 'l' || (l[1] | 0x20) != 'i') {
+                        return 2;
+                    }
+                    ls = 1;                     /* ("Listen": one of them only with more said) */
+                    break;
                 }
             }
         }

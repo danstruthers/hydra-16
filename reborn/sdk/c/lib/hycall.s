@@ -13,7 +13,6 @@ HR_A            = 0             ; struct hy_regs: a, x, y, r[4]
 HR_X            = 1
 HR_Y            = 2
 HR_R            = 3
-HR_RN           = 8             ; (r0-r3: 8 bytes)
 
             .code
 
@@ -23,15 +22,32 @@ _hy_call:
             jsr         popax                               ; The call
             sta         vec
             stx         vec + 1
-            ldx         #0                                  ; r0-r3 in
-            ldy         #HR_R
-:
+            ldy         #HR_R                               ; r0-r3 in (a byte at a time, no loop: some 130
+                                                            ;   cycles a call less, in and out, a poll's every
+                                                            ;   call: 2026-11-16)
             lda         (ptr1),Y
-            sta         r0,X
+            sta         r0
             iny
-            inx
-            cpx         #HR_RN
-            bne         :-
+            lda         (ptr1),Y
+            sta         r0 + 1
+            iny
+            lda         (ptr1),Y
+            sta         r0 + 2
+            iny
+            lda         (ptr1),Y
+            sta         r0 + 3
+            iny
+            lda         (ptr1),Y
+            sta         r0 + 4
+            iny
+            lda         (ptr1),Y
+            sta         r0 + 5
+            iny
+            lda         (ptr1),Y
+            sta         r0 + 6
+            iny
+            lda         (ptr1),Y
+            sta         r0 + 7
             ldy         #HR_Y                               ; .Y, .X, .A in
             lda         (ptr1),Y
             pha
@@ -54,15 +70,30 @@ _hy_call:
             iny
             lda         tmp3
             sta         (ptr1),Y
-            ldx         #0                                  ; r0-r3 out
-            ldy         #HR_R
-:
-            lda         r0,X
+            ldy         #HR_R                               ; r0-r3 out
+            lda         r0
             sta         (ptr1),Y
             iny
-            inx
-            cpx         #HR_RN
-            bne         :-
+            lda         r0 + 1
+            sta         (ptr1),Y
+            iny
+            lda         r0 + 2
+            sta         (ptr1),Y
+            iny
+            lda         r0 + 3
+            sta         (ptr1),Y
+            iny
+            lda         r0 + 4
+            sta         (ptr1),Y
+            iny
+            lda         r0 + 5
+            sta         (ptr1),Y
+            iny
+            lda         r0 + 6
+            sta         (ptr1),Y
+            iny
+            lda         r0 + 7
+            sta         (ptr1),Y
             plp
             bcs         @error
             lda         #0

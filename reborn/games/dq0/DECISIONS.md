@@ -6621,3 +6621,79 @@ the furniture placed, after narr6's merge), the suite after each.  What's built:
   - The denizens' reach and gear by compartment (a robber's, a denizen's own): their code unchanged.
   - A compartment looked at ("look at the drawer"): its holder's look, as ever.
   - A hidden compartment's difficulty (built: its holder's quality's third, the steps the worse, two more by touch).
+
+## A look in from an overlay, the side pocket named whole; the timing scenes with their furniture (2026-11-16; as built, for review: ENGINE-CRITIQUE.md's rows 1 and 4)
+
+Two things the second stage of compartments left ("Compartments: the second stage", its open question on "the side
+pocket" typed whole; and the timing scenes it gave `dq0furn=0`).  Two commits.
+
+- **The game ended on "look in the side pocket"** (and on "look in the far side": not the compartments' own).  The
+  parser takes "side" for a side of the room (`OB_SIDE`, commands.words), its word the rest ("pocket", "far"); a look
+  *in* with a kind goes from the things' timed works (hthings.c's `H_LOOK_IN`, `o_things_work`: overlay 1, since §5.2's
+  step L, stage 3) to `look_way`, part 17.  There a word that names nothing it sees (`looked`: the world's `IO_LOOK`)
+  leaves the hub's bank in the window (`things ()`'s `hub_call`), and `look_way`'s `rts` came back to overlay 1's
+  code at $8000 in the hub's bank: it ran the hub's bytes till the task ended (the trace: `o_things_work`'s return,
+  then the swap area's labels in a row, then the C library's exit).  And `looked` writes the hub's header
+  (`HUB->ireq.to`) with overlay 1's bank in the window, into overlay 1, the world reading a stale `to`: a look that
+  didn't end the game told the world's raw text ("<torch6 food5 ...>").  The same at the merged base before
+  compartments (`d2945872^`: the call unchanged since `3eade6c6`), by the code; not run there.
+  - *Built*: part 17's `s_look_ov` (way.c), `look_way` asked from an overlay as `othings` asks the things: the window
+    kept (`hub_here`), the hub's header put in, `look_way`, the window put back (`hub_back`).  hthings.c's `H_LOOK_IN`
+    calls it.  A stub (6 bytes of the main RAM).  No other overlay calls a part's function that leaves the window
+    elsewhere (`o_things_work`'s other calls: `othings`, the overlays' stubs, `intend2`, each putting it back).
+  - *"The side pocket" typed whole* (the open question): the resolver (resolve.c, overlay 11), as a command's
+    resolved, takes `OB_SIDE` with the word "pocket", the thing's or the other's ("take the coin from the side
+    pocket": the parser puts the kind on the thing), as the thing "side pocket", the kind gone: a compartment's noun
+    before a way, for every verb ("look in", "close", "open", "take from", "go to the side pocket").  No backpack:
+    "You see no side pocket here." as for any thing.  "The side" alone and "the far side" are the room's, as ever.
+  - The words: "look in the side pocket" "You look for the side pocket. In the side pocket lies a chisel." (was the
+    game's end); "close the side pocket" "You tie the side pocket shut." (was "It has no shutters to open or close.",
+    the door's work); "open", "take ... from" the same; "look in the far side" a look about (was the game's end);
+    "go to the side pocket" "You haven't seen a side pocket here." (was a walk to the far side).
+  - *Test*: dq0sidepocket (gear.js): at seed 3 the side pocket typed whole put into, looked in, tied, looked in
+    closed, untied, the chisel taken out, "look in the far side" a look about and the game on to its quit.
+- **The timing scenes with their furniture.**  `dq0furn=0` had been set in dq0answer's scene (tests/lib/dq0.js, its
+  normal-pace look ahead past its 450,000) and dq0traces' (its step 1,929,179 cycles, budget 1,920,000).  Measured,
+  the fuller store isn't the cost: the step's window profiled by task and function (a probe on the CPU's steps), with
+  and without the furniture, every task's item work the same (the senses' `items` scan, the world's `item_at`); what
+  grew was the polling tasks' share as the step took a little longer (the world's main loop: `stocks`, its syscalls;
+  the idle task), the scene's timing moved (its rats elsewhere, other text printed as the answer begins: dq0answer's
+  listen 628,264 to 848,289, close the door 710,191 to 722,655 by the console's and the denizens' work in the window).
+  So the cure is the work every step and every answer pays, wherever it was:
+  - *`__osmaperrno` (sdk/c/lib/oserror.s)*: every failed system call (a poll's `E_AGAIN`: `hy_sem_try`, a key not
+    there) mapped its code by the map from its end, some 400 cycles; from its start, the poll's code fourth.  A
+    twentieth of the world's cycles as a step goes (102,000 of 2.2M over dq0traces' five squares), the UI's 80,000.
+  - *`hy_call` (sdk/c/lib/hycall.s)*: r0-r3 copied in and out a byte at a time unrolled, not a loop: some 130 cycles
+    a call less (the world's 1,400 calls over the five squares, 295,000 cycles).  54 bytes more in each program.
+  - *The world's `stocks` (dq0w/store.c)*, every pass of its main loop: the slots' bytes by their offset from a fixed
+    address, not a pointer stepped (some 1,000 cycles a pass to some 450).
+  - *"Listen" alone* (pace.c's `o_pacing`): no longer one of the pace's lines (`s_pace_cmd` acts on "listen" only
+    with a move's word or "listening"); the pace's part and the commands' were swapped for it each time.
+  - *A look one way with nothing to find* (way.c's `look_way`): `feature (0, ...)` is called only if it does
+    something (a thing to take in hand first, a way to turn to); else its 1 at once, part 13 not swapped in (a
+    listen, a look ahead).
+  - Tried and not kept: a swapped part's caller copied back only as far as the parts loaded over it reached
+    (swap.inc's `sw_back`, 'SWKEEP'): 155 bytes of each task's main RAM (the UI's under its 3,000) for some 30,000
+    cycles of the world's over the five squares, none of the UI's in them (its swaps there are fresh calls).
+  - *The numbers* (with the furniture): dq0traces' step 1,929,179 to 1,805,880 (budget 1,920,000; 1,906,100 was
+    without it); dq0answer at waits 0, 1 and 2 all within their budgets, e.g. normal listen 848,289 to 324,090,
+    270,650, 279,774 (budget 760,000), normal close the door 722,655 to 432,319, 408,481, 414,223 (720,000), normal
+    look ahead 381,452 to 328,414, 311,413, 311,773 (450,000).
+  - `dq0furn=0` taken out of dq0answer's and dq0answer96's scene (tests/lib/dq0.js) and dq0traces'.  Kept where the
+    scene is about something the furniture changes, not its timing: dq0rope (a cabinet beside the character took the
+    rope's tie from the spike), dq0blind (shelves underfoot in the dark changed its blind walk), dq0looks (its looks'
+    hashes against looks.ref, the dungeons as they were), dq0furniture (its own second game, none placed).
+- **The words**: every dq0 test's sentences the same but the side pocket's and the far side's above, dq0sidepocket's
+  own, the timing scenes' (dq0answer's, dq0answer96's, dq0traces': their furniture in sight, the denizens met at other
+  moments) and the known timing noise (dq0jobs, dq0lookfar, dq0passes, dq0restbusy, dq0sway: denizens met at other
+  moments; dq0tiring's accepted race; dq0peoplegen's last prompt not yet printed as its run ended).
+- **Room**: the UI's main RAM 3,106 to 3,043 (`hy_call` 54, the stub 6, `__osmaperrno` 2); dq0w 2,313 to 2,285 (`stocks` 26 bytes
+  less);
+  dq0d 3,044 to 2,988; dq0p 4,486 to 4,430; dq0m 3,908 to 3,852; dq0harn 2,123 to 2,067; the other C programs
+  that call `hy_call` 56 bytes less (dq0acct 2,297 to 2,241, hmchar 559 to 503: under its 2,048 as before).  Overlays: 1 2,145 unchanged, 11 (the resolver) 274 to
+  140, 16 (the pace's look) 2,416 to 2,334, 24 (part 17's image) 231 to 173; part 17 1,258 to 1,200.
+- **Start**: seed 1 234.7M to 235.2M, seed 123456789 311.0M to 310.5M.
+- **Suite**: all 460 pass (with dq0sidepocket) on the two commits' build; the first commit's alone not run whole.
+- **Open questions**: none of the user's.  "Side" in another compartment's name (none now but the pocket's) would want
+  the resolver's rule from the catalogue's nouns, not "pocket" alone (the kinds' bank has no room for the world's
+  words to name it).

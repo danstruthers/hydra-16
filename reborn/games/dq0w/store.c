@@ -204,17 +204,20 @@ void __fastcall__ s_change (unsigned char sn, unsigned x, unsigned y, unsigned c
 #pragma rodata-name (pop)
 
 /* The chunks the maker stocked as it made them (their slots CS_FRESH), if there are any, their things put down and
-** marked so (part 4's) */
+** marked so (part 4's).  Every pass of the world's (its jobs' first row): the slots' used bytes looked at by their
+** offset from a fixed address (cc65's .Y; a pointer stepped, some 1,000 cycles a pass, a twentieth of the world's
+** cycles as a step goes, 2026-11-16) */
+typedef char cs_fits[NCSLOTS * sizeof (struct cslot) < 256 ? 1 : -1];
 void stocks (void)
 {
-    unsigned char k;
-    struct cslot* c;
+    static unsigned char o;
 
     hub_map (WORLD_BANK);
-    for (k = NCSLOTS, c = WREC->cslot; k && c->used != CS_FRESH; --k, ++c) {
+    for (o = 0; o != (unsigned char) (NCSLOTS * sizeof (struct cslot)) &&
+        ((const unsigned char*) &WREC->cslot[0].used)[o] != CS_FRESH; o += sizeof (struct cslot)) {
     }
     hub_map (0);
-    if (k) {
+    if (o != (unsigned char) (NCSLOTS * sizeof (struct cslot))) {
         stocked ();
     }
 }

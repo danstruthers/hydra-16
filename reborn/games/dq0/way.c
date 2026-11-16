@@ -405,8 +405,14 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
     if (!j) {
         cmd.obj.lies = h;                       /* (A way said: that way) */
     }
-    j = feature (j, (e == 2 ? FG_NEAR : FG_FAR) | FW_NONE);   /* (A closed door's little window, its spy-hole:
+    if (j || hold_w[0] || (h <= H_NW && h != HUB->pc_face)) {
+        j = feature (j, (e == 2 ? FG_NEAR : FG_FAR) | FW_NONE);   /* (A closed door's little window, its spy-hole:
                                                 **   walked up to first) */
+    } else {
+        j = 1;                                  /* (None named, nothing in hand to take, the way it faces or none: its
+                                                **   feature's 1 and nothing more, its part not swapped in for it, some
+                                                **   50,000 cycles of a listen's first words, a look ahead's, 2026-11-16) */
+    }
     pick_x = x0;
     pick_y = y0;
     if (!j) {

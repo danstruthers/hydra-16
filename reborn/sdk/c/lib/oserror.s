@@ -11,13 +11,14 @@
             .code
 
 ___osmaperrno:
-            ldx         #MAP_SIZE - 2
-@look:
-            cmp         map,X
-            beq         @found
-            dex
-            dex
-            bpl         @look
+            ldx         #0                  ; (From the first: E_AGAIN, a poll's, the commonest, its fourth.  From the
+@look:                                      ;   last, a poll's every failed call went through the map whole, some 400
+            cmp         map,X               ;   cycles: a twentieth of the game's world and UI as a step goes,
+            beq         @found              ;   2026-11-16)
+            inx
+            inx
+            cpx         #MAP_SIZE
+            bcc         @look
             lda         #<EUNKNOWN
             ldx         #>EUNKNOWN
             rts
@@ -31,4 +32,4 @@ ___osmaperrno:
 map:
             .include    "oserrmap.inc"
 MAP_SIZE        = * - map
-.assert     MAP_SIZE    < 128, error, "oserror.s: .X counts down with bpl"
+.assert     MAP_SIZE    < 256, error, "oserror.s: .X counts the map's bytes"
