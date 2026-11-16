@@ -197,10 +197,28 @@ unsigned char __fastcall__ comp_of (unsigned k, unsigned char c)
     return o_comp_of (k, c);
 }
 
+/* Thing i's first compartment from c on that's open, its row in crow; 0xFF none (the catalogue's bank's o_comp_open):
+** a list's, what's in it told by each */
+unsigned char cfilt;                            /* (Its filter, contents': the compartment plus 1, times 16; 0 a
+                                                **   holder of one) */
+unsigned char __fastcall__ o_comp_open (unsigned i, unsigned char c);
+
+unsigned char __fastcall__ comp_open (unsigned i, unsigned char c)
+{
+    cat_map ();
+    return o_comp_open (i, c);
+}
+
 /* The next thing after i in thing x (items ()'s, for the catalogue's bank's code: its two arguments, m2's) */
 unsigned __fastcall__ items_in (unsigned i, unsigned x)
 {
     return items (i, IN_X | IN_ITEM, x);
+}
+
+/* Thing i's compartment as its record says (IC_OF, unchecked: the item bank left in the window) */
+unsigned char __fastcall__ ic_of (unsigned i)
+{
+    return IC_OF (item_at (i)->y);
 }
 
 /* Thing i's compartment in what it's in (its record's y, IC_MARK's: one its holder has; else 0) */
@@ -209,7 +227,7 @@ unsigned char __fastcall__ icomp (unsigned i)
     const struct item* p = item_at (i);
     unsigned char c;
 
-    if (p->where != IW_ITEM || !(c = IC_OF (p->y))) {
+    if (p->where != IW_ITEM || !(c = ic_of (i))) {
         return 0;
     }
     return comp_of (item_at (p->x)->kind, c) ? c : 0;
@@ -2118,8 +2136,9 @@ void s_ix_make (void)
         }
     }
     for (m = 0; m < n; ++m) {
-        if ((j = ixc[m].up) != 0 && j != 0xFF) {
-            ixc[j - 1].flags &= ~CX_EMPTY;      /* (Something in it) */
+        if ((j = ixc[m].up) != 0 && j != 0xFF && !ic_of (ixi[m])) {
+            ixc[j - 1].flags &= ~CX_EMPTY;      /* (Something in it: in its first compartment, a chest's inside, not on
+                                                **   its lid, the chooser's unlike's, 2026-11-16) */
         }
     }
     for (m = j = 0; m < n && j < NIXK; ++m) {   /* (Its kinds, each once) */
@@ -2214,8 +2233,10 @@ static unsigned char __fastcall__ fetch_find (const char* fn)
             r = IR_OK;
         }
     } else if ((n = pick (fn, HW_SEEN)) != 0) {
-        for (c = n; (p = item_at (c))->where == IW_ITEM && (c == n || !(p->shut & IS_CLOSED)); c = p->x) {
-        }
+        for (c = n; item_at (c)->where == IW_ITEM && !in_shut (c); c = item_at (c)->x) {
+        }                                       /* (Up through each compartment it's in that's open: a chest's lid's top,
+                                                **   its lid shut or not, 2026-11-16) */
+        p = item_at (c);
         r = IR_NO;                              /* (In a thing closed, carried, on another stratum) */
         if (p->where == IW_SQUARE && p->sn == sn) {
             x = p->x;
@@ -2720,9 +2741,13 @@ static unsigned char look_q;                    /* (A look's asking: s_look_pick
 static unsigned char __fastcall__ unlike (unsigned i, const struct kind* k)
 {
     unsigned char e = rec.id && !rec.fuel;
+    unsigned j = 0;
 
     if ((k->flags & K_CONTAINER) || (k->keeps & KF_ON)) {
-        e = !items (0, IN_X | IN_ITEM, i);
+        while ((j = items (j, IN_X | IN_ITEM, i)) != 0 && ic_of (j)) {
+        }
+        e = !j;                                 /* (Nothing in its first compartment: a chest's inside, not its lid's
+                                                **   top, 2026-11-16) */
     } else if ((unsigned char) (rec.kind - KI_OIL) > KI_PITCH - KI_OIL && !(wsel == SL_SPENT && (k->flags & K_LIGHT))) {
         return 1;                               /* (Neither a container nor a fuel, nor a light said spent) */
     }
@@ -2825,7 +2850,9 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
             }
         } else {
             if (how == HW_CARRIED || d > 1 || ps != sn || (dx = px - x + 20) > 40 || (dy = py - y + 20) > 40 ||
-                (d && !(kind_of (pk)->keeps & KF_ON)) || !(t = at (sn, px, py)) || (!(*t & T_VIS) &&
+                (d && !(rec.y >= IC_MARK ? IC_PREP (rec.y) == CP_ON : kind_of (pk)->keeps & KF_ON)) ||   /* (On a
+                                                **   chest's lid too, its compartment's prep: lying's, 2026-11-16) */
+                !(t = at (sn, px, py)) || (!(*t & T_VIS) &&
                 (how < HW_HAND || !(*t & T_SEEN) || !rec.id || room_of (sn, px, py) != room_of (sn, x, y)))) {
                 continue;                       /* (Lying about, or on a surface there, in sight, or remembered there
                                                 **   in the room it's in, as HW_HAND and those after it ask; not in a thing) */
@@ -3264,16 +3291,20 @@ unsigned char s_stow_where (void)
                                                 **   itself, a sword not, whatever its pints) */
     for (m = 0, i = 1; i < ihigh; ++i) {
         p = item_at (i);
-        if (i == n || !p->kind || !p->id || (p->shut & IS_CLOSED) || (i != pack && (!belt || p->where != IW_ITEM ||
-            p->x != belt))) {
+        if (i == n || !p->kind || !p->id || (i != pack && (!belt || p->where != IW_ITEM || p->x != belt))) {
             continue;                           /* (Not the pack, nor hanging from its belt) */
         }
+        for (s = p->kind, ccomp = 0; comp_of (s, ccomp) && crow.prep != CP_IN; ++ccomp) {
+        }                                       /* (Its compartment a put goes in: its first that's in it, the world's
+                                                **   cfor's, 2026-11-16) */
         k = kind_at (i);
         s = k->slots;                           /* (Kept: the kind's copy o_fits's to use again) */
-        if (!(k->flags & K_CONTAINER) || (k->keeps & KF_ON) || (i != pack && !s && z > k->seen + 1) ||
-            (cat_map (), o_fits (n, i))) {
+        if ((item_at (i)->shut & IS_SHUT_C (ccomp)) || !(k->flags & K_CONTAINER) || (k->keeps & KF_ON) || (i != pack &&
+            !s && z > k->seen + 1) || (cat_map (), o_fits (n, i))) {
+            ccomp = 0;
             continue;
         }
+        ccomp = 0;
         if (f && s == f) {                      /* (Made for its family, worn and free: first) */
             m = 1;
             c[0] = i;
@@ -4981,6 +5012,8 @@ static unsigned next_in (void)
 
 /* Each thing at where, x worded, and what's in it, or on it */
 static unsigned char lsig, lkf, lwo, ln, lin, lsn;
+static unsigned char lfilt;                     /* (The one compartment this pass tells, 0xFF all: contents' depth's) */
+unsigned char cprep = 0xFF;                     /* (A compartment told's words: "on it" 1, "in it" 0, by its kind 0xFF) */
 static const struct kind* cl_k;
 static struct item* cl_p;
 static struct got* gp;
@@ -4996,7 +5029,8 @@ static unsigned char __fastcall__ alike (unsigned i, unsigned* told, unsigned ch
 
     cl_p = item_at (jn);
     r = cl_p->qty == 1 && (cl_p->flags & I_WORN) == lwo && !(cl_p->flags & (I_NAMED | I_HELD)) && sig (cl_p) == lsig &&
-        (!lwo || cl_p->sn == lsn);              /* (Worn in the same place: two rings on the left hand, 2026-11-10) */
+        (!lwo || cl_p->sn == lsn) &&            /* (Worn in the same place: two rings on the left hand, 2026-11-10) */
+        (lfilt == 0xFF || ic_of (jn) == lfilt);    /* (In the one compartment listed: contents') */
     if (r && lin == 0xFF) {
         nx_n = 0;
         nx_w = IW_ITEM;
@@ -5021,12 +5055,15 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
     static const char* const hands_in[4] = { ", in your hand", ", in your left hand", ", in your right hand",
         ", in both hands" };
     unsigned i = 0, told[8];
-    unsigned char first = 1, nt = 0, gk = 0;
+    unsigned char first = 1, nt = 0, gk = 0, c, lf = (depth >> 4) - 1;   /* (depth's high bits the one compartment
+                                                **   told plus 1, 0 all: comp_open's cfilt, listed's lst_c) */
+
+    depth &= 15;
 
     while (gcur = gk, nx_n = i, nx_w = where, nx_x = x, (i = next_in ()) != 0) {  /* (From its place: what's in it,
                                                 **   and alike's, looked elsewhere) */
         gk = gcur;
-        if (depth == 1 && lst_c != 0xFF && icomp (i) != lst_c) {
+        if ((lfilt = lf) != 0xFF && ic_of (i) != lf) {
             continue;                           /* (Another compartment's: listed's lst_c, a chest's lid's top) */
         }
         fetch (&tw, i);
@@ -5075,7 +5112,7 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
                 }
             } else {
                 for (jn = i; nx_n = jn, nx_w = where, nx_x = x, (jn = next_in ()) != 0; ) {
-                    if (item_at (jn)->kind == tw.kind && (depth != 1 || lst_c == 0xFF || icomp (jn) == lst_c)) {
+                    if (item_at (jn)->kind == tw.kind) {
                         ln += alike (i, told, &nt);
                     }
                 }
@@ -5090,8 +5127,8 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
         } else if (depth == 1) {
             put (first ? "" : ", ");
         } else {
-            put (first ? (cl_k = kind_at (x), cl_k->flags & K_BELT || cl_k->keeps & KF_ON) ? " (on it: " : " (in it: " :
-                ", ");
+            put (first ? (cprep != 0xFF ? cprep : (cl_k = kind_at (x), cl_k->flags & K_BELT || cl_k->keeps & KF_ON)) ?
+                " (on it: " : " (in it: " : ", ");      /* (A compartment's own: a chest's lid's top, on it) */
         }
         first = 0;
         tw_n = ln;
@@ -5112,9 +5149,13 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
                 put (tw.flags & I_HELD ? hands_in[tw.sn & IH_BOTH] : "");  /* (The hand it's in, its sn: slice 4.1b's) */
             }
         }
-        if (lkf && !(tw.shut & IS_CLOSED)) {    /* (Closed: what's in it not told) */
-            contents (IW_ITEM, i, depth + 1);
+        for (c = 0; lkf && (c = comp_open (i, c)) != 0xFF; ++c) {   /* (Each of its compartments that's open (closed:
+                                                **   what's in it not told), a holder of several's each its own, "(in it:
+                                                **   a sack) (on it: a chisel)": the reader of a thing's place by its
+                                                **   compartment, the user's, 2026-11-16) */
+            contents (IW_ITEM, i, depth + 1 | cfilt);
         }
+        cprep = 0xFF;
     }
     if (!first && lmode == 1 && depth > 1) {
         put (")");
@@ -5189,7 +5230,7 @@ void __fastcall__ s_listed (unsigned n)
 {
     lmode = 1;
     ngot = 0xFF;                                /* (No list gathered: next_in's passes) */
-    contents (IW_ITEM, n, 1);
+    contents (IW_ITEM, n, 1 | (unsigned char) ((lst_c + 1) << 4));
     lmode = 0;
 }
 
@@ -5646,6 +5687,38 @@ unsigned char __fastcall__ o_comp_of (unsigned k, unsigned char c)
     crow.fam = q->slots;
     crow.noun = 0;
     return 1;
+}
+
+/* The compartment of kind k name names by its own name (comp_named's): its number, its row in crow; 0 none */
+unsigned char __fastcall__ o_comp_named (unsigned k, const char* name)
+{
+    static unsigned char c;
+
+    for (c = 1; o_comp_of (k, c); ++c) {
+        if (*cnouns[crow.noun & CN_MASK] && named (cnouns[crow.noun & CN_MASK], name)) {
+            return c;
+        }
+    }
+    return 0;
+}
+
+/* Thing i's first compartment from c on that's open, its row in crow (comp_open's): its number, 0xFF none; cfilt, a
+** list's filter for it (0 for a holder of one), cprep its words ("on it" 1, "in it" 0; a holder of one, 0xFF: by its
+** kind) */
+unsigned char __fastcall__ o_comp_open (unsigned i, unsigned char c)
+{
+    static unsigned char m;
+
+    FETCH (i);
+    m = o_comp_of (o.kind, 1);
+    for (; o_comp_of (o.kind, c); ++c) {
+        if (!(o.shut & IS_SHUT_C (c)) && !CS_UNSEEN (crow.noun, o.fuel, c)) {
+            cfilt = m ? c + 1 << 4 : 0;
+            cprep = m ? crow.prep != CP_IN : 0xFF;
+            return c;
+        }
+    }
+    return 0xFF;
 }
 
 /* Its words (SA_*: items.h's) put in the hub's text, as a code and the two names (said.txt's SA rows the UI's: narration

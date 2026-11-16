@@ -138,7 +138,7 @@ static void __fastcall__ seen_one (struct sight* s, unsigned i, unsigned char on
 void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, unsigned y, unsigned char face)
 {
     static struct item q;
-    static unsigned char k, listed;
+    static unsigned char k, listed, on;
     static const struct kind* kq;
     static struct item* r;
     static unsigned qx, qy;
@@ -166,14 +166,11 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
         se.y = q.y;
         seen_one (s, i, 0);
         kq = kind_of (q.kind);
-        if (kq->keeps & KF_ON) {
+        on = kq->keeps & KF_ON;
+        if (on || ((kq->flags & K_CONTAINER) && on_lid (q.kind))) {  /* (What's on a surface, on a chest's lid, seen
+                                                **   with it: its compartment's, not a desk's drawer's, 2026-11-16) */
             for (j = 0; s->nitems < SEE_ITEMS && (j = items (j, IN_X | IN_ITEM, i)) != 0; ) {
-                seen_one (s, j, 1);
-            }
-        } else if ((kq->flags & K_CONTAINER) && on_lid (q.kind)) {   /* (What's on a chest's lid, seen with it:
-                                                **   its compartment's) */
-            for (j = 0; s->nitems < SEE_ITEMS && (j = items (j, IN_X | IN_ITEM, i)) != 0; ) {
-                if (item_at (j)->y >= IC_MARK && IC_PREP (item_at (j)->y) == CP_ON) {
+                if (item_at (j)->y >= IC_MARK ? IC_PREP (item_at (j)->y) == CP_ON : on) {
                     seen_one (s, j, 1);
                 }
             }

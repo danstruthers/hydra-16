@@ -1525,6 +1525,26 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0compread', near: ['gear', 'parser'], what: 'Dingus Quest Zero\'s readers of a thing\'s place by its compartment (the user\'s, 2026-11-16: DECISIONS.md\'s "Compartments: the second stage"): at seed 3 (dq0 -T, a kit of a chest, a chisel and a sack) a chisel put on the carried chest\'s lid and the chest closed: the inventory lists the chisel under it still (on its lid, open to the hand; what\'s inside a closed one not told); the chest set down, the chisel taken from its lid by its name alone (the chooser: a thing on a chest\'s lid lies there as on a table); the chest opened, the chisel on its lid again: "the empty chest" is that one (nothing in it, its lid\'s top not its inside: the chooser\'s state), looked in ("The chest is empty."); the sack put in it, and "the empty chest" none',
+      init: 't_rc', cycles: 2000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k \'chest,chisel,sack\'', 'put the chisel on the chest', 'close the chest', 'inventory', 'drop the chest', 'take the chisel',
+        'open the chest', 'put the chisel on the chest', 'look in the empty chest', 'put the sack in the chest', 'look in the empty chest', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '');
+        const inv = T.of('inventory').after, chest = inv && inv.items.find(i => i.name === 'chest'), ch = inv && inv.items.find(i => i.name === 'chisel');
+        if (!chest || !ch || ch.where !== 'IW_ITEM' || ch.x !== chest.n) f.push('the chisel not on the carried chest: ' + JSON.stringify(ch));
+        if (!/\(j\) a chest \(closed\), in both hands\s+\(k\) a chisel/.test(s)) f.push('the inventory not listing the chisel on the closed chest\'s lid');
+        const tk = T.of('take the chisel').after;
+        if (!tk || !dq0Carried(tk).some(i => i.name === 'chisel')) f.push('the chisel not taken from the lid by its name');
+        inTurn(s, ['> look in the empty chest', 'The chest is empty.', '> put the sack in the chest', 'You put the sack in the chest.', '> look in the empty chest',
+          'You see no chest here.'], f, 'the words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0examine', what: 'Dingus Quest Zero\'s things looked at and examined, their aspects asked for, what opening shows, and what a command\'s done with (the user\'s, 2026-10-22: "When examining an item, I want to know about its state ... look [at] item instead of examine should give these things.  Examine gives too many unimportant details (like value)"; "examine value [of] item", "quality [of] item"; "if I open a chest, I should get a \'You open the chest, revealing a pile of gold coins\'"; "hit door with bar hits the door, even if I don\'t have a bar"): at seed 3 (dq0 -T, a kit of a table, two chisels, a sack and a chest more) a look at the table (where, what\'s on it, no appraisal), at the torch (lit), the torch examined (what it\'s made of, its wear, how burnt: no test), the dagger\'s value, its quality, both (the referee\'s appraisal test each, IO_DESCRIBE, only what\'s asked), the backpack hefted (its weight with what\'s in it), the chest looked at closed (with a lock), its lock examined (its make), gone over for traps (none), its condition (the last thing named: "its"); the chest opened (": it\'s empty."), the sack untied (what\'s in it told), the flask unstoppered (how full); a blow with a hammer it hasn\'t got refused ("You have no hammer to hand.", no blow); the door ahead opened (what it shows beyond told with it, the world\'s look after it: "revealing a passage, 30 feet of it"), gone over for traps (the world\'s PA_CHECK: 10 seconds), examined (its plain features, no judgement), judged (its state, the appraisal test), its lock, its condition, its value',
       init: 't_rc', cycles: 2600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',

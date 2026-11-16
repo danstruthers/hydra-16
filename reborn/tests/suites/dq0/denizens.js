@@ -976,6 +976,28 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0fetchlid', near: ['denizens', 'gear'], what: 'Dingus Quest Zero\'s ally\'s errand to a chest\'s lid (the user\'s, 2026-11-16: every reader of a thing\'s place by its compartment, the errand\'s fetch among them; DECISIONS.md\'s "Compartments: the second stage"): dq0fetch\'s seed 21 rat befriended and named Grub, with a chest besides (dq0 -k): the chest set down, two rations put on its lid, the character two squares off and turned round; Grub told to fetch the rations: found where they lie (on the chest\'s lid, open to the hand, not in a thing closed), picked up and handed over (FT_TOOK, FT_GAVE), the rations the character\'s again',
+      init: 't_rc', cycles: 1600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', 'echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -R 117 -k chest',
+        'befriend the rat', 'befriend the rat', 'name the rat grub', 'drop the chest', 'close the chest', 'put 2 rations on the chest', 'move east 2 squares', 'turn around',
+        'tell grub to fetch the rations', 'wait', 'wait', 'inventory', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [];
+        const { IC_MARK, CP_ON } = require('../../../games/dq0/hubgen.js').load().C;   // (items.h's)
+        const p = T.of('put 2 rations on the chest').after, chest = p && p.items.find(i => i.name === 'chest');
+        const on = p && chest ? p.items.filter(i => i.name === 'rations' && i.where === 'IW_ITEM' && i.x === chest.n) : [];
+        if (on.length !== 1 || on[0].y !== (IC_MARK | CP_ON << 4 | 1)) f.push('the rations not on the chest\'s lid: ' + JSON.stringify(on));
+        const fe = T.of('tell grub to fetch the rations');
+        if (!dq0Rep(fe, 'sway', { kind: 'SW_ORDER', order: 'OR_FETCH', result: 'SR_OK' }).length) f.push('Grub not sent to fetch the rations (' + JSON.stringify(fe.replies.filter(r => r.req === 'sway')) + ')');
+        const ev = T.filter(t => t.k >= fe.k).flatMap(t => dq0Ev(t, 'E_TASK', { te: 'TE_FETCHED' }));
+        if (!ev.some(e => e.ft === 'FT_TOOK')) f.push('Grub never picked the rations up from the lid (' + JSON.stringify(ev) + ')');
+        if (!ev.some(e => e.ft === 'FT_GAVE')) f.push('Grub never handed the rations over (' + JSON.stringify(ev) + ')');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0denpace', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's denizens' paces (the user's, 2026-11-03: \"walk unless hurried, and closing in to attack should be hurried unless they are cautious\": HOUSE.md's their paces), by the time between an actor's steps (its E_DEN DE_MOVEDs: the world's wbody.c, every actor's): a hand-written theme's hostile bandits (seed 1), a kind whose walk is 20 tenths a square: coming at the character, at its jog, 10; a theme's hostile giant rats (seed 3), a shy kind whose walk is 12, cautious: coming on at its walk, no quicker, for all it's hostile; both referees",
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'dq0hour=128',
