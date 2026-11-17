@@ -60,6 +60,17 @@ end with their open questions: copy them here when the branch is merged.
 - **P9. Should "say" alone show the quoted form?** It says "I don't understand that."; `say hello` now gets "Put the
   words in quotes: say "hello"."
   - built/2026-11-17-parse.md, its open question 6.
+- **P10. The renderer's copy loop doesn't pay.** The user agreed to spend about 40 bytes of the UI's main RAM on it;
+  built and measured, it cost 34 bytes and made the renderer slower (the inventory's words 100,785 to 141,907
+  cycles; dq0traces' step 1,816,296 to 1,897,342), since the rows are mostly codes, not runs of letters. Options:
+  neither; or the bytes on what would pay (one call to skip an alternative, or a row scan in bank.s), measured first.
+  - built/2026-11-17-text.md, its open question 1 (the code kept in its record).
+- **P11. An unseen fighter stays "it"** ("Something strikes at you with its spear"): "their" would tell the player
+  it's a person. Built that way; confirm?
+  - built/2026-11-17-text.md, its open question 5.
+- **P12. Two rewordings with "they":** "Grub keeps the name: it can't be taken back." (was "...you gave it"), and
+  "Open which door?" (was "Ask it to open which door?"). Accept?
+  - built/2026-11-17-text.md, its open question 6.
 
 ## Doors, portcullises and windows
 
@@ -180,6 +191,10 @@ answers of 2026-11-17).  N2, N3 and N5 were settled by the user's "One path for 
   set by a theme's history. styles.txt has only the two today. The answers of 2026-11-17 (a stratum's size from what
   was built there, room uses varied, the world plug-in) bear on it.
   - ENGINE-CRITIQUE.md:519-520 (section 5, its step 3's "Left:").
+- **M2. A generated theme's room.** With seed 70002's grave-slab clue now whole, the ledger's clue no longer fits
+  under linegen's THEME_SIZE, so that theme has one clue fewer (the other 59 of 60 seeds keep every clue). Accept,
+  or grow the theme's room?
+  - built/2026-11-17-text.md, its open question 3.
 
 ## Architecture
 
