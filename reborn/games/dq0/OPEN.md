@@ -159,6 +159,14 @@ only quit and help taken, nothing sensed). These are the rest.
 - **X1. dq0hold's own poke of burn_due is lost if a minute is under way as it lands.** The test passes at its timing.
   Make it poke burn_ask, a sturdier probe?
   - DECISIONS.md:6022-6023, "The hold-back's holes".
+- **X2. Measures over their D17 targets: fail the suite until they are won back, or note them?** Built: noted, not
+  failed, since their old budgets were over the targets too. dq0answer's step forward (a first letter at 772,675
+  cycles at the turns pace, 722,946 at the normal, against 720,000), dq0lookfar's looks (6.2M and 20.6M against
+  1.79M) and its map's first letter (758,556).
+  - built/2026-11-17-guards.md, its open question 1.
+- **X3. A test's `cycles` limit still acts as a budget where it sits close to the measure** (dq0save: 940M against
+  851M). Make each a generous timeout?
+  - built/2026-11-17-guards.md, its open question 2.
 
 ## The user's own open items (HOUSE.md's "Open")
 
