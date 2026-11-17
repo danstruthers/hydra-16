@@ -1970,7 +1970,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0housefaults', asks: true, initiative: true, reach: true, bearings: true, outfit: true, near: ['gear', 'map'], what: 'Dingus Quest Zero\'s faults found by HOUSE.md\'s check (2026-11-03), each as it was shown: a journey ended at a shut door told, and nothing written into the chunk in the window (the hub writers\' check); a door round a bend walked up to first, closed, opened and struck; a denizen standing in the door meant said to be in the way, no walk to the wall; a far look\'s words ("is some 10 feet off"); a closed thing searched not held open; a shut door said by "examine the wall", one test of a rock; "sharpen the torch" refused, the torch still lit; "walk normally" and "walk quickly" said in the dark; "stop working" whatever the work; a dropped lit torch no time, and put out a second; a second new torch not the old one at its feet; a candle read by its own life; a mankar named strikes though a better weapon\'s held; thrown hard at a denizen',
+      name: 'dq0housefaults', asks: true, initiative: true, reach: true, bearings: true, outfit: true, near: ['gear', 'map'], what: 'Dingus Quest Zero\'s faults found by HOUSE.md\'s check (2026-11-03), each as it was shown: a journey ended at a shut door told, and nothing written into the chunk in the window (the hub writers\' check); a door round a bend walked up to first, closed, opened and struck; a denizen standing in the door meant said to be in the way, no walk to the wall; a far look\'s words ("is some 10 feet off"); a closed thing searched not held open; a shut door said by "examine the wall", one test of a rock; "sharpen the torch" refused, the torch still lit; "walk normally" and "walk quickly" said in the dark; "stop working" whatever the work; a dropped lit torch no time, and put out a second; a second new torch not the old one at its feet; a candle read by its own life; a mankar named strikes though a better weapon\'s held; thrown hard at a denizen; a lantern filled never put away to free a hand for its flask, the torch laid down (the hands\' rule, the light last but never the thing filled: 2026-11-17)',
       init: 't_rc', cycles: 9000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm',
         'dq0 -p t -s 5 -c /ram/c.hm -a', 's', 's', 'go to the entrance', 'go to the entrance', 'quit',
@@ -2062,6 +2062,10 @@ module.exports = {
         has(16, 'throw the mankar hard at the giant rat', 'You throw your mankar hard at the giant rat');
         // (A fill in a lit room: nothing spilt, every time)
         for (let n = 1; n <= 5; n++) { never(17, 'fill the lantern', 'hands slip', n); never(17, 'fill the lantern', 'oil spills', n); }
+        // (The lantern being filled never put away to free a hand for its flask: the lit torch laid down, the hands' rule's
+        // light last but never the thing filled, 2026-11-17)
+        never(17, 'fill the lantern', 'You stow the lantern', 1);
+        has(17, 'fill the lantern', 'You lay the torch on the ground, still burning.', 1);
         // (A sconce's cold torch part burnt, not whole: "nearly spent", its last sixteenth at this stratum's age)
         has(18, 'inventory', 'a torch (nearly spent)');
         // (A Move under 4 walks as Move 4: the status line's feet by the step it walks at)

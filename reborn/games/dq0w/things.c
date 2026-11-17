@@ -5740,11 +5740,10 @@ unsigned char s_fill (void)
         return IR_NO;
     }
     if (!(iq.to & IO_DONE)) {
-        if (takes & FU_PITCH) {                 /* (A torch dipped: what comes first, part 86's) */
-            handled = n;
-            if (reach_do (RO_REDIP) != IR_OK) {
-                return IR_NO;
-            }
+        handled = n;                            /* (The light filled never put away to free a hand for its fuel: the
+                                                **   hands' rule's, part 90's, the user's, 2026-11-17) */
+        if ((takes & FU_PITCH) && reach_do (RO_REDIP) != IR_OK) {
+            return IR_NO;                       /* (A torch dipped: what comes first, part 86's) */
         }
         if (reach_step (c, RS_TOOL)) {
             return IR_NO;                       /* (Its fuel got out: a tool's steps; put away after the filling) */

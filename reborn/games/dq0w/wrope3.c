@@ -242,6 +242,8 @@ static unsigned char rp_up (void)
     if (band == 4 || R_FEET > ROPE_FEET + ROPE_REACH) {
         return rp_no (SA_TOO_HIGH);
     }
+    handled = R_M;                              /* (The grapple never put away to free a hand for its rope: the hands'
+                                                **   rule's, part 90's, 2026-11-17) */
     if (reach_step (R_N, RS_TOOL)) {
         return IR_NO;
     }

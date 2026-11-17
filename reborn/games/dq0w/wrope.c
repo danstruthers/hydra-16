@@ -83,6 +83,7 @@ static unsigned char __fastcall__ rp_tie (unsigned char done)
         R_SPIKE = R_HAMMER = 0;
         k = R_A ? item_at (R_A)->kind : 0;
         if (k == KI_GRAPPLE && on_pc (R_A)) {
+            handled = R_A;                      /* (The grapple tied on never put away to free a hand for the rope) */
             if (reach_step (R_N, RS_TOOL)) {
                 return IR_NO;
             }
