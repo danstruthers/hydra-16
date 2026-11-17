@@ -6867,6 +6867,12 @@ static unsigned char turns_run (void)
                                                 **   tasks' timing, 2026-11-04.  A stuck task's let go by, as a turn's) */
         }
         if ((unsigned) (hy_ticks () - ui_t) < TURN_WAIT) {
+            if (hub_posted (&HUB->ireq)) {
+                things ();                      /* (The UI's things meanwhile, as turn's: what it does about an event
+                                                **   may ask them, a dig's tools (E_DIG's D_NO_TOOL, its to_hand), and
+                                                **   each waited on the other thirty seconds, the main loop's things
+                                                **   not come to: dq0answer's dig down, 2026-11-17) */
+            }
             hub_ring (T_UI);
             hub_sleep (1);
             return 1;
