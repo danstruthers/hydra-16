@@ -458,6 +458,8 @@ void s_pc_asked (void)
         nobear = (HUB->wreq.y & WY_NO_BEAR) != 0;   /* (dq0 -N: the tests') */
         HUB->gait = HUB->wreq.a;
         HUB->watch = HUB->wreq.b;
+        HUB->pc.state = 1;                      /* (Its body in the dungeon: actor 0's, the bodies' first, as a
+                                                **   denizen's is as it comes in; its hiding still pc_hid's) */
         if (HUB->resume) {
             world_back ();
         }

@@ -1369,8 +1369,9 @@ struct hub {                                    /* Bank 0, at $8000 */
         struct {
             union {
                 struct actor pc;                /* Actor 0, the character's body: its stratum, square, facing, when it
-                                                **   can act again, its position and its pace (the world's); not kept
-                                                **   yet, the rest (its hiding pc_hid's; built/2026-11-17-actor0.md) */
+                                                **   can act again, its position and its pace (the world's); state 1
+                                                **   from the game's start; not kept yet, the rest (its hiding pc_hid's;
+                                                **   built/2026-11-17-actor0.md) */
                 /* (Its fields by the names they had before it was actor 0, each laid over its field, so that each
                 ** task's code moves to the new ones in its own time: an old name goes once no task uses it) */
                 struct { unsigned char _a0sn[offsetof (struct actor, sn)]; volatile unsigned char pc_stratum; };
