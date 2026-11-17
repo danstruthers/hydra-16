@@ -8,7 +8,7 @@ const { card, typed } = require('../../lib/common.js');
 const {
   T_ROCK, T_FLOOR, T_WALL, T_CORR, T_WINDOW, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks, stratumRec,
   dq0Story, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Named, DQ0_I,
-  dq0Typed, dq0Portal, dq0Rec, dq0Poke, dq0PcShock, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer
+  dq0Typed, dq0Portal, dq0Rec, dq0Poke, dq0PcShock, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Alone
 } = require('../../lib/dq0.js');
 const { target } = require('../../lib/trends.js');   // (The user's targets, D17: each measure kept, those past 90% listed after the tests)
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
@@ -1017,6 +1017,84 @@ module.exports = {
         this.notes = [band + ' ' + rats];
         if (band < 6 || band > 11) f.push('a hostile bandit not at its jog: ' + band + ' steps in ten seconds');
         if (!rats || rats > 9) f.push('a shy hostile rat not at its walk: ' + rats + ' steps in ten seconds');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      // (The diagonal's own: a denizen's steps' time is the world's step_cost, the character's, 2026-11-17)
+      name: 'dq0dendiag', meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's diagonal step for every actor (GAME-CRITIQUE.md's E4, the user's of 2026-11-17: \"the 7/5 diagonal for every actor\"; one step_cost, dq0w.c's, the character's and a denizen's, wbody.c's), by the time an actor's steps take (its ready, the hub's, as each line's typed) and the squares it steps to (its E_DEN DE_MOVEDs): at seed 3, every built passage on the diagonal (dq0 -A, dq0slant's), the character gone east from the kitchen along the passage that bends away northeast; a denizen put at the kitchen's door the character set out from, hostile, drawn on to where it stands (the minds' drawn and last-sensed square poked), the others sent off: its steps up the passage on the diagonal each seven-fifths of a step on the flat (its jog's 10 tenths, 14), where they were a straight step's",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 3 -c /ram/c.hm -A -d /ram/g', 'look',
+        'go through the door to the east', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        const a = m.acia, read = a.read;
+        let typed = '';
+        m.diag = { start: null, k: -1, at: [], why: '' };
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13 && m.dq0 && m.dq0.bank(0)) {
+              const { L, K } = m.dq0.layout(), h = m.dq0.bank(0), u16 = o => h[o] | h[o + 1] << 8, at = k => L.actor + k * L.actorSize;
+              const w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; }, u32 = o => (u16(o) + u16(o + 2) * 65536) >>> 0;
+              const px = u16(L.pcX), py = u16(L.pcY), sn = h[L.pcSn];
+              if (typed === 'go through the door to the east') m.diag.start = [px, py, sn];
+              if (typed === 'wait' && m.diag.k < 0 && m.diag.start) {   // (The scene: one put where the character set out from)
+                const live = [...Array(L.nactors).keys()].filter(j => h[at(j) + L.aState] === 1 && h[at(j) + L.aSn] === sn);
+                const k = live[0];
+                m.diag.why = 'actors ' + live.length;
+                if (k !== undefined) {
+                  dq0Alone(m, h, L, K, at, k);
+                  const [x, y] = m.diag.start, o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);
+                  w16(o + L.aX, x);
+                  w16(o + L.aY, y);
+                  h[o + L.aSn] = sn;
+                  h[o + L.aAttitude] = K.AT_HOSTILE;
+                  h[o + L.aDoing] = 0;
+                  h[o + L.aPos] = K.POS_STANDING;
+                  for (let i = 0; i < 4; i++) h[o + L.aReady + i] = h[L.hubNow + i];
+                  R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8;
+                  R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8;
+                  R.mem[q + R.SN] = sn;
+                  R.mem[q + R.ATTITUDE] = K.AT_HOSTILE;
+                  const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+                  const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]];
+                  ram[ad('drawn') + k] = 8;
+                  ram[ad('lsx') + 2 * k] = px & 255; ram[ad('lsx') + 2 * k + 1] = px >> 8;
+                  ram[ad('lsy') + 2 * k] = py & 255; ram[ad('lsy') + 2 * k + 1] = py >> 8;
+                  h[L.denSeq] = h[L.denSeq] + 1 & 255;
+                  m.diag.k = k;
+                  m.diag.name = (() => { let n = ''; for (let i = 0; h[o + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[o + L.aName + i]); return n; })();
+                }
+              }
+              if (m.diag.k >= 0 && (typed === 'wait' || typed === 'quit')) {   // (Where it is and when it's next free, as each line's typed)
+                const o = at(m.diag.k);
+                m.diag.at.push({ x: u16(o + L.aX), y: u16(o + L.aY), ready: u32(o + L.aReady), step: h[o + L.aReady + 4], doing: h[o + L.aDoing] });
+              }
+            }
+            if (c === 13) typed = ''; else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], D = m.diag;
+        if (D.k < 0 || D.at.length < 2) return ['the scene not set: no actor on the stratum (' + D.why + ')'];
+        // (Its first wait's steps, from the kitchen up the passage: each square it came to, the four ways' a straight
+        // step, a corner's a diagonal; their time its ready's, the flat's, at its jog (hostile, coming at it: half its walk))
+        const from = D.at[0], to = D.at[1], w = T.of('wait');
+        let x = from.x, y = from.y, nd = 0, ns = 0;
+        for (const e of w.dens) if (e.kind === 'E_DEN' && e.who === D.k + 1 && (e.sx !== x || e.sy !== y)) {
+          if (Math.abs(e.sx - x) === 1 && Math.abs(e.sy - y) === 1) nd++; else ns++;
+          x = e.sx; y = e.sy;
+        }
+        const s = from.step >> 1, d = s + Math.floor(2 * s / 5), want = ns * s + nd * d;
+        this.notes = [D.name + ', its walk ' + from.step + ' tenths: ' + ns + ' straight steps, ' + nd + ' on the diagonal, ' + (to.ready - from.ready) + ' tenths'];
+        if (nd < 3) f.push('fewer than three steps on the diagonal up the passage: ' + nd + ' (' + ns + ' straight)');
+        if (to.ready - from.ready !== want) f.push('its steps took ' + (to.ready - from.ready) + ' tenths, not ' + want + ' (' + ns + ' straight at ' + s +
+          ', ' + nd + ' on the diagonal at ' + d + '; ' + (ns + nd) * s + ' were every step a straight one\'s)');
         return f;
       },
       sdcard: true

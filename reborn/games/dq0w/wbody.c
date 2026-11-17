@@ -3,7 +3,8 @@
 ** denizens' task (games/dq0d) is their minds: it decides what each actor means to do and says so (the hub's di, a
 ** ring: hub.h's the denizens' intents), and the world carries it out by the character's rules: a square at a time
 ** (one it can walk, step_ok: no wall, no shut door; no one on it, nor the character, nor where the character's move
-** ends), its time its step's, more uphill, steeply down, on steps (as the world's cost () has the character's); a
+** ends), its time its step's, more uphill, steeply down, on steps, a diagonal seven feet (the character's own:
+** dq0w.c's step_cost, one body rule, 2026-11-17); a
 ** dash past the character; a wait; come along with the character up or down; a blow (wfight.c's); a body come into
 ** its keeping, gone from it.  What the bodies do is told in the denizens' events (E_DEN: a step, a noise, the
 ** character noticed or lost), the world's to write.  Which the character sees is the senses' to decide (dq0p's
@@ -260,10 +261,13 @@ void s_den_intents (void)
                 break;
             }
             o = (unsigned char) apart (bd.x - bpx, bd.y - bpy);
-            if (!I_STEP_COARSE (m)) {           /* (Its time: its step, uphill and steeply down more, on steps more) */
+            if (!I_STEP_COARSE (m)) {           /* (Its time: its step, uphill and steeply down more, on steps more, a
+                                                **   diagonal seven feet: the character's own, step_cost's, one body rule,
+                                                **   2026-11-17) */
                 z = elev_at (bd.sn, bd.x, bd.y);
                 p = at (bd.sn, x, y);
                 z = C->elev[cy_][cx_] - z;
+                c = (TILE (*p) == T_STEPS) | (d & 1 ? SC_DIAG : 0);
                 s = bd.step;                    /* (Its walk, or hurried its jog, and the louder for it (the user's,
                                                 **   2026-11-03, "walk unless hurried, and closing in to attack should
                                                 **   be hurried unless they are cautious"): fleeing; coming at its foe
@@ -275,22 +279,10 @@ void s_den_intents (void)
                     s >>= 1;
                     ++I_STEP_LOUD (m);
                 }
-                c = s;
-                if (z > 0) {
-                    c += s * z / 2;
-                } else if (z < -1) {
-                    c += s * (-z - 1) / 4;
-                }
-                if (TILE (*p) == T_STEPS) {
-                    c += s / 2;
-                }
-                c += c * (bd.move & 3);         /* (Lame, twice its time; crawling, three times: slice
-                                                **   4.1b's) */
-                if (I_STEP_FEELS (m) && unlit_at (bd.sn, x, y)) {
-                    c <<= 1;                    /* (Its kind no darkvision, a square unlit: it feels its way, at
-                                                **   half its pace, HOUSE.md's walking in the dark) */
-                }
-                bd.ready += c;
+                bd.ready += step_cost (s, z, c | SC_MUL ((1 + (bd.move & 3)) << (I_STEP_FEELS (m) && unlit_at (bd.sn, x,
+                    y))));                      /* (Lame, twice its time; crawling, three times: slice 4.1b's; its kind
+                                                **   no darkvision, a square unlit: it feels its way, at half its pace,
+                                                **   HOUSE.md's walking in the dark) */
             }
             if (!noinit && !help && bd.attitude <= AT_UNFRIENDLY && bd.sn == bps && o > 1 && apart (x - bpx, y - bpy) == 1) {
                 eng = bk + 1;                   /* (An enemy come up beside the character: it engages it, the

@@ -20,6 +20,13 @@ extern unsigned bled_at;                        /* When their bloodloss was last
 extern unsigned char den_done;                  /* The denizens' turn they've done (their I_DONE's: the hub's den_go) */
 extern unsigned char den_saw;                   /* A body fallen: the world to look about again */
 
+/* A square's time to walk into, every actor's (dq0w.c's, the main RAM's: one body rule, GAME-CRITIQUE.md's E4,
+** 2026-11-17): its step s, its rise dz, how (SC_*: on steps, a diagonal, its multiplier) */
+unsigned __fastcall__ step_cost (unsigned char s, int dz, unsigned char how);
+#define SC_STEPS        0x01                    /* (Onto steps: half again) */
+#define SC_DIAG         0x02                    /* (A diagonal: seven feet to a square's five) */
+#define SC_MUL(m)       ((m) << 2)              /* (Its time times m: a slow pace's, lame, crawling, feeling its way) */
+
 /* Body k copied out (bd, bk; the character's place, bpx ...), and back (its body's bytes only: its mind's the
 ** denizens'); the hub's header in the window after (each part its own: BD_GET, BD_PUT) */
 #define BD_GET(k)       (bk = (k), hub_map (0), memcpy (&bd, &HUB->actor[bk], sizeof bd), bpx = HUB->pc_x, \

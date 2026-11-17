@@ -471,23 +471,33 @@ static void paced (void)
     }
 }
 
-/* A square's time to walk into, tenths of a second: the pace's step (the referee's, its summary's gstep), more uphill
-** (half again a foot of rise), a little more steeply downhill (a quarter a foot past the first), more on steps (half
-** again); a slower pace's (a slow walk's: feeling the way in the dark) times as many */
-static unsigned __fastcall__ cost (int dz, unsigned char steps)
+/* A square's time to walk into, tenths of a second, every actor's (one body rule, GAME-CRITIQUE.md's E4, 2026-11-17:
+** the character's here, a denizen's wbody.c's): its step s, more uphill (half again a foot of rise), a little more
+** steeply downhill (a quarter a foot past the first), more on steps (half again: SC_STEPS); times how's multiplier
+** (SC_MUL: a slower pace's, a slow walk's feeling the way in the dark; a denizen's lame leg, its crawl, its feeling its
+** way); a diagonal (SC_DIAG) seven feet to a square's five, 7/5 of it */
+unsigned __fastcall__ step_cost (unsigned char s, int dz, unsigned char how)
 {
-    unsigned base = pst, c = base;
+    unsigned c = s;
 
     if (dz > 0) {
-        c += base * dz / 2;
+        c += (unsigned) s * dz >> 1;
     } else if (dz < -1) {
-        c += base * (-dz - 1) / 4;
+        c += (unsigned) s * (unsigned) (-dz - 1) >> 2;
     }
-    if (steps) {
-        c += base / 2;
+    if (how & SC_STEPS) {
+        c += s >> 1;
     }
-    return c * mul_;
+    c *= how >> 2;
+    if (how & SC_DIAG) {
+        c += (c << 1) / 5;
+    }
+    return c;
 }
+
+/* The character's: its pace's step (the referee's, its summary's gstep), a slower pace's times as many (each caller's
+** own, a part's: the main RAM's room) */
+#define cost(dz, how)   step_cost (pst, (dz), (how) | SC_MUL (mul_))
 
 /* A square of chunk C (its tile t) known to the character: seen now, or before (T_SEEN, the map remembered), or felt,
 ** walked in the dark (the senses' felt: T_SEEN too), and its chunk not forgotten (HOUSE.md's travel: what's kept now) */
@@ -980,7 +990,8 @@ void __fastcall__ s_across (unsigned char h, unsigned char r)
                 k = FA_TRAP;
                 break;                          /* (A trap it knows of: it stops short of it, told) */
             }
-            cut_t = t + cost (dz, st);
+            cut_t = t + cost (dz, st | (h & 1 ? SC_DIAG : 0));   /* (A diagonal seven feet, as any step: one body
+                                                **   rule, 2026-11-17) */
             tx_ = cx_;
             ty_ = cy_;
             fx_ = cx_ - head_x[h];
@@ -989,7 +1000,7 @@ void __fastcall__ s_across (unsigned char h, unsigned char r)
             on_way ();
             return;
         }
-        t += (unsigned long) cost (dz, st) * ((h & 1) ? 7 : 5) / 5;
+        t += cost (dz, st | (h & 1 ? SC_DIAG : 0));
         mx = nx;
         my = ny;
         ++n;
@@ -1573,7 +1584,6 @@ void __fastcall__ s_walk (unsigned char d)
     unsigned long t = 0;
     unsigned char n = 0, inside, cross, h0 = d, nd;
     unsigned char* p;
-    unsigned c;
     int z;
 
     pwalk0 = npath;
@@ -1590,8 +1600,8 @@ void __fastcall__ s_walk (unsigned char d)
         my += head_y[d];
         ++n;
         p = at (sn_, mx, my);
-        c = cost (C->elev[cy_][cx_] - z, TILE (*p) == T_STEPS);
-        t += d & 1 ? c + (c << 1) / 5 : c;      /* (A diagonal: seven feet) */
+        t += cost (C->elev[cy_][cx_] - z, (TILE (*p) == T_STEPS) | (d & 1 ? SC_DIAG : 0));   /* (A diagonal: seven
+                                                **   feet) */
         path_add (d, pbase + t);
         inside = TILE (*p) != T_DOOR && room_of (sn_, mx, my) != 0xFF;
         if (inside) {                           /* (Through a door, into a room) */
@@ -7424,10 +7434,7 @@ static void reached (void)
 {
     static unsigned t, c;
 
-    c = cost (wk_dz, (wk_v8 & WC_STEPS) != 0);
-    if (wk_e >= 4) {
-        c += (c << 1) / 5;                      /* (A diagonal: seven feet) */
-    }
+    c = cost (wk_dz, ((wk_v8 & WC_STEPS) != 0) | (wk_e >= 4 ? SC_DIAG : 0));   /* (A diagonal: seven feet) */
     t = WAYS_T[wk_u];
     WAYS_T[wk_v] = t + c < t || t + c > 0xFFFE ? 0xFFFE : t + c;
     WAYS_TRAP[wk_v] = (t = WAYS_TRAP[wk_u]) != 0xFFFF ? t : wk_v8 & WC_TRAP ? wk_v : 0xFFFF;
