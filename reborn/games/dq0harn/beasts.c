@@ -51,7 +51,7 @@ const struct bkind bestiary[NBEASTS] = {
       { { "sword", 55, 5, HARN_EDGE, 0xFF }, { "" } } },
     { "bear", { 16, 13, 13, 13, 13 }, 65, 5, 65, 65, { 5, 2, 2, 4 }, BF_QUAD,       /* (Bears 2, p13) */
       { { "bite", 52, 4, HARN_POINT, HARN_FACE }, { "claws", 65, 4, HARN_EDGE, HARN_HAND } } },
-    { "kobold", { 10, 10, 11, 11, 10 }, 18, 3, 50, 55, { 4, 3, 1, 3 }, BF_BIPED | BF_FOLK | BF_THEY,   /* (Gargun 4, its kin) */
+    { "kobold", { 10, 10, 11, 11, 10 }, 18, 3, 50, 55, { 4, 3, 1, 3 }, BF_BIPED | BF_FOLK,   /* (Gargun 4, its kin) */
       { { "spear", 60, 7, HARN_POINT, 0xFF }, { "" } } },
     { "bat", { 3, 8, 10, 10, 8 }, 1, 1, 45, 50, { 1, 1, 0, 1 }, 0,                  /* (Bats 1, p10) */
       { { "bite", 45, 1, HARN_POINT, HARN_FACE }, { "" } } },
@@ -66,41 +66,41 @@ const struct bkind bestiary[NBEASTS] = {
                                                                                     **   its will gone) */
     { "shade", { 11, 12, 11, 11, 15 }, 38, 4, 70, 50, { 2, 2, 1, 0 }, BF_BIPED,
       { { "sword", 60, 5, HARN_EDGE, 0xFF }, { "" } } },                            /* (Morvrin 3, p76: a priest's) */
-    { "koblord", { 11, 12, 12, 13, 12 }, 20, 3, 60, 55, { 3, 3, 2, 1 }, BF_BIPED | BF_FOLK | BF_THEY,
+    { "koblord", { 11, 12, 12, 13, 12 }, 20, 3, 60, 55, { 3, 3, 2, 1 }, BF_BIPED | BF_FOLK,
       { { "axe", 55, 6, HARN_EDGE, 0xFF }, { "" } } },
-    { "bandit", { 11, 11, 11, 11, 11 }, 40, 4, 50, 45, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK | BF_THEY,
+    { "bandit", { 11, 11, 11, 11, 11 }, 40, 4, 50, 45, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK,
       { { "sword", 50, 5, HARN_EDGE, 0xFF }, { "" } } },
-    { "banlord", { 14, 13, 12, 12, 13 }, 45, 4, 65, 55, { 4, 5, 3, 2 }, BF_BIPED | BF_FOLK | BF_THEY,
+    { "banlord", { 14, 13, 12, 12, 13 }, 45, 4, 65, 55, { 4, 5, 3, 2 }, BF_BIPED | BF_FOLK,
       { { "sword", 65, 6, HARN_EDGE, 0xFF }, { "" } } },
-    { "cultist", { 10, 10, 11, 10, 12 }, 38, 4, 55, 40, { 1, 1, 0, 0 }, BF_BIPED | BF_FOLK | BF_THEY,
+    { "cultist", { 10, 10, 11, 10, 12 }, 38, 4, 55, 40, { 1, 1, 0, 0 }, BF_BIPED | BF_FOLK,
       { { "dagger", 45, 3, HARN_POINT, 0xFF }, { "" } } },
-    { "priest", { 10, 11, 12, 11, 16 }, 38, 4, 70, 45, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK | BF_THEY,
+    { "priest", { 10, 11, 12, 11, 16 }, 38, 4, 70, 45, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK,
       { { "mace", 55, 5, HARN_BLUNT, 0xFF }, { "" } } },
     /* (Phase 4's peoples, 2026-10-29) */
-    { "arak", { 10, 10, 11, 11, 10 }, 18, 3, 50, 55, { 4, 3, 1, 3 }, BF_BIPED | BF_THEY,     /* (Gargun 4: the small orc) */
+    { "arak", { 10, 10, 11, 11, 10 }, 18, 3, 50, 55, { 4, 3, 1, 3 }, BF_BIPED,     /* (Gargun 4: the small orc) */
       { { "dagger", 60, 5, HARN_POINT, 0xFF }, { "" } } },
-    { "hyeka", { 11, 11, 11, 11, 11 }, 24, 3, 55, 55, { 4, 3, 1, 3 }, BF_BIPED | BF_THEY,    /* (Gargun 5: the brown orc) */
+    { "hyeka", { 11, 11, 11, 11, 11 }, 24, 3, 55, 55, { 4, 3, 1, 3 }, BF_BIPED,    /* (Gargun 5: the brown orc) */
       { { "mankar", 55, 5, HARN_EDGE, 0xFF }, { "" } } },
-    { "khanu", { 13, 12, 11, 11, 12 }, 26, 3, 72, 55, { 4, 3, 1, 3 }, BF_BIPED | BF_BERSERK | BF_THEY,  /* (Gargun 6: the black
+    { "khanu", { 13, 12, 11, 11, 12 }, 26, 3, 72, 55, { 4, 3, 1, 3 }, BF_BIPED | BF_BERSERK,  /* (Gargun 6: the black
                                                                                     **   orc) */
       { { "mang", 60, 6, HARN_EDGE, 0xFF }, { "" } } },
-    { "kyani", { 11, 11, 11, 11, 11 }, 24, 3, 55, 55, { 4, 3, 1, 3 }, BF_BIPED | BF_THEY,    /* (Gargun 7: the white orc) */
+    { "kyani", { 11, 11, 11, 11, 11 }, 24, 3, 55, 55, { 4, 3, 1, 3 }, BF_BIPED,    /* (Gargun 7: the white orc) */
       { { "spear", 55, 7, HARN_POINT, 0xFF }, { "" } } },
-    { "viasal", { 12, 11, 11, 11, 11 }, 25, 3, 66, 55, { 4, 3, 1, 3 }, BF_BIPED | BF_THEY,   /* (Gargun 8: the red orc) */
+    { "viasal", { 12, 11, 11, 11, 11 }, 25, 3, 66, 55, { 4, 3, 1, 3 }, BF_BIPED,   /* (Gargun 8: the red orc) */
       { { "axe", 60, 6, HARN_EDGE, 0xFF }, { "" } } },
-    { "garking", { 15, 14, 12, 12, 14 }, 28, 3, 80, 60, { 4, 3, 1, 3 }, BF_BIPED | BF_BERSERK | BF_THEY,   /* (The house's: a
+    { "garking", { 15, 14, 12, 12, 14 }, 28, 3, 80, 60, { 4, 3, 1, 3 }, BF_BIPED | BF_BERSERK,   /* (The house's: a
                                                                                     **   tribe's king, its strongest) */
       { { "mang", 70, 6, HARN_EDGE, 0xFF }, { "" } } },
-    { "khuzwar", { 15, 15, 12, 11, 14 }, 38, 4, 65, 50, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK | BF_THEY,   /* (A Khuzan warrior) */
+    { "khuzwar", { 15, 15, 12, 11, 14 }, 38, 4, 65, 50, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK,   /* (A Khuzan warrior) */
       { { "axe", 65, 6, HARN_EDGE, 0xFF }, { "" } } },
-    { "khuzmin", { 15, 15, 12, 11, 13 }, 37, 4, 50, 45, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK | BF_THEY,   /* (A miner) */
+    { "khuzmin", { 15, 15, 12, 11, 13 }, 37, 4, 50, 45, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK,   /* (A miner) */
       { { "pick", 50, 5, HARN_POINT, 0xFF }, { "" } } },
-    { "khuzeld", { 14, 14, 12, 11, 16 }, 36, 4, 75, 50, { 3, 3, 2, 1 }, BF_BIPED | BF_FOLK | BF_THEY,   /* (An elder) */
+    { "khuzeld", { 14, 14, 12, 11, 16 }, 36, 4, 75, 50, { 3, 3, 2, 1 }, BF_BIPED | BF_FOLK,   /* (An elder) */
       { { "hammer", 70, 6, HARN_BLUNT, 0xFF }, { "" } } },
-    { "sindwar", { 12, 12, 13, 13, 12 }, 32, 4, 65, 65, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK | BF_THEY,   /* (A Sindarin warden) */
+    { "sindwar", { 12, 12, 13, 13, 12 }, 32, 4, 65, 65, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK,   /* (A Sindarin warden) */
       { { "blade", 65, 3, HARN_EDGE, 0xFF }, { "" } } },
-    { "manarms", { 12, 12, 11, 11, 11 }, 40, 4, 55, 50, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK | BF_THEY,   /* (A man-at-arms) */
+    { "manarms", { 12, 12, 11, 11, 11 }, 40, 4, 55, 50, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK,   /* (A man-at-arms) */
       { { "spear", 55, 7, HARN_POINT, 0xFF }, { "" } } },
-    { "captain", { 14, 13, 12, 12, 13 }, 44, 4, 70, 55, { 4, 5, 3, 2 }, BF_BIPED | BF_FOLK | BF_THEY,   /* (Its captain) */
+    { "captain", { 14, 13, 12, 12, 13 }, 44, 4, 70, 55, { 4, 5, 3, 2 }, BF_BIPED | BF_FOLK,   /* (Its captain) */
       { { "sword", 65, 5, HARN_EDGE, 0xFF }, { "" } } },
 };

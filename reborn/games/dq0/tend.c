@@ -125,6 +125,8 @@ void s_tend (void)
             goto out;
         }
         r->other = k;
+        r->w2 = k && HUB->folk[(k - 1) & 7];    /* (A person, "they": the hub's folk, the referee's words, one source,
+                                                **   2026-11-17) */
         strcpy (r->text, strstr (cl, "change") ? "*" : "");    /* (A dressing changed: "change the bandage on my arm",
                                                 **   HOUSE.md's bandages, 2026-11-10; the referee's, its plan's) */
         strcat (r->text, k ? "" : strstr (cl, "left") ? "left " : strstr (cl, "right") ? "right " : "");
@@ -151,6 +153,7 @@ void s_tend (void)
         goto out;
     }
     r->other = plan.other;
+    r->w2 = plan.other && HUB->folk[(plan.other - 1) & 7];
     RS_TREAT_HOW (*r) = plan.c;
     RS_TREAT_LOC (*r) = plan.x;
     r = ask_b (RS_TREAT, 1, plan.b);

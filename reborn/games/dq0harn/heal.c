@@ -55,8 +55,8 @@ static const char* __fastcall__ wname (const harn_char* c, unsigned char k)
 {
     const harn_injury* j = &c->inj[k];
 
-    wound_words (ww, j->sev, j->loc, j->aspect, j->il, c == &pc ? pc_by[k] : BY_ITS | (beast_flags (bs.kind) & BF_THEY ?
-        BY_THEIR : 0));                         /* (A person's "to their": 2026-11-17) */
+    wound_words (ww, j->sev, j->loc, j->aspect, j->il, c == &pc ? pc_by[k] : BY_ITS);  /* (The character's alone: its
+                                                **   callers'; a creature's wounds told nowhere here) */
     k = strlen (ww) + 1;
     do {
         ww[k + 2] = ww[k];

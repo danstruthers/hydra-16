@@ -238,9 +238,11 @@ UK_NO           < E_OUTCOME; w1 no:8-15@U_VERB folk:0-1
 UK_FIRST        < E_OUTCOME; w1 fs:8-15@FS_THE
                 # (A command's first words, sway.c's: their form, FS_*.  arg the verb, FV_*; w4 the word that tells
                 #   it apart, "spent "; text its name)
-UK_SA           < E_OUTCOME; w1 sa:8-15@SA_HOLD
+UK_SA           < E_OUTCOME; w1 sa:8-15@SA_HOLD pl:0
                 # (The world's things' words, coded in things_text (items.h's SAY_AT): its SA_*.  text the thing's
-                #   name, obj the other's: refuse.c's tt_words, stage 5, 2026-11-12)
+                #   name, obj the other's: refuse.c's tt_words, stage 5, 2026-11-12; pl, the name a plural (its last
+                #   letter an s, not two: "pennies", not "pane of glass"), its verb and its pronoun the plural's,
+                #   2026-11-17)
 UK_SELF         < E_OUTCOME; w1 my:8-15@MY_WANT v:0-7
                 # (The character's own state, its body and its bearings, in words: MY_*; v a number or a choice, n2
                 #   another, text a word (a heading's name, the time).  narration as data's rest, 2026-11-15)
@@ -319,10 +321,11 @@ RS_TIME         a about; b pc; w1 minutes; w2 bleeders; x[0] fighting; x[2] drow
                 #   dead, its health; those that bound their bleeding, and died; news 2 words, 4 hurt anew, 8 a want's
                 #   level; the tenths senseless; the clock it's next asked at)
 RS_EXERT        a pace; w1 tenths  -> result tired      # (GA_*, GA_WORK, GA_REST, GA_STOOD; 1 a level more)
-RS_TREAT        a done  -> result cant; b wound; c how; w1 tenths; x[0] loc
-                # (other the patient, the text the part.  a 0 planned: the wound, the treatment (TR_*), where, its time;
-                #   1 nothing to treat, 2 not one it can treat itself, 3 no patient)
-RS_TREAT:done   a done; b wound; c how; x[0] loc  -> result undone      # (a 1, done: 1 still bleeding, 2 the plan gone)
+RS_TREAT        a done; w2 they  -> result cant; b wound; c how; w1 tenths; x[0] loc
+                # (other the patient, the text the part, they 1 a person: the hub's folk, its words "they", 2026-11-17.
+                #   a 0 planned: the wound, the treatment (TR_*), where, its time; 1 nothing to treat, 2 not one it can
+                #   treat itself, 3 no patient)
+RS_TREAT:done   a done; b wound; c how; w2 they; x[0] loc  -> result undone      # (a 1, done: 1 still bleeding, 2 the plan gone)
 RS_EQUIP        a how; w1 load; w2 held                 # (0 put away, 1 taken up, the key the text; 2 all to hand)
 RS_MORALE       a why@MR_NONE; b field; c bonds; steps; w1 fallen; w2(leaders) band:0-7 faction:8-15
                 -> result state@M_STEADY; grade

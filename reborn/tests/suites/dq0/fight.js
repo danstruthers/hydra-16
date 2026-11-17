@@ -728,7 +728,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0they', outfit: true, asks: true, initiative: true, near: ['fight', 'denizens'], what: "Dingus Quest Zero's people \"they\", beasts \"it\" (the user's, 2026-11-17: \"The elf unslings their hartbow.\"; GAME-CRITIQUE.md's 5.6): the speaking peoples' kinds (kinds.txt's nature f, the hub's folk as the denizens make it an actor; the referee's bestiary's BF_THEY the same kinds) said \"their\" and \"they\", a pronoun the subject its verb plural (\"they fend off the blow\"), the kind named keeping the singular (\"The bandit unslings their round shield.\"): dq0shield's bandits set on the character, no \"its\" nor \"it\" of one, their shield unslung and its block in their words, the referee's wound and armour words \"their\"; a giant rat still \"it\" (seed 3's, keeping its distance)",
+      name: 'dq0they', outfit: true, asks: true, initiative: true, near: ['fight', 'denizens'], what: "Dingus Quest Zero's people \"they\", beasts \"it\" (the user's, 2026-11-17: \"The elf unslings their hartbow.\"; GAME-CRITIQUE.md's 5.6): the speaking peoples' kinds (kinds.txt's nature f, the hub's folk as the denizens make it an actor: the one source, the referee's words from it, the world's blow's RS_THEY and first aid's w2, its bestiary no flag of its own, 2026-11-17) said \"their\" and \"they\", a pronoun the subject its verb plural (\"they fend off the blow\"), the kind named keeping the singular (\"The bandit unslings their round shield.\"): dq0shield's bandits set on the character, no \"its\" nor \"it\" of one, their shield unslung and its block in their words, the referee's wound and armour words \"their\"; a giant rat still \"it\" (seed 3's, keeping its distance)",
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm',
         'echo ml swd 90 >> /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
@@ -748,11 +748,8 @@ module.exports = {
         for (const w of [/The bandit unslings their [a-z ]+\./, /they fend off the blow with their [a-z ]+/]) if (!w.test(b)) f.push('not said: ' + w);
         if (/: a [a-z ]+ to its [a-z ]+ \([MSG]\d+\)/.test(b)) f.push('a bandit\'s wound "to its"');
         if (!/keeping its distance/.test(r)) f.push('a giant rat not "keeping its distance" (seed 3): ' + JSON.stringify(r.slice(0, 400)));
-        // (The referee's own bestiary: BF_THEY the kinds the game's bestiary calls folk, kinds.txt's nature f)
-        const kinds = fs.readFileSync(path.join(TESTS, '..', 'games', 'dq0d', 'kinds.txt'), 'latin1').split(/\r?\n/).filter(l => l.trim() && !l.startsWith('#'))
-          .map(l => l.split('|').map(x => x.trim())).filter(v => v.length > 20), folk = kinds.filter(v => v[19] === 'f').map(v => v[1]).sort();
-        const they = [...fs.readFileSync(path.join(TESTS, '..', 'games', 'dq0harn', 'beasts.c'), 'latin1').matchAll(/\{ "(\w+)",[^\n]*BF_THEY/g)].map(x => x[1]).sort();
-        if (folk.join(' ') !== they.join(' ')) f.push('the referee\'s BF_THEY (' + they.join(' ') + ') not kinds.txt\'s folk (' + folk.join(' ') + ')');
+        // (One source, the hub's folk: the referee's bestiary no flag of its own, its words by the requests', 2026-11-17)
+        if (/BF_THEY/.test(fs.readFileSync(path.join(TESTS, '..', 'games', 'dq0harn', 'beasts.c'), 'latin1'))) f.push('the referee\'s bestiary keeps a flag of its own, BF_THEY');
         return f;
       },
       sdcard: true

@@ -165,9 +165,11 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     pa = me == att ? bd.pos : HUB->pc_pos;     /* (Their bodies' positions, the world's: prone, the easier struck) */
     pd = me == att ? HUB->pc_pos : bd.pos;
     RS_ATTACK_FLAGS (*r) = bd.timid | (POS_LOW (pa) ? RS_PRONE_A : 0) | (POS_LOW (pd) ? RS_PRONE_D : 0) | (ra ? RS_REARM : 0) |
-        ((me != att ? bd.doing == DO_SLEEP || (HUB->pc_hid && DO_UNAWARE (bd.doing)) : bd.state > 1) ? RS_ASLEEP : 0);
+        ((me != att ? bd.doing == DO_SLEEP || (HUB->pc_hid && DO_UNAWARE (bd.doing)) : bd.state > 1) ? RS_ASLEEP : 0) |
+        (HUB->folk[((def ? def : att) - 1) & 7] ? RS_THEY : 0);
                                                 /* (A sleeper struck at: no defence, the book's Ignore, 2026-11-02; and
-                                                **   one that hasn't seen a blow from hiding coming, 2026-11-04) */
+                                                **   one that hasn't seen a blow from hiding coming, 2026-11-04; the
+                                                **   creature struck a person, the hub's folk: the referee's words) */
     g = z & AIM_GRAPPLE ? z & 7 : GM_NONE;      /* (A grapple: its move, HOUSE.md's grappling, 2026-11-09) */
     if (g) {
         if (g != GM_BREAK && GRIP_OF (grip) != def) {
@@ -568,7 +570,8 @@ signed char __fastcall__ s_den_test (unsigned char p, signed char steps)
 /* Thing n, in another, reached by body bd (its reach respects compartments as the character's does, the user's,
 ** 2026-11-17: a robbery's took from any, the take rule's reached through a closed lid): each compartment on its way
 ** out, a hidden one none of its (a robbery's no search; PR_KNOWN, an errand's, one the character's found is); a
-** closed one opened (PR_TIMED: two seconds, as the character's; a robbery's its reach's level, as it was); a locked one
+** closed one opened (PR_TIMED: two seconds, as the character's; a robbery's its reach's level, as it was), what's on a
+** lid opened slid off it (things.c's slide, the character's); a locked one
 ** unlocked first by a key of its own that fits (on it, or in its pouch: three seconds), else, but PR_QUIET (a robbery
 ** unawares: the noise; an errand's), forced (the character's own test of a lid's lock, by its sheet: ten seconds;
 ** burst), else left.  1 reached, 0 left; its time on bd's ready.  The robbery's, and the take rule's (wtake.c's, its
@@ -627,6 +630,10 @@ unsigned char __fastcall__ s_den_pry (unsigned n, unsigned char how)
             bd.ready += 20;
         }
         item_at (h)->shut &= ~IS_SHUT_C (cc);
+        if (!cc) {
+            slide (h | SL_QUIET);               /* (Its lid opened: what's on it slides off, the character's opening's
+                                                **   own, untold, as the opening is: the user's, 2026-11-17) */
+        }
     }
     return 1;
 }

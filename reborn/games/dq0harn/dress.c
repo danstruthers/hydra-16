@@ -71,14 +71,14 @@ static void __fastcall__ sheet_out (unsigned char n)
 }
 
 /* A wound's words, "the minor cut to your left forearm (M1)" (heal.c's wname, its copy: its words heal.c's ww, in the
-** main RAM, where overlay 1 writes them) */
+** main RAM, where overlay 1 writes them); a creature's "its", a person's "their" (th, BY_THEIR: the hub's folk, the
+** UI's in the request, RS_TREAT's w2, one source, 2026-11-17) */
 extern char ww[56];
-static const char* __fastcall__ wname (const harn_char* c, unsigned char k)
+static const char* wname (const harn_char* c, unsigned char k, unsigned char th)
 {
     const harn_injury* j = &c->inj[k];
 
-    wound_words (ww + 2, j->sev, j->loc, j->aspect, j->il, c == &pc ? pc_by[k] : BY_ITS | (beast_flags (bs.kind) & BF_THEY ?
-        BY_THEIR : 0));                         /* (A person's "to their": 2026-11-17) */
+    wound_words (ww + 2, j->sev, j->loc, j->aspect, j->il, c == &pc ? pc_by[k] : BY_ITS | th);
     ww[0] = 't';                                /* ("a minor" ... "the minor") */
     ww[1] = 'h';
     ww[2] = 'e';
@@ -210,7 +210,8 @@ static void __fastcall__ used (unsigned char d, unsigned char old)
 ** place): the Treatment roll (Physician EML, the bonus as to hand: test_sk's, its own penalties), its words; a dressing
 ** changed, none (the fresh one on); result 1 a bleeder still bleeding (a minute more, the book's), 2 the plan gone
 ** (healed, changed); the text's second line, after a newline, the key of what it used up ("bandage7": a dressing's,
-** surgery's, a change's, its grade; "bandage7+", the old one kept).  The part said a * first: a dressing changed */
+** surgery's, a change's, its grade; "bandage7+", the old one kept).  The part said a * first: a dressing changed.  w2 1,
+** the one tended (other) a person, "they" (the hub's folk, the UI's: one source, 2026-11-17) */
 void __fastcall__ o_treat (struct req* r)
 {
     harn_char* c = &pc;
@@ -233,7 +234,7 @@ void __fastcall__ o_treat (struct req* r)
         }
         if (ch) {
             RS_TREAT_CANT (*r) = 1;
-            put (beast_flags (bs.kind) & BF_THEY ? "You keep no dressings on them." : "You keep no dressings on it.");
+            put (r->w2 ? "You keep no dressings on them." : "You keep no dressings on it.");
             return;
         }
         c = &cr;
@@ -243,7 +244,7 @@ void __fastcall__ o_treat (struct req* r)
             RS_TREAT_CANT (*r) = 1;
             put (ch ? (tpart[0] ? "There's no dressing there to change." : "You have no dressings to change.") :
                 tpart[0] && !strstr (tpart, "wound") ? "There's nothing there that wants tending." : c == &pc ?
-                "You have no wounds that want tending." : beast_flags (bs.kind) & BF_THEY ?
+                "You have no wounds that want tending." : r->w2 ?
                 "They have no wounds that want tending." : "It has no wounds that want tending.");   /* (A person "they",
                                                 **   2026-11-17) */
             return;
@@ -267,7 +268,7 @@ void __fastcall__ o_treat (struct req* r)
         RS_TREAT_TENTHS (*r) = t;
         RS_TREAT_LOC (*r) = j->loc;
         put (how == TR_CHANGE && !pc_dr[k] ? "You dress " : begun[how]);
-        put (wname (c, k));
+        put (wname (c, k, r->w2 ? BY_THEIR : 0));
         put (".");
         return;
     }

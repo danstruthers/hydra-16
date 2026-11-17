@@ -762,6 +762,41 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0pitfall', near: ['map', 'gear'], what: "Dingus Quest Zero's thing let fall into a pit (the user's, 2026-11-17: \"drop the candle stubs in the pit\" lets them fall: phase A's bugs; wwell2.c's well_put, a pit on the character's square or beside it, T_PIT), and the things' words begun empty for it (2026-11-17, built/2026-11-17-parse.md's noticed: \"put the rope down the hole\" after \"hit the door with the bar\" said \"You have no bar to hand.\", the last answer's words again; things.c's serve, IO_PUT's well, text_new): at seed 5 (dq0 -T, candle stubs and a rope more) the stubs dropped into the pit, none near: \"There's no well or shaft here for the candle stubs to fall down.\"; a pit made beside the character by a poke: dropped again, \"You let the candle stubs fall into the pit.\", that refusal not said again before it, the stubs lying in the pit's square; \"hit the door with the bar\" then \"put the rope down the hole\": the bar's words not said for the rope",
+      init: 't_rc', cycles: 1600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        "dq0 -p t -s 5 -c /ram/c.hm -T -k 'candle stubs,rope'", 'drop the candle stubs into the pit', 'drop the candle stubs into the pit', 'hit the door with the bar',
+        'put the rope down the hole', 'quit', 'echo $status']) },
+      expect: ['% echo $status'], sdcard: true,
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'drop the candle stubs into the pit', n: 2, call: () => {   // (The square east of it a pit, dq0rope's way)
+          const h = m.dq0.bank(0), { L } = m.dq0.layout(), w = m.dq0.bank(WORLD_BANK_N), st = stratumRec(m, h[L.pcSn]);
+          const ox = (h[L.pcX] | h[L.pcX + 1] << 8) - st.x0, oy = (h[L.pcY] | h[L.pcY + 1] << 8) - st.y0;
+          const [TILE] = require('../../../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, tile)']);
+          for (let c = 0; c < 24; c++) {
+            const sl = CSLOT_AT + c * 8, b = m.dq0.bank(5 + Math.floor(c / 3)), o = (c % 3) * 0xAA0, x = (ox & 31) + 1, y = oy & 31;
+            if (!w[sl] || !b || x > 31 || w[sl + 1] !== h[L.pcSn] || (w[sl + 2] | w[sl + 3] << 8) !== ox >> 5 || (w[sl + 4] | w[sl + 5] << 8) !== oy >> 5) continue;
+            b[o + TILE + y * 32 + x] = b[o + TILE + y * 32 + x] & 0xF0 | 9;
+            m.pitAt = [(h[L.pcX] | h[L.pcX + 1] << 8) + 1, h[L.pcY] | h[L.pcY + 1] << 8];
+          }
+        } }]);
+      },
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '').replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' ');
+        if (!m.pitAt) return ['the pit not made'];
+        const segs = l => { const r = []; for (let i = 0; (i = s.indexOf('> ' + l + ' ', i)) >= 0; ) { if (s.startsWith('> ' + l + ' ', i + l.length + 3)) i += l.length + 3; const e = s.indexOf('> ', i + l.length + 3); r.push(s.slice(i, e < 0 ? undefined : e)); if (e < 0) break; i = e; } return r; };
+        const [d1 = '', d2 = ''] = segs('drop the candle stubs into the pit');
+        if (!/There's no well or shaft here for the candle stubs to fall down\./.test(d1)) f.push('no pit near: not said why: ' + d1.slice(0, 300));
+        if (!/You let the candle stubs fall into the pit\./.test(d2)) f.push('the stubs not let fall into the pit: ' + d2.slice(0, 300));
+        if (/no well or shaft/.test(d2)) f.push('the last answer\'s words said again before the fall: ' + d2.slice(0, 300));
+        const dr = T.filter(t => t.line === 'drop the candle stubs into the pit')[1], st = dr && dr.after && dr.after.items.find(i => i.name === 'candle stubs');
+        if (!st || st.where !== 'IW_SQUARE' || st.x !== m.pitAt[0] || st.y !== m.pitAt[1]) f.push('the stubs not in the pit\'s square: ' + JSON.stringify(st) + ' ' + JSON.stringify(m.pitAt));
+        const [rp = ''] = segs('put the rope down the hole');
+        if (!rp || /no bar to hand/.test(rp)) f.push('the bar\'s words said for the rope: ' + rp.slice(0, 300));
+        return f;
+      },
+    },
+    {
       name: 'dq0rope', reach: true, near: ['map', 'gear'], what: "Dingus Quest Zero's rope and grapples (the user's A16, 2026-11-03: \"Queue rope rules\"; HOUSE.md's rope and grapples, for review), by the words, the item store and the referee's tests, each rule a scene: no drop, refused; a drop made beside the character by a poke (a ledge fifteen feet down), a rope got out by the hands routine (its steps told), a spike driven with a hammer (a minute's long task, its noise 7, the spike there for good), let down: a tied rope at its top, a hanging rope at its foot, seen; climbing down it by its help (every Climbing test on the rope 3 steps the better, the book's), at the foot the knot out of reach, climbing back up by it, untied: coiled at its feet, the hanging rope gone, the spike still driven, not taken, the rope taken; a thing that won't hold named, a chest that will, a pit's drop climbed into and out of by the rope; the second game every room a shaft (dq0sky=1): a mouth too high to reach, a grapple thrown up (a Throwing test at its band, the noise heard, told), the rope seen and looked at (a grapple's, how far), the grating (A18) barring the top as before, the grapple shaken loose from below, coiled at its feet, thrown again, its way out opened: climbed out by it; a grapple giving under the climber's weight (its record's RK_SLIP set: a marginal success's, one in four), its rope at its feet, the mouth too high again; the third game a rope let down a shaft from an iron ring (the maker's), the game saved and carried on: the rope still there, at its top and its foot, used to go down, still aided, its end poked out of reach from the foot: told, the shaft climbed unaided; a sack's tie, closed and opened",
       init: 't_rc', cycles: 4500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml thr 95 >> /ram/c.hm', 'echo ml cli 40 >> /ram/c.hm', 'dq0sky=0', 'dq0hour=128', 'dq0furn=0',

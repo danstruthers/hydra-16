@@ -1078,6 +1078,35 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0denlid', near: ['denizens', 'gear'], what: 'Dingus Quest Zero\'s denizen\'s opening of a lid tips off what lies on it (the user\'s, 2026-11-17: phase A\'s bugs, "a denizen opening a lid slides things off": the one function, the character\'s, things.c\'s slide, called from wfight.c\'s den_pry, untold as a denizen\'s opening is; dq0lidslide the character\'s): dq0robcoins\' bandits (seed 1, a case more, dq0 -k), the case set down, the pennies put in it, closed, the dagger put on its lid, the case taken up (no hand free: into the pack); a bandit put beside the character, engaged, the character senseless (dq0PcShock\'s): robbed, the robber goes through its things for its coins (den_pry: the case opened, a closed one, to get at them), the dagger slid off the lid onto the floor where the character lies (a carried box\'s, the character\'s square), the pennies taken, the case left open in the pack',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k case',
+        'drop the case', 'put the pennies in the case', 'close the case', 'put the dagger on the case', 'take the case', 'i', 'wait', 'wait', 'i', 'quit',
+        'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, name: 'bandit', beside: 'face', engage: true }, { g: 1, line: 'wait', n: 1, call: () => dq0PcShock(m, 3000) }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const { IC_MARK, CP_ON } = require('../../../games/dq0/hubgen.js').load().C;   // (items.h's)
+        const [i1, i2] = T.filter(t => t.line === 'i'), p = i1 && i1.after, box = p && p.items.find(i => i.name === 'case');
+        const dg = p && box ? p.items.filter(i => i.name === 'dagger' && i.where === 'IW_ITEM' && i.x === box.n) : [];
+        if (!box || !dq0Carried(p).includes(box) || !(box.shut & 1)) return ['the case not carried, closed: ' + JSON.stringify(box)];
+        if (dg.length !== 1 || dg[0].y !== (IC_MARK | CP_ON << 4 | 1)) return ['the dagger not on the case\'s lid: ' + JSON.stringify(dg)];
+        if (!p.items.some(i => i.name === 'pennies' && i.where === 'IW_ITEM' && i.x === box.n)) return ['the pennies not in the case'];
+        if (!/goes through your things/.test(s)) f.push('not robbed');
+        const q = i2 && i2.after, b2 = q && q.items.find(i => i.n === box.n), d2 = q && q.items.find(i => i.n === dg[0].n);
+        if (!q || q.items.some(i => i.name === 'pennies' && dq0Carried(q).includes(i))) f.push('robbed, its pennies left on it');
+        if (!b2 || (b2.shut & 1)) f.push('the case not opened for the coins in it: ' + JSON.stringify(b2));
+        if (!d2 || d2.where !== 'IW_SQUARE' || d2.x !== q.pc.x || d2.y !== q.pc.y) f.push('the dagger not slid off the lid onto the floor where the character lies: ' + JSON.stringify(d2));
+        if (/From the lid/.test(s.slice(s.indexOf('> wait')))) f.push('a denizen\'s opening told as the character\'s');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0denpace', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's denizens' paces (the user's, 2026-11-03: \"walk unless hurried, and closing in to attack should be hurried unless they are cautious\": HOUSE.md's their paces), by the time between an actor's steps (its E_DEN DE_MOVEDs: the world's wbody.c, every actor's): a hand-written theme's hostile bandits (seed 1), a kind whose walk is 20 tenths a square: coming at the character, at its jog, 10; a theme's hostile giant rats (seed 3), a shy kind whose walk is 12, cautious: coming on at its walk, no quicker, for all it's hostile; both referees",
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'dq0hour=128',

@@ -67,7 +67,10 @@ void __fastcall__ o_say_no (unsigned char a, const char* w)
 ** into lb (said_to, said_q: not said), the text after it read again from the hub (t) after its words, or (t 0: a
 ** line's, list_say's) kept in lb as they're put before it.  tt_sa the first
 ** sentence's code, if the text begins with one (s_hold_first's "held already": a code's, not the words').  A code past
-** TT_AT cuts the text there (lb's room: a sentence's words, and its names kept at lb's end as it's worded) */
+** TT_AT cuts the text there (lb's room: a sentence's words, and its names kept at lb's end as it's worded).  A thing's
+** name a plural (its last letter an s, but not two: "pennies", "candle stubs", not "pane of glass"; water, chalk, paper,
+** the dice, singular), its row's verb and pronoun the plural's (UK_SA's pl: "The pennies are there already.", the user's
+** plural slip, 2026-11-17) */
 #define TT_AT           250
 #pragma static-locals (push, off)
 void __fastcall__ o_tt_words (const char* t)
@@ -76,6 +79,7 @@ void __fastcall__ o_tt_words (const char* t)
     static char* e;
     static char* y;
     static unsigned r;
+    static unsigned char pl;
     struct msg c;
 
     lb[sizeof lb - 1] = 0;
@@ -110,13 +114,14 @@ void __fastcall__ o_tt_words (const char* t)
         } else {
             e = strchr (q + 2, SAY_SEP);
             *e = 0;
+            pl = e[-1] == 's' && e[-2] != 's';  /* (A plural: its row's pl.  No name: e[-1] the code's byte, | 0x80) */
             y = strchr (++e, SAY_SEP);
             *y = 0;
             r += ++y - q;                       /* (The hub's text's after it) */
             said_s[2] = strcpy (lb + sizeof lb - 40, q + 2);    /* (The thing's name: text; the other's: obj) */
             said_s[0] = strcpy (lb + sizeof lb - 20, e);
             c.kind = UK_SA;
-            c.w1 = (unsigned) ((q[1] & 0x7F) | (*q == SAY_AT2 ? 0x80 : 0)) << 8;
+            c.w1 = (unsigned) ((q[1] & 0x7F) | (*q == SAY_AT2 ? 0x80 : 0)) << 8 | pl;
         }
         if (!t) {
             strcpy (lb + TT_AT + 20, y);        /* (The rest of a line, kept: list_say's) */

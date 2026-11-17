@@ -237,6 +237,11 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_OWN, D_NONE };
                                                 **   blow, the book's Ignore (Combat 9: one unaware); 2026-11-02) */
 #define RS_REARM        0x20                    /* (RS_ATTACK's w2: the attacker, its weapon let fall, takes it up again,
                                                 **   its turn: O_REARM, slice 4.1b's) */
+#define RS_THEY         0x10                    /* (RS_ATTACK's w2 at an actor: the creature in it (the one struck: the
+                                                **   defender if it's an actor, else the attacker) one of the speaking
+                                                **   peoples, the hub's folk, the world's: its words "their", the user's,
+                                                **   2026-11-17, one source; RS_SHORT's bit, which a thing's blow alone
+                                                **   has) */
 #define RS_SHORT        0x10                    /* (RS_ATTACK at RS_THING's w2: a bare part (no armour on it: the
                                                 **   fists, the feet, the head) that would be hurt stopped short of it,
                                                 **   unhurt, result | 4: the first time at a door, HOUSE.md's) */

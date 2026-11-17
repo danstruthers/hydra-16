@@ -246,7 +246,8 @@ void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, uns
     char* w, unsigned char stop)
 {
     unsigned char aspect = aspect_of (s, s == &A ? RS_ATTACK_ASPECT (*R) : AS_BEST), by = dealt (s), loc, f, p, sev, il;
-    unsigned char th = t->b && (t->b->flags & BF_THEY) ? BY_THEIR : 0;   /* (A person's "their", 2026-11-17) */
+    unsigned char th = t->who && (prones & RS_THEY) ? BY_THEIR : 0;   /* (A person's "their", 2026-11-17: the hub's folk,
+                                                **   the world's flag in the request, one source) */
     harn_char* c = t->c;
     harn_injury* j;
     int impact;

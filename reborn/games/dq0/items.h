@@ -604,8 +604,10 @@ enum {
     SA_NOT_ON,                                  /* (Not found on a surface, "You find no chisel on the shelves.": SA_NOT_IN's
                                                 **   for a thing that holds things on it, things.c's in_other, 2026-11-17;
                                                 **   past 127, SAY_AT2's) */
-    SA_NO_FALL                                  /* (No well nor shaft to let it fall down: wwell2.c's, in things_text,
+    SA_NO_FALL,                                 /* (No well nor shaft to let it fall down: wwell2.c's, in things_text,
                                                 **   2026-11-17) */
+    SA_PIT_FALL                                 /* (Let fall into an open pit within reach: wwell2.c's, in trtext as the
+                                                **   well's, 2026-11-17) */
 };
 
 /* What the character carries, for the UI to word (IO_LIST's): each thing, how deep it's in others, its state */

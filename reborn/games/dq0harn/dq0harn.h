@@ -53,9 +53,9 @@ extern unsigned char hheld;                     /* (The character's hands that h
 #define BF_FOLK         0x08                    /*   folk, its armour only what it wears, its things told: the outfits'
                                                 **   gear, DECISIONS.md's answer 7); */
 #define BF_BERSERK      0x10                    /*   one that would sooner go berserk than flee (the Gargu-khanu: its
-                                                **   breakdown never a flight, the house's, 2026-10-29); */
-#define BF_THEY         0x20                    /*   one of the speaking peoples, its words "their", "they" (kinds.txt's
-                                                **   folk, the gargun too: the user's people "they", 2026-11-17) */
+                                                **   breakdown never a flight, the house's, 2026-10-29).  A person, "they",
+                                                **   not the bestiary's: the hub's folk, the world's and the UI's in the
+                                                **   requests, RS_ATTACK's RS_THEY, RS_TREAT's w2 (one source, 2026-11-17) */
 #define conditions()    cond_of (&pc)           /* The character's */
 unsigned char __fastcall__ health_of (const harn_char* c); /* Its health (rs.h's H_*) */
 extern struct kind wk;                          /* A thing's kind, the catalogue's (the hub's pc_strike's, SK_OF;
@@ -175,7 +175,7 @@ unsigned __fastcall__ knocked_out (harn_char* c, unsigned long* o, unsigned char
 enum { BY_ASPECT, BY_BITE, BY_CLAWS, BY_STING, BY_HORNS, BY_VENOM };   /* (BY_VENOM: a venom's ache where it's
                                                 **   spread, heal.c's) */
 #define BY_ITS          0x80                    /* (wound_words's: to a creature, "to its"; */
-#define BY_THEIR        0x40                    /*   with it, a person, "to their": BF_THEY's, 2026-11-17) */
+#define BY_THEIR        0x40                    /*   with it, a person, "to their": the hub's folk, 2026-11-17) */
 extern unsigned char pc_by[HARN_INJMAX];
 extern unsigned char pc_dr[HARN_INJMAX];        /* (The dressing on each of the character's injuries, its bandage's grade
                                                 **   plus 1, 0 none: dress.c's, kept in step with pc_by; its file's

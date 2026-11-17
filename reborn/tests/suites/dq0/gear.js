@@ -1690,9 +1690,41 @@ module.exports = {
         purse(T.of('take the pennies from the chest'), 'taken from the chest');
         if (/Stow it where/.test(s)) f.push('the pennies\' place asked');
         inTurn(s, ['> take the pennies', 'Taken.', '> hold the pennies', 'You take the pennies in your right hand.', '> stow the pennies', 'You put the pennies in the pouch.',
-          '> put 5 pennies in the chest', 'You put the 5 pennies in the chest.', '> take the pennies from the chest', 'You take the pennies from the chest. It\'s in your pouch.'], f, 'the words: ');
+          '> put 5 pennies in the chest', 'You put the 5 pennies in the chest.', '> take the pennies from the chest', 'You take the pennies from the chest. They\'re in your pouch.'], f, 'the words: ');
         const r = T.of('take the rations').after, pack = r && r.items.find(i => i.name === 'backpack'), ra = r ? r.items.filter(i => i.name === 'rations' && dq0Carried(r).includes(i)) : [];
         if (!ra.length || ra.some(i => i.where !== 'IW_ITEM' || !pack || i.x !== pack.n)) f.push('the rations not to the pack: ' + JSON.stringify(ra));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0plurals', reach: true, near: ['gear', 'parser'], what: 'Dingus Quest Zero\'s things\' sentences for a plural name (2026-11-17: the play test\'s "The pennies is there already."; "You\'ve no hand free for the candle stubs: you put it in your backpack."): at seed 3 (dq0 -T, candle stubs and a sword more) the pennies put in the pouch they\'re in: "The pennies are there already." (the SA rows\' pl: the name\'s last letter an s, not two, refuse.c\'s, as the catalogue\'s plural kinds are named); the sword held, the candle stubs put down and taken up again, no hand free: "You\'ve no hand free for the candle stubs: you put them in your backpack." (things.c\'s s_carry, by the same rule)',
+      init: 't_rc', cycles: 1600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        "dq0 -p t -s 3 -c /ram/c.hm -T -k 'candle stubs,sword'", 'put the pennies in the pouch', 'hold the sword', 'drop the candle stubs', 'take the candle stubs', 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '').replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' ');
+        inTurn(s, ['> put the pennies in the pouch', 'The pennies are there already.', '> take the candle stubs',
+          'You\'ve no hand free for the candle stubs: you put them in your backpack.'], f, 'the words: ');
+        if (/pennies is there|candle stubs: you put it in/.test(s)) f.push('a plural said as one: ' + (/[^.]*(pennies is there|candle stubs: you put it in)[^.]*/.exec(s) || [''])[0]);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0keypack', reach: true, near: ['gear'], what: 'Dingus Quest Zero\'s key found in the pack the reach set down (built/2026-11-17-parse.md\'s noticed: "At the full reach, an overloaded hunter\'s \\"unlock the chest\\" (its own key in the worn pack, the pack set down for the reach) says \\"You have nothing to pick its lock with.\\""): at seed 3 (dq0 -T, dq0parsefix\'s kit: a chest and its key, a rope, a case, a chisel, a table, a dagger) the chest put down, "unlock the chest": the hands freed, the pack taken off and set down, the key got out of it (things.c\'s key_fits: what the character carries, and the pack it set down for this handling, rs_pack), "You unlock the chest with its key.", the chest unlocked; never "nothing to pick its lock with"',
+      init: 't_rc', cycles: 1800e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        "dq0 -p t -s 3 -c /ram/c.hm -T -k 'chest,key,rope,case,chisel,table,dagger'", 'drop the chest', 'unlock the chest', 'inventory', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '').replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' ');
+        inTurn(s, ['> unlock the chest', 'You take off the backpack', 'You get out the iron key.', 'You unlock the chest with its key.'], f, 'the words: ');
+        if (/nothing to pick its lock with/.test(s)) f.push('the key in the pack set down not found: "nothing to pick its lock with" said');
+        const u = T.of('unlock the chest').after, chest = u && u.items.find(i => i.name === 'chest');
+        if (!chest || (chest.shut & 2)) f.push('the chest still locked: ' + JSON.stringify(chest));
         return f;
       },
       sdcard: true

@@ -628,6 +628,7 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
 {
     unsigned char h;
     unsigned c;
+    const char* w;
 
     h = hand_free (n);
     if (h & HF_FIXT) {
@@ -644,10 +645,12 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
         place (n, IW_ITEM, cont = c, 0);        /* (cont: where it went, carried's words) */
         lv_c = 0;
         reach_to (c);                           /* (Put away: its reach, HOUSE.md's: part 56's) */
-        if (hand_first == 2 && c == pack) {     /* (Taken up, its hands full: said so, the user's, 2026-11-06) */
+        if (hand_first == 2 && c == pack) {     /* (Taken up, its hands full: said so, the user's, 2026-11-06; a plural
+                                                **   "them", its name's last letter an s, not two: refuse.c's tt_words') */
             put ("You've no hand free for the ");
-            put (kind_of (item_kind (n))->name);
-            put (": you put it in your ");
+            put (w = kind_of (item_kind (n))->name);
+            h = strlen (w);
+            put (w[h - 1] == 's' && w[h - 2] != 's' ? ": you put them in your " : ": you put it in your ");
             put (kind_of (item_kind (pack))->name);
             put (".");
         }
@@ -2560,7 +2563,9 @@ unsigned char s_serve (void)
         break;
     case IO_PUT:
         if (!strcmp (iq.into, "well") || !strcmp (iq.into, "shaft")) {   /* (Into a well, down a shaft or a hole: part
-                                                **   104's, read in first: 2026-11-06) */
+                                                **   104's, read in first: 2026-11-06; its words the trtext's, the
+                                                **   things' text begun empty, not the last answer's said again) */
+            text_new ();
             look_more (0, LM_ROPES);
             iq.result = well_put ();
             break;
@@ -3843,8 +3848,9 @@ static signed char __fastcall__ tested (unsigned char p, signed char steps)
     return g;
 }
 
-/* A key the character carries (in hand, on it, in what it carries) that fits the lock of thing number id (its number
-** in the key's size and thick: HOUSE.md's keys that fit, 2026-10-27): 1; 2, keys but none that fits; 0, none */
+/* A key the character carries (in hand, on it, in what it carries; in the pack it set down for this handling, rs_pack:
+** the full reach's own step, 2026-11-17) that fits the lock of thing number id (its number in the key's size and thick:
+** HOUSE.md's keys that fit, 2026-10-27): 1; 2, keys but none that fits; 0, none */
 static unsigned char __fastcall__ key_fits (unsigned id)
 {
     unsigned i = 0, j;
@@ -3857,7 +3863,7 @@ static unsigned char __fastcall__ key_fits (unsigned id)
         }
         for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {
         }
-        if (item_at (j)->where != IW_ACTOR || item_at (j)->x) {
+        if ((item_at (j)->where != IW_ACTOR || item_at (j)->x) && j != rs_pack) {
             continue;
         }
         p = item_at (i);
@@ -4315,13 +4321,15 @@ void __fastcall__ s_own_comps (struct item* q)
 
 /* What's on its lid slid off as it's opened (the user's, 2026-11-16: "Things on a chest's lid slide off when it's opened"),
 ** to the floor (its square's; a carried one's, the character's), told: "From the lid a chisel slides onto the floor."; the
-** world's look told it's changed (slid) */
+** world's look told it's changed (slid).  Every actor's opening (the user's, 2026-11-17: "a denizen opening a lid tips off
+** what lies on it"): n | SL_QUIET, a denizen's (wfight.c's den_pry), untold, as its opening is */
 void __fastcall__ s_slide (unsigned n)
 {
     unsigned j, x, y;
-    unsigned char c, sn, pl = 0;
+    unsigned char c, sn, pl = 0, q = n >> 15;
     char* t0;
 
+    n &= ~SL_QUIET;
     for (c = 1; comp_of (item_at (n)->kind, c) && (crow.noun & CN_MASK) != CN_LID; ++c) {
     }
     if (!comp_of (item_at (n)->kind, c)) {
@@ -4335,16 +4343,18 @@ void __fastcall__ s_slide (unsigned n)
     if (!pl) {
         return;
     }
-    put (" From the lid ");                  /* ("From the lid a chisel slides onto the floor.": its list the
+    if (!q) {
+        put (" From the lid ");              /* ("From the lid a chisel slides onto the floor.": its list the
                                                 **   UI's list renderer's, its words lower case) */
-    hub_map (UI_BANK);
-    t0 = tp;
-    hub_map (0);
-    lst_c = c;
-    listed (n);
-    lst_c = 0xFF;
-    and_last (t0);
-    put (pl > 1 ? " slide onto the floor." : " slides onto the floor.");
+        hub_map (UI_BANK);
+        t0 = tp;
+        hub_map (0);
+        lst_c = c;
+        listed (n);
+        lst_c = 0xFF;
+        and_last (t0);
+        put (pl > 1 ? " slide onto the floor." : " slides onto the floor.");
+    }
     for (j = n; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {
     }
     hub_map (0);
@@ -4369,8 +4379,14 @@ void __fastcall__ s_slide (unsigned n)
     slid = 1;
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* Box b locked, key k made to fit it alone (the kit's, dq0 -k's "chest,iron key": outmake.c's rule, every making's;
-** HOUSE.md's keys that fit) */
+** HOUSE.md's keys that fit).  Part 13's, the stock's (part 61's till 2026-11-17: its room, the headroom rule's, a
+** denizen's opening's slide) */
+#pragma code-name (push, "SW13CODE")
+#pragma rodata-name (push, "SW13RODATA")
 void __fastcall__ s_kit_lock (unsigned b, unsigned k)
 {
     struct item* p;
@@ -4396,7 +4412,6 @@ void __fastcall__ s_kit_lock (unsigned b, unsigned k)
     p->size = id;
     p->thick = id >> 8;
 }
-
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 

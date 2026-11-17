@@ -53,6 +53,27 @@ static unsigned char shaft_near (void)
     return 0xFF;
 }
 
+/* An open pit within reach of the character (its own square, or one of the eight round it: T_PIT, given way, in plain
+** sight; "drop the candle stubs in the pit", a hole's kind said, the UI's "shaft"): its square W_X, W_Y on W_SN, 1; or 0 */
+static unsigned char pit_near (void)
+{
+    static unsigned px, py;
+    static unsigned char k, r;
+    static const unsigned char* p;
+
+    hub_map (0);
+    W_SN = HUB->pc_stratum;
+    px = HUB->pc_x;
+    py = HUB->pc_y;
+    for (k = r = 0; k < 9 && !r; ++k) {
+        W_X = k ? px + head_x[k - 1] : px;
+        W_Y = k ? py + head_y[k - 1] : py;
+        r = (p = at (W_SN, W_X, W_Y)) != 0 && TILE (*p) == T_PIT;
+    }
+    hub_map (0);
+    return r;
+}
+
 static char b[120];
 
 /* None to let thing n fall down (0: none of the name to hand), its words in the things' text (said.txt's SA rows: "There's
@@ -81,16 +102,17 @@ static unsigned char __fastcall__ none_for (unsigned n)
 ** "shaft", a shaft's or a hole's kind said, the UI's): on the head's square, then down to its foot (a well choked, it lodges
 ** where it is), told in the things' words, the sound of its landing by the foot's water: IR_OK; its reach's step first,
 ** IR_NO; a well seen but out of reach, IR_NOT_HERE (where it is: the UI walks over to it, and asks again); none, IR_NONE,
-** why in the things' words */
+** why in the things' words.  A hole's with no shaft within reach, an open pit's within reach: it falls into the pit, on
+** its floor (the user's, 2026-11-17: "drop the candle stubs in the pit", verbs do real actions) */
 unsigned char s_well_put (void)
 {
     struct item* q;
     const struct stratum* s;
     unsigned n;
-    unsigned char k, w, wet = 0;
+    unsigned char k, w, wet = 0, pit = 0;
     static struct msg m;
 
-    if ((w = well (WL_NEAR)) == 0 && (*iq.into != 's' || shaft_near () == 0xFF)) {
+    if ((w = well (WL_NEAR)) == 0 && (*iq.into != 's' || shaft_near () == 0xFF) && (*iq.into != 's' || !(pit = pit_near ()))) {
         if (*iq.into == 's' || (n = seen_named ("well")) == 0) {
             return none_for (at_hand (iq.name));
         }
@@ -109,12 +131,12 @@ unsigned char s_well_put (void)
     if (reach_step (n, 0)) {
         return IR_NO;                           /* (A step of the reach first: got out of the pack ...) */
     }
-    if (w ? well (WL_SHAFT) != 0xFF : well (WL_FOOT)) {
+    if (!pit && (w ? well (WL_SHAFT) != 0xFF : well (WL_FOOT))) {
         wet = WET_BIT (C, cx_, cy_) != 0;       /* (Its foot, in the window: part 103's footed) */
         s = &STRATUM (W_B);
         k = it_need (W_B, (W_X - s->x0) >> CW_BITS, (W_Y - s->y0) >> CW_BITS);
     } else {
-        k = 0;
+        k = 0;                                  /* (A pit's: its floor's square, this stratum's) */
     }
     q = item_at (n);
     q->where = IW_SQUARE;
@@ -125,7 +147,7 @@ unsigned char s_well_put (void)
     k = q->kind;
     b[0] = SAY_AT2;                             /* (Its sentence coded, said.txt's SA rows: the well's, the shaft's; it
                                                 **   lodges, a splash, it lands; the user's, 2026-11-16) */
-    b[1] = (SA_WELL_LODGES + (w ? 0 : 3) + (item_at (n)->sn == W_SN ? 0 : wet ? 1 : 2)) | 0x80;
+    b[1] = (pit ? SA_PIT_FALL : SA_WELL_LODGES + (w ? 0 : 3) + (item_at (n)->sn == W_SN ? 0 : wet ? 1 : 2)) | 0x80;
     hub_map (KIND_BANK);
     strcpy (b + 2, CATALOGUE[k].name);
     strcat (b, "\2\2");
