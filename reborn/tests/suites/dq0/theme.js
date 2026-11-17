@@ -10,6 +10,7 @@ const {
   dq0Made, dq0Story, dq0Turns, dq0Ev, dq0Rep, dq0Need, dq0Carried, dq0Here, DQ0_I, dq0Typed, dq0Poke
 } = require('../../lib/dq0.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
+const CUT_SEEDS = [271828, 1000003, ...Array.from({ length: 22 }, (_, k) => 70000 + k)];   // (dq0cut's: the clock-sized, the play test's)
 
 module.exports = {
   tests: [
@@ -220,6 +221,37 @@ module.exports = {
         }
         for (const k of ['artifact', 'evil', 'prisoner', 'through']) if (!kinds.has(k)) f.push('no ' + k + ' goal among seeds 1-12');
         this.notes = ['goal kinds: ' + [...kinds].join(', ')];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0cut', near: ['theme'], what: "Dingus Quest Zero's generated words whole (GAME-CRITIQUE.md's 5.6, 2026-11-17): themegen's histories said (themegen -s, its theme to read) for 24 seeds, the clock-sized ones 70000 on, the play test's 271828 and 1000003: no words cut short to fit their room (themegen's tcut, fill's and linegen's: \"themegen: words cut short\" said; linegen's 240-byte buffer cut every cursed tomb's clue at 239, \"...and their dead would not lie s\", seed 70001's grave slab), every clue's and era's words ending in a full stop; the story's capitals (an era's first letter's place past 255 bytes an unsigned char's: \"aNd Wearag held it\", \"ago. the Khulim dwarves\" at seed 1000003): every sentence begun with a capital, none inside a word",
+      init: 't_rc', cycles: 2400e6,
+      get machine() {
+        return { input: ['bind -a /sd/0/games /bin', ...CUT_SEEDS.flatMap(s => ['themegen -s ' + s, 'echo seed ' + s + ' status $status']), 'echo done']
+          .map(l => '\u0101' + l + '\r').join('') };
+      },
+      expect: ['% echo done\ndone\n'],
+      check(m, out) {
+        const o = out.replace(/\r/g, ''), f = [];
+        if (/words cut short/.test(o)) f.push('words cut short: ' + JSON.stringify(o.slice(Math.max(0, o.indexOf('words cut short') - 600), o.indexOf('words cut short') + 40)));
+        for (const s of CUT_SEEDS) {
+          if (!o.includes('seed ' + s + ' status\n')) f.push('seed ' + s + ': themegen failed');   // (rc's status none: 0)
+          const L = DQ0_MAKE().lines(saidTheme(out, 'themegen -s ' + s), 'seed ' + s), v = k => L.filter(l => l.key === k).map(l => l.v);
+          for (const r of v('rule').filter(r => r[0] === 'read')) if (!/[.!?]"?$/.test(r[r.length - 1])) f.push('seed ' + s + ': a clue cut: ' + JSON.stringify(r[r.length - 1].slice(-60)));
+          for (const e of v('era')) if (!/\.$/.test(e[e.length - 1])) f.push('seed ' + s + ': an era\'s words cut: ' + JSON.stringify(e[e.length - 1].slice(-60)));
+          const story = (v('story')[0] || [''])[0];
+          if (!story) { f.push('seed ' + s + ': no story'); continue; }
+          for (const x of story.split(/(?<=[.!?]"?)\s+/)) if (!/^"?[A-Z0-9]/.test(x)) f.push('seed ' + s + ': a sentence of its story not begun with a capital: ' + JSON.stringify(x.slice(0, 40)));
+          const mid = story.match(/\b[a-z]+[A-Z]\w*/);
+          if (mid) f.push('seed ' + s + ': a capital inside a word of its story: ' + JSON.stringify(mid[0]));
+        }
+        const s3 = DQ0_MAKE().lines(saidTheme(out, 'themegen -s 1000003'), '1000003').find(l => l.key === 'story');
+        if (!s3 || !/called Gruog, and Wearag held it/.test(s3.v[0]) || !/centuries ago\. The Khulim dwarves came after/.test(s3.v[0]))
+          f.push('seed 1000003: its story not as the history has it: ' + JSON.stringify(s3 && s3.v[0].slice(0, 500)));
+        const c1 = DQ0_MAKE().lines(saidTheme(out, 'themegen -s 70001'), '70001').find(l => l.key === 'rule' && l.v[1] === 'grave slab');
+        if (!c1 || !/their dead would not lie still\.$/.test(c1.v[2])) f.push('seed 70001: its grave slab\'s clue not whole: ' + JSON.stringify(c1 && c1.v[2]));
         return f;
       },
       sdcard: true

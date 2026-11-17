@@ -12,7 +12,7 @@
             .forceimport    _rname, _rock, _seed, _sl, _st, _tg_count, _tg_find, _tg_get, _tg_key, _tg_lines, _title
             .forceimport    _peoples, _pk_era, _pk_lead
             .forceimport    _gwhy, _gQ, _rmode, _gwl, _gD, _gpence, _region_line, _gsl, _gs_s, _gu_s, _ge_s, _geu_s
-            .forceimport    _gx_s, _gg_w
+            .forceimport    _gx_s, _gg_w, _tcut
             .forceimport    _val, _valn, _water, _work_of, _works, _wused, _beasts, _erp, _stp, _fap, _beastp, _Dp
             .forceimport    _strncat, _strncmp, _ultoa, ___bzero, _strlen, _strcpy, _strcat, _strcmp, _strchr, _strstr
             .forceimport    _strncpy, _memcpy, _memset, _atoi, _write

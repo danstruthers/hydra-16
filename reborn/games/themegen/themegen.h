@@ -70,6 +70,8 @@ const char* __fastcall__ purpose_words (unsigned char p);
 extern const char* sl[58];
 #define SL(c)           sl[(c) - 'A']
 void __fastcall__ fill (char* out, const char* tpl, unsigned max);
+extern unsigned char tcut;                      /* (Words cut short to fit their room (fill's, linegen's): told as themegen
+                                                **   ends, "words cut short"; the tests' check, 2026-11-17) */
 char* __fastcall__ pick (const char* s, char* out);     /* One of s's words (spaces between) at random, into out */
 unsigned char __fastcall__ among (const char* s, const char* list);    /* s one of list's words */
 extern char W[LINE_TEXT];                       /* (Words made, for a line: the bank programs' room) */

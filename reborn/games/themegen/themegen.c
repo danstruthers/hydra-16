@@ -181,6 +181,7 @@ const char* __fastcall__ purpose_words (unsigned char p)
 
 const char* sl[58];
 char W[LINE_TEXT];
+unsigned char tcut;
 
 void __fastcall__ fill (char* out, const char* tpl, unsigned max)
 {
@@ -202,8 +203,10 @@ void __fastcall__ fill (char* out, const char* tpl, unsigned max)
             out[n++] = cap && *s >= 'a' && *s <= 'z' ? *s - 32 : *s;
             cap = 0;
         }
+        tcut |= *s;                             /* (A slot's words cut) */
     }
     out[n] = 0;
+    tcut |= *tpl;                               /* (Or the rest) */
 }
 
 char* __fastcall__ pick (const char* s, char* out)
@@ -540,6 +543,16 @@ static int __fastcall__ rumours (struct bank_fn* hist, struct bank_fn* goal)
     return 0;
 }
 
+/* Words cut short to fit their room (tcut: fill's, linegen's), told: none, the tests' check (theme.js's dq0cut,
+** 2026-11-17: a clue's words cut at 239 bytes).  The theme as it is, its status as it is (a word short, not a game
+** lost: the stand-ins its fallback) */
+static void cut_told (void)
+{
+    if (tcut) {
+        say ("themegen: words cut short\n");
+    }
+}
+
 int main (int argc, char* argv[])
 {
     static char* targs[8];
@@ -608,7 +621,9 @@ int main (int argc, char* argv[])
     goal = child (2, "goalgen.bp", "_make");
     step ();
     if (rmode) {
-        return rumours (hist, goal);            /* (No lines of a theme's: linegen not loaded) */
+        i = rumours (hist, goal);               /* (No lines of a theme's: linegen not loaded) */
+        cut_told ();
+        return i;
     }
     lines = child (3, "linegen.bp", "_make");
     step ();
@@ -640,6 +655,7 @@ int main (int argc, char* argv[])
     if (ofd >= 0) {
         close (ofd);
     }
+    cut_told ();
     if (bad || !outdir) {
         return bad;
     }

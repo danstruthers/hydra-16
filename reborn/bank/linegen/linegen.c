@@ -15,12 +15,20 @@
 #define BANKPROG
 #include "../../games/themegen/themegen.h"
 
-/* An era's words: what its people made (or made their own), and how it ended (ago: and how long ago), into out (200
-** bytes), its first letter small */
+#define WMAX            300                     /* (w's bytes: the longest clue, an era's words in a clue's, some 271) */
+
+static char w[WMAX];                            /* (A line's words: the head's, the history's, the goal's, one at a
+                                                **   time; one for them all, the bank's room.  240 bytes till
+                                                **   2026-11-17: a clue's words cut at 239, "...and their dead would
+                                                **   not lie s", every cursed tomb's; the longest some 271) */
+
+/* An era's words: what its people made (or made their own), and how it ended (ago: and how long ago, into w; else into
+** out, its record's 200 bytes), its first letter small.  Cut to fit: themegen's tcut, told */
 static void __fastcall__ era_words (unsigned char e, char* out, unsigned char ago)
 {
     static char c[8], t[260];
     struct era* r = &er[e];
+    unsigned m;
 
     if (r->own) {
         if (out != r->words) {
@@ -56,8 +64,12 @@ static void __fastcall__ era_words (unsigned char e, char* out, unsigned char ag
     if (t[0] == 'T' && !strncmp (t + 1, "he ", 3)) {
         t[0] = 't';                             /* (Its first letter a capital only where a sentence begins) */
     }
-    strncpy (out, t, 199);
-    out[199] = 0;
+    m = ago ? WMAX - 2 : sizeof r->words - 1;   /* (w's: a full stop after it, hist_lines'; none cut there, t shorter) */
+    if (!ago && strlen (t) > sizeof r->words - 1) {
+        tcut = 1;
+    }
+    strncpy (out, t, m);
+    out[m] = 0;
 }
 
 /* The goal's slots, for its lines (goals.txt's): as goalgen made them (gsl, themegen's: the bank's room), put back after an era's
@@ -103,9 +115,6 @@ static void why_line (void)
 }
 
 /* ---- The groups */
-
-static char w[240];                             /* (A line's words: the head's, the history's, the goal's, one at a
-                                                **   time; one for them all, the bank's room) */
 
 /* A hand-written theme's line of the key, if it gives one: written as it is (the head's lines one by one: a name
 ** given, its story made) */
@@ -172,6 +181,9 @@ static void story_line (void)
 {
     char* story = W;                            /* (W: its own words its eras', made apart) */
     unsigned char e, k;
+    unsigned n;                                 /* (An era's first letter's place: past 255 in a story, an unsigned char's
+                                                **   till 2026-11-17, the capital made 256 bytes back: "aNd Wearag", and
+                                                **   "ago. the Khulim dwarves") */
     int j, end;
 
     SL ('R') = rname;
@@ -180,10 +192,13 @@ static void story_line (void)
     for (e = 0; e < ne; ++e) {
         era_words (e, w, 1);
         strcat (story, " ");
-        k = strlen (story);
-        strncat (story, w, LINE_TEXT - k - 3);
-        if (story[k] >= 'a' && story[k] <= 'z') {
-            story[k] -= 32;
+        n = strlen (story);
+        if (strlen (w) + n > LINE_TEXT - 3) {
+            tcut = 1;
+        }
+        strncat (story, w, LINE_TEXT - n - 3);
+        if (story[n] >= 'a' && story[n] <= 'z') {
+            story[n] -= 32;
         }
         strcat (story, ".");
     }
