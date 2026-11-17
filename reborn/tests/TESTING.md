@@ -8,10 +8,11 @@ round, after all the merges.
 ## The selector: `--changed`, `--near`, `--list`
 
 `node sim/test.js --changed [REF]` runs only the tests that the files changed since REF can affect (since its merge
-base with HEAD). `--changed=REF` names it. Name it every time: the default REF (sim/test.js, sim/tiers.js) is still
-`reborn-game`, a branch that no longer exists, so `--changed` alone stops with "no merge base". Give the branch your
-work began from, today `reborn-commands`. The files are everything committed since the merge base, everything staged
-or not, and the new files git doesn't ignore.
+base with HEAD). `--changed=REF` names it. Without one, the REF is the repository's main branch, `main` (its merge
+base with HEAD), or HEAD's parent where there's none (`defaultRef` in `../base/sim/select.js`). Since `main` is far
+behind a branch of the game's work, name the branch your work began from (today `reborn-commands`) to run only what
+your change can affect. The files are everything committed since the merge base, everything staged or not, and the
+new files git doesn't ignore.
 
 - Each file maps to areas through the table in `tests/areas.js` (`rules`: the first rule that matches the path).
   For example, `base/kernel`, `reborn/modules/rc`, `reborn/sim` and `reborn/tools` run every test.
@@ -138,8 +139,8 @@ This runs, one step after another with one summary at the end:
   file changed (`GRAMMAR` in `tests/areas.js`: `games/dq0/commands.*`, `games/dq0c/`, the command tools,
   `resolve.c`).
 
-`--tier report --changed REF` names the REF; without it the tier uses the missing `reborn-game` and its suite steps
-stop. `--tier report --list` shows each step and what it would run.
+`--tier report --changed REF` names the REF; without it the tier takes the same default as `--changed` (`main`, or
+HEAD~1). `--tier report --list` shows each step and what it would run.
 
 **3. The lead, once per round after all the merges**: everything:
 

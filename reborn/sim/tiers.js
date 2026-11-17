@@ -7,7 +7,8 @@
 //   lead     the lead's, once a round after all the merges: the whole suite (dq0answer at 0), RULES=null's meaning
 //            tests, the soaks (soak.js -n 200; -n 60 -fight 0.8; -n 20 -life 3 -same), dq0answer at DQ0ANS_WAIT=1 and 2, the parser's
 // Usage: node sim/test.js --tier report|lead [--changed REF] [-j N] [--seed N] [--list]
-//   --changed REF   report's REF (default: reborn-game, the merge base with it)
+//   --changed REF   report's REF (default: the repository's main branch, main, the merge base with it; else HEAD~1:
+//                   ../base/sim/select.js's defaultRef)
 //   -j N, --seed N  each step's (the suite's, the soaks')
 //   --list          the steps, and each suite step's --list (what it would run, and why), without running
 'use strict';
@@ -78,7 +79,7 @@ const shown = s => Object.entries(s.env || {}).filter(([, v]) => v !== '').map((
 
 // sim/test.js --tier NAME [...]: the tier's steps, one after another; the summary.  argv: the options but --tier's
 async function main(tier, argv) {
-  const o = { ref: 'reborn-game', pass: [], soak: [], list: false };
+  const o = { ref: null, pass: [], soak: [], list: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--changed') o.ref = argv[++i];
     else if (argv[i].startsWith('--changed=')) o.ref = argv[i].slice(10);
@@ -87,6 +88,7 @@ async function main(tier, argv) {
     else if (argv[i] === '--list') o.list = true;
     else { console.error('--tier ' + tier + ': not an option of a tier: ' + argv[i] + ' (node sim/test.js --tier report|lead [--changed REF] [-j N] [--seed N] [--list])'); process.exit(2); }
   }
+  if (!o.ref) { const sel = require('../../base/sim/select.js'); o.ref = sel.defaultRef(sel.topOf(ROOT)); }
   const list = steps(tier, o);
   if (!list) { console.error('--tier: report or lead, not ' + tier); process.exit(2); }
   if (o.list) {

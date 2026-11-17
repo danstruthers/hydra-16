@@ -349,7 +349,7 @@ runner.setup({ root: ROOT, tests, IRQ_OFF_MAX, image, pcFolder, self: __filename
   scenes: (t, tm, prom, opt) => scenes.of(t, tm, prom, opt, images.bios(ROOT, images.built(ROOT)), images.built(ROOT)),
   build: () => require('../build.js').buildBoth({ quiet: true }),
   runDl: (...a) => require('./dl/bridge.js').runDl(...a),
-  areas: require('../tests/areas.js'), ref: 'reborn-game', restrict: meaningOf,
+  areas: require('../tests/areas.js'), restrict: meaningOf,   // (--changed's REF: select.js's defaultRef)
   testFiles: Object.assign({ 'base/tests/tests.js': require('../../base/tests/tests.js').tests }, testFiles), testHelpers });
 
 if (require.main === module) {

@@ -11,8 +11,8 @@
 //   NAME      only these tests (default: all)
 //   --changed [REF]  of those, only the ones what's changed since REF can affect (sim/select.js: the files changed
 //             since REF's merge base with HEAD, committed or not, and the new ones, each mapped to areas by the
-//             system's tests/areas.js; a path it doesn't know runs every test).  REF: the default the system's
-//             (HydraOS's reborn-game), or --changed=REF
+//             system's tests/areas.js; a path it doesn't know runs every test).  REF: the system's (none set:
+//             sim/select.js's defaultRef, the repository's main branch, main, else HEAD~1), or --changed=REF
 //   --near AREA,...  the tests of these areas (areas.js's: fight, parser, map, basic, mod:t_rc ...) or of these names,
 //             as well as the NAMEs: an agent's working loop
 //   --list    what would run, and why (the files changed and their areas, each test's reason), without running
@@ -32,7 +32,7 @@
 // { boot: its boot's options, attach(m) as it's booted, judge(m) -> { failures, notes } }, sim/lib's emulator's
 // alone), summary(list, opt) (after the tests, before the count), areas (its tests/areas.js: { rules, areasOf }),
 // testFiles (its tests files: { path from the repository's top: the tests it makes }), testHelpers (the helper modules
-// their entries use: [path from the top]: select.js's testTexts), ref (--changed's default),
+// their entries use: [path from the top]: select.js's testTexts), ref (--changed's default; none, select.js's defaultRef),
 // restrict(list, opt) (the list when no NAME's given, the system's narrowing of it: HydraOS's RULES=NAME, the meaning
 // checks), trend(t, what, value) (a budget marked trend: true, a measure kept, never a failure: its note or null,
 // HydraOS's tests/lib/trends.js) }; then main(argv).  After the tests, obj/testtimes.json: each one's wall time and
@@ -50,7 +50,7 @@ const { readManifest, hwtest } = require('../build.js');
 const BASE = path.join(__dirname, '..');
 // The system the tests are run for (setup): the base's own, unless a system on it says otherwise
 const env = { root: BASE, tests: null, IRQ_OFF_MAX: 200, image: null, build: null, pcFolder: null, runDl: null, self: __filename,
-  instrument: null, summary: null, areas: null, testFiles: null, testHelpers: null, scenes: null, ref: 'reborn-game', restrict: null, trend: null };
+  instrument: null, summary: null, areas: null, testFiles: null, testHelpers: null, scenes: null, ref: null, restrict: null, trend: null };
 function setup(e) { Object.assign(env, e); }
 const baseTests = () => require('../tests/tests.js').tests.map(t => Object.assign(t, { system: 'base' }));
 
@@ -271,7 +271,7 @@ function choose(tests, opt) {
   if (!opt.names.length && env.restrict) named = env.restrict(named, opt);
   let changes = null;
   if (opt.changed !== undefined) {
-    try { changes = S.sel.forChanges(Object.assign({ ref: opt.changed || env.ref }, S.o)); }
+    try { changes = S.sel.forChanges(Object.assign({ ref: opt.changed || env.ref || S.sel.defaultRef(S.o.top) }, S.o)); }
     catch (e) { console.error(e.message); process.exit(2); }
     named = named.filter(t => changes.run.has(t.name));
     for (const t of named) why.set(t.name, changes.run.get(t.name));

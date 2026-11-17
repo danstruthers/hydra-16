@@ -19,6 +19,7 @@
 // A RegExp rule's areas can have $1, $2 ...: its groups (word:$1, mod:$1).
 //
 // From Node:
+//   defaultRef(top)                     the REF when none is named: main (its merge base with HEAD), else HEAD~1
 //   changedFiles(top, ref)              { ref, base, files }: base the merge base's commit, files the paths changed
 //   parseTests(file, tests, shared)     a tests file's entries: { items, texts (name -> its entry's text and its
 //                                       helpers'), lineOf(n) -> { item | decls | global | none } }, or null
@@ -32,6 +33,12 @@ const cp = require('child_process');
 
 const git = (top, args) => cp.execFileSync('git', args, { cwd: top, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 << 20 });
 const topOf = dir => git(dir, ['rev-parse', '--show-toplevel']).trim();
+
+// The REF taken when none is named (sim/test.js's --changed, the tiers' report): the repository's main branch, main,
+// its merge base with HEAD where it has one; else HEAD's parent (the last commit's changes, and what isn't committed)
+function defaultRef(top) {
+  try { git(top, ['merge-base', 'main', 'HEAD']); return 'main'; } catch (e) { return 'HEAD~1'; }
+}
 
 // The files changed since ref's merge base with HEAD: committed since, staged, unstaged, new (untracked, not ignored).
 // OUT: { ref, base, files } (files: paths from the top, sorted)
@@ -317,4 +324,4 @@ function near(o, words) {
   return { list, unknown };
 }
 
-module.exports = { topOf, changedFiles, areasOfPath, parseTests, parseHelpers, entriesChanged, namesForLines, select, wordRe, testTexts, areasFn, forChanges, near };
+module.exports = { topOf, defaultRef, changedFiles, areasOfPath, parseTests, parseHelpers, entriesChanged, namesForLines, select, wordRe, testTexts, areasFn, forChanges, near };
