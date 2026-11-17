@@ -57,6 +57,7 @@ static unsigned __fastcall__ apart (int dx, int dy)
 }
 
 #define PC_HID          0x80                    /* (pos's: the character hidden) */
+static unsigned char eden[NACTORS];             /* (Each entry's denizen its eyes are, its record: E's) */
 void s_sense_actor (void)
 {
     static unsigned char k, sight, dark, hear, eyes, nose, pcs, own, lv, lit, res, m, ex, noise, c, pos;
@@ -124,6 +125,11 @@ void s_sense_actor (void)
         lv = 2 * (own - dist) + 1;
     }
     e = &E[k + 1];
+    if (eden[k] != sact.den) {                  /* (Another denizen in the entry: its eyes its own, as a new one's, not
+                                                **   its last one's: GAME-CRITIQUE.md's 3.5, 2026-11-17) */
+        eden[k] = sact.den;
+        e->t = 0;
+    }
     adapt (e, lv, eyes);
     lit = own || light_at (pcs, pcx, pcy);      /* The character lit: its own light, or where it stands */
     m = lit ? sight : dark;

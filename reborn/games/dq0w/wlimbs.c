@@ -657,6 +657,9 @@ void __fastcall__ s_den_enter (const struct msg* m)
     bd.arm = 0;
     bleeds = I_ENTER_BLEEDING (*m) ? bleeds | 1 << bk : bleeds & ~(1 << bk);
     hub_map (0);
+    HUB->dig_t[bk] = HUB->agear[bk] = 0;        /* (Its entry's, the world's, its last actor's no longer: its mind told
+                                                **   nothing seen, eaten nor begun; its things as its gear makes them,
+                                                **   a beast's none: GAME-CRITIQUE.md's 3.5, 2026-11-17) */
     if (bd.did && !(HUB->gear & GE_OLD)) {      /* (dq0 -K's: none of their own) */
         it_need (bd.hsn, (bd.hx - STRATUM (bd.hsn).x0) >> CW_BITS, (bd.hy - STRATUM (bd.hsn).y0) >> CW_BITS);
         s_den_equip ();

@@ -1022,6 +1022,56 @@ module.exports = {
       sdcard: true
     },
     {
+      // (An entry's state its own actor's: GAME-CRITIQUE.md's 3.5, 2026-11-17)
+      name: 'dq0freshslot', meaning: true, near: ['denizens'], what: "Dingus Quest Zero's actors' entries made fresh as they're reused (GAME-CRITIQUE.md's 3.5, 2026-11-17: the minds' per-actor arrays reset by hand, drawn and fooled never, \"a hostile denizen enlisted into a dead one's slot can inherit drawn on with its target zeroed\"), by the minds' arrays (dq0d's, by their labels) and the hub's own per-actor bytes as the actors are: at seed 5 (dq0denizens' second game) the character at the top's way down among its rats, every entry's state poked full of what no fresh one has (drawn on a long while, fooled, its door's tries past their dozen, its rounds' room far on, its errand's square, the world's dig_t its mind told it ate, its things all AG_*) as it climbs down; the rats below enlisted into the entries the top's left: none of it theirs (drawn on no more than its eight decisions, not fooled, no door tried, no rounds, no errand's square, nothing eaten, none of the things it doesn't have)",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -T', 'look', 'd', 'look', 'quit', 'echo $status']) },
+      start(m) {
+        const a = m.acia, read = a.read;
+        let typed = '';
+        m.fresh = { was: null, now: null };
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13 && m.dq0 && m.dq0.bank(0) && (typed === 'd' || (typed === 'quit' && m.fresh.was))) {
+              const { L } = m.dq0.layout(), h = m.dq0.bank(0), at = k => L.actor + k * L.actorSize, ram = m.taskRam[h[12 + 2]];
+              const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+              const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16);
+              const read = k => ({ k, den: h[at(k) + L.aName + 12], name: (() => { let n = ''; for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]); return n; })(),
+                state: h[at(k) + L.aState], drawn: ram[ad('drawn') + k], fooled: ram[ad('fooled') + k], atry: ram[ad('atry') + k], pway: ram[ad('pway') + k],
+                afx: ram[ad('afx') + 2 * k] | ram[ad('afx') + 2 * k + 1] << 8, digt: h[L.digT + 2 * k] | h[L.digT + 2 * k + 1] << 8, agear: h[L.agear + k] });
+              if (typed === 'd') {             // (Every entry full of what no fresh one has)
+                m.fresh.was = [...Array(L.nactors).keys()].map(read);
+                for (let k = 0; k < L.nactors; k++) {
+                  ram[ad('drawn') + k] = 0x77; ram[ad('fooled') + k] = 0x5A; ram[ad('atry') + k] = 0xFF; ram[ad('pway') + k] = 0xEE;
+                  ram[ad('afx') + 2 * k] = 0xEF; ram[ad('afx') + 2 * k + 1] = 0xBE;
+                  h[L.digT + 2 * k] = 0x00; h[L.digT + 2 * k + 1] = 0xFD;   // (hub.h's TW_ATE)
+                  h[L.agear + k] = 0xFF;
+                }
+              } else m.fresh.now = [...Array(L.nactors).keys()].map(read);
+            }
+            if (c === 13) typed = ''; else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m) {
+        const f = [], F = m.fresh;
+        if (!F.was || !F.now) return ['the entries never read: ' + JSON.stringify(F)];
+        const anew = F.now.filter(e => e.state === 1 && e.name && !F.was.some(w => w.k === e.k && w.state === 1 && w.den === e.den && w.name === e.name));
+        this.notes = ['entries reused: ' + anew.map(e => e.k + ' ' + e.name).join(', ')];
+        if (!anew.length) f.push('no entry reused by another denizen as the character climbed down: ' + JSON.stringify(F.now.map(e => [e.k, e.name, e.state])));
+        for (const e of anew) {
+          const bad = [e.drawn > 8 && 'drawn ' + e.drawn, e.fooled > 1 && 'fooled ' + e.fooled, e.atry >> 4 > 12 && 'atry ' + e.atry,
+            e.pway >= 0x80 && 'pway ' + e.pway, e.afx === 0xBEEF && 'afx ' + e.afx, e.digt === 0xFD00 && 'dig_t TW_ATE', e.agear === 0xFF && 'agear ' + e.agear].filter(Boolean);
+          if (bad.length) f.push('entry ' + e.k + ' (' + e.name + ') holds its last actor\'s: ' + bad.join(', '));
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
       // (The diagonal's own: a denizen's steps' time is the world's step_cost, the character's, 2026-11-17)
       name: 'dq0dendiag', meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's diagonal step for every actor (GAME-CRITIQUE.md's E4, the user's of 2026-11-17: \"the 7/5 diagonal for every actor\"; one step_cost, dq0w.c's, the character's and a denizen's, wbody.c's), by the time an actor's steps take (its ready, the hub's, as each line's typed) and the squares it steps to (its E_DEN DE_MOVEDs): at seed 3, every built passage on the diagonal (dq0 -A, dq0slant's), the character gone east from the kitchen along the passage that bends away northeast; a denizen put at the kitchen's door the character set out from, hostile, drawn on to where it stands (the minds' drawn and last-sensed square poked), the others sent off: its steps up the passage on the diagonal each seven-fifths of a step on the flat (its jog's 10 tenths, 14), where they were a straight step's",
       init: 't_rc', cycles: 2500e6,

@@ -1196,6 +1196,7 @@ void __fastcall__ s_retire (unsigned char k)
 ** its mind's fields written, its body given the world (I_ENTER: its place, its step, its time, bleeding or not); its
 ** sheet the referee's (RS_NEW_ACTOR, by its kind's key: made the first time, the same one after) */
 static unsigned char esl;                       /* (Asleep by its day as it comes: enlist_near's, part 9's) */
+static void __fastcall__ fresh (unsigned char k);  /* (Part 4's, after the arrays: below) */
 void __fastcall__ s_enlist (unsigned char i, unsigned char k)
 {
     struct rs_summary* s = (struct rs_summary*) RS_NEW_ACTOR_SUMMARY (rq);
@@ -1234,6 +1235,7 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     intr[k] = seenfoe[k] = anear[k] = 0;
     lsx[k] = lsy[k] = 0;
     fled[k] = 0;
+    fresh (k);                                  /* (The rest of the entry's: nothing of its last one's, below) */
     strcpy (rq.text, K.key);
     RS_NEW_ACTOR_RECORD (rq) = i;
     RS_NEW_ACTOR_WANT (rq) = want_fl (k);                         /* (Its want, and its fatigue levels, part 8's: the referee's) */
@@ -5693,6 +5695,41 @@ static unsigned long snow;                      /* (sched's: the clock it last r
 static unsigned m0, dday;
 static unsigned char pway[NACTORS];            /* (Each one's room on its rounds, the next it walks to: its lair's
                                                 **   chunk's rooms in turn) */
+
+/* Entry k made fresh for the denizen enlisted into it (s_enlist's, part 4's; GAME-CRITIQUE.md's 3.5, 2026-11-17: an
+** entry's state its last actor's no longer, a hostile one drawn on toward a square zeroed, fooled, its way's hold, its
+** door's tries ...).  Every one of the minds' per-actor arrays: set by s_enlist from its record (akind, ahx, ahy, aorder,
+** awater; aate, adrank, want_fl's), or as it's enlisted (sgen, alert, intr, seenfoe, anear, lsx, lsy, fled, stn; afetch,
+** akeep, aday, upto, aact, enlist_near's); stq its stay's square, its stay from now whatever it holds (stn's); atx, aty
+** its day's place as its day's first asked (aday's, at once); the ways' bank's act[] by the denizen's number (wfind's);
+** the rest here, as a new entry's: aroute (no way, no hold), aloot (looked for as it first decides), fooled, lstep,
+** sres, slk, sax, say (sensed as it first decides), steps, stalk, shat, drunk, afx, afy, drawn, sniffed, atry, pway.
+** An errand isn't carried with it (afetch's, enlist_near's): a door's, its square not in its record, following again */
+#pragma code-name (push, "SW4CODE")
+#pragma rodata-name (push, "SW4RODATA")
+static unsigned char* const fresh_c[] = { aroute, fooled, lstep, sres, slk, steps, stalk, shat, drawn, atry, pway };
+static unsigned* const fresh_u[] = { sax, say, afx, afy, drunk };
+#pragma static-locals (push, on)
+static void __fastcall__ fresh (unsigned char k)
+{
+    unsigned char i;
+
+    for (i = 0; i < sizeof fresh_c / sizeof fresh_c[0]; ++i) {
+        fresh_c[i][k] = 0;
+    }
+    for (i = 0; i < sizeof fresh_u / sizeof fresh_u[0]; ++i) {
+        fresh_u[i][k] = 0;
+    }
+    aloot[k] = NOW_T;
+    sniffed[k] = 0;
+    if (aorder[k] >= OR_FETCH) {
+        aorder[k] = OR_FOLLOW;
+    }
+}
+#pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 #define TALK_LOUD       3                       /* (Those on watch talking as they go: heard as a squeak is) */
 #define SNORE_LOUD      2
 #define ALARM_LOUD      6                       /* (A body found: the alarm's shout, as loud as a rally) */
