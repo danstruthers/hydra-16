@@ -1479,7 +1479,7 @@ static const char hw_said[] =               /* (By HW_*, one after another: a ta
     "\nYou keep still in the dark, out of sight.\0" "\nYou come out of hiding.\0"
     "\nThere's no cover here: you're hiding no longer.\0" "\n%s has seen you!\0" "\nYou spot %s, hiding.\0"
     "\n%s leaps out of hiding!\0" "\nYou strike from hiding.\0" "\nYou're hidden already.\0"
-    "\nNot with a light on you: it gives you away.\0" "\n%s is watching you: you can't hide from it now.\0"
+    "\nNot with a light on you: it gives you away.\0" "\n%s is watching you: you can't hide from %s now.\0"
     "\nThere's nothing here to hide behind, and the light's too good.";
 unsigned char __fastcall__ s_hide (const char* w)
 {
@@ -1517,7 +1517,8 @@ unsigned char __fastcall__ s_hide (const char* w)
             t[12] = 0;
             strcpy (tn, t[0] >= 'A' && t[0] <= 'Z' ? "" : d == HW_SPOT ? "a " : "The ");
             strcat (tn, t);
-            sayf (s, tn);
+            hub_mem (0, &n, &HUB->folk[(n - 1) & 7], 1);
+            sayf (s, tn, n ? "them" : "it");    /* (HW_SEEN's: a person "them", the hub's folk, 2026-11-17) */
         } else {
             sayf (s, "");
         }

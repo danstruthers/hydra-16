@@ -268,7 +268,8 @@ unsigned char __fastcall__ worn_at (unsigned n, unsigned k);  /* (Thing n, of ki
                                                 **   else SA_*, or 0xFF its words said: the catalogue's don's) */
 extern unsigned char wplace;
 void __fastcall__ worn_put (unsigned n, unsigned char how);    /* (Where thing n's worn, in words: WH_*) */
-enum { WH_LIST, WH_LOOK, WH_DEN };              /* (The inventory's ", on your left hand" (else ", worn"); a look's
-                                                **   " on your left hand", after "worn"; a denizen's " on its left hand") */
+enum { WH_LIST, WH_LOOK, WH_DEN, WH_THEY };    /* (The inventory's ", on your left hand" (else ", worn"); a look's
+                                                **   " on your left hand", after "worn"; a denizen's " on its left hand";
+                                                **   a person's " on their left hand", the user's, 2026-11-17) */
 unsigned char worn_which (void);                /* ("Take off the ring", worn in two places or more: IR_WHICH, asked by
                                                 **   place; else 0) */

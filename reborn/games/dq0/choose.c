@@ -333,7 +333,7 @@ unsigned char s_wield (void)
     }
     k = cmd.obj.kind;
     t = a == VB_BREAK_OBJECT || k == OB_DOOR || k == OB_WINDOW || k == OB_PORTC;
-    if ((!t && !fight_target (&cmd)) || (t && k && !pick (k | PICK_ANY, cmd.obj.lies))) {
+    if ((!t && !(a = fight_target (&cmd))) || (t && k && !pick (k | PICK_ANY, cmd.obj.lies))) {
         return 0;                               /* (No denizen there to strike, nor a door, a window, a portcullis
                                                 **   seen: why not told as it's carried out, unasked, slice 4.1b's) */
     }
@@ -362,7 +362,8 @@ unsigned char s_wield (void)
             k = 1;
         } else {
             sayf ("\nYou can %s, but would you rather %s your %s?", t ? "try battering it with your hands" :
-                "fight it with your fists", t ? "use" : "draw", cmd.other.word);
+                HUB->folk[((a & 0x0F) - 1) & 7] ? "fight them with your fists" : "fight it with your fists",
+                t ? "use" : "draw", cmd.other.word);    /* (A person "them": the hub's folk, 2026-11-17) */
         }
     } else if (lit) {
         strike = SK_PUNCH;                      /* (A light in hand, nothing better: its bare hands, as with none, the

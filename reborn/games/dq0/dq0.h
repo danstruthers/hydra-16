@@ -316,6 +316,8 @@ enum { U_VERB, U_YET, U_CANT, U_NOTE, U_WHAT,   /* (A verb the game doesn't know
                                                 **   o_unknown, 2026-11-17) */
     A_COUNT };
 #define A_LB        0x80                        /* (say_no's a |: added to lb, not said) */
+#define A_THEY      0x40                        /* (say_no's a |: its thing a person, "go up to them first", none named
+                                                **   "They are ...": A_FAR's, the user's people "they", 2026-11-17) */
 void __fastcall__ say_no (unsigned char a, const char* w);   /* Overlay 24 (refuse.c's): a refusal said, the one
                                                 **   wording of its meaning (U_*, A_*: "You see no %s here.",
                                                 **   "You have no %s.", "%s is out of reach: go up to it first.",

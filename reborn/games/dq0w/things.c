@@ -4416,7 +4416,8 @@ static void __fastcall__ and_last62 (char* from)
 ** the character's alone asks it yet */
 static const char gmake[10][9] = { "crude", "crude", "poor", "plain", "sound", "sound", "good", "fine", "fine",
     "master's" };                               /* (appraise.c's makes) */
-static unsigned char gd, geye, glv, gn, gfar;
+static unsigned char gd, geye, glv, gn, gfar, gfo;     /* (gfo: the denizen a person, "they": the hub's folk,
+                                                **   2026-11-17) */
 static struct item gr;
 
 /* Thing i's words, if the eyes make it out (gd its distance, geye the eyes, glv the level): a list's next, after
@@ -4455,7 +4456,7 @@ static unsigned char __fastcall__ gthing (unsigned i, const char* pre, unsigned 
         put (nm);
     }
     if ((gr.flags & (I_WORN | I_HELD)) == I_WORN) {
-        worn_put (i, WH_DEN);                   /* (" on its left hand": part 107's, 2026-11-10) */
+        worn_put (i, gfo ? WH_THEY : WH_DEN);   /* (" on its left hand": part 107's, 2026-11-10; a person's "their") */
     }
     if (c) {
         strcpy (cn, kind_at (c)->name);
@@ -4547,6 +4548,7 @@ unsigned char s_gear_words (void)
             gd = d;
             best = k;
             did = a->did;
+            gfo = HUB->folk[k];
             strcpy (nm, a->name);
         }
     }
@@ -4569,12 +4571,12 @@ unsigned char s_gear_words (void)
             }
             fetch (&gr, i);
             if (part == 0 && (gr.flags & I_HELD)) {
-                gthing (i, any ? ". It holds " : " holds ", 0);
+                gthing (i, any ? gfo ? ". They hold " : ". It holds " : " holds ", 0);
             } else if (part == 1 && (gr.flags & (I_WORN | I_HIDDEN | I_HELD)) == I_WORN) {
                 if (kind_of (gr.kind)->flags & K_BELT) {
                     belt = i;
                 }
-                gthing (i, any ? ". It wears " : " wears ", 0);
+                gthing (i, any ? gfo ? ". They wear " : ". It wears " : " wears ", 0);
             }
         }
         if (part == 2 && belt) {
@@ -4584,7 +4586,8 @@ unsigned char s_gear_words (void)
                     continue;
                 }
                 j = kind_of (gr.kind)->slots ? items (0, IN_X | IN_ITEM, i) : 0;   /* (A carrier's: what's in it) */
-                gthing (j ? j : i, any ? ". At its belt: " : " has at its belt ", j ? i : 0);
+                gthing (j ? j : i, any ? gfo ? ". At their belt: " : ". At its belt: " : gfo ? " has at their belt " :
+                    " has at its belt ", j ? i : 0);
             }
         }
         if (gn) {
@@ -4592,7 +4595,8 @@ unsigned char s_gear_words (void)
             and_last62 (t0);
         }
     }
-    put (!any ? (did && gfar ? " is too far off for you to make out what it carries." : " carries nothing that you can see.") :
+    put (!any ? (did && gfar ? gfo ? " is too far off for you to make out what they carry." :
+        " is too far off for you to make out what it carries." : " carries nothing that you can see.") :
         gfar ? ". There's more you can't make out from here." : ".");
     return IR_OK;
 }

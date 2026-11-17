@@ -1258,6 +1258,7 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     a.mood = K.flags & K_NOSE ? AM_STALKS : 0;  /* (A hunter by smell comes on stalking, at a walk: decide's stalk) */
     hub_map (0);
     memcpy (HUB->actor[k].name, a.name, sizeof a - offsetof (struct actor, name));
+    HUB->folk[k] = KF_NATURE (K.form) == NA_FOLK;  /* (A person, "they"; a beast, the dead, "it": the words', 2026-11-17) */
     I_ENTER_DOING (im) = s->cond & C_UNCONSCIOUS ? DO_DOWN : esl ? DO_SLEEP : 0;   /* (Left senseless, and senseless still: it lies
                                                 **   there) */
     I_ENTER_FACE (im) = a.face;

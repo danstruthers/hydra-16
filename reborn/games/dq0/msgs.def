@@ -217,21 +217,24 @@ UK_THROW        < E_OUTCOME; w1 ir:8-15@IR_OK how:0-1@TH_HIT hard:2
                 # (A throw told: how it went, IR_*; how it came out, TH_*; thrown hard.  obj the thing, text the mark)
 UK_SKY          < E_OUTCOME; w1 phase:8-15@SKP_NONE shows:0-7@SKS_WAY
                 # (The sky seen: its phase, a shaft's refusal, a rope's; what shows it.  text the time in words)
-UK_SWAY         < E_OUTCOME; a order@OR_NONE; b now@AT_HOSTILE; w1 res:8-15@SR_OK how:0-7@SW_LOOK
+UK_SWAY         < E_OUTCOME; a order@OR_NONE; b now@AT_HOSTILE; w1 res:8-15@SR_OK how:0-7@SW_LOOK; w2 folk:0
                 # (A sway's answer: its result, its kind, the attitude now, an ally's request.  obj the one it's about
-                #   ("the giant rat", "Grub"; "" none), text a name given or a thing to fetch; arg the attitude's move)
+                #   ("the giant rat", "Grub"; "" none), text a name given or a thing to fetch; arg the attitude's move; folk
+                #   the one it's about a person, "they": the hub's folk, 2026-11-17)
 UK_FIGHT        < E_OUTCOME; a(ff) adown:0 adead:1 ddown:2 ddead:3 flees:4; b(which) f1:0 f2:1 stray:2 thrown:3
                 missile:4 shield:5 again:6 first:7; w1 out:8-15@O_MISS wk:0-2 hard:3 black:4;
-                w2(lines) s2:0-1 s3:2-3 au:4 du:5
+                w2(lines) s2:0-1 s3:2-3 au:4 du:5 afolk:6 dfolk:7
                 # (A blow (an E_FIGHT, its record's): who the attacker; how it came out (O_*; the UI's own gone, bled,
                 #   bound for FO_*); what it left them in (FF_*); the record's which (FW_*: whose a fumble, a stumble);
                 #   the attacker's weapon's word (0 another, 1 foot, 2 head, 3 bite, 4 claws, 5 none); thrown hard; a
                 #   black-out told already; the strikes' lines, the third and the fourth (0 none, 1 a wound, 2 the armour
                 #   that stopped it); the attacker, the defender not seen.  w4 the attacker's name, obj the
                 #   defender's (none: the character), instr the weapon, w5 the defender's, w6 and text the strikes';
-                #   arg the attacker's body)
-UK_NO           < E_OUTCOME; w1 no:8-15@U_VERB
-                # (A refusal, refuse.c's say_no: U_*, A_*.  text the thing's name, as it's put in)
+                #   arg the attacker's body; afolk, dfolk the attacker, the defender a person and seen, "they":
+                #   2026-11-17)
+UK_NO           < E_OUTCOME; w1 no:8-15@U_VERB folk:0-1
+                # (A refusal, refuse.c's say_no: U_*, A_*.  text the thing's name, as it's put in; folk its thing a person,
+                #   1 named, 2 not, "They": A_THEY's, 2026-11-17)
 UK_FIRST        < E_OUTCOME; w1 fs:8-15@FS_THE
                 # (A command's first words, sway.c's: their form, FS_*.  arg the verb, FV_*; w4 the word that tells
                 #   it apart, "spent "; text its name)
@@ -246,10 +249,11 @@ UK_AHEAD        < E_OUTCOME; a pl; b rel; w1 ah:8-15@AH_PEER k:0-7; w2 far:0-7 r
                 #   plural or a choice, rel its way (0 ahead to the left, 1 ahead, 2 to the right), far its squares,
                 #   room a room's kind or a choice.  narration as data's rest, 2026-11-15)
 
-UK_LIST         < E_OUTCOME; b d; w1 lf:8-15@LF_LIE v:0-7; w2 r:0-2 pl:3 at:4-7 g:8-9 mail:10
+UK_LIST         < E_OUTCOME; b d; w1 lf:8-15@LF_LIE v:0-7; w2 r:0-2 pl:3 at:4-7 g:8-9 mail:10 folk:11
                 # (A sentence with a list, the look's lists (the user's, 2026-11-16): LF_*; a its entries (said_li);
                 #   v a choice, d squares or a room's kind, r a way (REL8), pl a verb's plural, at where or a choice, g
-                #   and mail a denizen's gear.  obj a surface's name, part 8's words for where)
+                #   and mail a denizen's gear, folk it a person ("keeping their distance", 2026-11-17).  obj a
+                #   surface's name, part 8's words for where)
 UK_LI           < E_OUTCOME; a tk:0-1 side:2-4; b n; w1 li:8-15@LI_THING f:0-2 sz:3-4 lit:5 kpl:6 the:7; w2 q;
                 t nf:0-2 pf:3-4 dur:8-9 lt:10 fuel:11-13 wear:16-18 shut:19-20
                 # (A list's entry, struct li: LI_*; f its form, n how many alike, q a count, sz its size made out,

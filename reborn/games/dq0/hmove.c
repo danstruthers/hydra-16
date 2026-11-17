@@ -205,7 +205,7 @@ void s_follow_go (void)
     dx = (int) a->x - (int) HUB->pc_x;
     dy = (int) a->y - (int) HUB->pc_y;
     if (k == NACTORS || a->sn != HUB->pc_stratum || (!n && (fol_still == 3 || dx < -6 || dx > 6 || dy < -6 || dy > 6))) {
-        sayf ("\nYou've lost %s. (\"track\" may find its trail.)", lb);
+        sayf ("\nYou've lost %s. (\"track\" may find %s trail.)", lb, k < NACTORS && HUB->folk[k] ? "their" : "its");
         return;
     }
     if (reach != 2) {

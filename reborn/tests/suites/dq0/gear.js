@@ -73,7 +73,7 @@ module.exports = {
         a.shown = (v, t) => {
           shown(v, t);
           tail = (tail + String.fromCharCode(v)).slice(-40);
-          if (armed || !tail.includes('strikes at you with its sword')) return;
+          if (armed || !tail.includes('strikes at you with their sword')) return;
           const h = m.dq0.bank(0), { L, K } = m.dq0.layout(), per = Math.floor(0x2000 / L.itemSize), at = k => L.actor + k * L.actorSize;
           for (let k = 0; k < L.nactors && !armed; k++) {
             if (!h[at(k) + L.aState] || h[at(k) + L.aDoing] === undefined) continue;
@@ -104,7 +104,7 @@ module.exports = {
         if (!/Your spade only scratches at the /.test(s)) f.push('the spade not told as a shovel is');
         const pick = T.flatMap(t => [...t.events, ...t.dens]).find(e => e.kind === 'E_BEAT' && e.beat === 'WB_PICKS' && e.b > 0);
         if (!pick || pick.thing !== K.KI_MATTOCK) f.push('no mattock taken up from a denizen\'s arm: ' + JSON.stringify(pick));
-        if (!/snatches up its mattock/.test(s)) f.push('not told as the bandit snatches up its mattock');
+        if (!/snatches up their mattock/.test(s)) f.push('not told as the bandit snatches up their mattock');
         return f;
       }
     },
@@ -294,7 +294,7 @@ module.exports = {
         if (!draw) f.push('no bandit drew its weapon (WB_DRAWS)');
         else {
           const w = kname(draw.thing);
-          inTurn(o, ['The bandit draws its ' + w + '.', 'The bandit strikes at you with its ' + w], f, 'the drawing\'s words: ');
+          inTurn(o, ['The bandit draws their ' + w + '.', 'The bandit strikes at you with their ' + w], f, 'the drawing\'s words: ');
         }
         // (Its weapon let fall: the same record on the floor)
         const drop = all.find(e => e.kind === 'E_BEAT' && e.beat === 'WB_DROP' && e.b > 0);
@@ -1211,8 +1211,8 @@ module.exports = {
         const o = dq0Story(out), i = o.indexOf('> examine the bandit'), w = i < 0 ? '' : o.slice(i, i + 700), f = [];
         this.notes = [w];
         if (!/The bandit (?:holds|wears)/.test(w)) return ['the bandit not examined: ' + w];
-        if (!/earrings in its ears/.test(w)) f.push('no earrings in its ears: ' + w);
-        if (!/a ring on its (?:left|right) hand/.test(w)) f.push('no ring on its hand: ' + w);
+        if (!/earrings in their ears/.test(w)) f.push('no earrings in their ears: ' + w);
+        if (!/a ring on their (?:left|right) hand/.test(w)) f.push('no ring on their hand: ' + w);
         return f;
       },
       sdcard: true

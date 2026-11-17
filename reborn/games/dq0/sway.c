@@ -19,11 +19,14 @@
 void __fastcall__ o_sway_said (const struct sway* s)
 {
     struct msg c;
-    unsigned char h = s->kind, r = s->result;
+    unsigned char h = s->kind, r = s->result, f = 0;
 
+    if (s->actor & 0x7F) {                      /* (The one it's about a person, "they": the hub's folk, 2026-11-17) */
+        hub_mem (0, &f, &HUB->folk[((s->actor & 0x7F) - 1) & 7], 1);
+    }
     lb[0] = 0;
     if ((r == SR_NONE && s->word[0]) || (r == SR_FAR && (s->beast || h == SW_GIVE))) {
-        say_no (r == SR_NONE ? A_SEE_NO | A_LB : A_FAR | A_LB, r == SR_NONE ? s->word : s->name);
+        say_no (r == SR_NONE ? A_SEE_NO | A_LB : A_FAR | A_LB | (f ? A_THEY : 0), r == SR_NONE ? s->word : s->name);
         msg (lb);
         return;
     }
@@ -41,6 +44,7 @@ void __fastcall__ o_sway_said (const struct sway* s)
     c.a = s->order;
     c.b = s->now;
     c.w1 = r << 8 | h;
+    c.w2 = f;
     outcome_words (&c);
 }
 

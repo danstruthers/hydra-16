@@ -20,8 +20,9 @@
 
 /* The denizens as they're told, alike ones together: each the way it lies (REL8 as the character faces), how far
 ** (squares), what it's doing (DO_*), its name (as it lies there; all 0: too far to make out), how many */
-struct told { unsigned char rel, d, doing; char name[12]; unsigned char gear, n; };
-#define ALIKE       16                          /* (Its bytes that make it alike: all but n) */
+struct told { unsigned char rel, d, doing; char name[12]; unsigned char gear, n, folk; };
+#define ALIKE       16                          /* (Its bytes that make it alike: all but n, and folk, its kind's: a
+                                                **   person, "keeping their distance", the hub's, 2026-11-17) */
 static struct told now_[SEE_DENS] = { { 0 } };  /* As they are now (group's), */
 static unsigned char nnow = 0, heard = 0;       /*   so many; one heard close behind */
 static struct told was[SEE_DENS] = { { 0 } };   /* As they were told last, */
@@ -74,6 +75,22 @@ static unsigned char __fastcall__ differ (unsigned char n)
     return 0;
 }
 
+/* Denizen record r's actor a person (the hub's folk: one of the speaking peoples, "they", the user's, 2026-11-17), by the
+** actor whose record it is */
+static unsigned char __fastcall__ folk_of (unsigned char r)
+{
+    unsigned char k, b;
+
+    for (k = 0; k < NACTORS; ++k) {
+        hub_mem (0, &b, &HUB->actor[k].den, 1);
+        if (b == r) {
+            hub_mem (0, &b, &HUB->folk[k], 1);
+            return b;
+        }
+    }
+    return 0;
+}
+
 /* The denizens seen, as they're told (none behind the character but an ally; one close behind it heard), alike ones
 ** together: into now_ */
 static void group (void)
@@ -91,6 +108,7 @@ static void group (void)
         t.d = apart (S.den[i].x, S.den[i].y);
         t.doing = S.den[i].doing % (DO_LEISURE + NPAST);
         t.n = 1;
+        t.folk = folk_of (S.den[i].den);
         if (REL_BEHIND (t.rel) && n[0] >= 'a') {
             heard |= t.d <= 2;
             continue;
@@ -170,7 +188,7 @@ static void __fastcall__ tell_one (const struct told* t)
     named (&e, t, 0);
     gcap = 0;
     den_list (&e.e, LF_DEN << 8 | (many && t->doing == DO_SHY ? DO_LEISURE + NPAST : t->doing),
-        (t->rel & 7) | many << 3 | (g & AG_MAIL ? (g & AG_ARMED) << 8 | 1 << 10 : (g & 3) << 8), t->d);
+        (t->rel & 7) | many << 3 | (g & AG_MAIL ? (g & AG_ARMED) << 8 | 1 << 10 : (g & 3) << 8) | (unsigned) t->folk << 11, t->d);
 }
 
 /* What was told kept: now_'s, its first n */

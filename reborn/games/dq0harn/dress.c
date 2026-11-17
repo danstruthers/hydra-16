@@ -77,7 +77,8 @@ static const char* __fastcall__ wname (const harn_char* c, unsigned char k)
 {
     const harn_injury* j = &c->inj[k];
 
-    wound_words (ww + 2, j->sev, j->loc, j->aspect, j->il, c == &pc ? pc_by[k] : BY_ITS);
+    wound_words (ww + 2, j->sev, j->loc, j->aspect, j->il, c == &pc ? pc_by[k] : BY_ITS | (beast_flags (bs.kind) & BF_THEY ?
+        BY_THEIR : 0));                         /* (A person's "to their": 2026-11-17) */
     ww[0] = 't';                                /* ("a minor" ... "the minor") */
     ww[1] = 'h';
     ww[2] = 'e';
@@ -232,7 +233,7 @@ void __fastcall__ o_treat (struct req* r)
         }
         if (ch) {
             RS_TREAT_CANT (*r) = 1;
-            put ("You keep no dressings on it.");
+            put (beast_flags (bs.kind) & BF_THEY ? "You keep no dressings on them." : "You keep no dressings on it.");
             return;
         }
         c = &cr;
@@ -242,7 +243,9 @@ void __fastcall__ o_treat (struct req* r)
             RS_TREAT_CANT (*r) = 1;
             put (ch ? (tpart[0] ? "There's no dressing there to change." : "You have no dressings to change.") :
                 tpart[0] && !strstr (tpart, "wound") ? "There's nothing there that wants tending." : c == &pc ?
-                "You have no wounds that want tending." : "It has no wounds that want tending.");
+                "You have no wounds that want tending." : beast_flags (bs.kind) & BF_THEY ?
+                "They have no wounds that want tending." : "It has no wounds that want tending.");   /* (A person "they",
+                                                **   2026-11-17) */
             return;
         }
         j = &c->inj[k];

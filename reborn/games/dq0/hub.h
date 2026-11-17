@@ -1621,6 +1621,10 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   harm, till it comes round and is free): no intent of the UI's taken
                                                 **   meanwhile but the quit, and the UI takes no line (2026-11-13, the
                                                 **   user's) */
+    unsigned char   folk[NACTORS];              /* Each actor one of the speaking peoples (kinds.txt's nature f: dwarves,
+                                                **   elves, men, kobolds, the gargun), said "they" ("their", "them"): 1;
+                                                **   a beast, the dead, "it": 0 (the user's, 2026-11-17; the denizens', as
+                                                **   it's made an actor; last, the rest where they were) */
 };
 #define WANT_HUNGER(w)  ((w) & 0x0F)            /* (pc_want's hunger level, and its thirst's: 0 none, 1 hungry or */
 #define WANT_THIRST(w)  ((w) >> 4)              /*   thirsty, 2 very, 3 starving or parched, 4 dying of it; */
@@ -2034,6 +2038,7 @@ struct wsave {
 **   own hub.pc_aff world
 **   own hub.pc_dose world
 **   own hub.pc_out world                                       (Senseless: 2026-11-13)
+**   own hub.folk denizens                                      (Each actor a person, "they": 2026-11-17)
 **   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)

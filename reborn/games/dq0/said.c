@@ -56,7 +56,20 @@ static unsigned art;                            /* An "a" waiting for its word: 
 static unsigned char once;                      /* The row's said as a look's (lb_said) */
 #pragma bss-name (pop)
 
-/* Field f's value (said_f's: its byte, shift and mask; less K, more than K, times K) */
+/* Actor n - 1 one of the speaking peoples (the hub's folk, kinds.txt's nature f: dwarves, elves, men, kobolds, the
+** gargun), said "they" ("their", "them"): 1; the character (n 0), a beast, the dead, "it": 0 (the user's, 2026-11-17).
+** n with 0x40: one not seen, "something", "it" (UK_FIGHT's actor, blows.c's) */
+static unsigned char __fastcall__ they (unsigned char n)
+{
+    unsigned char f = 0;
+
+    if (n && n < 0x40) {
+        hub_mem (0, &f, &HUB->folk[(n - 1) & 7], 1);
+    }
+    return f;
+}
+
+/* Field f's value (said_f's: its byte, shift and mask; less K, more than K, times K; the actor it names a person) */
 static unsigned __fastcall__ fv (unsigned char f)
 {
     const unsigned char* d = said_f + f * 5u;
@@ -65,6 +78,8 @@ static unsigned __fastcall__ fv (unsigned char f)
     switch (d[3]) {
     case 4:
         return *(const unsigned*) ((const unsigned char*) sm + d[0]);  /* (A word whole: a count, the look's lists') */
+    case 5:
+        return they (v);                        /* (Its actor plus 1 a person: {they F?it|they}) */
     case 1:
         return v > d[4] ? v - d[4] : 0;
     case 2:
@@ -325,8 +340,8 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
                 *sp++ = 's';
             }
             break;
-        case SC_ITS:                            /* (The actor's: "your", "its") */
-            strcpy (sp, ac ? "its" : "your");
+        case SC_ITS:                            /* (The actor's: "your", "its"; a person's "their", 2026-11-17) */
+            strcpy (sp, !ac ? "your" : they (ac) ? "their" : "its");
             sp += strlen (sp);
             break;
         case SC_A:

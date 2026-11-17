@@ -711,7 +711,7 @@ module.exports = {
         if (!/> drop the sword[^>]*(Put down\.|You put down the sword\.)/.test(s)) f.push('the sword not put down');
         const picks = T.flatMap(t => [...t.events, ...t.dens]).filter(e => e.kind === 'E_BEAT' && e.beat === 'WB_PICKS' && e.b === m.take.k + 1);
         if (!picks.length) f.push('the bandit never took up a thing (E_BEAT WB_PICKS)');
-        if (!/The bandit snatches up its sword\./.test(s)) f.push('not told "The bandit snatches up its sword."');
+        if (!/The bandit snatches up their sword\./.test(s)) f.push('not told "The bandit snatches up their sword."');
         const per = Math.floor(0x2000 / L.itemSize);
         let sword = null;
         for (let i = 1; i < L.nitems; i++) {
@@ -831,7 +831,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0killrest', initiative: true, near: ['denizens', 'time'], what: 'Dingus Quest Zero\'s killers at a sleeper (HOUSE.md\'s those that want it, as it rests, for review, 2026-11-06): a hand-written theme\'s hostile cultists (killers, kinds.txt\'s k), the character asleep in the dark at seed 1: one comes on and strikes the sleeper as its kind\'s rule says, not standing off, the blow with no defence (the book\'s Ignore, RS_ASLEEP)',
+      name: 'dq0killrest', initiative: true, near: ['denizens', 'time'], what: 'Dingus Quest Zero\'s killers at a sleeper (HOUSE.md\'s those that want it, as it rests, for review, 2026-11-06): a hand-written theme\'s hostile cultists (killers, kinds.txt\'s k), the character asleep in the dark at seed 1: one comes on and strikes the sleeper as its kind\'s rule says, not standing off, the blow with no defence (the book\'s Ignore, RS_ASLEEP); a person not seen told as a thing is, "Something strikes at you with its dagger" (the user\'s people "they", 2026-11-17: no word of what can\'t be seen)',
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Foes | cultist | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
         "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g", 'douse the torch', 'sleep', 'echo $status']) },   // (Dead of it: the game over)
@@ -842,6 +842,11 @@ module.exports = {
         const all = [sl, ...T.filter(t => t.k > sl.k)];
         if (!all.some(t => dq0Rep(t, 'slot0', { kind: RS_ATTACK, w2: v => v & 0x80 }).length)) f.push('no blow at the sleeper with no defence (RS_ASLEEP)');
         if (!/You settle down to sleep for eight hours\.[\s\S]*strikes at you/.test(s)) f.push('the sleeper not struck: ' + JSON.stringify(s.slice(s.indexOf('> sleep'), s.indexOf('> sleep') + 400)));
+        // (A person not seen, "something": its words a thing's, "its", not a person's "their", the user's people "they",
+        // 2026-11-17: blows.c's, not a word of what can't be seen)
+        if (!/Something strikes at you with its /.test(s)) f.push('the cultist unseen not "Something strikes at you with its ...": ' + JSON.stringify(s.slice(s.indexOf('> sleep'), s.indexOf('> sleep') + 400)));
+        const told = s.match(/[^.!?]*\b[Ss]omething\b[^.!?]*\b(?:they|their|them)\b[^.!?]*[.!?]/);
+        if (told) f.push('one not seen given a person\'s words: ' + JSON.stringify(told[0]));
         return f;
       },
       sdcard: true
@@ -1357,8 +1362,8 @@ module.exports = {
           '> yell "wake up!" You yell, "wake up!"', '> "Hi" You say, "Hi"', '> knock on the door You knock on the door.',
           '> knock on the north wall You knock along the north wall, listening for a hollow...', '> wake You\'re awake.',
           '> pretend ignorance The bandit', '> pretend dead You lie still, feigning death. The bandit is taken in.',
-          'goes through your things as you lie helpless', '> wake the bandit You shake the bandit awake. It comes to with a snarl, and turns on you!',
-          '> taunt the bandit You taunt the bandit. It\'s goaded: it comes for you!', '> orate You hold', 'to those about you, in common.', '> knock on the north wall You knock along the north wall, listening for a hollow...',
+          'goes through your things as you lie helpless', '> wake the bandit You shake the bandit awake. They come to with a snarl, and turn on you!',
+          '> taunt the bandit You taunt the bandit. They\'re goaded: they come for you!', '> orate You hold', 'to those about you, in common.', '> knock on the north wall You knock along the north wall, listening for a hollow...',
           'You find a door hidden in the wall.', '> orate There\'s no one here to hear you.', '% echo $status'], f);
         if (/in this game yet/.test(s)) f.push('a "not yet" said: ' + (s.match(/> [^>]*in this game yet/) || [''])[0]);
         const sw = (line, want, what) => { const t = T.of(line); if (!t || !dq0Rep(t, 'sway', want).length) f.push(what + ' (' + JSON.stringify(t && t.replies.filter(r => r.req === 'sway')) + ')'); };
@@ -1449,7 +1454,7 @@ module.exports = {
           f.push('not the haggled price paid: ' + pennies(before.after) + ' then ' + pennies(after.after) + ', agreed ' + got[1]);
         if (after && after.after && !dq0Carried(after.after).some(i => i.name === 'rope')) f.push('the rope not bought back');
         sw('sing to bob', { kind: 'SW_ENTERTAIN', result: 'SR_OK' }, 'not sung to');   // (Indifferent: the referee's Singing tested)
-        if (!/You sing for Bob\. (It's delighted|It's pleased|It's bored|It isn't moved)/.test(s)) f.push('the song not told');
+        if (!/You sing for Bob\. (They're delighted|They're pleased|They're bored|They aren't moved)/.test(s)) f.push('the song not told');
         if (f.length) f.push(s.slice(s.indexOf('> buy the oil'), s.indexOf('> buy the oil') + 2500));
         return f;
       },
@@ -1713,7 +1718,7 @@ module.exports = {
         if (!m.thrower) return ['the scene not set: no dwarf miner, or none of its own things found'];
         const ev = T.flatMap(t => [...t.events, ...t.dens]).filter(e => e.kind === 'E_BEAT' && (e.beat === 'WB_THREW' || e.beat === 'WB_FELL'));
         if (!ev.length) f.push('it never threw the thing over (WB_THREW, WB_FELL): ' + o.slice(o.indexOf('> wait'), o.indexOf('> wait') + 900));
-        if (!/throws you its/.test(o)) f.push('no words of it: ' + o.slice(o.indexOf('> wait'), o.indexOf('> wait') + 900));
+        if (!/throws you their/.test(o)) f.push('no words of it: ' + o.slice(o.indexOf('> wait'), o.indexOf('> wait') + 900));
         return f;
       },
     },
@@ -1837,7 +1842,7 @@ module.exports = {
         if (!/A (brown|black) orc, armed/.test(or)) f.push('no orc seen armed');
         const items = T.filter(t => t.after).flatMap(t => t.after.items);
         if (!items.some(i => i.name === 'mankar' || i.name === 'mang')) f.push('no mankar or mang made (the orcs\x27 own): ' + [...new Set(items.map(i => i.name))].join(', '));
-        if (!/An elf/.test(el) || !/keeping its distance/.test(el)) f.push('no elf keeping its distance');
+        if (!/An elf/.test(el) || !/keeping their distance/.test(el)) f.push('no elf keeping their distance');
         const ee = el.slice(el.indexOf('> examine the elf'));
         if (!/longknife/.test(ee) || !/hartbow/.test(ee)) f.push('the elf\'s longknife and hartbow not seen: ' + JSON.stringify(ee.slice(0, 300)));
         const na = T.flatMap(t => t.replies).filter(r => r.kind === K.RS_NEW_ACTOR);

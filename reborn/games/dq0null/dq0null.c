@@ -840,7 +840,9 @@ void __fastcall__ rf_answer (struct req* r)
                                                 **   own, each tended once; its heal the sooner) */
         if (r->other || wounds <= tended) {
             RS_TREAT_CANT (*r) = 1;
-            put (r->other ? "It has no wounds you can tend." : "You have no wounds that want tending.");
+            put (!r->other ? "You have no wounds that want tending." : HUB->folk[(r->other - 1) & 7] ?
+                "They have no wounds you can tend." : "It has no wounds you can tend.");    /* (A person "they": the hub's
+                                                **   folk, 2026-11-17) */
         } else if (!RS_TREAT_DONE (*r)) {
             RS_TREAT_TENTHS (*r) = 3000;
             put ("You clean and bind a wound.");

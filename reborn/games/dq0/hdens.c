@@ -194,7 +194,9 @@ static void split (void)
             msg (lb);
         }
     } else if (d & FT_CLOSE) {
-        say_no (A_FAR, cmd.obj.word);           /* ("The rat is out of reach: go up to it first.") */
+        hub_mem (0, &n, &HUB->folk[((d & 0x0F) - 1) & 7], 1);
+        say_no (A_FAR | (n ? A_THEY : 0), cmd.obj.word);    /* ("The rat is out of reach: go up to it first."; a
+                                                **   person's "them", 2026-11-17) */
     } else {
         if (e == FT_THING || (e & FT_CLOSE) || !((e ^ d) & 0x0F)) {
             e = 0;                              /* (No other foe beside it: the first alone) */

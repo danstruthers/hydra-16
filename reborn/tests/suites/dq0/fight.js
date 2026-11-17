@@ -663,7 +663,7 @@ module.exports = {
       })() },
       start(m) {        // (Told as it falls, 2026-11-03: the lines typed no longer fall on it)
         dq0Poke(m, [1, 2].map(g => ({ g, line: 'drop the backpack', n: 1, call: (h, L) => { h[L.nolurk] = 1; } })));   // (No robber lying in wait, HOUSE.md's hiding oneself: this scene's the bandits at it, 2026-11-04)
-        dq0OnWords(m, Array.from({ length: 15 }, (_, i) => ({ g: 2, line: 'wait', n: i + 2, words: 'falls senseless.', text: 'talk to the bandit\r' })));
+        dq0OnWords(m, Array.from({ length: 15 }, (_, i) => ({ g: 2, line: 'wait', n: i + 2, words: 'They fall senseless.', text: 'talk to the bandit\r' })));
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -677,16 +677,16 @@ module.exports = {
         else if (!pick || pick.b !== drop.b || pick.thing !== drop.thing) f.push('the bandit\'s sword not taken up again (' + JSON.stringify(pick) + ')');
         const swords = s => s ? s.items.filter(i => i.name === 'sword').length : -1;
         if (swords(end.at) !== swords(w0.after)) f.push('a sword left on the floor, taken up again (' + swords(w0.after) + ' swords before, ' + swords(end.at) + ' after)');
-        const said = dq0Story(out), fum = said.search(/The bandit strikes at you with its sword, but fumbles the blow\.|; it falters\./);
+        const said = dq0Story(out), fum = said.search(/The bandit strikes at you with their sword, but fumbles the blow\.|; they falter\./);
         if (fum < 0) f.push('the bandit\'s fumble not told');
-        else inTurn(said.slice(fum), ['The bandit drops its sword.', 'The bandit snatches up its sword.'], f, 'the bandit\'s fumble\'s words: ');
+        else inTurn(said.slice(fum), ['The bandit drops their sword.', 'The bandit snatches up their sword.'], f, 'the bandit\'s fumble\'s words: ');
         // (Knocked senseless, it lies there doing nothing, and comes round on the floor: its first turn after, up)
         const fights = T.filter(u => u.k > g2.k).flatMap(u => u.dens).filter(e => e.kind === 'E_FIGHT');
         const out1 = fights.findIndex(e => e.who === 0 && e.a > 0 && (e.ff & 4)), by = out1 < 0 ? 0 : fights[out1].a;
         const next = fights.slice(out1 + 1).find(e => e.who === by);
         if (out1 < 0) f.push('no bandit knocked senseless');
         else if (!next || next.out !== 'O_RISE') f.push('the bandit come round not getting to its feet first (' + JSON.stringify(next) + ')');
-        inTurn(said.slice(said.lastIndexOf('dq0 -p t -s 1 -c /ram/c.hm')), ['falls senseless.', 'lying senseless.', 'The bandit lies senseless: it can\'t hear you.', 'The bandit gets to its feet.'], f,
+        inTurn(said.slice(said.lastIndexOf('dq0 -p t -s 1 -c /ram/c.hm')), ['They fall senseless.', 'lying senseless.', 'The bandit lies senseless: they can\'t hear you.', 'The bandit gets to their feet.'], f,
           'the bandit knocked senseless: ');
         return f;
       },
@@ -721,7 +721,38 @@ module.exports = {
           f.push('the character\'s blow not blocked by the bandit\'s shield (D_BLOCK, AF_SHIELD, O_BLOCKED): ' + JSON.stringify(blocks));
         if (blocks.some(r => r.b !== 1 || r.actor !== 0)) f.push('AF_SHIELD not a denizen\'s block: ' + JSON.stringify(blocks));
         const sw = ready && names.get(ready.thing);
-        inTurn(o, ['The bandit unslings its ' + sw + '.', 'it fends off the blow with its ' + sw], f, 'the shield\'s words: ');
+        inTurn(o, ['The bandit unslings their ' + sw + '.', 'they fend off the blow with their ' + sw], f, 'the shield\'s words: ');   // (People "they",
+                                                //   the user's, 2026-11-17: "its" before)
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0they', outfit: true, asks: true, initiative: true, near: ['fight', 'denizens'], what: "Dingus Quest Zero's people \"they\", beasts \"it\" (the user's, 2026-11-17: \"The elf unslings their hartbow.\"; GAME-CRITIQUE.md's 5.6): the speaking peoples' kinds (kinds.txt's nature f, the hub's folk as the denizens make it an actor; the referee's bestiary's BF_THEY the same kinds) said \"their\" and \"they\", a pronoun the subject its verb plural (\"they fend off the blow\"), the kind named keeping the singular (\"The bandit unslings their round shield.\"): dq0shield's bandits set on the character, no \"its\" nor \"it\" of one, their shield unslung and its block in their words, the referee's wound and armour words \"their\"; a giant rat still \"it\" (seed 3's, keeping its distance)",
+      init: 't_rc', cycles: 1600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm',
+        'echo ml swd 90 >> /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk' -R 3", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
+        'defend block', ...Array(44).fill('wait'), 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'f', 'look', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [0, 1, 2].map(k => k ? { g: 1, line: 'wait', n: 1, k, set: { attitude: 4, doing: 0 } } : { g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: 4 }));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out), at = o.indexOf('dq0 -p t -s 3 -c /ram/c.hm -T'), b = at < 0 ? o : o.slice(0, at), r = at < 0 ? '' : o.slice(at);
+        const ss = b.split(/(?<=[.!?])\s+/);
+        for (const s of ss.filter(s => /The bandit|the bandit/.test(s))) {
+          if (/\bits\b/.test(s)) f.push('a bandit\'s "its": ' + JSON.stringify(s));
+          if (/[;,] it (dodges|fends|strikes|stumbles|falters|slips|twists)|\bIt (falls|flees)\b/.test(s)) f.push('a bandit "it": ' + JSON.stringify(s));
+        }
+        for (const w of [/The bandit unslings their [a-z ]+\./, /they fend off the blow with their [a-z ]+/]) if (!w.test(b)) f.push('not said: ' + w);
+        if (/: a [a-z ]+ to its [a-z ]+ \([MSG]\d+\)/.test(b)) f.push('a bandit\'s wound "to its"');
+        if (!/keeping its distance/.test(r)) f.push('a giant rat not "keeping its distance" (seed 3): ' + JSON.stringify(r.slice(0, 400)));
+        // (The referee's own bestiary: BF_THEY the kinds the game's bestiary calls folk, kinds.txt's nature f)
+        const kinds = fs.readFileSync(path.join(TESTS, '..', 'games', 'dq0d', 'kinds.txt'), 'latin1').split(/\r?\n/).filter(l => l.trim() && !l.startsWith('#'))
+          .map(l => l.split('|').map(x => x.trim())).filter(v => v.length > 20), folk = kinds.filter(v => v[19] === 'f').map(v => v[1]).sort();
+        const they = [...fs.readFileSync(path.join(TESTS, '..', 'games', 'dq0harn', 'beasts.c'), 'latin1').matchAll(/\{ "(\w+)",[^\n]*BF_THEY/g)].map(x => x[1]).sort();
+        if (folk.join(' ') !== they.join(' ')) f.push('the referee\'s BF_THEY (' + they.join(' ') + ') not kinds.txt\'s folk (' + folk.join(' ') + ')');
         return f;
       },
       sdcard: true
@@ -886,7 +917,7 @@ module.exports = {
         if (!/You gather up \d+ arrows?\./.test(o)) f.push('the gathering not told');
         const den = T.filter(u => u.k > g2.k).flatMap(u => u.dens).filter(e => e.kind === 'E_FIGHT' && e.who > 0);
         if (!den.length) f.push('no elf\'s blow or shot (E_FIGHT)');
-        inTurn(o, ['The elf unslings its hartbow.', 'The elf shoots at you with its hartbow'], f, 'the elf\'s shot: ');
+        inTurn(o, ['The elf unslings their hartbow.', 'The elf shoots at you with their hartbow'], f, 'the elf\'s shot: ');
         return f;
       },
       sdcard: true
@@ -998,7 +1029,7 @@ module.exports = {
         if (!/You gather up \d+ arrows?\./.test(o)) f.push('the gathering not told');
         if (ga.after && !(inQuiver(ga.after) > inQuiver(ga.at))) f.push('the arrows not gathered into the quiver (' + inQuiver(ga.at) + ', ' + inQuiver(ga.after) + ')');
         // (The soldiers: a spear thrown, or a crossbow taken up and shot)
-        if (!/The small orc (?:throws its (?:spear|dagger) at you|shoots at you with its shortbow)/.test(s2)) f.push('no small orc\'s throw or shot');
+        if (!/The small orc (?:throws their (?:spear|dagger) at you|shoots at you with their shortbow)/.test(s2)) f.push('no small orc\'s throw or shot');
         // (Auto-target: the character shooting back unbidden)
         inTurn(s3, ['You shoot at hostiles within medium range on your own.', 'You fight back against the elf.', 'You take up your shortbow.'], f, 'the auto-target: ');
         return f;
@@ -1549,7 +1580,7 @@ module.exports = {
           const e = last(g), b0 = e && e.acts.find(a => a.k === 0), b1 = e && e.acts.find(a => a.k === 1), r = rallies(gi);
           if (!b0 || !(b0.mood & AM_LEADS) || b0.rank !== 1 || !b0.prom || (b1 && ((b1.mood & AM_LEADS) || b1.rank))) f.push('game ' + g + ': the more influential not at the black orc\'s post over the mightier: ' + JSON.stringify(e && e.acts));
           if (r.length !== 1 || r[0].who !== 1 || !!r[0].seen !== (how === 'seen')) f.push('game ' + g + ': not one rally by it, ' + how + ': ' + JSON.stringify(r));
-          if (!(how === 'seen' ? /The small orc rallies its fellows\./ : /You hear a rallying shout/).test(st[gi] || '')) f.push('game ' + g + ': the rally ' + how + ' not told');
+          if (!(how === 'seen' ? /The small orc rallies their fellows\./ : /You hear a rallying shout/).test(st[gi] || '')) f.push('game ' + g + ': the rally ' + how + ' not told');
         }
         const e3 = H.find(x => x.g === 3 && x.line === 'wait' && x.n === 2), act = k => e3 && e3.acts.find(a => a.k === k), c3 = act(3), c4 = act(4), c0 = act(0) || act(1);
         if (!c3 || c3.rank !== 2 || !c3.prom) f.push('the captain not king after the king: ' + JSON.stringify(e3 && e3.acts));

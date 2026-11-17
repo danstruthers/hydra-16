@@ -33,6 +33,18 @@ extern unsigned char finds;                     /* (main.c's: a search's end awa
 #define dealt       (*(struct sway*) (lb + sizeof lb - sizeof (struct sway)))  /* (The reply's copy at lb's end, as
                                                 **   main.c's deal keeps it: the words at its start) */
 
+/* The one dealt with a person (the reply's actor, the hub's folk: one of the speaking peoples, said "they", the user's,
+** 2026-11-17) */
+static unsigned char dealt_folk (void)
+{
+    unsigned char f = 0;
+
+    if (dealt.actor & 0x7F) {
+        hub_mem (0, &f, &HUB->folk[((dealt.actor & 0x7F) - 1) & 7], 1);
+    }
+    return f;
+}
+
 /* A noise the character makes (I_NOISE: how loud, what it is), the world's to carry out (two seconds) */
 static void __fastcall__ noise (unsigned char loud, unsigned char what)
 {
@@ -246,8 +258,11 @@ static void wake (void)
     if (ask_den (SW_WAKE, 0) == SR_OK) {
         strcpy (lb, "You shake ");
         who (0);
-        strcat (lb, dealt.now == AT_HOSTILE ? " awake. It comes to with a snarl, and turns on you!" :
-            dealt.now <= AT_WARY ? " awake. It starts up, and eyes you warily." : " awake. It blinks up at you.");
+        d = dealt_folk ();
+        strcat (lb, dealt.now == AT_HOSTILE ? (d ? " awake. They come to with a snarl, and turn on you!" :
+            " awake. It comes to with a snarl, and turns on you!") : dealt.now <= AT_WARY ? (d ?
+            " awake. They start up, and eye you warily." : " awake. It starts up, and eyes you warily.") : d ?
+            " awake. They blink up at you." : " awake. It blinks up at you.");
         msg (lb);
     } else if (dealt.result == SR_CANT) {
         lb[0] = 0;
@@ -264,8 +279,9 @@ static void taunt (void)
     if (ask_den (SW_TAUNT, 0) == SR_OK) {
         strcpy (lb, "You taunt ");
         who (0);
-        strcat (lb, G_OK (dealt.grade) ? ". It's goaded: it comes for you!" : dealt.grade == G_BADLY ?
-            ". It only laughs at you." : ". It ignores your jeers.");
+        strcat (lb, dealt_folk () ? (G_OK (dealt.grade) ? ". They're goaded: they come for you!" : dealt.grade == G_BADLY ?
+            ". They only laugh at you." : ". They ignore your jeers.") : G_OK (dealt.grade) ? ". It's goaded: it comes for you!" :
+            dealt.grade == G_BADLY ? ". It only laughs at you." : ". It ignores your jeers.");
         msg (lb);
     }
     took ();
@@ -318,7 +334,7 @@ static void pretend (void)
     if (!dealt.iy) {
         strcpy (lb, "No foe is watching you.");
     } else if (!dealt.ix) {
-        strcpy (lb, dealt.iy > 1 ? "No one is taken in." : "It isn't taken in.");
+        strcpy (lb, dealt.iy > 1 ? "No one is taken in." : dealt_folk () ? "They aren't taken in." : "It isn't taken in.");
     } else {
         who (1);
         strcat (lb, dealt.ix < dealt.iy ? " is taken in, but not all of them are." : dealt.ix > 1 ?

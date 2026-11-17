@@ -28,11 +28,12 @@ void __fastcall__ o_say_no (unsigned char a, const char* w)
 {
     static char t[64];
     struct msg c;
+    unsigned char p = a & A_THEY ? (w ? 1 : 2) : 0;     /* (| A_THEY, a person: named 1, "They" 2; UK_NO's folk) */
 
     f = a & A_LB;
-    a &= ~A_LB;
+    a &= ~(A_LB | A_THEY);
     if (!w) {
-        w = "it";
+        w = p ? "they" : "it";
     }
     if ((a == A_SEE_NO || a == A_HAVE_NO || a == A_NO_GODS) && (!*w || *w == '#')) {
         ++a;                                    /* (No name to say: the form without one) */
@@ -40,7 +41,7 @@ void __fastcall__ o_say_no (unsigned char a, const char* w)
     t[0] = 0;
     if (a == A_UNSEEN || a == A_UNSEEN_WAY) {
         strcpy (t, strchr ("aeiou", *w) ? "an " : "a ");
-    } else if (a == A_FAR && *w >= 'a' && strcmp (w, "it")) {
+    } else if (a == A_FAR && *w >= 'a' && strcmp (w, "it") && p != 2) {
         strcpy (t, "the ");
     }
     strcat (t, w);
@@ -50,7 +51,7 @@ void __fastcall__ o_say_no (unsigned char a, const char* w)
     said_s[2] = strcpy (lb + 200, t);           /* (The main RAM's: the words' overlay in the window, not this one) */
     c.kind = UK_NO;
     c.who = 0;
-    c.w1 = a << 8;
+    c.w1 = a << 8 | p;
     said_q = f;
     outcome_words (&c);
     said_q = 0;

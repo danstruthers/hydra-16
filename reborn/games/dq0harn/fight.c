@@ -255,7 +255,8 @@ void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, uns
     p = guard (t, loc, aspect);
     if (impact - p < 1) {                       /* (Stopped by its armour, or no harm) */
         if (impact >= 1 && arm[0]) {
-            strcpy (w, t->who ? "its " : "your ");
+            strcpy (w, !t->who ? "your " : t->b && (t->b->flags & BF_THEY) ? "their " : "its ");   /* (A person's "their",
+                                                **   2026-11-17) */
             strcat (w, arm);
             RS_ATTACK_AF (*R) |= stop;
         }
@@ -278,7 +279,7 @@ void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, uns
             f |= c->state == HARN_DEAD ? HARN_W_DEAD : 0;
         }
     }
-    wound_words (w, sev, loc, aspect, il, t->who ? by | BY_ITS : by);
+    wound_words (w, sev, loc, aspect, il, t->who ? by | BY_ITS | (t->b && (t->b->flags & BF_THEY) ? BY_THEIR : 0) : by);
     if (f & HARN_W_DEAD) {
         o_effect (t->who, X_DEATH, C_DEAD, HARN_KILL, loc, aspect);
         return;

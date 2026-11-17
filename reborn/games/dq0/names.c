@@ -492,7 +492,8 @@ static void forget (void)
         return;
     }
     if (e.what == NM_DEN) {
-        sayf ("\n%s keeps the name you gave it.", e.name);
+        sayf ("\n%s keeps the name: it can't be taken back.", e.name);  /* ("...you gave it." till 2026-11-17: a person
+                                                **   "them", the one named not always to hand, its words the name's) */
         return;
     }
     sayf ("\nYou forget the name %s.", e.name);

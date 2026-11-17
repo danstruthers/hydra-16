@@ -82,6 +82,7 @@ static unsigned char __fastcall__ place_of (unsigned i)
 ** "on your left hand", "about its neck", "in your ears", "on your hands" */
 #define SY_ITS          1
 #define SY_BOTH         2
+#define SY_THEY         4                       /* (SY_ITS's, a person's: "their", 2026-11-17) */
 static void __fastcall__ say_at (unsigned char s, unsigned char how)
 {
     static const char* const prep[4] = { "on", "over", "about", "at" };
@@ -91,7 +92,7 @@ static void __fastcall__ say_at (unsigned char s, unsigned char how)
     unsigned char l = s & WP_LOC;
 
     put (s & WP_PAIR ? "in" : prep[pi[l]]);
-    put (how & SY_ITS ? " its " : " your ");
+    put (how & SY_ITS ? (how & SY_THEY ? " their " : " its ") : " your ");
     if (s & WP_PAIR) {
         put ("ears");
         return;
@@ -182,7 +183,7 @@ void __fastcall__ s_worn_put (unsigned n, unsigned char how)
         return;
     }
     put (how == WH_LIST ? ", " : " ");
-    say_at (s, how == WH_DEN ? SY_ITS : 0);
+    say_at (s, how == WH_DEN ? SY_ITS : how == WH_THEY ? SY_ITS | SY_THEY : 0);
 }
 
 /* "Take off the ring" with rings worn in two places or more (IO_DOFF's, things.c's serve: its thing named by its word,

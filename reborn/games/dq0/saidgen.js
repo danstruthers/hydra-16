@@ -35,7 +35,8 @@
 //   SC_TRAP F G, SC_KIND F, SC_NAME F, SC_PIECE P (each F and P there plus 1: no 0 in a text); SC_EXT X (the look's
 //   lists, 2026-11-16: X 1 the UI's list joined ", " and " and ", 2 joined "; ", 3 joined ", "; 4 the text made more
 //   than one, 5 a people's way; 6 "A", "An" before a vowel; 7 one of a lot's, "ration").  A field the slot's whole word: its operation SF_WORD
-//   (4), its sixteen bits read (a count past 255)
+//   (4), its sixteen bits read (a count past 255); a field an actor plus 1 asked whether it's a person ({they F?a|b}): its
+//   operation SF_THEY (5), said.c's they (the hub's folk: people "they", beasts "it", the user's, 2026-11-17)
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -56,6 +57,7 @@ const WORDS_MAX = 180;                                        // (The words said
 const BANK = 0x2000, NBANK = 3;                               // (A bank of the rows': overlays 28, 29 and 30)
 const ANY = 0xFE;                                            // (A row for any outcome: said.c's SAID_ANY)
 const OP = { '': 0, '-': 1, '>': 2, '*': 3 };
+const SF_THEY = 5;                                            // (A field's operation: its actor plus 1 a person, said.c's they)
 const WORDS = ['obj', 'instr', 'text', 'actor'], MORE = ['w4', 'w5', 'w6'];   // (The UI's words; its fourth to sixth, said_s[3-5]: SC_STR2's)
 const DICT = [2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29];   // (A word's codes)
 
@@ -180,6 +182,15 @@ function generate(H, say = () => {}) {
     if (fieldIx.get(s) >= FMAX) throw new Error('saidgen: more than ' + FMAX + ' fields');
     return fieldIx.get(s);
   };
+  const theyField = (K, expr, line) => {                      // ({they F?a|b}: field F an actor plus 1, a person or not,
+    const d = [...fields[field(K, expr, line)]];              //   said.c's fv's SF_THEY (5): the user's people "they",
+    d[3] = SF_THEY;                                           //   2026-11-17)
+    d[4] = 0;
+    const s = d.join(',');
+    if (!fieldIx.has(s)) { fieldIx.set(s, fields.length); fields.push(d); }
+    if (fieldIx.get(s) >= FMAX) throw new Error('saidgen: more than ' + FMAX + ' fields');
+    return fieldIx.get(s);
+  };
   const pc = [], pcIx = new Map();
   const piece = (K, p, line) => {                             // (A piece's place, compiled for the kind the first time)
     if (pieces[p] === undefined) throw new Error('said.txt:' + line + ': no @' + p);
@@ -230,6 +241,11 @@ function generate(H, say = () => {}) {
         };
         if (name[0] === '@') { b.push(SC.PIECE, piece(K, name.slice(1), line) + 1); continue; }
         if (m[2] === '?') {
+          if (name === 'they') {
+            if (args.length !== 1) throw new Error('said.txt:' + line + ': {they F?...}: one field, an actor plus 1');
+            block(fc(SC.CHOOSE, theyField(K, args[0], line)));
+            continue;
+          }
           if (w >= 0 && name === lc) block(SC.IF + w);
           else if (w2 >= 0 && name === lc) block(SC.IF + 5 + w2);
           else if (name === 'arg') block(SC.IF + 4);

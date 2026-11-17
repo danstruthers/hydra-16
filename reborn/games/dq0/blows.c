@@ -27,11 +27,33 @@ static unsigned char __fastcall__ body_of (unsigned char k)
     return b < NBODIES ? b : BD_TWO;
 }
 
+/* Actor k - 1 a person (the hub's folk: one of the speaking peoples, said "they", the user's, 2026-11-17); k 0, the
+** character: 0 */
+static unsigned char __fastcall__ folk_of (unsigned char k)
+{
+    unsigned char f = 0;
+
+    if (k) {
+        hub_mem (0, &f, &HUB->folk[(k - 1) & 7], 1);
+    }
+    return f;
+}
+
 /* A strike's line told (UK_FIGHT's s2, s3): 1 a wound ("a serious cut ..."), 2 the armour that stopped it ("your leather
 ** tunic", "its ..."), 0 none (no harm) */
 static unsigned char __fastcall__ struck (const char* l)
 {
     return *l == 'a' && l[1] == ' ' ? 1 : *l ? 2 : 0;
+}
+
+/* A strike's line of one not seen, "something": its "their" (the referee's, a person's) made "its" ("a serious gash to
+** its neck": the user's people "they", 2026-11-17, not a word of what can't be seen) */
+static void __fastcall__ unthey (char* l)
+{
+    if ((l = strstr (l, "their ")) != 0) {
+        memcpy (l, "its", 3);
+        memmove (l + 3, l + 5, strlen (l + 5) + 1);
+    }
 }
 
 /* A blow (an E_FIGHT: the character's, or one at it), worded; the character dead of it, the game's end; knocked
@@ -125,7 +147,20 @@ unsigned __fastcall__ o_fight_said (const struct msg* m)
         out != O_RISE && (f->which & FW_STRAY) ? SAID_FIGHT_STRAY : out;
     c.w1 = k << 8 | (!*aw ? 5 : !strcmp (aw, "foot") ? 1 : !strcmp (aw, "head") ? 2 : !strcmp (aw, "bite") ? 3 :
         !strcmp (aw, "claws") ? 4 : 0) | (pc && (cmd.manner & MN_HARD) ? 8 : 0) | (harm_told & C_UNCONSCIOUS ? 16 : 0);
-    c.w2 = struck (line[2]) | struck (line[3]) << 2 | (aname && *aname == '?' ? 16 : 0) | (dname && *dname == '?' ? 32 : 0);
+    c.w2 = (aname && *aname == '?' ? 16 : 0) | (dname && *dname == '?' ? 32 : 0);
+    if (c.w2 & 16) {                            /* (Its people "they": afolk, dfolk; one not seen, "something", "it" and
+                                                **   "its", its actor's 0x40 said.c's they's, 2026-11-17) */
+        unthey ((char*) line[3]);
+        c.who |= 0x40;
+    } else {
+        c.w2 |= folk_of (m->who) << 6;
+    }
+    if (c.w2 & 32) {
+        unthey ((char*) line[2]);
+    } else {
+        c.w2 |= folk_of (E_FIGHT_DEF (*m)) << 7;
+    }
+    c.w2 |= struck (line[2]) | struck (line[3]) << 2;
     outcome_words (&c);
     if ((k >= SAID_FIGHT_GONE && k != SAID_FIGHT_STRAY) || k == O_RISE) {
         return 0;                               /* (No blow: nothing left in) */
@@ -152,10 +187,12 @@ void __fastcall__ o_fight_note (unsigned char n)
 {
     struct msg c;
 
-    if ((n &= 7) == FN_AWAY) {
-        say_no (A_FAR | A_LB, 0);       /* ("It is out of reach: go up to it first.": the refusals' one wording) */
+    if ((n & 7) == FN_AWAY) {           /* ("It is out of reach: go up to it first.": the refusals' one wording; n | 8,
+                                        **   a person's, "They are ... them") */
+        say_no (A_FAR | A_LB | (n & 8 ? A_THEY : 0), 0);
         return;
     }
+    n &= 7;
     said_s[2] = rs_owns;                /* (D_OWN's the ruleset's: RS_HELLO's) */
     c.kind = UK_SELF;                   /* (Its words said.txt's SELF.stance, left in lb, 2026-11-15) */
     c.who = 0;
@@ -219,7 +256,7 @@ unsigned char __fastcall__ o_fight_target (struct cmd* c)
                 if (nigh) {
                     return k + 1;
                 }
-                away = 1;
+                away = FN_AWAY | (folk_of (k + 1) ? 8 : 0);   /* (Out of reach: a person's, "They are ... them") */
             }
             ex = c->obj.x ? q.x - c->obj.x : dx;   /* (One it sees, said or the target: the one of its name nearest
                                                 **   where it was seen; else, several of its name and none beside it,
@@ -238,7 +275,7 @@ unsigned char __fastcall__ o_fight_target (struct cmd* c)
     if (best) {
         return best;
     }
-    note (away ? FN_AWAY : *w ? FN_NONE_LIKE : FN_NONE);
+    note (away ? away : *w ? FN_NONE_LIKE : FN_NONE);
     return 0;
 }
 
@@ -287,7 +324,8 @@ unsigned char __fastcall__ o_grapple (unsigned char g)
         hub_mem (0, &q, &HUB->actor[k], sizeof q);
         if (q.state && q.name[0] && q.sn == sn && name_is (q.name, w)) {
             if ((unsigned) (q.x - px + 1) > 2 || (unsigned) (q.y - py + 1) > 2) {
-                away = 1;
+                hub_mem (0, &away, &HUB->folk[k], 1);
+                away = away ? A_THEY : 1;       /* (A person's: "go up to them first") */
                 memcpy (an, q.name, sizeof an);   /* (Its name, said: "The giant rat is out of reach") */
             } else if (!f || k + 1 == gk) {
                 f = k + 1;                      /* (The first beside; the one grappled last before it, the one held:
@@ -305,7 +343,7 @@ unsigned char __fastcall__ o_grapple (unsigned char g)
     }
     if (away) {
         *lb = 0;
-        say_no (A_FAR | A_LB, an);              /* ("The giant rat is out of reach: go up to it first.") */
+        say_no (A_FAR | A_LB | (away & A_THEY), an);    /* ("The giant rat is out of reach: go up to it first.") */
     } else {
         fight_note (*w ? 6 : 7);                /* ("There's nothing like that here to fight.") */
     }

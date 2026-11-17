@@ -69,7 +69,7 @@ unsigned char s_trade (void)
 {
     static const char played[4][10] = { "entertain", "sing for", "play for", "dance for" };
     struct ireq* q = &HUB->ireq;
-    unsigned char h = cmd.aux, sell, r, life, o;
+    unsigned char h = cmd.aux, sell, r, life, o, fk;
     unsigned it, w = 0xFFFF, qty, n, item, its = 0, nits = 0, c = 0, ni = 0, fc = 0, fi = 0, fn = 0, fm = 0;
     unsigned long v;
     char t[16], pr[16], ps[6];
@@ -193,6 +193,7 @@ ask:
     SW_NFITS (&S) = fm;
     hub_call (&S, T_DENIZENS);
     S.state = REQ_FREE;
+    fk = S.actor && HUB->folk[(S.actor - 1) & 7];    /* (A person, "they": the hub's folk, 2026-11-17) */
     strcpy (nl, S.name[0] >= 'A' && S.name[0] <= 'Z' ? "" : "the ");    /* (Its name: "the dwarf", "Grub") */
     strcat (nl, S.name);
     strcpy (nm, nl);
@@ -209,9 +210,11 @@ ask:
         break;
     case SR_OK:
         if (h == SW_ENTERTAIN) {
-            sayf ("\nYou %s %s. %s", played[S.order & 3], nl, S.now > S.was ? (S.grade == G_WELL ?
-                "It's delighted: it seems friendlier now." : "It's pleased: it seems friendlier now.") : S.now < S.was ?
-                "It's bored, and seems the less friendly." : "It isn't moved.");
+            sayf ("\nYou %s %s. %s", played[S.order & 3], nl, S.now > S.was ? (S.grade == G_WELL ? (fk ?
+                "They're delighted: they seem friendlier now." : "It's delighted: it seems friendlier now.") : fk ?
+                "They're pleased: they seem friendlier now." : "It's pleased: it seems friendlier now.") : S.now < S.was ?
+                (fk ? "They're bored, and seem the less friendly." : "It's bored, and seems the less friendly.") : fk ?
+                "They aren't moved." : "It isn't moved.");
             break;
         }
         sayf ("\n%s%s%s for %s %s.", nm, h == SW_PRICE ? " asks " : h == SW_OFFER ? " would give you " :
@@ -220,7 +223,7 @@ ask:
             h == SW_PRICE || !(S.iy & 1) ? "the" : "your", gd);
         break;
     case SR_FAR:
-        say_no (A_FAR, nm);
+        say_no (A_FAR | (fk ? A_THEY : 0), nm);
         break;
     case SR_TONGUE:
         sayf ("\n%s doesn't speak any tongue you know: you can't haggle.", nm);
@@ -233,7 +236,7 @@ ask:
         sayf ("\n%s lies senseless.", nm);
         break;
     case SR_AS_FAR:
-        sayf ("\n%s is friendly already: that won't move it further.", nm);
+        sayf ("\n%s is friendly already: that won't move %s further.", nm, fk ? "them" : "it");
         break;
     case SR_WONT:
         sayf ("\n%s won't trade with you.", nm);
@@ -245,13 +248,13 @@ ask:
         sayf ("\nYou haven't the money: %s asks %s.", nl, pr);
         break;
     case SR_BROKE:
-        sayf ("\n%s hasn't the money: it would give %s.", nm, pr);
+        sayf ("\n%s hasn't the money: %s would give %s.", nm, fk ? "they" : "it", pr);
         break;
     case SR_SPURNED:
         sayf ("\nYou haggle too hard: %s takes offence, and won't deal with you now.", nl);
         break;
     default:
-        msg ("It won't trade.");
+        msg (fk ? "They won't trade." : "It won't trade.");
         break;
     }
     if (S.t) {
@@ -351,7 +354,8 @@ unsigned char s_errand (void)
     } else if (cmd.order >= OR_OPEN) {          /* (A door's errand, 2026-11-02: the door found, as the character's own
                                                 **   command finds it: its square) */
         if (cmd.obj.kind != OB_DOOR) {
-            msg ("Ask it to open which door?");
+            msg ("Open which door?");           /* ("Ask it to ..." till 2026-11-17: an ally a person or a beast, not known
+                                                **   yet; "Fetch what?"'s way) */
             return 0;
         }
         if (pick (OB_DOOR | PICK_TELL, cmd.obj.lies) != 1) {

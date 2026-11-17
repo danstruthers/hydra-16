@@ -53,7 +53,7 @@ static const char* const wound_word[4 + BY_VENOM][3] = {
 
 static const char* __fastcall__ noun (unsigned char by, unsigned char aspect, unsigned char sev)
 {
-    by &= ~BY_ITS;
+    by &= ~(BY_ITS | BY_THEIR);
     return wound_word[by && by <= BY_VENOM ? 3 + by : aspect & 3][sev > HARN_GRIEVOUS ? 2 : sev ? sev - 1 : 0];
 }
 
@@ -75,7 +75,7 @@ void __fastcall__ o_wound_words (char* w, unsigned char sev, unsigned char loc, 
     strcat (w, harn_severity_name (sev));
     strcat (w, " ");
     strcat (w, noun (by, aspect, sev));
-    strcat (w, by & BY_ITS ? " to its " : " to your ");
+    strcat (w, by & BY_ITS ? (by & BY_THEIR ? " to their " : " to its ") : " to your ");
     cat_loc (w, loc);
     if (sev <= HARN_GRIEVOUS) {
         strcat (w, sev == HARN_MINOR ? " (M" : sev == HARN_SERIOUS ? " (S" : " (G");
