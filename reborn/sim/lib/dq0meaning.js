@@ -59,7 +59,7 @@ function layoutOf(H) {
   aHeart: F('struct actor', 'heart'), aLead: F('struct actor', 'lead'), aPower: F('struct actor', 'power'), aMood: F('struct actor', 'mood'),
   aServe: F('struct actor', 'serve'), aContact: F('struct actor', 'contact'), aBonds: F('struct actor', 'bonds'), task: F('struct hub', 'task'),
   // (The bodies by who, the character's actor 0, pc: ONE-PATH.md's stage 1; the denizens' actor[k] is bodies[k + 1])
-  bodies: F('struct hub', 'bodies'), pcBody: F('struct hub', 'pc'),
+  bodies: F('struct hub', 'bodies'), pcBody: F('struct hub', 'pc'), lookAt: F('struct hub', 'look'),
   themeBank: K('THEME_BANK'), thName: F('struct theme', 'name'), thStratum: F('struct theme', 'stratum'), tstrata: K('TSTRATA'),
   tSname: F('struct sight', 'sname'),
   namesAt: K('NAMES_AT') - 0x8000, tnames: K('TNAMES'), tname: Z('tname'), nmWhat: F('struct tname', 'what'),

@@ -45,7 +45,9 @@ function lookSnap(m, ptr, game) {
   }
   const { L } = require('../../../sim/lib/dq0meaning.js').layout(), n = ptr - 0x8000 === L.dsenseAt ? L.dsenseSize : 16;   // (The
   // denizens' senses' request its own bytes: the hub's ui_cmd after it, 2026-10-20)
-  return [game, ptr.toString(16), lookHash(banks[hub].subarray(ptr - 0x8000, ptr - 0x8000 + n)), lookHash(banks[hub + 19].subarray(0, 0x800)),
+  const what = ptr - 0x8000 === L.dsenseAt ? 'dsense' : ptr - 0x8000 === L.lookAt ? 'look' : ptr.toString(16);   // (The request by
+  // its name, not its place in the hub, which a layout change moves: ONE-PATH.md's stage 1, actor 0, 2026-11-17)
+  return [game, what, lookHash(banks[hub].subarray(ptr - 0x8000, ptr - 0x8000 + n)), lookHash(banks[hub + 19].subarray(0, 0x800)),
     ...ch.sort()].join(' ');
 }
 
