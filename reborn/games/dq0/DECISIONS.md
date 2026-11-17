@@ -1981,7 +1981,7 @@ Two more places where the UI knew which thing was meant and sent the world only 
 The user: "Don't worry too much about the startup time.  If you need to rewrite some of the portions in assembly, do so.  Do whatever cleanup you can, and then start the next piece of the critiques work."
 
 - **The start's budget** (dq0starttime) is now 235M cycles at seed 1 and 315M at the big seed (it was 226M and 305M; the start is 225.8M and some 302M now), so the work to come isn't held to the last megacycle.  The measure is kept: it still fails a start that grows a lot.
-- **The disagreements the AâF steps didn't close**, closed: the first words of a thing named by a capital or another handle never borrow a carried thing of its name (7); "attack the rat with the other sword" takes the other sword in hand, the instrument's own selector, not the rat's (9); "attack the rat" with several rats in sight goes for the nearest, the resolver's choice, its square the fight's to go by, not the first in the actors' table (11); "You look them over." is said only when two of those seen differ, as the world then asks which; two alike, the one taken is reached for (5, test dq0leftovers).  "The second" settles as one order for each kind: carried things the UI's, things lying about the world's, denizens the resolver's (2).
+- **The disagreements the A–F steps didn't close**, closed: the first words of a thing named by a capital or another handle never borrow a carried thing of its name (7); "attack the rat with the other sword" takes the other sword in hand, the instrument's own selector, not the rat's (9); "attack the rat" with several rats in sight goes for the nearest, the resolver's choice, its square the fight's to go by, not the first in the actors' table (11); "You look them over." is said only when two of those seen differ, as the world then asks which; two alike, the one taken is reached for (5, test dq0leftovers).  "The second" settles as one order for each kind: carried things the UI's, things lying about the world's, denizens the resolver's (2).
 - **Clean-up:** the three parallel agents' worktrees and branches removed (one folder under .claude/worktrees still held open by a process, left to go); stray single-byte section signs written into four sources made UTF-8.
 
 ### The second sweep: every command that names a thing answers about it (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's §5.2, step G)
@@ -2000,13 +2000,13 @@ The same refusal was worded, or built, in many places: "You see no %s here." in 
 - **One table, one routine.**  refuse.c's `said[]` is the table of refusals, its first rows the line's (U_VERB, U_YET, U_CANT, U_NOTE, and now U_WHAT), then the A_* (dq0.h): "You see no %s here.", "You have no %s." (each with a nameless form: "You see none of those here.", "You carry none of those.", said when there's no name to put in, none or a handle's "#"), "There's nothing here to take.", "You haven't seen a(n) %s here." and "... that way.", "%s is out of reach: go up to it first." ("the" put in before a name that isn't capitalised, the sentence's start capitalised), "You can't get near enough to %s.".  Said by `say_no (a, w)` (w the thing's name, 0 "it"; copied first, so it may be lb, any of the main RAM's, not another overlay's own), or `unknown (U_*)`, from the line, as before; `A_LB` adds it to lb, unsaid, for the sway's words and a blow's note, which are built there.  Each site calls it in place of its own `sayf`, nothing round it moved (thirty-five sites, fourteen files).
 - **refuse.c is overlay 24's now** (overlay 1 had 286 bytes; the table and say_no wouldn't fit beside the title and the help).  One more stub in the main RAM (11 bytes).
 - **Every wording that changed** (old, then new; where):
-  - "You see none of those here." â "You see no pumpkin here." (the thing named): take (main.c's s_took_up), hide behind a thing (s_hide), lift a bar with no door by it (s_lift), search for a thing (search.c).
-  - "You carry none of those." â "You have no pumpkin.": drop (main.c), hide a thing (s_hide), throw (resolve.c).  "You have no such thing." (give, with nothing named: errand.c) â "You carry none of those.".
-  - "The giant rat is too far off: you'd need to be within reach." (give, a beast's ways: sway.c; a trade: errand.c), "It's out of reach: go up to it first." (a blow's note: blows.c), "You'd have to be beside the rat." (first aid: tend.c) â "The giant rat is out of reach: go up to it first.", "It is out of reach: go up to it first.", "The rat is out of reach: go up to it first.".  ("... is too far off to hear you." kept: talking range isn't reach.)
-  - "You can't get any nearer to it." (a walk to a thing that stopped short: main.c's reach_go) â "You can't get near enough to it." (the fight's close-in's words, task.c's).
-  - "Take what?", "Put down what?" (main.c), "Read what?", "Copy what?" (read.c), "Name what?" (names.c) â the line's verb and "what?", as "Drop what? [a, b ...]" was already: "Take what?", "Get what?", "Put down what?", "Drop what?", "Read what?", "Copy what?", "Name what?", "Call what?" (in play the take's and the drop's are seldom reached: "take" alone asks which, "drop" alone lists the letters).
-  - "There's nothing written on it." (read, a part of the place named with no word: read.c) â "There's nothing written on the way out." (U_NOTE, the line after its verb, as refuse.c's rows say it).
-  - "You can't eat the pot." (feed.c, from its word) â the same from the line (U_CANT): "eat pot" says "You can't eat pot.".
+  - "You see none of those here." → "You see no pumpkin here." (the thing named): take (main.c's s_took_up), hide behind a thing (s_hide), lift a bar with no door by it (s_lift), search for a thing (search.c).
+  - "You carry none of those." → "You have no pumpkin.": drop (main.c), hide a thing (s_hide), throw (resolve.c).  "You have no such thing." (give, with nothing named: errand.c) → "You carry none of those.".
+  - "The giant rat is too far off: you'd need to be within reach." (give, a beast's ways: sway.c; a trade: errand.c), "It's out of reach: go up to it first." (a blow's note: blows.c), "You'd have to be beside the rat." (first aid: tend.c) → "The giant rat is out of reach: go up to it first.", "It is out of reach: go up to it first.", "The rat is out of reach: go up to it first.".  ("... is too far off to hear you." kept: talking range isn't reach.)
+  - "You can't get any nearer to it." (a walk to a thing that stopped short: main.c's reach_go) → "You can't get near enough to it." (the fight's close-in's words, task.c's).
+  - "Take what?", "Put down what?" (main.c), "Read what?", "Copy what?" (read.c), "Name what?" (names.c) → the line's verb and "what?", as "Drop what? [a, b ...]" was already: "Take what?", "Get what?", "Put down what?", "Drop what?", "Read what?", "Copy what?", "Name what?", "Call what?" (in play the take's and the drop's are seldom reached: "take" alone asks which, "drop" alone lists the letters).
+  - "There's nothing written on it." (read, a part of the place named with no word: read.c) → "There's nothing written on the way out." (U_NOTE, the line after its verb, as refuse.c's rows say it).
+  - "You can't eat the pot." (feed.c, from its word) → the same from the line (U_CANT): "eat pot" says "You can't eat pot.".
   - Not changed in wording, only where it's kept: "You see no %s here." (resolve.c twice, words.c twice, way.c, tend.c, errand.c twice, sway.c), "You have no %s." (errand.c, feed.c twice), "There's nothing here to take." (resolve.c twice), "You haven't seen a(n) %s here/that way." (way.c, choose.c).
 - **Left as they are, on purpose:** the questions with a hint or another shape ("Throw it at what? (throw the dagger at the rat ...)", "Give it to whom?", "Fetch what?" (an order: its line isn't "fetch"), "Name it what?", "Use what, and on what? ...", "Combine what with what? ..."); the "Which one?" headings (caps.c, which.c: a question's start, its choices after it); the per-action templates of §4.5 (refuse.c's rules[] rows are what there is of them).
 - **Tests:** expectations changed only where a wording did: dq0hide ("You see no ... here", either form), dq0firstword ("take the pumpkin": "You see no pumpkin here."), dq0moving ("can't get near enough"), dq0parse (the gift out of reach), the repeats allowed in dq0engage (both forms).  No behaviour changed, so no new test.
@@ -3561,7 +3561,7 @@ letter for letter.
   (`den_told`) from wdig.c's part 79.  What each copy did its own way are flags in its loud byte: `DT_SEEN` (a dug
   square seen as it was, before it changed: wdig.c's 0x80 before) and `DT_DOOR` (a door's work: what lies between
   measured from the door, and seen if the body's own square is: wport.c's).  Its event is on the C stack, as
-  wport.c's was (not wbody.c's bev).  dq0w's main RAM 2,188 â 2,182 (the stub alone); part 79 622 â 929 (its copy out), part 80 181 â 122.
+  wport.c's was (not wbody.c's bev).  dq0w's main RAM 2,188 → 2,182 (the stub alone); part 79 622 → 929 (its copy out), part 80 181 → 122.
   **Not resident**, so stage 2's 170 bytes weren't spent.  **Not in part 79, though it was built there first:** part
   79's bank is overlay 32, one of dq0w.rop's three, read in only at ropes_in; a denizen's door work before that
   copied an unread bank in and the world hung (dq0allydoor, dq0daily's garrison, dq0builder, dq0hoard).  wbody.c's
@@ -3628,7 +3628,7 @@ letter for letter.
   | dq0w's parts 79, 80 | 622, 181 | 929, 122 |
   | dq0w's overlays 24, 32 | 291, 1,086 | 232, 1,393 |
 
-- **The start** (dq0starttime): seed 1 233.2M â 234.0M cycles (budget 245M), seed 123456789 311.4M â 310.6M: the one bank more read as it starts, the four functions' code gone.
+- **The start** (dq0starttime): seed 1 233.2M → 234.0M cycles (budget 245M), seed 123456789 311.4M → 310.6M: the one bank more read as it starts, the four functions' code gone.
 - **Checked:** every dq0 test's screen kept before and after (a temporary hook in sim/test.js, not committed), their
   sentences compared (the status line dropped, wrapped lines joined, the order of whole sentences ignored).
   8 of 294 differ, all noise: the real-time fights in dq0antidote and dq0denpace (dq0denpace's new run shows the moved
@@ -3776,11 +3776,11 @@ Built in five stages, each its own commit:
   **dq0acct is HarnMaster's own account program** (the table names it as the ruleset's): it still includes
   dq0harn's headers, as part of that ruleset.
 
-**Room** (main RAM free, before â after): dq0harn 2,264 â 2,209; dq0null 5,036 â 4,605 (dq0harn's fuller
-`equip_all` and `put`); dq0life 18,318 â 18,198 (the table and its lookup); dq0schol 5,405 â 5,333 (its overlay
-591 â 630); the UI (3,383, 3 less than before stage 1: the request numbers), the world (2,243), the denizens, the
-account and the others as they were; dq0harn's overlays 1 194 â 170, 3 110 â 174, 7 11 â 47, 8 32 â 22, part 2
-1,574 â 1,564.  The start at seed 1: 233.3M cycles (233.9M at stage 2); at 123456789, 310.6M (budgets 245M and
+**Room** (main RAM free, before → after): dq0harn 2,264 → 2,209; dq0null 5,036 → 4,605 (dq0harn's fuller
+`equip_all` and `put`); dq0life 18,318 → 18,198 (the table and its lookup); dq0schol 5,405 → 5,333 (its overlay
+591 → 630); the UI (3,383, 3 less than before stage 1: the request numbers), the world (2,243), the denizens, the
+account and the others as they were; dq0harn's overlays 1 194 → 170, 3 110 → 174, 7 11 → 47, 8 32 → 22, part 2
+1,574 → 1,564.  The start at seed 1: 233.3M cycles (233.9M at stage 2); at 123456789, 310.6M (budgets 245M and
 325M).
 
 **A race found on the way: dq0reachstop.**  Its "halt" and "stop" are typed as a step's words show, at the turns pace;
@@ -3884,11 +3884,11 @@ stirs."; an Initiative improvement told in dq0robrest and not in dq0restbusy, a 
 lands in the step it was typed in, "You stop getting out the rations.", the side the user accepted on 2026-11-11).
 Stage (c): 10, all noise (dq0antidote's and dq0denpace's real-time fights; dq0answer's, dq0jobs' and dq0mine's sounds heard from denizens met at other moments; dq0skykin; dq0passes' and dq0stopwords' "Something stirs."; dq0robrest's improvement; dq0reachstop's race on the side the user accepted).  No step's words changed: each reach sentence, each word ("the old torch", "the other torch", "the new torch") and each "You stop ..." is said as often as before in every test but dq0reachstop's race.
 
-**Room.**  dq0w main RAM 2,243 â 2,220 (a: the step record and the stack) â 2,220 (b) â 2,188 (c: the pop's table and
-loop, 32 bytes more than the ternary chain); its part 86 234 â 212, 87 2,203 â 2,188; overlays 17 134 â 119, 26
-114 â 92.  The UI (dq0) 3,383 throughout; its overlays 171 bytes freer and its parts 209 at (b) (the sentences;
-ovlpack's placing).  The start at seed 1: 233.3M â 233.5M (a) â 233.7M (b) â 233.2M (c) cycles (245M the budget);
-at 123456789 310.6M â 311.0M (b) â 311.4M (c).
+**Room.**  dq0w main RAM 2,243 → 2,220 (a: the step record and the stack) → 2,220 (b) → 2,188 (c: the pop's table and
+loop, 32 bytes more than the ternary chain); its part 86 234 → 212, 87 2,203 → 2,188; overlays 17 134 → 119, 26
+114 → 92.  The UI (dq0) 3,383 throughout; its overlays 171 bytes freer and its parts 209 at (b) (the sentences;
+ovlpack's placing).  The start at seed 1: 233.3M → 233.5M (a) → 233.7M (b) → 233.2M (c) cycles (245M the budget);
+at 123456789 310.6M → 311.0M (b) → 311.4M (c).
 
 ## The meta programs' library, their state record, one theme compiler (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §9 and step 11)
 
@@ -4052,7 +4052,7 @@ rat.") already say the same doing the same way.
   | overlays 15, 18 (the packer's) | 311, 758 | 308, 752 |
   | dq0w's main RAM | 2,182 | 2,182 (the world untouched) |
 
-- **The start** (dq0starttime): seed 1 234.0M â 233.4M cycles (budget 245M), seed 123456789 310.6M â 311.4M.
+- **The start** (dq0starttime): seed 1 234.0M → 233.4M cycles (budget 245M), seed 123456789 310.6M → 311.4M.
 
 - **Checked:** every dq0 test's screen kept before and after (a temporary hook in sim/test.js, not committed), their
   sentences compared (the status line dropped, wrapped lines joined, the order of whole sentences ignored).  41 of 294
