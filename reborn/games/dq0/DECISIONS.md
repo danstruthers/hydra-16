@@ -6802,3 +6802,45 @@ names the phase of GAME-CRITIQUE.md's section 10 the work falls in.
   the character's torch included.
 - **To build**: an audit of every interaction for the two paths, then one path for each (GAME-CRITIQUE.md's E4, its
   "later, the character as actor 0", and E6's action table).
+
+## The one-path plan and phase A's questions: the user's answers (2026-11-17)
+
+ONE-PATH.md's decisions, and OPEN.md's questions from phase A's branches (built/2026-11-17-*.md), answered.
+
+**One path for every actor (ONE-PATH.md)**
+- **The character becomes actor 0 first**: its record moved into the hub's actor table, then every act rebuilt on
+  it (chosen over the staged way inside the world: every task and the save change together).
+- **Now, alongside phase B (the parser) and phase C (tests on the game as played).**  It takes in phase E's denizen
+  work; the world plug-in and phase D follow.
+- **Denizens hear one another's footsteps by a cost along the straight line** (walls and doors counted, rock stops
+  them); loud events by a real pulse; exact whenever the character is at either end.
+- **The D17 speed targets: "Rethink the D17 speed targets.  Please investigate the assumptions there and reset
+  those that do not make much sense."**  To do, before any measure is made to fail again.
+- **Searching is anyone's**: "Any actor should be able to search about for things when exploring, or when
+  specifically trying to tail prey (or the player), or when on patrol.  There are probably lots of other reasons to
+  search about, and each actor should do so based on its own characteristics.  Please remove the specific
+  "robbers" type since searching about is not only for them...anyone may want to find/steal something."
+
+**Hands, lights and the pack**
+- **A drawn weapon keeps its hand in a fight**; outside one, the home-first order stands.
+- **A rest puts a burning light out first** (for every actor).
+- **Any move away takes up a light the rule left burning**: a walk, a climb, going up or down; else "You leave the
+  ... behind.".  A light the player put down stays.  An unlit light goes home like any thing.
+- **A named light is used for battering as told**; it may break or go out.
+- **The side pocket is asked about** even when the pack is the only place, as built.
+- **"stop" ends everything under way**, a fight's part and the reach it took over.
+
+**The parser and the words**
+- **Pillars and a window's bars are tie points** for a rope.
+- **"pick" always picks**; "unlock" uses a key if one fits.
+- **"take all from" names what's taken in one list** ("You take a chisel and a key from the case."), and empties a
+  hidden compartment once it's been found.
+- **A thing put or dropped on a part of the room is placed there if it can rest there** (stairs, a ledge, a floor
+  within reach); refused only where nothing can rest (a wall, a door).
+- **"say" alone shows the quoted form.**
+- **The UI's 40 bytes are kept**: the copy loop isn't spent (it measured slower).
+- **An unseen fighter stays "it"**; the two rewordings for "they" are accepted.
+
+**The denizens and sounds**
+- **A key, a bar and a pick make quiet sounds**, heard close by under the one hearing rule, for every actor.
+- **A follow out of reach says so once**, when it starts.

@@ -41,44 +41,9 @@ end with their open questions: copy them here when the branch is merged.
   - Not built: the shared paths (main.c's things, feature, reach_go) do those steps for every verb already, and the
     coverage report's "-" cells are where a row's refusal would go.
   - DECISIONS.md:6045, "The dispatch table's rest".
-- **P4. Should a pillar (or a window's bars) hold a rope?** "tie the rope to the pillar" now names the pillar, and is
-  refused: "You can't tie the rope to the pillar." (it tied to the nearest holder before).
-  - built/2026-11-17-parse.md, its open question 1.
-- **P5. Should "pick the lock" always pick?** Today the world uses a key that fits first, then the picks.
-  - built/2026-11-17-parse.md, its open question 2.
-- **P6. Should "take all from the case" name each thing taken?** Built: "You take everything from the case." (one
-  thing named; "You take what you can ..." when some won't fit). Each thing's own words repeat sentences, which the
-  suite's repeat check refuses; a list ("You take a chisel and a key from the case.") is the world's list words' to
-  make.
-  - built/2026-11-17-parse.md, its open question 3.
-- **P7. Should "take all from" empty a hidden compartment once it's found?** Built: a hidden compartment, found or
-  not, is skipped; its things are taken by name.
-  - built/2026-11-17-parse.md, its open question 4.
-- **P8. Should "drop the dagger on the stairs" be refused, as put, hang and tie now are?** It still drops at the
-  character's feet.
-  - built/2026-11-17-parse.md, its open question 5.
-- **P9. Should "say" alone show the quoted form?** It says "I don't understand that."; `say hello` now gets "Put the
-  words in quotes: say "hello"."
-  - built/2026-11-17-parse.md, its open question 6.
-- **P10. The renderer's copy loop doesn't pay.** The user agreed to spend about 40 bytes of the UI's main RAM on it;
-  built and measured, it cost 34 bytes and made the renderer slower (the inventory's words 100,785 to 141,907
-  cycles; dq0traces' step 1,816,296 to 1,897,342), since the rows are mostly codes, not runs of letters. Options:
-  neither; or the bytes on what would pay (one call to skip an alternative, or a row scan in bank.s), measured first.
-  - built/2026-11-17-text.md, its open question 1 (the code kept in its record).
-- **P11. An unseen fighter stays "it"** ("Something strikes at you with its spear"): "their" would tell the player
-  it's a person. Built that way; confirm?
-  - built/2026-11-17-text.md, its open question 5.
-- **P12. Two rewordings with "they":** "Grub keeps the name: it can't be taken back." (was "...you gave it"), and
-  "Open which door?" (was "Ask it to open which door?"). Accept?
-  - built/2026-11-17-text.md, its open question 6.
 
 ## Doors, portcullises and windows
 
-- **D1. A denizen's "open" at a portcullis raises it at once, untimed.** dq0w/wport.c's den_portal times a raise
-  (PA_RAISE), not an open (PA_OPEN). No denizen sends one today (the minds send PA_RAISE), but an ally's errand could,
-  where no door is in sight.
-  - Options: make it the minds' timed raise (begun, then posted again); or leave it.
-  - DECISIONS.md:5818-5819, "Opening a portcullis" (its open question 1).
 - **D2. "Close the door" at a portcullis**, with no door in sight, keeps a door's first words ("You reach for the
   door."), the thing named as the player named it (built). Keep it?
   - DECISIONS.md:5820-5821, "Opening a portcullis".
@@ -104,25 +69,9 @@ All five from DECISIONS.md:5878-5885, "No look when the light's the same".
 
 ## Hands, lights and the pack
 
-From built/2026-11-17-things.md (the hand freed by its home first, the light last and taken up again; the user's
-answers of 2026-11-17).
-- **H1. In a fight, should the weapon keep its hand?** Built: a sword with a scabbard goes home before a light is set
-  down, in a fight as anywhere.
-- **H2. Should an unlit light keep its hand too?** Built: "the light last" means a lit one; an unlit one is an
-  ordinary thing with a home.
-- **H3. Should a light the player put down themselves be taken up when a walk starts?** Built: only one the rule set
-  down.
-- **H4. Should a climb take the light up as a walk does?** Built: only a walk.
-- **H5. What should a rest do with a burning light?** Built: it burns in hand, "Your torch is burning low." is told,
-  and the rest stops as it goes out. Options: put it out at the rest's start, stop when it burns low, or ask.
-- **H6. Should a named light be refused for battering?** Built: "break the door with the lantern" still uses it;
-  with nothing named a light counts as an empty hand and the fist is used ("You set to punching the door.").
-- **H7. Should the side pocket be offered when the pack is the only other place?** Built: "(b) the backpack, the
-  side pocket" is asked.
+From built/2026-11-17-things.md; its other questions were answered on 2026-11-17 (DECISIONS.md).
 - **H8. The thing a tool is for is kept in hand only when its request names it.** A rope tied to a held spike keeps
   the rope and stows the spike. Protect it by the act instead?
-- **H9. "stop" while a fight has taken over a reach step** stops only the fight (built). Should it stop the reach
-  too?
 
 ## Knocked out
 
@@ -155,17 +104,6 @@ only quit and help taken, nothing sensed). These are the rest.
   test of each event against a black-out, is called on every event: leave it in main RAM (built), or move it to an
   overlay, at a cost in time?
   - DECISIONS.md:5665-5666 (its point 7).
-
-## The denizens
-
-From built/2026-11-17-bodies.md (denizens take only what they've found, by the compartments' rules; the user's
-answers of 2026-11-17).  N2, N3 and N5 were settled by the user's "One path for every actor" (DECISIONS.md).
-- **N1. When does a denizen search?** Built: only a robber, where it lost the character (once, a minute, the
-  referee's search by its own sheet). Should robbers, the hungry or the unarmed search more often?
-- **N4. Should keys click, for every actor?** Built: a key, a bar and picking are silent for the character and the
-  denizens alike.
-- **N6. A follow out of reach.** "You can't get near enough to ..." is no longer said while following (it was said at
-  each re-aim). Say it once, when a follow starts out of reach?
 
 ## The step planner, the reach and time
 
@@ -207,11 +145,6 @@ answers of 2026-11-17).  N2, N3 and N5 were settled by the user's "One path for 
 - **X1. dq0hold's own poke of burn_due is lost if a minute is under way as it lands.** The test passes at its timing.
   Make it poke burn_ask, a sturdier probe?
   - DECISIONS.md:6022-6023, "The hold-back's holes".
-- **X2. Measures over their D17 targets: fail the suite until they are won back, or note them?** Built: noted, not
-  failed, since their old budgets were over the targets too. dq0answer's step forward (a first letter at 772,675
-  cycles at the turns pace, 722,946 at the normal, against 720,000), dq0lookfar's looks (6.2M and 20.6M against
-  1.79M) and its map's first letter (758,556).
-  - built/2026-11-17-guards.md, its open question 1.
 - **X3. A test's `cycles` limit still acts as a budget where it sits close to the measure** (dq0save: 940M against
   851M). Make each a generous timeout?
   - built/2026-11-17-guards.md, its open question 2.
