@@ -2,9 +2,9 @@
 # that suit a dungeon (its numbers the game's own, in its own words; the referee's sheet for each, a ruleset's, is
 # the referee's: games/dq0harn/fight.c's bestiary, by the key).  make.js makes it the denizens' task's data file
 # (lib/dq0/dq0d.dat: 40 bytes a kind, the first none; then the factions, factions.txt's), which it reads into a bank
-# of its own as it starts; the history's generator chooses a region's inhabitants by the habitats (land, climate,
-# light, the strata and styles), the nature and the size, and the population's generator (popgen) groups them by
-# their lairs.
+# of its own as it starts; the population's generator (popgen) groups the inhabitants (the theme's factions, the
+# history's: its peoples chosen by history.txt's lands) by their lairs.  A kind's land and climate are kept in the data
+# file, but nothing reads them yet.
 #
 # A line a kind, its fields between bars:
 #   name      what the character sees it as (11 letters at most)

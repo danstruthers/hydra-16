@@ -6,8 +6,9 @@
 ** (and a field's value, a row's condition), its text said as it reads: the event's fields, the UI's words for its
 ** things (said_s), "you" or the denizen, articles, a heading from the way the character faces, the theme's names.
 ** What the UI works out for a row (which of a dig's refusals, a tool's name) its caller's (main.c's s_news); the words
-** here and in said.txt alone.  The table's rows are overlay 28's (a bank of their own, 2026-11-11: this one's room
-** for the renderer and the kinds to come), read a byte at a time through bank.s's said_b; the rest here.
+** here and in said.txt alone.  The table's rows are overlays 28, 29 and 30's (banks of their own, 2026-11-11 and
+** 2026-11-15: this one's room for the renderer and the kinds to come), read a byte at a time through bank.s's said_b;
+** the rest here.
 */
 
 #pragma code-name ("OV27CODE")

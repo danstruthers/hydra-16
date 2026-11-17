@@ -1,5 +1,5 @@
 /*
-** house.c - (dq0harn) the house's rules, every referee's (rshouse.h's, ../dq0/rf/): all of them the main RAM's
+** house.c - (dq0null) the house's rules, every referee's (rshouse.h's, ../dq0/rf/): all of them the main RAM's
 */
 
 #include "../dq0/rf/dig.c"

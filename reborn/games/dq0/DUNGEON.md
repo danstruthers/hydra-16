@@ -1805,7 +1805,7 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   light.
 - **One path for every actor** (Phase 3C, begun 2026-11-02: below; a denizen's portcullises and a robber's lock
   picking built 2026-11-02, DENIZENS.md's): left, a denizen working windows, its lift by its size, an ally told to put a thing down or give it to another (the order's words: overlay 15 has no room), one throwing at a mark but the character.  Things put down, given and thrown, and food eaten, built 2026-11-04: above.
-  The choosers stay two (2026-11-04, looked at and not merged: choose.c, resolve.c and things.c's pick choose by the player's words, among what's seen and carried, asking which; a mind chooses by what it wants, TW_*, or by a record it was told; the user's own table has it, "a mind names things by their squares and their records, not by words": the take rule's what they share, and it's shared).
+  The player's words are resolved by one resolver, the UI's (COMMANDS-CRITIQUE.md's 5.1, 2026-11-07: one rule for a name, one order for each kind of thing, one reader of "which?"; the world's pick ranks what's to hand), and a mind chooses by what it wants, TW_*, or by a record it was told (the user's own table has it, "a mind names things by their squares and their records, not by words"): the take rule's what they share, and it's shared.  The two ways of choosing were looked at on 2026-11-04 and not merged.
 - **The character carries on** (slice 4.4, built 2026-11-02: above): left, the denizens'
   weapons' versions (the outfits' gear's), a thing's wear and fuel carried as they were.
 - **The market** (built in part 2026-11-02: HOUSE.md's the market, entertaining and remedies; DENIZENS.md's trading):

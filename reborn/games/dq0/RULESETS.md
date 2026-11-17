@@ -105,7 +105,7 @@ The programs between dungeons (dq0life, dq0acct, dq0town, dq0schol) talk to the 
 
 - **The rulesets' table** (RULESETS): each ruleset's referee and its own program for the time between dungeons (its
   healing, its skills' growth, the town; lib's acct folder), or none.  dq0life runs the one the save's ruleset names
-  (game.dat's referee): HarnMaster's dq0acct; the null ruleset has none, its game goes on as it did.  dq0acct is
+  (game.dat's referee): HarnMaster's dq0acct; the null ruleset's dq0nacct (rsmeta.h's RULESETS).  dq0acct is
   HarnMaster's own program, and reads dq0harn's headers as part of that ruleset.
 - **The sheet as a meta program sees it**: meta_line (a line of the sheet read: what the ruleset keeps of it, any other
   line the program's own), meta_ml (a mastery by what it's for: MK_LANGUAGE, MK_SCRIPT, MK_FOLKLORE, MK_RECKON,

@@ -5,9 +5,10 @@
 ** 0-ended, an offset from the file's start (0: none).  make.js lays them out the same.  And the kinds' habitats, the
 ** bits of the denizens' kinds' records (kinds.txt's, in dq0d.dat: struct dkind's form, land, climate and arms).
 **
-** Their readers: the history's generator (what a region's eras were, who built what, to whom), the UI (each deity's
-** name a word of the commands'), and the clues and the stocking (a people's walls, doors and marks; a deity's sign,
-** its temples).
+** Their readers, to come (nothing reads the two files at run time yet: GAME-CRITIQUE.md's 5.4): the history's generator
+** (what a region's eras were, who built what, to whom), and the clues and the stocking (a people's walls, doors and
+** marks; a deity's sign, its temples).  The UI has the deities' names from dq0g.txt (the catalogue's bank's last records:
+** each a word of the commands'), not dq0g.dat; the kinds' land and climate are read by nothing yet.
 */
 
 #ifndef _LORE_H
