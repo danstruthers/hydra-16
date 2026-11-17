@@ -6844,3 +6844,27 @@ ONE-PATH.md's decisions, and OPEN.md's questions from phase A's branches (built/
 **The denizens and sounds**
 - **A key, a bar and a pick make quiet sounds**, heard close by under the one hearing rule, for every actor.
 - **A follow out of reach says so once**, when it starts.
+
+## The D17 targets rethought (the user's, 2026-11-17)
+
+The user: "Rethink the D17 speed targets.  Please investigate the assumptions there and reset those that do not
+make much sense."  The investigation and the targets as reset are built/2026-11-17-d17.md's; the user then chose
+how they go in and what is built to meet them.
+
+- **The targets now** (tests/lib/trends.js's D17):
+  - **a first letter within 720,000 cycles** (a fifth of a second at the board's 3,579,545 Hz) for every command,
+    looks and the map included (a look's was 1.79M);
+  - **no pause longer than 1.79M** (half a second) between two letters of a reading once its words begin.  A
+    reading's whole time is a trend: it grows with the text and the ground seen.
+  - Measured at 115,200 baud; the median of three typings; a line typed while the character is busy fails the
+    test; no measure excused by a list or by a trend already over.
+- **They go in now; the misses are won back next.**  At 8a9b3e42 the suite fails 4 tests on 9 measures: a look
+  one way's pauses (3.2M-5.0M), the look across (17.1M), the map's pause (5.0M), "attack C" and "attack A" (2.2M-3.7M
+  to a first letter), "drop 1g" (2.7M).
+- **Every command says its first words at once**, in the story ("You close with the giant rat.", "You count out a
+  farthing."): a status line's change alone isn't the answer.
+- **Long readings, all four fixes:** a look tells what's near first and goes on as the rest is worked out; the maker
+  builds the map's pieces ahead of the character's eyes in the background; the map draws row by row; the senses'
+  look is made quicker as it is.
+- **The timing tests also run at the menacing pace, and once without the test switches** (the game as played, where
+  each step of a reach costs the world 2-11M cycles today).
