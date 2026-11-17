@@ -41,6 +41,25 @@ end with their open questions: copy them here when the branch is merged.
   - Not built: the shared paths (main.c's things, feature, reach_go) do those steps for every verb already, and the
     coverage report's "-" cells are where a row's refusal would go.
   - DECISIONS.md:6045, "The dispatch table's rest".
+- **P4. Should a pillar (or a window's bars) hold a rope?** "tie the rope to the pillar" now names the pillar, and is
+  refused: "You can't tie the rope to the pillar." (it tied to the nearest holder before).
+  - built/2026-11-17-parse.md, its open question 1.
+- **P5. Should "pick the lock" always pick?** Today the world uses a key that fits first, then the picks.
+  - built/2026-11-17-parse.md, its open question 2.
+- **P6. Should "take all from the case" name each thing taken?** Built: "You take everything from the case." (one
+  thing named; "You take what you can ..." when some won't fit). Each thing's own words repeat sentences, which the
+  suite's repeat check refuses; a list ("You take a chisel and a key from the case.") is the world's list words' to
+  make.
+  - built/2026-11-17-parse.md, its open question 3.
+- **P7. Should "take all from" empty a hidden compartment once it's found?** Built: a hidden compartment, found or
+  not, is skipped; its things are taken by name.
+  - built/2026-11-17-parse.md, its open question 4.
+- **P8. Should "drop the dagger on the stairs" be refused, as put, hang and tie now are?** It still drops at the
+  character's feet.
+  - built/2026-11-17-parse.md, its open question 5.
+- **P9. Should "say" alone show the quoted form?** It says "I don't understand that."; `say hello` now gets "Put the
+  words in quotes: say "hello"."
+  - built/2026-11-17-parse.md, its open question 6.
 
 ## Doors, portcullises and windows
 
