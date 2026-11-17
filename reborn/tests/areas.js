@@ -37,6 +37,8 @@ const rules = [
   ['reborn/tests/dq0/', ['word:LOOKS_REF']],
   ['reborn/tests/speed/', ['none']],                          // (sim/speed.js's, not the suite's)
   ['reborn/tests/numtest.js', ['word:numtest']],
+  ['reborn/tests/noise.txt', ['none']],                       // (The transcripts' known noise: sim/tools/sentdiff.js's, no test's)
+  ['reborn/tests/trends.json', ['dq0']],                      // (The trends kept: the dq0 tests' measures, tests/lib/trends.js)
   ['reborn/tests/', ['*']],
   // The game: its programs, tasks, data and bank programs (the SD card's)
   [/^reborn\/games\/.*\.md$/, ['none']],                      // (DUNGEON.md, HOUSE.md ...: the design's)
@@ -82,7 +84,7 @@ const rules = [
   ['reborn/sim/tools/hysong.js', ['sound', 'word:hysong']],
   [/^reborn\/sim\/tools\/(numref|numfmt|numxcheck)\.js$/, ['numbers', 'basic', 'forth', 'hylang', 'c']],
   [/^reborn\/sim\/tools\/(command[\w-]*\.js|cmdmatch\/)/, ['dq0']],   // (the parser's tables: dq0c's, dq0w's make.js)
-  [/^reborn\/sim\/tools\/(soak|sdwrite|nprof)\.js$/, ['none']],    // (the soaks: a tier's own; the card writer)
+  [/^reborn\/sim\/tools\/(soak|sdwrite|nprof|sentdiff|trends)\.js$/, ['none']],   // (the soaks: a tier's own; the card writer; the transcripts' and the trends' tools)
   ['reborn/sim/tiers.js', ['none']],                         // (The tiers' steps: --tier's, no test's)
   ['reborn/sim/dl/', ['dl']],                                 // (--dl's: every test then)
   [/^reborn\/sim\/(web\.js|web\/|bench\.js|speed\.js|consbench\.js|run\.js)/, ['none']],   // (Not the tests')
@@ -196,6 +198,7 @@ const CASES = [
   ['reborn/sim/lib/dq0meaning.js', { has: ['dq0*'], not: ['boot', 'race'] }],
   ['reborn/sim/lib/pchost.js', { has: ['pc', 'pc-img', 'dq0rules'], not: ['boot'] }],
   ['reborn/sim/dl/cpu.dl', 'none'], ['reborn/sim/tools/soak.js', 'none'], ['reborn/sim/tiers.js', 'none'],
+  ['reborn/tests/noise.txt', 'none'], ['reborn/sim/tools/sentdiff.js', 'none'], ['reborn/sim/lib/guards.js', '*'],
 ];
 function selfCheck() {
   const path = require('path'), sel = require('../../base/sim/select.js');

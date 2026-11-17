@@ -37,11 +37,11 @@ is built; OPEN.md holds the open questions; ../../tests/TESTING.md says which te
   - 512 bytes in themec and themegen.
 
   At a46c5c38: dq0 3,043; dq0w 2,285; dq0d 2,988; dq0p 4,430; dq0m 3,852; dq0harn 2,067. The build fails a task
-  under 2,048 (build.js:259); the UI's 3,000 is not yet checked by the build, so check it yourself. The UI's main RAM
-  is the tightest room in the game (43 bytes over its floor at a46c5c38): put new code in overlays and swapped parts,
-  not there.
+  below its floor (build.js's FLOORS). The UI's main RAM is the tightest room in the game (43 bytes over its floor at
+  a46c5c38): put new code in overlays and swapped parts, not there.
 - **The headroom rule** (the user's, 2026-11-17): a part or bank under 64 bytes free, or a measure past 90% of its
-  target, has its room or time won back before the next feature.
+  target, has its room or time won back before the next feature. The build lists the first (its "headroom" lines),
+  the suite the second (after the tests).
 - **Overlays** are 8K banks in each task's .cfg, with bank.s's OVMAX (OVBANKS in the world) and ovbank[]. The three
   must agree. In the world, dq0w/make.js checks them; elsewhere nothing does (the UI's dq0.h still declares
   ovbank[27] against bank.s's OVMAX of 30).
@@ -50,9 +50,11 @@ is built; OPEN.md holds the open questions; ../../tests/TESTING.md says which te
 - **Swapped parts** are set in parts.txt, `#@SWn` lines and `#pragma code-name (push, "SWnCODE")`, and packed by
   pack.js. A function moves between parts by its pragma alone.
 - **The bank window.** A call between an overlay and a part, or from an overlay into code that maps the hub, can
-  return with the wrong bank in the window. Nothing checks it yet, and it is the commonest bug class. Before adding
-  such a call, read GAME-CRITIQUE.md's section 6.1 and the fix in 79083a98 (way.c's look_ov: the window kept, the hub
-  put in, the call, the window put back).
+  return with the wrong bank in the window. It is the commonest bug class. The emulator's guards (sim/lib/guards.js,
+  in every test) stop a test at an instruction fetched from the window with no code there, and at a store that names
+  the hub's header landing in another bank; but only where a test goes. Before adding such a call, read
+  GAME-CRITIQUE.md's section 6.1 and the fix in 79083a98 (way.c's look_ov: the window kept, the hub put in, the call,
+  the window put back).
 
 ## Behaviour and transcripts
 
@@ -71,8 +73,9 @@ is built; OPEN.md holds the open questions; ../../tests/TESTING.md says which te
 - **What fails the suite:** the D17 targets (a command's first letter within 720,000 cycles, a look within 1.79M:
   tests/lib/dq0.js), the main RAM floors, and a silent start.
 - **The other cycle budgets are trends** (the user's, 2026-11-17): dq0answer's per-command budgets, dq0traces' step,
-  the start's 245M and 325M. They move with memory layout alone. Don't reshape code to pass one. Never edit a budget
-  yourself: if a change pushes one over, report the test, the budget and the measure.
+  the start's 245M and 325M, and the rest (tests/trends.json). They move with memory layout alone. Don't reshape code
+  to pass one. A rise of more than 5% is noted, not failed: say it in your report. Take a measure as the new trend
+  only on purpose (`node sim/tools/trends.js --update NAME`, ../../tests/TESTING.md), with the reason.
 
 ## Tests
 

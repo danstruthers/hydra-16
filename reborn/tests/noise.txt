@@ -1,0 +1,46 @@
+# ****************************************************************************
+# noise.txt - the transcripts' known noise: the tests whose words differ between two builds by the tasks' timing
+# alone, the game unchanged, and the sentences that do in any test, each with its reason.  sim/tools/sentdiff.js
+# marks their differences as known noise; any other difference is a change to what the player reads, to be meant.
+# (GAME-CRITIQUE.md's 6.4: a lockstep turns pace would end most of these; till then each is listed here, with why.)
+#
+# A test: its name, then its reason.  A sentence: in double quotes, then its reason.  # a comment.
+
+# The real-time paces: not reproducible by design (the minds decide whenever they get the CPU, one dice stream)
+dq0antidote     the real-time fight: its rounds and blows fall as the tasks' timing has them
+dq0denpace      the real-time fight: its rounds and blows fall as the tasks' timing has them
+
+# Denizens met at other moments: the minds run as a background task, so where a denizen is when the character looks
+# moves with the tasks' timing, even at the turns pace (not a lockstep: hub.h's promise isn't kept yet)
+dq0answer       denizens met at other moments (the minds' timing)
+dq0jobs         denizens met at other moments (the minds' timing)
+dq0skykin       denizens met at other moments (the minds' timing)
+dq0mine         denizens met at other moments (the minds' timing)
+dq0prompt       denizens met at other moments (the minds' timing)
+dq0passes       denizens met at other moments (the minds' timing)
+dq0robrest      denizens met at other moments (the minds' timing)
+dq0stopwords    denizens met at other moments (the minds' timing)
+dq0sway         denizens met at other moments (the minds' timing)
+dq0dug          denizens met at other moments (the minds' timing)
+dq0lookfar      denizens met at other moments (the minds' timing)
+dq0restbusy     denizens met at other moments (the minds' timing)
+dq0kit          denizens met at other moments (the minds' timing)
+dq0lair         denizens met at other moments (the minds' timing)
+dq0strip        denizens met at other moments (the minds' timing)
+dq0wornden      denizens met at other moments (the minds' timing)
+dq0denportal    denizens met at other moments (the minds' timing)
+dq0deadonce     denizens met at other moments (the minds' timing)
+dq0faced        denizens met at other moments (the minds' timing)
+dq0tiring       denizens met at other moments (the minds' timing)
+
+# The accepted races (the user's, 2026-11-11 and 12: DECISIONS.md's dq0reachstop): a line typed as words show at the
+# turns pace lands as the parser's speed has it
+dq0reachstop    the accepted race: a stop landing one step or one thing later
+dq0tiring       the accepted race: a stop landing one step or one thing later
+
+# A run's end
+dq0peoplegen    its last prompt printed or not as its run ended
+
+# Sentences told as the tasks' timing has them, in any test
+"Something stirs."   told or not as the minds' timing has a denizen move within hearing
+"Time passes."       told or not as the tasks' timing has the clock run on past a line

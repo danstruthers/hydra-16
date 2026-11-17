@@ -77,6 +77,48 @@ emulator all use). To run a whole suite with fewer, set `HYDRA_MODULES=N` (1 to 
 and the soaks inherit it, and the summary line names it. A test that sets its own `machine.modules` keeps its own.
 `sim/run.js --modules N` sets one run's.
 
+## The guards, the trends and the transcripts
+
+**The emulator's guards** (`sim/lib/guards.js`) run in every test, at no cost in the game's bytes. A hit stops the
+machine at once, and the test fails with the hit's words (the task, its program, the function, the bank):
+
+- **fetch**: an instruction fetched from the bank window ($8000-$9FFF) with no code there. Code there is a program's
+  link areas at $8000 (its overlays, the world's catalogue), its bytes those of the build's files, or a module of the
+  kernel's code cache (a child, a bank program run in place).
+- **store**: a store that names the hub's header (a C line's `HUB->`, or a hub macro; an assembly line's hub offset)
+  writing into a bank other than the header's.
+- **swap**: the swap stack past its `SWDEPTH` (swap.inc's `swsp`), the overlay calls' past `DEPTH` (bank.s's `ovsp`).
+- **stack**: cc65's C stack pointer below its floor (the swap area's top, or the BSS's end).
+
+What each program has comes from the build's outputs (its map, labels, link config, listings and overlay files),
+cached beside its map as `NAME.guards.json`. `KNOWN` in guards.js lists what's taken as it is, each with its reason
+(hylang runs the code it compiles in its own banks). `GUARDS=0` turns them off; `GUARDS=note` notes every hit
+without stopping, and lists them all after the tests; `GUARDS_FLAGS=N` keeps only some (1 fetch, 2 store, 4 the
+stacks). dq0guards makes each guard fire on purpose.
+
+**What fails the suite, and what's a trend** (the user's, 2026-11-17). The suite fails on the user's targets (D17:
+a command's first letter within 720,000 cycles, a look within 1.79M), the RAM floors (the build's) and a silent start.
+Every other cycle measure is a trend, kept in `tests/trends.json` (`tests/lib/trends.js`): a rise of more than 5%
+over it is noted in the test's report and after the tests, never failed. A target's measure that was over its target
+when the trends were first kept is noted, not failed, until it's brought under. After the tests, the summary lists
+the trends that rose, and each target's measure past 90% of it (the headroom rule).
+
+To take a measure as it is now (a rise that's meant, a gain to keep, a new measure), run its test, then
+
+    node sim/tools/trends.js --update NAME ...
+
+and commit `tests/trends.json` with the reason. `node sim/tools/trends.js [NAME ...]` shows each measure beside its
+trend. A target's measure over its target isn't taken unless its trend is over it already (`--accept-over` to).
+
+**Transcripts.** `TRANSCRIPTS=DIR node sim/test.js` saves each test's screen as `DIR/NAME.txt`. Run the suite before and
+after a change, then compare the two folders sentence by sentence:
+
+    node sim/tools/sentdiff.js BEFORE AFTER [NAME ...] [--quiet]
+
+Each sentence only in one run is shown with its counts. A test in `tests/noise.txt` (its words move with the tasks'
+timing, each with why), or a difference only in the list's noisy sentences, is marked as known noise; `--quiet`
+counts those without showing them. Any other difference is a change to what the player reads, to be meant.
+
 ## The tiers
 
 **1. While working**: the agent's own tests, and `--near` its area:

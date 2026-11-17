@@ -116,17 +116,27 @@ function pcFolder(t, opt) {
   return { dir, host };
 }
 
-// A test's instrument: the guards' (guardInstrument) and a dq0 test's own (dq0Instrument), together
+// A test's instrument: the guards' (guardInstrument), a dq0 test's own (dq0Instrument), and its transcript, together
 // (each its part of the boot's options, the machine, the judging and a scene's state)
 function instrument(t) {
   const parts = [dq0Instrument(t), guardInstrument(t)].filter(Boolean);
-  if (!parts.length) return null;
+  if (!parts.length && !TRANSCRIPTS) return null;
   return {
     boot: Object.assign({}, ...parts.map(p => p.boot)),
     attach: mm => parts.forEach(p => p.attach(mm)),
-    judge: m => { const r = parts.map(p => p.judge(m)); return { failures: r.flatMap(x => x.failures), notes: r.flatMap(x => x.notes) }; },
+    judge: m => { transcript(t, m); const r = parts.map(p => p.judge(m)); return { failures: r.flatMap(x => x.failures), notes: r.flatMap(x => x.notes) }; },
     state: () => parts.map(p => p.state()), restore: s => parts.forEach((p, i) => p.restore(s[i])),
   };
+}
+
+// TRANSCRIPTS=DIR: each test's screen, the bytes the serial line sent as they came, in DIR/NAME.txt (made by the
+// judging, after its run): two runs' compared by sim/tools/sentdiff.js, sentence by sentence, the known noise marked
+// (tests/noise.txt)
+const TRANSCRIPTS = process.env.TRANSCRIPTS || '';
+function transcript(t, m) {
+  if (!TRANSCRIPTS) return;
+  try { fs.mkdirSync(TRANSCRIPTS, { recursive: true }); fs.writeFileSync(path.join(TRANSCRIPTS, t.name + '.txt'), m.out, 'latin1'); }
+  catch (e) { console.error('TRANSCRIPTS: ' + t.name + ': ' + e.message); }
 }
 
 // The guards (sim/lib/guards.js: the bank window's code, the hub's header's stores, the swap stack, the C stack), every
