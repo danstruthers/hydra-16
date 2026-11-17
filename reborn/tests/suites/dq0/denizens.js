@@ -10,7 +10,7 @@ const {
   dq0Story, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Named, DQ0_I,
   dq0Typed, dq0Portal, dq0Rec, dq0Poke, dq0PcShock, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Alone
 } = require('../../lib/dq0.js');
-const { target } = require('../../lib/trends.js');   // (The user's targets, D17: each measure kept, those past 90% listed after the tests)
+const { target, D17 } = require('../../lib/trends.js');   // (The user's targets, D17, at 115,200 baud: each measure kept, those over and past 90% listed after the tests)
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
 
 // Dingus Quest Zero's morale's own (dq0morale): at each line's Enter (the CR as the ACIA has it, the game still as it
@@ -1489,7 +1489,7 @@ module.exports = {
     {
       name: 'dq0letdens', near: ['denizens', 'parser'], what: "Dingus Quest Zero's designators, step 4 (the user's design, 2026-11-06, DECISIONS.md's: \"denizens numbered first\"): at seed 3 (-T) three giant rats in sight, each a capital before the things' (the bones'), shown in the look's sentences ((A, C) Two giant rats ... (B) A giant rat ...) and in around, one a line with where it is; a capital where a denizen's name goes (look at B: how it seems, the one named, the denizens' task told which; talk to C); two rats told apart and each attacked by its letter (the scene set: both senseless beside the character, A to its left, C to its right: attack C finishes C and not A, then attack A finishes A); a capital kept while it's remembered (B still B); each first letter within the user's 720,000 cycles",
       init: 't_rc', cycles: 1500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', ...LETDENS, 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', ...LETDENS, 'quit', 'echo $status']) },
       start(m) {
         this.timer = dq0Timer(m);
         const self = this;
@@ -1529,12 +1529,13 @@ module.exports = {
         const d = this.dead;
         if (!d['attack A'] || d['attack A'][0] !== 'up' || d['attack A'][1] !== 'gone') f.push('attack C: not C finished and A left: ' + JSON.stringify(d));
         if (!d['around'] || d['around'][0] !== 'gone') f.push('attack A: A not finished: ' + JSON.stringify(d));
-        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', ...LETDENS],
-          LETDENS.map(l => ({ line: l, want: 'You|The|(' })));
+        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', ...LETDENS],
+          LETDENS.map(l => ({ line: l, want: /^attack/.test(l) ? 'You' : 'You|The|(' })));   // (A blow's first words its own, not a stir's denizens told before it)
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first);
-          // (A blow's words the fight's, its first a status line's: as "attack the rat"'s)
-          if (!/^(look|around|attack .)$/.test(r.line) && target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          // (Every line held, a blow too: an attack has no first words yet, its first letter the blow's words, the
+          // fight's "Fighting the giant rat" on the status line before them: D17's, 2026-11-17, its letting off gone)
+          if (target(this, r.line + ': first letter', r.first, D17.first)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },

@@ -4,11 +4,11 @@
 // floors and a silent start fail the suite, every other cycle budget a trend, its rise past 5% said): each measure
 // the last run kept (obj/trends/NAME.json: each test's, as it ran), its trend (tests/trends.json), how far from it.
 // --update [NAME ...]: those tests' measures (or every test's the last runs kept) made their trends, on purpose: a
-// rise taken as it is now, a measure new, a gain kept.  A D17 target's measure over its target isn't taken (a target
-// met is held: tests/lib/trends.js's target) unless its trend is over it already, or with --accept-over (each said).
+// rise taken as it is now, a measure new, a gain kept.  A D17 target's measure is a trend too, its rise said; its
+// trend never lets it off its target (tests/lib/trends.js's target: over it, the test fails, since 2026-11-17).
 //
 // Usage: node sim/tools/trends.js [NAME ...]                    the measures and their trends
-//        node sim/tools/trends.js --update [--accept-over] [NAME ...]
+//        node sim/tools/trends.js --update [NAME ...]
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -40,17 +40,14 @@ function show(names) {
   }
 }
 
-function update(names, acceptOver) {
+function update(names) {
   const T = JSON.parse(JSON.stringify(trends())), R = lastRuns(names), said = [];
   if (names.length) for (const x of names) if (!R[x]) said.push(x + ': no measures kept (run it first)');
   for (const [test, r] of Object.entries(R)) {
     const t = T[test] = T[test] || {};
     for (const [name, v] of Object.entries(r.trends || {})) {
       const g = (r.targets || {})[name];
-      if (g && g[0] !== null && g[0] > g[1] && !(t[name] > g[1])) {
-        if (!acceptOver) { said.push(test + ' ' + name + ': ' + n(v) + ' over its target ' + n(g[1]) + ', not taken (--accept-over to)'); continue; }
-        said.push(test + ' ' + name + ': ' + n(v) + ' over its target ' + n(g[1]) + ', taken (--accept-over)');
-      }
+      if (g && g[0] !== null && g[0] > g[1]) said.push(test + ' ' + name + ': ' + n(v) + ' over its target ' + n(g[1]) + ' (a trend all the same: the test fails till it\'s won back)');
       if (t[name] !== v) said.push(test + ' ' + name + ': ' + n(t[name]) + ' -> ' + n(v));
       t[name] = v;
     }
@@ -68,7 +65,7 @@ function update(names, acceptOver) {
 
 if (require.main === module) {
   const argv = process.argv.slice(2), names = argv.filter(a => !a.startsWith('--'));
-  if (argv.includes('--update')) update(names, argv.includes('--accept-over'));
+  if (argv.includes('--update')) update(names);
   else show(names);
 }
 module.exports = { show, update };

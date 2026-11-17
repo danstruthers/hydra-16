@@ -366,8 +366,9 @@ card's image and the paged ROM's images. It takes ten minutes or more, so run it
   a secret niche. A row of comps[] each (dq0w/kinds.c; struct comp, items.h:113-154), at most four a kind.
 - **The coverage report** (obj/games/dq0cover.txt, made by dq0/make.js): for each verb, a cell for a word and for
   each kind of room part: done by the handler, refused by the row, or left to the handler. It fails nothing.
-- **D17**: the user's targets for the answers' speed at 115,200 baud: a command's first letter within 720,000 cycles,
-  and a look within 1.79M (tests/lib/dq0.js:864).
+- **D17**: the user's targets for the answers' speed at 115,200 baud (rethought 2026-11-17, built/2026-11-17-d17.md):
+  every command's first letter within 720,000 cycles (a fifth of a second), and a reading's words (a look, the map,
+  what's carried, a thing examined) with no pause longer than 1.79M (half a second) (tests/lib/trends.js's D17).
 - **Designators**: letters that name things. Lower case for things carried; capitals for things and denizens seen
   (A-Z, then AA-AZ). The player types them in place of a name ("drop d"); "Which one?" offers them (letters.c,
   caps.c, which.c).

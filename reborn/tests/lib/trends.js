@@ -1,16 +1,23 @@
 // ****************************************************************************
 // trends.js - the tests' cycle measures as trends, not budgets (the user's, 2026-11-17: DECISIONS.md's "Budgets",
-// GAME-CRITIQUE.md's 6.3 and E9): only the user's targets (D17: a command's first letter within 720,000 cycles, a look
-// within 1.79M), the RAM floors and a silent start fail the suite.  Every other cycle budget is a trend:
+// GAME-CRITIQUE.md's 6.3 and E9): only the user's targets (D17), the RAM floors and a silent start fail the suite.
+// The targets (D17, rethought 2026-11-17 at the user's asking: games/dq0/built/2026-11-17-d17.md), at 115,200 baud
+// and 3.58 MHz:
+//   D17.first   a command's first letter within a fifth of a second of its Enter, 720,000 cycles: every command, a
+//               look and the map as any other
+//   D17.pause   a reading's words flowing: no pause between two of its letters longer than half a second, 1,790,000
+//               cycles, from its first letter to its last (a look about, one way or across, the map, what's carried, a
+//               thing examined or assessed: the user's "a look in half")
+// Each test that holds one says how it measures it (dq0answer and dq0lookfar: the median of three typings).  Every
+// other cycle budget is a trend:
 //   trend(t, name, value)       the measure kept (obj/trends/NAME.json, this run's) and held to tests/trends.json's
 //                               value for it: a rise of more than RISE over it said (a note: "trend ..."), never a
 //                               failure.  OUT: the note, or null
-//   target(t, name, value, max, notes)  a D17 target's measure kept the same way: true if it's over its target (the
-//                               test fails), unless its trend (the same name's, tests/trends.json's) was over it
-//                               already when the budgets became trends: then said in notes, not failed (the user's
-//                               targets not met yet: GAME-CRITIQUE.md's 6.3; met and kept as a trend, it's held to
-//                               them from then on).  Past HEADROOM of its target (the headroom rule: time won back
-//                               before the next feature), listed after the tests (sim/test.js's summary)
+//   target(t, name, value, max) a D17 target's measure kept the same way: true if it's over its target or there's
+//                               none (the test fails).  None is let off: a measure over its target fails, however long
+//                               it has been over (its trend no excuse, since 2026-11-17's rethinking).  Past HEADROOM of
+//                               its target (the headroom rule: time won back before the next feature), and over it,
+//                               listed after the tests (sim/test.js's summary)
 // A test's measures are named by the test (its line, its pace ...).  The file is made again only on purpose, from the
 // last run's measures: node sim/tools/trends.js --update [NAME ...] (sim/tools/trends.js: the measures and their
 // trends, each rise).  TRENDS_RUN (sim/test.js's: the run's start) marks a run's records, for its summary.
@@ -21,7 +28,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
 const FILE = path.join(ROOT, 'tests', 'trends.json'), DIR = path.join(ROOT, 'obj', 'trends');
 const RISE = 0.05, HEADROOM = 0.9;
-const D17 = { first: 720000, look: 1790000 };                 // (The user's targets: a command's first letter, a look's)
+const D17 = { first: 720000, pause: 1790000 };                // (The user's targets: a command's first letter, a reading's longest pause)
 
 let kept = null;
 const trends = () => { if (!kept) { try { kept = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch (e) { kept = {}; } } return kept; };
@@ -49,16 +56,12 @@ function trend(t, name, value) {
   return value > was * (1 + RISE) ? 'trend ' + name + ': ' + n(value) + ' cycles, ' + ((value / was - 1) * 100).toFixed(1) + '% over its ' + n(was) : null;
 }
 
-function target(t, name, value, max, notes) {
-  const r = record(t), v = value === null || value === undefined ? null : Math.round(value);
+function target(t, name, value, max) {
+  const r = record(t), v = value === null || value === undefined || !isFinite(value) ? null : Math.round(value);
   const was = r.targets[name];
   if (!was || v === null || (was[0] !== null && v > was[0])) r.targets[name] = [v, max];   // (A name met twice: its worst)
   save(t, r);
-  if (v !== null && v <= max) return false;
-  const kept = (trends()[t.name] || {})[name];
-  if (v === null || !(kept > max)) return true;
-  if (notes) notes.push(name + ': ' + n(v) + ' cycles, over the user\'s ' + n(max) + ' (its trend ' + n(kept) + ' over it already: not failed)');
-  return false;
+  return v === null || v > max;
 }
 
 // A run's records (sim/test.js's summary): each test's that this run made
@@ -70,20 +73,24 @@ function records(names) {
   return out;
 }
 
-// After the tests: the trends that rose past RISE, and the D17 targets' measures past HEADROOM of them (or over it:
-// one whose trend was over it already, not failed)
+// After the tests: the trends that rose past RISE, and the D17 targets' measures over them (failed) and past HEADROOM
+// of them
 function summary(names, say = console.log) {
-  const R = records(names), T = trends(), rose = [], near = [];
+  const R = records(names), T = trends(), rose = [], over = [], near = [];
   for (const [test, r] of Object.entries(R)) {
     for (const [name, v] of Object.entries(r.trends)) {
       const was = (T[test] || {})[name];
       if (was === undefined) rose.push(test + ' ' + name + ': ' + n(v) + ' (none kept)');
       else if (v > was * (1 + RISE)) rose.push(test + ' ' + name + ': ' + n(v) + ', ' + ((v / was - 1) * 100).toFixed(1) + '% over its ' + n(was));
     }
-    for (const [name, [v, max]] of Object.entries(r.targets))
-      if (v === null || v > max * HEADROOM) near.push(test + ' ' + name + ': ' + (v === null ? 'none' : n(v) + ' (' + Math.round(v / max * 100) + '% of ' + n(max) + ')'));
+    for (const [name, [v, max]] of Object.entries(r.targets)) {
+      const s = test + ' ' + name + ': ' + (v === null ? 'none' : n(v) + ' (' + Math.round(v / max * 100) + '% of ' + n(max) + ')');
+      if (v === null || v > max) over.push(s);
+      else if (v > max * HEADROOM) near.push(s);
+    }
   }
   if (rose.length) say('trends: ' + rose.length + ' measure(s) more than ' + RISE * 100 + '% over their trend (tests/trends.json; to take one as it is now: node sim/tools/trends.js --update NAME):\n  ' + rose.join('\n  '));
+  if (over.length) say('the D17 targets: ' + over.length + ' measure(s) over their target (failed: time to win back):\n  ' + over.join('\n  '));
   if (near.length) say('the D17 targets: ' + near.length + ' measure(s) past ' + HEADROOM * 100 + '% of their target (the headroom rule: time won back before the next feature):\n  ' + near.join('\n  '));
 }
 

@@ -9,7 +9,7 @@ const {
   CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks, stratumRec, chunkDiff, dq0Story, inTurn, dq0Turns,
   dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Thing, DQ0_I, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0Timer
 } = require('../../lib/dq0.js');
-const { trend, target } = require('../../lib/trends.js');
+const { trend, target, D17 } = require('../../lib/trends.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
 
 // Dingus Quest Zero's tasks' overlays as they are in their banks (at the first prompt: dq0starttime's), each the same as
@@ -53,7 +53,7 @@ function dq0OvlBanks(m) {
 // then twenty more at waits that move the phase.  Each within its budget, and each job shown to have run (its stub called:
 // given way to, not lost)
 function dq0JobsTest() {
-  const BEFORE = [0, 100000, 250000, 450000], LINE = 'inventory', WANT = 'You carry', MAX = 720000;
+  const BEFORE = [0, 100000, 250000, 450000], LINE = 'inventory', WANT = 'You carry', MAX = D17.first;
   const each = ['burn', 'trace', 'both'].flatMap(j => BEFORE.map(d => ({ j, d })));
   const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p n -s 3 -c /ram/c.hm -T', 'look'];
   const free = 20, gaps = [1, 2, 3, 1, 4, 2];
@@ -108,7 +108,7 @@ function dq0JobsTest() {
       this.timer(lines, lines.slice(pre.length, pre.length + each.length + free).map(l => ({ line: l, want: WANT }))).forEach((r, i) => {
         const j = each[i], name = j ? j.j + ' ' + j.d + ' before' : 'free ' + (i - each.length);
         notes.push(name + ': first letter ' + r.first);
-        if (target(this, name + ': first letter', r.first, MAX, notes)) f.push(name + ': its first letter ' + r.first + ' cycles from Enter (the user\'s ' + MAX + ')');
+        if (target(this, name + ': first letter', r.first, MAX)) f.push(name + ': its first letter ' + r.first + ' cycles from Enter (the user\'s ' + MAX + ')');
       });
       notes.push('the jobs made due: lights ' + R.burnWant + ', traces ' + R.traceWant + '; run: lights ' + R.burn + ', traces ' + R.trace);
       if (R.burn < R.burnWant) f.push('the lights\' minute made due ' + R.burnWant + ' times, run ' + R.burn);
@@ -129,7 +129,7 @@ function dq0JobsTest() {
 // theirs carried out (the world's) in the long line's first HELD cycles of keys nor from inventory's first key to its first
 // letter; some of it run as the long line's keys go on past LIMIT
 function dq0HoldTest() {
-  const LONG = 'look about the room for a while', LINE = 'inventory', WANT = 'You carry', MAX = 720000, HELD = 8000000, LIMIT = 16000000, FREE = 1200000;
+  const LONG = 'look about the room for a while', LINE = 'inventory', WANT = 'You carry', MAX = D17.first, HELD = 8000000, LIMIT = 16000000, FREE = 1200000;
   const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl'];
   const slow = [...LONG].join('Ā');
   // (At the normal pace the long line let go part way, as the denizens are about (seed 3's: a mind deciding, the senses and
@@ -216,7 +216,7 @@ function dq0HoldTest() {
       if (!(t !== null && t <= FREE)) f.push('the turns pace: a job ' + t + ' cycles late, held for the keys (at most ' + FREE + ')');
       const r = this.timer(lines, [{ line: LINE, want: WANT }])[0];
       notes.push(LINE + ' typed fast: first letter ' + r.first + '; the lights\' minute run ' + (R.fastburn ? R.fastburn.ran - R.enter : null) + ', the journal ' + (R.fasttrace ? R.fasttrace.ran - R.enter : null) + ' after Enter');
-      if (target(this, LINE + ': first letter', r.first, MAX, notes)) f.push(LINE + ': its first letter ' + r.first + ' cycles from Enter (the user\'s ' + MAX + ')');
+      if (target(this, LINE + ': first letter', r.first, MAX)) f.push(LINE + ': its first letter ' + r.first + ' cycles from Enter (the user\'s ' + MAX + ')');
       for (const n of ['fastburn', 'fasttrace']) {
         if (!(R[n] && R[n].ran)) f.push(n + ': made due as the line was typed, never run');
         else if (r.first !== null && R[n].ran - R.enter < r.first) f.push(n + ': run ' + (R[n].ran - R.enter) + ' cycles after Enter, before its first letter at ' + r.first);

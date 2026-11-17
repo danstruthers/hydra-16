@@ -70,8 +70,11 @@ is built; OPEN.md holds the open questions; ../../tests/TESTING.md says which te
 
 ## Budgets
 
-- **What fails the suite:** the D17 targets (a command's first letter within 720,000 cycles, a look within 1.79M:
-  tests/lib/dq0.js), the main RAM floors, and a silent start.
+- **What fails the suite:** the D17 targets (rethought 2026-11-17, built/2026-11-17-d17.md; tests/lib/trends.js), at
+  115,200 baud: every command's first letter within 720,000 cycles, a look's and the map's too; a reading's words
+  (a look, the map, what's carried, a thing examined) with no pause longer than 1.79M. Then the main RAM floors, and
+  a silent start. No measure over its target is let off, by a list or by its trend: one still over fails, named as
+  time to win back.
 - **The other cycle budgets are trends** (the user's, 2026-11-17): dq0answer's per-command budgets, dq0traces' step,
   the start's 245M and 325M, and the rest (tests/trends.json). They move with memory layout alone. Don't reshape code
   to pass one. A rise of more than 5% is noted, not failed: say it in your report. Take a measure as the new trend

@@ -9,7 +9,7 @@ const {
   dq0Story, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Here, dq0Thing,
   dq0Holder, DQ0_I, dq0Typed, dq0Rec, dq0Poke, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, WORN
 } = require('../../lib/dq0.js');
-const { target } = require('../../lib/trends.js');   // (The user's targets, D17: each measure kept, those past 90% listed after the tests)
+const { target, D17 } = require('../../lib/trends.js');   // (The user's targets, D17, at 115,200 baud: each measure kept, those over and past 90% listed after the tests)
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
 
 const TORCHX = ['inventory', 'drop torch', 'take torch', 'inventory', 'wait 2 hours', 'light a new torch', 'take the spent torch from the ground', 'drop the spent torch',
@@ -780,7 +780,7 @@ module.exports = {
     {
       name: 'dq0torchwords', reach: true, near: ['gear'], what: "Dingus Quest Zero's torches by the user's playtest of 2026-11-06 (\"You reach for the torch.\" then \"Put down.\"; \"drop the spent torch\" dropped the lit one; \"You put the torch in your backpack.\" of the spent one; \"You set to filling the torch.\" of a dip; \"You put away the tinderbox.\" of one in hand; a torch taken up went in the pack; \"You see no floor here\"): the first word says what happens (put down; your backpack reached for; looked for, none), a thing named by its state beside another of its kind, spent chooses, a dip's own word, a tool in hand before stays in hand, a torch taken up goes in a free hand and in the pack only with both full (said so), the floor and the ground a place to take from",
       init: 't_rc', cycles: 3000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...TORCHX, 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...TORCHX, 'quit', 'echo $status']) },
       start(m) { this.timer = dq0Timer(m); },
       expect: ['% echo $status'],
       check(m, out) {
@@ -816,11 +816,11 @@ module.exports = {
         not('put the tinderbox in the backpack', /You reach for your backpack\. The tinderbox is there already/);
         said('dip the spent torch in the oil', /You set to dipping the/);
         not('dip the spent torch in the oil', /filling/);
-        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...TORCHX],
+        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...TORCHX],
           TORCHX.map(l => ({ line: l, want: 'You|Taken|Put|Your|It' })));
-        for (const r of tm) {           // (Every handling's first letter within the user's fifth of a second, D17: a thing in hand too)
+        for (const r of tm) {           // (Every line's first letter within the user's fifth of a second, D17, at 115,200 baud: a thing in hand too)
           this.notes.push(r.line + ': first letter ' + r.first);
-          if (!/^(inventory|wait)/.test(r.line) && target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (target(this, r.line + ': first letter', r.first, D17.first)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         if (/You see no (floor|ground) here/.test(o)) f.push('the floor not a place: ' + o.match(/.{80}You see no (floor|ground) here/)[0]);
         return f;
@@ -830,7 +830,7 @@ module.exports = {
     {
       name: 'dq0letters', outfit: true, reach: true, near: ['gear', 'save'], what: "Dingus Quest Zero's designators, step 1 (the user's design, 2026-11-06, DECISIONS.md's): the inventory a list, one a line, what's in a thing under it, each thing its letter in brackets, the burden line kept; a thing put down and taken up again its letter back; the letters kept in the save (quit, carried on with dq0 -d) and into the next dungeon (kit.dat); the inventory's first letter within the user's 720,000 cycles",
       init: 't_rc', cycles: 3000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,pick -d /ram/q', ...LETTERX[0],
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,pick -d /ram/q', ...LETTERX[0],
         'dq0 -d /ram/q', ...LETTERX[1], 'dq0 -p t -s 259 -d /ram/q', ...LETTERX[2], 'echo $status']) },
       start(m) { this.timer = dq0Timer(m); },
       expect: ['% echo $status'],
@@ -852,11 +852,11 @@ module.exports = {
         if (Object.keys(L[3]).length < 10) f.push('the save\'s inventory short: ' + invs[3].slice(0, 300));
         same(3, 4, 'the next dungeon (kit.dat)', ['a pick', 'clothes', 'a backpack', 'a belt', 'a pouch', 'a tinderbox', 'a rope', 'a sack']);
         if (!['a pick', 'clothes', 'a backpack'].every(k => L[4][k])) f.push('the next dungeon\'s inventory not the kit: ' + invs[4].slice(0, 300));
-        const tm = this.timer(['dq0auto=1', 'bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,pick -d /ram/q', ...LETTERX[0]],
+        const tm = this.timer(['dq0auto=1', 'bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,pick -d /ram/q', ...LETTERX[0]],
           LETTERX[0].filter(l => l === 'inventory').map(l => ({ line: l, want: 'You carry' })));
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first + ', whole ' + r.whole);
-          if (target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (target(this, r.line + ': first letter', r.first, D17.first)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },
@@ -865,7 +865,7 @@ module.exports = {
     {
       name: 'dq0letcmd', reach: true, near: ['gear', 'parser'], what: "Dingus Quest Zero's designators, step 2 (the user's design, 2026-11-06, DECISIONS.md's): a thing's letter where its name goes (drop j, put j in b, take j from b, light j with a, drop 2c), that thing and no other (the spare torch in the pack, not the one in hand), its first words its own; a letter not one where it's a way (look d) or an article (take a torch); a command with nothing named asks with the letters that fit (Drop what? [...]), one key answers; a line that isn't an answer lets it go; words still work beside them (drop the lit torch); each first letter within the user's 720,000 cycles",
       init: 't_rc', cycles: 3000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETCMD, 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETCMD, 'quit', 'echo $status']) },
       start(m) { this.timer = dq0Timer(m); },
       expect: ['% echo $status'],
       check(m, out) {
@@ -898,11 +898,11 @@ module.exports = {
         said('take off', /^Take off what\? \[b, e\]/);
         not('look', /You take off/);
         said('drop the lit torch', /^You put down the (lit )?torch\./);   // (Both lit after "light j with a": the plain name)
-        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETCMD],
+        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETCMD],
           LETCMD.map(l => ({ line: l, want: 'You|Taken|Put|Your|It|Drop|Take' })));
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first);
-          if (!/^(inventory|wait)/.test(r.line) && target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (target(this, r.line + ': first letter', r.first, D17.first)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },
@@ -911,7 +911,7 @@ module.exports = {
     {
       name: 'dq0letsight', reach: true, near: ['gear', 'parser'], what: "Dingus Quest Zero's designators, step 3 (the user's design, 2026-11-06, DECISIONS.md's): a capital for each thing seen, given as it's first told, shown in the look's sentences and in the list of what's in sight (around, one a line with where it is); a capital where a thing's name goes (take D, take D from C), a count before it (take 5E: fewer there, told, the rest taken), a thing put down its old capital again; each first letter within the user's 720,000 cycles",
       init: 't_rc', cycles: 3000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETSIGHT, 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETSIGHT, 'quit', 'echo $status']) },
       start(m) { this.timer = dq0Timer(m); },
       expect: ['% echo $status'],
       check(m, out) {
@@ -940,11 +940,11 @@ module.exports = {
         said('around', /\(H\) a torch, at your feet/, 12);  // (The spare put down: a capital of its own)
         if (/\(G\)/.test(seg[LETSIGHT.indexOf('around', 12)])) f.push('the torch taken up still told in sight: ' + seg[LETSIGHT.indexOf('around', 12)]);
         said('inventory', /\(j\) a torch, in your right hand/);
-        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETSIGHT],
+        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETSIGHT],
           LETSIGHT.map(l => ({ line: l, want: 'You|Taken|Put|There|(' })));
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first);
-          if (!/^(inventory|look|around)/.test(r.line) && target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (target(this, r.line + ': first letter', r.first, D17.first)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },
@@ -953,7 +953,7 @@ module.exports = {
     {
       name: 'dq0letwhich', reach: true, near: ['gear', 'parser'], what: "Dingus Quest Zero's designators, step 5 (the user's playtest, 2026-11-06: \"If there are three torches, one in hand, one in my backpack on my back, and one on the ground, if I say pick up the torch it should take the one I don't already have (from the ground).  But if all three are on the ground, I should get a prompt for which one, with longer descriptions of each\"): the user's three torches, one taken up from the ground; three on the ground, two of them alike, asked about once a description (Which one? (E) a torch (lit), (F) a torch: the world's IR_WHICH, the inventory's words, each its capital), answered by its capital (F), by its number (2), by a word of its state (lit), each re-running the command on that one; no first words before the question; each first letter within the user's 720,000 cycles",
       init: 't_rc', cycles: 3000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETWHICH, 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETWHICH, 'quit', 'echo $status']) },
       start(m) { this.timer = dq0Timer(m); },
       expect: ['% echo $status'],
       check(m, out) {
@@ -978,11 +978,11 @@ module.exports = {
         said('take torch', /^You look them over\. Which one\? \(E\) a torch \(lit\), \(F\) a torch $/);
         said('lit', /^You reach for the torch\. Taken\./);
         said('inventory', /a torch \(lit\), in your left hand/, 14);
-        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETWHICH],
+        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETWHICH],
           LETWHICH.map(l => ({ line: l, want: 'You|Taken|Which' })));
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first);
-          if (!/^(inventory)$/.test(r.line) && target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (target(this, r.line + ': first letter', r.first, D17.first)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },
@@ -991,7 +991,7 @@ module.exports = {
     {
       name: 'dq0letseveral', reach: true, near: ['gear', 'parser'], what: "Dingus Quest Zero's designators, step 6 (the user's design, 2026-11-06): several letters in a line, each its own command in turn (drop h i: the dagger, then the waterskin; take E F, by their capitals); letter h as t swaps two of the character's letters (Your dagger is (t) now.), the inventory after it so, the new letter naming the thing (drop t); a letter of nothing carried told so; each first letter within the user's 720,000 cycles",
       init: 't_rc', cycles: 3000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSEVERAL, 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSEVERAL, 'quit', 'echo $status']) },
       start(m) { this.timer = dq0Timer(m); },
       expect: ['% echo $status'],
       check(m, out) {
@@ -1016,11 +1016,11 @@ module.exports = {
         not('inventory', /\(h\)/, 6);
         said('drop t', /Put down\.|You put down the dagger/);
         said('letter q as r', /^You have nothing by that letter\./);
-        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSEVERAL],
+        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSEVERAL],
           LETSEVERAL.map(l => ({ line: l, want: 'You|Taken|Your|Put|Stow' })));
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first);
-          if (!/^(inventory|look)$/.test(r.line) && target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (target(this, r.line + ': first letter', r.first, D17.first)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },
@@ -1029,7 +1029,7 @@ module.exports = {
     {
       name: 'dq0letstow', reach: true, near: ['gear', 'parser'], what: "Dingus Quest Zero's designators, step 7 (the user's, 2026-11-06: \"when stowing something, it should ask where if there is more than one place it could go (pouch(es) or backpack), of course depending on size.  Stowing a weapon with a sheath should choose the sheath if worn.\"): a dagger stowed with the backpack and a pouch on the belt to take it, asked (Stow it where? (b) the backpack, (f) the pouch), one key answering it; a penny dropped and taken up: into the purse (the first pouch on the belt), unasked (the user's, 2026-11-17: coins to the purse); a waterskin too big for any pouch, asked of the pack and its side pocket (a place of its own, the user's, 2026-11-17), the pack answering; the sheath hung on the belt, the dagger stowed in it without asking; each first letter within the user's 720,000 cycles",
       init: 't_rc', cycles: 3000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSTOW, 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSTOW, 'quit', 'echo $status']) },
       start(m) { this.timer = dq0Timer(m); },
       expect: ['% echo $status'],
       check(m, out) {
@@ -1052,11 +1052,11 @@ module.exports = {
         said('stow i', /Stow it where\? \(b\) the backpack, the side pocket $/);
         said('b', /You stow the waterskin in your backpack\./);
         said('stow the dagger', /^You lift the dagger\. You put the dagger in the sheath\./, 12);
-        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSTOW],
+        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSTOW],
           LETSTOW.map(l => ({ line: l, want: 'You|Taken|Your|Put|Stow' })));
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first);
-          if (!/^(inventory|look|drop 1g)$/.test(r.line) && target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (target(this, r.line + ': first letter', r.first, D17.first)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },
@@ -1065,7 +1065,7 @@ module.exports = {
     {
       name: 'dq0doff', near: ['gear'], what: "Dingus Quest Zero's things taken off with both hands full (the user's playtest, 2026-11-06: \"take off the backpack\" refused with its hands full, \"drop backpack\" not): a sword and the torch in hand, a cloak and an iron helm worn (dq0 -k), each taken off with no hand free and no room in the pack set down at the character's feet, said so; the backpack, worn, the same, its things with it; nothing refused; each first letter within the user's 720,000 cycles",
       init: 't_rc', cycles: 1500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'sword,cloak,iron helm'",
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'sword,cloak,iron helm'",
         'hold the sword', 'wear the cloak', 'wear the iron helm', 'i', 'take off the cloak', 'take off the iron helm', 'take off the backpack', 'i', 'quit', 'echo $status']) },
       start(m) { this.timer = dq0Timer(m); },
       expect: ['% echo $status'],
@@ -1077,12 +1077,12 @@ module.exports = {
         if (/stow something, or put it down/.test(o.slice(o.indexOf('> take off the cloak')))) f.push('a take off refused, its hands full');
         const inv = o.slice(o.lastIndexOf('> i '));
         if (/cloak|helm|backpack/.test(inv.slice(0, inv.indexOf('In all')))) f.push('still carried: ' + inv.slice(0, 300));
-        const lines = ['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k sword,cloak,iron helm',
+        const lines = ['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -T -k sword,cloak,iron helm',
           'hold the sword', 'wear the cloak', 'wear the iron helm', 'i', 'take off the cloak', 'take off the iron helm', 'take off the backpack'];
         this.notes = [];
         for (const r of this.timer(lines, ['take off the cloak', 'take off the iron helm', 'take off the backpack'].map(l => ({ line: l, want: 'You|Your' })))) {
           this.notes.push(r.line + ': first letter ' + r.first);
-          if (target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (target(this, r.line + ': first letter', r.first, D17.first)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },

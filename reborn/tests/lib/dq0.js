@@ -796,18 +796,31 @@ function dq0OnWords(m, list) {
   };
 }
 
-// Dingus Quest Zero's answers timed (dq0answer's): each command's Enter (the CR as the ACIA has it) to its answer's first
-// letter in the story (want: the words it begins with), and to the story's last letter before the prompt ("> " on
-// the line typed's row) comes back; the status line (reverse video) and the escapes not the story's.  dq0Timer(m),
-// as the machine's made, listens (each byte's cycle, each CR's), and gives a function of the lines typed and of cmds
-// ({ line, want }: each the line's first time typed after the one before) giving { line, first, whole } for each
+// Dingus Quest Zero's answers timed (dq0answer's, and the D17 targets' tests'): each command's Enter (the CR as the ACIA
+// has it) to its answer's first letter in the story (want: the words it begins with), to the story's last letter before
+// the prompt ("> " on the line typed's row) comes back, and the longest pause between two of its letters, from its first
+// to the last of its own (before the prompt, and before any news of the world told after its first letter, NEWS: a
+// stir, a sound, the denizens' doings told as they come, their wait the game's time and not the answer's); the status
+// line (reverse video) and the escapes not the story's.  dq0Timer(m), as the machine's made, listens (each byte's
+// cycle; each CR's, and whether the character was busy as it came: the UI's busy, a line typed then held till it's
+// free, its answer the game's time), and gives a function of the lines typed and of cmds ({ line, want, news }: each the
+// line's first time typed after the one before) giving { line, first, whole, pause, pauseAt, busy } for each (null: none)
+const NEWS = /Something stirs|Nothing stirs in sight|You hear (?!nothing)/;
+let busyAt = null;
 function dq0Timer(m) {
   const at = [], enters = [];
   let out = m.out;
   for (let i = 0; i < out.length; i++) at.push(0);
   Object.defineProperty(m, 'out', { get: () => out, set: v => { const c = m.cpu.cyc; for (let i = out.length; i < v.length; i++) at.push(c); out = v; } });
   const a = m.acia, read = a.read;
-  a.read = (r, t) => { if (r === 0 && a.rdrf && a.rx === 13) enters.push({ t: a.rxAt, pos: out.length }); return read(r, t); };
+  const busy = () => {                          // (The UI's busy as a CR comes, the hub's T_UI its task; null with no game)
+    try {
+      if (busyAt === null) busyAt = parseInt(/^al ([0-9A-F]+) \._busy$/m.exec(fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0', 'dq0.lbl'), 'latin1'))[1], 16);
+      const h = m.dq0 && m.dq0.bank(0), ui = h ? h[12] : 0;
+      return ui && m.taskRam[ui] ? m.taskRam[ui][busyAt] : null;
+    } catch (e) { return null; }
+  };
+  a.read = (r, t) => { if (r === 0 && a.rdrf && a.rx === 13) enters.push({ t: a.rxAt, pos: out.length, busy: busy() }); return read(r, t); };
   return (lines, cmds) => {
     const res = [];
     let li = 0;
@@ -815,7 +828,7 @@ function dq0Timer(m) {
       while (li < lines.length && lines[li] !== c.line) li++;
       const e = enters[li], e2 = enters[li + 1];
       li++;
-      if (!e) { res.push({ line: c.line, first: null, whole: null }); continue; }
+      if (!e) { res.push({ line: c.line, first: null, whole: null, pause: null, pauseAt: '', busy: null }); continue; }
       const end = e2 ? e2.pos : out.length;
       let story = '', idx = [], rev = 0, prompt = -1;
       for (let i = e.pos; i < end; i++) {
@@ -836,60 +849,102 @@ function dq0Timer(m) {
       const w = c.want.split('|').map(x => story.indexOf(x)).filter(x => x >= 0).reduce((a, b) => a < 0 || b < a ? b : a, -1);   // (Words the answer may begin with, | between)
       let last = prompt < 0 ? idx.length - 1 : prompt - 1;
       while (last > 0 && story[last] === ' ') last--;
-      res.push({ line: c.line, first: w < 0 ? null : at[idx[w]] - e.t, whole: w < 0 || last < w ? null : at[idx[last]] - e.t });
+      let own = last, pause = null, pauseAt = '';  // (Its own words: up to the world's news told after its first letter)
+      if (w >= 0) {
+        const k = story.slice(w + 1, last + 1).search(c.news || NEWS);
+        if (k >= 0) for (own = w + k; own > w && story[own] === ' '; own--);
+        for (let j = w + 1, p = -1; j <= own; j++) {
+          const g = at[idx[j]] - at[idx[j - 1]];
+          if (g > p) { p = pause = g; pauseAt = story.slice(Math.max(w, j - 24), j) + ' | ' + story.slice(j, j + 24); }
+        }
+        if (pause === null && own >= w) pause = 0;
+      }
+      res.push({ line: c.line, first: w < 0 ? null : at[idx[w]] - e.t, whole: w < 0 || last < w ? null : at[idx[last]] - e.t, pause, pauseAt, busy: e.busy });
     }
     return res;
   };
 }
 
-// dq0answer's commands: at seed 3 (-T: by the way down), the turns pace, then the normal pace; each a line and the
-// words its answer begins with, timed at 115,200 baud from Enter to its first letter and to its whole, and held to the
-// user's targets (D17: a command's first letter a fifth of a second, 720,000 cycles; a look's first and its whole under
-// half a second, 1.79M: its whole held where it was before, the look about's), the suite failing past them.  Each
-// measure a trend besides (tests/lib/trends.js: tests/trends.json's, a rise of more than 5% said, not failed: the
-// user's, 2026-11-17).  A measure whose trend was over its target when the budgets became trends is said, not failed:
-// each budget had been brought down as it was cured, to just over what was measured at waits 0, 1 and 2, both paces
-// (2026-11-03: the world's periodic work given way to a command, a walk's first words no parts' swaps, a step's told
-// as it begins, "You carry" before the world's asked), but some over the user's 720,000 still, by what it takes: a
-// carried thing examined, a thing taken with a walk or a pack, a step or a turn with a denizen's things being drawn at
-// wait 0, its answer behind that draw's giving way (the open question: GAME-CRITIQUE.md's 6.3)
+// The median of a measure over a test's typings (dq0answer's, dq0lookfar's: a null, none, counted the highest), and
+// their worst
+const dq0Median = vs => { const b = vs.map(v => v === null || v === undefined ? Infinity : v).sort((x, y) => x - y), v = b[(b.length - 1) >> 1]; return v === Infinity ? null : v; };
+const dq0Worst = vs => vs.some(v => v === null || v === undefined) ? null : Math.max(...vs);
+
+// The waits of 2M cycles before each line of a typing (dq0answer's and dq0lookfar's), its pattern k (0-2) and DQ0ANS_WAIT
+// turning them on (the lead's tier's other phases): 0-2 before a command, j its place in the game; none before a dq0
+// line itself (the runner's switches, -a and the rest, go on a dq0 line typed straight at its prompt: a soft question
+// asked of a game without -a was answered by the next line, its first words "You stop walking.", 2026-11-17)
+const dq0Waits = (k, j) => (k * (j + 1) + +(process.env.DQ0ANS_WAIT || 0)) % 3;
+
+// A measure held to a D17 target over a test's typings (dq0answer's, dq0lookfar's): its median held (tests/lib/trends.js's
+// target: f its failures), each typing's said in notes, the worst said when it's over the target and the median isn't,
+// the median a trend (max 0: a trend only; undefined: said only, dq0answer96's at 9,600)
+function dq0Held(t, f, notes, id, what, vs, max) {
+  const K = v => v === null ? 'none' : Math.round(v).toLocaleString('en-US'), v = dq0Median(vs), w = dq0Worst(vs), many = vs.length > 1;
+  notes.push(id + ': ' + what + ' ' + vs.map(K).join(', ') + (many ? ' (median ' + K(v) + ')' : ''));
+  if (max === undefined) return;
+  if (max && target(t, id + ': ' + what, v, max)) f.push(id + ': ' + what + ' ' + K(v) + ' cycles' + (many ? ', the median of ' + vs.map(K).join(', ') : '') + ' (the user\'s ' + K(max) + ')');
+  else if (max && !(w <= max)) notes.push(id + ': ' + what + ': its worst typing ' + K(w) + ', over the user\'s ' + K(max) + ' (its median held)');
+  const n = v === null ? null : trend(t, id + ': ' + what, v);
+  if (n) notes.push(n);
+}
+
+// dq0answer's commands: each a line, the words its answer begins with, and its readings' marks: 'read' (a look, what's
+// carried, a thing examined or assessed: its words' longest pause held to D17.pause), 'whole' (its whole a trend)
 const DQ0_ANSWERS = [['turn left', 'You turn'], ['turn right', 'You turn'],
-  ['step forward', 'You step forward'], ['inventory', 'You carry'], ['examine the torch', 'You look at the torch|You look for the torch'], ['walk to the door ahead to my left', 'You head for'], ['examine the door', 'You head for|A door|Which door'],
+  ['step forward', 'You step forward'], ['inventory', 'You carry', 'read'], ['examine the torch', 'You look at the torch|You look for the torch', 'read'], ['walk to the door ahead to my left', 'You head for'], ['examine the door', 'You head for|A door|Which door'],
   ['open the door', 'You try the door|You turn|Which door'], ['close the door', 'You reach for the door|You turn|Which door'], ['listen', 'You listen'], ['bar the door', 'You look at the door|You turn|Which door'],
-  ['look', 'You', 'whole'], ['look ahead', 'You peer ahead|You turn'], ['go up', 'There\'s no way up or down here.'], ['go to the far side', 'You'], ['walk to the window', 'You head for'], ['take the bones', 'You look for the bones|You go over to the bones.|You stop'], ['look', 'You'],
-  ['take the sack from the backpack', 'You reach for your backpack|You look for'], ['put the whetstone in the sack', 'You reach|You look for the whetstone|You stop'], ['take the whetstone from the sack', 'You reach|You look for|You stop'],
-  ['drop the sack', 'You put down the|You reach|You look for|You stop'], ['take the sack', 'You reach for the sack|You look for the sack|You stop'], ['assess the sack', 'You look at the sack|You look for the sack'], ['sit', 'You sit down'], ['stand', 'You get to your feet'], ['wait 1 minute', 'You wait a minute'], ['dig down', 'You look at the floor|You stop']];   // (The first words as they begin, 2026-11-04: dq0firstword's; a line typed as the reach's question's asked, its first words the stop's, drop and take the sack's "You stop" as the others', 2026-11-06; assess's its normal pace's at wait 1, 1.9M, some 420,000 else, not diagnosed)   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
+  ['look', 'You', 'read whole'], ['look ahead', 'You peer ahead|You turn', 'read'], ['go up', 'There\'s no way up or down here.'], ['go to the far side', 'You'], ['walk to the window', 'You head for'], ['take the bones', 'You look for the bones|You go over to the bones.'], ['look', 'You', 'read'],
+  ['take the sack from the backpack', 'You reach for your backpack|You look for'], ['put the whetstone in the sack', 'You reach|You look for the whetstone'], ['take the whetstone from the sack', 'You reach|You look for'],
+  ['drop the sack', 'You put down the|You reach|You look for'], ['take the sack', 'You reach for the sack|You look for the sack'], ['assess the sack', 'You look at the sack|You look for the sack', 'read'], ['sit', 'You sit down'], ['stand', 'You get to your feet'], ['wait 1 minute', 'You wait a minute'], ['dig down', 'You look at the floor']];   // (The first words as they begin, 2026-11-04: dq0firstword's; a walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken.  "You stop", a line taken for a soft question's answer, gone: no question's asked with -a, 2026-11-17)
+
+// dq0answer: the user's D17 targets (rethought 2026-11-17, games/dq0/built/2026-11-17-d17.md; tests/lib/trends.js), at
+// seed 3 (-T: by the way down), each pace's game typed three times (the turns pace's, then the normal pace's), each line
+// after 0-2 waits of 2M cycles by its typing's pattern (dq0Waits): where the background's work falls against an Enter
+// moves an answer by 10-20% at the normal pace (the denizens' minds, the senses, the world's own work) and by some 5%
+// at the turns pace (a sit 613,000-731,000 over eight phases), so each measure is the median of the three, the answer as
+// it's typically had (the worst said in the notes).  Timed at 115,200 baud from Enter: every command's first letter held
+// to D17.first (a look's too, as any command's: its first words come at once, "You peer ahead."); a reading's longest
+// pause to D17.pause; each measure a trend besides (a rise of more than 5% said, not failed).  Each line typed only once
+// the character's free (the prompt, the UI not busy: one typed as it's busy is held till it's free, its first letter
+// the game's time), else the test fails.  At 9,600 (dq0answer96) one typing a pace, its times said, no target held
+// (the user's targets are 115,200's)
 function dq0AnswerTest(baud) {
-  const wait = +(process.env.DQ0ANS_WAIT || 0);   // (Each line typed after 0-2 waits of 2M cycles: the timing moved, for an average)
-  const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'];
-  const lines = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', ...(baud === 115200 ? ['echo b115200 >/dev/serctl'] : []),
-    ...games.flatMap(g => [g, ...DQ0_ANSWERS.map(c => c[0]), 'quit']), 'echo $status'];
+  const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'], N = baud === 115200 ? 3 : 1;
+  const plays = games.flatMap((g, p) => [...Array(N).keys()].map(k => ({ g, pace: p ? 'normal' : 'turns', k })));
+  const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', ...(baud === 115200 ? ['echo b115200 >/dev/serctl'] : [])];
+  const typed = [...pre.map(l => [l, 0]), ...plays.flatMap(p => [[p.g, 0], ...DQ0_ANSWERS.map((c, j) => [c[0], dq0Waits(p.k, j)]), ['quit', 0]]), ['echo $status', 0]];
+  const lines = typed.map(x => x[0]);
   return {
-    name: baud === 115200 ? 'dq0answer' : 'dq0answer96', what: 'Dingus Quest Zero\'s answers timed at ' + baud + ' baud (the user\'s D17: the responsiveness targets at 115,200; a command answered in a fifth of a second, 720,000 cycles, a look in half, 1.79M): from Enter to the answer\'s first letter, and to its last, for a turn left and right at seed 3, a step, what the character carries, a door examined, a look, a step that can\'t be taken and a walk, at the turns pace and the normal pace',
+    name: baud === 115200 ? 'dq0answer' : 'dq0answer96', what: 'Dingus Quest Zero\'s answers timed at ' + baud + ' baud (the user\'s D17, rethought 2026-11-17: a command\'s first letter within a fifth of a second, 720,000 cycles; a reading\'s words with no pause longer than half a second, 1.79M): from Enter to the answer\'s first letter, its longest pause and its last, for 28 commands at seed 3 (turns, a step, what the character carries, things examined, doors, a look about and ahead, a refused step, walks, the pack, sitting, waiting, digging), at the turns pace and the normal pace, each pace\'s game typed three times at different moments, the median of the three held',
     meaning: true, outfit: true,                  // (The game as it's played: its outfit drawn, 2026-10-27)
-    init: 't_rc', cycles: 2500e6,
-    machine: { input: lines.map((l, i) => '\u0101' + '\u0100'.repeat(wait * (i + 1) % 3) + l + '\r').join('') },
+    init: 't_rc', cycles: 4000e6,
+    machine: { input: typed.map(([l, w]) => '\u0101' + '\u0100'.repeat(w) + l + '\r').join('') },
     expect: ['% echo $status'],
     start(m) { this.timer = dq0Timer(m); },
     check(m, out) {
-      const f = [], notes = this.notes = [], li = lines.indexOf(games[1]), seen = {};
-      // (Its first letter, and a look about's whole, held to the target, and kept as trends: each line by its pace and
-      // its place, a line met twice its second '#2')
-      const held = (name, what, v, max) => {
-        if (baud !== 115200) return;
-        if (target(this, name + ': ' + what, v, max, notes)) f.push(name + ': ' + what + ' ' + v + ' cycles from Enter (the user\'s ' + max + ')');
-        const n = trend(this, name + ': ' + what, v);
-        if (n) notes.push(n);
-      };
-      const pace = (from, to, name) => this.timer(lines.slice(0, to).map((l, i) => i < from ? '' : l), DQ0_ANSWERS.map(c => ({ line: c[0], want: c[1] }))).forEach((r, k) => {
-        notes.push(name + ' ' + r.line + ': first letter ' + r.first + ', whole ' + r.whole);
-        const c = DQ0_ANSWERS[k], look = /^look/.test(c[0]), nth = seen[name + c[0]] = (seen[name + c[0]] || 0) + 1;
-        const id = name + ' ' + c[0] + (nth > 1 ? ' #' + nth : '');
-        held(id, 'first letter', r.first, look ? D17.look : D17.first);
-        if (c[2] === 'whole') held(id, 'whole', r.whole, D17.look);
+      const f = [], notes = this.notes = [];
+      // (Each typing's answers, its lines' places among all of them; then each command's measures over its pace's typings)
+      let from = 0;
+      const runs = plays.map(p => {
+        const i0 = lines.indexOf(p.g, from), to = i0 + DQ0_ANSWERS.length + 1;
+        from = to;
+        return this.timer(lines.slice(0, to).map((l, i) => i < i0 ? '' : l), DQ0_ANSWERS.map(c => ({ line: c[0], want: c[1] })));
       });
-      pace(0, li, 'turns');
-      pace(li, lines.length, 'normal');
+      const T = baud === 115200 ? D17 : {};      // (At 9,600 its times said, no target)
+      for (const pace of ['turns', 'normal']) {
+        const rs = runs.filter((r, i) => plays[i].pace === pace), seen = {};
+        DQ0_ANSWERS.forEach((c, k) => {
+          const nth = seen[c[0]] = (seen[c[0]] || 0) + 1, id = pace + ' ' + c[0] + (nth > 1 ? ' #' + nth : ''), r = rs.map(x => x[k]);
+          r.forEach((x, n) => { if (x.busy) f.push(id + ': typed in typing ' + (n + 1) + ' while the character was busy (its answer the game\'s time, not the command\'s)'); });
+          dq0Held(this, f, notes, id, 'first letter', r.map(x => x.first), T.first);
+          if (/read/.test(c[2] || '')) {
+            dq0Held(this, f, notes, id, 'longest pause', r.map(x => x.pause), T.pause);
+            notes.push(id + ': its longest pause where ' + r.map(x => JSON.stringify(x.pauseAt)).join(', '));
+          }
+          if (/whole/.test(c[2] || '')) dq0Held(this, f, notes, id, 'whole', r.map(x => x.whole), baud === 115200 ? 0 : undefined);
+        });
+      }
       return f;
     },
     sdcard: true
@@ -907,5 +962,5 @@ module.exports = {
   DQ0_REPEATS, dq0Answers, dq0Repeats, dq0Doubled, dq0Lost, dq0Check, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need,
   dq0Never, dq0Carried, dq0Here, dq0Named, dq0Thing, dq0Holder, dq0View, DQ0_I, passings, dq0TypedAsk, dq0Typed,
   dq0PortalOff, dq0Portal, dq0RecPb, dq0Rec, dq0Alone, dq0Poke, dq0BodyFb, dq0Body, dq0SheetSb, dq0Sheet, dq0PcShock,
-  dq0Grow, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, DQ0_ANSWERS, dq0AnswerTest, WORN,
+  dq0Grow, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Median, dq0Worst, dq0Waits, dq0Held, DQ0_ANSWERS, dq0AnswerTest, WORN,
 };

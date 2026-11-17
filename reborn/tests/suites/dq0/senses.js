@@ -8,7 +8,7 @@ const { typed } = require('../../lib/common.js');
 const {
   CHUNK_SIZE, CK_TILE, CK_ROOM, caveReport, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks, stratumRec,
   dq0StatusRows, dq0Story, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried,
-  dq0Here, DQ0_I, passings, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0OnWords, dq0Timer, dq0PortalAt
+  dq0Here, DQ0_I, passings, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0OnWords, dq0Timer, dq0PortalAt, dq0Waits, dq0Held
 } = require('../../lib/dq0.js');
 const { trend, target, D17 } = require('../../lib/trends.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
@@ -62,32 +62,38 @@ function lookSnap(m, ptr, game) {
 // dq0lookfar: a look one way into new ground (the delays' round, 2026-11-05: the first look ahead of a game made every chunk its
 // grid touched, up to nine, behind it as well, at the normal pace 12M cycles each, 28-55 s on the board, the world and the
 // denizens stopped behind it; seed 3's five, 78.5M), by the maker's make_chunk and dq0Timer's times, at the normal pace.  At
-// seed 3's start the wall a few squares ahead: nothing made, its whole timed; asked for again the same; the map drawn
-// with the maker first (16.3M before, 9.4M), its first words at once.  Then the character put where the line ahead reaches
-// a chunk not made yet past a glance's reach (its sight poked to 0: a glance 4 squares, a look one way 8; a straight run of
-// floor to the chunk's edge): that chunk made as the eyes reach it, by the maker in the foreground (its elapsed near its own
-// 5.5M, 12M before)
+// seed 3's start the wall a few squares ahead: nothing made; the map drawn with the maker first (16.3M before, 9.4M), its
+// first words at once; turned left, a look ahead again.  Then the character put where the line ahead reaches a chunk not
+// made yet past a glance's reach (its sight poked to 0: a glance 4 squares, a look one way 8; a straight run of floor to
+// the chunk's edge): that chunk made as the eyes reach it, by the maker in the foreground (its elapsed near its own 5.5M,
+// 12M before).  The user's D17 targets (rethought 2026-11-17, games/dq0/built/2026-11-17-d17.md): each command's first
+// letter within 720,000 cycles, a look's and the map's words with no pause longer than 1.79M; the game typed three times,
+// each line after 0-2 waits of 2M cycles by its typing's pattern (dq0Waits), the median of the three held (the map's first
+// letter falls on the denizens' outfits being drawn as the game starts: 676,000-855,000 over six phases); each whole a
+// trend
 function dq0LookFarTest() {
-  const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl'];
-  const cmds = [{ line: 'look ahead', want: 'You peer ahead' }, { line: 'map', want: 'The map' }, { line: 'turn left', want: 'You turn' }, { line: 'look ahead', want: 'You peer ahead' }, { line: 'look ahead', want: 'You peer ahead' }];
-  const lines = [...pre, 'dq0 -p n -s 3 -c /ram/c.hm -T', ...cmds.map(c => c.line), 'quit', 'echo $status'];
+  const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl'], game = 'dq0 -p n -s 3 -c /ram/c.hm -T', N = 3;
+  const cmds = [{ line: 'look ahead', want: 'You peer ahead', id: 'the first look ahead', read: 1 }, { line: 'map', want: 'The map', id: 'the map', read: 1 },
+    { line: 'turn left', want: 'You turn', id: 'the turn left' }, { line: 'look ahead', want: 'You peer ahead', id: 'the look ahead turned', read: 1 }, { line: 'look ahead', want: 'You peer ahead', id: 'the look across', read: 1 }];
+  const typed = [...pre.map(l => [l, 0]), ...[...Array(N).keys()].flatMap(k => [[game, 0], ...cmds.map((c, j) => [c.line, dq0Waits(k, j)]), ['quit', 0]]), ['echo $status', 0]];
+  const lines = typed.map(x => x[0]);
   return {
     name: 'dq0lookfar', near: ['senses', 'time'], meaning: true, outfit: true,
-    what: 'Dingus Quest Zero\'s look one way into new ground (the delays\' round, 2026-11-05): the first look ahead makes only the chunks the eyes reach past a glance\'s: none with a wall in the way (seed 3\'s five before, 78.5M cycles; now within 8M), the map drawn with the maker first (within 11M; 16.3M before), a chunk the line ahead does reach made then',
-    init: 't_rc', cycles: 900e6,
-    machine: { input: lines.map(l => '\u0101' + l + '\r').join('') },
+    what: 'Dingus Quest Zero\'s look one way into new ground (the delays\' round, 2026-11-05): the first look ahead makes only the chunks the eyes reach past a glance\'s: none with a wall in the way (seed 3\'s five before, 78.5M cycles), the map drawn with the maker first (16.3M before), a chunk the line ahead does reach made then; the user\'s D17 targets (each first letter within 720,000 cycles, a look\'s and the map\'s words with no pause longer than 1.79M), the game typed three times at different moments, the median of the three held',
+    init: 't_rc', cycles: 2400e6,
+    machine: { input: typed.map(([l, w]) => '\u0101' + '\u0100'.repeat(w) + l + '\r').join('') },
     expect: ['% echo $status'],
     start(m) {
       this.timer = dq0Timer(m);
       const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0m', 'dq0m.lbl'), 'latin1');
       const make = parseInt(/^al ([0-9A-F]+) \._make_chunk$/m.exec(lbl)[1], 16);
-      const cpu = m.cpu, step = cpu.step.bind(cpu), made = this.made = [], enters = this.enters = [], a = m.acia, read = a.read, T = this;
+      const cpu = m.cpu, step = cpu.step.bind(cpu), made = this.made = [], enters = this.enters = [], a = m.acia, read = a.read, put = this.put = {};
       a.read = (r, c) => { if (r === 0 && a.rdrf && a.rx === 13) enters.push(a.rxAt); return read(r, c); };
       cpu.step = v => {
         if (cpu.PC === make && m.dq0 && m.dq0.bank && m.dq0.bank(0) && m.T === m.dq0.bank(0)[12 + 5]) made.push(cpu.cyc);
         return step(v);
       };
-      dq0Poke(m, [{ g: 1, line: 'look ahead', n: 3, call: (h, L) => {
+      dq0Poke(m, [...Array(N).keys()].map(g => ({ g: g + 1, line: 'look ahead', n: 3, call: (h, L) => {
         const sn = h[L.pcSn], S = stratumRec(m, sn), live = liveChunks(m, sn), TILE = 443, FACE = { E: 2, W: 6, N: 0, S: 4 };
         const open = (b, x, y) => { const t = b[TILE + y * 32 + x] & 15; return t === 1 || t === 4; };
         h[L.pcsum + L.sSight] = 0;
@@ -96,41 +102,46 @@ function dq0LookFarTest() {
           const tries = [['E', 1, 0], ['W', -1, 0], ['S', 0, 1], ['N', 0, -1]];
           for (const [nm, dx, dy] of tries) {
             if (live[(cx + dx) + ',' + (cy + dy)] || cx + dx < 0 || cy + dy < 0 || (cx + dx + 1) * 32 > S.w || (cy + dy + 1) * 32 > S.h) continue;
-            for (let o = 2; o < 30 && !T.put; o++) {
+            for (let o = 2; o < 30 && !put[g]; o++) {
               let run = true;
               for (let d = 0; d <= 4 && run; d++) { const x = dx ? (dx > 0 ? 31 - d : d) : o, y = dy ? (dy > 0 ? 31 - d : d) : o; run = open(b, x, y) && (b[1467 + y * 32 + x] === b[1467 + (dy ? (dy > 0 ? 31 : 0) : y) * 32 + (dx ? (dx > 0 ? 31 : 0) : x)]); }
               if (!run) continue;
               const x = S.x0 + cx * 32 + (dx ? (dx > 0 ? 27 : 4) : o), y = S.y0 + cy * 32 + (dy ? (dy > 0 ? 27 : 4) : o);
               h[L.pcX] = x & 255; h[L.pcX + 1] = x >> 8; h[L.pcY] = y & 255; h[L.pcY + 1] = y >> 8; h[L.pcFace] = FACE[nm];
-              T.put = { k, to: (cx + dx) + ',' + (cy + dy), x, y, nm };
+              put[g] = { k, to: (cx + dx) + ',' + (cy + dy), x, y, nm };
             }
           }
         }
-      } }]);
+      } })));
     },
     check(m, out) {
-      const f = [], notes = this.notes = [], r = this.timer(lines, cmds), E = this.enters, within = (a, b) => this.made.filter(c => c >= a && c < b).length;
-      // (Each whole a trend, a look's held to the user's 1.79M as well; the map's first words to the 720,000 of a
-      // command's first letter: tests/lib/trends.js, 2026-11-17, their budgets FIRST, MAP, ACROSS and 1,200,000 before)
-      const at = i => E[pre.length + 1 + i], over = (x, name, look) => {
-        notes.push(name + ': first letter ' + x.first + ', whole ' + x.whole);
-        if (x.whole === null) f.push(name + ': no answer');
-        else if (look && target(this, name + ': whole', x.whole, D17.look, notes)) f.push(name + ': its whole ' + x.whole + ' cycles from Enter (the user\'s ' + D17.look + ')');
-        const tn = trend(this, name + ': whole', x.whole);
-        if (tn) notes.push(tn);
-      };
-      over(r[0], 'the first look ahead', true);
-      notes.push('chunks made in it: ' + within(at(0), at(1)));
-      if (within(at(0), at(1))) f.push('the first look ahead, a wall in the way, made ' + within(at(0), at(1)) + ' chunks');
-      over(r[1], 'the map', false);
-      if (target(this, 'the map: first letter', r[1].first, D17.first, notes)) f.push('the map: its first words ' + r[1].first + ' cycles from Enter (the user\'s ' + D17.first + ')');
-      const tm = trend(this, 'the map: first letter', r[1].first);
-      if (tm) notes.push(tm);
-      const put = this.put;
-      notes.push('put: ' + JSON.stringify(put || null) + '; chunks made by the look across: ' + within(at(4), at(5)));
-      if (!put) f.push('no straight run to a chunk\'s edge in the scene');
-      else if (within(at(4), at(5)) < 1) f.push('the look ahead along a run to a chunk not made: none made');
-      over(r[4], 'the look across', true);
+      const f = [], notes = this.notes = [], E = this.enters, within = (a, b) => this.made.filter(c => c >= a && c < b).length;
+      // (Each typing's answers, its lines' places among all of them; its chunks made by the Enters' cycles)
+      let from = 0;
+      const runs = [...Array(N).keys()].map(g => {
+        const i0 = lines.indexOf(game, from), to = i0 + cmds.length + 1, at = i => E[i0 + 1 + i];
+        from = to;
+        const r = this.timer(lines.slice(0, to).map((l, i) => i < i0 ? '' : l), cmds);
+        const ahead = within(at(0), at(1)), across = within(at(4), at(5));
+        notes.push('typing ' + (g + 1) + ': chunks made by the first look ahead ' + ahead + '; put: ' + JSON.stringify(this.put[g] || null) + '; chunks made by the look across: ' + across);
+        if (ahead) f.push('typing ' + (g + 1) + ': the first look ahead, a wall in the way, made ' + ahead + ' chunks');
+        if (!this.put[g]) f.push('typing ' + (g + 1) + ': no straight run to a chunk\'s edge in the scene');
+        else if (across < 1) f.push('typing ' + (g + 1) + ': the look ahead along a run to a chunk not made: none made');
+        return r;
+      });
+      // (Each command's first letter held to D17.first, a look's and the map's longest pause to D17.pause, by the median
+      // of the typings; their wholes trends: tests/lib/trends.js, 2026-11-17, their budgets FIRST, MAP, ACROSS and
+      // 1,200,000 before, then the looks' wholes held to 1.79M, their trends over it: not failed)
+      cmds.forEach((c, k) => {
+        const r = runs.map(x => x[k]);
+        r.forEach((x, n) => { if (x.busy) f.push(c.id + ': typed in typing ' + (n + 1) + ' while the character was busy (its answer the game\'s time, not the command\'s)'); });
+        dq0Held(this, f, notes, c.id, 'first letter', r.map(x => x.first), D17.first);
+        if (c.read) {
+          dq0Held(this, f, notes, c.id, 'longest pause', r.map(x => x.pause), D17.pause);
+          notes.push(c.id + ': its longest pause where ' + r.map(x => JSON.stringify(x.pauseAt)).join(', '));
+          dq0Held(this, f, notes, c.id, 'whole', r.map(x => x.whole), 0);
+        }
+      });
       return f;
     },
     sdcard: true

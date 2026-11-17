@@ -97,19 +97,32 @@ cached beside its map as `NAME.guards.json`. `KNOWN` in guards.js lists what's t
 without stopping, and lists them all after the tests; `GUARDS_FLAGS=N` keeps only some (1 fetch, 2 store, 4 the
 stacks). dq0guards makes each guard fire on purpose.
 
-**What fails the suite, and what's a trend** (the user's, 2026-11-17). The suite fails on the user's targets (D17:
-a command's first letter within 720,000 cycles, a look within 1.79M), the RAM floors (the build's) and a silent start.
-Every other cycle measure is a trend, kept in `tests/trends.json` (`tests/lib/trends.js`): a rise of more than 5%
-over it is noted in the test's report and after the tests, never failed. A target's measure that was over its target
-when the trends were first kept is noted, not failed, until it's brought under. After the tests, the summary lists
-the trends that rose, and each target's measure past 90% of it (the headroom rule).
+**What fails the suite, and what's a trend** (the user's, 2026-11-17). The suite fails on the user's targets (D17,
+rethought 2026-11-17: games/dq0/built/2026-11-17-d17.md), the RAM floors (the build's) and a silent start. The
+targets, at 115,200 baud and 3.58 MHz (`tests/lib/trends.js`'s `D17`):
+
+- **A command's first letter** within a fifth of a second of its Enter, 720,000 cycles: every command, a look and
+  the map as any other.
+- **A reading's words flowing**: no pause longer than half a second, 1,790,000 cycles, between two of its letters
+  from its first to its last (a look about, one way or across, the map, what's carried, a thing examined or assessed).
+  The pause ends at the prompt or at the world's news told after the answer began (a stir, a sound).
+
+They're measured at 115,200 baud only (`echo b115200 >/dev/serctl` before the game: 9,600's slower text is the user's
+choice). dq0answer and dq0lookfar type each game three times, each line after 0-2 waits of 2M cycles by its own
+pattern, and hold the median of the three (the background's work falls where it falls: 10-20% at the normal pace);
+the rest hold their one run. A line is typed only once the character's free (dq0Timer's check of the UI's `busy`). No
+measure over its target is let off, by a list or by its trend.
+
+Every other cycle measure is a trend, kept in `tests/trends.json`: a rise of more than 5% over it is noted in the
+test's report and after the tests, never failed. A target's measure is a trend too. After the tests, the summary lists
+the trends that rose, each target's measure over it (failed), and each past 90% of it (the headroom rule).
 
 To take a measure as it is now (a rise that's meant, a gain to keep, a new measure), run its test, then
 
     node sim/tools/trends.js --update NAME ...
 
 and commit `tests/trends.json` with the reason. `node sim/tools/trends.js [NAME ...]` shows each measure beside its
-trend. A target's measure over its target isn't taken unless its trend is over it already (`--accept-over` to).
+trend. A target's trend never lets it off its target.
 
 **Transcripts.** `TRANSCRIPTS=DIR node sim/test.js` saves each test's screen as `DIR/NAME.txt`. Run the suite before and
 after a change, then compare the two folders sentence by sentence:
@@ -191,7 +204,8 @@ trust when other runs share the machine. Cycles are the emulated machine's.
 
 The whole suite took 17 minutes of wall time (its processes' wall times sum to 135 minutes). RULES=null runs the 78
 meaning tests again: a quarter of the suite's CPU time, as they ran under HarnMaster. One dq0answer run took 19 s
-(12 s of CPU).
+(12 s of CPU); since D17's rethinking (2026-11-17) it types each pace's game three times, some 2.9G cycles and a
+minute.
 
 What `--changed` runs, for some sample diffs (the selector's choice, with those tests' share of the CPU time above):
 
