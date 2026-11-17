@@ -6785,3 +6785,20 @@ names the phase of GAME-CRITIQUE.md's section 10 the work falls in.
   "Which one?" choices (with B).  To build.
 
 **Next**: phase A, the safety net and quick fixes, begun.
+
+## One path for every actor (the user's, 2026-11-17)
+
+"Please make sure that the player and any agent's interaction with the world are handled the same, in all cases."
+
+- **The rule.** The character and every denizen and ally interact with the world by the same rules and the same code:
+  moving and the body, portals and locks, things, hands and compartments, lights and tools, perception, search,
+  combat, hazards, costs, noise, the words told and the sounds played.  Actors differ in what they are (skills,
+  senses such as darkvision, size, kind), never in the rules applied to them.  An asymmetry is a bug.
+- **What a mind chooses** (when to search, whether to rummage in a chest) stays the mind's; what it can do, and how
+  the world answers, is the character's.
+- **Settled by it** (OPEN.md's N2, N3, N5, and the bodies branch's gaps): a denizen's search seen or heard is told
+  as the character's is; a denizen can take from containers and open them as the character can; a robber can pick a
+  box's lock as the character can; a denizen opening a lid tips off what lies on it; a denizen sees by any light,
+  the character's torch included.
+- **To build**: an audit of every interaction for the two paths, then one path for each (GAME-CRITIQUE.md's E4, its
+  "later, the character as actor 0", and E6's action table).

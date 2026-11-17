@@ -126,16 +126,11 @@ only quit and help taken, nothing sensed). These are the rest.
 ## The denizens
 
 From built/2026-11-17-bodies.md (denizens take only what they've found, by the compartments' rules; the user's
-answers of 2026-11-17).
+answers of 2026-11-17).  N2, N3 and N5 were settled by the user's "One path for every actor" (DECISIONS.md).
 - **N1. When does a denizen search?** Built: only a robber, where it lost the character (once, a minute, the
   referee's search by its own sheet). Should robbers, the hungry or the unarmed search more often?
-- **N2. Should a denizen's search be told** ("The bandit searches about.")? Built: silent.
-- **N3. Containers in a denizen's take.** It takes only what lies on the floor. Should it take from an open chest, or
-  open closed ones to look?
 - **N4. Should keys click, for every actor?** Built: a key, a bar and picking are silent for the character and the
-  denizens alike; a denizen's unbarring that opens a door is silent where the character's plays the door opening.
-- **N5. Should robbers pick a box's lock in a robbery?** Built: they pick door locks, never a box's (a locked box is
-  forced when the character is helpless, or left).
+  denizens alike.
 - **N6. A follow out of reach.** "You can't get near enough to ..." is no longer said while following (it was said at
   each re-aim). Say it once, when a follow starts out of reach?
 
