@@ -17,7 +17,8 @@ This file is a newcomer's map:
 - a glossary;
 - how to add a verb, a sentence, a kind of thing, a fixture and a denizen kind.
 
-Paths are relative to reborn/games, except build.js, sim/, tests/, tools/ and modules/, which are relative to reborn/.
+Paths are relative to reborn/games, and a bare file name is games/dq0's own; build.js, sim/, tests/, tools/ and
+modules/ are relative to reborn/.
 A file:line is the line at the time of writing (2026-11-17, commit a46c5c38); lines move, so search for the name
 given beside it.
 
@@ -168,9 +169,9 @@ Each task is started with the hub's segment, its role and the lib folder (hub.c:
   hubgen.js makes obj/gen/dq0rec.h, and the layouts in dq0hub.json.
 - **The record store** is a different thing. It is one paging scheme for every store kept by region:
   - its calls are rp.h's RP_*, into the paged ROM library;
-  - its stores (rp.h:4-8) are the change records (dq0w/store.c, wfile.c), the strata (sfile.c), the traces
-    (wtrace.c), the things (ipage.c), the denizens (dq0d.c), the seen maps and plans (dq0m/changes.c), and the hub's
-    chunks' cache;
+  - its stores (rp.h:4-8) are the change records (dq0w/store.c, wfile.c), the strata (dq0w/sfile.c), the traces
+    (dq0w/wtrace.c), the things (dq0w/ipage.c), the denizens (dq0d/dq0d.c), the seen maps and plans (dq0m/changes.c),
+    and the hub's chunks' cache;
   - a stored page's file is named by its store and region (preSXXYY.dat), and each write is a new version.
 
 ### The paged ROM library (dq0lib)
@@ -188,8 +189,8 @@ Each task is started with the hub's segment, its role and the lib folder (hub.c:
 - **The zero page.** A program's zero page is $22-$7F. $44-$70 is the library's fixed block (lnzp.inc:15, 50), which
   keeps its state across calls.
   - The tasks that read the chunks (the world, the minds and the senses) end their own zero page at $43
-    (dq0w.cfg:18, dq0d.cfg:15, dq0p.cfg:20). One more zero-page variable of theirs fails their link: that is the
-    check (DECISIONS.md:5778-5780).
+    (dq0w/dq0w.cfg:18, dq0d/dq0d.cfg:15, dq0p/dq0p.cfg:20). One more zero-page variable of theirs fails their link:
+    that is the check (DECISIONS.md:5778-5780).
   - The UI, the maker and the HarnMaster referee keep $22-$7F.
 
 ### The referee
@@ -197,7 +198,7 @@ Each task is started with the hub's segment, its role and the lib folder (hub.c:
 - **rs.h** is the ruleset-neutral contract: a purpose (P_*), the circumstances in steps of 5%, a grade (G_BADLY to
   G_WELL), and effects and words back. RULESETS.md tables each request: who asks it and what's read. An unknown
   request gets 0xFF.
-- **The skeleton** is rf/, with referee.h its interface:
+- **The skeleton** is dq0/rf/, with referee.h its interface:
   - rf.c, the main loop: it attaches the hub, seeds the dice from the game's seed (a stream for each asker), and
     answers the world's, the UI's and the denizens' slots;
   - sheets.c reads the creatures' sheets (beasts.dat);
@@ -299,8 +300,8 @@ card's image and the paged ROM's images. It takes ten minutes or more, so run it
 1. `node sim/run.js -i` opens the Hydra's serial console in the emulator (Ctrl-A x quits). The SD card,
    bin/sdcard.img, is in SD device 0.
 2. At the shell, `bind -a /sd/0/games /bin`, then `dq0`. Or `/sd/0/games/dq0`, without the bind.
-3. The tests start a game this way (tests/lib/dq0.js:861): `hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm`, then
-   `dq0 -p t -s 3 -c /ram/c.hm`.
+3. The tests start a game this way (dq0answer's, tests/lib/dq0.js:860-861): `hmchar -q -s 5 -u feudal -c hunter -o
+   /ram/c.hm`, then `dq0 -p t -s 3 -c /ram/c.hm -T`.
 
 **dq0's switches** (main.c's s_args, main.c:2831-2897):
 - **For play:**
@@ -347,7 +348,7 @@ card's image and the paged ROM's images. It takes ten minutes or more, so run it
   row gives the handler (H_*), the kinds of thing it takes, its refusals and its request to the world. main.c's
   s_command calls the handler's group by its H_ number.
 - **The activity, the step planner** (dq0w/activity.h's struct pc_activity): the character's long task now
-  (pc_task), and a stack of what follows it (AK_*), pushed by act_plan and popped by dq0w.c's act_next.
+  (pc_task), and a stack of what follows it (AK_*), pushed by act_plan and popped by dq0w/dq0w.c's act_next.
 - **Bank programs** (.bp): small programs loaded into a RAM bank and called like functions: popgen, histgen and the
   others (sdk/c/include/bankprog.h).
 - **The bank window**: $8000-$9FFF in every task. The bank register ($00) chooses what's there: a hub bank, an
@@ -360,7 +361,7 @@ card's image and the paged ROM's images. It takes ten minutes or more, so run it
 - **Change records**: the world's record of every change to the dungeon (a door opened, rock dug), kept by region and
   paged to the save folder (DUNGEON.md).
 - **Chunks**: 32 by 32 squares of 5 feet, made on demand from the seed and the place. **The chunks' cache** is 24
-  slots in the hub (world.h:44-45).
+  slots in the hub (dq0w/world.h:44-46).
 - **Compartments**: every place in, on or hung from a holder: a lid's top, a drawer, a side pocket, a false bottom,
   a secret niche. A row of comps[] each (dq0w/kinds.c; struct comp, items.h:113-154), at most four a kind.
 - **The coverage report** (obj/games/dq0cover.txt, made by dq0/make.js): for each verb, a cell for a word and for
@@ -399,7 +400,8 @@ card's image and the paged ROM's images. It takes ten minutes or more, so run it
 - **The paged ROM library**: dq0lib (section 2).
 - **Paces**: section 2.
 - **Portals**: a door, window, portcullis or arrow slit between two areas: a struct portal in its chunk, with a kind
-  (PK_*), a state (PS_*), a lock and a material. dq0w/wdoor.c works them for every actor alike.
+  (PK_*), a state (PS_*), a lock and a material. The character and the denizens work them by one path (dq0w/wport.c,
+  wdoor.c).
 - **Reach**: the house rule for getting at a thing by where it is (in hand, on the body, in a container, in a pack
   worn), told and timed a step at a time (HOUSE.md's "Reach, handy tools and things used up").
 - **The record store**: section 2.
@@ -415,18 +417,17 @@ card's image and the paged ROM's images. It takes ten minutes or more, so run it
 - **The soak** (sim/tools/soak.js): many seeds played by a random player at the turns pace, looking for crashes,
   hangs, a clock standing still, owner violations and sentences told twice. `-fight`, `-life` and `-same` vary it.
 - **Strata**: a stratum is one level of the dungeon, numbered from 0 at the top, with its own bounds, seed, style
-  (built, natural, mine or mixed), purpose and plan (world.h; DUNGEON.md).
+  (built, natural, mine or mixed), purpose and plan (dq0w/world.h; DUNGEON.md).
 - **Swapped parts**: main-RAM code run one part at a time in a swap area under the C stack (the UI's is $1100
   bytes: dq0.cfg's __SWAPSIZE__). A part's image is kept in an overlay bank and copied in when a function of it is
-  called. A function is put in part n by
-  `#pragma code-name (push, "SWnCODE")`, and called through an SWFN stub and sw_call. parts.txt says where each
-  part's image is kept; parts.js makes the stubs, and pack.js moves code between parts that are too full. Unlike an
-  overlay's code, a part's code can read the hub.
+  called. A function is put in part n by `#pragma code-name (push, "SWnCODE")`, and called through an SWFN stub and
+  sw_call. parts.txt says where each part's image is kept; parts.js makes the stubs, and pack.js moves code between
+  parts that are too full. Unlike an overlay's code, a part's code can read the hub.
 - **Sway**: words that would change a denizen's attitude (talk, persuade, deceive, threaten, calm, befriend), and
   requests to an ally. The UI asks the minds; the referee judges the contest.
 - **Themes**: what a dungeon is about, as data: its name, story, strata, room words, bestiary, eight kinds of its
   own, the puzzle's pieces and rules, mission, endings, history and inhabitants (theme.h). A game's own theme comes
-  from themegen; the stand-ins from themes/.
+  from themegen; the stand-ins from dq0/themes/.
 - **Tiers**: the test runs for while working, before reporting and for the lead (tests/TESTING.md).
 - **The turns pace**: section 2.
 - **The zero-page block**: section 2.
@@ -439,8 +440,9 @@ them, build and run the tests the change can affect, and compare the transcripts
 ### A verb
 
 The worked example is rip (62b56369, 2026-11-10): "rip the cloak", "wash the bandage". It is the only action added
-since the verbs plan, so it shows the whole path. The 50 verbs of the plan's batches B0-B7 already had their actions
-and rows (75cb16ce); those commits show the handler half only.
+since the verbs plan, so it shows the whole path. The verbs of the plan's batches already had their actions; B0
+(75cb16ce) gave its 50 unbuilt verbs their rows and stub handlers, and B1-B7 replaced the stubs, so those commits
+show the handler half only.
 
 1. **commands.actions**: the action, at the end of [actions]. Its place is its number. Example (:149):
    `VB_RIP_OBJECT object instrument`. hubgen.js makes obj/gen/actions.h from it.
@@ -464,7 +466,7 @@ and rows (75cb16ce); those commits show the handler half only.
     already says 27 against OVMAX's 30).
 11. **The world**, if it must act: an IO_* request (items.h, e.g. IO_RIP), its case in dq0w/things.c's s_serve, the
     world's code (dq0w/wcloth.c) and its line in dq0w/parts.txt; or an intent (hub.h's I_*, its payload in msgs.def,
-    a case in dq0w.c's switch). Add the minds and both referees when the rules are theirs (9b13e40f, grappling).
+    a case in dq0w/dq0w.c's switch). Add the minds and both referees when the rules are theirs (9b13e40f, grappling).
 12. **Words**: refusals through say_no and said.txt's NO rows; the world's sentences as SA codes (next recipe). A help
     line in help.txt if wanted.
 13. **Tests**: an entry in tests/suites/dq0/*.js (dq0rip is in gear.js), its name in tests/areas.js's NEAR lists, and
@@ -511,7 +513,7 @@ The narration is data: every sentence the player reads should be a row of said.t
    - **A UI kind:** a struct msg with kind UK_* and `w1 = outcome << 8 | value`, then outcome_words (task.c:471-479).
    - **The world's sentence about things:** the world writes SAY_AT, the SA_* code | 0x80, the names and SAY_SEP into
      things_text (items.h:554-562; dq0w/wcloth.c's told). There are 158 SA codes, so a new one is past 127 and must
-     be written with SAY_AT2, as wdrag.c does.
+     be written with SAY_AT2, as dq0w/wdrag.c does.
 4. **Mind the room.** The rows live in overlays 28, 29 and 30 (1, 6 and 3,223 bytes free, DECISIONS.md:6456), and a
    kind's rows must sit whole in one bank, the first with room (saidgen.js:391-399). So a row added to a kind in 28
    or 29 moves the whole kind to a later bank, which said_b reads more slowly: that once pushed dq0answer over its
@@ -546,15 +548,15 @@ The worked example is the whetstone (9ef6bf42, 2026-11-02); for a weapon, the ma
 6. **The referee (HarnMaster)**: a melee weapon is a row in dq0harn/weapons.h keyed by its tool key, above the torch,
    stick, club, staff and shield rows (gear.c finds those by position), and its Weapon Quality in gear.c's wqs[] at
    the same index (nothing checks it). A missile weapon goes in missile.c's mws[]; armour in gear.c's pieces[]; a
-   digging tool in rf/dig.c (and NDIGGERS in rshouse.h). The null referee needs nothing.
+   digging tool in dq0/rf/dig.c (and NDIGGERS in rshouse.h). The null referee needs nothing.
 7. **Where it appears**: a room use's leftovers or marks (dq0m/uses.c's leavings[], signs[]); a style's kinds
    (styles.txt); the character's kit (dq0harn/outfits.txt, e.g. `free 25: whetstone@pack`); the denizens' gear
    (outfits.txt). outfits.js fails on an unknown name.
 8. **said.txt**: nothing per kind; rows name the thing by {kind F} or {text}.
 9. **Test**: give the character the thing with `-k` (gear.js: `dq0 -p t -s 3 -c /ram/c.hm -T -k mang,whetstone`).
 
-**Limits:** 166 kinds are used (KI_COUNT); kinds.c:25 allows 204, and the account's bank check (acct/acct.c:44)
-allows 183. The catalogue bank's code has 242 bytes free (GAME-CRITIQUE.md, section 6.2).
+**Limits:** 166 kinds are used (KI_COUNT); dq0w/kinds.c:25 allows 204, and the account's bank check
+(dq0/acct/acct.c:44) allows 183. The catalogue bank's code has 242 bytes free (GAME-CRITIQUE.md, section 6.2).
 
 ### A fixture or a piece of furniture
 
@@ -581,7 +583,8 @@ The worked examples are d1bf52b3 (the furniture's kinds and compartments) and 45
    phase D).
 6. **Tests**: dq0furniture, dq0compdesk, dq0compcase, dq0comppocket and dq0lidslide (tests/suites/dq0/gear.js).
 
-Windows, portcullises and traps are the map's fixtures, not things: place.c's rows call dq0m/fixtures.c's hooks.
+Windows, portcullises and traps are the map's fixtures, not things: dq0m/place.c's rows call dq0m/fixtures.c's
+hooks.
 
 ### A denizen kind
 
@@ -590,18 +593,18 @@ The worked example is 1a0d12cb (2026-10-29), which added twelve.
 1. **dq0d/kinds.txt**: a row at the end (a kind's number is its line, and the number is used by the sounds, the
    outfits, the deities and the themes). The 36 fields are documented at kinds.txt:9-104. Example (kinds.txt:132):
    `dwarf miner | khuzmin | lfm | mx | 1-7 | 2-4 | 2 | 150 | 50-10 | ...`.
-2. **A faction**: an existing one in factions.txt, or a new one (15 at most).
-3. **The referee (HarnMaster)**: an entry at the end of dq0harn/beasts.c, and NBEASTS raised (dq0harn.h:260). Example
-   (beasts.c:96): `{ "khuzmin", { 15, 15, 12, 11, 13 }, 37, 4, 50, 45, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK, { { "pick",
-   50, 5, HARN_POINT, 0xFF }, { "" } } }`. Nothing ties kinds.txt to beasts.c at build time: a missing key falls back
-   to the giant rat's sheet (fight.c:500-505). A venomous kind also goes in course.h's venoms[]. The null referee
-   needs nothing.
+2. **A faction**: an existing one in dq0d/factions.txt, or a new one (15 at most).
+3. **The referee (HarnMaster)**: an entry at the end of dq0harn/beasts.c, and NBEASTS raised (dq0harn/dq0harn.h:260).
+   Example (beasts.c:96): `{ "khuzmin", { 15, 15, 12, 11, 13 }, 37, 4, 50, 45, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK, { {
+   "pick", 50, 5, HARN_POINT, 0xFF }, { "" } } }`. Nothing ties kinds.txt to beasts.c at build time: a missing key
+   falls back to the giant rat's sheet (dq0harn/fight.c:500-505). A venomous kind also goes in dq0harn/course.h's
+   venoms[]. The null referee needs nothing.
 4. **Its sounds**: two rows in dq0s/sounds.txt, a step and a noise (sounds.txt:68-69, khuzmin's). dq0s/make.js checks
    the keys against kinds.txt.
 5. **Its gear** (folk only; beasts carry nothing): [role KEY], [lair KEY] and [purse KEY] sections in outfits.txt.
 6. **Words**: nothing to add; a denizen is named by its kind's name, and its plural made by said.c.
 7. **Into a dungeon**: a stand-in theme names its kinds in a `denizens` line or its `faction` lines
-   (themes/1crypt.txt:126); a game folder's theme.txt in inhabit.txt's format; or, for a generated history, the
+   (dq0/themes/1crypt.txt:126); a game folder's theme.txt in inhabit.txt's format; or, for a generated history, the
    kind's strata and styles (themegen/make.js copies them into themegen.dat). themec rejects an unknown key.
 8. **Tests**: dq0peoples (tests/suites/dq0/denizens.js) and dq0peoplegen (theme.js).
 

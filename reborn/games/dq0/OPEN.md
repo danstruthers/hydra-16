@@ -2,7 +2,8 @@
 
 Every question about the game that is still open, in one place, as of 2026-11-17 (commit a46c5c38). Each entry gives
 the question, its options where there are some (what's built now is marked "built"), and where it was raised: a
-DECISIONS.md entry's title and line, or a file:line.
+DECISIONS.md entry's title and line, or a file:line (relative to reborn/games; a bare file name is
+games/dq0's own).
 
 **How it was made.** From the open-question blocks of DECISIONS.md ("Open questions", "Open, for the user", "Open,
 for review", "For review / open questions", and the notes left "the user's to decide"), the open notes of
