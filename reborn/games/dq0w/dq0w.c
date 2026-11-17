@@ -3822,7 +3822,8 @@ unsigned char __fastcall__ s_pc_dig (unsigned char w)
 static void wall_look (void)
 {
     unsigned char i, t = T_FLOOR, h = HUB->pc_face, k;
-    unsigned x = mx, y = my;
+    unsigned x = mx, y = my, seed = (unsigned) HUB->seed;   /* (The hub's header in the window as it begins, as
+                                                **   pc_face is read: at () puts a chunk's bank there after) */
     unsigned char* p = 0;
     const struct portal* q;
 
@@ -3853,7 +3854,7 @@ static void wall_look (void)
         if (C->mat[t == T_WALL && k != 0xFF ? k : NROOMS][MP_WALL] != MAT_MASONRY) {
             ww1 = x ^ y;                        /* (The first answer kept for this wall, till the skill improves, as a
                                                 **   thing appraised: the user's, 2026-11-03) */
-            dig.rock = rock_kind (HUB->seed, -3 - elev_at (sn_, mx, my) - STRATUM (sn_).datum, x, y) |
+            dig.rock = rock_kind (seed, -3 - elev_at (sn_, mx, my) - STRATUM (sn_).datum, x, y) |
                 (G_OK (test_w (P_APPRAISE, AP_ROCK)) ? WK_NAMED : 0);
             ww1 = 0;
         }
