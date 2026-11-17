@@ -4,7 +4,8 @@
 ** lib/dq0/dq0s.dat) in the hub as it starts (the denizens' events' bank, after their ring: SND_AT, where the UI finds
 ** a sound's words), claims its channels (the YM2151's 4-6, and with a Vera X the PSG's 20-23: the rest are the
 ** music's and the bell's), and plays what the character hears: the denizens' events (their steps and noises, each
-** kind's own sound) and the world's (the character's digging, the doors it works, a trap sprung), each read as it
+** kind's own sound; their digging, the doors they work, as the character's own) and the world's (the character's
+** digging, the doors it works, a trap sprung), each read as it
 ** comes, by its own place in each queue (nobody waits for it, nor it for anyone).  A source is heard within its
 ** loudness times (hearing + 3) / 2 squares (the character's hearing, the referee's), each square of wall or rock
 ** between four squares further, each shut door two (the world says what's between: E_DEN's x[3]), as the
@@ -367,6 +368,25 @@ static unsigned char __fastcall__ world_sound (const struct msg* m)
     return 0xFF;
 }
 
+/* A denizen's work heard as the world's sounds (E_DEN's DE_DIG ... DE_PICKS: a tunneller's, a builder's, a door or a
+** portcullis worked), each as the character's own work of its kind is played (world_sound's: one body rule,
+** GAME-CRITIQUE.md's 4.2, 2026-11-17; a denizen's door work was told but silent): a door opened, burst open, shut,
+** slammed, battered, broken in; its forcing begun, a winch wound, bars strained at (their strain a work's noise, as the
+** character's is); a portcullis raised, let fall.  NO_WS: what the character's own makes no sound of (a key turned, a
+** bar lifted or set, a lock picked, a door holding, a heave begun, bars bent apart) */
+#define NO_WS           0xFF
+static const unsigned char den_ws[] = {
+    WS_DIG, WS_SMASH, WS_DIG,                   /* (DE_DIG, DE_DUG, DE_DIGS) */
+    WS_OPEN, WS_SHUT, WS_SHUT, NO_WS, NO_WS, NO_WS, NO_WS, WS_DIG, WS_OPEN, NO_WS, WS_BLOW, WS_SMASH,
+                                                /* (DE_OPENS, SHUTS, SLAMS, UNLOCKS, LOCKS, BARS, UNBARS, STRAINS,
+                                                **   BURSTS, HOLDS, BATTERS, BREAKS) */
+    WS_SMASH, WS_BLOW, WS_BLOW,                 /* (DE_ROOF, HANGS, WALLS) */
+    WS_DIG, NO_WS, WS_CHAINS, WS_CHAINS, WS_DIG, NO_WS, NO_WS, NO_WS
+                                                /* (DE_WINDS, HEAVES, RAISES, LOWERS, BENDS, BENT, PICKING, PICKS) */
+};
+typedef char den_ws_fits[sizeof den_ws == DE_PICKS - DE_DIG + 1 && DE_OPENS - DE_DIG == 3 && DE_ROOF - DE_DIG == 15 &&
+    DE_WINDS - DE_DIG == 18 ? 1 : -1];          /* (hub.h's DE_* as the table has them) */
+
 static void listen (void)
 {
     static struct msg m;
@@ -392,14 +412,10 @@ static void listen (void)
             heard (m.who, E_DEN_DKIND (m) % SND_KINDS * 2 + (E_DEN_DE (m) == DE_NOISE), E_DEN_LOUD (m), E_DEN_SX (m) - px,
                 E_DEN_SY (m) - py, E_DEN_BETWEEN (m));
         } else if (m.kind == E_DEN && E_DEN_LOUD (m) && E_DEN_SN (m) == sn &&
-            (unsigned char) (E_DEN_DE (m) - DE_DIG) <= DE_DIGS - DE_DIG) {
-            heard (m.who, WORLD (E_DEN_DE (m) == DE_DUG ? WS_SMASH : WS_DIG), E_DEN_LOUD (m), E_DEN_SX (m) - px,
-                E_DEN_SY (m) - py, E_DEN_BETWEEN (m));
-                                                /* (A tunneller's spell, its way through: slice 4.11's rest) */
-        } else if (m.kind == E_DEN && E_DEN_LOUD (m) && E_DEN_SN (m) == sn &&
-            (unsigned char) (E_DEN_DE (m) - DE_ROOF) <= DE_WALLS - DE_ROOF) {
-            heard (m.who, WORLD (E_DEN_DE (m) == DE_ROOF ? WS_SMASH : WS_BLOW), E_DEN_LOUD (m), E_DEN_SX (m) - px,
-                E_DEN_SY (m) - py, E_DEN_BETWEEN (m));
+            (unsigned char) (E_DEN_DE (m) - DE_DIG) <= DE_PICKS - DE_DIG && (n = den_ws[E_DEN_DE (m) - DE_DIG]) != NO_WS) {
+            heard (m.who, WORLD (n), E_DEN_LOUD (m), E_DEN_SX (m) - px, E_DEN_SY (m) - py, E_DEN_BETWEEN (m));
+                                                /* (A tunneller's spell, its way through, a builder's work, slice 4.11's
+                                                **   rest; a door, a portcullis worked: den_ws's) */
         } else if (m.kind == E_FIGHT && E_FIGHT_SN (m) == sn && E_FIGHT_OUT (m) < O_LETGO) {   /* (A blow: landing, or not; a grapple's
                                                 **   scuffle, but a hold let go) */
             heard (m.who, WORLD (E_FIGHT_OUT (m) == O_HIT || E_FIGHT_OUT (m) == O_BOTH_HIT ||

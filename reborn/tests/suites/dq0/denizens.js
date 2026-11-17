@@ -136,6 +136,22 @@ function dq0DoorScene(m, on, who, how) {
   };
 }
 
+// The sounds the sound task plays (a machine's ymLog: each YM2151 key-on on its channels, 4-6, the source and the sound
+// its channel's playing then, dq0s.c's struct ch, 44 bytes, who then snd: its cs[] by its label), m.played: [{ who, snd }]
+// (who an actor's entry plus 1, 0 the character; snd 2 * SND_KINDS + WS_*, the world's: 64 dig, 65 open, 66 shut, 67 blow,
+// 68 smash, 69 chains)
+function dq0Played(m) {
+  const w = m.ym.writes, push = w.push.bind(w), lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0s', 'dq0s.lbl'), 'latin1');
+  const cs = parseInt(/^al ([0-9A-F]+) \._cs$/m.exec(lbl)[1], 16);
+  m.played = [];
+  w.push = e => {
+    const [, reg, v] = e, k = [4, 5, 6].indexOf(v & 7), h = reg === 0x08 && (v & 0x78) && k >= 0 && m.dq0 && m.dq0.bank(0), ram = h && m.taskRam[h[12 + 4]];
+    if (ram) m.played.push({ who: ram[cs + 44 * k], snd: ram[cs + 44 * k + 1] });
+    return push(e);
+  };
+}
+const WSND = { dig: 64, open: 65, shut: 66, blow: 67, smash: 68, chains: 69 };
+
 const LETDENS = ['look', 'around', 'look at B', 'talk to C', 'attack C', 'attack A', 'around'];   // (dq0letdens' lines)
 
 module.exports = {
@@ -426,13 +442,14 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0denportc', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's portcullis worked by a denizen (2026-11-02: the minds' leftovers of Phase 3C's one path, DENIZENS.md's a portcullis and a lock, HOUSE.md's denizens and doors, for review): dq0tunnel's scene, the dwarf's tries at the portcullis not given up: kept from the character by the portcullis let down (from the character's side, its winch's), it heaves at it from the far side (E_DEN DE_HEAVES, the character's code: wwin.c's heave, P_LIFT by its sheet), and raises it (DE_RAISES) or, held twice, strains at its bars (DE_BENDS), each told seen or heard; its way there found (the minds' ways: a field made, dq0d's rb).  [dq0tunnel's what, for the scene:] Dingus Quest Zero's tunnellers (slice 4.11, 2026-11-01: DENIZENS.md's tunnellers and builders, HOUSE.md's tunnellers, for review): a hand-written theme's dwarf miners (seed 1, south of the start, wary; a miner digs with the tools it carries, kinds.txt's ways m: its pick, outfits.txt's [role khuzmin]), the character in their guardroom, the portcullis it came in by let down behind it ('close the door'); one of them put in the passage beyond it, hostile, drawn on to where it last sensed the character (the scene set as the first wait's typed: the hub's actor and its record, the minds' drawn and last-sensed square poked).  A portcullis it can't raise, no way nearer: it digs its way round it (dq0d's dig_way, a diagonal round the door: nearer as the crow flies; I_KIT's KT_DIG, the world's wdig.c a spell of ten minutes at a time by the character's rules: a pick's rate on the wall, a Strength test by its sheet), its first spell seen through the portcullis (E_DEN's DE_DIG: \"The dwarf miner digs into the wall.\", or heard, a scraping in rock), the hole kept as it goes (DUG), and through (DE_DUG: the square a passage, told seen, \"A fresh tunnel opens ...\", or heard, rock falling); the dwarf come through it after; both referees",
+      name: 'dq0denportc', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's portcullis worked by a denizen (2026-11-02: the minds' leftovers of Phase 3C's one path, DENIZENS.md's a portcullis and a lock, HOUSE.md's denizens and doors, for review): dq0tunnel's scene, the dwarf's tries at the portcullis not given up: kept from the character by the portcullis let down (from the character's side, its winch's), it heaves at it from the far side (E_DEN DE_HEAVES, the character's code: wwin.c's heave, P_LIFT by its sheet), and raises it (DE_RAISES) or, held twice, strains at its bars (DE_BENDS), each told seen or heard, and each heard as the character's own would be (the user's, 2026-11-17, GAME-CRITIQUE.md's 4.2: the sound task's), a portcullis raised (the world's *chains), a strain a work noise (*dig); its way there found (the minds' ways: a field made, dq0d's rb).  [dq0tunnel's what, for the scene:] Dingus Quest Zero's tunnellers (slice 4.11, 2026-11-01: DENIZENS.md's tunnellers and builders, HOUSE.md's tunnellers, for review): a hand-written theme's dwarf miners (seed 1, south of the start, wary; a miner digs with the tools it carries, kinds.txt's ways m: its pick, outfits.txt's [role khuzmin]), the character in their guardroom, the portcullis it came in by let down behind it ('close the door'); one of them put in the passage beyond it, hostile, drawn on to where it last sensed the character (the scene set as the first wait's typed: the hub's actor and its record, the minds' drawn and last-sensed square poked).  A portcullis it can't raise, no way nearer: it digs its way round it (dq0d's dig_way, a diagonal round the door: nearer as the crow flies; I_KIT's KT_DIG, the world's wdig.c a spell of ten minutes at a time by the character's rules: a pick's rate on the wall, a Strength test by its sheet), its first spell seen through the portcullis (E_DEN's DE_DIG: \"The dwarf miner digs into the wall.\", or heard, a scraping in rock), the hole kept as it goes (DUG), and through (DE_DUG: the square a passage, told seen, \"A fresh tunnel opens ...\", or heard, rock falling); the dwarf come through it after; both referees",
       init: 't_rc', cycles: 7000e6,   // (2026-11-08, one line of sight: the dwarf sees the character through the bars, heaves the portcullis up and comes at it, knocking it out: the game runs on till it comes round, 6.1G cycles; 3000e6 before)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
         "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7',
-        'open the door', 'go through it', 'turn around', 'close the door ahead', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']) },
+        'open the door', 'go through it', 'turn around', 'close the door ahead', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']), ymLog: true },
       start(m) {
         m.portc = true;
+        dq0Played(m);
         const a = m.acia, read = a.read;
         let typed = '', done = false;
         m.tun = null;
@@ -491,6 +508,11 @@ module.exports = {
         if (!dens.some(e => e.a === K.DE_HEAVES)) f.push('the dwarf never heaved at the portcullis (E_DEN DE_HEAVES)');
         if (!dens.some(e => e.a === K.DE_RAISES || e.a === K.DE_BENDS)) f.push('the portcullis neither raised nor its bars strained at (DE_RAISES, DE_BENDS)');
         if (!/The dwarf miner sets to heaving at the portcullis\.|iron scraping/.test(s)) f.push('its heaving neither seen nor heard');
+        for (const [de, snd, what] of [[K.DE_RAISES, WSND.chains, 'the portcullis it raised not heard as one raised (the world sound *chains)'],
+          [K.DE_BENDS, WSND.dig, 'its strain at the bars not heard as a work noise (the world sound *dig)']]) {   // (As the character's own: 2026-11-17)
+          if (dens.some(e => e.a === de) && !m.played.some(p => p.who === m.tun.k + 1 && p.snd === snd)) f.push(what + ': ' + JSON.stringify(m.played.filter(p => p.who)));
+        }
+        this.notes = ['the dwarf heard as: ' + [...new Set(m.played.filter(p => p.who === m.tun.k + 1).map(p => p.snd))].join(' ')];
         for (const e of dens.filter(e => e.a >= K.DE_OPENS)) if (e.w1 !== m.tun.door[0] || e.w2 !== m.tun.door[1]) f.push('a portal worked not the portcullis: ' + [e.a, e.w1, e.w2]);
         const h = m.dq0.bank(0), lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
         if (!m.taskRam[h[12 + 2]][parseInt(/^al ([0-9A-F]+) \._rb$/m.exec(lbl)[1], 16)]) f.push('no way found (dq0d\'s rb: the ways\' bank never had)');
@@ -500,13 +522,14 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0denportal', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's one path for every actor (Phase 3C, 2026-11-02: DUNGEON.md's one path, DENIZENS.md's doors, HOUSE.md's denizens and doors, for review): a denizen's mind posts the character's own intent (I_PORTAL) and the world carries it out by the character's parts (wdoor.c's, by the world's wport.c).  A hand-written theme's wary bandits (seed 1, dq0kit's); the character (a rope and a shortsword carried more, dq0 -k: twelve pounds, its burden as the scene was written before D13's free pounds) opens the door ahead and shuts it again, and a bandit is put beyond it, hostile, drawn on to where it last sensed the character (the scene set as the first wait's typed: the hub's actor and its record, the minds' drawn and last-sensed square poked): no step nearer but through the shut door, it opens it (E_DEN DE_OPENS at the door's square: 'The bandit opens the door.'), comes through and fights the character; and a bandit fleeing beyond the door (the scene set as the last wait's typed, 2026-11-02: a living one put there, fleeing, the minds' fled poked, whichever way the fight's dice went), the character beyond it, slams the door shut behind it (DE_SLAMS at the door: 'The bandit slams the door shut.', unseen if the character lies senseless as it's done, the user's, 2026-11-14; the door shut in its chunk at the end)",
+      name: 'dq0denportal', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's one path for every actor (Phase 3C, 2026-11-02: DUNGEON.md's one path, DENIZENS.md's doors, HOUSE.md's denizens and doors, for review): a denizen's mind posts the character's own intent (I_PORTAL) and the world carries it out by the character's parts (wdoor.c's, by the world's wport.c).  A hand-written theme's wary bandits (seed 1, dq0kit's); the character (a rope and a shortsword carried more, dq0 -k: twelve pounds, its burden as the scene was written before D13's free pounds) opens the door ahead and shuts it again, and a bandit is put beyond it, hostile, drawn on to where it last sensed the character (the scene set as the first wait's typed: the hub's actor and its record, the minds' drawn and last-sensed square poked): no step nearer but through the shut door, it opens it (E_DEN DE_OPENS at the door's square: 'The bandit opens the door.'), comes through and fights the character; and a bandit fleeing beyond the door (the scene set as the last wait's typed, 2026-11-02: a living one put there, fleeing, the minds' fled poked, whichever way the fight's dice went), the character beyond it, slams the door shut behind it (DE_SLAMS at the door: 'The bandit slams the door shut.', unseen if the character lies senseless as it's done, the user's, 2026-11-14; the door shut in its chunk at the end); each heard as the character's own would be (the user's, 2026-11-17, GAME-CRITIQUE.md's 4.2: the sound task's, a denizen's door work told but silent before): the opening played as a door opening (the world's *open), the slam as a door shutting (*shut), the bandit's own",
       init: 't_rc', cycles: 3000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+      machine: { ymLog: true, input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
         "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k rope,shortsword',
         'open the door', 'close the door', 'wait', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']) },
       start(m) {
         dq0DoorScene(m, 'wait', 'bandit');
+        dq0Played(m);
         const a = m.acia, read = a.read;       // (The slam's scene, 2026-11-02, as the last wait's typed: whichever way the fight's dice went, a
         let typed = '';                        //   living bandit put beyond the open door, fleeing, the character on the other side: the minds' fled)
         a.read = (r, t) => {
@@ -558,19 +581,22 @@ module.exports = {
         if (!lay && !/The bandit slams the door shut\./.test(s)) f.push('its slam not seen: "The bandit slams the door shut."');
         if (lay && /The bandit slams the door shut\./.test(s)) f.push('its slam seen as it lay senseless');
         if (!T.flatMap(t => t.dens).some(e => e.kind === 'E_FIGHT' && e.who === m.door.k + 1)) f.push('the bandit never came through to fight');
+        if (opens.length && !m.played.some(p => p.who === m.door.k + 1 && p.snd === WSND.open)) f.push('its opening not heard as a door opening (the world\'s *open): ' + JSON.stringify(m.played.filter(p => p.who)));
+        if (slammed.length && !lay && !m.played.some(p => p.who === slammed[0].who && p.snd === WSND.shut)) f.push('its slam not heard as a door shutting (the world\'s *shut): ' + JSON.stringify(m.played.filter(p => p.who)));
         if (f.length) f.push(JSON.stringify(dens.filter(e => e.a).map(e => [e.a, e.w1, e.w2, e.t])) + ' ' + s.slice(s.indexOf('> close the door'), s.indexOf('> close the door') + 1500));
         return f;
       },
       sdcard: true
     },
     {
-      name: 'dq0denkey', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's doors' keys and a denizen forcing a locked door (Phase 3C's one path, 2026-11-02: HOUSE.md's keys that fit, every actor's; DENIZENS.md's doors): at seed 1 (dq0denportal's wary bandits, the character with an iron key, dq0 -k), the character opens the door ahead and shuts it again; the door given a lock and the key made its own (the scene set as 'lock the door' is typed: the chunk's portal record's lock, the key's size and thick DOOR_KEY's), 'lock the door' locks it ('You lock it with its key.'); a bandit put beyond it, hostile, drawn on (dq0denportal's scene); it has no key, so it strains at the door (E_DEN DE_STRAINS: 'The bandit strains at the door.', or a door creaking) by the character's forcing (the referee's Strength test, its own sheet's), and, held, batters it (DE_BATTERS), each told seen or heard, till it's through or it gives up",
+      name: 'dq0denkey', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's doors' keys and a denizen forcing a locked door (Phase 3C's one path, 2026-11-02: HOUSE.md's keys that fit, every actor's; DENIZENS.md's doors): at seed 1 (dq0denportal's wary bandits, the character with an iron key, dq0 -k), the character opens the door ahead and shuts it again; the door given a lock and the key made its own (the scene set as 'lock the door' is typed: the chunk's portal record's lock, the key's size and thick DOOR_KEY's), 'lock the door' locks it ('You lock it with its key.'); a bandit put beyond it, hostile, drawn on (dq0denportal's scene); it has no key, so it strains at the door (E_DEN DE_STRAINS: 'The bandit strains at the door.', or a door creaking) by the character's forcing (the referee's Strength test, its own sheet's), and, held, batters it (DE_BATTERS), each told seen or heard, till it's through or it gives up; each heard as the character's own would be (the user's, 2026-11-17, GAME-CRITIQUE.md's 4.2: the sound task's): its strain as work's noise (the world's *dig, the character's forcing's), a blow at the door as a blow (*blow), a door burst open as a door opening (*open)",
       init: 't_rc', cycles: 4000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+      machine: { ymLog: true, input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
         "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'iron key'",
         'open the door', 'close the door', 'lock the door', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']) },
       start(m) {
         dq0DoorScene(m, 'wait', 'bandit');
+        dq0Played(m);
         const a = m.acia, read = a.read;
         let typed = '';
         a.read = (r, t) => {
@@ -617,6 +643,11 @@ module.exports = {
         if (!/The bandit sets to picking the lock\.|a faint scratching/.test(s)) f.push('its picking neither seen nor heard');
         if (!picked && !/The bandit sets to forcing the door\.|a door creaking/.test(s)) f.push('its forcing neither seen nor heard');
         if (!picked && !dens.some(e => e.a === K.DE_BURSTS || e.a === K.DE_BATTERS)) f.push('its forcing neither burst the door nor, held, went on to battering');
+        const heard = (de, snd, what) => { if (dens.some(e => e.a === de) && !m.played.some(p => p.who === m.door.k + 1 && p.snd === snd)) f.push(what + ': ' + JSON.stringify(m.played.filter(p => p.who))); };
+        heard(K.DE_STRAINS, WSND.dig, 'its strain at the door not heard as a work noise (the world sound *dig)');
+        heard(K.DE_BATTERS, WSND.blow, 'its blows at the door not heard as a blow (the world sound *blow)');
+        heard(K.DE_BURSTS, WSND.open, 'the door it burst not heard opening (the world sound *open)');
+        this.notes = ['the bandit heard as: ' + [...new Set(m.played.filter(p => p.who === m.door.k + 1).map(p => p.snd))].join(' ')];
         if (process.env.DQ0SHOW) f.push(s.slice(s.indexOf('> lock the door'), s.indexOf('> lock the door') + 2500));
         for (const e of dens.filter(e => e.a >= K.DE_OPENS)) if (e.w1 !== m.door.door[0] || e.w2 !== m.door.door[1]) f.push('a door worked not the one between them: ' + [e.a, e.w1, e.w2]);
         if (f.length) f.push(JSON.stringify(dens.filter(e => e.a).map(e => [e.a, e.w1, e.w2, e.t])) + ' ' + s.slice(s.indexOf('> lock the door'), s.indexOf('> lock the door') + 1800));
