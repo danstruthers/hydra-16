@@ -53,6 +53,13 @@ function layoutOf(H) {
   aX: F('struct actor', 'x'), aY: F('struct actor', 'y'), aDoing: F('struct actor', 'doing'), aName: F('struct actor', 'name'), aArm: F('struct actor', 'arm'), aDropped: F('struct actor', 'dropped'),
   aAttitude: F('struct actor', 'attitude'), aFaction: F('struct actor', 'faction'), aKind: F('struct actor', 'kind'), aDid: F('struct actor', 'did'),
   aReady: F('struct actor', 'ready'), denSeq: F('struct hub', 'den_seq'), agear: F('struct hub', 'agear'), digT: F('struct hub', 'dig_t'),
+  // (An actor's every field by its name, its record's and its heart's too: the tests' pokes by name, not by their place
+  // in the record, so a field added doesn't move what they poke; the hub's tasks, task[T_*])
+  aDen: F('struct actor', 'den'), aGait: F('struct actor', 'gait'), aStep: F('struct actor', 'step'), aMove: F('struct actor', 'move'),
+  aHeart: F('struct actor', 'heart'), aLead: F('struct actor', 'lead'), aPower: F('struct actor', 'power'), aMood: F('struct actor', 'mood'),
+  aServe: F('struct actor', 'serve'), aContact: F('struct actor', 'contact'), aBonds: F('struct actor', 'bonds'), task: F('struct hub', 'task'),
+  // (The bodies by who, the character's actor 0, pc: ONE-PATH.md's stage 1; the denizens' actor[k] is bodies[k + 1])
+  bodies: F('struct hub', 'bodies'), pcBody: F('struct hub', 'pc'),
   themeBank: K('THEME_BANK'), thName: F('struct theme', 'name'), thStratum: F('struct theme', 'stratum'), tstrata: K('TSTRATA'),
   tSname: F('struct sight', 'sname'),
   namesAt: K('NAMES_AT') - 0x8000, tnames: K('TNAMES'), tname: Z('tname'), nmWhat: F('struct tname', 'what'),
@@ -198,7 +205,7 @@ function createRecorder() {
         skew: h[L.pcSkew], lost: h[L.pcLost], noise: h[L.pcNoise], mask: h[L.pcMask], bg: h[L.pcBg], airH: h[L.airH], airS: h[L.airS],
         task: { kind: name('LT_NONE', h[L.pcTask]), asking: h[L.pcTask + 1], len: w16(h, L.pcTask + 2), done: w16(h, L.pcTask + 4), foe: h[L.pcTask + L.ltFoe] - 1, mins: h[L.pcTask + L.ltMins] },
         ready: w16(h, L.pcReady) + w16(h, L.pcReady + 2) * 65536, now: w16(h, L.hubNow) + w16(h, L.hubNow + 2) * 65536,
-        chart: h[L.pcChart], chartk: h[L.pcChartk], map: w16(h, L.pcMap) },
+        chart: h[L.pcChart], chartk: h[L.pcChartk], map: w16(h, L.pcMap), state: h[L.pcBody + L.aState] },   // (state: its body's, actor 0's)
       sum: { cond: w16(h, L.pcsum + L.sCond), health: h[L.pcsum + L.sHealth], load: h[L.pcsum + L.sLoad], sight: h[L.pcsum + L.sSight],
         step: h[L.pcsum + L.sStep], gstep: Array.from(h.subarray(L.pcsum + L.sGstep, L.pcsum + L.sGstep + L.ngaits)),
         limbs: h[L.pcsum + L.sLimbs], limp: h[L.pcsum + L.sLimp], northsense: h[L.pcsum + L.sNorth],

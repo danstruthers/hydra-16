@@ -502,7 +502,7 @@ function dq0Alone(m, h, L, K, at, keep) {
   const R = dq0Rec(m), far = 3000 + (h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16);
   let n = 0;
   for (let k = 0; k < L.nactors; k++) if (k !== keep && h[at(k) + L.aName] && h[at(k) + L.aState]) {
-    const o = R.at(h[at(k) + L.aName + 12]), x = 32706 + (n & 3), y = 32784 + (n++ >> 2);
+    const o = R.at(h[at(k) + L.aDen]), x = 32706 + (n & 3), y = 32784 + (n++ >> 2);
     h[at(k) + L.aX] = R.mem[o + R.X] = x & 255; h[at(k) + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8;
     h[at(k) + L.aY] = R.mem[o + R.Y] = y & 255; h[at(k) + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8;
     h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_FRIENDLY;
@@ -513,7 +513,7 @@ function dq0Alone(m, h, L, K, at, keep) {
 }
 
 function dq0Poke(m, pokes) {
-  const a = m.acia, read = a.read, TAIL = ['heart', 'lead', 'power', 'mood', 'serve', 'contact', 'bonds'];
+  const a = m.acia, read = a.read;
   let typed = '', g = 0, seen = {};
   m.hearts = [];
   a.read = (r, t) => {
@@ -528,7 +528,7 @@ function dq0Poke(m, pokes) {
         const h = m.dq0 && m.dq0.bank(0);
         if (h) {
           const { L, K } = m.dq0.layout(), at = k => L.actor + k * L.actorSize, w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
-          const off = f => TAIL.includes(f) ? L.actorSize - 7 + TAIL.indexOf(f) : L['a' + f[0].toUpperCase() + f.slice(1)];
+          const off = f => L['a' + f[0].toUpperCase() + f.slice(1)];   // (An actor's field by its name: dq0meaning's layout)
           const named = k => { let n = ''; for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]); return n; };
           for (const p of pokes) if (p.g === g && p.line === typed && p.n === seen[typed]) {
             for (const [f, v] of Object.entries(p.hub || {})) h[L[f]] = v;   // (The hub's own bytes, by the layout's names: pcSkew)
@@ -592,7 +592,7 @@ function dq0Poke(m, pokes) {
             if (k === undefined) continue;
             for (const [f, v] of Object.entries(p.set || {})) if (f === 'x' || f === 'y') w16(at(k) + off(f), v); else h[at(k) + off(f)] = v;
             if (p.beside !== undefined || p.engage) {   // (Put beside the character, engaged: the hub's and its record's)
-              const R = dq0Rec(m), o = R.at(h[at(k) + L.aName + 12]), r16 = (q, v) => { R.mem[o + q] = v & 255; R.mem[o + q + 1] = v >> 8 & 255; };
+              const R = dq0Rec(m), o = R.at(h[at(k) + L.aDen]), r16 = (q, v) => { R.mem[o + q] = v & 255; R.mem[o + q + 1] = v >> 8 & 255; };
               if (p.beside !== undefined) {
                 const d = p.beside === 'face' ? h[L.pcFace] : p.beside, x = (h[L.pcX] | h[L.pcX + 1] << 8) + [0, 1, 1, 1, 0, -1, -1, -1][d & 7],
                   y = (h[L.pcY] | h[L.pcY + 1] << 8) + [-1, -1, 0, 1, 1, 1, 0, -1][d & 7];
@@ -611,26 +611,26 @@ function dq0Poke(m, pokes) {
               h[L.denSeq] = h[L.denSeq] + 1 & 255;
             }
             if (p.senseless) {                  // (Senseless, for the tenths given, as the referee has it and the world: down, prone, 2026-11-03)
-              const S = dq0Sheet(m), o = S.at(h[at(k) + L.aName + 12]), now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16 | h[L.now + 3] << 24, till = (now + p.senseless) >>> 0, rd = L.actor + k * L.actorSize + L.aReady;
+              const S = dq0Sheet(m), o = S.at(h[at(k) + L.aDen]), now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16 | h[L.now + 3] << 24, till = (now + p.senseless) >>> 0, rd = L.actor + k * L.actorSize + L.aReady;
               S.mem[o + S.STATE] = S.mem[o + S.STATE] & ~3 | 1;
               for (let i = 0; i < 4; i++) S.mem[o + S.OUT + i] = h[rd + i] = till >>> (8 * i) & 255;
               h[at(k) + L.aDoing] = K.DO_DOWN;
               h[at(k) + L.aPos] = K.POS_PRONE;
             }
             if (p.hurt) {                       // (Hurt, as the referee has it: a minor injury of the levels given, every test of its the worse by five points a level: its Dodge within reach of a blow, its courage shaken, 2026-11-04)
-              const S = dq0Sheet(m), o = S.at(h[at(k) + L.aName + 12]);
+              const S = dq0Sheet(m), o = S.at(h[at(k) + L.aDen]);
               S.mem[o + 9] = 1;                 // (Its ninj, its inj[0] at 10: a location, an aspect, HARN_MINOR, its level)
               S.mem.set([0, 0, 1, p.hurt, 0, 0], o + 10);
             }
             if (p.lame) {                       // (Prone, seriously wounded and Agility 1, as the referee has it: its Rise an Agility test failed, 2026-11-03)
-              const S = dq0Sheet(m), o = S.at(h[at(k) + L.aName + 12]);
+              const S = dq0Sheet(m), o = S.at(h[at(k) + L.aDen]);
               S.mem[o + 4] = 1;                 // (struct beast's att[3])
               S.mem[o + 9] = 1;                 // (Its ninj, its inj[0] at 10: a location, an aspect, HARN_SERIOUS, its level 2)
               S.mem.set([0, 0, 2, 2, 0, 0], o + 10);
               h[at(k) + L.aPos] = K.POS_PRONE;
             }
             if (p.rec) {
-              const R = dq0Rec(m), o = R.at(h[at(k) + L.aName + 12]);
+              const R = dq0Rec(m), o = R.at(h[at(k) + L.aDen]);
               if (p.rec.or) R.mem[o + R.FLAGS] |= p.rec.or;
               if (p.rec.serve !== undefined) R.mem[o + R.SERVE] = p.rec.serve;
               if (p.rec.contact !== undefined) R.mem[o + R.CONTACT] = p.rec.contact;
@@ -641,8 +641,8 @@ function dq0Poke(m, pokes) {
             let n = '';
             for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]);
             if (n) {
-              const t = h.subarray(at(k) + L.actorSize - 7, at(k) + L.actorSize), R = dq0Rec(m), o = R.at(h[at(k) + L.aName + 12]);
-              acts.push({ k, name: n, heart: (t[0] << 24) >> 24, lead: t[1], power: t[2], mood: t[3], bonds: t[6], doing: h[at(k) + L.aDoing],
+              const R = dq0Rec(m), o = R.at(h[at(k) + L.aDen]);
+              acts.push({ k, name: n, heart: (h[at(k) + L.aHeart] << 24) >> 24, lead: h[at(k) + L.aLead], power: h[at(k) + L.aPower], mood: h[at(k) + L.aMood], bonds: h[at(k) + L.aBonds], doing: h[at(k) + L.aDoing],
                 rank: R.mem[o + R.FLAGS] >> 5 & 3, prom: !!(R.mem[o + R.FLAGS] & 0x80) });
             }
           }

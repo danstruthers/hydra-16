@@ -32,7 +32,7 @@ function dq0BodyPoke(m, pokes) {
             let n = '';
             for (let i = 0; h[o + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[o + L.aName + i]);
             if (!n) continue;
-            const den = h[o + L.aName + 12], q = B.at(den), mem = B.mem;
+            const den = h[o + L.aDen], q = B.at(den), mem = B.mem;
             let poked = false;
             for (const p of pokes) if (p.g === g && p.line === typed && p.n === seen[typed] && p.name === n) {
               if (p.lv !== undefined) mem[q] = p.lv;
@@ -780,7 +780,7 @@ module.exports = {
           let n = 0;
           for (let k = 0; k < L.nactors; k++) {
             if (!h[at(k) + L.aName] || !h[at(k) + L.aState]) continue;
-            const o = R.at(h[at(k) + L.aName + 12]), q = S.at(h[at(k) + L.aName + 12]), [x, y] = [[32720, 32721], [32719, 32721], [32719, 32722], [32720, 32722]][n++ & 3];
+            const o = R.at(h[at(k) + L.aDen]), q = S.at(h[at(k) + L.aDen]), [x, y] = [[32720, 32721], [32719, 32721], [32719, 32722], [32720, 32722]][n++ & 3];
             h[at(k) + L.aX] = R.mem[o + R.X] = x & 255; h[at(k) + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8;
             h[at(k) + L.aY] = R.mem[o + R.Y] = y & 255; h[at(k) + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8;
             h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_WARY;
@@ -822,7 +822,7 @@ module.exports = {
           if (go) { w16(L.pcX, 32705); w16(L.pcY, 32735); }   // (A step from it to a long room's corner)
           let n = 0;
           for (let k = 0; k < L.nactors; k++) if (h[at(k) + L.aName] && h[at(k) + L.aState]) {
-            const o = R.at(h[at(k) + L.aName + 12]), q = S.at(h[at(k) + L.aName + 12]), [x, y] = !n && rat ? [32707, 32734] : [32705 + n, 32741];
+            const o = R.at(h[at(k) + L.aDen]), q = S.at(h[at(k) + L.aDen]), [x, y] = !n && rat ? [32707, 32734] : [32705 + n, 32741];
             ++n;
             w16(at(k) + L.aX, x); w16(at(k) + L.aY, y);
             R.mem[o + R.X] = x & 255; R.mem[o + R.X + 1] = x >> 8; R.mem[o + R.Y] = y & 255; R.mem[o + R.Y + 1] = y >> 8;
@@ -866,7 +866,7 @@ module.exports = {
           const R = dq0Rec(m), S = dq0Sheet(m), now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16, due = now + 3000; let n = 0;
           const px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8;
           for (let k = 0; k < L.nactors; k++) if (h[at(k) + L.aName] && h[at(k) + L.aState]) {
-            const o = R.at(h[at(k) + L.aName + 12]), q = S.at(h[at(k) + L.aName + 12]), x = n ? 32719 + n : px - 1, y = n ? 32721 : py;
+            const o = R.at(h[at(k) + L.aDen]), q = S.at(h[at(k) + L.aDen]), x = n ? 32719 + n : px - 1, y = n ? 32721 : py;
             ++n;
             h[at(k) + L.aX] = R.mem[o + R.X] = x & 255; h[at(k) + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8; h[at(k) + L.aY] = R.mem[o + R.Y] = y & 255; h[at(k) + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8;
             h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_WARY; h[at(k) + L.aDoing] = K.DO_WATCH;
@@ -996,7 +996,7 @@ module.exports = {
                   const tile = (x, y) => { const c = S && liveChunks(m, sn)[((x - S.x0) >> 5) + ',' + ((y - S.y0) >> 5)]; return c ? c[443 + ((y - S.y0) & 31) * 32 + ((x - S.x0) & 31)] & 15 : -1; };
                   const busy = (x, y) => [...Array(L.nactors).keys()].some(q => h[at(q) + L.aState] && u(at(q) + L.aX) === x && u(at(q) + L.aY) === y) || (u(L.pcX) === x && u(L.pcY) === y);
                   const d = [[0, -1], [1, 0], [0, 1], [-1, 0]].find(([dx, dy]) => [1, 4].includes(tile(x0 + dx, y0 + dy)) && !busy(x0 + dx, y0 + dy));
-                  if (d) { const x = x0 + d[0], y = y0 + d[1], o = at(rats[1]); h[o + L.aX] = x & 255; h[o + L.aX + 1] = x >> 8; h[o + L.aY] = y & 255; h[o + L.aY + 1] = y >> 8; h[o + L.aSn] = sn; const R = dq0Rec(m), q = R.at(h[o + L.aName + 12]); R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8; h[L.denSeq] = h[L.denSeq] + 1 & 255; }
+                  if (d) { const x = x0 + d[0], y = y0 + d[1], o = at(rats[1]); h[o + L.aX] = x & 255; h[o + L.aX + 1] = x >> 8; h[o + L.aY] = y & 255; h[o + L.aY + 1] = y >> 8; h[o + L.aSn] = sn; const R = dq0Rec(m), q = R.at(h[o + L.aDen]); R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8; h[L.denSeq] = h[L.denSeq] + 1 & 255; }
                 }
               }
               typed = '';

@@ -397,7 +397,7 @@ module.exports = {
           w16(L.pcY, 32762);
           let n = 0;
           for (let k = 0; k < L.nactors; k++) if (h[at(k) + L.aName] && h[at(k) + L.aState]) {
-            const o = R.at(h[at(k) + L.aName + 12]), [x, y] = n ? [32708 + n, 32768] : [32712, 32762];
+            const o = R.at(h[at(k) + L.aDen]), [x, y] = n ? [32708 + n, 32768] : [32712, 32762];
             m.watched = n ? m.watched : k;
             ++n;
             w16(at(k) + L.aX, x); w16(at(k) + L.aY, y);

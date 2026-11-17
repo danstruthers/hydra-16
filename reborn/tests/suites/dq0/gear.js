@@ -1301,7 +1301,7 @@ module.exports = {
           const u16 = o => h[o] | h[o + 1] << 8, w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
           const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
           if (k === undefined) return;
-          const px = u16(L.pcX), py = u16(L.pcY), x = px + 1, y = py, R = dq0Rec(m), q = R.at(h[at(k) + L.aName + 12]);
+          const px = u16(L.pcX), py = u16(L.pcY), x = px + 1, y = py, R = dq0Rec(m), q = R.at(h[at(k) + L.aDen]);
           w16(at(k) + L.aX, x);
           w16(at(k) + L.aY, y);
           h[at(k) + L.aSn] = h[L.pcSn];

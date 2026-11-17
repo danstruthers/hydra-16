@@ -113,7 +113,7 @@ function dq0DoorScene(m, on, who, how) {
             h[o + L.aSn] = sn;
             h[o + L.aAttitude] = K.AT_HOSTILE;
             h[o + L.aDoing] = 0;
-            const R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);
+            const R = dq0Rec(m), q = R.at(h[o + L.aDen]);
             R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8;
             R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8;
             R.mem[q + R.SN] = sn;
@@ -195,7 +195,7 @@ module.exports = {
                   h[o + L.aSn] = sn;
                   h[o + L.aAttitude] = K.AT_HOSTILE;
                   h[o + L.aDoing] = 0;
-                  const R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);
+                  const R = dq0Rec(m), q = R.at(h[o + L.aDen]);
                   R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8;
                   R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8;
                   R.mem[q + R.SN] = sn;
@@ -479,7 +479,7 @@ module.exports = {
                   h[o + L.aSn] = sn;
                   h[o + L.aAttitude] = K.AT_HOSTILE;
                   h[o + L.aDoing] = 0;
-                  const R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);
+                  const R = dq0Rec(m), q = R.at(h[o + L.aDen]);
                   R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8;
                   R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8;
                   R.mem[q + R.SN] = sn;
@@ -543,7 +543,7 @@ module.exports = {
                 const on = (k, q) => u16(at(k) + L.aX) === q[0] && u16(at(k) + L.aY) === q[1];
                 const k = up.find(j => on(j, m.door.door)) ?? up.find(j => on(j, m.door.beyond)) ?? up[0];
                 if (k !== undefined && (m.door.state(...m.door.door) & 1)) {
-                  const [x, y] = m.door.beyond, o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);
+                  const [x, y] = m.door.beyond, o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aDen]);
                   w16(o + L.aX, x);
                   w16(o + L.aY, y);
                   R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8;
@@ -689,7 +689,7 @@ module.exports = {
                   h[o + L.aSn] = sn;
                   h[o + L.aDoing] = 0;
                   h[L.agear + k] &= ~1;           // (AG_ARMED: none to hand)
-                  const R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);
+                  const R = dq0Rec(m), q = R.at(h[o + L.aDen]);
                   R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8;
                   R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8;
                   R.mem[q + R.SN] = sn;
@@ -1073,7 +1073,7 @@ module.exports = {
               const { L } = m.dq0.layout(), h = m.dq0.bank(0), at = k => L.actor + k * L.actorSize, ram = m.taskRam[h[12 + 2]];
               const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
               const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16);
-              const read = k => ({ k, den: h[at(k) + L.aName + 12], name: (() => { let n = ''; for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]); return n; })(),
+              const read = k => ({ k, den: h[at(k) + L.aDen], name: (() => { let n = ''; for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]); return n; })(),
                 state: h[at(k) + L.aState], drawn: ram[ad('drawn') + k], fooled: ram[ad('fooled') + k], atry: ram[ad('atry') + k], pway: ram[ad('pway') + k],
                 afx: ram[ad('afx') + 2 * k] | ram[ad('afx') + 2 * k + 1] << 8, digt: h[L.digT + 2 * k] | h[L.digT + 2 * k + 1] << 8, agear: h[L.agear + k] });
               if (typed === 'd') {             // (Every entry full of what no fresh one has)
@@ -1129,7 +1129,7 @@ module.exports = {
           const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
           if (k === undefined) return null;
           dq0Alone(m, h, L, K, at, k);
-          const sn = h[L.pcSn], o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);
+          const sn = h[L.pcSn], o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aDen]);
           w16(o + L.aX, x); w16(o + L.aY, y); h[o + L.aSn] = sn; h[o + L.aDoing] = 0; h[o + L.aState] = 1; h[o + L.aPos] = K.POS_STANDING;
           for (let i = 0; i < 4; i++) h[o + L.aReady + i] = h[L.hubNow + i];
           R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8; R.mem[q + R.SN] = sn;
@@ -1228,7 +1228,7 @@ module.exports = {
           const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && h[at(j) + L.aSn] === sn && named(j) === 'dwarf miner');
           if (k === undefined) { m.allyWhy = [...Array(L.nactors).keys()].map(j => [named(j), h[at(j) + L.aState], h[at(j) + L.aSn]]); return; }
           dq0Alone(m, h, L, K, at, k);
-          const x = px + dx, y = py + dy, o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);   // (Before the portcullis, its winch's side: where the character stood)
+          const x = px + dx, y = py + dy, o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aDen]);   // (Before the portcullis, its winch's side: where the character stood)
           w16(o + L.aX, x); w16(o + L.aY, y); h[o + L.aSn] = sn; h[o + L.aDoing] = 0; h[o + L.aState] = 1; h[o + L.aAttitude] = K.AT_ALLIED; h[o + L.aPos] = K.POS_STANDING;
           for (let i = 0; i < 4; i++) h[o + L.aReady + i] = h[L.hubNow + i];
           R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8; R.mem[q + R.SN] = sn;
@@ -1286,7 +1286,7 @@ module.exports = {
                 m.diag.why = 'actors ' + live.length;
                 if (k !== undefined) {
                   dq0Alone(m, h, L, K, at, k);
-                  const [x, y] = m.diag.start, o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);
+                  const [x, y] = m.diag.start, o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aDen]);
                   w16(o + L.aX, x);
                   w16(o + L.aY, y);
                   h[o + L.aSn] = sn;
@@ -1496,7 +1496,7 @@ module.exports = {
         self.dead = {};
         // (The capital's actor: its record the UI bank's cap's id, CAP_DEN's, the actor's record the byte after its name)
         const capk = (h, L, at, c) => { const u = m.dq0.bank(L.uiBank), o = L.uCap + c * L.ucapSize, id = u[o] | u[o + 1] << 8;
-          return id >= 0xFF00 && u[o + 2] === 2 ? [...Array(L.nactors).keys()].find(j => h[at(j) + L.aName] && h[at(j) + L.aName + 12] === (id & 255)) : undefined; };
+          return id >= 0xFF00 && u[o + 2] === 2 ? [...Array(L.nactors).keys()].find(j => h[at(j) + L.aName] && h[at(j) + L.aDen] === (id & 255)) : undefined; };
         const wary = (h, L) => { for (let k = 0; k < L.nactors; k++) if (h[L.actor + k * L.actorSize + L.aName]) h[L.actor + k * L.actorSize + L.aAttitude] = 2; };
         const pa = { g: 1, line: 'attack C', n: 1, beside: 0, senseless: 6000 }, pc = { g: 1, line: 'attack C', n: 1, beside: 0, senseless: 6000 };
         const pb = { g: 1, line: 'attack C', n: 1, senseless: 60000 };   // (B out of it, senseless where it is: no fight for the test's words)
@@ -1616,7 +1616,7 @@ module.exports = {
         const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) \\._' + n + '$', 'm').exec(lbl())[1], 16);
         const ramOf = h => { const t = h[12 + 2]; return m.taskRam[t]; };
         const place = (h, L, K, at, R, k, x, y, att, fac) => {
-          const o = R.at(h[at(k) + L.aName + 12]);
+          const o = R.at(h[at(k) + L.aDen]);
           h[at(k) + L.aX] = R.mem[o + R.X] = x & 255; h[at(k) + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8; h[at(k) + L.aY] = R.mem[o + R.Y] = y & 255; h[at(k) + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8;
           h[at(k) + L.aSn] = h[L.pcSn];
           h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = att;
@@ -1689,7 +1689,7 @@ module.exports = {
           const px = u16(L.pcX), py = u16(L.pcY), sn = h[L.pcSn], f = h[L.pcFace], dx = [0, 1, 1, 1, 0, -1, -1, -1][f], dy = [-1, -1, 0, 1, 1, 1, 0, -1][f];
           const k = [...Array(L.nactors).keys()].find(j => named(j) === 'dwarf miner');
           if (k === undefined) return;
-          const x = px + 2 * dx, y = py + 2 * dy, o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aName + 12]), did = u16(o + L.aDid);
+          const x = px + 2 * dx, y = py + 2 * dy, o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aDen]), did = u16(o + L.aDid);
           const per = Math.floor(0x2000 / L.itemSize);
           let thing = 0;
           for (let i = 1; i < L.nitems && !thing; i++) {
@@ -1736,7 +1736,7 @@ module.exports = {
           let n = 0;
           for (let k = 0; k < L.nactors; k++) if (h[at(k) + L.aName] && h[at(k) + L.aState]) {
             if (!n++) {
-              const x = px + 1, y = py, o = R.at(h[at(k) + L.aName + 12]);
+              const x = px + 1, y = py, o = R.at(h[at(k) + L.aDen]);
               h[at(k) + L.aX] = R.mem[o + R.X] = x & 255; h[at(k) + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8; h[at(k) + L.aY] = R.mem[o + R.Y] = y & 255; h[at(k) + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8;
               h[at(k) + L.aSn] = h[L.pcSn];
               h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_FRIENDLY; h[at(k) + L.aDoing] = K.DO_ROAM;
@@ -2111,7 +2111,7 @@ module.exports = {
                 const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && h[at(j) + L.aDoing] >= K.DO_LEISURE);
                 if (k !== undefined) {
                   const d = h[L.pcFace] & 7, x = (h[L.pcX] | h[L.pcX + 1] << 8) + [0, 1, 1, 1, 0, -1, -1, -1][d], y = (h[L.pcY] | h[L.pcY + 1] << 8) + [-1, -1, 0, 1, 1, 1, 0, -1][d];
-                  const R = dq0Rec(m), o = R.at(h[at(k) + L.aName + 12]);
+                  const R = dq0Rec(m), o = R.at(h[at(k) + L.aDen]);
                   w16(at(k) + L.aX, x);
                   w16(at(k) + L.aY, y);
                   h[at(k) + L.aSn] = h[L.pcSn];

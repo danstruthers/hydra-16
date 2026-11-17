@@ -197,7 +197,7 @@ function dq0LineTest() {
         let k = m.lineK;
         if (k === undefined) k = m.lineK = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'dwarf miner');
         if (k === undefined) return;
-        const x = px + 4 * dx, y = py + 4 * dy, o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);
+        const x = px + 4 * dx, y = py + 4 * dy, o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aDen]);
         dq0Alone(m, h, L, K, at, k);
         w16(o + L.aX, x); w16(o + L.aY, y);
         h[o + L.aSn] = h[L.pcSn];
@@ -289,7 +289,7 @@ function dq0RouteTest() {
         const f = [0, 1, 2, 3].map(j => (j + (h[L.pcFace] >> 1)) & 3).find(j => floor(j, 0, 4) && (floor(j, 1, 3) || floor(j, -1, 3)));
         if (f === undefined) { m.route = { none: true }; return; }
         const dx = DX[f], dy = DY[f], x = px + 4 * dx, y = py + 4 * dy, mx = px + 2 * dx, my = py + 2 * dy;
-        const o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aName + 12]), w16 = (p, v) => { h[p] = v & 255; h[p + 1] = v >> 8 & 255; };
+        const o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aDen]), w16 = (p, v) => { h[p] = v & 255; h[p + 1] = v >> 8 & 255; };
         dq0Alone(m, h, L, K, at, k);
         w16(o + L.aX, x); w16(o + L.aY, y);
         h[o + L.aSn] = sn;
