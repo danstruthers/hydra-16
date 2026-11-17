@@ -1887,7 +1887,7 @@ The user asked for a fresh look at the command processor (COMMANDS-CRITIQUE.md a
 
 ## The build places the swapped parts (2026-11-07, as built, for review)
 
-The user: "Go ahead with the auto-packer" (ENGINE-CRITIQUE.md's Â§1.2, after the parts' stubs and config were made by the build).
+The user: "Go ahead with the auto-packer" (ENGINE-CRITIQUE.md's §1.2, after the parts' stubs and config were made by the build).
 
 - **The parts' banks are the build's.** parts.txt's bank is a part's wish.  The build reads every segment's size from the objects before the link (od65).  A bank whose wishers don't fit moves out the fewest bytes (the smallest part that makes room), each to the bank of the same file with the least room that holds it: the world's dq0w.rop, read only as ropes are first wanted, keeps its own.  A growing overlay pushes part images elsewhere instead of failing the build.
 - **Calls are routed by part** (pack.js's route, every build): s_NAME called from outside its part becomes NAME, its stub; NAME called from inside its part becomes s_NAME, straight.  So a function moved is its pragma alone, whatever its callers write.  Two of the UI's stubs went (called only from inside their part).
@@ -1912,15 +1912,15 @@ The sweep's last three gaps, and the first of the features as things (the stairs
 - **The sweep has no gaps left**: every one of its 134 lines names its thing, and the take, light, look, examine and sniff answers are held word for word.
 - **The UI's banks: a last resort, measured and kept out of use.**  At one point these few hundred bytes left no UI bank with room for part 17, even with one part moved out for it, so the bank packer has a last resort: every part of that file placed again, the biggest first, each in the bank with the least room that holds it.  It worked, but the packed overlays came out 3.5K bigger (the parts scattered pack worse), and the start went 1.7M cycles over its budget (dq0starttime: 226.7M of 225.0M).  So it stays a last resort, and part 17 was trimmed instead (8 bytes): nothing moves today.  The UI's banks have about 4K free between them, in pieces; the next sizeable UI feature needs a bank more (as overlay 23 was for the designators) or space won back (the refusal table, features as data).
 
-### The resolver's choice kept (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's Â§5.1, step A)
+### The resolver's choice kept (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's §5.1, step A)
 
-A survey found six choosers deciding what a name means, and twelve ways they disagree (COMMANDS-CRITIQUE.md's Â§5.1).  The first: the UI's resolver chose one of several things lying about ("the closest", "the largest", an answer to its "Which do you mean?"), then sent the world only the name, and the world chose again by its own rules.  "take the closest torch", with a lit one at your feet and an unlit one a step off, asked "Which one? (E) a torch (lit), (F) a torch".
+A survey found six choosers deciding what a name means, and twelve ways they disagree (COMMANDS-CRITIQUE.md's §5.1).  The first: the UI's resolver chose one of several things lying about ("the closest", "the largest", an answer to its "Which do you mean?"), then sent the world only the name, and the world chose again by its own rules.  "take the closest torch", with a lit one at your feet and an unlit one a step off, asked "Which one? (E) a torch (lit), (F) a torch".
 
 - **Now** the resolver's choice of several is sent as that thing's id (letters.c's des_seen adds it to the line's handles, as a letter's is), and the world takes that one: "take the closest torch" takes the lit one at once.  Test dq0closest (it fails on the old code with the "Which one?").
 - **One candidate alone** is still left to the world, whose rule puts what's in hand first: "light the torch" with one lying about and one lit in hand is still "The torch is lit already." (the sweep caught this when every choice was sent).
-- **Next** (Â§5.1's order of work): "it" and "take all" carrying ids; then one chooser for things in the UI, over what's carried and what's seen together, which will need a staging overlay bank.
+- **Next** (§5.1's order of work): "it" and "take all" carrying ids; then one chooser for things in the UI, over what's carried and what's seen together, which will need a staging overlay bank.
 
-### The carried thing chosen once (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's Â§5.1, step C's first half)
+### The carried thing chosen once (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's §5.1, step C's first half)
 
 The user approved a staging overlay bank (overlay 24) and step C.  What's built:
 
@@ -1929,7 +1929,7 @@ The user approved a staging overlay bank (overlay 24) and step C.  What's built:
 - **Not done, and why:** a chooser of its own in overlay 24 copied what's carried a second time and made the first words 30,000 cycles slower, past the user's 720,000 for a first letter (dq0torchwords); so the choice is made final in sway.c, where the first words already make it.  Things lying about stay the world's to choose: the UI's sight record holds only six of them, and the world also chooses among things remembered in the dark.
 - **Overlay 24** is in the game, empty of code for now; the bank packer moved part 6's image into it when overlay 20 grew by this change.  It's for step D (one "which?" question).
 
-### One "Which one?" for things and denizens (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's Â§5.1, step D)
+### One "Which one?" for things and denizens (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's §5.1, step D)
 
 The user: "Do D then finish C, and if you can do them in parallel, do that."  (Step C's second half is being done alongside, separately.)
 
@@ -1938,7 +1938,7 @@ The user: "Do D then finish C, and if you can do them in parallel, do that."  (S
 - **Not yet:** the doors' and openings' question (choose.c's "Which door: 1. ..."), answered by a number or a way; doors have no capitals until features are lettered (step E).  And "Drop what? [a, d, f]" keeps its own form.
 - **Room:** the new code is in overlay 24 (which.c); resolve.c's overlay 11 went from 7 bytes free to 1,097.
 
-### A state said, the carried thing chosen once too (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's Â§5.1, step C)
+### A state said, the carried thing chosen once too (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's §5.1, step C)
 
 The carried thing the first words choose is now the world's with a state said too ("drop the spent torch", "drop the full pot", "hold the open sack"), as the step before left out.  What's built:
 
@@ -1947,7 +1947,7 @@ The carried thing the first words choose is now the world's with a state said to
 - **Test dq0statesel:** potsherds before a pot of pitch in the pack, "drop the full pot" puts down the pitch (with the old flags the UI chose the sherds and the world, given them, said "You carry none of those."); "drop the open basket" puts nothing down; "drop the spent torch" is the one burnt out in hand.
 - **Room:** the UI's overlay 20 has 2,876 bytes free (73 used by this), the world's part 102 931 (60 used).  The start 225.8M cycles at seed 1 (its budget 226M).
 
-### The doors' "Which door?" the same question (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's Â§5.1, step E)
+### The doors' "Which door?" the same question (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's §5.1, step E)
 
 The user: "Finish up 5.1, please, on parallel threads."  (Steps B and F are being done alongside, separately.)
 
@@ -1955,7 +1955,7 @@ The user: "Finish up 5.1, please, on parallel threads."  (Steps B and F are bein
 - **Not lettered.**  Giving doors and openings capitals would change every room's words ("a door (G) ahead"); the designators' design gave capitals to things and denizens only.  So doors are numbered in the question, and nothing else about them changed.  If you want them lettered too, that's a small step from here.
 - **Room:** choose.c's own answer and kept command are gone (overlay 7: 40 bytes free to 255); the new code is in overlay 24.
 
-### One name match (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's Â§5.1, step F)
+### One name match (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's §5.1, step F)
 
 Six rules decided whether a word typed names a thing: the world's chooser's (a word of the name or its start, a plural, the end of the name: "pack" a backpack), the world's other copy without the end, the resolver's (whole words, a plural, and a qualifier checked), the first words' (a copy of the chooser's, and `strstr` for things seen), and the blows' `strstr`.  "pack" found the backpack in the world and nothing in the resolver.  What's built:
 
@@ -1966,7 +1966,7 @@ Six rules decided whether a word typed names a thing: the world's chooser's (a w
 - **Test dq0namematch:** the backpack put down, "target the pack" and "target the bon" find it and the bones (before: "You see no pack here.", "You see no bon here."); "target the black rat" finds none of the giant rats.  No other test's expectations changed.
 - **Room:** in assembly, as the C was 550 bytes and left the UI's main RAM under its 2,048: the main RAM 2,560 bytes free to 2,194; overlays 1 from 1 to 443, 11 from 1,097 to 1,507, 20 from 2,876 to 3,197.  The world's main RAM 2,894 to 2,791, its part 4 134 to 447.  The start 225.3M cycles at seed 1 (its budget 226M); all 421 tests pass.
 
-### "It" and "take all" by the thing, not its word (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's Â§5.1, step B)
+### "It" and "take all" by the thing, not its word (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's §5.1, step B)
 
 Two more places where the UI knew which thing was meant and sent the world only its name, for the world to choose again (the survey's disagreements 8 and 12).
 
@@ -1976,7 +1976,7 @@ Two more places where the UI knew which thing was meant and sent the world only 
 - **Test dq0it:** both, in one game at seed 3; it fails on the old code with the hidden torch taken, and "Which one?" for "take it".
 - **Room:** the handles' adder (letters.c's des_add) is in overlay 24 (542 bytes of it: 1,736 left), as overlay 22 has 570 and the code reads the store's records and the letters itself; resolve.c's overlay 11 used 171 (926 left), sway.c's overlay 20 27 (2,849 left); the main RAM 13 bytes (2,547 left).  The start 225.5M cycles at seed 1 (its budget 226M); all 421 tests pass.
 
-### Â§5.1's last disagreements, and the start's budget (2026-11-07, as built, for review)
+### §5.1's last disagreements, and the start's budget (2026-11-07, as built, for review)
 
 The user: "Don't worry too much about the startup time.  If you need to rewrite some of the portions in assembly, do so.  Do whatever cleanup you can, and then start the next piece of the critiques work."
 
@@ -1984,16 +1984,16 @@ The user: "Don't worry too much about the startup time.  If you need to rewrite 
 - **The disagreements the AâF steps didn't close**, closed: the first words of a thing named by a capital or another handle never borrow a carried thing of its name (7); "attack the rat with the other sword" takes the other sword in hand, the instrument's own selector, not the rat's (9); "attack the rat" with several rats in sight goes for the nearest, the resolver's choice, its square the fight's to go by, not the first in the actors' table (11); "You look them over." is said only when two of those seen differ, as the world then asks which; two alike, the one taken is reached for (5, test dq0leftovers).  "The second" settles as one order for each kind: carried things the UI's, things lying about the world's, denizens the resolver's (2).
 - **Clean-up:** the three parallel agents' worktrees and branches removed (one folder under .claude/worktrees still held open by a process, left to go); stray single-byte section signs written into four sources made UTF-8.
 
-### The second sweep: every command that names a thing answers about it (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's Â§5.2, step G)
+### The second sweep: every command that names a thing answers about it (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's §5.2, step G)
 
-The next piece of the critiques' work, after Â§5.1: the dispatch (Â§5.2).  Its first step is a second sweep of the verbs the first one didn't cover, the same rule (an answer names the thing named), and the gaps it found closed.
+The next piece of the critiques' work, after §5.1: the dispatch (§5.2).  Its first step is a second sweep of the verbs the first one didn't cover, the same rule (an answer names the thing named), and the gaps it found closed.
 
 - **Test dq0sweep2:** eat, drink, fill, look in, tie, untie, wear, push, pull, unlock, lock, raise, lower, disarm, force, bend and bar, each at the pot, the well, the sconce, the stairs, the wall, the backpack worn, the torch in hand and the sack carried: 136 lines, 55 of them broke the rule, none now.
 - **What changed:** "eat the pot" said "You're not hungry."; now "You can't eat the iron pot." (a thing named must be food, its kind's key, or water, a waterskin, the well; one not to hand, "You have no apples."); not hungry with food named, "You're not hungry. You leave the rations be."  "raise the pot", "bend the pot", "bar the pot", "disarm the pot" went looking for a door or a trap; now "You can't raise the pot." (a door's or a window's own part by its word still taken: "lift the bar", "bend the bars").  Eat, drink, fill, tie, untie, wear and look in at the stairs or a wall: "You can't fill the stairs." (look in still works at a door, a window, a passage, a shaft).
 - **For review, odd but named:** "tie the torch" says "You can't close the torch."; "wear the torch" says "You hold the lit torch in your left hand already."
 - **"take all" holds its next thing while a line is being typed.**  The test of the user's rule for a line typed during a reach (dq0reachstop) caught "stop" typed during "take all" acted on only after the next thing was reached for and taken: the next was started as soon as the UI was free, whatever was being typed, so the order turned on timing.  Now the next waits while a line is half typed; a stop, once entered, ends the take as the rule says; any other line is held till the take's end, as before.
 
-### Refusals as data (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's Â§5.2, step K)
+### Refusals as data (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's §5.2, step K)
 
 The same refusal was worded, or built, in many places: "You see no %s here." in eight, "out of reach" four ways, a dozen "<verb> what?".  What's built:
 
@@ -2008,12 +2008,12 @@ The same refusal was worded, or built, in many places: "You see no %s here." in 
   - "There's nothing written on it." (read, a part of the place named with no word: read.c) â "There's nothing written on the way out." (U_NOTE, the line after its verb, as refuse.c's rows say it).
   - "You can't eat the pot." (feed.c, from its word) â the same from the line (U_CANT): "eat pot" says "You can't eat pot.".
   - Not changed in wording, only where it's kept: "You see no %s here." (resolve.c twice, words.c twice, way.c, tend.c, errand.c twice, sway.c), "You have no %s." (errand.c, feed.c twice), "There's nothing here to take." (resolve.c twice), "You haven't seen a(n) %s here/that way." (way.c, choose.c).
-- **Left as they are, on purpose:** the questions with a hint or another shape ("Throw it at what? (throw the dagger at the rat ...)", "Give it to whom?", "Fetch what?" (an order: its line isn't "fetch"), "Name it what?", "Use what, and on what? ...", "Combine what with what? ..."); the "Which one?" headings (caps.c, which.c: a question's start, its choices after it); the per-action templates of Â§4.5 (refuse.c's rules[] rows are what there is of them).
+- **Left as they are, on purpose:** the questions with a hint or another shape ("Throw it at what? (throw the dagger at the rat ...)", "Give it to whom?", "Fetch what?" (an order: its line isn't "fetch"), "Name it what?", "Use what, and on what? ...", "Combine what with what? ..."); the "Which one?" headings (caps.c, which.c: a question's start, its choices after it); the per-action templates of §4.5 (refuse.c's rules[] rows are what there is of them).
 - **Tests:** expectations changed only where a wording did: dq0hide ("You see no ... here", either form), dq0firstword ("take the pumpkin": "You see no pumpkin here."), dq0moving ("can't get near enough"), dq0parse (the gift out of reach), the repeats allowed in dq0engage (both forms).  No behaviour changed, so no new test.
 - **Room:** the main RAM 2,150 bytes free to 2,139 (the stub); the banks, overlays and parts together, 8,619 free to 8,723 (the build repacked the parts among the banks, so single overlays moved a lot: refuse.c's 700-odd bytes out of overlay 1, the four strings out of tell.c's overlay 14).
 - **All 424 tests pass,** dq0sweep and dq0sweep2 among them.
 
-### One path for things, one walk over (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's Â§5.2, steps H and I)
+### One path for things, one walk over (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's §5.2, steps H and I)
 
 A survey found some fifteen handlers each doing part of what `handle()` does for a thing (ask the world, walk over if it's out of reach, ask which if several differ, word it, charge the time), and the walk over then the command again written four times.
 
@@ -2028,7 +2028,7 @@ A survey found some fifteen handlers each doing part of what `handle()` does for
 - **Test dq0onepath:** both hides, at seed 3. On the old code "hide the bones" said "You carry none of those.".
 - **Room:** the main RAM 2,150 bytes free to 2,144 (`things` rewritten to reach the request by its fixed address, which paid for `IO_GO`). Part 2 683 to 777, part 13 2,274 to 2,234, part 17 1,915 to 1,926, part 18 1,748 to 1,648, part 10 1,397 to 1,405, part 25 510 to 513; overlay 16 49 to 61. (The build placed part images differently, so some overlays' numbers moved: 5 255 to 215, 14 23 to 128, 18 102 to 10, 19 17 to 10.)
 
-### One path for features (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's Â§5.2, step J)
+### One path for features (2026-11-07, as built, for review: COMMANDS-CRITIQUE.md's §5.2, step J)
 
 A door, a window, a portcullis, a passage, the stairs, a ladder, a shaft or the way out is acted on in the same steps: found, walked up to if it's out of reach, faced, the first words said, then the act.  There was one full copy of those steps (the door verbs') and seven partial ones, with two ways of turning (an intent, and way.c's own bare message to the world) and two tests of what's in reach.  What's built:
 
@@ -2045,7 +2045,7 @@ A door, a window, a portcullis, a passage, the stairs, a ladder, a shaft or the 
 - **Room:** see COMMANDS-CRITIQUE.md's row J and the commit.  Part 2 683 to 824 bytes free, part 17 1,915 to 2,182, part 24 3,161 to 3,240, part 13 2,274 to 1,997 (the routine): 210 bytes won back in all.  The main RAM is unchanged at 2,150 (one stub replaced by another).
 - **A test's premise changed by step J** (found merging, 2026-11-07): dq0choose's second game examined a door (answered "right"), then "go through the door" and expected "Which door?".  Examining a door now faces it, so the door is ahead and the go goes through it without asking, as it should.  The game now turns away ("face south") before the go, so it still tests the question.  (The turn after "right" goes northwest, the door's own bearing, where the question said "to your right", the look's stored way: the two can differ, as the chooser survey noted.)
 
-### The dispatch table, stage 1 (2026-11-08, as built, for review: COMMANDS-CRITIQUE.md's Â§5.2, step L)
+### The dispatch table, stage 1 (2026-11-08, as built, for review: COMMANDS-CRITIQUE.md's §5.2, step L)
 
 Which function carried out a verb depended on where there had been room: `s_command`'s switch (part 2), then its default's `chores` (part 2), then `more` (overlay 16), then `rarer` (part 24), each tried in turn, and "You can't ... in this game yet." if none took it.  Stage 1 puts a table in front of them and calls each verb's handler by its row, the handlers' work unchanged.  What's built:
 
@@ -2058,11 +2058,11 @@ Which function carried out a verb depended on where there had been room: `s_comm
 - **Room:** the main RAM 2,133 bytes free to 2,122 (`verb_row`'s stub).  Part 2 905 to 1,059, part 24 3,238 to 3,342, overlay 16 146 to 184, overlay 11 1,367 to 738 (the table, 568 bytes).
 - **For review:** the two bank entries (`run16`, `run24`) are where stage 3 will meet the question of a handler moved between banks: its `case` moves to the new bank's entry.  And whether the table should hold stub addresses after all once stage 3 has the handlers in few banks.
 
-### The dispatch table, stage 2: the refusals in the rows (2026-11-08, as built: COMMANDS-CRITIQUE.md's Â§5.2, step L)
+### The dispatch table, stage 2: the refusals in the rows (2026-11-08, as built: COMMANDS-CRITIQUE.md's §5.2, step L)
 
 refuse.c's list of refusals by verb is now part of the dispatch table: each verb's row says what it refuses for a thing named by a word and for a feature of the place, and which features the verb does.  One table says what a verb does, what it takes and what it refuses.  Nothing a player sees changed (the whole suite passes).
 
-### The dispatch table, stage 3: the handlers by meaning (2026-11-08, as built: COMMANDS-CRITIQUE.md's Â§5.2, step L)
+### The dispatch table, stage 3: the handlers by meaning (2026-11-08, as built: COMMANDS-CRITIQUE.md's §5.2, step L)
 
 The command handlers were where the old chain cut by size had put them: part 2 (main.c's `do_*` and one-line cases), overlay 16 (words.c's `run16`), part 24 (main.c's `run24`).  Stage 3 puts them in files by what they're about, each group's place its pragma's.  Nothing a player sees changed (the whole suite: all 426 tests pass).  What's built:
 
@@ -2073,9 +2073,9 @@ The command handlers were where the old chain cut by size had put them: part 2 (
 - **Found, for review:** an empty name (`""`) an overlay gives `othings` is read through the window after `othings` has put the hub there: it was overlay 16's address, which falls past the hub's header, in the room bank 0 keeps free, where nothing is kept.  The moved timed works give `nil`, an empty name in the main RAM, so where they land doesn't matter.  resolve.c (overlay 11) does the same with IO_FIND, left as it is.
 - **Room:** the main RAM 2,117 bytes free to 2,128.  Part 2 1,059 to 659, part 24 3,342 to 3,729; overlay 16 131 to 1,073, overlay 1 1,288 to 424, overlay 11 307 to 278.
 
-## One line of sight (2026-11-08, as built, for review: ENGINE-CRITIQUE.md's Â§4 and step 2, its first part)
+## One line of sight (2026-11-08, as built, for review: ENGINE-CRITIQUE.md's §4 and step 2, its first part)
 
-ENGINE-CRITIQUE.md's Â§4 said there were three lines between two squares that might disagree. They did. What each did
+ENGINE-CRITIQUE.md's §4 said there were three lines between two squares that might disagree. They did. What each did
 before:
 
 - **The look (dq0p/cast.s's ray, in its grid):** Bresenham's squares from the character's eyes (a step along if
@@ -2118,7 +2118,7 @@ character through closed shutters the character couldn't see through, or over a 
   part 68 are gone.
 - **The look keeps its grid** (cast.s's ray: thousands of lines a look, reading the grid with no `at`): the same
   squares, heights and portal rule, worked out there (dq0looks holds the look's every answer to what it was, below).
-- **Not yet in the paged ROM** (ENGINE-CRITIQUE.md's Â§1.4 wanted it there): the line reads the chunks through each
+- **Not yet in the paged ROM** (ENGINE-CRITIQUE.md's §1.4 wanted it there): the line reads the chunks through each
   task's own `at` (its cache in the hub's banks, the maker asked for a chunk not made), which a ROM module can't call
   back into.  It's a stage: one source, assembled into the two tasks that draw lines.  It goes to ROM with the chunk
   lookup.
@@ -2192,11 +2192,11 @@ rules gone).  The senses' main RAM 2,634 to 2,435 (the whole line, in place of c
 to 4,136.  (Written in C first, cc65 made it 1,185 bytes; in assembly it's 766 in the world, 219 of them in the main
 RAM and the line itself in part 65, and 892 in the senses, with the cache's checks.)
 
-## The game's own library in the paged ROM (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's Â§1.4, Â§4 and step 2)
+## The game's own library in the paged ROM (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's §1.4, §4 and step 2)
 
-ENGINE-CRITIQUE.md's Â§1.4 wanted the code the tasks each had a copy of in a shared library of the paged ROM, called by
+ENGINE-CRITIQUE.md's §1.4 wanted the code the tasks each had a copy of in a shared library of the paged ROM, called by
 XCALL (some 120 cycles a call: for routines that do real work, or are called seldom).  Its first contents are the two
-Â§4 copies that were simplest and safest: the overlays' loading and `num`.
+§4 copies that were simplest and safest: the overlays' loading and `num`.
 
 **A module of its own, not an addition to unpack.**  modules/dq0lib (rom.txt, after unpack: a library module,
 HT_LIBRARY, its jump table at `$A030`).  The unpack library is the system's (libraries.md lists it with numbers, math
@@ -2221,7 +2221,7 @@ in its turn (found by MODINFO, as the tasks found it before): XCALLs nest, each 
   library (finding it would cost more than their `num`).
 
 **Room** (the main RAM's free bytes, the floor 2,048): the UI 2,128 to 2,307; the world 2,536 to 2,624; the denizens
-2,399 to 2,512; the senses 2,435 to 3,122; the maker 2,414 to 2,879; the referee 2,197 to 2,329.  More than Â§1.4's
+2,399 to 2,512; the senses 2,435 to 3,122; the maker 2,414 to 2,879; the referee 2,197 to 2,329.  More than §1.4's
 measure ("a few hundred bytes a task"): a task's `ovl_load` was what brought the C library's `open`, `strcpy`,
 `strcat` and the like into its main RAM, and the senses and the maker used them nowhere else; the maker and the referee
 had a 64-byte path besides.  The parts: the world's part 3 84 to 166 and overlay 1 86 to 168, the denizens' part 23
@@ -2230,7 +2230,7 @@ had a 64-byte path besides.  The parts: the world's part 3 84 to 166 and overlay
 **Performance:** the start (dq0starttime) 226.8M cycles to 226.6M at seed 1, 305.9M at seed 123456789; every task's
 banks as ld65 made them (dq0OvlBanks).
 
-**The line of sight and the chunk lookup, looked at, not moved** (ENGINE-CRITIQUE.md's Â§4 has the plan).  The obstacle
+**The line of sight and the chunk lookup, looked at, not moved** (ENGINE-CRITIQUE.md's §4 has the plan).  The obstacle
 noted before ("a ROM module can't call back into the task's `at`") isn't the real one: a ROM routine can `jsr` to its
 caller's RAM.  The real ones: the ROM can't link to the task's symbols, so `at` and the rest must be handed over at run
 time; the line keeps some 45 bytes over its calls of `at`, which may change the call registers, and a library has no
@@ -2242,9 +2242,9 @@ the senses' main RAM and the world's part 65, for some 150 cycles a line (3%).  
 room, the one line is already one source, and the router (step 2's next) needs the same contract of callbacks into
 `at` from the ROM, so it's best designed once, for both.
 
-## One way-finder (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's Â§4 and step 2, its second part)
+## One way-finder (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's §4 and step 2, its second part)
 
-ENGINE-CRITIQUE.md's Â§4 listed the step rule and the way-finding as copies that might disagree: chunk.c's `step_ok`,
+ENGINE-CRITIQUE.md's §4 listed the step rule and the way-finding as copies that might disagree: chunk.c's `step_ok`,
 the world's `step_by` (its own copy), ways.inc (the same source, compiled into the world and the senses), the minds'
 `open_sq` and `taken`; the minds' `route` (a search) and `step_for` (greedy), the world's `ways`, `s_go_to`,
 `s_path_ways`, `s_ways_go`, `s_step_to`.  What each decided before:
@@ -2351,9 +2351,9 @@ its part 21 1,641 to 1,402 free.  The denizens' main RAM 2,399 to 2,348 (`legal`
 of the step test gone from step_for's, s_coarse's and s_way's), part 18 95 to 89, part 17 2,718 to 2,870.  The senses
 unchanged (2,435).
 
-## The hub's numbers, made by the build (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's Â§2 and step 3, its first stage)
+## The hub's numbers, made by the build (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's §2 and step 3, its first stage)
 
-ENGINE-CRITIQUE.md's Â§2 found the hub's numbers kept in step across languages by hand: games/dq0c/hub.inc mirroring
+ENGINE-CRITIQUE.md's §2 found the hub's numbers kept in step across languages by hand: games/dq0c/hub.inc mirroring
 twenty of hub.h's (held to them by dq0c's make.js), actions.h mirroring the catalogue (held by make.js), struct kind's
 size, the attitudes, a square's feet, the sound's kinds and some sixty of struct theme's offsets typed again in the
 make.js files with nothing holding them, the tests compiling C expressions with cc65 as they ran to find the structs'
@@ -2422,7 +2422,7 @@ tables built from world.h's T_PASS (slant.s's t_kinds, cast.s's): the generator 
 added to its list.  `node sim/tools/commandmatch-test.js --phrases` doesn't link (resolve.c's letters, des_add and
 the rest, not in cmdres.c's stubs: nothing of this change's), and isn't part of the suite or the tiers.
 
-## The messages' payloads, declared (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's Â§2 and step 3, its second stage: the intents)
+## The messages' payloads, declared (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's §2 and step 3, its second stage: the intents)
 
 Every intent and event travels in one `struct msg { kind, who, a, b, w1, w2, t, x[4] }`, and what each slot meant for
 each kind was written only in hub.h's comments, often packed by hand at both ends (I_WAIT's w2: `k << 8 | (n & 0x7F) <<
@@ -2488,11 +2488,11 @@ The events' decode merges a declared payload too, so declaring the events needs 
 **No behaviour change:** the images came out byte-identical (bin/*, and every program and data file in obj/games; the
 objects differ only in their debug lines, hub.h two lines longer), and the suite passes.
 
-**Left** (ENGINE-CRITIQUE.md's Â§2, "Left of stage 2"): the events (E_*: forms chosen by a field's value, E_TASK's TE_*,
+**Left** (ENGINE-CRITIQUE.md's §2, "Left of stage 2"): the events (E_*: forms chosen by a field's value, E_TASK's TE_*,
 E_BEAT's WB_*, in place of dq0meaning.js's hand switch; their names clear of the raw slots the event records keep at the
 top), then the referee's requests (struct req: multi-byte slots, a request's fields and its reply's apart).
 
-## The events' payloads, declared (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's Â§2 and step 3, its second stage: the events)
+## The events' payloads, declared (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's §2 and step 3, its second stage: the events)
 
 The intents' mechanism (the entry above) carried over to the events (E_*), the world's news to the UI, the denizens
 and the sound task, in the same struct msg.  What an event's slots mean often hangs on one of them: E_TASK's b and
@@ -2571,10 +2571,10 @@ recorder's events are what they were, by declaration.
 files; the .s files the same less their .dbg lines; dq0's .lbl differs in one function's local labels' numbers alone,
 its addresses the same), the UI's main RAM as it was, and the suite passes.
 
-**Left** (ENGINE-CRITIQUE.md's Â§2, "Left of stage 2"): the referee's requests (struct req: multi-byte slots, a request's
+**Left** (ENGINE-CRITIQUE.md's §2, "Left of stage 2"): the referee's requests (struct req: multi-byte slots, a request's
 fields and its reply's apart), being done beside this.
 
-## The referee's requests' payloads, declared (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's Â§2 and step 3, its second stage: the referee's requests)
+## The referee's requests' payloads, declared (2026-11-09, as built, for review: ENGINE-CRITIQUE.md's §2 and step 3, its second stage: the referee's requests)
 
 The referee is asked in `struct req { RQH; actor, other; steps; a, b, c; w1, w2; x[32]; grade, result; text }`, and
 answers in the same slots: what each meant, the request's and the reply's, was rs.h's comments, and the code at both
@@ -2656,7 +2656,7 @@ obj/tests/t_rules.hyx), and the suite passes.  The accessors were held to the co
 `(*(unsigned long*) ((*r).x + 4))` the hand cast, `&RS_TIME_NEXT (*r)` the address memcpy took, `((*r).result & 0x8)`
 `r->result & 8`; RS_MORALE's packer `(l1) | (unsigned) (l2) << 8` the same as the hand's `l1 | l2 << 8`.
 
-**Left** (ENGINE-CRITIQUE.md's Â§2, "Left of stage 2"): the requests' forms chosen by a field's value, a pass of its
+**Left** (ENGINE-CRITIQUE.md's §2, "Left of stage 2"): the requests' forms chosen by a field's value, a pass of its
 own (the accessors it renames, the constants it wants).
 
 ## Wear for what's worn (2026-11-09, as built, for review: the user's, "wear" restricted to articles that can be worn)
@@ -3139,7 +3139,7 @@ Five of the stubs the verbs plan left saying "not yet" (B0's) now do something i
 - **Room.**  The handlers' work is part 24's (the commands seen to less often), through two stubs (`fights`, `again_go`): part 2 is 89 bytes from full (110 before); a third stub, `said_again`.  Overlay 6 is 67 bytes from full (183 before: parts.c's split), overlay 16 25 (88).  Part 24's state is the part's own (`bss-name` SW24RODATA: none kept across a call of another part).  The UI's main RAM 2,202 bytes free (2,272 before).  The world: part 24 (fighting on) full, the charge's pace set in part 37 (the intent's).  The UI's banks are close to full (some 4,000 bytes free over all, the most 514 in one): a later batch may need parts moved, or a bank more.
 - **Test dq0fightverbs**: again with nothing, charge with none, the throws (two squares; the wall behind, at its feet), turn left then again and repeat (three turns), a charge (the war cry, the close-in at a run or the blow, a blow struck), engage and already engaged, a split attack (both struck at).
 
-## The UI's room won back (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's Â§1)
+## The UI's room won back (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §1)
 
 The UI (games/dq0) was at the edge: its main RAM 2,069 bytes free against the floor of 2,048, part 2 (the commands'
 handlers) 102 bytes from the swap area's 4,352, its overlay banks some 4K free in pieces of 500 at most.  The ask: at
@@ -3190,14 +3190,14 @@ does or says changes; what's built:
 - **Not done, for later:** the swap area (4,352) is the biggest part's, part 4's (s_pace_cmd, one piece of 4,339, its
   pointer argument pinning it), so it can't shrink without splitting that function by hand; main.c's events and main
   loop (2,240 bytes) read the hub at every turn and stay; names.c's helpers shared by parts 5 and 6 (some 700) would
-  want part-local copies (Â§1.3) and part 5 has 113 bytes free.
+  want part-local copies (§1.3) and part 5 has 113 bytes free.
 - **The start** (dq0starttime): seed 1 234.7M cycles to the first prompt, its budget 235M; seed 123456789 310.7M, its
   budget 315M.  The 27th bank's bytes are read in as it starts, and the stubs' calls cost a little more: seed 1 is
   0.3M from its budget, so the next bank added (or much more code in this one) will want the budget raised, which the
   user's said is fine (the start's time isn't a concern).
 - **Tested:** all 442 tests pass.
 
-## Narration as data, stage 1 (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's Â§3.2 and step 5, its first stage)
+## Narration as data, stage 1 (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §3.2 and step 5, its first stage)
 
 The words of what came of an action were written by hand, a function for each feature (33 of them), each its own
 switch, its own strings and its own state.  This stage builds the generic mechanism, the critique's outcome event, one
@@ -3220,7 +3220,7 @@ same, letter for letter.
   of its own in a single E_OUTCOME kind.  That keeps the tests, the denizens' and the sound task's switches as they were,
   and leaves the struct's bytes for the handles; a new action is a kind (an enum member in hub.h) and a msgs.def line.
   **The handles are always 0 so far:** the world's dig works with the referee's tool names, not item ids, and a portal
-  has no handle yet (COMMANDS-CRITIQUE.md's Â§4.8: features lettered later); the UI gives the words for them (below).
+  has no handle yet (COMMANDS-CRITIQUE.md's §4.8: features lettered later); the UI gives the words for them (below).
 - **The phrase table (games/dq0/said.txt), made by the build** (games/dq0/saidgen.js, called by build.js's hubNumbers
   after hubgen.js, into obj/gen/dq0said.h; made again only when said.txt, saidgen.js or the headers' numbers change).
   A row is `KIND.OUTCOME[COND] "text"`: `DIG.begun`, `PORTAL.opened[pk=PK_WINDOW,PK_SLIT]`; the outcome's name is its
@@ -3293,7 +3293,7 @@ same, letter for letter.
   differently (the only sentences new or gone are the real-time fights' rolls in dq0antidote and dq0denpace, which go
   by the clock, and lines typed ahead).
 
-## The tests: split by area, scenes, the runner (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's step 10, Â§9)
+## The tests: split by area, scenes, the runner (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's step 10, §9)
 
 The suite took 14 to 17 minutes on the 8-core desktop (442 tests, 8 at a time), and every merge waits on it.  Measured first (obj/testtimes.json, and a dq0 test's lines' cycles one by one):
 
@@ -3325,9 +3325,9 @@ Warm, the dq0 tests' CPU time is a third less (2,626 s, from 3,929 without scene
 - **Cold runs gain less than warm ones.**  After a merge the images are new, so the run is cold, and in a cold run a scene only helps tests that share a start with one run before them (most share the boot and hmchar; few share a dungeon).  The lead's run after the merges is cold, its RULES=null run after it (the same images, another dq0 line, `-r null`) gains only the rc point.  An agent's runs while it works, and every rerun, are warm.
 - **Disk.**  obj/scenes holds some 300 MB at its fullest (400 scenes).
 - **The emulator's snapshot** (base/sim/lib) refuses what it doesn't hold: the VERA, the input controller, the RTC, the sound, a /pc host, CA1's pulses, the debugger's things.  A test using one runs from its start.
-- **Next** (Â§9's): scene constructors (a room, its things and its denizens declared, not reached by commands), and the recorder's offsets from the schema.
+- **Next** (§9's): scene constructors (a room, its things and its denizens declared, not reached by commands), and the recorder's offsets from the schema.
 
-## The placers' table and the keyed dice (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's Â§5 and step 8)
+## The placers' table and the keyed dice (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §5 and step 8)
 
 The maker placed each fixture in code of its own with dice of its own: the doors their own hash (pass.c), fixtures.c
 its `dseed`/`dr` (windows, portcullises, the fortified doors, the portals' make, the traps from a local array),
@@ -3409,14 +3409,14 @@ maps, the fixtures and their places, the things.
   -A -T -T, -V -T -T -T: the top stratum and those under it; built, natural and mixed; the diagonal passages, the
   rooms at 45 degrees, the great caverns, the long slopes): 252 games, 902 chunks made (8,109 doors, 892 windows, 233
   slits, 915 portcullises, 770 traps in 489 chunks), 29,202 runs of bytes.  Before and after: the same, every seed.
-- **Left:** the styles' proportions (uses.c's styles[4]) into the theme (Â§5's step 3); the private hashes that aren't
+- **Left:** the styles' proportions (uses.c's styles[4]) into the theme (§5's step 3); the private hashes that aren't
   placers' dice (caves.c's caverns, water and rubble, sky.c's skylights, plan.c's water, uses.c's ring, make.c's mixed
   third) as purposes of `dkey`'s, each defined as its own formula (they'd move nothing, but each wants its own
   derivation, or the seeded key and new dungeons); the hooks' square-finding as a few shared finders (a square along
   a wall, one in the open, one by a wall) once more fixtures want the same squares; a text source for the table if it
   grows.
 
-## Narration as data, stage 2 (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's Â§3.2 and step 5, its second stage)
+## Narration as data, stage 2 (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §3.2 and step 5, its second stage)
 
 Stage 1 built the renderer and the phrase table and left overlay 27 with 282 bytes.  This stage makes room for the
 table to grow, moves four more wording functions and seven of task_words' own sentences onto it, and takes out the
@@ -3540,7 +3540,7 @@ world's told () copies that only sent events.  The words the player sees are the
   said_b choosing the bank by the row's place.
 - **Tested:** all 442 tests pass.
 
-## Narration as data, stage 3 (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's Â§3.2 and step 5, its third stage)
+## Narration as data, stage 3 (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §3.2 and step 5, its third stage)
 
 Stage 2 left the rest of task_words, the walk's beats, the denizens' doings and the last two told () copies.  This
 stage moves those onto the phrase table, gives the rows a second bank, takes out the two copies, and words the
@@ -3711,9 +3711,9 @@ Each entry above now says so; what's built:
   (1,194), overlay 3 9 (20: its line buffer now path).  dq0life 18,318; dq0null 5,035; the world's main RAM unchanged
   (2,336), its overlay 5 265 (328).  dq0c's records as before; the aliases 1,896 bytes (1,889).
 
-## The referee's skeleton (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's Â§8 and step 9)
+## The referee's skeleton (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §8 and step 9)
 
-**The user's choice, 2026-11-11: option (a), swappable rules are a real goal.**  Â§8 found the referee interface
+**The user's choice, 2026-11-11: option (a), swappable rules are a real goal.**  §8 found the referee interface
 halfway: an indirection the game paid for, and HarnMaster everywhere behind it.  (b) would have said HarnMaster is the
 house system and dq0null a test double.  The user chose (a): a referee skeleton in a library so a ruleset is its
 answers, the interface trimmed, HarnMaster's lists behind the referee, and the meta programs talking to "the ruleset".
@@ -3807,7 +3807,7 @@ left for review (see below).  **So the suite: 444 of 444 at stage 2; 443 at stag
   later (the record store's timing flipped it): the tinderbox reached for and taken, then the stop, the pack in hand,
   no third thing taken.
 
-## The step planner and the activity stack (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's Â§3.3, Â§7 and step 6)
+## The step planner and the activity stack (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §3.3, §7 and step 6)
 
 **What the survey found.**  The reach's steps were already planned from the containment tree, lazily: each time a
 handling is asked (the UI's command again, after a step's wait), things.c's `s_reach_step` walks the thing's
@@ -3866,12 +3866,12 @@ making's late job).
   world changes between steps (a denizen takes the pack, a grope fails) and the handling's own checks come first.
   The after-work take-ups (stage a's) are the one family queued ahead; the pack put back on and a tool put away
   (`rs_after_on`, `rs_using`, RR_STOW, RR_RELIGHT) are still flags `rs_after` reads in order.
-- `burn_ask` and `chart_late` are periodic work, not the character's: stage (d), Â§7's scheduler table, wasn't built.
+- `burn_ask` and `chart_late` are periodic work, not the character's: stage (d), §7's scheduler table, wasn't built.
 - The denizens: their minds post intents the world carries out; `struct pc_activity` and `struct step` don't name
   the character, so a denizen's record would be the same shape, but none was moved.
-- Containers (COMMANDS-CRITIQUE.md's Â§4.9): the edges are the planner's; the compartments aren't there (a thing's
+- Containers (COMMANDS-CRITIQUE.md's §4.9): the edges are the planner's; the compartments aren't there (a thing's
   `where`/`x` its holder alone), so the walk (`rs_walk`, `level_of`) still knows a container by K_CONTAINER, KF_BACK,
-  IS_CLOSED and K_HANG.  With Â§6b's compartment table the walk reads `(holder, compartment)`, each compartment's
+  IS_CLOSED and K_HANG.  With §6b's compartment table the walk reads `(holder, compartment)`, each compartment's
   `closes` and noun pick the edge (open, reach in) and its words, a row per verb in said.txt (the narration's)
   rather than reach_said's table.
 
@@ -3890,7 +3890,7 @@ loop, 32 bytes more than the ternary chain); its part 86 234 â 212, 87 2,20
 ovlpack's placing).  The start at seed 1: 233.3M â 233.5M (a) â 233.7M (b) â 233.2M (c) cycles (245M the budget);
 at 123456789 310.6M â 311.0M (b) â 311.4M (c).
 
-## The meta programs' library, their state record, one theme compiler (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's Â§9 and step 11)
+## The meta programs' library, their state record, one theme compiler (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §9 and step 11)
 
 The programs between dungeons (dq0life, dq0acct, dq0town, dq0schol, dq0end; themegen and themec beside them) each had their own copy of the same helpers, passed the town's state to each other through long argument lists and a file of their own, and the theme compiler was written twice, in JS for the build and in C for the Hydra, the tests holding the two to the same bytes.  Four stages, each its own commit:
 
@@ -4073,7 +4073,7 @@ rat.") already say the same doing the same way.
   its key", the old words' alternative gone).
 - **Tested:** all 444 tests pass.
 
-## One record store (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's Â§6 and step 7)
+## One record store (2026-11-11, as built, for review: ENGINE-CRITIQUE.md's §6 and step 7)
 
 **What the survey found.**  Not five stores paging by region but seven, in three tasks, and each its own table, its
 own least-lately-wanted loop and its own copy of vfile.inc (the one thing they shared: the save folder's versions):
@@ -4121,7 +4121,7 @@ renumbered and written.  `rp_dirty`, `rp_flush` and `rp_save` as ENGINE-CRITIQUE
 dirty and when it's written is each store's (the pages' `dirty`, the traces' `TC_DIRTY`, the things written as a
 chunk goes out), and the save is the stamps' commit, already one.
 
-**Where it lives, and why the ROM.**  The paged ROM's library (Â§1.4), not a C source compiled into each task: vfile.inc
+**Where it lives, and why the ROM.**  The paged ROM's library (§1.4), not a C source compiled into each task: vfile.inc
 was compiled six times (four of the world's parts, the denizens' part 21, the maker's main RAM), and with it the C
 library's file calls it took in; the tables' loops a dozen times.  In the ROM they're one copy and no task's room: the
 library is assembly, its scratch the caller's block (a part's own data, or the main RAM for a table read in play),
