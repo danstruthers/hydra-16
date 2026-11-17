@@ -834,8 +834,11 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
        WB_BROKE,                                /* (A weapon or a shield broken, its kind times 256: every actor's, the book's) */
        WB_SEARCH,                               /* (A room searched whole, as it goes, 2026-11-02: RSW_* times 256,
                                                 **   search.c's words: dq0w's wroom.inc) */
-       WB_EATS, WB_HANDS, WB_THREW, WB_FELL };  /* (A denizen's: what it holds eaten, handed to its fellow, thrown to the
+       WB_EATS, WB_HANDS, WB_THREW, WB_FELL,    /* (A denizen's: what it holds eaten, handed to its fellow, thrown to the
                                                 **   character, falling short of it, its kind times 256: wtake.c's, 2026-11-04) */
+       WB_DOUSE };                              /* (A light put out as one settles to rest, its kind times 256: every
+                                                **   actor's, the user's, 2026-11-17, "A rest puts a burning light out
+                                                **   first") */
 enum { RSW_BEGUN, RSW_GOES_ON, RSW_ALREADY, RSW_WALL, RSW_CORNER, RSW_MIDDLE, RSW_ROUND, RSW_END, RSW_FLOOR, RSW_DONE,
        RSW_THING };                             /* (WB_SEARCH's what: b 1 by touch; it begun, gone on with, done before;
                                                 **   along a wall, round a corner, the floor inside, a room of one stop;

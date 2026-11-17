@@ -1209,10 +1209,12 @@ static unsigned char __fastcall__ hold (unsigned n);
 ** the ground lit; what's kept worn, slung (a shield); coins the purse (s_purse's); a carrier its family's on the body; else the pack,
 ** by the steps of the reach; else set down.  Never what's being readied: rs_tool, the tools out already (a tinderbox), the thing
 ** they're for (handled, a request's by the steps: the torch to light, the rope tied as its hammer's readied), a chisel's
-** hammer or a hammer's chisel; the pack off for this in
+** hammer or a hammer's chisel; nor, engaged (in an enemy's zone: the reach's own test), a weapon in hand, a shield too (the
+** user's, 2026-11-17: "A drawn weapon keeps its hand in a fight; outside one, the home-first order stands"); the pack off
+** for this in
 ** a hand set down, never slung to come off again; no more than RS_FREE of them a sequence, so nothing can go round for ever: then no
-** hand, the handler's words (the soak, 2026-11-04).  A light set down burning, or in a sconce, left_lit: taken up again as a walk
-** starts (s_lit_back's) */
+** hand, the handler's words (the soak, 2026-11-04).  A light set down burning, or in a sconce, left_lit: taken up again as a move
+** away starts (s_lit_back's) */
 #define RS_FREE         6
 unsigned left_lit;                              /* (The light the hands' rule set down burning, or in a sconce: 0 none) */
 static unsigned char rd, rt, rn;                /* (home_of's: the step's edge, its words, its time; */
@@ -1286,7 +1288,7 @@ static unsigned char __fastcall__ home_of (unsigned o, unsigned char w)
 static unsigned char s_room (void)
 {
     unsigned i = 0, o = 0, o1, o2;
-    unsigned char t, r, best = 3, pair;
+    unsigned char t, r, best = 3, pair, eng;
 
     if (item_at (rs_tool)->flags & I_HELD) {
         return 0;
@@ -1309,10 +1311,11 @@ static unsigned char s_room (void)
     hub_map (0);
     o1 = HUB->rs_nout ? HUB->rs_out[0] : 0;
     o2 = HUB->rs_nout > 1 ? HUB->rs_out[1] : 0;
+    eng = near_one () && zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y);   /* (Engaged: its weapons kept) */
     while ((i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
         if ((ip->flags & I_HELD) && i != rs_tool && i != o1 && i != o2 && (rs_ok != 1 || i != handled) &&
             !(pair && (!strcmp (kind_at (i)->tool, "chisel") || !strcmp (kind_at (i)->tool, "hammer"))) &&
-            (r = home_of (i, 0)) < best) {
+            !(eng && kind_at (i)->craft == AP_WEAPON) && (r = home_of (i, 0)) < best) {
             best = r;                           /* (The one with a home first, the light last: the first of the best) */
             o = i;
         }
@@ -1346,20 +1349,28 @@ static unsigned char s_room (void)
     return 1;
 }
 
-/* A light the hands' rule set down burning (left_lit: laid at the character's feet, set in a sconce), as a walk starts (the user's,
-** 2026-11-17: "a light left burning is picked up when a walk starts, if a hand is free"; dq0w.c's intent, go its kind): a walk's (I_GO,
-** I_GOTO, I_STEP, I_TAKE, I_TRAVEL), before it, taken up again into a free hand, a second's work, told ("You take up the lantern."),
-** none free, kept for the walk's start; | LB_GO, the walk begun, left behind, told ("You leave the lantern behind."); gone from
-** where it was set, out, or in hand again, nothing.  Forgotten but for a walk not begun, no hand free.  The hub's header in the
-** window after */
+/* A light the hands' rule set down burning (left_lit: laid at the character's feet, set in a sconce), as a move away starts (the
+** user's, 2026-11-17: "a light left burning is picked up when a walk starts, if a hand is free"; and "Any move away takes up a light
+** the rule left burning: a walk, a climb, going up or down"; dq0w.c's intent, go its kind): any move's (a walk, I_GO, I_GOTO,
+** I_STEP, I_TAKE, I_TRAVEL; a climb, up or down, I_CLIMB: a stairway, a ladder, a ledge, a pit, a rope, a shaft; a close-in,
+** I_CLOSE; a disengage or a flight, I_DISENGAGE; a gathering, I_GATHER), before it, taken up again into a free hand, a second's
+** work, told ("You take up the lantern."), none free, kept for the move's start; | LB_GO, the move begun, left behind, told ("You
+** leave the lantern behind."); gone from where it was set, out, or in hand again, nothing.  Forgotten but for a move not begun, no
+** hand free.  The hub's header in the window after */
+static const unsigned char lb_moves[4] = {      /* (The moves, I_* by its bit: I_GO ... I_GATHER, all under 32) */
+    1 << I_GO | 1 << I_CLIMB, 1 << (I_GOTO - 8) | 1 << (I_STEP - 8), 1 << (I_TAKE - 16) | 1 << (I_CLOSE - 16) |
+    1 << (I_DISENGAGE - 16), 1 << (I_TRAVEL - 24) | 1 << (I_GATHER - 24)
+};
+typedef char lb_moves_fit[I_GO < 8 && I_CLIMB < 8 && I_GOTO >= 8 && I_STEP < 16 && I_TAKE >= 16 && I_DISENGAGE < 24 &&
+    I_TRAVEL >= 24 && I_GATHER < 32 ? 1 : -1];  /* (hub.h's I_* as the table has them) */
 void __fastcall__ s_lit_back (unsigned char go)
 {
     struct msg m;
     unsigned n = left_lit;
     unsigned char h = 0, k = go & ~LB_GO, sc;
 
-    if (k != I_GO && k != I_GOTO && k != I_STEP && k != I_TAKE && k != I_TRAVEL) {
-        goto out;                               /* (Not a walk: as it was) */
+    if (k >= 32 || !(lb_moves[k >> 3] >> (k & 7) & 1)) {
+        goto out;                               /* (Not a move: as it was) */
     }
     go &= LB_GO;
     fetch (&rec, n);

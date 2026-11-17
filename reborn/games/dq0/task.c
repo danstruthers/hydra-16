@@ -166,6 +166,12 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
                                                 **   timed work stopped: its end dropped, words.c's; "take all"'s
                                                 **   later things with it, 2026-11-06) */
             pending[0] = 0;
+        } else if (cmd.action == VB_STOP && p == TE_STOPPED) {
+            pending[0] = 0;                     /* (The player's stop of a fight that took over a reach's steps: the reach
+                                                **   ends with it, where it stands, the pack's place told, as a flight's
+                                                **   does, main's; the user's, 2026-11-17: "'stop' ends everything under
+                                                **   way, a fight's part and the reach it took over") */
+            reach_said (TE_IDLE, 0);
         }
     }
     k = p;
@@ -758,11 +764,15 @@ void __fastcall__ o_time_said (unsigned w, unsigned char b);
 
 /* A wait (VB_WAIT, VB_PASS) or a sleep or a rest (VB_SLEEP) begun (chores'): as long as the line says (wait_of); a
 ** wait or a pass with none said a round; a sleep or a rest a night's, eight hours, or a short one's, half an hour
-** (the house's); its intent in tenths, or in minutes past 100 of them (WA_MIN), asleep for a sleep (WA_SLEEP) */
+** (the house's); its intent in tenths, or in minutes past 100 of them (WA_MIN), asleep for a sleep (WA_SLEEP).  A sleep
+** or a rest with a light burning: its words as its E_TIME comes, after the world's of the light put out first (the
+** user's, 2026-11-17: "A rest puts a burning light out first"; its locals on the C stack, the main RAM's: the hub's
+** pc_light copied into one, not into the overlay's bank, the window's as hub_mem copies) */
+#pragma static-locals (push, off)
 void __fastcall__ o_wait_go (unsigned char action)
 {
     unsigned m = time_ui (TU_UNTIL);            /* ("until dawn", "watch the sun": time.c's, 2026-10-31) */
-    unsigned char a = 0;
+    unsigned char a = 0, lit = 0;
 
     if (!m) {
         m = wait_of (cl, cmd.n);
@@ -773,13 +783,14 @@ void __fastcall__ o_wait_go (unsigned char action)
             m = strstr (cl, "short") ? 30 : 480;
         }
         a = rest_ ? WA_SLEEP | WA_REST : WA_SLEEP;
+        hub_mem (0, &lit, (const void*) &HUB->pc_light, 1);
     }
     if (m > 100) {
         a |= WA_MIN;
     } else {
         m *= 600;
     }
-    if (!busy && m) {
+    if (!busy && m && !lit) {
         o_time_said (m, a);                     /* (As long as it says: told at once, the world's E_TIME to come saying
                                                 **   nothing, the user's, 2026-11-04; a round's in time as it is) */
         t_flush ();
@@ -788,6 +799,7 @@ void __fastcall__ o_wait_go (unsigned char action)
     intend_a = a;
     intend2 (I_WAIT, m, 0);
 }
+#pragma static-locals (pop)
 
 /* Time passed for the character (E_TIME: w its tenths, or its minutes, b's WA_MIN; asleep, WA_SLEEP), told: a
 ** round's (none said), "Time passes."; a wait's as long as it is, "You wait eight hours.", "You wait three hours and

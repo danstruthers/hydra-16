@@ -1650,6 +1650,29 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0litclimb', reach: true, near: ['gear'], what: 'Dingus Quest Zero\'s light left burning taken up as any move away starts (the user\'s, 2026-11-17: DECISIONS.md\'s "The one-path plan and phase A\'s questions: the user\'s answers", "Any move away takes up a light the rule left burning: a walk, a climb, going up or down; else \\"You leave the ... behind.\\".  A light the player put down stays"; dq0handorder\'s walks, a climb now too: things.c\'s s_lit_back, its moves I_GO ... I_GATHER): at seed 3 (dq0 -T, a pick more) the pick held, the torch laid down lit for its hands; "d", no hand free: "You leave the torch behind." before the stairway\'s words; a second game the pick held and stowed again, "d": "You take up the torch." first, the torch lit in hand below; a third the torch put down by the player, "d": it stays, neither taken up nor told left behind',
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k pick', 'hold the pick', 'd', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -k pick', 'hold the pick', 'stow the pick', 'd', 'inventory',
+        'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'drop the torch', 'd', 'inventory', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '').replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' ');
+        const games = s.split('% dq0 -p t -s 3').slice(1);
+        if (games.length !== 3) return ['not three games: ' + games.length];
+        const seg = (g, l) => { let i = g.indexOf('> ' + l + ' '); if (i < 0) return ''; if (g.startsWith('> ' + l + ' ', i + l.length + 3)) i += l.length + 3; const e = g.indexOf('> ', i + l.length + 3); return g.slice(i, e < 0 ? undefined : e); };
+        const [a, b, c] = games;
+        if (!/You lay the torch on the ground, still burning\./.test(seg(a, 'hold the pick'))) f.push('the pick held: the torch not laid down lit: ' + seg(a, 'hold the pick').slice(0, 300));
+        if (!/^> d You leave the torch behind\. You go down the stairway/.test(seg(a, 'd'))) f.push('down the stairs, no hand free: the torch not told left behind first: ' + seg(a, 'd').slice(0, 300));
+        if (!/^> d You take up the torch\. You go down the stairway/.test(seg(b, 'd'))) f.push('down the stairs, a hand free: the torch not taken up first: ' + seg(b, 'd').slice(0, 300));
+        if (!/a torch \(lit\), in your left hand/.test(seg(b, 'inventory'))) f.push('the torch taken up: not lit in hand below: ' + seg(b, 'inventory').slice(0, 300));
+        if (/take up the torch|leave the torch behind/.test(seg(c, 'd'))) f.push('the torch the player put down taken up, or told left behind: ' + seg(c, 'd').slice(0, 300));
+        if (/torch \(lit\), in your/.test(seg(c, 'inventory'))) f.push('the torch the player put down in hand below: ' + seg(c, 'inventory').slice(0, 300));
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0purse', reach: true, near: ['gear', 'money'], what: 'Dingus Quest Zero\'s coins put in the purse (the user\'s, 2026-11-17: "coins to the purse"): at seed 3 (dq0 -T, a chest more) three pennies dropped and taken up again: into the pouch on the belt (the purse), one lot with the rest, not the backpack nor a hand; held, then stowed: into the pouch, unasked (not "Stow it where?"); some put in the chest and taken from it: into the pouch; a lot of rations (no coins) still to the pack',
       init: 't_rc', cycles: 2400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
@@ -2345,19 +2368,20 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0reachflee', reach: true, near: ['gear', 'fight'], what: 'Dingus Quest Zero\'s flight typed during a reach engaged (HOUSE.md\'s breaking off at once; the user\'s, 2026-11-06, "`stop` and other similar commands should be acted on immediately"): at seed 7 the ghoul engaging it (set steady, dq0packgrope\'s scene), the torch put down lit and the dagger in the other hand (a sheath on the belt: the hand freed for the rations the dagger\'s, into its sheath, a step of its own before the pack comes off, the home first, the user\'s, 2026-11-17; the sword kept to fight with), "take the rations from the backpack" typed ahead, each step a round; "flee" typed as the pack comes off: that step stopped, not done (the pack still worn), the rations not got out, then the flight from the ghoul, before any further step; "stop" typed the same: the step stopped, no further step, the reach over (then a flight, the fight\'s end)',
-      init: 't_rc', cycles: 4000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk,sheath' -T", 'wear the gambeson', 'wear the mail hauberk', 'hang the sheath on the belt', 'd',
-        'drop the torch', 'hold the dagger', 'wait']) +
-        'take the rations from the backpack\r' + dq0Typed(['inventory', 'quit',
-        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk,sheath' -T", 'wear the gambeson', 'wear the mail hauberk', 'hang the sheath on the belt', 'd',
-        'drop the torch', 'hold the dagger', 'wait']) +
-        'take the rations from the backpack\r' + dq0Typed(['inventory', 'quit', 'echo $status']) },
+      name: 'dq0reachflee', reach: true, near: ['gear', 'fight'], what: 'Dingus Quest Zero\'s flight and stop typed during a reach engaged (HOUSE.md\'s breaking off at once; the user\'s, 2026-11-06, "`stop` and other similar commands should be acted on immediately"; and 2026-11-17, "\'stop\' ends everything under way, a fight\'s part and the reach it took over"): at seed 7 the ghoul engaging it (set steady, dq0packgrope\'s scene), the sword and the lit torch in hand, "take the rations from the backpack" typed ahead, each step a round; the hand for the rations the torch\'s, laid down lit, the sword kept to fight with (the user\'s, 2026-11-17: "A drawn weapon keeps its hand in a fight"; the home first outside one: its sword not stowed); "flee" typed as the pack comes off: that step stopped, not done (the pack still worn), the rations not got out, then the flight from the ghoul, before any further step; "stop" typed the same: the step stopped, no further step, the reach over; and, a crowbar in hand for the sword (no weapon: its home the pack, so the pack comes off first, as the sword\'s did in a fight before), "stop" typed as the pack comes off and taken as the fight takes a round between the reach\'s steps ("You turn to the ghoul. Fighting the ghoul"): the fight stopped and the reach it took over with it, no further step (the crowbar not stowed, the rations not got out), the pack still worn (built/2026-11-17-things.md\'s open question 7: the reach went on after it)',
+      init: 't_rc', cycles: 6000e6,
+      machine: { input: (() => {
+        const game = ["dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T", 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait'];
+        const tool = ["dq0 -p t -s 7 -c /ram/c.hm -k 'gambeson,mail hauberk,crowbar' -T", 'wear the gambeson', 'wear the mail hauberk', 'hold the crowbar', 'd', 'wait'];
+        return dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', ...game]) + 'take the rations from the backpack\r' +
+          dq0Typed(['inventory', 'quit', ...game]) + 'take the rations from the backpack\r' + dq0Typed(['inventory', 'quit', ...tool]) +
+          'take the rations from the backpack\r' + dq0Typed(['inventory', 'quit', 'echo $status']);
+      })() },
       start(m) {
-        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } }, { g: 2, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } }]);
+        dq0Poke(m, [1, 2, 3].map(g => ({ g, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } })));
         dq0OnWords(m, [{ g: 1, line: 'take the rations from the backpack', n: 1, words: 'You take off the backpack', text: 'flee\r' },
-          { g: 2, line: 'take the rations from the backpack', n: 1, words: 'You take off the backpack', text: 'stop\rflee\r' }]);
+          { g: 2, line: 'take the rations from the backpack', n: 1, words: 'You take off the backpack', text: 'stop\r' },
+          { g: 3, line: 'take the rations from the backpack', n: 1, words: 'You take off the backpack', text: 'stop\r' }]);
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -2371,7 +2395,20 @@ module.exports = {
         const st = after(2, 'stop > stop');
         inTurn(st, ['You stop taking off the backpack.'], f, 'the stop: ');
         if (/You get out the rations|You put on the backpack/.test(st)) f.push('a step after the stop: ' + st.slice(0, 600));
-        for (const g of [1, 2]) { const t = game(g), i = t.slice(t.indexOf('> inventory > inventory')); if (!/\(b\) a backpack, worn/.test(i) || /rations \(\w+\), in your|rations, in your/.test(i)) f.push('game ' + g + ': the pack not still worn, or the rations got out: ' + i.slice(0, 300)); }
+        const sf = after(3, 'stop > stop');
+        inTurn(sf, ['You stop fighting.'], f, 'the stop as the fight took a round: ');
+        if (/You reach for the rations|You hold the backpack open|You stow the crowbar|You get out the rations|You put on the backpack/.test(sf)) f.push('the reach went on after the stop that ended its fight: ' + sf.slice(0, 600));
+        for (const g of [1, 2, 3]) {
+          const t = game(g), i = t.slice(t.indexOf('> inventory > inventory'));
+          if (!/\(b\) a backpack, worn/.test(i) || /rations \(\w+\), in your|rations, in your/.test(i)) f.push('game ' + g + ': the pack not still worn, or the rations got out: ' + i.slice(0, 300));
+          if (g === 3) {
+            if (!/a crowbar, in your/.test(i)) f.push('game 3: the crowbar not still in hand: ' + i.slice(0, 300));
+            continue;
+          }
+          if (!/You lay the torch on the ground, still burning\./.test(t)) f.push('game ' + g + ': the torch not laid down for the rations\' hand, its weapon kept: ' + t.slice(t.indexOf('> take the rations'), t.indexOf('> take the rations') + 400));
+          if (/You stow the sword|You put the sword/.test(t)) f.push('game ' + g + ': the sword put away in a fight');
+          if (!/a sword, in your/.test(i)) f.push('game ' + g + ': the sword not still in hand: ' + i.slice(0, 300));
+        }
         return f;
       },
       sdcard: true

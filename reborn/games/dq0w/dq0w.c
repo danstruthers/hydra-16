@@ -6412,6 +6412,29 @@ void s_rest_go (void)
 }
 
 void __fastcall__ swim_still (unsigned char dive);   /* (Part 73's) */
+
+/* A rest begun, a sleep's or a rest's (I_WAIT's WA_SLEEP): each light it carries burning put out first, told as it is
+** (E_BEAT's WB_DOUSE, its kind: "You put out your torch.", the limbs' row, every actor's words), the light it carries made
+** again (the user's, 2026-11-17: "A rest puts a burning light out first (for every actor)": a denizen carries none lit) */
+static void rest_dark (void)
+{
+    unsigned i;
+    unsigned char k, d = 0;
+
+    for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM | IN_FLAGS, I_LIT)) != 0; ) {
+        if (on_pc (i)) {
+            k = item_at (i)->kind;
+            item_at (i)->flags &= ~I_LIT;
+            event (E_BEAT, 0, WB_DOUSE | (unsigned) k << 8);
+            d = 1;
+        }
+    }
+    if (d) {
+        light_now ();
+    }
+    hub_map (0);
+}
+
 void __fastcall__ s_intent_few (struct msg* m)
 {
     unsigned long t;
@@ -6437,6 +6460,9 @@ void __fastcall__ s_intent_few (struct msg* m)
         }
         pc_waited = 1;                          /* (Its eyes looked to as it ends: the senses') */
         burn_ask |= TS_ASK;                     /* (And the time it believes, as it begins and ends: part 76's) */
+        if (I_WAIT_HOW (*m) & WA_SLEEP) {
+            rest_dark ();                       /* (Its lights out first) */
+        }
         if ((I_WAIT_HOW (*m) & WA_SLEEP) && (HUB->pc_pos == POS_STANDING || HUB->pc_pos == POS_CROUCHED)) {
             HUB->pc_pos = POS_PRONE;            /* (A sleeper lies down, every actor's: its load borne no more, up by
                                                 **   the Rise as it goes on, the user's, 2026-11-03) */
