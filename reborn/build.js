@@ -252,12 +252,14 @@ function partsChecked(sources, objdir) {
 // a program with less main RAM free than its floor fails the build (floorOf, the user's floors: GAME-CRITIQUE.md's
 // 6.2 and 7.4; the UI's, dq0's, 3,000; every other task of Dingus Quest Zero's, dq0*, 2,048, as they run together and
 // grow; the theme compiler and the theme generator 512, tools run alone between dungeons and by the build, not in
-// play beside the tasks, the user's of 2026-11-13); an overlay or a part with under ROOM_LOW free, or another game's
-// program short of TASK_FLOOR (hmchar: run alone, most of it the harn library's), only a warning.  Nothing else of a
+// play beside the tasks, the user's of 2026-11-13); another game's program short of TASK_FLOOR (hmchar: run alone,
+// most of it the harn library's), only a warning.  And the headroom (the user's standing rule, 2026-11-17: a part or
+// bank under 64 bytes free has its room won back before the next feature): each main RAM within HEADROOM of its
+// floor, each overlay's and swapped part's bank with under HEADROOM free (marked !), listed.  Nothing else of a
 // task's is past its BSS's end: no heap (a dq0 task that takes in malloc fails: cc65's heap runs from the BSS's end
 // to the stack's, over the swap area, and isn't counted), the C stack's least room (__STACKMIN__) above the measure's
 // top, its arguments at TASK_ARGS ($0350).  OUT: { text, faults }
-const TASK_FLOOR = 2048, FLOORS = { dq0: 3000, themec: 512, themegen: 512 }, ROOM_LOW = 512;
+const TASK_FLOOR = 2048, FLOORS = { dq0: 3000, themec: 512, themegen: 512 }, HEADROOM = 64;
 const floorOf = name => FLOORS[name] !== undefined ? FLOORS[name] : TASK_FLOOR;
 const floored = name => /^dq0/.test(name) || FLOORS[name] !== undefined;     // (Below its floor, the build fails)
 function headroom(names) {
@@ -283,13 +285,14 @@ function headroom(names) {
     const used = by => { const u = {}; for (const [n, s] of Object.entries(seg)) if (by[n]) u[by[n]] = (u[by[n]] || 0) + s.size; return u; };
     const ov = Object.entries(used(load)).filter(([a]) => /^OV\d+$/.test(a) && size[a]).sort(byNumber);
     const sw = Object.entries(used(run)).filter(([a]) => /^SW\d+$/.test(a)).sort(byNumber);
-    const short = [];                                   // (Its overlays and parts under ROOM_LOW)
+    const short = [];                                   // (Its main RAM near its floor, its overlays and parts under HEADROOM)
+    if (floored(name) && free >= floor && free - floor < HEADROOM) short.push('main RAM ' + free + ' (' + (free - floor) + ' over its ' + floor + ')');
     const room = (what, list, of) => {
       const s = [];
       const text = list.map(([a, u]) => {
         const left = of(a) - u;
-        if (left < ROOM_LOW) s.push(a.slice(2));
-        return a.slice(2) + ' ' + left + (of(a) !== 0x2000 && what === 'overlay' ? ' of ' + of(a) : '') + (left < ROOM_LOW ? '!' : '');
+        if (left < HEADROOM) s.push(a.slice(2) + ' (' + left + ')');
+        return a.slice(2) + ' ' + left + (of(a) !== 0x2000 && what === 'overlay' ? ' of ' + of(a) : '') + (left < HEADROOM ? '!' : '');
       }).join(', ');
       if (s.length) short.push(what + (s.length > 1 ? 's ' : ' ') + s.join(', '));
       return text;
@@ -309,10 +312,11 @@ function headroom(names) {
       fmoved.map(([n, f, t, b]) => n + ' (' + b + ') from ' + f + ' to ' + t).join(', '));
     if (short.length) lows.push(name + "'s " + short.join(' and '));
   }
-  if (lows.length) warns.push('under ' + ROOM_LOW + ' bytes free: ' + lows.join('; '));
   const text = ["The games' room (bytes free: the main RAM's, from the BSS's end; at least " + FLOORS.dq0 + " for the UI, " + TASK_FLOOR +
     " for dq0's other tasks, " + FLOORS.themec + ' for themec and themegen; ! short, or an ' +
-    'overlay or a part under ' + ROOM_LOW + '):', ...rows, ...warns.map(w => '  warning: ' + w)].join('\n');
+    'overlay or a part under ' + HEADROOM + '):', ...rows, ...warns.map(w => '  warning: ' + w),
+    ...(lows.length ? ['  headroom (the standing rule: room won back before the next feature), under ' + HEADROOM + ' bytes free or within ' +
+      HEADROOM + ' of a floor:', ...lows.map(l => '    ' + l)] : [])].join('\n');
   return { text, faults };
 }
 

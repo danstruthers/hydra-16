@@ -9,7 +9,8 @@
 //                               test fails), unless its trend (the same name's, tests/trends.json's) was over it
 //                               already when the budgets became trends: then said in notes, not failed (the user's
 //                               targets not met yet: GAME-CRITIQUE.md's 6.3; met and kept as a trend, it's held to
-//                               them from then on)
+//                               them from then on).  Past HEADROOM of its target (the headroom rule: time won back
+//                               before the next feature), listed after the tests (sim/test.js's summary)
 // A test's measures are named by the test (its line, its pace ...).  The file is made again only on purpose, from the
 // last run's measures: node sim/tools/trends.js --update [NAME ...] (sim/tools/trends.js: the measures and their
 // trends, each rise).  TRENDS_RUN (sim/test.js's: the run's start) marks a run's records, for its summary.
@@ -69,17 +70,21 @@ function records(names) {
   return out;
 }
 
-// After the tests: the trends that rose past RISE
+// After the tests: the trends that rose past RISE, and the D17 targets' measures past HEADROOM of them (or over it:
+// one whose trend was over it already, not failed)
 function summary(names, say = console.log) {
-  const R = records(names), T = trends(), rose = [];
+  const R = records(names), T = trends(), rose = [], near = [];
   for (const [test, r] of Object.entries(R)) {
     for (const [name, v] of Object.entries(r.trends)) {
       const was = (T[test] || {})[name];
       if (was === undefined) rose.push(test + ' ' + name + ': ' + n(v) + ' (none kept)');
       else if (v > was * (1 + RISE)) rose.push(test + ' ' + name + ': ' + n(v) + ', ' + ((v / was - 1) * 100).toFixed(1) + '% over its ' + n(was));
     }
+    for (const [name, [v, max]] of Object.entries(r.targets))
+      if (v === null || v > max * HEADROOM) near.push(test + ' ' + name + ': ' + (v === null ? 'none' : n(v) + ' (' + Math.round(v / max * 100) + '% of ' + n(max) + ')'));
   }
   if (rose.length) say('trends: ' + rose.length + ' measure(s) more than ' + RISE * 100 + '% over their trend (tests/trends.json; to take one as it is now: node sim/tools/trends.js --update NAME):\n  ' + rose.join('\n  '));
+  if (near.length) say('the D17 targets: ' + near.length + ' measure(s) past ' + HEADROOM * 100 + '% of their target (the headroom rule: time won back before the next feature):\n  ' + near.join('\n  '));
 }
 
 module.exports = { trend, target, records, summary, trends, D17, RISE, HEADROOM, FILE, DIR };

@@ -179,8 +179,8 @@ function guardSummary(list) {
     console.log('  ' + (e.known ? '(known: ' + e.known + ') ' : '') + e.text.replace(/ at cycle \d+$/, '') + ': ' + tests.length + ' test(s), ' + tests.slice(0, 6).join(', ') + (tests.length > 6 ? ' ...' : ''));
 }
 // After the tests (HUBOWN=1): every violation seen, the tests' together, by the move that's to end it (NEW: none),
-// and the table's known ones none of the tests showed.  And always: the trends that rose (tests/lib/trends.js), this
-// run's
+// and the table's known ones none of the tests showed.  And always: the trends that rose, the D17 targets' measures
+// past 90% of them (tests/lib/trends.js), this run's
 function summary(list) {
   trends.summary(list.map(t => t.name));
   if (GUARDS === 'note') guardSummary(list);
