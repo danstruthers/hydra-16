@@ -1,15 +1,17 @@
 # Testing: the tests a change can affect, and the tiers of checks
 
-Several agents build at once on one machine. If each runs the whole suite (252 tests) several times, plus
+Several agents build at once on one machine. If each runs the whole suite (460 tests) several times, plus
 RULES=null, the soaks and dq0answer at three waits, the machine spends most of its time testing. So each agent runs
 only the tests its change can affect while it works and before it reports, and the lead runs everything once a
 round, after all the merges.
 
 ## The selector: `--changed`, `--near`, `--list`
 
-`node sim/test.js --changed [REF]` runs only the tests that the files changed since REF can affect. The default REF
-is `reborn-game` (its merge base with HEAD). `--changed=REF` names another. The files are everything committed since
-the merge base, everything staged or not, and the new files git doesn't ignore.
+`node sim/test.js --changed [REF]` runs only the tests that the files changed since REF can affect (since its merge
+base with HEAD). `--changed=REF` names it. Name it every time: the default REF (sim/test.js, sim/tiers.js) is still
+`reborn-game`, a branch that no longer exists, so `--changed` alone stops with "no merge base". Give the branch your
+work began from, today `reborn-commands`. The files are everything committed since the merge base, everything staged
+or not, and the new files git doesn't ignore.
 
 - Each file maps to areas through the table in `tests/areas.js` (`rules`: the first rule that matches the path).
   For example, `base/kernel`, `reborn/modules/rc`, `reborn/sim` and `reborn/tools` run every test.
@@ -51,16 +53,17 @@ once a build, not once a test.
 
 ## Scenes: a dq0 test taken up after its start
 
-Most dq0 tests boot, make a character and wait while the game grows its first dungeon (some 250M cycles, several
-seconds) before their first command. `sim/lib/scenes.js` saves the whole machine at two points of a test's input, the
-prompt waits just before and just after its first `dq0` line, in `obj/scenes`, and the next test whose input is the
-same up to there is taken up from it instead (its watchers given what the serial port gave before it). A scene's key
-is that input and the ROM's, the BIOS's and the SD card's images (their sha1), the seed, the chip, the modules, the
-core, `HUBOWN`, and the emulator's and the runner's sources: a rebuild makes new ones. A test with `start(m)` saves
-its own (its suite's sources in the key). A test with budgets, `send`, a `/pc`, a machine of its own but the input and
-the SD card, or `scene: false`, is never taken up.
+Most dq0 tests boot, make a character and wait while the game grows its first dungeon (some 235M cycles at seed 1,
+310M at a generated theme's seed 123456789: several seconds) before their first command. `sim/lib/scenes.js` saves
+the whole machine at two points of a test's input, the prompt waits just before and just after its first `dq0` line,
+in `obj/scenes`, and the next test whose input is the same up to there is taken up from it instead (its watchers
+given what the serial port gave before it). A scene's key is that input and the ROM's, the BIOS's and the SD card's
+images (their sha1), the seed, the chip, the modules, the core, `HUBOWN`, and the emulator's and the runner's
+sources: a rebuild makes new ones. A test with `start(m)` saves its own (its suite's sources in the key). A test with
+budgets, `send`, a `/pc`, a machine of its own but the input and the SD card, or `scene: false`, is never taken up.
 
 - `SCENES=0`: none (every test from its start, as before). `SCENES=fresh`: none taken up, each saved anew.
+  obj/scenes keeps the newest 400 (`SCENES_KEEP=N` sets another number).
 - `SCENES_TRACE=DIR`: each dq0 test's cycles, output hash, failures and notes in `DIR/NAME.json`, to hold a run with
   scenes to one without (a test taken up must end exactly as it does from its start: the same cycles, the same
   output; one that doesn't is `scene: false`).
@@ -82,18 +85,19 @@ and the soaks inherit it, and the summary line names it. A test that sets its ow
 
 **2. Before reporting** (the brief's checks): everything the change can affect, in one command:
 
-    node sim/test.js --tier report
+    node sim/test.js --tier report --changed reborn-commands
 
 This runs, one step after another with one summary at the end:
 
-- `node sim/test.js --changed=reborn-game`: only the game's tests when only games/ changed. It includes dq0answer
+- `node sim/test.js --changed=REF`: only the game's tests when only games/ changed. It includes dq0answer
   at DQ0ANS_WAIT=0 whenever the game changed.
-- `RULES=null node sim/test.js --changed=reborn-game`: the meaning tests among those.
+- `RULES=null node sim/test.js --changed=REF`: the meaning tests among those.
 - The parser's checks (`commandmatch-test.js`, `commandmatch-test.js --mean`, `commandcorpus.js`), when a grammar
   file changed (`GRAMMAR` in `tests/areas.js`: `games/dq0/commands.*`, `games/dq0c/`, the command tools,
   `resolve.c`).
 
-`--tier report --changed REF` uses another REF. `--tier report --list` shows each step and what it would run.
+`--tier report --changed REF` names the REF; without it the tier uses the missing `reborn-game` and its suite steps
+stop. `--tier report --list` shows each step and what it would run.
 
 **3. The lead, once per round after all the merges**: everything:
 
@@ -129,40 +133,43 @@ check `node sim/test.js --list --near basic` (or the area you mean) shows it, or
 
 ## What the tiers save
 
-These figures were measured on 2026-10-29 with `-j 8`, while other agents shared the machine. Times are each test's
-own process's wall time, summed (`obj/testtimes.json`). Cycles are the emulated machine's.
+These figures are from the suite's last whole run: 2026-11-17, at `-j 8` on the shared machine, a46c5c38's images,
+460 tests, all passing. Times are each test's own process's CPU time, summed (`obj/testtimes.json`): the measure to
+trust when other runs share the machine. Cycles are the emulated machine's.
 
-| Area | Tests | Cycles | Share of cycles | Process time | Share of time |
+| Area | Tests | Cycles | Share of cycles | CPU time | Share of time |
 |---|---:|---:|---:|---:|---:|
-| The game's (dq0...) | 105 | 101.1G | 84% | 150 min | 86% |
-| hmchar's | 2 | 2.5G | 2% | 3 min | 2% |
-| hylang's (hy...) | 14 | 5.6G | 5% | 7 min | 4% |
-| The rest of HydraOS's | 116 | 11.3G | 9% | 15 min | 8% |
-| The base's | 16 | 0.2G | 0.1% | 0.3 min | 0.2% |
-| **The whole suite** | 253 | 120.6G | | 175 min | |
+| The game's (dq0...) | 310 | 293.1G | 94% | 65.9 min | 93% |
+| hmchar's | 3 | 2.9G | 1% | 0.5 min | 1% |
+| hylang's (hy...) | 14 | 5.6G | 2% | 1.0 min | 1% |
+| The rest of HydraOS's | 116 | 11.4G | 4% | 3.0 min | 4% |
+| The base's | 17 | 0.2G | 0.1% | 0.2 min | 0.3% |
+| **The whole suite** | 460 | 313.3G | | 70.5 min | |
 
-The whole suite took 22 minutes of wall time at `-j 8` on the shared machine (12 to 14 minutes when it was
-quieter). RULES=null's 43 meaning tests add 31% of the suite again. One dq0answer run takes about 75 to 90 s.
+The whole suite took 17 minutes of wall time (its processes' wall times sum to 135 minutes). RULES=null runs the 78
+meaning tests again: a quarter of the suite's CPU time, as they ran under HarnMaster. One dq0answer run took 19 s
+(12 s of CPU).
 
-What `--changed` runs, for some sample diffs:
+What `--changed` runs, for some sample diffs (the selector's choice, with those tests' share of the CPU time above):
 
 | What changed | Tests | Share of the suite's time |
 |---|---:|---:|
-| The game only (games/, its rebuilt bin/ images) | 107 | 88% |
-| The game, and a new dq0 test entry in tests.js | 108 | 88% |
+| The game only (games/, its rebuilt bin/ images) | 313 | 94% |
+| The game, and a new dq0 test's entry in a dq0 suite (it, and `tiers`) | 315 | 94% |
 | The design documents only (HOUSE.md ...) | 0 | 0% |
-| The BASIC module | 18 | 1% |
-| The hylang module | 36 | 7% |
-| A program (edit) | 15 | 1% |
+| The BASIC module | 18 | 0.6% |
+| The hylang module | 37 | 2.7% |
+| A program (edit) | 15 | 0.5% |
 | A test module (t_task) | 1 | 0% |
-| The kernel, the emulator, an unknown path | 253 | 100% |
+| The kernel, the emulator, an unknown path | 460 | 100% |
 
-The game's tests are most of the suite, so for game work `--changed` saves only the other eighth. The report tier
+The game's tests are most of the suite, so for game work `--changed` saves only the other sixteenth. The report tier
 saves more by leaving the soaks and dq0answer at waits 1 and 2 to the lead's single run each round. The working
-loop saves the most: a `--near` area is 4% to 26% of the suite (`fight` 17%, `parser` 8%, `map` 26%, `gear` 17%,
-`money` 6%, `senses` 12%, `time` 10%, `screen` 4%).
+loop saves the most: a `--near` area is 1% to 26% of the suite (`fight` 13%, `parser` 8%, `map` 19%, `gear` 26%,
+`money` 8%, `senses` 12%, `denizens` 15%, `theme` 8%, `time` 11%, `body` 12%, `save` 14%, `screen` 1%).
 
-One report as the brief's checks were, against the report tier, for a game-only change on the same machine:
+One report as the brief's checks were, against the report tier, for a game-only change on the same machine (measured
+on 2026-11-04, when the suite had 253 tests; not measured since):
 
 | Step | Before (every agent, every report) | `--tier report` |
 |---|---|---|
