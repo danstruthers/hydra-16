@@ -5,7 +5,9 @@
 const { typed } = require('../../lib/common.js');
 const fs = require('fs');
 const path = require('path');
-const { dq0StatusRows, dq0Typed, DQ0_MAKE } = require('../../lib/dq0.js');
+const { dq0StatusRows, dq0Typed, DQ0_MAKE, dq0Story } = require('../../lib/dq0.js');
+// (dq0played's lines: the play test's first game, 2026-11-16, review/play's g1.json, as typed)
+const PLAYED = ['help', 'look', 'i', 'status', 'x room', 'map', 'l', 'z', 'x case', 'open the case', 'look in the case', 'take all from the case', 'get all', 'look under the bed', 'g', 'again', 'undo', 'examine the skylight', 'look at the stairs', 'climb the stairs', 'go to the door', 'open the door', 'look', 'go through the door', 'look', 'map', 'unlock the door', 'i', 'drop the case', 'pick the lock', 'force the door', 'kick the door', 'break the door', 'search', 'search the room', 'look', 'x door', 'look around', 'turn around', 'look', 'break the door', 'break the door', 'status', 'break the door with the knife', 'look', 'go through the door', 'look', 'map', 'f', 'look', 'f', 'listen', 'smell', 'f', 'look', 'map', 'open the door', 'go through the door', 'look', 'f', 'look', 'go back', 'look', 'turn left', 'sw', 'look', 'sw', 'look', 'map', 'w', 'look', 'open the case', 'look in it', 'put the knife in the case', 'look in the case', 'take the knife from the case', 'close the case', 'take E', 'i', 'take C', 'x pit', 'look in the pit', 'go to the pit', 'look down', 'drop the candle stubs in the pit', 'i', 'look', 'drop the stubs into the pit', 'put the stubs in the pit', 'jump into the pit', 'climb down into the pit', 'enter the pit', 'go through the left door', 'look', 'f', 'look', 'open the door', 'go back', 'look', 'go through the right door', 'look', 'f', 'look', 'open the door', '1', 'take F', 'x it', 'break the door', 'go through the door', 'look', 'map'];
 
 module.exports = {
   tests: [
@@ -173,6 +175,42 @@ module.exports = {
           JSON.stringify(said[k < 0 ? want.length : k]) + ' (wanted ' + JSON.stringify(want[k < 0 ? want.length : k]) + ')');
         if (parts.filter(p => p.length > 1).length < 3) f.push('fewer than three of help.txt\'s lines read in parts: none longer than help.c\'s buffer tried');
         if (!/\(f, b, l, r: as you face; l is left, not look\)/.test(said.join(' '))) f.push('the first steps not saying l is left');
+        return f;
+      },
+      sdcard: true
+    },
+    // ---- The words the player reads (2026-11-17: GAME-CRITIQUE.md's 5.6 and section 1's visible bugs)
+    {
+      name: 'dq0pitwords', near: ['screen'], outfit: true, what: "Dingus Quest Zero's refusals and measures in words (2026-11-17, the play test's): a thing let fall down a shaft with none near (the world's wwell2.c, IR_NONE: its words none, so the UI said the things' text as it was left, \"drop the candle stubs in the pit\" an inventory before it, cut short), said why, \"There's no well or shaft here for the torch to fall down.\", the inventory before it not said again, nor at the pit; a weapon's look (the soak's cleric's dagger, light: its item's size its version, WV_*, read as its measure, \"1 feet long\") without a measure",
+      init: 't_rc', cycles: 900e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'i',
+        'drop the torch down the shaft', 'i', 'drop the torch into the pit', 'quit', 'hmchar -q -s 1 -o /ram/d.hm', 'dq0 -p t -s 3 -c /ram/d.hm -T', 'examine the dagger', 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out), turn = (a, b) => { const i = s.indexOf('> ' + a), j = s.indexOf('> ' + b, i + 1); return i < 0 ? '' : s.slice(i, j < 0 ? undefined : j); };
+        const sh = turn('drop the torch down the shaft', 'i'), pt = turn('drop the torch into the pit', 'quit'), dg = turn('examine the dagger', 'quit');
+        if (!sh.includes("There's no well or shaft here for the torch to fall down.")) f.push('no shaft near: not said why: ' + JSON.stringify(sh));
+        for (const [w, t] of [['down the shaft', sh], ['into the pit', pt]]) if (/You carry|In all,|\(a\) /.test(t)) f.push(w + ': the inventory before it said again: ' + JSON.stringify(t));
+        if (!/Your dagger is (?:in|on) your [a-z]+\. It's made of iron[;.]/.test(dg)) f.push('the dagger looked at: ' + JSON.stringify(dg));
+        if (/feet long|foot long/.test(dg)) f.push('a weapon\'s version said as its measure: ' + JSON.stringify(dg));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0played', near: ['screen'], outfit: true, fit: true, reach: true, bearings: true, initiative: true, hours: true, what: "Dingus Quest Zero's play test's first game replayed (2026-11-16, GAME-CRITIQUE.md's: a weak scribe, seed 271828's generated dungeon, its 118 lines as typed): a thing too far to make out told as one, whatever it is (\"On the floor ahead to your right lies (F) something small.\": a plural kind's candle stubs through a window, \"lie\" till 2026-11-17: seen.c's verb by its words); the candle stubs dropped in the pit, the inventory taken between, its words never said again (\"You reach for your backpack.\" and the inventory before it, cut short, till 2026-11-17)",
+      init: 't_rc', cycles: 1600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 77 -u feudal -c scribe -o /ram/c.hm', 'dq0 -p t -s 271828 -c /ram/c.hm',
+        ...PLAYED, 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out), far = s.match(/ (lie|lies) \([A-Z]\) something (small|large)/g) || [];
+        if (!far.length) f.push('no thing too far to make out told (the scene moved?)');
+        for (const x of far) if (!/ lies /.test(x)) f.push('a thing too far to make out said with a plural verb: ' + JSON.stringify(x));
+        const pit = s.slice(s.indexOf('> drop the stubs into the pit'), s.indexOf('> jump into the pit'));
+        if (!pit) f.push('the pit not come to (the scene moved?)');
+        else if (/You carry|In all,|\(a\) clothes/.test(pit)) f.push('the inventory before it said again at the pit: ' + JSON.stringify(pit.slice(0, 300)));
         return f;
       },
       sdcard: true

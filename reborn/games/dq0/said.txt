@@ -983,7 +983,8 @@ SA.against          +" It stands against the door."
 
 # ---- The well's (UK_SA, past 127: wwell.c's and wwell2.c's codes in the UI bank's trtext, not the things' text, said as
 # the traces' words are, E_VIEW's V_TRACED: words.c's reader, tt_words of trtext; the user's, 2026-11-16).  text the
-# thing let fall
+# thing let fall.  No well or shaft to let it fall down: its refusal in the things' text, as the things' are (no_fall,
+# 2026-11-17: none before it, the things' text said as it was left, the play test's stale inventory after a pit)
 
 @fallwell   "You let the {text} fall into the well."
 @fallshaft  "You let the {text} fall down the shaft."
@@ -999,3 +1000,4 @@ SA.shaft_lodges     +"{@fallshaft}{@lodges}"
 SA.shaft_splash     +"{@fallshaft}{@splash}"
 SA.shaft_lands      +"{@fallshaft}{@lands}"
 SA.not_on           +"{text?You find nothing on the {obj}.|You find no {text} on the {obj}.}"
+SA.no_fall          +"There's no well or shaft here for the {text} to fall down."

@@ -5251,7 +5251,9 @@ void __fastcall__ s_closer (unsigned char mode)
     }
     put (lpl ? " They're made of " : " It's made of ");
     put (*matname[rec.mat] ? matname[rec.mat] : "something you can't name");
-    if ((k = rec.size) != 0) {                  /* (Its measure: a portal's part's, its opening's) */
+    if ((k = rec.size) != 0 && lk.craft != AP_WEAPON) {    /* (Its measure: a portal's part's, its opening's; a
+                                                **   weapon's size its version, WV_*, not a measure: "1 feet long", a
+                                                **   light dagger's, till 2026-11-17, the soak's) */
         put (", ");
         put (utoa (k & 15, b, 10));
         if (k >> 4) {
@@ -5259,7 +5261,7 @@ void __fastcall__ s_closer (unsigned char mode)
             put (utoa (k >> 4, b, 10));
             put (" feet");
         } else {
-            put (" feet long");
+            put (k == 1 ? " foot long" : " feet long");     /* ("1 feet long" till 2026-11-17, the soak's dagger) */
         }
     }
     if ((k = rec.thick) != 0) {

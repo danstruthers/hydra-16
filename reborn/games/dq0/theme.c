@@ -66,11 +66,18 @@ void __fastcall__ o_theme_load (unsigned char t)
     Q.theme = own ? 0xFF : t;                   /* (Its kinds the world's to put in the catalogue: IO_THEME) */
 }
 
-/* Its words at offset w (0: none), said on a line of their own */
+/* Its words at offset w (0: none), said on a line of their own; words with a choice by the light outside
+** ("{the light of day/the dark of night}": the theme format's, 1crypt.txt's head) copied into lb and said by the hour,
+** time.c's (2026-11-17: "Above, it's dark: it's night.", then "You climb the stair into the light of day") */
 static void __fastcall__ words_at (unsigned w)
 {
-    if (w) {
-        msg ((const char*) T + w);
+    const char* s = (const char*) T + w;
+
+    if (w && strchr (s, '{') && strlen (s) < sizeof lb) {
+        strcpy (lb, s);
+        time_ui (TU_LIGHT);
+    } else if (w) {
+        msg (s);
     }
 }
 

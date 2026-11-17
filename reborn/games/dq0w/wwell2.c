@@ -53,22 +53,46 @@ static unsigned char shaft_near (void)
     return 0xFF;
 }
 
+static char b[120];
+
+/* None to let thing n fall down (0: none of the name to hand), its words in the things' text (said.txt's SA rows: "There's
+** no well or shaft here for the candle stubs to fall down."; "You have no such thing."): IR_NONE.  (Its words none
+** before 2026-11-17: the UI said the things' text as it was, the play test's "drop the candle stubs in the pit", its
+** inventory before it, cut) */
+static unsigned char __fastcall__ none_for (unsigned n)
+{
+    unsigned char k = n ? item_at (n)->kind : 0;
+
+    b[0] = n ? SAY_AT2 : SAY_AT;
+    b[1] = n ? SA_NO_FALL : SA_NO_THING | 0x80;
+    b[2] = 0;
+    if (n) {
+        hub_map (KIND_BANK);
+        strcpy (b + 2, CATALOGUE[k].name);
+    }
+    strcat (b, "\2\2");
+    hub_map (UI_BANK);
+    strcpy (UIREC->things_text, b);
+    hub_map (0);
+    return IR_NONE;
+}
+
 /* The thing named (the things' request's) into the well within reach, or down a shaft (the request's into: "well", or
 ** "shaft", a shaft's or a hole's kind said, the UI's): on the head's square, then down to its foot (a well choked, it lodges
 ** where it is), told in the things' words, the sound of its landing by the foot's water: IR_OK; its reach's step first,
-** IR_NO; a well seen but out of reach, IR_NOT_HERE (where it is: the UI walks over to it, and asks again); none, IR_NONE */
+** IR_NO; a well seen but out of reach, IR_NOT_HERE (where it is: the UI walks over to it, and asks again); none, IR_NONE,
+** why in the things' words */
 unsigned char s_well_put (void)
 {
     struct item* q;
     const struct stratum* s;
     unsigned n;
     unsigned char k, w, wet = 0;
-    static char b[120];
     static struct msg m;
 
     if ((w = well (WL_NEAR)) == 0 && (*iq.into != 's' || shaft_near () == 0xFF)) {
         if (*iq.into == 's' || (n = seen_named ("well")) == 0) {
-            return IR_NONE;
+            return none_for (at_hand (iq.name));
         }
         q = item_at (n);
         W_X = q->x;
@@ -80,7 +104,7 @@ unsigned char s_well_put (void)
         return IR_NOT_HERE;
     }
     if ((n = at_hand (iq.name)) == 0) {
-        return IR_NONE;
+        return none_for (0);
     }
     if (reach_step (n, 0)) {
         return IR_NO;                           /* (A step of the reach first: got out of the pack ...) */

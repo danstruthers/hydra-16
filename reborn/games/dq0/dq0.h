@@ -429,8 +429,9 @@ void __fastcall__ feed (unsigned char eat);     /* (Part 16's, feed.c: "eat", "d
 #define HD_UP           ((const char*) 2)
 unsigned __fastcall__ time_ui (unsigned w);     /* Overlay 16 (time.c): the time of day believed, worded (w TU_TELL,
                                                 **   "time"; TU_SKY | its phase times 256, the sky seen; TU_UNTIL, a
-                                                **   wait's minutes "until dawn", "watch the sun", 0 none said) */
-enum { TU_TELL, TU_SKY, TU_UNTIL };
+                                                **   wait's minutes "until dawn", "watch the sun", 0 none said; TU_LIGHT,
+                                                **   lb's theme words with the light outside, said: theme.c's) */
+enum { TU_TELL, TU_SKY, TU_UNTIL, TU_LIGHT };
 #define FIGHT_LB    ((struct fight*) (lb + sizeof lb) - 1)
 void __fastcall__ fight_note (unsigned char n);   /* Overlay 22: a fight's word into lb (blows.c's) */
 unsigned char __fastcall__ grapple (unsigned char g);  /* Overlay 19 (blows.c's): a grapple's move (rs.h's GM_*) at the

@@ -207,7 +207,7 @@ void __fastcall__ o_appraise (const struct ireq* q, signed char g, unsigned char
             add (utoa (sz >> 4, b, 10));
             add (" feet");
         } else {
-            add (" feet long");
+            add (sz == 1 ? " foot long" : " feet long");     /* ("1 feet long" till 2026-11-17) */
         }
         if (q->thick) {
             add (", ");

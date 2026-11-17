@@ -15,6 +15,9 @@
 #   %Q the one who asked (a why line's patron: a name the seed's, or a rumour's)
 #   %Y why the character came (its why line's words, their slots filled: in the story, where "you came down to try" was)
 #   %D what the patron pays, in words ("87 pennies": a why line's reward words)
+#   and in an ending's words (or a rule's, lock's, opened's) a choice by the light outside, its words by the hour
+#   they're said at: {day/night} ("{the daylight/the night}", dawn and dusk the day's; or {day/night/dawn/dusk}: the
+#   theme format's, ../dq0/themes/1crypt.txt's head)
 # The lines:
 #   goal     its name (the theme's goal line's), the mission (escape, rule), and where its stratum is: built (a
 #            stratum an era built, not the deepest), cursed (an era's that ended cursed: the history makes one),
@@ -69,9 +72,10 @@ rule     | take | %a | open | So this is %A, where they said it would be.
 story    | Somewhere below, in %S, lies %A.  %Y  The way back up is open behind you.
 wayin    | open
 opened   | The way up stands open: go up to leave.
-ending   | escaped | You climb out into the daylight with %A in your hands.  Behind you %R keep their dark; you have
-           found what you came for, and lived.
-ending   | left | You climb out into the daylight with empty hands.  %A still lies under %R, for all you came to find it.
+ending   | escaped | You climb out into {the daylight/the night} with %A in your hands.  Behind you %R keep their dark;
+           you have found what you came for, and lived.
+ending   | left | You climb out into {the daylight/the night} with empty hands.  %A still lies under %R, for all you
+           came to find it.
 ending   | died | %A stays where it lies, and you with it.
 
 goal     | evil | rule | cursed
@@ -110,9 +114,9 @@ lock     | The way out is shut fast.  The curse holds it till the curse is broke
            somewhere below.
 opened   | The way up stands open: go up to leave.
 wayout   | %O
-ending   | ruled | %N's curse is broken, and %R are free of it.  You climb out into the daylight, and behind you the
-           dead of %P sleep at last.
-ending   | left | You climb out into the daylight.  %N's curse still lies on %R, and the dead of %P walk on.
+ending   | ruled | %N's curse is broken, and %R are free of it.  You climb out into {the daylight/the night}, and behind
+           you the dead of %P sleep at last.
+ending   | left | You climb out into {the daylight/the night}.  %N's curse still lies on %R, and the dead of %P walk on.
 ending   | died | You join the dead of %P, and walk the dark with them.
 
 goal     | prisoner | escape | lair
@@ -146,9 +150,9 @@ lock     | The way out is shut fast: the stair has fallen in behind you.  If any
            be another, somewhere below.
 opened   | %M's way up stands open: go up to leave.
 wayout   | %O
-ending   | escaped | You come out into the daylight, and %M behind you, free at last.  Behind you %R keep their
-           dark.  You have done what you came to do.
-ending   | left | You climb out into the daylight alone.  %M is still down there, in chains.
+ending   | escaped | You come out into {the daylight/the night}, and %M behind you, free at last.  Behind you %R keep
+           their dark.  You have done what you came to do.
+ending   | left | You climb out into {the daylight/the night} alone.  %M is still down there, in chains.
 ending   | died | %M waits in the dark for someone else.
 
 goal     | through | escape | deep
@@ -181,7 +185,8 @@ lock     | The way in has fallen in behind you: there's no going back that way. 
            down.
 ending   | escaped | You come up at last through %A into the open air, far from where you went in.  You have come
            through.
-ending   | left | You climb out into the daylight, not far from where you went in.  %A is still down there, untried.
+ending   | left | You climb out into {the daylight/the night}, not far from where you went in.  %A is still down there,
+           untried.
 ending   | died | %A is still down there, for someone luckier.
 
 goal     | lore | escape | built | heard
@@ -214,9 +219,9 @@ story    | Somewhere below, in %S, %P set down %A, and no one has opened it sinc
            you.
 wayin    | open
 opened   | The way up stands open: go up to leave.
-ending   | escaped | You climb out into the daylight with %A under your arm.  Behind you %R keep their dark; what %P
-           wrote down comes up into the light with you.
-ending   | left | You climb out into the daylight with nothing to read.  %A still lies under %R, unopened.
+ending   | escaped | You climb out into {the daylight/the night} with %A under your arm.  Behind you %R keep their dark;
+           what %P wrote down comes up into the light with you.
+ending   | left | You climb out into {the daylight/the night} with nothing to read.  %A still lies under %R, unopened.
 ending   | died | %A keeps what's written in it, and you with it.
 
 goal     | scourge | escape | lair | heard
@@ -246,8 +251,8 @@ story    | %M, chief of %g, sends raiders up out of %S to burn and steal across 
            they take.  Take %A from %M's lair, and the raids will end.  %Y  The way back up is open behind you.
 wayin    | open
 opened   | The way up stands open: go up to leave.
-ending   | escaped | You climb out into the daylight with %A, and %g are raiders no longer.  The farms by %R can sleep at
-           night.
-ending   | left | You climb out into the daylight with nothing to show.  %M's raiders will be out again before the moon
-           turns.
+ending   | escaped | You climb out into {the daylight/the night} with %A, and %g are raiders no longer.  The farms by %R
+           can sleep at night.
+ending   | left | You climb out into {the daylight/the night} with nothing to show.  %M's raiders will be out again
+           before the moon turns.
 ending   | died | %M's raiders will be out again, and no one will come after them now.

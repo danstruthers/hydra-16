@@ -115,6 +115,42 @@ static unsigned until (void)
     return m < 5 ? m + 1440 : m;
 }
 
+/* The theme's words in lb (theme.c's words_at: an ending, the way out opened), each choice by the light outside
+** ("{the light of day/the dark of night/the grey light of dawn/the last light of day}": day, night, dawn, dusk; of two,
+** day and night, dawn and dusk the first's) made its words by the true hour, as the sky shows it (the world's
+** wtime.c's: night before five and from seven in the evening, dawn till seven, dusk from five), said (2026-11-17: the
+** play test's "Above, it's dark: it's night.", then "You climb the stair into the light of day") */
+#pragma register-vars (push, on)
+static void light_words (void)
+{
+    struct tbelief t;
+    register char* p;
+    register char* q;
+    unsigned m;
+    unsigned char k, n, i;
+
+    hub_mem (0, &t, &HUB->tb, sizeof t);
+    t.skew = 0;
+    m = day_believed (&t);                      /* (Its belief's skew none: the true minute) */
+    k = m < 300 || m >= 1140 ? 1 : m < 420 ? 2 : m < 1020 ? 0 : 3;
+    while ((p = strchr (lb, '{')) != 0 && strchr (p, '}')) {
+        for (n = 0, q = p; *q != '}'; ++q) {    /* (Its alternatives less one) */
+            n += *q == '/';
+        }
+        for (n = k > n ? 0 : k, q = p + 1; n; --n) {
+            q = strchr (q, '/') + 1;
+        }
+        for (i = 0; q[i] != '/' && q[i] != '}'; ++i) {
+        }
+        memmove (p, q, i);                      /* (The one chosen in its place, the rest after it: its brace found
+                                                **   past it, the bytes moved before it its own) */
+        q = strchr (q + i, '}') + 1;
+        memmove (p + i, q, strlen (q) + 1);
+    }
+    msg (lb);
+}
+#pragma register-vars (pop)
+
 /* The UI's ask (w's low byte, TU_*; its high, the sky's phase): told, the sky's words, a wait's length */
 unsigned __fastcall__ o_time_ui (unsigned w)
 {
@@ -148,6 +184,9 @@ unsigned __fastcall__ o_time_ui (unsigned w)
         break;
     case TU_UNTIL:
         return until ();
+    case TU_LIGHT:
+        light_words ();
+        break;
     }
     return 0;
 }

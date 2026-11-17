@@ -197,9 +197,11 @@ static void items (void)
             k = LF_LIE;
         }
         group (i);
-        f.w2 |= m || n > 1 || S->item[i].plural || gq > 1 ? 8 : 0;   /* ("lie", "lies") */
-        f.w1 = k << 8;
         one (v, i, n);
+        f.w2 |= m || ((v->w1 & 7) != 2 && (n > 1 || S->item[i].plural || gq > 1)) ? 8 : 0;   /* ("lie", "lies": one
+                                                **   too far off to make out "something small", whatever it is, one;
+                                                **   "lie (F) something small" of a plural kind's till 2026-11-17) */
+        f.w1 = k << 8;
         for (f.a = 1, j = i + 1; m; ++j) {
             if (now & 1 << j) {
                 --m;

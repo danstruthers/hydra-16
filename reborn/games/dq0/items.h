@@ -601,9 +601,11 @@ enum {
                                                 /* (The well's: wwell.c's, wwell2.c's, in the UI bank's trtext, said as
                                                 **   the traces' words are, E_VIEW's V_TRACED: words.c's reader, the
                                                 **   user's, 2026-11-16; in the order wwell2.c counts them) */
-    SA_NOT_ON                                   /* (Not found on a surface, "You find no chisel on the shelves.": SA_NOT_IN's
+    SA_NOT_ON,                                  /* (Not found on a surface, "You find no chisel on the shelves.": SA_NOT_IN's
                                                 **   for a thing that holds things on it, things.c's in_other, 2026-11-17;
                                                 **   past 127, SAY_AT2's) */
+    SA_NO_FALL                                  /* (No well nor shaft to let it fall down: wwell2.c's, in things_text,
+                                                **   2026-11-17) */
 };
 
 /* What the character carries, for the UI to word (IO_LIST's): each thing, how deep it's in others, its state */

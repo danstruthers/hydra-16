@@ -438,6 +438,26 @@ module.exports = {
       }
     },
     {
+      name: 'dq0night', near: ['theme', 'time'], what: "Dingus Quest Zero's words by the light outside (the theme format's {day/night/dawn/dusk}: theme.c's words_at, time.c's light_words, by the true hour as the sky shows it; GAME-CRITIQUE.md's 5.6, the play test's \"Above, it's dark: it's night.\", then the crypt's ending \"You climb the stair into the light of day\"): the crypt (seed 3) at ten at night (dq0hour=22), its seal made whole and used on the way out: its door grinding open on the stair up to the night sky, the way out looked at the same, and up it into the dark of night, the light of day not said; at six in the morning the grey of dawn, and the grey light of dawn",
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', ...['22', '6'].flatMap(h => ['dq0hour=' + h,
+        'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone', 'drop the hatchet', 'combine the sunstone with the moonstone', 'use the seal on the way out',
+        'examine the way out', 'u']), 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out), at = s.indexOf('dq0hour=6'), g = [s.slice(0, at < 0 ? s.length : at), at < 0 ? '' : s.slice(at)];
+        const has = (k, w, what) => { if (!g[k].includes(w)) f.push(what + ': ' + JSON.stringify(w) + ' not said'); };
+        has(0, 'and the door grinds open on the stair up to the night sky.', 'at night, the door opened');
+        has(0, 'The black door stands open on the stair up to the night sky: go up to leave.', 'at night, the way out looked at');
+        has(0, 'You climb the stair into the dark of night, and behind you the hill closes again over the Crypt of the Dead King.', 'at night, the ending');
+        if (/light of day|daylight|\{/.test(g[0])) f.push('at night, the day\'s words said (or a choice\'s braces)');
+        has(1, 'and the door grinds open on the stair up to the grey of dawn.', 'at dawn, the door opened');
+        has(1, 'You climb the stair into the grey light of dawn, and behind you', 'at dawn, the ending');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0handtheme', meaning: true, what: 'Dingus Quest Zero\'s hand-written theme (dq0 -t FILE: games/dq0/themes/1crypt.txt\'s format, its history\'s groups): a theme giving its name, its region and its two strata, made into a game\'s own by themegen (its seed\'s history filling the rest: the head\'s mission and story made, line by line; the eras, the inhabitants, the goal and its puzzle), written into the save\'s folder and compiled (theme.txt, theme.dat), even at a small seed (5: a stand-in\'s, but for -t); the game in it: the theme\'s name, its top stratum the one given',
       init: 't_rc', cycles: 900e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
