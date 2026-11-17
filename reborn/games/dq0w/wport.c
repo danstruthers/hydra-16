@@ -65,7 +65,7 @@ unsigned s_door_key (void)
 ** 0 nothing done (a refusal: its mind's to see in the door's state) */
 #define DE(d, loud)     ((d) - DE_OPENS | (loud) << 4)
 static const unsigned char de_of[PO_HELD + 1] = {
-    0, DE (DE_OPENS, 2), DE (DE_SHUTS, 3), 0, 0, 0, 0, DE (DE_UNBARS, 3), 0, 0, 0, 0, DE (DE_BURSTS, 7),
+    0, DE (DE_OPENS, 2), DE (DE_SHUTS, 3), 0, 0, 0, 0, 0, 0, 0, 0, 0, DE (DE_BURSTS, 7),
     DE (DE_HOLDS, 7)
 };
 
@@ -265,8 +265,9 @@ static void __fastcall__ den_portal (const struct msg* m)
     } else if (o == PO_KEYED || o == PO_KEY_LOCKED) {
         de = o == PO_KEYED ? DE_UNLOCKS : DE_LOCKS;
         loud = 1;
-    } else if (o == PO_LIFTED || o == PO_REBARRED) {
-        de = o == PO_LIFTED ? DE_UNBARS : DE_BARS;
+    } else if (o == PO_LIFTED || o == PO_REBARRED || o == PO_UNBARRED) {
+        de = o == PO_LIFTED ? DE_UNBARS : o == PO_REBARRED ? DE_BARS : DE_UNBARRED;   /* (Unbarred and opened at once:
+                                                **   the character's own, its words and its sound the opening's, 2026-11-17) */
         loud = 3;
     } else if (o <= PO_HELD && de_of[o]) {
         de = (de_of[o] & 15) + DE_OPENS;

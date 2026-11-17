@@ -3875,9 +3875,26 @@ void __fastcall__ own_comps (struct item* q);  /* (Part 61's: a thing's compartm
 
 SAY_PUT (say36)
 
-unsigned char s_shut_work (void)
+/* A noise of the character's lock work, how loud (what made it, NZ_*): a key turned, a lock picked at or picked, quiet
+** (NZ_CLICK, 1: heard close by, the user's, 2026-11-17, "A key, a bar and a pick make quiet sounds", as a door's are,
+** wdoor.c's); a lid wrenched at, loud (NZ_WORK, 6) */
+static void __fastcall__ box_noise (unsigned char loud, unsigned char what)
 {
     struct msg m;
+
+    hub_map (0);
+    m.kind = E_NOISE;
+    m.who = 0;
+    E_NOISE_LOUD (m) = loud;
+    E_NOISE_WHAT (m) = what;
+    E_NOISE_SX (m) = HUB->pc_x;
+    E_NOISE_SY (m) = HUB->pc_y;
+    m.t = HUB->now;
+    hub_event (&m);
+}
+
+unsigned char s_shut_work (void)
+{
     const struct kind* k;
     unsigned n, t = 20;                         /* (Its time: a minute's picking, 600, past a char's 255: it was 88
                                                 **   tenths, a char's, till 2026-10-22) */
@@ -3944,6 +3961,7 @@ unsigned char s_shut_work (void)
         }
         s ^= IS_LOCKED;                         /* (With its own key: no test, a few seconds) */
         say36 (w == PA_LOCK ? SA_LOCK : SA_UNLOCK, nm, "");
+        box_noise (1, NZ_CLICK);
         t = 30;
         lt = 0;
         ok = IR_OK;
@@ -3983,9 +4001,11 @@ unsigned char s_shut_work (void)
             t = 600;                            /* (The means to hand: a minute a try, as a door's, a long task, its
                                                 **   test made again at its end; the lockpicks' reach first) */
             lt = LT_PICK;
+            box_noise (1, NZ_CLICK);            /* (Its scratching at the lock) */
         } else if (g > 0) {
             s &= ~IS_LOCKED;
             say36 (SA_PICKED, nm, "");
+            box_noise (1, NZ_CLICK);
         } else {
             say36 (SA_NOT_PICKED, nm, "");
         }
@@ -3999,16 +4019,8 @@ unsigned char s_shut_work (void)
             if (reach_step (0, st)) {
                 return IR_NO;
             }
-            hub_map (0);
-            m.kind = E_NOISE;                   /* (Loud: a lock burst, or a lid wrenched at, ten seconds' of it, its
+            box_noise (6, NZ_WORK);             /* (Loud: a lock burst, or a lid wrenched at, ten seconds' of it, its
                                                 **   test at its end) */
-            m.who = 0;
-            E_NOISE_LOUD (m) = 6;
-            E_NOISE_WHAT (m) = NZ_WORK;
-            E_NOISE_SX (m) = HUB->pc_x;
-            E_NOISE_SY (m) = HUB->pc_y;
-            m.t = HUB->now;
-            hub_event (&m);
             t = 100;
             lt = LT_FORCE;
         } else if (tested (P_FORCE, (rec.mat == MT_WOOD ? 0 : -2) - (signed char) (rec.quality / 3)) > 0) {

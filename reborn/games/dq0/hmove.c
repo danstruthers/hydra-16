@@ -150,9 +150,11 @@ unsigned char s_swim_go (void)
     return 0;
 }
 
-static unsigned char fol, fol_still;            /* (The denizen followed, its record: the denizens' task's, struct
-                                                **   actor's den; 1 caught up with it, a round's wait beside it once; 2
-                                                **   walked after it, */
+static unsigned char fol;                       /* (The denizen followed, its record: the denizens' task's, struct
+                                                **   actor's den; */
+unsigned char fol_still;                        /*   1 caught up with it, a round's wait beside it once; 2 walked after
+                                                **   it, | 4 as the follow began (out of reach told then alone: task.c's
+                                                **   TE_FAR), */
 static unsigned fol_x, fol_y;                   /*   from here) */
 
 /* A denizen followed ("follow the rat", "tail the bandit": VB_FOLLOW_OBJECT): one seen (the resolver's, its square in
@@ -222,12 +224,12 @@ void s_follow_go (void)
         fol_still = 1;
         intend2 (I_WAIT, HUB->round, I_WAIT_W2 (0, 0, 1));   /* (A round beside it, to see if it goes) */
     } else {
-        if (fol_still == 2 && fol_x == HUB->pc_x && fol_y == HUB->pc_y) {
+        if ((fol_still & ~4) == 2 && fol_x == HUB->pc_x && fol_y == HUB->pc_y) {
             sayf ("\nYou can't keep up with %s.", lb);   /* (Its last walk after it got nowhere: no way, or no
                                                 **   nearer) */
             return;
         }
-        fol_still = 2;
+        fol_still = reach != 2 ? 6 : 2;         /* (As it begins: its first walk after it, 6) */
         fol_x = HUB->pc_x;
         fol_y = HUB->pc_y;
         placing = 1;                            /* (Its arrival not "You go over to it.": "You follow" said) */

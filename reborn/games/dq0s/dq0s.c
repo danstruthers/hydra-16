@@ -45,8 +45,9 @@ struct dsnd {
 typedef char dsnd_fits[sizeof (struct dsnd) == SND_REC ? 1 : -1];
 #define S_USED          0x01                    /* A sound there */
 #define S_NOISY         0x02                    /* A noise (the PSG's, first) */
-enum { WS_DIG, WS_OPEN, WS_SHUT, WS_BLOW, WS_SMASH, WS_CHAINS, WS_TRAP, WS_HIT, WS_SWISH };   /* The world's
-                                                **   (sounds.txt's *dig ...; a fight's blow landing, missing) */
+enum { WS_DIG, WS_OPEN, WS_SHUT, WS_BLOW, WS_SMASH, WS_CHAINS, WS_TRAP, WS_HIT, WS_SWISH, WS_CLICK, WS_BAR };   /* The
+                                                **   world's (sounds.txt's *dig ...; a fight's blow landing, missing; a
+                                                **   key turned or a lock picked, a bar lifted or set: quiet, 2026-11-17) */
 #define WORLD(w)        (2 * SND_KINDS + (w))
 #define NSOUNDS         (2 * SND_KINDS + SND_WORLD)
 
@@ -348,7 +349,8 @@ static unsigned char __fastcall__ world_sound (const struct msg* m)
     case E_NOISE:                               /* (Work's, a dig's; or a blow's, a battering's, a knock's: each heard; a
                                                 **   voice, none: 2026-11-10) */
         o = E_NOISE_WHAT (*m);
-        return o == NZ_VOICE ? 0xFF : WORLD (o == NZ_BLOW || o == NZ_KNOCK ? WS_BLOW : WS_DIG);
+        return o == NZ_VOICE ? 0xFF : WORLD (o == NZ_BLOW || o == NZ_KNOCK ? WS_BLOW : o == NZ_CLICK ? WS_CLICK : o == NZ_BAR ?
+            WS_BAR : WS_DIG);                   /* (A key's, a pick's, a bar's: quiet, 2026-11-17) */
     case E_TRAP:
         return E_TRAP_TO (*m) == TO_SPRUNG ? WORLD (WS_TRAP) : 0xFF;
     case E_PORTAL:
@@ -368,23 +370,26 @@ static unsigned char __fastcall__ world_sound (const struct msg* m)
     return 0xFF;
 }
 
-/* A denizen's work heard as the world's sounds (E_DEN's DE_DIG ... DE_PICKS: a tunneller's, a builder's, a door or a
+/* A denizen's work heard as the world's sounds (E_DEN's DE_DIG ... DE_UNBARRED: a tunneller's, a builder's, a door or a
 ** portcullis worked), each as the character's own work of its kind is played (world_sound's: one body rule,
 ** GAME-CRITIQUE.md's 4.2, 2026-11-17; a denizen's door work was told but silent): a door opened, burst open, shut,
 ** slammed, battered, broken in; its forcing begun, a winch wound, bars strained at (their strain a work's noise, as the
-** character's is); a portcullis raised, let fall.  NO_WS: what the character's own makes no sound of (a key turned, a
-** bar lifted or set, a lock picked, a door holding, a heave begun, bars bent apart) */
+** character's is); a portcullis raised, let fall; a key turned, a lock picked at or picked, a click, and a bar lifted or
+** set, a bar's, quiet (the user's, 2026-11-17: "A key, a bar and a pick make quiet sounds", the character's E_NOISE's).
+** NO_WS: what the character's own makes no sound of (a door holding, a heave begun, bars bent apart) */
 #define NO_WS           0xFF
 static const unsigned char den_ws[] = {
     WS_DIG, WS_SMASH, WS_DIG,                   /* (DE_DIG, DE_DUG, DE_DIGS) */
-    WS_OPEN, WS_SHUT, WS_SHUT, NO_WS, NO_WS, NO_WS, NO_WS, WS_DIG, WS_OPEN, NO_WS, WS_BLOW, WS_SMASH,
+    WS_OPEN, WS_SHUT, WS_SHUT, WS_CLICK, WS_CLICK, WS_BAR, WS_BAR, WS_DIG, WS_OPEN, NO_WS, WS_BLOW, WS_SMASH,
                                                 /* (DE_OPENS, SHUTS, SLAMS, UNLOCKS, LOCKS, BARS, UNBARS, STRAINS,
                                                 **   BURSTS, HOLDS, BATTERS, BREAKS) */
     WS_SMASH, WS_BLOW, WS_BLOW,                 /* (DE_ROOF, HANGS, WALLS) */
-    WS_DIG, NO_WS, WS_CHAINS, WS_CHAINS, WS_DIG, NO_WS, NO_WS, NO_WS
+    WS_DIG, NO_WS, WS_CHAINS, WS_CHAINS, WS_DIG, NO_WS, WS_CLICK, WS_CLICK,
                                                 /* (DE_WINDS, HEAVES, RAISES, LOWERS, BENDS, BENT, PICKING, PICKS) */
+    WS_OPEN                                     /* (DE_UNBARRED: its bar lifted and the door opened at once, the opening's,
+                                                **   as the character's PO_UNBARRED is played: 2026-11-17) */
 };
-typedef char den_ws_fits[sizeof den_ws == DE_PICKS - DE_DIG + 1 && DE_OPENS - DE_DIG == 3 && DE_ROOF - DE_DIG == 15 &&
+typedef char den_ws_fits[sizeof den_ws == DE_UNBARRED - DE_DIG + 1 && DE_OPENS - DE_DIG == 3 && DE_ROOF - DE_DIG == 15 &&
     DE_WINDS - DE_DIG == 18 ? 1 : -1];          /* (hub.h's DE_* as the table has them) */
 
 static void listen (void)
@@ -412,7 +417,7 @@ static void listen (void)
             heard (m.who, E_DEN_DKIND (m) % SND_KINDS * 2 + (E_DEN_DE (m) == DE_NOISE), E_DEN_LOUD (m), E_DEN_SX (m) - px,
                 E_DEN_SY (m) - py, E_DEN_BETWEEN (m));
         } else if (m.kind == E_DEN && E_DEN_LOUD (m) && E_DEN_SN (m) == sn &&
-            (unsigned char) (E_DEN_DE (m) - DE_DIG) <= DE_PICKS - DE_DIG && (n = den_ws[E_DEN_DE (m) - DE_DIG]) != NO_WS) {
+            (unsigned char) (E_DEN_DE (m) - DE_DIG) <= DE_UNBARRED - DE_DIG && (n = den_ws[E_DEN_DE (m) - DE_DIG]) != NO_WS) {
             heard (m.who, WORLD (n), E_DEN_LOUD (m), E_DEN_SX (m) - px, E_DEN_SY (m) - py, E_DEN_BETWEEN (m));
                                                 /* (A tunneller's spell, its way through, a builder's work, slice 4.11's
                                                 **   rest; a door, a portcullis worked: den_ws's) */

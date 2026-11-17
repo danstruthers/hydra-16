@@ -79,11 +79,13 @@ static unsigned char __fastcall__ rp_done (unsigned t)
 }
 
 #ifndef RP_THROWN
+#define PILLAR_K        0                       /* (The kind a rope's tied to, its hide: a pillar, the place's own, no thing's:
+                                                **   the user's, 2026-11-17, "Pillars and a window's bars are tie points") */
 /* Its kind's name, into b (14 bytes) */
 static void __fastcall__ rp_name (unsigned char k, char* b)
 {
     hub_map (KIND_BANK);
-    strcpy (b, CATALOGUE[k].name);
+    strcpy (b, k != PILLAR_K ? CATALOGUE[k].name : "pillar");
 }
 #endif
 

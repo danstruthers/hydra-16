@@ -230,9 +230,11 @@ unsigned char o_refused (void)
     r = rows + cmd.action;
     f = 0;
     if ((r->takes & TK_ONTO) && cmd.other.kind && (cmd.prep != PR_IN ||
-        (cmd.other.kind != OB_SHAFT && cmd.other.kind != OB_TRAP))) {
+        (cmd.other.kind != OB_SHAFT && cmd.other.kind != OB_TRAP)) && (cmd.action != VB_TIE_OBJECT ||
+        (cmd.other.kind != OB_PILLAR && cmd.other.kind != OB_WINDOW))) {
         f = U_CANT;                             /* (A part of the place where it's put, or tied: "You can't put the torch on
-                                                **   the door.", not the belt's; but into a hole, let fall, 2026-11-17) */
+                                                **   the door.", not the belt's; but into a hole, let fall, 2026-11-17; a
+                                                **   rope tied to a pillar, a window's bars, the user's, 2026-11-17) */
     } else if (!r->no) {
     } else if (*w) {
         f = r->no >> 4 & 3;

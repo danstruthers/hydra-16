@@ -1716,9 +1716,9 @@ static void hear (void)
                 sgen[k] = 0;                    /* (It senses again: the character, if it's there to be sensed; not
                                                 **   at another's noise, a fellow's every step: the senses' work
                                                 **   for each, slice 4.5's, a rat's steps a storm of it) */
-                if (E_NOISE_WHAT (m) >= NZ_VOICE) {
+                if ((unsigned char) (E_NOISE_WHAT (m) - NZ_VOICE) < 2) {
                     lsx[k] = m.w1;              /* (Words, a yell, a knock: a foe comes to look, drawn on to it, */
-                    lsy[k] = m.w2;              /*   2026-11-10) */
+                    lsy[k] = m.w2;              /*   2026-11-10; a key's click, a bar's: turned to, as work's) */
                     drawn[k] = DRAWN_N;
                 }
             }

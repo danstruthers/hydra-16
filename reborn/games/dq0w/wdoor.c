@@ -35,6 +35,12 @@ extern unsigned char burn_ask;                  /* (things.h's) */
 unsigned door_key (void);                       /* (Part 80's, wport.c: a key that fits it, the actor's) */
 unsigned char __fastcall__ braced (unsigned char sn, unsigned x, unsigned y);   /* (Part 109's, wdrag.c) */
 
+/* A quiet sound of the work (w, NZ_*: a key turned, a lock picked at, a bar lifted or set), how loud: the character's
+** E_NOISE (the minds hear it by the senses' rule, the sound task plays it); an actor's its E_DEN's, wport.c's (told's: the
+** user's, 2026-11-17, "A key, a bar and a pick make quiet sounds, heard close by under the one hearing rule, for every
+** actor") */
+#define quiet(w, loud)  (E_NOISE_WHAT (wk.m) = (w), noise (loud))
+
 void s_doors (void)
 {
     unsigned char out, what = wk.what, st, mine;
@@ -144,6 +150,7 @@ found:
             if (wk.plan) {                      /* (Begun, the means to hand (the referee's): a minute a try, the
                                                 **   test made again at its end, its outcome then; the lockpicks
                                                 **   got out first) */
+                quiet (NZ_CLICK, 1);            /* (Its scratching at the lock: a denizen's DE_PICKING's) */
                 timed (LT_PICK, 600);           /* (Its reach, the lockpicks got out, the world's steps first:
                                                 **   s_door_work's, reach_tool) */
                 return;
@@ -194,6 +201,11 @@ found:
             out = what == PA_THROUGH ? PO_NOT_WINDOW : PO_NOT_PORTC;
             break;
         }
+    }
+    if (out == PO_KEYED || out == PO_KEY_LOCKED || out == PO_PICKED) {
+        quiet (NZ_CLICK, 1);                    /* (A key turned, a lock picked: as a denizen's DE_UNLOCKS ... DE_PICKS) */
+    } else if (out == PO_LIFTED || out == PO_UNBARRED || out == PO_REBARRED) {
+        quiet (NZ_BAR, 3);                      /* (A bar lifted, set: as a denizen's DE_UNBARS, DE_BARS) */
     }
     tail (out);
 }

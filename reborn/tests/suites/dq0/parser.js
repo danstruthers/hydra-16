@@ -424,8 +424,9 @@ function dq0FeaturesTest() {
 // section 1), at seed 3 in the kitchen (dq0 -T, a kit of things more: a chest and its key, a rope, a case, a chisel, a
 // table, a dagger): the other thing's phrase its head, the last word ("with the iron key": the key, not "iron"); a part
 // of the place after the thing and its preposition the other's, refused as where a thing's put or tied ("You can't put
-// the torch on the door.", not the belt's "won't hang"; "You can't tie the rope to the pillar.", not the nearest
-// holder); a part of the place its verb can't use said so, not "Push the wall what?"; a word that names nothing to open
+// the torch on the door.", not the belt's "won't hang"; a pillar a tie point, the user's, 2026-11-17: "You see no pillar
+// here.", none beside it, not the nearest holder); a part of the place its verb can't use said so, not "Push the wall
+// what?"; a word that names nothing to open
 // said so ("You see no drawer here."), not the door ahead worked; words said with no quotes, the form shown; "eat"
 // alone a meal's, as "drink" alone; "pick the lock" an unlock; "take all from the case" everything in it, the world's
 // count, not a handle's "#17"; a surface's "on", not "in"; "drop all" what's in its hands, each put down, nothing worn;
@@ -439,7 +440,8 @@ function dq0ParseFixTest() {
   return {
     name: 'dq0parsefix', near: ['parser'], what: 'Dingus Quest Zero\'s parser\'s quick fixes (GAME-CRITIQUE.md\'s phase A, ' +
       '2026-11-17): "unlock the chest with the iron key" the key\'s (the other thing\'s head, its last word); "put the ' +
-      'torch on the door", "tie the rope to the pillar" refused plainly (a part of the place where it\'s put); "push the ' +
+      'torch on the door" refused plainly (a part of the place where it\'s put); "tie the rope to the pillar", none ' +
+      'beside it, "You see no pillar here." (a pillar a tie point, the user\'s, 2026-11-17), not the nearest holder; "push the ' +
       'wall" "You can\'t push the wall."; "open the drawer", none about, "You see no drawer here."; "say hello" its form ' +
       'shown; "eat" alone as "drink" alone; "pick the lock" as "unlock"; "take all from the case" everything in it; "on ' +
       'the table" for a surface; "drop all" what\'s in its hands; "name" alone',
@@ -456,7 +458,7 @@ function dq0ParseFixTest() {
       want('unlock the chest with the iron key', /You unlock the chest/, 'not unlocked with the key (the other thing\'s head)');
       if (/won't do for a lock/.test(a('unlock the chest with the iron key'))) f.push('the key named by "iron"');
       want('put the torch on the door', /You can't put the torch on the door\./, 'not refused plainly');
-      want('tie the rope to the pillar', /You can't tie the rope to the pillar\./, 'not refused plainly');
+      want('tie the rope to the pillar', /You see no pillar here\./, 'not refused plainly, none beside it');
       want('push the wall', /You can't push the wall\./, 'not said so');
       want('taste the wall', /You can't taste the wall\./, 'not said so');
       want('open the drawer', /You see no drawer here\./, 'not said so');

@@ -653,9 +653,11 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_
     DE_HANGS,                                   /* (A door broken down put up again by a builder: at the door's
                                                 **   square, slice 4.11's rest) */
     DE_WALLS,                                   /* (A way dug into its home walled up by a builder: at its square) */
-    DE_WINDS, DE_HEAVES, DE_RAISES, DE_LOWERS, DE_BENDS, DE_BENT, DE_PICKING, DE_PICKS };
+    DE_WINDS, DE_HEAVES, DE_RAISES, DE_LOWERS, DE_BENDS, DE_BENT, DE_PICKING, DE_PICKS,
                                                 /* (2026-11-02: a portcullis's winch wound, heaved at, raised, let
                                                 **   fall, its bars strained at, bent apart; a lock worked at, picked) */
+    DE_UNBARRED };                              /* (A door's bar lifted and the door opened, at once: the character's
+                                                **   PO_UNBARRED, its words and its sound the door's opening, 2026-11-17) */
                                                 /* E_DEN's what: a step, a
                                                 **   noise of its own (a squeak, a growl), the character sensed, lost
                                                 **   (its senses' own); a successor rallying its fellows at its post
@@ -670,10 +672,13 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_
                                                 **   and its way through (DE_DUG: w1 w2 the square dug, x[2] seen: "A
                                                 **   fresh tunnel opens ..."), its spells after the first (DE_DIGS:
                                                 **   heard by the denizens, not told the player again), slice 4.11's */
-enum { NZ_WORK, NZ_BLOW, NZ_VOICE, NZ_KNOCK };  /* E_NOISE's b: work's (a dig's, a door forced ...), a blow at a thing
+enum { NZ_WORK, NZ_BLOW, NZ_VOICE, NZ_KNOCK,    /* E_NOISE's b: work's (a dig's, a door forced ...), a blow at a thing
                                                 **   (a battering's, each blow: the sound task's); a voice (words said,
                                                 **   a yell, a speech: the sound task's none), a knock (I_NOISE's, 2026-11-10:
                                                 **   a foe that hears either comes to look, the denizens' hear) */
+    NZ_CLICK, NZ_BAR };                         /* (Quiet: a key turned, a lock picked; a bar lifted or set: heard close
+                                                **   by, the sound task's *click and *bar, the minds' as any noise; the
+                                                **   user's, 2026-11-17, "A key, a bar and a pick make quiet sounds") */
 enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's pc_strike): the best it holds (the
                                                 **   best weapon in its hands, the referee's; else the fists: the UI's
                                                 **   with nothing named, its hands empty), a fist, a foot, the head */

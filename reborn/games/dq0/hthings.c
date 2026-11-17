@@ -469,7 +469,11 @@ unsigned char __fastcall__ o_things_work (unsigned char h)
         }
         break;
     case H_TIE:                                 /* (A rope's: the things', wrope.c's, IO_HIDE's shape; a sack's tie, as it's
-                                                **   opened or closed) */
+                                                **   opened or closed.  Tied to a pillar, a window's bars, said by its kind
+                                                **   alone: their names, the world's, the user's, 2026-11-17) */
+        if (!cmd.other.word[0] && (cmd.other.kind == OB_PILLAR || cmd.other.kind == OB_WINDOW)) {
+            strcpy (cmd.other.word, cmd.other.kind == OB_PILLAR ? "pillar" : "bars");
+        }
         if (hide (HD_ROPE)) {
             worked (othings (IO_HIDE | IO_STEPS | IO_GO, cmd.obj.word, cmd.other.word,
                 d | IO_ROPE | (action == VB_UNTIE_OBJECT ? RP_UNTIE : cmd.aux)));

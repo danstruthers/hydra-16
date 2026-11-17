@@ -143,6 +143,7 @@ static const char* __fastcall__ doing_of (unsigned char k, unsigned char n)
 ** was doing, the journey's place, a light's plural: their words copied into the main RAM, lb's end, said_s; a choice,
 ** said_n); the stop, the question, the robbery's purse its own */
 static unsigned char pursed;                    /* (Its coins taken as it lay, not told yet: robbed's, overlay 15's before) */
+extern unsigned char fol_still;                 /* (hmove.c's: a follow's state, 6 its first walk after its quarry) */
 
 unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
 {
@@ -253,10 +254,13 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         }
         break;
     case TE_FAR:
-        if (cmd.action != VB_FOLLOW_OBJECT) {   /* (Following: re-aimed each time, out of reach as often as it keeps its
-                                                **   distance; the follow's own words its end, "You can't keep up",
-                                                **   "You've lost", hmove.c's: 2026-11-17, a rat keeping its distance at
-                                                **   the denizens' new timing told it four times over in one answer) */
+        if (cmd.action != VB_FOLLOW_OBJECT || fol_still == 6) {   /* (Following: re-aimed each time, out of reach as often as
+                                                **   it keeps its distance; the follow's own words its end, "You can't keep
+                                                **   up", "You've lost", hmove.c's: 2026-11-17, a rat keeping its distance at
+                                                **   the denizens' new timing told it four times over in one answer.  Said
+                                                **   once, as the follow begins, its first walk after it: fol_still 6, the
+                                                **   user's, 2026-11-17, "A follow out of reach says so once, when it
+                                                **   starts") */
             say_no (A_NEARER, foe (named, 0));
         }
         return 0;

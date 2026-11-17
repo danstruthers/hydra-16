@@ -31,41 +31,111 @@ void __fastcall__ make_own (unsigned i);        /* (Part 13's) */
 #define R_A             (*(unsigned*) (iq.into + 0))    /* (The thing it's tied to, the spike, the hammer: the other's name's */
 #define R_SPIKE         (*(unsigned*) (iq.into + 2))    /*   room, past its use) */
 #define R_HAMMER        (*(unsigned*) (iq.into + 4))
+#define RA_PILLAR       0xFFFF                  /* (R_A's: a pillar, the place's own, no thing; its kind PILLAR_K, wrope.h's) */
 
 /* Thing i: does it hold a rope?  Lying there, fixed where it stands (a ring, a post, a spike driven, an altar, a well) or too
-** heavy to come away */
+** heavy to come away; or a window's bars (a portal's part, IW_PORTAL: the user's, 2026-11-17, "Pillars and a window's bars
+** are tie points for a rope") */
 static unsigned char __fastcall__ rp_holds (unsigned i)
 {
-    unsigned char k = item_at (i)->kind;
+    const struct item* p = item_at (i);
+    unsigned char k = p->kind, w = p->where;
 
-    if (item_at (i)->where != IW_SQUARE || k == KI_TIED || k == KI_HUNG || k == KI_SCONCE) {
+    if (w == IW_PORTAL) {
+        return k == KI_BARS;
+    }
+    if (w != IW_SQUARE || k == KI_TIED || k == KI_HUNG || k == KI_SCONCE) {
         return 0;
     }
     hub_map (KIND_BANK);
     return (CATALOGUE[k].keeps & KF_FIXED) || weight_of (i) >= ROPE_HEAVY;
 }
 
-/* The nearest thing that holds one, on the character's square or beside it: its number, or 0 */
-static unsigned rp_anchor (void)
+/* Square x, y of the character's stratum solid (rock, a wall: not passed, not a door, a window or a pit): 1 */
+static unsigned char __fastcall__ rp_solid (unsigned x, unsigned y)
 {
-    unsigned i = 0;
+    const unsigned char* p = at (R_TSN, x, y);
 
-    while ((i = items (i, IN_SQUARE, 0)) != 0) {
-        if (ip->sn == R_TSN && (unsigned) (ip->x - R_FX + 1) <= 2 && (unsigned) (ip->y - R_FY + 1) <= 2 && rp_holds (i)) {
-            return i;
+    return p && !T_PASS (*p) && TILE (*p) != T_DOOR && TILE (*p) != T_WINDOW && TILE (*p) != T_PIT;
+}
+
+/* The solid squares of the eight round square x, y */
+static unsigned char __fastcall__ rp_round (unsigned x, unsigned y)
+{
+    unsigned char k, n = 0;
+
+    for (k = 0; k < 8; ++k) {
+        n += rp_solid (x + head_x[k], y + head_y[k]);
+    }
+    return n;
+}
+
+/* A pillar beside the character (on R_TSN, at R_FX, R_FY): a solid square standing free, a cavern's (dq0m/caves.c: two by
+** two), its own solid neighbours and theirs three at most, floor round them: 1, or 0 (the chunk in the window after) */
+static unsigned char rp_pillar (void)
+{
+    unsigned char k, j, ok;
+    unsigned x, y;
+
+    for (k = 0; k < 8; ++k) {
+        x = R_FX + head_x[k];
+        y = R_FY + head_y[k];
+        if (!rp_solid (x, y) || rp_round (x, y) > 3) {
+            continue;
+        }
+        for (ok = 1, j = 0; j < 8 && ok; ++j) {
+            ok = !rp_solid (x + head_x[j], y + head_y[j]) || rp_round (x + head_x[j], y + head_y[j]) <= 3;
+        }
+        if (ok) {
+            return 1;
         }
     }
     return 0;
 }
 
+/* Thing i within reach to tie to: lying within reach (in_reach's), or a window's bars on the character's square or beside
+** it */
+static unsigned char __fastcall__ rp_near (unsigned i)
+{
+    const struct item* p = item_at (i);
+    unsigned x = p->x, y = p->y;
+    unsigned char sn = p->sn;
+
+    if (p->where != IW_PORTAL) {
+        return in_reach (i);
+    }
+    hub_map (0);
+    return sn == HUB->pc_stratum && x - HUB->pc_x + 1 <= 2 && y - HUB->pc_y + 1 <= 2;
+}
+
+/* The nearest thing that holds one, on the character's square or beside it (a window's bars too): its number; else a
+** pillar beside it, RA_PILLAR; or 0 */
+static unsigned rp_anchor (void)
+{
+    unsigned i = 0;
+
+    while ((i = items (i, IN_SQUARE | IN_PORTAL, 0)) != 0) {
+        if (ip->sn == R_TSN && (unsigned) (ip->x - R_FX + 1) <= 2 && (unsigned) (ip->y - R_FY + 1) <= 2 && rp_holds (i)) {
+            return i;
+        }
+    }
+    return rp_pillar () ? RA_PILLAR : 0;
+}
+
 /* Tied to the thing named, or what's nearest that holds, and let down: "tie the rope", "tie the rope to the ring", "let down
-** the rope"; its work a timed one (the steps of the reach first: a tool, the hands routine's).  "Tie the grapple to the
-** rope": one thing, a round's, with no drop asked */
+** the rope"; a window's bars, a pillar beside it ("tie the rope to the bars", "to the pillar": the UI's names for them, the
+** user's, 2026-11-17); its work a timed one (the steps of the reach first: a tool, the hands routine's).  "Tie the grapple to
+** the rope": one thing, a round's, with no drop asked */
 static unsigned char __fastcall__ rp_tie (unsigned char done)
 {
-    unsigned char k;
+    unsigned char k, pil;
     char b[14];
 
+    hub_map (0);
+    R_TSN = HUB->pc_stratum;                    /* (Where it stands: a pillar beside it, rp_anchor's) */
+    R_FX = HUB->pc_x;
+    R_FY = HUB->pc_y;
+    pil = !strcmp (iq.into, "pillar");
     R_N = *iq.name ? carried_named (iq.name) : rp_carried (KI_ROPE);
     handled = R_N;                              /* (Never put away to free a hand for its hammer: the hands' rule's, the
                                                 **   home first, 2026-11-17) */
@@ -95,15 +165,20 @@ static unsigned char __fastcall__ rp_tie (unsigned char done)
         if (k == KI_SPIKE && on_pc (R_A)) {
             R_SPIKE = R_A;
             R_A = 0;
-        } else if (!R_A || !rp_holds (R_A) || !in_reach (R_A)) {
+        } else if (!R_A && pil) {
+            if (!rp_pillar ()) {                /* (None beside it: "You see no pillar here."; iq.into R_A's now) */
+                rp_new ();
+                rp_say (SA_NO_OTHER, "pillar");
+                hub_map (0);
+                HUB->ireq.qty = 0;
+                return IR_NO;
+            }
+            R_A = RA_PILLAR;                    /* (A pillar beside it) */
+        } else if (!R_A || !rp_holds (R_A) || !rp_near (R_A)) {
             return rp_no (SA_NO_HOLD_ROPE);
         }
     } else {
         R_SPIKE = R_HAMMER = 0;
-        hub_map (0);
-        R_TSN = HUB->pc_stratum;
-        R_FX = HUB->pc_x;
-        R_FY = HUB->pc_y;
         if (!(R_A = rp_anchor ())) {            /* (Else its grapple, set over the edge; else a spike driven) */
             if (!rp_in (R_N, KI_GRAPPLE) && !rp_carried (KI_GRAPPLE) && !(R_SPIKE = rp_carried (KI_SPIKE))) {
                 return rp_no (SA_NOTHING_HOLDS);
@@ -147,6 +222,9 @@ static unsigned char __fastcall__ rp_tie (unsigned char done)
         ip->x = R_TX;
         ip->y = R_TY;
         rp_noise (7);
+    } else if (R_A == RA_PILLAR) {
+        R_AK = PILLAR_K;                        /* (A pillar beside it: its run to the edge) */
+        R_RUN = ROPE_RUN;
     } else if (R_A) {
         ip = item_at (R_A);
         R_AK = ip->kind;

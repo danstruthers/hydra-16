@@ -870,6 +870,58 @@ module.exports = {
       },
     },
     {
+      name: 'dq0tiepoints', reach: true, near: ['map', 'gear'], what: "Dingus Quest Zero's pillars and a window's bars tie points for a rope (the user's, 2026-11-17: DECISIONS.md's \"The one-path plan and phase A's questions: the user's answers\", \"Pillars and a window's bars are tie points for a rope\"; wrope.c's rp_tie: a pillar the place's own, a window's bars a portal's part, IW_PORTAL), by the words: at seed 5 (dq0 -T, a rope more) \"tie the rope to the pillar\", none beside it: \"You see no pillar here.\"; a pillar made beside the character by a poke (two squares by two of rock standing free, floor round it: a cavern's, dq0m/caves.c's) and a ledge to the east fifteen feet down: tied to it and let down (\"You tie the rope to the pillar and let it down over the edge: it reaches the foot.\"), looked at (\"It's tied to the pillar\"), climbed down by it; at seed 28 a barred window gone to: \"tie the rope to the bars\" its bars, no drop yet (\"There's no drop here to let a rope down.\", not \"That won't hold a rope.\"), a drop beside the character made by a poke, \"tie the rope to the window\" (its bars: \"You tie the rope to the iron bars and let it down over the edge\"), looked at, climbed down by it",
+      init: 't_rc', cycles: 3200e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 5 -c /ram/c.hm -T -k rope', 'tie the rope to the pillar', 'tie the rope to the pillar', 'examine the tied rope', 'd', 'quit',
+        'dq0 -p t -s 28 -c /ram/c.hm -k rope', 'go to the window', 'tie the rope to the bars', 'tie the rope to the window', 'examine the tied rope', 'd', 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'], sdcard: true,
+      start(m) {
+        const poke = pick => () => {                       // (Squares about the character: rock, floor, a drop of ft feet)
+          const h = m.dq0.bank(0), { L } = m.dq0.layout(), w = m.dq0.bank(WORLD_BANK_N), st = stratumRec(m, h[L.pcSn]);
+          const ox = (h[L.pcX] | h[L.pcX + 1] << 8) - st.x0, oy = (h[L.pcY] | h[L.pcY + 1] << 8) - st.y0;
+          const [TILE, ELEV] = require('../../../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, tile)', 'offsetof (struct chunk, elev)']);
+          for (let c = 0; c < 24; c++) {
+            const sl = CSLOT_AT + c * 8, b = m.dq0.bank(5 + Math.floor(c / 3)), o = (c % 3) * 0xAA0;
+            if (!w[sl] || !b || w[sl + 1] !== h[L.pcSn] || (w[sl + 2] | w[sl + 3] << 8) !== ox >> 5 || (w[sl + 4] | w[sl + 5] << 8) !== oy >> 5) continue;
+            const tile = (dx, dy) => b[o + TILE + ((oy & 31) + dy) * 32 + (ox & 31) + dx] & 15;
+            for (const p of pick(tile)) {
+              const x = (ox & 31) + p.dx, y = (oy & 31) + p.dy, at = y * 32 + x;
+              if (x < 0 || y < 0 || x > 31 || y > 31) continue;
+              if (p.tile !== undefined) b[o + TILE + at] = b[o + TILE + at] & 0xF0 | p.tile;
+              if (p.ft) b[o + ELEV + at] = (b[o + ELEV + at] - p.ft) & 255;
+              m.poked = (m.poked || 0) + 1;
+            }
+          }
+        };
+        const pillar = () => {                              // (Two by two of rock west of it, floor round them; a ledge east)
+          const r = [];
+          for (let y = -2; y <= 1; y++) for (let x = -3; x <= 0; x++) if (x || y) r.push({ dx: x, dy: y, tile: (x === -2 || x === -1) && (y === -1 || y === 0) ? T_ROCK : T_FLOOR });
+          return [...r, { dx: 1, dy: 0, tile: T_FLOOR, ft: 15 }];
+        };
+        const beside = tile => {                            // (A floor square beside it, of the four, a ledge fifteen feet down)
+          for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) if (tile(dx, dy) === T_FLOOR) return [{ dx, dy, ft: 15 }];
+          return [];
+        };
+        dq0Poke(m, [{ g: 1, line: 'tie the rope to the pillar', n: 2, call: poke(pillar) }, { g: 2, line: 'tie the rope to the window', n: 1, call: poke(beside) }]);
+      },
+      check(m, out) {
+        const f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '').replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' ');
+        if (!m.poked) return ['the scenes not set'];
+        const games = s.split('% dq0 -p t -s ').slice(1);
+        if (games.length !== 2) return ['not two games: ' + games.length];
+        inTurn(games[0], ['> tie the rope to the pillar', 'You see no pillar here.', '> tie the rope to the pillar',
+          'You tie the rope to the pillar and let it down over the edge: it reaches the foot.', '> examine the tied rope', 'It\'s tied to the pillar, over the edge',
+          '> d', 'You come down to the foot of the ledge.'], f, 'the pillar: ');
+        inTurn(games[1], ['> tie the rope to the bars', 'There\'s no drop here to let a rope down.', '> tie the rope to the window',
+          'You tie the rope to the iron bars and let it down over the edge', '> examine the tied rope', 'It\'s tied to the iron bars, over the edge',
+          '> d', 'You come down to the foot of the ledge.'], f, 'the window\'s bars: ');
+        if (/won't hold a rope|You can't tie the rope/.test(s)) f.push('a tie point refused: ' + (/[^.]*(won't hold a rope|You can't tie the rope)[^.]*/.exec(s) || [''])[0]);
+        return f;
+      },
+    },
+    {
       name: 'dq0foundkey', near: ['map', 'gear'], what: "Dingus Quest Zero's found keys (the user's A17: \"fit something nearby\"; HOUSE.md's keys that fit, for review): by the item store and the chunks: in three seeds' first chunks a key the maker put down is numbered for a door in its own chunk, that door locked, mechanical; none has no lock; the same game the same number; the key given the character (a poke), put beside its door: \"You unlock it with its key.\", no Picklock test asked",
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0hour=128', 'dq0sky=0',

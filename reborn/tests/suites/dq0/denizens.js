@@ -139,7 +139,7 @@ function dq0DoorScene(m, on, who, how) {
 // The sounds the sound task plays (a machine's ymLog: each YM2151 key-on on its channels, 4-6, the source and the sound
 // its channel's playing then, dq0s.c's struct ch, 44 bytes, who then snd: its cs[] by its label), m.played: [{ who, snd }]
 // (who an actor's entry plus 1, 0 the character; snd 2 * SND_KINDS + WS_*, the world's: 64 dig, 65 open, 66 shut, 67 blow,
-// 68 smash, 69 chains)
+// 68 smash, 69 chains; 73 click, 74 bar, quiet: a key's, a pick's, a bar's, 2026-11-17)
 function dq0Played(m) {
   const w = m.ym.writes, push = w.push.bind(w), lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0s', 'dq0s.lbl'), 'latin1');
   const cs = parseInt(/^al ([0-9A-F]+) \._cs$/m.exec(lbl)[1], 16);
@@ -150,7 +150,7 @@ function dq0Played(m) {
     return push(e);
   };
 }
-const WSND = { dig: 64, open: 65, shut: 66, blow: 67, smash: 68, chains: 69 };
+const WSND = { dig: 64, open: 65, shut: 66, blow: 67, smash: 68, chains: 69, click: 73, bar: 74 };
 
 const LETDENS = ['look', 'around', 'look at B', 'talk to C', 'attack C', 'attack A', 'around'];   // (dq0letdens' lines)
 
@@ -589,6 +589,40 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0denunbar', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's denizen unbarring a door to open it, heard as the character's own (the user's, 2026-11-17: \"A key, a bar and a pick make quiet sounds\", and a denizen's unbarring that opens a door plays the door opening, as the character's does; built/2026-11-17-bodies.md's noticed: its PO_UNBARRED a DE_UNBARS, silent): dq0allydoor's scene (seed 1's bandits, the door ahead opened and shut, a bandit put beyond it and made the character's ally), the door barred from the bandit's side (its portal record's state and its bar's side poked as the look's typed); \"ask the bandit to open the door\" (its errand's PA_OPEN, the character's own act; a mind's own door plan lifts a bar first, PA_LIFT, two doings): the bandit lifts the bar and opens the door at once, the character's own unbarring (E_DEN DE_UNBARRED at the door's square: 'The bandit lifts the bar and opens the door.', the character's own words, PORTAL.unbarred's piece; heard, a door opening), played as the door opening, as the character's is (the world's *open)",
+      init: 't_rc', cycles: 2500e6,
+      machine: { ymLog: true, input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
+        'open the door', 'close the door', 'look', 'ask the bandit to open the door', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'look', n: 1, name: 'bandit', set: { attitude: 5, doing: 0 } }, { g: 1, line: 'ask the bandit to open the door', n: 1, name: 'bandit', set: { attitude: 5 } }]);
+        dq0DoorScene(m, 'look', 'bandit', (h, o, L, K) => {   // (The door barred, its bar on the bandit's side: the way from the door to it)
+          const f = h[L.pcFace], u16 = q => h[q] | h[q + 1] << 8;
+          const x = u16(L.pcX) + [0, 1, 1, 1, 0, -1, -1, -1][f], y = u16(L.pcY) + [-1, -1, 0, 1, 1, 1, 0, -1][f];
+          const live = !(f & 1) && dq0PortalAt(m, h[L.pcSn], x, y);   // (The cache's own bytes: its record's state, 3; its bar's side, 7)
+          if (live) { live.b[live.o + 3] = (live.b[live.o + 3] & ~1) | 4; live.b[live.o + 7] = f >> 1; m.barred = { side: f >> 1 }; }
+        });
+        dq0Played(m);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), { K } = m.dq0.layout();
+        if (!m.door || !m.barred) return ['the scene not set: no bandit near, no door ahead with a floor beyond it, or not barred: ' + JSON.stringify(m.doorWhy)];
+        const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.door.k + 1 && e.w1 === m.door.door[0] && e.w2 === m.door.door[1]);
+        const unbarred = dens.filter(e => e.a === K.DE_UNBARRED);
+        if (!unbarred.length) f.push('the bandit never unbarred and opened the door (E_DEN DE_UNBARRED at the door)');
+        if (dens.some(e => e.a === K.DE_UNBARS || e.a === K.DE_OPENS)) f.push('its unbarring told in two (DE_UNBARS, DE_OPENS), not as the character\'s one');
+        if (!/The bandit lifts the bar and opens the door\.|a door opening/.test(s)) f.push('its unbarring neither seen ("The bandit lifts the bar and opens the door.") nor heard');
+        if (unbarred.length && !m.played.some(p => p.who === m.door.k + 1 && p.snd === WSND.open)) f.push('the door it unbarred not heard opening (the world\'s *open): ' + JSON.stringify(m.played.filter(p => p.who)));
+        if (m.door.state(...m.door.door) & 4) f.push('the door still barred in its chunk');
+        const a = T.of('ask the bandit to open the door');
+        if (!a || !dq0Rep(a, 'sway', { kind: 'SW_ORDER', order: 'OR_OPEN', result: 'SR_OK' }).length) f.push('the ally not asked to open the door (' + JSON.stringify(a && a.replies.filter(r => r.req === 'sway')) + ')');
+        if (f.length) f.push(JSON.stringify(dens.map(e => [e.a, e.w1, e.w2, e.t])) + ' ' + s.slice(s.indexOf('> close the door'), s.indexOf('> close the door') + 1500));
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0denkey', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's doors' keys and a denizen forcing a locked door (Phase 3C's one path, 2026-11-02: HOUSE.md's keys that fit, every actor's; DENIZENS.md's doors): at seed 1 (dq0denportal's wary bandits, the character with an iron key, dq0 -k), the character opens the door ahead and shuts it again; the door given a lock and the key made its own (the scene set as 'lock the door' is typed: the chunk's portal record's lock, the key's size and thick DOOR_KEY's), 'lock the door' locks it ('You lock it with its key.'); a bandit put beyond it, hostile, drawn on (dq0denportal's scene); it has no key, so it strains at the door (E_DEN DE_STRAINS: 'The bandit strains at the door.', or a door creaking) by the character's forcing (the referee's Strength test, its own sheet's), and, held, batters it (DE_BATTERS), each told seen or heard, till it's through or it gives up; each heard as the character's own would be (the user's, 2026-11-17, GAME-CRITIQUE.md's 4.2: the sound task's): its strain as work's noise (the world's *dig, the character's forcing's), a blow at the door as a blow (*blow), a door burst open as a door opening (*open)",
       init: 't_rc', cycles: 4000e6,
       machine: { ymLog: true, input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
@@ -647,6 +681,13 @@ module.exports = {
         heard(K.DE_STRAINS, WSND.dig, 'its strain at the door not heard as a work noise (the world sound *dig)');
         heard(K.DE_BATTERS, WSND.blow, 'its blows at the door not heard as a blow (the world sound *blow)');
         heard(K.DE_BURSTS, WSND.open, 'the door it burst not heard opening (the world sound *open)');
+        heard(K.DE_PICKING, WSND.click, 'its picking at the lock not heard, quiet (the world sound *click: 2026-11-17)');
+        heard(K.DE_PICKS, WSND.click, 'the lock it picked not heard, quiet (the world sound *click)');
+        // (The character's own key turned in the lock: a quiet noise the minds hear, E_NOISE NZ_CLICK of 1, and played, its
+        // *click: the user's, 2026-11-17, "A key, a bar and a pick make quiet sounds ... for every actor")
+        const lk = T.of('lock the door');
+        if (!dq0Ev(lk, 'E_NOISE', { a: 1, b: K.NZ_CLICK }).length) f.push('the key turned in the lock made no quiet noise (E_NOISE NZ_CLICK, 1)');
+        if (!m.played.some(p => p.who === 0 && p.snd === WSND.click)) f.push('the key turned in the lock not played (the world sound *click): ' + JSON.stringify(m.played.filter(p => !p.who)));
         this.notes = ['the bandit heard as: ' + [...new Set(m.played.filter(p => p.who === m.door.k + 1).map(p => p.snd))].join(' ')];
         if (process.env.DQ0SHOW) f.push(s.slice(s.indexOf('> lock the door'), s.indexOf('> lock the door') + 2500));
         for (const e of dens.filter(e => e.a >= K.DE_OPENS)) if (e.w1 !== m.door.door[0] || e.w2 !== m.door.door[1]) f.push('a door worked not the one between them: ' + [e.a, e.w1, e.w2]);
@@ -726,7 +767,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0follow', near: ['denizens'], what: 'Dingus Quest Zero\'s following (the verbs plan\'s B6, 2026-11-10: DECISIONS.md\'s "Prayer, fasting, swimming and following"), by the words, the sway\'s replies and the character\'s squares: "follow me" an ally\'s order still (dq0fetch\'s seed 21 rat befriended twice, an ally: SW_ORDER OR_FOLLOW, SR_OK); at seed 5, "follow the sack" refused ("The sack isn\'t going anywhere."); down the ladder, "follow the rat" trails a giant rat that keeps its distance ("You follow the giant rat.", walked after it, the world\'s close-in re-aimed each time, looked round for as it goes behind), till it\'s lost ("You\'ve lost the giant rat.", "track" offered)',
+      name: 'dq0follow', near: ['denizens'], what: 'Dingus Quest Zero\'s following (the verbs plan\'s B6, 2026-11-10: DECISIONS.md\'s "Prayer, fasting, swimming and following"), by the words, the sway\'s replies and the character\'s squares: "follow me" an ally\'s order still (dq0fetch\'s seed 21 rat befriended twice, an ally: SW_ORDER OR_FOLLOW, SR_OK); at seed 5, "follow the sack" refused ("The sack isn\'t going anywhere."); down the ladder, "follow the rat" trails a giant rat that keeps its distance ("You follow the giant rat.", walked after it, the world\'s close-in re-aimed each time, looked round for as it goes behind), till it\'s lost ("You\'ve lost the giant rat.", "track" offered); out of reach as it begins, said so once then ("You follow the giant rat. You can\'t get near enough to the giant rat.", the user\'s, 2026-11-17: "A follow out of reach says so once, when it starts"), never again as it\'s re-aimed',
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', 'echo ml ani 90 >> /ram/a.hm',
         'dq0 -p t -s 21 -c /ram/a.hm -T -R 117', 'befriend the rat', 'befriend the rat', 'follow me', 'quit',
@@ -737,6 +778,8 @@ module.exports = {
         const fm = T.of('follow me');
         if (!dq0Rep(fm, 'sway', { kind: 'SW_ORDER', order: 'OR_FOLLOW', result: 'SR_OK' }).length) f.push('"follow me" not the ally\'s order (' + JSON.stringify(fm.replies.filter(r => r.req === 'sway')) + ')');
         inTurn(o, ['> follow the sack The sack isn\'t going anywhere.', '> follow the rat You follow the giant rat.', 'You\'ve lost the giant rat. ("track" may find its trail.)'], f);
+        const fo = o.slice(o.lastIndexOf('> follow the rat'), o.indexOf('You\'ve lost the giant rat.')).replace(/\s+/g, ' '), far = fo.split('You can\'t get near enough to the giant rat.').length - 1;
+        if (far !== 1 || !/^> follow the rat You follow the giant rat\. You can't get near enough to the giant rat\./.test(fo)) f.push('out of reach as the follow began: not said once, then: ' + far + ' ' + fo.slice(0, 200));
         const fr = T.of('follow the rat');
         if (!fr.at || !fr.after || (fr.at.pc.x === fr.after.pc.x && fr.at.pc.y === fr.after.pc.y)) f.push('not walked after the rat');
         if (/in this game yet/.test(o)) f.push('a "not yet" said');
