@@ -851,5 +851,45 @@ module.exports = {
       },
       sdcard: true
     },
+    {
+      name: 'dq0savebytes', meaning: true, near: ['save', 'body'], what: 'Dingus Quest Zero\'s save byte for byte (ONE-PATH.md\'s stage 1, the character as actor 0: its record moved in the hub, the save\'s bytes as they were), over five seeds (dq0 -T, the turns pace): the character turned, a step, a jog, crouched, its torch put out and hidden, quit (the world\'s world.dat, the denizens\' dens.dat dumped), carried on and quit again (world.dat dumped again; the folder gone after, so the RAM disk keeps its room): the first world.dat the hub\'s state as it quit (its stratum, square, facing, position, hiding, pace and watchfulness), the game carried on from it, and written back the same (all but the time believed\'s next reckoning, made again as it goes on); the dumps the old build\'s and the new\'s alike (their transcripts compared); and the character\'s body actor 0, the hub\'s bodies[0] (its old names, pc_x ..., on its fields; the denizens\' entries the bodies\' from 1), in the dungeon (its state 1) as each game begins and is carried on',
+      init: 't_rc', cycles: 6000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', ...[1, 2, 3, 6, 21].flatMap(s => [
+        'dq0 -p t -s ' + s + ' -c /ram/c.hm -T -d /ram/k' + s, 'turn right', 'step forward', 'jog', 'crouch', 'douse the torch', 'hide', 'quit',
+        'xd /ram/k' + s + '/d1/world.dat', 'xd /ram/k' + s + '/d1/dens.dat', 'cp /ram/k' + s + '/d1/world.dat /ram/k' + s + '/w1.dat',
+        'dq0 -p t -d /ram/k' + s, 'quit', 'cp /ram/k' + s + '/d1/world.dat /ram/k' + s + '/w2.dat', 'xd /ram/k' + s + '/w2.dat',
+        'cmp /ram/k' + s + '/w1.dat /ram/k' + s + '/w2.dat', 'echo same ' + s + ' $status', 'rm -r /ram/k' + s]), 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], H = require('../../../games/dq0/hubgen.js').load(), o = n => H.off('wsave', n), z = n => H.size('wsave', n);
+        const num = (b, n) => { let v = 0; for (let i = z(n) - 1; i >= 0; i--) v = v * 256 + b[o(n) + i]; return v; };
+        const KEPT = ['sn', 'x', 'y', 'face', 'pos', 'hid', 'gait', 'watch', 'skew', 'lost', 'hunger', 'thirst', 'meals', 'ropes'];
+        const PC = { sn: 'sn', x: 'x', y: 'y', face: 'face', pos: 'pos', hid: 'hid', gait: 'gait', watch: 'watch', skew: 'skew', lost: 'lost' };
+        const L = m.dq0.layout().L;                       // (Actor 0: the character's body the bodies' first, its old names on its fields,
+        if (L.pcBody !== L.bodies || L.actor !== L.bodies + L.actorSize)   //   the denizens' entries the bodies' from 1)
+          f.push('the bodies: actor 0 at ' + L.pcBody + ', the denizens at ' + L.actor + ', the table at ' + L.bodies);
+        for (const [o, a] of [['pcSn', 'aSn'], ['pcX', 'aX'], ['pcY', 'aY'], ['pcFace', 'aFace'], ['pcPos', 'aPos'], ['gait', 'aGait'], ['pcReady', 'aReady']])
+          if (L[o] !== L.pcBody + L[a]) f.push('the old name ' + o + ' at ' + L[o] + ', not actor 0\'s ' + a + ' at ' + (L.pcBody + L[a]));
+        let from = 0;
+        for (const s of [1, 2, 3, 6, 21]) {
+          const w1 = xdBytes(out, 'xd /ram/k' + s + '/d1/world.dat'), w2 = xdBytes(out, 'xd /ram/k' + s + '/w2.dat');
+          const q = T.of('quit', from), c = T.of('dq0 -p t -d /ram/k' + s, from), q2 = T.of('quit', c.k + 1);
+          from = q2.k + 1;
+          if (w1.length !== H.size('wsave') + H.size('wrec', 'strata')) { f.push(s + ': world.dat ' + w1.length + ' bytes, not ' + (H.size('wsave') + H.size('wrec', 'strata'))); continue; }
+          if (num(w1, 'magic') !== H.C.WSAVE_MAGIC || num(w1, 'version') !== 4) f.push(s + ': world.dat\'s head ' + num(w1, 'magic') + ' ' + num(w1, 'version'));
+          const pc = q.at && q.at.pc;                     // (The hub's, as the quit was typed: the character as it was kept)
+          for (const [k, n] of Object.entries(PC)) if (!pc || num(w1, n) !== pc[k]) f.push(s + ': world.dat\'s ' + n + ' ' + num(w1, n) + ', the hub\'s ' + (pc && pc[k]));
+          if (!pc || pc.state !== 1) f.push(s + ': the character\'s body, actor 0, not in the dungeon: its state ' + (pc && pc.state));
+          dq0Need(f, c, 'E_ARRIVE', { how: 'A_RESUMED' }, s + ': not carried on');
+          const b = q2.at && q2.at.pc;                    // (The hub's as the game was carried on: the save read back)
+          for (const [k, n] of Object.entries(PC)) if (!b || num(w1, n) !== b[k]) f.push(s + ': carried on, the hub\'s ' + k + ' ' + (b && b[k]) + ', world.dat\'s ' + num(w1, n));
+          if (!b || b.state !== 1) f.push(s + ': carried on, the character\'s body, actor 0, not in the dungeon: its state ' + (b && b.state));
+          for (const n of KEPT) if (num(w2, n) !== num(w1, n)) f.push(s + ': written back, world.dat\'s ' + n + ' ' + num(w2, n) + ', not ' + num(w1, n));
+          if (!xdBytes(out, 'xd /ram/k' + s + '/d1/dens.dat').length) f.push(s + ': no dens.dat');
+        }
+        return f;
+      },
+      sdcard: true
+    },
   ],
 };
