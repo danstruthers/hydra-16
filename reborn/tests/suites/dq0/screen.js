@@ -3,7 +3,9 @@
 // their order; ../../lib: the helpers they share)
 'use strict';
 const { typed } = require('../../lib/common.js');
-const { dq0StatusRows, dq0Typed } = require('../../lib/dq0.js');
+const fs = require('fs');
+const path = require('path');
+const { dq0StatusRows, dq0Typed, DQ0_MAKE } = require('../../lib/dq0.js');
 
 module.exports = {
   tests: [
@@ -138,6 +140,39 @@ module.exports = {
         if (!/Dorn, [A-Za-z/]+, enters the dungeon\./.test(ser.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '))) f.push('the character hmchar made in the game (Dorn) not the one it plays (dq0\'s, before)');
         if (/keyboard screen/.test(ser)) f.push('consctl said keyboard screen with no keyboard');
         if (!text.some(l => l.startsWith('> look'))) f.push('the game not on the screen too');
+        return f;
+      },
+      sdcard: true
+    },
+    // ---- The help (GAME-CRITIQUE.md's 5.6; DECISIONS.md's answers of 2026-11-17: "l" stays left, the help's first steps say so)
+    {
+      name: 'dq0help', near: ['screen'], what: "Dingus Quest Zero's help (help.c's o_help, games/dq0/help.txt; GAME-CRITIQUE.md's 5.6: three lines past help.c's 400-byte buffer were said as two paragraphs, two cut mid-word, \"the w\" \"ell\"): each of help.txt's lines said as one paragraph, whole, wrapped as the story wraps one (term.c's say: a word on the next line only where it won't fit the 80 columns), the long ones read in parts and said on at a space (games/dq0/make.js's helpParts, the build's check of every line); the first steps saying l is left, not look (the user's, 2026-11-17)",
+      init: 't_rc', cycles: 500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'help', 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], parts = DQ0_MAKE().helpParts(fs.readFileSync(path.join(__dirname, '..', '..', '..', 'games', 'dq0', 'help.txt'), 'latin1'));
+        const o = out.replace(/\r/g, ''), at = o.indexOf('> help\n'), end = at < 0 ? -1 : o.indexOf('\x1b', at);
+        if (end < 0) return ['no help said'];
+        const said = o.slice(at + 7, end).split('\n'), want = [];
+        while (said.length && !said[said.length - 1]) said.pop();
+        for (const p of parts) {                // (Each paragraph as say wraps it: a word on the next line only where it won't
+          let line = '';                        //   fit, its column, a space and it 80 or more; "@own " the ruleset's word and
+          for (const w of p.join('').replace(/@own /g, 'counter, ').split(' ').filter(Boolean)) {    // a comma, HarnMaster's)
+            if (line && line.length + 1 + w.length >= 80) {
+              want.push(line);
+              line = '';
+            }
+            line += (line ? ' ' : '') + w;
+          }
+          want.push(line);
+        }
+        const k = want.findIndex((l, i) => said[i] !== l);
+        if (k >= 0 || said.length !== want.length) f.push('the help not said a paragraph a line of help.txt, whole, at line ' + (k < 0 ? want.length : k + 1) + ': ' +
+          JSON.stringify(said[k < 0 ? want.length : k]) + ' (wanted ' + JSON.stringify(want[k < 0 ? want.length : k]) + ')');
+        if (parts.filter(p => p.length > 1).length < 3) f.push('fewer than three of help.txt\'s lines read in parts: none longer than help.c\'s buffer tried');
+        if (!/\(f, b, l, r: as you face; l is left, not look\)/.test(said.join(' '))) f.push('the first steps not saying l is left');
         return f;
       },
       sdcard: true

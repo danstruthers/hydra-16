@@ -74,8 +74,40 @@ function coverage(dir, objdir) {
     ' refused by their rows, ' + sum['-'] + ' the handlers\' own (obj/games/dq0cover.txt)';
 }
 
+// The help's lines (help.txt) held to what help.c's o_help can print whole: a line read into lb (LB bytes, the last its
+// 0) a part at a time, a line longer than that said to its last space and the rest after it, the paragraph going on
+// (2026-11-17: three lines past 400 bytes were said as two paragraphs, two cut mid-word).  The parts as o_help makes
+// them; a line fails if a part has no space to end at (a word of LB - 1 letters), or "@own " (the ruleset's stance's
+// word) is cut by a part's end.  The parts (a line's, each said on after the one before) for the tests
+function helpParts(text) {
+  const LB = 400, out = [], lines = text.split('\n');
+  lines.forEach((l, n) => {
+    if (l.startsWith('#') || (!l && n === lines.length - 1)) return;
+    const parts = [], at = 'games/dq0/help.txt:' + (n + 1) + ': ';
+    let rest = l + (n < lines.length - 1 ? '\n' : '');
+    for (;;) {                                  // (o_help's parts: lb holds LB - 1 bytes of the line, the newline found
+      const nl = rest.indexOf('\n');            //   at LB - 2 at most; else said to the last space before LB - 1, not
+      if (nl >= 0 && nl < LB - 1) { parts.push(rest.slice(0, nl).replace(/\r$/, '')); break; }    // the first byte)
+      if (nl < 0 && rest.length < LB - 1) { parts.push(rest.replace(/\r$/, '')); break; }
+      const sp = rest.lastIndexOf(' ', LB - 2);
+      if (sp <= 0) throw new Error(at + 'a word ' + (LB - 1) + ' letters long, or longer: the help can\'t print it whole');
+      parts.push(rest.slice(0, sp));
+      rest = rest.slice(sp);
+    }
+    if (parts.slice(0, -1).some(p => p.endsWith('@own')) || parts.some(p => (p.match(/@own /g) || []).length > 1))
+      throw new Error(at + '"@own " cut where its parts meet, or twice in a part: the help can\'t print it whole');
+    out.push(parts);
+  });
+  return out;
+}
+function helpWhole(dir) {
+  return helpParts(fs.readFileSync(path.join(dir, 'help.txt'), 'latin1'));
+}
+
 function build({ dir, objdir, say = () => {} }) {
   rowsSame(dir);
+  const help = helpWhole(dir);
+  say('help.txt: ' + help.length + ' paragraphs, each printed whole (' + help.filter(p => p.length > 1).length + ' in parts, at a space)');
   say(coverage(dir, objdir));
   return { overlays: B.pack(objdir, 'dq0') };
 }
@@ -108,4 +140,4 @@ function standIns(objdir) {
   return out;
 }
 
-module.exports = { build, after, standIns, lines, THEME_SIZE, HEAD };
+module.exports = { build, after, standIns, lines, helpParts, THEME_SIZE, HEAD };
