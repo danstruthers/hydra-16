@@ -91,6 +91,28 @@ All five from DECISIONS.md:5878-5885, "No look when the light's the same".
 - **L5. A sconce's torch gone out in a room lit by its lamps**: no look; the sconce's torch shown unlit at the next
   look (built). Keep it?
 
+## Hands, lights and the pack
+
+From built/2026-11-17-things.md (the hand freed by its home first, the light last and taken up again; the user's
+answers of 2026-11-17).
+- **H1. In a fight, should the weapon keep its hand?** Built: a sword with a scabbard goes home before a light is set
+  down, in a fight as anywhere.
+- **H2. Should an unlit light keep its hand too?** Built: "the light last" means a lit one; an unlit one is an
+  ordinary thing with a home.
+- **H3. Should a light the player put down themselves be taken up when a walk starts?** Built: only one the rule set
+  down.
+- **H4. Should a climb take the light up as a walk does?** Built: only a walk.
+- **H5. What should a rest do with a burning light?** Built: it burns in hand, "Your torch is burning low." is told,
+  and the rest stops as it goes out. Options: put it out at the rest's start, stop when it burns low, or ask.
+- **H6. Should a named light be refused for battering?** Built: "break the door with the lantern" still uses it;
+  with nothing named a light counts as an empty hand and the fist is used ("You set to punching the door.").
+- **H7. Should the side pocket be offered when the pack is the only other place?** Built: "(b) the backpack, the
+  side pocket" is asked.
+- **H8. The thing a tool is for is kept in hand only when its request names it.** A rope tied to a held spike keeps
+  the rope and stows the spike. Protect it by the act instead?
+- **H9. "stop" while a fight has taken over a reach step** stops only the fight (built). Should it stop the reach
+  too?
+
 ## Knocked out
 
 The user answered three questions on 2026-11-14 ("Knocked out: the three questions": the words "You lie senseless.",
