@@ -10,13 +10,17 @@
 // test (HUBOWN=0 too), nothing told twice in one answer, nor a chunk's door or trap made twice (tests.js's dq0Check);
 // and what happened recorded, the hub's events, replies and state a line at a time (sim/lib/dq0meaning.js: m.dq0, for
 // the tests' meaning checks, tests.js's dq0Turns).
+// The guards in every test (sim/lib/guards.js: an instruction fetched from the bank window with no code there, a write
+// that names the hub's header into another bank, the swap stack and the C stack past their room): the first hit stops
+// the machine, and fails the test.  GUARDS=0: none; GUARDS=note: each hit noted, none stopping the run, and all of them
+// after the tests.
 // RULES=NAME (null ...): the dq0 tests run with that ruleset's referee (games/dq0/RULESETS.md: dq0 -r NAME added to
 // each dq0 line typed), and with no test named, those that are meaning checks (tests.js's meaning: true: their checks
 // what happened, not its words) are the ones run (of --near's, or --changed's, with them).
 // The tests a change can affect (--changed [REF], --near AREA, --list: the base's runner's, ../base/sim/select.js, with
 // tests/areas.js's table), and the tiers of checks (--tier report|lead: sim/tiers.js, tests/TESTING.md).
 //
-// Usage: [HUBOWN=0|1] [RULES=NAME] [HYDRA_MODULES=N] node sim/test.js [NAME ...] [--changed [REF]] [--near AREA,...]
+// Usage: [GUARDS=0|note] [HUBOWN=0|1] [RULES=NAME] [HYDRA_MODULES=N] node sim/test.js [NAME ...] [--changed [REF]] [--near AREA,...]
 //          [--list] [--build] [-v] [--seed N] [-j N] [--dl] [--modules N]
 //        node sim/test.js --tier report|lead [--changed REF] [-j N] [--seed N] [--list]
 'use strict';
@@ -31,6 +35,7 @@ const romfs = require('../tools/romfs.js');
 const { readManifest, hwtest } = require('../build.js');
 const { tests, files: testFiles, helpers: testHelpers, IRQ_OFF_MAX, dq0Check } = require('../tests/tests.js');
 const hubown = require('./lib/hubown.js');
+const guards = require('./lib/guards.js');
 const scenes = require('./lib/scenes.js');
 const crypto = require('crypto');
 const dq0meaning = require('./lib/dq0meaning.js');
@@ -110,10 +115,39 @@ function pcFolder(t, opt) {
   return { dir, host };
 }
 
+// A test's instrument: the guards' (guardInstrument) and a dq0 test's own (dq0Instrument), together
+// (each its part of the boot's options, the machine, the judging and a scene's state)
+function instrument(t) {
+  const parts = [dq0Instrument(t), guardInstrument(t)].filter(Boolean);
+  if (!parts.length) return null;
+  return {
+    boot: Object.assign({}, ...parts.map(p => p.boot)),
+    attach: mm => parts.forEach(p => p.attach(mm)),
+    judge: m => { const r = parts.map(p => p.judge(m)); return { failures: r.flatMap(x => x.failures), notes: r.flatMap(x => x.notes) }; },
+    state: () => parts.map(p => p.state()), restore: s => parts.forEach((p, i) => p.restore(s[i])),
+  };
+}
+
+// The guards (sim/lib/guards.js: the bank window's code, the hub's header's stores, the swap stack, the C stack), every
+// test's: GUARDS=0 none; GUARDS=note each hit noted, none stopping the run (each a failure still), and after the tests
+// all of them (obj/guards/NAME.json each); else (the default) the first new hit stops the machine there
+const GUARDS = process.env.GUARDS || '1';
+const guardDir = path.join(ROOT, 'obj', 'guards');
+function guardInstrument(t) {
+  if (GUARDS === '0') return null;
+  const g = guards.createGuard({ mode: GUARDS === 'note' ? 'note' : 'stop', expect: t.guards });   // (t.guards: a test of them)
+  const judge = m => {
+    const r = g.judge(m);
+    if (GUARDS === 'note') try { fs.mkdirSync(guardDir, { recursive: true }); fs.writeFileSync(path.join(guardDir, t.name + '.json'), JSON.stringify(g.hits())); } catch (e) { /* (No summary) */ }
+    return r;
+  };
+  return { boot: { guard: g }, attach: mm => g.attach(mm), judge, state: () => g.state(), restore: s => g.restore(s) };
+}
+
 // The hub writers' check, a dq0 test's (HUBOWN=0: none): its violations each in obj/hubown/NAME.json, for the summary
 const HUBOWN = process.env.HUBOWN || '';
 const hubDir = path.join(ROOT, 'obj', 'hubown');
-function instrument(t) {
+function dq0Instrument(t) {
   if (!/^dq0/.test(t.name)) return null;
   const r = dq0meaning.createRecorder(), on = mm => { r.attach(mm); mm.dq0 = r; };   // (What happened: m.dq0, tests.js's dq0Turns)
   if (HUBOWN === '0') return { boot: { sharedWrite: r.hook }, attach: on, judge: m => ({ failures: dq0Check(t.name, m), notes: [] }),
@@ -131,9 +165,22 @@ function instrument(t) {
     return { failures, notes };
   } };
 }
+// After the tests (GUARDS=note): every guard's hit, the tests' together
+function guardSummary(list) {
+  const all = new Map();
+  for (const t of list) {
+    let h = [];
+    try { h = JSON.parse(fs.readFileSync(path.join(guardDir, t.name + '.json'), 'utf8')); } catch (e) { continue; }
+    for (const e of h) { const a = all.get(e.key) || { e, tests: [] }; a.tests.push(t.name); all.set(e.key, a); }
+  }
+  console.log('guards: ' + all.size + ' hit(s) over ' + list.length + ' tests');
+  for (const { e, tests } of [...all.values()].sort((x, y) => x.e.key.localeCompare(y.e.key)))
+    console.log('  ' + (e.known ? '(known: ' + e.known + ') ' : '') + e.text.replace(/ at cycle \d+$/, '') + ': ' + tests.length + ' test(s), ' + tests.slice(0, 6).join(', ') + (tests.length > 6 ? ' ...' : ''));
+}
 // After the tests (HUBOWN=1): every violation seen, the tests' together, by the move that's to end it (NEW: none),
 // and the table's known ones none of the tests showed
 function summary(list) {
+  if (GUARDS === 'note') guardSummary(list);
   if (HUBOWN !== '1') return;
   const all = new Map();
   for (const t of list) {

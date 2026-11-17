@@ -20,6 +20,8 @@
 //                    build's options: { clock, acia }, obj/build.json)
 //   check(m, out)    more checks on the machine afterwards: gives a list of failures
 //   start(m)         the machine as it's made, before it runs (to listen to its sound, say)
+//   guards           [kinds]: a test of the emulator's guards (sim/lib/guards.js): the kinds it makes fire on
+//                    purpose (fetch, store, swap, stack), each wanted, noted not failed
 // Every test also checks the longest IRQs-off stretch after the boot (IRQ_OFF_MAX).
 'use strict';
 const { IRQ_OFF_MAX, sdcardOf } = require('./lib/common.js');
@@ -47,7 +49,8 @@ const SUITES = [
   'suites/dq0/time.js',
   'suites/dq0/save.js',
   'suites/dq0/theme.js',
-  'suites/dq0/screen.js'
+  'suites/dq0/screen.js',
+  'suites/dq0/guards.js'
 ];
 const files = {}, tests = [];
 for (const f of SUITES) { const list = require('./' + f).tests; files['reborn/tests/' + f] = list; tests.push(...list); }
