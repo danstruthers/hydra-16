@@ -25,6 +25,7 @@ function dq0GuardsTest() {
     'look', 'turn left', 'inventory', 'step forward', 'look', 'quit', 'echo $status'];
   return {
     name: 'dq0guards', near: ['dq0'], guards: ['fetch', 'store', 'swap', 'stack'],
+    scene: false,                                     // (Typed from its start: its stack poke is the world's start's)
     what: 'The emulator\'s guards (sim/lib/guards.js, GAME-CRITIQUE.md\'s 6.1): in a game at seed 3, the world\'s task made, by pokes that do no harm, to fetch an RTS from the hub\'s header\'s bank, to run a store that names the hub\'s header with a bank of its own in the window, to take its swap stack past its depth and its C stack below its floor: each guard\'s hit heard (noted, not failed), and the game going on to its quit',
     init: 't_rc', cycles: 1500e6,
     machine: { input: dq0Typed(lines) },
