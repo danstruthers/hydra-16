@@ -86,15 +86,16 @@ static void __fastcall__ cap_at (char* b, unsigned char j)
 
 /* The resolver's question (resolve.c's ask_which: of several things or denizens it sees, the one meant), asked as the
 ** world's is, by the designators: each choice (the UI bank's which_w[k], n of them, the resolver's: its name, its square
-** at 15, its way at 19 (0xFF where the character stands), a denizen's 1 at 20) given its capital (at 23) and told where
-** it lies: "Which one? (A) the giant rat ahead to your left, on the right, (B) the giant rat ahead to your left, on the
-** left, (C) the giant rat ahead"; the answer letters.c's which_in's, the command made again on that one's capital (the
-** thing of role r's word: its other's, 1; none said, "take", the capital after it).  which_n | WN_SEEN */
+** at 15, its way at 19 (0xFF where the character stands), a denizen's 1 at 20, its place in the sight record at 21)
+** given its capital (at 23: its own, by that place, so several on one square each have theirs, not the last's, the
+** user's three cave adders all (G), 2026-11-17) and told where it lies: "Which one? (A) the giant rat ahead to your
+** left, on the right, (B) the giant rat ahead to your left, on the left, (C) the giant rat ahead" (on one square, no
+** side said); the answer letters.c's which_in's, the command made again on that one's capital (the thing of role r's
+** word: its other's, 1; none said, "take", the capital after it).  which_n | WN_SEEN */
 void __fastcall__ o_which_seen (unsigned char r, unsigned char n)
 {
     static unsigned wx[4], wy[4];
-    static unsigned char wh[4], k, j, c, kd;
-    static const struct sden* q;
+    static unsigned char wh[4], k, j, kd;
     static int sk, sj;
     static char b[8];
 
@@ -103,21 +104,9 @@ void __fastcall__ o_which_seen (unsigned char r, unsigned char n)
         wx[k] = WAT (o, 15);
         wy[k] = WAT (o, 17);
         wh[k] = o[19];
-        c = NLET;
-        if (o[20]) {
-            for (q = sight_copy.den; q < sight_copy.den + sight_copy.ndens; ++q) {
-                if (q->x == wx[k] && q->y == wy[k]) {
-                    c = cap_index (CAP_DEN (q->den), CW_DEN, 0);
-                }
-            }
-        } else {
-            for (j = 0; j < sight_copy.nitems; ++j) {
-                if (sight_copy.item[j].x == wx[k] && sight_copy.item[j].y == wy[k] && !strcmp (sight_copy.item[j].name, o)) {
-                    c = cap_index (id_of (sight_copy.item[j].n, &kd), CW_THING, kd);
-                }
-            }
-        }
-        o[WSIZE - 1] = c;
+        j = o[21];
+        o[WSIZE - 1] = o[20] ? cap_index (CAP_DEN (sight_copy.den[j].den), CW_DEN, 0) :
+            cap_index (id_of (sight_copy.item[j].n, &kd), CW_THING, kd);
         to_ui (UIREC->which_w[k], o, WSIZE);
     }
     strcpy (lb, "Which one?");
@@ -131,7 +120,9 @@ void __fastcall__ o_which_seen (unsigned char r, unsigned char n)
                 if (apart (wx[j], wy[j]) == apart (wx[k], wy[k])) {
                     sk = head_x[pc_face] * ((int) wy[k] - sight_copy.y) - head_y[pc_face] * ((int) wx[k] - sight_copy.x);
                     sj = head_x[pc_face] * ((int) wy[j] - sight_copy.y) - head_y[pc_face] * ((int) wx[j] - sight_copy.x);
-                    strcat (lb, sk < sj ? ", on the left" : ", on the right");
+                    if (sk != sj) {
+                        strcat (lb, sk < sj ? ", on the left" : ", on the right");
+                    }
                 } else {
                     strcat (strcat (strcat (lb, ", "), utoa (5 * apart (wx[k], wy[k]), b, 10)), " feet off");
                 }

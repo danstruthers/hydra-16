@@ -311,6 +311,9 @@ enum { U_VERB, U_YET, U_CANT, U_NOTE, U_WHAT,   /* (A verb the game doesn't know
     A_NO_MAGIC, A_NO_PSI, A_NO_GODS, A_NO_GOD,  /* (The powers, H_POWERS's: no spells, no psionics; no invocations of
                                                 **   the character's deity's, its name put in; none, worshipping none) */
     A_OUT,                                      /* (A line typed as it lies senseless: main.c's out_line) */
+    A_SENSE, A_QUOTE,                           /* (Words the game knows, not a command its grammar has; words said
+                                                **   with no quotes, the form shown: main.c's s_command, refuse.c's
+                                                **   o_unknown, 2026-11-17) */
     A_COUNT };
 #define A_LB        0x80                        /* (say_no's a |: added to lb, not said) */
 void __fastcall__ say_no (unsigned char a, const char* w);   /* Overlay 24 (refuse.c's): a refusal said, the one

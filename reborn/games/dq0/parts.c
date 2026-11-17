@@ -38,6 +38,8 @@ static const char brks[] = "stop\0halt\0enough\0flee\0escape\0disengage\0withdra
 static const char brk2[] = "run\0back\0break\0";   /* ("run away", "back away", "back off", "break off") */
 static const char blows[] = "attack\0fight\0hit\0strike\0";   /* ("attack the rat and the goblin": one line, a split
                                                 **   attack, parts_op's: the verbs plan's B1, 2026-11-10) */
+static const char pairs[] = "combine\0join\0";   /* ("combine the tablet and the seal": one line, the one with the
+                                                **   other, the parser's, 2026-11-17) */
 
 /* The line's own, this overlay's data (the main RAM's room): where each part begins in inl, its length, it follows a
 ** list's word ("and", a comma); so many parts */
@@ -119,8 +121,9 @@ static void parts (void)
                     }
                     if (among (i + 5, "then\0\0")) {
                         cut (5);                /* ("and then" the "then"'s) */
-                    } else if (!a && among (0, blows) && among (i + 5, dets)) {
-                                                /* ("attack the rat and the goblin": a split attack, one line) */
+                    } else if (!a && ((among (0, blows) && among (i + 5, dets)) || among (0, pairs))) {
+                                                /* ("attack the rat and the goblin": a split attack, one line; "combine
+                                                **   the tablet and the seal", the one with the other) */
                     } else if ((!among (w, ways) || !among (i + 5, ways)) && (!among (w, units) ||
                         (!among (i + 5, nums) && (inl[i + 5] < '0' || inl[i + 5] > '9')))) {
                         cut (5);                /* (Not "north and east": two commands) */
@@ -276,10 +279,53 @@ unsigned char __fastcall__ o_parts_in (unsigned char op)
     return 1;
 }
 
+/* Line t (0-ended, d bytes with its 0) put first in the queue, the next taken: 1; 0 no room */
+static unsigned char __fastcall__ q_first (const char* t, unsigned d)
+{
+    if (qlen + d > QMAX) {
+        return 0;
+    }
+    memmove (queue + d, queue, qlen);
+    memcpy (queue, t, d);
+    qlen += d;
+    return 1;
+}
+
+/* "Drop all" (GAME-CRITIQUE.md's 2.6: "Drop all what?", 2026-11-17): what's in its hands put down, and anything else it
+** carries loose (in no hand, not worn, in nothing); never a thing worn, nor one in another (packed, in a sack, hung from a
+** belt).  The line made "drop" and their letters (the UI bank's ix, the world's: letters.c's a line each, "drop d",
+** "drop e", each put down as one named), back in the queue: 1 (none to drop, said so) */
+static char dt[64] = "drop";                   /* (The line made, this overlay's) */
+#define DIX     ((const struct cix*) (lb + 1))  /* (What's carried, copied into lb: the main RAM's, the UI bank in the
+                                                **   window as it's copied; its count first) */
+static unsigned char drop_all (void)
+{
+    static unsigned char e = 0, j = 0, k = 0;
+
+    hub_mem (UI_BANK, lb, &UIREC->ixn, 1 + NIX * sizeof (struct cix));
+    for (k = 4, e = 0; e < (unsigned char) lb[0] && e < NIX && k < sizeof dt - 4; ++e) {
+        if (DIX[e].up || (DIX[e].flags & CX_WORN) || !(j = DIX[e].let)) {
+            continue;
+        }
+        dt[k++] = ' ';
+        if (--j >= NLET / 2) {
+            dt[k++] = 'a';                      /* (aa ... az) */
+            j -= NLET / 2;
+        }
+        dt[k++] = 'a' + j;
+    }
+    dt[k] = 0;
+    if (k == 4) {
+        msg ("Your hands are empty.");
+        return 1;
+    }
+    return q_first (dt, k + 1);
+}
+
 /* A list's matters (parts_in's): PO_STOP, the long task stopped, or asked about: the rest of its line let go.  PO_AGAIN, the command cl
 ** has no verb, and no way in it ("rope"): a list's later part (after "and", or a comma) has the verb of the part before it
 ** put to it, back in the queue: 1 (nothing to say); a blow at two, "attack the rat and the goblin" (one line, parts'),
-** made a split attack (VB_ATTACK_SPLIT, the verbs plan's B1, 2026-11-10) */
+** made a split attack (VB_ATTACK_SPLIT, the verbs plan's B1, 2026-11-10); "drop all", what's in its hands (drop_all) */
 static unsigned char __fastcall__ parts_op (unsigned char op)
 {
     static unsigned d = 0;
@@ -288,6 +334,9 @@ static unsigned char __fastcall__ parts_op (unsigned char op)
     if (op == PO_STOP) {
         let_go ();
         return 0;
+    }
+    if (cmd.action == VB_DROP_OBJECT && cmd.obj.sel == SL_ALL && !cmd.obj.word[0] && !cmd.prep) {
+        return drop_all ();
     }
     if (cmd.action == VB_ATTACK_OBJECT && !cmd.other.word[0] && strstr (cl, " and ")) {
         cmd.action = VB_ATTACK_SPLIT;           /* (Its thing the parser's last, the second; the first the word before

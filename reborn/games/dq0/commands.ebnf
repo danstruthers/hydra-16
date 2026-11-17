@@ -121,7 +121,7 @@
 <errand>         ::= ( "fetch" | "bring" | "retrieve" ) [ "me" ] <object> | ( "follow" | "come" ) [ "me" ] "at" <number> [ "space" | "spaces" | "square" | "squares" ]
                    | ( "open" | "close" | "shut" | "unlock" ) <thing>   (* an errand at a door, 2026-11-02: "ask the dwarf to open the door" *)   (* an ally's errand (slice 4.8): "tell Grub to fetch the key", "ask the dwarf to bring me the torch", "tell Grub to follow me at 3 squares" *)
 <cast>           ::= <CAST> [ <det> ] [ <spell-word> ] [ "spell" ] [ <at-phrase> ]       (* "concentrate" alone: the spell in use *)
-<eat>            ::= <EAT> <object>
+<eat>            ::= <EAT> [ <object> ]   (* "eat" alone: a meal from what it carries, as "drink" alone drinks (2026-11-17) *)
 <drink>          ::= <DRINK> [ "from" <object> | <object> ]
 <swim>           ::= <SWIM> [ <move-dir> ] | "dive" | "tread" "water"   (* alone in deep water: treading water a minute; "dive", "swim down": under on purpose (2026-11-10) *)
 <find>           ::= <FIND> <object>                            (* question 10: FIND locates a known thing *)
@@ -290,8 +290,9 @@
 <grab>           ::= ( "grab" | "hold" ) <object> [ <from-phrase> ] [ <hand-phrase> ]   (* a grapple when the object is engaged; else a get, or a carry for hold; "hold the spear in both hands" *)
 <lock>           ::= "lock" <thing> [ <USING> <object> ]
 <unlock>         ::= "unlock" <thing> [ <USING> <object> ]
-                   | ( "unlock" | "pick" ) ( "the" | "its" ) "lock" ( "of" | "on" ) <thing> [ <USING> <object> ]   (* "pick
-                                                   the lock of the chest", slice 4.1's; "... with the lockpicks" *)
+                   | ( "unlock" | "pick" ) [ "the" | "its" ] "lock" [ ( "of" | "on" ) <thing> ] [ <USING> <object> ]   (* "pick
+                                                   the lock of the chest", slice 4.1's; "... with the lockpicks"; "pick the lock", "pick lock"
+                                                   alone, the one in front, as the help has it (2026-11-17) *)
 <fill>           ::= "fill" <object> [ <from-phrase> | "with" <object> ]   (* "fill the lantern", "fill the lantern with oil" (a light renewed, slice 4.1's) *)
 <dip>            ::= ( "dip" | "soak" ) <object> [ ( "in" | "into" ) <object> ]   (* "dip the torch in the oil", "soak the torch in pitch"; "dip the torch": the first fuel carried *)
 <read>           ::= "read" [ <object> ]   (* bare: the last thing named *)

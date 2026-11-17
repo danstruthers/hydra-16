@@ -188,6 +188,7 @@ concentrate	VB_CAST_SPELL	-	-	concentrate, the spell in use
 eat the rations	VB_EAT_OBJECT	object=rations	near=rations	eat
 consume the rations	VB_EAT_OBJECT	object=rations	near=rations	consume
 drink	VB_DRINK	-	-	drink
+eat	VB_EAT_OBJECT	-	-	eat alone: a meal from what it carries, as drink alone drinks (2026-11-17)
 drink from the waterskin	VB_DRINK	object=waterskin	near=waterskin	from
 find the key	VB_FIND_OBJECT	object=key	-	find (question 10)
 where is the key	VB_FIND_OBJECT	object=key	-	where is
@@ -382,6 +383,7 @@ first aid for the bandit	VB_TEND	object=bandit	near=bandit	first aid for
 lock the door	VB_LOCK_OBJECT	object=door	near=door	lock
 unlock the door with the key	VB_UNLOCK_OBJECT	object=door;instrument=key	near=door,key	unlock with a key
 pick the lock of the chest	VB_UNLOCK_OBJECT	object=chest	near=chest	a thing's lock picked (slice 4.1)
+pick the lock	VB_UNLOCK_OBJECT	-	-	the lock in front, as the help has it (2026-11-17)
 fill the waterskin	VB_FILL_OBJECT	object=waterskin	near=waterskin	fill
 fill the waterskin from the chest	VB_FILL_OBJECT	object=waterskin;source=chest	near=waterskin,chest	fill from a source
 fill the lantern with oil	VB_FILL_OBJECT	object=lantern;source=oil	near=lantern,oil	fill with a fuel (slice 4.1)
@@ -594,6 +596,7 @@ change the dressing on the bandit	VB_TEND	object=bandit	near=bandit	another's: t
 hang the quiver on my belt	VB_HANG_OBJECT	object=quiver;support=belt	near=quiver,belt	hang
 sheathe the sword	VB_HANG_OBJECT	object=sword	near=sword	sheathe an alias of hang
 combine the sunstone with the moonstone	VB_COMBINE_OBJECT	object=sunstone;other=moonstone	near=sunstone,moonstone	combine
+combine the sunstone and the moonstone	VB_COMBINE_OBJECT	object=sunstone;other=moonstone	near=sunstone,moonstone	and for with: one line, not split (2026-11-17)
 join the pieces	VB_COMBINE_OBJECT	object=pieces	near=pieces	join an alias of combine
 approach the altar	VB_APPROACH_OBJECT	object=altar	near=altar	approach
 approach the door to the east	VB_APPROACH_OBJECT	object=door;lies=E	near=door	approach where it lies

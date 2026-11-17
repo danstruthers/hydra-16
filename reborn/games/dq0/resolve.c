@@ -111,6 +111,8 @@ static unsigned char __fastcall__ gather (const char* w, unsigned char what)
         for (i = 0; i < s->ndens; ++i) {
             if (*w ? name_is (s->den[i].name, w) : s->den[i].doing != DO_DOWN) {
                 add (s->den[i].name, s->den[i].x, s->den[i].y, 5, s->den[i].doing == DO_DOWN ? 3 : 1);
+                ci[nc - 1] = i;                 /* (Its place in the sight record too: several on one square each their
+                                                **   own capital, which.c's, 2026-11-17) */
             }
         }
     }
@@ -224,6 +226,7 @@ static void __fastcall__ ask_which (unsigned char r)
             swapc (ch + j);
             swapc (cs + j);
             swapc (cd + j);
+            swapc (ci + j);
         }
     }
     for (k = 0; k < nc && k < 4; ++k) {          /* (Each choice for the question, the UI bank's which_w: caps.c's, by capitals) */
@@ -233,6 +236,7 @@ static void __fastcall__ ask_which (unsigned char r)
         *(unsigned*) (b + 17) = cy[k];
         b[19] = ch[k];
         b[20] = cd[k] & 1;
+        b[21] = ci[k];                          /* (Its place in the sight record: which.c's, its own capital) */
         hub_mem (UI_BANK, UIREC->which_w[k], b, sizeof b);
     }
     which_seen (r, k);                          /* ("Which one? (A) the giant rat ahead ...": its answer letters.c's which_in,
@@ -513,27 +517,30 @@ unsigned char o_resolve (void)
         }
     } else {
         if (a == VB_RETRIEVE_OBJECT && cmd.obj.sel == SL_ALL && !cmd.obj.word[0]) {
-            if (!gather ("", 1)) {              /* ("take all": everything it sees lying about, in turn) */
-                say_no (A_NO_TAKE, 0);
-                return RV_DONE;
-            }
-            for (nall = 0; nall < nc; ++nall) { /* (The nearest first: those in reach before those walked to) */
-                for (k = n = 0; k < nc; ++k) {
-                    if (apart (cx[k], cy[k]) < apart (cx[n], cy[n])) {
-                        n = k;
-                    }
+            if (!cmd.other.word[0]) {           /* ("Take all from the case": the world's, everything in it, its count
+                                                **   all, no name; not what lies about by a handle's "#17", 2026-11-17) */
+                if (!gather ("", 1)) {          /* ("take all": everything it sees lying about, in turn) */
+                    say_no (A_NO_TAKE, 0);
+                    return RV_DONE;
                 }
-                strcpy (all[nall], cn[n]);
-                allid[nall] = des_add (strcpy (cmd.obj.word, cn[n]), s->item[ci[n]].n | LT_REC);   /* (Its id, the
-                                                **   first's the line's handle: the world asked of that one, not to
-                                                **   choose again by its name, step B's; its word in the main RAM, for
-                                                **   overlay 24's) */
-                cx[n] = cy[n] = 0xFFFF;
+                for (nall = 0; nall < nc; ++nall) { /* (The nearest first: those in reach before those walked to) */
+                    for (k = n = 0; k < nc; ++k) {
+                        if (apart (cx[k], cy[k]) < apart (cx[n], cy[n])) {
+                            n = k;
+                        }
+                    }
+                    strcpy (all[nall], cn[n]);
+                    allid[nall] = des_add (strcpy (cmd.obj.word, cn[n]), s->item[ci[n]].n | LT_REC);   /* (Its id,
+                                                **   the first's the line's handle: the world asked of that one, not
+                                                **   to choose again by its name, step B's; its word in the main RAM,
+                                                **   for overlay 24's) */
+                    cx[n] = cy[n] = 0xFFFF;
+                }
+                iall = 1;
+                take_more = take_all = nall > 1;
+                strcpy (cmd.obj.word, all[0]);
+                cmd.obj.sel = SL_THE;           /* (Each by its name in turn: not all of a name at once) */
             }
-            iall = 1;
-            take_more = take_all = nall > 1;
-            strcpy (cmd.obj.word, all[0]);
-            cmd.obj.sel = SL_THE;               /* (Each by its name in turn: not all of a name at once) */
         } else if (!find_thing (&cmd.obj, a == VB_ATTACK_OBJECT ? 2 : a == VB_THROW_OBJECT ? 1 : 3, 0,
             (unsigned char) (a - VB_MOVE_DIRECTION) < 2 || a == VB_APPROACH_OBJECT)) {   /* (Gone to: which, asked) */
             return RV_DONE;

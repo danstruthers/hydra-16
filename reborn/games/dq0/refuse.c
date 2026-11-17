@@ -143,17 +143,24 @@ void __fastcall__ o_tt_words (const char* t)
 **   U_NOTE    nothing written on it: "There's nothing written on the stairs." (the line after its verb)
 **   U_WHAT    nothing named, asked what: "Take what?" (the line); a part of the place named (the command's kind, a
 **             word after its verb), its verb no use for it: U_CANT's, "You can't push the wall." (not "Push the wall
-**             what?", 2026-11-17: GAME-CRITIQUE.md's 2.6) */
+**             what?", 2026-11-17: GAME-CRITIQUE.md's 2.6)
+**   A_SENSE   words the game knows, not a command its grammar has: "I don't understand that."; words said with no
+**             quotes, the form shown: "Put the words in quotes: say \"hello\"." (the user's, 2026-10-19: DECISIONS.md's
+**             "The command grammar's answers"; main.c's s_command, the grammar's no) */
 void __fastcall__ o_unknown (unsigned char f)
 {
     static const char* p;
     static const char* s;
+    static char* q;
     static unsigned char d, all;
 
     p = cl;
     s = strchr (p, ' ');                        /* (Its verb's end) */
     if (f == U_WHAT && cmd.obj.kind && s) {
         f = U_CANT;
+    }
+    if (f == A_SENSE && cmd.action == VB_SAY && s && !strchr (p, '"')) {
+        f = A_QUOTE;
     }
     all = f > U_YET || (f && (cmd.obj.word[0] || cmd.obj.kind));
     if (f == U_NOTE) {
@@ -166,6 +173,10 @@ void __fastcall__ o_unknown (unsigned char f)
         --d;
     }
     lb[d] = 0;
+    if (f == A_QUOTE && (q = strchr (lb, ' ')) != 0) {
+        memmove (q + 2, q + 1, d - (q - lb));   /* (A quote after the verb, its words then: say "hello, the row's the */
+        q[1] = '"';                             /*   other) */
+    }
     o_say_no (f, d ? lb : 0);
 }
 

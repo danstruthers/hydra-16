@@ -2840,8 +2840,9 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
         if (*name != '#') {                     /* (A kind's name asked where it lies, once a kind: nothing copied out,
                                                 **   a thing named its first letter the sooner, the user's D17) */
             hub_map (KIND_BANK);
-            if (!*name || !named ((const char*) kinds + ((unsigned) pk << 5) + ((unsigned) pk << 2) + pk, name)) {   /* (The
-                                                **   main RAM's named, the one rule, no swap; "" names none here) */
+            if (*name ? !named ((const char*) kinds + ((unsigned) pk << 5) + ((unsigned) pk << 2) + pk, name) : how != HW_IN) {
+                                                /* (The main RAM's named, the one rule, no swap; "" names none here, but
+                                                **   any in a thing: "take all from the case", 2026-11-17) */
                 if (!wcn || !*name || !(j = comp_named (pk, name))) {
                     no[pk] = 1;
                     continue;
@@ -2869,8 +2870,10 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
             px = 0;
         }
         if (how == HW_IN) {
-            if (rec.where != IW_ITEM || rec.x != win || (wcin && ic_of (i) != wcin)) {
-                continue;                       /* (In it; in the compartment named, wcin's) */
+            if (rec.where != IW_ITEM || rec.x != win || (wcin && ic_of (i) != wcin) ||
+                (!*name && icomp (i) && (crow.noun & CC_HIDDEN))) {
+                continue;                       /* (In it; in the compartment named, wcin's; any, "", not in a hidden
+                                                **   one, found or not: "take all from the case", 2026-11-17) */
             }
             r = 0;
         } else if (rec.where == IW_ITEM && rec.x == win) {
@@ -3514,6 +3517,11 @@ void __fastcall__ s_many (char* b, unsigned n, unsigned char k)
     const struct kind* p = kind_of (k);
     unsigned char i, c;
 
+    if (!*iq.name && iq.kind == IO_TAKE && n > 1) {   /* ("Take all from the case", none named: all of them, or all that
+                                                **   would come, any left in it, pick's, 2026-11-17) */
+        strcpy (b, pick ("", HW_IN) ? "what you can" : "everything");
+        return;
+    }
     if (n == 1) {
         strcpy (b, p->flags & K_PLURAL && !(p->form & KF_COUNT) ? "some " : strchr ("aeiou", p->name[0]) ? "an " : "a ");
     } else if (n <= 10 && !(p->form & KF_COUNT)) {
@@ -5929,7 +5937,7 @@ static void __fastcall__ say (unsigned char n)
 
     last_sa = n;
     d = tbuf;
-    *d++ = SAY_AT;
+    *d++ = n & 0x80 ? SAY_AT2 : SAY_AT;         /* (Past 127, SAY_AT2's: SA_NOT_ON, 2026-11-17) */
     *d++ = n | 0x80;
     strcpy (d, xn);
     d += strlen (d);
@@ -6144,14 +6152,15 @@ static unsigned c;
 static unsigned in_other (void)
 {
     static unsigned n;
-    static unsigned char s;
+    static unsigned char s, k;
 
     if (!(c = other ())) {
         return 0;
     }
     FETCH (c);
     s = o.shut;
-    if ((s & IS_CLOSED) && !B (m2 (comp_of, o.kind, 1))) {
+    k = o.kind;
+    if ((s & IS_CLOSED) && !B (m2 (comp_of, k, 1))) {
         no (SA_SHUT);                           /* (Its one compartment closed: nothing in it looked for) */
         return 0;
     }
@@ -6164,8 +6173,9 @@ static unsigned in_other (void)
         no (SA_SHUT);                           /* (In one closed: a chest's inside, its lid shut, not on its lid) */
         return 0;
     }
-    if (!n) {
-        no (SA_NOT_IN);
+    if (!n) {                                   /* (On a thing that holds things on it, a table's, a shelf's, a lid's
+                                                **   top named: "on the shelves", not "in", 2026-11-17) */
+        no ((ocomp ? (m2 (comp_of, k, ocomp), crow.prep == CP_ON) : !(KFLAGS (k) & K_CONTAINER)) ? SA_NOT_ON : SA_NOT_IN);
         return 0;
     }
     name_of (n, 1);

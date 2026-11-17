@@ -1242,6 +1242,9 @@ class Compiler {
           const bad = steps.find(r => r.error || r.question);
           return bad || act('VB_ATTACK_SPLIT', { targets: steps.map(r => r.roles.object).join(',') });
         }
+        if (spec.rule === 'combine' && steps.length === 2 && steps.every(r => r.action === 'VB_COMBINE_OBJECT' && !r.roles.other)) {
+          return act('VB_COMBINE_OBJECT', { object: steps[0].roles.object, other: steps[1].roles.object });   // ("Combine the
+        }                                       //   tablet and the seal": the one with the other, one line, 2026-11-17)
         return sequenceOf(steps);
       }
       case 'bare-direction': return act('VB_MOVE_DIRECTION', { direction: dirCode(findFirst(child, 'direction'), env),

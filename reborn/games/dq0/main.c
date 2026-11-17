@@ -2376,8 +2376,10 @@ void __fastcall__ s_command (char* l)
         unknown (0);
         return;
     }
-    if (!d && !ok) {                            /* (Words the game knows, but not a command the grammar has) */
-        sayf ("\nI don't understand that.");
+    if (!d && !ok) {                            /* (Words the game knows, but not a command the grammar has: "I don't
+                                                **   understand that."; words said with no quotes, the form shown,
+                                                **   refuse.c's) */
+        unknown (A_SENSE);
         return;
     }
     if (strstr (l, "hand")) {

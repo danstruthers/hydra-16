@@ -420,6 +420,104 @@ function dq0FeaturesTest() {
     sdcard: true
   };
 }
+// The parser's quick fixes (GAME-CRITIQUE.md's section 10, phase A, 2026-11-17: its 2.2, 2.6 and the play test's
+// section 1), at seed 3 in the kitchen (dq0 -T, a kit of things more: a chest and its key, a rope, a case, a chisel, a
+// table, a dagger): the other thing's phrase its head, the last word ("with the iron key": the key, not "iron"); a part
+// of the place after the thing and its preposition the other's, refused as where a thing's put or tied ("You can't put
+// the torch on the door.", not the belt's "won't hang"; "You can't tie the rope to the pillar.", not the nearest
+// holder); a part of the place its verb can't use said so, not "Push the wall what?"; a word that names nothing to open
+// said so ("You see no drawer here."), not the door ahead worked; words said with no quotes, the form shown; "eat"
+// alone a meal's, as "drink" alone; "pick the lock" an unlock; "take all from the case" everything in it, the world's
+// count, not a handle's "#17"; a surface's "on", not "in"; "drop all" what's in its hands, each put down, nothing worn;
+// "name" alone asks of its own line.  DQ0_PARSEFIX=1 prints the answers
+function dq0ParseFixTest() {
+  const lines = ['drop the chest', 'unlock the chest with the iron key', 'put the torch on the door', 'tie the rope to the pillar',
+    'push the wall', 'taste the wall', 'open the drawer', 'say hello', 'eat', 'drink', 'unlock the window', 'pick the lock', 'pick lock',
+    'drop the case',
+    'put the chisel in the case', 'put the key in the case', 'take all from the case', 'take all from the case', 'drop the table',
+    'take the dagger from the table', 'take all from the table', 'i', 'drop all', 'i', 'name'];
+  return {
+    name: 'dq0parsefix', near: ['parser'], what: 'Dingus Quest Zero\'s parser\'s quick fixes (GAME-CRITIQUE.md\'s phase A, ' +
+      '2026-11-17): "unlock the chest with the iron key" the key\'s (the other thing\'s head, its last word); "put the ' +
+      'torch on the door", "tie the rope to the pillar" refused plainly (a part of the place where it\'s put); "push the ' +
+      'wall" "You can\'t push the wall."; "open the drawer", none about, "You see no drawer here."; "say hello" its form ' +
+      'shown; "eat" alone as "drink" alone; "pick the lock" as "unlock"; "take all from the case" everything in it; "on ' +
+      'the table" for a surface; "drop all" what\'s in its hands; "name" alone',
+    init: 't_rc', cycles: 400e6 + lines.length * 50e6,
+    machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+      'dq0 -p t -s 3 -c /ram/c.hm -T -k \'chest,key,rope,case,chisel,table,dagger\'', ...lines, 'quit', 'echo $status']) },
+    expect: ['% echo $status'],
+    check(m) {
+      const A = dq0Answers(m.out), f = [], all = l => A.filter(x => x.cmd === l).map(x => x.text),
+        a = l => (A.find(x => x.cmd === l) || { text: '(no answer)' }).text;
+      if (process.env.DQ0_PARSEFIX) for (const l of lines) console.log(l + ' => ' + a(l));
+      const one = t => t.split(/(?<=[.!?]) /)[0];   // (Its first sentence: the rats' stirs after it, the scene's)
+      const want = (l, re, why) => { if (!re.test(a(l))) f.push('"' + l + '" ' + why + ': ' + a(l).slice(0, 160)); };
+      want('unlock the chest with the iron key', /You unlock the chest/, 'not unlocked with the key (the other thing\'s head)');
+      if (/won't do for a lock/.test(a('unlock the chest with the iron key'))) f.push('the key named by "iron"');
+      want('put the torch on the door', /You can't put the torch on the door\./, 'not refused plainly');
+      want('tie the rope to the pillar', /You can't tie the rope to the pillar\./, 'not refused plainly');
+      want('push the wall', /You can't push the wall\./, 'not said so');
+      want('taste the wall', /You can't taste the wall\./, 'not said so');
+      want('open the drawer', /You see no drawer here\./, 'not said so');
+      want('say hello', /Put the words in quotes: say "hello"\./, 'its form not shown');
+      want('eat', /^You're not hungry\./, 'not a meal\'s');
+      want('drink', /^You're not thirsty\./, 'not a drink\'s');
+      for (const l of ['pick the lock', 'pick lock']) {   // (The one in front, the window frame ahead: its words "unlock the
+        if (!a('unlock the window').includes(one(a(l))) || /understand/.test(a(l))) {   //   window"'s, after its walk up to it)
+          f.push('"' + l + '" not "unlock the window": ' + a(l).slice(0, 120) + ' / ' + a('unlock the window').slice(0, 120));
+        }
+      }
+      const [t1, t2] = all('take all from the case');
+      if (!/You take everything from the case\./.test(t1 || '')) f.push('"take all from the case": not everything taken: ' + (t1 || '').slice(0, 160));
+      if (!/You find nothing in the case\./.test(t2 || '')) f.push('"take all from the case" again: not said empty: ' + (t2 || '').slice(0, 160));
+      want('take the dagger from the table', /You find no dagger on the table\./, 'not "on" a surface');
+      want('take all from the table', /You find nothing on the table\./, 'not "on" a surface');
+      if (/#\d/.test(A.map(x => x.text).join(' '))) f.push('a handle told: ' + (/[^.]*#\d[^.]*/.exec(A.map(x => x.text).join(' ')) || [''])[0]);
+      const [i1, i2] = all('i'), held = /in your (?:right|left) hand|in both hands/;
+      if (!held.test(i1 || '')) f.push('nothing in hand before "drop all": ' + (i1 || '').slice(0, 200));
+      if (held.test(i2 || '')) f.push('"drop all": something still in hand: ' + (i2 || '').slice(0, 200));
+      if (!/You put down/.test(A.filter(x => /^drop [a-z]{1,2}$/.test(x.cmd)).map(x => x.text).join(' ') + a('drop all'))) {
+        f.push('"drop all": nothing put down: ' + a('drop all').slice(0, 160));
+      }
+      if (!/backpack, worn/.test(i2 || '')) f.push('"drop all": the worn backpack not kept: ' + (i2 || '').slice(0, 200));
+      want('name', /^Name what\?/, 'not asked of its own line');
+      return f;
+    },
+    sdcard: true
+  };
+}
+// "And" for "with", and the "Which one?" choices each their own capital (GAME-CRITIQUE.md's section 1, the play test's
+// bugs, 2026-11-17): at seed 3 (the crypt, the sunstone and the moonstone given) "combine the sunstone and the moonstone"
+// one line, the stones made one (it was two lines, "Combine what with what?" twice); then two daggers put down where
+// the character stands, "go to the dagger" asks which, each dagger its own capital (the resolver's choices by their
+// place in the sight record, not their square: the play test's three cave adders on one square all (G)), no side said
+// of two on one square.  DQ0_PAIRS=1 prints the answers
+function dq0PairsTest() {
+  const lines = ['combine the sunstone and the moonstone', 'i', 'drop the dagger', 'drop the dagger', 'go to the dagger'];
+  return {
+    name: 'dq0pairs', near: ['parser'], what: 'Dingus Quest Zero\'s "combine X and Y" one line, the one with the other ' +
+      '(the play test\'s "Combine what with what?" twice), and the resolver\'s "Which one?" choices on one square each ' +
+      'their own capital (the play test\'s three adders all (G)), no side said of them',
+    init: 't_rc', cycles: 300e6 + lines.length * 60e6,
+    machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 909 -u feudal -c sage -o /ram/c.hm',
+      'dq0 -p t -s 3 -c /ram/c.hm -k \'sunstone,moonstone,dagger,dagger\'', ...lines, 'quit', 'echo $status']) },
+    expect: ['% echo $status'],
+    check(m) {
+      const A = dq0Answers(m.out), f = [], a = l => (A.find(x => x.cmd === l) || { text: '(no answer)' }).text;
+      if (process.env.DQ0_PAIRS) for (const l of lines) console.log(l + ' => ' + a(l));
+      if (/Combine what with what/.test(a('combine the sunstone and the moonstone')) || !/seal/.test(a('combine the sunstone and the moonstone')))
+        f.push('"combine the sunstone and the moonstone": not made one: ' + a('combine the sunstone and the moonstone').slice(0, 160));
+      if (!/seal/.test(a('i'))) f.push('no seal carried after the combine: ' + a('i').slice(0, 200));
+      const q = a('go to the dagger'), caps = [...q.matchAll(/\(([A-Z]{1,2})\) the dagger/g)].map(x => x[1]);
+      if (!/^Which one\?/.test(q) || caps.length !== 2) f.push('"go to the dagger": not asked which of two: ' + q.slice(0, 160));
+      else if (caps[0] === caps[1]) f.push('"go to the dagger": both daggers the same capital: ' + q.slice(0, 160));
+      if (/on the (left|right)/.test(q)) f.push('"go to the dagger": a side said of two on one square: ' + q.slice(0, 160));
+      return f;
+    },
+    sdcard: true
+  };
+}
 function dq0SweepTest(opt = {}) {
   const name = opt.name || 'dq0sweep', gapsOf = opt.gaps || SWEEP_GAPS, saidOf = opt.said || SWEEP_SAID, lines = dq0SweepLines(opt.verbs);
   return {
@@ -505,6 +603,8 @@ module.exports = {
     dq0LineTest(),
     dq0OnePathTest(),
     dq0FeaturesTest(),
+    dq0ParseFixTest(),
+    dq0PairsTest(),
     {
       name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), a grapple at a rat out of reach (since 2026-11-09, HOUSE.md\'s grappling: "go up to it first"; till then the grammar\'s and not yet the game\'s); a gift the game takes since slice 4.8 ("give the torch to the rat": the rat out of reach, or out of sight); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',
       init: 't_rc', cycles: 1500e6,
