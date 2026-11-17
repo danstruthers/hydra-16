@@ -93,7 +93,8 @@ function dq0NameMatchTest() {
         f.push('"target the pack": the resolver found no backpack (its own rule): ' + a('target the pack').slice(0, 120));
       if (!/^Your target: the bones\./.test(a('target the bon')))
         f.push('"target the bon": the resolver found no bones (a word\'s start): ' + a('target the bon').slice(0, 120));
-      if (!/^You see no rat here\./.test(a('target the black rat')))
+      if (!/^You see no black rat here\./.test(a('target the black rat')))   // (The name said whole, "black rat": the
+                                                // parser's, 2026-11-17)
         f.push('"target the black rat": not none (the qualifier): ' + a('target the black rat').slice(0, 120));
       if (!/^(?:Your target: the giant rat\.|Which one\? \(.\) the giant rat)/.test(a('target the giant rats')))
         f.push('"target the giant rats": not the rats asked about: ' + a('target the giant rats').slice(0, 120));

@@ -65,51 +65,55 @@
 <face>           ::= [ "change" ] ( "face" | "facing" | "turn" ) [ "half" ] [ "to" ] <direction> | "turn" "around"   (* "turn around" is a half turn: facing back; "turn half left": an eighth *)
 
 (* ---- Handling things (question 2: CLOSE and OPEN are actions) ---- *)
-<get>            ::= <GET> [ <object> ] [ <from-phrase> ] [ <hand-phrase> ] | <GET> <object> <off-phrase> | <GET> <object> "up"   (* bare: the last thing named, else things near (question 8); "pick the sword up"; "take the torch in my right hand" (slice 4.1b) *)
+<get>            ::= <GET> [ <object> ] [ <from-phrase:other> ] [ <hand-phrase:hand> ] | <GET> <object> <off-phrase:other> | <GET> <object> "up"   (* bare: the last thing named, else things near (question 8); "pick the sword up"; "take the torch in my right hand" (slice 4.1b) *)
 <drop>           ::= <DROP> [ <object> ] | "put" <object> "down" | "shrug" <object> "off"   (* bare: the last thing named *)
-                   | <DROP> <thing> ( "into" | "in" | "inside" | "down" ) <object>   (* "drop the dagger into the well", "down the shaft": put in it (2026-11-06) *)
-<put>            ::= <PUT> <thing> <put-prep> <object> | <PUT> <thing> <hand-phrase> | <PUT> <thing> <worn-phrase>   (* "put the bar back in its brackets": back, a way, passed over; "put the dagger in my other hand": held there (slice 4.1b) *)
+                   | <DROP> <thing> ( "into" | "in" | "inside" | "down" ) <object:other>   (* "drop the dagger into the well", "down the shaft": put in it (2026-11-06) *)
+<put>            ::= <PUT> <thing> <hand-phrase:hand> | <PUT> <thing> <worn-phrase:worn> | <PUT> <thing> <put-prep:other> <object:other>   (* "put the bar back in its brackets": back, a way, passed over; "put the dagger in my other hand": held there (slice 4.1b) *)
 <put-prep>       ::= "in" | "into" | "inside" | "on" | "onto" | "on top of" | "under" | "against" | "down"   (* "down the shaft": in it, 2026-11-06 *)
-<use>            ::= <USE> <object> [ ( "on" | "with" ) <object> ]
-<equip>          ::= <EQUIP> [ <object> ] [ <hand-phrase> | <worn-phrase> ]   (* bare: the last thing named; "wield the sword in my left hand"; "wear the ring on my left hand" *)
+<use>            ::= <USE> <object> [ ( "on" | "with" ) <object:other> ]
+<equip>          ::= <EQUIP> [ <object> ] [ <hand-phrase:hand> | <worn-phrase:worn> ]   (* bare: the last thing named; "wield the sword in my left hand"; "wear the ring on my left hand" *)
 <worn-phrase>    ::= ( "on" | "over" | "around" | "about" | "at" | "in" ) "my" [ "left" | "right" ] ( <object> | "head" | "hand" | "hands" | "face" )   (* where a
                                                  thing's worn (2026-11-10, the user's): "put the scarf over my face", "wear the earrings
                                                  in my ears"; the place the UI's to read (worn.c), the world's to keep *)
 (* ---- The hands (added 2026-10-22, slice 4.1b): the hand a thing goes in, or the one that holds what strikes ---- *)
 <hand-phrase>    ::= "in" [ "my" ] ( ( "left" | "right" | "other" | "off" | "main" ) "hand" | "both" "hands" )
 <swap>           ::= ( "swap" | "switch" | "change" ) "hands" | "swap"   (* what's in the hands changed over, left to right *)
-<tend>           ::= <TEND> [ <object> ]       (* first aid (slice 4.3): "tend my wounds", "bandage my left arm", "treat the
+<tend>           ::= <TEND> [ <object:mine> ]       (* first aid (slice 4.3): "tend my wounds", "bandage my left arm", "treat the
                                                  bandit", "first aid"; none said, its own wounds *)
 <TEND>           ::= "tend" [ "to" ] | "treat" | "bandage" | "dress" | "bind" | "staunch" | "first" "aid" [ "to" | "for" ]
                    | "change" [ "the" | "my" ] ( "bandage" | "bandages" | "dressing" ) [ "on" ]   (* a dressing changed: "change the
                                                  bandage on my arm" (2026-11-10, HOUSE.md's bandages) *)
-<rip>            ::= <RIP> <object> [ "up" ] [ <USING> <object> ] | "wash" <object>   (* a cloth torn up for bandages, "cut up the
+<rip>            ::= <RIP> <object> [ "up" ] [ <USING> <object:tool> ] | "wash" <object>   (* a cloth torn up for bandages, "cut up the
                                                  cloak with the dagger"; washed, "wash the bandages" (2026-11-10) *)
 <RIP>            ::= ( "rip" | "tear" ) [ "up" ] | "cut" "up"
-<trade>          ::= ( "buy" | "purchase" ) <object> [ "from" <object> ] | "sell" <object> [ "to" <object> ]
+<trade>          ::= ( "buy" | "purchase" ) <object> [ "from" <object:other> ] | "sell" <object> [ "to" <object:other> ]
                    | "how" "much" [ "will" "you" "give" ] [ "for" | "is" | "are" ] <object> | "what" ( "will" | "would" ) "you" "give" [ "me" ] "for" <object>
-                   | ( "haggle" | "bargain" | "barter" ) [ ( "for" | "over" ) <object> ] [ "with" <object> ]
+                   | ( "haggle" | "bargain" | "barter" ) [ ( "for" | "over" ) <object> ] [ "with" <object:other> ]
                    | "entertain" [ <object> ] | ( "sing" | "play" | "dance" ) [ ( "to" | "for" | "with" ) <object> ]   (* the market and
                                                  entertaining (2026-11-02): "buy the rope from the dwarf", "sell my dagger", "how much for the
                                                  lantern", "what will you give for this", "haggle for the rope", "sing to the dwarf": VB_TRADE,
                                                  its verb's aux the sway's SW_* *)
 <unequip>        ::= <UNEQUIP> [ <object> ] | "put" <object> "away" | "take" <object> "off"   (* "put away the sword", "put the sword away", "take the helm off" *)
-<open>           ::= "o" [ <thing> [ <USING> <object> ] ]   (* "open" alone: what's in front *)
+<open>           ::= "o" [ <thing> [ <USING> <object:tool> ] ]   (* "open" alone: what's in front *)
 <close>          ::= "close" [ <thing> ]           (* "close look" is <DETAIL> <LOOK>, not this *)
 <from-phrase>    ::= "from" <object> | "out" "of" <object>
 <off-phrase>     ::= "off" <object>
 
 (* ---- Fighting ---- *)
-<attack>         ::= <ATTACK> [ <thing> [ <USING> <object> [ <hand-phrase> ] ] ]   (* bare: the target, else the nearest foe; "attack the rat with the dagger in my left hand" *)
+<attack>         ::= <ATTACK> [ <thing> [ <USING> <object:tool> [ <hand-phrase:hand> ] ] ]   (* bare: the target, else the nearest foe; "attack the rat with the dagger in my left hand" *)
 <USING>          ::= "with" | "using"                (* what it's done with: an instrument, to hand (2026-10-22) *)
-<grapple>        ::= <GRAPPLE> <object> | <THROW> <object> | "put" <object> "in" [ "a" ] ( "head" "lock" | "headlock" ) | "let" "go" [ "of" <object> ]   (* a grapple maneuver: the object is engaged; "toss" and "throw" a creature are grapples too *)
-<throw>          ::= <THROW> [ <throwing> ] <at-phrase>          (* at something: a target *)
-                   | <THROW> [ <throwing> ] ( "into" | "in" | "down" ) <object>   (* "throw the dagger into the well", "down the shaft": let fall in it (2026-11-06) *)
+<headlock>       ::= "in" [ "a" ] ( "head" "lock" | "headlock" )   (* "put the goblin in a headlock": the hold the other
+                                                 thing, as a put's *)
+<grapple>        ::= <GRAPPLE> <object> | <THROW> <object> | "put" <object> <headlock:other> | "let" "go" [ "of" <object> ]   (* a grapple maneuver: the object is engaged; "toss" and "throw" a creature are grapples too *)
+<throw>          ::= <THROW> [ <throwing> ] <at-phrase:other>          (* at something: a target *)
+                   | <THROW> [ <throwing> ] ( "into" | "in" | "down" ) <object:other>   (* "throw the dagger into the well", "down the shaft": let fall in it (2026-11-06) *)
                    | <THROW> [ <throwing> ] <throw-dir>
                    | <THROW>          (* in a direction: a floor square, distance asked *)
 <throwing>       ::= <manner> [ <object> ] | <object> [ <manner> ]   (* "throw hard the apple", "throw the apple hard" *)
 <throw-dir>      ::= <direction> | "around the corner"
-<shoot>          ::= <SHOOT> [ <object> ] [ <at-phrase> ] [ <USING> <object> ]   (* "fire the bow at the goblin", "shoot at the goblin", "shoot the goblin", "shoot at the goblin with my bow" *)
+<shoot>          ::= <SHOOT> <at-phrase> [ <USING> <object:tool> ] | <SHOOT> [ <object> ] [ <at-phrase:other> ] [ <USING> <object:tool> ]   (* "fire the bow at
+                                                 the goblin", "shoot at the goblin" (the target the thing: none said
+                                                 before it), "shoot the goblin", "shoot at the goblin with my bow" *)
 <load>           ::= <LOAD> <object>   (* "load the crossbow", "nock an arrow" (nock: an alias), "draw the bow" *)
 <gather>         ::= <GATHER> [ <object> ]   (* "gather the arrows", "collect the bolts", "gather": the missiles lying about, each walked to (slice 4.7) *)
 <at-phrase>      ::= ( "at" | "toward" | "towards" | "to" | "on" ) <object>
@@ -117,10 +121,10 @@
 (* ---- Other actions ---- *)
 <jump>           ::= <JUMP> [ <direction> [ <object> ] | ( "over" | "onto" | "into" | "in" ) <object> ]   (* "jump into the well", "jump down the well" (2026-11-06) *)
 <say>            ::= <SAY> <quoted-text> | <VOLUME-SAY> <quoted-text> [ "!" ]   (* yell, scream, whisper *)
-<tell>           ::= <TELL> <object> [ "to" | "about" ] ( <quoted-text> | <object> | <phrase> | <errand> ) | <TELL> <object> "that" <text> { <text> }   (* "tell the goblin that the bridge is out" *)
+<tell>           ::= <TELL> <object> [ "to" | "about" ] ( <quoted-text> | <object:other> | <phrase:other> | <errand:other> ) | <TELL> <object> "that" <text:other> { <text:other> }   (* "tell the goblin that the bridge is out" *)
 <errand>         ::= ( "fetch" | "bring" | "retrieve" ) [ "me" ] <object> | ( "follow" | "come" ) [ "me" ] "at" <number> [ "space" | "spaces" | "square" | "squares" ]
                    | ( "open" | "close" | "shut" | "unlock" ) <thing>   (* an errand at a door, 2026-11-02: "ask the dwarf to open the door" *)   (* an ally's errand (slice 4.8): "tell Grub to fetch the key", "ask the dwarf to bring me the torch", "tell Grub to follow me at 3 squares" *)
-<cast>           ::= <CAST> [ <det> ] [ <spell-word> ] [ "spell" ] [ <at-phrase> ]       (* "concentrate" alone: the spell in use *)
+<cast>           ::= <CAST> [ <det> ] [ <spell-word> ] [ "spell" ] [ <at-phrase:other> ]       (* "concentrate" alone: the spell in use *)
 <eat>            ::= <EAT> [ <object> ]   (* "eat" alone: a meal from what it carries, as "drink" alone drinks (2026-11-17) *)
 <drink>          ::= <DRINK> [ "from" <object> | <object> ]
 <swim>           ::= <SWIM> [ <move-dir> ] | "dive" | "tread" "water"   (* alone in deep water: treading water a minute; "dive", "swim down": under on purpose (2026-11-10) *)
@@ -149,7 +153,7 @@
 <charge>         ::= [ "fast" ] "charge" [ "!" ]        (* run at the closest enemy ahead, attack it, shout "Charge!"; fast: a sprint *)
 
 (* ---- Naming and meta-commands (question 15: naming things is "name" or "call") ---- *)
-<naming>         ::= <NAME> ( <object> | "room" | "place" ) [ "as" | "the" ] <name-word>
+<naming>         ::= <NAME> ( <object> | "room" | "place" ) [ "as" | "the" ] <name-word:other>
 <meta>           ::= <META-WORD> [ <meta-topic> ]
 <alias-cmd>      ::= <ALIAS> <alias> ( "is" | "=" ) <substitution>   (* define, or overwrite after a question *)
                    | <ALIAS> <alias>                                   (* show its meaning *)
@@ -167,21 +171,21 @@
 <here-ref>       ::= "me" | "myself"        (* question 14: "me" only, never "you" *)
 
 (* ---- Objects ---- *)
-<object>         ::= <object-one> { "and" <object-one> }
+<object>         ::= <object-one> { "and" <object-one:list> }
 <object-one>     ::= <np> | <pronoun> | <me-phrase> | <everything> | <way-out>   (* "the sword and the shield": a list, one command for each *)
 <chosen>         ::= ( <superlative> | <ordinal> ) [ "one" ]   (* "the closest", "the second one": of those it perceives *)
 <superlative>    ::= "closest" | "nearest" | "largest" | "biggest" | "smallest" | "lead"   (* (<chosen>'s and <selector>'s: the rules' room, 2026-10-28) *)
 <way-out>        ::= [ "the" ] "way" "out"          (* the theme's way out of the dungeon *)
 <np>             ::= [ <det> ] ( [ <selector> ] { <adj> } <head> | <chosen> ) | <portion> [ "of" ] <det> { <adj> } <head>
 <portion>        ::= "all" | "half" | "both" | <number>   (* "all the sacks", "half the rations", "two of the sacks": how many of them, slice 4.1's *)
-<thing>          ::= <object> [ <of-room> ] [ <lies> ]   (* a thing in the place, and where it lies: "the door ahead to my left" *)
+<thing>          ::= <object> [ <of-room:skip> ] [ <lies> ]   (* a thing in the place, and where it lies: "the door ahead to my left" *)
 <of-room>        ::= "of" [ "the" | "this" ] ( "room" | "chamber" | "hall" | "cave" | "cavern" )   (* "the centre of the room" *)
 <lies>           ::= <compass> | <relative>
 <det>            ::= "a" | "an" | "the" | "this" | "that" | "these" | "those" | "its"   (* "my coat": <me-phrase> *)
 <selector>       ::= <number> | "all" | "every" | "each" | "any" | "both" | <ordinal> | <superlative>
 <head>           ::= { <noun> } <name>                (* every word a thing can be called: "the mail hauberk" (a noun: no adjective, number or ordinal) *)
 <pronoun>        ::= "it" | "them" | "that" | "this" | "one" | "he" | "she" | "him" | "her"   (* "it": the last thing of any kind (question 7); he, she, him, her: the last person named (context "person=") *)
-<me-phrase>      ::= <here-ref> | ( "my" | "your" ) <np>
+<me-phrase>      ::= <here-ref> | ( "my" | "your" ) <np:mine>
 <everything>     ::= "everything" [ "near" | "here" ] | "all"
 
 (* ---- Directions (question 5: the single letters are commands) ---- *)
@@ -249,8 +253,8 @@
 <META-WORD>  ::= "status" | "help" | "i" | "map" | "m" | "save" | "q" | "sheet" | "pause" | "time" | "what time is it"
 
 (* ---- Fire (added 2026-10-19) ---- *)
-<light>          ::= <LIGHT> [ "a" ] "fire" | <LIGHT> <object> [ <in-phrase> ] [ <USING> <object> ] | "turn" <object> "on"   (* "light the torch", "start a fire", "turn it on", "light the torch in the sconce" *)
-<extinguish>     ::= <EXTINGUISH> [ "the" ] "fire" | <EXTINGUISH> <object> [ <in-phrase> ] | "put" <object> "out" | "turn" <object> "off"   (* "quench the fire", "put out the torch", "put the torch out", "turn it off", "put out the torch in the sconce" *)
+<light>          ::= <LIGHT> [ "a" ] "fire" | <LIGHT> <object> [ <in-phrase:other> ] [ <USING> <object:tool> ] | "turn" <object> "on"   (* "light the torch", "start a fire", "turn it on", "light the torch in the sconce" *)
+<extinguish>     ::= <EXTINGUISH> [ "the" ] "fire" | <EXTINGUISH> <object> [ <in-phrase:other> ] | "put" <object> "out" | "turn" <object> "off"   (* "quench the fire", "put out the torch", "put the torch out", "turn it off", "put out the torch in the sconce" *)
 <in-phrase>      ::= ( "in" | "on" ) <object>   (* the thing it's in, or on: a sconce's torch *)
 (* ---- Posture and pretence (added 2026-10-19) ---- *)
 <posture>        ::= <SIT> | <STAND> | <LIE-DOWN> | <CROUCH> | ( "lie" | "lay" ) [ "down" ] ( "on" | "in" ) <object>          (* a change of the standing state; no object *)
@@ -269,14 +273,14 @@
 <climb>          ::= <CLIMB> [ <direction> ] [ <object> ] | <CLIMB> ( "over" | "onto" | "into" | "in" | "through" ) <object>
                    | <CLIMB> "out" [ "of" <object> ]   (* "climb out", "climb out of the well": up it (2026-11-06) *)
 <CLIMB>          ::= "climb"
-<dig>            ::= <DIG> [ <direction> | "for" <object> | <object> ] [ <USING> <object> ]   (* "dig down", "dig the wall",
+<dig>            ::= <DIG> [ <direction> | "for" <object> | <object> ] [ <USING> <object:tool> ]   (* "dig down", "dig the wall",
                                                    "dig for treasure", "dig down with the pick" *)
 <DIG>            ::= "dig"
 <wake>           ::= <WAKE> [ <object> ] | "wake" <object> "up"   (* "wake the goblin", "wake the goblin up" *)
 <WAKE>           ::= "wake" [ "up" ] | "rouse" | "awaken"
 (* ---- Stealth ---- *)
 <CROUCH>         ::= "crouch" | "kneel" [ "down" ] | "squat"
-<hide>           ::= "h" [ <object> ] [ <locative> ]            (* "hide behind the table": the locative adjunct; "hide the pouch": a thing hidden *)
+<hide>           ::= "h" [ <object> ] [ <locative:loc> ]            (* "hide behind the table": the locative adjunct; "hide the pouch": a thing hidden *)
 <sneak>          ::= <SNEAK> [ <direction> ]
 <SNEAK>          ::= "sneak"
 (* ---- Handling and senses ---- *)
@@ -285,16 +289,16 @@
 <PUSH>           ::= "push"
 <pull>           ::= <PULL> <object>
 <PULL>           ::= "pull"
-<give>           ::= <GIVE> <object> ( "to" | "for" ) <object> | <GIVE> <object> <object>   (* "give the bandit 5 pennies", "offer the orc my dagger": the one given it first (2026-11-02) *)
+<give>           ::= <GIVE> <object> ( "to" | "for" ) <object:other> | <GIVE> <object:other> <object>   (* "give the bandit 5 pennies", "offer the orc my dagger": the one given it first (2026-11-02) *)
 <GIVE>           ::= "give"                                     (* spelt out: "g" is again's (the user's, 2026-11-11) *)
-<grab>           ::= ( "grab" | "hold" ) <object> [ <from-phrase> ] [ <hand-phrase> ]   (* a grapple when the object is engaged; else a get, or a carry for hold; "hold the spear in both hands" *)
-<lock>           ::= "lock" <thing> [ <USING> <object> ]
-<unlock>         ::= "unlock" <thing> [ <USING> <object> ]
-                   | ( "unlock" | "pick" ) [ "the" | "its" ] "lock" [ ( "of" | "on" ) <thing> ] [ <USING> <object> ]   (* "pick
+<grab>           ::= ( "grab" | "hold" ) <object> [ <from-phrase:other> ] [ <hand-phrase:hand> ]   (* a grapple when the object is engaged; else a get, or a carry for hold; "hold the spear in both hands" *)
+<lock>           ::= "lock" <thing> [ <USING> <object:tool> ]
+<unlock>         ::= "unlock" <thing> [ <USING> <object:tool> ]
+                   | ( "unlock" | "pick" ) [ "the" | "its" ] "lock" [ ( "of" | "on" ) <thing> ] [ <USING> <object:tool> ]   (* "pick
                                                    the lock of the chest", slice 4.1's; "... with the lockpicks"; "pick the lock", "pick lock"
                                                    alone, the one in front, as the help has it (2026-11-17) *)
-<fill>           ::= "fill" <object> [ <from-phrase> | "with" <object> ]   (* "fill the lantern", "fill the lantern with oil" (a light renewed, slice 4.1's) *)
-<dip>            ::= ( "dip" | "soak" ) <object> [ ( "in" | "into" ) <object> ]   (* "dip the torch in the oil", "soak the torch in pitch"; "dip the torch": the first fuel carried *)
+<fill>           ::= "fill" <object> [ <from-phrase:other> | "with" <object:other> ]   (* "fill the lantern", "fill the lantern with oil" (a light renewed, slice 4.1's) *)
+<dip>            ::= ( "dip" | "soak" ) <object> [ ( "in" | "into" ) <object:other> ]   (* "dip the torch in the oil", "soak the torch in pitch"; "dip the torch": the first fuel carried *)
 <read>           ::= "read" [ <object> ]   (* bare: the last thing named *)
 <copy>           ::= ( "copy" | "transcribe" ) [ <object> ]   (* a writing copied onto a sheet (the plan's step 9: Drawing's); bare: the last thing named *)
 <taste>          ::= "taste" <object>
@@ -315,7 +319,7 @@
                                                                               interrupt between parts *)
 <seq-part>       ::= <command> | <quoted-speech> | <object>   (* an object alone repeats the verb before: "attack the rat then the goblin" *)
 (* ---- Unarmed blows (HarnMaster Combat 8-9: unarmed combat is a melee attack) ---- *)
-<knock-out>      ::= "knock" "out" <object> | "knock" "the" <slang> "out" "of" <object>
+<knock-out>      ::= "knock" "out" <object> | "knock" "the" <slang:skip> "out" "of" <object>
 <slang>          ::= "shit" | "daylights" | "living" "daylights" | "crap"
 (* ---- Engagement (HarnMaster Combat 6-7): engage, disengage and pass ---- *)
 <engage>         ::= "engage" <object>                          (* an Engage option: a half-move, then a melee attack *)
@@ -327,35 +331,35 @@
 <pray>            ::= "pray" [ "for" <text> { <text> } ]        (* alone: an hour of prayer, for piety; "for": a prayer that spends piety on an endeavour *)
 <intervene>       ::= ( "call" "on" | "beseech" ) <DEITY> [ "for" <text> { <text> } ]   (* a call for divine intervention *)
 <DEITY>           ::= <deity-name>                 (* the world's deities: an open name, given by the world, not the grammar *)
-<invoke>          ::= ( "invoke" | "perform" | "chant" ) <INVOCATION> [ "on" ] [ <object> ] [ "to" <DEITY> ]   (* clerics perform a ritual; the deity acts *)
+<invoke>          ::= ( "invoke" | "perform" | "chant" ) <INVOCATION> [ "on" ] [ <object:other> ] [ "to" <DEITY:other> ]   (* clerics perform a ritual; the deity acts *)
 <INVOCATION>      ::= "divination" | "baptism" | "passage" "of" "the" "soul" | "consecration" | "exorcism" | "curse" | "blessing" | "balefire"
-<learn-invocation> ::= "learn" <INVOCATION> [ "from" <object> ]  (* from a mentor or scripture; 5 piety per circle *)
+<learn-invocation> ::= "learn" <INVOCATION> [ "from" <object:other> ]  (* from a mentor or scripture; 5 piety per circle *)
 <fasting>         ::= "fast" | "break" "my" "fast"                 (* a day of fasting: piety accrues each day; "break my fast" (or "stop fasting") ends the vow (2026-11-10) *)
 (* ---- Baptism is the invocation that converts a willing convert: "baptise", "convert" ---- *)
-<baptise>         ::= ( "baptise" | "baptize" | "convert" ) <object> [ "to" <DEITY> ]
+<baptise>         ::= ( "baptise" | "baptize" | "convert" ) <object> [ "to" <DEITY:other> ]
 (* ---- Magic (HarnMaster Magic: memorization, learning, research, dispelling, countering) ---- *)
 <spell>           ::= [ <det> ] <spell-word> [ "spell" ]          (* a spell by name *)
 <memorize>        ::= "memorize" <spell>
 <unmemorize>      ::= "unmemorize" <spell>                         (* instant *)
-<learn-spell>     ::= "learn" <spell> [ "from" <object> ]
+<learn-spell>     ::= "learn" <spell> [ "from" <object:other> ]
 <research>        ::= "research" <spell>
 <dispel>          ::= "dispel" <object>                            (* removes a temporary enchantment *)
 <counter>         ::= "counter" <spell>                            (* a defensive spell against one being cast *)
 <release>         ::= "release" <object>                           (* a principle stored in a jorum, let out into the mundane world *)
 (* ---- The game's own (added 2026-10-19: the old parser's commands, games/dq0/parse.c, now dq0c's: what the game does
    with each is commands.words's, the verb as typed) ---- *)
-<break>           ::= "break" [ <thing> [ <USING> <object> ] ]   (* "break the window", "break" alone: what's in front *)
+<break>           ::= "break" [ <thing> [ <USING> <object:tool> ] ]   (* "break the window", "break" alone: what's in front *)
 <raise>           ::= "raise" [ <thing> ]                     (* a portcullis raised *)
 <lower>           ::= "lower" [ <thing> ]
-<bend>            ::= "bend" [ <thing> [ <USING> <object> ] ]    (* a window's bars bent *)
-<force>           ::= "force" [ <thing> [ <USING> <object> ] ]   (* a door forced *)
-<disarm>          ::= "disarm" [ <thing> [ <USING> <object> ] ]  (* a trap disarmed *)
+<bend>            ::= "bend" [ <thing> [ <USING> <object:tool> ] ]    (* a window's bars bent *)
+<force>           ::= "force" [ <thing> [ <USING> <object:tool> ] ]   (* a door forced *)
+<disarm>          ::= "disarm" [ <thing> [ <USING> <object:tool> ] ]  (* a trap disarmed *)
 <rebar>           ::= ( "rebar" | "unbar" | "unbolt" ) [ <thing> ]   (* a door barred: "bar the door" (bar an alias); unbarred: its bar lifted out *)
-<hang>            ::= "hang" <object> [ ( "on" | "from" ) <object> ]   (* "hang the quiver on my belt" *)
-<tie>             ::= ( "tie" | "fasten" ) [ "off" ] <object> [ ( "to" | "on" | "onto" | "round" | "around" ) <object> ]   (* "tie the rope to the ring", "tie off the rope"; 2026-11-04 *)
+<hang>            ::= "hang" <object> [ ( "on" | "from" ) <object:other> ]   (* "hang the quiver on my belt" *)
+<tie>             ::= ( "tie" | "fasten" ) [ "off" ] <object> [ ( "to" | "on" | "onto" | "round" | "around" ) <object:other> ]   (* "tie the rope to the ring", "tie off the rope"; 2026-11-04 *)
                     | "let" "down" <object> | "let" <object> "down"            (* "let down the rope": tied to what holds, let down *)
 <untie>           ::= ( "untie" | "unfasten" ) <object>                         (* a rope in place untied, coiled at the feet; a sack's tie *)
-<combine>         ::= "combine" <object> [ "with" <object> ]   (* the theme's pieces put together: "combine the sunstone with the moonstone", "join the pieces" *)
+<combine>         ::= "combine" <object> [ "with" <object:other> ]   (* the theme's pieces put together: "combine the sunstone with the moonstone", "join the pieces" *)
 <deceive>         ::= "deceive" <object>                       (* a denizen swayed: deceived, threatened, calmed, befriended *)
 <threaten>        ::= "threaten" <object>
 <calm>            ::= "calm" <object>
@@ -364,7 +368,7 @@
 <ally>            ::= ( "come" | "heel" | "stay" ) [ "here" ] | "dismiss" <object>   (* an ally's request *)
 
 (* ---- Psionic talents (HarnMaster core, Psionics: latent until found; the GM generates them) ---- *)
-<talk>            ::= "talk" [ "to" | "with" ] <object> [ "about" <text> { <text> } ]   (* a conversation: VB_TELL_OBJECT *)
+<talk>            ::= "talk" [ "to" | "with" ] <object> [ "about" <text:other> { <text:other> } ]   (* a conversation: VB_TELL_OBJECT *)
 <talent>          ::= <TALENT> [ "on" ] [ <object> ]          (* the talent is used on the object, if any *)
 <TALENT>          ::= "charm" | "clairvoyance" | "disembodiment" | "heal" | "healing" | "hex" | "medium" | "mental" "bolt" | "bolt"
                     | "negation" | "negate" | "prescience" | "foresee" | "psychometry" | "pyrokinesis" | "ignite" | "sensitivity"
@@ -375,11 +379,11 @@
 <activate>        ::= "activate" <object>                        (* an artifact's powers: it may resist *)
 (* ---- Influence: Rhetoric and its specialties (HarnMaster core, Skills 12): taunt and fast-talk are kinds of Rhetoric ---- *)
 <intimidate>      ::= "intimidate" <object>                      (* Intimidation: establish dominance *)
-<order>           ::= "command" <object> [ "to" <text> { <text> } ]   (* Command: a subordinate accepts leadership *)
-<persuade>       ::= ( "persuade" | "convince" ) [ "with" | "over" ] <object> [ "to" <text> { <text> } ]   (* Rhetoric: to do something *)
-<orate>           ::= ( "orate" [ "to" <object> ] | "address" <object> ) [ "about" <text> { <text> } ]   (* Oratory: a speech *)
+<order>           ::= "command" <object> [ "to" <text:other> { <text:other> } ]   (* Command: a subordinate accepts leadership *)
+<persuade>       ::= ( "persuade" | "convince" ) [ "with" | "over" ] <object> [ "to" <text:other> { <text:other> } ]   (* Rhetoric: to do something *)
+<orate>           ::= ( "orate" [ "to" <object> ] | "address" <object> ) [ "about" <text:other> { <text:other> } ]   (* Oratory: a speech *)
 <negotiate>       ::= "negotiate" [ "with" <object> ]            (* Diplomacy *)
-<fast-talk>       ::= ( "fast" "talk" | "bluff" | "lie" [ "to" ] ) <object> [ "about" <text> { <text> } ]   (* Rhetoric: persuade them to believe you *)
-<taunt>           ::= "taunt" <object> [ "to" <text> { <text> } ]   (* Rhetoric: persuade them to attack *)
+<fast-talk>       ::= ( "fast" "talk" | "bluff" | "lie" [ "to" ] ) <object> [ "about" <text:other> { <text:other> } ]   (* Rhetoric: persuade them to believe you *)
+<taunt>           ::= "taunt" <object> [ "to" <text:other> { <text:other> } ]   (* Rhetoric: persuade them to attack *)
 <judge>           ::= "sense" "a" "lie" "from" <object>   (* Diplomacy: is the speaker bluffing (a thing judged, its
                                                    quality: <appraise>, 2026-10-22) *)

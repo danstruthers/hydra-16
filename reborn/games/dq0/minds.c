@@ -104,34 +104,22 @@ static void took (void)
 }
 
 /* ---- Words said aloud (say, yell, whisper; a line in quotes: "Hello", y"Help!" yelled, w"Psst" whispered, one ending
-** in ! yelled): from the line itself (cl: the parser keeps no words); a yell with no words a shout */
+** in ! yelled): the words where the parser found them (struct cmd's quote: their place in the line), their loudness the
+** verb's (its aux: yell 6, whisper 1; say 3), or the quote's own (y", w"); a yell with no words a shout */
 static void say_aloud (void)
 {
     static const char* const said[3] = { "whisper", "say", "yell" };
-    const char* w = cl;
-    unsigned char loud = 3, c = *w | 0x20, n, k;
+    const char* w = "";
+    unsigned char loud = cmd.aux ? cmd.aux : 3, c, n, k;
     struct actor* a;
     int dx, dy;
 
-    if (*w == '"') {
-    } else if ((c == 'y' || c == 'w') && w[1] == '"') {
-        loud = c == 'y' ? 6 : 1;                /* (y"Here!", w"Psst") */
-        ++w;
-    } else {
-        if (c == 'y' || (c == 's' && (w[1] | 0x20) != 'a')) {
-            loud = 6;                           /* (yell, shout, scream) */
-        } else if (c == 'w') {
-            loud = 1;
+    if (cmd.quote && *cl) {
+        w = cl + cmd.quote - 1;
+        c = cmd.quote > 2 ? cl[cmd.quote - 3] | 0x20 : 0;
+        if ((cmd.flags & CF_NOVERB) && (c == 'y' || c == 'w')) {
+            loud = c == 'y' ? 6 : 1;            /* (y"Here!", w"Psst") */
         }
-        while (*w && *w != ' ') {
-            ++w;
-        }
-        while (*w == ' ') {
-            ++w;
-        }
-    }
-    if (*w == '"') {
-        ++w;
     }
     strncpy (lb, w, 120);
     lb[120] = 0;
@@ -316,9 +304,10 @@ static void orate (void)
 ** pretence ("feign ignorance") a tale spun to the nearest (deceive's) */
 static void pretend (void)
 {
-    unsigned char s = strstr (cl, "sleep") != 0;
+    const char* w = cmd.obj.word;               /* (The state, the parser's thing: "pretend to be asleep") */
+    unsigned char s = strstr (w, "sleep") != 0;
 
-    if (!s && !strstr (cl, "dead") && !strstr (cl, "death") && !strstr (cl, "uncon") && !strstr (cl, "sense")) {
+    if (!s && !strstr (w, "dead") && !strstr (w, "death") && !strstr (w, "uncon") && !strstr (w, "sense")) {
         cmd.obj.word[0] = 0;
         deal (SW_DECEIVE);                      /* (Another pretence: a deception, the nearest's) */
         return;

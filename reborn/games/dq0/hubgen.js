@@ -51,9 +51,11 @@ const ASM = {
   cmdmean: {                                                    // games/dq0c/cmdmean.s: struct cmd, struct cthing
     CM_ACTION: 'cmd.action', CM_FLAGS: 'cmd.flags', CM_DIR: 'cmd.dir', CM_HOW: 'cmd.how', CM_PREP: 'cmd.prep', CM_AUX: 'cmd.aux',
     CM_MANNER: 'cmd.manner', CM_ORDER: 'cmd.order', CM_DFLT: 'cmd.dflt', CM_SKILL: 'cmd.skill', CM_TASK: 'cmd.task', CM_N: 'cmd.n',
-    CM_OBJ: 'cmd.obj', CM_OTHER: 'cmd.other', CM_SIZE: 'sizeof cmd',
+    CM_OBJ: 'cmd.obj', CM_OTHER: 'cmd.other', CM_HAND: 'cmd.hand', CM_QUOTE: 'cmd.quote', CM_SIZE: 'sizeof cmd',
     T_KIND: 'cthing.kind', T_SEL: 'cthing.sel', T_N: 'cthing.n', T_LIES: 'cthing.lies', T_WORD: 'cthing.word', T_WORDSIZE: 'sizeof cthing.word',
-    CF_NOVERB: 'CF_NOVERB', CF_HALF: 'CF_HALF', CF_UNSAID: 'CF_UNSAID', CF_STRANGE: 'CF_STRANGE', CQ_REL: 'CQ_REL',
+    CF_NOVERB: 'CF_NOVERB', CF_HALF: 'CF_HALF', CF_UNSAID: 'CF_UNSAID', CF_STRANGE: 'CF_STRANGE', CF_WORN: 'CF_WORN', CF_LIST: 'CF_LIST',
+    CQ_REL: 'CQ_REL', SL_OTHER: 'SL_OTHER', HN_LEFT: 'HN_LEFT', HN_RIGHT: 'HN_RIGHT', HN_BOTH: 'HN_BOTH', HN_OTHER: 'HN_OTHER',
+    HN_OFF: 'HN_OFF', HN_MAIN: 'HN_MAIN',
   },
   line: {                                                       // modules/dq0lib/line.s: the squares, a portal
     T_WALL: 'T_WALL', T_DOOR: 'T_DOOR', T_WINDOW: 'T_WINDOW', P_KIND: 'portal.kind', P_STATE: 'portal.state', P_PARTS: 'portal.parts',

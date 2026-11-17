@@ -266,24 +266,6 @@ ask:
 #pragma rodata-name (pop)
 #pragma code-name (pop)
 
-/* "give the bandit 5 pennies", "offer the orc my dagger" (2026-11-02): no "to", the one given it the line's first word
-** after the verb that isn't the thing's, a number or a little word */
-static void given_to (void)
-{
-    const char* p = cl;
-    char w[16];
-
-    p = word_at (p, w);
-    while (*p) {
-        p = word_at (p, w);
-        if (w[0] && (w[0] < '0' || w[0] > '9') && strcmp (w, cmd.obj.word) && strcmp (w, "the") && strcmp (w, "a") &&
-            strcmp (w, "an") && strcmp (w, "my") && strcmp (w, "some") && strcmp (w, "your")) {
-            strcpy (cmd.other.word, w);
-            return;
-        }
-    }
-}
-
 /* 1 to ask the denizens (the sway's item, ix, iy filled in), or 0 (told why not) */
 unsigned char s_errand (void)
 {
@@ -300,10 +282,8 @@ unsigned char s_errand (void)
     HUB->sway.item = HUB->sway.ix = HUB->sway.iy = 0;
     HUB->sway.actor = 0;
     q->sel = 0;
-    if (cmd.action == VB_GIVE_OBJECT) {         /* (A gift: the thing the character carries, then the one meant) */
-        if (!cmd.other.word[0]) {
-            given_to ();
-        }
+    if (cmd.action == VB_GIVE_OBJECT) {         /* (A gift: the thing the character carries, then the one meant: the
+                                                **   parser's other, "give the bandit 5 pennies" too) */
         hub_map (0);
         if (!cmd.other.word[0]) {
             msg ("Give it to whom?");
@@ -353,12 +333,12 @@ unsigned char s_errand (void)
         HUB->sway.ix = cmd.n;                   /* (Its distance: "follow me at 3 squares") */
     } else if (cmd.order >= OR_OPEN) {          /* (A door's errand, 2026-11-02: the door found, as the character's own
                                                 **   command finds it: its square) */
-        if (cmd.obj.kind != OB_DOOR) {
+        if (cmd.other.kind != OB_DOOR) {        /* (The errand's door: the parser's other, the errand's thing) */
             msg ("Open which door?");           /* ("Ask it to ..." till 2026-11-17: an ally a person or a beast, not known
                                                 **   yet; "Fetch what?"'s way) */
             return 0;
         }
-        if (pick (OB_DOOR | PICK_TELL, cmd.obj.lies) != 1) {
+        if (pick (OB_DOOR | PICK_TELL, cmd.other.lies) != 1) {
             return 0;
         }
         hub_map (0);

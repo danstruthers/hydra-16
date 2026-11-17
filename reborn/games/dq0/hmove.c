@@ -125,7 +125,7 @@ unsigned char s_swim_go (void)
     unsigned char d = cmd.dir, dive = 0;
 
     if (reach != 4) {
-        dive = d == GO_DOWN || strstr (cl, "dive") != 0;
+        dive = d == GO_DOWN || cmd.aux;         /* ("dive": its verb's) */
         if (!dive && d != GO_UP && (d != 0xFF || cmd.obj.kind || (cmd.obj.word[0] && strcmp (cmd.obj.word, "water")))) {
             return 1;
         }

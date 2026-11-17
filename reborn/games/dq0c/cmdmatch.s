@@ -4,15 +4,18 @@
 ; version 8; its index, DQ0I version 3; the default aliases, DQ0A version 1); the test data, commandmatch-gen.js's.
 ;
 ; Its calls (the parser's task, dq0c.s, makes them; C's cmdmatch.h, sim/tools/cmdmatch/cmdmatch_c.s, wraps them):
-;   cm_init     the tables: cm_g the grammar, cm_i its index, cm_a the default aliases (each where it stays).  C = 0,
-;               or C = 1: one is not a dq0 table, they don't belong together, or one is too large for the matcher.
+;   cm_init     the tables: cm_g the grammar, cm_i its index, cm_a the default aliases (each where it stays), then the
+;               aliases read (cm_ainit's).  C = 0, or C = 1: one is not a dq0 table, they don't belong together, or one
+;               is too large for the matcher.  cm_tables the same but the aliases; cm_ainit those alone (dq0c's: the
+;               aliases' table in a bank of its own, the words', 2026-11-17)
 ;               The grammar may be in two parts: cm_r (not 0) its rules, where they are (with the kinds before them),
 ;               cm_g its counts and, for its words, only their bytes' length (two bytes after the counts: the words
 ;               themselves are the index's; the rules are read as the lines are matched)
 ;   cm_world    the world's words, when they change: cm_g the words the world names things by, cm_i the names
 ;               given, cm_a the deities' names (space-separated lists, each to stay as it is till the next cm_world)
 ;   cm_match    a line (.A/.X, zero-ended): .A 1 if it parses, 0 if not, $FF (and .X $FF) if it is too long or
-;               nests too deep.  Its tokens stay till the next (what the line means is cmdmean.s's, from them): each
+;               nests too deep: cm_tokens (its tokens, the aliases' table read), then cm_parse (matched; dq0c's the
+;               rules' bank in the window for this, the words' for that).  Its tokens stay till the next (what the line means is cmdmean.s's, from them): each
 ;               its letters as typed (tokoff, toklen in tbuf), its entry as typed (toktl, tokth: $FFFF none), its
 ;               entry (tokel, tokeh: an alias's root, if one began there), and whether that alias was several words
 ;               (tokmu); quoted text tokq
@@ -44,8 +47,9 @@
 
             .setcpu     "65C02"
             .macpack    longbranch
-            .export     cm_init, cm_world, cm_match, cm_g, cm_i, cm_a, cm_r
+            .export     cm_init, cm_tables, cm_ainit, cm_world, cm_match, cm_tokens, cm_parse, cm_roles, cm_g, cm_i, cm_a, cm_r
             .export     ntok, tokoff, toklen, tokq, toktl, tokth, tokel, tokeh, tokmu, tbuf, nent, lmark   ; (cmdmean.s's)
+            .export     tokrole, qat
 
 ; Node tags in the grammar table
 T_SEQ       = 1
@@ -54,8 +58,8 @@ T_OPT       = 3
 T_REP       = 4
 T_TERM      = 6                     ; (Words: two or more)
 T_QUOTE     = 7
-T_NAME      = $40                   ; A rule's name: $40 | its number's top five bits, then its low byte
-T_OPEN      = $60                   ; An open name: $60, then its number among them (its kind's in pkind)
+T_NAME      = $40                   ; A rule's name: $40 | its role << 1 | its number's top bit, then its low byte
+T_OPEN      = $60                   ; An open name: $60 | its role, then its number among them (its kind's in pkind)
 T_WORD      = $80                   ; A word alone: $80 | its number's top seven bits, then its low byte
 
 ; The open-name kinds, a bit each in a token's mask (tokmlo: kinds 0-7, tokmhi: 8-11)
@@ -92,6 +96,7 @@ MAXINDEX    = 24
 ALTMIN      = 8                     ; commandtables.js's ALT_INDEX_MIN: an alternation this large may be indexed
 CACHE       = 128                   ; The rules' ends kept, a line's (a power of two)
 MAXREP      = 12
+R_MINE      = 8                     ; A token's role's mine (commandcompile.js's ROLES.mine: "my left arm")
 FSTKMAX     = 240                   ; The working values' stack: a page, and a little room
 HWMIN       = $30                   ; The 6502's stack: at least this much left for interrupts
 TBUFMAX     = 180                   ; A line's letters kept
@@ -126,6 +131,8 @@ pklo1:      .res        2           ; (The same, a page on: rules 256 on)
 pkhi1:      .res        2
 lnp:        .res        2           ; tokenize's line; cm_world's list; cm_init's aliases
 te:         .res        2           ; lookup: the bucket's end
+dn:         .res        2           ; cm_roles: the node walked, a child
+dc:         .res        2
 
             .bss
 gbase:      .res        2           ; The grammar table
@@ -207,6 +214,17 @@ posg:       .res        1
 li:         .res        1           ; tokenize: where in the line, where in tbuf, a word's start
 nb:         .res        1
 tstart:     .res        1
+tokrole:    .res        MAXTOK + 1  ; Each token's role (cm_roles': commandcompile.js's ROLES; R_MINE with it)
+qat:        .res        1           ; The first quoted text's first letter's place in the line, + 1 (0: none)
+dp:         .res        1           ; cm_roles: the node's tokens from dp to de; a child's end, dt; a position, dq;
+de:         .res        1           ;   its items or rounds, dk; positions, dm; fsp as a repeat began, rf
+dt:         .res        1
+dq:         .res        1
+dk:         .res        1
+dm:         .res        2
+rf:         .res        1
+di:         .res        1           ;   an indexed alternation's option tried, the first that fits
+dbn:        .res        2
 cm_a:       .res        2           ; cm_init's tables, cm_world's lists (their callers')
 cm_i:       .res        2
 cm_g:       .res        2
@@ -547,6 +565,7 @@ yes:        sec
 .proc tokenize
             stz         ntok
             stz         toolong
+            stz         qat
             stz         hasthen
             stz         nb
             stz         li
@@ -591,6 +610,12 @@ quote:      ldx         ntok
             cpx         #MAXTOK
             bcs         long
             inc         li
+            lda         qat             ; (The first's place: its first letter's, + 1)
+            bne         :+
+            lda         li
+            ina
+            sta         qat
+:
             lda         #1
             sta         tokq,x
             lda         #$FF
@@ -1137,7 +1162,7 @@ no:         lda         #$FF
             rts
 nt:         cmp         #T_OPEN         ; a rule: its number (quoted-text a leaf)
             bcs         open
-            and         #$1F
+            and         #$01
             sta         ridh
             ldy         #1
             lda         (lfp),y
@@ -1587,10 +1612,59 @@ out:        ldx         fsp
 over:       jmp         abort
 .endproc
 
-; alt_ix: indexed alternation .X from position pos: the options its first word begins (a binary search of the sorted
-; words), and those that begin with an open name the token fits or can match nothing, gathered on fstk, then each
-; tried.  (e_alt keeps cp, wn, wo and wp for it.)
+; alt_ix: indexed alternation .X from position pos: the options gather_ix gathers, each tried.  (e_alt keeps cp, wn, wo
+; and wp for it.)
 .proc alt_ix
+            jsr         gather_ix
+try:        lda         wn              ; each option gathered
+            beq         fin
+            dec         wn
+            ldx         fsp
+            dex
+            lda         fstk,x
+            stx         fsp
+            jsr         optnode
+            lda         wp
+            jsr         ends
+            lda         res
+            tsb         wo
+            lda         res+1
+            tsb         wo+1
+            bra         try
+fin:        lda         wo
+            sta         res
+            lda         wo+1
+            sta         res+1
+            rts
+.endproc
+
+; optnode: option .A of the indexed alternation whose options' offsets are at cp, its node into np
+.proc optnode
+            stz         tq+1            ; np: the grammar + offsets[option]
+            asl         a
+            rol         tq+1
+            clc
+            adc         cp
+            sta         tq
+            lda         tq+1
+            adc         cp+1
+            sta         tq+1
+            ldy         #0
+            clc
+            lda         (tq),y
+            adc         gbase
+            sta         np
+            iny
+            lda         (tq),y
+            adc         gbase+1
+            sta         np+1
+            rts
+.endproc
+
+; gather_ix: indexed alternation .X from position pos: the options its first word begins (a binary search of the sorted
+; words), and those that begin with an open name the token fits or can match nothing, gathered on fstk (wn of them; cp
+; its options' offsets, wp the position, wo nothing)
+.proc gather_ix
             stx         t3
             lda         pos
             sta         wp
@@ -1727,7 +1801,7 @@ wild:       ldx         t3              ; the options that begin with an open na
             sta         tp+1
             lda         ixpn,x
             sta         t1
-            beq         try
+            beq         gdone
 wloop:      ldy         #2
             lda         (tp),y
             bmi         take
@@ -1750,43 +1824,7 @@ wnext:      clc
             inc         tp+1
 :           dec         t1
             bne         wloop
-try:        lda         wn              ; each option gathered
-            beq         fin
-            dec         wn
-            ldx         fsp
-            dex
-            lda         fstk,x
-            stx         fsp
-            stz         tq+1            ; np: the grammar + offsets[option]
-            asl         a
-            rol         tq+1
-            clc
-            adc         cp
-            sta         tq
-            lda         tq+1
-            adc         cp+1
-            sta         tq+1
-            ldy         #0
-            clc
-            lda         (tq),y
-            adc         gbase
-            sta         np
-            iny
-            lda         (tq),y
-            adc         gbase+1
-            sta         np+1
-            lda         wp
-            jsr         ends
-            lda         res
-            tsb         wo
-            lda         res+1
-            tsb         wo+1
-            bra         try
-fin:        lda         wo
-            sta         res
-            lda         wo+1
-            sta         res+1
-            rts
+gdone:      rts
 .endproc
 
 ; gather: option .A onto fstk, for alt_ix
@@ -1906,16 +1944,468 @@ done:       lda         ws
 over:       jmp         abort
 .endproc
 
-; ---- The calls -----------------------------------------------------------------------------------------------------
+; ---- The roles (2026-11-17, phase B: the grammar records them; commandcompile.js's rolesOf the host's) -------------
 
-; cm_match: line .A/.X: 1 if it parses, 0 if not, -1 ($FF, .X $FF) if it is too long or nests too deep
-.proc cm_match
-            sta         lnp
-            stx         lnp+1
+; cm_roles: the roles of the line cm_match has just read, its verdict .A (1: it parses), each token's (tokrole:
+; commandcompile.js's ROLES, 0 none: the thing's; R_MINE with it, "my left arm"): the grammar walked from "line" over its
+; tokens as ends says they can go, the tokens of each name with a role given its role, the innermost the last; into the
+; rules that hold one (the index's pkhi, bit 6) alone.  Where it could go several ways: an alternation's first option
+; that can end there; a sequence's items each begun as late as can be, from its end back; an option taken if it can; a
+; repeat's fewest rounds, each begun as late as can be.  None, the line not parsed; the walk short of its deepest, the
+; stacks near full (its roles as far as it got)
+.proc cm_roles
+            ldx         #MAXTOK
+:           stz         tokrole,x
+            dex
+            bpl         :-
+            cmp         #1
+            bne         done
             tsx
             stx         savedsp
             stz         fsp
-            jsr         tokenize
+            lda         #<linenode
+            sta         dn
+            lda         #>linenode
+            sta         dn+1
+            stz         dp
+            lda         ntok
+            sta         de
+            jmp         dwalk
+done:       rts
+.endproc
+
+; dwalk: node dn, over tokens dp to de (it can match them): its roles
+.proc dwalk
+            tsx
+            cpx         #HWMIN + 80     ; (Room for ends' calls below it, else no deeper)
+            bcc         out
+            lda         (dn)
+            bmi         out             ; (A word alone)
+            cmp         #T_OPEN
+            bcs         open
+            cmp         #T_NAME
+            bcs         name
+            cmp         #T_ALT
+            beq         alt
+            cmp         #T_SEQ
+            jeq         seq
+            cmp         #T_OPT
+            jeq         opt
+            cmp         #T_REP
+            jeq         rep
+out:        rts
+open:       and         #$1F            ; An open name: its role its token's
+            jmp         label
+name:       pha                         ; A rule: its role its tokens'; then its body, if a role's in it
+            lsr         a
+            and         #$0F
+            jsr         label
+            pla
+            and         #$01
+            sta         ridh
+            ldy         #1
+            lda         (dn),y
+            sta         rid
+            cmp         rquoted         ; (Quoted text: a leaf)
+            bne         :+
+            lda         ridh
+            cmp         rquoted+1
+            beq         out
+:           ldy         rid
+            lda         ridh
+            bne         far
+            lda         (pkhi),y
+            and         #$40
+            beq         out
+            lda         rplo,y
+            sta         dn
+            lda         rphi,y
+            sta         dn+1
+            jmp         dwalk
+far:        lda         (pkhi1),y
+            and         #$40
+            beq         out
+            lda         rplo + 256,y
+            sta         dn
+            lda         rphi + 256,y
+            sta         dn+1
+            jmp         dwalk
+alt:        lda         dn              ; An alternation: the first option that can end at de (an indexed one's
+            sta         np              ;   among those its index gathers)
+            lda         dn+1
+            sta         np+1
+            jsr         seq_head
+            sta         dk
+            lda         de
+            sta         dt
+            lda         dk
+            cmp         #ALTMIN
+            bcc         aloop
+            ldx         nindex
+afind:      dex
+            bmi         aloop
+            lda         ixnlo,x
+            cmp         dn
+            bne         afind
+            lda         ixnhi,x
+            cmp         dn+1
+            bne         afind
+            lda         dp
+            sta         pos
+            jsr         gather_ix
+            lda         #$FF            ; (The first that fits: none yet)
+            sta         dq
+iloop:      lda         wn
+            beq         ibest
+            dec         wn
+            ldx         fsp
+            dex
+            lda         fstk,x
+            stx         fsp
+            cmp         dq
+            bcs         iloop
+            sta         di
+            jsr         optnode
+            lda         np
+            sta         dc
+            lda         np+1
+            sta         dc+1
+            lda         dp
+            jsr         reach
+            bcc         iloop
+            lda         di
+            sta         dq
+            lda         dc
+            sta         dbn
+            lda         dc+1
+            sta         dbn+1
+            bra         iloop
+ibest:      lda         dq
+            cmp         #$FF
+            jeq         out
+            lda         dbn
+            sta         dn
+            lda         dbn+1
+            sta         dn+1
+            jmp         dwalk
+aloop:      lda         dk
+            jeq         out
+            lda         cp
+            sta         dc
+            lda         cp+1
+            sta         dc+1
+            lda         dp
+            jsr         reach
+            bcs         taken
+            lda         dc
+            sta         cp
+            lda         dc+1
+            sta         cp+1
+            jsr         skip
+            dec         dk
+            bra         aloop
+opt:        lda         dp              ; An option: taken, if it can end at de
+            cmp         de
+            jeq         out
+            lda         dn
+            sta         np
+            lda         dn+1
+            sta         np+1
+            jsr         opt_head
+            lda         np
+            sta         dc
+            lda         np+1
+            sta         dc+1
+            lda         de
+            sta         dt
+            lda         dp
+            jsr         reach
+            jcc         out
+taken:      lda         dc
+            sta         dn
+            lda         dc+1
+            sta         dn+1
+            jmp         dwalk
+seq:        lda         dn              ; A sequence: each item and the positions it can begin at, kept (fstk);
+            sta         np              ;   then from the last back, each one's start (the latest from which it
+            lda         dn+1            ;   can end at the next's), kept (the 6502's stack); then each walked
+            sta         np+1
+            jsr         seq_head
+            sta         dk
+            tay
+            jeq         out
+            ldx         dp
+            lda         bitlo,x
+            sta         wm
+            lda         bithi,x
+            sta         wm+1
+fwd:        ldx         fsp
+            lda         cp
+            sta         fstk,x
+            inx
+            lda         cp+1
+            sta         fstk,x
+            inx
+            lda         wm
+            sta         fstk,x
+            inx
+            lda         wm+1
+            sta         fstk,x
+            inx
+            stx         fsp
+            cpx         #FSTKMAX
+            jcs         abort
+            dey
+            beq         back
+            phy
+            lda         dp
+            sta         wq
+            jsr         scan            ; (wo: where it can end, from any of wm)
+            lda         wo
+            sta         wm
+            lda         wo+1
+            sta         wm+1
+            jsr         skip
+            ply
+            bra         fwd
+back:       lda         de
+            sta         dt
+            pha
+            ldy         dk
+bloop:      ldx         fsp
+            dex
+            lda         fstk,x
+            sta         dm+1
+            dex
+            lda         fstk,x
+            sta         dm
+            dex
+            lda         fstk,x
+            sta         dc+1
+            dex
+            lda         fstk,x
+            sta         dc
+            stx         fsp
+            phy
+            jsr         latest
+            ply
+            sta         dt
+            lda         dc
+            pha
+            lda         dc+1
+            pha
+            lda         dt
+            pha
+            dey
+            bne         bloop
+walk:       ldy         dk              ; (Each walked, the first first: its start, its node, its end the next's start)
+wloop:      pla
+            sta         dp
+            pla
+            sta         dn+1
+            pla
+            sta         dn
+            pla
+            sta         de
+            pha
+            phy
+            jsr         dwalk
+            ply
+            dey
+            bne         wloop
+            pla
+            rts
+rep:        lda         dp              ; A repeat: each round's new positions (fstk), from dp, till de's among them;
+            cmp         de              ;   then from de back, each round's start, as a sequence's
+            jeq         out
+            lda         fsp
+            sta         rf
+            lda         dn
+            sta         np
+            lda         dn+1
+            sta         np+1
+            jsr         opt_head
+            lda         np
+            sta         dc
+            lda         np+1
+            sta         dc+1
+            ldx         dp
+            lda         bitlo,x
+            sta         wm
+            sta         dm
+            lda         bithi,x
+            sta         wm+1
+            sta         dm+1
+            stz         dk
+round:      ldx         fsp
+            lda         wm
+            sta         fstk,x
+            inx
+            lda         wm+1
+            sta         fstk,x
+            inx
+            stx         fsp
+            cpx         #FSTKMAX
+            jcs         abort
+            ldx         de
+            lda         bitlo,x
+            and         wm
+            bne         rback
+            lda         bithi,x
+            and         wm+1
+            bne         rback
+            lda         dk
+            cmp         #MAXREP
+            bcs         none
+            inc         dk
+            lda         dc
+            sta         cp
+            lda         dc+1
+            sta         cp+1
+            lda         dp
+            sta         wq
+            jsr         scan
+            lda         dm
+            eor         #$FF
+            and         wo
+            sta         wm
+            lda         dm+1
+            eor         #$FF
+            and         wo+1
+            sta         wm+1
+            ora         wm
+            beq         none
+            lda         wm
+            tsb         dm
+            lda         wm+1
+            tsb         dm+1
+            bra         round
+none:       lda         rf
+            sta         fsp
+            rts
+rback:      ldx         fsp             ; (The last round's: de's)
+            dex
+            dex
+            stx         fsp
+            lda         de
+            sta         dt
+            pha
+            ldy         dk
+rbloop:     ldx         fsp
+            dex
+            lda         fstk,x
+            sta         dm+1
+            dex
+            lda         fstk,x
+            sta         dm
+            stx         fsp
+            phy
+            jsr         latest
+            ply
+            sta         dt
+            lda         dc
+            pha
+            lda         dc+1
+            pha
+            lda         dt
+            pha
+            dey
+            bne         rbloop
+            jmp         walk
+.endproc
+
+; label: tokens dp to de given role .A (R_MINE added to theirs; another in place of theirs, R_MINE kept); 0, nothing
+.proc label
+            beq         done
+            ldx         dp
+            cmp         #R_MINE
+            beq         mine
+            sta         t1
+loop:       cpx         de
+            bcs         done
+            lda         tokrole,x
+            and         #R_MINE
+            ora         t1
+            sta         tokrole,x
+            inx
+            bra         loop
+mine:       cpx         de
+            bcs         done
+            lda         tokrole,x
+            ora         #R_MINE
+            sta         tokrole,x
+            inx
+            bra         mine
+done:       rts
+.endproc
+
+; latest: the latest position of dm's from which node dc can end at dt: .A (none: dp)
+.proc latest
+            lda         dt
+            sta         dq
+loop:       ldx         dq
+            lda         bitlo,x
+            and         dm
+            bne         try
+            lda         bithi,x
+            and         dm+1
+            beq         next
+try:        lda         dq
+            jsr         reach
+            bcs         found
+next:       lda         dq
+            beq         none
+            dec         dq
+            bra         loop
+found:      lda         dq
+            rts
+none:       lda         dp
+            rts
+.endproc
+
+; reach: can node dc, from position .A, end at dt?  C set if so
+.proc reach
+            pha
+            lda         dc
+            sta         np
+            lda         dc+1
+            sta         np+1
+            pla
+            jsr         ends
+            ldx         dt
+            lda         bitlo,x
+            and         res
+            bne         yes
+            lda         bithi,x
+            and         res+1
+            bne         yes
+            clc
+            rts
+yes:        sec
+            rts
+.endproc
+
+; ---- The calls -----------------------------------------------------------------------------------------------------
+
+; cm_match: line .A/.X: 1 if it parses, 0 if not, -1 ($FF, .X $FF) if it is too long or nests too deep (cm_tokens, then
+; cm_parse)
+.proc cm_match
+            jsr         cm_tokens
+            jmp         cm_parse
+.endproc
+
+; cm_tokens: line .A/.X made its tokens (the default aliases' table, cm_a's, read)
+.proc cm_tokens
+            sta         lnp
+            stx         lnp+1
+            jmp         tokenize
+.endproc
+
+; cm_parse: cm_tokens' tokens matched: 1 if they parse, 0 if not, -1 ($FF, .X $FF) if too long or nesting too deep
+.proc cm_parse
+            tsx
+            stx         savedsp
+            stz         fsp
             lda         toolong
             bne         long
             clc                         ; the line's generation: the cache emptied every 16 lines
@@ -2051,8 +2541,15 @@ mark:       clc                         ; lmark[entry] |= the flag
 .endproc
 
 ; cm_init: the tables (cm_g, cm_i, cm_a) read: C = 0; or C = 1 if a table is not a dq0 table, they don't belong
-; together, or one is too large for the matcher
+; together, or one is too large for the matcher.  cm_tables: the grammar and the index alone (dq0c's: then cm_ainit, the
+; aliases' bank in the window)
 .proc cm_init
+            jsr         cm_tables
+            bcs         fail
+            jmp         cm_ainit
+fail:       rts
+.endproc
+.proc cm_tables
             jsr         rdgrammar
             bcs         fail
             jsr         rdindex
@@ -2063,8 +2560,6 @@ mark:       clc                         ; lmark[entry] |= the flag
             sta         tp+1
             jsr         zeroent
             stz         ndyn
-            jsr         rdaliases
-            bcs         fail
             stz         gen             ; the cache empty
             lda         #$FF
             ldx         #CACHE - 1
@@ -2114,7 +2609,7 @@ no:         sec
             sta         tp+1
             sta         gbase+1
             lda         #'G'
-            ldx         #8
+            ldx         #9
             jsr         magic
             jcs         bad
             ldy         #5              ; rules (MAXRULES at most) and names (their open names 255 at most)
@@ -2510,8 +3005,9 @@ bad:        sec
             rts
 .endproc
 
-; rdaliases: each default alias: its first word's entry heads its chain; the rest of its key, whether it stands
-; anywhere, and its verb's entry kept
+; cm_ainit (rdaliases): each default alias (cm_a's table, after cm_tables): its first word's entry heads its chain; the
+; rest of its key, whether it stands anywhere, and its verb's entry kept.  C = 0; C = 1 not an aliases' table
+cm_ainit    = rdaliases
 .proc rdaliases
             lda         cm_a
             sta         tp

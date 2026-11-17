@@ -4,8 +4,9 @@
 ; made by make.js: the grammar, its index and the default aliases, sim/tools/commandtables.js's; the game's words and
 ; verbs, commandwords.js's): the grammar's rules into a RAM bank of its own, the words and verbs into another, the rest
 ; into its RAM.  Then it answers the UI's requests (the hub's cq, hub.h's protocol: posted, the parser's doorbell rung;
-; answered, the asker's rung) as they come: a line matched and the command it makes (CQ_MATCH: the reply's res 1, 0,
-; or -1, and its struct cmd in the text bank at CQ_CMD, cmdmean.s's, the character facing the cq's face), the world's
+; answered, the asker's rung) as they come: a line matched, its words' roles, and the command it makes (CQ_MATCH: the
+; reply's res 1, 0, or -1, and its struct cmd in the text bank at CQ_CMD: cmdmatch.s's cm_roles, by the grammar's
+; derivation, then cmdmean.s's, the character facing the cq's face), the world's
 ; words set (CQ_WORLD), nothing (CQ_NONE: the round trip alone, timed).  Between them it waits on its doorbell, costing
 ; nothing; it ends when the hub's quit is set (the world's, as the game ends: the UI rings it then).  Assembly
 ; throughout (cmdmatch.s the matcher, cmdmean.s the meaning): no C runtime.  Its RAM: the tables (13K), the matcher's
@@ -22,17 +23,17 @@ HUB_BANKREG = $00
 
             .macpack    longbranch
 
-            .import     cm_init, cm_world, cm_match, cm_g, cm_i, cm_a, cm_r
+            .import     cm_tables, cm_ainit, cm_world, cm_tokens, cm_parse, cm_roles, cm_g, cm_i, cm_a, cm_r
             .import     cm_winit, cm_mean, cm_wthings, cm_w, cm_cmd
 
             HYX2_PROGRAM "dq0c", main
 
-TABLES_MAX  = 14592                 ; dq0c.dat's room in the RAM: its header, then the tables there; and in the banks,
+TABLES_MAX  = 12800                 ; dq0c.dat's room in the RAM: its header, then the tables there; and in the banks,
 RULES_MAX   = 8192                  ;   the rules, the words and verbs (make.js holds the file to them)
 WORDS_MAX   = 8192
-DAT_HEAD    = 15                    ; Its header: "DQ0C", version 4, the lengths of the grammar's counts (its words'
-DAT_VERSION = 4                     ;   bytes counted, not there), the index, the aliases (those in the RAM), the rules
-                                    ;   and the words' table (the banks)
+DAT_HEAD    = 15                    ; Its header: "DQ0C", version 5, the lengths of the grammar's counts (its words'
+DAT_VERSION = 5                     ;   bytes counted, not there), the index (those in the RAM), the aliases, the rules
+                                    ;   and the words' table (the banks: the aliases after the words, 2026-11-17)
 RULES_AT    = $8000                 ; (A bank in the window)
 WORLD_MAX   = CQ_WORDS              ; The world's words kept (their three lists, each 0-ended: hub.h's most)
 LINE_MAX    = 255                   ; A line's letters kept
@@ -91,11 +92,11 @@ main:
             bra         :-
 :           lda         seg             ; The hub: attached, its bank 0 at $8000, its text bank found
             CALL        SEG_ATTACH
-            bcs         hubfail
+            jcs         hubfail
             lda         seg
             ldx         #0
             CALL        SEG_MAP
-            bcs         hubfail
+            jcs         hubfail
             sta         u0
             stx         x0
             jsr         map0
@@ -111,7 +112,7 @@ main:
             lda         seg
             ldx         HUB_WINDOW + HUBO_CQ + CQO_BANK
             CALL        SEG_MAP
-            bcs         hubfail
+            jcs         hubfail
             sta         uc
             stx         xc
             jsr         map0
@@ -119,13 +120,15 @@ main:
             ldx         role
             sta         HUB_WINDOW + HUBO_TASK,x
             jsr         load            ; The tables
-            bcs         tabfail
+            jcs         tabfail
             jsr         mapg
-            jsr         cm_init
-            bcs         tabbad
+            jsr         cm_tables
+            jcs         tabbad
             jsr         mapw
+            jsr         cm_ainit        ; (The aliases: in the words' bank, after them)
+            jcs         tabbad
             jsr         cm_winit
-            bcs         tabbad
+            jcs         tabbad
             jsr         cm_wthings      ; (The game's things, the world's words till it says more)
 loop:       jsr         map0            ; The requests, as they come
             lda         HUB_WINDOW + HUBO_QUIT
@@ -162,11 +165,14 @@ match:      lda         HUB_WINDOW + HUBO_CQ + CQO_FACE
             lda         #<LINE_MAX
             ldx         #>LINE_MAX
             jsr         text
-            jsr         mapg
+            jsr         mapw            ; (Its tokens: the aliases' table in the words' bank)
             lda         #<line
             ldx         #>line
-            jsr         cm_match
+            jsr         cm_tokens
+            jsr         mapg
+            jsr         cm_parse
             sta         res
+            jsr         cm_roles        ; (Its roles: the grammar's derivation, the rules' bank still in)
             jsr         mapw
             lda         face
             jsr         cm_mean
@@ -341,13 +347,6 @@ end:        jsr         pastz
             lda         tables + 6
             adc         tables + 8
             sta         cnt+1
-            clc
-            lda         cnt
-            adc         tables + 9
-            sta         cnt
-            lda         cnt+1
-            adc         tables + 10
-            sta         cnt+1
             jcs         bad
             cmp         #>(TABLES_MAX - DAT_HEAD)
             bcc         :+
@@ -375,8 +374,14 @@ end:        jsr         pastz
             jsr         map0
             plp
             jcs         bad
-            lda         tables + 14     ; The words and verbs: the same, in another
-            cmp         #>WORDS_MAX + 1
+            clc                         ; The words and verbs, then the aliases: the same, in another
+            lda         tables + 13
+            adc         tables + 9
+            sta         cnt
+            lda         tables + 14
+            adc         tables + 10
+            sta         cnt+1
+            cmp         #>WORDS_MAX
             jcs         bad
             lda         #1
             CALL        BANKS_ALLOC
@@ -384,10 +389,6 @@ end:        jsr         pastz
             sta         wbank
             jsr         mapw
             LDR         ap, RULES_AT
-            lda         tables + 13
-            sta         cnt
-            lda         tables + 14
-            sta         cnt+1
             jsr         readn
             php
             jsr         map0
@@ -395,16 +396,17 @@ end:        jsr         pastz
             jcs         bad
             lda         fd
             CALL        CLOSE
-            LDR         cm_g, tables + DAT_HEAD   ; The grammar's counts and words, the index, the aliases; the
-            MOVR        ap, cm_g                  ;   rules and the words in their banks
+            LDR         cm_g, tables + DAT_HEAD   ; The grammar's counts and words, the index; the rules and the
+            MOVR        ap, cm_g                  ;   words, then the aliases, in their banks
             ldx         #5
             jsr         after
             MOVR        cm_i, ap
-            ldx         #7
-            jsr         after
-            MOVR        cm_a, ap
             LDR         cm_r, RULES_AT
             LDR         cm_w, RULES_AT
+            LDR         ap, RULES_AT
+            ldx         #13
+            jsr         after
+            MOVR        cm_a, ap
             clc
             rts
 bad:        lda         fd

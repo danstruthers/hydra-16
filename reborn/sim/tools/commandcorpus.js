@@ -40,12 +40,12 @@ for (const [name, body] of rules) {
     const a = bare.split(open_).length - 1, b = bare.split(close).length - 1;
     if (a !== b) fail('commands.ebnf', 0, `<${name}>: unbalanced '${open_}${close}' (${a} open, ${b} close)`);
   }
-  for (const m of bare.matchAll(/<([^>]+)>/g)) {
+  for (const m of bare.matchAll(/<([^>:]+)(?::[a-z]+)?>/g)) {   // (A name, and its role: <object:other>)
     if (!defined.has(m[1]) && !open.has(m[1])) fail('commands.ebnf', 0, `<${name}> uses undefined <${m[1]}>`);
   }
 }
 const used = new Set();
-for (const body of rules.values()) for (const m of body.matchAll(/<([^>]+)>/g)) used.add(m[1]);
+for (const body of rules.values()) for (const m of body.matchAll(/<([^>:]+)(?::[a-z]+)?>/g)) used.add(m[1]);
 for (const name of defined) if (!used.has(name) && name !== 'line') warnings.push(`commands.ebnf: <${name}> is defined but never used`);
 
 // ---- the catalogue ----

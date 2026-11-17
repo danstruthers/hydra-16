@@ -32,7 +32,15 @@ const DEFAULT_ALIASES = loadAliases(path.join(GAME, 'commands.aliases'));
 
 // ---- the grammar ----------------------------------------------------------------------------------------------------
 
-// The rules of commands.ebnf as trees: alt / seq / opt / rep / nt (a rule or open name) / term (words) / quote.
+// The roles a name's match may play in a command (commands.ebnf's <name:role>; the record's parts, hub.h's struct cmd):
+// none, the thing (cmd.obj); other, the other thing (cmd.other: put in, taken from, given to, its preposition said
+// with it); tool, what it's done with (cmd.other, PR_WITH); hand, the hand said (cmd.hand); worn, a place on the body
+// (cmd.other, CF_WORN); loc, a hiding place (cmd.other); list, a list's later thing (cmd.other, CF_LIST); skip, words
+// that name nothing ("of the room"); and mine, a thing its own ("my left arm": a side its name's), with its role.  The
+// 65C02's: cmdmatch.s's R_*, in a name's first byte (commandtables.js's)
+const ROLES = { other: 1, tool: 2, hand: 3, worn: 4, loc: 5, list: 6, skip: 7, mine: 8 };
+
+// The rules of commands.ebnf as trees: alt / seq / opt / rep / nt (a rule or open name, its role) / term (words) / quote.
 function loadRules(file) {
   const text = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n').replace(/\(\*[\s\S]*?\*\)/g, ' ');
   const bodies = new Map();
@@ -66,7 +74,12 @@ function parseBody(s, name) {
     if (k === '[') { const a = alt(); i++; return { t: 'opt', x: a }; }
     if (k === '{') { const a = alt(); i++; return { t: 'rep', x: a }; }
     if (k === '(') { const a = alt(); i++; return a; }
-    if (k[0] === '<') return { t: 'nt', name: k.slice(1, -1) };
+    if (k[0] === '<') {                         // (A name, and the role of what it matches: <object:other>, the roles)
+      const [nm, role] = k.slice(1, -1).split(':');
+      if (role === undefined) return { t: 'nt', name: nm };
+      if (!own(ROLES, role)) throw new Error(`${name}: no role ${role}`);
+      return { t: 'nt', name: nm, role: ROLES[role] };
+    }
     if (k === "'\"'") return { t: 'quote' };
     if (k[0] === '"') return { t: 'term', words: k.slice(1, -1).toLowerCase().split(/\s+/).filter(Boolean) };
     throw new Error(`${name}: bad token ${k}`);
@@ -233,6 +246,139 @@ function matchRule(name, pos, env) {
   }
   env.memo.set(key, res);
   return res;
+}
+
+// ---- the roles: one derivation of a line, as the 65C02's (cmdmatch.s's cm_roles) -----------------------------------
+// The positions a node can end at from pos (a Set), as cmdmatch.s's ends: a repeat at most MAXREP rounds; a rule's ends
+// kept (env.ends, by the node and the position)
+const MAXREP = 12;
+function endsOf(node, pos, env) {
+  let m = env.ends.get(node);
+  if (!m) env.ends.set(node, m = new Map());
+  if (m.has(pos)) return m.get(pos);
+  const toks = env.toks, out = new Set();
+  m.set(pos, out);                            // (No left recursion: none asked again before it's made)
+  switch (node.t) {
+    case 'term': {
+      let p = pos;
+      for (const w of node.words) { const tk = toks[p]; if (!tk || tk.k !== 'w' || tk.v !== w) return out; p++; }
+      out.add(p);
+      break;
+    }
+    case 'quote': if (toks[pos] && toks[pos].k === 'q') out.add(pos + 1); break;
+    case 'nt':
+      if (OPEN.has(node.name)) { if (toks[pos] && openOK(node.name, toks[pos], env)) out.add(pos + 1); }
+      else {
+        if (node.name === 'sequence' && !toks.some(t => t.k === 'w' && t.v === 'then')) break;   // (A sequence needs a then)
+        for (const e of endsOf(env.rules.get(node.name), pos, env)) out.add(e);
+      }
+      break;
+    case 'seq': {
+      let at = new Set([pos]);
+      for (const it of node.items) {
+        const nx = new Set();
+        for (const q of at) for (const e of endsOf(it, q, env)) nx.add(e);
+        if (!nx.size) return out;
+        at = nx;
+      }
+      for (const e of at) out.add(e);
+      break;
+    }
+    case 'alt': for (const o of node.opts) for (const e of endsOf(o, pos, env)) out.add(e); break;
+    case 'opt': out.add(pos); for (const e of endsOf(node.x, pos, env)) out.add(e); break;
+    case 'rep': {
+      out.add(pos);
+      let front = [pos];
+      for (let g = 0; g < MAXREP && front.length; g++) {
+        const nx = [];
+        for (const q of front) for (const e of endsOf(node.x, q, env)) if (!out.has(e)) { out.add(e); nx.push(e); }
+        front = nx;
+      }
+      break;
+    }
+    default: throw new Error('bad node ' + node.t);
+  }
+  return out;
+}
+
+// The rules whose match holds a role (a name with one in their body, or a rule that holds one): the walk goes into
+// those alone.  OUT: a Set of rule names (the 65C02's: a bit of each rule's, the index's, commandtables.js's)
+function roleRules(rules) {
+  const has = new Set();
+  const holds = n => {
+    switch (n.t) {
+      case 'nt': return !!n.role || has.has(n.name);
+      case 'seq': return n.items.some(holds);
+      case 'alt': return n.opts.some(holds);
+      case 'opt': case 'rep': return holds(n.x);
+      default: return false;
+    }
+  };
+  for (let changed = true; changed;) {
+    changed = false;
+    for (const [k, t] of rules) if (!has.has(k) && k !== 'quoted-text' && holds(t)) { has.add(k); changed = true; }
+  }
+  return has;
+}
+
+// The derivation of tokens 0 to n (a line that parses), its roles: each token's role (ROLES': 0 none), the innermost
+// name with one that it's in (and mine, of any it's in).  The choice where there are several, the 65C02's: an alternation's first option that can
+// end there; a sequence's items each as late as it can begin (from its end back: the latest of the positions its item
+// before can end at, from which it can end where it must); an option taken if it can; a repeat's fewest rounds, each
+// begun as late as it can.  env: envFor's, with its rules' roleRules (env.has)
+function rolesOf(env) {
+  const toks = env.toks, n = toks.length, lab = new Array(n).fill(0);
+  env.ends = env.ends || new Map();
+  if (!env.has) env.has = roleRules(env.rules);
+  const latest = (S, node, e) => { let b = -1; for (const q of S) if (q > b && endsOf(node, q, env).has(e)) b = q; return b; };
+  const walk = (node, p, e) => {
+    switch (node.t) {
+      case 'nt':
+        if (node.role) for (let i = p; i < e; i++) lab[i] = node.role === ROLES.mine ? lab[i] | ROLES.mine : (lab[i] & ROLES.mine) | node.role;
+        if (!OPEN.has(node.name) && env.has.has(node.name)) walk(env.rules.get(node.name), p, e);
+        return;
+      case 'alt':
+        for (const o of node.opts) if (endsOf(o, p, env).has(e)) return walk(o, p, e);
+        return;
+      case 'opt':
+        if (p !== e && endsOf(node.x, p, env).has(e)) walk(node.x, p, e);
+        return;
+      case 'seq': {
+        const k = node.items.length, S = [new Set([p])];
+        for (let i = 0; i < k - 1; i++) {
+          const s = new Set();
+          for (const q of S[i]) for (const r of endsOf(node.items[i], q, env)) s.add(r);
+          S.push(s);
+        }
+        const at = new Array(k + 1);
+        at[k] = e;
+        for (let i = k; i >= 1; i--) at[i - 1] = latest(S[i - 1], node.items[i - 1], at[i]);
+        for (let i = 0; i < k; i++) walk(node.items[i], at[i], at[i + 1]);
+        return;
+      }
+      case 'rep': {
+        if (p === e) return;
+        const F = [new Set([p])], seen = new Set([p]);
+        while (!F[F.length - 1].has(e) && F.length <= MAXREP) {
+          const s = new Set();
+          for (const q of F[F.length - 1]) for (const r of endsOf(node.x, q, env)) if (!seen.has(r)) { s.add(r); seen.add(r); }
+          if (!s.size) return;
+          F.push(s);
+        }
+        const j = F.length - 1;
+        if (!F[j].has(e)) return;
+        const at = new Array(j + 1);
+        at[j] = e;
+        for (let i = j; i >= 1; i--) at[i - 1] = latest(F[i - 1], node.x, at[i]);
+        for (let i = 0; i < j; i++) walk(node.x, at[i], at[i + 1]);
+        return;
+      }
+      default: return;
+    }
+  };
+  const line = { t: 'nt', name: 'line' };
+  if (endsOf(line, 0, env).has(n)) walk(line, 0, n);
+  return lab;
 }
 
 // ---- the tree -------------------------------------------------------------------------------------------------------
@@ -1299,7 +1445,8 @@ function checkCorpus(compiler, corpusFile, log) {
 const LEXICON = { adj: [...ADJ], ordinals: ORDINALS, numbers: Object.keys(NUMWORDS), spellStop: [...SPELL_STOP],
   invocations: INVOCATION_WORDS, notObject: [...NOT_OBJECT] };
 
-module.exports = { Compiler, loadRules, buildContext, tokenize, DEFAULT_WORLD, checkCorpus, matchRule, countRule, DEFAULT_ALIASES, DEFAULT_ANYWHERE, segmentAliases, LEXICON };
+module.exports = { Compiler, loadRules, buildContext, tokenize, DEFAULT_WORLD, checkCorpus, matchRule, countRule, DEFAULT_ALIASES, DEFAULT_ANYWHERE, segmentAliases, LEXICON,
+  ROLES, endsOf, roleRules, rolesOf, literalWords, OPEN };
 
 if (require.main === module) {
   const compiler = new Compiler(loadRules(path.join(GAME, 'commands.ebnf')));

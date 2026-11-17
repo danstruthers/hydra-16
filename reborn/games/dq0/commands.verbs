@@ -185,21 +185,38 @@ bid         thing=VB_TRADE unsaid=last aux=SW_OFFER                  #   over; o
 haggle      thing=VB_TRADE alone=VB_TRADE unsaid=last aux=SW_HAGGLE  #   for, danced for, the verb said the skill)
 entertain   thing=VB_TRADE alone=VB_TRADE aux=SW_ENTERTAIN
 rip         thing=VB_RIP_OBJECT unsaid=last aux=IO_RIP               # (new, 2026-11-10: a cloth torn up for bandages,
-                                                                     #   HOUSE.md's bandages; "wash" a cloth washed, the
-                                                                     #   same verb, its request the word's, hthings.c's:
-                                                                     #   one verb, dq0c's records near full)
+                                                                     #   HOUSE.md's bandages)
+# (2026-11-17, phase B: the verbs the UI read the line again for, each its own row, its value its aux: dq0c's records
+# no longer full, a word's verb its dictionary entry's)
+wash        thing=VB_RIP_OBJECT unsaid=last aux=IO_WASH              # (A cloth washed: the things' IO_WASH)
+sharpen     thing=VB_FILL_OBJECT unsaid=last aux=IO_SHARP            # (A blade sharpened: "sharpen", "hone", "whet")
+dive        alone=VB_SWIM thing=VB_SWIM way=VB_SWIM skill=P_SWIM aux=1   # (Under on purpose, as "swim down")
+climbout    thing=VB_CLIMB way=VB_CLIMB alone=VB_CLIMB unsaid=front skill=P_CLIMB task=LT_CLIMB aux=1   # (Up and out: "climb
+                                                                     #   out", "climb out of the well")
+unfast      alone=VB_FASTING aux=1                                   # (The vow ended: "break my fast")
+kneel       alone=VB_CROUCH aux=POS_KNEELING                         # (Kneeling, not crouching)
+rest        alone=VB_SLEEP thing=VB_SLEEP task=LT_SLEEP aux=1        # (A rest, not a sleep: its aux 1; a short one
+shortsleep  alone=VB_SLEEP thing=VB_SLEEP task=LT_SLEEP aux=2        #   2, half an hour)
+shortrest   alone=VB_SLEEP thing=VB_SLEEP task=LT_SLEEP aux=3
+retend      alone=VB_TEND thing=VB_TEND unsaid=none skill=P_FIRST_AID task=LT_TEND aux=1   # (A dressing changed: "change the
+                                                                     #   bandage on my arm")
+watch       alone=VB_WAIT thing=VB_WAIT unsaid=none task=LT_WAIT aux=15   # (The sky watched, its minutes: "watch the sun",
+watchstars  alone=VB_WAIT thing=VB_WAIT unsaid=none task=LT_WAIT aux=30   #   "the sky"; the stars half an hour)
+fastcharge  alone=VB_CHARGE aux=1                                    # (A sprint at the foe, not a run: "fast charge")
+yell        alone=VB_SAY thing=VB_SAY aux=6                          # (Its loudness: a yell's; a whisper's; say's 0, the
+whisper     alone=VB_SAY thing=VB_SAY aux=1                          #   speech's, 3)
 
 [words]
 change facing = face
 clear target = untarget
 slow walk = move
 double time = double
-fast charge = charge
+fast charge = fastcharge
 fast talk = bluff
 tread water = swim
-break my fast = fasting
-short rest = sleep
-short sleep = sleep
+break my fast = unfast
+short rest = shortrest
+short sleep = shortsleep
 get up = stand
 change hands = swap
 change my hands = swap
@@ -287,6 +304,7 @@ grope = grope
 turn = turn
 face = face
 climb = climb
+climb out = climbout
 jump = jump
 j = jump
 open = open
@@ -356,9 +374,9 @@ how much will you give = bid
 what will you give = bid
 what would you give = bid
 how much = quote
-watch the sun = wait
-watch the sky = wait
-watch the stars = wait
+watch the sun = watch
+watch the sky = watch
+watch the stars = watchstars
 hide = hide
 conceal = hide
 stash = hide
@@ -480,14 +498,14 @@ nock = load
 gather = gather
 collect = gather
 say = say
-yell = say
-whisper = say
+yell = yell
+whisper = whisper
 cast = cast
 c = cast
 eat = eat
 drink = drink
 swim = swim
-dive = swim
+dive = dive
 find = find
 listen = listen
 smell = smell
@@ -540,7 +558,7 @@ follow the tracks = track
 follow tracks = track
 follow the trail = track
 sleep = sleep
-rest = sleep
+rest = rest
 sit = sit
 stand = stand
 rise = stand
@@ -557,7 +575,7 @@ first aid = tend
 first aid to = tend
 first aid for = tend
 crouch = crouch
-kneel = crouch
+kneel = kneel
 squat = crouch
 pretend = pretend
 exit = leave
@@ -645,18 +663,21 @@ rip up = rip
 tear = rip
 tear up = rip
 cut up = rip
-wash = rip
-change the bandage on = tend
-change the bandages on = tend
-change the dressing on = tend
-change my bandage on = tend
-change my dressing on = tend
-change the bandage = tend
-change the bandages = tend
-change the dressing = tend
-change my bandage = tend
-change my bandages = tend
-change my dressing = tend
-change bandage = tend
-change bandages = tend
-change dressing = tend
+wash = wash
+sharpen = sharpen
+hone = sharpen
+whet = sharpen
+change the bandage on = retend
+change the bandages on = retend
+change the dressing on = retend
+change my bandage on = retend
+change my dressing on = retend
+change the bandage = retend
+change the bandages = retend
+change the dressing = retend
+change my bandage = retend
+change my bandages = retend
+change my dressing = retend
+change bandage = retend
+change bandages = retend
+change dressing = retend

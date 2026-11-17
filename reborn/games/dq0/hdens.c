@@ -147,7 +147,7 @@ static void charge (void)
     intend_a = e;
     if (n > 1) {
         reach = 6;                              /* (Closed with first, its arrival's words short) */
-        intend2 (I_CLOSE, 0, strstr (cl, "fast") ? GA_SPRINT : GA_RUN);
+        intend2 (I_CLOSE, 0, cmd.aux ? GA_SPRINT : GA_RUN);   /* ("fast charge": its verb's) */
     } else {
         intend2 (I_ATTACK, 0, 0);
     }
@@ -173,20 +173,18 @@ static void engage (void)
 }
 
 /* H_SPLIT: two denizens beside it attacked by turns ("attack the rat and the goblin", one line, parts.c's: the parser's
-** thing the second, the last named; the first the word before the "and"): the first struck at, the other sent with the
+** thing the first, its other the second, a list's, CF_LIST): the first struck at, the other sent with the
 ** blow (I_ATTACK's split), the world's fighting on turning between them while both stand; the other not beside it, the
 ** first's an attack alone; the first not beside it, go up to it first */
 static void split (void)
 {
-    static const char* p;
+    static struct cthing first;
 
-    p = strstr (cl, " and ");
-    e = fight_target (&cmd);                    /* (The second, the parser's thing) */
+    memcpy (&first, &cmd.obj, sizeof first);    /* (The first kept) */
+    memcpy (&cmd.obj, &cmd.other, sizeof cmd.obj);
+    e = fight_target (&cmd);                    /* (The second, the parser's other) */
     strcpy (lb + 360, cmd.obj.word);
-    memset (&cmd.obj, 0, sizeof cmd.obj);
-    for (n = 0; p && p > cl && p[-1] != ' ' && n < sizeof cmd.obj.word - 1; --p, ++n) {
-    }
-    memcpy (cmd.obj.word, p, n);                /* (The first, by its word) */
+    memcpy (&cmd.obj, &first, sizeof first);    /* (The first) */
     if ((d = fight_target (&cmd)) == FT_THING || !d) {
         if (d) {
             unknown (U_CANT);

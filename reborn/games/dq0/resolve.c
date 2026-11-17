@@ -356,16 +356,6 @@ static unsigned char has_target (void)
     return k + 1;
 }
 
-/* Thing t, a side of the room by the parser ("side", OB_SIDE) its word "pocket": the thing "side pocket" (the backpack's
-** compartment's own name), its kind gone */
-static void __fastcall__ side_pocket (struct cthing* t)
-{
-    if (t->kind == OB_SIDE && !strcmp (t->word, "pocket")) {
-        strcpy (t->word, "side pocket");
-        t->kind = 0;
-    }
-}
-
 /* Overlay 11: the command (cmd) resolved: it, its unsaid thing, which of several, the target.  RV_ON: carried on
 ** with; RV_DONE: seen to (a question asked, the target shown or set, said why not) */
 unsigned char o_resolve (void)
@@ -412,11 +402,6 @@ unsigned char o_resolve (void)
         drx = s->rx;
         dry = s->ry;
     }
-    side_pocket (&cmd.obj);                     /* ("The side pocket": the backpack's compartment, a thing's, named by its
-                                                **   own name, not a side of the room, the parser's "side": "look in the
-                                                **   side pocket", "close the side pocket", "take the coin from the side
-                                                **   pocket", 2026-11-16; each thing its own kind, 2026-11-17) */
-    side_pocket (&cmd.other);
     if (cmd.obj.sel == SL_IT && !cmd.obj.word[0] && !cmd.obj.kind) {   /* ("it": the last thing named) */
         if (!last.word[0] && !last.kind) {
             msg ("You haven't named anything yet.");

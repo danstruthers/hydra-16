@@ -263,12 +263,12 @@ static void unvow (void)
 }
 
 /* A vow of fasting (VB_FASTING: "fast"): a day from now no food (feed.c's refusal), hunger counting on as ever (the
-** referee's, rf/want.c); "break my fast" (the parser's, the line's word) ends it */
+** referee's, rf/want.c); "break my fast" (its verb's own, unfast's aux) ends it */
 void s_fast_go (void)
 {
     unsigned long now;
 
-    if (strstr (cl, "break")) {
+    if (cmd.aux) {
         unvow ();
         return;
     }

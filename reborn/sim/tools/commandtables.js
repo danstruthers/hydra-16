@@ -7,24 +7,25 @@
 // another. The names are not in the table: a rule or open name is its number in grammarNames' order (rules, then open
 // names). A composite node (sequence, alternative, option, repeat) is [tag, size, count or child, ...]: the size is one
 // byte under 128, else two bytes with the top bit of the first set, counted from the tag, so a reader steps over the
-// node without walking it. A leaf has no size: a rule's name is two bytes, $40 | its number's top five bits, then its
-// low byte (rules to 8191); an open name's two, $60 and its number among the open names (the rule count less); a word
-// alone two, $80 | its number's top seven bits, then its low byte; a list of words [tag, count, each word's number in
-// two bytes]; a quote its tag. (Version 7's names were three bytes, its words alone four:
-// version 8 is the rule room of 2026-10-29, the rules a fifth smaller.)
+// node without walking it. A leaf has no size: a rule's name is two bytes, $40 | its role << 1 | its number's top bit,
+// then its low byte (rules to 511); an open name's two, $60 | its role, and its number among the open names (the rule
+// count less); the role, what its match is in the command (commandcompile.js's ROLES: 0 none); a word alone two, $80 |
+// its number's top seven bits, then its low byte; a list of words [tag, count, each word's number in two bytes]; a
+// quote its tag. (Version 7's names were three bytes, its words alone four: version 8 is the rule room of 2026-10-29,
+// the rules a fifth smaller; version 9, the roles of 2026-11-17, phase B.)
 // Alias layout: magic "DQ0A", version 1; the count; per alias: the word, the verb, and a flag (1: stands anywhere).
 //   node sim/tools/commandtables.js [grammar.bin] [aliases.bin] [index.bin]   write the tables and print their sizes
 //   node sim/tools/commandtables.js --check                       encode, decode, and run the corpus through the tables
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { loadRules, Compiler, buildContext, DEFAULT_WORLD, checkCorpus, DEFAULT_ALIASES, DEFAULT_ANYWHERE, LEXICON } = require('./commandcompile.js');
+const { loadRules, Compiler, buildContext, DEFAULT_WORLD, checkCorpus, DEFAULT_ALIASES, DEFAULT_ANYWHERE, LEXICON, roleRules } = require('./commandcompile.js');
 const words = require('./commandwords.js');
 
 const GAME = path.join(__dirname, '..', '..', 'games', 'dq0');
 const MAGIC = [0x44, 0x51, 0x30, 0x47]; // "DQ0G"
 const MAGIC_ALIAS = [0x44, 0x51, 0x30, 0x41]; // "DQ0A"
-const VERSION = 8;
+const VERSION = 9;
 const VERSION_ALIAS = 1;
 const TAG = { seq: 1, alt: 2, opt: 3, rep: 4, term: 6, quote: 7 };
 const NAME = 0x40, OPEN = 0x60, WORD = 0x80;   // a rule's name's first byte, an open name's, a word's alone
@@ -92,10 +93,10 @@ function encodeGrammar(rules, open) {
         if (!nameId.has(n.name)) throw new Error('undefined name <' + n.name + '>');
         if (nameId.get(n.name) >= rules.size) {
           if (nameId.get(n.name) - rules.size > 255) throw new Error('too many open names');
-          return [OPEN, nameId.get(n.name) - rules.size];
+          return [OPEN | (n.role || 0), nameId.get(n.name) - rules.size];
         }
-        if (nameId.get(n.name) > 0x1FFF) throw new Error('too many rules');
-        return [NAME | nameId.get(n.name) >> 8, nameId.get(n.name) & 255];
+        if (nameId.get(n.name) > 0x1FF) throw new Error('too many rules');
+        return [NAME | (n.role || 0) << 1 | nameId.get(n.name) >> 8, nameId.get(n.name) & 255];
       case 'term':
         if (n.words.length > 255) throw new Error('term too long');
         if (n.words.length === 1) {
@@ -151,8 +152,9 @@ function decodeGrammar(buf, names) {
     const start = p;
     const tag = u8();
     if (tag >= WORD) return { t: 'term', words: [words[(tag & 0x7F) << 8 | u8()]] };
-    if (tag >= OPEN) return { t: 'nt', name: names[ruleCount + u8()] };
-    if (tag >= NAME) return { t: 'nt', name: names[(tag & 0x1F) << 8 | u8()] };
+    const role = n => (n.role ? n : (delete n.role, n));       // (A name's role, if it has one: the text's)
+    if (tag >= OPEN) return role({ t: 'nt', name: names[ruleCount + u8()], role: tag & 0x1F });
+    if (tag >= NAME) return role({ t: 'nt', name: names[(tag & 1) << 8 | u8()], role: tag >> 1 & 0x0F });
     switch (tag) {
       case TAG.seq: case TAG.alt: case TAG.opt: case TAG.rep: {
         const b = u8();
@@ -201,7 +203,8 @@ function decodeAliases(buf) {
 // number; then the lexicon's other words, and the default aliases' first words); each entry's flags (a byte: LX_*);
 // each rule's first words as a 64-bit Bloom filter (eight rows of a byte a rule: word w sets bit w & 63) and its first
 // open-name kinds (two rows of a byte a rule: the K_ bits; in the second row's top bit, whether the rule can match
-// nothing); then the large alternations' indexes: the count, and for each its offset in the grammar table, its options'
+// nothing, and in its bit 6 whether a name with a role is in it: the roles' walk goes into it, commandcompile.js's
+// roleRules); then the large alternations' indexes: the count, and for each its offset in the grammar table, its options'
 // offsets, its first words (the count; the words, sorted, two bytes each; then each one's option, a byte) and its options
 // that can begin with an open name or match nothing (the count, then option and kinds, bit 15 for nothing).
 const INDEX_MAGIC = [0x44, 0x51, 0x30, 0x49]; // "DQ0I"
@@ -370,6 +373,7 @@ function encodeIndex(rules, gbuf, aliases = DEFAULT_ALIASES, game = words.gameWo
   const at = nodeOffsets(gbuf, rules);
   const { R, of } = firstSets(rules);
   checkLeftRecursion(rules, of);
+  const held = roleRules(rules);
   const names = [...rules.keys()], n = names.length;
   const id = k => { const i = names.indexOf(k); if (i < 0 || i > 0x3FFF) throw new Error('no rule <' + k + '> for the matcher'); return i; };
   // The dictionary: the grammar's words (their numbers), then the lexicon's others, then the aliases' first words, then
@@ -396,7 +400,7 @@ function encodeIndex(rules, gbuf, aliases = DEFAULT_ALIASES, game = words.gameWo
     const f = R.get(k);
     for (const w of f.words) { const b = wid.get(w) & 63; bloom[b >> 3][r] |= 1 << (b & 7); }
     klo.push(f.kinds & 255);
-    khi.push(((f.kinds >> 8) & 0x7F) | (f.nullable ? 0x80 : 0));
+    khi.push(((f.kinds >> 8) & 0x3F) | (held.has(k) ? 0x40 : 0) | (f.nullable ? 0x80 : 0));
   });
   const out = [...INDEX_MAGIC, INDEX_VERSION, ...u16(n), ...u16(words.length), ...u16(entries.length),
     ...u16(id('line')), ...u16(id('sequence')), ...u16(id('quoted-text')), ...PEARSON, ...starts.flatMap(u16), ...recs, ...flags, ...bloom.flat(), ...klo, ...khi];

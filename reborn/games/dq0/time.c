@@ -91,21 +91,20 @@ static void time_told (void)
     outcome_words (&c);
 }
 
-/* A wait's length by the line (cl): "until dawn" (the minutes till the hour it names, as it believes the time now: the
-** next one, a day on if it's that hour now), "watch the sun", "the sky", "the stars" (watched a while, a quarter of an
-** hour, the stars' half an hour): minutes, or 0 (none said) */
+/* A wait's length by the command: "until dawn" (the minutes till the hour it names, the thing's word, as it believes the
+** time now: the next one, a day on if it's that hour now), "watch the sun", "the sky", "the stars" (watched a while, its
+** verb's own minutes, its aux: a quarter of an hour, the stars' half an hour): minutes, or 0 (none said) */
 static unsigned until (void)
 {
     struct tbelief t;
-    const char* p = strstr (cl, "until ");
     const char* w = untils;
     unsigned char k;
     unsigned m;
 
-    if (!p) {
-        return strstr (cl, "watch") ? (strstr (cl, "star") ? 30 : 15) : 0;
+    if (cmd.aux >= 15) {
+        return cmd.aux;
     }
-    for (p += 6, k = 0; *w && strncmp (p, w, strlen (w)); w += strlen (w) + 1, ++k) {
+    for (k = 0; *w && strcmp (cmd.obj.word, w); w += strlen (w) + 1, ++k) {
     }
     if (!*w) {
         return 0;

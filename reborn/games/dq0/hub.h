@@ -969,7 +969,7 @@ struct rqh {
 enum { CQ_NONE, CQ_MATCH, CQ_WORLD };
 #define CQ_WORDS        1024                    /* The world's words' text, at most (dq0c keeps that much) */
 #define CQ_CMD          0x1000                  /* (Past the text) */
-#define CMD_SIZE        61
+#define CMD_SIZE        63
 #define CQ_REL          0x10                    /* A way as the character faces (CQ_REL | 0 ahead, 2 its right ...) */
 struct cq {
     RQH;                                        /* (kind: CQ_*) */
@@ -983,7 +983,12 @@ struct cq {
 ** parser's: dq0c, by the verbs, commands.verbs; a denizen's mind's), for the world to apply to what it names, the same
 ** way for every actor: an action (actions.h's VB_*, the catalogue's: commands.actions) and its roles.  A thing a role
 ** names is said as the player said it (its word, its kind, which of several, where it lies) and found among those
-** the actor perceives as the command's carried out (the UI's, for the character) */
+** the actor perceives as the command's carried out (the UI's, for the character).  The parser fills it by the roles the
+** grammar's derivation gives a line's words (2026-11-17, phase B: commands.ebnf's <name:role>, dq0c's cmdmatch.s's
+** cm_roles): the thing; the other thing, its preposition with it (where it's put, what it's taken from, given to); what
+** it's done with (the other, PR_WITH); the hand; a place on the body (the other, CF_WORN); a list's later thing (the
+** other, CF_LIST); quoted words' place.  Each thing named by its last word and the one before it ("the iron key":
+** "iron key"), a part of the place by its kind (its word the one before it: "the far side": "far") */
 struct cthing {
     unsigned char   kind;                       /* OB_* (dq0.h's): a part of the place (a door, the stairs ...);
                                                 **   OB_NONE: a thing, by its word */
@@ -1063,7 +1068,12 @@ enum { SM_NEW = 0x40, SM_OLD = 0x80, SM_OTHER = 0xC0 };   /* (A step's words' wo
 #define CF_STRANGE      0x08                    /*   no verb, and the line's first word one the game doesn't know:
                                                 **   "bribe the goblin", a verb it hasn't; */
 #define CF_ASKED        0x10                    /*   the UI's: a blow's question put, its command kept, not carried
-                                                **   out now: choose.c's) */
+                                                **   out now: choose.c's; */
+#define CF_WORN         0x20                    /*   the other a place on the body: "on my left hand" (its word "left
+                                                **   hand"), worn.c's to make one of, or not; */
+#define CF_LIST         0x40                    /*   the other a list's later thing: "attack the rat and the goblin") */
+enum { HN_NONE, HN_LEFT, HN_RIGHT, HN_BOTH, HN_OTHER, HN_OFF, HN_MAIN };   /* (The hand said: struct cmd's hand, "in my
+                                                **   left hand" ... "in my main hand") */
 struct cmd {
     unsigned char   action;                     /* VB_* */
     unsigned char   actor;                      /* Whose: 0 the character, an actor's entry plus 1 */
@@ -1082,6 +1092,8 @@ struct cmd {
     unsigned char   task;                       /* LT_*: a long task's kind */
     unsigned char   n;                          /* A number said ("move south 4 squares"; "1", a choice) */
     struct cthing   obj, other;                 /* The thing it's done to, and the other */
+    unsigned char   hand;                       /* The hand said (HN_*: "take the torch in my left hand"), 0 none */
+    unsigned char   quote;                      /* Quoted words said: their first letter's place in the line, + 1; 0 none */
 };
 typedef char cmd_fits[sizeof (struct cmd) == CMD_SIZE ? 1 : -1];   /* (dq0c's, games/dq0c/cmdmean.s's CM_*) */
 

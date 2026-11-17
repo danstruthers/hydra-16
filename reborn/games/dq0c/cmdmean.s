@@ -18,13 +18,16 @@
 ;
 ; Each word (a token, not quoted text, ! or =) has its records: its entry's (the word as typed; or, an alias of
 ; several words begun there, its root: "look closely"), and its root's; a field of the word's is the first's, or, if
-; that has none and the alias was one word, the root's (get).  Its size: some 1.5K of code, 250 bytes of RAM.
+; that has none and the alias was one word, the root's (get); a verb its entry's, the same way (verbof).  Each word is
+; the thing's or the other's by its role (2026-11-17, phase B: the grammar's derivation's, cmdmatch.s's cm_roles: the
+; other thing, what it's done with, a hand, a place on the body, a hiding place, a list's later thing), each thing
+; named by its last word and the one before it (fin, both).  Its size: some 1.7K of code, 260 bytes of RAM.
 ; ****************************************************************************
 
             .setcpu     "65C02"
             .macpack    longbranch
             .export     cm_winit, cm_mean, cm_wthings, cm_w, cm_cmd
-            .import     ntok, tokoff, toklen, tokq, toktl, tokth, tokel, tokeh, tokmu, tbuf, nent, lmark
+            .import     ntok, tokoff, toklen, tokq, toktl, tokth, tokel, tokeh, tokmu, tbuf, nent, lmark, tokrole, qat
 
 ; struct cmd (hub.h): its fields' places (CM_*), a thing's (struct cthing: T_*) in it, its flags (CF_*), a way as the
 ; character faces (CQ_REL): the build's, from hub.h (games/dq0/hubgen.js)
@@ -36,20 +39,20 @@ PART        = $80                   ; A thing's part ("the bars": the window's)
 NONE        = $FF                   ; No way
 W_WORLD     = 1                     ; An entry's mark: the world names a thing by it (cmdmatch.s's)
 
-; The records' columns (commandwords.js's COLUMNS): 0 in each, none (the way's its value + 1)
-C_VERB      = 0
-C_DIR       = 1
-C_THING     = 2
-C_PREP      = 3
-C_HOW       = 4
-C_SPECIAL   = 5
-C_ORDER     = 6
-C_SEL       = 7
-C_NUM       = 8
-C_MANNER    = 9
-C_LITTLE    = 10
-C_ASPECT    = 11                    ; (A thing's aspect judged: EX_*, 2026-10-22)
-NCOL        = 12
+; The records' columns (commandwords.js's COLUMNS): 0 in each, none (the way's its value + 1); a word's verb its entry's
+; (verbof), not its record's (2026-11-17: the records 255 of 255; 110 now)
+C_DIR       = 0
+C_THING     = 1
+C_PREP      = 2
+C_HOW       = 3
+C_SPECIAL   = 4
+C_ORDER     = 5
+C_SEL       = 6
+C_NUM       = 7
+C_MANNER    = 8
+C_LITTLE    = 9
+C_ASPECT    = 10                    ; (A thing's aspect judged: EX_*, 2026-10-22)
+NCOL        = 11
 
 ; A verb's fields (commandwords.js's ROW), and its flags
 R_ALONE     = 0
@@ -72,7 +75,20 @@ S_HALF      = 4
 S_AROUND    = 5
 S_BAR       = 6
 S_WAYOUT    = 7
+S_MAIN      = 8                     ; ("in my main hand")
 P_SPECIAL   = 1
+
+; A token's role (cmdmatch.s's tokrole: commandcompile.js's ROLES): none, the thing's; the other's (put in, taken from,
+; given to), what it's done with, the hand, a place on the body, a hiding place, a list's later thing, nothing ("of the
+; room"); and mine with any, "my left arm"
+R_OTHER     = 1
+R_TOOL      = 2
+R_HAND      = 3
+R_WORN      = 4
+R_LOC       = 5
+R_LIST      = 6
+R_SKIP      = 7
+R_MINE      = 8
 
 NCONST      = 31                    ; The constants (commandwords.js's CONSTANTS, in order)
 MAXWS       = 15                    ; The words of a line (cmdmatch.s's MAXTOK + 1)
@@ -117,7 +133,8 @@ v_THROW     = kv + 27               ; throw; HOW_TO, PR_AT
 v_HOWTO     = kv + 28
 v_AT        = kv + 29
 v_IN        = kv + 30               ; PR_IN ("drop the dagger down the well": into it, 2026-11-06)
-pgwi:       .res        2           ; Each entry's record
+pgwi:       .res        2           ; Each entry's record, its verb
+pgwv:       .res        2
 colpl:      .res        NCOL        ; Each column
 colph:      .res        NCOL
 nmulti:     .res        1           ; The verbs of several words
@@ -128,6 +145,8 @@ nrows:      .res        1           ; The verbs (rows), and the prepositions' ow
 prows:      .res        2
 nprep:      .res        1
 pprep:      .res        2
+nqual:      .res        1           ; The words that make one kind another ("iron", "stone", "black": a name's word
+pqual:      .res        2           ;   before its last kept with it if it's one)
 face:       .res        1           ; The way the character faces
 wsn:        .res        1           ; The line's words: each one's token, its entry (its own, or its alias's root,
 wtk:        .res        MAXWS       ;   as above), whether its alias was several words, its records (as typed, its
@@ -146,15 +165,22 @@ wi:         .res        1           ; The word being read
 dir:        .res        1           ; The way said (the struct's dir or its thing's lies, as it ends)
 spc:        .res        1           ; The word's special
 wrec:       .res        1           ; The record of the word kept in the thing's word (as typed)
-thoff:      .res        1           ; The thing being said (CM_OBJ, or CM_OTHER after its preposition)
+thoff:      .res        1           ; The thing being said (CM_OBJ, or CM_OTHER: its role's), it (so: 0, 1)
+so:         .res        1
+lb:         .res        1           ; The word's role (tokrole's), less R_MINE (ro)
+ro:         .res        1
+shd:        .res        2           ; Each thing's name: its last word, the one before it (NONE: none), its role
+sql:        .res        2
+sro:        .res        2
+said:       .res        1           ; The thing said: a word of its name not a part of the place's, or a selector
 around:     .res        1           ; "around" said
-ended:      .res        1           ; The other thing's phrase over (a word of how after its word)
 me:         .res        1           ; "me" said
 aspect:     .res        1           ; A thing's aspects said (EX_*: all of them)
 kk:         .res        1           ; A value for the moment
 cnt:        .res        1
 nn:         .res        1
 pk:         .res        1
+pw:         .res        1
 xb:         .res        1
 yb:         .res        1
 fb:         .res        1
@@ -169,7 +195,7 @@ wl:         .res        1
             sta         mp
             lda         cm_w+1
             sta         mp+1
-            ldy         #0              ; "DQ0W", version 3
+            ldy         #0              ; "DQ0W", version 4
 :           lda         (mp),y
             cmp         magic,y
             jne         bad
@@ -196,13 +222,12 @@ wl:         .res        1
             sta         pgwi
             lda         mp+1
             sta         pgwi+1
-            clc                         ; The records: their count, then each column
+            jsr         pastent         ; The entries' verbs
             lda         mp
-            adc         nent
-            sta         mp
+            sta         pgwv
             lda         mp+1
-            adc         nent+1
-            sta         mp+1
+            sta         pgwv+1
+            jsr         pastent         ; The records: their count, then each column
             lda         (mp)
             sta         nn
             ldy         #1
@@ -264,7 +289,7 @@ col:        lda         mp
             jsr         past
             dex
             bra         :-
-:           lda         (mp)            ; The prepositions' own actions
+:           lda         (mp)            ; The prepositions' own actions: four bytes each
             sta         nprep
             ldy         #1
             jsr         past
@@ -272,6 +297,20 @@ col:        lda         mp
             sta         pprep
             lda         mp+1
             sta         pprep+1
+            ldx         nprep
+:           beq         :+
+            ldy         #4
+            jsr         past
+            dex
+            bra         :-
+:           lda         (mp)            ; The words that make one kind another
+            sta         nqual
+            ldy         #1
+            jsr         past
+            lda         mp
+            sta         pqual
+            lda         mp+1
+            sta         pqual+1
             clc
             rts
 bad:        sec
@@ -319,6 +358,18 @@ next:       inc         rp
 :           dec         el
             bra         loop
 done:       rts
+.endproc
+
+; pastent: mp past a byte an entry
+.proc pastent
+            clc
+            lda         mp
+            adc         nent
+            sta         mp
+            lda         mp+1
+            adc         nent+1
+            sta         mp+1
+            rts
 .endproc
 
 ; past: mp past .Y bytes
@@ -597,14 +648,6 @@ end:        stz         cm_cmd,x
             rts
 .endproc
 
-; setword: word .X the thing's word, its record kept (for "bar")
-.proc setword
-            lda         yrec,x
-            sta         wrec
-            lda         #CM_OBJ + T_WORD
-            jmp         copyword
-.endproc
-
 ; between: the way between dir and kk, neither up nor down (a quarter apart: the eighth between them; else kk), one by
 ; the compass and one as the character faces: that one made the compass's first.  OUT: .A
 .proc between
@@ -680,11 +723,17 @@ mid:        ina
             sta         cm_cmd + CM_OBJ + T_LIES
             sta         cm_cmd + CM_OTHER + T_LIES
             sta         dir
+            sta         shd             ; (Neither thing named yet)
+            sta         shd+1
+            stz         sro
+            stz         sro+1
+            stz         said
             stz         wrec
             stz         around
-            stz         ended
             stz         me
             stz         aspect
+            lda         qat             ; (Quoted text: where it is in the line)
+            sta         cm_cmd + CM_QUOTE
             lda         ntok            ; (Quoted text first: said aloud)
             beq         :+
             lda         tokq
@@ -736,9 +785,7 @@ mnext:      lda         nn
             jsr         past
             dec         cnt
             bra         mloop
-single:     ldx         #0              ; Or of one
-            ldy         #C_VERB
-            jsr         get
+single:     jsr         verbof          ; Or of one
             beq         noverb
             sta         verb
             lda         #1
@@ -761,17 +808,36 @@ noverb:     lda         v_MOVE          ; (None: a way, or a thing, alone: going
             tsb         cm_cmd + CM_FLAGS
 each0:      lda         wi
             sta         first
-each:       ldx         wi              ; Each word after the verb
+each:       ldx         wi              ; Each word after the verb, by its role (cm_roles')
             cpx         wsn
-            jcs         rules
-            lda         #CM_OBJ         ; (The thing being said: the other, after its preposition)
-            ldy         cm_cmd + CM_OBJ + T_WORD
+            jcs         fin
+            ldy         wtk,x
+            lda         tokrole,y
+            sta         lb
+            and         #7
+            sta         ro
+            cmp         #R_SKIP         ; (Words that name nothing: "of the room")
+            jeq         next
+            cmp         #R_HAND
+            jeq         hand
+            ldy         #0              ; (The thing it's of: the other's, a role's)
+            cmp         #0
             beq         :+
-            ldy         cm_cmd + CM_PREP
-            beq         :+
-            lda         #CM_OTHER
-:           sta         thoff
-            lda         trec,x          ; (A word none of the game's: a number, or a thing's word, the rest passed)
+            iny
+:           sty         so
+            lda         thoffs,y
+            sta         thoff
+            lda         ro
+            cmp         #R_WORN
+            bne         :+
+            lda         #CF_WORN
+            tsb         cm_cmd + CM_FLAGS
+            lda         ro
+:           cmp         #R_LIST
+            bne         :+
+            lda         #CF_LIST
+            tsb         cm_cmd + CM_FLAGS
+:           lda         trec,x          ; (A word none of the game's: a number, or a name's word)
             ora         rrec,x
             jeq         number
             lda         ordv            ; A request's order, the first
@@ -809,17 +875,42 @@ each:       ldx         wi              ; Each word after the verb
             sta         cm_cmd + CM_OBJ + T_KIND
             inc         wi
             jmp         next
-:           lda         cm_cmd + CM_OBJ + T_WORD   ; A prep, after a thing said, the first
-            ora         cm_cmd + CM_OBJ + T_SEL
+:           lda         cm_cmd + CM_PREP   ; A preposition, the first: after the thing said, or the other's own (not
+            bne         noprep          ;   a list's)
+            lda         ro
             beq         :+
-            lda         cm_cmd + CM_PREP
-            bne         :+
-            ldy         #C_PREP
+            cmp         #R_LIST
+            bne         p1
+            bra         noprep
+:           lda         said
+            beq         noprep
+p1:         ldy         #C_PREP
             jsr         get
-            beq         :+
+            beq         noprep
             sta         cm_cmd + CM_PREP
             jmp         next
-:           lda         verb            ; "put away": stowed; "put back": put
+noprep:     lda         ro              ; A place on the body, a hiding place: a side its name's ("my left hand"),
+            cmp         #R_WORN         ;   the words of where and how no more
+            beq         :+
+            cmp         #R_LOC
+            bne         nowl
+:           ldy         #C_DIR
+            jsr         get
+            beq         :+
+            dea
+            jsr         lr
+            jeq         content
+            jmp         next
+:           ldy         #C_HOW
+            jsr         get
+            jne         next
+            lda         spc
+            cmp         #S_AROUND
+            jeq         next
+            ldy         #C_LITTLE
+            jsr         get
+            jne         next
+nowl:       lda         verb            ; "put away": stowed; "put back": put
             cmp         v_PUT
             bne         :++
             lda         spc
@@ -830,13 +921,10 @@ each:       ldx         wi              ; Each word after the verb
             jmp         next
 :           cmp         #S_BACK
             jeq         next
-:           ldy         #C_HOW          ; How: up to it, through it (the first said: "go through the door to the east");
-            jsr         get             ;   after the other thing's word, its phrase over ("with the dagger in my left
-            beq         :++             ;   hand", 2026-11-17)
-            ldx         cm_cmd + CM_OTHER + T_WORD
+:           ldy         #C_HOW          ; How: up to it, through it (the first said: "go through the door to the east")
+            jsr         get
             beq         :+
-            stx         ended
-:           ldx         cm_cmd + CM_HOW
+            ldx         cm_cmd + CM_HOW
             jne         next
             sta         cm_cmd + CM_HOW
             jmp         next
@@ -867,6 +955,9 @@ each:       ldx         wi              ; Each word after the verb
             lsr         a
             lsr         a
             sta         cm_cmd + T_N,y
+            lda         so              ; (The thing's: said)
+            jne         next
+            inc         said
             jmp         next
 nosel:      ldy         #C_MANNER       ; How it's done ("carefully", "hard")
             jsr         get
@@ -876,14 +967,14 @@ nosel:      ldy         #C_MANNER       ; How it's done ("carefully", "hard")
 :           ldy         #C_LITTLE       ; A little word: nothing
             jsr         get
             jne         next
-number:     lda         cm_cmd + CM_N   ; A number: in digits, or a word ("one"), the first
-            bne         nonum
-            jsr         digits
-            bcs         :+
+number:     jsr         digits          ; A number: in digits, or a word ("one"); the first; the others no name's
+            bcs         :+              ;   word
             ldy         #C_NUM
             jsr         get
             beq         nonum
-:           sta         cm_cmd + CM_N
+:           ldy         cm_cmd + CM_N
+            jne         next
+            sta         cm_cmd + CM_N
             jmp         next
 nonum:      ldy         #C_DIR          ; A way: with one before, the way between them (but up or down: the last)
             jsr         get
@@ -894,8 +985,7 @@ nonum:      ldy         #C_DIR          ; A way: with one before, the way betwee
             bne         :+              ;   it ("drop the dagger down the well": a shaft's, a hole's, 2026-11-06)
             lda         cm_cmd + CM_PREP
             bne         :+
-            lda         cm_cmd + CM_OBJ + T_WORD
-            ora         cm_cmd + CM_OBJ + T_SEL
+            lda         said
             beq         :+
             ldx         wi
             inx
@@ -911,6 +1001,12 @@ nonum:      ldy         #C_DIR          ; A way: with one before, the way betwee
 @in:        lda         v_IN
             sta         cm_cmd + CM_PREP
             jmp         next
+:           lda         lb              ; ("My left": a side, the name's: "bandage my left arm")
+            and         #R_MINE
+            beq         :+
+            lda         kk
+            jsr         lr
+            beq         content
 :           lda         dir
             cmp         #NONE
             beq         newdir
@@ -925,71 +1021,252 @@ nonum:      ldy         #C_DIR          ; A way: with one before, the way betwee
 newdir:     lda         kk
             sta         dir
             jmp         next
-thing:      ldy         #C_THING        ; A thing (a part of one: its word too, if there's none yet)
+thing:      ldy         #C_THING        ; A part of the place: a word of a name too; the way out, the thing's
             jsr         get
             beq         word
-            sta         kk
-            bpl         :+              ; (A part after "with": what it's done with, the other thing's word: "hit the
-            lda         cm_cmd + CM_PREP   ;   door with the bar", not the door's)
-            cmp         v_WITH
-            beq         word2
-:           lda         kk              ; (After the thing and its prep, the other's: "put the torch on the door", "tie
-            and         #$FF ^ PART     ;   the rope to the pillar", 2026-11-17; not a request's, "ask the dwarf to
-            ldy         thoff           ;   open the door", nor the way out, the puzzle's; a part's word the other's
-            cpy         #CM_OTHER       ;   too)
-            bne         okind
-            ldy         ordv
-            bne         okind
+            and         #$FF ^ PART
             cmp         v_WAYOUT
-            beq         okind
-            sta         cm_cmd + CM_OTHER + T_KIND
-            bit         kk
-            bmi         word2
-            bra         next
-okind:      sta         cm_cmd + CM_OBJ + T_KIND
-            lda         kk
-            bpl         next
-            lda         cm_cmd + CM_OBJ + T_WORD
-            beq         wset
-            jsr         ishead
-            beq         next
-wset:       jsr         setword
-            bra         next
-word:       lda         wi              ; A word not understood: the line's first, with no verb, a verb the game
-            bne         :+              ;   doesn't know (CF_STRANGE: the UI says so)
+            bne         content
+            sta         cm_cmd + CM_OBJ + T_KIND
+            jmp         next
+word:       ldy         #C_PREP         ; A preposition not taken: no name's word
+            jsr         get
+            jne         next
+            lda         wi              ; A word not understood: the line's first, with no verb, a verb the game
+            bne         content         ;   doesn't know (CF_STRANGE: the UI says so)
             lda         cm_cmd + CM_FLAGS
             and         #CF_NOVERB
-            beq         :+
+            beq         content
             lda         #CF_STRANGE
             tsb         cm_cmd + CM_FLAGS
-:           lda         cm_cmd + CM_PREP   ; The thing's (its last before a prep its head); the
-            cmp         v_WITH          ;   other thing's after a prep (after "it" and a prep, too)
-            beq         word2
-            lda         cm_cmd + CM_OBJ + T_WORD
-            bne         whead
-            lda         cm_cmd + CM_PREP
-            beq         wset
-            lda         cm_cmd + CM_OBJ + T_SEL
-            bne         word2
-            bra         wset
-whead:      jsr         ishead
-            bne         wset
-word2:      lda         verb            ;   (its head the last, as the thing's is: "with the iron key", the key,
-            cmp         v_NAME          ;   2026-11-17; a name given the last too; its phrase over, none: "with the
-            beq         w2              ;   dagger in my left hand")
-            lda         ended
+content:    ldy         so              ; A word of a name: its last, the one before it kept; a phrase said in
+            lda         ro              ;   another role, a new name ("attack the rat and the goblin")
+            cmp         sro,y
+            beq         :+
+            sta         sro,y
+            lda         #NONE
+            sta         shd,y
+:           lda         shd,y
+            sta         sql,y
+            lda         wi
+            sta         shd,y
+            lda         so              ; (The thing's: said, but by a part of the place's word)
             bne         next
-            lda         cm_cmd + CM_PREP
-            bne         w2
-            lda         ordv
-            bne         w2
-            lda         verb
-            cmp         v_COMBINE
+            ldx         wi
+            ldy         #C_THING
+            jsr         get
+            beq         :+
+            bpl         next
+:           inc         said
+            bra         next
+hand:       ldy         #C_DIR          ; The hand: "in my left hand", "in both hands", "in my off hand"
+            jsr         get
+            beq         :+
+            dea
+            ldy         #HN_LEFT
+            cmp         #REL | 6
+            beq         hset
+            ldy         #HN_RIGHT
+            cmp         #REL | 2
+            beq         hset
+:           ldy         #C_NUM
+            jsr         get
+            ldy         #HN_BOTH
+            cmp         #2
+            beq         hset
+            ldy         #C_SEL
+            jsr         get
+            beq         :+
+            and         #15
+            ldy         #HN_OTHER
+            cmp         #SL_OTHER
+            beq         hset
+:           ldy         #C_PREP
+            jsr         get
+            beq         :+
+            ldy         #HN_OFF
+            cmp         v_FROM
+            beq         hset
+:           ldy         #C_SPECIAL
+            jsr         get
+            ldy         #HN_MAIN
+            cmp         #S_MAIN
             bne         next
-w2:         lda         #CM_OTHER + T_WORD
-            jsr         copyword
+hset:       sty         cm_cmd + CM_HAND
 next:       inc         wi
             jmp         each
+fin:        ldy         #1              ; Each thing's name (the other's first)
+fslot:      sty         so
+            lda         shd,y
+            cmp         #NONE
+            beq         fnext
+            sta         xb              ; (Its head, its qualifier; its word's place)
+            lda         sql,y
+            sta         yb
+            lda         thoffs,y
+            clc
+            adc         #T_WORD
+            sta         wd
+            cpy         #0
+            bne         :+
+            ldx         xb              ; (The thing's head's record: for "bar")
+            lda         yrec,x
+            sta         wrec
+:           lda         sro,y           ; (What it's done with: a thing's name, "with the bar", not the door's)
+            cmp         #R_TOOL
+            beq         fboth
+            ldx         xb
+            ldy         #C_THING
+            jsr         get
+            beq         fboth
+            sta         kk
+            and         #$FF ^ PART
+            ldy         so
+            ldx         thoffs,y
+            sta         cm_cmd + T_KIND,x
+            bit         kk
+            bpl         fqual
+            lda         #NONE           ; (A part of a thing: its own word, "the iron bars", "the window bars": "bars")
+            sta         yb
+            bra         fboth
+fqual:      ldx         yb              ; (A part of the place: its word the one before it, "the far side")
+            cpx         #NONE
+            beq         fnext
+            lda         wd
+            jsr         copyword
+            bra         fnext
+fboth:      jsr         both
+fnext:      ldy         so
+            dey
+            bpl         fslot
+            jmp         rules
+.endproc
+
+; both: a name, its qualifier (yb: $FF none) and its head (xb), at cm_cmd + wd: "iron key"; its qualifier not one
+; that makes one kind another ("the sleeping rat"), or too long, its head alone
+.proc both
+            ldx         yb
+            cpx         #NONE
+            beq         head
+            inx                         ; (Just before it: "the iron key"; not "the flask of oil", the oil, as the
+            cpx         xb              ;   world names it)
+            bne         head
+            ldx         yb
+            jsr         isqual          ; (Kept if it makes one kind another, or a side: "my left arm")
+            bcs         :+
+            ldy         #C_DIR
+            jsr         get
+            beq         head
+:
+            ldy         wtk,x           ; (Their letters, and a space, no more than WORDMAX)
+            lda         toklen,y
+            ldx         xb
+            ldy         wtk,x
+            clc
+            adc         toklen,y
+            cmp         #WORDMAX
+            bcs         head
+            ldx         yb
+            lda         wd
+            jsr         copyword        ; (.X: where it ended)
+            lda         #' '
+            sta         cm_cmd,x
+            inx
+            txa
+            ldx         xb
+            jmp         copyword
+head:       ldx         xb
+            lda         wd
+            jmp         copyword
+.endproc
+
+; isqual: does word .X make one kind another (the words' table's qualifiers)?  C set if so.  Keeps .X
+.proc isqual
+            ldy         wtk,x
+            lda         toklen,y
+            sta         wl
+            lda         tokoff,y
+            sta         nn
+            lda         pqual
+            sta         mp
+            lda         pqual+1
+            sta         mp+1
+            lda         nqual
+            sta         cnt
+loop:       lda         cnt
+            beq         no
+            lda         (mp)            ; (Each: its length, its letters)
+            cmp         wl
+            bne         next
+            phx
+            ldx         nn
+            ldy         #0
+same:       iny
+            lda         (mp),y
+            cmp         tbuf,x
+            bne         differ
+            inx
+            cpy         wl
+            bne         same
+            plx
+            sec
+            rts
+differ:     plx
+next:       lda         (mp)
+            sec
+            adc         mp
+            sta         mp
+            bcc         :+
+            inc         mp+1
+:           dec         cnt
+            bra         loop
+no:         clc
+            rts
+.endproc
+
+; lr: is way .A left or right (as the character faces)?  Z set if so
+.proc lr
+            cmp         #REL | 6
+            beq         :+
+            cmp         #REL | 2
+:           rts
+.endproc
+
+; verbof: the line's first word's verb (its entry's, or, none and its alias not several words, its root's).  OUT: .A
+; (0: none), Z with it
+.proc verbof
+            lda         wtl
+            ldx         wth
+            jsr         vent
+            bne         done
+            lda         wmu
+            bne         none
+            ldy         wtk
+            lda         tokel,y
+            ldx         tokeh,y
+            jsr         vent
+done:       rts
+none:       lda         #0
+            rts
+.endproc
+
+; vent: entry .A/.X's verb (0: none; an entry of the world's own, past the index's)
+.proc vent
+            cpx         nent+1
+            bcc         in
+            bne         no
+            cmp         nent
+            bcs         no
+in:         clc
+            adc         pgwv
+            sta         cq
+            txa
+            adc         pgwv+1
+            sta         cq+1
+            lda         (cq)
+            rts
+no:         lda         #0
+            rts
 .endproc
 
 ; rules: the line's words read, the old parser's rules on what they made; then its action (action)
@@ -1216,6 +1493,7 @@ ploop:      cpx         wsn
             inx
             bra         ploop
 pfound:     sta         pk
+            stx         pw
 pdone:      lda         cm_cmd + CM_DIR    ; Up or down the stairs: the way's
             cmp         #NONE
             beq         :+
@@ -1232,8 +1510,16 @@ pdone:      lda         cm_cmd + CM_DIR    ; Up or down the stairs: the way's
             ora         cm_cmd + CM_OBJ + T_SEL
             beq         nothing
             lda         pk
-            bne         set
-            ldy         #R_THING
+            beq         :++
+            ldx         pw              ; (Its preposition the command's, if none's said: "look on the table")
+            lda         cm_cmd + CM_PREP
+            bne         :+
+            ldy         #C_PREP
+            jsr         get
+            sta         cm_cmd + CM_PREP
+:           lda         pk
+            bra         set
+:           ldy         #R_THING
             lda         (rp),y
             bne         set
             ldy         #R_ALONE
@@ -1268,24 +1554,6 @@ set:        sta         cm_cmd + CM_ACTION
             rts
 .endproc
 
-; ishead: is a later word the thing's head (no prep yet, nor a request, a name or things combined)?  Z clear if so.
-; Keeps .X
-.proc ishead
-            lda         cm_cmd + CM_PREP
-            bne         no
-            lda         ordv
-            bne         no
-            lda         verb
-            cmp         v_NAME
-            beq         no
-            cmp         v_COMBINE
-            beq         no
-            lda         #1
-            rts
-no:         lda         #0
-            rts
-.endproc
-
 ; toword2, toword: the thing's word into the other's, or the other's into the thing's
 .proc toword2
             ldy         #0
@@ -1307,4 +1575,5 @@ no:         lda         #0
 .endproc
 
             .rodata
-magic:      .byte       "DQ0W", 3
+magic:      .byte       "DQ0W", 4
+thoffs:     .byte       CM_OBJ, CM_OTHER    ; (The thing's and the other's places in struct cmd)

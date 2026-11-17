@@ -338,9 +338,9 @@ static unsigned char __fastcall__ parts_op (unsigned char op)
     if (cmd.action == VB_DROP_OBJECT && cmd.obj.sel == SL_ALL && !cmd.obj.word[0] && !cmd.prep) {
         return drop_all ();
     }
-    if (cmd.action == VB_ATTACK_OBJECT && !cmd.other.word[0] && strstr (cl, " and ")) {
-        cmd.action = VB_ATTACK_SPLIT;           /* (Its thing the parser's last, the second; the first the word before
-                                                **   the "and", hdens.c's split) */
+    if (cmd.action == VB_ATTACK_OBJECT && (cmd.flags & CF_LIST)) {
+        cmd.action = VB_ATTACK_SPLIT;           /* (Its thing the first, its other the second: a list's, the parser's;
+                                                **   hdens.c's split) */
         return 0;
     }
     if (!(cmd.flags & (CF_NOVERB | CF_STRANGE)) || !lnp || qlen < qafter || cmd.dir != 0xFF) {

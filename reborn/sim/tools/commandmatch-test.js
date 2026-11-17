@@ -71,11 +71,13 @@ function sim65() {
   return bad === 0;
 }
 
-// What each line means on sim65 (cmdmean.c), against the host's (commandwords.js's scan, the default aliases)
+// What each line means on sim65 (cmdmean.c: its roles, cmdmatch.s's cm_roles, then its struct cmd), against the host's
+// (commandwords.js's roles and scan, the default aliases), the world's words the game's (commandwords.js's worldWords,
+// the things' marked)
 function mean() {
   const words = require('./commandwords.js');
   const { DEFAULT_ALIASES, DEFAULT_ANYWHERE } = require('./commandcompile.js');
-  const lines = require('./commandmatch-gen.js').meaningLines(), w = words.load();
+  const lines = require('./commandmatch-gen.js').meaningLines(), w = words.load(), world = words.worldWords();
   // (The lines in parts, cmd_lines.h written again for each: the sim's 64K, as the corpus's, 2026-11-17; each part's
   // lines numbered from its first, the facing its own number's, mod 8)
   const PART = 400, out = [];
@@ -83,7 +85,8 @@ function mean() {
     const dir = path.join(OUT, 'mean' + from), bin = path.join(dir, 'cmdmean.bin'), part = lines.slice(from, from + PART);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, 'cmd_lines.h'), '#define CMD_LINES ' + part.length + '\nstatic const char *const cmd_line[' +
-      part.length + '] = {\n' + part.map(x => JSON.stringify(x)).join(',\n') + '\n};\n');
+      part.length + '] = {\n' + part.map(x => JSON.stringify(x)).join(',\n') + '\n};\nstatic const char cmd_world_words[] = ' +
+      JSON.stringify([...world].join(' ')) + ';\n');
     run(tool('cl65'), ['--cpu', '65C02', '-t', 'sim65c02', '-O', '-I', dir, '-I', OUT, '-I', HERE, '--asm-include-dir', GEN, '-o', bin,
       path.join(HERE, 'cmdmean.c'), path.join(GAME, 'cmdmatch.s'), path.join(GAME, 'cmdmean.s'), path.join(HERE, 'cmdmatch_c.s'),
       path.join(HERE, 'cmdmean_c.s')], { cwd: dir, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -92,7 +95,7 @@ function mean() {
     }
   }
   const F = ['action', 'actor', 'flags', 'dir', 'how', 'prep', 'aux', 'manner', 'order', 'dflt', 'skill', 'task', 'n',
-    'obj.kind', 'obj.sel', 'obj.n', 'obj.lies', 'other.kind', 'other.sel', 'other.n', 'other.lies'];
+    'obj.kind', 'obj.sel', 'obj.n', 'obj.lies', 'other.kind', 'other.sel', 'other.n', 'other.lies', 'hand', 'quote'];
   const field = (c, k) => k.includes('.') ? c[k.split('.')[0]][k.split('.')[1]] : c[k];
   let n = 0, bad = 0, long = 0, sum = 0, most = 0;
   for (const l of out) {
@@ -103,7 +106,8 @@ function mean() {
     sum += +m[3];
     most = Math.max(most, +m[3]);
     if (+m[2] < 0) { long++; continue; }          // (Too long for the matcher: its tokens cut short)
-    const c = words.scan(words.tokens(lines[i], DEFAULT_ALIASES, DEFAULT_ANYWHERE), w, i & 7);
+    const toks = words.tokens(lines[i], DEFAULT_ALIASES, DEFAULT_ANYWHERE);
+    const c = words.scan(toks, w, i & 7, words.roles(toks, w, world));
     const d = F.filter((k, j) => field(c, k) !== v[j]);
     if (c.obj.word !== m[5]) d.push('obj.word');
     if (c.other.word !== m[6]) d.push('other.word');
@@ -115,7 +119,7 @@ function mean() {
   }
   if (n !== lines.length) { console.log('only ' + n + ' of ' + lines.length + ' lines ran'); return false; }
   console.log(n + ' lines, ' + bad + ' differ from the host' + (long ? ' (' + long + ' too long, not compared)' : ''));
-  console.log('cycles: cm_mean ' + Math.round(sum / n) + ' on average, ' + most + ' the most');
+  console.log('cycles: cm_roles and cm_mean ' + Math.round(sum / n) + ' on average, ' + most + ' the most');
   return bad === 0;
 }
 

@@ -127,10 +127,9 @@ void s_tend (void)
         r->other = k;
         r->w2 = k && HUB->folk[(k - 1) & 7];    /* (A person, "they": the hub's folk, the referee's words, one source,
                                                 **   2026-11-17) */
-        strcpy (r->text, strstr (cl, "change") ? "*" : "");    /* (A dressing changed: "change the bandage on my arm",
+        strcpy (r->text, cmd.aux ? "*" : "");   /* (A dressing changed, retend's: "change the bandage on my arm",
                                                 **   HOUSE.md's bandages, 2026-11-10; the referee's, its plan's) */
-        strcat (r->text, k ? "" : strstr (cl, "left") ? "left " : strstr (cl, "right") ? "right " : "");
-        strncat (r->text, k ? "" : cmd.obj.word, 9);
+        strncat (r->text, k ? "" : cmd.obj.word, 15);   /* (Its side in its name: "left arm", the parser's) */
         r = ask_b (RS_TREAT, 0, 0);
         plan.other = k;
         plan.tries = 0;

@@ -201,6 +201,7 @@ half = HALF
 around = AROUND
 about = AROUND
 bar = BAR
+main = MAIN                                 # (2026-11-17, phase B: "in my main hand", the hand said)
 
 [selectors]
 closest = SL_CLOSEST
@@ -314,3 +315,8 @@ space
 spaces
 square
 squares
+until                                       # (2026-11-17, phase B: words of a phrase's that name nothing: "wait
+be                                          #   until dawn", "pretend to be asleep", "walk past the goblin",
+past                                        #   "how much is the rope")
+is
+are

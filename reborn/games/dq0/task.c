@@ -784,9 +784,10 @@ void __fastcall__ o_wait_go (unsigned char action)
         m = wait_of (cl, cmd.n);
     }
     if (action == VB_SLEEP) {
-        rest_ = strstr (cl, "rest") != 0;
+        rest_ = cmd.aux & 1;                    /* (A rest, a short one: the verbs' own, commands.verbs' rest, shortrest,
+                                                **   shortsleep) */
         if (!m) {
-            m = strstr (cl, "short") ? 30 : 480;
+            m = cmd.aux & 2 ? 30 : 480;
         }
         a = rest_ ? WA_SLEEP | WA_REST : WA_SLEEP;
         hub_mem (0, &lit, (const void*) &HUB->pc_light, 1);

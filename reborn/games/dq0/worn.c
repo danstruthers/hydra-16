@@ -3,9 +3,10 @@
 ** should extend to rings, necklaces, earrings, and other jewelry, as well as scarves, and should keep track of where
 ** worn"; HOUSE.md's worn places): "wear the ring on my left hand", "put the scarf on my head", "wear the scarf over my
 ** face", "put the necklace around my neck", "don the brooch at my left shoulder".  A wear, a don, a put on, or a put
-** whose words say a part of the body after "my" ("put X on my <part>": a don there, not a put in a thing) is a don, its
-** other the place, in the world's words for it ("@" and the place: items.h's place on the body as a letter, A PB_HEAD
-** ... P PB_FOOT; the side said, l or r, else -), the world's things.c's don and part 107's (wworn.c) to judge it
+** whose words say a part of the body after "my" (the parser's worn phrase, CF_WORN: its other the place's words, "left
+** hand"; "put X on my <part>": a don there, not a put in a thing) is a don, its other the place, in the world's words
+** for it ("@" and the place: items.h's place on the body as a letter, A PB_HEAD ... P PB_FOOT; the side said, l or r,
+** else -), the world's things.c's don and part 107's (wworn.c) to judge it
 */
 
 #include <string.h>
@@ -25,16 +26,19 @@ static const char locs[] = "AAABCCDIIJHHHG";
 
 void worn_said (void)
 {
-    static const char* p;
     static const char* q;
     static const char* e;
     static unsigned char a, k, n, side;
 
     a = cmd.action;
-    if (!(a == VB_PUT_OBJECT || (a == VB_EQUIP_OBJECT && cmd.aux != IO_HOLD)) || !(p = strstr (cl, " my "))) {
+    if (!(cmd.flags & CF_WORN)) {
         return;
     }
-    q = p + 4;
+    cmd.flags &= ~CF_WORN;
+    if (!(a == VB_PUT_OBJECT || (a == VB_EQUIP_OBJECT && cmd.aux != IO_HOLD))) {
+        return;
+    }
+    q = cmd.other.word;                         /* (Its side the word before its part: "left hand") */
     side = '-';
     if (!strncmp (q, "left ", 5)) {
         side = 'l';
@@ -43,35 +47,16 @@ void worn_said (void)
         side = 'r';
         q += 6;
     }
-    for (k = 0, e = parts; *e; ++k, e += n + 1) {
-        n = strlen (e);
-        if (!strncmp (q, e, n) && (!q[n] || q[n] == ' ')) {
-            break;
-        }
+    for (k = 0, e = parts; *e && strcmp (q, e); ++k, e += strlen (e) + 1) {
     }
     if (!*e) {
         return;                                 /* (No part of the body: a put in a thing, "put the ring on my pack") */
-    }
-    if (!strcmp (cmd.obj.word, e)) {            /* (The place's word taken for the thing's, "wear the scarf over my face":
-                                                **   the thing's the word before the place's preposition) */
-        for (q = p; q > cl && q[-1] != ' '; --q) {
-        }
-        for (e = --q; e > cl && e[-1] != ' '; --e) {
-        }
-        n = q - e;
-        if (!n || n > sizeof cmd.obj.word - 1) {
-            return;
-        }
-        memcpy (cmd.obj.word, e, n);
-        cmd.obj.word[n] = 0;
-        cmd.obj.kind = 0;
     }
     cmd.action = VB_EQUIP_OBJECT;
     if (a == VB_PUT_OBJECT) {
         cmd.aux = IO_DON;                       /* ("Put the scarf on my head": put on, there) */
     }
     cmd.prep = PR_ON;
-    cmd.dir = 0xFF;                             /* ("Left": no way) */
     cmd.other.kind = cmd.other.sel = cmd.other.n = 0;
     cmd.other.word[0] = '@';
     cmd.other.word[1] = locs[k];

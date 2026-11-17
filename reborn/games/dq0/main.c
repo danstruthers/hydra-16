@@ -1524,13 +1524,8 @@ unsigned char __fastcall__ s_hide (const char* w)
         }
         return 0;
     }
-    if (!*w || (!cmd.other.word[0] && (strstr (cl, " behind ") || strstr (cl, " in ") || strstr (cl, " under ") ||
-        strstr (cl, " among ") || strstr (cl, " beside ") || strstr (cl, " by ")))) {
-        if (*w) {
-            strcpy (cmd.other.word, w);         /* (Behind the table, in the straw: the parser's the thing, or the other; so
-                                                **   kept, walked over to it first) */
-            cmd.obj.word[0] = 0;
-        }
+    if (!*w) {                                  /* (Nothing to hide: the character itself, behind or in the place said,
+                                                **   the parser's other, its locative's: "hide behind the table") */
         w = cmd.other.word;
         if (*w && !strstr ("shadow shadows dark darkness doorway door corner", w) && (HUB->ireq.to = LM_COND, d = things (IO_LOOK | IO_GO, w)) != IR_OK) {
             if (d != IR_GONE) {
@@ -1577,35 +1572,19 @@ again:  HUB->ireq.to = reach == 4 ? IO_DONE : 0;
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The hand said in the command's line (cl: "in my left hand", "in my right hand", "in both hands", "in my other hand",
-** "in my off hand", "in my main hand"; slice 4.1b's), into shand (items.h's IH_*; IH_OTHER, the other one): a thing
-** taken, put, held or worn so made a hold of it, into that hand ("take the torch in my right hand", "put the dagger in
-** my other hand"); and the way and the count the parser made of its words no more (dq0c's meaning takes "left" for a
-** way, "both" for a count: "attack the rat with the dagger in my left hand" no rat to its left) */
+/* The hand said (the parser's: struct cmd's hand, its hand phrase's, "in my left hand", "in both hands", "in my other
+** hand", "in my off hand", "in my main hand"; slice 4.1b's), into shand (items.h's IH_*; IH_OTHER, the other one): a
+** thing taken, put, held or worn so made a hold of it, into that hand ("take the torch in my right hand", "put the
+** dagger in my other hand") */
 #pragma code-name (push, "SW23CODE")
 #pragma rodata-name (push, "SW23RODATA")
 void s_hand_said (void)
 {
-    static const char* const said[6] = { "left hand", "right hand", "both hands", "other hand", "off hand",
-        "main hand" };
-    const char* p;
-    unsigned char k, a = cmd.action, h;
+    unsigned char k = cmd.hand, a = cmd.action, h;
 
-    for (k = 0; k < 6; ++k) {
-        for (p = cl; *p && strnicmp (p, said[k], strlen (said[k])); ++p) {
-        }
-        if (*p) {
-            break;
-        }
-    }
-    if (k == 6) {
-        return;
-    }
     h = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
-    shand = k == 0 ? IH_LEFT : k == 1 ? IH_RIGHT : k == 2 ? IH_BOTH : k == 3 ? IH_OTHER : k == 4 ? h ^ IH_BOTH : h;
-    cmd.dir = 0xFF;
-    cmd.how = 0;
-    cmd.n = 0;
+    shand = k == HN_LEFT ? IH_LEFT : k == HN_RIGHT ? IH_RIGHT : k == HN_BOTH ? IH_BOTH : k == HN_OTHER ? IH_OTHER :
+        k == HN_OFF ? h ^ IH_BOTH : h;
     if (cmd.prep != PR_ON && (a == VB_PUT_OBJECT || a == VB_RETRIEVE_OBJECT || a == VB_EQUIP_OBJECT ||
         a == VB_HANG_OBJECT || a == VB_HOLD_OBJECT)) {  /* (Not "on my left hand": worn there, worn.c's, 2026-11-10) */
         cmd.action = VB_HOLD_OBJECT;
@@ -1830,7 +1809,7 @@ void s_limbs_cmd (void)
 
     if (cmd.action != VB_SWAP_HANDS) {
         intend2 (I_RISE, cmd.action == VB_SIT ? POS_SITTING : cmd.action == VB_LIE_DOWN ? POS_PRONE :
-            cmd.action == VB_STAND ? POS_STANDING : strstr (cl, "kneel") ? POS_KNEELING : POS_CROUCHED, 0);
+            cmd.action == VB_STAND ? POS_STANDING : cmd.aux ? cmd.aux : POS_CROUCHED, 0);   /* (Kneeling: its verb's) */
         return;
     }
     if (cmd.action == VB_SWAP_HANDS) {
@@ -2317,6 +2296,11 @@ signed char __fastcall__ s_cq_cmd (const char* l)
     } else if (cmd.obj.lies != 0xFF && (cmd.obj.lies & CQ_REL)) {
         cmd.obj.lies = (f + cmd.obj.lies) & 7;
     }
+    if (cmd.other.lies <= H_NW) {               /* (The other's too: "ask the dwarf to open the door to my left") */
+        cmd.other.lies = (cmd.other.lies - d) & 7;
+    } else if (cmd.other.lies != 0xFF && (cmd.other.lies & CQ_REL)) {
+        cmd.other.lies = (f + cmd.other.lies) & 7;
+    }
     if (cmd.action == VB_FACE_DIRECTION && (cmd.flags & CF_HALF) && cmd.dir < GO_UP) {
         d = (cmd.dir - f) & 7;
         cmd.dir = d == 6 ? (f + 7) & 7 : d == 2 ? (f + 1) & 7 : cmd.dir;
@@ -2383,8 +2367,8 @@ void __fastcall__ s_command (char* l)
         unknown (A_SENSE);
         return;
     }
-    if (strstr (l, "hand")) {
-        hand_said ();                           /* (A hand said: part 11's, slice 4.1b's) */
+    if (cmd.hand) {
+        hand_said ();                           /* (A hand said, the parser's: part 23's, slice 4.1b's) */
     }
     place_said ();                              /* ("From the floor", "on the ground": sway.c's, overlay 14) */
     if (((cmd.flags & CF_UNSAID) && what_ask ()) || resolve () != RV_ON) {

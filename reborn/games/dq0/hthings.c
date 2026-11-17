@@ -123,8 +123,8 @@ void __fastcall__ s_things_do (unsigned h)
         if (cmd.action == VB_HOLD_OBJECT && grip_go (GM_HOLD | GT_TRY)) {
             break;                              /* ("Hold the goblin": a denizen beside, held, a grapple's) */
         }
-        handle (cmd.aux == IO_DON_WORN ? IO_DON : cmd.aux == IO_RIP && strstr (cl, "wash") ? IO_WASH : cmd.aux,
-            cmd.obj.word,                       /* ("Wash" a cloth washed: rip's verb, its request the word's) */ cmd.other.word[0] || cmd.prep != PR_IN ?
+        handle (cmd.aux == IO_DON_WORN ? IO_DON : cmd.aux,   /* ("Wash" a cloth washed: its own verb's request, IO_WASH) */
+            cmd.obj.word, cmd.other.word[0] || cmd.prep != PR_IN ?
             cmd.other.word : "shaft", cmd.aux == IO_DON_WORN ? DN_WORN : cmd.prep == PR_ON);
     }                                           /* ("Put the dagger down the shaft", the hole: its kind said, no word) */
 }
@@ -444,8 +444,8 @@ unsigned char __fastcall__ o_things_work (unsigned char h)
     switch (h) {
     case H_FILL:                                /* (A light renewed, slice 4.1's: "fill the lantern", "dip the torch in
                                                 **   the oil", the things' IO_FILL; its time, quietly: a timed work) */
-        if (cmd.aux == IO_SHARP || strstr (cl, "sharpen") || strstr (cl, "hone") || strstr (cl, "whet")) {   /* (IO_SHARP:
-                                                **   "use the whetstone", part 29's) */
+        if (cmd.aux == IO_SHARP) {              /* (IO_SHARP: "sharpen", "hone", "whet", the verb's; "use the whetstone",
+                                                **   part 29's) */
             d |= IO_SHARP;                      /* (A blade's words: a light has no edge, the things') */
         }
         worked (othings (IO_FILL | IO_STEPS | IO_GO, cmd.obj.word, cmd.other.word, d));
@@ -458,7 +458,7 @@ unsigned char __fastcall__ o_things_work (unsigned char h)
             look_ov (VB_OBSERVE_THROUGH);       /* (The window put back as it was: this overlay's, returned to) */
             break;
         }
-        action = othings (IO_INSIDE | IO_STEPS | IO_GO, cmd.obj.word, nil, strstr (cl, " on ") ? 4 : 0);   /* (The one
+        action = othings (IO_INSIDE | IO_STEPS | IO_GO, cmd.obj.word, nil, cmd.prep == PR_ON ? 4 : 0);   /* (The one
                                                 **   path for things: out of reach, walked over to first, then again;
                                                 **   "look on the chest", 4: its lid's top, step 6b's) */
         if (action == IR_NONE) {
