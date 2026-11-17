@@ -109,6 +109,14 @@ void __fastcall__ grip_left (unsigned char out);    /* (Part 106) The hold as a 
 void __fastcall__ den_rob (const struct msg* m);    /* (Part 15) The character robbed by body bd, what it takes
                                                 **   put down at m's w1, w2, or in its faction's hoard there, or hidden
                                                 **   there (I_ROB's) */
+unsigned char __fastcall__ den_pry (unsigned n, unsigned char how);    /* (Part 69: wfight.c) Thing n, in another,
+                                                **   reached by body bd by its compartments' rules (how: PR_*): 1, or 0
+                                                **   left; its time on its ready (2026-11-17) */
+#define PR_KNOWN        0x01                    /* (A hidden compartment the character's found reached: an errand's) */
+#define PR_QUIET        0x02                    /* (A lock not forced: an errand's, a robbery unawares) */
+#define PR_TIMED        0x04                    /* (Each opened its two seconds: not a robbery's, its reach's level's) */
+signed char __fastcall__ den_test (unsigned char p, signed char steps);  /* (Part 69) The referee's test of body bd's
+                                                **   own, by its sheet: its grade */
 void __fastcall__ den_fetch (const struct msg* m);  /* (Part 72: wfetch.c) Body bd's errand: a thing fetched taken
                                                 **   up, handed over; a gift taken (I_ROB's a: slice 4.8's) */
 void __fastcall__ den_take (const struct msg* m);   /* (Part 81: wtake.c) Body bd's own take, by the take rule (I_TAKE's: a

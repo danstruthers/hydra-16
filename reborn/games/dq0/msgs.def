@@ -85,7 +85,8 @@ I_LEAVE         < I_DEN
 I_ROUSE         < I_DEN; w1 tenths; w2 whenever         # (Free w1 tenths from now; w2 1, whenever it was free)
 I_DONE          w1 turn; t now                          # (who 0: the turn it's done, the clock then)
 I_TAKE          a alone; w1 x; w2 y; t thing            # (Walked over to it and taken up; a 1, walked over to alone)
-I_TAKE:den      < I_DEN; a want; b unused; w1 x; w2 y; t thing      # (Its wants, TW_*: the world's take rule)
+I_TAKE:den      < I_DEN; a want; b dark; w1 x; w2 y; t thing        # (Its wants, TW_*: the world's take rule; its
+                                                        #   darkvision, squares, what it sees by: 2026-11-17)
 I_STOP          a named@LT_NONE; w1 over                # (The kind named, LT_NONE any; w1 1, a command taking over)
 I_GO_ON         -
 I_ASK           w1 why@TE_STOPPED                       # (TE_ASK_HEARD: a sound the UI heard)

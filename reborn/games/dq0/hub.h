@@ -1162,7 +1162,12 @@ struct actor {
 #define TW_LOOT         0x04                    /*   coins, jewels, a robber's: the world's to choose the first lying in
                                                 **   its reach by the take rule, wfetch.c's; none, the nearest within
                                                 **   four squares told its mind in the hub's dig_t, TW_SEEN | its
-                                                **   offsets, dx + 8 and dy + 8 times 16) */
+                                                **   offsets, dx + 8 and dy + 8 times 16: only what it senses, seen by
+                                                **   light or its darkvision, a line clear between, or underfoot, not
+                                                **   hidden, the user's, 2026-11-17) */
+#define TW_SEARCH       0x08                    /* (And its own search first, a robber's where it last sensed the
+                                                **   character: a minute's, its reach, what's hidden there found by its
+                                                **   sheet, wtake.c's) */
 #define TW_SEEN         0xFE00
 #define TW_ATE          0xFD00                  /* (The hub's dig_t: it's eaten what it held, the world's: its mind's to
                                                 **   know, and clear by an I_TAKE of no wants) */

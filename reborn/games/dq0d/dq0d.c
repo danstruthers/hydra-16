@@ -1108,6 +1108,8 @@ static unsigned afx[NACTORS], afy[NACTORS];
 static unsigned char akeep[NACTORS];
 #define FETCH_TRIED     0x8000
 static unsigned lsx[NACTORS], lsy[NACTORS];     /* (Where each last sensed the character: an ally follows it there) */
+static unsigned char asrch[NACTORS];            /* (Each one's searched there, the character gone: a robber's, take_way's
+                                                **   TW_SEARCH; 0 as it senses it again) */
 #define DRAWN_N         8                       /* (A hostile one drawn on there, its decisions: drawn) */
 static unsigned char drawn[NACTORS];
 static unsigned char intr[NACTORS];             /* (Each one's lair intruded on, not yet left: its attitude fallen) */
@@ -2071,6 +2073,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
     if (sres[k]) {
         lsx[k] = pcx;
         lsy[k] = pcy;
+        asrch[k] = 0;
         drawn[k] = DRAWN_N;
         upto[k] = (unsigned) (now >> 8) + UP_T; /* (Up: not back to sleep a while, part 9's) */
         if (feels (k)) {
@@ -2419,8 +2422,11 @@ unsigned char __fastcall__ s_door_way (unsigned char k)
 ** if there's one, and nothing else changes: the actor goes on with what it decided, its doing and its face kept): a
 ** weapon, a folk denizen with none (its agear's AG_ARMED); food, hungry; coins and jewels, a robber (kinds.txt's ways r).
 ** None in its reach, the world tells it the nearest it sees within four squares (the hub's dig_t, TW_SEEN | its
-** offsets): idle (k's high bit: no step decided), it steps toward it, and asks again beside it.  Not an ally (its
-** errands its own), nor a tunneller at its digging (dig_t its spell's).  Its step, or 0xFF */
+** offsets): idle (k's high bit: no step decided), it steps toward it, and asks again beside it.  What it senses alone,
+** the world's: seen by light or by its darkvision (I_TAKE's b, its kind's), a line clear between, or underfoot; what's
+** hidden found only by its own search (TW_SEARCH: a robber come to where it last sensed the character, the character
+** gone, searches there once, a minute's; the user's, 2026-11-17).  Not an ally (its errands its own), nor a tunneller
+** at its digging (dig_t its spell's).  Its step, or 0xFF */
 unsigned char __fastcall__ s_take_way (unsigned char k)
 {
     unsigned char want = 0, d, idle = k & 0x80;
@@ -2478,6 +2484,14 @@ unsigned char __fastcall__ s_take_way (unsigned char k)
     if (!want) {
         return 0xFF;
     }
+    if ((want & TW_LOOT) && !asrch[k] && !sres[k] && (lsx[k] | lsy[k]) && apart (a.x - lsx[k], a.y - lsy[k]) <= 1) {
+        asrch[k] = 1;                           /* (A robber come to where it last sensed the character, the character
+                                                **   gone: it searches there, its own (the user's, 2026-11-17: what's
+                                                **   hidden found only so), once till it senses it again; the world's,
+                                                **   a minute) */
+        want |= TW_SEARCH;
+        goto ask;
+    }
     if (idle && w >> 8 == TW_SEEN >> 8) {       /* (One seen out of its reach, the world's: to it) */
         x = a.x + (w & 15) - 8;
         y = a.y + (w >> 4 & 15) - 8;
@@ -2497,7 +2511,8 @@ unsigned char __fastcall__ s_take_way (unsigned char k)
 #undef q
 ask:
     I_TAKE_WANT (im) = want;
-    I_TAKE_UNUSED (im) = 0;
+    I_TAKE_DARK (im) = K.dark;                  /* (What it sees by in the dark, its kind's: the world's to know what it
+                                                **   sees, 2026-11-17) */
     I_TAKE_THING (im) = 0;
     I_TAKE_X (im) = a.x;
     I_TAKE_Y (im) = a.y;
@@ -3555,6 +3570,10 @@ unsigned char __fastcall__ s_draw_on (unsigned char k)
     --drawn[k];
     refx = lsx[k];
     refy = lsy[k];
+    if ((K_HELP (K) & H_ROBS) && !asrch[k] && apart (a.x - refx, a.y - refy) <= 1) {
+        aloot[k] = NOW_T;                       /* (A robber there, the character gone: it searches as it decides, take_way's
+                                                **   TW_SEARCH, 2026-11-17) */
+    }
     return step_for (k, K.flags & K_LAIR ? 2 : 2 * K.range + 8, S_TOWARD);   /* (Not far from its lair: one that
                                                 **   keeps to it, a step or two) */
 }
@@ -5703,11 +5722,12 @@ static unsigned char pway[NACTORS];            /* (Each one's room on its rounds
 ** akeep, aday, upto, aact, enlist_near's); stq its stay's square, its stay from now whatever it holds (stn's); atx, aty
 ** its day's place as its day's first asked (aday's, at once); the ways' bank's act[] by the denizen's number (wfind's);
 ** the rest here, as a new entry's: aroute (no way, no hold), aloot (looked for as it first decides), fooled, lstep,
-** sres, slk, sax, say (sensed as it first decides), steps, stalk, shat, drunk, afx, afy, drawn, sniffed, atry, pway.
-** An errand isn't carried with it (afetch's, enlist_near's): a door's, its square not in its record, following again */
+** sres, slk, sax, say (sensed as it first decides), steps, stalk, shat, drunk, afx, afy, drawn, sniffed, atry, pway,
+** asrch.  An errand isn't carried with it (afetch's, enlist_near's): a door's, its square not in its record, following
+** again */
 #pragma code-name (push, "SW4CODE")
 #pragma rodata-name (push, "SW4RODATA")
-static unsigned char* const fresh_c[] = { aroute, fooled, lstep, sres, slk, steps, stalk, shat, drawn, atry, pway };
+static unsigned char* const fresh_c[] = { aroute, fooled, lstep, sres, slk, steps, stalk, shat, drawn, atry, pway, asrch };
 static unsigned* const fresh_u[] = { sax, say, afx, afy, drunk };
 #pragma static-locals (push, on)
 static void __fastcall__ fresh (unsigned char k)

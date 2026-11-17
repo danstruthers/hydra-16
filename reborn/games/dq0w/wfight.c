@@ -542,9 +542,98 @@ static unsigned char mine (void)
     return p->where == IW_ACTOR && !p->x;
 }
 
+extern struct comp crow;                        /* (things.c's, the main RAM's: a compartment's row, comp_of's) */
+unsigned char __fastcall__ icomp (unsigned i);  /* (things.c's: thing i's compartment in what holds it, its row in crow) */
+
+/* The referee's test of body bd's own (by its sheet), for p, the steps the worse: its grade (wtake.c's search's too,
+** its stub's) */
+signed char __fastcall__ s_den_test (unsigned char p, signed char steps)
+{
+    struct req* r;
+    signed char g;
+
+    hub_map (0);
+    r = &HUB->slot[SLOT_WORLD];
+    r->kind = RS_TEST;
+    r->actor = bk + 1;
+    RS_TEST_PURPOSE (*r) = p;
+    RS_TEST_HOW (*r) = 0;
+    RS_TEST_STEPS (*r) = steps;
+    r = hub_ask (SLOT_WORLD);
+    g = RS_TEST_GRADE (*r);
+    r->state = REQ_FREE;
+    return g;
+}
+
+/* Thing n, in another, reached by body bd (its reach respects compartments as the character's does, the user's,
+** 2026-11-17: a robbery's took from any, the take rule's reached through a closed lid): each compartment on its way
+** out, a hidden one none of its (a robbery's no search; PR_KNOWN, an errand's, one the character's found is); a
+** closed one opened (PR_TIMED: two seconds, as the character's; a robbery's its reach's level, as it was); a locked one
+** unlocked first by a key of its own that fits (on it, or in its pouch: three seconds), else, but PR_QUIET (a robbery
+** unawares: the noise; an errand's), forced (the character's own test of a lid's lock, by its sheet: ten seconds;
+** burst), else left.  1 reached, 0 left; its time on bd's ready.  The robbery's, and the take rule's (wtake.c's, its
+** stub's) */
+unsigned char __fastcall__ s_den_pry (unsigned n, unsigned char how)
+{
+    struct item* q;
+    unsigned c, h, i, j, id;
+    unsigned char cc, b;
+
+    for (c = n; item_at (c)->where == IW_ITEM; c = h) {
+        h = item_at (c)->x;
+        cc = icomp (c);                         /* (Its compartment, its row in crow) */
+        q = item_at (h);
+        if (cc && (how & PR_KNOWN ? CS_UNSEEN (crow.noun, q->fuel, cc) : crow.noun & CC_HIDDEN)) {
+            return 0;
+        }
+        if (!(q->shut & IS_SHUT_C (cc))) {
+            continue;
+        }
+        if (cc ? q->fuel & CS_AT (cc, CS_LOCKED) : q->shut & IS_LOCKED) {
+            id = q->id;
+            b = q->mat == MT_WOOD ? 0 : 2;
+            b += q->quality / 3;                /* (Forcing's steps, the character's: wood or not, how well made) */
+            for (i = 0; bd.did && (i = items (i, IN_DEN | IN_ITEM, 0)) != 0; ) {
+                if (ip->kind != KI_KEY || (ip->size | ip->thick << 8) != id) {
+                    continue;
+                }
+                for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {
+                }
+                if (item_at (j)->where == IW_DEN && ip->owner == (unsigned char) bd.did && ip->hide == bd.did >> 8) {
+                    break;                      /* (Its own key that fits, on it or in its pouch: HOUSE.md's keys that
+                                                **   fit) */
+                }
+            }
+            if (i) {
+                bd.ready += 30;
+                b = 0;
+            } else if (how & PR_QUIET) {
+                return 0;
+            } else {
+                bd.ready += 100;
+                if (s_den_test (P_FORCE, -(signed char) b) <= 0) {
+                    return 0;                   /* (Held: left, locked) */
+                }
+                b = 1;
+            }
+            q = item_at (h);
+            if (cc) {
+                q->fuel = (q->fuel & ~CS_AT (cc, CS_LOCKED)) | (b ? CS_AT (cc, CS_BURST) : 0);
+            } else {
+                q->shut = (q->shut & ~IS_LOCKED) | (b ? IS_BURST : 0);
+            }
+        }
+        if (how & PR_TIMED) {
+            bd.ready += 20;
+        }
+        item_at (h)->shut &= ~IS_SHUT_C (cc);
+    }
+    return 1;
+}
+
 /* The character robbed by body bd (its intent, I_ROB: part 14's; a robber's, kinds.txt's ways r, the character
 ** helpless beside it): what it holds (but a light lit: the robber leaves it its light) and its pennies (wherever it
-** keeps them), taken off to x, y (the robber's lair's home square, on its stratum; or, that square not to be had,
+** keeps them that it can get into, by their compartments' rules: den_pry's, 2026-11-17), taken off to x, y (the robber's lair's home square, on its stratum; or, that square not to be had,
 ** where the robber stands) and put down there, a stash to be found; the referee told at once what's to hand now and
 ** the load left (RS_EQUIP 2, as the UI's to_hand tells it a thing handled: the keys of the tools it still carries, each
 ** after its mark and with its quality, things.c's tools; their weight, weight_in's: the user's, 2026-10-22, "Weight
@@ -588,8 +677,9 @@ void __fastcall__ s_den_rob (const struct msg* q)
     for (n = 0, i = 0; !(pur & RB_CAUGHT) && (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
         kind = ip->kind;
         f = ip->flags;
-        if (!mine () || (kind != KI_PENNIES && kind != KI_FARTHINGS && kind != KI_CROWNS && (pur || (f & (I_HELD | I_LIT)) != I_HELD))) {
-            continue;
+        if (!mine () || (kind != KI_PENNIES && kind != KI_FARTHINGS && kind != KI_CROWNS && (pur || (f & (I_HELD | I_LIT)) != I_HELD)) ||
+            !s_den_pry (i, pur ? PR_QUIET : 0)) {
+            continue;                           /* (Not its own, or not wanted; in what it can't get into: left) */
         }
         reach_from (i);                         /* (Its reach, the robber's: HOUSE.md's, every actor's) */
         p = item_at (i);

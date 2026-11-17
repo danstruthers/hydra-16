@@ -1103,6 +1103,112 @@ module.exports = {
       sdcard: true
     },
     {
+      // (Only what it's found: the user's, 2026-11-17; GAME-CRITIQUE.md's 3.1 and E4)
+      name: 'dq0denfound', outfit: true, near: ['denizens'], what: "Dingus Quest Zero's denizens taking only what they've found (the user's, 2026-11-17: \"Denizens find hidden things only by a search of their own, by skill and time, where they can see or feel the place; what they haven't found they don't take\", and follow the character's compartment rules; GAME-CRITIQUE.md's 3.1: a robber took what the character hid, through walls, in the dark), by the item store's records, the hub's dig_t (what a denizen's take saw, told its mind) and the words: at seed 1 (dq0robcoins' wary bandits, robbers by their kind; the start's cell lit by its sconce) the crowns the character hid (a minute's work, its Conceal test) at its feet, a bandit put beside it: not taken, still hidden; the crowns let fall by the door, shut, a bandit put beyond it, two squares off: not seen through the shut door (no TW_SEEN told its mind), not taken; the same with the door open: seen (TW_SEEN told its mind as its look comes due; it shuts the door, the character beyond it); the crowns put in the pouch and the pouch tied shut, the character senseless and a bandit beside it engaged: robbed, the pouch untied for them (a robbery's reach by the compartments' rules); and the crowns hidden at the start (their hiding made the easiest), the character gone through the door, shut, its torch out, hiding itself: a bandit put on the crowns' square, hostile, drawn on to where it last sensed the character there, searches it (its own search, a minute's, by its sheet: the referee's P_SEARCH, a creature's by its Dexterity; the dice's offset 17, one it passes) and finds them, taken up",
+      init: 't_rc', cycles: 6000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k crowns',
+        'hide the crowns', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit',
+        'mkdir /ram/h', 'cp /ram/g/d1/theme.txt /ram/h/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k crowns', 'open the door', 'close the door', 'drop the crowns', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit',
+        'mkdir /ram/i', 'cp /ram/g/d1/theme.txt /ram/i/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/i -k crowns', 'close the door', 'open the door', 'drop the crowns', 'wait', 'wait', 'quit',
+        'mkdir /ram/j', 'cp /ram/g/d1/theme.txt /ram/j/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/j -k crowns', 'put the crowns in the pouch', 'close the pouch', 'i', 'wait', 'wait', 'i', 'quit',
+        'mkdir /ram/k', 'cp /ram/g/d1/theme.txt /ram/k/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/k -k crowns -R 17',
+        'hide the crowns', 'close the door', 'open the door', 'go through it', 'turn around', 'close the door ahead', 'put out the torch', 'hide',
+        'wait', 'wait 1 minute', 'wait 1 minute', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        m.found = { put: {}, digt: {} };
+        const lbl = () => fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+        // (A bandit, the first actor of them, put on square x, y: its record too; the rest sent off; unhidden, standing)
+        const put = (h, L, K, at, named, x, y, how) => {
+          const u16 = o => h[o] | h[o + 1] << 8, w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
+          if (k === undefined) return null;
+          dq0Alone(m, h, L, K, at, k);
+          const sn = h[L.pcSn], o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);
+          w16(o + L.aX, x); w16(o + L.aY, y); h[o + L.aSn] = sn; h[o + L.aDoing] = 0; h[o + L.aState] = 1; h[o + L.aPos] = K.POS_STANDING;
+          for (let i = 0; i < 4; i++) h[o + L.aReady + i] = h[L.hubNow + i];
+          R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8; R.mem[q + R.SN] = sn;
+          const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl())[1], 16), ram = m.taskRam[h[12 + 2]];
+          ram[ad('aloot') + k] = ram[ad('now') + 1];   // (Its look for things it wants due as it next decides: NOW_T)
+          if (how) how(o, R, q, k);
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+          return { k, did: u16(o + L.aDid), at: [x, y], ready: u16(o + L.aReady) };
+        };
+        // (Seed 1's: beyond the door the character faces, beside it, two squares off)
+        const beyond = g => (h, L, K, at, named) => {
+          const u16 = o => h[o] | h[o + 1] << 8, f = h[L.pcFace], dx = [0, 1, 1, 1, 0, -1, -1, -1][f], dy = [-1, -1, 0, 1, 1, 1, 0, -1][f];
+          m.found.put[g] = put(h, L, K, at, named, u16(L.pcX) + 2 * dx, u16(L.pcY) + 2 * dy);
+        };
+        // (Game 5's: on the crowns' square, hostile, drawn on to it: where it last sensed the character)
+        const searcher = (h, L, K, at, named) => {
+          const H = m.found.hid;
+          m.found.who = [...Array(L.nactors).keys()].map(j => [named(j), h[at(j) + L.aState], h[at(j) + L.aSn]]);
+          if (!H) return;
+          m.found.put[5] = put(h, L, K, at, named, H[0], H[1], (o, R, q, k) => {
+            h[o + L.aAttitude] = R.mem[q + R.ATTITUDE] = K.AT_HOSTILE;
+            const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl())[1], 16), ram = m.taskRam[h[12 + 2]];
+            ram[ad('drawn') + k] = 8; ram[ad('sres') + k] = 0; ram[ad('asrch') + k] = 0;
+            ram[ad('lsx') + 2 * k] = H[0] & 255; ram[ad('lsx') + 2 * k + 1] = H[0] >> 8;
+            ram[ad('lsy') + 2 * k] = H[1] & 255; ram[ad('lsy') + 2 * k + 1] = H[1] >> 8;
+          });
+        };
+        // (Game 5's: the crowns hidden at the character's feet made the easiest to find, hide 0, as it sets out)
+        const easy = (h, L, K) => {
+          const u16 = o => h[o] | h[o + 1] << 8, x = u16(L.pcX), y = u16(L.pcY), sn = h[L.pcSn], per = Math.floor(0x2000 / L.itemSize);
+          m.found.hid = [x, y, sn];
+          for (let i = 1; i < L.nitems; i++) {
+            const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+            if (b && b[o + L.iKind] === K.KI_CROWNS && b[o + L.iWhere] === K.IW_SQUARE && b[o + L.iSn] === sn && u16o(b, o + L.iX) === x && u16o(b, o + L.iY) === y &&
+              (b[o + L.iFlags] & DQ0_I.HIDDEN)) { b[o + L.iHide] = 0; m.found.easy = i; }
+          }
+        };
+        const u16o = (b, o) => b[o] | b[o + 1] << 8;
+        // (The bandit's dig_t, what its take saw told its mind, as each line's typed: game 2's)
+        const digt = g => (h, L) => { const P = m.found.put[g]; if (P) (m.found.digt[g] = m.found.digt[g] || []).push(h[L.digT + 2 * P.k] | h[L.digT + 2 * P.k + 1] << 8); };
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, name: 'bandit', beside: 'face' },
+          { g: 2, line: 'wait', n: 1, call: beyond(2) }, ...[2, 3, 4, 5, 6].map(n => ({ g: 2, line: 'wait', n, call: digt(2) })), { g: 2, line: 'quit', n: 1, call: digt(2) },
+          { g: 3, line: 'wait', n: 1, call: beyond(3) }, { g: 3, line: 'wait', n: 2, call: digt(3) }, { g: 3, line: 'quit', n: 1, call: digt(3) },
+          { g: 4, line: 'wait', n: 1, name: 'bandit', beside: 'face', engage: true }, { g: 4, line: 'wait', n: 1, call: () => dq0PcShock(m, 3000) },
+          { g: 5, line: 'close the door', n: 1, call: easy }, { g: 5, line: 'wait', n: 1, call: searcher }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), s = dq0Story(out), G = s.split('% dq0 ').slice(1), f = [], F = m.found;
+        if (G.length !== 5) return ['not five games: ' + G.length];
+        const quit = g => T.filter(t => t.line === 'quit')[g], crowns = t => t && t.at ? t.at.items.filter(i => i.name === 'crowns') : [];
+        const picks = g => T.flatMap(t => [...t.events, ...t.dens]).filter(e => e.game === g && e.kind === 'E_BEAT' && e.beat === 'WB_PICKS');
+        // (Hidden at its feet, a bandit beside it: not taken, still hidden)
+        const c1 = crowns(quit(0));
+        if (!c1.length || c1.some(i => i.where !== 'IW_SQUARE' || !(i.flags & DQ0_I.HIDDEN))) f.push('the hidden crowns not lying hidden still: ' + JSON.stringify(c1.map(i => [i.where, i.flags, i.did])));
+        if (picks(0).length) f.push('a bandit took up something beside the hidden crowns: ' + JSON.stringify(picks(0)));
+        // (Beyond the shut door: unseen, nothing told its mind, not taken; the door open: seen, taken)
+        if (!F.put[2] || !F.put[3]) f.push('a bandit not put beyond the door: ' + JSON.stringify(F.put));
+        const c2 = crowns(quit(1)), c3 = crowns(quit(2));
+        if ((F.digt[2] || []).some(w => w >> 8 === 0xFE)) f.push('the crowns beyond the shut door seen (its take\'s TW_SEEN): ' + JSON.stringify(F.digt[2]));
+        if (!c2.length || c2.some(i => i.where !== 'IW_SQUARE')) f.push('the crowns beyond the shut door taken: ' + JSON.stringify(c2.map(i => [i.where, i.did])));
+        if (!(F.digt[3] || []).some(w => w >> 8 === 0xFE)) f.push('the crowns through the open door not seen (no TW_SEEN told its mind): ' + JSON.stringify(F.digt[3]));
+        // (The pouch tied shut: robbed, the pouch untied for its crowns)
+        const i1 = T.filter(t => t.line === 'i')[0], i2 = T.filter(t => t.line === 'i')[1];
+        const shut = (t, n) => { const it = t && t.after ? dq0Carried(t.after).find(i => i.name === n) : null; return it ? it.shut & 1 : -1; };
+        const inPouch = i1 && i1.after && dq0Carried(i1.after).some(i => i.name === 'crowns' && i.where === 'IW_ITEM' && (i1.after.items.find(j => j.n === i.x) || {}).name === 'pouch');
+        if (!inPouch || shut(i1, 'pouch') !== 1) f.push('the crowns not in the pouch tied shut as it began: ' + JSON.stringify(i1 && i1.after && dq0Carried(i1.after).map(i => [i.name, i.where, i.shut])));
+        if (!/goes through your things/.test(G[3])) f.push('not robbed');
+        if (i2 && i2.after && dq0Carried(i2.after).some(i => i.name === 'crowns')) f.push('robbed, its crowns left in the pouch');
+        if (shut(i2, 'pouch') === 1) f.push('robbed of the crowns in the pouch, the pouch still tied shut');
+        // (Game 5's search: the bandit drawn on to where it last sensed the character finds the hidden crowns, its own search)
+        const P = F.put[5], c5 = crowns(quit(4));
+        if (!F.easy) f.push('the hidden crowns not found in the store at the hiding square: ' + JSON.stringify(F.hid));
+        if (!P) f.push('no bandit put on the crowns\' square: ' + JSON.stringify(F.who));
+        else if (!c5.some(i => i.n === F.easy && i.where === 'IW_DEN' && i.did === P.did)) f.push('the hidden crowns not found by the bandit\'s search: ' + JSON.stringify(c5.map(i => [i.n, i.where, i.did, i.flags])));
+        const tests5 = T.filter(t => t.game === 4).flatMap(t => t.replies).filter(r => r.req === 'slot0' && P && r.actor === P.k + 1).map(r => [r.rs, r.a, r.steps, r.grade]);
+        const { K } = m.dq0.layout(), PS = K.P_SEARCH === undefined ? 3 : K.P_SEARCH;
+        if (P && !tests5.some(r => r[0] === 'RS_TEST' && r[1] === PS)) f.push('no search of the bandit\'s own (the referee\'s P_SEARCH by its sheet): ' + JSON.stringify(tests5));
+        this.notes = ['the bandit\'s tests in the search\'s game: ' + JSON.stringify(tests5), 'dig_t beyond the shut door: ' + JSON.stringify(F.digt[2]) + ', the open door: ' + JSON.stringify(F.digt[3])];
+        return f;
+      },
+      sdcard: true
+    },
+    {
       // (The diagonal's own: a denizen's steps' time is the world's step_cost, the character's, 2026-11-17)
       name: 'dq0dendiag', meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's diagonal step for every actor (GAME-CRITIQUE.md's E4, the user's of 2026-11-17: \"the 7/5 diagonal for every actor\"; one step_cost, dq0w.c's, the character's and a denizen's, wbody.c's), by the time an actor's steps take (its ready, the hub's, as each line's typed) and the squares it steps to (its E_DEN DE_MOVEDs): at seed 3, every built passage on the diagonal (dq0 -A, dq0slant's), the character gone east from the kitchen along the passage that bends away northeast; a denizen put at the kitchen's door the character set out from, hostile, drawn on to where it stands (the minds' drawn and last-sensed square poked), the others sent off: its steps up the passage on the diagonal each seven-fifths of a step on the flat (its jog's 10 tenths, 14), where they were a straight step's",
       init: 't_rc', cycles: 2500e6,
