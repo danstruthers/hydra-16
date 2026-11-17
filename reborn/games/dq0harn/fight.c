@@ -246,6 +246,7 @@ void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, uns
     char* w, unsigned char stop)
 {
     unsigned char aspect = aspect_of (s, s == &A ? RS_ATTACK_ASPECT (*R) : AS_BEST), by = dealt (s), loc, f, p, sev, il;
+    unsigned char th = t->b && (t->b->flags & BF_THEY) ? BY_THEIR : 0;   /* (A person's "their", 2026-11-17) */
     harn_char* c = t->c;
     harn_injury* j;
     int impact;
@@ -255,8 +256,7 @@ void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, uns
     p = guard (t, loc, aspect);
     if (impact - p < 1) {                       /* (Stopped by its armour, or no harm) */
         if (impact >= 1 && arm[0]) {
-            strcpy (w, !t->who ? "your " : t->b && (t->b->flags & BF_THEY) ? "their " : "its ");   /* (A person's "their",
-                                                **   2026-11-17) */
+            strcpy (w, !t->who ? "your " : th ? "their " : "its ");
             strcat (w, arm);
             RS_ATTACK_AF (*R) |= stop;
         }
@@ -279,7 +279,7 @@ void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, uns
             f |= c->state == HARN_DEAD ? HARN_W_DEAD : 0;
         }
     }
-    wound_words (w, sev, loc, aspect, il, t->who ? by | BY_ITS | (t->b && (t->b->flags & BF_THEY) ? BY_THEIR : 0) : by);
+    wound_words (w, sev, loc, aspect, il, t->who ? by | BY_ITS | th : by);
     if (f & HARN_W_DEAD) {
         o_effect (t->who, X_DEATH, C_DEAD, HARN_KILL, loc, aspect);
         return;
