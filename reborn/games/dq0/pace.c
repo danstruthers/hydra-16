@@ -52,7 +52,8 @@ static void split (void)
     }
 }
 
-/* Which of the words (0-ended, then an empty one) is among the line's: its place in the line plus 1, or 0 */
+/* Which of the words (0-ended, then an empty one) is among the line's: its place in the line plus 1, or 0 (each
+** compared only where its first letter's a word's: a step's dozen lists, some 160 compares, 2026-11-17) */
 static unsigned char __fastcall__ any (const char* list)
 {
     unsigned char i;
@@ -60,7 +61,7 @@ static unsigned char __fastcall__ any (const char* list)
 
     for (p = list; *p; p += strlen (p) + 1) {
         for (i = 0; i < nw; ++i) {
-            if (!strcmp (w[i], p)) {
+            if (*w[i] == *p && !strcmp (w[i], p)) {
                 return i + 1;
             }
         }
@@ -70,16 +71,14 @@ static unsigned char __fastcall__ any (const char* list)
 
 /* The paces' words (the last said goes: "walk slowly"); GA_SAID, a pace said outright, a faster one than feeling
 ** the way: in the dark, gone at there (the world's, its dangers: HOUSE.md's walking in the dark), as a jog, a run and a
-** sprint are; "walk" alone, there, the cautious walk */
-static const struct { char w[11]; unsigned char g; } paces[] = {
-    { "creep", GA_CREEP }, { "creeping", GA_CREEP }, { "sneak", GA_CREEP }, { "sneaking", GA_CREEP },
-    { "tiptoe", GA_CREEP }, { "crawl", GA_CREEP | GA_CRAWL }, { "hop", GA_WALK | GA_HOP },
-    { "quietly", GA_CREEP }, { "stealthily", GA_CREEP },
-    { "slowly", GA_SLOW }, { "slow", GA_SLOW }, { "walk", GA_WALK }, { "walking", GA_WALK },
-    { "normal", GA_WALK | GA_SAID }, { "normally", GA_WALK | GA_SAID }, { "quickly", GA_WALK | GA_SAID },
-    { "jog", GA_JOG }, { "jogging", GA_JOG }, { "trot", GA_JOG }, { "briskly", GA_JOG },
-    { "run", GA_RUN }, { "running", GA_RUN }, { "hurry", GA_RUN }, { "sprint", GA_SPRINT }, { "sprinting", GA_SPRINT },
-    { "dash", GA_SPRINT },
+** sprint are; "walk" alone, there, the cautious walk.  The words a list, each one's pace in its place in paceg (a
+** table of 12-byte rows till 2026-11-17: a row's place a multiplication each compare) */
+static const char pacew[] = "creep\0creeping\0sneak\0sneaking\0tiptoe\0crawl\0hop\0quietly\0stealthily\0slowly\0slow\0walk\0"
+    "walking\0normal\0normally\0quickly\0jog\0jogging\0trot\0briskly\0run\0running\0hurry\0sprint\0sprinting\0dash\0";
+static const unsigned char paceg[] = {
+    GA_CREEP, GA_CREEP, GA_CREEP, GA_CREEP, GA_CREEP, GA_CREEP | GA_CRAWL, GA_WALK | GA_HOP, GA_CREEP, GA_CREEP,
+    GA_SLOW, GA_SLOW, GA_WALK, GA_WALK, GA_WALK | GA_SAID, GA_WALK | GA_SAID, GA_WALK | GA_SAID,
+    GA_JOG, GA_JOG, GA_JOG, GA_JOG, GA_RUN, GA_RUN, GA_RUN, GA_SPRINT, GA_SPRINT, GA_SPRINT
 };
 
 /* A count's words: one ... ten (a, an: one), or figures; 0 none */
@@ -95,7 +94,7 @@ static unsigned char __fastcall__ count_of (const char* s)
         return k ? k : 1;
     }
     for (p = counts, k = 1; *p; p += strlen (p) + 1, ++k) {
-        if (!strcmp (s, p)) {
+        if (*s == *p && !strcmp (s, p)) {
             return k == 1 ? 1 : k - 1;
         }
     }
@@ -125,6 +124,7 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
 {
     unsigned char i, k, g = 0xFF, wa, st, n = 0, keep, d, said;
     unsigned mw;
+    const char* p;
 
     strncpy (b, l, INMAX);
     split ();
@@ -160,9 +160,9 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
         return 1;
     }
     for (i = 0; i < nw; ++i) {
-        for (k = 0; k < sizeof paces / sizeof paces[0]; ++k) {
-            if (!strcmp (w[i], paces[k].w)) {
-                g = paces[k].g;
+        for (p = pacew, k = 0; *p; p += strlen (p) + 1, ++k) {
+            if (*p == *w[i] && !strcmp (w[i], p)) {
+                g = paceg[k];
             }
         }
         if ((d = count_of (w[i])) == 0) {

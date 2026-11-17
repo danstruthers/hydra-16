@@ -886,7 +886,8 @@ void __fastcall__ o_dots (unsigned char k)
 unsigned char fored;                            /* (The tasks in the foreground: FS_*, fore_sync's) */
 static unsigned char iqh, owed, obeat;          /* (The intents' ring as a line's taken; an answer owed, main's;
                                                 **   the world's heartbeat as it was sent) */
-static unsigned char stirs;                     /* (A denizen's stir held while a line's answered: events', main's) */
+unsigned char stir_held;                        /* (A denizen's stir held while a line's answered: events', main's; or
+                                                **   its keys come as its words were made, dens.c's) */
 static void fore_sync (void)
 {
     static unsigned char f;
@@ -1110,37 +1111,36 @@ static unsigned char events (void)          /* (How many there were) */
             }
             break;
         case E_VIEW:
-            if (m.who == 0 && sight_same ((unsigned char) E_VIEW_WHY (m))) {
+            k = (unsigned char) E_VIEW_WHY (m);
+            if (m.who || (k < V_STIR && sight_same (k))) {
                 break;                          /* (A light lit or put out, but the place seen as at the last look, by a
                                                 **   light of the same name: a torch lit from another, one of two put out
                                                 **   or burnt out, a candle lit by a torch; no look, its own words said, the
-                                                **   user's, 2026-11-14: look.c's) */
+                                                **   user's, 2026-11-14: look.c's.  Asked of a light's change and a turn's
+                                                **   look alone, the rest never the same (its part 8's copy not in a stir's
+                                                **   way, nor a turn's or a step's first words', 2026-11-17)) */
             }
-            if (m.who == 0 && out_told) {       /* (Senseless: nothing seen; a look owed (its light changed, out_told 2) as
+            if (out_told) {                     /* (Senseless: nothing seen; a look owed (its light changed, out_told 2) as
                                                 **   it comes round, numb's) */
-                out_told |= E_VIEW_WHY (m) != V_STIR ? 2 : 0;
-            } else if (m.who == 0) {
-                if (E_VIEW_WHY (m) == V_STIR) {
-                    if ((t_next () || inn || HUB->ui_cmd) && (HUB->tpr || !busy)) {
-                        stirs = 1;              /* (A line typed or its answer owed, at the real paces: told after its answer, main's,
+                out_told |= k != V_STIR ? 2 : 0;
+            } else if (k == V_STIR) {
+                if ((t_next () || inn || HUB->ui_cmd) && (HUB->tpr || !busy)) {
+                    stir_held = 1;              /* (A line typed or its answer owed, at the real paces: told after its answer, main's,
                                                 **   the background's news not in its way, 2026-10-30; or one being
                                                 **   typed: told as it's entered and answered, or let go, its echo
                                                 **   and its Enter not behind the stir's words.  At the turns pace a line
                                                 **   typed or being typed, or just taken, nothing going: its answer's own, so what it says isn't told twice,
-                                                **   the stir's words after its echo and its look after them: 2026-11-04) */
-                    } else {
-                        stir ();                /* (A denizen it sees moved) */
-                    }
-                    break;
+                                                **   the stir's words after its echo and its look after them: 2026-11-04.
+                                                **   A line's keys come as its words are made: held too, dens.c's) */
+                } else {
+                    stir ();                    /* (A denizen it sees moved) */
                 }
-                if ((E_VIEW_WHY (m) & ~1) == V_FACING) {  /* (A turn's first words, as it's begun: out at once, its look
+            } else if ((k & ~1) == V_FACING) {  /* (A turn's first words, as it's begun: out at once, its look
                                                 **   after, V_TURNED's; a step's or a walk's, V_SETOFF's: b its way) */
-                    turned_says (E_VIEW_WAY (m));
-                    t_flush ();
-                    break;
-                }
-                look ((unsigned char) E_VIEW_WHY (m) & (V_LOOKED | V_TRACED));  /* (A look one way's own words: way.c's;
-                                                **   the traces read, words.c's) */
+                turned_says (E_VIEW_WAY (m));
+                t_flush ();
+            } else {
+                look (k & (V_LOOKED | V_TRACED));   /* (A look one way's own words: way.c's; the traces read, words.c's) */
             }
             break;
         case E_TASK:                            /* (The long task's: stopped, asked, refused; slice 4.0's) */
@@ -3154,8 +3154,13 @@ int main (int argc, char* argv[])
                     names_den ();               /* (A denizen named: its name recorded) */
                 }
             }
-            cq_drop ();                         /* (The command parser's reply, if the line wasn't a command's: not
+            if (cq_st == CQ_OUT) {
+                cq_drop ();                     /* (The command parser's reply, if the line wasn't a command's: not
                                                 **   left there) */
+            }
+            cq_st = 0;                          /* (Taken already, cq_cmd's: let go here, cq_drop's part 2 not copied
+                                                **   in for it after a part's own command, the pace's, its intent's
+                                                **   answer to come, 2026-11-17) */
             held = 0;
             quick = 25;                         /* (Its answer looked for twice as often, a quarter second) */
             if (!busy) {
@@ -3170,11 +3175,14 @@ int main (int argc, char* argv[])
                                                 **   give way till the character's news comes, events'; an intent
                                                 **   sent, the character not busy, its answer owed too: a step that
                                                 **   can't be taken, the world's words) */
-        } else {
-            ready ();                           /* (The commands' part back, if another's in) */
+        } else if (!(fored & FS_CMD)) {
+            ready ();                           /* (The commands' part back, if another's in; not while its
+                                                **   answer's owed at the real paces (fored's FS_CMD, ui_cmd's): its copy
+                                                **   not the world's time as it works the answer out, nor in the way of
+                                                **   its first news's part, 2026-11-17) */
         }
-        if (stirs && !inn && !HUB->ui_cmd) {
-            stirs = 0;
+        if (stir_held && !inn && !HUB->ui_cmd) {
+            stir_held = 0;
             t_flush ();                         /* (Its answer out, not waiting on these words) */
             stir ();                            /* (A stir held while the line was typed and answered: told now, its
                                                 **   answer begun, ui_cmd's) */

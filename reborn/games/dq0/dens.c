@@ -229,7 +229,11 @@ static void stirred (void)
 /* The denizens it sees, as one comes into sight, goes from it, or does something else (the world's V_STIR: into
 ** lb): what's changed since they were told; "" if nothing has.  "Something stirs. A giant rat is ahead, 10 feet away,
 ** coming towards you."; "Something stirs. The giant rat to your left is gone from sight."; "Nothing stirs in sight
-** now." */
+** now."  A line's keys come as they were made (at the real paces, or the character free: main's events' rule): none,
+** held (main.c's stir_held: told after the line's answer), not kept as told (2026-11-17: the line's echo and its
+** Enter not behind the stir's words, the user's D17); and none made if keys are there already, or one's held (its
+** words made as it's told, with all that's changed: the next stir's in the same pass, or the held one told at the
+** pass's end, the keys not read yet, made again for nothing) */
 void o_stir_words (void)
 {
     unsigned char i, k;
@@ -237,6 +241,10 @@ void o_stir_words (void)
     struct named e;
 
     *(lbe = lb) = 0;
+    if (stir_held || ((fored || !busy) && t_haskey ())) {
+        stir_held = 1;
+        return;
+    }
     lbn = 0;
     stirs = 0;
     group ();
@@ -296,6 +304,11 @@ void o_stir_words (void)
         stirred ();
         add (" ");
         den_list (0, LF_HEARD << 8, 0, 0);
+    }
+    if ((fored || !busy) && t_haskey ()) {
+        stir_held = 1;
+        *(lbe = lb) = 0;
+        return;
     }
     keep (nnow);
 }

@@ -6271,9 +6271,11 @@ unsigned char pc_waited;                        /* (A wait's end, its eyes and t
 
 /* An intent carried out, the UI's: a step, a walk, a climb (each answered at once: the main RAM's); a turn, a wait
 ** and the quit part 53's (intent_few: slice 4.2's, the main RAM's room); the rest part 37's (intent_more) */
-#pragma code-name (push, "SW47CODE")
-#pragma rodata-name (push, "SW47RODATA")
-/* A small move (I_STEP: DUNGEON.md's; part 47's since 2026-11-03, a small part's copies for part 9's): n squares on heading h (the UI's: by the words, else by the pace), its facing
+#pragma code-name (push, "SW110CODE")
+#pragma rodata-name (push, "SW110RODATA")
+/* A small move (I_STEP: DUNGEON.md's; part 47's since 2026-11-03, a small part's copies for part 9's; its own,
+** part 110, since 2026-11-17: the things' search in 47 copied in twice a step, across's call between, 18,000 cycles
+** each, a step's first words behind them): n squares on heading h (the UI's: by the words, else by the pace), its facing
 ** kept if keep (backing up, a step aside); in a room straight
 ** across its floor (across's rules: its edge, a ledge, a denizen or a trap stops it), in a passage along it (go's,
 ** walk's: a fork, a door or a denizen stops it) */

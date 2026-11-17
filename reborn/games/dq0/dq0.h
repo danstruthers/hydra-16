@@ -355,6 +355,7 @@ void facing_words (void);                       /* (Overlay 7's) The way it beli
 #define FS_MAKE     4
 #define FS_SENS     8
 extern unsigned char fored;
+extern unsigned char stir_held;                 /* (main.c's: a denizen's stir held, told after the line's answer) */
 void __fastcall__ fore_set (unsigned char on);  /* (Overlay 6's) The UI and the answer's tasks in the kernel's
                                                 **   foreground, or not (main.c's FS_*) */
 unsigned char __fastcall__ stop_kind (const char* word);  /* Overlay 7 (task.c's): the task a stop names */
