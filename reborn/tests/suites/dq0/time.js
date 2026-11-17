@@ -9,6 +9,7 @@ const {
   CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks, stratumRec, chunkDiff, dq0Story, inTurn, dq0Turns,
   dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Thing, DQ0_I, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0Timer
 } = require('../../lib/dq0.js');
+const { trend, target } = require('../../lib/trends.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
 
 // Dingus Quest Zero's tasks' overlays as they are in their banks (at the first prompt: dq0starttime's), each the same as
@@ -107,7 +108,7 @@ function dq0JobsTest() {
       this.timer(lines, lines.slice(pre.length, pre.length + each.length + free).map(l => ({ line: l, want: WANT }))).forEach((r, i) => {
         const j = each[i], name = j ? j.j + ' ' + j.d + ' before' : 'free ' + (i - each.length);
         notes.push(name + ': first letter ' + r.first);
-        if (!(r.first !== null && r.first <= MAX)) f.push(name + ': its first letter ' + r.first + ' cycles from Enter (budget ' + MAX + ')');
+        if (target(this, name + ': first letter', r.first, MAX, notes)) f.push(name + ': its first letter ' + r.first + ' cycles from Enter (the user\'s ' + MAX + ')');
       });
       notes.push('the jobs made due: lights ' + R.burnWant + ', traces ' + R.traceWant + '; run: lights ' + R.burn + ', traces ' + R.trace);
       if (R.burn < R.burnWant) f.push('the lights\' minute made due ' + R.burnWant + ' times, run ' + R.burn);
@@ -215,7 +216,7 @@ function dq0HoldTest() {
       if (!(t !== null && t <= FREE)) f.push('the turns pace: a job ' + t + ' cycles late, held for the keys (at most ' + FREE + ')');
       const r = this.timer(lines, [{ line: LINE, want: WANT }])[0];
       notes.push(LINE + ' typed fast: first letter ' + r.first + '; the lights\' minute run ' + (R.fastburn ? R.fastburn.ran - R.enter : null) + ', the journal ' + (R.fasttrace ? R.fasttrace.ran - R.enter : null) + ' after Enter');
-      if (!(r.first !== null && r.first <= MAX)) f.push(LINE + ': its first letter ' + r.first + ' cycles from Enter (budget ' + MAX + ')');
+      if (target(this, LINE + ': first letter', r.first, MAX, notes)) f.push(LINE + ': its first letter ' + r.first + ' cycles from Enter (the user\'s ' + MAX + ')');
       for (const n of ['fastburn', 'fasttrace']) {
         if (!(R[n] && R[n].ran)) f.push(n + ': made due as the line was typed, never run');
         else if (r.first !== null && R[n].ran - R.enter < r.first) f.push(n + ': run ' + (R[n].ran - R.enter) + ' cycles after Enter, before its first letter at ' + r.first);
@@ -298,7 +299,10 @@ module.exports = {
         if (!i8 || i8.ring !== 'ui' || i8.tenths !== 480 || i8.how !== 1 || i8.task !== 'LT_NONE' || i8.quiet) f.push('"wait 8 hours" not an I_WAIT of 480 minutes (WA_MIN): ' + JSON.stringify(i8));
         if (!w8.after || w8.after.pc.task.len !== 480 || !w8.after.pc.task.mins) f.push('the long task not 480 minutes, in minutes: ' + JSON.stringify(w8.after && w8.after.pc.task));
         if (!/> wait 8 hours You wait eight hours\./.test(o)) f.push('"wait 8 hours" not told "You wait eight hours."');
-        if (cyc(w8) > 40e6) f.push('eight hours waited, nothing near, too slow: ' + (cyc(w8) / 1e6).toFixed(1) + 'M cycles (40M at most)');
+        // (Each wait's cycles a trend, 2026-11-17: tests/lib/trends.js, a rise of more than 5% said, not failed; 40M at
+        // most before, 60M at the normal pace)
+        const timed = (name, t) => { if (!isFinite(cyc(t))) f.push(name + ': not timed'); const n = trend(this, name, cyc(t)); if (n) (this.notes = this.notes || []).push(n); };
+        timed('wait 8 hours', w8);
         const st = of(a, 'status');
         if (!st.at || st.at.now < 288000) f.push('the clock not on eight hours at the status after: ' + (st.at && st.at.now));
         if (!/> status Pace: [^>]*Facing: south\./.test(o)) f.push('no status after the wait');
@@ -315,13 +319,13 @@ module.exports = {
           if (took(t) !== 288000) f.push('"' + line + '" not a night\'s sleep: ' + took(t) + ' tenths');
           if (!e || !e.asleep) f.push('"' + line + '" not asleep (E_TIME\'s WA_SLEEP): ' + JSON.stringify(e));
           if (!o.includes('> ' + line + ' ' + words)) f.push('"' + line + '" not told "' + words + '"');
-          if (cyc(t) > 40e6) f.push('"' + line + '" too slow: ' + (cyc(t) / 1e6).toFixed(1) + 'M cycles');
+          timed(line, t);
         }
         if (!m.dq0.games[0].tasks.some(k => k.kind === 'LT_SLEEP' && k.len === 480)) f.push('no sleep\'s long task, LT_SLEEP, 480 minutes');
         // (At the normal pace: the long wait as quick, the turns pace's way)
         const n8 = of(b, 'wait 8 hours');
         if (took(n8) < 288000 || took(n8) > 288600) f.push('the normal pace\'s "wait 8 hours" not eight hours: ' + took(n8) + ' tenths (its real clock a few more at most)');
-        if (cyc(n8) > 60e6) f.push('the normal pace\'s eight hours too slow: ' + (cyc(n8) / 1e6).toFixed(1) + 'M cycles (60M at most)');
+        timed('the normal pace: wait 8 hours', n8);
         // (Broken off: asked at a sound, "no"; and stopped hard by a bite)
         const all = gm => gm.flatMap(t => t.events);
         if (!all(c).some(e => e.kind === 'E_TASK' && e.te === 'TE_ASK_HEARD' && e.task === 'LT_WAIT')) f.push('the long wait not asked about at a sound');
@@ -331,7 +335,7 @@ module.exports = {
         if (!all(d).some(e => e.kind === 'E_TASK' && e.te === 'TE_HIT' && e.task === 'LT_SLEEP')) f.push('the sleep not stopped hard by a bite: ' + all(d).filter(e => e.kind === 'E_TASK').map(e => e.te + ':' + e.task).join(', '));
         const ds = of(d, 'sleep 8 hours');
         if (!ds.at || !ds.after || ds.after.now - ds.at.now >= 288000) f.push('the bitten sleep not short of its eight hours');
-        this.notes = ['the cycles of the long waits: eight hours nothing near ' + (cyc(w8) / 1e6).toFixed(1) + 'M, rest ' + (cyc(of(a, 'rest')) / 1e6).toFixed(1) + 'M, at the normal pace ' + (cyc(n8) / 1e6).toFixed(1) + 'M'];
+        this.notes = ['the cycles of the long waits: eight hours nothing near ' + (cyc(w8) / 1e6).toFixed(1) + 'M, rest ' + (cyc(of(a, 'rest')) / 1e6).toFixed(1) + 'M, at the normal pace ' + (cyc(n8) / 1e6).toFixed(1) + 'M', ...(this.notes || [])];
         return f;
       },
       sdcard: true
@@ -488,7 +492,7 @@ module.exports = {
       // 36M cycles, 10 s at 3.58 MHz; 25M now, the longest (the UI's overlays read, before the screen's made).  The
       // help's line: after the first look's words, only the status line's and the prompt after it.  And every task's
       // overlays in their banks at the first prompt as ld65 made them (dq0OvlBanks))
-      starts: [{ seed: 1, max: 245e6 }, { seed: 123456789, max: 325e6 }], quiet: 36e6,    // (2026-11-11, the user's: raised from 235M and 315M, the start at 234.1M and 311.0M after the UI's room pass and narration's stage 1, a bank more to come; 2026-11-03: dq0w's new overlay, and two kinds more, to load: 241.3M, 321.0M, -K's; with the outfits, as a game's played, 249.7M and 332.7M; then the margins' pass, DUNGEON.md's: 219.7M, 298.8M; 2026-11-07, the designators merged: 224.7M, 301.9M; the stairs looked at, way.c's opened: 225.3M, 302.5M, seed 1's budget 226M for review; then the user, 2026-11-07: "Don't worry too much about the startup time": 235M and 315M, room for the work to come, 225.8M and some 302M then)
+      starts: [{ seed: 1 }, { seed: 123456789 }], quiet: 36e6,   // (2026-11-17, the user's: the starts' budgets, 245M and 325M, trends: tests/lib/trends.js, a rise of more than 5% said, not failed; the silence's 36M still a failure)  // (Before: 2026-11-11, the user's: raised from 235M and 315M, the start at 234.1M and 311.0M after the UI's room pass and narration's stage 1, a bank more to come; 2026-11-03: dq0w's new overlay, and two kinds more, to load: 241.3M, 321.0M, -K's; with the outfits, as a game's played, 249.7M and 332.7M; then the margins' pass, DUNGEON.md's: 219.7M, 298.8M; 2026-11-07, the designators merged: 224.7M, 301.9M; the stairs looked at, way.c's opened: 225.3M, 302.5M, seed 1's budget 226M for review; then the user, 2026-11-07: "Don't worry too much about the startup time": 235M and 315M, room for the work to come, 225.8M and some 302M then)    // (2026-11-11, the user's: raised from 235M and 315M, the start at 234.1M and 311.0M after the UI's room pass and narration's stage 1, a bank more to come; 2026-11-03: dq0w's new overlay, and two kinds more, to load: 241.3M, 321.0M, -K's; with the outfits, as a game's played, 249.7M and 332.7M; then the margins' pass, DUNGEON.md's: 219.7M, 298.8M; 2026-11-07, the designators merged: 224.7M, 301.9M; the stairs looked at, way.c's opened: 225.3M, 302.5M, seed 1's budget 226M for review; then the user, 2026-11-07: "Don't worry too much about the startup time": 235M and 315M, room for the work to come, 225.8M and some 302M then)
       start(m) {
         const a = m.acia, read = a.read, shown = a.shown, self = this;
         let typed = '', g = null, tail = '', esc = 0, text = '';
@@ -518,17 +522,18 @@ module.exports = {
         };
       },
       check(m) {
-        const f = [], M = n => (n / 1e6).toFixed(1) + 'M';
+        const f = [], M = n => (n / 1e6).toFixed(1) + 'M', rose = [];
         this.starts.forEach((s, i) => {
           const g = this.games[i];
           if (!g || !g.total) return f.push('seed ' + s.seed + ': no first prompt');
-          if (g.total > s.max) f.push('seed ' + s.seed + ': its start ' + M(g.total) + ' cycles, over its budget ' + M(s.max));
+          const tn = trend(this, 'seed ' + s.seed + ': the start', g.total);
+          if (tn) rose.push(tn);
           if (g.quiet > this.quiet) f.push('seed ' + s.seed + ': ' + M(g.quiet) + ' cycles with nothing on the screen, ' + M(g.quietAt) + ' after Enter (' + M(this.quiet) + ' at most)');
           const w = g.text.replace(/\s+/g, ' '), h = w.lastIndexOf('Type help for the commands.'), look = w.lastIndexOf('You ');
           if (h < 0 || look < 0 || h < look || w.length - h > 80) f.push('seed ' + s.seed + ': the help\'s line not with the first prompt, after the first look: ' + JSON.stringify(w.slice(-300)));
         });
         f.push(...(this.banks || ['the overlays\' banks not looked at']).filter(x => !/^ok/.test(x)));
-        this.notes = (this.banks || []).filter(x => /^ok/.test(x)).concat(this.games.map((g, i) => 'seed ' + (this.starts[i] || {}).seed + ': ' + M(g.total) + ' cycles to the first prompt (' + (g.total / 3579545).toFixed(1) + ' s at 3.58 MHz); the longest silence ' + M(g.quiet) + ', ' + M(g.quietAt) + ' after Enter'));
+        this.notes = (this.banks || []).filter(x => /^ok/.test(x)).concat(this.games.map((g, i) => 'seed ' + (this.starts[i] || {}).seed + ': ' + M(g.total) + ' cycles to the first prompt (' + (g.total / 3579545).toFixed(1) + ' s at 3.58 MHz); the longest silence ' + M(g.quiet) + ', ' + M(g.quietAt) + ' after Enter')).concat(rose);
         return f;
       },
       sdcard: true

@@ -34,7 +34,9 @@
 // testFiles (its tests files: { path from the repository's top: the tests it makes }), testHelpers (the helper modules
 // their entries use: [path from the top]: select.js's testTexts), ref (--changed's default),
 // restrict(list, opt) (the list when no NAME's given, the system's narrowing of it: HydraOS's RULES=NAME, the meaning
-// checks) }; then main(argv).  After the tests, obj/testtimes.json: each one's wall time and cycles.
+// checks), trend(t, what, value) (a budget marked trend: true, a measure kept, never a failure: its note or null,
+// HydraOS's tests/lib/trends.js) }; then main(argv).  After the tests, obj/testtimes.json: each one's wall time and
+// cycles.
 // The emulator runs as fast as the host can, never paced to the Hydra's clock (run.js -i is): the cycles a test
 // reports, and its budgets, are the emulated machine's.
 'use strict';
@@ -48,7 +50,7 @@ const { readManifest, hwtest } = require('../build.js');
 const BASE = path.join(__dirname, '..');
 // The system the tests are run for (setup): the base's own, unless a system on it says otherwise
 const env = { root: BASE, tests: null, IRQ_OFF_MAX: 200, image: null, build: null, pcFolder: null, runDl: null, self: __filename,
-  instrument: null, summary: null, areas: null, testFiles: null, testHelpers: null, scenes: null, ref: 'reborn-game', restrict: null };
+  instrument: null, summary: null, areas: null, testFiles: null, testHelpers: null, scenes: null, ref: 'reborn-game', restrict: null, trend: null };
 function setup(e) { Object.assign(env, e); }
 const baseTests = () => require('../tests/tests.js').tests.map(t => Object.assign(t, { system: 'base' }));
 
@@ -140,10 +142,16 @@ function judge(t, m, marks, pc, status, ins) {
   if (!status) failures.push(t.expect ? 'missing: ' + t.expect.filter(e => !out.includes(e)).map(e => JSON.stringify(e)).join(', ')
     : 'no result in ' + t.cycles + ' cycles');
   else if (status === 'FAIL' && !failures.length) failures.push(t.init + ': FAIL');
-  const budgets = [], options = built();
+  const budgets = [], options = built(), trends = [];
   for (const b of t.budgets || []) {
     if (![b.from, b.to, ...(b.minus || [])].every(k => k in marks)) { failures.push('budget ' + b.what + ': no marks'); continue; }
     const v = (marks[b.to] - marks[b.from] - (b.minus ? marks[b.minus[1]] - marks[b.minus[0]] : 0)) / b.per;
+    if (b.trend) {                                              // (A trend, not a budget: the system's env.trend says
+      budgets.push({ what: b.what, value: v, trend: true });   //   a rise, never a failure)
+      const n = env.trend ? env.trend(t, b.what, v) : null;
+      if (n) trends.push(n);
+      continue;
+    }
     const max = typeof b.max === 'function' ? b.max(options) : b.max;
     budgets.push({ what: b.what, value: v, max });
     if (v > max) failures.push(b.what + ': ' + v.toFixed(1) + ' cycles (budget ' + max + ')');
@@ -153,7 +161,7 @@ function judge(t, m, marks, pc, status, ins) {
   if (ioff && ioff[0] > env.IRQ_OFF_MAX) failures.push('IRQs off for ' + ioff[0] + ' cycles at ' + ioff[1] + ' - ' + ioff[2] + ' (budget ' + env.IRQ_OFF_MAX + ')');
   if (m.acia.txLost) failures.push(m.acia.txLost + ' byte(s) lost on the WDC ACIA: written while one was going and another waiting (two writers, or the pacing)');
   if (t.check) failures.push(...t.check(m, out));
-  const notes = [...(t.notes || []), ...(pc ? [pc.host.report() + '; ' + m.acia.pcLost + ' reply byte(s) lost'] : [])];
+  const notes = [...(t.notes || []), ...trends, ...(pc ? [pc.host.report() + '; ' + m.acia.pcLost + ' reply byte(s) lost'] : [])];
   if (ins) { const x = ins.judge(m); failures.push(...x.failures); notes.push(...x.notes); }
   return { m, out, lines, failures, budgets, notes };
 }
@@ -166,7 +174,7 @@ function report(t, r, opt, lbl) {
   if (opt.verbose) out.push(r.out.split('\n').map(l => '    | ' + l).join('\n'));
   for (const b of r.budgets) {
     const at = b.what.replace(/(\w):([0-9A-F]{4})/g, (_, w, pc) => w + ':' + pc + ' ' + lbl.at(parseInt(pc, 16), parseInt(w, 16)));
-    out.push('       ' + (b.value > b.max ? 'OVER ' : '     ') + at + ': ' + (Number.isInteger(b.value) ? b.value : b.value.toFixed(1)) + ' cycles (budget ' + b.max + ')');
+    out.push('       ' + (b.value > b.max ? 'OVER ' : '     ') + at + ': ' + (Number.isInteger(b.value) ? b.value : b.value.toFixed(1)) + ' cycles (' + (b.trend ? 'a trend' : 'budget ' + b.max) + ')');
   }
   for (const n of r.notes) out.push('       ' + n);
   for (const f of r.failures) out.push('       ! ' + f);

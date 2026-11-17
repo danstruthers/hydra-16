@@ -9,6 +9,7 @@ const {
   dq0Story, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Here, dq0Thing,
   dq0Holder, DQ0_I, dq0Typed, dq0Rec, dq0Poke, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, WORN
 } = require('../../lib/dq0.js');
+const { target } = require('../../lib/trends.js');   // (The user's targets, D17: each measure kept, those past 90% listed after the tests)
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
 
 const TORCHX = ['inventory', 'drop torch', 'take torch', 'inventory', 'wait 2 hours', 'light a new torch', 'take the spent torch from the ground', 'drop the spent torch',
@@ -819,7 +820,7 @@ module.exports = {
           TORCHX.map(l => ({ line: l, want: 'You|Taken|Put|Your|It' })));
         for (const r of tm) {           // (Every handling's first letter within the user's fifth of a second, D17: a thing in hand too)
           this.notes.push(r.line + ': first letter ' + r.first);
-          if (!/^(inventory|wait)/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (!/^(inventory|wait)/.test(r.line) && target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         if (/You see no (floor|ground) here/.test(o)) f.push('the floor not a place: ' + o.match(/.{80}You see no (floor|ground) here/)[0]);
         return f;
@@ -855,7 +856,7 @@ module.exports = {
           LETTERX[0].filter(l => l === 'inventory').map(l => ({ line: l, want: 'You carry' })));
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first + ', whole ' + r.whole);
-          if (r.first === null || r.first > 720000) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },
@@ -901,7 +902,7 @@ module.exports = {
           LETCMD.map(l => ({ line: l, want: 'You|Taken|Put|Your|It|Drop|Take' })));
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first);
-          if (!/^(inventory|wait)/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (!/^(inventory|wait)/.test(r.line) && target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },
@@ -943,7 +944,7 @@ module.exports = {
           LETSIGHT.map(l => ({ line: l, want: 'You|Taken|Put|There|(' })));
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first);
-          if (!/^(inventory|look|around)/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (!/^(inventory|look|around)/.test(r.line) && target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },
@@ -981,7 +982,7 @@ module.exports = {
           LETWHICH.map(l => ({ line: l, want: 'You|Taken|Which' })));
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first);
-          if (!/^(inventory)$/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (!/^(inventory)$/.test(r.line) && target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },
@@ -1019,7 +1020,7 @@ module.exports = {
           LETSEVERAL.map(l => ({ line: l, want: 'You|Taken|Your|Put|Stow' })));
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first);
-          if (!/^(inventory|look)$/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (!/^(inventory|look)$/.test(r.line) && target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },
@@ -1056,7 +1057,7 @@ module.exports = {
           LETSTOW.map(l => ({ line: l, want: 'You|Taken|Your|Put|Stow' })));
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first);
-          if (!/^(inventory|look|drop 1g)$/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (!/^(inventory|look|drop 1g)$/.test(r.line) && target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },
@@ -1082,7 +1083,7 @@ module.exports = {
         this.notes = [];
         for (const r of this.timer(lines, ['take off the cloak', 'take off the iron helm', 'take off the backpack'].map(l => ({ line: l, want: 'You|Your' })))) {
           this.notes.push(r.line + ': first letter ' + r.first);
-          if (r.first === null || r.first > 720000) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },

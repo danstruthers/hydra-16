@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { VT, DEC_ASCII } = require('../../../base/sim/lib/vt.js');
 const { typed } = require('./common.js');
+const { trend, target, D17 } = require('./trends.js');
 const TESTS = path.join(__dirname, '..');   // (The tests' folder: their fixtures')
 
 // A natural stratum's chunks (dq0m/caves.c), read from the hub's cache in the shared segments' banks (world.h's struct
@@ -841,20 +842,23 @@ function dq0Timer(m) {
   };
 }
 
-// dq0answer's commands: at seed 3 (-T: by the way down), the turns pace, then the normal pace; each a line, the words
-// its answer begins with, and at 115,200 baud its budgets (the user's targets, D17: a command's first letter a fifth of a
-// second, 720,000 cycles; a look's first and its whole under half a second, 1.79M), its first letter's and its whole's,
-// from Enter.  Each brought down as it was cured, to just over what's measured at waits 0, 1 and 2, both paces (2026-11-03:
-// the table in the report, the world's periodic work given way to a command, a walk's first words no parts' swaps, a step's
-// told as it begins, "You carry" before the world's asked): never raised.  Over the user's 720,000 still, by what it takes:
-// a carried thing examined, a thing taken with a walk or a pack, a step or a turn with a denizen's things being drawn at
-// wait 0, its answer behind that draw's giving way
-const DQ0_ANSWERS = [['turn left', 'You turn', 800000], ['turn right', 'You turn', 1300000],
-  ['step forward', 'You step forward', 1400000], ['inventory', 'You carry', 500000], ['examine the torch', 'You look at the torch|You look for the torch', 640000], ['walk to the door ahead to my left', 'You head for', 760000], ['examine the door', 'You head for|A door|Which door', 720000],
-  ['open the door', 'You try the door|You turn|Which door', 720000], ['close the door', 'You reach for the door|You turn|Which door', 720000], ['listen', 'You listen', 760000], ['bar the door', 'You look at the door|You turn|Which door', 720000],
-  ['look', 'You', 650000, 1790000], ['look ahead', 'You peer ahead|You turn', 450000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You', 800000], ['walk to the window', 'You head for', 700000], ['take the bones', 'You look for the bones|You go over to the bones.|You stop', 800000], ['look', 'You', 650000],
-  ['take the sack from the backpack', 'You reach for your backpack|You look for', 760000], ['put the whetstone in the sack', 'You reach|You look for the whetstone|You stop', 800000], ['take the whetstone from the sack', 'You reach|You look for|You stop', 760000],
-  ['drop the sack', 'You put down the|You reach|You look for|You stop', 650000], ['take the sack', 'You reach for the sack|You look for the sack|You stop', 650000], ['assess the sack', 'You look at the sack|You look for the sack', 2000000], ['sit', 'You sit down', 780000], ['stand', 'You get to your feet', 760000], ['wait 1 minute', 'You wait a minute', 760000], ['dig down', 'You look at the floor|You stop', 600000]];   // (The first words as they begin, 2026-11-04: dq0firstword's; a line typed as the reach's question's asked, its first words the stop's, drop and take the sack's "You stop" as the others', 2026-11-06; budgets over what's measured at waits 0, 1 and 2, both paces: assess's 2M its normal pace's at wait 1, 1.9M, some 420,000 else, not diagnosed)   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
+// dq0answer's commands: at seed 3 (-T: by the way down), the turns pace, then the normal pace; each a line and the
+// words its answer begins with, timed at 115,200 baud from Enter to its first letter and to its whole, and held to the
+// user's targets (D17: a command's first letter a fifth of a second, 720,000 cycles; a look's first and its whole under
+// half a second, 1.79M: its whole held where it was before, the look about's), the suite failing past them.  Each
+// measure a trend besides (tests/lib/trends.js: tests/trends.json's, a rise of more than 5% said, not failed: the
+// user's, 2026-11-17).  A measure whose trend was over its target when the budgets became trends is said, not failed:
+// each budget had been brought down as it was cured, to just over what was measured at waits 0, 1 and 2, both paces
+// (2026-11-03: the world's periodic work given way to a command, a walk's first words no parts' swaps, a step's told
+// as it begins, "You carry" before the world's asked), but some over the user's 720,000 still, by what it takes: a
+// carried thing examined, a thing taken with a walk or a pack, a step or a turn with a denizen's things being drawn at
+// wait 0, its answer behind that draw's giving way (the open question: GAME-CRITIQUE.md's 6.3)
+const DQ0_ANSWERS = [['turn left', 'You turn'], ['turn right', 'You turn'],
+  ['step forward', 'You step forward'], ['inventory', 'You carry'], ['examine the torch', 'You look at the torch|You look for the torch'], ['walk to the door ahead to my left', 'You head for'], ['examine the door', 'You head for|A door|Which door'],
+  ['open the door', 'You try the door|You turn|Which door'], ['close the door', 'You reach for the door|You turn|Which door'], ['listen', 'You listen'], ['bar the door', 'You look at the door|You turn|Which door'],
+  ['look', 'You', 'whole'], ['look ahead', 'You peer ahead|You turn'], ['go up', 'There\'s no way up or down here.'], ['go to the far side', 'You'], ['walk to the window', 'You head for'], ['take the bones', 'You look for the bones|You go over to the bones.|You stop'], ['look', 'You'],
+  ['take the sack from the backpack', 'You reach for your backpack|You look for'], ['put the whetstone in the sack', 'You reach|You look for the whetstone|You stop'], ['take the whetstone from the sack', 'You reach|You look for|You stop'],
+  ['drop the sack', 'You put down the|You reach|You look for|You stop'], ['take the sack', 'You reach for the sack|You look for the sack|You stop'], ['assess the sack', 'You look at the sack|You look for the sack'], ['sit', 'You sit down'], ['stand', 'You get to your feet'], ['wait 1 minute', 'You wait a minute'], ['dig down', 'You look at the floor|You stop']];   // (The first words as they begin, 2026-11-04: dq0firstword's; a line typed as the reach's question's asked, its first words the stop's, drop and take the sack's "You stop" as the others', 2026-11-06; assess's its normal pace's at wait 1, 1.9M, some 420,000 else, not diagnosed)   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
 function dq0AnswerTest(baud) {
   const wait = +(process.env.DQ0ANS_WAIT || 0);   // (Each line typed after 0-2 waits of 2M cycles: the timing moved, for an average)
   const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'];
@@ -868,14 +872,21 @@ function dq0AnswerTest(baud) {
     expect: ['% echo $status'],
     start(m) { this.timer = dq0Timer(m); },
     check(m, out) {
-      const f = [], notes = this.notes = [], li = lines.indexOf(games[1]);
-      const over = (r, name, what, v, max) => {
-        if (baud === 115200 && max && !(v !== null && v <= max)) f.push(name + ' ' + r.line + ': ' + what + ' ' + v + ' cycles from Enter (budget ' + max + ')');
+      const f = [], notes = this.notes = [], li = lines.indexOf(games[1]), seen = {};
+      // (Its first letter, and a look about's whole, held to the target, and kept as trends: each line by its pace and
+      // its place, a line met twice its second '#2')
+      const held = (name, what, v, max) => {
+        if (baud !== 115200) return;
+        if (target(this, name + ': ' + what, v, max, notes)) f.push(name + ': ' + what + ' ' + v + ' cycles from Enter (the user\'s ' + max + ')');
+        const n = trend(this, name + ': ' + what, v);
+        if (n) notes.push(n);
       };
       const pace = (from, to, name) => this.timer(lines.slice(0, to).map((l, i) => i < from ? '' : l), DQ0_ANSWERS.map(c => ({ line: c[0], want: c[1] }))).forEach((r, k) => {
         notes.push(name + ' ' + r.line + ': first letter ' + r.first + ', whole ' + r.whole);
-        over(r, name, 'its first letter', r.first, DQ0_ANSWERS[k][2]);
-        over(r, name, 'its whole', r.whole, DQ0_ANSWERS[k][3]);
+        const c = DQ0_ANSWERS[k], look = /^look/.test(c[0]), nth = seen[name + c[0]] = (seen[name + c[0]] || 0) + 1;
+        const id = name + ' ' + c[0] + (nth > 1 ? ' #' + nth : '');
+        held(id, 'first letter', r.first, look ? D17.look : D17.first);
+        if (c[2] === 'whole') held(id, 'whole', r.whole, D17.look);
       });
       pace(0, li, 'turns');
       pace(li, lines.length, 'normal');

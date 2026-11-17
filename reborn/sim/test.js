@@ -36,6 +36,7 @@ const { readManifest, hwtest } = require('../build.js');
 const { tests, files: testFiles, helpers: testHelpers, IRQ_OFF_MAX, dq0Check } = require('../tests/tests.js');
 const hubown = require('./lib/hubown.js');
 const guards = require('./lib/guards.js');
+const trends = require('../tests/lib/trends.js');
 const scenes = require('./lib/scenes.js');
 const crypto = require('crypto');
 const dq0meaning = require('./lib/dq0meaning.js');
@@ -178,8 +179,10 @@ function guardSummary(list) {
     console.log('  ' + (e.known ? '(known: ' + e.known + ') ' : '') + e.text.replace(/ at cycle \d+$/, '') + ': ' + tests.length + ' test(s), ' + tests.slice(0, 6).join(', ') + (tests.length > 6 ? ' ...' : ''));
 }
 // After the tests (HUBOWN=1): every violation seen, the tests' together, by the move that's to end it (NEW: none),
-// and the table's known ones none of the tests showed
+// and the table's known ones none of the tests showed.  And always: the trends that rose (tests/lib/trends.js), this
+// run's
 function summary(list) {
+  trends.summary(list.map(t => t.name));
   if (GUARDS === 'note') guardSummary(list);
   if (HUBOWN !== '1') return;
   const all = new Map();
@@ -330,7 +333,9 @@ function meaningOf(list) {
   return list.filter(t => /^dq0/.test(t.name) && t.meaning);
 }
 
-runner.setup({ root: ROOT, tests, IRQ_OFF_MAX, image, pcFolder, self: __filename, instrument, summary,
+if (!process.env.TRENDS_RUN) process.env.TRENDS_RUN = String(Date.now());   // (This run's measures, its tests' processes'
+                                                                             //   too: tests/lib/trends.js)
+runner.setup({ root: ROOT, tests, IRQ_OFF_MAX, image, pcFolder, self: __filename, instrument, summary, trend: (t, what, v) => trends.trend(t, what, v),
   scenes: (t, tm, prom, opt) => scenes.of(t, tm, prom, opt, images.bios(ROOT, images.built(ROOT)), images.built(ROOT)),
   build: () => require('../build.js').buildBoth({ quiet: true }),
   runDl: (...a) => require('./dl/bridge.js').runDl(...a),

@@ -799,9 +799,11 @@ module.exports = {
       // (The inventory's budget a guard against a large slowdown at 9,600 baud, not a target: 1,410,000 to 1,530,000
       // cycles measured, as the rats' stirring falls on the line before it; the user's targets are 115,200's, D17:
       // dq0answer's)
-      budgets: [{ what: 'inventory answered (Enter to the answer)', from: '> inv', to: 'You carry', per: 1, max: 2000000 },
+      // (Trends since 2026-11-17, the user's, their budgets 2,000,000 and 700,000 before: tests/lib/trends.js, a rise
+      // of more than 5% said, not failed)
+      budgets: [{ what: 'inventory answered (Enter to the answer)', from: '> inv', to: 'You carry', per: 1, trend: true },
         { what: 'a step that can\'t be taken answered (the world\'s: from the line told into the story)', from: '\n> go up',
-          to: 'There\'s no way up or down here.', per: 1, max: 700000 }],
+          to: 'There\'s no way up or down here.', per: 1, trend: true }],
       // (Each a mark in what the serial line sends: the inventory's from the line typed at the bottom, a fifth of a
       // second, the user's; the step's from the line entered, as it's told into the story (on a line of its own: the
       // line typed's row, 24, after it, or the status line's clock first, as the second falls): about 285,000 cycles to "go up"'s answer since the world sleeps on its

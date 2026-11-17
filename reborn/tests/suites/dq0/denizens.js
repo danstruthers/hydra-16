@@ -10,6 +10,7 @@ const {
   dq0Story, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Named, DQ0_I,
   dq0Typed, dq0Portal, dq0Rec, dq0Poke, dq0PcShock, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer
 } = require('../../lib/dq0.js');
+const { target } = require('../../lib/trends.js');   // (The user's targets, D17: each measure kept, those past 90% listed after the tests)
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
 
 // Dingus Quest Zero's morale's own (dq0morale): at each line's Enter (the CR as the ACIA has it, the game still as it
@@ -1215,7 +1216,7 @@ module.exports = {
         for (const r of tm) {
           this.notes.push(r.line + ': first letter ' + r.first);
           // (A blow's words the fight's, its first a status line's: as "attack the rat"'s)
-          if (!/^(look|around|attack .)$/.test(r.line) && (r.first === null || r.first > 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (!/^(look|around|attack .)$/.test(r.line) && target(this, r.line + ': first letter', r.first, 720000)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },

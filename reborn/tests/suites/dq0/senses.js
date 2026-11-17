@@ -10,6 +10,7 @@ const {
   dq0StatusRows, dq0Story, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried,
   dq0Here, DQ0_I, passings, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0OnWords, dq0Timer, dq0PortalAt
 } = require('../../lib/dq0.js');
+const { trend, target, D17 } = require('../../lib/trends.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
 
 // The YM2151's key-ons in a machine's log (machine: { ymLog: true }), each its channel and its speakers as it came
@@ -53,19 +54,20 @@ function lookSnap(m, ptr, game) {
 // cell, 5 squares; the same walks at seed 3 with no traces, the slice before, within 0.2-0.6% of them: the journal's
 // entry a step, the store's taking 24 in a part's swap; 1,800,000 since 2026-10-29: the sound layer's pulse, once a
 // denizens' turn after a step, and the denizens' senses' own part, slices 4.5 and 4.6); 1,900,000 since 2026-10-31
-// (1,863,195: the minds' steps looking at each square's chunk for its bad air, a swimmer's too, the giant rats')
-const TRACE_STEP = 1920000;   // (1950000 for a day, 2026-11-02, part 14's some 30 bytes more, digs told why; 1,901,748 to 1,911,662 since the margins' pass, 2026-11-03, by the tasks' timing and the code's layout)
+// (1,863,195: the minds' steps looking at each square's chunk for its bad air, a swimmer's too, the giant rats');
+// 1,920,000 (1,950,000 for a day, 2026-11-02, part 14's some 30 bytes more, digs told why; 1,901,748 to 1,911,662 since
+// the margins' pass, 2026-11-03, by the tasks' timing and the code's layout).  A trend since 2026-11-17 (the user's:
+// tests/lib/trends.js, tests/trends.json's "a step's cost", a rise of more than 5% said, not failed)
 
 // dq0lookfar: a look one way into new ground (the delays' round, 2026-11-05: the first look ahead of a game made every chunk its
 // grid touched, up to nine, behind it as well, at the normal pace 12M cycles each, 28-55 s on the board, the world and the
 // denizens stopped behind it; seed 3's five, 78.5M), by the maker's make_chunk and dq0Timer's times, at the normal pace.  At
-// seed 3's start the wall a few squares ahead: nothing made, its whole within budget; asked for again the same; the map drawn
+// seed 3's start the wall a few squares ahead: nothing made, its whole timed; asked for again the same; the map drawn
 // with the maker first (16.3M before, 9.4M), its first words at once.  Then the character put where the line ahead reaches
 // a chunk not made yet past a glance's reach (its sight poked to 0: a glance 4 squares, a look one way 8; a straight run of
 // floor to the chunk's edge): that chunk made as the eyes reach it, by the maker in the foreground (its elapsed near its own
 // 5.5M, 12M before)
 function dq0LookFarTest() {
-  const FIRST = 8000000, MAP = 11000000, ACROSS = 24000000;
   const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl'];
   const cmds = [{ line: 'look ahead', want: 'You peer ahead' }, { line: 'map', want: 'The map' }, { line: 'turn left', want: 'You turn' }, { line: 'look ahead', want: 'You peer ahead' }, { line: 'look ahead', want: 'You peer ahead' }];
   const lines = [...pre, 'dq0 -p n -s 3 -c /ram/c.hm -T', ...cmds.map(c => c.line), 'quit', 'echo $status'];
@@ -108,17 +110,27 @@ function dq0LookFarTest() {
     },
     check(m, out) {
       const f = [], notes = this.notes = [], r = this.timer(lines, cmds), E = this.enters, within = (a, b) => this.made.filter(c => c >= a && c < b).length;
-      const at = i => E[pre.length + 1 + i], over = (x, name, max) => { notes.push(name + ': first letter ' + x.first + ', whole ' + x.whole); if (!(x.whole !== null && x.whole <= max)) f.push(name + ': its whole ' + x.whole + ' cycles from Enter (budget ' + max + ')'); };
-      over(r[0], 'the first look ahead', FIRST);
+      // (Each whole a trend, a look's held to the user's 1.79M as well; the map's first words to the 720,000 of a
+      // command's first letter: tests/lib/trends.js, 2026-11-17, their budgets FIRST, MAP, ACROSS and 1,200,000 before)
+      const at = i => E[pre.length + 1 + i], over = (x, name, look) => {
+        notes.push(name + ': first letter ' + x.first + ', whole ' + x.whole);
+        if (x.whole === null) f.push(name + ': no answer');
+        else if (look && target(this, name + ': whole', x.whole, D17.look, notes)) f.push(name + ': its whole ' + x.whole + ' cycles from Enter (the user\'s ' + D17.look + ')');
+        const tn = trend(this, name + ': whole', x.whole);
+        if (tn) notes.push(tn);
+      };
+      over(r[0], 'the first look ahead', true);
       notes.push('chunks made in it: ' + within(at(0), at(1)));
       if (within(at(0), at(1))) f.push('the first look ahead, a wall in the way, made ' + within(at(0), at(1)) + ' chunks');
-      over(r[1], 'the map', MAP);
-      if (!(r[1].first !== null && r[1].first <= 1200000)) f.push('the map: its first words ' + r[1].first + ' cycles from Enter');
+      over(r[1], 'the map', false);
+      if (target(this, 'the map: first letter', r[1].first, D17.first, notes)) f.push('the map: its first words ' + r[1].first + ' cycles from Enter (the user\'s ' + D17.first + ')');
+      const tm = trend(this, 'the map: first letter', r[1].first);
+      if (tm) notes.push(tm);
       const put = this.put;
       notes.push('put: ' + JSON.stringify(put || null) + '; chunks made by the look across: ' + within(at(4), at(5)));
       if (!put) f.push('no straight run to a chunk\'s edge in the scene');
       else if (within(at(4), at(5)) < 1) f.push('the look ahead along a run to a chunk not made: none made');
-      over(r[4], 'the look across', ACROSS);
+      over(r[4], 'the look across', true);
       return f;
     },
     sdcard: true
@@ -166,7 +178,8 @@ function dq0AskHeldTest() {
 // at rest, and those that reach it rob it: the scene a sleep, the character's Awareness 5, so one robs it unawares and it sleeps
 // on, the rest of the band about it (an awake rest's seen them coming in the cell's light, and stopped, a third of a minute in)
 function dq0RestBusyTest() {
-  const MAX = 3400000;   // (Cycles a game minute of the rest: 1.63M or 2.87M now, by the power-up; more than 16M before, a game not over in 8,000M)
+  // (Cycles a game minute of the rest: 1.63M or 2.87M, by the power-up; more than 16M before, a game not over in 8,000M;
+  // its budget 3,400,000 a trend since 2026-11-17: tests/lib/trends.js, a rise of more than 5% said, not failed)
   const lines = ['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml awa 5 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
     'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'douse the torch', 'wait', 'wait', 'wait', 'sleep', 'quit', 'echo $status'];
   return {
@@ -193,7 +206,9 @@ function dq0RestBusyTest() {
     check() {
       const f = [], notes = this.notes = [], R = this.R, mins = (R.n1 - R.n0) / 600, per = (R.t1 - R.t0) / (mins || 1);
       notes.push('the rest: ' + Math.round(R.t1 - R.t0) + ' cycles, ' + mins.toFixed(1) + ' game minutes, ' + Math.round(per) + ' cycles a minute');
-      if (!(per <= MAX)) f.push('the rest ' + Math.round(per) + ' cycles a game minute (budget ' + MAX + ')');
+      if (!isFinite(per) || !(mins > 0)) f.push('the rest not timed: ' + Math.round(per) + ' cycles a game minute');
+      const tn = trend(this, 'cycles a game minute of the rest', per);
+      if (tn) notes.push(tn);
       return f;
     },
     sdcard: true
@@ -234,8 +249,10 @@ module.exports = {
         if (rd(s2).smoke) f.push('its torch\'s smoke still smelt three hours on: ' + JSON.stringify(rd(s2)));
         const e = T.of('w'), sq = e.at && e.after ? Math.abs(e.after.pc.x - e.at.pc.x) + Math.abs(e.after.pc.y - e.at.pc.y) : 0;
         const per = sq ? (e.after.cyc - e.at.cyc) / sq : Infinity;
-        this.notes = ['a step\'s cost ' + Math.round(per) + ' cycles (' + sq + ' squares walked, budget ' + TRACE_STEP + ')'];
-        if (!(per <= TRACE_STEP)) f.push(this.notes[0]);
+        this.notes = ['a step\'s cost ' + Math.round(per) + ' cycles (' + sq + ' squares walked)'];
+        if (!isFinite(per)) f.push(this.notes[0]);
+        const tn = trend(this, 'a step\'s cost', per);
+        if (tn) this.notes.push(tn);
         const k0 = T.of('dq0 -d /ram/kept'), kx = T.after(k0, 'examine the floor');
         if (!/tr0[0-9a-f]{4}\.da[t12]/.test(out)) f.push('no traces\' region file in the save folder');
         if (!rd(kx).trod) f.push('the game carried on, its walk\'s prints not read back from the save: ' + JSON.stringify(rd(kx)));
