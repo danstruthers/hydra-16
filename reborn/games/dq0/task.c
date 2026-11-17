@@ -31,11 +31,11 @@ static const char* const doing[] = {           /* (By LT_*; then by SV_*, a step
     "taking off", "taking off", "putting on", "letting fall", "setting down", "setting down", "setting down", "dipping",
     "reaching into", "holding open", "getting out", "letting fall", "putting away", "putting out", "putting out", "lighting",
     "setting down", "taking up", "sharpening", "striking a spark", "sheathing", "slinging", "setting down", "stowing",
-    "stowing"
+    "stowing", "leaving"
 };
 #define NDOING          (sizeof doing / sizeof doing[0])
 #define NLT             (LT_DIP + 1)
-typedef char doing_all[NDOING == NLT + SV_INPACK2 + 1 - SV_OFF ? 1 : -1];   /* (Every long task's words: "You stop doing anything the torch",
+typedef char doing_all[NDOING == NLT + SV_LEAVE + 1 - SV_OFF ? 1 : -1];   /* (Every long task's words: "You stop doing anything the torch",
                                                 **   2026-11-04) */
 #define DOING(k)        doing[(k) & LT_STEP ? NLT - SV_OFF + ((k) & ~SM_ALL) : (k) < NLT ? (k) : 0]   /* (A step's by its verb: its
                                                 **   word, SM_*, its first words' alone) */

@@ -6342,6 +6342,10 @@ static void __fastcall__ intent (struct msg* m)
         return;                                 /* (Prone, its legs not whole: up first, or crawling; or no move:
                                                 **   part 50's, slice 4.1b's) */
     }
+    if (left_lit) {
+        lit_back (m->kind);                     /* (A light the hands' rule set down burning: taken up again as a walk
+                                                **   starts, a hand free, the user's, 2026-11-17: part 90's) */
+    }
     switch (m->kind) {
     case I_GO:
         tgx = I_GO_X (*m);
@@ -6363,6 +6367,9 @@ static void __fastcall__ intent (struct msg* m)
     default:
         intent_more (m);                        /* (The rest: part 37's) */
         break;
+    }
+    if (left_lit && move.on) {
+        lit_back (m->kind | LB_GO);             /* (None free, the walk begun: left behind, told) */
     }
 }
 

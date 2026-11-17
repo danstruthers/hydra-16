@@ -1349,7 +1349,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0strike', what: 'Dingus Quest Zero\'s blows by what strikes (the user\'s playtest, 2026-10-22: "I cannot `hit the door with bar` if I have a `bar` in hand.  It still says I am battering it with my bare hands"; "A bar should just be treated as a club or stick, no?"; a soft thing tried once, "it seems ineffectual"; nothing named, what\'s in hand; HOUSE.md\'s fights, what strikes), by the world\'s events, the hub\'s pc_strike and the words: at seed 14 (dq0 -k bar: the torch and the bar in hand) the door hit with the bar, battered with it (TE_BEGUN\'s what the door and SK_WITH, pc_strike the bar\'s kind: "You set to battering the door with the bar."), no part of the character struck (no stop short, no hurt); hit with nothing named, the bar again (of the two in hand the referee\'s, RS_WIELD: the club over the torch\'s stick); the torch alone in hand, the door hit, battered with the torch (never a better thing carried, unasked); a rope named (soft): one attempt, no battering ("You attempt to batter the door with the rope, but it seems ineffectual."), and a kick said outright a kick still; at seed 5 (dq0 -T) a giant rat attacked with the bar ("You strike at the giant rat with your bar"), and one swatted with a cloak, no blow struck ("You swat at the giant rat with the cloak, but it seems ineffectual.")',
+      name: 'dq0strike', what: 'Dingus Quest Zero\'s blows by what strikes (the user\'s playtest, 2026-10-22: "I cannot `hit the door with bar` if I have a `bar` in hand.  It still says I am battering it with my bare hands"; "A bar should just be treated as a club or stick, no?"; a soft thing tried once, "it seems ineffectual"; nothing named, what\'s in hand; HOUSE.md\'s fights, what strikes), by the world\'s events, the hub\'s pc_strike and the words: at seed 14 (dq0 -k bar: the torch and the bar in hand) the door hit with the bar, battered with it (TE_BEGUN\'s what the door and SK_WITH, pc_strike the bar\'s kind: "You set to battering the door with the bar."), no part of the character struck (no stop short, no hurt); hit with nothing named, the bar again (of the two in hand the referee\'s, RS_WIELD: the club over the torch\'s stick); the torch alone in hand, the door hit, not battered with the torch (the user\'s, 2026-11-17: "nothing is battered with a light"): its fist (SK_PUNCH, its hand as if empty: never a better thing carried, unasked); a rope named (soft): one attempt, no battering ("You attempt to batter the door with the rope, but it seems ineffectual."), and a kick said outright a kick still; at seed 5 (dq0 -T) a giant rat attacked with the bar ("You strike at the giant rat with your bar"), and one swatted with a cloak, no blow struck ("You swat at the giant rat with the cloak, but it seems ineffectual.")',
       init: 't_rc', cycles: 2400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 14 -c /ram/c.hm -k bar', 'hit the door with the bar', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k bar', 'hit the door', 'quit',
@@ -1372,7 +1372,7 @@ module.exports = {
           if (!dq0Ev(t, 'E_PORTAL', { po: p => ['PO_BROKE_DOWN', 'PO_GIVING', 'PO_HOLDING', 'PO_NO_MARK'].includes(p) }).length) f.push('the bar\'s battering not ended (' + w + ': ' + dq0Evs(t) + ')');
         }
         const g2 = T.of('dq0 -p t -s 14 -c /ram/c.hm'), h3 = T.after(g2, 'hit the door');
-        if (!begun(h3) || begun(h3).what !== (1 | 0x40) || !h3.after || h3.after.pc.strike !== K.KI_TORCH + 3) f.push('the torch in hand, the door not battered with it (' + dq0Evs(h3) + ')');
+        if (!begun(h3) || begun(h3).what !== (1 | 1 << 4) || !h3.after || h3.after.pc.strike !== 'SK_PUNCH') f.push('the torch in hand, the door not battered with its fist (' + dq0Evs(h3) + ')');
         const r = T.of('batter the door with the rope'), k = T.after(r, 'kick the door');
         dq0Need(f, r, 'E_PORTAL', { po: 'PO_SOFT' }, 'the rope not one attempt, ineffectual');
         if (begun(r)) f.push('the rope\'s attempt a battering (' + dq0Evs(r) + ')');
@@ -1383,10 +1383,33 @@ module.exports = {
         dq0Need(f, cq, 'E_BEAT', { beat: 'WB_SWAT' }, 'the rat not swatted at with the cloak');
         if (dq0Ev(c, 'E_FIGHT', { who: 0 }).length) f.push('a blow struck with the cloak (' + dq0Evs(c) + ')');
         inTurn(s, ['> hit the door with the bar', 'You set to battering the door with the bar.', '> hit the door', 'You set to battering the door with the bar.',
-          '> hit the door', 'You set to battering the door with the torch.', '> batter the door with the rope',
+          '> hit the door', 'You set to punching the door.', '> batter the door with the rope',
           'You attempt to batter the door with the rope, but it seems ineffectual.', '> kick the door', 'You set to kicking the door.',
           '> attack the rat with the bar', 'You strike at the giant rat with your bar', '> attack the rat with the cloak',
           'You swat at the giant rat with the cloak, but it seems ineffectual.'], f, 'the words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0nolight', asks: true, what: 'Dingus Quest Zero\'s door never battered with a light (the user\'s, 2026-11-17: DECISIONS.md\'s "The critique\'s questions: the user\'s answers", freeing a hand: "nothing is battered with a light"; the play test\'s "break the door" with no tool named: "You set to battering the door with the lantern."), by the world\'s events, the hub\'s pc_strike and the words: a light in hand is as if its hand were empty (the UI\'s wield: the things\' IO_HANDS telling which are lights), so the rules of a blow with nothing named go on as ever: at seed 14 (dq0 -k pick: a lit torch in hand, the pick in the pack) the door hit: asked ("... would you rather use your pick?"), no: its fist (SK_PUNCH, "You set to punching the door."), not the torch; at seed 14 (dq0 -k lantern: an unlit lantern in hand, the torch put down) the door broken: its fist again; at seed 14 (dq0 -k bar: the torch and the bar in hand) the door hit: the bar (dq0strike\'s)',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'hit the door', 'no', 'stop', 'quit',
+        'dq0 -p t -s 14 -c /ram/c.hm -k lantern', 'drop the torch', 'break the door', 'stop', 'quit',
+        'dq0 -p t -s 14 -c /ram/c.hm -k bar', 'hit the door', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
+        const begun = t => dq0Ev(t, 'E_TASK', { te: 'TE_BEGUN', task: 'LT_BATTER' })[0];
+        const n = T.of('no'), b = T.of('break the door'), h = T.after(b, 'hit the door');
+        for (const [t, w] of [[n, 'asked, no'], [b, 'a lantern in hand']]) {
+          if (!begun(t) || begun(t).what !== (1 | 1 << 4) || !t.after || t.after.pc.strike !== 'SK_PUNCH') f.push(w + ': not battered with its fist (' + dq0Evs(t) + ', pc_strike ' + (t.after && t.after.pc.strike) + ')');
+        }
+        if (!begun(h) || begun(h).what !== (1 | 0x40) || !h.after || h.after.pc.strike !== K.KI_BAR + 3) f.push('the torch and the bar: not the bar (' + dq0Evs(h) + ')');
+        inTurn(s, ['> hit the door', 'You can try battering it with your hands, but would you rather use your pick?', '> no', 'You set to punching the door.',
+          '> break the door', 'You set to punching the door.', '> hit the door', 'You set to battering the door with the bar.'], f, 'the words: ');
+        if (/battering the door with the (?:torch|lantern)/.test(s)) f.push('a door battered with a light');
         return f;
       },
       sdcard: true

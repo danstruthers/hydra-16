@@ -268,9 +268,11 @@ again:
 ** or asked about (the command kept, CF_ASKED: resolve's to leave it be) */
 static void __fastcall__ wielded (struct cmd* c)
 {
-    if ((c->action == VB_ATTACK_OBJECT || c->action == VB_BREAK_OBJECT) && wield () == 2) {
+    unsigned char w;
+
+    if ((c->action == VB_ATTACK_OBJECT || c->action == VB_BREAK_OBJECT) && ((w = wield ()) & 2)) {
         memcpy (&kept, c, sizeof kept);
-        tasked = 1;
+        tasked = w;                             /* (| 4: a light in hand, "no" its fist) */
         c->flags |= CF_ASKED;
     }
 }
@@ -288,16 +290,20 @@ unsigned char __fastcall__ o_choose (struct cmd* c)
                                                 **   for a blow, resolve.c's) */
     hold_w[0] = 0;
     if (tasked) {
-        tasked = 0;
         if ((j = o_answer_of (cl)) != 0) {
             memcpy (c, &kept, sizeof kept);
             if (j == 1) {
                 c->prep = PR_WITH;              /* (Yes: with the better thing, taken in hand) */
             } else {
-                c->other.word[0] = 0;           /* (No: bare-handed) */
+                c->other.word[0] = 0;           /* (No: bare-handed; a light in hand, its fist: s_wield's) */
+                if (tasked & 4) {
+                    strike = SK_PUNCH;
+                }
             }
+            tasked = 0;
             return 1;
         }
+        tasked = 0;
     }
     wielded (c);
     return 0;
@@ -312,12 +318,14 @@ unsigned char __fastcall__ o_choose (struct cmd* c)
 ** a window, a portcullis): what's in its hands strikes (the things' IO_HANDS; of two, the referee's choice,
 ** RS_WIELD's), strike that thing: 1; its hands empty, a better thing carried (RS_WIELD's key, its name the
 ** things' IO_WEAR's, worn by nothing), its name its other thing and the question put: 2 (dq0 -a's: yes, unasked, with
-** it: 1); else 0, its bare hands (the window put back) */
+** it: 1); else 0, its bare hands (the window put back).  At a door, a window, a portcullis a light in hand never
+** strikes (the user's, 2026-11-17: "nothing is battered with a light"): its hand as if empty, the other's thing, or the
+** better thing asked about (| 4: "no" its fist), or its bare hands, SK_PUNCH (its fist, the light kept in the other) */
 #define USLOT           (HUB->slot[SLOT_UI])
 unsigned char s_wield (void)
 {
     unsigned b;
-    unsigned char a = cmd.action, t, k;
+    unsigned char a = cmd.action, t, k, lit;
 
     if ((a == VB_ATTACK_OBJECT && cmd.aux != SK_BEST) || cmd.prep == PR_WITH || (a == VB_BREAK_OBJECT &&
         !cmd.obj.kind && cmd.obj.word[0])) {
@@ -332,8 +340,14 @@ unsigned char s_wield (void)
     b = hub_here ();
     hub_map (0);
     things (IO_HANDS, "");
-    USLOT.x[0] = (unsigned char) HUB->ireq.x;
-    USLOT.x[1] = (unsigned char) HUB->ireq.y;
+    lit = t ? HUB->ireq.mat : 0;                /* (A door, a window, a portcullis: never battered with a light, the user's,
+                                                **   2026-11-17; a light in hand as if the hand were empty: its bits the
+                                                **   world's) */
+    USLOT.x[0] = lit & 1 ? 0 : (unsigned char) HUB->ireq.x;
+    USLOT.x[1] = lit & 2 ? 0 : (unsigned char) HUB->ireq.y;
+    if (lit) {
+        lit = 4;
+    }
     ask_b (RS_WIELD, 0, t)->state = REQ_FREE;
     if ((k = USLOT.result) != 0) {              /* (What's in its hands strikes: held already, nothing to take) */
         strike = SK_OF (USLOT.x[k - 1]);
@@ -342,7 +356,7 @@ unsigned char s_wield (void)
         HUB->ireq.to = 0;
         things (IO_WEAR, USLOT.text);
         strcpy (cmd.other.word, HUB->ireq.name);
-        k = 2;
+        k = 2 | lit;                            /* (A light in hand: no, its fist, o_choose's) */
         if (autogo) {
             cmd.prep = PR_WITH;
             k = 1;
@@ -350,6 +364,9 @@ unsigned char s_wield (void)
             sayf ("\nYou can %s, but would you rather %s your %s?", t ? "try battering it with your hands" :
                 "fight it with your fists", t ? "use" : "draw", cmd.other.word);
         }
+    } else if (lit) {
+        strike = SK_PUNCH;                      /* (A light in hand, nothing better: its bare hands, as with none, the
+                                                **   light kept in the other; SK_BEST the referee's would take the torch) */
     }
     hub_back (b);
     return k;

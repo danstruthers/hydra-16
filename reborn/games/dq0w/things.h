@@ -182,6 +182,11 @@ unsigned char __fastcall__ rs_more (unsigned char w);  /* (Part 90's: 0 hands ma
 #define RF_TELL         0x8000                  /* (| TE_*: a word to the UI, E_TASK's, b rstep.what; TE_BEGUN's kind rstep.say) */
 extern unsigned rs_tool;                        /* (The tool in use; a fire-maker to hand, part 10's flame's) */
 extern unsigned char rs_free;
+extern unsigned handled;                        /* (The thing a request handles: never put away to free a hand for its tool) */
+extern unsigned left_lit;                       /* (Part 90's: a light the hands' rule set down burning, 0 none) */
+void __fastcall__ lit_back (unsigned char k);   /* (Part 90's: it taken up again as a walk starts, k the intent's kind; left behind
+                                                **   told, | LB_GO, the walk begun) */
+#define LB_GO           0x80
 extern unsigned char rs_using;                  /* (A tool's: 1 out; 2 caught, a fire-maker's) */
 #define LW_REACH        0xFE                    /* (act.work's: a step of the reach, its end RO_END's) */
 extern unsigned rs_pack;                        /* (The pack off for this handling) */

@@ -87,9 +87,11 @@ unsigned char gear_words (void);                /* Part 62 */
 void __fastcall__ kit_lock (unsigned b, unsigned k);   /* Part 61 */
 void __fastcall__ mix_need (unsigned i);        /* Part 64: a pile of coins's mints (2026-10-28) */
 void __fastcall__ mix_join (unsigned i, unsigned n);
+unsigned __fastcall__ join (unsigned n);    /* Part 35: a lot joined to one alike where it is (the hands' purse, part 75's) */
 void __fastcall__ mix_words (unsigned i);
 unsigned char __fastcall__ mix_worth (unsigned i);
 void __fastcall__ listed (unsigned n);          /* Part 11 */
+unsigned __fastcall__ purse (unsigned n);       /* Part 10: coins' purse */
 unsigned char textile (void);                   /* Part 107: a cloth torn up, washed (wcloth.c, 2026-11-10) */
 #define HW_CARRIED      1                      /* (pick's how: carried; seen, lying about; either, as far as it sees,
                                                 **   or to hand, within reach (afar else); in win) */
@@ -576,6 +578,29 @@ void s_about (void)
     }
 }
 
+/* The purse coins n go in as they're put away (the user's, 2026-11-17: "coins to the purse"; taken up, stowed, a hand
+** freed of them): the first pouch hanging from the character's belt that they fit in (open, its room: a container that
+** hangs, of no family, fits'); 0 none, or n no coins (a lot of small things counted: pennies, farthings, crowns).  The
+** belt about's */
+unsigned __fastcall__ s_purse (unsigned n)
+{
+    const struct kind* k;
+    unsigned i = 0;
+
+    s_about ();
+    k = kind_at (n);                            /* (After about's: kind_of's copies go round) */
+    if ((k->form & (KF_SMALL | KF_COUNT)) != (KF_SMALL | KF_COUNT) || !belt) {
+        return 0;
+    }
+    while ((i = items (i, IN_X | IN_ITEM, belt)) != 0) {
+        k = kind_at (i);
+        if ((k->flags & (K_CONTAINER | K_HANG)) == (K_CONTAINER | K_HANG) && !k->slots && !fits (n, i)) {
+            return i;
+        }
+    }
+    return 0;
+}
+
 /* Thing n put somewhere (where, x: items.h's), as it's flagged (held, worn, or neither), no longer hidden (nor
 ** tended: a light its keepers kept burning, taken up, burns down) */
 static void __fastcall__ place (unsigned n, unsigned char where, unsigned x, unsigned char flags)
@@ -593,29 +618,33 @@ static void __fastcall__ place (unsigned n, unsigned char where, unsigned x, uns
     }
 }
 
-/* Thing n carried: into the pack if it fits, else in a hand, the one that suits it (part 48's: hand first, the other
+/* Thing n carried: coins into the purse (s_purse's, the user's, 2026-11-17); else into the pack if it fits, else in a
+** hand, the one that suits it (part 48's: hand first, the other
 ** way about, and 2 said so as it goes in the pack, the hands full: a thing taken up, the user's, 2026-11-06; and a thing taken from a fixture, a sconce's torch, the user's, 2026-11-03: the hand, the pack only with both
-** full): 1 in the pack, 2 in a hand, 0 neither (full; or a step of the reach begun first, rs_st) */
+** full): 1 in the pack or the purse (cont), 2 in a hand, 0 neither (full; or a step of the reach begun first, rs_st) */
 #define HF_FIXT         0x80                    /* (hand_free's: thing n's in a fixture) */
 unsigned char __fastcall__ hand_free (unsigned n);
 unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
 {
     unsigned char h;
+    unsigned c;
 
-    s_about ();
     h = hand_free (n);
     if (h & HF_FIXT) {
         hand_first = 1;                         /* (From a fixture: the hand, part 48's) */
         h &= ~HF_FIXT;
     }
-    if ((!hand_first || !h) && pack && !fits (n, pack)) {
-        if (reach_step (n, pack)) {
+    if (!(c = s_purse (n)) && (!hand_first || !h) && pack && !fits (n, pack)) {
+        c = pack;                               /* (Coins in the purse first, the user's, 2026-11-17; else the pack) */
+    }
+    if (c) {
+        if (reach_step (n, c)) {
             return 0;                           /* (A step of the reach first: part 85's) */
         }
-        place (n, IW_ITEM, pack, 0);
+        place (n, IW_ITEM, cont = c, 0);        /* (cont: where it went, carried's words) */
         lv_c = 0;
-        reach_to (pack);                        /* (Put away: its reach, HOUSE.md's: part 56's) */
-        if (hand_first == 2) {                  /* (Taken up, its hands full: said so, the user's, 2026-11-06) */
+        reach_to (c);                           /* (Put away: its reach, HOUSE.md's: part 56's) */
+        if (hand_first == 2 && c == pack) {     /* (Taken up, its hands full: said so, the user's, 2026-11-06) */
             put ("You've no hand free for the ");
             put (kind_of (item_kind (n))->name);
             put (": you put it in your ");
@@ -1173,19 +1202,91 @@ static unsigned char __fastcall__ hold (unsigned n);
 /* ---- Hands made free (the user's, 2026-11-03: "If your hands are busy and your want to ready tools or other things, it should
 ** probably put the other things away first (in their appropriate place) then take the tools in hand.  A torch would be placed in a
 ** nearby empty sconce or laid on the ground, a sword put in its scabbard, etc."; HOUSE.md's): the next thing in the way of rs_tool in
-** hand (a chisel, both hands for it and its hammer), its step begun: 1; or 0, its hand free, or none to be had.  What goes where is
-** the house's: a flame in hand into an empty sconce within reach, else laid on the ground lit; what's kept worn, slung (a shield); a
-** carrier its family's on the body; else the pack, by the steps of the reach; else set down.  Never what's being readied: rs_tool, the
-** tools out already (a tinderbox), the thing they're for (handled, a request's by the steps: the torch to light), a chisel's hammer or a
-** hammer's chisel; the pack off for this in a hand set down, never slung to come off again; no more than RS_FREE of them a sequence,
-** so nothing can go round for ever: then no hand, the handler's words (the soak, 2026-11-04) */
+** hand (a chisel, both hands for it and its hammer), its step begun: 1; or 0, its hand free, or none to be had.  Of two in the way, the
+** one whose thing has a home first, the light last (the user's, 2026-11-17: "the hand whose thing has a home goes first (a sword to
+** its scabbard, coins to the purse), the light last"; the rule of 2026-11-03 kept, only the order chosen): home_of's rank, the item
+** store's order between two alike.  What goes where is the house's: a flame in hand into an empty sconce within reach, else laid on
+** the ground lit; what's kept worn, slung (a shield); coins the purse (s_purse's); a carrier its family's on the body; else the pack,
+** by the steps of the reach; else set down.  Never what's being readied: rs_tool, the tools out already (a tinderbox), the thing
+** they're for (handled, a request's by the steps: the torch to light, the rope tied as its hammer's readied), a chisel's
+** hammer or a hammer's chisel; the pack off for this in
+** a hand set down, never slung to come off again; no more than RS_FREE of them a sequence, so nothing can go round for ever: then no
+** hand, the handler's words (the soak, 2026-11-04).  A light set down burning, or in a sconce, left_lit: taken up again as a walk
+** starts (s_lit_back's) */
 #define RS_FREE         6
+unsigned left_lit;                              /* (The light the hands' rule set down burning, or in a sconce: 0 none) */
+static unsigned char rd, rt, rn;                /* (home_of's: the step's edge, its words, its time; */
+static unsigned rc, ri;                         /*   the place it goes, a sconce, the purse, a carrier; the pack) */
+
+/* Where held thing o goes to free its hand (rd, rt, rn, rc, ri), w 0 but its rank: 0 a home (a scabbard, a sheath, the purse,
+** slung, the pack; the pack off for this, set down), 1 none (set down at its feet), 2 a light burning (its place not looked for,
+** w 0).  The pack and the belt about's */
+static unsigned char __fastcall__ home_of (unsigned o, unsigned char w)
+{
+    unsigned i;
+    const struct kind* k;
+    unsigned char lit;
+
+    rc = 0;
+    rn = 20;
+    fetch (&rec, o);
+    k = kind_of (rec.kind);
+    if ((lit = rec.flags & I_LIT) != 0 && !w) {
+        return 2;
+    }
+    if (lit && !(k->flags & K_HANG)) {
+        for (i = 0; (i = items (i, IN_SQUARE, 0)) != 0; ) {
+            if (ip->kind == KI_SCONCE && in_reach (i)) {
+                cat_map ();
+                if (!o_fits (o, i)) {
+                    rc = i;
+                    break;
+                }
+            }
+        }
+        rd = rc ? SE_PLACE : SE_DROP;
+        rt = rc ? SV_SCONCE : SV_LAYLIT;
+    } else if ((k->flags & K_WEAR) && o != rs_pack) {
+        rd = SE_SLING;
+        rt = SV_SLING;
+        rn = 50;
+    } else {
+        if ((k->form & (KF_SMALL | KF_COUNT)) == (KF_SMALL | KF_COUNT)) {
+            rc = purse (o);                     /* (Coins: the purse) */
+        }
+        for (i = 0; !rc && (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
+            k = kind_of (ip->kind);
+            if ((k->flags & K_HANG) && k->slots && i != o && on_pc (i)) {
+                cat_map ();
+                if (!o_fits (o, i)) {
+                    rc = i;
+                }
+            }
+        }
+        if (rc) {
+            rd = SE_PLACE;
+            rt = SV_SHEATHE;
+        } else {
+            i = pack ? pack : rs_pack;          /* (Worn, or off for this at its feet) */
+            cat_map ();
+            if (i && i != o && !o_fits (o, i)) {
+                rd = SE_STOW;
+                rt = SV_INPACK;
+                ri = i;
+            } else {
+                rd = SE_DROP;
+                rt = SV_SETDOWN;
+                rn = 10;
+            }
+        }
+    }
+    return lit ? 2 : rd == SE_DROP && o != rs_pack;
+}
+
 static unsigned char s_room (void)
 {
-    unsigned i = 0, c = 0, o, o1, o2;
-    const struct kind* k;
-    unsigned char d, t, n = 20, pair;
-
+    unsigned i = 0, o = 0, o1, o2;
+    unsigned char t, r, best = 3, pair;
 
     if (item_at (rs_tool)->flags & I_HELD) {
         return 0;
@@ -1204,84 +1305,106 @@ static unsigned char s_room (void)
         return 0;
     }
     pair = !strcmp (kind_at (rs_tool)->tool, "chisel") || !strcmp (kind_at (rs_tool)->tool, "hammer");
+    about ();                                   /* (The pack, the belt: home_of's) */
     hub_map (0);
     o1 = HUB->rs_nout ? HUB->rs_out[0] : 0;
     o2 = HUB->rs_nout > 1 ? HUB->rs_out[1] : 0;
     while ((i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
         if ((ip->flags & I_HELD) && i != rs_tool && i != o1 && i != o2 && (rs_ok != 1 || i != handled) &&
-            !(pair && (!strcmp (kind_at (i)->tool, "chisel") || !strcmp (kind_at (i)->tool, "hammer")))) {
-            break;
+            !(pair && (!strcmp (kind_at (i)->tool, "chisel") || !strcmp (kind_at (i)->tool, "hammer"))) &&
+            (r = home_of (i, 0)) < best) {
+            best = r;                           /* (The one with a home first, the light last: the first of the best) */
+            o = i;
         }
     }
-    if (!i) {
+    if (!o) {
         return 0;
     }
-    o = i;
-    fetch (&rec, o);
-    k = kind_of (rec.kind);
-    if ((rec.flags & I_LIT) && !(k->flags & K_HANG)) {
-        for (i = 0; (i = items (i, IN_SQUARE, 0)) != 0; ) {
-            if (ip->kind == KI_SCONCE && in_reach (i)) {
-                cat_map ();
-                if (!o_fits (o, i)) {
-                    c = i;
-                    break;
-                }
-            }
-        }
-        d = c ? SE_PLACE : SE_DROP;
-        t = c ? SV_SCONCE : SV_LAYLIT;
-    } else if ((k->flags & K_WEAR) && o != rs_pack) {
-        d = SE_SLING;
-        t = SV_SLING;
-        n = 50;
-    } else {
-        for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
-            k = kind_of (ip->kind);
-            if ((k->flags & K_HANG) && k->slots && i != o && on_pc (i)) {
-                cat_map ();
-                if (!o_fits (o, i)) {
-                    c = i;
-                    break;
-                }
-            }
-        }
-        if (c) {
-            d = SE_PLACE;
-            t = SV_SHEATHE;
-        } else {
-            about ();
-            i = pack ? pack : rs_pack;          /* (Worn, or off for this at its feet) */
-            cat_map ();
-            if (i && i != o && !o_fits (o, i)) {
-                if (reach_step (o, i)) {
-                    return 1;                   /* (The pack off first, its level) */
-                }
-                d = SE_STOW;
-                t = SV_INPACK;
-            } else {
-                d = SE_DROP;
-                t = SV_SETDOWN;
-                n = 10;
-            }
-        }
+    home_of (o, 1);                             /* (Its place, its words: the chosen one's) */
+    if (rd == SE_STOW && reach_step (o, ri)) {
+        return 1;                               /* (The pack off first, its level) */
     }
+    if (best == 2) {
+        left_lit = o;                           /* (A light set down burning: taken up again as a walk starts) */
+    }
+    t = rt;
     if (o != rs_pack && ++rs_free > 1) {        /* (The other hand's after it: its words not the first's again) */
         t = t == SV_LAYLIT ? SV_LAYLIT2 : t == SV_INPACK ? SV_INPACK2 : t == SV_SETDOWN ? SV_LETFALL : t;
     }
-    pair = c || d == SE_STOW ? item_kind (c ? c : i) : 0;   /* (Where it goes, its kind: the step's words', the UI's, "in your
+    pair = rc || rd == SE_STOW ? item_kind (rc ? rc : ri) : 0;   /* (Where it goes, its kind: the step's words', the UI's, "in your
                                                 **   backpack", "in the sconce": one wording, the world's, 2026-11-13) */
     rstep.what = item_kind (rstep.apart = o);
     hub_map (0);
-    HUB->rs_place = c;
+    HUB->rs_place = rc;
     HUB->ireq.mat = pair;
     rstep.thing = o;
     rs_hand = 0;
-    rstep.edge = d;
+    rstep.edge = rd;
     rstep.say = t;
-    rstep.time = n;
+    rstep.time = rn;
     reach_step (0, RS_GO);
     return 1;
+}
+
+/* A light the hands' rule set down burning (left_lit: laid at the character's feet, set in a sconce), as a walk starts (the user's,
+** 2026-11-17: "a light left burning is picked up when a walk starts, if a hand is free"; dq0w.c's intent, go its kind): a walk's (I_GO,
+** I_GOTO, I_STEP, I_TAKE, I_TRAVEL), before it, taken up again into a free hand, a second's work, told ("You take up the lantern."),
+** none free, kept for the walk's start; | LB_GO, the walk begun, left behind, told ("You leave the lantern behind."); gone from
+** where it was set, out, or in hand again, nothing.  Forgotten but for a walk not begun, no hand free.  The hub's header in the
+** window after */
+void __fastcall__ s_lit_back (unsigned char go)
+{
+    struct msg m;
+    unsigned n = left_lit;
+    unsigned char h = 0, k = go & ~LB_GO, sc;
+
+    if (k != I_GO && k != I_GOTO && k != I_STEP && k != I_TAKE && k != I_TRAVEL) {
+        goto out;                               /* (Not a walk: as it was) */
+    }
+    go &= LB_GO;
+    fetch (&rec, n);
+    k = rec.kind;
+    if (!k || (rec.flags & (I_LIT | I_HELD)) != I_LIT) {
+        goto gone;
+    }
+    if ((sc = rec.where == IW_ITEM) != 0) {
+        if (item_at (rec.x)->kind != KI_SCONCE || (!go && !in_reach (rec.x))) {
+            goto gone;
+        }
+    } else {
+        hub_map (0);
+        if (rec.where != IW_SQUARE || (!go && (rec.sn != HUB->pc_stratum || rec.x != HUB->pc_x || rec.y != HUB->pc_y))) {
+            goto gone;                          /* (Where it was set: at its feet, in a sconce within reach; the walk
+                                                **   begun, it may be a step on) */
+        }
+    }
+    if (!go) {
+        if (!(h = hand_free (n) & ~HF_FIXT)) {
+            goto out;                           /* (No hand free: left behind if the walk begins) */
+        }
+        fetch (&rec, n);
+        rec.where = IW_ACTOR;
+        rec.x = rec.y = 0;
+        rec.sn = h;
+        rec.flags = (rec.flags & ~(I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | I_HELD;
+        store (&rec, n);
+        light_now ();                           /* (Its light: what it holds lit) */
+        if (sc) {
+            sconce_lights (1);                  /* (Out of its sconce: the room's light) */
+        }
+        pextra += 10;                           /* (A second's: the walk's first spell the longer) */
+    }
+    hub_map (0);
+    m.kind = E_TASK;
+    m.who = 0;
+    m.b = k;
+    m.w1 = TE_BEGUN | (unsigned) (h ? SV_TAKEUP : SV_LEAVE) << 8;    /* (A step's words, the UI's TASK.step) */
+    m.t = HUB->now;
+    hub_event (&m);
+gone:
+    left_lit = 0;
+out:
+    hub_map (0);
 }
 
 /* A step's end of these (rstep.edge, rstep.thing): the tool in hand, kept to go back; the tool back where it came from, or the pack; put in its
@@ -1350,6 +1473,9 @@ void s_rs_did2 (void)
     store (&rec, n);
     if (d == SE_PLACE) {
         sconce_lights (1);
+        if (kind_at (n)->form & KF_COUNT) {
+            join (n);                           /* (Coins in the purse: with those there, part 35's) */
+        }
     }
 }
 #pragma code-name (pop)
@@ -2323,6 +2449,9 @@ unsigned char s_serve (void)
         }
     }
     memcpy (&iq, &HUB->ireq, sizeof iq);
+    handled = 0;                                /* (This request's own, as it's found: an earlier one's never kept from
+                                                **   the hands' rule, a falchion drawn before a bandage got out, the play
+                                                **   test's, 2026-11-17) */
     if (HUB->pc_hid) {
         hid_op (HO_THING);                      /* (A thing handled: out of hiding, part 94's) */
     }
@@ -3096,10 +3225,15 @@ unsigned char s_bar_hand (void)
 {
     unsigned n, best;
 
-    if (iq.kind == IO_HANDS) {                  /* (And what's in its hands, IO_HANDS's, below) */
+    if (iq.kind == IO_HANDS) {                  /* (And what's in its hands, IO_HANDS's, below: which are lights, mat's
+                                                **   bits 1 and 2, a door never battered with one, the UI's wield, the
+                                                **   user's, 2026-11-17) */
         held_kinds ();
+        n = (kind_flags (held_k[0]) & K_LIGHT ? 1 : 0) | (kind_flags (held_k[1]) & K_LIGHT ? 2 : 0);
+        hub_map (0);
         HUB->ireq.x = held_k[0];
         HUB->ireq.y = held_k[1];
+        HUB->ireq.mat = n;
         return 0;
     }
 
@@ -3203,7 +3337,7 @@ static unsigned __fastcall__ split (unsigned n, unsigned char k)
     return n;
 }
 
-static unsigned __fastcall__ join (unsigned n)
+unsigned __fastcall__ s_join (unsigned n)
 {
     struct item q;
     unsigned i = 0;
@@ -3307,7 +3441,8 @@ static unsigned char which (void)
 ** one place it could go (pouch(es) or backpack), of course depending on size.  Stowing a weapon with a sheath should
 ** choose the sheath if worn."; the designators' step 7): of the containers the character wears (the pack, what hangs
 ** from its belt), not shut, that thing n fits in (its size, its weight, its family: fits'), a holder made for its family
-** (a sheath a knife's, a scabbard a sword's, a quiver arrows': its kind's slots) first, without asking; else two or more
+** (a sheath a knife's, a scabbard a sword's, a quiver arrows': its kind's slots) first, without asking, and coins the
+** purse (s_purse's: the user's, 2026-11-17, "coins to the purse"); else two or more
 ** that keep anything, IR_WHICH, the thing's id and each place's id in the text for the UI to ask where ("W12|30|31|");
 ** one, that one (the request made a put into it, "#" and its id; the pack's, a stow as ever); none, as ever */
 #pragma code-name (push, "SW74CODE")            /* (Part 74's: part 35's room, overlay 19's; not dq0w.rop's, part 104's,
@@ -3327,6 +3462,10 @@ unsigned char s_stow_where (void)
                                                 **   as it was) */
     if (!(n = pick (iq.name, HW_HAND))) {
         return 0;
+    }
+    if ((c[0] = purse (n)) != 0) {
+        m = 1;                                  /* (Coins: the purse, unasked) */
+        goto one;
     }
     f = kind_at (n)->slots;
     z = kind_at (n)->seen;                      /* (Its size, as it's made out: a pouch holds nothing much bigger than
@@ -3367,6 +3506,7 @@ unsigned char s_stow_where (void)
         put ("|");
         return IR_WHICH;
     }
+one:
     if (m && c[0] != pack) {
         iq.kind = IO_PUT;                       /* (Into that one: a put, by its id) */
         iq.into[0] = '#';
@@ -6191,7 +6331,7 @@ static unsigned char __fastcall__ carried (unsigned char s, unsigned char t)
         return rs_st ? IR_NO : no (SA_HANDS);   /* (A step of the reach first: part 85's) */
     }
     say (s);
-    name_of (pack, 0);                          /* (carry's about's) */
+    name_of (cont, 0);                          /* (Where carry put it: the pack, the purse) */
     return yes (cr == 1 ? SA_IN_PACK : SA_IN_HAND, t);
 }
 

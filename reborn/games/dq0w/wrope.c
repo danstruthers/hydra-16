@@ -67,6 +67,8 @@ static unsigned char __fastcall__ rp_tie (unsigned char done)
     char b[14];
 
     R_N = *iq.name ? carried_named (iq.name) : rp_carried (KI_ROPE);
+    handled = R_N;                              /* (Never put away to free a hand for its hammer: the hands' rule's, the
+                                                **   home first, 2026-11-17) */
     k = R_N ? item_at (R_N)->kind : 0;
     if (k == KI_GRAPPLE) {                      /* (The other way about: the grapple to the rope) */
         if (!(R_N = rp_carried (KI_ROPE))) {

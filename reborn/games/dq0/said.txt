@@ -401,7 +401,7 @@ TASK.elsewhere      +"{text?{nl}You came in on a level above this one.|\n{Text} 
                     "|{@douse}|go to {@douse}: that will leave you in the dark"
                     "|{@light} from the burning one|set the {text} down at your feet|take up the {text}"
                     "|set to sharpening the {text}|strike a spark|{@put_in}|sling the {text}"
-                    "|{@put_in}|{@stow}|{@stow} too}"
+                    "|{@put_in}|{@stow}|{@stow} too|leave the {text} behind}"
 
 TASK.step           +"\nYou {@steps}."
 TASK.fumble         +"\nYou fumble for your {kind named}."

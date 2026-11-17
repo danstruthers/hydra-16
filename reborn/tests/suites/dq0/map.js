@@ -1241,7 +1241,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0doorfar', near: ['map', 'parser'], what: "Dingus Quest Zero's door beyond the room's walls walked over to (HOUSE.md's out of reach, walked to first: \"close the door\", \"hit the door\", \"kick the door\" not beside it by the four ways, nor on the walls of the room it stands in: dq0's door_go; 2026-11-03, the check of the document), by the words and the hub: at seed 3 out through the cell's doorway into the passage (the rats held off, the scene's), the doors on the cell's wall asked about, one chosen: \"You head for the door.\", walked to beside it, then the command: the open door closed, the closed one battered with the torch, and kicked",
+      name: 'dq0doorfar', near: ['map', 'parser'], what: "Dingus Quest Zero's door beyond the room's walls walked over to (HOUSE.md's out of reach, walked to first: \"close the door\", \"hit the door\", \"kick the door\" not beside it by the four ways, nor on the walls of the room it stands in: dq0's door_go; 2026-11-03, the check of the document), by the words and the hub: at seed 3 out through the cell's doorway into the passage (the rats held off, the scene's), the doors on the cell's wall asked about, one chosen: \"You head for the door.\", walked to beside it, then the command: the open door closed, the closed one punched (the torch in hand never battered with: the user's, 2026-11-17), and kicked",
       init: 't_rc', cycles: 1400e6,
       machine: { input: (() => {
         const g = d => ['dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/' + d, 'step west', 's'];
@@ -1264,7 +1264,7 @@ module.exports = {
       check(m, out) {
         const T = dq0Turns(m), f = [], o = dq0Story(out), G = o.split('% dq0 ').slice(1);
         if (G.length !== 3) return ['not three games: ' + G.length];
-        const ans = T.filter(t => t.line === '2' || t.line === '1'), want = [['close the door', 32723, 'PO_CLOSED', /You close the door\./], ['hit the door', 32720, 'TE_BEGUN', /You set to battering the door with the torch\./], ['kick the door', 32720, 'TE_BEGUN', /You set to kicking the door\./]];
+        const ans = T.filter(t => t.line === '2' || t.line === '1'), want = [['close the door', 32723, 'PO_CLOSED', /You close the door\./], ['hit the door', 32720, 'TE_BEGUN', /You set to punching the door\./], ['kick the door', 32720, 'TE_BEGUN', /You set to kicking the door\./]];
         if (ans.length !== 3) return ['the doors not chosen: ' + ans.length];
         want.forEach(([l, x, ev, re], i) => {
           const a = ans[i];

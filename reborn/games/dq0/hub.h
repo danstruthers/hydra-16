@@ -1019,7 +1019,7 @@ enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK
 enum { SV_OFF = 0x20, SV_OFFDOWN, SV_ON, SV_LETBURN, SV_LAYLIT, SV_LAYLIT2, SV_DOWN2, SV_DIP,
        SV_IN, SV_OPEN, SV_GETOUT, SV_LETFALL, SV_PUTAWAY, SV_BLOWOUT, SV_BLOWDARK, SV_LIGHT,
        SV_SETDOWN, SV_TAKEUP, SV_HONE, SV_KINDLE, SV_SHEATHE, SV_SLING, SV_SCONCE, SV_INPACK,
-       SV_INPACK2 };                            /* A step of a long task (the world's step planner, things.h's struct
+       SV_INPACK2, SV_LEAVE };                  /* A step of a long task (the world's step planner, things.h's struct
                                                 **   step: the reach's, HOUSE.md's, each its own time): its words, in a long
                                                 **   task's kind's place (E_TASK's TE_BEGUN, I_WAIT's task: LT_STEP set, the
                                                 **   verb the low 5 bits): a pack on the back taken off, into a hand or set
@@ -1028,8 +1028,10 @@ enum { SV_OFF = 0x20, SV_OFFDOWN, SV_ON, SV_LETBURN, SV_LAYLIT, SV_LAYLIT2, SV_D
                                                 **   a container's level reached into, held open, a thing got out; let
                                                 **   fall, put away, blown out (to the dark), lit from another, set down,
                                                 **   taken up, sharpened, a spark struck, sheathed, slung, set in a
-                                                **   sconce, put in the pack (too).  Those before SV_IN are never told
-                                                **   apart by what they're like ("the spent torch": main.c's reach_said) */
+                                                **   sconce, put in the pack (too); a light left behind (the hands' rule's,
+                                                **   a walk begun, no hand free for it: 2026-11-17).  Those before SV_IN
+                                                **   are never told apart by what they're like ("the spent torch": main.c's
+                                                **   reach_said) */
 #define LT_STEP         0x20                    /* (A long task's kind past LT_DIP: a step, SV_*) */
 enum { SM_NEW = 0x40, SM_OLD = 0x80, SM_OTHER = 0xC0 };   /* (A step's words' word, | SV_*: "the new torch", "the old", "the
                                                 **   other" (of two alike); its words' alone: the long task's kind, I_WAIT's,
