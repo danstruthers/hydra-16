@@ -120,7 +120,8 @@ function structs(texts) {
 }
 
 // A body's members: [{ name, dims: [C expression], sub: a struct's body (a named struct's, or one of its own), or
-// null }]; a member that's a macro alone (RQH) its #define's text
+// null }]; a member that's a macro alone (RQH) its #define's text; an anonymous struct's or union's members its
+// parent's, as C has them (the hub's bodies, actor 0's old names: hub.h's union, offsetof's place of each by cc65)
 function members(body, defs, named) {
   const out = [];
   for (let decl of split(body.replace(/^[ \t]*#.*$/gm, ''), ';')) {     // (A #define among its fields left out)
@@ -132,6 +133,7 @@ function members(body, defs, named) {
       for (; e < decl.length; e++) if (decl[e] === '{') d++; else if (decl[e] === '}' && !--d) break;
       sub = decl.slice(b + 1, e);
       list = split(decl.slice(e + 1), ',').map(x => ({ x, ptr: x.includes('*') }));
+      if (!list.length) { out.push(...members(sub, defs, named)); continue; }   // (Anonymous: its members the parent's)
     } else {
       const parts = split(decl, ','), first = parts[0].match(/^(.*?)([\s*]+)(\w+\s*(?:\[[^\]]*\]\s*)*)$/);
       if (!first) continue;

@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     55                    /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     56                    /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -73,7 +73,9 @@
                                                 **   IOS_*; 53, LT_DIP, SL_SPENT, SL_FULL, the UI bank's ix (what's
                                                 **   carried: the UI's first words), a thing told apart, AW_*; 54, the letters: the UI bank's low and
                                                 **   cap, struct cix's let, NLET, LT_REC, struct ucap, CW_*;
-                                                **   55, the denizens' capitals: struct sden's den) */
+                                                **   55, the denizens' capitals: struct sden's den; 56, the bodies: the
+                                                **   character actor 0, bodies[] and pc, its fields' old names laid over
+                                                **   it, ONE-PATH.md's stage 1) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -1088,7 +1090,9 @@ struct req {
 };
 enum { SLOT_WORLD, SLOT_UI, NSLOTS };
 
-/* An actor: a denizen near the character, a mind and a body.  Its mind is the denizens' task's (dq0d: its records
+/* An actor: a denizen near the character, a mind and a body; and the character, actor 0, whose body is a struct actor
+** too, the first in the hub's table of bodies (bodies[], by who: ONE-PATH.md's stage 1), its mind the UI's (the
+** player's).  A denizen's mind is the denizens' task's (dq0d: its records
 ** its own, in its own banks): it decides what the actor means to do, and says so (its intents, the hub's di: hub.h's
 ** the denizens' intents).  Its body is the world's, as the character's is: the world carries out its intents by the
 ** character's rules (a square at a time, its time added to ready; a blow, the referee asked), keeps the character
@@ -1281,7 +1285,6 @@ struct hub {                                    /* Bank 0, at $8000 */
     /* The clock (the world's: tick, then now, then tick again, so a reader sees it whole: hub_now) */
     volatile unsigned char tick;
     volatile unsigned long now;
-    volatile unsigned long pc_ready;            /* When the character can act again */
     unsigned        round;                      /* The ruleset's round, tenths of a second */
     unsigned        tpr;                        /* Real ticks a round, at the pace (0: turns; and while a long wait
                                                 **   or a sleep runs as the turns pace does, the world's wait_pace) */
@@ -1296,10 +1299,9 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   same: every task's streams mixed with it, the dungeon not) */
     unsigned long   seed;
     char            pcstatus[16];               /* The character's state, the referee's words ("UP 3") */
-    volatile unsigned char pc_stratum;          /* Where the character is (the world's): its stratum, */
-    volatile unsigned pc_x, pc_y;               /*   its square (the dungeon's frame, world.h's), */
-    volatile unsigned char pc_face;             /*   the way it faces (a heading: H_N ... H_NW), */
-    volatile unsigned char pc_light;            /*   the light it carries: how far it reaches, in tiles (0: none:
+                                                /* (Where it is, the way it faces, when it can act again: its body's,
+                                                **   actor 0's, the bodies' below: pc_stratum, pc_x ... their old names) */
+    volatile unsigned char pc_light;            /* The light it carries: how far it reaches, in tiles (0: none:
                                                 **   the world's, from the lit things it holds: its item store's), */
     char            pc_lamp[14];                /*   and the brightest of them, named (its minutes left: pc_fuel) */
     struct rs_summary pcsum;                    /* The character's summary (the referee's: its senses ...) */
@@ -1357,9 +1359,32 @@ struct hub {                                    /* Bank 0, at $8000 */
     /* The referee's slots: the world's, the UI's, and the denizens' task's (a short one: DTEXT of its text) */
     struct req      slot[NSLOTS];
     unsigned char   dslot[sizeof (struct req) - REQ_TEXT + DTEXT];
-    /* The denizens near the character (their minds the denizens' task's, their bodies the world's), and a save asked
-    ** of the denizens' task (its records written to the save folder's dens.dat) */
-    struct actor    actor[NACTORS];
+    /* The bodies (ONE-PATH.md's stage 1, the user's choice of 2026-11-17: the character actor 0): every actor's body
+    ** in one table by who, as the intents, the events and the referee's requests name an actor (0 the character, a
+    ** denizen's entry plus 1), the world's; the character's mind the UI's (the player's), the denizens' near it their
+    ** task's (their records its own, in its own banks); and a save asked of the denizens' task (its records written
+    ** to the save folder's dens.dat) */
+    union {
+        struct actor bodies[1 + NACTORS];       /* Every body, by who: bodies[0] the character's, bodies[k + 1] actor[k] */
+        struct {
+            union {
+                struct actor pc;                /* Actor 0, the character's body: its stratum, square, facing, when it
+                                                **   can act again, its position and its pace (the world's); not kept
+                                                **   yet, the rest (its hiding pc_hid's; built/2026-11-17-actor0.md) */
+                /* (Its fields by the names they had before it was actor 0, each laid over its field, so that each
+                ** task's code moves to the new ones in its own time: an old name goes once no task uses it) */
+                struct { unsigned char _a0sn[offsetof (struct actor, sn)]; volatile unsigned char pc_stratum; };
+                struct { unsigned char _a0x[offsetof (struct actor, x)]; volatile unsigned pc_x; };
+                struct { unsigned char _a0y[offsetof (struct actor, y)]; volatile unsigned pc_y; };
+                struct { unsigned char _a0face[offsetof (struct actor, face)]; volatile unsigned char pc_face; };
+                struct { unsigned char _a0ready[offsetof (struct actor, ready)]; volatile unsigned long pc_ready; };
+                struct { unsigned char _a0pos[offsetof (struct actor, pos)]; unsigned char pc_pos; };
+                struct { unsigned char _a0gait[offsetof (struct actor, gait)]; unsigned char gait; };
+            };
+            struct actor actor[NACTORS];        /* The denizens near the character (their bodies the world's, their
+                                                **   minds their task's): actor[k] is bodies[k + 1] */
+        };
+    };
     struct rqh      dsave;
     volatile unsigned char den_seq;             /* Bumped as the world changes what the character may see of the
                                                 **   actors */
@@ -1376,8 +1401,8 @@ struct hub {                                    /* Bank 0, at $8000 */
     /* The character's pace and watchfulness (DUNGEON.md: moving; the world's, set as the player says, the UI's request
     ** WQ_SET, and kept with the game, world.dat; the referee's to word, RS_DESCRIBE b 3), the pace it's going at now
     ** (the world's: as a move starts, till it's there and has looked about), and its body's position (the world's, as
-    ** the referee says it's fallen, or got up: POS_*) */
-    unsigned char   gait;                       /* rs.h's GA_* */
+    ** the referee says it's fallen, or got up: POS_*).  Its pace (gait, rs.h's GA_*) and its position (pc_pos) are its
+    ** body's, actor 0's, the bodies' above */
     unsigned char   watch;                      /* WA_* */
     unsigned char   pc_lump;                    /* (dq0 -J, the tests': the reach in one lump, no steps, things.c's part 85, PL_*) */
     unsigned        rs_out[2], rs_home[2], rs_place;   /* (The tools a use got out, the world's, part 87's, each where it came from, 0 anywhere;
@@ -1390,7 +1415,6 @@ struct hub {                                    /* Bank 0, at $8000 */
     const char*     ldir;                       /* (The game's lib folder, the world's argument: its own memory) */
     unsigned char   rlo, rhi;                   /* (The climb's rope's help: the feet above the foot it runs between; rhi 0, none:
                                                 **   dq0w.c's part 97) */
-    unsigned char   pc_pos;                     /* POS_* */
     volatile unsigned char pc_going;            /* The pace it's going at plus 1 (0: not moving), | GOING_DARK: by
                                                 **   feel; not moving, GOING_BOLD, a pace said outright in the dark */
     /* A fight: the character's blow, posted by the world (I_ATTACK) as it takes the round for it, and struck (the
@@ -1888,7 +1912,6 @@ struct wsave {
 **   own hub.cq commands +ui                                    (The command parser's: the UI's request)
 **   own hub.tick world                                         (The clock: the world's alone)
 **   own hub.now world
-**   own hub.pc_ready world
 **   own hub.round world                                        (The game begun: the UI's WQ_START)
 **   own hub.tpr world
 **   own hub.paused world                                       (The UI's pause and quit: its requests, WQ_SET, I_QUIT)
@@ -1902,11 +1925,6 @@ struct wsave {
 **   own hub.seed ui
 **   own hub.dice ui
 **   own hub.pcstatus referee                                   (The referee's words)
-**   own hub.pc_stratum world                                   (The character's body: the world's; a game carried
-**                                                                on, its world.dat's)
-**   own hub.pc_x world
-**   own hub.pc_y world
-**   own hub.pc_face world
 **   own hub.pc_light world
 **   own hub.pc_lamp world
 **   own hub.pc_fuel world                                      (Its light's minutes left: slice 4.1's)
@@ -1941,6 +1959,9 @@ struct wsave {
 **   own hub.slot[SLOT_WORLD] referee +world
 **   own hub.slot[SLOT_UI] referee +ui +world +denizens         (The UI's, lent to those asking for it)
 **   own hub.dslot referee +denizens
+**   own hub.pc world                                           (The character's body, actor 0: the world's, its
+**                                                                old names too, pc_x ... gait; a game carried on, its
+**                                                                world.dat's; its pace the UI's request, WQ_SET)
 **   own hub.actor[*] world                                     (A denizen's body: the world's)
 **   own hub.actor[*].name denizens                             (Its mind, its record: the denizens')
 **   own hub.actor[*].den denizens
@@ -1970,7 +1991,6 @@ struct wsave {
 **   own hub.dq_head world                                      (The denizens' events: the world's)
 **   own hub.way_open world                                     (The puzzle's: the world's, by the theme's rules)
 **   own hub.sway denizens +ui
-**   own hub.gait world                                         (The character's state: the world's, WQ_SET)
 **   own hub.rs_out world                                       (The tools a use got out, part 87's, 90's: 2026-11-03)
 **   own hub.rs_home world
 **   own hub.rs_place world
@@ -1981,7 +2001,6 @@ struct wsave {
 **   own hub.rlo world
 **   own hub.rhi world
 **   own hub.watch world
-**   own hub.pc_pos world                                       (Its body's position: the world's, as the referee says)
 **   own hub.pc_going world
 **   own hub.pc_foe world
 **   own hub.pc_aim world
@@ -2109,6 +2128,12 @@ struct wsave {
 #define DSLOT   ((struct req*) HUB->dslot)
 #define HUB_FREE        2048                    /* (Bank 0's room kept free, at least) */
 typedef char hub_fits[sizeof (struct hub) + HUB_FREE <= 0x2000 ? 1 : -1];   /* (The header in bank 0) */
+typedef char pc_names[sizeof HUB->pc_stratum == sizeof HUB->pc.sn && sizeof HUB->pc_x == sizeof HUB->pc.x &&
+                      sizeof HUB->pc_y == sizeof HUB->pc.y && sizeof HUB->pc_face == sizeof HUB->pc.face &&
+                      sizeof HUB->pc_ready == sizeof HUB->pc.ready && sizeof HUB->pc_pos == sizeof HUB->pc.pos &&
+                      sizeof HUB->gait == sizeof HUB->pc.gait && sizeof (HUB->bodies) == sizeof (struct actor) * (1 + NACTORS) &&
+                      offsetof (struct hub, actor) == offsetof (struct hub, bodies[1]) ? 1 : -1];   /* (Actor 0's old names
+                                                **   each the size of its field; the denizens' entries the bodies' from 1) */
 /* (What the assembly reads of the hub, where it is, and the numbers the build's make.js files and the tests want:
 ** the build's, from these headers as cc65 lays them out, games/dq0/hubgen.js: obj/gen/dq0hub_*.inc, dq0hub.json) */
 typedef char snd_fit[sizeof (struct sndhead) <= 48 && SND_QUEUE + 1024 + 128 + 512 <= 0x2000 ? 1 : -1];
