@@ -22,7 +22,8 @@
 //                          disk's volume after the modules (romfs/romfs.txt: tools/romfs.js), each file read back
 //   5. the budgets         sizes, and room left (../base/tools/budget.js); and the games' room (headroom: each C
 //                          game's main RAM free, its overlays' and swapped parts'): the build failed if one of
-//                          Dingus Quest Zero's tasks has under HEADROOM bytes of main RAM free
+//                          Dingus Quest Zero's tasks, or the theme compiler or generator, has less main RAM free
+//                          than its floor (FLOORS)
 //   6. the SDK             bin/sdk/asm: the assembly SDK whole, to take away (sdk/asm, the generated hydra.inc and
 //                          numbers.inc, asmlib.inc, the samples' sources); the C library, obj/sdk/c/hydra.lib (cc65's none.lib
 //                          with sdk/c/lib's modules), and bin/sdk/c: the C SDK whole (sdk/c, the generated
@@ -248,15 +249,17 @@ function partsChecked(sources, objdir) {
 // sdk/c/hydra.cfg): its main RAM free, from its BSS's end to its swapped parts' area (__SWAP_START__: games/dq0/
 // swap.inc), or, with none, to the C stack's least room (__RAMTOP__ - __STACKMIN__); each overlay's bytes free (OVn,
 // of its own size: 8K as a rule) and each swapped part's (SWn, of the area's: __SWAPSIZE__).  One table of them all;
-// a task of Dingus Quest Zero (dq0 and dq0*: they run together, and grow) with under HEADROOM bytes free fails the
-// build; an overlay or a part with under ROOM_LOW free, or another game's program short of HEADROOM (hmchar: run
-// alone, most of it the harn library's), only a warning.  Nothing else of a task's is past its BSS's end: no heap
-// (a dq0 task that takes in malloc fails: cc65's heap runs from the BSS's end to the stack's, over the swap area,
-// and isn't counted), the C stack's least room (__STACKMIN__) above the measure's top, its arguments at TASK_ARGS
-// ($0350).  A program of TOOL_ROOM's its own floor, not HEADROOM: the theme compiler and the theme generator (the
-// user's, 2026-11-13: exempt, as tools run alone between dungeons and by the build, not in play beside the tasks).
-// OUT: { text, faults }
-const HEADROOM = 2048, ROOM_LOW = 512, TOOL_ROOM = { themec: 512, themegen: 512 };
+// a program with less main RAM free than its floor fails the build (floorOf, the user's floors: GAME-CRITIQUE.md's
+// 6.2 and 7.4; the UI's, dq0's, 3,000; every other task of Dingus Quest Zero's, dq0*, 2,048, as they run together and
+// grow; the theme compiler and the theme generator 512, tools run alone between dungeons and by the build, not in
+// play beside the tasks, the user's of 2026-11-13); an overlay or a part with under ROOM_LOW free, or another game's
+// program short of TASK_FLOOR (hmchar: run alone, most of it the harn library's), only a warning.  Nothing else of a
+// task's is past its BSS's end: no heap (a dq0 task that takes in malloc fails: cc65's heap runs from the BSS's end
+// to the stack's, over the swap area, and isn't counted), the C stack's least room (__STACKMIN__) above the measure's
+// top, its arguments at TASK_ARGS ($0350).  OUT: { text, faults }
+const TASK_FLOOR = 2048, FLOORS = { dq0: 3000, themec: 512, themegen: 512 }, ROOM_LOW = 512;
+const floorOf = name => FLOORS[name] !== undefined ? FLOORS[name] : TASK_FLOOR;
+const floored = name => /^dq0/.test(name) || FLOORS[name] !== undefined;     // (Below its floor, the build fails)
 function headroom(names) {
   const rows = [], faults = [], warns = [], lows = [], hex = n => '$' + n.toString(16).toUpperCase();
   const byNumber = (a, b) => parseInt(a[0].slice(2)) - parseInt(b[0].slice(2));
@@ -274,7 +277,7 @@ function headroom(names) {
     for (const [, n, l, r] of block('SEGMENTS').matchAll(/^\s*(\w+):\s*load\s*=\s*(\w+)(?:,\s*run\s*=\s*(\w+))?/gm)) { load[n] = l; if (r) run[n] = r; }
     if (!seg.BSS || sym.__RAMTOP__ === undefined) throw new Error('games/' + name + ': no BSS, or no __RAMTOP__, in its map');
     const top = sym.__SWAP_START__ !== undefined ? sym.__SWAP_START__ : sym.__RAMTOP__ - sym.__STACKMIN__;
-    const free = top - (seg.BSS.end + 1), task = /^dq0/.test(name);
+    const free = top - (seg.BSS.end + 1), task = /^dq0/.test(name), floor = floorOf(name);
     if (/\((_heap|malloc|calloc|realloc|free|_heapadd)\.o\)/.test(m) && task)   // (cc65's heap: from the BSS's end
       faults.push(name + ' takes in the heap (malloc: from its BSS\'s end up, into the swap area, uncounted)');   //   to the stack's)
     const used = by => { const u = {}; for (const [n, s] of Object.entries(seg)) if (by[n]) u[by[n]] = (u[by[n]] || 0) + s.size; return u; };
@@ -291,8 +294,7 @@ function headroom(names) {
       if (s.length) short.push(what + (s.length > 1 ? 's ' : ' ') + s.join(', '));
       return text;
     };
-    const floor = TOOL_ROOM[name] !== undefined ? TOOL_ROOM[name] : HEADROOM;
-    if (free < floor) (task ? faults : warns).push(name + "'s main RAM: " + free + ' bytes free, under ' + floor);
+    if (free < floor) (floored(name) ? faults : warns).push(name + "'s main RAM: " + free + ' bytes free, under ' + floor);
     rows.push('  ' + name.padEnd(9) + String(free).padStart(6) + (free < floor ? '!' : ' ') + ' (' + hex(seg.BSS.end + 1) + '-' +
       hex(top - 1) + (sw.length ? '; the swap area ' + hex(top) + ', ' + sym.__SWAPSIZE__ + ' bytes)' : ')'));
     if (ov.length) rows.push('             overlays (of 8192):  ' + room('overlay', ov, a => size[a]));
@@ -308,7 +310,8 @@ function headroom(names) {
     if (short.length) lows.push(name + "'s " + short.join(' and '));
   }
   if (lows.length) warns.push('under ' + ROOM_LOW + ' bytes free: ' + lows.join('; '));
-  const text = ["The games' room (bytes free: the main RAM's, from the BSS's end; at least " + HEADROOM + " for dq0's tasks; ! short, or an " +
+  const text = ["The games' room (bytes free: the main RAM's, from the BSS's end; at least " + FLOORS.dq0 + " for the UI, " + TASK_FLOOR +
+    " for dq0's other tasks, " + FLOORS.themec + ' for themec and themegen; ! short, or an ' +
     'overlay or a part under ' + ROOM_LOW + '):', ...rows, ...warns.map(w => '  warning: ' + w)].join('\n');
   return { text, faults };
 }
@@ -538,9 +541,9 @@ function build(opt = {}) {
     if (fs.existsSync(src))                                                                                 //   the tests',
       for (const d of fs.readdirSync(src, { withFileTypes: true }).filter(d => d.isDirectory()))           //   then the
         children[d.name] = buildChild(path.join(src, d.name), od);                                         //   system's
-  const room = headroom(Object.keys(games));            // (Their room: a dq0 task short of HEADROOM fails the build)
+  const room = headroom(Object.keys(games));            // (Their room: a task below its floor fails the build)
   say(room.text);
-  if (room.faults.length) throw new Error('a game\'s task short of main RAM (HEADROOM ' + HEADROOM + '): ' + room.faults.join('; '));
+  if (room.faults.length) throw new Error('a game\'s task short of main RAM (below its floor): ' + room.faults.join('; '));
   sdk();
   const card = sdcard.build(ROOT);                          // The SD card's image (bin/sdcard.img): the samples, the songs, the benchmarks
   forthlib.build({ root: ROOT, modules, assemble: (files, od, inc) => assemble(files, od, inc, defines), ld65: args => run(LD65, args) });
