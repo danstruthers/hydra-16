@@ -18,15 +18,27 @@
 
 /* H_POWERS: a spell, a talent, an invocation: refused, true to the character (2026-11-09, the user's: the refusal the
 ** row's request, A_NO_MAGIC, A_NO_PSI, A_NO_GODS: actions.c's); an invocation's names the character's deity (the
-** referee's, RS_DESCRIBE's RD_DEITY: "" none, its form without a name).  Part 24's, the commands seen to less often,
-** through its stub powers (2026-11-11: part 2's room) */
+** referee's, RS_DESCRIBE's RD_DEITY: "" none, its form without a name).  "Heal" without the talent first aid, tend's
+** (the user's, 2026-11-17).  Part 24's, the commands seen to less often, through its stub powers (2026-11-11: part 2's
+** room) */
 void powers (void);
 #pragma code-name (push, "SW24CODE")
 #pragma rodata-name (push, "SW24RODATA")
 void s_powers (void)
 {
     struct req* r;
+    const char* s;
 
+    for (s = cl; *s == ' '; ++s) {
+    }
+    if (cmd.action == VB_USE_TALENT && !strncmp (s, "heal", 4)) {
+        cmd.action = VB_TEND;                   /* ("heal" without the talent: first aid, by skill, its own wounds or
+                                                **   the one named (the user's, 2026-11-17).  No character has the talent
+                                                **   yet, D11's latent talents not built: with it, the power, as the rest) */
+        cmd.aux = 0;
+        tend ();
+        return;
+    }
     lb[0] = 0;
     if (cmd.aux == A_NO_GODS) {
         r = ask_b (RS_DESCRIBE, 0, RD_DEITY);

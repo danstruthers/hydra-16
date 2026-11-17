@@ -433,6 +433,26 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0healaid', what: 'Dingus Quest Zero\'s "heal" without the talent first aid (the user\'s, 2026-11-17: DECISIONS.md\'s "The critique\'s questions: the user\'s answers": "\\"heal\\" without the talent is first aid on wounds, by skill; with the talent it stays the psionic power"; no character has a talent yet, D11\'s): at seed 517 the kobold warren\'s ledge jumped down (dq0tend\'s: a minor bruise to the shoulder), "heal" the book\'s treatment, a cold compress (a timed work, its long task LT_TEND, as "tend my wounds"), "heal" again nothing to tend, "healing" the same; "heal my shoulder" a part named, nothing there to tend; never "You reach for it; nothing stirs." (the psionic refusal)',
+      init: 't_rc', cycles: 1600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 517 -c /ram/c.hm -d /ram/hurt', 'ne', 'e', 'u', 'u',
+        'turn around', 'jump down', 'heal', 'status', 'heal', 'healing', 'heal my shoulder', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out);
+        if (!/You land hard: a minor bruise to your right shoulder \(M1\)\./.test(s)) return ['no bruise from the fall (the seed\'s): ' + JSON.stringify((s.match(/You land hard[^.]*\./) || [''])[0])];
+        const tw = dq0Turns(m).of('heal').intents.find(e => e.kind === 'I_WAIT');
+        if (!tw || tw.task !== 'LT_TEND' || !tw.quiet || !tw.tenths) f.push('"heal" not first aid\'s timed work, I_WAIT LT_TEND: ' + JSON.stringify(tw));
+        if (!/> heal You hold a cold compress to the minor bruise to your right shoulder \(M1\)\.[^>]*It's (?:well tended|tended|tended, roughly|badly done)\./.test(s))
+          f.push('"heal" not the compress, nor its outcome at its end');
+        if (!/Condition: hurt: 1 injury, a minor bruise to your right shoulder \(M1\); all tended/.test(s)) f.push('its state not "all tended"');
+        inTurn(s, ['> heal', 'You have no wounds that want tending.', '> healing', 'You have no wounds that want tending.', '> heal my shoulder'], f, 'the words: ');
+        if (/nothing stirs\./.test(s)) f.push('"heal" refused as the psionic talent');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0limbs', what: 'Dingus Quest Zero\'s limbs (slice 4.1b, the user\'s, 2026-10-21: "if you have a limb injury, it should affect that limbs usefulness"; 2026-10-22: "For an arm or hand, that means no picking things up with that hand"), by where each thing is (the item store\'s), the referee\'s summary (its limbs) and the words: a character with a grievous wound to its left forearm, its limb useless (its file\'s inj line: the book\'s, Combat 14): its summary\'s limbs its left arm useless; at seed 3 (dq0 -T, dq0 -k pick) the kit\'s torch in its right hand (its off hand the useless one), the pick (two-handed) in the pack; the dagger refused its left hand ("Your left arm is useless."), the pick refused ("You can\'t hold the pick in one hand."), the hands not swapped (the torch not into the useless hand)',
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
