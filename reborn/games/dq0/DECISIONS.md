@@ -6697,3 +6697,91 @@ pocket" typed whole; and the timing scenes it gave `dq0furn=0`).  Two commits.
 - **Open questions**: none of the user's.  "Side" in another compartment's name (none now but the pocket's) would want
   the resolver's rule from the catalogue's nouns, not "pocket" alone (the kinds' bank has no room for the world's
   words to name it).
+
+## The critique's questions: the user's answers (2026-11-17)
+
+GAME-CRITIQUE.md's section 11 questions, and the containers' and narration's open questions, answered.  "To build"
+names the phase of GAME-CRITIQUE.md's section 10 the work falls in.
+
+**The player's view**
+- **"look around" is a real sweep**: the character turns to look all round, a few game seconds, and ends facing the
+  way it started; a plain "look" stays what's ahead.  It keeps the rule "only what the character can see", since the
+  character really looks.  To build (B).
+- **"l" stays left** (the command grammar's fifteen answers); the help's first steps say so.  To build (A).
+- **Plain words on the screen**: wounds and penalties told in words, no "UP" on the status line at 0, a legend for
+  the map; the codes and numbers on the character sheet.  To build (9.12).
+- **People are "they", beasts "it"** ("The elf unslings their hartbow.").  To build.
+- **"heal" without the talent is first aid** on wounds, by skill; with the talent it stays the psionic power.  To
+  build.
+- **No north-up map**: the map turns with the facing, as now.
+
+**The denizens**
+- **Allies fight beside the character and rival factions fight each other**, by morale; the player may start such
+  fights.  To build (E).
+- **Talk remembers and tells**: repeated words lose force ("It won't listen."); "ask about" is answered from what the
+  minds know (the lair, friends and foes, the leader, the hoard, a goal guarded).  In the dungeon only.  To build (E).
+- **Denizens find hidden things only by a search of their own**, by skill and time, where they can see or feel the
+  place; what they haven't found they don't take.  To build (A).
+- **The 7/5 diagonal for every actor**: the denizens' timing and many transcripts change, accepted.  To build (A).
+- **A line being typed costs the denizens nothing**: held back while it's typed, they catch up in full once it's
+  entered; one give-way rule on one clock for the world, the minds and the senses.  To build.
+- **Sight through a door's grille or spy-hole works both ways** (a denizen beyond can see the one watching), and the
+  far side is seen by its own light only, not the watcher's torch.  To build (9.9).
+
+**The dungeon and the story**
+- **A stratum's size comes from what was built there** (a storm cellar small, catacombs vast, still any size), not
+  the dice.  The ways down stay where they fall: not drawn near the way in.  To build (D).
+- **Every dungeon changes once, together**: one keyed hash with the game's seed for every die the maker throws,
+  containers stocked, room uses varied, sizes by history.  To build (D).
+- **Generated goals use the richer forms** (a way out to open, a combine, two solutions), with guardians placed by
+  the piece, a prisoner who follows, the cursed dead stilled.  To build (D).
+- **The peoples: neither set.**  "Those are just random.  I would like the history, peoples, etc. be part of a world
+  plug-in, similar to the referee/game rules.  One such world plug-in should be Harn World.  Another could be the
+  World of Greyhawk.  Third could be Troll Lord's Airde/Winter Dark."  And: "The world plugin would also dictate
+  deities."  The history, peoples, lands, deities and names become a world plug-in, swappable as the referee is.
+  Built before D, today's data moved into it with the dungeons unchanged.  To build.
+- **Deeper is poorer**, as intended; rot reaches the caves and chambers too (no fresh rope in a 4,000-year-old cave).
+  To build (D).
+- **Clues match where they come from**: "A clue from a person matches the scripts/languages they know, unless the
+  clue was a scrap or was copied from an older text/inscription."  To build (D).
+- **Freeing a hand**: the hand whose thing has a home goes first (a sword to its scabbard, coins to the purse), the
+  light last; a light left burning is picked up when a walk starts, if a hand is free; nothing is battered with a
+  light.  The rule of 2026-11-03 kept; only the order chosen.  To build (A).
+
+**Engineering and process**
+- **Budgets**: the D17 targets, the RAM floors and a silent start fail the suite; the other budgets become trends,
+  flagged on a rise past 5%.  To build (A).
+- **The headroom rule**: a part or bank under 64 bytes free, or a measure past 90% of its target, has room or time
+  won back before the next feature.  A standing rule.
+- **The tests move to the game as played**: pinned generated seeds for each goal kind, the switches off where they
+  hide behaviour; most transcripts re-baselined once.  To build (C).
+- **Game code in the paged ROM**: tried for one module, measured, then decided.  To build.
+- **Real-time games reproducible**: each denizen's dice keyed to it, steps applied at their intent's time, a log of
+  game time and commands; the clock may stretch slightly when the CPU is busy.  To build (C).
+- **The item record gains a byte for compartment state**; old saves converted when loaded.  To build.
+- **The docs**: HOUSE.md and DUNGEON.md become references to the game as it is; its history lives in DECISIONS.md
+  alone, which keeps decisions only; a README and an OPEN.md.  To build.
+- **The grammar records roles** (verb, object, instrument and the rest) in assembly, and becomes the one reading of
+  a line: GAME-CRITIQUE.md's 2.8 step 8 chosen over the cheaper way.  To build (B).
+
+**The containers' open questions**
+- **A thing put on an open lid is refused.**  To build.
+- **Lid tops**: the chest's and the case's alone, as built.
+- **Denizens follow the character's compartment rules**: lids opened, locks unlocked or forced, hidden compartments
+  found by their own search; their own gear in their packs and purses.  To build.
+- **A compartment looked at describes itself** (open or closed, locked, what's in it), not its holder.  To build.
+- **The desk's hidden compartment becomes "the secret drawer"** once the parser tells it from "the drawer".  To build
+  (B).
+- **"case" names both** the furniture case and the bolt case, the one most to hand meant, as built; "the bolt case"
+  names it once the parser takes whole phrases.
+- **Where to stow offers a pack's side pocket as a place of its own.**  To build.
+- **A hidden compartment's difficulty**: as built (its holder's quality, worse by touch).
+
+**The narration's open questions**
+- **The renderer's run of plain letters copied in assembly**: the UI's 40 bytes or so of main RAM spent.  The UI
+  then sits under the headroom rule's 64 bytes, so its room is won back before its next feature.  To build (A).
+- **The inventory's slower finish is accepted** (its first words as quick as before).
+- **The rest of the hand-written words go to the phrase table**: the lists' joins and frames, a thing looked at, the
+  "Which one?" choices (with B).  To build.
+
+**Next**: phase A, the safety net and quick fixes, begun.

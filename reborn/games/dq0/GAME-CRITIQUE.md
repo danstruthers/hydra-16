@@ -1137,6 +1137,8 @@ clean-up is paid for by the features that need it.
 
 These are decisions this critique can't make. Each has a default in brackets.
 
+Answered by the user on 2026-11-17: DECISIONS.md's "The critique's questions: the user's answers".
+
 **The player's view**
 1. "look" shows only what's ahead, by your "Only what the character can see". Should "look around" become a real
    sweep, with the character turning to look all round and taking a few seconds, so a room can be seen whole? [yes: it
