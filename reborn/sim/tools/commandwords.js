@@ -177,7 +177,7 @@ function scan(toks, w, face = 0) {
   const little = t => w.little.has(text(t)) || (!t.multi && w.little.has(t.root));
   const two = (i, m) => i + 1 < ws.length ? m.get(text(ws[i]) + ' ' + text(ws[i + 1])) : undefined;
   let i = 0, dir = NONE, k, verb = 0, around = 0, me = 0;
-  let word = '', word2 = '';
+  let word = '', word2 = '', ended = 0;        // (ended: the other thing's phrase over, a word of how after its word)
   for (const e of w.verbs) {                   // The verb, if the line starts with one: several words first
     if (e.words.length <= ws.length && e.words.every((x, j) => text(ws[j]) === x)) { verb = e.v; i = e.words.length; break; }
   }
@@ -195,8 +195,10 @@ function scan(toks, w, face = 0) {
     const t = ws[i];
     const th = word && c.prep ? c.other : c.obj;   // (The thing being said: the other, after its preposition)
     const said = word || c.obj.sel;              // (A thing said: a word, or one chosen, "it")
-    const other = () => {                        // (A word for the other thing: a name given the last)
-      if (verb === R.get('name') || ((c.prep || order() || verb === R.get('combine')) && !word2)) word2 = t.typed.slice(0, 15);
+    const other = () => {                        // (A word for the other thing: its head, the last, as the thing's is ("with
+                                                //   the iron key": the key, 2026-11-17); a name given the last too; its
+                                                //   phrase over, none: "with the dagger in my left hand")
+      if (verb === R.get('name') || ((c.prep || order() || verb === R.get('combine')) && !ended)) word2 = t.typed.slice(0, 15);
     };
     if (order() && !c.order && (k = get(t, w.orders))) { c.order = k; continue; }   // (A request's word, the first, not
                                                 //   the other thing's: "tell Grub to fetch the key" the key, 2026-10-30)
@@ -206,7 +208,11 @@ function scan(toks, w, face = 0) {
     if (said && !c.prep && (k = get(t, w.preps)) !== undefined) { c.prep = k; continue; }
     if (verb === R.get('put') && sp(i, 'AWAY')) { verb = R.get('stow'); continue; }
     if (verb === R.get('put') && sp(i, 'BACK')) continue;
-    if ((k = get(t, w.how)) !== undefined) { c.how = c.how || k; continue; }   // (The first said: "go through the door to the east")
+    if ((k = get(t, w.how)) !== undefined) {     // (The first said: "go through the door to the east"; after the other
+      if (word2) ended = 1;                      //   thing's word, its phrase over)
+      c.how = c.how || k;
+      continue;
+    }
     if (sp(i, 'HALF')) { c.flags |= CF_HALF; continue; }
     if (sp(i, 'AROUND')) { around = 1; continue; }
     if ((k = get(t, w.selectors)) !== undefined) {
@@ -231,6 +237,11 @@ function scan(toks, w, face = 0) {
     if ((k = get(t, w.things)) !== undefined) {
       if ((k & PART) && c.prep === V.PR_WITH) { other(); continue; }   // (A part after "with": what it's done with, "hit the
                                                 //   door with the bar", not the door's)
+      if (th === c.other && !order() && (k & ~PART) !== V.OB_WAY_OUT) {
+        c.other.kind = k & ~PART;               // (After the thing and its preposition, the other's: "put the torch on the
+        if (k & PART) other();                  //   door", "tie the rope to the pillar", 2026-11-17; not a request's,
+        continue;                               //   "ask the dwarf to open the door", nor the way out, the puzzle's)
+      }
       c.obj.kind = k & ~PART;
       if ((k & PART) && (!word || head())) word = t.typed.slice(0, 15);
       continue;

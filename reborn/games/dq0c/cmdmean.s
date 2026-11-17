@@ -148,6 +148,7 @@ spc:        .res        1           ; The word's special
 wrec:       .res        1           ; The record of the word kept in the thing's word (as typed)
 thoff:      .res        1           ; The thing being said (CM_OBJ, or CM_OTHER after its preposition)
 around:     .res        1           ; "around" said
+ended:      .res        1           ; The other thing's phrase over (a word of how after its word)
 me:         .res        1           ; "me" said
 aspect:     .res        1           ; A thing's aspects said (EX_*: all of them)
 kk:         .res        1           ; A value for the moment
@@ -681,6 +682,7 @@ mid:        ina
             sta         dir
             stz         wrec
             stz         around
+            stz         ended
             stz         me
             stz         aspect
             lda         ntok            ; (Quoted text first: said aloud)
@@ -828,10 +830,13 @@ each:       ldx         wi              ; Each word after the verb
             jmp         next
 :           cmp         #S_BACK
             jeq         next
-:           ldy         #C_HOW          ; How: up to it, through it (the first said: "go through the door to the east")
-            jsr         get
+:           ldy         #C_HOW          ; How: up to it, through it (the first said: "go through the door to the east");
+            jsr         get             ;   after the other thing's word, its phrase over ("with the dagger in my left
+            beq         :++             ;   hand", 2026-11-17)
+            ldx         cm_cmd + CM_OTHER + T_WORD
             beq         :+
-            ldx         cm_cmd + CM_HOW
+            stx         ended
+:           ldx         cm_cmd + CM_HOW
             jne         next
             sta         cm_cmd + CM_HOW
             jmp         next
@@ -928,9 +933,20 @@ thing:      ldy         #C_THING        ; A thing (a part of one: its word too, 
             lda         cm_cmd + CM_PREP   ;   door with the bar", not the door's)
             cmp         v_WITH
             beq         word2
-:           lda         kk
-            and         #$FF ^ PART
-            sta         cm_cmd + CM_OBJ + T_KIND
+:           lda         kk              ; (After the thing and its prep, the other's: "put the torch on the door", "tie
+            and         #$FF ^ PART     ;   the rope to the pillar", 2026-11-17; not a request's, "ask the dwarf to
+            ldy         thoff           ;   open the door", nor the way out, the puzzle's; a part's word the other's
+            cpy         #CM_OTHER       ;   too)
+            bne         okind
+            ldy         ordv
+            bne         okind
+            cmp         v_WAYOUT
+            beq         okind
+            sta         cm_cmd + CM_OTHER + T_KIND
+            bit         kk
+            bmi         word2
+            bra         next
+okind:      sta         cm_cmd + CM_OBJ + T_KIND
             lda         kk
             bpl         next
             lda         cm_cmd + CM_OBJ + T_WORD
@@ -958,10 +974,10 @@ word:       lda         wi              ; A word not understood: the line's firs
             bra         wset
 whead:      jsr         ishead
             bne         wset
-word2:      lda         verb            ;   (a name given: the last)
-            cmp         v_NAME
-            beq         w2
-            lda         cm_cmd + CM_OTHER + T_WORD
+word2:      lda         verb            ;   (its head the last, as the thing's is: "with the iron key", the key,
+            cmp         v_NAME          ;   2026-11-17; a name given the last too; its phrase over, none: "with the
+            beq         w2              ;   dagger in my left hand")
+            lda         ended
             bne         next
             lda         cm_cmd + CM_PREP
             bne         w2

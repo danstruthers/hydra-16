@@ -76,11 +76,21 @@ function mean() {
   const words = require('./commandwords.js');
   const { DEFAULT_ALIASES, DEFAULT_ANYWHERE } = require('./commandcompile.js');
   const lines = require('./commandmatch-gen.js').meaningLines(), w = words.load();
-  const bin = path.join(OUT, 'cmdmean.bin');
-  run(tool('cl65'), ['--cpu', '65C02', '-t', 'sim65c02', '-O', '-I', OUT, '-I', HERE, '--asm-include-dir', GEN, '-o', bin, path.join(HERE, 'cmdmean.c'),
-    path.join(GAME, 'cmdmatch.s'), path.join(GAME, 'cmdmean.s'), path.join(HERE, 'cmdmatch_c.s'), path.join(HERE, 'cmdmean_c.s')],
-    { cwd: OUT, stdio: ['ignore', 'pipe', 'pipe'] });
-  const out = run(tool('sim65'), ['--cpu', '65C02', '-x', '4000000000', bin], { cwd: OUT }).split(/\r?\n/);
+  // (The lines in parts, cmd_lines.h written again for each: the sim's 64K, as the corpus's, 2026-11-17; each part's
+  // lines numbered from its first, the facing its own number's, mod 8)
+  const PART = 400, out = [];
+  for (let from = 0; from < lines.length; from += PART) {
+    const dir = path.join(OUT, 'mean' + from), bin = path.join(dir, 'cmdmean.bin'), part = lines.slice(from, from + PART);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'cmd_lines.h'), '#define CMD_LINES ' + part.length + '\nstatic const char *const cmd_line[' +
+      part.length + '] = {\n' + part.map(x => JSON.stringify(x)).join(',\n') + '\n};\n');
+    run(tool('cl65'), ['--cpu', '65C02', '-t', 'sim65c02', '-O', '-I', dir, '-I', OUT, '-I', HERE, '--asm-include-dir', GEN, '-o', bin,
+      path.join(HERE, 'cmdmean.c'), path.join(GAME, 'cmdmatch.s'), path.join(GAME, 'cmdmean.s'), path.join(HERE, 'cmdmatch_c.s'),
+      path.join(HERE, 'cmdmean_c.s')], { cwd: dir, stdio: ['ignore', 'pipe', 'pipe'] });
+    for (const l of run(tool('sim65'), ['--cpu', '65C02', '-x', '4000000000', bin], { cwd: dir }).split(/\r?\n/)) {
+      out.push(l.replace(/^(\d+) /, (s, i) => (+i + from) + ' '));
+    }
+  }
   const F = ['action', 'actor', 'flags', 'dir', 'how', 'prep', 'aux', 'manner', 'order', 'dflt', 'skill', 'task', 'n',
     'obj.kind', 'obj.sel', 'obj.n', 'obj.lies', 'other.kind', 'other.sel', 'other.n', 'other.lies'];
   const field = (c, k) => k.includes('.') ? c[k.split('.')[0]][k.split('.')[1]] : c[k];

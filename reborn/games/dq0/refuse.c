@@ -141,17 +141,23 @@ void __fastcall__ o_tt_words (const char* t)
 **             game yet." (the line, if it names a thing; else its first word: "You can't eat in this game yet.")
 **   U_CANT    a thing the verb can't be done to: "You can't take the stairs."
 **   U_NOTE    nothing written on it: "There's nothing written on the stairs." (the line after its verb)
-**   U_WHAT    nothing named, asked what: "Take what?" (the line) */
+**   U_WHAT    nothing named, asked what: "Take what?" (the line); a part of the place named (the command's kind, a
+**             word after its verb), its verb no use for it: U_CANT's, "You can't push the wall." (not "Push the wall
+**             what?", 2026-11-17: GAME-CRITIQUE.md's 2.6) */
 void __fastcall__ o_unknown (unsigned char f)
 {
     static const char* p;
+    static const char* s;
     static unsigned char d, all;
 
     p = cl;
+    s = strchr (p, ' ');                        /* (Its verb's end) */
+    if (f == U_WHAT && cmd.obj.kind && s) {
+        f = U_CANT;
+    }
     all = f > U_YET || (f && (cmd.obj.word[0] || cmd.obj.kind));
     if (f == U_NOTE) {
-        p = strchr (p, ' ');                    /* (Past its verb) */
-        p = p ? p + 1 : "";
+        p = s ? s + 1 : "";                     /* (Past its verb) */
     }
     for (d = 0; p[d] && (all || p[d] != ' ') && d < 60; ++d) {
         lb[d] = p[d];

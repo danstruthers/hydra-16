@@ -479,15 +479,16 @@ unsigned char __fastcall__ o_things_work (unsigned char h)
     case H_SHUT:                                /* (A thing that closes, worked: "open the chest", "untie the sack",
                                                 **   "pick the chest's lock", "force the chest", the user's; the world's
                                                 **   IO_SHUT, a lid, a tie, a stopper, a lock (lock's PA_LOCK its row's,
-                                                **   actions.c's); none of that name, a door's work: H_DOOR's, 0.  Its
-                                                **   verbs the table's TK_CLOSER) */
+                                                **   actions.c's); none of that name, "You see no drawer here." (not the
+                                                **   door ahead worked, 2026-11-17), but the lock, a door's work: H_DOOR's,
+                                                **   0.  Its verbs the table's TK_CLOSER) */
         if (!cmd.obj.word[0] || cmd.obj.kind) {
             return 0;
         }
         action = othings (IO_SHUT | IO_STEPS | IO_GO, cmd.obj.word, nil, cmd.aux | d);
         if (action == IR_NONE) {
-            if (cmd.action != VB_LOCK_OBJECT) {
-                return 0;
+            if (!strcmp (cmd.obj.word, "lock")) {
+                return 0;                       /* ("Unlock the lock", "force the lock": the door's) */
             }
             say_no (A_SEE_NO, cmd.obj.word);
         } else if (action == IR_NO && (cmd.action == VB_TIE_OBJECT || cmd.action == VB_UNTIE_OBJECT) && strstr (lb, "can't")) {

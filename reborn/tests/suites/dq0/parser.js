@@ -442,6 +442,8 @@ function dq0SweepTest(opt = {}) {
           ok = re.get(thing).test(A[i].text) && !place;
         if (!ok || process.env.DQ0_SWEEP === 'all') gaps.push(l + ' => ' + A[i].text.slice(0, 110));
         if (!ok && !gapsOf.has(l)) f.push('"' + l + '": its thing not named: ' + (A[i].text.slice(0, 140) || '(nothing)'));
+        if (/ what\?/.test(A[i].text)) f.push('"' + l + '": a thing named, asked "... what?" (GAME-CRITIQUE.md\'s 2.8 step 7): ' +
+          A[i].text.slice(0, 140));
         if (ok && gapsOf.has(l)) f.push('"' + l + '" names its thing now: take it off SWEEP_GAPS (' + A[i].text.slice(0, 100) + ')');
       }
       for (const [l, w] of saidOf) {                // (Answers held word for word: a thing carried taken, lit)

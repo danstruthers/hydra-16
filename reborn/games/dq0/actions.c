@@ -64,7 +64,7 @@ static const struct row rows[NACTIONS] = {
     ROW (VB_EXAMINE_LOCALE, H_EXAMINE, 0),
     ROWR (VB_RETRIEVE_OBJECT, H_TAKE, 0, 0, U_CANT, M_NONE),
     ROW (VB_DROP_OBJECT, H_DROP, 0),
-    ROWP (VB_PUT_OBJECT, H_HANDLE, 0, 0, 0, M_NONE, IO_PUT),
+    ROWP (VB_PUT_OBJECT, H_HANDLE, TK_ONTO, 0, 0, M_NONE, IO_PUT),
     ROW (VB_USE_OBJECT, H_USE, 0),              /* (The puzzle's first, theme.c's, before the table; B4's) */
     ROWR (VB_EQUIP_OBJECT, H_HANDLE, 0, 0, U_CANT, M_NONE),
     ROW (VB_UNEQUIP_OBJECT, H_HANDLE, 0),
@@ -180,7 +180,7 @@ static const struct row rows[NACTIONS] = {
     ROWP (VB_FORCE_OBJECT, H_DOOR, TK_CLOSER, 0, U_CANT, M_WORKED, PA_FORCE),
     ROWP (VB_DISARM_OBJECT, H_DOOR, 0, U_CANT | (W_PART >> 4), U_CANT, M_WORKED, PA_DISARM),
     ROWR (VB_BAR_OBJECT, H_DOOR, 0, U_CANT | (W_PART >> 4), U_CANT, M_WORKED),
-    ROWP (VB_HANG_OBJECT, H_HANDLE, 0, 0, 0, M_NONE, IO_PUT),
+    ROWP (VB_HANG_OBJECT, H_HANDLE, TK_ONTO, 0, 0, M_NONE, IO_PUT),
     ROW (VB_COMBINE_OBJECT, H_NOTHING, 0),      /* (The puzzle's, theme.c's, before the table: never here) */
     ROW (VB_APPROACH_OBJECT, H_GO, 0),
     ROW (VB_DECEIVE, H_SWAY, 0),
@@ -198,7 +198,7 @@ static const struct row rows[NACTIONS] = {
     ROW (VB_GATHER_OBJECT, H_MISSILE, 0),
     ROW (VB_META_TIME, H_TIME, 0),
     ROW (VB_TRADE, H_GIVE, 0),
-    ROWR (VB_TIE_OBJECT, H_TIE, 0, 0, U_CANT, M_NONE),
+    ROWR (VB_TIE_OBJECT, H_TIE, TK_ONTO, 0, U_CANT, M_NONE),
     ROWR (VB_UNTIE_OBJECT, H_TIE, 0, 0, U_CANT, M_NONE),
     ROWP (VB_RIP_OBJECT, H_HANDLE, 0, 0, U_CANT, M_NONE, IO_RIP)     /* (A cloth torn up, washed: the things' IO_RIP, IO_WASH,
                                                 **   hthings.c's; HOUSE.md's bandages, 2026-11-10) */
@@ -229,7 +229,11 @@ unsigned char o_refused (void)
     }
     r = rows + cmd.action;
     f = 0;
-    if (!r->no) {
+    if ((r->takes & TK_ONTO) && cmd.other.kind && (cmd.prep != PR_IN ||
+        (cmd.other.kind != OB_SHAFT && cmd.other.kind != OB_TRAP))) {
+        f = U_CANT;                             /* (A part of the place where it's put, or tied: "You can't put the torch on
+                                                **   the door.", not the belt's; but into a hole, let fall, 2026-11-17) */
+    } else if (!r->no) {
     } else if (*w) {
         f = r->no >> 4 & 3;
         if (*w == '#' || ((r->no & W_CLIMB) && (!strcmp (w, "well") || strstr (w, "rope"))) || ((r->no & W_PART) &&

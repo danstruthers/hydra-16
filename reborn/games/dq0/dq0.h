@@ -243,6 +243,9 @@ enum {
 #define H_SELF      H_NOTHING
 #define TK_CLOSER   0x01                        /* (A row's takes: a thing that closes, worked first, H_SHUT's: a
                                                 **   chest, a sack; else a door's) */
+#define TK_ONTO     0x02                        /* (A thing put somewhere: a part of the place its other refused, "You
+                                                **   can't put the torch on the door." (but into a hole, a shaft's, a
+                                                **   pit's), actions.c's o_refused, 2026-11-17) */
 unsigned __fastcall__ verb_row (unsigned char action);  /* A verb's row: its handler, its takes times 256 (and its
                                                 **   request into cmd.aux, if the line gave none) */
 void __fastcall__ taken_next (char* w);         /* "Take all"'s next thing to take up, into w ("": none) */
