@@ -918,7 +918,7 @@ module.exports = {
         inTurn(o, ['> walk to the door behind me', 'You head for the door.', '> i', 'You carry: (a) a torch (lit), in your left hand (b) a backpack, worn (c) 3 rations (d) a tinderbox (k) a basket (l) a heap of sand',
           '(q) a sword (r) a torch (s) a flask of oil (e) a belt, worn (f) a pouch (g) 12 pennies (h) a dagger (i) a waterskin (empty) (j) a table, in both hands In all, 60 lb.', '> drop table', 'You put down the table.',
           '> put the candle on the table', 'You put the candle on the table.', '> look', 'At your feet lies a table. On the table lies a candle.',
-          '> take the candle from the table', 'You take the candle from the table. It\'s in your hand.', '> stow the candle', 'Stow it where? (b) the backpack, (f) the pouch', '> b', 'You stow the candle in your backpack.', '> wear cloak', 'You put on the cloak.',
+          '> take the candle from the table', 'You take the candle from the table. It\'s in your hand.', '> stow the candle', 'Stow it where? (b) the backpack, the side pocket, (f) the pouch', '> b', 'You stow the candle in your backpack.', '> wear cloak', 'You put on the cloak.',
           '> hold basket', 'You take the basket in your right hand.', '> put sand in basket', 'The basket won\'t keep the heap of sand: it would run out.',
           '> put the dagger in the waterskin', 'The dagger won\'t go in the waterskin.', '> hang the quiver on my belt', 'You hang the quiver from your belt.',
           '> put arrows in quiver', 'You put the arrows in the quiver.', '> hang the candle', 'The candle won\'t hang from a belt.', '> wield the dagger',

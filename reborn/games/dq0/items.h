@@ -586,7 +586,7 @@ enum {
     SA_NO_THING, SA_FILL_WHAT, SA_NO_FUEL, SA_NO_FUELS, SA_WONT_BURN, SA_FULL, SA_FILL, SA_FILLED, SA_SOAK, SA_SOAKED,
     SA_DOFF_FEET, SA_BOTH_HANDS, SA_ARM, SA_ONE_HAND, SA_HAND_HOLDS, SA_BOTH_YOUR, SA_HANDS_EMPTY, SA_CHANGE,
     SA_LEATHER, SA_NOT_CLOTH, SA_TAKE_OFF_FIRST, SA_EMPTY_FIRST, SA_FOUL, SA_NO_WASH, SA_CLEAN, SA_WASH, SA_BANDAGES,
-    SA_NO_TEAR, SA_NO_CUT, SA_STOUT, SA_CUT, SA_TEAR, SA_SKIN_FULL, SA_NO_WATER, SA_FILL_SKIN,
+    SA_NO_TEAR, SA_NO_CUT, SA_STOUT, SA_CUT, SA_TEAR, SA_SKIN_FULL, SA_NO_WATER, SA_FILL_SKIN, SA_LID_OPEN,
                                                 /* (The world's parts' own sentences, coded by their SAY_PUT: the locks',
                                                 **   the fill's, the hands', the cloth's, the water's; narration as data's
                                                 **   rest, 2026-11-15) */

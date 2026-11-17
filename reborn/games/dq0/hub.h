@@ -1798,6 +1798,8 @@ struct uirec {
 #define WN_SEEN         0x40                    /*   the resolver's, of things and denizens seen: each which_w its name,
                                                 **   its square at 15, its way at 19, 1 at 20 a denizen's; caps.c's
                                                 **   o_which_seen, 2026-11-07) */
+#define WN_POCKET       0xFE                    /* (A stow's place's letter byte, which_w's last: the pack's side pocket,
+                                                **   named, not lettered, the user's, 2026-11-17) */
 enum { ML_NOW, ML_KEPT, ML_DRAWN, ML_PC, ML_COMPASS };   /* (A map's square: seen now; remembered; drawn on the map
                                                 **   carried; the character; the compass) */
 

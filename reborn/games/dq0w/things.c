@@ -3109,15 +3109,20 @@ unsigned __fastcall__ s_at_hand (const char* name)
 }
 
 /* The thing a look's asked of (IO_LOOK: the request's to, LM_*): carried, or seen: the one most to hand, of several; all
-** but a plain look, remembered too, walked to; gone to: lying about.  The request read for part 39's s_look_on */
+** but a plain look, remembered too, walked to; gone to: lying about; or the holder of a compartment named by its own name
+** ("look at the drawer": wcomp, the user's, 2026-11-17).  The request read for part 39's s_look_on */
 unsigned __fastcall__ s_look_pick (void)
 {
+    unsigned n;
+
     hub_map (0);
     memcpy (&iq, &HUB->ireq, sizeof iq);
     wsel = iq.sel;
     wnot = win = wforce = 0;
-    look_q = 1;
-    return s_pick (iq.name, iq.to == LM_AT ? HW_ANY : iq.to == LM_GO ? HW_GONE : HW_KNOWN);
+    look_q = wcn = 1;
+    n = s_pick (iq.name, iq.to == LM_AT ? HW_ANY : iq.to == LM_GO ? HW_GONE : HW_KNOWN);
+    wcn = 0;
+    return n;
 }
 
 /* A tool used, got out first (HOUSE.md's handy tools: its reach owed, part 10's; part 4's, its room): the first the
@@ -3442,9 +3447,11 @@ static unsigned char which (void)
 ** choose the sheath if worn."; the designators' step 7): of the containers the character wears (the pack, what hangs
 ** from its belt), not shut, that thing n fits in (its size, its weight, its family: fits'), a holder made for its family
 ** (a sheath a knife's, a scabbard a sword's, a quiver arrows': its kind's slots) first, without asking, and coins the
-** purse (s_purse's: the user's, 2026-11-17, "coins to the purse"); else two or more
-** that keep anything, IR_WHICH, the thing's id and each place's id in the text for the UI to ask where ("W12|30|31|");
-** one, that one (the request made a put into it, "#" and its id; the pack's, a stow as ever); none, as ever */
+** purse (s_purse's: the user's, 2026-11-17, "coins to the purse"); else two or more that keep anything, the pack's side
+** pocket a place of its own (the user's, 2026-11-17: open, its room, a thing no bigger than a pouch takes), IR_WHICH, the
+** thing's id and each place's id in the text for the UI to ask where ("W12|30|30p|31|": p, the side pocket of that one);
+** one, that one (the request made a put into it, "#" and its id, or "side pocket", the compartment by its own name; the
+** pack's, a stow as ever); none, as ever */
 #pragma code-name (push, "SW74CODE")            /* (Part 74's: part 35's room, overlay 19's; not dq0w.rop's, part 104's,
                                                 **   read in only as a rope's first wanted) */
 #pragma rodata-name (push, "SW74RODATA")
@@ -3455,7 +3462,7 @@ unsigned char s_stow_where (void)
     const struct item* p;
     const struct kind* k;
     unsigned c[NWHICH], n, i;
-    unsigned char m, f, s, z;
+    unsigned char m, f, s, z, q[NWHICH];
     char b[6];
 
     about ();                                   /* (Before the chooser: a part's call copies this one in again, its data
@@ -3465,6 +3472,7 @@ unsigned char s_stow_where (void)
     }
     if ((c[0] = purse (n)) != 0) {
         m = 1;                                  /* (Coins: the purse, unasked) */
+        q[0] = 0;
         goto one;
     }
     f = kind_at (n)->slots;
@@ -3480,20 +3488,29 @@ unsigned char s_stow_where (void)
                                                 **   cfor's, 2026-11-16) */
         k = kind_at (i);
         s = k->slots;                           /* (Kept: the kind's copy o_fits's to use again) */
-        if ((item_at (i)->shut & IS_SHUT_C (ccomp)) || !(k->flags & K_CONTAINER) || (k->keeps & KF_ON) || (i != pack &&
-            !s && z > k->seen + 1) || (cat_map (), o_fits (n, i))) {
-            ccomp = 0;
-            continue;
+        if (!((item_at (i)->shut & IS_SHUT_C (ccomp)) || !(k->flags & K_CONTAINER) || (k->keeps & KF_ON) || (i != pack &&
+            !s && z > k->seen + 1) || (cat_map (), o_fits (n, i)))) {
+            if (f && s == f) {                  /* (Made for its family, worn and free: first) */
+                m = 1;
+                c[0] = i;
+                q[0] = 0;
+                ccomp = 0;
+                break;
+            }
+            if (!s && m < NWHICH) {
+                q[m] = 0;
+                c[m++] = i;
+            }
+        }
+        for (ccomp = 1; i == pack && z <= kind_of (KI_POUCH)->seen + 1 && comp_of (item_kind (i), ccomp); ++ccomp) {
+            if ((crow.noun & CN_MASK) == CN_POCKET && m < NWHICH && !(item_at (i)->shut & IS_SHUT_C (ccomp)) &&
+                (cat_map (), !o_fits (n, i))) {
+                q[m] = 1;                       /* (The pack's side pocket, open, room in it, a pouch's size: nothing much
+                                                **   bigger than one, as a pouch's: a place of its own) */
+                c[m++] = i;
+            }
         }
         ccomp = 0;
-        if (f && s == f) {                      /* (Made for its family, worn and free: first) */
-            m = 1;
-            c[0] = i;
-            break;
-        }
-        if (!s && m < NWHICH) {
-            c[m++] = i;
-        }
     }
     if (m > 1) {
         text_new ();
@@ -3502,15 +3519,22 @@ unsigned char s_stow_where (void)
         for (f = 0; f < m; ++f) {
             put ("|");
             put (utoa (item_at (c[f])->id, b, 10));
+            if (q[f]) {
+                put ("p");
+            }
         }
         put ("|");
         return IR_WHICH;
     }
 one:
-    if (m && c[0] != pack) {
-        iq.kind = IO_PUT;                       /* (Into that one: a put, by its id) */
-        iq.into[0] = '#';
-        utoa (item_at (c[0])->id, iq.into + 1, 10);
+    if (m && (c[0] != pack || q[0])) {
+        iq.kind = IO_PUT;                       /* (Into that one: a put, by its id; the side pocket by its own name) */
+        if (q[0]) {
+            strcpy (iq.into, "side pocket");
+        } else {
+            iq.into[0] = '#';
+            utoa (item_at (c[0])->id, iq.into + 1, 10);
+        }
     }
     return 0;
 }
@@ -4030,7 +4054,8 @@ done:
 ** candle and two chisels."; "The sack is empty."; "The chest is closed." (nothing in it seen); a well's shaft; a
 ** thing that holds nothing, "You can't see into the sword."  The request's to 1: as it's examined (it's named
 ** already: "In it lie ..."; a thing that holds nothing, no words); | 2, after the words there already (a look at it:
-** part 39's) */
+** part 39's); 8, a compartment looked at by its own name ("look at the drawer", part 39's): its state, then what's in
+** it */
 static void __fastcall__ and_last (char* from)
 {
     char* p;
@@ -4106,7 +4131,41 @@ unsigned char s_inside (void)
                                                 **   look in its inside, examined each that holds something) */
     hs = rec.shut;
     hf = rec.fuel;
-    strcpy (hn, nm);
+    if ((iq.to & 8) && ic) {                    /* (A compartment looked at, iq's to 8: itself, not its holder, the user's,
+                                                **   2026-11-17: "The drawer is closed and locked.", "The side pocket is
+                                                **   untied. In it lies a coin."; a lid's top its holder's lid's state) */
+        comp_of (hk, ic);
+        strcpy (hn, cnouns[crow.noun & CN_MASK]);   /* (Its name: the catalogue's bank's, in the window) */
+        put ("The ");
+        put (hn);
+        put (" is ");
+        f = crow.keeps & KF_CLOSES;
+        on = (hs & IS_SHUT_C (ic)) || ((crow.noun & CC_INNER) && (hs & IS_CLOSED));
+        did = (hf & CS_AT (ic, CS_LOCKED)) != 0;
+        if (!f) {
+            f = kk & KF_CLOSES;                 /* (A lid's top: its holder's lid, its lock; what's on it seen, the lid
+                                                **   shut or not) */
+            pl = hs & IS_CLOSED;
+            did = (hs & (IS_LOCKED | IS_BURST)) == IS_LOCKED;
+        } else {
+            pl = on;
+        }
+        put (f == KF_TIE ? (pl ? "tied shut" : "untied") : f == KF_STOPPER ? (pl ? "stoppered" : "unstoppered") : pl ?
+            "closed" : "open");
+        if (did) {
+            put (" and locked");
+        }
+        put (".");
+        if (on) {
+            return IR_OK;                       /* (Closed: nothing in it seen) */
+        }
+        put (" ");
+        did = to = 1;                           /* (What's in it as examined, "In it lies ...", that one alone: no reach,
+                                                **   a look's) */
+        strcpy (hn, "it");
+    } else {
+        strcpy (hn, nm);
+    }
     multi = comp_of (hk, 1);
     for (pl = 0; !ic && comp_of (hk, pl); ++pl) {
         if (crow.prep == (w ? CP_ON : CP_IN) && !CS_UNSEEN (crow.noun, hf, pl)) {
@@ -4125,7 +4184,7 @@ unsigned char s_inside (void)
             goto next;                          /* (Hidden, not found: not told) */
         }
         strcpy (nm, hn);
-        if (cc && crow.prep == CP_IN && (crow.noun & CN_MASK)) {
+        if (cc && crow.prep == CP_IN && (crow.noun & CN_MASK) && !(iq.to & 8)) {
             strcpy (nm, to ? "its " : "the "); /* (One in it of its own name: "In the drawer lies a key.", "In its
                                                 **   side pocket lies a coin.") */
             strcat (nm, cnouns[crow.noun & CN_MASK]);
@@ -4699,6 +4758,11 @@ static unsigned char __fastcall__ look_at (unsigned n)
     if ((k = ld > 1 + HUB->pcsum.sight / 2 + lk.seen) != 0) {    /* (Too far off to make out: its size alone) */
         put (lk.seen <= 2 ? "Something small" : lk.seen >= 5 ? "Something large" : "Something");
         goto off;
+    }
+    if (wcomp && ld <= 1 && mode <= LM_CLOSE) {
+        iq.to = 8 | 2;                          /* (A compartment named, within reach: itself, open or closed, locked,
+                                                **   what's in it, not its holder: part 61's, the user's, 2026-11-17) */
+        return inside ();
     }
     lpl = (lk.flags & K_PLURAL) || rec.qty > 1;
     put (mine ? "Your " : "The ");              /* What it is, and where */
@@ -6150,12 +6214,12 @@ static void __fastcall__ o_flags (unsigned n, unsigned char set, unsigned char c
 /* Whether thing n can go in c's compartment ccomp (in it, on it: a surface; hung from it: a belt): 0, or the words why
 ** not (SA_*): its form (a basket won't keep sand, nor water; a sack won't keep water), lit (a flame in a pack), its room
 ** (a belt's slots), the weight it bears, the compartment's own (crow, comp_of's: left for o_place); never into itself,
-** nor into what's in it */
+** nor into what's in it, nor on a lid's top with its lid up */
 static unsigned char __fastcall__ o_fits (unsigned n, unsigned c)
 {
     static const struct kind* k;
     static unsigned j, bear, b, w;
-    static unsigned char kf, form, lit, cp, keeps, room, slots, fam;
+    static unsigned char kf, form, lit, cp, keeps, room, slots, fam, lid;
 
     k = KIND (n);
     kf = k->flags;
@@ -6171,6 +6235,7 @@ static unsigned char __fastcall__ o_fits (unsigned n, unsigned c)
     room = crow.bulk;
     bear = crow.weight;
     slots = crow.fam;
+    lid = (crow.noun & CN_MASK) == CN_LID;
     for (j = c; j; j = o.where == IW_ITEM ? o.x : 0) {
         if (j == n) {
             return SA_ITSELF;
@@ -6192,6 +6257,10 @@ static unsigned char __fastcall__ o_fits (unsigned n, unsigned c)
     FETCH (c);
     if (o.shut & IS_SHUT_C (ccomp)) {
         return SA_SHUT;                         /* (Closed: its lid down, its tie tied, its stopper in) */
+    }
+    if (lid && !(o.shut & IS_CLOSED)) {
+        return SA_LID_OPEN;                     /* (A lid's top, its lid up: nothing would stay there, the user's,
+                                                **   2026-11-17) */
     }
     for (j = 0, b = w = 0; (j = m2 (items_in, j, c)) != 0; ) {
         if (B (m1 (icomp, j)) == ccomp) {       /* (What's in that compartment alone) */

@@ -857,6 +857,7 @@ SA.tear             +"You tear the {text} into {obj} bandages."
 SA.skin_full        +"Your waterskin is full already."
 SA.no_water         +"There's no water here."
 SA.fill_skin        +"You fill your waterskin."
+SA.lid_open         +"The lid is open: nothing would stay on it."
 
 # ---- A look one way, ahead (UK_AHEAD: ah, AH_*; k the opening's noun, BN_*, or a choice; rel its way, 0 ahead to the
 # left, 1 ahead, 2 ahead to the right; pl its plural ("s", "es") or a choice; far a passage's or a room's squares; room

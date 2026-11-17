@@ -503,9 +503,16 @@ void o_which_ask (void)
         for (k = 0, p = (char*) np; k < 4 && (e = strchr (p, '|')) != 0; ++k, p = e + 1) {
             np = p;
             let_name (kd = low_of (num ()));    /* (Each place carried, by its letter: its kind's name) */
-            strcat (lb, k ? ", (" : " (");
-            low_text (lb + strlen (lb), kd);
-            strcat (strcat (lb, ") the "), wb);
+            if (np[-1] == 'p') {                /* (The pack's side pocket, a place of its own, named, not lettered: the
+                                                **   user's, 2026-11-17; "pocket" its answer, letters.c's which_in) */
+                strcat (lb, k ? ", the side pocket" : " the side pocket");
+                strcpy (wb, "side pocket");
+                kd = WN_POCKET;
+            } else {
+                strcat (lb, k ? ", (" : " (");
+                low_text (lb + strlen (lb), kd);
+                strcat (strcat (lb, ") the "), wb);
+            }
             wb[sizeof UIREC->which_w[0] - 1] = kd;
             to_ui (UIREC->which_w[k], wb, sizeof UIREC->which_w[0]);
         }

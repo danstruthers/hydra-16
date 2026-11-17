@@ -330,6 +330,9 @@ static unsigned char __fastcall__ which_in (char* l)
         for (p += 4; *p == ' '; ++p) {          /* ("the shield", "the closest") */
         }
     }
+    if (!strncmp (p, "side ", 5)) {
+        p += 5;                                 /* ("side pocket": "pocket", a stow's place, 2026-11-17) */
+    }
     for (len = 0; p[len] && p[len] != ' '; ++len) {
     }
     for (i = len; p[i] == ' '; ++i) {
@@ -368,7 +371,12 @@ chosen:
     if (n & WN_PLACE) {
         goto put;                               /* (The line as it was, its door chosen: pick_x, pick_y) */
     }
-    if (n & WN_STOW) {                          /* ("put j in" and its letter: "put j in f") */
+    if (n & WN_STOW) {                          /* ("put j in" and its letter: "put j in f"; the pack's side pocket by its
+                                                **   name, "put j in the side pocket", 2026-11-17) */
+        if (j == WN_POCKET) {
+            strcat (o, " the side pocket");
+            goto put;
+        }
         if (j >= NLET) {
             return 0;
         }
