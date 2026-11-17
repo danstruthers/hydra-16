@@ -1209,6 +1209,54 @@ module.exports = {
       sdcard: true
     },
     {
+      // (DECISIONS.md's "Opening a portcullis", its open question 1: a denizen's opening a raise, timed, as the character's)
+      name: 'dq0allyportc', meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's portcullis opened by a denizen as the character's is (2026-11-17: DECISIONS.md's \"Opening a portcullis\", its open question 1: a denizen's PA_OPEN at a portcullis raised it at once, untimed), by the denizens' events and the portcullis's state: at seed 1 (dq0denportc's wary dwarf miners in their guardroom) the portcullis the character came in by let down behind it by its winch, the character a step back from it; a dwarf put before it on the winch's side, an ally sent to open it (the minds' aorder OR_OPEN, its square, an errand's: \"ask it to open the door\"): it winds the winch, its long work begun (E_DEN DE_WINDS: the world's timed raise, the character's own, half a minute), and raises it as it's asked again, its time up (DE_RAISES), the portcullis up; then follows again",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7',
+        'open the door', 'go through it', 'turn around', 'close the door ahead', 'step back', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        m.ally = null;
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, call: (h, L, K, at, named) => {
+          const u16 = o => h[o] | h[o + 1] << 8, w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
+          const px = u16(L.pcX), py = u16(L.pcY), sn = h[L.pcSn], f = h[L.pcFace], dx = [0, 1, 1, 1, 0, -1, -1, -1][f], dy = [-1, -1, 0, 1, 1, 1, 0, -1][f];
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && h[at(j) + L.aSn] === sn && named(j) === 'dwarf miner');
+          if (k === undefined) { m.allyWhy = [...Array(L.nactors).keys()].map(j => [named(j), h[at(j) + L.aState], h[at(j) + L.aSn]]); return; }
+          dq0Alone(m, h, L, K, at, k);
+          const x = px + dx, y = py + dy, o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);   // (Before the portcullis, its winch's side: where the character stood)
+          w16(o + L.aX, x); w16(o + L.aY, y); h[o + L.aSn] = sn; h[o + L.aDoing] = 0; h[o + L.aState] = 1; h[o + L.aAttitude] = K.AT_ALLIED; h[o + L.aPos] = K.POS_STANDING;
+          for (let i = 0; i < 4; i++) h[o + L.aReady + i] = h[L.hubNow + i];
+          R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8; R.mem[q + R.SN] = sn;
+          R.mem[q + R.ATTITUDE] = K.AT_ALLIED;
+          const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+          const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]];
+          ram[ad('aorder') + k] = 5;            // (OR_OPEN, hub.h's)
+          ram[ad('afetch') + 2 * k] = 0; ram[ad('afetch') + 2 * k + 1] = 0;
+          const ux = px + 2 * dx, uy = py + 2 * dy;
+          ram[ad('afx') + 2 * k] = ux & 255; ram[ad('afx') + 2 * k + 1] = ux >> 8;
+          ram[ad('afy') + 2 * k] = uy & 255; ram[ad('afy') + 2 * k + 1] = uy >> 8;
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+          m.ally = { k, door: [ux, uy], sn, name: named(k) };
+        } }]);
+      },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], { K } = m.dq0.layout(), A = m.ally;
+        if (!A) return ['the scene not set: no dwarf miner near: ' + JSON.stringify(m.allyWhy)];
+        const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === A.k + 1 && e.a >= K.DE_OPENS);
+        const winds = dens.filter(e => e.a === K.DE_WINDS), raises = dens.filter(e => e.a === K.DE_RAISES);
+        this.notes = [A.name + ': ' + JSON.stringify(dens.map(e => [e.a, e.w1, e.w2, e.t]))];
+        if (!winds.length) f.push('the winch never wound, its work begun (E_DEN DE_WINDS): ' + JSON.stringify(dens.map(e => [e.a, e.t])));
+        if (!raises.length) f.push('the portcullis never raised (E_DEN DE_RAISES)');
+        if (winds.length && raises.length && raises[0].t - winds[0].t < 300) f.push('raised ' + (raises[0].t - winds[0].t) + ' tenths after its winding began, not half a minute');
+        for (const e of dens) if (e.w1 !== A.door[0] || e.w2 !== A.door[1]) f.push('a portal worked not the portcullis: ' + [e.a, e.w1, e.w2]);
+        const st = dq0Portal(m, A.sn, ...A.door);
+        if (!st || !(st.b[st.state] & 1)) f.push('the portcullis not up at the end');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       // (The diagonal's own: a denizen's steps' time is the world's step_cost, the character's, 2026-11-17)
       name: 'dq0dendiag', meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's diagonal step for every actor (GAME-CRITIQUE.md's E4, the user's of 2026-11-17: \"the 7/5 diagonal for every actor\"; one step_cost, dq0w.c's, the character's and a denizen's, wbody.c's), by the time an actor's steps take (its ready, the hub's, as each line's typed) and the squares it steps to (its E_DEN DE_MOVEDs): at seed 3, every built passage on the diagonal (dq0 -A, dq0slant's), the character gone east from the kitchen along the passage that bends away northeast; a denizen put at the kitchen's door the character set out from, hostile, drawn on to where it stands (the minds' drawn and last-sensed square poked), the others sent off: its steps up the passage on the diagonal each seven-fifths of a step on the flat (its jog's 10 tenths, 14), where they were a straight step's",
       init: 't_rc', cycles: 2500e6,

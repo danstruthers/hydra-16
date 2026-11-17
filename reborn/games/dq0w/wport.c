@@ -192,7 +192,11 @@ static void __fastcall__ den_portal (const struct msg* m)
     }
     p = at (bd.sn, x, y);
     q = d < 4 && p && TILE (*p) == T_DOOR ? portal_at (cx_, cy_) : 0;
-    pc = q && q->kind == PK_PORTCULLIS;         /* (A portcullis: raised, heaved, lowered, its bars bent, 2026-11-02) */
+    pc = q && q->kind == PK_PORTCULLIS;         /* (A portcullis: raised, heaved, lowered, its bars bent, 2026-11-02;
+                                                **   opened, raised, the timed work the character's is, 2026-11-17) */
+    if (pc && what == PA_OPEN) {
+        what = PA_RAISE;
+    }
     if (!q || (q->kind != PK_DOOR && !pc) || (q->state & PS_HIDDEN) || what == PA_SEARCH || what == PA_DISARM ||
         (!pc && (what == PA_RAISE || what == PA_LOWER || what == PA_BEND)) || what == PA_THROUGH || what >= PA_CHECK) {
         hub_map (0);

@@ -3592,6 +3592,8 @@ unsigned char __fastcall__ s_ally (unsigned char k)
 {
     unsigned char d = 0xFE, n = 1 + akeep[k], w = 0;
     unsigned x = lsx[k], y = lsy[k], i = afetch[k] & ~FETCH_TRIED;
+    unsigned char* p;
+    struct portal* q;
 
     if (sres[k]) {
         a.face = bearing (ddx, ddy);
@@ -3623,11 +3625,18 @@ unsigned char __fastcall__ s_ally (unsigned char k)
         I_PORTAL_WHICH (im) = PW_DOOR;
         I_PORTAL_X (im) = x;
         I_PORTAL_Y (im) = y;
-        I_PORTAL_STEP (im) = 0;
+        I_PORTAL_STEP (im) = (afetch[k] & FETCH_TRIED) != 0;
         a.face = bearing (x - a.x, y - a.y);
         act (I_PORTAL, k);
-        aorder[k] = OR_FOLLOW;
         wt = 5;
+        if (aorder[k] == OR_OPEN && !(afetch[k] & FETCH_TRIED) && (p = at (a.sn, x, y)) != 0 && TILE (*p) == T_DOOR &&
+            (q = portal_at (cx_, cy_)) != 0 && q->kind == PK_PORTCULLIS) {
+            afetch[k] |= FETCH_TRIED;           /* (A portcullis opened, raised: timed work, the world's, as the
+                                                **   character's is, begun; done as it's asked again, its time up,
+                                                **   2026-11-17: DECISIONS.md's "Opening a portcullis", its question 1) */
+            return 0xFE;
+        }
+        aorder[k] = OR_FOLLOW;
         return 0xFE;
     }
     if (aorder[k] == OR_FETCH) {
