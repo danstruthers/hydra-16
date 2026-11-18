@@ -41,29 +41,6 @@ end with their open questions: copy them here when the branch is merged.
   - Not built: the shared paths (main.c's things, feature, reach_go) do those steps for every verb already, and the
     coverage report's "-" cells are where a row's refusal would go.
   - DECISIONS.md:6045, "The dispatch table's rest".
-- **P4. "empty X" and "empty X onto Y".** The grammar takes them, but there's no world act for them yet. Should the
-  things come out and be put down here, or on Y; a liquid poured away; and how long does it take?
-  - built/2026-11-17-pb.md, open question 1.
-- **P5. A thing put on a ledge, in a corner, the centre, a side or a passage** is still refused as a put; a drop puts
-  it down at the character's feet (built). Placing it needs that place's square: walk there and place it?
-  - built/2026-11-17-pb.md, open question 2.
-- **P6. "unlock the door with the lockpicks" when a key fits** uses the key (built, by the letter of the answer of
-  2026-11-17: "pick" always picks; "unlock" uses a key if one fits). The lockpicks were named, so pick instead?
-  pb built that rule first, then dropped it to win back overlay 11's room (53b17b15); it would cost a few bytes there.
-  - built/2026-11-17-pb.md, "What the rebase changed".
-- **P7. First words that a count then contradicts.** "drop 2 backpacks" with one carried says "You count out two
-  backpacks." at once (built), then the world's "You have only one". Other first words for a count past what's
-  carried, or hold them back for the world (1.47M cycles later)?
-  - built/2026-11-17-fw.md, open question 1.
-- **P8. "The cave adder engages you: you stop walking. The cave adder closes with you."** Drop the closing words
-  when the engage line has just been said?
-  - built/2026-11-17-fw.md, open question 2.
-- **P9. An attack that names its weapon** ("attack the rat with the sword"): "You close with the giant rat." comes
-  first and the hold's "You lift the sword." is gone (built). The hold's words first instead?
-  - built/2026-11-17-fw.md, open question 3.
-- **P10. "You look at the rat." uses the word typed**, while "You close with the giant rat." uses the name it's seen
-  by (built). The seen name for a look too?
-  - built/2026-11-17-fw.md, open question 4.
 
 ## Doors, portcullises and windows
 
@@ -89,30 +66,12 @@ L1-L5 from DECISIONS.md:5878-5885, "No look when the light's the same".
   last "Left:" note.
 - **L5. A sconce's torch gone out in a room lit by its lamps**: no look; the sconce's torch shown unlit at the next
   look (built). Keep it?
-- **L6. A light at the feet through a rest.** A rest puts out the burning lights the character carries (built). A
-  light the hands' rule laid down burning, or one the player put down, burns on through it. Put out every light
-  within reach too?
-  - built/2026-11-17-polish.md, open question 3.
-- **L7. A stir told between a look's near part and its far part.** A look one way now tells what's near first, then
-  what lies further (built). A denizen's stir held while the line was answered is told after the near part, so
-  before the far part's words; before, it came after the whole look. It shows only where the far part adds
-  something. Keep it, or hold the stir for the far part?
-  - built/2026-11-17-looks.md, open question 1.
 
 ## Hands, lights and the pack
 
 H8 from built/2026-11-17-things.md; its other questions were answered on 2026-11-17 (DECISIONS.md).
 - **H8. The thing a tool is for is kept in hand only when its request names it.** A rope tied to a held spike keeps
   the rope and stows the spike. Protect it by the act instead?
-- **H9. A thing put back where there's no room.** At the full reach, a pack packed past its room (a kit's) won't take
-  back the key that came out of it. "You put away the iron key." is told as the step begins, and the key stays in
-  hand (built, dq0keypack). Look for the room before the step is told ("You keep the iron key in hand."), or let a
-  thing always go back where it came from?
-  - built/2026-11-17-polish.md, open question 1.
-- **H10. Things in a pit.** Things let fall into a pit lie on its floor's square: the look tells them "On the floor
-  to your left", and they're within reach from its edge (built; the reach knows no depth). Tell them "In the
-  pit ...", out of reach from its edge?
-  - built/2026-11-17-polish.md, open question 2.
 
 ## Knocked out
 
@@ -174,23 +133,6 @@ only quit and help taken, nothing sensed). These are the rest.
   under linegen's THEME_SIZE, so that theme has one clue fewer (the other 59 of 60 seeds keep every clue). Accept,
   or grow the theme's room?
   - built/2026-11-17-text.md, its open question 3.
-- **M3. When the chunk cache is full, may a chunk made ahead push out one already read?** The maker now makes the
-  chunks ahead of every actor's eyes in the background (built), but never in place of a chunk a reader has used, so
-  once the cache fills (24 slots; 12 with dq0 -C) nothing more is made ahead.
-  - Options: (a) as built; (b) push out the read chunk furthest from every actor (the game's words and saves can
-    change, since travel, the far glows and the saved seen-maps read the cache); (c) give the maker room of its own
-    for chunks made ahead (2,707 bytes each, three to an 8K bank).
-  - built/2026-11-17-maker.md, open question 1.
-- **M4. When the making ahead stands back.** It gives way to a command in hand or a line being typed, and also to
-  the game's own time: the start, the character's long tasks (a sleep, a long wait), its death, and the world's turn
-  at the turns pace (built). Without that, long waits ran 52% slower. Keep it so?
-  - built/2026-11-17-maker.md, open question 5.
-- **M5. A look one way into ground not made yet.** Typed the moment the character arrives, the look waits while the
-  maker grows the chunk: a pause of about 16M cycles (some 4.5 seconds) between its words (built; dq0lookfar's "look at
-  once" misses the 1.79M target). Speed alone can't close it: the grow is 4.5M of the maker's own. Should the look tell
-  what the made ground shows and hold the rest ("...the passage runs on into the dark"), telling more when the ground
-  is made; or keep waiting, as now?
-  - built/2026-11-17-maker.md, "Afterwards: the look at once", open question 1.
 
 ## Architecture
 

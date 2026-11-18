@@ -6868,3 +6868,35 @@ how they go in and what is built to meet them.
   look is made quicker as it is.
 - **The timing tests also run at the menacing pace, and once without the test switches** (the game as played, where
   each step of a reach costs the world 2-11M cycles today).
+
+## The merged branches' questions: the user's answers (2026-11-18)
+
+Asked after polish, loadguard, looks, pb, buildspeed, maker and fw were merged (OPEN.md's L6-L7, H9-H10, P4-P10,
+M3-M5), with the images' commit.
+
+- **A look one way into ground not made yet tells what the made ground shows first** (M5), then the rest once the
+  maker has made it. A look no longer waits whole on a grow.
+- **The images are committed now, with the misses named** in the commit, though the suite doesn't pass whole:
+  the playable build matches the code.
+- **The maker gets room of its own for the chunks it makes ahead** (M3): its own banks (2,707 bytes a chunk, three
+  to an 8K bank), so a full reader's cache doesn't stop the making ahead and no read chunk is pushed out.
+- **The making ahead stands back for the game's own time** (M4), as built: the start, long tasks, death, the
+  world's turn at the turns pace, as well as commands and typing.
+- **Counted first words only when the UI's own view shows enough carried** (P7): "You count out two backpacks." is
+  said at once only when two are carried; otherwise the world's answer comes first. (The user's first choice was to
+  always wait for the world; told that "drop 1g" would then miss its target fourfold, the user chose this.)
+- **The closing line dropped when the engage line has just been said** (P8): "The cave adder engages you: you stop
+  walking." alone.
+- **An attack that names its weapon tells the hold's words first** (P9): "You lift the sword. You close with the
+  giant rat."
+- **A look's first words use the seen name** (P10): "You look at the giant rat.", as an attack does.
+- **"empty X" puts its things down here, or on Y when named; a liquid is poured away** (P4); it takes a moment a
+  handful, as a take does.
+- **A thing put on a ledge, in a corner, the centre, a side or a passage: walk there and put it down** (P5).
+- **A named tool wins** (P6): "unlock the door with the lockpicks" picks, even when a key fits; plain "unlock" uses
+  a key if one fits.
+- **A rest puts out every burning light within reach**, not only those carried (L6).
+- **A denizen's stir is held until a look's far part is told** (L7): the look reads as one piece.
+- **A thing is put back only where there's room; the room is looked for before the step is told** (H9): "You keep
+  the iron key in hand."
+- **Things in a pit are told "In the pit ..." and are out of reach from its edge** (H10).
