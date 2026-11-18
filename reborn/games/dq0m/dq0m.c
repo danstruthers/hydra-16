@@ -269,6 +269,7 @@ int main (int argc, char* argv[])
     }
     libpath = argv[3];
     changes_init ();
+    ahead_init ();                              /* (Its own banks for the chunks it makes ahead) */
     hub_set (THEME_BANK, THEME_PLACE, 0xFF, NPIECES * sizeof (struct tplace));     /* (No piece placed yet) */
     for (;;) {
         hub_map (0);                            /* (The hub's header: its own banks may be in the window) */

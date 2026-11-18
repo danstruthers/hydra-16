@@ -122,8 +122,11 @@ struct akey {
 #define AH_MADE         0x80
 #define AH_ROCK         0x40
 #define AH_STYLE        0x0F
-extern struct akey ah_k[NCSLOTS];
-extern unsigned char ah_f[NCSLOTS];
+extern struct akey ah_k[NAHEAD];
+extern unsigned char ah_f[NAHEAD];
+extern unsigned char ahb, nah;                  /* (The maker's own banks for them: the first, the slots in them) */
+void ahead_init (void);                         /* (Its banks, as the maker starts) */
+void __fastcall__ own_copy (unsigned char k, unsigned char put);   /* (Own slot k's chunk into cb, or cb into it) */
 extern unsigned char ah_ver;                    /* (The cache's chunks changed, counted) */
 extern unsigned char nsn;
 extern unsigned ncx, ncy;
@@ -132,7 +135,6 @@ unsigned char __fastcall__ ahead_found (unsigned char sn, unsigned cx, unsigned 
                                                 **   0xFF */
 void __fastcall__ ahead_drop (unsigned char k);
 void ahead_none (void);
-void __fastcall__ ahead_move (unsigned char k, unsigned char j);
 unsigned char ahead_room (void);
 unsigned char ahead_next (void);
 unsigned char ahead_still (void);               /* (The one being made ahead still wanted) */

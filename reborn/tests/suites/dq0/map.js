@@ -285,6 +285,11 @@ function dq0AheadDenTest() {
               t.ahead = [];
               for (let k = 0; k < 24; k++) if (R[AF + k] & 0x80) t.ahead.push([R[AK + 5 * k], R[AK + 5 * k + 1] | R[AK + 5 * k + 2] << 8, R[AK + 5 * k + 3] | R[AK + 5 * k + 4] << 8].join(','));
               t.live = Object.keys(liveChunks(m, t.put ? t.put.sn : 0));
+              // (And the hub's record of them, the world record's ahead: the maker's table published, 2026-11-18)
+              const B = m.sharedBanks(), hk = Object.keys(B).map(Number).sort((x, y) => x - y).find(k => B[k][0] === 0x44 && B[k][1] === 0x51), w = B[hk + WORLD_BANK_N];
+              const AO = require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load().off('wrec', 'ahead');
+              t.hubAhead = [];
+              for (let k = 0; w && k < 24; k++) if (w[AO + 8 * k] & 0x80) t.hubAhead.push([w[AO + 8 * k + 1], w[AO + 8 * k + 2] | w[AO + 8 * k + 3] << 8, w[AO + 8 * k + 4] | w[AO + 8 * k + 5] << 8].join(','));
             }
             typed = '';
           } else if (a.rx >= 32) typed += String.fromCharCode(a.rx);
@@ -301,6 +306,7 @@ function dq0AheadDenTest() {
       if ((cx + 2) * 32 > P.w) f.push('no chunk east of the rat\'s in the stratum');
       if ((cx + 1) * 32 - P.pc[0] <= 16) f.push('the chunk east of the rat\'s within the character\'s reach');
       if (!this.ahead.includes(east)) f.push('the chunk east of the rat\'s (' + east + ') not made ahead');
+      if ([...this.ahead].sort().join(' ') !== [...(this.hubAhead || [])].sort().join(' ')) f.push('the hub\'s record of the chunks made ahead not the maker\'s own: ' + (this.hubAhead || []).join(' '));
       if (!this.ahead.includes(own) && !this.live.includes(own.slice(own.indexOf(',') + 1))) f.push('the rat\'s chunk (' + own + ') neither made ahead nor in the cache');
       return f;
     },

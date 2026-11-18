@@ -27,6 +27,7 @@
 
 #include <stddef.h>
 #include <string.h>
+#include <hydra.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
 #include "grow.h"
@@ -34,10 +35,13 @@
 #define AH_STEPS        8
 #define AH_WAY          31                      /* (dq0p's WAY_R: a look one way's reach, at most) */
 
-/* The slots' chunks made ahead: each slot's key (its chunk's place), and its state (AH_MADE, its style, AH_ROCK); what
-** its plan of uses left (us) kept in its chunk's kept, till it's finished (make.c's) */
-struct akey ah_k[NCSLOTS];
-unsigned char ah_f[NCSLOTS];
+/* The chunks made ahead, in the maker's own banks (the user's, 2026-11-18: room of its own, so a full cache doesn't stop
+** the making ahead and no chunk a reader has is made way for): each own slot's key (its chunk's place), and its state
+** (AH_MADE, its style, AH_ROCK); what its plan of uses left (us) kept in its chunk's kept, till it's finished (make.c's);
+** each as it changes into the hub's world record (WREC->ahead: the senses' to read) */
+struct akey ah_k[NAHEAD];
+unsigned char ah_f[NAHEAD];
+unsigned char ahb, nah;                         /* (Its own banks' first, and their slots: three a bank) */
 unsigned char ah_ver;                           /* (The cache's chunks changed, counted: the choice looked at again) */
 
 /* The cache's table and its readers' slots, as last copied (look_cache's); the actors as last looked at (actors's): in
@@ -60,6 +64,7 @@ static unsigned char nan, seen_sum, seen_ver;   /* (As the choice last found non
 static unsigned char pc0;                       /* (The character's body in the dungeon: an[0] its) */
 static unsigned char held;                      /* (The choice given way: each's, dq0m.c's ahead_held) */
 unsigned char ahead_held (void);
+void __fastcall__ hub_set (unsigned char bank, void* to, unsigned char c, unsigned n);   /* (make.c's) */
 unsigned char nsn;                              /* (The next to make: ahead_next's) */
 unsigned ncx, ncy;
 
@@ -69,12 +74,36 @@ static void look_cache (void)
     hub_get (WORLD_BANK, WREC->inuse, inu, sizeof inu);
 }
 
-/* The slot chunk sn, cx, cy was made ahead in, or 0xFF */
+/* Own slot k's state into the hub's record of them */
+static struct cslot pk;
+static void __fastcall__ publish (unsigned char k)
+{
+    pk.used = ah_f[k];
+    pk.sn = ah_k[k].sn;
+    pk.cx = ah_k[k].cx;
+    pk.cy = ah_k[k].cy;
+    hub_put (WORLD_BANK, &WREC->ahead[k], &pk, sizeof pk);
+}
+
+/* The maker's own banks for them, as it starts: as many as it gets, up to AH_BANKS (none: nothing made ahead) */
+void o_ahead_init (void)
+{
+    unsigned char n;
+    int b = -1;
+
+    for (n = AH_BANKS; n && (b = hy_banks_alloc (n)) < 0; --n) {
+    }
+    ahb = b;
+    nah = n * 3;
+    hub_set (WORLD_BANK, WREC->ahead, 0, sizeof WREC->ahead + sizeof WREC->growing);
+}
+
+/* The own slot chunk sn, cx, cy was made ahead in, or 0xFF */
 unsigned char __fastcall__ o_ahead_at (unsigned char sn, unsigned cx, unsigned cy)
 {
     unsigned char k;
 
-    for (k = 0; k < NCSLOTS; ++k) {
+    for (k = 0; k < nah; ++k) {
         if ((ah_f[k] & AH_MADE) && ah_k[k].sn == sn && ah_k[k].cx == cx && ah_k[k].cy == cy) {
             return k;
         }
@@ -102,6 +131,7 @@ void __fastcall__ o_ahead_drop (unsigned char k)
     if (ah_f[k]) {
         ah_f[k] = 0;
         ++ah_ver;
+        publish (k);
     }
 }
 
@@ -110,43 +140,18 @@ void o_ahead_none (void)
 {
     memset (ah_f, 0, sizeof ah_f);
     ++ah_ver;
+    hub_set (WORLD_BANK, WREC->ahead, 0, sizeof WREC->ahead);
 }
 
-/* Slot k taken for a chunk asked for (make_chunk's): a chunk made ahead in it moved to slot j (j 0xFF: the last other
-** free one), or let go (none) */
-void __fastcall__ o_ahead_move (unsigned char k, unsigned char j)
-{
-    unsigned o, n;
-
-    if (!ah_f[k]) {
-        return;
-    }
-    if (j == 0xFF) {
-        look_cache ();
-        for (j = NCSLOTS; j-- && (j == k || cs[j].used || ah_f[j]); ) {
-        }
-    }
-    if (j != 0xFF) {
-        for (o = 0; o < sizeof (struct chunk); o += n) {   /* (A piece at a time through the main RAM: the stock's
-                                                **   list's, idle as a chunk's asked for) */
-            n = sizeof (struct chunk) - o > sizeof sk ? sizeof sk : sizeof (struct chunk) - o;
-            hub_get (CACHE_BANK (k), (char*) CHUNK_AT (k) + o, &sk, n);
-            hub_put (CACHE_BANK (j), (char*) CHUNK_AT (j) + o, &sk, n);
-        }
-        ah_k[j] = ah_k[k];
-        ah_f[j] = ah_f[k];
-    }
-    ah_f[k] = 0;
-}
-
-/* Slot j's chunk made ahead taken to be finished (make.c's make_chunk) into slot k: its bytes into cb; its rock (its
-** edges' x1), its style (sty again), what its plan of uses left back (from its kept, then nothing there); its slot
-** free, and another made ahead in slot k moved into it */
+/* Own slot j's chunk made ahead taken to be finished (make.c's make_chunk) into the cache's slot k: its bytes into cb;
+** its rock (its edges' x1), its style (sty again), what its plan of uses left back (from its kept, then nothing there);
+** its own slot free */
 void __fastcall__ o_ahead_take (unsigned char j, unsigned char k)
 {
     unsigned char g;
 
-    hub_get (CACHE_BANK (j), CHUNK_AT (j), &cb, sizeof cb);
+    (void) k;
+    own_copy (j, 0);
     me.x1 = ah_f[j] & AH_ROCK ? 0xFF : 0;
     cstyle = ah_f[j] & AH_STYLE;
     hub_get (0, &HUB->gear, &g, 1);
@@ -155,22 +160,19 @@ void __fastcall__ o_ahead_take (unsigned char j, unsigned char k)
     memset (&cb.kept, 0, sizeof cb.kept);
     SP = &sty;
     o_ahead_drop (j);
-    if (k != j) {
-        o_ahead_move (k, j);
-    }
 }
 
-/* The chunk grown ahead (cb: nsn, ncx, ncy) into slot k (ahead_room's, free to the readers), what its plan left in its
-** kept: 1 */
+/* The chunk grown ahead (cb: nsn, ncx, ncy) into own slot k (ahead_room's), what its plan left in its kept: 1 */
 unsigned char __fastcall__ o_ahead_keep (unsigned char k)
 {
     memcpy (&cb.kept, &us, sizeof us);
-    hub_put (CACHE_BANK (k), CHUNK_AT (k), &cb, sizeof cb);
+    own_copy (k, 1);
     ah_k[k].sn = nsn;
     ah_k[k].cx = ncx;
     ah_k[k].cy = ncy;
     ah_f[k] = AH_MADE | (me.x1 == 0xFF ? AH_ROCK : 0) | cstyle;
     ++ah_ver;
+    publish (k);
     return 1;
 }
 
@@ -359,23 +361,20 @@ unsigned char o_ahead_mine (void)
 
 /* ---- Where */
 
-/* The slot a chunk made ahead goes in (the cache's table copied first): the last free one, else one made ahead that no
-** actor wants now; or 0xFF (none: a chunk a reader has is never made way for by one made ahead, so the cache's readers'
-** chunks are the cache's as it would be without them, and so what they find, the save's seen maps, all as before) */
+/* The own slot a chunk made ahead goes in: a free one, else one whose chunk no actor wants now; or 0xFF (none: every
+** one wanted; or no own banks).  The cache's slots never: a chunk a reader has is never made way for by one made
+** ahead, and the cache is as it would be without them (what the readers find, the save's seen maps, all as before) */
 unsigned char o_ahead_room (void)
 {
-    unsigned char k, n, small;
+    unsigned char k;
 
-    look_cache ();
-    hub_get (0, &HUB->small, &small, 1);
-    n = small ? 12 : NCSLOTS;                   /* (dq0 -C: twelve slots, as pick's) */
-    for (k = n; k--; ) {
-        if (!cs[k].used && !ah_f[k]) {
+    for (k = nah; k--; ) {
+        if (!ah_f[k]) {
             return k;
         }
     }
-    for (k = n; k--; ) {
-        if (ah_f[k] && !wanted (ah_k[k].sn, ah_k[k].cx, ah_k[k].cy)) {
+    for (k = nah; k--; ) {
+        if (!wanted (ah_k[k].sn, ah_k[k].cx, ah_k[k].cy)) {
             return k;
         }
     }

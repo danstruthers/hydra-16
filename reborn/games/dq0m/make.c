@@ -20,6 +20,7 @@
 #include <setjmp.h>
 #include <string.h>
 #include <dice.h>
+#include <hydra.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
 #include "grow.h"
@@ -213,7 +214,6 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
     sl->stamp = ++WREC->stamp;
     hub_map (0);
     if (j == 0xFF) {
-        ahead_move (k, 0xFF);                   /* (One made ahead in the slot: moved, or let go) */
         grow (sn, cx, cy);
     } else {
         ahead_take (j, k);                      /* (Made ahead: as it was grown, and what its plan left) */
@@ -249,22 +249,51 @@ void ahead_check (void)
 
 /* Chunk sn, cx, cy made ahead: grown, then into the slot ahead_room gives (ahead.c's ahead_keep), what its plan left
 ** kept with it: 1, or 0 (given up, or no room) */
+/* Own slot k's chunk (the maker's own banks: ahead.c's ahb) into cb, or (put) cb into it; the window put back */
+void __fastcall__ own_copy (unsigned char k, unsigned char put)
+{
+    unsigned w = hub_here ();
+
+    hy_bank (ahb + k / 3);
+    if (put) {
+        memcpy (CHUNK_AT (k), &cb, sizeof cb);
+    } else {
+        memcpy (&cb, CHUNK_AT (k), sizeof cb);
+    }
+    hub_back (w);
+}
+
+/* The one being grown ahead, in the hub's world record (WREC->growing: none, used 0) */
+static struct cslot gk;
+static void __fastcall__ growing (unsigned char on)
+{
+    gk.used = on;
+    gk.sn = nsn;
+    gk.cx = ncx;
+    gk.cy = ncy;
+    hub_put (WORLD_BANK, &WREC->growing, &gk, sizeof gk);
+}
+
 unsigned char __fastcall__ make_ahead (unsigned char sn, unsigned cx, unsigned cy)
 {
     unsigned char k;
 
     if (setjmp (ajb)) {
         ahead_back ();                          /* (Given up: the calls it was in gone) */
+        growing (0);
         hub_map (0);
         return 0;
     }
     ahead_mark ();
+    growing (1);
     aheading = 1;
     ahead_check ();                             /* (A line or a request come as it was chosen: given way at once) */
     chunk_edges (sn, cx, cy, &me);
     grow (sn, cx, cy);
     aheading = 0;
-    return (k = ahead_room ()) != 0xFF && ahead_keep (k);
+    k = (k = ahead_room ()) != 0xFF && ahead_keep (k);
+    growing (0);
+    return k;
 }
 
 

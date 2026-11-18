@@ -1885,6 +1885,11 @@ struct wrec {
                                                 **   world writes it into strata) */
     struct stock    stock[NCSLOTS];             /* Each slot's chunk's things, as the maker stocked it (items.h's: its
                                                 **   slot CS_FRESH, the world puts them down) */
+    struct cslot    ahead[NAHEAD];              /* The chunks the maker's made ahead, in its own banks (not the cache:
+                                                **   none a reader's till one asks for it, 2026-11-18): each its used
+                                                **   the maker's AH_ flags (0: none), its sn, cx, cy; stamp 0 */
+    struct cslot    growing;                    /* The one it's growing ahead now (used 1), or none (0): with the
+                                                **   cache's table, a chunk made, made ahead or being grown, read */
 };
 
 /* The world's part of the save (DUNGEON.md: the save; save version 8 on): world.dat in the save folder, the world's to

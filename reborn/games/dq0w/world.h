@@ -44,6 +44,9 @@ extern unsigned char smask;
 #define PLAN_BANKS      4                       /* The hub's banks for the plans (two to a bank: a slot's), */
 #define CACHE_BANKS     8                       /*   and for the chunks (three to a bank) */
 #define NCSLOTS         (CACHE_BANKS * 3)
+#define AH_BANKS        8                       /* The maker's own banks for the chunks it makes ahead (three to a
+                                                **   bank: as many as it gets, up to these; the user's, 2026-11-18) */
+#define NAHEAD          (AH_BANKS * 3)
 #define PLAN_BANK(n)    (1 + (SLOT (n) >> 1))   /* (Banks of the hub's segment: stratum n's slot's) */
 #define PLAN_AT(n)      ((struct region*) (0x8000 + ((n) & 1) * 0x1000))
 #define PLAN_MAX        (0x1000 / sizeof (struct region))   /* Regions in a plan, at most */

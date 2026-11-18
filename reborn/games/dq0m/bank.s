@@ -221,7 +221,7 @@ ovcall:
             OVFN        ahead_found, 10
             OVFN        ahead_drop, 10
             OVFN        ahead_none, 10
-            OVFN        ahead_move, 10
+            OVFN        ahead_init, 10
             OVFN        ahead_room, 10
             OVFN        ahead_next, 10
             OVFN        ahead_still, 10
