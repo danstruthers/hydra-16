@@ -51,6 +51,19 @@ end with their open questions: copy them here when the branch is merged.
   2026-11-17: "pick" always picks; "unlock" uses a key if one fits). The lockpicks were named, so pick instead?
   pb built that rule first, then dropped it to win back overlay 11's room (53b17b15); it would cost a few bytes there.
   - built/2026-11-17-pb.md, "What the rebase changed".
+- **P7. First words that a count then contradicts.** "drop 2 backpacks" with one carried says "You count out two
+  backpacks." at once (built), then the world's "You have only one". Other first words for a count past what's
+  carried, or hold them back for the world (1.47M cycles later)?
+  - built/2026-11-17-fw.md, open question 1.
+- **P8. "The cave adder engages you: you stop walking. The cave adder closes with you."** Drop the closing words
+  when the engage line has just been said?
+  - built/2026-11-17-fw.md, open question 2.
+- **P9. An attack that names its weapon** ("attack the rat with the sword"): "You close with the giant rat." comes
+  first and the hold's "You lift the sword." is gone (built). The hold's words first instead?
+  - built/2026-11-17-fw.md, open question 3.
+- **P10. "You look at the rat." uses the word typed**, while "You close with the giant rat." uses the name it's seen
+  by (built). The seen name for a look too?
+  - built/2026-11-17-fw.md, open question 4.
 
 ## Doors, portcullises and windows
 
