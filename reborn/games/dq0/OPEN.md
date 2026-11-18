@@ -185,6 +185,12 @@ only quit and help taken, nothing sensed). These are the rest.
   the game's own time: the start, the character's long tasks (a sleep, a long wait), its death, and the world's turn
   at the turns pace (built). Without that, long waits ran 52% slower. Keep it so?
   - built/2026-11-17-maker.md, open question 5.
+- **M5. A look one way into ground not made yet.** Typed the moment the character arrives, the look waits while the
+  maker grows the chunk: a pause of about 16M cycles (some 4.5 seconds) between its words (built; dq0lookfar's "look at
+  once" misses the 1.79M target). Speed alone can't close it: the grow is 4.5M of the maker's own. Should the look tell
+  what the made ground shows and hold the rest ("...the passage runs on into the dark"), telling more when the ground
+  is made; or keep waiting, as now?
+  - built/2026-11-17-maker.md, "Afterwards: the look at once", open question 1.
 
 ## Architecture
 
