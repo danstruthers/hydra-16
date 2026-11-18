@@ -466,7 +466,11 @@ void __fastcall__ s_look_ov (unsigned char action)
 ** look.c's look (8)), from the senses' record (sight_copy) and their look one way's own (WAY_SEEN, copied into lb's
 ** end, words.c's not begun yet): the place it's in not told again; its own sentences said as they're made (none a
 ** glance says), the things' and the denizens' (those ahead, the record's then) in the glance's words, streamed
-** (lbsaid.s's: none said twice in an answer) */
+** (lbsaid.s's: none said twice in an answer).  What's near told first (the user's, 2026-11-17): a look one way's near
+** part (WAY_NEAR's, its first E_VIEW) as its far part's worked out, but what the far part may change (an opening held
+** back, WB_HOLD; "nothing more that way", WM_HOLDN); then its far part (WAY_SEEN's, WM_FAR, its second): only what's
+** new, its things, denizens and lights far off the near part told left out (their sentences with them: none told
+** twice, those it adds told on their own), nothing at all if it's all as the near part had it (WM_SAME) */
 
 #pragma code-name (push, "OV13CODE")
 #pragma rodata-name (push, "OV13RODATA")
@@ -507,17 +511,109 @@ static unsigned char __fastcall__ twin (const struct beyond* b)
         (b[1].dist == b->dist && b[1].kind == b->kind && b[1].lit == b->lit));
 }
 
+static unsigned char nid;                       /* (The near part told last, its id; the things, the denizens and the */
+static unsigned nit[SEE_ITEMS];                 /*   lights far off it told: their numbers, records, ways; and if it */
+static unsigned char nni, nden[SEE_DENS], nnd, ngl[SEE_GLOWS], nng, nany;   /*   told anything at all; its openings, */
+static struct beyond nb[SEE_BEYOND];            /*   what's beyond them told unless held back) */
+
+/* Opening b, what's beyond it, as the near part told it (its own byte by byte: the C library's memcmp not the UI's) */
+static unsigned char __fastcall__ near_said (const struct beyond* b)
+{
+    unsigned char j, k;
+
+    for (j = 0; j < SEE_BEYOND; ++j) {
+        for (k = 0; k < sizeof *b && ((const unsigned char*) b)[k] == ((const unsigned char*) &nb[j])[k]; ++k) {
+        }
+        if (k == sizeof *b) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* The far part's things (k 0), denizens (1), lights far off (2) at W's entry i: one the near part told */
+static unsigned char __fastcall__ near_told (unsigned char k, unsigned char i)
+{
+    unsigned char j;
+
+    for (j = k ? k == 1 ? nnd : nng : nni; j--; ) {
+        if (k ? k == 1 ? nden[j] == W.den[i].den : ngl[j] == W.glow[i].rel : nit[j] == W.item[i].n) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* The far part's things, denizens, lights far off the near part told left out (a thing with those on it after it, hid
+** 2, left out only if they all were) */
+static void far_new (void)
+{
+    unsigned char i, j, n, a;
+
+    for (i = n = 0; i < W.nitems; i = j) {
+        for (a = near_told (0, i), j = i + 1; j < W.nitems && (W.item[j].hid & 2); ++j) {
+            a &= near_told (0, j);
+        }
+        if (!a) {
+            memmove (&W.item[n], &W.item[i], (j - i) * sizeof W.item[0]);
+            n += j - i;
+        }
+    }
+    W.nitems = n;
+    for (i = n = 0; i < W.ndens; ++i) {
+        if (!near_told (1, i)) {
+            W.den[n++] = W.den[i];
+        }
+    }
+    W.ndens = n;
+    for (i = n = 0; i < W.nglows; ++i) {
+        if (!near_told (2, i)) {
+            W.glow[n++] = W.glow[i];
+        }
+    }
+    W.nglows = n;
+}
+
 void o_focus_words (void)
 {
     struct beyond* b;
     struct beyond* c;
-    unsigned char i, j, k, n, told = 0;
+    unsigned char i, j, k, n, part, told = 0;
 
-    hub_mem (SIGHT_BANK, &W, WAY_SEEN, sizeof W);
-    if (W.seq != S.seq) {
-        W.nbeyond = W.nitems = W.ndens = W.nglows = 0;  /* (Not this record's: a look about came after it) */
+    hub_mem (SIGHT_BANK, &W, WAY_NEAR, sizeof W);
+    part = 0;                                   /* (0 the whole of it; 1 its near part; 2 its far part, after it) */
+    if ((W.more & WM_NEAR) && W.id != nid) {
+        part = 1;                               /* (Its near part, told first: what it told kept) */
+        nid = W.id;
+        for (i = nni = W.nitems; i--; ) {
+            nit[i] = W.item[i].n;
+        }
+        for (i = nnd = W.ndens; i--; ) {
+            nden[i] = W.den[i].den;
+        }
+        for (i = nng = W.nglows; i--; ) {
+            ngl[i] = W.glow[i].rel;
+        }
+        nany = W.nbeyond | W.nitems | W.ndens | W.nglows;
+        memcpy (nb, W.beyond, sizeof nb);
+        for (i = W.nbeyond; i < SEE_BEYOND; ++i) {
+            nb[i].what = 0xFF;                  /* (None: matching no opening) */
+        }
+    } else {
+        hub_mem (SIGHT_BANK, &W, WAY_SEEN, sizeof W);
+        if ((W.more & WM_FAR) && W.id == nid) {
+            if (W.more & WM_SAME) {
+                sight_get ();                   /* (All of it as its near part had it: nothing more to tell) */
+                return;
+            }
+            part = 2;
+            far_new ();                         /* (Only what's new) */
+        } else if (W.seq != S.seq) {
+            W.nbeyond = W.nitems = W.ndens = W.nglows = 0;  /* (Not this record's: a look about came after it) */
+        }
     }
-    if (worded != 3) {
+    S.eye = W.eye;                              /* (What it makes out, a look one way's: twice as far) */
+    if (worded != 3 && part != 2) {
         ah (AH_PEER << 8 | (S.dark != 0));
     }
     for (i = 0, b = W.beyond; i < W.nbeyond; ++i, ++b) {    /* What's beyond the openings ahead (k: the opening,
@@ -528,8 +624,10 @@ void o_focus_words (void)
                                                 **   kitchen, lit by torches."; "Down the passage ahead you see into
                                                 **   the hall, 30 feet on." */
         k = b->noun;
-        if (told & 1 << i) {
-            continue;                           /* (A way into a room told already, with the first) */
+        if ((told & 1 << i) || (b->what & WB_HOLD) || (part == 2 && near_said (b))) {
+            continue;                           /* (A way into a room told already, with the first; or what's beyond
+                                                **   it held back for the far part; a far part's as its near part told
+                                                **   it, none of the look's own said twice) */
         }
         if (k >= BN_GRILLE && b->what == WB_SHUT) {
             ah (AH_COVER << 8);
@@ -592,8 +690,9 @@ void o_focus_words (void)
         ahrel = (W.glow[i].rel + 1) & 3;
         ah (AH_GLOW << 8 | (W.glow[i].how != GL_LIGHT));
     }
-    if (!(W.nbeyond | W.nitems | W.ndens | W.nglows)) {
-        ah (AH_NOTHING << 8);
+    if (!(W.nbeyond | W.nitems | W.ndens | W.nglows) && !(part == 1 && (W.more & WM_HOLDN)) && !(part == 2 && nany)) {
+        ah (AH_NOTHING << 8);                   /* (Nothing: a near part's, unless the far part may yet see more; a far
+                                                **   part's, unless its near part told something) */
     }
     memcpy (&S.nitems, &W.nitems, sizeof S.nitems + sizeof S.item);   /* The things and the denizens ahead, in a */
     memcpy (&S.ndens, &W.ndens, sizeof S.ndens + sizeof S.den);       /*   glance's words (overlay 7's, 9's) */

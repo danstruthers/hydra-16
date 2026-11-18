@@ -22,7 +22,9 @@ extern unsigned char v_way;                     /* A look one way (HOUSE.md's lo
 #define VP_COVER        6                       /*   its spy-hole's cover on the far side: nothing seen through it.
                                                 **   The user's, 2026-11-14: way.c's to tell) */
 void __fastcall__ way_seen (unsigned char sn, unsigned char face);  /* A look one way's own record (WAY_SEEN),
-                                                **   after the look's, and its denizens' (part 3's, way.c) */
+                                                **   after the look's, and its denizens' (part 3's, way.c); its near
+                                                **   part's (WAY_NEAR: dq0p.c's wnear), from the last whole look's,
+                                                **   what the far part may change held back */
 void __fastcall__ felt (unsigned char sn, unsigned x, unsigned y, unsigned char d, unsigned char n);   /* A walk's
                                                 **   squares remembered (from x, y its first way d, n of them) */
 #define RUN_AT          0x0FF8                  /* (In the senses' bank, before a look one way's: its passage's ways'

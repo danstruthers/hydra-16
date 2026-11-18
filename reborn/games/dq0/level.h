@@ -170,8 +170,18 @@ struct wayseen {
     struct sden     den[SEE_DENS];
     unsigned char   nglows;
     struct sglow    glow[SEE_GLOWS];
+    unsigned char   id;                         /* (The look one way it's of: its near part's and its far part's the
+                                                **   same, the senses' count) */
+    unsigned char   more;                       /* (WM_*: its near part, the far's to come; the far part, after a near) */
+    unsigned char   eye;                        /* (What it makes out at a distance: the record's eye, a look one way's) */
 };
 enum { WB_DARK, WB_PASSAGE, WB_ROOM, WB_SHUT, WB_SKY };
+#define WB_HOLD         0x80                    /* (A near part's opening, its what's: what's beyond it may yet change
+                                                **   as the far part's worked out, held back for it) */
+#define WM_NEAR         1                       /* (more's: a near part, WAY_NEAR's: the far part to come, */
+#define WM_HOLDN        2                       /*   "nothing more that way" held back for it; */
+#define WM_FAR          4                       /*   a far part, WAY_SEEN's, after its near part told; */
+#define WM_SAME         8                       /*   and all of it as the near part had it) */
 enum { BN_PASSAGE, BN_DOORWAY, BN_OPEN, BN_BROKEN, BN_DOOR, BN_PORTCULLIS, BN_WINDOW, BN_SLIT, BN_GRILLE, BN_PEEP };
                                                 /* (BN_GRILLE, BN_PEEP: a closed door's little window, its spy-hole,
                                                 **   the eye at it: dq0p's view.c, way.c; the user's, 2026-11-14) */

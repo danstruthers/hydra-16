@@ -3342,10 +3342,24 @@ void __fastcall__ s_start (const char* dir)
 
 /* A look one way (I_LOOK's: HOUSE.md's looking one way): the senses' look about, and twice as far in the quarter
 ** ahead, their own record of it too (LK_WAY; LK_PEEK, t | 0x8000: through the closed door ahead's little window or
-** spy-hole, the user's, 2026-11-14), t tenths; told the UI, E_VIEW V_LOOKED */
+** spy-hole, the user's, 2026-11-14), t tenths; told the UI, E_VIEW V_LOOKED.  What's near told first (the user's,
+** 2026-11-17: "a look tells what's near first and goes on as the rest is worked out"): its near part, the senses' from
+** their last look as it stands (LK_NEAR: none if it doesn't), told the UI as its far part's look is worked out */
 void __fastcall__ s_look_way (unsigned t)
 {
     busy (t & 0x7FFF);
+    if (!(t & 0x8000)) {
+        HUB->look.kind = LK_NEAR;
+        hub_post (&HUB->look, T_SENSES);
+        while (!hub_wait_t (&HUB->look, 4) && !HUB->quit) {
+            waiting ();                         /* (As looked's: the clock on, the UI's things) */
+            hub_map (0);
+        }
+        HUB->look.state = REQ_FREE;
+        if (HUB->look.ch & LC_FAR) {
+            view (V_LOOKED);                    /* (Its near part, WAY_NEAR's, told meanwhile) */
+        }
+    }
     HUB->look.kind = t & 0x8000 ? LK_PEEK : LK_WAY;
     see (0);
     hub_map (0);

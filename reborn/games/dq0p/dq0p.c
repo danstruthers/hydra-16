@@ -14,6 +14,7 @@
 */
 
 #include <fcntl.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -29,8 +30,10 @@ void sense_actor (void);                        /* (sense.c's: the hub's dsense 
 void snd_need (void);                           /* (sound.c's: the sound layer up to date) */
 
 static unsigned char sees;                      /* (The denizens seen changed: the look's reply's ch) */
+static unsigned char wch;                       /* (And a look one way's near part told: LC_FAR, the far's to come) */
 unsigned char here_known;                       /* (Its square known before this look: sight.c's, in the dark) */
 unsigned char v_way;                            /* (A look one way, the hub's LK_WAY: view.h's) */
+extern unsigned char sgen;                      /* (sound.c's: bumped as the world's doors, squares, lights change) */
 
 /* A look about for the character, from what the hub has of it (its square, its facing, its light, its senses; the
 ** squares it walked to get there), the denizens it sees with it */
@@ -57,6 +60,26 @@ static void pc (void)
 extern unsigned char gw;                        /* (give_way's, below) */
 void give_way (void);
 #define GIVE_WAY        100                     /* (give_way's: below) */
+
+/* The last whole look as it was made (a look about's or one way's: its view and its record; not one through a door's
+** little window), so a look one way's near part can be told from it while its far part's worked out: from the same
+** square, facing the same way, the same light, sight and eyes' height, nothing the world's changed since (sound.c's
+** sgen: light.c's E_LIGHT, a door, a square, a light: look_near's) */
+static struct lk { unsigned x, y; unsigned char sn, face, light, sight, dark, pos, gen; } lk, lkn;
+static unsigned char lk_ok;
+static void lk_now (void)                       /* (lkn: as they are now, pc ()'s) */
+{
+    lkn.x = x;
+    lkn.y = y;
+    lkn.sn = sn;
+    lkn.face = face;
+    lkn.light = light;
+    lkn.sight = sight;
+    lkn.dark = dark;
+    lkn.pos = HUB->pc_pos;
+    lkn.gen = sgen;
+}
+
 static void look (void)
 {
     unsigned char first, wd, wn;
@@ -90,6 +113,185 @@ static void look (void)
     }
     hub_map (0);
     HUB->look.first = first;
+    lk_ok = !(v_way & ~1) && sight != 0xFF;     /* (As it was made: not through a door's little window, not blind) */
+    lk_now ();
+    lk = lkn;
+}
+
+/* What may let a look one way's far part see more than its near part, the last look's (a glance's reach, range: past it
+** only what's lit, in the quarter ahead out to twice it, WAY_R at most): 1, something lights squares past it within a
+** look one way's reach (its own light or ultravision reaching that far, the walls round what they light with them; a lit
+** thing lying about, the light layer's lamps, its squares within its reach and the walls round them; a lit room in a
+** chunk there); 2, a chunk there not made (the far part may make it: "nothing more that way" held back for it).  Over
+** rather than under: the way it faces not asked, WAY_R's reach for twice a glance's, a lit room anywhere in its chunks */
+static unsigned char wlim;                      /* (way_stop's: the squares a glance is sure of, each way's sum) */
+unsigned char wfar, wnear, wheld;               /* (way.c's: far_may's; a near part made now; an opening held back) */
+static unsigned char wid, far_next;             /* (way_more's: the looks one way, counted (their records' id); the next
+                                                **   look one way a near part's far part) */
+static const struct stratum* wst;               /* (The character's stratum: its bounds) */
+static unsigned wa, wb;
+static unsigned char wk;
+
+/* Square wa, wb of the character's stratum in it, but in a chunk not made */
+static unsigned char unmade (void)
+{
+    return wa - wst->x0 < wst->w && wb - wst->y0 < wst->h && !cached (sn, wa, wb);
+}
+
+/* wa, wb from the character's square, each made its size; the greater in wa */
+static void apart (void)
+{
+    wa -= x;
+    wb -= y;
+    if ((int) wa < 0) {
+        wa = -wa;
+    }
+    if ((int) wb < 0) {
+        wb = -wb;
+    }
+}
+
+/* ==== Part 7 (swapped: a look one way's near part's, its far check; the main RAM's room, 2026-11-17) */
+#pragma code-name (push, "SW7CODE")
+#pragma rodata-name (push, "SW7RODATA")
+#pragma bss-name (push, "SW7RODATA")            /* (Its statics its own: none kept from one call to the next) */
+
+/* The squares g0 ... g1 of a way from square v on it: the nearest, gn, and the farthest, gf (255 at most) */
+static unsigned g0, g1;
+static unsigned char gn, gf;
+static void __fastcall__ span (unsigned v)
+{
+    static unsigned a, b;
+
+    a = g0 - v;
+    b = g1 - v;
+    gn = (int) a > 0 ? (a > 255 ? 255 : a) : (int) b < 0 ? (-b > 255 ? 255 : -b) : 0;
+    a = (int) a < 0 ? -a : a;
+    b = (int) b < 0 ? -b : b;
+    gf = a > b ? (a > 255 ? 255 : a) : (b > 255 ? 255 : b);
+}
+
+unsigned char s_far_may (void)
+{
+    static unsigned char f, e, i, j, n, m, rw;
+    static unsigned cx, cy;
+    static const struct lsrc* l;
+    static const struct room* q;
+
+    if (light + 2 > range || dark + 2 > range) {
+        return 1;
+    }
+    for (wk = nls, l = ls; wk; --wk, ++l) {     /* (Its squares within its reach, Chebyshev's: past a glance's reach in
+                                                **   a straight line if past two thirds of it so) */
+        wa = l->x;
+        wb = l->y;
+        apart ();
+        if (wb > wa) {
+            wa = wb;
+        }
+        e = l->r + 1;
+        wa += e;
+        if (wa <= WAY_R + 2 * e && wa + wa + wa > range + range) {
+            return 1;
+        }
+    }
+    f = 0;
+    rw = 2 * range < WAY_R ? 2 * range : WAY_R;
+    for (j = 0, wb = y - WAY_R; j < 3; ++j, wb += WAY_R) {     /* (The chunks of the squares WAY_R each way: those */
+        for (i = 0, wa = x - WAY_R; i < 3; ++i, wa += WAY_R) {  /*   of nine of them, WAY_R apart) */
+            if (unmade ()) {
+                f = 2;
+            } else if (wa - wst->x0 < wst->w && wb - wst->y0 < wst->h) {
+                at (sn, wa, wb);
+                cx = wa - ((wa - wst->x0) & (CW - 1));  /* (Its chunk's first square) */
+                cy = wb - ((wb - wst->y0) & (CW - 1));
+                for (e = C->nrooms, q = C->room; e; --e, ++q) {
+                    if (q->flags & R_LIT) {     /* (A lit room, its floor and walls: some within a look one way's
+                                                **   reach, not all within two thirds of a glance's) */
+                        g0 = cx + q->x - 1;
+                        g1 = cx + q->x + q->w;
+                        span (x);
+                        n = gn;
+                        m = gf;
+                        g0 = cy + q->y - 1;
+                        g1 = cy + q->y + q->h;
+                        span (y);
+                        if ((n > gn ? n : gn) <= rw && 3 * (m > gf ? m : gf) > 2 * range) {
+                            return 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return f;
+}
+
+#pragma bss-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (pop)
+unsigned char far_may (void);                   /* (Its stub, bank.s's) */
+
+/* Square ox, oy of a near part's walk (way.c's seen_on): 2, a chunk round it not made (it goes no further, none made for
+** it: the far part's to); 1, past the squares a glance is sure of (a glance's reach less two, each way's sum: the squares
+** round them a glance's); 0 */
+static const signed char wcx[4] = { -1, 1, -1, 1 }, wcy[4] = { -1, -1, 1, 1 };
+unsigned char __fastcall__ way_stop (unsigned ox, unsigned oy)
+{
+    if ((unsigned char) (ox - wst->x0 + 1) % CW < 2 || (unsigned char) (oy - wst->y0 + 1) % CW < 2) {
+        for (wk = 0; wk < 4; ++wk) {            /* (At its chunk's edge: those round it) */
+            wa = ox + wcx[wk];
+            wb = oy + wcy[wk];
+            if (unmade ()) {
+                return 2;
+            }
+        }
+    }
+    wa = ox;
+    wb = oy;
+    apart ();
+    return wa + wb > wlim;
+}
+
+/* A look one way's record r (in the bank, way.c's) of the look one way it's of (wid: its near part's own, or the whole of
+** it at once; its far part's its near part's), what it makes out (twice as far: sight.c's), what's more: a near part's,
+** WM_NEAR ("nothing more that way" held back, WM_HOLDN, the far part may see more, or an opening's held back); its far
+** part's, WM_FAR (WM_SAME, all as its near part had it: nothing more to tell) */
+void __fastcall__ way_more (struct wayseen* r)
+{
+    if (wnear || !far_next) {
+        ++wid;
+    }
+    r->id = wid;
+    r->eye = 2 * eye + 2;
+    r->more = wnear ? wheld | wfar ? WM_NEAR | WM_HOLDN : WM_NEAR : !far_next ? 0 : WAY_NEAR->id != wid ||
+        memcmp (&r->nbeyond, &WAY_NEAR->nbeyond, offsetof (struct wayseen, id) - 1) || ((WAY_NEAR->more & WM_HOLDN) &&
+        !(r->nbeyond | r->nitems | r->ndens | r->nglows)) ? WM_FAR : WM_FAR | WM_SAME;   /* (Its near part empty, its
+                                                **   "nothing more that way" held back: told now, not the same) */
+    far_next = wnear;                           /* (A near part's far part next) */
+}
+
+/* A look one way's near part (LK_NEAR's): told from the last whole look, if it stands as it was made (its squares
+** seen, its record: way.c's, what's beyond its openings ahead, what lies ahead, held back what the far part may yet
+** change), the far part's look (LK_WAY's) asked next; else none, the whole look one way asked next */
+extern const struct sight* sight_rec;           /* (sight.c's: the record made) */
+static void look_near (void)
+{
+    v_way = 1;
+    pc ();
+    lk_now ();
+    if (lk_ok && !memcmp (&lk, &lkn, sizeof lk)) {
+        sync_strata ();
+        wst = &STRATUM (sn);
+        wlim = range - 2;
+        wfar = far_may ();
+        memcpy (&((struct sight*) sight_rec)->nglows, &G, sizeof G);  /* (The lights far off as they're seen now:
+                                                **   eyes.c's, an LK_EYES's since) */
+        wnear = 1;
+        way_seen (sn, face);
+        wnear = 0;
+        wch = LC_FAR;
+    }
 }
 
 /* The look giving way to the UI's command in hand at the real paces (the hub's ui_cmd: its answer, the world's, the
@@ -161,6 +363,8 @@ int main (int argc, char* argv[])
     }
     chunks_init (ASK_SENSES);
     light_init ();
+    hub_map (SIGHT_BANK);
+    WAY_NEAR->more = 0;                         /* (No near part yet: the UI's to tell none) */
     for (;;) {
         hub_map (0);
         if (held) {
@@ -177,6 +381,9 @@ int main (int argc, char* argv[])
         if (hub_posted (&HUB->look)) {
             light_events ();                    /* (The world's lights and doors changed: the light layer's out of
                                                 **   date near them) */
+            if (HUB->look.kind != LK_WAY) {
+                far_next = 0;                   /* (A near part's far part only next) */
+            }
             if (HUB->look.kind == LK_DENS) {
                 sees = dens_seen ();            /* (Only the denizens seen, looked at again: their bodies changed) */
             } else if (HUB->look.kind == LK_EYES) {
@@ -187,6 +394,8 @@ int main (int argc, char* argv[])
                 glows (sn, x, y, face, range, own);
                 hub_map (SIGHT_BANK);
                 memcpy (&SIGHT->nglows, &G, sizeof G);
+            } else if (HUB->look.kind == LK_NEAR) {
+                look_near ();                   /* (A look one way's near part, told first: its far part LK_WAY's) */
             } else {
                 v_way = HUB->look.kind == LK_PEEK ? 1 | VP_ASK : HUB->look.kind == LK_WAY;   /* (A look one way:
                                                 **   twice as far in the quarter ahead, and what's beyond its
@@ -194,7 +403,8 @@ int main (int argc, char* argv[])
                 look ();
             }
             hub_map (0);
-            HUB->look.ch = sees;
+            HUB->look.ch = sees | wch;
+            wch = 0;
             hub_reply (&HUB->look);
             if (HUB->tpr) {
                 snd_need ();                    /* (At the real paces, the sound layer for where the character is

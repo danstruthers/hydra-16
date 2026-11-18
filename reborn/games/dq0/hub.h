@@ -277,6 +277,9 @@ typedef char names_fit[TNAMES * sizeof (struct tname) <= 0x800 ? 1 : -1];  /* (T
 #define SIGHT           ((struct sight*) HUB_WINDOW)
 #define WAY_AT          0x1000
 #define WAY_SEEN        ((struct wayseen*) (HUB_WINDOW + WAY_AT))  /* (A look one way's own, after it: level.h's) */
+#define WAY_NEAR_AT     0x0E00
+#define WAY_NEAR        ((struct wayseen*) (HUB_WINDOW + WAY_NEAR_AT))  /* (Its near part's, told first: LK_NEAR's, made
+                                                **   before the far part's look; the UI's to read as the near's told) */
 /* The sound layer (slice 4.5's: DUNGEON.md's perception as layers), the senses', in SIGHT_BANK after a look one way's
 ** own: a pulse from the character's square over the squares round it (SND_R each way), how far a sound goes between
 ** it and each square it reaches, round corners, through what lets sound through (a shut door or a closed window
@@ -1722,12 +1725,17 @@ enum { HW_BEHIND, HW_HEAP, HW_DOORWAY, HW_RUBBLE, HW_SHADOW, HW_OUT, HW_OPEN, HW
     HW_LIGHT, HW_SEEN, HW_BARE };               /* (The hub's pc_hw says of what: HW_BEHIND, HW_HEAP its kind; HW_FOUND, HW_SPOT, HW_LEAP,
                                                 **   HW_SEEN the actor plus 1) */
 
-enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY, LK_PEEK };   /* The look's kinds: a look about; the denizens seen looked at
-                                                **   again; the eyes only, as time's gone (the lights seen far off: a
-                                                **   wait's); a look one way (I_LOOK's: a look about, and twice as far
-                                                **   in the quarter ahead; its own record, WAY_SEEN); the same through
-                                                **   the closed door ahead's little window or spy-hole (I_LOOK's w2:
-                                                **   dq0p's view.c, the user's, 2026-11-14) */
+enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY, LK_PEEK, LK_NEAR };  /* The look's kinds: a look about; the denizens seen
+                                                **   looked at again; the eyes only, as time's gone (the lights seen far
+                                                **   off: a wait's); a look one way (I_LOOK's: a look about, and twice as
+                                                **   far in the quarter ahead; its own record, WAY_SEEN); the same
+                                                **   through the closed door ahead's little window or spy-hole (I_LOOK's
+                                                **   w2: dq0p's view.c, the user's, 2026-11-14); a look one way's near
+                                                **   part, what's near told first (the user's, 2026-11-17: the senses'
+                                                **   way.c's, from what the last look saw, its own record WAY_NEAR; the
+                                                **   reply's ch LC_FAR, the far part to come as LK_WAY; else the whole
+                                                **   look one way done as LK_WAY's, its last look not as it stands) */
+#define LC_FAR          2                       /* (The look's reply's ch, LK_NEAR's: its near part told, the far's next) */
 #define LF_ARRIVE       0x40                    /* (The look's first: arrived, R_VISITED the senses') */
 
 /* A thing the character carries (the UI bank's ix): its kind, what it's in (that one's entry plus 1; 0 none: held, worn,

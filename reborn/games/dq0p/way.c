@@ -6,6 +6,14 @@
 ** down a passage it sees; a shut door, closed shutters, not seen past; and the things, the denizens and the lights
 ** far off the record has that lie ahead (the record sight.c's, its denizens dens.c's, as the look's made).  Ahead is
 ** the way the character faces, or either side of it (REL8's ahead, ahead to its right, ahead to its left).
+**
+** A look one way's near part (the hub's LK_NEAR, dq0p.c's look_near: the user's, 2026-11-17, "a look tells what's near
+** first and goes on as the rest is worked out"): the same record (WAY_NEAR) made from the last whole look as it stands
+** (its squares seen now, its record), told as its far part's look (LK_WAY's) is worked out, and what that may yet
+** change held back for it: an opening's way (WB_HOLD) the eye follows to a chunk not made (none made for it: the far
+** part's to), or out past the squares a glance is sure of where the far part may see more (dq0p.c's way_stop, far_may);
+** "nothing more that way" (WM_HOLDN) where the far part may see more at all.  The far part's record (WAY_SEEN) says if
+** it's all as its near part had it (WM_SAME: dq0p.c's way_more): nothing more to tell.
 */
 
 #include <stddef.h>
@@ -22,11 +30,18 @@
 static struct { unsigned char seq, nbeyond; struct beyond beyond[SEE_BEYOND]; } W;   /* (Its first part, its
                                                 **   openings: the rest made in the bank) */
 typedef char w_fits[sizeof W == offsetof (struct wayseen, nitems) ? 1 : -1];
+typedef char wn_fits[sizeof (struct sight) <= WAY_NEAR_AT && WAY_NEAR_AT + sizeof (struct wayseen) <= RUN_AT &&
+    WAY_AT + sizeof (struct wayseen) <= SOUND_AT ? 1 : -1];   /* (The bank's: the record, the near part's, the whole's) */
 static struct beyond* b;                        /* (The opening's entry) */
 static struct { unsigned char rel; signed char dz; unsigned char state; unsigned x, y; unsigned char kind, parts; } d;
 static unsigned ox, oy, rx, ry, px, py;         /* (seen_on's: from ox, oy on od, stratum osn; the character's room's
                                                 **   floor's first square rx, ry; the character's square px, py) */
 static unsigned char osn, od, fc_;          /* (fc_: the way it faces) */
+static unsigned char lf_;                       /* (seen_on's: a near part's way to a chunk not made, 2, or out past
+                                                **   what a glance is sure of, 1: way_stop's) */
+extern unsigned char wnear, wfar, wheld;        /* (dq0p.c's: a near part made now; far_may's; an opening held back) */
+unsigned char __fastcall__ way_stop (unsigned x, unsigned y);
+void __fastcall__ way_more (struct wayseen* r);
 
 /* Square p (at ()'s: its chunk's portal_at () for it) one the eye sees past: no rock nor wall, no shut door, no window's
 ** shutters closed (but a portcullis: view.c's, cast.s's rdoors) */
@@ -49,7 +64,11 @@ static void seen_on (void)
     struct room* q;
 
     b->what = WB_DARK;
+    lf_ = 0;
     for (n = 0; n < 2 * WAY_R && ox - px + WAY_R <= 2 * WAY_R && oy - py + WAY_R <= 2 * WAY_R; ) {
+        if (wnear && (lf_ |= way_stop (ox, oy)) & 2) {
+            break;                              /* (A near part's: a chunk round it not made, the far part's) */
+        }
         for (k = 0, w = 0xFF; k < 8; ++k) {     /* (Straight on, else the first way seen that isn't back; a diagonal
                                                 **   only a diagonal way, slant's: past its cut corner) */
             if (!REL_BEHIND (k - od) && (w == 0xFF || k == od) && (!(k & 1) || slant (osn, ox, oy, k)) &&
@@ -77,6 +96,11 @@ static void seen_on (void)
                 break;
             }
         }
+    }
+    if (lf_ & (wfar & 1 | 2)) {
+        b->what |= WB_HOLD;                     /* (A near part's: held back, its way on to a chunk not made, or out past
+                                                **   what a glance is sure of where the far part may see more) */
+        wheld = 1;
     }
 }
 
@@ -127,7 +151,10 @@ void __fastcall__ s_way_seen (unsigned char sn, unsigned char face)
                                                 **   1 to 3: view.c's, the user's, 2026-11-14) */
     signed char hx = head_x[face], hy = head_y[face];
 
+    struct wayseen* R;
+
     memset (&W, 0, sizeof W);
+    wheld = 0;
     fc_ = face;
     W.seq = s->seq;
     osn = sn;
@@ -191,9 +218,10 @@ void __fastcall__ s_way_seen (unsigned char sn, unsigned char face)
             }
         }
     }
-    hub_map (SIGHT_BANK);                       /* (Into the bank: the record the main RAM's) */
-    memcpy (WAY_SEEN, &W, sizeof W);
-    WAY_SEEN->nitems = WAY_SEEN->ndens = WAY_SEEN->nglows = 0;
+    hub_map (SIGHT_BANK);                       /* (Into the bank: the record the main RAM's; a near part's its own) */
+    R = wnear ? WAY_NEAR : WAY_SEEN;
+    memset (R, 0, sizeof *R);                   /* (Its lists' ends nothing: the far part's and its near part's compared) */
+    memcpy (R, &W, sizeof W);
     for (k = s->nitems, on = 0, p = (const unsigned char*) s->item; k; --k, p += sizeof s->item[0]) {   /* (The
                                                 **   things ahead, a surface's with it) */
         if (!(((const struct sitem*) p)->hid & 2)) {
@@ -201,19 +229,20 @@ void __fastcall__ s_way_seen (unsigned char sn, unsigned char face)
                 is_ahead (((const struct sitem*) p)->rel);
         }
         if (on) {
-            memcpy (&WAY_SEEN->item[WAY_SEEN->nitems++], p, sizeof s->item[0]);
+            memcpy (&R->item[R->nitems++], p, sizeof s->item[0]);
         }
     }
     for (k = s->nglows, p = (const unsigned char*) s->glow; k; --k, p += sizeof s->glow[0]) {   /* (The lights far
                                                 **   off ahead) */
         if (!pk && is_ahead (*p)) {
-            memcpy (&WAY_SEEN->glow[WAY_SEEN->nglows++], p, sizeof s->glow[0]);
+            memcpy (&R->glow[R->nglows++], p, sizeof s->glow[0]);
         }
     }
     for (k = SIGHT->ndens, q = SIGHT->den; k; --k, ++q) {     /* (The denizens ahead: dens.c's, the bank's) */
         if (pk ? beyond (q->x, q->y, pk) : is_ahead (REL8 (bearing ((int) (q->x - s->x), (int) (q->y - s->y)), face))) {
-            memcpy (&WAY_SEEN->den[WAY_SEEN->ndens++], q, sizeof *q);
+            memcpy (&R->den[R->ndens++], q, sizeof *q);
         }
     }
+    way_more (R);                               /* (Its look one way's, what's more: dq0p.c's) */
     hub_map (0);
 }
