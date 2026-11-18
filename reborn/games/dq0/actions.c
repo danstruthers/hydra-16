@@ -230,16 +230,15 @@ unsigned char o_refused (void)
         return 0;
     }
     r = rows + cmd.action;
-    f = 0;
     f = cmd.other.kind;
     if ((r->takes & TK_ONTO) && f && !(cmd.prep == PR_IN && (f == OB_SHAFT || f == OB_TRAP)) &&
         !(cmd.action == VB_TIE_OBJECT && (f == OB_PILLAR || f == OB_WINDOW)) &&
-        (cmd.action == VB_DROP_OBJECT ? f < 16 && (NOREST >> f & 1) : f != OB_STAIRS || cmd.action != VB_PUT_OBJECT)) {
+        (cmd.action != VB_DROP_OBJECT || (f < 16 && (NOREST >> f & 1)))) {
         f = U_CANT;                             /* (A part of the place where it's put, or tied: "You can't put the torch on
                                                 **   the door.", not the belt's; but into a hole, let fall, 2026-11-17; a
                                                 **   rope tied to a pillar, a window's bars, the user's, 2026-11-17;
-                                                **   dropped, refused only where nothing can rest, a put on the stairs
-                                                **   placed there: the user's, 2026-11-17) */
+                                                **   dropped, refused only where nothing can rest; a put on the stairs a
+                                                **   drop there, sway.c's place_said: the user's, 2026-11-17) */
     } else if ((f = 0), !r->no) {
     } else if (*w) {
         f = r->no >> 4 & 3;
