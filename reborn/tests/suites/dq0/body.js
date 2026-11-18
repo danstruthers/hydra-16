@@ -400,7 +400,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0tend', what: "Dingus Quest Zero's first aid and healing (slice 4.3: HOUSE.md's wounds over time; Physician 2-4), both referees (its hunger and thirst poked low at each sleep: dq0Poke's, slice 4.9's): at seed 517 the kobold warren's gatehouse, its ledge jumped down, a minor bruise to the shoulder (dq0harm's); \"tend my head\" not the grammar's (no such thing); \"tend my wounds\" the book's treatment for a minor bruise, a cold compress (5d6 minutes: a timed work, its long task LT_TEND, its words at once and its outcome at its end), its healing rate on the wound (the sheet's \"tended\", the state's \"all tended\"), \"first aid\" again nothing to tend (one treatment roll a wound); then a night's sleep, again and again (its torch put out first), till five days' rest have gone by: the book's five-day healing roll (its rate times its Endurance), the wound healed, told as it wakes (\"The minor bruise to your right shoulder (M1) has healed.\"), the sheet's injuries none; and the null referee's simple way, a light wound tended (\"You clean and bind a wound.\") and healed by eight hours' rest (\"A wound has healed.\")",
+      name: 'dq0tend', what: "Dingus Quest Zero's first aid and healing (slice 4.3: HOUSE.md's wounds over time; Physician 2-4), both referees (its hunger and thirst poked low at each sleep: dq0Poke's, slice 4.9's): at seed 517 the kobold warren's gatehouse, its ledge jumped down onto the gatehouse's hard floor (the referee's GR_HARD: its room's, the passages' till the load guard found s_fall reading its square in a chunk's bank), a minor bruise to the calf (dq0harm's); \"tend my head\" not the grammar's (no such thing); \"tend my wounds\" the book's treatment for a minor bruise, a cold compress (5d6 minutes: a timed work, its long task LT_TEND, its words at once and its outcome at its end), its healing rate on the wound (the sheet's \"tended\", the state's \"all tended\"), \"first aid\" again nothing to tend (one treatment roll a wound); then a night's sleep, again and again (its torch put out first), till five days' rest have gone by: the book's five-day healing roll (its rate times its Endurance), the wound healed, told as it wakes (\"The minor bruise to your right calf (M1) has healed.\"), the sheet's injuries none; and the null referee's simple way, a light wound tended (\"You clean and bind a wound.\") and healed by eight hours' rest (\"A wound has healed.\")",
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 517 -c /ram/c.hm -d /ram/hurt', 'ne', 'e', 'u', 'u',
         'turn around', 'jump down', 'tend my head', 'tend my wounds', 'status', 'sheet', 'first aid', 'douse the torch', ...Array(20).fill('sleep'), 'sheet', 'quit',
@@ -413,16 +413,18 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], s = dq0Story(out), at = s.indexOf('Dingus, Wanderer'), h = at < 0 ? s : s.slice(0, at), n = at < 0 ? '' : s.slice(at);
-        if (!/You land hard: a minor bruise to your right shoulder \(M1\)\./.test(h)) return ['no bruise from the fall (the seed\'s): ' + JSON.stringify((h.match(/You land hard[^.]*\./) || [''])[0])];
+        if (!/You land hard: a minor bruise to your right calf \(M1\)\./.test(h)) return ['no bruise from the fall (the seed\'s): ' + JSON.stringify((h.match(/You land hard[^.]*\./) || [''])[0])];
+        const jd = dq0Turns(m).of('jump down').replies.find(q => q.rs === 'RS_HARM' && q.ask.cause === 'HC_FALL');   // (The ground its
+        if (!jd || jd.ask.ground !== 'GR_HARD') f.push('the fall not onto the gatehouse\'s floor, hard: ' + JSON.stringify(jd && jd.ask));   //   room's floor's)
         if (!/tend my head I don't understand that\./.test(h)) f.push('"tend my head" not refused by the grammar');
         const tw = dq0Turns(m).of('tend my wounds').intents.find(e => e.kind === 'I_WAIT');   // (Its intent by its payload's
         if (!tw || tw.task !== 'LT_TEND' || !tw.quiet || !tw.tenths) f.push('"tend my wounds" not a timed work\'s I_WAIT, LT_TEND: ' + JSON.stringify(tw));   //   names, msgs.def's)
-        if (!/You hold a cold compress to the minor bruise to your right shoulder \(M1\)\.[^>]*It's (?:well tended|tended|tended, roughly|badly done)\./.test(h))
+        if (!/You hold a cold compress to the minor bruise to your right calf \(M1\)\.[^>]*It's (?:well tended|tended|tended, roughly|badly done)\./.test(h))
           f.push('no compress, nor its outcome at its end');
-        if (!/Condition: hurt: 1 injury, a minor bruise to your right shoulder \(M1\); all tended/.test(h)) f.push('its state not "all tended"');
-        if (!/Injuries: right shoulder M1 \(bruise\), tended\./.test(h)) f.push('the sheet\'s injury not "tended"');
+        if (!/Condition: hurt: 1 injury, a minor bruise to your right calf \(M1\); all tended/.test(h)) f.push('its state not "all tended"');
+        if (!/Injuries: right calf M1 \(bruise\), tended\./.test(h)) f.push('the sheet\'s injury not "tended"');
         if (!/first aid You have no wounds that want tending\./.test(h)) f.push('first aid again not nothing to tend');
-        if (!/The minor bruise to your right shoulder \(M1\) (?:has healed|is mending|is no better)\./.test(h)) f.push('the bruise\'s five-day roll not told as it woke');
+        if (!/The minor bruise to your right calf \(M1\) (?:has healed|is mending|is no better)\./.test(h)) f.push('the bruise\'s five-day roll not told as it woke');
         if (/has healed\./.test(h) && !/No injuries/.test(h.slice(h.lastIndexOf('> sheet')))) f.push('the sheet\'s injuries not none once it healed');
         if (!/You land hard: a light wound\./.test(n)) return [...f, 'the null referee\'s fall not a light wound'];
         if (!/first aid You clean and bind a wound\.[^>]*It's (?:tended|badly done)\./.test(n)) f.push('the null referee\'s first aid not its own');
@@ -433,19 +435,19 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0healaid', what: 'Dingus Quest Zero\'s "heal" without the talent first aid (the user\'s, 2026-11-17: DECISIONS.md\'s "The critique\'s questions: the user\'s answers": "\\"heal\\" without the talent is first aid on wounds, by skill; with the talent it stays the psionic power"; no character has a talent yet, D11\'s): at seed 517 the kobold warren\'s ledge jumped down (dq0tend\'s: a minor bruise to the shoulder), "heal" the book\'s treatment, a cold compress (a timed work, its long task LT_TEND, as "tend my wounds"), "heal" again nothing to tend, "healing" the same; "heal my shoulder" a part named, nothing there to tend; never "You reach for it; nothing stirs." (the psionic refusal)',
+      name: 'dq0healaid', what: 'Dingus Quest Zero\'s "heal" without the talent first aid (the user\'s, 2026-11-17: DECISIONS.md\'s "The critique\'s questions: the user\'s answers": "\\"heal\\" without the talent is first aid on wounds, by skill; with the talent it stays the psionic power"; no character has a talent yet, D11\'s): at seed 517 the kobold warren\'s ledge jumped down (dq0tend\'s: a minor bruise to the calf), "heal" the book\'s treatment, a cold compress (a timed work, its long task LT_TEND, as "tend my wounds"), "heal" again nothing to tend, "healing" the same; "heal my shoulder" a part named, nothing there to tend; never "You reach for it; nothing stirs." (the psionic refusal)',
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 517 -c /ram/c.hm -d /ram/hurt', 'ne', 'e', 'u', 'u',
         'turn around', 'jump down', 'heal', 'status', 'heal', 'healing', 'heal my shoulder', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], s = dq0Story(out);
-        if (!/You land hard: a minor bruise to your right shoulder \(M1\)\./.test(s)) return ['no bruise from the fall (the seed\'s): ' + JSON.stringify((s.match(/You land hard[^.]*\./) || [''])[0])];
+        if (!/You land hard: a minor bruise to your right calf \(M1\)\./.test(s)) return ['no bruise from the fall (the seed\'s): ' + JSON.stringify((s.match(/You land hard[^.]*\./) || [''])[0])];
         const tw = dq0Turns(m).of('heal').intents.find(e => e.kind === 'I_WAIT');
         if (!tw || tw.task !== 'LT_TEND' || !tw.quiet || !tw.tenths) f.push('"heal" not first aid\'s timed work, I_WAIT LT_TEND: ' + JSON.stringify(tw));
-        if (!/> heal You hold a cold compress to the minor bruise to your right shoulder \(M1\)\.[^>]*It's (?:well tended|tended|tended, roughly|badly done)\./.test(s))
+        if (!/> heal You hold a cold compress to the minor bruise to your right calf \(M1\)\.[^>]*It's (?:well tended|tended|tended, roughly|badly done)\./.test(s))
           f.push('"heal" not the compress, nor its outcome at its end');
-        if (!/Condition: hurt: 1 injury, a minor bruise to your right shoulder \(M1\); all tended/.test(s)) f.push('its state not "all tended"');
+        if (!/Condition: hurt: 1 injury, a minor bruise to your right calf \(M1\); all tended/.test(s)) f.push('its state not "all tended"');
         inTurn(s, ['> heal', 'You have no wounds that want tending.', '> healing', 'You have no wounds that want tending.', '> heal my shoulder'], f, 'the words: ');
         if (/nothing stirs\./.test(s)) f.push('"heal" refused as the psionic talent');
         return f;

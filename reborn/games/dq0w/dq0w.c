@@ -1163,6 +1163,8 @@ unsigned __fastcall__ s_fall (unsigned feet, unsigned char how)
 
     hub_map (0);
     if (at (sn_, HUB->pc_x, HUB->pc_y)) {
+        hub_map (0);                            /* (Its square read again from the hub's header: at () put its chunk's
+                                                **   bank in the window; room_of puts it back) */
         k = room_of (sn_, HUB->pc_x, HUB->pc_y);
         m = C->mat[k == 0xFF ? NROOMS : k][MP_FLOOR];
     }
