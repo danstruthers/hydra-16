@@ -45,7 +45,6 @@ const KNOWN = [
   { kind: 'fetch', prog: 'hylang', banks: 'own', why: 'hylang compiles a function\'s bytecode to the 65C02\'s own code in its arena, banks of its own (modules/hylang/vmx.inc), and runs it there: code made as it runs, no build output says where' },
   { kind: 'fetch', prog: 'forth', banks: 'own', why: 'HyForth is subroutine threaded: a colon definition is 65C02 code, compiled into its code banks (modules/forth/fcomp.inc) and run there' },
   { kind: 'fetch', prog: 'basic', banks: 'own', why: 'BASIC compiles a program to 65C02 code in its regions\' banks (modules/basic/comp.inc) and runs it there' },
-  { kind: 'load', prog: 'dq0w', at: 's_zone_step', why: 'a step\'s wet and air read after at () put its chunk\'s bank in the window (mended next)' },
   { kind: 'load', prog: 'dq0w', at: 'den_portal', why: 'a denizen\'s timed door work\'s end read after the door\'s work left a chunk\'s bank in the window (mended next)' },
   { kind: 'load', prog: 'dq0w', at: 'air_here', why: 'a burst\'s afterdamp\'s stratum read after at () put its chunk\'s bank in the window (mended next)' },
   { kind: 'load', prog: 'dq0w', at: 'here', why: 's_start_dig\'s here () with wall_look\'s chunk in the window (mended next)' },

@@ -5343,7 +5343,9 @@ unsigned char __fastcall__ s_zone_step (unsigned ox, unsigned oy, unsigned x, un
         if ((p = at (sn_, x, y)) != 0 && TILE (*p) == T_RUBBLE) {
             wade (pst | WADE_MORE);             /* (Rubble clambered over: twice the step's time, slice 4.10's) */
         }
-        if (HUB->pc_wet || HUB->pc_air || (at (sn_, x, y) && (C->wany || C->air))) {
+        hub_map (0);                            /* (Its wet and its air the hub's: at () leaves its chunk's bank in
+                                                **   the window, wade the hub's header) */
+        if ((HUB->pc_wet | HUB->pc_air) || (at (sn_, x, y) && (C->wany || C->air))) {
             wade (pst);                         /* (A walk's step into water, or in it: its time the more, swimming,
                                                 **   part 73's, slice 4.9's) */
         }
