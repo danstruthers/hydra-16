@@ -10,8 +10,9 @@
 ** RAM (the hub's not in the window while the overlay is), its words put into the reply's text.
 */
 
-#pragma code-name ("OV7CODE")                   /* (Overlay 7's since slice 4.4: overlay 1's room) */
-#pragma rodata-name ("OV7RODATA")
+#pragma code-name ("OV6CODE")                   /* (Overlay 6's since 2026-11-18, overlay 7's room; 7's since slice 4.4,
+                                                **   overlay 1's room) */
+#pragma rodata-name ("OV6RODATA")
 
 #include <string.h>
 #include <harn.h>

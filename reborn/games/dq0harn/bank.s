@@ -185,7 +185,7 @@ ovcall:
 
 ; The overlays' functions (dq0harn.h has them with their overlays)
             OVFN        sheet, 1
-            OVFN        outfit_of, 7        ; (Overlay 1's room, slice 4.4's)
+            OVFN        outfit_of, 6        ; (Overlay 1's room, slice 4.4's; 7's, 2026-11-18)
             OVFN        brief, 1
             OVFN        state, 1
             OVFN        spent, 9            ; (Overlay 1's room, the dressings': 2026-11-10)
