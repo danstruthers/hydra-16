@@ -420,6 +420,16 @@ module.exports = {
       check() { const r = require('../areas.js').selfCheck(); this.notes = r.notes; return r.failures; },
     },
     {
+      name: 'buildcache', what: "the build's cache of cc65's, ca65's and od65's runs (../base/tools/objcache.js, GAME-CRITIQUE.md's 7.2), on sources of its own (obj/buildcache): a run taken from it only when every file it read is the same and every place a name could be found has a file or none as it had (an .include's .include changed, an .include put in a folder searched first, an .incbin's file changed, a header changed: each run anew, and taken again once it's back); a run not kept when a source changed as it began, or a computed #include found its header where no name says; the same outputs taken as made; the tree moved with its cache, its runs found",
+      init: 'init', cycles: 3e6, expect: ['POST ok'],
+      check() {
+        const { tool } = require('../../../base/build.js');
+        const r = require('../../../base/tools/objcache.js').selfCheck({ dir: path.join(TESTS, '..', 'obj', 'buildcache'), ca65: tool('ca65'), cc65: tool('cc65'), od65: tool('od65') });
+        this.notes = r.notes;
+        return r.failures;
+      },
+    },
+    {
       name: 'hwtest', what: 'a T typed during POST starts the hardware test (paged ROM bank 1)',
       init: 'init', cycles: 3e6, machine: { input: 'T' },
       expect: ['Hydra-16 hardware test'],
