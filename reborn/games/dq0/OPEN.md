@@ -161,6 +161,17 @@ only quit and help taken, nothing sensed). These are the rest.
   under linegen's THEME_SIZE, so that theme has one clue fewer (the other 59 of 60 seeds keep every clue). Accept,
   or grow the theme's room?
   - built/2026-11-17-text.md, its open question 3.
+- **M3. When the chunk cache is full, may a chunk made ahead push out one already read?** The maker now makes the
+  chunks ahead of every actor's eyes in the background (built), but never in place of a chunk a reader has used, so
+  once the cache fills (24 slots; 12 with dq0 -C) nothing more is made ahead.
+  - Options: (a) as built; (b) push out the read chunk furthest from every actor (the game's words and saves can
+    change, since travel, the far glows and the saved seen-maps read the cache); (c) give the maker room of its own
+    for chunks made ahead (2,707 bytes each, three to an 8K bank).
+  - built/2026-11-17-maker.md, open question 1.
+- **M4. When the making ahead stands back.** It gives way to a command in hand or a line being typed, and also to
+  the game's own time: the start, the character's long tasks (a sleep, a long wait), its death, and the world's turn
+  at the turns pace (built). Without that, long waits ran 52% slower. Keep it so?
+  - built/2026-11-17-maker.md, open question 5.
 
 ## Architecture
 
