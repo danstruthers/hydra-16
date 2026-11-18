@@ -971,17 +971,18 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0stopwords', near: ['parser'], what: "Dingus Quest Zero's stop words other than \"stop working\" (HOUSE.md's stopping: the work named; 2026-11-03: the grammar had none of dipping, sharpening, freeing, and sharpening's was filling's kind), typed as each task's told (dq0OnWords): at the normal pace (a task's time for the words to be typed in), at seed 12 the window's pane being worked free: \"stop digging\" refused, naming what it's at, \"stop freeing\" stops it, the pane still in its frame; a blunted sword being sharpened (dq0Poke's wear): \"stop dipping\" refused, \"stop sharpening\" stops it, no fresh edge told; a torch being dipped: \"stop dipping\" stops it, no soaking told",
+      name: 'dq0stopwords', near: ['parser'], what: "Dingus Quest Zero's stop words other than \"stop working\" (HOUSE.md's stopping: the work named; 2026-11-03: the grammar had none of dipping, sharpening, freeing, and sharpening's was filling's kind), typed as each task's told (dq0OnWords): at the normal pace (a task's time for the words to be typed in), at seed 12 the window's pane being worked free: \"stop digging\" refused, naming what it's at, \"stop freeing\" stops it, the pane still in its frame; a blunted sword being sharpened (dq0Poke's wear): \"stop dipping\" refused, \"stop sharpening\" stops it, no fresh edge told; a torch being dipped: \"stop dipping\" stops it, no soaking told; dipped again, \"stop soaking\" stops it too (filling, soaking and dipping: whichever of them it's at, 2026-11-06; the UI's overlay 7 read the task's kind in its own bank till the load guard found it)",
       init: 't_rc', cycles: 1300e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p n -s 12 -c /ram/c.hm', 'go through the door to the north', 'lift the pane', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k sword,whetstone', 'sharpen the sword', 'quit',
-        'dq0 -p n -s 3 -c /ram/c.hm -T', 'drop a fresh torch', 'wait 20 minutes', 'dip the torch', 'quit', 'echo $status']) },
+        'dq0 -p n -s 3 -c /ram/c.hm -T', 'drop a fresh torch', 'wait 20 minutes', 'dip the torch', 'dip the torch', 'quit', 'echo $status']) },
       start(m) {
         dq0Poke(m, [{ g: 2, line: 'sharpen the sword', n: 1, wear: { sword: 200 } }]);
         dq0OnWords(m, [{ g: 1, line: 'lift the pane', n: 1, words: 'You set to working the pane free.', text: 'stop digging\rstop freeing\r' },
           { g: 2, line: 'sharpen the sword', n: 1, words: 'You set to sharpening', text: 'stop dipping\rstop sharpening\r' },
-          { g: 3, line: 'dip the torch', n: 1, words: 'You set to dipping', text: 'stop dipping\r' }]);
+          { g: 3, line: 'dip the torch', n: 1, words: 'You set to dipping', text: 'stop dipping\r' },
+          { g: 3, line: 'dip the torch', n: 2, words: 'You set to dipping', text: 'stop soaking\r' }]);
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -992,8 +993,9 @@ module.exports = {
         if (/The pane comes free/.test(G[0])) f.push('the pane: not stopped');
         if (!/You aren't dipping: you're sharpening the sword\./.test(G[1])) f.push('sharpening: a stop naming another not refused');
         if (/You put a fresh edge/.test(G[1])) f.push('sharpening: not stopped');
-        if (/You aren't (filling|dipping)|You aren't doing anything/.test(G[2])) f.push('dipping: refused');
+        if (/You aren't (filling|dipping|soaking)|You aren't doing anything/.test(G[2])) f.push('dipping: refused');
         if (/You soak the torch/.test(G[2])) f.push('dipping: not stopped');
+        if ((G[2].match(/You set to dipping/g) || []).length !== 2) f.push('the torch not dipped twice');
         return f;
       },
       sdcard: true

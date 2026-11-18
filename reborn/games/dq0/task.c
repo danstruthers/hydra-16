@@ -592,8 +592,10 @@ unsigned char __fastcall__ o_stop_kind (const char* word)
 
     for (i = 0; i < sizeof kind_; ++i) {
         if (!strcmp (word, word_[i])) {
-            k = HUB->pc_task.kind;              /* (Filling, soaking, dipping: whichever of them it's at, a lantern's, a
-                                                **   torch's, the old torch's: each its own words, 2026-11-06) */
+            hub_mem (0, &k, &HUB->pc_task.kind, 1);   /* (Filling, soaking, dipping: whichever of them it's at, a
+                                                **   lantern's, a torch's, the old torch's: each its own words,
+                                                **   2026-11-06; the hub's byte copied, as this overlay's in the window
+                                                **   as it runs, not the hub's header) */
             return (kind_[i] == LT_FILL || kind_[i] == LT_DIP) && (k == LT_FILL || k == LT_DIP || k == SV_DIP) ? k : kind_[i];
         }
     }

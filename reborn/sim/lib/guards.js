@@ -45,7 +45,6 @@ const KNOWN = [
   { kind: 'fetch', prog: 'hylang', banks: 'own', why: 'hylang compiles a function\'s bytecode to the 65C02\'s own code in its arena, banks of its own (modules/hylang/vmx.inc), and runs it there: code made as it runs, no build output says where' },
   { kind: 'fetch', prog: 'forth', banks: 'own', why: 'HyForth is subroutine threaded: a colon definition is 65C02 code, compiled into its code banks (modules/forth/fcomp.inc) and run there' },
   { kind: 'fetch', prog: 'basic', banks: 'own', why: 'BASIC compiles a program to 65C02 code in its regions\' banks (modules/basic/comp.inc) and runs it there' },
-  { kind: 'load', prog: 'dq0', at: 'o_stop_kind', why: 'overlay 7\'s HUB->pc_task.kind, read in its own bank (mended next)' },
 ];
 
 const hx = (v, n = 4) => '$' + v.toString(16).toUpperCase().padStart(n, '0');
