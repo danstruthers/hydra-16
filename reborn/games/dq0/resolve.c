@@ -298,10 +298,16 @@ static unsigned char tool_ok (void)
     if (k == sizeof tooled || !*w || cmd.obj.kind == OB_WAY_OUT) {
         return 1;                               /* (Not done with a thing; the way out's own, the puzzle's) */
     }
-    if ((a == VB_UNLOCK_OBJECT || a == VB_LOCK_OBJECT) && !strstr (w, "key") && !strstr (w, "pick")) {
-        sayf ("\nYour %s won't do for a lock.", w);   /* (A thing named is the one used, or none: a key or the lockpicks
-                                                **   aren't taken over it, 2026-11-03) */
-        return 0;
+    if ((a == VB_UNLOCK_OBJECT || a == VB_LOCK_OBJECT) && !strstr (w, "key")) {
+        if (!strstr (w, "pick")) {
+            sayf ("\nYour %s won't do for a lock.", w);   /* (A thing named is the one used, or none: a key or the
+                                                **   lockpicks aren't taken over it, 2026-11-03) */
+            return 0;
+        }
+        if (a == VB_UNLOCK_OBJECT) {
+            cmd.aux = PA_PICK;                  /* ("Unlock the door with the lockpicks": picked, no key tried: a named
+                                                **   tool wins, the user's P6, 2026-11-18) */
+        }
     }
     k = w == cmd.obj.word ? cmd.obj.sel | cmd.obj.n << 4 : cmd.other.sel | cmd.other.n << 4;
     hub_mem (0, &HUB->ireq.sel, &k, 1);         /* (Which of several: the world's to choose) */
