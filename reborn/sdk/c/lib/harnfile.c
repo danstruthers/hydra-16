@@ -32,6 +32,9 @@ const char* __fastcall__ harn_attr_key (unsigned char a)
     return a < HARN_NATTRS ? attrkeys[a] : "";
 }
 
+/* (The keys both written and read: once each, a swapped part's room, 2026-11-18) */
+static const char k_fam[] = "fam", k_psy[] = "psy", k_sexuality[] = "sexuality", k_vol[] = "vol", k_inj[] = "inj";
+
 /* ---- Writing */
 
 static int wfd;
@@ -87,7 +90,7 @@ int __fastcall__ harn_write (int fd, const harn_char* c)
         num (c->att[k]);
         put ("\n");
     }
-    put ("fam");
+    put (k_fam);
     num (c->culture);
     num (c->social);
     num (c->sibrank);
@@ -105,12 +108,12 @@ int __fastcall__ harn_write (int fd, const harn_char* c)
     }
     put ("\n");
     for (k = 0; k < HARN_PSYMAX && c->psy[k]; ++k) {
-        put ("psy");
+        put (k_psy);
         num (c->psy[k]);
         num (c->psysev[k]);
         put ("\n");
     }
-    put ("sexuality");
+    put (k_sexuality);
     num (c->sexuality);
     put ("\n");
     for (k = 0; k < HARN_MAXSKILLS; ++k) {
@@ -125,7 +128,7 @@ int __fastcall__ harn_write (int fd, const harn_char* c)
             put ("\n");
         }
     }
-    put ("vol");
+    put (k_vol);
     num (c->fl);
     num (c->bl);
     num (c->dp);
@@ -134,7 +137,7 @@ int __fastcall__ harn_write (int fd, const harn_char* c)
     put ("\n");
     for (k = 0; k < c->ninj; ++k) {
         j = &c->inj[k];
-        put ("inj");
+        put (k_inj);
         num (j->loc);
         num (j->aspect);
         num (j->sev);
@@ -209,7 +212,7 @@ static void __fastcall__ line (harn_char* c, char* l, void (*other) (char* line)
                 return;
             }
         }
-    } else if (len == 3 && !strncmp (l, "fam", 3) && nums (rest, v, 7) == 7) {
+    } else if (len == 3 && !strncmp (l, k_fam, 3) && nums (rest, v, 7) == 7) {
         c->culture = v[0], c->social = v[1], c->sibrank = v[2], c->famsize = v[3];
         c->parent = v[4], c->estrange = v[5], c->clanhead = v[6];
     } else if (len == 4 && !strncmp (l, "look", 4) && nums (rest, v, 3) == 3) {
@@ -219,14 +222,14 @@ static void __fastcall__ line (harn_char* c, char* l, void (*other) (char* line)
         for (k = 0; k < HARN_MEDMAX; ++k) {
             c->med[k] = k < n ? v[k] : HARN_MED_NONE;
         }
-    } else if (len == 3 && !strncmp (l, "psy", 3) && nums (rest, v, 2) == 2) {
+    } else if (len == 3 && !strncmp (l, k_psy, 3) && nums (rest, v, 2) == 2) {
         for (k = 0; k < HARN_PSYMAX && c->psy[k]; ++k) {
         }
         if (k < HARN_PSYMAX) {
             c->psy[k] = v[0];
             c->psysev[k] = v[1];
         }
-    } else if (len == 9 && !strncmp (l, "sexuality", 9) && nums (rest, v, 1)) {
+    } else if (len == 9 && !strncmp (l, k_sexuality, 9) && nums (rest, v, 1)) {
         c->sexuality = v[0];
     } else if (len == 2 && !strncmp (l, "ml", 2)) {
         while (*rest == ' ') {
@@ -238,9 +241,9 @@ static void __fastcall__ line (harn_char* c, char* l, void (*other) (char* line)
         if (k < HARN_MAXSKILLS && nums (rest + n, v, 1)) {
             c->ml[k] = v[0];
         }
-    } else if (len == 3 && !strncmp (l, "vol", 3) && nums (rest, v, 5) == 5) {
+    } else if (len == 3 && !strncmp (l, k_vol, 3) && nums (rest, v, 5) == 5) {
         c->fl = v[0], c->bl = v[1], c->dp = v[2], c->state = v[3], c->shockhr = v[4];
-    } else if (len == 3 && !strncmp (l, "inj", 3) && nums (rest, v, 6) == 6 && c->ninj < HARN_INJMAX) {
+    } else if (len == 3 && !strncmp (l, k_inj, 3) && nums (rest, v, 6) == 6 && c->ninj < HARN_INJMAX) {
         j = &c->inj[c->ninj++];
         j->loc = v[0], j->aspect = v[1], j->sev = v[2], j->il = v[3], j->hr = v[4], j->flags = v[5];
     } else if (len == 4 && !strncmp (l, "harn", 4)) {

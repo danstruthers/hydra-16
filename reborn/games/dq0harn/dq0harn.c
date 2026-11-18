@@ -420,30 +420,32 @@ static void status (void)
 ** a digit each in order, "dealt 0100": pc_by's, sheet.c's BY_*) */
 
 static unsigned char gait = GA_WALK, watch;
+static const char k_name[] = "name ", k_occ[] = "occupation ", k_dealt[] = "dealt ", k_dressed[] = "dressed ",
+    k_time[] = "timesense";                    /* (Its lines' keys, read and written: once, part 1's room, 2026-11-18) */
 
 static void __fastcall__ own_line (char* l)
 {
     unsigned char k;
 
-    if (!strncmp (l, "dealt ", 6)) {
+    if (!strncmp (l, k_dealt, 6)) {
         for (k = 0; k < HARN_INJMAX && l[k + 6]; ++k) {
             pc_by[k] = l[k + 6] & 7;            /* (A digit: BY_* are 0-4) */
         }
-    } else if (!strncmp (l, "dressed ", 8)) {
+    } else if (!strncmp (l, k_dressed, 8)) {
         dress_line (l + 8, 0);                  /* (Its dressings: dress.c's pc_dr, overlay 9's) */
     } else if (!strncmp (l, "pace ", 5) && strlen (l) >= 10) {
         gait = l[5] - '0' < NGAITS ? l[5] - '0' : GA_WALK;
         watch = l[7] - '0';
         tired = atoi (l + 9);
-    } else if (!strncmp (l, "name ", 5)) {
+    } else if (!strncmp (l, k_name, 5)) {
         strncpy (name, l + 5, sizeof name - 1);
-    } else if (!strncmp (l, "occupation ", 11)) {
+    } else if (!strncmp (l, k_occ, 11)) {
         strncpy (calling, l + 11, sizeof calling - 1);
     } else if (!strncmp (l, "body ", 5)) {
         body_line (l + 5, 1);                   /* (Its venom, its rest toward its healing rolls: heal.c's) */
     } else if (!strncmp (l, "wealth ", 7)) {
         wealth = atoi (l + 7);                  /* (Its family's, hmchar's: RS_OUTFIT's) */
-    } else if (!strcmp (l, "timesense")) {
+    } else if (!strcmp (l, k_time)) {
         HUB->pcsum.timesense = 1;               /* (Absolute timesense: hmchar's, the house's rare trait, 2026-10-31:
                                                 **   the world's, the hub's tb; the hub in the window as the file's
                                                 **   read, its request's) */
@@ -502,10 +504,10 @@ void __fastcall__ s_save_pc (struct req* r)
         return;
     }
     harn_write (fd, &pc);
-    strcpy (line, "name ");
+    strcpy (line, k_name);
     strcat (line, name);
     harn_write_line (fd, line);
-    strcpy (line, "occupation ");
+    strcpy (line, k_occ);
     strcat (line, calling);
     harn_write_line (fd, line);
     strcpy (line, "pace 0 0 ");                 /* (The game's: its pace, its watchfulness, its exertion) */
@@ -519,19 +521,19 @@ void __fastcall__ s_save_pc (struct req* r)
                                                 **   and its scripts, "language" and "script" lines: afflict.c's) */
         harn_write_line (fd, line);
     }
-    strcpy (line, "dealt ");                    /* (What dealt each injury: its words') */
+    strcpy (line, k_dealt);                    /* (What dealt each injury: its words') */
     for (g = 0; g < pc.ninj; ++g) {
         line[g + 6] = '0' | pc_by[g];
     }
     line[g + 6] = 0;
     harn_write_line (fd, line);
-    strcpy (line, "dressed ");                  /* (Its dressings: dress.c's pc_dr, HOUSE.md's bandages) */
+    strcpy (line, k_dressed);                  /* (Its dressings: dress.c's pc_dr, HOUSE.md's bandages) */
     dress_line (line + 8, 1);
     if (line[8]) {
         harn_write_line (fd, line);
     }
     if (HUB->pcsum.timesense) {
-        harn_write_line (fd, "timesense");      /* (Its trait, kept: the house's) */
+        harn_write_line (fd, k_time);      /* (Its trait, kept: the house's) */
     }
     close (fd);
     RS_SAVE_FAILED (*r) = 0;
