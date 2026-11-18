@@ -5488,8 +5488,9 @@ static void air_here (void)
         am.t = HUB->now;
         hub_event (&am);
         k = ((unsigned char*) &HUB->now)[2] & 0x7F;
-        if (at (HUB->pc_stratum, x, y)) {       /* (Burnt off: its afterdamp left, kept) */
-            change (HUB->pc_stratum, x - cx_ + C->ax, y - cy_ + C->ay, AQ_WHITE << 4 | 2, k ? k : 1, AIR_STATE);
+        q = HUB->pc_stratum;                    /* (Read in the hub's header: at () puts its chunk's bank there) */
+        if (at (q, x, y)) {                     /* (Burnt off: its afterdamp left, kept) */
+            change (q, x - cx_ + C->ax, y - cy_ + C->ay, AQ_WHITE << 4 | 2, k ? k : 1, AIR_STATE);
         }
         air_harm (HC_FIRE, 0, s + 1);           /* (A burn, 3d6 or 4d6: the house's) */
         hub_map (0);
