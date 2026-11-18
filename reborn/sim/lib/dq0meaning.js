@@ -97,6 +97,7 @@ function layoutOf(H) {
   bDist: F('struct beyond', 'dist'), bKind: F('struct beyond', 'kind'), bLit: F('struct beyond', 'lit'),
   wNitems: F('struct wayseen', 'nitems'), wItem: F('struct wayseen', 'item'), wNdens: F('struct wayseen', 'ndens'),
   wDen: F('struct wayseen', 'den'), wNglows: F('struct wayseen', 'nglows'), wGlow: F('struct wayseen', 'glow'),
+  wayNearAt: K('WAY_NEAR_AT'), wId: F('struct wayseen', 'id'), wMore: F('struct wayseen', 'more'), wEye: F('struct wayseen', 'eye'),
   uiBank: K('UI_BANK'), uCap: F('struct uirec', 'cap'), ucapSize: Z('ucap'), uMap: F('struct uirec', 'map'), mapH: K('MAP_H'), mapW: K('MAP_W'), uMapLay: F('struct uirec', 'maplay'),
   uTread: F('struct uirec', 'tread'), uTrtext: F('struct uirec', 'trtext'), trText: K('TR_TEXT'), trHow: F('struct tread', 'how'),
   trResult: F('struct tread', 'result'), trGrade: F('struct tread', 'grade'), trFloor: F('struct tread', 'floor'), trDust: F('struct tread', 'dust'),
@@ -316,18 +317,21 @@ function createRecorder() {
           trigger: name('TT_PLATE', t[L.pTrigger + o]), state: t[L.pState + o] })),
         glows: list(L.tNglows, L.seeGlows, g0, L.tGlowSize, o => ({ rel: t[L.gRel + o], dist: t[L.gDist + o], how: name('GL_GLOW', t[L.gHow + o]) })) };
       // (A look one way's own, after it in the bank (level.h's struct wayseen): its openings ahead and what's beyond
-      // them, the things, the denizens and the lights far off ahead; valid, the record's own: the last look one way's)
-      const u = t.subarray(L.wayAt), n = (k, max) => Math.min(u[k], max);
-      s.way = { valid: u[0] === s.sight.seq,
+      // them, the things, the denizens and the lights far off ahead; valid, the record's own: the last look one way's.
+      // And its near part's, told first (WAY_NEAR: the user's, 2026-11-17), its own: an opening held back for the far
+      // part, its what's held true (WB_HOLD); more WM_*'s, id the look one way it's of)
+      const way = (u, valid) => { const n = (k, max) => Math.min(u[k], max); return { valid, id: u[L.wId], more: u[L.wMore], eye: u[L.wEye],
         beyond: Array.from({ length: n(L.wNb, L.seeBeyond) }, (_, i) => { const o = L.wB + i * L.wBSize;
-          return { what: name('WB_DARK', u[o + L.bWhat]), noun: name('BN_PASSAGE', u[o + L.bNoun]), rel: u[o + L.bRel], dist: u[o + L.bDist],
+          return { what: name('WB_DARK', u[o + L.bWhat] & 0x7F), held: !!(u[o + L.bWhat] & 0x80), noun: name('BN_PASSAGE', u[o + L.bNoun]), rel: u[o + L.bRel], dist: u[o + L.bDist],
             kind: u[o + L.bKind], lit: u[o + L.bLit] }; }),
         items: Array.from({ length: n(L.wNitems, L.seeItems) }, (_, i) => { const o = L.wItem + i * L.tItemSize - L.tItem;
           return { name: str(u, L.sName + o, 14), qty: u[L.sQty + o], rel: u[L.sRel + o], hid: u[L.sHid + o] }; }),
         dens: Array.from({ length: n(L.wNdens, L.seeDens) }, (_, i) => { const o = L.wDen + i * L.tDenSize - L.tDen;
           return { x: w16(u, L.nX + o), y: w16(u, L.nY + o), doing: name('DO_ROAM', u[L.nDoing + o]), name: str(u, L.nName + o, 12) }; }),
         glows: Array.from({ length: n(L.wNglows, L.seeGlows) }, (_, i) => { const o = L.wGlow + i * L.tGlowSize - L.tGlow;
-          return { rel: u[L.gRel + o], dist: u[L.gDist + o], how: name('GL_GLOW', u[L.gHow + o]) }; }) };
+          return { rel: u[L.gRel + o], dist: u[L.gDist + o], how: name('GL_GLOW', u[L.gHow + o]) }; }) }; };
+      s.way = way(t.subarray(L.wayAt), t[L.wayAt] === s.sight.seq);
+      s.wayNear = way(t.subarray(L.wayNearAt), !!(t[L.wayNearAt + L.wMore] & 1));
     }
     return s;
   }

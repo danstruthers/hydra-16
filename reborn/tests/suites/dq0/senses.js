@@ -150,6 +150,62 @@ function dq0LookFarTest() {
   };
 }
 
+// dq0looknear: a look one way tells what's near first and goes on as the rest is worked out (the user's, 2026-11-17: the D17
+// targets rethought; HOUSE.md's looking one way), by the hub's events, the senses' two records (WAY_NEAR, its near part's;
+// WAY_SEEN, the whole) and the words.  Seed 7's dark hall below the lit kitchen (dq0lookway's scene: the kitchen lit by its
+// sconce's torch, its south door open, the passage straight down to the hall's north door, open), a character of Eyesight
+// 10 (HarnMaster's sight 4: a glance's reach 12 squares, a look one way's 24), at the hall's far side, 15 squares from the
+// kitchen's floor: "look north" tells what a glance has seen of the hall first (the table ahead to its left), the open door's
+// way held back (the lit kitchen past a glance's reach, within a look one way's), then the kitchen through it and the iron pot
+// on its floor as the far part's worked out, each told once; "look east" (turned first) at the hall's closed door, nothing
+// past a glance's reach lit that way: the near part all of it, the far part the same (nothing more said)
+function dq0LookNearTest() {
+  const lines = ['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 5 -u feudal -c clothier -o /ram/c.hm', 'cp /ram/c.hm /ram/e.hm',
+    'echo att eye 10 >> /ram/e.hm', 'dq0 -p t -s 7 -c /ram/e.hm', 'light the torch in the sconce', 'face north', 'open the door behind me', 's',
+    'turn around', 'move south 4 squares', 'face north', 'look north', 'look east', 'quit', 'echo $status'];
+  return {
+    name: 'dq0looknear', meaning: true, near: ['senses', 'map'],
+    what: 'Dingus Quest Zero\'s look one way telling what\'s near first (the user\'s, 2026-11-17: "a look tells what\'s near first and goes on as the rest is worked out"), by the hub\'s events, the senses\' two records and the words: at seed 7\'s dark hall below the lit kitchen (dq0lookway\'s scene), a character of Eyesight 10 (a glance\'s 12 squares, a look one way\'s 24) at the hall\'s far side: "look north" tells the hall\'s table first, the open door\'s way held back (the lit kitchen past a glance\'s reach), then the kitchen through it and its iron pot as the far part\'s worked out, each told once, two E_VIEW V_LOOKED; "look east" at the closed door, nothing lit that way past a glance: the near part all of it, the far part the same, nothing more said',
+    init: 't_rc', cycles: 900e6,
+    machine: { input: dq0Typed(lines) },
+    expect: ['% echo $status'],
+    check(m) {
+      const T = dq0Turns(m), f = [], notes = this.notes = [], A = dq0Answers(m.out);
+      const ln = T.of('look north'), le = T.of('look east'), txt = l => (A.find(x => x.cmd === l) || { text: '' }).text;
+      const once = (t, s, what) => { const n = t.split(s).length - 1; if (n !== 1) f.push(what + ': told ' + n + ' times'); };
+      for (const t of [ln, le]) {
+        if (!t.after || !t.after.wayNear || !t.after.way) { f.push(t.line + ': not typed, or no record'); continue; }
+        notes.push(t.line + ': ' + txt(t.line), t.line + ': near ' + JSON.stringify(t.after.wayNear) + '; whole ' + JSON.stringify(t.after.way));
+        if (dq0Ev(t, 'E_VIEW', { why: 'V_LOOKED' }).length !== 2) f.push(t.line + ': not its near part and its far part told (' + dq0Evs(t) + ')');
+        const n = t.after.wayNear, w = t.after.way;
+        if (!n.valid || !(n.more & 1) || n.id !== w.id || !(w.more & 4)) f.push(t.line + ': not a near part and its far part of one look (near more ' + n.more + ' id ' + n.id + ', whole more ' + w.more + ' id ' + w.id + ')');
+        once(txt(t.line), 'You peer ahead', t.line + ': its first words');
+      }
+      if (ln.after && ln.after.wayNear) {
+        const n = ln.after.wayNear, w = ln.after.way, s = txt('look north');
+        const nd = n.beyond.find(b => b.rel === 0 && b.noun === 'BN_OPEN'), wd = w.beyond.find(b => b.rel === 0 && b.noun === 'BN_OPEN');
+        if (!nd || !nd.held) f.push('look north: the open door\'s way not held back in its near part: ' + JSON.stringify(n.beyond));
+        if (!wd || wd.what !== 'WB_ROOM' || wd.kind !== 8 || !wd.lit) f.push('look north: the lit kitchen not seen through the door in its far part: ' + JSON.stringify(w.beyond));
+        if (!n.items.some(i => i.name === 'table') || n.items.some(i => i.name === 'iron pot')) f.push('look north: its near part not the hall\'s table alone: ' + JSON.stringify(n.items));
+        if (!w.items.some(i => i.name === 'iron pot') || (w.more & 8)) f.push('look north: its far part without the kitchen\'s pot, or the same as its near part');
+        const t1 = s.search(/lies \([A-Z]\) a table\./), k = s.indexOf('Through the open door ahead you see into the kitchen, lit'), p = s.search(/On the floor ahead lies \([A-Z]\) /);
+        if (t1 < 0 || k < 0 || p < 0 || !(t1 < k && k < p)) f.push('look north: not the table first, then the kitchen through the door, then what lies in it: ' + s);
+        once(s, 'a table.', 'look north: the table');
+        once(s, 'into the kitchen', 'look north: the kitchen');
+      }
+      if (le.after && le.after.wayNear) {
+        const n = le.after.wayNear, w = le.after.way, s = txt('look east');
+        dq0Need(f, le, 'E_VIEW', { why: 'V_FACING' }, 'look east: not turned first');
+        if (!n.beyond.some(b => b.rel === 0 && b.noun === 'BN_DOOR' && b.what === 'WB_SHUT' && !b.held)) f.push('look east: the closed door not told in its near part: ' + JSON.stringify(n.beyond));
+        if (!(w.more & 8)) f.push('look east: its far part not the same as its near part (more ' + w.more + ')');
+        once(s, 'You can\'t see past the door ahead: it\'s closed.', 'look east: the door');
+      }
+      return f;
+    },
+    sdcard: true
+  };
+}
+
 // dq0askheld: a soft question standing as other news of the long task comes (the delays' round, fight soak's seed 358, on the
 // tree before it: "Keep waiting?", then more of its news, "go on" taken for a command held till the character was free, the
 // world waiting on the answer: no prompt again, a true hang).  At seed 3 digging, "You're tiring.  Keep digging?", a light's
@@ -621,6 +677,7 @@ module.exports = {
       sdcard: true
     },
     dq0LookFarTest(),
+    dq0LookNearTest(),
     dq0AskHeldTest(),
     dq0RestBusyTest(),
     (() => {
