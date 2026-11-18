@@ -55,7 +55,7 @@ end with their open questions: copy them here when the branch is merged.
 
 ## Light and the look
 
-All five from DECISIONS.md:5878-5885, "No look when the light's the same".
+L1-L5 from DECISIONS.md:5878-5885, "No look when the light's the same".
 - **L1. A light of another kind lit while one already burns** (a lantern lit while a torch burns, the place seen
   whole): look again, naming it ("by the light of your lantern"), or is its own sentence enough (built)?
 - **L2. A candle lit beside a torch**: no look, and the candle's light not worded (built). Keep it?
@@ -66,12 +66,25 @@ All five from DECISIONS.md:5878-5885, "No look when the light's the same".
   last "Left:" note.
 - **L5. A sconce's torch gone out in a room lit by its lamps**: no look; the sconce's torch shown unlit at the next
   look (built). Keep it?
+- **L6. A light at the feet through a rest.** A rest puts out the burning lights the character carries (built). A
+  light the hands' rule laid down burning, or one the player put down, burns on through it. Put out every light
+  within reach too?
+  - built/2026-11-17-polish.md, open question 3.
 
 ## Hands, lights and the pack
 
-From built/2026-11-17-things.md; its other questions were answered on 2026-11-17 (DECISIONS.md).
+H8 from built/2026-11-17-things.md; its other questions were answered on 2026-11-17 (DECISIONS.md).
 - **H8. The thing a tool is for is kept in hand only when its request names it.** A rope tied to a held spike keeps
   the rope and stows the spike. Protect it by the act instead?
+- **H9. A thing put back where there's no room.** At the full reach, a pack packed past its room (a kit's) won't take
+  back the key that came out of it. "You put away the iron key." is told as the step begins, and the key stays in
+  hand (built, dq0keypack). Look for the room before the step is told ("You keep the iron key in hand."), or let a
+  thing always go back where it came from?
+  - built/2026-11-17-polish.md, open question 1.
+- **H10. Things in a pit.** Things let fall into a pit lie on its floor's square: the look tells them "On the floor
+  to your left", and they're within reach from its edge (built; the reach knows no depth). Tell them "In the
+  pit ...", out of reach from its edge?
+  - built/2026-11-17-polish.md, open question 2.
 
 ## Knocked out
 
