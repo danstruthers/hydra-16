@@ -12,24 +12,31 @@
 // count less); the role, what its match is in the command (commandcompile.js's ROLES: 0 none); a word alone two, $80 |
 // its number's top seven bits, then its low byte; a list of words [tag, count, each word's number in two bytes]; a
 // quote its tag. (Version 7's names were three bytes, its words alone four: version 8 is the rule room of 2026-10-29,
-// the rules a fifth smaller; version 9, the roles of 2026-11-17, phase B.)
+// the rules a fifth smaller; version 9, the roles of 2026-11-17, phase B.)  A sequence of one item is written as that
+// item ("[ <manner> ]" an option of the name, "a" | "b" an alternation of words: the parse's time, 2026-11-17); the
+// table read back, the text's rules so (oneItem).  After the rules (version 10, 2026-11-17: in their bank, out of the
+// 65C02's RAM), each rule's first words as a 64-bit Bloom filter: eight rows of a byte a rule, a word setting two bits
+// (bloomBits').
 // Alias layout: magic "DQ0A", version 1; the count; per alias: the word, the verb, and a flag (1: stands anywhere).
 //   node sim/tools/commandtables.js [grammar.bin] [aliases.bin] [index.bin]   write the tables and print their sizes
 //   node sim/tools/commandtables.js --check                       encode, decode, and run the corpus through the tables
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { loadRules, Compiler, buildContext, DEFAULT_WORLD, checkCorpus, DEFAULT_ALIASES, DEFAULT_ANYWHERE, LEXICON, roleRules } = require('./commandcompile.js');
+const { loadRules, Compiler, buildContext, DEFAULT_WORLD, checkCorpus, DEFAULT_ALIASES, DEFAULT_ANYWHERE, LEXICON, roleRules, roleWitness, ANYWIT } = require('./commandcompile.js');
 const words = require('./commandwords.js');
 
 const GAME = path.join(__dirname, '..', '..', 'games', 'dq0');
 const MAGIC = [0x44, 0x51, 0x30, 0x47]; // "DQ0G"
 const MAGIC_ALIAS = [0x44, 0x51, 0x30, 0x41]; // "DQ0A"
-const VERSION = 9;
+const VERSION = 10;
 const VERSION_ALIAS = 1;
 const TAG = { seq: 1, alt: 2, opt: 3, rep: 4, term: 6, quote: 7 };
 const NAME = 0x40, OPEN = 0x60, WORD = 0x80;   // a rule's name's first byte, an open name's, a word's alone
 const tagOf = b => b >= WORD ? 'term' : b >= NAME ? 'nt' : Object.keys(TAG).find(k => TAG[k] === b);
+// A rule's tree as the table has it: each sequence of one item that item
+const oneItem = n => (n.t === 'seq' ? (n.items.length === 1 ? oneItem(n.items[0]) : { t: 'seq', items: n.items.map(oneItem) }) :
+  n.t === 'alt' ? { t: 'alt', opts: n.opts.map(oneItem) } : n.t === 'opt' || n.t === 'rep' ? { t: n.t, x: oneItem(n.x) } : n);
 
 // The open names are declared on the header line of the grammar: "open: ...".
 function openNames(file) {
@@ -85,7 +92,7 @@ function encodeGrammar(rules, open) {
   };
   const node = n => {
     switch (n.t) {
-      case 'seq': return composite(TAG.seq, [n.items.length], n.items.flatMap(node));
+      case 'seq': return n.items.length === 1 ? node(n.items[0]) : composite(TAG.seq, [n.items.length], n.items.flatMap(node));
       case 'alt': return composite(TAG.alt, [n.opts.length], n.opts.flatMap(node));
       case 'opt': return composite(TAG.opt, [], node(n.x));
       case 'rep': return composite(TAG.rep, [], node(n.x));
@@ -111,13 +118,16 @@ function encodeGrammar(rules, open) {
   };
   const ruleBytes = [];
   for (const tree of rules.values()) ruleBytes.push(...node(tree));
+  const bloom = Array.from({ length: 8 }, () => new Array(rules.size).fill(0)), { R } = firstSets(rules);   // (The rows)
+  [...rules.keys()].forEach((k, r) => { for (const w of R.get(k).words) for (const b of bloomBits(wid(w))) bloom[b >> 3][r] |= 1 << (b & 7); });
+  if (words.length > 2048) throw new Error('too many words for the second Bloom bit (the 65C02 shifts a byte)');
   const kinds = names.slice(rules.size).map(n => {
     if (!(n in OPEN_KIND)) throw new Error('no matcher kind for the open name ' + n);
     return OPEN_KIND[n];
   });
   const head = [...MAGIC, VERSION, ...u16(rules.size), ...u16(names.length), ...u16(words.length)];
   for (const w of words) head.push(...packWord(w));
-  return Buffer.from([...head, ...kinds, ...ruleBytes]);
+  return Buffer.from([...head, ...kinds, ...ruleBytes, ...bloom.flat()]);
 }
 
 function encodeAliases(aliases = DEFAULT_ALIASES, anywhere = DEFAULT_ANYWHERE) {
@@ -195,23 +205,30 @@ function decodeAliases(buf) {
 }
 
 // ---- The index table: what the 65C02 matcher uses to find words, and to skip what can't match -------------------------
-// Index layout (version 3): magic "DQ0I", the version; the rule count, the word count (the grammar table's) and the
+// Index layout (version 4): magic "DQ0I", the version; the rule count, the word count (the grammar table's) and the
 // dictionary's entry count (two bytes each); the rules "line", "sequence" and "quoted-text" (two bytes each: what the
 // matcher treats by name); the hash's permutation (256 bytes: Pearson's, the matcher's and wordHash's); the dictionary:
 // for each of the 256 hashes, where its words start (257 offsets from the first word, two bytes each), then the words in
 // hash order, each its length, its letters and its entry (two bytes: entries 0 to n - 1 are the grammar's words, by
-// number; then the lexicon's other words, and the default aliases' first words); each entry's flags (a byte: LX_*);
-// each rule's first words as a 64-bit Bloom filter (eight rows of a byte a rule: word w sets bit w & 63) and its first
-// open-name kinds (two rows of a byte a rule: the K_ bits; in the second row's top bit, whether the rule can match
-// nothing, and in its bit 6 whether a name with a role is in it: the roles' walk goes into it, commandcompile.js's
-// roleRules); then the large alternations' indexes: the count, and for each its offset in the grammar table, its options'
-// offsets, its first words (the count; the words, sorted, two bytes each; then each one's option, a byte) and its options
-// that can begin with an open name or match nothing (the count, then option and kinds, bit 15 for nothing).
+// number; then the lexicon's other words, and the default aliases' first words); each entry's flags (a byte: LX_*,
+// LX.witness one of the walk's witnesses); each rule's first open-name kinds (two rows of a byte a rule: the K_ bits;
+// in the second row's top bit, whether the rule can match nothing, and in its bit 6 whether a name with a role is in
+// it: the roles' walk goes into it, commandcompile.js's roleRules); then the large alternations' indexes: the count, and
+// for each its offset in the grammar table, its options' offsets, its first words (the count; the words, sorted, two
+// bytes each; then each one's option, a byte) and its options that can begin with an open name or match nothing (the
+// count, then option and kinds, bit 15 for nothing); then the walk's witnesses (commandcompile.js's roleWitness): the
+// words (the count, then each one's number, two bytes, in order: 64 at most), the sets (the count, then 8 bytes each: a
+// bit a word) and each rule's set (a byte a rule: 0 none, walked into always).  (Version 4, 2026-11-17, the parse's
+// time won back: the walk's witnesses; the rules' first words' Bloom filter the grammar table's now, after its rules.)
 const INDEX_MAGIC = [0x44, 0x51, 0x30, 0x49]; // "DQ0I"
-const INDEX_VERSION = 3;
+const INDEX_VERSION = 4;
+// A word's two bits in the Bloom filter: w & 63, and (w >> 3) + 2 (w >> 6), mod 64 (the tokenizer's, cmdmatch.s).  (One
+// bit, w & 63, let "from" into <lies> and <compass>, its bit "ne"'s: a parse's time, 2026-11-17.  Of the second bits
+// that cost the 65C02 a few shifts, this one lets the corpus's words into the fewest rules: a quarter of the one bit's)
+const bloomBits = w => [w & 63, ((w >> 3) + 2 * (w >> 6)) & 63];
 const ALT_INDEX_MIN = 8;          // an alternation of this many options or more is indexed by its first words
 const K_QUOTED = 10;              // the matcher's kind for quoted text (cmdmatch.s's K_QUOTED)
-const LX = { adj: 1, task: 2, ordinal: 4, number: 8, notspell: 16, notobject: 32 };   // cmdmatch.s's LX_*
+const LX = { adj: 1, task: 2, ordinal: 4, number: 8, notspell: 16, notobject: 32, witness: 64 };   // cmdmatch.s's LX_*
 
 // The hash: Pearson's, a byte from a byte at a time through a permutation of 0..255 (fixed: from a seeded shuffle).
 const PEARSON = (() => {
@@ -269,6 +286,7 @@ function nodeOffsets(buf, rules) {
   };
   const at = new Map();
   const visit = (n, q) => {
+    if (n.t === 'seq' && n.items.length === 1) { at.set(n, q); visit(n.items[0], q); return; }   // (Written as its item)
     if (tagOf(buf[q]) !== n.t) throw new Error('the grammar table and the rules differ at ' + q);
     at.set(n, q);
     if (n.t === 'seq' || n.t === 'alt') {
@@ -277,7 +295,7 @@ function nodeOffsets(buf, rules) {
     } else if (n.t === 'opt' || n.t === 'rep') visit(n.x, head(q));
   };
   for (const tree of rules.values()) { visit(tree, p); p = next(p); }
-  if (p !== buf.length) throw new Error('the grammar table has bytes after its rules');
+  if (p + 8 * rules.size !== buf.length) throw new Error('the grammar table: not its rules, then its Bloom filter\'s rows');
   return at;
 }
 
@@ -393,17 +411,20 @@ function encodeIndex(rules, gbuf, aliases = DEFAULT_ALIASES, game = words.gameWo
   }
   starts.push(recs.length);
   if (recs.length > 65535) throw new Error('the dictionary is too large');
-  // The rules' first words and kinds
-  const bloom = Array.from({ length: 8 }, () => new Array(n).fill(0));
+  // The rules' first kinds
   const klo = [], khi = [];
   names.forEach((k, r) => {
     const f = R.get(k);
-    for (const w of f.words) { const b = wid.get(w) & 63; bloom[b >> 3][r] |= 1 << (b & 7); }
     klo.push(f.kinds & 255);
     khi.push(((f.kinds >> 8) & 0x3F) | (held.has(k) ? 0x40 : 0) | (f.nullable ? 0x80 : 0));
   });
+  // The walk's witnesses (commandcompile.js's roleWitness): the words (64 at most, by their numbers, in order), each
+  // flagged in the dictionary (so the 65C02 looks for those tokens' numbers alone)
+  const wit = roleWitness(rules, held), ww = [...new Set([...wit.values()].filter(s => s !== ANYWIT).flatMap(s => [...s]))]
+    .filter(x => wid.has(x)).sort((a, b) => wid.get(a) - wid.get(b)).slice(0, 64);
+  for (const x of ww) flags[wid.get(x)] |= LX.witness;
   const out = [...INDEX_MAGIC, INDEX_VERSION, ...u16(n), ...u16(words.length), ...u16(entries.length),
-    ...u16(id('line')), ...u16(id('sequence')), ...u16(id('quoted-text')), ...PEARSON, ...starts.flatMap(u16), ...recs, ...flags, ...bloom.flat(), ...klo, ...khi];
+    ...u16(id('line')), ...u16(id('sequence')), ...u16(id('quoted-text')), ...PEARSON, ...starts.flatMap(u16), ...recs, ...flags, ...klo, ...khi];
   // The large alternations
   const alts = [];
   const walk = t => {
@@ -427,6 +448,20 @@ function encodeIndex(rules, gbuf, aliases = DEFAULT_ALIASES, game = words.gameWo
     out.push(...u16(at.get(a)), a.opts.length, ...a.opts.flatMap(o => u16(at.get(o))), ...u16(ents.length),
       ...ents.flatMap(([w]) => u16(w)), ...ents.map(([, i]) => i), wild.length, ...wild.flatMap(([i, k]) => [i, ...u16(k)]));
   }
+  // The walk's witnesses: the words (above), the sets (a bit a word, 8 bytes), each rule's set (1 on; 0 none: walked
+  // into always)
+  const sets = [], setOf = new Map();
+  const ruleSet = names.map(k => {
+    const s = wit.get(k);
+    if (!held.has(k) || !s || s === ANYWIT || [...s].some(x => !ww.includes(x))) return 0;
+    const key = [...s].sort().join(' ');
+    if (!setOf.has(key)) { setOf.set(key, sets.length + 1); sets.push(s); }
+    return setOf.get(key);
+  });
+  if (sets.length > 255) throw new Error('too many witness sets');   // (Rules 256 on: walked into always, the 65C02's)
+  out.push(ww.length, ...ww.flatMap(x => u16(wid.get(x))), sets.length,
+    ...sets.flatMap(s => { const b = new Array(8).fill(0); for (const x of s) { const i = ww.indexOf(x); b[i >> 3] |= 1 << (i & 7); } return b; }),
+    ...ruleSet);
   return Buffer.from(out);
 }
 
@@ -451,7 +486,7 @@ function indexWords(ibuf, gbuf) {
   return seen;
 }
 
-module.exports = { encodeGrammar, decodeGrammar, encodeAliases, decodeAliases, openNames, grammarNames, OPEN_KIND, encodeIndex, checkIndex, indexWords, firstSets, wordHash, PEARSON };
+module.exports = { bloomBits, encodeGrammar, decodeGrammar, encodeAliases, decodeAliases, openNames, grammarNames, OPEN_KIND, encodeIndex, checkIndex, indexWords, firstSets, wordHash, PEARSON };
 
 if (require.main === module) {
   const grammar = path.join(GAME, 'commands.ebnf');
@@ -468,7 +503,7 @@ if (require.main === module) {
   if (args[2] && args[2] !== '--check') fs.writeFileSync(args[2], ibytes);
   if (args.includes('--check')) {
     const decoded = decodeGrammar(gbytes, grammarNames(rules, openNames(grammar)));
-    const same = [...rules.keys()].every(k => JSON.stringify(rules.get(k)) === JSON.stringify(decoded.get(k)));
+    const same = [...rules.keys()].every(k => JSON.stringify(oneItem(rules.get(k))) === JSON.stringify(decoded.get(k)));
     const al = decodeAliases(abytes);
     const aliasSame = [...DEFAULT_ALIASES].every(([k, v]) => al.aliases.get(k) === v) && al.aliases.size === DEFAULT_ALIASES.size &&
       al.anywhere.size === DEFAULT_ANYWHERE.size && [...DEFAULT_ANYWHERE].every(k => al.anywhere.has(k));

@@ -321,6 +321,89 @@ function roleRules(rules) {
   return has;
 }
 
+// The witnesses of each rule with a role in it (the walk's time, 2026-11-17): a set of words, one of which every span
+// it gives a role in holds, so the walk goes into it only if its span holds one.  A name with a role: the words its
+// span can begin with, if they're all words (no open name, no quote); else a word every derivation of its sequence
+// holds (the nearest item that can't be empty, its first words all words); a rule: its body's, an alternation's its
+// options', an option's and a repeat's their own.  OUT: a Map of rule names to Sets, or ANY (none found: walked into
+// always)
+const ANYWIT = 'ANY', WITS = new WeakMap();   // (Each rules' witnesses, worked out once)
+function roleWitness(rules, has = roleRules(rules)) {
+  const nullMemo = new Map(), firstMemo = new Map(), wMemo = new Map();
+  const nullable = (n, seen = new Set()) => {
+    switch (n.t) {
+      case 'term': return n.words.length === 0;
+      case 'nt':
+        if (OPEN.has(n.name) || seen.has(n.name)) return false;
+        if (!nullMemo.has(n.name)) { seen.add(n.name); nullMemo.set(n.name, nullable(rules.get(n.name), seen)); seen.delete(n.name); }
+        return nullMemo.get(n.name);
+      case 'seq': return n.items.every(x => nullable(x, seen));
+      case 'alt': return n.opts.some(x => nullable(x, seen));
+      case 'opt': case 'rep': return true;
+      default: return false;
+    }
+  };
+  const first = (n, seen = new Set()) => {      // (A Set of words, or null: not words alone)
+    switch (n.t) {
+      case 'term': return new Set([n.words[0]]);
+      case 'nt': {
+        if (OPEN.has(n.name)) return null;
+        if (firstMemo.has(n.name)) return firstMemo.get(n.name);
+        if (seen.has(n.name)) return new Set();
+        seen.add(n.name);
+        const r = first(rules.get(n.name), seen);
+        seen.delete(n.name);
+        firstMemo.set(n.name, r);
+        return r;
+      }
+      case 'seq': {
+        const out = new Set();
+        for (const x of n.items) { const f = first(x, seen); if (f === null) return null; f.forEach(w => out.add(w)); if (!nullable(x)) break; }
+        return out;
+      }
+      case 'alt': { const out = new Set(); for (const x of n.opts) { const f = first(x, seen); if (f === null) return null; f.forEach(w => out.add(w)); } return out; }
+      case 'opt': case 'rep': return first(n.x, seen);
+      default: return null;
+    }
+  };
+  const union = (a, b) => (a === null ? b : b === null ? a : a === ANYWIT || b === ANYWIT ? ANYWIT : new Set([...a, ...b]));
+  const W = (n, seen) => {
+    switch (n.t) {
+      case 'nt':
+        if (n.role) { const f = first(n); return f && f.size ? f : ANYWIT; }
+        if (OPEN.has(n.name) || !has.has(n.name)) return null;
+        return rule(n.name, seen);
+      case 'seq': {
+        let out = null;
+        const lits = n.items.map((x, i) => [i, nullable(x) ? null : first(x)]).filter(p => p[1] && p[1].size);
+        n.items.forEach((x, j) => {
+          const w = W(x, seen);
+          if (w === ANYWIT && lits.length) {     // (The nearest item that can't be empty, its first words all words)
+            out = union(out, lits.reduce((a, b) => (Math.abs(a[0] - j) < Math.abs(b[0] - j) ||
+              (Math.abs(a[0] - j) === Math.abs(b[0] - j) && a[1].size <= b[1].size) ? a : b))[1]);
+          } else out = union(out, w);
+        });
+        return out;
+      }
+      case 'alt': return n.opts.reduce((o, x) => union(o, W(x, seen)), null);
+      case 'opt': case 'rep': return W(n.x, seen);
+      default: return null;
+    }
+  };
+  const rule = (k, seen = new Set()) => {
+    if (wMemo.has(k)) return wMemo.get(k);
+    if (seen.has(k)) return ANYWIT;             // (A cycle: none found, the safe answer)
+    seen.add(k);
+    const r = W(rules.get(k), seen);
+    seen.delete(k);
+    wMemo.set(k, r === null ? ANYWIT : r);
+    return wMemo.get(k);
+  };
+  const out = new Map();
+  for (const k of has) out.set(k, rule(k));
+  return out;
+}
+
 // The derivation of tokens 0 to n (a line that parses), its roles: each token's role (ROLES': 0 none), the innermost
 // name with one that it's in (and mine, of any it's in).  The choice where there are several, the 65C02's: an alternation's first option that can
 // end there; a sequence's items each as late as it can begin (from its end back: the latest of the positions its item
@@ -330,12 +413,19 @@ function rolesOf(env) {
   const toks = env.toks, n = toks.length, lab = new Array(n).fill(0);
   env.ends = env.ends || new Map();
   if (!env.has) env.has = roleRules(env.rules);
+  if (!env.wit) { if (!WITS.has(env.rules)) WITS.set(env.rules, roleWitness(env.rules, env.has)); env.wit = WITS.get(env.rules); }
+  const held = (k, p, e) => {                    // (A rule gone into only if its span holds a witness: the 65C02's)
+    const s = env.wit.get(k);
+    if (s === ANYWIT) return true;
+    for (let i = p; i < e; i++) if (toks[i].k === 'w' && s.has(toks[i].v)) return true;
+    return false;
+  };
   const latest = (S, node, e) => { let b = -1; for (const q of S) if (q > b && endsOf(node, q, env).has(e)) b = q; return b; };
   const walk = (node, p, e) => {
     switch (node.t) {
       case 'nt':
         if (node.role) for (let i = p; i < e; i++) lab[i] = node.role === ROLES.mine ? lab[i] | ROLES.mine : (lab[i] & ROLES.mine) | node.role;
-        if (!OPEN.has(node.name) && env.has.has(node.name)) walk(env.rules.get(node.name), p, e);
+        if (!OPEN.has(node.name) && env.has.has(node.name) && held(node.name, p, e)) walk(env.rules.get(node.name), p, e);
         return;
       case 'alt':
         for (const o of node.opts) if (endsOf(o, p, env).has(e)) return walk(o, p, e);
@@ -1445,7 +1535,7 @@ function checkCorpus(compiler, corpusFile, log) {
 const LEXICON = { adj: [...ADJ], ordinals: ORDINALS, numbers: Object.keys(NUMWORDS), spellStop: [...SPELL_STOP],
   invocations: INVOCATION_WORDS, notObject: [...NOT_OBJECT] };
 
-module.exports = { Compiler, loadRules, buildContext, tokenize, DEFAULT_WORLD, checkCorpus, matchRule, countRule, DEFAULT_ALIASES, DEFAULT_ANYWHERE, segmentAliases, LEXICON,
+module.exports = { roleWitness, ANYWIT, Compiler, loadRules, buildContext, tokenize, DEFAULT_WORLD, checkCorpus, matchRule, countRule, DEFAULT_ALIASES, DEFAULT_ANYWHERE, segmentAliases, LEXICON,
   ROLES, endsOf, roleRules, rolesOf, literalWords, OPEN };
 
 if (require.main === module) {

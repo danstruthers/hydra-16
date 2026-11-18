@@ -1,7 +1,7 @@
 ; ****************************************************************************
 ; cmdmatch.s - Dingus Quest Zero's command matcher, for the 65C02: does a line parse by the command grammar?  The
 ; host's reference is sim/tools/commandcompile.js; the tables are sim/tools/commandtables.js's (the grammar, DQ0G
-; version 8; its index, DQ0I version 3; the default aliases, DQ0A version 1); the test data, commandmatch-gen.js's.
+; version 10; its index, DQ0I version 4; the default aliases, DQ0A version 1); the test data, commandmatch-gen.js's.
 ;
 ; Its calls (the parser's task, dq0c.s, makes them; C's cmdmatch.h, sim/tools/cmdmatch/cmdmatch_c.s, wraps them):
 ;   cm_init     the tables: cm_g the grammar, cm_i its index, cm_a the default aliases (each where it stays), then the
@@ -27,12 +27,15 @@
 ;   are compared.  Each entry has its lexicon flags (LX_*: the words the open names look for), the world's marks
 ;   (W_*: cm_world, when the world changes), and heads the chain of the aliases that begin with its word: the
 ;   aliases are a trie of words, the first by the hash, the rest compared.
-; - A rule is entered only if the token can begin it: its first words as a 64-bit Bloom filter, and its first kinds.
+; - A rule is entered only if the token can begin it: its first words as a 64-bit Bloom filter (two bits a word; its
+;   rows after the rules, in their bank: 2026-11-17), and its first kinds.
 ;   An alternation of many options (the phrases) tries only the options the token begins: its first words, sorted, by
 ;   a binary search; and its options that begin with an open name the token fits, or can match nothing.
-; - A rule's ends are kept in a cache (128 entries, a line's), not a memo of every rule at every position: the grammar
+; - A rule's ends are kept in a cache (256 entries, a line's), not a memo of every rule at every position: the grammar
 ;   has no left recursion (commandtables.js says so as it builds the index), so nothing needs a "being matched" mark.
-; - A word, an open name and quoted text are checked where they stand in a sequence or alternation, without a call.
+; - A word, an open name and quoted text are checked where they stand in a sequence or alternation, without a call; a
+;   rule there goes straight to the cache, an option to its child's (child's quick ways, 2026-11-17).  A sequence of one
+;   item is in the table as that item (commandtables.js).
 ; The return addresses go on the 6502's stack (two bytes a level, the grammar's nesting at most); a composite node's
 ; working values on a stack of their own (fstk).  A line that would nest deeper than either allows gives -1.
 ;
@@ -42,7 +45,8 @@
 ; Speed (sim/tools/commandmatch-test.js): about 50,000 cycles a command on the corpus (2026-10-29; 41,000 on
 ; 2026-10-19, the grammar the smaller); a command's round trip through dq0c (--task) about 64,000.  The rule room
 ; (2026-10-29): a rule's number two bytes (MAXRULES, its rows' bytes a page on through canfar), a name or a word
-; alone two bytes in the table, the grammar's words not in dq0c's RAM; as fast as before within a half per cent.
+; alone two bytes in the table, the grammar's words not in dq0c's RAM; as fast as before within a half per cent.  The
+; parse's time won back (2026-11-17, after the roles): about 42,000 cycles a command on the corpus (54,000 before).
 ; ****************************************************************************
 
             .setcpu     "65C02"
@@ -83,6 +87,7 @@ LX_ORDINAL  = 4
 LX_NUMBER   = 8
 LX_NOTSPELL = 16
 LX_NOTOBJECT = 32
+LX_WITNESS  = 64                    ; (One of the walk's witnesses: commandtables.js's, cm_roles')
 W_WORLD     = 1                     ; The world names a thing by the word
 W_NAME      = 2                     ; A name given to a thing
 W_DEITY     = 4                     ; A deity's name
@@ -94,7 +99,7 @@ MAXDYN      = 16                    ; The world's own words: deities' names that
 MAXALIAS    = 160                   ; (The default aliases: 134 now)
 MAXINDEX    = 24
 ALTMIN      = 8                     ; commandtables.js's ALT_INDEX_MIN: an alternation this large may be indexed
-CACHE       = 128                   ; The rules' ends kept, a line's (a power of two)
+CACHE       = 256                   ; The rules' ends kept, a line's (a page: the walk's rules found again, 2026-11-17)
 MAXREP      = 12
 R_MINE      = 8                     ; A token's role's mine (commandcompile.js's ROLES.mine: "my left arm")
 FSTKMAX     = 240                   ; The working values' stack: a page, and a little room
@@ -133,6 +138,9 @@ lnp:        .res        2           ; tokenize's line; cm_world's list; cm_init'
 te:         .res        2           ; lookup: the bucket's end
 dn:         .res        2           ; cm_roles: the node walked, a child
 dc:         .res        2
+wset:       .res        2           ; cm_roles: a rule's witnesses (its set's 8 bytes); the words, in order; each
+pww:        .res        2           ;   rule's set (cm_tables')
+pwrule:     .res        2
 
             .bss
 gbase:      .res        2           ; The grammar table
@@ -201,6 +209,8 @@ tokmlo:     .res        MAXTOK + 1
 tokmhi:     .res        MAXTOK + 1
 tokbk:      .res        MAXTOK + 1
 tokbb:      .res        MAXTOK + 1
+tokbk2:     .res        MAXTOK + 1  ; (Its second Bloom byte and bit: commandtables.js's bloomBits)
+tokbb2:     .res        MAXTOK + 1
 ckr:        .res        CACHE       ; The cache: rule (low, high), position ($FF: empty), ends
 ckh:        .res        CACHE
 ckp:        .res        CACHE
@@ -216,6 +226,10 @@ nb:         .res        1
 tstart:     .res        1
 tokrole:    .res        MAXTOK + 1  ; Each token's role (cm_roles': commandcompile.js's ROLES; R_MINE with it)
 cm_ok:      .res        1           ; cm_roles' verdict: 1, the line parses (its roles); else none
+nww:        .res        1           ; The walk's witnesses (the index's, commandtables.js's): the words (their numbers,
+pwset:      .res        2           ;   in order: pww), the sets (8 bytes, a bit a word), each rule's set (0 none:
+                                    ;   pwrule); each token's witness word, + 1 (0 none)
+wtid:       .res        MAXTOK + 1
 qat:        .res        1           ; The first quoted text's first letter's place in the line, + 1 (0: none)
 dp:         .res        1           ; cm_roles: the node's tokens from dp to de; a child's end, dt; a position, dq;
 de:         .res        1           ;   its items or rounds, dk; positions, dm; fsp as a repeat began, rf
@@ -254,7 +268,8 @@ kindtab:
             .repeat     32, F
             .byte       K_TEXT | ((F & LX_NOTSPELL) ^ LX_NOTSPELL) * 2 | (F & LX_ADJ) * 2 | (F & LX_TASK) * 8 | (F & LX_ORDINAL) * 2 | (F & LX_NUMBER) / 2
             .endrepeat
-posmix:     .byte       0, 37, 74, 111, 20, 57, 94, 3, 40, 77, 114, 23, 60, 97, 6, 43   ; A position's part of the cache's hash
+; A position's part of the cache's hash (37 a position, over the page)
+posmix:     .byte       0, 37, 74, 111, 148, 185, 222, 3, 40, 77, 114, 151, 188, 225, 6, 43
 thenword:   .byte       "then"
 
             .code
@@ -562,7 +577,7 @@ yes:        sec
 
 ; tokenize: the line at lnp into tokens: words (lower case, with ' and - after the first letter), ! and =, and quoted
 ; text (a w or y directly before the quote is part of it); anything else between them.  Each word is looked up as it
-; is read.  Then the aliases, then each token's kinds and Bloom bit.
+; is read.  Then the aliases, then each token's kinds and Bloom bits.
 .proc tokenize
             stz         ntok
             stz         toolong
@@ -939,8 +954,9 @@ done:       lda         ntok
             rts
 .endproc
 
-; kinds: what open names each token fits (the host's openOK), from its lexicon flags and the world's marks; and its
-; Bloom byte and bit (its grammar word's bits 3-5 and 0-2)
+; kinds: what open names each token fits (the host's openOK), from its lexicon flags and the world's marks; its Bloom
+; bytes and bits (commandtables.js's bloomBits); and whether it's one of the walk's witnesses (wtid: $FF, its number
+; cm_roles' to find; else 0)
 .proc kinds
             ldx         #0
 loop:       cpx         ntok
@@ -1049,13 +1065,19 @@ store:      lda         t3              ; A noun: a name's word, but no adjectiv
             sta         tokmlo,x
             lda         th
             sta         tokmhi,x
-bloom:      lda         tokwh,x
+bloom:      lda         t1              ; (one of the walk's witnesses?)
+            and         #LX_WITNESS
+            beq         :+
+            lda         #$FF
+:           sta         wtid,x
+            lda         tokwh,x
             cmp         #$FF
             bne         hasw
             stz         tokbk,x
             stz         tokbb,x
             bra         nexttok
-hasw:       lda         tokwl,x
+hasw:       sta         t1              ; (its high byte)
+            lda         tokwl,x         ; its first bit: w & 63
             lsr         a
             lsr         a
             lsr         a
@@ -1066,6 +1088,30 @@ hasw:       lda         tokwl,x
             tay
             lda         bitb,y
             sta         tokbb,x
+            lda         tokwl,x         ; its second: (w >> 3) + 2 (w >> 6), mod 64 (commandtables.js's bloomBits)
+            lsr         t1
+            ror         a
+            lsr         t1
+            ror         a
+            lsr         t1
+            ror         a
+            sta         t2              ; (w >> 3: the words fewer than 2048)
+            lsr         a
+            lsr         a
+            and         #$FE
+            clc
+            adc         t2
+            and         #63
+            tay
+            lsr         a
+            lsr         a
+            lsr         a
+            sta         tokbk2,x
+            tya
+            and         #7
+            tay
+            lda         bitb,y
+            sta         tokbb2,x
 nexttok:    inx
             jmp         loop
 .endproc
@@ -1256,6 +1302,16 @@ gate:       lda         (pkhi),y
             ldy         t1
             lda         (tq),y
             and         tokbb,x
+            beq         kinds
+            lda         tokbk2,x        ; (and its second bit)
+            tay
+            lda         brlo,y
+            sta         tq
+            lda         brhi,y
+            sta         tq+1
+            ldy         t1
+            lda         (tq),y
+            and         tokbb2,x
             bne         yes
 kinds:      ldy         t1              ; or a kind of the token's among its first kinds?
             lda         (pklo),y
@@ -1294,6 +1350,16 @@ gate:       lda         (pkhi1),y
             ldy         t1
             lda         (tq),y
             and         tokbb,x
+            beq         kinds
+            lda         tokbk2,x        ; (and its second bit)
+            tay
+            lda         brlo,y
+            sta         tq
+            lda         brhi1,y
+            sta         tq+1
+            ldy         t1
+            lda         (tq),y
+            and         tokbb2,x
             bne         yes
 kinds:      ldy         t1              ; or a kind of the token's among its first kinds?
             lda         (pklo1),y
@@ -1405,7 +1471,8 @@ body:       lda         pos
 over:       jmp         abort
 .endproc
 
-; A child (cp) from position wp: a leaf where it stands, anything else by ends; its ends into wo
+; A child (cp) from position wp: a leaf where it stands, a rule from e_nt's cache (or its body), an option the position
+; and its child's, anything else by ends; its ends into wo
 .proc child
             lda         cp
             sta         lfp
@@ -1422,8 +1489,12 @@ over:       jmp         abort
             lda         bithi,y
             tsb         wo+1
 done:       rts
-call:       lda         (cp)            ; a sequence: can its first item begin here?
-            cmp         #T_SEQ
+call:       lda         (cp)
+            cmp         #T_NAME         ; a rule (leaf's rid, ridh): straight to e_nt's cache, as ends would go
+            bcs         rule
+            cmp         #T_OPT
+            beq         opt
+            cmp         #T_SEQ          ; a sequence: can its first item begin here?
             bne         really
             ldy         #1
             lda         (cp),y
@@ -1459,11 +1530,50 @@ really:     lda         cp
             sta         np+1
             lda         wp
             jsr         ends
-            lda         res
+got:        lda         res
             tsb         wo
             lda         res+1
             tsb         wo+1
             rts
+rule:       tsx                         ; (ends' depth test, as if called)
+            cpx         #HWMIN + 2
+            bcc         deep
+            lda         wp
+            sta         pos
+            jsr         e_nt::rule
+            bra         got
+deep:       jmp         abort
+opt:        ldx         wp              ; an option: the position (empty), and its child's ends: a leaf's, a rule's,
+            lda         bitlo,x         ;   else the option's by ends
+            tsb         wo
+            lda         bithi,x
+            tsb         wo+1
+            ldy         #1
+            lda         (cp),y
+            bmi         :+
+            lda         #2
+            bra         :++
+:           lda         #3
+:           clc
+            adc         cp
+            sta         lfp
+            lda         cp+1
+            adc         #0
+            sta         lfp+1
+            jsr         leaf
+            bcc         :+
+            cmp         #$FF           ; (a leaf: where it ends)
+            beq         odone
+            tay
+            lda         bitlo,y
+            tsb         wo
+            lda         bithi,y
+            tsb         wo+1
+odone:      rts
+:           lda         (lfp)
+            cmp         #T_NAME
+            bcs         rule
+            bra         really
 .endproc
 
 ; scan: each position in wm (from wq up) through child, wm emptied, the ends into wo
@@ -1962,7 +2072,48 @@ over:       jmp         abort
             bpl         :-
             cmp         #1
             bne         done
-            tsx
+            ldx         ntok            ; Each token's witness word (+ 1; 0 none): of those the tokenizer marked one
+wid:        dex                     ;   ($FF), a binary search of the words
+            bmi         wdone
+            lda         wtid,x
+            beq         wid
+            stz         wtid,x
+            lda         tokwh,x
+            cmp         #$FF
+            beq         wid
+            stz         t1              ; (t1 .. t2: the words still in the running)
+            lda         nww
+            sta         t2
+wbin:       lda         t1
+            cmp         t2
+            bcs         wid
+            clc
+            adc         t2
+            ror         a
+            sta         wq
+            asl         a
+            tay
+            iny
+            lda         (pww),y         ; (its number's high byte first)
+            cmp         tokwh,x
+            bne         :+
+            dey
+            lda         (pww),y
+            cmp         tokwl,x
+            beq         whit
+:           bcc         wlow
+            lda         wq              ; (the word's above: the lower half)
+            sta         t2
+            bra         wbin
+wlow:       lda         wq
+            ina
+            sta         t1
+            bra         wbin
+whit:       lda         wq
+            ina
+            sta         wtid,x
+            bra         wid
+wdone:      tsx
             stx         savedsp
             stz         fsp
             lda         #<linenode
@@ -1988,7 +2139,7 @@ done:       rts
             cmp         #T_NAME
             bcs         name
             cmp         #T_ALT
-            beq         alt
+            jeq         alt
             cmp         #T_SEQ
             jeq         seq
             cmp         #T_OPT
@@ -2019,25 +2170,65 @@ name:       pha                         ; A rule: its role its tokens'; then its
             lda         (pkhi),y
             and         #$40
             beq         out
-            lda         rplo,y
+            lda         (pwrule),y      ; (Gone into only if its span holds one of its witnesses)
+            beq         go
+            dea
+            stz         t2              ; (its set: 8 bytes)
+            asl         a
+            rol         t2
+            asl         a
+            rol         t2
+            asl         a
+            rol         t2
+            clc
+            adc         pwset
+            sta         wset
+            lda         t2
+            adc         pwset+1
+            sta         wset+1
+            ldx         dp
+wtok:       cpx         de
+            bcs         out
+            lda         wtid,x
+            beq         wnext
+            dea
+            pha
+            lsr         a
+            lsr         a
+            lsr         a
+            tay
+            pla
+            and         #7
+            phx
+            tax
+            lda         bitb,x          ; (its bit)
+            plx
+            and         (wset),y
+            bne         wgo
+wnext:      inx
+            bra         wtok
+wgo:        ldy         rid
+go:         lda         rplo,y
             sta         dn
             lda         rphi,y
             sta         dn+1
             jmp         dwalk
 far:        lda         (pkhi1),y
             and         #$40
-            beq         out
+            jeq         out
             lda         rplo + 256,y
             sta         dn
             lda         rphi + 256,y
             sta         dn+1
             jmp         dwalk
 alt:        lda         dn              ; An alternation: the first option that can end at de (an indexed one's
-            sta         np              ;   among those its index gathers)
+            sta         np              ;   among those its index gathers); words alone, none walked
             lda         dn+1
             sta         np+1
             jsr         seq_head
             sta         dk
+            jsr         bare
+            jcs         out
             lda         de
             sta         dt
             lda         dk
@@ -2106,8 +2297,8 @@ aloop:      lda         dk
             jsr         skip
             dec         dk
             bra         aloop
-opt:        lda         dp              ; An option: taken, if it can end at de
-            cmp         de
+opt:        lda         dp              ; An option: taken if it has tokens (its child can match them, as the
+            cmp         de              ;   option can)
             jeq         out
             lda         dn
             sta         np
@@ -2115,14 +2306,10 @@ opt:        lda         dp              ; An option: taken, if it can end at de
             sta         np+1
             jsr         opt_head
             lda         np
-            sta         dc
+            sta         dn
             lda         np+1
-            sta         dc+1
-            lda         de
-            sta         dt
-            lda         dp
-            jsr         reach
-            jcc         out
+            sta         dn+1
+            jmp         dwalk
 taken:      lda         dc
             sta         dn
             lda         dc+1
@@ -2136,6 +2323,9 @@ seq:        lda         dn              ; A sequence: each item and the position
             sta         dk
             tay
             jeq         out
+            jsr         bare            ;   (words alone: not walked)
+            jcs         out
+            ldy         dk
             ldx         dp
             lda         bitlo,x
             sta         wm
@@ -2227,6 +2417,10 @@ rep:        lda         dp              ; A repeat: each round's new positions (
             lda         dn+1
             sta         np+1
             jsr         opt_head
+            lda         (np)            ; (words alone: not walked)
+            jmi         out
+            cmp         #T_TERM
+            jeq         out
             lda         np
             sta         dc
             lda         np+1
@@ -2316,6 +2510,39 @@ rbloop:     ldx         fsp
             jmp         walk
 .endproc
 
+; bare: the .A nodes from cp each a word alone or a list of words (no name in them, so no role)?  C set if so.  (cp
+; kept: tr the one looked at)
+.proc bare
+            tax
+            beq         yes
+            lda         cp
+            sta         tr
+            lda         cp+1
+            sta         tr+1
+loop:       lda         (tr)
+            bmi         word
+            cmp         #T_TERM
+            bne         no
+            ldy         #1              ; (a list: 2, and 2 a word)
+            lda         (tr),y
+            asl         a
+            clc
+            adc         #2
+            bra         add
+word:       lda         #2
+add:        clc
+            adc         tr
+            sta         tr
+            bcc         :+
+            inc         tr+1
+:           dex
+            bne         loop
+yes:        sec
+            rts
+no:         clc
+            rts
+.endproc
+
 ; label: tokens dp to de given role .A (R_MINE added to theirs; another in place of theirs, R_MINE kept); 0, nothing
 .proc label
             beq         done
@@ -2341,9 +2568,43 @@ mine:       cpx         de
 done:       rts
 .endproc
 
-; latest: the latest position of dm's from which node dc can end at dt: .A (none: dp)
+; latest: the latest position of dm's from which node dc can end at dt: .A (none: dp).  One of dm's at dt or before
+; alone: that one, no reach tried (the derivation's: dt is where the node can end from one of dm's)
 .proc latest
-            lda         dt
+            ldx         dt              ; (dm's up to dt: dm and the bits below dt + 1's)
+            lda         bitlo+1,x
+            sec
+            sbc         #1
+            and         dm
+            sta         t1
+            lda         bithi+1,x
+            sbc         #0
+            and         dm+1
+            sta         t2
+            lda         t1              ; (one alone: m and m - 1 nothing in common)
+            sec
+            sbc         #1
+            and         t1
+            sta         t3
+            lda         t2
+            sbc         #0
+            and         t2
+            ora         t3
+            bne         some
+            lda         dt              ; (that one: from dt down)
+            sta         dq
+one:        ldx         dq
+            lda         bitlo,x
+            and         t1
+            bne         found
+            lda         bithi,x
+            and         t2
+            bne         found
+            lda         dq
+            beq         none
+            dec         dq
+            bra         one
+some:       lda         dt
             sta         dq
 loop:       ldx         dq
             lda         bitlo,x
@@ -2416,10 +2677,10 @@ yes:        sec
             sta         gen
             bne         :++
             lda         #$FF
-            ldx         #CACHE - 1
+            ldx         #0              ; (a page)
 :           sta         ckp,x
-            dex
-            bpl         :-
+            inx
+            bne         :-
 :
             lda         #<linenode
             sta         np
@@ -2564,10 +2825,10 @@ fail:       rts
             stz         ndyn
             stz         gen             ; the cache empty
             lda         #$FF
-            ldx         #CACHE - 1
+            ldx         #0              ; (a page)
 :           sta         ckp,x
-            dex
-            bpl         :-
+            inx
+            bne         :-
             clc
             rts
 fail:       sec
@@ -2611,7 +2872,7 @@ no:         sec
             sta         tp+1
             sta         gbase+1
             lda         #'G'
-            ldx         #9
+            ldx         #10
             jsr         magic
             jcs         bad
             ldy         #5              ; rules (MAXRULES at most) and names (their open names 255 at most)
@@ -2746,21 +3007,38 @@ one:        lda         cp
             bne         rules
             inc         ridh
             bra         rules
-ok:         clc
+ok:         ldx         #0              ; The rules' first words: the Bloom filter's rows, after them (in their bank)
+rows:       lda         cp
+            sta         brlo,x
+            lda         cp+1
+            sta         brhi,x
+            ina
+            sta         brhi1,x
+            clc
+            lda         cp
+            adc         nrules
+            sta         cp
+            lda         cp+1
+            adc         nrules+1
+            sta         cp+1
+            inx
+            cpx         #8
+            bne         rows
+            clc
             rts
 bad:        sec
             rts
 .endproc
 
-; rdindex: the counts (the grammar's), the rules treated by name, the dictionary's parts, the Bloom rows, the first
-; kinds, and each indexed alternation's parts; "then" found, and the line's node made
+; rdindex: the counts (the grammar's), the rules treated by name, the dictionary's parts, the first kinds, each
+; indexed alternation's parts and the walk's witnesses; "then" found, and the line's node made
 .proc rdindex
             lda         cm_i
             sta         tp
             lda         cm_i+1
             sta         tp+1
             lda         #'I'
-            ldx         #3
+            ldx         #4
             jsr         magic
             jcs         bad
             ldy         #5
@@ -2833,25 +3111,14 @@ bad:        sec
             lda         (tq),y
             adc         drec+1
             sta         dflags+1
-            clc                         ; the Bloom rows, after the flags
+            clc                         ; the first kinds, after the flags
             lda         dflags
             adc         nent
             sta         tp
             lda         dflags+1
             adc         nent+1
             sta         tp+1
-            ldx         #0
-rows:       lda         tp
-            sta         brlo,x
-            lda         tp+1
-            sta         brhi,x
-            ina
-            sta         brhi1,x
-            jsr         pastrules
-            inx
-            cpx         #8
-            bne         rows
-            lda         tp              ; the first kinds
+            lda         tp
             sta         pklo
             lda         tp+1
             sta         pklo+1
@@ -2871,16 +3138,49 @@ rows:       lda         tp
             jsr         pastrules
             lda         (tp)            ; the indexed alternations
             cmp         #MAXINDEX + 1
-            bcs         bad
+            jcs         bad
             sta         nindex
             ldy         #1
             jsr         pasty
             ldx         #0
 alts:       cpx         nindex
-            bcs         then
+            bcs         wit
             jsr         rdalt
             inx
             bra         alts
+wit:        lda         (tp)            ; The walk's witnesses: the words, the sets, each rule's set
+            sta         nww
+            ldy         #1
+            jsr         pasty
+            lda         tp
+            sta         pww
+            lda         tp+1
+            sta         pww+1
+            lda         nww
+            stz         t2
+            asl         a
+            rol         t2
+            jsr         past16
+            lda         (tp)            ; (the sets: 8 bytes each)
+            sta         t1
+            ldy         #1
+            jsr         pasty
+            lda         tp
+            sta         pwset
+            lda         tp+1
+            sta         pwset+1
+            lda         t1
+            stz         t2
+            ldx         #3
+:           asl         a
+            rol         t2
+            dex
+            bne         :-
+            jsr         past16
+            lda         tp
+            sta         pwrule
+            lda         tp+1
+            sta         pwrule+1
 then:       lda         #<thenword
             sta         tp
             lda         #>thenword
