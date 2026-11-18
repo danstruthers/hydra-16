@@ -12,10 +12,17 @@
 // A table (.word label, .byte <label) in one bank of a label in another is listed with --tables: right for a table of
 // far calls (hylang's builtins), wrong for a jump table (jmp (table,x) jumps in its own bank).
 //
-// Usage: node tools/bankcheck.js FILE.dbg [--far MACRO,...] [--tables]   (exit status 1 if there's a direct use)
-// From Node: check(dbgText, { far: [...] }) gives [{ file, line, text, label, from, to }] (an empty list: all well)
+// Each source's lines are read by the name the debug information gives it: a name not absolute is the assembler's
+// folder's (the base's: build.js runs ca65 there, its files named from there, since 2026-11-17), or --root's.  A
+// source that isn't there fails the check (its lines unread, its uses would go unseen).
+//
+// Usage: node tools/bankcheck.js FILE.dbg [--far MACRO,...] [--tables] [--root DIR]   (exit status 1 if there's a
+// direct use)
+// From Node: check(dbgText, { far: [...], root }) gives [{ file, line, text, label, from, to }] (an empty list: all
+// well)
 'use strict';
 const fs = require('fs');
+const path = require('path');
 
 // Macros that only take a label's address: far calls; immediates (LDR, LDAX, LDW); hylang's table of builtins (BI).  A
 // module adds its own with a comment, "bankcheck: far NAME ...", in any of its files; and "bankcheck: copied" marks a
@@ -63,7 +70,10 @@ function check(text, opt = {}) {
   const far = [...FAR, ...(opt.far || [])], d = parse(text), lines = {}, copied = new Set(), out = [];
   const src = id => {
     const f = d.file[id];
-    if (!lines[id]) lines[id] = fs.existsSync(f.name) ? fs.readFileSync(f.name, 'latin1').split(/\r?\n/) : [];
+    if (lines[id]) return lines[id];
+    const file = path.resolve(opt.root || path.join(__dirname, '..'), f.name);
+    if (!fs.existsSync(file)) throw new Error('bankcheck: ' + f.name + ' (' + file + '), named in the debug information, isn\'t there');
+    lines[id] = fs.readFileSync(file, 'latin1').split(/\r?\n/);
     return lines[id];
   };
   for (const id of Object.keys(d.file)) for (const l of src(id)) {          // (The files' own: bankcheck: ...)
@@ -93,8 +103,9 @@ function check(text, opt = {}) {
 if (require.main === module) {
   const args = process.argv.slice(2), file = args[0];
   const fi = args.indexOf('--far'), far = fi >= 0 ? args[fi + 1].split(',') : [], tables = args.includes('--tables');
-  if (!file) { console.error('usage: bankcheck.js FILE.dbg [--far MACRO,...] [--tables]'); process.exit(2); }
-  const all = check(fs.readFileSync(file, 'latin1'), { far, tables }), bad = all.filter(b => b.use !== 'table');
+  const ri = args.indexOf('--root'), root = ri >= 0 ? path.resolve(args[ri + 1]) : undefined;
+  if (!file) { console.error('usage: bankcheck.js FILE.dbg [--far MACRO,...] [--tables] [--root DIR]'); process.exit(2); }
+  const all = check(fs.readFileSync(file, 'latin1'), { far, tables, root }), bad = all.filter(b => b.use !== 'table');
   for (const b of all) console.log(b.file + ':' + b.line + ': bank ' + b.from + ' uses ' + b.label + ' (bank ' + b.to + ') ' + (b.use === 'direct' ? 'directly' : b.use === 'table' ? 'in a table (a jump table\'s entries must be its bank\'s)' : 'in ' + b.use) + ': ' + b.text);
   process.exit(bad.length ? 1 : 0);
 }

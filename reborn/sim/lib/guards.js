@@ -246,10 +246,10 @@ function listings(p, segs, mods, f) {
     let c = cfiles.get(file);                                 //   the fields each of its macros names)
     if (c) return c;
     let text = '';
-    const rel = /[\\/](reborn|base)[\\/](.*)$/.exec(file);   // (Its tree moved since the build: the file here)
-    for (const f of [file, ...(rel ? [path.join(ROOT, '..', rel[1], rel[2])] : [])]) {
-      try { text = fs.readFileSync(f, 'latin1'); break; } catch (e) { /* (Gone: none of its lines named) */ }
-    }
+    const rel = /[\\/](reborn|base)[\\/](.*)$/.exec(file);   // (Its tree moved since the build: the file here.  A name not
+    for (const f of [path.resolve(ROOT, file), ...(rel ? [path.join(ROOT, '..', rel[1], rel[2])] : [])]) {   //   absolute is
+      try { text = fs.readFileSync(f, 'latin1'); break; } catch (e) { /* (Gone: none of its lines named) */ }   //   reborn/'s,
+    }                                                         //   where the build runs cc65, since 2026-11-17)
     const defs = new Map();
     macros(text, defs);
     const all = closure(defs, new Set(H.header));

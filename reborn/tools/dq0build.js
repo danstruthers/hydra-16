@@ -29,7 +29,8 @@
 //   hub ()                     the headers' numbers, as generate made them (hubgen.js's load: obj/gen/dq0hub.json)
 //   swappedParts (dir, objdir, extra, b)
 //                              a task's C with swapped parts (its dir has a parts.txt) compiled and placed: build.js's
-//                              cprog's, its tools b = { cc65 (args), od65 (args): its words, compileC (files, objdir,
+//                              cprog's, its tools b = { cc65 (args), cc65all ([args]: optional, the runs together, those
+//                              the build's cache hasn't side by side), od65 (args): its words, compileC (files, objdir,
 //                              extra, asExtra), csources (dir), flags (cflags ()'s) }.  Its C compiled (cc65), its calls
 //                              routed by part (pack.js's route: a call into another part its stub's, one inside a part
 //                              straight), assembled with its assembly but bank.s; each part's bytes (od65's); a part
@@ -138,7 +139,8 @@ function swappedParts(dir, objdir, extra = [], b) {
   K.planChecked();
   const src = b.csources(dir), cs = src.filter(f => f.endsWith('.c')), ss = src.filter(f => f.endsWith('.s'));
   const sOf = f => path.join(objdir, path.basename(f, '.c') + '.s'), o = new Map();
-  for (const f of cs) b.cc65([...b.flags.cc, ...extra, '-o', sOf(f), f]);
+  if (b.cc65all) b.cc65all(cs.map(f => [...b.flags.cc, ...extra, '-o', sOf(f), f]));   // (build.js's: those not kept run side by side)
+  else for (const f of cs) b.cc65([...b.flags.cc, ...extra, '-o', sOf(f), f]);
   const compiled = cs.map(sOf), rest = ss.filter(f => path.basename(f) !== 'bank.s'), bank = ss.filter(f => path.basename(f) === 'bank.s');
   const asm = () => b.compileC(compiled, objdir).forEach((x, i) => o.set(cs[i], x));
   K.route(compiled);

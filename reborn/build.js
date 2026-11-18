@@ -32,14 +32,25 @@
 // (cc65 -t none) and linked with the C library and sdk/c/hydra.cfg (sdk/c/README.md); the C samples are
 // sdk/c/samples/NAME -> obj/samples/c/NAME.hyx.
 // and obj/build.json: the options it was built with ({ clock, acia }: sim/test.js's budgets can depend on them).
-// All of it twice, once for each serial chip U3 can be (Rockwell's R65C51, WDC's W65C51N: the kernel's ACIA_CHIP),
-// and the images named for the chip where the two builds' differ (../base/tools/images.js): the BIOS ROM's,
-// bin/bios_rockwell.bin and bios_wdc.bin, and the base's the same way in ../base/bin; the rest, the same for both,
-// once (prom0.bin, prom1.bin, prom2.bin, sdcard.img).  obj/ is the last build's: the Rockwell one's, unless --acia wdc.
+// The kernel for each serial chip U3 can be (Rockwell's R65C51, WDC's W65C51N: the kernel's ACIA_CHIP, its alone), the
+// rest once (GAME-CRITIQUE.md's 7.2, 2026-11-17: before, all of it twice, the rest coming out the same), and the images
+// named for the chip where they differ (../base/tools/images.js): the BIOS ROM's, bin/bios_rockwell.bin and
+// bios_wdc.bin, and the base's the same way in ../base/bin; the rest one file each (prom0.bin, prom1.bin, prom2.bin,
+// sdcard.img).  obj/ is the last build's: the Rockwell one's, unless --acia wdc.
+// cc65's, ca65's and od65's runs are kept in obj/cache (../base/tools/objcache.js: each by a hash of everything it
+// read, the tool's own file, its flags and the environment it reads), and a run whose inputs are all as they were
+// isn't run again; cc65 and ca65 are given the repository's files by their names from here (../base's, from there),
+// so what they make, and the cache, are the same wherever the tree is.
 //
-// Usage: node build.js [--clock 1|2] [--acia rockwell|wdc] [--quiet]
+// Usage: node build.js [--clock 1|2] [--acia rockwell|wdc] [--both] [--no-cache | --clean] [--quiet]
 //   --clock 2: for a 7.16 MHz board (jumper J8); --acia: the chip whose build is the last, its objects left in obj/
-//   for the tests (rockwell unless it's wdc: a WDC W65C51N, with its TDRE bug's workaround)
+//   for the tests (rockwell unless it's wdc: a WDC W65C51N, with its TDRE bug's workaround); --both: the whole build
+//   for each chip, as before (the check that nothing but the BIOS ROM depends on the chip); --no-cache: every tool
+//   run, nothing kept; --clean: the cache emptied first (every tool run, and kept)
+//        node build.js games [--no-cache | --clean] [--quiet]
+//   only what the games are made of, on the last whole build (buildGames): for a change in games/ (or bank/'s
+//   programs); the whole build instead if there's none, or a module of the paged ROM changed (dq0lib is partly
+//   games/'s)
 //        node build.js prog DIR
 //   a RAM program from DIR/*.s (with the SDK: sdk/asm/README.md), or DIR/*.c and *.s (a C program: sdk/c/README.md),
 //   into DIR/NAME.hyx, NAME the folder's
@@ -47,7 +58,8 @@
 // Windows, ../base/tools/cc65/win64_hydra/bin in the repository, else the PATH); cc65's own folders (include, asminc,
 // lib): $CC65_HOME, else the folder above its tools'.  The assembler's CPU is the W65C02 (WAI, STP), the compiler's the 65C02.
 // From Node: require('./build.js').buildBoth(opts) does the same, and gives what the last build made; build(opts)
-// builds for opts.acia alone, its images bin/bios.bin, prom0.bin ... (buildBoth names them).
+// builds for opts.acia alone, its images bin/bios.bin, prom0.bin ... (buildBoth names them); buildGames(opts) the
+// games' build.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -61,6 +73,7 @@ const forthlib = require('./tools/forthlib.js');
 const hysnap = require('./tools/hysnap.js');
 const budget = require('../base/tools/budget.js');
 const check = require('../base/tools/check.js');
+const objcache = require('../base/tools/objcache.js');
 
 const ROOT = __dirname;
 const at = (...p) => path.join(ROOT, ...p);
@@ -78,9 +91,24 @@ function cc65Home() {
   return path.dirname(bin);
 }
 
+// A tool run; its errors thrown.  cc65 and ca65 are given the repository's files by their names from here (so what
+// they make names them so: the same wherever the tree is), and run through the cache in use, if there's one
+// (../base/tools/objcache.js).  od65's output (its stdout), the cache's too
 function run(exe, args) {
-  try { execFileSync(exe, args, { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] }); }
-  catch (e) { throw new Error(path.basename(exe) + ' ' + args.filter(a => /\.(s|c|cfg)$/.test(a)).join(' ') + ':\n' + ((e.stderr || '') + (e.stdout || '')).toString().trim()); }
+  const cache = objcache.current(), own = objcache.knows(exe), a = own ? objcache.relative(args, ROOT) : args;
+  try {
+    if (cache && own) cache.run(exe, a, ROOT);
+    else execFileSync(exe, a, { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
+  } catch (e) { throw new Error(path.basename(exe) + ' ' + args.filter(a => /\.(s|c|cfg)$/.test(a)).join(' ') + ':\n' + ((e.stderr || '') + (e.stdout || '') || e.message).toString().trim()); }
+}
+const od65 = args => objcache.current() ? objcache.current().output(OD65, args) : execFileSync(OD65, args, { encoding: 'latin1' });
+// A tool's runs (each its arguments), in turn; those the cache in use hasn't run first side by side (objcache.js's
+// ahead: the runs then taken from it)
+function runAll(exe, list) {
+  const cache = objcache.current();
+  if (cache && objcache.knows(exe) && list.length > 1)
+    try { cache.ahead(list.map(a => ({ exe, args: objcache.relative(a, ROOT), cwd: ROOT }))); } catch (e) { /* (Each run in turn, as ever) */ }
+  for (const a of list) run(exe, a);
 }
 const mkdir = d => fs.mkdirSync(d, { recursive: true });
 const sources = dir => fs.readdirSync(dir).filter(f => f.endsWith('.s')).sort().map(f => path.join(dir, f));
@@ -90,12 +118,10 @@ const isC = dir => fs.readdirSync(dir).some(f => f.endsWith('.c'));
 // Assemble files into objdir.  OUT: the objects
 function assemble(files, objdir, includes, defines) {
   mkdir(objdir);
-  return files.map(f => {
-    const o = path.join(objdir, path.basename(f, '.s') + '.o');
-    run(CA65, ['--cpu', 'W65C02', '-g', ...includes.flatMap(i => ['-I', i]), ...defines.flatMap(d => ['-D', d]),
-      '-l', o.replace(/\.o$/, '.lst'), '-o', o, f]);
-    return o;
-  });
+  const objs = files.map(f => path.join(objdir, path.basename(f, '.s') + '.o'));
+  runAll(CA65, files.map((f, i) => ['--cpu', 'W65C02', '-g', ...includes.flatMap(i => ['-I', i]), ...defines.flatMap(d => ['-D', d]),
+    '-l', objs[i].replace(/\.o$/, '.lst'), '-o', objs[i], f]));
+  return objs;
 }
 
 // HydraOS's includes, then the base's (its hydra.inc, the SDK's core, the hardware's, errors.inc): a module's, a
@@ -131,17 +157,10 @@ function hubNumbers(say = () => {}) {
 // C and assembly sources into objdir (a .c: cc65 makes its .s there, then ca65).  OUT: the objects
 function compileC(files, objdir, extra = [], asExtra = []) {
   mkdir(objdir);
-  const fl = cflags();
-  return files.map(f => {
-    const name = path.basename(f).replace(/\.[cs]$/, ''), o = path.join(objdir, name + '.o');
-    let s = f;
-    if (f.endsWith('.c')) {
-      s = path.join(objdir, name + '.s');
-      run(CC65, [...fl.cc, ...extra, '-o', s, f]);
-    }
-    run(CA65, [...fl.as, ...asExtra, '-l', path.join(objdir, name + '.lst'), '-o', o, s]);
-    return o;
-  });
+  const fl = cflags(), name = f => path.basename(f).replace(/\.[cs]$/, ''), s = f => f.endsWith('.c') ? path.join(objdir, name(f) + '.s') : f;
+  runAll(CC65, files.filter(f => f.endsWith('.c')).map(f => [...fl.cc, ...extra, '-o', s(f), f]));   // (The C, then all of it
+  runAll(CA65, files.map(f => [...fl.as, ...asExtra, '-l', path.join(objdir, name(f) + '.lst'), '-o', path.join(objdir, name(f) + '.o'), s(f)]));   //   assembled)
+  return files.map(f => path.join(objdir, name(f) + '.o'));
 }
 
 // obj/sdk/c/hydra.lib: cc65's none.lib, with sdk/c/lib's modules added (one named as one of cc65's, getenv say,
@@ -328,7 +347,7 @@ function cprog(dir, objdir, out, extra) {
   let own = path.join(dir, path.basename(dir) + '.cfg'), objs;
   if (fs.existsSync(parts)) {                           // (A game's task whose swapped parts the build makes:
     objs = require('./tools/dq0build.js').swappedParts(dir, objdir, extra, { cc65: args => run(CC65, args),   //   tools/
-      od65: args => execFileSync(OD65, args, { encoding: 'latin1' }), compileC, csources, flags: cflags() });   //   dq0build.js's)
+      cc65all: list => runAll(CC65, list), od65, compileC, csources, flags: cflags() });                       //   dq0build.js's)
     own = path.join(objdir, path.basename(dir) + '.cfg');
   } else {
     objs = compileC(csources(dir), objdir, extra);
@@ -405,7 +424,7 @@ function o65Bare(m) {
 function buildChild(dir, objdir) {
   const name = path.basename(dir), od = path.join(objdir, name);
   const objs = compileC(csources(dir), od);
-  const names = (opt, re) => [...new Set(objs.flatMap(o => [...execFileSync(OD65, [opt, o], { encoding: 'latin1' }).matchAll(re)].map(m => m[1])))];
+  const names = (opt, re) => [...new Set(objs.flatMap(o => [...od65([opt, o]).matchAll(re)].map(m => m[1])))];
   const exps = names('--dump-exports', /Name:\s+"([^"]+)"/g), own = new Set(exps);
   const imps = names('--dump-imports', /Name:\s+"([^"]+)"/g).filter(n => !own.has(n));
   const hi = [];                                        // (The high byte of an import's address and an offset whose
@@ -487,6 +506,115 @@ function prog(dir) {
 // The hardware test (bank 1 of the old system's paged ROM image) and a rom.txt's list: the base's
 const { hwtest, readManifest, HWTEST_IMAGE } = base;
 
+// A RAM program's folder built into objdir: a C program, a bank program (its folder's file bank says so), or one in
+// assembly.  OUT: its image
+function ramProgram(dir, objdir, defines) {
+  return isC(dir) ? cprog(dir, path.join(objdir, path.basename(dir)), path.join(objdir, path.basename(dir) + '.hyx'))
+    : fs.existsSync(path.join(dir, 'bank')) ? bankProgram(dir, objdir, defines) : buildModule(dir, objdir, defines, true);
+}
+// The test RAM programs (tests/NAME: obj/tests/NAME.hyx; t_rules reads the game's hub.h).  OUT: { NAME: its image }
+function testPrograms(defines) {
+  const progs = {};
+  if (fs.existsSync(at('tests', 'ram')))
+    for (const d of fs.readdirSync(at('tests', 'ram'), { withFileTypes: true }).filter(d => d.isDirectory()))
+      progs[d.name] = ramProgram(at('tests', 'ram', d.name), at('obj', 'tests'), defines);
+  return progs;
+}
+// The games (games/NAME: on the SD card), each a C program, and its make.js's data files, if it has one; then each
+// make.js's after, if it has one: what wants another game built (dq0's themes, themec's).  bios: the BIOS ROM the
+// make.js files run themec on.  OUT: { NAME: its image }
+function gamesMade(say, bios, defines) {
+  const games = {}, dirs = fs.existsSync(at('games')) ? fs.readdirSync(at('games'), { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name) : [];
+  for (const n of dirs) {
+    games[n] = ramProgram(at('games', n), at('obj', 'games'), defines);
+    const make = at('games', n, 'make.js');
+    if (fs.existsSync(make)) require(make).build({ dir: at('games', n), objdir: at('obj', 'games', n), say, bios });
+  }
+  for (const n of dirs) {
+    const make = at('games', n, 'make.js');
+    if (fs.existsSync(make) && require(make).after) require(make).after({ dir: at('games', n), objdir: at('obj', 'games', n), say, bios });
+  }
+  return games;
+}
+// The bank programs (children: bankprog.h), their callers built: the tests', then the system's.  OUT: { NAME: its file }
+function childrenMade() {
+  const children = {};
+  for (const [src, od] of [[at('tests', 'bank'), at('obj', 'tests')], [at('bank'), at('obj', 'bank')]])
+    if (fs.existsSync(src))
+      for (const d of fs.readdirSync(src, { withFileTypes: true }).filter(d => d.isDirectory()))
+        children[d.name] = buildChild(path.join(src, d.name), od);
+  return children;
+}
+// The games' room said; a task below its floor fails the build
+function roomChecked(games, say) {
+  const room = headroom(Object.keys(games));
+  say(room.text);
+  if (room.faults.length) throw new Error('a game\'s task short of main RAM (below its floor): ' + room.faults.join('; '));
+}
+
+// A C program's exports as its NAME.exp has them (writeExports's file): its names
+function readExports(file) {
+  const b = fs.readFileSync(file), names = new Set();
+  if (b.toString('latin1', 0, 2) !== 'BX' || b[2] !== 1) throw new Error(file + ': not an exports file');
+  for (let p = 3; b[p]; p += 1 + b[p] + 2) names.add(b.toString('latin1', p + 1, p + 1 + b[p]));
+  return names;
+}
+
+// The paged ROM's modules (modules/NAME) made again in place, as the whole build makes them (base.buildModule's
+// assemble: their objects from the cache, or made anew), and held to what that build left: the first whose objects
+// aren't the same byte for byte (an object made anew carries the time of its making), or null.  dq0lib's sources
+// .include games/dq0's lnzp.inc and the hub's numbers (obj/gen/dq0hub_*.inc): a change in games/ can change it
+function moduleChanged(defines) {
+  for (const d of fs.readdirSync(at('modules'), { withFileTypes: true }).filter(d => d.isDirectory())) {
+    const dir = at('modules', d.name), od = at('obj', 'modules', d.name), files = sources(dir);
+    const objs = files.map(f => path.join(od, path.basename(f, '.s') + '.o')), was = objs.map(o => fs.existsSync(o) ? fs.readFileSync(o) : null);
+    base.assemble(files, od, [...INCLUDES, dir, path.dirname(dir)], defines);
+    if (objs.some((o, i) => !was[i] || !was[i].equals(fs.readFileSync(o)))) return d.name;
+  }
+  return null;
+}
+
+// Only what the games are made of, on the last whole build (for a change in games/, or bank/'s programs): the
+// generated headers, the C library, the test RAM programs (t_rules reads hub.h), the games and their make.js files,
+// the bank programs, the games' room, the SD card's image and the browser's page; the BIOS ROM and the paged ROM as
+// that build left them, and its chip and clock (obj/build.json).  It's the whole build instead if there's none to
+// build on (or it failed), or if a module of the paged ROM is no longer what it was made of (moduleChanged: dq0lib's
+// sources are partly games/'s).  OUT: { games } (or buildBoth's)
+function buildGames(opt = {}) {
+  const say = opt.quiet ? () => {} : s => console.log(s);
+  let was = null;
+  try { was = JSON.parse(fs.readFileSync(at('obj', 'build.json'), 'utf8')); } catch (e) { /* (None) */ }
+  const clock = was && was.clock > 1 ? { clock: was.clock } : {};   // (build.json's clock 1: none given, the default)
+  const whole = why => {
+    say('(The whole build: ' + why + ')');
+    try { return buildBoth(Object.assign({}, opt, clock, was ? { acia: was.acia } : {})); } catch (e) { e.whole = true; throw e; }
+  };
+  const images = require('../base/tools/images.js'), bad = lastBuildFailed();
+  if (!was || (bad && !bad.startsWith(GAMES_FAILED)) || !images.file(ROOT, 'bios', was.acia) || !images.file(ROOT, 'prom0', was.acia) ||
+    !fs.existsSync(at('obj', 'tests', 't_rc.bin')))
+    return whole('no whole build to build the games on' + (bad && !bad.startsWith(GAMES_FAILED) ? ': the last one failed' : ''));
+  const c = base.useCache(at('obj', 'cache'), opt), defines = base.definesOf(clock);
+  apigen.generate(ROOT);
+  hubNumbers(say);
+  const moved = moduleChanged(defines);
+  if (moved) return whole('the paged ROM\'s ' + moved + ' isn\'t what the last whole build made it of');
+  clib();
+  testPrograms(defines);
+  for (const dir of ['programs', 'games', 'tests'].map(d => at('obj', d)))   // (The callers the bank programs name:
+    for (const f of fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => f.endsWith('.exp')) : [])   //   the whole
+      if (!exportsOf.has(f.slice(0, -4))) exportsOf.set(f.slice(0, -4), readExports(path.join(dir, f)));   //   build's)
+  const games = gamesMade(say, images.bios(ROOT, was.acia), defines);
+  childrenMade();
+  roomChecked(games, say);
+  const card = sdcard.build(ROOT);
+  say('SD card: ' + card.files.length + ' files, ' + card.bytes + ' bytes: bin/sdcard.img, ' + card.size / 1048576 + ' MB');
+  const page = require('./sim/web.js').build(at('bin', 'hydra-16.html'));
+  say('The emulator in a browser: bin/hydra-16.html, ' + (page.size / 1048576).toFixed(1) + ' MB (sim/web.js); the BIOS ROM and the paged ROM the last whole build\'s');
+  const said = base.cacheDone(c);
+  if (said) say(said);
+  return { games };
+}
+
 function build(opt = {}) {
   const say = opt.quiet ? () => {} : s => console.log(s);
   const defines = base.definesOf(opt);
@@ -500,9 +628,8 @@ function build(opt = {}) {
 
   // The C library (the C programs need it), the modules, the test modules and the test RAM programs
   clib();
-  const ram = (dir, objdir) => isC(dir) ? cprog(dir, path.join(objdir, path.basename(dir)), path.join(objdir, path.basename(dir) + '.hyx'))
-    : fs.existsSync(path.join(dir, 'bank')) ? bankProgram(dir, objdir, defines) : buildModule(dir, objdir, defines, true);
-  const modules = {}, tests = {}, progs = {}, programs = {}, samples = {}, games = {};
+  const ram = (dir, objdir) => ramProgram(dir, objdir, defines);
+  const modules = {}, tests = {}, programs = {}, samples = {};
   mkdir(at('obj', 'modules'));                          // The base's modules (kdev, ser, wozmon) as HydraOS's too: in
   for (const [n, data] of Object.entries(baseBuilt.modules)) {  //   obj/modules with its own, for the tools that read them there
     modules[n] = data;
@@ -513,9 +640,7 @@ function build(opt = {}) {
   if (fs.existsSync(at('tests', 'mod')))
     for (const d of fs.readdirSync(at('tests', 'mod'), { withFileTypes: true }).filter(d => d.isDirectory()))
       tests[d.name] = buildModule(at('tests', 'mod', d.name), at('obj', 'tests'), defines);
-  if (fs.existsSync(at('tests', 'ram')))
-    for (const d of fs.readdirSync(at('tests', 'ram'), { withFileTypes: true }).filter(d => d.isDirectory()))
-      progs[d.name] = ram(at('tests', 'ram', d.name), at('obj', 'tests'));
+  const progs = testPrograms(defines);
   if (fs.existsSync(at('programs')))
     for (const d of fs.readdirSync(at('programs'), { withFileTypes: true }).filter(d => d.isDirectory()))
       programs[d.name] = ram(at('programs', d.name), at('obj', 'programs'));
@@ -528,26 +653,9 @@ function build(opt = {}) {
   }
   for (const d of fs.readdirSync(at('sdk', 'c', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory()))
     samples['c/' + d.name] = ram(at('sdk', 'c', 'samples', d.name), at('obj', 'samples', 'c'));
-  if (fs.existsSync(at('games')))                       // The games (games/NAME: on the SD card), each a C program,
-    for (const d of fs.readdirSync(at('games'), { withFileTypes: true }).filter(d => d.isDirectory())) {   //   and its make.js's
-      games[d.name] = ram(at('games', d.name), at('obj', 'games'));                                         //   data files, if
-      const make = at('games', d.name, 'make.js');                                                          //   it has one
-      if (fs.existsSync(make)) require(make).build({ dir: at('games', d.name), objdir: at('obj', 'games', d.name), say, bios: fs.readFileSync(at('bin', 'bios.bin')) });
-    }
-  if (fs.existsSync(at('games')))                       // (Then each make.js's after, if it has one: what wants
-    for (const d of fs.readdirSync(at('games'), { withFileTypes: true }).filter(d => d.isDirectory())) {   //   another
-      const make = at('games', d.name, 'make.js');                                                          //   game built:
-      if (fs.existsSync(make) && require(make).after)                                                       //   dq0's
-        require(make).after({ dir: at('games', d.name), objdir: at('obj', 'games', d.name), say, bios: fs.readFileSync(at('bin', 'bios.bin')) });   //   themes,
-    }                                                                                                       //   themec's)
-  const children = {};                                  // The bank programs (children: bankprog.h), their callers
-  for (const [src, od] of [[at('tests', 'bank'), at('obj', 'tests')], [at('bank'), at('obj', 'bank')]])   //   built:
-    if (fs.existsSync(src))                                                                                 //   the tests',
-      for (const d of fs.readdirSync(src, { withFileTypes: true }).filter(d => d.isDirectory()))           //   then the
-        children[d.name] = buildChild(path.join(src, d.name), od);                                         //   system's
-  const room = headroom(Object.keys(games));            // (Their room: a task below its floor fails the build)
-  say(room.text);
-  if (room.faults.length) throw new Error('a game\'s task short of main RAM (below its floor): ' + room.faults.join('; '));
+  const games = gamesMade(say, fs.readFileSync(at('bin', 'bios.bin')), defines);
+  childrenMade();
+  roomChecked(games, say);
   sdk();
   const card = sdcard.build(ROOT);                          // The SD card's image (bin/sdcard.img): the samples, the songs, the benchmarks
   forthlib.build({ root: ROOT, modules, assemble: (files, od, inc) => assemble(files, od, inc, defines), ld65: args => run(LD65, args) });
@@ -594,9 +702,12 @@ function build(opt = {}) {
 // Both chips' builds, and their images (the base's buildBoth): HydraOS's bin (its card's image too) and the base's
 const IMAGE_NAMES = /^(bios|prom\d+)(_(rockwell|wdc))?\.bin$|^sdcard(_(rockwell|wdc))?\.img$/;
 function buildBoth(opt = {}) {
+  const c = base.useCache(at('obj', 'cache'), opt);
   const r = base.buildBoth(opt, build, [[at('bin'), IMAGE_NAMES], [atBase('bin'), base.IMAGE_NAMES]]);
   const page = require('./sim/web.js').build(at('bin', 'hydra-16.html'));   // (The emulator in one page, from them)
   if (!opt.quiet) console.log('The emulator in a browser: bin/hydra-16.html, ' + (page.size / 1048576).toFixed(1) + ' MB (sim/web.js)');
+  const said = base.cacheDone(c);
+  if (said && !opt.quiet) console.log(said);
   return r;
 }
 
@@ -609,6 +720,7 @@ function failed(why) {
   mkdir(at('obj'));
   fs.writeFileSync(f, why + '\n');
 }
+const GAMES_FAILED = '(the games\' build) ';             // (Its failure's mark: a games' build may go on from it)
 function lastBuildFailed() {
   const f = at('obj', 'build.failed');
   return fs.existsSync(f) ? fs.readFileSync(f, 'utf8').split('\n')[0] : null;
@@ -618,17 +730,25 @@ if (require.main === module) {
   const a = process.argv.slice(2), opt = {};
   if (a[0] === 'prog') {
     if (a.length !== 2) { console.error('usage: node build.js prog DIR'); process.exit(2); }
-    try { console.log(path.relative(process.cwd(), prog(a[1]))); } catch (e) { console.error('build: ' + e.message); process.exit(1); }
+    try { base.useCache(at('obj', 'cache')); console.log(path.relative(process.cwd(), prog(a[1]))); base.cacheDone(objcache.current()); }
+    catch (e) { console.error('build: ' + e.message); process.exit(1); }
     process.exit(0);
   }
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] === '--clock') opt.clock = +a[++i];
-    else if (a[i] === '--acia') opt.acia = a[++i];
+  const games = a[0] === 'games';
+  const usage = 'usage: node build.js [--clock 1|2] [--acia rockwell|wdc] [--both] [--no-cache | --clean] [--quiet]\n' +
+    '       node build.js games [--no-cache | --clean] [--quiet]\n       node build.js prog DIR';
+  for (let i = games ? 1 : 0; i < a.length; i++) {
+    if (a[i] === '--clock' && !games) opt.clock = +a[++i];
+    else if (a[i] === '--acia' && !games) opt.acia = a[++i];
+    else if (a[i] === '--both' && !games) opt.both = true;
     else if (a[i] === '--quiet') opt.quiet = true;
-    else { console.error('usage: node build.js [--clock 1|2] [--acia rockwell|wdc] [--quiet]'); process.exit(2); }
+    else if (a[i] === '--no-cache') opt.cache = false;
+    else if (a[i] === '--clean') opt.clean = true;
+    else { console.error(usage); process.exit(2); }
   }
-  try { buildBoth(opt); } catch (e) { failed(e.message); console.error('build: ' + e.message); process.exit(1); }
+  try { if (games) buildGames(opt); else buildBoth(opt); }
+  catch (e) { failed((games && !e.whole ? GAMES_FAILED : '') + e.message); console.error('build: ' + e.message); process.exit(1); }
   failed(null);
 }
 
-module.exports = { build, buildBoth, buildModule, readManifest, hwtest, prog, clib, cprog, headroom, lastBuildFailed };
+module.exports = { build, buildBoth, buildGames, buildModule, readManifest, hwtest, prog, clib, cprog, headroom, lastBuildFailed };
