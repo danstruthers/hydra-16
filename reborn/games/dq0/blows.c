@@ -244,7 +244,8 @@ static unsigned char in_hand (void)
 ** first words): held till the blow's carried out (unasked under dq0 -a) */
 static unsigned char __fastcall__ found (const struct cmd* c, unsigned char d)
 {
-    if (c->action == VB_ATTACK_OBJECT && !strstr (cl, " and ")) {   /* (Two foes by turns: parts.c's split, its own words) */
+    if (c->action == VB_ATTACK_OBJECT && !(c->flags & CF_LIST)) {  /* (Two foes by turns, a list's: hdens.c's split, its
+                                                **   own words) */
         if (worded & 0x80) {
             if (!autogo && !in_hand ()) {
                 return d;
