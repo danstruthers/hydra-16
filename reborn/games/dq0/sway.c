@@ -257,13 +257,8 @@ void __fastcall__ o_walk_says (const char* name)
 {
     unsigned char k = cmd.obj.kind;
 
-    if (cmd.aux == IO_PLACE && !name) {         /* (A thing put in a place, walked there first: the place's words, not */
-        if (!worded) {                          /*   the thing's, P5's, 2026-11-18) */
-            worded = 1;
-            msg (cmd.other.n == PW_LEDGE ? "You go over to the ledge." : cmd.other.n == PW_PASSAGE ?
-                "You go over to the passage." : "You set off across the room.");
-            t_flush ();
-        }
+    if (cmd.aux == IO_PLACE && !name) {         /* (A thing put in a place, walked there first: the place's words told
+                                                **   already, o_walk_ahead's, P5's, 2026-11-18) */
         placing = 1;
         return;
     }
@@ -567,13 +562,21 @@ void __fastcall__ o_walk_ahead (const char* name)
     unsigned char k, away = 0, op = walk_op & ~IO_STEPS, lit = 0, unlit = 0, e, y, sel, in = 0, hd, nall = 0, dif = 0;
     const struct sitem* i0 = 0;
     char nb[sizeof CATALOGUE[0].name];
-    static const char ops[] = { IO_GET, IO_DROP, IO_FILL, IO_HIDE, IO_SHUT, IO_THROW, IO_DESCRIBE, IO_INSIDE, 0 };
+    static const char ops[] = { IO_GET, IO_DROP, IO_FILL, IO_HIDE, IO_SHUT, IO_THROW, IO_DESCRIBE, IO_INSIDE, IO_EMPTY,
+        IO_PLACE, 0 };
 
     if (worded) {                               /* (Told once a line: not again as its command's asked again after a step) */
         return;
     }
     if (*name == '#' || !*name || (!strchr (ops, op) && (op < IO_HOLD || op > IO_DOUSE))) {
         return;
+    }
+    if (op == IO_PLACE && ((unsigned char) (cmd.other.x - s->x + 1) > 2 || (unsigned char) (cmd.other.y - s->y + 1) > 2)) {
+        msg (cmd.other.n == PW_LEDGE ? "You go over to the ledge." : cmd.other.n == PW_PASSAGE ?
+            "You go over to the passage." : "You set off across the room.");
+        goto told;                              /* (Put in a place out of reach: the place's words, not the thing's, its
+                                                **   walk told now, P5's; in reach, and a thing emptied, P4's, the
+                                                **   thing's own, 2026-11-18) */
     }
     for (k = s->nitems, it = s->item; k; --k, ++it) {
         if (name_is (it->name, name)) {         /* (The one rule, the world's chooser's: main.c's) */

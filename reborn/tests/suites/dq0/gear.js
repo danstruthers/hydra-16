@@ -16,7 +16,7 @@ const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their f
 const TORCHX = ['inventory', 'drop torch', 'take torch', 'inventory', 'wait 2 hours', 'light a new torch', 'take the spent torch from the ground', 'drop the spent torch',
   'drop the lit torch', 'take the spent torch from the floor', 'drop torch', 'take the lit torch', 'hold the tinderbox', 'take torch', 'inventory', 'douse the torch', 'light the torch',
   'inventory', 'take spent torch from backpack', 'put the rope in the backpack', 'put the tinderbox in the backpack', 'dip the spent torch in the oil', 'inventory'];   // (dq0torchwords' lines: the user's playtest, 2026-11-06)
-const EMPTYPLACE = ['drop the chest', 'drop the table', 'unlock the chest with the lockpicks', 'put the key in the sack', 'empty the sack', 'empty the sack', 'take the key', 'put the key in the sack', 'empty the sack onto the table', 'open the flask of oil', 'empty the flask of oil', 'empty the torch', 'take the key from the table', 'put the key in the sack', 'tie the sack', 'empty the sack', 'untie the sack', 'take the key from the sack', 'put the key in the corner', 'put the dagger in the middle of the room', 'put the key on the ledge', 'look'];   // (dq0emptyplace's: P4, P5, P6, 2026-11-18)
+const EMPTYPLACE = ['drop the chest', 'drop the table', 'unlock the chest with the lockpicks', 'unlock the chest', 'put the key in the sack', 'empty the sack', 'empty the sack', 'take the key', 'put the key in the sack', 'empty the sack onto the table', 'open the flask of oil', 'empty the flask of oil', 'empty the torch', 'take the key from the table', 'put the key in the sack', 'tie the sack', 'empty the sack', 'untie the sack', 'take the key from the sack', 'put the key in the corner', 'put the dagger in the middle of the room', 'put the key on the ledge', 'look'];   // (dq0emptyplace's: P4, P5, P6, 2026-11-18)
 const LETSIGHT = ['drop j', 'drop c', 'drop b', 'look', 'around', 'take 5F', 'drop c', 'around', 'take 2F', 'drop rations', 'take torch from E', 'drop k',
   'take G', 'around', 'inventory'];   // (dq0letsight's lines: the rats seen first, A, B, C, 2026-11-06's step 4)
 const LETCMD = ['inventory', 'drop j', 'inventory', 'take torch', 'put j in b', 'inventory', 'take j from b', 'light j with a', 'drop 2c', 'look d',
@@ -2653,6 +2653,7 @@ module.exports = {
         const want = (l, re, why, n) => { if (!re.test(a(l, n))) f.push('"' + l + '" ' + why + ': ' + a(l, n).slice(0, 200)); };
         want('unlock the chest with the lockpicks', /You set to picking the lock\./, 'not picked (P6: the named tool wins)');
         if (/with its key/.test(a('unlock the chest with the lockpicks'))) f.push('"unlock the chest with the lockpicks": its key used');
+        want('unlock the chest', /You unlock the chest with its key\./, 'not unlocked by its key (plain unlock)');
         want('empty the sack', /You empty the sack out at your feet\./, 'not emptied at its feet');
         want('empty the sack', /The sack is empty\./, 'not told empty', 1);
         want('empty the sack onto the table', /You empty the sack onto the table\./, 'not emptied onto the table');
@@ -2663,6 +2664,13 @@ module.exports = {
         want('put the dagger in the middle of the room', /^You set off across the room\..*You put the dagger in the middle\./,
           'not walked there and put in the middle');
         want('put the key on the ledge', /You haven't seen a ledge here\./, 'no ledge not told');
+        // (Each new command's first letter held to D17's, the test's own typing; a tool named by its word, the lockpicks,
+        // said only: tool_ok's IO_FIND asks the world before the first words, as it did before P6, resolve.c's)
+        this.notes = [];
+        for (const r of this.timer.game(0, EMPTYPLACE.map(l => ({ line: l, want: 'You|The' })))) {
+          this.notes.push(r.line + ': first letter ' + r.first);
+          if (!/ with the lockpicks/.test(r.line) && target(this, r.line + ': first letter', r.first, D17.first)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+        }
         return f;
       },
       sdcard: true
