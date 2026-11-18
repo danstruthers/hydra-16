@@ -41,6 +41,10 @@ node sim/run.js --trace-calls       each system call a program makes, by name, a
                                     memory, breaks, watches): the top of sim/run.js has them all
 danlang sim/dl/run.dl -i            the serial console in the danlang emulator (Ctrl-] x quits, Ctrl-] h helps;
                                     Ctrl-C is the Hydra's); --input "\phylang\r" starts hylang at the first prompt
+node build.js games                 only what the games are made of (games/, bank/), on the last whole build: the
+                                    games, their data, the bank programs, the SD card and the page (the whole build
+                                    instead if there's none, or a module of the paged ROM changed: dq0lib)
+node build.js --clean               a build from nothing: obj/cache emptied first (--no-cache: none kept or used)
 node build.js prog DIR              a program of your own, DIR/*.s into DIR/NAME.hyx (sdk/asm/README.md), or
                                     DIR/*.c (and *.s), a C program (sdk/c/README.md)
 node sim/test.js                    the regression tests, with their time budgets: as many at a time as the CPU has
@@ -53,8 +57,11 @@ node ../docs/build/docpdf.js        ../docs/hydra-16.pdf, the book as one PDF to
 ```
 
 `build.js --clock 2` builds for a 7.16 MHz board (jumper J8).  The kernel is built for both serial chips U3 can be:
-`bin/bios_rockwell.bin` for a Rockwell R65C51, `bin/bios_wdc.bin` for a WDC W65C51N; the paged ROM is the same for
-both (`--acia wdc` leaves `obj/` the WDC build's, for the tests).  The ROM images in `bin/` (`bios_rockwell.bin`,
+`bin/bios_rockwell.bin` for a Rockwell R65C51, `bin/bios_wdc.bin` for a WDC W65C51N; the rest, the paged ROM and the
+SD card, once, the same for both (`--acia wdc` leaves `obj/` the WDC build's, for the tests; `--both` builds it all
+for each chip, as before, and names any image that differs).  cc65's, ca65's and od65's runs are kept in
+`obj/cache` (../base/tools/objcache.js), each by a hash of everything it read, and a run whose inputs are all as
+they were isn't run again; those that are run, side by side (`HYDRA_BUILD_JOBS`, the cores).  The ROM images in `bin/` (`bios_rockwell.bin`,
 `bios_wdc.bin`, `prom0.bin` ...), and the web page made from them (`hydra-16.html`), are in Git, for programming the chips (and running the emulator) without a
 toolchain: rebuild and commit them with a change to what's in them (and a merge's conflict in one: rebuild).  The
 rest of `bin/`, and `obj/`, are the build's (`bin/sdk/asm` and `bin/sdk/c` are the SDKs, whole, to take away).

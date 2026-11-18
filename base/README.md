@@ -45,7 +45,8 @@ node sim/test.js         the base's tests (the boot, the monitor, the kernel's o
 ```
 
 The images are in Git (`bin/`), so `node sim/run.js -i` works without cc65.  On the board, `bin/bios_rockwell.bin`
-(or `bios_wdc.bin`, for a WDC W65C51N in U3: the build makes both, and the paged ROM is the same for either) goes into
+(or `bios_wdc.bin`, for a WDC W65C51N in U3: the build makes the kernel for both, the rest once, and the paged ROM is
+the same for either; `--both` builds it all for each, and names an image that differs) goes into
 the BIOS ROM's socket and `bin/prom0.bin` into the first paged ROM socket (U31), as for HydraOS (its BIOS ROM is this
 one, byte for byte); a terminal at 9600 baud on the serial port is the console.  `node ../reborn/build.js` builds this
 first, then HydraOS on it.
@@ -60,7 +61,7 @@ first, then HydraOS on it.
 | `modules/` | The base's modules, a folder each: `ser`, `kdev`, `wozmon`; `rom.txt`, the paged ROM's list and its init; `module.cfg` ... `module8.cfg`, a module's link (one bank to eight) |
 | `lib/` | Sources shared with HydraOS's modules: `serial.inc` (the serial port's layer: `ser`'s and `cons`'s), `dis.inc` and `w65c02.inc` (the disassembler and the W65C02S's instructions: `wozmon`'s and HydraOS's asm library's) |
 | `sdk/asm/` | The assembly SDK's core: `hyx2.inc` and `hyx2.cfg` (a module's or a RAM program's header and link), `macros.inc`, `srvlib.inc` and `srvlib.s` (the server library a driver is built on), and `hydra.inc` (the calls, the error codes and the constants: made from `spec/` by the build, and in Git, so a program can be built against it without one) |
-| `tools/` | `apigen.js` (the spec into the jump table, the error texts, `hydra.inc`, `api.json`), `romimg.js` (a paged ROM image: the module directory, the hardware test, the modules), `check.js` (only the kernel writes `T`, `V`, `W`), `budget.js`, `images.js` (the images for each serial chip: the build's, the emulators' and tests') |
+| `tools/` | `apigen.js` (the spec into the jump table, the error texts, `hydra.inc`, `api.json`), `romimg.js` (a paged ROM image: the module directory, the hardware test, the modules), `check.js` (only the kernel writes `T`, `V`, `W`), `budget.js`, `images.js` (the images for each serial chip: the build's, the emulators' and tests'), `objcache.js` (the build's cache of cc65's, ca65's and od65's runs, by a hash of everything each read: obj/cache; `objjobs.js` runs those it hasn't side by side), `bankcheck.js` |
 | `sim/` | The board's emulator, cycle by cycle (`lib/`: the W65C02S, `T`/`U`/`V`/`W`, the ACIA, the VIA, the YM2151, the DS1747, a Vera X card, SD cards), `run.js` (any system's images, live or for a while; the monitor, breaks, the call trace), `view.js` (the screen and sound in a browser), `test.js` (the tests' runner, HydraOS's too) |
 | `tests/` | `tests.js`, the base's tests; `mod/`, their modules (and `testlib.inc`, HydraOS's test modules' too) |
 | `bin/` | The images (in Git): `bios_rockwell.bin`, `bios_wdc.bin`, `prom0.bin` |

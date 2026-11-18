@@ -287,7 +287,15 @@ what's in them (reborn/.gitignore:1-2).
 ## 4. Build, run and test
 
 **Build.** `node build.js` in reborn/ builds everything: the BIOS, the modules (dq0lib among them), the games, the SD
-card's image and the paged ROM's images. It takes ten minutes or more, so run it in the background.
+card's image and the paged ROM's images. The kernel is built for each serial chip, the rest once; cc65's, ca65's and
+od65's runs are kept in obj/cache (base/tools/objcache.js), and a run whose every input is unchanged is taken from
+there, so a build redoes only what a change reaches. Run it in the background still: its wall time is what the
+machine's load allows.
+- `node build.js games`: only the games' part (the games, their make.js data, bank/'s programs, the test RAM
+  programs, the room, the SD card and the browser's page) on the last whole build, for a change in games/; it does the
+  whole build itself if there's none, or if the change reaches the paged ROM (dq0lib .includes lnzp.inc and the hub's
+  numbers).
+- `node build.js --clean` empties obj/cache first: a build from nothing. `--no-cache` uses none.
 - Before any game, tools/dq0build.js runs hubgen.js, then saidgen.js, then the styles file (tools/dq0build.js:86-88).
 - Then each game folder is compiled, and its make.js run.
 - A folder with a parts.txt gets its stubs and link config made by parts.js (build.js:318-325).

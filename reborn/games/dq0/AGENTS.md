@@ -88,7 +88,11 @@ is built; OPEN.md holds the open questions; ../../tests/TESTING.md says which te
 - Run the relevant tests while you work, and the whole suite at the end. All must pass, the trends apart.
 - **Loosen no check.** Change an expected string only where your change means it to change.
 - **Add tests for what you build.**
-- `node build.js` in reborn/ takes ten minutes or more: run it in the background too.
+- `node build.js` in reborn/ builds the kernel for each serial chip and the rest once, and takes cc65's, ca65's and
+  od65's runs from obj/cache when everything they read is unchanged: a build with nothing changed is some 20 s of
+  CPU, one from nothing some 75 s (115 s before 2026-11-17); its wall time is what the machine's load allows, so run
+  it in the background still. After a change in games/ alone, `node build.js games` builds only the games' part
+  (README.md's section 4); `node build.js --clean` builds from nothing.
 
 ## Commits
 
