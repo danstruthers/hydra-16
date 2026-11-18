@@ -3590,8 +3590,9 @@ void __fastcall__ s_start_dig (unsigned char d)
     unsigned char* p;
     unsigned char t, k;
 
-    here ();
-    if (d >= 0xFC) {                            /* (Part 1's, the room's: the shaft through, a wall's words) */
+    if (d >= 0xFC) {                            /* (Part 1's, the room's: the shaft through, a wall's words; its square
+                                                **   s_dig_on's here ()'s, the hub's header read: wall_look leaves its
+                                                **   chunk's bank in the window) */
         if (d == 0xFE) {
             shaft_through ();
         } else {
@@ -3599,6 +3600,7 @@ void __fastcall__ s_start_dig (unsigned char d)
         }
         return;
     }
+    here ();
     if (d >= 8) {                               /* (A heading, the UI's: N, E, S, W 0 to 3, a diagonal 6 to 9) */
         d = (d & 1 ? 6 : 0) + (d - 8 >> 1);
     }
