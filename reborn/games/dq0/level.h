@@ -183,6 +183,11 @@ enum { WB_DARK, WB_PASSAGE, WB_ROOM, WB_SHUT, WB_SKY };
 #define WM_HOLDN        2                       /*   "nothing more that way" held back for it; */
 #define WM_FAR          4                       /*   a far part, WAY_SEEN's, after its near part told; */
 #define WM_SAME         8                       /*   and all of it as the near part had it) */
+#define WM_REST         16                      /* (And its ground not all made: the eyes reached a chunk not made yet,
+                                                **   none made for it (dq0p's view.c), what lies there told as the maker's
+                                                **   made it, the look's rest (LK_REST's, after the prompt: the user's,
+                                                **   2026-11-18, "a look no longer waits whole on a grow"); its openings
+                                                **   whose way on goes there held, WB_HOLD, told "so far") */
 enum { BN_PASSAGE, BN_DOORWAY, BN_OPEN, BN_BROKEN, BN_DOOR, BN_PORTCULLIS, BN_WINDOW, BN_SLIT, BN_GRILLE, BN_PEEP };
                                                 /* (BN_GRILLE, BN_PEEP: a closed door's little window, its spy-hole,
                                                 **   the eye at it: dq0p's view.c, way.c; the user's, 2026-11-14) */

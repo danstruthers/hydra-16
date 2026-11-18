@@ -33,7 +33,12 @@ static unsigned char sees;                      /* (The denizens seen changed: t
 static unsigned char wch;                       /* (And a look one way's near part told: LC_FAR, the far's to come) */
 unsigned char here_known;                       /* (Its square known before this look: sight.c's, in the dark) */
 unsigned char v_way;                            /* (A look one way, the hub's LK_WAY: view.h's) */
-extern unsigned char sgen;                      /* (sound.c's: bumped as the world's doors, squares, lights change) */
+unsigned char v_nom, v_def;                     /* (view.h's: none made for a look one way's far part, or but its rest's
+                                                **   own; one wanted not made) */
+static const struct stratum* wst;               /* (The character's stratum: its bounds) */
+static unsigned rcx, rcy, dcx, dcy;             /* (The rest's own chunk, way_want's; the first wanted not made) */
+extern unsigned char wfar;
+extern unsigned char sgen;                    /* (sound.c's: bumped as the world's doors, squares, lights change) */
 
 /* A look about for the character, from what the hub has of it (its square, its facing, its light, its senses; the
 ** squares it walked to get there), the denizens it sees with it */
@@ -80,14 +85,16 @@ static void lk_now (void)                       /* (lkn: as they are now, pc ()'
     lkn.gen = sgen;
 }
 
+static unsigned char kept_owed;                 /* (A look one way's memory to keep: after its reply, before the next look) */
 static void look (void)
 {
     unsigned char first, wd, wn;
     unsigned wx, wy;
 
-    gw = v_way ? GIVE_WAY : 0;                  /* (Its giving way: GIVE_WAY ticks a look at most; a look one way's none,
+    gw = v_way && v_nom != 2 ? GIVE_WAY : 0;    /* (Its giving way: GIVE_WAY ticks a look at most; a look one way's none,
                                                 **   its own command's answer, the world waiting on it: 2026-11-17, the
-                                                **   normal pace's half second asleep in it) */
+                                                **   normal pace's half second asleep in it; its rest's, after the
+                                                **   prompt, as a look about's) */
     pc ();
     first = HUB->look.first;
     wx = HUB->look.wx;
@@ -95,9 +102,16 @@ static void look (void)
     wd = HUB->look.wd;
     wn = HUB->look.wn;
     sync_strata ();                             /* (The strata's records, the world bank's) */
+    wst = &STRATUM (sn);
+    v_def = 0;
+    if (v_nom) {
+        wfar = 0;                               /* (Its openings held only for a chunk not made: way.c's seen_on) */
+    }
     things_lamps (sn, x, y);                    /* (The lit things lying about: a torch put down) */
     view (sn, x, y, face, light, sight, dark);
-    kept ();                                    /* (What it keeps of it: each chunk's memory, part 4's) */
+    kept (v_way ? 1 : 3);                       /* (What it keeps of it: each chunk's memory, part 4's; a look one way's
+                                                **   after its reply, its words the sooner, 2026-11-18: kept_owed) */
+    kept_owed = v_way;
     glows (sn, x, y, face, range, own);         /* (Its eyes adapted, the lights it sees far off: eyes.c's) */
     give_way ();
     if (wn) {
@@ -128,14 +142,37 @@ static unsigned char wlim;                      /* (way_stop's: the squares a gl
 unsigned char wfar, wnear, wheld;               /* (way.c's: far_may's; a near part made now; an opening held back) */
 static unsigned char wid, far_next;             /* (way_more's: the looks one way, counted (their records' id); the next
                                                 **   look one way a near part's far part) */
-static const struct stratum* wst;               /* (The character's stratum: its bounds) */
 static unsigned wa, wb;
 static unsigned char wk;
 
-/* Square wa, wb of the character's stratum in it, but in a chunk not made */
+/* Square x, y's chunk, not made (cached's), one the look may make now (view.h's): v_nom 0, any (or outside the
+** stratum: none to make); its rest's, way_want's alone; else not, the first wanted kept (dcx, dcy: its rest's to come) */
+unsigned char __fastcall__ v_may (unsigned x, unsigned y)
+{
+    unsigned cx, cy;
+
+    if (!v_nom || x - wst->x0 >= wst->w || y - wst->y0 >= wst->h) {
+        return 1;
+    }
+    cx = (x - wst->x0) / CW;
+    cy = (y - wst->y0) / CW;
+    hub_map (0);
+    if (v_nom == 2 && cx == rcx && cy == rcy && !(HUB->ui_cmd | HUB->ui_keys)) {
+        return 1;                               /* (Its rest's own; but a line begun meanwhile, its answer not
+                                                **   kept waiting on the chunk's finish and stock: later) */
+    }
+    if (!v_def) {
+        v_def = 1;
+        dcx = cx;
+        dcy = cy;
+    }
+    return 0;
+}
+
+/* Square wa, wb of the character's stratum in it, but in a chunk not made (a far part's: one it may not make, v_may's) */
 static unsigned char unmade (void)
 {
-    return wa - wst->x0 < wst->w && wb - wst->y0 < wst->h && !cached (sn, wa, wb);
+    return wa - wst->x0 < wst->w && wb - wst->y0 < wst->h && !cached (sn, wa, wb) && (!v_nom || !v_may (wa, wb));
 }
 
 /* wa, wb from the character's square, each made its size; the greater in wa */
@@ -268,6 +305,14 @@ void __fastcall__ way_more (struct wayseen* r)
         memcmp (&r->nbeyond, &WAY_NEAR->nbeyond, offsetof (struct wayseen, id) - 1) || ((WAY_NEAR->more & WM_HOLDN) &&
         !(r->nbeyond | r->nitems | r->ndens | r->nglows)) ? WM_FAR : WM_FAR | WM_SAME;   /* (Its near part empty, its
                                                 **   "nothing more that way" held back: told now, not the same) */
+    if (!wnear && v_def) {
+        r->more |= WM_REST;                     /* (Its eyes reached a chunk not made, none made for it: its rest to
+                                                **   come, its openings held for it told "so far": not the same as
+                                                **   a near part that held them back) */
+        if (wheld) {
+            r->more &= ~WM_SAME;
+        }
+    }
     far_next = wnear;                           /* (A near part's far part next) */
 }
 
@@ -291,6 +336,48 @@ static void look_near (void)
         way_seen (sn, face);
         wnear = 0;
         wch = LC_FAR;
+    } else {
+        v_nom = 1;                              /* (It doesn't stand: the whole look one way now, as LK_WAY's, its
+                                                **   far part's request the less) */
+        look ();
+        wch = LC_WHOLE;
+    }
+}
+
+/* A look one way's rest (LK_REST's: the user's, 2026-11-18, "a look into ground not made yet tells what the made ground
+** shows first, then the rest once the maker has made it"): the chunk its eyes reached not made (way_want's) made since,
+** the far part's look again with it, if it stands as it was made (none else looked since but the denizens and the eyes),
+** the far part's record its near's to tell only what's new (way_more's), LC_FAR if there's any; the next chunk not made
+** its rest's again.  Its own chunk made, finished (the maker's made it ahead), its things stocked: the world waits on it,
+** nothing in hand */
+static unsigned char rest_ok;                   /* (A rest to come: the far part's eyes reached a chunk not made) */
+static void look_rest (void)
+{
+    hub_map (0);
+    rcx = HUB->way_want.cx;
+    rcy = HUB->way_want.cy;
+    v_way = 1;
+    pc ();
+    if (rest_ok && (HUB->ui_cmd | HUB->ui_keys)) {
+        HUB->way_want.st = WW_MADE;             /* (A line being typed, or its command in hand: its rest asked again
+                                                **   as nothing's in hand, the world's look_due) */
+        return;
+    }
+    lk_now ();
+    if (rest_ok && lk_ok && HUB->way_want.sn == sn && !memcmp (&lk, &lkn, offsetof (struct lk, light)) && lk.pos == lkn.pos) {
+                                                /* (From the same square, the same way: its light
+                                                **   may have changed, a torch burnt down, what it shows now the rest's) */
+        hub_map (SIGHT_BANK);
+        memcpy (WAY_NEAR, WAY_SEEN, sizeof (struct wayseen));
+        far_next = 1;
+        v_nom = 2;
+        look ();
+        hub_map (SIGHT_BANK);
+        if (memcmp (&WAY_SEEN->nbeyond, &WAY_NEAR->nbeyond, offsetof (struct wayseen, id) - 1)) {
+            wch = LC_FAR;
+        }
+    } else {
+        rest_ok = 0;
     }
 }
 
@@ -379,12 +466,23 @@ int main (int argc, char* argv[])
             break;
         }
         if (hub_posted (&HUB->look)) {
+            if (kept_owed) {
+                kept_owed = 0;
+                kept (2);                       /* (The last look one way's memory kept, before another look) */
+            }
             light_events ();                    /* (The world's lights and doors changed: the light layer's out of
                                                 **   date near them) */
             if (HUB->look.kind != LK_WAY) {
                 far_next = 0;                   /* (A near part's far part only next) */
             }
-            if (HUB->look.kind == LK_DENS) {
+            v_nom = 0;
+            if (HUB->look.kind != LK_DENS && HUB->look.kind != LK_EYES && HUB->look.kind != LK_REST) {
+                rest_ok = 0;                    /* (Another look: a look one way's rest owed let go) */
+                HUB->way_want.st = WW_NONE;
+            }
+            if (HUB->look.kind == LK_REST) {
+                look_rest ();                   /* (A look one way's rest, the chunk its eyes reached made since) */
+            } else if (HUB->look.kind == LK_DENS) {
                 sees = dens_seen ();            /* (Only the denizens seen, looked at again: their bodies changed) */
             } else if (HUB->look.kind == LK_EYES) {
                 pc ();                          /* (Only its eyes, as time's gone: the lights far off; and the sound
@@ -400,7 +498,22 @@ int main (int argc, char* argv[])
                 v_way = HUB->look.kind == LK_PEEK ? 1 | VP_ASK : HUB->look.kind == LK_WAY;   /* (A look one way:
                                                 **   twice as far in the quarter ahead, and what's beyond its
                                                 **   openings: way.c's; LK_PEEK, through a door's little window) */
+                v_nom = HUB->look.kind == LK_WAY;   /* (Its far part, or the whole of it: no chunk made for it but
+                                                **   those a glance reaches, the rest as they're made: the user's,
+                                                **   2026-11-18) */
                 look ();
+            }
+            if (v_nom) {
+                rest_ok = v_def;                /* (Its eyes reached a chunk not made: the maker to make it ahead,
+                                                **   the world to ask its rest as it has) */
+                if (v_def) {
+                    hub_map (0);
+                    HUB->way_want.sn = sn;
+                    HUB->way_want.cx = dcx;
+                    HUB->way_want.cy = dcy;
+                    HUB->way_want.st = WW_WANTED;
+                }
+                v_nom = 0;
             }
             hub_map (0);
             HUB->look.ch = sees | wch;

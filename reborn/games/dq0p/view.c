@@ -307,7 +307,8 @@ static void __fastcall__ box (unsigned char r)
 }
 
 /* The chunks of those squares not made yet made (rows first, as they always were), or, on (the grid made), those the
-** eyes reach: 1 if one was */
+** eyes reach (a look one way's far part, none, a glance's own nor further: v_may's, its rest's to come, the user's,
+** 2026-11-18): 1 if one was */
 static unsigned char __fastcall__ chunks (unsigned char on)
 {
     unsigned char m = 0;
@@ -321,7 +322,7 @@ static unsigned char __fastcall__ chunks (unsigned char on)
         for (xx = gx0; xx <= gx1; xx += ni_) {
             ni_ = band (xx, gx1);
             i_ = xx - gx0;
-            if (!cached (v_sn, xx, yy) && (!on || reached ()) && at (v_sn, xx, yy)) {
+            if (!cached (v_sn, xx, yy) && (!on || reached ()) && v_may (xx, yy) && at (v_sn, xx, yy)) {
                 m = 1;
             }
         }
@@ -394,7 +395,7 @@ static void __fastcall__ fresh (const struct fresh* fr)
 ** square in a passage, each heading it can step (step8's) followed as a walk goes (its one way on, none behind: a wide
 ** passage's breadth a way, its run's end), through the squares
 ** seen now (T_VIS), to a door, a room, a fork, its end, or RUN_MAX steps: its run's bearing in sixteenths, by its
-** first heading, into the senses' bank (RUNS) */
+** first heading, into the senses' bank (RUNS); a look one way's far part's, to a chunk it may not make (way_stop's) */
 #include "../dq0/run.h"
 typedef char runs_fit[sizeof (struct sight) <= RUN_AT ? 1 : -1];
 #pragma bss-name (push, "SW4RODATA")            /* (Its state the part's own: none kept from one call to the next) */
@@ -423,7 +424,7 @@ static void runs (void)
             run_s[n++] = h;
             x += head_x[h];
             y += head_y[h];
-            if (n == RUN_MAX || !(p = at (sn, x, y)) || (*p & (T_VIS | 0x0F)) != (T_VIS | T_CORR)) {
+            if (n == RUN_MAX || (v_nom && (way_stop (x, y) & 2)) || !(p = at (sn, x, y)) || (*p & (T_VIS | 0x0F)) != (T_VIS | T_CORR)) {
                 break;
             }
             for (k = w = 0; k < 8; ++k) {       /* (Its ways on, none behind: one, or the run's end) */
@@ -446,7 +447,7 @@ static void runs (void)
 #pragma bss-name (pop)
 
 static const unsigned char bend[4] = { 1, 7, 2, 6 };
-void s_kept (void)
+void __fastcall__ s_kept (unsigned char what)
 {
     unsigned age, map, x, y;                    /* (On the C stack: the main RAM's room) */
     unsigned char i0, i1, j, j0, j1, dsk, d, n, sn, lcx, lcy, lb;
@@ -455,7 +456,12 @@ void s_kept (void)
     unsigned char* p;
     struct fresh fr;
 
-    runs ();                                    /* (A passage's ways' runs, for sight.c's: part 2's room) */
+    if (what & 1) {
+        runs ();                                /* (A passage's ways' runs, for sight.c's: part 2's room) */
+    }
+    if (!(what & 2)) {
+        return;
+    }
     hub_map (0);
     fr.now = KEPT_CLOCK;
     fr.q4 = HUB->pcsum.mapmind;
@@ -469,7 +475,7 @@ void s_kept (void)
     x = HUB->look.wx;
     y = HUB->look.wy;
     d = HUB->look.wd;
-    n = HUB->look.wn;
+    n = what & 1 ? HUB->look.wn : 0;            /* (Kept after its reply: the walk's the next look's, if any) */
     sn = HUB->pc_stratum;
     for (j0 = 0; j0 < bw; j0 = j1) {            /* (Each chunk's rows of the view, and its columns) */
         j1 = j0 + CW - ((by0 + j0 - v_y0) & (CW - 1));
@@ -479,7 +485,7 @@ void s_kept (void)
             i1 = i1 < bw ? i1 : bw;
             for (j = j0; j < j1 && (blo[j] >= i1 || bhi[j] < i0); ++j) {
             }
-            if (j == j1 || !at (v_sn, bx0 + i0, by0 + j)) {
+            if (j == j1 || (v_nom && !cached (v_sn, bx0 + i0, by0 + j)) || !at (v_sn, bx0 + i0, by0 + j)) {
                 continue;                       /* (None of its squares seen now) */
             }
             fresh (&fr);

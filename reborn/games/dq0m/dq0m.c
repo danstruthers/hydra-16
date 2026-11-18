@@ -260,6 +260,42 @@ unsigned char ahead_wanted (void)
     }
 }
 
+/* The next chunk to make ahead (nsn, ncx, ncy: 1; else 0, ahead_next's): first a look one way's rest's (the hub's way_want,
+** WW_WANTED: the senses', the user's, 2026-11-18, "a look into ground not made yet tells what the made ground shows first,
+** then the rest once the maker has made it"), the chunk its eyes reached, not made, made ahead before any other (in the
+** background, giving way as they do: make_ahead's); made ahead, or in the cache, WW_MADE, the world to ask its rest; no
+** room for it, let go (the next look one way's to tell it).  The hub's header in the window after */
+#pragma code-name (push, "SW3CODE")             /* (Part 3's: the main RAM's room) */
+#pragma rodata-name (push, "SW3RODATA")
+unsigned char s_way_next (void)
+{
+    struct akey k;                              /* (On the C stack: the main RAM's room) */
+
+    if (HUB->way_want.st == WW_WANTED) {
+        memcpy (&k, &HUB->way_want, sizeof k);
+        hub_get (WORLD_BANK, WREC->strata, strata, sizeof strata);
+        if (ahead_at (k.sn, k.cx, k.cy) != 0xFF || ahead_found (k.sn, k.cx, k.cy) != 0xFF) {
+            hub_map (0);
+            if (HUB->way_want.st == WW_WANTED && HUB->way_want.sn == k.sn && HUB->way_want.cx == k.cx &&
+                HUB->way_want.cy == k.cy) {
+                HUB->way_want.st = WW_MADE;     /* (Still the one wanted: the senses' look since none other) */
+            }
+        } else if (ahead_room () != 0xFF) {
+            nsn = k.sn;                         /* (Made ahead now: WW_MADE as it's looked at again) */
+            ncx = k.cx;
+            ncy = k.cy;
+            return 1;
+        } else {
+            hub_map (0);
+            HUB->way_want.st = WW_NONE;
+        }
+    }
+    return ahead_next ();
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+unsigned char way_next (void);                  /* (Its stub: bank.s's) */
+
 int main (int argc, char* argv[])
 {
     unsigned char i, w, t, calm = 0;
@@ -285,7 +321,7 @@ int main (int argc, char* argv[])
             } else if (!calm) {
                 calm = 1;
                 t = AH_SETTLE;                  /* (Once, rung awake by a request meanwhile) */
-            } else if (ahead_next ()) {
+            } else if (way_next ()) {           /* (A look one way's rest's chunk first) */
                 make_ahead (nsn, ncx, ncy);
                 continue;
             } else {

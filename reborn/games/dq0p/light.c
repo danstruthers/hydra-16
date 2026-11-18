@@ -251,10 +251,10 @@ static void make (void)
     hub_map (0);
 }
 
-/* ---- Part 3's (swapped: with the lamps found, things.c's, part 1's before, 2026-11-17): the lamps against the last
-** look's */
-#pragma code-name (push, "SW3CODE")
-#pragma rodata-name (push, "SW3RODATA")
+/* ---- Part 7's (swapped: with the lamps found, things.c's, part 1's before, 2026-11-17; part 3's, 2026-11-18): the
+** lamps against the last look's */
+#pragma code-name (push, "SW7CODE")
+#pragma rodata-name (push, "SW7RODATA")
 
 /* Those of list a (n of them) not in list b (m), stale round them */
 static void __fastcall__ gone (const struct lsrc* a, unsigned char n, const struct lsrc* b, unsigned char m)

@@ -66,8 +66,9 @@ static void seen_on (void)
     b->what = WB_DARK;
     lf_ = 0;
     for (n = 0; n < 2 * WAY_R && ox - px + WAY_R <= 2 * WAY_R && oy - py + WAY_R <= 2 * WAY_R; ) {
-        if (wnear && (lf_ |= way_stop (ox, oy)) & 2) {
-            break;                              /* (A near part's: a chunk round it not made, the far part's) */
+        if ((wnear | v_nom) && (lf_ |= way_stop (ox, oy)) & 2) {
+            break;                              /* (A near part's: a chunk round it not made, the far part's; a far
+                                                **   part's, one none's made for, its rest's: v_may's) */
         }
         for (k = 0, w = 0xFF; k < 8; ++k) {     /* (Straight on, else the first way seen that isn't back; a diagonal
                                                 **   only a diagonal way, slant's: past its cut corner) */

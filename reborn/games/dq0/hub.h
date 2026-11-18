@@ -1686,7 +1686,15 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   elves, men, kobolds, the gargun), said "they" ("their", "them"): 1;
                                                 **   a beast, the dead, "it": 0 (the user's, 2026-11-17; the denizens', as
                                                 **   it's made an actor; last, the rest where they were) */
+    struct {                                    /* A look one way's rest (the user's, 2026-11-18: a look into ground not */
+        unsigned char sn;                       /*   made yet tells what the made ground shows first, then the rest once */
+        unsigned cx, cy;                        /*   the maker's made it): the chunk its eyes reached, not made (the */
+        unsigned char st;                       /*   senses', WAY_SEEN's WM_REST), st 1; made ahead (the maker's, in the
+                                                **   background as it makes the chunks ahead: WW_*), 2, the world to ask
+                                                **   the rest (LK_REST, as nothing's in hand); 0 none */
+    } way_want;
 };
+enum { WW_NONE, WW_WANTED, WW_MADE };           /* (way_want's st) */
 #define WANT_HUNGER(w)  ((w) & 0x0F)            /* (pc_want's hunger level, and its thirst's: 0 none, 1 hungry or */
 #define WANT_THIRST(w)  ((w) >> 4)              /*   thirsty, 2 very, 3 starving or parched, 4 dying of it; */
 #define WANT_DEAD       5                       /*   WANT_DEAD dead of it) */
@@ -1750,7 +1758,7 @@ enum { HW_BEHIND, HW_HEAP, HW_DOORWAY, HW_RUBBLE, HW_SHADOW, HW_OUT, HW_OPEN, HW
     HW_LIGHT, HW_SEEN, HW_BARE };               /* (The hub's pc_hw says of what: HW_BEHIND, HW_HEAP its kind; HW_FOUND, HW_SPOT, HW_LEAP,
                                                 **   HW_SEEN the actor plus 1) */
 
-enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY, LK_PEEK, LK_NEAR };  /* The look's kinds: a look about; the denizens seen
+enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY, LK_PEEK, LK_NEAR, LK_REST };  /* The look's kinds: a look about; the denizens seen
                                                 **   looked at again; the eyes only, as time's gone (the lights seen far
                                                 **   off: a wait's); a look one way (I_LOOK's: a look about, and twice as
                                                 **   far in the quarter ahead; its own record, WAY_SEEN); the same
@@ -1759,8 +1767,13 @@ enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY, LK_PEEK, LK_NEAR };  /* The look's kin
                                                 **   part, what's near told first (the user's, 2026-11-17: the senses'
                                                 **   way.c's, from what the last look saw, its own record WAY_NEAR; the
                                                 **   reply's ch LC_FAR, the far part to come as LK_WAY; else the whole
-                                                **   look one way done as LK_WAY's, its last look not as it stands) */
-#define LC_FAR          2                       /* (The look's reply's ch, LK_NEAR's: its near part told, the far's next) */
+                                                **   look one way done as LK_WAY's, its last look not as it stands); a
+                                                **   look one way's rest, the chunk its eyes reached made since (way_want's:
+                                                **   the user's, 2026-11-18), the reply's ch LC_FAR if there's more to tell */
+#define LC_FAR          2                       /* (The look's reply's ch, LK_NEAR's: its near part told, the far's next;
+                                                **   LK_REST's: its rest to tell) */
+#define LC_WHOLE        4                       /* (LK_NEAR's: its last look not standing, the whole look one way done
+                                                **   as LK_WAY's would, no far part to ask: a request the less) */
 #define LF_ARRIVE       0x40                    /* (The look's first: arrived, R_VISITED the senses') */
 
 /* A thing the character carries (the UI bank's ix): its kind, what it's in (that one's entry plus 1; 0 none: held, worn,
@@ -2108,6 +2121,7 @@ struct wsave {
 **   own hub.pc_dose world
 **   own hub.pc_out world                                       (Senseless: 2026-11-13)
 **   own hub.folk denizens                                      (Each actor a person, "they": 2026-11-17)
+**   own hub.way_want senses +maker +world                      (A look one way's rest: the user's, 2026-11-18)
 **   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)

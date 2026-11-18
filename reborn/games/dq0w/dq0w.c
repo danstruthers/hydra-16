@@ -3356,25 +3356,39 @@ void __fastcall__ s_start (const char* dir)
 void __fastcall__ s_look_way (unsigned t)
 {
     busy (t & 0x7FFF);
-    if (!(t & 0x8000)) {
-        HUB->look.kind = LK_NEAR;
-        hub_post (&HUB->look, T_SENSES);
-        while (!hub_wait_t (&HUB->look, 4) && !HUB->quit) {
-            waiting ();                         /* (As looked's: the clock on, the UI's things) */
-            hub_map (0);
-        }
-        HUB->look.state = REQ_FREE;
+    HUB->look.kind = t & 0x8000 ? LK_PEEK : LK_NEAR;
+    see (0);                                    /* (As a look's: the things round it first, as it's moved) */
+    hub_map (0);
+    if (!(t & 0x8000) && !(HUB->look.ch & LC_WHOLE)) {    /* (Its last look as it stands: its near part, the far
+                                                **   part's look asked after it; else the whole of it done, LC_WHOLE) */
         if (HUB->look.ch & LC_FAR) {
             view (V_LOOKED);                    /* (Its near part, WAY_NEAR's, told meanwhile) */
         }
+        HUB->look.kind = LK_WAY;
+        see (0);
+        hub_map (0);
     }
-    HUB->look.kind = t & 0x8000 ? LK_PEEK : LK_WAY;
-    see (0);
-    hub_map (0);
     HUB->look.kind = LK_LOOK;
     view (V_LOOKED);
 }
 void __fastcall__ look_way (unsigned t);        /* (Its stub, bank.s's) */
+
+/* A look one way's rest (the user's, 2026-11-18: "a look into ground not made yet tells what the made ground shows first,
+** then the rest once the maker has made it"): the chunk its eyes reached made ahead since (the hub's way_want, WW_MADE:
+** the maker's), the senses' look again (LK_REST: none if it doesn't stand as it was made), told the UI if there's more,
+** E_VIEW V_LOOKED; as nothing's in hand (look_due's, ui_long's) */
+void s_look_rest (void)
+{
+    HUB->way_want.st = WW_NONE;
+    HUB->look.kind = LK_REST;
+    see (0);
+    hub_map (0);
+    HUB->look.kind = LK_LOOK;
+    if (HUB->look.ch & LC_FAR) {
+        view (V_LOOKED);
+    }
+}
+void look_rest (void);                          /* (Its stub, bank.s's) */
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -7299,16 +7313,21 @@ static unsigned char den_due (void)
     return DEN_INTENTS ();
 }
 
+static unsigned char was_busy;                  /* (main's: its E_READY to come) */
 static unsigned char look_due (void)
 {
-    return den_saw && !move.on;
+    return (den_saw || (HUB->way_want.st == WW_MADE && !was_busy && !HUB->pc_task.kind)) && !move.on;
 }
 
-/* A body fallen: looked at again, the things too */
+/* A body fallen: looked at again, the things too; or a look one way's rest, the chunk its eyes reached made since, the
+** character free (its E_READY told: after the prompt, part 22's) */
 static void look_job (void)
 {
-    den_saw = 0;
-    see (0);
+    if (den_saw) {
+        see (0);
+    } else {
+        look_rest ();
+    }
 }
 
 static unsigned char dseq_due (void)
@@ -7345,11 +7364,12 @@ static unsigned char burn_due_ (void)
 
 /* The lights' minute (burn_due: a minute on, a rest's ten; or at once, burn_ask: a light's change, the time it believes
 ** alone, TS_ASK, the sconces' pass, BA_SCONCES), once the game's begun (WQ_START's, its clock a game carried on's) */
-static void burn_job (void)
+#pragma code-name (push, "SW27CODE")            /* (Part 27's, burns_now's: the main RAM's room, 2026-11-18) */
+#pragma rodata-name (push, "SW27RODATA")
+void s_burn_job (void)
 {
     if (burn_ask & BA_SCONCES) {                /* (A minute in two passes: the sconces' on their own, a part's swap and
-                                                **   its passes of the store, a command coming between; part 27 not
-                                                **   copied for it, 2026-11-04) */
+                                                **   its passes of the store, a command coming between, 2026-11-04) */
         burn_ask &= ~BA_SCONCES;
         sconce_lights (0xFF);
     } else if (burn_ask == TS_ASK && HUB->now < burn_due) {
@@ -7366,6 +7386,9 @@ static void burn_job (void)
     }
     hub_map (0);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+void burn_job (void);                           /* (Its stub, bank.s's) */
 
 /* The table, a row a job, in the order they're walked (row r: each column's [r]) */
 unsigned char (* const jobs_due[]) (void) = {
@@ -7403,7 +7426,7 @@ void __fastcall__ jobs (unsigned rows);        /* (jobs.s: the rows from the fir
 int main (int argc, char* argv[])
 {
     static struct msg m;
-    static unsigned char was_busy, took;        /* (Static: the main RAM's room, 2026-11-06) */
+    static unsigned char took;                  /* (Static: the main RAM's room, 2026-11-06; was_busy too, look_due's) */
 
     if (argc < 4 || ovl_load (argv[3]) || wstart (argv)) {
         return 1;                               /* (Attached, and started: part 3's) */

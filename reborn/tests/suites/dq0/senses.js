@@ -92,8 +92,9 @@ function dq0LookFarTest() {
     { line: 'turn left', want: 'You turn', id: 'the turn left' }, { line: 'look ahead', want: 'You peer ahead', id: 'the look ahead turned', read: 1 },
     { line: 'listen', want: 'You listen', id: 'the listen' }, { line: 'look ahead', want: 'You peer ahead', id: 'the look across', read: 1, after: 16 },
     { line: 'look ahead', want: 'You peer ahead', id: 'the look at once', read: 1 }];
-  const typed = [...pre.map(l => [l, 0]), ...games.flatMap((g, k) => [[g, 0], ...cmds.map((c, j) => [c.line, (k < N ? dq0Waits(k, j) : 0) + (c.after || 0)]), ['quit', 0]]),
-    ['echo $status', 0]];   // (The look across a player's pause after the listen: sixteen waits more, 32M cycles, some nine seconds)
+  const typed = [...pre.map(l => [l, 0]), ...games.flatMap((g, k) => [[g, 0], ...cmds.map((c, j) => [c.line, (k < N ? dq0Waits(k, j) : 0) + (c.after || 0)]), ['quit', 16]]),
+    ['echo $status', 0]];   // (The look across a player's pause after the listen: sixteen waits more, 32M cycles, some nine seconds; the
+                              //   quit the same after the look at once: its rest told meanwhile, the user's, 2026-11-18)
   return {
     name: 'dq0lookfar', near: ['senses', 'time'], meaning: true, outfit: true,
     what: 'Dingus Quest Zero\'s look one way into new ground (the delays\' round, 2026-11-05): the first look ahead makes only the chunks the eyes reach past a glance\'s: none with a wall in the way (seed 3\'s five before, 78.5M cycles), the map drawn with the maker first (16.3M before), a row at a time (2026-11-17), a chunk the line ahead does reach made ahead of the eyes as the character listens (2026-11-17), and a look into a chunk not made typed the moment the character\'s there, the chunk grown for it; the user\'s D17 targets (each first letter within 720,000 cycles, a look\'s and the map\'s words with no pause longer than 1.79M), the game typed three times at different moments, the median of the three held; and once at the menacing pace, and once as the game is played (without the tests\' switches), each held',
@@ -150,10 +151,15 @@ function dq0LookFarTest() {
       };
       // (As it listens; and as the look at once is typed, the chunk past the edge not made ahead either, nor being made)
       dq0Poke(m, games.flatMap((x, g) => [{ g: g + 1, line: 'listen', n: 1, call: (h, L) => place(h, L, put, g, new Set()) },
-        { g: g + 1, line: 'look ahead', n: 4, call: (h, L) => place(h, L, put2, g, ahead(h, h[L.pcSn])) }]));
+        { g: g + 1, line: 'look ahead', n: 4, call: (h, L) => place(h, L, put2, g, new Set()) }]));
     },
     check(m, out) {
       const f = [], notes = this.notes = [], E = this.timer.enters, within = (a, b) => this.made.filter(c => c >= a && c < b).length, T = dq0Turns(m);
+      // (The look across's way on to the chunk not made told so far, its rest as the maker's made it: the user's, 2026-11-18;
+      // nothing told contradicted, the rest's own words only what's new, in this dark passage none)
+      const sofar = (m.out.match(/feet of it so far\./g) || []).length;
+      notes.push('the way on told "so far" ' + sofar + ' times');
+      if (sofar < games.length) f.push('the look across\'s way on to a chunk not made not told "so far" in each typing (' + sofar + ')');
       // (Each typing's answers, by its game's place among those typed; its chunks made by the Enters' cycles, each command's
       // the next typed with its words, the game's quit after its last)
       const runs = games.map((x, g) => {
@@ -168,7 +174,6 @@ function dq0LookFarTest() {
           before + ' (ahead of its eyes); chunks made by the look across ' + across + ', grown by it ' + by1.length + (by1.length ? ' (' + by1.join(' ') + ')' : ''));
         if (ahead) f.push('typing ' + (g + 1) + ': the first look ahead, a wall in the way, made ' + ahead + ' chunks');
         if (!this.put[g]) f.push('typing ' + (g + 1) + ': no straight run to a chunk\'s edge in the scene');
-        else if (across < 1) f.push('typing ' + (g + 1) + ': the look ahead along a run to a chunk not made: none made');
         else if (!before || by1.includes(this.put[g].to)) f.push('typing ' + (g + 1) + ': the chunk on the line ahead, ' + this.put[g].to + ', not made ahead as the character listened (grown then ' + before + ', by the look ' + by1.join(' ') + ')');
         // (The look at once: put as it's typed where the line ahead reaches a chunk not made, nor made ahead, nor being
         // made; that chunk grown for its asking, the whole look one way made at once, no last look standing there)
@@ -176,7 +181,7 @@ function dq0LookFarTest() {
         const lk = T.filter(t => t.line === 'look ahead')[4 * g + 3], v = lk ? dq0Ev(lk, 'E_VIEW', { why: 'V_LOOKED' }).length : 0;
         notes.push('typing ' + (g + 1) + ': put as the look at once is typed: ' + JSON.stringify(this.put2[g] || null) + '; chunks made by it ' + once + ', grown by it ' + by2.length + (by2.length ? ' (' + by2.join(' ') + ')' : '') + '; told in ' + v + ' part(s)');
         if (!this.put2[g]) f.push('typing ' + (g + 1) + ': no straight run to a chunk\'s edge, not made nor made ahead, for the look at once');
-        else if (!by2.includes(this.put2[g].to)) f.push('typing ' + (g + 1) + ': the look at once along a run to a chunk not made, ' + this.put2[g].to + ': not grown for it (made ' + once + ', grown ' + by2.join(' ') + ')');
+        else if (by2.includes(this.put2[g].to)) f.push('typing ' + (g + 1) + ': the look at once along a run to a chunk not made, ' + this.put2[g].to + ': grown for its asking, the look waiting on it (made ' + once + ', grown ' + by2.join(' ') + ')');
         return r;
       });
       // (Each command's first letter held to D17.first, a look's and the map's longest pause to D17.pause, by the median

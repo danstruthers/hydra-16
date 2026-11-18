@@ -14,6 +14,14 @@ extern unsigned char v_way;                     /* A look one way (HOUSE.md's lo
                                                 **   things near looked for as far, what's made out twice as far,
                                                 **   its own record made (way.c's) */
 #define WAY_R           31
+extern unsigned char v_nom, v_def;              /* (dq0p.c's: a look one way's far part, 1, no chunk made for it past what
+                                                **   a glance reaches (the user's, 2026-11-18: its rest told as the maker's
+                                                **   made them); its rest, 2, but its own (the hub's way_want); v_def, one
+                                                **   wanted not made) */
+unsigned char __fastcall__ v_may (unsigned x, unsigned y);    /* (Square x, y's chunk, not made, one the look may
+                                                **   make now: 1; else 0, kept for its rest) */
+unsigned char __fastcall__ way_stop (unsigned x, unsigned y);  /* (dq0p.c's: 2, a chunk round square x, y not made,
+                                                **   one the look may not make: a far part's walks stop there) */
 #define VP_ASK          8                       /* (v_way's: a look one way through the closed door ahead, asked,
                                                 **   LK_PEEK: the user's, 2026-11-14) */
 #define VP_GRILLE       2                       /* (v_way's more, view.c's, a look one way's at a closed door on the
@@ -31,8 +39,9 @@ void __fastcall__ felt (unsigned char sn, unsigned x, unsigned y, unsigned char 
                                                 **   runs' bearings, sixteenths, by their first headings: view.c's
                                                 **   runs, as a look begins, for sight.c's ways) */
 #define RUNS            ((unsigned char*) (HUB_WINDOW + RUN_AT))
-void kept (void);                               /* The memory of what the view saw kept (each chunk's: part 4's,
-                                                **   after the view's) */
+void __fastcall__ kept (unsigned char what);    /* The memory of what the view saw kept (each chunk's: part 4's,
+                                                **   after the view's): what 2; 1, its passage's runs first, sight.c's
+                                                **   (a look one way's memory after its reply: dq0p.c's kept_owed) */
 
 /* The lit things lying about near the character (things.c's, before each view): the chunks round them reached with
 ** the view's, in its order (their light the light layer's, light.c's) */

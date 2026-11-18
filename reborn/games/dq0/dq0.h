@@ -413,7 +413,7 @@ extern const struct li* said_li;                /* (said.c's: the list a UK_LIST
 void __fastcall__ list_words (const struct msg* m);    /* Overlay 27 (said.c): a UK_LIST sentence worded into lb at
                                                 **   lbe, not said (the look's: their add ()s' streaming), lbe after it */
 enum { AH_PEER, AH_COVER, AH_SHUT, AH_GRILLE, AH_THROUGH, AH_DARK, AH_SKY, AH_PASSAGE, AH_INTO, AH_ON, AH_LIT, AH_TOO,
-    AH_END, AH_GLOW, AH_NOTHING };              /* (UK_AHEAD's: way.c's focus_words, each one of its say ()s before) */
+    AH_END, AH_GLOW, AH_NOTHING, AH_SOFAR };    /* (UK_AHEAD's: way.c's focus_words, each one of its say ()s before) */
 enum { MY_WANT, MY_LIMB, MY_LIMP, MY_POS, MY_HIDDEN, MY_UNDER, MY_SWIM, MY_DEEP, MY_FACING, MY_STEP, MY_SETOFF, MY_FACE,
     MY_POSE, MY_POSED, MY_DRAUGHT, MY_STILL, MY_HEARD, MY_BEHIND, MY_STANCE, MY_TIME, MY_LOST, MY_NOISE };
                                                 /* (UK_SELF's: the status's lines, a turn's and a step's first words, a
