@@ -73,9 +73,11 @@ unsigned char o_may_den (void)
     }
     cmd.obj.word[3] = c;
     if (k < NACTORS) {
-        walk_says ((const char*) (W_SEEN + k)); /* ("You look at the giant rat.": the look at it's first words at once, the
-                                                **   minds' answer to come, 2026-11-17, by its name as it's seen, the
-                                                **   user's, 2026-11-18; not of a name given that may be no denizen's,
+        walk_says ((const char*) (name_is (nm, cmd.obj.word) ? W_SEEN + k : W_SWAY));   /* ("You look at the giant
+                                                **   rat.": the look at it's first words at once, the minds' answer to
+                                                **   come, 2026-11-17, by its name as it's seen, the user's, 2026-11-18,
+                                                **   where the word truly names it (not "rations" by its "rat": the word
+                                                **   typed then); not of a name given that may be no denizen's,
                                                 **   "examine the moon") */
         return 1;
     }

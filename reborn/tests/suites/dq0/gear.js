@@ -1872,6 +1872,9 @@ module.exports = {
         }
         const od = s.slice(s.indexOf('> open the door'), s.indexOf('> check the door for traps'));
         if ((od.match(/passage, 30 feet/g) || []).length !== 1) f.push('what the door shows told other than once: ' + od);
+        // (A thing whose word shares a denizen's first letters, "rations" and "giant rat": its own words, not the rat's
+        // seen name, 2026-11-18)
+        if (/> look at the rations\s+You look at the giant rat/.test(s)) f.push('the rations looked at told as the giant rat');
         return f;
       },
       sdcard: true
