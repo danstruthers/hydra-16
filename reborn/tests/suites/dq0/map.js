@@ -262,7 +262,7 @@ function dq0AheadDenTest() {
         let k = 0;
         while (k < L.nactors && !(h[at(k) + L.aState] & 1)) k++;
         if (k === L.nactors) return;
-        const x = S.x0 + ((px - S.x0) >> 5) * 32 + 36, y = py, far = 30000 + (h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16), o = R.at(h[at(k) + L.aName + 12]);
+        const x = S.x0 + ((px - S.x0) >> 5) * 32 + 36, y = py, far = 30000 + (h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16), o = R.at(h[at(k) + L.aDen]);
         h[L.pcsum + L.sSight] = 0;
         h[at(k) + L.aX] = R.mem[o + R.X] = x & 255; h[at(k) + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8;
         h[at(k) + L.aY] = R.mem[o + R.Y] = y & 255; h[at(k) + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8;

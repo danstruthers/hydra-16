@@ -215,10 +215,10 @@ unsigned char ahead_wanted (void)
             return 0;
         }
         if (!giving ()) {
-            if (HUB->pc_stratum != asn || (HUB->pc_x ^ ax) & ~7 || (HUB->pc_y ^ ay) & ~7) {
-                asn = HUB->pc_stratum;
-                ax = HUB->pc_x;
-                ay = HUB->pc_y;
+            if (HUB->pc.sn != asn || (HUB->pc.x ^ ax) & ~7 || (HUB->pc.y ^ ay) & ~7) {
+                asn = HUB->pc.sn;
+                ax = HUB->pc.x;
+                ay = HUB->pc.y;
                 return !ahead_still ();
             }
             hy_yield ();                        /* (The other tasks' turn first, any that wants it: the background's

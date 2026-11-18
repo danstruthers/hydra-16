@@ -180,33 +180,30 @@ static void __fastcall__ reach (struct act* p, unsigned char sight)
     p->f = (2 * e < AH_WAY ? 2 * e : AH_WAY) + AH_STEPS;
 }
 
-/* The actors as they are now (the hub's), into an: the character first; their sum (a change seen: a stratum, a facing,
-** a block of sixteen squares each way, half a chunk; a step within one looked at as the next change comes: the
-** chooser's cost each step of every denizen's else, a twentieth of the game's time at the normal pace) */
+/* The actors as they are now (the hub's bodies, by who: the character's, actor 0's, first), into an; their sum (a
+** change seen: a stratum, a facing, a block of sixteen squares each way, half a chunk; a step within one looked at as
+** the next change comes: the chooser's cost each step of every denizen's else, a twentieth of the game's time at the
+** normal pace) */
 static unsigned char actors (void)
 {
     static struct { unsigned char state, sn, face; } h;
     struct act* p = an;
     unsigned char k, s;
 
-    hub_get (0, &HUB->pc_stratum, &h.sn, 1);
-    hub_get (0, &HUB->pc_x, &p->x, 4);
-    hub_get (0, &HUB->pc_face, &h.face, 1);
-    hub_get (0, &HUB->pcsum.sight, &s, 1);
-    p->sn = h.sn;
-    p->face = h.face & 7;
-    reach (p, s);
-    for (k = 0; k < NACTORS; ++k) {
-        hub_get (0, &HUB->actor[k].state, &h, 3);
-        if (h.state & 1) {
-            ++p;
+    for (k = 0; k <= NACTORS; ++k) {
+        hub_get (0, &HUB->bodies[k].state, &h, 3);
+        if (h.state & 1) {                      /* (A body in the dungeon) */
             p->sn = h.sn;
             p->face = h.face & 7;
-            hub_get (0, &HUB->actor[k].x, &p->x, 4);
-            reach (p, 9);
+            hub_get (0, &HUB->bodies[k].x, &p->x, 4);
+            s = 9;                              /* (A denizen's sight isn't in the hub: the most a kind's) */
+            if (!k) {
+                hub_get (0, &HUB->pcsum.sight, &s, 1);
+            }
+            reach (p++, s);
         }
     }
-    nan = p - an + 1;
+    nan = p - an;
     for (s = nan, p = an; p < an + nan; ++p) {
         s = (s << 1 | s >> 7) ^ p->sn ^ p->face;
         s = (s << 1 | s >> 7) ^ (unsigned char) (p->x >> 4);
