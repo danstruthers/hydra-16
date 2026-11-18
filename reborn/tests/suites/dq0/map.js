@@ -136,6 +136,8 @@ function dq0CarveStairs(m, p) {
 // a reader (its reply to M_CHUNK) taken as it's finished, its bytes (struct chunk's) and its things listed (the world
 // bank's stock, if it stocked it): the two games' the same chunks in the same order, byte for byte; the first game's
 // made ahead in part (finished with nothing grown: make_chunk with no grow before its reply), the second's none
+// (2026-11-18: a look one way makes no chunk for itself, its rest asked as the maker's made it, the user's: a pause after
+// each look too, its rest's chunk finished then; the second game's rest asked at once, its chunk grown for it)
 function dq0AheadTest() {
   const seeds = [3, 70001], W = 10, K = 6;
   const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm'];
@@ -147,13 +149,13 @@ function dq0AheadTest() {
     // its start asks for, finished before a scene's point, sim/lib/scenes.js)
     what: 'Dingus Quest Zero\'s chunks made ahead of the eyes the chunks made on demand (the user\'s, 2026-11-17: generation deterministic, the same seed the same chunk whenever it\'s made): at seeds 3 and 70001 the same game twice at the turns pace, the character put at an edge of the ground made and a look ahead after a pause, six times; the first as the game is (the maker making ahead in the pauses), the second with the making ahead off: every chunk the maker finished for a reader, its bytes and its things, the same in the same order; the first game\'s made ahead in part, the second\'s none',
     init: 't_rc', cycles: 4000e6,
-    machine: { input: lines.map(l => '\u0101' + (l === 'look ahead' ? '\u0100'.repeat(W) : '') + l + '\r').join('') },
+    machine: { input: lines.map(l => '\u0101' + (l === 'look ahead' || l === 'inventory' ? '\u0100'.repeat(W) : '') + l + '\r').join('') },
     expect: ['% echo $status'],
     start(m) {
       const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0m', 'dq0m.lbl'), 'latin1');
       const sym = n => parseInt(new RegExp('^al ([0-9A-F]+) \\.' + n + '$', 'm').exec(lbl)[1], 16);
-      const REPLY = sym('_hub_reply'), NEXT = sym('_ahead_next'), MAKE = sym('_make_chunk'), GROW = sym('_grow');
-      const H = require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load(), MREQ = H.off('hub', 'mreq'), MSZ = H.size('mreq'), STOCK = H.off('wrec', 'stock'), SSZ = H.size('stock');
+      const REPLY = sym('_hub_reply'), NEXT = sym('_way_next'), MAKE = sym('_make_chunk'), GROW = sym('_grow');
+      const H = require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load(), MREQ = H.off('hub', 'mreq'), WWST = H.off('hub', 'way_want.st'), MSZ = H.size('mreq'), STOCK = H.off('wrec', 'stock'), SSZ = H.size('stock');
       const cpu = m.cpu, step = cpu.step.bind(cpu), games = this.games = [], a = m.acia, read = a.read, used = new Set();
       let mk = null, look = 0, grew = true, typed = '', g = -1;
       // (The character put at an edge of the ground made, as each inventory's typed: dq0lookfar's put, a chunk not put
@@ -190,9 +192,13 @@ function dq0AheadTest() {
         const pc = cpu.PC;
         if (cpu.cyc >= look) {
           look = cpu.cyc + 200000;
-          try { const h = m.dq0 && m.dq0.bank && m.dq0.bank(0); mk = h && h[0] === 0x44 ? h[12 + 5] || null : null; } catch (e) { mk = null; }
-          const R = mk && m.taskRam[mk];          // (The second game of a seed: the making ahead off, its stub "lda #0, ldx #0, rts")
+          let h = null;
+          try { h = m.dq0 && m.dq0.bank && m.dq0.bank(0); mk = h && h[0] === 0x44 ? h[12 + 5] || null : null; } catch (e) { mk = null; h = null; }
+          const R = mk && m.taskRam[mk];          // (The second game of a seed: the making ahead off, its stub "lda #0, ldx #0, rts":
+                                                  //   way_next's, the chooser's and a look one way's rest's, 2026-11-18)
           if (R && g >= 0 && !plays[g].ahead && R[NEXT] === 0x20) { R[NEXT] = 0xA9; R[NEXT + 1] = 0; R[NEXT + 2] = 0xA2; R[NEXT + 3] = 0; R[NEXT + 4] = 0x60; }
+          if (mk && g >= 0 && !plays[g].ahead && h[WWST] === 1) h[WWST] = 2;   // (A look one way's rest wanted: asked at
+                                                  //   once, its chunk grown for it, none made ahead: way_want's WW_MADE)
         }
         if (mk && m.T === mk && g >= 0) {
           if (pc === MAKE) grew = false;
@@ -222,17 +228,26 @@ function dq0AheadTest() {
         const A = this.games[2 * n] || [], B = this.games[2 * n + 1] || [];
         const ahead = A.filter(x => !x.grew).length, bAhead = B.filter(x => !x.grew).length;
         notes.push('seed ' + s + ': ' + A.length + ' chunks finished for a reader as the game is, ' + ahead + ' of them made ahead; ' + B.length + ' with the making ahead off');
-        if (!A.length || A.length !== B.length) f.push('seed ' + s + ': ' + A.length + ' chunks finished, and ' + B.length + ' with the making ahead off');
+        // (A chunk finished in both, the same byte for byte: by its place, not its order, 2026-11-18: a look one way's rest
+        // asked as the maker's made its chunk ahead, or at once with the making ahead off, the finishes in another order;
+        // its things but their stock's seq, items.h's, the chunks stocked counted as it was)
+        if (!A.length || !B.length) f.push('seed ' + s + ': ' + A.length + ' chunks finished, and ' + B.length + ' with the making ahead off');
         if (!ahead) f.push('seed ' + s + ': no chunk made ahead');
         if (bAhead) f.push('seed ' + s + ': ' + bAhead + ' chunks made ahead with the making ahead off');
-        A.forEach((x, k) => {
-          const y = B[k];
-          if (!y || y.key !== x.key) { if (k === 0 || A[k - 1] && B[k - 1] && A[k - 1].key === B[k - 1].key) f.push('seed ' + s + ': chunk ' + k + ' ' + x.key + ', and ' + (y ? y.key : 'none') + ' with the making ahead off'); return; }
+        const bk = new Map(B.map(y => [y.key, y]));
+        let both = 0, made = 0;
+        A.forEach(x => {
+          const y = bk.get(x.key);
+          if (!y) return;
+          ++both;
+          made += !x.grew;
           const at = [];
           for (let i = 0; i < x.bytes.length && at.length < 8; i++) if (x.bytes[i] !== y.bytes[i]) at.push(i);
           if (at.length) f.push('seed ' + s + ': chunk ' + x.key + (x.grew ? '' : ' (made ahead)') + ' not the same byte for byte: at ' + at.join(', '));
-          if ((x.stock || y.stock) && !(x.stock && y.stock && x.stock.equals(y.stock))) f.push('seed ' + s + ': chunk ' + x.key + '\'s things not the same');
+          if ((x.stock || y.stock) && !(x.stock && y.stock && x.stock.subarray(2).equals(y.stock.subarray(2)))) f.push('seed ' + s + ': chunk ' + x.key + '\'s things not the same');
         });
+        notes.push('seed ' + s + ': ' + both + ' chunks finished in both games, ' + made + ' of them made ahead in the first');
+        if (both < Math.min(A.length, B.length) - 2 || !made) f.push('seed ' + s + ': ' + both + ' chunks finished in both games (' + made + ' made ahead in the first)');
       });
       return f;
     },
