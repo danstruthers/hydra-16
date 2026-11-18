@@ -270,10 +270,15 @@ static void __fastcall__ wielded (struct cmd* c)
 {
     unsigned char w;
 
-    if ((c->action == VB_ATTACK_OBJECT || c->action == VB_BREAK_OBJECT) && ((w = wield ()) & 2)) {
-        memcpy (&kept, c, sizeof kept);
-        tasked = w;                             /* (| 4: a light in hand, "no" its fist) */
-        c->flags |= CF_ASKED;
+    if (c->action == VB_ATTACK_OBJECT || c->action == VB_BREAK_OBJECT) {
+        worded = 0x80;                          /* (Its target's first words held, its hands empty: blows.c's found) */
+        w = wield ();
+        worded &= 1;
+        if (w & 2) {
+            memcpy (&kept, c, sizeof kept);
+            tasked = w | worded << 3;           /* (| 4: a light in hand, "no" its fist; | 8: its first words said) */
+            c->flags |= CF_ASKED;
+        }
     }
 }
 
@@ -292,8 +297,8 @@ unsigned char __fastcall__ o_choose (struct cmd* c)
     if (tasked) {
         if ((j = o_answer_of (cl)) != 0) {
             memcpy (c, &kept, sizeof kept);
-            worded = c->action == VB_ATTACK_OBJECT;   /* (A blow's first words said as it was asked, fight_target's: not
-                                                **   again, 2026-11-17) */
+            worded = tasked >> 3;               /* (A blow's first words said as it was asked, fight_target's: not
+                                                **   again; held as it was, its hands empty, said now, 2026-11-17) */
             if (j == 1) {
                 c->prep = PR_WITH;              /* (Yes: with the better thing, taken in hand) */
             } else {

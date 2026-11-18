@@ -219,12 +219,38 @@ static void __fastcall__ stance (const char* w, unsigned char d)
     note (d);
 }
 
+/* Something in the character's hands (the UI bank's ix, the world's: CX_HELD): 1, or 0 */
+#pragma static-locals (push, off)               /* (Copied from the hub onto the C stack, the main RAM) */
+static unsigned char in_hand (void)
+{
+    struct cix e;
+    unsigned char n, k;
+
+    hub_mem (UI_BANK, &n, &UIREC->ixn, 1);
+    for (k = 0; k < n && k < NIX; ++k) {
+        hub_mem (UI_BANK, &e, &UIREC->ix[k], sizeof e);
+        if (e.flags & CX_HELD) {
+            return 1;
+        }
+    }
+    return 0;
+}
+#pragma static-locals (pop)
+
 /* An attack's target found, d (its entry plus 1, | FT_CLOSE out of reach): its first words at once (the user's,
 ** 2026-11-17: "You close with the giant rat."; out of reach, its walk over's), once a line (sway.c's: looked for as the
-** blow's weapon's chosen, wield's, and again as it's carried out) */
+** blow's weapon's chosen, wield's, and again as it's carried out).  Looked for as the weapon's chosen (worded's 0x80,
+** choose.c's wielded) with its hands empty, a question may come first ("... would you rather draw your sword?", its
+** first words): held till the blow's carried out (unasked under dq0 -a) */
 static unsigned char __fastcall__ found (const struct cmd* c, unsigned char d)
 {
     if (c->action == VB_ATTACK_OBJECT && !strstr (cl, " and ")) {   /* (Two foes by turns: parts.c's split, its own words) */
+        if (worded & 0x80) {
+            if (!autogo && !in_hand ()) {
+                return d;
+            }
+            worded = 0;
+        }
         walk_says ((const char*) (W_CLOSE + d));
     }
     return d;

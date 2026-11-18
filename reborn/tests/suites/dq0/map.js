@@ -1339,6 +1339,9 @@ module.exports = {
         }
         if (!so.after || so.after.pc.y !== so.at.pc.y + 1) f.push('south out of the stream not gone');
         if (!/You wade out of the water\./.test(o)) f.push('coming out not told');
+        // (Each stroke's first words, after a walk told at once, "You set off north.": a step's line the pace's,
+        // 2026-11-17)
+        inTurn(o, ['You set off north.', '> step east', 'You step to your right.', '> step west', 'You step back.'], f, 'the strokes: ');
         if (w('south').wet & 0x7F) f.push('dry floor, still wet: ' + JSON.stringify(w('south')));
         if (so2.after && e.after && !(e.after.now - e.at.now > so2.after.now - so2.at.now)) f.push('a swimmer\'s square no longer than a walked one: ' + (e.after.now - e.at.now) + ' tenths, ' + (so2.after.now - so2.at.now));
         if (e.after && w('n').swim && e.after.now - e.at.now < Math.floor(600 / w('n').swim)) f.push('a stroke not its squares a minute\'s time: ' + (e.after.now - e.at.now) + ' tenths at ' + w('n').swim + ' a minute');
@@ -1658,7 +1661,7 @@ module.exports = {
         if (!bear(e4, 'BRG_LOST')) f.push('the third time east: not lost, known (' + dq0Evs(e4) + ')');
         at(e4, 2, 1, 'the third time east, a critical failure');
         inTurn(s, ['> turn left', 'You turn to face northeast.', '> face north', 'You turn to face north.',
-          '> face northwest', 'You turn to face northwest.', '> f', 'You know this place: your bearings come back to you.',
+          '> face northwest', 'You turn to face northwest.', '> f', 'You set off northwest.', 'You know this place: your bearings come back to you.',
           'You\'ve lost your bearings: you\'re no longer sure which way is north.', '> status', 'Facing: south, you think'], f, 'the words: ');
         inTurn(dq0StatusRows(out), ['facing SE', 'facing S?'], f, 'the status line: ');
         // Kept with the game, and carried on

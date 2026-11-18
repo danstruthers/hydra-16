@@ -420,7 +420,8 @@ enum { MY_WANT, MY_LIMB, MY_LIMP, MY_POS, MY_HIDDEN, MY_UNDER, MY_SWIM, MY_DEEP,
                                                 **   pose, the air and the background heard, a stance, the time told; a
                                                 **   denizen heard, not seen) */
 enum { FS_THE, FS_YOUR, FS_INTO, FS_THEM, FS_IT, FS_PEER, FS_LISTEN,   /* (UK_FIRST's: a command's first words' form, */
-    FS_CLOSE, FS_COUNT, FS_AIM, FS_LINK };      /*   an attack's close, a count's, a shot's, a way between strata's: the
+    FS_CLOSE, FS_COUNT, FS_AIM, FS_LINK, FS_OVER };   /*   an attack's close, a count's, a shot's, a way between strata's,
+                                                **   an attack's walk over to its target: the
                                                 **   user's, 2026-11-17,
                                                 **   every command's first words at once, "You close with the giant
                                                 **   rat.", "You count out a farthing.") */

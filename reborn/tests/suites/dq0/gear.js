@@ -1584,6 +1584,7 @@ module.exports = {
         const g = s.slice(s.indexOf('> look in the far side'));
         if (/<[a-z]+\d/.test(g)) f.push('the world\'s raw text told: ' + (/<[^>]*>[^ ]*/.exec(g) || [''])[0]);
         if (!/> quit[^%]*% echo/.test(g) || /rc: (look|quit): not found/.test(g)) f.push('the game ended before its quit');
+        if (/You look (?:for|at) the far/.test(g)) f.push('a side of the room looked into, its word looked for as a thing\'s (the look\'s first words a thing\'s alone, 2026-11-17)');
         return f;
       },
       sdcard: true
@@ -1722,6 +1723,7 @@ module.exports = {
           '> close the chest', 'You close the chest.', '> put the dagger on the chest', 'You put the dagger on the chest.', '> look at the lid',
           'The lid is closed. On it lies a dagger.'], f, 'the words: ');
         if (/The desk is (?:at your feet|beside you)/.test(s.slice(s.indexOf('> look at the drawer'), s.indexOf('> look at the pocket')))) f.push('a drawer looked at told its desk');
+        if (/> look at the (?:drawer|pocket|lid) You look for/.test(s)) f.push('a part of a thing looked at, looked for first (the look\'s first words, 2026-11-17)');
         const r = T.of('put the dagger on the chest').after, d = r && dq0Thing(r, 'dagger');
         if (!d || !dq0Carried(r).includes(d)) f.push('the dagger refused the open lid: not still carried: ' + JSON.stringify(d));
         return f;

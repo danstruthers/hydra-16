@@ -787,6 +787,9 @@ FIRST.count         +"\nYou count out {n1?|{a} {text}|{@few} {plural}}."
 # link_out: arg its kind, level.h's O_STAIRS_UP ... O_LADDER_DOWN, O_RAMP_UP, O_RAMP_DOWN)
 FIRST.link          +"\nYou start {arg?up the stairway|down the stairway|up the ladder|down the ladder|||||up the long slope"
                     "|down the long slope}."
+# An attack's target out of reach, walked over to first (sway.c's close_word: obj its name as it's seen, "the small orc",
+# "Grub", "something")
+FIRST.over          +"\nYou go over to {obj}."
 
 # ---- The character's own state, its body and its bearings (UK_SELF: my, MY_*; v a number or a choice, n2 another; text
 # a heading's name, the time in words).  The status's lines (task.c's facing_words), a turn's and a step's first words

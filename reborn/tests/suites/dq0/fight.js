@@ -531,10 +531,11 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0begin', near: ['fight', 'gear', 'parser'], what: "Dingus Quest Zero's first words at once for every command (the user's, 2026-11-17: \"You close with the giant rat.\" for an attack, \"You count out a farthing.\" for a counted drop; one path for every actor, a denizen's the same rows the other way round, \"The bandit closes with you.\"): at seed 5 (dq0fight's: a sword, the giant rats down the ladder) pennies counted out before the world splits the lot (\"You count out 2 pennies.\", then \"You put down 2 pennies.\"), the sack looked at (\"You look at the sack.\"), the ladder started down before the stratum below is grown (\"You start down the ladder.\", then as it gets there \"You climb down the ladder.\"), a wait's \"Time passes.\" first, the rat beside it attacked (\"You close with the giant rat.\" before its blow), and its kin closing with the character (\"The giant rat closes with you.\" before its first bite)",
-      init: 't_rc', cycles: 1500e6,
+      name: 'dq0begin', near: ['fight', 'gear', 'parser'], what: "Dingus Quest Zero's first words at once for every command (the user's, 2026-11-17: \"You close with the giant rat.\" for an attack, \"You count out a farthing.\" for a counted drop; one path for every actor, a denizen's the same rows the other way round, \"The bandit closes with you.\"): at seed 5 (dq0fight's: a sword, the giant rats down the ladder) pennies counted out before the world splits the lot (\"You count out 2 pennies.\", then \"You put down 2 pennies.\"), the sack looked at (\"You look at the sack.\"), the ladder started down before the stratum below is grown (\"You start down the ladder.\", then as it gets there \"You climb down the ladder.\"), a wait's \"Time passes.\" first, the rat beside it attacked (\"You close with the giant rat.\" before its blow), and its kin closing with the character (\"The giant rat closes with you.\" before its first bite); a second game, a rat attacked out of reach as it's come to below: walked over to first, by the name it's seen by (\"You go over to the giant rat.\", not the word typed)",
+      init: 't_rc', cycles: 2100e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 95 >> /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -k sword -T',
-        'drop 2 pennies', 'look at the sack', 'd', 'wait', 'go right', 'attack the rat', 'quit', 'echo $status']) },
+        'drop 2 pennies', 'look at the sack', 'd', 'wait', 'go right', 'attack the rat', 'quit',
+        'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'd', 'attack the rat', 'quit', 'echo $status']) },
       start(m) {
         dq0Poke(m, [{ g: 1, line: 'attack the rat', n: 1, k: 0, set: { mood: 8 } }, ...[0, 1, 2, 3].map(k => ({ g: 1, line: 'attack the rat', n: 1, k, hurt: 8 }))]);   // (dq0fight's: the kin steady, all hurt)
       },
@@ -551,6 +552,9 @@ module.exports = {
         const k = a.indexOf('The giant rat closes with you.');
         if (k < 0) f.push('the kin\'s attack begun not told: "The giant rat closes with you.": ' + a.slice(0, 600));
         else if (!/^The giant rat closes with you\.[^.]*?The giant rat bites at you/.test(a.slice(k))) f.push('the kin\'s closing not before its bite: ' + a.slice(k, k + 200));
+        // (Game 2: the rat out of reach, walked over to first, by its name as it's seen, not the word typed)
+        const j = o.lastIndexOf('> attack the rat > attack the rat '), b = j < 0 ? '' : o.slice(j + 34).trim();
+        if (!/^You go over to the giant rat\./.test(b)) f.push('attack the rat out of reach: its first words not "You go over to the giant rat.": ' + b.slice(0, 300));
         return f;
       },
       sdcard: true
@@ -1468,7 +1472,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0rather', asks: true, what: 'Dingus Quest Zero\'s blow with nothing named and its hands empty (the user\'s, 2026-10-22: "I don\'t think it should auto-fallback to something better unless you have nothing at hand, and then it should ask for confirmation.  If your hands are empty, but you have an axe at your belt, then something like `You can try battering it with your hands, but would you rather use your axe?`"; HOUSE.md\'s fights, what strikes), by the world\'s events, the hub\'s pc_strike and the words: at seed 14 (dq0 -k pick: the pick in the pack) the torch put down, the door hit: asked ("... would you rather use your pick?", nothing struck), yes taking the pick in hand and battering with it; again, no battering bare-handed ("You set to battering the door."), stopped; asked again, and a look typed instead letting the blow go (no battering, the look done); at seed 5 (dq0 -T, dq0 -k sword: Sword 80) its sword stowed, the rats seen down the ladder, its torch put down, a rat attacked: asked ("You can fight it with your fists, but would you rather draw your sword?"), a look letting it go; and before it, its hands empty, a ghoul attacked with none there to fight: not asked',
+      name: 'dq0rather', asks: true, what: 'Dingus Quest Zero\'s blow with nothing named and its hands empty (the user\'s, 2026-10-22: "I don\'t think it should auto-fallback to something better unless you have nothing at hand, and then it should ask for confirmation.  If your hands are empty, but you have an axe at your belt, then something like `You can try battering it with your hands, but would you rather use your axe?`"; HOUSE.md\'s fights, what strikes), by the world\'s events, the hub\'s pc_strike and the words: at seed 14 (dq0 -k pick: the pick in the pack) the torch put down, the door hit: asked ("... would you rather use your pick?", nothing struck), yes taking the pick in hand and battering with it; again, no battering bare-handed ("You set to battering the door."), stopped; asked again, and a look typed instead letting the blow go (no battering, the look done); at seed 5 (dq0 -T, dq0 -k sword: Sword 80) its sword stowed, the rats seen down the ladder, its torch put down, a rat attacked: asked ("You can fight it with your fists, but would you rather draw your sword?"), a look letting it go; and before it, its hands empty, a ghoul attacked with none there to fight: not asked; each answer\'s first words its own ("You reach for your backpack.", "You head for the door."), and the rat\'s question its first words, no walk over to it told before it (the user\'s first words at once, 2026-11-17)',
       init: 't_rc', cycles: 2400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'drop the torch', 'hit the door', 'yes', 'quit',
@@ -1489,12 +1493,17 @@ module.exports = {
         if (begun(h3) || begun(l)) f.push('the blow asked about not let go for a look (' + dq0Evs(h3) + '; ' + dq0Evs(l) + ')');
         const a = T.of('attack the rat'), al = T.after(a, 'look');
         if (dq0Ev(a, 'E_FIGHT', { who: 0 }).length || dq0Ev(al, 'E_FIGHT', { who: 0 }).length) f.push('the rat struck at, asked about and let go (' + dq0Evs(a) + ')');
-        inTurn(s, ['> hit the door', 'You can try battering it with your hands, but would you rather use your pick?', '> yes', 'You take the pick in both hands.',
+        inTurn(s, ['> hit the door', 'You can try battering it with your hands, but would you rather use your pick?', '> yes', 'You reach for your backpack.',
+          'You take the pick in both hands.',
           'You set to battering the door with the pick.', '> hit the door', 'You can try battering it with your hands, but would you rather use your pick?',
-          '> no', 'You set to battering the door.', '> hit the door', 'would you rather use your pick?', '> look', '> attack the ghoul', '> take the torch',
+          '> no', 'You head for the door.', 'You set to battering the door.', '> hit the door', 'would you rather use your pick?', '> look', '> attack the ghoul', '> take the torch',
           '> attack the rat', 'You can fight it with your fists, but would you rather draw your sword?', '> look'], f, 'the words: ');
         const ag = s.slice(s.indexOf('> attack the ghoul'), s.indexOf('> take the torch'));
         if (/would you rather/.test(ag)) f.push('asked with nothing to fight: ' + ag);
+        // (Its first words the question, its hands empty: no walk over to the rat told before it, 2026-11-17; the
+        // door's answered, its own first words after it, as ever)
+        const ar = s.slice(s.indexOf('> attack the rat'), s.indexOf('would you rather draw'));
+        if (/You go over to|You close with/.test(ar)) f.push('the rat closed with before it was asked: ' + ar);
         return f;
       },
       sdcard: true

@@ -1685,8 +1685,9 @@ static void hear (void)
             sn = pcs;
             loud = E_NOISE_LOUD (m);
         } else if (hub_dnext (&dplace, &m)) {   /* (The denizens': an actor's, not heard by itself) */
-            if (m.kind != E_DEN || !E_DEN_LOUD (m)) {
-                continue;
+            if (m.kind != E_DEN || !E_DEN_LOUD (m) || E_DEN_DE (m) == DE_CLOSES) {
+                continue;                       /* (A closing-in the character's words alone, the world's den_close:
+                                                **   no sound of its own, its steps heard as they're taken) */
             }
             src = m.who;
             sn = E_DEN_SN (m);

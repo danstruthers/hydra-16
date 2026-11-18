@@ -526,8 +526,10 @@ void __fastcall__ o_turned_says (unsigned char go)
         my (MY_FACE << 8, 0);
         return;
     }
-    if (worded == 2) {                          /* (A way set out on, V_SETOFF's: 8 a step, by the way it faces; a walk,
-                                                **   by the north it believes in) */
+    if (worded == 2 && !(go & 8)) {             /* (A way set out on, V_SETOFF's: 8 a step, by the way it faces; a walk,
+                                                **   by the north it believes in; a walk's told already, sway.c's
+                                                **   setoff17, or felt: not a step's, its line the pace's, pace.c's,
+                                                **   worded not cleared for it, 2026-11-17) */
         return;
     }
     hub_mem (0, &f, &HUB->pc_face, 1);

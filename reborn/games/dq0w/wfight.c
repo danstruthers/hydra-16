@@ -443,11 +443,12 @@ void s_pc_blow (void)
 /* Body bd's attack begun (s_den_intents' I_ATTACK, its doing not a fight's before it; at def, its aim z): a blow at the
 ** character, not a shot, told first as it closes with it (E_DEN's DE_CLOSES, the one sender's: "The bandit closes with
 ** you.", the character's own first words the other way round: the user's, 2026-11-17, every actor's first words by the
-** same rows); not at one that's struck at the character already, nor at the one it's fighting */
+** same rows); not at one that's struck at the character already, nor at the one it's fighting, nor by one down (its
+** blow a try to rise: "The orc king struggles, but can't get up.") */
 void __fastcall__ s_den_close (unsigned char def, unsigned char z)
 {
     hub_map (0);
-    if (!def && !(z & (AIM_SHOT | AIM_GRAPPLE)) && flast != bk + 1 &&
+    if (!def && !(z & (AIM_SHOT | AIM_GRAPPLE)) && flast != bk + 1 && bd.pos == POS_STANDING &&
         (HUB->pc_task.kind != LT_FIGHT || HUB->pc_task.foe != bk + 1)) {
         den_told (DE_CLOSES, 1, bd.x, bd.y);
     }

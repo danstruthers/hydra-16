@@ -62,24 +62,23 @@ unsigned char o_may_den (void)
     if (!cmd.obj.word[0]) {
         return 0;
     }
-    if (!names_n) {
-        c = cmd.obj.word[3];
-        cmd.obj.word[3] = 0;                    /* (Its first three letters, a moment) */
-        nm[sizeof nm - 1] = 0;
-        for (k = 0; k < NACTORS; ++k) {
-            hub_mem (0, nm, HUB->actor[k].name, sizeof nm - 1);
-            if (nm[0] && strstr (nm, cmd.obj.word)) {
-                break;
-            }
-        }
-        cmd.obj.word[3] = c;
-        if (k >= NACTORS) {
-            return 0;
+    c = cmd.obj.word[3];
+    cmd.obj.word[3] = 0;                        /* (Its first three letters, a moment) */
+    nm[sizeof nm - 1] = 0;
+    for (k = 0; k < NACTORS; ++k) {
+        hub_mem (0, nm, HUB->actor[k].name, sizeof nm - 1);
+        if (nm[0] && strstr (nm, cmd.obj.word)) {
+            break;
         }
     }
-    walk_says ((const char*) W_SWAY);           /* ("You look at the giant rat.": the look at it's first words at once, the
-                                                **   minds' answer to come, 2026-11-17) */
-    return 1;
+    cmd.obj.word[3] = c;
+    if (k < NACTORS) {
+        walk_says ((const char*) W_SWAY);       /* ("You look at the giant rat.": the look at it's first words at once, the
+                                                **   minds' answer to come, 2026-11-17; not of a name given that may
+                                                **   be no denizen's, "examine the moon") */
+        return 1;
+    }
+    return names_n != 0;
 }
 #pragma code-name (pop)
 
@@ -113,8 +112,8 @@ static void __fastcall__ first17 (unsigned char f, unsigned char v, const char* 
 /* A walk a way (hmove.c's do_go: cmd.dir its true heading): its set-off words at once, the world's own (its V_SETOFF's,
 ** said.txt's SELF.setoff, "You set off west.", by the north the character believes in; not again as the world's come,
 ** worded 2), where the senses' record s shows the way open: the room's floor that way, a doorway or an open door there,
-** a passage's way on; not in the dark (the walk's own words, felt).  Else the world's alone, as ever (a way refused,
-** "You can't go that way.") */
+** a passage's way on; not in the dark (the walk's own words, felt), nor with a light left burning at its feet (taken up
+** first).  Else the world's alone, as ever (a way refused, "You can't go that way.") */
 #pragma static-locals (push, off)               /* (Its words' event on the C stack: the words' overlay reads it) */
 static void __fastcall__ setoff17 (const struct sight* s)
 {
@@ -136,10 +135,15 @@ static void __fastcall__ setoff17 (const struct sight* s)
         k = s->door[i].x == x && s->door[i].y == y && (s->door[i].state == DOORWAY || (s->door[i].state &
             (PS_OPEN | PS_WRECKED)));
     }
+    for (i = 0; i < s->nitems && k; ++i) {      /* (A light left burning at its feet: taken up as the walk begins, the
+                                                **   hands' rule, its words first: the world's alone) */
+        k = s->item[i].x != s->x || s->item[i].y != s->y || !(s->item[i].hid & 4);
+    }
     if (!k) {
         return;
     }
-    said_s[2] = head_name[believed (h)];
+    hub_mem (0, &k, &HUB->pc_skew, 1);          /* (By the north it believes in: the hub's, the senses' in the window) */
+    said_s[2] = head_name[(h + k) & 7];
     c.kind = UK_SELF;
     c.who = 0;
     c.b = 0;
@@ -248,12 +252,13 @@ void __fastcall__ o_walk_says (const char* name)
         }
         worded = 1;
         k = (unsigned char) name - W_CLOSE;
-        if (!(k & FT_CLOSE)) {
-            close_word (k & 0x0F, k & 0x10 ? FS_AIM : FS_CLOSE);    /* (Beside it: closed with; a shot's: aimed at) */
-            return;
+        close_word (k & 0x0F, k & FT_CLOSE ? FS_OVER : k & 0x10 ? FS_AIM : FS_CLOSE);  /* (Beside it: closed with; a
+                                                **   shot's: aimed at; out of reach: walked over to first, by its name
+                                                **   as it's seen, "the small orc", not the word typed) */
+        if (k & FT_CLOSE) {
+            placing = 1;
         }
-        k = cmd.obj.kind;
-        name = 0;                               /* (Out of reach: walked over to first, its walk's words, as ever) */
+        return;
     }
     if (said_ahead) {
         said_ahead = 0;                         /* (Told already, walk_ahead's) */
@@ -604,6 +609,10 @@ void __fastcall__ o_walk_ahead (const char* name)
             return;
         }
         v = e != 0xFF || away ? FV_LOOK_AT : FV_LOOK_FOR;
+        if (v == FV_LOOK_FOR && cmd.action == VB_OBSERVE_OBJECT) {
+            return;                             /* ("Look at the drawer", a part of a thing, "the moon": the answer's
+                                                **   own words, not looked for, way.c's, 2026-11-17) */
+        }
         goto say;
     }
     if (e == 0xFF) {

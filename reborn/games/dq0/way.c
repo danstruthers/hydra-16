@@ -396,9 +396,10 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
         } else if (k && h == 0xFF && (k == 4 || !cmd.obj.word[0])) {
             k += k & 1;                         /* ("listen", "sniff", "smell the air": about it) */
         } else {
-            if (!k && cmd.obj.word[0]) {
+            if (!k && cmd.obj.word[0] && !cmd.obj.kind) {
                 walk_op = IO_DESCRIBE;          /* ("You look at the body.": its first words at once, examine's, the
-                                                **   world's answer to come: the user's, 2026-11-17) */
+                                                **   world's answer to come: the user's, 2026-11-17; a thing's, not a
+                                                **   part of the room, "look in the far side") */
                 walk_ahead (cmd.obj.word);
             }
             if (k || !looked (LM_AT, 10)) {     /* ("look at the table": what anyone sees of it, the user's) */
