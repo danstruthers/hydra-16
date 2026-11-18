@@ -791,9 +791,10 @@ void __fastcall__ o_time_said (unsigned w, unsigned char b);
 /* A wait (VB_WAIT, VB_PASS) or a sleep or a rest (VB_SLEEP) begun (chores'): as long as the line says (wait_of); a
 ** wait or a pass with none said a round; a sleep or a rest a night's, eight hours, or a short one's, half an hour
 ** (the house's); its intent in tenths, or in minutes past 100 of them (WA_MIN), asleep for a sleep (WA_SLEEP).  A sleep
-** or a rest: its words as its E_TIME comes, after the world's of the lights within reach put out first (the user's,
-** 2026-11-17: "A rest puts a burning light out first"; 2026-11-18, L6: every one within reach, which the UI doesn't
-** know: the world's to say) */
+** or a rest with a light carried burning (the hub's pc_light): its words as its E_TIME comes, after the world's of the
+** lights put out first (the user's, 2026-11-17: "A rest puts a burning light out first"); none carried, at once, as ever
+** (one lying within reach put out too, L6, the world's words after these: the UI's last look too stale to judge by, its
+** wait for the world a want's words twice in one answer, dq0tend's) */
 #pragma static-locals (push, off)
 void __fastcall__ o_wait_go (unsigned char action)
 {
@@ -810,7 +811,7 @@ void __fastcall__ o_wait_go (unsigned char action)
             m = cmd.aux & 2 ? 30 : 480;
         }
         a = rest_ ? WA_SLEEP | WA_REST : WA_SLEEP;
-        lit = 1;
+        hub_mem (0, &lit, (const void*) &HUB->pc_light, 1);
     }
     if (m > 100) {
         a |= WA_MIN;

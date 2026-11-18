@@ -641,7 +641,7 @@ module.exports = {
       check(m, out) {
         const T = dq0Turns(m), f = [], o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' ');
         const lit = (t, n) => t && t.after ? t.after.items.filter(i => i.name === n && i.where === 'IW_ACTOR' && (i.flags & DQ0_I.LIT)) : [];
-        inTurn(o, ['> rest', 'You put out your torch. You settle down to rest for eight hours.'], f, 'the rest: ');
+        inTurn(o, ['> rest', 'You put out your torch.', 'You settle down to rest for eight hours.'], f, 'the rest: ');   // (The dark told between: L6's look, 2026-11-18)
         const r = T.of('rest');
         if (lit(r, 'torch').length) f.push('the torch still lit after the rest');
         if (!r || !r.after || r.after.pc.light) f.push('the hub\'s light not none after the rest: ' + JSON.stringify(r && r.after && r.after.pc.light));

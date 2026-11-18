@@ -852,7 +852,8 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
        WB_DOUSE,                                /* (A light put out as one settles to rest, its kind times 256: every
                                                 **   actor's, the user's, 2026-11-17, "A rest puts a burning light out
                                                 **   first") */
-       WB_DOUSE_NEAR };                         /* (One within its reach, not carried: the user's, 2026-11-18, L6) */
+       WB_DOUSE_NEAR,                           /* (One within its reach, not carried: the user's, 2026-11-18, L6) */
+       WB_DOUSE_MORE };                         /* (Another of the kind before it, within its reach) */
 enum { RSW_BEGUN, RSW_GOES_ON, RSW_ALREADY, RSW_WALL, RSW_CORNER, RSW_MIDDLE, RSW_ROUND, RSW_END, RSW_FLOOR, RSW_DONE,
        RSW_THING };                             /* (WB_SEARCH's what: b 1 by touch; it begun, gone on with, done before;
                                                 **   along a wall, round a corner, the floor inside, a room of one stop;

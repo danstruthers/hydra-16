@@ -279,6 +279,7 @@ BEAT.threw          +"\nThe {name whose} throws you {its} {kind thing}."
 BEAT.fell           +"\nThe {name whose} throws you {its} {kind thing}; it falls short."
 BEAT.douse          +"\n{Actor} put{s} out {its} {kind thing}."
 BEAT.douse_near     +"\n{Actor} put{s} out the {kind thing}."
+BEAT.douse_more     +"\n{Actor} put{s} out another {kind thing}."
 BEAT.unseen         "You hear something fall."
 
 # ---- The water's (E_BEAT's WB_WATER ... WB_DOUSED, the character's: wet its band, a swim's how; water_words' before,

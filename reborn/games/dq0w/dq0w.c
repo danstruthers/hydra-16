@@ -6477,28 +6477,34 @@ static void rest_dark (void)
 {
     const struct item* p;
     unsigned i, j, x, y, px, py;
-    unsigned char k, w, d = 0, sn, ps, pw;
+    unsigned char k, w, d = 0, sn, ps, pw, last = 0, any = 0;
 
     hub_map (0);
     sn = HUB->pc_stratum;
     x = HUB->pc_x;
     y = HUB->pc_y;
+    if (!HUB->pc_light && !(*at (sn, x, y) & T_VIS)) {
+        hub_map (0);
+        return;                                 /* (None carried, its square unlit: no light burns within its reach,
+                                                **   the store not gone through, the rest begun as soon as ever) */
+    }
     for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM | IN_SQUARE | IN_FLAGS, I_LIT)) != 0; ) {
-        if (on_pc (i)) {
+        for (j = i; (p = item_at (j))->where == IW_ITEM; j = p->x) {
+        }                                       /* (Up to whoever has it, or where it lies: on_pc's walk, once) */
+        pw = p->where;
+        ps = p->sn;
+        px = p->x;
+        py = p->y;
+        if (j == rs_pack || (pw == IW_ACTOR && !px)) {
             w = WB_DOUSE;
             d = 1;
         } else {
-            for (j = i; (p = item_at (j))->where == IW_ITEM; j = p->x) {
-            }
-            pw = p->where;
-            ps = p->sn;
-            px = p->x;
-            py = p->y;
             if (pw != IW_SQUARE || ps != sn || px - x + 1 > 2 || py - y + 1 > 2 ||
                 ((px != x || py != y) && TILE (*at (sn, px, py)) == T_PIT)) {
                 continue;
             }
-            w = WB_DOUSE_NEAR;
+            w = item_at (i)->kind == last ? WB_DOUSE_MORE : WB_DOUSE_NEAR;   /* (Another of its kind: "You put out
+                                                **   another torch.", not the same words twice) */
             if (j != i) {
                 chart_late |= 2;                /* (In a sconce: its room's light, the main loop's) */
             }
@@ -6506,9 +6512,16 @@ static void rest_dark (void)
         k = item_at (i)->kind;
         item_at (i)->flags &= ~I_LIT;
         event (E_BEAT, 0, w | (unsigned) k << 8);
+        last = w == WB_DOUSE ? 0 : k;
+        any = 1;
     }
     if (d) {
         light_now ();
+    }
+    if (any) {
+        see (0);                                /* (Looked about as the light's gone: "It is dark.", as a light put out
+                                                **   is, I_LIGHT's) */
+        view (V_DARK);
     }
     hub_map (0);
 }
