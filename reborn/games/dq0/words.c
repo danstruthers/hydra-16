@@ -257,6 +257,8 @@ static void zones (void)
 /* ---- The ceiling in general words (the user's: a high ceiling, a low, rough one), as it's seen at a glance: its kind,
 ** and how high it is (low, under 8 feet; high, over 12; lofty, over 20), added to lb (its record sight_copy; seen.c's
 ** once, overlay 7's, its room) */
+static const char c_flat[] = " The ceiling is flat", c_dome[] = " The ceiling is a dome,", c_rough[] = " The ceiling is rough stone",
+    c_slopes[] = " The ceiling slopes";                 /* (A glance's and a close look's: once, overlay 2's room, 2026-11-18) */
 static void ceiling_glance (void)
 {
 #define S sight_copy
@@ -265,9 +267,8 @@ static void ceiling_glance (void)
     unsigned char k = S.ceil != C_ROUGH && S.ceil != C_SLOPED && S.cwall >= S.cmid ? C_FLAT : S.ceil, h;
 
     h = S.cmid < 8 ? 0 : S.cmid <= 12 ? 1 : S.cmid <= 20 ? 2 : 3;
-    add (k == C_FLAT ? " The ceiling is flat" : k == C_BARREL ? " A barrel vault arches" : k == C_DOME ?
-         " The ceiling is a dome," : k == C_CATHEDRAL ? " A pointed vault rises" : k == C_SLOPED ?
-         " The ceiling slopes" : " The ceiling is rough stone");
+    add (k == C_FLAT ? c_flat : k == C_BARREL ? " A barrel vault arches" : k == C_DOME ? c_dome : k == C_CATHEDRAL ?
+         " A pointed vault rises" : k == C_SLOPED ? c_slopes : c_rough);
     add (k == C_SLOPED ? (S.cmid >= S.cwall + 6 ? " steeply, high on one side and low on the other." :
          ", higher on one side.") : k == C_FLAT || k == C_ROUGH ? and[h] : over[h]);
 #undef S
@@ -288,7 +289,8 @@ static void ceiling (void)
     }
     switch (S->ceil != C_ROUGH && S->cwall >= S->cmid ? C_FLAT : S->ceil) {   /* (A vault no higher in the middle: flat) */
     case C_FLAT:
-        add (" The ceiling is flat, ");
+        add (c_flat);
+        add (", ");
         addn (S->cmid);
         add (" feet up.");
         return;
@@ -296,20 +298,23 @@ static void ceiling (void)
         add (" A barrel vault rises to ");
         break;
     case C_DOME:
-        add (" The ceiling is a dome, ");
+        add (c_dome);
+        add (" ");
         break;
     case C_CATHEDRAL:
         add (wl_said[1]);                       /* (" A pointed vault ...": the main RAM's, look.c's: overlay 2's room) */
         break;
     case C_SLOPED:
-        add (" The ceiling slopes from ");
+        add (c_slopes);
+        add (" from ");
         addn (S->cmid);
         add (" feet down to ");
         addn (S->cwall);
         add (".");
         return;
     default:
-        add (" The ceiling is rough stone, about ");
+        add (c_rough);
+        add (", about ");
         addn (S->cmid);
         add (" feet up.");
         return;
