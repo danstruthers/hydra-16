@@ -2462,7 +2462,7 @@ static unsigned __fastcall__ held_lit (void)
 
 static unsigned char o_handle (void);
 unsigned char drag (void);                      /* (Part 109's: wdrag.c, IO_DRAG) */
-unsigned char handout (void);                   /* (Part 111's: wempty.c, IO_EMPTY, IO_PLACE) */
+unsigned char __fastcall__ handout (const struct msg* m);  /* (Part 111's: wempty.c, IO_EMPTY, IO_PLACE) */
 unsigned char s_serve (void)
 {
     unsigned char changed = 0, k;
@@ -2547,7 +2547,7 @@ unsigned char s_serve (void)
         break;
     case IO_EMPTY:                              /* (A thing's things put out, a thing put down on a square: part 111's, */
     case IO_PLACE:                              /*   wempty.c, every actor's: P4, P5, 2026-11-18) */
-        changed = (iq.result = handout ()) == IR_OK;
+        changed = (iq.result = handout (0)) == IR_OK;
         break;
     case IO_USE:                                /* (A thing used up by its key: a bandage, first aid's, part 70's; by the
                                                 **   steps, got out for its use, a tool's, part 85's: IR_NO a step first) */

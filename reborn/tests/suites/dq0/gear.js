@@ -2664,12 +2664,12 @@ module.exports = {
         want('put the dagger in the middle of the room', /^You set off across the room\..*You put the dagger in the middle\./,
           'not walked there and put in the middle');
         want('put the key on the ledge', /You haven't seen a ledge here\./, 'no ledge not told');
-        // (Each new command's first letter held to D17's, the test's own typing; a tool named by its word, the lockpicks,
-        // said only: tool_ok's IO_FIND asks the world before the first words, as it did before P6, resolve.c's)
+        // (Each line's first letter held to D17's, the test's own typing; a tool named by its word too, the lockpicks: found
+        // in what it carries, the UI's copy, letters.c's o_des_low, 2026-11-18)
         this.notes = [];
         for (const r of this.timer.game(0, EMPTYPLACE.map(l => ({ line: l, want: 'You|The' })))) {
           this.notes.push(r.line + ': first letter ' + r.first);
-          if (!/ with the lockpicks/.test(r.line) && target(this, r.line + ': first letter', r.first, D17.first)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+          if (target(this, r.line + ': first letter', r.first, D17.first)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }
         return f;
       },

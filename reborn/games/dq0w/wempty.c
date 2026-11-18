@@ -346,19 +346,27 @@ static unsigned char place (void)
     return IR_OK;
 }
 
-/* The things' IO_EMPTY and IO_PLACE (things.c's s_serve); a denizen's FE_EMPTY, FE_PLACE (wbody.c's: iq.kind 0, its
-** intent at iq.item): above */
-unsigned char s_handout (void)
+/* The things' IO_EMPTY and IO_PLACE (things.c's s_serve: m 0); a denizen's FE_EMPTY, FE_PLACE (wbody.c's: its intent
+** m, I_ROB:fetch's fields), above.  A denizen's in a request copy of its own: the character's, iq, kept on the C stack
+** and put back after, so a denizen's turn that comes in the middle of the character's request (a stratum grown as a
+** thing falls down a shaft, its populations waited for: kept_wait's den_intents) leaves it as it was */
+#pragma static-locals (push, off)
+unsigned char __fastcall__ s_handout (const struct msg* m)
 {
-    static const struct msg* m;
+    struct ireq k;
+    unsigned char r;
 
-    if (!iq.kind) {                             /* (A denizen's, body bd's: its intent at iq.item, I_ROB:fetch's fields) */
-        m = (const struct msg*) iq.item;
-        iq.kind = I_ROB_ERRAND (*m) == FE_EMPTY ? IO_EMPTY : IO_PLACE;
-        iq.to = TO_DEN;
-        iq.item = I_ROB_THING (*m);
-        iq.x = I_ROB_X (*m);
-        iq.y = I_ROB_Y (*m);
+    if (!m) {
+        return iq.kind == IO_EMPTY ? empty () : place ();
     }
-    return iq.kind == IO_EMPTY ? empty () : place ();
+    memcpy (&k, &iq, sizeof iq);
+    iq.kind = I_ROB_ERRAND (*m) == FE_EMPTY ? IO_EMPTY : IO_PLACE;
+    iq.to = TO_DEN;
+    iq.item = I_ROB_THING (*m);
+    iq.x = I_ROB_X (*m);
+    iq.y = I_ROB_Y (*m);
+    r = iq.kind == IO_EMPTY ? empty () : place ();
+    memcpy (&iq, &k, sizeof iq);
+    return r;
 }
+#pragma static-locals (pop)

@@ -156,13 +156,36 @@ void __fastcall__ o_des_seen (const struct cthing* t)
 }
 
 /* Is word w a lower-case letter's, its thing carried, for a command done with it (resolve.c's tool_ok: to hand, the world not
-** asked; but a blow's, a dig's, which want its kind)? */
+** asked; but a blow's, a dig's, which want its kind)?  Or, no letter, no state nor count said, the name of one kind and
+** one only of those it carries (the world's own copy, ix_make's uirec.ixks): carried, so to hand, the world's IO_FIND's
+** answer known, its kind in othings_x as IO_FIND gives it (| 256, carried); the first words at once, not some
+** 700,000 cycles on (the user's D17, "unlock the chest with the lockpicks", 2026-11-18).  None, or two kinds of the
+** name: the world's to find, as ever */
+#pragma static-locals (push, off)               /* (Its locals on the C stack: the UI bank's bytes copied by way of it) */
 unsigned char __fastcall__ o_des_low (const char* w)
 {
-    unsigned char k = o_des_find (w, 0);
+    struct cixk c;
+    unsigned char k = o_des_find (w, 0), n, f = 0;
 
-    return k && ldes[k - 1].low && cmd.action != VB_ATTACK_OBJECT && cmd.action != VB_BREAK_OBJECT && cmd.action != VB_DIG;
+    if (k) {
+        return ldes[k - 1].low && cmd.action != VB_ATTACK_OBJECT && cmd.action != VB_BREAK_OBJECT && cmd.action != VB_DIG;
+    }
+    if (w == cmd.obj.word ? cmd.obj.sel | cmd.obj.n : cmd.other.sel | cmd.other.n) {
+        return 0;
+    }
+    hub_mem (UI_BANK, &n, &UIREC->ixk, 1);
+    for (k = 0; k < n && k < NIXK; ++k) {
+        hub_mem (UI_BANK, &c, &UIREC->ixks[k], sizeof c);
+        if (name_is (c.name, w)) {
+            if (f++) {
+                return 0;
+            }
+            othings_x = c.kind | 0x100;
+        }
+    }
+    return f;
 }
+#pragma static-locals (pop)
 
 /* Word w the thing's own if a letter made it, from ldes[k] on: "#" and its id, as a name given is (the world chooses
 ** that one: things.c's chooser), into the hub's to (its request's); desk the letter's place plus 1, or 0 */
