@@ -41,6 +41,12 @@ end with their open questions: copy them here when the branch is merged.
   - Not built: the shared paths (main.c's things, feature, reach_go) do those steps for every verb already, and the
     coverage report's "-" cells are where a row's refusal would go.
   - DECISIONS.md:6045, "The dispatch table's rest".
+- **P4. "empty X" and "empty X onto Y".** The grammar takes them, but there's no world act for them yet. Should the
+  things come out and be put down here, or on Y; a liquid poured away; and how long does it take?
+  - built/2026-11-17-pb.md, open question 1.
+- **P5. A thing put on a ledge, in a corner, the centre, a side or a passage** is still refused as a put; a drop puts
+  it down at the character's feet (built). Placing it needs that place's square: walk there and place it?
+  - built/2026-11-17-pb.md, open question 2.
 
 ## Doors, portcullises and windows
 
