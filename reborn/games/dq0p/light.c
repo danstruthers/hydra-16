@@ -251,10 +251,10 @@ static void make (void)
     hub_map (0);
 }
 
-/* ---- Part 1's (swapped: with the look's grid and its lines, view.c's and cast.s's, the lamps found, things.c's):
-** the lamps against the last look's; a lamp's light on a chunk (bank.s's stub) */
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
+/* ---- Part 3's (swapped: with the lamps found, things.c's, part 1's before, 2026-11-17): the lamps against the last
+** look's */
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
 
 /* Those of list a (n of them) not in list b (m), stale round them */
 static void __fastcall__ gone (const struct lsrc* a, unsigned char n, const struct lsrc* b, unsigned char m)
@@ -288,6 +288,14 @@ void __fastcall__ light_lamps_end (unsigned char sn)
     memcpy (ls, ln, sizeof ls);
     nls = nln;
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ---- Part 1's (swapped: with the look's grid and its lines, view.c's and cast.s's): a lamp's light on a chunk (bank.s's
+** stub) */
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
 
 /* ---- A chunk's grid worked out */
 

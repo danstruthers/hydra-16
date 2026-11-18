@@ -162,9 +162,45 @@ void __fastcall__ s_grid (unsigned char sn, unsigned gx, unsigned gy, unsigned c
     rect ();
 }
 
+/* A look one way's grid (from gx, gy, w each way, the eyes in its middle, g_r: never kept) made only where it may see
+** (cast.s's: a glance's reach every way it looks, not behind; twice as far in the quarter ahead), the walls round them,
+** and its lines' squares (each from the eyes to one of them, within them): on a compass way the half ahead and two
+** squares back; on a diagonal the quarter ahead (two squares back) and a glance's reach and a square, every way.  The
+** rest of the grid as it was: no square there is looked at but to be passed over (behind, or past a glance's reach
+** outside the quarter ahead, cast.s's).  A look one way's grid made a third to a half quicker (2026-11-17) */
+static unsigned char rg_, vf_;                  /* (s_view's: a glance's reach, the way it faces) */
+static unsigned gxw, gyw;
+static void sub (void)                          /* (Its columns from r_i0, r_wi of them; rows from r_j0, r_wj) */
+{
+    r_x = gxw + r_i0;
+    r_y = gyw + r_j0;
+    rect ();
+}
+
+static void way_grid (void)
+{
+    static unsigned char r, e;
+    static signed char hx, hy;
+
+    r = g_r;
+    e = 2 * r + 1;
+    hx = head_x[vf_];
+    hy = head_y[vf_];
+    r_i0 = hx > 0 ? r - 2 : 0;                  /* (The half ahead; a diagonal's quarter ahead) */
+    r_wi = (hx < 0 ? r + 3 : e) - r_i0;
+    r_j0 = hy > 0 ? r - 2 : 0;
+    r_wj = (hy < 0 ? r + 3 : e) - r_j0;
+    sub ();
+    if (hx && hy) {                             /* (A diagonal's: a glance's too, the quarter's squares again) */
+        r_i0 = r_j0 = r - rg_ - 1;
+        r_wi = r_wj = 2 * rg_ + 3;
+        sub ();
+    }
+}
+
 /* The view's grid of stratum v_sn from gx, gy, w each way: the last one kept if nothing in it has changed (its
 ** stratum, its size, the light layer's lgen, the stratum's bounds), the last view's marks taken out of it (blo, bhi),
-** moved by the steps since (the squares come into it made), else made afresh */
+** moved by the steps since (the squares come into it made), else made afresh (a look one way's, way_grid's) */
 static void __fastcall__ view_grid (unsigned gx, unsigned gy, unsigned char w)
 {
     static struct stratum* s;
@@ -179,7 +215,11 @@ static void __fastcall__ view_grid (unsigned gx, unsigned gy, unsigned char w)
     r_y = gy;
     r_i0 = r_j0 = 0;
     r_wi = r_wj = w;
-    if (gw_ == w && gsn_ == v_sn && glg_ == lgen && gsx0 == s->x0 && gsy0 == s->y0 && gsw == s->w && gsh == s->h &&
+    if (v_way) {
+        gxw = gx;
+        gyw = gy;
+        way_grid ();
+    } else if (gw_ == w && gsn_ == v_sn && glg_ == lgen && gsx0 == s->x0 && gsy0 == s->y0 && gsw == s->w && gsh == s->h &&
         dx > -w && dx < w && dy > -w && dy < w) {
         hub_map (LOOK_BANK);                    /* (The last view's marks out: its squares the grid's) */
         for (j = 0; j < bw; ++j) {
@@ -516,6 +556,7 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
         return;
     }
     range = 4 + 2 * (sight > 9 ? 9 : sight);
+    rg_ = range;
     x_ = x;
     y_ = y;
     box (range);                                /* (A glance's reach: its chunks) */
@@ -546,6 +587,7 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
             }
         }
         lbk = 0xFF;
+        vf_ = face;
         stratum (sn);                           /* (The light layer's lamps' lines may have had the grid) */
         view_grid (gx0, gy0, w);                /* The grid; then those not made that the eyes reach made, and it all again */
     } while (v_way && chunks (1));

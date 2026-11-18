@@ -56,12 +56,15 @@ static void pc (void)
 
 extern unsigned char gw;                        /* (give_way's, below) */
 void give_way (void);
+#define GIVE_WAY        100                     /* (give_way's: below) */
 static void look (void)
 {
     unsigned char first, wd, wn;
     unsigned wx, wy;
 
-    gw = 0;                                     /* (Its giving way: GIVE_WAY ticks a look at most) */
+    gw = v_way ? GIVE_WAY : 0;                  /* (Its giving way: GIVE_WAY ticks a look at most; a look one way's none,
+                                                **   its own command's answer, the world waiting on it: 2026-11-17, the
+                                                **   normal pace's half second asleep in it) */
     pc ();
     first = HUB->look.first;
     wx = HUB->look.wx;
@@ -94,7 +97,6 @@ static void look (void)
 ** time; but not to one waiting for the world's answer that waits for the look
 ** (a request of the things but what's carried, the tools, a tool's wear; the world's own, wreq: dq0w.c's waiting);
 ** the hub's header in the window after */
-#define GIVE_WAY        100
 unsigned char gw;                               /* (Reset as a look begins: its ticks given) */
 static unsigned char gk;
 void give_way (void)
