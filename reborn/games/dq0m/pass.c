@@ -293,6 +293,7 @@ unsigned char __fastcall__ o_join (unsigned char a, unsigned char b)
     unsigned char da, db, ax, ay;
     int za;
 
+    ahead_check ();
     da = facing (a, B->x + B->w / 2, B->y + B->h / 2);
     db = (da + 2) & 3;
     door_in (a, da);
@@ -316,6 +317,7 @@ static unsigned char __fastcall__ cross (unsigned char d, unsigned char sx, unsi
     unsigned dist, bd = 0xFFFF;
     int zs = gz (sx, sy);
 
+    ahead_check ();
     for (r = 0; r < L->nrooms; ++r) {
         dist = (unsigned) (sx > L->room[r].x ? sx - L->room[r].x : L->room[r].x - sx) +
             (sy > L->room[r].y ? sy - L->room[r].y : L->room[r].y - sy);

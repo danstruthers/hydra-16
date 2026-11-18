@@ -18,7 +18,7 @@ RP_X        = 1                     ; (The record store's calls, ../dq0/rp.h's r
             .include    "../dq0/dq0lib.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 9                     ; dq0m.cfg's overlays (the 6th the swapped parts' images, the 7th uses.c, the 8th the great caverns, the 9th sky.c)
+OVMAX       = 10                    ; dq0m.cfg's overlays (the 6th the swapped parts' images, the 7th uses.c, the 8th the great caverns, the 9th sky.c, the 10th the chunks made ahead)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 DEPTH       = 16                    ; Overlay calls in calls, at most
 
@@ -188,7 +188,7 @@ ovcall:
             OVFN        grow_built, 1
             OVFN        join, 2
             OVFN        crossings, 2
-            OVFN        slants, 1           ; (The caves' diagonal ways: 2026-10-31, overlay 3's room)
+            OVFN        slants, 2           ; (The caves' diagonal ways: 2026-10-31, overlay 3's room; 2's, 1's room, 2026-11-17)
             OVFN        grow_caves, 3
             OVFN        cavern, 8           ; (The great caverns: slice 4.10's, caves.c's in overlay 8, 3's room)
             OVFN        wet_chunk, 6        ; (The water: slice 4.9's, caves.c's in overlay 6, 3's room)
@@ -217,6 +217,18 @@ ovcall:
             OVFN        put_trap, 5
             OVFN        put_dtrap, 5
             OVFN        put_mark, 7
+            OVFN        ahead_at, 10        ; (The chunks made ahead: ahead.c, 2026-11-17)
+            OVFN        ahead_found, 10
+            OVFN        ahead_drop, 10
+            OVFN        ahead_none, 10
+            OVFN        ahead_move, 10
+            OVFN        ahead_room, 10
+            OVFN        ahead_next, 10
+            OVFN        ahead_still, 10
+            OVFN        ahead_take, 10
+            OVFN        ahead_keep, 10
+            OVFN        grow, 10            ; (make.c's: a chunk grown, the main RAM's room)
+            OVFN        detail, 10          ; (plan.c's: a region's details, overlay 4's room)
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0m.cfg's SWAP, a part at a time, copied
 ; there from overlay 6's bank as it's called)
@@ -224,3 +236,29 @@ ovcall:
             .include    "../dq0/swap.inc"
 
             .include    "parts.inc"         ; (The parts and their stubs, the build's: parts.txt, ../dq0/parts.js)
+
+; ---- A chunk made ahead given up (make.c's make_ahead: a request come, or a command; longjmp from a grower's
+; checkpoint): the overlays' and the swapped parts' call stacks put back as they were as it began
+
+            .export     _ahead_mark, _ahead_back
+
+            .bss
+amark:      .res        2
+
+            .code
+
+; void ahead_mark (void): the stacks' depths kept
+_ahead_mark:
+            lda         ovsp
+            sta         amark
+            lda         swsp
+            sta         amark + 1
+            rts
+
+; void ahead_back (void): and put back (the window the caller's to set)
+_ahead_back:
+            lda         amark
+            sta         ovsp
+            lda         amark + 1
+            sta         swsp
+            rts

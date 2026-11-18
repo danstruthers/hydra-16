@@ -466,7 +466,9 @@ static struct detail {
     unsigned char   n[RCH][RCH], w[RCH][RCH];
 } D;
 
-static void __fastcall__ detail (unsigned char sn, unsigned char rx, unsigned char ry)
+#pragma code-name (push, "OV10CODE")           /* (Overlay 10's, 4's room, 2026-11-17: its stub detail, bank.s's) */
+#pragma rodata-name (push, "OV10RODATA")
+void __fastcall__ o_detail (unsigned char sn, unsigned char rx, unsigned char ry)
 {
     struct stratum* s = &STRATUM (sn);
     struct detail* at = (struct detail*) 0x8000 + ((unsigned) rx * 31 + (unsigned) ry * 17 + sn * 7) % DCACHE;
@@ -480,13 +482,14 @@ static void __fastcall__ detail (unsigned char sn, unsigned char rx, unsigned ch
     if (D.used && D.sn == sn && D.rx == rx && D.ry == ry) {
         return;
     }
-    D.used = 1;
+    D.used = 0;                                 /* (Worked out whole, or not at all: a chunk made ahead given up in it) */
     D.sn = sn;
     D.rx = rx;
     D.ry = ry;
     memset (D.n, NO_WAY, sizeof D.n);
     memset (D.w, NO_WAY, sizeof D.w);
     if (rg (sn, rx, ry)->kind == RG_ROCK) {
+        D.used = 1;
         bwrite (detail_bank, at, &D, sizeof D);
         return;
     }
@@ -499,6 +502,9 @@ static void __fastcall__ detail (unsigned char sn, unsigned char rx, unsigned ch
     seen[0] = 1;
     ix = iy = 0;
     for (todo = kw * kh - 1, steps = 0; todo && steps < 20000; ++steps) {
+        if (!((unsigned char) steps & 31)) {
+            ahead_check ();             /* (Each 32 steps: some 120,000 cycles, the dice the library's) */
+        }
         d = random (4);
         nx = ix + dir_x[d];
         ny = iy + dir_y[d];
@@ -531,8 +537,12 @@ static void __fastcall__ detail (unsigned char sn, unsigned char rx, unsigned ch
             }
         }
     }
+    D.used = 1;
     bwrite (detail_bank, at, &D, sizeof D);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+void __fastcall__ detail (unsigned char sn, unsigned char rx, unsigned char ry);
 
 /* The way across chunk (cx, cy)'s north edge (west: across its west), or NO_WAY */
 static unsigned char __fastcall__ edge_way (unsigned char sn, unsigned cx, unsigned cy, unsigned char west)
@@ -579,10 +589,15 @@ void __fastcall__ o_chunk_edges (unsigned char sn, unsigned cx, unsigned cy, str
     e->way[DIR_W] = edge_way (sn, cx, cy, 1);
     e->way[DIR_S] = edge_way (sn, cx, cy + 1, 0);
     e->way[DIR_E] = edge_way (sn, cx + 1, cy, 1);
+    ahead_check ();                             /* (A chunk made ahead: its ways, then each corner, some 45,000 each) */
     e->ground[0] = ground (sn, x, y);
+    ahead_check ();
     e->ground[1] = ground (sn, x + CW - 1, y);
+    ahead_check ();
     e->ground[2] = ground (sn, x, y + CW - 1);
+    ahead_check ();
     e->ground[3] = ground (sn, x + CW - 1, y + CW - 1);
+    ahead_check ();
     w = s->w - cx * CW;
     e->x0 = 0;
     e->x1 = w >= CW ? CW - 1 : w - 1;

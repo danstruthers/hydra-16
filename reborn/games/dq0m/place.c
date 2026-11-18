@@ -35,10 +35,18 @@ static unsigned long dh;
 
 unsigned char __fastcall__ dr (unsigned char n)
 {
+    unsigned r;
+
+    ahead_check ();                             /* (A checkpoint of a chunk made ahead, each throw: the growers' busiest
+                                                **   work between their own; nothing but the chunk's own state, and the
+                                                **   dice's, keyed again before they're next thrown, under way here) */
     dh ^= dh << 13;
     dh ^= dh >> 17;
     dh ^= dh << 5;
-    return (unsigned char) ((dh >> 8) % n);
+    r = (unsigned char) (dh >> 24) % n;         /* ((dh >> 8) % n, a byte at a time: no 32-bit division, the dice the
+                                                **   most of a chunk's time, 2026-11-17) */
+    r = ((r << 8) | (unsigned char) (dh >> 16)) % n;
+    return ((r << 8) | (unsigned char) (dh >> 8)) % n;
 }
 
 /* ---- The numbers of their own: what the caves, the sky, the plan, the uses and a mixed stratum decided by a hash of
@@ -245,6 +253,7 @@ void __fastcall__ o_place (unsigned char stage)
             continue;
         }
         for (at = 0; at < (a->site == SI_DOOR ? L->nportals : a->site == SI_WALL ? L->nrooms << 2 : L->nrooms); ++at) {
+            ahead_check ();
             for (w = a; w < b; ++w) {
                 site (at);
             }

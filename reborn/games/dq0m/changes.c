@@ -353,7 +353,8 @@ static unsigned char sreg_need (void)
 ** with a folder) */
 static unsigned char __fastcall__ map_of (unsigned char sn, unsigned cx, unsigned cy, unsigned char make)
 {
-    unsigned char i;
+    unsigned char i, j;
+    struct seen* q;
 
     rsn = sn;
     rrx = cx >> 3;
@@ -362,9 +363,11 @@ static unsigned char __fastcall__ map_of (unsigned char sn, unsigned cx, unsigne
     if (HUB->savedir[0] && !sreg_need ()) {
         return 0xFF;
     }
-    for (i = 0; i < NSEEN; ++i) {
-        if (seen_at (i)->used && seen_at (i)->sn == sn && seen_at (i)->cx == cx && seen_at (i)->cy == cy) {
-            return i;
+    for (i = 0; i < NSEEN; ) {                  /* (A bank's maps at a time: each a chunk's finishing, 2026-11-17) */
+        for (q = seen_at (i), j = SEEN_PER_BANK; j; --j, ++q, ++i) {
+            if (q->used && q->sn == sn && q->cx == cx && q->cy == cy) {
+                return i;
+            }
         }
     }
     if (!make) {

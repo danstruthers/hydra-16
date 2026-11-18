@@ -353,7 +353,6 @@ void __fastcall__ turned_says (unsigned char go);                        /* (Ove
 void facing_words (void);                       /* (Overlay 7's) The way it believes it faces (task.c's: slice 4.2's) */
 #define FS_CMD      1                           /* (fore_set's: main.c's) */
 #define FS_UI       2
-#define FS_MAKE     4
 #define FS_SENS     8
 extern unsigned char fored;
 extern unsigned char stir_held;                 /* (main.c's: a denizen's stir held, told after the line's answer) */

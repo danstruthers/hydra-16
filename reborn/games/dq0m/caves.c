@@ -397,6 +397,7 @@ static void cav_part (void)
     W.x0 = W.y0 = W.best = 0xFF;
     W.x1 = W.y1 = 0;
     for (W.y = 0; W.y < CW; ++W.y) {
+        ahead_check ();
         for (W.x = 0; W.x < CW; ++W.x) {
             if (((W.c = cav_at (W.x, W.y)) & 0x7F) < 64) {
                 L->elev[W.y][W.x] = -(signed char) ((unsigned) V.deep * (64 - (W.c & 0x7F)) >> 6);
@@ -472,6 +473,7 @@ static unsigned char __fastcall__ cut (const struct room* p, unsigned char i, un
 static void diamonds (void)
 {
     for (W.c = 0, W.p = L->room; W.c < L->nrooms; ++W.c, ++W.p) {
+        ahead_check ();
         if (W.p->w < 4 || W.p->h < 4) {
             continue;
         }
@@ -548,6 +550,7 @@ static void incline (void)
         return;
     }
     for (V.gx = 0; V.gx < 48; ++V.gx) {         /* (Tries: a passage's square, a way off it) */
+        ahead_check ();
         V.n = ch (L->cx + V.gx, L->cy + 0x4141);
         W.x = 3 + V.n % (CW - 6);
         W.y = 3 + ch (L->cx + V.gx, L->cy + 0x4242) % (CW - 6);
@@ -655,6 +658,7 @@ unsigned char __fastcall__ o_cavern (unsigned char m)
         return 1 + L->nrooms;                   /* (1: none in the chunk, only beside it; 2: its part) */
     }
     for (W.y = 0; W.y < CW; ++W.y) {
+        ahead_check ();
         for (W.x = 0; W.x < CW; W.x += W.y && W.y < CW - 1 ? CW - 1 : 1) {    /* (The edges' squares) */
             for (W.i = 0; W.i < 9 && L->tile[W.y][W.x] == T_ROCK; ++W.i) {
                 if (cav_at (W.x - 1 + W.i % 3, W.y - 1 + W.i / 3) & 0x80) {
@@ -668,8 +672,8 @@ unsigned char __fastcall__ o_cavern (unsigned char m)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "OV1CODE")            /* (Overlay 1's: 3's room, the air's) */
-#pragma rodata-name (push, "OV1RODATA")
+#pragma code-name (push, "OV2CODE")            /* (Overlay 2's: 3's room, the air's; 1's, its checkpoints, 2026-11-17) */
+#pragma rodata-name (push, "OV2RODATA")
 static const int o8[8] = { -CW, 1 - CW, 1, CW + 1, CW, CW - 1, -1, -CW - 1 };    /* (The eight ways, as offsets in
                                                 **   the chunk: N, NE ... NW) */
 /* A tunnel's zigzag made the diagonal it is (the user's, 2026-10-31: tunnels off the compass): a tunnel's square in no
@@ -720,7 +724,7 @@ void o_slants (void)
 #pragma static-locals (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-void slants (void);                             /* (Overlay 1's, its stub) */
+void slants (void);                             /* (Overlay 2's, its stub) */
 
 void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned long seed)
 {
@@ -742,6 +746,7 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
         L->zone[0].z = floor_at (mx, my);
     }
     for (i = 0; i < e->nland; ++i) {            /* (The links: each in a chamber, a tunnel to the middle) */
+        ahead_check ();
         chamber (e->lx[i], e->ly[i], 2 + random (2), 1 + random (2));
         tunnel (e->lx[i], e->ly[i], random (2));
     }
@@ -759,6 +764,7 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
         tunnel (CW - 1, e->way[DIR_E], random (3) < SP->wide);
     }
     for (k = random (SP->chambers ? SP->chambers : 1); k; --k) {   /* (Chambers more, along the tunnels) */
+        ahead_check ();
         for (n = 0; n < 40; ++n) {
             x = 2 + random (CW - 4);
             y = 2 + random (CW - 4);
@@ -770,12 +776,14 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
     }
     /* The floors, the chambers' hollows, and the walls: the rock beside what's open */
     for (y = 0; y < CW; ++y) {
+        ahead_check ();
         for (x = 0; x < CW; ++x) {
             L->elev[y][x] = L->tile[y][x] != T_ROCK ? floor_at (x, y) + L->elev[y][x] : 0;   /* (A cavern's hollow
                                                 **   in it: cav_part's) */
         }
     }
     for (i = 0; i < L->nrooms; ++i) {
+        ahead_check ();
         if (!(L->room[i].flags & R_CAVERN)) {
             hollow (&L->room[i]);
         }
@@ -783,6 +791,7 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
     cavern (3);                                 /* (A sloping tunnel, its floors laid: overlay 8's) */
     slants ();
     for (y = 0; y < CW; ++y) {
+        ahead_check ();
         for (x = 0; x < CW; ++x) {
             if (L->tile[y][x] != T_ROCK) {
                 continue;

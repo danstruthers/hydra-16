@@ -31,10 +31,16 @@
 #include "../dq0w/world.h"
 #include "grow.h"
 
-unsigned char ufort, uwater;                    /* (The chunk's stratum fortified, the chunk's water: US_PLAN's) */
-unsigned char ulayer, uruin;                    /* (The chunk's layer, SG_*, and a ruin after it, EN_* or 0xFF) */
-static unsigned char unl, upurpose, uage, uring, ua;    /* (Its stratum's layers, the older one's purpose, its
-                                                **   age; the chunk's ring, its main room: US_UNDER's) */
+struct ustate us;                               /* (The chunk's stratum fortified, the chunk's water: US_PLAN's; the
+                                                **   chunk's layer, SG_*, and a ruin after it, EN_* or 0xFF; its
+                                                **   stratum's layers, the older one's purpose, its age; the chunk's
+                                                **   ring, its main room: US_UNDER's.  One struct: kept whole with a
+                                                **   chunk made ahead, make.c's, for its stock as it's first found) */
+#define unl             us.nl
+#define upurpose        us.purpose
+#define uage            us.age
+#define uring           us.ring
+#define ua              us.a
 
 /* The styles' proportions (theme.h's struct style): the set the theme names (its mission's TM_STYLES: 0 the first, the
 ** house's), read from the game's lib folder's styles.dat (the build's, from games/dq0/styles.txt: its head, the
@@ -277,6 +283,7 @@ static void floors (void)
 
     L->pceil = std;
     for (r = 0; r < L->nrooms; ++r) {
+        ahead_check ();
         p = &L->room[r];
         area = (unsigned) p->w * p->h;
         across = p->w >= p->h;                  /* (Its zones side by side along its length: zones () in built.c) */

@@ -828,18 +828,16 @@ static void stop_world (void)
 ** so a line's Enter is looked for at the next tick, a tick at most behind the background's work; a driver serving its
 ** calls, the console's, with it), and the world, the command parser, the senses and the referee while a command's in
 ** hand (FS_CMD: the hub's ui_cmd).  The senses with them: the world waits on their look and their stock (in the
-** background, an inventory's answer was 60,000 cycles the slower).  And the maker but while a command's in hand (FS_MAKE:
-** asked for a chunk or the map, someone waits on it, the player mostly, a chunk the longest wait in the game: in the
-** background 12M cycles, a chunk's 5.5M of its own among the denizens and the rest; asked for nothing, asleep), and the
-** senses always (a look's rest after its first word, the sound's pulse after it: over the sooner, not lying under the next
-** line's answer; asked for nothing, asleep).  Not at
-** the turns pace: there the game waits for the player, and its tasks take their turns as they did (fore_sync's; overlay
-** 6's) */
+** background, an inventory's answer was 60,000 cycles the slower).  (The maker puts itself in it while one in it waits on
+** its request, the world, the senses, the UI: dq0m.c's fore, 2026-11-17; out of it as it makes the chunks ahead, the
+** background's work.)  And the senses always (a look's rest after its first word, the sound's pulse after it: over the
+** sooner, not lying under the next line's answer; asked for nothing, asleep).  Not at the turns pace: there the game
+** waits for the player, and its tasks take their turns as they did (fore_sync's; overlay 6's) */
 #pragma code-name (push, "OV13CODE")            /* (Overlay 13's and 3's since 2026-11-04, overlay 17's room) */
 #pragma rodata-name (push, "OV13RODATA")
 void __fastcall__ o_fore_set (unsigned char on)
 {
-    static const unsigned char fg[] = { T_WORLD, T_COMMANDS, T_REFEREE, T_SENSES, T_MAKER }, fm[] = { FS_CMD, FS_CMD, FS_CMD, FS_SENS, FS_MAKE };
+    static const unsigned char fg[] = { T_WORLD, T_COMMANDS, T_REFEREE, T_SENSES }, fm[] = { FS_CMD, FS_CMD, FS_CMD, FS_SENS };
     unsigned char k;
 
     hy_taskfore (hy_task (), (on & FS_UI) != 0);
@@ -900,7 +898,7 @@ static void fore_sync (void)
         HUB->ui_cmd = owed = 0;                 /* (Its intent taken and the world round again since: an answer
                                                 **   without news to the character, if any, given) */
     }
-    f = HUB->tpr ? FS_UI | FS_SENS | (HUB->ui_cmd ? FS_CMD : FS_MAKE) : 0;
+    f = HUB->tpr ? FS_UI | FS_SENS | (HUB->ui_cmd ? FS_CMD : 0) : 0;
     if (f != fored) {
         fore_set (fored = f);
     }

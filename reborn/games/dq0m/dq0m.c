@@ -22,10 +22,11 @@
 
 struct stratum strata[MAXSTRATA];               /* (This task's copy of the hub's) */
 const char* libpath;                            /* (The game's lib folder: its bank programs', stratagen's) */
-#define OVLS    9                               /* Its overlays: built.c, pass.c, caves.c, plan.c, fixtures.c; the
+#define OVLS    10                              /* Its overlays: built.c, pass.c, caves.c, plan.c, fixtures.c; the
                                                 **   swapped parts' images (../dq0/swap.inc: map.c's, changes.c's);
                                                 **   uses.c; the great caverns (caves.c's cavern); what shows the sky
-                                                **   (sky.c: bank.s's OVMAX, dq0lib.inc's OVL_BANKS) */
+                                                **   (sky.c); the chunks made ahead (ahead.c: bank.s's OVMAX,
+                                                **   dq0lib.inc's OVL_BANKS) */
 
 /* The overlays: dir/dq0m.ovl, an 8K bank each (dq0m.cfg's OV1 ...; the file cut after the last one used, each bank's
 ** bank packed: make.js, ../dq0/ovlpack.js), read and unpacked in place into banks of its own by the unpack library,
@@ -68,6 +69,9 @@ static void __fastcall__ serve (unsigned char i)
 
     memcpy (&q, &HUB->mreq[i], sizeof q);
     hub_get (WORLD_BANK, WREC->strata, strata, sizeof strata);
+    if (q.kind == M_SLOT || q.kind == M_PLAN || q.kind == M_RESTORE) {
+        ahead_none ();                          /* (A plan grown, or read back: the chunks made ahead let go) */
+    }
     switch (q.kind) {
     case M_SLOT:                                /* (Its record read back into its slot: its plan grown again) */
         stale ();
@@ -111,9 +115,124 @@ static void __fastcall__ serve (unsigned char i)
     hub_reply (&HUB->mreq[i]);
 }
 
+/* ---- The chunks made ahead (the user's, 2026-11-17: the maker builds the map's pieces ahead of the character's eyes,
+** in the background, so a look or a walk finds them made; ahead.c's which and where, make.c's the making): in the
+** background (the kernel's: the maker in its foreground only while one there waits on its request, fore), as nothing's
+** asked of it, AH_SETTLE ticks after the last; giving way to a command in hand or a line being typed as the senses' ask
+** does (dq0p.c's sense_held: at the real paces GIVE_WAY ticks at most from a line's Enter, KEY_HOLD while its keys go
+** on; at the turns pace, the game waiting on the player between, while it's in hand), held where it is meanwhile (the
+** growers' checkpoints: ahead_wanted); given up as a request comes for anything but the chunk it's making (one for it:
+** made on, in the foreground if its asker is); at each checkpoint the other tasks' turn first (hy_yield: the
+** background's least).  Asleep but as it's rung, or AH_NAP ticks gone: each wake the maker's few thousand cycles, taken
+** from what the game's doing then (2026-11-17: four ticks' naps as it gave way, a fortieth of a command's answer) */
+#define AH_NAP          40                      /* (Ticks asleep at most, nothing wanted: the actors looked at again) */
+#define AH_SETTLE       4                       /* (Ticks of no command and no keys before one's begun) */
+#define AH_HOLD         25                      /* (Ticks asleep at most as it gives way) */
+#define GIVE_WAY        100                     /* (dq0p.c's: ticks held from a line's Enter at most, */
+#define KEY_HOLD        600                     /*   and while its keys go on) */
+#define ASK_FORE        0x1D                    /* (The requests whose askers are the kernel's foreground's: the world's,
+                                                **   the senses', the UI's, the map's; not the denizens') */
+static unsigned char fg;                        /* (In the kernel's foreground now: fore ()'s) */
+
+/* The requests posted: bit i mreq[i]'s (ASK_*), bit 4 the map's (the hub's header in the window) */
+static unsigned char asked (void)
+{
+    unsigned char i, w = 0;
+
+    for (i = 0; i < NASK; ++i) {
+        if (hub_posted (&HUB->mreq[i])) {
+            w |= 1 << i;
+        }
+    }
+    return hub_posted (&HUB->mapq) ? w | 0x10 : w;
+}
+
+/* In the kernel's foreground or not (the hub's header in the window): on, the requests posted (asked's), the maker's
+** turn there as it was the UI's to give (main.c's fore_sync, FS_MAKE, before 2026-11-17): at the real paces, for the
+** map, and for the rest while no command's in hand (one in hand, the world's, the command parser's and the referee's
+** time first: its answer's first letter); and for a request from one in the foreground (the world, the senses, the
+** UI's), not the denizens' minds' alone; never as it makes a chunk ahead for no one */
+static void __fastcall__ fore (unsigned char on)
+{
+    on = HUB->tpr && ((on & 0x10) || ((on & ASK_FORE) && !HUB->ui_cmd));
+    if (on != fg) {
+        hy_taskfore (hy_task (), fg = on);
+    }
+}
+
+/* A command in hand, or a line being typed: the background gives way, as the senses' ask does (the hub's header in the
+** window) */
+static unsigned char hst, hsq, hcm, hks;        /* (The hold's state: 0 none, 1 since ht0, 2 run out; its line's, and its
+                                                **   command's and keys' as it began) */
+static unsigned ht0;
+static unsigned char giving (void)
+{
+    if (!(HUB->ui_cmd | HUB->ui_keys)) {
+        hst = 0;
+        return 0;
+    }
+    if (!HUB->tpr) {
+        return 1;                               /* (The turns pace: while it's in hand) */
+    }
+    if (HUB->cq.seq != hsq || HUB->ui_cmd != hcm || HUB->ui_keys != hks) {
+        hks = HUB->ui_keys;                     /* (A line typed again, a new line entered: its own hold) */
+        hsq = HUB->cq.seq;
+        hcm = HUB->ui_cmd;
+        hst = 0;
+    }
+    if (!hst) {
+        hst = 1;
+        ht0 = hy_ticks ();
+    } else if (hst == 1 && hy_ticks () - ht0 >= (HUB->ui_cmd ? GIVE_WAY : KEY_HOLD)) {
+        hst = 2;
+    }
+    return hst == 1;
+}
+
+/* At a checkpoint of a chunk being made ahead (make.c's ahead_check): 1, give it up (a request posted for anything but
+** it: ahead.c's nsn, ncx, ncy; the game's end; another the nearest wanted now, the character moved on: looked at again
+** as it comes to another eight squares' block); else, giving way, held there, asleep AH_HOLD ticks at a time; 0, go on (in
+** the kernel's foreground if one there's asked for this very chunk).  The hub's header in the window after */
+static unsigned char asn;                       /* (The character's place as it was last looked at) */
+static unsigned ax, ay;
+unsigned char ahead_wanted (void)
+{
+    struct mreq* q;
+    unsigned char i, w;
+
+    for (;;) {
+        hub_map (0);
+        if (HUB->quit || (w = asked ()) & 0x10) {
+            return 1;
+        }
+        if (w) {
+            for (i = 0, q = HUB->mreq; i < NASK; ++i, ++q) {
+                if ((w >> i & 1) && (q->kind != M_CHUNK || q->sn != nsn || q->cx != ncx || q->cy != ncy)) {
+                    return 1;
+                }
+            }
+            fore (w);
+            return 0;
+        }
+        if (!giving ()) {
+            if (HUB->pc_stratum != asn || (HUB->pc_x ^ ax) & ~7 || (HUB->pc_y ^ ay) & ~7) {
+                asn = HUB->pc_stratum;
+                ax = HUB->pc_x;
+                ay = HUB->pc_y;
+                return !ahead_still ();
+            }
+            hy_yield ();                        /* (The other tasks' turn first, any that wants it: the background's
+                                                **   least, the denizens' minds and the world's own work not put off by
+                                                **   it, 2026-11-17) */
+            return 0;
+        }
+        hy_sem_wait (HUB->sem[T_MAKER], AH_HOLD);
+    }
+}
+
 int main (int argc, char* argv[])
 {
-    unsigned char i;
+    unsigned char i, w, t, calm = 0;
 
     if (argc < 4 || ovl_load (argv[3]) || hub_attach (num (argv[1]), num (argv[2]))) {
         return 1;
@@ -123,11 +242,30 @@ int main (int argc, char* argv[])
     hub_set (THEME_BANK, THEME_PLACE, 0xFF, NPIECES * sizeof (struct tplace));     /* (No piece placed yet) */
     for (;;) {
         hub_map (0);                            /* (The hub's header: its own banks may be in the window) */
-        hy_sem_acquire (HUB->sem[T_MAKER]);     /* (Waiting costs nothing) */
-        hub_map (0);
         if (HUB->quit) {
             break;
         }
+        if (!(w = asked ())) {                  /* (Nothing asked: a chunk made ahead, or asleep on its doorbell, woken
+                                                **   by a request's ring) */
+            fore (0);
+            if (giving ()) {
+                calm = 0;
+                t = AH_HOLD;
+            } else if (!calm) {
+                calm = 1;
+                t = AH_SETTLE;                  /* (Once, rung awake by a request meanwhile) */
+            } else if (ahead_next ()) {
+                make_ahead (nsn, ncx, ncy);
+                continue;
+            } else {
+                t = AH_NAP;
+            }
+            hub_map (0);
+            hy_sem_wait (HUB->sem[T_MAKER], t);
+            continue;
+        }
+        calm = 0;
+        fore (w);                               /* (One in the foreground waits on it: there too, at the real paces) */
         for (i = 0; i < NASK; ++i) {
             if (hub_posted (&HUB->mreq[i])) {
                 serve (i);

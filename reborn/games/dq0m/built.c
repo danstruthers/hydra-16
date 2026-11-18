@@ -94,6 +94,7 @@ static unsigned char __fastcall__ landing_room (unsigned char lx, unsigned char 
     unsigned char tries, w, h, x, y;
 
     for (tries = 0; tries < 40; ++tries) {
+        ahead_check ();
         w = 2 + random (tries < 20 ? 7 : 2);
         h = 2 + random (tries < 20 ? 3 : 1);
         x = lx - random (w);
@@ -111,6 +112,7 @@ static void rooms (void)
     unsigned char tries, w, h, x, y;
 
     for (tries = 0; tries < 60 && L->nrooms < NROOMS; ++tries) {
+        ahead_check ();
         w = 3 + random (8);
         h = 2 + random (4);
         x = 2 + random (CW - 4 - w);
@@ -226,6 +228,7 @@ static void __fastcall__ zones (unsigned char r)
         }
         ceiling (z);
         for (y = z->y; y < z->y + z->h; ++y) {
+            ahead_check ();                     /* (A row at a time: a zone's floor some 150,000 cycles) */
             for (x = z->x; x < z->x + z->w; ++x) {
                 L->elev[y][x] = clampz (z->z + (z->gx * (x - z->x) + z->gy * (y - z->y)) / 4);
             }
@@ -258,32 +261,25 @@ static void __fastcall__ zones (unsigned char r)
 unsigned char sx[SMAX], sy[SMAX];              /* (sx the caves' great cavern's room too, caves.c's: idle as a
                                                 **   cave's grown) */
 
-static unsigned char __fastcall__ can (unsigned char x, unsigned char y, unsigned char d)
-{
-    unsigned char nx = x + dir_x[d], ny = y + dir_y[d], t = L->tile[y][x], u;
-    int dz;
-
-    if (nx >= CW || ny >= CW) {
-        return 0;
-    }
-    u = L->tile[ny][nx];
-    if (!T_PASS (u)) {
-        return 0;
-    }
-    dz = L->elev[ny][nx] - L->elev[y][x];
-    if (dz < 0) {
-        dz = -dz;
-    }
-    return dz <= (TILE (t) == T_STEPS || TILE (u) == T_STEPS ? STAIR_MAX : STEP_MAX);
-}
-
 static unsigned char __fastcall__ reached (unsigned char x, unsigned char y)
 {
     return (L->tile[y][x] & T_MARK) != 0;
 }
 
+/* Everything reached from the first room's corner (or the middle), walking: a step to a square beside one reached that
+** can be stood on, the rise or fall a step's (more on steps), each square reached marked and followed in turn (the
+** stack's room SMAX: more, not followed, and grown again); then every zone, every way across an edge, every link's
+** square reached, and the marks taken off: 1, or 0.  (Each square's four found by their offsets from it, its own and
+** its floor's read once: some three times quicker than a square's place worked out for each, 2026-11-17, the same
+** squares followed in the same order) */
+static const signed char co[4] = { -CW, 1, CW, -1 };   /* (dir_x's and dir_y's, as offsets among the squares) */
+static unsigned char ack;                       /* (connected ()'s squares counted: its checkpoints) */
 static unsigned char connected (void)
 {
+    static unsigned char* tp;
+    static signed char* ep;
+    static unsigned char t, u;
+    static int dz;
     unsigned sn = 0;
     unsigned char x, y, d, nx, ny, i, ok = 1;
 
@@ -297,14 +293,27 @@ static unsigned char connected (void)
     L->tile[sy[0]][sx[0]] |= T_MARK;
     sn = 1;
     while (sn) {
+        if (!(++ack & 3)) {                     /* (A chunk being made ahead: given up as a request comes, or a command) */
+            ahead_check ();
+        }
         --sn;
         x = sx[sn];
         y = sy[sn];
+        tp = &L->tile[y][x];
+        ep = &L->elev[y][x];
+        t = TILE (*tp) == T_STEPS;
         for (d = 0; d < 4; ++d) {
             nx = x + dir_x[d];
             ny = y + dir_y[d];
-            if (can (x, y, d) && !reached (nx, ny)) {
-                L->tile[ny][nx] |= T_MARK;
+            if (nx >= CW || ny >= CW || !T_PASS (u = tp[co[d]]) || (u & T_MARK)) {
+                continue;
+            }
+            dz = ep[co[d]] - *ep;
+            if (dz < 0) {
+                dz = -dz;
+            }
+            if (dz <= (t || TILE (u) == T_STEPS ? STAIR_MAX : STEP_MAX)) {
+                tp[co[d]] = u | T_MARK;
                 if (sn < SMAX) {
                     sx[sn] = nx;
                     sy[sn] = ny;
@@ -332,6 +341,7 @@ static unsigned char connected (void)
         }
     }
     for (y = 0; y < CW; ++y) {
+        ahead_check ();
         for (x = 0; x < CW; ++x) {
             L->tile[y][x] &= ~T_MARK;
         }
@@ -355,6 +365,7 @@ void __fastcall__ o_grow_built (struct chunk* c, const struct edges* e, unsigned
     mx = (e->x0 + e->x1) / 2;                   /* (The middle: where passages meet with no room to meet in) */
     my = (e->y0 + e->y1) / 2;
     for (tries = 0; tries < 24; ++tries) {
+        ahead_check ();
         clear ();
         ok = 1;
         for (i = 0; i < e->nland; ++i) {        /* (The rooms its links come out in) */
@@ -371,10 +382,12 @@ void __fastcall__ o_grow_built (struct chunk* c, const struct edges* e, unsigned
         sort ();
         uses (US_PLAN, 0);                      /* (Their uses: the stratum's plan's) */
         for (r = 0; r < L->nrooms; ++r) {
+            ahead_check ();
             zones (r);
         }
         uses (US_FLOOR, 0);                     /* (Their floors and ceilings by them) */
         for (i = 0; i + 1 < L->nrooms; ++i) {
+            ahead_check ();
             if (!join (i, i + 1) && i + 2 < L->nrooms) {
                 join (i, i + 2);
             }
@@ -384,11 +397,14 @@ void __fastcall__ o_grow_built (struct chunk* c, const struct edges* e, unsigned
                 join (i, i + 2);
             }
         }
+        ahead_check ();
         if (crossings () && connected ()) {
             break;
         }
     }
+    ahead_check ();
     cavern (2);                                 /* (Its rooms at 45 degrees, if its complex lies so: caves.c's) */
+    ahead_check ();
     if (SP->slant) {
         slants ();                              /* (Its passages on the diagonal: their staircases cut, caves.c's) */
     }

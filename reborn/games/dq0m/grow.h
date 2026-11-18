@@ -68,9 +68,14 @@ enum { US_STYLE, US_PLAN, US_FLOOR, US_THING, US_SIGN, US_UNDER };   /* The styl
                                                 **   what room arg & 7 has lying about (its die arg >> 3: a kind, or
                                                 **   0), its use's mark (place.c's row a kitchen's well), the mark
                                                 **   room arg's use under the chunk's older layer left (stock.c's) */
-extern unsigned char ufort, uwater;             /* (The chunk's stratum fortified (SP_FORT), the chunk's water) */
-extern unsigned char ulayer, uruin;             /* (The chunk's layer of its history, theme.h's SG_*; a ruin after
-                                                **   it, EN_*, or 0xFF: US_PLAN's) */
+struct ustate {                                 /* (uses.c's us: what a chunk's plan of uses left for its stock) */
+    unsigned char   fort, water, layer, ruin, nl, purpose, age, ring, a;
+};
+extern struct ustate us;
+#define ufort           us.fort                 /* (The chunk's stratum fortified (SP_FORT), the chunk's water) */
+#define uwater          us.water
+#define ulayer          us.layer                /* (The chunk's layer of its history, theme.h's SG_*; a ruin after */
+#define uruin           us.ruin                 /*   it, EN_*, or 0xFF: US_PLAN's) */
 unsigned char __fastcall__ layer_at (unsigned char sn, unsigned cx, unsigned cy);  /* Which of stratum sn's layers
                                                 **   chunk (cx, cy) is now (SG_*: stratagen's; uses.c's, a stub) */
 extern const char* libpath;                     /* (The game's lib folder: dq0m.c's, its third argument) */
@@ -101,6 +106,40 @@ void __fastcall__ place_pieces (unsigned char n);   /* The theme's pieces in str
                                                 **   is grown (overlay 4's: plan.c) */
 unsigned char __fastcall__ cavern (unsigned char m);    /* A great cavern's part (overlay 8's: caves.c, slice 4.10's) */
 
+/* make.c: a chunk being made ahead held as a command's in hand, given up as a request comes for another (the growers'
+** checkpoints, in their loops: nothing as a chunk's made for a reader); one made ahead (1, or 0: given up, or no room) */
+void ahead_check (void);
+unsigned char __fastcall__ make_ahead (unsigned char sn, unsigned cx, unsigned cy);
+
+/* ahead.c (overlay 10's): the chunks made ahead, the cache's slots they're in (free to the readers): each slot's key
+** and state (AH_MADE, AH_ROCK: solid rock, nothing grown; its style, AH_STYLE), the next to make (ahead_next: 1, its
+** place in nsn, ncx, ncy), where one goes (ahead_room), a slot's taken by a chunk asked for (ahead_move: its chunk made
+** ahead into slot j, 0xFF another free one, else let go) */
+struct akey {
+    unsigned char   sn;
+    unsigned        cx, cy;
+};
+#define AH_MADE         0x80
+#define AH_ROCK         0x40
+#define AH_STYLE        0x0F
+extern struct akey ah_k[NCSLOTS];
+extern unsigned char ah_f[NCSLOTS];
+extern unsigned char ah_ver;                    /* (The cache's chunks changed, counted) */
+extern unsigned char nsn;
+extern unsigned ncx, ncy;
+unsigned char __fastcall__ ahead_at (unsigned char sn, unsigned cx, unsigned cy);  /* Its slot, or 0xFF */
+unsigned char __fastcall__ ahead_found (unsigned char sn, unsigned cx, unsigned cy);   /* A reader's slot it's in, or
+                                                **   0xFF */
+void __fastcall__ ahead_drop (unsigned char k);
+void ahead_none (void);
+void __fastcall__ ahead_move (unsigned char k, unsigned char j);
+unsigned char ahead_room (void);
+unsigned char ahead_next (void);
+unsigned char ahead_still (void);               /* (The one being made ahead still wanted) */
+void __fastcall__ ahead_take (unsigned char j, unsigned char k);   /* (Slot j's into cb, to finish into slot k) */
+unsigned char __fastcall__ ahead_keep (unsigned char k);   /* (cb, grown ahead, into slot k: 1, or 0) */
+extern struct chunk cb;                         /* (make.c's: the chunk grown) */
+
 /* changes.c: the change records (world.h's: the world's) laid over a chunk made again; what's been seen, kept */
 void changes_init (void);
 int changes_save (void);                        /* The seen maps into the save's folder: 0, or -1 (part 2's) */
@@ -123,7 +162,7 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[9];
+extern unsigned char ovbank[10];
 
 /* make.c: a hub's bank reached from an overlay (its bytes copied to the main RAM, or from it, or set) */
 void __fastcall__ hub_get (unsigned char bank, const void* from, void* to, unsigned n);

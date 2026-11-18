@@ -320,7 +320,7 @@ void __fastcall__ s_map (const char* rules)
     cn = (0 - HUB->pc_skew - ((HUB->pc_face >> 1) << 1)) & 7;
     side = tw > MAP_W + PANEL + 1;
     memset (ml, 0, sizeof ml);
-    fore_set (FS_UI | FS_SENS | FS_MAKE);       /* (The maker first as it draws, the player waiting on it: the world, the
+    fore_set (FS_UI | FS_SENS);                 /* (The maker first as it draws, the player waiting on it: the world, the
                                                 **   referee, the command parser the background meanwhile, main.c's) */
     for (y = drawn = k = held = 0, n = 0xFF; y < MAP_H; ) {
         hub_map (UI_BANK);

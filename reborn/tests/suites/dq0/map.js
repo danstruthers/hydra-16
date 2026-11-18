@@ -126,6 +126,187 @@ function dq0CarveStairs(m, p) {
   return r;
 }
 
+// dq0ahead: the chunks made ahead are the chunks made on demand (the user's, 2026-11-17: the maker builds the map's pieces
+// ahead of the character's eyes, in the background; "generation must stay deterministic: the same seed makes the same
+// chunk whenever it's made").  At seeds 3 (a crypt's built strata) and 70001 (a history's), the same game played twice at
+// the turns pace: the character put at an edge of the ground made (facing a chunk not made, four squares off it) as an
+// inventory's typed, then after a pause of 20M cycles a look ahead, six times over; the first time as the game is, the
+// maker making the chunks round it ahead in the pauses, the second with that turned off (the maker's ahead_next stub made
+// to say "none" in its RAM as the game starts: every chunk made on demand, as before).  Every chunk the maker finishes for
+// a reader (its reply to M_CHUNK) taken as it's finished, its bytes (struct chunk's) and its things listed (the world
+// bank's stock, if it stocked it): the two games' the same chunks in the same order, byte for byte; the first game's
+// made ahead in part (finished with nothing grown: make_chunk with no grow before its reply), the second's none
+function dq0AheadTest() {
+  const seeds = [3, 70001], W = 10, K = 6;
+  const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm'];
+  const game = s => ['dq0 -p t -s ' + s + ' -c /ram/c.hm -T', ...[...Array(K).keys()].flatMap(() => ['inventory', 'look ahead']), 'quit'];
+  const plays = seeds.flatMap(s => [{ s, ahead: 1 }, { s, ahead: 0 }]);
+  const lines = [...pre, ...plays.flatMap(p => game(p.s)), 'echo $status'];
+  return {
+    name: 'dq0ahead', near: ['map', 'time'], meaning: true,
+    what: 'Dingus Quest Zero\'s chunks made ahead of the eyes the chunks made on demand (the user\'s, 2026-11-17: generation deterministic, the same seed the same chunk whenever it\'s made): at seeds 3 and 70001 the same game twice at the turns pace, the character put at an edge of the ground made and a look ahead after a pause, six times; the first as the game is (the maker making ahead in the pauses), the second with the making ahead off: every chunk the maker finished for a reader, its bytes and its things, the same in the same order; the first game\'s made ahead in part, the second\'s none',
+    init: 't_rc', cycles: 4000e6,
+    machine: { input: lines.map(l => '\u0101' + (l === 'look ahead' ? '\u0100'.repeat(W) : '') + l + '\r').join('') },
+    expect: ['% echo $status'],
+    start(m) {
+      const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0m', 'dq0m.lbl'), 'latin1');
+      const sym = n => parseInt(new RegExp('^al ([0-9A-F]+) \\.' + n + '$', 'm').exec(lbl)[1], 16);
+      const REPLY = sym('_hub_reply'), NEXT = sym('_ahead_next'), MAKE = sym('_make_chunk'), GROW = sym('_grow');
+      const H = require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load(), MREQ = H.off('hub', 'mreq'), MSZ = H.size('mreq'), STOCK = H.off('wrec', 'stock'), SSZ = H.size('stock');
+      const cpu = m.cpu, step = cpu.step.bind(cpu), games = this.games = [], a = m.acia, read = a.read, used = new Set();
+      let mk = null, look = 0, grew = true, typed = '', g = -1;
+      // (The character put at an edge of the ground made, as each inventory's typed: dq0lookfar's put, a chunk not put
+      // facing before, each time)
+      a.read = (r, x) => {
+        if (r === 0 && a.rdrf) {
+          if (a.rx === 13) {
+            if (/^dq0 /.test(typed)) { ++g; used.clear(); }
+            if (typed === 'inventory') {
+              const h = m.dq0.bank(0), { L } = m.dq0.layout(), sn = h[L.pcSn], S = stratumRec(m, sn), live = liveChunks(m, sn), FACE = { E: 2, W: 6, N: 0, S: 4 };
+              const open = (b, x, y) => { const t = b[CK_TILE + y * 32 + x] & 15; return t === T_FLOOR || t === T_CORR; };
+              let done = false;
+              for (const k of Object.keys(live).sort()) {
+                const [cx, cy] = k.split(',').map(Number), b = live[k];
+                for (const [nm, dx, dy] of [['E', 1, 0], ['S', 0, 1], ['W', -1, 0], ['N', 0, -1]]) {
+                  const to = (cx + dx) + ',' + (cy + dy);
+                  if (done || used.has(to) || live[to] || cx + dx < 0 || cy + dy < 0 || (cx + dx + 1) * 32 > S.w || (cy + dy + 1) * 32 > S.h) continue;
+                  for (let o = 2; o < 30 && !done; o++) {
+                    const x0 = dx ? (dx > 0 ? 27 : 4) : o, y0 = dy ? (dy > 0 ? 27 : 4) : o;
+                    if (!open(b, x0, y0)) continue;
+                    const x = S.x0 + cx * 32 + x0, y = S.y0 + cy * 32 + y0;
+                    h[L.pcX] = x & 255; h[L.pcX + 1] = x >> 8; h[L.pcY] = y & 255; h[L.pcY + 1] = y >> 8; h[L.pcFace] = FACE[nm];
+                    used.add(to); done = true;
+                  }
+                }
+              }
+            }
+            typed = '';
+          } else if (a.rx >= 32) typed += String.fromCharCode(a.rx);
+        }
+        return read(r, x);
+      };
+      cpu.step = v => {
+        const pc = cpu.PC;
+        if (cpu.cyc >= look) {
+          look = cpu.cyc + 200000;
+          try { const h = m.dq0 && m.dq0.bank && m.dq0.bank(0); mk = h && h[0] === 0x44 ? h[12 + 5] || null : null; } catch (e) { mk = null; }
+          const R = mk && m.taskRam[mk];          // (The second game of a seed: the making ahead off, its stub "lda #0, ldx #0, rts")
+          if (R && g >= 0 && !plays[g].ahead && R[NEXT] === 0x20) { R[NEXT] = 0xA9; R[NEXT + 1] = 0; R[NEXT + 2] = 0xA2; R[NEXT + 3] = 0; R[NEXT + 4] = 0x60; }
+        }
+        if (mk && m.T === mk && g >= 0) {
+          if (pc === MAKE) grew = false;
+          else if (pc === GROW) grew = true;
+          else if (pc === REPLY) {
+            const banks = m.sharedBanks(), hk = Object.keys(banks).map(Number).sort((p, q) => p - q).find(k => banks[k][0] === 0x44 && banks[k][1] === 0x51);
+            const h = banks[hk], w = banks[hk + WORLD_BANK_N], i = ((cpu.A | cpu.X << 8) - 0x8000 - MREQ) / MSZ, o = MREQ + i * MSZ;
+            if (!games[g]) games[g] = [];
+            if (i >= 0 && i < 4 && h[o] === 1 && h[o + 1] === H.C.M_CHUNK) {
+              const sn = h[o + 4], cx = h[o + 5] | h[o + 6] << 8, cy = h[o + 7] | h[o + 8] << 8;
+              for (let k = 0; k < 24; k++) {
+                const s = CSLOT_AT + k * 8;
+                if (!w[s] || w[s + 1] !== sn || (w[s + 2] | w[s + 3] << 8) !== cx || (w[s + 4] | w[s + 5] << 8) !== cy) continue;
+                const b = banks[hk + 5 + Math.floor(k / 3)], off = (k % 3) * 0xAA0;
+                games[g].push({ key: sn + ',' + cx + ',' + cy, grew, bytes: Buffer.from(b.subarray(off, off + CHUNK_BYTES)),
+                  stock: w[s] === H.C.CS_FRESH ? Buffer.from(w.subarray(STOCK + k * SSZ, STOCK + (k + 1) * SSZ)) : null });
+              }
+            }
+          }
+        }
+        return step(v);
+      };
+    },
+    check(m, out) {
+      const f = [], notes = this.notes = [];
+      seeds.forEach((s, n) => {
+        const A = this.games[2 * n] || [], B = this.games[2 * n + 1] || [];
+        const ahead = A.filter(x => !x.grew).length, bAhead = B.filter(x => !x.grew).length;
+        notes.push('seed ' + s + ': ' + A.length + ' chunks finished for a reader as the game is, ' + ahead + ' of them made ahead; ' + B.length + ' with the making ahead off');
+        if (!A.length || A.length !== B.length) f.push('seed ' + s + ': ' + A.length + ' chunks finished, and ' + B.length + ' with the making ahead off');
+        if (!ahead) f.push('seed ' + s + ': no chunk made ahead');
+        if (bAhead) f.push('seed ' + s + ': ' + bAhead + ' chunks made ahead with the making ahead off');
+        A.forEach((x, k) => {
+          const y = B[k];
+          if (!y || y.key !== x.key) { if (k === 0 || A[k - 1] && B[k - 1] && A[k - 1].key === B[k - 1].key) f.push('seed ' + s + ': chunk ' + k + ' ' + x.key + ', and ' + (y ? y.key : 'none') + ' with the making ahead off'); return; }
+          const at = [];
+          for (let i = 0; i < x.bytes.length && at.length < 8; i++) if (x.bytes[i] !== y.bytes[i]) at.push(i);
+          if (at.length) f.push('seed ' + s + ': chunk ' + x.key + (x.grew ? '' : ' (made ahead)') + ' not the same byte for byte: at ' + at.join(', '));
+          if ((x.stock || y.stock) && !(x.stock && y.stock && x.stock.equals(y.stock))) f.push('seed ' + s + ': chunk ' + x.key + '\'s things not the same');
+        });
+      });
+      return f;
+    },
+    sdcard: true
+  };
+}
+
+// dq0aheadden: the chunks made ahead for every actor, by one rule (the user's, 2026-11-17: "chunks are made for whoever
+// needs them, the denizens' walks included"; ONE-PATH.md): at seed 3 at the turns pace, as an inventory's typed, the
+// character's sight made 0 (its reach a glance's 4 squares and 8 steps, 16 the way it faces) and a giant rat (an actor)
+// put 4 squares into the next chunk east, facing east, not to stir for minutes (dq0Alone's way); then the game
+// left a while: the chunk east of the rat's, its nearest square past the character's reach but within the rat's (its
+// sight the most a kind's: 22 squares and its steps), made ahead (the maker's own table, ah_k and ah_f), as the rat's
+// own chunk is
+function dq0AheadDenTest() {
+  const lines = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'inventory', 'time', 'quit', 'echo $status'];
+  return {
+    name: 'dq0aheadden', near: ['map', 'denizens'], meaning: true,
+    what: 'Dingus Quest Zero\'s chunks made ahead for the denizens too (the user\'s, 2026-11-17: made for whoever needs them, the denizens\' walks included): at seed 3 the character\'s sight made 0 and a giant rat put four squares into the next chunk east, facing east; the game left a while: the chunk east of the rat\'s, past the character\'s reach, made ahead as the rat\'s own is',
+    init: 't_rc', cycles: 1500e6,
+    machine: { input: lines.map(l => '\u0101' + (l === 'time' ? '\u0100'.repeat(60) : '') + l + '\r').join('') },
+    expect: ['% echo $status'],
+    start(m) {
+      const t = this;
+      dq0Poke(m, [{ g: 1, line: 'inventory', n: 1, call: (h, L, K) => {
+        const at = k => L.actor + k * L.actorSize, R = dq0Rec(m), sn = h[L.pcSn], S = stratumRec(m, sn);
+        const px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8;
+        let k = 0;
+        while (k < L.nactors && !(h[at(k) + L.aState] & 1)) k++;
+        if (k === L.nactors) return;
+        const x = S.x0 + ((px - S.x0) >> 5) * 32 + 36, y = py, far = 30000 + (h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16), o = R.at(h[at(k) + L.aName + 12]);
+        h[L.pcsum + L.sSight] = 0;
+        h[at(k) + L.aX] = R.mem[o + R.X] = x & 255; h[at(k) + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8;
+        h[at(k) + L.aY] = R.mem[o + R.Y] = y & 255; h[at(k) + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8;
+        h[at(k) + L.aFace] = 2;
+        for (let i = 0; i < 4; i++) h[at(k) + L.aReady + i] = far >>> (8 * i) & 255;
+        h[L.denSeq] = h[L.denSeq] + 1 & 255;
+        t.put = { sn, pc: [px - S.x0, py - S.y0], rat: [x - S.x0, y - S.y0], w: S.w, h: S.h };
+      } }]);
+      // (The maker's table of the chunks made ahead, read as "time" is typed, before its turn)
+      const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0m', 'dq0m.lbl'), 'latin1');
+      const sym = n => parseInt(new RegExp('^al ([0-9A-F]+) \\.' + n + '$', 'm').exec(lbl)[1], 16), AK = sym('_ah_k'), AF = sym('_ah_f');
+      const a = m.acia, read = a.read;
+      let typed = '';
+      a.read = (r, x) => {
+        if (r === 0 && a.rdrf) {
+          if (a.rx === 13) {
+            if (typed === 'time' && m.dq0) {
+              const R = m.taskRam[m.dq0.bank(0)[12 + 5]];
+              t.ahead = [];
+              for (let k = 0; k < 24; k++) if (R[AF + k] & 0x80) t.ahead.push([R[AK + 5 * k], R[AK + 5 * k + 1] | R[AK + 5 * k + 2] << 8, R[AK + 5 * k + 3] | R[AK + 5 * k + 4] << 8].join(','));
+              t.live = Object.keys(liveChunks(m, t.put ? t.put.sn : 0));
+            }
+            typed = '';
+          } else if (a.rx >= 32) typed += String.fromCharCode(a.rx);
+        }
+        return read(r, x);
+      };
+    },
+    check(m, out) {
+      const f = [], P = this.put;
+      if (!P || !this.ahead) return ['the rat not put, or the maker\'s table not read'];
+      const cx = P.rat[0] >> 5, cy = P.rat[1] >> 5, ccx = P.pc[0] >> 5, east = P.sn + ',' + (cx + 1) + ',' + cy, own = P.sn + ',' + cx + ',' + cy;
+      this.notes = ['the character at ' + P.pc + ' (chunk ' + ccx + '), the rat at ' + P.rat + ' (chunk ' + cx + '); made ahead: ' + this.ahead.join(' ') + '; in the cache: ' + this.live.join(' ')];
+      if (cx === ccx) f.push('the rat not in the next chunk');
+      if ((cx + 2) * 32 > P.w) f.push('no chunk east of the rat\'s in the stratum');
+      if ((cx + 1) * 32 - P.pc[0] <= 16) f.push('the chunk east of the rat\'s within the character\'s reach');
+      if (!this.ahead.includes(east)) f.push('the chunk east of the rat\'s (' + east + ') not made ahead');
+      if (!this.ahead.includes(own) && !this.live.includes(own.slice(own.indexOf(',') + 1))) f.push('the rat\'s chunk (' + own + ') neither made ahead nor in the cache');
+      return f;
+    },
+    sdcard: true
+  };
+}
+
 module.exports = {
   tests: [
     {
@@ -1689,6 +1870,8 @@ module.exports = {
       },
       sdcard: true
     },
+    dq0AheadTest(),
+    dq0AheadDenTest(),
     {
       name: 'dq0stairtrap', meaning: true, what: 'Dingus Quest Zero\'s walks to stairs and ladders checking their way for traps, as the other walks do (the user\'s, 2026-10-16), by the world\'s events: at seed 38 the character goes round to the kitchen\'s far door, clear of the covered pit hidden between it and the stairs up to the way out (not noticed in passing: the referee\'s, HarnMaster\'s at this seed), then up (u): the walk back to the stairs stops on the pit, which gives way under it (a fall, a climb out begun, a slip ending it at its floor: D13\'s, slice 4.4\'s), the pit seen open; climbed out again (climb up: a slip again, then out); then the stairs again, the pit it knows of gone round, and the way out reached (shut fast), no second fall',
       init: 't_rc', cycles: 600e6,

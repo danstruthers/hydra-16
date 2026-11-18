@@ -205,6 +205,7 @@ static void make (void)
     unsigned char sd = (unsigned char) (s->seed >> 5);
 
     for (i = 0, p = L->portal; i < L->nportals; ++i, ++p) {
+        ahead_check ();
         dkey (DP_MAKE, p->x << 5 | p->y);
         if (p->kind == PK_WINDOW || p->kind == PK_SLIT) {
             w = p->kind == PK_SLIT ? 1 : 2 + dr (2);
@@ -340,6 +341,7 @@ void __fastcall__ o_fixtures (struct chunk* c)
     L = c;
     materials ();
     place (PG_WALLS);
+    ahead_check ();
     fortify ();
     make ();
     place (PG_TRAPS);
