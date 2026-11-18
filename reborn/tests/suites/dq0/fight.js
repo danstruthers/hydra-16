@@ -531,6 +531,31 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0begin', near: ['fight', 'gear', 'parser'], what: "Dingus Quest Zero's first words at once for every command (the user's, 2026-11-17: \"You close with the giant rat.\" for an attack, \"You count out a farthing.\" for a counted drop; one path for every actor, a denizen's the same rows the other way round, \"The bandit closes with you.\"): at seed 5 (dq0fight's: a sword, the giant rats down the ladder) pennies counted out before the world splits the lot (\"You count out 2 pennies.\", then \"You put down 2 pennies.\"), the sack looked at (\"You look at the sack.\"), the ladder started down before the stratum below is grown (\"You start down the ladder.\", then as it gets there \"You climb down the ladder.\"), a wait's \"Time passes.\" first, the rat beside it attacked (\"You close with the giant rat.\" before its blow), and its kin closing with the character (\"The giant rat closes with you.\" before its first bite)",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 95 >> /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -k sword -T',
+        'drop 2 pennies', 'look at the sack', 'd', 'wait', 'go right', 'attack the rat', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'attack the rat', n: 1, k: 0, set: { mood: 8 } }, ...[0, 1, 2, 3].map(k => ({ g: 1, line: 'attack the rat', n: 1, k, hurt: 8 }))]);   // (dq0fight's: the kin steady, all hurt)
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\s+/g, ' '), seg = l => { const i = o.indexOf('> ' + l + ' > ' + l + ' '), e = o.indexOf(' > ', i + 2 * l.length + 6); return i < 0 ? '' : o.slice(i + 2 * l.length + 6, e < 0 ? undefined : e); };
+        const first = (l, re) => { const a = seg(l).trim(); if (!re.test(a)) f.push(l + ': its first words not ' + re + ': ' + a.slice(0, 300)); return a; };
+        inTurn(first('drop 2 pennies', /^You count out 2 pennies\./), ['You count out 2 pennies.', 'You put down 2 pennies.'], f, 'drop 2 pennies: ');
+        first('look at the sack', /^You look at the sack\./);
+        inTurn(first('d', /^You start down the ladder\./), ['You start down the ladder.', 'You climb down the ladder.', 'You come into the'], f, 'd: ');
+        first('wait', /^Time passes\./);
+        const a = first('attack the rat', /^You close with the giant rat\./);
+        inTurn(a, ['You close with the giant rat.', 'You strike at the giant rat'], f, 'attack the rat: ');
+        const k = a.indexOf('The giant rat closes with you.');
+        if (k < 0) f.push('the kin\'s attack begun not told: "The giant rat closes with you.": ' + a.slice(0, 600));
+        else if (!/^The giant rat closes with you\.[^.]*?The giant rat bites at you/.test(a.slice(k))) f.push('the kin\'s closing not before its bite: ' + a.slice(k, k + 200));
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0grapple', what: 'Dingus Quest Zero\'s grappling (HOUSE.md\'s grappling, 2026-11-09: the user\'s "full HarnMaster grappling rules"; the referee\'s RS_ATTACK RS_GRAPPLE, dq0harn/grapple.c; the world\'s hold, wfight.c\'s grip), by the blows told (E_FIGHT: who, at whom, how it came out, O_HOLD ... O_LETGO; what it left them in), the actors\' places and positions and the words, the referee\'s dice the commands\' at seed 5\'s giant rats (down the ladder, beside one; the character\'s Unarmed 80, its Stamina and Will 99; the rats set hurt, dq0Poke\'s, the book\'s rat dodging at 90): "wrestle the rat" fought on till it\'s held ("You seize the giant rat and hold it fast."), the fight over then (the next move the player\'s: no fist fight after it); the rat, made wary and shy (dq0Poke\'s, as the first wait\'s typed: it would keep its distance), held where it is as it tries to walk away, each try a struggle ("The giant rat struggles in your grip."), till it breaks free ("...breaks free of your grip.") and goes; a second game\'s "throw the rat", a hold and then a throw ("You throw the giant rat to the ground", the fall\'s hurt, laid down), the hold let go as it\'s thrown ("let go": "You aren\'t holding anyone."), then "wrestle the rat" and "let go" ("You let go of the giant rat."); a third\'s "pin the rat" (pinned, laid down), then "choke the rat", the one pinned, till it falls senseless ("You choke the giant rat. It falls senseless.")',
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml una 80 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -T',

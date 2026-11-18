@@ -271,6 +271,8 @@ const DQ0_REPEATS = [
     why: 'a grapple fought on (HOUSE.md\'s grappling, 2026-11-09): each round\'s try told as it comes, a hold missed, a choke, a held one\'s struggle, the same words some of them' },
   { what: /^You turn to (?:something|the [a-z ]+)\.$/,
     why: 'a fight\'s turns to a foe, each told as it turns (fighting on: struck from another side again and again; in the dark "something": dq0scent\'s rats, their dice by who asks, 2026-10-30)' },
+  { what: /^The [a-z ]+ closes with you\.$/,
+    why: 'each denizen\'s attack begun, told as it closes with the character (the user\'s, 2026-11-17: its first words, "The bandit closes with you."): two of a name closing in one answer, the same words (dq0fightverbs\' charge, both rats), or one coming back to the fight' },
   { what: /^(?:You (?:look over|poke through|go through|feel over|feel through) the .+|You find nothing in the .+|Your hands find nothing in the .+|There's nothing (?:in|on) the .+|It's closed: you go over the outside of it|(?:It's|They're) made of .+|You stop short: just ahead is a trap, .+)\.$/,
     why: 'a room searched whole, each thing in it in turn (HOUSE.md\'s, 2026-11-02): two heaps of straw, two iron pots, told each as it\'s gone through' },
   { what: /^You find (?:a trap|a door)[^.]*\.$/, why: 'a room searched whole\'s finds, each told as it\'s found: two plates, two doors' },
@@ -334,7 +336,8 @@ function dq0Answers(out) {
 function dq0Repeats(name, out) {
   const found = [];
   for (const a of dq0Answers(out)) {
-    const parts = a.cmd.split(/ and |,/).length;     // (A list's parts each told, "Put down." "Put down.": games/dq0/parts.c; no oftener than it has parts)
+    const parts = Math.max(a.cmd.split(/ and |,/).length,   // (A list's parts each told, "Put down." "Put down.": games/dq0/parts.c; no oftener than it has parts;
+      /^\S+(?: [a-zA-Z]{1,2}){2,}$/.test(a.cmd) ? a.cmd.split(' ').length - 1 : 1);   //   several letters a line its commands too, "drop h i": letters.c's, each its reach's steps, the game as played)
     // (Each stir a telling of its own: a denizen's place told again after a change between, "two rats" then "a rat",
     // is what changed, not a repeat; within a telling, a look's or a stir's, nothing twice)
     for (const part of a.text.split(/(?=Something stirs\.)/)) {
@@ -804,12 +807,14 @@ function dq0OnWords(m, list) {
 // line (reverse video) and the escapes not the story's.  dq0Timer(m), as the machine's made, listens (each byte's
 // cycle; each CR's, and whether the character was busy as it came: the UI's busy, a line typed then held till it's
 // free, its answer the game's time), and gives a function of the lines typed and of cmds ({ line, want, news }: each the
-// line's first time typed after the one before) giving { line, first, whole, pause, pauseAt, busy } for each (null: none)
+// line's first time typed after the one before) giving { line, first, whole, pause, pauseAt, busy } for each (null: none).
+// Its .game (n, cmds): the same of the n'th game typed (its dq0 line, 0 on), each command by its words as it was typed
+// after the one before, to the game's end (the lines typed between them passed over: a soft question's answer, dq0Answer's)
 const NEWS = /Something stirs|Nothing stirs in sight|You hear (?!nothing)/;
 let busyAt = null;
 function dq0Timer(m) {
   const at = [], enters = [];
-  let out = m.out;
+  let out = m.out, typed = '';
   for (let i = 0; i < out.length; i++) at.push(0);
   Object.defineProperty(m, 'out', { get: () => out, set: v => { const c = m.cpu.cyc; for (let i = out.length; i < v.length; i++) at.push(c); out = v; } });
   const a = m.acia, read = a.read;
@@ -820,49 +825,143 @@ function dq0Timer(m) {
       return ui && m.taskRam[ui] ? m.taskRam[ui][busyAt] : null;
     } catch (e) { return null; }
   };
-  a.read = (r, t) => { if (r === 0 && a.rdrf && a.rx === 13) enters.push({ t: a.rxAt, pos: out.length, busy: busy() }); return read(r, t); };
-  return (lines, cmds) => {
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {                    // (Each CR's, and the words typed before it)
+      const c = a.rx;
+      if (c === 13) { enters.push({ t: a.rxAt, pos: out.length, busy: busy(), line: typed }); typed = ''; }
+      else if (c === 0x15) typed = '';
+      else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+  const none = c => ({ line: c.line, first: null, whole: null, pause: null, pauseAt: '', busy: null });
+  const timer = (lines, cmds) => {
     const res = [];
     let li = 0;
     for (const c of cmds) {
       while (li < lines.length && lines[li] !== c.line) li++;
       const e = enters[li], e2 = enters[li + 1];
       li++;
-      if (!e) { res.push({ line: c.line, first: null, whole: null, pause: null, pauseAt: '', busy: null }); continue; }
-      const end = e2 ? e2.pos : out.length;
-      let story = '', idx = [], rev = 0, prompt = -1;
-      for (let i = e.pos; i < end; i++) {
-        if (out[i] === '\x1b') {
-          const q = /^\x1b\[([0-9;?]*)([A-Za-z])/.exec(out.slice(i, i + 12));
-          if (q) {
-            if (q[2] === 'm') rev = q[1] === '7';
-            if (q[2] === 'H' && /;1$/.test(q[1]) && q[1] !== '1;1' && /^\x1b\[K(\x1b\[\?25h)?> /.test(out.slice(i + q[0].length, i + q[0].length + 12)) &&
-              c.want.split('|').some(x => story.includes(x)) && prompt < 0) prompt = idx.length;
-            i += q[0].length - 1;
-            continue;
-          }
-        }
-        if (rev || out[i] < ' ') continue;
-        story += out[i];
-        idx.push(i);
-      }
-      const w = c.want.split('|').map(x => story.indexOf(x)).filter(x => x >= 0).reduce((a, b) => a < 0 || b < a ? b : a, -1);   // (Words the answer may begin with, | between)
-      let last = prompt < 0 ? idx.length - 1 : prompt - 1;
-      while (last > 0 && story[last] === ' ') last--;
-      let own = last, pause = null, pauseAt = '';  // (Its own words: up to the world's news told after its first letter)
-      if (w >= 0) {
-        const k = story.slice(w + 1, last + 1).search(c.news || NEWS);
-        if (k >= 0) for (own = w + k; own > w && story[own] === ' '; own--);
-        for (let j = w + 1, p = -1; j <= own; j++) {
-          const g = at[idx[j]] - at[idx[j - 1]];
-          if (g > p) { p = pause = g; pauseAt = story.slice(Math.max(w, j - 24), j) + ' | ' + story.slice(j, j + 24); }
-        }
-        if (pause === null && own >= w) pause = 0;
-      }
-      res.push({ line: c.line, first: w < 0 ? null : at[idx[w]] - e.t, whole: w < 0 || last < w ? null : at[idx[last]] - e.t, pause, pauseAt, busy: e.busy });
+      res.push(e ? measure(c, e, e2) : none(c));
     }
     return res;
   };
+  const game = l => /^(?:\S*\/)?dq0( |$)/.test(l);
+  timer.enters = enters;                        // (Each CR's: { t, pos, busy, line })
+  timer.game = (n, cmds) => {
+    const res = [];
+    let i = -1;
+    for (let k = 0; k <= n; k++) for (i++; i < enters.length && !game(enters[i].line); i++);
+    for (const c of cmds) {
+      let j = i + 1;
+      while (j < enters.length && enters[j].line !== c.line && !game(enters[j].line)) j++;
+      if (j >= enters.length || enters[j].line !== c.line) { res.push(none(c)); continue; }
+      res.push(measure(c, enters[j], enters[j + 1]));
+      i = j;
+    }
+    return res;
+  };
+  return timer;
+  function measure(c, e, e2) {
+    const end = e2 ? e2.pos : out.length;
+    let story = '', idx = [], rev = 0, prompt = -1;
+    for (let i = e.pos; i < end; i++) {
+      if (out[i] === '\x1b') {
+        const q = /^\x1b\[([0-9;?]*)([A-Za-z])/.exec(out.slice(i, i + 12));
+        if (q) {
+          if (q[2] === 'm') rev = q[1] === '7';
+          if (q[2] === 'H' && /;1$/.test(q[1]) && q[1] !== '1;1' && /^\x1b\[K(\x1b\[\?25h)?> /.test(out.slice(i + q[0].length, i + q[0].length + 12)) &&
+            (c.want === '*' ? anyWords(story, c.line, story.length) >= 0 : c.want.split('|').some(x => story.includes(x))) && prompt < 0) prompt = idx.length;
+          i += q[0].length - 1;
+          continue;
+        }
+      }
+      if (rev || out[i] < ' ') continue;
+      story += out[i];
+      idx.push(i);
+    }
+    const w = c.want === '*' ? anyWords(story, c.line, prompt < 0 ? story.length : prompt) :
+      c.want.split('|').map(x => story.indexOf(x)).filter(x => x >= 0).reduce((a, b) => a < 0 || b < a ? b : a, -1);   // (Words the answer may begin with, | between)
+    let last = prompt < 0 ? idx.length - 1 : prompt - 1;
+    while (last > 0 && story[last] === ' ') last--;
+    let own = last, pause = null, pauseAt = '';  // (Its own words: up to the world's news told after its first letter)
+    if (w >= 0) {
+      const k = story.slice(w + 1, last + 1).search(c.news || NEWS);
+      if (k >= 0) for (own = w + k; own > w && story[own] === ' '; own--);
+      for (let j = w + 1, p = -1; j <= own; j++) {
+        const g = at[idx[j]] - at[idx[j - 1]];
+        if (g > p) { p = pause = g; pauseAt = story.slice(Math.max(w, j - 24), j) + ' | ' + story.slice(j, j + 24); }
+      }
+      if (pause === null && own >= w) pause = 0;
+    }
+    return { line: c.line, first: w < 0 ? null : at[idx[w]] - e.t, whole: w < 0 || last < w ? null : at[idx[last]] - e.t, pause, pauseAt, busy: e.busy };
+  }
+}
+
+// (dq0Timer's want '*': the answer's own words, whatever they are, 2026-11-17: the first letter in story s, before lim,
+// after the line's own echo ("> " and line) and past the world's news told before them, a stir's, a sound's (NEWS, and
+// what a stir's telling lists: "(A) A giant rat ...", "... is gone from sight."); -1 none)
+function anyWords(s, line, lim) {
+  let j = s.indexOf('> ' + line);
+  j = j >= 0 && j < 8 ? j + line.length + 2 : 0;
+  for (let news = 0; ; news = 1) {               // (A stir's list after its news: news too; one first, the answer's)
+    while (j < lim && s[j] === ' ') j++;
+    if (j >= lim) return -1;
+    const rest = s.slice(j, lim);
+    if (!/^(?:Something stirs|Nothing stirs in sight|You hear (?!nothing))/.test(rest) && (!news || !/^(?:\(|[^.!?]* gone from sight[.!?])/.test(rest))) return j;
+    const e = /[.!?](?= |$)/.exec(rest);
+    if (!e) return -1;
+    j += e.index + 1;
+  }
+}
+
+// The game as played (the user's, 2026-11-17: the timing tests once without the test switches, where each step of a
+// reach costs the world its own time): its dq0 line typed after a wait (DQ0_PLAYED before it), so the runner's switches
+// aren't on it (sim/test.js's -a -I -J -N -K -F -E go on a dq0 line typed straight at its prompt); each soft question it
+// asks answered yes as it's asked, as the player would (dq0Asks), the test's next line after it.  And dq0Paces: a D17
+// test's game typed again at the menacing pace, and as played (its pace the normal), each its lines and a quit
+const DQ0_PLAYED = 'Ā';
+const dq0Paces = (game, lines) => [game.replace(/ -p [a-z]/, ' -p m'), ...lines, 'quit', DQ0_PLAYED + game.replace(/ -p [a-z]/, ' -p n'), ...lines, 'quit'];
+const dq0Own = out => { const i = out.indexOf('dq0 -p m'); return i < 0 ? out : out.slice(0, i); };   // (The test's own games' output: dq0Paces' after it)
+// The soft questions ("Keep walking?", "You're tiring.  Keep digging?", "... would you rather draw your sword?") of the
+// games gs (their numbers, as the dq0 lines are typed: 1 on) answered "yes" as they're asked, before the test's next line
+function dq0Asks(m, gs) {
+  const a = m.acia, read = a.read, shown = a.shown;
+  let typed = '', g = 0, tail = '', esc = 0;
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) { if (/^(?:\S*\/)?dq0( |$)/.test(typed)) ++g; typed = ''; }
+      else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+  a.shown = (v, t) => {
+    shown(v, t);
+    if (esc === 1) { esc = v === 0x5B ? 2 : 0; return; }
+    if (esc === 2) { if (v >= 0x40 && v <= 0x7E) esc = 0; return; }
+    if (v === 0x1B) { esc = 1; return; }
+    if (!gs.includes(g)) return;
+    tail = (tail + (v < 0x20 ? ' ' : String.fromCharCode(v))).slice(-48);
+    if (/(?:Keep [a-z ]+|would you rather [a-z ]+)\?$/.test(tail)) {
+      a.rxQueue.unshift(...'yes\r');            // (Its answer, before the test's next line, that waiting for a prompt again)
+      a.promptFrom = -1;
+      tail = '';
+    }
+  };
+}
+// Each line of a D17 test's typings timed (dq0Timer's game: the test's own first, then dq0Paces' menacing and played),
+// its first letter held to D17.first (tests/lib/trends.js's target: f the failures, notes; their names the test's own
+// first, the others' ", menacing" and ", played" after the line); the first typing's words its want, the others' '*'
+// (their answers their own: the kit, the hour, the questions of a game without the switches).  gs the three games'
+// places among those typed (0 on)
+function dq0HeldPaces(t, f, notes, timer, gs, cmds) {
+  [['', cmds], [', menacing', null], [', played', null]].forEach(([sfx, cs], i) => {
+    for (const r of timer.game(gs[i], cs || cmds.map(c => ({ line: c.line, want: '*' })))) {
+      notes.push(r.line + sfx + ': first letter ' + r.first + (r.busy ? ' (typed as it was busy)' : ''));
+      if (target(t, r.line + sfx + ': first letter', r.first, D17.first)) f.push(r.line + sfx + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+    }
+  });
 }
 
 // The median of a measure over a test's typings (dq0answer's, dq0lookfar's: a null, none, counted the highest), and
@@ -907,45 +1006,43 @@ const DQ0_ANSWERS = [['turn left', 'You turn'], ['turn right', 'You turn'],
 // to D17.first (a look's too, as any command's: its first words come at once, "You peer ahead."); a reading's longest
 // pause to D17.pause; each measure a trend besides (a rise of more than 5% said, not failed).  Each line typed only once
 // the character's free (the prompt, the UI not busy: one typed as it's busy is held till it's free, its first letter
-// the game's time), else the test fails.  At 9,600 (dq0answer96) one typing a pace, its times said, no target held
-// (the user's targets are 115,200's)
+// the game's time), else the test fails.  And (the user's, 2026-11-17) typed once more at the menacing pace, and once
+// as the game is played (the normal pace's, without the runner's switches: DQ0_PLAYED, its soft questions answered as
+// they're asked, dq0Asks), each held to the same targets, its own measures ("menacing turn left", "played turn left").
+// At 9,600 (dq0answer96) one typing a pace, its times said, no target held (the user's targets are 115,200's)
 function dq0AnswerTest(baud) {
-  const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'], N = baud === 115200 ? 3 : 1;
-  const plays = games.flatMap((g, p) => [...Array(N).keys()].map(k => ({ g, pace: p ? 'normal' : 'turns', k })));
-  const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', ...(baud === 115200 ? ['echo b115200 >/dev/serctl'] : [])];
+  const fast = baud === 115200, N = fast ? 3 : 1, game = p => 'dq0 -p ' + p + ' -s 3 -c /ram/c.hm -T';
+  const plays = [...[['t', 'turns'], ['n', 'normal']].flatMap(([p, pace]) => [...Array(N).keys()].map(k => ({ g: game(p), pace, k }))),
+    ...(fast ? [{ g: game('m'), pace: 'menacing', k: 0 }, { g: DQ0_PLAYED + game('n'), pace: 'played', k: 0 }] : [])];
+  const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', ...(fast ? ['echo b115200 >/dev/serctl'] : [])];
   const typed = [...pre.map(l => [l, 0]), ...plays.flatMap(p => [[p.g, 0], ...DQ0_ANSWERS.map((c, j) => [c[0], dq0Waits(p.k, j)]), ['quit', 0]]), ['echo $status', 0]];
-  const lines = typed.map(x => x[0]);
   return {
-    name: baud === 115200 ? 'dq0answer' : 'dq0answer96', what: 'Dingus Quest Zero\'s answers timed at ' + baud + ' baud (the user\'s D17, rethought 2026-11-17: a command\'s first letter within a fifth of a second, 720,000 cycles; a reading\'s words with no pause longer than half a second, 1.79M): from Enter to the answer\'s first letter, its longest pause and its last, for 28 commands at seed 3 (turns, a step, what the character carries, things examined, doors, a look about and ahead, a refused step, walks, the pack, sitting, waiting, digging), at the turns pace and the normal pace, each pace\'s game typed three times at different moments, the median of the three held',
+    name: fast ? 'dq0answer' : 'dq0answer96', what: 'Dingus Quest Zero\'s answers timed at ' + baud + ' baud (the user\'s D17, rethought 2026-11-17: a command\'s first letter within a fifth of a second, 720,000 cycles; a reading\'s words with no pause longer than half a second, 1.79M): from Enter to the answer\'s first letter, its longest pause and its last, for 28 commands at seed 3 (turns, a step, what the character carries, things examined, doors, a look about and ahead, a refused step, walks, the pack, sitting, waiting, digging), at the turns pace and the normal pace, each pace\'s game typed three times at different moments, the median of the three held' + (fast ? '; and once at the menacing pace, and once as the game is played (the normal pace without the tests\' switches, its soft questions answered), each held' : ''),
     meaning: true, outfit: true,                  // (The game as it's played: its outfit drawn, 2026-10-27)
-    init: 't_rc', cycles: 4000e6,
+    init: 't_rc', cycles: fast ? 7000e6 : 4000e6,
     machine: { input: typed.map(([l, w]) => '\u0101' + '\u0100'.repeat(w) + l + '\r').join('') },
     expect: ['% echo $status'],
-    start(m) { this.timer = dq0Timer(m); },
+    start(m) { this.timer = dq0Timer(m); dq0Asks(m, plays.map((p, i) => p.pace === 'played' ? i + 1 : 0).filter(Boolean)); },
     check(m, out) {
-      const f = [], notes = this.notes = [];
-      // (Each typing's answers, its lines' places among all of them; then each command's measures over its pace's typings)
-      let from = 0;
-      const runs = plays.map(p => {
-        const i0 = lines.indexOf(p.g, from), to = i0 + DQ0_ANSWERS.length + 1;
-        from = to;
-        return this.timer(lines.slice(0, to).map((l, i) => i < i0 ? '' : l), DQ0_ANSWERS.map(c => ({ line: c[0], want: c[1] })));
+    const f = [], notes = this.notes = [];
+    // (Each typing's answers, by its game's place among those typed; then each command's measures over its pace's typings)
+    const runs = plays.map((p, i) => this.timer.game(i, DQ0_ANSWERS.map(c => ({ line: c[0], want: c[1] }))));
+    const T = fast ? D17 : {};                 // (At 9,600 its times said, no target)
+    for (const pace of ['turns', 'normal', 'menacing', 'played']) {
+      const rs = runs.filter((r, i) => plays[i].pace === pace), seen = {};
+      if (!rs.length) continue;
+      DQ0_ANSWERS.forEach((c, k) => {
+        const nth = seen[c[0]] = (seen[c[0]] || 0) + 1, id = pace + ' ' + c[0] + (nth > 1 ? ' #' + nth : ''), r = rs.map(x => x[k]);
+        r.forEach((x, n) => { if (x.busy) f.push(id + ': typed in typing ' + (n + 1) + ' while the character was busy (its answer the game\'s time, not the command\'s)'); });
+        dq0Held(this, f, notes, id, 'first letter', r.map(x => x.first), T.first);
+        if (/read/.test(c[2] || '')) {
+          dq0Held(this, f, notes, id, 'longest pause', r.map(x => x.pause), T.pause);
+          notes.push(id + ': its longest pause where ' + r.map(x => JSON.stringify(x.pauseAt)).join(', '));
+        }
+        if (/whole/.test(c[2] || '')) dq0Held(this, f, notes, id, 'whole', r.map(x => x.whole), baud === 115200 ? 0 : undefined);
       });
-      const T = baud === 115200 ? D17 : {};      // (At 9,600 its times said, no target)
-      for (const pace of ['turns', 'normal']) {
-        const rs = runs.filter((r, i) => plays[i].pace === pace), seen = {};
-        DQ0_ANSWERS.forEach((c, k) => {
-          const nth = seen[c[0]] = (seen[c[0]] || 0) + 1, id = pace + ' ' + c[0] + (nth > 1 ? ' #' + nth : ''), r = rs.map(x => x[k]);
-          r.forEach((x, n) => { if (x.busy) f.push(id + ': typed in typing ' + (n + 1) + ' while the character was busy (its answer the game\'s time, not the command\'s)'); });
-          dq0Held(this, f, notes, id, 'first letter', r.map(x => x.first), T.first);
-          if (/read/.test(c[2] || '')) {
-            dq0Held(this, f, notes, id, 'longest pause', r.map(x => x.pause), T.pause);
-            notes.push(id + ': its longest pause where ' + r.map(x => JSON.stringify(x.pauseAt)).join(', '));
-          }
-          if (/whole/.test(c[2] || '')) dq0Held(this, f, notes, id, 'whole', r.map(x => x.whole), baud === 115200 ? 0 : undefined);
-        });
-      }
-      return f;
+    }
+    return f;
     },
     sdcard: true
   };
@@ -963,4 +1060,5 @@ module.exports = {
   dq0Never, dq0Carried, dq0Here, dq0Named, dq0Thing, dq0Holder, dq0View, DQ0_I, passings, dq0TypedAsk, dq0Typed,
   dq0PortalOff, dq0Portal, dq0RecPb, dq0Rec, dq0Alone, dq0Poke, dq0BodyFb, dq0Body, dq0SheetSb, dq0Sheet, dq0PcShock,
   dq0Grow, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Median, dq0Worst, dq0Waits, dq0Held, DQ0_ANSWERS, dq0AnswerTest, WORN,
+  DQ0_PLAYED, dq0Paces, dq0Own, dq0Asks, dq0HeldPaces,
 };

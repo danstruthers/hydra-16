@@ -8,7 +8,8 @@ const { typed } = require('../../lib/common.js');
 const {
   CHUNK_SIZE, CK_TILE, CK_ROOM, caveReport, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks, stratumRec,
   dq0StatusRows, dq0Story, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried,
-  dq0Here, DQ0_I, passings, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0OnWords, dq0Timer, dq0PortalAt, dq0Waits, dq0Held
+  dq0Here, DQ0_I, passings, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0OnWords, dq0Timer, dq0PortalAt, dq0Waits, dq0Held,
+  DQ0_PLAYED, dq0Asks
 } = require('../../lib/dq0.js');
 const { trend, target, D17 } = require('../../lib/trends.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
@@ -74,27 +75,29 @@ function lookSnap(m, ptr, game) {
 // letter within 720,000 cycles, a look's and the map's words with no pause longer than 1.79M; the game typed three times,
 // each line after 0-2 waits of 2M cycles by its typing's pattern (dq0Waits), the median of the three held (the map's first
 // letter falls on the denizens' outfits being drawn as the game starts: 676,000-855,000 over six phases); each whole a
-// trend
+// trend.  And (the user's, 2026-11-17) typed once more at the menacing pace, and once as the game is played (the normal
+// pace without the runner's switches: DQ0_PLAYED), each held to the same targets, its measures its own (", menacing",
+// ", played"), the same scene set in each
 function dq0LookFarTest() {
   const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl'], game = 'dq0 -p n -s 3 -c /ram/c.hm -T', N = 3;
+  const games = [...Array(N).fill(game), game.replace(' -p n', ' -p m'), DQ0_PLAYED + game], sfx = ['', '', '', ', menacing', ', played'];
   const cmds = [{ line: 'look ahead', want: 'You peer ahead', id: 'the first look ahead', read: 1 }, { line: 'map', want: 'The map', id: 'the map', read: 1 },
     { line: 'turn left', want: 'You turn', id: 'the turn left' }, { line: 'look ahead', want: 'You peer ahead', id: 'the look ahead turned', read: 1 },
     { line: 'listen', want: 'You listen', id: 'the listen' }, { line: 'look ahead', want: 'You peer ahead', id: 'the look across', read: 1, after: 16 }];
-  const typed = [...pre.map(l => [l, 0]), ...[...Array(N).keys()].flatMap(k => [[game, 0], ...cmds.map((c, j) => [c.line, dq0Waits(k, j) + (c.after || 0)]), ['quit', 0]]),
+  const typed = [...pre.map(l => [l, 0]), ...games.flatMap((g, k) => [[g, 0], ...cmds.map((c, j) => [c.line, (k < N ? dq0Waits(k, j) : 0) + (c.after || 0)]), ['quit', 0]]),
     ['echo $status', 0]];   // (The look across a player's pause after the listen: sixteen waits more, 32M cycles, some nine seconds)
-  const lines = typed.map(x => x[0]);
   return {
     name: 'dq0lookfar', near: ['senses', 'time'], meaning: true, outfit: true,
-    what: 'Dingus Quest Zero\'s look one way into new ground (the delays\' round, 2026-11-05): the first look ahead makes only the chunks the eyes reach past a glance\'s: none with a wall in the way (seed 3\'s five before, 78.5M cycles), the map drawn with the maker first (16.3M before), a row at a time (2026-11-17), a chunk the line ahead does reach made ahead of the eyes as the character listens (2026-11-17); the user\'s D17 targets (each first letter within 720,000 cycles, a look\'s and the map\'s words with no pause longer than 1.79M), the game typed three times at different moments, the median of the three held',
-    init: 't_rc', cycles: 2400e6,
+    what: 'Dingus Quest Zero\'s look one way into new ground (the delays\' round, 2026-11-05): the first look ahead makes only the chunks the eyes reach past a glance\'s: none with a wall in the way (seed 3\'s five before, 78.5M cycles), the map drawn with the maker first (16.3M before), a row at a time (2026-11-17), a chunk the line ahead does reach made ahead of the eyes as the character listens (2026-11-17); the user\'s D17 targets (each first letter within 720,000 cycles, a look\'s and the map\'s words with no pause longer than 1.79M), the game typed three times at different moments, the median of the three held; and once at the menacing pace, and once as the game is played (without the tests\' switches), each held',
+    init: 't_rc', cycles: 4400e6,
     machine: { input: typed.map(([l, w]) => '\u0101' + '\u0100'.repeat(w) + l + '\r').join('') },
     expect: ['% echo $status'],
     start(m) {
       this.timer = dq0Timer(m);
+      dq0Asks(m, [games.length]);               // (The game as played: its soft questions, if any, answered)
       const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0m', 'dq0m.lbl'), 'latin1');
       const sym = n => parseInt(new RegExp('^al ([0-9A-F]+) \\.' + n + '$', 'm').exec(lbl)[1], 16), make = sym('_make_chunk'), grow = sym('_grow'), reply = sym('_hub_reply');
-      const cpu = m.cpu, step = cpu.step.bind(cpu), made = this.made = [], grown = this.grown = [], asked = this.asked = [], enters = this.enters = [], a = m.acia, read = a.read, put = this.put = {};
-      a.read = (r, c) => { if (r === 0 && a.rdrf && a.rx === 13) enters.push(a.rxAt); return read(r, c); };
+      const cpu = m.cpu, step = cpu.step.bind(cpu), made = this.made = [], grown = this.grown = [], asked = this.asked = [], put = this.put = {};
       let inMake = false;                       // (A grow in a reader's make_chunk, before its reply: the look's own; else one made ahead)
       cpu.step = v => {
         const pc = cpu.PC;
@@ -103,7 +106,7 @@ function dq0LookFarTest() {
         }
         return step(v);
       };
-      dq0Poke(m, [...Array(N).keys()].map(g => ({ g: g + 1, line: 'listen', n: 1, call: (h, L) => {
+      dq0Poke(m, games.map((x, g) => ({ g: g + 1, line: 'listen', n: 1, call: (h, L) => {
         const sn = h[L.pcSn], S = stratumRec(m, sn), live = liveChunks(m, sn), TILE = 443, FACE = { E: 2, W: 6, N: 0, S: 4 };
         const open = (b, x, y) => { const t = b[TILE + y * 32 + x] & 15; return t === 1 || t === 4; };
         h[L.pcsum + L.sSight] = 0;
@@ -125,14 +128,15 @@ function dq0LookFarTest() {
       } })));
     },
     check(m, out) {
-      const f = [], notes = this.notes = [], E = this.enters, within = (a, b) => this.made.filter(c => c >= a && c < b).length;
-      // (Each typing's answers, its lines' places among all of them; its chunks made by the Enters' cycles)
-      let from = 0;
-      const runs = [...Array(N).keys()].map(g => {
-        const i0 = lines.indexOf(game, from), to = i0 + cmds.length + 1, at = i => E[i0 + 1 + i];
-        from = to;
-        const r = this.timer(lines.slice(0, to).map((l, i) => i < i0 ? '' : l), cmds);
-        const ahead = within(at(0), at(1)), across = within(at(5), at(6)), grew = (l, a, b) => l.filter(c => c >= a && c < b).length;
+      const f = [], notes = this.notes = [], E = this.timer.enters, within = (a, b) => this.made.filter(c => c >= a && c < b).length;
+      // (Each typing's answers, by its game's place among those typed; its chunks made by the Enters' cycles, each command's
+      // the next typed with its words, the game's quit after its last)
+      const runs = games.map((x, g) => {
+        const r = this.timer.game(g, cmds), e = [];
+        let i = -1;
+        for (let k = 0; k <= g; k++) for (i++; i < E.length && !/^dq0 /.test(E[i].line); i++);
+        for (const c of [...cmds, { line: 'quit' }]) { while (++i < E.length && E[i].line !== c.line); e.push(E[i] ? E[i].t : Infinity); }
+        const at = k => e[k], ahead = within(at(0), at(1)), across = within(at(5), at(6)), grew = (l, a, b) => l.filter(c => c >= a && c < b).length;
         const before = grew(this.grown, at(4), at(5)), by = grew(this.asked, at(5), at(6));   // (Grown ahead as it listened; grown for the look's asking)
         notes.push('typing ' + (g + 1) + ': chunks made by the first look ahead ' + ahead + '; put: ' + JSON.stringify(this.put[g] || null) + '; chunks grown as it listened ' +
           before + ' (ahead of its eyes); chunks made by the look across ' + across + ', grown by it ' + by);
@@ -145,14 +149,14 @@ function dq0LookFarTest() {
       // (Each command's first letter held to D17.first, a look's and the map's longest pause to D17.pause, by the median
       // of the typings; their wholes trends: tests/lib/trends.js, 2026-11-17, their budgets FIRST, MAP, ACROSS and
       // 1,200,000 before, then the looks' wholes held to 1.79M, their trends over it: not failed)
-      cmds.forEach((c, k) => {
-        const r = runs.map(x => x[k]);
-        r.forEach((x, n) => { if (x.busy) f.push(c.id + ': typed in typing ' + (n + 1) + ' while the character was busy (its answer the game\'s time, not the command\'s)'); });
-        dq0Held(this, f, notes, c.id, 'first letter', r.map(x => x.first), D17.first);
+      for (const s of ['', ', menacing', ', played']) cmds.forEach((c, k) => {   // (The first three's median; the others their own)
+        const r = runs.filter((x, n) => sfx[n] === s).map(x => x[k]), id = c.id + s;
+        r.forEach((x, n) => { if (x.busy) f.push(id + ': typed in typing ' + (n + 1) + ' while the character was busy (its answer the game\'s time, not the command\'s)'); });
+        dq0Held(this, f, notes, id, 'first letter', r.map(x => x.first), D17.first);
         if (c.read) {
-          dq0Held(this, f, notes, c.id, 'longest pause', r.map(x => x.pause), D17.pause);
-          notes.push(c.id + ': its longest pause where ' + r.map(x => JSON.stringify(x.pauseAt)).join(', '));
-          dq0Held(this, f, notes, c.id, 'whole', r.map(x => x.whole), 0);
+          dq0Held(this, f, notes, id, 'longest pause', r.map(x => x.pause), D17.pause);
+          notes.push(id + ': its longest pause where ' + r.map(x => JSON.stringify(x.pauseAt)).join(', '));
+          dq0Held(this, f, notes, id, 'whole', r.map(x => x.whole), 0);
         }
       });
       return f;

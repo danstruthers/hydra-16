@@ -7,7 +7,7 @@ const path = require('path');
 const { card, typed } = require('../../lib/common.js');
 const {
   CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks, stratumRec, chunkDiff, dq0Story, inTurn, dq0Turns,
-  dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Thing, DQ0_I, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0Timer
+  dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Thing, DQ0_I, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0Timer, DQ0_PLAYED
 } = require('../../lib/dq0.js');
 const { trend, target, D17 } = require('../../lib/trends.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
@@ -51,22 +51,22 @@ function dq0OvlBanks(m) {
 // time the job poked due a set time before its Enter (0, 100,000, 250,000 and 450,000 cycles): the lights' minute (the
 // world's burn_due, 0), the traces' journal (tr_n full, held empty till then so there's a journal to take in), and both;
 // then twenty more at waits that move the phase.  Each within its budget, and each job shown to have run (its stub called:
-// given way to, not lost)
+// given way to, not lost).  And (the user's, 2026-11-17) the same typed again at the menacing pace, and as the game is
+// played (the normal pace without the runner's switches: DQ0_PLAYED), each held to the same target, its measures its
+// own (", menacing", ", played")
 function dq0JobsTest() {
   const BEFORE = [0, 100000, 250000, 450000], LINE = 'inventory', WANT = 'You carry', MAX = D17.first;
   const each = ['burn', 'trace', 'both'].flatMap(j => BEFORE.map(d => ({ j, d })));
-  const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p n -s 3 -c /ram/c.hm -T', 'look'];
+  const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl'], game = 'dq0 -p n -s 3 -c /ram/c.hm -T';
+  const games = [game, game.replace(' -p n', ' -p m'), DQ0_PLAYED + game], sfx = ['', ', menacing', ', played'];
   const free = 20, gaps = [1, 2, 3, 1, 4, 2];
-  const lines = [...pre, ...each.map(() => LINE), ...Array(free).fill(LINE), 'quit', 'echo $status'];
-  const input = lines.map((l, i) => {
-    const k = i - pre.length;
-    const w = k < 0 || i >= pre.length + each.length + free ? 0 : k < each.length ? 3 : gaps[k % gaps.length];
-    return 'ā' + 'Ā'.repeat(w) + l + '\r';
-  }).join('');
+  const play = [...each.map(() => LINE), ...Array(free).fill(LINE)];
+  const input = [...pre.map(l => 'ā' + l + '\r'), ...games.flatMap(g => ['ā' + g + '\r', 'ālook\r',
+    ...play.map((l, k) => 'ā' + 'Ā'.repeat(k < each.length ? 3 : gaps[k % gaps.length]) + l + '\r'), 'āquit\r']), 'āecho $status\r'].join('');
   return {
     name: 'dq0jobs', what: 'Dingus Quest Zero\'s periodic work giving way to a command (the user\'s D17, a command\'s first letter within 720,000 cycles): the lights\' minute and the traces\' journal made due a set time before an Enter, each answer within its budget and each job run after it; and what\'s carried asked at waits that move the phase',
     meaning: true, outfit: true,
-    init: 't_rc', cycles: 900e6,
+    init: 't_rc', cycles: 2500e6,
     machine: { input },
     expect: ['% echo $status'],
     start(m) {
@@ -74,8 +74,16 @@ function dq0JobsTest() {
       const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0w', 'dq0w.lbl'), 'latin1');
       const at = n => parseInt(new RegExp('^al ([0-9A-F]+) \\.' + n + '$', 'm').exec(lbl)[1], 16);
       const due = at('_burn_due'), trn = at('_tr_n'), burn = at('_burns_now'), flush = at('_tr_flush');
-      const a = m.acia, cpu = m.cpu, step = cpu.step.bind(cpu), ran = this.ran = { burn: 0, trace: 0, burnWant: 0, traceWant: 0 };
-      let qlen = -1, k = -1, fire = 0, job = null, world = -1, held = 0;
+      const a = m.acia, cpu = m.cpu, step = cpu.step.bind(cpu), ran = this.ran = { burn: 0, trace: 0, burnWant: 0, traceWant: 0 }, read = a.read;
+      let qlen = -1, k = -1, fire = 0, job = null, world = -1, held = 0, typed = '';
+      a.read = (r, t) => {                      // (Each game its jobs again, its world's: as its dq0 line's entered)
+        if (r === 0 && a.rdrf) {
+          const c = a.rx;
+          if (c === 13) { if (/^dq0 /.test(typed)) { k = world = -1; fire = 0; } typed = ''; }
+          else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+        }
+        return read(r, t);
+      };
       cpu.step = v => {
         if (a.rxQueue.length !== qlen) {
           qlen = a.rxQueue.length;
@@ -105,11 +113,11 @@ function dq0JobsTest() {
     },
     check() {
       const f = [], notes = this.notes = [], R = this.ran;
-      this.timer(lines, lines.slice(pre.length, pre.length + each.length + free).map(l => ({ line: l, want: WANT }))).forEach((r, i) => {
-        const j = each[i], name = j ? j.j + ' ' + j.d + ' before' : 'free ' + (i - each.length);
+      games.forEach((x, g) => this.timer.game(g, play.map(l => ({ line: l, want: WANT }))).forEach((r, i) => {
+        const j = each[i], name = (j ? j.j + ' ' + j.d + ' before' : 'free ' + (i - each.length)) + sfx[g];
         notes.push(name + ': first letter ' + r.first);
         if (target(this, name + ': first letter', r.first, MAX)) f.push(name + ': its first letter ' + r.first + ' cycles from Enter (the user\'s ' + MAX + ')');
-      });
+      }));
       notes.push('the jobs made due: lights ' + R.burnWant + ', traces ' + R.traceWant + '; run: lights ' + R.burn + ', traces ' + R.trace);
       if (R.burn < R.burnWant) f.push('the lights\' minute made due ' + R.burnWant + ' times, run ' + R.burn);
       if (R.trace < R.traceWant) f.push('the traces\' journal made due ' + R.traceWant + ' times, taken in ' + R.trace);
@@ -136,11 +144,14 @@ function dq0HoldTest() {
   // their intents some 30M cycles on), and typed again from its "room": a line's first key as they're at it, its hold theirs)
   const slow1 = [...LONG.slice(0, 14)].join('Ā') + 'Ā\x15Ā' + [...LONG.slice(15)].join('Ā');
   const lines = [...pre, 'dq0 -p n -s 3 -c /ram/c.hm -T', LINE, 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'quit', 'echo $status'];
-  const input = pre.map(l => 'ā' + l + '\r').join('') + 'ā' + lines[3] + '\r' + 'ā' + slow1 + 'Ā\x15ĀĀ' + LINE + '\rā' + 'quit\r' + 'ā' + lines[6] + '\r' + 'ā' + slow + '\x15Ā' + 'quit\rāecho $status\r';
+  // (And the normal pace's typed again at the menacing pace, and as the game is played (the user's, 2026-11-17: without the
+  // runner's switches, DQ0_PLAYED), inventory's first letter held as the normal pace's)
+  const more = ['dq0 -p m -s 3 -c /ram/c.hm -T', DQ0_PLAYED + 'dq0 -p n -s 3 -c /ram/c.hm -T'].map(g => 'ā' + g + '\r' + 'ā' + slow1 + 'Ā\x15ĀĀ' + LINE + '\rāquit\r').join('');
+  const input = pre.map(l => 'ā' + l + '\r').join('') + 'ā' + lines[3] + '\r' + 'ā' + slow1 + 'Ā\x15ĀĀ' + LINE + '\rā' + 'quit\r' + 'ā' + lines[6] + '\r' + 'ā' + slow + '\x15Ā' + 'quit\r' + more + 'āecho $status\r';
   return {
     name: 'dq0hold', what: 'Dingus Quest Zero\'s world\'s long jobs waiting from a line\'s first key to its answer\'s first word at the real paces, three seconds at most while keys go on (the user\'s "hold back"): the lights\' minute and the traces\' journal made due as a long line is typed slowly, as it\'s let go, and as a line\'s typed fast; at the turns pace not held',
     meaning: true, outfit: true,
-    init: 't_rc', cycles: 1400e6,
+    init: 't_rc', cycles: 2600e6,
     machine: { input },
     expect: ['% echo $status'],
     start(m) {
@@ -163,7 +174,7 @@ function dq0HoldTest() {
           const c = a.rx;
           if (c === 13) {
             if (/^dq0 -p/.test(typed)) game++;
-            if (typed === LINE) R.enter = a.rxAt;
+            if (typed === LINE && game === 1) R.enter = a.rxAt;
             typed = '';
           } else if (c === 0x15) {
             R['letgo' + game] = a.rxAt;
@@ -172,7 +183,7 @@ function dq0HoldTest() {
           } else {
             typed += String.fromCharCode(c);
             if (typed.length === 1 && game === 1) R['key' + typed] = a.rxAt;   // (A line's first key: the long line's, inventory's)
-            if (typed === 'l') go(game === 1 ? 'held1' : 'turns', 'burn', 100000);
+            if (typed === 'l' && game <= 2) go(game === 1 ? 'held1' : 'turns', 'burn', 100000);
             if (typed === 'i' && game === 1) { go('fastburn', 'burn', 100000); go('fasttrace', 'trace', 100000); }
           }
         }
@@ -217,6 +228,11 @@ function dq0HoldTest() {
       const r = this.timer(lines, [{ line: LINE, want: WANT }])[0];
       notes.push(LINE + ' typed fast: first letter ' + r.first + '; the lights\' minute run ' + (R.fastburn ? R.fastburn.ran - R.enter : null) + ', the journal ' + (R.fasttrace ? R.fasttrace.ran - R.enter : null) + ' after Enter');
       if (target(this, LINE + ': first letter', r.first, MAX)) f.push(LINE + ': its first letter ' + r.first + ' cycles from Enter (the user\'s ' + MAX + ')');
+      ['menacing', 'played'].forEach((p, i) => {   // (Typed again at the menacing pace, and as the game is played: their third and fourth games)
+        const q = this.timer.game(2 + i, [{ line: LINE, want: WANT }])[0];
+        notes.push(LINE + ', ' + p + ': first letter ' + q.first);
+        if (target(this, LINE + ', ' + p + ': first letter', q.first, MAX)) f.push(LINE + ', ' + p + ': its first letter ' + q.first + ' cycles from Enter (the user\'s ' + MAX + ')');
+      });
       for (const n of ['fastburn', 'fasttrace']) {
         if (!(R[n] && R[n].ran)) f.push(n + ': made due as the line was typed, never run');
         else if (r.first !== null && R[n].ran - R.enter < r.first) f.push(n + ': run ' + (R[n].ran - R.enter) + ' cycles after Enter, before its first letter at ' + r.first);

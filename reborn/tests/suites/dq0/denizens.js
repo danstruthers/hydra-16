@@ -8,7 +8,8 @@ const { card, typed } = require('../../lib/common.js');
 const {
   T_ROCK, T_FLOOR, T_WALL, T_CORR, T_WINDOW, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks, stratumRec,
   dq0Story, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Named, DQ0_I,
-  dq0Typed, dq0Portal, dq0Rec, dq0Poke, dq0PcShock, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Alone
+  dq0Typed, dq0Portal, dq0Rec, dq0Poke, dq0PcShock, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Alone, dq0Paces, dq0Own,
+  dq0Asks, dq0HeldPaces
 } = require('../../lib/dq0.js');
 const { target, D17 } = require('../../lib/trends.js');   // (The user's targets, D17, at 115,200 baud: each measure kept, those over and past 90% listed after the tests)
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
@@ -1560,25 +1561,32 @@ module.exports = {
     },
     {
       name: 'dq0letdens', near: ['denizens', 'parser'], what: "Dingus Quest Zero's designators, step 4 (the user's design, 2026-11-06, DECISIONS.md's: \"denizens numbered first\"): at seed 3 (-T) three giant rats in sight, each a capital before the things' (the bones'), shown in the look's sentences ((A, C) Two giant rats ... (B) A giant rat ...) and in around, one a line with where it is; a capital where a denizen's name goes (look at B: how it seems, the one named, the denizens' task told which; talk to C); two rats told apart and each attacked by its letter (the scene set: both senseless beside the character, A to its left, C to its right: attack C finishes C and not A, then attack A finishes A); a capital kept while it's remembered (B still B); each first letter within the user's 720,000 cycles",
-      init: 't_rc', cycles: 1500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', ...LETDENS, 'quit', 'echo $status']) },
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', ...LETDENS, 'quit',
+        ...dq0Paces('dq0 -p t -s 3 -c /ram/c.hm -k pick -T', LETDENS), 'echo $status']) },
       start(m) {
         this.timer = dq0Timer(m);
+        dq0Asks(m, [3]);
         const self = this;
         self.dead = {};
         // (The capital's actor: its record the UI bank's cap's id, CAP_DEN's, the actor's record the byte after its name)
         const capk = (h, L, at, c) => { const u = m.dq0.bank(L.uiBank), o = L.uCap + c * L.ucapSize, id = u[o] | u[o + 1] << 8;
           return id >= 0xFF00 && u[o + 2] === 2 ? [...Array(L.nactors).keys()].find(j => h[at(j) + L.aName] && h[at(j) + L.aDen] === (id & 255)) : undefined; };
         const wary = (h, L) => { for (let k = 0; k < L.nactors; k++) if (h[L.actor + k * L.actorSize + L.aName]) h[L.actor + k * L.actorSize + L.aAttitude] = 2; };
-        const pa = { g: 1, line: 'attack C', n: 1, beside: 0, senseless: 6000 }, pc = { g: 1, line: 'attack C', n: 1, beside: 0, senseless: 6000 };
-        const pb = { g: 1, line: 'attack C', n: 1, senseless: 60000 };   // (B out of it, senseless where it is: no fight for the test's words)
-        const at0 = { g: 1, line: 'attack C', n: 1, call: (h, L, K, at) => { wary(h, L); pa.k = capk(h, L, at, 0); pb.k = capk(h, L, at, 1); pc.k = capk(h, L, at, 2); pa.beside = (h[L.pcFace] + 6) & 7; pc.beside = (h[L.pcFace] + 2) & 7; self.ka = pa.k; self.kc = pc.k; } };
+        // (Each game's scene the same: the test's own, and its lines typed again at the menacing pace and as the game is
+        // played, dq0Paces', games 2 and 3)
+        const scene = g => {
+          const pa = { g, line: 'attack C', n: 1, beside: 0, senseless: 6000 }, pc = { g, line: 'attack C', n: 1, beside: 0, senseless: 6000 };
+          const pb = { g, line: 'attack C', n: 1, senseless: 60000 };   // (B out of it, senseless where it is: no fight for the test's words)
+          const at0 = { g, line: 'attack C', n: 1, call: (h, L, K, at) => { wary(h, L); pa.k = capk(h, L, at, 0); pb.k = capk(h, L, at, 1); pc.k = capk(h, L, at, 2); pa.beside = (h[L.pcFace] + 6) & 7; pc.beside = (h[L.pcFace] + 2) & 7; if (g === 1) { self.ka = pa.k; self.kc = pc.k; } } };
+          return ['look', 'around', 'look at B', 'talk to C'].map(line => ({ g, line, n: 1, call: wary })).concat([at0, pa, pb, pc]);
+        };
         const note = (line, n = 1) => ({ g: 1, line, n, call: (h, L, K, at, named) => { wary(h, L); self.dead[line] = [self.ka, self.kc].map(k => k === undefined ? '?' : named(k) ? 'up' : 'gone'); } });
-        dq0Poke(m, ['look', 'around', 'look at B', 'talk to C'].map(line => ({ g: 1, line, n: 1, call: wary })).concat([at0, pa, pb, pc, note('attack A'), note('around', 2), note('quit')]));
+        dq0Poke(m, [...scene(1), ...scene(2), ...scene(3), note('attack A'), note('around', 2), note('quit')]);
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
+        const f = [], o = dq0Story(dq0Own(out)).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
         let at = 0;
         for (const l of LETDENS) {
           let i = o.indexOf('> ' + l + ' ', at);
@@ -1592,7 +1600,7 @@ module.exports = {
         said('look', /\(A, C\) Two giant rats are ahead to your left, 15 feet away\. \(B\) A giant rat is ahead, 10 feet away\./);
         said('look', /\(D\) some bones/);
         said('around', /^\(A\) a giant rat, ahead to your left, 15 feet away \(B\) a giant rat, ahead, 10 feet away \(C\) a giant rat, ahead to your left, 15 feet away \(D\) some bones, ahead to your right/);
-        said('look at B', /^The giant rat seems wary of you\./);
+        said('look at B', /^You look at the giant rat\. The giant rat seems wary of you\./);   // (Its first words at once, 2026-11-17)
         said('talk to C', /words won't reach it/);
         said('attack C', /You finish the giant rat where it lies\./);
         said('attack A', /You finish the giant rat where it lies\./);
@@ -1601,14 +1609,9 @@ module.exports = {
         const d = this.dead;
         if (!d['attack A'] || d['attack A'][0] !== 'up' || d['attack A'][1] !== 'gone') f.push('attack C: not C finished and A left: ' + JSON.stringify(d));
         if (!d['around'] || d['around'][0] !== 'gone') f.push('attack A: A not finished: ' + JSON.stringify(d));
-        const tm = this.timer(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', ...LETDENS],
-          LETDENS.map(l => ({ line: l, want: /^attack/.test(l) ? 'You' : 'You|The|(' })));   // (A blow's first words its own, not a stir's denizens told before it)
-        for (const r of tm) {
-          this.notes.push(r.line + ': first letter ' + r.first);
-          // (Every line held, a blow too: an attack has no first words yet, its first letter the blow's words, the
-          // fight's "Fighting the giant rat" on the status line before them: D17's, 2026-11-17, its letting off gone)
-          if (target(this, r.line + ': first letter', r.first, D17.first)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
-        }
+        // (Every line held, a blow too, in each typing (the test's own, the menacing pace's, the game as played: dq0Paces'):
+        // an attack's first words its own, "You close with the giant rat.", not a stir's denizens told before it, 2026-11-17)
+        dq0HeldPaces(this, f, this.notes, this.timer, [0, 1, 2], LETDENS.map(l => ({ line: l, want: /^attack/.test(l) ? 'You' : 'You|The|(' })));
         return f;
       },
       sdcard: true
