@@ -40,8 +40,9 @@ function build(root, out = path.join(root, 'bin', 'sdcard.img')) {
     }
     check.close();
     const img = fs.readFileSync(tmp);
-    const same = fs.existsSync(out) && fs.readFileSync(out).equals(img);
-    if (!same) { fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, img); }
+    const { retry } = require('../../base/tools/images.js');   // (The image held a moment, by a reader or a scanner: again)
+    const same = fs.existsSync(out) && retry(() => fs.readFileSync(out)).equals(img);
+    if (!same) { fs.mkdirSync(path.dirname(out), { recursive: true }); retry(() => fs.writeFileSync(out, img)); }
     return { files, bytes: files.reduce((n, f) => n + f.data.length, 0), size: img.length, written: !same };
   } finally {
     hydrafs.setNow(null);

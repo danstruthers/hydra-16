@@ -63,8 +63,8 @@ load(${JSON.stringify(entry)});
 function images() {
   const bios = romimages.bios(ROOT, 'rockwell'), proms = romimages.chipList(ROOT, 'rockwell');   // (The page's machine's chip)
   const card = path.join(ROOT, 'bin', 'sdcard.img');            // (HydraOS's SD card: the samples, the songs, the benchmarks)
-  return { bios, prom: Buffer.concat(proms), card: fs.existsSync(card) ? fs.readFileSync(card) : null };
-}
+  return { bios, prom: Buffer.concat(proms), card: fs.existsSync(card) ? romimages.retry(() => fs.readFileSync(card)) : null };   // (Held a
+}                                                               //   moment, by a reader or a scanner: read again)
 
 // What the page says it was built from: its images, by their checksum (sha1sum of bin/bios_rockwell.bin, then
 // prom0.bin ... one after another).  Not the commit: the page is in Git, and is the same for the same images
@@ -88,7 +88,7 @@ function build(out) {
       '">\n' + zlib.gzipSync(img.card, { level: 9 }).toString('base64') + '\n</script>' : ''));   // (Its sum: a card kept from an older page is known)
   put('<!--PAGE-->', '<script>\n' + inScript(page.code) + '</script>');
   fs.mkdirSync(path.dirname(out), { recursive: true });
-  fs.writeFileSync(out, html);
+  romimages.retry(() => fs.writeFileSync(out, html));
   return { size: html.length, worker, page };
 }
 

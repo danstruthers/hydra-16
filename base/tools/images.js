@@ -12,11 +12,24 @@
 //   write(dir, made, names)     made: { rockwell: { file: Buffer }, wdc: { ... } } (each build's images, by their
 //                               plain file names): each written as one file, or a file for each chip if they
 //                               differ; the files of names (a RegExp) that aren't the build's any more removed
+//   retry(fn)                   fn () (a read, a write or a removal of an image), tried again a few times over some
+//                               seconds while Windows says the file's held (UNKNOWN, EBUSY, EPERM, EACCES: a lock
+//                               that passes, a scanner's or a reader's); its result
 'use strict';
 const fs = require('fs');
 const path = require('path');
 
 const ACIAS = ['rockwell', 'wdc'];
+
+const HELD = new Set(['UNKNOWN', 'EBUSY', 'EPERM', 'EACCES']);
+function retry(fn, tries = 20) {
+  for (let k = 1; ; k++) {
+    try { return fn(); } catch (e) {
+      if (k >= tries || !HELD.has(e.code)) throw e;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);   // (A quarter of a second, then again)
+    }
+  }
+}
 
 function file(root, name, acia = 'rockwell') {
   for (const f of [name + '_' + acia + '.bin', name + '.bin']) {
@@ -50,17 +63,17 @@ function write(dir, made, names) {
   for (const f of all) {
     const [r, w] = ACIAS.map(a => made[a] && made[a][f]);
     const ext = path.extname(f), stem = f.slice(0, -ext.length);
-    if (r && w && r.equals(w)) { fs.writeFileSync(path.join(dir, f), r); keep.add(f); continue; }
+    if (r && w && r.equals(w)) { retry(() => fs.writeFileSync(path.join(dir, f), r)); keep.add(f); continue; }
     ACIAS.forEach((a, i) => {
       const data = i ? w : r;
       if (!data) return;
       const g = stem + '_' + a + ext;
-      fs.writeFileSync(path.join(dir, g), data);
+      retry(() => fs.writeFileSync(path.join(dir, g), data));
       keep.add(g);
     });
   }
-  for (const f of fs.readdirSync(dir)) if (names.test(f) && !keep.has(f)) fs.rmSync(path.join(dir, f));
+  for (const f of fs.readdirSync(dir)) if (names.test(f) && !keep.has(f)) retry(() => fs.rmSync(path.join(dir, f)));
   return [...keep].sort();
 }
 
-module.exports = { ACIAS, file, bios, chipList, built, write };
+module.exports = { ACIAS, file, bios, chipList, built, write, retry };

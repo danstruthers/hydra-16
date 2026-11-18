@@ -259,8 +259,8 @@ const IMAGE_NAMES = /^(bios|prom\d+)(_(rockwell|wdc))?\.bin$/;
 function takeImages(dir, names) {
   const out = {};
   for (const f of fs.readdirSync(dir).filter(f => names.test(f) && !/_(rockwell|wdc)\./.test(f))) {
-    out[f] = fs.readFileSync(path.join(dir, f));
-    fs.rmSync(path.join(dir, f));
+    out[f] = images.retry(() => fs.readFileSync(path.join(dir, f)));
+    images.retry(() => fs.rmSync(path.join(dir, f)));
   }
   return out;
 }

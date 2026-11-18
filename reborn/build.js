@@ -682,8 +682,9 @@ function build(opt = {}) {
   if (!hwt) say('(no ' + path.relative(ROOT, HWTEST_IMAGE) + ': the paged ROM has no hardware test)');
   const { image, entries, disk, banks, chips } = romimg.build({ modules: manifest.modules.map(n => ({ file: n, data: modules[n] })), init: manifest.init,
     hwtest: hwt, bios, romfs: romfs.manifest(at('romfs', 'romfs.txt')) });
-  for (const f of fs.readdirSync(at('bin')).filter(f => /^prom\d*\.bin$/.test(f))) fs.rmSync(at('bin', f));   // (The last build's)
-  for (let k = 0; k < chips; k++) fs.writeFileSync(at('bin', 'prom' + k + '.bin'), image.subarray(k * romimg.CHIP, (k + 1) * romimg.CHIP));
+  const { retry } = require('../base/tools/images.js');   // (An image held a moment, by a reader or a scanner: again)
+  for (const f of fs.readdirSync(at('bin')).filter(f => /^prom\d*\.bin$/.test(f))) retry(() => fs.rmSync(at('bin', f)));   // (The last build's)
+  for (let k = 0; k < chips; k++) retry(() => fs.writeFileSync(at('bin', 'prom' + k + '.bin'), image.subarray(k * romimg.CHIP, (k + 1) * romimg.CHIP)));
   fs.writeFileSync(at('obj', 'build.json'), JSON.stringify({ clock: opt.clock || 1, acia: opt.acia || 'rockwell' }) + '\n');
 
   const report = budget.report(base.ROOT, { modules, tests, progs, programs, samples, games, entries });
