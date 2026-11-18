@@ -6415,12 +6415,17 @@ void __fastcall__ swim_still (unsigned char dive);   /* (Part 73's) */
 
 /* A rest begun, a sleep's or a rest's (I_WAIT's WA_SLEEP): each light it carries burning put out first, told as it is
 ** (E_BEAT's WB_DOUSE, its kind: "You put out your torch.", the limbs' row, every actor's words), the light it carries made
-** again (the user's, 2026-11-17: "A rest puts a burning light out first (for every actor)": a denizen carries none lit) */
+** again (the user's, 2026-11-17: "A rest puts a burning light out first (for every actor)": a denizen carries none lit).
+** None burning (the hub's pc_light none), no look through the item store: the rest begun as soon as before */
 static void rest_dark (void)
 {
     unsigned i;
     unsigned char k, d = 0;
 
+    hub_map (0);
+    if (!HUB->pc_light) {
+        return;
+    }
     for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM | IN_FLAGS, I_LIT)) != 0; ) {
         if (on_pc (i)) {
             k = item_at (i)->kind;

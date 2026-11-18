@@ -553,8 +553,15 @@ module.exports = {
         const away = line => [0, 1, 2].map(k => ({ g: 1, line, n: 1, k, set: { attitude: 4, doing: 0 } }));
         dq0Poke(m, [...away('look'), ...away('close the door'), ...away('sleep for an hour'),
           { g: 1, line: 'look', n: 2, k: 0, call: (h, L) => { h[L.actor + L.aSn] = h[L.pcSn] + 1; h[L.denSeq] = h[L.denSeq] + 1 & 255; } }]);   // (Out of its sight before the rest, so it's new)
-        // (As it's told it's settled down: a friendly bandit put beside it, a denizen come into sight)
+        // (As it's told it's settled down, and the world's begun its wait (its task the hub's pc_task: the UI's words
+        //  can come before the world takes the line, a race the rest lost at times, 2026-11-17): a friendly bandit put
+        //  beside it, a denizen come into sight as it rests, not one there as it began)
         const near = () => {
+          const { L } = m.dq0.layout(), a = m.acia, shown = a.shown;
+          if (m.dq0.bank(0)[L.pcTask]) return beside();
+          a.shown = (v, t) => { shown(v, t); if (m.dq0.bank(0)[L.pcTask]) { a.shown = shown; beside(); } };
+        };
+        const beside = () => {
           const h = m.dq0.bank(0), { L } = m.dq0.layout(), o = L.actor, R = dq0Rec(m), r = R.at(h[o + L.aDen]), w = (q, v) => { h[q] = v & 255; h[q + 1] = v >> 8 & 255; };
           const x = (h[L.pcX] | h[L.pcX + 1] << 8) + 1, y = h[L.pcY] | h[L.pcY + 1] << 8;
           w(o + L.aX, x); w(o + L.aY, y); h[o + L.aSn] = h[L.pcSn]; R.mem[r + R.X] = x & 255; R.mem[r + R.X + 1] = x >> 8; R.mem[r + R.Y] = y & 255; R.mem[r + R.Y + 1] = y >> 8; R.mem[r + R.SN] = h[L.pcSn];
