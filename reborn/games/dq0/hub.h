@@ -879,8 +879,10 @@ enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH,     /* I_PORTAL's: wha
        PA_BAR, PA_BEND,                         /*   a door barred again (a bar carried, or in reach, set in its
                                                 **   brackets); bars bent (a portcullis's; a window's, forced); */
        PA_LOCK,                                 /*   a thing's lock locked (IO_SHUT's); */
-       PA_CHECK };                              /*   a door gone over for traps, its own (2026-10-22: a search's test,
-                                                **   10 seconds) */
+       PA_CHECK,                                /*   a door gone over for traps, its own (2026-10-22: a search's test,
+                                                **   10 seconds); */
+       PA_PICK };                               /*   a lock picked, no key tried (a door's, a thing's: "pick the lock",
+                                                **   the user's, 2026-11-17; PA_UNLOCK its key first, if one fits) */
 enum { WQ_SAVE, WQ_EXAMINE, WQ_START, WQ_SET }; /* The hub's wreq's kinds */
 #define WY_NO_INIT      0x100                   /* (WQ_START's y: dq0 -I, the tests', no engage initiative test nor
                                                 **   a grope's test while engaged: their fights' dice as they were) */

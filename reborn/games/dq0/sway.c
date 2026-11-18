@@ -576,9 +576,28 @@ void worn_said (void);                          /* (worn.c's: a place on the bod
 void o_place_said (void)
 {
     static const char* const places[] = { "floor", "ground", "bottom", "here" };
+    const struct sight* s;
     unsigned char k;
 
     worn_said ();
+    if (cmd.other.kind == OB_STAIRS && cmd.prep == PR_ON && (cmd.action == VB_PUT_OBJECT || cmd.action == VB_DROP_OBJECT)) {
+        cmd.action = VB_DROP_OBJECT;            /* (On the stairs: placed there, put down on its own square, the user's,
+                                                **   2026-11-17; its stairway elsewhere, out of reach: told, the command
+                                                **   left be, CF_ASKED's, resolve's) */
+        s = sight_get ();
+        for (k = 0; k < s->nopen; ++k) {
+            if (s->open[k].rel == 0xFF && (s->open[k].kind == O_STAIRS_UP || s->open[k].kind == O_STAIRS_DOWN ||
+                s->open[k].kind == O_WAY_OUT)) {
+                cmd.other.kind = 0;
+                cmd.prep = PR_NONE;
+                return;
+            }
+        }
+        strcpy (lb, "The stairway");        /* (In the main RAM: the refusals' overlay's to read) */
+        say_no (A_FAR, lb);
+        cmd.flags |= CF_ASKED;
+        return;
+    }
     for (k = 0; k < sizeof places / sizeof places[0]; ++k) {
         if (!strcmp (cmd.other.word, places[k])) {
             cmd.other.word[0] = cmd.other.sel = cmd.other.n = 0;

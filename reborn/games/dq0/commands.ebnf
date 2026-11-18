@@ -68,7 +68,9 @@
 (* ---- Handling things (question 2: CLOSE and OPEN are actions) ---- *)
 <get>            ::= <GET> [ <object> ] [ <from-phrase:other> ] [ <hand-phrase:hand> ] | <GET> <object> <off-phrase:other> | <GET> <object> "up"   (* bare: the last thing named, else things near (question 8); "pick the sword up"; "take the torch in my right hand" (slice 4.1b) *)
 <drop>           ::= <DROP> [ <object> ] | "put" <object> "down" | "shrug" <object> "off"   (* bare: the last thing named *)
-                   | <DROP> <object> ( "into" | "in" | "inside" | "down" ) <object:other>   (* "drop the dagger into the well", "down the shaft": put in it (2026-11-06) *)
+                   | <DROP> <object> ( "into" | "in" | "inside" | "down" | "on" | "onto" ) <object:other>   (* "drop the dagger into the well", "down the shaft": put in it (2026-11-06);
+                                                 "drop the dagger on the table": put on it, "on the floor" put down,
+                                                 "on the stairs" placed there (2026-11-17) *)
 <put>            ::= <PUT> <object> <hand-phrase:hand> | <PUT> <object> <worn-phrase:worn> | <PUT> <object> <put-prep:other> <object:other>   (* "put the bar back in its brackets": back, a way, passed over; "put the dagger in my other hand": held there (slice 4.1b) *)
 <put-prep>       ::= "in" | "into" | "inside" | "on" | "onto" | "on top of" | "under" | "against" | "down"   (* "down the shaft": in it, 2026-11-06 *)
 <use>            ::= <USE> <object> [ ( "on" | "with" ) <object:other> ]
@@ -106,7 +108,7 @@
 <USING>          ::= "with" | "using"                (* what it's done with: an instrument, to hand (2026-10-22) *)
 <headlock>       ::= "in" [ "a" ] ( "head" "lock" | "headlock" )   (* "put the goblin in a headlock": the hold the other
                                                  thing, as a put's *)
-<grapple>        ::= <GRAPPLE> <object> | <THROW> <object> | "put" <object> <headlock:other> | "let" "go" [ "of" <object> ]   (* a grapple maneuver: the object is engaged; "toss" and "throw" a creature are grapples too *)
+<grapple>        ::= <GRAPPLE> <object> | <THROW> <object> | "put" <object> <headlock:skip> | "let" "go" [ "of" <object> ]   (* a grapple maneuver: the object is engaged; "toss" and "throw" a creature are grapples too *)
 <throw>          ::= <THROW> [ <throwing> ] <at-phrase:other>          (* at something: a target *)
                    | <THROW> [ <throwing> ] ( "into" | "in" | "down" ) <object:other>   (* "throw the dagger into the well", "down the shaft": let fall in it (2026-11-06) *)
                    | <THROW> [ <throwing> ] <throw-dir>
@@ -328,7 +330,9 @@
                                                                               interrupt between parts *)
 <seq-part>       ::= <command> | <quoted-speech> | <object>   (* an object alone repeats the verb before: "attack the rat then the goblin" *)
 (* ---- Unarmed blows (HarnMaster Combat 8-9: unarmed combat is a melee attack) ---- *)
-<knock-out>      ::= "knock" "out" <object> | "knock" "the" <slang:skip> "out" "of" <object>
+<knock-out>      ::= "knock" <out:skip> <object> | "knock" "the" <slang:skip> "out" "of" <object>   (* a punch: its words
+                                                 the knock's made a punch's (commands.verbs' [turns], 2026-11-17) *)
+<out>            ::= "out"
 <slang>          ::= "shit" | "daylights" | "living" "daylights" | "crap"
 (* ---- Engagement (HarnMaster Combat 6-7): engage, disengage and pass ---- *)
 <engage>         ::= "engage" <object>                          (* an Engage option: a half-move, then a melee attack *)

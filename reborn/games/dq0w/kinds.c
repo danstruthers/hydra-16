@@ -233,7 +233,7 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
                                                 **   bed's, 24d; a towel, 4d) */
     { "towel", 0, 2, 2, 0, 0, 0, 0, 3, "", MT_LINEN, AP_CLOTH, 16 },
     { "desk", 0, 200, 100, 30, 400, 0, 0, 7, "", MT_WOOD, AP_WOOD, 240, KF_ON },   /* (Furniture, the user's, 2026-11-16:
-                                                **   a desk's top, a drawer that locks, a secret niche; */
+                                                **   a desk's top, a drawer that locks, a secret drawer; */
     { "cabinet", K_CONTAINER, 240, 120, 60, 400, 0, 0, 7, "", MT_WOOD, AP_WOOD, 200, SS | KF_LID },   /*   a cabinet, its
                                                 **   doors, its top, a drawer; */
     { "case", K_CONTAINER, 40, 20, 12, 80, 0, 0, 4, "", MT_WOOD, AP_WOOD, 120, SS | KF_LID },   /*   a case, its lid and
@@ -276,7 +276,9 @@ const struct comp comps[] = {
     { KI_CASK, CP_IN, KF_LIQUID | KF_STOPPER, 32, 200, 0, 0 },
     { KI_DESK, CP_ON, 0, 30, 400, 0, 0 },       /* (Furniture, the user's, 2026-11-16: a desk's top, */
     { KI_DESK, CP_IN, SS | KF_LID, 6, 40, 0, CN_DRAWER | CC_LOCK },     /*   its drawer, a lock of its own, */
-    { KI_DESK, CP_IN, SS | KF_LID, 2, 10, 0, CN_SECRET | CC_HIDDEN },   /*   a secret niche, hidden; */
+    { KI_DESK, CP_IN, SS | KF_LID, 2, 10, 0, CN_SECRET | CC_HIDDEN },   /*   a secret drawer, hidden (the
+                                                **   user's, 2026-11-17: "the secret niche" till the parser told it
+                                                **   from "the drawer"); */
     { KI_CABINET, CP_IN, SS | KF_LID, 60, 400, 0, 0 },  /*   a cabinet's inside, its doors, */
     { KI_CABINET, CP_ON, 0, 20, 200, 0, 0 },    /*   its top, */
     { KI_CABINET, CP_IN, SS | KF_LID, 6, 40, 0, CN_DRAWER },    /*   a drawer; */
@@ -290,7 +292,7 @@ const struct comp comps[] = {
 #pragma rodata-name (pop)
 
 /* The compartments' own names (CN_*), as a thing's in the catalogue's bank's words */
-const char cnouns[NCN][CN_LEN] = { "", "lid", "", "drawer", "side pocket", "false bottom", "secret niche" };
+const char cnouns[NCN][CN_LEN] = { "", "lid", "", "drawer", "side pocket", "false bottom", "secret drawer" };
 
 /* How each light burns (DUNGEON.md: light; HOUSE.md's burning, slice 4.1's): its kind; how long a whole one burns
 ** at middling make, in tens of minutes (a torch an hour, the house rule's; a tallow candle three-quarters of an inch

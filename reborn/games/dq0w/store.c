@@ -222,8 +222,8 @@ void stocks (void)
     }
 }
 
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW38CODE")           /* (Part 38's, store_put's own, since 2026-11-17: part 4's room) */
+#pragma rodata-name (push, "SW38RODATA")
 
 /* The chunks the maker stocked (their slots CS_FRESH), in the order it stocked them (each one's list's seq): their
 ** things put down (things.c's), and marked so, a record each (STOCKED, its first square), their slots as any other's;
@@ -265,6 +265,10 @@ void s_stocked (void)
     }
     hub_map (0);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW4CODE")
+#pragma rodata-name (push, "SW4RODATA")
 
 /* The portal on the hub's wreq's square looked at closely (the UI's request, PA_EXAMINE: the square one it sees, on
 ** the character's stratum): its record copied into the hub's pview, its bar 1 if the character's on its bar's side;

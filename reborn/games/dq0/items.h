@@ -133,13 +133,13 @@ struct comp {
 enum { CP_IN, CP_ON, CP_HUNG };
 enum { CN_NONE, CN_LID, CN_TOP, CN_DRAWER, CN_POCKET, CN_BOTTOM, CN_SECRET, NCN };   /* (Its own name: dq0w/kinds.c's
                                                 **   cnouns, "lid", "top", "drawer", "side pocket", "false bottom",
-                                                **   "secret niche": the one name match's, a thing's, things.c's pick) */
+                                                **   "secret drawer": the one name match's, a thing's, things.c's pick) */
 #define CN_LEN          16                      /* (At most 15 letters: a name's room, xn's and yn's) */
 #define CN_MASK         0x0F                    /* (A row's noun's own name, CN_*: its high bits CC_*) */
 #define CC_INNER        0x20                    /* (Reached through its holder's first: a false bottom, closed as that
                                                 **   is, opened only with it open) */
 #define CC_LOCK         0x40                    /* (It has a lock of its own: a drawer's, its holder's key fitting it) */
-#define CC_HIDDEN       0x80                    /* (Hidden till it's found: a false bottom, a secret niche, unseen and
+#define CC_HIDDEN       0x80                    /* (Hidden till it's found: a false bottom, a secret drawer, unseen and
                                                 **   unnamed, a search's to find, the referee's test) */
 /* Each compartment past the first's own state (the user's, 2026-11-16): a holder's record's fuel (a light's and a
 ** fuel's alone else), four bits a compartment, 1 to 3: locked, its lock burst, found (a hidden one), none (a hidden one

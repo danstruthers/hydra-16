@@ -4169,7 +4169,7 @@ unsigned char __fastcall__ s_work (unsigned char what, unsigned x, unsigned y, u
         if (what == PA_BREAK || (k != PK_DOOR && k != PK_PORTCULLIS && what == PA_FORCE && !shut &&
             !(p->parts & PP_BARS))) {
             blows ();                           /* (Broken; a window forced, nothing shut or barred: its glass) */
-        } else if (k == PK_DOOR || what == PA_BAR || (k != PK_PORTCULLIS && (what <= PA_UNLOCK || (what == PA_FORCE &&
+        } else if (k == PK_DOOR || what == PA_BAR || (k != PK_PORTCULLIS && (what <= PA_UNLOCK || what == PA_PICK || (what == PA_FORCE &&
             shut)))) {
             doors ();                           /* (A door's; a window's shutters, as a door's) */
         } else {

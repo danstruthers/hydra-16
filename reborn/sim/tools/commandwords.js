@@ -323,18 +323,22 @@ function scan(toks, w, face = 0, lab = null) {
     }
   }
   // A verb made another (commands.verbs' [turns]): by its thing's name, the thing then none ("look at the floor": the
-  // floor's look); else by its own preposition, the grammar's ("look under the table": a search of it)
-  if (S[0].hd >= 0 && (k = w.turns.get(verb + ' ' + text(ws[S[0].hd]))) !== undefined) {
+  // floor's look), but not one its own preposition makes another action ("look in the wall"; "look for the tracks"
+  // a find's, made the tracks'); else by its own words, the grammar's skip ("look under the table": a search of it)
+  let own;
+  for (let j = first; j < ws.length && own === undefined; ++j) {
+    own = w.rows[verb].preps.get(text(ws[j]));
+    if (own === undefined && !little(ws[j])) break;
+  }
+  if (S[0].hd >= 0 && (own === undefined || own === V.VB_FIND_OBJECT) &&
+    (k = w.turns.get(verb + ' ' + text(ws[S[0].hd]))) !== undefined) {
     verb = k;
     c.order = 0;
     Object.assign(c.obj, thing());
   } else {
-    for (let j = first; j < ws.length; j++) {   // (Each in turn: "search around for", a grope, then a seek)
-      if (((lab ? lab[ws[j].ti] : 0) & 7) === RO.SKIP) {
-        if ((k = w.turns.get(verb + ' ' + text(ws[j]))) !== undefined) { verb = k; c.order = 0; }
-        continue;
-      }
-      if (!little(ws[j])) break;
+    for (let j = first; j < ws.length; j++) {   // (Each in turn, anywhere: "search around for", a grope, then a seek;
+      if (((lab ? lab[ws[j].ti] : 0) & 7) === RO.SKIP &&   //   "put the goblin in a headlock", a hold)
+        (k = w.turns.get(verb + ' ' + text(ws[j]))) !== undefined) { verb = k; c.order = 0; }
     }
   }
   let word = c.obj.word, word2 = c.other.word;
@@ -400,7 +404,7 @@ function scan(toks, w, face = 0, lab = null) {
 // each the verb, the word's entry, the verb it's made)
 const CONSTANTS = ['move', 'put', 'stow', 'doff', 'hang', 'drop', 'bar', 'get', 'turn', 'face', 'light', 'douse', 'unlock',
   'name', 'combine', 'PR_WITH', 'PR_ON', 'PR_FROM', 'OB_WAY_OUT', 'OB_DOOR', 'GO_UP', 'GO_DOWN', 'SL_ME', 'VB_SAY', 'OB_STAIRS',
-  'OB_LADDER', 'OB_SHAFT', 'throw', 'HOW_TO', 'PR_AT', 'PR_IN'];
+  'OB_LADDER', 'OB_SHAFT', 'throw', 'HOW_TO', 'PR_AT', 'PR_IN', 'VB_FIND_OBJECT'];
 const SPECIAL = { WITH: 1, AWAY: 2, BACK: 3, HALF: 4, AROUND: 5, BAR: 6, WAY_OUT: 7, MAIN: 8 };   // (cmdmean.s's S_*)
 const COLUMNS = ['dir', 'thing', 'prep', 'how', 'special', 'order', 'sel', 'num', 'manner', 'little', 'aspect'];   // (cmdmean.s's C_*)
 const ROW = ['alone', 'thing', 'way', 'unsaid', 'aux', 'skill', 'task', 'flags'];            // (cmdmean.s's R_*)

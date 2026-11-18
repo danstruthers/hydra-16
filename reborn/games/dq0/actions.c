@@ -40,6 +40,8 @@ struct row {
 ** (W_CLIMB: but a well, a rope, a thing's letter; W_PART: but a door's or a window's part); a part of the place (a
 ** kind, OB_*) not among those the verb does (masks[], the row's takes' high four bits), refused by its low four */
 #define BIT(k)      (1u << (k))
+#define NOREST      (BIT (OB_DOOR) | BIT (OB_WALL) | BIT (OB_WINDOW) | BIT (OB_PORTC) | BIT (OB_PILLAR) | BIT (OB_LADDER) | \
+    BIT (OB_WAY_OUT))                           /* (Parts of the place nothing rests on: a drop there refused) */
 #define CLIMBS      (BIT (OB_STAIRS) | BIT (OB_LADDER) | BIT (OB_SHAFT) | BIT (OB_WINDOW) | BIT (OB_LEDGE))
 #define WORKED      (BIT (OB_DOOR) | BIT (OB_PORTC) | BIT (OB_WINDOW) | BIT (OB_WAY_OUT) | BIT (OB_TRAP))
 #define SEARCHED    (BIT (OB_DOOR) | BIT (OB_PORTC) | BIT (OB_WINDOW) | BIT (OB_ROOM) | BIT (OB_WALL))
@@ -63,7 +65,7 @@ static const struct row rows[NACTIONS] = {
     ROW (VB_EXAMINE_OBJECT, H_EXAMINE, 0),
     ROW (VB_EXAMINE_LOCALE, H_EXAMINE, 0),
     ROWR (VB_RETRIEVE_OBJECT, H_TAKE, 0, 0, U_CANT, M_NONE),
-    ROW (VB_DROP_OBJECT, H_DROP, 0),
+    ROW (VB_DROP_OBJECT, H_DROP, TK_ONTO),
     ROWP (VB_PUT_OBJECT, H_HANDLE, TK_ONTO, 0, 0, M_NONE, IO_PUT),
     ROW (VB_USE_OBJECT, H_USE, 0),              /* (The puzzle's first, theme.c's, before the table; B4's) */
     ROWR (VB_EQUIP_OBJECT, H_HANDLE, 0, 0, U_CANT, M_NONE),
@@ -229,13 +231,16 @@ unsigned char o_refused (void)
     }
     r = rows + cmd.action;
     f = 0;
-    if ((r->takes & TK_ONTO) && cmd.other.kind && (cmd.prep != PR_IN ||
-        (cmd.other.kind != OB_SHAFT && cmd.other.kind != OB_TRAP)) && (cmd.action != VB_TIE_OBJECT ||
-        (cmd.other.kind != OB_PILLAR && cmd.other.kind != OB_WINDOW))) {
+    f = cmd.other.kind;
+    if ((r->takes & TK_ONTO) && f && !(cmd.prep == PR_IN && (f == OB_SHAFT || f == OB_TRAP)) &&
+        !(cmd.action == VB_TIE_OBJECT && (f == OB_PILLAR || f == OB_WINDOW)) &&
+        (cmd.action == VB_DROP_OBJECT ? f < 16 && (NOREST >> f & 1) : f != OB_STAIRS || cmd.action != VB_PUT_OBJECT)) {
         f = U_CANT;                             /* (A part of the place where it's put, or tied: "You can't put the torch on
                                                 **   the door.", not the belt's; but into a hole, let fall, 2026-11-17; a
-                                                **   rope tied to a pillar, a window's bars, the user's, 2026-11-17) */
-    } else if (!r->no) {
+                                                **   rope tied to a pillar, a window's bars, the user's, 2026-11-17;
+                                                **   dropped, refused only where nothing can rest, a put on the stairs
+                                                **   placed there: the user's, 2026-11-17) */
+    } else if ((f = 0), !r->no) {
     } else if (*w) {
         f = r->no >> 4 & 3;
         if (*w == '#' || ((r->no & W_CLIMB) && (!strcmp (w, "well") || strstr (w, "rope"))) || ((r->no & W_PART) &&

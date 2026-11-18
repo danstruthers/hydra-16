@@ -152,7 +152,8 @@ void __fastcall__ o_tt_words (const char* t)
 **             what?", 2026-11-17: GAME-CRITIQUE.md's 2.6)
 **   A_SENSE   words the game knows, not a command its grammar has: "I don't understand that."; words said with no
 **             quotes, the form shown: "Put the words in quotes: say \"hello\"." (the user's, 2026-10-19: DECISIONS.md's
-**             "The command grammar's answers"; main.c's s_command, the grammar's no) */
+**             "The command grammar's answers"; main.c's s_command, the grammar's no); "say" alone, the same, its words
+**             an example's (the user's, 2026-11-17) */
 void __fastcall__ o_unknown (unsigned char f)
 {
     static const char* p;
@@ -165,7 +166,7 @@ void __fastcall__ o_unknown (unsigned char f)
     if (f == U_WHAT && cmd.obj.kind && s) {
         f = U_CANT;
     }
-    if (f == A_SENSE && cmd.action == VB_SAY && s && !strchr (p, '"')) {
+    if (f == A_SENSE && cmd.action == VB_SAY && !strchr (p, '"')) {
         f = A_QUOTE;
     }
     all = f > U_YET || (f && (cmd.obj.word[0] || cmd.obj.kind));
@@ -179,9 +180,13 @@ void __fastcall__ o_unknown (unsigned char f)
         --d;
     }
     lb[d] = 0;
-    if (f == A_QUOTE && (q = strchr (lb, ' ')) != 0) {
-        memmove (q + 2, q + 1, d - (q - lb));   /* (A quote after the verb, its words then: say "hello, the row's the */
-        q[1] = '"';                             /*   other) */
+    if (f == A_QUOTE) {
+        if ((q = strchr (lb, ' ')) != 0) {
+            memmove (q + 2, q + 1, d - (q - lb));   /* (A quote after the verb, its words then: say "hello, */
+            q[1] = '"';                         /*   the row's the other) */
+        } else {
+            strcpy (lb + d, " \"hello");        /* ("Say" alone: an example's words, say "hello) */
+        }
     }
     o_say_no (f, d ? lb : 0);
 }

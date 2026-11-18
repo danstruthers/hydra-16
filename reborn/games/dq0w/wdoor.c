@@ -118,13 +118,14 @@ found:
                 door_state (wk.pq.state & ~PS_OPEN);
             }
             break;
+        case PA_PICK:                           /* (Picked, no key tried: "pick the lock", the user's, 2026-11-17) */
         case PA_UNLOCK:
             if (!(wk.pq.state & PS_LOCKED)) {
                 out = PO_NO_LOCK;
                 break;
             }
-            if (door_key ()) {                  /* (Its key: no test, three seconds, every actor's; the character's by a
-                                                **   tool's steps, a timed work: s_door_work's, 2026-11-04) */
+            if (what == PA_UNLOCK && door_key ()) {   /* (Its key: no test, three seconds, every actor's; the character's
+                                                **   by a tool's steps, a timed work: s_door_work's, 2026-11-04) */
                 if (!wk.who) {
                     if (wk.plan) {
                         timed (LT_KEY, 30);

@@ -25,29 +25,12 @@
 ** world telling the things changing hands (E_TASK's TE_FETCHED).  Its data the part's own (zeros as it's copied in) */
 unsigned char trade (void);                     /* (Part 15's stub) */
 
-/* A word of the line's: in lower case into w (15 at most); the line on past it */
-static const char* __fastcall__ word_at (const char* p, char* w)
-{
-    unsigned char n = 0;
-
-    while (*p == ' ') {
-        ++p;
-    }
-    for (; *p && *p != ' '; ++p) {
-        if (n < 15) {
-            w[n++] = *p >= 'A' && *p <= 'Z' ? *p + 'a' - 'A' : *p;
-        }
-    }
-    w[n] = 0;
-    return p;
-}
-
 #pragma code-name (push, "SW15CODE")            /* (Part 15's, the market's; the rest part 20's: its room, 2026-11-03) */
 #pragma rodata-name (push, "SW15RODATA")
 #pragma bss-name (push, "SW15RODATA")
 static char gd[16], wh[16], nm[16], nl[16];
 
-/* (A word of the line's: word_at's, in the part) */
+/* A word of the line's: in lower case into w (15 at most); the line on past it (the entertainment's verb) */
 static const char* __fastcall__ word_at2 (const char* p, char* w)
 {
     unsigned char n = 0;

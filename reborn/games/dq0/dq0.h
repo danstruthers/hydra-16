@@ -607,11 +607,11 @@ void __fastcall__ letters_in (char* l);         /* (Overlay 22's) The line's let
 unsigned char what_ask (void);                  /* (Overlay 22's) A command with nothing named asked about ("Drop what?
                                                 **   [a, d, f]"): 1, or 0 */
 void __fastcall__ walk_ahead (const char* name);    /* (sway.c's: a thing to take seen out of reach: its walk told before the world's asked) */
-#define W_DIG           (PA_CHECK + 2)          /* (walk_says' name, a first word by what's asked: PA_* + 1 a portal's work, sway.c's) */
-#define W_SWAY          (PA_CHECK + 3)
-#define W_PEER          (PA_CHECK + 4)
-#define W_LISTEN        (PA_CHECK + 5)
-#define W_MAX           (PA_CHECK + 6)
+#define W_DIG           (PA_PICK + 2)           /* (walk_says' name, a first word by what's asked: PA_* + 1 a portal's work, sway.c's) */
+#define W_SWAY          (PA_PICK + 3)
+#define W_PEER          (PA_PICK + 4)
+#define W_LISTEN        (PA_PICK + 5)
+#define W_MAX           (PA_PICK + 6)
 extern unsigned char said_ahead, walk_op, worded, placing;       /* (main.c's: its walk told already; a walk over's arrival short) */
 void __fastcall__ blow (const struct msg* m);    /* (Overlay 6's, blows.c: an E_FIGHT worded, and what comes of it) */
 void __fastcall__ walk_says (const char* name);    /* (A walk over told as it begins, at once: "You go over to the pot."; 0: the command's thing) */

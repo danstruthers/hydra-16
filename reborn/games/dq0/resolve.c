@@ -310,6 +310,10 @@ static unsigned char tool_ok (void)
         msg (lb);                               /* ("You have no bar to hand.", "The bar is out of reach: ...") */
         return 0;
     }
+    if (a == VB_UNLOCK_OBJECT && strstr (w, "pick")) {
+        cmd.aux = PA_PICK;                      /* ("Unlock the door with the lockpicks": picked, no key tried, the
+                                                **   user's, 2026-11-17) */
+    }
     if (w == cmd.obj.word) {                    /* ("Attack with the sword": what it's done with, the thing unsaid) */
         strcpy (cmd.other.word, w);
         *w = 0;

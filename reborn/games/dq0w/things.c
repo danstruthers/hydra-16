@@ -2929,6 +2929,13 @@ static unsigned char __fastcall__ unlike (unsigned i, const struct kind* k)
 }
 
 static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigned char* no);
+
+/* Compartment c of thing h (its row in crow) hidden and not found yet (CS_UNSEEN's: the chooser's, twice, part 4's
+** room) */
+static unsigned char __fastcall__ unseen (unsigned h, unsigned char c)
+{
+    return CS_UNSEEN (crow.noun, item_at (h)->fuel, c);
+}
 #pragma static-locals (push, off)
 unsigned __fastcall__ s_pick (const char* name, unsigned char how)
 {
@@ -2992,7 +2999,7 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
                     no[pk] = 1;
                     continue;
                 }
-                if (CS_UNSEEN (crow.noun, item_at (i)->fuel, j)) {
+                if (unseen (i, j)) {
                     continue;                   /* (Named by a compartment of its, "the drawer": the user's, 2026-11-16;
                                                 **   a hidden one not found, none) */
                 }
@@ -3016,9 +3023,10 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
         }
         if (how == HW_IN) {
             if (rec.where != IW_ITEM || rec.x != win || (wcin && ic_of (i) != wcin) ||
-                (!*name && icomp (i) && (crow.noun & CC_HIDDEN))) {
+                (!*name && (j = icomp (i)) != 0 && unseen (win, j))) {
                 continue;                       /* (In it; in the compartment named, wcin's; any, "", not in a hidden
-                                                **   one, found or not: "take all from the case", 2026-11-17) */
+                                                **   one not found yet: "take all from the case", a found one's too, the
+                                                **   user's, 2026-11-17) */
             }
             r = 0;
         } else if (rec.where == IW_ITEM && rec.x == win) {
@@ -3560,6 +3568,10 @@ one:
 unsigned char stow_where (void);                /* (Part 104's: its stub) */
 
 #define STRIP_T         100
+#define TK_N            5                       /* (The kinds "take all from" names, at most: more, "everything") */
+extern unsigned char tk_n;                      /* (Part 105's: the kinds taken, kept as they're taken; its stubs) */
+void __fastcall__ took_kind (unsigned n);
+void __fastcall__ took_list (char* b);
 unsigned char __fastcall__ s_moved (unsigned char op)
 {
     static unsigned want, got, t, c;
@@ -3572,7 +3584,7 @@ unsigned char __fastcall__ s_moved (unsigned char op)
     }
     want = iq.count == CT_ALL ? 0xFFFF : iq.count;
     got = t = 0;
-    times = away = 0;
+    times = away = tk_n = 0;
     kind = 0;
     win = 0;
     take_cnt = 0;
@@ -3630,6 +3642,10 @@ unsigned char __fastcall__ s_moved (unsigned char op)
         n = handled;
         kind = item_at (n)->kind;
         got += item_at (n)->qty;
+        if (op == IO_TAKE && !*iq.name) {
+            took_kind (n);                      /* (Each kind taken and its count: "take all from the case" names them,
+                                                **   the user's, 2026-11-17) */
+        }
         rs_ok |= 4;                             /* (The rest by the lump, their levels paid: part 85's) */
         sa = last_sa;
         t += took;
@@ -3670,7 +3686,11 @@ unsigned char __fastcall__ s_moved (unsigned char op)
         }
         if (op == IO_GET || op == IO_DROP || op == IO_TAKE) {
             put (op == IO_DROP ? "You put down " : "You take ");
-            put (b);
+            if (op == IO_TAKE && !*iq.name) {
+                took_list (b);                  /* ("You take a chisel and a key from the case.") */
+            } else {
+                put (b);
+            }
             if (op == IO_TAKE) {
                 put (" from the ");
                 put (kind_of (item_at (win)->kind)->name);
@@ -3697,8 +3717,8 @@ void __fastcall__ s_many (char* b, unsigned n, unsigned char k)
     const struct kind* p = kind_of (k);
     unsigned char i, c;
 
-    if (!*iq.name && iq.kind == IO_TAKE && n > 1) {   /* ("Take all from the case", none named: all of them, or all that
-                                                **   would come, any left in it, pick's, 2026-11-17) */
+    if (!*iq.name && iq.kind == IO_TAKE && tk_n > TK_N) {   /* ("Take all from the case", more kinds than its list names:
+                                                **   all of them, or all that would come, any left in it, pick's) */
         strcpy (b, pick ("", HW_IN) ? "what you can" : "everything");
         return;
     }
@@ -3731,6 +3751,49 @@ void __fastcall__ s_many (char* b, unsigned n, unsigned char k)
     }
     strcat (b, p->name + i);
 }
+
+/* "Take all from the case" names what's taken in one list (the user's, 2026-11-17: "You take a chisel and a key from
+** the case."): each kind taken and its count, kept as it's taken (s_moved's: thing n; TK_N kinds at most, more
+** "everything", s_many's b), then said, each by its count's words (s_many's), into b and the text */
+unsigned char tk_n;                             /* (The main RAM's: kept across the parts' swaps) */
+static unsigned char tk_k[TK_N];
+static unsigned tk_q[TK_N];
+#pragma static-locals (push, off)
+void __fastcall__ s_took_kind (unsigned n)
+{
+    unsigned char j, k = item_at (n)->kind;
+
+    if (tk_n > TK_N) {
+        return;
+    }
+    for (j = 0; j < tk_n && tk_k[j] != k; ++j) {
+    }
+    if (j == TK_N) {
+        tk_n = TK_N + 1;
+        return;
+    }
+    if (j == tk_n) {
+        tk_k[tk_n++] = k;
+        tk_q[j] = 0;
+    }
+    tk_q[j] += item_at (n)->qty;
+}
+
+void __fastcall__ s_took_list (char* b)
+{
+    unsigned char j;
+
+    if (tk_n > TK_N) {
+        put (b);                                /* (More kinds than it names: "everything", s_many's) */
+        return;
+    }
+    for (j = 0; j < tk_n; ++j) {
+        s_many (b, tk_q[j], tk_k[j]);
+        put (b);
+        put (j + 2 == tk_n ? " and " : j + 1 < tk_n ? ", " : "");
+    }
+}
+#pragma static-locals (pop)
 #pragma rodata-name (pop)
 #pragma code-name (pop)
 
@@ -3904,11 +3967,15 @@ unsigned char s_shut_work (void)
     const struct kind* k;
     unsigned n, t = 20;                         /* (Its time: a minute's picking, 600, past a char's 255: it was 88
                                                 **   tenths, a char's, till 2026-10-22) */
-    unsigned char w = iq.to & ~IO_DONE, s, c, ok = IR_NO, d = iq.to & IO_DONE, lt = 0, os, cc, h;
+    unsigned char w = iq.to & ~IO_DONE, s, c, ok = IR_NO, d = iq.to & IO_DONE, lt = 0, os, cc, h, pk = 0;
     signed char g;
     char nm[CN_LEN];
     unsigned st;
 
+    if (w == PA_PICK) {
+        w = PA_UNLOCK;                          /* ("Pick the lock": picked, no key tried, the user's, 2026-11-17) */
+        pk = 1;
+    }
     text_new ();
     wcn = 1;                                    /* (Or a compartment of one by its own name: "open the drawer", the
                                                 **   user's, 2026-11-16) */
@@ -3961,7 +4028,7 @@ unsigned char s_shut_work (void)
     }
     --c;
     if ((w == PA_LOCK || w == PA_UNLOCK) && (s & (IS_LOCK | IS_BURST | IS_CLOSED)) == (IS_LOCK | IS_CLOSED) &&
-        ((s & IS_LOCKED) != 0) == (w == PA_UNLOCK) && (lt = key_fits (rec.id)) == 1) {
+        ((s & IS_LOCKED) != 0) == (w == PA_UNLOCK) && !pk && (lt = key_fits (rec.id)) == 1) {
         if (reach_step (rs_tool, RS_TOOL)) {
             return IR_NO;                       /* (Its key got out: a tool's steps) */
         }
@@ -6963,7 +7030,7 @@ static unsigned char __fastcall__ poked (unsigned n, unsigned char touch)
 #pragma rodata-name (push, "SW47RODATA")
 #pragma static-locals (push, on)
 
-/* The referee's search test of a hidden compartment of the thing in rec (a false bottom, a secret niche: the user's,
+/* The referee's search test of a hidden compartment of the thing in rec (a false bottom, a secret drawer: the user's,
 ** 2026-11-16), the steps worse the better it's made, 2 more by touch, as hidden things' (part 46's turned_up): 1 found */
 static unsigned char __fastcall__ found_c (unsigned char touch)
 {

@@ -29,8 +29,9 @@
 #
 # [turns]: a verb and a word = another verb: the verb made that one by its thing's name, the thing then none ("look at
 # the floor" the floor's look, "follow the tracks" a track), or by its own preposition, the grammar's ("look under the
-# table" a search of it), each of its prepositions in turn ("search around for": a grope, then a seek).  (2026-11-17,
-# phase B: the floor's, the wall's, the tracks' and the search's phrase verbs gone)
+# table" a search of it), each of them in turn, anywhere in the line ("search around for": a grope, then a seek; "put
+# the goblin in a headlock": a hold).  (2026-11-17, phase B: the floor's, the wall's, the tracks' and the search's
+# phrase verbs gone)
 
 [verbs]
 move        way=VB_MOVE_DIRECTION thing=VB_MOVE_TOWARD alone=VB_MOVE_DIRECTION unsaid=none task=LT_WALK
@@ -53,6 +54,8 @@ jump        thing=VB_JUMP way=VB_JUMP alone=VB_JUMP skill=P_JUMP
 open        thing=VB_OPEN_OBJECT unsaid=front aux=PA_OPEN
 close       thing=VB_CLOSE_OBJECT unsaid=front aux=PA_CLOSE
 unlock      thing=VB_UNLOCK_OBJECT unsaid=front aux=PA_UNLOCK skill=P_PICKLOCK
+picklock    thing=VB_UNLOCK_OBJECT unsaid=front aux=PA_PICK skill=P_PICKLOCK     # (A lock picked, no key tried: "pick the
+                                                                     #   lock", the user's, 2026-11-17)
 lock        thing=VB_LOCK_OBJECT unsaid=front
 force       thing=VB_FORCE_OBJECT unsaid=front aux=PA_FORCE skill=P_FORCE
 raise       thing=VB_RAISE_OBJECT unsaid=front aux=PA_RAISE skill=P_LIFT
@@ -249,9 +252,9 @@ look in detail = examine
 close look = examine
 really look = examine
 pick up = get
-pick the lock = unlock
-pick its lock = unlock
-pick lock = unlock
+pick the lock = picklock
+pick its lock = picklock
+pick lock = picklock
 lie on = liedown
 lie down on = liedown
 put out = douse
@@ -678,3 +681,10 @@ search for = seek
 touch around = grope
 touch about = grope
 grope for = seek
+knock out = punch
+knock shit = punch
+knock living = punch
+knock daylights = punch
+knock crap = punch
+put headlock = hold
+put head = hold

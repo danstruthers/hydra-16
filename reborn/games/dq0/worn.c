@@ -28,7 +28,7 @@ void worn_said (void)
 {
     static const char* q;
     static const char* e;
-    static unsigned char a, k, n, side;
+    static unsigned char a, k, side;
 
     a = cmd.action;
     if (!(cmd.flags & CF_WORN)) {

@@ -90,7 +90,7 @@ R_LIST      = 6
 R_SKIP      = 7
 R_MINE      = 8
 
-NCONST      = 31                    ; The constants (commandwords.js's CONSTANTS, in order)
+NCONST      = 32                    ; The constants (commandwords.js's CONSTANTS, in order)
 MAXWS       = 15                    ; The words of a line (cmdmatch.s's MAXTOK + 1)
 
             .zeropage
@@ -133,6 +133,7 @@ v_THROW     = kv + 27               ; throw; HOW_TO, PR_AT
 v_HOWTO     = kv + 28
 v_AT        = kv + 29
 v_IN        = kv + 30               ; PR_IN ("drop the dagger down the well": into it, 2026-11-06)
+v_FIND      = kv + 31               ; VB_FIND_OBJECT ("look for the tracks": its thing's turn, 2026-11-17)
 pgwi:       .res        2           ; Each entry's record, its verb
 pgwv:       .res        2
 colpl:      .res        NCOL        ; Each column
@@ -1175,8 +1176,20 @@ fboth:      jsr         both
 fnext:      ldy         so
             dey
             bpl         fslot
-            ldx         shd             ; A verb made another (commands.verbs' [turns]): by its thing's name, the thing
-            cpx         #NONE           ;   then none ("look at the floor": the floor's look)
+            ldx         first           ; A verb made another (commands.verbs' [turns]): by its thing's name, the thing
+own:        cpx         wsn             ;   then none ("look at the floor": the floor's look), but not one its own
+            bcs         tthing          ;   preposition makes another action ("look in the wall"; "look for the
+            jsr         prepof          ;   tracks" a find's, made the tracks')
+            bne         ownp
+            ldy         #C_LITTLE
+            jsr         get
+            beq         tthing
+            inx
+            bra         own
+ownp:       cmp         v_FIND
+            bne         tprep
+tthing:     ldx         shd
+            cpx         #NONE
             beq         tprep
             jsr         turnof
             beq         tprep
@@ -1187,20 +1200,15 @@ fnext:      ldy         so
             stz         cm_cmd + CM_OBJ + T_N
             stz         cm_cmd + CM_OBJ + T_WORD
             jmp         rules
-tprep:      ldx         first           ; Or by its own prepositions, the grammar's ("look under the table": a search
-tloop:      cpx         wsn             ;   of it), the little words passed; each in turn ("search around for": a
-            bcs         tdone           ;   grope, then a seek)
+tprep:      ldx         first           ; Or by its own words, the grammar's skip ("look under the table": a search
+tloop:      cpx         wsn             ;   of it), each in turn, anywhere ("search around for": a grope, then a
+            bcs         tdone           ;   seek; "put the goblin in a headlock": a hold)
             ldy         wtk,x
             lda         tokrole,y
             and         #7
             cmp         #R_SKIP
-            beq         tfound
-            ldy         #C_LITTLE
-            jsr         get
-            beq         tdone
-            inx
-            bra         tloop
-tfound:     jsr         turnof
+            bne         tnext
+            jsr         turnof
             beq         tnext
             sta         verb
             stz         cm_cmd + CM_ORDER
