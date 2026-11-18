@@ -248,6 +248,8 @@ static void __fastcall__ den_portal (const struct msg* m)
     }
     bd.ready += wk.tt > 600 ? 600 : (unsigned) wk.tt;
     if (wk.plan && wk.task) {
+        hub_map (0);                            /* (The hub's header: the door's work leaves a chunk's bank in the
+                                                **   window) */
         HUB->dig_t[bk] = (unsigned) HUB->now + (unsigned) wk.tt;   /* (When its time's up) */
     }
     o = wk.open ? wk.open : wk.out;
