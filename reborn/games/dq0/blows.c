@@ -219,6 +219,17 @@ static void __fastcall__ stance (const char* w, unsigned char d)
     note (d);
 }
 
+/* An attack's target found, d (its entry plus 1, | FT_CLOSE out of reach): its first words at once (the user's,
+** 2026-11-17: "You close with the giant rat."; out of reach, its walk over's), once a line (sway.c's: looked for as the
+** blow's weapon's chosen, wield's, and again as it's carried out) */
+static unsigned char __fastcall__ found (const struct cmd* c, unsigned char d)
+{
+    if (c->action == VB_ATTACK_OBJECT && !strstr (cl, " and ")) {   /* (Two foes by turns: parts.c's split, its own words) */
+        walk_says ((const char*) (W_CLOSE + d));
+    }
+    return d;
+}
+
 /* VB_ATTACK_OBJECT's denizen beside the character to strike at (one whose name has the command's word, if it's
 ** given; the one that way, a heading, if that is), struck with what the verb says (its aux: SK_*, main.c's strike,
 ** sent with the blow for the hub's pc_strike): its entry plus 1; or 0, and why not in lb; at a door, a window, a
@@ -254,7 +265,7 @@ unsigned char __fastcall__ o_fight_target (struct cmd* c)
             nigh = dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1;
             if (!c->obj.x) {
                 if (nigh) {
-                    return k + 1;
+                    return found (c, k + 1);
                 }
                 away = FN_AWAY | (folk_of (k + 1) ? 8 : 0);   /* (Out of reach: a person's, "They are ... them") */
             }
@@ -273,7 +284,7 @@ unsigned char __fastcall__ o_fight_target (struct cmd* c)
         }
     }
     if (best) {
-        return best;
+        return found (c, best);
     }
     note (away ? away : *w ? FN_NONE_LIKE : FN_NONE);
     return 0;

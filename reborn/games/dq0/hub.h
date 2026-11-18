@@ -659,8 +659,11 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_
     DE_WINDS, DE_HEAVES, DE_RAISES, DE_LOWERS, DE_BENDS, DE_BENT, DE_PICKING, DE_PICKS,
                                                 /* (2026-11-02: a portcullis's winch wound, heaved at, raised, let
                                                 **   fall, its bars strained at, bent apart; a lock worked at, picked) */
-    DE_UNBARRED };                              /* (A door's bar lifted and the door opened, at once: the character's
+    DE_UNBARRED,                                /* (A door's bar lifted and the door opened, at once: the character's
                                                 **   PO_UNBARRED, its words and its sound the door's opening, 2026-11-17) */
+    DE_CLOSES };                                /* (Closed with the character, its attack begun, its first blow the next:
+                                                **   the character's own first words the other way round, the user's
+                                                **   "The bandit closes with you.", 2026-11-17) */
                                                 /* E_DEN's what: a step, a
                                                 **   noise of its own (a squeak, a growl), the character sensed, lost
                                                 **   (its senses' own); a successor rallying its fellows at its post

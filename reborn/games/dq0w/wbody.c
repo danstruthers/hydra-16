@@ -328,6 +328,10 @@ void s_den_intents (void)
                                                 **   15's blow_t): not the clock's as the world gets to it, so a fight's
                                                 **   the same whatever the passes' timing; the user's, 2026-11-13) */
             bd.ready += HUB->round;
+            if (was != DO_FIGHT) {
+                den_close (I_ATTACK_FOE (m), I_ATTACK_AIM (m));   /* (Its attack begun: closed with, told first, part
+                                                **   106's, 2026-11-17) */
+            }
             den_blow (I_ATTACK_FOE (m), I_ATTACK_AIM (m));
             break;
         }

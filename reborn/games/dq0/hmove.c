@@ -50,6 +50,7 @@ static void do_go (void)
     } else if (cmd.dir == GO_UP || cmd.dir == GO_DOWN) {
         intend (I_CLIMB, cmd.dir == GO_UP ? DIR_UP : DIR_DOWN);    /* (Up or down: the stairs, a ladder) */
     } else if (cmd.dir != 0xFF) {
+        walk_says ((const char*) W_SETOFF);     /* ("You set off west.": at once where the way's seen open, 2026-11-17) */
         intend (I_GO, cmd.dir);
     } else {
         missiles ();                            /* (Anything else it has seen, or which way: way.c's go_thing,

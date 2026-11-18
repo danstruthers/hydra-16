@@ -60,8 +60,9 @@ static void do_fight (void)
     if (d) {
         if (!hold_w[0] || hold_first ()) {      /* (Its thing in hand first, slice 4.1b's) */
             if (d & FT_CLOSE) {
-                reach = 6;                      /* (Closed with first, its arrival's words short) */
-                walk_says (0);
+                reach = 6;                      /* (Closed with first, its arrival's words short: its walk's first
+                                                **   words fight_target's, at once, the user's D17) */
+                placing = 1;
                 intend (I_CLOSE, d & 0x0F);
                 return;
             }
@@ -165,8 +166,8 @@ static void engage (void)
     } else if (!(d & FT_CLOSE)) {
         sayf ("\nYou're already engaged with the %s.", cmd.obj.word);
     } else {
-        sayf ("\nYou close with the %s.", cmd.obj.word);
-        t_flush ();
+        walk_says ((const char*) (W_CLOSE + (d & 0x0F)));   /* ("You close with the giant rat.": an attack's first
+                                                **   words, said.txt's FIRST.close, at once) */
         intend_a = d & 0x0F;
         intend2 (I_CLOSE, 1, 0);                /* (Up to it as it moves, no blow) */
     }

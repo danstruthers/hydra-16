@@ -512,6 +512,7 @@ DEN.picking         +"{arg?\n{@picking}.|a faint scratching}"
 DEN.picks           +"{arg?\n{@picked}.|a lock clicking}"
 DEN.unbarred        +"{arg?\n{@unbar}.|a door opening}"
 DEN.any             +"\n{Actor} {text}."
+DEN.closes          +"{arg?\n{@closes}.|something closing in}"
 
 # ==== The UI's own kinds (dq0.h's UK_*, msgs.def's: no world's event, the UI's words of its own; narration as data,
 # stage 4, 2026-11-12).  The UI fills one and has it worded, as an outcome event is
@@ -766,6 +767,26 @@ FIRST.them          +"\nYou look them over."
 FIRST.it            "You go over to it."
 FIRST.peer          "You peer ahead."
 FIRST.listen        "You listen."
+
+# Every command's first words at once (the user's, 2026-11-17: "You close with the giant rat.", "You count out a
+# farthing."): a blow's, the one beside it closed with, and a shot's, aimed at, each said as it's seen (sway.c's
+# close_word: obj "the giant rat", "Grub", "something"; @closes a denizen's closing with the character too, DEN.closes:
+# "The bandit closes with you."); a count's, counted out before the world splits the lot (count20: n1 the count, 11 past
+# ten, w4 its figures, text the kind's name; n2 1 the name a plural, "pennies", | 2 half of them, | 4 all)
+
+@closes     "{Actor} close{s} with {obj?you|{obj}}"
+@aims       "{Actor} take{s} aim at {obj?you|{obj}}"
+@few        "{n1?|one|two|three|four|five|six|seven|eight|nine|ten|{w4}}"
+
+FIRST.close         +"\n{@closes}."
+FIRST.aim           +"\n{@aims}."
+FIRST.count[n2=2,3,4,5] +"\nYou count out {n2?||half the {plural}|half the {text}|the {plural}|the {text}}."
+FIRST.count[n2=1]   +"\nYou count out {n1?|{a} {single}|{w4} {text}}."
+FIRST.count         +"\nYou count out {n1?|{a} {text}|{@few} {plural}}."
+# A way between strata set out on, at once, the stratum come to told as it gets there (task.c's turned_says, the world's
+# link_out: arg its kind, level.h's O_STAIRS_UP ... O_LADDER_DOWN, O_RAMP_UP, O_RAMP_DOWN)
+FIRST.link          +"\nYou start {arg?up the stairway|down the stairway|up the ladder|down the ladder|||||up the long slope"
+                    "|down the long slope}."
 
 # ---- The character's own state, its body and its bearings (UK_SELF: my, MY_*; v a number or a choice, n2 another; text
 # a heading's name, the time in words).  The status's lines (task.c's facing_words), a turn's and a step's first words

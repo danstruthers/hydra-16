@@ -292,6 +292,8 @@ unsigned char __fastcall__ o_choose (struct cmd* c)
     if (tasked) {
         if ((j = o_answer_of (cl)) != 0) {
             memcpy (c, &kept, sizeof kept);
+            worded = c->action == VB_ATTACK_OBJECT;   /* (A blow's first words said as it was asked, fight_target's: not
+                                                **   again, 2026-11-17) */
             if (j == 1) {
                 c->prep = PR_WITH;              /* (Yes: with the better thing, taken in hand) */
             } else {

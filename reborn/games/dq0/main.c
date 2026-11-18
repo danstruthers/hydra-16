@@ -1765,6 +1765,8 @@ unsigned char s_missiles (void)
             return 1;
         }
         if ((k = launcher (w)) != 0) {
+            walk_says ((const char*) (W_AIM + d));  /* ("You take aim at the giant rat.": its first words at once, the
+                                                **   user's, 2026-11-17, the shot the world's to come) */
             shot (d, SK_OF (k));
         }
         return 1;

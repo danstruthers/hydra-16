@@ -8,6 +8,7 @@
 #pragma code-name ("OV15CODE")
 #pragma rodata-name ("OV15RODATA")
 
+#include <stdlib.h>
 #include <string.h>
 #include "dq0.h"
 #include "hub.h"
@@ -61,20 +62,24 @@ unsigned char o_may_den (void)
     if (!cmd.obj.word[0]) {
         return 0;
     }
-    if (names_n) {
-        return 1;
-    }
-    c = cmd.obj.word[3];
-    cmd.obj.word[3] = 0;                        /* (Its first three letters, a moment) */
-    nm[sizeof nm - 1] = 0;
-    for (k = 0; k < NACTORS; ++k) {
-        hub_mem (0, nm, HUB->actor[k].name, sizeof nm - 1);
-        if (nm[0] && strstr (nm, cmd.obj.word)) {
-            break;
+    if (!names_n) {
+        c = cmd.obj.word[3];
+        cmd.obj.word[3] = 0;                    /* (Its first three letters, a moment) */
+        nm[sizeof nm - 1] = 0;
+        for (k = 0; k < NACTORS; ++k) {
+            hub_mem (0, nm, HUB->actor[k].name, sizeof nm - 1);
+            if (nm[0] && strstr (nm, cmd.obj.word)) {
+                break;
+            }
+        }
+        cmd.obj.word[3] = c;
+        if (k >= NACTORS) {
+            return 0;
         }
     }
-    cmd.obj.word[3] = c;
-    return k < NACTORS;
+    walk_says ((const char*) W_SWAY);           /* ("You look at the giant rat.": the look at it's first words at once, the
+                                                **   minds' answer to come, 2026-11-17) */
+    return 1;
 }
 #pragma code-name (pop)
 
@@ -105,6 +110,46 @@ static void __fastcall__ first17 (unsigned char f, unsigned char v, const char* 
 }
 #pragma static-locals (pop)
 
+/* A walk a way (hmove.c's do_go: cmd.dir its true heading): its set-off words at once, the world's own (its V_SETOFF's,
+** said.txt's SELF.setoff, "You set off west.", by the north the character believes in; not again as the world's come,
+** worded 2), where the senses' record s shows the way open: the room's floor that way, a doorway or an open door there,
+** a passage's way on; not in the dark (the walk's own words, felt).  Else the world's alone, as ever (a way refused,
+** "You can't go that way.") */
+#pragma static-locals (push, off)               /* (Its words' event on the C stack: the words' overlay reads it) */
+static void __fastcall__ setoff17 (const struct sight* s)
+{
+    struct msg c;
+    unsigned char h = cmd.dir, k = 0, i;
+    unsigned x = s->x + head_x[h & 7], y = s->y + head_y[h & 7];
+
+    if (h > H_NW || s->dark) {
+        return;
+    }
+    if (s->where == W_ROOM) {
+        k = x - s->rx < s->rw && y - s->ry < s->rh;
+    } else {
+        for (i = 0; i < s->nways && !k; ++i) {
+            k = (s->way[i].rel & 7) == ((h - pc_face) & 7);
+        }
+    }
+    for (i = 0; i < s->ndoors && !k; ++i) {
+        k = s->door[i].x == x && s->door[i].y == y && (s->door[i].state == DOORWAY || (s->door[i].state &
+            (PS_OPEN | PS_WRECKED)));
+    }
+    if (!k) {
+        return;
+    }
+    said_s[2] = head_name[believed (h)];
+    c.kind = UK_SELF;
+    c.who = 0;
+    c.b = 0;
+    c.w1 = MY_SETOFF << 8;
+    outcome_words (&c);
+    t_flush ();
+    worded = 2;
+}
+#pragma static-locals (pop)
+
 static const char* __fastcall__ port_name (unsigned char k)
 {
     return k == OB_DOOR ? "door" : k == OB_WINDOW ? "window" : "portcullis";
@@ -125,6 +170,11 @@ static void __fastcall__ first_word (unsigned char n)
     if (worded) {
         return;
     }
+    if (n == W_SETOFF) {                        /* (A walk a way, its heading the command's: its set-off words at once,
+                                                **   the world's own, where the senses show the way open; 2026-11-17) */
+        setoff17 (s);
+        return;
+    }
     if (n >= W_PEER) {
         first17 (n == W_PEER ? FS_PEER : FS_LISTEN, 0, 0, 0);
         t_flush ();
@@ -132,7 +182,8 @@ static void __fastcall__ first_word (unsigned char n)
         return;
     }
     if (n == W_SWAY) {
-        v = s->dark ? FV_FEEL_FOR : FV_LOOK_FOR;
+        v = s->dark ? FV_FEEL_FOR : cmd.action == VB_OBSERVE_OBJECT || cmd.action == VB_EXAMINE_OBJECT ? FV_LOOK_AT :
+            FV_LOOK_FOR;                        /* (A denizen looked at: "You look at the giant rat.", 2026-11-17) */
         if (!*name) {
             return;
         }
@@ -156,13 +207,53 @@ static void __fastcall__ first_word (unsigned char n)
 #pragma data-name (pop)
 #pragma bss-name (pop)
 
+/* An attack's first words at once, its target beside it (the user's, 2026-11-17: "You close with the giant rat."), or a
+** shot's (f FS_AIM: "You take aim at the giant rat."): actor d - 1 by its name (the one the command found by it), or
+** "something" in the dark, as its blows are; said.txt's FIRST.close and FIRST.aim, their words the pieces @closes and
+** @aims, a denizen's at the character the same (DEN.closes, "The bandit closes with you.") */
+#pragma static-locals (push, off)               /* (On the C stack: its name copied from the hub, with the hub in the
+                                                **   window) */
+static void __fastcall__ close_word (unsigned char d, unsigned char f)
+{
+    char nm[sizeof HUB->actor[0].name + 5];
+
+    nm[4] = nm[sizeof nm - 1] = 0;
+    hub_mem (0, nm + 4, HUB->actor[(d - 1) & 7].name, sizeof HUB->actor[0].name);
+    if (sight_get ()->dark) {
+        strcpy (nm, "something");
+    } else if (nm[4] < 'A' || nm[4] > 'Z') {
+        memcpy (nm, "the ", 4);                 /* (A name given its own, "Grub": as it is) */
+    } else {
+        memmove (nm, nm + 4, sizeof nm - 4);
+    }
+    said_s[0] = lb + 340;                       /* (The one closed with, first17's copy: the row's {obj}) */
+    first17 (f, 0, 0, nm);
+    said_s[0] = 0;
+    t_flush ();
+}
+#pragma static-locals (pop)
+
 void __fastcall__ o_walk_says (const char* name)
 {
     unsigned char k = cmd.obj.kind;
 
     if (name && (unsigned) name < W_MAX) {
-        first_word ((unsigned char) name);
-        return;
+        if ((unsigned) name < W_CLOSE) {
+            first_word ((unsigned char) name);
+            return;
+        }
+        if (worded) {
+            return;                             /* (An attack's said already: its target looked for again as it's
+                                                **   carried out, the wield's first, then the blow's) */
+        }
+        worded = 1;
+        k = (unsigned char) name - W_CLOSE;
+        if (!(k & FT_CLOSE)) {
+            close_word (k & 0x0F, k & 0x10 ? FS_AIM : FS_CLOSE);    /* (Beside it: closed with; a shot's: aimed at) */
+            return;
+        }
+        k = cmd.obj.kind;
+        name = 0;                               /* (Out of reach: walked over to first, its walk's words, as ever) */
     }
     if (said_ahead) {
         said_ahead = 0;                         /* (Told already, walk_ahead's) */
@@ -385,6 +476,25 @@ static void __fastcall__ first20 (unsigned char f, unsigned char v, const char* 
     outcome_words (&c);
 }
 
+/* A count's first words at once, before the world splits a lot (the user's, 2026-11-17: "You count out a farthing."):
+** carried entry e counted out by the command's count, half or all (said.txt's FIRST.count: n1 the count, ten and more
+** 11, w4 its figures; n2 1 the kind's name a plural, "pennies" one "a penny", | 2 half, | 4 all), the world's words
+** after it, what's put down */
+static void __fastcall__ count20 (unsigned char e)
+{
+    struct msg c;
+    unsigned n = cmd.n;
+
+    said_s[3] = utoa (n, lb + 300, 10);
+    said_s[2] = strcpy (lb + 340, kname (e));
+    c.kind = UK_FIRST;
+    c.who = 0;
+    c.b = (ix[e].kind < nck && (ck[ix[e].kind].flags & K_PLURAL) ? 1 : 0) | (cmd.flags & CF_HALF ? 2 : cmd.obj.sel == SL_ALL ?
+        4 : 0);
+    c.w1 = FS_COUNT << 8 | (n > 11 ? 11 : n);
+    outcome_words (&c);
+}
+
 /* The state said, as a word ("the spent torch") */
 static const char* __fastcall__ sel_word (unsigned char sel)
 {
@@ -531,7 +641,9 @@ void __fastcall__ o_walk_ahead (const char* name)
     }
     if (op == IO_DROP) {
         if (cmd.n || cmd.obj.sel == SL_ALL || (cmd.flags & CF_HALF)) {
-            return;                             /* (By the count: the world's words) */
+            count20 (e);                        /* (By the count: counted out, at once, the world's words after it as
+                                                **   ever, what's put down) */
+            goto told;
         }
         first20 (FS_THE, FV_PUT_DOWN, w, name);
         t_flush ();

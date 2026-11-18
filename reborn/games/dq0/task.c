@@ -494,6 +494,18 @@ static void __fastcall__ my (unsigned w, unsigned char b)
     outcome_words (&c);
 }
 
+/* A way between strata's first words (said.txt's FIRST.link): its kind k, level.h's O_* */
+static void __fastcall__ link_said (unsigned char k)
+{
+    struct msg c;
+
+    said_n = k;
+    c.kind = UK_FIRST;
+    c.who = 0;
+    c.w1 = FS_LINK << 8;
+    outcome_words (&c);
+}
+
 /* A turn's first words (V_FACING's): "You turn to face west.", always, whatever's typed after it (the user's,
 ** 2026-11-16: the way it turned, "You turn right, to face west.", was read from the command queue as the words were
 ** told, and a command typed after it was found there instead; the event's b now the heading it believes it faces, | 32,
@@ -503,6 +515,12 @@ void __fastcall__ o_turned_says (unsigned char go)
 {
     unsigned char f, d;
 
+    if (go & 64) {                              /* (A way between strata set out on, its kind: stairs, a ladder, a long
+                                                **   slope, its first words at once, "You start down the stairway.", the
+                                                **   stratum come to told as it gets there: the user's, 2026-11-17) */
+        link_said (go & 15);
+        return;
+    }
     if (go & 32) {                              /* (A turn: the heading it believes it faces, the world's) */
         said_s[2] = head_name[go & 7];
         my (MY_FACE << 8, 0);
@@ -797,9 +815,10 @@ void __fastcall__ o_wait_go (unsigned char action)
     } else {
         m *= 600;
     }
-    if (!busy && m && !lit) {
+    if (!busy && !lit) {
         o_time_said (m, a);                     /* (As long as it says: told at once, the world's E_TIME to come saying
-                                                **   nothing, the user's, 2026-11-04; a round's in time as it is) */
+                                                **   nothing, the user's, 2026-11-04; a round's too, "Time passes.", its
+                                                **   first words at once, the user's, 2026-11-17) */
         t_flush ();
         time_told = 1;
     }

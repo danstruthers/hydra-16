@@ -419,7 +419,11 @@ enum { MY_WANT, MY_LIMB, MY_LIMP, MY_POS, MY_HIDDEN, MY_UNDER, MY_SWIM, MY_DEEP,
                                                 /* (UK_SELF's: the status's lines, a turn's and a step's first words, a
                                                 **   pose, the air and the background heard, a stance, the time told; a
                                                 **   denizen heard, not seen) */
-enum { FS_THE, FS_YOUR, FS_INTO, FS_THEM, FS_IT, FS_PEER, FS_LISTEN };   /* (UK_FIRST's: a command's first words' form, */
+enum { FS_THE, FS_YOUR, FS_INTO, FS_THEM, FS_IT, FS_PEER, FS_LISTEN,   /* (UK_FIRST's: a command's first words' form, */
+    FS_CLOSE, FS_COUNT, FS_AIM, FS_LINK };      /*   an attack's close, a count's, a shot's, a way between strata's: the
+                                                **   user's, 2026-11-17,
+                                                **   every command's first words at once, "You close with the giant
+                                                **   rat.", "You count out a farthing.") */
 enum { FV_REACH, FV_LOOK_FOR, FV_FEEL_FOR, FV_LOOK_AT, FV_HEAD, FV_TRY, FV_RAISE, FV_LIFT, FV_PUT_DOWN, FV_OVER,
     FV_FEEL };                                  /*   its verb: "You reach for the torch.", sway.c's) */
 extern unsigned char said_n;                    /* (A choice of the UI's for a row: its {arg}) */
@@ -611,7 +615,11 @@ void __fastcall__ walk_ahead (const char* name);    /* (sway.c's: a thing to tak
 #define W_SWAY          (PA_PICK + 3)
 #define W_PEER          (PA_PICK + 4)
 #define W_LISTEN        (PA_PICK + 5)
-#define W_MAX           (PA_PICK + 6)
+#define W_SETOFF        (PA_PICK + 6)           /* (A walk a way, cmd.dir's: its set-off words, sway.c's setoff17) */
+#define W_CLOSE         0x20                   /* (walk_says' name W_CLOSE + an attack's target, fight_target's: the
+                                                **   actor plus 1, | FT_CLOSE out of reach: its first words at once; */
+#define W_AIM           0x30                    /*   W_AIM + a shot's, the actor plus 1: "You take aim at the rat.") */
+#define W_MAX           0x80
 extern unsigned char said_ahead, walk_op, worded, placing;       /* (main.c's: its walk told already; a walk over's arrival short) */
 void __fastcall__ blow (const struct msg* m);    /* (Overlay 6's, blows.c: an E_FIGHT worded, and what comes of it) */
 void __fastcall__ walk_says (const char* name);    /* (A walk over told as it begins, at once: "You go over to the pot."; 0: the command's thing) */

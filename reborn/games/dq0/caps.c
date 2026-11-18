@@ -567,6 +567,10 @@ unsigned char __fastcall__ o_den_heard (const struct msg* m)
     if ((lsn & 1) && ((rel + 1) & 7) < 3) {
         dx >>= 1;                               /* (Listened for, that way: twice as far) */
     }
+    if (E_DEN_DE (*m) == DE_CLOSES && E_DEN_SEEN (*m)) {
+        return rel;                             /* (One seen closing with the character: told as its blow is, whatever's
+                                                **   heard, the user's, 2026-11-17) */
+    }
     if (dx * 2 > (E_DEN_LOUD (*m) > mask ? E_DEN_LOUD (*m) - mask : 0) * (hear + 3) ||   /* (The background masking it: slice 4.5's) */
         m->t < heard_at + (rel == heard_rel ? 300 : 50)) {
         return 0xFF;

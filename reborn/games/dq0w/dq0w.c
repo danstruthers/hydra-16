@@ -2310,6 +2310,8 @@ static unsigned char __fastcall__ link_here (unsigned char d, unsigned long* t)
     return best;
 }
 
+static void __fastcall__ link_out (unsigned char k);
+
 /* The stairway or ladder in the room, and up or down it (I_JUMP: down a shaft, or a ledge, jumped) */
 void __fastcall__ s_climb (unsigned char d)
 {
@@ -2391,6 +2393,12 @@ void __fastcall__ s_climb (unsigned char d)
         if (sky_ask (SA_GO | (d == DIR_UP ? SA_UP : 0) | (jump ? SA_JUMP : 0) | l)) {
             return;
         }
+        hub_map (0);
+        lk = &STRATUM (sn_).link[l];
+    }
+    if (lk->kind <= O_LADDER_DOWN || lk->kind == O_RAMP_UP || lk->kind == O_RAMP_DOWN) {
+        link_out (lk->kind);                    /* (Its first words at once, the stratum below grown after it, and the
+                                                **   walk: the user's, 2026-11-17) */
         hub_map (0);
         lk = &STRATUM (sn_).link[l];
     }
@@ -6345,6 +6353,27 @@ static void __fastcall__ set_out (unsigned char h)
         }
     }
 }
+
+/* A way between strata set out on (s_climb's: stairs, a ladder, a long slope, its kind k), told at once (E_VIEW V_SETOFF,
+** its b 64 | k: the UI's turned_says), before the stratum below's grown and the walk to it (the user's, 2026-11-17: every
+** command's first words at once); its words alone, no turn of the denizens' for them (set_out's).  Part 2's, s_climb's */
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+static void __fastcall__ link_out (unsigned char k)
+{
+    unsigned char alone;
+
+    hub_map (0);
+    alone = HUB->eq_head == go_eq;
+    evb = 64 | k;
+    view (V_SETOFF);
+    if (alone) {
+        hub_map (0);
+        go_eq = HUB->eq_head;
+    }
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 static void __fastcall__ intent (struct msg* m)
 {
