@@ -19,8 +19,10 @@
 #include "world.h"
 #include "work.h"
 
-#pragma code-name ("SW7CODE")
-#pragma rodata-name ("SW7RODATA")
+/* (Part 53's, the intents' part: the build moved it there from part 7, too full; made the C's, its place not the
+** banks' room's to choose, 2026-11-17) */
+#pragma code-name ("SW53CODE")
+#pragma rodata-name ("SW53RODATA")
 #pragma local-strings (on)
 
 #define W_HARM
