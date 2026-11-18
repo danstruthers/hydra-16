@@ -126,7 +126,9 @@ static void __fastcall__ serve (unsigned char i)
 ** background's least).  Asleep but as it's rung, or AH_NAP ticks gone: each wake the maker's few thousand cycles, taken
 ** from what the game's doing then (2026-11-17: four ticks' naps as it gave way, a fortieth of a command's answer) */
 #define AH_NAP          40                      /* (Ticks asleep at most, nothing wanted: the actors looked at again) */
-#define AH_SETTLE       4                       /* (Ticks of no command and no keys before one's begun) */
+#define AH_SETTLE       60                      /* (Ticks of no request, no command and no keys before one's begun: a
+                                                **   reader's requests come in bursts, a new stratum's chunks one
+                                                **   after another, none begun between them) */
 #define AH_HOLD         25                      /* (Ticks asleep at most as it gives way) */
 #define GIVE_WAY        100                     /* (dq0p.c's: ticks held from a line's Enter at most, */
 #define KEY_HOLD        600                     /*   and while its keys go on) */
@@ -160,13 +162,20 @@ static void __fastcall__ fore (unsigned char on)
     }
 }
 
-/* A command in hand, or a line being typed: the background gives way, as the senses' ask does (the hub's header in the
-** window) */
+/* A command in hand, or a line being typed: the background gives way, as the senses' ask does; and while the game's
+** starting or the character's long task is under way (a walk, a wait, a rest, a dig ...: the world's own time, a
+** command's still), or it's dead (the game's end); at the turns pace too while the world's turn goes on (the
+** character not yet ready again, its intents not all taken: the denizens catching up, dq0w.c's turns_run).  The hub's
+** header in the window */
 static unsigned char hst, hsq, hcm, hks;        /* (The hold's state: 0 none, 1 since ht0, 2 run out; its line's, and its
                                                 **   command's and keys' as it began) */
 static unsigned ht0;
 static unsigned char giving (void)
 {
+    if (HUB->starting || HUB->pc_task.kind || ((unsigned char) HUB->pcsum.cond & C_DEAD) ||
+        (!HUB->tpr && (HUB->pc_ready > HUB->now || HUB->iq_head != HUB->iq_tail || HUB->ui_giving))) {
+        return 1;
+    }
     if (!(HUB->ui_cmd | HUB->ui_keys)) {
         hst = 0;
         return 0;

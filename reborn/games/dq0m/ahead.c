@@ -5,11 +5,12 @@
 ** that hold them.  The making's make.c's (make_ahead, finished by make_chunk as a reader first asks for one), the
 ** time's dq0m.c's (as nobody waits on the maker, giving way to a command in hand).
 **
-** Which: by one rule for every actor (ONE-PATH.md), the character and each denizen that's an actor (the hub's actors),
-** each by its own reach: its chunk, and those round it whose nearest square is within its eyes' reach and the steps it
-** may take meanwhile (AH_STEPS), or, in the quarter it faces, within twice its eyes' (a look one way's, dq0p's WAY_R
-** at most) and those steps; the nearest first.  Its eyes' reach the senses' look's (4 squares and 2 more for each point
-** of its sight, up to 9: dq0p's view); a denizen's sight isn't in the hub, so the most a kind's (9).
+** Which: by one rule for every actor (ONE-PATH.md), every body in the dungeon (the hub's bodies: the character's,
+** actor 0's, and each denizen's), each by its own reach: its chunk, and those round it whose nearest square is within
+** its eyes' reach and the steps it may take meanwhile (AH_STEPS), or, in the quarter it faces, within twice its eyes'
+** (a look one way's, dq0p's WAY_R at most) and those steps; the nearest first.  Its eyes' reach the senses' look's (4
+** squares and 2 more for each point of its sight, up to 9: dq0p's view); a denizen's sight isn't in the hub, so the
+** most a kind's (9).
 **
 ** Where: the cache's room free to the readers, the last free slot (make_chunk's pick takes the first); else one whose
 ** chunk made ahead no actor wants now.  A chunk a reader has is never made way for by one: the cache's readers' chunks
@@ -385,16 +386,18 @@ unsigned char o_ahead_still (void)
 }
 
 /* The next chunk to make ahead, if one's wanted and there's room for it: 1 (into nsn, ncx, ncy), else 0 (looked for
-** again only as an actor moves or the cache changes); the strata's records copied first */
+** again only as an actor moves or the cache changes); the strata's records copied then (a stratum grown, the cache's
+** count's changed: ahead_none's) */
 unsigned char o_ahead_next (void)
 {
     unsigned char s;
 
-    hub_get (WORLD_BANK, WREC->strata, strata, sizeof strata);
     s = actors ();
     if (s == seen_sum && ah_ver == seen_ver) {
-        return 0;
+        return 0;                               /* (Nothing changed: the wake's few thousand cycles, not the strata's
+                                                **   copy too, some 25,000: a twentieth of the game's time asleep) */
     }
+    hub_get (WORLD_BANK, WREC->strata, strata, sizeof strata);
     look_cache ();
     best = 0xFF;
     each (nearer);
