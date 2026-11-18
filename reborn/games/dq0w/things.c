@@ -444,7 +444,10 @@ unsigned char __fastcall__ on_pc (unsigned i)
 ** the surface's, copied), or 0 */
 static const struct item* __fastcall__ lying (const struct item* q)
 {
-    static struct item s;
+#pragma bss-name (push, "SW10RODATA")
+    static struct item s;                       /* (Part 10's own: its one caller, s_in_reach, swaps no part in while
+                                                **   it's used; the main RAM's room, 2026-11-18) */
+#pragma bss-name (pop)
 
     if (q->where == IW_SQUARE || q->where == IW_PORTAL) {
         return q;                               /* (A portal's part as a thing lying there) */
@@ -2951,6 +2954,8 @@ unsigned __fastcall__ s_pick (const char* name, unsigned char how)
 }
 #pragma static-locals (pop)
 
+#pragma bss-name (push, "SW4RODATA")            /* (pick_'s locals, static: part 4's own, none of its calls swapping a
+                                                **   part in; the main RAM's room, 2026-11-18) */
 static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigned char* no)
 {
     struct { unsigned n; unsigned char r; } c[NCAND];
@@ -3110,6 +3115,7 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
     }
     return i;
 }
+#pragma bss-name (pop)
 
 /* The first thing named that the character carries; that it sees lying about; that's to hand (carried, or seen within
 ** reach: afar, seen but out of reach) */
@@ -3232,6 +3238,10 @@ static unsigned char __fastcall__ get (unsigned n)
 
 /* The closed thing that thing n is in (or in what that's in: a sack tied shut in an open pack), or 0 (none: it's to
 ** hand: part 35's, the catalogue's bank's code's through its stub) */
+/* (Part 106's, where the packer put it to make part 35 fit: there by its pragma now, part 35 its headroom kept,
+** 2026-11-18) */
+#pragma code-name (push, "SW106CODE")
+#pragma rodata-name (push, "SW106RODATA")
 unsigned __fastcall__ s_shut_in (unsigned n)
 {
     unsigned c;
@@ -3245,6 +3255,8 @@ unsigned __fastcall__ s_shut_in (unsigned n)
     }
     return 0;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* A door's bar to hand (carried, or within reach: not one in another's brackets), the widest: its width (took's,
 ** the request's x) and IR_NO (nothing about it changed); or (iq's to 1) it set in the door's brackets, a portal's part
@@ -7699,8 +7711,13 @@ void s_kit (void)
 #pragma rodata-name (push, "SW64RODATA")
 #pragma static-locals (push, on)
 
-static unsigned char cm_n, cm_era[TMINTS], cm_ways[TMINTS];    /* (The theme's mints: how many, each one's era, ways) */
-static unsigned cm_c[TMINTS + 1];               /* (A pile's coins by mint: counts) */
+static unsigned char cm_n, cm_era[TMINTS];      /* (The theme's mints: how many, each one's era) */
+/* (Each one's ways, and a pile's coins by mint, counts: part 64's own, each used with no part swapped in between, as
+** s_mix_words' puts do; the main RAM's room, 2026-11-18) */
+#pragma bss-name (push, "SW64RODATA")
+static unsigned char cm_ways[TMINTS];
+static unsigned cm_c[TMINTS + 1];
+#pragma bss-name (pop)
 static unsigned char* cm_b;                     /* (Its groups: its size, thick and fuel's bytes, each a mint (the high
                                                 **   four bits: 0 none) and its share (the low four)) */
 static unsigned char cm_s;                      /* (Their shares' sum) */
