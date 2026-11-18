@@ -143,7 +143,8 @@ function dq0AheadTest() {
   const plays = seeds.flatMap(s => [{ s, ahead: 1 }, { s, ahead: 0 }]);
   const lines = [...pre, ...plays.flatMap(p => game(p.s)), 'echo $status'];
   return {
-    name: 'dq0ahead', near: ['map', 'time'], meaning: true,
+    name: 'dq0ahead', near: ['map', 'time'], meaning: true, scene: false,   // (Its watchers see the game's start: the chunks
+    // its start asks for, finished before a scene's point, sim/lib/scenes.js)
     what: 'Dingus Quest Zero\'s chunks made ahead of the eyes the chunks made on demand (the user\'s, 2026-11-17: generation deterministic, the same seed the same chunk whenever it\'s made): at seeds 3 and 70001 the same game twice at the turns pace, the character put at an edge of the ground made and a look ahead after a pause, six times; the first as the game is (the maker making ahead in the pauses), the second with the making ahead off: every chunk the maker finished for a reader, its bytes and its things, the same in the same order; the first game\'s made ahead in part, the second\'s none',
     init: 't_rc', cycles: 4000e6,
     machine: { input: lines.map(l => '\u0101' + (l === 'look ahead' ? '\u0100'.repeat(W) : '') + l + '\r').join('') },

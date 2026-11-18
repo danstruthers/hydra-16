@@ -165,8 +165,9 @@ static void __fastcall__ fore (unsigned char on)
 /* A command in hand, or a line being typed: the background gives way, as the senses' ask does; and while the game's
 ** starting or the character's long task is under way (a walk, a wait, a rest, a dig ...: the world's own time, a
 ** command's still), or it's dead (the game's end); at the turns pace too while the world's turn goes on (the
-** character not yet ready again, its intents not all taken: the denizens catching up, dq0w.c's turns_run).  The hub's
-** header in the window */
+** character not yet ready again, its intents not all taken: the denizens catching up, dq0w.c's turns_run): 2, held
+** for the game's own time (asleep AH_NAP ticks at a time, its wakes as few as when nothing's wanted: a long sleep's
+** timing as it was); 1, for a command or keys (AH_HOLD: on again the sooner).  The hub's header in the window */
 static unsigned char hst, hsq, hcm, hks;        /* (The hold's state: 0 none, 1 since ht0, 2 run out; its line's, and its
                                                 **   command's and keys' as it began) */
 static unsigned ht0;
@@ -174,7 +175,7 @@ static unsigned char giving (void)
 {
     if (HUB->starting || HUB->pc_task.kind || ((unsigned char) HUB->pcsum.cond & C_DEAD) ||
         (!HUB->tpr && (HUB->pc_ready > HUB->now || HUB->iq_head != HUB->iq_tail || HUB->ui_giving))) {
-        return 1;
+        return 2;
     }
     if (!(HUB->ui_cmd | HUB->ui_keys)) {
         hst = 0;
@@ -207,7 +208,7 @@ static unsigned ax, ay;
 unsigned char ahead_wanted (void)
 {
     struct mreq* q;
-    unsigned char i, w;
+    unsigned char i, w, g;
 
     for (;;) {
         hub_map (0);
@@ -223,7 +224,7 @@ unsigned char ahead_wanted (void)
             fore (w);
             return 0;
         }
-        if (!giving ()) {
+        if (!(g = giving ())) {
             if (HUB->pc.sn != asn || (HUB->pc.x ^ ax) & ~7 || (HUB->pc.y ^ ay) & ~7) {
                 asn = HUB->pc.sn;
                 ax = HUB->pc.x;
@@ -235,7 +236,7 @@ unsigned char ahead_wanted (void)
                                                 **   it, 2026-11-17) */
             return 0;
         }
-        hy_sem_wait (HUB->sem[T_MAKER], AH_HOLD);
+        hy_sem_wait (HUB->sem[T_MAKER], g == 2 ? AH_NAP : AH_HOLD);
     }
 }
 
@@ -257,9 +258,9 @@ int main (int argc, char* argv[])
         if (!(w = asked ())) {                  /* (Nothing asked: a chunk made ahead, or asleep on its doorbell, woken
                                                 **   by a request's ring) */
             fore (0);
-            if (giving ()) {
+            if ((t = giving ()) != 0) {
                 calm = 0;
-                t = AH_HOLD;
+                t = t == 2 ? AH_NAP : AH_HOLD;
             } else if (!calm) {
                 calm = 1;
                 t = AH_SETTLE;                  /* (Once, rung awake by a request meanwhile) */
