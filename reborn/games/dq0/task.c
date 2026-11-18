@@ -817,10 +817,12 @@ void __fastcall__ o_wait_go (unsigned char action)
     } else {
         m *= 600;
     }
-    if (!busy && !lit) {
+    if (!busy && !lit && (m || !held)) {
         o_time_said (m, a);                     /* (As long as it says: told at once, the world's E_TIME to come saying
                                                 **   nothing, the user's, 2026-11-04; a round's too, "Time passes.", its
-                                                **   first words at once, the user's, 2026-11-17) */
+                                                **   first words at once, the user's, 2026-11-17; not a round's typed as
+                                                **   it fought, held till it's free: "You stop fighting.", the round,
+                                                **   then its words, as the world's E_TIME comes) */
         t_flush ();
         time_told = 1;
     }

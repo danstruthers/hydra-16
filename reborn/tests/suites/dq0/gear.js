@@ -1637,8 +1637,10 @@ module.exports = {
         const seg = (g, l) => { let i = g.indexOf('> ' + l + ' '); if (i < 0) return ''; if (g.startsWith('> ' + l + ' ', i + l.length + 3)) i += l.length + 3; const e = g.indexOf('> ', i + l.length + 3); return g.slice(i, e < 0 ? undefined : e); };
         const [a, b, c] = games;
         if (!/You lay the torch on the ground, still burning\./.test(seg(a, 'hold the pick'))) f.push('the pick held: the torch not laid down lit: ' + seg(a, 'hold the pick').slice(0, 300));
-        if (!/^> d You leave the torch behind\. You go down the stairway/.test(seg(a, 'd'))) f.push('down the stairs, no hand free: the torch not told left behind first: ' + seg(a, 'd').slice(0, 300));
-        if (!/^> d You take up the torch\. You go down the stairway/.test(seg(b, 'd'))) f.push('down the stairs, a hand free: the torch not taken up first: ' + seg(b, 'd').slice(0, 300));
+        // (The stairway's first words "You start down the stairway." at once after the light's, as the climb's taken:
+        // the first words at once, 2026-11-17)
+        if (!/^> d You leave the torch behind\. You start down the stairway\. You go down the stairway/.test(seg(a, 'd'))) f.push('down the stairs, no hand free: the torch not told left behind first: ' + seg(a, 'd').slice(0, 300));
+        if (!/^> d You take up the torch\. You start down the stairway\. You go down the stairway/.test(seg(b, 'd'))) f.push('down the stairs, a hand free: the torch not taken up first: ' + seg(b, 'd').slice(0, 300));
         if (!/a torch \(lit\), in your left hand/.test(seg(b, 'inventory'))) f.push('the torch taken up: not lit in hand below: ' + seg(b, 'inventory').slice(0, 300));
         if (/take up the torch|leave the torch behind/.test(seg(c, 'd'))) f.push('the torch the player put down taken up, or told left behind: ' + seg(c, 'd').slice(0, 300));
         if (/torch \(lit\), in your/.test(seg(c, 'inventory'))) f.push('the torch the player put down in hand below: ' + seg(c, 'inventory').slice(0, 300));

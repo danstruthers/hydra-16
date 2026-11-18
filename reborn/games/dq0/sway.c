@@ -112,28 +112,41 @@ static void __fastcall__ first17 (unsigned char f, unsigned char v, const char* 
 /* A walk a way (hmove.c's do_go: cmd.dir its true heading): its set-off words at once, the world's own (its V_SETOFF's,
 ** said.txt's SELF.setoff, "You set off west.", by the north the character believes in; not again as the world's come,
 ** worded 2), where the senses' record s shows the way open: the room's floor that way, a doorway or an open door there,
-** a passage's way on; not in the dark (the walk's own words, felt), nor with a light left burning at its feet (taken up
-** first).  Else the world's alone, as ever (a way refused, "You can't go that way.") */
+** a passage's way on, level enough for a step (dq0w's STEP_MAX, STAIR_MAX on steps); not in the dark (the walk's own
+** words, felt), nor with a light left burning at its feet (taken up first), nor toward a part of the room higher or
+** lower that way (a ledge: "The floor rises 10 feet at a ledge ahead ...", perhaps the first square), nor into a
+** denizen seen there ("A giant rat is in the way.").  Else the world's alone, as ever (a way refused, "You can't go that
+** way.") */
 #pragma static-locals (push, off)               /* (Its words' event on the C stack: the words' overlay reads it) */
 static void __fastcall__ setoff17 (const struct sight* s)
 {
     struct msg c;
-    unsigned char h = cmd.dir, k = 0, i;
+    unsigned char h = cmd.dir, k = 0, i, r = (h - pc_face) & 7;
     unsigned x = s->x + head_x[h & 7], y = s->y + head_y[h & 7];
+    signed char z;
 
     if (h > H_NW || s->dark) {
         return;
     }
     if (s->where == W_ROOM) {
         k = x - s->rx < s->rw && y - s->ry < s->rh;
+        for (i = 0; i < s->nzones && k; ++i) {
+            z = s->zone[i].dz;                  /* (By steps or a slope too: the straight way may meet its ledge; its
+                                                **   middle's way, an eighth either side of it) */
+            k = ((s->zone[i].rel - r + 1) & 7) > 2 || (z <= 2 && z >= -2);
+        }
     } else {
         for (i = 0; i < s->nways && !k; ++i) {
-            k = (s->way[i].rel & 7) == ((h - pc_face) & 7);
-        }
+            z = s->way[i].dz;
+            k = (s->way[i].rel & 7) == r && z <= 4 && z >= -4 && (s->way[i].steps == 5 || (z <= 2 && z >= -2));
+        }                                       /* (5: dq0w/world.h's T_STEPS, words.c's T_STEPS_) */
     }
     for (i = 0; i < s->ndoors && !k; ++i) {
         k = s->door[i].x == x && s->door[i].y == y && (s->door[i].state == DOORWAY || (s->door[i].state &
             (PS_OPEN | PS_WRECKED)));
+    }
+    for (i = 0; i < s->ndens && k; ++i) {
+        k = s->den[i].x != x || s->den[i].y != y;
     }
     for (i = 0; i < s->nitems && k; ++i) {      /* (A light left burning at its feet: taken up as the walk begins, the
                                                 **   hands' rule, its words first: the world's alone) */

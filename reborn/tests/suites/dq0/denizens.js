@@ -901,7 +901,7 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'search', 'search', 'quit',
         'dq0 -p t -s 5 -c /ram/c.hm -T', 'd', 'go right', 'go forward', 'step forward', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
-      check(m) {
+      check(m, out) {
         const T = dq0Turns(m), f = [], g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T'), s0 = g.after;
         const rats = s => s ? s.actors.filter(a => a.state && a.name === 'giant rat') : [];
         const near = (s, n) => rats(s).filter(a => a.sn === s.pc.sn && Math.max(Math.abs(a.x - s.pc.x), Math.abs(a.y - s.pc.y)) <= n);
@@ -920,6 +920,9 @@ module.exports = {
           dq0Need(f, t, 'E_NOWAY', { why: 'N_DEN' }, t.line + ': a rat not in the way');
           if (!t.at || !t.after || t.after.pc.x !== t.at.pc.x || t.after.pc.y !== t.at.pc.y) f.push(t.line + ': moved onto a rat\'s square');
         }
+        // (A walk into a rat seen there not begun: its first words the world's, not "You set off west." the UI's at
+        // once, 2026-11-17)
+        if (/You set off [a-z]+\.\s+A giant rat is in the way/.test(dq0Story(out))) f.push('a walk into a rat told set off first');
         return f;
       },
       sdcard: true

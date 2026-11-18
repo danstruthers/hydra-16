@@ -6356,13 +6356,18 @@ static void __fastcall__ set_out (unsigned char h)
 
 /* A way between strata set out on (s_climb's: stairs, a ladder, a long slope, its kind k), told at once (E_VIEW V_SETOFF,
 ** its b 64 | k: the UI's turned_says), before the stratum below's grown and the walk to it (the user's, 2026-11-17: every
-** command's first words at once); its words alone, no turn of the denizens' for them (set_out's).  Part 2's, s_climb's */
+** command's first words at once); its words alone, no turn of the denizens' for them (set_out's).  A light the hands'
+** rule left burning, no hand free for it: told left behind first ("You leave the torch behind.", part 90's, as a walk's
+** is), not again as the climb's begun.  Part 2's, s_climb's */
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
 static void __fastcall__ link_out (unsigned char k)
 {
     unsigned char alone;
 
+    if (left_lit) {
+        lit_back (I_CLIMB | LB_GO);
+    }
     hub_map (0);
     alone = HUB->eq_head == go_eq;
     evb = 64 | k;

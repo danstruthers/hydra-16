@@ -74,6 +74,9 @@ module.exports = {
         const pc = out.slice(out.indexOf('% cat /ram/hurt/pc.hm'));
         if (!/\ninj /.test(pc)) f.push('the injury not kept in the save (pc.hm\'s inj line)');
         if (!/\npace 0 2 /.test(pc)) f.push('the pace and watchfulness not kept with the sheet (pc.hm\'s pace line: a creep, listening)');
+        // (A walk at a ledge not begun: its first words the ledge's, not "You set off east." the UI's at once,
+        // 2026-11-17)
+        if (/You set off east\.\s+The floor rises/.test(dq0Story(out))) f.push('a walk refused at a ledge told set off first');
         return f;
       },
       sdcard: true
