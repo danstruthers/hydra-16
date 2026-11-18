@@ -235,7 +235,39 @@ static unsigned char in_hand (void)
     }
     return 0;
 }
+
+/* A kind of what the character carries named w (the UI bank's ixks: the world's IO_FIND's IR_OK too): 1, or 0 */
+static unsigned char __fastcall__ carried (const char* w)
+{
+    char nm[sizeof UIREC->ixks[0].name + 1];
+    unsigned char n, k;
+
+    nm[sizeof nm - 1] = 0;
+    hub_mem (UI_BANK, &n, &UIREC->ixk, 1);
+    for (k = 0; k < n && k < NIXK; ++k) {
+        hub_mem (UI_BANK, nm, UIREC->ixks[k].name, sizeof nm - 1);
+        if (name_is (nm, w)) {
+            return 1;
+        }
+    }
+    return 0;
+}
 #pragma static-locals (pop)
+
+/* A thing named w lying in the character's reach, as the senses see it (the world's IO_FIND's IR_OK): 1, or 0 */
+static unsigned char __fastcall__ thing_near (const char* w)
+{
+    const struct sight* s = sight_get ();
+    const struct sitem* it = s->item;
+    unsigned char k;
+
+    for (k = s->nitems; k; --k, ++it) {
+        if (it->x - s->x + 1 <= 2 && it->y - s->y + 1 <= 2 && name_is (it->name, w)) {
+            return 1;
+        }
+    }
+    return 0;
+}
 
 /* An attack's target found, d (its entry plus 1, | FT_CLOSE out of reach): its first words at once (the user's,
 ** 2026-11-17: "You close with the giant rat."; out of reach, its walk over's), once a line (sway.c's: looked for as the
@@ -250,6 +282,12 @@ static unsigned char __fastcall__ found (const struct cmd* c, unsigned char d)
             if (!autogo && !in_hand ()) {
                 return d;
             }
+            worded = 0;
+        }
+        if (hold_w[0] && !worded) {             /* (Its weapon named, taken in hand first: its words first, "You lift the
+                                                **   sword. You close with the giant rat.", the user's, 2026-11-18) */
+            walk_op = IO_HOLD | IO_STEPS;
+            walk_ahead (hold_w);
             worded = 0;
         }
         walk_says ((const char*) (W_CLOSE + d));
@@ -313,7 +351,18 @@ unsigned char __fastcall__ o_fight_target (struct cmd* c)
     if (best) {
         return found (c, best);
     }
+    d = *w && !c->obj.kind && c->action == VB_ATTACK_OBJECT && !(worded & 0x80);
+    if (d && !away && thing_near (w)) {
+        unknown (U_CANT);                       /* ("You can't attack bones.": a thing in reach, not a denizen, refused at
+                                                **   once, the world's IO_FIND to come saying nothing, worded 5: do_fight's,
+                                                **   refuse.c's, 2026-11-18) */
+        worded = 5;
+    }
     note (away ? away : *w ? FN_NONE_LIKE : FN_NONE);
+    if (d && worded != 5 && !carried (w)) {
+        *c->obj.word = 0;                       /* (Nothing of its name in reach nor carried: the world's IO_FIND would
+                                                **   find none, its why in lb now, do_fight's, said at once) */
+    }
     return 0;
 }
 

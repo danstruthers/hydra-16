@@ -563,6 +563,8 @@ static void den_shot (void)
         hub_map (0);
         bd.ready += HUB->round;                 /* (A crossbow's load a round more) */
     }
+    den_told (DE_AIMS, 1, bd.x, bd.y);         /* ("The bandit takes aim at you.": the shot begun, the character's "You
+                                                **   take aim at ..." the other way round, 2026-11-18) */
     if (fire (bk + 1, 0, Z_MID, bd.sn, bd.x, bd.y, bpx, bpy, r & DS_THROW ? sm_item : 0, sl_kind)) {
         hub_map (0);
         HUB->agear[bk] |= AG_NOSHOT;

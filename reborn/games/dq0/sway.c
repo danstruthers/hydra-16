@@ -73,9 +73,10 @@ unsigned char o_may_den (void)
     }
     cmd.obj.word[3] = c;
     if (k < NACTORS) {
-        walk_says ((const char*) W_SWAY);       /* ("You look at the giant rat.": the look at it's first words at once, the
-                                                **   minds' answer to come, 2026-11-17; not of a name given that may
-                                                **   be no denizen's, "examine the moon") */
+        walk_says ((const char*) (W_SEEN + k)); /* ("You look at the giant rat.": the look at it's first words at once, the
+                                                **   minds' answer to come, 2026-11-17, by its name as it's seen, the
+                                                **   user's, 2026-11-18; not of a name given that may be no denizen's,
+                                                **   "examine the moon") */
         return 1;
     }
     return names_n != 0;
@@ -230,7 +231,7 @@ static void __fastcall__ first_word (unsigned char n)
 ** @aims, a denizen's at the character the same (DEN.closes, "The bandit closes with you.") */
 #pragma static-locals (push, off)               /* (On the C stack: its name copied from the hub, with the hub in the
                                                 **   window) */
-static void __fastcall__ close_word (unsigned char d, unsigned char f)
+static void __fastcall__ close_word (unsigned char d, unsigned char f, unsigned char v)
 {
     char nm[sizeof HUB->actor[0].name + 5];
 
@@ -244,7 +245,7 @@ static void __fastcall__ close_word (unsigned char d, unsigned char f)
         memmove (nm, nm + 4, sizeof nm - 4);
     }
     said_s[0] = lb + 340;                       /* (The one closed with, first17's copy: the row's {obj}) */
-    first17 (f, 0, 0, nm);
+    first17 (f, v, 0, nm);
     said_s[0] = 0;
     t_flush ();
 }
@@ -263,9 +264,20 @@ void __fastcall__ o_walk_says (const char* name)
             return;                             /* (An attack's said already: its target looked for again as it's
                                                 **   carried out, the wield's first, then the blow's) */
         }
-        worded = 1;
         k = (unsigned char) name - W_CLOSE;
-        close_word (k & 0x0F, k & FT_CLOSE ? FS_OVER : k & 0x10 ? FS_AIM : FS_CLOSE);  /* (Beside it: closed with; a
+        if (k >= W_SEEN - W_CLOSE) {            /* (A denizen looked at, asked of: by its seen name, FIRST.seen; in the
+                                                **   dark, felt for by the word typed, first_word's) */
+            if (sight_get ()->dark) {
+                first_word (W_SWAY);
+                return;
+            }
+            worded = 1;
+            close_word ((k & 7) + 1, FS_SEEN, cmd.action == VB_OBSERVE_OBJECT || cmd.action == VB_EXAMINE_OBJECT ?
+                FV_LOOK_AT : FV_LOOK_FOR);
+            return;
+        }
+        worded = 1;
+        close_word (k & 0x0F, k & FT_CLOSE ? FS_OVER : k & 0x10 ? FS_AIM : FS_CLOSE, 0);  /* (Beside it: closed with; a
                                                 **   shot's: aimed at; out of reach: walked over to first, by its name
                                                 **   as it's seen, "the small orc", not the word typed) */
         if (k & FT_CLOSE) {
@@ -501,15 +513,29 @@ static void __fastcall__ first20 (unsigned char f, unsigned char v, const char* 
 static void __fastcall__ count20 (unsigned char e)
 {
     struct msg c;
-    unsigned n = cmd.n;
+    unsigned n = cmd.n, t = 0;
+    unsigned char q[NIX], k;
 
+    from_ui (q, UIREC->ixq, nix);               /* (How many each is: the world's, ix_make's) */
+    for (k = 0; k < nix; ++k) {
+        if (ix[k].kind == ix[e].kind) {
+            t += q[k];
+        }
+    }
+    k = FS_COUNT;
+    if (t < n) {                                /* (Fewer carried than counted, its own view: not counted out, the
+                                                **   user's, 2026-11-18; "You have only one.", the world's "You drop it."
+                                                **   after it) */
+        n = t;
+        k = FS_ONLY;
+    }
     said_s[3] = utoa (n, lb + 300, 10);
     said_s[2] = strcpy (lb + 340, kname (e));
     c.kind = UK_FIRST;
     c.who = 0;
     c.b = (ix[e].kind < nck && (ck[ix[e].kind].flags & K_PLURAL) ? 1 : 0) | (cmd.flags & CF_HALF ? 2 : cmd.obj.sel == SL_ALL ?
         4 : 0);
-    c.w1 = FS_COUNT << 8 | (n > 11 ? 11 : n);
+    c.w1 = k << 8 | (n > 11 ? 11 : n);
     outcome_words (&c);
 }
 

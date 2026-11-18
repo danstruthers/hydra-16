@@ -371,6 +371,8 @@ module.exports = {
           f.push('its state not poisoned, nor weak from the loss of blood: ' + JSON.stringify((s.match(/Condition: [^.]*\./) || [''])[0]));
         if (!/You bleed to death\. You are dead\./.test(s)) f.push('not bled to death');
         if (!T.some(t => dq0Ev(t, 'E_BYE', {}).length)) f.push('the game not ended by the death');
+        // (Engaged as it walked: its engaging alone, not its closing after it, the user's, 2026-11-18)
+        if (/engages you: you stop walking\.\s+The cave adder closes with you/.test(s)) f.push('the engage line and the closing both told');
         return f;
       },
       sdcard: true

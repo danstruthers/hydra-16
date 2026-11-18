@@ -513,6 +513,7 @@ DEN.picks           +"{arg?\n{@picked}.|a lock clicking}"
 DEN.unbarred        +"{arg?\n{@unbar}.|a door opening}"
 DEN.any             +"\n{Actor} {text}."
 DEN.closes          +"{arg?\n{@closes}.|something closing in}"
+DEN.aims            +"{arg?\n{@aims}.|a bowstring drawn}"
 
 # ==== The UI's own kinds (dq0.h's UK_*, msgs.def's: no world's event, the UI's words of its own; narration as data,
 # stage 4, 2026-11-12).  The UI fills one and has it worded, as an outcome event is
@@ -790,6 +791,12 @@ FIRST.link          +"\nYou start {arg?up the stairway|down the stairway|up the 
 # An attack's target out of reach, walked over to first (sway.c's close_word: obj its name as it's seen, "the small orc",
 # "Grub", "something")
 FIRST.over          +"\nYou go over to {obj}."
+# A denizen looked at, asked of, given to, by its name as it's seen (the user's, 2026-11-18: "You look at the giant
+# rat.", as an attack does; arg FIRST.the's first four, FV_*)
+FIRST.seen          +"\nYou {arg?reach for|look for|feel for|look at} {obj}."
+# A count of more than it carries, as the UI's own view has it (the user's, 2026-11-18: no "You count out" then; n1
+# how many it has, w4 its figures): the world's "You drop it." after it
+FIRST.only          +"\nYou have only {@few}."
 
 # ---- The character's own state, its body and its bearings (UK_SELF: my, MY_*; v a number or a choice, n2 another; text
 # a heading's name, the time in words).  The status's lines (task.c's facing_words), a turn's and a step's first words

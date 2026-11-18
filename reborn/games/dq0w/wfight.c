@@ -444,12 +444,33 @@ void s_pc_blow (void)
 ** character, not a shot, told first as it closes with it (E_DEN's DE_CLOSES, the one sender's: "The bandit closes with
 ** you.", the character's own first words the other way round: the user's, 2026-11-17, every actor's first words by the
 ** same rows); not at one that's struck at the character already, nor at the one it's fighting, nor by one down (its
-** blow a try to rise: "The orc king struggles, but can't get up.") */
+** blow a try to rise: "The orc king struggles, but can't get up."), nor by one whose engaging the character has just
+** stopped its walk ("The cave adder engages you: you stop walking." alone: the user's, 2026-11-18).  A shot at the
+** character, each one: "The bandit takes aim at you." (DE_AIMS, the character's "You take aim at ..." the other way
+** round, 2026-11-18: wshoot.c's den_shot, as it shoots) */
+static unsigned char engaged_by (void)          /* (Its engaging told in the world's last events: 1, or 0) */
+{
+    unsigned h = HUB->eq_head;
+    unsigned char n;
+    const struct msg* q;
+
+    for (n = 0; n < 16 && h; ++n) {
+        q = &HUB->eq[--h & (EQ_SIZE - 1)];
+        if (q->t + 100 < HUB->now) {
+            break;
+        }
+        if (q->kind == E_TASK && !q->who && E_TASK_TE (*q) == TE_ENGAGED && E_TASK_ENGAGED_BY (*q) == bk + 1) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 void __fastcall__ s_den_close (unsigned char def, unsigned char z)
 {
     hub_map (0);
     if (!def && !(z & (AIM_SHOT | AIM_GRAPPLE)) && flast != bk + 1 && bd.pos == POS_STANDING &&
-        (HUB->pc_task.kind != LT_FIGHT || HUB->pc_task.foe != bk + 1)) {
+        (HUB->pc_task.kind != LT_FIGHT || HUB->pc_task.foe != bk + 1) && !engaged_by ()) {
         den_told (DE_CLOSES, 1, bd.x, bd.y);
     }
 }

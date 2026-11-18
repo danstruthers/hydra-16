@@ -946,7 +946,7 @@ module.exports = {
         if (!/You gather up \d+ arrows?\./.test(o)) f.push('the gathering not told');
         const den = T.filter(u => u.k > g2.k).flatMap(u => u.dens).filter(e => e.kind === 'E_FIGHT' && e.who > 0);
         if (!den.length) f.push('no elf\'s blow or shot (E_FIGHT)');
-        inTurn(o, ['The elf unslings their hartbow.', 'The elf shoots at you with their hartbow'], f, 'the elf\'s shot: ');
+        inTurn(o, ['The elf unslings their hartbow.', 'The elf takes aim at you.', 'The elf shoots at you with their hartbow'], f, 'the elf\'s shot: ');   // (Its aim told as it shoots, the character's "You take aim" the other way round, 2026-11-18)
         return f;
       },
       sdcard: true

@@ -161,6 +161,10 @@ void __fastcall__ o_unknown (unsigned char f)
     static char* q;
     static unsigned char d, all;
 
+    if (worded == 5) {
+        return;                                 /* (Said already, at once: blows.c's fight_target, "You can't attack
+                                                **   bones.") */
+    }
     p = cl;
     s = strchr (p, ' ');                        /* (Its verb's end) */
     if (f == U_WHAT && cmd.obj.kind && s) {

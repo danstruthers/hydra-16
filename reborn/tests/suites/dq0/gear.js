@@ -896,6 +896,9 @@ module.exports = {
         said('k', /^You put down the (unlit )?torch\.|^You reach for your backpack\./);
         said('take off', /^Take off what\? \[b, e\]/);
         not('look', /You take off/);
+        // (A count of more than it carries, as played, "drop 2c" its backpack: not counted out, "You have only one.", the
+        // world's "You drop it.", 2026-11-18)
+        if (/You count out [^.]*\.\s+You drop/.test(dq0Story(out)) || /you put down it/.test(dq0Story(out))) f.push('a count of more than it carries counted out, or "put down it"');
         said('drop the lit torch', /^You put down the (lit )?torch\./);   // (Both lit after "light j with a": the plain name)
         dq0HeldPaces(this, f, this.notes, this.timer, [0, 1, 2], LETCMD.map(l => ({ line: l, want: 'You|Taken|Put|Your|It|Drop|Take' })));   // (D17's, each typing's: dq0Paces')
         return f;
@@ -1929,7 +1932,7 @@ module.exports = {
           '> take the lit torch in my right hand', 'You take the lit torch in your right hand.',
           '> i', 'You carry: (a) a torch (lit), in your right hand', '(k) a spear, in your left hand',
           '> i', 'You carry: (a) a torch (lit), in your right hand', '(j) a sword, in your left hand In all',
-          '> attack the rat with the sword in my left hand', 'You shift the sword to your left hand.', 'You strike at the giant rat with your sword'], f, 'the words: ');
+          '> attack the rat with the sword in my left hand', 'You lift the sword.', 'You close with the giant rat.', 'You shift the sword to your left hand.', 'You strike at the giant rat with your sword'], f, 'the words: ');
         return f;
       },
       sdcard: true

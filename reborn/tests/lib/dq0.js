@@ -273,6 +273,8 @@ const DQ0_REPEATS = [
     why: 'a fight\'s turns to a foe, each told as it turns (fighting on: struck from another side again and again; in the dark "something": dq0scent\'s rats, their dice by who asks, 2026-10-30)' },
   { what: /^The [a-z ]+ closes with you\.$/,
     why: 'each denizen\'s attack begun, told as it closes with the character (the user\'s, 2026-11-17: its first words, "The bandit closes with you."): two of a name closing in one answer, the same words (dq0fightverbs\' charge, both rats), or one coming back to the fight' },
+  { what: /^The [a-z ]+ takes aim at you\.$/,
+    why: 'each shot at the character begun, told as the shooter takes aim (the user\'s, 2026-11-18: one path, the character\'s "You take aim at ..." the other way round): a shot a round, several in one wait' },
   { what: /^(?:You (?:look over|poke through|go through|feel over|feel through) the .+|You find nothing in the .+|Your hands find nothing in the .+|There's nothing (?:in|on) the .+|It's closed: you go over the outside of it|(?:It's|They're) made of .+|You stop short: just ahead is a trap, .+)\.$/,
     why: 'a room searched whole, each thing in it in turn (HOUSE.md\'s, 2026-11-02): two heaps of straw, two iron pots, told each as it\'s gone through' },
   { what: /^You find (?:a trap|a door)[^.]*\.$/, why: 'a room searched whole\'s finds, each told as it\'s found: two plates, two doors' },

@@ -420,7 +420,7 @@ enum { MY_WANT, MY_LIMB, MY_LIMP, MY_POS, MY_HIDDEN, MY_UNDER, MY_SWIM, MY_DEEP,
                                                 **   pose, the air and the background heard, a stance, the time told; a
                                                 **   denizen heard, not seen) */
 enum { FS_THE, FS_YOUR, FS_INTO, FS_THEM, FS_IT, FS_PEER, FS_LISTEN,   /* (UK_FIRST's: a command's first words' form, */
-    FS_CLOSE, FS_COUNT, FS_AIM, FS_LINK, FS_OVER };   /*   an attack's close, a count's, a shot's, a way between strata's,
+    FS_CLOSE, FS_COUNT, FS_AIM, FS_LINK, FS_OVER, FS_SEEN, FS_ONLY };   /*   an attack's close, a count's, a shot's, a way between strata's,
                                                 **   an attack's walk over to its target: the
                                                 **   user's, 2026-11-17,
                                                 **   every command's first words at once, "You close with the giant
@@ -620,6 +620,7 @@ void __fastcall__ walk_ahead (const char* name);    /* (sway.c's: a thing to tak
 #define W_CLOSE         0x20                   /* (walk_says' name W_CLOSE + an attack's target, fight_target's: the
                                                 **   actor plus 1, | FT_CLOSE out of reach: its first words at once; */
 #define W_AIM           0x30                    /*   W_AIM + a shot's, the actor plus 1: "You take aim at the rat.") */
+#define W_SEEN          0x70                    /* (W_SEEN + a denizen looked at, its entry: its words by its seen name) */
 #define W_MAX           0x80
 extern unsigned char said_ahead, walk_op, worded, placing;       /* (main.c's: its walk told already; a walk over's arrival short) */
 void __fastcall__ blow (const struct msg* m);    /* (Overlay 6's, blows.c: an E_FIGHT worded, and what comes of it) */

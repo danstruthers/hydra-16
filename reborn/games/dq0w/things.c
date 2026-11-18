@@ -2253,6 +2253,7 @@ unsigned ixi[NIX];                              /* (Each one's record, */
 unsigned ixd[NIX];                              /*   its key in the letters, its id or its record's | LT_REC, */
 struct cix ixc[NIX];                            /*   its words for the UI: letter.s's too) */
 static unsigned char ixkk[NIXK];
+static unsigned char ixqq[NIX];                 /* (And how many each is: a lot's count, else 1) */
 #pragma bss-name (pop)
 
 /* Each thing it carries its letter (the user's designators, 2026-11-06: hub.h's low): its own, kept while it's carried
@@ -2280,6 +2281,7 @@ void s_ix_make (void)
         fetch (&rec, ixi[m]);
         ixd[m] = rec.id ? rec.id : ixi[m] | LT_REC;
         k = kind_of (rec.kind);
+        ixqq[m] = (k->form & KF_COUNT) && rec.qty ? rec.qty : 1;
         f = (rec.flags & I_HELD ? CX_HELD : 0) | (rec.flags & I_WORN ? CX_WORN : 0) | (rec.flags & I_LIT ? CX_LIT : 0) |
             (rec.shut & IS_CLOSED ? CX_SHUT : 0) | ((k->form & KF_BACK) && (rec.flags & I_WORN) ? CX_BACK : 0);
         j = rec.id && !rec.fuel;                /* (Its state as the chooser's unlike has it, 2026-11-07: a container or
@@ -2329,6 +2331,7 @@ void s_ix_make (void)
     UIREC->ixn = n;
     UIREC->ixk = j;
     memcpy (UIREC->ix, ixc, n * sizeof (struct cix));
+    memcpy (UIREC->ixq, ixqq, n);
     for (f = 0; f < j; ++f) {
         k = kind_of (ixkk[f]);                  /* (Copied out: the UI's bank put back for it) */
         hub_map (UI_BANK);
@@ -3674,10 +3677,17 @@ unsigned char __fastcall__ s_moved (unsigned char op)
         text_new ();                            /* (Their words by the count: "You take 4 rations.") */
         many (b, got, kind);
         if (want != 0xFFFF && got < want && !away) {
-            put (op == IO_DROP ? "You have only " : got == 1 ? "There is only " : "There are only ");
+            if (op == IO_DROP) {
+                put ("You drop ");           /* ("You have only one." the UI's first words, as it carries fewer than
+                                                **   it counted, its own view: sway.c's count20, 2026-11-18) */
+            } else {
+                put (got == 1 ? "There is only " : "There are only ");
+            }
             if (op <= IO_DROP || op == IO_TAKE) {   /* ("There are only 2 there; you take both.", the user's, 2026-11-06) */
-                put (got == 1 ? "one" : utoa (got, b, 10));
-                put (op == IO_DROP ? "; you put down " : " there; you take ");
+                if (op != IO_DROP) {
+                    put (got == 1 ? "one" : utoa (got, b, 10));
+                    put (" there; you take ");
+                }
                 put (got == 1 ? "it." : got == 2 ? "both." : "them all.");
                 return r;
             }

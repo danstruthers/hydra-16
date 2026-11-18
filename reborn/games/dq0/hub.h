@@ -661,9 +661,11 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_
                                                 **   fall, its bars strained at, bent apart; a lock worked at, picked) */
     DE_UNBARRED,                                /* (A door's bar lifted and the door opened, at once: the character's
                                                 **   PO_UNBARRED, its words and its sound the door's opening, 2026-11-17) */
-    DE_CLOSES };                                /* (Closed with the character, its attack begun, its first blow the next:
+    DE_CLOSES,                                  /* (Closed with the character, its attack begun, its first blow the next:
                                                 **   the character's own first words the other way round, the user's
                                                 **   "The bandit closes with you.", 2026-11-17) */
+    DE_AIMS };                                  /* (Its shot at the character begun: "The bandit takes aim at you.", the
+                                                **   character's "You take aim at ..." the other way round, 2026-11-18) */
                                                 /* E_DEN's what: a step, a
                                                 **   noise of its own (a squeak, a growl), the character sensed, lost
                                                 **   (its senses' own); a successor rallying its fellows at its post
@@ -1853,6 +1855,9 @@ struct uirec {
     unsigned char   which_n;                    /*   how many it asked of, */
     char            which_w[4][24];             /*   and each one's words (the inventory's: "a torch (spent)"), its
                                                 **   capital in the last byte */
+    unsigned char   ixq[NIX];                   /* How many each of ix is (a lot's count, 250 at most; 1 a thing's): the
+                                                **   UI's counted first words only when as many are carried (the user's,
+                                                **   2026-11-18; the world's: things.c's ix_make) */
 };
 #define WN_STOW         0x80                    /* (which_n's: a stow's where, lower-case letters; */
 #define WN_PLACE        0x20                    /* (choose.c's, of doors and openings: each which_w a few words, its
@@ -2133,6 +2138,7 @@ struct wsave {
 **   own uirec.ix world +ui                                     (Its letters swapped: "letter d as t", caps.c's)
 **   own uirec.ixk world
 **   own uirec.ixks world
+**   own uirec.ixq world                                        (How many each is: counted first words, 2026-11-18)
 **   own uirec.low world +ui                                    (The letters of what it carries: the save's, the UI's)
 **   own uirec.lowt world +ui
 **   own uirec.cap ui                                           (The capitals of what it's seen)

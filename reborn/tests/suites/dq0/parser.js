@@ -746,7 +746,7 @@ module.exports = {
         inTurn(o, ['> cast light You\'ve no magic: you never studied the convocations.',
           '> memorize the light spell You\'ve no magic: you never studied the convocations.', '> telepathy You reach for it; nothing stirs.',
           '> invoke divination You know no invocations of Peoni\'s.', '> learn divination You know no invocations of Peoni\'s.',
-          '> activate the torch', 'The torch is lit already.', '> negotiate with the rat', '> sense a lie from the rat You look at the rat. The giant rat seems', '> status Pace: a walk',
+          '> activate the torch', 'The torch is lit already.', '> negotiate with the rat', '> sense a lie from the rat You look at the giant rat. The giant rat seems', '> status Pace: a walk',
           'Watching: nothing in particular.', '> pace Pace: a walk', 'Watching: nothing in particular.', '> sneak north Pace: a creep',
           'You set off north.', '> status Pace: a creep', '> invoke divination You know no invocations.', '% echo $status'], f);
         if (/in this game yet/.test(o)) f.push('a "not yet" said: ' + (o.match(/> [^>]*in this game yet/) || [''])[0]);

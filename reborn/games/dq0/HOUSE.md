@@ -944,7 +944,7 @@ world's answer follows.  The word is said before the world's asked, and holds wh
   small").  The denizens (the plan's step 4) take theirs from the same capitals, given before the things' in a look.
 - **A capital where a thing's name goes**: "take D", "take D from C", "take 5C" (its count): fewer there than asked, told
   and the rest taken ("There are only 3 there; you take them all.", "...; you take both.", "There is only one there; you
-  take it."), as for a count of any name ("take 5 rations"); put down, "You have only 2; you put down both."  A count by
+  take it."), as for a count of any name ("take 5 rations"); put down, "You have only 2; you drop both."  A count by
   the letter of one of several alike (not a lot) takes that one, then others of its kind, the most to hand.
 - **Denizens lettered first** (the user's: "capital letters for in-the-environment things (items and denizens ...) with
   denizens numbered first (designators only for seen items or creatures)"; the plan's step 4): each denizen seen (not one
