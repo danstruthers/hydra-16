@@ -51,10 +51,10 @@ is built; OPEN.md holds the open questions; ../../tests/TESTING.md says which te
   pack.js. A function moves between parts by its pragma alone.
 - **The bank window.** A call between an overlay and a part, or from an overlay into code that maps the hub, can
   return with the wrong bank in the window. It is the commonest bug class. The emulator's guards (sim/lib/guards.js,
-  in every test) stop a test at an instruction fetched from the window with no code there, and at a store that names
-  the hub's header landing in another bank; but only where a test goes. Before adding such a call, read
-  GAME-CRITIQUE.md's section 6.1 and the fix in 79083a98 (way.c's look_ov: the window kept, the hub put in, the call,
-  the window put back).
+  in every test) stop a test at an instruction fetched from the window with no code there, and at a store or a load
+  that names the hub's header with another bank in the window; but only where a test goes. Before adding such a
+  call, read GAME-CRITIQUE.md's section 6.1 and the fix in 79083a98 (way.c's look_ov: the window kept, the hub put
+  in, the call, the window put back).
 
 ## Behaviour and transcripts
 

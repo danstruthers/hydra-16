@@ -29,15 +29,17 @@
 // test runner's hub writers' check, reborn/sim/lib/hubown.js); opt.calls (a Map: a jump table slot's
 // address -> its call's name), opt.errNames (code -> name) and opt.callFilter (a Set of names and "tN", or none):
 // each call a program makes logged, with its registers, and what it gives back as it returns.  opt.guard: the
-// guards (reborn/sim/lib/guards.js: a system's, which knows its programs), { flags (1 fetch, 2 store, 4 watch; all
-// three if none), sync(m) (as each run starts: its tables made right for the tasks there), hit(m, kind, a, v) }, the
-// tables in m.guards ({ code, store, watch, hubKey }, the WebAssembly core's or the JS's): kind 0, an instruction
+// guards (reborn/sim/lib/guards.js: a system's, which knows its programs), { flags (1 fetch, 2 store, 4 watch, 8 load;
+// all four if none), sync(m) (as each run starts: its tables made right for the tasks there), hit(m, kind, a, v) }, the
+// tables in m.guards ({ code, store, load, watch, hubKey }, the WebAssembly core's or the JS's): kind 0, an instruction
 // fetched at a in the bank window ($8000-$9FFF) whose page the code table doesn't mark for the task's slot v (its bank
 // $00-$EF, 256 + U * 16 + a shared bank's low four bits, or 512: none there), before it runs; 1, a write of v at a in
 // the window by an instruction the stores' table marks for the task (by its PC, below $8000), the window's bank not
-// the shared bank m.guards.hubKey names; 2, a write of v to one of the task's four watched bytes (watch: 4 bytes
-// each, the address, a kind, 1 a most or 2 a least, and the limit) past its limit, by the task's own code (its PC
-// below $8000).  hit may set m.cpu.halted (the run stops there; a fetch's instruction not run).  The loop that runs each instruction allocates nothing, so the emulator runs as fast as the
+// the shared bank m.guards.hubKey names; 3, a read of v at a in the window by an instruction the loads' table marks
+// (the same: a read-modify-write's read is one, its write a 1); 2, a write of v to one of the task's four watched
+// bytes (watch: 4 bytes each, the address, a kind, 1 a most or 2 a least, and the limit; 3 any: the stores' and the
+// loads' tables follow it) past its limit, by the task's own code (its PC below $8000), the watches on with 2, 4 or 8.
+// hit may set m.cpu.halted (the run stops there; a fetch's instruction not run).  The loop that runs each instruction allocates nothing, so the emulator runs as fast as the
 // host can (with the WebAssembly core, core.js: some 90 MHz of the Hydra's cycles in a dq0 test on a 2019 desktop, 190 MHz
 // on plain code; the JS's alone about half that): keep it that way.
 'use strict';
@@ -91,10 +93,11 @@ function createMachine(opt) {
   const coreFlags = core ? new Uint8Array(core.buf, core.FLAGS, 16 * 256 + 256) : null;
   if (core) { new Uint8Array(core.buf, core.PROM, pagedrom.length).set(pagedrom); new Uint8Array(core.buf, core.OSROM, osrom.length).set(osrom); }
   // The guards (opt.guard): their tables, the core's or the JS's, and the hub's header's shared bank (-1: not known)
-  const guard = opt.guard || null, gFlags = guard ? (guard.flags === undefined ? 7 : guard.flags) : 0;
-  const gFetch = (gFlags & 1) !== 0, gStoreOn = (gFlags & 2) !== 0, gWatchOn = (gFlags & 4) !== 0;
+  const guard = opt.guard || null, gFlags = guard ? (guard.flags === undefined ? 15 : guard.flags) : 0;
+  const gFetch = (gFlags & 1) !== 0, gStoreOn = (gFlags & 2) !== 0, gWatchOn = (gFlags & 14) !== 0, gLoadOn = (gFlags & 8) !== 0;
   const gCode = core ? new Uint32Array(core.buf, core.GCODE, 16 * G_SLOTS) : new Uint32Array(16 * G_SLOTS);
   const gStore = core ? new Uint8Array(core.buf, core.GSTORE, 16 * 4096) : new Uint8Array(16 * 4096);
+  const gLoad = core ? new Uint8Array(core.buf, core.GLOAD, 16 * 4096) : new Uint8Array(16 * 4096);
   const gWatch = core ? new Uint8Array(core.buf, core.GWATCH, 256) : new Uint8Array(256);
   let gHubKey = -1, gw0 = -1, gw1 = -1, gw2 = -1, gw3 = -1;
 
@@ -184,8 +187,8 @@ function createMachine(opt) {
     }
   }
   // The guards' ways, for the JS's CPU (the core's are lib.rs's, the same): a fetch from the window, the slot's page
-  // not code (the guard asked); a write into the window by a marked PC, not into the hub's header's bank; a watched
-  // byte written past its limit by the task's own code
+  // not code (the guard asked); a write or a read in the window by a marked PC, not in the hub's header's bank; a
+  // watched byte written past its limit by the task's own code
   function fetchCheck() {
     const b = bankRam[0], slot = b >= 0xF0 ? (sharedOn ? 256 + U * 16 + (b & 15) : 512) : b < bankLimit ? b : 512;
     if (!(gCode[T * G_SLOTS + slot] >>> ((cpu.PC >> 8) & 31) & 1)) guard.hit(m, 0, cpu.PC, slot);
@@ -196,13 +199,20 @@ function createMachine(opt) {
     if (b >= 0xF0 && sharedOn && U * 16 + (b & 15) === gHubKey) return;
     guard.hit(m, 1, a, v);
   }
+  function loadCheck(a, v, b) {
+    const pc = cpu.lastPC;
+    if (pc >= 0x8000 || !(gLoad[T * 4096 + (pc >> 3)] >> (pc & 7) & 1)) return v;
+    if (b >= 0xF0 && sharedOn && U * 16 + (b & 15) === gHubKey) return v;
+    guard.hit(m, 3, a, v);
+    return v;
+  }
   function watchWrite(a, v) {
     if (cpu.lastPC >= 0x8000) return;
     const o = T * 16;
     for (let i = 0; i < 4; i++) {
       if ((gWatch[o + i * 4] | gWatch[o + i * 4 + 1] << 8) !== a || !gWatch[o + i * 4 + 2]) continue;
       const k = gWatch[o + i * 4 + 2], lim = gWatch[o + i * 4 + 3];
-      if ((k === 1 && v > lim) || (k === 2 && v < lim)) guard.hit(m, 2, a, v);
+      if ((k === 1 && v > lim) || (k === 2 && v < lim) || k === 3) guard.hit(m, 2, a, v);
       return;
     }
   }
@@ -211,15 +221,15 @@ function createMachine(opt) {
     if (a >= 0x8000 && a < 0xA000 && !ramFault) {
       const b = bankRam[0];
       if (b >= 0xF0) {
-        if (!sharedOn) return a >> 8;
+        if (!sharedOn) return gLoadOn ? loadCheck(a, a >> 8, b) : a >> 8;
         const k = U * 16 + (b & 15); let mem = sharedBanks_[k];
         if (mem === null) mem = bankMem(b);
-        return mem[a - 0x8000];
+        return gLoadOn ? loadCheck(a, mem[a - 0x8000], b) : mem[a - 0x8000];
       }
-      if (!(b < bankLimit)) return a >> 8;
+      if (!(b < bankLimit)) return gLoadOn ? loadCheck(a, a >> 8, b) : a >> 8;
       let mem = taskBanks[T * 256 + b];
       if (mem === null) mem = bankMem(b);
-      return mem[a - 0x8000];
+      return gLoadOn ? loadCheck(a, mem[a - 0x8000], b) : mem[a - 0x8000];
     }
     if (a >= 0xA000 && a < 0xE000) { const off = romBase[bankRam[1]] + ((a - 0xA000) ^ 0x2000); return off < promLen ? pagedrom[off] : 0xFF; }
     if (a >= 0xE000 && a < 0xFF00) return osrom[wBase + a];
@@ -231,7 +241,7 @@ function createMachine(opt) {
         log('read: $' + hx(a, 4) + ' (task ' + hx(tsel(a), 1) + ') ' + hx(taskRam[tsel(a)][a]) + ' by ' + hx(W, 1) + ':' + hx(cpu.PC, 4) + ' at cycle ' + cpu.cyc);
       return rtc && a >= RTC_REGS && tsel(a) === RTC_TASK ? rtc.read(a - RTC_REGS) : taskRam[tsel(a)][a];
     }
-    if (a < 0xA000) { const b = taskRam[tsel(0)][0]; return bankInstalled(b) ? bankMem(b)[ramOfs(b, a)] : (a >> 8); }  // floating bus
+    if (a < 0xA000) { const b = taskRam[tsel(0)][0], v = bankInstalled(b) ? bankMem(b)[ramOfs(b, a)] : (a >> 8); return gLoadOn ? loadCheck(a, v, b) : v; }  // floating bus
     if (a < 0xE000) { const off = romBank(taskRam[tsel(1)][1]) * 0x4000 + ((a - 0xA000) ^ 0x2000); return off < pagedrom.length ? pagedrom[off] : 0xFF; }
     if (a >= 0xFF00 && a < 0xFFF0) return ioRead(a);
     if (a === 0xFFF0) return regT; if (a === 0xFFF1) return regU; if (a === 0xFFF2) return V; if (a === 0xFFF3) return regW;
@@ -535,7 +545,7 @@ function createMachine(opt) {
     si[30] = sharedWrite ? 1 : 0; si[31] = rtc ? 1 : 0;
     si[32] = opt.sharedU > 0 ? Math.min(16, Math.ceil(opt.sharedU)) : 0; si[33] = 0;
     for (let i = 0; i < 16; i++) si[48 + i] = stackLow[i];
-    si[28] = core.GWATCH; si[44] = gFlags; si[45] = core.GCODE; si[46] = core.GSTORE; si[47] = gHubKey;
+    si[28] = core.GWATCH; si[44] = gFlags; si[45] = core.GCODE; si[46] = core.GSTORE; si[47] = gHubKey; si[64] = core.GLOAD;
     sf[0] = cpu.cyc; sf[1] = limit; sf[2] = devNext; sf[3] = devSeen; sf[4] = iOffAt; sf[5] = cpu.ioAt;
   }
   function fromCore() {
@@ -661,7 +671,7 @@ function createMachine(opt) {
     quick();
   }
   // (The guards' tables and the hub's header's bank, for opt.guard's sync and hit)
-  const guards = { flags: gFlags, slots: G_SLOTS, code: gCode, store: gStore, watch: gWatch,
+  const guards = { flags: gFlags, slots: G_SLOTS, code: gCode, store: gStore, load: gLoad, watch: gWatch,
     get hubKey() { return gHubKey; }, set hubKey(k) { gHubKey = k; if (core) core.si[47] = k; } };
   Object.assign(m, { cpu, acia, via, i2c, smc, ym, vera, audio, rtc, taskRam, vecRam, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd, taskBankMem, sharedBanks, state, restore, guards });
   Object.defineProperties(m, {                                // (The pseudo-registers, the trace and the profile's count, as they are now)

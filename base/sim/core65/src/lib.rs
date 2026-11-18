@@ -10,8 +10,10 @@
 // The guards (machine.js's opt.guard, S_GUARD's bits): an instruction fetched from the bank window ($8000-$9FFF)
 // whose page the code table (GCODE: a task's bank, its 32 pages a bit each) doesn't mark (1); a write into the
 // window by an instruction the stores' table (GSTORE: a task's PCs below $8000, a bit each) marks, its bank not
-// S_GHUBK's shared one (2); a write to one of the task's four watched main RAM bytes (GWATCH) past its limit, by
-// the task's own code (4).  Each goes to JavaScript (guard_hit), which says what's code and what isn't.
+// S_GHUBK's shared one (2); a read in the window by an instruction the loads' table (GLOAD, the same) marks, its bank
+// not that one (8: guard_hit's 3); a write to one of the task's four watched main RAM bytes (GWATCH) past its limit,
+// or any (kind 3: the part the stores' and loads' tables follow), by the task's own code (4; kind 3's with 2 or 8).
+// Each goes to JavaScript (guard_hit), which says what's code and what isn't.
 #![no_std]
 #![allow(static_mut_refs)]
 use core::panic::PanicInfo;
@@ -56,9 +58,11 @@ const S_BANKS: usize = 34; const S_PROMLEN: usize = 35; const S_TR: usize = 36; 
 const S_PROM: usize = 39; const S_OSROM: usize = 40; const S_VEC: usize = 41; const S_RING: usize = 42; const S_FLAGS: usize = 43;
 const S_STACKLOW: usize = 48;
 const S_GWATCH: usize = 28; const S_GUARD: usize = 44; const S_GCODE: usize = 45; const S_GSTORE: usize = 46; const S_GHUBK: usize = 47;
+const S_GLOAD: usize = 64;
 const G_SLOTS: usize = 513;                                   // (A task's code table: its banks, 256 shared, none)
+const G_WATCHES: u32 = 2 | 4 | 8;                             // (The watched bytes: the stacks' (4), the tables' part (2, 8))
 const F_CYC: usize = 0; const F_LIMIT: usize = 1; const F_DEVNEXT: usize = 2; const F_LASTSTART: usize = 3; const F_IOFFAT: usize = 4; const F_IOAT: usize = 5;
-static mut SI: [i32; 64] = [0; 64];
+static mut SI: [i32; 72] = [0; 72];
 static mut SF: [f64; 8] = [0.0; 8];
 #[no_mangle] pub extern "C" fn state_i() -> *mut i32 { unsafe { SI.as_mut_ptr() } }
 #[no_mangle] pub extern "C" fn state_f() -> *mut f64 { unsafe { SF.as_mut_ptr() } }
@@ -242,7 +246,7 @@ struct Mach {
   banks: u32, prom_len: u32, shared_on: bool, shared_u: u32, noshared: bool, hook: bool, rtc: bool,
   c0: u64,                                                    // (The instruction's first cycle)
   cur: *const Regs,
-  gflags: u32, gcode: usize, gstore: usize, gwatch: usize, ghubk: i32,   // (The guards: S_GUARD's ...)
+  gflags: u32, gcode: usize, gstore: usize, gload: usize, gwatch: usize, ghubk: i32,   // (The guards: S_GUARD's ...)
   gw: [u32; 4], gwk: [u32; 4],                                // (The task's watched bytes, kind << 8 | limit)
 }
 impl Mach {
@@ -282,7 +286,7 @@ impl Mach {
   }
   #[inline(never)] fn wr_high(&mut self, a: u32, v: u32) {
     if a < 0xFFF0 { self.io_write(a, v); return; }
-    if a == 0xFFF0 { self.reg_t = v; self.t = v & 15; if self.gflags & 4 != 0 { self.load_watch(); } return; }
+    if a == 0xFFF0 { self.reg_t = v; self.t = v & 15; if self.gflags & G_WATCHES != 0 { self.load_watch(); } return; }
     if a == 0xFFF1 { self.set_u(v); return; }
     if a == 0xFFF2 { self.vreg = v; return; }
     if a == 0xFFF3 { self.reg_w = v; self.w = v & 15; return; }
@@ -293,22 +297,22 @@ impl Mach {
   }
   fn set_u(&mut self, v: u32) { self.reg_u = v; self.u = v & 15; self.shared_on = !self.noshared && self.u < self.shared_u; }
   // The guards' ways.  The task's watched bytes (GWATCH: 4 a task, 4 bytes each: the address, kind, limit; kind 0
-  // none, 1 a most, 2 a least), as T is set
+  // none, 1 a most, 2 a least, 3 any), as T is set
   fn load_watch(&mut self) {
     let o = self.gwatch + (self.t as usize) * 16;
     for i in 0..4 {
       let (k, lim) = (self.b(o + i * 4 + 2), self.b(o + i * 4 + 3));
-      self.gw[i] = if self.gflags & 4 != 0 && k != 0 { self.b(o + i * 4) | self.b(o + i * 4 + 1) << 8 } else { 0xFFFF_FFFF };
+      self.gw[i] = if self.gflags & G_WATCHES != 0 && k != 0 { self.b(o + i * 4) | self.b(o + i * 4 + 1) << 8 } else { 0xFFFF_FFFF };
       self.gwk[i] = k << 8 | lim;
     }
   }
-  // A watched byte written: past its limit, by the task's own code (below $8000), said
+  // A watched byte written: past its limit (or any write, kind 3's), by the task's own code (below $8000), said
   #[inline(never)] fn watch_write(&mut self, a: u32, v: u32) {
     if unsafe { (*self.cur).last_pc } >= 0x8000 { return; }
     for i in 0..4 {
       if self.gw[i] != a { continue; }
       let (k, lim) = (self.gwk[i] >> 8, self.gwk[i] & 0xFF);
-      if (k == 1 && v > lim) || (k == 2 && v < lim) { self.out(); unsafe { guard_hit(2, a, v); } return; }
+      if (k == 1 && v > lim) || (k == 2 && v < lim) || k == 3 { self.out(); unsafe { guard_hit(2, a, v); } return; }
     }
   }
   // A write into the window: by an instruction the stores' table marks (the hub's header named, below $8000), not
@@ -320,6 +324,16 @@ impl Mach {
     self.store_hit(a, v);
   }
   #[inline(never)] fn store_hit(&mut self, a: u32, v: u32) { self.out(); unsafe { guard_hit(1, a, v); self.ghubk = SI[S_GHUBK]; } }
+  // A read in the window (v, the byte read): by an instruction the loads' table marks (the hub's header named, below
+  // $8000), not in the hub's header's bank, said
+  #[inline(always)] fn load_check(&mut self, a: u32, v: u32, b: u32) -> u32 {
+    let pc = unsafe { (*self.cur).last_pc };
+    if pc >= 0x8000 || self.b(self.gload + (self.t as usize) * 4096 + (pc >> 3) as usize) & (1 << (pc & 7)) == 0 { return v; }
+    if b >= 0xF0 && self.shared_on && (self.u * 16 + (b & 15)) as i32 == self.ghubk { return v; }
+    self.load_hit(a, v);
+    v
+  }
+  #[inline(never)] fn load_hit(&mut self, a: u32, v: u32) { self.out(); unsafe { guard_hit(3, a, v); self.ghubk = SI[S_GHUBK]; } }
 }
 impl Bus for Mach {
   #[inline(always)] fn set_regs(&mut self, c: &Regs) { self.cur = c as *const Regs; }
@@ -331,15 +345,17 @@ impl Bus for Mach {
     }
     if a < 0xA000 {
       let b = self.b(self.tr + (self.t as usize) * 0x8000);
-      if b >= 0xF0 {
-        if !self.shared_on { return a >> 8; }
-        let k = self.u * 16 + (b & 15);
-        self.reach(1, k);
-        return self.b(self.sb + (k as usize) * 0x2000 + (a - 0x8000) as usize);
-      }
-      if b >= self.banks { return a >> 8; }
-      self.reach(0, self.t * 256 + b);
-      return self.b(self.tb + ((self.t * self.banks + b) as usize) * 0x2000 + (a - 0x8000) as usize);
+      let v = if b >= 0xF0 {
+        if !self.shared_on { a >> 8 } else {
+          let k = self.u * 16 + (b & 15);
+          self.reach(1, k);
+          self.b(self.sb + (k as usize) * 0x2000 + (a - 0x8000) as usize)
+        }
+      } else if b >= self.banks { a >> 8 } else {
+        self.reach(0, self.t * 256 + b);
+        self.b(self.tb + ((self.t * self.banks + b) as usize) * 0x2000 + (a - 0x8000) as usize)
+      };
+      return if self.gflags & 8 != 0 { self.load_check(a, v, b) } else { v };
     }
     if a < 0xE000 {
       let r = self.b(self.tr + (self.t as usize) * 0x8000 + 1);
@@ -354,7 +370,7 @@ impl Bus for Mach {
     let v = v & 0xFF;
     if a < 0x8000 {
       if self.rtc && a >= 0x7FF8 && self.t == 15 { self.rtc_write(a, v); return; }
-      if self.gflags & 4 != 0 && (a == self.gw[0] || a == self.gw[1] || a == self.gw[2] || a == self.gw[3]) { self.watch_write(a, v); }
+      if self.gflags & G_WATCHES != 0 && (a == self.gw[0] || a == self.gw[1] || a == self.gw[2] || a == self.gw[3]) { self.watch_write(a, v); }
       self.setb(self.tr + (self.t as usize) * 0x8000 + a as usize, v); return;
     }
     if a < 0xA000 {
@@ -396,11 +412,11 @@ pub extern "C" fn run(skip: u32) -> u32 {
       vec: SI[S_VEC] as usize, flags: SI[S_FLAGS] as usize, banks: SI[S_BANKS] as u32, prom_len: SI[S_PROMLEN] as u32,
       shared_on: false, shared_u: SI[S_SHAREDU] as u32, noshared: SI[S_NOSHARED] != 0, hook: SI[S_HOOK] != 0, rtc: SI[S_RTC] != 0,
       c0: 0, cur: core::ptr::null(),
-      gflags: SI[S_GUARD] as u32, gcode: SI[S_GCODE] as usize, gstore: SI[S_GSTORE] as usize, gwatch: SI[S_GWATCH] as usize,
+      gflags: SI[S_GUARD] as u32, gcode: SI[S_GCODE] as usize, gstore: SI[S_GSTORE] as usize, gload: SI[S_GLOAD] as usize, gwatch: SI[S_GWATCH] as usize,
       ghubk: SI[S_GHUBK], gw: [0xFFFF_FFFF; 4], gwk: [0; 4],
     };
     m.set_u(SI[S_REGU] as u32);
-    if m.gflags & 4 != 0 { m.load_watch(); }
+    if m.gflags & G_WATCHES != 0 { m.load_watch(); }
     let gfetch = m.gflags & 1 != 0;
     let regs = Regs { a: SI[S_A] as u32, x: SI[S_X] as u32, y: SI[S_Y] as u32, s: SI[S_S] as u32, p: SI[S_P] as u32, pc: SI[S_PC] as u32,
       cyc: SF[F_CYC] as u64, extra: 0, crossed: 0, last_pc: SI[S_LASTPC] as u32, io_at: SF[F_IOAT] as u64 };

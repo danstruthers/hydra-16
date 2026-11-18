@@ -15,6 +15,10 @@ const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder)
 //          window with the hub in it would (79083a98's crash)
 //   store  one of the world's stores that name the hub's header run with a bank of the world's own that it never
 //          used in the window; the byte it wrote put where it belonged after (79083a98's HUB->ireq.to)
+//   load   one of the world's loads that name the hub's header (an LDA, LDX or LDY) run the same way, its register
+//          and flags made the hub's byte's after (7a65b8eb's HUB->seed); and a read-modify-write that names it (an
+//          INC or a DEC of the main code's: turn's ++HUB->den_go, advance's ++HUB->tick) run the same way, a load and a
+//          store both, the hub's byte stepped after
 //   swap   the swap stack's depth put at its SWDEPTH before sw_call's inc swsp, put right after it
 //   stack  a write of the C library's to cc65's sp's high byte (sta, stx, sty, inc, dec sp+1: its first, crt0's as
 //          the world starts) made to write the page under its floor (the register or the byte put so before it), what
@@ -24,9 +28,9 @@ function dq0GuardsTest() {
   const lines = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T',
     'look', 'turn left', 'inventory', 'step forward', 'look', 'quit', 'echo $status'];
   return {
-    name: 'dq0guards', near: ['dq0'], guards: ['fetch', 'store', 'swap', 'stack'],
+    name: 'dq0guards', near: ['dq0'], guards: ['fetch', 'store', 'load', 'swap', 'stack'],
     scene: false,                                     // (Typed from its start: its stack poke is the world's start's)
-    what: 'The emulator\'s guards (sim/lib/guards.js, GAME-CRITIQUE.md\'s 6.1): in a game at seed 3, the world\'s task made, by pokes that do no harm, to fetch an RTS from the hub\'s header\'s bank, to run a store that names the hub\'s header with a bank of its own in the window, to take its swap stack past its depth and its C stack below its floor: each guard\'s hit heard (noted, not failed), and the game going on to its quit',
+    what: 'The emulator\'s guards (sim/lib/guards.js, GAME-CRITIQUE.md\'s 6.1): in a game at seed 3, the world\'s task made, by pokes that do no harm, to fetch an RTS from the hub\'s header\'s bank, to run a store, a load and a read-modify-write that name the hub\'s header with a bank of its own in the window, to take its swap stack past its depth and its C stack below its floor: each guard\'s hit heard (noted, not failed; the read-modify-write a load and a store both), and the game going on to its quit',
     init: 't_rc', cycles: 1500e6,
     machine: { input: dq0Typed(lines) },
     expect: ['% echo $status'],
@@ -35,6 +39,7 @@ function dq0GuardsTest() {
       const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0w', 'dq0w.lbl'), 'latin1');
       const swCall = parseInt(/^al ([0-9A-F]+) \.sw_call$/m.exec(lbl)[1], 16);
       const stores = new Set(f.stores.main), PLAIN = { 0x8D: 0, 0x8E: 0, 0x8C: 0, 0x9C: 0, 0x9D: 'X', 0x9E: 'X', 0x99: 'Y' };
+      const loads = new Set(f.loads.main.map(e => e[0])), LOADS = { 0xAD: 'A', 0xAE: 'X', 0xAC: 'Y' }, RMW = { 0xEE: 1, 0xCE: -1 };
       const cpu = m.cpu, step = cpu.step.bind(cpu), H = require('../../../games/dq0/hubgen.js').load().C;
       const nameOf = T => { let s = ''; for (let i = 0; i < 16 && m.taskRam[T][0x230 + i]; i++) s += String.fromCharCode(m.taskRam[T][0x230 + i]); return s; };
       let world = -1, incAt = -1;
@@ -82,6 +87,34 @@ function dq0GuardsTest() {
             return out;
           }
         }
+        if (!R.load && loads.has(pc) && LOADS[r[pc]] && header()) {   // (load: a bank of its own, the register
+          let free = -1;                                               //   and flags the hub's byte's after)
+          for (let b = 0x2F; b > 0 && free < 0; b--) if (!m.taskBankMem(world, b)) free = b;
+          if (free > 0) {
+            const { bank } = header(), was = r[0], reg = LOADS[r[pc]], a = r[pc + 1] | r[pc + 2] << 8;
+            r[0] = free;
+            const out = step(v);
+            r[0] = was;
+            R.load = { pc, a, read: cpu[reg], v: bank[a - 0x8000], bank: free };
+            cpu[reg] = bank[a - 0x8000];
+            cpu.P = (cpu.P & ~0x82) | (cpu[reg] & 0x80) | (cpu[reg] ? 0 : 2);
+            return out;
+          }
+        }
+        if (!R.rmw && loads.has(pc) && stores.has(pc) && RMW[r[pc]] && header()) {   // (read-modify-write: the same,
+          let free = -1;                                                             //   the hub's byte stepped after)
+          for (let b = 0x2F; b > 0 && free < 0; b--) if (!m.taskBankMem(world, b)) free = b;
+          if (free > 0) {
+            const { bank } = header(), was = r[0], a = r[pc + 1] | r[pc + 2] << 8, want = (bank[a - 0x8000] + RMW[r[pc]]) & 0xFF;
+            r[0] = free;
+            const out = step(v);
+            r[0] = was;
+            bank[a - 0x8000] = want;
+            cpu.P = (cpu.P & ~0x82) | (want & 0x80) | (want ? 0 : 2);
+            R.rmw = { pc, a, v: want, bank: free };
+            return out;
+          }
+        }
         if (!R.swap && pc === incAt) {                        // (swap: its depth at SWDEPTH as inc swsp runs)
           const was = r[f.swsp];
           r[f.swsp] = f.swdepth;
@@ -114,7 +147,10 @@ function dq0GuardsTest() {
     },
     check(m, out) {
       const f = [], R = this.R, s = dq0Story(out);
-      for (const k of ['fetch', 'store', 'swap', 'stack']) if (!R[k]) f.push('the ' + k + ' poke never made');
+      for (const k of ['fetch', 'store', 'load', 'rmw', 'swap', 'stack']) if (!R[k]) f.push('the ' + k + ' poke never made');
+      const hits = m.guard ? m.guard.hits() : null, at = p => '$' + p.toString(16).toUpperCase().padStart(4, '0') + ')';   // (sim/test.js's
+      if (hits && R.load && !hits.some(e => e.kind === 'load' && e.text.includes(at(R.load.pc)))) f.push('the load poke not heard');   //   guard;
+      if (hits && R.rmw) for (const k of ['load', 'store']) if (!hits.some(e => e.kind === k && e.text.includes(at(R.rmw.pc)))) f.push('the read-modify-write not heard as a ' + k);   //   GUARDS=0 none)
       if (!/> quit[^%]*% echo \$status/.test(s) || /rc: (look|quit|turn|step): not found/.test(s)) f.push('the game ended before its quit');
       if (!/You carry/.test(s)) f.push('no inventory: the game not unharmed');
       this.notes = ['the pokes: ' + JSON.stringify(R)];

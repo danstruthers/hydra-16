@@ -11,9 +11,9 @@
 // and what happened recorded, the hub's events, replies and state a line at a time (sim/lib/dq0meaning.js: m.dq0, for
 // the tests' meaning checks, tests.js's dq0Turns).
 // The guards in every test (sim/lib/guards.js: an instruction fetched from the bank window with no code there, a write
-// that names the hub's header into another bank, the swap stack and the C stack past their room): the first hit stops
-// the machine, and fails the test.  GUARDS=0: none; GUARDS=note: each hit noted, none stopping the run, and all of them
-// after the tests.
+// or a read that names the hub's header with another bank there, the swap stack and the C stack past their room): the
+// first hit stops the machine, and fails the test.  GUARDS=0: none; GUARDS=note: each hit noted, none stopping the
+// run, and all of them after the tests.
 // RULES=NAME (null ...): the dq0 tests run with that ruleset's referee (games/dq0/RULESETS.md: dq0 -r NAME added to
 // each dq0 line typed), and with no test named, those that are meaning checks (tests.js's meaning: true: their checks
 // what happened, not its words) are the ones run (of --near's, or --changed's, with them).
@@ -139,9 +139,10 @@ function transcript(t, m) {
   catch (e) { console.error('TRANSCRIPTS: ' + t.name + ': ' + e.message); }
 }
 
-// The guards (sim/lib/guards.js: the bank window's code, the hub's header's stores, the swap stack, the C stack), every
-// test's: GUARDS=0 none; GUARDS=note each hit noted, none stopping the run (each a failure still), and after the tests
-// all of them (obj/guards/NAME.json each); else (the default) the first new hit stops the machine there
+// The guards (sim/lib/guards.js: the bank window's code, the hub's header's stores and loads, the swap stack, the C
+// stack), every test's: GUARDS=0 none; GUARDS=note each hit noted, none stopping the run (each a failure still), and
+// after the tests all of them (obj/guards/NAME.json each); else (the default) the first new hit stops the machine
+// there.  The guard is the machine's m.guard too (a test's check: its hits)
 const GUARDS = process.env.GUARDS || '1';
 const guardDir = path.join(ROOT, 'obj', 'guards');
 function guardInstrument(t) {
@@ -152,7 +153,7 @@ function guardInstrument(t) {
     if (GUARDS === 'note') try { fs.mkdirSync(guardDir, { recursive: true }); fs.writeFileSync(path.join(guardDir, t.name + '.json'), JSON.stringify(g.hits())); } catch (e) { /* (No summary) */ }
     return r;
   };
-  return { boot: { guard: g }, attach: mm => g.attach(mm), judge, state: () => g.state(), restore: s => g.restore(s) };
+  return { boot: { guard: g }, attach: mm => { g.attach(mm); mm.guard = g; }, judge, state: () => g.state(), restore: s => g.restore(s) };
 }
 
 // The hub writers' check, a dq0 test's (HUBOWN=0: none): its violations each in obj/hubown/NAME.json, for the summary

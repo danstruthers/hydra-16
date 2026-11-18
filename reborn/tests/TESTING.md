@@ -88,6 +88,12 @@ machine at once, and the test fails with the hit's words (the task, its program,
   kernel's code cache (a child, a bank program run in place).
 - **store**: a store that names the hub's header (a C line's `HUB->`, or a hub macro; an assembly line's hub offset)
   writing into a bank other than the header's.
+- **load**: a load that names the hub's header (the same lines: a load, a compare, a sum or a BIT, plain or indexed)
+  reading a bank other than the header's; a read-modify-write (`++HUB->x`) is a load and a store. The byte read must
+  be in a field of the header its line names (`HUB->pc_x`: pc_x's two bytes; a macro, the fields its body names), so
+  a line that names the hub and reads another bank's bytes on purpose (a chunk's, an item's) isn't taken for a read
+  of the hub. A line in an overlay's code (run in the window) that names the hub's header can't be right: it's said
+  as the instruction's fetched. The hit names the C line and the calls that reached it.
 - **swap**: the swap stack past its `SWDEPTH` (swap.inc's `swsp`), the overlay calls' past `DEPTH` (bank.s's `ovsp`).
 - **stack**: cc65's C stack pointer below its floor (the swap area's top, or the BSS's end).
 
@@ -95,7 +101,7 @@ What each program has comes from the build's outputs (its map, labels, link conf
 cached beside its map as `NAME.guards.json`. `KNOWN` in guards.js lists what's taken as it is, each with its reason
 (hylang runs the code it compiles in its own banks). `GUARDS=0` turns them off; `GUARDS=note` notes every hit
 without stopping, and lists them all after the tests; `GUARDS_FLAGS=N` keeps only some (1 fetch, 2 store, 4 the
-stacks). dq0guards makes each guard fire on purpose.
+stacks, 8 load). dq0guards makes each guard fire on purpose.
 
 **What fails the suite, and what's a trend** (the user's, 2026-11-17). The suite fails on the user's targets (D17,
 rethought 2026-11-17: games/dq0/built/2026-11-17-d17.md), the RAM floors (the build's) and a silent start. The
