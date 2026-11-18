@@ -35,6 +35,9 @@ struct msg bev;
 unsigned char bleeds;
 unsigned bled_at;
 
+extern struct ireq iq;                          /* (things.c's: the request's copy; a denizen's FE_EMPTY, FE_PLACE put in it) */
+unsigned char handout (void);                   /* (Part 111's: wempty.c, the empty and the place, every actor's) */
+
 #pragma code-name ("SW14CODE")
 #pragma rodata-name ("SW14RODATA")
 
@@ -309,10 +312,16 @@ void s_den_intents (void)
             bd.ready += bd.step;                /* (Its two squares at a jog) */
             told_den (I_GOTO_HEARD (m), I_GOTO_LOUD (m));
             break;
+        case I_ROB:
+            if (I_ROB_ERRAND (m) >= FE_EMPTY) { /* (Its thing's things put out, a thing put down on a square: the */
+                iq.kind = 0;                    /*   character's own code, wempty.c's, P4's and P5's, 2026-11-18: */
+                iq.item = (unsigned) &m;        /*   the intent its to read) */
+                handout ();
+                break;
+            }
         case I_RISE:                            /* (Its position, its mind's: part 80's, part 14's room, 2026-11-03) */
         case I_CLIMB:                           /* (The rarer: an ally come along with the character; a robbery; */
-        case I_ROB:                             /*   a door worked, the character's code, a thing taken, Phase 3C's: */
-        case I_PORTAL:                          /*   part 80's) */
+        case I_PORTAL:                          /*   a door worked, the character's code, a thing taken, Phase 3C's: part 80's) */
         case I_TAKE:
             den_more (&m);
             break;

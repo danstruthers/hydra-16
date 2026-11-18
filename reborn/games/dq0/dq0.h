@@ -637,6 +637,9 @@ unsigned char __fastcall__ feature (unsigned char obj, unsigned char how);   /* 
 #define FW_NONE         0x1F                    /*   no first words: else walk_says' PA_* + 1, W_*, 0 its own) */
 void __fastcall__ search_said (const struct msg* m);   /* (A room searched whole's, as it goes: an E_BEAT's WB_SEARCH) */
 unsigned char __fastcall__ place_go (const struct cmd* c);   /* Part 7: a place in the room walked to */                  /* Part 7: a command's thing out of reach walked over to first */
+#define PQ_NONE     0xFFFFu                     /* (tx as place_go asks sway.c's place_said for its square: none */
+#define PQ_TOLD     0xFFFEu                     /*   such place; not in a room, told; */
+#define PQ_DARK     0xFFFDu                     /*   in the dark: straight on.  Else tx, ty the square, P5's, 2026-11-18) */
 void __fastcall__ took_up (unsigned r);         /* Part 2: a thing taken up, or not, told (an E_TAKEN's: IR_*, the
                                                 **   light before times 256) */
 enum { NL_NONE, NL_DONE, NL_DEN };

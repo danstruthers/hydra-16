@@ -16,6 +16,7 @@ const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their f
 const TORCHX = ['inventory', 'drop torch', 'take torch', 'inventory', 'wait 2 hours', 'light a new torch', 'take the spent torch from the ground', 'drop the spent torch',
   'drop the lit torch', 'take the spent torch from the floor', 'drop torch', 'take the lit torch', 'hold the tinderbox', 'take torch', 'inventory', 'douse the torch', 'light the torch',
   'inventory', 'take spent torch from backpack', 'put the rope in the backpack', 'put the tinderbox in the backpack', 'dip the spent torch in the oil', 'inventory'];   // (dq0torchwords' lines: the user's playtest, 2026-11-06)
+const EMPTYPLACE = ['drop the chest', 'drop the table', 'unlock the chest with the lockpicks', 'put the key in the sack', 'empty the sack', 'empty the sack', 'take the key', 'put the key in the sack', 'empty the sack onto the table', 'open the flask of oil', 'empty the flask of oil', 'empty the torch', 'take the key from the table', 'put the key in the sack', 'tie the sack', 'empty the sack', 'untie the sack', 'take the key from the sack', 'put the key in the corner', 'put the dagger in the middle of the room', 'put the key on the ledge', 'look'];   // (dq0emptyplace's: P4, P5, P6, 2026-11-18)
 const LETSIGHT = ['drop j', 'drop c', 'drop b', 'look', 'around', 'take 5F', 'drop c', 'around', 'take 2F', 'drop rations', 'take torch from E', 'drop k',
   'take G', 'around', 'inventory'];   // (dq0letsight's lines: the rats seen first, A, B, C, 2026-11-06's step 4)
 const LETCMD = ['inventory', 'drop j', 'inventory', 'take torch', 'put j in b', 'inventory', 'take j from b', 'light j with a', 'drop 2c', 'look d',
@@ -2635,6 +2636,33 @@ module.exports = {
         const f = [], a = out.indexOf('% dq0 -p t -s 3 -c /ram/c.hm'), b = out.indexOf('% dq0 -p t -s 3 -c /ram/w.hm');
         if (!/It's a heavy one/.test(out.slice(a, b))) f.push('the strong character\'s knife not heavy');
         if (!/It's a light one/.test(out.slice(b))) f.push('the weak character\'s knife not light');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0emptyplace', near: ['gear'], what: 'Dingus Quest Zero\'s empty, place and named tool (the user\'s P4, P5, P6, 2026-11-18): at seed 3 (-T, a kit of a chest, its key, the lockpicks, a sack and a table) "unlock the chest with the lockpicks" picks it though its key fits, plain "unlock" its key; "empty the sack" puts its things down at the feet, empty again "The sack is empty.", onto the table put on it, a flask\'s oil poured away, a torch refused, a sack tied refused; "put the key in the corner" walks there and puts it down on that square, "in the middle of the room" the same, no ledge here told',
+      init: 't_rc', cycles: 600e6 + EMPTYPLACE.length * 150e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k \'chest,key,lockpicks,sack,table\'', ...EMPTYPLACE, 'quit', 'echo $status']) },
+      start(m) { this.timer = dq0Timer(m); },
+      expect: ['% echo $status'],
+      check(m) {
+        const A = dq0Answers(m.out), f = [], a = (l, n = 0) => (A.filter(x => x.cmd === l)[n] || { text: '(no answer)' }).text;
+        if (process.env.DQ0_EMPTY) for (const x of A) console.error(x.cmd + ' => ' + x.text);
+        const want = (l, re, why, n) => { if (!re.test(a(l, n))) f.push('"' + l + '" ' + why + ': ' + a(l, n).slice(0, 200)); };
+        want('unlock the chest with the lockpicks', /You set to picking the lock\./, 'not picked (P6: the named tool wins)');
+        if (/with its key/.test(a('unlock the chest with the lockpicks'))) f.push('"unlock the chest with the lockpicks": its key used');
+        want('empty the sack', /You empty the sack out at your feet\./, 'not emptied at its feet');
+        want('empty the sack', /The sack is empty\./, 'not told empty', 1);
+        want('empty the sack onto the table', /You empty the sack onto the table\./, 'not emptied onto the table');
+        want('empty the flask of oil', /You pour the oil out of the flask of oil\./, 'its oil not poured away');
+        want('empty the torch', /The torch isn't a thing to empty\./, 'not refused');
+        want('empty the sack', /The sack is closed\./, 'a tied sack not refused', 2);
+        want('put the key in the corner', /You put the iron key in the corner\./, 'not put in the corner');
+        want('put the dagger in the middle of the room', /^You set off across the room\..*You put the dagger in the middle\./,
+          'not walked there and put in the middle');
+        want('put the key on the ledge', /You haven't seen a ledge here\./, 'no ledge not told');
         return f;
       },
       sdcard: true

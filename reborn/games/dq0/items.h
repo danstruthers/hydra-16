@@ -526,6 +526,24 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   water: the flux's).  dq0w/wdrag.c's, the verbs plan's B4 */
 enum { DG_PUSH, DG_PULL, DG_TASTE };
 #define DRAG_BULK      40                      /* (Pints: a thing that big is shoved, not carried about: furniture) */
+#define IO_EMPTY        (IO_BAR + 20)           /* A thing's things put out (P4, the user's, 2026-11-18): name the thing
+                                                **   (carried, or within reach), into the other (to 1, a surface: onto it)
+                                                **   or none, down at the character's feet; a liquid in it poured away
+                                                **   (a flask's oil too); its words in things_text, its time in x, a
+                                                **   take's moment a thing; IR_NOT_HERE out of reach (where it lies in x,
+                                                **   y), IR_NO refused (not a thing that holds things, closed, locked,
+                                                **   nothing in it; the other one that holds nothing, closed, no room
+                                                **   in it), IR_NONE none.  dq0w/wempty.c's, every actor's: to TO_DEN,
+                                                **   body bd's own thing item (I_ROB's FE_EMPTY) */
+#define IO_PLACE        (IO_BAR + 21)           /* A thing carried (name) put down on square x, y within reach (P5,
+                                                **   2026-11-18: "put the key in the corner"), qty the place's words
+                                                **   (PW_*: "in the corner"); out of reach, IR_NOT_HERE, the square in x, y (the
+                                                **   UI walks there first); a square nothing rests on, IR_NO.  dq0w/
+                                                **   wempty.c's, every actor's: to TO_DEN, body bd's own thing item on
+                                                **   square x, y (I_ROB's FE_PLACE) */
+#define TO_DEN          0x80                    /* (IO_EMPTY's and IO_PLACE's to: a denizen's, body bd's: wbody.c's) */
+enum { PW_DOWN, PW_CORNER, PW_MIDDLE, PW_FAR, PW_NEAR, PW_LEFT, PW_RIGHT, PW_LEDGE, PW_PASSAGE };   /* (IO_PLACE's qty:
+                                                **   the place's words, "in the corner", "on the far side": wempty.c's) */
 enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS, LM_KIT, LM_GO, LM_ROPES };   /* (IO_LOOK's: a look at it; a closer look; its
                                                 **   condition; its weight; its lock; gone over for traps; LM_KIT the
                                                 **   world's own, the character's things kept, kit.dat: slice 4.4's; LM_GO, gone to, walking there) */

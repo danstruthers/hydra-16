@@ -202,8 +202,10 @@ static const struct row rows[NACTIONS] = {
     ROW (VB_TRADE, H_GIVE, 0),
     ROWR (VB_TIE_OBJECT, H_TIE, TK_ONTO, 0, U_CANT, M_NONE),
     ROWR (VB_UNTIE_OBJECT, H_TIE, 0, 0, U_CANT, M_NONE),
-    ROWP (VB_RIP_OBJECT, H_HANDLE, 0, 0, U_CANT, M_NONE, IO_RIP)     /* (A cloth torn up, washed: the things' IO_RIP, IO_WASH,
+    ROWP (VB_RIP_OBJECT, H_HANDLE, 0, 0, U_CANT, M_NONE, IO_RIP),    /* (A cloth torn up, washed: the things' IO_RIP, IO_WASH,
                                                 **   hthings.c's; HOUSE.md's bandages, 2026-11-10) */
+    ROWP (VB_EMPTY_OBJECT, H_HANDLE, TK_ONTO, 0, 0, M_NONE, IO_EMPTY)    /* (A thing's things put out: the things' IO_EMPTY,
+                                                **   dq0w/wempty.c's, the user's P4, 2026-11-18) */
 };
 
 /* Verb a's row: its handler, its takes times 256 (one past the table: none's); its request put in the command's aux,

@@ -2726,83 +2726,26 @@ unsigned char __fastcall__ s_feature (unsigned char obj, unsigned char how)
 #pragma code-name (push, "SW7CODE")
 #pragma rodata-name (push, "SW7RODATA")
 
-/* A place in the room the character's in (HOUSE.md's going places), by its facing alone: the centre (the middle); a
-** side, the far one (the other side, the far end, the wall ahead) unless it says which (near, left, right, the way it
-** lies); a corner ("the far left corner"; unsaid, the nearest).  The square there walked to (I_GOTO, a 1: the nearest
-** the way reaches, a cave's rock about it); 1 if it's such a place (walked, or told why not), 0 if it isn't one */
+/* A place in the room the character's in (its square: sway.c's place_said, overlay 14's place_sq, P5's puts there too,
+** 2026-11-18): the square there walked to (I_GOTO, a 1: the nearest the way reaches, a cave's rock about it); in the
+** dark, straight on; 1 if it's such a place (walked, or told why not), 0 if it isn't one.  (c: the command, cmd) */
 unsigned char __fastcall__ s_place_go (const struct cmd* c)
 {
-    signed char a, b, fa, ra;
-    unsigned char k, l, q, fy;
-    unsigned x0, x1, y0, y1, px, py, f0, f1, r0, r1, fc, rc;
-    struct sight* s;
-    const char* w = cl;                         /* (Its words: the line's, "the near side" the parser's how) */
+    const struct sight* s;
 
-    k = c->obj.kind;
-    if (k == OB_ROOM) {                         /* ("The centre of the room": the place, not the room) */
-        k = strstr (w, "corner") ? OB_CORNER : strstr (w, "cent") || strstr (w, "middle") ? OB_CENTRE : OB_SIDE;   /* (Its
-                                                **   far side: "the far end of the room", "cross the room") */
-    }
-    if (k != OB_CENTRE && k != OB_SIDE && k != OB_CORNER && k != OB_WALL) {
-        return 0;
-    }
-    s = sight_get ();
-    if (s->where != W_ROOM || s->dark) {
-        if (k == OB_CORNER || k == OB_WALL) {
-            return 0;                           /* (A passage's corner, a wall: as ever) */
-        }
-        if (s->dark) {
+    tx = PQ_NONE;
+    place_said ();
+    if (tx >= PQ_DARK) {
+        if (tx == PQ_DARK) {
             intend_a = pc_face;                 /* (A place it can't see: straight on) */
             intend2 (I_GO, 0, 0);
-            return 1;
         }
-        msg ("You aren't in a room.");
-        return 1;
+        return tx != PQ_NONE;
     }
-    a = b = 2;
-    if (k == OB_CENTRE) {
-        a = b = 0;
-    }
-    a = strstr (w, "far") || strstr (w, "other") || strstr (w, "opposite") ? 1 : strstr (w, "near") ? -1 : a;
-    b = strstr (w, "left") ? -1 : strstr (w, "right") ? 1 : b;
-    l = c->obj.lies != 0xFF ? c->obj.lies : c->dir <= H_NW && a == 2 && b == 2 ? c->dir : 0xFF;
-    if (l != 0xFF) {
-        l = l & CQ_REL ? l & 7 : (l - pc_face) & 7;    /* (As it faces) */
-        a = l == 7 || l <= 1 ? 1 : l >= 3 && l <= 5 ? -1 : a;
-        b = l >= 1 && l <= 3 ? 1 : l >= 5 ? -1 : b;
-    }
-    if (k != OB_CORNER && a == 2 && b == 2) {
-        a = 1;                                  /* (A side, a wall: the far one) */
-    }
-    x0 = s->rx;
-    x1 = s->rx + s->rw - 1;
-    y0 = s->ry;
-    y1 = s->ry + s->rh - 1;
-    px = s->x;
-    py = s->y;
-    q = ((pc_face + 1) & 7) >> 1;               /* (The nearest of the four it faces: its ahead and its right) */
-    fy = !(q & 1);                              /* (Ahead along y: facing north or south) */
-    fa = q == 1 || q == 2 ? 1 : -1;             /* (Ahead the way x or y grows) */
-    ra = q <= 1 ? 1 : -1;                       /* (Its right the way the other grows) */
-    f0 = fy ? y0 : x0;
-    f1 = fy ? y1 : x1;
-    r0 = fy ? x0 : y0;
-    r1 = fy ? x1 : y1;
-    fc = fy ? py : px;
-    rc = fy ? px : py;
-    if (k == OB_CORNER) {                       /* (Unsaid: the nearer end each way) */
-        if (a == 2) {
-            a = (fa > 0 ? f1 - fc <= fc - f0 : fc - f0 <= f1 - fc) ? 1 : -1;
-        }
-        if (b == 2) {
-            b = (ra > 0 ? r1 - rc <= rc - r0 : rc - r0 <= r1 - rc) ? 1 : -1;
-        }
-    }
-    fc = a == 2 ? fc : !a ? f0 + (f1 - f0) / 2 : a * fa > 0 ? f1 : f0;   /* (Not (f0 + f1) / 2: the frame's squares near */
-    rc = b == 2 ? rc : !b ? r0 + (r1 - r0) / 2 : b * ra > 0 ? r1 : r0;   /*   $8000, a sum past 16 bits) */
-    I_GOTO_X (pm) = fy ? rc : fc;
-    I_GOTO_Y (pm) = fy ? fc : rc;
-    if (I_GOTO_X (pm) == px && I_GOTO_Y (pm) == py) {
+    s = sight_get ();
+    I_GOTO_X (pm) = tx;
+    I_GOTO_Y (pm) = ty;
+    if (tx == s->x && ty == s->y) {
         msg ("You're there already.");
         return 1;
     }

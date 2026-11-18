@@ -214,6 +214,7 @@ watchstars  alone=VB_WAIT thing=VB_WAIT unsaid=none task=LT_WAIT aux=30   #   "t
 fastcharge  alone=VB_CHARGE aux=1                                    # (A sprint at the foe, not a run: "fast charge")
 yell        alone=VB_SAY thing=VB_SAY aux=6                          # (Its loudness: a yell's; a whisper's; say's 0, the
 whisper     alone=VB_SAY thing=VB_SAY aux=1                          #   speech's, 3)
+empty       thing=VB_EMPTY_OBJECT unsaid=last aux=IO_EMPTY           # (Its things put out, a liquid poured away: P4, 2026-11-18)
 
 [words]
 change facing = face
@@ -652,6 +653,12 @@ change my dressing = retend
 change bandage = retend
 change bandages = retend
 change dressing = retend
+empty = empty
+empty out = empty
+tip out = empty
+pour out = empty
+dump = empty
+dump out = empty
 
 [turns]
 look floor = floorlook

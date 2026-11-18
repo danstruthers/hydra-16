@@ -27,7 +27,7 @@
                    | <knock-out> | <engage> | <disengage> | <pass>
                    | <pray> | <intervene> | <invoke> | <learn-invocation> | <fasting>
                    | <memorize> | <unmemorize> | <learn-spell> | <research> | <dispel> | <counter> | <release>
-                   | <talent> | <possess> | <link-mind> | <activate> | <baptise>
+                   | <talent> | <possess> | <link-mind> | <activate> | <baptise> | <empty>
                    | <talk>
                    | <sit-on>
                    | <intimidate> | <order> | <persuade> | <orate> | <negotiate> | <fast-talk> | <taunt> | <judge>
@@ -72,6 +72,7 @@
                                                  "drop the dagger on the table": put on it, "on the floor" put down,
                                                  "on the stairs" placed there (2026-11-17) *)
 <put>            ::= <PUT> <object> <hand-phrase:hand> | <PUT> <object> <worn-phrase:worn> | <PUT> <object> <put-prep:other> <object:other>   (* "put the bar back in its brackets": back, a way, passed over; "put the dagger in my other hand": held there (slice 4.1b) *)
+<empty>          ::= <EMPTY> <object> [ "out" ] [ <put-prep:other> <object:other> ]   (* "empty the sack", "empty the sack onto the table": its things put out, here or on the other, a liquid poured away (the user's P4, 2026-11-18) *)
 <put-prep>       ::= "in" | "into" | "inside" | "on" | "onto" | "on top of" | "under" | "against" | "down"   (* "down the shaft": in it, 2026-11-06 *)
 <use>            ::= <USE> <object> [ ( "on" | "with" ) <object:other> ]
 <equip>          ::= <EQUIP> [ <object> ] [ <hand-phrase:hand> | <worn-phrase:worn> ]   (* bare: the last thing named; "wield the sword in my left hand"; "wear the ring on my left hand" *)
@@ -227,6 +228,7 @@
 <GET>        ::= "get" | "take" | "pick up" | "pick"
 <DROP>       ::= "drop" | "put down" | "shrug off"
 <PUT>        ::= "put" | "place"
+<EMPTY>      ::= "empty" | "empty out" | "tip out" | "pour out" | "dump" | "dump out"
 <USE>        ::= "use" | "make use of"
 <EQUIP>      ::= "equip" | "put on"
 <UNEQUIP>    ::= "doff" | "take off" | "put away"

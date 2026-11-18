@@ -1212,10 +1212,14 @@ struct actor {
 enum { FE_ROB, FE_TAKE, FE_GIVE, FE_GIFT,       /* (I_ROB's a: a robbery; an ally's fetching, the thing (t) taken up
                                                 **   where it lies (w1, w2), handed to the character; a gift, the
                                                 **   character's thing (t) taken by the actor: slice 4.8's) */
-       FE_DROP, FE_PASS, FE_THROW };            /* (Phase 3C's one path, the things' rest, 2026-11-04: what it holds, no
+       FE_DROP, FE_PASS, FE_THROW,              /* (Phase 3C's one path, the things' rest, 2026-11-04: what it holds, no
                                                 **   weapon, no light, let fall where it stands, no time; the food it holds
                                                 **   handed to actor b less 1, beside it; thing t thrown at the character,
                                                 **   by the character's throw: wtake.c's) */
+       FE_EMPTY, FE_PLACE };                    /* (P4, P5, 2026-11-18, the character's own: its thing t's things put
+                                                **   out at its feet, a liquid poured away; thing t put down on square w1,
+                                                **   w2 within its reach: wempty.c's, I_ROB:fetch's fields; no mind
+                                                **   posts them yet) */
 enum { FT_TOOK, FT_GAVE, FT_GONE, FT_HEAVY, FT_HANDS, FT_FEET, FT_GOT, FT_FAR };   /* (E_TASK TE_FETCHED's b's high
                                                 **   bits: taken up, handed over, gone from where it lay, too heavy
                                                 **   for it, its hands full, set down at the character's feet (its own

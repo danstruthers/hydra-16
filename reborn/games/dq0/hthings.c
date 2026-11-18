@@ -40,6 +40,9 @@ void __fastcall__ s_handle (unsigned char op, const char* x, const char* y, unsi
 
     strcpy (HUB->ireq.into, y);
     HUB->ireq.to = on | shand;                  /* (A hold's: the hand said, slice 4.1b's) */
+    HUB->ireq.x = cmd.other.x;                  /* (A place's square and its words' number: IO_PLACE's, sway.c's */
+    HUB->ireq.y = cmd.other.y;                  /*   place_said, P5's) */
+    HUB->ireq.qty = cmd.other.n;
     if (things (op | IO_STEPS | IO_GO, x) == IR_GONE) {
         return;                                 /* (Out of reach: walked over to it first, then again; stowed: where,
                                                 **   asked) */

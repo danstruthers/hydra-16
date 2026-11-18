@@ -257,6 +257,16 @@ void __fastcall__ o_walk_says (const char* name)
 {
     unsigned char k = cmd.obj.kind;
 
+    if (cmd.aux == IO_PLACE && !name) {         /* (A thing put in a place, walked there first: the place's words, not */
+        if (!worded) {                          /*   the thing's, P5's, 2026-11-18) */
+            worded = 1;
+            msg (cmd.other.n == PW_LEDGE ? "You go over to the ledge." : cmd.other.n == PW_PASSAGE ?
+                "You go over to the passage." : "You set off across the room.");
+            t_flush ();
+        }
+        placing = 1;
+        return;
+    }
     if (name && (unsigned) name < W_MAX) {
         if ((unsigned) name < W_CLOSE) {
             first_word ((unsigned char) name);
@@ -734,6 +744,128 @@ told:
 /* A place said where a thing's other would be ("take the torch from the floor", "put it on the ground": the user's
 ** playtest, 2026-11-06, "You see no floor here"): where things lie about, not a thing: taken up, put down, of those lying
 ** there (the world's chooser leaves out those carried).  Overlay 14's since 2026-11-06 (overlay 20's room) */
+/* A place in the room the character's in (HOUSE.md's going places), by its facing alone: the centre (the middle); a
+** side, the far one (the other side, the far end, the wall ahead) unless it says which (near, left, right, the way it
+** lies); a corner ("the far left corner"; unsaid, the nearest).  Thing o's (cmd.obj's, a move's: place_go's; cmd.other's,
+** a put's).  OUT: 2, its square in tx, ty (the nearest the way reaches, a cave's rock about it, the world's walk's); 1, not
+** in a room (told); 3, in the dark (a move straight on, place_go's); 0, not such a place.  (Part 7's place_go's till
+** 2026-11-18: P5's put there too) */
+static unsigned char __fastcall__ place_sq (const struct cthing* o)
+{
+    signed char a, b, fa, ra;
+    unsigned char k, l, q, fy;
+    unsigned x0, x1, y0, y1, px, py, f0, f1, r0, r1, fc, rc;
+    const struct sight* s;
+    const char* w = cl;                         /* (Its words: the line's, "the near side" the parser's how) */
+
+    k = o->kind;
+    if (k == OB_ROOM) {                         /* ("The centre of the room": the place, not the room) */
+        k = strstr (w, "corner") ? OB_CORNER : strstr (w, "cent") || strstr (w, "middle") ? OB_CENTRE : OB_SIDE;   /* (Its
+                                                **   far side: "the far end of the room", "cross the room") */
+    }
+    if (k != OB_CENTRE && k != OB_SIDE && k != OB_CORNER && k != OB_WALL) {
+        return 0;
+    }
+    s = sight_get ();
+    if (s->where != W_ROOM || s->dark) {
+        if (k == OB_CORNER || k == OB_WALL) {
+            return 0;                           /* (A passage's corner, a wall: as ever) */
+        }
+        if (s->dark) {
+            return 3;
+        }
+        msg ("You aren't in a room.");
+        return 1;
+    }
+    a = b = 2;
+    if (k == OB_CENTRE) {
+        a = b = 0;
+    }
+    a = strstr (w, "far") || strstr (w, "other") || strstr (w, "opposite") ? 1 : strstr (w, "near") ? -1 : a;
+    b = strstr (w, "left") ? -1 : strstr (w, "right") ? 1 : b;
+    l = o->lies != 0xFF ? o->lies : cmd.dir <= H_NW && a == 2 && b == 2 ? cmd.dir : 0xFF;
+    if (l != 0xFF) {
+        l = l & CQ_REL ? l & 7 : (l - pc_face) & 7;    /* (As it faces) */
+        a = l == 7 || l <= 1 ? 1 : l >= 3 && l <= 5 ? -1 : a;
+        b = l >= 1 && l <= 3 ? 1 : l >= 5 ? -1 : b;
+    }
+    if (k != OB_CORNER && a == 2 && b == 2) {
+        a = 1;                                  /* (A side, a wall: the far one) */
+    }
+    x0 = s->rx;
+    x1 = s->rx + s->rw - 1;
+    y0 = s->ry;
+    y1 = s->ry + s->rh - 1;
+    px = s->x;
+    py = s->y;
+    q = ((pc_face + 1) & 7) >> 1;               /* (The nearest of the four it faces: its ahead and its right) */
+    fy = !(q & 1);                              /* (Ahead along y: facing north or south) */
+    fa = q == 1 || q == 2 ? 1 : -1;             /* (Ahead the way x or y grows) */
+    ra = q <= 1 ? 1 : -1;                       /* (Its right the way the other grows) */
+    f0 = fy ? y0 : x0;
+    f1 = fy ? y1 : x1;
+    r0 = fy ? x0 : y0;
+    r1 = fy ? x1 : y1;
+    fc = fy ? py : px;
+    rc = fy ? px : py;
+    if (k == OB_CORNER) {                       /* (Unsaid: the nearer end each way) */
+        if (a == 2) {
+            a = (fa > 0 ? f1 - fc <= fc - f0 : fc - f0 <= f1 - fc) ? 1 : -1;
+        }
+        if (b == 2) {
+            b = (ra > 0 ? r1 - rc <= rc - r0 : rc - r0 <= r1 - rc) ? 1 : -1;
+        }
+    }
+    fc = a == 2 ? fc : !a ? f0 + (f1 - f0) / 2 : a * fa > 0 ? f1 : f0;   /* (Not (f0 + f1) / 2: the frame's squares near */
+    rc = b == 2 ? rc : !b ? r0 + (r1 - r0) / 2 : b * ra > 0 ? r1 : r0;   /*   $8000, a sum past 16 bits) */
+    tx = fy ? rc : fc;
+    ty = fy ? fc : rc;
+    return 2;
+}
+
+/* A thing put on a ledge, in a corner, the centre, a side or a passage (P5, the user's, 2026-11-18: walked there and
+** put down on that square): its square found (a corner, the centre, a side: place_sq's; a ledge, a passage: pick's,
+** which asked of several), the command made a put by the things' IO_PLACE (the put's handle: hthings.c's s_handle sends
+** cmd.other's square and its words' number, PW_*, the world's), the place no other thing (no refusal of it, no thing
+** looked for); not found, told, the command left be (CF_ASKED's, resolve's).  1 if it was such a put */
+static unsigned char place_put (void)
+{
+    unsigned char k = cmd.other.kind, r, n;
+    const char* w = cl;
+
+    if ((cmd.action != VB_PUT_OBJECT && cmd.action != VB_DROP_OBJECT) || cmd.aux == IO_PLACE ||
+        (k != OB_LEDGE && k != OB_PASSAGE && k != OB_CORNER && k != OB_CENTRE && k != OB_SIDE &&
+        (k != OB_ROOM || !(strstr (w, "corner") || strstr (w, "cent") || strstr (w, "middle") || strstr (w, "side") ||
+        strstr (w, "end"))))) {
+        return 0;
+    }
+    if (k == OB_LEDGE || k == OB_PASSAGE) {
+        r = pick (k | PICK_TELL, cmd.other.lies) == 1;
+        n = k == OB_LEDGE ? PW_LEDGE : PW_PASSAGE;
+    } else {
+        if ((r = place_sq (&cmd.other)) == 3) {
+            msg ("You can't see where, in the dark.");
+        }
+        r = r == 2;
+        n = strstr (w, "corner") ? PW_CORNER : strstr (w, "cent") || strstr (w, "middle") ? PW_MIDDLE :
+            strstr (w, "left") ? PW_LEFT : strstr (w, "right") ? PW_RIGHT : strstr (w, "near") ? PW_NEAR : PW_FAR;
+    }
+    if (!r) {
+        cmd.flags |= CF_ASKED;                  /* (None there, which asked, in the dark, not in a room: told) */
+        return 1;
+    }
+    cmd.action = VB_PUT_OBJECT;
+    cmd.aux = IO_PLACE;
+    cmd.prep = PR_NONE;
+    cmd.other.kind = cmd.other.sel = 0;
+    cmd.other.word[0] = 0;
+    cmd.other.lies = 0xFF;
+    cmd.other.x = tx;
+    cmd.other.y = ty;
+    cmd.other.n = n;
+    return 1;
+}
+
 void worn_said (void);                          /* (worn.c's: a place on the body, "on my left hand", 2026-11-10) */
 void o_place_said (void)
 {
@@ -741,7 +873,16 @@ void o_place_said (void)
     const struct sight* s;
     unsigned char k;
 
+    if (tx == PQ_NONE) {                        /* (place_go's, a move's: the place cmd.obj names, its square) */
+        if ((k = place_sq (&cmd.obj)) != 2) {
+            tx = k == 1 ? PQ_TOLD : k == 3 ? PQ_DARK : PQ_NONE;
+        }
+        return;
+    }
     worn_said ();
+    if (place_put ()) {
+        return;                                 /* (A thing put in a place in the room, on a ledge, in a passage: P5's) */
+    }
     if (cmd.other.kind == OB_STAIRS && cmd.prep == PR_ON && (cmd.action == VB_PUT_OBJECT || cmd.action == VB_DROP_OBJECT)) {
         cmd.action = VB_DROP_OBJECT;            /* (On the stairs: placed there, put down on its own square, the user's,
                                                 **   2026-11-17; its stairway elsewhere, out of reach: told, the command

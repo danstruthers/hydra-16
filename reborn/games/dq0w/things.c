@@ -2462,6 +2462,7 @@ static unsigned __fastcall__ held_lit (void)
 
 static unsigned char o_handle (void);
 unsigned char drag (void);                      /* (Part 109's: wdrag.c, IO_DRAG) */
+unsigned char handout (void);                   /* (Part 111's: wempty.c, IO_EMPTY, IO_PLACE) */
 unsigned char s_serve (void)
 {
     unsigned char changed = 0, k;
@@ -2543,6 +2544,10 @@ unsigned char s_serve (void)
         break;
     case IO_DRAG:                               /* (A heavy thing shoved, dragged; a thing tasted: part 109's, wdrag.c) */
         changed = (iq.result = drag ()) == IR_OK && iq.to != DG_TASTE;
+        break;
+    case IO_EMPTY:                              /* (A thing's things put out, a thing put down on a square: part 111's, */
+    case IO_PLACE:                              /*   wempty.c, every actor's: P4, P5, 2026-11-18) */
+        changed = (iq.result = handout ()) == IR_OK;
         break;
     case IO_USE:                                /* (A thing used up by its key: a bandage, first aid's, part 70's; by the
                                                 **   steps, got out for its use, a tool's, part 85's: IR_NO a step first) */
@@ -2634,7 +2639,7 @@ unsigned char s_serve (void)
         break;
     }
     if (iq.result != IR_NOT_HERE && (iq.kind == IO_KIT || iq.kind == IO_GET || iq.kind == IO_DROP || iq.kind == IO_HIDE ||
-        iq.kind == IO_THROW || (iq.kind >= IO_HOLD && iq.kind <= IO_NAME))) {   /* (Out of reach: nothing's moved yet) */
+        iq.kind == IO_THROW || iq.kind == IO_PLACE || iq.kind == IO_EMPTY || (iq.kind >= IO_HOLD && iq.kind <= IO_NAME))) {   /* (Out of reach: nothing's moved yet) */
         s_light_now ();                         /* (Its light: what it holds lit) */
         changed |= iq.result == IR_OK;
     } else if (iq.result == IR_OK && (iq.kind == IO_FILL || iq.kind == IO_SHUT || iq.kind == IO_USE)) {
