@@ -392,16 +392,19 @@ function scan(toks, w, face = 0, lab = null) {
 }
 
 // The tables dq0c's meaning reads (cmdmean.s), its part of dq0c.dat (in a bank of dq0c's own): magic "DQ0W", version
-// 4; the constants it needs (CONSTANTS' values, a byte each: a verb's its number); the dictionary's entry count (the
+// 5; the constants it needs (CONSTANTS' values, a byte each: a verb's its number); the dictionary's entry count (the
 // index's, u16), and a byte an entry: its record (0: none, no word of the game's); then a byte an entry: the verb it
 // is, alone (0: none; not in its record, so each verb a record's no more: 2026-11-17, the records 255 of 255 before);
 // the records' count (record 0 the none's among them), and their fields, a column each, a byte a record (COLUMNS: 0 in
-// each the none's; the way's + 1, so $FF's none is 0 too); the verbs of several words, in their order (a count, the entries, the verb), all
-// before any of one word's; the pairs (two entries, 1 a special's, the value); the verbs (a count, then each one's
-// ROW bytes: its actions alone, with a thing, with a way, its unsaid, aux, skill, task and flags), and the
-// prepositions' own actions (a count, then each: the verb, the word's entry, the action); then the words that make one
-// kind another (qualWords: a count, each its length and letters); then the turns (commands.verbs' [turns]: a count,
-// each the verb, the word's entry, the verb it's made)
+// each the none's; the way's + 1, so $FF's none is 0 too); the verbs of several words (a count; the groups of one first
+// word, a count and each its first word's entry, how many it has and where they start, in bytes; then each: its words'
+// count, their entries, the verb: by their first word's entry, those of one first word in their order, so the first
+// that fits is the one it was, the 65C02's found by halves), all before any of one word's; the pairs (two entries,
+// 1 a special's, the value); the verbs (a count, then each one's ROW bytes: its actions alone, with a thing, with a
+// way, its unsaid, aux, skill, task and flags), and the prepositions' own actions (a count, then each, by verb: the
+// verb, the word's entry, the action); then the words that make one kind another (qualWords: a count, each its length
+// and letters); then the turns (commands.verbs' [turns]: a count, each, by verb: the verb, the word's entry, the verb
+// it's made).  (The orders, the groups: the meaning's time, 2026-11-17; the 65C02 looks for a verb's by halves)
 const CONSTANTS = ['move', 'put', 'stow', 'doff', 'hang', 'drop', 'bar', 'get', 'turn', 'face', 'light', 'douse', 'unlock',
   'name', 'combine', 'PR_WITH', 'PR_ON', 'PR_FROM', 'OB_WAY_OUT', 'OB_DOOR', 'GO_UP', 'GO_DOWN', 'SL_ME', 'VB_SAY', 'OB_STAIRS',
   'OB_LADDER', 'OB_SHAFT', 'throw', 'HOW_TO', 'PR_AT', 'PR_IN', 'VB_FIND_OBJECT'];
@@ -471,6 +474,14 @@ function encode(w, entries) {
     gwi[ent(k)] = recOf.get(key);
   }
   if (recs.length > 255 || multi.length > 255 || two.length > 42 || w.rows.length > 255) throw new Error("dq0c.dat: too many of the game's words");
+  const first = m => m[1] | m[2] << 8;
+  multi.sort((a, b) => first(a) - first(b));    // (Stable: those of one first word in their order)
+  const groups = [];                            // (Each first word's: its entry, its count, where its start)
+  for (let i = 0, off = 0; i < multi.length; off += multi[i].length, i++) {
+    if (!groups.length || groups[groups.length - 1][0] !== first(multi[i])) groups.push([first(multi[i]), 0, off]);
+    groups[groups.length - 1][1]++;
+  }
+  if (groups.length > 51 || multi.flat().length > 65535) throw new Error('dq0c.dat: too many first words of the verbs of several words');
   const k = CONSTANTS.map(n => {
     const x = w.rowOf.has(n) ? w.rowOf.get(n) : V[n];
     if (x === undefined) throw new Error('dq0c.dat: no value for ' + n);
@@ -478,13 +489,15 @@ function encode(w, entries) {
   });
   const rows = w.rows.slice(1).map(x => ROW.map(f => byte(x[f], 255, x.name + "'s " + f)));
   const preps = [];
-  w.rows.forEach((x, n) => { if (x) for (const [p, a] of x.preps) preps.push([n, ...u16(ent(p)), byte(a, 255, 'action')]); });
-  if (preps.length > 63) throw new Error("dq0c.dat: too many of the verbs' prepositions");
-  return Buffer.from([0x44, 0x51, 0x30, 0x57, 4, ...k, ...u16(entries.length), ...gwi, ...gwv,
-    recs.length, ...COLUMNS.flatMap((c, i) => recs.map(b => b[i])), multi.length, ...multi.flat(), two.length, ...two.flat(),
+  w.rows.forEach((x, n) => { if (x) for (const [p, a] of x.preps) preps.push([n, ...u16(ent(p)), byte(a, 255, 'action')]); });   // (By verb)
+  const turns = [...w.turns].map(([k, v]) => { const [r, wd] = k.split(' '); return [+r, ...u16(ent(wd)), v]; }).sort((a, b) => a[0] - b[0]);
+  if (preps.length > 63 || turns.length > 63) throw new Error("dq0c.dat: too many of the verbs' prepositions, or turns");
+  return Buffer.from([0x44, 0x51, 0x30, 0x57, 5, ...k, ...u16(entries.length), ...gwi, ...gwv,
+    recs.length, ...COLUMNS.flatMap((c, i) => recs.map(b => b[i])), multi.length, groups.length,
+    ...groups.flatMap(([e, n, off]) => [...u16(e), n, ...u16(off)]), ...multi.flat(), two.length, ...two.flat(),
     w.rows.length - 1, ...rows.flat(), preps.length, ...preps.flat(), byte(w.quals.size, 255, 'qualifiers'),
     ...[...w.quals].flatMap(q => [q.length, ...[...q].map(c => c.charCodeAt(0))]), byte(w.turns.size, 255, 'turns'),
-    ...[...w.turns].flatMap(([k, v]) => { const [r, wd] = k.split(' '); return [+r, ...u16(ent(wd)), v]; })]);
+    ...turns.flat()]);
 }
 
 // What the UI makes of it as the command's carried out: the ways as the character faces made the compass's, and a half

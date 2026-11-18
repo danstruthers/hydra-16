@@ -138,8 +138,10 @@ pgwi:       .res        2           ; Each entry's record, its verb
 pgwv:       .res        2
 colpl:      .res        NCOL        ; Each column
 colph:      .res        NCOL
-nmulti:     .res        1           ; The verbs of several words
-pmulti:     .res        2
+nmulti:     .res        1           ; The verbs of several words, and their groups (one a first word: its entry,
+pmulti:     .res        2           ;   its count, where they start)
+ngroup:     .res        1
+pgroup:     .res        2
 ntwo:       .res        1           ; The pairs
 ptwo:       .res        2
 nrows:      .res        1           ; The verbs (rows), and the prepositions' own actions
@@ -182,6 +184,10 @@ aspect:     .res        1           ; A thing's aspects said (EX_*: all of them)
 kk:         .res        1           ; A value for the moment
 cnt:        .res        1
 nn:         .res        1
+glo:        .res        1           ; A binary search's: the first, the past last, the one looked at, the count
+ghi:        .res        1
+gmid:       .res        1
+gcnt:       .res        1
 pk:         .res        1
 pw:         .res        1
 xb:         .res        1
@@ -198,7 +204,7 @@ wl:         .res        1
             sta         mp
             lda         cm_w+1
             sta         mp+1
-            ldy         #0              ; "DQ0W", version 4
+            ldy         #0              ; "DQ0W", version 5
 :           lda         (mp),y
             cmp         magic,y
             jne         bad
@@ -245,10 +251,24 @@ col:        lda         mp
             inx
             cpx         #NCOL
             bne         col
-            lda         (mp)            ; The verbs of several words: each its count, its entries, its verb
-            sta         nmulti
+            lda         (mp)            ; The verbs of several words: their groups, then each its count, its entries,
+            sta         nmulti          ;   its verb
             sta         cnt
             ldy         #1
+            lda         (mp),y
+            sta         ngroup
+            iny
+            jsr         past
+            lda         mp
+            sta         pgroup
+            lda         mp+1
+            sta         pgroup+1
+            lda         ngroup          ; (5 bytes a group)
+            asl         a
+            asl         a
+            clc
+            adc         ngroup
+            tay
             jsr         past
             lda         mp
             sta         pmulti
@@ -531,12 +551,46 @@ none:       lda         #0
             lda         nprep
 .endproc
 .proc find4
+            sta         gcnt            ; (Each: the verb, the word's entry, the action; by verb: the verb's first by
+            sta         ghi             ;   halves, then each of its)
+            stz         glo
+bs:         lda         glo
+            cmp         ghi
+            bcs         at
+            clc
+            adc         ghi
+            ror         a
+            sta         gmid
+            asl         a
+            asl         a
+            tay
+            lda         (mp),y
+            cmp         verb
+            bcs         :+
+            lda         gmid
+            ina
+            sta         glo
+            bra         bs
+:           lda         gmid
+            sta         ghi
+            bra         bs
+at:         lda         glo
+            asl         a
+            asl         a
+            clc
+            adc         mp
+            sta         mp
+            bcc         :+
+            inc         mp+1
+:           lda         gcnt
+            sec
+            sbc         glo
             sta         cnt
 loop:       lda         cnt
             beq         none
-            lda         (mp)            ; (Each: the verb, the word's entry, the action)
+            lda         (mp)
             cmp         verb
-            bne         next
+            bne         none
             ldy         #1
             lda         (mp),y
             cmp         wtl,x
@@ -777,22 +831,67 @@ mid:        ina
             bne         :+
             rts
 :           stz         wi              ; The verb, if the line begins with one: of several words first
-            lda         pmulti
+            lda         pgroup          ;   (the line's first word's group: by halves)
             sta         mp
-            lda         pmulti+1
+            lda         pgroup+1
             sta         mp+1
-            lda         nmulti
+            stz         glo
+            lda         ngroup
+            sta         ghi
+gfind:      lda         glo
+            cmp         ghi
+            jcs         single
+            clc
+            adc         ghi
+            ror         a
+            sta         gmid
+            asl         a
+            asl         a
+            adc         gmid
+            tay
+            iny
+            lda         (mp),y          ; (its first word's entry: high byte, then low)
+            cmp         wth
+            bne         :+
+            dey
+            lda         (mp),y
+            cmp         wtl
+            beq         gfound
+:           bcc         glow
+            lda         gmid
+            sta         ghi
+            bra         gfind
+glow:       lda         gmid
+            ina
+            sta         glo
+            bra         gfind
+gfound:     iny                         ; (its count, where they start)
+            iny
+            lda         (mp),y
             sta         cnt
-mloop:      lda         cnt
+            iny
+            lda         (mp),y
+            clc
+            adc         pmulti
+            pha
+            iny
+            lda         (mp),y
+            adc         pmulti+1
+            sta         mp+1
+            pla
+            sta         mp
+mloop:      lda         cnt             ; (Each of the group's: its first word the line's)
             beq         single
             lda         (mp)
             sta         nn
             lda         wsn
             cmp         nn
             bcc         mnext
-            ldx         #0
-            ldy         #1
-mword:      lda         (mp),y
+            ldx         #1              ; (its other words)
+            ldy         #3
+mword:      cpx         nn
+            beq         mhit
+            lda         (mp),y
             cmp         wtl,x
             bne         mnext
             iny
@@ -801,19 +900,20 @@ mword:      lda         (mp),y
             bne         mnext
             iny
             inx
-            cpx         nn
-            bne         mword
-            lda         (mp),y
+            bra         mword
+mhit:       lda         (mp),y
             sta         verb
             stx         wi
             bra         verbed
-mnext:      lda         nn
+mnext:      lda         (mp)            ; (2 a word, its count and its verb)
             asl         a
-            clc
             adc         #2
-            tay
-            jsr         past
-            dec         cnt
+            clc
+            adc         mp
+            sta         mp
+            bcc         :+
+            inc         mp+1
+:           dec         cnt
             bra         mloop
 single:     jsr         verbof          ; Or of one
             beq         noverb
@@ -1650,5 +1750,5 @@ set:        sta         cm_cmd + CM_ACTION
 .endproc
 
             .rodata
-magic:      .byte       "DQ0W", 4
+magic:      .byte       "DQ0W", 5
 thoffs:     .byte       CM_OBJ, CM_OTHER    ; (The thing's and the other's places in struct cmd)
