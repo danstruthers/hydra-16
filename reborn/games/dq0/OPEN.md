@@ -47,6 +47,10 @@ end with their open questions: copy them here when the branch is merged.
 - **P5. A thing put on a ledge, in a corner, the centre, a side or a passage** is still refused as a put; a drop puts
   it down at the character's feet (built). Placing it needs that place's square: walk there and place it?
   - built/2026-11-17-pb.md, open question 2.
+- **P6. "unlock the door with the lockpicks" when a key fits** uses the key (built, by the letter of the answer of
+  2026-11-17: "pick" always picks; "unlock" uses a key if one fits). The lockpicks were named, so pick instead?
+  pb built that rule first, then dropped it to win back overlay 11's room (53b17b15); it would cost a few bytes there.
+  - built/2026-11-17-pb.md, "What the rebase changed".
 
 ## Doors, portcullises and windows
 
