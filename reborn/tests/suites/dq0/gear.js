@@ -1780,7 +1780,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0compdesk', near: ['gear'], what: 'Dingus Quest Zero\'s desk (furniture, the user\'s, 2026-11-16: DECISIONS.md\'s "Compartments: the second stage"): a lock on a compartment past the first and a hidden one, by the words and the records; at seed 3 (dq0 -T, a kit of a desk, a key after it, a chisel: the key its drawer\'s, the drawer closed and locked, the kit\'s rule) the desk set down: "open the drawer" refused ("The drawer is locked."), unlocked with its key, opened, the chisel put in it and looked in, closed and locked again (its holder\'s fuel\'s CS_LOCKED, its shut\'s closed bit); its secret niche unnamed till found ("You see no niche here."), found by a search (the referee\'s test: "You find a secret niche in the desk."), a dagger put in it, looked in, found again by a search ("In the secret niche you find a dagger.")',
+      name: 'dq0compdesk', near: ['gear'], what: 'Dingus Quest Zero\'s desk (furniture, the user\'s, 2026-11-16: DECISIONS.md\'s "Compartments: the second stage"): a lock on a compartment past the first and a hidden one, by the words and the records; at seed 3 (dq0 -T, a kit of a desk, a key after it, a chisel: the key its drawer\'s, the drawer closed and locked, the kit\'s rule) the desk set down: "open the drawer" refused ("The drawer is locked."), unlocked with its key, opened, the chisel put in it and looked in, closed and locked again (its holder\'s fuel\'s CS_LOCKED, its shut\'s closed bit); its secret niche unnamed till found ("You see no secret niche here.": its name whole, the parser\'s, 2026-11-17), found by a search (the referee\'s test: "You find a secret niche in the desk."), a dagger put in it, looked in, found again by a search ("In the secret niche you find a dagger.")',
       init: 't_rc', cycles: 2600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k \'desk,key,chisel\'', 'drop the desk', 'drop the torch', 'open the drawer', 'unlock the drawer', 'open the drawer',
@@ -1795,7 +1795,7 @@ module.exports = {
         inTurn(s, ['> open the drawer', 'The drawer is locked.', '> unlock the drawer', 'You unlock the drawer with its key.', '> open the drawer',
           'You open the drawer: it\'s empty.', '> put the chisel in the drawer', 'You put the chisel in the drawer.', '> look in the drawer', 'In the drawer lies a chisel.',
           '> close the drawer', 'You close the drawer.', '> lock the drawer', 'You lock the drawer with its key.', '> open the drawer', 'The drawer is locked.',
-          '> look in the secret niche', 'You see no niche here.', '> search the desk', 'You find a secret niche in the desk.', '> put the dagger in the niche',
+          '> look in the secret niche', 'You see no secret niche here.', '> search the desk', 'You find a secret niche in the desk.', '> put the dagger in the niche',
           'You put the dagger in the secret niche.', '> look in the niche', 'In the secret niche lies a dagger.', '> search the desk',
           'In the secret niche you find a dagger.'], f, 'the words: ');
         return f;

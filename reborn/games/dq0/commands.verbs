@@ -26,6 +26,11 @@
 # [words]: a word (or words: a verb of several, matched before one of one) = the verb it says, as a line's first;
 # each also as the root its alias gives (commands.aliases: "peer" is look's, "attack" fight's).  A line that begins
 # with none is a way, or a thing, alone: going there (move's).
+#
+# [turns]: a verb and a word = another verb: the verb made that one by its thing's name, the thing then none ("look at
+# the floor" the floor's look, "follow the tracks" a track), or by its own preposition, the grammar's ("look under the
+# table" a search of it), each of its prepositions in turn ("search around for": a grope, then a seek).  (2026-11-17,
+# phase B: the floor's, the wall's, the tracks' and the search's phrase verbs gone)
 
 [verbs]
 move        way=VB_MOVE_DIRECTION thing=VB_MOVE_TOWARD alone=VB_MOVE_DIRECTION unsaid=none task=LT_WALK
@@ -193,6 +198,7 @@ sharpen     thing=VB_FILL_OBJECT unsaid=last aux=IO_SHARP            # (A blade 
 dive        alone=VB_SWIM thing=VB_SWIM way=VB_SWIM skill=P_SWIM aux=1   # (Under on purpose, as "swim down")
 climbout    thing=VB_CLIMB way=VB_CLIMB alone=VB_CLIMB unsaid=front skill=P_CLIMB task=LT_CLIMB aux=1   # (Up and out: "climb
                                                                      #   out", "climb out of the well")
+getoff      thing=VB_CLIMB way=VB_CLIMB alone=VB_CLIMB unsaid=front skill=P_CLIMB task=LT_CLIMB aux=2   # (Down: "get off")
 unfast      alone=VB_FASTING aux=1                                   # (The vow ended: "break my fast")
 kneel       alone=VB_CROUCH aux=POS_KNEELING                         # (Kneeling, not crouching)
 rest        alone=VB_SLEEP thing=VB_SLEEP task=LT_SLEEP aux=1        # (A rest, not a sleep: its aux 1; a short one
@@ -305,6 +311,14 @@ turn = turn
 face = face
 climb = climb
 climb out = climbout
+get out of = climbout
+get on = climb
+get onto = climb
+get off = getoff
+get in = enter
+in = enter
+get out = leave
+out = leave
 jump = jump
 j = jump
 open = open
@@ -511,52 +525,6 @@ listen = listen
 smell = smell
 sniff = smell
 track = track
-examine the floor = floorlook
-examine floor = floorlook
-x the floor = floorlook
-x floor = floorlook
-examine the ground = floorlook
-examine ground = floorlook
-examine the dust = floorlook
-inspect the floor = floorlook
-look at the floor = floorlook
-look at floor = floorlook
-look at the ground = floorlook
-look at ground = floorlook
-look at the dust = floorlook
-look at the wall = walllook
-look at wall = walllook
-look at the walls = walllook
-look at the rock = walllook
-examine the rock = walllook
-study the wall = walllook
-study the floor = floorlook
-look for tracks = track
-look for prints = track
-look for footprints = track
-search for tracks = track
-search around for = seek                    # (new, 2026-10-22: a search for a thing, within reach; by touch in the dark)
-search about for = seek
-search for = seek
-feel around for = seek
-feel about for = seek
-grope around for = seek
-grope about for = seek
-grope for = seek
-search around = grope
-search about = grope
-feel around = grope
-feel about = grope
-grope around = grope
-grope about = grope
-examine the tracks = track
-examine tracks = track
-look at the tracks = track
-study the tracks = track
-read the tracks = track
-follow the tracks = track
-follow tracks = track
-follow the trail = track
 sleep = sleep
 rest = rest
 sit = sit
@@ -681,3 +649,32 @@ change my dressing = retend
 change bandage = retend
 change bandages = retend
 change dressing = retend
+
+[turns]
+look floor = floorlook
+look ground = floorlook
+look dust = floorlook
+examine floor = floorlook
+examine ground = floorlook
+examine dust = floorlook
+look wall = walllook
+look walls = walllook
+look rock = walllook
+examine rock = walllook
+look tracks = track
+look prints = track
+look footprints = track
+examine tracks = track
+search tracks = track
+seek tracks = track
+read tracks = track
+follow tracks = track
+follow trail = track
+look under = search
+look behind = search
+search around = grope
+search about = grope
+search for = seek
+touch around = grope
+touch about = grope
+grope for = seek

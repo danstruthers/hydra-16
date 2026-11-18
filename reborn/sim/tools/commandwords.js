@@ -86,7 +86,7 @@ function load(file = path.join(GAME, 'commands.words'), vfile = path.join(GAME, 
     if (n === undefined && !/^[A-Z_]+$/.test(s)) throw new Error('commands.words: no value for ' + s);
     return n === undefined ? s : n | flag;
   };
-  const w = { verbs: [], rows: [null], rowOf: new Map(), orders: new Map(), dirs: new Map(), things: new Map(),
+  const w = { verbs: [], rows: [null], rowOf: new Map(), turns: new Map(), orders: new Map(), dirs: new Map(), things: new Map(),
     preps: new Map(), how: new Map(), special: new Map(), selectors: new Map(), numbers: new Map(), manners: new Map(),
     aspects: new Map(), little: new Set(), V };
   let sec = null;
@@ -128,6 +128,10 @@ function load(file = path.join(GAME, 'commands.words'), vfile = path.join(GAME, 
       const [k, x] = l.split('=').map(t => t.trim());
       if (!w.rowOf.has(x)) throw new Error('commands.verbs: ' + k + ' = ' + x + ', no such verb');
       w.verbs.push({ words: k.split(/ +/), v: w.rowOf.get(x) });
+    } else if (sec === 'turns') {                // (A verb and a word: the verb it's made)
+      const [k, x] = l.split('=').map(t => t.trim()), [v, wd] = k.split(/ +/);
+      if (!w.rowOf.has(v) || !w.rowOf.has(x) || !wd) throw new Error('commands.verbs: ' + l);
+      w.turns.set(w.rowOf.get(v) + ' ' + wd, w.rowOf.get(x));
     } else throw new Error('commands.verbs: no section ' + sec);
   }
   w.verbs.sort((a, b) => (b.words.length > 1) - (a.words.length > 1));   // (Several words first, each's order kept)
@@ -249,7 +253,9 @@ function scan(toks, w, face = 0, lab = null) {
       if (k) c.hand = k;
       continue;
     }
-    const s = S[r ? 1 : 0], th = s.th;         // (The thing it's of: the other's, a role's)
+    const s = S[r || (!lab && said && c.prep) ? 1 : 0], th = s.th;   // (The thing it's of: the other's, a role's; a line
+                                                //   the grammar doesn't take, after the thing said and its preposition,
+                                                //   the old rule's: "drop the dagger on the floor")
     if (r === RO.WORN) c.flags |= CF_WORN;
     if (r === RO.LIST) c.flags |= CF_LIST;
     if (order() && !c.order && (k = get(t, w.orders))) { c.order = k; continue; }   // (A request's word, the first, not
@@ -260,10 +266,10 @@ function scan(toks, w, face = 0, lab = null) {
     if ((r ? r !== RO.LIST : said) && !c.prep && (k = get(t, w.preps)) !== undefined) { c.prep = k; continue; }   // (Its
                                                 //   preposition: the first, after the thing said, or the other's own)
     if (r === RO.WORN || r === RO.LOC) {       // (A place on the body, "on my left hand"; or to hide, "behind the table":
-      const d = get(t, w.dirs);                //   its side its name's, no way; its words of how and where no more)
-      if (d === (REL | 6) || d === (REL | 2)) { content(s, i, r); continue; }
-      if (d !== undefined || get(t, w.how) !== undefined || sp(i, 'AROUND') || little(t)) continue;
-    }
+      const d = get(t, w.dirs);                //   its side its name's, no way; its words of how and where no more; a
+      if (d === (REL | 6) || d === (REL | 2) || little(t)) { content(s, i, r); continue; }   //   little word a word of its
+      if (d !== undefined || get(t, w.how) !== undefined || sp(i, 'AROUND')) continue;   //   name, its last the head:
+    }                                          //   "on my head", head a little word, "head north")
     if (verb === R.get('put') && sp(i, 'AWAY')) { verb = R.get('stow'); continue; }
     if (verb === R.get('put') && sp(i, 'BACK')) continue;
     if ((k = get(t, w.how)) !== undefined) { c.how = c.how || k; continue; }   // (The first said: "go through the door to
@@ -314,6 +320,21 @@ function scan(toks, w, face = 0, lab = null) {
       s.th.kind = hk & ~PART;
       s.th.word = hk & PART ? h.typed.slice(0, 15) : qs ? qs.typed.slice(0, 15) : '';   // (A part of a thing by its own word:
                                                 //   "the iron bars", "the window bars": "bars")
+    }
+  }
+  // A verb made another (commands.verbs' [turns]): by its thing's name, the thing then none ("look at the floor": the
+  // floor's look); else by its own preposition, the grammar's ("look under the table": a search of it)
+  if (S[0].hd >= 0 && (k = w.turns.get(verb + ' ' + text(ws[S[0].hd]))) !== undefined) {
+    verb = k;
+    c.order = 0;
+    Object.assign(c.obj, thing());
+  } else {
+    for (let j = first; j < ws.length; j++) {   // (Each in turn: "search around for", a grope, then a seek)
+      if (((lab ? lab[ws[j].ti] : 0) & 7) === RO.SKIP) {
+        if ((k = w.turns.get(verb + ' ' + text(ws[j]))) !== undefined) { verb = k; c.order = 0; }
+        continue;
+      }
+      if (!little(ws[j])) break;
     }
   }
   let word = c.obj.word, word2 = c.other.word;
@@ -375,7 +396,8 @@ function scan(toks, w, face = 0, lab = null) {
 // before any of one word's; the pairs (two entries, 1 a special's, the value); the verbs (a count, then each one's
 // ROW bytes: its actions alone, with a thing, with a way, its unsaid, aux, skill, task and flags), and the
 // prepositions' own actions (a count, then each: the verb, the word's entry, the action); then the words that make one
-// kind another (qualWords: a count, each its length and letters)
+// kind another (qualWords: a count, each its length and letters); then the turns (commands.verbs' [turns]: a count,
+// each the verb, the word's entry, the verb it's made)
 const CONSTANTS = ['move', 'put', 'stow', 'doff', 'hang', 'drop', 'bar', 'get', 'turn', 'face', 'light', 'douse', 'unlock',
   'name', 'combine', 'PR_WITH', 'PR_ON', 'PR_FROM', 'OB_WAY_OUT', 'OB_DOOR', 'GO_UP', 'GO_DOWN', 'SL_ME', 'VB_SAY', 'OB_STAIRS',
   'OB_LADDER', 'OB_SHAFT', 'throw', 'HOW_TO', 'PR_AT', 'PR_IN'];
@@ -390,6 +412,7 @@ function gameWords(w) {
   const add = k => k.split(' ').filter(tokenWord).forEach(x => out.add(x));
   w.verbs.forEach(e => e.words.forEach(add));
   w.rows.slice(1).forEach(r => [...r.preps.keys()].forEach(add));
+  for (const k of w.turns.keys()) add(k.split(' ')[1]);
   for (const m of [w.orders, w.dirs, w.things, w.preps, w.how, w.special, w.selectors, w.numbers, w.manners, w.aspects]) for (const k of m.keys()) add(k);
   w.little.forEach(add);
   return [...out];
@@ -456,7 +479,8 @@ function encode(w, entries) {
   return Buffer.from([0x44, 0x51, 0x30, 0x57, 4, ...k, ...u16(entries.length), ...gwi, ...gwv,
     recs.length, ...COLUMNS.flatMap((c, i) => recs.map(b => b[i])), multi.length, ...multi.flat(), two.length, ...two.flat(),
     w.rows.length - 1, ...rows.flat(), preps.length, ...preps.flat(), byte(w.quals.size, 255, 'qualifiers'),
-    ...[...w.quals].flatMap(q => [q.length, ...[...q].map(c => c.charCodeAt(0))])]);
+    ...[...w.quals].flatMap(q => [q.length, ...[...q].map(c => c.charCodeAt(0))]), byte(w.turns.size, 255, 'turns'),
+    ...[...w.turns].flatMap(([k, v]) => { const [r, wd] = k.split(' '); return [+r, ...u16(ent(wd)), v]; })]);
 }
 
 // What the UI makes of it as the command's carried out: the ways as the character faces made the compass's, and a half

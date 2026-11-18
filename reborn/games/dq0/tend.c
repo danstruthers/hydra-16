@@ -80,12 +80,15 @@ static struct {
 static unsigned char patient (void)
 {
     const char* w = cmd.obj.word;
+    const char* h = strrchr (w, ' ');
     const struct actor* p = HUB->actor;
     unsigned char k;
     int dx, dy;
 
+    h = h ? h + 1 : w;                          /* (A part of the body by its last word: "left arm" an arm, its side
+                                                **   the referee's, the parser's name whole) */
     for (k = 0; k < sizeof body / sizeof body[0]; ++k) {
-        if (!strcmp (w, body[k]) || cmd.obj.sel == SL_ME) {
+        if (!strcmp (h, body[k]) || cmd.obj.sel == SL_ME) {
             return 0;
         }
     }

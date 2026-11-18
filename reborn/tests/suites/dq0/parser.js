@@ -521,6 +521,52 @@ function dq0PairsTest() {
     sdcard: true
   };
 }
+// The grammar's roles and its forms (GAME-CRITIQUE.md's 2.8 steps 1 and 3, phase B, 2026-11-17): at seed 3 (-T, a kit
+// of a chest, a key, a table, a chair and a stone chisel, the table and the chair set down) a thing named whole ("the
+// stone chisel": its qualifier and its head, not the plain chisel); the other thing's name its own ("remove the key
+// from the chest": taken from it); "sit in the chair" as "sit on the chair"; "climb on the table" refused plainly, "get
+// off" with nothing it's on (not a stairway down taken for it); "look under the table" and "look behind the chest" a
+// search of it; "the north wall" anywhere (examined, knocked on); the floor's and the tracks' looks by their thing's name
+// (commands.verbs' [turns]: their phrase verbs gone); "get in", "in", "out", "get out" understood (the enter's, the
+// leave's).  DQ0_FORMS=1 prints the answers
+function dq0FormsTest() {
+  const lines = ['drop the table', 'drop the chair', 'examine the stone chisel', 'drop the chest', 'unlock the chest', 'open the chest', 'put the key in the chest',
+    'remove the key from the chest', 'sit on the chair', 'stand', 'sit in the chair', 'stand', 'climb on the table', 'get off', 'look under the table',
+    'look behind the chest', 'examine the north wall', 'knock on the north wall', 'look at the floor', 'look for tracks', 'get in', 'in', 'out', 'get out'];
+  return {
+    name: 'dq0forms', near: ['parser'], what: 'Dingus Quest Zero\'s grammar\'s roles and forms (GAME-CRITIQUE.md\'s 2.8 steps 1 ' +
+      'and 3, phase B): a thing named whole ("the stone chisel"); "remove the key from the chest" taken from it; "sit in the ' +
+      'chair" as "sit on the chair"; "climb on the table" refused plainly, "get off" with nothing it\'s on; "look under the ' +
+      'table" and "look behind the chest" a search of it; "the north wall" examined, knocked on; "look at the floor" the ' +
+      'floor\'s look, "look for tracks" the tracks\' (their thing\'s name, commands.verbs\' [turns]); "get in", "in", "out", ' +
+      '"get out" understood',
+    init: 't_rc', cycles: 600e6 + lines.length * 80e6,
+    machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+      'dq0 -p t -s 3 -c /ram/c.hm -T -k \'chest,key,table,chair,stone chisel\'', ...lines, 'quit', 'echo $status']) },
+    expect: ['% echo $status'],
+    check(m) {
+      const A = dq0Answers(m.out), f = [], a = l => (A.find(x => x.cmd === l) || { text: '(no answer)' }).text;
+      if (process.env.DQ0_FORMS) for (const l of lines) console.log(l + ' => ' + a(l));
+      const want = (l, re, why) => { if (!re.test(a(l))) f.push('"' + l + '" ' + why + ': ' + a(l).slice(0, 160)); };
+      for (const l of lines) if (/understand/.test(a(l))) f.push('"' + l + '" not understood: ' + a(l).slice(0, 120));
+      want('examine the stone chisel', /You look at the stone chisel\./, 'not named whole');
+      want('remove the key from the chest', /You take the (?:iron )?key from the chest\./, 'not taken from the chest');
+      const sit = t => t.replace(/ (?:Nothing|Something) stirs[^.]*\./g, '').replace(/ (?:on|in) the chair/, '');
+      if (sit(a('sit in the chair')) !== sit(a('sit on the chair'))) f.push('"sit in the chair" not as "sit on the chair": ' +
+        a('sit in the chair').slice(0, 120) + ' / ' + a('sit on the chair').slice(0, 120));
+      want('climb on the table', /You can't climb on the table\./, 'not refused plainly');
+      want('get off', /^You're not on anything\./, 'not said so');
+      want('look under the table', /You search the table/, 'not a search of the table');
+      want('look behind the chest', /You search the chest/, 'not a search of the chest');
+      want('examine the north wall', /You look at the wall\./, 'not the wall looked at');
+      want('knock on the north wall', /You knock along the north wall/, 'not knocked along');
+      want('look at the floor', /You look at the floor\./, 'not the floor\'s look');
+      want('look for tracks', /You cast about for tracks\./, 'not the tracks\' look');
+      return f;
+    },
+    sdcard: true
+  };
+}
 function dq0SweepTest(opt = {}) {
   const name = opt.name || 'dq0sweep', gapsOf = opt.gaps || SWEEP_GAPS, saidOf = opt.said || SWEEP_SAID, lines = dq0SweepLines(opt.verbs);
   return {
@@ -608,6 +654,7 @@ module.exports = {
     dq0FeaturesTest(),
     dq0ParseFixTest(),
     dq0PairsTest(),
+    dq0FormsTest(),
     {
       name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), a grapple at a rat out of reach (since 2026-11-09, HOUSE.md\'s grappling: "go up to it first"; till then the grammar\'s and not yet the game\'s); a gift the game takes since slice 4.8 ("give the torch to the rat": the rat out of reach, or out of sight); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',
       init: 't_rc', cycles: 1500e6,

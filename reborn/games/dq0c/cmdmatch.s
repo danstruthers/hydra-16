@@ -49,7 +49,7 @@
             .macpack    longbranch
             .export     cm_init, cm_tables, cm_ainit, cm_world, cm_match, cm_tokens, cm_parse, cm_roles, cm_g, cm_i, cm_a, cm_r
             .export     ntok, tokoff, toklen, tokq, toktl, tokth, tokel, tokeh, tokmu, tbuf, nent, lmark   ; (cmdmean.s's)
-            .export     tokrole, qat
+            .export     tokrole, qat, cm_ok
 
 ; Node tags in the grammar table
 T_SEQ       = 1
@@ -215,6 +215,7 @@ li:         .res        1           ; tokenize: where in the line, where in tbuf
 nb:         .res        1
 tstart:     .res        1
 tokrole:    .res        MAXTOK + 1  ; Each token's role (cm_roles': commandcompile.js's ROLES; R_MINE with it)
+cm_ok:      .res        1           ; cm_roles' verdict: 1, the line parses (its roles); else none
 qat:        .res        1           ; The first quoted text's first letter's place in the line, + 1 (0: none)
 dp:         .res        1           ; cm_roles: the node's tokens from dp to de; a child's end, dt; a position, dq;
 de:         .res        1           ;   its items or rounds, dk; positions, dm; fsp as a repeat began, rf
@@ -1954,6 +1955,7 @@ over:       jmp         abort
 ; repeat's fewest rounds, each begun as late as can be.  None, the line not parsed; the walk short of its deepest, the
 ; stacks near full (its roles as far as it got)
 .proc cm_roles
+            sta         cm_ok
             ldx         #MAXTOK
 :           stz         tokrole,x
             dex

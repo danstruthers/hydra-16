@@ -357,3 +357,74 @@ drop all
 take all from the case
 open the drawer
 push the wall
+# phase B (2026-11-17): the grammar's roles and forms, the role record's
+remove the key from the chest
+climb on the table
+sit in the chair
+get in
+get out
+get on the ledge
+get off
+get out of the well
+in
+out
+look under the table
+look behind the chest
+examine the north wall
+knock on the north wall
+look at the floor
+look in the wall
+look for tracks
+follow the tracks
+take the iron key
+unlock the chest with the iron key
+put the scarf on my head
+wear the ring on my left hand
+don the brooch at my left shoulder
+bandage my left arm
+change the bandage on my right arm
+hide behind the table
+hide the pouch behind the table
+take the torch in my left hand
+hold the spear in both hands
+wield the sword in my off hand
+attack the rat with the dagger in my left hand
+put the dagger in my other hand
+yell "help!"
+whisper "psst"
+say "hello there"
+give the bandit 8 pennies
+attack the rat and the goblin
+take the sword and the shield
+drop the dagger on the floor
+convert the goblin to peoni
+put the dagger in the sack to my left
+give the dagger to the dwarf ahead
+throw the dagger at the rat to my left
+take the key from the chest ahead
+search around for the key
+search about for the key
+search for the key
+feel around for the key
+feel about for the key
+grope around for the key
+grope about for the key
+grope for the key
+search around
+search about
+feel around
+feel about
+grope around
+grope about
+search for traps
+search around on the floor
+grope on the floor
+look in the secret drawer
+take all from the case
+pick the lock
+pick lock
+pick the lock of the chest
+unlock the door with the lockpicks
+say
+yell
+empty the sack

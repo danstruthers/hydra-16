@@ -27,7 +27,7 @@
             .setcpu     "65C02"
             .macpack    longbranch
             .export     cm_winit, cm_mean, cm_wthings, cm_w, cm_cmd
-            .import     ntok, tokoff, toklen, tokq, toktl, tokth, tokel, tokeh, tokmu, tbuf, nent, lmark, tokrole, qat
+            .import     ntok, tokoff, toklen, tokq, toktl, tokth, tokel, tokeh, tokmu, tbuf, nent, lmark, tokrole, qat, cm_ok
 
 ; struct cmd (hub.h): its fields' places (CM_*), a thing's (struct cthing: T_*) in it, its flags (CF_*), a way as the
 ; character faces (CQ_REL): the build's, from hub.h (games/dq0/hubgen.js)
@@ -147,6 +147,8 @@ nprep:      .res        1
 pprep:      .res        2
 nqual:      .res        1           ; The words that make one kind another ("iron", "stone", "black": a name's word
 pqual:      .res        2           ;   before its last kept with it if it's one)
+nturn:      .res        1           ; The turns: a verb made another by a word (commands.verbs' [turns])
+pturn:      .res        2
 face:       .res        1           ; The way the character faces
 wsn:        .res        1           ; The line's words: each one's token, its entry (its own, or its alias's root,
 wtk:        .res        MAXWS       ;   as above), whether its alias was several words, its records (as typed, its
@@ -303,14 +305,31 @@ col:        lda         mp
             jsr         past
             dex
             bra         :-
-:           lda         (mp)            ; The words that make one kind another
+:           lda         (mp)            ; The words that make one kind another: each its length and letters
             sta         nqual
+            sta         cnt
             ldy         #1
             jsr         past
             lda         mp
             sta         pqual
             lda         mp+1
             sta         pqual+1
+:           lda         cnt
+            beq         :+
+            lda         (mp)
+            ina
+            tay
+            jsr         past
+            dec         cnt
+            bra         :-
+:           lda         (mp)            ; The turns
+            sta         nturn
+            ldy         #1
+            jsr         past
+            lda         mp
+            sta         pturn
+            lda         mp+1
+            sta         pturn+1
             clc
             rts
 bad:        sec
@@ -493,14 +512,24 @@ none:       lda         #0
             rts
 .endproc
 
-; prepof: the verb's own action for word .X straight after it (its preposition's: "look through"), 0 none.  OUT: .A,
-; Z with it.  Keeps .X
+; prepof: the verb's own action for word .X straight after it (its preposition's: "look through"), 0 none; turnof: the
+; verb word .X makes the verb (commands.verbs' [turns]), 0 none.  OUT: .A, Z with it.  Keeps .X
+.proc turnof
+            lda         pturn
+            sta         mp
+            lda         pturn+1
+            sta         mp+1
+            lda         nturn
+            bra         find4
+.endproc
 .proc prepof
             lda         pprep
             sta         mp
             lda         pprep+1
             sta         mp+1
             lda         nprep
+.endproc
+.proc find4
             sta         cnt
 loop:       lda         cnt
             beq         none
@@ -820,10 +849,17 @@ each:       ldx         wi              ; Each word after the verb, by its role 
             jeq         next
             cmp         #R_HAND
             jeq         hand
-            ldy         #0              ; (The thing it's of: the other's, a role's)
-            cmp         #0
+            ldy         #0              ; (The thing it's of: the other's, a role's; a line the grammar doesn't
+            cmp         #0              ;   take, after the thing said and its preposition, the old rule's: "drop
+            bne         oth             ;   the dagger on the floor")
+            lda         cm_ok
+            dea
             beq         :+
-            iny
+            lda         said
+            beq         :+
+            lda         cm_cmd + CM_PREP
+            beq         :+
+oth:        iny
 :           sty         so
             lda         thoffs,y
             sta         thoff
@@ -890,11 +926,14 @@ p1:         ldy         #C_PREP
             sta         cm_cmd + CM_PREP
             jmp         next
 noprep:     lda         ro              ; A place on the body, a hiding place: a side its name's ("my left hand"),
-            cmp         #R_WORN         ;   the words of where and how no more
-            beq         :+
+            cmp         #R_WORN         ;   the words of where and how no more; a little word a word of its name,
+            beq         :+              ;   its last the head ("on my head": head a little word, "head north")
             cmp         #R_LOC
             bne         nowl
-:           ldy         #C_DIR
+:           ldy         #C_LITTLE
+            jsr         get
+            jne         content
+            ldy         #C_DIR
             jsr         get
             beq         :+
             dea
@@ -907,9 +946,6 @@ noprep:     lda         ro              ; A place on the body, a hiding place: a
             lda         spc
             cmp         #S_AROUND
             jeq         next
-            ldy         #C_LITTLE
-            jsr         get
-            jne         next
 nowl:       lda         verb            ; "put away": stowed; "put back": put
             cmp         v_PUT
             bne         :++
@@ -1139,7 +1175,38 @@ fboth:      jsr         both
 fnext:      ldy         so
             dey
             bpl         fslot
+            ldx         shd             ; A verb made another (commands.verbs' [turns]): by its thing's name, the thing
+            cpx         #NONE           ;   then none ("look at the floor": the floor's look)
+            beq         tprep
+            jsr         turnof
+            beq         tprep
+            sta         verb
+            stz         cm_cmd + CM_ORDER
+            stz         cm_cmd + CM_OBJ + T_KIND
+            stz         cm_cmd + CM_OBJ + T_SEL
+            stz         cm_cmd + CM_OBJ + T_N
+            stz         cm_cmd + CM_OBJ + T_WORD
             jmp         rules
+tprep:      ldx         first           ; Or by its own prepositions, the grammar's ("look under the table": a search
+tloop:      cpx         wsn             ;   of it), the little words passed; each in turn ("search around for": a
+            bcs         tdone           ;   grope, then a seek)
+            ldy         wtk,x
+            lda         tokrole,y
+            and         #7
+            cmp         #R_SKIP
+            beq         tfound
+            ldy         #C_LITTLE
+            jsr         get
+            beq         tdone
+            inx
+            bra         tloop
+tfound:     jsr         turnof
+            beq         tnext
+            sta         verb
+            stz         cm_cmd + CM_ORDER
+tnext:      inx
+            bra         tloop
+tdone:      jmp         rules
 .endproc
 
 ; both: a name, its qualifier (yb: $FF none) and its head (xb), at cm_cmd + wd: "iron key"; its qualifier not one

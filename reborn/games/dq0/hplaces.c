@@ -38,7 +38,12 @@ void __fastcall__ s_climb (unsigned char h)
 {
     unsigned char d;
 
-    d = h == H_JUMP ? DIR_DOWN | I_JUMP : cmd.aux ? DIR_UP : DIR_DOWN;   /* ("climb out": its verb's) */
+    if (cmd.aux == 2 && !cmd.obj.word[0] && !cmd.obj.kind) {
+        msg ("You're not on anything.");        /* ("Get off", nothing named: nothing the character stands on but the
+                                                **   floor, nor a stairway down taken for it, 2026-11-17) */
+        return;
+    }
+    d = h == H_JUMP ? DIR_DOWN | I_JUMP : cmd.aux == 1 ? DIR_UP : DIR_DOWN;   /* ("climb out", "get off": its verb's) */
     if (h == H_CLIMB && strcmp (cmd.obj.word, "well") && (cmd.obj.word[0] || !cmd.aux)) {
         if (cmd.obj.kind == OB_WINDOW || cmd.how == HOW_THROUGH) {
             cmd.obj.kind = OB_WINDOW;           /* (Through a window) */
