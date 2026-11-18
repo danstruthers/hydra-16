@@ -94,12 +94,50 @@ corpus.split('\n').forEach((line, i) => {
   }
 });
 for (const a of actions) if (!covered.has(a)) fail('commands.actions', 0, `${a} has no corpus case`);
+
+// ---- the corpus held to the role record (phase B, 2026-11-17: the grammar the one reading of a line, GAME-CRITIQUE.md's
+// 2.8 step 8, the user's): each case's action the game's meaning's (commandwords.js's, the host twin of dq0c's
+// cmdmean.s, held to it by commandmatch-test.js --mean), and the things it names in its roles (object, instrument,
+// source, container, target) the record's thing or other.  Not held: an answer to a question (context pending=, the
+// UI's), a line of the player's own shortcut (context its key=, alias.c's), several commands in a line (VB_SEQUENCE:
+// parts.c's lists), a role's thing the line doesn't name (the resolver's: "take it", "hit him"); an action the record
+// makes another's (MAPPED: a list's attack, CF_LIST; an alias's verb)
+const W = require('./commandwords.js'), wds = W.load();
+const MAPPED = { VB_ATTACK_SPLIT: 'VB_ATTACK_OBJECT', VB_ACTIVATE: 'VB_USE_OBJECT', VB_NEGOTIATE: 'VB_PERSUADE',
+  VB_JUDGE_SINCERITY: 'VB_EXAMINE_OBJECT' };
+const last = s => s.split(' ').pop();
+let held = 0, heldRoles = 0;
+corpus.split('\n').forEach((line, i) => {
+  const f = line.split('\t');
+  if (!line.trim() || line.startsWith('#') || f.length !== 5 || !f[1].startsWith('VB_') || f[1] === 'VB_SEQUENCE') return;
+  const [input, expect, roles, ctx] = f;
+  const C = ctx === '-' ? {} : Object.fromEntries(ctx.split(';').map(p => p.split('=')));
+  if (C.pending || C[input.split(' ')[0]] !== undefined) return;
+  held++;
+  const c = W.meaning(input, wds, 0), got = W.actionName(c.action), low = input.toLowerCase();
+  if (got !== (MAPPED[expect] || expect)) fail('commands.corpus', i + 1, `"${input}": the record's action ${got}, not ${expect}`);
+  if (roles === '-') return;
+  const isThing = (t, v) => (t.word && (t.word === v || last(t.word) === last(v))) ||
+    (wds.things.has(v) && t.kind && t.kind === (wds.things.get(v) & 0x7F)) || (v === 'me' && t.sel === wds.V.SL_ME) ||
+    (v === 'way out' && t.kind === wds.V.OB_WAY_OUT);
+  for (const p of roles.split(';')) {
+    const [k, raw] = p.split('='), v = (raw || '').toLowerCase();
+    if (!['object', 'instrument', 'source', 'container', 'target'].includes(k) || !v || !low.includes(last(v))) continue;
+    heldRoles++;
+    const ok = k === 'object' ? isThing(c.obj, v) :
+      k === 'instrument' ? isThing(c.other, v) || ((c.obj.kind || !c.other.word || !/(^|;)object=/.test(roles)) &&
+        isThing(c.obj, v)) || low.startsWith(v) :
+      k === 'target' ? isThing(c.other, v) || isThing(c.obj, v) : isThing(c.other, v);
+    if (!ok) fail('commands.corpus', i + 1, `"${input}": ${k}=${raw} not the record's (${W.show(c)})`);
+  }
+});
 for (const r of results) if (!usedResults.has(r)) warnings.push(`commands.actions: result ${r} has no corpus case`);
 
 // ---- report ----
 console.log(`grammar: ${rules.size} rules, ${open.size} open names`);
 console.log(`catalogue: ${actions.size} actions, ${results.size} result codes`);
-console.log(`corpus: ${cases} cases, ${covered.size}/${actions.size} actions covered`);
+console.log(`corpus: ${cases} cases, ${covered.size}/${actions.size} actions covered; ${held} held to the role record, ` +
+  `${heldRoles} of their roles`);
 for (const w of warnings) console.log('warning: ' + w);
 for (const e of errors) console.log('error: ' + e);
 console.log(errors.length ? `FAILED: ${errors.length} error(s)` : 'ok');

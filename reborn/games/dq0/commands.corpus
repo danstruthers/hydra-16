@@ -19,13 +19,13 @@ look to the north	VB_OBSERVE_DIRECTION	direction=N	-	with 'to the'
 look left	VB_OBSERVE_DIRECTION	direction=L	facing=N	relative to facing
 look ahead	VB_OBSERVE_DIRECTION	direction=F	facing=N	relative
 look down	VB_OBSERVE_DIRECTION	direction=D	-	vertical
-look at the wall	VB_OBSERVE_OBJECT	object=wall	near=wall	question 3: a glance
+look at the wall	VB_TRACK	-	near=wall	the wall's look, its rock (slice 4.10's walllook; commands.verbs' [turns], the record's, 2026-11-17)
 look the torch over	VB_OBSERVE_OBJECT	object=torch	near=torch	a look at it, over (2026-10-22)
 look over the torch	VB_OBSERVE_OBJECT	object=torch	near=torch	over first
 look at me	VB_OBSERVE_OBJECT	object=me	-	'me' only
 look through the window	VB_OBSERVE_THROUGH	object=window	near=window	through an opening
 look around the corner	VB_OBSERVE_AROUND	object=corner	near=corner	orientation point
-look under the table	VB_OBSERVE_OBJECT	object=table	near=table	locative look
+look under the table	VB_SEARCH	object=table	near=table	a search of it (GAME-CRITIQUE.md's 2.8 step 3, 2026-11-17)
 look in the sack	VB_OBSERVE_IN	object=sack	near=sack	into a thing (slice 4.1)
 look inside the pouch	VB_OBSERVE_IN	object=pouch	near=pouch	inside is in
 look into the well	VB_OBSERVE_IN	object=well	near=well	into
@@ -446,19 +446,19 @@ walk north	ERROR:ENGAGED	-	engaged=goblin	a walk is a move too
 rest	ERROR:ENGAGED	-	engaged=goblin	rest is for the unengaged only
 sit down	ERROR:ENGAGED	-	engaged=goblin	sitting is a rest
 sneak north	ERROR:ENGAGED	-	engaged=goblin	a sneak is a move
-flee north	VB_DISENGAGE	direction=N;pace=run	engaged=goblin	fleeing while engaged is a run out of the zone
+flee north	VB_FLEE	direction=N;pace=run	engaged=goblin	fleeing while engaged: the flight, the UI's (the record's, 2026-11-17)
 pass	VB_PASS	-	engaged=goblin	forfeit the turn, defend normally
 pass	ERROR:NOT_ENGAGED	-	-	pass alone is for engaged characters only
 wrestle the goblin	ERROR:NOT_ENGAGED	-	near=goblin	a grapple needs an engaged opponent
 tackle the goblin	VB_GRAPPLE_OBJECT	object=goblin;maneuver=tackle	near=goblin;engaged=goblin	a grapple maneuver
 pin the goblin	VB_GRAPPLE_OBJECT	object=goblin;maneuver=pin	near=goblin;engaged=goblin	pin
 choke the goblin	VB_GRAPPLE_OBJECT	object=goblin;maneuver=choke	near=goblin;engaged=goblin	choke
-put the goblin in a headlock	VB_GRAPPLE_OBJECT	object=goblin;maneuver=headlock	near=goblin;engaged=goblin	a head lock
-toss the goblin	VB_GRAPPLE_OBJECT	object=goblin;maneuver=throw	near=goblin;engaged=goblin	toss a creature: a grapple throw
-throw the goblin	VB_GRAPPLE_OBJECT	object=goblin;maneuver=throw	near=goblin;engaged=goblin	throw a creature: a grapple throw
-hold the goblin	VB_GRAPPLE_OBJECT	object=goblin;maneuver=hold	near=goblin;engaged=goblin	hold a creature engaged: a grapple
+put the goblin in a headlock	VB_HOLD_OBJECT	object=goblin;maneuver=headlock	near=goblin;engaged=goblin	a head lock: a hold, the UI's grapple of a denizen (commands.verbs' [turns], 2026-11-17)
+toss the goblin	VB_THROW_OBJECT	object=goblin;maneuver=throw	near=goblin;engaged=goblin	toss a creature: a grapple throw, the UI's (hdens.c's grip_go; the record's throw, 2026-11-17)
+throw the goblin	VB_THROW_OBJECT	object=goblin;maneuver=throw	near=goblin;engaged=goblin	throw a creature: a grapple throw, the UI's (the record's throw)
+hold the goblin	VB_HOLD_OBJECT	object=goblin;maneuver=hold	near=goblin;engaged=goblin	hold a creature engaged: a grapple, the UI's (the record's hold)
 hold the torch	VB_HOLD_OBJECT	object=torch	near=torch;engaged=goblin	hold an item: carry it
-grab the goblin	VB_GRAPPLE_OBJECT	object=goblin;maneuver=grab	near=goblin;engaged=goblin	grab a creature engaged
+grab the goblin	VB_RETRIEVE_OBJECT	object=goblin;maneuver=grab	near=goblin;engaged=goblin	grab a creature engaged: a grapple, the UI's (the record's get)
 grab the sword	VB_RETRIEVE_OBJECT	object=sword	near=sword;engaged=goblin	grab an item: get it
 hold the goblin	VB_HOLD_OBJECT	object=goblin	near=goblin	hold a creature not engaged: no grapple, so it is carried (the runtime may refuse a creature)
 wait	ERROR:ENGAGED	-	engaged=goblin	wait is a long idle: not in combat
@@ -709,3 +709,28 @@ throw the dagger down the well	VB_THROW_OBJECT	object=dagger;target=well	near=da
 put the dagger down the shaft	VB_PUT_OBJECT	object=dagger;container=shaft	near=dagger,shaft	any shaft: a thing let fall down it
 drop the rope down the shaft	VB_DROP_OBJECT	object=rope;container=shaft	near=rope,shaft	dropped down a shaft
 throw the dagger down	QUESTION:DISTANCE	object=dagger;direction=D	near=dagger	down alone, nothing after it: a way, as before
+# --- phase B (2026-11-17): the grammar's roles and forms (GAME-CRITIQUE.md's 2.8 steps 1 and 3), held to the role record
+take the iron key	VB_RETRIEVE_OBJECT	object=iron key	near=key	a name whole, its qualifier kept
+remove the key from the chest	VB_RETRIEVE_OBJECT	object=key;source=chest	near=key,chest	remove X from Y: taken from it
+climb on the table	VB_CLIMB	object=table	near=table	climb on
+sit in the chair	VB_SIT	-	near=chair	sit in, as sit on
+get in	VB_ENTER	-	-	get in: entered
+in	VB_ENTER	-	-	in alone: entered
+get out	VB_LEAVE	-	-	get out: left
+out	VB_LEAVE	-	-	out alone: left
+get on the ledge	VB_CLIMB	object=ledge	near=ledge	get on: climbed
+get off	VB_CLIMB	-	-	get off: down, if it's on something
+get out of the well	VB_CLIMB	-	near=well	get out of: climbed out
+look behind the chest	VB_SEARCH	object=chest	near=chest	look behind: a search of it
+examine the north wall	VB_EXAMINE_OBJECT	object=wall	near=wall	the north wall anywhere
+knock on the north wall	VB_KNOCK_OBJECT	object=wall	near=wall	the north wall knocked along
+look at the floor	VB_TRACK	-	-	the floor's look by its thing's name ([turns])
+follow the tracks	VB_TRACK	-	-	the tracks followed by their name ([turns])
+search around for the key	VB_SEARCH	object=key	near=key	a grope, then a seek ([turns], each in turn)
+drop the dagger on the floor	VB_DROP_OBJECT	object=dagger	near=dagger	dropped on the floor: put down
+drop the dagger on the table	VB_DROP_OBJECT	object=dagger;container=table	near=dagger,table	dropped on a thing: put on it
+drop the dagger on the stairs	VB_DROP_OBJECT	object=dagger	near=dagger,stairs	dropped on the stairs: placed there
+pick the lock	VB_UNLOCK_OBJECT	-	-	a lock picked, no key tried (the user's, 2026-11-17)
+wear the ring on my left hand	VB_EQUIP_OBJECT	object=ring	near=ring	a place on the body: its words the record's other
+hide the pouch behind the table	VB_HIDE	object=pouch	near=pouch,table	hidden there: the locative the record's other
+yell "help!"	VB_SAY	text=help!;volume=shout	-	the quote's place the record's
