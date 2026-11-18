@@ -70,6 +70,11 @@ L1-L5 from DECISIONS.md:5878-5885, "No look when the light's the same".
   light the hands' rule laid down burning, or one the player put down, burns on through it. Put out every light
   within reach too?
   - built/2026-11-17-polish.md, open question 3.
+- **L7. A stir told between a look's near part and its far part.** A look one way now tells what's near first, then
+  what lies further (built). A denizen's stir held while the line was answered is told after the near part, so
+  before the far part's words; before, it came after the whole look. It shows only where the far part adds
+  something. Keep it, or hold the stir for the far part?
+  - built/2026-11-17-looks.md, open question 1.
 
 ## Hands, lights and the pack
 
