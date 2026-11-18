@@ -953,8 +953,8 @@ module.exports = {
       name: 'dq0pitfall', near: ['map', 'gear'], what: "Dingus Quest Zero's thing let fall into a pit (the user's, 2026-11-17: \"drop the candle stubs in the pit\" lets them fall: phase A's bugs; wwell2.c's well_put, a pit on the character's square or beside it, T_PIT), and the things' words begun empty for it (2026-11-17, built/2026-11-17-parse.md's noticed: \"put the rope down the hole\" after \"hit the door with the bar\" said \"You have no bar to hand.\", the last answer's words again; things.c's serve, IO_PUT's well, text_new): at seed 5 (dq0 -T, candle stubs and a rope more) the stubs dropped into the pit, none near: \"There's no well or shaft here for the candle stubs to fall down.\"; a pit made beside the character by a poke: dropped again, \"You let the candle stubs fall into the pit.\", that refusal not said again before it, the stubs lying in the pit's square; \"hit the door with the bar\" then \"put the rope down the hole\": the bar's words not said for the rope",
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        "dq0 -p t -s 5 -c /ram/c.hm -T -k 'candle stubs,rope'", 'drop the candle stubs into the pit', 'drop the candle stubs into the pit', 'hit the door with the bar',
-        'put the rope down the hole', 'quit', 'echo $status']) },
+        "dq0 -p t -s 5 -c /ram/c.hm -T -k 'candle stubs,rope'", 'drop the candle stubs into the pit', 'drop the candle stubs into the pit', 'look',
+        'take the candle stubs', 'hit the door with the bar', 'put the rope down the hole', 'quit', 'echo $status']) },
       expect: ['% echo $status'], sdcard: true,
       start(m) {
         dq0Poke(m, [{ g: 1, line: 'drop the candle stubs into the pit', n: 2, call: () => {   // (The square east of it a pit, dq0rope's way)
@@ -979,6 +979,11 @@ module.exports = {
         if (/no well or shaft/.test(d2)) f.push('the last answer\'s words said again before the fall: ' + d2.slice(0, 300));
         const dr = T.filter(t => t.line === 'drop the candle stubs into the pit')[1], st = dr && dr.after && dr.after.items.find(i => i.name === 'candle stubs');
         if (!st || st.where !== 'IW_SQUARE' || st.x !== m.pitAt[0] || st.y !== m.pitAt[1]) f.push('the stubs not in the pit\'s square: ' + JSON.stringify(st) + ' ' + JSON.stringify(m.pitAt));
+        const [lk = ''] = segs('look'), [tk = ''] = segs('take the candle stubs');   // (Things in a pit: H10, 2026-11-18)
+        if (!/In the pit (?:ahead|to your \w+|behind you)[a-z ]* lie some candle stubs\./.test(lk) || /On the floor[^.]*candle stubs/.test(lk)) f.push('the stubs not told in the pit: ' + lk.slice(0, 400));
+        if (!/The candle stubs are down in the pit, out of reach: climb down to them first\./.test(tk)) f.push('the stubs in the pit not out of reach from its edge: ' + tk.slice(0, 300));
+        const tt = T.of('take the candle stubs'), st2 = tt && tt.after && tt.after.items.find(i => i.name === 'candle stubs');
+        if (!st2 || st2.where !== 'IW_SQUARE' || st2.x !== m.pitAt[0]) f.push('the stubs taken from the pit\'s edge: ' + JSON.stringify(st2));
         const [rp = ''] = segs('put the rope down the hole');
         if (!rp || /no bar to hand/.test(rp)) f.push('the bar\'s words said for the rope: ' + rp.slice(0, 300));
         return f;

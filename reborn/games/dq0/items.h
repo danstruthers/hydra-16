@@ -606,8 +606,10 @@ enum {
                                                 **   past 127, SAY_AT2's) */
     SA_NO_FALL,                                 /* (No well nor shaft to let it fall down: wwell2.c's, in things_text,
                                                 **   2026-11-17) */
-    SA_PIT_FALL                                 /* (Let fall into an open pit within reach: wwell2.c's, in trtext as the
+    SA_PIT_FALL,                                /* (Let fall into an open pit within reach: wwell2.c's, in trtext as the
                                                 **   well's, 2026-11-17) */
+    SA_IN_PIT                                   /* (Down in a pit, out of reach from its edge: things.c's s_serve, the
+                                                **   user's, 2026-11-18, H10) */
 };
 
 /* What the character carries, for the UI to word (IO_LIST's): each thing, how deep it's in others, its state */

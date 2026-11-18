@@ -278,6 +278,7 @@ BEAT.hands          +"\nThe {name whose} hands {its} {kind thing} to {its} fello
 BEAT.threw          +"\nThe {name whose} throws you {its} {kind thing}."
 BEAT.fell           +"\nThe {name whose} throws you {its} {kind thing}; it falls short."
 BEAT.douse          +"\n{Actor} put{s} out {its} {kind thing}."
+BEAT.douse_near     +"\n{Actor} put{s} out the {kind thing}."
 BEAT.unseen         "You hear something fall."
 
 # ---- The water's (E_BEAT's WB_WATER ... WB_DOUSED, the character's: wet its band, a swim's how; water_words' before,
@@ -410,7 +411,7 @@ TASK.elsewhere      +"{text?{nl}You came in on a level above this one.|\n{Text} 
                     "|{@douse}|go to {@douse}: that will leave you in the dark"
                     "|{@light} from the burning one|set the {text} down at your feet|take up the {text}"
                     "|set to sharpening the {text}|strike a spark|{@put_in}|sling the {text}"
-                    "|{@put_in}|{@stow}|{@stow} too|leave the {text} behind}"
+                    "|{@put_in}|{@stow}|{@stow} too|leave the {text} behind|keep the {text} in hand}"
 
 TASK.step           +"\nYou {@steps}."
 TASK.fumble         +"\nYou fumble for your {kind named}."
@@ -938,7 +939,8 @@ AHEAD.nothing       +" You see nothing more that way."
 # "; "; {list,} joined ", ".  {plural} the text made more than one, its first word's before " of " ("iron pots",
 # "heaps of sand"), {people} a people's way, the whole ("giant rats", "dwarves"); {A} "A", "An" before a vowel.  The
 # things lying about (seen.c's items: obj a surface's name, or part 8's words for where they lie, where_w's; at the
-# place, 0 at the character's feet, 1 on the floor its way r, 2 and 3 the same hidden, 4 part 8's, 5 a surface's; pl a
+# place, 0 at the character's feet, 1 on the floor its way r, 2 and 3 the same hidden, 4 part 8's, 5 a surface's, 6 in a
+# pit its way r (sight's hid 8: the user's, 2026-11-18, H10); pl a
 # verb's plural), the denizens seen, as they stir and gone from sight (dens.c's: d squares off, v what it's doing, its
 # twenty-two, then one more, many keeping their distance), the walls felt in the dark (task.c's touch_words: v blinded;
 # at 1 a room's kind d known, 2 a passage).  Their add ()s and strcat ()s before; the words the same
@@ -953,7 +955,7 @@ AHEAD.nothing       +" You see nothing more that way."
             "|, mending {folk?its|their} gear.|, whittling.|, keeping their distance.}"
 
 LIST.lie            +"{at?At your feet |On the floor {@rel} |Hidden at your feet |Hidden on the floor {@rel} |{obj}"
-                    "|On the {obj} }{pl?lies|lie} {list}."
+                    "|On the {obj} |In the pit {@rel} }{pl?lies|lie} {list}."
 LIST.where          +"{obj}{list}."
 LIST.in             +", {list} in it."
 LIST.packed         +"Your drawing things are in your {obj}."
@@ -1049,3 +1051,4 @@ SA.shaft_lands      +"{@fallshaft}{@lands}"
 SA.not_on           +"{text?You find nothing on the {obj}.|You find no {text} on the {obj}.}"
 SA.no_fall          +"There's no well or shaft here for the {text} to fall down."
 SA.pit_fall         +"You let the {text} fall into the pit."
+SA.in_pit           +"The {text} {pl?is|are} down in the pit, out of reach: climb down to {pl?it|them} first."

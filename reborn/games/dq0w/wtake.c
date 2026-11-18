@@ -190,8 +190,8 @@ unsigned char __fastcall__ s_take_rule (unsigned n)
     tk_y = p->y;
     k = item_at (n)->kind;
     if (!k || p->where != IW_SQUARE || p->sn != bd.sn || (unsigned) (tk_x - bd.x + 1) > 2 ||
-        (unsigned) (tk_y - bd.y + 1) > 2) {
-        k = IR_NOT_HERE;
+        (unsigned) (tk_y - bd.y + 1) > 2 || ((tk_x != bd.x || tk_y != bd.y) && TILE (*at (bd.sn, tk_x, tk_y)) == T_PIT)) {
+        k = IR_NOT_HERE;                        /* (Down in a pit, from its edge: the character's own rule, H10) */
     } else if (item_at (n)->where == IW_PORTAL) {
         k = IR_FIXED;
     } else if (hub_map (KIND_BANK), CATALOGUE[k].keeps & KF_FIXED) {
@@ -212,6 +212,12 @@ unsigned char __fastcall__ s_take_rule (unsigned n)
 
 /* ---- Only what it's found (the user's, 2026-11-17) */
 static unsigned char want, dark, cleared;       /* (The take's: its wants, its darkvision, got's) */
+
+/* The thing ip (items ()'s) at body bd's own home, its lair's own or its takings: 1 (left there) */
+static unsigned char home_near (void)
+{
+    return ip->sn == bd.hsn && (unsigned) (ip->x - bd.hx + 1) <= 2 && (unsigned) (ip->y - bd.hy + 1) <= 2;
+}
 
 /* Square x, y, d squares off body bd (the more of across and down, its four at most), as it senses it: underfoot, felt
 ** where it stands; else lit (a room's light, the character's: unlit_at's) or within its darkvision, a line clear
@@ -285,6 +291,7 @@ static unsigned char __fastcall__ got (unsigned i, unsigned char k, unsigned cha
 ** found, got; the rest left as they were, hidden */
 void __fastcall__ s_den_take (const struct msg* m)
 {
+    struct item* p;
     unsigned i, seen = 0;
     unsigned char k, f, c, d, best = 5;
     int dx, dy;
@@ -297,11 +304,11 @@ void __fastcall__ s_den_take (const struct msg* m)
     dark = I_TAKE_DARK (*m);
     if ((want & TW_FOOD) && (i = held (1)) != 0) {   /* (Hungry, with food in hand: eaten, five minutes as the character's
                                                 **   meal; a lot one less; its mind told) */
-        k = item_at (i)->kind;
-        if (item_at (i)->qty > 1) {
-            --item_at (i)->qty;
+        k = (p = item_at (i))->kind;
+        if (p->qty > 1) {
+            --p->qty;
         } else {
-            item_at (i)->kind = 0;
+            p->kind = 0;
         }
         hub_map (0);
         bd.ready += 3000;
@@ -313,8 +320,7 @@ void __fastcall__ s_den_take (const struct msg* m)
 
     for (i = 0; (i = items (i, IN_SQUARE, 0)) != 0; ) {
         if (ip->sn != bd.sn || (unsigned) ((dx = ip->x - bd.x) + 4) > 8 || (unsigned) ((dy = ip->y - bd.y) + 4) > 8 ||
-            (ip->sn == bd.hsn && (unsigned) (ip->x - bd.hx + 1) <= 2 && (unsigned) (ip->y - bd.hy + 1) <= 2) ||
-            (ip->flags & I_HIDDEN)) {
+            home_near () || (ip->flags & I_HIDDEN)) {
             continue;                           /* (Out of its sight's four squares; at its own home, its lair's own
                                                 **   or its takings, left there; hidden: its search's alone) */
         }
@@ -345,8 +351,7 @@ void __fastcall__ s_den_take (const struct msg* m)
         bd.ready += 600;
         for (i = 0; (i = items (i, IN_SQUARE, 0)) != 0; ) {
             if (ip->sn != bd.sn || (ip->flags & (I_HIDDEN | I_MAGIC)) != I_HIDDEN ||
-                (unsigned) ((dx = ip->x - bd.x) + 1) > 2 || (unsigned) ((dy = ip->y - bd.y) + 1) > 2 ||
-                (ip->sn == bd.hsn && (unsigned) (ip->x - bd.hx + 1) <= 2 && (unsigned) (ip->y - bd.hy + 1) <= 2)) {
+                (unsigned) ((dx = ip->x - bd.x) + 1) > 2 || (unsigned) ((dy = ip->y - bd.y) + 1) > 2 || home_near ()) {
                 continue;                       /* (Out of its reach; its own home's, its takings' stash, left) */
             }
             f = ip->hide;

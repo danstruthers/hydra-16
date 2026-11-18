@@ -6468,26 +6468,44 @@ void s_rest_go (void)
 
 void __fastcall__ swim_still (unsigned char dive);   /* (Part 73's) */
 
-/* A rest begun, a sleep's or a rest's (I_WAIT's WA_SLEEP): each light it carries burning put out first, told as it is
-** (E_BEAT's WB_DOUSE, its kind: "You put out your torch.", the limbs' row, every actor's words), the light it carries made
-** again (the user's, 2026-11-17: "A rest puts a burning light out first (for every actor)": a denizen carries none lit).
-** None burning (the hub's pc_light none), no look through the item store: the rest begun as soon as before */
+/* A rest begun, a sleep's or a rest's (I_WAIT's WA_SLEEP): each light burning within its reach put out first, told as it
+** is (E_BEAT's limbs' row, its kind: one it carries WB_DOUSE, "You put out your torch."; one lying on its square or
+** beside it, on a thing there or in one, a sconce's, WB_DOUSE_NEAR, "You put out the torch."; but one down in a pit
+** from its edge, out of reach, H10's), the light it carries made again, a sconce's room's light after (the user's,
+** 2026-11-17, "A rest puts a burning light out first", and 2026-11-18, L6: "every burning light within reach") */
 static void rest_dark (void)
 {
-    unsigned i;
-    unsigned char k, d = 0;
+    const struct item* p;
+    unsigned i, j, x, y, px, py;
+    unsigned char k, w, d = 0, sn, ps, pw;
 
     hub_map (0);
-    if (!HUB->pc_light) {
-        return;
-    }
-    for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM | IN_FLAGS, I_LIT)) != 0; ) {
+    sn = HUB->pc_stratum;
+    x = HUB->pc_x;
+    y = HUB->pc_y;
+    for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM | IN_SQUARE | IN_FLAGS, I_LIT)) != 0; ) {
         if (on_pc (i)) {
-            k = item_at (i)->kind;
-            item_at (i)->flags &= ~I_LIT;
-            event (E_BEAT, 0, WB_DOUSE | (unsigned) k << 8);
+            w = WB_DOUSE;
             d = 1;
+        } else {
+            for (j = i; (p = item_at (j))->where == IW_ITEM; j = p->x) {
+            }
+            pw = p->where;
+            ps = p->sn;
+            px = p->x;
+            py = p->y;
+            if (pw != IW_SQUARE || ps != sn || px - x + 1 > 2 || py - y + 1 > 2 ||
+                ((px != x || py != y) && TILE (*at (sn, px, py)) == T_PIT)) {
+                continue;
+            }
+            w = WB_DOUSE_NEAR;
+            if (j != i) {
+                chart_late |= 2;                /* (In a sconce: its room's light, the main loop's) */
+            }
         }
+        k = item_at (i)->kind;
+        item_at (i)->flags &= ~I_LIT;
+        event (E_BEAT, 0, w | (unsigned) k << 8);
     }
     if (d) {
         light_now ();

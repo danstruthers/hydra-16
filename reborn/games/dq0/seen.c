@@ -191,8 +191,9 @@ static void items (void)
                 said_s[0] = where_w + 1;        /* (In a corner, against a wall: part 8's) */
                 f.w2 = 4 << 4;
             } else {
-                f.w2 |= ((S->item[i].hid & 1) << 1 | (S->item[i].rel != 0xFF)) << 4;  /* (At its feet, on the floor
-                                                **   its way; hidden) */
+                f.w2 |= (S->item[i].hid & 8 ? 6 : (S->item[i].hid & 1) << 1 | (S->item[i].rel != 0xFF)) << 4;  /* (At its
+                                                **   feet, on the floor its way; hidden; in a pit its way, the senses' hid
+                                                **   8: the user's, 2026-11-18, H10) */
             }
             k = LF_LIE;
         }

@@ -768,6 +768,71 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0denpit', outfit: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's things in a pit out of a denizen's reach from its edge (the user's, 2026-11-18: DECISIONS.md's \"The merged branches' questions\", H10, every actor's: wtake.c's take rule as the character's things.c): dq0dentake's scene (seed 1's bandits, the character given a sword), the sword dropped at its feet, a square beside the character made a pit by a poke and the sword put down in it (the item store's); a bandit with no weapon to hand put on a square beside the pit: it doesn't snatch the sword up from the pit's edge (no E_BEAT WB_PICKS of it while it stands outside the pit), the sword left in the pit unless it went down into it",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k sword",
+        'drop the sword', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        const sq = () => {                                   // (The character's chunk's bank, its tiles' offset, its square in it)
+          const h = m.dq0.bank(0), { L } = m.dq0.layout(), w = m.dq0.bank(WORLD_BANK_N), st = stratumRec(m, h[L.pcSn]);
+          const px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8, ox = px - st.x0, oy = py - st.y0;
+          const [TILE] = require('../../../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, tile)']);
+          for (let c = 0; c < 24; c++) {
+            const sl = CSLOT_AT + c * 8, b = m.dq0.bank(5 + Math.floor(c / 3)), o = (c % 3) * 0xAA0;
+            if (!w[sl] || !b || w[sl + 1] !== h[L.pcSn] || (w[sl + 2] | w[sl + 3] << 8) !== ox >> 5 || (w[sl + 4] | w[sl + 5] << 8) !== oy >> 5) continue;
+            return { b, t: o + TILE, x: ox & 31, y: oy & 31, px, py };
+          }
+          return null;
+        };
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, call: () => {   // (A floor square beside it a pit, another beside both for the bandit)
+          const q = sq(); if (!q) return;
+          const tile = (dx, dy) => { const x = q.x + dx, y = q.y + dy; return x < 0 || y < 0 || x > 31 || y > 31 ? -1 : q.b[q.t + y * 32 + x] & 15; };
+          for (const [ax, ay, bx, by] of [[1, 0, 0, 1], [0, 1, -1, 0], [-1, 0, 0, -1], [0, -1, 1, 0]]) {
+            if (tile(ax, ay) === 1 && tile(bx, by) === 1) {
+              q.b[q.t + (q.y + ay) * 32 + q.x + ax] = q.b[q.t + (q.y + ay) * 32 + q.x + ax] & 0xF0 | 9;
+              m.pit = [q.px + ax, q.py + ay];
+              const { L, K } = m.dq0.layout(), per = Math.floor(0x2000 / L.itemSize);   // (The sword dropped at its feet put down in the pit)
+              for (let n = 1; n < L.nitems; n++) {
+                const b = m.dq0.bank(L.item0 + Math.floor(n / per)), o = (n % per) * L.itemSize;
+                if (b && b[o + L.iWhere] === K.IW_SQUARE && (b[o + L.iX] | b[o + L.iX + 1] << 8) === q.px && (b[o + L.iY] | b[o + L.iY + 1] << 8) === q.py) {
+                  b[o + L.iX] = m.pit[0] & 255; b[o + L.iX + 1] = m.pit[0] >> 8; b[o + L.iY] = m.pit[1] & 255; b[o + L.iY + 1] = m.pit[1] >> 8; m.moved = (m.moved || 0) + 1;
+                }
+              }
+              m.side = [q.px + bx, q.py + by];
+              return;
+            }
+          }
+        } }, { g: 1, line: 'wait', n: 1, call: (h, L, K, at) => {
+          if (!m.side) return;
+          const u16 = o => h[o] | h[o + 1] << 8, w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
+          const named = k => { let n = ''; for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]); return n; };
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
+          if (k === undefined) return;
+          const o = at(k), [x, y] = m.side;
+          w16(o + L.aX, x); w16(o + L.aY, y); h[o + L.aSn] = h[L.pcSn]; h[o + L.aDoing] = 0;
+          h[L.agear + k] &= ~1;                              // (AG_ARMED: none to hand, so it wants a weapon)
+          const R = dq0Rec(m), r = R.at(h[o + L.aDen]);
+          R.mem[r + R.X] = x & 255; R.mem[r + R.X + 1] = x >> 8; R.mem[r + R.Y] = y & 255; R.mem[r + R.Y + 1] = y >> 8; R.mem[r + R.SN] = h[L.pcSn];
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+          m.take = { k, did: u16(o + L.aDid) };
+        } }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        if (!m.pit || !m.take) return ['the scene not set: no pit beside the character, or no bandit: ' + JSON.stringify([m.pit, m.take])];
+        if (!m.moved) return ['the sword not put down in the pit'];
+        for (const t of T) {
+          const p = [...t.events, ...t.dens].filter(e => e.kind === 'E_BEAT' && e.beat === 'WB_PICKS' && e.b === m.take.k + 1);
+          const a = t.after && t.after.actors.find(x => x.name === 'bandit' && x.x === m.side[0] && x.y === m.side[1]);
+          if (p.length && (!t.after || t.after.actors.some(x => x.name === 'bandit' && x.x === m.pit[0] && x.y === m.pit[1])) === false) f.push('the bandit took a thing up, not in the pit: ' + t.line + (a ? ' (from the pit\'s edge)' : ''));
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0follow', near: ['denizens'], what: 'Dingus Quest Zero\'s following (the verbs plan\'s B6, 2026-11-10: DECISIONS.md\'s "Prayer, fasting, swimming and following"), by the words, the sway\'s replies and the character\'s squares: "follow me" an ally\'s order still (dq0fetch\'s seed 21 rat befriended twice, an ally: SW_ORDER OR_FOLLOW, SR_OK); at seed 5, "follow the sack" refused ("The sack isn\'t going anywhere."); down the ladder, "follow the rat" trails a giant rat that keeps its distance ("You follow the giant rat.", walked after it, the world\'s close-in re-aimed each time, looked round for as it goes behind), till it\'s lost ("You\'ve lost the giant rat.", "track" offered); out of reach as it begins, said so once then ("You follow the giant rat. You can\'t get near enough to the giant rat.", the user\'s, 2026-11-17: "A follow out of reach says so once, when it starts"), never again as it\'s re-aimed',
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', 'echo ml ani 90 >> /ram/a.hm',

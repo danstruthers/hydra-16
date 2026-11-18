@@ -655,6 +655,27 @@ module.exports = {
       },
     },
     {
+      name: 'dq0restnear', near: ['time', 'gear'], what: "Dingus Quest Zero's rest puts out every burning light within reach (the user's, 2026-11-18: DECISIONS.md's \"The merged branches' questions\", L6: \"A rest puts out every burning light within reach, not only those carried\"; dq0w.c's rest_dark: on its square or beside it, on a thing or in one there, E_BEAT's WB_DOUSE_NEAR), by the words and the item store: at seed 3 (dq0 -T, a lantern more) the lantern lit and set down at its feet: \"sleep 5 minutes\": \"You put out your torch.\" and \"You put out the lantern.\" before \"You settle down to sleep\", neither lit after; a second game the torch dropped lit and the character gone to the room's far side: the torch out of reach, still lit after the sleep, nothing put out",
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k lantern', 'light the lantern', 'drop the lantern', 'sleep 5 minutes', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'drop the torch', 'go to the far side', 'sleep 5 minutes', 'quit', 'echo $status']) },
+      sdcard: true,
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' ');
+        const g = o.split('% dq0 -p t -s 3').slice(1);
+        if (g.length !== 2) return ['not two games: ' + g.length];
+        const sl = g[0].slice(g[0].indexOf('> sleep 5 minutes'), g[0].indexOf('You settle down to sleep'));
+        if (!/You put out your torch\./.test(sl) || !/You put out the lantern\./.test(sl)) f.push('the lights carried and at its feet not both put out first: ' + sl.slice(0, 300));
+        const [s1, s2] = T.filter(t => t.line === 'sleep 5 minutes'), lit = (t, n) => t && t.after ? t.after.items.filter(i => i.name === n && (i.flags & DQ0_I.LIT)) : [];
+        if (lit(s1, 'torch').length || lit(s1, 'lantern').length) f.push('a light within reach still lit after the sleep');
+        if (/You put out/.test(g[1])) f.push('a light out of reach put out: ' + g[1].slice(g[1].indexOf('> sleep'), g[1].indexOf('> sleep') + 300));
+        if (!lit(s2, 'torch').filter(i => i.where === 'IW_SQUARE').length) f.push('the torch out of reach not still lit');
+        return f;
+      },
+    },
+    {
       name: 'dq0passes', near: ['time', 'gear'], what: "Dingus Quest Zero's minute's lighter passes at a real pace (2026-11-04: seen to in the world's main loop, part 27 not copied for them, the swap study's; the same work as when they were part 27's): at the normal pace, idle, not in a long wait: a torch burning in a sconce, its last minute poked, goes out at the minute's look and the sconce's own pass after it takes its room's light away (BA_SCONCES); the character's own torch burns a minute down for each minute gone; a wait's end asks the time it believes (TS_ASK): it's reckoned by then (its next due ahead of the clock, its minute this one)",
       init: 't_rc', cycles: 2400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p n -s 535 -c /ram/c.hm -T -T -T', 'light the torch in the sconce', 'wait 5 seconds',

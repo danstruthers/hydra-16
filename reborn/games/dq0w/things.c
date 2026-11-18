@@ -389,8 +389,10 @@ unsigned char rsteps, rbody;                    /*   its steps; the main RAM's, 
 ** time it took) */
 struct ireq iq;
 static unsigned pack, belt, dropped, seen_d, took;
-static unsigned char afar, nin;
+static unsigned char afar, nin;                /* (afar: 1 out of reach, 2 down in a pit from its edge, R_PIT's) */
 static unsigned far_n, far_x, far_y;            /* (The thing at_hand found out of reach, and where it lies) */
+#define R_PIT           29                      /* (pick_'s rank of a thing down in a pit, not the character's square: out
+                                                **   of reach from its edge, the user's, 2026-11-18, H10; the worst) */
 static char xn[16], yn[16];                     /* (The two names said: the words asked, then the things'; the
                                                 **   catalogue's bank's code's, and a count's words) */
 static unsigned char last_sa;                   /* (The words the catalogue's code said last: SA_*) */
@@ -470,10 +472,12 @@ static unsigned char __fastcall__ fits (unsigned n, unsigned c)
 }
 
 
-/* Within reach of the character (on a square next to it, or its own; or on a surface there) */
+/* Within reach of the character (on a square next to it, or its own; or on a surface there); not down in a pit but
+** its own square (the user's, 2026-11-18, H10: from inside it alone, every actor's: wtake.c's take rule the same) */
 unsigned char __fastcall__ s_in_reach (unsigned n)
 {
     const struct item* s;
+    const unsigned char* p;
     unsigned x, y;
 
     fetch (&rec, n);
@@ -485,7 +489,8 @@ unsigned char __fastcall__ s_in_reach (unsigned n)
         far_x = s->x;                           /* (Where it lies: at_hand's, out of reach) */
         far_y = s->y;
     }
-    return s && s->x - x + 1 <= 2 && s->y - y + 1 <= 2;
+    return s && s->x - x + 1 <= 2 && s->y - y + 1 <= 2 && ((s->x == x && s->y == y) || !(p = at (s->sn, s->x, s->y)) ||
+        TILE (*p) != T_PIT);
 }
 
 /* ---- What's in a thing, or on the character: the bulk and weight (quarter pounds) of what's in it (a thing's own
@@ -952,7 +957,14 @@ unsigned char __fastcall__ s_reach_step (unsigned n, unsigned c)
             rs_after_on = 1;
             rstep.thing = rs_tool;
             rstep.edge = SE_BACKIN;
-            rstep.say = SV_PUTAWAY;
+            hub_map (0);                        /* (Where it goes back, SE_BACKIN's: its room looked for first, the
+                                                **   user's, 2026-11-18, H9; none, kept in hand, said so) */
+            if ((c = HUB->rs_nout ? HUB->rs_home[HUB->rs_nout - 1] : 0) == 0 && (c = rs_pack) == 0) {
+                about ();
+                c = pack;
+            }
+            cat_map ();
+            rstep.say = c && !o_fits (rs_tool, c) ? SV_PUTAWAY : SV_KEEP;
             rstep.what = item_kind (rstep.apart = rs_tool);
             rstep.time = 20;
             return rs_begin ();
@@ -2649,6 +2661,13 @@ unsigned char s_serve (void)
             HUB->ireq.x += n;
         }
     }
+    if (iq.result == IR_NOT_HERE && afar == 2) {   /* (Down in a pit, from its edge: said so, no walk over to it, the
+                                                **   user's, 2026-11-18, H10: climbing down reaches it) */
+        text_new ();
+        cat_map ();                             /* (The catalogue's bank's words) */
+        name_of (far_n, 1);
+        iq.result = no (SA_IN_PIT);
+    }
     rclear10 ();
     hand_n = 0;
     hub_map (0);
@@ -3060,6 +3079,9 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
             dx = dx > 20 ? dx - 20 : 20 - dx;
             dy = dy > 20 ? dy - 20 : 20 - dy;
             r = 8 + (dx > dy ? dx : dy);
+            if ((px != x || py != y) && (t = at (sn, px, py)) != 0 && TILE (*t) == T_PIT) {
+                r = R_PIT;                      /* (Down in a pit: reached from inside it alone) */
+            }
         }
         k = kind_of (rec.kind);
         if (s == SL_LIT ? !(rec.flags & I_LIT) : wsel == SL_NEW ? rec.flags & (I_HELD | I_LIT) : s == SL_UNLIT ? (rec.flags &
@@ -3104,8 +3126,9 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
         wcomp = name_comp (item_at (i)->kind, name);   /* (Named by a compartment of its: which, for the verb) */
     }
     seen_d = r < 8 ? 0 : r - 8;
-    if (how == HW_HAND && r >= 10) {            /* (Seen, but out of reach: where it lies, the UI's to walk to) */
-        afar = 1;
+    if (how == HW_HAND && r >= 10) {            /* (Seen, but out of reach: where it lies, the UI's to walk to; down in a
+                                                **   pit, s_serve's words, no walk) */
+        afar = r == R_PIT ? 2 : 1;
         far_n = i;
         chain (i);
         p = item_at (ctop);
@@ -3222,6 +3245,11 @@ static unsigned char __fastcall__ get (unsigned n)
     HUB->ireq.y = rec.y;
     HUB->ireq.item = n;
     if (rec.x - x + 1 > 2 || rec.y - y + 1 > 2) {
+        return IR_NOT_HERE;
+    }
+    if ((rec.x != x || rec.y != y) && TILE (*at (rec.sn, rec.x, rec.y)) == T_PIT) {
+        afar = 2;                               /* (Down in a pit, from its edge: s_serve's words, no walk; H10) */
+        far_n = n;
         return IR_NOT_HERE;
     }
     fetch (&rec, n);

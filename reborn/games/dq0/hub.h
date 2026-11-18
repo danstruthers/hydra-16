@@ -849,9 +849,10 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
                                                 **   search.c's words: dq0w's wroom.inc) */
        WB_EATS, WB_HANDS, WB_THREW, WB_FELL,    /* (A denizen's: what it holds eaten, handed to its fellow, thrown to the
                                                 **   character, falling short of it, its kind times 256: wtake.c's, 2026-11-04) */
-       WB_DOUSE };                              /* (A light put out as one settles to rest, its kind times 256: every
+       WB_DOUSE,                                /* (A light put out as one settles to rest, its kind times 256: every
                                                 **   actor's, the user's, 2026-11-17, "A rest puts a burning light out
                                                 **   first") */
+       WB_DOUSE_NEAR };                         /* (One within its reach, not carried: the user's, 2026-11-18, L6) */
 enum { RSW_BEGUN, RSW_GOES_ON, RSW_ALREADY, RSW_WALL, RSW_CORNER, RSW_MIDDLE, RSW_ROUND, RSW_END, RSW_FLOOR, RSW_DONE,
        RSW_THING };                             /* (WB_SEARCH's what: b 1 by touch; it begun, gone on with, done before;
                                                 **   along a wall, round a corner, the floor inside, a room of one stop;
@@ -1044,7 +1045,7 @@ enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK
 enum { SV_OFF = 0x20, SV_OFFDOWN, SV_ON, SV_LETBURN, SV_LAYLIT, SV_LAYLIT2, SV_DOWN2, SV_DIP,
        SV_IN, SV_OPEN, SV_GETOUT, SV_LETFALL, SV_PUTAWAY, SV_BLOWOUT, SV_BLOWDARK, SV_LIGHT,
        SV_SETDOWN, SV_TAKEUP, SV_HONE, SV_KINDLE, SV_SHEATHE, SV_SLING, SV_SCONCE, SV_INPACK,
-       SV_INPACK2, SV_LEAVE };                  /* A step of a long task (the world's step planner, things.h's struct
+       SV_INPACK2, SV_LEAVE, SV_KEEP };                  /* A step of a long task (the world's step planner, things.h's struct
                                                 **   step: the reach's, HOUSE.md's, each its own time): its words, in a long
                                                 **   task's kind's place (E_TASK's TE_BEGUN, I_WAIT's task: LT_STEP set, the
                                                 **   verb the low 5 bits): a pack on the back taken off, into a hand or set

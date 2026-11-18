@@ -1700,7 +1700,11 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '').replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' ');
-        inTurn(s, ['> unlock the chest', 'You take off the backpack', 'You get out the iron key.', 'You unlock the chest with its key.'], f, 'the words: ');
+        inTurn(s, ['> unlock the chest', 'You take off the backpack', 'You get out the iron key.', 'You unlock the chest with its key.',
+          'You keep the iron key in hand.'], f, 'the words: ');
+        if (/You put away the iron key\./.test(s)) f.push('the key told put away, the pack (packed past its room) with none for it (H9, 2026-11-18)');
+        const iv = T.of('inventory').after, key = iv && iv.items.find(i => i.name === 'iron key');
+        if (!key || !(key.flags & DQ0_I.HELD)) f.push('the key not kept in hand: ' + JSON.stringify(key));
         if (/nothing to pick its lock with/.test(s)) f.push('the key in the pack set down not found: "nothing to pick its lock with" said');
         const u = T.of('unlock the chest').after, chest = u && u.items.find(i => i.name === 'chest');
         if (!chest || (chest.shut & 2)) f.push('the chest still locked: ' + JSON.stringify(chest));

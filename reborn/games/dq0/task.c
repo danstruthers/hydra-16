@@ -31,11 +31,11 @@ static const char* const doing[] = {           /* (By LT_*; then by SV_*, a step
     "taking off", "taking off", "putting on", "letting fall", "setting down", "setting down", "setting down", "dipping",
     "reaching into", "holding open", "getting out", "letting fall", "putting away", "putting out", "putting out", "lighting",
     "setting down", "taking up", "sharpening", "striking a spark", "sheathing", "slinging", "setting down", "stowing",
-    "stowing", "leaving"
+    "stowing", "leaving", "keeping"
 };
 #define NDOING          (sizeof doing / sizeof doing[0])
 #define NLT             (LT_DIP + 1)
-typedef char doing_all[NDOING == NLT + SV_LEAVE + 1 - SV_OFF ? 1 : -1];   /* (Every long task's words: "You stop doing anything the torch",
+typedef char doing_all[NDOING == NLT + SV_KEEP + 1 - SV_OFF ? 1 : -1];   /* (Every long task's words: "You stop doing anything the torch",
                                                 **   2026-11-04) */
 #define DOING(k)        doing[(k) & LT_STEP ? NLT - SV_OFF + ((k) & ~SM_ALL) : (k) < NLT ? (k) : 0]   /* (A step's by its verb: its
                                                 **   word, SM_*, its first words' alone) */
@@ -791,9 +791,9 @@ void __fastcall__ o_time_said (unsigned w, unsigned char b);
 /* A wait (VB_WAIT, VB_PASS) or a sleep or a rest (VB_SLEEP) begun (chores'): as long as the line says (wait_of); a
 ** wait or a pass with none said a round; a sleep or a rest a night's, eight hours, or a short one's, half an hour
 ** (the house's); its intent in tenths, or in minutes past 100 of them (WA_MIN), asleep for a sleep (WA_SLEEP).  A sleep
-** or a rest with a light burning: its words as its E_TIME comes, after the world's of the light put out first (the
-** user's, 2026-11-17: "A rest puts a burning light out first"; its locals on the C stack, the main RAM's: the hub's
-** pc_light copied into one, not into the overlay's bank, the window's as hub_mem copies) */
+** or a rest: its words as its E_TIME comes, after the world's of the lights within reach put out first (the user's,
+** 2026-11-17: "A rest puts a burning light out first"; 2026-11-18, L6: every one within reach, which the UI doesn't
+** know: the world's to say) */
 #pragma static-locals (push, off)
 void __fastcall__ o_wait_go (unsigned char action)
 {
@@ -810,7 +810,7 @@ void __fastcall__ o_wait_go (unsigned char action)
             m = cmd.aux & 2 ? 30 : 480;
         }
         a = rest_ ? WA_SLEEP | WA_REST : WA_SLEEP;
-        hub_mem (0, &lit, (const void*) &HUB->pc_light, 1);
+        lit = 1;
     }
     if (m > 100) {
         a |= WA_MIN;

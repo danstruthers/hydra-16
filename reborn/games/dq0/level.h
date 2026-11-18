@@ -75,7 +75,8 @@ struct sight {
                                                 **   shape, ../dq0/run.h's, 2026-11-01) */
     unsigned char   nitems;                     /* The things it sees lying about (the things', named) */
     struct sitem { char name[14]; unsigned char qty, plural, rel, hid; unsigned n, x, y; } item[SEE_ITEMS];
-                                                /* (hid: 1 it hid it, 2 on the surface before it, 4 lit; its high
+                                                /* (hid: 1 it hid it, 2 on the surface before it, 4 lit, 8 down in
+                                                **   a pit, not at its feet (2026-11-18); its high
                                                 **   four bits how far off it's made out, squares past a speck: the
                                                 **   kind's seen) */
     unsigned char   stratum, sname, style;      /* The stratum: its number, its name (the theme's), its style */

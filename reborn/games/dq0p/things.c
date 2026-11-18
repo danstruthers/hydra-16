@@ -138,7 +138,7 @@ static void __fastcall__ seen_one (struct sight* s, unsigned i, unsigned char on
 void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, unsigned y, unsigned char face)
 {
     static struct item q;
-    static unsigned char k, listed, on;
+    static unsigned char k, listed, on, pit;
     static const struct kind* kq;
     static struct item* r;
     static unsigned qx, qy;
@@ -160,11 +160,16 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
         if (!(p = at (sn, qx, qy)) || !(*p & T_VIS)) {
             continue;
         }
+        pit = TILE (*p) == T_PIT && (qx != x || qy != y);   /* (Down in a pit, not at its feet: hid 8, "In the pit
+                                                **   ...", the user's, 2026-11-18, H10) */
         fetch (&q, i);
         se.rel = q.x == x && q.y == y ? 0xFF : REL8 (bearing ((int) (q.x - x), (int) (q.y - y)), face);
         se.x = q.x;
         se.y = q.y;
         seen_one (s, i, 0);
+        if (pit) {
+            s->item[s->nitems - 1].hid |= 8;
+        }
         kq = kind_of (q.kind);
         on = kq->keeps & KF_ON;
         if (on || ((kq->flags & K_CONTAINER) && on_lid (q.kind))) {  /* (What's on a surface, on a chest's lid, seen

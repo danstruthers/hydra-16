@@ -193,7 +193,7 @@ E_BEAT:feel     w1 beat:0-7==WB_FEEL@WB_QUIET head:8-10 gait:12-15      # (Set o
 E_BEAT:met      w1 beat:0-7==WB_FELT,WB_OFF,WB_SHORT@WB_QUIET fa:8-15@FA_NONE
 E_BEAT:hit      w1 beat:0-7==WB_HIT@WB_QUIET fa:8-11@FA_NONE gait:12-15
 E_BEAT:thing    w1 beat:0-7==WB_THING,WB_TRIP,WB_STUMBLE,WB_SPENT,WB_CRUTCH@WB_QUIET thing:8-15     # (A thing's kind, the catalogue's)
-E_BEAT:limb     b whose; w1 beat:0-7==WB_DROP,WB_PICKS,WB_DRAWS,WB_READIES,WB_BROKE,WB_EATS,WB_HANDS,WB_THREW,WB_FELL,WB_DOUSE@WB_QUIET
+E_BEAT:limb     b whose; w1 beat:0-7==WB_DROP,WB_PICKS,WB_DRAWS,WB_READIES,WB_BROKE,WB_EATS,WB_HANDS,WB_THREW,WB_FELL,WB_DOUSE,WB_DOUSE_NEAR@WB_QUIET
                 thing:8-15
                 # (The limbs': b whose, 0 the character, else the actor plus 1, | 0x80 a fall unseen; the thing's kind)
 E_BEAT:rise     b whose; w1 beat:0-7==WB_RISEN,WB_NOT_UP@WB_QUIET already:8     # (On its feet already; no leg to
