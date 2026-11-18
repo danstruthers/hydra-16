@@ -17,7 +17,8 @@
 ** that isn't there now was seen, if at all, before the cache made way for it: its memory's laid over it as it's made
 ** again, so the character's near ones are always there).
 **
-** All of it a swapped part's (part 1: ../dq0/swap.inc), draw_map called through its stub (bank.s's).
+** Each row into the UI bank as it's drawn, its layers after it (the UI shows it as the last of them comes: the user's,
+** 2026-11-17).  All of it a swapped part's (part 1: ../dq0/swap.inc), draw_map called through its stub (bank.s's).
 */
 
 #include <string.h>
@@ -245,16 +246,18 @@ void s_draw_map (void)
     cj = MAP_H / 2;
     if (north) {                                /* (North up: the window kept in the stratum) */
         left = px - MAP_W / 2;
+        x = s->x0 + s->w - MAP_W;               /* (Its furthest east, and south: worked out once, the part's room) */
         if (s->w <= MAP_W || left < s->x0) {
             left = s->x0;
-        } else if (left > s->x0 + s->w - MAP_W) {
-            left = s->x0 + s->w - MAP_W;
+        } else if (left > x) {
+            left = x;
         }
         top = py - MAP_H / 2;
+        y = s->y0 + s->h - MAP_H;
         if (s->h <= MAP_H || top < s->y0) {
             top = s->y0;
-        } else if (top > s->y0 + s->h - MAP_H) {
-            top = s->y0 + s->h - MAP_H;
+        } else if (top > y) {
+            top = y;
         }
         ci = px - left;
         cj = py - top;
@@ -280,7 +283,9 @@ void s_draw_map (void)
             }
         }
         row[n] = 0;
-        hub_map (UI_BANK);                      /* (The map the UI bank's) */
+        hub_map (UI_BANK);                      /* (The map the UI bank's: its row, then its layers, their last byte
+                                                **   last, the UI's 0xFF there till then: it shows each row as it's
+                                                **   drawn, the user's, 2026-11-17) */
         strcpy (UIREC->map[j], row);
         memcpy (UIREC->maplay[j], lays, MAP_W);
     }

@@ -183,7 +183,9 @@ static const char* const sgr[] = { "\x1b[97m", "\x1b[90m", "\x1b[33m", "\x1b[96m
 /* A passage's slant drawn as a slant (the user's, 2026-10-31: ways off the compass; HOUSE.md's a passage's heading),
 ** on the map as the maker drew it (the UI bank's rows, as they're turned): a passage's square ('#') that's an elbow (two
 ** ways out of it a quarter apart, nothing else beside it but walls and rock) with an elbow turned the same way beside
-** it along one of its two, a staircase of short steps, drawn '/' or '\' along it; a bend's corner alone stays '#' */
+** it along one of its two, a staircase of short steps, drawn '/' or '\' along it; a bend's corner alone stays '#'.  A
+** row's worked out from the rows as drawn, two above it and two below, into the row shown (the same as the rows marked
+** whole: a mark was a passage's square to the others; 2026-11-17, the map shown a row at a time) */
 #pragma bss-name (push, "SW3RODATA")            /* (Its state the part's own: none kept from one map to the next) */
 static unsigned char ml[MAP_H], em;
 static const signed char ex[4] = { 0, 1, 0, -1 }, ey[4] = { -1, 0, 1, 0 };
@@ -197,8 +199,8 @@ static unsigned char __fastcall__ elbow (signed char x, signed char y)    /* (1 
 {
     unsigned char d, n = 0, c = mc (x, y);
 
-    if (c != '#' && c > 2) {
-        return 0;                               /* (Not a passage's square, nor one marked an elbow) */
+    if (c != '#') {
+        return 0;                               /* (Not a passage's square) */
     }
     for (d = em = 0; d < 4; ++d) {
         c = mc (x + ex[d], y + ey[d]);
@@ -210,111 +212,152 @@ static unsigned char __fastcall__ elbow (signed char x, signed char y)    /* (1 
     return n != 2 ? 0 : em == 6 || em == 9 ? 1 : em == 3 || em == 12 ? 2 : 0;
 }
 
-static void slants (void)
+/* Row y's slants made in r, its copy */
+static void __fastcall__ slants (char* r, signed char y)
 {
-    static signed char x, y;
+    static signed char x;
     static unsigned char k, m, d;
 
     hub_map (UI_BANK);
-    for (y = 0; y < MAP_H; ++y) {
-        ml[y] = strlen (UIREC->map[y]);
-    }
-    for (y = 0; y < MAP_H; ++y) {
-        for (x = 0; x < ml[y]; ++x) {
-            if ((k = elbow (x, y)) != 0) {
-                for (m = em, d = 0; d < 4; ++d) {
-                    if ((m >> d & 1) && elbow (x + ex[d], y + ey[d]) == k) {
-                        UIREC->map[y][x] = k;   /* (Marked, still a passage's square to the others) */
-                        break;
-                    }
+    for (x = 0; x < ml[y]; ++x) {
+        if ((k = elbow (x, y)) != 0) {
+            for (m = em, d = 0; d < 4; ++d) {
+                if ((m >> d & 1) && elbow (x + ex[d], y + ey[d]) == k) {
+                    r[x] = k == 1 ? '/' : '\\';
+                    break;
                 }
-            }
-        }
-    }
-    for (y = 0; y < MAP_H; ++y) {
-        for (x = 0; x < ml[y]; ++x) {
-            if ((k = UIREC->map[y][x]) <= 2) {
-                UIREC->map[y][x] = k == 1 ? '/' : '\\';
             }
         }
     }
     hub_map (0);
 }
+
+static unsigned char cq, cn, side;              /* (The compass's letter (none: north up) and its way; the panel beside) */
+static unsigned char lays[MAP_W];
 #pragma bss-name (pop)
 
-void __fastcall__ s_map (const char* rules)
+/* The map's line k: row y (0xFF: none, the panel's line alone), its colours, its slants, the compass in its top three
+** (turned), and the panel's line k beside it (line: room for it, LINE) */
+static void __fastcall__ map_line (char* line, unsigned char y, unsigned char k)
 {
-    static unsigned char lays[MAP_W];
-    char line[LINE];                            /* (On the C stack: the main RAM's room) */
-    unsigned char y, n, side, k, at, cur, cn, cq;
-    char* o;
+    char* o = line;
     char* r = line + LINE - MAP_W - 1;          /* (A row's letters at the line's end, coloured into its start) */
+    unsigned char at = 0, cur;
 
-    make_panel (rules);
+    if (y != 0xFF) {
+        hub_mem (UI_BANK, r, UIREC->map[y], MAP_W + 1);
+        hub_mem (UI_BANK, lays, UIREC->maplay[y], MAP_W);
+        slants (r, y);                          /* (A passage's slant drawn as one: 2026-11-01) */
+        if (cq && y < 3) {                      /* (The compass, its three rows) */
+            for (at = strlen (r); at < MAP_W; ++at) {
+                r[at] = ' ';
+            }
+            r[MAP_W] = 0;
+            r[MAP_W - 3] = r[MAP_W - 1] = ' ';
+            r[MAP_W - 2] = y == 1 ? '+' : ' ';
+            if (1 + head_y[cn] == y) {
+                r[MAP_W - 2 + head_x[cn]] = cq;
+            }
+            lays[MAP_W - 3] = lays[MAP_W - 2] = lays[MAP_W - 1] = ML_COMPASS;
+            at = 0;
+        }
+        for (cur = 0xFF; (*o = r[at]) != 0; ++at) {
+            if (!plain && *o != ' ' && lays[at] != cur && o < line + LINE - MAP_W - 12) {
+                cur = lays[at];                 /* (Its colour as it changes, but between the letters) */
+                strcpy (o, sgr[cur]);
+                o += strlen (o);
+                *o = r[at];
+            }
+            ++o;
+        }
+        if (cur != 0xFF) {
+            strcpy (o, "\x1b[0m");              /* (Its end plain again) */
+            o += 4;
+        }
+    }
+    *o = 0;
+    if (side && k < np) {
+        for (; at < MAP_W + 1; ++at) {
+            *o++ = ' ';
+        }
+        strcpy (o, panel[k]);
+    }
+    say_raw (line);
+}
+
+/* The map's first words, at once (the user's D17), and the maker asked to draw it (the UI bank's rows, each as it's
+** drawn: its layers after it, their last 0xFF till then) as the referee's lines and the panel are made (sheet_map's) */
+void s_map_begin (void)
+{
+    unsigned char y;
+
     blank ();
     sayf ("The map (you face %s%s; heights in tens of feet against yours):", head_name[(HUB->pc_face + HUB->pc_skew) & 7],
         HUB->pc_lost ? ", or so you think" : "");
-    t_flush ();                                 /* (Its first words at once, the maker's drawing some ten million cycles:
-                                                **   the user's D17) */
-    fore_set (FS_UI | FS_SENS | FS_MAKE);                 /* (The answer begun: the maker first, the player waiting on it: main.c's) */
-    hub_call (&HUB->mapq, T_MAKER);             /* (The maker draws it into the UI bank) */
-    fore_set (fored);
-    slants ();                                  /* (A passage's slant drawn as one: 2026-11-01) */
+    t_flush ();
+    hub_map (UI_BANK);
+    for (y = 0; y < MAP_H; ++y) {
+        UIREC->maplay[y][MAP_W - 1] = 0xFF;
+    }
+    hub_map (0);
+    hub_post (&HUB->mapq, T_MAKER);
+}
+
+/* The map shown a row at a time as the maker draws it (the user's, 2026-11-17: each row as it's ready, not the whole
+** before its first): each row once it's drawn, and the two after it if it has a passage's squares (its slants), the
+** rows said so far sent as it waits; the rows from the first seen (north up: the top row else) to the last that has
+** something on it (one with nothing held back till one that has comes), the panel's lines beside them (under them, the
+** screen too narrow) */
+void __fastcall__ s_map (const char* rules)
+{
+    char line[LINE];                            /* (On the C stack: the main RAM's room) */
+    unsigned char y, n, k, held, drawn, k2;
+
+    make_panel (rules);
     cq = HUB->pcsum.northsense ? 0 : HUB->pc_lost ? '?' : 'N';   /* (Turned: the compass, its N where the north it
                                                 **   believes in lies, as the map's turned: a quarter for every two
                                                 **   eighths it faces round) */
     cn = (0 - HUB->pc_skew - ((HUB->pc_face >> 1) << 1)) & 7;
-    hub_map (UI_BANK);                          /* (The map's the UI bank's: its rows copied out one by one) */
-    for (n = 0; !cq && n < MAP_H - 1 && !UIREC->map[n][0]; ++n) {
-    }
-    for (y = MAP_H - 1; y > n && !UIREC->map[y][0]; --y) {
-    }
-    hub_map (0);
     side = tw > MAP_W + PANEL + 1;
-    for (k = 0; n + k <= y || (side && k < np); ++k) {  /* (The rows from the first seen to the last, the panel's
-                                                **   beside them) */
-        o = line;
-        at = 0;
-        if (n + k <= y && n + k < MAP_H) {
-            hub_mem (UI_BANK, r, UIREC->map[n + k], MAP_W + 1);
-            hub_mem (UI_BANK, lays, UIREC->maplay[n + k], MAP_W);
-            if (cq && n + k < 3) {              /* (The compass, its three rows) */
-                for (at = strlen (r); at < MAP_W; ++at) {
-                    r[at] = ' ';
-                }
-                r[MAP_W] = 0;
-                r[MAP_W - 3] = r[MAP_W - 1] = ' ';
-                r[MAP_W - 2] = n + k == 1 ? '+' : ' ';
-                if (1 + head_y[cn] == n + k) {
-                    r[MAP_W - 2 + head_x[cn]] = cq;
-                }
-                lays[MAP_W - 3] = lays[MAP_W - 2] = lays[MAP_W - 1] = ML_COMPASS;
-                at = 0;
-            }
-            for (cur = 0xFF; (*o = r[at]) != 0; ++at) {
-                if (!plain && *o != ' ' && lays[at] != cur && o < line + LINE - MAP_W - 12) {
-                    cur = lays[at];             /* (Its colour as it changes, but between the letters) */
-                    strcpy (o, sgr[cur]);
-                    o += strlen (o);
-                    *o = r[at];
-                }
-                ++o;
-            }
-            if (cur != 0xFF) {
-                strcpy (o, "\x1b[0m");          /* (Its end plain again) */
-                o += 4;
-            }
+    memset (ml, 0, sizeof ml);
+    fore_set (FS_UI | FS_SENS | FS_MAKE);       /* (The maker first as it draws, the player waiting on it: the world, the
+                                                **   referee, the command parser the background meanwhile, main.c's) */
+    for (y = drawn = k = held = 0, n = 0xFF; y < MAP_H; ) {
+        hub_map (UI_BANK);
+        while (drawn < MAP_H && UIREC->maplay[drawn][MAP_W - 1] != 0xFF) {    /* (The rows drawn since) */
+            ml[drawn] = strlen (UIREC->map[drawn]);
+            ++drawn;
         }
-        *o = 0;
-        if (side && k < np) {
-            for (; at < MAP_W + 1; ++at) {
-                *o++ = ' ';
-            }
-            strcpy (o, panel[k]);
+        k2 = drawn > y && strchr (UIREC->map[y], '#');
+        hub_map (0);
+        if (drawn <= y || (drawn < MAP_H && drawn < y + 3 && k2)) {
+            t_flush ();                         /* (The rows said so far out as it waits: shown as they come) */
+            hub_wait_t (&HUB->mapq, 3);         /* (A row's some ten ticks: a look every three) */
+            continue;                           /* (Not drawn; or a passage's squares in it, its slants not yet known) */
         }
-        say_raw (line);
+        if (n == 0xFF && !cq && y < MAP_H - 1 && !ml[y]) {
+            ++y;                                /* (North up: from the first row with something on it) */
+            continue;
+        }
+        if (n == 0xFF) {
+            n = y;
+        }
+        if (y > n && !ml[y]) {
+            ++held;
+        } else {
+            for (; held; --held) {
+                map_line (line, y - held, k++);
+            }
+            map_line (line, y, k++);
+        }
+        ++y;
     }
+    hub_wait (&HUB->mapq);
     HUB->mapq.state = REQ_FREE;
+    fore_set (fored);
+    for (; side && k < np; ++k) {
+        map_line (line, 0xFF, k);
+    }
     if (!side) {
         blank ();
         for (k = 0; k < np; ++k) {

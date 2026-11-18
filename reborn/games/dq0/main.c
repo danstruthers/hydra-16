@@ -508,8 +508,12 @@ static unsigned char __fastcall__ life (unsigned char given)
 /* The character's sheet (0), the referee's words; or the map (1), with its side's lines (part 2's room, 2026-11-03) */
 void __fastcall__ s_sheet_map (unsigned char what)
 {
-    struct req* r = ask_b (RS_DESCRIBE, 0, what);
+    struct req* r;
 
+    if (what) {
+        map_begin ();                           /* (Its first words at once, the maker drawing it meanwhile: look.c's) */
+    }
+    r = ask_b (RS_DESCRIBE, 0, what);
     if (what) {
         map (r->text);                          /* (Its lines read where they are, in the hub's header, before the
                                                 **   map's drawn) */

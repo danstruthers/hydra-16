@@ -115,6 +115,7 @@ void __fastcall__ look (unsigned char first);   /* Where the character is (first
 void stir (void);                               /* The denizens it sees, told as they move */
 void __fastcall__ map (const char* rules);      /* Part 3: the map of what it's seen round it, and the
                                                 **   character's state beside it (rules: the referee's short lines) */
+void map_begin (void);                          /* (Part 3's) Its first words, the maker asked to draw it */
 
 /* ---- A command: the command parser's (dq0c: games/dq0c, cmdmean.s's, by the verbs, commands.verbs), hub.h's
 ** struct cmd: an action (actions.h's VB_*) and its roles; cq_cmd's, the one the UI carries out (cmd) */
