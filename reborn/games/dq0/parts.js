@@ -106,7 +106,7 @@ function cfg(text, list, file) {
 // OUT: { at: Map part → its bank, moved: [{ n, from, to, size }], room: Map bank → its bytes left, file: Map bank → its
 // file }; throws, a part no bank has room for.  A bank whose MEMORY line's comment says "no parts" is no part's (dq0's OV28,
 // the phrase table's rows: their room kept for them, 2026-11-11)
-function banks(text, list, sizes, file) {
+function banks(text, list, sizes, file, spare = 0) {
   const block = k => (text.split(new RegExp('^' + k + '\\s*\\{', 'm'))[1] || '').split('}')[0];
   const cap = new Map(), fileOf = new Map(), room = new Map(), closed = new Set();
   for (const [l, n, f, z] of block('MEMORY').matchAll(/^\s*OV(\d+):\s*file\s*=\s*"([^"]*)"[^;\n]*?\bsize\s*=\s*\$([0-9A-Fa-f]+)[^\n]*/gm)) {
@@ -117,6 +117,8 @@ function banks(text, list, sizes, file) {
   for (const [k, c] of cap) room.set(k, c);
   for (const [, s, k] of block('SEGMENTS').matchAll(/^\s*(\w+):\s*load\s*=\s*OV(\d+)\b/gm))
     if (!/^SW\d+(CODE|RODATA)$/.test(s) && room.has(+k)) room.set(+k, room.get(+k) - (sizes.get(s) || 0));
+  const keep = new Map([...room].map(([k, x]) => [k, closed.has(k) ? 0 : Math.min(typeof spare === 'number' ? spare : spare.has(k) ? spare.get(k) : SPARE, Math.max(0, x))]));   // (spare:
+  for (const [k, x] of keep) room.set(k, room.get(k) - x);                                        //   each bank's kept free)
   const base = new Map(room);                           // (Each bank's room before any part's in it)
   const size = p => (sizes.get('SW' + p.n + 'CODE') || 0) + (sizes.get('SW' + p.n + 'RODATA') || 0);
   const at = new Map(), left = [], moved = [];
@@ -187,8 +189,30 @@ function banks(text, list, sizes, file) {
     put(best.q, best.c);
     put(p, best.b);
   }
-  return { at, moved, room, file: fileOf };
+  for (const [k, x] of keep) room.set(k, room.get(k) + x);
+  return { at, moved, room, file: fileOf, spare };
 }
+
+// banks() with each bank kept SPARE bytes free (the headroom rule's: a bank under 64 free has its room won back),
+// spread over every bank, not piled in a few: 64 in each if the task's parts fit so; else the bank whose keeping it
+// stops them fitting keeps the most that lets them, each other 64 (a bank whose own code leaves less keeps what it
+// has, no part put in it); else (two such) the most each bank alike.  spare: banks()'s, Map bank -> bytes or a
+// number.  OUT: banks()'s, its spare that
+const SPARE = 64;
+function spread(text, list, sizes, file) {
+  const tryIt = s => { try { return banks(text, list, sizes, file, s); } catch (e) { return null; } };
+  const most = (lo, hi, at) => { let r = null; while (lo < hi) { const mid = (lo + hi + 1) >> 1, m = tryIt(at(mid)); if (m) { lo = mid; r = m; } else hi = mid - 1; } return r || tryIt(at(lo)); };
+  let r = tryIt(SPARE);
+  if (r) return r;
+  const fail = banks(text, list, sizes, file, 0);       // (Its throw the task's own, if none kept won't do)
+  const ks = [...new Set([...text.matchAll(/^\s*OV(\d+):/gm)].map(m => +m[1]))];
+  for (const k of ks) {                                // (One bank the reason: the most it can keep, the rest 64)
+    const at = s => new Map([[k, s]]);
+    if (tryIt(at(0))) return most(0, SPARE - 1, at);
+  }
+  return most(0, SPARE - 1, s => s) || fail;
+}
+
 
 // banks()'s rules held, each build (make's): a bank too full moves out its smallest part that makes room, not the
 // wish that filled it; one with a wish no bank of its file can hold fails; one read later keeps to its own file
@@ -228,12 +252,13 @@ function make({ dir, objdir, compiled, own, sizes }) {
     throw new Error(task + ': ' + s.name + ' is in part ' + s.part + ', which parts.txt doesn\'t have');
   const src = path.join(dir, task + '.cfg'), out = path.join(objdir, task + '.cfg'), text = fs.readFileSync(src, 'latin1');
   if (sizes) banksChecked();
-  const placed = sizes ? banks(text, list, sizes, src) : { at: new Map(list.parts.map(p => [p.n, p.ov])), moved: [] };
+  const placed = sizes ? spread(text, list, sizes, src) : { at: new Map(list.parts.map(p => [p.n, p.ov])), moved: [], spare: 0 };
   const put = { ...list, parts: list.parts.map(p => ({ ...p, ov: placed.at.get(p.n) })) };
   fs.writeFileSync(path.join(objdir, 'parts.inc'), inc(task, put, stubs));
   fs.writeFileSync(out, cfg(text, put, src));
   fs.writeFileSync(path.join(objdir, 'placed.txt'), placed.moved.map(m => m.n + ' ' + m.from + ' ' + m.to + ' ' + m.size + '\n').join(''));
+  fs.writeFileSync(path.join(objdir, 'spare.txt'), (typeof placed.spare === 'number' ? placed.spare : [...placed.spare].map(([k, s]) => 'OV' + k + ' ' + s + ', the rest ' + SPARE).join('')) + '\n');   // (Each bank's room kept free: the room table's)
   return out;
 }
 
-module.exports = { read, wanted, inc, cfg, banks, segsizes, make };
+module.exports = { read, wanted, inc, cfg, banks, spread, segsizes, make };

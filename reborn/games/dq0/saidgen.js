@@ -55,6 +55,7 @@ const FMAX = 126;                                            // (Fields at most:
 const WORDS_MAX = 180;                                        // (The words said as SC_WORD and a byte, at most: 180 since
                                                               //   2026-11-15, overlay 27's room kept, the rows' banks the rest)
 const BANK = 0x2000, NBANK = 3;                               // (A bank of the rows': overlays 28, 29 and 30)
+const SPARE = 64;                                             // (Each bank's room left free if the rows allow: the headroom rule's)
 const ANY = 0xFE;                                            // (A row for any outcome: said.c's SAID_ANY)
 const OP = { '': 0, '-': 1, '>': 2, '*': 3 };
 const SF_THEY = 5;                                            // (A field's operation: its actor plus 1 a person, said.c's they)
@@ -408,9 +409,12 @@ function generate(H, say = () => {}) {
   at.forEach((a, i) => (kinds[i].last ? late : blocks).push(rows.slice(a, i + 1 < at.length ? at[i + 1] : pfirst)));
   for (let i = pfirst; i < rows.length; i++) blocks.push([rows[i]]);
   blocks.push(...late);                                       // (The `last` kinds' after the pieces)
+  // (Each bank filled to SPARE short of full, the first with room, if all the rows could fit so; a block that fits none
+  // so, the first with room to its end)
+  const all = blocks.reduce((t, bl) => t + bl.reduce((u, r) => u + r.b.length, 0), 0), cap = all <= NBANK * (BANK - SPARE) ? BANK - SPARE : BANK;
   const fill = Array(NBANK).fill(0), offOf = new Map(), inBank = fill.map(() => []);
   for (const bl of blocks) {
-    const z = bl.reduce((t, r) => t + r.b.length, 0), k = fill.findIndex(v => v + z <= BANK);
+    const z = bl.reduce((t, r) => t + r.b.length, 0), k = [cap, BANK].reduce((k, c) => k >= 0 ? k : fill.findIndex(v => v + z <= c), -1);
     if (k < 0) throw new Error('saidgen: the rows past their ' + NBANK + ' banks\' ' + NBANK * BANK + ' bytes');
     for (const r of bl) { offOf.set(r, k * BANK + fill[k]); fill[k] += r.b.length; inBank[k].push(r); }
   }
