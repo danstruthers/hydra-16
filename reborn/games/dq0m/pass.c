@@ -39,6 +39,10 @@ static unsigned char __fastcall__ dig (unsigned char x, unsigned char y)
 {
     unsigned char t;
 
+    if (!(pn & 15)) {
+        ahead_check ();                         /* (Made ahead: a checkpoint each 16 squares dug, 2026-11-18: a
+                                                **   join's leg and lay ran 30,000-60,000 cycles without one) */
+    }
     if (x < E->x0 || x > E->x1 || y < E->y0 || y > E->y1) {
         return 0;
     }
@@ -142,6 +146,9 @@ static unsigned char __fastcall__ lay (int za, int zb)
     int dz;
 
     for (k = 0; k < pn; ++k) {
+        if (!(k & 15)) {
+            ahead_check ();                     /* (Each 16 squares laid, made ahead) */
+        }
         pz[k] = clampz (za + (zb - za) * k / pn);
         t = TILE (L->tile[py[k]][px[k]]);
         if (t != T_ROCK) {

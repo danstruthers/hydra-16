@@ -60,6 +60,9 @@ static unsigned char __fastcall__ fits (unsigned char x, unsigned char y, unsign
     x1 = x + w + 1 > E->x1 ? E->x1 : x + w + 1;
     y1 = y + h + 1 > E->y1 ? E->y1 : y + h + 1;
     for (j = y0; j <= y1; ++j) {
+        if (!(j & 3)) {
+            ahead_check ();                     /* (Made ahead: each 4 rows looked at, 2026-11-18) */
+        }
         for (i = x0; i <= x1; ++i) {
             if (L->tile[j][i] != T_ROCK) {
                 return 0;
@@ -118,6 +121,7 @@ static void rooms (void)
         x = 2 + random (CW - 4 - w);
         y = 2 + random (CW - 4 - h);
         if (fits (x, y, w, h)) {
+            ahead_check ();                     /* (Between the room found and laid, made ahead) */
             put_room (x, y, w, h);
         }
     }
