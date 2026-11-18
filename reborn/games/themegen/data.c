@@ -200,10 +200,11 @@ static unsigned char tg_bank;
 struct line D;
 char Dt[LINE_TEXT];
 
+/* (tg_load's index, read into Dt, no line read yet: a buffer of its own was 255 bytes of the main RAM; a READ costs
+** some 24K cycles from a card, whatever its size: 255 bytes at a time, the index's 85 lines) */
+#define b ((unsigned char*) Dt)
 int __fastcall__ tg_load (const char* path)
 {
-    static unsigned char b[255];                /* (A READ costs some 24K cycles from a card, whatever its size:
-                                                **   255 bytes at a time, the index's 85 lines) */
     unsigned i, j, n, k;
     unsigned char was = getbank ();
     int fd = open (path, O_RDONLY), first;
@@ -237,6 +238,7 @@ int __fastcall__ tg_load (const char* path)
     close (fd);
     return 0;
 }
+#undef b
 
 void __fastcall__ tg_get (int i, struct line* l, char* text)
 {
