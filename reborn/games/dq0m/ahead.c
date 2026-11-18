@@ -57,6 +57,9 @@ typedef char aroom_fits[sizeof (struct aroom) <= sizeof (struct stock) ? 1 : -1]
 #define inu             AR->inu
 #define an              AR->an
 static unsigned char nan, seen_sum, seen_ver;   /* (As the choice last found none: the actors' sum, the cache's count) */
+static unsigned char pc0;                       /* (The character's body in the dungeon: an[0] its) */
+static unsigned char held;                      /* (The choice given way: each's, dq0m.c's ahead_held) */
+unsigned char ahead_held (void);
 unsigned char nsn;                              /* (The next to make: ahead_next's) */
 unsigned ncx, ncy;
 
@@ -191,6 +194,7 @@ static unsigned char actors (void)
     struct act* p = an;
     unsigned char k, s;
 
+    pc0 = 0;
     for (k = 0; k <= NACTORS; ++k) {
         hub_get (0, &HUB->bodies[k].state, &h, 3);
         if (h.state & 1) {                      /* (A body in the dungeon) */
@@ -200,6 +204,7 @@ static unsigned char actors (void)
             s = 9;                              /* (A denizen's sight isn't in the hub: the most a kind's) */
             if (!k) {
                 hub_get (0, &HUB->pcsum.sight, &s, 1);
+                pc0 = 1;
             }
             reach (p++, s);
         }
@@ -299,6 +304,10 @@ static unsigned char __fastcall__ each (eachf w)
     unsigned char i, j, d;
 
     for (p = an; p < an + nan; ++p) {
+        if (ahead_held ()) {                    /* (A line or a command: given way, the choice left) */
+            held = 1;
+            return 1;
+        }
         if ((p == an || !again (p)) && stands (p)) {
             for (j = 0; j < 5; ++j) {
                 for (i = 0; i < 5; ++i) {
@@ -340,6 +349,14 @@ static unsigned char __fastcall__ wanted (unsigned char sn, unsigned cx, unsigne
     return 0;
 }
 
+/* The chunk being made ahead (nsn, ncx, ncy) one the character's own eyes want (the actors as last looked at, the
+** character's first): 1, else 0 (dq0m.c's ahead_wanted: a finish asked for waits the grow's rest, not thrown away) */
+unsigned char o_ahead_mine (void)
+{
+    return pc0 && an->sn == nsn && stands (an) && ncx - acx + 2 < 5 && ncy - acy + 2 < 5 &&
+        within (an, (unsigned char) (ncx - acx + 2), (unsigned char) (ncy - acy + 2)) != 0xFF;
+}
+
 /* ---- Where */
 
 /* The slot a chunk made ahead goes in (the cache's table copied first): the last free one, else one made ahead that no
@@ -375,8 +392,9 @@ unsigned char o_ahead_still (void)
     actors ();
     look_cache ();
     best = 0xFF;
+    held = 0;
     each (nearer);
-    if (best == 0xFF || (nsn == sn && ncx == cx && ncy == cy)) {
+    if (held || best == 0xFF || (nsn == sn && ncx == cx && ncy == cy)) {
         nsn = sn;
         ncx = cx;
         ncy = cy;
@@ -392,7 +410,13 @@ unsigned char o_ahead_next (void)
 {
     unsigned char s;
 
+    if (ahead_held ()) {
+        return 0;                               /* (A line or a request: given way before the actors' copy) */
+    }
     s = actors ();
+    if (ahead_held ()) {
+        return 0;                               /* (And before the strata's, some 25,000 cycles) */
+    }
     if (s == seen_sum && ah_ver == seen_ver) {
         return 0;                               /* (Nothing changed: the wake's few thousand cycles, not the strata's
                                                 **   copy too, some 25,000: a twentieth of the game's time asleep) */
@@ -400,7 +424,11 @@ unsigned char o_ahead_next (void)
     hub_get (WORLD_BANK, WREC->strata, strata, sizeof strata);
     look_cache ();
     best = 0xFF;
+    held = 0;
     each (nearer);
+    if (held) {
+        return 0;                               /* (Given way: chosen again, the sum not kept) */
+    }
     if (best != 0xFF && o_ahead_room () != 0xFF) {
         return 1;
     }

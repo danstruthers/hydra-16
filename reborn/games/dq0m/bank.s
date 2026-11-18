@@ -225,6 +225,7 @@ ovcall:
             OVFN        ahead_room, 10
             OVFN        ahead_next, 10
             OVFN        ahead_still, 10
+            OVFN        ahead_mine, 10
             OVFN        ahead_take, 10
             OVFN        ahead_keep, 10
             OVFN        grow, 10            ; (make.c's: a chunk grown, the main RAM's room)

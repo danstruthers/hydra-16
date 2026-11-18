@@ -136,6 +136,7 @@ void __fastcall__ ahead_move (unsigned char k, unsigned char j);
 unsigned char ahead_room (void);
 unsigned char ahead_next (void);
 unsigned char ahead_still (void);               /* (The one being made ahead still wanted) */
+unsigned char ahead_mine (void);                /* (The one being made ahead the character's eyes want) */
 void __fastcall__ ahead_take (unsigned char j, unsigned char k);   /* (Slot j's into cb, to finish into slot k) */
 unsigned char __fastcall__ ahead_keep (unsigned char k);   /* (cb, grown ahead, into slot k: 1, or 0) */
 extern struct chunk cb;                         /* (make.c's: the chunk grown) */

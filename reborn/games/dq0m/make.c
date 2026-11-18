@@ -260,6 +260,7 @@ unsigned char __fastcall__ make_ahead (unsigned char sn, unsigned cx, unsigned c
     }
     ahead_mark ();
     aheading = 1;
+    ahead_check ();                             /* (A line or a request come as it was chosen: given way at once) */
     chunk_edges (sn, cx, cy, &me);
     grow (sn, cx, cy);
     aheading = 0;

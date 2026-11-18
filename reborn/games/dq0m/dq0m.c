@@ -199,6 +199,21 @@ static unsigned char giving (void)
     return hst == 1;
 }
 
+/* The chooser's give-way (ahead.c's ahead_next, at each actor, and make_ahead's start): 1, a request posted or a
+** command in hand or a line being typed (giving's), the choice left to be looked at again as the maker next wakes; else
+** 0.  Called from the overlay's code: the window put back as it was (2026-11-17: the chooser ran on into a line's
+** answer, 26,000-36,000 cycles of a turn's first letter) */
+unsigned char ahead_held (void)
+{
+    unsigned w = hub_here ();
+    unsigned char r;
+
+    hub_map (0);
+    r = asked () || giving ();
+    hub_back (w);
+    return r;
+}
+
 /* At a checkpoint of a chunk being made ahead (make.c's ahead_check): 1, give it up (a request posted for anything but
 ** it: ahead.c's nsn, ncx, ncy; the game's end; another the nearest wanted now, the character moved on: looked at again
 ** as it comes to another eight squares' block); else, giving way, held there, asleep AH_HOLD ticks at a time; 0, go on (in
@@ -218,6 +233,11 @@ unsigned char ahead_wanted (void)
         if (w) {
             for (i = 0, q = HUB->mreq; i < NASK; ++i, ++q) {
                 if ((w >> i & 1) && (q->kind != M_CHUNK || q->sn != nsn || q->cx != ncx || q->cy != ncy)) {
+                    if (q->kind == M_CHUNK && ahead_at (q->sn, q->cx, q->cy) != 0xFF && ahead_mine ()) {
+                        continue;               /* (A chunk made ahead to finish, and the one in hand the
+                                                **   character's eyes want too: grown first, not thrown away,
+                                                **   2026-11-17; the asker waits the grow's rest) */
+                    }
                     return 1;
                 }
             }
