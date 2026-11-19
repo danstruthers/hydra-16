@@ -2281,6 +2281,8 @@ void* __fastcall__ hub_call (void* q, unsigned char t);  /* hub_post, then hub_w
 #define GW_LOOK         8                       /*   a look one way's rest awaited (way_want) in hand too */
 #define GW_ALL          16                      /*   held while anything's in hand, no limit (the world's time
                                                 **   believed: it runs at the next pass that's free) */
+#define GW_REST         32                      /*   at the real paces (tpr), a look one way's rest awaited: held, no
+                                                **   limit (speed7's den_held); alone, that test only */
 #define GW_HELD_X       0x69                    /* (The library's entry: dq0lib.s's jump table) */
 struct gw {
     unsigned char   st, sq, cm, ks;             /* (The hold: 0 none, 1 since t0, 2 run out; its line's seq, ui_cmd,

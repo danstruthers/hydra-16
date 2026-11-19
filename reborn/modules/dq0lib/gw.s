@@ -14,6 +14,8 @@
 ;   while a command's in hand, GW_KEYS while its keys go on; then 0 till the next line.  GW_LOOK: a look one way's
 ;   rest awaited (the hub's way_want) in hand as a command is; GW_ALL: held as long as anything's in hand, no limit
 ;   (the world's time believed: speed6's, 2026-11-19, its pass run at the next that's free).
+;   GW_REST: at the real paces (tpr not 0), a look one way's rest awaited (the maker's chunk: speed7's, the
+;   denizens' intents not taken beside it): held, no limit, the state as it was; GW_REST alone, that test only (0 else).
 ; OUT: .A 1 held, 0 not; .X 0.  Modifies .A, .X, .Y, r2, r3
 
 .include "hydra.inc"
@@ -32,6 +34,19 @@ GS_T0       = 4
 .code
 
 gw_held:
+            lda         r1                              ; A look's rest awaited at the real paces: held (GW_REST)
+            and         #GW_REST
+            beq         @go
+            lda         HUB_WINDOW + HUBO_TPR
+            ora         HUB_WINDOW + HUBO_TPR + 1
+            beq         @norest
+            lda         HUB_WINDOW + HUBO_WWST
+            jne         @held
+@norest:
+            lda         r1
+            cmp         #GW_REST
+            jeq         @over                           ; (That test alone: not held, the state untouched)
+@go:
             lda         r1                              ; The turns pace: no hold
             and         #GW_PACE
             beq         @tpr

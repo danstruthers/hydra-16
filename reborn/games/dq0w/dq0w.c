@@ -7287,15 +7287,13 @@ unsigned char ui_long (void)
 static unsigned char den_held (void)
 {
     hub_map (0);
-    if (HUB->tpr && HUB->way_want.st) {
-        return 1;                               /* (At the real paces, a look one way's rest awaited, the maker's chunk:
-                                                **   the denizens' parts and outfits not drawn beside it, the look
-                                                **   across's pause, 2026-11-19) */
-    }
     if (HUB->ui_cmd) {
-        return ui_first ();                     /* (A command in hand: its own hold, its free passes') */
+        return gw_held (&gden, GW_REST) || ui_first ();   /* (A look one way's rest awaited at the real paces,
+                                                **   the maker's chunk: the denizens' parts and outfits not drawn beside
+                                                **   it, the look across's pause, speed7's; else a command in hand's own
+                                                **   hold, its free passes') */
     }
-    return gw_held (&gden, GW_PACE);            /* (A line's keys: the library's one give-way, 2026-11-19) */
+    return gw_held (&gden, GW_PACE | GW_REST);  /* (The look's rest, or a line's keys: the library's one give-way) */
 }
 
 /* What's queued after the character's long task (activity.h's), the next popped as it's free, the last planned first:
