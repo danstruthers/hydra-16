@@ -140,7 +140,7 @@ void __fastcall__ feel (unsigned char k);       /* Part 8 (2026-11-02: the main 
 unsigned char __fastcall__ way (unsigned char k);   /* Part 17: a way followed (2026-11-02) */
 unsigned char __fastcall__ wfind (unsigned char k);     /* Part 18: a way found (2026-11-02) */
 /* ---- Each denizen's mind, one record (GAME-CRITIQUE.md's E15, ONE-PATH.md's 2.6, 2026-11-19): who it is, what it
-** knows, what it wants and what it's doing, and its own dice, an entry for each actor (its body the world's, the hub's
+** knows, what it wants and what it's doing, an entry for each actor (its body the world's, the hub's
 ** actor; its sheet the referee's).  Laid out by field (md.lsx[k], not md[k].lsx): the 6502 indexes an array of bytes
 ** in one instruction, a record's field by a multiply, so each field's an array and the record is the struct whole.
 ** Made fresh as a denizen's enlisted into the entry (mind_fresh: every field, so none is a last actor's; then what
@@ -203,12 +203,9 @@ struct mind {
                                                 **   many, times 16) */
     unsigned char pway[NACTORS];            /* (Each one's room on its rounds, the next it walks to: its lair's
                                                 **   chunk's rooms in turn) */
-    /* ---- Its target and its dice (2026-11-19) */
+    /* ---- Its target (2026-11-19) */
     unsigned char   target[NACTORS];            /* (Who it's after: 0 the character, k + 1 actor k; set as it's
                                                 **   enlisted, the character, the minds' one target so far) */
-    unsigned long   dice[NACTORS];              /* (Its own stream of the minds' dice: xorshift's state, swapped in as
-                                                **   it decides, so one's rolls don't move another's; seeded as it's
-                                                **   enlisted from the game's seed, its record and the clock) */
 };
 static struct mind md;
 #define WAY_HOLD(t)     ((unsigned char) (NOW_T + (t)) | 2)
@@ -742,7 +739,6 @@ void __fastcall__ s_populate (unsigned char n)
 ** rats, with a byte more of code here, 2026-10-30) */
 extern unsigned long xs_seed;                   /* (xorshift.s's state) */
 static unsigned long minds;
-static unsigned long dsave;                     /* (tend's: the minds' stream, a denizen's own swapped in as it decides) */
 
 static void grow (void)
 {
@@ -3355,8 +3351,6 @@ static void tend (void)
             again = 1;
             continue;
         }
-        dsave = xs_seed;                        /* (Its own dice: its stream swapped in, 2026-11-19) */
-        xs_seed = md.dice[k];
         for (n = 0, r = q->ready; r <= now && q->name[0] && n < 64 && (!n || !held ()); ++n) {
             if (decide (k) && (r = a.ready) > now) {
                 break;                          /* (A wait only, the world's to carry out with the rest) */
@@ -3366,8 +3360,6 @@ static void tend (void)
                                                 **   2026-11-19; one decision a pass at the real paces before, the world's
                                                 **   CATCHUP a few seconds at most) */
         }
-        md.dice[k] = xs_seed;
-        xs_seed = dsave;
     }
     if (again) {
         if (pcs != lrs || (pcx - STRATUM (pcs).x0) >> 8 != lrx || (pcy - STRATUM (pcs).y0) >> 8 != lry) {
@@ -5717,15 +5709,13 @@ static unsigned m0, dday;
 
 /* Entry k made fresh for the denizen enlisted into it (s_enlist's, as it begins, part 4's; GAME-CRITIQUE.md's 3.5 and
 ** E15, 2026-11-19): every field of its mind (struct mind's, MIND_FIELDS: a field left out of it, and the build stops),
-** so nothing's its last actor's; then s_enlist and enlist_near set what's its record's and its enlisting's.  Its dice
-** seeded: the game's seed and its dice's offset (dq0 -R, as the minds' stream is), its record's number and the clock
-** (never 0: xorshift's); its target the character; its next
-** look for a thing to loot as it first decides.  Before, a list of the arrays made fresh, the rest each set by hand */
+** so nothing's its last actor's; then s_enlist and enlist_near set what's its record's and its enlisting's.  Its
+** target the character; its next look for a thing to loot as it first decides.  Before, a list of the arrays made fresh, the rest each set by hand */
 #define MIND_FIELDS(X)  X (akind) X (ahx) X (ahy) X (awater) X (aate) X (adrank) X (sgen) X (sres) X (sax) X (say) \
                         X (alert) X (lsx) X (lsy) X (fooled) X (seenfoe) X (drawn) X (intr) X (anear) X (sniffed) \
                         X (shat) X (aorder) X (afetch) X (afx) X (afy) X (akeep) X (aloot) X (aroute) X (lstep) \
                         X (steps) X (stalk) X (stq) X (stn) X (fled) X (upto) X (aact) X (atx) X (aty) X (drunk) \
-                        X (aday) X (asrch) X (slk) X (atry) X (pway) X (target) X (dice)
+                        X (aday) X (asrch) X (slk) X (atry) X (pway) X (target)
 #define MF(f)           { offsetof (struct mind, f), sizeof md.f[0] },
 #define MS(f)           + sizeof md.f[0]
 typedef char mind_all[sizeof (struct mind) == NACTORS * (0 MIND_FIELDS (MS)) ? 1 : -1];
@@ -5736,20 +5726,10 @@ static const struct { unsigned off; unsigned char n; } mfield[] = { MIND_FIELDS 
 static void __fastcall__ fresh (unsigned char k)
 {
     unsigned char i;
-    unsigned long was;                          /* (The minds' stream as it was: tend's saved one kept) */
 
     for (i = 0; i < sizeof mfield / sizeof mfield[0]; ++i) {
         memset ((char*) &md + mfield[i].off + k * mfield[i].n, 0, mfield[i].n);
     }
-    hub_map (0);
-    was = xs_seed;
-    xs_seed = (HUB->seed ^ (unsigned long) HUB->dice << 16 ^ ((unsigned long) D.id << 13) ^ now) | 1;
-    for (i = 0; i < 12; ++i) {
-        rand16 ();                              /* (Its seed's bits mixed: a seed differing in a few bits gave the
-                                                **   same first numbers, its first choices every one's) */
-    }
-    md.dice[k] = xs_seed;
-    xs_seed = was;
     md.aloot[k] = NOW_T;
 }
 #pragma static-locals (pop)
