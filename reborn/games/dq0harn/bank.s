@@ -17,7 +17,7 @@ OVL_DOT     = 0
             .include    "../dq0/dq0lib.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 9                     ; dq0harn.cfg's overlays (the 4th and 5th the swapped parts' images; the 8th afflict.c's; the 9th grapple.c's)
+OVMAX       = 10                    ; dq0harn.cfg's overlays (the 4th and 5th the swapped parts' images; the 8th afflict.c's; the 9th grapple.c's; the 10th a strike's and a fall's)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 DEPTH       = 16                    ; Overlay calls in calls, at most
 
@@ -234,8 +234,11 @@ ovcall:
             OVFN        grip, 9             ; (Grappling: grapple.c, 2026-11-09)
             OVFN        treat, 9            ; (First aid, the dressings: dress.c, 2026-11-10, heal.c's room)
             OVFN        dress_line, 9       ; (Their file's line: part 1's room)
-            OVFN        effect, 2           ; (Its calls of fight.c's)
-            OVFN        strike, 2
+            OVFN        effect, 10          ; (Its calls of fight.c's)
+            OVFN        strike, 10
+            OVFN        dealt, 10           ; (Overlay 10's, 2026-11-19: overlay 2's room)
+            OVFN        aspect_of, 10
+            OVFN        harn_fall, 10       ; (HarnMaster's falls, the library's: hfall.c, the main RAM's room)
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0harn.cfg's SWAP, a part at a time,
 ; copied there from overlay 4's bank as it's called)

@@ -53,7 +53,9 @@ static const struct bkind* __fastcall__ beast (unsigned char j)
 
 /* A creature's own parts that word its wounds by what they are (sheet.c's wound_words: BY_*, in order; talons
 ** claws'): a weapon's word one of these */
+#pragma rodata-name (push, "OV10RODATA")       /* (dealt's alone: overlay 10's, 2026-11-19) */
 static const char natural[][8] = { "", "bite", "claws", "sting", "horns", "talons" };
+#pragma rodata-name (pop)
 
 /* ---- A creature's sheet, unpacked (into a HarnMaster character, for the book's functions) and packed again */
 
@@ -152,6 +154,14 @@ static void __fastcall__ beast_side (struct side* s, unsigned char who)
     strcpy (s->word, w->word);
 }
 
+/* ---- Overlay 10 (2026-11-19, overlay 2's room for fights between any two): what guards a side, the effects told,
+** what a strike deals and with what aspect, a fall, and the strike itself; overlay 2 calls them through their stubs */
+#pragma code-name (push, "OV10CODE")
+#pragma rodata-name (push, "OV10RODATA")
+
+/* (Overlay 10's own words: cc65 puts a file's string literals in the read-only data named at its end, overlay 2's) */
+static const char hide[] = "hide", your[] = "your ", their[] = "their ", its[] = "its ";
+
 /* What guards side t at loc against aspect: the character's armour, a creature's hide; an actor's things told (the
 ** outfits' gear), the pieces it wears (folk: no hide but them, DECISIONS.md's answer 7; the dead their own besides,
 ** the better) */
@@ -170,7 +180,7 @@ static unsigned char __fastcall__ guard (const struct side* t, unsigned char loc
                 return v;
             }
         }
-        strcpy (arm, h ? "hide" : "");
+        strcpy (arm, h ? hide : hide + 4);
         return h;
     }
     return pc_armour (loc, aspect);
@@ -200,7 +210,7 @@ void __fastcall__ o_effect (unsigned char target, unsigned char kind, unsigned c
 
 /* What side s's strike deals (BY_*, sheet.c's wound_words): a creature's own part by its word (a bite, claws); a
 ** weapon, the character's fists and feet, by the aspect */
-static unsigned char __fastcall__ dealt (const struct side* s)
+unsigned char __fastcall__ o_dealt (const struct side* s)
 {
     unsigned char k = sizeof natural / sizeof natural[0];
 
@@ -214,7 +224,7 @@ static unsigned char __fastcall__ dealt (const struct side* s)
 }
 
 /* The best aspect side s strikes with (its weapon's greatest impact), or want if it can */
-static unsigned char __fastcall__ aspect_of (const struct side* s, unsigned char want)
+unsigned char __fastcall__ o_aspect_of (const struct side* s, unsigned char want)
 {
     unsigned char k;
 
@@ -234,10 +244,19 @@ static void __fastcall__ prone (const struct side* s, unsigned char on)
     }
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+unsigned char __fastcall__ dealt (const struct side* s);   /* (Overlay 10's, through their stubs) */
+unsigned char __fastcall__ aspect_of (const struct side* s, unsigned char want);
+
 static unsigned char __fastcall__ is_prone (const struct side* s)
 {
     return (prones & (s == &A ? RS_PRONE_A : RS_PRONE_D)) != 0;
 }
+
+#pragma code-name (push, "OV10CODE")
+#pragma rodata-name (push, "OV10RODATA")
 
 /* Side s strikes side t with n dice at zone z (or part, not 0xFF: a block's strike on what struck or blocked): the
 ** impact, the armour there off it, the wound; its words into w (or the armour that stopped it: stop, AF_*, in the
@@ -245,7 +264,7 @@ static unsigned char __fastcall__ is_prone (const struct side* s)
 void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, unsigned char z, unsigned char part,
     char* w, unsigned char stop)
 {
-    unsigned char aspect = aspect_of (s, s == &A ? RS_ATTACK_ASPECT (*R) : AS_BEST), by = dealt (s), loc, f, p, sev, il;
+    unsigned char aspect = o_aspect_of (s, s == &A ? RS_ATTACK_ASPECT (*R) : AS_BEST), by = o_dealt (s), loc, f, p, sev, il;
     unsigned char th = t->who && (prones & RS_THEY) ? BY_THEIR : 0;   /* (A person's "their", 2026-11-17: the hub's folk,
                                                 **   the world's flag in the request, one source) */
     harn_char* c = t->c;
@@ -257,7 +276,7 @@ void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, uns
     p = guard (t, loc, aspect);
     if (impact - p < 1) {                       /* (Stopped by its armour, or no harm) */
         if (impact >= 1 && arm[0]) {
-            strcpy (w, !t->who ? "your " : th ? "their " : "its ");
+            strcpy (w, !t->who ? your : th ? their : its);
             strcat (w, arm);
             RS_ATTACK_AF (*R) |= stop;
         }
@@ -308,18 +327,21 @@ void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, uns
     }
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* A fumble roll, or a stumble roll, for side s (which: its bit in the reply's a) */
 static void __fastcall__ mishap (struct side* s, unsigned char stumble, unsigned char which)
 {
     RS_ATTACK_WHOSE (*R) |= which;
     if (stumble ? harn_stumble_roll (s->c, 0) : harn_fumble_roll (s->c, 0)) {
         if (stumble) {
-            prone (s, 1);
+            effect (s->who, X_COND_ON, C_PRONE, 0, 0, 0);   /* (prone's: overlay 10's, its effect through its stub) */
         } else if ((s == &A || !(RS_ATTACK_AF (*R) & AF_SHIELD)) && (stumble = fumbled (s, s == &A)) != 0) {
                                                 /* (A shield's block fumbled: it's strapped on, nothing let go
                                                 **   of: the book's fumble roll the easier for it, Skills 21; the
                                                 **   house's none) */
-            o_effect (s->who, X_DROP, 0, 0, stumble, 0);  /* (What it struck with, or blocked with, its hand's) */
+            effect (s->who, X_DROP, 0, 0, stumble, 0);  /* (What it struck with, or blocked with, its hand's) */
         }
     }
 }
@@ -376,7 +398,7 @@ static void attack (void)
     }
     if (D.who && D.c->state == HARN_UNCONSCIOUS) {
         D.c->state = HARN_DEAD;                 /* (Senseless: finished where it lies) */
-        o_effect (D.who, X_DEATH, C_DEAD, HARN_KILL, 0, 0);
+        effect (D.who, X_DEATH, C_DEAD, HARN_KILL, 0, 0);
         RS_ATTACK_OUTCOME (*R) = O_DISPATCH;
         RS_ATTACK_DEFENCE (*R) = D_NONE;
         return;
@@ -394,7 +416,7 @@ static void attack (void)
         z = k == HARN_BLUNT ? HARN_SKULL : HARN_NECK;
         pc.state = HARN_DEAD;
         pc_out = 0;
-        o_effect (0, X_DEATH, C_DEAD, HARN_KILL, z, k);
+        effect (0, X_DEATH, C_DEAD, HARN_KILL, z, k);
         wound_words (line[0], HARN_KILL, z, k, 0, dealt (&A));
         RS_ATTACK_OUTCOME (*R) = O_HIT;
         RS_ATTACK_DEFENCE (*R) = D_NONE;
@@ -425,28 +447,28 @@ static void attack (void)
     case HARN_R_BLOCK:
         RS_ATTACK_OUTCOME (*R) = O_BLOCKED;
         if (D.bare && A.part == 0xFF) {         /* (A bare arm against a weapon: struck, H2) */
-            o_strike (&A, &D, 2, 0, HARN_FOREARM, line[0], AF_STOPPED);
+            strike (&A, &D, 2, 0, HARN_FOREARM, line[0], AF_STOPPED);
         } else if (A.part != 0xFF && !D.bare) { /* (A claw or a bite against a weapon: struck by it) */
-            o_strike (&D, &A, 2, 0, A.part, line[1], AF_STOPPED_D);
+            strike (&D, &A, 2, 0, A.part, line[1], AF_STOPPED_D);
         } else if ((n = w_damage ()) != 0) {    /* (Weapon against weapon: broken, gear.c's: an X_DROP with its x[1],
                                                 **   1 a weapon, 2 a creature's shield, the world's to word and to make its
                                                 **   pieces) */
-            o_effect (n == 1 ? A.who : D.who, X_DROP, 0, 0, fumbled (n == 1 ? &A : &D, n == 1) | 0x80,
+            effect (n == 1 ? A.who : D.who, X_DROP, 0, 0, fumbled (n == 1 ? &A : &D, n == 1) | 0x80,
                 n == 2 && D.b && (RS_ATTACK_AF (*R) & AF_SHIELD) ? 2 : 1);
         }
         break;
     case HARN_R_AH:
         RS_ATTACK_OUTCOME (*R) = O_HIT;
-        o_strike (&A, &D, n, z, 0xFF, line[0], AF_STOPPED);
+        strike (&A, &D, n, z, 0xFF, line[0], AF_STOPPED);
         break;
     case HARN_R_DH:
         RS_ATTACK_OUTCOME (*R) = O_COUNTER_HIT;
-        o_strike (&D, &A, n, HARN_MID, 0xFF, line[1], AF_STOPPED_D);
+        strike (&D, &A, n, HARN_MID, 0xFF, line[1], AF_STOPPED_D);
         break;
     case HARN_R_BH:
         RS_ATTACK_OUTCOME (*R) = O_BOTH_HIT;
-        o_strike (&A, &D, n, z, 0xFF, line[0], AF_STOPPED);
-        o_strike (&D, &A, n, HARN_MID, 0xFF, line[1], AF_STOPPED_D);
+        strike (&A, &D, n, z, 0xFF, line[0], AF_STOPPED);
+        strike (&D, &A, n, HARN_MID, 0xFF, line[1], AF_STOPPED_D);
         break;
     case HARN_R_AF:
     case HARN_R_DF:
@@ -689,11 +711,11 @@ void __fastcall__ o_fight (struct req* r)
             A.aml = A.b->w[0].ml - 5 * harn_get_pp (&cr) - 10;
         }
         if ((sw = shot ()) & SHOT_DROP) {        /* (Its strike, its fumble's drop: overlay 2's, here) */
-            o_effect (A.who, X_DROP, 0, 0, A.who ? DH_RIGHT : pc_hand & IH_BOTH, 0);
+            effect (A.who, X_DROP, 0, 0, A.who ? DH_RIGHT : pc_hand & IH_BOTH, 0);
         } else if (sw) {
             sb = RS_ATTACK_ASPECT (*R);
             RS_ATTACK_ASPECT (*R) = sw >> 12 & 3;                 /* (strike's: the attacker's aspect, its request's b) */
-            o_strike (&A, &D, sw >> 8 & 3, sw >> 10 & 3, sw, line[0], AF_STOPPED);
+            strike (&A, &D, sw >> 8 & 3, sw >> 10 & 3, sw, line[0], AF_STOPPED);
             RS_ATTACK_ASPECT (*R) = sb;
         }
     } else {
