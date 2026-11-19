@@ -5715,7 +5715,8 @@ static unsigned m0, dday;
 /* Entry k made fresh for the denizen enlisted into it (s_enlist's, as it begins, part 4's; GAME-CRITIQUE.md's 3.5 and
 ** E15, 2026-11-19): every field of its mind (struct mind's, MIND_FIELDS: a field left out of it, and the build stops),
 ** so nothing's its last actor's; then s_enlist and enlist_near set what's its record's and its enlisting's.  Its dice
-** seeded: the game's seed, its record's number and the clock (never 0: xorshift's); its target the character; its next
+** seeded: the game's seed and its dice's offset (dq0 -R, as the minds' stream is), its record's number and the clock
+** (never 0: xorshift's); its target the character; its next
 ** look for a thing to loot as it first decides.  Before, a list of the arrays made fresh, the rest each set by hand */
 #define MIND_FIELDS(X)  X (akind) X (ahx) X (ahy) X (awater) X (aate) X (adrank) X (sgen) X (sres) X (sax) X (say) \
                         X (alert) X (lsx) X (lsy) X (fooled) X (seenfoe) X (drawn) X (intr) X (anear) X (sniffed) \
@@ -5737,7 +5738,7 @@ static void __fastcall__ fresh (unsigned char k)
         memset ((char*) &md + mfield[i].off + k * mfield[i].n, 0, mfield[i].n);
     }
     hub_map (0);
-    md.dice[k] = (HUB->seed ^ ((unsigned long) D.id << 13) ^ now) | 1;
+    md.dice[k] = (HUB->seed ^ (unsigned long) HUB->dice << 16 ^ ((unsigned long) D.id << 13) ^ now) | 1;
     md.aloot[k] = NOW_T;
 }
 #pragma static-locals (pop)

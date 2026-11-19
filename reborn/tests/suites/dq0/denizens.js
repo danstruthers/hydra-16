@@ -527,10 +527,12 @@ module.exports = {
       sdcard: true
     },
     {
+      // (-R 2, 2026-11-19: each denizen's own dice, the minds' stream its own by who decides: the bandits' rolls the scene
+      // was written for found again, as DQ0_ROLLS finds them)
       name: 'dq0denportal', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's one path for every actor (Phase 3C, 2026-11-02: DUNGEON.md's one path, DENIZENS.md's doors, HOUSE.md's denizens and doors, for review): a denizen's mind posts the character's own intent (I_PORTAL) and the world carries it out by the character's parts (wdoor.c's, by the world's wport.c).  A hand-written theme's wary bandits (seed 1, dq0kit's); the character (a rope and a shortsword carried more, dq0 -k: twelve pounds, its burden as the scene was written before D13's free pounds) opens the door ahead and shuts it again, and a bandit is put beyond it, hostile, drawn on to where it last sensed the character (the scene set as the first wait's typed: the hub's actor and its record, the minds' drawn and last-sensed square poked): no step nearer but through the shut door, it opens it (E_DEN DE_OPENS at the door's square: 'The bandit opens the door.'), comes through and fights the character; and a bandit fleeing beyond the door (the scene set as the last wait's typed, 2026-11-02: a living one put there, fleeing, the minds' fled poked, whichever way the fight's dice went), the character beyond it, slams the door shut behind it (DE_SLAMS at the door: 'The bandit slams the door shut.', unseen if the character lies senseless as it's done, the user's, 2026-11-14; the door shut in its chunk at the end); each heard as the character's own would be (the user's, 2026-11-17, GAME-CRITIQUE.md's 4.2: the sound task's, a denizen's door work told but silent before): the opening played as a door opening (the world's *open), the slam as a door shutting (*shut), the bandit's own",
       init: 't_rc', cycles: 3000e6,
       machine: { ymLog: true, input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
-        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k rope,shortsword',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k rope,shortsword -R 2',
         'open the door', 'close the door', 'wait', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']) },
       start(m) {
         dq0DoorScene(m, 'wait', 'bandit');
@@ -936,11 +938,12 @@ module.exports = {
       sdcard: true
     },
     {
+      // (-R 3, both games, 2026-11-19: each denizen's own dice: the robbers' rolls the scenes were written for found again)
       name: 'dq0robrest', initiative: true, near: ['denizens', 'time'], what: 'Dingus Quest Zero\'s robbers at a sleeper (the user\'s, 2026-11-06: "robbers should come and rob a resting character"; HOUSE.md\'s those that want it, as it rests, for review): a lair of hostile bandits about, the character asleep in the dark: at seed 1 a bandit comes to it and robs it as it lies, unnoticed (the book\'s Legerdemain, its Stealth, against the character\'s Awareness at half asleep: the referee\'s test of it in the minds\' slot, its steps the fewer by half its mastery), its coins alone taken (E_TASK TE_ROBBED, RB_PURSE), the sleep going on, told as it\'s up ("You find your coins gone: someone robbed you as you lay."); at seed 4 one caught at it, nothing taken (no robbery unawares), the sleep stopped ("You wake to find something at your purse!", RB_CAUGHT)',
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
-        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g", 'douse the torch', 'sleep', 'inventory', 'quit', 'mkdir /ram/h', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/h/theme.txt",
-        "dq0 -p t -s 4 -c /ram/c.hm -T -d /ram/h", 'douse the torch', 'sleep', 'quit', 'echo $status']) },   // (A folder of its own: the first's a life gone on
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 3", 'douse the torch', 'sleep', 'inventory', 'quit', 'mkdir /ram/h', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/h/theme.txt",
+        "dq0 -p t -s 4 -c /ram/c.hm -T -d /ram/h -R 3", 'douse the torch', 'sleep', 'quit', 'echo $status']) },   // (A folder of its own: the first's a life gone on
                                                 // with, its coins gone; quit as it's asked, the fight with the robber not fought)
       expect: ['% echo $status'],
       check(m, out) {
@@ -1077,10 +1080,11 @@ module.exports = {
       name: 'dq0sway', what: 'Dingus Quest Zero\'s attitudes and influence (DENIZENS.md; the user: "skills like animal husbandry could influence animals encountered"), by the denizens\' replies to the character\'s ways with them (the hub\'s sway: the result, the attitude before and after) and the actors\' records (the referee\'s Animalcraft tests in their order at this seed: HarnMaster\'s): a character good with animals (Animalcraft 90, hmchar\'s file) at seed 21\'s giant rats (wary, the vermin faction\'s), words refused (an animal: persuasion doesn\'t reach it), how one seems (examined: wary), befriended a test at a time (indifferent, then won over: an ally, following; then asked no more), named Grub, asked to wait and seen waiting as the character turns round, then to follow, following it across the room (seen beside it as it turns round again) and down the stairway (come along to the stratum below); the game kept (dq0 -d) and carried on, Grub its ally still; then a fresh game, a blow at a rat out of reach not struck, the rat as wary as it was',
       init: 't_rc', cycles: 1400e6,
       // (-R 117: the dice's offset that gives the game it was written for, since the dice by who asks,
-      // 2026-10-30: the same dungeon, other rolls)
+      // 2026-10-30: the same dungeon, other rolls; 2026-11-19, each denizen's own dice: Grub, following, stood east of the
+      // character in its corner, "Grub is in the way." for "go east", so the room's crossed going north, Grub after it)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', 'echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -d /ram/kept -R 117',
         'persuade the rat', 'examine the rat', 'befriend the rat', 'befriend the rat', 'befriend the rat', 'name the rat grub', 'tell grub to wait', 'turn around',
-        'follow me', 'go east', 'turn around', 'd', 'quit', 'dq0 -d /ram/kept -R 117', 'examine grub', 'quit', 'dq0 -p t -s 3 -c /ram/a.hm -T -R 117', 'attack the rat',
+        'follow me', 'go north', 'turn around', 'd', 'quit', 'dq0 -d /ram/kept -R 117', 'examine grub', 'quit', 'dq0 -p t -s 3 -c /ram/a.hm -T -R 117', 'attack the rat',
         'examine the rat', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
@@ -1097,7 +1101,7 @@ module.exports = {
         const nm = T.of('name the rat grub');
         sw(nm, { kind: 'SW_NAME', result: 'SR_OK' }, 'the rat not named');
         if (!grub(nm.after) || grub(nm.after).attitude !== 'AT_ALLIED') f.push('no ally Grub');
-        const w = T.of('tell grub to wait'), ta = T.after(w, 'turn around'), fm = T.of('follow me'), ge = T.of('go east'), ta2 = T.after(ge, 'turn around');
+        const w = T.of('tell grub to wait'), ta = T.after(w, 'turn around'), fm = T.of('follow me'), ge = T.of('go north'), ta2 = T.after(ge, 'turn around');
         sw(w, { kind: 'SW_ORDER', order: 'OR_WAIT', result: 'SR_OK' }, 'Grub not asked to wait');
         if (!seen(ta, 'DO_WAIT')) f.push('Grub not seen waiting as the character turned round');
         sw(fm, { kind: 'SW_ORDER', order: 'OR_FOLLOW', result: 'SR_OK' }, 'Grub not asked to follow');
