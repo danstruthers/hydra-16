@@ -724,13 +724,39 @@ unsigned char __fastcall__ s_felt_stop (unsigned char h)
     return k;
 }
 
-/* Square x, y of stratum sn dark to a denizen (wbody.c's: its kind with no darkvision feels its way there): not seen
-** lit by the character, nor in a room's own light (the chunk in the window after) */
+/* Square x, y of stratum sn dark (wbody.c's: a kind with no darkvision feels its way there; a thing taken, a search's
+** touch, a hider's cover): the senses asked, every actor's light the one rule (the hub's look, LK_LIT: the light layer,
+** a carried light within its reach with a line clear; ONE-PATH.md's 2.2, 2026-11-19), the look's walk and its reply kept
+** as they were.  The look itself posted (its wait's clock moving the bodies: the senses may be waiting on the world),
+** or the game ending (the senses may be gone), not asked: what the character saw lit (T_VIS), or a room's own light,
+** as before.  The hub's header in the window after */
+static unsigned char __fastcall__ ask_look (unsigned char kind);
 unsigned char __fastcall__ s_unlit_at (unsigned char sn, unsigned x, unsigned y)
 {
-    unsigned char* p = at (sn, x, y), r;
+    static unsigned wx, wy;
+    static unsigned char wd, ch, r;
+    static unsigned char* p;
 
-    return p && !(*p & T_VIS) && ((r = room_of (sn, x, y)) == 0xFF || !(C->room[r].flags & R_LIT));
+    hub_map (0);
+    if (HUB->look.state != REQ_FREE || HUB->quit) {
+        p = at (sn, x, y);
+        r = p && !(*p & T_VIS) && ((r = room_of (sn, x, y)) == 0xFF || !(C->room[r].flags & R_LIT));
+        hub_map (0);
+        return r;
+    }
+    wx = HUB->look.wx;
+    wy = HUB->look.wy;
+    wd = HUB->look.wd;
+    ch = HUB->look.ch;
+    HUB->look.wx = x;
+    HUB->look.wy = y;
+    HUB->look.wd = sn;
+    r = !ask_look (LK_LIT);
+    HUB->look.wx = wx;
+    HUB->look.wy = wy;
+    HUB->look.wd = wd;
+    HUB->look.ch = ch;
+    return r;
 }
 
 #pragma code-name (pop)
