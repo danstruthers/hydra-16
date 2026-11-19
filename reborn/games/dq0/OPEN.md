@@ -67,6 +67,12 @@ L1-L5 from DECISIONS.md:5878-5885, "No look when the light's the same".
 - **L5. A sconce's torch gone out in a room lit by its lamps**: no look; the sconce's torch shown unlit at the next
   look (built). Keep it?
 
+- **L8. A look's rest, told after the prompt.** A look one way into ground not made yet now tells what's made with
+  "so far" ("Down the passage ahead you see 20 feet of it so far."), and the rest comes once the maker has made it,
+  after the prompt, with no lead-in, and only what's new (built). Give it a lead-in ("Peering on, ...")? And when the
+  rest has nothing more to add (often, in a dark passage), say so ("...and no more.") or say nothing (built)?
+  - built/2026-11-18-looks2.md, open questions 3 and 4.
+
 ## Hands, lights and the pack
 
 H8 from built/2026-11-17-things.md; its other questions were answered on 2026-11-17 (DECISIONS.md).
