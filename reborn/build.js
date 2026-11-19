@@ -583,13 +583,19 @@ function gamesMade(say, bios, defines) {
   }
   return games;
 }
-// The bank programs (children: bankprog.h), their callers built: the tests', then the system's.  OUT: { NAME: its file }
-function childrenMade() {
+// The bank programs (children: bankprog.h), their callers built: the tests', then the system's; with ready, only those
+// whose callers (its parents file) are built already, the rest left for a call after (a clean tree's build: the ROM
+// disk's bankrun's hello.bp before the games, whose themes themec compiles in the emulator, its ROM disk read whole:
+// romfs/romfs.txt).  OUT: { NAME: its file }
+function childrenMade(ready = false) {
   const children = {};
   for (const [src, od] of [[at('tests', 'bank'), at('obj', 'tests')], [at('bank'), at('obj', 'bank')]])
     if (fs.existsSync(src))
-      for (const d of fs.readdirSync(src, { withFileTypes: true }).filter(d => d.isDirectory()))
+      for (const d of fs.readdirSync(src, { withFileTypes: true }).filter(d => d.isDirectory())) {
+        const parents = path.join(src, d.name, 'parents');
+        if (ready && fs.existsSync(parents) && fs.readFileSync(parents, 'latin1').split(/\s+/).some(p => p && !exportsOf.has(p))) continue;
         children[d.name] = buildChild(path.join(src, d.name), od);
+      }
   return children;
 }
 // The games' room said; a task below its floor fails the build
@@ -700,13 +706,16 @@ function build(opt = {}) {
   }
   for (const d of fs.readdirSync(at('sdk', 'c', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory()))
     samples['c/' + d.name] = ram(at('sdk', 'c', 'samples', d.name), at('obj', 'samples', 'c'));
+  // What the ROM disk has of the build's (romfs/romfs.txt: HyForth's libraries, obj/forthlib; the bank programs whose
+  // callers are built, obj/bank's hello.bp) before the games: themec boots a ROM with it to compile their themes (a
+  // clean tree's build failed there, 2026-11-19)
+  forthlib.build({ root: ROOT, modules, assemble: (files, od, inc) => assemble(files, od, inc, defines), ld65: args => run(LD65, args) });
+  childrenMade(true);
   const games = gamesMade(say, fs.readFileSync(at('bin', 'bios.bin')), defines);
   childrenMade();
   roomChecked(games, say);
   sdk();
-  forthlib.build({ root: ROOT, modules, assemble: (files, od, inc) => assemble(files, od, inc, defines), ld65: args => run(LD65, args) });
-  const card = sdcard.build(ROOT);                          // The SD card's image (bin/sdcard.img): the samples, the songs, the benchmarks,
-                                                            //   obj/forthlib's libraries (forthlib's, made first: a clean tree's build)
+  const card = sdcard.build(ROOT);                          // The SD card's image (bin/sdcard.img): the samples, the songs, the benchmarks
 
   // hylang's snapshot (the module hysnap: its heap with its library loaded, taken in the emulator), then the paged ROM
   const manifest = readManifest(at('modules', 'rom.txt'));
