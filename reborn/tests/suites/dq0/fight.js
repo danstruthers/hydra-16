@@ -8,9 +8,10 @@ const { typed } = require('../../lib/common.js');
 const {
   liveChunks, stratumRec, dq0Story, dq0Prose, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never,
   dq0Carried, dq0Named, dq0Thing, DQ0_I, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0Body, dq0Sheet, dq0PcShock, dq0Grow,
-  dq0Aware, dq0OnWords, WORN, dq0Ad
+  dq0Aware, dq0OnWords, WORN, dq0Ad, dq0Timer, dq0Asks, dq0Paces, dq0HeldPaces
 } = require('../../lib/dq0.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
+const FIGHTCMD = ['d', 'wait', 'go right', 'inventory', 'wait', 'look', 'wait', 'inventory', 'wait', 'look'];   // (dq0fightcmd's lines: dq0fight's way to the rats, a rat engaged as the first's typed, then commands typed as it fights, waits between for its blows)
 
 // At each line's Enter, each actor's body (m.bodies: { g, line, name, den, lv: its levels, wfl, ex, at }) after the pokes made then
 // (each { g: the game, 1 on, line, n: its nth time typed in it, name: the actor's, lv: its levels, ex, at: its body's set })
@@ -1888,6 +1889,27 @@ module.exports = {
         const b1 = g1.indexOf('Everything goes black.'), lay1 = g1.slice(b1 + 22, g1.indexOf('> wait', b1)).replace('> drop the torch', '').replace('You lie senseless.', '').trim();
         if ((lay1.match(/stirs/g) || []).length > 1 || /fighting you|You hear/.test(lay1)) f.push('told as it lay senseless (the rats): ' + lay1.slice(0, 200));
         if (!dq0Ev(T.of('drop the torch'), 'E_DEN', {}).length) f.push('no denizen\'s doing as it lay senseless (the rats): the check proves nothing');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0fightcmd', near: ['fight', 'denizens'], what: "Dingus Quest Zero's commands typed during a fight (the coordinator's, gw2, 2026-11-19: the character's fight and its other long tasks take the one give-way, so a command typed mid-fight has its first letter in time; gw1's dq0letdens, a rat fighting the character as attack A was typed, 837,757 cycles at the menacing pace): dq0fight's rats at seed 5, one put before the character, hostile and fighting it, as the first command's typed (dq0Poke's engage), then inventory, look, inventory and look typed as it fights on, a wait between each for its blows (a blow struck at the character, and a rat fighting as one of them was typed), each one's first letter within the user's 720,000 cycles (D17), at the turns pace, the menacing pace and as played (dq0Paces)",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'echo b115200 >/dev/serctl',
+        'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', ...FIGHTCMD, 'quit', ...dq0Paces('dq0 -p t -s 5 -c /ram/c.hm -k sword -T', FIGHTCMD), 'echo $status']) },
+      start(m) {
+        this.timer = dq0Timer(m);
+        dq0Asks(m, [3]);
+        dq0Poke(m, [1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, k: 0, beside: 'face', engage: true })));   // (A rat put before the character, hostile and fighting it, as the first command's typed)
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], notes = this.notes = [];
+        const mid = T.filter(t => ['inventory', 'look'].includes(t.line) && t.at && t.at.actors.some(a => a.doing === 'DO_FIGHT'));
+        if (!T.some(t => dq0Ev(t, 'E_FIGHT', { def: 0 }).length)) f.push('no blow struck at the character: no fight');
+        if (!mid.length) f.push('no command typed as a rat fought the character (none fighting as inventory or look was typed): the test proves nothing');
+        dq0HeldPaces(this, f, notes, this.timer, [0, 1, 2], FIGHTCMD.filter(l => l === 'inventory' || l === 'look').map(l => ({ line: l, want: '*' })));
         return f;
       },
       sdcard: true

@@ -4580,18 +4580,28 @@ void s_stopped (void)
 ** a walk's next square come, a blow or a wound to see to).  Its next step gives way to a line entered since it began
 ** till the line's command is given (the hub's ui_keys, Enter to the line taken, and ui_giving), at the real paces,
 ** ui_first's quarter second at most: its step done, the line answered, then on (dq0hold's, 2026-11-06); not a blow */
-static unsigned char tsq;                       /* (The parser's request's seq as it began, or as an intent was last
-                                                **   taken: its own line's, never held for it: main's) */
+static unsigned char tin, lsq;                  /* (The line in hand's intent taken by the world: its own task, never
+                                                **   held for it; the parser's seq it was taken at: main's, each pass) */
+/* The character's long task held for a line typed since it began (the one give-way, ui_first's: its command in hand
+** at the real paces, GW_CMD ticks at most), till the world takes the line's intent (tin: then its own, never held;
+** from its Enter, its seq posted some 50,000 cycles after, so not told by the seq alone):
+** a walk's next square, and a fight's, a battering's or a queued task's next as the character's free (fight_on's
+** blow beside a command typed mid-fight: 837,757 cycles to its first letter at the menacing pace, gw1's dq0letdens;
+** gw2, 2026-11-19).  1, held */
+static unsigned char pc_held (void)
+{
+    return !tin && HUB->ui_cmd && ui_first ();
+}
+
 static void stepping (void)
 {
     unsigned char k;
 
     hub_map (0);
     if (!(k = HUB->pc_task.kind)) {
-        tsq = HUB->cq.seq;
         return;
     }
-    if (HUB->pc_task.asking || (!pc_hit && tsq != HUB->cq.seq && (HUB->ui_keys | HUB->ui_giving) && ui_first ())) {
+    if (HUB->pc_task.asking || (!pc_hit && pc_held ())) {
         return;
     }
     if ((k == LT_WAIT || k == LT_SLEEP || k == LT_SEARCH || k >= LT_STUDY || act.work) && !HUB->pc_task.mins) {
@@ -7516,11 +7526,18 @@ int main (int argc, char* argv[])
                                                 **   world's own periodic work waits for it, a quarter second at most:
                                                 **   ui_first's; the long jobs, as they fall due, ui_long's: a line being
                                                 **   typed too, and looked at then, this pass perhaps long since begun) */
+        if (!HUB->ui_cmd) {
+            tin = 0;                            /* (Nothing in hand; a new line's seq, its intent not yet taken) */
+        } else if (HUB->cq.seq != lsq) {
+            lsq = HUB->cq.seq;
+            tin = 0;
+        }
         jobs (JOBS_EARLY);                      /* (The early jobs: the chunks stocked, the map making's, the traces',
                                                 **   the denizens' intents) */
         while (hub_take (&m)) {
-            tsq = HUB->cq.seq;                  /* (The line whose intent it is: a task it begins not held for it,
-                                                **   stepping's; a task begun in the pass its line came in, 2026-11-06) */
+            tin = 1;                            /* (The line whose intent it is: a task it begins not held for it,
+                                                **   pc_held's; a task begun in the pass its line came in, 2026-11-06) */
+            lsq = HUB->cq.seq;
             if (m.kind != I_ASK) {
                 was_busy = 1;                   /* (Its E_READY as it's free; but a sound's question (I_ASK, the UI's
                                                 **   as a task goes) none, the task's own has it: one come as a step's
@@ -7556,10 +7573,11 @@ int main (int argc, char* argv[])
         if (turns_run ()) {
             continue;                           /* (The turns pace: the denizens catching up) */
         }
-        if (move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
+        if (move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking && !pc_held ()) {
             arrive ();
         }
-        if ((was_busy || (act.fight & 1) || HUB->pc_out) && !move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
+        if ((was_busy || (act.fight & 1) || HUB->pc_out) && !move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking &&
+            !pc_held ()) {
             HUB->pc_out = 0;                    /* (Come round, if it was out: told as it's free, E_READY) */
             if (pc_waited & 1) {
                 pc_waited = 2;                  /* (2: its body's time owed as it's free, below) */

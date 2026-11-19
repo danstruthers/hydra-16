@@ -9,7 +9,8 @@
 ; flags (hub.h's GW_*).  The hub's header in the window (the caller's hub_map (0)).
 ;   The turns pace (GW_PACE: the hub's pace, a long wait held as well; else its tpr 0, a long wait the turns pace's
 ;   too), or nothing in hand (ui_cmd, and ui_keys unless GW_NOKEYS): 0, the hold over.
-;   A line its own (the parser's request's seq, the UI's ui_cmd and its keys' number ui_keys, GW_NOKEYS too: a line
+;   A line its own (the parser's request's seq, the UI's ui_cmd, its keys' number ui_keys, GW_NOKEYS too, and its Enter,
+;   ui_enter, gw2's: a line
 ;   typed again, its command's answer begun, a new line's first key before its seq's posted, each its own hold): held from the first time it's asked, GW_CMD ticks
 ;   while a command's in hand, GW_KEYS while its keys go on; then 0 till the next line.  GW_LOOK: a look one way's
 ;   rest awaited (the hub's way_want) in hand as a command is; GW_ALL: held as long as anything's in hand, no limit
@@ -29,7 +30,8 @@ GS_ST       = 0                                 ; (struct gw's: the hold's state
 GS_SQ       = 1                                 ;   its line's seq, ui_cmd and ui_keys; its start, the ticks')
 GS_CM       = 2
 GS_KS       = 3
-GS_T0       = 4
+GS_EN       = 4                                 ; (Its line's Enter: the UI's ui_enter)
+GS_T0       = 5
 
 .code
 
@@ -93,6 +95,10 @@ gw_held:
             iny
             lda         HUB_WINDOW + HUBO_KEYS          ; (The line's keys' own number, GW_NOKEYS too: a new
             cmp         (r0),Y                          ;   line's first key its own hold, its seq not yet posted)
+            bne         @line
+            iny
+            lda         HUB_WINDOW + HUBO_ENTER         ; (Its Enter: a line typed as the last was answered,
+            cmp         (r0),Y                          ;   the same seq and keys, its own hold, gw2's)
             beq         @same
 @line:
             ldy         #GS_SQ
@@ -103,6 +109,9 @@ gw_held:
             sta         (r0),Y
             iny
             lda         HUB_WINDOW + HUBO_KEYS
+            sta         (r0),Y
+            iny
+            lda         HUB_WINDOW + HUBO_ENTER
             sta         (r0),Y
             lda         #0
             sta         (r0)                            ; (GS_ST)

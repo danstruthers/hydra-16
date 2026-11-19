@@ -1716,6 +1716,9 @@ struct hub {                                    /* Bank 0, at $8000 */
     } sens[1 + NACTORS];
     unsigned char dsense_whom;                  /* dsense's target: 0 the character; else an actor's entry + 1 (the
                                                 **   senses' sense (looker, target): ONE-PATH.md's 2.2) */
+    volatile unsigned char ui_enter;            /* The UI's: a count of the lines entered (and of a held line taken up
+                                                **   again), each its own hold in the one give-way from its Enter, its
+                                                **   seq not yet posted (gw.s's: gw2, 2026-11-19) */
 };
 enum { WW_NONE, WW_WANTED, WW_MADE };           /* (way_want's st) */
 #define AS_LISTEN       0x01                    /* (sens' flags: listening as it goes, hearing 2 better: the character's
@@ -2152,6 +2155,7 @@ struct wsave {
 **   own hub.way_want senses +maker +world                      (A look one way's rest: the user's, 2026-11-18)
 **   own hub.sens senses                                        (Each actor's senses: one path, 2026-11-19)
 **   own hub.dsense_whom denizens +world                        (A sense's target: the asker's)
+**   own hub.ui_enter ui                                        (Each line's Enter: the give-way's, 2026-11-19)
 **   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)
@@ -2286,6 +2290,7 @@ void* __fastcall__ hub_call (void* q, unsigned char t);  /* hub_post, then hub_w
 struct gw {
     unsigned char   st, sq, cm, ks;             /* (The hold: 0 none, 1 since t0, 2 run out; its line's seq, ui_cmd,
                                                 **   ui_keys) */
+    unsigned char   en;                         /* (Its line's ui_enter) */
     unsigned        t0;                         /* (Its start, the ticks') */
 };
 unsigned __fastcall__ lib_x (unsigned char e);  /* (dq0lib.inc's: the library's entry e, an XCALL) */

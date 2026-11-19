@@ -80,7 +80,7 @@ const ASM = {
   gw: {                                                         // modules/dq0lib/gw.s: the one give-way
     HUB_WINDOW: 'HUB_WINDOW', HUBO_PACE: 'hub.pace', HUBO_TPR: 'hub.tpr', HUBO_CMD: 'hub.ui_cmd', HUBO_KEYS: 'hub.ui_keys',
     HUBO_CQ: 'hub.cq', RQ_SEQ: 'rqh.seq', GW_CMD: 'GW_CMD', GW_KEYS: 'GW_KEYS', GW_PACE: 'GW_PACE', GW_NOKEYS: 'GW_NOKEYS',
-    GW_LOOK: 'GW_LOOK', GW_ALL: 'GW_ALL', GW_REST: 'GW_REST', HUBO_WWST: 'hub.way_want.st',
+    GW_LOOK: 'GW_LOOK', GW_ALL: 'GW_ALL', GW_REST: 'GW_REST', HUBO_WWST: 'hub.way_want.st', HUBO_ENTER: 'hub.ui_enter',
   },                                     // games/dq0/lbsaid.s: a look's sentences kept (dq0.h's)
 };
 
