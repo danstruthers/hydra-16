@@ -73,7 +73,7 @@ function dq0JobsTest() {
       this.timer = dq0Timer(m);
       const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0w', 'dq0w.lbl'), 'latin1');
       const at = n => parseInt(new RegExp('^al ([0-9A-F]+) \\.' + n + '$', 'm').exec(lbl)[1], 16);
-      const due = at('_burn_due'), trn = at('_tr_n'), burn = at('_burns_now'), flush = at('_tr_flush');
+      const due = at('_burn_due'), trn = at('_tr_n'), burn = at('_burn_job'), flush = at('_tr_flush');
       const a = m.acia, cpu = m.cpu, step = cpu.step.bind(cpu), ran = this.ran = { burn: 0, trace: 0, burnWant: 0, traceWant: 0 }, read = a.read;
       let qlen = -1, k = -1, fire = 0, job = null, world = -1, held = 0, typed = '';
       a.read = (r, t) => {                      // (Each game its jobs again, its world's: as its dq0 line's entered)
@@ -158,7 +158,7 @@ function dq0HoldTest() {
       this.timer = dq0Timer(m);
       const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0w', 'dq0w.lbl'), 'latin1');
       const at = n => parseInt(new RegExp('^al ([0-9A-F]+) \\.' + n + '$', 'm').exec(lbl)[1], 16);
-      const due = at('_burn_due'), trn = at('_tr_n'), burn = at('_burns_now'), flush = at('_tr_flush');
+      const due = at('_burn_due'), trn = at('_tr_n'), burn = at('_burn_job'), flush = at('_tr_flush');
       const a = m.acia, cpu = m.cpu, step = cpu.step.bind(cpu), read = a.read, R = this.R = {};
       // (The background's own work, each run's cycle at the normal pace: a mind deciding, the senses answering a mind's ask,
       // the denizens' intents carried out, by their first addresses in their tasks: dq0d, dq0p, the world)
