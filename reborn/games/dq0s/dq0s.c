@@ -163,17 +163,20 @@ static void __fastcall__ off (unsigned char k)
 
 /* Each channel's hits as they fall due: the soonest change's ticks from now (10 at most, a twentieth of a second: the
 ** queues looked at again; the world's events ring it, the denizens' don't, a step heard that much late at most) */
+static unsigned char playing;                   /* (tend's: a channel in use) */
 static unsigned char tend (void)
 {
     struct ch* c;
     unsigned char k, wait = 10;
     unsigned d;
 
+    playing = 0;
     for (k = 0; k < nch; ++k) {
         c = &cs[k];
         if (c->who == 0xFF) {
             continue;
         }
+        playing = 1;
         if ((int) (tick - c->next) >= 0) {
             if (!c->on) {
                 hit (k);
@@ -594,6 +597,11 @@ int main (int argc, char* argv[])
         }
         k = tend ();
         hub_map (0);
+        if (!playing && HUB->tpr && HUB->ui_cmd) {
+            k = 40;                             /* (Nothing playing, a command's answer in hand at the real paces:
+                                                **   looked at four times as seldom, the answer's tasks the CPU; the
+                                                **   world's events ring it, 2026-11-18) */
+        }
         ++HUB->beat[T_SOUND];
         hy_sleep_ticks (HUB->starting ? 50 : k);    /* (Nothing to hear as the game starts: a quarter second's nap, not
                                                 **   a twentieth's, some 6,000 cycles each: 2026-11-03, the start's time) */

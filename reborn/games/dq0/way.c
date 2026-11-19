@@ -426,12 +426,17 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
                                                 **   main.c's feature path; none, told; or which, asked) */
     }
     h = cmd.obj.lies;
+    if (!k) {
+        intend2 (I_LOOK, WAY_T, e == 2);        /* (The world's: the senses' look one way, E_VIEW V_LOOKED; through the
+                                                **   closed door's little window, its spy-hole: LK_PEEK.  Asked before
+                                                **   its first words are said, the look begun as they are, its far
+                                                **   part's the sooner: 2026-11-18) */
+    }
     if (j == 1 && k < 4) {                      /* (Its first words at once, the look's or the listen's 4.8M cycles and
                                                 **   more off: the user's, 2026-11-04; turned first, the turn's are) */
         walk_says ((const char*) (k ? W_LISTEN : W_PEER));
     }
     if (!k) {
-        intend2 (I_LOOK, WAY_T, e == 2);        /* (Through the closed door's little window, its spy-hole: LK_PEEK) */             /* (The world's: the senses' look one way, E_VIEW V_LOOKED) */
         return 0;
     }
     if (k == 4) {
