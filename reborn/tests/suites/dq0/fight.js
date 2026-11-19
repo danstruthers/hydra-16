@@ -683,15 +683,16 @@ module.exports = {
       // another fall, the fumble in another bout)
       // (The scene set since the dice by who asks, 2026-10-30: the bandits' room gone into, two squares south through the
       // door, their own door opened already as they roam; two games, each in a folder of its own (a game's folder its save:
-      // the second would go on with the first), the dice's offsets each its own: -R 21's a fumble, -R 48's a bandit knocked
-      // senseless as it's talked to, talked to again as it lies there)
+      // the second would go on with the first), the dice's offsets each its own: -R 24's a fumble (21's till
+      // 2026-11-19: act1's door noises, the bandits come at another moment), -R 48's a bandit knocked senseless as it's
+      // talked to, talked to again as it lies there)
       machine: { input: (() => {
         const game = (d, r, talks) => ["dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/" + d + " -k 'sword,gambeson,mail hauberk' -R " + r, 'drop the backpack', 'wear the gambeson',
           'wear the mail hauberk', 'defend block', 'wait', 'close the door', 'open the door', 'go south', 'go south', ...Array(15).fill('wait'),
           ...Array(talks).fill('talk to the bandit'), ...Array(3).fill('wait'), 'quit'];
         return dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 26 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm',
           'echo ml swd 60 >> /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-          'mkdir /ram/h', 'cp /ram/g/theme.txt /ram/h/theme.txt', ...game('g', 21, 1), ...game('h', 48, 2), 'echo $status']);
+          'mkdir /ram/h', 'cp /ram/g/theme.txt /ram/h/theme.txt', ...game('g', 24, 1), ...game('h', 48, 2), 'echo $status']);
       })() },
       start(m) {        // (Told as it falls, 2026-11-03: the lines typed no longer fall on it)
         dq0Poke(m, [1, 2].map(g => ({ g, line: 'drop the backpack', n: 1, call: (h, L) => { h[L.nolurk] = 1; } })));   // (No robber lying in wait, HOUSE.md's hiding oneself: this scene's the bandits at it, 2026-11-04)

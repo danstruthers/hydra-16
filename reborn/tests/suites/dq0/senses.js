@@ -1380,7 +1380,9 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 1 -c /ram/c.hm -T',
         'look through the spy-hole', 'close the door', 'look', 'turn around', 'turn around', 'examine the door', 'look through the little window',
         'peer through the grille', 'look through the door', 'look through the window', 'look south', 'close the little window', 'open the door',
-        'go south', 'wait', 'go north', 'look through the grille', 'look through the little window', 'turn left', 'examine the door',
+        // (go east: the walk on, a rat come into sight having stopped it at the passage's turn: the minds hear the
+        // character's door shut and opened, act1's, 2026-11-19)
+        'go south', 'go east', 'wait', 'go north', 'look through the grille', 'look through the little window', 'turn left', 'examine the door',
         'look through the spy-hole', 'open the spy-hole', 'close the spy-hole', 'turn right', 'look through the spy-hole', 'examine the door',
         'quit', 'echo $status']) },
       start(m) {

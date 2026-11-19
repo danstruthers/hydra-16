@@ -13,6 +13,9 @@ const {
 } = require('../../lib/dq0.js');
 const { target, D17 } = require('../../lib/trends.js');   // (The user's targets, D17, at 115,200 baud: each measure kept, those over and past 90% listed after the tests)
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
+// The world's act table's rows by name (games/dq0w/acts.txt, acts.js's read: the one-path plan's stage 1, 2026-11-19): each
+// act's time, test, noise (loud; nz the character's E_NOISE's what, de an actor's E_DEN's), the same for every actor
+const dq0Acts = () => Object.fromEntries(require(path.join(TESTS, '..', 'games', 'dq0w', 'acts.js')).read(require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load()).map(r => [r.name, r]));
 
 // Dingus Quest Zero's morale's own (dq0morale): at each line's Enter (the CR as the ACIA has it, the game still as it
 // stands), the pokes made (each { g: the game, 1 on, by the dq0 lines typed, line, n: its nth time typed in it, 1 on, k:
@@ -584,6 +587,19 @@ module.exports = {
         if (!T.flatMap(t => t.dens).some(e => e.kind === 'E_FIGHT' && e.who === m.door.k + 1)) f.push('the bandit never came through to fight');
         if (opens.length && !m.played.some(p => p.who === m.door.k + 1 && p.snd === WSND.open)) f.push('its opening not heard as a door opening (the world\'s *open): ' + JSON.stringify(m.played.filter(p => p.who)));
         if (slammed.length && !lay && !m.played.some(p => p.who === slammed[0].who && p.snd === WSND.shut)) f.push('its slam not heard as a door shutting (the world\'s *shut): ' + JSON.stringify(m.played.filter(p => p.who)));
+        // (The act table's parity, 2026-11-19: the character's opening and shutting heard as the bandit's are, by the same
+        // rows, at the door: its E_NOISE the row's loudness and NZ_DOOR, the bandit's E_DEN the row's loudness and DE_*)
+        const A = dq0Acts(), [dx, dy] = m.door.door;
+        let done = 0;
+        for (const [line, r, po] of [['open the door', A.open, 'PO_OPENED'], ['close the door', A.shut, 'PO_CLOSED']]) {
+          if (!dq0Ev(T.of(line), 'E_PORTAL', { po }).length) continue;   // (Open already as it begins: the scene's)
+          const me = dq0Ev(T.of(line), 'E_NOISE', { a: r.loud, b: r.nz });
+          done++;
+          if (!me.length) f.push('"' + line + '" made no noise by its row (E_NOISE ' + r.loud + ', ' + r.nz + '): ' + dq0Evs(T.of(line)));
+          else if (me[0].w1 !== dx || me[0].w2 !== dy) f.push('"' + line + '"\'s noise not at the door: ' + [me[0].w1, me[0].w2]);
+        }
+        if (!done) f.push('the character neither opened nor shut the door');
+        for (const [es, r] of [[opens, A.open], [slammed, A.slam]]) for (const e of es) if (e.a !== r.de || e.b !== r.loud) f.push('the bandit\'s ' + r.name + ' not by its row: ' + [e.a, e.b] + ' not ' + [r.de, r.loud]);
         if (f.length) f.push(JSON.stringify(dens.filter(e => e.a).map(e => [e.a, e.w1, e.w2, e.t])) + ' ' + s.slice(s.indexOf('> close the door'), s.indexOf('> close the door') + 1500));
         return f;
       },
@@ -689,6 +705,13 @@ module.exports = {
         const lk = T.of('lock the door');
         if (!dq0Ev(lk, 'E_NOISE', { a: 1, b: K.NZ_CLICK }).length) f.push('the key turned in the lock made no quiet noise (E_NOISE NZ_CLICK, 1)');
         if (!m.played.some(p => p.who === 0 && p.snd === WSND.click)) f.push('the key turned in the lock not played (the world sound *click): ' + JSON.stringify(m.played.filter(p => !p.who)));
+        // (The act table's parity, 2026-11-19: the character's key heard at the door by its row; the bandit's picking, its
+        // forcing and their ends by theirs; its forcing the referee's P_FORCE of its own sheet, the character's purpose)
+        const A = dq0Acts(), mine = dq0Ev(lk, 'E_NOISE', { a: A.lock.loud, b: A.lock.nz });
+        if (mine.length && (mine[0].w1 !== m.door.door[0] || mine[0].w2 !== m.door.door[1])) f.push('the key\'s noise not at the door: ' + [mine[0].w1, mine[0].w2]);
+        for (const r of [A.picking, A.picked, A.forcing, A.burst, A.held]) for (const e of dens.filter(e => e.a === r.de)) if (e.b !== r.loud) f.push('the bandit\'s ' + r.name + ' not by its row: loud ' + e.b + ' not ' + r.loud);
+        const forced = T.flatMap(t => t.replies).filter(q => q.kind === K.RS_TEST && q.a === A.forcing.p && q.actor === m.door.k + 1);
+        if (strains.length && !forced.length) f.push('the bandit strained at the door with no test of its own sheet (RS_TEST P_FORCE, its actor)');
         this.notes = ['the bandit heard as: ' + [...new Set(m.played.filter(p => p.who === m.door.k + 1).map(p => p.snd))].join(' ')];
         if (process.env.DQ0SHOW) f.push(s.slice(s.indexOf('> lock the door'), s.indexOf('> lock the door') + 2500));
         for (const e of dens.filter(e => e.a >= K.DE_OPENS)) if (e.w1 !== m.door.door[0] || e.w2 !== m.door.door[1]) f.push('a door worked not the one between them: ' + [e.a, e.w1, e.w2]);
@@ -1173,6 +1196,55 @@ module.exports = {
         if (!b2 || (b2.shut & 1)) f.push('the case not opened for the coins in it: ' + JSON.stringify(b2));
         if (!d2 || d2.where !== 'IW_SQUARE' || d2.x !== q.pc.x || d2.y !== q.pc.y) f.push('the dagger not slid off the lid onto the floor where the character lies: ' + JSON.stringify(d2));
         if (/From the lid/.test(s.slice(s.indexOf('> wait')))) f.push('a denizen\'s opening told as the character\'s');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0actlid', meaning: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's act table (GAME-CRITIQUE.md's E6, ONE-PATH.md's 2.1: the one-path plan's stage 1, 2026-11-19, games/dq0w/acts.txt): a lid's lock forced by the character and by a denizen by the same row and the same senders: at seed 1 (dq0denlid's bandits and case, dq0 -k), the case set down, its lock (its own, kinds.c's) locked (its record's shut poked as 'force the case' is typed: no key to it), forced by the character (a long task, ten seconds: its noise the lidforce row's, loud, E_NOISE NZ_WORK where it stands; its test the referee's P_FORCE, its steps by the case's make, wood or not, how well made); the case made whole again, opened, the pennies put in it, closed, locked again (poked as 'take the case' is typed), taken up (into the pack); a bandit put beside the character, engaged, the character senseless (dq0PcShock's): its robber goes through its things and gets at the coins in the locked case (wfight.c's den_pry: no key of its own, forced; told robbed only if it took something) by the same row (its noise the lidforce row's, E_DEN DE_PRIES, as loud) and the same test (P_FORCE, its own sheet's, at the same steps for the same case)",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k case',
+        'drop the case', 'force the case', 'open the case', 'put the pennies in the case', 'close the case', 'take the case', 'i', 'wait', 'wait', 'i', 'quit',
+        'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, name: 'bandit', beside: 'face', engage: true }, { g: 1, line: 'wait', n: 1, call: () => dq0PcShock(m, 3000) }]);
+        const a = m.acia, read = a.read, IS_CLOSED = 1, IS_LOCKED = 2, IS_LOCK = 4;
+        const shut = { 'force the case': IS_CLOSED | IS_LOCK | IS_LOCKED, 'open the case': IS_CLOSED, 'take the case': IS_CLOSED | IS_LOCK | IS_LOCKED };
+        let typed = '';
+        m.locked = [];
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (shut[typed] !== undefined && m.dq0) {   // (The case's lock: its record's shut, the item store's)
+                const { L, K } = m.dq0.layout(), per = Math.floor(0x2000 / L.itemSize);
+                for (let i = 1; i < L.nitems; i++) {
+                  const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+                  if (b && b[o + L.iKind] === K.KI_CASE) { b[o + L.iShut] = shut[typed]; m.locked.push(typed); break; }   // (The kit's: the first made)
+                }
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), A = dq0Acts(), { K } = m.dq0.layout();
+        if (m.locked.length !== 3) return ['the case not given its lock as the lines were typed: ' + JSON.stringify(m.locked)];
+        const fc = T.of('force the case'), all = T.flatMap(t => t.replies).filter(q => q.kind === K.RS_TEST && q.a === A.lidforce.p);
+        const mine = all.filter(q => q.actor === 0), theirs = all.filter(q => q.actor > 0);
+        if (!dq0Ev(T.and(fc), 'E_NOISE', { a: A.lidforce.loud, b: A.lidforce.nz }).length) f.push('the character\'s forcing made no noise by its row (E_NOISE ' + A.lidforce.loud + ', ' + A.lidforce.nz + '): ' + dq0Evs(fc));
+        if (!mine.length) f.push('the character\'s forcing not tested (RS_TEST P_FORCE, actor 0)');
+        const pries = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.a === A.lidforce.de);
+        if (!pries.length) f.push('the robber never forced the case (E_DEN DE_PRIES)');
+        for (const e of pries) if (e.b !== A.lidforce.loud) f.push('the robber\'s forcing not by its row: loud ' + e.b + ' not ' + A.lidforce.loud);
+        if (!theirs.length) f.push('the robber\'s forcing not tested by its own sheet (RS_TEST P_FORCE, its actor)');
+        if (mine.length && theirs.length && mine[0].steps !== theirs[0].steps) f.push('the same case forced at different steps: the character\'s ' + mine[0].steps + ', the robber\'s ' + theirs[0].steps);
+        this.notes = ['steps ' + (mine[0] && mine[0].steps) + ' ' + (theirs[0] && theirs[0].steps) + '; the robber\'s forcing ' + (theirs[0] && theirs[0].grade > 0 ? 'burst it' : 'held')];
+        if (f.length) f.push(s.slice(s.indexOf('> force the case'), s.indexOf('> force the case') + 2500));
         return f;
       },
       sdcard: true
