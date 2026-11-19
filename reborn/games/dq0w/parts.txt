@@ -117,3 +117,4 @@
 111 30  A thing's things put out, a thing put down on a square within reach, every actor's (wempty.c: P4, P5, 2026-11-18)
 stub start 3
 stub begin 3
+stub take_rest 16     # (Kept, unused: the main RAM laid out as before s_take_rest left part 35, 2026-11-18)
