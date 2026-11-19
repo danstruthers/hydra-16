@@ -75,6 +75,8 @@ unsigned __fastcall__ fall (unsigned feet, unsigned char how);
 void begin (void);                              /* Part 3 */
 void __fastcall__ grow_below (unsigned char n);
 void __fastcall__ go (unsigned char h);         /* Part 9 */
+extern unsigned char out_told;                  /* (s_go's early set-off: intent's 2, 1 told) */
+void __fastcall__ out_tell (unsigned char h);
 void __fastcall__ go_to (unsigned x, unsigned y);
 void __fastcall__ step_to (unsigned char h, unsigned char n, unsigned char keep);
 void __fastcall__ door_work (unsigned char what);   /* Part 12 */
@@ -1656,8 +1658,27 @@ void __fastcall__ s_go (unsigned char h)
     dens_where ();
     here ();
     paced ();
+    r = room_of (sn_, mx, my);
+    if ((k = out_told) == 2) {
+        out_told = 0;                           /* (A step's go, its words told already, 1: kept) */
+    }
+    if (k == 2 && !tgx && step8 (sn_, mx, my, h)) {
+        /* (A way word alone, intent's (2), its first square walkable: its first words before its way's worked out,
+        ** where the UI can't say them at once (the dark, a light at its feet): the walk across a room and what's felt
+        ** ahead were three parts swapped in and out first, the words some 775,000 cycles from Enter (a felt walk's 1.1M
+        ** to 1.5M); under 300,000 now, fw5.  Not felt for, its set-off words; felt for, the felt walk's own, "You
+        ** feel your way north.", dark_way's not again (3): the way it sets out, as the UI's at once in the light, not
+        ** the way it'll face at its end, a passage's bend) */
+        if (!feel_) {
+            out_tell (h | 16);
+            out_told = 1;
+        } else if (lim_ == 250) {
+            event (E_BEAT, 0, WB_FEEL | (unsigned) (h | rush_ << 4) << 8);
+            out_told = 3;
+        }
+    }
     npath = 0;
-    if ((r = room_of (sn_, mx, my)) != 0xFF) {
+    if (r != 0xFF) {
         if (!tgx) {
             across (h, r);                      /* (A way word alone: straight on) */
             return;
@@ -5126,9 +5147,10 @@ unsigned char s_dark_way (void)
         }
     }
     hub_map (0);
-    if (lim_ == 250 && npath) {                 /* (Not a walk of no steps: a close-in's later leg already where it can
-                                                **   get, "You run northeast into the dark." told again for nothing, the
-                                                **   fight soak's seed 31, 2026-11-06) */
+    if (lim_ == 250 && npath && out_told != 3) {   /* (Not a walk of no steps: a close-in's later leg already where
+                                                **   it can get, "You run northeast into the dark." told again for
+                                                **   nothing, the fight soak's seed 31, 2026-11-06; nor told already,
+                                                **   s_go's 3, fw5) */
         event (E_BEAT, 0, WB_FEEL | (unsigned) (h0 | rush_ << 4) << 8);
     }
     return 0;
@@ -6339,6 +6361,12 @@ void __fastcall__ s_step_to (unsigned char h, unsigned char n, unsigned char kee
     dens_where ();
     here ();
     paced ();
+    if (out_told == 2 && (out_told = 0, step8 (sn_, mx, my, h))) {
+        out_tell (h | 8);                       /* (Its first words before its way's worked out, s_go's walk's way,
+                                                **   felt for or not (a step's words its own, the dark's too): intent's
+                                                **   2, fw5) */
+        out_told = 1;
+    }
     npath = 0;
     lim_ = n;
     move.on = 0;
@@ -6363,18 +6391,25 @@ void __fastcall__ s_step_to (unsigned char h, unsigned char n, unsigned char kee
 ** words at once, its look as it gets there (the user's D17: a step's first letter was its look's, a second on; only one
 ** that's under way, what stops it at once its own words) */
 static unsigned go_eq;                          /* (turn's, turns_run's: the events the denizens have had their turn at) */
+unsigned char out_told;                         /* (A walk's first words told before its way was worked out, 1 its set-off,
+                                                **   3 its felt words: s_go's; 2, it may be, intent's) */
+void __fastcall__ out_tell (unsigned char h)
+{
+    hub_map (0);
+    h = (h & 0x7F) | (HUB->eq_head == go_eq ? 0x80 : 0);
+    evb = h & 0x7F;
+    view (V_SETOFF);
+    if (h & 0x80) {
+        hub_map (0);
+        go_eq = HUB->eq_head;                   /* (Its words alone: no turn of the denizens' for them, turns_run's) */
+    }
+}
 static void __fastcall__ set_out (unsigned char h)
 {
-    if (move.on) {
-        hub_map (0);
-        h = (h & 0x7F) | (HUB->eq_head == go_eq ? 0x80 : 0);
-        evb = h & 0x7F;
-        view (V_SETOFF);
-        if (h & 0x80) {
-            hub_map (0);
-            go_eq = HUB->eq_head;               /* (Its words alone: no turn of the denizens' for them, turns_run's) */
-        }
+    if (move.on && !out_told) {
+        out_tell (h);
     }
+    out_told = 0;
 }
 
 /* A way between strata set out on (s_climb's: stairs, a ladder, a long slope, its kind k), told at once (E_VIEW V_SETOFF,
@@ -6431,6 +6466,7 @@ static void __fastcall__ intent (struct msg* m)
     case I_GO:
         tgx = I_GO_X (*m);
         tgy = I_GO_Y (*m);
+        out_told = 2;                           /* (Its set-off words perhaps told before its way's worked out: s_go's) */
         go (I_GO_HEAD (*m));
         set_out (I_GO_HEAD (*m) | 16);
         break;
@@ -6438,6 +6474,7 @@ static void __fastcall__ intent (struct msg* m)
         climb (I_CLIMB_WAY (*m));
         break;
     case I_STEP:
+        out_told = 2;
         step_to (I_STEP_HEAD (*m), I_STEP_SQUARES (*m), I_STEP_KEEP (*m) != 0);
         set_out (I_STEP_HEAD (*m) | 8);
         break;
