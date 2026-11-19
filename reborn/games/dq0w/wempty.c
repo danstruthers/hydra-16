@@ -4,7 +4,8 @@
 ** named, a liquid poured away, a take's moment a handful; a thing put on a ledge, in a corner, the centre, a side or a
 ** passage, walked there and put down on that square), every actor's by the same code (DECISIONS.md's one path): the
 ** things' IO_EMPTY and IO_PLACE (things.c's s_serve), a denizen's I_ROB FE_EMPTY and FE_PLACE (wbody.c's: no mind posts
-** them yet).  All of it swapped part 111's (../dq0/swap.inc: dq0w.cfg's SW111), through its stub, handout.  Its locals
+** them yet).  Swapped part 111's (../dq0/swap.inc: dq0w.cfg's SW111), through its stub, handout; the empty itself
+** part 112's (wpour.c: its liquid poured into another, H11, 2026-11-19).  Its locals
 ** the part's own (static, in its image): what lasts across a call to another part (pick's, bulk_of's, sky_ask's) is in
 ** the request's copy, iq, the main RAM's, as the drag's is (wdrag.c)
 */
@@ -12,6 +13,7 @@
 #pragma local-strings (on)
 
 #include <string.h>
+#include <stdlib.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
 #include "hub0.h"
@@ -25,6 +27,7 @@ extern char* tp;
 extern char* tpe;
 extern unsigned char put_bank;
 unsigned __fastcall__ pick (const char* name, unsigned char how);   /* (Part 4's) */
+unsigned char pour (void);                      /* (Part 112's: wpour.c, IO_EMPTY, every actor's) */
 
 #pragma code-name ("SW111CODE")
 #pragma rodata-name ("SW111RODATA")
@@ -47,7 +50,9 @@ static const char* __fastcall__ name (unsigned char k)
 #define E_N             iq.item                 /* (The thing, */
 #define E_Y             iq.value                /*   the other, */
 #define E_I             iq.dur                  /*   a thing in it, */
-#define E_B             iq.dur_max              /*   the room they want) */
+#define E_B             iq.dur_max              /*   the room they want, */
+#define E_L             iq.y                    /*   its liquid, */
+#define E_C             iq.x                    /*   what's in the other now) */
 unsigned char __fastcall__ sky_ask (unsigned w);    /* (Part 89's: a thing let fall on a shaft's head) */
 unsigned __fastcall__ bulk_of (unsigned i);     /* (Part 10's) */
 unsigned __fastcall__ bulk_in (unsigned x);
@@ -68,76 +73,15 @@ static void __fastcall__ seen_do (unsigned w)
     hub_map (0);
 }
 
-/* Thing E_N's things (its first compartment's: a chest's inside, not its lid's top) put out: a liquid poured away (gone);
-** the rest into thing E_Y (its first compartment), or (E_Y 0) down on stratum sn's square x, y.  How many put out in
-** iq.qty, the first one's kind in iq.mat; how many poured in iq.plural, the first one's kind in iq.craft */
-static void __fastcall__ out_all (unsigned char sn, unsigned x, unsigned y)
-{
-    static unsigned i;
-    static unsigned char k;
-    static struct item* q;
-
-    iq.qty = iq.plural = 0;
-    for (i = 0; (i = items (i, IN_X | IN_ITEM, E_N)) != 0; ) {
-        if (IC_OF (ip->y)) {
-            continue;                           /* (Not its inside: its lid's top, a drawer) */
-        }
-        k = ip->kind;
-        hub_map (KIND_BANK);
-        if (CATALOGUE[k].form & KF_LIQUID) {
-            item_at (i)->kind = 0;              /* (Poured away: gone) */
-            if (!iq.plural++) {
-                iq.craft = k;
-            }
-            continue;
-        }
-        q = item_at (i);
-        if (!iq.qty++) {
-            iq.mat = k;
-        }
-        if (E_Y) {
-            q->x = E_Y;
-            q->y = 0;
-        } else {
-            q->where = IW_SQUARE;
-            q->sn = sn;
-            q->x = x;
-            q->y = y;
-            q->flags = (q->flags & ~(I_HELD | I_WORN)) | I_KNOWN;
-        }
-    }
-    hub_map (0);
-}
-
-/* Thing n to the character's hand: carried, or lying (or in a thing lying) on its square or one beside it: 1; else 0,
-** where it lies in the reply (the UI walks there first) */
-static unsigned char __fastcall__ in_hand (unsigned n)
-{
-    static struct item* p;
-    static unsigned char w, sn;
-    static unsigned x, y;
-
-    while ((p = item_at (n))->where == IW_ITEM) {
-        n = p->x;                               /* (Its outermost holder's place) */
-    }
-    w = p->where;
-    sn = p->sn;
-    x = p->x;
-    y = p->y;
-    hub_map (0);
-    if ((w == IW_ACTOR && !x) || (w == IW_SQUARE && sn == HUB->pc_stratum && x - HUB->pc_x + 1 <= 2 &&
-        y - HUB->pc_y + 1 <= 2)) {
-        return 1;
-    }
-    HUB->ireq.x = x;
-    HUB->ireq.y = y;
-    HUB->ireq.item = 0;
-    return 0;
-}
-
-/* The things' words begun (the UI bank's things_text) */
+/* The things' words begun (the UI bank's things_text); a denizen's, none (put's room nil: its words aren't the
+** character's to read) */
+static char nob;
 static void text_on (void)
 {
+    if (iq.to & TO_DEN) {
+        tp = tpe = &nob;
+        return;
+    }
     put_bank = UI_BANK;
     hub_map (UI_BANK);
     tp = UIREC->things_text;
@@ -152,119 +96,6 @@ static unsigned char __fastcall__ the (unsigned char k, const char* s)
     put (name (k));
     put (s);
     return IR_NO;
-}
-
-/* A thing's things put out (IO_EMPTY): the character's (iq.name, carried or within reach; iq.into the other, a surface
-** to 1, or none: at its feet), or body bd's (iq.to's TO_DEN: its own thing iq.item, at its feet).  Refused: not a thing
-** that holds things, closed (sealed, locked), nothing in it; the other not one that holds things, closed, no room in it
-** for them.  A flask's oil poured away as a liquid in a thing is */
-static unsigned char empty (void)
-{
-    static unsigned char k, ky, sh, f, oil, any;
-    static struct item* q;
-
-    if (iq.to & TO_DEN) {
-        E_Y = 0;
-        out_all (bd.sn, bd.x, bd.y);
-        bd.ready += TAKE_T * (iq.qty + (iq.plural != 0));
-        ++HUB->den_seq;
-        if (iq.qty) {
-            seen_do (WB_DROP | (unsigned) iq.mat << 8);
-        }
-        return IR_OK;
-    }
-    E_Y = 0;
-    if (!(E_N = pick (iq.name, HW_ANY))) {
-        return IR_NONE;
-    }
-    if (!in_hand (E_N)) {
-        return IR_NOT_HERE;                     /* (Walked over to it first: the UI's) */
-    }
-    if (*iq.into && (!(E_Y = pick (iq.into, HW_ANY)) || E_Y == E_N)) {
-        return IR_NONE;
-    }
-    if (E_Y) {
-        if (!in_hand (E_Y)) {
-            return IR_NOT_HERE;
-        }
-        E_B = bulk_in (E_Y);                    /* (The room they want, the solid ones, and what's in it) */
-        for (E_I = 0; (E_I = items (E_I, IN_X | IN_ITEM, E_N)) != 0; ) {
-            if (!IC_OF (ip->y)) {
-                k = ip->kind;
-                hub_map (KIND_BANK);
-                if (!(CATALOGUE[k].form & KF_LIQUID)) {
-                    E_B += bulk_of (E_I);
-                }
-            }
-        }
-    }
-    text_on ();
-    q = item_at (E_N);
-    k = q->kind;
-    sh = q->shut;
-    oil = k == KI_OIL && q->fuel;
-    any = items (0, IN_X | IN_ITEM, E_N) != 0;
-    if (E_Y) {
-        q = item_at (E_Y);
-        ky = q->kind;
-        f = q->shut;
-    }
-    hub_map (KIND_BANK);
-    if (!(CATALOGUE[k].flags & K_CONTAINER) && !oil) {
-        return the (k, " isn't a thing to empty.");
-    }
-    if (sh & IS_CLOSED) {
-        return the (k, sh & IS_LOCKED ? " is locked." : " is closed.");
-    }
-    if (!any && !oil) {
-        return the (k, " is empty.");
-    }
-    if (E_Y) {
-        hub_map (KIND_BANK);
-        if (!(CATALOGUE[ky].flags & K_CONTAINER) && !(CATALOGUE[ky].keeps & KF_ON)) {
-            return the (ky, " won't hold them.");
-        }
-        if (f & IS_CLOSED) {
-            return the (ky, " is closed.");
-        }
-        if (E_B > CATALOGUE[ky].cap_bulk) {
-            put (iq.to ? "There's no room for them on the " : "There's no room for them in the ");
-            put (name (ky));
-            put (".");
-            return IR_NO;
-        }
-    }
-    hub_map (0);
-    out_all (HUB->pc_stratum, HUB->pc_x, HUB->pc_y);
-    if (oil) {
-        item_at (E_N)->fuel = 0;                /* (A flask's oil poured away) */
-        ++iq.plural;
-    }
-    if (iq.qty) {
-        put ("You empty the ");
-        put (name (k));
-        if (E_Y) {
-            put (iq.to ? " onto the " : " into the ");
-            put (name (ky));
-            put (".");
-        } else {
-            put (" out at your feet.");
-        }
-        if (iq.plural) {
-            put (" The ");
-            put (oil ? "oil" : name (iq.craft));
-            put (" runs away.");
-        }
-    } else {
-        put ("You pour the ");
-        put (oil ? "oil" : name (iq.craft));
-        put (" out of the ");
-        put (name (k));
-        put (".");
-    }
-    hub_map (0);
-    HUB->ireq.x = TAKE_T * (iq.qty + (iq.plural != 0));    /* (A moment a handful, a take's) */
-    return IR_OK;
 }
 
 /* A thing put down on a square within reach (IO_PLACE): the character's (iq.name, carried; iq.x, iq.y the square, the
@@ -357,7 +188,7 @@ unsigned char __fastcall__ s_handout (const struct msg* m)
     unsigned char r;
 
     if (!m) {
-        return iq.kind == IO_EMPTY ? empty () : place ();
+        return iq.kind == IO_EMPTY ? pour () : place ();
     }
     memcpy (&k, &iq, sizeof iq);
     iq.kind = I_ROB_ERRAND (*m) == FE_EMPTY ? IO_EMPTY : IO_PLACE;
@@ -365,7 +196,7 @@ unsigned char __fastcall__ s_handout (const struct msg* m)
     iq.item = I_ROB_THING (*m);
     iq.x = I_ROB_X (*m);
     iq.y = I_ROB_Y (*m);
-    r = iq.kind == IO_EMPTY ? empty () : place ();
+    r = iq.kind == IO_EMPTY ? pour () : place ();
     memcpy (&iq, &k, sizeof iq);
     return r;
 }

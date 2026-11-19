@@ -17,6 +17,7 @@ const TORCHX = ['inventory', 'drop torch', 'take torch', 'inventory', 'wait 2 ho
   'drop the lit torch', 'take the spent torch from the floor', 'drop torch', 'take the lit torch', 'hold the tinderbox', 'take torch', 'inventory', 'douse the torch', 'light the torch',
   'inventory', 'take spent torch from backpack', 'put the rope in the backpack', 'put the tinderbox in the backpack', 'dip the spent torch in the oil', 'inventory'];   // (dq0torchwords' lines: the user's playtest, 2026-11-06)
 const EMPTYPLACE = ['drop the chest', 'drop the table', 'unlock the chest with the lockpicks', 'unlock the chest', 'put the key in the sack', 'empty the sack', 'empty the sack', 'take the key', 'put the key in the sack', 'empty the sack onto the table', 'open the flask of oil', 'empty the flask of oil', 'empty the torch', 'take the key from the table', 'put the key in the sack', 'tie the sack', 'empty the sack', 'untie the sack', 'take the key from the sack', 'put the key in the corner', 'put the dagger in the middle of the room', 'put the key on the ledge', 'look'];   // (dq0emptyplace's: P4, P5, P6, 2026-11-18)
+const POUR = ['d', 'n', 'fill the waterskin', 's', 'light the torch', 'drop the iron pot', 'open the waterskin', 'open the vial', 'pour the water into the vial', 'pour out the vial', 'empty the waterskin into the vial', 'empty the waterskin into the iron pot', 'empty the vial into the iron pot', 'empty the waterskin into the vial', 'empty the iron pot into the sack', 'close the vial', 'empty the iron pot into the vial', 'pour the water', 'look'];   // (dq0pour's: H11, 2026-11-19)
 const LETSIGHT = ['drop j', 'drop c', 'drop b', 'look', 'around', 'take 5F', 'drop c', 'around', 'take 2F', 'drop rations', 'take torch from E', 'drop k',
   'take G', 'around', 'inventory'];   // (dq0letsight's lines: the rats seen first, A, B, C, 2026-11-06's step 4)
 const LETCMD = ['inventory', 'drop j', 'inventory', 'take torch', 'put j in b', 'inventory', 'take j from b', 'light j with a', 'drop 2c', 'look d',
@@ -2668,6 +2669,34 @@ module.exports = {
         // in what it carries, the UI's copy, letters.c's o_des_low, 2026-11-18)
         this.notes = [];
         for (const r of this.timer.game(0, EMPTYPLACE.map(l => ({ line: l, want: 'You|The' })))) {
+          this.notes.push(r.line + ': first letter ' + r.first);
+          if (target(this, r.line + ': first letter', r.first, D17.first)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0pour', near: ['gear'], what: "Dingus Quest Zero's pouring from one container into another (the user's H11, 2026-11-19): at seed 2 (-T, a kit of an iron pot, a vial and a sack; the waterskin filled in the water down the stair, dq0things' way) 'pour the water into the vial' fills it, a pint, the rest left in the waterskin (told); the vial poured out, then the waterskin emptied into it, the same; emptied into the iron pot (on the floor), all of it, the vial's joined to it; refused: into the sack (holds no liquid), into a closed vial, into a full one; 'pour the water' pours the pot's away; each pour's and empty's first letter held to D17",
+      init: 't_rc', cycles: 600e6 + POUR.length * 150e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'mkdir /ram/g', 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g -k \'iron pot,vial,sack\'', ...POUR, 'quit', 'echo $status']) },
+      start(m) { this.timer = dq0Timer(m); },
+      expect: ['% echo $status'],
+      check(m) {
+        const A = dq0Answers(m.out), f = [], a = (l, n = 0) => (A.filter(x => x.cmd === l)[n] || { text: '(no answer)' }).text;
+        if (process.env.DQ0_POUR) for (const x of A) console.error(x.cmd + ' => ' + x.text);
+        const want = (l, re, why, n) => { if (!re.test(a(l, n))) f.push('"' + l + '" ' + why + ': ' + a(l, n).slice(0, 200)); };
+        want('pour the water into the vial', /You pour a pint of the water into the vial: it's full, and the rest stays in the waterskin\./, 'not poured in, the rest kept');
+        want('empty the waterskin into the vial', /You pour a pint of the water into the vial: it's full, and the rest stays in the waterskin\./, 'not poured in again', 0);
+        want('empty the waterskin into the iron pot', /You pour the water into the iron pot\./, 'not poured into the pot');
+        want('empty the vial into the iron pot', /You pour the water into the iron pot\./, "the vial's not joined in the pot");
+        want('empty the waterskin into the vial', /The waterskin is empty\./, 'an empty waterskin not told', 1);
+        want('empty the iron pot into the sack', /The sack won't hold water\./, 'the sack not refused');
+        want('empty the iron pot into the vial', /The vial is closed\./, 'a closed vial not refused');
+        want('pour the water', /You pour the water out of the iron pot\./, "the pot's water not poured away");
+        this.notes = [];
+        for (const r of this.timer.game(0, POUR.filter(l => /^(pour|empty) /.test(l)).map(l => ({ line: l, want: 'You|The' })))) {
           this.notes.push(r.line + ': first letter ' + r.first);
           if (target(this, r.line + ': first letter', r.first, D17.first)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
         }

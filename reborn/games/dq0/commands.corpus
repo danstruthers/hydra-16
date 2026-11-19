@@ -737,3 +737,5 @@ yell "help!"	VB_SAY	text=help!;volume=shout	-	the quote's place the record's
 empty the sack	VB_EMPTY_OBJECT	object=sack	near=sack	its things put out at the feet (the user's P4, 2026-11-18)
 empty the sack onto the table	VB_EMPTY_OBJECT	object=sack;container=table	near=sack,table	onto another: its things on it
 pour out the waterskin	VB_EMPTY_OBJECT	object=waterskin	near=waterskin	a liquid poured away
+pour the water into the vial	VB_EMPTY_OBJECT	object=water;container=vial	near=water,vial	a liquid poured into another (the user's H11, 2026-11-19)
+empty the waterskin into the vial	VB_EMPTY_OBJECT	object=waterskin;container=vial	near=waterskin,vial	its liquid into the other

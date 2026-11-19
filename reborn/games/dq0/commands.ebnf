@@ -228,7 +228,7 @@
 <GET>        ::= "get" | "take" | "pick up" | "pick"
 <DROP>       ::= "drop" | "put down" | "shrug off"
 <PUT>        ::= "put" | "place"
-<EMPTY>      ::= "empty" | "empty out" | "tip out" | "pour out" | "dump" | "dump out"
+<EMPTY>      ::= "empty" | "empty out" | "tip out" | "pour out" | "dump" | "dump out" | "pour"
 <USE>        ::= "use" | "make use of"
 <EQUIP>      ::= "equip" | "put on"
 <UNEQUIP>    ::= "doff" | "take off" | "put away"

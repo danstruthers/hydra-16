@@ -443,6 +443,10 @@ static unsigned char __fastcall__ ix_pick (const char* w, unsigned char sel, uns
     }
     for (e = 0; e < nck; ++e) {
         cm[e] = name_is (ck[e].name, w);        /* (The word asked of each kind once: the one rule, the world's, main.c's) */
+        if (op == IO_EMPTY && cm[e] && !strncmp (ck[e].name, w, j = strlen (w)) && ck[e].name[j] >= 'a') {
+            cm[e] = 0;                          /* (Emptied, poured: "water" not the waterskin, a word's start; the
+                                                **   world's the liquid's, wpour.c's liquid_named, H11, 2026-11-19) */
+        }
     }
     for (e = 0; e < nix; ++e) {
         f = ix[e].flags;

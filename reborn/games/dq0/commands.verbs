@@ -659,6 +659,7 @@ tip out = empty
 pour out = empty
 dump = empty
 dump out = empty
+pour = empty
 
 [turns]
 look floor = floorlook

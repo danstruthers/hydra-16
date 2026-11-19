@@ -1217,8 +1217,8 @@ enum { FE_ROB, FE_TAKE, FE_GIVE, FE_GIFT,       /* (I_ROB's a: a robbery; an all
                                                 **   handed to actor b less 1, beside it; thing t thrown at the character,
                                                 **   by the character's throw: wtake.c's) */
        FE_EMPTY, FE_PLACE };                    /* (P4, P5, 2026-11-18, the character's own: its thing t's things put
-                                                **   out at its feet, a liquid poured away; thing t put down on square w1,
-                                                **   w2 within its reach: wempty.c's, I_ROB:fetch's fields; no mind
+                                                **   out at its feet (w1 0), or into thing w1, its liquid too (H11,
+                                                **   2026-11-19); thing t put down on square w1, w2 within its reach: wempty.c's, I_ROB:fetch's fields; no mind
                                                 **   posts them yet) */
 enum { FT_TOOK, FT_GAVE, FT_GONE, FT_HEAVY, FT_HANDS, FT_FEET, FT_GOT, FT_FAR };   /* (E_TASK TE_FETCHED's b's high
                                                 **   bits: taken up, handed over, gone from where it lay, too heavy
