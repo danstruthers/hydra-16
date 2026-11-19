@@ -233,10 +233,12 @@ function chunkDiff(a, b) {
 // The status line as the screen showed it after each of its draws (the game draws only from its first column changed:
 // "torch 15" of "torch 15m" when the m was there already), one a line, for a check of what it said
 const dq0StatusRows = out => { const v = new VT({ onlcr: true }); return out.split('\x1b[0m').map(c => v.write(c + '\x1b[0m').lines()[0]).join('\n'); };
-// (The status line's draws not the story's: drawn in reverse video on its own row, wherever they fall among an answer's
-// words, as dq0Timer's story has it; 2026-11-18, dq0follow's "[######....] torch 59m UP 0 facing W" between a follow's
-// two sentences: its long task's bar shown while it was under way, as the UI came round between its events)
-const dq0Story = out => out.replace(/\x1b\[7m[\s\S]*?\x1b\[0?m/g, ' ').replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' ');
+const dq0Story = out => out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' ');
+// The story's prose alone: the status line's draws left out (drawn in reverse video on its own row, wherever they fall
+// among an answer's words, as dq0Timer's story has it), for a check of what an answer said in order (2026-11-18:
+// dq0follow's "[######....] torch 59m UP 0 facing W" between a follow's two sentences, its long task's bar drawn while it
+// was under way; the story itself keeps them, the checks of what the status line said read it there)
+const dq0Prose = out => dq0Story(out.replace(/\x1b\[7m[\s\S]*?\x1b\[0?m/g, ' '));
 function inTurn(o, want, f, name = '') {
   let at = 0;
   for (const w of want) {
@@ -1066,7 +1068,7 @@ const WORN = ['inventory', 'wear the ring on my left hand', 'wear the ring on my
 module.exports = {
   CHUNK_SIZE, CK_TILE, CK_ROOM, T_ROCK, T_FLOOR, T_WALL, T_CORR, T_WINDOW, cacheBanks, cacheChunks, caveReport,
   PK_PORTCULLIS, T_DOOR, T_STEPS, xdBytes, saidTheme, DQ0_MAKE, dq0Life, THEMEC, builtChunks, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N,
-  CSLOT_AT, liveChunks, O_WAY_OUT, O_NOWHERE, stratumRec, dq0Made, chunkDiff, dq0StatusRows, dq0Story, inTurn,
+  CSLOT_AT, liveChunks, O_WAY_OUT, O_NOWHERE, stratumRec, dq0Made, chunkDiff, dq0StatusRows, dq0Story, dq0Prose, inTurn,
   DQ0_REPEATS, dq0Answers, dq0Repeats, dq0Doubled, dq0Lost, dq0Check, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need,
   dq0Never, dq0Carried, dq0Here, dq0Named, dq0Thing, dq0Holder, dq0View, DQ0_I, passings, dq0TypedAsk, dq0Typed,
   dq0PortalOff, dq0Portal, dq0RecPb, dq0Rec, dq0Alone, dq0Poke, dq0BodyFb, dq0Body, dq0SheetSb, dq0Sheet, dq0PcShock,

@@ -3124,7 +3124,8 @@ int main (int argc, char* argv[])
         fore_sync ();                           /* (In the foreground or out, as a command's in hand or not) */
         k = t_wrote;
         hub_nap (k && t_haskey () ? 0 : quick && (k || !HUB->tpr) ? (--quick, 1) : HUB->tpr && !k &&
-            HUB->look.state == REQ_POSTED && HUB->look.kind >= LK_WAY ? nap << 2 : nap);  /* (Keys that came as
+            HUB->look.state == REQ_POSTED && (unsigned char) (HUB->look.kind - LK_WAY) <= LK_NEAR - LK_WAY ? nap << 2 :
+            nap);  /* (Keys that came as
                                                 **   it said something,
                                                 **   a line typed as an answer or a look went out: no nap, taken at
                                                 **   once, 2026-10-30.  A fiftieth of a second: the keys looked
@@ -3140,7 +3141,8 @@ int main (int argc, char* argv[])
                                                 **   waits on the world, the events ringing it, each look at the keys the
                                                 **   console's 9,000 cycles from the answer's own tasks, a look one
                                                 **   way's a tenth, 2026-11-18; and while the senses work a look one way
-                                                **   out, nothing said, four times the nap: their look the CPU,
+                                                **   out, nothing said, four times the nap: their look the CPU (not its
+                                                **   rest's, after the prompt, a line perhaps typed meanwhile),
                                                 **   2026-11-18) */
     }
     finish ();

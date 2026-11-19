@@ -7,7 +7,7 @@ const path = require('path');
 const { card, typed } = require('../../lib/common.js');
 const {
   T_ROCK, T_FLOOR, T_WALL, T_CORR, T_WINDOW, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks, stratumRec,
-  dq0Story, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Named, DQ0_I,
+  dq0Story, dq0Prose, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Named, DQ0_I,
   dq0Typed, dq0Portal, dq0Rec, dq0Poke, dq0PcShock, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Alone, dq0Paces, dq0Own,
   dq0Asks, dq0HeldPaces
 } = require('../../lib/dq0.js');
@@ -844,7 +844,9 @@ module.exports = {
         const fm = T.of('follow me');
         if (!dq0Rep(fm, 'sway', { kind: 'SW_ORDER', order: 'OR_FOLLOW', result: 'SR_OK' }).length) f.push('"follow me" not the ally\'s order (' + JSON.stringify(fm.replies.filter(r => r.req === 'sway')) + ')');
         inTurn(o, ['> follow the sack The sack isn\'t going anywhere.', '> follow the rat You follow the giant rat.', 'You\'ve lost the giant rat. ("track" may find its trail.)'], f);
-        const fo = o.slice(o.lastIndexOf('> follow the rat'), o.indexOf('You\'ve lost the giant rat.')).replace(/\s+/g, ' '), far = fo.split('You can\'t get near enough to the giant rat.').length - 1;
+        const p = dq0Prose(out);              // (Its words in order, the status line's draws among them left out: its bar
+                                                //   drawn as the follow's long task went on, 2026-11-18)
+        const fo = p.slice(p.lastIndexOf('> follow the rat'), p.indexOf('You\'ve lost the giant rat.')).replace(/\s+/g, ' '), far = fo.split('You can\'t get near enough to the giant rat.').length - 1;
         if (far !== 1 || !/^> follow the rat You follow the giant rat\. You can't get near enough to the giant rat\./.test(fo)) f.push('out of reach as the follow began: not said once, then: ' + far + ' ' + fo.slice(0, 200));
         const fr = T.of('follow the rat');
         if (!fr.at || !fr.after || (fr.at.pc.x === fr.after.pc.x && fr.at.pc.y === fr.after.pc.y)) f.push('not walked after the rat');
