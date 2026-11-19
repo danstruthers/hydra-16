@@ -21,6 +21,8 @@
 ;   AC_ROW      the world's act table's rows (table.s: games/dq0w/acts.txt, every actor's act its numbers, 2026-11-19)
 ;   WK_*        the one way-finder and its rule for a square (walk.s: dq0w/walk.inc, compiled into the world and the
 ;               denizens, before)
+;   GW_HELD     the one give-way (gw.s, 2026-11-19: the world's den_held and ui_first, the minds' held, the senses'
+;               sense_held and the maker's giving before, four copies on two clocks)
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -28,7 +30,7 @@
 
             HYX2_LIBRARY "dq0lib", "HEADER", "ROM"
             .export     rp_find
-            .import     at_find, ck_made, ck_at, ln_line, ln_pass, ln_portal, wk_row, wk_seed, wk_search, ac_row
+            .import     at_find, ck_made, ck_at, ln_line, ln_pass, ln_portal, wk_row, wk_seed, wk_search, ac_row, gw_held
 
 .code
 .assert     * = $A030, lderror, "The dq0lib library's entry isn't right after its header"
@@ -51,6 +53,7 @@
             jmp         wk_seed                             ; $A060: WK_SEED
             jmp         wk_search                           ; $A063: WK_SEARCH
             jmp         ac_row                              ; $A066: AC_ROW (table.s: the act table, games/dq0w/acts.h)
+            jmp         gw_held                             ; $A069: GW_HELD (gw.s: the one give-way)
 
 BANKREG     = $00                                           ; The task's RAM bank register
 BUF         = $9FE0                                         ; MODINFO's answer (ME_SIZE bytes; then the entry looked

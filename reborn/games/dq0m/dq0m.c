@@ -118,7 +118,7 @@ static void __fastcall__ serve (unsigned char i)
 ** in the background, so a look or a walk finds them made; ahead.c's which and where, make.c's the making): in the
 ** background (the kernel's: the maker in its foreground only while one there waits on its request, fore), as nothing's
 ** asked of it, AH_SETTLE ticks after the last; giving way to a command in hand or a line being typed as the senses' ask
-** does (dq0p.c's sense_held: at the real paces GIVE_WAY ticks at most from a line's Enter, KEY_HOLD while its keys go
+** does (the library's one give-way, gw.s: at the real paces GW_CMD ticks at most from a line's Enter, GW_KEYS while its keys go
 ** on; at the turns pace, the game waiting on the player between, while it's in hand), held where it is meanwhile (the
 ** growers' checkpoints: ahead_wanted); given up as a request comes for anything but the chunk it's making (one for it:
 ** made on, in the foreground if its asker is); at each checkpoint the other tasks' turn first (hy_yield: the
@@ -129,8 +129,6 @@ static void __fastcall__ serve (unsigned char i)
                                                 **   reader's requests come in bursts, a new stratum's chunks one
                                                 **   after another, none begun between them) */
 #define AH_HOLD         25                      /* (Ticks asleep at most as it gives way) */
-#define GIVE_WAY        100                     /* (dq0p.c's: ticks held from a line's Enter at most, */
-#define KEY_HOLD        600                     /*   and while its keys go on) */
 #define ASK_FORE        0x1D                    /* (The requests whose askers are the kernel's foreground's: the world's,
                                                 **   the senses', the UI's, the map's; not the denizens') */
 static unsigned char fg;                        /* (In the kernel's foreground now: fore ()'s) */
@@ -167,35 +165,17 @@ static void __fastcall__ fore (unsigned char on)
 ** character not yet ready again, its intents not all taken: the denizens catching up, dq0w.c's turns_run): 2, held
 ** for the game's own time (asleep AH_NAP ticks at a time, its wakes as few as when nothing's wanted: a long sleep's
 ** timing as it was); 1, for a command or keys (AH_HOLD: on again the sooner).  The hub's header in the window */
-static unsigned char hst, hsq, hcm, hks;        /* (The hold's state: 0 none, 1 since ht0, 2 run out; its line's, and its
-                                                **   command's and keys' as it began) */
-static unsigned ht0;
+static struct gw gmk;                           /* (The library's one give-way's state: its own copy before) */
 static unsigned char giving (void)
 {
     if (HUB->starting || HUB->pc_task.kind || ((unsigned char) HUB->pcsum.cond & C_DEAD) ||
         (!HUB->tpr && (HUB->pc_ready > HUB->now || HUB->iq_head != HUB->iq_tail || HUB->ui_giving))) {
         return 2;
     }
-    if (!(HUB->ui_cmd | HUB->ui_keys)) {
-        hst = 0;
-        return 0;
-    }
-    if (!HUB->tpr) {
+    if (!HUB->tpr && (HUB->ui_cmd | HUB->ui_keys)) {
         return 1;                               /* (The turns pace: while it's in hand) */
     }
-    if (HUB->cq.seq != hsq || HUB->ui_cmd != hcm || HUB->ui_keys != hks) {
-        hks = HUB->ui_keys;                     /* (A line typed again, a new line entered: its own hold) */
-        hsq = HUB->cq.seq;
-        hcm = HUB->ui_cmd;
-        hst = 0;
-    }
-    if (!hst) {
-        hst = 1;
-        ht0 = hy_ticks ();
-    } else if (hst == 1 && hy_ticks () - ht0 >= (HUB->ui_cmd ? GIVE_WAY : KEY_HOLD)) {
-        hst = 2;
-    }
-    return hst == 1;
+    return gw_held (&gmk, 0);                   /* (The real paces: the one give-way, gw.s's, 2026-11-19) */
 }
 
 /* The chooser's give-way (ahead.c's ahead_next, at each actor, and make_ahead's start): 1, a request posted or a

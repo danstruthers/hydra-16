@@ -7228,30 +7228,20 @@ unsigned char __fastcall__ fumbled (unsigned char k)
 static unsigned char kfree, kcut, kmore, kburn; /* (kmore: the free pass over, the minute's own passes after it still
                                                 **   free, the lights' row's alone (kburn, as it's walked): main's,
                                                 **   dq0hold's hole, 2026-11-14) */
+static struct gw gui, gden;                     /* (The library's one give-way's states: ui_first's, den_held's) */
 unsigned char ui_first (void)
 {
-    static unsigned t0;
-    static unsigned char sq;
-
     if ((HUB->pace & 3) == 3 || !HUB->ui_cmd) { /* (The real paces: its pace's, not tpr, 0 in a long wait as well,
                                                 **   2026-11-03: a line typed then its answer first too) */
-        t0 = 0;
+        gui.st = 0;
         return 0;
     }
     if (kfree == 2 && kmore <= kburn) {
         return 0;                               /* (Not another row's in the minute's own passes: kmore's) */
     }
     kcut |= kfree & 1;
-    if (HUB->cq.seq != sq) {
-        sq = HUB->cq.seq;                       /* (Each line's own quarter second: a line typed as the last's answer
-                                                **   was still owed had its kits drawn meanwhile, 2026-10-30) */
-        t0 = 0;
-    }
-    if (!t0) {
-        t0 = (hy_ticks () - 1) | 1;             /* (Not 0, and not ahead of the ticks: an even tick's | 1 made the time
-                                                **   gone 65,535 till the next, a job let through as a command came) */
-    }
-    return (unsigned) (hy_ticks () - t0) < 50;
+    return gw_held (&gui, GW_PACE | GW_NOKEYS | GW_LINE);  /* (Each line's own, the parser's seq: GW_CMD real ticks,
+                                                **   the library's one give-way, 2026-11-19; a quarter second before) */
 }
 
 /* The world's long jobs (HOUSE.md's holding back: a denizen's things drawn, the traces' journal taken in, the lights'
@@ -7269,7 +7259,7 @@ unsigned char ui_first (void)
 ** own: not riding the minute's passes, a journal come due as they went flushed with the keys on the line (dq0hold's
 ** held2, 2026-11-14).  1, it waits for the keys (a command's own ui_first's, a quarter second).  The hub's header in
 ** the window */
-#define KEY_HOLD        600
+#define KEY_HOLD        GW_KEYS                 /* (The one give-way's, hub.h's) */
 static unsigned kt0;
 static unsigned char keys_hold (void)
 {
@@ -7294,8 +7284,6 @@ unsigned char ui_long (void)
 ** go; not keys_hold's free pass and hold again, the denizens three seconds behind at most, not slowed while the keys
 ** go on.  Each line's own (the hub's ui_keys, as the minds' gks and the senses' hks): a line let go and typed again
 ** before a pass saw no keys held again, not the last's hold run out, 2026-11-14.  1, held */
-static unsigned char dst, dks;
-static unsigned dt0;
 static unsigned char den_held (void)
 {
     hub_map (0);
@@ -7304,21 +7292,10 @@ static unsigned char den_held (void)
                                                 **   the denizens' parts and outfits not drawn beside it, the look
                                                 **   across's pause, 2026-11-19) */
     }
-    if ((HUB->pace & 3) == 3 || !HUB->ui_keys || HUB->ui_cmd) {
-        dst = 0;
-        return ui_first ();
+    if (HUB->ui_cmd) {
+        return ui_first ();                     /* (A command in hand: its own hold, its free passes') */
     }
-    if (HUB->ui_keys != dks) {
-        dks = HUB->ui_keys;                     /* (A line typed again: its own hold) */
-        dst = 0;
-    }
-    if (!dst) {
-        dst = 1;
-        dt0 = hy_ticks ();
-    } else if ((unsigned) (hy_ticks () - dt0) >= KEY_HOLD) {
-        dst = 2;
-    }
-    return dst == 1;
+    return gw_held (&gden, GW_PACE);            /* (A line's keys: the library's one give-way, 2026-11-19) */
 }
 
 /* What's queued after the character's long task (activity.h's), the next popped as it's free, the last planned first:

@@ -76,7 +76,11 @@ const ASM = {
     CH_NPORTALS: 'chunk.nportals', CH_PORTAL: 'chunk.portal', PO_SIZE: 'sizeof portal', PO_X: 'portal.x', PO_Y: 'portal.y', CW: 'CW',
   },
   walk: { CW: 'CW', T_DOOR: 'T_DOOR', T_STEPS: 'T_STEPS', STEP_MAX: 'STEP_MAX', STAIR_MAX: 'STAIR_MAX', PS_HIDDEN: 'PS_HIDDEN', PS_OPEN: 'PS_OPEN' },   // modules/dq0lib/walk.s
-  lbsaid: { TOLD: 'TOLD' },                                     // games/dq0/lbsaid.s: a look's sentences kept (dq0.h's)
+  lbsaid: { TOLD: 'TOLD' },
+  gw: {                                                         // modules/dq0lib/gw.s: the one give-way
+    HUB_WINDOW: 'HUB_WINDOW', HUBO_PACE: 'hub.pace', HUBO_TPR: 'hub.tpr', HUBO_CMD: 'hub.ui_cmd', HUBO_KEYS: 'hub.ui_keys',
+    HUBO_CQ: 'hub.cq', RQ_SEQ: 'rqh.seq', GW_CMD: 'GW_CMD', GW_KEYS: 'GW_KEYS', GW_PACE: 'GW_PACE', GW_NOKEYS: 'GW_NOKEYS', GW_LINE: 'GW_LINE',
+  },                                     // games/dq0/lbsaid.s: a look's sentences kept (dq0.h's)
 };
 
 // ---- The headers read: their text less comments, a backslash's line joined to the next

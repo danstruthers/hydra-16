@@ -66,7 +66,7 @@ static void pc (void)
 
 extern unsigned char gw;                        /* (give_way's, below) */
 void give_way (void);
-#define GIVE_WAY        100                     /* (give_way's: below) */
+#define GIVE_WAY        GW_CMD                  /* (give_way's: below; the one give-way's, hub.h's) */
 
 /* The last whole look as it was made (a look about's or one way's: its view and its record; not one through a door's
 ** little window), so a look one way's near part can be told from it while its far part's worked out: from the same
@@ -442,32 +442,17 @@ unsigned char __fastcall__ num (const char* s);
 ** world's long jobs', 2026-11-06: the senses' part copied in and a mind's ask answered as an Enter came, 90,000 cycles
 ** of an answer's first letter), KEY_HOLD ticks at most while the keys go on, then answered till the line's Enter (its
 ** command's GIVE_WAY its own, the parser's request's seq a new line's) or the keys let go */
-#define KEY_HOLD        600
-static unsigned char held, hst, hsq, hcm, hks;       /* (Held; the hold's state: 0 none, 1 since ht0, 2 run out; its line's,
-                                                **   and the UI's ui_cmd as it began: dq0d.c's gsq, gcm) */
-static unsigned ht0;
+static unsigned char held;                      /* (A denizen's ask held) */
+static struct gw gsense;                        /* (The library's one give-way, gw.s's: 2026-11-19, its own copy before) */
 
 static unsigned char sense_held (void)
 {
     hub_map (0);
-    if (!HUB->tpr || !(HUB->ui_cmd | HUB->ui_keys) || HUB->sway.state == REQ_POSTED) {
-        hst = 0;                                /* (Nothing in hand, the turns pace, or the UI's asked the minds) */
+    if (HUB->sway.state == REQ_POSTED) {
+        gsense.st = 0;                          /* (The UI's asked the minds: they wait on it) */
         return 0;
     }
-    if (HUB->cq.seq != hsq || HUB->ui_cmd != hcm || HUB->ui_keys != hks) {
-        hks = HUB->ui_keys;                     /* (A line typed again: its own hold, hub.h's ui_keys) */
-        hsq = HUB->cq.seq;                      /* (A new line entered: its command's own hold; a line's keys as the
-                                                **   last's answer's begun, theirs) */
-        hcm = HUB->ui_cmd;
-        hst = 0;
-    }
-    if (!hst) {
-        hst = 1;
-        ht0 = hy_ticks ();
-    } else if (hst == 1 && (unsigned) (hy_ticks () - ht0) >= (HUB->ui_cmd ? GIVE_WAY : KEY_HOLD)) {
-        hst = 2;
-    }
-    return hst == 1;
+    return gw_held (&gsense, 0);
 }
 
 void lit_ask (void);                            /* (sense.c's, part 6's) */

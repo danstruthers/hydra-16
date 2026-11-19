@@ -2267,4 +2267,26 @@ void* __fastcall__ hub_call (void* q, unsigned char t);  /* hub_post, then hub_w
                                                         **   when its reply's taken) */
 #define hub_ask(s)      ((struct req*) hub_call (&HUB->slot[s], T_REFEREE))     /* (The referee asked, slot s) */
 
+/* ---- The one give-way (modules/dq0lib's gw.s, its GW_HELD: ONE-PATH.md's 2.6, the sense audit's 3.5, 2026-11-19):
+** a task's work held back while the UI's command is in hand or a line's being typed, at the real paces, on real ticks,
+** one rule for every task (the world's denizens' intents and its long jobs, the minds, the senses' answers to them, the
+** maker's making ahead); each task's own state a struct gw, a line's hold its own.  gw_held (s, flags): 1, held */
+#define GW_CMD          100                     /* Real ticks a task waits for the UI's command in hand, each line's
+                                                **   (its answer first; 50, 100 and 30 tenths before) */
+#define GW_KEYS         600                     /* Real ticks it waits while a line's keys go on (three seconds) */
+#define GW_PACE         1                       /* (Its flags) the turns pace the hub's pace's (a long wait held as
+                                                **   well), not tpr's 0 */
+#define GW_NOKEYS       2                       /*   a command in hand alone, not a line's keys */
+#define GW_LINE         4                       /*   a line its own by the parser's seq alone */
+#define GW_HELD_X       0x69                    /* (The library's entry: dq0lib.s's jump table) */
+struct gw {
+    unsigned char   st, sq, cm, ks;             /* (The hold: 0 none, 1 since t0, 2 run out; its line's seq, ui_cmd,
+                                                **   ui_keys) */
+    unsigned        t0;                         /* (Its start, the ticks') */
+};
+unsigned __fastcall__ lib_x (unsigned char e);  /* (dq0lib.inc's: the library's entry e, an XCALL) */
+#define gw_held(s, f)   (*(void**) 2 = (s), *(unsigned char*) 4 = (f), (unsigned char) lib_x (GW_HELD_X))
+                                                /* (Its arguments the call registers r0, r1: the hub's header in the
+                                                **   window) */
+
 #endif
