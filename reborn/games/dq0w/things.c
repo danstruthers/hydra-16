@@ -3853,7 +3853,10 @@ void __fastcall__ s_took_list (char* b)
 #pragma code-name (pop)
 
 /* (Part 16's: I_TAKE's walk over to a thing, a count taken up as it gets there: the request as it was, its count;
-** wgame.c's take_up) */
+** wgame.c's take_up, its one caller, in its part since 2026-11-18: part 35's room, its call of s_moved the swap
+** take_up's call of it was) */
+#pragma code-name (push, "SW16CODE")
+#pragma rodata-name (push, "SW16RODATA")
 unsigned char s_take_rest (void)
 {
     if (!take_cnt) {
@@ -3866,6 +3869,8 @@ unsigned char s_take_rest (void)
     wnot = win = wforce = 0;
     return s_moved (IO_GET);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma static-locals (pop)
 #pragma code-name (pop)
