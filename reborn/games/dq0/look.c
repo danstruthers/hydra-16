@@ -62,6 +62,23 @@ const char* tt (void)
     return lb;
 }
 
+/* The senses' record copied (sight_copy), summed up to the things: where it stands, how much of it's seen, its dark, its
+** own light, its doors, ways and ceiling; not its seq, nor first, the UI's (sight_same's, a light's change compared
+** with the last look's: the main RAM's, part 8 not copied in for each look's words, 2026-11-18) */
+static unsigned sight_sum;
+static unsigned sight_sum_of (void)
+{
+    unsigned char a = 0, b = 0;
+    const unsigned char* p = &sight_copy.where;
+
+    do {
+        if (p != &sight_copy.first) {
+            b += a += *p;
+        }
+    } while (++p != &sight_copy.nitems);
+    return a | b << 8;
+}
+
 /* What the character perceives (first: the first time there; 2, a close look, the room's figures with it; | 4, as a
 ** run or a sprint ends: briefly; 8, a look one way's: what it sees that way, way.c's; 32, LOOK_NEW, only what's
 ** new since the command, a walk over for it just done, task.c's; 16, the traces read, the world's reply, words.c's): the senses'
@@ -70,7 +87,6 @@ void __fastcall__ look (unsigned char first)
 {
     sight_close = first & 58;                   /* (The theme's words for a place's first sight: later) */
     sight_get ();
-    sight_same (SS_LOOKED);                     /* (What it saw, kept: a light's change compared with it, main.c's E_VIEW) */
     sight_copy.first |= first & 4 ? SIGHT_HURRY : 0;
     sight_light = HUB->pc_light;
     strcpy (sight_lamp, HUB->pc_lamp);
@@ -87,6 +103,9 @@ void __fastcall__ look (unsigned char first)
                                                 **   streamed look's are: lbsaid.s's) */
     }
     lb_stream = 0;
+    sight_sum = sight_sum_of ();                /* (What it saw, kept: a light's change compared with it, main.c's E_VIEW;
+                                                **   after its words, their first letter the sooner, 2026-11-18: the
+                                                **   words change none of what's summed) */
 }
 
 /* A denizen the character sees has moved (the world's E_VIEW, V_STIR): the senses' record copied, worded (overlay
@@ -384,29 +403,14 @@ char where_w[34];
 ** name (the senses' record up to the things, summed: where it stands, how much of it's seen, its dark, its own light, its
 ** doors, ways and ceiling; not its seq, nor first, the UI's; not what lies about nor the denizens, which a light lit or
 ** put out alone doesn't change): 1, no look wanted (the user's, 2026-11-14: a torch lit from another, one of two put
-** out or burnt out, a candle lit by a torch).  w SS_LOOKED: a look's, sight_copy just read, its sum kept */
-static unsigned sight_sum;
+** out or burnt out, a candle lit by a torch).  The last look's sum, sight_sum_of's (the main RAM's) */
 unsigned char __fastcall__ s_sight_same (unsigned char w)
 {
-    unsigned char a = 0, b = 0;
-    const unsigned char* p = &SC.where;
-
-    if (w != SS_LOOKED) {
-        if ((unsigned char) (w - V_LIT) >= 2 || strcmp (HUB->pc_lamp, sight_lamp)) {
-            return 0;
-        }
-        sight_get ();
-    }
-    do {
-        if (p != &SC.first) {
-            b += a += *p;
-        }
-    } while (++p != &SC.nitems);
-    if (w == SS_LOOKED) {
-        sight_sum = a | b << 8;
+    if ((unsigned char) (w - V_LIT) >= 2 || strcmp (HUB->pc_lamp, sight_lamp)) {
         return 0;
     }
-    return sight_sum == (a | b << 8);
+    sight_get ();
+    return sight_sum == sight_sum_of ();
 }
 
 /* An actor's square (x, y) in sight, the senses' last look's (blows.c's: one closed with) */

@@ -87,9 +87,10 @@ static unsigned char __fastcall__ on_lid (unsigned char k)
     return lids[k >> 3] & 1 << (k & 7);
 }
 
-/* The records lying on squares near the character (stratum near_sn, 20 squares each way of near_x, near_y), as the
-** look's lamps found them (things_lamps's pass of the store), in order, for things_seen's (near_ok: the list whole,
-** the store as it was: the world waits for the look, and writes the store meanwhile only as a chunk's stocked) */
+/* The records lying on squares near the character (stratum near_sn, 20 squares each way of near_x, near_y; a look one
+** way's WAY_R, its reach, 2026-11-18), as the look's lamps found them (things_lamps's pass of the store), in order,
+** for things_seen's (near_ok: the list whole, the store as it was: the world waits for the look, and writes the store
+** meanwhile only as a chunk's stocked) */
 #define NNEAR           24
 static unsigned nearv[NNEAR], near_x, near_y;
 static unsigned char nnear, near_ok, near_sn, near_r, near_w;  /* (near_r, near_w: things_seen's reach, a look one
@@ -236,8 +237,9 @@ void __fastcall__ s_things_lamps (unsigned char sn, unsigned x, unsigned y)
     nlamps = 0;
     light_lamps_begin ();
     nnear = 0;
-    near_ok = !v_way;                           /* (A look one way's further: the store gone through, not the list of
-                                                **   those near) */
+    near_ok = 1;                                /* (The list of those near: a look one way's as far as it looks, the
+                                                **   store not gone through again for it, 2026-11-18; too many for the
+                                                **   list, gone through) */
     near_r = v_way ? WAY_R : 20;
     near_w = 2 * near_r;
     near_sn = sn;
@@ -245,7 +247,7 @@ void __fastcall__ s_things_lamps (unsigned char sn, unsigned x, unsigned y)
     near_y = y;
     sky_lamps ();
     while ((i = items (i, IN_SQUARE | IN_ITEM | IN_PORTAL, 0)) != 0) {
-        if (ip->where == IW_SQUARE && ip->sn == sn && ip->x - x + 20 <= 40 && ip->y - y + 20 <= 40) {
+        if (ip->where == IW_SQUARE && ip->sn == sn && ip->x - x + near_r <= near_w && ip->y - y + near_r <= near_w) {
             if (nnear < NNEAR) {                /* (One near: things_seen's) */
                 nearv[nnear++] = i;
             } else {

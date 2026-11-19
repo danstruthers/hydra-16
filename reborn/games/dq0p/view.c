@@ -322,7 +322,9 @@ static unsigned char __fastcall__ chunks (unsigned char on)
         for (xx = gx0; xx <= gx1; xx += ni_) {
             ni_ = band (xx, gx1);
             i_ = xx - gx0;
-            if (!cached (v_sn, xx, yy) && (!on || reached ()) && v_may (xx, yy) && at (v_sn, xx, yy)) {
+            if (!cached (v_sn, xx, yy) && (!on || ((v_nom != 1 || !v_def) && reached ())) && v_may (xx, yy) &&
+                at (v_sn, xx, yy)) {            /* (A far part's: none made, the eyes' reach asked only till the first
+                                                **   wanted's found, its rest's; 2026-11-18) */
                 m = 1;
             }
         }
@@ -535,6 +537,34 @@ void __fastcall__ s_kept (unsigned char what)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+/* The chunk at the view's squares i_, j_ on (ni_, nj_ of them) one a look one way may see into (way_grid's: the half
+** ahead, a diagonal's quarter, and a glance's reach; the bounds way_box's): its light layer's grid wanted; the rest
+** of the view's chunks the look can't see, their light not worked out for it (the menacing pace's look across, its light
+** layer's some 280,000 cycles, 2026-11-18; the main RAM's, part 1's room) */
+#pragma code-name (push, "CODE")
+static unsigned char wg0, wg1, wi0, wi1, wj0, wj1;
+static unsigned char way_in (void)
+{
+    static unsigned char ie, je;
+
+    ie = i_ + ni_;
+    je = j_ + nj_;
+    if (i_ <= wg1 && ie > wg0 && j_ <= wg1 && je > wg0) {
+        return 1;
+    }
+    return i_ <= wi1 && ie > wi0 && j_ <= wj1 && je > wj0;
+}
+static void __fastcall__ way_box (unsigned char r, unsigned char f)
+{
+    wg0 = r - rg_ - 1;
+    wg1 = r + rg_ + 1;
+    wi0 = head_x[f] > 0 ? r - 2 : 0;
+    wi1 = head_x[f] < 0 ? r + 2 : 2 * r;
+    wj0 = head_y[f] > 0 ? r - 2 : 0;
+    wj1 = head_y[f] < 0 ? r + 2 : 2 * r;
+}
+#pragma code-name (pop)
+
 void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned char face, unsigned char light,
     unsigned char sight, unsigned char dark)
 {
@@ -570,6 +600,7 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
     g_o2 = range * range;                       /* (A glance's reach; a look one way's twice it, in the quarter ahead) */
     if (v_way) {
         range = 2 * range < WAY_R ? 2 * range : WAY_R;
+        way_box (range, face);                  /* (way_in's: a glance's reach; the half ahead, a diagonal's quarter) */
     }
     g_r = range;
     g_r2 = range * range;
@@ -584,10 +615,15 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
     box (range);
     g_m = g_nl = 0;
     do {
-        for (yy = gy0; yy < gy1; yy += CW - ((yy - v_y0) & (CW - 1))) {
-            for (xx = gx0; xx <= gx1; xx += band (xx, gx1)) {
+        for (yy = gy0; yy < gy1; yy += nj_) {
+            nj_ = CW - ((yy - v_y0) & (CW - 1));
+            j_ = yy - gy0;
+            for (xx = gx0; xx <= gx1; xx += ni_) {
+                ni_ = band (xx, gx1);
+                i_ = xx - gx0;
                 give_way ();                    /* Their chunks' light (the layer's, worked out if it isn't yet): those */
-                if (cached (sn, xx, yy)) {      /*   made */
+                if (cached (sn, xx, yy) && (!v_way || way_in ())) {     /*   made (a look one way's, those
+                                                **   it may see into) */
                     light_grid (sn, xx, yy, 1);
                 }
             }

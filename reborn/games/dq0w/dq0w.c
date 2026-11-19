@@ -805,9 +805,10 @@ static unsigned char __fastcall__ looked (unsigned char first)
                                                 **   the first look, drawn: how true, part 7's) */
     }
     hub_post (&HUB->look, T_SENSES);
-    while (!hub_wait_t (&HUB->look, HUB->starting ? 40 : 4) && !HUB->quit) {   /* (Asleep meanwhile, a request rung waking it: the
-                                                **   senses' stock, the UI's things; else four ticks, the clock on from
-                                                **   the ticks gone: a tick's, a fifth of the CPU a look took from it; as
+    while (!hub_wait_t (&HUB->look, HUB->starting ? 40 : 16) && !HUB->quit) {  /* (Asleep meanwhile, a request rung waking it: the
+                                                **   senses' stock, the UI's things; else sixteen ticks, the clock on from
+                                                **   the ticks gone (a tick's, a fifth of the CPU a look took from it;
+                                                **   four's, a look one way's answer the later, 2026-11-18); as
                                                 **   the game starts, no clock to keep: 2M cycles of the start's.  The
                                                 **   game ending, the senses may be gone: no reply to wait for, a look's
                                                 **   after the death's quit in the same round, the fight soak's hang) */
@@ -3345,8 +3346,10 @@ void __fastcall__ s_start (const char* dir)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW22CODE")            /* (Part 22's, sfile.c's: its bank's room) */
-#pragma rodata-name (push, "SW22RODATA")
+/* (Part 37's, intent_more's, the intent's own: none copied in for it, nor back after, a look one way's first words and
+** its far part's the sooner, 2026-11-18; part 22's, sfile.c's, before) */
+#pragma code-name (push, "SW37CODE")
+#pragma rodata-name (push, "SW37RODATA")
 
 /* A look one way (I_LOOK's: HOUSE.md's looking one way): the senses' look about, and twice as far in the quarter
 ** ahead, their own record of it too (LK_WAY; LK_PEEK, t | 0x8000: through the closed door ahead's little window or
@@ -3371,7 +3374,7 @@ void __fastcall__ s_look_way (unsigned t)
     HUB->look.kind = LK_LOOK;
     view (V_LOOKED);
 }
-void __fastcall__ look_way (unsigned t);        /* (Its stub, bank.s's) */
+void __fastcall__ look_way (unsigned t);        /* (Its stub, bank.s's: intent_more's own call, none) */
 
 /* A look one way's rest (the user's, 2026-11-18: "a look into ground not made yet tells what the made ground shows first,
 ** then the rest once the maker has made it"): the chunk its eyes reached made ahead since (the hub's way_want, WW_MADE:
@@ -6830,7 +6833,7 @@ void __fastcall__ s_intent_more (struct msg* m)
         view (I_LIGHT_LIT (*m) ? V_LIT : V_DARK);
         break;
     case I_LOOK:
-        look_way (I_LOOK_TENTHS (*m) | (I_LOOK_PEEK (*m) ? 0x8000 : 0));   /* (A look one way: part 22's; through a
+        look_way (I_LOOK_TENTHS (*m) | (I_LOOK_PEEK (*m) ? 0x8000 : 0));   /* (A look one way: part 37's; through a
                                                 **   door's little window, LK_PEEK) */
         break;
     case I_ATTACK:                              /* (A round's blow, struck: at once; at the turns pace, as the clock
@@ -7314,13 +7317,17 @@ static unsigned char den_due (void)
 }
 
 static unsigned char was_busy;                  /* (main's: its E_READY to come) */
+#define REST_IDLE       600                     /* (Ticks free before a look one way's rest is asked: three seconds, the
+                                                **   player reading, not typing on; a line come, none: 2026-11-18) */
+static unsigned free_t;                         /* (main's: the character free again, E_READY told, then) */
 static unsigned char look_due (void)
 {
-    return (den_saw || (HUB->way_want.st == WW_MADE && !was_busy && !HUB->pc_task.kind)) && !move.on;
+    return (den_saw || (HUB->way_want.st == WW_MADE && !was_busy && !HUB->pc_task.kind &&
+        (unsigned) (hy_ticks () - free_t) >= REST_IDLE)) && !move.on;
 }
 
 /* A body fallen: looked at again, the things too; or a look one way's rest, the chunk its eyes reached made since, the
-** character free (its E_READY told: after the prompt, part 22's) */
+** character free (its E_READY told: after the prompt, part 37's) */
 static void look_job (void)
 {
     if (den_saw) {
@@ -7539,6 +7546,7 @@ int main (int argc, char* argv[])
                 }
                 took = HUB->eq_head == go_eq;
                 event (E_READY, 0, 0);          /* (The character free again: the UI takes its next line) */
+                free_t = hy_ticks ();
                 if (took) {
                     go_eq = HUB->eq_head;       /* (Its word alone: no turn for it) */
                 }

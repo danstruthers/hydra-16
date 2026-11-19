@@ -4762,8 +4762,10 @@ int main (int argc, char* argv[])
         }
         hub_map (0);
         ++HUB->beat[T_DENIZENS];
-        hub_sleep (10);                         /* (Asleep on the doorbell: a request, an event, the clock moved on
-                                                **   at the turns pace, wakes it at once) */
+        hub_sleep (HUB->tpr && HUB->ui_cmd ? 40 : 10);  /* (Asleep on the doorbell: a request, an event, the clock
+                                                **   moved on at the turns pace, wakes it at once; a command's answer in
+                                                **   hand at the real paces, four times as long, the answer's tasks the
+                                                **   CPU, its minds held meanwhile anyway: 2026-11-18) */
     }
     return 0;
 }
