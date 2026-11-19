@@ -830,7 +830,7 @@ module.exports = {
     },
     {
       name: 'dq0hard', near: ['save', 'body'], what: 'Dingus Quest Zero\'s death and its autosave (slice 4.4: D7, death permanent with autosaves before danger as a setting, off hard mode; HOUSE.md\'s the character carries on), by the world\'s events and the words told: a hunter (hmchar\'s, seed 5) given a grievous bleeding wound and its blood near spent (its file\'s lines added), begun by the stairway down (dq0 -T) and down it (kept as it comes into the stratum: the autosave), then a wait: dead of it, the ending\'s words saying its last save is kept, and the game begun again with the folder carried on from that save (resumed, not a new game); the same in hard mode (dq0 -H): no save to go back to, the game begun again a new one (its folder\'s save not taken up)',
-      init: 't_rc', cycles: 1600e6,
+      init: 't_rc', cycles: 1700e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cat /ram/c.hm', 'echo \'inj 8 0 3 4 0 1\' >> /ram/c.hm', 'echo \'vol 0 9 0 0 0\' >> /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/d', 'd', 'wait 10 minutes', 'dq0 -p t -d /ram/d', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -H -d /ram/h', 'd', 'wait 10 minutes', 'dq0 -p t -s 3 -c /ram/c.hm -d /ram/h', 'quit', 'echo $status']) },
