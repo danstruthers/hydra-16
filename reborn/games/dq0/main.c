@@ -898,7 +898,10 @@ static void fore_sync (void)
         HUB->ui_cmd = owed = 0;                 /* (Its intent taken and the world round again since: an answer
                                                 **   without news to the character, if any, given) */
     }
-    f = HUB->tpr ? FS_UI | FS_SENS | (HUB->ui_cmd ? FS_CMD : 0) : 0;
+    f = HUB->tpr ? FS_UI | FS_SENS | (HUB->ui_cmd ? FS_CMD : 0) : HUB->ui_cmd ? FS_UI : 0;   /* (The turns pace: the
+                                                **   UI alone while a command's in hand, its words told ahead of the
+                                                **   denizens' turn after it, 2026-11-19: "sit"'s first letter 650,000,
+                                                **   its words' event out at 342,000) */
     if (f != fored) {
         fore_set (fored = f);
     }
