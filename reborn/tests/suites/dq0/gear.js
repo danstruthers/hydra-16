@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { typed } = require('../../lib/common.js');
 const {
-  dq0Story, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Here, dq0Thing,
+  dq0Story, dq0Prose, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Here, dq0Thing,
   dq0Holder, DQ0_I, dq0Typed, dq0Rec, dq0Poke, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, WORN, dq0Paces, dq0Own, dq0Asks,
   dq0HeldPaces
 } = require('../../lib/dq0.js');
@@ -93,7 +93,7 @@ module.exports = {
         };
       },
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), K = m.dq0.layout().K;
         if (!(K.KI_MATTOCK > 127 && K.KI_SPADE > 127 && K.KI_MANG > 127 && K.KI_WOOD_CHISEL > 127)) f.push('the kinds here not past 127');
         const i0 = T.of('inventory');
         if (!/mattock/.test(s.slice(s.indexOf('You carry')))) f.push('the mattock not carried');
@@ -203,7 +203,7 @@ module.exports = {
           if (dq0Carried(s).some(i => !i.id)) f.push(what + ': a thing not its own (no number)');
         };
         const wealth = file => { const w = (file.match(/\nwealth (\d+)/) || [])[1]; return w === undefined ? -1 : +w; };
-        const story = dq0Story(out), hm = (k) => story.split('% cat ')[k] || '';
+        const story = dq0Prose(out), hm = (k) => story.split('% cat ')[k] || '';
         // seed 5's hunter: a serf, its wealth rolled and kept, the kit bought within it, its Spear's staff in hand
         const w5 = wealth(out.slice(out.indexOf('% cat /ram/c.hm'), out.indexOf('% dq0 -p t -s 3 -c /ram/c.hm -T')).replace(/\r/g, ''));
         if (![40, 80, 160].includes(w5)) f.push('the hunter\'s file: no serf\'s wealth line (' + w5 + ')');
@@ -268,7 +268,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], o = dq0Story(out), I = DQ0_I;
+        const T = dq0Turns(m), f = [], o = dq0Prose(out), I = DQ0_I;
         const g1 = T.of("dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'"), s1 = g1.after;
         if (!s1) return ['the game not played'];
         // (Each thing's own: by its record, its holder's chain to its top, IW_DEN's its denizen's)
@@ -336,7 +336,7 @@ module.exports = {
         'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], o = dq0Story(out);
+        const T = dq0Turns(m), f = [], o = dq0Prose(out);
         const g1 = T.of("dq0 -p t -s 3 -c /ram/c.hm -T -k 'chest,iron key'");
         if (!g1.after) return ['the game not played'];
         const chest = s => s && s.items.find(i => i.name === 'chest'), keys = s => s ? s.items.filter(i => i.name === 'iron key') : [];
@@ -581,7 +581,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), kn = T.of('dig down with the knife');
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), kn = T.of('dig down with the knife');
         const better = T.filter(t => dq0Ev(t, 'E_DIG', { how: 'D_BETTER' }).length);
         if (better.length !== 1 || better[0].k !== kn.k) f.push('the better tool not told once, as the dig began: ' + better.map(t => t.line));
         if (!/Your shovel would do this better, but you set to it with the knife as you said\./.test(s)) f.push('not told of the shovel');
@@ -604,7 +604,7 @@ module.exports = {
           ['d', 'value the dagger', 'judge the dagger', 'value the shield']].flatMap(([c, ...l]) => ['dq0 -p t -s 3 -c /ram/' + c + '.hm -T -k \'dagger,round shield\'', ...l, 'quit']), 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out), said = l => [...s.matchAll(new RegExp('> ' + l + ' > ' + l + ' (.*?) (?=Something stirs|Nothing stirs|>)', 'g'))].map(x => x[1]);
+        const f = [], s = dq0Prose(out), said = l => [...s.matchAll(new RegExp('> ' + l + ' > ' + l + ' (.*?) (?=Something stirs|Nothing stirs|>)', 'g'))].map(x => x[1]);
         for (const l of ['value the dagger', 'judge the dagger', 'appraise the dagger', 'value the shield', 'judge the door']) {
           const a = said(l);
           if (a.length < 2) f.push(l + ': not asked twice: ' + a.length);
@@ -631,7 +631,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const T = dq0Turns(m), f = [], s = dq0Prose(out);
         const pennies = st => dq0Carried(st).filter(i => i.name === 'pennies').reduce((n, i) => n + i.qty, 0);
         if (!/would give you 1 farthing for your chalk\./.test(s)) f.push('the chalk not offered for in farthings');
         if (!/Bob asks 1 farthing for the chalk\./.test(s)) f.push('the chalk not priced in farthings');
@@ -661,7 +661,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const T = dq0Turns(m), f = [], s = dq0Prose(out);
         const wont = T.filter(t => /^(how much|what will|sell)/.test(t.line)).map(t => t.replies.filter(r => r.req === 'sway').map(r => r.result).join());
         this.notes = [wont.join(' ')];
         if (wont.slice(0, 4).join() !== 'SR_WONT,SR_WONT,SR_WONT,SR_WONT') f.push('indifferent, not refused every way: ' + wont.join(' '));
@@ -689,7 +689,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], o = dq0Story(out);
+        const T = dq0Turns(m), f = [], o = dq0Prose(out);
         const tk = T.of('take the leather vest from the body');
         if (!tk || !tk.after || !dq0Carried(tk.after).some(i => i.name === 'leather vest')) return ['the vest not taken from the body (the scene?): ' + o.slice(-600)];
         const t0 = tk.at.now, t1 = tk.after.now;
@@ -1151,7 +1151,7 @@ module.exports = {
         'dq0 -d /ram/q', ...WORNKIT[1], 'dq0 -p t -s 259 -d /ram/q', ...WORNKIT[2], 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], invs = dq0Story(out).split('You carry:').slice(1).map(t => t.slice(0, t.indexOf('In all, ') < 0 ? 600 : t.indexOf('In all, ')));
+        const f = [], invs = dq0Prose(out).split('You carry:').slice(1).map(t => t.slice(0, t.indexOf('In all, ') < 0 ? 600 : t.indexOf('In all, ')));
         this.notes = invs.map(t => t.slice(0, 600));
         if (invs.length !== 3) return ['not three inventories: ' + invs.length];
         ['the first game', 'carried on (the save)', 'the next dungeon (kit.dat)'].forEach((w, i) => {
@@ -1185,7 +1185,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const o = dq0Story(out), i = o.indexOf('> examine the bandit'), w = i < 0 ? '' : o.slice(i, i + 700), f = [];
+        const o = dq0Prose(out), i = o.indexOf('> examine the bandit'), w = i < 0 ? '' : o.slice(i, i + 700), f = [];
         this.notes = [w];
         if (!/The bandit (?:holds|wears)/.test(w)) return ['the bandit not examined: ' + w];
         if (!/earrings in their ears/.test(w)) f.push('no earrings in their ears: ' + w);
@@ -1258,7 +1258,7 @@ module.exports = {
       sdcard: true,
       expect: ['% echo $status'],
       check(m, out) {
-        const o = dq0Story(out), f = [];
+        const o = dq0Prose(out), f = [];
         const i = o.indexOf('> eat the rations'), j = o.indexOf('> drink'), e = o.indexOf('> quit');
         const inOrder = (t, list, what) => { let p = 0; for (const w of list) { const q = t.indexOf(w, p); if (q < 0) { f.push(what + ': no "' + w + '" in its order: ' + t); return; } p = q; } };
         inOrder(o.slice(i, j), ['You take off the backpack', 'You get out the rations', 'You eat a meal', 'You put away the rations', 'You put on the backpack'], 'eat');
@@ -1292,7 +1292,7 @@ module.exports = {
       sdcard: true,
       expect: ['% echo $status'],
       check(m, out) {
-        const o = dq0Story(out), f = [];
+        const o = dq0Prose(out), f = [];
         if (m.bandit === undefined) return ['no bandit to set beside it'];
         const i = o.indexOf('> attack the bandit with the pick'), t = o.slice(i, o.indexOf('> quit'));
         const inOrder = list => { let p = 0; for (const w of list) { const q = t.indexOf(w, p); if (q < 0) { f.push('no "' + w + '" in its order: ' + t.slice(0, 900)); return; } p = q; } };
@@ -1339,7 +1339,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], seg = dq0Segs(out, DRESSLINES), s = dq0Story(out).replace(/\s+/g, ' '), said = (k, re, n = DRESSLINES.indexOf(k)) => { if (!re.test(seg[n])) f.push(k + ' (' + n + '): not ' + re + ': ' + seg[n].slice(0, 300)); };
+        const f = [], seg = dq0Segs(out, DRESSLINES), s = dq0Prose(out).replace(/\s+/g, ' '), said = (k, re, n = DRESSLINES.indexOf(k)) => { if (!re.test(seg[n])) f.push(k + ' (' + n + '): not ' + re + ': ' + seg[n].slice(0, 300)); };
         this.notes = DRESSLINES.map((l, i) => l + ': ' + seg[i].slice(0, 400));
         said('bandage my left arm', /You clean and dress the serious stab to your left forearm \(S2\)\..*It's (?:well tended|tended|tended, roughly|badly done)\./);
         said('sheet', /left forearm S2 \(stab\), tended, dressed in linen, clean; right forearm S2 \(stab\), tended, dressed, soiled/);
@@ -1413,7 +1413,7 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm', 'look into the well', 'look in the pot', 'open the pot', 'look in the pot', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '');
+        const T = dq0Turns(m), f = [], s = dq0Prose(out).replace(/\([A-Z]{1,2}\) /g, '');
         const { IS_CLOSED, IS_LOCK } = require('../../../games/dq0/hubgen.js').load().C;   // (items.h's IS_*)
         const thing = (st, n) => st && (dq0Carried(st).find(i => i.name === n) || st.items.find(i => i.name === n && i.sn === st.pc.sn));
         const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -k \'table,chisel,chisel,sack,chest,iron pot\'');
@@ -1478,7 +1478,7 @@ module.exports = {
         'look', 'take the chisel off the chest', 'open the chest', 'look at the chest', 'look on the chest', 'search the chest', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '');
+        const T = dq0Turns(m), f = [], s = dq0Prose(out).replace(/\([A-Z]{1,2}\) /g, '');
         const { IC_MARK, CP_ON } = require('../../../games/dq0/hubgen.js').load().C;   // (items.h's)
         const p = T.after(T.of('close the chest'), 'put the chisel on the chest'), st = p.after;
         const chest = st && st.items.find(i => i.name === 'chest' && i.where === 'IW_SQUARE');
@@ -1509,7 +1509,7 @@ module.exports = {
         'open the chest', 'put the chisel on the chest', 'look in the empty chest', 'put the sack in the chest', 'look in the empty chest', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '');
+        const T = dq0Turns(m), f = [], s = dq0Prose(out).replace(/\([A-Z]{1,2}\) /g, '');
         const inv = T.of('inventory').after, chest = inv && inv.items.find(i => i.name === 'chest'), ch = inv && inv.items.find(i => i.name === 'chisel');
         if (!chest || !ch || ch.where !== 'IW_ITEM' || ch.x !== chest.n) f.push('the chisel not on the carried chest: ' + JSON.stringify(ch));
         if (!/\(j\) a chest \(closed\), in both hands\s+\(k\) a chisel/.test(s)) f.push('the inventory not listing the chisel on the closed chest\'s lid');
@@ -1529,7 +1529,7 @@ module.exports = {
         'open the chest', 'look on the chest', 'take the chisel', 'close the chest', 'put the chisel on the chest', 'open the chest', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '');
+        const T = dq0Turns(m), f = [], s = dq0Prose(out).replace(/\([A-Z]{1,2}\) /g, '');
         const o = T.of('open the chest').after, chest = o && o.items.find(i => i.name === 'chest' && i.where === 'IW_SQUARE');
         for (const n of ['chisel', 'dagger']) {
           const t = o && o.items.filter(i => i.name === n && i.id && (i.where === 'IW_SQUARE' || (i.where === 'IW_ITEM' && chest && i.x === chest.n)));
@@ -1550,7 +1550,7 @@ module.exports = {
         'open the pocket', 'take the chisel from the pocket', 'take the pocket', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '');
+        const T = dq0Turns(m), f = [], s = dq0Prose(out).replace(/\([A-Z]{1,2}\) /g, '');
         const { IC_MARK, CP_IN } = require('../../../games/dq0/hubgen.js').load().C;   // (items.h's)
         const st = T.of('put the chisel in the side pocket').after, pk = st && st.items.find(i => i.name === 'backpack');
         const ch = st && pk && st.items.find(i => i.name === 'chisel' && i.where === 'IW_ITEM' && i.x === pk.n);
@@ -1574,7 +1574,7 @@ module.exports = {
         'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '');
+        const T = dq0Turns(m), f = [], s = dq0Prose(out).replace(/\([A-Z]{1,2}\) /g, '');
         const { IC_MARK, CP_IN } = require('../../../games/dq0/hubgen.js').load().C;   // (items.h's)
         const st = T.of('put the chisel in the side pocket').after, pk = st && st.items.find(i => i.name === 'backpack');
         const ch = st && pk && st.items.find(i => i.name === 'chisel' && i.where === 'IW_ITEM' && i.x === pk.n);
@@ -1774,7 +1774,7 @@ module.exports = {
         'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '');
+        const T = dq0Turns(m), f = [], s = dq0Prose(out).replace(/\([A-Z]{1,2}\) /g, '');
         const { CS_LOCKED, IS_SHUT_C1 } = Object.assign({ IS_SHUT_C1: 0x20 }, require('../../../games/dq0/hubgen.js').load().C);   // (items.h's)
         const st = T.of('lock the drawer').after, dk = st && st.items.find(i => i.name === 'desk');
         if (!dk || !(dk.fuel & CS_LOCKED) || !(dk.shut & IS_SHUT_C1)) f.push('the desk\'s drawer not closed and locked: ' + JSON.stringify(dk));
@@ -1798,7 +1798,7 @@ module.exports = {
         'look in the bottom', 'close the chest', 'put the rope on the chest', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '');
+        const T = dq0Turns(m), f = [], s = dq0Prose(out).replace(/\([A-Z]{1,2}\) /g, '');
         const { CS_FOUND } = require('../../../games/dq0/hubgen.js').load().C;   // (items.h's)
         const st = T.of('look in the bottom').after, cs = st && st.items.find(i => i.name === 'case');
         if (!cs || !(cs.fuel >> 4 & CS_FOUND)) f.push('the case\'s false bottom not found, its record\'s: ' + JSON.stringify(cs));
@@ -1819,7 +1819,7 @@ module.exports = {
         'dq0furn=0', 'dq0 -p t -s 14 -c /ram/c.hm', 'look', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, ''), games = s.split('dq0 -p t -s 14').slice(1);
+        const T = dq0Turns(m), f = [], s = dq0Prose(out).replace(/\([A-Z]{1,2}\) /g, ''), games = s.split('dq0 -p t -s 14').slice(1);
         const { KI_CASE, KI_DESK, KI_CABINET, KI_SHELVES } = require('../../../games/dq0/hubgen.js').load().C;   // (items.h's)
         const furn = st => st ? st.items.filter(i => [KI_CASE, KI_DESK, KI_CABINET, KI_SHELVES].includes(i.kind)) : [];
         const looks = T.filter(t => t.line === 'look');
@@ -1844,7 +1844,7 @@ module.exports = {
         'examine the door', 'judge the door', 'examine the lock of the door', 'condition of the door', 'assess the door', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const T = dq0Turns(m), f = [], s = dq0Prose(out);
         for (const l of ['look at the table', 'look at the torch', 'examine the torch', 'heft the backpack', 'look at the chest',
           'examine the lock of the chest', 'check the chest for traps', 'check its condition', 'look at the sack']) {
           if (!dq0Rep(T.of(l), 'ireq', { kind: 'IO_LOOK', result: 'IR_OK' }).length) f.push(l + ': no IO_LOOK done');
@@ -1898,7 +1898,7 @@ module.exports = {
         'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), K = m.dq0.layout().K;
         const H = { L: 1, R: 2, B: 3 }, hn = ['none', 'left', 'right', 'both'];
         const hand = (t, name, h, what) => {
           const i = t && dq0Thing(t.after, name);
@@ -1960,7 +1960,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const T = dq0Turns(m), f = [], s = dq0Prose(out);
         const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -k sack');
         if (g.k < 0) return ['the first game not played'];
         const dt = t => t.at && t.after ? t.after.now - t.at.now : null;
@@ -2049,7 +2049,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const T = dq0Turns(m), f = [], s = dq0Prose(out);
         const games = []; for (let i = s.indexOf('% dq0 '); i >= 0; i = s.indexOf('% dq0 ', i + 1)) games.push(i);
         const seg = (g, line, n = 1) => { const e = '> ' + line + ' > ' + line; let i = games[g - 1]; for (let k = 0; k < n && i >= 0; k++) i = s.indexOf(e, i + 1);
           if (i < 0) { f.push('game ' + g + ': "' + line + '" not answered'); return ''; } const j = s.indexOf(' > ', i + e.length); return s.slice(i + e.length, j < 0 ? s.length : j); };
@@ -2131,7 +2131,7 @@ module.exports = {
         'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out);
+        const f = [], s = dq0Prose(out);
         const enc = [...s.matchAll(/Condition: (.*?)Hunger/g)].map(x => { const e = /encumbrance (\d+)/.exec(x[1]); return e ? +e[1] : 0; });
         if (enc.length !== 4) f.push('status told ' + enc.length + ' times, not 4');
         enc.forEach((e, i) => { if (e > 2) f.push('character ' + (i + 1) + ' starts at encumbrance ' + e); });
@@ -2176,7 +2176,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const T = dq0Turns(m), f = [], s = dq0Prose(out);
         // (The answer to a line: its echo, then its words as far as the next line's echo: the nth such, from a game's start)
         const games = []; for (let i = s.indexOf('% dq0 '); i >= 0; i = s.indexOf('% dq0 ', i + 1)) games.push(i);
         const seg = (g, line, n = 1) => { const e = '> ' + line + ' > ' + line; let i = games[g - 1]; for (let k = 0; k < n && i >= 0; k++) i = s.indexOf(e, i + 1);
@@ -2280,7 +2280,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const T = dq0Turns(m), f = [], s = dq0Prose(out);
         const K = m.dq0.layout().K, w = T.of('wait'), late = T.filter(t => t.k >= w.k);
         const seq = late.flatMap(t => t.replies).filter(r => (/^slot/.test(r.req) && r.kind === K.RS_TEST && r.a === K.P_GROPE) || (r.req === 'ireq' && /^IO_(STEP|TAKE|DOFF|DROP|GET)$/.test(r.kind)));
         const k = kind => seq.findIndex(r => r.kind === kind);
@@ -2302,7 +2302,7 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'drop a fresh torch', 'wait 20 minutes', 'dip the torch', 'no', 'inventory', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const s = dq0Story(out), f = [];
+        const s = dq0Prose(out), f = [];
         inTurn(s, ['> dip the torch', 'You go to put out the torch: that will leave you in the dark.', 'Keep putting out the torch?', 'You stop putting out the torch.', '> inventory', 'a torch (lit'], f);
         return f;
       },
@@ -2334,7 +2334,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const s = dq0Story(out), f = [], gs = [];
+        const s = dq0Prose(out), f = [], gs = [];
         for (let i = s.indexOf('% dq0 '); i >= 0; i = s.indexOf('% dq0 ', i + 1)) gs.push(i);
         const game = g => s.slice(gs[g - 1], gs[g] === undefined ? s.length : gs[g]);
         // (A game's story from its line to its inventory's answer)
@@ -2407,7 +2407,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const s = dq0Story(out), f = [], gs = [];
+        const s = dq0Prose(out), f = [], gs = [];
         for (let i = s.indexOf('% dq0 '); i >= 0; i = s.indexOf('% dq0 ', i + 1)) gs.push(i);
         const game = g => s.slice(gs[g - 1], gs[g] === undefined ? s.length : gs[g]);
         const after = (g, w) => { const t = game(g), a = t.indexOf(w); return a < 0 ? '' : t.slice(a, t.indexOf('> inventory', a)); };
@@ -2443,7 +2443,7 @@ module.exports = {
         ...Array(48).fill(['go to the far side', 'go to the near side']).flat(), 'i', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), K = m.dq0.layout().K;
         const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -k paper,chalk');
         if (g.k < 0) return ['the game not played'];
         const mg = T.after(g, 'map as I go'), l1 = T.after(mg, 'look'), l2 = T.after(l1, 'look'), pu = T.after(l2, 'put the chalk in the pouch');
@@ -2508,7 +2508,7 @@ module.exports = {
       start(m) { dq0Poke(m, [{ g: 1, line: 'wait 55 minutes', n: 1, fuel: { lantern: 65 } }]); },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const T = dq0Turns(m), f = [], o = dq0Prose(out).replace(/\[[.#]{10}\] /g, '');
         const games = o.split(/% dq0 -p t -s 3 -c \/ram\/\w\.hm/).slice(1);
         const inv = g => { const i = games[g].indexOf('You carry'); return i < 0 ? '' : games[g].slice(i, games[g].indexOf('In all', i)); };
         const a = inv(0), b = inv(1), c = inv(2), d = inv(3);
@@ -2539,7 +2539,7 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'turn r', 'turn left', 'turn half left', 'turn half right', 'turn around', 'face west', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const f = [], o = dq0Prose(out).replace(/\[[.#]{10}\] /g, '');
         const games = o.split(/% dq0 -p t -s 3 -c \/ram\/c\.hm/).slice(1), T = dq0Turns(m);
         if (games.length !== 4) return ['not four games: ' + games.length];
         inTurn(games[0], ['You set the sword down at your feet.', 'You take off the backpack', 'You get out the new torch.', 'You light the new torch from the burning one.',
@@ -2589,7 +2589,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], o = dq0Story(out);
+        const f = [], o = dq0Prose(out);
         const hefts = [...o.matchAll(/Your warhammer weighs about ([\d,]+) pounds?|Your warhammer weighs (under a pound|about a pound)/g)].map(x => +(x[1] || '1').replace(/,/g, ''));
         const loads = [...o.matchAll(/load ([\d,]+) lb/g)].map(x => +x[1].replace(/,/g, ''));
         this.notes = ['hefted ' + hefts.join(', ') + ' lb; the sheet\'s load ' + loads.join(', ') + ' lb'];

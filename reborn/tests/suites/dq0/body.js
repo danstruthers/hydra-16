@@ -4,7 +4,7 @@
 'use strict';
 const { typed } = require('../../lib/common.js');
 const {
-  liveChunks, stratumRec, dq0Story, inTurn, dq0Turns, dq0Ev, dq0Need, dq0Carried, dq0Thing, DQ0_I, dq0Typed, dq0Rec,
+  liveChunks, stratumRec, dq0Story, dq0Prose, inTurn, dq0Turns, dq0Ev, dq0Need, dq0Carried, dq0Thing, DQ0_I, dq0Typed, dq0Rec,
   dq0Poke, dq0PcShock, dq0Grow, dq0OnWords, dq0AnswerTest
 } = require('../../lib/dq0.js');
 
@@ -73,7 +73,7 @@ module.exports = {
           { g: 2, line: 'climb down the well', n: 2, call: move(2) }, { g: 2, line: 'look', n: 1, call: foot('sump') }, { g: 3, line: 'climb down the well', n: 2, call: move(3) }]);
       },
       check(m, out) {
-        const T = dq0Turns(m), K = m.dq0.layout().K, f = [], o = dq0Story(out), g = m.dq0.games;
+        const T = dq0Turns(m), K = m.dq0.layout().K, f = [], o = dq0Prose(out), g = m.dq0.games;
         const climbs = t => t.replies.filter(r => /^slot/.test(r.req) && r.a === K.P_CLIMB).map(r => r.steps);
         const arr = (t, how) => T.filter(u => u.k >= t.k).flatMap(u => dq0Ev(u, 'E_ARRIVE', {})).find(e => (e.w1 & 0xFF) === how);
         const at = (s, nm) => s ? s.items.filter(i => i.name === nm && i.where === 'IW_SQUARE') : [];
@@ -169,7 +169,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const f = [], o = dq0Prose(out).replace(/\[[.#]{10}\] /g, '');
         const at = line => o.indexOf('> ' + line + ' > ' + line + ' ');
         const n = at('n'), s = at('look');
         const ns = n >= 0 && s > n ? o.slice(n, s) : '';
@@ -194,7 +194,7 @@ module.exports = {
         'dq0 -p t -s 2 -c /ram/c.hm -T', 'swim', 'd', 'swim', 'n', 'swim', 'dive', 'tread water', 'swim south', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), o = dq0Story(out), f = [];
+        const T = dq0Turns(m), o = dq0Prose(out), f = [];
         inTurn(o, ['> swim There\'s no water deep enough.', '> swim There\'s no water deep enough.', 'You\'re out of your depth: you swim.',
           '> swim You tread water.', '> dive You take a deep breath and dive under.', 'You strike out for the surface.', 'You come up, gasping.',
           '> tread water You tread water.', '> swim south', 'You wade out of the water.'], f);
@@ -221,7 +221,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out);
+        const f = [], s = dq0Prose(out);
         if (!/You fill your waterskin\./.test(s)) f.push('the skin not filled');
         const b = m.foul.find(e => e.when === 'before'), a = m.foul.find(e => e.when === 'filled');
         this.notes = [JSON.stringify(m.foul)];
@@ -273,7 +273,7 @@ module.exports = {
         'dq0air=32', 'dq0 -p t -s 1 -c /ram/c.hm -T', 'open the door', 'south', 'south', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out), cap = s.indexOf('a pale blue cap trembling over it'), burst = s.indexOf('The air ignites with a roar');
+        const f = [], s = dq0Prose(out), cap = s.indexOf('a pale blue cap trembling over it'), burst = s.indexOf('The air ignites with a roar');
         this.notes = ['cap at ' + cap + ', burst at ' + burst];
         if (cap < 0) f.push('no warning on its flame: ' + JSON.stringify(s.slice(-700)));
         if (burst < 0) f.push('no burst on after the warning: ' + JSON.stringify(s.slice(-700)));
@@ -295,7 +295,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), g = s.slice(0, s.indexOf('dq0 -r null')), n = s.slice(s.indexOf('dq0 -r null')), i = g.indexOf('You drink the antidote.');
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), g = s.slice(0, s.indexOf('dq0 -r null')), n = s.slice(s.indexOf('dq0 -r null')), i = g.indexOf('You drink the antidote.');
         if (!/there's venom in it\./.test(g)) f.push('no venom: the scene not set');
         if (i < 0) f.push('the antidote not drunk');
         if (i >= 0 && !/The remedy works|The remedy eases you/.test(g.slice(i, i + 600))) f.push('the antidote did nothing: ' + JSON.stringify(g.slice(i, i + 600)));
@@ -387,7 +387,7 @@ module.exports = {
         'dq0air=31', 'dq0 -r null -p t -s 1 -T', 'open the door', 'south', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out), a = s.indexOf('dq0air=32'), b = s.indexOf('dq0air=31');
+        const f = [], s = dq0Prose(out), a = s.indexOf('dq0air=32'), b = s.indexOf('dq0air=31');
         const g1 = a < 0 ? s : s.slice(0, a), g2 = a < 0 || b < 0 ? '' : s.slice(a, b), g3 = b < 0 ? '' : s.slice(b);
         if (!/The air's too foul to keep your light burning\./.test(g1)) f.push('blackdamp: its torch not put out');
         if (!/Your head swims; your heart pounds\./.test(g1)) f.push('blackdamp: its breath not told at once');
@@ -417,7 +417,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out), at = s.indexOf('Dingus, Wanderer'), h = at < 0 ? s : s.slice(0, at), n = at < 0 ? '' : s.slice(at);
+        const f = [], s = dq0Prose(out), at = s.indexOf('Dingus, Wanderer'), h = at < 0 ? s : s.slice(0, at), n = at < 0 ? '' : s.slice(at);
         if (!/You land hard: a minor bruise to your right calf \(M1\)\./.test(h)) return ['no bruise from the fall (the seed\'s): ' + JSON.stringify((h.match(/You land hard[^.]*\./) || [''])[0])];
         const jd = dq0Turns(m).of('jump down').replies.find(q => q.rs === 'RS_HARM' && q.ask.cause === 'HC_FALL');   // (The ground its
         if (!jd || jd.ask.ground !== 'GR_HARD') f.push('the fall not onto the gatehouse\'s floor, hard: ' + JSON.stringify(jd && jd.ask));   //   room's floor's)
@@ -446,7 +446,7 @@ module.exports = {
         'turn around', 'jump down', 'heal', 'status', 'heal', 'healing', 'heal my shoulder', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out);
+        const f = [], s = dq0Prose(out);
         if (!/You land hard: a minor bruise to your right calf \(M1\)\./.test(s)) return ['no bruise from the fall (the seed\'s): ' + JSON.stringify((s.match(/You land hard[^.]*\./) || [''])[0])];
         const tw = dq0Turns(m).of('heal').intents.find(e => e.kind === 'I_WAIT');
         if (!tw || tw.task !== 'LT_TEND' || !tw.quiet || !tw.tenths) f.push('"heal" not first aid\'s timed work, I_WAIT LT_TEND: ' + JSON.stringify(tw));

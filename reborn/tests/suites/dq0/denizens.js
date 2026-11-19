@@ -221,7 +221,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), DE_DIG = 24, DE_DUG = 25;
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), DE_DIG = 24, DE_DUG = 25;
         if (!m.tun) return ['the scene not set: no dwarf miner near, or no portcullis ahead with a floor beyond it'];
         const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.tun.k + 1);
         const digs = dens.filter(e => e.a === DE_DIG), dug = dens.filter(e => e.a === DE_DUG);
@@ -297,7 +297,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), DE_DIG = 24, DE_DUG = 25, DE_DIGS = 26;
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), DE_DIG = 24, DE_DUG = 25, DE_DIGS = 26;
         if (!m.mine || !m.mine.miners.length) return ['no dwarf miner an actor at the end: ' + JSON.stringify(m.mine)];
         const ks = new Set(m.mine.miners.map(q => q.k + 1));
         const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && ks.has(e.who));
@@ -401,7 +401,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const T = dq0Turns(m), f = [], s = dq0Prose(out);
         if (!m.door) return ['the scene not set: no closed door beside the character'];
         const fin = T.of('quit').at, ch = (fin ? fin.changes : []).filter(c => c.sn === m.door.sn && c.x === m.door.x && c.y === m.door.y);
         const st = ch.filter(c => c.what === 'PORTAL_STATE');
@@ -429,7 +429,7 @@ module.exports = {
         'step west', 'dig north', 'wait', 'step east', 'd', 'wait 2 hours', 'wait 2 hours', 'u', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), at = T.of('wait').at, fin = T.of('quit').at, d = T.of('dig north');
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), at = T.of('wait').at, fin = T.of('quit').at, d = T.of('dig north');
         if (!dq0Ev(d, 'E_DIG', { how: 'D_THROUGH' }).length && !dq0Ev(T.of('wait'), 'E_DIG', { how: 'D_THROUGH' }).length) f.push('the character not through the wall: ' + dq0Evs(d));
         const dug = at ? at.changes.filter(c => c.what === 'SQUARE' && c.tile === 4 && c.sn === at.pc.sn) : [];
         if (!dug.length) f.push('no square dug a passage, before the miners');
@@ -503,7 +503,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), DE_DIG = 24, DE_DUG = 25;
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), DE_DIG = 24, DE_DUG = 25;
         if (!m.tun) return ['the scene not set: no dwarf miner near, or no portcullis ahead with a floor beyond it'];
         const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.tun.k + 1), { K } = m.dq0.layout();
         if (!dens.some(e => e.a === K.DE_HEAVES)) f.push('the dwarf never heaved at the portcullis (E_DEN DE_HEAVES)');
@@ -566,7 +566,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), DE_OPENS = 27, DE_SLAMS = 29;
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), DE_OPENS = 27, DE_SLAMS = 29;
         if (!m.door) return ['the scene not set: no bandit near, or no door ahead with a floor beyond it: ' + JSON.stringify(m.doorWhy)];
         const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.door.k + 1);
         const opens = dens.filter(e => e.a === DE_OPENS);
@@ -607,7 +607,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), { K } = m.dq0.layout();
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), { K } = m.dq0.layout();
         if (!m.door || !m.barred) return ['the scene not set: no bandit near, no door ahead with a floor beyond it, or not barred: ' + JSON.stringify(m.doorWhy)];
         const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.door.k + 1 && e.w1 === m.door.door[0] && e.w2 === m.door.door[1]);
         const unbarred = dens.filter(e => e.a === K.DE_UNBARRED);
@@ -665,7 +665,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), { K } = m.dq0.layout();
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), { K } = m.dq0.layout();
         if (!m.keyed) return ['the key not made the door\'s: no door ahead, or no iron key carried'];
         if (!m.door) return ['the scene not set: no bandit near, or no door ahead with a floor beyond it: ' + JSON.stringify(m.doorWhy)];
         if (!/> lock the door[^>]*You lock the door with its key\./.test(s)) f.push('"lock the door" not "You lock the door with its key."');
@@ -748,7 +748,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), { L, K } = m.dq0.layout();
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), { L, K } = m.dq0.layout();
         if (!m.take) return ['the scene not set: no bandit near, or no open square beside the character'];
         if (!/> drop the sword[^>]*(Put down\.|You put down the sword\.)/.test(s)) f.push('the sword not put down');
         const picks = T.flatMap(t => [...t.events, ...t.dens]).filter(e => e.kind === 'E_BEAT' && e.beat === 'WB_PICKS' && e.b === m.take.k + 1);
@@ -820,7 +820,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const T = dq0Turns(m), f = [], s = dq0Prose(out);
         if (!m.pit || !m.take) return ['the scene not set: no pit beside the character, or no bandit: ' + JSON.stringify([m.pit, m.take])];
         if (!m.moved) return ['the sword not put down in the pit'];
         for (const t of T) {
@@ -840,7 +840,7 @@ module.exports = {
         'dq0 -p t -s 5 -c /ram/a.hm -T', 'follow the sack', 'd', 'wait', 'follow the rat', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), o = dq0Story(out), f = [];
+        const T = dq0Turns(m), o = dq0Prose(out), f = [];
         const fm = T.of('follow me');
         if (!dq0Rep(fm, 'sway', { kind: 'SW_ORDER', order: 'OR_FOLLOW', result: 'SR_OK' }).length) f.push('"follow me" not the ally\'s order (' + JSON.stringify(fm.replies.filter(r => r.req === 'sway')) + ')');
         inTurn(o, ['> follow the sack The sack isn\'t going anywhere.', '> follow the rat You follow the giant rat.', 'You\'ve lost the giant rat. ("track" may find its trail.)'], f);
@@ -900,7 +900,7 @@ module.exports = {
         };
       },
       check(m, out) {
-        const T = dq0Turns(m), f = [], R = this.R, s = dq0Story(out), rt = T.of('rest for an hour');
+        const T = dq0Turns(m), f = [], R = this.R, s = dq0Prose(out), rt = T.of('rest for an hour');
         if (!R.hid.some(v => v > 1)) return ['no bandit hidden before the rest: ' + [...new Set(R.hid)].join(',')];
         if (!R.during.length) f.push('the rest not watched');
         const late = R.during.filter(e => e.t > 300 && e.state > 1);     // (Thirty seconds on: its next turn's come)
@@ -926,7 +926,7 @@ module.exports = {
         const robs = sl.map(t => [...dq0Ev(t, 'E_TASK', { te: 'TE_ROBBED' }), ...dq0Ev(T[t.k + 1] || t, 'E_TASK', { te: 'TE_ROBBED' })]);
         const tests = t => ({ them: dq0Rep(t, 'dslot', { kind: RS_TEST, a: STEALTH, actor: v => v > 0, other: v => v !== 0 }), it: dq0Rep(t, 'dslot', { kind: RS_TEST, a: SOUND, actor: 0 }),
           stalk: dq0Rep(t, 'dslot', { kind: RS_TEST, a: STEALTH, actor: v => v > 0, other: 0 }) });   // (Its sleight of hand, the asker's dice; its stalk, its own)
-        const t0 = tests(sl[0]), t1 = tests(sl[1]), s = dq0Story(out);
+        const t0 = tests(sl[0]), t1 = tests(sl[1]), s = dq0Prose(out);
         if (robs[0].length !== 1 || !robs[0][0].purse || robs[0][0].caught || !robs[0][0].asleep) f.push('seed 1: not robbed once unawares as it slept: ' + JSON.stringify(robs[0]));
         if (!t0.it.length || !t0.them.length) f.push('seed 1: no Legerdemain against its Awareness: ' + t0.them.length + ' and ' + t0.it.length + ' tests');
         else if (!(t0.it[t0.it.length - 1].steps < 0)) f.push('seed 1: its Awareness asleep not at half: ' + JSON.stringify(t0.it));
@@ -948,7 +948,7 @@ module.exports = {
         "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g", 'douse the torch', 'sleep', 'echo $status']) },   // (Dead of it: the game over)
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], RS_ATTACK = m.dq0.layout().K.RS_ATTACK, sl = T.of('sleep'), s = dq0Story(out);
+        const T = dq0Turns(m), f = [], RS_ATTACK = m.dq0.layout().K.RS_ATTACK, sl = T.of('sleep'), s = dq0Prose(out);
         if (sl.k < 0) return ['the game not played'];
         const all = [sl, ...T.filter(t => t.k > sl.k)];
         if (!all.some(t => dq0Rep(t, 'slot0', { kind: RS_ATTACK, w2: v => v & 0x80 }).length)) f.push('no blow at the sleeper with no defence (RS_ASLEEP)');
@@ -1160,7 +1160,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const T = dq0Turns(m), f = [], s = dq0Prose(out);
         const { IC_MARK, CP_ON } = require('../../../games/dq0/hubgen.js').load().C;   // (items.h's)
         const [i1, i2] = T.filter(t => t.line === 'i'), p = i1 && i1.after, box = p && p.items.find(i => i.name === 'case');
         const dg = p && box ? p.items.filter(i => i.name === 'dagger' && i.where === 'IW_ITEM' && i.x === box.n) : [];
@@ -1500,7 +1500,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), s = dq0Story(out), f = [];
+        const T = dq0Turns(m), s = dq0Prose(out), f = [];
         inTurn(s, ['> say "hello there" You say, "hello there" You talk with the bandit.', '> whisper "psst" You whisper, "psst"',
           '> yell "wake up!" You yell, "wake up!"', '> "Hi" You say, "Hi"', '> knock on the door You knock on the door.',
           '> knock on the north wall You knock along the north wall, listening for a hollow...', '> wake You\'re awake.',
@@ -1565,7 +1565,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const T = dq0Turns(m), f = [], s = dq0Prose(out);
         const sw = (line, want, what) => { const t = T.of(line); if (!t || !dq0Rep(t, 'sway', want).length) f.push(what + ' (' + JSON.stringify(t && t.replies.filter(r => r.req === 'sway')) + ')'); return t; };
         const oil = st => dq0Carried(st).filter(i => i.name === 'flask of oil').length;
         const pennies = st => dq0Carried(st).filter(i => i.name === 'pennies').reduce((n, i) => n + i.qty, 0);
@@ -1615,7 +1615,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), DE_OPENS = 27;
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), DE_OPENS = 27;
         if (!m.door) return ['the scene not set: no bandit near, or no door ahead with a floor beyond it: ' + JSON.stringify(m.doorWhy)];
         const a = T.of('ask the bandit to open the door');
         if (!a || !dq0Rep(a, 'sway', { kind: 'SW_ORDER', order: 'OR_OPEN', result: 'SR_OK' }).length) f.push('the ally not asked to open the door (' + JSON.stringify(a && a.replies.filter(r => r.req === 'sway')) + ')');
@@ -2052,7 +2052,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), s = dq0Story(out), G = s.split('% dq0 ').slice(1), f = [];
+        const T = dq0Turns(m), s = dq0Prose(out), G = s.split('% dq0 ').slice(1), f = [];
         const picks = g => T.flatMap(t => [...t.events, ...t.dens]).filter(e => e.game === g && e.kind === 'E_BEAT' && e.beat === 'WB_PICKS');
         if (G.length !== 3) return ['not three games: ' + G.length];
         for (const [g, w] of [[0, 'crowns'], [1, 'farthings']]) {

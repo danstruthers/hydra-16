@@ -8,7 +8,7 @@ const { typed } = require('../../lib/common.js');
 const {
   CHUNK_SIZE, CK_TILE, CK_ROOM, T_ROCK, T_FLOOR, T_WALL, T_CORR, T_WINDOW, cacheBanks, cacheChunks, caveReport,
   PK_PORTCULLIS, T_DOOR, T_STEPS, builtChunks, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks,
-  O_WAY_OUT, O_NOWHERE, stratumRec, dq0Made, chunkDiff, dq0StatusRows, dq0Story, inTurn, dq0Answers, dq0Turns, dq0Ev,
+  O_WAY_OUT, O_NOWHERE, stratumRec, dq0Made, chunkDiff, dq0StatusRows, dq0Story, dq0Prose, inTurn, dq0Answers, dq0Turns, dq0Ev,
   dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Here, dq0Named, dq0Thing, dq0View, passings, dq0Typed, dq0Portal,
   dq0Rec, dq0Poke, dq0OnWords
 } = require('../../lib/dq0.js');
@@ -398,7 +398,7 @@ module.exports = {
         'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), maps = T.filter(t => t.line === 'map');
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), maps = T.filter(t => t.line === 'map');
         if (maps.length !== 8) return ['the eight maps not typed: ' + maps.length];
         const [m1, m2, m3, m4, p1, d1, d2, d3] = maps.map(t => dq0MapLayers(t.after));
         if (process.env.MAPDUMP) maps.forEach(t => console.log(t.k, dq0MapDump(t.after)));
@@ -450,7 +450,7 @@ module.exports = {
         if (!rn[0] || rn[0][62] !== 'N' || !rn[1] || rn[1][62] !== '+') f.push('facing north: no compass, N above + (' + JSON.stringify(rn.map(l => l.slice(60, 64))) + ')');
         if (!re[1] || re[1].slice(61, 63) !== 'N+') f.push('facing east: no compass, N left of + (' + JSON.stringify(re.map(l => l.slice(60, 64))) + ')');
         if (rd.some(l => l.slice(61, 64).includes('N'))) f.push('the dwarf\'s map: a compass');
-        const s = dq0Story(out);
+        const s = dq0Prose(out);
         inTurn(s, ['> face east', '> map', 'The map (you face east', 'Facing E'], f, 'the human: ');
         if (/Sq -?\d+,-?\d+/.test(s.slice(s.indexOf('> face north'), s.indexOf('% dq0 -p t -s 3 -c /ram/d.hm')))) f.push('the human\'s map: its square given');
         if (!/Sq -?\d+,-?\d+/.test(s.slice(s.indexOf('% dq0 -p t -s 3 -c /ram/d.hm')))) f.push('the dwarf\'s map: no square given');
@@ -554,7 +554,7 @@ module.exports = {
         const k = x3.at && x3.at.task;
         if (b && h && (!k || k.kind !== 'LT_DIG' || k.len !== 2 * b.feet || k.done < h)) f.push('the shaft\'s bar not on from where it was left: ' + JSON.stringify(k) + ', its record ' + h + ' half-feet of ' + 2 * b.feet);
         // (The UI's words for it, both times: the UI's own, whatever the referee)
-        const again = dq0Story(out).match(/You set to digging again where you left off\. \((?:A foot|\d+ feet) to go\.\)/g) || [];
+        const again = dq0Prose(out).match(/You set to digging again where you left off\. \((?:A foot|\d+ feet) to go\.\)/g) || [];
         if (again.length !== 2) f.push('"You set to digging again where you left off." said ' + again.length + ' times, not 2');
         return f;
       },
@@ -570,7 +570,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out), first = s.indexOf('You\'re into'), begun = s.lastIndexOf('You set to digging', first);
+        const f = [], s = dq0Prose(out), first = s.indexOf('You\'re into'), begun = s.lastIndexOf('You set to digging', first);
         const looks = { shale: 'flaky', sandstone: 'buff', limestone: 'pale grey', slate: 'blue-grey', marble: 'white', granite: 'speckled grey',
           basalt: 'black', quartz: 'white-veined', ironstone: 'rusty red', 'copper ore': 'green-stained' };
         const told = [...s.matchAll(/You're into ([a-z -]+?) rock(?:: ([a-z ]+))?\. (?:You dig with your [a-z]+\. )?(The work goes well\.|The work goes slowly\.|Your tool slips|The rotten rock)/g)];
@@ -638,7 +638,7 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/m.hm -k pick -T', 'face north', 'go to the far right corner', 'dig northeast', 'go northeast', 'map', 'look', 'look southwest', 'go southwest', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const f = [], s = dq0Prose(out).replace(/\[[.#]{10}\] /g, '');
         const at = l => s.indexOf('> ' + l + ' > ' + l);
         const seg = (l, n) => at(l) >= 0 ? s.slice(at(l), at(n) > at(l) ? at(n) : undefined) : '';
         if (!seg('dig northeast', 'go northeast').includes('You break through.')) f.push('the dig northeast not through');
@@ -666,7 +666,7 @@ module.exports = {
       expect: ['% echo $status'],
       start(m) { this.carve = dq0CarveStairs(m, { g: 1, sn: 1, line: 'look', n: 1, at: [-2, 2], steps: [2, 2, 1, 2, 1, 2, 1, 2, 1] }); },
       check(m, out) {
-        const f = [], s = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const f = [], s = dq0Prose(out).replace(/\[[.#]{10}\] /g, '');
         if (!this.carve.done) return ['the staircase not made: ' + this.carve.why];
         const at = l => s.indexOf('> ' + l + ' > ' + l);
         const seg = (l, n) => at(l) >= 0 ? s.slice(at(l), at(n) > at(l) ? at(n) : undefined) : '';
@@ -693,7 +693,7 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -A', 'look', 'go through the door to the east', 'map', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const f = [], s = dq0Prose(out).replace(/\[[.#]{10}\] /g, '');
         if (!/You (can see|are in)/.test(s)) f.push('no first look told');
         const i = s.indexOf('> go through the door to the east > go through the door to the east'), go = i < 0 ? '' : s.slice(i, s.indexOf('> map', i));
         if (!go.includes('The passage bends away northeast.') || !/The passage (comes to a door|ends here|forks here)|You are in a passage/.test(go)) f.push('"go east" not along a passage on the diagonal to its end ("The passage bends away northeast."): ' + go.slice(0, 300));
@@ -728,7 +728,7 @@ module.exports = {
       expect: ['% echo $status'],
       start(m) { this.snaps = []; dq0Where(this, m, l => { if (l === 'quit') this.snaps.push(cavernChunks(m, 1)); }); },
       check(m, out) {
-        const f = [], s = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const f = [], s = dq0Prose(out).replace(/\[[.#]{10}\] /g, '');
         const S = stratumRec(m, 1), ks = this.snaps[0] || new Map(), CAV = 0x10, open = t => t !== T_ROCK && t !== T_WALL && t !== T_WINDOW;
         const parts = [...ks.values()].filter(c => c.rooms.some(r => r.flags & CAV));
         const floorOf = (c, x, y) => c.tile[y * 32 + x] === T_FLOOR && c.rooms.some(r => (r.flags & CAV) && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h);
@@ -778,7 +778,7 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -T -P', 'look', 'd', 'look', 'map', 'u', 'look', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const f = [], s = dq0Prose(out).replace(/\[[.#]{10}\] /g, '');
         const at = l => s.indexOf('> ' + l + ' > ' + l);
         const seg = (l, n) => at(l) >= 0 ? s.slice(at(l), at(n) > at(l) ? at(n) : undefined) : '';
         if (!seg('look', 'd').includes('a long slope leading down')) f.push('"look" not by "a long slope leading down": ' + seg('look', 'd').slice(0, 300));
@@ -800,7 +800,7 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -D', 'look', 'go through the door to the east', 'map', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out).replace(/\[[.#]{10}\] /g, ''), S = stratumRec(m, 0), T_DOOR = 3;
+        const f = [], s = dq0Prose(out).replace(/\[[.#]{10}\] /g, ''), S = stratumRec(m, 0), T_DOOR = 3;
         if (!/You (can see|are in)/.test(s)) f.push('no first look told');
         let cut = 0, corners = 0;
         for (const c of cacheChunks(m, 0).values()) {
@@ -861,7 +861,7 @@ module.exports = {
         });
       },
       check(m, out) {
-        const f = [], s = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const f = [], s = dq0Prose(out).replace(/\[[.#]{10}\] /g, '');
         if (!this.runs.some(r => r.n >= 10 && r.n <= 16)) f.push('no sloping tunnel of 10 to 16 squares in the stratum\'s cached chunks: ' + JSON.stringify(this.runs));
         const at = (l, from = 0) => s.indexOf('> ' + l + ' > ' + l, from), i = at('go south'), j = at('go north');
         const up = i < 0 ? '' : s.slice(i, at('look', i)), down = j < 0 ? '' : s.slice(j, at('look', j));
@@ -880,7 +880,7 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'examine the wall', 'd', 'examine the wall', 'turn left', 'examine the wall', 'turn left', 'look at the wall', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out);
+        const f = [], s = dq0Prose(out);
         const looks = { shale: 'flaky', sandstone: 'buff', limestone: 'pale grey', slate: 'blue-grey', marble: 'white', granite: 'speckled grey',
           basalt: 'black', quartz: 'white-veined', ironstone: 'rusty red', 'copper ore': 'green-stained' };
         const said = [...s.matchAll(/(?:examine|look at) the wall (?:You look at the wall\. )?(The wall's masonry|The wall's the bare rock, ([a-z -]+?)(?:: ([a-z ]+))?\.|It's too dark|There's no wall)/g)];
@@ -930,7 +930,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), digs = T.filter(t => /^dig /.test(t.line));
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), digs = T.filter(t => /^dig /.test(t.line));
         if ([1, 2, 3, 5].some(g => !m.door[g])) return ['the scenes not set: ' + JSON.stringify(m.door)];
         const looks = T.filter(t => t.line === 'look');
         const [d1, d2, d3, d4, d5, d6, d7] = digs;   // (Knife, hands; chisel; pick, the door found, then a door in sight; chisel and hammer; magic)
@@ -1044,7 +1044,7 @@ module.exports = {
           } }]);
       },
       check(m, out) {
-        const T = dq0Turns(m), f = [], K = m.dq0.layout().K, o = dq0Story(out);
+        const T = dq0Turns(m), f = [], K = m.dq0.layout().K, o = dq0Prose(out);
         const say = (t, re, what) => { if (!re.test(o)) f.push('no words: ' + what); };
         const g1 = T.of("dq0 -p t -s 5 -c /ram/c.hm -T -k 'rope,iron spike,hammer'");
         const climbs = t => t.replies.filter(r => /^slot/.test(r.req) && r.a === K.P_CLIMB).map(r => r.steps);
@@ -1235,7 +1235,7 @@ module.exports = {
           { g: 2, line: 'quit', n: 1, call: note(2) }, { g: 3, line: 'quit', n: 1, call: note(3) }, { g: 4, line: 'quit', n: 1, call: note(4) }]);
       },
       check(m, out) {
-        const f = [], o = dq0Story(out);
+        const f = [], o = dq0Prose(out);
         let n = 0;
         for (const g of [1, 2, 3, 4]) for (const e of m.found[g] || []) {
           ++n;
@@ -1355,7 +1355,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], o = dq0Story(out), w = l => (m.wet || []).find(e => e.line === l) || {}, t = (l, n) => T.of(l, n === 2 ? T.of(l).k + 1 : 0);
+        const T = dq0Turns(m), f = [], o = dq0Prose(out), w = l => (m.wet || []).find(e => e.line === l) || {}, t = (l, n) => T.of(l, n === 2 ? T.of(l).k + 1 : 0);
         inTurn(o, ["You're out of your depth: you swim.", 'The water puts out your light.'], f, 'into the stream: ');
         if (!/You swim strongly\.|You struggle to keep afloat\./.test(o)) f.push('its swimming not told (the referee\'s test)');
         for (const l of ['n', 'east', 'west', 'west 2']) if ((w(l).wet & 0x7F) !== 6 || !w(l).swim) f.push('not swimming six feet down after ' + l + ': ' + JSON.stringify(w(l)));
@@ -1383,7 +1383,7 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -T -k pick -a -R 2', 'dig down', 'stop', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out), told = [...s.matchAll(/You're into ([a-z -]+?) rock(: [a-z ]+)?\./g)];
+        const f = [], s = dq0Prose(out), told = [...s.matchAll(/You're into ([a-z -]+?) rock(: [a-z ]+)?\./g)];
         this.notes = [told.map(x => x[0]).join(' ')];
         if (told.length !== 2 || told[0][2] || !told[1][2] || told[0][1] !== told[1][1]) f.push('not its looks, then named at the first good spell: ' + told.map(x => x[0]).join(' '));
         else if (!/rock: [a-z ]+\. The work goes well\./.test(s)) f.push('named but not with a spell that went well');
@@ -1560,7 +1560,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], o = dq0Story(out), G = o.split('% dq0 ').slice(1);
+        const T = dq0Turns(m), f = [], o = dq0Prose(out), G = o.split('% dq0 ').slice(1);
         if (G.length !== 3) return ['not three games: ' + G.length];
         const ans = T.filter(t => t.line === '2' || t.line === '1'), want = [['close the door', 32723, 'PO_CLOSED', /You close the door\./], ['hit the door', 32720, 'TE_BEGUN', /You set to punching the door\./], ['kick the door', 32720, 'TE_BEGUN', /You set to kicking the door\./]];
         if (ans.length !== 3) return ['the doors not chosen: ' + ans.length];
@@ -1743,7 +1743,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const T = dq0Turns(m), f = [], s = dq0Prose(out);
         const tr = (t, te) => dq0Ev(t, 'E_TASK', { task: 'LT_TRAVEL', te });
         const legs = t => dq0Ev(t, 'E_ARRIVE').length;
         // (The named room's chunk and room in a state, and the character in it; what it keeps of that chunk now, 0-100: the

@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { card, typed } = require('../../lib/common.js');
 const {
-  CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks, stratumRec, chunkDiff, dq0Story, inTurn, dq0Turns,
+  CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks, stratumRec, chunkDiff, dq0Story, dq0Prose, inTurn, dq0Turns,
   dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Thing, DQ0_I, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0Timer, DQ0_PLAYED
 } = require('../../lib/dq0.js');
 const { trend, target, D17 } = require('../../lib/trends.js');
@@ -298,7 +298,7 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', 'sleep 8 hours', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], o = dq0Story(out);
+        const T = dq0Turns(m), f = [], o = dq0Prose(out);
         const games = [], g = [];
         for (const t of T) { if (/^dq0 /.test(t.line)) games.push(g.splice(0)); g.push(t); }
         games.push(g.splice(0)); games.shift();
@@ -438,7 +438,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], gs = m.dq0.games, o = dq0Story(out), G = o.split('% dq0 ').slice(1), SN_SEEN = 1;
+        const f = [], gs = m.dq0.games, o = dq0Prose(out), G = o.split('% dq0 ').slice(1), SN_SEEN = 1;
         if (gs.length !== 6 || G.length !== 6) return ['not six games: ' + gs.length];
         const seen = g => gs[g].replies.filter(r => r.req === 'dsense' && r.who === m.watched && !r.noise && r.x === 32712 && r.y === 32762 && r.pc.x === 32706 && r.pc.y === 32762);
         const d = seen(0), n = seen(1);
@@ -623,7 +623,7 @@ module.exports = {
       sdcard: true,
       expect: ['% echo $status'],
       check(m, out) {
-        const o = dq0Story(out), f = [], i = o.indexOf('> wait 5 minutes'), j = o.indexOf('> sleep 5 minutes');
+        const o = dq0Prose(out), f = [], i = o.indexOf('> wait 5 minutes'), j = o.indexOf('> sleep 5 minutes');
         if (i < 0 || j < 0) return ['the lines not found'];
         if (!/burning low/.test(o.slice(i, j))) f.push('awake, the torch not told burning low: ' + o.slice(i, j).slice(0, 400));
         if (/burning low/.test(o.slice(j))) f.push('told burning low asleep: ' + o.slice(j).slice(0, 400));
@@ -734,7 +734,7 @@ module.exports = {
           { g: 1, line: 'wait until night', n: 1, hub: Object.assign({ tbSky: 0 }, due) }]);
       },
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), P = x => (x && x.pc && x.pc.tb) || null, at = l => T.of(l).at;
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), P = x => (x && x.pc && x.pc.tb) || null, at = l => T.of(l).at;
         const after = l => P(T.of(l).after), times = [...s.matchAll(/time ([^>]*?)(?= > |$)/g)].map(x => x[1]);
         if (!at('quit')) return ['the game not played'];
         if (!/time It's eight in the morning\./.test(s)) f.push('the start not told plainly: ' + times[0]);
@@ -795,7 +795,7 @@ module.exports = {
         dq0Poke(m, [rec(1), rec(2), { g: 2, line: 'd', n: 1, call: goto_head }, { g: 3, line: 'look', n: 2, call: () => { const h = m.dq0.bank(0), [A,B] = require('../../../sim/lib/hubown.js').evaluate(['offsetof (struct hub, tb.nsky)', 'offsetof (struct hub, tb.sun)']); m.dbg = [h[A], h[B]]; } }, rec(5), { g: 6, line: 'u', n: 1, call: roof(8) }]);
       },
       check(m, out) {
-        const f = [], G = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '').split('enters the dungeon'), ok = (g, re, what) => { if (!re.test(G[g] || '')) f.push(what); };
+        const f = [], G = dq0Prose(out).replace(/\([A-Z]{1,2}\) /g, '').split('enters the dungeon'), ok = (g, re, what) => { if (!re.test(G[g] || '')) f.push(what); };
         const sk = m.sky || {}, sky = (r, kind) => r && r.links.find(l => l.kind === kind && l.dug === 2);
         if (!sk[1] || sky(sk[1][0], 5)) f.push('seed 1 with a shaft: ' + JSON.stringify(sk[1]));
         const up = sk[2] && sky(sk[2][0], 5), dn = sk[2] && sky(sk[2][0], 6);

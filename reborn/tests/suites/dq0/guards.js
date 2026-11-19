@@ -5,7 +5,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { dq0Typed, dq0Story } = require('../../lib/dq0.js');
+const { dq0Typed, dq0Story, dq0Prose } = require('../../lib/dq0.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder)
 
 // dq0guards: at seed 3, the turns pace, a few commands; as the world runs (its task by its name, its facts the
@@ -146,7 +146,7 @@ function dq0GuardsTest() {
       };
     },
     check(m, out) {
-      const f = [], R = this.R, s = dq0Story(out);
+      const f = [], R = this.R, s = dq0Prose(out);
       for (const k of ['fetch', 'store', 'load', 'rmw', 'swap', 'stack']) if (!R[k]) f.push('the ' + k + ' poke never made');
       const hits = m.guard ? m.guard.hits() : null, at = p => '$' + p.toString(16).toUpperCase().padStart(4, '0') + ')';   // (sim/test.js's
       if (hits && R.load && !hits.some(e => e.kind === 'load' && e.text.includes(at(R.load.pc)))) f.push('the load poke not heard');   //   guard;

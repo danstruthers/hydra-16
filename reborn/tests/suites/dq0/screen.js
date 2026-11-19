@@ -5,7 +5,7 @@
 const { typed } = require('../../lib/common.js');
 const fs = require('fs');
 const path = require('path');
-const { dq0StatusRows, dq0Typed, DQ0_MAKE, dq0Story } = require('../../lib/dq0.js');
+const { dq0StatusRows, dq0Typed, DQ0_MAKE, dq0Story, dq0Prose } = require('../../lib/dq0.js');
 // (dq0played's lines: the play test's first game, 2026-11-16, review/play's g1.json, as typed, but its three "break the
 // door" with the lantern named, the tool the game chose for it till then: a bare "break the door" punches since the things
 // branch's nothing battered with a light, 2026-11-17, and the weak scribe's fists put it in shock before the door gives, the
@@ -191,7 +191,7 @@ module.exports = {
         'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out), turn = (a, b) => { const i = s.indexOf('> ' + a), j = s.indexOf('> ' + b, i + 1); return i < 0 ? '' : s.slice(i, j < 0 ? undefined : j); };
+        const f = [], s = dq0Prose(out), turn = (a, b) => { const i = s.indexOf('> ' + a), j = s.indexOf('> ' + b, i + 1); return i < 0 ? '' : s.slice(i, j < 0 ? undefined : j); };
         const sh = turn('drop the torch down the shaft', 'i'), pt = turn('drop the torch into the pit', 'quit'), dg = turn('examine the dagger', 'quit');
         if (!sh.includes("There's no well or shaft here for the torch to fall down.")) f.push('no shaft near: not said why: ' + JSON.stringify(sh));
         for (const [w, t] of [['down the shaft', sh], ['into the pit', pt]]) if (/You carry|In all,|\(a\) /.test(t)) f.push(w + ': the inventory before it said again: ' + JSON.stringify(t));
@@ -208,7 +208,7 @@ module.exports = {
         ...PLAYED, 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out), far = s.match(/ (lie|lies) \([A-Z]\) something (small|large)/g) || [];
+        const f = [], s = dq0Prose(out), far = s.match(/ (lie|lies) \([A-Z]\) something (small|large)/g) || [];
         if (!far.length) f.push('no thing too far to make out told (the scene moved?)');
         for (const x of far) if (!/ lies /.test(x)) f.push('a thing too far to make out said with a plural verb: ' + JSON.stringify(x));
         const pit = s.slice(s.indexOf('> drop the stubs into the pit'), s.indexOf('> jump into the pit'));

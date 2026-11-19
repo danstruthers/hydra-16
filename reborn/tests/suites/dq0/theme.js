@@ -7,7 +7,7 @@ const path = require('path');
 const { card, typed } = require('../../lib/common.js');
 const {
   xdBytes, saidTheme, PK_PORTCULLIS, DQ0_MAKE, dq0Life, THEMEC, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, O_WAY_OUT, O_NOWHERE, stratumRec,
-  dq0Made, dq0Story, dq0Turns, dq0Ev, dq0Rep, dq0Need, dq0Carried, dq0Here, DQ0_I, dq0Typed, dq0Poke
+  dq0Made, dq0Story, dq0Prose, dq0Turns, dq0Ev, dq0Rep, dq0Need, dq0Carried, dq0Here, DQ0_I, dq0Typed, dq0Poke
 } = require('../../lib/dq0.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
 const CUT_SEEDS = [271828, 1000003, ...Array.from({ length: 22 }, (_, k) => 70000 + k)];   // (dq0cut's: the clock-sized, the play test's)
@@ -384,7 +384,7 @@ module.exports = {
         dq0Poke(m, [{ g: 1, line: 'u', n: 1, call: roof(8) }, { g: 8, line: 'look', n: 1, call: toExit }, { g: 9, line: 'look', n: 1, call: toExit }]);
       },
       check(m, out) {
-        const T = dq0Turns(m), f = [], st = dq0Story(out), G = st.split('enters the dungeon'), ok = (g, re, what) => { if (!re.test(G[g] || '')) f.push(what + ' (game ' + g + ')'); };
+        const T = dq0Turns(m), f = [], st = dq0Prose(out), G = st.split('enters the dungeon'), ok = (g, re, what) => { if (!re.test(G[g] || '')) f.push(what + ' (game ' + g + ')'); };
         const no = (g, re, what) => { if (re.test(G[g] || '')) f.push(what + ' (game ' + g + ')'); };
         const q = cmd => {                   // (game.dat: its head 20 bytes, the outcome, then Q: theme, done, solved)
           const b = xdBytes(out, cmd);
@@ -445,7 +445,7 @@ module.exports = {
         'examine the way out', 'u']), 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out), at = s.indexOf('dq0hour=6'), g = [s.slice(0, at < 0 ? s.length : at), at < 0 ? '' : s.slice(at)];
+        const f = [], s = dq0Prose(out), at = s.indexOf('dq0hour=6'), g = [s.slice(0, at < 0 ? s.length : at), at < 0 ? '' : s.slice(at)];
         const has = (k, w, what) => { if (!g[k].includes(w)) f.push(what + ': ' + JSON.stringify(w) + ' not said'); };
         has(0, 'and the door grinds open on the stair up to the night sky.', 'at night, the door opened');
         has(0, 'The black door stands open on the stair up to the night sky: go up to leave.', 'at night, the way out looked at');

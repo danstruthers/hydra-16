@@ -6,7 +6,7 @@ const path = require('path');
 const { typed } = require('../../lib/common.js');
 const {
   T_ROCK, T_FLOOR, T_WALL, T_CORR, T_WINDOW, PK_PORTCULLIS, T_DOOR, T_STEPS, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N,
-  CSLOT_AT, liveChunks, stratumRec, dq0Story, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never,
+  CSLOT_AT, liveChunks, stratumRec, dq0Story, dq0Prose, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never,
   dq0Carried, dq0Here, dq0Thing, DQ0_I, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0OnWords, dq0AnswerTest
 } = require('../../lib/dq0.js');
 
@@ -742,7 +742,7 @@ module.exports = {
         'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const o = dq0Story(out), f = [];
+        const o = dq0Prose(out), f = [];
         inTurn(o, ['> cast light You\'ve no magic: you never studied the convocations.',
           '> memorize the light spell You\'ve no magic: you never studied the convocations.', '> telepathy You reach for it; nothing stirs.',
           '> invoke divination You know no invocations of Peoni\'s.', '> learn divination You know no invocations of Peoni\'s.',
@@ -765,7 +765,7 @@ module.exports = {
         'put out the torch', 'pray', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), o = dq0Story(out), f = [];
+        const T = dq0Turns(m), o = dq0Prose(out), f = [];
         inTurn(o, ['> pray You kneel and pray to Peoni.', 'You rise from your prayers', 'Peoni', '> pray for strength You kneel and pray to Peoni.',
           'You rise from your prayers', 'Peoni', '> fast You vow to fast for a day', '> eat food You\'re fasting, with 24 hours of your vow to go: you leave the food be.',
           '> fast You\'re fasting already, with 24 hours of your vow to go.', '> stop You break your fast: you may eat again.', '> eat food',
@@ -1075,7 +1075,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const o = dq0Story(out), G = o.split('% dq0 ').slice(1), f = [];
+        const o = dq0Prose(out), G = o.split('% dq0 ').slice(1), f = [];
         if (G.length !== 3) return ['not three games: ' + G.length];
         if (!/You aren't digging: you're working the pane free\./.test(G[0])) f.push('the pane: a stop naming another not refused');
         if (/I don't understand/.test(G[0] + G[1] + G[2])) f.push('a stop word not understood');
@@ -1099,7 +1099,7 @@ module.exports = {
       sdcard: true,
       expect: ['% echo $status'],
       check(m, out) {
-        const o = dq0Story(out), f = [], part = (a, b) => { const i = o.indexOf('> ' + a), j = b ? o.indexOf('> ' + b, i + 1) : -1; return i < 0 ? '' : o.slice(i, j < 0 ? o.length : j); };
+        const o = dq0Prose(out), f = [], part = (a, b) => { const i = o.indexOf('> ' + a), j = b ? o.indexOf('> ' + b, i + 1) : -1; return i < 0 ? '' : o.slice(i, j < 0 ? o.length : j); };
         const n = (t, w) => (t.match(new RegExp(w, 'g')) || []).length;
         if (n(part('drop the rope and the sack', 'take sack and rope'), 'Put down|You put down') !== 2) f.push('"drop the rope and the sack" not each put down: ' + part('drop the rope and the sack', 'take sack and rope'));
         const t2 = part('take sack and rope', 'drop rope, sack');
@@ -1137,7 +1137,7 @@ module.exports = {
       sdcard: true,
       expect: ['% echo $status'],
       check(m, out) {
-        const o = dq0Story(out), f = [], i = o.indexOf('> wait 30 minutes and drop the torch');
+        const o = dq0Prose(out), f = [], i = o.indexOf('> wait 30 minutes and drop the torch');
         const t = o.slice(i, o.indexOf('> quit', i));
         if (!/You stop waiting/.test(t)) f.push('the wait not stopped: ' + t);
         if (/Put down|You let the/.test(t)) f.push('the rest of the line not let go: ' + t);
@@ -1154,7 +1154,7 @@ module.exports = {
         'drop all the sacks', 'look', 'take all the sacks', 'drop the unlit torch', 'i', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), I = DQ0_I;
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), I = DQ0_I;
         const sacks = st => st ? st.items.filter(i => i.name === 'sack') : [];
         const lots = (st, where) => st ? st.items.filter(i => i.name === 'rations' && (where === 'carried' ? dq0Carried(st).includes(i) : where === 'here' ?
           i.where === 'IW_SQUARE' && i.sn === st.pc.sn && i.x === st.pc.x && i.y === st.pc.y : true)) : [];
@@ -1200,7 +1200,7 @@ module.exports = {
         'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const T = dq0Turns(m), f = [], s = dq0Prose(out);
         const g = T.of('dq0 -p t -s 3 -c /ram/c.hm'), e = T.after(g, 'e'), so = T.after(e, 'go through the door to the south');
         const beats = so.events.filter(x => x.kind === 'E_BEAT').map(x => x.beat);
         const c = beats.indexOf('WB_CROSS'), d = beats.indexOf('WB_DOOR');
