@@ -86,6 +86,7 @@ const rows = (file, enc = 'latin1') => fs.readFileSync(file, enc).split(/\r?\n/)
 function generate({ say = () => {}, cc65 }) {
   const H = require(path.join(DQ0, 'hubgen.js')).generate({ say, cc65 });
   require(path.join(DQ0, 'saidgen.js')).generate(H, say);
+  require(path.join(DQ0, '..', 'dq0w', 'acts.js')).generate(H, say);   // (The world's act table: dq0acts.inc, .h)
   styles(H, say);
   return H;
 }

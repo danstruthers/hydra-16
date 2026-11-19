@@ -661,6 +661,9 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_
                                                 **   fall, its bars strained at, bent apart; a lock worked at, picked) */
     DE_UNBARRED,                                /* (A door's bar lifted and the door opened, at once: the character's
                                                 **   PO_UNBARRED, its words and its sound the door's opening, 2026-11-17) */
+    DE_TURNS, DE_PRIES,                         /* (A key turned in a box's lock, a box's lid forced: wfight.c's den_pry,
+                                                **   the act table's lidkey, lidforce, heard as the character's are; the
+                                                **   work's kinds, before DE_CLOSES, the fight's, 2026-11-19) */
     DE_CLOSES,                                  /* (Closed with the character, its attack begun, its first blow the next:
                                                 **   the character's own first words the other way round, the user's
                                                 **   "The bandit closes with you.", 2026-11-17) */
@@ -684,9 +687,12 @@ enum { NZ_WORK, NZ_BLOW, NZ_VOICE, NZ_KNOCK,    /* E_NOISE's b: work's (a dig's,
                                                 **   (a battering's, each blow: the sound task's); a voice (words said,
                                                 **   a yell, a speech: the sound task's none), a knock (I_NOISE's, 2026-11-10:
                                                 **   a foe that hears either comes to look, the denizens' hear) */
-    NZ_CLICK, NZ_BAR };                         /* (Quiet: a key turned, a lock picked; a bar lifted or set: heard close
+    NZ_CLICK, NZ_BAR,                           /* (Quiet: a key turned, a lock picked; a bar lifted or set: heard close
                                                 **   by, the sound task's *click and *bar, the minds' as any noise; the
                                                 **   user's, 2026-11-17, "A key, a bar and a pick make quiet sounds") */
+    NZ_DOOR };                                  /* (A door opened, shut, burst or held: the minds' to hear, as an
+                                                **   actor's DE_OPENS ...; the sound task's none, E_PORTAL's its own:
+                                                **   the act table's, dq0w/acts.txt, 2026-11-19) */
 enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's pc_strike): the best it holds (the
                                                 **   best weapon in its hands, the referee's; else the fists: the UI's
                                                 **   with nothing named, its hands empty), a fist, a foot, the head */
