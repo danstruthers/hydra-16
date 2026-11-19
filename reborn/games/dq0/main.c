@@ -3093,10 +3093,11 @@ int main (int argc, char* argv[])
                                                 **   in for it after a part's own command, the pace's, its intent's
                                                 **   answer to come, 2026-11-17) */
             held = 0;
-            quick = 0;                          /* (Its answer not looked for each tick, its Enter's quick naps
-                                                **   over: the world's events ring the UI's doorbell, and each look at
-                                                **   the keys took the console's some 9,000 cycles from the answer
-                                                **   itself, a look one way's a tenth, 2026-11-18) */
+            quick = HUB->tpr ? 0 : 25;          /* (At the real paces its answer not looked for each tick, its
+                                                **   Enter's quick naps over: the world's events ring the UI's doorbell,
+                                                **   and each look at the keys took the console's some 9,000 cycles from
+                                                **   the answer itself, a look one way's a tenth, 2026-11-18; at the
+                                                **   turns pace a quarter second of them, as before) */
             if (!busy) {
                 status ();                      /* (A world's answer to come: the status line after it, events') */
             }
