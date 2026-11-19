@@ -3093,11 +3093,7 @@ int main (int argc, char* argv[])
                                                 **   in for it after a part's own command, the pace's, its intent's
                                                 **   answer to come, 2026-11-17) */
             held = 0;
-            quick = HUB->tpr ? 0 : 25;          /* (At the real paces its answer not looked for each tick, its
-                                                **   Enter's quick naps over: the world's events ring the UI's doorbell,
-                                                **   and each look at the keys took the console's some 9,000 cycles from
-                                                **   the answer itself, a look one way's a tenth, 2026-11-18; at the
-                                                **   turns pace a quarter second of them, as before) */
+            quick = 25;                         /* (Its answer looked for twice as often, a quarter second) */
             if (!busy) {
                 status ();                      /* (A world's answer to come: the status line after it, events') */
             }
@@ -3126,7 +3122,9 @@ int main (int argc, char* argv[])
         HUB->ui_eq = (unsigned char) place;     /* (All it does about the events done: the turns pace on, the world's turns_run) */
         HUB->ui_dq = (unsigned char) dplace;
         fore_sync ();                           /* (In the foreground or out, as a command's in hand or not) */
-        hub_nap (t_wrote && t_haskey () ? 0 : quick ? (--quick, 1) : nap);  /* (Keys that came as it said something,
+        k = t_wrote;
+        hub_nap (k && t_haskey () ? 0 : quick && (k || !HUB->tpr) ? (--quick, 1) : nap);  /* (Keys that came as
+                                                **   it said something,
                                                 **   a line typed as an answer or a look went out: no nap, taken at
                                                 **   once, 2026-10-30.  A fiftieth of a second: the keys looked
                                                 **   for, the world's
@@ -3136,7 +3134,11 @@ int main (int argc, char* argv[])
                                                 **   its answer told the sooner; and woken at once by the world's
                                                 **   events, its doorbell rung with them; a fifth of a second as the
                                                 **   game starts, its look at the keys and the console's a quarter of
-                                                **   the CPU otherwise: the start's time, 2026-11-03) */
+                                                **   the CPU otherwise: the start's time, 2026-11-03; at the real paces the
+                                                **   quick naps only as it says something, its answer's words: not as it
+                                                **   waits on the world, the events ringing it, each look at the keys the
+                                                **   console's 9,000 cycles from the answer's own tasks, a look one
+                                                **   way's a tenth, 2026-11-18) */
     }
     finish ();
     return 0;
