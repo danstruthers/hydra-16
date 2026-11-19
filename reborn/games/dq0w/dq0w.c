@@ -4397,6 +4397,8 @@ void __fastcall__ s_door_work (unsigned char what)
 #pragma code-name (push, "SW41CODE")
 #pragma rodata-name (push, "SW41RODATA")
 #pragma static-locals (push, on)
+#pragma bss-name (push, "SW41RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
+                                                **   the main RAM's room, 2026-11-18) */
 void s_revealed (void)
 {
     struct portal* o;
@@ -4456,6 +4458,7 @@ void s_revealed (void)
     hub_event (&wk.m);
     wk.open = 0;
 }
+#pragma bss-name (pop)
 #pragma static-locals (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -5052,6 +5055,8 @@ static unsigned char pheavy;
 ** cautious walk stopped short of it, its foot finding it there (told as it gets there: pcut), a faster one to stumble
 ** over it as it comes to it (pthing: tripped's).  Told as it sets out ("You feel your way north.", "You run north into
 ** the dark.": a walk's, not a small move's).  1 if the thing's right before it, told (no walk) */
+#pragma bss-name (push, "SW43RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
+                                                **   the main RAM's room, 2026-11-18) */
 unsigned char s_dark_way (void)
 {
     struct item* p;
@@ -5128,6 +5133,7 @@ unsigned char s_dark_way (void)
     }
     return 0;
 }
+#pragma bss-name (pop)
 
 /* Over a thing in its way at a faster pace in the dark (step_on's, as it comes to it: pthing): the book's stumble roll
 ** (the referee's P_STUMBLE: steps the darkness's 4 worse, the thing's 2, a heavy one's 4, a run's 2, a sprint's 4);
@@ -7624,6 +7630,8 @@ static void reached (void)
 static unsigned char wrow[CW], wdoor[CW];
 static signed char werow[CW];
 #pragma bss-name (pop)
+#pragma bss-name (push, "SW21RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
+                                                **   the main RAM's room, 2026-11-18) */
 void __fastcall__ s_ways_go (unsigned char r, unsigned char fx, unsigned char fy)
 {
     static struct room* p;
@@ -7702,6 +7710,7 @@ void __fastcall__ s_ways_go (unsigned char r, unsigned char fx, unsigned char fy
     wk_search ();
     (hub_map) (at_bank);
 }
+#pragma bss-name (pop)
 
 #pragma code-name (push, "SW78CODE")            /* (go_to's own part's, 2026-10-31: part 21's room) */
 #pragma rodata-name (push, "SW78RODATA")

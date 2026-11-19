@@ -4007,6 +4007,8 @@ SAY_PUT (say36)
 /* A noise of the character's lock work, how loud (what made it, NZ_*): a key turned, a lock picked at or picked, quiet
 ** (NZ_CLICK, 1: heard close by, the user's, 2026-11-17, "A key, a bar and a pick make quiet sounds", as a door's are,
 ** wdoor.c's); a lid wrenched at, loud (NZ_WORK, 6) */
+#pragma bss-name (push, "SW36RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
+                                                **   the main RAM's room, 2026-11-18) */
 static void __fastcall__ box_noise (unsigned char loud, unsigned char what)
 {
     struct msg m;
@@ -4021,6 +4023,7 @@ static void __fastcall__ box_noise (unsigned char loud, unsigned char what)
     m.t = HUB->now;
     hub_event (&m);
 }
+#pragma bss-name (pop)
 
 unsigned char s_shut_work (void)
 {
@@ -7787,6 +7790,8 @@ static void __fastcall__ cm_at (unsigned i)
 
 /* The groups made from the counts (cm_c, by mint), the four greatest, in fifteenths of their sum (each at least one,
 ** the greatest the rest), put in the pile's bytes (cm_b) */
+#pragma bss-name (push, "SW64RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
+                                                **   the main RAM's room, 2026-11-18) */
 static void cm_groups (void)
 {
     unsigned t = 0, c;
@@ -7812,10 +7817,13 @@ static void cm_groups (void)
     }
     cm_b[0] += left;                            /* (The greatest the rest: fifteen in all) */
 }
+#pragma bss-name (pop)
 
 /* Thing i's mix, if it's a pile of coins with none yet: today's (its numbers', no die: four coins in five, a fifth more
 ** or less, the region's own, the rest another's of today, a neighbour's or the dwarves'; a crown the gold one's, the
 ** dwarves') */
+#pragma bss-name (push, "SW64RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
+                                                **   the main RAM's room, 2026-11-18) */
 void __fastcall__ s_mix_need (unsigned i)
 {
     struct item* p = item_at (i);
@@ -7849,6 +7857,7 @@ void __fastcall__ s_mix_need (unsigned i)
     cm_at (i);
     cm_groups ();
 }
+#pragma bss-name (pop)
 
 /* Pile n joined to pile i (alike, its count not yet added): their groups merged, each group's coins counted (its
 ** share of its pile) */
