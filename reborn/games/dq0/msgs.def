@@ -49,7 +49,7 @@ struct msg
 # ---- The intents (I_*: an actor's, to the world; the UI's for the character, who 0; the denizens' who the actor's
 # entry plus 1, their ring the hub's di: the :den forms)
 
-I_DEN           x[0] doing@DO_ROAM; x[1] face          # (Not a kind: the denizens' intents' head, what it's doing now
+I_DEN           x[0] doing@DO_ROAM; x[1] face; t when  # (Not a kind: the denizens' intents' head, what it's doing now
                                                         #   and the way it faces, 0xFF either as it is)
 I_WAIT          a how; w1 tenths; w2(busy) task:8-15@LT_NONE what:1-7 quiet:0
                 # (a: WA_MIN, WA_SLEEP, WA_REST, WA_TREAD, WA_DIVE; w1 tenths, or minutes (WA_MIN); w2: a timed work's long task (LT_*)

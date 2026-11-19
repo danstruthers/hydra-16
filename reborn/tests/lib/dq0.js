@@ -1153,7 +1153,33 @@ const WORN = ['inventory', 'wear the ring on my left hand', 'wear the ring on my
   'wear the ring on my left hand', 'wear the ring on my neck', 'wear the ring', 'inventory', 'put the scarf on my head', 'put the necklace around my neck', 'wear the earrings',
   'examine the scarf', 'inventory', 'take off the ring', 'right', 'inventory', 'take off the scarf', 'wear the scarf over my face', 'inventory'];   // (dq0worn's lines)
 
+// The minds' places by name (dq0d.lbl's text): a label's (._NAME), else a field of the minds' one record per denizen
+// (games/dq0d/dq0d.c's struct mind md, 2026-11-19: by field, each an array of NACTORS; its fields' order and sizes
+// read from the source), the address of its first element
+let dq0MindOff = null;
+function dq0Ad(lbl) {
+  const at = n => { const m = new RegExp('^al ([0-9A-F]+) \\._' + n + '$', 'm').exec(lbl); return m ? parseInt(m[1], 16) : null; };
+  return n => {
+    const v = at(n);
+    if (v !== null) return v;
+    if (!dq0MindOff) {
+      const c = fs.readFileSync(path.join(__dirname, '..', '..', 'games', 'dq0d', 'dq0d.c'), 'latin1');
+      const body = c.slice(c.indexOf('struct mind {'), c.indexOf('static struct mind md;')).replace(/\/\*[^]*?\*\//g, '');
+      const N = dq0Hub().value('NACTORS');
+      dq0MindOff = {};
+      let o = 0;
+      for (const m of body.matchAll(/^\s*unsigned( char| long)?\s+([^;]+);/gm)) {
+        const size = m[1] === ' char' ? 1 : m[1] === ' long' ? 4 : 2;
+        for (const f of m[2].split(',')) { dq0MindOff[f.trim().replace('[NACTORS]', '')] = o; o += size * N; }
+      }
+    }
+    if (dq0MindOff[n] === undefined) throw new Error('dq0Ad: no ' + n + ' in dq0d.lbl or struct mind');
+    return at('md') + dq0MindOff[n];
+  };
+}
+
 module.exports = {
+  dq0Ad,
   CHUNK_SIZE, CK_TILE, CK_ROOM, T_ROCK, T_FLOOR, T_WALL, T_CORR, T_WINDOW, cacheBanks, cacheChunks, caveReport,
   PK_PORTCULLIS, T_DOOR, T_STEPS, xdBytes, saidTheme, DQ0_MAKE, dq0Life, THEMEC, builtChunks, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N,
   CSLOT_AT, liveChunks, O_WAY_OUT, O_NOWHERE, stratumRec, dq0Made, chunkDiff, dq0StatusRows, dq0Story, dq0Prose, inTurn,

@@ -24,8 +24,6 @@
 
 #pragma local-strings (on)
 
-#define CATCHUP         30                      /* Tenths an actor makes up, at most, that it's fallen behind the clock
-                                                **   (the real paces': the denizens' task late) */
 
 struct actor bd;                                /* (wbody.h's: the main RAM's) */
 unsigned char bk;
@@ -231,10 +229,6 @@ void s_den_intents (void)
         if (I_DEN_FACE (m) != 0xFF) {
             bd.face = I_DEN_FACE (m);
         }
-        if (HUB->tpr && (m.kind == I_STEP || m.kind == I_GOTO || m.kind == I_WAIT || m.kind == I_ATTACK) &&
-            bd.ready + CATCHUP < HUB->now) {
-            bd.ready = HUB->now - CATCHUP;      /* (Fallen behind the clock: a few seconds made up at most) */
-        }
         if (grip) {
             grip_held (&m);                     /* (Held by the character: its try to break free, part 15's) */
         }
@@ -250,6 +244,11 @@ void s_den_intents (void)
             was = bd.doing;
             break;
         case I_STEP:                            /* (A square, by the character's rules: refused, it waits a moment) */
+            if (I_STEP_WHEN (m) > bd.ready) {
+                bd.ready = I_STEP_WHEN (m);     /* (Taken no sooner than it was meant: its intent's time, the minds'
+                                                **   stamp; a denizen fallen behind the clock catches up in full, no
+                                                **   CATCHUP's few seconds, the user's, 2026-11-19) */
+            }
             if (I_STEP_SCENT (m) && (I_STEP_WAY (m) = tr_scent (I_STEP_NOSE (m))) > H_NW) {
                 bd.doing = DO_ROAM;             /* (No scent its nose can follow: the trail lost) */
                 bd.ready += 10;

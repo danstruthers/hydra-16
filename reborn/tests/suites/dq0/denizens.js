@@ -9,7 +9,8 @@ const {
   T_ROCK, T_FLOOR, T_WALL, T_CORR, T_WINDOW, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks, stratumRec,
   dq0Story, dq0Prose, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Named, DQ0_I,
   dq0Typed, dq0Portal, dq0Rec, dq0Poke, dq0PcShock, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Alone, dq0Paces, dq0Own,
-  dq0Asks, dq0HeldPaces, dq0PlayLetters
+  dq0Asks, dq0HeldPaces, dq0PlayLetters,
+  dq0Ad
 } = require('../../lib/dq0.js');
 const { target, D17 } = require('../../lib/trends.js');   // (The user's targets, D17, at 115,200 baud: each measure kept, those over and past 90% listed after the tests)
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
@@ -123,7 +124,7 @@ function dq0DoorScene(m, on, who, how) {
             R.mem[q + R.SN] = sn;
             R.mem[q + R.ATTITUDE] = K.AT_HOSTILE;
             const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
-            const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]];
+            const ad = dq0Ad(lbl), ram = m.taskRam[h[12 + 2]];
             ram[ad('drawn') + k] = 8;
             ram[ad('lsx') + 2 * k] = px & 255; ram[ad('lsx') + 2 * k + 1] = px >> 8;
             ram[ad('lsy') + 2 * k] = py & 255; ram[ad('lsy') + 2 * k + 1] = py >> 8;
@@ -205,7 +206,7 @@ module.exports = {
                   R.mem[q + R.SN] = sn;
                   R.mem[q + R.ATTITUDE] = K.AT_HOSTILE;
                   const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
-                  const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]];
+                  const ad = dq0Ad(lbl), ram = m.taskRam[h[12 + 2]];
                   ram[ad('drawn') + k] = 8;
                   if (!m.portc) ram[ad('atry') + k] = ((f >> 1) + 2 & 3) | 3 << 2;   // (Its tries at the portcullis given up already (the minds'
                   // atry: its way, stage 3), 2026-11-02: so it digs round; dq0portc's the portcullis worked)
@@ -262,7 +263,7 @@ module.exports = {
               if (typed === 'wait 2 hours' && !m.opened && m.dq0) {   // (The scene: the portcullis on the mine's way across raised)
                 const { L } = m.dq0.layout(), h = m.dq0.bank(0), u16 = o => h[o] | h[o + 1] << 8;
                 const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'), ram = m.taskRam[h[12 + 2]];
-                const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16), sn = h[L.pcSn];
+                const ad = dq0Ad(lbl), sn = h[L.pcSn];
                 const hx = ram[ad('ahx')] | ram[ad('ahx') + 1] << 8, hy = ram[ad('ahy')] | ram[ad('ahy') + 1] << 8, v = dq0Vein(u16(L.seed), hx, hy);
                 m.opened = [];
                 for (let x = hx; v && x !== v.vx; x += Math.sign(v.vx - hx)) {
@@ -281,7 +282,7 @@ module.exports = {
                   return n;
                 };
                 const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
-                const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]];
+                const ad = dq0Ad(lbl), ram = m.taskRam[h[12 + 2]];
                 const miners = [...Array(L.nactors).keys()].filter(k => named(k) === 'dwarf miner').map(k => ({ k,
                   hx: ram[ad('ahx') + 2 * k] | ram[ad('ahx') + 2 * k + 1] << 8, hy: ram[ad('ahy') + 2 * k] | ram[ad('ahy') + 2 * k + 1] << 8,
                   attitude: h[at(k) + L.aAttitude], act: ram[ad('aact') + k], tx: ram[ad('atx') + 2 * k] | ram[ad('atx') + 2 * k + 1] << 8,
@@ -387,7 +388,7 @@ module.exports = {
                   }
                 }
                 const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'), ram = m.taskRam[h[12 + 2]];
-                const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16);
+                const ad = dq0Ad(lbl);
                 if (m.door) m.door.home = [ram[ad('ahx')] | ram[ad('ahx') + 1] << 8, ram[ad('ahy')] | ram[ad('ahy') + 1] << 8];
                 const v = m.door && dq0Vein(m.door.seed, m.door.home[0], m.door.home[1]);   // (The portcullis on the mine's way across raised, as dq0mine's)
                 for (let x = m.door ? m.door.home[0] : 0; v && x !== v.vx; x += Math.sign(v.vx - m.door.home[0])) {
@@ -489,7 +490,7 @@ module.exports = {
                   R.mem[q + R.SN] = sn;
                   R.mem[q + R.ATTITUDE] = K.AT_HOSTILE;
                   const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
-                  const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]];
+                  const ad = dq0Ad(lbl), ram = m.taskRam[h[12 + 2]];
                   ram[ad('drawn') + k] = 8;
                   ram[ad('lsx') + 2 * k] = px & 255; ram[ad('lsx') + 2 * k + 1] = px >> 8;
                   ram[ad('lsy') + 2 * k] = py & 255; ram[ad('lsy') + 2 * k + 1] = py >> 8;
@@ -554,7 +555,7 @@ module.exports = {
                   R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8;
                   h[o + L.aAttitude] = K.AT_UNFRIENDLY;
                   const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
-                  const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]];
+                  const ad = dq0Ad(lbl), ram = m.taskRam[h[12 + 2]];
                   ram[ad('fled') + k] = 8;
                   ram[ad('sgen') + k] = 0;
                   h[L.denSeq] = h[L.denSeq] + 1 & 255;
@@ -1287,7 +1288,7 @@ module.exports = {
             if (c === 13 && m.dq0 && m.dq0.bank(0) && (typed === 'd' || (typed === 'quit' && m.fresh.was))) {
               const { L } = m.dq0.layout(), h = m.dq0.bank(0), at = k => L.actor + k * L.actorSize, ram = m.taskRam[h[12 + 2]];
               const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
-              const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16);
+              const ad = dq0Ad(lbl);
               const read = k => ({ k, den: h[at(k) + L.aDen], name: (() => { let n = ''; for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]); return n; })(),
                 state: h[at(k) + L.aState], drawn: ram[ad('drawn') + k], fooled: ram[ad('fooled') + k], atry: ram[ad('atry') + k], pway: ram[ad('pway') + k],
                 afx: ram[ad('afx') + 2 * k] | ram[ad('afx') + 2 * k + 1] << 8, digt: h[L.digT + 2 * k] | h[L.digT + 2 * k + 1] << 8, agear: h[L.agear + k] });
@@ -1348,7 +1349,7 @@ module.exports = {
           w16(o + L.aX, x); w16(o + L.aY, y); h[o + L.aSn] = sn; h[o + L.aDoing] = 0; h[o + L.aState] = 1; h[o + L.aPos] = K.POS_STANDING;
           for (let i = 0; i < 4; i++) h[o + L.aReady + i] = h[L.hubNow + i];
           R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8; R.mem[q + R.SN] = sn;
-          const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl())[1], 16), ram = m.taskRam[h[12 + 2]];
+          const ad = dq0Ad(lbl()), ram = m.taskRam[h[12 + 2]];
           ram[ad('aloot') + k] = ram[ad('now') + 1];   // (Its look for things it wants due as it next decides: NOW_T)
           if (how) how(o, R, q, k);
           h[L.denSeq] = h[L.denSeq] + 1 & 255;
@@ -1366,7 +1367,7 @@ module.exports = {
           if (!H) return;
           m.found.put[5] = put(h, L, K, at, named, H[0], H[1], (o, R, q, k) => {
             h[o + L.aAttitude] = R.mem[q + R.ATTITUDE] = K.AT_HOSTILE;
-            const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl())[1], 16), ram = m.taskRam[h[12 + 2]];
+            const ad = dq0Ad(lbl()), ram = m.taskRam[h[12 + 2]];
             ram[ad('drawn') + k] = 8; ram[ad('sres') + k] = 0; ram[ad('asrch') + k] = 0;
             ram[ad('lsx') + 2 * k] = H[0] & 255; ram[ad('lsx') + 2 * k + 1] = H[0] >> 8;
             ram[ad('lsy') + 2 * k] = H[1] & 255; ram[ad('lsy') + 2 * k + 1] = H[1] >> 8;
@@ -1449,7 +1450,7 @@ module.exports = {
           R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8; R.mem[q + R.SN] = sn;
           R.mem[q + R.ATTITUDE] = K.AT_ALLIED;
           const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
-          const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]];
+          const ad = dq0Ad(lbl), ram = m.taskRam[h[12 + 2]];
           ram[ad('aorder') + k] = 5;            // (OR_OPEN, hub.h's)
           ram[ad('afetch') + 2 * k] = 0; ram[ad('afetch') + 2 * k + 1] = 0;
           const ux = px + 2 * dx, uy = py + 2 * dy;
@@ -1514,7 +1515,7 @@ module.exports = {
                   R.mem[q + R.SN] = sn;
                   R.mem[q + R.ATTITUDE] = K.AT_HOSTILE;
                   const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
-                  const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]];
+                  const ad = dq0Ad(lbl), ram = m.taskRam[h[12 + 2]];
                   ram[ad('drawn') + k] = 8;
                   ram[ad('lsx') + 2 * k] = px & 255; ram[ad('lsx') + 2 * k + 1] = px >> 8;
                   ram[ad('lsy') + 2 * k] = py & 255; ram[ad('lsy') + 2 * k + 1] = py >> 8;
@@ -2083,7 +2084,7 @@ module.exports = {
             if (c === 13) {
               if (typed === 'search' && ++n === 2 && m.dq0) {
                 const h = m.dq0.bank(0), { L } = m.dq0.layout(), tk = h[12 + 2];
-                const ad = parseInt(/^al ([0-9A-F]+) \._aate$/m.exec(fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'))[1], 16);
+                const ad = dq0Ad(fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'))('aate');
                 const nowU = h[L.now + 2];
                 for (let k = 0; k < L.nactors; k++) {
                   const o = L.actor + k * L.actorSize;
@@ -2262,7 +2263,7 @@ module.exports = {
             if (c === 13 && m.dq0 && m.dq0.bank(0) && /^wait/.test(typed)) {
               const R = dq0Rec(m), h = m.dq0.bank(0), u16 = o => R.mem[o] | R.mem[o + 1] << 8, w16 = (o, v) => { R.mem[o] = v & 255; R.mem[o + 1] = v >> 8; };
               const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
-              const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]];
+              const ad = dq0Ad(lbl), ram = m.taskRam[h[12 + 2]];
               const MANARMS = 28, all = [...Array(224).keys()].map(i => R.at(i)), out = all.filter(o => R.mem[o] && (R.mem[o + R.FLAGS] & 7) === 1);
               if (typed === 'wait 1 minute' && !m.body) {   // (A soldier with a post, dead at its lair's home, the rest away from it)
                 const g = out.filter(o => out.some(p => p !== o && R.mem[p + 25] === R.mem[o + 25] && u16(p + 21) === u16(o + 21)));
