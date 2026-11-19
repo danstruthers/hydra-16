@@ -1726,7 +1726,10 @@ module.exports = {
           const pa = { g, line: 'attack C', n: 1, beside: 0, senseless: 6000 }, pc = { g, line: 'attack C', n: 1, beside: 0, senseless: 6000 };
           const pb = { g, line: 'attack C', n: 1, senseless: 60000 };   // (B out of it, senseless where it is: no fight for the test's words)
           const at0 = { g, line: 'attack C', n: 1, call: (h, L, K, at) => { wary(h, L); pa.k = capk(h, L, at, 0); pb.k = capk(h, L, at, 1); pc.k = capk(h, L, at, 2); pa.beside = (h[L.pcFace] + 6) & 7; pc.beside = (h[L.pcFace] + 2) & 7; if (g === 1) { self.ka = pa.k; self.kc = pc.k; } } };
-          return ['look', 'around', 'look at B', 'talk to C'].map(line => ({ g, line, n: 1, call: wary })).concat([at0, pa, pb, pc]);
+          // (Any other rat sent off as attack A is typed, 2026-11-19: a fourth enlisted as attack C was answered, caught up in
+          // full now, closed in and fought, the character's fight's next blow beside attack A's answer: not this scene)
+          const away = { g, line: 'attack A', n: 1, call: (h, L, K, at) => dq0Alone(m, h, L, K, at, [pa.k, pb.k, pc.k].filter(k => k !== undefined)) };
+          return ['look', 'around', 'look at B', 'talk to C'].map(line => ({ g, line, n: 1, call: wary })).concat([at0, pa, pb, pc, away]);
         };
         const note = (line, n = 1) => ({ g: 1, line, n, call: (h, L, K, at, named) => { wary(h, L); self.dead[line] = [self.ka, self.kc].map(k => k === undefined ? '?' : named(k) ? 'up' : 'gone'); } });
         dq0Poke(m, [...scene(1), ...scene(2), ...scene(3), note('attack A'), note('around', 2), note('quit')]);

@@ -7240,8 +7240,10 @@ unsigned char ui_first (void)
         return 0;                               /* (Not another row's in the minute's own passes: kmore's) */
     }
     kcut |= kfree & 1;
-    return gw_held (&gui, GW_PACE | GW_NOKEYS | GW_LINE);  /* (Each line's own, the parser's seq: GW_CMD real ticks,
-                                                **   the library's one give-way, 2026-11-19; a quarter second before) */
+    return gw_held (&gui, GW_PACE | GW_NOKEYS);  /* (Each line's own: GW_CMD real ticks, the library's one give-way,
+                                                **   2026-11-19; a quarter second before.  A line by its seq, and its keys'
+                                                **   number: a new line's Enter before its seq's posted held too, the
+                                                **   last's hold run out not carried to it) */
 }
 
 /* The world's long jobs (HOUSE.md's holding back: a denizen's things drawn, the traces' journal taken in, the lights'

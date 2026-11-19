@@ -2277,7 +2277,6 @@ void* __fastcall__ hub_call (void* q, unsigned char t);  /* hub_post, then hub_w
 #define GW_PACE         1                       /* (Its flags) the turns pace the hub's pace's (a long wait held as
                                                 **   well), not tpr's 0 */
 #define GW_NOKEYS       2                       /*   a command in hand alone, not a line's keys */
-#define GW_LINE         4                       /*   a line its own by the parser's seq alone */
 #define GW_LOOK         8                       /*   a look one way's rest awaited (way_want) in hand too */
 #define GW_ALL          16                      /*   held while anything's in hand, no limit (the world's time
                                                 **   believed: it runs at the next pass that's free) */

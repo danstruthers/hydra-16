@@ -507,11 +507,11 @@ function dq0Rec(m) {
   return { mem, at: i => 330 + 64 * 17 + 30 * i, FLAGS: 1, SN: 2, ID: 4, X: 8, Y: 10, ATTITUDE: 16, SERVE: 26, CONTACT: 27, ATE: 28, DRANK: 29 };
 }
 
-// Every denizen near but actor keep sent far off, friendly, and not free again for some five minutes: a scene with one foe in it (a dq0Poke's call)
+// Every denizen near but actor keep (or those of a list) sent far off, friendly, and not free again for some five minutes: a scene with one foe in it (a dq0Poke's call)
 function dq0Alone(m, h, L, K, at, keep) {
-  const R = dq0Rec(m), far = 3000 + (h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16);
+  const R = dq0Rec(m), far = 3000 + (h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16), ks = [].concat(keep);
   let n = 0;
-  for (let k = 0; k < L.nactors; k++) if (k !== keep && h[at(k) + L.aName] && h[at(k) + L.aState]) {
+  for (let k = 0; k < L.nactors; k++) if (!ks.includes(k) && h[at(k) + L.aName] && h[at(k) + L.aState]) {
     const o = R.at(h[at(k) + L.aDen]), x = 32706 + (n & 3), y = 32784 + (n++ >> 2);
     h[at(k) + L.aX] = R.mem[o + R.X] = x & 255; h[at(k) + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8;
     h[at(k) + L.aY] = R.mem[o + R.Y] = y & 255; h[at(k) + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8;

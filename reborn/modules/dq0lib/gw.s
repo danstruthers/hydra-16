@@ -9,8 +9,8 @@
 ; flags (hub.h's GW_*).  The hub's header in the window (the caller's hub_map (0)).
 ;   The turns pace (GW_PACE: the hub's pace, a long wait held as well; else its tpr 0, a long wait the turns pace's
 ;   too), or nothing in hand (ui_cmd, and ui_keys unless GW_NOKEYS): 0, the hold over.
-;   A line its own (the parser's request's seq; with GW_LINE only that: else the UI's ui_cmd and ui_keys as well, a
-;   line typed again or its command's answer begun its own hold): held from the first time it's asked, GW_CMD ticks
+;   A line its own (the parser's request's seq, the UI's ui_cmd and its keys' number ui_keys, GW_NOKEYS too: a line
+;   typed again, its command's answer begun, a new line's first key before its seq's posted, each its own hold): held from the first time it's asked, GW_CMD ticks
 ;   while a command's in hand, GW_KEYS while its keys go on; then 0 till the next line.  GW_LOOK: a look one way's
 ;   rest awaited (the hub's way_want) in hand as a command is; GW_ALL: held as long as anything's in hand, no limit
 ;   (the world's time believed: speed6's, 2026-11-19, its pass run at the next that's free).
@@ -86,16 +86,13 @@ gw_held:
             lda         HUB_WINDOW + HUBO_CQ + RQ_SEQ
             cmp         (r0),Y
             bne         @line
-            lda         r1
-            and         #GW_LINE
-            bne         @same
             iny
             lda         r3
             cmp         (r0),Y
             bne         @line
             iny
-            lda         r2
-            cmp         (r0),Y
+            lda         HUB_WINDOW + HUBO_KEYS          ; (The line's keys' own number, GW_NOKEYS too: a new
+            cmp         (r0),Y                          ;   line's first key its own hold, its seq not yet posted)
             beq         @same
 @line:
             ldy         #GS_SQ
@@ -105,7 +102,7 @@ gw_held:
             lda         r3
             sta         (r0),Y
             iny
-            lda         r2
+            lda         HUB_WINDOW + HUBO_KEYS
             sta         (r0),Y
             lda         #0
             sta         (r0)                            ; (GS_ST)
