@@ -17,22 +17,14 @@ const { loadRules } = require('../../sim/tools/commandcompile.js');
 const B = require('../../tools/dq0build.js'), H = B.hub(), C = H.C;  // (The headers' numbers, the build's: ../dq0/hubgen.js)
 const KIND = H.size('kind'), NAME = H.size('kind', 'name'), CAP_WEIGHT = H.off('kind', 'cap_weight');   // (items.h's struct kind)
 
-// A #define's number from a header
-function define(file, name) {
-  const m = new RegExp('#define\\s+' + name + '\\s+(\\d+)').exec(fs.readFileSync(file, 'latin1'));
-  if (!m) throw new Error(file + ': no ' + name);
-  return +m[1];
-}
-
-// The overlays' count the same in things.h (OVBANKS, ovbank[OVBANKS + 4]), bank.s (OVBANKS; _ovbank's room OVBANKS +
-// 4) and dq0w.cfg (OV1 ...): a 22nd overlay with bank.s's table left at 25 overran it (2026-10-31: "Nearly ready" hung)
+// The overlays' count one, the build's (OVLS, dq0w.cfg's OV1 ...: build.js's overlaysCounted): things.h's OVBANKS and
+// bank.s's it, and the world's four banks after them in _ovbank's room and ovbank[] (a 22nd overlay with bank.s's
+// table left at 25 overran it, 2026-10-31: "Nearly ready" hung)
 function checkOverlays(dir) {
-  const hfile = fs.readFileSync(path.join(dir, 'things.h'), 'latin1'), h = define(path.join(dir, 'things.h'), 'OVBANKS');
-  const s = fs.readFileSync(path.join(dir, 'bank.s'), 'latin1'), m = /^OVBANKS\s*=\s*(\d+)/m.exec(s);
-  const ov = (fs.readFileSync(path.join(dir, 'dq0w.cfg'), 'latin1').match(/^\s*OV\d+:/gm) || []).length;
-  if (!m || +m[1] !== h || ov !== h || !/^_ovbank:\s+\.res\s+OVBANKS \+ 4\b/m.test(s) || !/ovbank\[OVBANKS \+ 4\]/.test(hfile))
-    throw new Error('dq0w: the overlays\' count not the same in things.h (' + h + '), bank.s (' + (m ? m[1] : 'none') +
-      ', its _ovbank OVBANKS + 4) and dq0w.cfg (' + ov + ')');
+  const hfile = fs.readFileSync(path.join(dir, 'things.h'), 'latin1'), s = fs.readFileSync(path.join(dir, 'bank.s'), 'latin1');
+  if (!/#define\s+OVBANKS\s+OVLS\b/.test(hfile) || !/^OVBANKS\s*=\s*OVLS\b/m.test(s) || !/^_ovbank:\s+\.res\s+OVBANKS \+ 4\b/m.test(s) ||
+    !/ovbank\[OVBANKS \+ 4\]/.test(hfile))
+    throw new Error('dq0w: the overlays\' count not the build\'s (OVLS) in things.h\'s OVBANKS and bank.s\'s, or _ovbank not OVBANKS + 4');
   // Each overlay but its file's last filled out to its 8K (fill = yes): ld65 writes an unfilled one's bytes only, so
   // every bank after it in its file is read in shifted (2026-11-10: OV28 left unfilled, a 29th .ovl bank after it, and
   // the parts the build moved there ran garbage, the game stalled at its first step)

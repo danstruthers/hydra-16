@@ -23,6 +23,8 @@
 
 unsigned char __fastcall__ said_b (const unsigned char* p);    /* (bank.s's: byte p of overlay 28's bank, the rows') */
 #define RB(p)           said_b (p)
+/* (The rows read only through RB, overlay 28's bank (29's, 30's) put in for each byte by said_b: build.js's
+** partsChecked, bankcheck: banked said_rows) */
 
 /* A text's codes (saidgen.js's SC: the letters as they are, '\n' a new line; the others under SC_END the words most
 ** said, said_dw's) */

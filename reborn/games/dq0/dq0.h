@@ -514,7 +514,8 @@ unsigned char __fastcall__ den_heard (const struct msg* m);   /* (Overlay 23's) 
 
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
-extern unsigned char ovbank[30];               /* (bank.s's OVMAX: overlay 21 the writings' parts, 22 the designators', 23 their
+extern unsigned char ovbank[];                  /* (bank.s's, OVMAX of them: OVLS, the build's count of dq0.cfg's;
+                                                **   overlay 21 the writings' parts, 22 the designators', 23 their
                                                 **   capitals, 2026-11-06; 24 the things' chooser, 2026-11-07; 25 part 27's,
                                                 **   2026-11-10; 26 part 28's; 27 the outcome events' words, said.c, 28 to 30
                                                 **   the phrase table's rows, 2026-11-11 and 2026-11-15) */

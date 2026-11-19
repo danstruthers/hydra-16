@@ -6,7 +6,7 @@
             .export     _ovbank
 
             .include    "zeropage.inc"
-OVL_BANKS   = 7                     ; (The game's library, ../dq0/dq0lib.inc: ovl_load, num)
+OVL_BANKS   = OVLS                  ; (dq0d.cfg's overlays, the build's count) (The game's library, ../dq0/dq0lib.inc: ovl_load, num)
 OVL_DOT     = 0
 .define     OVL_FILE "/dq0d.ovl"
 RP_X        = 1                     ; (The record store's calls, ../dq0/rp.h's rp_x)
@@ -23,7 +23,7 @@ ova:        .res        1           ; (.A and .X kept through a stub)
 ovx:        .res        1
 
             .bss
-_ovbank:    .res        7           ; The parts' images' banks (dq0d.cfg's OV1 ... OV7)
+_ovbank:    .res        OVLS        ; The parts' images' banks (dq0d.cfg's OV1 ... OV7)
 
             .include    "../dq0/swap.inc"
 

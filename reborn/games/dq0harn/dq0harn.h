@@ -149,8 +149,6 @@ void __fastcall__ sheet_get (unsigned char n);  /* Sheet n into bs */
 void __fastcall__ sheet_put (unsigned char n);  /*   and back */
 
 /* sheet.c (overlay 1) */
-#define OVLS    8                               /* (The 4th and 5th: the swapped parts' images; the 6th and 7th heal.c's;
-                                                **   the 7th the missiles' too, missile.c's, slice 4.7's) */
 extern char hurt[200];                          /* The last harm's words */
 void sheet (void);                              /* The sheet, into the reply */
 void brief (void);                              /*   its short lines */
@@ -348,6 +346,6 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[OVLS];
+extern unsigned char ovbank[];                  /* (bank.s's, OVMAX of them: OVLS, the build's count of dq0harn.cfg's) */
 
 #endif

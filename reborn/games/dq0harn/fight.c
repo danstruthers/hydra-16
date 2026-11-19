@@ -41,7 +41,8 @@
 #include "../dq0/rs.h"
 #include "dq0harn.h"
 
-/* ---- The bestiary (beasts.c's, in overlay 5: dq0harn.h's struct bkind), an entry at a time copied out (bk) */
+/* ---- The bestiary (beasts.c's, in overlay 5: dq0harn.h's struct bkind), an entry at a time copied out (bk) by bread,
+** its bank put in (build.js's partsChecked, bankcheck: banked bestiary) */
 
 static struct bkind bk;
 

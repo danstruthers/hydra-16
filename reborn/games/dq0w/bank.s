@@ -29,7 +29,7 @@ SWDEPTH     = 12                    ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
                                     ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
-OVBANKS     = 34                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
+OVBANKS     = OVLS                  ; The overlays (dq0w.cfg's OV1 ...: the build's count, OVLS; things.h's OVBANKS)
 
             .zeropage
 ova:        .res        1           ; (.A and .X kept through a stub)

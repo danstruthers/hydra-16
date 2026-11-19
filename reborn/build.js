@@ -202,15 +202,35 @@ function bankProgram(dir, objdir, defines) {
   return out;
 }
 
-// A game's swapped parts (its own NAME.cfg's SWn segments: code in the main RAM's area only while it's called,
-// through its stub; games/dq0/swap.inc) checked in its sources: the compiler's output (objdir's .s of each .c) and
-// its own assembly (the folder's .s, and what they .include of its own: ../dq0w/at.s ...): no reference to a
-// function or data of one from outside it (the main code's, an overlay's, another part's), which would find another
-// part's there; a label's part the segment it's defined in, the C's and the assembly's together (a C function in
-// the main RAM calling a part's assembly, cast.s's, or the assembly a part's C).  The stubs (swap.inc's SWFN: the
-// macro builds the part's name) and what's in a macro's body aren't references.  Throws, with each
-function partsChecked(sources, objdir) {
+// A game's swapped parts and overlays checked in its sources: the compiler's output (objdir's .s of each .c) and its
+// own assembly (the folder's .s, and what they .include of its own: ../dq0w/at.s ...); a label's place the segment
+// it's defined in, the C's and the assembly's together (a C function in the main RAM calling a part's assembly,
+// cast.s's, or the assembly a part's C).  The stubs (swap.inc's SWFN: the macro builds the part's name) and what's in
+// a macro's body aren't references.  Throws, with each:
+// - a part (its config's SWn segments: code in the main RAM's area only while it's called, through its stub;
+//   games/dq0/swap.inc): no reference to a function or data of one from outside it (the main code's, an overlay's,
+//   another part's), which would find another part's there;
+// - an overlay (the config's OVn in the bank window, OVnT the rest of OVn's bank; not the world's KIN and CAT, the
+//   hub's banks, which their callers put in first: cat_map): no reference to its function, literal, table or data
+//   from a part's or another overlay's code or data (2026-11-19: fight.c's literals, cc65's all in the read-only data named at the file's
+//   end, overlay 2's, copied by overlay 10's code with its own bank in the window).  The main RAM's code may name
+//   them (bread, the stubs' ...).  The sanctioned way, a read through a call that maps the bank (said.c's RB, bank.s's
+//   said_b; hub_mem), is a source's "bankcheck: banked NAME ..." (the label's name, C's without its _)
+function partsChecked(sources, objdir, cfg) {
   const part = seg => (/^SW\d+/.exec(seg) || [])[0] || '';
+  const areas = new Map(), runs = new Map(), block = k => (cfg.split(new RegExp('^' + k + '\\s*\\{', 'm'))[1] || '').split('}')[0];
+  for (const l of block('MEMORY').split(/\r?\n/)) {          // (Each area of the window: its bank's name)
+    const m = /^\s*(\w+)\s*:[^;]*\bstart\s*=\s*\$([0-9A-Fa-f]+)/.exec(l.replace(/#.*/, ''));
+    if (m && /^OV\d+/.test(m[1]) && parseInt(m[2], 16) >= 0x8000 && parseInt(m[2], 16) < 0xA000) areas.set(m[1], m[1].replace(/^(OV\d+)\D+$/, '$1'));
+  }
+  for (const l of block('SEGMENTS').split(/\r?\n/)) {
+    const m = /^\s*(\w+)\s*:([^;]*);/.exec(l.replace(/#.*/, ''));
+    if (m) runs.set(m[1], (/\brun\s*=\s*(\w+)/.exec(m[2]) || /\bload\s*=\s*(\w+)/.exec(m[2]) || [])[1]);
+  }
+  const bank = seg => part(seg) || areas.get(runs.get(seg)) || '';   // (A part's, a window area's, or '': the main RAM's)
+  const banked = new Set();
+  for (const f of sources) for (const [, l] of fs.readFileSync(f, 'latin1').matchAll(/bankcheck:\s*banked\b([\w ]*)/g))
+    l.trim().split(/\s+/).filter(Boolean).forEach(n => banked.add(n));
   const read = (file, seen) => {                        // (An assembly source's lines, its own .includes in place)
     if (seen.has(file)) return [];
     seen.add(file);
@@ -258,10 +278,13 @@ function partsChecked(sources, objdir) {
       for (const [, n] of body.matchAll(asm ? /\b([A-Za-z_]\w*)\b/g : /\b(_\w+|[LMS][0-9A-F]{4})\b/g)) {
         const own = procOf[i], s = own && own.has(n) ? own.get(n) : defs.has(n) ? defs.get(n) : global.get(n), p = part(s || '');
         if (p && p !== part(seg)) faults.push(path.basename(f) + ': ' + n + ' (' + s + '\'s) used from ' + seg + ' (' + where + ')');
+        else if (!p && s && bank(s) && bank(seg) && bank(s) !== bank(seg) && !banked.has(n.replace(/^_/, '')))
+          faults.push(path.basename(f) + ': ' + n + ' (' + s + '\'s, ' + bank(s) + ') used from ' + seg + ' (' + bank(seg) + ', ' + where + ')');
       }
     });
   }
-  if (faults.length) throw new Error('a swapped part\'s code or data reached from outside it, not through its stub:\n  ' + faults.join('\n  '));
+  if (faults.length) throw new Error('a swapped part\'s code or data reached from outside it, not through its stub, or an overlay\'s from ' +
+    'another bank\'s code or data (build.js\'s partsChecked):\n  ' + faults.join('\n  '));
 }
 
 // The games' room: each C program of games/ (its map, obj/games/NAME/NAME.map, and its link, its own NAME.cfg or
@@ -339,20 +362,44 @@ function headroom(names) {
   return { text, faults };
 }
 
+// A game's task's overlays' count, one source: its config's (cfg) OVn areas (OV5T, the rest of OV5's bank, not one),
+// given its C and its assembly as OVLS (critique 6.2: the count once kept by hand in three files, 2026-11-19; a 22nd
+// overlay with bank.s's table left short overran it, 2026-10-31).  Throws at a count its sources keep by hand: an
+// assembly's OVMAX, OVL_BANKS or OVBANKS a number, or its _ovbank's room; the C's ovbank[] a number, or OVLS,
+// OVBANKS or ACCT_NOV #defined as one.  OUT: the compilers' arguments (-D OVLS=n)
+function overlaysCounted(dir, cfg) {
+  const mem = (fs.readFileSync(cfg, 'latin1').split(/^MEMORY\s*\{/m)[1] || '').split('}')[0];
+  const n = (mem.replace(/#.*/g, '').match(/^\s*OV\d+\s*:/gm) || []).length, faults = [];
+  for (const f of fs.readdirSync(dir).filter(f => /\.(s|inc|c|h)$/.test(f))) {
+    fs.readFileSync(path.join(dir, f), 'latin1').split(/\r?\n/).forEach((l, i) => {
+      const s = /\.(s|inc)$/.test(f) ? l.replace(/;.*/, '') : l.replace(/\/\*.*?(\*\/|$)/g, '').replace(/\/\/.*/, '');
+      if (/\.(s|inc)$/.test(f) ? /^\s*(OVMAX|OVL_BANKS|OVBANKS)\s*=\s*\d|^_ovbank:\s*\.res\s+\d/.test(s) :
+        /\bovbank\s*\[\s*\d+\s*\]\s*;/.test(s) && /\bextern\b/.test(s) || /^\s*#\s*define\s+(OVLS|OVBANKS|ACCT_NOV)\s+\d/.test(s))
+        faults.push(f + ' line ' + (i + 1) + ': ' + l.trim());
+    });
+  }
+  if (faults.length) throw new Error(path.basename(dir) + ': its overlays\' count kept by hand (its config\'s ' + n + ' OVn, OVLS: build.js\'s ' +
+    'overlaysCounted):\n  ' + faults.join('\n  '));
+  return ['-D', 'OVLS=' + n];
+}
+
 // A C program: dir's .c and .s files, linked with the C library and sdk/c/hydra.cfg into out (a RAM program; its
 // map and labels in objdir); or with the folder's own NAME.cfg, if it has one (a game's, with its overlays: files
-// beside out that the cfg names).  OUT: its image
-function cprog(dir, objdir, out, extra) {
+// beside out that the cfg names; its overlays' count, OVLS, given its C and its assembly: overlaysCounted).  OUT: its
+// image
+function cprog(dir, objdir, out, extra = []) {
   const name = path.basename(out).replace(/\.hyx$/, ''), parts = path.join(dir, 'parts.txt');
   let own = path.join(dir, path.basename(dir) + '.cfg'), objs;
+  const ovls = fs.existsSync(own) ? overlaysCounted(dir, own) : [], cc = [...extra, ...ovls];
   if (fs.existsSync(parts)) {                           // (A game's task whose swapped parts the build makes:
-    objs = require('./tools/dq0build.js').swappedParts(dir, objdir, extra, { cc65: args => run(CC65, args),   //   tools/
-      cc65all: list => runAll(CC65, list), od65, compileC, csources, flags: cflags() });                       //   dq0build.js's)
+    objs = require('./tools/dq0build.js').swappedParts(dir, objdir, cc, { cc65: args => run(CC65, args),   //   tools/
+      cc65all: list => runAll(CC65, list), od65, csources, flags: cflags(),                               //   dq0build.js's)
+      compileC: (files, od, ex, asEx = []) => compileC(files, od, ex, [...asEx, ...ovls]) });
     own = path.join(objdir, path.basename(dir) + '.cfg');
   } else {
-    objs = compileC(csources(dir), objdir, extra);
+    objs = compileC(csources(dir), objdir, cc, ovls);
   }
-  if (fs.existsSync(own)) partsChecked(csources(dir), objdir);
+  if (fs.existsSync(own)) partsChecked(csources(dir), objdir, fs.readFileSync(own, 'latin1'));
   run(LD65, ['-C', fs.existsSync(own) ? own : at('sdk', 'c', 'hydra.cfg'), '-o', out, '-m', path.join(objdir, name + '.map'), '-Ln', path.join(objdir, name + '.lbl'),
     ...objs, at('obj', 'sdk', 'c', 'hydra.lib')]);
   exportsOf.set(name, writeExports(path.join(objdir, name + '.map'), out.replace(/\.hyx$/, '') + '.exp'));

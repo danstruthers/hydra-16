@@ -43,6 +43,9 @@
 ** doesn't undo a better.  Its exit status 0, or 1 (its fault said).
 */
 
+#if OVLS != 1                                   /* (One overlay, the link's OV1 (the build's count, OVLS): its overlay read into its bank) */
+#error "the link has more overlays than the one this reads in"
+#endif
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>

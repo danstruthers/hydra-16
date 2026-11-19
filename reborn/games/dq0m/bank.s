@@ -18,7 +18,7 @@ RP_X        = 1                     ; (The record store's calls, ../dq0/rp.h's r
             .include    "../dq0/dq0lib.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 10                    ; dq0m.cfg's overlays (the 6th the swapped parts' images, the 7th uses.c, the 8th the great caverns, the 9th sky.c, the 10th the chunks made ahead)
+OVMAX       = OVLS                  ; dq0m.cfg's overlays, the build's count (the 6th the swapped parts' images, the 7th uses.c, the 8th the great caverns, the 9th sky.c, the 10th the chunks made ahead)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 DEPTH       = 16                    ; Overlay calls in calls, at most
 

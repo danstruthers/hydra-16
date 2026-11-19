@@ -17,7 +17,7 @@ OVL_DOT     = 0
             .include    "../dq0/dq0lib.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 10                    ; dq0harn.cfg's overlays (the 4th and 5th the swapped parts' images; the 8th afflict.c's; the 9th grapple.c's; the 10th a strike's and a fall's)
+OVMAX       = OVLS                  ; dq0harn.cfg's overlays, the build's count (the 4th and 5th the swapped parts' images; the 8th afflict.c's; the 9th grapple.c's; the 10th a strike's and a fall's)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 DEPTH       = 16                    ; Overlay calls in calls, at most
 

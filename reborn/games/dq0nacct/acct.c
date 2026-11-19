@@ -4,6 +4,6 @@
 */
 
 #define ACCT_NAME       "dq0nacct"
-#define ACCT_NOV        2
+#define ACCT_NOV        OVLS                    /* (dq0nacct.cfg's overlays, the build's count) */
 
 #include "../dq0/acct/acct.c"

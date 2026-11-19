@@ -35,6 +35,9 @@
 ** fault said).
 */
 
+#if OVLS != 1                                   /* (One overlay, the link's OV1 (the build's count, OVLS): its overlay read into the third of its banks) */
+#error "the link has more overlays than the one this reads in"
+#endif
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>

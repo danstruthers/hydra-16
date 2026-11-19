@@ -165,7 +165,7 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[10];
+extern unsigned char ovbank[];                  /* (bank.s's, OVMAX of them: OVLS, the build's count of dq0m.cfg's) */
 
 /* make.c: a hub's bank reached from an overlay (its bytes copied to the main RAM, or from it, or set) */
 void __fastcall__ hub_get (unsigned char bank, const void* from, void* to, unsigned n);

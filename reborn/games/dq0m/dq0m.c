@@ -22,11 +22,10 @@
 
 struct stratum strata[MAXSTRATA];               /* (This task's copy of the hub's) */
 const char* libpath;                            /* (The game's lib folder: its bank programs', stratagen's) */
-#define OVLS    10                              /* Its overlays: built.c, pass.c, caves.c, plan.c, fixtures.c; the
+/* Its overlays (OVLS, the build's, dq0m.cfg's count): built.c, pass.c, caves.c, plan.c, fixtures.c; the
                                                 **   swapped parts' images (../dq0/swap.inc: map.c's, changes.c's);
                                                 **   uses.c; the great caverns (caves.c's cavern); what shows the sky
-                                                **   (sky.c); the chunks made ahead (ahead.c: bank.s's OVMAX,
-                                                **   dq0lib.inc's OVL_BANKS) */
+                                                **   (sky.c); the chunks made ahead (ahead.c) */
 
 /* The overlays: dir/dq0m.ovl, an 8K bank each (dq0m.cfg's OV1 ...; the file cut after the last one used, each bank's
 ** bank packed: make.js, ../dq0/ovlpack.js), read and unpacked in place into banks of its own by the unpack library,

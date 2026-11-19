@@ -150,7 +150,7 @@ static unsigned char aloot[NACTORS];            /* (Each one's next look for a t
 #define NOW_T           (((unsigned char*) &now)[1])    /* (The clock's 25.6-second ticks, a byte: now >> 8's) */
 static unsigned char door_by (void);            /* (Below) */
 static unsigned char nonear;                    /* (None left near to place: nearby's, till the character moves) */
-extern unsigned char ovbank[7];
+extern unsigned char ovbank[];                  /* (bank.s's: OVLS, the build's count of dq0d.cfg's) */
 static unsigned char __fastcall__ wades (unsigned char w, unsigned char sn, unsigned x, unsigned y);  /* (Below) */
 
 /* ---- The kinds: the data file's (make.js's, from kinds.txt: the game's bestiary), in a bank of their own */
