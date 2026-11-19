@@ -878,7 +878,13 @@ function dq0Timer(m) {
           continue;
         }
       }
-      if (rev || out[i] < ' ') continue;
+      if (rev) continue;
+      if (out[i] === '\n' && story && story[story.length - 1] !== ' ') {   // (A line's end a space: a news sentence and
+        story += ' ';                                                      //   the answer's own after it on the next line
+        idx.push(i);                                                       //   told apart, "left.\nYou lift", 2026-11-18)
+        continue;
+      }
+      if (out[i] < ' ') continue;
       story += out[i];
       idx.push(i);
     }

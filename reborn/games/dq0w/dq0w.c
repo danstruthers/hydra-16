@@ -7519,6 +7519,12 @@ int main (int argc, char* argv[])
                 see (0);
             } else if (!took) {
                 HUB->pc_task.kind = LT_NONE;    /* (Its long task over) */
+                if (HUB->now >= body_due) {
+                    bled ();                    /* (Its body's time up to now first, the lights' minute's else: a
+                                                **   sleep's last wants, "You're getting hungry.", told before it's
+                                                **   free, not after its prompt, 2026-11-18) */
+                    hub_map (0);
+                }
                 if (!HUB->tpr && !HUB->paused && !HUB->hold && HUB->eq_head != go_eq) {
                     turn ();                    /* (The turns pace: the denizens' turn at what's told first, as its
                                                 **   line may come at once: a line typed fast finding them where a slow
