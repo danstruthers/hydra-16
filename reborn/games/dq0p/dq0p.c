@@ -112,8 +112,13 @@ static void look (void)
     sens_pc ();                                 /* (Its senses kept: part 7's, the lamps' after it) */
     things_lamps (sn, x, y);                    /* (The lit things lying about: a torch put down) */
     view (sn, x, y, face, light, sight, dark);
-    kept (v_way ? 1 : 3);                       /* (What it keeps of it: each chunk's memory, part 4's; a look one way's
-                                                **   after its reply, its words the sooner, 2026-11-18: kept_owed) */
+    if (!v_way) {
+        kept (3);                               /* (What it keeps of it: each chunk's memory, part 4's, and a passage's
+                                                **   ways' runs for its words; a look one way's memory after its
+                                                **   reply, its words the sooner, 2026-11-18: kept_owed; its runs
+                                                **   none, a glance's words not its own, part 4 not copied in for
+                                                **   them: 140,000 cycles of the look across's pause, 2026-11-19) */
+    }
     kept_owed = v_way;
     glows (sn, x, y, face, range, own);         /* (Its eyes adapted, the lights it sees far off: eyes.c's) */
     give_way ();
