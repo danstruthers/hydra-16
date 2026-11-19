@@ -7503,8 +7503,8 @@ int main (int argc, char* argv[])
         }
         if ((was_busy || (act.fight & 1) || HUB->pc_out) && !move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
             HUB->pc_out = 0;                    /* (Come round, if it was out: told as it's free, E_READY) */
-            if (pc_waited) {
-                pc_waited = 0;
+            if (pc_waited & 1) {
+                pc_waited = 2;                  /* (2: its body's time owed as it's free, below) */
                 tsense ();                      /* (Its time believed: woken, part 76's, before it's free) */
                 ask_look (LK_EYES);             /* (A wait's end: its eyes, as time's gone, the senses') */
             }
@@ -7519,12 +7519,13 @@ int main (int argc, char* argv[])
                 see (0);
             } else if (!took) {
                 HUB->pc_task.kind = LT_NONE;    /* (Its long task over) */
-                if (bleeds || (HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) || HUB->pcsum.health != H_FINE ||
-                    HUB->now >= body_due) {
-                    bled ();                    /* (Its body's time up to now first, as the lights' minute would
-                                                **   (burn_job's test): a sleep's last wants, "You're getting
-                                                **   hungry.", told before it's free, not after its prompt, 2026-11-18;
-                                                **   hurt, the referee's next watch no matter, 2026-11-18, fw4) */
+                if (HUB->now >= body_due || ((pc_waited & 2) && (bleeds || (HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) ||
+                    HUB->pcsum.health != H_FINE))) {
+                    bled ();                    /* (Its body's time up to now first, the lights' minute's else: a
+                                                **   sleep's last wants, "You're getting hungry.", told before it's
+                                                **   free, not after its prompt, 2026-11-18; a wait's or a sleep's
+                                                **   end hurt as the lights' minute would, the watch no matter (fw4:
+                                                **   not a fight's steps, dq0handy's reach)) */
                     hub_map (0);
                 }
                 if (!HUB->tpr && !HUB->paused && !HUB->hold && HUB->eq_head != go_eq) {
@@ -7544,6 +7545,7 @@ int main (int argc, char* argv[])
                 took = 0;
             }
             was_busy = took == 2;
+            pc_waited &= 1;                     /* (A wait's end owed this round only: a knockout's 1 kept) */
         }
         if (pc_tired) {                         /* (Tired a level more by strenuous work: asked, soft, as it goes on,
                                                 **   "You're tiring.  Keep digging?", part 23's; a battering's bare
