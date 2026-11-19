@@ -76,6 +76,7 @@ void begin (void);                              /* Part 3 */
 void __fastcall__ grow_below (unsigned char n);
 void __fastcall__ go (unsigned char h);         /* Part 9 */
 extern unsigned char out_told;                  /* (s_go's early set-off: intent's 2, 1 told) */
+void __fastcall__ out_early (unsigned char h);  /* Part 110 */
 void __fastcall__ out_tell (unsigned char h);
 void __fastcall__ go_to (unsigned x, unsigned y);
 void __fastcall__ step_to (unsigned char h, unsigned char n, unsigned char keep);
@@ -1658,27 +1659,14 @@ void __fastcall__ s_go (unsigned char h)
     dens_where ();
     here ();
     paced ();
-    r = room_of (sn_, mx, my);
-    if ((k = out_told) == 2) {
-        out_told = 0;                           /* (A step's go, its words told already, 1: kept) */
-    }
-    if (k == 2 && !tgx && step8 (sn_, mx, my, h)) {
-        /* (A way word alone, intent's (2), its first square walkable: its first words before its way's worked out,
-        ** where the UI can't say them at once (the dark, a light at its feet): the walk across a room and what's felt
-        ** ahead were three parts swapped in and out first, the words some 775,000 cycles from Enter (a felt walk's 1.1M
-        ** to 1.5M); under 300,000 now, fw5.  Not felt for, its set-off words; felt for, the felt walk's own, "You
-        ** feel your way north.", dark_way's not again (3): the way it sets out, as the UI's at once in the light, not
-        ** the way it'll face at its end, a passage's bend) */
-        if (!feel_) {
-            out_tell (h | 16);
-            out_told = 1;
-        } else if (lim_ == 250) {
-            event (E_BEAT, 0, WB_FEEL | (unsigned) (h | rush_ << 4) << 8);
-            out_told = 3;
+    if (out_told == 2) {
+        out_told = 0;
+        if (!tgx) {
+            out_early (h | 16);                 /* (A way word alone, intent's: its first words now, part 110's) */
         }
     }
     npath = 0;
-    if (r != 0xFF) {
+    if ((r = room_of (sn_, mx, my)) != 0xFF) {
         if (!tgx) {
             across (h, r);                      /* (A way word alone: straight on) */
             return;
@@ -6348,6 +6336,31 @@ unsigned char pc_waited;                        /* (A wait's end, its eyes and t
 ** and the quit part 53's (intent_few: slice 4.2's, the main RAM's room); the rest part 37's (intent_more) */
 #pragma code-name (push, "SW110CODE")
 #pragma rodata-name (push, "SW110RODATA")
+/* A way word's walk or step (h: its heading, | 16 a walk, | 8 a step; intent's: out_told 2), its pace known and the
+** character's square (here, paced): its first words before its way's worked out, if its first square's walkable and no
+** denizen's on it, where the UI can't say them at once (the dark, a light at its feet; in the light the UI's said them, the
+** world's not again).  Its way worked out first (go's), the walk across a room and what's felt ahead were three parts
+** swapped in and out, the words some 775,000 cycles from Enter (a felt walk's 1.1M to 1.5M); about 260,000 now (fw5).  A
+** walk not felt for, or a step: its set-off words (out_told 1); a walk felt for, the felt walk's own, "You feel your way
+** north." (dark_way's not again: 3), the way it sets out, as the UI's at once in the light, not the way it'll face at its
+** end, a passage's bend.  Part 110's: part 9's room, 2026-11-19 */
+void __fastcall__ s_out_early (unsigned char h)
+{
+    unsigned char d = h & 7;
+
+    out_told = 0;
+    if (!step8 (sn_, mx, my, d) || den_on (mx + head_x[d], my + head_y[d])) {
+        return;
+    }
+    if ((h & 8) || !feel_) {
+        out_tell (h);
+        out_told = 1;
+    } else if (lim_ == 250) {
+        event (E_BEAT, 0, WB_FEEL | (unsigned) (d | rush_ << 4) << 8);
+        out_told = 3;
+    }
+}
+
 /* A small move (I_STEP: DUNGEON.md's; part 47's since 2026-11-03, a small part's copies for part 9's; its own,
 ** part 110, since 2026-11-17: the things' search in 47 copied in twice a step, across's call between, 18,000 cycles
 ** each, a step's first words behind them): n squares on heading h (the UI's: by the words, else by the pace), its facing
@@ -6361,11 +6374,8 @@ void __fastcall__ s_step_to (unsigned char h, unsigned char n, unsigned char kee
     dens_where ();
     here ();
     paced ();
-    if (out_told == 2 && (out_told = 0, step8 (sn_, mx, my, h))) {
-        out_tell (h | 8);                       /* (Its first words before its way's worked out, s_go's walk's way,
-                                                **   felt for or not (a step's words its own, the dark's too): intent's
-                                                **   2, fw5) */
-        out_told = 1;
+    if (out_told == 2) {
+        out_early (h | 8);                      /* (Its first words now, intent's) */
     }
     npath = 0;
     lim_ = n;
