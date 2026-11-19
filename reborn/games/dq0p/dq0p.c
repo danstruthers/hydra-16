@@ -373,6 +373,7 @@ static void look_rest (void)
         v_nom = 2;
         look ();
         hub_map (SIGHT_BANK);
+        WAY_SEEN->more |= WM_RESTED;            /* (The rest's: the UI's lead-in, "Peering on, ...") */
         if (memcmp (&WAY_SEEN->nbeyond, &WAY_NEAR->nbeyond, offsetof (struct wayseen, id) - 1)) {
             wch = LC_FAR;
         }

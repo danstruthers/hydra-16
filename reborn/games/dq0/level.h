@@ -188,6 +188,8 @@ enum { WB_DARK, WB_PASSAGE, WB_ROOM, WB_SHUT, WB_SKY };
                                                 **   made it, the look's rest (LK_REST's, after the prompt: the user's,
                                                 **   2026-11-18, "a look no longer waits whole on a grow"); its openings
                                                 **   whose way on goes there held, WB_HOLD, told "so far") */
+#define WM_RESTED       32                      /* (Its rest's record, LK_REST's: told after the prompt, "Peering on, ...",
+                                                **   the user's, 2026-11-19, L8) */
 enum { BN_PASSAGE, BN_DOORWAY, BN_OPEN, BN_BROKEN, BN_DOOR, BN_PORTCULLIS, BN_WINDOW, BN_SLIT, BN_GRILLE, BN_PEEP };
                                                 /* (BN_GRILLE, BN_PEEP: a closed door's little window, its spy-hole,
                                                 **   the eye at it: dq0p's view.c, way.c; the user's, 2026-11-14) */

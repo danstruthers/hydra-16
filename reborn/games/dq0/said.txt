@@ -912,7 +912,8 @@ SA.lid_open         +"The lid is open: nothing would stay on it."
 # left, 1 ahead, 2 ahead to the right; pl its plural ("s", "es") or a choice; far a passage's or a room's squares; room
 # a room's kind, or a closed one's state: closed, barred, locked, they're closed, its shutters, theirs).  Each row one
 # of way.c's say ()s before (focus_words, overlay 13: narration as data's rest, 2026-11-15), so the words wrap where
-# they did.  "So far": an opening's way on to ground not made yet, the look's rest to come (the user's, 2026-11-18)
+# they did.  "So far": an opening's way on to ground not made yet, the look's rest to come (the user's, 2026-11-18);
+# "Peering on, ...": the rest, told after the prompt, its first sentence (the user's, 2026-11-19, L8)
 
 @ahnoun     "{k?passage|doorway|open door|broken door|door|portcullis|window|arrow slit}"
 @ahrel      "{rel?ahead to your left|ahead|ahead to your right}"
@@ -934,6 +935,9 @@ AHEAD.end           +"."
 AHEAD.glow          +" A {k?light shows|faint glow shows} far off {@ahrel}."
 AHEAD.nothing       +" You see nothing more that way."
 AHEAD.sofar         +" so far"
+AHEAD.onthrough     +" Peering on, {k?down|through} the {@ahnoun}{pl?|s|es} {@ahrel} you see "
+AHEAD.onglow        +" Peering on, a {k?light shows|faint glow shows} far off {@ahrel}."
+AHEAD.onmore        +" Peering on, you see more."
 
 # ---- The look's lists (UK_LIST: lf, LF_*, a sentence with a list in it; UK_LI: li, LI_*, each thing in the list, and the
 # words between them: the user's, 2026-11-16).  {list} the UI's list (said_li: the frame's a entries, struct li each,

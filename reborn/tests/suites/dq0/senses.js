@@ -7,7 +7,7 @@ const path = require('path');
 const { typed } = require('../../lib/common.js');
 const {
   CHUNK_SIZE, CK_TILE, CK_ROOM, caveReport, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks, stratumRec,
-  dq0StatusRows, dq0Story, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried,
+  dq0StatusRows, dq0Story, dq0Prose, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried,
   dq0Here, DQ0_I, passings, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0OnWords, dq0Timer, dq0PortalAt, dq0Waits, dq0Held,
   DQ0_PLAYED, dq0Asks
 } = require('../../lib/dq0.js');
@@ -149,9 +149,10 @@ function dq0LookFarTest() {
           }
         }
       };
-      // (As it listens; and as the look at once is typed, the chunk past the edge not made ahead either, nor being made)
+      // (As it listens; and as the look at once is typed, the chunk past the edge not made ahead either, nor being made,
+      // its light poked to 12 squares: the passage lit past the edge, its rest's words "Peering on, ...", L8's)
       dq0Poke(m, games.flatMap((x, g) => [{ g: g + 1, line: 'listen', n: 1, call: (h, L) => place(h, L, put, g, new Set()) },
-        { g: g + 1, line: 'look ahead', n: 4, call: (h, L) => place(h, L, put2, g, new Set()) }]));
+        { g: g + 1, line: 'look ahead', n: 4, call: (h, L) => { place(h, L, put2, g, new Set()); h[L.pcLight] = 12; } }]));
     },
     check(m, out) {
       const f = [], notes = this.notes = [], E = this.timer.enters, within = (a, b) => this.made.filter(c => c >= a && c < b).length, T = dq0Turns(m);
@@ -160,6 +161,11 @@ function dq0LookFarTest() {
       const sofar = (m.out.match(/feet of it so far\./g) || []).length;
       notes.push('the way on told "so far" ' + sofar + ' times');
       if (sofar < games.length) f.push('the look across\'s way on to a chunk not made not told "so far" in each typing (' + sofar + ')');
+      // (The look at once's rest, its light poked further, told after the prompt with its lead-in, "Peering on, down the
+      // passage ...": the user's, 2026-11-19, L8; never its sentence without it)
+      const p = dq0Prose(out), on = (p.match(/> Peering on, (down|through) /g) || []).length, bare = (p.match(/> Down the passage ahead you see \d+ feet of it\./g) || []).length;
+      notes.push('the rest told with its lead-in ' + on + ' times, without it ' + bare);
+      if (!on || bare) f.push('the look\'s rest: with its lead-in ' + on + ' times, without it ' + bare);
       // (Each typing's answers, by its game's place among those typed; its chunks made by the Enters' cycles, each command's
       // the next typed with its words, the game's quit after its last)
       const runs = games.map((x, g) => {
@@ -499,7 +505,7 @@ module.exports = {
         dq0Poke(m, [{ g: 3, line: 'creep', n: 1, call: none }, { g: 3, line: 'step forward', n: 1, call: none }, { g: 3, line: 'step forward', n: 2, call: none }]);
       },
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), hid = t => t && t.after ? t.after.pc.hid : -1, pos = t => t.after ? t.after.pc.pos : -1, now = t => t.after ? t.after.now : 0;
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), hid = t => t && t.after ? t.after.pc.hid : -1, pos = t => t.after ? t.after.pc.pos : -1, now = t => t.after ? t.after.now : 0;
         const h0 = T.of('hide');
         if (hid(h0) !== 0) f.push('hidden with a light on it');
         if (!/Not with a light on you/.test(s)) f.push('with a light: not told why');
@@ -576,7 +582,7 @@ module.exports = {
         dq0Poke(m, [{ g: 1, line: 'wait 1 minute', n: 1, call: put(0, 2) }, ...[1, 2, 3, 4, 5, 6].map(n => ({ g: 2, line: 'wait', n, call: put(0, n & 1 ? 1 : 2) })), ...[0, 1, 2, 3, 4, 5].map(k => ({ g: 3, line: 'drop the cask', n: 1, k, set: { attitude: 2 } })), { g: 3, line: 'attack', n: 1, call: put(0, 1, { attitude: 0 }) }, { g: 4, line: 'wait 1 minute', n: 1, call: put(0, 1, { state: 3 }) }]);
       },
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), STEALTH = 4, RS_TEST = m.dq0.layout().K.RS_TEST, RS_ATTACK = m.dq0.layout().K.RS_ATTACK;
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), STEALTH = 4, RS_TEST = m.dq0.layout().K.RS_TEST, RS_ATTACK = m.dq0.layout().K.RS_ATTACK;
         const hid = t => t && t.after ? t.after.pc.hid : -1, gs = T.filter(t => /^dq0 -p t/.test(t.line));
         const from = n => gs[n] ? gs[n].k : 0, tests = (a, b) => T.filter(t => t.k >= a && t.k < b).flatMap(t => dq0Rep(t, 'dslot', { kind: RS_TEST, a: STEALTH, actor: 0 }));
         const t0 = tests(from(0), from(1)), t1 = tests(from(1), from(2));
@@ -680,7 +686,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), a = s.indexOf('> sleep for an hour'), b = s.indexOf('> rest for an hour');
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), a = s.indexOf('> sleep for an hour'), b = s.indexOf('> rest for an hour');
         const sleep = s.slice(a, b), rest = s.slice(b);
         this.notes = [JSON.stringify(sleep.slice(0, 300)), JSON.stringify(rest.slice(0, 300))];
         if (/Keep sleeping\?/.test(sleep)) f.push('asleep, a denizen seen: asked');
@@ -742,7 +748,7 @@ module.exports = {
         machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', ...LINES, 'echo $status']) },
         expect: ['% echo $status'],
         check(m, out) {
-          const f = [], o = dq0Story(out), said = (l, want, from = 0) => {
+          const f = [], o = dq0Prose(out), said = (l, want, from = 0) => {
             const i = o.indexOf('> ' + l + ' ', from), e = o.indexOf('> ' + LINES[LINES.indexOf(l) + 1] + ' ', i + 1), s = o.slice(i, e < 0 ? undefined : e);
             inTurn(s, want, f, l + ': ');
             if (s.split(want[0]).length !== 2) f.push(l + ': "' + want[0] + '" told ' + (s.split(want[0]).length - 1) + ' times: ' + s);
@@ -818,7 +824,7 @@ module.exports = {
           if (t.after && t.after.sight && t.after.sight.dens.length) f.push(t.line + ': a rat seen in the dark');
           dq0Never(f, t, 'E_VIEW', { why: 'V_STIR' }, t.line + ': a stirring told in the dark');
         }
-        const o = dq0Story(out), seg = o.slice(o.indexOf('> douse the torch'), o.indexOf('> quit'));
+        const o = dq0Prose(out), seg = o.slice(o.indexOf('> douse the torch'), o.indexOf('> quit'));
         if (!/You hear [^.]* to your right\./.test(seg)) f.push('the rats not heard to the right');
         if (o.includes('You hear something')) f.push('a sound told without its words (the sound task\'s table not in the hub)');
         if (!ons.some(k => k === '4R' || k === '5R' || k === '6R')) f.push('no rat played on the right: ' + ons.join(' '));
@@ -927,7 +933,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const T = dq0Turns(m), f = [], s = dq0Prose(out);
         const games = []; for (let i = s.indexOf('% dq0 '); i >= 0; i = s.indexOf('% dq0 ', i + 1)) games.push(i);
         const seg = (g, line, n = 1) => { const e = '> ' + line + ' > ' + line; let i = games[g - 1]; for (let k = 0; k < n && i >= 0; k++) i = s.indexOf(e, i + 1);
           if (i < 0) { f.push('game ' + g + ': "' + line + '" not answered'); return ''; } const j = s.indexOf(' > ', i + e.length); return s.slice(i + e.length, j < 0 ? s.length : j); };
@@ -974,7 +980,7 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm', 'douse the torch', 'e', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), K = m.dq0.layout().K;
         const beats = (t, b) => dq0Ev(t, 'E_BEAT', { beat: b });
         const at = (t, x, y, what) => { if (!t.after || t.after.pc.x !== x || t.after.pc.y !== y) f.push(what + ': at ' + (t.after ? t.after.pc.x + ',' + t.after.pc.y : '?') + ', not ' + x + ',' + y); };
         const g1 = T.of('dq0 -p t -s 7 -c /ram/c.hm'), s1 = T.after(g1, 's'), e1 = T.after(s1, 'e'), w2 = T.after(T.after(e1, 'step west'), 'step west');
@@ -1039,7 +1045,7 @@ module.exports = {
         'search the east wall', 'search nearby', 'hide the pouch', 'step east', 'douse the torch', 'search', 'search for the pouch', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), K = m.dq0.layout().K;
         const portal = t => dq0Ev(t, 'E_PORTAL', {}).filter(e => ['PO_NOTHING', 'PO_FOUND', 'PO_FOUND_TRAP'].includes(e.po));
         const took = t => t.at && t.after ? t.after.now - t.at.now : -1;
         const g1 = T.of('dq0 -p t -s 7 -c /ram/c.hm'), se = T.after(g1, 'search'), sk = T.after(se, 'search for the sack'), fl = T.after(sk, 'search the floor');
@@ -1105,7 +1111,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), K = m.dq0.layout().K;
         const took = t => t.at && t.after ? t.after.now - t.at.now : -1;
         const said = (a, b) => { const i = s.indexOf(a), j = b ? s.indexOf(b, i + a.length) : -1; return i < 0 ? '' : s.slice(i, j < 0 ? undefined : j); };
         const g1 = T.of("dq0 -p t -s 7 -c /ram/c.hm -d /ram/g -k 'heap of straw,iron key'");
@@ -1176,7 +1182,7 @@ module.exports = {
         'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K, I = DQ0_I;
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), K = m.dq0.layout().K, I = DQ0_I;
         const named = (st, n) => dq0Carried(st).filter(i => i.name === n);
         const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -k lantern');
         if (!g.after) return ['the first game not begun'];
@@ -1251,7 +1257,7 @@ module.exports = {
         'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out), LOOK = 'You can see part of a cell';
+        const f = [], s = dq0Prose(out), LOOK = 'You can see part of a cell';
         const games = []; for (let i = s.indexOf('% dq0 '); i >= 0; i = s.indexOf('% dq0 ', i + 1)) games.push(i);
         const seg = (g, line, n = 1) => { const e = '> ' + line + ' > ' + line; let i = games[g - 1]; for (let k = 0; k < n && i >= 0; k++) i = s.indexOf(e, i + 1);
           if (i < 0) { f.push('game ' + g + ': "' + line + '" not answered'); return ''; } const j = s.indexOf(' > ', i + e.length); return s.slice(i + e.length, j < 0 ? s.length : j); };
@@ -1413,7 +1419,7 @@ module.exports = {
       },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Story(out), g = m.grille;
+        const f = [], s = dq0Prose(out), g = m.grille;
         if (!g || g.set.length !== 4 || g.f & 1) return ['the scene not set: no door ahead at the start, faced square on: ' + JSON.stringify(g)];
         // (Each answer, in order of the lines, its words: what it must say, what it mustn't)
         const A = dq0Answers(out).filter(x => x.cmd), see = 'Through the little window in the door you see ', hole = 'Through the spy-hole in the door you see ';

@@ -626,7 +626,7 @@ void o_focus_words (void)
 {
     struct beyond* b;
     struct beyond* c;
-    unsigned char i, j, k, n, h, hm, part, told = 0;
+    unsigned char i, j, k, n, h, hm, part, lead, told = 0;
 
     hub_mem (SIGHT_BANK, &W, WAY_NEAR, sizeof W);
     part = 0;                                   /* (0 the whole of it; 1 its near part; 2 its far part, after it) */
@@ -672,6 +672,8 @@ void o_focus_words (void)
             hm |= 1 << i;
         }
     }
+    lead = (W.more & WM_RESTED) != 0;           /* (A look's rest, told after the prompt: its first sentence "Peering
+                                                **   on, ...", the look's going on, the user's, 2026-11-19, L8) */
     S.eye = W.eye;                              /* (What it makes out, a look one way's: twice as far) */
     if (worded != 3 && part != 2) {
         ah (AH_PEER << 8 | (S.dark != 0));
@@ -718,7 +720,8 @@ void o_focus_words (void)
         } else {
             ahpl = !n ? 0 : k == BN_PORTCULLIS ? 2 : 1;
             ahrel = (b->rel + 1) & 3;
-            ah (AH_THROUGH << 8 | k);
+            ah ((lead ? AH_ONTHROUGH : AH_THROUGH) << 8 | k);
+            lead = 0;
         }
         ahfar = b->kind << 8 | b->dist;         /* (Its squares; a room's kind) */
         if (b->what == WB_DARK) {
@@ -753,7 +756,8 @@ void o_focus_words (void)
     }
     for (i = 0; i < W.nglows; ++i) {            /* The lights far off ahead */
         ahrel = (W.glow[i].rel + 1) & 3;
-        ah (AH_GLOW << 8 | (W.glow[i].how != GL_LIGHT));
+        ah ((lead ? AH_ONGLOW : AH_GLOW) << 8 | (W.glow[i].how != GL_LIGHT));
+        lead = 0;
     }
     if (!(W.nbeyond | W.nitems | W.ndens | W.nglows) && !(part == 1 && (W.more & WM_HOLDN)) && !(part == 2 && (nany | nrest))
         && !(W.more & WM_REST)) {
@@ -769,6 +773,9 @@ void o_focus_words (void)
         told_add ();
     }
     cmd_hold (part == 1);
+    if (lead && (W.nitems | W.ndens)) {
+        ah (AH_ONMORE << 8);                    /* (Its things and denizens in a glance's words after it) */
+    }
     memcpy (&S.nitems, &W.nitems, sizeof S.nitems + sizeof S.item);   /* The things and the denizens ahead, in a */
     memcpy (&S.ndens, &W.ndens, sizeof S.ndens + sizeof S.den);       /*   glance's words (overlay 7's, 9's) */
     lbn = 1;                                    /* (Said after these, as a look's are) */
