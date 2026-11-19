@@ -7422,8 +7422,12 @@ void s_burn_job (void)
                                                 **   looked at, its next look as it was, so nothing else moves for it; a
                                                 **   command in hand, its answer first, at the next look) */
         burn_ask = 0;
-        if (!HUB->tpr || !HUB->ui_cmd) {
-            tsense ();                          /* (At the real paces; the turns pace's by its clock alone) */
+        if (!HUB->tpr || (!(HUB->ui_cmd | HUB->ui_keys) && HUB->way_want.st == WW_NONE)) {
+            tsense ();                          /* (At the real paces; the turns pace's by its clock alone.  Not while
+                                                **   a line's typed either: its Enter came as it began, the UI not yet
+                                                **   round to it, and the command waited on it, 200,000 cycles, the
+                                                **   menacing turn's first letter 713,000; nor while a look one way's
+                                                **   rest is awaited, the senses' and the maker's, 2026-11-19) */
         }
     } else {
         burns_now ();                           /* (The lights burnt down, a game minute's: part 27's; a command's answer
