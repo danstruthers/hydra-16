@@ -36,6 +36,7 @@
 #include "things.h"
 #include "../dq0/life.h"                        /* (The clues' CLUE_*: kit_put's) */
 #include "wbody.h"
+#include "acts.h"
 #include "outfit.h"
 #include "line.h"                               /* (ln_pass: a thing thrown stopped short, s_throw_at's) */
 
@@ -3950,26 +3951,9 @@ static void __fastcall__ reveal (unsigned n)
     put (".");
 }
 
-static signed char __fastcall__ tested (unsigned char p, signed char steps)
-{
-    struct req* r;
-    signed char g;
-
-    hub_map (0);
-    r = &HUB->slot[SLOT_UI];                    /* (The UI's: it waits on this request meanwhile) */
-    r->kind = RS_TEST;
-    r->actor = 0;
-    RS_TEST_PURPOSE (*r) = p;
-    RS_TEST_HOW (*r) = 0;
-    RS_TEST_STEPS (*r) = steps;
-    r = hub_ask (SLOT_UI);
-    g = RS_TEST_GRADE (*r);
-    if (RS_TEST_CANT (*r)) {
-        g = -100;                               /* (No tools for it: lockpicks) */
-    }
-    r->state = REQ_FREE;
-    return g;
-}
+#define tested(p, s)    act_test (0, (p), (s))  /* (The referee's test of the character's, in SLOT_UI (the UI waits on it
+                                                **   meanwhile): its grade, -100 no tools for it (lockpicks); every
+                                                **   actor's sender, part 69's, acts.h's, 2026-11-19) */
 
 /* A key the character carries (in hand, on it, in what it carries; in the pack it set down for this handling, rs_pack:
 ** the full reach's own step, 2026-11-17) that fits the lock of thing number id (its number in the key's size and thick:
@@ -4004,31 +3988,19 @@ void __fastcall__ own_comps (struct item* q);  /* (Part 61's: a thing's compartm
 
 SAY_PUT (say36)
 
-/* A noise of the character's lock work, how loud (what made it, NZ_*): a key turned, a lock picked at or picked, quiet
-** (NZ_CLICK, 1: heard close by, the user's, 2026-11-17, "A key, a bar and a pick make quiet sounds", as a door's are,
-** wdoor.c's); a lid wrenched at, loud (NZ_WORK, 6) */
-#pragma bss-name (push, "SW36RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
-                                                **   the main RAM's room, 2026-11-18) */
-static void __fastcall__ box_noise (unsigned char loud, unsigned char what)
+/* The character's lid work's act (the act table's row ac: a key turned, a lock picked at or picked, quiet, heard close
+** by, the user's, 2026-11-17; a lid wrenched at, loud): its noise where it stands (act_noise, every actor's: a denizen's
+** reach into a box, wfight.c's den_pry, the same rows), its row's time (the one-path plan's stage 1, 2026-11-19) */
+static unsigned __fastcall__ box_act (unsigned char ac)
 {
-    struct msg m;
-
     hub_map (0);
-    m.kind = E_NOISE;
-    m.who = 0;
-    E_NOISE_LOUD (m) = loud;
-    E_NOISE_WHAT (m) = what;
-    E_NOISE_SX (m) = HUB->pc_x;
-    E_NOISE_SY (m) = HUB->pc_y;
-    m.t = HUB->now;
-    hub_event (&m);
+    return act_noise (0, ac, HUB->pc_x, HUB->pc_y);
 }
-#pragma bss-name (pop)
 
 unsigned char s_shut_work (void)
 {
     const struct kind* k;
-    unsigned n, t = 20;                         /* (Its time: a minute's picking, 600, past a char's 255: it was 88
+    unsigned n, t;                              /* (Its time: a minute's picking, 600, past a char's 255: it was 88
                                                 **   tenths, a char's, till 2026-10-22) */
     unsigned char w = iq.to & ~IO_DONE, s, c, ok = IR_NO, d = iq.to & IO_DONE, lt = 0, os, cc, h, pk = 0;
     signed char g;
@@ -4055,6 +4027,7 @@ unsigned char s_shut_work (void)
         }
         return IR_NONE;                         /* (No such thing: a door's work, the UI's) */
     }
+    t = box_act (AC_LID);                       /* (A lid's handling: no noise; the act table's row) */
     make_own (n);                               /* (Its lid and its lock its own: found closed, a chest locked
                                                 **   sometimes) */
     if (!d) {
@@ -4097,8 +4070,7 @@ unsigned char s_shut_work (void)
         }
         s ^= IS_LOCKED;                         /* (With its own key: no test, a few seconds) */
         say36 (w == PA_LOCK ? SA_LOCK : SA_UNLOCK, nm, "");
-        box_noise (1, NZ_CLICK);
-        t = 30;
+        t = box_act (AC_LIDKEY);
         lt = 0;
         ok = IR_OK;
         goto done;
@@ -4134,14 +4106,14 @@ unsigned char s_shut_work (void)
             if (reach_step (0, st) || tool_reach (yn)) {
                 return IR_NO;
             }
-            t = 600;                            /* (The means to hand: a minute a try, as a door's, a long task, its
-                                                **   test made again at its end; the lockpicks' reach first) */
+            t = box_act (AC_LIDPICK);           /* (The means to hand: a minute a try, as a door's, a long task, its
+                                                **   test made again at its end; the lockpicks' reach first; its
+                                                **   scratching at the lock) */
             lt = LT_PICK;
-            box_noise (1, NZ_CLICK);            /* (Its scratching at the lock) */
         } else if (g > 0) {
             s &= ~IS_LOCKED;
             say36 (SA_PICKED, nm, "");
-            box_noise (1, NZ_CLICK);
+            box_act (AC_LIDPICK);
         } else {
             say36 (SA_NOT_PICKED, nm, "");
         }
@@ -4155,9 +4127,8 @@ unsigned char s_shut_work (void)
             if (reach_step (0, st)) {
                 return IR_NO;
             }
-            box_noise (6, NZ_WORK);             /* (Loud: a lock burst, or a lid wrenched at, ten seconds' of it, its
+            t = box_act (AC_LIDFORCE);          /* (Loud: a lock burst, or a lid wrenched at, ten seconds' of it, its
                                                 **   test at its end) */
-            t = 100;
             lt = LT_FORCE;
         } else if (tested (P_FORCE, (rec.mat == MT_WOOD ? 0 : -2) - (signed char) (rec.quality / 3)) > 0) {
             s = (s & ~(IS_LOCKED | IS_CLOSED)) | IS_BURST;

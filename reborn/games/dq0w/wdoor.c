@@ -19,6 +19,7 @@
 #include "world.h"
 #include "work.h"
 #include "wbody.h"
+#include "acts.h"
 
 #pragma code-name ("SW5CODE")
 #pragma rodata-name ("SW5RODATA")
@@ -35,15 +36,18 @@ extern unsigned char burn_ask;                  /* (things.h's) */
 unsigned door_key (void);                       /* (Part 80's, wport.c: a key that fits it, the actor's) */
 unsigned char __fastcall__ braced (unsigned char sn, unsigned x, unsigned y);   /* (Part 109's, wdrag.c) */
 
-/* A quiet sound of the work (w, NZ_*: a key turned, a lock picked at, a bar lifted or set), how loud: the character's
-** E_NOISE (the minds hear it by the senses' rule, the sound task plays it); an actor's its E_DEN's, wport.c's (told's: the
-** user's, 2026-11-17, "A key, a bar and a pick make quiet sounds, heard close by under the one hearing rule, for every
-** actor") */
-#define quiet(w, loud)  (E_NOISE_WHAT (wk.m) = (w), noise (loud))
+/* A door's outcome's act (PO_*, AC_* in pairs): its noise, every actor's, by the act table's row (act_noise: the
+** character's E_NOISE, an actor's E_DEN, at the door; wport.c's own table of an actor's before, the character's own
+** quiet sounds here, its opening and shutting none: the one-path plan's stage 1, 2026-11-19).  A key, a bar and a pick
+** quiet, heard close by (the user's, 2026-11-17) */
+static const unsigned char po_ac[] = {
+    PO_OPENED, AC_OPEN, PO_CLOSED, AC_SHUT, PO_UNBARRED, AC_UNBAR, PO_LIFTED, AC_LIFT, PO_REBARRED, AC_BAR, PO_KEYED,
+    AC_UNLOCK, PO_KEY_LOCKED, AC_LOCK, PO_PICKED, AC_PICKED, PO_FORCED, AC_BURST, PO_HELD, AC_HELD, 0
+};
 
 void s_doors (void)
 {
-    unsigned char out, what = wk.what, st, mine;
+    unsigned char out, what = wk.what, st, mine, i;
     signed char g;
 
     front ();
@@ -151,7 +155,7 @@ found:
             if (wk.plan) {                      /* (Begun, the means to hand (the referee's): a minute a try, the
                                                 **   test made again at its end, its outcome then; the lockpicks
                                                 **   got out first) */
-                quiet (NZ_CLICK, 1);            /* (Its scratching at the lock: a denizen's DE_PICKING's) */
+                act_noise (wk.who, AC_PICKING, wk.px, wk.py);   /* (Its scratching at the lock) */
                 timed (LT_PICK, 600);           /* (Its reach, the lockpicks got out, the world's steps first:
                                                 **   s_door_work's, reach_tool) */
                 return;
@@ -169,7 +173,7 @@ found:
                 break;
             }
             if (wk.plan) {                      /* (Begun: ten seconds' straining, loud, its test at their end) */
-                noise (7);
+                act_noise (wk.who, AC_FORCING, wk.px, wk.py);
                 timed (LT_FORCE, 100);
                 return;
             }
@@ -203,10 +207,11 @@ found:
             break;
         }
     }
-    if (out == PO_KEYED || out == PO_KEY_LOCKED || out == PO_PICKED) {
-        quiet (NZ_CLICK, 1);                    /* (A key turned, a lock picked: as a denizen's DE_UNLOCKS ... DE_PICKS) */
-    } else if (out == PO_LIFTED || out == PO_UNBARRED || out == PO_REBARRED) {
-        quiet (NZ_BAR, 3);                      /* (A bar lifted, set: as a denizen's DE_UNBARS, DE_BARS) */
+    for (i = 0; po_ac[i] && po_ac[i] != out; i += 2) {
+    }
+    if (po_ac[i]) {
+        act_noise (wk.who, po_ac[i + 1] == AC_SHUT && wk.who && bd.doing == DO_FLEE ? AC_SLAM : po_ac[i + 1], wk.px,
+            wk.py);                             /* (Shut behind it as it flees: slammed, louder) */
     }
     tail (out);
 }

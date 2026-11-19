@@ -62,6 +62,7 @@
 /* The missiles (wshoot.c's, parts 65 and 66: slice 4.7's; their calls wbody.h's) */
 extern unsigned char pshoot;                    /* (The character's fight a missile's) */
 #include "wbody.h"
+#include "acts.h"
 #include "trace.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
@@ -3503,23 +3504,6 @@ static signed char test_dig (void)
     return g;
 }
 
-/* A noise where the character is: how loud (0-9), for the denizens (the hub's header in the window) */
-#pragma bss-name (push, "SW1RODATA")            /* (Its message the part's own: the main RAM's room, 2026-11-02) */
-static void __fastcall__ noise (unsigned char loud)
-{
-    static struct msg m;
-
-    hub_map (0);
-    m.kind = E_NOISE;
-    m.who = 0;
-    E_NOISE_LOUD (m) = loud;
-    E_NOISE_SX (m) = HUB->pc_x;
-    E_NOISE_SY (m) = HUB->pc_y;
-    m.t = HUB->now;
-    hub_event (&m);
-}
-#pragma bss-name (pop)
-
 static void spell (void)
 {
     in_place (A_DIGGING, SPELL);
@@ -3995,7 +3979,8 @@ void s_dig_on (void)
     l = pc_dig (2);      /* (A hidden door come to, two spells with nothing to show: part 79's) */
     hub_map (0);
     HUB->pc_task.done = dig.done;
-    noise (6);
+    act_noise (0, g == 0x7F ? AC_ROOF : AC_DIG, HUB->pc_x, HUB->pc_y);    /* (A spell's noise, a roof come down's: a
+                                                **   tunneller's, the act table's rows, 2026-11-19) */
     if (l & 0x10) {
         event (E_DIG, 0, E_DIG_W1 (D_FOUND, l & 3)); /* (Its facing dug off: the door behind it, a find) */
         see (0);

@@ -5,12 +5,13 @@
 ** code.  A door worked by body bd (wbody.c's part 14 calls it, the body copied out): the work's parts the character's
 ** (wdoor.c's doors, wblow.c's blows: work.h's wk, its who the actor's), the character's own work kept round it (a
 ** battering under way, its blows' count), the referee asked of the actor (its sheet), nothing told the UI by the parts
-** but its outcome (wk.out, or an opening's wk.open): told here as the denizens' event (E_DEN's DE_OPENS ...: seen, by
-** its name; heard, a door opening, a crash).  The timed work as wdig.c's: forcing begun (its strain heard, the body
-** busy its ten seconds) and made as its mind posts it again (t 1), the test then; a battering a blow a post (t the
-** blows so far, a dozen at most: its mind's).  A denizen opens and shuts doors (not windows, nor portcullises: the
-** house's, as yet), lifts and sets a bar on its side, unlocks and locks one with its key, forces and batters one; it
-** never springs a door's trap (the house's, for review), nor picks a lock.
+** but its outcome (wk.out, or an opening's wk.open): a portcullis's and a battering's told here as the denizens' event
+** (E_DEN's DE_RAISES ...: seen, by its name; heard, a crash); a door's by wdoor.c itself, every actor's alike (the act
+** table's rows, acts.h's act_noise: the one-path plan's stage 1, 2026-11-19).  The timed work as wdig.c's: forcing
+** begun (its strain heard, the body busy its ten seconds) and made as its mind posts it again (t 1), the test then; a
+** battering a blow a post (t the blows so far, a dozen at most: its mind's).  A denizen opens and shuts doors (not
+** windows, nor portcullises: the house's, as yet), lifts and sets a bar on its side, unlocks and locks one with its
+** key, forces and batters one; it never springs a door's trap (the house's, for review), nor picks a lock.
 **
 ** And the doors' keys, every actor's (HOUSE.md's keys that fit): a locked door's key fits it alone (DOOR_KEY, its
 ** stratum and square in the key's size and thick); each locked door of a lair's chunk has one, made with the lair's
@@ -60,14 +61,6 @@ unsigned s_door_key (void)
     hub_map (0);
     return r ? i : 0;
 }
-
-/* What body bd did at the door, by its outcome (PO_NONE ... PO_HELD): its DE_* (less DE_OPENS), | how loud times 16;
-** 0 nothing done (a refusal: its mind's to see in the door's state) */
-#define DE(d, loud)     ((d) - DE_OPENS | (loud) << 4)
-static const unsigned char de_of[PO_HELD + 1] = {
-    0, DE (DE_OPENS, 2), DE (DE_SHUTS, 3), 0, 0, 0, 0, 0, 0, 0, 0, 0, DE (DE_BURSTS, 7),
-    DE (DE_HOLDS, 7)
-};
 
 static unsigned __fastcall__ apart (int ax, int ay)
 {
@@ -253,31 +246,17 @@ static void __fastcall__ den_portal (const struct msg* m)
         HUB->dig_t[bk] = (unsigned) HUB->now + (unsigned) wk.tt;   /* (When its time's up) */
     }
     o = wk.open ? wk.open : wk.out;
-    if (wk.plan && wk.task) {
-        de = what == PA_FORCE ? DE_STRAINS : what == PA_BEND ? DE_BENDS : what == PA_UNLOCK || what == PA_PICK ? DE_PICKING :
-            wk.pq.bar == ((d + 2) & 3) ? DE_WINDS : DE_HEAVES;     /* (Forcing, bending, picking, winding, heaving
-                                                **   begun: loud, but a pick's scratching) */
-        loud = what == PA_UNLOCK || what == PA_PICK ? 1 : 7;
-    } else if (o == PO_RAISED || o == PO_HEAVED || o == PO_LOWERED || o == PO_BENT || o == PO_PICKED) {
-        de = o == PO_LOWERED ? DE_LOWERS : o == PO_BENT ? DE_BENT : o == PO_PICKED ? DE_PICKS : DE_RAISES;
-        loud = o == PO_PICKED ? 1 : 8;
+    if (pc && wk.plan && wk.task) {             /* (A door's work told by wdoor.c's, every actor's, by the act
+                                                **   table's rows, 2026-11-19; a portcullis's here) */
+        de = what == PA_FORCE ? DE_STRAINS : what == PA_BEND ? DE_BENDS : wk.pq.bar == ((d + 2) & 3) ? DE_WINDS :
+            DE_HEAVES;                          /* (Forcing, bending, winding, heaving begun: loud) */
+        loud = 7;
+    } else if (o == PO_RAISED || o == PO_HEAVED || o == PO_LOWERED || o == PO_BENT) {
+        de = o == PO_LOWERED ? DE_LOWERS : o == PO_BENT ? DE_BENT : DE_RAISES;
+        loud = 8;
     } else if (o == PO_BROKE_DOWN) {
         de = DE_BREAKS;
         loud = 8;
-    } else if (o == PO_KEYED || o == PO_KEY_LOCKED) {
-        de = o == PO_KEYED ? DE_UNLOCKS : DE_LOCKS;
-        loud = 1;
-    } else if (o == PO_LIFTED || o == PO_REBARRED || o == PO_UNBARRED) {
-        de = o == PO_LIFTED ? DE_UNBARS : o == PO_REBARRED ? DE_BARS : DE_UNBARRED;   /* (Unbarred and opened at once:
-                                                **   the character's own, its words and its sound the opening's, 2026-11-17) */
-        loud = 3;
-    } else if (o <= PO_HELD && de_of[o]) {
-        de = (de_of[o] & 15) + DE_OPENS;
-        loud = de_of[o] >> 4;
-        if (de == DE_SHUTS && bd.doing == DO_FLEE) {
-            de = DE_SLAMS;                      /* (Shut behind it as it flees: slammed, louder) */
-            loud = 5;
-        }
     }
     at (bd.sn, x, y);
     if ((q = portal_at (cx_, cy_)) != 0 && q->state != was) {

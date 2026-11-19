@@ -26,6 +26,7 @@
 #include "world.h"
 #include "work.h"
 #include "wbody.h"
+#include "acts.h"
 
 #pragma local-strings (on)
 #pragma code-name ("SW79CODE")
@@ -33,8 +34,9 @@
                                                 **   parts, which copy this one in again after) */
 
 #define SPELL           6000                    /* Tenths: ten minutes' work (dq0w.c's) */
-#define DIG_LOUD        6                       /* A spell's noise (the character's, dq0w.c's noise (6)) */
-#define DUG_LOUD        7                       /* The way through: the spoil falling */
+#define DUG_LOUD        7                       /* The way through: the spoil falling (a spell's noise, and a roof's
+                                                **   come down, the act table's rows: AC_DIGBEGIN, AC_DIG, AC_ROOF,
+                                                **   the character's the same, 2026-11-19) */
 
 #include "../dq0/rshouse.h"                   /* (Its rates alone: RS_DIG_PICK, RS_DIG_SHOVEL, DIG_TESTED) */
 
@@ -174,7 +176,7 @@ void __fastcall__ s_den_dig (const struct msg* m)
         bd.face = h;
         HUB->dig_t[bk] = now;
         bd.ready += SPELL;
-        den_told (DE_DIG, DIG_LOUD, bd.x, bd.y);
+        act_noise (bk + 1, AC_DIGBEGIN, bd.x, bd.y);
         goto put;
     }
     if (ago < SPELL) {
@@ -226,7 +228,7 @@ spell:
         HUB->dig_t[bk] = now;                   /* (On: another spell, its noise: heard by the denizens, the
                                                 **   player's told as it began) */
         bd.ready += SPELL;
-        den_told (roof ? DE_ROOF : DE_DIGS, roof ? DUG_LOUD : DIG_LOUD, bd.x, bd.y);
+        act_noise (bk + 1, roof ? AC_ROOF : AC_DIG, bd.x, bd.y);
         goto put;
     }
     z = elev_at (bd.sn, bd.x, bd.y);            /* (Through: the square a passage at its floor's height) */

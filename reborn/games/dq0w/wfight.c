@@ -20,6 +20,7 @@
 #include "world.h"
 #include "things.h"
 #include "wbody.h"
+#include "acts.h"
 
 #pragma local-strings (on)
 
@@ -582,24 +583,66 @@ static unsigned char mine (void)
 extern struct comp crow;                        /* (things.c's, the main RAM's: a compartment's row, comp_of's) */
 unsigned char __fastcall__ icomp (unsigned i);  /* (things.c's: thing i's compartment in what holds it, its row in crow) */
 
-/* The referee's test of body bd's own (by its sheet), for p, the steps the worse: its grade (wtake.c's search's too,
-** its stub's) */
-signed char __fastcall__ s_den_test (unsigned char p, signed char steps)
+/* The referee's test, every actor's (acts.h's act_test: the one sender by who, the act table's stage 1, 2026-11-19;
+** s_den_test, an actor's, and things.c's tested, the character's, before): who's (0 the character: its stress, the tool
+** it wants, the referee's, in SLOT_UI, the things' channel the UI waits on; else an actor's entry plus 1, by its sheet,
+** in SLOT_WORLD), for p, the steps the better: its grade, or -100 the tool it wants none (the
+** referee's CANT: lockpicks) */
+signed char __fastcall__ s_act_test (unsigned char who, unsigned char p, signed char steps)
 {
     struct req* r;
     signed char g;
+    unsigned char s = who ? SLOT_WORLD : SLOT_UI;
 
     hub_map (0);
-    r = &HUB->slot[SLOT_WORLD];
+    r = &HUB->slot[s];
     r->kind = RS_TEST;
-    r->actor = bk + 1;
+    r->actor = who;
     RS_TEST_PURPOSE (*r) = p;
     RS_TEST_HOW (*r) = 0;
     RS_TEST_STEPS (*r) = steps;
-    r = hub_ask (SLOT_WORLD);
-    g = RS_TEST_GRADE (*r);
+    r = hub_ask (s);
+    g = RS_TEST_CANT (*r) ? -100 : RS_TEST_GRADE (*r);
     r->state = REQ_FREE;
     return g;
+}
+
+/* The referee's test of body bd's own (act_test's, its actor bd's: wtake.c's search's, its stub's, part 81's room) */
+signed char __fastcall__ s_den_test (unsigned char p, signed char steps)
+{
+    return s_act_test (bk + 1, p, steps);
+}
+
+/* An act's noise at square x, y (the act table's row ac: its loudness, the character's NZ_*, an actor's DE_*), every
+** actor's (acts.h's act_noise: the one sender by who, the act table's stage 1, 2026-11-19): the character's an E_NOISE
+** (the minds hear it by the one rule, the sound task plays it); an actor's, body bd's, an E_DEN (told if seen, else
+** heard: wport.c's den_told, the one sender of an actor's work; its door's square's DT_DOOR when it's not where it
+** stands).  None if the row's is none.  Its row's time (ACT_STEP's flag and all: its caller's to spend); the hub's
+** header in the window after */
+unsigned __fastcall__ s_act_noise (unsigned char who, unsigned char ac, unsigned x, unsigned y)
+{
+    struct actq q;                              /* (On the C stack: den_told swaps this part out) */
+    struct msg m;
+
+    act_get (q, ac);
+    if (!q.r.loud) {
+        hub_map (0);
+        return q.r.time;
+    }
+    if (who) {
+        den_told (q.r.den, q.r.loud | (x != bd.x || y != bd.y ? DT_DOOR : 0), x, y);
+        return q.r.time;
+    }
+    hub_map (0);
+    m.kind = E_NOISE;
+    m.who = 0;
+    E_NOISE_LOUD (m) = q.r.loud;
+    E_NOISE_WHAT (m) = q.r.noise;
+    E_NOISE_SX (m) = x;
+    E_NOISE_SY (m) = y;
+    m.t = HUB->now;
+    hub_event (&m);
+    return q.r.time;
 }
 
 /* Thing n, in another, reached by body bd (its reach respects compartments as the character's does, the user's,
@@ -643,13 +686,14 @@ unsigned char __fastcall__ s_den_pry (unsigned n, unsigned char how)
                 }
             }
             if (i) {
-                bd.ready += 30;
+                bd.ready += s_act_noise (bk + 1, AC_LIDKEY, bd.x, bd.y);   /* (Its key turned: the act table's row,
+                                                **   the character's time and noise, 2026-11-19) */
                 b = 0;
             } else if (how & PR_QUIET) {
                 return 0;
             } else {
-                bd.ready += 100;
-                if (s_den_test (P_FORCE, -(signed char) b) <= 0) {
+                bd.ready += s_act_noise (bk + 1, AC_LIDFORCE, bd.x, bd.y);   /* (Forced: heard, as the character's) */
+                if (s_act_test (bk + 1, P_FORCE, -(signed char) b) <= 0) {
                     return 0;                   /* (Held: left, locked) */
                 }
                 b = 1;
@@ -662,7 +706,7 @@ unsigned char __fastcall__ s_den_pry (unsigned n, unsigned char how)
             }
         }
         if (how & PR_TIMED) {
-            bd.ready += 20;
+            bd.ready += s_act_noise (bk + 1, AC_LID, bd.x, bd.y);   /* (Opened: the character's time, no noise) */
         }
         item_at (h)->shut &= ~IS_SHUT_C (cc);
         if (!cc) {
