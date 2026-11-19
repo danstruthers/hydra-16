@@ -42,8 +42,6 @@ K_SCALL:
             lda         T_REGISTER                          ; .A = this task
             stz         T_REGISTER                          ; ---- The kernel task's
             sty         K0_FSRV
-            ldx         K0_TICKS
-            stx         K0_FSRVT
             sta         T_REGISTER                          ; ---- This task
             ldx         K_X
             bra         @look
@@ -75,9 +73,11 @@ K_SCALL:
             bcs         @srch
             sei
             sta         K_A                                 ; (The argument .A, while we look)
+            tya                                             ; (A KCALL: the kernel task, never the foreground's; its
+            beq         @look                               ;   calls kept the console out of it, 2026-11-18)
             lda         TK_FLAGS                            ; A foreground caller's: the task called the foreground's
-            and         #TF_FORE                            ;   FORE_SRV ticks from now (K0_FSRV: sched.s; the work
-            bne         @fsrv                               ;   the call leaves it, the console's words)
+            and         #TF_FORE                            ;   till a foreground task calls another (K0_FSRV: sched.s;
+            bne         @fsrv                               ;   the work the call leaves it, the console's words)
 @look:                                                      ; IRQs off; .X: the argument.  Is it there, and free?
             lda         T_REGISTER                          ; .A = this task (the caller)
             sty         T_REGISTER                          ; ---- The task called: its zero page (a quick look)

@@ -141,7 +141,7 @@ parent:
             jsr         wait_kid
 
 ; ---- A foreground task calling a server for good (the console's writes), the server in the foreground a moment
-; after each call (K0_FSRV, FORE_SRV): the background still has its turns
+; after each call, till another is called (K0_FSRV): the background still has its turns
             lda         #'w'
             jsr         spawn
             sta         busy

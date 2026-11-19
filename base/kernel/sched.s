@@ -177,14 +177,9 @@ K_SCHED_PICK:
             sta         K0_FSEEN
             bra         @fself
 @fno:                                                       ; Not in it: the server a foreground task called last
-            stz         T_REGISTER                          ; ---- The kernel task's (K0_FSRV, FORE_SRV ticks at most
-            cpx         K0_FSRV                             ;   since: the work its call left it, the console's
-            bne         @fself                              ;   words, done with its caller's)
-            lda         K0_TICKS
-            sec
-            sbc         K0_FSRVT
-            cmp         #FORE_SRV
-            bcs         @fself
+            stz         T_REGISTER                          ; ---- The kernel task's (K0_FSRV, till a foreground task
+            cpx         K0_FSRV                             ;   calls another: the work its call left it, the
+            bne         @fself                              ;   console's words painted, done with its caller's)
             sty         T_REGISTER                          ; ---- This task
             lda         #TF_STOPPED
             jsr         pick_ok

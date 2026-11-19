@@ -258,12 +258,12 @@ K0_FMODE        = $7A           ;   0: the foreground's turn (FORE_RUN ticks at 
 K0_FPICK        = $7B           ;   the task the foreground's last pick was ($FF: the round robin's was the last) ...
 K0_RR           = $7C           ;   the round robin's place: the task it picks after ...
 K0_FSEEN        = $7D           ;   and <> 0, a look at the foreground found a task in it
-K0_FSRV         = $7E           ;   the task a foreground task last called (SCALL; 0: none) ...
-K0_FSRVT        = $7F           ;   and the tick it called
+K0_FSRV         = $7E           ;   and the task a foreground task last called (SCALL, not a KCALL; 0: none): in the
+                                ;   foreground, whenever it can run, till a foreground task calls another (the
+                                ;   console's words painted while the world works; 2026-11-18: 2 ticks were less
+                                ;   than a send ring's worth, and every KCALL ended them)
 K0_SCHED_END    = $80
 FORE_RUN        = 8             ; The foreground's turn at most, in ticks: then the background's, the rest of a tick
-FORE_SRV        = 2             ; A server in the foreground from a foreground task's call to it, in ticks (the
-                                ;   console's words out at once; in the foreground's turn, as any of it)
 PF_T            = $01           ; K0_POSTFAULT: a T line (tasks' memory not apart)
 PF_SHARED       = $02           ;   shared RAM not shared between tasks
 PF_W            = $04           ;   a W line (BIOS ROM pages)
