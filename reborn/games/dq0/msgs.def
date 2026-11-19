@@ -49,7 +49,7 @@ struct msg
 # ---- The intents (I_*: an actor's, to the world; the UI's for the character, who 0; the denizens' who the actor's
 # entry plus 1, their ring the hub's di: the :den forms)
 
-I_DEN           x[0] doing@DO_ROAM; x[1] face; t when  # (Not a kind: the denizens' intents' head, what it's doing now
+I_DEN           x[0] doing@DO_ROAM; x[1] face          # (Not a kind: the denizens' intents' head, what it's doing now
                                                         #   and the way it faces, 0xFF either as it is)
 I_WAIT          a how; w1 tenths; w2(busy) task:8-15@LT_NONE what:1-7 quiet:0
                 # (a: WA_MIN, WA_SLEEP, WA_REST, WA_TREAD, WA_DIVE; w1 tenths, or minutes (WA_MIN); w2: a timed work's long task (LT_*)
@@ -72,9 +72,10 @@ I_GOTO          a near; w1 x; w2 y                      # (a 1: walked to, acros
 I_GOTO:den      < I_DEN; a heard@DE_MOVED; b loud; w1 x; w2 y       # (A dash: what it's heard as, how loud)
 I_STEP          w1 head:0-2@H_N keep:8=STEP_KEEP; w2 squares
 I_STEP:den      < I_DEN; a heard@DE_MOVED; b loud; w1(way) head:0-2@H_N coarse:9=STEP_COARSE scent:10=STEP_SCENT;
-                w2(sense) one:0 feels:1=STEP_FEELS; x[2] nose
+                w2(sense) one:0 feels:1=STEP_FEELS; x[2] nose; t when
                 # (A square: coarse, no time, nothing heard; scent, the heading none: the character's scent's way, by
-                #   its nose; one always (a square); feels, no darkvision: its way felt in the dark)
+                #   its nose; one always (a square); feels, no darkvision: its way felt in the dark; when, its time as the
+                #   mind meant it: taken no sooner, 2026-11-19)
 I_QUIT          -
 I_ATTACK        a foe; b aim; w1 split; x[1] strike; x[2] hand    # (The actor struck at plus 1 (the denizens': 0 the
                                                         #   character); the aim, Z_* | AIM_SHOT, AIM_HARD; as I_PORTAL's;

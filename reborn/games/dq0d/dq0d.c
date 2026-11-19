@@ -1109,7 +1109,10 @@ static void __fastcall__ act (unsigned char kind, unsigned char k)
 {
     I_DEN_DOING (im) = a.doing;
     I_DEN_FACE (im) = a.face;
-    I_DEN_WHEN (im) = a.ready;                  /* (Its time, when it means it: a step taken no sooner, 2026-11-19) */
+    if (kind == I_STEP) {
+        I_STEP_WHEN (im) = a.ready;             /* (A step's time, when it means it: taken no sooner, 2026-11-19; a step's
+                                                **   alone, t another kind's thing, step or ready) */
+    }
     post (kind, k + 1);
 }
 
@@ -5733,12 +5736,20 @@ static const struct { unsigned off; unsigned char n; } mfield[] = { MIND_FIELDS 
 static void __fastcall__ fresh (unsigned char k)
 {
     unsigned char i;
+    unsigned long was;                          /* (The minds' stream as it was: tend's saved one kept) */
 
     for (i = 0; i < sizeof mfield / sizeof mfield[0]; ++i) {
         memset ((char*) &md + mfield[i].off + k * mfield[i].n, 0, mfield[i].n);
     }
     hub_map (0);
-    md.dice[k] = (HUB->seed ^ (unsigned long) HUB->dice << 16 ^ ((unsigned long) D.id << 13) ^ now) | 1;
+    was = xs_seed;
+    xs_seed = (HUB->seed ^ (unsigned long) HUB->dice << 16 ^ ((unsigned long) D.id << 13) ^ now) | 1;
+    for (i = 0; i < 12; ++i) {
+        rand16 ();                              /* (Its seed's bits mixed: a seed differing in a few bits gave the
+                                                **   same first numbers, its first choices every one's) */
+    }
+    md.dice[k] = xs_seed;
+    xs_seed = was;
     md.aloot[k] = NOW_T;
 }
 #pragma static-locals (pop)
