@@ -6417,10 +6417,10 @@ unsigned char out_told;                         /* (A walk's first words told be
 void __fastcall__ out_tell (unsigned char h)
 {
     hub_map (0);
-    h = (h & 0x7F) | (HUB->eq_head == go_eq ? 0x80 : 0);
-    evb = h & 0x7F;
+    evb = h;                                    /* (Its way, | 8 a step, | 16 a walk) */
+    h = HUB->eq_head == go_eq;
     view (V_SETOFF);
-    if (h & 0x80) {
+    if (h) {
         hub_map (0);
         go_eq = HUB->eq_head;                   /* (Its words alone: no turn of the denizens' for them, turns_run's) */
     }
@@ -7299,6 +7299,11 @@ static unsigned dt0;
 static unsigned char den_held (void)
 {
     hub_map (0);
+    if (HUB->tpr && HUB->way_want.st) {
+        return 1;                               /* (At the real paces, a look one way's rest awaited, the maker's chunk:
+                                                **   the denizens' parts and outfits not drawn beside it, the look
+                                                **   across's pause, 2026-11-19) */
+    }
     if ((HUB->pace & 3) == 3 || !HUB->ui_keys || HUB->ui_cmd) {
         dst = 0;
         return ui_first ();
