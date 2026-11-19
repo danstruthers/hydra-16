@@ -7519,10 +7519,12 @@ int main (int argc, char* argv[])
                 see (0);
             } else if (!took) {
                 HUB->pc_task.kind = LT_NONE;    /* (Its long task over) */
-                if (HUB->now >= body_due) {
-                    bled ();                    /* (Its body's time up to now first, the lights' minute's else: a
-                                                **   sleep's last wants, "You're getting hungry.", told before it's
-                                                **   free, not after its prompt, 2026-11-18) */
+                if (bleeds || (HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) || HUB->pcsum.health != H_FINE ||
+                    HUB->now >= body_due) {
+                    bled ();                    /* (Its body's time up to now first, as the lights' minute would
+                                                **   (burn_job's test): a sleep's last wants, "You're getting
+                                                **   hungry.", told before it's free, not after its prompt, 2026-11-18;
+                                                **   hurt, the referee's next watch no matter, 2026-11-18, fw4) */
                     hub_map (0);
                 }
                 if (!HUB->tpr && !HUB->paused && !HUB->hold && HUB->eq_head != go_eq) {
