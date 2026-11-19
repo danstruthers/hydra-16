@@ -704,8 +704,9 @@ function build(opt = {}) {
   childrenMade();
   roomChecked(games, say);
   sdk();
-  const card = sdcard.build(ROOT);                          // The SD card's image (bin/sdcard.img): the samples, the songs, the benchmarks
   forthlib.build({ root: ROOT, modules, assemble: (files, od, inc) => assemble(files, od, inc, defines), ld65: args => run(LD65, args) });
+  const card = sdcard.build(ROOT);                          // The SD card's image (bin/sdcard.img): the samples, the songs, the benchmarks,
+                                                            //   obj/forthlib's libraries (forthlib's, made first: a clean tree's build)
 
   // hylang's snapshot (the module hysnap: its heap with its library loaded, taken in the emulator), then the paged ROM
   const manifest = readManifest(at('modules', 'rom.txt'));
