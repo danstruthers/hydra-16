@@ -7,7 +7,7 @@ const path = require('path');
 const { typed } = require('../../lib/common.js');
 const {
   dq0Story, dq0Prose, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Here, dq0Thing,
-  dq0Holder, DQ0_I, dq0Typed, dq0Rec, dq0Poke, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, WORN, dq0Paces, dq0Own, dq0Asks,
+  dq0Holder, DQ0_I, dq0Typed, dq0Rec, dq0Poke, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, WORN, dq0Paces, dq0Own, dq0Asks, dq0PlayLetters,
   dq0HeldPaces
 } = require('../../lib/dq0.js');
 const { target, D17 } = require('../../lib/trends.js');   // (The user's targets, D17, at 115,200 baud: each measure kept, those over and past 90% listed after the tests)
@@ -867,7 +867,7 @@ module.exports = {
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETCMD, 'quit',
         ...dq0Paces('dq0 -p t -s 3 -c /ram/c.hm -T -k torch', LETCMD), 'echo $status']) },
-      start(m) { this.timer = dq0Timer(m); dq0Asks(m, [3]); },
+      start(m) { this.timer = dq0Timer(m); dq0Asks(m, [3]); dq0PlayLetters(m, 1, 3); },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], o = dq0Story(dq0Own(out)).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
@@ -912,7 +912,7 @@ module.exports = {
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETSIGHT, 'quit',
         ...dq0Paces('dq0 -p t -s 3 -c /ram/c.hm -T -k torch', LETSIGHT), 'echo $status']) },
-      start(m) { this.timer = dq0Timer(m); dq0Asks(m, [3]); },
+      start(m) { this.timer = dq0Timer(m); dq0Asks(m, [3]); dq0PlayLetters(m, 1, 3); },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], o = dq0Story(dq0Own(out)).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
@@ -950,7 +950,7 @@ module.exports = {
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p t -s 3 -c /ram/c.hm -T -k torch', ...LETWHICH, 'quit',
         ...dq0Paces('dq0 -p t -s 3 -c /ram/c.hm -T -k torch', LETWHICH), 'echo $status']) },
-      start(m) { this.timer = dq0Timer(m); dq0Asks(m, [3]); },
+      start(m) { this.timer = dq0Timer(m); dq0Asks(m, [3]); dq0PlayLetters(m, 1, 3); },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], o = dq0Story(dq0Own(out)).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
@@ -984,7 +984,7 @@ module.exports = {
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSEVERAL, 'quit',
         ...dq0Paces("dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", LETSEVERAL), 'echo $status']) },
-      start(m) { this.timer = dq0Timer(m); dq0Asks(m, [3]); },
+      start(m) { this.timer = dq0Timer(m); dq0Asks(m, [3]); dq0PlayLetters(m, 1, 3); },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], o = dq0Story(dq0Own(out)).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];
@@ -1018,7 +1018,7 @@ module.exports = {
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", ...LETSTOW, 'quit',
         ...dq0Paces("dq0 -p t -s 3 -c /ram/c.hm -T -k 'torch,sheath,pouch'", LETSTOW), 'echo $status']) },
-      start(m) { this.timer = dq0Timer(m); dq0Asks(m, [3]); },
+      start(m) { this.timer = dq0Timer(m); dq0Asks(m, [3]); dq0PlayLetters(m, 1, 3); },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], o = dq0Story(dq0Own(out)).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), seg = [];

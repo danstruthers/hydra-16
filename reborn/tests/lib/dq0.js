@@ -835,7 +835,11 @@ function dq0Timer(m) {
   a.read = (r, t) => {
     if (r === 0 && a.rdrf) {                    // (Each CR's, and the words typed before it)
       const c = a.rx;
-      if (c === 13) { enters.push({ t: a.rxAt, pos: out.length, busy: busy(), line: typed }); typed = ''; }
+      if (c === 13) {                           // (A line typed in its own game's letters, dq0PlayLetters': the test's line)
+        const o = m.dq0Orig && m.dq0Orig.length && m.dq0Orig[0].to === typed ? m.dq0Orig.shift().from : null;
+        enters.push({ t: a.rxAt, pos: out.length, busy: busy(), line: o || typed, typed });
+        typed = '';
+      }
       else if (c === 0x15) typed = '';
       else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
     }
@@ -878,7 +882,7 @@ function dq0Timer(m) {
         if (q) {
           if (q[2] === 'm') rev = q[1] === '7';
           if (q[2] === 'H' && /;1$/.test(q[1]) && q[1] !== '1;1' && /^\x1b\[K(\x1b\[\?25h)?> /.test(out.slice(i + q[0].length, i + q[0].length + 12)) &&
-            (c.want === '*' ? anyWords(story, c.line, story.length) >= 0 : c.want.split('|').some(x => story.includes(x))) && prompt < 0) prompt = idx.length;
+            (c.want === '*' ? anyWords(story, e.typed || c.line, story.length) >= 0 : c.want.split('|').some(x => story.includes(x))) && prompt < 0) prompt = idx.length;
           i += q[0].length - 1;
           continue;
         }
@@ -893,7 +897,7 @@ function dq0Timer(m) {
       story += out[i];
       idx.push(i);
     }
-    const w = c.want === '*' ? anyWords(story, c.line, prompt < 0 ? story.length : prompt) :
+    const w = c.want === '*' ? anyWords(story, e.typed || c.line, prompt < 0 ? story.length : prompt) :
       c.want.split('|').map(x => story.indexOf(x)).filter(x => x >= 0).reduce((a, b) => a < 0 || b < a ? b : a, -1);   // (Words the answer may begin with, | between)
     let last = prompt < 0 ? idx.length - 1 : prompt - 1;
     while (last > 0 && story[last] === ' ') last--;
@@ -963,6 +967,90 @@ function dq0Asks(m, gs) {
     }
   };
 }
+// The designators' letters in the game as played (the user's, 2026-11-19: the designator tests' played games type that
+// game's own letters, so each plays the same commands as the others): its kit isn't the tests' (no -K), so a letter of
+// the test's own game names another thing there, or none.  As each line of the test's own game (own: its number, the dq0
+// lines typed, 1 on) is entered, each letter in it (a word of one letter, a count before it, "drop 1g"; not the new one of
+// "letter h as t") is noted as the thing it names then: a carried thing's kind's name, where it is (held, worn, at the
+// belt, or in what) and its state (lit, spent), its place among those alike (the UI bank's ix, in the store's order); a
+// capital's thing's or denizen's kind and its place among those alike (the UI bank's cap).  As the same line comes to be
+// typed in the game as played (played: its number), at its prompt, each letter is the one that game gives the same thing
+// (alike as near as it can: its kind and place, then its kind), kept if there's none.  m.dq0Orig: the lines so changed,
+// for dq0Timer (its line the test's, typed as its own)
+function dq0LetterKeys(m) {
+  if (!m.dq0) return null;
+  const { L } = m.dq0.layout(), ui = m.dq0.bank(L.uiBank), cat = m.dq0.bank(L.catBank);
+  if (!ui) return null;
+  const str = (b, o, n) => { let t = ''; for (let i = 0; i < n && b[o + i]; i++) t += String.fromCharCode(b[o + i]); return t; };
+  const ltr = (i, base) => i < 26 ? String.fromCharCode(base + i) : String.fromCharCode(base) + String.fromCharCode(base + i - 26);
+  const kname = k => k === 0xFF ? '?' : str(ui, L.uIxks + k * L.cixkSize + L.ckName, 14);
+  const ent = [];
+  for (let i = 0; i < Math.min(ui[L.uIxn], 40); i++) {
+    const o = L.uIx + i * L.cixSize;
+    ent.push({ kind: ui[o + L.cxKind], up: ui[o + L.cxUp], flags: ui[o + L.cxFlags], let: ui[o + L.cxLet] });
+  }
+  const low = {}, cap = {}, seen = {};
+  for (const e of ent) {
+    if (!e.let) continue;
+    const name = kname(e.kind), at = e.up && ent[e.up - 1] ? 'in ' + kname(ent[e.up - 1].kind) : e.flags & 1 ? 'held' : e.flags & 2 ? 'worn' : 'top';
+    const k = name + '|' + at + '|' + (e.flags & 0x0C);
+    low[ltr(e.let - 1, 97)] = { name, at, st: e.flags & 0x0C, rank: seen[k] = (seen[k] === undefined ? 0 : seen[k] + 1) };
+  }
+  for (let i = 0; i < L.nlet; i++) {
+    const o = L.uCap + i * L.ucapSize, id = ui[o + L.ucId] | ui[o + L.ucId + 1] << 8;
+    if (!id) continue;
+    const what = ui[o + L.ucWhat], kind = ui[o + L.ucKind], name = what === 2 ? 'den ' + kind : cat ? str(cat, kind * L.kindSize, 14) : 'kind ' + kind;
+    cap[ltr(i, 65)] = { name, at: '', st: 0, rank: seen['C' + name] = (seen['C' + name] === undefined ? 0 : seen['C' + name] + 1) };
+  }
+  return { low, cap };
+}
+function dq0PlayLetters(m, own, played) {
+  const a = m.acia, read = a.read, tick = a.tick, ownLines = [];
+  let typed = '', g = 0, n = 0;
+  const tokens = l => l.split(' ').map((w, i, ws) => ({ w, i, m: /^(\d*)([A-Za-z])$/.exec(w), as: i > 0 && ws[i - 1] === 'as' && ws[0] === 'letter' }));
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) {
+        if (/^(?:\S*\/)?dq0( |$)/.test(typed)) { ++g; n = 0; }
+        else if (g === own) {                   // (The test's own game: its letters' things as the line's entered)
+          const K = dq0LetterKeys(m), keys = {};
+          for (const tk of tokens(typed)) if (tk.m && !tk.as && K) keys[tk.i] = (tk.m[2] < 'a' ? K.cap : K.low)[tk.m[2]] || null;
+          ownLines.push({ line: typed, keys });
+        }
+        typed = '';
+      } else if (c === 0x15) typed = '';
+      else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+  a.tick = (d, t) => {
+    const head = a.rxQueue[0];
+    tick(d, t);
+    if (head !== '\u0101' || a.rxQueue[0] === '\u0101' || g !== played) return;
+    let e = a.rxQueue.indexOf('\r');           // (Its prompt come: the line about to be typed)
+    if (e < 0) return;
+    const line = a.rxQueue.slice(0, e).join(''), o = ownLines[n++];
+    if (!o || o.line !== line) return;
+    const K = dq0LetterKeys(m);
+    if (!K) return;
+    const ws = line.split(' ');
+    for (const tk of tokens(line)) {
+      const want = o.keys[tk.i];
+      if (!tk.m || tk.as || !want) continue;
+      const here = tk.m[2] < 'a' ? K.cap : K.low, all = Object.entries(here);
+      const pick = f => { const c = all.filter(([, v]) => f(v)); return c.length ? c[Math.min(want.rank, c.length - 1)][0] : null; };
+      const to = pick(v => v.name === want.name && v.at === want.at && v.st === want.st) || pick(v => v.name === want.name && v.at === want.at) ||
+        pick(v => v.name === want.name && v.st === want.st) || pick(v => v.name === want.name);
+      if (to) ws[tk.i] = tk.m[1] + to;
+    }
+    const to = ws.join(' ');
+    if (to === line) return;
+    a.rxQueue.splice(0, e, ...to);
+    (m.dq0Orig = m.dq0Orig || []).push({ from: line, to });
+  };
+}
+
 // Each line of a D17 test's typings timed (dq0Timer's game: the test's own first, then dq0Paces' menacing and played),
 // its first letter held to D17.first (tests/lib/trends.js's target: f the failures, notes; their names the test's own
 // first, the others' ", menacing" and ", played" after the line); the first typing's words its want, the others' '*'
@@ -1073,5 +1161,5 @@ module.exports = {
   dq0Never, dq0Carried, dq0Here, dq0Named, dq0Thing, dq0Holder, dq0View, DQ0_I, passings, dq0TypedAsk, dq0Typed,
   dq0PortalOff, dq0Portal, dq0RecPb, dq0Rec, dq0Alone, dq0Poke, dq0BodyFb, dq0Body, dq0SheetSb, dq0Sheet, dq0PcShock,
   dq0Grow, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Median, dq0Worst, dq0Waits, dq0Held, DQ0_ANSWERS, dq0AnswerTest, WORN,
-  DQ0_PLAYED, dq0Paces, dq0Own, dq0Asks, dq0HeldPaces,
+  DQ0_PLAYED, dq0Paces, dq0Own, dq0Asks, dq0HeldPaces, dq0LetterKeys, dq0PlayLetters,
 };
