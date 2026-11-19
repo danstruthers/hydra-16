@@ -2695,6 +2695,7 @@ module.exports = {
         want('empty the iron pot into the sack', /The sack won't hold water\./, 'the sack not refused');
         want('empty the iron pot into the vial', /The vial is closed\./, 'a closed vial not refused');
         want('pour the water', /You pour the water out of the iron pot\./, "the pot's water not poured away");
+        if (/reach for the waterskin/.test(a('pour the water'))) f.push('"pour the water": its first words the empty waterskin\'s: ' + a('pour the water'));
         this.notes = [];
         for (const r of this.timer.game(0, POUR.filter(l => /^(pour|empty) /.test(l)).map(l => ({ line: l, want: 'You|The' })))) {
           this.notes.push(r.line + ': first letter ' + r.first);
