@@ -162,6 +162,7 @@ unsigned char __fastcall__ travel_go (const char* l);  /* The command's move to 
                                                 **   to the Mausoleum", the parser's cmd): its journey (I_TRAVEL), 1;
                                                 **   else 0 (slice 4.2's) */
 extern unsigned char busy;                      /* (main.c's: the character's doing something) */
+extern unsigned char journeyed;                 /* (main.c's: a journey's begun told, till it's free: task.c's) */
 struct req;
 struct req* __fastcall__ ask_b (unsigned char kind, unsigned char a, unsigned char b);   /* (main.c's) The referee
                                                 **   asked, the UI's slot */

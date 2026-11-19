@@ -70,6 +70,9 @@ static unsigned char noinit;                    /* (dq0 -I: no engage initiative
 static unsigned char nobear;                    /* (dq0 -N: its bearings never tested: the tests', slice 4.2's) */
 static unsigned char asked;                     /* (A sound's question put in this command's long task) */
 static unsigned bar_done;                       /* (The long task's part done as the bar was last drawn) */
+unsigned char journeyed;                        /* (A journey's begun told ("You head back toward the Grotto."), till
+                                                **   the character's free: a line typed then ends it, free_cmd's, the
+                                                **   world's long task not yet its own, 2026-11-19) */
 unsigned char busy = 1;                         /* The character's doing something: no command till it's free (nor
                                                 **   till the world's started, and says so: E_READY) */
 unsigned char nap = 40;                         /* (main's nap with nothing doing, ticks: o_dots's, a fiftieth once it's started) */
@@ -898,10 +901,10 @@ static void fore_sync (void)
         HUB->ui_cmd = owed = 0;                 /* (Its intent taken and the world round again since: an answer
                                                 **   without news to the character, if any, given) */
     }
-    f = HUB->tpr ? FS_UI | FS_SENS | (HUB->ui_cmd ? FS_CMD : 0) : HUB->ui_cmd ? FS_UI : 0;   /* (The turns pace: the
-                                                **   UI alone while a command's in hand, its words told ahead of the
-                                                **   denizens' turn after it, 2026-11-19: "sit"'s first letter 650,000,
-                                                **   its words' event out at 342,000) */
+    f = HUB->tpr ? FS_UI | FS_SENS | (HUB->ui_cmd ? FS_CMD : 0) : HUB->ui_cmd ? FS_UI : 0;
+                                                /* (The turns pace: the UI alone in it while a command's in hand, its
+                                                **   words told ahead of the denizens' turn after the act, 2026-11-19:
+                                                **   "sit"'s first letter 650,000, its words' event out at 342,000) */
     if (f != fored) {
         fore_set (fored = f);
     }
@@ -1067,7 +1070,7 @@ static unsigned char events (void)          /* (How many there were) */
             break;
         case E_READY:
             if (m.who == 0) {
-                busy = step_k = 0;
+                busy = step_k = journeyed = 0;
                 placing = 0;                    /* (Its walk's over, whatever its legs, wherever stopped) */
                 asking = 0;                     /* (A fight's question, its fight over as it asked: let go) */
                 heard ();                       /* (What came before it, told before the prompt: a blow's words;

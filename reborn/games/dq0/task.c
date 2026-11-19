@@ -312,6 +312,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
             said_s[0] = strcpy (lb + 340, noun (n));
         }
         if (p == LT_TRAVEL) {                   /* (A journey: slice 4.2's) */
+            journeyed = 1;
             strcpy (lb + 300, place (named));
         } else if (p == LT_BATTER && (n & SK_WITH)) {   /* (Struck with the thing named: "with the bar", the hub's
                                                 **   pc_strike's; its what the portal's kind plus 1) */
@@ -671,8 +672,9 @@ unsigned char __fastcall__ o_free_cmd (const char* l)
         return 3;                               /* (Breaks off: any long task, a reach's steps, a fight, a journey) */
     }
     hub_mem (0, &i, &HUB->pc_task.kind, 1);
-    if (i == LT_TRAVEL) {
-        return 2;                               /* (A journey: any command ends it, HOUSE.md's travel) */
+    if (i == LT_TRAVEL || journeyed) {
+        return 2;                               /* (A journey: any command ends it, HOUSE.md's travel; its begun told,
+                                                **   the world's long task not yet set as the line came, 2026-11-19) */
     }
     return i != LT_FIGHT ? 0 : a == VB_ATTACK_OBJECT && !cmd.obj.kind ? 1 : 2;
 }
