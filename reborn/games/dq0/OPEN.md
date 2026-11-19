@@ -73,6 +73,13 @@ H8 from built/2026-11-17-things.md; its other questions were answered on 2026-11
 - **H8. The thing a tool is for is kept in hand only when its request names it.** A rope tied to a held spike keeps
   the rope and stows the spike. Protect it by the act instead?
 
+- **H11. Pouring from one container into another** ("pour the water into the flask")? "empty X onto Y" now puts
+  things in Y's first compartment, all or nothing, and a liquid is poured away (built).
+  - built/2026-11-18-pb3.md, open question 2.
+- **H12. A tool to reach into a pit** (a pole, a hook)? Things in a pit are out of reach from its edge; climbing down is
+  the only way, since the catalogue has nothing long enough (built).
+  - built/2026-11-18-polish2.md, open question 1.
+
 ## Knocked out
 
 The user answered three questions on 2026-11-14 ("Knocked out: the three questions": the words "You lie senseless.",
