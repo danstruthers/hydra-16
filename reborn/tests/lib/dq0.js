@@ -233,7 +233,10 @@ function chunkDiff(a, b) {
 // The status line as the screen showed it after each of its draws (the game draws only from its first column changed:
 // "torch 15" of "torch 15m" when the m was there already), one a line, for a check of what it said
 const dq0StatusRows = out => { const v = new VT({ onlcr: true }); return out.split('\x1b[0m').map(c => v.write(c + '\x1b[0m').lines()[0]).join('\n'); };
-const dq0Story = out => out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' ');
+// (The status line's draws not the story's: drawn in reverse video on its own row, wherever they fall among an answer's
+// words, as dq0Timer's story has it; 2026-11-18, dq0follow's "[######....] torch 59m UP 0 facing W" between a follow's
+// two sentences: its long task's bar shown while it was under way, as the UI came round between its events)
+const dq0Story = out => out.replace(/\x1b\[7m[\s\S]*?\x1b\[0?m/g, ' ').replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' ');
 function inTurn(o, want, f, name = '') {
   let at = 0;
   for (const w of want) {
