@@ -14,6 +14,8 @@ struct glows {                                  /* (struct sight's, from its ngl
     unsigned char   dazzled;
 };
 extern struct glows G;
+#define PC_DARK         19                      /* The character's eyes: tenths to a 16th of a level darker (a torch's
+                                                **   9 to the dark's 0 in some 4.5 minutes; the hub's sens[0].eyes) */
 void __fastcall__ adapt (struct eyes* e, unsigned char lv, unsigned char rate);    /* As time's gone, in light lv */
 unsigned char __fastcall__ glow_reach (const struct eyes* e, unsigned char b);   /* How far a light of brightness b
                                                 **   is seen far off */

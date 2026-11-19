@@ -45,6 +45,8 @@ extern unsigned char sgen;                    /* (sound.c's: bumped as the world
 static unsigned char face, light, sight, dark, sn, own, range;
 static unsigned x, y;
 
+void sens_pc (void);                            /* (Part 7's, below) */
+
 /* The character as the hub has it */
 static void pc (void)
 {
@@ -107,6 +109,7 @@ static void look (void)
     if (v_nom) {
         wfar = 0;                               /* (Its openings held only for a chunk not made: way.c's seen_on) */
     }
+    sens_pc ();                                 /* (Its senses kept: part 7's, the lamps' after it) */
     things_lamps (sn, x, y);                    /* (The lit things lying about: a torch put down) */
     view (sn, x, y, face, light, sight, dark);
     kept (v_way ? 1 : 3);                       /* (What it keeps of it: each chunk's memory, part 4's; a look one way's
@@ -206,6 +209,24 @@ static void __fastcall__ span (unsigned v)
     a = (int) a < 0 ? -a : a;
     b = (int) b < 0 ? -b : b;
     gf = a > b ? (a > 255 ? 255 : a) : (b > 255 ? 255 : b);
+}
+
+/* The character's senses kept, as every actor's (the hub's sens[0]: ONE-PATH.md's 2.2), as it looks: its sight's reach
+** lit and by its darkvision (none asleep or blind), its hearing in the one formula's scale (the UI's own), its nose a
+** quarter of its smell (HOUSE.md's), its own light, listening as it goes (part 7's, the look's lamps' after it: the
+** main RAM's room) */
+void s_sens_pc (void)
+{
+    static struct asense ps;
+
+    ps.sight = sight == 0xFF ? 0 : range;
+    ps.dark = sight == 0xFF ? 0 : dark;
+    ps.hear = HUB->pcsum.hearing + 3;
+    ps.eyes = PC_DARK;
+    ps.nose = HUB->pcsum.smell >> 2;
+    ps.light = own;
+    ps.flags = AS_SET | (HUB->watch & WA_LISTEN ? AS_LISTEN : 0);
+    memcpy (&HUB->sens[0], &ps, sizeof ps);
 }
 
 unsigned char s_far_may (void)
@@ -444,6 +465,8 @@ static unsigned char sense_held (void)
     return hst == 1;
 }
 
+void lit_ask (void);                            /* (sense.c's, part 6's) */
+
 int main (int argc, char* argv[])
 {
     if (argc < 4 || ovl_load (argv[3]) || hub_attach (num (argv[1]), num (argv[2]))) {
@@ -466,7 +489,11 @@ int main (int argc, char* argv[])
         if (HUB->quit) {
             break;
         }
-        if (hub_posted (&HUB->look)) {
+        if (hub_posted (&HUB->look) && HUB->look.kind == LK_LIT) {
+            light_events ();                    /* (A square lit or not, the world's ask: every actor's light, the
+                                                **   one rule, sense.c's; unlit_at's that was, ONE-PATH.md's 2.2) */
+            lit_ask ();
+        } else if (hub_posted (&HUB->look)) {
             if (kept_owed) {
                 kept_owed = 0;
                 kept (2);                       /* (The last look one way's memory kept, before another look) */

@@ -1699,8 +1699,28 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   background as it makes the chunks ahead: WW_*), 2, the world to ask
                                                 **   the rest (LK_REST, as nothing's in hand); 0 none */
     } way_want;
+    /* Each actor's senses (the user's, 2026-11-17: the character and every denizen sense the world by the same rules and
+    ** code; ONE-PATH.md's 2.2): one record an actor, the character's entry 0, an actor's its entry + 1, the senses' to
+    ** keep (the character's as it looks, its summary's; a denizen's as its mind asks, its kind's), every task's to read
+    ** (the maker's chooser, its reach; the minds) */
+    struct asense {
+        unsigned char sight;                    /* How far it sees what's lit, squares (0: it sees nothing: asleep, blind) */
+        unsigned char dark;                     /*   and what isn't, its darkvision (squares) */
+        unsigned char hear;                     /* Its hearing: a loudness's reach, half-squares a level (the character's
+                                                **   its sheet's hearing and 3, the UI's and the sound's; a kind's its
+                                                **   kinds.txt's) */
+        unsigned char eyes;                     /* Its eyes' adapting to the dark (eyes.c's rate) */
+        unsigned char nose;                     /* How far it smells in still air, squares */
+        unsigned char light;                    /* Its carried light's reach, squares (0: none) */
+        unsigned char flags;                    /* AS_* */
+    } sens[1 + NACTORS];
+    unsigned char dsense_whom;                  /* dsense's target: 0 the character; else an actor's entry + 1 (the
+                                                **   senses' sense (looker, target): ONE-PATH.md's 2.2) */
 };
 enum { WW_NONE, WW_WANTED, WW_MADE };           /* (way_want's st) */
+#define AS_LISTEN       0x01                    /* (sens' flags: listening as it goes, hearing 2 better: the character's
+                                                **   WA_LISTEN, HOUSE.md's) */
+#define AS_SET          0x80                    /*   the record kept (0: none yet) */
 #define WANT_HUNGER(w)  ((w) & 0x0F)            /* (pc_want's hunger level, and its thirst's: 0 none, 1 hungry or */
 #define WANT_THIRST(w)  ((w) >> 4)              /*   thirsty, 2 very, 3 starving or parched, 4 dying of it; */
 #define WANT_DEAD       5                       /*   WANT_DEAD dead of it) */
@@ -1764,7 +1784,7 @@ enum { HW_BEHIND, HW_HEAP, HW_DOORWAY, HW_RUBBLE, HW_SHADOW, HW_OUT, HW_OPEN, HW
     HW_LIGHT, HW_SEEN, HW_BARE };               /* (The hub's pc_hw says of what: HW_BEHIND, HW_HEAP its kind; HW_FOUND, HW_SPOT, HW_LEAP,
                                                 **   HW_SEEN the actor plus 1) */
 
-enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY, LK_PEEK, LK_NEAR, LK_REST };  /* The look's kinds: a look about; the denizens seen
+enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY, LK_PEEK, LK_NEAR, LK_REST, LK_LIT };  /* The look's kinds: a look about; the denizens seen
                                                 **   looked at again; the eyes only, as time's gone (the lights seen far
                                                 **   off: a wait's); a look one way (I_LOOK's: a look about, and twice as
                                                 **   far in the quarter ahead; its own record, WAY_SEEN); the same
@@ -1776,6 +1796,8 @@ enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY, LK_PEEK, LK_NEAR, LK_REST };  /* The l
                                                 **   look one way done as LK_WAY's, its last look not as it stands); a
                                                 **   look one way's rest, the chunk its eyes reached made since (way_want's:
                                                 **   the user's, 2026-11-18), the reply's ch LC_FAR if there's more to tell */
+                                                /* (LK_LIT: square wx, wy of stratum wd lit, for every
+                                                **   actor alike, the reply's ch 1: the world's unlit_at, ONE-PATH.md's 2.2) */
 #define LC_FAR          2                       /* (The look's reply's ch, LK_NEAR's: its near part told, the far's next;
                                                 **   LK_REST's: its rest to tell) */
 #define LC_WHOLE        4                       /* (LK_NEAR's: its last look not standing, the whole look one way done
@@ -2128,6 +2150,8 @@ struct wsave {
 **   own hub.pc_out world                                       (Senseless: 2026-11-13)
 **   own hub.folk denizens                                      (Each actor a person, "they": 2026-11-17)
 **   own hub.way_want senses +maker +world                      (A look one way's rest: the user's, 2026-11-18)
+**   own hub.sens senses                                        (Each actor's senses: one path, 2026-11-19)
+**   own hub.dsense_whom denizens +world                        (A sense's target: the asker's)
 **   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)

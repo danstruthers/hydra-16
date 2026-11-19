@@ -178,10 +178,8 @@ unsigned char __fastcall__ o_ahead_keep (unsigned char k)
 
 /* ---- Which */
 
-static void __fastcall__ reach (struct act* p, unsigned char sight)
+static void __fastcall__ reach (struct act* p, unsigned char e)
 {
-    unsigned char e = 4 + 2 * (sight > 9 ? 9 : sight);
-
     p->r = e + AH_STEPS;
     p->f = (2 * e < AH_WAY ? 2 * e : AH_WAY) + AH_STEPS;
 }
@@ -193,6 +191,7 @@ static void __fastcall__ reach (struct act* p, unsigned char sight)
 static unsigned char actors (void)
 {
     static struct { unsigned char state, sn, face; } h;
+    struct asense as;                           /* (On the C stack: the main RAM's room) */
     struct act* p = an;
     unsigned char k, s;
 
@@ -203,11 +202,11 @@ static unsigned char actors (void)
             p->sn = h.sn;
             p->face = h.face & 7;
             hub_get (0, &HUB->bodies[k].x, &p->x, 4);
-            s = 9;                              /* (A denizen's sight isn't in the hub: the most a kind's) */
-            if (!k) {
-                hub_get (0, &HUB->pcsum.sight, &s, 1);
-                pc0 = 1;
-            }
+            hub_get (0, &HUB->sens[k], &as, sizeof as);    /* (Its own senses, the senses' record: its sight's
+                                                **   reach, lit or by its darkvision, squares; none kept yet, the most a
+                                                **   kind's, 4 + 2 x 9: ONE-PATH.md's 2.2, 2026-11-19) */
+            s = !(as.flags & AS_SET) ? 22 : as.sight > as.dark ? as.sight : as.dark;
+            pc0 |= !k;
             reach (p++, s);
         }
     }

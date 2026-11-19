@@ -1,6 +1,8 @@
 /*
 ** sense.c - (dq0p) the senses answering for an actor (DUNGEON.md: perception as layers; the hub's dsense, the
-** denizens asking for their minds, as one decides): whether it senses the character.  Its eyes first, adapted to
+** denizens asking for their minds, as one decides): whether it senses the character, or another actor (the hub's
+** dsense_whom: ONE-PATH.md's stage 1, one rule for every looker and every target, the user's 2026-11-17), its senses
+** kept in the hub's sens for every task to read.  Its eyes first, adapted to
 ** the light where it stands (the light layer's, and the character's own light if it's within its reach), as time's
 ** gone since they were last (eyes.c's adapt, at its kind's rate).  Seen: the character lit (its own light, or the
 ** light layer's where it stands) within the kind's sight, else within its darkvision, the less as its eyes are still
@@ -20,7 +22,11 @@
 ** sound layer's, no shut door on it; past it, a line the air passes: line.inc's).  A far one (beyond all of them) is
 ** answered coarsely, no line cast: how far it may go with the answer standing (slack).  The character hidden (the hub's
 ** pc_hid: HOUSE.md's hiding oneself): still, no sound of it; in sight's reach, SN_LOOK, not seen: its mind's to test the
-** look (dq0d's part 20); smelt all the same.
+** look (dq0d's part 20); smelt all the same.  Another actor the target: its body and its light (the hub's sens),
+** its steps heard while it's busy along the straight line, the air's (no rock nor shut door on it: the user's,
+** 2026-11-17; exact, the sound layer's way, whenever the character is at either end), smelt the same.  Facing (seen
+** only before its eyes, as the character's look is) waits on the minds turning to look (the audit's S14): the minds
+** never turn yet, so a watcher would stay blind to whatever its last step left behind it.
 */
 
 #include <stddef.h>
@@ -56,47 +62,139 @@ static unsigned __fastcall__ apart (int dx, int dy)
     return dx > dy ? dx : dy;
 }
 
-#define PC_HID          0x80                    /* (pos's: the character hidden) */
+/* (dens.c's, a darkvision's look's alone: the main RAM's room) The body copied (sact) low (crouched, kneeling,
+** sitting; prone) and unlit, seen only by the character's darkvision: past three quarters of its reach (prone,
+** half), not seen, as every looker's rule has it (sense.c's: ONE-PATH.md's 2.2, the audit's S6) */
+unsigned char s_low_far (void)
+{
+    static unsigned d, e;
+    static unsigned char m;
+
+    if (!sact.pos) {
+        return 0;
+    }
+    d = sact.x - HUB->pc_x;
+    e = sact.y - HUB->pc_y;
+    d = (int) d < 0 ? -d : d;
+    e = (int) e < 0 ? -e : e;
+    d = d > e ? d : e;
+    m = HUB->pcsum.darkvision;
+    e = HUB->pc_light * (HUB->pcsum.nightvision ? HUB->pcsum.nightvision : 1);  /* (Its own light's reach, the look's) */
+    if ((e && d <= e) || light_at (sact.sn, sact.x, sact.y)) {
+        return 0;
+    }
+    hub_map (0);
+    return d > (sact.pos == POS_PRONE ? m >> 1 : m - (m >> 2));
+}
+
+/* Square x, y of stratum sn lit, for every actor alike (the user's, 2026-11-17: a denizen sees by any light, the
+** character's torch included; ONE-PATH.md's 2.2, the audit's S2): the light layer's there (a room's own light, a lit
+** thing lying, daylight), or a carried light's within its reach with a line clear from it (the character's; the
+** denizens' lights to come); a chunk not made, dark.  The world's ask (the hub's look, LK_LIT: its unlit_at that was,
+** what the character saw) */
+unsigned char __fastcall__ s_lit_sq (unsigned char sn, unsigned x, unsigned y)
+{
+    static unsigned char own;
+    static unsigned d;
+
+    if (!cached (sn, x, y)) {
+        return 0;
+    }
+    if (light_at (sn, x, y)) {
+        return 1;
+    }
+    hub_map (0);
+    own = HUB->pc_light * (HUB->pcsum.nightvision ? HUB->pcsum.nightvision : 1);
+    if (!own || HUB->pc_stratum != sn || (d = apart (x - HUB->pc_x, y - HUB->pc_y)) > own) {
+        return 0;
+    }
+    ln_eye = LN_EYES (HUB->pc_pos);
+    return !line (sn, HUB->pc_x, HUB->pc_y, x, y, LN_SIGHT);
+}
+
+/* The world's ask (the hub's look, LK_LIT: square wx, wy of stratum wd), answered (its ch) */
+void s_lit_ask (void)
+{
+    static unsigned char c;
+
+    hub_map (0);
+    c = s_lit_sq (HUB->look.wd, HUB->look.wx, HUB->look.wy);
+    hub_map (0);
+    HUB->look.ch = c;
+    hub_reply (&HUB->look);
+}
+
+#define PC_HID          0x80                    /* (pos's: the target hidden) */
 static unsigned char eden[NACTORS];             /* (Each entry's denizen its eyes are, its record: E's) */
 void s_sense_actor (void)
 {
-    static unsigned char k, sight, dark, hear, eyes, nose, pcs, own, lv, lit, res, m, ex, noise, c, pos;
-    static unsigned pcx, pcy, dist, reach;
+    static unsigned char k, j, sight, dark, hear, eyes, nose, tsn, own, lv, lit, res, m, ex, noise, c, pos, gr;
+    static unsigned tx, ty, dist, reach;
     static int dx, dy;
     static signed char w;
     static struct eyes* e;
+    static struct asense* r;
+    static struct actor* t;
 
     hub_map (0);
     k = HUB->dsense.who;
+    j = HUB->dsense_whom;                       /* (Its target: 0 the character, else an actor's entry + 1) */
     sight = HUB->dsense.sight;
     dark = HUB->dsense.dark;
     hear = HUB->dsense.hear;
     eyes = HUB->dsense.eyes;
     nose = HUB->dsense.nose;                    /* (Its smell's reach in still air, squares) */
-    noise = HUB->dsense.noise;                  /* (A noise of the character's: heard or not, alone) */
-    memcpy (&sact, &HUB->actor[k], SACT);
-    pcs = HUB->pc_stratum;
-    pcx = HUB->pc_x;
-    pcy = HUB->pc_y;
-    own = HUB->pc_light;
-    pos = HUB->pc_pos | (HUB->pc_hid ? PC_HID : 0);
-    res = 0;
+    noise = HUB->dsense.noise;                  /* (A noise of the target's: heard or not, alone) */
     HUB->dsense.cost = 0xFF;
-    if (sact.sn != pcs || k >= NACTORS) {
+    if (k >= NACTORS || j > NACTORS || j == k + 1) {
         HUB->dsense.res = 0;
-        HUB->dsense.slack = 0xFF;               /* (Another stratum: till the character moves) */
+        HUB->dsense.slack = 0xFF;
         return;
     }
-    if (!noise && HUB->pc_ready > hub_now ()) {
-        c = (HUB->pc_going & 0x3F) - 1;         /* (Busy: its steps as loud as the world says, or by its pace, a walk
+    memcpy (&sact, &HUB->actor[k], SACT);
+    r = &HUB->sens[k + 1];                      /* (Its senses kept, as asked: the hub's, every task's to read) */
+    r->sight = sight;
+    r->dark = dark;
+    r->hear = hear;
+    r->eyes = eyes;
+    r->nose = nose;
+    r->flags = AS_SET;
+    if (!j) {                                   /* (The target: the character) */
+        tsn = HUB->pc_stratum;
+        tx = HUB->pc_x;
+        ty = HUB->pc_y;
+        own = HUB->pc_light;
+        pos = HUB->pc_pos | (HUB->pc_hid ? PC_HID : 0);
+    } else {                                    /* (Or another actor: its body, its light the one it carries) */
+        t = &HUB->actor[j - 1];
+        tsn = (t->state & 1) ? t->sn : 0xFF;
+        tx = t->x;
+        ty = t->y;
+        own = HUB->sens[j].light;
+        pos = t->pos | (t->state > 1 ? PC_HID : 0);
+    }
+    res = 0;
+    if (sact.sn != tsn) {
+        HUB->dsense.res = 0;
+        HUB->dsense.slack = 0xFF;               /* (Another stratum: till one moves) */
+        return;
+    }
+    if (!noise) {
+        if (!j) {
+            if (HUB->pc_ready > hub_now ()) {
+                c = (HUB->pc_going & 0x3F) - 1; /* (Busy: its steps as loud as the world says, or by its pace, a walk
                                                 **   2, a jog 3, a run 4, a sprint 5, its armour a level more; the
                                                 **   rest as a walk; asleep, softly: HOUSE.md's) */
-        noise = !HUB->pc_going ? (HUB->pc_task.kind == LT_SLEEP ? 1 : pos & PC_HID ? 0 : 2) : HUB->pc_noise != 0xFF ? HUB->pc_noise :
-            (c > GA_WALK ? c : GA_WALK) + HUB->pc_clank;
+                noise = !HUB->pc_going ? (HUB->pc_task.kind == LT_SLEEP ? 1 : pos & PC_HID ? 0 : 2) :
+                    HUB->pc_noise != 0xFF ? HUB->pc_noise : (c > GA_WALK ? c : GA_WALK) + HUB->pc_clank;
+            }
+        } else if (t->ready > hub_now () && !(pos & PC_HID)) {
+            noise = 1;                          /* (Another actor busy: its step, as the minds have it) */
+        }
     }
     snd_need ();                                /* (The sound layer, for the character where it is: sound.c's) */
-    dx = sact.x - pcx;                          /* (From the character to it: the way a sound or a smell goes) */
-    dy = sact.y - pcy;
+    dx = sact.x - tx;                           /* (From the target to it: the way a sound or a smell goes) */
+    dy = sact.y - ty;
     dist = apart (dx, dy);
     w = snd_wind (dx, dy);
     reach = 0;
@@ -104,8 +202,14 @@ void s_sense_actor (void)
         reach = (noise - m) * hear * (32 + w) / 32; /* (Twice the squares: a loudness's times the hearing's over two,
                                                 **   downwind a little further, upwind a little less) */
         if (2 * dist <= reach) {
-            c = snd_cost (sact.x, sact.y);
-            c = c == SND_NONE ? 0xFF : SND_COST (c);
+            if (!j) {
+                c = snd_cost (sact.x, sact.y);  /* (The character at one end: the way a sound goes, exactly) */
+                c = c == SND_NONE ? 0xFF : SND_COST (c);
+            } else {                            /* (Between two denizens: along the straight line, the air's, no rock
+                                                **   nor shut door on it: the user's, 2026-11-17) */
+                ln_eye = LN_EYE;
+                c = line (tsn, tx, ty, sact.x, sact.y, LN_AIR) ? 0xFF : (dist > 0xFE ? 0xFE : dist);
+            }
             hub_map (0);
             HUB->dsense.cost = c;
             if (2 * c <= reach) {
@@ -131,7 +235,8 @@ void s_sense_actor (void)
         e->t = 0;
     }
     adapt (e, lv, eyes);
-    lit = own || light_at (pcs, pcx, pcy);      /* The character lit: its own light, or where it stands */
+    lit = own || (cached (tsn, tx, ty) && light_at (tsn, tx, ty));     /* The target lit: its own light, or where it
+                                                **   stands */
     m = lit ? sight : dark;
     if (!lit && (ex = (e->a >> 4) - lv) < 16) {
         m = m * 4 / (4 + ex);                   /* (Darkvision the less, its eyes used to more light) */
@@ -139,23 +244,34 @@ void s_sense_actor (void)
     if ((pos & ~PC_HID) && !own) {
         m = (pos & ~PC_HID) == POS_PRONE ? m >> 1 : m - (m >> 2);   /* (Low, no light of its own: the less seen) */
     }
+    gr = own && !(pos & PC_HID) ? glow_reach (e, 2 * own + 1) : 0;   /* (Its light seen far off, eyes.c's) */
     w = 2 + w < 0 ? 0 : 2 + w;                  /* (The air: its smell carried downwind, held back upwind) */
     nose = nose * w / 2;
-    ln_eye = LN_EYES (pos & ~PC_HID);           /* (The line between them: the character's look's, from its eyes) */
-    if ((!res || (pos & PC_HID)) && dist <= m && !line (pcs, pcx, pcy, sact.x, sact.y, LN_SIGHT)) {
+    ln_eye = LN_EYES (pos & ~PC_HID);           /* (The line between them: the target's eyes', as the character's look
+                                                **   to it is) */
+    if ((!res || (pos & PC_HID)) && (dist <= m || dist <= gr) && !line (tsn, tx, ty, sact.x, sact.y, LN_SIGHT)) {
         res |= pos & PC_HID ? SN_LOOK : SN_SEEN;
     }
     if (!(res & ~SN_LOOK) && dist <= nose) {
-        c = snd_cost (sact.x, sact.y);          /* (Smelt along the way the air goes: no shut door on it; past the
+        if (!j) {
+            c = snd_cost (sact.x, sact.y);      /* (Smelt along the way the air goes: no shut door on it; past the
                                                 **   sound layer, a line the air passes) */
-        if (c != SND_NONE ? !(c & SND_AIR) && SND_COST (c) <= nose :
-            dist > SND_R && !line (pcs, pcx, pcy, sact.x, sact.y, LN_AIR)) {
+            c = c != SND_NONE ? !(c & SND_AIR) && SND_COST (c) <= nose :
+                dist > SND_R && !line (tsn, tx, ty, sact.x, sact.y, LN_AIR);
+        } else {
+            ln_eye = LN_EYE;
+            c = !line (tsn, tx, ty, sact.x, sact.y, LN_AIR);
+        }
+        if (c) {
             res = SN_SMELT;
         }
     }
     hub_map (0);
     HUB->dsense.res = res;
     m = lit ? sight : dark;                     /* (Far beyond all of them: the coarse answer, no line cast) */
+    if (gr > m) {
+        m = gr;
+    }
     reach >>= 1;
     if (reach > m) {
         m = reach > 250 ? 250 : reach;

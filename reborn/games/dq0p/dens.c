@@ -11,6 +11,7 @@
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
 #include "sight.h"
+#include "light.h"
 
 #define SACT            offsetof (struct actor, did)    /* (sense.c's the same) */
 #define sact            (*(struct actor*) sactb)
@@ -19,6 +20,9 @@ static unsigned sig[NACTORS];                   /* (Each body as it was seen: it
 typedef char sden_fits[offsetof (struct actor, den) - offsetof (struct actor, x) == offsetof (struct sden, den) ? 1 : -1];
                                                 /* (Its square, doing, name and record copied whole: the record its
                                                 **   capital's, the user's designators) */
+
+unsigned char low_far (void);                   /* (sense.c's, part 6's: a low body unlit, past the character's
+                                                **   darkvision's cut for it) */
 
 unsigned char dens_seen (void)
 {
@@ -33,7 +37,8 @@ unsigned char dens_seen (void)
         if (a->state == 1) {                    /* (Its body copied out only if it's one, not hidden: most aren't) */
             memcpy (&sact, a, SACT);
             g = HUB->agear[k];                  /* (Its things at a look: the world's, AG_*; the hub in the window) */
-            if (sact.sn == HUB->pc_stratum && n < SEE_DENS && (p = at (sact.sn, sact.x, sact.y)) != 0 && (*p & T_VIS)) {
+            if (sact.sn == HUB->pc_stratum && n < SEE_DENS && (p = at (sact.sn, sact.x, sact.y)) != 0 && (*p & T_VIS) &&
+                !(sact.pos && (hub_map (0), HUB->pcsum.darkvision) && low_far ())) {
                 hub_map (SIGHT_BANK);
                 memcpy (&SIGHT->den[n], &sact.x, offsetof (struct sden, gear));
                 SIGHT->den[n++].gear = g;

@@ -21,8 +21,7 @@
 #pragma static-locals (on)
 
 #define GLOW_MAX        31                      /* Squares a light far off is seen at, at most */
-#define PC_DARK         19                      /* The character's eyes: tenths to a 16th of a level darker (a torch's
-                                                **   9 to the dark's 0 in some 4.5 minutes), */
+/* (PC_DARK, the character's eyes' rate: eyes.h's) */
 #define DAZZLE          6                       /*   dazzled by a light this many levels brighter than they're used to,
                                                 **   for DAZZLE_T tenths a level */
 #define DAZZLE_T        5

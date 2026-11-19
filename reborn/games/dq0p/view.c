@@ -40,6 +40,7 @@
 #include "../dq0w/world.h"
 #include "view.h"
 #include "light.h"
+#include "eyes.h"
 
 #pragma code-name ("SW1CODE")                   /* (Part 1's, all of it: swapped, bank.s's stubs, once a look) */
 #pragma rodata-name ("SW1RODATA")
@@ -590,6 +591,10 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
     if (sight == 0xFF) {                        /* (Blinded: the grid's marks the last view's, not kept) */
         bw = gw_ = 0;
         return;
+    }
+    if (dark && E[0].t && (k = (E[0].a >> 4) - (light ? 2 * light + 1 : own ? light_at (sn, x, y) : 0)) < 16) {
+        dark = dark * 4 / (4 + k);              /* (Its darkvision the less as its eyes are still used to more light
+                                                **   than is there, as every actor's: sense.c's, ONE-PATH.md's 2.2) */
     }
     range = 4 + 2 * (sight > 9 ? 9 : sight);
     rg_ = range;
