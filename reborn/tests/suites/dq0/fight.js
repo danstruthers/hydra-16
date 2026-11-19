@@ -8,7 +8,7 @@ const { typed } = require('../../lib/common.js');
 const {
   liveChunks, stratumRec, dq0Story, dq0Prose, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never,
   dq0Carried, dq0Named, dq0Thing, DQ0_I, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0Body, dq0Sheet, dq0PcShock, dq0Grow,
-  dq0Aware, dq0OnWords, WORN
+  dq0Aware, dq0OnWords, WORN, dq0Ad
 } = require('../../lib/dq0.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
 
@@ -241,7 +241,7 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
         "echo 'faction | Vermin | rat | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'look', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
       start(m) {
-        const lbl = n => parseInt(new RegExp('^al ([0-9A-F]+) \\._' + n + '$', 'm').exec(fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'))[1], 16);
+        const lbl = n => dq0Ad(fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'))(n);
         const broken = (h, L, K, at) => {
           const ram = m.taskRam[h[12 + 2]];
           dq0Alone(m, h, L, K, at, 0);

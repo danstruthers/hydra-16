@@ -11,7 +11,9 @@
 ;   too), or nothing in hand (ui_cmd, and ui_keys unless GW_NOKEYS): 0, the hold over.
 ;   A line its own (the parser's request's seq; with GW_LINE only that: else the UI's ui_cmd and ui_keys as well, a
 ;   line typed again or its command's answer begun its own hold): held from the first time it's asked, GW_CMD ticks
-;   while a command's in hand, GW_KEYS while its keys go on; then 0 till the next line.
+;   while a command's in hand, GW_KEYS while its keys go on; then 0 till the next line.  GW_LOOK: a look one way's
+;   rest awaited (the hub's way_want) in hand as a command is; GW_ALL: held as long as anything's in hand, no limit
+;   (the world's time believed: speed6's, 2026-11-19, its pass run at the next that's free).
 ; OUT: .A 1 held, 0 not; .X 0.  Modifies .A, .X, .Y, r2, r3
 
 .include "hydra.inc"
@@ -54,6 +56,15 @@ gw_held:
             sta         r2
             lda         HUB_WINDOW + HUBO_CMD
             sta         r3
+            lda         r1                              ; (A look's rest awaited: in hand, GW_LOOK)
+            and         #GW_LOOK
+            beq         :+
+            lda         HUB_WINDOW + HUBO_WWST
+            beq         :+
+            lda         #$80
+            tsb         r3
+:
+            lda         r3
             ora         r2
             jeq         @none                           ; (Nothing in hand)
             ldy         #GS_SQ                          ; A line of its own: the hold begun again
@@ -99,6 +110,9 @@ gw_held:
 @running:
             cmp         #1
             bne         @over                           ; (Run out: on, till the next line)
+            lda         r1                              ; (No limit: held while anything's in hand)
+            and         #GW_ALL
+            bne         @held
             jsr         TICKS                           ; Run out yet: the ticks since t0 against GW_CMD or GW_KEYS
             phx
             sec

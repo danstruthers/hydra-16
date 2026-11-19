@@ -1835,7 +1835,7 @@ module.exports = {
       })() },
       start(m) {
         const lbl = () => fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
-        const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) \\._' + n + '$', 'm').exec(lbl())[1], 16);
+        const ad = dq0Ad(lbl());
         const ramOf = h => { const t = h[12 + 2]; return m.taskRam[t]; };
         const place = (h, L, K, at, R, k, x, y, att, fac) => {
           const o = R.at(h[at(k) + L.aDen]);
@@ -1905,7 +1905,7 @@ module.exports = {
         'open the door', 'go through it', 'turn around', 'close the door ahead', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']) },
       start(m) {
         const lbl = () => fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
-        const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) \\._' + n + '$', 'm').exec(lbl())[1], 16);
+        const ad = dq0Ad(lbl());
         dq0Poke(m, [{ g: 1, line: 'wait', n: 1, call: (h, L, K, at, named) => {
           const u16 = o => h[o] | h[o + 1] << 8, w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
           const px = u16(L.pcX), py = u16(L.pcY), sn = h[L.pcSn], f = h[L.pcFace], dx = [0, 1, 1, 1, 0, -1, -1, -1][f], dy = [-1, -1, 0, 1, 1, 1, 0, -1][f];
@@ -1954,7 +1954,7 @@ module.exports = {
       })() },
       start(m) {
         const set = hungry => (h, L, K, at, named) => {
-          const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'), ad = n => parseInt(new RegExp('^al ([0-9A-F]+) \\._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]], px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8, nowU = h[L.now + 2] | h[L.now + 3] << 8, R = dq0Rec(m);
+          const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'), ad = dq0Ad(lbl), ram = m.taskRam[h[12 + 2]], px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8, nowU = h[L.now + 2] | h[L.now + 3] << 8, R = dq0Rec(m);
           let n = 0;
           for (let k = 0; k < L.nactors; k++) if (h[at(k) + L.aName] && h[at(k) + L.aState]) {
             if (!n++) {

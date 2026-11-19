@@ -7228,7 +7228,7 @@ unsigned char __fastcall__ fumbled (unsigned char k)
 static unsigned char kfree, kcut, kmore, kburn; /* (kmore: the free pass over, the minute's own passes after it still
                                                 **   free, the lights' row's alone (kburn, as it's walked): main's,
                                                 **   dq0hold's hole, 2026-11-14) */
-static struct gw gui, gden;                     /* (The library's one give-way's states: ui_first's, den_held's) */
+static struct gw gui, gden, gburn;                   /* (The library's one give-way's states: ui_first's, den_held's) */
 unsigned char ui_first (void)
 {
     if ((HUB->pace & 3) == 3 || !HUB->ui_cmd) { /* (The real paces: its pace's, not tpr, 0 in a long wait as well,
@@ -7430,7 +7430,8 @@ void s_burn_job (void)
                                                 **   looked at, its next look as it was, so nothing else moves for it; a
                                                 **   command in hand, its answer first, at the next look) */
         burn_ask = 0;
-        if (!HUB->tpr || (!(HUB->ui_cmd | HUB->ui_keys) && HUB->way_want.st == WW_NONE)) {
+        if (!gw_held (&gburn, GW_LOOK | GW_ALL)) {    /* (The one give-way, 2026-11-19: at the
+                                                **   turns pace not held, at the real paces while anything's in hand) */
             tsense ();                          /* (At the real paces; the turns pace's by its clock alone.  Not while
                                                 **   a line's typed either: its Enter came as it began, the UI not yet
                                                 **   round to it, and the command waited on it, 200,000 cycles, the

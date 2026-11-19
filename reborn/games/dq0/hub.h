@@ -2278,6 +2278,9 @@ void* __fastcall__ hub_call (void* q, unsigned char t);  /* hub_post, then hub_w
                                                 **   well), not tpr's 0 */
 #define GW_NOKEYS       2                       /*   a command in hand alone, not a line's keys */
 #define GW_LINE         4                       /*   a line its own by the parser's seq alone */
+#define GW_LOOK         8                       /*   a look one way's rest awaited (way_want) in hand too */
+#define GW_ALL          16                      /*   held while anything's in hand, no limit (the world's time
+                                                **   believed: it runs at the next pass that's free) */
 #define GW_HELD_X       0x69                    /* (The library's entry: dq0lib.s's jump table) */
 struct gw {
     unsigned char   st, sq, cm, ks;             /* (The hold: 0 none, 1 since t0, 2 run out; its line's seq, ui_cmd,

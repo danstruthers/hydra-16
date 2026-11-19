@@ -1307,13 +1307,13 @@ void s_enlist_near (void)
         }
         den_get (i);
         if (k < NACTORS && apart (D.x - pcx, D.y - pcy) <= ACT_R) {
-            md.afetch[k] = md.akeep[k] = 0;           /* (No errand of its own: an errand isn't carried with it) */
-            md.aday[k] = md.upto[k] = (unsigned) (now >> 8);   /* (Its day asked as it first decides: part 9's; asleep by
-                                                **   it, it comes asleep) */
-            md.aact[k] = SC_ABOUT;
             kind_get (D.kind);
             esl = sched (D.kind, D.id) == SC_SLEEP;
-            enlist (i, k);
+            enlist (i, k);                      /* (Its mind made fresh whole as it begins: then, as it's come near) */
+            md.aday[k] = md.upto[k] = (unsigned) (now >> 8);   /* (Its day asked as it first decides: part 9's; asleep by
+                                                **   it, it comes asleep; no errand of its own, afetch and akeep fresh:
+                                                **   an errand isn't carried with it) */
+            md.aact[k] = SC_ABOUT;
         } else if (nnear < NEAR) {
             nearx[nnear] = D.x;
             neary[nnear++] = D.y;
