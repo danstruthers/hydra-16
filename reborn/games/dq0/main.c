@@ -1053,15 +1053,15 @@ static void heard (void)
 static unsigned char events (void)          /* (How many there were) */
 {
     static struct msg m;
+    static unsigned char given;
     unsigned char k, n = 0;
 
     while (!quit && hub_next (&place, &m)) {
         ++n;
         numb (&m);                              /* (Come round by it, or senseless still: out_told) */
-        if (!m.who && (busy | owed) && (m.kind != E_VIEW || E_VIEW_WHY (m) != V_STIR)) {
-            HUB->ui_cmd = owed = 0;             /* (The character's news: a command's answer begun, its intent out;
-                                                **   not a denizen stirring, the background's, held till after it) */
-        }
+        given = !m.who && (busy | owed) && (m.kind != E_VIEW || E_VIEW_WHY (m) != V_STIR);   /* (The character's news:
+                                                **   a command's answer begun, its intent out; not a denizen stirring,
+                                                **   the background's, held till after it) */
         switch (m.kind) {
         case E_TIME:
             if (m.who == 0) {
@@ -1226,6 +1226,12 @@ static unsigned char events (void)          /* (How many there were) */
                 ending ((unsigned char) E_LEFT_END (m));
             }
             break;
+        }
+        if (given) {
+            hub_map (0);
+            HUB->ui_cmd = owed = 0;             /* (Its answer given: as its words are told, not before, the world's
+                                                **   held jobs (the denizens' intents, part 14) not let in beside the
+                                                **   telling, the menacing sit's 2026-11-19) */
         }
     }
     return n;
