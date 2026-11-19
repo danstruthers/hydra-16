@@ -6900,3 +6900,16 @@ M3-M5), with the images' commit.
 - **A thing is put back only where there's room; the room is looked for before the step is told** (H9): "You keep
   the iron key in hand."
 - **Things in a pit are told "In the pit ..." and are out of reach from its edge** (H10).
+
+## The D17 pause, a look's rest, pouring: the user's answers (2026-11-19)
+
+- **D17's pause target stays on readings only** (looks and the map): no gap over 1.79M cycles between a reading's
+  letters once its words begin. Other answers' gaps are the game's own time between first words and outcome (a step,
+  a wait, a reach); fw4's survey (306 of 762 timed answers over 1.79M, nearly all of that kind) stays a trend, to catch
+  a real stall.
+- **A look's rest gets a lead-in** (L8): told after the prompt, it reads as the look's continuation ("Peering on,
+  ...").
+- **A look's rest with nothing new says nothing** (L8), as built.
+- **Pouring from one container into another is built** (H11): "pour the water into the flask" moves the liquid,
+  not away.
+- **No tool to reach into a pit** (H12): climbing down stays the only way.
