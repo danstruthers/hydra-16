@@ -931,7 +931,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0throwheld', near: ['fight', 'gear'], what: "Dingus Quest Zero's thing thrown out of the hand (the user's playtest, 2026-11-20: a dagger thrown at a foe and missed, the foe's bite then blocked with the dagger it no longer had: the referee never told it had gone, nor the UI's copy of what's carried), by the item store, the referee's requests (RS_EQUIP, the character's hands empty), the UI bank's copy (no thing in a hand) and the words: at seed 3 (the hunter's dagger in hand, another at its belt) a giant rat set hostile two squares west, the character set to block, the dagger thrown at the rat: no blow struck nor bite fended off with a dagger after it, what's carried nothing in a hand; then at the normal pace (a game of its own), its torch kept, the belt's dagger gone, a rat beside it senseless (a hit: the dagger at its feet) and the rest far, the dagger thrown, what's carried (no dagger), taken up from the floor (where it fell out of the light: the scene's, at its feet), held and thrown again, held again (none to hand: gone over to where it lies, or told so; its first words no lifting of the dagger, the UI's copy's)",
+      name: 'dq0throwheld', near: ['fight', 'gear'], what: "Dingus Quest Zero's thing thrown out of the hand (the user's playtest, 2026-11-20: a dagger thrown at a foe and missed, the foe's bite then blocked with the dagger it no longer had: the referee never told it had gone, nor the UI's copy of what's carried), by the item store, the referee's requests (RS_EQUIP, the character's hands empty), the UI bank's copy (no thing in a hand) and the words: at seed 3 (the hunter's dagger in hand, another at its belt) a giant rat set hostile two squares west, the character set to block, the dagger thrown at the rat: no blow struck nor bite fended off with a dagger after it, what's carried nothing in a hand; then at the normal pace (a game of its own), its torch kept, the belt's dagger gone, a rat beside it senseless and the rest far, senseless too (none roused to fight), the dagger thrown, what's carried (no dagger), taken up from the floor (where it fell out of the light: the scene's, at its feet), held and thrown again, held again (none to hand: gone over to where it lies, or told so; its first words no lifting of the dagger, the UI's copy's)",
       init: 't_rc', cycles: 2000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
         "dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k dagger", 'drop the torch', 'defend block', 'throw the dagger at the closest rat', 'wait', 'i', 'quit',
@@ -950,6 +950,10 @@ module.exports = {
             h[at(k) + L.aPos] = K.POS_STANDING;
             if (far || !foe) for (let i = 0; i < 4; i++) h[at(k) + L.aReady + i] = due >>> (8 * i) & 255;
             S.mem[q + S.STATE] = 0; S.mem[q + 8] = 0; S.mem[q + 9] = 0;
+            if (far && !foe) {   // (The second game's others senseless till the scene's done: none roused by the noise to come and fight)
+              h[at(k) + L.aDoing] = K.DO_DOWN; h[at(k) + L.aPos] = K.POS_PRONE; S.mem[q + S.STATE] = 1;
+              for (let i = 0; i < 4; i++) S.mem[q + S.OUT + i] = due >>> (8 * i) & 255;
+            }
           }
           h[L.denSeq] = h[L.denSeq] + 1 & 255;
         };

@@ -534,13 +534,15 @@ function dq0Poke(m, pokes) {
           ++g;
           seen = {};
         }
-        seen[typed] = (seen[typed] || 0) + 1;
+        const line = m.dq0Orig && m.dq0Orig.length && m.dq0Orig[0].to === typed ? m.dq0Orig[0].from : typed;   // (A played game's
+                                                //   line in its own letters, dq0PlayLetters': the test's line, its scene the same)
+        seen[line] = (seen[line] || 0) + 1;
         const h = m.dq0 && m.dq0.bank(0);
         if (h) {
           const { L, K } = m.dq0.layout(), at = k => L.actor + k * L.actorSize, w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
           const off = f => L['a' + f[0].toUpperCase() + f.slice(1)];   // (An actor's field by its name: dq0meaning's layout)
           const named = k => { let n = ''; for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]); return n; };
-          for (const p of pokes) if (p.g === g && p.line === typed && p.n === seen[typed]) {
+          for (const p of pokes) if (p.g === g && p.line === line && p.n === seen[line]) {
             for (const [f, v] of Object.entries(p.hub || {})) h[L[f]] = v;   // (The hub's own bytes, by the layout's names: pcSkew)
             for (const [kn, v] of Object.entries(p.fuel || {})) {   // (A thing's fuel left, minutes, by its kind's name: the
               const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize);   //   first in the store, 2026-10-31)
@@ -656,7 +658,7 @@ function dq0Poke(m, pokes) {
                 rank: R.mem[o + R.FLAGS] >> 5 & 3, prom: !!(R.mem[o + R.FLAGS] & 0x80) });
             }
           }
-          m.hearts.push({ g, line: typed, n: seen[typed], acts });
+          m.hearts.push({ g, line, n: seen[line], acts });
         }
         typed = '';
       } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
@@ -967,6 +969,34 @@ function dq0Asks(m, gs) {
     }
   };
 }
+// Each line typed only once the character's free (the user's D17: a line typed while the character is busy, fighting
+// or walking, fails the test; 2026-11-20, the coordinator's, dq0letdens' played game): a line come to its prompt held
+// while the UI's busy (dq0Timer's busy) or the character's on a long task (fighting on, walking: the hub's pc_task,
+// pc_going), its first key sent as it's free; a soft question's answer (dq0Asks', put
+// before it) not held.  Installed after dq0Asks and dq0PlayLetters (the line as it's to be typed, its letters the game's)
+function dq0WhenFree(m) {
+  const a = m.acia, tick = a.tick, idleTo = a.idleTo;
+  let held = 0;
+  const busy = () => {
+    try {
+      if (busyAt === null) busyAt = parseInt(/^al ([0-9A-F]+) ._busy$/m.exec(fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0', 'dq0.lbl'), 'latin1'))[1], 16);
+      const h = m.dq0 && m.dq0.bank(0), ui = h ? h[12] : 0;
+      if (!h) return 0;
+      const { L } = m.dq0.layout();             // (Fighting on, walking, any long task: the hub's pc_task, pc_going)
+      return (ui && m.taskRam[ui] ? m.taskRam[ui][busyAt] : 0) || h[L.pcTask] || h[L.pcGoing];
+    } catch (e) { return 0; }
+  };
+  a.tick = (d, t) => {
+    held = a.rxQueue[0] === 'ā' && busy() ? 1 : 0;
+    if (!held) return tick(d, t);
+    const q = a.rxQueue;                        // (Its prompt not taken yet: the line kept back, the rest of the tick
+    a.rxQueue = [];                             //   done; a soft question's answer put in meanwhile, before it)
+    tick(d, t);
+    a.rxQueue = a.rxQueue.concat(q);
+  };
+  a.idleTo = t => held ? Math.min(idleTo(t), t + 50000) : idleTo(t);   // (Looked at again, as it's held, every 50,000 cycles)
+}
+
 // The designators' letters in the game as played (the user's, 2026-11-19: the designator tests' played games type that
 // game's own letters, so each plays the same commands as the others): its kit isn't the tests' (no -K), so a letter of
 // the test's own game names another thing there, or none.  As each line of the test's own game (own: its number, the dq0
@@ -1187,5 +1217,5 @@ module.exports = {
   dq0Never, dq0Carried, dq0Here, dq0Named, dq0Thing, dq0Holder, dq0View, DQ0_I, passings, dq0TypedAsk, dq0Typed,
   dq0PortalOff, dq0Portal, dq0RecPb, dq0Rec, dq0Alone, dq0Poke, dq0BodyFb, dq0Body, dq0SheetSb, dq0Sheet, dq0PcShock,
   dq0Grow, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Median, dq0Worst, dq0Waits, dq0Held, DQ0_ANSWERS, dq0AnswerTest, WORN,
-  DQ0_PLAYED, dq0Paces, dq0Own, dq0Asks, dq0HeldPaces, dq0LetterKeys, dq0PlayLetters,
+  DQ0_PLAYED, dq0Paces, dq0Own, dq0Asks, dq0HeldPaces, dq0LetterKeys, dq0PlayLetters, dq0WhenFree,
 };

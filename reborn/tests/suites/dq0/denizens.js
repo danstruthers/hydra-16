@@ -8,7 +8,7 @@ const { card, typed } = require('../../lib/common.js');
 const {
   T_ROCK, T_FLOOR, T_WALL, T_CORR, T_WINDOW, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks, stratumRec,
   dq0Story, dq0Prose, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Named, DQ0_I,
-  dq0Typed, dq0Portal, dq0Rec, dq0Poke, dq0PcShock, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Alone, dq0Paces, dq0Own,
+  dq0Typed, dq0Portal, dq0Rec, dq0Poke, dq0PcShock, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Alone, dq0Paces, dq0Own, dq0WhenFree,
   dq0Asks, dq0HeldPaces, dq0PlayLetters,
   dq0Ad
 } = require('../../lib/dq0.js');
@@ -1714,7 +1714,8 @@ module.exports = {
         ...dq0Paces('dq0 -p t -s 3 -c /ram/c.hm -k pick -T', LETDENS), 'echo $status']) },
       start(m) {
         this.timer = dq0Timer(m);
-        dq0Asks(m, [3]); dq0PlayLetters(m, 1, 3);
+        dq0Asks(m, [3]); dq0PlayLetters(m, 1, 3); dq0WhenFree(m);   // (Each line typed as the character's free; the played game's
+                                                //   scene set by the test's own lines though its letters are that game's: dq0Poke's, 2026-11-20)
         const self = this;
         self.dead = {};
         // (The capital's actor: its record the UI bank's cap's id, CAP_DEN's, the actor's record the byte after its name)
