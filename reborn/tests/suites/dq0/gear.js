@@ -8,7 +8,7 @@ const { typed } = require('../../lib/common.js');
 const {
   dq0Story, dq0Prose, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Here, dq0Thing,
   dq0Holder, DQ0_I, dq0Typed, dq0Rec, dq0Poke, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, WORN, dq0Paces, dq0Own, dq0Asks, dq0PlayLetters,
-  dq0HeldPaces
+  dq0HeldPaces, dq0Alone
 } = require('../../lib/dq0.js');
 const { target, D17 } = require('../../lib/trends.js');   // (The user's targets, D17, at 115,200 baud: each measure kept, those over and past 90% listed after the tests)
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
@@ -2302,6 +2302,9 @@ module.exports = {
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'drop a fresh torch', 'wait 20 minutes', 'dip the torch', 'no', 'inventory', 'quit', 'echo $status']) },
+      // (The rats incidental: sent off as the torch is got out, hear1's, 2026-11-20: the minds hearing one another's
+      // footsteps by the senses' rule, a giant rat came into sight then and broke off the getting out)
+      start(m) { dq0Poke(m, [{ g: 1, line: 'drop a fresh torch', n: 1, call: (h, L, K, at) => dq0Alone(m, h, L, K, at, []) }]); },
       expect: ['% echo $status'],
       check(m, out) {
         const s = dq0Prose(out), f = [];

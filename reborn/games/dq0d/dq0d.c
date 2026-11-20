@@ -203,6 +203,10 @@ struct mind {
                                                 **   many, times 16) */
     unsigned char pway[NACTORS];            /* (Each one's room on its rounds, the next it walks to: its lair's
                                                 **   chunk's rooms in turn) */
+    unsigned char hsrc[NACTORS];             /* (The actor it last heard by the senses, entry + 1, and when (the
+                                                **   clock's low 16 bits): its next noise within a second heard as that
+                                                **   was, not asked again, a fellow's every step a storm of asks, gw2's) */
+    unsigned hat[NACTORS];
     /* ---- Its target (2026-11-19) */
     unsigned char   target[NACTORS];            /* (Who it's after: 0 the character, k + 1 actor k; set as it's
                                                 **   enlisted, the character, the minds' one target so far) */
@@ -1680,11 +1684,18 @@ static void hear (void)
 {
     static struct msg m;
     static struct actor* q;
-    static unsigned char k, src, sn;
+    static unsigned char k, src, sn, c;
+    static unsigned wend, dend;
 
+    hub_map (0);
+    wend = HUB->eq_head;                        /* (The noises made by now: those after, the next time round; each
+                                                **   another's heard by the senses, a round trip, the world on meanwhile,
+                                                **   its noises after it never ending the loop: dq0letsight's inventory
+                                                **   never answered at the turns pace, sense1's, 2026-11-19) */
+    dend = HUB->dq_head;
     for (;;) {
         hub_map (0);
-        if (hub_next (&wplace, &m)) {           /* (The world's: a noise of the character's, on its stratum) */
+        if (wplace != wend && hub_next (&wplace, &m)) {           /* (The world's: a noise of the character's, on its stratum) */
             if (m.kind == E_NOWAY && E_NOWAY_WHY (m) == N_DEN) {
                 aside (E_NOWAY_ACTOR (m) & 7);          /* (One in its way: aside, if it will: D10's) */
             }
@@ -1694,7 +1705,7 @@ static void hear (void)
             src = 0;
             sn = pcs;
             loud = E_NOISE_LOUD (m);
-        } else if (hub_dnext (&dplace, &m)) {   /* (The denizens': an actor's, not heard by itself) */
+        } else if (dplace != dend && hub_dnext (&dplace, &m)) {   /* (The denizens': an actor's, not heard by itself) */
             if (m.kind != E_DEN || !E_DEN_LOUD (m) || E_DEN_DE (m) >= DE_CLOSES) {
                 continue;                       /* (A closing-in the character's words alone, the world's den_close:
                                                 **   no sound of its own, its steps heard as they're taken) */
@@ -1717,9 +1728,25 @@ static void hear (void)
             }
             kind_get (md.akind[k]);
             doze (q);
-            if (src ? apart (q->x - m.w1, q->y - m.w2) > K.hear * loud / 2 : !(senses (k) & 1)) {
-                continue;                       /* (The character's: the senses' to say, loud as it is) */
+            if (src && apart (q->x - m.w1, q->y - m.w2) > K.hear * loud / 2) {
+                continue;                       /* (Another's, past the most it could carry: no need to ask) */
             }
+            if (src && md.hsrc[k] == src && (unsigned) now - md.hat[k] < 10) {
+                goto heard;                     /* (The same one heard within a second: heard again, its steps on) */
+            }
+            hub_map (0);
+            HUB->dsense_whom = src;             /* (Whoever's it is, the senses' one rule to say, loud as it is:
+                                                **   the background, the way it goes; another's, along the straight
+                                                **   line, the user's, 2026-11-17: ONE-PATH.md's 2.2; sense1's) */
+            c = senses (k) & 1;
+            hub_map (0);
+            HUB->dsense_whom = 0;
+            if (!c) {
+                continue;
+            }
+            md.hsrc[k] = src;
+            md.hat[k] = (unsigned) now;
+heard:
             hub_map (0);
             rface = bearing (m.w1 - q->x, m.w2 - q->y);
             md.alert[k] = now + 100;
@@ -5732,7 +5759,7 @@ static unsigned m0, dday;
                         X (alert) X (lsx) X (lsy) X (fooled) X (seenfoe) X (drawn) X (intr) X (anear) X (sniffed) \
                         X (shat) X (aorder) X (afetch) X (afx) X (afy) X (akeep) X (aloot) X (aroute) X (lstep) \
                         X (steps) X (stalk) X (stq) X (stn) X (fled) X (upto) X (aact) X (atx) X (aty) X (drunk) \
-                        X (aday) X (asrch) X (slk) X (atry) X (pway) X (target)
+                        X (aday) X (asrch) X (slk) X (atry) X (pway) X (target) X (hsrc) X (hat)
 #define MF(f)           { offsetof (struct mind, f), sizeof md.f[0] },
 #define MS(f)           + sizeof md.f[0]
 typedef char mind_all[sizeof (struct mind) == NACTORS * (0 MIND_FIELDS (MS)) ? 1 : -1];
