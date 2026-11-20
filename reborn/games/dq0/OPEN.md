@@ -116,6 +116,11 @@ only quit and help taken, nothing sensed). These are the rest.
   overlay, at a cost in time?
   - DECISIONS.md:5665-5666 (its point 7).
 
+- **K10. A command typed mid-round of the character's own fight** waits for the whole round: the referee's test, the
+  world's swaps and the blow's words come first, then the command's answer (built; first letters 500K-630K, under the
+  720K target). Tell the command's own first words first ("You stop fighting." before the blow), reordering what's told?
+  - built/2026-11-20-start2.md, open question 1.
+
 ## The step planner, the reach and time
 
 - **T1. The reach isn't planned whole ahead.** Each step walks the tree again, since the world changes between steps

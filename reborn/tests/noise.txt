@@ -9,6 +9,7 @@
 # The real-time paces: not reproducible by design (the minds decide whenever they get the CPU, one dice stream)
 dq0antidote     the real-time fight: its rounds and blows fall as the tasks' timing has them
 dq0denpace      the real-time fight: its rounds and blows fall as the tasks' timing has them
+dq0fightcmd     the real-time fight: its menacing and played games' rounds and blows fall as the tasks' timing has them
 
 # Denizens met at other moments: the minds run as a background task, so where a denizen is when the character looks
 # moves with the tasks' timing, even at the turns pace (not a lockstep: hub.h's promise isn't kept yet)
