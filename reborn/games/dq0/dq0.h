@@ -354,9 +354,12 @@ void __fastcall__ turned_says (unsigned char go);                        /* (Ove
 void facing_words (void);                       /* (Overlay 7's) The way it believes it faces (task.c's: slice 4.2's) */
 #define FS_CMD      1                           /* (fore_set's: main.c's) */
 #define FS_UI       2
+#define FS_REF      4                           /* (The referee, as the world waits on it with a line's intent behind) */
 #define FS_SENS     8
 extern unsigned char fored;
 extern unsigned char stir_held;                 /* (main.c's: a denizen's stir held, told after the line's answer) */
+void fore_sync (void);                          /* (Overlay 13's) The answer's tasks in the foreground or out, as
+                                                **   a line's in hand or not (main.c's) */
 void __fastcall__ fore_set (unsigned char on);  /* (Overlay 6's) The UI and the answer's tasks in the kernel's
                                                 **   foreground, or not (main.c's FS_*) */
 unsigned char __fastcall__ stop_kind (const char* word);  /* Overlay 7 (task.c's): the task a stop names */

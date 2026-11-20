@@ -846,11 +846,12 @@ static void stop_world (void)
 #pragma rodata-name (push, "OV13RODATA")
 void __fastcall__ o_fore_set (unsigned char on)
 {
-    static const unsigned char fg[] = { T_WORLD, T_COMMANDS, T_REFEREE, T_SENSES }, fm[] = { FS_CMD, FS_CMD, 0, FS_SENS };
-                                                /* (The referee never: the one give-way's, gw3's, 2026-11-19, a
-                                                **   denizen's blow asked of it as a line's entered taking the answer's
-                                                **   CPU half and half, 450,000 cycles; the answer's own blow worked as
-                                                **   the UI waits for it) */
+    static const unsigned char fg[] = { T_WORLD, T_COMMANDS, T_REFEREE, T_SENSES }, fm[] = { FS_CMD, FS_CMD, FS_REF, FS_SENS };
+                                                /* (The referee not while a line's in hand: the one give-way's, gw3's,
+                                                **   2026-11-19, a denizen's blow asked of it as a line's entered taking
+                                                **   the answer's CPU half and half, 450,000 cycles; the answer's own
+                                                **   blow worked as the UI waits for it.  But as the world waits on it
+                                                **   with a line's intent behind, FS_REF: o_fore_sync's) */
     unsigned char k;
 
     hy_taskfore (hy_task (), (on & FS_UI) != 0);
@@ -903,22 +904,39 @@ static unsigned char iqh, owed, obeat;          /* (The intents' ring as a line'
                                                 **   the world's heartbeat as it was sent) */
 unsigned char stir_held;                        /* (A denizen's stir held while a line's answered: events', main's; or
                                                 **   its keys come as its words were made, dens.c's) */
-static void fore_sync (void)
+/* The answer's tasks in the foreground or out (o_fore_set's), as a line's in hand or not; and its answer owed given up
+** once its intent's taken and the world's round again with no news (ui_cmd let go).  At the turns pace the UI alone in it
+** while a command's in hand, its words told ahead of the denizens' turn after the act, 2026-11-19: "sit"'s first letter
+** 650,000, its words' event out at 342,000.  At the real paces the referee too while the world waits on it (its slot's
+** ask posted: a round's blow, a denizen's) with a line's intent behind it not yet taken (a line held behind a fight's
+** round, its stop): the round's blow worked out in the background kept the line's first words 680,000 cycles,
+** dq0fightmid's, start2, 2026-11-20.  Overlay 13's, the hub's fields through hub_mem (the main RAM's room, 2026-11-20) */
+#pragma code-name (push, "OV13CODE")
+#pragma rodata-name (push, "OV13RODATA")
+void o_fore_sync (void)
 {
-    static unsigned char f;
+    unsigned char q[2], c, k, f;
+    unsigned t;
 
-    if (owed && !busy && HUB->iq_tail == HUB->iq_head && (unsigned char) (HUB->beat[T_WORLD] - obeat) >= 2) {
-        HUB->ui_cmd = owed = 0;                 /* (Its intent taken and the world round again since: an answer
+    hub_mem (0, q, (const void*) &HUB->iq_head, 2);     /* (The intents' ring's head and tail: iq_head, iq_tail) */
+    hub_mem (0, &c, (const void*) &HUB->ui_cmd, 1);
+    if (owed && !busy && q[0] == q[1]) {
+        hub_mem (0, &k, (const void*) &HUB->beat[T_WORLD], 1);
+        if ((unsigned char) (k - obeat) >= 2) {
+            c = owed = 0;                       /* (Its intent taken and the world round again since: an answer
                                                 **   without news to the character, if any, given) */
+            hub_mem (0, (void*) &HUB->ui_cmd, &c, 1);
+        }
     }
-    f = HUB->tpr ? FS_UI | FS_SENS | (HUB->ui_cmd ? FS_CMD : 0) : HUB->ui_cmd ? FS_UI : 0;
-                                                /* (The turns pace: the UI alone in it while a command's in hand, its
-                                                **   words told ahead of the denizens' turn after the act, 2026-11-19:
-                                                **   "sit"'s first letter 650,000, its words' event out at 342,000) */
+    hub_mem (0, &t, (const void*) &HUB->tpr, 2);
+    hub_mem (0, &k, (const void*) &HUB->slot[SLOT_WORLD].state, 1);
+    f = t ? FS_UI | FS_SENS | (c ? FS_CMD : 0) | (q[0] != q[1] && k == REQ_POSTED ? FS_REF : 0) : c ? FS_UI : 0;
     if (f != fored) {
-        fore_set (fored = f);
+        o_fore_set (fored = f);
     }
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 unsigned char cq_st;                            /* The line posted to the command parser: none (0), its reply not
                                                 **   taken (CQ_OUT), or taken (CQ_IN: its struct cmd in CMD_BANK) */
@@ -3134,11 +3152,13 @@ int main (int argc, char* argv[])
                                                 **   not the world's time as it works the answer out, nor in the way of
                                                 **   its first news's part, 2026-11-17) */
         }
-        if (stir_held && !inn && !HUB->ui_cmd) {
+        if (stir_held && !inn && !HUB->ui_cmd && !took) {
             stir_held = 0;
             t_flush ();                         /* (Its answer out, not waiting on these words) */
             stir ();                            /* (A stir held while the line was typed and answered: told now, its
-                                                **   answer begun, ui_cmd's) */
+                                                **   answer begun, ui_cmd's; a line held behind a fight's round (took)
+                                                **   its own first, its round's blow's words not behind the stir's, start2,
+                                                **   2026-11-20) */
         }
         t_done ();
         HUB->ui_eq = (unsigned char) place;     /* (All it does about the events done: the turns pace on, the world's turns_run) */

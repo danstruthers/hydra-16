@@ -76,6 +76,11 @@ static void __fastcall__ told (unsigned char att, unsigned char def, unsigned ch
     E_FIGHT_FF (bev) = f;
     E_FIGHT_WORDS (bev) = fring;
     hub_devent (&bev);
+    if (!att || !def) {
+        hub_ring (T_UI);                        /* (The UI woken to tell it: the denizens' events ring nobody, and a
+                                                **   blow at or by the character waited on its nap, four ticks, a line
+                                                **   held behind the round with it, start2, 2026-11-20) */
+    }
     fring = (fring + 1) % NFIGHTS;
 }
 

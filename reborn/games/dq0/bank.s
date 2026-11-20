@@ -206,6 +206,7 @@ ovcall:
             OVFN        facing_words, 19
             OVFN        turned_says, 19     ; (A turn's first words: task.c's, the main RAM's room)
             OVFN        fore_set, 13        ; (The answer's tasks in the foreground: main.c's)
+            OVFN        fore_sync, 13       ; (And as a line's in hand or not, each time round: main.c's, the main RAM's room)
             OVFN        time_ui, 16         ; (The time of day believed, worded: time.c, 2026-10-31)
             OVFN        say_raw, 16         ; (A line as it is, the map's: term.c, the main RAM's room)
             OVFN        t_status, 19        ; (The status line drawn: term.c, the main RAM's room, 2026-11-03; 19's, 2026-11-11)
