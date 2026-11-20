@@ -11,7 +11,7 @@ const {
   dq0Aware, dq0OnWords, WORN, dq0Ad, dq0Timer, dq0Asks, dq0Paces, dq0HeldPaces
 } = require('../../lib/dq0.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
-const FIGHTCMD = ['d', 'wait', 'go right', 'inventory', 'wait', 'look', 'wait', 'inventory', 'wait', 'look'];   // (dq0fightcmd's lines: dq0fight's way to the rats, a rat engaged as the first's typed, then commands typed as it fights, waits between for its blows)
+const FIGHTCMD = ['d', 'wait', 'go right', 'attack the rat', 'inventory', 'wait', 'look', 'wait', 'inventory', 'wait', 'look'];   // (dq0fightcmd's lines: dq0fight's way to the rats, the fight begun, a rat engaged as the first command after's typed, then commands typed as it fights, waits between for its blows: every one timed, gw3's)
 
 // At each line's Enter, each actor's body (m.bodies: { g, line, name, den, lv: its levels, wfl, ex, at }) after the pokes made then
 // (each { g: the game, 1 on, line, n: its nth time typed in it, name: the actor's, lv: its levels, ex, at: its body's set })
@@ -1909,7 +1909,7 @@ module.exports = {
         const mid = T.filter(t => ['inventory', 'look'].includes(t.line) && t.at && t.at.actors.some(a => a.doing === 'DO_FIGHT'));
         if (!T.some(t => dq0Ev(t, 'E_FIGHT', { def: 0 }).length)) f.push('no blow struck at the character: no fight');
         if (!mid.length) f.push('no command typed as a rat fought the character (none fighting as inventory or look was typed): the test proves nothing');
-        dq0HeldPaces(this, f, notes, this.timer, [0, 1, 2], FIGHTCMD.filter(l => l === 'inventory' || l === 'look').map(l => ({ line: l, want: '*' })));
+        dq0HeldPaces(this, f, notes, this.timer, [0, 1, 2], FIGHTCMD.map(l => ({ line: l, want: '*' })));
         return f;
       },
       sdcard: true

@@ -186,9 +186,17 @@ int main (int argc, char* argv[])
         }
         for (s = 0; s < NSLOTS; ++s) {
             if (hub_posted (&HUB->slot[s])) {
+                if (s == SLOT_UI) {
+                    hy_taskfore (hy_task (), 1);    /* (The UI's own ask in the foreground with it, the rest in the
+                                                **   background: a denizen's blow asked as a line's entered not taking
+                                                **   the answer's CPU, the one give-way's, gw3's, 2026-11-19) */
+                }
                 dice_to (s);
                 answer (&HUB->slot[s]);
                 hub_reply (&HUB->slot[s]);
+                if (s == SLOT_UI) {
+                    hy_taskfore (hy_task (), 0);
+                }
             }
         }
         dice_to (NSLOTS);

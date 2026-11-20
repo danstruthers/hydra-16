@@ -846,7 +846,11 @@ static void stop_world (void)
 #pragma rodata-name (push, "OV13RODATA")
 void __fastcall__ o_fore_set (unsigned char on)
 {
-    static const unsigned char fg[] = { T_WORLD, T_COMMANDS, T_REFEREE, T_SENSES }, fm[] = { FS_CMD, FS_CMD, FS_CMD, FS_SENS };
+    static const unsigned char fg[] = { T_WORLD, T_COMMANDS, T_REFEREE, T_SENSES }, fm[] = { FS_CMD, FS_CMD, 0, FS_SENS };
+                                                /* (The referee never: the one give-way's, gw3's, 2026-11-19, a
+                                                **   denizen's blow asked of it as a line's entered taking the answer's
+                                                **   CPU half and half, 450,000 cycles; the answer's own blow worked as
+                                                **   the UI waits for it) */
     unsigned char k;
 
     hy_taskfore (hy_task (), (on & FS_UI) != 0);
@@ -2968,10 +2972,6 @@ int main (int argc, char* argv[])
         if (t_next () && (!busy || !held)) {
             HUB->ui_cmd = 1;                    /* (A line entered: the senses' look and the minds give way at once,
                                                 **   not after the events and the status line; its answer first) */
-            if (!cq_st) {
-                ++HUB->ui_enter;                /* (Its own hold from its Enter, the one give-way's, its seq not yet
-                                                **   posted: once, not again for a line held, gw2's, 2026-11-19) */
-            }
             owed = 0;
             fore_sync ();                       /* (The answer's tasks in the foreground meanwhile) */
             letters_in ((char*) t_next ());     /* (Its letters made its things' names first, as it's posted: letters.c's;
@@ -3038,7 +3038,6 @@ int main (int argc, char* argv[])
             }
             asked = 0;                          /* (Its long task, if it's one: not asked of a sound yet) */
             hub_map (0);
-            ++HUB->ui_enter;                    /* (Taken up again: its own hold, gw2's) */
             HUB->ui_cmd = 1;                    /* (A command in hand: the senses' look gives way meanwhile, from
                                                 **   its first look, at_once's, on: a line typed as a look began
                                                 **   waited for it, its parsing a third of the CPU) */

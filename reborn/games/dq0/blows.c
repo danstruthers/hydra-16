@@ -352,10 +352,12 @@ unsigned char __fastcall__ o_fight_target (struct cmd* c)
         return found (c, best);
     }
     d = *w && !c->obj.kind && c->action == VB_ATTACK_OBJECT && !(worded & 0x80);
-    if (d && !away && thing_near (w)) {
+    if (d && !away && (thing_near (w) || carried (w))) {
         unknown (U_CANT);                       /* ("You can't attack bones.": a thing in reach, not a denizen, refused at
                                                 **   once, the world's IO_FIND to come saying nothing, worded 5: do_fight's,
-                                                **   refuse.c's, 2026-11-18) */
+                                                **   refuse.c's, 2026-11-18; or carried, the UI's index's, its IO_FIND's
+                                                **   IR_OK known: "attack the rat", the rations, 535,000 cycles of the
+                                                **   world's, gw3's, 2026-11-19) */
         worded = 5;
     }
     note (away ? away : *w ? FN_NONE_LIKE : FN_NONE);

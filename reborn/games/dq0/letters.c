@@ -435,6 +435,20 @@ put:
 
 /* Line l's letters made its things' names (its every line's, as it's posted, before the parser has it); the answer to
 ** the question asked (a letter alone, one it offered) made its command ("d": "drop d") first */
+/* Each line's own hold in the one give-way from its Enter, and a held line's as it's taken up again (the hub's
+** ui_enter: gw2's; here, the overlay's, not the main RAM's, gw3's).  Its byte on the C stack: the overlay's own
+** statics are in the bank window, the hub's as it's copied */
+#pragma static-locals (push, off)
+static void enter_count (void)
+{
+    unsigned char e;
+
+    hub_mem (0, &e, (const void*) &HUB->ui_enter, 1);
+    ++e;
+    hub_mem (0, (void*) &HUB->ui_enter, &e, 1);
+}
+#pragma static-locals (pop)
+
 void __fastcall__ o_letters_in (char* l)
 {
     static const char joins[] = "in\0into\0inside\0on\0onto\0from\0with\0at\0to\0and\0then\0under\0over\0down\0up\0off\0"
@@ -446,6 +460,7 @@ void __fastcall__ o_letters_in (char* l)
     static unsigned char nt, i, j, e, n, c, nd, loaded, up, ok, ns;
     static unsigned id;
 
+    enter_count ();
     if (cq_st) {
         return;                                 /* (Posted already: its letters made names then) */
     }
