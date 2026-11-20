@@ -777,7 +777,7 @@ module.exports = {
     })(),
     {
       scene: false,   // (Its watchers keep the looks' replies from the game's first: none taken up, sim/lib/scenes.js)
-      name: 'dq0looks', what: 'Dingus Quest Zero\'s looks the same as they were (the look quickened, reborn-game-look: its grid kept and moved, its marks put only where they reach, the store gone through once): eight games at the turns pace (seeds 3, 5, 7, 12, 4, 517: turns, steps, walks, a walk\'s chosen door, a stairway down, a torch put out and lit again, one put down and taken up, a portcullis lowered and raised, a window broken (punched bare-handed, as the old code\'s run struck it: the torch in hand would strike it now, the user\'s, 2026-10-22) and climbed through, a weak-eyed character; each dungeon dry, dq0 -W: the looks before the water, slice 4.9\'s), every reply the senses give (a look\'s, the denizens\' senses\') with the same request, the same record of what the character perceives and the same squares seen and visible in every live chunk as tests/dq0/looks.ref, the old code\'s (DQ0LOOKS=write: written afresh from this run)',
+      name: 'dq0looks', what: 'Dingus Quest Zero\'s looks the same as they were (the look quickened, reborn-game-look: its grid kept and moved, its marks put only where they reach, the store gone through once): eight games at the turns pace (seeds 3, 5, 7, 12, 4, 517: turns, steps, walks, a walk\'s chosen door, a stairway down, a torch put out and lit again, one put down and taken up, a portcullis lowered and raised, a window broken (punched bare-handed, as the old code\'s run struck it: the torch in hand would strike it now, the user\'s, 2026-10-22) and climbed through, a weak-eyed character; each dungeon dry, dq0 -W: the looks before the water, slice 4.9\'s), every look of the character\'s with the same request, the same record of what the character perceives and the same squares seen and visible in every live chunk as tests/dq0/looks.ref, in order (DQ0LOOKS=write: written afresh from this run); the denizens\' senses (their number and place the minds\' timing\'s, since the hearing, 2026-11-20) each asked by a live denizen of the character or another live one, answered with the SN_* kinds alone, and every one asked answered',
       init: 't_rc', cycles: 3000e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm\rādq0furn=0\rācp /ram/c.hm /ram/w.hm\rāecho att eye 4 >> /ram/w.hm\r' +
         [['dq0 -p t -s 3 -c /ram/c.hm -T -W -k sword',['look','turn left','turn right','walk to the door ahead to my left','2','look','turn around','turn left','turn right','map','d','look','sw','look']],['dq0 -p t -s 5 -c /ram/c.hm -T -W',['d','wait','go right','turn left','look','turn around','wait','look']],['dq0 -p t -s 7 -c /ram/w.hm -W',['open the door behind me','s','move south 4 squares','face north','look','douse the torch','z','z','z','look','light the torch','z','look','turn around','n']],['dq0 -p t -s 3 -c /ram/c.hm -T -W',['drop the torch','turn around','step forward','look','turn around','step forward','get torch','look']],['dq0 -p t -s 12 -c /ram/c.hm -T -W',['e','wait','e','wait','e','turn around','lower portcullis','w','look','raise portcullis','w','turn left']],['dq0 -p t -s 12 -c /ram/c.hm -W',['n','turn around','punch the window','climb through window','turn around','look','turn right']],['dq0 -p t -s 4 -c /ram/c.hm -W',['open door','3','look','go through the door','look','turn left']],['dq0 -p t -s 517 -c /ram/c.hm -W',['look','turn left','turn right','turn around','look']]].map(([g, c]) => 'ā' + g + '\r' + c.concat('quit').map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
@@ -787,24 +787,55 @@ module.exports = {
       start(m) {
         const dir = path.join(TESTS, '..', 'obj', 'games'), hyx = fs.readFileSync(path.join(dir, 'dq0p.hyx'));
         const lbl = fs.readFileSync(path.join(dir, 'dq0p', 'dq0p.lbl'), 'latin1'), at = n => parseInt(new RegExp('^al ([0-9A-F]+) \\.' + n + '$', 'm').exec(lbl)[1], 16);
-        const main = at('_main'), reply = at('_hub_reply'), lines = this.lines = [], cpu = m.cpu, step = cpu.step.bind(cpu);
-        let lastT = -1, isP = false, game = 0, qpos = 0, out = m.out;
+        const main = at('_main'), reply = at('_hub_reply'), lines = this.lines = [], senses = this.senses = [], cpu = m.cpu, step = cpu.step.bind(cpu);
+        const { L } = require('../../../sim/lib/dq0meaning.js').layout(), posts = this.posts = [];
+        let lastT = -1, isP = false, game = 0, qpos = 0, out = m.out, was = 0;
+        const hubBank = () => { const b = m.sharedBanks(); return Object.keys(b).map(Number).sort((a, c) => a - c).map(k => b[k]).find(x => x[0] === 0x44 && x[1] === 0x51); };
         cpu.step = v => {
           const T = m.T;
-          if (T !== lastT) { lastT = T; const r = m.taskRam[T]; isP = true; for (let i = 0; i < 24; i++) if (r[main + i] !== hyx[main - 0x800 + i]) { isP = false; break; } }
-          if (isP && cpu.PC === reply) { const l = lookSnap(m, cpu.A | cpu.X << 8, game); if (l) lines.push(l); }
+          if (T !== lastT) {
+            lastT = T; const r = m.taskRam[T]; isP = true; for (let i = 0; i < 24; i++) if (r[main + i] !== hyx[main - 0x800 + i]) { isP = false; break; }
+            const h = hubBank(), st = h ? h[L.dsenseAt] : 0;   // (The denizens' senses' request posted: counted as it's seen posted, each its own)
+            if (st === 1 && was !== 1) posts[game] = (posts[game] || 0) + 1;
+            was = st;
+          }
+          if (isP && cpu.PC === reply) {
+            const ptr = cpu.A | cpu.X << 8, l = lookSnap(m, ptr, game);
+            if (l && / look /.test(l)) lines.push(l);
+            else if (l && ptr - 0x8000 === L.dsenseAt) {   // (A denizen's senses' reply: who asked, of whom, and what it says)
+              const h = hubBank(), who = h[L.dsWho], whom = h[L.dsWhom], a = k => L.actor + k * L.actorSize;
+              senses.push({ game, who, whom, res: h[L.dsRes], live: !!(h[a(who) + L.aName] && h[a(who) + L.aState]),
+                target: whom === 0 || (whom - 1 !== who && !!(h[a(whom - 1) + L.aName] && h[a(whom - 1) + L.aState])) });
+            }
+          }
           step(v);
         };
         Object.defineProperty(m, 'out', { get: () => out, set: v => { let i; while ((i = v.indexOf('> quit', qpos)) >= 0) { game++; qpos = i + 6; } out = v; } });
       },
+      // (The character's looks (each look reply: its request, the record of what the character perceives, the squares
+      // seen and visible in every live chunk) compared with tests/dq0/looks.ref in order, exactly.  The denizens' senses'
+      // replies vary in number and place with when the denizens hear (the minds' timing, hear1 and hear2, 2026-11-20): each
+      // held to what it must say instead: asked by a live denizen, of the character or another live one, its answer of
+      // the SN_* kinds alone; and every request posted answered, each game)
       check(m, out) {
-        const now = this.lines || [];
+        const now = this.lines || [], senses = this.senses || [], posts = this.posts || [], f = [];
         if (process.env.DQ0LOOKS === 'write') { fs.writeFileSync(LOOKS_REF, now.join('\n') + '\n'); return []; }
-        const ref = fs.readFileSync(LOOKS_REF, 'utf8').split(/\r?\n/).filter(l => l), f = [];
-        if (now.length !== ref.length) f.push(now.length + ' replies, ' + ref.length + ' in tests/dq0/looks.ref');
+        const ref = fs.readFileSync(LOOKS_REF, 'utf8').split(/\r?\n/).filter(l => l);
+        if (now.length !== ref.length) f.push(now.length + ' looks, ' + ref.length + ' in tests/dq0/looks.ref');
         for (let i = 0; i < Math.min(now.length, ref.length) && f.length < 4; i++) {
-          if (now[i] !== ref[i]) f.push('reply ' + i + ': ' + now[i].slice(0, 120) + ' (looks.ref: ' + ref[i].slice(0, 120) + ')');
+          if (now[i] !== ref[i]) f.push('look ' + i + ': ' + now[i].slice(0, 120) + ' (looks.ref: ' + ref[i].slice(0, 120) + ')');
         }
+        if (!senses.length) f.push('no denizen\'s senses asked');
+        const SN = 0x0F;   // (SN_SEEN, SN_HEARD, SN_SMELT, SN_LOOK: hub.h's)
+        for (const x of senses) {
+          if (!x.live) f.push('game ' + x.game + ': senses asked for actor ' + x.who + ', not a live denizen');
+          if (!x.target) f.push('game ' + x.game + ': actor ' + x.who + '\'s senses asked of ' + x.whom + ', not the character nor another live denizen');
+          if (x.res & ~SN) f.push('game ' + x.game + ': actor ' + x.who + '\'s senses answered ' + x.res + ', not of SN_*');
+          if (f.length > 8) break;
+        }
+        const answered = []; for (const x of senses) answered[x.game] = (answered[x.game] || 0) + 1;
+        posts.forEach((n, g) => { if (n && (answered[g] || 0) < n) f.push('game ' + g + ': ' + n + ' senses asked, ' + (answered[g] || 0) + ' answered'); });
+        this.notes = ['looks ' + now.length + '; the denizens\' senses asked and answered by game: ' + posts.map((n, g) => g + ':' + (n || 0) + '/' + (answered[g] || 0)).filter((x, g) => posts[g]).join(' ')];
         return f;
       },
       sdcard: true
