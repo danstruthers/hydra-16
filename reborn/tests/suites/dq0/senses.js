@@ -418,7 +418,7 @@ module.exports = {
         if (end.pc.light) f.push('the character not in the dark');
         // (Slices 4.5 and 4.6: the rats on its scent stalk it, their Stealth tested, the denizens' slot's, their steps
         // the quieter; every sound's way from the character to a rat no shorter than the line, round the corner longer)
-        const g = m.dq0.games[0] || { replies: [], dens: [] }, rs = g.replies.filter(r => r.req === 'dsense' && r.cost !== 255);
+        const g = m.dq0.games[0] || { replies: [], dens: [] }, rs = g.replies.filter(r => r.req === 'dsense' && r.cost !== 255 && !r.whom);   // (The character the target: another actor's noise heard along the line, gw2's)
         if (!g.replies.some(r => r.req === 'dslot' && r.kind === m.dq0.layout().K.RS_TEST && r.a === 4 && r.actor)) f.push("no rat's Stealth tested, stalking");
         if (!g.dens.some(e => e.kind === 'E_DEN' && e.de === 'DE_MOVED' && e.b === 0)) f.push("no rat's step silent, stalking");
         const short = rs.filter(r => r.cost < Math.max(Math.abs(r.x - r.pc.x), Math.abs(r.y - r.pc.y)));
@@ -566,7 +566,7 @@ module.exports = {
         "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/j", 'look', 'wait 1 minute', 'look', 'status', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       start(m) {
-        // (A bandit put where the scene wants it, a square or three off the way the character faces, unaware; its doing poked)
+        // (A bandit put where the scene wants it, a square or three off the way the character faces, facing it, unaware; its doing poked)
         const put = (d, dist, extra = {}) => (h, L, K, at, named) => {
           const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
           if (k === undefined) return;
@@ -575,6 +575,7 @@ module.exports = {
           w16(at(k) + L.aX, u16(L.pcX) + DX[fc] * dist);
           w16(at(k) + L.aY, u16(L.pcY) + DY[fc] * dist);
           h[at(k) + L.aDoing] = extra.doing || 0;
+          h[at(k) + L.aFace] = fc + 4 & 7;     // (Facing the character, its eyes its way: the senses see only before them, gw2's, 2026-11-19)
           h[L.hlook + k] = 0;                  // (A fresh look)
           if (extra.attitude !== undefined) h[at(k) + L.aAttitude] = extra.attitude;
           if (extra.state) h[at(k) + L.aState] = extra.state;

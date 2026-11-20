@@ -2057,10 +2057,11 @@ unsigned char __fastcall__ s_shoots (unsigned char k, unsigned char ag)
 ** will be free, as the world will have it) */
 static unsigned char __fastcall__ decide (unsigned char k)
 {
-    unsigned char d = 0xFF, was, foe, ag, w, rng;
+    unsigned char d = 0xFF, was, foe, ag, w, rng, of;
 
     kind_get (md.akind[k]);
     memcpy (&a, &HUB->actor[k], sizeof a);
+    of = a.face;
     ag = HUB->agear[k];                         /* (Its things, the world's: a launcher, a shot, slice 4.7's) */
     stayed (k);
     wt = 0;
@@ -2175,6 +2176,22 @@ static unsigned char __fastcall__ decide (unsigned char k)
         if (pcrest && a.doing != DO_FLEE) {
             wt *= 30;                           /* (A watcher's three to six minutes, an idler's one or two) */
         }
+    }
+    if (d < 8) {
+        a.face = md.sres[k] && a.doing != DO_FLEE && dist ? bearing (ddx, ddy) : DH (d);   /* (Its face its mind's,
+                                                **   gw2's, 2026-11-19: the senses see only before its eyes, as the
+                                                **   character's look does.  A step: its way; sensing the character, not
+                                                **   fleeing, its eyes on it, coming on or keeping its distance) */
+    } else if (md.sres[k] && dist && d != 0xFB) {
+        a.face = bearing (ddx, ddy);            /* (The character sensed, heard or smelt, not seen behind it: turned
+                                                **   to it) */
+    } else if (!md.sres[k] && d == 0xFF && md.alert[k] <= now && a.doing != DO_SLEEP && a.doing != DO_DOWN &&
+        !(((unsigned char) (now >> 4) + k) % 3)) {
+        a.face = a.face + 3 & 7;                /* (Nothing sensed, idle: a glance about now and then, by the clock, not
+                                                **   the minds' dice: every roll after it the same) */
+    }
+    if (a.face != of) {
+        md.sgen[k] = 0;                         /* (Turned: sensed again, the way it faces now) */
     }
     hub_map (0);
     HUB->actor[k].attitude = a.attitude;        /* (Its mind's own, as it decides) */

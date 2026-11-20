@@ -292,7 +292,10 @@ void s_den_intents (void)
             den_trod (I_STEP_HEAD (m));
             bd.x = x;
             bd.y = y;
-            bd.face = I_STEP_HEAD (m);
+            if (I_DEN_FACE (m) == 0xFF) {
+                bd.face = I_STEP_HEAD (m);      /* (Its way, unless its mind faces it another: one keeping its
+                                                **   distance backing off, its eyes on its foe, gw2's, 2026-11-19) */
+            }
             if (!I_STEP_COARSE (m)) {
                 told_den (I_STEP_HEARD (m), I_STEP_LOUD (m));
             }

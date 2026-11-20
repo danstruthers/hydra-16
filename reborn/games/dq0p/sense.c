@@ -24,9 +24,9 @@
 ** pc_hid: HOUSE.md's hiding oneself): still, no sound of it; in sight's reach, SN_LOOK, not seen: its mind's to test the
 ** look (dq0d's part 20); smelt all the same.  Another actor the target: its body and its light (the hub's sens),
 ** its steps heard while it's busy along the straight line, the air's (no rock nor shut door on it: the user's,
-** 2026-11-17; exact, the sound layer's way, whenever the character is at either end), smelt the same.  Facing (seen
-** only before its eyes, as the character's look is) waits on the minds turning to look (the audit's S14): the minds
-** never turn yet, so a watcher would stay blind to whatever its last step left behind it.
+** 2026-11-17; exact, the sound layer's way, whenever the character is at either end), smelt the same.  Seen only
+** before its eyes, as the character's look is (none behind it but beside it: REL_BEHIND), its face the way its mind's
+** turned it (gw2, 2026-11-19: the audit's S1 and S14).
 */
 
 #include <stddef.h>
@@ -249,7 +249,9 @@ void s_sense_actor (void)
     nose = nose * w / 2;
     ln_eye = LN_EYES (pos & ~PC_HID);           /* (The line between them: the target's eyes', as the character's look
                                                 **   to it is) */
-    if ((!res || (pos & PC_HID)) && (dist <= m || dist <= gr) && !line (tsn, tx, ty, sact.x, sact.y, LN_SIGHT)) {
+    if ((!res || (pos & PC_HID)) && (dist <= m || dist <= gr) && (dist <= 1 || !REL_BEHIND (REL8 (bearing (-dx, -dy), sact.face))) &&
+        !line (tsn, tx, ty, sact.x, sact.y, LN_SIGHT)) {   /* (Before its eyes, as the character's look is: none behind
+                                                **   it but beside it, its face its mind's to turn, gw2's, 2026-11-19) */
         res |= pos & PC_HID ? SN_LOOK : SN_SEEN;
     }
     if (!(res & ~SN_LOOK) && dist <= nose) {

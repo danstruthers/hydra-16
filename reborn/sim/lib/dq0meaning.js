@@ -116,7 +116,7 @@ function layoutOf(H) {
   chTile: F('struct change', 'tile'), chElev: F('struct change', 'elev'), chLink: F('struct change', 'link'),
   dsenseAt: F('struct hub', 'dsense'), dsenseSize: S('struct hub', 'dsense'),
   // (The sound and the air, slices 4.5 and 4.6: dsense's replies, the character's noise, the background, the draught)
-  dsWho: F('struct hub', 'dsense.who'), dsNoise: F('struct hub', 'dsense.noise'), dsRes: F('struct hub', 'dsense.res'),
+  dsWho: F('struct hub', 'dsense.who'), dsWhom: F('struct hub', 'dsense_whom'), dsNoise: F('struct hub', 'dsense.noise'), dsRes: F('struct hub', 'dsense.res'),
   dsCost: F('struct hub', 'dsense.cost'), pcNoise: F('struct hub', 'pc_noise'), pcMask: F('struct hub', 'pc_mask'),
   pcBg: F('struct hub', 'pc_bg'), airH: F('struct hub', 'air_h'), airS: F('struct hub', 'air_s'),
   // (Hunger and thirst, the water: slice 4.9's; a sixteen-bit field's high byte its name's Hi, for dq0Poke's hub bytes)
@@ -373,7 +373,7 @@ function createRecorder() {
         order: name('OR_NONE', h[off + L.swOrder]), result: name('SR_OK', h[off + L.swResult]), grade: s8(h[off + L.swGrade]),
         was: name('AT_HOSTILE', h[off + L.swWas]), now: name('AT_HOSTILE', h[off + L.swNow]), name: str(h, off + L.swName, 12) });
       else if (off === L.wreq) game.replies.push({ line: enters, req: 'wreq', kind: name('WQ_SAVE', h[L.wqKind]), res: h[L.wqRes] });
-      else if (off === L.dsenseAt) game.replies.push({ line: enters, req: 'dsense', who: h[L.dsWho], noise: h[L.dsNoise], res: h[L.dsRes],
+      else if (off === L.dsenseAt) game.replies.push({ line: enters, req: 'dsense', who: h[L.dsWho], whom: h[L.dsWhom], noise: h[L.dsNoise], res: h[L.dsRes],
         cost: h[L.dsCost], now: w16(h, L.hubNow) + w16(h, L.hubNow + 2) * 65536, pc: { x: w16(h, L.pcX), y: w16(h, L.pcY), noise: h[L.pcNoise] },
         x: w16(h, L.actor + h[L.dsWho] * L.actorSize + L.aX), y: w16(h, L.actor + h[L.dsWho] * L.actorSize + L.aY) });
       else if (rqAt(off)) {
