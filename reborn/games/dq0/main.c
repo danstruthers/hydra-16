@@ -910,12 +910,15 @@ unsigned char stir_held;                        /* (A denizen's stir held while 
 ** 650,000, its words' event out at 342,000.  At the real paces the referee too while the world waits on it (its slot's
 ** ask posted: a round's blow, a denizen's) with a line's intent behind it not yet taken (a line held behind a fight's
 ** round, its stop): the round's blow worked out in the background kept the line's first words 680,000 cycles,
-** dq0fightmid's, start2, 2026-11-20.  Overlay 13's, the hub's fields through hub_mem (the main RAM's room, 2026-11-20) */
+** dq0fightmid's, start2, 2026-11-20.  And as soon as a line's in hand while the world waits on the character's own blow (its slot's
+** RS_ATTACK, actor 0): before, the referee out of the foreground till the line was parsed and its intent sent (some
+** 160,000 cycles), its blow's words, the line's first, at 625,000-665,000 (throw3, 2026-11-20: dq0fightmid's "go left";
+** now 458,000-516,000; a look's or what's carried typed then the slower, 320,000 at most).  Overlay 13's, the hub's fields through hub_mem (the main RAM's room, 2026-11-20) */
 #pragma code-name (push, "OV13CODE")
 #pragma rodata-name (push, "OV13RODATA")
 void o_fore_sync (void)
 {
-    unsigned char q[2], c, k, f;
+    unsigned char q[2], c, k, f, r[5];
     unsigned t;
 
     hub_mem (0, q, (const void*) &HUB->iq_head, 2);     /* (The intents' ring's head and tail: iq_head, iq_tail) */
@@ -929,8 +932,9 @@ void o_fore_sync (void)
         }
     }
     hub_mem (0, &t, (const void*) &HUB->tpr, 2);
-    hub_mem (0, &k, (const void*) &HUB->slot[SLOT_WORLD].state, 1);
-    f = t ? FS_UI | FS_SENS | (c ? FS_CMD : 0) | (q[0] != q[1] && k == REQ_POSTED ? FS_REF : 0) : c ? FS_UI : 0;
+    hub_mem (0, r, (const void*) &HUB->slot[SLOT_WORLD].state, 5);   /* (Its state, kind, from, seq, actor: RQH's) */
+    k = r[0] == REQ_POSTED && (q[0] != q[1] || (c && r[1] == RS_ATTACK && !r[4]));
+    f = t ? FS_UI | FS_SENS | (c ? FS_CMD : 0) | (k ? FS_REF : 0) : c ? FS_UI : 0;
     if (f != fored) {
         o_fore_set (fored = f);
     }
