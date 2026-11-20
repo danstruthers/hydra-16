@@ -240,6 +240,9 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
                                                 **   lock, its lid's top, a false bottom; */
     { "shelves", K_PLURAL, 120, 60, 40, 300, 0, 0, 7, "", MT_WOOD, AP_WOOD, 96, KF_ON | KF_FIXED },   /*   shelves, on a
                                                 **   wall) */
+    { "oil", K_PLURAL, 4, 1, 0, 0, 0, 0, 1, "", MT_OTHER, AP_FOOD, 4, 0, KF_LIQUID | KF_COUNT },   /* (Lamp oil, a
+                                                **   liquid of its own, pints: the user's H14, 2026-11-19; a penny a
+                                                **   pint, the flask's worth less the flask) */
 };
 #pragma rodata-name (pop)
 
@@ -354,7 +357,8 @@ const unsigned char throws[KI_COUNT] = {
     2, 0, 0, 0, 0, 0,                           /* iron spike; a spike driven, a ring, a post, a rope in place */
     1, 2,                                       /* old writing, copy */
     2, 2, 1, 2,                                 /* scarf, earrings, linen sheet, towel */
-    0, 0, 0, 0                                  /* desk, cabinet, case, shelves */
+    0, 0, 0, 0,                                 /* desk, cabinet, case, shelves */
+    0                                           /* oil */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
 

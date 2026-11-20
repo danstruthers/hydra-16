@@ -5487,7 +5487,8 @@ static void words (void)
             f = (q <= 10 && !(twk->form & KF_COUNT) ? LN_FEW : LN_COUNT) | (twk->flags & K_PLURAL ? 0 : LN_PLURAL);
         }
     } else {
-        f = q > 1 ? (tw.kind == KI_WATER ? LN_PINTS : LN_COUNT) : twk->flags & K_PLURAL ? 0 : LN_A;
+        f = q > 1 ? (twk->form & KF_LIQUID ? LN_PINTS : LN_COUNT) : twk->flags & K_PLURAL ? 0 : LN_A;   /* (Water's, lamp
+                                                **   oil's pints: H14, 2026-11-19) */
     }
     s = !tw.dur_max ? 0 : tw.dur * 10 < tw.dur_max ? 1 : tw.dur * 3 < tw.dur_max ? 2 : 0;   /* (Nearly broken, battered) */
     s |= tw.flags & I_LIT ? 4 : 0;
@@ -5808,7 +5809,8 @@ unsigned char s_fill (void)
 {
     struct item l, f;                           /* (On the C stack: the main RAM's room) */
     const struct burn* b;
-    unsigned n, c, room, give, n2;
+    unsigned n, c, room, give, n2, h = 0;
+    struct item* lp;
     unsigned char takes, k, bk = 0;
     char ln[14], fn[14];
 
@@ -5856,7 +5858,8 @@ unsigned char s_fill (void)
     } else {
         for (c = 0; (c = items (c, IN_ACTOR | IN_ITEM, 0)) != 0; ) {    /* (The first carried it takes, not empty) */
             fetch (&f, c);
-            if (f.fuel && (b = burn_of (f.kind)) != 0 && (b->fuels & takes) && !(kind_of (f.kind)->flags & K_LIGHT)) {
+            if (f.fuel && ((f.kind == KI_LAMP_OIL && (takes & FU_OIL)) || ((b = burn_of (f.kind)) != 0 && (b->fuels & takes) &&
+                !(kind_of (f.kind)->flags & K_LIGHT)))) {   /* (Lamp oil in what it carries too: H14's) */
                 for (n2 = c; item_at (n2)->where == IW_ITEM; n2 = ip->x) {
                 }
                 if (n2 == rs_pack || (ip->where == IW_ACTOR && !ip->x)) {
@@ -5871,8 +5874,20 @@ unsigned char s_fill (void)
     }
     make_own (c);
     fetch (&f, c);
-    strcpy (fn, kind_of (f.kind)->name);
-    if ((kind_of (f.kind)->flags & K_LIGHT) || !(b = burn_of (f.kind)) || !(b->fuels & takes)) {
+    if ((takes & FU_OIL) && (kind_of (f.kind)->flags & K_CONTAINER)) {
+        for (n2 = 0; (n2 = items (n2, IN_X | IN_ITEM, c)) != 0 && (IC_OF (ip->y) || ip->kind != KI_LAMP_OIL); ) {
+        }
+        if (n2) {
+            c = n2;                             /* ("From the vial": the lamp oil in it, H14's) */
+            fetch (&f, c);
+        }
+    }
+    if (f.kind == KI_LAMP_OIL && f.where == IW_ITEM) {
+        h = f.x;                                /* (Its vessel: reached for, named) */
+    }
+    strcpy (fn, kind_of (h ? item_at (h)->kind : f.kind)->name);
+    if (f.kind == KI_LAMP_OIL ? !(takes & FU_OIL) : (kind_of (f.kind)->flags & K_LIGHT) || !(b = burn_of (f.kind)) ||
+        !(b->fuels & takes)) {
         say100 (SA_WONT_BURN, ln, "");
         return IR_NO;
     }
@@ -5890,11 +5905,11 @@ unsigned char s_fill (void)
         if ((takes & FU_PITCH) && reach_do (RO_REDIP) != IR_OK) {
             return IR_NO;                       /* (A torch dipped: what comes first, part 86's) */
         }
-        if (reach_step (c, RS_TOOL)) {
+        if (reach_step (h ? h : c, RS_TOOL)) {
             return IR_NO;                       /* (Its fuel got out: a tool's steps; put away after the filling) */
         }
         reach_from (n);                         /* (The light and its fuel got out first: their reach, HOUSE.md's) */
-        reach_from (c);
+        reach_from (h ? h : c);
     }
     hub_map (0);
     HUB->ireq.x = takes == FU_OIL ? 200 : 100;
@@ -5911,7 +5926,11 @@ unsigned char s_fill (void)
     }
     give = room < f.fuel ? room : f.fuel;
     item_at (n)->fuel = l.fuel + give;
-    item_at (c)->fuel = f.fuel - give;
+    lp = item_at (c);
+    lp->fuel = f.fuel - give;
+    if (f.kind == KI_LAMP_OIL && !(lp->qty = (lp->fuel + OIL_PINT - 1) / OIL_PINT)) {
+        lp->kind = 0;                           /* (Lamp oil's pints as it's used; none left, gone: H14's) */
+    }
     say100 ((takes == FU_OIL ? SA_FILL : SA_SOAK) + (give == f.fuel), ln, fn);  /* (Its fuel used up: "and it's empty now") */
     return IR_OK;
 }

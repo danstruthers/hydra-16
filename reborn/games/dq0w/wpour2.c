@@ -93,13 +93,70 @@ static unsigned free_rec (void)
 ** else moved, or split off when only some goes (the rest stays where it was: what a hand pouring does, the vessel
 ** full, nothing spilt unasked; the user's H11, 2026-11-19); or (E_Y 0) poured away, all of it: gone.  Still water's
 ** foulness goes with it (wwater.c's: mixed with clean, still foul) */
+static unsigned __fastcall__ pints_of (unsigned f)
+{
+    return (f + OIL_PINT - 1) / OIL_PINT;
+}
+
+/* Lamp oil's measure g taken from what it's poured from: the flask's (iq.thick), or record E_L's, its pints as they're
+** left, none left gone */
+static void __fastcall__ oil_less (unsigned g)
+{
+    static struct item* q;
+
+    q = item_at (iq.thick ? E_N : E_L);
+    q->fuel -= g;
+    if (!iq.thick && !(q->qty = pints_of (q->fuel))) {
+        q->kind = 0;
+    }
+    hub_map (0);
+}
+
 static void pour_in (void)
 {
     static struct item c;
-    static unsigned i;
+    static unsigned i, mf, g;
     static struct item* q;
 
+    if (iq.thick || (iq.size & 2)) {          /* (Lamp oil by its measure, minutes: the user's H14, 2026-11-19) */
+        mf = item_at (iq.thick ? E_N : E_L)->fuel;
+        if (!E_Y) {
+            oil_less (mf);                      /* (Poured away) */
+            return;
+        }
+        q = item_at (E_Y);
+        if (iq.size & 2) {
+            g = OIL_PINT - q->fuel;             /* (A flask filled as far as it takes) */
+            g = g < mf ? g : mf;
+            q->fuel += g;
+            iq.osel = g == mf ? iq.count : 0;
+            oil_less (g);
+            return;
+        }
+        for (i = 0; (i = items (i, IN_X | IN_ITEM, E_Y)) != 0 && (IC_OF (ip->y) || ip->kind != KI_LAMP_OIL); ) {
+        }
+        if (!i && (i = free_rec ()) != 0) {     /* (A flask's oil into a vessel: lamp oil, a record of its own) */
+            if (i >= ihigh) {
+                ihigh = i + 1;
+            }
+            q = item_at (i);
+            memset (q, 0, sizeof *q);
+            q->kind = KI_LAMP_OIL;
+            q->where = IW_ITEM;
+            q->x = E_Y;
+        }
+        if (i) {
+            q = item_at (i);
+            q->fuel += mf;
+            q->qty = pints_of (q->fuel);
+            oil_less (mf);
+        }
+        hub_map (0);
+        return;
+    }
     memcpy (&c, item_at (E_L), sizeof c);
+    mf = c.kind != KI_LAMP_OIL ? 0 : iq.osel == c.qty ? c.fuel : iq.osel * OIL_PINT;   /* (Lamp oil's measure that goes:
+                                                **   whole pints, the last one's part with it all) */
     if (E_Y) {
         for (i = 0; (i = items (i, IN_X | IN_ITEM, E_Y)) != 0 && (IC_OF (ip->y) || ip->kind != c.kind); ) {
         }
@@ -107,6 +164,10 @@ static void pour_in (void)
             q = item_at (i);                    /* (Joined to the same liquid there) */
             q->qty += iq.osel;
             q->wear |= c.wear & 1;
+            if (mf) {
+                q->fuel += mf;
+                q->qty = pints_of (q->fuel);
+            }
         } else if (iq.osel == c.qty) {
             q = item_at (E_L);                  /* (All of it: moved) */
             q->x = E_Y;
@@ -122,10 +183,12 @@ static void pour_in (void)
             q->x = E_Y;
             q->y = 0;
             q->qty = iq.osel;
+            q->fuel = mf;
             q->id = 0;                          /* (Its own number as it's next looked at: make_own's, wfetch.c's) */
         }
     }
     q = item_at (E_L);
+    q->fuel -= mf;
     if (!E_Y || !(q->qty -= iq.osel)) {
         q->kind = 0;                            /* (All gone from it) */
     }
@@ -147,8 +210,8 @@ static void __fastcall__ pints (unsigned char n, const char* l)
 {
     static char b[4];
 
-    put (n == 1 ? "a pint" : utoa (n, b, 10));
-    put (n == 1 ? " of the " : " pints of the ");
+    put (n == 1 ? "a pint" : !n ? "some" : utoa (n, b, 10));
+    put (n < 2 ? " of the " : " pints of the ");   /* (Some: a flask filled, by its measure) */
     put (l);
 }
 
@@ -167,12 +230,8 @@ unsigned char s_pour_said (void)
     } else {
         out_all (HUB->pc_stratum, HUB->pc_x, HUB->pc_y);
     }
-    if (E_L) {
-        pour_in ();
-    }
-    if (iq.thick) {
-        item_at (E_N)->fuel = 0;                /* (A flask's oil poured away) */
-        hub_map (0);
+    if (E_L || iq.thick) {
+        pour_in ();                             /* (A flask's oil too: poured away, or into another) */
     }
     if (iq.to & TO_DEN) {
         bd.ready += TAKE_T * (iq.qty + (iq.count || iq.thick));

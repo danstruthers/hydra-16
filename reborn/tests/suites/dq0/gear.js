@@ -18,6 +18,7 @@ const TORCHX = ['inventory', 'drop torch', 'take torch', 'inventory', 'wait 2 ho
   'inventory', 'take spent torch from backpack', 'put the rope in the backpack', 'put the tinderbox in the backpack', 'dip the spent torch in the oil', 'inventory'];   // (dq0torchwords' lines: the user's playtest, 2026-11-06)
 const EMPTYPLACE = ['drop the chest', 'drop the table', 'unlock the chest with the lockpicks', 'unlock the chest', 'put the key in the sack', 'empty the sack', 'empty the sack', 'take the key', 'put the key in the sack', 'empty the sack onto the table', 'open the flask of oil', 'empty the flask of oil', 'empty the torch', 'take the key from the table', 'put the key in the sack', 'tie the sack', 'empty the sack', 'untie the sack', 'take the key from the sack', 'put the key in the corner', 'put the dagger in the middle of the room', 'put the key on the ledge', 'look'];   // (dq0emptyplace's: P4, P5, P6, 2026-11-18)
 const POUR = ['d', 'n', 'fill the waterskin', 's', 'light the torch', 'drop the iron pot', 'open the waterskin', 'open the vial', 'pour the water into the vial', 'pour out the vial', 'empty the waterskin into the vial', 'empty the waterskin into the iron pot', 'empty the vial into the iron pot', 'empty the waterskin into the vial', 'empty the iron pot into the sack', 'close the vial', 'empty the iron pot into the vial', 'pour the water', 'look'];   // (dq0pour's: H11, 2026-11-19)
+const OIL = ['drop the iron pot', 'open the flask of oil', 'open the vial', 'pour the oil into the vial', 'empty the vial into the iron pot', 'empty the iron pot into the vial', 'light the lantern', 'wait 1 hour', 'fill the lantern from the vial', 'pour the oil into the flask of oil', 'empty the vial', 'empty the flask', 'look'];   // (dq0oil's: H14, 2026-11-19)
 const LETSIGHT = ['drop j', 'drop c', 'drop b', 'look', 'around', 'take 5F', 'drop c', 'around', 'take 2F', 'drop rations', 'take torch from E', 'drop k',
   'take G', 'around', 'inventory'];   // (dq0letsight's lines: the rats seen first, A, B, C, 2026-11-06's step 4)
 const LETCMD = ['inventory', 'drop j', 'inventory', 'take torch', 'put j in b', 'inventory', 'take j from b', 'light j with a', 'drop 2c', 'look d',
@@ -2700,6 +2701,33 @@ module.exports = {
         for (const r of this.timer.game(0, POUR.filter(l => /^(pour|empty) /.test(l)).map(l => ({ line: l, want: 'You|The' })))) {
           this.notes.push(r.line + ': first letter ' + r.first);
           if (target(this, r.line + ': first letter', r.first, D17.first)) f.push(r.line + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0oil', near: ['gear'], what: "Dingus Quest Zero's lamp oil a liquid of its own (the user's H14, 2026-11-19): at seed 3 (-T, a kit of a lantern, a flask of oil, a vial and an iron pot) the flask's oil poured into the vial (a pint of lamp oil there), the vial emptied into the pot on the floor, the pot's emptied back into the vial, the lantern lit and burnt an hour, then filled from the vial (its oil the less), the rest poured back into the flask, the vial and the flask emptied after: 'The vial is empty.', the flask's oil poured out; each pour's, empty's and fill's first letter held to D17",
+      init: 't_rc', cycles: 600e6 + OIL.length * 150e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k \'lantern,flask of oil,vial,iron pot\'', ...OIL, 'quit', 'echo $status']) },
+      start(m) { this.timer = dq0Timer(m); },
+      expect: ['% echo $status'],
+      check(m) {
+        const A = dq0Answers(m.out), f = [], a = (l, n = 0) => (A.filter(x => x.cmd === l)[n] || { text: '(no answer)' }).text;
+        if (process.env.DQ0_OIL) for (const x of A) console.error(x.cmd + ' => ' + x.text);
+        const want = (l, re, why, n) => { if (!re.test(a(l, n))) f.push('"' + l + '" ' + why + ': ' + a(l, n).slice(0, 200)); };
+        want('pour the oil into the vial', /You pour the oil into the vial\./, "the flask's oil not poured into the vial");
+        want('empty the vial into the iron pot', /You pour the oil into the iron pot\./, 'not poured into the pot');
+        want('empty the iron pot into the vial', /You pour the oil into the vial\./, "the pot's oil not poured back");
+        want('fill the lantern from the vial', /You fill the lantern from the vial\./, 'the lantern not filled from the vial');
+        want('pour the oil into the flask of oil', /You pour the oil into the flask of oil\./, 'the rest not poured back into the flask');
+        want('empty the vial', /The vial is empty\./, 'the vial not empty after');
+        want('empty the flask', /You pour the oil out of the flask of oil\./, "the flask's oil not poured out");
+        this.notes = [];
+        for (const r of this.timer.game(0, OIL.filter(l => /^(pour|empty|fill) /.test(l)).map(l => ({ line: l, want: 'You|The' })))) {
+          this.notes.push(r.line + ': first letter ' + r.first);
+          if (target(this, r.line + ': first letter', r.first, D17.first)) f.push(r.line + ': its first letter ' + r.first + " cycles from Enter (the user's 720,000)");
         }
         return f;
       },

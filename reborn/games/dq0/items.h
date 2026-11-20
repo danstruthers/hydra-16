@@ -225,7 +225,12 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
                                                 **   they're put; a linen sheet, a folk bed's; a towel) */
     KI_DESK, KI_CABINET, KI_CASE, KI_SHELVES,   /* (Furniture, its compartments the catalogue's comps: the maker's placers
                                                 **   put it in rooms whose use fits, the user's, 2026-11-16) */
+    KI_LAMP_OIL,                                /* (Lamp oil, a liquid of its own, poured and carried in any vessel as
+                                                **   water is: the user's H14, 2026-11-19; its record's fuel the minutes
+                                                **   of burning it holds, its qty the pints, OIL_PINT a pint) */
     KI_COUNT };
+#define OIL_PINT        360                     /* (A pint of lamp oil, a lantern's fill: six hours, in minutes, kinds.c's
+                                                **   burns) */
 /* The places on the body a thing's worn at (the engine's own, 2026-11-12: ENGINE-CRITIQUE.md's section 8; HarnMaster's
 ** harn.h locations till then, the same numbers, so a save's places read as they were): the head (the ears a pair),
 ** the face, the neck, a shoulder, an upper arm, an elbow, a wrist (the forearm), a hand, the breast, the waist, the

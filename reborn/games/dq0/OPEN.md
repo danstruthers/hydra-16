@@ -73,6 +73,10 @@ L1-L5 from DECISIONS.md:5878-5885, "No look when the light's the same".
 H8 from built/2026-11-17-things.md; its other questions were answered on 2026-11-17 (DECISIONS.md).
 - **H8. The thing a tool is for is kept in hand only when its request names it.** A rope tied to a held spike keeps
   the rope and stows the spike. Protect it by the act instead?
+- **H15. Lamp oil spilt on the floor** ("pour out the oil", "empty the vial" with lamp oil in it): built, it's gone,
+  as water poured away is. Should it lie there a while instead, burning if a flame reaches it, or slippery underfoot?
+  Neither is built: a new behaviour the user hasn't asked for.
+  - built/2026-11-19-oil1.md, its open question 1.
 
 
 

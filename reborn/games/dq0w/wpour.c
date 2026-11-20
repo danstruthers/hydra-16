@@ -177,7 +177,7 @@ static unsigned char __fastcall__ the (unsigned char k, const char* s)
 static unsigned char empty (void)
 {
     static unsigned char k, ky, sh, f, oil, any, lk, yk, room;
-    static unsigned lq, cap;
+    static unsigned lq, cap, yf;
     static const char* ln;
     static char lb[14];
     static struct item* q;
@@ -193,10 +193,13 @@ static unsigned char empty (void)
         if (*iq.into && !(E_Y = pick (iq.into, HW_ANY))) {
             return none (iq.into);
         }
-        if ((k = liquid_named (iq.name)) != 0 && item_at (E_N)->kind != k) {
+        if ((k = liquid_named (iq.name)) != 0 && (yk = item_at (E_N)->kind) != k && (E_N == E_Y || (!strncmp (name (yk),
+            iq.name, lk = strlen (iq.name)) && name (yk)[lk] >= 'a'))) {
             for (E_I = 0; (E_I = items (E_I, IN_ITEM, 0)) != 0; ) {
                 if (ip->kind == k && in_hand (E_I)) {
-                    E_N = E_I;                  /* ("Pour the water": the water to hand, wherever it's in) */
+                    E_N = E_I;                  /* ("Pour the water": the water to hand, wherever it's in, the chooser's
+                                                **   "waterskin" only a word's start; "the oil", a flask of oil named,
+                                                **   the chooser's, as the UI's first words have it: sway.c's ix_pick) */
                     break;
                 }
             }
@@ -270,6 +273,7 @@ static unsigned char empty (void)
         q = item_at (E_Y);
         ky = q->kind;
         f = q->shut;
+        yf = q->fuel;
         for (E_I = 0; (E_I = items (E_I, IN_X | IN_ITEM, E_Y)) != 0; ) {
             if (!IC_OF (ip->y)) {
                 k = ip->kind;
@@ -280,6 +284,11 @@ static unsigned char empty (void)
             }
         }
         k = item_at (E_N)->kind;
+    }
+    if (oil && E_Y) {
+        lk = KI_LAMP_OIL;                       /* (A flask's oil poured into a vessel: lamp oil, a pint at most, the
+                                                **   user's H14, 2026-11-19) */
+        lq = 1;
     }
     ln = oil ? "oil" : lq ? strcpy (lb, name (lk)) : "";
     hub_map (KIND_BANK);
@@ -293,13 +302,21 @@ static unsigned char empty (void)
         return the (k, " is empty.");
     }
     iq.osel = lq;
-    if (E_Y) {
-        if (oil) {
-            put ("The oil is for a lantern: you won't pour it into the ");
-            put (name (ky));
+    if (E_Y && ky == KI_OIL) {                  /* (Into a flask of oil: its lamp oil, as far as it takes, H14's) */
+        if (E_B || !lq || lk != KI_LAMP_OIL) {
+            put ("The flask of oil won't hold ");
+            put (lq && !E_B ? ln : "them");
             put (".");
             return IR_NO;
         }
+        if (f & IS_CLOSED) {
+            return the (ky, " is closed.");
+        }
+        if (yf >= OIL_PINT) {
+            return the (ky, " is full.");
+        }
+        iq.size |= 2;                           /* (By its measure, minutes: wpour2.c's pour_in) */
+    } else if (E_Y) {
         hub_map (KIND_BANK);
         if (!(CATALOGUE[ky].flags & K_CONTAINER) && !(CATALOGUE[ky].keeps & KF_ON)) {
             return the (ky, " won't hold them.");
@@ -338,9 +355,10 @@ static unsigned char empty (void)
             }
             if (room < lq) {
                 iq.osel = room;
-                if (!yk && !free_rec ()) {
-                    return the (ky, " is full.");   /* (No record for the part poured: as full, nothing poured) */
-                }
+            }
+            if (!yk && (room < lq || oil) && !free_rec ()) {
+                return the (ky, " is full.");   /* (No record for the part poured, or the flask's oil: as full,
+                                                **   nothing poured) */
             }
         }
     }

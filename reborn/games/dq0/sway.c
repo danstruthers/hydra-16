@@ -337,6 +337,7 @@ static char* kn;                                /* (A kind's name as it's copied
 static struct cixk ck[NIXK];                         /* (The kinds of what it carries, their flags and names: the world's, copied
                                                 **   with it, no catalogue read, the user's D17; o_walk_ahead's) */
 static unsigned char nck, cm[NIXK];             /* (How many; whether the word said names each, 0xFF not yet asked) */
+static unsigned char exact;                     /* (ix_pick's: a kind of the very name only, an empty's) */
 
 /* The UI bank's bytes copied into this bank, by way of the C stack (the two share the window), a piece at a time */
 static void __fastcall__ from_ui (void* to, const void* from, unsigned n)
@@ -442,7 +443,8 @@ static unsigned char __fastcall__ ix_pick (const char* w, unsigned char sel, uns
         return 0xFF;
     }
     for (e = 0; e < nck; ++e) {
-        cm[e] = name_is (ck[e].name, w);        /* (The word asked of each kind once: the one rule, the world's, main.c's) */
+        cm[e] = exact ? !strcmp (ck[e].name, w) : name_is (ck[e].name, w);   /* (The word asked of each kind once: the one
+                                                **   rule, the world's, main.c's) */
         if (op == IO_EMPTY && cm[e] && !strncmp (ck[e].name, w, j = strlen (w)) && ck[e].name[j] >= 'a') {
             cm[e] = 0;                          /* (Emptied, poured: "water" not the waterskin, a word's start; the
                                                 **   world's the liquid's, wpour.c's liquid_named, H11, 2026-11-19) */
@@ -660,6 +662,13 @@ void __fastcall__ o_walk_ahead (const char* name)
                                                 **   torch" its old one let fall by it;
                                                 **   another named, "the torch in the sconce", "the sack in the sack",
                                                 **   the world's, but a put's of another name) */
+    }
+    if (op == IO_EMPTY && e != 0xFF && cmd.other.word[0] && ix_pick (cmd.other.word, cmd.other.sel | cmd.other.n << 4, 0, 0) ==
+        e) {
+        exact = 1;                              /* ("Pour the oil into the flask of oil": the oil, not the flask, the
+                                                **   world's too: wpour.c's liquid_named, H14, 2026-11-19) */
+        e = ix_pick (name, sel, op, in);
+        exact = 0;
     }
     if (op == IO_DESCRIBE || op == IO_INSIDE) { /* (Looked at, asked of it: its quality, its weight ...; way.c's.  In the
                                                 **   dark, the answer's own) */
