@@ -8491,6 +8491,9 @@ void s_burns_now (void)
                                                 **   once the other is too, or out) */
     }
     if (d) {
+        hub_map (0);                            /* (The hub's header in the window: the things' walk above leaves the
+                                                **   catalogue's bank or the store's there; ui_cmd read from it, the load
+                                                **   guard's, 2026-11-20) */
         if (kowed && !HUB->ui_cmd) {
             hub_map (DEN_BANK);
             mine = KEPT_DONE (KEPT_AT, kowed - 1);
