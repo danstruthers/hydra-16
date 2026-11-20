@@ -80,6 +80,10 @@ H8 from built/2026-11-17-things.md; its other questions were answered on 2026-11
 
 
 
+- **H16. The flask of oil as an ordinary container?** It keeps its oil as fuel, not as a liquid inside it, so it can't
+  hold water and pours by measure (built). Make it a container holding lamp oil, like the vial?
+  - built/2026-11-19-oil1.md, open question 2.
+
 ## Knocked out
 
 The user answered three questions on 2026-11-14 ("Knocked out: the three questions": the words "You lie senseless.",
