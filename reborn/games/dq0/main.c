@@ -3145,7 +3145,7 @@ int main (int argc, char* argv[])
         HUB->ui_dq = (unsigned char) dplace;
         fore_sync ();                           /* (In the foreground or out, as a command's in hand or not) */
         k = t_wrote;
-        hub_nap (k && t_haskey () ? 0 : quick && (k || !HUB->tpr) ? (--quick, 1) : HUB->tpr && !k &&
+        hub_nap (k && t_haskey () ? 0 : quick && k ? (--quick, 1) : HUB->tpr && !k &&
             HUB->look.state == REQ_POSTED && (unsigned char) (HUB->look.kind - LK_WAY) <= LK_NEAR - LK_WAY ? nap << 2 :
             nap);  /* (Keys that came as
                                                 **   it said something,
@@ -3158,11 +3158,14 @@ int main (int argc, char* argv[])
                                                 **   its answer told the sooner; and woken at once by the world's
                                                 **   events, its doorbell rung with them; a fifth of a second as the
                                                 **   game starts, its look at the keys and the console's a quarter of
-                                                **   the CPU otherwise: the start's time, 2026-11-03; at the real paces the
-                                                **   quick naps only as it says something, its answer's words: not as it
-                                                **   waits on the world, the events ringing it, each look at the keys the
-                                                **   console's 9,000 cycles from the answer's own tasks, a look one
-                                                **   way's a tenth, 2026-11-18; and while the senses work a look one way
+                                                **   the CPU otherwise: the start's time, 2026-11-03; the quick naps only
+                                                **   as it says something, its answer's words: not as it waits on the
+                                                **   world, the events ringing it, each look at the keys the console's
+                                                **   9,000 cycles from the answer's own tasks, a look one way's a tenth,
+                                                **   2026-11-18 at the real paces; at the turns pace too, 2026-11-20 (the
+                                                **   UI in the foreground there, the world behind it: a tick each round
+                                                **   for a quarter second, the world a third of the CPU, "d"'s climb
+                                                **   at the first prompt 823,616 cycles, dq0fightcmd's); and while the senses work a look one way
                                                 **   out, nothing said, four times the nap: their look the CPU (not its
                                                 **   rest's, after the prompt, a line perhaps typed meanwhile),
                                                 **   2026-11-18) */
