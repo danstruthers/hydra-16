@@ -11,6 +11,8 @@ const {
   dq0Aware, dq0OnWords, WORN, dq0Ad, dq0Timer, dq0Asks, dq0Paces, dq0HeldPaces
 } = require('../../lib/dq0.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
+const MID_MARK = '\u0104', NO_ROUND = 60e6, MID_GAP = 3e6;   // (dq0fightmid's: a line typed as the character's own blow is being worked, 3M cycles after the line before at least; none in 60M cycles, typed anyway)
+const FIGHTMID = ['d', 'wait', 'go right', 'inventory', MID_MARK + 'look', MID_MARK + 'wait', MID_MARK + 'inventory', MID_MARK + 'go left'];   // (dq0fightmid's lines: dq0fightcmd's way to the rats, a rat engaged as inventory's typed, then lines typed mid-round: a look and what's carried told at once, the fight going on; a wait and a step held till its round's out, the fight stopped for them, and taken up again as the rat bites)
 const FIGHTCMD = ['d', 'wait', 'go right', 'attack the rat', 'inventory', 'wait', 'look', 'wait', 'inventory', 'wait', 'look'];   // (dq0fightcmd's lines: dq0fight's way to the rats, the fight begun, a rat engaged as the first command after's typed, then commands typed as it fights, waits between for its blows: every one timed, gw3's)
 
 // At each line's Enter, each actor's body (m.bodies: { g, line, name, den, lv: its levels, wfl, ex, at }) after the pokes made then
@@ -1910,6 +1912,46 @@ module.exports = {
         if (!T.some(t => dq0Ev(t, 'E_FIGHT', { def: 0 }).length)) f.push('no blow struck at the character: no fight');
         if (!mid.length) f.push('no command typed as a rat fought the character (none fighting as inventory or look was typed): the test proves nothing');
         dq0HeldPaces(this, f, notes, this.timer, [0, 1, 2], FIGHTCMD.map(l => ({ line: l, want: '*' })));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0fightmid', near: ['fight', 'denizens'], what: "Dingus Quest Zero's commands typed in the middle of the character's own round (the coordinator's, start2, 2026-11-20: a line typed as the character fights on is held till the round's blow is struck, the blow's referee test then worked in the background, 830,000 cycles in start1's trace, a D17 risk the suite didn't reach): dq0fightcmd's rats at seed 5, one put before the character, hostile and fighting it (dq0Poke's engage, as inventory's typed); then look, wait, inventory and go left (the fight taken up again after the wait as the rat bites), each typed (3M cycles after the line before at least, no prompt waited for: the fight goes on) as the world's referee slot holds the character's own blow (RS_ATTACK, the character striking, not yet answered), each one's first letter within the user's 720,000 cycles (D17), at the normal pace, the menacing pace and as played (dq0Paces)",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'echo b115200 >/dev/serctl',
+        'dq0 -p n -s 5 -c /ram/c.hm -k sword -T', ...FIGHTMID, 'quit', ...dq0Paces('dq0 -p n -s 5 -c /ram/c.hm -k sword -T', FIGHTMID), 'echo $status']).split('\u0101' + MID_MARK).join(MID_MARK) },   // (A line typed mid-round: not after a prompt, the fight going on)
+      start(m) {
+        this.timer = dq0Timer(m);
+        dq0Asks(m, [3]);
+        dq0Poke(m, [1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, k: 0, beside: 'face', engage: true })));   // (A rat put before the character, hostile and fighting it)
+        // (Each line marked MID_MARK typed only as the world's referee slot holds the character's own blow: posted, not yet
+        // answered; or, none come in NO_ROUND cycles, typed anyway and said so)
+        const H = require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load(), a = m.acia, tick = a.tick, self = this;
+        const ST = H.off('hub', 'slot.state'), KD = H.off('hub', 'slot.kind'), AC = H.off('hub', 'slot.actor');
+        let since = -1;
+        this.mids = [];
+        const blow = () => { const h = m.dq0 && m.dq0.bank(0); return !!h && h[ST] === H.C.REQ_POSTED && h[KD] === H.C.RS_ATTACK && h[AC] === 0; };
+        a.tick = (d, t) => {
+          if (a.rxQueue[0] !== MID_MARK) { since = -1; return tick(d, t); }
+          if (since < 0) since = m.cpu.cyc;
+          const hit = blow();
+          if ((hit && m.cpu.cyc - since >= MID_GAP) || m.cpu.cyc - since > NO_ROUND) {
+            a.rxQueue.shift();
+            self.mids.push({ at: m.cpu.cyc, round: hit, line: a.rxQueue.slice(0, a.rxQueue.indexOf('\r')).join('') });
+            return tick(d, t);
+          }
+          const q = a.rxQueue.splice(0);
+          try { return tick(d, t); } finally { a.rxQueue.push(...q); }
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], notes = this.notes = [], lines = FIGHTMID.map(l => l.replace(MID_MARK, ''));
+        const missed = this.mids.filter(x => !x.round);
+        if (this.mids.length !== 3 * FIGHTMID.filter(l => l[0] === MID_MARK).length) f.push(this.mids.length + ' lines typed mid-round, not ' + 3 * FIGHTMID.filter(l => l[0] === MID_MARK).length);
+        if (missed.length) f.push(missed.length + ' line(s) typed with no blow of the character\'s under way (' + missed.map(x => x.line).join(', ') + '): no round met');
+        dq0HeldPaces(this, f, notes, this.timer, [0, 1, 2], lines.map(l => ({ line: l, want: '*' })));
         return f;
       },
       sdcard: true
