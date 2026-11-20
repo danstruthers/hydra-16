@@ -293,7 +293,8 @@ static unsigned char empty (void)
     ln = oil ? "oil" : lq ? strcpy (lb, name (lk)) : "";
     hub_map (KIND_BANK);
     if (!(CATALOGUE[k].flags & K_CONTAINER) && !oil) {
-        return the (k, " isn't a thing to empty.");
+        return the (k, k == KI_OIL ? " is empty." : " isn't a thing to empty.");   /* (A flask of oil poured out: empty,
+                                                **   H14's) */
     }
     if (sh & IS_CLOSED) {
         return the (k, sh & IS_LOCKED ? " is locked." : " is closed.");

@@ -77,7 +77,8 @@ static unsigned char __fastcall__ wsaid (unsigned char s, unsigned t)
     c[1] = s | 0x80;
     c[2] = 0;
     put (c);
-    put ("\2\2");
+    put (s == SA_EMPTY_FIRST ? "waterskin\2\2" : "\2\2");   /* (Another liquid in it: "You'd have to empty the
+                                                **   waterskin first.", H13, H14) */
     hub_map (0);
     HUB->ireq.x = t;
     HUB->ireq.qty = 0;
@@ -98,6 +99,9 @@ static unsigned char fill_skin (void)
     }
     hub_map (KIND_BANK);
     cap = CATALOGUE[KI_WATERSKIN].cap_bulk;
+    if (items (0, IN_ITEM | IN_X, sk) && ip->kind != KI_WATER) {
+        return wsaid (SA_EMPTY_FIRST, 0);      /* (Lamp oil in it, a liquid of its own: two don't mix, H13) */
+    }
     if (items (0, IN_ITEM | IN_X, sk) && ip->kind == KI_WATER && ip->qty >= cap) {
         return wsaid (SA_SKIN_FULL, 0);    /* (Why it seemed to start empty: the user's,
                                                 **   2026-11-03) */
