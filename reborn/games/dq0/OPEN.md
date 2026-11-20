@@ -84,6 +84,11 @@ H8 from built/2026-11-17-things.md; its other questions were answered on 2026-11
   hold water and pours by measure (built). Make it a container holding lamp oil, like the vial?
   - built/2026-11-19-oil1.md, open question 2.
 
+- **H17. How deep in a container set down is a thing "to hand"?** A thing in an open container lying within reach is
+  now to hand by name, one level deep, if the character knows it's there (built). A thing in a sack inside a pack on
+  the floor isn't ("take the X from the sack" works). Deeper levels to hand too, each taking more time?
+  - built/2026-11-20-hear2.md, open question 2.
+
 ## Knocked out
 
 The user answered three questions on 2026-11-14 ("Knocked out: the three questions": the words "You lie senseless.",
