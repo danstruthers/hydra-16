@@ -26,6 +26,10 @@
 #include "outfit.h"
 
 
+unsigned char den_eq_all;                       /* (s_den_equip's: told even with no things of its own left, its
+                                                **   last let go of: wshoot.c's fire, a throw's; else, none, the
+                                                **   bestiary's, untold) */
+
 #pragma local-strings (on)
 #pragma code-name ("SW49CODE")
 #pragma rodata-name ("SW49RODATA")
@@ -469,6 +473,7 @@ void __fastcall__ s_den_drop (unsigned char den_brk)   /* (Broken as it's let fa
     limb_news ((den_brk ? WB_BROKE : WB_DROP) | (unsigned) k << 8, bk + 1);
     den_saw = 1;
     if (i) {
+        den_eq_all = 1;                         /* (Told, though it was the last it had) */
         den_equip ();
     }
 }
@@ -568,9 +573,13 @@ void s_den_equip (void)
     hub_map (0);
     HUB->slot[SLOT_WORLD].text[0] = 0;
     HUB->agear[bk] = ag = nw = th = 0;
-    if (!(ki = kit_next (0))) {               /* (Its first: ip its record, its bank in the window) */
+    if (!(ki = kit_next (0)) && (!den_eq_all || !bd.did)) {   /* (Its first: ip its record, its bank in the window;
+                                                **   none, and none of its own ever (a beast's), the
+                                                **   bestiary's, untold) */
+        den_eq_all = 0;
         return;
     }
+    den_eq_all = 0;                             /* (Its last let go of: its hands told empty, 2026-11-20) */
     for (; ki; ki = kit_next (ki)) {
         f = ip->flags;
         n = ip->quality;

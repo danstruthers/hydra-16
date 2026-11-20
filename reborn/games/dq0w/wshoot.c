@@ -493,6 +493,9 @@ static unsigned char __fastcall__ span67 (int dx, int dy)
     return dx > dy ? (dx > 255 ? 255 : dx) : (dy > 255 ? 255 : dy);
 }
 
+void den_equip (void);                          /* (Part 60's, wlimbs.c's: body bd's things told the referee) */
+extern unsigned char den_eq_all;                /* (wlimbs.c's: told though nothing's left) */
+
 /* A shot or a throw (part 65's mfire, its arguments), and where its missile falls after it (part 68's mfall, called
 ** from here: a swapped call less deep, 2026-10-30): mfire's value */
 static unsigned char __fastcall__ fire (unsigned char att, unsigned char def, unsigned char z, unsigned char sn,
@@ -503,6 +506,26 @@ static unsigned char __fastcall__ fire (unsigned char att, unsigned char def, un
     if (!r && o != O_RISE && o != O_REARM) {
         mfall (sn, sx, sy, tx, ty, o, thr ? tk : sl_kind == KI_SLING ? KI_STONES : sl_kind == KI_CROSSBOW ? KI_BOLTS :
             KI_ARROWS, thr);
+        if (att) {                              /* (Out of the shooter's hands and off it, every actor's alike (the
+                                                **   user's playtest, 2026-11-20: a dagger thrown and missed, then a
+                                                **   block made with it): the referee told what it holds now, as a
+                                                **   thing let fall is (wlimbs.c's den_drop's, drop_held's) */
+            if (thr) {
+                den_eq_all = 1;                 /* (Told even if it was the last thing it had) */
+                den_equip ();                   /* (Body bd's: the thrower's; a launcher's missile, its load none) */
+            }
+        } else {
+            hub_map (0);
+            if (thr && HUB->pc_strike == SK_OF (tk)) {
+                HUB->pc_strike = SK_BEST;       /* (What it threw no longer what it strikes with: drop_held's) */
+            }
+            equip_now ();                       /* (What's to hand, its load the lighter: the referee's) */
+            if (thr) {
+                light_now ();                   /* (Its light, a torch thrown; what it carries, the UI's first words') */
+            } else {
+                ix_make ();                     /* (A missile the fewer: the UI's first words', its counts) */
+            }
+        }
     }
     return r;
 }
@@ -525,6 +548,8 @@ static void den_unbow (void)
     p->flags = (p->flags & ~(I_HELD | I_WORN)) | I_KNOWN;
     hub_map (0);
     limb_news (WB_DROP | (unsigned) sl_kind << 8, bk + 1);
+    den_eq_all = 1;
+    den_equip ();                               /* (The referee told it's gone from its hands: den_drop's) */
 }
 
 /* A denizen's shot or throw (body bd, entry bk: its intent's, I_ATTACK's AIM_SHOT, part 15's den_blow) at the character
@@ -655,6 +680,7 @@ unsigned char __fastcall__ s_pc_shot (unsigned char k)
                 hub_map (0);
                 HUB->pc_shand = tk;
                 equip_now ();
+                ix_make ();                     /* (In hand now: the UI's first words') */
                 why = 0xFF;                     /* (Told: TE_READIED, its kind) */
             }
         }
@@ -683,9 +709,6 @@ unsigned char __fastcall__ s_pc_shot (unsigned char k)
         why = fire (0, k + 1, HUB->pc_aim, sn, HUB->pc_x, HUB->pc_y, tx, ty, thr, tk);
         BD_PUT ();
         ++HUB->den_seq;
-        if (!why && !thr) {
-            equip_now ();                       /* (Its load the lighter, the referee told) */
-        }
     }
     hub_map (0);
     if (why) {

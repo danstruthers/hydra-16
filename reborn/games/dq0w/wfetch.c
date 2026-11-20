@@ -45,6 +45,9 @@ static struct item rec;                         /* (A lot's part split off, a gi
 ** sender (dq0w.c's event: its copy here gone, 2026-11-11) */
 #define told(how, kind) (evb = E_TASK_FETCHED_B (bk + 1, (how)), event (E_TASK, 0, E_TASK_FETCHED_W1 (kind)), ++HUB->den_seq)
 
+void den_equip (void);                          /* (Part 60's, wlimbs.c's: body bd's things told the referee) */
+extern unsigned char den_eq_all;                /* (wlimbs.c's: told though nothing's left) */
+
 /* Thing n body bd's own, held (filed at its lair's home, as its things are: items.h's IW_DEN) */
 static void __fastcall__ hold (unsigned n)
 {
@@ -58,6 +61,8 @@ static void __fastcall__ hold (unsigned n)
     p->hide = bd.did >> 8;
     p->flags = (p->flags & ~(I_WORN | I_HIDDEN | I_TENDED)) | I_HELD;
     hub_map (0);
+    den_equip ();                               /* (The referee told what it holds now: every actor's, as the
+                                                **   character's equip_now; 2026-11-20) */
 }
 
 /* A count k of lot n split off (a gift's, a trade's: its own record, the rest left where it was): the part's number,
@@ -138,6 +143,8 @@ void __fastcall__ s_den_fetch (const struct msg* q)
             p->y = bpy;
             p->owner = p->hide = 0;
             hub_map (0);
+            den_eq_all = 1;
+            den_equip ();                       /* (Out of its hands: the referee told, as for a throw) */
             told (FT_FEET, kind);
             return;
         }
@@ -155,6 +162,8 @@ void __fastcall__ s_den_fetch (const struct msg* q)
         }
         equip_now ();                           /* (What's to hand now, and its load: the referee's) */
         light_now ();
+        den_eq_all = 1;
+        den_equip ();                           /* (And the giver's: out of its hands) */
         told (FT_GAVE, kind);
         return;
     }

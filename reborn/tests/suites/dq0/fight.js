@@ -928,6 +928,137 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0throwheld', near: ['fight', 'gear'], what: "Dingus Quest Zero's thing thrown out of the hand (the user's playtest, 2026-11-20: a dagger thrown at a foe and missed, the foe's bite then blocked with the dagger it no longer had: the referee never told it had gone, nor the UI's copy of what's carried), by the item store, the referee's requests (RS_EQUIP, the character's hands empty), the UI bank's copy (no thing in a hand) and the words: at seed 3 (the hunter's dagger in hand, another at its belt) a giant rat set hostile two squares west, the character set to block, the dagger thrown at the rat: no blow struck nor bite fended off with a dagger after it, what's carried nothing in a hand; then at the normal pace (a game of its own), its torch kept, the belt's dagger gone, a rat beside it senseless (a hit: the dagger at its feet) and the rest far, the dagger thrown, what's carried (no dagger), taken up from the floor (where it fell out of the light: the scene's, at its feet), held and thrown again, held again (none to hand: gone over to where it lies, or told so; its first words no lifting of the dagger, the UI's copy's)",
+      init: 't_rc', cycles: 2000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
+        "dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k dagger", 'drop the torch', 'defend block', 'throw the dagger at the closest rat', 'wait', 'i', 'quit',
+        'mkdir /ram/h', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/h/theme.txt', "dq0 -p n -s 3 -c /ram/c.hm -T -d /ram/h -k dagger", 'look', 'throw the dagger at the closest rat', 'i', 'look', 'take the dagger', 'hold the dagger', 'throw the dagger at the closest rat', 'hold the dagger', 'i', 'quit', 'echo $status']) },
+      start(m) {
+        const held = [];
+        m.uiHeld = held;
+        const put = (d, foe) => (h, L, K, at) => {   // (Rat 0 d squares west, hostile or held still; the rest far off, friendly, held still)
+          const R = dq0Rec(m), S = dq0Sheet(m), due = (h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16) + 6000; let n = 0;
+          const px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8;
+          for (let k = 0; k < L.nactors; k++) if (h[at(k) + L.aName] && h[at(k) + L.aState]) {
+            const o = R.at(h[at(k) + L.aDen]), q = S.at(h[at(k) + L.aDen]), far = n > 0, x = far ? 32719 + n : px - d, y = far ? 32721 : py;
+            ++n;
+            h[at(k) + L.aX] = R.mem[o + R.X] = x & 255; h[at(k) + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8; h[at(k) + L.aY] = R.mem[o + R.Y] = y & 255; h[at(k) + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8;
+            h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = far ? K.AT_FRIENDLY : foe ? K.AT_HOSTILE : K.AT_WARY; h[at(k) + L.aDoing] = far ? K.DO_ROAM : foe ? K.DO_FIGHT : K.DO_WATCH;
+            h[at(k) + L.aPos] = K.POS_STANDING;
+            if (far || !foe) for (let i = 0; i < 4; i++) h[at(k) + L.aReady + i] = due >>> (8 * i) & 255;
+            S.mem[q + S.STATE] = 0; S.mem[q + 8] = 0; S.mem[q + 9] = 0;
+          }
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+        };
+        const unbelt = (h, L) => {   // (The dagger not in a hand gone from the store: one dagger in the game)
+          const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize);
+          for (let i = 0; cat && i < L.nitems; i++) {
+            const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+            if (!b || !b[o + L.iKind]) continue;
+            let n = '';
+            for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
+            if (n === 'dagger' && !(b[o + L.iFlags] & 2)) b[o + L.iKind] = 0;
+          }
+        };
+        const near = (h, L) => {   // (The dagger, fallen out of the torch's light, put at the character's feet: to be taken up)
+          const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize), px = h[L.pcX] | h[L.pcX + 1] << 8;
+          for (let i = 0; cat && i < L.nitems; i++) {
+            const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+            if (b && b[o + L.iKind] === 5 && b[o + L.iWhere] === 0) { b[o + L.iX] = px & 255; b[o + L.iX + 1] = px >> 8; b[o + L.iY] = h[L.pcY]; b[o + L.iY + 1] = h[L.pcY + 1]; }
+          }
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+        };
+        const look = line => (h, L) => {   // (The UI bank's copy of what's carried: its things in a hand, by kind's name)
+          const ui = m.dq0.bank(L.uiBank), names = [];
+          for (let i = 0; ui && i < Math.min(ui[L.uIxn], 40); i++) {
+            const e = L.uIx + i * L.cixSize, k = ui[e + L.cxKind];
+            let n = '';
+            for (let j = 0; k !== 0xFF && j < 14 && ui[L.uIxks + k * L.cixkSize + L.ckName + j]; j++) n += String.fromCharCode(ui[L.uIxks + k * L.cixkSize + L.ckName + j]);
+            if ((ui[e + L.cxFlags] & 1) && n === 'dagger') names.push(n);
+          }
+          held.push({ line, names });
+        };
+        dq0Poke(m, [{ g: 1, line: 'throw the dagger at the closest rat', n: 1, call: put(2, 1) }, { g: 1, line: 'wait', n: 1, call: look('g1') },
+          { g: 2, line: 'look', n: 1, call: unbelt }, { g: 2, line: 'throw the dagger at the closest rat', n: 1, call: put(1, 0), name: 'giant rat', senseless: 3000 },
+          { g: 2, line: 'i', n: 1, call: look('g2') }, { g: 2, line: 'look', n: 2, call: near }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), o = dq0Prose(out), f = [];
+        if (process.env.DQ0SHOW) console.log(o);
+        const g1 = T.of("dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k dagger"), g2 = T.of("dq0 -p n -s 3 -c /ram/c.hm -T -d /ram/h -k dagger");
+        if (g1.k < 0 || g2.k < 0) return ['the games not played'];
+        const th = T.after(g1, 'throw the dagger at the closest rat'), t2 = T.after(g2, 'throw the dagger at the closest rat');
+        const inHand = s => dq0Carried(s).filter(i => i.name === 'dagger' && (i.flags & DQ0_I.HELD)), lying = s => s ? s.items.filter(i => i.name === 'dagger' && i.where === 'IW_SQUARE') : [];
+        for (const [g, t] of [['the first', th], ['the second', t2]]) {
+          if (!t.at || inHand(t.at).length !== 1) { f.push(g + ' game\'s dagger not in hand before the throw'); continue; }
+          if (inHand(t.after).length || lying(t.after).length !== 1) f.push(g + ' game\'s dagger not on the floor after the throw: ' + JSON.stringify((t.after ? t.after.items : []).filter(i => i.name === 'dagger')));
+          const eq = t.replies.filter(r => r.rs === 'RS_EQUIP' && r.actor === 0);
+          if (!eq.length || (t === th && eq[eq.length - 1].ask.held !== 0)) f.push(g + ' game\'s referee not told the hands are empty after the throw: ' + JSON.stringify(eq.map(r => r.ask)));
+        }
+        // (The first: thrown, then fought on: no blow, block nor fend with the dagger it threw)
+        const o1 = o.slice(o.indexOf('You throw your dagger at'), o.indexOf('> quit'));
+        if (!/You throw your dagger at/.test(o)) f.push('the throw not told');
+        if (/with your dagger/.test(o1)) f.push('the dagger used after it was thrown: ' + (o1.match(/[^.]*with your dagger[^.]*\./) || [''])[0]);
+        const i1 = o.slice(o.indexOf('> i', o.indexOf('You throw your dagger at')), o.indexOf('> quit'));
+        if (/dagger, in your/.test(i1)) f.push('what\'s carried, after the throw, a thing in hand: ' + i1.slice(0, 300));
+        for (const u of m.uiHeld) if (u.names.length) f.push('the UI\'s copy of what\'s carried, ' + u.line + ', a thing in hand: ' + u.names.join(', '));
+        if (m.uiHeld.length !== 2) f.push('the UI\'s copy not read twice: ' + JSON.stringify(m.uiHeld));
+        // (The second: taken up from where it fell, held, thrown again, held again)
+        const tk = T.after(g2, 'take the dagger'), h1 = T.after(tk, 'hold the dagger'), t3 = T.after(h1, 'throw the dagger at the closest rat'), h2 = T.after(t3, 'hold the dagger');
+        if (!dq0Carried(tk.after).some(i => i.name === 'dagger')) f.push('the dagger not taken up from the floor: ' + JSON.stringify(lying(tk.after)));
+        if (inHand(h1.after).length !== 1) f.push('the dagger taken up not held: ' + JSON.stringify((h1.after ? h1.after.items : []).filter(i => i.name === 'dagger')));
+        if (inHand(t3.after).length || lying(t3.after).length !== 1) f.push('the dagger thrown again not on the floor');
+        const a2 = o.slice(o.lastIndexOf('> hold the dagger'));
+        if (/You lift the dagger\./.test(a2.slice(0, 80))) f.push('held after it was thrown again, its first words a dagger lifted (the UI\'s copy of what\'s carried): ' + a2.slice(0, 120));
+        if (!/You have no dagger to hand\.|You go over to the dagger\./.test(a2.slice(0, 200))) f.push('held after it was thrown again, neither told it isn\'t carried nor gone over to: ' + a2.slice(0, 200));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0denthrow', near: ['fight'], outfit: true, lostLines: true, what: "Dingus Quest Zero's thing thrown out of a denizen's hand, by the same code as the character's (the user's playtest, 2026-11-20: a dagger thrown, then a block made with it; ONE-PATH.md: every actor alike), by the item store, the referee's requests and the words: dq0throws' small orcs (arak, hostile: seed 2), each made a spearman (its club a spear; no bow nor arrows: the scene's), a mail hauberk put on (fought on till it falls: the game may end there): a small orc throwing its spear at the character; the spear on the floor after it, no one's, the referee told what that orc holds now (RS_EQUIP, its own, after the throw, in the same turn), and no blow of its told with a spear after it",
+      init: 't_rc', cycles: 1600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm', 'echo ml swd 90 >> /ram/c.hm',
+        'mkdir /ram/g', "echo 'faction | Tribe | arak | 0-0 | 20 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'wear the mail hauberk', 'quit', 'echo $status']) },
+      start(m) {
+        const spears = (h, L, K) => {   // (Each orc's club a spear, its bow and arrows gone: a spearman, to throw)
+          const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize), name = k => { let n = ''; for (let j = 0; j < 14 && cat[k * L.kindSize + j]; j++) n += String.fromCharCode(cat[k * L.kindSize + j]); return n; };
+          let sp = 0;
+          for (let k = 1; k < 255 && !sp; k++) if (name(k) === 'spear') sp = k;
+          for (let i = 0; cat && sp && i < L.nitems; i++) {
+            const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+            if (!b || !b[o + L.iKind]) continue;
+            const n = name(b[o + L.iKind]);
+            if (b[o + L.iWhere] === K.IW_DEN && n === 'club') b[o + L.iKind] = sp;
+            if (['shortbow', 'arrows', 'quiver'].includes(n) && (b[o + L.iWhere] === K.IW_DEN || b[o + L.iWhere] === K.IW_ITEM)) b[o + L.iKind] = 0;
+          }
+        };
+        dq0Poke(m, [{ g: 1, line: 'drop the backpack', n: 1, call: spears }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), o = dq0Prose(out), f = [];
+        if (process.env.DQ0SHOW) console.log(o);
+        const g = T.of("dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'");
+        if (g.k < 0) return ['the game not played'];
+        const k = o.search(/The small orc throws (?:their|its) spear at you/);
+        if (k < 0) return ['the scene not set: no small orc\'s spear thrown'];
+        if (/The small orc (?:strikes|thrusts|jabs|stabs|swings)[^.]*with (?:their|its) spear/.test(o.slice(k + 10, o.indexOf('> quit')))) f.push('a blow with a spear after it was thrown: ' + o.slice(k, k + 600));
+        const thrownIn = T.filter(u => u.k > g.k && u.at && u.after).find(u => u.after.items.some(i => i.name === 'spear' && i.where === 'IW_SQUARE' && !i.owner) &&
+          !u.at.items.some(i => i.name === 'spear' && i.where === 'IW_SQUARE' && !i.owner));
+        if (!thrownIn) return f.concat(['the thrown spear not on the floor, no one\'s']);
+        // (The throw: a small orc's blow at the character told to the referee, and the next it hears of that orc what it
+        // holds now, before any blow more)
+        const reps = thrownIn.replies.filter(r => r.rs === 'RS_ATTACK' || r.rs === 'RS_EQUIP');
+        const at = reps.findIndex((r, i) => r.rs === 'RS_ATTACK' && r.actor > 0 && r.other === 0 && reps[i + 1] && reps[i + 1].rs === 'RS_EQUIP' && reps[i + 1].actor === r.actor);
+        if (at < 0) f.push('the referee not told what the thrower holds after its throw: ' + reps.filter(r => /RS_ATTACK|RS_EQUIP/.test(r.rs)).map(r => r.rs + ' ' + r.actor + '>' + r.other).join(', '));
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0missile', outfit: true, asks: true, near: ['fight'], what: 'Dingus Quest Zero\'s missiles (slice 4.7, 2026-10-29: DUNGEON.md\'s missiles, HOUSE.md\'s, for review; the referee\'s RS_MISSILE, HarnMaster\'s Combat 15-17), by the words, the fights told and the item store: the character (hmchar seed 23, its Bow 90: its outfit a shortbow slung, a quiver of arrows at its belt) in a gambeson and a mail hauberk (Dodge 90), its arrows put down and gathered up again ("You gather up 22 arrows."), put back in the quiver; down seed 5\'s ladder by the giant rats, its torch put down, "shoot the rat": its shortbow taken up first (its round\'s, "You take up your shortbow."), then shot (E_FIGHT, "You shoot at the giant rat with your shortbow"), an arrow the fewer; then with the hand-written theme\'s elves (sindwar, hartbows slung: seed 4), waited for: an elf unslinging its hartbow and shooting at the character from further off than beside it (E_FIGHT by it; "The elf shoots at you with its hartbow")',
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml bow 90 >> /ram/c.hm',
