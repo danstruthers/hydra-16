@@ -11,6 +11,8 @@ const {
   dq0HeldPaces, dq0Alone
 } = require('../../lib/dq0.js');
 const { target, D17 } = require('../../lib/trends.js');   // (The user's targets, D17, at 115,200 baud: each measure kept, those over and past 90% listed after the tests)
+// (dq0stopsweep's stops: 0.5M, 1.5M ... 23.5M cycles after the reach's Enter, its whole sequence, a step at a time)
+const STOPS = Array.from({ length: 24 }, (_, i) => 500000 + i * 1000000);
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
 
 const TORCHX = ['inventory', 'drop torch', 'take torch', 'inventory', 'wait 2 hours', 'light a new torch', 'take the spent torch from the ground', 'drop the spent torch',
@@ -2314,6 +2316,61 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0stopsweep', reach: true, meaning: true, near: ['gear'], what: 'Dingus Quest Zero\'s reach stopped at every moment tells only what happened (the coordinator\'s, 2026-11-20: "The game must never tell what didn\'t happen"; hear2\'s dq0packsteps, "You put on the backpack." told with the pack left in hand): "take the flask from the backpack" at seed 3 (dq0 -T: the pack off and set down, the flask got out, taken in the right hand, the pack back on, some 20M cycles), a "stop" typed 0.5M, 1.5M ... 23.5M cycles after its Enter, each its own try in one game (the flask put back and the pack put on between them); at each, by the item store as the inventory\'s typed after it: every word told of the pack true (the last of "You take off the backpack", "You put on the backpack", "Your backpack is in your hand", "Your backpack lies at your feet" where the pack is; none of the last two after a "put on" with no "take off" between), the flask in the pack unless "You get out the flask of oil." or "You take the flask of oil in your right hand." was told (got out: out of the pack; taken: in hand).  The stop a race in timing only: a step\'s words told as it\'s done (part 86\'s RO_END), a step stopped part way undone and untold (HOUSE.md\'s: "You stop taking off the backpack.", the pack still on)',
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T',
+        ...STOPS.flatMap(() => ['take the flask from the backpack', 'inventory', 'put the flask in the backpack', 'put on the pack']), 'quit', 'echo $status']) },
+      start(m) {                                // (Each try's stop typed its cycles after its Enter; a later line typed first, none)
+        const a = m.acia, read = a.read, cpu = m.cpu, step = cpu.step.bind(cpu);
+        let typed = '', k = 0, due = 0;
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (typed !== 'stop') due = 0;
+              if (typed === 'take the flask from the backpack' && k < STOPS.length) due = cpu.cyc + STOPS[k++];
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+        cpu.step = v => { step(v); if (due && cpu.cyc >= due) { due = 0; a.rxQueue.unshift(...'stop\r'); } };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const s = dq0Prose(out).replace(/\s+/g, ' '), f = [], T = dq0Turns(m), LINE = 'take the flask from the backpack';
+        const PACK = /You take off the backpack|Your backpack is in your hand|Your backpack lies at your feet|You put on the backpack/g;
+        let at = 0, from = 0;
+        this.notes = [];
+        for (const d of STOPS) {
+          const i = s.indexOf('> ' + LINE, at), j = s.indexOf('> inventory', i + 1), u = T.of(LINE, from), inv = T.after(u, 'inventory');
+          if (i < 0 || j < 0 || u.k < 0 || !inv.at) { f.push('the try stopped at ' + d + ' not played'); break; }
+          at = j + 5;
+          from = inv.k + 1;
+          const seg = s.slice(i + LINE.length + 2, j), st = inv.at;
+          const pack = st.items.find(x => x.name === 'backpack'), fl = st.items.find(x => x.name === 'flask of oil');
+          const ps = !pack ? '?' : pack.where === 'IW_ACTOR' && pack.x === 0 ? (pack.flags & DQ0_I.WORN ? 'worn' : pack.flags & DQ0_I.HELD ? 'in hand' : 'carried') :
+            pack.where === 'IW_SQUARE' ? 'at its feet' : pack.where;
+          const fs_ = !fl ? '?' : fl.where === 'IW_ITEM' && pack && fl.x === pack.n ? 'in the pack' : fl.where === 'IW_ACTOR' && fl.x === 0 && (fl.flags & DQ0_I.HELD) ? 'in hand' : fl.where;
+          const pw = seg.match(PACK) || [], last = pw.length ? pw[pw.length - 1] : '';
+          const want = !last || /put on/.test(last) ? 'worn' : /in your hand/.test(last) ? 'in hand' : /at your feet/.test(last) ? 'at its feet' : 'not worn';
+          this.notes.push(d + ': ' + seg.slice(0, 300) + ' || the pack ' + ps + ', the flask ' + fs_);
+          let told = 'worn';
+          for (const w of pw) {
+            if (/take off/.test(w)) told = 'off';
+            else if (/put on/.test(w)) told = 'worn';
+            else if (told === 'worn') f.push(d + ': "' + w + '." told with the pack told on');
+          }
+          if (want === 'not worn' ? ps === 'worn' : ps !== want) f.push(d + ': the pack told "' + (last || 'nothing') + '" but ' + ps);
+          const took = /You take the flask of oil in your/.test(seg), got = /You get out the flask of oil/.test(seg);
+          if (took ? fs_ !== 'in hand' : got ? fs_ === 'in the pack' : fs_ !== 'in the pack')
+            f.push(d + ': the flask told ' + (took ? 'taken' : got ? 'got out' : 'nothing') + ' but ' + fs_);
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0reachstop', reach: true, meaning: true, near: ['gear'], what: 'Dingus Quest Zero\'s lines that break off, acted on at once during any long task and a reach\'s steps, every other line held till its end (the user\'s, 2026-11-06, DECISIONS.md\'s a line typed during a reach: "`stop` and other similar commands should be acted on immediately, but others could be held until after the reach"; HOUSE.md\'s breaking off at once), at seed 3 (dq0 -T), each line typed as a step\'s words are told: an ordinary line ("drop the rations") typed as the pack comes off waits till the pack\'s back on; "halt" (a stop now) as the rations are got out: stopped there, the pack left at its feet, said, no ally\'s words; a flight as the worn pack\'s searched: the search stopped, the pack in hand said, then the flight; "enough" in a search of the room: stopped; a flight as a pick from the pack digs: the dig stopped, the pack at its feet and the pick in hand said; an ordinary line ("turn around") in "take all" runs after its last thing and the pack back on, a stop there ends it, its later things not taken; a flight in a list\'s first part lets its later parts go; an ordinary line as a fire-maker from the pack is struck waits for the torch lit and the pack back on.  And the class kept by the parser\'s meanings: every word commands.verbs gives stop, flee or disengage is one parts.c\'s list takes at once ahead of a list\'s later parts',
       init: 't_rc', cycles: 7000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
@@ -2352,9 +2409,11 @@ module.exports = {
         // (halt: a stop, at once, the pack where it was left; the user's, 2026-11-11: the parse of "halt" and the end of the
         //  short get-out step race at the turns pace, so a stop landing in the step after (the rations taken in hand, then
         //  "You stop there.") passes too, the pack still left at its feet and nothing after it done)
-        order(2, 'take the rations from the backpack', upto(2, 'take the rations from the backpack').includes('You stop getting out the rations.') ?
-          ['You get out the rations.', 'halt', 'You stop getting out the rations.', 'Your backpack lies at your feet.'] :
-          ['You get out the rations.', 'halt', 'You take the rations in your right hand.', 'You stop there.', 'Your backpack lies at your feet.']);
+        //  (reach1's, 2026-11-20: a step's words told as it's done, "halt" typed at "You get out the" lands after the get-out,
+        //  as the rations are taken in hand: "You stop there.", the rations in hand, the pack at its feet)
+        order(2, 'take the rations from the backpack', ['You get out the rations.', 'You take the rations in your right hand.', 'halt', 'You stop there.',
+          'Your backpack lies at your feet.']);
+        if (!/rations, in your/.test(inv(2))) f.push('game 2: the rations told taken, not in hand: ' + inv(2));
         never(2, 'take the rations from the backpack', 'You put on the backpack.');
         never(2, 'take the rations from the backpack', 'no ally');
         if (/\(b\) a backpack, worn/.test(inv(2))) f.push('game 2: the pack back on after the halt');
@@ -2378,7 +2437,11 @@ module.exports = {
           if ((upto(7, 'take all').match(/Taken\./g) || []).length > 2) f.push('game 7: "take all" went on past one thing after the stop');
         }
         // (A list's later part let go with a flight)
-        order(8, 'take the tinderbox from the backpack and take the flask from the backpack', ['You get out the tinderbox.', 'flee', 'You stop getting out the tinderbox.', 'Your backpack lies at your feet.', 'You see nothing to flee from.']);
+        // (reach1's, 2026-11-20: a step's words told as it's done, "You get out the tinderbox." the get-out over, the take in
+        //  hand after it; the flight typed at those words lands as it's taken, "You stop there.", the pack left at its feet)
+        order(8, 'take the tinderbox from the backpack and take the flask from the backpack', ['You get out the tinderbox.', 'You take the tinderbox in your right hand.', 'flee',
+          'You stop there.', 'Your backpack lies at your feet.', 'You see nothing to flee from.']);
+        if (!/tinderbox, in your/.test(inv(8))) f.push('game 8: the tinderbox told taken, not in hand: ' + inv(8));
         never(8, 'take the tinderbox from the backpack and take the flask from the backpack', 'flask of oil');
         // (A fire-maker from the pack: an ordinary line after the torch lit and the pack on)
         order(9, 'light the torch', ['You strike a spark.', 'turn left', 'You light the torch.', 'You put away the tinderbox.', 'You put on the backpack.', 'You turn to face']);
@@ -2406,9 +2469,17 @@ module.exports = {
       })() },
       start(m) {
         dq0Poke(m, [1, 2, 3].map(g => ({ g, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } })));
-        dq0OnWords(m, [{ g: 1, line: 'take the rations from the backpack', n: 1, words: 'You take off the backpack', text: 'flee\r' },
-          { g: 2, line: 'take the rations from the backpack', n: 1, words: 'You take off the backpack', text: 'stop\r' },
-          { g: 3, line: 'take the rations from the backpack', n: 1, words: 'You take off the backpack', text: 'stop\r' }]);
+        // (reach1's, 2026-11-20: a step's words told as it's done, so typed as the pack comes off is typed in the round after the
+        //  step before's words, the torch laid down (LATER cycles on: a line typed just between two steps, a flight's held to
+        //  the reach's end, the report's); the crowbar's, as the fight takes its round after "You reach for your backpack.")
+        const a = m.acia, cpu = m.cpu, step = cpu.step.bind(cpu), LATER = 3000000;   // (3M cycles: in the pack's round; 1M and
+                                                // 2M land as the step changes, the flight held past the inventory, the report's)
+        let due = 0, text = '';
+        cpu.step = v => { step(v); if (due && cpu.cyc >= due) { due = 0; a.rxQueue.unshift(...text); a.promptFrom = -1; } };
+        const later = t => () => { due = cpu.cyc + LATER; text = t; };
+        dq0OnWords(m, [{ g: 1, line: 'take the rations from the backpack', n: 1, words: 'You lay the torch on the ground, still burning.', call: later('flee\r') },
+          { g: 2, line: 'take the rations from the backpack', n: 1, words: 'You lay the torch on the ground, still burning.', call: later('stop\r') },
+          { g: 3, line: 'take the rations from the backpack', n: 1, words: 'You reach for your backpack. You turn to the ghoul.', text: 'stop\r' }]);
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -2417,10 +2488,13 @@ module.exports = {
         const game = g => s.slice(gs[g - 1], gs[g] === undefined ? s.length : gs[g]);
         const after = (g, w) => { const t = game(g), a = t.indexOf(w); return a < 0 ? '' : t.slice(a, t.indexOf('> inventory', a)); };
         const fl = after(1, 'flee > flee');
-        inTurn(fl, ['You stop taking off the backpack.', 'You break away from the ghoul.'], f, 'the flight: ');
+        // (Its words "You stop taking off the backpack." or, landing as the step's begun and not yet noted, "You stop there.":
+        //  a race in timing, both true, the pack still worn, reach1's, 2026-11-20)
+        const stopped = t => /You stop taking off the backpack\./.test(t) ? 'You stop taking off the backpack.' : 'You stop there.';
+        inTurn(fl, [stopped(fl), 'You break away from the ghoul.'], f, 'the flight: ');
         if (/You get out the rations|You put on the backpack/.test(fl.slice(0, fl.indexOf('You break away')))) f.push('a step after the flight was typed: ' + fl.slice(0, 600));
         const st = after(2, 'stop > stop');
-        inTurn(st, ['You stop taking off the backpack.'], f, 'the stop: ');
+        inTurn(st, [stopped(st)], f, 'the stop: ');
         if (/You get out the rations|You put on the backpack/.test(st)) f.push('a step after the stop: ' + st.slice(0, 600));
         const sf = after(3, 'stop > stop');
         inTurn(sf, ['You stop fighting.'], f, 'the stop as the fight took a round: ');

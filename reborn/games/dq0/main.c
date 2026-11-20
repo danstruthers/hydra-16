@@ -2582,7 +2582,14 @@ void s_step_go (void)
             UIREC->things_text[0] = 0;
             hub_map (0);
         }
-        task_words (TE_BEGUN | (unsigned) k << 8, n);
+        if (SV_AT_START (k)) {
+            task_words (TE_BEGUN | (unsigned) k << 8, n);
+        } else {
+            step_k = k;                         /* (Its words as it's done, the world's (part 86's RO_END), not now: the
+                                                **   step under way noted for a stop's words, "You stop taking off the
+                                                **   backpack.", reach1's, 2026-11-20) */
+            step_n = n | 0x80;
+        }
     }
     if (HUB->ireq.y & 2) {
         intend2 (I_WAIT, t, I_WAIT_W2 (0, 0, 1));   /* (Engaged: the round's action, a blow no stop of it) */
@@ -2632,7 +2639,8 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
         what_hi = named & 0x80;
     }
     if ((unsigned char) w == TE_BEGUN) {
-        step_k = k;                             /* (The step under way: a stop's words, task.c's TE_IDLE) */
+        step_k = SV_AT_START (k) ? k : 0;       /* (The step under way: a stop's words, task.c's TE_IDLE; one told as
+                                                **   it's done, none: "You stop there.", reach1's) */
         step_n = named | 0x80;                  /* (Its kind, task.c's noun: the top bit what_hi's) */
         t[0] = 0;
         if (k & SM_ALL) {

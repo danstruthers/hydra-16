@@ -829,6 +829,10 @@ unsigned __fastcall__ s_reach_done (unsigned char said)
 #pragma register-vars (push, on)
 
 unsigned rs_pack;                               /* (The pack off for this handling) */
+unsigned char rs_owed;                          /* (A step's words owed, told as it's done: SV_AT_START's not, part 86's) */
+unsigned char rs_spill (void);                  /* (Part 85's) */
+void __fastcall__ rs_queue (unsigned char e);  /* (Part 85's) */
+static unsigned char __fastcall__ no (unsigned char n);
 struct step rstep;                              /* (The step under way, things.h's: rstep.thing too the pack on the back
                                                 **   the reach comes to, rs_walk's; rstep.what the referee's grade, rs_roll's) */
 struct step aside[2];                           /* (What was set down to free a hand, a redip's, a new light's: each a step
@@ -999,6 +1003,40 @@ unsigned char __fastcall__ s_reach_step (unsigned n, unsigned c)
     return rs_begin ();
 }
 
+/* A filling's or a dipping's end in the dark, by touch (the dark's test: "a fumble can spill oil"; handled the fuel):
+** spilt, half the flask's less, told: 1 (part 85's since 2026-11-20: part 86's room) */
+unsigned char s_rs_spill (void)
+{
+    hub_map (SIGHT_BANK);
+    if (!SIGHT->dark || rs_for (RF_ROLL)) {     /* (By touch alone: in the light nothing's spilt) */
+        return 0;
+    }
+    fetch (&rec, handled);
+    rec.fuel >>= 1;
+    store (&rec, handled);
+    strcpy (xn, iq.name);
+    cat_map ();
+    no (SA_SPILT);
+    return 1;
+}
+
+/* An after-work step planned (AQ_*: AQ_STOW, AQ_RELIGHT once): queued in its place, above those of a lower kind
+** (part 85's since 2026-11-20: part 86's room) */
+void __fastcall__ s_rs_queue (unsigned char e)
+{
+    register unsigned char i;
+
+    for (i = naq; e != AQ_UP && i; ) {
+        if (aq[--i] == e) {
+            return;
+        }
+    }
+    for (i = naq++; i && aq[i - 1] > e; --i) {
+        aq[i] = aq[i - 1];
+    }
+    aq[i] = e;
+}
+
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -1058,7 +1096,7 @@ static void rs_cut (void)
     hub_map (0);
     HUB->rs_nout = 0;
     rs_pack = 0;
-    rs_after_on = rstep.edge = rs_paid = rs_live = rs_keep = rs_using = rs_redo = rs_free = naside = naq = 0;
+    rs_after_on = rstep.edge = rs_paid = rs_live = rs_keep = rs_using = rs_redo = rs_free = naside = naq = rs_owed = 0;
     ix_make ();                                 /* (What it carries now, the pack off at its feet: the UI's first words') */
 }
 
@@ -1589,22 +1627,6 @@ static unsigned char rs_go (void)
     return reach_step (0, RS_GO) ? IR_NO : IR_OK;
 }
 
-/* An after-work step planned (AQ_*: AQ_STOW, AQ_RELIGHT once): queued in its place, above those of a lower kind */
-static void __fastcall__ rs_queue (unsigned char e)
-{
-    register unsigned char i;
-
-    for (i = naq; e != AQ_UP && i; ) {
-        if (aq[--i] == e) {
-            return;
-        }
-    }
-    for (i = naq++; i && aq[i - 1] > e; --i) {
-        aq[i] = aq[i - 1];
-    }
-    aq[i] = e;
-}
-
 static unsigned char __fastcall__ rs_set_down (unsigned i)
 {
     register struct step* sp;
@@ -1892,23 +1914,6 @@ static unsigned char rs_after (void)
     return 0;
 }
 
-/* A filling's or a dipping's end in the dark, by touch (the dark's test: "a fumble can spill oil"; handled the fuel):
-** spilt, half the flask's less, told: 1 */
-static unsigned char rs_spill (void)
-{
-    hub_map (SIGHT_BANK);
-    if (!SIGHT->dark || rs_for (RF_ROLL)) {     /* (By touch alone: in the light nothing's spilt) */
-        return 0;
-    }
-    fetch (&rec, handled);
-    rec.fuel >>= 1;
-    store (&rec, handled);
-    strcpy (xn, iq.name);
-    cat_map ();
-    no (SA_SPILT);
-    return 1;
-}
-
 #pragma static-locals (pop)
 
 /* What the reach's steps want of this part, by w: RO_*, or an intent's tool's keys.  RO_ASK a request by the steps taken
@@ -1985,6 +1990,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
             HUB->ireq.qty = rstep.say;
             HUB->ireq.item = rstep.what;
             rs_st = rs_ok = 0;
+            rs_owed = rstep.say && !SV_AT_START (rstep.say);  /* (Its words the UI's as it's done: the world's at its end, below) */
             return 1;
         }
         if (rs_pack && !rs_using && (HUB->pc_lump & PL_MORE) && iq.kind == IO_GET && iq.result == IR_OK) {
@@ -2020,7 +2026,11 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         rs_for (RF_CUT);
         return 0;
     case RO_GO:
-        rs_for (RF_TELL | TE_BEGUN);
+        if (SV_AT_START (rstep.say)) {
+            rs_for (RF_TELL | TE_BEGUN);         /* (A work set to, a question: its words as it begins) */
+        } else {
+            rs_owed = rstep.say != 0;           /* (The rest told as they're done: RO_END's) */
+        }
         wk.m.kind = I_WAIT;
         I_WAIT_HOW (wk.m) = 0;
         I_WAIT_TENTHS (wk.m) = rstep.time;
@@ -2035,6 +2045,13 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
             return 0;
         }
         act.cut = 0;                             /* (A fight begun as it came free, its line a step in hand, stopped: that the stop, not the step) */
+    }
+    if (rs_owed) {
+        rs_owed = 0;
+        rs_for (RF_TELL | TE_BEGUN);             /* (The step's words as it's done, not before: a stop part way
+                                                **   leaves it undone and untold, "You stop taking off the backpack.", the
+                                                **   pack still on; the game tells nothing that didn't happen, reach1's,
+                                                **   2026-11-20) */
     }
     w = 0;
     if (rstep.edge != SE_IN && rstep.edge != SE_TRY && rstep.edge) {   /* (What it changes changed) */

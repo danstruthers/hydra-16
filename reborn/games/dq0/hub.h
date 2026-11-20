@@ -1070,6 +1070,12 @@ enum { SM_NEW = 0x40, SM_OLD = 0x80, SM_OTHER = 0xC0 };   /* (A step's words' wo
                                                 **   other" (of two alike); its words' alone: the long task's kind, I_WAIT's,
                                                 **   the verb, as E_TASK's light form has 6 bits of it) */
 #define SM_ALL          0xC0
+#define SV_AT_START(k)  (((k) & ~SM_ALL) == SV_DIP || ((k) & ~SM_ALL) == SV_HONE || ((k) & ~SM_ALL) == SV_KINDLE || \
+                         ((k) & ~SM_ALL) == SV_BLOWDARK)   /* (A step's words told as it begins: a work set to ("You set
+                                                **   to dipping the torch.", "You strike a spark."), a question; the rest
+                                                **   as it's done, its change made (part 86's RO_END): a stop part way
+                                                **   leaves it undone and untold, the game telling nothing that didn't
+                                                **   happen, reach1's, 2026-11-20) */
 #define MN_CAREFUL      0x01                    /* (struct cmd's manner: carefully, slowly, quickly, quietly, hard, */
 #define MN_SLOW         0x02                    /*   gently, firmly) */
 #define MN_QUICK        0x04
