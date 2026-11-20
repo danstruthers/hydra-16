@@ -580,6 +580,8 @@ unsigned char go_near;                          /* (I_GOTO's a: the nearest squa
                                                 **   the one said: a place in the room, the UI's; 2 the square before
                                                 **   it, beside it: a thing gone to, I_TAKE's a 2, wgame.c's) */
 static unsigned char wr, wfx, wfy, wneed;       /* (The ways wanted: worked out as the first is looked up) */
+static unsigned char wfresh;                    /* (Worked out just now, before a climb's part: ways_first's, for
+                                                **   link_here: this room's, from where it stands) */
 
 /* ---- The path (above: a move's way, a square at a time) kept in the ways' bank, after their queue: three bytes a
 ** square, its heading and its time from the start (the chunk in the window again after) */
@@ -2325,7 +2327,10 @@ static unsigned char __fastcall__ link_here (unsigned char d, unsigned long* t)
         *t = 0;                                 /* (A passage's: only one where it stands, part 89's) */
         return sky_ask (SA_HERE | (d == DIR_UP ? SA_UP : 0));
     }
-    ways (r, cx_, cy_);
+    if (!wfresh) {
+        ways (r, cx_, cy_);                     /* (Worked out already, before this part: ways_first's) */
+    }
+    wfresh = 0;
     for (k = 0; k < C->nopen; ++k) {
         kind = C->open[k].kind;
         if (C->open[k].link == 0xFF || (d == DIR_UP) != (kind == O_STAIRS_UP || kind == O_LADDER_UP || kind == O_WAY_OUT ||
@@ -6388,6 +6393,8 @@ void __fastcall__ s_passed (const struct msg* m)
 unsigned char pc_waited;                        /* (A wait's end, its eyes and the time it believes looked to: the
                                                 **   knockout's too, wfight.c's) */
 
+void __fastcall__ ways_first (unsigned char d);  /* (Part 21's: a climb's ways worked out first) */
+
 /* An intent carried out, the UI's: a step, a walk, a climb (each answered at once: the main RAM's); a turn, a wait
 ** and the quit part 53's (intent_few: slice 4.2's, the main RAM's room); the rest part 37's (intent_more) */
 #pragma code-name (push, "SW110CODE")
@@ -6537,7 +6544,11 @@ static void __fastcall__ intent (struct msg* m)
         set_out (I_GO_HEAD (*m) | 16);
         break;
     case I_CLIMB:
+        if (I_CLIMB_WAY (*m) == DIR_DOWN) {
+            ways_first (DIR_DOWN);              /* (Part 21 not swapped in for a climb up: its ways not wanted first) */
+        }
         climb (I_CLIMB_WAY (*m));
+        wfresh = 0;                             /* (Its ways not taken as fresh after: another walk's own) */
         break;
     case I_STEP:
         out_told = 2;
@@ -7684,6 +7695,26 @@ int main (int argc, char* argv[])
 /* ==== Part 21: the ways across a room worked out (way's: see the way across a room, above) */
 #pragma code-name (push, "SW21CODE")
 #pragma rodata-name (push, "SW21RODATA")
+
+/* A climb's ways (the room's, from where the character stands) worked out before its part's swapped in (I_CLIMB's:
+** s_climb's link_here asks them first), here in part 21 with ways_go, called from the main code: no part to put back
+** after it, nor part 2 swapped out for ways_go and in again: one swap the fewer on every "d" (the headroom
+** rule's, dq0fightmid's "d, played", 2026-11-20).  Down alone (d, I_CLIMB's way), plainly: not
+** up (a pit, a ledge ahead climbed first, the ways not wanted), not a jump nor down a well, not with a rope here */
+void __fastcall__ s_ways_first (unsigned char d)
+{
+    unsigned char r;
+
+    hub_map (0);                                /* (The hub's header in the window: here's) */
+    here ();
+    if (d == DIR_DOWN && !HUB->ropes && (r = room_of (sn_, mx, my)) != 0xFF) {
+        ways (r, cx_, cy_);
+        way (cx_, cy_);                         /* (Its ways now: wneed's) */
+        wfresh = 1;
+    }
+    hub_map (0);                                /* (The hub's header in the window again, room_of's chunk or not: climb's
+                                                **   here reads it) */
+}
 
 /* C's trap on its square x, y that's set, and set off as it's walked on; or NULL (part 21's own: part 33's trap_at) */
 static struct trap* __fastcall__ trap_at21 (unsigned char x, unsigned char y)
