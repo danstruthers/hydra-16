@@ -3075,12 +3075,18 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
             }
         } else {
             if (how == HW_CARRIED || d > 1 || ps != sn || (dx = px - x + 20) > 40 || (dy = py - y + 20) > 40 ||
-                (d && !(rec.y >= IC_MARK ? IC_PREP (rec.y) == CP_ON : kind_of (pk)->keeps & KF_ON)) ||   /* (On a
+                (d && !(rec.y >= IC_MARK ? IC_PREP (rec.y) == CP_ON : kind_of (pk)->keeps & KF_ON) &&   /* (On a
                                                 **   chest's lid too, its compartment's prep: lying's, 2026-11-16) */
+                (how != HW_HAND || !(rec.flags & I_KNOWN) || !(kind_of (pk)->flags & K_CONTAINER) || in_shut (i))) ||
+                                                /* (To hand, in an open container set down too, one it knows is in it:
+                                                **   the user's reach, 2026-10-23, "a backpack on the ground ... is more
+                                                **   readily available"; DECISIONS.md's "in a container set down":
+                                                **   dq0disarm's gambeson in the pack it dropped, hear2's) */
                 !(t = at (sn, px, py)) || (!(*t & T_VIS) &&
                 (how < HW_HAND || !(*t & T_SEEN) || !rec.id || room_of (sn, px, py) != room_of (sn, x, y)))) {
                 continue;                       /* (Lying about, or on a surface there, in sight, or remembered there
-                                                **   in the room it's in, as HW_HAND and those after it ask; not in a thing) */
+                                                **   in the room it's in, as HW_HAND and those after it ask; not in a
+                                                **   thing, but to hand in an open one it knows of) */
             }
             dx = dx > 20 ? dx - 20 : 20 - dx;
             dy = dy > 20 ? dy - 20 : 20 - dy;

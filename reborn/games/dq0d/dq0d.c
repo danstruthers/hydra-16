@@ -203,7 +203,8 @@ struct mind {
                                                 **   many, times 16) */
     unsigned char pway[NACTORS];            /* (Each one's room on its rounds, the next it walks to: its lair's
                                                 **   chunk's rooms in turn) */
-    unsigned char hsrc[NACTORS];             /* (The actor it last heard by the senses, entry + 1, and when (the
+    unsigned char hsrc[NACTORS];             /* (The actor it last heard by the senses (0 none, 1 the character,
+                                                **   another's entry + 2), and when (the
                                                 **   clock's low 16 bits): its next noise within a second heard as that
                                                 **   was, not asked again, a fellow's every step a storm of asks, gw2's) */
     unsigned hat[NACTORS];
@@ -1728,11 +1729,16 @@ static void hear (void)
             }
             kind_get (md.akind[k]);
             doze (q);
-            if (src && apart (q->x - m.w1, q->y - m.w2) > K.hear * loud / 2) {
-                continue;                       /* (Another's, past the most it could carry: no need to ask) */
+            if (apart (q->x - m.w1, q->y - m.w2) > (unsigned) K.hear * loud * 19 / 32) {
+                continue;                       /* (Past the most it could carry, downwind in the strongest draught
+                                                **   too (the senses' reach, loudness times hearing times (32 + 2 x
+                                                **   air_s, 3 at most) / 32, twice the squares): no need to ask, the
+                                                **   character's noise or another's, the one rule, the user's,
+                                                **   2026-11-20) */
             }
-            if (src && md.hsrc[k] == src && (unsigned) now - md.hat[k] < 10) {
-                goto heard;                     /* (The same one heard within a second: heard again, its steps on) */
+            if (md.hsrc[k] == src + 1 && (unsigned) now - md.hat[k] < 10) {
+                goto heard;                     /* (The same one heard within a second: heard again, its steps on;
+                                                **   the character's or another's alike, the user's, 2026-11-20) */
             }
             hub_map (0);
             HUB->dsense_whom = src;             /* (Whoever's it is, the senses' one rule to say, loud as it is:
@@ -1744,7 +1750,7 @@ static void hear (void)
             if (!c) {
                 continue;
             }
-            md.hsrc[k] = src;
+            md.hsrc[k] = src + 1;
             md.hat[k] = (unsigned) now;
 heard:
             hub_map (0);
