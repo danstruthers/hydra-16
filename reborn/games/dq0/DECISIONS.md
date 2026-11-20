@@ -6923,3 +6923,13 @@ M3-M5), with the images' commit.
 - **Two different liquids don't mix** (H13): the pour is refused ("The vial has wine in it already."), as built.
 - **Lamp oil is a liquid of its own** (H14): poured and carried in any container, like water, not only the flask's
   lamp fuel.
+
+## Facing, and the first command: the user's answers (2026-11-20)
+
+- **Facing is accepted as built** (gw3): denizens see only before their eyes (and right beside them), and their minds
+  turn them toward a noise, their target or their way, by the character's rules. It moves when and where denizens are
+  met in 36 tests.
+- **A rest may end with a robbery noticed**, not only an approach seen (dq0lurkrest's widened check): a robber unseen
+  behind a resting character can pick the purse before it's seen.
+- **The start's work finishes before the first prompt** (the denizens' kits, the map's scan), so the first command
+  is answered on time; the start takes a little longer.
