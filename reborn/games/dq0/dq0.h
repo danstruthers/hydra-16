@@ -534,7 +534,7 @@ void life_dir (void);                           /* Part 22 (main.c): the save's 
 void __fastcall__ begin (int argc, char* argv[]);   /* Part 1 (main.c): the arguments, the world started, the game
                                                 **   begun */
 void finish (void);                             /* Part 1: the game kept, the world stopped */
-void save_game (void);                          /* Part 1: the game kept (if it's kept: -d) */
+void save_game (void);                          /* Part 14: the game kept (if it's kept: -d), the window kept */
 void __fastcall__ command (char* l);            /* Part 2 (main.c): a command, the parser's, carried out */
 void ready (void);                              /* Part 2 (main.c): nothing, the part copied in for the next */
 void __fastcall__ cq_post (const char* l);      /* Part 2 (main.c): a line posted to the command parser (dq0c) */

@@ -891,5 +891,37 @@ module.exports = {
       },
       sdcard: true
     },
+    {
+      name: 'dq0savemid', near: ['save'], what: "Dingus Quest Zero's \"save\" typed in the middle of a game (2026-11-19: it halted the UI in every game, overlay 7's o_meta calling part 14's save, which left the hub's bank in the window, the overlay's code returned to run in it; main.c's s_save_game keeps the window now), in a new game and in one carried on, with the caches small (dq0 -C) and not, at seeds 3 and 5: each game played twice, the same commands, one with \"save\" typed among them and one without, both quit (the quit's save): the game kept (\"The game is kept.\") and going on, and the two folders' game.dat and world.dat byte for byte the same (a save typed changes nothing the quit keeps); then both carried on (resumed, not a new game), played on the same way, a \"save\" typed in one, quit and compared again; and the saved one carried on once more",
+      init: 't_rc', cycles: 12000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', ...[[3, ''], [5, '-C '], [5, '']].flatMap(([s, c]) => {
+        const d = '/ram/m' + s + (c ? 'c' : ''), e = d + 'n';
+        const cmp = t => ['cmp ' + d + '/d1/game.dat ' + e + '/d1/game.dat && echo same game ' + d + ' ' + t,
+          'cmp ' + d + '/d1/world.dat ' + e + '/d1/world.dat && echo same world ' + d + ' ' + t];
+        const play = (dir, save, first) => [first ? 'dq0 -p t -s ' + s + ' -c /ram/c.hm -T ' + c + '-d ' + dir : 'dq0 -p t ' + c + '-d ' + dir,
+          ...(first ? ['turn right', 'step forward'] : ['turn left']), ...(save ? ['save'] : []), 'look', 'quit'];
+        return [...play(d, 1, 1), ...play(e, 0, 1), ...cmp('new'), ...play(d, 1, 0), ...play(e, 0, 0), ...cmp('carried'),
+          'dq0 -p t ' + c + '-d ' + d, 'quit', 'rm -r ' + d, 'rm -r ' + e];
+      }), 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], T = dq0Turns(m), kept = (out.match(/The game is kept\./g) || []).length;
+        if (kept !== 6) f.push('"The game is kept." told ' + kept + ' times, not 6 (each "save" typed)');
+        for (const d of ['/ram/m3', '/ram/m5c', '/ram/m5'])
+          for (const t of ['new', 'carried'])
+            for (const w of ['game', 'world'])
+              if (!new RegExp('\\nsame ' + w + ' ' + d + ' ' + t + '\\r?\\n').test(out)) f.push(d + ', ' + t + ': its ' + w + '.dat with a "save" typed not byte for byte the one without (cmp)');
+        let from = 0;
+        for (const d of ['/ram/m3', '/ram/m5c', '/ram/m5'])
+          for (let k = 0; k < 2; k++) {
+            const c = T.of(d.endsWith('c') ? 'dq0 -p t -C -d ' + d : 'dq0 -p t -d ' + d, from);
+            if (c.k < 0) { f.push(d + ': carried on, its ' + (k + 1) + ' time, not found'); break; }
+            dq0Need(f, c, 'E_ARRIVE', { how: 'A_RESUMED' }, d + ': carried on (' + (k + 1) + '), not resumed');
+            from = c.k + 1;
+          }
+        return f;
+      },
+      sdcard: true
+    },
   ],
 };

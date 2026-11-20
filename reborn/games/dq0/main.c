@@ -540,17 +540,22 @@ static char* __fastcall__ save_at (const char* name)
 }
 
 /* The game kept: the referee's sheet, the maker's seen maps, the denizens' records, the world's (its change records,
-** its things, its own: its last step, the region files written made the save's), and the game's state (the hub's
-** header in the window) */
+** its things, its own: its last step, the region files written made the save's), and the game's state.  The hub's
+** header in the window for it, then the window put back as it found it: "save" typed is overlay 7's (task.c's o_meta),
+** whose code, returned to with the hub's bank left in the window (its letters' last hub_map (0)), ran in it (2026-11-19:
+** the UI halted, the guard's fetch at $939C), and its HUB-> writes went into overlay 7's bank (look_ov's way, way.c's) */
 void s_save_game (void)
 {
     struct req* r;
     struct mreq* q;
     int fd;
+    unsigned w;
 
     if (!savedir) {
         return;
     }
+    w = hub_here ();
+    hub_map (0);
     strcpy (HUB->slot[SLOT_UI].text, save_at ("../pc.hm"));
     r = referee (RS_SAVE, 0);
     r->state = REQ_FREE;
@@ -585,6 +590,7 @@ void s_save_game (void)
         letters_keep (fd, 0);                   /* (The letters: the UI bank's, letters.c) */
         close (fd);
     }
+    hub_back (w);
 }
 
 #pragma code-name (pop)
