@@ -929,7 +929,9 @@ module.exports = {
         if (!R.during.length) f.push('the rest not watched');
         const late = R.during.filter(e => e.t > 300 && e.state > 1);     // (Thirty seconds on: its next turn's come)
         if (late.length) f.push('a bandit hidden as the character rests: ' + JSON.stringify(late.slice(0, 4)));
-        if (!/You settle down to rest for an hour\.[\s\S]*bandit[^.]*coming towards[\s\S]*You stop waiting\./.test(s)) f.push('not seen coming, the rest not stopped: ' + JSON.stringify(s.slice(s.indexOf('> rest for an hour'), s.indexOf('> inventory'))));
+        // (The rest stopped by the robber: seen coming, or caught at the purse, gw3's, 2026-11-19: with facing a robber comes on
+        // hidden in the dark and robs before it's seen, the theft its stop: the user's "come and rob a resting character")
+        if (!/You settle down to rest for an hour\.[\s\S]*(bandit[^.]*coming towards|You catch something at your purse)[\s\S]*You stop waiting\./.test(s)) f.push('not seen coming nor caught robbing, the rest not stopped: ' + JSON.stringify(s.slice(s.indexOf('> rest for an hour'), s.indexOf('> inventory'))));
         if (!dq0Ev(rt, 'E_TASK', {}).length) f.push('no E_TASK in the rest');
         return f;
       },
@@ -1334,7 +1336,10 @@ module.exports = {
         'mkdir /ram/i', 'cp /ram/g/d1/theme.txt /ram/i/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/i -k crowns', 'close the door', 'open the door', 'drop the crowns', 'wait', 'wait', 'quit',
         'mkdir /ram/j', 'cp /ram/g/d1/theme.txt /ram/j/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/j -k crowns', 'put the crowns in the pouch', 'close the pouch', 'i', 'wait', 'wait', 'i', 'quit',
         'mkdir /ram/k', 'cp /ram/g/d1/theme.txt /ram/k/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/k -k crowns -R 17',
-        'hide the crowns', 'close the door', 'open the door', 'go through it', 'turn around', 'close the door ahead', 'put out the torch', 'hide',
+        // (Game 5's walk on down the guardroom before the searcher's put, gw3's, 2026-11-19: with facing, a denizen turned senses
+        // again, and the searcher on the crowns' square found the character in the guardroom beyond the portcullis, as it
+        // would, and went for it: the character out of its senses, the search its own)
+        'hide the crowns', 'close the door', 'open the door', 'go through it', 'turn around', 'close the door ahead', 'put out the torch', 'turn around', 'go left', 'hide',
         'wait', 'wait 1 minute', 'wait 1 minute', 'wait', 'quit', 'echo $status']) },
       start(m) {
         m.found = { put: {}, digt: {} };
