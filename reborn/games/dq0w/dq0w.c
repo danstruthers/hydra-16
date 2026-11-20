@@ -3345,8 +3345,14 @@ unsigned char __fastcall__ s_wstart (char** argv)
 ** asked as the game starts (the theme's kinds, the kit ...) till the UI's begun it, then the dungeon begun, the
 ** character arrived, and the UI told (part 3's: the main RAM's room) */
 static void things (void);
+static void chart_job (void);
+static unsigned char burn_due_ (void);
+void burn_job (void);
+#define START_WORK      (2 * HY_TICK_HZ)        /* (The start's own work's longest: s_start's) */
+#define START_BURN()    (HUB->tpr && burn_due_ ())  /* (The lights' first minute, the start's: the real paces') */
 void __fastcall__ s_start (const char* dir)
 {
+    unsigned t0;
     unsigned char k;
 
     chunks_init (ASK_WORLD);
@@ -3374,6 +3380,35 @@ void __fastcall__ s_start (const char* dir)
                                                 **   the null referee's) */
     arrive ();                                  /* (Its look the first: the things round it in the item store first, its
                                                 **   paging's) */
+    t0 = hy_ticks ();
+    do {                                        /* (The start's own work done before the first prompt, the user's,
+                                                **   2026-11-20: "so the first command is answered on time; the start
+                                                **   takes a little longer".  Left to the main loop, the first command
+                                                **   waited on it: the chunks the maker stocked as the start ended, their
+                                                **   things put down (part 13's, never held: 2.8M cycles, dq0fightcmd's
+                                                **   "d" at the turns pace, its intent taken 1.58M after its Enter); the
+                                                **   map making's things (the real paces' chart_late); at the real paces
+                                                **   the lights' first minute, due as the game begins, and the time it
+                                                **   believes with it (part 76's, the referee's test: "d" as played, its
+                                                **   intent taken 375,000 cycles after its Enter; at the turns pace it's
+                                                **   the first command's pass's, before the clock moves, and its test's
+                                                **   dice are taken where they always were: taken here, the turns pace's
+                                                **   games went otherwise, dq0looks's and dq0line's).  Till none's due
+                                                **   again (a minute's passes after its first, burn_ask's); two seconds
+                                                **   at most, or keys typed meanwhile.  The denizens' kits not: at the
+                                                **   turns pace they're drawn in the arrival's turn already; at the real
+                                                **   paces they give way to a command as they're drawn (wlimbs.c's
+                                                **   s_den_other), and drawn here they moved the denizens' timing, a line
+                                                **   held behind a fight's round as dq0letdens's "attack A" was typed as
+                                                **   played, 1.2M: built/2026-11-20-start1.md) */
+        if (chart_late) {
+            chart_job ();
+        }
+        if (START_BURN ()) {
+            burn_job ();
+        }
+        stocks ();                              /* (Last: what the rest had made stocked too) */
+    } while ((chart_late || START_BURN ()) && !HUB->ui_keys && (unsigned) (hy_ticks () - t0) < START_WORK);
     event (E_READY, 0, 0);                      /* (The UI waits for it: its commands, the world started) */
     HUB->starting = 0;
     last = hy_ticks ();

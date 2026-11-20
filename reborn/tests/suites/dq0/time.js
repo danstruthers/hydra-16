@@ -554,6 +554,49 @@ module.exports = {
       },
       sdcard: true
     },
+    {
+      name: 'dq0startwork', near: ['time'], what: 'Dingus Quest Zero\'s start\'s own work done before its first prompt (the user\'s, 2026-11-20: "The start\'s work finishes before the first prompt, so the first command is answered on time; the start takes a little longer"; built/2026-11-20-start1.md), at seed 5 by its way down (-T: dq0fightcmd\'s, whose "d" waited on it) at the turns pace and as played, and at seed 3 at the normal pace: as the first command\'s typed at the first prompt, no chunk the maker stocked is left with its things not put down (the world bank\'s cslot table: none CS_FRESH), and at the real paces the lights\' first minute has been reckoned (the hub\'s pc_left, the light\'s words on the status line, said; at the turns pace it\'s the first command\'s pass\'s, its test\'s dice where they always were)',
+      init: 't_rc', cycles: 1300e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'quit',
+        DQ0_PLAYED + 'dq0 -p n -s 5 -c /ram/c.hm -k sword -T', 'quit', 'dq0 -p n -s 3 -c /ram/c.hm -T', 'quit', 'echo $status']) },
+      start(m) {
+        const H = require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load(), CSLOT = H.off('wrec', 'cslot'), CSZ = H.size('cslot'),
+          LEFT = H.off('hub', 'pc_left'), a = m.acia, read = a.read, self = this;
+        let typed = '', game = '';
+        this.seen = [];
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (/^dq0 /.test(typed)) game = typed;
+              else if (typed === 'quit' && game) {
+                const h = m.dq0 && m.dq0.bank(0), w = m.dq0 && m.dq0.bank(WORLD_BANK_N), fresh = [];
+                let left = '';
+                for (let i = 0; h && h[LEFT + i] && i < 16; i++) left += String.fromCharCode(h[LEFT + i]);
+                for (let k = 0; w && k < H.C.NCSLOTS; k++) if (w[CSLOT + k * CSZ] === H.C.CS_FRESH) fresh.push(k);
+                self.seen.push({ game, fresh, left, turns: / -p t/.test(game), ok: !!(h && w) });
+                game = '';
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m) {
+        const f = [];
+        if (this.seen.length !== 3) f.push('the first prompt met ' + this.seen.length + ' times, not 3');
+        for (const s of this.seen) {
+          if (!s.ok) f.push(s.game + ': the hub not there at the first command');
+          if (s.fresh.length) f.push(s.game + ': at the first command, chunk slot(s) ' + s.fresh.join(', ') + ' stocked, their things not put down');
+          if (!s.turns && !s.left) f.push(s.game + ': at the first command, the lights\' first minute not reckoned (pc_left empty)');
+        }
+        this.notes = this.seen.map(s => s.game + ': the light "' + s.left + '", fresh slots ' + (s.fresh.length ? s.fresh.join(', ') : 'none'));
+        return f;
+      },
+      sdcard: true
+    },
     { name: 'dq0jobs', ...dq0JobsTest() },
     { name: 'dq0hold', ...dq0HoldTest() },
     {
