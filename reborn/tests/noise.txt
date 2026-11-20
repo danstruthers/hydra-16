@@ -48,6 +48,9 @@ dq0tiring       denizens met at other moments (the minds' timing)
 # turns pace lands as the parser's speed has it
 dq0reachstop    the accepted race: a stop landing one step or one thing later
 dq0tiring       the accepted race: a stop landing one step or one thing later
+dq0noise        the turns pace's race: the denizens' turn after a line told as the UI's naps meet it (start1, da217652)
+dq0sleepsenses  the turns pace's race: the denizens' turn after a line told as the UI's naps meet it (start1, da217652)
+dq0line         the turns pace's race: the denizens' turn after a line told as the UI's naps meet it (start1, da217652)
 
 # A run's end
 dq0peoplegen    its last prompt printed or not as its run ended
