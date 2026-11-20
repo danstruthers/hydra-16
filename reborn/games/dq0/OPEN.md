@@ -75,12 +75,6 @@ H8 from built/2026-11-17-things.md; its other questions were answered on 2026-11
   the rope and stows the spike. Protect it by the act instead?
 
 
-- **H13. Should a theme's liquids ever mix** (water poured into wine), rather than the pour being refused (built:
-  "The vial has wine in it already.")? Only water is a liquid in the catalogue today.
-  - built/2026-11-19-pb4.md, open question 1.
-- **H14. Should oil be a liquid of its own**, poured and carried like water? Today a flask's oil is a lantern's fuel
-  and pouring it into a container is refused (built).
-  - built/2026-11-19-pb4.md, open question 2.
 
 ## Knocked out
 

@@ -6913,3 +6913,13 @@ M3-M5), with the images' commit.
 - **Pouring from one container into another is built** (H11): "pour the water into the flask" moves the liquid,
   not away.
 - **No tool to reach into a pit** (H12): climbing down stays the only way.
+
+## Each denizen's dice, catching up, liquids: the user's answers (2026-11-19)
+
+- **Each denizen's own dice is dropped from the one-path plan.** Built and measured (gw1), it didn't reduce the runs'
+  variation (147 differing sentences against 155) and reshuffled seven test scenes; one shared dice stream stays.
+- **A late denizen catches up all at once**, as built (gw1): the user's "catch up in full" stands, though the denizens'
+  timing between test runs is noisier (226 differing sentences against 147).
+- **Two different liquids don't mix** (H13): the pour is refused ("The vial has wine in it already."), as built.
+- **Lamp oil is a liquid of its own** (H14): poured and carried in any container, like water, not only the flask's
+  lamp fuel.
