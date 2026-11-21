@@ -8,7 +8,6 @@
 ** 359 rounds of a penalty to 255.  Overlay 10's, beside its caller.
 */
 
-#include <string.h>
 
 extern unsigned long xs_seed;                   /* (xorshift.s's state, the dice stream in it now: ../dq0/dice.inc's) */
 
@@ -188,31 +187,16 @@ static const unsigned char xs_cols[17][128] = {
     }
 };
 
+void __fastcall__ xs_apply (const unsigned char* col);  /* (xsjumpa.s's: the state through one matrix) */
+
 void __fastcall__ xs_jump (unsigned long n)
 {
-    static unsigned char i, j, m, b, s[4], r[4];
-    static const unsigned char* col;
+    static unsigned char i;
 
     for (i = 0; n; ++i, n >>= 1) {
-        if (!((unsigned char) n & 1)) {
-            continue;
+        if ((unsigned char) n & 1) {
+            xs_apply (xs_cols[i]);              /* (Its 32 columns, in assembly: speed8, 2026-11-21) */
         }
-        memcpy (s, &xs_seed, 4);
-        r[0] = r[1] = r[2] = r[3] = 0;
-        col = xs_cols[i];
-        for (j = 0; j < 4; ++j) {
-            b = s[j];
-            for (m = 0; m < 8; ++m, col += 4) {
-                if (b & 1) {
-                    r[0] ^= col[0];
-                    r[1] ^= col[1];
-                    r[2] ^= col[2];
-                    r[3] ^= col[3];
-                }
-                b >>= 1;
-            }
-        }
-        memcpy (&xs_seed, r, 4);
     }
 }
 
