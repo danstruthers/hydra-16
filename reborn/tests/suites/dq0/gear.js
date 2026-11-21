@@ -2411,7 +2411,11 @@ module.exports = {
         //  "You stop there.") passes too, the pack still left at its feet and nothing after it done)
         //  (reach1's, 2026-11-20: a step's words told as it's done, "halt" typed at "You get out the" lands after the get-out,
         //  as the rations are taken in hand: "You stop there.", the rations in hand, the pack at its feet)
-        order(2, 'take the rations from the backpack', ['You get out the rations.', 'You take the rations in your right hand.', 'halt', 'You stop there.',
+        //  (sched1's, 2026-11-21, the coordinator's: a quicker scheduler lands it a step sooner as well, "halt" told between
+        //  the get-out and the take; the stop the same, after the take, the rations in hand and the pack at its feet)
+        const g2 = upto(2, 'take the rations from the backpack'), sooner = g2.indexOf('halt') >= 0 && g2.indexOf('halt') < g2.indexOf('You take the rations in your right hand.');
+        order(2, 'take the rations from the backpack', sooner ? ['You get out the rations.', 'halt', 'You take the rations in your right hand.', 'You stop there.',
+          'Your backpack lies at your feet.'] : ['You get out the rations.', 'You take the rations in your right hand.', 'halt', 'You stop there.',
           'Your backpack lies at your feet.']);
         if (!/rations, in your/.test(inv(2))) f.push('game 2: the rations told taken, not in hand: ' + inv(2));
         never(2, 'take the rations from the backpack', 'You put on the backpack.');

@@ -25,7 +25,7 @@
 ;
 ; The candidates (K0_CANDLO/HI, 2026-11-21): the pick looks only at the tasks that may be in a state it runs or ends
 ; (ST_READY, ST_SLEEP, ST_BLOCKED, ST_EVENT), in the order it always looked at every task, so it picks as it did
-; (a task out of the set is one its look would have passed by, changing nothing), for some 600 cycles a tick where
+; (a task out of the set is one its look would have passed by, changing nothing), for some 650 cycles a tick where
 ; it took some 1,240 with one program busy, the console waiting for a key and four drivers idle.  The set may hold
 ; more: a task goes in as it's switched out (it ran, whatever state it left in), as another task makes it ready
 ; (WAKE, a note, its start: CAND_SET), and leaves it only as a look finds it in none of those states and serving
@@ -115,8 +115,7 @@ K_SCHED_NOTED:
 ; one whose look would have passed it by and changed nothing.  A task goes in as it's switched out (here: it ran,
 ; whatever state it left in) and as another makes it ready (WAKE, a note, its start: CAND_SET); out as a look finds
 ; it in no candidate's state.  Whether any task is in the foreground at all (none: K0_FORES cleared) is the same
-; (K_FMASK: TASKFORE puts a task in; fseen takes out one that's left it).  And with no foreground, no notes to post
-; and this task the only candidate, the pick is this task if it can run, else the idle task, with one look.
+; (K_FMASK: TASKFORE puts a task in; fseen takes out one that's left it).
 ; T is this task's at every JSR, RTS and moment for interrupts (T chooses the stack page too); the kernel task's
 ; only between.  IN, OUT: IRQs off (a moment on between its looks).  OUT: .A = the task.  Modifies .X, .Y
 K_SCHED_PICK:
@@ -154,44 +153,22 @@ K_SCHED_PICK:
             sta         K0_FPICK
             ldx         K0_RR
             lda         K0_FORES                            ; The round's first time round: the foreground passed
-            bne         @first                              ;   by, if there may be any; then with it
-            lda         K0_NQ_ANY                           ; This task the only candidate, and no notes to post?
-            bne         @all
-            lda         K0_CANDLO
-            eor         cand_lo,Y
-            bne         @all
-            lda         K0_CANDHI
-            eor         cand_hi,Y
-            bne         @all
             sty         T_REGISTER                          ; ---- This task
-            tya                                             ; (The kernel task's: none at all)
-            beq         @idle
-            tax
-            cli                                             ; (A moment for interrupts)
-            nop
-            sei
-            lda         #TF_STOPPED
-            jsr         look
-            bcs         @found
-@idle:
-            ldx         #KERNEL_TASK                        ; Nobody: the idle task
-@found:
-            txa
-            rts
-
-@first:
-            sty         T_REGISTER                          ; ---- This task
+            beq         @all                                ;   by, if there may be any; then with it
             lda         #TF_STOPPED | TF_FORE
             jsr         round
             bcs         @found
             stz         T_REGISTER                          ; ---- The kernel task's
             ldx         K0_RR
-@all:
             sty         T_REGISTER                          ; ---- This task
+@all:
             lda         #TF_STOPPED
             jsr         round
             bcs         @found
-            bra         @idle
+            ldx         #KERNEL_TASK                        ; Nobody: the idle task
+@found:
+            txa
+            rts
 
 @fpass:                                                     ; The foreground's looks, after this task
             sty         T_REGISTER                          ; ---- This task
@@ -226,7 +203,7 @@ K_SCHED_PICK:
 round:
             sta         TK_PICKS                            ; (The look: this task's, in its zero page)
             stz         T_REGISTER                          ; ---- The kernel task's
-            stx         K_START
+            stx         K_START                             ; (Bit 7: from 1 on, the second part)
             lda         #$FF                                ; (From .X + 1 to 15)
             sta         K_LIM
             sta         K_LIM + 1
@@ -244,49 +221,40 @@ round:
             bcc         @next
             rts
 
-@wrap:
+@wrap:                                                      ; Past 15 (or, the second time, past the start)
             cli                                             ; (A moment for interrupts)
             nop
             sei
+            stz         T_REGISTER                          ; ---- The kernel task's
+            ldx         K_START
+            bmi         @no
+            sty         T_REGISTER                          ; ---- This task
             lda         TK_PICKS                            ; The kernel task's place (the round robin's)
             stz         T_REGISTER                          ; ---- The kernel task's
             beq         :+
-            ldx         #KERNEL_TASK
             lda         K0_NQ_ANY
-            bne         @yes
+            beq         :+
+            ldx         #KERNEL_TASK
+            sec
+            bra         @back
+
 :
-            ldx         K_START                             ; (From 1 to the start: not past it)
-            lda         above_lo,X
+            lda         above_lo,X                          ; From 1 to the start: not past it
             eor         #$FF
             sta         K_LIM
             lda         above_hi,X
             eor         #$FF
             sta         K_LIM + 1
-            sty         T_REGISTER                          ; ---- This task
+            lda         #$80
+            tsb         K_START
             ldx         #0
-@next2:
-            cli                                             ; (A moment for interrupts)
-            nop
-            sei
-            jsr         next
-            bcs         @no
-            cli                                             ; (A moment for interrupts, before each look)
-            nop
-            sei
-            jsr         check
-            bcc         @next2
-            rts
+            sty         T_REGISTER                          ; ---- This task
+            bra         @next
 
 @no:
-            cli                                             ; (A moment for interrupts)
-            nop
-            sei
             clc
-            rts
-
-@yes:
+@back:
             sty         T_REGISTER                          ; ---- This task
-            sec
             rts
 
 ; The next candidate after task .X, within K_LIM, as they are now (a WAKE in a moment for interrupts counts).  IN,
@@ -308,45 +276,29 @@ next:
 first:
             stz         T_REGISTER                          ; ---- The kernel task's
 first0:
+            ldx         #0                                  ; (.X: the byte's first task)
             lda         K_M
-            beq         @high
-            bit         #$0F
-            beq         @b4
-            and         #$0F
-            tax
-            lda         lsb4,X
-            bra         @got
-
-@b4:
-            lsr         a
-            lsr         a
-            lsr         a
-            lsr         a
-            tax
-            lda         lsb4,X
-            ora         #4
-            bra         @got
-
-@high:
+            bne         :+
+            ldx         #8
             lda         K_M + 1
             beq         @none
-            bit         #$0F
-            beq         @b12
+:
+            bit         #$0F                                ; (Its low nibble, else its high)
+            bne         :+
+            lsr         a
+            lsr         a
+            lsr         a
+            lsr         a
+            inx
+            inx
+            inx
+            inx
+:
+            stx         K_NIB                               ; (A moment)
             and         #$0F
             tax
             lda         lsb4,X
-            ora         #8
-            bra         @got
-
-@b12:
-            lsr         a
-            lsr         a
-            lsr         a
-            lsr         a
-            tax
-            lda         lsb4,X
-            ora         #12
-@got:
+            ora         K_NIB                               ; (0, 4, 8 or 12: no carries)
             tax
             sty         T_REGISTER                          ; ---- This task
             clc
@@ -556,38 +508,6 @@ K_PAUSE:
             plp
             rts
 
-; TPAUSE: PAUSE till a time: wait until woken (WAKE), or till the wake time in the kernel task's table (K_WAKE_LO/HI,
-; as SLEEP_UNTIL's: the caller's, set already); at once if a wake came since the last.  A sleep the scheduler ends at
-; the time, and WAKE too (TF_TIMED: set and cleared by TSB and TRB, a byte others change too).  OUT: C = 1 if it's
-; still before the time (woken).  Modifies .A, .Y
-K_TPAUSE:
-            php
-            sei
-            lda         TK_WOKEN
-            bne         @woken
-            lda         #TF_TIMED
-            tsb         TK_FLAGS
-            lda         #ST_SLEEP
-            sta         TK_STATE
-            jsr         K_YIELD
-@woken:
-            stz         TK_WOKEN
-            plp
-            lda         #TF_TIMED
-            trb         TK_FLAGS
-            php
-            sei
-            ldy         T_REGISTER
-            stz         T_REGISTER                          ; ---- The kernel task's: the wake time, and now
-            lda         K0_TICKS
-            cmp         K_WAKE_LO,Y
-            lda         K0_TICKS + 1
-            sbc         K_WAKE_HI,Y
-            sty         T_REGISTER                          ; ---- Back
-            plp
-            cmp         #$80                                ; (Now - the time below 0: C = 1)
-            rts
-
 ; WAKE: task .A, if it's waiting, can run; if it isn't, its next PAUSE won't wait (TK_WOKEN).  A task asleep in a
 ; timed wait (TF_TIMED: TPAUSE's) is waiting too.  From any task, or an irq entry.  Keeps everything
 K_WAKE:
@@ -707,3 +627,38 @@ K_SLEEP_UNTIL:
             lda         #E_INTR
             sec
             jmp         K_NOTE_RETURN
+
+; ****************************************************************************
+.segment "KCODE_P1"
+
+; TPAUSE: PAUSE till a time: wait until woken (WAKE), or till the wake time in the kernel task's table (K_WAKE_LO/HI,
+; as SLEEP_UNTIL's: the caller's, set already); at once if a wake came since the last.  A sleep the scheduler ends at
+; the time, and WAKE too (TF_TIMED: set and cleared by TSB and TRB, a byte others change too).  OUT: C = 1 if it's
+; still before the time (woken).  Modifies .A, .Y.  On page 1, with its caller (sem.s: SEM_WAIT's)
+K_TPAUSE:
+            php
+            sei
+            lda         TK_WOKEN
+            bne         @woken
+            lda         #TF_TIMED
+            tsb         TK_FLAGS
+            lda         #ST_SLEEP
+            sta         TK_STATE
+            FARCALL     K_YIELD
+@woken:
+            stz         TK_WOKEN
+            plp
+            lda         #TF_TIMED
+            trb         TK_FLAGS
+            php
+            sei
+            ldy         T_REGISTER
+            stz         T_REGISTER                          ; ---- The kernel task's: the wake time, and now
+            lda         K0_TICKS
+            cmp         K_WAKE_LO,Y
+            lda         K0_TICKS + 1
+            sbc         K_WAKE_HI,Y
+            sty         T_REGISTER                          ; ---- Back
+            plp
+            cmp         #$80                                ; (Now - the time below 0: C = 1)
+            rts

@@ -145,14 +145,13 @@ waiting.
   have passed it by and changed nothing.  The set may hold more than those: a task goes in as it's switched out (it
   ran: whatever state it left in) and as another task makes it ready (`WAKE`, a note, its start); it leaves only as a
   look finds it in none of the four states and serving no call (a call's end puts back the state the task had before
-  it, a wait the scheduler ends maybe).  Whether any task is in the foreground at all is kept the same way (`TASKFORE` puts a task in a set; a
-  look takes out one that's left it).  With no foreground, no notes for task 0 to post and this task the only
-  candidate, the pick is one look at it.  So a pick looks at the busy tasks and the waiters whose wait the scheduler
-  ends, not every task: one CPU-bound program beside the console waiting for a key and four idle drivers went from
-  some 1,240 cycles a tick to some 600 (the pick was 7% of its time, now 3.5%).  The pick's moments for interrupts are
-  taken with `T` the task being switched out's (the stack page goes with `T`).  `base/tools/schedcheck.js` checks it
-  on any run: each pick against a model of the old one, on the memory as the pick began, and the set against the
-  states.
+  it, a wait the scheduler ends maybe).  Whether any task is in the foreground at all is kept the same way
+  (`TASKFORE` puts a task in a set; a look takes out one that's left it).  So a pick looks at the busy tasks and the
+  waiters whose wait the scheduler ends, not every task: one CPU-bound program beside the console waiting for a key
+  and four idle drivers went from some 1,240 cycles a tick to some 650 (the pick was 7% of its time, now under 4%).
+  The pick's moments for interrupts are taken with `T` the task being switched out's (the stack page goes with `T`).
+  `base/tools/schedcheck.js` checks it on any run: each pick against a model of the old one, on the memory as the
+  pick began, and the set against the states.
 * **Task 0** runs only when nothing else can (its idle loop: `WAI`), or when interrupt handlers have queued notes for it
   to deliver.
 * **`PREEMPT_OFF`** holds the CPU for timing-critical work (interrupts still run; a switch that comes due waits for

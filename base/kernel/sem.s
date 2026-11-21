@@ -107,7 +107,7 @@ K_SEM_WAIT:
 @wait:
             lda         TK_NOTED
             bne         @intr
-            FARCALL     K_TPAUSE                            ; Till a release wakes it, a note, or the time
+            jsr         K_TPAUSE                            ; Till a release wakes it, a note, or the time
             bcc         @time
             lda         TK_NOTED
             bne         @intr

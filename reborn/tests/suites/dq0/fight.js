@@ -12,6 +12,7 @@ const {
 } = require('../../lib/dq0.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
 const MID_MARK = '\u0104', NO_ROUND = 60e6, MID_GAP = 3e6;   // (dq0fightmid's: a line typed as the character's own blow is being worked, 3M cycles after the line before at least; none in 60M cycles, typed anyway)
+const NO_ROUND_MID = 400e6;   // (dq0fightmid's own wait for a round, 2026-11-21, the coordinator's: its rat fights on, so a round comes; 60M let a line go with none met as the tasks' timing moved)
 const FIGHTMID = ['d', 'wait', 'go right', 'inventory', MID_MARK + 'look', MID_MARK + 'wait', MID_MARK + 'inventory', MID_MARK + 'go left'];   // (dq0fightmid's lines: dq0fightcmd's way to the rats, a rat engaged as inventory's typed, then lines typed mid-round: a look and what's carried told at once, the fight going on; a wait and a step held till its round's out, the fight stopped for them, and taken up again as the rat bites)
 const FELLED = ['d', 'wait', 'go right', 'inventory', MID_MARK + 'look', MID_MARK + 'look', MID_MARK + 'look', MID_MARK + 'wait', MID_MARK + 'go left'];   // (dq0felled's: dq0fightmid's way to the rats, a rat engaged and hurt as inventory's typed, then lines typed mid-round, a blow felling it as one waits)
 const FIGHTCMD = ['d', 'wait', 'go right', 'attack the rat', 'inventory', 'wait', 'look', 'wait', 'inventory', 'wait', 'look'];   // (dq0fightcmd's lines: dq0fight's way to the rats, the fight begun, a rat engaged as the first command after's typed, then commands typed as it fights, waits between for its blows: every one timed, gw3's)
@@ -2068,7 +2069,7 @@ module.exports = {
         dq0Asks(m, [3]);
         dq0Poke(m, [1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, k: 0, beside: 'face', engage: true })));   // (A rat put before the character, hostile and fighting it)
         // (Each line marked MID_MARK typed only as the world's referee slot holds the character's own blow: posted, not yet
-        // answered; or, none come in NO_ROUND cycles, typed anyway and said so)
+        // answered; or, none come in NO_ROUND_MID cycles, typed anyway and said so)
         const H = require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load(), a = m.acia, tick = a.tick, self = this;
         const ST = H.off('hub', 'slot.state'), KD = H.off('hub', 'slot.kind'), AC = H.off('hub', 'slot.actor');
         let since = -1;
@@ -2078,7 +2079,7 @@ module.exports = {
           if (a.rxQueue[0] !== MID_MARK) { since = -1; return tick(d, t); }
           if (since < 0) since = m.cpu.cyc;
           const hit = blow();
-          if ((hit && m.cpu.cyc - since >= MID_GAP) || m.cpu.cyc - since > NO_ROUND) {
+          if ((hit && m.cpu.cyc - since >= MID_GAP) || m.cpu.cyc - since > NO_ROUND_MID) {
             a.rxQueue.shift();
             self.mids.push({ at: m.cpu.cyc, round: hit, line: a.rxQueue.slice(0, a.rxQueue.indexOf('\r')).join('') });
             return tick(d, t);
