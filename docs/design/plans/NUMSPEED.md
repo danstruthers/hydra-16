@@ -375,3 +375,36 @@ BASIC's call costs more where an operand now comes from a bank (the stack's way 
 Room: the numbers library's first bank 15,533 to 16,175 bytes (209 free), its second and the math library's as they were; BASIC's first bank 11,748 to 12,161, its fourth 14,483 to 14,496, its RAM 100 bytes more (to `$26D4`); numbers.fl 8,952 to 9,185 bytes, and 1,031 more of BSS.
 
 Checked: the numbers library's test, BASIC's (`basic`, `bsuite`, `bdivs`), HyForth's (`fnumbers`, `fnumquick`; `fnumxcheck.js --base` on 5d28167c's numbers.fl, seeds 1, 2: 0 lines different), and a new random test, `sim/tools/callxcheck.js`: BASIC's and hylang's `+ - * /` and order over operands of every size and kind (integers of 0-100 bytes and the edges of 7-64 bits, fixed decimals, fractions, complex numbers), every result's bytes and error compared with another build's (5d28167c, then b2403e41: 11 seeds, about 2,000 pairs, 0 lines different); then the whole suite.
+
+**Later: what the cheaper call cost won back; fixnums' `*`; the fraction's reduction** (November 2026, `nmcall2`), every result and error as before:
+
+* **The small way's entry** (`nmsmall.inc`, `nmarith.inc`): nmcall1 left some cases a little slower than before it (hylang's `(< 1.5 2.25)` 4,855 to 4,989 cycles a pass, BASIC's `X = X * 1.5: X = X / 1.5`).  Now the integers' limit is kept as the tags past it (a compare as before, not an extra one), y's load falls through again, a fixed decimal's check of x is made where a fixed decimal is met, the caller's bank is set inline, and an operand in the RAM is copied by a loop of its own bytes.  And a fixed decimal's scaling by a power of 10 (`s_scale`) is one pass over its bytes but its top 0s by 100 or 10 (`s_mulk`, quarter squares), not 8 bytes shifted and added for each 10.  BASIC's `operand` takes ARITH's flag from its callers again (`n_inpl`, cleared by `err_entry`), not from `.Y`'s bit 7 on every call.
+* **hylang's fixnums' `*`** (`nm_times`, the interpreter's `*` of more than two or as a value: the VM's own was already by quarter squares, `vm_mul8`): a byte pair at a time by quarter squares (`nl_qm8` and its table in the third bank), not 16 shifts and adds; both past a byte, too big at once.
+* **The fraction's reduction** (`n_gcd`): when both are 16 bytes or fewer, the binary way in two 16-byte words in the bank (`g_fast`), over the bytes still in use, not in the registers: about 330 cycles a step for 8 bytes, against some 1,360.  The first bank's copy alone (`NM_GCD64`): the math library's and the second bank's copies of `nmval.inc` are unchanged.
+* **Room**: the math library's constants (312 bytes, used by `INIT` alone) moved to the numbers library's second bank (`nm_iconst`, by `NMFAR2`).
+
+Before nmcall1 (`8a2e86f8`), the head before this (`ebb2ea23`), and after, at 3.58 MHz:
+
+| | before nmcall1 | head | after |
+| :--- | ---: | ---: | ---: |
+| hylang `(< 1.5 2.25)`, cycles a pass | 4,855 | 4,989 | 4,778 |
+| hylang `(+ 1.5 2.25)` | 6,384 | 6,371 | 6,155 |
+| BASIC `300 of * 1.5, / 1.5` (ms) | 801 | 815 | 786 |
+| BASIC `X = INT(A)` | 4,169 | 4,187 | 4,169 |
+| hylang decimals `+`, the call | 6,601 | 6,719 | 6,610 |
+| hylang 5 bytes `*`, a pass | 11,250 | 11,350 | 11,200 |
+| hylang 8 bytes `*`, a pass | 15,900 | 16,100 | 15,900 |
+| BASIC 5 bytes `/`, the call | 42,126 | 42,513 | 20,311 |
+| BASIC 8 bytes `/`, the call | 55,376 | 55,833 | 23,337 |
+| BASIC 12345.678901234 / 2.5, the call | 37,311 | 37,680 | 22,483 |
+| HyForth `n/` of 8 bytes, a word | 58,734 | 56,654 | 24,090 |
+| hylang `/` of 8 bytes, the call | 55,487 | 55,629 | 22,923 |
+| hylang `(* x y 1)` of fixnums, `nm_times` a call | | 906 | 231-315 |
+| numh `1/1 to 1/20 summed, 10 times` (ms) | 1,509 | 1,450 | 1,133 |
+| numh `60! twenty times` (ms) | 4,354 | 4,339 | 4,069 |
+
+Left a few cycles slower than before nmcall1, by where things now fall in memory, not by work done: BASIC's `X = A` 640 to 642 cycles a pass, `IF A < B` 1,764 to 1,769, `X = A + B` 1,510 to 1,512, `X = A * B` 2,135 to 2,137 (BASIC's RAM ends 100 bytes later, so its value stack's 5-byte values cross pages elsewhere; none of these calls the library).  `sim/bench.js` and the four Mandelbrots as they were (BASIC's 20 52,685 to 52,675 ms; 60.3, 62.0, 63.1 and 105.0 s).
+
+Room: the numbers library's first bank 16,175 to 16,126 bytes (258 free), its second 14,893 to 15,241; the math library's as it was; hylang's third bank 11,984 to 13,077; BASIC's fourth 14,496 to 14,500.
+
+Checked: the numbers library's test; BASIC's (`basic`, `bsuite`, `bdivs`), HyForth's (`fnumbers`, `fnumquick`), hylang's (`hylang`, `hytext`, `hyspeed`, `hyread`, `hyquot`, which found a 0 scaled wrongly on the way: `s_mulk`'s scan for its top byte ran below x's word); `callxcheck.js --base` the head (10 seeds, 0 lines different); `fnumxcheck.js --base` the head's numbers.fl (seeds 1, 2: 0 lines different); every product of 68 fixnums (the edges and random ones) in hylang against the head's; then the whole suite.
