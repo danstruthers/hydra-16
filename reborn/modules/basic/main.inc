@@ -334,6 +334,7 @@ getc_in:
 ; ---- Errors: .A/.X the code, from b_error (any bank, this one at $A000 again)
 
 err_entry:
+            stz         n_inpl                              ; (num.inc's operand: an error between its two calls)
             sta         err_code
             stx         err_code + 1
             jsr         code_sel

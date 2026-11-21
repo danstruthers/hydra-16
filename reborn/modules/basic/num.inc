@@ -42,6 +42,7 @@ rv_tag:     .res        1                                   ; (result_vt's: a fi
 ; ---- The libraries readied (main's start): found, a bank of the task's theirs, the scratch and text banks.  OUT:
 ; C = 1 if there's no numbers library (or no bank)
 num_init:
+            stz         n_inpl
             stz         num_mod
             stz         math_mod
             stz         t0
@@ -310,15 +311,10 @@ int_sf:
 
 ; ---- An operand made ready: the value at vt as a number's bytes, its address in r0 (or r1: .X = 2)
 
-; .Y = which (0: the first, r0, NS_A or nia; 1: the second, r1, NS_B or nib), and bit 7 set if a VT_NUM may be read
-; where it is (ARITH: r4 or r4 + 1 its bank).  The scratch bank at $8000 after
+; .Y = which (0: the first, r0, NS_A or nia; 1: the second, r1, NS_B or nib); n_inpl $FF if a VT_NUM may be read where
+; it is (ARITH's: r4 or r4 + 1 its bank), else 0.  The scratch bank at $8000 after
 operand:
-            tya
-            asl         a                                   ; (Bit 7: n_inpl's)
-            ror         n_inpl
-            lsr         a
-            and         #1
-            sta         t4 + 3
+            sty         t4 + 3
             lda         (vt)
             bne         :+
             jmp         @int
@@ -469,18 +465,17 @@ num_op:
             beq         @one
             stz         r4                                  ; (+ - * /: ARITH's, each VT_NUM read where it is: its bank
             stz         r4 + 1                              ;   r4 or r4 + 1, else 0)
-            ldy         #0
             cmp         #OP_DIV + 1
             bcs         :+
-            ldy         #$80
+            dec         n_inpl                              ; ($FF: n_inpl is 0 but here, and b_error's)
 :
-            phy
             jsr         two_vals                            ; (vt the first, vu the second)
+            ldy         #0
             jsr         operand                             ; (r0)
             MOVW        vt, vu
-            ply
-            iny
+            ldy         #1
             jsr         operand                             ; (r1)
+            stz         n_inpl
             jsr         two_vals
             bra         @call
 @one:
@@ -736,12 +731,14 @@ rv_heap:
 num_cmp2:
             stz         r4                                  ; (ARITH's CMP: each VT_NUM read where it is)
             stz         r4 + 1
-            ldy         #$80
+            dec         n_inpl
+            ldy         #0
             jsr         operand
             MOVW        t4 + 2, vt                          ; (vt kept: operand moves it)
             MOVW        vt, vu
-            ldy         #$81
+            ldy         #1
             jsr         operand
+            stz         n_inpl
             MOVW        vt, t4 + 2
             ldy         #4
             NUMCALL     NUM_ARITH
