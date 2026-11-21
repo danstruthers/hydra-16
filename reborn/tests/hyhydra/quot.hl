@@ -42,4 +42,6 @@
 (print "library" (list (divmod 7 2) (divmod -7 2) (% -7 3) (odd? 7) (even? -4) (div 7.5 2) (mod 7.5 2) (mod -7/2 1)))
 (fun {qr a b} {list (quot a b) (rem a b) (div a b) (mod a b)})
 (print "compiled" (qr 1000 -7) (qr 22500 50) (qr -22500 50) ((quot 100) 7))
+(do (random-seed 7) =(r1 (list (random 1000) (random 1000) (random 100000000000000000000))) (random-seed 7)
+  (print "seed" (eq r1 (list (random 1000) (random 1000) (random 100000000000000000000))) (random-seed 0) (random-seed -1)))
 (print "status" ?((zero? bad) :ok :bad))

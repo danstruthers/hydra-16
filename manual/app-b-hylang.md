@@ -187,7 +187,7 @@ hylang> (elem? 8 l)
 | `(complex re im)` | A complex number |
 | `(val s)` | The number a string holds |
 | `(fib n)` | The *n*th Fibonacci number |
-| `(random n)` | A random whole number from 0 to *n* - 1 |
+| `(random n)`, `(random-seed s)` | A random whole number from 0 to *n* - 1; the same numbers again after the same *s* (0: the clock's) |
 | `(base)`, `(base b)` | The base; set it (giving the one before) |
 | `(digits)`, `(digits n)` | The math functions' precision; set it |
 | `(sqrt x)` `(exp x)` `(log x)` `(sin x)` `(cos x)` `(tan x)` `(atan x)` `(pi)` `(pow x y)` | The math functions |

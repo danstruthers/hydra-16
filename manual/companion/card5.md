@@ -32,10 +32,11 @@ with `hylang file.hl`.
 | Functions | What they give |
 |---|---|
 | `(+ a b ...)` `(- a b)` `(* a b ...)` `(/ a b)` | Exact answers: `(/ 10 4)` is `5/2` |
-| `(mod a b)`, `(div a b)` | The remainder; the whole part |
+| `(mod a b)`, `(div a b)` | The remainder; the whole part (rounded down) |
+| `(rem a b)`, `(quot a b)` | The same, rounded toward zero, for whole numbers |
 | `(sqrt x)`, `(pow x y)`, `(abs x)` | |
 | `(to-fixed x 2)`, `(truncate x)`, `(round x)` | A decimal to 2 places; the whole part; the nearest whole number |
-| `(random n)` | A whole number from 0 to *n* − 1, by chance |
+| `(random n)`, `(random-seed s)` | A whole number from 0 to *n* − 1, by chance; the same ones again after the same seed |
 | `(== a b)` `(!= a b)` `(< a b)` `(> a b)` `(<= a b)` `(>= a b)` | `T` or `NIL` |
 | `(and a b)` `(or a b)` `(not a)` | |
 

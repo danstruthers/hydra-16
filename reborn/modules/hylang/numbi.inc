@@ -1180,6 +1180,24 @@ bi_random:
             LDAX        s_randint
             jmp         n_error
 
+; (random-seed n): random's generator started again from n, a whole number 1 or more (past 32767, 32767): the same
+; numbers after it each time; 0, from the ticks and the clock, as hylang starts.  NIL
+bi_random_seed:
+            jsr         n_arg0
+            lda         ex
+            ldx         ex + 1
+            jsr         n_whole
+            bcs         @bad
+            cpx         #$80
+            bcs         @bad
+            sta         r0
+            stx         r0 + 1
+            NLCALL      NUM_SEED
+            jmp         nil_out
+@bad:
+            LDAX        s_seedbad
+            jmp         n_error
+
 ; IN: .A, .X = a PK_SNUM or PK_NUMBER cell.  OUT: .A = its number's tag (its first byte: hp its bytes)
 nl_tag:
             sta         nl_v
@@ -2295,5 +2313,6 @@ n_mod:      .byte       "mod", 0
 s_nqcannot: .byte       "Cannot perform '", 0
 s_nqint:    .byte       "' on non-integers", 0
 s_nqnum:    .byte       "' on non-numbers", 0
+s_seedbad:  .byte       "'random-seed' expects a whole number, 0 or more", 0
 
 .segment "CODE3"

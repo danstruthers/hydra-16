@@ -14,7 +14,8 @@
 ;
 ; hylang reads a library slowly, and compiles each function fun makes as it's read: these are def's and fn's, each
 ; compiled at its second call, so those a program calls once or not at all cost it no time.  The Skill Data table is
-; text, for the same reason.  hylang's random can't be seeded: the same character twice is HyForth's (harn.fs) or C's.
+; text, for the same reason.  (random-seed n) makes the dice repeat (hmchar.hl -s), but they aren't C's: the
+; character C's hmchar makes from a seed is HyForth's (harn.fs).
 
 ; ****************
 ; *** Dice ***

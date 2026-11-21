@@ -1917,8 +1917,8 @@ hylang> (cards)
 
 ## div, mod, divmod, fdiv
 
-Functions of the library, written in hylang: division with a whole quotient and a remainder; and division
-to a decimal.
+`div` and `mod` are built in: division with a whole quotient, rounded down, and its remainder. `divmod` and
+`fdiv` are functions of the library, written in hylang: both of those as a list; and division to a decimal.
 
 #### Syntax
 
@@ -1952,9 +1952,10 @@ the quotient.
 Because the quotient is rounded *down*, not toward zero, the remainder always has the sign of *b*:
 `(mod -7 2)` is 1, and `(mod 7 -2)` is -1. With a positive *b*, `mod` is therefore always from 0 up to, but
 not including, *b*, which is what is wanted for wrapping a position round a table or an angle round a
-circle.
+circle. `quot` and `rem` round toward zero instead, as BASIC's `\` and `MOD` do.
 
-The numbers need not be whole: `(mod 7.5 2)` is 1.5.
+The numbers need not be whole: `(mod 7.5 2)` is 1.5. Two whole numbers are divided as whole numbers, of any
+size, and two that fit a fixnum (-16384 to 16383) quickest.
 
 #### Errors
 
@@ -1962,10 +1963,11 @@ The numbers need not be whole: `(mod 7.5 2)` is 1.5.
 |---|---|
 | `Cannot perform 'div' on non-numbers` | An argument is not a number (each function with its own name) |
 | `Division by zero.` | *b* is 0 |
+| `'truncate' expects a real number` | *a* / *b* is a complex number |
 
 #### See also
 
-`/`, `floor`, `to-fixed`, `odd?`.
+`quot`, `rem`, `/`, `floor`, `to-fixed`, `odd?`.
 
 #### Example
 
@@ -5609,14 +5611,64 @@ hylang> (error? 5)
 => NIL
 ```
 
-## random
+## quot, rem
 
-A function: a random whole number.
+Built-in functions: whole-number division, rounding toward zero, and its remainder.
+
+#### Syntax
+
+```text
+(quot a b)
+(rem a b)
+```
+
+#### Arguments
+
+*a*, *b*
+: Whole numbers (integers), of any size. *b* is not 0.
+
+#### Result
+
+`quot` gives *a* / *b* with what is after the point dropped: `(quot 7 2)` is 3 and `(quot -7 2)` is -3. `rem`
+gives what is left over, *a* - *b* × `(quot a b)`, so it has the sign of *a*: `(rem -7 2)` is -1.
+
+#### Description
+
+These are BASIC's `\` and `MOD` and Forth's `/` and `mod`. Two fixnums (-16384 to 16383) are divided
+quickest; larger integers by the numbers library. `div` and `mod` round down instead, and take any real
+numbers.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `Cannot perform 'quot' on non-integers` | An argument is not an integer (`rem`'s says `'rem'`) |
+| `Division by zero.` | *b* is 0 |
+
+#### See also
+
+`div`, `mod`, `truncate`, `/`.
+
+#### Example
+
+```session
+hylang> (list (quot -7 2) (rem -7 2) (div -7 2) (mod -7 2))
+=> {-3 -1 -4 1}
+hylang> (quot (pow 10 20) 7)
+=> 14285714285714285714
+hylang> (quot 7.5 2)
+=> Error: Cannot perform 'quot' on non-integers
+```
+
+## random, random-seed
+
+Built-in functions: a random whole number; and the numbers made to repeat.
 
 #### Syntax
 
 ```text
 (random n)
+(random-seed s)
 ```
 
 #### Arguments
@@ -5624,10 +5676,17 @@ A function: a random whole number.
 *n*
 : A whole number, 1 or more. It may be as large as any integer.
 
+*s*
+: A whole number, 0 or more (past 32767, 32767).
+
 #### Result
 
-A whole number from 0 to *n* - 1, chosen at random. `(random 6)` is one of 0 to 5: add 1 for the
-throw of a die.
+`random` gives a whole number from 0 to *n* - 1, chosen at random. `(random 6)` is one of 0 to 5: add 1 for
+the throw of a die.
+
+`random-seed` gives `NIL`. After `(random-seed s)`, `random` gives the same numbers in the same order each
+time, for the same *s*: a game or a test can be played again. `(random-seed 0)` starts them from the clock
+and the ticks again, as hylang does when it starts.
 
 #### Errors
 
@@ -5635,16 +5694,21 @@ throw of a die.
 |---|---|
 | `'random' expects a number above 0` | *n* is 0 or negative |
 | `'random' expects an integer` | *n* is not a whole number |
+| `'random-seed' expects a whole number, 0 or more` | *s* is negative or not a whole number |
 
 #### Example
 
-The answers differ from run to run:
+The first answers differ from run to run; after a seed, they are the same each time:
 
 ```text
 hylang> (random 6)
 => 2
 hylang> (1+ (random 6))
 => 4
+hylang> (do (random-seed 7) (list (random 6) (random 6)))
+=> {5 3}
+hylang> (do (random-seed 7) (list (random 6) (random 6)))
+=> {5 3}
 ```
 
 ## range

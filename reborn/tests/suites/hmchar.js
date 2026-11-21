@@ -128,17 +128,17 @@ function hmRun(out, cmd) {
 module.exports = {
   tests: [
     {
-      name: 'hmchartongues', what: "hmchar's tongues and scripts (the plan for the game between dungeons, its step 8; occupations.txt's tongues N and scripts N) from its three makers: a Feudal scribe (seed 5) from C's hmchar and hmchar.fs the same, its profile and file as hmcharCheck has them (a 2nd Language, the native script ardic and two more, none twice); a Viking lexigrapher from both the same (two scripts, the native delvic, no second tongue); hmchar.hl's scribe (its dice its own) a language line and three scripts, the native ardic, none twice",
+      name: 'hmchartongues', what: "hmchar's tongues and scripts (the plan for the game between dungeons, its step 8; occupations.txt's tongues N and scripts N) from its three makers: a Feudal scribe (seed 5) from C's hmchar and hmchar.fs the same, its profile and file as hmcharCheck has them (a 2nd Language, the native script ardic and two more, none twice); a Viking lexigrapher from both the same (two scripts, the native delvic, no second tongue); hmchar.hl's scribe (its dice its own, seeded: -s 5, random-seed's, the same scribe every run) a language line and three scripts, the native ardic, none twice",
       init: 't_rc', cycles: 1600e6,
       machine: { input: 'ābind -a /sd/0/games /bin\r' + 'ācd /ram; hmchar -q -s 5 -u feudal -c scribe -o x.hm >s.out; cp x.hm s.hm; hmchar.fs -q -s 5 -u feudal -c scribe -o x.hm >f.out\r' +
         'ācmp s.out f.out && cmp s.hm x.hm && echo scribe same; cat s.out; ' + HM_FILE('s.hm') + '\r' +
         'āhmchar -q -s 7 -u viking -c lexi -o x.hm >l.out; cp x.hm l.hm; hmchar.fs -q -s 7 -u viking -c lexi -o x.hm >g.out\r' +
         'ācmp l.out g.out && cmp l.hm x.hm && echo lexigrapher same; cat l.out; ' + HM_FILE('l.hm') + '\r' +
-        'āhmchar.hl -q -u feudal -c scribe -o h.hm >h.out; cat h.out; ' + HM_FILE('h.hm') + '\r' + 'āecho =DONE\r' },
+        'āhmchar.hl -q -s 5 -u feudal -c scribe -o h.hm >h.out; cat h.out; ' + HM_FILE('h.hm') + '\r' + 'āecho =DONE\r' },
       expect: ['\n=DONE\n'],
       check(m, out) {
         const f = [], o = out.replace(/\r/g, '');
-        const c1 = 'cmp s.out f.out && cmp s.hm x.hm && echo scribe same; cat s.out; ' + HM_FILE('s.hm'), c2 = 'cmp l.out g.out && cmp l.hm x.hm && echo lexigrapher same; cat l.out; ' + HM_FILE('l.hm'), c3 = 'hmchar.hl -q -u feudal -c scribe -o h.hm >h.out; cat h.out; ' + HM_FILE('h.hm');
+        const c1 = 'cmp s.out f.out && cmp s.hm x.hm && echo scribe same; cat s.out; ' + HM_FILE('s.hm'), c2 = 'cmp l.out g.out && cmp l.hm x.hm && echo lexigrapher same; cat l.out; ' + HM_FILE('l.hm'), c3 = 'hmchar.hl -q -s 5 -u feudal -c scribe -o h.hm >h.out; cat h.out; ' + HM_FILE('h.hm');
         const sc = s => [...s.matchAll(/\nscript ([a-z]+)(?:=\d+)?(?=\n)/g)].map(x => x[1]), lg = s => [...s.matchAll(/\nlanguage [a-z]+=\d+(?=\n)/g)].length;
         if (!/\nscribe same\n/.test(o)) f.push('hmchar.fs\'s scribe not C\'s');
         if (!/\nlexigrapher same\n/.test(o)) f.push('hmchar.fs\'s lexigrapher not C\'s');
@@ -146,7 +146,8 @@ module.exports = {
           const p = hmRun(o, c);
           if (!p) { f.push(n + ': no file'); continue; }
           const x = sc('\n' + p.file);
-          // (hmchar.hl's dice unseeded, the order its draw's: the native among them, 2026-11-10, the images' change drew "starric" first)
+          // (hmchar.hl's scripts in its draw's order: the native among them, 2026-11-10, the images' change drew "starric" first;
+          // its dice unseeded changed with every image, 2026-11-21's a Khuzdul scribe: -s 5 since)
           if (lg('\n' + p.file) !== nl || x.length !== ns || (c === c3 ? !x.includes(nat) : x[0] !== nat) || new Set(x).size !== ns) f.push(n + '\'s tongues and scripts: ' + JSON.stringify(p.file.split('\n').filter(z => /^(language|script) /.test(z))));
           f.push(...hmcharCheck(p.out, p.file).map(z => n + ': ' + z));
         }
@@ -155,15 +156,15 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'hmcharhl', what: 'hmchar.hl (games/hmchar: hmchar in hylang, harn.hl in the ROM disk\'s /lib/hylang) at rc: -q, its profile and its file (harnfile.c\'s lines) agreeing, the automatic skills open; then as a player answers (a roll again, a deity, Peoni, chosen after a beginning that isn\'t enough and one there isn\'t, its ritual opened; an occupation out of range, weapons by a beginning of their names, one ambiguous, one twice, an option point\'s second improvement and a third, a skill there isn\'t), the skills it says as they should be; -s refused (hylang\'s random can\'t be seeded); harntest.hl\'s tests of the character it read back; -p elf, a Sindarin (Character 2: not rolled), its profile and file as they should be; -u viking, a human of the Viking culture (not rolled: the user\'s, 2026-10-20)',
+      name: 'hmcharhl', what: 'hmchar.hl (games/hmchar: hmchar in hylang, harn.hl in the ROM disk\'s /lib/hylang) at rc: -q, its profile and its file (harnfile.c\'s lines) agreeing, the automatic skills open; then as a player answers (a roll again, a deity, Peoni, chosen after a beginning that isn\'t enough and one there isn\'t, its ritual opened; an occupation out of range, weapons by a beginning of their names, one ambiguous, one twice, an option point\'s second improvement and a third, a skill there isn\'t), the skills it says as they should be; -s with a seed that isn\'t a whole number above 0 refused; harntest.hl\'s tests of the character it read back; -p elf, a Sindarin (Character 2: not rolled), its profile and file as they should be; -u viking, a human of the Viking culture (not rolled: the user\'s, 2026-10-20)',
       init: 't_rc', cycles: 1400e6,
       machine: { input: 'ābind -a /sd/0/games /bin\r' + 'ācd /ram; hmchar.hl -q -o q.hm; ' + HM_FILE('q.hm') + '\r' + 'āhmchar.hl\r' + HM_PLAY + 'ā' + HM_FILE('Dorn.hm') + '\r' +
         'ācd /ram; hmchar.hl -q -p elf -o e.hm; ' + HM_FILE('e.hm') + '\r' + 'ācd /ram; hmchar.hl -q -p h -u viking -o v.hm; ' + HM_FILE('v.hm') + '\r' +
-        'āhmchar.hl -s 3; echo $status\r' + 'āecho \'(do (use "harntest") (def {c} (harn.read "Dorn.hm")) (list (c :other) (harn.eml c 1)))\' | hylang\r' },
+        'āhmchar.hl -s x; echo $status\r' + 'āecho \'(do (use "harntest") (def {c} (harn.read "Dorn.hm")) (list (c :other) (harn.eml c 1)))\' | hylang\r' },
       expect: ['Written to q.hm\n', ...HM_DEITY_SAID, 'Which? 99\nThere\'s no such occupation.\nWhich? ?glad\nGladiator, 4 years: Initiative/6, weapons 3/2, Unarmed/6, Physician/2\nWhich? glad\n', 'The second: s\nWhich? More than one begins so.\n',
         'The third: shield\nThat one\'s chosen already.\n', 'Points left: 4. A skill: climb\nNo more than two points in a skill: that one\'s had its share.\n',
         'A skill: zzz\nThere\'s no such skill.\n', 'Written to Dorn.hm\n',
-        'hmchar.hl: -s: hylang\'s random can\'t be seeded (hmchar.fs and C\'s hmchar have -s)\nusage: hmchar.hl [-o file] [-q] [-p species] [-c occupation] [-u culture]\n1\n%',
+        'usage: hmchar.hl [-o file] [-q] [-s seed] [-p species] [-c occupation] [-u culture]\n1\n%',
         '=> {{"name Dorn" "occupation Gladiator" "wealth ', 'hylang> => exit'],
       check(m, out) {
         const f = [], q = hmRun(out, 'cd /ram; hmchar.hl -q -o q.hm; ' + HM_FILE('q.hm')), d = hmRun(out, HM_FILE('Dorn.hm'));

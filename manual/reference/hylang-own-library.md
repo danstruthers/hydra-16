@@ -146,16 +146,15 @@ hylang> (round 7/2)
 => 4
 ```
 
-## div, mod, divmod, fdiv
+## divmod, fdiv
 
-Functions of the library, written in hylang: division with a whole quotient and a remainder; and division
-to a decimal.
+Functions of the library, written in hylang: division with a whole quotient and a remainder, as a list; and
+division to a decimal. `div` and `mod`, which `divmod` uses, are built in, as are `quot` and `rem`, which
+round toward zero (chapter 5).
 
 #### Syntax
 
 ```text
-(div a b)
-(mod a b)
 (divmod a b)
 (fdiv a b [places])
 ```
@@ -170,47 +169,34 @@ to a decimal.
 
 #### Result
 
-`div` gives the quotient rounded down to a whole number: the `floor` of *a* / *b*. `mod` gives what is left
-over: *a* - *b* × `(div a b)`. `divmod` gives both, as a list of two.
+`divmod` gives `(div a b)` and `(mod a b)` as a list of two: the quotient rounded down to a whole number,
+the `floor` of *a* / *b*, and what is left over, *a* - *b* × the quotient, with the sign of *b*.
 
 `fdiv` gives *a* / *b* as a decimal of at most *places* places, cut off, not rounded: it is `to-fixed` of
 the quotient.
 
-`%` is another name for `mod`.
-
-#### Description
-
-Because the quotient is rounded *down*, not toward zero, the remainder always has the sign of *b*:
-`(mod -7 2)` is 1, and `(mod 7 -2)` is -1. With a positive *b*, `mod` is therefore always from 0 up to, but
-not including, *b*, which is what is wanted for wrapping a position round a table or an angle round a
-circle.
-
-The numbers need not be whole: `(mod 7.5 2)` is 1.5.
+`%` is another name for the built-in `mod`.
 
 #### Errors
 
 | Message | Cause |
 |---|---|
-| `Cannot perform 'div' on non-numbers` | An argument is not a number (each function with its own name) |
+| `Cannot perform 'divmod' on non-numbers` | An argument is not a number (`fdiv`'s with its own name) |
 | `Division by zero.` | *b* is 0 |
 
 #### See also
 
-`/`, `floor`, `to-fixed`, `odd?`.
+`div`, `mod`, `quot`, `rem`, `/`, `floor`, `to-fixed`, `odd?`.
 
 #### Example
 
 ```session
-hylang> (div 7 2)
-=> 3
-hylang> (mod 7 2)
-=> 1
-hylang> (div -7 2)
-=> -4
-hylang> (mod -7 2)
-=> 1
 hylang> (divmod 7 2)
 => {3 1}
+hylang> (divmod -7 2)
+=> {-4 1}
+hylang> (% -7 3)
+=> 2
 hylang> (fdiv 1 3 4)
 => 0.3333
 ```

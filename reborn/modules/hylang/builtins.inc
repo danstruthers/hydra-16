@@ -348,6 +348,7 @@ BI_N        .set 256        ; (The second table: ordinary built-ins in a bank, B
             BI          "pi", 0, 0, B3, bi_pi
             BI          "digits", 0, 1, B3, bi_digits
             BI          "pow", 2, 2, B3, bi_pow
+            BI          "random-seed", 1, 1, B3, bi_random_seed
             BI          "mods", 0, 0, B5, bi_mods
             BI          "buffer-fill", 2, 4, B6, bi_buffer_fill  ; (Moved from the first table for quot, rem, div, mod)
             BI          "buffer-copy", 3, 5, B6, bi_buffer_copy

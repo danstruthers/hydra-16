@@ -3,7 +3,7 @@
 ; (harnfile.c's text) for a game, Dingus Quest Zero's or any other, to read: C's hmchar (games/hmchar) in hylang, the
 ; same questions, the same profile, the same file.
 ;
-; hmchar.hl [-o file] [-q] [-p species] [-c occupation] [-u culture]
+; hmchar.hl [-o file] [-q] [-s seed] [-p species] [-c occupation] [-u culture]
 ;   -o file    where it's written (default: NAME.hm, in the current directory, NAME the character's)
 ;   -q         no questions: the first roll kept, an occupation (one of the book's), weapons and option points chosen
 ;              at random, a name made up
@@ -12,8 +12,8 @@
 ;   -c occupation  the occupation, by its name (case ignored, a beginning enough), not asked or drawn, not held to
 ;              the character's class or sex
 ;   -u culture a human's culture, not rolled: feudal, imperial, viking or tribal (a beginning enough)
-; (C's -s seed, the same character each time, isn't here: hylang's random can't be seeded.  HyForth's hmchar.fs has
-; it, and gives the character C's hmchar does)
+;   -s seed    the dice from seed (a whole number, 1 or more: random-seed's), the same character each time; not the
+;              one C's hmchar -s gives (hylang's dice aren't C's: HyForth's hmchar.fs gives C's)
 ;
 ; The steps (Character 1): the attributes rolled, a human's culture too (Character 3: mostly Feudal), kept, or
 ; rolled again; a deity, the player's choice (Character 12: one of the ten or none, the book's Morality for each a
@@ -48,12 +48,12 @@
     (set! {a} (tail a)))
   ?((and (eq o "-p") (and (tail a) (not (nil? (species-of (snd a)))))) (do (set! {species} (species-of (snd a)))
     (set! {a} (tail a)))
+  ?((and (eq o "-s") (and (tail a) (and (int? (val (snd a))) (pos? (val (snd a))))))
+    (do (random-seed (val (snd a))) (set! {a} (tail a)))
   ?((eq o "-q") (set! {quiet} T)
     (do
-      ?((eq o "-s")
-        (print-to stderr "hmchar.hl: -s: hylang's random can't be seeded (hmchar.fs and C's hmchar have -s)") NIL)
-      (print-to stderr "usage: hmchar.hl [-o file] [-q] [-p species] [-c occupation] [-u culture]")
-      (exit 1)))))))
+      (print-to stderr "usage: hmchar.hl [-o file] [-q] [-s seed] [-p species] [-c occupation] [-u culture]")
+      (exit 1))))))))
   (set! {a} (tail a))})
 
 (use "harn")
