@@ -538,6 +538,26 @@ K_TASKFORE:
             and         #$FF ^ TF_FORE
             ora         K_TMP
             QL_PUT      TK_FLAGS
+            lda         K_TMP                               ; In it: in the scheduler's set of them too (K_FMASK)
+            beq         @out
+            txa
+            pha
+            and         #7
+            tax
+            lda         #0                                  ; (.A = 1 << (the task & 7))
+            sec
+:           rol         a
+            dex
+            bpl         :-
+            plx
+            stz         T_REGISTER                          ; ---- The kernel task's
+            cpx         #8
+            bcs         :+
+            tsb         K_FMASK
+            bra         :++
+:           tsb         K_FMASK + 1
+:           sty         T_REGISTER                          ; ---- Back
+@out:
             lda         K_TMP
             stz         T_REGISTER                          ; ---- The kernel task's: there may be some now
             tsb         K0_FORES

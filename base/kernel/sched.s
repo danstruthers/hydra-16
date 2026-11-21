@@ -22,6 +22,15 @@
 ; tick (its tasks by the round robin), so the others always have theirs.
 ; For a program whose answer runs through several tasks (a game's: the UI, its parser, its world) while others
 ; work in the background.  With none in it, the scheduler is the round robin alone, as it was.
+;
+; The candidates (K0_CANDLO/HI, 2026-11-21): the pick looks only at the tasks that may be in a state it runs or ends
+; (ST_READY, ST_SLEEP, ST_BLOCKED, ST_EVENT), in the order it always looked at every task, so it picks as it did
+; (a task out of the set is one its look would have passed by, changing nothing), for some 600 cycles a tick where
+; it took some 1,240 with one program busy, the console waiting for a key and four drivers idle.  The set may hold
+; more: a task goes in as it's switched out (it ran, whatever state it left in), as another task makes it ready
+; (WAKE, a note, its start: CAND_SET), and leaves it only as a look finds it in none of those states and serving
+; no call (a call's end puts back the state the task had before it, a wait the pick ends maybe).
+; docs/03-base/kernel.md, "The scheduler".
 
 .include "kdefs.inc"
 
@@ -97,24 +106,37 @@ K_SCHED_NOTED:
 ; Else the round robin: the next task that can run after its place (1-15, its place last), the foreground's passed
 ; by unless nobody else can run, that place this task unless the foreground's last pick was this one; else the
 ; kernel task (to idle).  A task can run when it's ST_READY, or it's waiting for what's come (a sleeper's time, a
-; call's task free, an event: pick_ok's, which makes it ST_READY).  With no foreground task it's the round robin
+; call's task free, an event: look's, which makes it ST_READY).  With no foreground task it's the round robin
 ; after this one alone, as it always was.  The round robin's place goes on round: so every task that can run has its
-; turn, a foreground task busy or not.  IN, OUT: IRQs off (a moment on between its looks at each task).  OUT: .A =
-; the task.  Modifies .X, .Y
+; turn, a foreground task busy or not.
+;
+; The looks go only to the candidates (K0_CANDLO/HI: every task in a state the pick runs or ends, ST_READY, ST_SLEEP,
+; ST_BLOCKED or ST_EVENT, and maybe others), in the order they always went to every task: a task out of the set is
+; one whose look would have passed it by and changed nothing.  A task goes in as it's switched out (here: it ran,
+; whatever state it left in) and as another makes it ready (WAKE, a note, its start: CAND_SET); out as a look finds
+; it in no candidate's state.  Whether any task is in the foreground at all (none: K0_FORES cleared) is the same
+; (K_FMASK: TASKFORE puts a task in; fseen takes out one that's left it).  And with no foreground, no notes to post
+; and this task the only candidate, the pick is this task if it can run, else the idle task, with one look.
+; T is this task's at every JSR, RTS and moment for interrupts (T chooses the stack page too); the kernel task's
+; only between.  IN, OUT: IRQs off (a moment on between its looks).  OUT: .A = the task.  Modifies .X, .Y
 K_SCHED_PICK:
             ldy         T_REGISTER                          ; .Y = this task, throughout
             stz         T_REGISTER                          ; ---- The kernel task's
+            lda         cand_lo,Y                           ; This task a candidate, maybe (it ran)
+            tsb         K0_CANDLO
+            lda         cand_hi,Y
+            tsb         K0_CANDHI
             cpy         K0_FPICK                            ; (The round robin's place: this task, unless the
             beq         :+                                  ;   foreground picked it)
             sty         K0_RR
 :
             lda         K0_FORES
-            beq         @tor
+            beq         @robin
             lda         K0_TICKS                            ; (Its turns by the ticks: .A = the tick now)
             ldx         K0_FMODE
             beq         @fturn
             cmp         K0_FTICK                            ; The background's turn: the rest of its tick
-            beq         @tor
+            beq         @robin
             stz         K0_FMODE                            ; (Over: the foreground's turn, from this tick)
             sta         K0_FTICK
             bra         @fpass
@@ -127,29 +149,229 @@ K_SCHED_PICK:
             inc         K0_FMODE                            ; (Over: the background's turn, this tick)
             lda         K0_TICKS
             sta         K0_FTICK
-@tor:
-            jmp         @robin
+@robin:                                                     ; The round robin's pick (T: the kernel task's)
+            lda         #$FF
+            sta         K0_FPICK
+            ldx         K0_RR
+            lda         K0_FORES                            ; The round's first time round: the foreground passed
+            bne         @first                              ;   by, if there may be any; then with it
+            lda         K0_NQ_ANY                           ; This task the only candidate, and no notes to post?
+            bne         @all
+            lda         K0_CANDLO
+            eor         cand_lo,Y
+            bne         @all
+            lda         K0_CANDHI
+            eor         cand_hi,Y
+            bne         @all
+            sty         T_REGISTER                          ; ---- This task
+            tya                                             ; (The kernel task's: none at all)
+            beq         @idle
+            tax
+            cli                                             ; (A moment for interrupts)
+            nop
+            sei
+            lda         #TF_STOPPED
+            jsr         look
+            bcs         @found
+@idle:
+            ldx         #KERNEL_TASK                        ; Nobody: the idle task
+@found:
+            txa
+            rts
 
-@fpass:
-            stz         K0_FSEEN
+@first:
+            sty         T_REGISTER                          ; ---- This task
+            lda         #TF_STOPPED | TF_FORE
+            jsr         round
+            bcs         @found
+            stz         T_REGISTER                          ; ---- The kernel task's
+            ldx         K0_RR
+@all:
+            sty         T_REGISTER                          ; ---- This task
+            lda         #TF_STOPPED
+            jsr         round
+            bcs         @found
+            bra         @idle
+
+@fpass:                                                     ; The foreground's looks, after this task
             sty         T_REGISTER                          ; ---- This task
             tya
-            tax                                             ; .X = the candidate
-            lda         #TASKS
-            sta         TK_PICKS
-@fnext:
+            tax
+            lda         #0
+            jsr         round
+            bcc         @fnone
+            cli                                             ; (A moment for interrupts)
+            nop
+            sei
+            stz         T_REGISTER                          ; ---- The kernel task's: the foreground's pick
+            stx         K0_FPICK
+            sty         T_REGISTER                          ; ---- This task
+            bra         @found
+
+@fnone:
+            jsr         fseen                               ; None in the foreground at all: none till TASKFORE
+            stz         T_REGISTER                          ; ---- The kernel task's
+            bne         :+
+            stz         K0_FORES
+:
+            lda         K0_TICKS                            ; (None of it could run: its turn from this tick)
+            sta         K0_FTICK
+            bra         @robin
+
+; A round of looks: the candidates after task .X, from .X + 1 to 15, then (the round robin's) the kernel task's place,
+; then from 1 to .X; each by the round robin's look (.A: the flags it passes by) or the foreground's (.A = 0), till one
+; can run.  The kernel task is in the round robin's only while it has notes queued to post (notes.s: K_NOTE_QUEUED,
+; from its idle loop).  IN, OUT: T = this task (.Y), IRQs off (a moment on before each look).  OUT: C = 1, .X = the
+; task; C = 0, none.  Keeps .Y
+round:
+            sta         TK_PICKS                            ; (The look: this task's, in its zero page)
+            stz         T_REGISTER                          ; ---- The kernel task's
+            stx         K_START
+            lda         #$FF                                ; (From .X + 1 to 15)
+            sta         K_LIM
+            sta         K_LIM + 1
+            sty         T_REGISTER                          ; ---- This task
+@next:
+            cli                                             ; (A moment for interrupts)
+            nop
+            sei
+            jsr         next
+            bcs         @wrap
             cli                                             ; (A moment for interrupts, before each look)
             nop
             sei
-            inx
-            txa
-            and         #TASKS - 1
+            jsr         check
+            bcc         @next
+            rts
+
+@wrap:
+            cli                                             ; (A moment for interrupts)
+            nop
+            sei
+            lda         TK_PICKS                            ; The kernel task's place (the round robin's)
+            stz         T_REGISTER                          ; ---- The kernel task's
+            beq         :+
+            ldx         #KERNEL_TASK
+            lda         K0_NQ_ANY
+            bne         @yes
+:
+            ldx         K_START                             ; (From 1 to the start: not past it)
+            lda         above_lo,X
+            eor         #$FF
+            sta         K_LIM
+            lda         above_hi,X
+            eor         #$FF
+            sta         K_LIM + 1
+            sty         T_REGISTER                          ; ---- This task
+            ldx         #0
+@next2:
+            cli                                             ; (A moment for interrupts)
+            nop
+            sei
+            jsr         next
+            bcs         @no
+            cli                                             ; (A moment for interrupts, before each look)
+            nop
+            sei
+            jsr         check
+            bcc         @next2
+            rts
+
+@no:
+            cli                                             ; (A moment for interrupts)
+            nop
+            sei
+            clc
+            rts
+
+@yes:
+            sty         T_REGISTER                          ; ---- This task
+            sec
+            rts
+
+; The next candidate after task .X, within K_LIM, as they are now (a WAKE in a moment for interrupts counts).  IN,
+; OUT: T = this task (.Y).  OUT: C = 1, none; else C = 0, .X = it.  Modifies .A
+next:
+            stz         T_REGISTER                          ; ---- The kernel task's
+            lda         K0_CANDLO
+            and         K_LIM
+            and         above_lo,X
+            sta         K_M
+            lda         K0_CANDHI
+            and         K_LIM + 1
+            and         above_hi,X
+            sta         K_M + 1
+            bra         first0
+
+; The first task in the set K_M (bit = task).  IN, OUT: T = this task (.Y).  OUT: C = 1, none; else C = 0, .X =
+; it.  Modifies .A
+first:
+            stz         T_REGISTER                          ; ---- The kernel task's
+first0:
+            lda         K_M
+            beq         @high
+            bit         #$0F
+            beq         @b4
+            and         #$0F
             tax
-            beq         @fskip                              ; (The kernel task: never the foreground's)
+            lda         lsb4,X
+            bra         @got
+
+@b4:
+            lsr         a
+            lsr         a
+            lsr         a
+            lsr         a
+            tax
+            lda         lsb4,X
+            ora         #4
+            bra         @got
+
+@high:
+            lda         K_M + 1
+            beq         @none
+            bit         #$0F
+            beq         @b12
+            and         #$0F
+            tax
+            lda         lsb4,X
+            ora         #8
+            bra         @got
+
+@b12:
+            lsr         a
+            lsr         a
+            lsr         a
+            lsr         a
+            tax
+            lda         lsb4,X
+            ora         #12
+@got:
+            tax
+            sty         T_REGISTER                          ; ---- This task
+            clc
+            rts
+
+@none:
+            sty         T_REGISTER                          ; ---- This task
+            sec
+            rts
+
+; Task .X looked at by the round's look: the round robin's (TK_PICKS: the flags it passes by), or the foreground's
+; (TK_PICKS = 0).  IN, OUT: T = this task (.Y).  OUT: C = 1, it's picked.  Keeps .X, .Y
+check:
+            lda         TK_PICKS
+            bne         look
+
+; The foreground's look: task .X, if it's in the foreground, or serving a call (SCALL, not BUSY_NOSERVE) for a
+; caller in it, or the server a foreground task called last (K0_FSRV, till a foreground task calls another: the
+; work its call left it, the console's words painted, done with its caller's); and it can run (look's, but if it's
+; stopped).  IN, OUT: T = this task (.Y).  OUT: C = 1, it's picked.  Keeps .X, .Y
+fore_ok:
             stx         T_REGISTER                          ; ---- The candidate
             lda         TK_FLAGS
             and         #TF_FORE
-            bne         @fore
+            bne         @look
             lda         TK_BUSY                             ; Serving a call (not BUSY_NOSERVE) ...
             beq         @fno
             bmi         @fno
@@ -161,163 +383,66 @@ K_SCHED_PICK:
             lda         TK_FLAGS
             and         #TF_FORE
             beq         @fno
-            sty         T_REGISTER                          ; ---- This task
+@look:
             lda         #TF_STOPPED
-            jsr         pick_ok
-            bcs         @fpick
-            bra         @fskip
+            bra         look
 
-@fore:
-            sty         T_REGISTER                          ; ---- This task
-            lda         #TF_STOPPED
-            jsr         pick_ok
-            bcs         @fpick
-            stz         T_REGISTER                          ; ---- The kernel task's: the foreground's not empty
-            lda         #TF_FORE
-            sta         K0_FSEEN
-            bra         @fself
-@fno:                                                       ; Not in it: the server a foreground task called last
-            stz         T_REGISTER                          ; ---- The kernel task's (K0_FSRV, till a foreground task
-            cpx         K0_FSRV                             ;   calls another: the work its call left it, the
-            bne         @fself                              ;   console's words painted, done with its caller's)
-            sty         T_REGISTER                          ; ---- This task
-            lda         #TF_STOPPED
-            jsr         pick_ok
-            bcs         @fpick
-            bra         @fskip
-@fself:
-            sty         T_REGISTER                          ; ---- This task
-@fskip:
-            dec         TK_PICKS
-            bne         @fnext
+@fno:                                                       ; Not in it: the server a foreground task called last?
             stz         T_REGISTER                          ; ---- The kernel task's
-            lda         K0_FSEEN                            ; None in the foreground at all: none till TASKFORE
-            bne         :+
-            stz         K0_FORES
-:
-            lda         K0_TICKS                            ; (None of it could run: its turn from this tick)
-            sta         K0_FTICK
-            bra         @robin
-
-@fpick:
-            cli                                             ; (A moment for interrupts)
-            nop
-            sei
-            stz         T_REGISTER                          ; ---- The kernel task's: the foreground's pick
-            stx         K0_FPICK
+            cpx         K0_FSRV
             sty         T_REGISTER                          ; ---- This task
-            txa
-            rts
-
-@robin:                                                     ; (T: the kernel task's)
-            lda         #$FF                                ; The round robin's pick
-            sta         K0_FPICK
-            ldx         K0_RR                               ; .X = the candidate: after the place
-            lda         K0_FORES                            ; The round's first time round: the foreground passed
-            sty         T_REGISTER                          ;   by, if there may be any; then with it
-            beq         @all
-            lda         #TASKS
-            sta         TK_PICKS
-@next:
-            cli                                             ; (A moment for interrupts, before each look)
-            nop
-            sei
-            inx
-            txa
-            and         #TASKS - 1
-            tax
-            beq         @kernel
-            lda         #TF_STOPPED | TF_FORE
-            jsr         pick_ok
-            bcs         @found
-@skip:
-            dec         TK_PICKS
-            bne         @next
-            stz         T_REGISTER                          ; ---- The kernel task's
-            ldx         K0_RR
-            sty         T_REGISTER                          ; ---- This task
-@all:
-            lda         #TASKS
-            sta         TK_PICKS
-@next2:
-            cli                                             ; (A moment for interrupts, before each look)
-            nop
-            sei
-            inx
-            txa
-            and         #TASKS - 1
-            tax
-            beq         @kernel2
-            lda         #TF_STOPPED
-            jsr         pick_ok
-            bcs         @found
-@skip2:
-            dec         TK_PICKS
-            bne         @next2
-            lda         #KERNEL_TASK                        ; Nobody: the idle task
-            rts
-
-@kernel:                                                    ; The kernel task is in the round only while it has
-            jsr         kernel_ok                           ;   notes queued to post (notes.s: K_NOTE_QUEUED, from
-            beq         @skip                               ;   its idle loop)
-@found:
-            txa
-            rts
-
-@kernel2:
-            jsr         kernel_ok
-            beq         @skip2
-            txa                                             ; (KERNEL_TASK)
-            rts
-
-; Has the kernel task notes queued to post?  IN: IRQs off, .Y and T = this task.  OUT: Z = 0, it has
-kernel_ok:
-            stz         T_REGISTER
-            lda         K0_NQ_ANY
-            sty         T_REGISTER
+            beq         @look
+            clc
             rts
 
 ; Can task .X run?  Not if it has any of the flags .A (TF_STOPPED: it's stopped; TF_FORE: the round robin's first
 ; time round).  If it's ST_READY; or a sleeper whose time has come; or blocked on a call to a task that's free now;
-; or waiting for an event count that's changed: then it's made ST_READY.  IN: IRQs off, .Y and T = this task.
-; OUT: C = 1, it can.  Keeps .X, .Y
-pick_ok:
-            stx         T_REGISTER                          ; A quick look at it
+; or waiting for an event count that's changed: then it's made ST_READY.  A task in none of those states (ST_FREE,
+; ST_WAIT, ST_CALL, ST_IDLE, ST_NEW) leaves the candidates, unless it's serving a call.  IN: IRQs off.  OUT: C = 1,
+; it can; T = this task (.Y).  Keeps .X, .Y
+look:
+            stx         T_REGISTER                          ; ---- The candidate: a quick look
             and         TK_FLAGS
-            bne         @not
+            bne         @no
             lda         TK_STATE
-            sty         T_REGISTER
+            stz         T_REGISTER                          ; ---- The kernel task's
             cmp         #ST_READY
             beq         @yes
             cmp         #ST_SLEEP
+            bcc         @drop                               ; (ST_FREE, ST_WAIT, ST_CALL, ST_IDLE, ST_NEW)
             beq         @sleeper
             cmp         #ST_BLOCKED
             beq         @blocked
             cmp         #ST_EVENT
             beq         @event
+@drop:
+            stx         T_REGISTER                          ; (Serving a call, waiting in it: a candidate still,
+            lda         TK_BUSY                             ;   as the call's end puts back the state it had
+            stz         T_REGISTER                          ;   before, a wait the pick ends maybe)
+            beq         :+
+            bpl         @no
+:
+            lda         cand_lo,X                           ; No candidate
+            trb         K0_CANDLO
+            lda         cand_hi,X
+            trb         K0_CANDHI
 @no:
-            clc
-            rts
-
-@not:
-            sty         T_REGISTER
+            sty         T_REGISTER                          ; ---- This task
             clc
             rts
 
 @sleeper:                                                   ; Has its time come?  (Now - its time >= 0)
-            stz         T_REGISTER                          ; (The kernel task's: the ticks, the wake times)
             lda         K0_TICKS
             cmp         K_WAKE_LO,X
             lda         K0_TICKS + 1
             sbc         K_WAKE_HI,X
-            sty         T_REGISTER
             bmi         @no
 @ready:
             stx         T_REGISTER                          ; It can run: ready
             lda         #ST_READY
             sta         TK_STATE
-            sty         T_REGISTER
 @yes:
+            sty         T_REGISTER                          ; ---- This task
             sec
             rts
 
@@ -326,7 +451,6 @@ pick_ok:
             lda         TK_BLOCKEDON
             sta         T_REGISTER
             lda         TK_BUSY
-            sty         T_REGISTER                          ; (Z: from TK_BUSY)
             beq         @ready
             bra         @no
 
@@ -339,9 +463,52 @@ pick_ok:
             lda         TK_EVENT
             stx         T_REGISTER                          ; ---- The waiter
             cmp         TK_EVV
-            sty         T_REGISTER                          ; ---- Back
             bne         @ready
             bra         @no
+
+; Is any task in the foreground (TF_FORE)?  The tasks in K_FMASK looked at, one that's left it taken out.  IN, OUT:
+; T = this task (.Y), IRQs off.  OUT: Z = 0, there is.  Modifies .A, .X
+fseen:
+            cli                                             ; (A moment for interrupts)
+            nop
+            sei
+            stz         T_REGISTER                          ; ---- The kernel task's
+            lda         K_FMASK
+            sta         K_M
+            lda         K_FMASK + 1
+            sta         K_M + 1
+            sty         T_REGISTER                          ; ---- This task
+            jsr         first
+            bcs         @none
+            stx         T_REGISTER                          ; ---- The task: a quick look
+            lda         TK_FLAGS
+            sty         T_REGISTER                          ; ---- This task
+            and         #TF_FORE
+            bne         @yes
+            stz         T_REGISTER                          ; ---- The kernel task's: it's left it
+            lda         cand_lo,X
+            trb         K_FMASK
+            lda         cand_hi,X
+            trb         K_FMASK + 1
+            sty         T_REGISTER                          ; ---- This task
+            bra         fseen
+
+@none:
+            lda         #0
+@yes:
+            rts
+
+.segment "KRODATA"
+
+; Each task's bit in a set of tasks (low byte, high byte: the kernel task's none: CAND_SET's too); the tasks after
+; each (above_lo, above_hi); the lowest bit set in each nibble (lsb4)
+cand_lo:    .byte       $00, $02, $04, $08, $10, $20, $40, $80, $00, $00, $00, $00, $00, $00, $00, $00
+cand_hi:    .byte       $00, $00, $00, $00, $00, $00, $00, $00, $01, $02, $04, $08, $10, $20, $40, $80
+above_lo:   .byte       $FE, $FC, $F8, $F0, $E0, $C0, $80, $00, $00, $00, $00, $00, $00, $00, $00, $00
+above_hi:   .byte       $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FE, $FC, $F8, $F0, $E0, $C0, $80, $00
+lsb4:       .byte       $00, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
+
+.segment "KCODE"
 
 ; ****************************************************************************
 ; PREEMPT_OFF: hold the CPU (no task switch: interrupts go on).  They nest.  Keeps everything
@@ -446,6 +613,7 @@ K_WAKE:
 @ready:
             lda         #ST_READY
             sta         TK_STATE
+            CAND_SET                                        ; (A candidate)
             bra         @back
 @not:
             lda         #1

@@ -572,6 +572,8 @@ K_TASK_GO:
             sei
             lda         #ST_READY
             QL_PUT      TK_STATE
+            CAND_SET                                        ; (A candidate: sched.s)
+            sty         T_REGISTER
             plp
             txa
             rts
@@ -715,6 +717,12 @@ K_TASK_BOOT:
 :           stz         K0_FORES,X                          ;   foreground yet, its place task 0's)
             dex
             bpl         :-
+            lda         #$FE                                ; (Every task a candidate, till a look finds it isn't;
+            sta         K0_CANDLO                           ;   none in the foreground)
+            lda         #$FF
+            sta         K0_CANDHI
+            stz         K_FMASK
+            stz         K_FMASK + 1
             jsr         K_MD_VALID
             bcc         :+
             TPRINT      T_S_NOMODS

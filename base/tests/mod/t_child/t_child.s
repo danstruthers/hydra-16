@@ -73,11 +73,15 @@ op_s:
             jsr         TICKS
             sta         start
 :
-            jsr         TICKS
-            sec
-            sbc         start
+            ldx         #40                                 ; (Mostly in its own code, TICKS a moment in each
+:
+            dex                                             ;   round: a tick that comes in TICKS's IRQs-off
+            bne         :-                             ;   time is taken just after it, in the kernel, and a
+            jsr         TICKS                               ;   note waits for a switch that finds the task in its
+            sec                                             ;   own code: 2026-11-21, a round of TICKS alone let
+            sbc         start                               ;   every tick land there, so a kill waited 37 ticks)
             cmp         param
-            bcc         :-
+            bcc         :--
             lda         #0
             bra         end
 

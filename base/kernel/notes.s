@@ -192,14 +192,11 @@ q_post:
             cmp         #ST_BLOCKED
             beq         @wake
             cmp         #ST_EVENT
-            beq         @wake
-            lda         #1
-            sta         TK_WOKEN
-            bra         @done
-
+            bne         @unwoken
 @wake:
             lda         #ST_READY
             sta         TK_STATE
+            CAND_SET                                        ; (A candidate: sched.s)
 @done:
             sty         T_REGISTER                          ; ---- Back
             plp
@@ -216,6 +213,11 @@ q_post:
             plp
 @perm:
             FAIL        E_PERM
+
+@unwoken:                                                   ; (Not waiting: its next PAUSE won't)
+            lda         #1
+            sta         TK_WOKEN
+            bra         @done
 
 ; PAUSE, as programs call it: a note pending (it wakes the task) is taken on the way out
 K_UPAUSE:

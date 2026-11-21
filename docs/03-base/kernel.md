@@ -139,6 +139,20 @@ waiting.
   program whose answer to a key runs through tasks of its own while others work in the background (Dingus Quest Zero:
   its UI, parser, world and senses while a command is in hand; its denizens' minds after).  The flag goes with the task:
   cleared as it ends or `EXEC`s.  With no task in the foreground the scheduler is the round robin alone, as before.
+* **The candidates** (2026-11-21): the pick looks only at the tasks that may be in a state it runs or ends (`READY`,
+  `SLEEP`, `BLOCKED`, `EVENT`: a set of tasks, a bit each, in the kernel task's zero page), in the order it always looked
+  at every task, so it picks the same task as before in every case: a task out of the set is one whose look would
+  have passed it by and changed nothing.  The set may hold more than those: a task goes in as it's switched out (it
+  ran: whatever state it left in) and as another task makes it ready (`WAKE`, a note, its start); it leaves only as a
+  look finds it in none of the four states and serving no call (a call's end puts back the state the task had before
+  it, a wait the scheduler ends maybe).  Whether any task is in the foreground at all is kept the same way (`TASKFORE` puts a task in a set; a
+  look takes out one that's left it).  With no foreground, no notes for task 0 to post and this task the only
+  candidate, the pick is one look at it.  So a pick looks at the busy tasks and the waiters whose wait the scheduler
+  ends, not every task: one CPU-bound program beside the console waiting for a key and four idle drivers went from
+  some 1,240 cycles a tick to some 600 (the pick was 7% of its time, now 3.5%).  The pick's moments for interrupts are
+  taken with `T` the task being switched out's (the stack page goes with `T`).  `base/tools/schedcheck.js` checks it
+  on any run: each pick against a model of the old one, on the memory as the pick began, and the set against the
+  states.
 * **Task 0** runs only when nothing else can (its idle loop: `WAI`), or when interrupt handlers have queued notes for it
   to deliver.
 * **`PREEMPT_OFF`** holds the CPU for timing-critical work (interrupts still run; a switch that comes due waits for

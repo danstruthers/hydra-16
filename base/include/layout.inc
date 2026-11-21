@@ -52,8 +52,9 @@ TK_BLOCKEDON    = $86           ; ST_BLOCKED: the busy task it's waiting to call
 TK_INCALLER     = $88           ; SCALL: the calling task, put here by the caller (a quick look)
 TK_INA          = $89           ; SCALL: registers crossing the switch
 TK_INX          = $8A
-TK_PICKS        = $8B           ; The scheduler's count of tasks to look at (in the task being switched out:
-                                ;   never the call stubs' scratch, which a switch can come in the middle of)
+TK_PICKS        = $8B           ; The scheduler's look in a round: the flags it passes by, 0 the foreground's (in
+                                ;   the task being switched out: never the call stubs' scratch, which a switch can
+                                ;   come in the middle of)
 KF_PAGE         = $8C           ; The kernel's far call (common.s: K_FAR): the routine's BIOS ROM page ...
 KF_VEC          = $8D           ; (2)   its address ...
 KF_A            = $8F           ;   and .A, a moment
@@ -257,11 +258,14 @@ K0_FTICK        = $79           ;   the tick its turn began (the foreground's, o
 K0_FMODE        = $7A           ;   0: the foreground's turn (FORE_RUN ticks at most); 1, the background's (a tick) ...
 K0_FPICK        = $7B           ;   the task the foreground's last pick was ($FF: the round robin's was the last) ...
 K0_RR           = $7C           ;   the round robin's place: the task it picks after ...
-K0_FSEEN        = $7D           ;   and <> 0, a look at the foreground found a task in it
-K0_FSRV         = $7E           ;   and the task a foreground task last called (SCALL, not a KCALL; 0: none): in the
+K0_CANDLO       = $7D           ;   the candidates (bit = task, 1-7; K0_CANDHI 8-15): every task in a state the pick
+                                ;   runs or ends (ST_READY, ST_SLEEP, ST_BLOCKED, ST_EVENT), and maybe others; its
+                                ;   looks go to these alone (sched.s) ...
+K0_FSRV         = $7E           ;   the task a foreground task last called (SCALL, not a KCALL; 0: none): in the
                                 ;   foreground, whenever it can run, till a foreground task calls another (the
                                 ;   console's words painted while the world works; 2026-11-18: 2 ticks were less
-                                ;   than a send ring's worth, and every KCALL ended them)
+                                ;   than a send ring's worth, and every KCALL ended them) ...
+K0_CANDHI       = $7F           ;   and the candidates 8-15
 K0_SCHED_END    = $80
 FORE_RUN        = 8             ; The foreground's turn at most, in ticks: then the background's, the rest of a tick
 PF_T            = $01           ; K0_POSTFAULT: a T line (tasks' memory not apart)
@@ -289,6 +293,11 @@ K_NGROUP        = $0490         ; (16) Each task's note group (a task's number: 
 K_CPU_LO        = $04A0         ; (16) Each task's CPU time, in ticks (24 bits: the tick charges the task it
 K_CPU_MID       = $04B0         ; (16)   interrupts)
 K_CPU_HI        = $04C0         ; (16)
+K_FMASK         = $04D0         ; (2) The scheduler's (sched.s): the tasks that may be in the foreground (bit = task;
+                                ;   TASKFORE puts one in, a look finds one that's left it) ...
+K_LIM           = $04D2         ; (2)   a round's tasks still to look at (bit = task) ...
+K_M             = $04D4         ; (2)   a set of tasks, a moment ...
+K_START         = $04D6         ;   and the task a round began after
 
 ; TASKINFO's answer (24 bytes)
 TI_STATE        = 0             ; ST_*

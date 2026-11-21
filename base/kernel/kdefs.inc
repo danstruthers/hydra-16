@@ -18,7 +18,7 @@
 .global     K_KIRQ
 ; ---- sched.s: the scheduler, waiting, time
 .global     K_SCHED_SWITCH, K_SCHED_RESUME, K_YIELD, K_PAUSE, K_TPAUSE, K_WAKE, K_EVWAIT, K_PREEMPT_OFF, K_PREEMPT_ON
-.global     K_SLEEP, K_SLEEP_UNTIL, K_TICKS
+.global     K_SLEEP, K_SLEEP_UNTIL, K_TICKS, cand_lo, cand_hi
 ; ---- call.s: calls into other tasks, and kcopy
 .global     K_SCALL, K_KCALL, K_KDISPATCH, K_KCOPY, K_ROMREAD
 ; ---- task.s: tasks and modules
@@ -79,6 +79,16 @@
             stx         T_REGISTER
             sta         addr
             sty         T_REGISTER
+.endmacro
+
+; Task .X a candidate of the scheduler's (K0_CANDLO/HI: sched.s), as another task makes it ready.  IN: IRQs off.
+; OUT: T = the kernel task's (the caller puts its own back).  Modifies .A.  (On BIOS ROM page 0: its tables)
+.macro CAND_SET
+            stz         T_REGISTER
+            lda         cand_lo,X
+            tsb         K0_CANDLO
+            lda         cand_hi,X
+            tsb         K0_CANDHI
 .endmacro
 
 ; .A = the kernel task's byte at addr (a quick look).  IN: IRQs off, .Y = this task.  Keeps .X, .Y
