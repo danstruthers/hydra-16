@@ -46,11 +46,41 @@ _rseed:
             inc         _xs_seed
 :           rts
 
-; unsigned __fastcall__ random (unsigned n): the high 16 bits of rand16 () * n
+; unsigned __fastcall__ random (unsigned n): the high 16 bits of rand16 () * n.  n under 256 (a die's sides, the most
+; asked): x * n 24 bits, n's 8 bits looked at, its high byte the answer (the same number, in half the steps: ref1,
+; 2026-11-20, the referee's rounds out a die a point of penalty, some 3,000 a felled foe's hour)
 _random:
             sta         ptr1                        ; n
             stx         ptr1 + 1
             jsr         next
+            lda         ptr1 + 1
+            bne         @wide
+            sta         tmp1                        ; tmp1-tmp3: x * n, low byte first, its bits shifted in from n's
+            sta         tmp2                        ;   top (tmp4) down, x added each time it's 1
+            sta         tmp3
+            lda         ptr1
+            sta         tmp4
+            ldy         #8
+@nbit:      asl         tmp1
+            rol         tmp2
+            rol         tmp3
+            asl         tmp4
+            bcc         @nno
+            clc
+            lda         tmp1
+            adc         _xs_seed
+            sta         tmp1
+            lda         tmp2
+            adc         _xs_seed + 1
+            sta         tmp2
+            bcc         @nno
+            inc         tmp3
+@nno:       dey
+            bne         @nbit
+            lda         tmp3
+            ldx         #0
+            rts
+@wide:
             lda         #0                          ; tmp1-tmp4: the product, low byte first
             sta         tmp3
             sta         tmp4
@@ -87,26 +117,29 @@ next:
             ora         _xs_seed + 3
             bne         :+
             jsr         __rseed_clock
-:           lda         _xs_seed                    ; x ^= x << 13: x << 8 (its bytes 0-2 as bytes 1-3: tmp1,
-            sta         tmp1                        ;   tmp2, tmp3; byte 0 is 0), then << 5
-            lda         _xs_seed + 1
+:           lda         _xs_seed                    ; x ^= x << 13: x << 16 (its bytes 0-2 as bytes 2-4: tmp1,
+            sta         tmp1                        ;   tmp2, tmp3), then >> 3, its bytes 1-3 tmp4, tmp1, tmp2
+            lda         _xs_seed + 1                ;   (three steps, not five: ref1, 2026-11-20)
             sta         tmp2
             lda         _xs_seed + 2
             sta         tmp3
-            ldy         #5
-:           asl         tmp1
-            rol         tmp2
-            rol         tmp3
+            lda         #0
+            sta         tmp4
+            ldy         #3
+:           lsr         tmp3
+            ror         tmp2
+            ror         tmp1
+            ror         tmp4
             dey
             bne         :-
             lda         _xs_seed + 1
-            eor         tmp1
+            eor         tmp4
             sta         _xs_seed + 1
             lda         _xs_seed + 2
-            eor         tmp2
+            eor         tmp1
             sta         _xs_seed + 2
             lda         _xs_seed + 3
-            eor         tmp3
+            eor         tmp2
             sta         _xs_seed + 3
             lda         _xs_seed + 3                ; x ^= x >> 17: x >> 16 (bytes 2-3 to 0-1), then >> 1
             lsr

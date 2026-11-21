@@ -25,8 +25,14 @@ int __fastcall__ die (unsigned sides)
 
 int __fastcall__ dice_plus (unsigned char n, unsigned sides, int mod)
 {
-    while (n--) {
-        mod += die (sides);
+    if (dice_hook) {
+        while (n--) {
+            mod += dice_hook (sides);
+        }
+        return mod;
+    }
+    while (n--) {                               /* (Each die die ()'s, without its call: ref1, 2026-11-20) */
+        mod += 1 + (int) random (sides);
     }
     return mod;
 }
