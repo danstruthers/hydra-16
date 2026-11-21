@@ -949,3 +949,46 @@ s_toobig:   .byte       "Too big: an integer past 255 bytes", 0
 s_nlnot:    .byte       "Not a number", 0
 
 .segment "CODE3"
+
+; .X/.A (low, high) = .A * .Y, two bytes, by quarter squares: q(a + b) - q(|a - b|), q(x) = x * x / 4 rounded down
+; (nm_times's).  Uses nl_i
+nl_qm8:
+            sta         nl_i
+            sty         nl_i + 1
+            sec
+            sbc         nl_i + 1
+            bcs         :+
+            eor         #$FF                                ; (C = 0: b - a)
+            adc         #1
+:
+            tay                                             ; (|a - b|)
+            lda         nl_i
+            clc
+            adc         nl_i + 1
+            tax                                             ; (a + b, past 255 the tables' second half)
+            bcs         @hi
+            lda         nl_sqlo,x
+            sec
+            sbc         nl_sqlo,y
+            sta         nl_i
+            lda         nl_sqhi,x
+            sbc         nl_sqhi,y
+            ldx         nl_i
+            rts
+@hi:
+            lda         nl_sqlo + 256,x
+            sec
+            sbc         nl_sqlo,y
+            sta         nl_i
+            lda         nl_sqhi + 256,x
+            sbc         nl_sqhi,y
+            ldx         nl_i
+            rts
+nl_sqlo:
+.repeat     511, I
+            .byte       <(I * I / 4)
+.endrep
+nl_sqhi:
+.repeat     511, I
+            .byte       >(I * I / 4)
+.endrep

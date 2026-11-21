@@ -206,9 +206,9 @@ s_mulk:
             adc         #8
             tax
 :
+            cpx         s_xo                                ; (0: as it is)
+            beq         @zero
             dex
-            cpx         s_xo
-            bcc         @zero
             lda         s_ma,x
             beq         :-
             inx

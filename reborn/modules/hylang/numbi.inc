@@ -280,7 +280,7 @@ nm_negate:
 :
             rts
 
-; nm_acc = nm_acc * nm_n (nm_over if it's past 15 bits)
+; nm_acc = nm_acc * nm_n (nm_over if it's past 15 bits), by quarter squares
 nm_times:
             stz         nm_sign
             lda         nm_acc + 1                          ; (The magnitudes, the sign apart)
@@ -301,35 +301,30 @@ nm_times:
             eor         #1
             sta         nm_sign
 :
-            stz         nm_p                                ; (nm_p: the product, 32 bits)
-            stz         nm_p + 1
-            stz         nm_p + 2
-            stz         nm_p + 3
-            ldx         #16
-@bit:
-            asl         nm_p
-            rol         nm_p + 1
-            rol         nm_p + 2
-            rol         nm_p + 3
-            asl         nm_n
-            rol         nm_n + 1
-            bcc         @no
-            clc
-            lda         nm_p
-            adc         nm_acc
-            sta         nm_p
-            lda         nm_p + 1
-            adc         nm_acc + 1
+            lda         nm_acc + 1                          ; (Both past a byte: too big.  Else a byte pair at a time,
+            beq         :+                                  ;   by quarter squares (nl_qm8): nm_p, 24 bits)
+            ldy         nm_n + 1
+            bne         @over
+:
+            lda         nm_acc
+            ldy         nm_n
+            jsr         nl_qm8
+            stx         nm_p
             sta         nm_p + 1
-            bcc         @no
-            inc         nm_p + 2
-            bne         @no
-            inc         nm_p + 3
-@no:
-            dex
-            bne         @bit
+            stz         nm_p + 2
+            ldy         nm_n + 1
+            beq         :+
+            lda         nm_acc
+            jsr         nl_qm8
+            jsr         @add
+:
+            lda         nm_acc + 1
+            beq         :+
+            ldy         nm_n
+            jsr         nl_qm8
+            jsr         @add
+:
             lda         nm_p + 2                            ; (Past 15 bits: too big)
-            ora         nm_p + 3
             bne         @over
             lda         nm_p + 1
             bmi         @over
@@ -341,6 +336,16 @@ nm_times:
             rts
 @over:
             inc         nm_over
+            rts
+@add:                                                       ; (.X/.A added at nm_p + 1)
+            pha
+            txa
+            clc
+            adc         nm_p + 1
+            sta         nm_p + 1
+            pla
+            adc         nm_p + 2
+            sta         nm_p + 2
             rts
 
 ; The result: nm_acc, a fixnum (past one: the general way)
