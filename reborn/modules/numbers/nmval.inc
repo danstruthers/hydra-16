@@ -388,8 +388,16 @@ n_ratw:
 ; and its twos shifted out, till they're the same: shifts and subtractions.  But while one is far longer than the
 ; other (by more than a third of the shorter's bytes), a division: the longer made its remainder by the shorter (a
 ; division costs as their lengths multiplied, the subtractions as the longer's length for each bit they're apart).
-; OUT: Z = 1 if it's 1.  Uses R1-R3
+; OUT: Z = 1 if it's 1.  Uses R1-R3.  (The numbers library's first bank: both 16 bytes or fewer, g_fast's way, nmsmall.inc)
 n_gcd:
+.ifndef NM_COPY
+.ifdef NM_GCD64
+            jsr         g_fast
+            bcs         :+
+            jmp         @same
+:
+.endif
+.endif
             lda         #4                                  ; (R0 = |R4|, R1 = |R5|; R4 0: R0 = R1)
             sta         nra
             lda         #0
