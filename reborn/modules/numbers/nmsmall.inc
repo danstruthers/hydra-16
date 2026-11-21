@@ -1,7 +1,7 @@
 ; ****************************************************************************
 ; nmsmall.inc - small numbers' own way (docs/design/plans/NUMSPEED.md, step 3): ADD, SUB, MUL, DIV and CMP of two
-; numbers each an integer of 4 bytes or fewer or a fixed decimal of 0-15 places whose digits are, worked here in 64-bit
-; words, not in the registers.  The results are the tower's (nmval.inc): a sum, difference or product of two integers
+; numbers each an integer of 8 bytes or fewer or a fixed decimal of 0-15 places whose digits are, worked here in 64-bit
+; words, not in the registers (a product's factors 4 bytes at most each, a quotient's two parts 32 bits).  The results are the tower's (nmval.inc): a sum, difference or product of two integers
 ; an integer, of a fixed decimal and either a fixed decimal (a sum's places the more of the two's, a product's both's,
 ; the 0s at its digits' end dropped); a quotient an integer if it's whole, else a rational in lowest terms.  Anything
 ; past 64 bits on the way (32 for a quotient's two parts), or any other kind: C = 1, the tower's way.
@@ -25,6 +25,8 @@ s_j:        .res        1
 s_la:       .res        1
 s_lb:       .res        1
 s_k:        .res        1
+s_lim:      .res        1                                   ; (An integer's bytes at most, less 1: 7, or 3 for a product, a
+                                                            ;   quotient, or once a fixed decimal is met)
 f_n:        .res        4                                   ; (Fractions: x's numerator and y's (16 bits each) ...
 f_d:        .res        4                                   ;   and their denominators ...
 f_p:        .res        4                                   ;   x's numerator times y's denominator, y's times x's
@@ -36,10 +38,23 @@ f_sgn:      .res        1                                   ; (f_int16's sign)
 .endif
             NM_CODE
 
+; .Y = b: .A = a b's low byte, .Y its high (a's pointers s_qptr's): f(a + b) - f(|a - b|), f(n) = n^2 / 4 rounded down
+.macro QS_MUL
+            lda         (np),y
+            sec
+            sbc         (nt),y
+            sta         n_phi
+            lda         (nq),y
+            sbc         (nu),y
+            tay
+            lda         n_phi
+.endmacro
+
 ; ---- The two operands
 
-; n_x and n_y (values) as x and y: C = 0; C = 1 if either isn't small
+; n_x and n_y (values) as x and y: C = 0; C = 1 if either isn't small.  .A = the integers' bytes at most less 1 (s_lim)
 s_both:
+            sta         s_lim
             stz         s_fx
             lda         n_x
             ldx         n_x + 1
@@ -51,6 +66,17 @@ s_both:
             lda         n_y
             ldx         n_y + 1
             ldy         #1
+            jsr         s_load
+            bcs         @rts
+            lda         s_fx                                ; (A fixed decimal: an integer with it 4 bytes at most)
+            beq         @rts
+            lda         s_ma + 4
+            ora         s_ma + 5
+            ora         s_ma + 6
+            ora         s_ma + 7
+            cmp         #1                                  ; (C = 1: not 0)
+@rts:
+            rts
 ; The number at .A, .X as x (.Y = 0) or y (1): C = 0; C = 1 if it isn't small
 s_load:
             sta         nt
@@ -77,10 +103,12 @@ s_load:
             bcc         @int
             cmp         #NT_FIXED + 16
             bcs         @no
-            and         #$0F                                ; (A fixed decimal of 0-15 places: its digits after)
-            sta         s_pa,x
+            and         #$0F                                ; (A fixed decimal of 0-15 places: its digits after, 4
+            sta         s_pa,x                              ;   bytes at most, and the other's too)
             lda         #1
             sta         s_fx
+            lda         #3
+            sta         s_lim
             inc         nt
             bne         @int
             inc         nt + 1
@@ -98,15 +126,19 @@ s_load:
             clc
             rts
 @tagged:
-            cmp         #NT_POS + 4                         ; (1-4 bytes)
+            cmp         #NT_POS + 8                         ; (1-8 bytes)
             bcc         @bytes
             cmp         #NT_NEG
             bcc         @no
-            cmp         #NT_NEG + 4
+            cmp         #NT_NEG + 8
             bcs         @no
             dec         s_na,x
 @bytes:
-            and         #$03
+            and         #$07
+            cmp         s_lim
+            beq         :+
+            bcs         @no
+:
             clc
             adc         #2
             sta         s_k                                 ; (Its bytes and 1: the copy's end)
@@ -253,6 +285,12 @@ s_ucmp:
 ; hv = n_x .A n_y (OP_ADD, OP_SUB, OP_MUL, OP_DIV) if both are small: C = 0; else C = 1
 s_arith:
             sta         s_j
+            ldx         #7                                  ; (A sum's integers 8 bytes at most, a product's or a
+            cmp         #OP_MUL                             ;   quotient's 4)
+            bcc         :+
+            ldx         #3
+:
+            txa
             jsr         s_both
             bcc         :+
             jmp         s_frac                              ; (Not two of those: fractions, perhaps)
@@ -323,7 +361,8 @@ s_arith:
 @rts:
             rts
 
-; A product: x's magnitude times y's (32 by 32 bits), the places added
+; A product: x's magnitude times y's (32 by 32 bits), the places added.  A row of y's bytes for each of x's, by quarter
+; squares through four pointers (s_qptr), added in at its place
 s_mul:
             lda         s_pa
             clc
@@ -364,40 +403,85 @@ s_mul:
             ldx         s_i
             lda         s_ma,x
             beq         @next
-            sta         n_m8
+            jsr         s_qptr
             stz         n_cy
-            ldy         #0
+            ldx         #0
 @col:
-            lda         s_mb,y
-            jsr         mul8                                ; (.A its product's low byte, n_phi its high; .Y kept)
-            clc
+            ldy         s_mb,x                              ; (a b: its low byte, then its high, .Y)
+            QS_MUL
+            clc                                             ; (The carry added: the row's byte, s_t)
             adc         n_cy
+            sta         s_t,x
             bcc         :+
-            inc         n_phi
-:
-            sta         s_k
-            tya
-            clc
-            adc         s_i
-            tax
-            lda         s_k
-            clc
-            adc         s_mr,x
-            sta         s_mr,x
-            lda         n_phi
-            adc         #0
-            sta         n_cy
             iny
-            cpy         s_lb
+:
+            sty         n_cy
+            inx
+            cpx         s_lb
             bne         @col
             lda         n_cy
-            sta         s_mr + 1,x
+            sta         s_t,x
+            inx                                             ; (The row added in at byte i, its carry on up)
+            stx         s_k
+            ldy         s_i
+            ldx         #0
+            clc
+:
+            lda         s_t,x
+            adc         s_mr,y
+            sta         s_mr,y
+            iny
+            inx
+            dec         s_k
+            bne         :-
+            bcc         @next
+:
+            lda         s_mr,y
+            adc         #0
+            sta         s_mr,y
+            iny
+            bcs         :-
 @next:
             inc         s_i
             lda         s_i
             cmp         s_la
             bne         @row
             jmp         s_made
+
+; The quarter squares' four pointers for a factor .A (a): np f(a + b), nq its high bytes, nt f(|a - b|) (from 255 - a),
+; nu its high bytes, for QS_MUL's b in .Y.  Modifies .A, .X
+s_qptr:
+            tax
+            clc
+            adc         #<sq_lo
+            sta         np
+            lda         #>sq_lo
+            adc         #0
+            sta         np + 1
+            txa
+            clc
+            adc         #<sq_hi
+            sta         nq
+            lda         #>sq_hi
+            adc         #0
+            sta         nq + 1
+            txa
+            eor         #$FF
+            tax
+            clc
+            adc         #<nsq_lo
+            sta         nt
+            lda         #>nsq_lo
+            adc         #0
+            sta         nt + 1
+            txa
+            clc
+            adc         #<nsq_hi
+            sta         nu
+            lda         #>nsq_hi
+            adc         #0
+            sta         nu + 1
+            rts
 
 ; A quotient: (x's magnitude * 10^y's places) / (y's * 10^x's), each 32 bits at most, in lowest terms (their greatest
 ; common divisor, the binary way), its sign the two's; y 0: the tower's (its error)
@@ -665,6 +749,7 @@ s_div32:
 
 ; .A = n_x against n_y if both are small: C = 0; else C = 1
 s_cmp:
+            lda         #7
             jsr         s_both
             bcc         :+
             lda         #OP_CMP                             ; (Not two of those: fractions, perhaps)
@@ -974,46 +1059,47 @@ f_cmp:
             clc
             rts
 
-; f_w = f_u * f_v (16 by 16 bits)
+; f_w = f_u * f_v (16 by 16 bits): u0's row, then u1's, by quarter squares (s_qptr, QS_MUL)
 s_m16:
-            stz         f_w + 2
-            stz         f_w + 3
-            lda         f_v
-            sta         n_m8
-            lda         f_u                                 ; (u0 v0)
-            jsr         mul8
+            lda         f_u                                 ; (u0 v0, u0 v1)
+            jsr         s_qptr
+            ldy         f_v
+            QS_MUL
             sta         f_w
-            lda         n_phi
-            sta         f_w + 1
-            lda         f_u + 1                             ; (u1 v0)
-            jsr         mul8
+            sty         f_w + 1
+            ldy         f_v + 1
+            QS_MUL
             clc
             adc         f_w + 1
             sta         f_w + 1
-            lda         n_phi
-            adc         #0
-            sta         f_w + 2
-            lda         f_v + 1
-            sta         n_m8
-            lda         f_u                                 ; (u0 v1)
-            jsr         mul8
+            bcc         :+
+            iny
+:
+            sty         f_w + 2
+            stz         f_w + 3
+            lda         f_u + 1                             ; (u1 v0, u1 v1: a byte on)
+            beq         @rts
+            jsr         s_qptr
+            ldy         f_v
+            QS_MUL
             clc
             adc         f_w + 1
             sta         f_w + 1
-            lda         n_phi
+            tya
             adc         f_w + 2
             sta         f_w + 2
-            lda         #0
-            adc         #0
-            sta         f_w + 3
-            lda         f_u + 1                             ; (u1 v1)
-            jsr         mul8
+            bcc         :+
+            inc         f_w + 3
+:
+            ldy         f_v + 1
+            QS_MUL
             clc
             adc         f_w + 2
             sta         f_w + 2
-            lda         n_phi
+            tya
             adc         f_w + 3
             sta         f_w + 3
+@rts:
             rts
 
 ; The number at .A, .X as fraction .Y (0: x, 1: y): f_n, f_d (16 bits each), its sign s_na or s_nb: C = 0; C = 1 if

@@ -411,6 +411,7 @@ nm_out:
             jsr         n_size
             sta         v_len
             stx         v_len + 1
+nm_outl:                                                    ; (Its length v_len known: nq it)
             lda         r3 + 1
             cmp         v_len + 1
             bcc         @noroom

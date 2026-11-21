@@ -100,6 +100,8 @@ NUM_FIB         = $A08D       ; r0 = n, an integer 0 or more
 NUM_BYTES       = $A090       ; r0 = bytes; r1 = their count
                               ; -> .A/.X = the number's length
 NUM_OPTIONS     = $A093       ; .A = the options: bit 0 = 1 if the zero page the libraries borrow ($70-$7F) needn't be kept over a call
+NUM_ARITH       = $A096       ; .Y = the operation: 0 ADD, 1 SUB, 2 MUL, 3 DIV, 4 CMP; r0 = x; r1 = y; r4 = the RAM bank x is in, r4 + 1 y's (0: the caller's)
+                              ; -> .A/.X = the result's length (CMP: .A = $FF, 0 or 1)
 
 ; ---- math: Its functions: square roots, e and logarithms, the circle's, real powers, pi, at a precision
 MATH_DIGITS     = $A030       ; .A = a precision (1 to 100 significant digits; 0: none set, the precision given back alone)
