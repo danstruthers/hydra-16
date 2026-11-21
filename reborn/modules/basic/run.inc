@@ -64,6 +64,17 @@ mq_b:       .res        2                                   ;   bytes)
 mq_s:       .res        1
 mq_x:       .res        1
 mq_y:       .res        1
+m3a:        .res        4                                   ; (imul32's: the magnitudes, their bytes, the product (5
+m3b:        .res        4                                   ;   bytes); a row's byte of x, a carry, a column's
+m3p:        .res        5                                   ;   product's bytes)
+m3la:       .res        1
+m3lb:       .res        1
+m3i:        .res        1
+m3j:        .res        1
+m3ai:       .res        1
+m3c:        .res        1
+m3l:        .res        1
+m3h:        .res        1
 fx_m:       .res        12                                  ; (The decimals': x's digits, y's, the result's (4 bytes
 fx_q:       .res        4                                   ;   each, signed), a quotient, a temporary, their places,
 fx_t:       .res        4                                   ;   the result's, the op, a count, a sign)
@@ -907,12 +918,15 @@ op_sub:
             sta         t0 + 3
             bra         int_t0
 
-; MUL: two integers each of 16 bits (signed), their product here; else the numbers'
+; MUL: two integers whose product fits 32 bits (signed), their product here; else the numbers'
 op_mul:
             jsr         two_vals
             bcs         @fix
             jsr         imul16
+            bcc         @int
+            jsr         imul32
             bcs         :+
+@int:
             jmp         int_t0
 @fix:
             jsr         fx_mul
@@ -1036,6 +1050,150 @@ imul16:
             bcc         :+
             inc         t0 + 3
 :
+            rts
+
+; t0 = (vt) * (vu), two integers (their 16-bit case imul16's), if the product fits 32 bits (signed): C = 0; else C = 1.
+; Their magnitudes' bytes but their top 0s (5 of them at most in all: else it can't fit), a row of y's bytes for
+; each of x's by quarter squares (qmul8), added in at its place
+imul32:
+            ldy         #4
+:
+            lda         (vt),y
+            sta         m3a - 1,y
+            lda         (vu),y
+            sta         m3b - 1,y
+            dey
+            bne         :-
+            lda         m3a + 3
+            eor         m3b + 3
+            sta         mq_s
+            ldx         #m3a - m3a
+            jsr         @mag
+            ldx         #m3b - m3a
+            jsr         @mag
+            ldx         #3                                  ; (Their bytes: m3la, m3lb)
+:
+            lda         m3a,x
+            bne         :+
+            dex
+            bpl         :-
+:
+            inx
+            stx         m3la
+            ldx         #3
+:
+            lda         m3b,x
+            bne         :+
+            dex
+            bpl         :-
+:
+            inx
+            stx         m3lb
+            txa
+            clc
+            adc         m3la
+            cmp         #6
+            bcc         :+
+            jmp         @no
+:
+            ldx         #4
+:
+            stz         m3p,x
+            dex
+            bpl         :-
+            stz         m3i
+            lda         m3lb                                ; (y 0: 0)
+            beq         @made
+@row:
+            ldx         m3i
+            cpx         m3la
+            beq         @made
+            lda         m3a,x
+            beq         @next
+            sta         m3ai
+            stz         m3c
+            stz         m3j
+@col:
+            ldy         m3j
+            lda         m3b,y
+            tay
+            lda         m3ai
+            jsr         qmul8                               ; (.X its low byte, .A its high)
+            sta         m3h
+            txa
+            clc
+            adc         m3c
+            bcc         :+
+            inc         m3h
+:
+            sta         m3l
+            lda         m3i
+            clc
+            adc         m3j
+            tax
+            lda         m3l
+            clc
+            adc         m3p,x
+            sta         m3p,x
+            bcc         :+
+            inc         m3h
+:
+            lda         m3h
+            sta         m3c
+            inc         m3j
+            lda         m3j
+            cmp         m3lb
+            bne         @col
+            inx
+            lda         m3c
+            sta         m3p,x
+@next:
+            inc         m3i
+            bra         @row
+@made:
+            lda         m3p + 4                             ; (Past 31 bits: only -2^31 fits)
+            bne         @no
+            lda         m3p + 3
+            bpl         @fits
+            cmp         #$80
+            bne         @no
+            lda         m3p
+            ora         m3p + 1
+            ora         m3p + 2
+            bne         @no
+            bit         mq_s
+            bpl         @no
+@fits:
+            ldx         #3
+:
+            lda         m3p,x
+            sta         t0,x
+            dex
+            bpl         :-
+            bit         mq_s
+            bpl         @done
+            sec
+.repeat 4, I
+            lda         #0
+            sbc         t0 + I
+            sta         t0 + I
+.endrep
+@done:
+            clc
+            rts
+@no:
+            sec
+            rts
+@mag:                                                       ; (m3a + .X made its magnitude)
+            lda         m3a + 3,x
+            bpl         @pos
+            sec
+.repeat 4, I
+            lda         #0
+            sbc         m3a + I,x
+            sta         m3a + I,x
+.endrep
+@pos:
             rts
 
 ; .X/.A (low, high) = .A * .Y, two bytes: q(a + b) - q(|a - b|)
@@ -2601,29 +2759,31 @@ mul_esize:
             sty         t4 + 2
             stz         t4 + 3
 mul16_t4:
-            lda         #0                                  ; (t4 * t4 + 2, the low 16 bits)
-            tax
-            ldy         #16
-@bit:
-            asl         a
-            pha
+            lda         t4                                  ; (t4 * t4 + 2, the low 16 bits, by quarter squares
+            ldy         t4 + 2                              ;   (qmul8): a0 b0, then a0 b1's and a1 b0's low
+            jsr         qmul8                               ;   bytes added to its high; mq_a it)
+            stx         mq_a
+            sta         mq_a + 1
+            ldy         t4 + 3
+            beq         :+
+            lda         t4
+            jsr         qmul8
             txa
-            rol         a
-            tax
-            pla
-            asl         t4
-            rol         t4 + 1
-            bcc         :+
             clc
-            adc         t4 + 2
-            pha
-            txa
-            adc         t4 + 3
-            tax
-            pla
+            adc         mq_a + 1
+            sta         mq_a + 1
 :
-            dey
-            bne         @bit
+            lda         t4 + 1
+            beq         :+
+            ldy         t4 + 2
+            jsr         qmul8
+            txa
+            clc
+            adc         mq_a + 1
+            sta         mq_a + 1
+:
+            lda         mq_a
+            ldx         mq_a + 1
             rts
 
 ; Cursor A on by .A/.X bytes (into the banks after, past the window's end)

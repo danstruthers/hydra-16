@@ -145,7 +145,9 @@ far_copy:
 @chunk:
             lda         cn
             ora         cn + 1
-            beq         @done
+            bne         :+
+            jmp         @done
+:
             ldy         #FBUF                               ; (FBUF bytes, or what's left)
             lda         cn + 1
             bne         :+
@@ -157,27 +159,70 @@ far_copy:
             sty         fk
             jsr         ca_sel
             ldy         #0
+            lda         ca                                  ; (All of it before the window's end: straight)
+            clc
+            adc         fk
+            lda         ca + 1
+            adc         #0
+            cmp         #WIN_END
+            bcc         @afast
 :
             jsr         ca_rd
             sta         fbuf,y
             iny
             cpy         fk
             bne         :-
+            bra         @b
+@afast:
+            lda         (ca),y
+            sta         fbuf,y
+            iny
+            cpy         fk
+            bne         @afast
+            tya
+            clc
+            adc         ca
+            sta         ca
+            bcc         @b
+            inc         ca + 1
+@b:
             jsr         cb_sel
             ldy         #0
+            lda         cb
+            clc
+            adc         fk
+            lda         cb + 1
+            adc         #0
+            cmp         #WIN_END
+            bcc         @bfast
 :
             lda         fbuf,y
             jsr         cb_wr
             iny
             cpy         fk
             bne         :-
+            bra         @next
+@bfast:
+            lda         fbuf,y
+            sta         (cb),y
+            iny
+            cpy         fk
+            bne         @bfast
+            tya
+            clc
+            adc         cb
+            sta         cb
+            bcc         @next
+            inc         cb + 1
+@next:
             lda         cn
             sec
             sbc         fk
             sta         cn
-            bcs         @chunk
+            bcs         :+
             dec         cn + 1
-            bra         @chunk
+:
+            jmp         @chunk
 @done:
 code_sel:
             pha

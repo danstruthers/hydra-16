@@ -34,6 +34,7 @@ rr3:        .res        2                                   ; (round_r0's: r3 ke
 rsrc:       .res        2                                   ; (result_vt's: the result's place)
 nt_base:    .res        2                                   ; num_text's base (0: the base)
 nolen:      .res        1                                   ; (operand's: an integer's or a VT_FIX's bytes' length)
+n_inpl:     .res        1                                   ; (operand's: bit 7, a VT_NUM read where it is, ARITH's)
 rv_tag:     .res        1                                   ; (result_vt's: a fixed decimal's tag)
 
 .segment "CODE4"
@@ -309,9 +310,15 @@ int_sf:
 
 ; ---- An operand made ready: the value at vt as a number's bytes, its address in r0 (or r1: .X = 2)
 
-; .Y = which (0: the first, r0, NS_A or nia; 1: the second, r1, NS_B or nib).  The scratch bank at $8000 after
+; .Y = which (0: the first, r0, NS_A or nia; 1: the second, r1, NS_B or nib), and bit 7 set if a VT_NUM may be read
+; where it is (ARITH: r4 or r4 + 1 its bank).  The scratch bank at $8000 after
 operand:
-            sty         t4 + 3
+            tya
+            asl         a                                   ; (Bit 7: n_inpl's)
+            ror         n_inpl
+            lsr         a
+            and         #1
+            sta         t4 + 3
             lda         (vt)
             bne         :+
             jmp         @int
@@ -340,6 +347,36 @@ operand:
             sta         cn
             jsr         ca_rd
             sta         cn + 1
+            bit         n_inpl                              ; (ARITH's: read where it is, its bank in r4 or r4 + 1,
+            bpl         @copy                               ;   if it's 255 bytes or fewer, all in the window)
+            lda         cn + 1
+            bne         @copy
+            lda         ca
+            clc
+            adc         cn
+            tax
+            lda         ca + 1
+            adc         #0
+            cmp         #WIN_END
+            bcc         :+
+            bne         @copy
+            cpx         #0
+            bne         @copy
+:
+            ldx         t4 + 3
+            lda         RAM_BANK
+            sta         r4,x
+            txa
+            asl         a
+            tax
+            lda         ca
+            sta         r0,x
+            lda         ca + 1
+            sta         r0 + 1,x
+            lda         nsb
+            sta         RAM_BANK
+            rts
+@copy:
             lda         cn + 1                              ; (Below $8000 if it fits: nba, nbb)
             bne         @bank
             lda         cn
@@ -430,11 +467,19 @@ num_op:
             beq         @one
             cmp         #OP_NOT
             beq         @one
-            jsr         two_vals                            ; (vt the first, vu the second)
+            stz         r4                                  ; (+ - * /: ARITH's, each VT_NUM read where it is: its bank
+            stz         r4 + 1                              ;   r4 or r4 + 1, else 0)
             ldy         #0
+            cmp         #OP_DIV + 1
+            bcs         :+
+            ldy         #$80
+:
+            phy
+            jsr         two_vals                            ; (vt the first, vu the second)
             jsr         operand                             ; (r0)
             MOVW        vt, vu
-            ldy         #1
+            ply
+            iny
             jsr         operand                             ; (r1)
             jsr         two_vals
             bra         @call
@@ -456,16 +501,18 @@ nop_tab:
             .word       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
             .word       n_not, n_and, n_or, n_xor, n_eqv, n_imp
 n_add:
-            NUMCALL     NUM_ADD
-            jmp         n_result
+            ldy         #0                                  ; (ARITH's .Y: 0 ADD, 1 SUB, 2 MUL, 3 DIV)
+            bra         n_arith
 n_sub:
-            NUMCALL     NUM_SUB
-            jmp         n_result
+            ldy         #1
+            bra         n_arith
 n_mul:
-            NUMCALL     NUM_MUL
-            jmp         n_result
+            ldy         #2
+            bra         n_arith
 n_div:
-            NUMCALL     NUM_DIV
+            ldy         #3
+n_arith:
+            NUMCALL     NUM_ARITH
             jmp         n_result
 n_neg:
             NUMCALL     NUM_NEG
@@ -687,14 +734,17 @@ rv_heap:
 
 ; t4 = the order of the values at vt and vu ($FF, 0, 1): CMP
 num_cmp2:
-            ldy         #0
+            stz         r4                                  ; (ARITH's CMP: each VT_NUM read where it is)
+            stz         r4 + 1
+            ldy         #$80
             jsr         operand
             MOVW        t4 + 2, vt                          ; (vt kept: operand moves it)
             MOVW        vt, vu
-            ldy         #1
+            ldy         #$81
             jsr         operand
             MOVW        vt, t4 + 2
-            NUMCALL     NUM_CMP
+            ldy         #4
+            NUMCALL     NUM_ARITH
             bcs         :+
             sta         t4
             jmp         code_sel
