@@ -96,6 +96,19 @@ function fnumCard() {
   return [imageCard(0, f, 16384)];
 }
 
+// The fnumquick test's card: fq.fs, fnumxcheck.js's cases (seed 1, 400 random ones) after REQUIRE numbers.fl
+const FNUMQ = require('../../sim/tools/fnumxcheck.js').gen(1, 400);
+function fnumqCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f = path.join(CARD_DIR, 'fnumq0.img');
+  hydrafs.mkfs(f, 8, 'FNUMQ', undefined, true);
+  const v = new hydrafs.Volume(f);
+  v.put('fq.fs', Buffer.from('REQUIRE numbers.fl\n' + FNUMQ.program(true), 'latin1'));
+  v.close();
+  return [imageCard(0, f, 16384)];
+}
+
 // The lshell test's long line, sent to another window: 100 characters, more than its keys' queue holds (63)
 const SEND_LONG = 'the quick brown fox jumps over the lazy dog, 0123456789, the quick brown fox jumps over the lazy cat';
 
@@ -358,6 +371,22 @@ module.exports = {
       },
       expect: ['Typed: 1/3 FF #b11111111 <3> 1 2 3 \n255 is FF and #b11111111, { and } {\n<-+> -+- --+  -0+00+ \n' +
         '#x255 -#x1 #xFFFF 255 \n0 errors in the number word tests\n\n%'],
+    },
+    {
+      name: 'fnumquick', what: 'HyForth\'s numbers done in numbers.fl itself (small integers, of 4 bytes or fewer; n/trunc; a variable\'s small integer in its cell, its block used again): sim/tools/fnumxcheck.js\'s cases (seed 1), random operands of every size and kind through n+ n- n* n/ n/mod n/trunc, the comparisons, n0= n0<, nnegate nabs, truncate nfloor nround, s>n d>n, n! n@ and TO, each result\'s bytes (nbytes) as numref.js has them; the errors and the stack\'s edges (64 numbers, 0 to 12 bytes of its 8K left) run, as fnumxcheck.js --base compares with another build',
+      init: 't_rc', cycles: 400e6,
+      get machine() {
+        return { sd: fnumqCard(), input: '\u0101cd /sd/0; forth fq.fs; echo $status\r' };
+      },
+      expect: ['==end\n'],
+      check(m, out) {
+        const f = [], a = out.indexOf('==start\n'), b = out.indexOf('==end');
+        if (a < 0 || b < 0) return ['no ==start ... ==end'];
+        const got = out.slice(a + 8, b).split('\n').filter(l => l !== '');
+        if (got.length !== FNUMQ.lines.length) f.push(got.length + ' lines, not ' + FNUMQ.lines.length);
+        FNUMQ.expect.forEach((e, k) => { if (e !== null && got[k] !== e && f.length < 10) f.push(FNUMQ.lines[k] + ': ' + got[k] + ', not ' + e); });
+        return f;
+      },
     },
     {
       name: 'lshell', what: 'the shell /lib/shell names (the ROM\'s: /bin/forth -l, HyForth the login shell): init\'s in window 0, and in a window made (Ctrl-] c: the kernel starts init there, $window); send, a line typed in another window (#cN/kbdin), run there, then one longer than its keys\' queue (the write waiting for room)',
