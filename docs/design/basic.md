@@ -130,7 +130,7 @@ Every number is the numbers library's (`modules/numbers`, the stored format of s
 its bank of RAM (`num.inc`): an integer that fits 32 bits stays a `VT_INT` (the operators try that first), a fixed
 decimal whose digits do a `VT_FIX` (a literal's `PUSHF`; `+`, `-`, `*`, the comparisons, `FOR`'s step and `IF` of those
 and integers worked by the interpreter as the library has them, past 31 bits the library's), any other lives in the
-heap.  Of two `VT_INT`s the interpreter works `+`, `-`, `*` of 16-bit factors (by quarter squares), `\` and `MOD`
+heap.  Of two `VT_INT`s the interpreter works `+`, `-`, `*` whose product fits 32 bits (by quarter squares), `\` and `MOD`
 itself, and `/` when the quotient is whole; a `/` that leaves a remainder goes to the library, except when `FIX` or
 `INT` follows it at once (`FIX(a / b)`, `INT(a / b)`), where the quotient toward 0 or below is made there and the
 `FN` passed by: the same integer the library's fraction would have given.  The math library (`modules/math`) gives `SQR` ... `ATN` and `^` of a power that isn't whole,

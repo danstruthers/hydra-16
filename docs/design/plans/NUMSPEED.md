@@ -344,3 +344,34 @@ Checked: BASIC's tests and the numbers library's; a new test, `bdivs` (`tests/ba
 | BASIC's twenty benchmarks (`sim/bench.js`) | 56,280 ms | 54,930 ms | `hash` 1.29x, `fold` 1.17x, `matrix` 1.11x |
 
 The cost: a `/` of two integers that leaves a fraction now divides once before the library does.  A divisor below 256 costs nothing that shows (`300 of i / 7 summed` is 1.02x faster); a 16-bit one some 1,900 cycles more a division (about 10% of it).  ROM: BASIC's first bank 10,203 to 11,748 bytes, its fourth 14,625 to 14,483.
+
+**Later: a cheaper call, and products by the quarter squares** (November 2026, `nmcall1`).  What was left of a library call on numbers past the callers' own small integers was mostly its fixed cost: each operand measured through `c_get` (a bank switch on each side of every byte when it was in the caller's bank, HyForth's number stack), copied in, the result measured again; BASIC's operands copied from its heap into the scratch first; and products of 3-4 bytes made bit by bit (HyForth's `n*`) or a `mul8` call a byte pair.  Built, every result and error as before:
+
+* **Operands in by their tags** (`nmarith.inc`, the numbers library's first bank): `ADD`, `SUB`, `MUL`, `DIV` and `CMP` measure each operand by its tags in one pass (`q_num`: an integer or a short fixed decimal from its tag alone) and copy it in another; one in a RAM bank at `$8000` is read with that bank selected once, through the stack (32 bytes or fewer, as `nm_out` writes) or 8 bytes at a time through the zero page.  Anything `q_num` doesn't take (past 255 bytes, a number crossing `$A000`, bytes that aren't a number) goes `nm_in`'s way, so its error is the same.  The small way's result keeps the length the arena gives it (`nm_outl`: no `n_size`).
+* **`ARITH`** (a new entry, `$A096`): `.Y` the operation (0 `ADD` ... 4 `CMP`), each operand read in the RAM bank `r4` or `r4 + 1` names.  BASIC's `+`, `-`, `*`, `/` and comparisons give it a `VT_NUM` where it is in the heap (or the code) when its window holds it and it's 255 bytes or fewer (`operand`'s bit 7), so the far copy to the scratch goes: `operand` 920 cycles to 250 for a 6-byte integer.
+* **The small way takes integers of 8 bytes** for `+`, `-` and the order (64-bit words, as it had); products and quotients keep to 4 bytes, and a fixed decimal's digits to 4 (scaling bigger ones by 10 a step was slower than the tower).
+* **Products by the quarter squares, a row at a time**: `s_mul` (32 by 32) and `s_m16` (the fractions' 16 by 16) through the four table pointers (`s_qptr`, `QS_MUL`), not `mul8` a pair; HyForth's small `n*` (`si_mul`) by a table of q(n) for n to 511 that `lib_init` makes (1K of numbers.fl's BSS), not bit by bit; BASIC's `*` of two integers whose product fits 32 bits worked in the interpreter (`imul32`: their bytes, 5 at most in all, by `qmul8`), not the library; and an array's index times its count (`mul16_t4`) by `qmul8`, not 16 shifts.
+* **HyForth's `n+ n- n* n/`** by the library (`nm_bin2`) have their result written in the place of the one below, with the same room given (the room after the top), not at the top's end and moved down; **BASIC's `far_copy`** copies a chunk that ends before its window's end straight.
+
+hylang's call sites are as they were: its operands are in its RAM (the scratch), where the library already copied them straight, and reading its cells in place would save only the copy of a few bytes against the bank's slower way in.
+
+Cycles of a library call, and of a pass of a loop of 200 (`n = x op y` and back; the caller's word for HyForth), before (`b2403e41`) and after; the operands 1/3 and 2/7, 12345.678901234 and 2.5, two integers of 5 and of 8 bytes:
+
+| | BASIC: the call | a pass | HyForth: `n+` ... | hylang: the call |
+| :--- | ---: | ---: | ---: | ---: |
+| fractions `+` | 6,761 to 5,340 | 10,700 to 8,450 | 8,396 to 6,177 | 7,014 to 5,435 |
+| fractions `*` | 5,727 to 4,587 | 9,700 to 7,700 | 7,380 to 5,407 | 5,988 to 4,687 |
+| fractions `/` | 5,979 to 4,837 | 9,850 to 7,900 | 7,631 to 5,672 | 6,201 to 4,921 |
+| decimals `+` | 6,407 to 6,681 | 10,800 to 10,050 | 9,048 to 7,539 | 6,597 to 6,711 |
+| decimals `*` | 8,769 to 8,956 | 13,150 to 12,350 | 11,359 to 9,826 | 8,907 to 8,994 |
+| 5 bytes `+` | 3,431 to 2,933 | 8,100 to 6,150 | 6,067 to 3,774 | 3,636 to 2,922 |
+| 5 bytes `*` | 7,130 to 7,412 | 12,200 to 10,850 | 9,859 to 8,245 | 7,255 to 7,342 |
+| 8 bytes `+` | 3,903 to 3,411 | 9,250 to 6,750 | 7,081 to 4,235 | 4,087 to 3,296 |
+| 8 bytes `*` | 10,997 to 11,421 | 20,250 to 18,400 | 14,284 to 12,258 | 11,108 to 11,262 |
+| quotients (any) | about 1% more | 2-4% less | 3-4% less | about as before |
+
+BASIC's call costs more where an operand now comes from a bank (the stack's way in) than it did from its copy in the RAM, but its own copy is gone: every pass is quicker.  Products (cycles): HyForth's `n*` of 100000 and 70000 2,660 to 2,106 a word, of two 32-bit numbers 4,435 to 2,515; BASIC's `X = I * 100000` 4,950 to 1,950 a pass (no library call), `X = M * M` (32 by 32 bits, the library's `s_mul`) the call 4,686 to 4,615, `X = R * R` (fractions) 9,550 to 8,545; hylang's `(* 3000000000 3000000000)` 4,879 to 4,605.  `sim/speed.js`: `X = C + D` (1/3 + 1/7) 10,567 to 8,335 cycles a pass, `X = E + F` (12 digits) 8,256 to 6,276, `X = E * F` 12,249 to 10,889, `300 of i / 7 summed` 1,655 to 1,492 ms, `2 doubled 100 times` 203 to 171 ms; hylang's `(+ 1/3 1/7)` 10,147 to 8,596, `300 of i/3 + i/7 summed` 3,324 to 3,120 ms, but `(< 1.5 2.25)` 4,855 to 4,989 (the quick way in costs a little more than the old one for a one-byte decimal).  `sim/bench.js`: BASIC's 20 52,965 to 52,685 ms (`matrix` 2,160 to 1,885: the index's product); hylang's and HyForth's as they were.  The four Mandelbrots (`sdcard/bench`) as they were: 60.3 s, 62.0 s, 63.1 s and 105.0 s (their numbers stay in the callers' own small ways).
+
+Room: the numbers library's first bank 15,533 to 16,175 bytes (209 free), its second and the math library's as they were; BASIC's first bank 11,748 to 12,161, its fourth 14,483 to 14,496, its RAM 100 bytes more (to `$26D4`); numbers.fl 8,952 to 9,185 bytes, and 1,031 more of BSS.
+
+Checked: the numbers library's test, BASIC's (`basic`, `bsuite`, `bdivs`), HyForth's (`fnumbers`, `fnumquick`; `fnumxcheck.js --base` on 5d28167c's numbers.fl, seeds 1, 2: 0 lines different), and a new random test, `sim/tools/callxcheck.js`: BASIC's and hylang's `+ - * /` and order over operands of every size and kind (integers of 0-100 bytes and the edges of 7-64 bits, fixed decimals, fractions, complex numbers), every result's bytes and error compared with another build's (5d28167c, then b2403e41: 11 seeds, about 2,000 pairs, 0 lines different); then the whole suite.
