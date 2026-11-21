@@ -123,6 +123,8 @@ static void __fastcall__ took (unsigned char k)
 ** HOUSE.md's reading and clues): a sheet ("sheet": paper, parchment; its number in sheet_n), and a point that draws ("draw":
 ** charcoal, a pencil, chalk) or a quill and ink: 1, or 0 */
 static unsigned sheet_n;
+#pragma bss-name (push, "SW16RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
+                                                **   the main RAM's room, 2026-11-21) */
 static unsigned char copy_with (void)
 {
     static unsigned i, j;
@@ -148,6 +150,7 @@ static unsigned char copy_with (void)
     }
     return sheet_n && ((has & 2) || (has & 12) == 12);
 }
+#pragma bss-name (pop)
 
 /* The hub's ireq, IO_PUZZLE's, answered (but its state, the caller's): its verb's rule for the things named looked
 ** for, by their kinds, and done (its result PZ_*, x the rule); 1 if what lies about has changed (a thing put) */

@@ -733,6 +733,8 @@ unsigned char __fastcall__ s_felt_stop (unsigned char h)
 ** or the game ending (the senses may be gone), not asked: what the character saw lit (T_VIS), or a room's own light,
 ** as before.  The hub's header in the window after */
 static unsigned char __fastcall__ ask_look (unsigned char kind);
+#pragma bss-name (push, "SW45RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
+                                                **   the main RAM's room, 2026-11-21) */
 unsigned char __fastcall__ s_unlit_at (unsigned char sn, unsigned x, unsigned y)
 {
     static unsigned wx, wy;
@@ -760,6 +762,7 @@ unsigned char __fastcall__ s_unlit_at (unsigned char sn, unsigned x, unsigned y)
     HUB->look.ch = ch;
     return r;
 }
+#pragma bss-name (pop)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -2708,6 +2711,8 @@ static unsigned char __fastcall__ btest (signed char steps)
 ** that chunk drawn on the map it carries, and the walk not in the dark (light to read it by), BEAR_MAP steps the easier
 ** (HOUSE.md's travel: drawn at a marginal failure half that, at a critical failure none) */
 #define BEAR_MAP        4
+#pragma bss-name (push, "SW52RODATA")          /* (familiar's, s_bearings' and s_bearings_off's locals their part's own:
+                                                **   no part swapped in while they run; the main RAM's room, 2026-11-21) */
 static signed char __fastcall__ familiar (unsigned char sn, unsigned x, unsigned y)
 {
     static unsigned char n;
@@ -2816,6 +2821,7 @@ void __fastcall__ s_bearings_off (unsigned feet)
         event (E_BEARING, 0, k);
     }
 }
+#pragma bss-name (pop)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
