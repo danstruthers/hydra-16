@@ -451,9 +451,11 @@ pr_bname:
             cpx         #>BUILTIN2
             tax
             bcs         :+
-            jmp         bi_name
+            FARN        8, bi_name
+            rts
 :
-            jmp         bi_name2
+            FARN        8, bi_name2
+            rts
 
 ; The name a character (.A) prints by.  OUT: C = 0, hq = its entry in cn_table, .X = its name's length; C = 1 if
 ; it has none (.A kept)

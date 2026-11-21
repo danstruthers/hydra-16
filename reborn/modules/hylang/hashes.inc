@@ -1823,7 +1823,7 @@ h_arg:
             LDAX        s_hfirst
             jsr         out_text
             ldx         bi_n
-            FARN        2, bi_name
+            FARN        8, bi_name
             LDAX        s_hmust
             jsr         out_text
             jsr         h_end_msg

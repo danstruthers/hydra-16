@@ -62,7 +62,7 @@ nb_int0:
             lda         #$27                                ; ('name''s ...)
             jsr         out_byte
             ldx         bi_n
-            FARN        2, bi_name
+            FARN        8, bi_name
             LDAX        s_ints
             jsr         out_text
 @words:

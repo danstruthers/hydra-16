@@ -136,19 +136,8 @@
   ?((neg? a) (- (floor (- 1/2 a))) (floor (+ a 1/2)))
 })
 
-; div and mod: the quotient rounded down (toward minus infinity, as mod has it), so (+ (* b (div a b)) (mod a b)) is a
-(fun {div a b} ?{
-  (and (num? a) (num? b))
-  (floor (/ a b))
-  (error "Cannot perform 'div' on non-numbers")
-})
-
-(fun {mod a b} ?{
-  (and (num? a) (num? b))
-  (- a (* b (floor (/ a b))))
-  (error "Cannot perform 'mod' on non-numbers")
-})
-
+; div and mod are built in (with quot and rem): the quotient rounded down (toward minus infinity, as mod has it), so
+; (+ (* b (div a b)) (mod a b)) is a
 :(% mod)
 
 (fun {divmod a b} ?{

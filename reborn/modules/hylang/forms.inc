@@ -1880,7 +1880,7 @@ walk:
             lda         #$27
             jsr         out_byte
             ldx         bi_n
-            FARN        2, bi_name
+            FARN        8, bi_name
             ldx         wk_op
             lda         wk_what_lo,x
             pha

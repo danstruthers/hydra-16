@@ -7,7 +7,8 @@
 ; machine through it.
 ;   An ordinary built-in's code gets its values at argp (cn of them, on the stack: roots), ee the caller's scope;
 ; it gives back ex, or C = 1 if there's no room.  A special form's (BF_SPECIAL: forms.inc) and one that runs the
-; machine (BF_MACHINE) are jumped to.
+; machine (BF_MACHINE) are jumped to.  Their names, the second table and the code that reads them are in the eighth
+; bank (bi_bind, bi_xinfo, bi_name, bi_name2: FARN 8).
 
 ANY             = 255           ; (The most a built-in takes: any number)
 B2              = 1             ; (Its code in the second bank, the third, the fourth or the fifth: BF_BANK's)
@@ -28,7 +29,7 @@ BI_N            .set 0
             .ident(.sprintf("bi_fl_%d", BI_N)) = flags
             .ident(.sprintf("bi_cd_%d", BI_N)) = code
             .pushseg
-            .segment "RODATA2"
+            .segment "RODATA8"
             .ident(.sprintf("bi_nm_%d", BI_N)): .byte name, 0
             .popseg
 BI_N        .set BI_N + 1
@@ -290,7 +291,6 @@ BIN_MAP         = BI_N          ; (map to product: forms.inc's walks, W_MAP on; 
             BI          "min", 1, ANY, B2, bq_min
             BI          "max", 1, ANY, B2, bq_max
             BI          "sysinfo", 0, 0, B5, bi_sysinfo     ; (The Hydra's: hydra.inc)
-            BI          "mods", 0, 0, B5, bi_mods
             BI          "errstr", 1, 1, B5, bi_errstr
             BI          "ps", 0, 0, B5, bi_ps
             BI          "task-info", 1, 1, B5, bi_task_info
@@ -329,9 +329,10 @@ BIN_SYS         = BI_N          ; (The sys- functions': hysys.inc's sys_lazy)
             BI          "buffer-get", 2, 2, B6, bi_buffer_get
 BIN_BUFPUT      = BI_N
             BI          "buffer-put", 3, 3, B6, bi_buffer_put
-            BI          "buffer-fill", 2, 4, B6, bi_buffer_fill
-            BI          "buffer-copy", 3, 5, B6, bi_buffer_copy
-            BI          "read-buffer", 2, 4, B6, bi_read_buffer
+            BI          "quot", 2, 2, B3, bi_quot           ; (Whole numbers' division: numbi.inc's)
+            BI          "rem", 2, 2, B3, bi_rem
+            BI          "div", 2, 2, B3, bi_idiv
+            BI          "mod", 2, 2, B3, bi_imod
 .assert     BI_N <= 256, error, "builtins.inc: the first table's 256 built-ins at most"
 BI_N        .set 256        ; (The second table: ordinary built-ins in a bank, BUILTIN2 and up)
             BI          "base", 0, 1, B3, bi_base              ; (The numbers': numbi.inc's)
@@ -347,6 +348,10 @@ BI_N        .set 256        ; (The second table: ordinary built-ins in a bank, B
             BI          "pi", 0, 0, B3, bi_pi
             BI          "digits", 0, 1, B3, bi_digits
             BI          "pow", 2, 2, B3, bi_pow
+            BI          "mods", 0, 0, B5, bi_mods
+            BI          "buffer-fill", 2, 4, B6, bi_buffer_fill  ; (Moved from the first table for quot, rem, div, mod)
+            BI          "buffer-copy", 3, 5, B6, bi_buffer_copy
+            BI          "read-buffer", 2, 4, B6, bi_read_buffer
 
 BI_COUNT        = BI_N
 .repeat 256, I                                              ; (The first table's unused entries: none)
@@ -361,12 +366,12 @@ BI_COUNT        = BI_N
 .assert     BI_COUNT <= 512, error, "builtins.inc: 512 built-ins at most (BUILTIN0 + 2 * n, below IMM_PAGES)"
 .if BI_COUNT > 256
 BI_FIRST        = 256           ; (The first table's: its entries here, and in the bytecode machine's bank; the second's
-.else                           ;   in the second bank, bi_xinfo's)
+.else                           ;   in the eighth bank, bi_xinfo's)
 BI_FIRST        = BI_COUNT
 .endif
 
 .rodata
-; The table: each built-in's least and most arguments, flags, code (the first 256's: the second table's in the second
+; The table: each built-in's least and most arguments, flags, code (the first 256's: the second table's in the eighth
 ; bank, bi_xinfo's)
 bi_min:
 .repeat BI_FIRST, I
@@ -389,7 +394,7 @@ bi_hi:
             .byte       >.ident(.sprintf("bi_cd_%d", I))
 .endrep
 
-.segment "RODATA2"
+.segment "RODATA8"
 ; The second table's: built-in 256 + I's least and most arguments, flags, code
 .if BI_COUNT > 256
 bi_xmin:
@@ -423,7 +428,7 @@ bi_names_hi:
             .byte       >.ident(.sprintf("bi_nm_%d", I))
 .endrep
 
-.segment "CODE2"
+.segment "CODE8"
 ; Each built-in bound to its name (as its global value): the first table's (bi_t2 0), the second's (bi_t2 1).
 ; OUT: C = 1 if there's no room
 bi_bind:

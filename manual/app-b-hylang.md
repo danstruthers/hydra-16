@@ -178,6 +178,8 @@ hylang> (elem? 8 l)
 | Function | Gives |
 |---|---|
 | `(+ x ...)`, `(- x ...)`, `(* x ...)`, `(/ x ...)` | Sum, difference, product, quotient (exact) |
+| `(quot a b)`, `(rem a b)` | Whole-number division of integers, rounding toward zero; its remainder (the sign of *a*), as BASIC's `` and `MOD` and Forth's `/` and `mod` |
+| `(div a b)`, `(mod a b)` | Division rounding down (toward minus infinity); its remainder (the sign of *b*). Any real numbers: the whole number below *a*/*b* |
 | `(1+ x)`, `(1- x)`, `(abs x)` | Plus one; minus one; its size (a complex number's distance from 0) |
 | `(truncate x)` | The whole part (toward zero) |
 | `(to-fixed x [places])`, `(to-rational x)` | As a fixed decimal; as a fraction |
@@ -208,6 +210,12 @@ hylang> (to-fixed (/ 22 7) 4)
 => 3.1428
 hylang> (truncate 22/7)
 => 3
+hylang> (list (quot -7 2) (rem -7 2) (div -7 2) (mod -7 2))
+=> {-3 -1 -4 1}
+hylang> (quot (pow 10 20) 7)
+=> 14285714285714285714
+hylang> (quot 7.5 2)
+=> Error: Cannot perform 'quot' on non-integers
 hylang> (* 1.5 4)
 => 6
 hylang> (pow 2 100)
@@ -514,7 +522,7 @@ hylang's library (`globals`, loaded as it starts) adds:
 | `math.pi` `math.e` `math.phi` `math.gamma` | Constants, to many places |
 | `(square n)`, `(cube n)`, `(recip n)` (`inverse`) | *n*², *n*³, 1/*n* |
 | `(floor a)` `(ceil a)` `(round a)` `(trunc a)` | Whole numbers |
-| `(div a b)`, `(mod a b)`, `(divmod a b)`, `(fdiv a b)` | Division, rounding down |
+| `(divmod a b)`, `(fdiv a b)` | Division, rounding down: a list of `div` and `mod` (B.4); a fixed decimal |
 | `(odd? n)` `(even? n)` `(positive? a)` `(negative? a)` | Tests |
 | `(xor a b)`, `(<> a b)` (`!=`) | Logic; not equal |
 | `(=0 n)` `(=1 n)` `(>0 n)` `(<0 n)` `(>=0 n)` `(<=0 n)` `(!=0 n)` `(!=1 n)` | Comparisons with 0 and 1 |
@@ -541,8 +549,8 @@ hylang> (square 12)
 => 144
 hylang> (round 7/2)
 => 4
-hylang> (mod 17 5)
-=> 2
+hylang> (divmod 17 5)
+=> {3 2}
 hylang> (even? 10)
 => T
 hylang> (third {10 20 30})

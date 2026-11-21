@@ -1177,9 +1177,9 @@ ev_bpartial:
 bi_jump:
             jmp         (ev_jv)
 
-; bx_min ... = the second table's built-in .X's entry (builtins.inc's bi_xinfo, in the second bank).  Keeps .A, .X, .Y
+; bx_min ... = the second table's built-in .X's entry (builtins.inc's bi_xinfo, in the eighth bank).  Keeps .A, .X, .Y
 ev_xinfo:
-            FARN        2, bi_xinfo
+            FARN        8, bi_xinfo
             rts
 
 ; A built-in of the second table (cf: BUILTIN2 and up; .A its high byte) applied to its values: ev_bapply's way, for
@@ -1998,7 +1998,7 @@ ev_apply_values:
             lda         #$27
             jsr         out_byte
             ldx         bi_n
-            FARN        2, bi_name
+            FARN        8, bi_name
             LDAX        s_special
             jsr         msg_out
             jmp         ev_err_end_args
@@ -2549,10 +2549,10 @@ ev_toomany:
             ldx         bi_n
             lda         bi_t2
             bne         :+
-            FARN        2, bi_name
+            FARN        8, bi_name
             bra         :++
 :
-            FARN        2, bi_name2
+            FARN        8, bi_name2
 :
             LDAX        s_btakes
             jsr         msg_out

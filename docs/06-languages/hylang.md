@@ -104,8 +104,22 @@ hylang> (base "d")
 ```
 
 `hex`, `bin`, the bit functions (`bit-and`, `shl` ...), `lo`, `hi` and `word` are for bytes and words.  Complex numbers,
-`random`, `truncate`, `to-fixed`, `div` and `mod` are there too, and `(number-bytes n)` and `(bytes-number b)` give a
-number's bytes in the stored format every language of the Hydra shares.
+`random`, `truncate` and `to-fixed` are there too, and `(number-bytes n)` and `(bytes-number b)` give a number's bytes in
+the stored format every language of the Hydra shares.
+
+**Whole-number division** is built in: `(quot a b)` divides two integers rounding toward zero and `(rem a b)` gives its
+remainder, with the sign of *a* (BASIC's `` and `MOD`, Forth's `/` and `mod`); `(div a b)` rounds down instead and `(mod a b)`
+gives that remainder, with the sign of *b*.  Fixnums are divided where they're met, larger integers by the numbers
+library; `quot` and `rem` of anything but integers are an error (`Cannot perform 'quot' on non-integers`), as a divisor
+of 0 is (`Division by zero.`), while `div` and `mod` take any real numbers (the whole number below *a*/*b*, and *a* less
+*b* times it):
+
+```
+hylang> (list (quot -7 2) (rem -7 2) (div -7 2) (mod -7 2))
+=> {-3 -1 -4 1}
+hylang> (list (quot 100000 -7) (div 7.5 2) (mod 7.5 2))
+=> {-14285 3 1.5}
+```
 
 **The math functions**, `sqrt`, `exp`, `log`, `sin`, `cos`, `tan`, `atan`, `(pi)` and `pow` of any real power, are exact
 when their answer is, and otherwise a fixed decimal of `(digits)` significant digits (12 at the start; `(digits n)`

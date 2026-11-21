@@ -291,7 +291,7 @@ y_fnerr:
             lda         #$27
             jsr         out_byte
             ldx         bi_n
-            FARN        2, bi_name
+            FARN        8, bi_name
             plx
             pla
             jsr         out_text

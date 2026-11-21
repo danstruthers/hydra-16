@@ -327,6 +327,20 @@ module.exports = {
         'hylang> (hy-loop 30000)\n:interrupt\n=> :done\nhylang> exit\n=> exit\n\n%'],          // (rc had the Ctrl-C too: a new line)
     },
     {
+      name: 'hyquot', what: 'hylang\'s quot and rem (whole numbers\' division toward 0, the remainder a\'s sign) and div and mod (rounded down, built in since: as globals.hl\'s were): tests/hyhydra/quot.hl, every pair of 52 values of every kind (fixnums of both signs, 0, a fixnum\'s edges -16384 and 16383, integers past one, big ones, fixed decimals, rationals, complex numbers, non-numbers): quot and rem against truncate of / and a - b * it, div and mod against the old definitions (values, types, error messages and codes); the errors (non-integers, a divisor of 0); results past a fixnum; called from a compiled function and partially applied',
+      init: 't_rc', cycles: 2400e6,
+      get machine() { return { sd: hylangCard(this.name), input: 'ācd /sd/0; hylang quot.hl; echo status $status\r' }; },
+      expect: ['pairs 2704 bad 0\n',
+        'quot errors {:error "Error: Cannot perform \'quot\' on non-integers"} {:error "Error: Cannot perform \'rem\' on non-integers"} {:error "Error: Division by zero."} {:error "Error: Division by zero."}\n',
+        'div errors {:error "Error: Cannot perform \'div\' on non-numbers"} {:error "Error: Cannot perform \'div\' on non-numbers"} {:error "Error: Cannot perform \'mod\' on non-numbers"} {:error "Error: Cannot perform \'mod\' on non-numbers"} {:error "Error: Division by zero."} {:error "Error: \'truncate\' expects a real number"} {:error "Error: \'truncate\' expects a real number"}\n',
+        'codes T T T\n',
+        'signs {3 1 -3 -1 -3 1 3 -1}\n', 'floor {3 1 -4 1 -4 -1 3 -1}\n',
+        'edges {16384 16384 0 -16383 -16384 -1 -2 -1}\n',
+        'past {14285 -5 -14286 2 -142857142857142857142857142857 1 -142857142857142857142857142858 -6}\n',
+        'library {{3 1} {-4 1} 2 T T 3 1.5 1/2}\n',
+        'compiled {-142 6 -143 -1} {450 0 450 0} {-450 0 -450 0} 14\n', 'status :ok\nstatus\n%'],
+    },
+    {
       name: 'hysh', what: 'hylang as the shell (the plan\'s phase 12: hylang -l, login.hl, profile.hl, shell.hl): the rc test\'s lines that stand alone, each an rc line at hylang\'s prompt (rc -c), as at rc\'s; hylang\'s lines by their first character; cd and the prompt; $status and status; bind and unmount in hylang\'s namespace; a usage; & and $apid; Ctrl-C to cat, rc\'s; exit',
       init: 't_rc', cycles: 400e6,
       machine: {

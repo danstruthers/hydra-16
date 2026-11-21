@@ -1,9 +1,9 @@
 ; ****************************************************************************
 ; numbi.inc - hylang's number built-ins, in its third bank, as danlang's: + - * / (fixnums first, the rest by the
-; numbers library: numlib.inc), abs, rational.n, rational.d, to-rational, to-fixed, truncate, complex, val, fib,
-; random, base, number-bytes, bytes-number; and what the other banks call: a number's sign, whole value and order,
-; range, to-str in a base, format's {base}, the four bytes of the system's calls.  Each built-in gets its values at
-; argp (cn of them) and gives back ex (C = 1 if there's no room).
+; numbers library: numlib.inc), quot, rem, div and mod (the same way), abs, rational.n, rational.d, to-rational,
+; to-fixed, truncate, complex, val, fib, random, base, number-bytes, bytes-number; and what the other banks call: a
+; number's sign, whole value and order, range, to-str in a base, format's {base}, the four bytes of the system's calls.
+; Each built-in gets its values at argp (cn of them) and gives back ex (C = 1 if there's no room).
 
 .segment "CODE3"
 
@@ -447,6 +447,397 @@ nm_neg1:
             ldx         ex + 1
             jsr         nl_one
             NLCALL      NUM_NEG
+            rts
+
+; ---- quot, rem, div, mod
+
+NQ_REM          = 1             ; (nq_mode: the remainder, not the quotient)
+NQ_FLOOR        = 2             ; (Rounded down, not toward 0: div's and mod's)
+
+; (quot a b), (rem a b): two integers' quotient rounded toward 0, and its remainder (a's sign: a - b * it).  (div a b),
+; (mod a b): two numbers' quotient rounded down (toward minus infinity), and its remainder (b's sign), as globals.hl's
+; were: the floor of a / b, and a - b * it.  Two fixnums here (when the answer is one); other integers by the library's
+; IDIV (div's and mod's one less, and b more, when the remainder isn't 0 and its sign isn't b's); div's and mod's other
+; numbers by DIV and FLOOR (mod's then MUL and SUB)
+bi_quot:
+            lda         #0
+            bra         nq_go
+bi_rem:
+            lda         #NQ_REM
+            bra         nq_go
+bi_idiv:
+            lda         #NQ_FLOOR
+            bra         nq_go
+bi_imod:
+            lda         #NQ_FLOOR | NQ_REM
+nq_go:
+            sta         nq_mode
+            lda         (argp)                              ; (Two fixnums: here)
+            ldy         #2
+            and         (argp),y
+            lsr
+            bcs         :+
+            jmp         nq_general
+:
+            lda         (argp),y                            ; (|b|, nm_n; its sign, nq_sb's bit 7)
+            pha
+            iny
+            lda         (argp),y
+            tax
+            pla
+            jsr         unfix
+            sta         nm_n
+            stx         nm_n + 1
+            stx         nq_sb
+            ora         nm_n + 1
+            bne         :+
+            LDAX        s_divzero                           ; (By 0)
+            jmp         n_error
+:
+            bit         nq_sb
+            bpl         :+
+            sec
+            lda         #0
+            sbc         nm_n
+            sta         nm_n
+            lda         #0
+            sbc         nm_n + 1
+            sta         nm_n + 1
+:
+            ldy         #1                                  ; (|a|, nm_acc: 16384 at most; its sign, nq_sa's)
+            lda         (argp),y
+            tax
+            lda         (argp)
+            jsr         unfix
+            sta         nm_acc
+            stx         nm_acc + 1
+            stx         nq_sa
+            txa
+            bpl         :+
+            jsr         nm_negate
+:
+            ldx         #16                                 ; (|a| / |b|: the quotient nm_acc, the remainder nm_m)
+            lda         nm_acc + 1                          ; (|a| below 256: its 8 bits)
+            bne         :+
+            lda         nm_acc
+            sta         nm_acc + 1
+            stz         nm_acc
+            ldx         #8
+:
+            stz         nm_m + 1
+            lda         nm_n + 1
+            bne         @wide
+            lda         #0                                  ; (|b| below 256: the remainder in .A)
+@bit8:
+            asl         nm_acc
+            rol         nm_acc + 1
+            rol
+            bcs         :+
+            cmp         nm_n
+            bcc         @no8
+:
+            sbc         nm_n
+            inc         nm_acc
+@no8:
+            dex
+            bne         @bit8
+            sta         nm_m
+            bra         @divided
+@wide:
+            stz         nm_m
+@bit:
+            asl         nm_acc
+            rol         nm_acc + 1
+            rol         nm_m
+            rol         nm_m + 1
+            sec
+            lda         nm_m
+            sbc         nm_n
+            tay
+            lda         nm_m + 1
+            sbc         nm_n + 1
+            bcc         @no
+            sta         nm_m + 1
+            sty         nm_m
+            inc         nm_acc
+@no:
+            dex
+            bne         @bit
+@divided:
+            bit         nq_sa                               ; (The remainder: a's sign)
+            bpl         :+
+            sec
+            lda         #0
+            sbc         nm_m
+            sta         nm_m
+            lda         #0
+            sbc         nm_m + 1
+            sta         nm_m + 1
+:
+            lda         nq_sa                               ; (The quotient: below 0 if the signs differ)
+            eor         nq_sb
+            bpl         @made
+            jsr         nm_negate
+            lda         nq_mode                             ; (Rounded down, a remainder: one less, and b more)
+            and         #NQ_FLOOR
+            beq         @made
+            lda         nm_m
+            ora         nm_m + 1
+            beq         @made
+            lda         nm_acc
+            bne         :+
+            dec         nm_acc + 1
+:
+            dec         nm_acc
+            bit         nq_sb
+            bmi         @less
+            clc
+            lda         nm_m
+            adc         nm_n
+            sta         nm_m
+            lda         nm_m + 1
+            adc         nm_n + 1
+            sta         nm_m + 1
+            bra         @made
+@less:
+            sec
+            lda         nm_m
+            sbc         nm_n
+            sta         nm_m
+            lda         nm_m + 1
+            sbc         nm_n + 1
+            sta         nm_m + 1
+@made:
+            lda         nq_mode
+            lsr
+            lda         nm_acc
+            ldx         nm_acc + 1
+            bcc         :+
+            lda         nm_m
+            ldx         nm_m + 1
+:
+            jsr         fix_make
+            bcs         nq_general                          ; (Past a fixnum: the library's)
+            MOVW        ex, hv
+            clc
+            rts
+
+; Not two fixnums, or the answer past one: each a number (quot's and rem's, an integer), then by the library
+nq_general:
+            stz         nq_int                              ; (Not 0: one isn't an integer)
+            ldy         #2
+@kind:
+            lda         (argp),y
+            pha
+            iny
+            lda         (argp),y
+            tax
+            pla
+            jsr         n_kind
+            cmp         #NK_NOT
+            beq         @not
+            cmp         #NK_INT
+            beq         :+
+            inc         nq_int
+:
+            dey
+            dey
+            dey
+            bpl         @kind
+            lda         nq_int
+            beq         nq_ints
+            lda         nq_mode
+            and         #NQ_FLOOR
+            beq         @notint
+            jmp         nq_real
+@not:
+            lda         nq_mode                             ; ("Cannot perform 'div' on non-numbers")
+            and         #NQ_FLOOR
+            beq         @notint
+            LDAX        s_nqnum
+            bra         nq_error
+@notint:
+            LDAX        s_nqint                             ; ("Cannot perform 'quot' on non-integers")
+; ex = the error "Cannot perform 'name'", then the text .A, .X
+nq_error:
+            pha
+            phx
+            jsr         nu_begin
+            LDAX        s_nqcannot
+            jsr         out_text
+            lda         nq_mode
+            asl
+            tax
+            ldy         nq_names + 1,x
+            lda         nq_names,x
+            phy
+            plx
+            jsr         out_text
+            plx
+            pla
+            jsr         out_text
+            jmp         nu_end
+
+; Two integers, by IDIV: the quotient at NL_A, the remainder at NL_B
+nq_ints:
+            jsr         nq_two
+            lda         NL_B                                ; (b's sign: nq_sb's bit 7)
+            jsr         nq_neg
+            ror         nq_sb
+            LDR         r5, NL_B
+            LDR         r6, NL_ROOM
+            NLCALL      NUM_IDIV
+            bcc         :+
+            jmp         nl_error
+:
+            sta         nl_len
+            stx         nl_len + 1
+            lda         nq_mode
+            and         #NQ_FLOOR
+            beq         @out
+            lda         NL_B                                ; (Rounded down: a remainder, its sign not b's?)
+            beq         @out
+            jsr         nq_neg
+            lda         #0
+            ror
+            eor         nq_sb
+            bmi         @adjust
+@out:
+            lda         nq_mode
+            lsr
+            bcs         @rem
+            lda         nl_len
+            ldx         nl_len + 1
+            clc
+            jmp         nl_result_a
+@rem:
+            lda         r6
+            ldx         r6 + 1
+            clc
+@resb:
+            bcc         :+
+            jmp         nl_error
+:
+            pha
+            LDR         nd, NL_B
+            pla
+            jmp         nl_ex
+@adjust:
+            lda         nq_mode
+            lsr
+            bcs         @mod
+            lda         #1                                  ; (div's: one less)
+            sta         NL_R
+            LDR         r0, NL_A
+            LDR         r1, NL_R
+            LDR         r2, NL_A
+            LDR         r3, NL_ROOM
+            NLCALL      NUM_SUB
+            jmp         nl_result_a
+@mod:
+            LDR         nd, NL_R                            ; (mod's: b more)
+            jsr         nq_arg1
+            jsr         nl_put
+            LDR         r0, NL_B
+            LDR         r1, NL_R
+            LDR         r2, NL_B
+            LDR         r3, NL_ROOM
+            NLCALL      NUM_ADD
+            jmp         @resb
+
+; div's and mod's of other numbers, as globals.hl's were: the floor of a / b (its error, a complex quotient's, floor's
+; "'truncate' expects a real number"), and a - b * it
+nq_real:
+            jsr         nq_two
+            NLCALL      NUM_DIV
+            bcc         :+
+            jmp         nl_error
+:
+            LDR         r0, NL_A
+            LDR         r2, NL_R
+            LDR         r3, NL_ROOM
+            NLCALL      NUM_FLOOR
+            bcc         @floor
+            cmp         #NE_REAL
+            beq         :+
+            jmp         nl_error
+:
+            jsr         nu_begin
+            lda         #$27
+            jsr         out_byte
+            LDAX        n_trunc
+            jsr         out_text
+            LDAX        s_expreal
+            jsr         out_text
+            jmp         nu_end
+@floor:
+            sta         nl_len
+            stx         nl_len + 1
+            lda         nq_mode
+            lsr
+            bcs         :+
+            lda         nl_len
+            ldx         nl_len + 1
+            clc
+            jmp         nl_result
+:
+            LDR         r0, NL_B                            ; (mod's: b * it, then a less that)
+            LDR         r1, NL_R
+            LDR         r2, NL_R
+            LDR         r3, NL_ROOM
+            NLCALL      NUM_MUL
+            bcc         :+
+            jmp         nl_error
+:
+            LDR         nd, NL_A
+            ldy         #1
+            lda         (argp),y
+            tax
+            lda         (argp)
+            jsr         nl_put
+            LDR         r0, NL_A
+            LDR         r1, NL_R
+            LDR         r2, NL_R
+            LDR         r3, NL_ROOM
+            NLCALL      NUM_SUB
+            jmp         nl_result
+
+; The two arguments staged: a at NL_A, b at NL_B (nl_two's: r0, r1; r2 = NL_A, r3 = NL_ROOM)
+nq_two:
+            jsr         nq_arg1
+            sta         nl_w
+            stx         nl_w + 1
+            ldy         #1
+            lda         (argp),y
+            tax
+            lda         (argp)
+            jmp         nl_two
+
+; .A, .X = the second argument
+nq_arg1:
+            ldy         #3
+            lda         (argp),y
+            tax
+            dey
+            lda         (argp),y
+            rts
+
+; IN: .A = an integer's tag (its first byte in the stored format).  OUT: C = 1 if it's below 0
+nq_neg:
+            cmp         #NT_POS
+            bcs         :+
+            cmp         #$40                                ; (-64 to 63: $40 to $7F below 0)
+            rts
+:
+            cmp         #NT_LONG_NEG
+            beq         @neg
+            and         #$F0
+            cmp         #NT_NEG
+            beq         @neg
+            clc
+            rts
+@neg:
+            sec
             rts
 
 ; ---- Conversions
@@ -1830,6 +2221,10 @@ n_x:        .res        2
 n_t:        .res        2                                   ; (A count, a part)
 n_c:        .res        1                                   ; (A byte; range's direction)
 n_xl:       .res        2                                   ; (range's x: its bytes' count)
+nq_mode:    .res        1                                   ; (quot's 0, rem's 1, div's 2, mod's 3: NQ_*)
+nq_sa:      .res        1                                   ; (Bit 7: a below 0; b below 0; not 0, one isn't an integer)
+nq_sb:      .res        1
+nq_int:     .res        1
 
 .segment "RODATA3"
 mf_lo:      .lobytes    MATH_SQRT, MATH_EXP, MATH_LOG, MATH_ATAN, MATH_TRIG, MATH_TRIG, MATH_TRIG, MATH_PI, MATH_RPOW, MATH_DIGITS, MATH_ABS
@@ -1892,5 +2287,13 @@ s_bnbad:    .byte       "'bytes-number': not a number in the stored format", 0
 s_fmtbase:  .byte       "'format': Invalid base specifier ", 0
 s_fmtnum1:  .byte       "'format's {", 0
 s_fmtnum2:  .byte       "} is a base, for a number", 0
+nq_names:   .word       n_quot, n_rem, n_div, n_mod
+n_quot:     .byte       "quot", 0
+n_rem:      .byte       "rem", 0
+n_div:      .byte       "div", 0
+n_mod:      .byte       "mod", 0
+s_nqcannot: .byte       "Cannot perform '", 0
+s_nqint:    .byte       "' on non-integers", 0
+s_nqnum:    .byte       "' on non-numbers", 0
 
 .segment "CODE3"

@@ -129,7 +129,7 @@ s_arg:
             lda         #$27
             jsr         out_byte
             ldx         bi_n
-            FARN        2, bi_name
+            FARN        8, bi_name
             LDAX        s_sexpects
             jsr         out_text
             jsr         h_end_msg
@@ -165,7 +165,7 @@ s_whole:
             lda         #$27
             jsr         out_byte
             ldx         bi_n
-            FARN        2, bi_name
+            FARN        8, bi_name
             LDAX        s_swhole1
             jsr         out_text
             lda         s_w
@@ -220,7 +220,7 @@ s_error_fn:
             lda         #$27
             jsr         out_byte
             ldx         bi_n
-            FARN        2, bi_name
+            FARN        8, bi_name
             lda         #$27
             jsr         out_byte
             plx
@@ -631,7 +631,7 @@ bi_str_join:
             lda         #$27
             jsr         out_byte
             ldx         bi_n
-            FARN        2, bi_name
+            FARN        8, bi_name
             LDAX        s_sqexpr
             jsr         out_text
             jsr         h_end_msg

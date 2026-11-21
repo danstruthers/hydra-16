@@ -547,7 +547,7 @@ main:
             beq         @init
             jsr         ev_syms
             bcs         @noroom
-            FARN        2, bi_bind
+            FARN        8, bi_bind
             bcs         @noroom
             FARN        5, y_std
             bcs         @noroom
