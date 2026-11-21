@@ -147,13 +147,55 @@ unsigned char __fastcall__ o_wound (harn_char* c, unsigned char loc, unsigned ch
     return w;
 }
 
+#pragma code-name (push, "OV10CODE")            /* (Overlay 10's, beside fight.c's strike and xsjump.c: overlay 1's room, the
+                                                **   rounds out, ref1, 2026-11-20) */
+/* A shock roll (harn_shock_roll's: up d6 over e) failed: 1.  Its dice the same and the generator moved on the same, a
+** number each (random's, or rand16's once the sum's over e: it can't come back under), its universal penalty and its
+** Endurance the caller's (the same each round as it lies senseless) */
+static unsigned char __fastcall__ shock_fails (unsigned char up, unsigned char e)
+{
+    static unsigned s;
+
+    if (dice_hook) {
+        return dice (up, 6) > e;                /* (A test's dice: each its own) */
+    }
+    for (s = 0; up; --up) {
+        if (s <= e) {
+            s += 1 + random (6);
+        } else {
+            rand16 ();
+        }
+    }
+    return s > e;
+}
+
 /* Knocked senseless (its shock roll failed): the rounds till c comes round, by the book's shock rolls, a round each,
-** within an hour (then anyway: the character's last shock roll the book's, in shock or not), in tenths */
-static unsigned __fastcall__ wake (harn_char* c)
+** within an hour (then anyway: the character's last shock roll the book's, in shock or not), in tenths.  Each round
+** harn_wake's (a shock roll not over Endurance wakes it, one more says whether it's in shock), its penalty and its
+** Endurance found once (ref1, 2026-11-20: an hour's 360 rounds of calls 4.5M cycles of the referee's, a line waiting) */
+unsigned __fastcall__ o_wake_out (harn_char* c)
 {
     unsigned k;
+    unsigned char up = harn_get_up (c), e = harn_end (c);
 
-    for (k = 1; k < 360 && harn_wake (c) == HARN_UNCONSCIOUS; ++k) {
+    if (c->state == HARN_UNCONSCIOUS && up > e && !dice_hook) {
+        xs_jump ((unsigned long) 359 * up);     /* (Its every shock roll failed, its least, up, over e: the hour's
+                                                **   rounds out, 359 rolls' numbers passed over, the dice after them
+                                                **   the same: xsjump.c's) */
+        k = 360;
+    } else
+    for (k = 1; k < 360; ++k) {
+        if (c->state == HARN_UNCONSCIOUS && !shock_fails (up, e)) {
+            if (shock_fails (up, e)) {
+                c->state = HARN_SHOCK;
+                c->shockhr = 5;
+            } else {
+                c->state = HARN_CONSCIOUS;
+            }
+        }
+        if (c->state != HARN_UNCONSCIOUS) {
+            break;
+        }
     }
     if (c == &pc && c->state == HARN_UNCONSCIOUS) {
         c->state = harn_shock_roll (c) ? HARN_SHOCK : HARN_CONSCIOUS;
@@ -167,7 +209,7 @@ static unsigned __fastcall__ wake (harn_char* c)
 ** round as the UI waits it out (it can't defend meanwhile) */
 unsigned __fastcall__ o_knocked_out (harn_char* c, unsigned long* o, unsigned char* f)
 {
-    unsigned w = wake (c);
+    unsigned w = o_wake_out (c);
 
     if (*o > tnow) {
         *f |= AF_AGAIN;
@@ -183,6 +225,7 @@ unsigned __fastcall__ o_knocked_out (harn_char* c, unsigned long* o, unsigned ch
     }
     return w;
 }
+#pragma code-name (pop)
 
 /* An injury told (sev HARN_KILL: a death): its effect, at e, and its words ("a serious fracture to your left thigh
 ** (S2)"), by what dealt it */
@@ -294,7 +337,7 @@ void __fastcall__ o_harm (struct req* r)
         RS_HARM_BAND (*r) = HARN_MINOR;
     }
     if (pc.state == HARN_UNCONSCIOUS) {         /* (Senseless: a shock roll a round to come round) */
-        RS_HARM_OUT (*r) = wake (&pc);
+        RS_HARM_OUT (*r) = wake_out (&pc);
     }
     if (RS_HARM_CAUSE (*r) == HC_STRUCK) {                    /* (Enough: the referee's say) */
         RS_HARM_STOP (*r) = pc.state != HARN_CONSCIOUS || RS_HARM_OUT (*r) || RS_HARM_BAND (*r) >= HARN_SERIOUS || part_levels (HARN_LOC (loc)) >= 3;

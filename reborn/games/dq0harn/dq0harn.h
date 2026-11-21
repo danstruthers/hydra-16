@@ -164,6 +164,9 @@ unsigned char __fastcall__ wound (harn_char* c, unsigned char loc, unsigned char
 void __fastcall__ wound_words (char* w, unsigned char sev, unsigned char loc, unsigned char aspect, unsigned char il,
     unsigned char by);                          /* A wound's words into w, the main RAM's ("a serious bite to your
                                                 **   right elbow (S2)"; by | BY_ITS, "to its"; sev HARN_KILL, a death's) */
+void __fastcall__ xs_jump (unsigned long n);    /* (Overlay 10's: xsjump.c) The dice stream moved on n numbers */
+unsigned __fastcall__ wake_out (harn_char* c);   /* (Overlay 10's) Knocked senseless: its tenths out, the book's
+                                                **   shock rolls a round (sheet.c's) */
 unsigned __fastcall__ knocked_out (harn_char* c, unsigned long* o, unsigned char* f);  /* Knocked senseless: the
                                                 **   tenths till it comes round, *o its time out (AF_AGAIN in *f) */
 
