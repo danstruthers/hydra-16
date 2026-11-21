@@ -1006,7 +1006,7 @@ world's answer follows.  The word is said before the world's asked, and holds wh
   twice, last of all (after the timesense), so the rest of the character's dice fall as they did; any of the six may
   come, the kobolds' clawmark too.  hmchar says them after the profile ("Tongues: common 62, khuzdul 12. Scripts: ardic
   83, delvic 83, sunglyph 83."; one with none open, "Scripts: none."); C's hmchar, hmchar.fs and hmchar.hl alike (the
-  same dice from C and HyForth; hylang's can't be seeded).  The referee keeps them (dq0harn.h's tongues), says them on
+  same dice from C and HyForth; hylang's its own: hmchar.hl -s seeds them, random-seed).  The referee keeps them (dq0harn.h's tongues), says them on
   the sheet at their ML (the line after its skills), and writes them back into the save; the account reads them and
   writes them back, and practises them (Between dungeons, below).  **Eight past its own at most** *(new, for review:
   2026-11-06, the plan's step 12)*: the book's most is six (a Save-K'nor cleric's church tongue, a second and a third
