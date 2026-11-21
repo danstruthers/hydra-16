@@ -86,6 +86,15 @@ d_idx:      .res        1
 n_cnt:      .res        1                                   ; (A count)
 si_tag:     .res        1                                   ; A small integer's result: its tag, its magnitude's
 si_n:       .res        1                                   ;   bytes after it
+qa:         .res        1                                   ; (si_mul's: a byte of x, of y; a carry, a row, a column,
+qb:         .res        1                                   ;   the product's byte, y's bytes)
+qc:         .res        1
+qi:         .res        1
+qj:         .res        1
+qk:         .res        1
+qn:         .res        1
+qs_lo:      .res        512                                 ; (q(n) = n * n / 4 rounded down, n 0 to 511: its low bytes,
+qs_hi:      .res        512                                 ;   its high; lib_init makes them)
 n_flag:     .res        1                                   ; (A flag: the math library's call; a double ...)
 minfo:      .res        ME_SIZE                             ; (MODINFO's)
 nbase:      .res        NBASE_SIZE                          ; A base string
@@ -141,6 +150,7 @@ lib_init:
             sta         nsbank
             ldx         xsave
             NCALL       NUM_INIT
+            jsr         qs_make
             stz         nst_dep
             LDR         nst_top, NS_START
             stz         nst_in
@@ -169,6 +179,42 @@ lib_init:
             lda         #<-59
             jmp         throw_a
 @rts:
+            rts
+
+; The quarter squares (qs_lo, qs_hi): q(0) = 0, q(n) = q(n - 1) + (n / 2 rounded down), the half of n - 1 rounded up
+qs_make:
+            stz         qa                                  ; (q, 16 bits: qa, qb)
+            stz         qb
+            ldy         #0                                  ; (n - 1 < 256, then its second half)
+:
+            lda         qa
+            sta         qs_lo,y
+            lda         qb
+            sta         qs_hi,y
+            tya
+            lsr         a
+            adc         qa
+            sta         qa
+            bcc         :+
+            inc         qb
+:
+            iny
+            bne         :--
+:
+            lda         qa
+            sta         qs_lo + 256,y
+            lda         qb
+            sta         qs_hi + 256,y
+            tya
+            sec                                         ; (128 more: (256 + y) / 2)
+            ror         a
+            adc         qa
+            sta         qa
+            bcc         :+
+            inc         qb
+:
+            iny
+            bne         :--
             rts
 
 ; Is minfo's name the string at w (a 0 after it)?  OUT: Z = 1 yes
@@ -736,6 +782,30 @@ mt_bin:
             jsr         nst_rep
             jmp         nst_back
 
+; As nm_bin, for ADD, SUB, MUL and DIV (n+ n- n* n/): the result written in the one below's place, not at the top's
+; end and moved down after (the library has both in its own bank before it writes it), with the same room: the room
+; after the top (r3), so an error is the same
+nm_bin2:
+            stz         n_flag
+            jsr         nst_sel
+            lda         #2
+            jsr         nst_need
+            jsr         nst_r01
+            jsr         nst_r23
+            lda         r0
+            sta         r2
+            lda         r0 + 1
+            sta         r2 + 1
+            jsr         nm_call
+            dec         nst_dep
+            dec         nst_dep
+            lda         r0
+            sta         nst_top
+            lda         r0 + 1
+            sta         nst_top + 1
+            jsr         nst_push
+            jmp         nst_back
+
 ; The numbers library's r15 pushed (nm_new; mt_new, the math library's)
 nm_new:
             stz         n_flag
@@ -1099,25 +1169,14 @@ si_add:
 @rts:
             rts
 
-; x * y: XS, XP (64 bits); the smaller magnitude the multiplier (its bits, shifted out, till it's 0), in 32 bits
-; when both are under 65536
+; x * y: XS, XP (64 bits).  Each byte pair's product by quarter squares (a b = q(a + b) - q(|a - b|), q(n) = n * n / 4
+; rounded down: qs_lo, qs_hi, made by lib_init), a row of y's bytes for each of x's but its 0s, its carry kept in qc.
+; Keeps .X
 si_mul:
+            phx
             lda         SX
             eor         SY
             sta         XS
-            jsr         si_ucmp
-            bcs         :++
-            ldy         #3                                  ; (|x| < |y|: swapped)
-:
-            lda         XA,y
-            pha
-            lda         XB,y
-            sta         XA,y
-            pla
-            sta         XB,y
-            dey
-            bpl         :-
-:
             stz         XP
             stz         XP + 1
             stz         XP + 2
@@ -1126,65 +1185,88 @@ si_mul:
             stz         XP + 5
             stz         XP + 6
             stz         XP + 7
-            stz         XR
-            stz         XR + 1
-            stz         XR + 2
-            stz         XR + 3
-            lda         XA + 2
-            ora         XA + 3
-            bne         @wide
-@n16:
-            lda         XB
-            ora         XB + 1
-            beq         @rts16
-            lsr         XB + 1
-            ror         XB
-            bcc         @s16
-            clc
-            lda         XP
-            adc         XA
-            sta         XP
-            lda         XP + 1
-            adc         XA + 1
-            sta         XP + 1
-            lda         XP + 2
-            adc         XA + 2
-            sta         XP + 2
-            lda         XP + 3
-            adc         XA + 3
-            sta         XP + 3
-@s16:
-            asl         XA
-            rol         XA + 1
-            rol         XA + 2
-            rol         XA + 3
-            bra         @n16
-@rts16:
+            ldy         #4                                  ; (y's bytes: those but its top 0s; none, 0)
+@top:
+            dey
+            bpl         :+
+            plx
             rts
-@wide:
-            lda         XB
-            ora         XB + 1
-            ora         XB + 2
-            ora         XB + 3
-            beq         @rts
-            lsr         XB + 3
-            ror         XB + 2
-            ror         XB + 1
-            ror         XB
-            bcc         @s64
+:
+            lda         XB,y
+            beq         @top
+            iny
+            sty         qn
+            stz         qi
+@row:
+            ldx         qi
+            lda         XA,x
+            beq         @next
+            sta         qa
+            stx         qk                                  ; (qk: the product's byte i + j)
+            stz         qc
+            stz         qj
+@col:
+            ldy         qj
+            lda         XB,y                                ; (b; a b's low byte, then its high, .Y)
+            sta         qb
+            sec
+            sbc         qa
+            bcs         :+
+            eor         #$FF
+            adc         #1
+:
+            tay                                             ; (|a - b|)
+            lda         qb
             clc
-.repeat 8, I
-            lda         XP + I
-            adc         XA + I
-            sta         XP + I
-.endrep
-@s64:
-            asl         XA
-.repeat 7, I
-            rol         XA + I + 1
-.endrep
-            bra         @wide
-@rts:
+            adc         qa
+            tax                                             ; (a + b: past 255, the tables' second half)
+            bcs         @hi
+            lda         qs_lo,x
+            sec
+            sbc         qs_lo,y
+            sta         qb
+            lda         qs_hi,x
+            sbc         qs_hi,y
+            bra         @got
+@hi:
+            lda         qs_lo + 256,x
+            sec
+            sbc         qs_lo,y
+            sta         qb
+            lda         qs_hi + 256,x
+            sbc         qs_hi,y
+@got:
+            tay
+            lda         qb                                  ; (The carry added, then the product's byte)
+            clc
+            adc         qc
+            bcc         :+
+            iny
+:
+            ldx         qk
+            clc
+            adc         XP,x
+            sta         XP,x
+            bcc         :+
+            iny
+:
+            sty         qc
+            inc         qk
+            inc         qj
+            lda         qj
+            cmp         qn
+            bne         @col
+            ldx         qk
+            lda         qc
+            sta         XP,x
+@next:
+            inc         qi
+            lda         qi
+            cmp         #4
+            beq         :+
+            jmp         @row
+:
+            plx
             rts
 
 ; |x| / |y| (y not 0): XA the quotient, XR the remainder.  A divisor under 256 a byte of the dividend at a time
@@ -1365,7 +1447,7 @@ nw_add:                                                     ; ( N: x y -- x+y )
             jmp         si_res2
 :
             LDR         r15, NUM_ADD
-            jmp         nm_bin
+            jmp         nm_bin2
 
             HEADER      "n-", 0
 nw_sub:
@@ -1375,7 +1457,7 @@ nw_sub:
             jmp         si_res2
 :
             LDR         r15, NUM_SUB
-            jmp         nm_bin
+            jmp         nm_bin2
 
             HEADER      "n*", 0
 nw_mul:
@@ -1385,7 +1467,7 @@ nw_mul:
             jmp         si_res2
 :
             LDR         r15, NUM_MUL
-            jmp         nm_bin
+            jmp         nm_bin2
 
             HEADER      "n/", 0
 nw_div:                                                     ; ( N: x y -- x/y ): exact (2/3), as hylang's /
@@ -1403,7 +1485,7 @@ nw_div:                                                     ; ( N: x y -- x/y ):
             jmp         si_res2
 @lib:
             LDR         r15, NUM_DIV
-            jmp         nm_bin
+            jmp         nm_bin2
 
             HEADER      "n/trunc", 0
 nw_divtrunc:                                                ; ( N: x y -- q ): x/y truncated, toward zero (n/ truncate's
