@@ -1,0 +1,40 @@
+; mandel.hl - after BBC BASIC's "FP + Strings" Mandelbrot benchmark: hylang's integers (quot and rem, rounding toward
+; zero, as mandel.bas's \ and MOD and mandel.fs's / and mod), the same picture as theirs and mandel-ex.hl's.  Its
+; fixnums are 15 bits: a product past 16383 (a * a, up to some 22,500) is the numbers library's.  hylang mandel.hl
+
+(def {zs} ".,'~=+:;*%&$OXB#@ ")
+(def {ff} 50)
+
+; The character for one point: x and y its place on the grid
+(fun {point x y} {do
+  =(cc (quot (* x 229) 100))
+  =(dd (quot (* y 416) 100))
+  =(aa cc) =(bb dd) =(ii 0) =(res NIL)
+  (while (not res) (do
+    =(qq (quot bb ff)) =(ss (rem bb ff))
+    =(tt (+ (quot (- (* aa aa) (* bb bb)) ff) cc))
+    (set! bb (+ (* 2 (+ (* aa qq) (quot (* aa ss) ff))) dd))
+    (set! aa tt)
+    =(pp (quot aa ff)) (set! qq (quot bb ff))
+    (if (>= (+ (* pp pp) (* qq qq)) 5)
+      (set! res (char-at zs ii))
+      (do (set! ii (+ ii 1)) (if (== ii 16) (set! res \space))))))
+  res})
+
+; The time, added up a row at a time ((ticks) is read in 15 bits, which wrap every 163.84 s)
+(def {tlast} 0) (def {tsecs} 0) (def {tticks} 0)
+(fun {clock} {do
+  =(now (ticks))
+  (set! tticks (+ tticks (bit-and (- now tlast) 32767)))
+  (set! tlast now)
+  (while (>= tticks 200) (do (set! tticks (- tticks 200)) (set! tsecs (+ tsecs 1))))})
+
+(print "Mandelbrot - hylang - integers + strings")
+(print "Start")
+(set! tlast (ticks))
+(each {y (range -12 13)} (do
+  (each {x (range -49 30)} (write (point x y)))
+  (print "")
+  (clock)))
+(print "Finished")
+(print (format "Time: {}.{}{} secs." tsecs (if (< tticks 20) "0" "") (quot tticks 2)))
