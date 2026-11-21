@@ -23,10 +23,10 @@ calls the second's with `C2`, which passes `.A`, `.X`, `.Y` and C).
 
 | Bank | Files | What | Used |
 | :--- | :--- | :--- | :--- |
-| 1 | `run.inc`, `main.inc`, `fn.inc`, nslib | The interpreter: its ops, calls and frames, errors' way to a handler; the top (the prompt's loop, a script, `RUN`, `CONT`); the statements' and functions' groups and their banks; the SDK's `newns` for `basic -l` | 62% |
+| 1 | `run.inc`, `main.inc`, `fn.inc`, nslib | The interpreter: its ops, calls and frames, errors' way to a handler; the top (the prompt's loop, a script, `RUN`, `CONT`); the statements' and functions' groups and their banks; the SDK's `newns` for `basic -l`; the integers' `*`, `/`, `\`, `MOD` (the quarter squares' table) | 71% |
 | 2 | `lex.inc`, `comp.inc`, `expr.inc`, `stmt.inc`, `procs.inc` | The compiler: tokens, symbols, labels and their fixups, the line table, `INCLUDE`; expressions; statements; `SUB` and `FUNCTION`, calls and their arguments | 85% |
 | 3 | `stmt3.inc`, `rec.inc`, `asm.inc`, `io.inc` | The compiler's other statements (`DIM`, `DATA`, `INPUT`, files, the console, `SYSTEM` ...); `TYPE`, fields and records' copies; `ASM`'s blocks (the asm library's assembler) and `CALL ASM`; `PRINT` (zones, `TAB`, `PRINT USING`), `INPUT`, `READ`, the console's sequences and keys, files | 88% |
-| 4 | `num.inc`, `fns4.inc`, `shell.inc`, `machine.inc`, `gfx.inc` | The numbers: the libraries' calls, the operators, the number functions, `VAL` (E notation), `STR$`; `basic -l`'s rule and its own commands; `SOUND`, `PLAY`, `SYS`, `RREG`; the graphics, as `/dev/vid/draw`'s commands | 89% |
+| 4 | `num.inc`, `fns4.inc`, `shell.inc`, `machine.inc`, `gfx.inc` | The numbers: the libraries' calls, the operators, the number functions, `VAL` (E notation), `STR$`; `basic -l`'s rule and its own commands; `SOUND`, `PLAY`, `SYS`, `RREG`; the graphics, as `/dev/vid/draw`'s commands | 88% |
 | 5 | `heap.inc`, `gc.inc`, `fns5.inc`, `sys.inc`, `prog.inc` | The heap: strings, numbers past 32 bits, arrays and records; the collector; the string functions; `DIM`, `REDIM`, `ERASE`, `MID$ =`; the errors' messages; the system's functions (`TIMER`, `ENV$`, `SHELL`, `PEEK` ...); the program's text: `LOAD`, `SAVE`, `LIST`, `EDIT`, `DELETE`, numbered lines typed | 78% |
 
 What every bank calls is in the task's RAM (`ram.inc`, the `DATA` segment): the far memory's cursors, the output's
@@ -130,7 +130,10 @@ Every number is the numbers library's (`modules/numbers`, the stored format of s
 its bank of RAM (`num.inc`): an integer that fits 32 bits stays a `VT_INT` (the operators try that first), a fixed
 decimal whose digits do a `VT_FIX` (a literal's `PUSHF`; `+`, `-`, `*`, the comparisons, `FOR`'s step and `IF` of those
 and integers worked by the interpreter as the library has them, past 31 bits the library's), any other lives in the
-heap.  The math library (`modules/math`) gives `SQR` ... `ATN` and `^` of a power that isn't whole,
+heap.  Of two `VT_INT`s the interpreter works `+`, `-`, `*` of 16-bit factors (by quarter squares), `\` and `MOD`
+itself, and `/` when the quotient is whole; a `/` that leaves a remainder goes to the library, except when `FIX` or
+`INT` follows it at once (`FIX(a / b)`, `INT(a / b)`), where the quotient toward 0 or below is made there and the
+`FN` passed by: the same integer the library's fraction would have given.  The math library (`modules/math`) gives `SQR` ... `ATN` and `^` of a power that isn't whole,
 exact when the answer is, else `DIGITS` significant digits.  `BASE` sets the library's base for `PRINT`, `STR$`,
 `VAL`, `INPUT` and `READ`, and the compiler's (`cbase`) for the program's text after it; `RUN` starts in decimal.
 

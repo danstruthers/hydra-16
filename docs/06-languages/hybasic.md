@@ -504,6 +504,6 @@ runs `/lib/basic/profile.bas` before its first prompt (a card's or the RAM disk'
 * **Numbers** are the shared `numbers` and `math` libraries', called with `XCALL`: the same as hylang's, HyForth's
   and C's.
 * **Inline assembly** is the asm library's assembler, the one `as` runs, given the blocks a line at a time.
-* **How fast**: over twenty benchmarks, 7.4 times HyForth's time and 3.2 times hylang's ([how fast](README.md#how-fast)).
+* **How fast**: over twenty benchmarks, 7.2 times HyForth's time and 3.2 times hylang's ([how fast](README.md#how-fast)).
   The first BASIC the Hydra had (Microsoft's, by way of EhyBASIC) was some 44 times HyForth's.
 * The design in full is `docs/design/basic.md`, and the plan it was built to `docs/design/plans/BASIC.md`.

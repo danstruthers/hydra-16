@@ -322,3 +322,25 @@ ROM: the numbers library 15.1K to 30.4K and the math library 15.9K to 30.5K (two
 A call of the math functions (BASIC's, cycles): the first `SIN` of a program 992,722 to 137,008 (7.2x), the first `EXP` 1,609,102 to 162,825 (9.9x); then `EXP` 1.7x, `SIN` 1.5x, `LOG` 2.0x, `SQR` 2.2x, `ATN` 2.4x, `I ^ 0.37` 1.6x, `SIN` at 30 digits 1.8x.  BASIC's single operations, cycles a pass of a `FOR` loop of 200: an empty pass 655 to 358, `X = A + B` of 1.5 and 2.25 10,517 to 1,541, `X = A * B` 10,429 to 2,170, `IF A < B` 7,020 to 1,796, `X = I \ G` 7,161 to 1,513, `FOR X = 0 TO 20 STEP 0.1` 15,827 to 1,517 (10.4x).  hylang's: `(+ 1.5 2.25)` 15,480 to 6,516, `(+ 1/3 1/7)` 20,090 to 10,317, `(/ i 3)` 12,387 to 7,045.
 
 The twenty benchmarks (`sim/bench.js`): BASIC's 68,580 ms to 55,095, 3.2 times hylang's time (geometric mean; 4.0 before), 7.4 times HyForth's (9.1); `digits` (numbers written out) 4,045 to 2,375.  hylang's and HyForth's are as they were (their benchmarks' numbers are fixnums and cells).
+
+**Later: integers' division and product in the interpreter** (November 2026, `bmath1`).  A profile of the Mandelbrot benchmark in exact numbers (`sdcard/bench/mandel-ex.bas`) found nearly all its time in `FIX(a / b)` of two integers: `NUM_DIV` (some 5,500 cycles: the operands copied in, the quotient, its gcd, a heap block for the fraction), then `NUM_TRUNCATE` (3,000), and the collections of the fractions thrown away.  Built, in `run.inc` (BASIC's first bank), every result as it was:
+
+* **`/` of two `VT_INT`s** divides there (`idiv32`, as `\` and `MOD` do).  No remainder: the quotient, an integer, as the library gives it.  A remainder, and `FN FIX` or `FN INT` the next op (`FIX(a / b)`, `INT(a / b)`): the quotient toward 0, or 1 less when the signs differ (toward minus infinity), and that `FN` passed by.  No compiler change: the op after `DIV` is read at run time, so a jump to the `FN` from elsewhere is as it was.  Anything else (a fraction kept, a divisor of 0 and its error, -2^31 / -1, any value not a `VT_INT`) goes to the library as before.
+* **`*` of two 16-bit integers** by quarter squares: a byte pair's product q(a + b) - q(|a - b|) from a table of q(x) = x * x / 4 (511 entries, low and high bytes: 1,022 bytes), a pair with a 0 byte passed by, in the first bank (the old shift-and-add `mul16` was in the fourth, called through `FARN`), its range test inline.
+* **`idiv32`** quicker: a divisor below 128 a byte at a time with its 8 steps unrolled (the quotient's bits rolled in as the dividend's go out), a 16-bit divisor with a 16-bit remainder, the dividend's top bytes of 0 passed by 8 steps at a time.
+
+Checked: BASIC's tests and the numbers library's; a new test, `bdivs` (`tests/basic/divs.bas`, `divs.dat`): `FIX(a / b)`, `INT(a / b)`, `a / b`, `a * b`, `a \ b`, `a MOD b` over 876 pairs (every pair of 26 integers at the edges: 0, 1, -1, 127/128, 255/256, 2^15, 2^16, -2^31, 2^31, past 32 bits; and 200 random pairs of every kind), each result's bytes (`MKN$`) and errors as the build before (`7dfff75a`) gave them; and random programs of the same (60 seeds, some 60,000 results) and a grid of 58 values by 58, compared line by line, `MKN$` included, with that build's.
+
+| At 3.58 MHz | Before | After | |
+| :--- | ---: | ---: | ---: |
+| `mandel-ex.bas` (exact numbers: `FIX(a / b)`) | 327.4 s | 64.3 s | 5.1x |
+| `mandel.bas` (32-bit integers: `\`) | 84.4 s | 62.6 s | 1.35x |
+| `X = FIX(I / G)` (cycles a pass) | 10,451 | 1,597 | 6.5x |
+| `X = INT(-I / G)` | 11,399 | 1,961 | 5.8x |
+| `X = I * G / G` (a whole quotient) | 9,928 | 2,145 | 4.6x |
+| `X = I * G` | 2,049 | 1,249 | 1.6x |
+| `X = I / G` (3: a third of them whole) | 7,368 | 5,754 | 1.3x |
+| `X = I \ G` | 1,550 | 1,476 | 1.05x |
+| BASIC's twenty benchmarks (`sim/bench.js`) | 56,280 ms | 54,930 ms | `hash` 1.29x, `fold` 1.17x, `matrix` 1.11x |
+
+The cost: a `/` of two integers that leaves a fraction now divides once before the library does.  A divisor below 256 costs nothing that shows (`300 of i / 7 summed` is 1.02x faster); a 16-bit one some 1,900 cycles more a division (about 10% of it).  ROM: BASIC's first bank 10,203 to 11,748 bytes, its fourth 14,625 to 14,483.
