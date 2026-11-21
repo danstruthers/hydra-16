@@ -533,7 +533,7 @@ main:
             FARN        3, nl_init                          ; (The numbers library: its bank, the text's)
             bcc         :+
             LDAX        s_nonum
-            jsr         out_text
+            jsr         msg_out
             lda         #1
             jmp         quit
 :
@@ -558,7 +558,7 @@ main:
             bcc         :+
 @noroom:
             LDAX        s_noheap
-            jsr         out_text
+            jsr         msg_out
             lda         #1
             jmp         quit
 :
@@ -581,7 +581,7 @@ main:
             jmp         quit
 @repl:
             LDAX        s_banner
-            jsr         out_text
+            jsr         msg_out
             lda         login                               ; (A login shell: login.hl's)
             beq         @expr
             jsr         sh_login
@@ -682,23 +682,23 @@ main:
             jmp         @expr
 @long:
             LDAX        s_long
-            jsr         out_text
+            jsr         msg_out
             jmp         @expr
 @nomem:
             LDAX        s_nomemline
-            jsr         out_text
+            jsr         msg_out
             jmp         @expr
 @end:
             lda         t_len                               ; (stdin's end: exit, or what an open expression is
             ora         t_len + 1                           ;   missing)
             bne         @missing
             LDAX        s_bye
-            jsr         out_text
+            jsr         msg_out
             lda         #0
             jmp         quit
 @missing:
             LDAX        s_missingl
-            jsr         out_text
+            jsr         msg_out
             jsr         out_closers
             lda         #LF
             jsr         out_byte
@@ -1126,8 +1126,6 @@ raw_off:
             rts
 
 .rodata
-s_banner:   .byte       "hylang (danlang on the Hydra-16)", LF
-            .byte       "Type 'exit' to Exit", LF, LF, 0
 s_prompt:   .byte       "hylang> ", 0
 s_shline:   .byte       "shell-line"
 S_SHLINE_N  = * - s_shline
@@ -1137,16 +1135,20 @@ s_login:    .byte       "#fx/lib/hylang/login.hl"
 S_LOGIN_N   = * - s_login
 s_more:     .byte       " <", 0
 s_is:       .byte       "=> ", 0
+s_globals:  .byte       "hylib"                             ; (globals.hl, then hylang's own)
+s_globals_n = * - s_globals
+s_hysnap:   .byte       "hysnap", 0
+snap_id:    .word       0                                   ; (This hylang's id: tools/hysnap.js patches it in, a CRC)
+
+.segment "RODATA4"                                          ; (The REPL's messages: msg_out's, out of the first bank)
+s_banner:   .byte       "hylang (danlang on the Hydra-16)", LF
+            .byte       "Type 'exit' to Exit", LF, LF, 0
 s_bye:      .byte       "=> exit", LF, 0
 s_missingl: .byte       "=> Error: missing ", 0
 s_long:     .byte       "=> Error: Too long: an expression of more than 4096 bytes", LF, 0
 s_nomemline: .byte      "=> Error: out of memory", LF, 0
 s_nonum:    .byte       "hylang: the numbers library (the module numbers) isn't there", $0A, 0
 s_noheap:   .byte       "hylang: no room for its heap", LF, 0
-s_globals:  .byte       "hylib"                             ; (globals.hl, then hylang's own)
-s_globals_n = * - s_globals
-s_hysnap:   .byte       "hysnap", 0
-snap_id:    .word       0                                   ; (This hylang's id: tools/hysnap.js patches it in, a CRC)
 
 .segment "CODE3"                                            ; (The numbers: phase 5)
 bank_three:
