@@ -1,0 +1,40 @@
+; mandel-ex.hl - after BBC BASIC's "FP + Strings" Mandelbrot benchmark: hylang's exact numbers (/ gives a fraction,
+; truncate makes it whole), the same picture as mandel-ex.bas and mandel-ex.fs.  hylang mandel-ex.hl
+
+(def {zs} ".,'~=+:;*%&$OXB#@ ")
+(def {ff} 50)
+(fun {tq n m} {truncate (/ n m)})                ; n / m, whole: toward zero
+
+; The character for one point: x and y its place on the grid
+(fun {point x y} {do
+  =(cc (tq (* x 229) 100))
+  =(dd (tq (* y 416) 100))
+  =(aa cc) =(bb dd) =(ii 0) =(res NIL)
+  (while (not res) (do
+    =(qq (tq bb ff)) =(ss (- bb (* qq ff)))
+    =(tt (+ (tq (- (* aa aa) (* bb bb)) ff) cc))
+    (set! bb (+ (* 2 (+ (* aa qq) (tq (* aa ss) ff))) dd))
+    (set! aa tt)
+    =(pp (tq aa ff)) (set! qq (tq bb ff))
+    (if (>= (+ (* pp pp) (* qq qq)) 5)
+      (set! res (char-at zs ii))
+      (do (set! ii (+ ii 1)) (if (== ii 16) (set! res \space))))))
+  res})
+
+; The time, added up a row at a time ((ticks) is read in 15 bits, which wrap every 163.84 s)
+(def {tlast} 0) (def {tsecs} 0) (def {tticks} 0)
+(fun {clock} {do
+  =(now (ticks))
+  (set! tticks (+ tticks (bit-and (- now tlast) 32767)))
+  (set! tlast now)
+  (while (>= tticks 200) (do (set! tticks (- tticks 200)) (set! tsecs (+ tsecs 1))))})
+
+(print "Mandelbrot - hylang - exact numbers + strings")
+(print "Start")
+(set! tlast (ticks))
+(each {y (range -12 13)} (do
+  (each {x (range -49 30)} (write (point x y)))
+  (print "")
+  (clock)))
+(print "Finished")
+(print (format "Time: {}.{}{} secs." tsecs (if (< tticks 20) "0" "") (div tticks 2)))
