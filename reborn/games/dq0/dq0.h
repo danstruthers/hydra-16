@@ -356,6 +356,7 @@ void facing_words (void);                       /* (Overlay 7's) The way it beli
 #define FS_UI       2
 #define FS_REF      4                           /* (The referee, as the world waits on it with a line's intent behind) */
 #define FS_SENS     8
+#define FS_PARSE    0x10                        /* (The command parser alone, not the world: the turns pace's, speed8) */
 extern unsigned char fored;
 extern unsigned char stir_held;                 /* (main.c's: a denizen's stir held, told after the line's answer) */
 void fore_sync (void);                          /* (Overlay 13's) The answer's tasks in the foreground or out, as

@@ -846,7 +846,7 @@ static void stop_world (void)
 #pragma rodata-name (push, "OV13RODATA")
 void __fastcall__ o_fore_set (unsigned char on)
 {
-    static const unsigned char fg[] = { T_WORLD, T_COMMANDS, T_REFEREE, T_SENSES }, fm[] = { FS_CMD, FS_CMD, FS_REF, FS_SENS };
+    static const unsigned char fg[] = { T_WORLD, T_COMMANDS, T_REFEREE, T_SENSES }, fm[] = { FS_CMD, FS_CMD | FS_PARSE, FS_REF, FS_SENS };
                                                 /* (The referee not while a line's in hand: the one give-way's, gw3's,
                                                 **   2026-11-19, a denizen's blow asked of it as a line's entered taking
                                                 **   the answer's CPU half and half, 450,000 cycles; the answer's own
@@ -934,7 +934,10 @@ void o_fore_sync (void)
     hub_mem (0, &t, (const void*) &HUB->tpr, 2);
     hub_mem (0, r, (const void*) &HUB->slot[SLOT_WORLD].state, 5);   /* (Its state, kind, from, seq, actor: RQH's) */
     k = r[0] == REQ_POSTED && (q[0] != q[1] || (c && r[1] == RS_ATTACK && !r[4]));
-    f = t ? FS_UI | FS_SENS | (c ? FS_CMD : 0) | (k ? FS_REF : 0) : c ? FS_UI : 0;
+    f = t ? FS_UI | FS_SENS | (c ? FS_CMD : 0) | (k ? FS_REF : 0) : c ? FS_UI | FS_PARSE : 0;
+                                                /* (The turns pace: the command parser with the UI, the world not: a
+                                                **   line's parse in the background some 260,000 cycles of its 165,000,
+                                                **   dq0answer's "put the whetstone in the sack", speed8, 2026-11-21) */
     if (f != fored) {
         o_fore_set (fored = f);
     }
