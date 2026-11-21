@@ -12,11 +12,17 @@
 ; BASE then); set-base selects any of the library's bases, BASE then
 ; its digits' count (36 at most), and, if it isn't a radix (a prefix shown, balanced, least digit first, digits of
 ; its own), cells are read and shown by the library too (num_custom: the core's number, n_text, u_text, d_text).
-;   The bank is selected only while a word works on it (nst_sel, nst_back), as the word that called it may be a
-; definition's in a code bank; a string a word is given is copied out first, as it may be in a bank too.  Errors
-; THROW: NE_BIG -11, NE_DIV0 -10, NE_ROOM -44 (as is the stack full), NE_DOMAIN -46, the rest -24; the number
+;   The bank is selected only while a word works on it (nst_sel, nst_back: once a word), as the word that called it
+; may be a definition's in a code bank; a string a word is given is copied out first, as it may be in a bank too.
+; Errors THROW: NE_BIG -11, NE_DIV0 -10, NE_ROOM -44 (as is the stack full), NE_DOMAIN -46, the rest -24; the number
 ; stack empty, -45; no math library, -21.  nvariable's numbers are in memory.fl's heap (loaded with this one, if it
-; isn't): a variable's cell 0 (the number 0) or a block's address, the block its number's length (2) and bytes.
+; isn't): a variable's cell 0 (the number 0), an odd cell 2n + 1 (the integer n, -16383 to 16383: no block), or a
+; block's address (even), the block its number's length (2) and bytes, used again while a number stored fits it
+; (its room memory.fl's block size, in the cell before it).
+;   Small integers (4 bytes or fewer in the stored format: si_*) are worked here, not by the library: n+ n- n* n/
+; (when it divides exactly) n/trunc n/mod, the comparisons, n0= n0<, nnegate nabs, s>n d>n, n@ n!; truncate,
+; nfloor and nround leave any integer as it is.  Each result is the library's to the byte, and each THROW too (the
+; room after the top the library would want for its result, or THROW -44); any other number is the library's.
 
 .include "forthlib.inc"
 .include "numbers.inc"
@@ -27,6 +33,17 @@ NS_END          = $A000
 NBUF_SIZE       = NUM_MAX                                   ; A number's bytes, or text (n>str's, nbytes' ...)
 NBASE_SIZE      = 96                                        ; A base string, its 0 too
 .assert <NS_END = 0, error, "nst_fits"
+
+; Small integers' work (si_*), in the zero page's registers r4-r15, which no call of the library is in the middle of
+XA              = r4                                        ; x's magnitude (4 bytes, the least significant first),
+XR              = XA + 4                                    ;   then a remainder (4), or its 8 bytes shifted (si_mul)
+XB              = r8                                        ; y's magnitude (4)
+XP              = r10                                       ; A result's magnitude (8)
+XS              = r14                                       ; Its sign: 0, or $10 negative (a tag's bit) ...
+SX              = r14 + 1                                   ;   x's ...
+SY              = r15                                       ;   y's
+SQ              = r15 + 1                                   ; (A byte: si_div's quotient's)
+.assert SQ = $21, error, "si: r4-r15"
 
 .macro NCALL entry                                          ; The numbers library's entry (nin_a, nin_x, nin_y in)
             LDR         r15, entry
@@ -67,6 +84,8 @@ n_test:     .res        1                                   ; (nh_lit: <> 0, the
 d_len:      .res        2                                   ; (nst_del's)
 d_idx:      .res        1
 n_cnt:      .res        1                                   ; (A count)
+si_tag:     .res        1                                   ; A small integer's result: its tag, its magnitude's
+si_n:       .res        1                                   ;   bytes after it
 n_flag:     .res        1                                   ; (A flag: the math library's call; a double ...)
 minfo:      .res        ME_SIZE                             ; (MODINFO's)
 nbase:      .res        NBASE_SIZE                          ; A base string
@@ -196,14 +215,20 @@ s_reqmem_end:
 
 ; ---- The libraries, the bank
 
-; The number stack's bank selected (nst_back: the one before again).  Keeps .X
+; The number stack's bank selected (nst_back: the one before again): once a word, a second nst_sel before its
+; nst_back nothing (a word's quick way, then the library's), and the bank register not written when it's that bank
+; already.  Keeps .X
 nst_sel:
+            lda         nst_in
+            bne         @rts
+            inc         nst_in
             lda         RAM_BANK
             sta         nst_prev
+            cmp         nsbank
+            beq         @rts
             lda         nsbank
             sta         RAM_BANK
-            lda         #1
-            sta         nst_in
+@rts:
             rts
 
 ; The bank before it selected again.  Keeps .A, .X, .Y, C
@@ -740,6 +765,547 @@ u_push:
             LDR         r15, NUM_FROM_INT
             bra         nm_new
 
+; ---- Small integers: an integer of 4 bytes or fewer in the stored format (its tag $00-$7F, $80-$83 or $90-$93:
+; -4294967295 to 4294967295) worked here, without a call of the library: read into a magnitude and a sign
+; (si_getx, si_gety), the result (XS, XP) written in its one form, as the library writes it (si_len, si_wr), with
+; the room the library would want for it (else THROW -44, as it).  Any other number, the library's
+
+; The number at w (the bank selected) a small integer?  C = 0: it is, x's magnitude and sign read (si_getx: XA, SX)
+; or y's (si_gety: XB, SY); C = 1, it isn't.  Keeps .X
+.macro SI_GET mag, sgn
+            .local      tag, neg, copy, no
+            lda         (w)
+            bmi         tag
+            stz         mag + 1
+            stz         mag + 2
+            stz         mag + 3
+            cmp         #$40
+            bcs         neg
+            sta         mag
+            stz         sgn
+            rts
+neg:
+            eor         #$7F                                ; (-64 to -1: 128 less the tag)
+            inc
+            sta         mag
+            lda         #$10
+            sta         sgn
+            clc
+            rts
+tag:
+            tay
+            and         #$EC
+            cmp         #$80
+            bne         no
+            tya
+            and         #$10
+            sta         sgn
+            stz         mag + 1
+            stz         mag + 2
+            stz         mag + 3
+            tya
+            and         #$03
+            tay
+            iny
+copy:
+            lda         (w),y
+            sta         mag - 1,y
+            dey
+            bne         copy
+            clc
+no:
+            rts
+.endmacro
+si_getx:
+            SI_GET      XA, SX
+si_gety:
+            SI_GET      XB, SY
+
+; The result's form (XS its sign, XP its magnitude): si_tag its tag, si_n its magnitude's bytes after it (0: the tag
+; alone, -64 to 63), nlen its length.  Keeps .X
+si_len:
+            stz         nlen + 1
+            lda         XP + 4
+            ora         XP + 5
+            ora         XP + 6
+            ora         XP + 7
+            beq         @low
+            ldy         #7                                  ; (Past 4 bytes)
+@top:
+            lda         XP,y
+            bne         @long
+            dey
+            bra         @top
+@low:
+            ldy         #3
+            lda         XP + 3
+            bne         @long
+            dey
+            lda         XP + 2
+            bne         @long
+            dey
+            lda         XP + 1
+            bne         @long
+            lda         XP                                  ; (A byte, or 0: the tag alone if it's -64 to 63)
+            beq         @one
+            ldy         XS
+            bne         @neg
+            cmp         #64
+            bcc         @one
+            bra         @long
+@neg:
+            ldy         #0
+            cmp         #65
+            bcs         @long
+            eor         #$7F                                ; (128 less it)
+            inc
+@one:
+            sta         si_tag
+            stz         si_n
+            lda         #1
+            sta         nlen
+            rts
+@long:
+            tya                                             ; (.Y: its bytes less 1)
+            ora         #$80
+            ora         XS
+            sta         si_tag
+            iny
+            sty         si_n
+            iny
+            sty         nlen
+            rts
+
+; The result (si_len's) written at w.  Keeps .X
+si_wr:
+            lda         si_tag
+            sta         (w)
+            ldy         si_n
+            beq         @rts
+@byte:
+            lda         XP - 1,y
+            sta         (w),y
+            dey
+            bne         @byte
+@rts:
+            rts
+
+; The result in place of the top two (si_res2) or the top (si_res1), at w (the first's place), room after the top
+; for it first (si_fit: else THROW -44); si_res, si_len's result written.  The bank back
+si_res2:
+            jsr         si_fit
+            dec         nst_dep
+            bra         si_res
+si_res1:
+            jsr         si_fit
+si_res:
+            jsr         si_wr
+            clc
+            lda         w
+            adc         nlen
+            sta         nst_top
+            lda         w + 1
+            adc         #0
+            sta         nst_top + 1
+            jmp         nst_back
+si_fit:
+            jsr         si_len
+            lda         nst_top + 1                         ; (A page or more left: room for 9 bytes)
+            cmp         #>(NS_END - $100)
+            bcc         @rts
+            lda         nlen
+            sta         tmp
+            stz         tmp + 1
+            jmp         nst_fits
+@rts:
+            rts
+
+; The result (XS, XP: its first 4 bytes, si_push4) pushed: room for one more (else THROW -44), the bank selected
+; and back
+si_push4:
+            stz         XP + 4
+            stz         XP + 5
+            stz         XP + 6
+            stz         XP + 7
+            jsr         nst_sel
+            jsr         nst_room
+            jsr         si_fit
+            lda         nst_top
+            sta         w
+            lda         nst_top + 1
+            sta         w + 1
+            jsr         si_wr
+            jsr         nst_push
+            jmp         nst_back
+
+; The top two (at least: else THROW -45) small integers?  The bank selected; C = 0: they are, x and y read, w x's
+; place; C = 1, not both
+si_two:
+            jsr         nst_sel
+            lda         #2
+            jsr         nst_need
+            lda         nst_dep
+            asl
+            tay
+            lda         nst_at - 4,y
+            sta         w2
+            lda         nst_at - 3,y
+            sta         w2 + 1
+            lda         nst_at - 2,y
+            sta         w
+            lda         nst_at - 1,y
+            sta         w + 1
+            jsr         si_gety
+            bcs         @rts
+            lda         w2
+            sta         w
+            lda         w2 + 1
+            sta         w + 1
+            jmp         si_getx
+@rts:
+            rts
+
+; The top (at least one: else THROW -45) a small integer?  The bank selected; C = 0: it is, x read, w its place
+si_one:
+            jsr         nst_sel
+            lda         #1
+            jsr         nst_need
+            lda         nst_dep
+            asl
+            tay
+            lda         nst_at - 2,y
+            sta         w
+            lda         nst_at - 1,y
+            sta         w + 1
+            jmp         si_getx
+
+; y 0?  Z = 1
+si_y0:
+            lda         XB
+            ora         XB + 1
+            ora         XB + 2
+            ora         XB + 3
+            rts
+
+; |x| against |y|: C = 1 |x| >= |y|, Z = 1 equal
+si_ucmp:
+            lda         XA + 3
+            cmp         XB + 3
+            bne         @rts
+            lda         XA + 2
+            cmp         XB + 2
+            bne         @rts
+            lda         XA + 1
+            cmp         XB + 1
+            bne         @rts
+            lda         XA
+            cmp         XB
+@rts:
+            rts
+
+; The result: XA's 4 bytes (a quotient, a product's factor), its sign x's and y's (si_pq); XR's (a remainder), x's
+; sign (si_pr)
+si_pq:
+            lda         SX
+            eor         SY
+            sta         XS
+            lda         XA
+            sta         XP
+            lda         XA + 1
+            sta         XP + 1
+            lda         XA + 2
+            sta         XP + 2
+            lda         XA + 3
+            sta         XP + 3
+            bra         si_p0
+si_pr:
+            lda         SX
+            sta         XS
+            lda         XR
+            sta         XP
+            lda         XR + 1
+            sta         XP + 1
+            lda         XR + 2
+            sta         XP + 2
+            lda         XR + 3
+            sta         XP + 3
+si_p0:
+            stz         XP + 4
+            stz         XP + 5
+            stz         XP + 6
+            stz         XP + 7
+            rts
+
+; x + y (si_sub: x - y): XS, XP
+si_sub:
+            lda         SY
+            eor         #$10
+            sta         SY
+si_add:
+            stz         XP + 4
+            stz         XP + 5
+            stz         XP + 6
+            stz         XP + 7
+            lda         SX
+            cmp         SY
+            bne         @diff
+            sta         XS
+            clc
+            lda         XA
+            adc         XB
+            sta         XP
+            lda         XA + 1
+            adc         XB + 1
+            sta         XP + 1
+            lda         XA + 2
+            adc         XB + 2
+            sta         XP + 2
+            lda         XA + 3
+            adc         XB + 3
+            sta         XP + 3
+            rol         XP + 4
+            rts
+@diff:                                                      ; (Signs not the same: |x| - |y|, x's sign; or, |y| the
+            sta         XS                                  ;   greater, |y| - |x|, y's)
+            sec
+            lda         XA
+            sbc         XB
+            sta         XP
+            lda         XA + 1
+            sbc         XB + 1
+            sta         XP + 1
+            lda         XA + 2
+            sbc         XB + 2
+            sta         XP + 2
+            lda         XA + 3
+            sbc         XB + 3
+            sta         XP + 3
+            bcs         @rts
+            sec
+            lda         #0
+            sbc         XP
+            sta         XP
+            lda         #0
+            sbc         XP + 1
+            sta         XP + 1
+            lda         #0
+            sbc         XP + 2
+            sta         XP + 2
+            lda         #0
+            sbc         XP + 3
+            sta         XP + 3
+            lda         SY
+            sta         XS
+@rts:
+            rts
+
+; x * y: XS, XP (64 bits); the smaller magnitude the multiplier (its bits, shifted out, till it's 0), in 32 bits
+; when both are under 65536
+si_mul:
+            lda         SX
+            eor         SY
+            sta         XS
+            jsr         si_ucmp
+            bcs         :++
+            ldy         #3                                  ; (|x| < |y|: swapped)
+:
+            lda         XA,y
+            pha
+            lda         XB,y
+            sta         XA,y
+            pla
+            sta         XB,y
+            dey
+            bpl         :-
+:
+            stz         XP
+            stz         XP + 1
+            stz         XP + 2
+            stz         XP + 3
+            stz         XP + 4
+            stz         XP + 5
+            stz         XP + 6
+            stz         XP + 7
+            stz         XR
+            stz         XR + 1
+            stz         XR + 2
+            stz         XR + 3
+            lda         XA + 2
+            ora         XA + 3
+            bne         @wide
+@n16:
+            lda         XB
+            ora         XB + 1
+            beq         @rts16
+            lsr         XB + 1
+            ror         XB
+            bcc         @s16
+            clc
+            lda         XP
+            adc         XA
+            sta         XP
+            lda         XP + 1
+            adc         XA + 1
+            sta         XP + 1
+            lda         XP + 2
+            adc         XA + 2
+            sta         XP + 2
+            lda         XP + 3
+            adc         XA + 3
+            sta         XP + 3
+@s16:
+            asl         XA
+            rol         XA + 1
+            rol         XA + 2
+            rol         XA + 3
+            bra         @n16
+@rts16:
+            rts
+@wide:
+            lda         XB
+            ora         XB + 1
+            ora         XB + 2
+            ora         XB + 3
+            beq         @rts
+            lsr         XB + 3
+            ror         XB + 2
+            ror         XB + 1
+            ror         XB
+            bcc         @s64
+            clc
+.repeat 8, I
+            lda         XP + I
+            adc         XA + I
+            sta         XP + I
+.endrep
+@s64:
+            asl         XA
+.repeat 7, I
+            rol         XA + I + 1
+.endrep
+            bra         @wide
+@rts:
+            rts
+
+; |x| / |y| (y not 0): XA the quotient, XR the remainder.  A divisor under 256 a byte of the dividend at a time
+; (its top bytes of 0 passed over); else a bit at a time.  Keeps .X
+si_div:
+            phx
+            stz         XR + 1
+            stz         XR + 2
+            stz         XR + 3
+            lda         XB + 1
+            ora         XB + 2
+            ora         XB + 3
+            bne         @long
+            ldy         #3
+:
+            lda         XA,y
+            bne         :+
+            dey
+            bpl         :-
+            stz         XR                                  ; (0)
+            plx
+            rts
+:
+            lda         #0                                  ; (The remainder)
+@byte:
+            pha
+            lda         XA,y
+            sta         SQ
+            pla
+            ldx         #8
+@bit:
+            asl         SQ
+            rol         a
+            bcs         @sub
+            cmp         XB
+            bcc         @next
+@sub:
+            sbc         XB
+            inc         SQ
+@next:
+            dex
+            bne         @bit
+            pha
+            lda         SQ
+            sta         XA,y
+            pla
+            dey
+            bpl         @byte
+            sta         XR
+            plx
+            rts
+@long:
+            stz         XR
+            ldx         #32
+@lbit:
+            asl         XA
+            rol         XA + 1
+            rol         XA + 2
+            rol         XA + 3
+            rol         XR
+            rol         XR + 1
+            rol         XR + 2
+            rol         XR + 3
+            ror         SQ                                  ; (Bit 7: past 32 bits, more than y)
+            sec
+            lda         XR
+            sbc         XB
+            sta         XP
+            lda         XR + 1
+            sbc         XB + 1
+            sta         XP + 1
+            lda         XR + 2
+            sbc         XB + 2
+            sta         XP + 2
+            lda         XR + 3
+            sbc         XB + 3
+            bcs         @take
+            bit         SQ
+            bpl         @lnext
+@take:
+            sta         XR + 3
+            lda         XP + 2
+            sta         XR + 2
+            lda         XP + 1
+            sta         XR + 1
+            lda         XP
+            sta         XR
+            inc         XA
+@lnext:
+            dex
+            bne         @lbit
+            plx
+            rts
+
+; x against y: .A $FF (x < y), 0 or 1 (x > y), as the library's CMP
+si_cmp:
+            lda         SX
+            cmp         SY
+            bne         @sign
+            jsr         si_ucmp
+            beq         @eq
+            bcc         @less
+            lda         SX                                  ; (|x| > |y|)
+            bne         @lt
+@gt:
+            lda         #1
+            rts
+@less:
+            lda         SX
+            bne         @gt
+@lt:
+            lda         #$FF
+            rts
+@eq:
+            lda         #0
+            rts
+@sign:
+            lda         SX
+            bne         @lt
+            bra         @gt
+
 ; ---- The words: the number stack
 
             HEADER      "ndepth", 0
@@ -793,27 +1359,129 @@ nw_rot:                                                     ; ( N: x y z -- y z 
 
             HEADER      "n+", 0
 nw_add:                                                     ; ( N: x y -- x+y )
+            jsr         si_two
+            bcs         :+
+            jsr         si_add
+            jmp         si_res2
+:
             LDR         r15, NUM_ADD
             jmp         nm_bin
 
             HEADER      "n-", 0
 nw_sub:
+            jsr         si_two
+            bcs         :+
+            jsr         si_sub
+            jmp         si_res2
+:
             LDR         r15, NUM_SUB
             jmp         nm_bin
 
             HEADER      "n*", 0
 nw_mul:
+            jsr         si_two
+            bcs         :+
+            jsr         si_mul
+            jmp         si_res2
+:
             LDR         r15, NUM_MUL
             jmp         nm_bin
 
             HEADER      "n/", 0
 nw_div:                                                     ; ( N: x y -- x/y ): exact (2/3), as hylang's /
+            jsr         si_two
+            bcs         @lib
+            jsr         si_y0
+            beq         @lib
+            jsr         si_div
+            lda         XR
+            ora         XR + 1
+            ora         XR + 2
+            ora         XR + 3
+            bne         @lib                                ; (Not whole: a fraction, the library's)
+            jsr         si_pq
+            jmp         si_res2
+@lib:
             LDR         r15, NUM_DIV
             jmp         nm_bin
 
+            HEADER      "n/trunc", 0
+nw_divtrunc:                                                ; ( N: x y -- q ): x/y truncated, toward zero (n/ truncate's
+            jsr         si_two                              ;   number): integers', n/mod's quotient; others', n/
+            bcs         @big                                ;   then truncate
+            jsr         si_y0
+            beq         @big
+            jsr         si_div
+            jsr         si_pq
+            jmp         si_res2
+@big:
+            lda         #1
+            jsr         n_isint
+            bcs         @frac
+            lda         #0
+            jsr         n_isint
+            bcs         @frac
+            jsr         nw_divmod
+            jsr         nst_sel
+            lda         #1
+            jsr         nst_del
+            jmp         nst_back
+@frac:
+            jsr         nw_div
+            jmp         nw_truncate
+
+; Entry .A from the top (the bank selected) an integer?  C = 0 it is (its tag under $B0)
+n_isint:
+            jsr         nst_addr
+            sta         w
+            sty         w + 1
+            lda         (w)
+            cmp         #$B0
+            rts
+
             HEADER      "n/mod", 0
 nw_divmod:                                                  ; ( N: x y -- r q ): integers', q toward zero, r x's sign
-            jsr         nst_sel
+            jsr         si_two
+            bcs         @lib
+            jsr         si_y0
+            beq         @lib
+            jsr         si_div
+            sec                                             ; (Half the room after the top each, as the library
+            lda         #<NS_END                            ;   has it)
+            sbc         nst_top
+            sta         n_t
+            lda         #>NS_END
+            sbc         nst_top + 1
+            lsr         a
+            sta         n_t + 1
+            ror         n_t
+            jsr         si_pr
+            jsr         si_len
+            jsr         si_half
+            jsr         si_pq
+            jsr         si_len
+            jsr         si_half
+            jsr         si_pr                               ; The remainder in x's place ...
+            jsr         si_len
+            jsr         si_wr
+            clc
+            lda         w
+            adc         nlen
+            sta         w
+            bcc         :+
+            inc         w + 1
+:
+            lda         nst_dep                             ;   the quotient after it
+            asl
+            tay
+            lda         w
+            sta         nst_at - 2,y
+            lda         w + 1
+            sta         nst_at - 1,y
+            jsr         si_pq
+            jsr         si_len
+            jmp         si_res
+@lib:
             lda         #2
             jsr         nst_need
             jsr         nst_r01
@@ -843,13 +1511,41 @@ nw_divmod:                                                  ; ( N: x y -- r q ):
             jsr         nst_put
             jmp         nst_back
 
+; nlen within n_t (n/mod's room for each), or THROW -44
+si_half:
+            lda         n_t + 1
+            bne         :+
+            lda         n_t
+            cmp         nlen
+            bcs         :+
+            jmp         nst_full
+:
+            rts
+
             HEADER      "nnegate", 0
 nw_negate:
+            jsr         si_one
+            bcs         :+
+            lda         SX
+            eor         #$10
+            sta         SX
+            stz         SY
+            jsr         si_pq
+            jmp         si_res1
+:
             LDR         r15, NUM_NEG
             jmp         nm_un
 
             HEADER      "nabs", 0
 nw_abs:
+            jsr         mt_ready                            ; (The math library's, as ever: there, digits right)
+            jsr         si_one
+            bcs         :+
+            stz         SX
+            stz         SY
+            jsr         si_pq
+            jmp         si_res1
+:
             LDR         r15, MATH_ABS                       ; (A complex number's modulus too)
             jmp         mt_un
 
@@ -872,13 +1568,23 @@ nw_pow:                                                     ; ( N: x y -- x^y ):
 
 ; The top two's order (CMP: $FF, 0, 1: .A, its flags), dropped
 n_cmp:
-            jsr         nst_sel
-            lda         #2
-            jsr         nst_need
+            jsr         si_two
+            bcs         @lib
+            jsr         si_cmp
+            sta         nlen
+            dec         nst_dep
+            dec         nst_dep
+            lda         w
+            sta         nst_top
+            lda         w + 1
+            sta         nst_top + 1
+            bra         @back
+@lib:
             jsr         nst_r01
             NCALL       NUM_CMP
             jsr         nst_drop
             jsr         nst_drop
+@back:
             jsr         nst_back
             lda         nlen
             rts
@@ -927,13 +1633,52 @@ nw_greater:
 
             HEADER      "n0=", 0
 nw_zeq:                                                     ; ( -- flag ) ( N: x -- )
+            jsr         si_z
+            bcs         :+
+            lda         XA
+            ora         XA + 1
+            ora         XA + 2
+            ora         XA + 3
+            bne         n_false
+            jmp         push_true
+:
             jsr         push_zero
             bra         nw_eq
 
             HEADER      "n0<", 0
 nw_zless:
+            jsr         si_z
+            bcs         :+
+            lda         SX
+            beq         n_false
+            jmp         push_true
+:
             jsr         push_zero
             bra         nw_less
+n_false:
+            jmp         push_false
+
+; n0= and n0<'s quick way: the top a small integer (read: XA, SX), with room for the 0 the library's way pushes (64
+; entries at most, a byte); C = 0: it is, taken off.  C = 1: the library's way.  The bank as it was
+si_z:
+            jsr         nst_sel
+            lda         nst_dep
+            beq         @no
+            cmp         #NS_MAX
+            bcs         @no
+            lda         nst_top + 1
+            cmp         #>NS_END
+            bcs         @no
+            jsr         si_one
+            bcs         @no
+            jsr         nst_drop
+            jsr         nst_back
+            clc
+            rts
+@no:
+            jsr         nst_back
+            sec
+            rts
 
 ; The top's kind (NK_), dropped: .A
 n_kind:
@@ -979,35 +1724,59 @@ nw_cpxq:
             HEADER      "s>n", 0
 nw_s2n:                                                     ; ( n -- ) ( N: -- x )
             lda         dlo,x
-            sta         r0
+            sta         XP
             lda         dhi,x
-            sta         r0 + 1
+            sta         XP + 1
             inx
-            asl                                             ; (Its sign, the high cell)
+            stz         XP + 2
+            stz         XP + 3
+            stz         XS
+            lda         XP + 1
+            bpl         :+
+            sec                                             ; (Negative: its magnitude)
             lda         #0
-            adc         #$FF
-            eor         #$FF
-            sta         r1
-            sta         r1 + 1
-            bra         :+
+            sbc         XP
+            sta         XP
+            lda         #0
+            sbc         XP + 1
+            sta         XP + 1
+            lda         #$10
+            sta         XS
+:
+            jmp         si_push4
 
             HEADER      "d>n", 0
 nw_d2n:                                                     ; ( d -- ) ( N: -- x )
-            lda         dlo,x
-            sta         r1
-            lda         dhi,x
-            sta         r1 + 1
             lda         dlo + 1,x
-            sta         r0
+            sta         XP
             lda         dhi + 1,x
-            sta         r0 + 1
+            sta         XP + 1
+            lda         dlo,x
+            sta         XP + 2
+            lda         dhi,x
+            sta         XP + 3
             inx
             inx
+            stz         XS
+            lda         XP + 3
+            bpl         :+
+            sec
+            lda         #0
+            sbc         XP
+            sta         XP
+            lda         #0
+            sbc         XP + 1
+            sta         XP + 1
+            lda         #0
+            sbc         XP + 2
+            sta         XP + 2
+            lda         #0
+            sbc         XP + 3
+            sta         XP + 3
+            lda         #$10
+            sta         XS
 :
-            lda         #1
-            sta         nin_y
-            LDR         r15, NUM_FROM_INT
-            jmp         nm_new
+            jmp         si_push4
 
 ; The top's integer part (toward zero), as a machine integer: r4/r5, .A TO_INT's (0 it fits in 32 bits signed, 1
 ; unsigned, 2 neither), dropped
@@ -1063,16 +1832,30 @@ nw_n2d:                                                     ; ( -- d ) ( N: x --
             HEADER      "truncate", 0
 nw_truncate:
             LDR         r15, NUM_TRUNCATE
-            jmp         nm_un
+            bra         n_whole
 
             HEADER      "nfloor", 0
 nw_floor:
             LDR         r15, NUM_FLOOR
-            jmp         nm_un
+            bra         n_whole
 
             HEADER      "nround", 0
 nw_round:
             LDR         r15, NUM_ROUND
+; truncate, nfloor, nround: an integer (of any size) as it is, with the room after the top the library would want
+; for it (else THROW -44, as it); another number, the library's r15
+n_whole:
+            jsr         nst_sel
+            lda         #1
+            jsr         nst_need
+            lda         #0
+            jsr         nst_ent
+            lda         (w2)
+            cmp         #$B0
+            bcs         :+
+            jsr         nst_fits
+            jmp         nst_back
+:
             jmp         nm_un
 
             HEADER      "to-fixed", 0
@@ -1900,33 +2683,135 @@ nw_fetch:                                                   ; ( a-addr -- ) ( N:
             lda         (w)
             sta         w
             sty         w + 1
+            lsr         a
+            bcs         @cell                               ; (Odd: the number in the cell)
+            lda         w
             ora         w + 1
             beq         :+
             jmp         push_w
 :
             jmp         push_zero
+@cell:
+            lda         w + 1                               ; (2n + 1: n)
+            bmi         @neg
+            lsr         a
+            sta         XP + 1
+            lda         w
+            ror         a
+            sta         XP
+            stz         XS
+            bra         @push
+@neg:
+            sec                                             ; (n negative: its magnitude, (1 - the cell) / 2)
+            lda         #1
+            sbc         w
+            sta         XP
+            lda         #0
+            sbc         w + 1
+            lsr         a
+            sta         XP + 1
+            ror         XP
+            lda         #$10
+            sta         XS
+@push:
+            stz         XP + 2
+            stz         XP + 3
+            jmp         si_push4
 
             HEADER      "n!", 0
-nw_store:                                                   ; ( a-addr -- ) ( N: x -- ): its block resized (or
-            jsr         nst_sel                              ;   allocated) to the number, and it copied there
-            lda         #1
-            jsr         nst_need
-            lda         #0
-            jsr         nst_ent
-            jsr         nst_back
-            MOVR        n_t, tmp
+nw_store:                                                   ; ( a-addr -- ) ( N: x -- ): an integer of -16383 to
+            jsr         nst_sel                             ;   16383 in the cell (2n + 1) if it has no block; else
+            lda         #1                                  ;   in its block if it fits; else the block resized (or
+            jsr         nst_need                            ;   allocated) to the number, and it copied there
             lda         dlo,x
             sta         v_at
-            sta         w
+            sta         w3
             lda         dhi,x
             sta         v_at + 1
-            sta         w + 1
+            sta         w3 + 1
             inx
             ldy         #1
-            lda         (w),y
+            lda         (w3),y
             sta         v_old + 1
-            lda         (w)
+            lda         (w3)
             sta         v_old
+            lda         #0
+            jsr         nst_ent                             ; (w2 the number, tmp its length)
+            lda         v_old
+            lsr         a
+            bcs         @cell
+            ora         v_old + 1
+            beq         @cell
+            sec                                             ; A block: its room (its size, at a-addr - 2, less that
+            lda         v_old                               ;   cell's 2 and the length's 2)
+            sbc         #2
+            sta         w
+            lda         v_old + 1
+            sbc         #0
+            sta         w + 1
+            lda         (w)
+            and         #$FE
+            sec
+            sbc         #4
+            sta         n_t
+            ldy         #1
+            lda         (w),y
+            sbc         #0
+            sta         n_t + 1
+            lda         n_t
+            cmp         tmp
+            lda         n_t + 1
+            sbc         tmp + 1
+            bcc         @grow
+            MOVR        w, v_old                            ; The number in it: its length, its bytes
+            lda         tmp
+            sta         (w)
+            lda         tmp + 1
+            ldy         #1
+            sta         (w),y
+            clc
+            lda         w
+            adc         #2
+            sta         w
+            bcc         @copy
+            inc         w + 1
+@copy:
+            jsr         nst_copy
+            jsr         nst_drop
+            jmp         nst_back
+@cell:
+            MOVR        w, w2                               ; No block: in the cell, if it fits
+            jsr         si_getx
+            bcs         @grow
+            lda         XA + 2
+            ora         XA + 3
+            bne         @grow
+            lda         XA + 1
+            cmp         #$40
+            bcs         @grow
+            asl         XA                                  ; (2n + 1)
+            rol         XA + 1
+            lda         SX
+            beq         :+
+            sec
+            lda         #0
+            sbc         XA
+            sta         XA
+            lda         #0
+            sbc         XA + 1
+            sta         XA + 1
+:
+            lda         XA
+            ora         #1
+            sta         (w3)
+            lda         XA + 1
+            ldy         #1
+            sta         (w3),y
+            jsr         nst_drop
+            jmp         nst_back
+@grow:
+            jsr         nst_back
+            MOVR        n_t, tmp
             clc                                             ; (Its length and 2)
             lda         n_t
             adc         #2
@@ -1934,7 +2819,9 @@ nw_store:                                                   ; ( a-addr -- ) ( N:
             lda         n_t + 1
             adc         #0
             sta         tmp + 1
-            lda         v_old
+            lda         v_old                               ; (A block: resized; else one allocated)
+            lsr         a
+            bcs         @new
             ora         v_old + 1
             beq         @new
             lda         v_old

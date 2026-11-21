@@ -436,7 +436,7 @@ number stack: `1.25`, `2/3`, `#xFF`, `2i`, `1+2i`, `100000000000000000000`, and 
 | What | Words (the number stack's effect after `N:`) |
 | :--- | :--- |
 | The number stack | `ndepth ( -- u )`, `ndrop`, `ndup`, `nover`, `nswap`, `nrot`, `n.s` |
-| Arithmetic | `n+`, `n-`, `n*`, `n/` (exact: `10/4` is `5/2`), `n/mod`, `nnegate`, `nabs`, `ngcd`, `npow ( N: x y -- x^y )` |
+| Arithmetic | `n+`, `n-`, `n*`, `n/` (exact: `10/4` is `5/2`), `n/trunc` (`x/y` truncated, toward zero: `n/ truncate` in one word), `n/mod`, `nnegate`, `nabs`, `ngcd`, `npow ( N: x y -- x^y )` |
 | Comparisons and tests | `n=`, `n<`, `n> ( -- flag ) ( N: x y -- )`, `n0=`, `n0<`, `ncompare`; `int?`, `fixed?`, `rational?`, `complex?` |
 | Cells and doubles | `s>n ( n -- )`, `d>n ( d -- )`; `n>s ( -- n )`, `n>d ( -- d )` |
 | Conversions | `truncate`, `nfloor`, `nround`, `to-fixed ( u -- )`, `to-rational`, `rational.n`, `rational.d`, `complex`, `nrandom`, `nseed`, `nfib` |
@@ -451,7 +451,13 @@ any of hylang's bases by its name: `s" #x"` hexadecimal with its prefix shown, `
 digits of your own ...; `get-base` gives it.
 
 Division by zero is THROW -10, a number past the libraries' limits -11, the number stack empty -45 or full -44.  Each
-word is a call of the library: about 1.7 ms for `1 s>n n+`, more as the numbers grow.
+word is a call of the library, about 1 ms or more, except on **small integers** (4 bytes or fewer in the stored
+format: -4294967295 to 4294967295): `n+`, `n-`, `n*`, `n/` (when it divides exactly), `n/trunc`, `n/mod`, the
+comparisons, `n0=`, `n0<`, `nnegate`, `nabs`, `s>n`, `d>n`, `n@` and `n!` work them in numbers.fl itself, some
+0.1-0.4 ms a word (`truncate`, `nfloor` and `nround` leave any integer as it is), with the same results to the byte
+and the same THROWs.  A variable keeps an integer of -16383 to 16383 in its cell (`2n+1`), with no block in the
+heap; a bigger number goes in a block, used again while the numbers stored fit.  `bench/mandel-ex.fs` (on the card)
+takes 109 s, where it took 541 s with each word a call of the library and `n/ truncate`.
 
 ---
 

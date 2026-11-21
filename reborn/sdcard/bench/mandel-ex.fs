@@ -1,8 +1,9 @@
 \ mandel-ex.fs - after BBC BASIC's "FP + Strings" Mandelbrot benchmark: HyForth's exact numbers (the numbers
-\ library's number stack: n/ gives a fraction, truncate makes it whole), the same picture as mandel.fs, which keeps
-\ to 16-bit cells.  forth mandel-ex.fs
+\ library's number stack), the same picture as mandel.fs, which keeps to 16-bit cells.  n/trunc divides and truncates
+\ toward zero in one word: the same number as n/ truncate (n/ gives a fraction, truncate makes it whole), sooner.
+\ forth mandel-ex.fs
 require hydra.fl                                  \ sys-ticks (200 a second)
-require numbers.fl                                \ the number stack: n+ n- n* n/ truncate n< nvariable
+require numbers.fl                                \ the number stack: n+ n- n* n/trunc n< nvariable
 decimal
 
 : z$ ( -- c-addr u ) s" .,'~=+:;*%&$OXB#@ " ;
@@ -12,16 +13,16 @@ variable k  variable t0
 
 \ The character for one point: x and y its place on the grid
 : point ( x y -- char )
-  s>n 416 s>n n* 100 s>n n/ truncate d n!
-  s>n 229 s>n n* 100 s>n n/ truncate c n!
+  s>n 416 s>n n* 100 s>n n/trunc d n!
+  s>n 229 s>n n* 100 s>n n/trunc c n!
   c n@ a n!  d n@ b n!  0 k !
   begin
-    b n@ f n/ truncate q n!                                    \ q = b / f, whole
+    b n@ f n/trunc q n!                                        \ q = b / f, whole
     b n@ q n@ f n* n- s n!                                     \ s = b - q * f
-    a n@ ndup n* b n@ ndup n* n- f n/ truncate c n@ n+          ( N: t )
-    a n@ q n@ n*  a n@ s n@ n* f n/ truncate n+  2 s>n n*  d n@ n+  b n!
+    a n@ ndup n* b n@ ndup n* n- f n/trunc c n@ n+              ( N: t )
+    a n@ q n@ n*  a n@ s n@ n* f n/trunc n+  2 s>n n*  d n@ n+  b n!
     a n!
-    a n@ f n/ truncate ndup n*  b n@ f n/ truncate ndup n* n+  5 s>n n<   \ not yet escaped?
+    a n@ f n/trunc ndup n*  b n@ f n/trunc ndup n* n+  5 s>n n<   \ not yet escaped?
   while
     1 k +!  k @ 16 = if bl exit then
   repeat
