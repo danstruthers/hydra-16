@@ -2129,12 +2129,17 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], notes = this.notes = [], lines = FELLED.map(l => l.replace(MID_MARK, ''));
-        // (A blow felling the rat in the answer of a line typed mid-round, each game: its words in that line's answer)
-        const o = dq0Prose(out), games = o.split(/% dq0 -p [nm] -s 5/).slice(1);
+        // (A blow felling the rat in the answer of a line typed mid-round, in one game at least: its words in that line's
+        // answer.  Which game's, and which line's, falls as the rounds' race does (its dodges, a blow that kills outright,
+        // speed8, 2026-11-21): the three games each a chance; noted)
+        const o = dq0Prose(out), games = o.split(/% dq0 -p [nm] -s 5/).slice(1), felled = [];
         games.forEach((g, i) => {
           const mids = lines.filter((l, k) => FELLED[k][0] === MID_MARK), segs = g.split(/> (?=look|wait|go left|inventory)/);
-          if (!segs.some(s => mids.some(l => s.startsWith(l)) && /falls senseless|knocked senseless|goes down/.test(s))) f.push('game ' + (i + 1) + ': no blow felling the rat as a line waited');
+          const s = segs.find(s => mids.some(l => s.startsWith(l)) && /falls senseless|knocked senseless|goes down/.test(s));
+          if (s) felled.push((i + 1) + ': ' + s.split(' ')[0]);
         });
+        notes.push('felled as a line waited, by game: ' + (felled.join(', ') || 'none'));
+        if (!felled.length) f.push('no blow felling the rat as a line waited, in any game');
         if (games.length !== 3) f.push(games.length + ' games, not 3');
         dq0HeldPaces(this, f, notes, this.timer, [0, 1, 2], lines.map(l => ({ line: l, want: '*' })));
         return f;
