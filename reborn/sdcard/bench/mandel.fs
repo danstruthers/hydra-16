@@ -22,18 +22,23 @@ variable a  variable b  variable c  variable d  variable n  variable q  variable
   repeat
   z$ drop n @ + c@ ;
 
-: secs. ( ticks -- )                              \ shown as seconds, two places
-  2/ s>d <# # # [char] . hold #s #> type ;
+\ The time, added up a row at a time (sys-ticks is read in 15 bits, which wrap every 163.84 s)
+variable last  variable secs  variable ticks
+: clock0 ( -- )  sys-ticks last !  0 secs !  0 ticks ! ;
+: clock ( -- )                                    \ the ticks since the last reading added
+  sys-ticks dup last @ - 32767 and ticks +!  last !
+  begin ticks @ 199 > while  -200 ticks +!  1 secs +!  repeat ;
+: secs. ( -- )                                    \ shown as seconds, two places
+  secs @ 0 .r  [char] . emit  ticks @ 2/ s>d <# # # #> type ;
 
 : mandel ( -- )
   ." Mandelbrot - HyForth - integers + strings" cr
   ." Start" cr
-  sys-ticks t0 !
+  clock0
   13 -12 do
     30 -49 do  i j point emit  loop
-    cr
+    cr  clock
   loop
-  sys-ticks t0 @ - 32767 and
   ." Finished" cr
   ." Time: " secs. ."  secs." cr ;
 
