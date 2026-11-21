@@ -13,6 +13,7 @@ const {
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
 const MID_MARK = '\u0104', NO_ROUND = 60e6, MID_GAP = 3e6;   // (dq0fightmid's: a line typed as the character's own blow is being worked, 3M cycles after the line before at least; none in 60M cycles, typed anyway)
 const FIGHTMID = ['d', 'wait', 'go right', 'inventory', MID_MARK + 'look', MID_MARK + 'wait', MID_MARK + 'inventory', MID_MARK + 'go left'];   // (dq0fightmid's lines: dq0fightcmd's way to the rats, a rat engaged as inventory's typed, then lines typed mid-round: a look and what's carried told at once, the fight going on; a wait and a step held till its round's out, the fight stopped for them, and taken up again as the rat bites)
+const FELLED = ['d', 'wait', 'go right', 'inventory', MID_MARK + 'look', MID_MARK + 'look', MID_MARK + 'look', MID_MARK + 'wait', MID_MARK + 'go left'];   // (dq0felled's: dq0fightmid's way to the rats, a rat engaged and hurt as inventory's typed, then lines typed mid-round, a blow felling it as one waits)
 const FIGHTCMD = ['d', 'wait', 'go right', 'attack the rat', 'inventory', 'wait', 'look', 'wait', 'inventory', 'wait', 'look'];   // (dq0fightcmd's lines: dq0fight's way to the rats, the fight begun, a rat engaged as the first command after's typed, then commands typed as it fights, waits between for its blows: every one timed, gw3's)
 
 // At each line's Enter, each actor's body (m.bodies: { g, line, name, den, lv: its levels, wfl, ex, at }) after the pokes made then
@@ -2092,6 +2093,48 @@ module.exports = {
         const missed = this.mids.filter(x => !x.round);
         if (this.mids.length !== 3 * FIGHTMID.filter(l => l[0] === MID_MARK).length) f.push(this.mids.length + ' lines typed mid-round, not ' + 3 * FIGHTMID.filter(l => l[0] === MID_MARK).length);
         if (missed.length) f.push(missed.length + ' line(s) typed with no blow of the character\'s under way (' + missed.map(x => x.line).join(', ') + '): no round met');
+        dq0HeldPaces(this, f, notes, this.timer, [0, 1, 2], lines.map(l => ({ line: l, want: '*' })));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0felled', near: ['fight', 'denizens'], what: "Dingus Quest Zero's foe felled while a line waits (reach1's find, 2026-11-20: dq0fightmid's \"go left\" once 6,506,445 cycles, the blow knocking the rat senseless as the line waited, the referee's own work 4.52M of it: its rounds out worked by the book's shock rolls, a round each, up to an hour's, each a die a point of its universal penalty), by the words and dq0Timer's times: dq0fightmid's rats at seed 5, one put before the character hostile and fighting it, and hurt (a minor wound of level 8: its every shock roll failed, the most rounds out the referee works: an hour's); then lines typed as the character's own blow is being worked (dq0fightmid's way): looks, a wait and a step; a blow felling the rat as one waits, and every first letter held to D17, at the normal pace, the menacing and as played",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'echo ml swd 90 >> /ram/c.hm', 'echo b115200 >/dev/serctl',
+        'dq0 -p n -s 5 -c /ram/c.hm -k sword -T', ...FELLED, 'quit', ...dq0Paces('dq0 -p n -s 5 -c /ram/c.hm -k sword -T', FELLED), 'echo $status']).split('ā' + MID_MARK).join(MID_MARK) },
+      start(m) {
+        this.timer = dq0Timer(m);
+        dq0Asks(m, [3]);
+        dq0Poke(m, [1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, k: 0, beside: 'face', engage: true, hurt: 8 })));   // (A rat before it, fighting it, its every shock roll failed)
+        const H = require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load(), a = m.acia, tick = a.tick, self = this;
+        const ST = H.off('hub', 'slot.state'), KD = H.off('hub', 'slot.kind'), AC = H.off('hub', 'slot.actor');
+        let since = -1;
+        this.mids = [];
+        const blow = () => { const h = m.dq0 && m.dq0.bank(0); return !!h && h[ST] === H.C.REQ_POSTED && h[KD] === H.C.RS_ATTACK && h[AC] === 0; };
+        a.tick = (d, t) => {   // (dq0fightmid's: each line marked MID_MARK typed as the character's own blow is being worked)
+          if (a.rxQueue[0] !== MID_MARK) { since = -1; return tick(d, t); }
+          if (since < 0) since = m.cpu.cyc;
+          const hit = blow();
+          if ((hit && m.cpu.cyc - since >= MID_GAP) || m.cpu.cyc - since > NO_ROUND) {
+            a.rxQueue.shift();
+            self.mids.push({ at: m.cpu.cyc, round: hit, line: a.rxQueue.slice(0, a.rxQueue.indexOf('\r')).join('') });
+            return tick(d, t);
+          }
+          const q = a.rxQueue.splice(0);
+          try { return tick(d, t); } finally { a.rxQueue.push(...q); }
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], notes = this.notes = [], lines = FELLED.map(l => l.replace(MID_MARK, ''));
+        // (A blow felling the rat in the answer of a line typed mid-round, each game: its words in that line's answer)
+        const o = dq0Prose(out), games = o.split(/% dq0 -p [nm] -s 5/).slice(1);
+        games.forEach((g, i) => {
+          const mids = lines.filter((l, k) => FELLED[k][0] === MID_MARK), segs = g.split(/> (?=look|wait|go left|inventory)/);
+          if (!segs.some(s => mids.some(l => s.startsWith(l)) && /falls senseless|knocked senseless|goes down/.test(s))) f.push('game ' + (i + 1) + ': no blow felling the rat as a line waited');
+        });
+        if (games.length !== 3) f.push(games.length + ' games, not 3');
         dq0HeldPaces(this, f, notes, this.timer, [0, 1, 2], lines.map(l => ({ line: l, want: '*' })));
         return f;
       },
