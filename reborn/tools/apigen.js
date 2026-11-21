@@ -115,7 +115,7 @@ const NC_BITS = 824, CONST_BYTES = 104;
 function numConst() {
   const R = require('../sim/tools/numref.js');
   let s = header(';', 'numconst.inc - the math library\'s constants, pi, log 2 and log 10, at NC_BITS bits (sim/tools/numref.js\'s)');
-  s += 'NC_BITS         = ' + NC_BITS + CRLF + '.rodata' + CRLF + 'nm_consts:' + CRLF;
+  s += 'NC_BITS         = ' + NC_BITS + CRLF + 'nm_consts:' + CRLF;   // (Its segment the includer's: numbers.s's second bank)
   for (const [name, v] of [['pi', R.piFixed(NC_BITS)], ['log 2', R.ln2Fixed(NC_BITS)], ['log 10', R.ln10Fixed(NC_BITS)]]) {
     const b = [];
     for (let x = v, k = 0; k < CONST_BYTES; k++, x >>= 8n) b.push(Number(x & 255n));

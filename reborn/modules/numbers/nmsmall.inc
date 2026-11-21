@@ -6,6 +6,8 @@
 ; the 0s at its digits' end dropped); a quotient an integer if it's whole, else a rational in lowest terms.  Anything
 ; past 64 bits on the way (32 for a quotient's two parts), or any other kind: C = 1, the tower's way.
 
+GW              = 16                                        ; (g_fast's words: their bytes)
+
 .ifndef NM_COPY
 .segment "NUMBANK"
 s_ma:       .res        8                                   ; x and y: their magnitudes (64 bits, least first) ...
@@ -25,8 +27,11 @@ s_j:        .res        1
 s_la:       .res        1
 s_lb:       .res        1
 s_k:        .res        1
-s_lim:      .res        1                                   ; (An integer's bytes at most, less 1: 7, or 3 for a product, a
-                                                            ;   quotient, or once a fixed decimal is met)
+s_xo:       .res        1                                   ; (s_mulk's: its word's offset, past its top byte)
+s_end:      .res        1
+s_lim:      .res        1                                   ; (The positive integers' tags past those taken: NT_POS + 8, or
+s_limn:     .res        1                                   ;   + 4 for a product, a quotient, a fixed decimal; the
+                                                            ;   negatives')
 f_n:        .res        4                                   ; (Fractions: x's numerator and y's (16 bits each) ...
 f_d:        .res        4                                   ;   and their denominators ...
 f_p:        .res        4                                   ;   x's numerator times y's denominator, y's times x's
@@ -35,6 +40,11 @@ f_u:        .res        2                                   ; (s_m16's factors, 
 f_v:        .res        2
 f_w:        .res        4
 f_sgn:      .res        1                                   ; (f_int16's sign)
+g_u:        .res        GW                                  ; (g_fast's: its two words, u then v; the bytes worked; the
+g_v:        .res        GW                                  ;   divisor's twos; G_TZ's count)
+g_l:        .res        1
+g_k:        .res        1
+g_t:        .res        1
 .endif
             NM_CODE
 
@@ -52,9 +62,13 @@ f_sgn:      .res        1                                   ; (f_int16's sign)
 
 ; ---- The two operands
 
-; n_x and n_y (values) as x and y: C = 0; C = 1 if either isn't small.  .A = the integers' bytes at most less 1 (s_lim)
+; n_x and n_y (values) as x and y: C = 0; C = 1 if either isn't small.  .A = the first positive integer's tag past those
+; taken (NT_POS + their bytes at most: s_lim, and s_limn the negative's)
 s_both:
             sta         s_lim
+            clc
+            adc         #NT_NEG - NT_POS
+            sta         s_limn
             stz         s_fx
             lda         n_x
             ldx         n_x + 1
@@ -66,17 +80,6 @@ s_both:
             lda         n_y
             ldx         n_y + 1
             ldy         #1
-            jsr         s_load
-            bcs         @rts
-            lda         s_fx                                ; (A fixed decimal: an integer with it 4 bytes at most)
-            beq         @rts
-            lda         s_ma + 4
-            ora         s_ma + 5
-            ora         s_ma + 6
-            ora         s_ma + 7
-            cmp         #1                                  ; (C = 1: not 0)
-@rts:
-            rts
 ; The number at .A, .X as x (.Y = 0) or y (1): C = 0; C = 1 if it isn't small
 s_load:
             sta         nt
@@ -104,11 +107,21 @@ s_load:
             cmp         #NT_FIXED + 16
             bcs         @no
             and         #$0F                                ; (A fixed decimal of 0-15 places: its digits after, 4
-            sta         s_pa,x                              ;   bytes at most, and the other's too)
-            lda         #1
+            sta         s_pa,x                              ;   bytes at most, and the other's too: x already 4 at
+            lda         #1                                  ;   most)
             sta         s_fx
-            lda         #3
+            lda         #NT_POS + 4
             sta         s_lim
+            lda         #NT_NEG + 4
+            sta         s_limn
+            txa
+            beq         :+
+            lda         s_ma + 4
+            ora         s_ma + 5
+            ora         s_ma + 6
+            ora         s_ma + 7
+            bne         @no
+:
             inc         nt
             bne         @int
             inc         nt + 1
@@ -126,19 +139,15 @@ s_load:
             clc
             rts
 @tagged:
-            cmp         #NT_POS + 8                         ; (1-8 bytes)
+            cmp         s_lim                               ; (1-8 bytes, or 1-4: s_lim, s_limn)
             bcc         @bytes
             cmp         #NT_NEG
             bcc         @no
-            cmp         #NT_NEG + 8
+            cmp         s_limn
             bcs         @no
             dec         s_na,x
 @bytes:
             and         #$07
-            cmp         s_lim
-            beq         :+
-            bcs         @no
-:
             clc
             adc         #2
             sta         s_k                                 ; (Its bytes and 1: the copy's end)
@@ -161,83 +170,79 @@ s_load:
 
 ; ---- Magnitudes
 
-; arr = arr * 10 (8 bytes): C = 0; C = 1 if it might pass 64 bits (its top byte $19 or more)
-.macro S_X10    arr
-            lda         arr + 7
-            cmp         #$19
-            bcs         :+++                                ; (Its end: no label to end the callers' locals)
-            asl         arr                                 ; (* 2: s_t)
-            rol         arr + 1
-            rol         arr + 2
-            rol         arr + 3
-            rol         arr + 4
-            rol         arr + 5
-            rol         arr + 6
-            rol         arr + 7
-            ldx         #7
-:
-            lda         arr,x
-            sta         s_t,x
-            dex
-            bpl         :-
-            asl         arr                                 ; (* 8, then the * 2 added)
-            rol         arr + 1
-            rol         arr + 2
-            rol         arr + 3
-            rol         arr + 4
-            rol         arr + 5
-            rol         arr + 6
-            rol         arr + 7
-            asl         arr
-            rol         arr + 1
-            rol         arr + 2
-            rol         arr + 3
-            rol         arr + 4
-            rol         arr + 5
-            rol         arr + 6
-            rol         arr + 7
-            ldx         #0
-            ldy         #8
-            clc
-:
-            lda         arr,x
-            adc         s_t,x
-            sta         arr,x
-            inx
-            dey
-            bne         :-
-            clc
-:
-.endmacro
-
-; x's magnitude times 10, .A times (C = 1: past 64 bits)
+; x's magnitude times 10, .A times (s_scale_a; y's: s_scale_b): by 100 a pass while two places are left, then by 10.
+; C = 1: past 64 bits
 s_scale_a:
+            ldx         #s_ma - s_ma
+            bra         s_scale
+s_scale_b:
+            ldx         #s_mb - s_ma
+s_scale:
             sta         s_k
 @ten:
             lda         s_k
             beq         @done
-            S_X10       s_ma
-            bcs         @rts
+            ldy         #10
             dec         s_k
-            bra         @ten
+            beq         :+
+            ldy         #100
+            dec         s_k
+:
+            tya
+            jsr         s_mulk
+            bcc         @ten
+            rts
 @done:
             clc
-@rts:
             rts
 
-; y's
-s_scale_b:
-            sta         s_k
-@ten:
-            lda         s_k
-            beq         @done
-            S_X10       s_mb
-            bcs         @rts
-            dec         s_k
-            bra         @ten
-@done:
+; The magnitude at s_ma + .X (8 bytes) times .A, in one pass over its bytes but its top 0s, by quarter squares: C = 1
+; past 64 bits.  Keeps .X
+s_mulk:
+            stx         s_xo
+            jsr         s_qptr
+            lda         s_xo                                ; (s_end: past its top byte not 0)
             clc
+            adc         #8
+            tax
+:
+            dex
+            cpx         s_xo
+            bcc         @zero
+            lda         s_ma,x
+            beq         :-
+            inx
+            stx         s_end
+            ldx         s_xo
+            stz         n_cy
+@byte:
+            ldy         s_ma,x
+            QS_MUL
+            clc
+            adc         n_cy
+            sta         s_ma,x
+            bcc         :+
+            iny
+:
+            sty         n_cy
+            inx
+            cpx         s_end
+            bne         @byte
+            lda         n_cy                                ; (Its carry: a byte more, past 64 bits C = 1)
+            beq         @zero
+            txa
+            sec
+            sbc         s_xo
+            cmp         #8
+            bcs         @rts
+            lda         n_cy
+            sta         s_ma,x
+@zero:
+            ldx         s_xo
+            clc
+            rts
 @rts:
+            ldx         s_xo
             rts
 
 ; x and y at the same places (the more of the two's: s_pr): C = 1 if a magnitude would pass 64 bits
@@ -285,10 +290,10 @@ s_ucmp:
 ; hv = n_x .A n_y (OP_ADD, OP_SUB, OP_MUL, OP_DIV) if both are small: C = 0; else C = 1
 s_arith:
             sta         s_j
-            ldx         #7                                  ; (A sum's integers 8 bytes at most, a product's or a
+            ldx         #NT_POS + 8                         ; (A sum's integers 8 bytes at most, a product's or a
             cmp         #OP_MUL                             ;   quotient's 4)
             bcc         :+
-            ldx         #3
+            ldx         #NT_POS + 4
 :
             txa
             jsr         s_both
@@ -749,7 +754,7 @@ s_div32:
 
 ; .A = n_x against n_y if both are small: C = 0; else C = 1
 s_cmp:
-            lda         #7
+            lda         #NT_POS + 8
             jsr         s_both
             bcc         :+
             lda         #OP_CMP                             ; (Not two of those: fractions, perhaps)
@@ -1382,6 +1387,183 @@ s_wint:
             cpx         s_k
             bne         :-
             rts
+
+; ---- The greatest common divisor of integers of GW bytes or fewer (n_gcd's, NUMSPEED.md: "a cheaper call" the second)
+
+; n_gcd's work when |R4| and |R5| are both GW bytes or fewer: the same binary way, in two words here (g_u, g_v: their
+; bytes least first, g_l of them worked, fewer as they shrink), not in the registers.  OUT: C = 0, R0 the divisor's odd
+; part, n_gk its twos (n_gcd's); C = 1 if either is longer (n_gcd's own way)
+g_fast:
+            lda         r_len + 4
+            cmp         #GW + 1
+            bcs         @no
+            lda         r_len + 5
+            cmp         #GW + 1
+            bcc         @go
+@no:
+            sec
+            rts
+@go:
+            ldx         #2 * GW - 1                         ; (Both words 0, then each's bytes)
+:
+            stz         g_u,x
+            dex
+            bpl         :-
+            ldy         r_len + 5                           ; (|R5|: v)
+            sty         g_l
+:
+            dey
+            bmi         :+
+            lda         regs + 5 * 256,y
+            sta         g_v,y
+            bra         :-
+:
+            ldy         r_len + 4                           ; (|R4|: u; 0, |R5| again)
+            beq         @u5
+:
+            dey
+            bmi         @twos
+            lda         regs + 4 * 256,y
+            sta         g_u,y
+            bra         :-
+@u5:
+            ldy         r_len + 5
+:
+            dey
+            bmi         @twos
+            lda         regs + 5 * 256,y
+            sta         g_u,y
+            bra         :-
+@twos:
+            lda         r_len + 4
+            cmp         g_l
+            bcc         :+
+            sta         g_l
+:
+            jsr         g_tzu                               ; (Each's twos out; the fewer the divisor's)
+            sta         g_k
+            jsr         g_tzv
+            cmp         g_k
+            bcs         @loop
+            sta         g_k
+@loop:
+            ldx         g_l                                 ; (The same: done)
+            dex
+:
+            lda         g_u,x
+            cmp         g_v,x
+            bne         @ne
+            dex
+            bpl         :-
+            bra         @done
+@ne:
+            bcc         @vu
+            ldx         #0                                  ; (u the more: u = u - v, its twos out)
+            ldy         g_l
+            sec
+:
+            lda         g_u,x
+            sbc         g_v,x
+            sta         g_u,x
+            inx
+            dey
+            bne         :-
+            jsr         g_tzu
+            bra         @shrink
+@vu:
+            ldx         #0                                  ; (v the more: v = v - u)
+            ldy         g_l
+            sec
+:
+            lda         g_v,x
+            sbc         g_u,x
+            sta         g_v,x
+            inx
+            dey
+            bne         :-
+            jsr         g_tzv
+@shrink:
+            ldx         g_l                                 ; (Their top bytes 0: a byte fewer)
+            dex
+            beq         @loop
+            lda         g_u,x
+            ora         g_v,x
+            bne         @loop
+            stx         g_l
+            bra         @shrink
+@done:
+            ldx         g_l                                 ; (R0 = u: its bytes but its top 0s)
+:
+            dex
+            lda         g_u,x
+            beq         :-
+            inx
+            stx         r_len
+            stz         r_neg
+:
+            dex
+            lda         g_u,x
+            sta         regs,x
+            txa
+            bne         :-
+            lda         g_k
+            sta         n_gk
+            stz         n_gk + 1
+            clc
+            rts
+
+; The word u (g_tzu) or v (g_tzv), g_l bytes, not 0, shifted right past its twos: .A = their count
+.macro G_TZ     w
+            stz         g_t
+@byte:
+            lda         w                                   ; (A byte of 0: the bytes down one)
+            bne         @bits
+            ldx         #0
+            ldy         g_l
+:
+            dey
+            beq         :+
+            lda         w + 1,x
+            sta         w,x
+            inx
+            bra         :-
+:
+            stz         w,x
+            lda         g_t
+            clc
+            adc         #8
+            sta         g_t
+            bra         @byte
+@bits:
+            ldy         #0                                  ; (Its bits of 0: .Y)
+:
+            lsr         a
+            bcs         :+
+            iny
+            bra         :-
+:
+            tya
+            beq         @ret
+            clc
+            adc         g_t
+            sta         g_t
+@shift:
+            ldx         g_l                                 ; (Right a bit, from its top byte)
+            clc
+:
+            ror         w - 1,x
+            dex
+            bne         :-
+            dey
+            bne         @shift
+@ret:
+            lda         g_t
+            rts
+.endmacro
+g_tzu:
+            G_TZ        g_u
+g_tzv:
+            G_TZ        g_v
 
             NM_RODATA
 f_p10lo:    .byte       <1, <10, <100, <1000, <10000        ; (10^0-10^4)

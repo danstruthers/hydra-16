@@ -13,6 +13,8 @@
 .include "numbers.inc"
 .include "nmbank.inc"
 
+NM_GCD64        = 1             ; (n_gcd's small way, g_fast: the first bank's alone, not the math library's copies)
+
             HYX2_LIBRARY "numbers", "HEADER", "ROM2", 2
 .include "numbers_jt.inc"
 
@@ -28,7 +30,6 @@
 .include "nmbits.inc"
 .include "nmrand.inc"
 .include "nmbytes.inc"
-.include "numconst.inc"
 
 ; ---- Text, in the second bank (NUMSPEED.md, step 2: the first's room for the arithmetic): its entries there, with
 ; their own copies of the calls', the registers' and the tower's code (their variables the first's: NM_COPY)
@@ -39,6 +40,31 @@ NM_COPY         = 1
 .include "nmreg.inc"
 .include "nmval.inc"
 .include "nmtext.inc"
+
+; INIT's: the math library's constants copied to the state (their bytes, two halves), each at NC_BITS bits
+nm_iconst:
+            ldy         #0
+:
+            lda         nm_consts,y
+            sta         st_const,y
+            lda         nm_consts + NCONST * CONST_BYTES / 2,y
+            sta         st_const + NCONST * CONST_BYTES / 2,y
+            iny
+            cpy         #NCONST * CONST_BYTES / 2
+            bne         :-
+            ldx         #2 * NCONST - 2
+:
+            lda         #<NC_BITS
+            sta         st_cbits,x
+            lda         #>NC_BITS
+            sta         st_cbits + 1,x
+            dex
+            dex
+            bpl         :-
+            rts
+            NM_RODATA
+.include "numconst.inc"
+            NM_CODE
 .endscope
 
 ; Its entries, from the first bank: NMFAR2 into the second

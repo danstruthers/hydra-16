@@ -22,7 +22,9 @@ nm_div:
 nm_arith:
             jsr         nm_begin
             sty         n_opc
-            jsr         nm_obank
+            lda         v_bank                              ; (Both read from the caller's own bank)
+            sta         v_ob
+            sta         v_ob + 1
 nm_arith2:
             jsr         nm_inq2
             lda         n_opc                               ; (Two small numbers: their own way, nmsmall.inc)
@@ -90,7 +92,9 @@ nm_abs:
 ; CMP: r0 = x, r1 = y.  OUT: .A = $FF, 0 or 1 (x less, the same, more)
 nm_cmp:
             jsr         nm_begin
-            jsr         nm_obank
+            lda         v_bank                              ; (Both read from the caller's own bank)
+            sta         v_ob
+            sta         v_ob + 1
 nm_cmp2:
             jsr         nm_inq2
             jsr         s_cmp                               ; (Two small numbers: their own way)
@@ -145,13 +149,6 @@ nm_arith_far:
 :
             jmp         nm_arith2
 
-; Both operands read from the caller's own bank
-nm_obank:
-            lda         v_bank
-            sta         v_ob
-            sta         v_ob + 1
-            rts
-
 ; n_x = the caller's r0 (its copy), n_y = its r1: nm_inq's
 nm_inq2:
             lda         r0
@@ -178,12 +175,26 @@ nm_inq:
             bcs         @high
             jsr         q_num
             bcs         @slow
-            sty         v_len                               ; (In the RAM: copied straight)
+            sty         v_len                               ; (In the RAM: copied straight, from its end)
             stz         v_len + 1
+            sty         nt
             tya
             ldx         #0
             jsr         a_room
-            jsr         m_copy_in
+            ldy         nt
+:
+            dey
+            lda         (np),y
+            sta         (nu),y
+            tya
+            bne         :-
+            lda         nt
+            clc
+            adc         nu
+            sta         nu
+            bcc         :+
+            inc         nu + 1
+:
             jmp         a_made
 @slow:
             lda         np
