@@ -135,6 +135,12 @@ module.exports = {
       expect: ['gfx: 21 checks, 0 failed'],
     },
     {
+      name: 'bdivs', what: 'BASIC\'s division and product of integers (tests/basic/divs.bas and divs.dat, from a card: it checks itself): FIX(a / b), INT(a / b), a / b, a * b, a \\ b and a MOD b over 876 pairs (every pair of 26 integers: 0, 1, -1, the bytes\' edges, -2^31, 2^31 and past 32 bits; and 200 random pairs of every kind: integers to 30 digits, fixed decimals, fractions, complex numbers), each result\'s bytes (MKN$) as the numbers library gave them before the interpreter took the integers\' cases (7dfff75a), division by zero\'s error and FIX\'s of a complex number too',
+      init: 't_rc', cycles: 1200e6,
+      get machine() { return { sd: basicCard(), input: 'ācd /sd/0\r' + 'ābasic divs.bas\r' }; },
+      expect: ['divs: 5256 checks, 0 failed'],
+    },
+    {
       name: 'bplay', what: 'BASIC\'s PLAY: a line of MML on channel 0 and on another (play -m), a score file (play name.mml), its time waited for (the program goes on after); play\'s error (its message as BASIC\'s, in its line; BASIC\'s status 1), a channel past 23 (illegal function call); SOUND\'s text commands (sndctl\'s: a note, a level)',
       init: 't_rc', cycles: 160e6, ymLog: true,
       get machine() {

@@ -59,6 +59,11 @@ id_d:       .res        4                                   ; (idiv32's: the div
 id_sa:      .res        1                                   ;   the quotient's, its bits to go)
 id_sq:      .res        1
 id_n:       .res        1
+mq_a:       .res        2                                   ; (imul16's: the magnitudes, the product's sign; qmul8's
+mq_b:       .res        2                                   ;   bytes)
+mq_s:       .res        1
+mq_x:       .res        1
+mq_y:       .res        1
 fx_m:       .res        12                                  ; (The decimals': x's digits, y's, the result's (4 bytes
 fx_q:       .res        4                                   ;   each, signed), a quotient, a temporary, their places,
 fx_t:       .res        4                                   ;   the result's, the op, a count, a sign)
@@ -906,12 +911,9 @@ op_sub:
 op_mul:
             jsr         two_vals
             bcs         @fix
-            jsr         small2
-            bcc         @lb900
-            jmp         num_slow
-@lb900:
-            FARN        4, mul16
-            jmp         nx1
+            jsr         imul16
+            bcs         :+
+            jmp         int_t0
 @fix:
             jsr         fx_mul
             bcs         :+
@@ -919,39 +921,220 @@ op_mul:
 :
             jmp         num_slow
 
-; Are vt's and vu's integers both of 16 bits, signed?  C = 0 yes
-small2:
-            ldx         vt
-            ldy         vt + 1
-            jsr         small1
-            bcs         :+
-            ldx         vu
-            ldy         vu + 1
-            jmp         small1
-:
-            rts
-small1:
-            stx         t4
-            sty         t4 + 1
-            ldy         #2
-            lda         (t4),y
-            asl         a                                   ; (Bit 15 into C)
-            ldy         #3
-            lda         (t4),y
-            adc         #0                                  ; (0 + C: 0 or 1; $FF + C: $FF or 0)
-            bne         @no
+; t0 = (vt) * (vu) if both are integers of 16 bits (signed): C = 0; else C = 1.  Their magnitudes' bytes multiplied
+; by quarter squares (a * b = q(a + b) - q(|a - b|), q(x) = x * x / 4 rounded down: sq_lo, sq_hi), a byte pair with
+; a 0 passed by
+imul16:
+            ldy         #3                                  ; (16 bits: bytes 3 and 4 both bit 15's)
+            lda         (vt),y
             iny
-            lda         (t4),y
-            dey
-            cmp         (t4),y
+            cmp         (vt),y
             bne         @no
-            clc
-            rts
+            lda         (vu),y
+            dey
+            cmp         (vu),y
+            bne         @no
+            ldy         #2
+            lda         (vt),y
+            sta         mq_a + 1
+            asl         a                                   ; (Bit 15 into C: byte 3 + C is 0)
+            iny
+            lda         (vt),y
+            adc         #0
+            bne         @no
+            dey
+            lda         (vu),y
+            sta         mq_b + 1
+            eor         mq_a + 1                            ; (The sign: mq_s)
+            sta         mq_s
+            lda         (vu),y
+            asl         a
+            iny
+            lda         (vu),y
+            adc         #0
+            beq         :+
 @no:
             sec
             rts
+:
+            ldy         #1                                  ; (The magnitudes: mq_a, mq_b)
+            lda         (vt),y
+            sta         mq_a
+            lda         (vu),y
+            sta         mq_b
+            bit         mq_a + 1
+            bpl         :+
+            sec
+            lda         #0
+            sbc         mq_a
+            sta         mq_a
+            lda         #0
+            sbc         mq_a + 1
+            sta         mq_a + 1
+:
+            bit         mq_b + 1
+            bpl         :+
+            sec
+            lda         #0
+            sbc         mq_b
+            sta         mq_b
+            lda         #0
+            sbc         mq_b + 1
+            sta         mq_b + 1
+:
+            lda         mq_a                                ; (a0 b0: bytes 0 and 1)
+            ldy         mq_b
+            jsr         qmul8
+            stx         t0
+            sta         t0 + 1
+            stz         t0 + 2
+            stz         t0 + 3
+            ldy         mq_b + 1                            ; (a0 b1: bytes 1 and 2)
+            beq         :+
+            lda         mq_a
+            jsr         qmul8
+            jsr         @add1
+:
+            lda         mq_a + 1
+            beq         @sign
+            ldy         mq_b                                ; (a1 b0: bytes 1 and 2)
+            jsr         qmul8
+            jsr         @add1
+            lda         mq_a + 1                            ; (a1 b1: bytes 2 and 3)
+            ldy         mq_b + 1
+            beq         @sign
+            jsr         qmul8
+            pha
+            clc
+            txa
+            adc         t0 + 2
+            sta         t0 + 2
+            pla
+            adc         t0 + 3
+            sta         t0 + 3
+@sign:
+            bit         mq_s
+            bpl         @done
+            sec
+.repeat 4, I
+            lda         #0
+            sbc         t0 + I
+            sta         t0 + I
+.endrep
+@done:
+            clc
+            rts
+@add1:                                                      ; (.X/.A added at bytes 1 and 2, the carry on)
+            pha
+            clc
+            txa
+            adc         t0 + 1
+            sta         t0 + 1
+            pla
+            adc         t0 + 2
+            sta         t0 + 2
+            bcc         :+
+            inc         t0 + 3
+:
+            rts
 
+; .X/.A (low, high) = .A * .Y, two bytes: q(a + b) - q(|a - b|)
+qmul8:
+            sta         mq_x
+            sty         mq_y
+            sec
+            sbc         mq_y
+            bcs         :+
+            eor         #$FF                                ; (C = 0: b - a, the 2's complement)
+            adc         #1
+:
+            tay                                             ; (.Y = |a - b|)
+            lda         mq_x
+            clc
+            adc         mq_y
+            tax                                             ; (.X = a + b, its carry past 255)
+            bcs         @hi
+            lda         sq_lo,x
+            sec
+            sbc         sq_lo,y
+            sta         mq_x
+            lda         sq_hi,x
+            sbc         sq_hi,y
+            ldx         mq_x
+            rts
+@hi:
+            lda         sq_lo + 256,x
+            sec
+            sbc         sq_lo,y
+            sta         mq_x
+            lda         sq_hi + 256,x
+            sbc         sq_hi,y
+            ldx         mq_x
+            rts
+
+; q(x) = x * x / 4 rounded down, x 0 to 510: its low bytes, its high
+sq_lo:
+.repeat     511, I
+            .byte       <(I * I / 4)
+.endrep
+sq_hi:
+.repeat     511, I
+            .byte       >(I * I / 4)
+.endrep
+
+; DIV of two integers: a whole quotient here (as the numbers library gives it: an integer); else, when FIX or INT
+; follows at once (FIX(a / b), INT(a / b)), the quotient toward 0 or below here and that FN passed by; else (a
+; fraction kept, a divisor of 0, -2^31 / -1, a value not an integer) the numbers'
 op_div:
+            jsr         two_vals
+            bcs         @slow
+            jsr         idiv32
+            bcs         @slow
+            lda         t4                                  ; (No remainder: the quotient)
+            ora         t4 + 1
+            ora         t4 + 2
+            ora         t4 + 3
+            bne         :+
+            jmp         int_t0
+:
+            ldy         #1                                  ; (FN FIX or FN INT next?)
+            lda         (ip),y
+            cmp         #OP_FN
+            bne         @slow
+            iny
+            lda         (ip),y
+            cmp         #F_FIX
+            beq         @whole
+            cmp         #F_INT
+            bne         @slow
+            bit         id_sq                               ; (INT: below 0, a remainder: 1 less)
+            bpl         @whole
+            lda         t0
+            bne         :+
+            lda         t0 + 1
+            bne         @dec1
+            lda         t0 + 2
+            bne         @dec2
+            dec         t0 + 3
+@dec2:
+            dec         t0 + 2
+@dec1:
+            dec         t0 + 1
+:
+            dec         t0
+@whole:
+            ldy         #4                                  ; (vt = t0, the top dropped, past DIV and its FN)
+:
+            lda         t0 - 1,y
+            sta         (vt),y
+            dey
+            bne         :-
+            lda         vu
+            sta         vsp
+            lda         vu + 1
+            sta         vsp + 1
+            NEXT_N      3
+@slow:
 op_pow:
             jmp         num_slow
 
@@ -1048,7 +1231,34 @@ idiv32:
             lda         id_d + 1                            ; (A divisor below 256: a byte at a time, the
             ora         id_d + 2                            ;   remainder in .A)
             ora         id_d + 3
-            bne         @wide
+            beq         :+
+            jmp         @wide
+:
+            lda         id_d                                ; (Below 128: each byte's 8 steps unrolled, the quotient's
+            bmi         @byte0                              ;   bits rolled in as the dividend's go out; the divisor
+            sta         t4                                  ;   in t4)
+            lda         #0
+            ldx         #3
+@fbyte:
+            ldy         t0,x                                ; (A 0 with no remainder: a 0)
+            bne         :+
+            cmp         #0
+            beq         @fnext
+:
+            asl         t0,x
+.repeat 8
+            rol         a
+            cmp         t4
+            bcc         :+
+            sbc         t4
+:
+            rol         t0,x
+.endrep
+@fnext:
+            dex
+            bpl         @fbyte
+            bra         @rem8
+@byte0:
             lda         #0
             ldx         #3
 @byte:
@@ -1073,11 +1283,12 @@ idiv32:
 @nextb:
             dex
             bpl         @byte
+@rem8:
             sta         t4
             stz         t4 + 1
             stz         t4 + 2
             stz         t4 + 3
-            bra         @signs
+            jmp         @signs
 @wide:
             stz         t4                                  ; (Wider: a bit at a time, 32 of them)
             stz         t4 + 1
@@ -1085,6 +1296,55 @@ idiv32:
             stz         t4 + 3
             lda         #32
             sta         id_n
+@skip:                                                      ; (The dividend's top bytes of 0: 8 steps each, a shift)
+            lda         t0 + 3
+            bne         @wgo
+            lda         id_n
+            cmp         #9
+            bcc         @wgo
+            sbc         #8
+            sta         id_n
+            lda         t0 + 2
+            sta         t0 + 3
+            lda         t0 + 1
+            sta         t0 + 2
+            lda         t0
+            sta         t0 + 1
+            stz         t0
+            bra         @skip
+@wgo:
+            lda         id_d + 2                            ; (A divisor of 16 bits: the remainder's 16 (and the carry
+            ora         id_d + 3                            ;   past them), the quotient's bits rolled in as the
+            bne         @wbit                               ;   dividend's go out)
+            asl         t0
+            rol         t0 + 1
+            rol         t0 + 2
+            rol         t0 + 3
+@n16:
+            rol         t4
+            rol         t4 + 1
+            bcs         @n16s                               ; (17 bits: past the divisor)
+            lda         t4
+            cmp         id_d
+            lda         t4 + 1
+            sbc         id_d + 1
+            bcc         @n16q                               ; (Below it: a 0)
+@n16s:
+            lda         t4
+            sbc         id_d
+            sta         t4
+            lda         t4 + 1
+            sbc         id_d + 1
+            sta         t4 + 1
+            sec                                             ; (A 1)
+@n16q:
+            rol         t0
+            rol         t0 + 1
+            rol         t0 + 2
+            rol         t0 + 3
+            dec         id_n
+            bne         @n16
+            jmp         @signs
 @wbit:
             asl         t0
             rol         t0 + 1
