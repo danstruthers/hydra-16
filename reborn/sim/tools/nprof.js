@@ -2,13 +2,14 @@
 // ****************************************************************************
 // nprof.js - a profiler by stretch (docs/design/plans/NUMSPEED.md, step 0): a program run at rc, its files on a card
 // (cd /sd/0), marks the stretches it wants measured by writing k to a byte (BASIC: POKE &H6F, k; hylang: (poke 32767
-// k), --mark 7FFF), the kth of the names given (0: none, not counted); each stretch's cycles are counted by where
-// they're spent: every module's labels by bank (from ld65's debug file of the module linked again), the kernel's, the
-// RAM's.  Each library call (an XCALL) is timed from its call to its return, and inside it by label; and every
-// routine the program's task calls is timed inclusive of what it calls (a shadow stack of its JSRs).
+// k), --mark 7FFF; HyForth: k $7F c!, --mark 7F, a byte of the task's zero page no Forth uses), the kth of the names
+// given (0: none, not counted); each stretch's cycles are counted by where they're spent: every module's labels by bank
+// (from ld65's debug file of the module linked again), the kernel's, the RAM's, and a HyForth library's (--fl).  Each
+// library call (an XCALL) is timed from its call to its return, and inside it by label; and every routine the
+// program's task calls is timed inclusive of what it calls (a shadow stack of its JSRs).
 //
 // Usage: node sim/tools/nprof.js DIR CMD --segs A,B,... [--mark HEX] [--top N] [--entries] [--inside N] [--tree N]
-//                                [--local] [--only SEG,...] [--build TREE]
+//                                [--local] [--only SEG,...] [--build TREE] [--fl NAME,...]
 //   DIR          the folder whose files go on the card
 //   CMD          the line typed at rc (its first word is the program's module: its marks count, its RAM code's labels)
 //   --segs       the stretches' names, in the order of their marks (1, 2 ...)
@@ -19,6 +20,9 @@
 //   --local      cheap local labels (@name) as their own, under their routine's name
 //   --only       those stretches alone in the report
 //   --build TREE another tree's build (its reborn folder): the default is this one's
+//   --fl NAME,.. HyForth libraries (obj/forthlib/NAME.fl) by their labels (NAME/NAME.lbl): each found in the task's
+//                RAM at the first mark (where its image, relocated, matches), its code then counted as NAME.fl's
+//                labels, and its routines in --tree as the ROM's are
 // As a module: profile({ tree, files, cmd, segs, mark, labels, entries, inside, tree: n, local }) gives back the
 // output and the stretches (a Map: name -> { total, other, prof, ent, inside, tree }).
 'use strict';
@@ -35,7 +39,7 @@ function profile(o) {
   const tree = path.resolve(o.tree || path.join(__dirname, '..', '..'));
   const SEGS = o.segs || [], MARK = o.mark === undefined ? 0x6F : o.mark, LABELS = o.labels !== false;
   const ENTRIES = !!o.entries || !!o.inside, INSIDE = o.inside || 0, TREE = o.routines || 0, LOCAL = !!o.local;
-  const MAX = o.max || 60e9;
+  const MAX = o.max || 60e9, FL = o.fl || [];
   const hydrafs = require(path.join(tree, 'sim', 'tools', 'hydrafs.js'));
   const { boot, labels } = require(path.join(tree, 'sim', 'run.js'));
   const romimg = require(path.join(tree, 'tools', 'romimg.js'));
@@ -104,6 +108,40 @@ function profile(o) {
     return r ? r[1] : '?';
   };
 
+  // HyForth's libraries (--fl): each one's image, the bytes its relocations change, its labels; its place (at) found
+  const fls = FL.map(n => {
+    const d = path.join(tree, 'obj', 'forthlib', n), b = fs.readFileSync(path.join(d, '..', n + '.fl'));
+    const len = b.readUInt16LE(7), nrel = b.readUInt16LE(17), image = b.subarray(19, 19 + len), moved = new Set();
+    for (let k = 0, p = 19 + len; k < nrel; k++) {
+      const v = b.readUInt16LE(p), kind = v >> 14, off = v & 0x3FFF;
+      p += kind === 2 ? 3 : 2;
+      if (kind === 0) { moved.add(off); moved.add(off + 1); } else moved.add(off);
+    }
+    const L = [];
+    for (const l of fs.readFileSync(path.join(d, n + '.lbl'), 'latin1').split(/\r?\n/)) {
+      const x = /^al ([0-9A-F]+) \.(\S+)$/.exec(l);
+      if (x && parseInt(x[1], 16) < len && (LOCAL || !x[2].startsWith('@')) && !x[2].startsWith('__')) L.push([parseInt(x[1], 16), x[2]]);
+    }
+    L.sort((a, c) => a[0] - c[0]);
+    return { name: n + '.fl', image, moved, L, at: -1 };
+  });
+  const flFind = () => {
+    for (const f of fls) {
+      if (f.at >= 0) continue;
+      const n = Math.min(f.image.length, 512);
+      for (let a = 0x0800; a + f.image.length <= 0x7F00 && f.at < 0; a++) {
+        let ok = true;
+        for (let i = 0; i < n && ok; i++) if (!f.moved.has(i) && m.rd(a + i) !== f.image[i]) ok = false;
+        if (ok) f.at = a;
+      }
+    }
+  };
+  const flAt = (T, pc) => {
+    if (T !== progTask) return null;
+    for (const f of fls) if (f.at >= 0 && pc >= f.at && pc < f.at + f.image.length) return f.name + (LABELS ? ' ' + near(f.L, pc - f.at) : '');
+    return null;
+  };
+
   // The card
   const img = path.join(os.tmpdir(), 'nprof-' + process.pid + '-' + Date.now() + '.img');
   hydrafs.setNow(0x1000);
@@ -128,6 +166,7 @@ function profile(o) {
     const mb = modAt(m.taskRam[m.T][1]);
     if (!mb || mb[0] !== prog) return;
     progTask = parseInt(mm[1], 16);
+    if (fls.length) flFind();
     const k = parseInt(mm[2], 16);
     seg = k ? (SEGS[k - 1] || 'seg' + k) : null;
     if (seg) segOf(seg);
@@ -150,6 +189,8 @@ function profile(o) {
       const [n, kk] = mb, L = modLabels(n);
       return n + (L.banks.length > 1 ? '#' + (kk + 1) : '') + (LABELS ? ' ' + near(L.banks[kk], pc) : '');
     }
+    const fa = fls.length ? flAt(T, pc) : null;
+    if (fa) return fa;
     if (T === progTask && pc >= 0x0400 && (pc < 0x0800 || LABELS && modLabels(prog).ramAt.some(([a, b]) => pc >= a && pc < b))) return prog + '#ram' + (LABELS ? ' ' + near(modLabels(prog).ram, pc) : '');
     return 'RAM ' + (pc < 0x8000 ? 'task' : 'bank');
   };
@@ -164,7 +205,7 @@ function profile(o) {
     }
     if (TREE && seg && T === progTask && op0 === 0x20) {        // (A JSR: the routine, inclusive)
       const a = m.rd(pc + 1) | m.rd(pc + 2) << 8;
-      if (a >= 0xA000) { const name = where(T, a); jstack.push({ name, sp: this.S, c0, T }); jcount.set(name, (jcount.get(name) || 0) + 1); }
+      if (a >= 0xA000 || fls.length && flAt(T, a)) { const name = where(T, a); jstack.push({ name, sp: this.S, c0, T }); jcount.set(name, (jcount.get(name) || 0) + 1); }
     }
     const r = step0(iv);
     if (xstack.length) {
@@ -244,7 +285,7 @@ if (require.main === module) {
   const flag = n => { const i = args.indexOf(n); if (i < 0) return false; args.splice(i, 1); return true; };
   const o = { segs: opt('--segs', '').split(',').filter(Boolean), mark: parseInt(opt('--mark', '6F'), 16), top: +opt('--top', 25),
     inside: +opt('--inside', 0), routines: +opt('--tree', 0), only: opt('--only', '').split(',').filter(Boolean),
-    local: flag('--local'), entries: flag('--entries'), tree: opt('--build', '') };
+    local: flag('--local'), entries: flag('--entries'), tree: opt('--build', ''), fl: opt('--fl', '').split(',').filter(Boolean) };
   const [dir, cmd] = args;
   if (!dir || !cmd) { console.error('usage: node sim/tools/nprof.js DIR CMD --segs A,B,... (see its head)'); process.exit(2); }
   o.files = {};
