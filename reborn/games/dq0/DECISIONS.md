@@ -6966,3 +6966,12 @@ M3-M5), with the images' commit.
   summary recomputed after it: a change to the referee skeleton.
 - **A look asks for the bodies' look itself** (T2).
 - **The lag sweeps become a tool** (T5: lineprof --sweep).
+
+## The referee's reply and the pause: the user's answers (2026-11-22)
+
+- **The referee's reply also carries the limp and the steps** (speed11's question 1), with condition, health and
+  limbs: a step taken right after a blow sees that blow's limp.
+- **The player's pause between lines mid-fight is one second**, as built (speed11's question 4).
+- **A line typed mid-round is made faster, not timed from the round's end** (speed11's question 6): its first
+  letter still within 720,000 cycles of its Enter.
+- **dq0venom joins the known noise** (speed11's question 7): its skylight's light by the minute its look lands.
