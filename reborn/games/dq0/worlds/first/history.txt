@@ -1,15 +1,17 @@
-# history.txt - (themegen) the words a region's history is made of: the game's own world (G3: its own peoples and
-# names, none of HarnWorld's), its peoples, its lands, what the peoples made and how it ended, the strata's names,
-# the clues each era leaves, the rooms' words and their light.  make.js makes it themegen's data file
-# (lib/dq0/themegen.dat) with goals.txt and the bestiary (dq0d/kinds.txt, factions.txt); themegen reads it as it
-# starts.  The same line format as a theme's (a key and its values between bars; a line begun with spaces goes on
-# with the one before).  In the words, a slot is a % and a letter, filled as the history's made:
+# history.txt - (the first world: games/dq0/WORLDS.md) the words a region's history is made of, in the world the game
+# began with (G3: its own peoples and names, none of HarnWorld's), its peoples, its lands, what the peoples made and how
+# it ended, the strata's names, the clues each era leaves, the rooms' words and their light; its tongues' sounds, the
+# realms and mints of today, and which of its peoples hold, settle or raid.  themegen's make.js makes it this world's
+# history.dat (lib/dq0/worlds/first/history.dat) with goals.txt and the bestiary (dq0d/kinds.txt, factions.txt);
+# themegen reads it as it starts (themegen -w first, or no -w: the default world).  The same line format as a theme's (a
+# key and its values between bars; a line begun with spaces goes on with the one before).  In the words, a slot is a %
+# and a letter, filled as the history's made:
 #   %R the region's name        %P an era's people         %K what they are (dwarves ...)
 #   %N the era's great one      %X a place's name, theirs  %O the people who came after
 #   %C how many centuries ago   %W what the era did (the era's words, for a clue)
 #
 # The keys:
-#   people   what a people is (its name made by namegen, in its tongue), its tongue (namegen's: 1-6), how it
+#   people   what a people is (its name made by namegen, in its tongue), its tongue (a tongue line's: 1 ...), how it
 #            builds, the lands it lives in, what it makes (the works below), its tongue's word (the referee's: what
 #            the denizens speak and a character's "language" lines name, 8 letters at most) and its script (the
 #            game's own, G3: what its writings are in, a character's "script" lines, 8 letters at most; the plan
@@ -28,10 +30,30 @@
 #   rooms    the rooms' eight words (a theme's rooms line), by the people above (default: any other)
 #   uses     the uses' twelve words, by the people above
 #   light    a room's light, by the people above
-#   folk     a faction (the bestiary's, dq0d/factions.txt) in words
+#   folk     a faction (the bestiary's, dq0d/factions.txt) in words: the bestiary's factions that live in this world,
+#            each once (one with no folk line isn't of this world: never an inhabitant)
 #   now      the story's words for who has it now, by the faction that's strongest there
 #   open     the story's first words
 #   ago      how long ago an era ended, in words (%C the centuries)
+#   tongue   a tongue's sounds, its number first (in order, 1 ...: the people lines' numbers, namegen's), its onsets,
+#            its vowels, its codas (words, spaces between) and a people's name's ending
+#   common   the tongue strangers speak (a tongue line's number): today's realms', and those who ask the character
+#            to go (a patron, a seeker, a prisoner)
+#   realm    a mint of today's (the theme's mint lines, now), in order: the tongue it's named in, its ways (the theme's
+#            mint line's: l the region's own, g gold, p taken at its worth everywhere, h hard to pass, - none; ?h hard
+#            to pass one game in two, by the seed)
+#   coin     a people (the people line's what) that struck coin in its era, and its ways (g gold, or -); a people
+#            with no coin line struck none
+#   wild     the lands beasts live in (land lines' words)
+#   raiders  the people (a people line's what) that comes to a region only last, digs its own mines and keeps a
+#            prisoner or raids from them (a prisoner's goal and a scourge's: none, and neither is made), and its
+#            faction (the bestiary's)
+#   holds    a faction (the bestiary's) that's a people's (a people line's what) where an era of theirs holds its
+#            works still: its kinds there, and its leader (a kind, or -)
+#   colony   a faction (the bestiary's) that settles a people's works lost (an era of theirs not holding them, and
+#            none holding theirs), in the lands given; its leader (a kind, or -); its kinds a tribe line's
+#   tribe    a colony's tribe: its faction, its kinds, and where it's found (a land and a climate) or - (the first
+#            tribe line the colony's own where it's found, or where none of the rest is picked; the rest by the dice)
 
 people   | dwarves | 1 | hewn | mountains hills | hold mine keep tomb | khuzdul | delvic
 people   | men | 2 | dressed | hills forest plain coast marsh mountains | keep temple town tomb | common | ardic
@@ -133,6 +155,8 @@ folk     | gargun | the gargun
 folk     | dwarves | the dwarves
 folk     | elves | the elves
 folk     | soldiers | the soldiers
+folk     | outlaws | the outlaws
+folk     | cult | the cult
 now      | dwarves | The dwarves hold it still, and keep its halls lit against the dark.
 now      | elves | The elves keep it still, and few who come there see them.
 now      | soldiers | Soldiers hold it still, and keep its gates against all comers.
@@ -144,3 +168,31 @@ now      | crawlers | Now spiders spin in it, and the dark has it.
 now      | vermin | Now rats run in it, and the dark has it.
 open     | Under %R lies a deep place, older than memory.
 ago      | some %C centuries ago
+
+tongue   | 1 | kh dr gr b d th k g br z n m r t | a u o i a u ai | n r m k d rd rn zd l th g | im
+tongue   | 2 | v m c t s l d r h b f | a e i o a e ae | n r s l m d nd st | ar
+tongue   | 3 | l s th v n f m r | ae e i ia a ei | l n s th r | ai
+tongue   | 4 | g h r w b gr hr br th | u o a ea | th g rd lf n m | ings
+tongue   | 5 | k y sk g z sn kr | i a ee | k p x t | ik
+tongue   | 6 | s sh v z h m th | e a i ou | sh s th n l | ani
+common   | 2
+
+realm    | 2 | l
+realm    | 2 | -
+realm    | 2 | ?h
+realm    | 1 | gp
+coin     | dwarves | g
+coin     | men | -
+coin     | elves | -
+coin     | sun-priests | -
+
+wild     | mountains hills forest
+raiders  | kobolds | kobolds
+holds    | dwarves | dwarves | khuzwar khuzmin | khuzeld
+holds    | elves | elves | sindwar | -
+holds    | soldiers | men | manarms | captain
+colony   | gargun | dwarves | mountains hills forest | garking
+tribe    | gargun | kyani | mountains cold
+tribe    | gargun | hyeka khanu | -
+tribe    | gargun | viasal | -
+tribe    | gargun | hyeka arak | -

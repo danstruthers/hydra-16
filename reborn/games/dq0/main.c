@@ -1,7 +1,7 @@
 /*
 ** main.c - Dingus Quest Zero: the UI's task, its start and its loop.
 **
-** dq0 [-s seed] [-p pace] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]]: -d keeps the game in a
+** dq0 [-s seed] [-p pace] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-w world] [-T [-T]]: -d keeps the game in a
 ** folder (on any card), and carries on the game kept there if there is one; without it nothing's kept (the folder: life.h's,
 ** the record of the character's life, its sheet and its things, each dungeon in a folder of its own). the seed makes
 ** the same game each time (the dice: dice.h's rseed), and its region's history and theme (themegen's: theme.h), but
@@ -11,7 +11,8 @@
 ** ruleset's character generator (its referee names it: hmchar) is run to make one (in this window, the screen as it
 ** is outside the game while it runs), into /ram/dq0.hm; a ruleset with none makes its own.  The rules: the ruleset's
 ** name (RULESETS.md: harn, HarnMaster's, if none's given; null, flat odds), its referee libdir/dq0NAME (the save's: a
-** game carried on keeps its own).  The tests' own: -C, -a, -T, -K (the kit as it was before the outfits, the denizens
+** game carried on keeps its own).  The world: its name (WORLDS.md: first, the game's own, if none's given; bare), its
+** files libdir/worlds/NAME (the save's too; a dungeon after the first the last one's, unless -w says another).  The tests' own: -C, -a, -T, -K (the kit as it was before the outfits, the denizens
 ** with none of theirs: their dice as they were), and -I (no engage initiative test, nor a grope's test
 ** while engaged: HOUSE.md's, the user's way to keep the tests' fights as they were).
 **
@@ -90,6 +91,7 @@ static unsigned char small;                     /* (dq0 -C: the caches small, th
 static unsigned char gear;                      /* (dq0 -K: the kit as it was, no outfits drawn, the tests') */
 static const char* kit;                         /* (dq0 -k: things more, as the game starts: a tool, ...) */
 static const char* tfile;                       /* (dq0 -t: a theme written by hand) */
+static const char* wname;                       /* (dq0 -w: the world, WORLDS.md's; none given, the save's, or the default) */
 unsigned char hard;                             /* (Hard mode: dq0 -H's, the save's pace's top bit) */
 const char* savedir;                            /* (dq0 -d: the save's folder; task.c's meta too) */
 unsigned char __fastcall__ things (unsigned char op, const char* name);   /* (way.c's too, part 6's) */
@@ -249,6 +251,7 @@ void __fastcall__ consctl (const char* what)
 ** yet; its own spawn, hub_run being part 1's) */
 static unsigned char resumed;
 static unsigned long seed;
+static struct save sv;                          /* (The save's head, below: its world, -w's) */
 static char spath[56];                          /* (A path in the dungeon's folder, itself sdl bytes of it, with -d: dq0life's,
                                                 **   s_life's; save_path's, part 14's save_at's, part 19's; "../" the save's) */
 static unsigned char sdl;
@@ -258,7 +261,15 @@ unsigned char __fastcall__ s_history (unsigned long seed)
     char* p = lb;
 
     if (resumed) {
-        return Q.theme;
+        return Q.theme;                         /* (Its world its save's) */
+    }
+    if (sv.magic != SAVE_MAGIC || sv.version != SAVE_VER) {
+        sv.world[0] = 0;                        /* (Its world: -w's; else the last dungeon's save's, a dungeon after the
+                                                **   first, or a new life's in its folder; none, the default) */
+    }
+    if (wname) {
+        strncpy (sv.world, wname, sizeof sv.world - 1);
+        sv.world[sizeof sv.world - 1] = 0;
     }
     if (!tfile && seed < 65536UL) {
         return (unsigned char) (seed >> 8);
@@ -278,6 +289,11 @@ unsigned char __fastcall__ s_history (unsigned long seed)
     strcpy (p += strlen (p) + 1, "-l");
     strcpy (p += 3, libdir);
     p += strlen (p) + 1;
+    if (*sv.world) {                            /* (Its world: the default's, none said) */
+        strcpy (p, "-w");
+        strcpy (p += 3, sv.world);
+        p += strlen (p) + 1;
+    }
     if (tfile) {
         strcpy (p, "-t");
         strcpy (p += 3, tfile);
@@ -783,6 +799,7 @@ static void words_in (void)
     } while (k == sizeof nm - 1);
 }
 
+void gods (void);
 static void world_words (void)
 {
     unsigned char i, k;
@@ -804,8 +821,13 @@ static void world_words (void)
     }
     HUB_WINDOW[n++] = 0;                        /* (Then the names given: none) */
     HUB_WINDOW[n++] = 0;
-    wfrom = GODS_AT;                            /* (Then the deities') */
-    words_in ();
+    wfrom = GODS_AT;                            /* (Then the deities': the default world's, the kinds' bank's; another's,
+                                                **   its gods.txt, WORLDS.md's) */
+    if (*sv.world) {
+        gods ();
+    } else {
+        words_in ();
+    }
     HUB_WINDOW[n] = 0;
     hub_map (0);
     HUB->cq.kind = CQ_WORLD;
@@ -813,6 +835,30 @@ static void world_words (void)
     hub_call (&HUB->cq, T_COMMANDS);
     HUB->cq.state = REQ_FREE;
 }
+
+#pragma code-name (push, "SW7CODE")             /* (Part 7's: part 1 full) */
+#pragma rodata-name (push, "SW7RODATA")
+/* Another world's deities' names (WORLDS.md: lib/dq0/worlds/NAME/gods.txt, spaces between) into the parser's words at n,
+** the commands' bank mapped after */
+void s_gods (void)
+{
+    int fd, got;
+
+    strcpy (lb + 300, libdir);
+    strcat (lb + 300, "/worlds/");
+    strcat (lb + 300, sv.world);
+    strcat (lb + 300, "/gods.txt");
+    if ((fd = open (lb + 300, O_RDONLY)) >= 0) {
+        hub_map (CMD_BANK);
+        if ((got = read (fd, HUB_WINDOW + n, CQ_WORDS - 2 - n)) > 0) {
+            n += got;
+        }
+        close (fd);
+    }
+    hub_map (CMD_BANK);
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The game's end: its tasks told to stop (the world first: its I_QUIT, the hub's quit its to set), and waited for */
 static void stop_world (void)
@@ -2893,12 +2939,14 @@ unsigned char __fastcall__ s_args (int argc, char* argv[])
             file = argv[++i];
         } else if (!strcmp (argv[i], "-r") && i + 1 < argc) {
             rules = argv[++i];                  /* (The ruleset, by its name: its referee dq0NAME) */
+        } else if (!strcmp (argv[i], "-w") && i + 1 < argc) {
+            wname = argv[++i];                  /* (The world, by its name: lib/dq0/worlds/NAME) */
         } else if (!strcmp (argv[i], "-p") && i + 1 < argc) {
             ++i;
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d dir] [-H] [-t theme] [-r rs] [-T..]");    /* (Not the tests' own: the room's) */
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d dir] [-H] [-t theme] [-r rs] [-w world] [-T..]");    /* (Not the tests' own: the room's) */
         }
     }
     return given;

@@ -5,10 +5,12 @@
 // a kind, the first none (dq0d.c's struct dkx: its keeps, its standing, its home's three room uses, 2026-10-27; its
 // body; its rank, 2026-10-30; its way with water; its day and its work's room; its pastimes, 2026-10-31).
 // And the kinds' traces (slice 4.1: their tread, marks, smell, scent and nose) made obj/games/dq0tr.dat, 64 bytes a
-// kind (the world's traces' store, dq0w/wtrace.c's struct tkind), the first the character's own.  And the world's lore
-// (lore.h): peoples.txt made obj/games/dq0f.dat, deities.txt obj/games/dq0g.dat, 64 bytes a
-// record (struct people, struct deity), the first none (its first byte the records' count), their words after; and
-// the deities' names, spaces between, obj/games/dq0g.txt (for dq0w's make: in the kinds' bank, the UI's, the commands' words).
+// kind (the world's traces' store, dq0w/wtrace.c's struct tkind), the first the character's own.  And each world's lore
+// (lore.h; ../dq0/WORLDS.md: ../dq0/worlds/NAME): its peoples.txt made obj/games/worlds/NAME/peoples.dat, its
+// deities.txt deities.dat, 64 bytes a record (struct people, struct deity), the first none (its first byte the records'
+// count), their words after; and its deities' names, spaces between, gods.txt (the UI's, as a game in that world begins:
+// the commands' words), the default world's obj/games/dq0g.txt too (for dq0w's make: in the kinds' bank, the UI's, so a
+// game in the default world opens no file of them).
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -45,6 +47,7 @@ const { SQ_FT } = C;                            // rs.h's: a square's feet (kind
 
 const { rows, blocks } = require('../../tools/dq0build.js');   // (A file's rows, its blocks: the make.js files' readers)
 const lines = f => rows(f, 'utf8');
+const WORLD = require('../dq0/worlds/worlds.js');
 
 // A file of keys and values (peoples.txt, deities.txt): its lines, each its key and its values (a line begun with a
 // space goes on with the last: its last value, or with a bar first, more values), in blocks each begun by first
@@ -166,17 +169,29 @@ function build({ dir, objdir, say = () => {} }) {
   noses[SND_KINDS] = tout[13];
   fs.writeFileSync(path.join(objdir, '..', 'dq0d.dat'), Buffer.concat([out, noses]));
 
-  // The deities (dq0g.dat), first: the peoples name them
+  // Each world's lore
+  const made = {};
+  for (const w of WORLD.names()) made[w] = lore(w, keys, path.join(objdir, '..', 'worlds', w));
+  fs.copyFileSync(path.join(objdir, '..', 'worlds', WORLD.DEFAULT, 'gods.txt'), path.join(objdir, '..', 'dq0g.txt'));
+  return { kinds: kinds.length, factions: facs.length, worlds: made };
+}
+
+// A world's lore (its folder's peoples.txt and deities.txt) made its peoples.dat, deities.dat and gods.txt, in out; keys the
+// bestiary's kinds.  OUT: how many deities and peoples
+function lore(world, keys, out) {
+  const dir = WORLD.dir(world), dq = 'worlds/' + world + '/deities.txt', pq = 'worlds/' + world + '/peoples.txt';
+  fs.mkdirSync(out, { recursive: true });
+  // The deities (deities.dat), first: the peoples name them
   const ds = blocks(path.join(dir, 'deities.txt'), 'deity'), dnames = ds.map(d => d.f.deity[0]);
-  if (ds.length >= 16) throw new Error('dq0d/deities.txt: more than 15 deities');
+  if (ds.length >= 16) throw new Error(dq + ': more than 15 deities');
   const dw = words(LREC * (ds.length + 1)), dout = Buffer.alloc(LREC * (ds.length + 1));
   dout[0] = ds.length + 1;
   const dbits = (v, what, n) => v === '-' ? 0 : v.split(/\s+/).reduce((a, w) => {
-    if (dnames.indexOf(w) < 0) throw new Error(`dq0d/deities.txt: line ${n}: ${what}: no deity ${w}`);
+    if (dnames.indexOf(w) < 0) throw new Error(`${dq}: line ${n}: ${what}: no deity ${w}`);
     return a | 1 << (dnames.indexOf(w) + 1);
   }, 0);
   ds.forEach((d, i) => {
-    const at = LREC * (i + 1), f = d.f, bad = w => { throw new Error(`dq0d/deities.txt: line ${d.n}: ${w}`); };
+    const at = LREC * (i + 1), f = d.f, bad = w => { throw new Error(`${dq}: line ${d.n}: ${w}`); };
     for (const k of ['deity', 'title', 'domains', 'temper', 'followers', 'rite', 'feast', 'number', 'colours', 'sign',
       'temple', 'burial', 'servants', 'enemies']) if (!f[k]) bad('no ' + k);
     if (!/^[A-Z][a-z]{1,10}$/.test(f.deity[0])) bad('its name: one word, 11 letters at most');
@@ -201,15 +216,17 @@ function build({ dir, objdir, say = () => {} }) {
     [f.title[0], f.followers[0], f.rite[1], f.feast[0], f.colours[0], f.sign[0], f.temple[0]]
       .forEach((s, k) => dout.writeUInt16LE(dw.add(s), at + 28 + 2 * k));
   });
-  fs.writeFileSync(path.join(objdir, '..', 'dq0g.dat'), Buffer.concat([dout, dw.data]));
-  fs.writeFileSync(path.join(objdir, '..', 'dq0g.txt'), dnames.join(' '), 'latin1');  // (Their names, the commands' words)
+  fs.writeFileSync(path.join(out, 'deities.dat'), Buffer.concat([dout, dw.data]));
+  // (Their names, the commands' words: in small letters, as the parser's tokens are (dq0c's tokenize); "Imma" as written
+  // was never matched, "beseech Imma" not understood, till 2026-11-21)
+  fs.writeFileSync(path.join(out, 'gods.txt'), dnames.map(n => n.toLowerCase()).join(' '), 'latin1');
 
-  // The peoples (dq0f.dat)
+  // The peoples (peoples.dat)
   const ps = blocks(path.join(dir, 'peoples.txt'), 'people');
   const pw = words(LREC * (ps.length + 1)), pout = Buffer.alloc(LREC * (ps.length + 1));
   pout[0] = ps.length + 1;
   ps.forEach((p, i) => {
-    const at = LREC * (i + 1), f = p.f, bad = w => { throw new Error(`dq0d/peoples.txt: line ${p.n}: ${w}`); };
+    const at = LREC * (i + 1), f = p.f, bad = w => { throw new Error(`${pq}: line ${p.n}: ${w}`); };
     for (const k of ['people', 'kinds', 'tongue', 'lands', 'climate', 'builds', 'styles', 'deities', 'walls', 'doors',
       'light', 'marks', 'rooms', 'uses']) if (!f[k]) bad('no ' + k);
     if (f.people[0].length > 23 || !f.people[1] || f.people[1].length > 7 || f.tongue[0].length > 7) bad('its name');
@@ -236,8 +253,8 @@ function build({ dir, objdir, say = () => {} }) {
     pout.writeUInt16LE(pw.list(f.rooms), at + 58);
     pout.writeUInt16LE(pw.list(f.uses), at + 60);
   });
-  fs.writeFileSync(path.join(objdir, '..', 'dq0f.dat'), Buffer.concat([pout, pw.data]));
-  return { kinds: kinds.length, factions: facs.length, deities: ds.length, peoples: ps.length };
+  fs.writeFileSync(path.join(out, 'peoples.dat'), Buffer.concat([pout, pw.data]));
+  return { deities: ds.length, peoples: ps.length };
 }
 
 module.exports = { build };

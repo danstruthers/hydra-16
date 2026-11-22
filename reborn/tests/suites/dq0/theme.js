@@ -207,6 +207,46 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0world', near: ['theme'], what: "Dingus Quest Zero's worlds (WORLDS.md: the user's world plug-in, 2026-11-17; the bare world, games/dq0/worlds/bare, the proof it swaps as the null referee is the rules'): themegen -w bare's histories (seeds 1-6, each passing the theme checker, themec in its place: its status) its peoples, lands, tongues, deities and words alone, none of the first world's (no dwarves, kobolds, Hills or Peaks; its region the Vales, Meads, Uplands or Tors; its eras its hearthfolk's and delvers'; its open line's story; no prisoner's goal nor scourge's, as it has no raiders); a world that isn't one refused (its history.dat not found, status 1); a game in it (dq0 -w bare, the null referee, a generated seed, kept in a folder): its story the bare world's, its deity's name the command parser's (\"beseech Wend\" understood), the first world's not (\"beseech Imma\" not); carried on with no -w, in the bare world still (its save's); and the same game in the default world as ever (\"beseech Imma\" understood)",
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'themegen -w bare -s 3', 'echo said $status',
+        ...[1, 2, 3, 4, 5, 6].flatMap(s => ['themegen -q -w bare -s ' + s + ' -o /ram/w' + s, 'echo seed ' + s + ' status $status', 'cat /ram/w' + s + '/theme.txt']),
+        'themegen -q -w nosuch -s 3', 'echo nosuch $status',
+        'dq0 -w bare -r null -p t -s 70000 -d /ram/bw', 'beseech Wend for help', 'beseech Imma for help', 'quit',
+        'dq0 -r null -p t -d /ram/bw', 'beseech Wend for help', 'quit',
+        'dq0 -r null -p t -s 70000', 'beseech Imma for help', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\r/g, ''), f = [], first = /\b(dwarves|elves|kobolds|hill-men|sun-priests|gargun|Khuzdul|Hills|Peaks|Crags|Downs|Fells|Woods|Wealds|Fens|Cliffs|Plains|Heaths)\b/;
+        const said = saidTheme(out, 'themegen -w bare -s 3');
+        if (!/^story +\| Under the \w+ (Vales|Meads|Uplands|Tors) there is an old place\./m.test(said)) f.push('seed 3: its story not the bare world\'s: ' + JSON.stringify((said.match(/^story.*$/m) || [''])[0].slice(0, 200)));
+        if (!o.includes('% echo said $status\nsaid\n')) f.push('themegen -w bare -s 3 failed');   // (rc's status none: 0)
+        for (let s = 1; s <= 6; s++) {
+          if (!o.includes('seed ' + s + ' status\n')) f.push('seed ' + s + ': the checker refused it (or it wasn\'t made)');
+          const L = DQ0_MAKE().lines(saidTheme(out, 'cat /ram/w' + s + '/theme.txt'), 'seed ' + s), v = k => L.filter(l => l.key === k).map(l => l.v);
+          for (const p of v('people')) if (!/^(hearthfolk|delvers)$/.test(p[1])) f.push('seed ' + s + ': a people not the bare world\'s: ' + p.join(' | '));
+          const g = v('goal')[0];
+          if (g && /^(prisoner|scourge)$/.test(g[0])) f.push('seed ' + s + ': a ' + g[0] + '\'s goal, and the bare world has no raiders');
+          for (const x of v('faction')) if (!/^(vermin|crawlers|dead|beasts|outlaws)$/.test(x[0]) && !/^(vermin|crawlers|dead|beasts|outlaws)$/.test(x[1] || '')) f.push('seed ' + s + ': a faction not of the bare world\'s: ' + x.join(' | '));
+          const t = saidTheme(out, 'cat /ram/w' + s + '/theme.txt'), b = t.match(first);
+          if (b) f.push('seed ' + s + ': the first world\'s "' + b[0] + '" in it: ' + JSON.stringify(t.slice(Math.max(0, b.index - 100), b.index + 60)));
+        }
+        if (!/% echo nosuch \$status\nnosuch 1\n/.test(o) || !/its world's data \(lib\/dq0\/worlds\/nosuch\/history\.dat\) not found/.test(o)) f.push('a world that isn\'t one not refused: ' + JSON.stringify(o.slice(o.indexOf('nosuch'), o.indexOf('nosuch') + 200)));
+        const p = dq0Prose(out), bare = p.slice(p.indexOf('dq0 -w bare'), p.indexOf('dq0 -r null -p t -d /ram/bw')), kept = p.slice(p.indexOf('dq0 -r null -p t -d /ram/bw'), p.indexOf('dq0 -r null -p t -s 70000')), dflt = p.slice(p.indexOf('dq0 -r null -p t -s 70000'));
+        if (!/there is an old place\./.test(bare)) f.push('the game in the bare world: not its story: ' + JSON.stringify(bare.slice(0, 600)));
+        const after = (s, cmd) => ((new RegExp('> ' + cmd + '\\s*(?:> ' + cmd + ')?\\s*([^>]*)').exec(s) || [])[1] || '');   // (Its words: the line's echo once)
+        const understood = s => /You know no invocations/.test(s);
+        if (!understood(after(bare, 'beseech Wend for help'))) f.push('the bare world: "beseech Wend" not understood: ' + JSON.stringify(after(bare, 'beseech Wend for help')));
+        if (understood(after(bare, 'beseech Imma for help'))) f.push('the bare world: "beseech Imma", the first world\'s, understood');
+        if (!understood(after(kept, 'beseech Wend for help'))) f.push('the bare world\'s game carried on: its world not its save\'s ("beseech Wend" not understood): ' + JSON.stringify(after(kept, 'beseech Wend for help')));
+        if (!understood(after(dflt, 'beseech Imma for help'))) f.push('the default world: "beseech Imma" not understood: ' + JSON.stringify(after(dflt, 'beseech Imma for help')));
+        if (first.test(bare.slice(0, bare.indexOf('> beseech')))) f.push('the game in the bare world: the first world\'s words in its story: ' + JSON.stringify(bare.slice(0, 600)));
+        this.notes = [(said.match(/^theme +\| (.*)/m) || [])[1] + ': ' + ((said.match(/^region +\| ([^|]*)/m) || [])[1] || '').trim()];
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0goals', what: 'Dingus Quest Zero\'s goal kinds (G5: data, games/themegen/goals.txt): themegen\'s histories for seeds 1-12, each passing the theme checker (themec, in themegen\'s place: its status), all four kinds among them (an artifact found, the evil cleared out, a prisoner rescued, a far exit won through to), each goal\'s stratum one of its history\'s and its guardians a faction there',
       init: 't_rc', cycles: 3000e6,
       machine: { input: ['bind -a /sd/0/games /bin', ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].flatMap(s => ['themegen -q -s ' + s + ' -o /ram/g',

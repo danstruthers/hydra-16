@@ -134,6 +134,9 @@ static int __fastcall__ run (const char* lib, const char* name, unsigned char wi
     strcat (p, name);
     if (with_lib == 2) {                        /* (Its dots: no silence, as the game's start has none) */
         q = argn (arg (arg1 (arg1 (q, "-q"), "-p"), "-r", "3"), "-s", seed_of (L.h.seed, L.h.dungeon) ^ 0x52554D52UL);
+        if (*sv.world) {                        /* (In the last dungeon's world: ../dq0/WORLDS.md's) */
+            q = arg (q, "-w", sv.world);
+        }
     }
     q = arg (q, with_lib == 2 ? "-o" : "-d", top);
     if (with_lib) {

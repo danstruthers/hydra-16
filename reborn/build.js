@@ -468,6 +468,7 @@ function o65Bare(m) {
 // an o65 module at $8000, its imports what its objects use and don't have (od65's --dump-imports), its exports
 // their globals (--dump-exports); checked against each caller its parents file names (its exports: exportsOf), the
 // build failing if one hasn't something the child uses.  OUT: its file's bytes
+const CHILD_ROOM = 7680, childRooms = new Map();   // (buildChild's: each bank program's room left, roomChecked says it)
 function buildChild(dir, objdir) {
   const name = path.basename(dir), od = path.join(objdir, name);
   const objs = compileC(csources(dir), od);
@@ -489,6 +490,13 @@ function buildChild(dir, objdir) {
   const bp = o65Bare (fs.readFileSync(out));           // (ld65's options gone: its date of making and its own version,
                                                         //   "V2.19" or "V2.19 - Git ..." as it was built, the images
                                                         //   the same each build, on every machine)
+  // Its room: the kernel's for a child (base/include/layout.inc's RB_TOP - RB_MODS, 7,680 bytes, not child.cfg's bank)
+  // less its text, data and BSS (the o65 header's) and its exports' table (each its name, a 0, its address; a 0 after
+  // the last: run.s's RE_TABLE).  Past it BANK_LOAD refuses it as the game runs (BL_BANK, 7): histgen's at 7,774 bytes,
+  // 2026-11-21, the build none the wiser
+  const room = CHILD_ROOM - bp.readUInt16LE(10) - bp.readUInt16LE(14) - bp.readUInt16LE(18) - exps.reduce((n, e) => n + e.length + 3, 1);
+  if (room < 0) throw new Error('bank program ' + name + ': ' + -room + ' bytes past a child\'s room, ' + CHILD_ROOM + ' (its text, data, BSS and exports\' table)');
+  childRooms.set(name, room);
   fs.writeFileSync(out, childRelocs(bp));
   const parents = path.join(dir, 'parents');
   if (fs.existsSync(parents)) {
@@ -602,6 +610,9 @@ function childrenMade(ready = false) {
 function roomChecked(games, say) {
   const room = headroom(Object.keys(games));
   say(room.text);
+  const kids = [...childRooms].sort((a, b) => a[0] < b[0] ? -1 : 1), low = kids.filter(([, r]) => r < HEADROOM);
+  say('The bank programs\' room (of a child\'s ' + CHILD_ROOM + ' bytes; ! under ' + HEADROOM + '): ' + kids.map(([n, r]) => n + ' ' + r + (r < HEADROOM ? '!' : '')).join(', ') +
+    (low.length ? '\n  headroom: ' + low.map(([n]) => n).join(', ') + ' under ' + HEADROOM + ' bytes free' : ''));
   if (room.faults.length) throw new Error('a game\'s task short of main RAM (below its floor): ' + room.faults.join('; '));
 }
 
