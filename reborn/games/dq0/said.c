@@ -240,14 +240,25 @@ static void __fastcall__ li (unsigned char j)
     sk = k;
 }
 
-/* A text said, from p to its end (0), or to the SC_ALT or SC_END that ends its alternative: there */
-static const unsigned char* __fastcall__ run (const unsigned char* p)
+/* A text said, from p to its end (0), or to the SC_ALT or SC_END that ends its alternative: there.  Its words said as
+** they're made, at a space past SAY_SOON letters (the words before it said, the rest after: say's line kept, its column
+** and its space owed; none while an "a" waits for its word, a thing's name's mark is in them, or they're kept: a look's,
+** said_q's), so a long one's first words are out while the rest is worked out (a blow's: speed12, 2026-11-22, the
+** user's D17).  (Its locals static, p kept through a call of its own where it's wanted after it: the C stack's
+** reads its time before) */
+#define SAY_SOON        16
+static const unsigned char* __fastcall__ run (const unsigned char* at)
 {
-    unsigned char c, v, f;
-    const unsigned char* q;
-    const char* s;
+#pragma bss-name (push, "OV27BSS")              /* (The bank's own: the main RAM's room) */
+    static const unsigned char* p;
+    static unsigned char c, v, f;
+    static const unsigned char* q;
+    static const char* s;
+    static unsigned u;
+#pragma bss-name (pop)
+    const unsigned char* k;                     /* (p kept through a call of its own: a piece's, a list's) */
 
-    for (;;) {
+    for (p = at; ; ) {
         c = RB (p);
         if (!c || c == SC_ALT || c == SC_END) {
             return p;
@@ -264,6 +275,13 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
                 strcpy (sp, said_dw + said_do[c < '\n' ? c - 2 : c - 4]);    /* (A word most said) */
                 sp += strlen (sp);
             } else {
+                if (c == ' ' && sp >= lb + SAY_SOON && !art && !once && !said_q && said_to == lb) {
+                    *sp = 0;
+                    if (!strchr (lb, '#')) {
+                        say (lb);               /* (The words so far said: say's column and its space owed kept) */
+                        sp = lb;
+                    }
+                }
                 *sp++ = c;
             }
             continue;
@@ -284,7 +302,8 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
                 v = c - SC_IF;
                 v = v == 4 ? said_n : v == 3 ? ac != 0 : (s = said_s[v > 4 ? v - 2 : v]) && *s;
             } else {
-                v = fv (f) > 255 ? 255 : fv (f);
+                u = fv (f);
+                v = u > 255 ? 255 : u;
             }
             for (; v; --v) {
                 q = over (p);
@@ -392,7 +411,9 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
                 rel (fv (v));
                 break;
             case SC_PIECE:
+                k = p;
                 run (said_rows + said_pc[v]);   /* (A piece's text, said.txt's @NAME) */
+                p = k;
                 break;
             case SC_KIND:                       /* (A thing's kind's name, the catalogue's) */
                 hub_mem (KIND_BANK, sp, CATALOGUE[fv (v)].name, sizeof CATALOGUE[0].name);
@@ -405,7 +426,9 @@ static const unsigned char* __fastcall__ run (const unsigned char* p)
                 break;
             case SC_EXT:                        /* (The look's lists': a list, a plural, "A") */
                 if (v < 3) {
+                    k = p;
                     li (v);
+                    p = k;
                 } else if (v != 5) {
                     plural (v == 6 ? 2 : v - 3);
                 } else {
