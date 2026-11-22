@@ -218,7 +218,7 @@ static void fit (void)
         t = LOT_WT (k->form, k->weight * (ost.budget >> 2));
         for (j = 0, e = OF_LIST; j < n; ++j, ++e) {
             k = CATALOGUE + e->kind;
-            w = k->weight;
+            w = e->kind == KI_OIL ? 4 : k->weight;  /* (A flask of oil weighed full, its pint a pound: H16's) */
             i = e->qty;
             if (k->form & KF_TENS) {
                 w = LOT_WT (k->form, w * i);
