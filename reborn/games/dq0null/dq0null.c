@@ -875,6 +875,7 @@ void __fastcall__ rf_answer (struct req* r)
             }
             break;
         }
+        ++tgen;                                 /* (What's to hand changed: referee.h's) */
         if (RS_EQUIP_HOW (*r) == 2) {
             equip_all (r->text);
         } else if (RS_EQUIP_HOW (*r)) {
@@ -963,6 +964,10 @@ unsigned char __fastcall__ rf_start (int argc, char* argv[])
 }
 
 void rf_begin (void)
+{
+}
+
+void rf_after (void)                            /* (Its summary kept whole in rf_answer: rf_later never set) */
 {
 }
 

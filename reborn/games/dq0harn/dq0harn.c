@@ -349,13 +349,22 @@ unsigned char lhurt[4];
 unsigned char cplan = BF_BIPED;
 unsigned char hheld;                            /* (The hands that hold something: RS_EQUIP 2's w2, DH_*) */
 
-static void status (void)
+static unsigned char pc_ep;                     /* (Its encumbrance penalty, as the summary's rest last reckoned it: its
+                                                **   load and its endurance, which no blow, harm or time changes) */
+
+/* The character's summary in the hub, in two halves (the user's T4, 2026-11-22: the referee skeleton's rf_later).  Its
+** own fields of what a blow, a harm, time or exertion changes, which the world reads as the reply comes (rs.h's cond,
+** health, limbs, limp, step and gstep: wfight.c's knockout latch, fight_on's shock and health, a walk's pace), and the
+** status line: before the reply (status_now) */
+static unsigned char sk, sl, ss, sw;            /* (The steps last worked out by: its walk's k, its limp, in shock; the
+                                                **   step: status_now's, k never 0) */
+static void status_now (void)
 {
     static const char* const word[4] = { "", " OUT", " SHOCK", " DEAD" };
     char b[8];
     struct rs_summary* s = &HUB->pcsum;
     static const unsigned char rate[3] = { 100, 50, 33 };
-    unsigned char up = harn_get_up (&pc), pp = up + harn_get_ep (&pc), ep = pp - up, k, w, g, v, l;
+    unsigned char up = harn_get_up (&pc), pp = up + pc_ep, k, w, g, v, l;
 
     strcpy (HUB->pcstatus, "UP ");             /* (Its PP once: the load's sum each time, room6's) */
     strcat (HUB->pcstatus, utoa (up, b, 10));
@@ -384,11 +393,19 @@ static void status (void)
                                                 **   house's: each level of the injuries to the legs it walks on a
                                                 **   fifth more time a square, slice 4.1b's) */
     s->limp = l = (v & LB_LEG_L ? 0 : lhurt[2]) + (v & LB_LEG_R ? 0 : lhurt[3]);
+    v = pc.state == HARN_SHOCK;
+    if (k == sk && l == sl && v == ss && s->step == sw) {
+        return;                                 /* (Its steps by the same: as they were, their divisions spared; a blow's
+                                                **   as most leave them, speed11's) */
+    }
+    sk = k;
+    sl = l;
+    ss = v;
     w = k < 4 ? 50 : 200 / k;
     if (l) {                                    /* (A limp's: its fifths; none, the same, its divisions spared) */
         w = (unsigned) w * (5 + l) / 5 > 255 ? 255 : (unsigned) w * (5 + l) / 5;
     }
-    s->step = w;
+    s->step = sw = w;
     s->gstep[GA_CREEP] = w > 85 ? 255 : w + (w << 1);   /* (The game's: a sixth of its Move, a quarter; the book's: a
                                                 **   jog its Move, a run twice, a sprint three times) */
     s->gstep[GA_SLOW] = w > 127 ? 255 : w << 1;
@@ -400,6 +417,15 @@ static void status (void)
         }
         s->gstep[g] = pc.state == HARN_SHOCK ? w : !v ? 1 : v < w ? v : w;
     }
+}
+
+/* And the rest (its encumbrance first, the steps' by it), after the reply: rf_after's; or before the half above, the
+** whole summary at once (status) */
+static void status_rest (void)
+{
+    struct rs_summary* s = &HUB->pcsum;
+    unsigned char ep = pc_ep = harn_get_ep (&pc);
+
     s->attacks = 1;
     s->sight = sense (HARN_EYE);
     s->hearing = sense (HARN_HRG) + (HUB->watch & WA_LISTEN ? 2 : 0);  /* (Listening as it goes: two better) */
@@ -424,6 +450,18 @@ static void status (void)
                                                 **   Intelligence, of a hundred; a tenth of it lost every twice its
                                                 **   Intelligence and Will together, minutes) */
     s->mapfade = 2 * (pc.att[HARN_INT] + pc.att[HARN_WIL]);
+}
+
+static void status (void)
+{
+    status_rest ();
+    status_now ();
+}
+
+/* (The skeleton's: after a reply that left the summary's rest, rf_later's) */
+void rf_after (void)
+{
+    status_rest ();
 }
 
 #pragma code-name (push, "SW1CODE")
@@ -908,7 +946,8 @@ void __fastcall__ rf_answer (struct req* r)
         memcpy (rq, r, sizeof rq);
         fight ((struct req*) rq);
         memcpy (r, rq, sizeof rq);
-        status ();
+        status_now ();                          /* (The blow's own summary in the reply, the rest after it: */
+        rf_later = 1;                           /*   rf_after's, the skeleton's, the user's T4, 2026-11-22) */
         break;
     case RS_HARM:                               /* (Harm, wounds over time, first aid: overlay 6's, heal.c, in a */
     case RS_TIME:                               /*   copy, the part said copied for it; the harm overlay 1's, its */
@@ -927,7 +966,8 @@ void __fastcall__ rf_answer (struct req* r)
             memcpy (&HUB->pc_hunger, rq + offsetof (struct req, x) + WANT_X, 6);
         }
         memcpy (r, rq, sizeof rq);
-        status ();
+        status_now ();                          /* (Its own summary in the reply, the rest after it) */
+        rf_later = 1;
         break;
     case RS_HELLO:                              /* (Part 1's, as the game's begun: the main RAM's room, 2026-11-02;
                                                 **   its words part 4's, part 1's room) */
@@ -987,7 +1027,8 @@ parted:
         k = pc.fl;
         spent (RS_EXERT_TENTHS (*r));
         RS_EXERT_TIRED (*r) = pc.fl > k;
-        status ();
+        status_now ();                          /* (Its steps in the reply, the rest after it) */
+        rf_later = 1;
         break;
     case RS_EQUIP:
         if (RS_EQUIP_HOW (*r) == 2 && !r->actor) {

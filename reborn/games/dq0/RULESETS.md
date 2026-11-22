@@ -98,7 +98,16 @@ referee is three things, and only the last is a ruleset's own:
   quietly's and an appraisal's own dice (QUIET_IN, JUDGE_IN).  Lockpicking wants "picks" to hand and magic's hiding
   wants magic in both referees (a line each).
 - **The ruleset's answers**: rf_start (its arguments, its overlays and banks), rf_begin (its beginning), rf_answer
-  (each request), rf_sheets (its creatures' sheets in beasts.dat).  dq0null is the proof: it needs no HarnMaster header.
+  (each request), rf_sheets (its creatures' sheets in beasts.dat), rf_after (its summary's rest after a reply, below).
+  dq0null is the proof: it needs no HarnMaster header.
+- **The summary after a reply** (the user's T4, 2026-11-22: "the referee's reply carries the blow's own summary fields,
+  the rest of the summary recomputed after it"): a reply carries the character's summary's fields its request changed
+  that the world reads as the reply comes (struct rs_summary's cond, health, limbs, limp, step and gstep, and the
+  status line); the rest (the senses, morale, load, power, lead, the map in mind, the traits: what no blow, harm, time
+  or exertion changes) a ruleset may leave for after it, setting rf_later in rf_answer.  The skeleton then lets the
+  asker run first (a tick at most, at the real paces) and calls rf_after before it answers anything else.  dq0harn leaves its encumbrance
+  and the rest after a blow, a harm, time and exertion (status_now before the reply, status_rest after it); dq0null
+  keeps its summary whole (its rf_after nothing).
 
 ## Between dungeons: the ruleset's own program, and its sheet
 

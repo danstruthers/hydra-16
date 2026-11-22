@@ -200,6 +200,7 @@ void __fastcall__ o_equip (const char* key, unsigned char on)
 {
     unsigned char k;
 
+    ++tgen;                                     /* (What's to hand changed: referee.h's) */
     for (k = 0; k < NTOOLS; ++k) {
         if (on ? !tools[k][0] : !strcmp (tools[k], key)) {
             if (on) {

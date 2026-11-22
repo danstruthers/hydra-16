@@ -382,6 +382,11 @@ unsigned char __fastcall__ o_den_armour (unsigned char k, unsigned char loc, uns
 ** the thing named, its kind in wk, and no other, its words its name, a soft one its fists (the world never asks it);
 ** else that part of it), its block (the best of what it holds, its weapon or its shield; else a bare arm) and each
 ** thing that blocks (a round's defences, fight.c's: each blocks one foe a round), its dodge */
+#pragma bss-name (push, "OV3RODATA")           /* (Its bank's, kept: the main RAM's room) */
+static unsigned char rok, rgen, trow[NTOOLS];   /* (Each slot's row in weapons, NWEAPONS none, 0xFF not yet found: as
+                                                **   what's to hand was at tgen, the skeleton's; a blow's sides the
+                                                **   table searched once, not each round, speed11's) */
+#pragma bss-name (pop)
 void __fastcall__ o_pc_side (struct side* s)
 {
     const struct weapon* w;
@@ -402,7 +407,15 @@ void __fastcall__ o_pc_side (struct side* s)
         if (!tools[k][0] || !(tflag[k] & T_HELD) || ((h = tflag[k] & (T_LEFT | T_RIGHT)) & dead)) {
             continue;
         }
-        for (j = NUNARMED; j < NWEAPONS && strcmp (weapons[j].key, tools[k]); ++j) {
+        if (!rok || rgen != tgen) {             /* (What's to hand changed since: every slot's row to find again) */
+            rok = 1;
+            rgen = tgen;
+            memset (trow, 0xFF, sizeof trow);
+        }
+        if ((j = trow[k]) == 0xFF) {
+            for (j = NUNARMED; j < NWEAPONS && strcmp (weapons[j].key, tools[k]); ++j) {
+            }
+            trow[k] = j;
         }
         if (j == NWEAPONS) {
             continue;
