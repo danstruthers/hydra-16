@@ -492,7 +492,8 @@ unsigned char __fastcall__ o_things_work (unsigned char h)
         if (!cmd.obj.word[0] || cmd.obj.kind) {
             return 0;
         }
-        action = othings (IO_SHUT | IO_STEPS | IO_GO, cmd.obj.word, nil, cmd.aux | d);
+        action = othings (IO_SHUT | IO_STEPS | IO_GO, cmd.obj.word, nil, (cmd.aux == PA_SLAM ? PA_CLOSE : cmd.aux) | d);
+                                                /* (A lid slammed: shut, 2026-11-21) */
         if (action == IR_NONE) {
             if (!strcmp (cmd.obj.word, "lock")) {
                 return 0;                       /* ("Unlock the lock", "force the lock": the door's) */

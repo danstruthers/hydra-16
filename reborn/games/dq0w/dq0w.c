@@ -909,16 +909,26 @@ static unsigned char __fastcall__ side_k (unsigned char h)
 static unsigned __fastcall__ door_on (unsigned nx, unsigned ny)
 {
     struct portal* o;
+    struct trap* t;
     unsigned char s, d;
 
     if (TILE (C->tile[cy_][cx_]) != T_DOOR || !(o = portal_at (cx_, cy_)) || (o->state & PS_OPEN) || o->kind != PK_DOOR ||
         !(o->parts & PP_KNOWN) || (o->state & (PS_LOCKED | PS_BARRED | PS_WARDED | PS_HIDDEN)) || braced (sn_, nx, ny)) {
         return 0;                               /* (Braced: a chest against it, wdrag.c's: not opened as it goes) */
     }
+    for (s = C->ntraps, t = C->trap; s; --s, ++t) {
+        if (t->x == cx_ && t->y == cy_ && TS_SET (t->state) && t->trigger == TT_DOOR) {
+            return 0;                           /* (A trap on it: left shut, as a locked one is, its opening the door
+                                                **   work's (wdoor.c's, its trap set off): the act audit's B2,
+                                                **   2026-11-21) */
+        }
+    }
     s = o->state;
     d = o->parts;
     change (sn_, nx, ny, s | PS_OPEN, d, PORTAL_STATE);
     event (E_PORTAL, 0, E_PORTAL_W1 (PK_DOOR, 0, PO_OPENED));
+    act_noise (0, AC_OPEN, nx, ny);             /* (Heard, as the door work's opening is: the act table's open, every
+                                                **   actor's; silent before, 2026-11-21) */
     return 2 * stept;
 }
 
@@ -4295,7 +4305,7 @@ unsigned char __fastcall__ s_work (unsigned char what, unsigned x, unsigned y, u
         if (what == PA_BREAK || (k != PK_DOOR && k != PK_PORTCULLIS && what == PA_FORCE && !shut &&
             !(p->parts & PP_BARS))) {
             blows ();                           /* (Broken; a window forced, nothing shut or barred: its glass) */
-        } else if (k == PK_DOOR || what == PA_BAR || (k != PK_PORTCULLIS && (what <= PA_UNLOCK || what == PA_PICK || (what == PA_FORCE &&
+        } else if (k == PK_DOOR || what == PA_BAR || (k != PK_PORTCULLIS && (what <= PA_UNLOCK || what >= PA_PICK || (what == PA_FORCE &&
             shut)))) {
             doors ();                           /* (A door's; a window's shutters, as a door's) */
         } else {

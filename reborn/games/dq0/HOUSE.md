@@ -3753,15 +3753,18 @@ These are the house's.
 
 - **The character's rules, every actor's:** a denizen opens, shuts, bars and unbars a door, forces it (its Strength,
   its own sheet's, against the door as the character's is) and batters it (each blow the character's attack at a thing
-  the door ignores, by its own weapon or body, off the door's body), by the character's code; its time its own.  The
-  code would let it set a bar and lock a door with its key too; no mind asks that yet.
+  the door ignores, by its own weapon or body, off the door's body), by the character's code; its time its own.  It
+  sets a bar as the character does (the widest it carries or has within reach), locks a door with its key, works a
+  window's shutters, bends its bars and works its pane out, and slams a door; an ally does any of them asked (lock,
+  bar, unbar, force, pick: 2026-11-21, the one-path plan's stage 2).
 - **No trap sprung** *(the house's; left for now, the user's, 2026-11-03)*: a denizen never sets off a door's trap as it opens it, as it never sets
   off one underfoot.  A faction knowing its own traps (and being caught by another's) is a planned item; till then
   none is.
 - **A lock picked** *(2026-11-02, the house's)*: a robber's kind (kinds.txt's ways r: a bandit, a kobold, a brown orc,
   their leaders) with no key to a
   locked door picks its lock, by the character's code (a minute a try, its test the lock's steps worse), two tries,
-  before it forces it; its tools its own (none in its things: the house's), its test by its sheet (the bestiary has no
+  before it forces it; only with lockpicks, as the character (2026-11-21: a bandit's purse holds a set; a kobold or an
+  orc has none, and forces), its test by its sheet (the bestiary has no
   Lockcraft: its Dexterity times five, as a creature's other tests; the null ruleset's flat odds).  Heard working at
   the lock 1 ("a faint scratching"), picked 1 ("a lock clicking").  Other kinds pick none.
 - **Hands** *(the house's)*: only a denizen with hands (a two-legged body, kinds.txt's) opens, shuts, bars or unlocks
@@ -3776,8 +3779,8 @@ These are the house's.
   far side (a round, its test by its sheet, P_LIFT six steps worse), two tries; then, hostile, it bends the bars
   apart (ten seconds' straining each, the bars' thickness the harder), two tries; then it gives up (and a tunneller
   digs round).  Against the character (fleeing, shy, or watching it, beyond the portcullis), from its winch's side it
-  lets it fall (no one under it).  Beasts work none.  Heard: winding and heaving 7, raised or let fall 8, bars bent 8.
-  Windows are left alone (to come: shutters, glass, a climb through).
+  lets it fall (no one under it).  Beasts work none.  Heard, every actor's (the act table's, 2026-11-21): winding 5,
+  heaving 7, raised or let fall 8, bars strained at 7, bent 8.  A window's climb through, to come.
 - **Shut against the character** *(the house's)*: one fleeing, shy, or watching the character shuts an open door
   between them (the character beyond it, within eight squares, no one in the doorway); fleeing, it slams it, louder
   (5, a door shut 3).

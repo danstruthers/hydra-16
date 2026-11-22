@@ -38,6 +38,30 @@ beside this file as the work list; every row there has its file:line:
 11. **Search.** A denizen's reaches one square, finds no doors or traps, and is never told.
 12. **The character** can't build, rob or filch a living denizen, dart past a body, or slam a door.
 
+**Done so far:**
+- **Stage 1, the world's part** (act1, 2026-11-19): the act table (games/dq0w/acts.txt) and one sender each for noise and
+  the referee's test (acts.h's act_noise, act_test).
+- **Stage 2, closures** (op2a, 2026-11-21; built/2026-11-21-op2a.md): doors, windows' shutters, portcullises and lids by
+  one code and one table for both sides.
+  - Portcullises and windows read the act table too (wind, heave, raised, lower, bend, bent, prise, wopen, wshut).
+    wport.c's own noise table for a denizen's portcullis is gone, so every actor's winding is 5, and the character's
+    heave, raise and bent bars are now heard as a denizen's were.
+  - One tool rule (wport.c's tool_of): a key that fits, or lockpicks, carried by whoever acts. A robber picks a door's
+    lock only with lockpicks (bandits now carry them in the purse; kobolds and orcs don't), and picks a lid's lock with
+    them before forcing it (den_pry). B4, G-8.
+  - Denizens bar doors (den_bar: the widest bar it carries or has within reach, the character's rule; wk.link is no
+    longer the picking flag). They also work a window's shutters, bend its bars and work its pane out: den_portal uses
+    s_work's routing. G-5, G-6 (climbing through is left to the climbing branch).
+  - Slamming is one act (PA_SLAM, PO_SLAMMED): "slam the door" for the character, and a fleeing denizen's slam is its
+    mind's PA_SLAM. G-20.
+  - A door that won't open though it's neither locked nor barred (braced) is tried twice, then forced if the denizen is
+    hostile, else given up. B8.
+  - A door opened as the character walks through is heard. A door with a set trap is not opened on a walk; it is left
+    for the door work, which springs the trap. B2.
+  - An ally's errands: lock, bar, unbar, force and pick, at a door, a window or a portcullis.
+  - Not yet: a denizen springing a door's trap (B9: needs the referee's harm for an actor), battering by who (B6), hidden
+    doors known to their lair (B10), a denizen's key interruptible as the character's is (B3).
+
 ## 2. The design: the same by construction
 
 One function per act, one sensing routine, one engagement, one exchange, one give-way. Each takes "who": 0 the

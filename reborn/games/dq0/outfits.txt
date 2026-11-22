@@ -241,6 +241,8 @@ free 15: jewel@worn 1d3
 free 33: chest@bed, pennies@in 1d6, iron key@pouch
 free 25: dice@pouch
 free 25: talisman@worn
+free: lockpicks@pouch                           ; (A robber's tools: a lock picked only with them, every actor's, the act
+                                                ;   audit's B4, 2026-11-21; last, each line its own die)
 ; (Its lord a Brigand/Outlaw and a Warrior: the higher chance and dice, the book's rule for one of two categories)
 [purse banlord]
 free 90: pennies@pouch 7d6
@@ -248,6 +250,7 @@ free 30: crowns@pouch 1d3
 free 15: jewel@worn 1d3
 free: chest@bed, pennies@in 7d6, iron key@pouch
 free 25: earrings@worn
+free: lockpicks@pouch
 ; (A cultist an outlawed cult's lay folk: Brigand/Outlaw, the house's nearest)
 [purse cultist]
 free 75: pennies@pouch 1d6

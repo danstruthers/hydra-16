@@ -2368,7 +2368,13 @@ unsigned char __fastcall__ s_door_way (unsigned char k)
         by = y + dir_y[j];
         what = 0xFF;
         if (mode == 1) {                        /* (Toward its foe, or the one it follows: shut, the way nearer) */
-            if ((s & PS_OPEN) || toward (bx - refx, by - refy) >= toward (a.x - refx, a.y - refy)) {
+            if (s & PS_OPEN) {
+                if ((md.atry[k] & 3) == j) {
+                    md.atry[k] = j;             /* (Open now: its tries at it begun again) */
+                }
+                continue;
+            }
+            if (toward (bx - refx, by - refy) >= toward (a.x - refx, a.y - refy)) {
                 continue;
             }
             st = md.atry[k];
@@ -2402,17 +2408,22 @@ unsigned char __fastcall__ s_door_way (unsigned char k)
                 }
             } else if ((s & PS_BARRED) && q->bar == ((j + 2) & 3)) {
                 what = PA_LIFT;                 /* (Its bar on its side: lifted out first) */
-            } else if (!(s & (PS_LOCKED | PS_BARRED))) {
-                what = PA_OPEN;
-                st = n = 0;
+            } else if (!(s & (PS_LOCKED | PS_BARRED)) && (st || n < 2)) {
+                what = PA_OPEN;                 /* (Twice: one that won't open, neither locked nor barred (a heavy
+                                                **   thing against it, wdrag.c's braced: PO_BLOCKED), forced as a locked
+                                                **   one is, hostile; else given up, round: held there for ever before,
+                                                **   the act audit's B8, 2026-11-21) */
+                n = st ? 1 : n + 1;
+                st = 0;
             } else if (!st && (s & PS_LOCKED)) {
                 what = PA_UNLOCK;               /* (Its key, if it has one: the world's) */
                 I_PORTAL_STEP (im) = 0;
                 st = 1;
             } else if (st == 1 && (s & PS_LOCKED) && (K_HELP (K) & H_ROBS) && n < 2) {
-                what = PA_UNLOCK;               /* (Picked, a robber's kind's: begun, then done, t 2 | 1, the world's
-                                                **   test by its sheet; 2026-11-02, the house's) */
-                I_PORTAL_STEP (im) = 2 | n++;
+                what = PA_PICK;                 /* (Picked, a robber's kind's: begun, then done, t 1, the world's
+                                                **   test by its sheet, with its lockpicks, if it has them (the world's:
+                                                **   none, PO_NO_PICKS, 2026-11-21); 2026-11-02, the house's) */
+                I_PORTAL_STEP (im) = n++ & 1;
             } else if (a.attitude != AT_HOSTILE) {
                 return 0xFF;                    /* (Locked or barred against it: no further, round, as it can) */
             }
@@ -2461,7 +2472,8 @@ unsigned char __fastcall__ s_door_way (unsigned char k)
             } else {
                 md.alert[k] = now + 600;           /* (Alert a while: still, looking about, a minute) */
             }
-            what = pc ? PA_LOWER : PA_CLOSE;
+            what = pc ? PA_LOWER : a.doing == DO_FLEE ? PA_SLAM : PA_CLOSE;   /* (Fleeing: slammed, the
+                                                **   character's own "slam the door", 2026-11-21) */
             I_PORTAL_STEP (im) = 0;
         }
         I_PORTAL_ACT (im) = what;
@@ -3621,6 +3633,8 @@ unsigned char __fastcall__ s_draw_on (unsigned char k)
 ** from where it is: the world's to refuse; then following again); else following the character, to where it last
 ** sensed it, till it's within the distance it's told (keep: beside it, unless "follow me at 3 squares").  The step,
 ** or 0xFE (its wait, wt) */
+static const unsigned char or_pa[] = { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_LOCK, PA_BAR, PA_LIFT, PA_FORCE, PA_PICK };
+                                                /* (A door's errand's act, by its order: OR_OPEN ...) */
 unsigned char __fastcall__ s_ally (unsigned char k)
 {
     unsigned char d = 0xFE, n = 1 + md.akeep[k], w = 0;
@@ -3654,7 +3668,9 @@ unsigned char __fastcall__ s_ally (unsigned char k)
             md.aorder[k] = OR_FOLLOW;              /* (No way to it: given up) */
             return 0xFE;
         }
-        I_PORTAL_ACT (im) = md.aorder[k] == OR_OPEN ? PA_OPEN : md.aorder[k] == OR_CLOSE ? PA_CLOSE : PA_UNLOCK;
+        w = or_pa[md.aorder[k] - OR_OPEN];         /* (Its act, the character's own: the one-path plan's stage 2,
+                                                **   closures, 2026-11-21) */
+        I_PORTAL_ACT (im) = w;
         I_PORTAL_WHICH (im) = PW_DOOR;
         I_PORTAL_X (im) = x;
         I_PORTAL_Y (im) = y;
@@ -3662,11 +3678,13 @@ unsigned char __fastcall__ s_ally (unsigned char k)
         a.face = bearing (x - a.x, y - a.y);
         act (I_PORTAL, k);
         wt = 5;
-        if (md.aorder[k] == OR_OPEN && !(md.afetch[k] & FETCH_TRIED) && (p = at (a.sn, x, y)) != 0 && TILE (*p) == T_DOOR &&
-            (q = portal_at (cx_, cy_)) != 0 && q->kind == PK_PORTCULLIS) {
-            md.afetch[k] |= FETCH_TRIED;           /* (A portcullis opened, raised: timed work, the world's, as the
-                                                **   character's is, begun; done as it's asked again, its time up,
-                                                **   2026-11-17: DECISIONS.md's "Opening a portcullis", its question 1) */
+        if (!(md.afetch[k] & FETCH_TRIED) && (p = at (a.sn, x, y)) != 0 && (q = portal_at (cx_, cy_)) != 0 &&
+            (w == PA_FORCE || w == PA_PICK || (q->kind == PK_PORTCULLIS ? w == PA_OPEN : q->kind != PK_DOOR && w == PA_LIFT))) {
+            md.afetch[k] |= FETCH_TRIED;           /* (Timed work, the world's, as the character's is, begun; done as
+                                                **   it's asked again, its time up: a portcullis opened (raised,
+                                                **   2026-11-17: DECISIONS.md's "Opening a portcullis", its question 1),
+                                                **   a door forced, a lock picked, a window's pane worked out, its bars
+                                                **   bent, 2026-11-21) */
             return 0xFE;
         }
         md.aorder[k] = OR_FOLLOW;

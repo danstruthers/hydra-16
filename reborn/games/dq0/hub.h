@@ -664,7 +664,10 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_
     DE_TURNS, DE_PRIES,                         /* (A key turned in a box's lock, a box's lid forced: wfight.c's den_pry,
                                                 **   the act table's lidkey, lidforce, heard as the character's are; the
                                                 **   work's kinds, before DE_CLOSES, the fight's, 2026-11-19) */
-    DE_CLOSES,                                  /* (Closed with the character, its attack begun, its first blow the next:
+    DE_WOPENS, DE_WSHUTS,                       /* (A window's shutters opened, shut: the act table's wopen, wshut, a
+                                                **   door's opening's numbers, the shutters' words: the one-path plan's
+                                                **   stage 2, closures, 2026-11-21) */
+    DE_CLOSES,                                 /* (Closed with the character, its attack begun, its first blow the next:
                                                 **   the character's own first words the other way round, the user's
                                                 **   "The bandit closes with you.", 2026-11-17) */
     DE_AIMS };                                  /* (Its shot at the character begun: "The bandit takes aim at you.", the
@@ -894,8 +897,11 @@ enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH,     /* I_PORTAL's: wha
        PA_LOCK,                                 /*   a thing's lock locked (IO_SHUT's); */
        PA_CHECK,                                /*   a door gone over for traps, its own (2026-10-22: a search's test,
                                                 **   10 seconds); */
-       PA_PICK };                               /*   a lock picked, no key tried (a door's, a thing's: "pick the lock",
-                                                **   the user's, 2026-11-17; PA_UNLOCK its key first, if one fits) */
+       PA_PICK,                                 /*   a lock picked, no key tried (a door's, a thing's: "pick the lock",
+                                                **   the user's, 2026-11-17; PA_UNLOCK its key first, if one fits); */
+       PA_SLAM };                               /*   a door slammed: shut, louder (the character's "slam the door", a
+                                                **   denizen's as it flees: the one-path plan's stage 2, closures,
+                                                **   2026-11-21) */
 enum { WQ_SAVE, WQ_EXAMINE, WQ_START, WQ_SET }; /* The hub's wreq's kinds */
 #define WY_NO_INIT      0x100                   /* (WQ_START's y: dq0 -I, the tests', no engage initiative test nor
                                                 **   a grope's test while engaged: their fights' dice as they were) */
@@ -944,8 +950,9 @@ enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARR
        PO_KEYED, PO_KEY_LOCKED, PO_NO_KEY, PO_IS_LOCKED,   /* (A door's key, every actor's, Phase 3C's: unlocked
                                                 **   with its key, locked with it, no key that fits (a lock), locked
                                                 **   already) */
-       PO_BLOCKED };                            /* (A heavy thing stands against it, beside it on its way through: it
-                                                **   won't open, every actor's; the verbs plan's B4, wdrag.c's braced) */                               /*   a blow at it with a soft thing, one attempt, no harm (the thing
+       PO_BLOCKED,                              /* (A heavy thing stands against it, beside it on its way through: it
+                                                **   won't open, every actor's; the verbs plan's B4, wdrag.c's braced) */
+       PO_SLAMMED };                            /* (Slammed shut, every actor's: PA_SLAM's, 2026-11-21) */                               /*   a blow at it with a soft thing, one attempt, no harm (the thing
                                                 **   the hub's pc_strike's, the user's, 2026-10-22) */
 #define PO_SHOWS        0x80                    /* (E_PORTAL's w1, an opening's: what it shows beyond told with it, as
                                                 **   the look after it found it, 2026-10-22: a what, WB_*, | 4 lit; b
@@ -1272,10 +1279,14 @@ enum { SW_LOOK, SW_TALK, SW_PERSUADE, SW_DECEIVE, SW_THREATEN, SW_CALM, SW_BEFRI
        SW_ENTERTAIN };                          /* (One entertained: sung to, played or danced for, the referee's
                                                 **   performing skill by the order: PF_*) */
 enum { PF_ANY, PF_SING, PF_PLAY, PF_DANCE };    /* (SW_ENTERTAIN's order: the best of them, or the one said) */
-enum { OR_NONE, OR_FOLLOW, OR_WAIT, OR_HOME, OR_FETCH, OR_OPEN, OR_CLOSE, OR_UNLOCK };   /* An ally's request (SW_ORDER's):
-                                                **   follow the character, wait where it is, go back to its own ways,
-                                                **   fetch a thing; a door opened, shut, unlocked (its square ix, iy:
-                                                **   2026-11-02, the minds' I_PORTAL) */
+enum { OR_NONE, OR_FOLLOW, OR_WAIT, OR_HOME, OR_FETCH, OR_OPEN, OR_CLOSE, OR_UNLOCK,
+       OR_LOCK, OR_BAR, OR_UNBAR, OR_FORCE, OR_PICK };   /* An ally's request (SW_ORDER's): follow the character, wait
+                                                **   where it is, go back to its own
+                                                **   ways, fetch a thing; a door opened, shut, unlocked (its square ix,
+                                                **   iy: 2026-11-02, the minds' I_PORTAL); locked, barred, its bar
+                                                **   lifted out, forced, its lock picked (a door's, a window's, a
+                                                **   portcullis's: the character's own acts, the one-path plan's stage
+                                                **   2, closures, 2026-11-21) */
 enum { SR_OK, SR_NONE, SR_FAR, SR_TONGUE, SR_BEAST, SR_MINDLESS, SR_AS_FAR, SR_NOT_ALLY, SR_CANT, SR_DOWN,
        SR_WONT, SR_NO_GOODS, SR_POOR, SR_BROKE, SR_SPURNED };   /* (The market's, 2026-11-02: it won't trade with the
                                                 **   character, it has no such thing to sell, the character hasn't

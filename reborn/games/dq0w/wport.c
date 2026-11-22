@@ -41,18 +41,26 @@
 
 unsigned char __fastcall__ on_pc (unsigned i);  /* (Part 10's) */
 
-/* A key that fits the door the work's on (wk's sn, px, py) carried by the work's actor (wk.who: the character, on it
-** or in what it carries; else body bd's own, IW_DEN): its number, or 0 */
-unsigned s_door_key (void)
+/* A thing of kind k carried by actor who (0 the character: on it, or in what it carries, on_pc's; else body bd: its
+** own, held or in what it carries, IW_DEN at the last): a key only if it fits lock id (its size and thick: a thing's
+** its id; 0 the work's door's, DOOR_KEY of wk's sn, px, py).  Its number, or 0.  Every actor's tools by one rule (a door's key, a lid's, lockpicks:
+** the one-path plan's stage 2, closures, 2026-11-21; a door's key, s_door_key, and den_pry's own loop, a lid's, before;
+** an actor's door key then only held, not in its pouch); the hub's header in the window after */
+unsigned __fastcall__ s_tool_of (unsigned char who, unsigned char k, unsigned id)
 {
-    unsigned i, id = DOOR_KEY (wk.sn, wk.px, wk.py);
+    unsigned i, j;
     unsigned char r = 0;
 
+    if (!id) {
+        id = DOOR_KEY (wk.sn, wk.px, wk.py);
+    }
     for (i = 0; !r && (i = items (i, IN_ACTOR | IN_ITEM | IN_DEN, 0)) != 0; ) {
-        if (ip->kind != KI_KEY || (ip->size | ip->thick << 8) != id) {
+        if (ip->kind != k || (k == KI_KEY && (ip->size | ip->thick << 8) != id)) {
             continue;
         }
-        if (wk.who) {
+        if (who) {
+            for (j = i; item_at (j)->where == IW_ITEM; j = ip->x) {
+            }
             r = ip->where == IW_DEN && ip->owner == (unsigned char) bd.did && ip->hide == bd.did >> 8;
         } else {
             r = on_pc (i);
@@ -71,6 +79,40 @@ static unsigned __fastcall__ apart (int ax, int ay)
         ay = -ay;
     }
     return ax > ay ? ax : ay;
+}
+
+/* Body bd's widest bar to hand (one it carries, or one lying within its reach: its square or beside it, the take
+** rule's), not one in a door's brackets: its width, 0 none (the character's own rule, things.c's bar_hand: carried or
+** in reach, the widest).  put: that one set in the door's brackets, on bd's square (beside the door, its bar's side:
+** IW_PORTAL, as the character's is).  A denizen's bar, the act audit's G-5, 2026-11-21; the hub's header in the window
+** after */
+static unsigned char __fastcall__ den_bar (unsigned char put)
+{
+    unsigned i, j, best = 0;
+    unsigned char w = 0;
+
+    for (i = 0; (i = items (i, IN_SQUARE | IN_ITEM | IN_DEN, 0)) != 0; ) {
+        if (ip->kind != KI_BAR || (ip->size & 15) <= w) {
+            continue;
+        }
+        for (j = i; item_at (j)->where == IW_ITEM; j = ip->x) {
+        }
+        if (ip->where == IW_DEN ? ip->owner == (unsigned char) bd.did && ip->hide == bd.did >> 8 : ip->sn == bd.sn &&
+            apart (ip->x - bd.x, ip->y - bd.y) <= 1) {
+            best = i;
+            w = item_at (i)->size & 15;
+        }
+    }
+    if (put && best) {
+        ip = item_at (best);
+        ip->where = IW_PORTAL;
+        ip->sn = bd.sn;
+        ip->x = bd.x;
+        ip->y = bd.y;
+        ip->flags &= ~(I_HELD | I_WORN | I_HIDDEN);
+    }
+    hub_map (0);
+    return w;
 }
 
 /* Body bd did what (DE_*), how loud (its low six bits): told (E_DEN) at square x, y (the dug one, a door's, or its own),
@@ -178,20 +220,29 @@ static void __fastcall__ den_portal (const struct msg* m)
     struct work keep;                           /* (The character's work, kept round it: a battering under way) */
     struct portal* q;
     unsigned char* p;
-    unsigned char d, what = I_PORTAL_ACT (*m), o, was, cut, de = 0, loud = 0, lng, pc;
+    unsigned char d, what = I_PORTAL_ACT (*m), o, was, cut, de = 0, loud = 0, lng, pc, win, shut;
     unsigned done, x = I_PORTAL_X (*m), y = I_PORTAL_Y (*m);
 
     for (d = 0; d < 4 && (bd.x + dir_x[d] != x || bd.y + dir_y[d] != y); ++d) {
     }
     p = at (bd.sn, x, y);
-    q = d < 4 && p && TILE (*p) == T_DOOR ? portal_at (cx_, cy_) : 0;
+    q = d < 4 && p && (TILE (*p) == T_DOOR || TILE (*p) == T_WINDOW) ? portal_at (cx_, cy_) : 0;
     pc = q && q->kind == PK_PORTCULLIS;         /* (A portcullis: raised, heaved, lowered, its bars bent, 2026-11-02;
                                                 **   opened, raised, the timed work the character's is, 2026-11-17) */
+    win = q && q->kind != PK_DOOR && !pc;       /* (A window: its shutters a door's, its bars bent, its pane worked
+                                                **   out, the character's code (dq0w.c's work's parts, by the same
+                                                **   choice), 2026-11-21; climbed through, broken: not yet, the climb's
+                                                **   and the blows') */
+    shut = q && (q->parts & PP_SHUTTERS) && !(q->state & PS_OPEN);
     if (pc && what == PA_OPEN) {
         what = PA_RAISE;
     }
-    if (!q || (q->kind != PK_DOOR && !pc) || (q->state & PS_HIDDEN) || what == PA_SEARCH || what == PA_DISARM ||
-        (!pc && (what == PA_RAISE || what == PA_LOWER || what == PA_BEND)) || what == PA_THROUGH || what == PA_CHECK) {
+    if (what == PA_BEND && !pc) {
+        what = PA_FORCE;                        /* (A door's, a window's bars bent: forced, s_work's) */
+    }
+    if (!q || (q->state & PS_HIDDEN) || what == PA_SEARCH || what == PA_DISARM || (!pc && (what == PA_RAISE ||
+        what == PA_LOWER)) || what == PA_THROUGH || what == PA_CHECK || (win && (what == PA_BREAK || (what == PA_FORCE &&
+        !shut && !(q->parts & PP_BARS))))) {
         hub_map (0);
         bd.ready += 10;                         /* (No door of its beside it: a moment, its mind to see) */
         return;
@@ -210,8 +261,11 @@ static void __fastcall__ den_portal (const struct msg* m)
     wk.fx = bd.x;
     wk.fy = bd.y;
     wk.what = what;
-    wk.link = (unsigned char) I_PORTAL_STEP (*m) >> 1;   /* (PA_UNLOCK's: it picks locks, its mind's: wdoor.c's) */
-    lng = what == PA_FORCE || what == PA_RAISE || what == PA_BEND || ((what == PA_UNLOCK || what == PA_PICK) && wk.link);   /* (Timed
+    if (what == PA_BAR) {
+        wk.link = den_bar (0);                  /* (The widest bar to hand, its width: the character's own rule,
+                                                **   things.c's bar_hand; 2026-11-21: wk.link its picking before) */
+    }
+    lng = what == PA_FORCE || what == PA_RAISE || what == PA_BEND || what == PA_PICK || (win && what == PA_LIFT);   /* (Timed
                                                 **   work: begun, then done as it's posted again, t 1) */
     if (lng && !(I_PORTAL_STEP (*m) & 1)) {
         wk.plan = 1;                            /* (Begun: its time, its strain heard; its test as it's posted again) */
@@ -234,10 +288,14 @@ static void __fastcall__ den_portal (const struct msg* m)
             de = DE_BATTERS;
             loud = 7;
         }
-    } else if (pc) {
-        portals ();                             /* (The character's parts: wwin.c's, by the winch on its side) */
+    } else if (pc || (win && what != PA_BAR && what > PA_UNLOCK && what < PA_PICK && (what != PA_FORCE || !shut))) {
+        portals ();                             /* (The character's parts: wwin.c's, by the winch on its side; a
+                                                **   window's but its shutters', s_work's choice) */
     } else {
         doors ();
+        if (wk.out == PO_REBARRED) {
+            den_bar (1);                        /* (Its bar set in the door's brackets) */
+        }
     }
     bd.ready += wk.tt > 600 ? 600 : (unsigned) wk.tt;
     if (wk.plan && wk.task) {
@@ -246,15 +304,9 @@ static void __fastcall__ den_portal (const struct msg* m)
         HUB->dig_t[bk] = (unsigned) HUB->now + (unsigned) wk.tt;   /* (When its time's up) */
     }
     o = wk.open ? wk.open : wk.out;
-    if (pc && wk.plan && wk.task) {             /* (A door's work told by wdoor.c's, every actor's, by the act
-                                                **   table's rows, 2026-11-19; a portcullis's here) */
-        de = what == PA_FORCE ? DE_STRAINS : what == PA_BEND ? DE_BENDS : wk.pq.bar == ((d + 2) & 3) ? DE_WINDS :
-            DE_HEAVES;                          /* (Forcing, bending, winding, heaving begun: loud) */
-        loud = 7;
-    } else if (o == PO_RAISED || o == PO_HEAVED || o == PO_LOWERED || o == PO_BENT) {
-        de = o == PO_LOWERED ? DE_LOWERS : o == PO_BENT ? DE_BENT : DE_RAISES;
-        loud = 8;
-    } else if (o == PO_BROKE_DOWN) {
+    if (o == PO_BROKE_DOWN) {                   /* (A door's, a portcullis's, a window's work told by their parts,
+                                                **   every actor's, by the act table's rows: 2026-11-19, a portcullis's
+                                                **   and a window's 2026-11-21; a battering's here) */
         de = DE_BREAKS;
         loud = 8;
     }

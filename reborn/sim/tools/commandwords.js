@@ -457,7 +457,7 @@ function encode(w, entries) {
   each(w.things, (x, v) => { x.thing = byte(v, 255, 'thing'); });
   each(w.preps, (x, v) => { x.prep = byte(v, 7, 'prep'); });
   each(w.how, (x, v) => { x.how = byte(v, 3, 'how'); });
-  each(w.orders, (x, v) => { x.order = byte(v, 7, 'order'); });
+  each(w.orders, (x, v) => { x.order = byte(v, 15, 'order'); });   // (OR_*: 12 since 2026-11-21's door acts)
   each(w.special, (x, v) => { x.special = byte(SPECIAL[v], 15, 'special ' + v); }, 1);
   each(w.selectors, (x, v) => { x.sel = byte(v, 255, 'selector'); });
   each(w.numbers, (x, v) => { x.num = byte(v, 255, 'number'); });

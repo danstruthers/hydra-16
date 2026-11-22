@@ -117,6 +117,9 @@ unsigned char __fastcall__ den_pry (unsigned n, unsigned char how);    /* (Part 
 #define PR_KNOWN        0x01                    /* (A hidden compartment the character's found reached: an errand's) */
 #define PR_QUIET        0x02                    /* (A lock not forced: an errand's, a robbery unawares) */
 #define PR_TIMED        0x04                    /* (Each opened its two seconds: not a robbery's, its reach's level's) */
+unsigned __fastcall__ tool_of (unsigned char who, unsigned char k, unsigned id);   /* (Part 80: wport.c) A thing of
+                                                **   kind k carried by actor who (0 the character, else body bd), a key
+                                                **   one that fits lock id: its number, or 0 (2026-11-21) */
 signed char __fastcall__ den_test (unsigned char p, signed char steps);  /* (Part 69) The referee's test of body bd's
                                                 **   own, by its sheet: its grade (act_test's, bd's: part 81's room) */
 signed char __fastcall__ act_test (unsigned char who, unsigned char p, signed char steps);
