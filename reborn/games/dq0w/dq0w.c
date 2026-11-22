@@ -1198,8 +1198,8 @@ void __fastcall__ s_go_to (unsigned x, unsigned y)
 #define ROUND_T         HUB->round              /* Tenths: a round, the ruleset's (RS_HELLO's: the hub's header in
                                                 **   the window) */
 
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW97CODE")            /* (Part 97's, the climb's by a rope: part 2's till */
+#pragma rodata-name (push, "SW97RODATA")        /*   speed12, its copy the less for every climb) */
 
 /* A fall of the character's (the referee's harm, rs.h's HC_FALL): feet, onto the floor where it lands (the maker's
 ** material for it: earth, flags or masonry hard, stone broken rock), how (HF_*); the UI told (E_HARM).  The tenths
@@ -6577,9 +6577,11 @@ static void __fastcall__ set_out (unsigned char h)
 ** is), not again as the climb's begun.  Part 2's, s_climb's */
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
+#define SAY_WAIT        6                       /* (Ticks: some 107,000 cycles) */
 static void __fastcall__ link_out (unsigned char k)
 {
     unsigned char alone;
+    unsigned t;
 
     if (left_lit) {
         lit_back (I_CLIMB | LB_GO);
@@ -6591,6 +6593,17 @@ static void __fastcall__ link_out (unsigned char k)
     if (alone) {
         hub_map (0);
         go_eq = HUB->eq_head;
+    }
+    for (t = hy_ticks (); (unsigned) (hy_ticks () - t) < SAY_WAIT; ) {   /* (The UI given the machine to say them, the
+                                                **   world asleep till it has (ui_eq's), SAY_WAIT at most, at the real
+                                                **   paces: their first letter's window the UI's and the console's, not
+                                                **   the climb's part copies' after it; speed12, the user's D17) */
+        hub_map (0);
+        if (!HUB->tpr || HUB->ui_eq == (unsigned char) HUB->eq_head) {
+            break;
+        }
+        hub_ring (T_UI);
+        hub_sleep (1);
     }
 }
 #pragma code-name (pop)
