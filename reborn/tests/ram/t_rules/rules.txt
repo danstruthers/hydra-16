@@ -1593,15 +1593,23 @@ ask HARM a=HC_STRIKE b=AS_BLUNT w1=17
 want text="a grievous crush to your left forearm (G4)"
 
 # Shock (Combat 14, Skills 22): over Endurance senseless; a shock roll each round to come round, then one more
-# (over: in shock); HOUSE.md: awake after an hour whatever the rolls, then that last roll
+# (over: in shock); HOUSE.md: awake after an hour whatever the rolls, then that last roll.  Each round's roll as its
+# time comes (the user's, 2026-11-21: the world's RS_ROUSE as the round's out, not an hour's at once as she falls):
+# senseless a round (w2 100, OUT till then), then each round asked, its roll
 
 char
 vol 3 0 0 0 0
 end
-case three fatigue levels and an S2 (UP 5): 5d6 of 15 over 12, senseless; awake the next round (10 seconds)
-dice 100:50 6:6 6:6 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1
+set now=1000
+case three fatigue levels and an S2 (UP 5): 5d6 of 15 over 12, senseless a round (its next roll's)
+dice 100:50 6:6 6:6 6:1 6:1 6:1
 ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
-want b=2 w2=100 e0.cond&C_UNCONSCIOUS=C_UNCONSCIOUS status="UP 5" sum.health=H_HURT
+want b=2 w2=100 e0.cond&C_UNCONSCIOUS=C_UNCONSCIOUS status="UP 5 OUT" dice=6
+set now=1100
+case the next round (10 seconds): her roll not over Endurance, awake; one more not over, not in shock
+dice 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1
+ask ROUSE
+want w2=0 status="UP 5" sum.health=H_HURT dice=10
 
 char
 vol 3 0 0 0 0
@@ -1614,26 +1622,46 @@ want w2=0 e0.cond&C_UNCONSCIOUS=0 status="UP 5"
 char
 vol 3 0 0 0 0
 end
+set now=2000
 case senseless two rounds: the first round's roll over Endurance too
-dice 100:50 6:6 6:6 6:1 6:1 6:1 6:6 6:6 6:6 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1
+dice 100:50 6:6 6:6 6:1 6:1 6:1
 ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
-want w2=200 status="UP 5"
+want w2=100 status="UP 5 OUT"
+set now=2100
+dice 6:6 6:6 6:6 6:1 6:1
+ask ROUSE
+want w2=100 status="UP 5 OUT" dice=5
+set now=2200
+dice 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1
+ask ROUSE
+want w2=0 status="UP 5" dice=10
 
 char
 vol 3 0 0 0 0
 end
+set now=3000
 case come round, the last roll over Endurance: in shock
-dice 100:50 6:6 6:6 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:6 6:6 6:6 6:1 6:1
+dice 100:50 6:6 6:6 6:1 6:1 6:1
 ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
-want w2=100 status="UP 5 SHOCK" sum.health=H_DOWN sum.cond&C_STUNNED=C_STUNNED
+want w2=100 status="UP 5 OUT"
+set now=3100
+dice 6:1 6:1 6:1 6:1 6:1 6:6 6:6 6:6 6:1 6:1
+ask ROUSE
+want w2=0 status="UP 5 SHOCK" sum.health=H_DOWN sum.cond&C_STUNNED=C_STUNNED dice=10
 
 char
 vol 3 0 0 0 0
 end
+set now=4000
 case every roll over Endurance: awake after an hour (359 rounds' rolls), the last roll over too: in shock
 dice 100:50 6:6*
 ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
-want w2=36000 status="UP 5 SHOCK" dice=1806
+want w2=100 status="UP 5 OUT" dice=6
+set now=40000
+case an hour gone by unasked: its 359 rounds' rolls as it's next asked, then the last, over too
+dice 6:6*
+ask ROUSE
+want w2=0 status="UP 5 SHOCK" dice=1800
 
 # One in shock wounded again (Combat 14: a shock roll with every injury; the library's harn_wound makes one only for
 # one conscious, so the character in shock was struck on and on and never fell: the user's adder, 2026-10-21)
@@ -1650,10 +1678,16 @@ char
 vol 0 0 0 2 0
 inj 9 0 2 2 0 0
 end
-case in shock with an S2, wounded again (UP 3): 3d6 of 18 over 12, senseless; come round the next round, in shock
-dice 100:50 6:6 6:6 6:6 6:1 6:1 6:1 6:6 6:6 6:6
+set now=5000
+case in shock with an S2, wounded again (UP 3): 3d6 of 18 over 12, senseless a round
+dice 100:50 6:6 6:6 6:6
 ask HARM a=HC_STRIKE b=AS_BLUNT w1=1
-want b=1 w2=100 e0.cond&C_UNCONSCIOUS=C_UNCONSCIOUS status="UP 3 SHOCK" dice=10
+want b=1 w2=100 e0.cond&C_UNCONSCIOUS=C_UNCONSCIOUS status="UP 3 OUT" dice=4
+set now=5100
+case come round the next round, in shock
+dice 6:1 6:1 6:1 6:6 6:6 6:6
+ask ROUSE
+want w2=0 status="UP 3 SHOCK" dice=6
 
 # The record's room (HOUSE.md's wounds: the library keeps twelve injuries, and past them added each new wound's
 # levels into the last, its words the running total, "a serious stab (S37)"): the least two folded into the lesser
@@ -1673,10 +1707,16 @@ inj 12 1 2 3 0 0
 inj 8 0 1 1 0 0
 inj 8 0 1 1 0 0
 end
-case twelve injuries (UP 14), a thirteenth: its own words (M1), the universal penalty all of them (15)
+set now=6000
+case twelve injuries (UP 14), a thirteenth: its own words (M1), the universal penalty all of them (15): senseless (its least roll, 15, over 12)
 dice 100:50 6:1*
 ask HARM a=HC_STRIKE b=AS_BLUNT w1=1
-want b=1 text="a minor bruise to your thorax (M1)" w2=36000 status="UP 15 SHOCK"
+want b=1 text="a minor bruise to your thorax (M1)" w2=100 status="UP 15 OUT"
+set now=42000
+case an hour gone by: every roll over Endurance, come round, the last over too: in shock
+dice 6:1*
+ask ROUSE
+want w2=0 status="UP 15 SHOCK" dice=5400
 dice
 ask DESCRIBE b=3
 want text~"in shock: 11 injuries and lesser hurts, the worst a serious gash to your left thigh (S3); penalties: universal 15"
@@ -1685,10 +1725,12 @@ ask DESCRIBE
 want text~"Injuries: lesser hurts (2 levels); thorax M1 (bruise);" text~"left thigh S3 (gash)" text~"universal penalty 15"
 dice 100:50 6:1*
 ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
-want b=2 text="a serious fracture to your thorax (S2)" status="UP 17 SHOCK"
+want b=2 text="a serious fracture to your thorax (S2)" status="UP 17 OUT"
 dice
 ask DESCRIBE
 want text~"lesser hurts (3 levels)" text~"thorax S2 (fracture)" text!"thorax S3" text!"M2"
+set now=0
+# (The clock back where it was: the watches after counted from it as they were, felled1's hours above)
 
 # Keeping one's feet over a thing in the way, in the dark at a pace said outright (P_STUMBLE, 2026-10-22: HOUSE.md's
 # walking in the dark): the book's stumble roll (Skills 22), 3d6, the physical penalty and the circumstances over AGL a
@@ -2150,6 +2192,10 @@ dice 100:85 ...
 ask ATTACK actor=4 other=0 a=Z_MID b=AS_BEST
 want b=D_NONE
 set now=3000 stance=D_BLOCK
+# (Her, or its, shock rolls as their time comes since felled1, 2026-11-21: one felled by the blows' rest of the dice
+# brought round, the next case's dice its own)
+dice 6:1*
+ask ROUSE
 case defend block: the first rat the sword's
 dice 100:81 100:2 ...
 ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
@@ -2163,6 +2209,10 @@ dice 100:81 100:2 ...
 ask ATTACK actor=3 other=0 a=Z_MID b=AS_BEST
 want b=D_DODGE
 set now=4000 stance=D_OWN
+# (Her, or its, shock rolls as their time comes since felled1, 2026-11-21: one felled by the blows' rest of the dice
+# brought round, the next case's dice its own)
+dice 6:1*
+ask ROUSE
 case defend counter: the first rat counterstruck with the sword
 dice 100:81 100:2 ...
 ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
@@ -2176,6 +2226,16 @@ dice 100:81 100:2 ...
 ask ATTACK actor=3 other=0 a=Z_MID b=AS_BEST
 want b=D_BLOCK
 set now=5000 stance=D_NONE
+# (Her, or its, shock rolls as their time comes since felled1, 2026-11-21: one felled by the blows' rest of the dice
+# brought round, the next case's dice its own)
+dice 6:1*
+ask ROUSE
+dice 6:1*
+ask ROUSE actor=1
+dice 6:1*
+ask ROUSE actor=2
+dice 6:1*
+ask ROUSE actor=3
 case defend none: no defence
 dice 100:85 ...
 ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
@@ -2200,10 +2260,10 @@ dice
 ask NEW_ACTOR actor=5 w1=13 text="rat"
 want result=0
 set now=10000 stance=D_NONE
-case bitten undefended, a minor bite, the shock roll over Endurance: senseless, an hour out (every roll after over too)
+case bitten undefended, a minor bite, the shock roll over Endurance: senseless, its next roll a round on
 dice 100:41 6:2 6:2 6:2 100:50 6:6*
 ask ATTACK actor=5 other=0 a=Z_MID b=AS_BEST
-want result=O_HIT b=D_NONE w2=36000 c=0 text~"a minor bite to your thorax (M1)" status="UP 4 OUT" sum.cond&C_UNCONSCIOUS=C_UNCONSCIOUS
+want result=O_HIT b=D_NONE w2=100 c=0 text~"a minor bite to your thorax (M1)" status="UP 4 OUT" sum.cond&C_UNCONSCIOUS=C_UNCONSCIOUS
 set now=10010
 case a second later, a blow at her as she lies senseless by one no killer: held (none struck, no dice)
 dice
@@ -2226,11 +2286,11 @@ ask NEW_ACTOR actor=5 w1=14 text="rat"
 want result=0
 set now=20000 stance=D_AUTO
 case in shock, bitten: no defence, a minor bite; its shock roll over Endurance: senseless a round (a killer's: one in shock held from any other, slice 4.3's); the bite's rat-bite fever its ninth die, after its shock roll (its exposure, 30 against 60: not caught, 2026-10-31)
-dice 100:41 6:2 6:2 6:2 100:50 6:6 6:6 6:6 100:30 6:1 6:1 6:1 6:6 6:6 6:6
+dice 100:41 6:2 6:2 6:2 100:50 6:6 6:6 6:6 100:30
 ask ATTACK actor=5 other=0 a=Z_MID b=AS_BEST w2=RS_KILLER
-want result=O_HIT b=D_NONE w2=100 text~"a minor bite to your thorax (M1)" status="UP 3 OUT" dice=15
+want result=O_HIT b=D_NONE w2=100 text~"a minor bite to your thorax (M1)" status="UP 3 OUT" dice=9
 set now=20100
-dice
+dice 6:1 6:1 6:1 6:6 6:6 6:6
 ask EQUIP a=2 text=""
 want status="UP 3 SHOCK" sum.cond&C_UNCONSCIOUS=0 sum.cond&C_STUNNED=C_STUNNED
 set stance=D_AUTO
@@ -2992,6 +3052,10 @@ ask ATTACK actor=0 other=1 a=Z_MID b=AS_BEST
 want result=O_HIT
 case a heavy sword (blade4H): a version heavier than her Strength's, two steps worse, 85: the 88 a marginal failure, no hit (the kobold's own block, its spear's 60 the better of its dodge, as failed)
 set now=961000
+# (Her, or its, shock rolls as their time comes since felled1, 2026-11-21: one felled by the blows' rest of the dice
+# brought round, the next case's dice its own)
+dice 6:1*
+ask ROUSE actor=1
 dice
 ask EQUIP a=2 text=">blade4H"
 dice 100:88 100:96 ...
@@ -3005,6 +3069,10 @@ case Strength 13: the heavy sword wielded freely, 95, the 88 a hit
 set now=962000 stance=D_BLOCK
 dice
 ask NEW_ACTOR actor=1 w1=9 text="kobold"
+# (Her, or its, shock rolls as their time comes since felled1, 2026-11-21: one felled by the blows' rest of the dice
+# brought round, the next case's dice its own)
+dice 6:1*
+ask ROUSE actor=1
 dice
 ask EQUIP a=2 text=">blade4H"
 dice 100:88 100:96 ...

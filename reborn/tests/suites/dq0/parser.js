@@ -399,9 +399,11 @@ function dq0FeaturesTest() {
       'one behind it); at seed 3 in the passage off the cell, "exit the door" by the door beyond the passage walks up to it ' +
       'first, as "go through the door" does ("You head for the door.", not "You can\'t go that way.")',
     init: 't_rc', cycles: 1400e6,
+    // (The second game -R 2, felled1's, 2026-11-21: a felled one's shock rolls a round each as the time comes, the dice in
+    // another order, a rat engaged it on its way out; a search of -R 1-14 found 2, 7, 9, 12 and 14)
     machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g',
       'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
-      'dq0 -p t -s 8 -c /ram/c.hm', ...a, 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', ...b, 'quit', 'echo $status']) },
+      'dq0 -p t -s 8 -c /ram/c.hm', ...a, 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -R 2', ...b, 'quit', 'echo $status']) },
     expect: ['% echo $status'],
     check(m, out) {
       const T = dq0Turns(m), A = dq0Answers(out), f = [], said = l => (A.filter(y => y.cmd === l).pop() || { text: '' }).text;

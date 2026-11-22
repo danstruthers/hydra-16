@@ -499,7 +499,7 @@ module.exports = {
       name: 'dq0fight', what: 'Dingus Quest Zero\'s fights (DENIZENS.md: fights; the referee\'s melee, RS_ATTACK, dq0harn/fight.c), by the blows told (the denizens\' events, E_FIGHT: who struck whom, how it came out, what it left them in; the referee\'s dice the commands\', in their order, at the turns pace: HarnMaster\'s at this seed): a fight with seed 5\'s giant rats won (down its ladder, a sword in hand, dq0 -k sword; the character\'s Sword and Dodge 95, its Stamina and Will 99, its file\'s), one attack fought on (HOUSE.md\'s fighting on, the user\'s, 2026-10-20): the rat struck at, and its lair\'s kin, turn on the character, both striking at it; blows at it till one knocks it senseless (the book\'s rat dodges at 90, 2026-11-04: both set hurt, dq0Poke\'s, so a blow lands); then the other turned to and felled, the fight over; the senseless one finished where it lies, an attack, the next attack finding none left to fight; their bodies left (seen as the world looks about again); the character hurt by their blows (since fighting on, the blows typed one by one before).  The scene set (since morale, 2026-10-29, and the dice by who asks, 2026-10-30, a kin seeing its fellow fall runs off, as a rule): the kin steady (dq0Poke\'s, at the attack: its mood AM_STEADY, its courage never tested), so the fight goes on to it; and the game played again as it stands, the kin running off as its fellow falls senseless beside it (part 6\'s dismay: no blow from it after, none at it, the fight\'s end told), morale\'s own small check',
       init: 't_rc', cycles: 1200e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 95 >> /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -k sword -T',
-        'd', 'wait', 'go right', 'attack the rat', 'attack the rat', 'attack the rat', 'look', 'quit',
+        'd', 'wait', 'go right', 'attack the rat', 'attack the rat', 'attack the rat', 'attack the rat', 'look', 'quit',
         'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'd', 'wait', 'go right', 'attack the rat', 'quit', 'echo $status']) },
       start(m) {
         dq0Poke(m, [{ g: 1, line: 'attack the rat', n: 1, k: 0, set: { mood: 8 } }, ...[1, 2].flatMap(g => [0, 1, 2, 3].map(k => ({ g, line: 'attack the rat', n: 1, k, hurt: 8 })))]);   // (The kin steady: hub.h's AM_STEADY; the book's rat dodges at 90, 2026-11-04: all set hurt, so a blow lands and their courage is shaken)
@@ -509,7 +509,7 @@ module.exports = {
         const T = dq0Turns(m), f = [], FF_D_DOWN = 4, FF_D_DEAD = 8;
         const mine = t => dq0Ev(t, 'E_FIGHT', { who: 0 }), theirs = t => dq0Ev(t, 'E_FIGHT', { def: 0, who: w => w > 0 });
         const q1 = T.of('quit'), a = T.filter(t => t.line === 'attack the rat' && t.k < q1.k);
-        if (a.length !== 3) return ['the attacks not typed'];
+        if (a.length !== 4) return ['the attacks not typed'];
         // (Played again, the kin as it is: running off as its fellow falls, morale's)
         const a2 = T.after(T.of('dq0 -p t -s 5 -c /ram/c.hm -k sword -T', q1.k), 'attack the rat'), b2 = mine(a2);
         const down2 = b2.find(e => e.ff & FF_D_DOWN), kin = down2 && theirs(a2).find(e => e.who !== down2.def);
@@ -528,9 +528,12 @@ module.exports = {
         if (turned.length !== 1 || !other || turned[0].by + 1 !== other.def) f.push('the other rat not turned to and felled (' + dq0Evs(a[0]) + ')');
         dq0Need(f, a[0], 'E_TASK', { te: 'TE_NO_FOE' }, 'the fight not over');
         if (b.some(e => e.out === 'O_DISPATCH')) f.push('a rat finished unasked');
-        const fin = mine(a[1]).find(e => e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD));
-        if (!fin || fin.def !== b[0].def) f.push('the senseless rat not finished where it lies (' + dq0Evs(a[1]) + ')');
-        if (mine(a[2]).length) f.push('a rat fought again, none left (' + dq0Evs(a[2]) + ')');
+        // (Those left senseless finished where they lie, an attack each: the first, and the other if it fell senseless too
+        // (felled1's, 2026-11-21: its shock rolls a round each as the time comes, the dice in another order, the other's blow
+        // a serious gash, not a mortal one); the next attack finding none left)
+        const lying = other && !(other.ff & FF_D_DEAD) ? 2 : 1, fins = a.slice(1, 1 + lying).map(t => mine(t).find(e => e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD)));
+        if (fins.some(e => !e) || !fins.some(e => e.def === b[0].def)) f.push('the senseless rat not finished where it lies (' + a.slice(1, 1 + lying).map(dq0Evs).join('; ') + ')');
+        if (mine(a[1 + lying]).length) f.push('a rat fought again, none left (' + dq0Evs(a[1 + lying]) + ')');
         const lk = T.of('look');
         if (!lk.after || !lk.after.sight || lk.after.sight.items.filter(i => i.name === 'body').length < 2) f.push('their bodies not seen');
         if (!lk.after || !(lk.after.sum.health > 0)) f.push('the character not hurt by their blows');
@@ -697,13 +700,15 @@ module.exports = {
       // (Game 1 -R 25 and 30 waits, hear2's, 2026-11-20: the gambeson worn now, got out of the pack it dropped (to hand
       // in a container set down), the fight's dice another fall; a search of -R 1-42 at 25 waits found 25 and 41; at
       // -R 25 bandit H comes in at the twenty-third wait and falters in its guard, seven waits to spare)
+      // (Game 2 -R 16, felled1's, 2026-11-21: a felled one's shock rolls a round each as the time comes, the dice in another
+      // order; at -R 48 the bandit came round before a look saw it lie; a search of -R 1-24 found 16)
       machine: { input: (() => {
         const game = (d, r, talks, w = 15) => ["dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/" + d + " -k 'sword,gambeson,mail hauberk' -R " + r, 'drop the backpack', 'wear the gambeson',
           'wear the mail hauberk', 'defend block', 'wait', 'close the door', 'open the door', 'go south', 'go south', ...Array(w).fill('wait'),
           ...Array(talks).fill('talk to the bandit'), ...Array(3).fill('wait'), 'quit'];
         return dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 26 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm',
           'echo ml swd 60 >> /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-          'mkdir /ram/h', 'cp /ram/g/theme.txt /ram/h/theme.txt', ...game('g', 25, 1, 30), ...game('h', 48, 2), 'echo $status']);
+          'mkdir /ram/h', 'cp /ram/g/theme.txt /ram/h/theme.txt', ...game('g', 25, 1, 30), ...game('h', 16, 2), 'echo $status']);
       })() },
       start(m) {        // (Told as it falls, 2026-11-03: the lines typed no longer fall on it)
         dq0Poke(m, [1, 2].map(g => ({ g, line: 'drop the backpack', n: 1, call: (h, L) => { h[L.nolurk] = 1; } })));   // (No robber lying in wait, HOUSE.md's hiding oneself: this scene's the bandits at it, 2026-11-04)
@@ -732,6 +737,11 @@ module.exports = {
         else if (!next || next.out !== 'O_RISE') f.push('the bandit come round not getting to its feet first (' + JSON.stringify(next) + ')');
         inTurn(said.slice(said.lastIndexOf('dq0 -p t -s 1 -c /ram/c.hm')), ['They fall senseless.', 'lying senseless.', 'The bandit lies senseless: they can\'t hear you.', 'The bandit gets to their feet.'], f,
           'the bandit knocked senseless: ');
+        // (Its shock rolls as their time comes, a round each, as the character's (the user's, 2026-11-21, felled1): the world's
+        // RS_ROUSE asked for it (its actor's) as it lay, senseless still a round on at most, then come round (0))
+        const RSR = m.dq0.layout().K.RS_ROUSE, rouses = T.filter(u => u.k > g2.k).flatMap(u => u.replies.filter(r => r.req === 'slot0' && r.kind === RSR && r.actor === by));
+        if (out1 >= 0 && (rouses.length < 2 || rouses.slice(0, -1).some(r => !r.w2 || r.w2 > 100) || rouses[rouses.length - 1].w2 !== 0))
+          f.push('the bandit\'s shock rolls not asked a round each as it lay (RS_ROUSE: ' + rouses.map(r => r.w2).join(', ') + ')');
         return f;
       },
       sdcard: true
@@ -1118,7 +1128,9 @@ module.exports = {
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml slg 5 >> /ram/c.hm',
         'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Serpents | adder | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sling,sling stones'", 'drop the torch', 'hold the sling', 'wait', ...Array(30).fill(['shoot the adder', 'take the sling', 'hold the sling']).flat(), 'quit', 'echo $status']) },
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sling,sling stones' -R 5", 'drop the torch', 'hold the sling', 'wait', ...Array(30).fill(['shoot the adder', 'take the sling', 'hold the sling']).flat(), 'quit', 'echo $status']) },
+      // (-R 5, felled1's, 2026-11-21: a felled one's shock rolls a round each as the time comes, the dice in another order, one
+      // wild shot in thirty; a search of -R 1-14 found 4, 5, 6, 8, 9, 10 and 12)
       expect: ['% echo $status'],
       start(m) { dq0Poke(m, [{ g: 1, line: 'drop the torch', n: 1, item: { 'sling stones': { qty: 200 } } }, { g: 1, line: 'wait', n: 1, k: 0, beside: 4, engage: true }]); },
       check(m, out) {
@@ -1426,6 +1438,11 @@ module.exports = {
         else if (!was || (!shock && !again) || told[0].w1 >= was.w1 || (!shock && told[0].w1 !== again.w1))
           f.push('the load told as it was robbed not what was left: before ' + (was && was.w1) + ', robbed ' + told[0].w1 + ', its torch put down and taken up again ' + (again && again.w1));
         if (!shock && rt && tk.after && rt.after && rt.after.sum.load !== tk.after.sum.load) f.push('the referee\'s encumbrance after the robbery ' + rt.after.sum.load + ', not ' + tk.after.sum.load);
+        // (Its shock rolls as their time comes, a round each (the user's, 2026-11-21, felled1): the world's RS_ROUSE asked as it
+        // lay, at each round's end, senseless still a round on at most (the reply's w2), then come round (0))
+        const RSR = m.dq0.layout().K.RS_ROUSE, rouses = T.flatMap(t => t.replies.filter(r => r.req === 'slot0' && r.kind === RSR && r.actor === 0));
+        if (rouses.length < 2 || rouses.slice(0, -1).some(r => !r.w2 || r.w2 > 100) || rouses[rouses.length - 1].w2 !== 0)
+          f.push('its shock rolls not asked a round each as it lay (RS_ROUSE: ' + rouses.map(r => r.w2).join(', ') + ')');
         return f;
       },
       sdcard: true
@@ -2129,17 +2146,17 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], notes = this.notes = [], lines = FELLED.map(l => l.replace(MID_MARK, ''));
-        // (A blow felling the rat in the answer of a line typed mid-round, in one game at least: its words in that line's
-        // answer.  Which game's, and which line's, falls as the rounds' race does (its dodges, a blow that kills outright,
-        // speed8, 2026-11-21): the three games each a chance; noted)
+        // (A blow felling the rat in the answer of a line typed mid-round, each game: its words in that line's answer.  Its
+        // shock rolls a round each as its time comes since felled1 (the user's, 2026-11-21), not an hour's as it falls: the
+        // felling cheap whichever line meets it; each game's line noted)
         const o = dq0Prose(out), games = o.split(/% dq0 -p [nm] -s 5/).slice(1), felled = [];
         games.forEach((g, i) => {
           const mids = lines.filter((l, k) => FELLED[k][0] === MID_MARK), segs = g.split(/> (?=look|wait|go left|inventory)/);
           const s = segs.find(s => mids.some(l => s.startsWith(l)) && /falls senseless|knocked senseless|goes down/.test(s));
           if (s) felled.push((i + 1) + ': ' + s.split(' ')[0]);
+          else f.push('game ' + (i + 1) + ': no blow felling the rat as a line waited');
         });
         notes.push('felled as a line waited, by game: ' + (felled.join(', ') || 'none'));
-        if (!felled.length) f.push('no blow felling the rat as a line waited, in any game');
         if (games.length !== 3) f.push(games.length + ' games, not 3');
         dq0HeldPaces(this, f, notes, this.timer, [0, 1, 2], lines.map(l => ({ line: l, want: '*' })));
         return f;
