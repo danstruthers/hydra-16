@@ -19,6 +19,7 @@
 //   --top N    the N functions and routines that took the most (default 60)
 //   --seed N   the runner's --seed (default 1)
 //   --out FILE the profile written there too
+//   --timeline N  each task's run in the window of N cycles or more, in order (who ran when)
 //   --lead N   the profile begun N cycles before the Enter (what came just before it: a part copied in, a round's
 //              work begun); its cycles in the counts, its part loads at their (negative) cycles
 // The run's other checks are the test's as ever (its failures said, not the tool's): GUARDS, HUBOWN and TRANSCRIPTS
@@ -63,8 +64,8 @@ function dbgBanks(file, by) {                         // (ld65's debug file's la
 function profiler(name, from, to) {
   let m = null;
   const self = new Map(), calls = new Map(), loads = [], byTask = new Array(16).fill(0);
-  let total = 0;
-  const last = [];
+  let total = 0, run = null;
+  const last = [], runs = [];
   const lab = {}, swl = {};
   for (const p of PROGS) { lab[p] = labels(path.join(ROOT, 'obj', 'games', p, p + '.lbl')); const s = lab[p].find(x => x[1] === 'swload'); if (s) swl[p] = s[0]; }
   const bios = dbgBanks(path.join(BASE, 'obj', 'kernel', 'bios.dbg'), s => { const b = /bank=(\d+)/.exec(s); return b ? +b[1] : null; });
@@ -95,6 +96,9 @@ function profiler(name, from, to) {
     let fn = own;
     for (const k of [1, 3, 5]) { if (/^(_|bios|lib|cons|swload$|sw_call$)/.test(fn)) break; fn = fnOf(T, W, ret(k), bk); }   // (A helper's: its C caller's; a part's copy its own)
     const p = taskOf()[T], key = 'T' + T + (p ? '/' + p : '') + ' ' + fn;
+    if (!run || run.T !== T) { run = { T, at: c0, cycles: 0, fns: new Map() }; runs.push(run); }   // (The timeline: a task's run)
+    run.cycles += dc;
+    run.fns.set(fn, (run.fns.get(fn) || 0) + dc);
     self.set(key, (self.get(key) || 0) + dc);
     const ck = 'T' + T + ' ' + own + ' <- ' + fnOf(T, W, ret(1), bk) + ' <- ' + fnOf(T, W, ret(3), bk);
     calls.set(ck, (calls.get(ck) || 0) + dc);
@@ -108,12 +112,22 @@ function profiler(name, from, to) {
     boot: { profile: from, profileTo: to, profileStep: step }, attach: mm => { m = mm; }, judge: () => ({ failures: [], notes: [] }),
     state: () => null, restore: () => {},
   } : null;
-  const result = () => ({ total, byTask, task: taskOf(), self, calls, loads });
+  const result = () => ({ total, byTask, task: taskOf(), self, calls, loads, runs });
   return { part, result };
 }
 
-function report(r, line, top) {
+function report(r, line, top, tl) {
   const out = [];
+  if (tl) {                                           // (--timeline N: each task's run of N cycles or more, in order,
+    out.push('-- timeline (cycle in the window, task, its run cycles, its top functions)');   //   its top functions)
+    let rest = 0;
+    for (const u of r.runs) {
+      if (u.cycles < tl) { rest += u.cycles; continue; }
+      const fs_ = [...u.fns].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([f, c]) => f + ' ' + c).join(', ');
+      out.push(String(u.at - line.t).padStart(9) + ' T' + u.T + ' ' + (r.task[u.T] || (u.T === CONS_T ? 'cons' : '')).padEnd(7) + String(u.cycles).padStart(7) + '  ' + fs_ + (rest ? '  (+' + rest + ' in short runs before)' : ''));
+      rest = 0;
+    }
+  }
   out.push('window ' + line.first.toLocaleString('en-US') + ' cycles, "' + line.line + '" (the Enter at cycle ' + line.t + ')');
   out.push('-- by task');
   r.byTask.forEach((c, T) => { if (c) out.push(String(c).padStart(9) + ' T' + T + ' ' + (r.task[T] || (T === CONS_T ? 'cons' : ''))); });
@@ -127,7 +141,7 @@ function report(r, line, top) {
 }
 
 async function main(argv) {
-  const opt = { seed: 1, top: 60, nth: 0, list: false, out: '', lead: 0, names: [] };
+  const opt = { seed: 1, top: 60, nth: 0, list: false, out: '', lead: 0, timeline: 0, names: [] };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--nth') opt.nth = +argv[++i];
     else if (argv[i] === '--list') opt.list = true;
@@ -135,6 +149,7 @@ async function main(argv) {
     else if (argv[i] === '--seed') opt.seed = +argv[++i];
     else if (argv[i] === '--out') opt.out = argv[++i];
     else if (argv[i] === '--lead') opt.lead = +argv[++i];
+    else if (argv[i] === '--timeline') opt.timeline = +argv[++i];
     else if (argv[i].startsWith('-')) { console.error('usage: node sim/tools/lineprof.js TEST [LINE] [--nth N] [--list] [--top N] [--seed N] [--out FILE] [--lead N]'); process.exit(2); }
     else opt.names.push(argv[i]);
   }
@@ -160,7 +175,7 @@ async function main(argv) {
   const r2 = await T.runTest(t, ro);
   const again = t.timer.at(line.i).first;
   if (again !== line.first) console.error('lineprof: the second run\'s first letter ' + again + ', not ' + line.first + ' (the window not the same)');
-  const text = report(P.result(), line, opt.top);
+  const text = report(P.result(), line, opt.top, opt.timeline);
   console.log(text);
   if (opt.out) fs.writeFileSync(opt.out, text + '\n');
   for (const f of [...r1.failures, ...r2.failures].slice(0, 5)) console.error('the test: ' + f);

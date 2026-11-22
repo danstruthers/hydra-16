@@ -12,7 +12,7 @@
 // all the serial port looks at), so the machine there is the same for every test whose input is the same up to it.
 // A scene's key: its input up to the point, and everything else the machine's run to there depends on: the ROM's
 // image, the BIOS, the SD card's image (sha1 of each), the power-up's seed, the serial chip, the RAM modules, the
-// core, the hub writers' check (HUBOWN), the guards (GUARDS), and the code that runs it (the emulator, the runner,
+// core, the hub writers' check (HUBOWN), the guards (GUARDS), the prompts' lag (SIM_PROMPT_LAG, acia.js's), and the code that runs it (the emulator, the runner,
 // the recorders and the guards: sha1 of their sources).  A rebuilt image is a new key; obj/scenes keeps the newest
 // (SCENES_KEEP files, 400).
 //
@@ -112,7 +112,7 @@ function of(t, tm, prom, opt, bios, acia) {
   const own = typeof t.start === 'function';
   const base = { f: FORMAT, code: codeHash(), tests: null, image: sha1(prom), bios: sha1(bios), acia, seed: opt.seed,
     cards: (tm.sd || []).map(c => [c.dev, c.blocks, fileHash(c.file)]), modules: process.env.HYDRA_MODULES || '', core: process.env.HYDRA_CORE || '',
-    hubown: process.env.HUBOWN || '', guards: process.env.GUARDS || '' };
+    hubown: process.env.HUBOWN || '', guards: process.env.GUARDS || '', lag: process.env.SIM_PROMPT_LAG || '' };
   const fileOf = (p, mine = own) => path.join(DIR, sha1(JSON.stringify(mine ? Object.assign({}, base, { tests: [t.name, testsHash(t.name)] }) : base), input.slice(0, p)) + '.scn');
   let events = [], hubAt = -1, rec = true, todo = at.slice();   // (What the serial port gave so far, 4 numbers each: 0 read or 1 shown, the byte, the cycle, the access's)
 

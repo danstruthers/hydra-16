@@ -17,6 +17,8 @@
 'use strict';
 
 const XON = 0x11, XOFF = 0x13;
+const PROMPT_LAG = +(process.env.SIM_PROMPT_LAG || 0);    // (A line's first key this many cycles later after its prompt: the
+                                                           //   phase of a line against the background's work, sim/tools/lineprof.js's sweeps)
 
 // The rates (the control register's low 4 bits: 0 = the external clock / 16), named for 1.8432 MHz; the ACIA's
 // clock (SER_CLK) is the board's 14.318 MHz crystal / 8, 1.790 MHz, so every rate is 2.9% slow, as on the board
@@ -96,7 +98,7 @@ function createAcia(env) {
     if (a.rxQueue[0] === '\u0101') {                           // \p: a prompt (one sent since the wait began), then on
       if (a.promptFrom < 0) a.promptFrom = a.sent;
       if (!prompted(t)) return;
-      a.rxQueue.shift(); a.promptFrom = -1; a.rxDelay = 20000; if (!a.rxQueue.length) a.typedLast = t;
+      a.rxQueue.shift(); a.promptFrom = -1; a.rxDelay = 20000 + PROMPT_LAG; if (!a.rxQueue.length) a.typedLast = t;
     }
     // (Held back by an XOFF: the serial port's keys, once what was on its way has gone; not a wait, nor the keyboard's)
     const stopped = a.held && !a.kbd && a.rxQueue.length && a.rxQueue[0] < '\u0100' && a.lag <= 0;
