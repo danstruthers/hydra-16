@@ -1,0 +1,18 @@
+# deities.txt - (the bare world: ../../WORLDS.md) its one deity, in the first world's deities.txt's form (its keys
+# there; lore.h's struct deity): dq0d's make.js makes it this world's deities.dat (lib/worlds/bare/deities.dat), and
+# its name gods.txt, the command parser's word for it as a game in this world begins (dq0 -w bare: "call on Wend").
+
+deity     | Wend
+title     | the Keeper of Ways
+domains   | protection law
+temper    | good | order
+followers | travellers and those who keep the roads
+rite      | 1 | a lamp lit at a crossing
+feast     | -
+number    | 1
+colours   | grey
+sign      | a lamp
+temple    | a single room with a lamp burning in it
+burial    | earth
+servants  | -
+enemies   | -

@@ -91,7 +91,7 @@ Bestiary's creatures that suit a dungeon, folk of the game's own, and since 2026
 and depths it lives in, its numbers, its range, its senses, its pace, its stand-in faction, its mind, its sway, its
 eyes, and for the history its habitat, nature, size and arms, and what it leaves dead), made a data file the task
 reads into a bank of its own (lib/dq0/dq0d.dat, with the stand-in's factions).  The world's peoples and deities are
-data beside them (dq0d/peoples.txt, deities.txt: lore.h), the history's to draw on.  No lair is by the dungeon's way
+data beside them, the world's (WORLDS.md: its peoples.txt and deities.txt, lore.h's), the history's to draw on.  No lair is by the dungeon's way
 in (the top stratum's first: where the character begins).
 
 - **Placing:** a lair's denizens are put on squares of their own as the character comes into its chunk or one beside

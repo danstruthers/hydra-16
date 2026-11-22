@@ -4,10 +4,10 @@
 ** rock, water and climate: history.txt's lands), its eras oldest first (two or three: who came, what they made, how
 ** it ended, how long ago; their names namegen's), the strata they left, from the top down (each era's works over
 ** the older ones', natural caves under all; a later people may take an older work for its own, a layer reused; an
-** era's end a layer ruined), and the inhabitants now (the bestiary's factions that fit the strata and the history:
-** the dead where an era ended cursed or conquered or laid its dead, beasts in wild land, vermin, crawlers and kobolds
-** wherever their kinds can live).  A hand-written theme's own groups (themegen -t) are read in in place of what it
-** makes, so what's made after fits them.
+** era's end a layer ruined); the inhabitants now goalgen's (2026-11-21: this bank full).  A hand-written theme's own
+** groups (themegen -t) are read in in place of what it makes, so what's made after fits them.  Its peoples, its lands
+** and its names are the world's (games/dq0/WORLDS.md: themegen -w's history.dat), and so are its raiders (the first
+** world's kobolds).
 */
 
 #include <stdlib.h>
@@ -15,6 +15,16 @@
 #include <dice.h>
 #define BANKPROG
 #include "../../games/themegen/themegen.h"
+
+/* The world's raiders (its raiders line: a people that comes only last, digs its own mines, keeps a prisoner and raids
+** from them; their faction goalgen's): their name in raid; none, "" */
+static char raid[12];
+static void raiders (void)
+{
+    if (data (TK_RAIDERS, 0, 0)) {
+        strncpy (raid, D.v[0], sizeof raid - 1);
+    }
+}
 
 /* The region: a land, its words, its rock, its water and its climate */
 static void make_region (void)
@@ -27,9 +37,9 @@ static void make_region (void)
     pick (D.v[4], climate);
 }
 
-/* The eras, oldest first: each its people (of the land, not the one before it; kobolds only the last), what they
-** made, how it ended (the last may hold it still), how long ago; their names.  A prisoner's goal has the kobolds
-** last, holding mines of their own (its keepers), as a scourge's has (the raiders); the evil's an era that ended cursed */
+/* The eras, oldest first: each its people (of the land, not the one before it; the raiders only the last), what they
+** made, how it ended (the last may hold it still), how long ago; their names.  A prisoner's goal has the raiders
+** last, holding mines of their own (its keepers), as a scourge's has; the evil's an era that ended cursed */
 static void make_eras (void)
 {
     static char w[12], cand[8];
@@ -41,8 +51,8 @@ static void make_eras (void)
     for (e = 0, r = er; e < ne; ++e, ++r) {
         for (nc = k = 0; k < n; ++k) {
             data (TK_PEOPLE, 0, k);
-            if (prisoner && e + 1 == ne ? !strcmp (D.v[0], "kobolds") : among (land, D.v[3]) &&
-                (strcmp (D.v[0], "kobolds") || e + 1 == ne) && (!e || k != r[-1].what)) {
+            if (prisoner && e + 1 == ne ? !strcmp (D.v[0], raid) : among (land, D.v[3]) &&
+                (strcmp (D.v[0], raid) || e + 1 == ne) && (!e || k != r[-1].what)) {
                 cand[nc++] = k;
             }
         }
@@ -117,7 +127,7 @@ static void make_strata (void)
 {
     static struct str t;
     static char nm[40];
-    unsigned char e, k, n, i, nd, top, tries, kobolds = gk == G_PRISONER - 1 || gk == G_SCOURGE - 1;
+    unsigned char e, k, n, i, nd, top, tries, kobolds = gk == G_PRISONER - 1 || gk == G_SCOURGE - 1;   /* (The raiders') */
     signed char sub;
     struct str* s;
     struct era* r;
@@ -181,108 +191,6 @@ static void make_strata (void)
     }
 }
 
-/* ---- The inhabitants now: each of the bestiary's factions that has a stratum its kinds live in, and that the
-** history calls for, its strata those, its lair one of them (the dead's an era's that ended cursed, the kobolds' the
-** deepest of their mines), its number its kinds' lairs' groups.  The peoples (Phase 4's, 2026-10-29): the dwarves, the
-** elves and the men's soldiers where an era of theirs holds its works still, on its strata; the gargun in mountains,
-** hills or forest where the dwarves' works were lost (the book's: their colonies in abandoned Khuzdul halls), a tribe
-** of one or two of their kinds (white orcs in cold mountains; else brown orcs ruled by black ones, red orcs, or brown
-** and small orcs), with a king; the dwarves' elder and the soldiers' captain their leaders (themegen's peoples) */
-#pragma static-locals (push, on)                /* (Its locals static: the bank program's room, 2026-10-29) */
-static void make_factions (void)
-{
-    unsigned char k, b, sn, n, ok, any, cursed = 0, dead = 0, nw, h, i, pass;
-    unsigned pm = 0;                            /* (The peoples' factions, a bit each: the first pass's) */
-    unsigned char where[TSTRATA];
-    const char* ch;                             /* (Its kinds chosen: of its own, these only) */
-    struct fac* f;
-    struct beast* p;
-
-    for (k = 0; k < ne; ++k) {
-        if (er[k].end == EN_CURSED) {
-            cursed = k + 1;
-        }
-        dead |= er[k].end == EN_CURSED || er[k].end == EN_CONQUERED || er[k].work == W_TOMB || er[k].work == W_TEMPLE;
-    }
-    nf = 0;
-    for (pass = 0; pass < 2; ++pass) {          /* (The peoples first, as they hold their works: then the rest, as
-                                                **   many as there's room for) */
-        for (k = 0; nf < TFACTIONS && data (TK_FACTION, 0, k); ++k) {
-            f = &fa[nf];
-            memset (f, 0, sizeof *f);
-            ok = !strcmp (D.v[0], "dead") ? dead :
-                !strcmp (D.v[0], "beasts") ? among (land, "mountains hills forest") : 1;
-            h = 0;
-            ch = 0;
-            if (pass ? (pm & 1u << k) != 0 : (ch = peoples (D.v[0])) == 0) {
-                continue;                           /* (A people's the first pass's: its era, its kinds, its leader) */
-            }
-            if (ch) {
-                pm |= 1u << k;
-                ok = (h = pk_era) != 0;
-            }
-            if (!ok) {
-                continue;
-            }
-            for (nw = sn = 0; sn < ns; ++sn) {      /* (Where its kinds live) */
-                for (any = b = 0; b < nbeasts; ++b) {
-                    any |= beasts[b].faction == k && (!ch || among (beasts[b].key, ch)) && lives (b, sn);
-                }
-                if (any) {
-                    where[nw++] = sn;
-                }
-            }
-            for (i = sn = 0; h && sn < nw; ++sn) {  /* (A people's on its era's strata, if its kinds live there) */
-                if (era_now (where[sn]) == h) {
-                    where[i++] = where[sn];
-                }
-            }
-            if (i) {
-                nw = i;
-            }
-            if (!nw) {
-                continue;
-            }
-            strcpy (f->name, D.v[0]);
-            f->att[0] = *D.v[1];
-            strncpy (f->others, D.n > 2 ? D.v[2] : "-", sizeof f->others - 1);
-            f->d0 = where[0];
-            f->d1 = where[nw - 1];
-            f->lair = where[random (nw)];
-            for (n = b = 0, p = beasts; b < nbeasts; ++b, ++p) {
-                if (p->faction == k && (!ch || among (p->key, ch))) {
-                    if (*f->kinds) {
-                        strcat (f->kinds, " ");
-                    }
-                    strcat (f->kinds, p->key);
-                    n += (p->n0 + p->n1) * p->lairs / 2;
-                    if (!strcmp (f->name, "kobolds") && !f->leader) {
-                        f->leader = b + 1;          /* (Its chieftain: one of its own) */
-                    }
-                }
-            }
-            f->n = n ? n : 1;
-            if (ch && pk_lead) {
-                f->leader = beast_of (pk_lead) + 1;
-            }
-            if (cursed && !strcmp (f->name, "dead")) {
-                for (sn = 0; sn < nw && era_now (where[sn]) != cursed; ++sn) {
-                }
-                if (sn < nw) {
-                    f->lair = where[sn];
-                }
-            } else if (!strcmp (f->name, "kobolds")) {
-                f->lair = where[nw - 1];
-            }
-            if (f->leader && !lives (f->leader - 1, f->lair)) {
-                f->leader = 0;
-            }
-            ++nf;
-        }
-    }
-}
-#pragma static-locals (pop)
-
 /* ---- A hand-written theme's own groups read in, so that what's made fits them */
 
 static unsigned char npl;
@@ -297,7 +205,6 @@ static void __fastcall__ take (struct line* l)
     int p;                                      /* (A purpose: SP_FORT its high bit) */
     struct era* r;
     struct str* s;
-    struct fac* f;
 
     if (!strcmp (k, "region") && l->n >= 5) {
         strncpy (rname, v[0], sizeof rname - 1);
@@ -314,7 +221,7 @@ static void __fastcall__ take (struct line* l)
         memset (r, 0, sizeof *r);
         for (i = 0; i < npl && strcmp (pl_name[i], v[0]); ++i) {
         }
-        r->tongue = i < npl ? pl_tongue[i] : 2;
+        r->tongue = i < npl ? pl_tongue[i] : data (TK_COMMON, 0, 0) ? atoi (D.v[0]) : 1;   /* (Else the world's common tongue) */
         strcpy (r->kind, i < npl ? pl_kind[i] : "folk");
         strncpy (r->people, v[0], 11);
         strcpy (r->pthe, "the ");
@@ -349,18 +256,6 @@ static void __fastcall__ take (struct line* l)
         if ((p = find_word (dids, v[2])) >= 0) {
             layer (&st[sn], atoi (v[1]), p, p == TL_RUINED ? find_word (endings, v[3]) : purpose_of (v[3]));
         }
-    } else if (!strcmp (k, "faction") && l->n >= 7 && nf < TFACTIONS) {
-        f = &fa[nf++];
-        memset (f, 0, sizeof *f);
-        strncpy (f->name, v[0], 11);
-        strncpy (f->kinds, v[1], sizeof f->kinds - 1);
-        f->d0 = atoi (v[2]);
-        f->d1 = strchr (v[2], '-') ? atoi (strchr (v[2], '-') + 1) : f->d0;
-        f->n = atoi (v[3]);
-        f->leader = strcmp (v[4], "-") ? beast_of (v[4]) + 1 : 0;
-        f->lair = atoi (v[5]);
-        f->att[0] = *v[6];
-        strncpy (f->others, l->n > 7 ? v[7] : "-", sizeof f->others - 1);
     }
 }
 
@@ -391,9 +286,9 @@ static void __fastcall__ why_of (struct line* l)
 }
 
 /* The history: the region (a hand-written theme's, if it gives it: the goal and the eras fit its land), the eras, the region's
-** name (the oldest people's), the strata, the inhabitants; the goal's kind first (goalgen's, the data's goal lines': one of
-** those a history picks by itself, or the why's it's given; a prisoner or a scourge where there are no kobolds to keep one or
-** raid an artifact), as the eras are made to fit it */
+** name (the oldest people's), the strata (the inhabitants goalgen's, 2026-11-21: this bank full); the goal's kind first
+** (goalgen's, the data's goal lines': one of those a history picks by itself, or the why's it's given; a prisoner or a
+** scourge where there are no raiders to keep one or raid, an artifact), as the eras are made to fit it */
 void make (void)
 {
     unsigned char n = tg_count (TK_GOAL, 0), m, k, r;
@@ -417,8 +312,9 @@ void make (void)
     if (given[GR_HEAD]) {
         given_each (GR_HEAD, why_of);
     }
-    if ((gk == G_PRISONER - 1 || gk == G_SCOURGE - 1) && !among (land, "mountains hills")) {
-        gk = G_ARTIFACT - 1;
+    raiders ();                                 /* (The world's raiders: raid) */
+    if ((gk == G_PRISONER - 1 || gk == G_SCOURGE - 1) && !(*raid && data (TK_PEOPLE, raid, 0) && among (land, D.v[3]))) {
+        gk = G_ARTIFACT - 1;                    /* (Not where the world's raiders live, or it has none) */
     }
     if (given[GR_GOAL]) {
         gk = 0xFF;                              /* (A hand-written theme's own puzzle) */
@@ -430,7 +326,7 @@ void make (void)
     }
     if (!given[GR_REGION]) {
         strcpy (rname, "the ");
-        strcat (rname, name_of (ne ? er[0].tongue : 2, NG_PLACE, rand32 ()));
+        strcat (rname, name_of (ne ? er[0].tongue : 0, NG_PLACE, rand32 ()));
         strcat (rname, " ");
         strcat (rname, noun);
     }
@@ -441,10 +337,5 @@ void make (void)
     if (given[GR_STRATA]) {
         ns = 0;
         given_each (GR_STRATA, take);
-    }
-    make_factions ();
-    if (given[GR_DENS]) {
-        nf = 0;
-        given_each (GR_DENS, take);
     }
 }

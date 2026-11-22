@@ -213,6 +213,8 @@ Each task is started with the hub's segment, its role and the lib folder (hub.c:
   - for the time between dungeons, an entry in rsmeta.h's RULESETS, and its acct_* and meta_* hooks;
   - optionally, a character generator named in its RS_HELLO (HarnMaster's is hmchar), and an outfits.txt.
 - `dq0 -r NAME` starts the referee dq0NAME (main.c:2931-2933).
+- The world (the setting a history's made in, its peoples, tongues and deities) is a plug-in too: `dq0 -w NAME`,
+  games/dq0/worlds/NAME (WORLDS.md).
 
 ### The paces
 
@@ -257,11 +259,17 @@ Each task is started with the hub's segment, its role and the lib folder (hub.c:
 - **kinds.txt**: the bestiary, 29 kinds, a line each of 36 fields (documented at its top).
 - **factions.txt**: the stand-in factions (11).
 - **inhabit.txt**: a theme's inhabitants, as faction lines; copied to the card for a game folder's theme.txt.
-- **peoples.txt**: the peoples (7): their walls, doors, light, marks, rooms and uses. It makes dq0f.dat, which
-  nothing reads at run time yet (GAME-CRITIQUE.md, section 5.4).
-- **deities.txt**: the deities (11). Their names go into the catalogue's last two records, for the parser.
+dq0d/make.js makes dq0d.dat and dq0tr.dat from them, and each world's peoples.dat, deities.dat and gods.txt from its
+peoples.txt and deities.txt.
 
-dq0d/make.js makes dq0d.dat, dq0tr.dat, dq0f.dat and dq0g.dat from them.
+**games/dq0/worlds** (WORLDS.md: a world a folder, dq0 -w NAME; the first the default):
+- **first/history.txt**: the first world's history's words (its peoples, lands, tongues, works, clues, mints, who
+  holds and raids); it makes worlds/first/history.dat (themegen's), with goals.txt and the bestiary.
+- **first/peoples.txt**: its peoples (7): their walls, doors, light, marks, rooms and uses. It makes peoples.dat, which
+  nothing reads at run time yet (GAME-CRITIQUE.md, section 5.4).
+- **first/deities.txt**: its deities (11). Their names go into the catalogue's last two records, for the parser.
+- **first/tongues.h**: its tongues' sounds in C, for the programs between dungeons and bankrun's namegen.
+- **bare/**: the bare world, the smallest that builds: the proof a world swaps (dq0world).
 
 **Elsewhere:**
 - **dq0w/kinds.c**: the catalogue, in C. kinds[] holds a row for each kind of thing, comps[] the compartments, and
@@ -269,7 +277,7 @@ dq0d/make.js makes dq0d.dat, dq0tr.dat, dq0f.dat and dq0g.dat from them.
   and CAT_BANK at start.
 - **dq0s/sounds.txt**: two sounds a denizen kind (a step and a noise), then the world's sounds; it makes dq0s.dat.
 - **dq0harn/outfits.txt**: HarnMaster's starting kit, by occupation, skill and bent.
-- **themegen/goals.txt** (the six goal kinds) and **history.txt** (the history's words): they make themegen.dat and
+- **themegen/goals.txt** (the six goal kinds): with each world's history.txt they make its history.dat; and
   bestiary.dat.
 - **hmchar/occupations.txt**: the book's occupations, for hmchar.
 - **tests/dq0/looks.ref**: dq0looks' hashes of the senses' replies. `DQ0LOOKS=write` makes it again.
@@ -319,7 +327,8 @@ machine's load allows.
   - `-d DIR`, a save folder (a game kept there goes on);
   - `-H`, hard mode;
   - `-t FILE`, a hand-written theme;
-  - `-r NAME`, the ruleset.
+  - `-r NAME`, the ruleset;
+  - `-w NAME`, the world (WORLDS.md: first, the default, or bare).
 - **For tests:**
   - `-T`, start at a way down (more `-T`s go further);
   - `-k THINGS`, extra things to start with;
@@ -614,7 +623,7 @@ The worked example is 1a0d12cb (2026-10-29), which added twelve.
 6. **Words**: nothing to add; a denizen is named by its kind's name, and its plural made by said.c.
 7. **Into a dungeon**: a stand-in theme names its kinds in a `denizens` line or its `faction` lines
    (dq0/themes/1crypt.txt:126); a game folder's theme.txt in inhabit.txt's format; or, for a generated history, the
-   kind's strata and styles (themegen/make.js copies them into themegen.dat). themec rejects an unknown key.
+   kind's strata and styles (themegen/make.js copies them into each world's history.dat). themec rejects an unknown key.
 8. **Tests**: dq0peoples (tests/suites/dq0/denizens.js) and dq0peoplegen (theme.js).
 
 **Limits:** 31 kinds at most (SND_KINDS, 32: hub.h:116), and 29 are used. The referee's overlay 5, where beasts.c

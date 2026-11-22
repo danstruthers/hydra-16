@@ -1,7 +1,8 @@
 # goals.txt - (themegen) the goal kinds (the user's, DesignIdeas.md: "Each dungeon needs a goal, and it may be to
 # find a specific artifact, clean out the evil denizens, rescue a prisoner, or just find a way through to a distant
 # exit"; G5: all four, maybe more, so they're data: a kind more is a block more here).  make.js makes them part of
-# themegen's data file (lib/dq0/themegen.dat), checking each one's lines as a theme's.
+# each world's data file, themegen's (lib/worlds/NAME/history.dat: ../dq0/WORLDS.md), checking each one's lines as a
+# theme's.  The game's, not a world's.
 #
 # A goal kind is a block: its goal line, then its things, then the theme's lines it adds, in the theme format with
 # slots in them (history.txt's %R, %P, %K, %N; and these):

@@ -134,7 +134,7 @@ const NEAR = {
     'dq0sound', 'dq0soundx', 'dq0watch', 'dq0lookway', 'dq0kept', 'dq0fog', 'dq0quiet', 'dq0pose'],
   denizens: ['dq0denizens', 'dq0popgen', 'dq0inhab', 'dq0reach', 'dq0sway', 'dq0talk', 'dq0names', 'dq0stay', 'dq0dens',
     'dq0traces', 'dq0lair', 'dq0robbed', 'dq0finished', 'dq0helpless'],
-  theme: ['dq0theme', 'dq0pieces', 'dq0themegen', 'dq0goals', 'dq0themec', 'dq0history', 'dq0layers', 'dq0quest',
+  theme: ['dq0theme', 'dq0pieces', 'dq0themegen', 'dq0world', 'dq0goals', 'dq0themec', 'dq0history', 'dq0layers', 'dq0quest',
     'dq0handtheme', 'dq0plan', 'dq0inhab', 'dq0popgen', 'dq0styles'],
   time: ['dq0time', 'dq0longwait', 'dq0tasks', 'dq0timed', 'dq0pace', 'dq0steps', 'dq0tiring', 'dq0watch', 'dq0rather', 'dq0stay',
     'dq0usedup', 'dq0answer', 'dq0jobs', 'dq0hold'],

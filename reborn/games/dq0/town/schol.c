@@ -207,6 +207,7 @@ static void a_name (void)
 
     q.seed = random (30000) + 1;
     q.tongue = 2;
+    q.snd = ng_first[1];                        /* (The first world's men's tongue: ../worlds/first/tongues.h) */
     q.form = NG_PERSON;
     ng_name (&q);
     strcpy (who, q.out);

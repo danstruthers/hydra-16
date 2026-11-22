@@ -1,5 +1,7 @@
 # Dingus Quest Zero's rulesets
 
+(The setting, a dungeon's history, its peoples, tongues and deities, is a world's, swapped as a ruleset is: WORLDS.md.)
+
 The game is ruleset-neutral: everything it knows of the rules it asks a referee, in rs.h's terms (a purpose, the
 circumstances in steps, a grade and conditions, effects and words back), and the referee is the only place a
 ruleset's rules live.  This is what a ruleset must answer, what the game still takes for granted of one, and what it

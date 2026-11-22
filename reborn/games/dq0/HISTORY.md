@@ -26,12 +26,14 @@ when and why each piece was decided, in the user's words, DECISIONS.md's.
 - **themegen** (games/themegen): `themegen -s SEED [-t THEME] [-o FOLDER] [-q]` makes a region's history and the
   dungeon's theme from a seed, the same each time, and says it (or writes it, theme.txt, into FOLDER).  Its work is
   bank programs (the SDK's: each a child called as a function from a RAM bank of themegen's own, on the history in
-  themegen's main RAM): **histgen** (the region, the eras, the strata, the inhabitants), **goalgen** (the goal),
-  **linegen** (the theme's lines), **namegen** (names) and **stratagen** (a stratum's layers planned: the theme
-  checker's, below, and the maker's).  Its words are data: history.txt (the peoples, the lands, the works, how eras
-  end, the strata's names, the clues, the rooms' words), goals.txt (the goal kinds), made lib/dq0/themegen.dat at
-  build time by its make.js, which holds every goal kind to a theme's (its lines compiled and checked, their slots
-  filled).
+  themegen's main RAM): **histgen** (the region, the eras, the strata), **goalgen** (the inhabitants, histgen's till
+  2026-11-21, and the goal), **linegen** (the theme's lines), **namegen** (names) and **stratagen** (a stratum's layers
+  planned: the theme checker's, below, and the maker's).  Its words are data: the world's history.txt (WORLDS.md: the
+  peoples, the lands, the tongues, the works, how eras end, the strata's names, the clues, the rooms' words, the mints;
+  the first world's, games/dq0/worlds/first, the default), goals.txt (the goal kinds, the game's), made each world's
+  lib/worlds/NAME/history.dat at build time by its make.js, which holds every goal kind to a theme's (its lines
+  compiled and checked, their slots filled) and every world to what themegen wants of one.  themegen -w NAME makes a
+  history in another world (dq0 -w NAME's).
 - **themec** (games/themec): `themec [-o RECORD] THEME` compiles a theme into its record (theme.h's struct theme:
   make.js's compile, in C, held to the same bytes by the tests) and checks it.  themegen runs it in its own place
   (exec) when it writes a folder: theme.txt compiled into theme.dat.
@@ -175,8 +177,8 @@ plans its first chunk of a stratum of layers.  A game carried on reads its theme
 ## Still to come
 
 - themegen choosing by the bestiary's own columns (each kind's land, climate, light, nature and size), the peoples'
-  builds and words (dq0d/peoples.txt) and the deities' temples, burials, servants and enemies (deities.txt): popgen's
-  data, which history.txt's peoples stand in for till then.
+  builds and words (the world's peoples.txt) and the deities' temples, burials, servants and enemies (its deities.txt):
+  popgen's data, which its history.txt's peoples stand in for till then.
 - popgen for a game with no save folder (its theme.txt in /ram/dq0).
 - Each goal kind played through with denizens: the evil's dead stilled as its curse breaks, the prisoner a denizen
   who follows (an ally), the guardians' lair at the goal's piece.

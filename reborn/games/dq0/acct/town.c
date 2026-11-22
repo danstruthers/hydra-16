@@ -50,6 +50,7 @@ void o_town (void)
 
     q.seed = (L.h.seed ^ 0x544F574EUL) + L.h.dungeon * 2654435761UL;    /* ("TOWN") */
     q.tongue = 2;
+    q.snd = ng_first[1];                        /* (The first world's men's tongue: ../worlds/first/tongues.h) */
     q.form = NG_PLACE;
     ng_name (&q);
     strcpy (town, q.out);
