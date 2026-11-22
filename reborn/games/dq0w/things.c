@@ -220,12 +220,6 @@ unsigned char __fastcall__ comp_named (unsigned k, const char* name)
     return o_comp_named (k, name);
 }
 
-/* The compartment of kind k name names, if it doesn't name the kind (the chooser's thing's: pick's wcomp) */
-static unsigned char __fastcall__ name_comp (unsigned char k, const char* name)
-{
-    hub_map (KIND_BANK);
-    return named (kinds[k].name, name) ? 0 : comp_named (k, name);
-}
 unsigned char __fastcall__ comp_open (unsigned i, unsigned char c)
 {
     cat_map ();
@@ -3005,6 +2999,14 @@ unsigned __fastcall__ s_pick (const char* name, unsigned char how)
     return pick_ (name, how, no);
 }
 #pragma static-locals (pop)
+
+/* The compartment of kind k name names, if it doesn't name the kind (the chooser's thing's: pick's wcomp; part 4's, its
+** one caller's: the world's main RAM's room, speed9, 2026-11-22) */
+static unsigned char __fastcall__ name_comp (unsigned char k, const char* name)
+{
+    hub_map (KIND_BANK);
+    return named (kinds[k].name, name) ? 0 : comp_named (k, name);
+}
 
 #pragma bss-name (push, "SW4RODATA")            /* (pick_'s locals, static: part 4's own, none of its calls swapping a
                                                 **   part in; the main RAM's room, 2026-11-18) */
