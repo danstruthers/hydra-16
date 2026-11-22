@@ -367,7 +367,7 @@ static void status (void)
     }
     strcat (HUB->pcstatus, s->cond & C_UNCONSCIOUS ? word[1] : pc.state ? word[pc.state & 3] : s->cond & C_BLEEDING ?
         " BLEEDING" : "");
-    if (ko_at[0]) {
+    if (ko_at[0] && pc.state == HARN_DEAD) {
         s->cond |= C_UNCONSCIOUS;               /* (Its fall's time kept till it comes round: dead as it lay, the world's
                                                 **   senseless still, no turn of its own after; its status as it was) */
     }

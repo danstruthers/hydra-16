@@ -690,7 +690,8 @@ void __fastcall__ o_fight (struct req* r)
             r->w2 = cr.state == HARN_UNCONSCIOUS ? (unsigned) (bs.out - tnow) : cr.state == HARN_DEAD ? 0xFFFF : 0;
         } else {
             rouse (&pc, &pc_out, 0);
-            r->w2 = pc.state == HARN_UNCONSCIOUS ? (unsigned) (pc_out - tnow) : pc.state == HARN_DEAD ? 0xFFFF : 0;
+            r->w2 = pc.state == HARN_DEAD ? 0xFFFF : pc_out > tnow ? (unsigned) (pc_out - tnow) : 0;   /* (Its time out ahead:
+                                                **   senseless, its next roll's; or out till then, whatever its state) */
         }
         return;
     }
