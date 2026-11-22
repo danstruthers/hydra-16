@@ -50,11 +50,25 @@ static unsigned char chunk (void)
 #pragma static-locals (push, off)
 static unsigned char __fastcall__ sniffed (unsigned char way, unsigned char c)
 {
-    struct actq q;                              /* (On the C stack: act_test swaps this part out, its statics too) */
+    struct actq q;
+    struct req* r;
+    signed char g;
 
     act_get (q, AC_SNIFF);
     bd.ready += q.r.time;
-    return act_test (bk + 1, q.r.test, q.r.steps + TRACE_STEPS (1, (signed char) c)) == G_BADLY ? 0xFF : way;
+    hub_map (0);                                /* (act_test's request, an actor's, laid out here: a hunter sniffs each ten
+                                                **   seconds, and part 69's swap in and out for it cost the UI's first
+                                                **   words their time, dq0letseveral's, 2026-11-21) */
+    r = &HUB->slot[SLOT_WORLD];
+    r->kind = RS_TEST;
+    r->actor = bk + 1;
+    RS_TEST_PURPOSE (*r) = q.r.test;
+    RS_TEST_HOW (*r) = 0;
+    RS_TEST_STEPS (*r) = q.r.steps + TRACE_STEPS (1, (signed char) c);
+    r = hub_ask (SLOT_WORLD);
+    g = RS_TEST_GRADE (*r);
+    r->state = REQ_FREE;
+    return g == G_BADLY ? 0xFF : way;
 }
 #pragma static-locals (pop)
 

@@ -16,6 +16,10 @@ beside this file as the work list; every row there has its file:line:
 | Acting on the world | 59 | 7 | 52 | 20 more, outside the table |
 | Sensing, fighting, dealing, telling, time | 104 | 27 | 65 | 12 in the table, 14 more outside it |
 | All | 163 | 34 | 117 | 46 |
+| After stage 2's search and hide (op2b, 2026-11-21) | 163 | 38 | 113 | 45 |
+
+(Stage 2's search and hide made the same: the act audit's C15 and G-7, the sense audit's F1, F3 and F5; the rest of
+its area's rows narrowed, below.)
 
 **What a player would meet:**
 1. **Denizens sense only the character.** They know one another by straight distance, through rock, and a denizen's
@@ -35,8 +39,34 @@ beside this file as the work list; every row there has its file:line:
    door.
 9. **Dealing.** Talk, trade, orders and robbery go one way only, and no denizen speaks.
 10. **Time.** Typing costs the denizens time while the character's steps and blows go on.
-11. **Search.** A denizen's reaches one square, finds no doors or traps, and is never told.
+11. **Search.** ~~A denizen's reaches one square, finds no doors or traps, and is never told.~~ Done (stage 2, op2b,
+    2026-11-21): below.
 12. **The character** can't build, rob or filch a living denizen, dart past a body, or slam a door.
+
+**Done: stage 2's search and hide** (branch op2b, 2026-11-21; built/2026-11-21-op2b.md):
+- **The act table's rows** search, hide, conceal, sniff and track (games/dq0w/acts.txt), read by both sides: a search's
+  minute, its test and its noise (the character's busy noise, an actor's told: E_DEN DE_SEARCHES, "The bandit starts
+  searching about.", heard as rummaging); hiding oneself's ten seconds; a thing concealed's minute and Concealment test
+  (its grade the hiding's steps, acts.h's HIDE_OF); a sniff's three seconds and a track's minute.
+- **One search** (wsearch.c, part 94): a denizen's search is the character's: wtrap.c's search of the hidden doors and
+  traps within its reach, by its own sight (the line from its eyes; by touch in the dark) and its own sheet; the hidden
+  things lying there by the character's own test; one hiding that it sees (the character's hiding ended, "found"; a
+  denizen not of its faction out of hiding) by the character's search's test of a hidden denizen.  What it finds is
+  found for every one, as the character's finds are.  Hostile folk search where they lost the character, once, as
+  robbers did (tailing the character: the user's "searching is anyone's").
+- **A thing hidden:** a robber's stash at its home by its own Concealment test and the minute (it was hidden at 1,
+  with no test and no time).
+- **Sniff for anyone:** a hunter by smell's sniff of the traces' store is the character's sniff: the same test (its
+  own nose and sheet, P_NOTICE_SMELL), its steps by the scent's strength (trace.h's TRACE_STEPS), its three seconds; a
+  critical failure loses the trail.
+- **Parity tests:** dq0srchact (a secret door and hidden crowns searched by the character and by a bandit: the same
+  tests at the same steps, the minute, the noise, the finds as the tests went), dq0hideact (a thing hidden by the
+  character and by a robber), dq0sniffact (the character's sniff and the rats' store sniffs).
+- **Left in this area:** knowers of a find (a door or a trap a denizen finds is found for every one: B10's knowers,
+  a lair's own secret doors); an actor's search all at once, not by the time it gets (F2: with an actor's timed
+  work); a robber's takings carried home and hidden there, not at a distance (C10, C14); no denizen tracks by prints,
+  and a hunter follows the character's trail alone (M2's any actor's trail: stage 3); smell without asking (M1, the
+  senses'); watched while hiding by the watcher's own eyes (B1); hidden compartments searched by a denizen (C5).
 
 ## 2. The design: the same by construction
 
