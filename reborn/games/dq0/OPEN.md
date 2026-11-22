@@ -125,6 +125,24 @@ only quit and help taken, nothing sensed). These are the rest.
   world's swaps and the blow's words come first, then the command's answer (built; first letters 500K-630K, under the
   720K target). Tell the command's own first words first ("You stop fighting." before the blow), reordering what's told?
   - built/2026-11-20-start2.md, open question 1.
+- **K11. A sleeper struck takes the blow undefended** (RS_ASLEEP), the character as a sleeping creature already was
+  (built, felled1's, one path). A sleeper struck by a killer can die from the first blow. Keep it?
+  - built/2026-11-21-felled1.md.
+- **K12. A creature nobody asks about** rolls all its due shock rolls the next time it's asked (built), like the
+  late denizen's catch-up all at once. Keep it?
+  - built/2026-11-21-felled1.md, open questions.
+- **K13. The character's state reads "senseless"** for the whole black-out (built), not its coming-round state set
+  as it falls. Keep it?
+  - built/2026-11-21-felled1.md, open questions.
+- **K14. A knockout from a fall or a trap** now goes through the same path as a blow's, its rolls a round each
+  (built). Keep it?
+  - built/2026-11-21-felled1.md, open questions.
+- **K15. A new wound or fatigue during the black-out** changes the penalty for the rolls after it (built). The old
+  code fixed the penalty as the blow fell. Keep it?
+  - built/2026-11-21-felled1.md, open questions.
+- **K16. A game loaded mid black-out** starts its rolls again from its next round, since the roll counts aren't
+  saved (built). Save them?
+  - built/2026-11-21-felled1.md, open questions.
 
 ## The step planner, the reach and time
 
