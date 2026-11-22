@@ -172,6 +172,11 @@ void unrouse (void);                            /* (Overlay 10's: sheet.c) The c
 extern unsigned long ko_at[NACTORS + 1];        /* (sheet.c's: each senseless one's fall, 0 the character, an actor's
                                                 **   entry plus 1; */
 extern unsigned ko_n[NACTORS + 1];              /*   its shock rolls since) */
+#define KOS             ((unsigned char*) 0x8000 + BBODIES + 0x100)    /* (A creature's fall and rolls kept by its
+                                                **   sheet's number, 6 bytes each (ko_at, ko_n), in fb past the skills'
+                                                **   growth (skills.c's GROW): saved in beasts.dat with the bodies, read
+                                                **   back as it's an actor again, the user's K16, 2026-11-21) */
+#define KOSZ            (NSHEETS * 6)
 extern unsigned char crw;                       /* (fight.c's: the creature unpacked, its actor's entry plus 1) */
 unsigned __fastcall__ knocked_out (harn_char* c, unsigned long* o, unsigned char* f);  /* Knocked senseless: the
                                                 **   tenths till it comes round, *o its time out (AF_AGAIN in *f) */

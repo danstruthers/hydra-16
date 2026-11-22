@@ -273,13 +273,15 @@ static void __fastcall__ tongue_out (char* l)
 }
 
 /* The save's line of the body (the character's file's "body": its venom, its rest toward its healing in minutes, its
-** disease, its breath, "body 3 14 0 25 1200 0 0 0 0 0 0"), into l (rd 0); or read back from l (rd 1: after "body ").
+** disease, its breath; and senseless, its fall, the shock rolls made since and its time out, each long in two halves,
+** low first (sheet.c's ko_at[0], ko_n[0], pc_out: a game kept mid black-out goes on where it was, the user's K16,
+** 2026-11-21), "body 3 14 0 25 1200 0 0 0 0 0 0 0 0 0 0 0"), into l (rd 0); or read back from l (rd 1: after "body ").
 ** And its skills' growth, "body u..." lines (skills.c's: rd 2 the next made, rd 3 cleared, rd 1 its u read), and after
 ** them its tongues' and scripts' lines (rd 2 on; rd 3 cleared, its own alone; rd 4 a line of the file's, l whole) */
 void __fastcall__ o_body_line (char* l, unsigned char rd)
 {
     char b[8];
-    unsigned v[11];
+    unsigned v[16];
     unsigned char k;
 
     if (rd == 4) {
@@ -313,15 +315,18 @@ void __fastcall__ o_body_line (char* l, unsigned char rd)
         v[8] = pd.inc;
         v[9] = air_co;
         v[10] = afffl;
+        *(unsigned long*) (v + 11) = ko_at[0];
+        v[13] = ko_n[0];
+        *(unsigned long*) (v + 14) = pc_out;
         strcpy (l, "body");
-        for (k = 0; k < 11; ++k) {
+        for (k = 0; k < 16; ++k) {
             strcat (l, " ");
             strcat (l, utoa (v[k], b, 10));
         }
         return;
     }
     memset (v, 0, sizeof v);
-    for (k = 0; l && k < 11; ++k) {
+    for (k = 0; l && k < 16; ++k) {
         v[k] = atoi (l);
         if ((l = strchr (l, ' ')) != 0) {
             ++l;
@@ -338,6 +343,9 @@ void __fastcall__ o_body_line (char* l, unsigned char rd)
     pd.inc = v[8];
     air_co = v[9];
     afffl = v[10];                              /* (In its fatigue already, the sheet's) */
+    ko_at[0] = *(unsigned long*) (v + 11);      /* (Senseless as it was kept: an old file's none, 0) */
+    ko_n[0] = v[13];
+    pc_out = *(unsigned long*) (v + 14);
     aff_breath = air_lv = 0;
 }
 

@@ -170,9 +170,22 @@ static unsigned char __fastcall__ shock_fails (unsigned char up, unsigned char e
 }
 
 /* Each senseless one's fall (the clock's) and the shock rolls made since, by its index (0 the character, an actor's
-** entry plus 1): rouse's.  Not kept with the game: a game loaded with one senseless, its rolls begun again from its next */
+** entry plus 1): rouse's.  Kept with the game (the user's K16, 2026-11-21): the character's in its file (its "rolls"
+** line, dq0harn.c's), a creature's by its sheet in fb (KOS: kept, below, read back as it's an actor again, fight.c's) */
 unsigned long ko_at[NACTORS + 1];
 unsigned ko_n[NACTORS + 1];
+
+/* A creature's (i, an actor's entry plus 1) fall and rolls kept by its sheet (KOS); the character's its file's */
+static void __fastcall__ kept (unsigned char i)
+{
+    static unsigned char* p;
+
+    if (i) {
+        p = KOS + aden[(i - 1) & 7] * 6;
+        bwrite (fb, p, &ko_at[i], 4);
+        bwrite (fb, p + 4, &ko_n[i], 2);
+    }
+}
 
 /* The character not senseless, none of its shock rolls kept: its file read (load_pc's, here for overlay 4's room) */
 void o_unrouse (void)
@@ -202,12 +215,12 @@ void __fastcall__ o_rouse (harn_char* c, unsigned long* o, unsigned char i)
         if (!*o) {
             ko_at[i] = tnow;
             *o = tnow + 100;
-            return;
+            goto keep;
         }
         ko_at[i] = *o >= 100 ? *o - 100 : 0;
     }
     if (tnow < *o) {
-        return;
+        goto keep;
     }
     n = (unsigned) ((tnow - ko_at[i]) / 100);
     if (n > 360) {
@@ -243,6 +256,8 @@ void __fastcall__ o_rouse (harn_char* c, unsigned long* o, unsigned char i)
     if (c->state != HARN_UNCONSCIOUS) {
         ko_at[i] = 0;
     }
+keep:
+    kept (i);
 }
 
 /* A fight's (fight.c's strike, through bank.s's stub), the harm's: c knocked senseless (its index the character's, 0,
@@ -265,6 +280,7 @@ unsigned __fastcall__ o_knocked_out (harn_char* c, unsigned long* o, unsigned ch
     *o = tnow + w;
     ko_at[i] = tnow;
     ko_n[i] = 0;
+    kept (i);
     if (c != &pc) {
         bs.state &= ~BS_SHOCKED;
     }

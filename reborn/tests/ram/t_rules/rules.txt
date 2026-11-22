@@ -1663,6 +1663,56 @@ dice 6:6*
 ask ROUSE
 want w2=0 status="UP 5 SHOCK" dice=1800
 
+# Kept with the game (the user's K16, 2026-11-21): a game saved as she lies senseless goes on where it was, her fall
+# and the rolls made since read back with her file (its "body" line), not begun again from her next as it's loaded
+
+char
+vol 3 0 0 0 0
+end
+set now=7000
+case kept senseless: a round's roll failed, saved and read back mid round: her next roll the next round's, as before
+dice 100:50 6:6 6:6 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
+want w2=100 status="UP 5 OUT"
+set now=7100
+dice 6:6 6:6 6:6 6:1 6:1
+ask ROUSE
+want w2=100 status="UP 5 OUT" dice=5
+set now=7150
+dice
+ask SAVE text="/ram/k.hm"
+dice
+ask LOAD_PC text="/ram/k.hm"
+want status="UP 5 OUT"
+set now=7200
+dice 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1
+ask ROUSE
+want w2=0 status="UP 5" dice=10
+
+char
+vol 3 0 0 0 0
+end
+set now=8000
+case kept senseless 200 rounds, read back: the hour from her fall, not from the load (159 rolls more, then the last)
+dice 100:50 6:6 6:6 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
+want w2=100 status="UP 5 OUT"
+set now=28000
+dice 6:6*
+ask ROUSE
+want w2=100 status="UP 5 OUT" dice=1000
+set now=28050
+dice
+ask SAVE text="/ram/k.hm"
+dice
+ask LOAD_PC text="/ram/k.hm"
+want status="UP 5 OUT"
+set now=44000
+dice 6:6*
+ask ROUSE
+want w2=0 status="UP 5 SHOCK" dice=800
+set now=40000
+
 # One in shock wounded again (Combat 14: a shock roll with every injury; the library's harn_wound makes one only for
 # one conscious, so the character in shock was struck on and on and never fell: the user's adder, 2026-10-21)
 

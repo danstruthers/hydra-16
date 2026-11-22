@@ -462,7 +462,7 @@ static void __fastcall__ own_line (char* l)
     }
 }
 
-static char path[64];                           /* (The file's path read, and a line of it written: s_save_pc's line too, the
+static char path[80];                           /* (The file's path read, and a line of it written: s_save_pc's line too, the
                                                 **   main RAM's room for the tongues, the plan's step 12) */
 
 void __fastcall__ s_load_pc (struct req* r)
@@ -583,19 +583,23 @@ void __fastcall__ sheet_put (unsigned char n)
 void __fastcall__ s_rf_sheets (unsigned char back)
 {
     unsigned off;
+    char* p;
     int fd;
 
     memset (piece, 0, sizeof piece);
     fd = back < 2 ? sheets_open (back) : -1;
-    for (off = 0; off < 0x2000 + BBODIES; off += sizeof piece) {     /* (The sheets, then their bodies: fb's) */
+    for (off = 0; off < 0x2000 + BBODIES + KOSZ; off += sizeof piece) {  /* (The sheets, then their bodies, fb's, then
+                                                **   their falls and shock rolls, fb's past the skills' growth: KOS,
+                                                **   K16's; a file from before them short, those none) */
+        p = (char*) 0x8000 + (off & 0x1FFF) + (off >= 0x2000 + BBODIES ? 0x100 : 0);
         if (!back) {
-            bread (off < 0x2000 ? sb : fb, (char*) 0x8000 + (off & 0x1FFF), piece, sizeof piece);
+            bread (off < 0x2000 ? sb : fb, p, piece, sizeof piece);
             write (fd, piece, sizeof piece);
         } else {
             if (fd < 0 || read (fd, piece, sizeof piece) != sizeof piece) {
                 memset (piece, 0, sizeof piece);
             }
-            bwrite (off < 0x2000 ? sb : fb, (char*) 0x8000 + (off & 0x1FFF), piece, sizeof piece);
+            bwrite (off < 0x2000 ? sb : fb, p, piece, sizeof piece);
         }
     }
     if (fd >= 0) {

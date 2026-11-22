@@ -291,7 +291,7 @@ RS_TEST:bearing -> grade; result drift                  # (P_BEARING's: a failur
 RS_TEST:draw    -> grade; result opened                 # (P_DRAW's: 1 Drawing opened by it)
 RS_CONTEST      a purpose@P_NOTICE_SIGHT; b against@P_NOTICE_SIGHT; steps; c osteps  -> grade; c ograde; result better
                 # (The other's purpose and steps (signed); its grade; 1 the actor did better, 2 the other, 0 alike)
-RS_ATTACK       a aim@Z_MID; b aspect@AS_BLUNT; c outnumbered; steps; w2(flags) shy:0; x[0] heart; x[4-7] when
+RS_ATTACK       a aim@Z_MID; b aspect@AS_BLUNT; c outnumbered; steps; w2(flags) shy:0 asleep:7=RS_ASLEEP; x[0] heart; x[4-7] when
                 -> result outcome@O_MISS; a whose; b defence@D_AUTO; c af; w1(health) hatt:0-7@H_FINE hdef:8-15@H_FINE;
                 w2 out; grade left; x effects
                 # (A blow.  flags RS_PRONE_A ... RS_ASLEEP, MS_*, shy a shy creature's; heart RS_HEART's; when its
