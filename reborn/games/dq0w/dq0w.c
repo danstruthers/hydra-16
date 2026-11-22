@@ -6031,6 +6031,9 @@ static void __fastcall__ fight_begin (unsigned char k)
 /* Its blow at k: the character busy its round, the blow posted (the hub's pc_foe) and struck, at the real paces at
 ** once, at the turns pace as the clock moves on (turns_run's); its record's (the hub in the window) */
 static unsigned char ftired;                    /* (A level more tired by its fighting: asked, fight_on's) */
+static unsigned char fdef;                      /* (Its blow left to main, struck as part 24's caller returns: 1 asked,
+                                                **   2 left; part 24 not copied back over part 15 for a return alone,
+                                                **   40,000 cycles on a mid-round line's path, speed10's, 2026-11-22) */
 
 static void __fastcall__ fight_blow (unsigned char k)
 {
@@ -6048,7 +6051,11 @@ static void __fastcall__ fight_blow (unsigned char k)
     ++HUB->pc_task.done;
     HUB->pc_foe = k;
     if (HUB->tpr) {
-        pc_blow ();
+        if (fdef) {
+            fdef = 2;                           /* (Struck by main at once, its caller's return: fdef's) */
+        } else {
+            pc_blow ();
+        }
     }
 }
 
@@ -6073,6 +6080,7 @@ void __fastcall__ s_fight_go (const struct msg* m)
         return;                                 /* (A soft thing's: one attempt, no fight) */
     }
     fight_begin (I_ATTACK_FOE (*m) | TE_QUIET);
+    fdef = 1;
     fight_blow (I_ATTACK_FOE (*m));
 }
 
@@ -6092,6 +6100,7 @@ unsigned char __fastcall__ s_fight_on (unsigned char idle)
     if (rs_live) {
         return idle ? 3 : 0;                    /* (The reach's steps under way, its command asked again first) */
     }
+    fdef = 1;                                   /* (Its blow main's, as it returns: blow_left's) */
     hub_map (0);
     if (HUB->pc_task.kind == LT_FIGHT) {
         if (act.cut) {
@@ -7534,6 +7543,16 @@ static unsigned char dseq_due (void)
     return HUB->den_seq != dseq;
 }
 
+/* A blow left by part 24 (fdef: fight_on's, fight_go's) struck now, from the main RAM: part 15 copied in, and not
+** part 24 back after it for its return alone (speed10's, 2026-11-22) */
+static void blow_left (void)
+{
+    if (fdef == 2) {
+        pc_blow ();
+    }
+    fdef = 0;
+}
+
 static struct gw gseq;                          /* (dseq's hold: a line's keys too, the one give-way's) */
 static unsigned char uf_held (void)
 {
@@ -7690,7 +7709,8 @@ int main (int argc, char* argv[])
                                                 **   comes only as its task is paused, asking: its E_READY still to come) */
             }
             if (!HUB->pc_out || m.kind == I_QUIT) {
-                intent (&m);                    /* (Senseless, nothing it means is done: the UI's line, typed before
+                intent (&m);
+                blow_left ();                   /* (Senseless, nothing it means is done: the UI's line, typed before
                                                 **   it knew, not taken; its E_READY as it comes round.  The quit taken,
                                                 **   whatever: 2026-11-13, the user's) */
             }
@@ -7732,6 +7752,7 @@ int main (int argc, char* argv[])
             }
             if (!took && (HUB->pc_task.kind == LT_FIGHT || act.fight)) {
                 took = fight_on (!was_busy);    /* (Fighting on's next blow, or begun: part 24's; 3, idle still) */
+                blow_left ();
             }
             if (took == 1) {
                 see (0);
