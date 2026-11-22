@@ -2482,8 +2482,9 @@ unsigned char __fastcall__ s_door_way (unsigned char k)
 ** None in its reach, the world tells it the nearest it sees within four squares (the hub's dig_t, TW_SEEN | its
 ** offsets): idle (k's high bit: no step decided), it steps toward it, and asks again beside it.  What it senses alone,
 ** the world's: seen by light or by its darkvision (I_TAKE's b, its kind's), a line clear between, or underfoot; what's
-** hidden found only by its own search (TW_SEARCH: a robber come to where it last sensed the character, the character
-** gone, searches there once, a minute's; the user's, 2026-11-17).  Not an ally (its errands its own), nor a tunneller
+** hidden found only by its own search (TW_SEARCH: a robber, or one hostile hunting it, come to where it last sensed the
+** character, the character gone, searches there once, a minute's, the character's own search, wsearch.c's; the user's,
+** 2026-11-17, 2026-11-21).  Not an ally (its errands its own), nor a tunneller
 ** at its digging (dig_t its spell's).  Its step, or 0xFF */
 unsigned char __fastcall__ s_take_way (unsigned char k)
 {
@@ -2539,16 +2540,20 @@ unsigned char __fastcall__ s_take_way (unsigned char k)
             }
         }
     }
-    if (!want) {
-        return 0xFF;
-    }
-    if ((want & TW_LOOT) && !md.asrch[k] && !md.sres[k] && (md.lsx[k] | md.lsy[k]) && apart (a.x - md.lsx[k], a.y - md.lsy[k]) <= 1) {
-        md.asrch[k] = 1;                           /* (A robber come to where it last sensed the character, the character
-                                                **   gone: it searches there, its own (the user's, 2026-11-17: what's
-                                                **   hidden found only so), once till it senses it again; the world's,
-                                                **   a minute) */
+    if (((want & TW_LOOT) || a.attitude == AT_HOSTILE) && !md.asrch[k] && !md.sres[k] && (md.lsx[k] | md.lsy[k]) &&
+        apart (a.x - md.lsx[k], a.y - md.lsy[k]) <= 1) {
+        md.asrch[k] = 1;                           /* (A robber, or one hostile hunting it, come to where it last sensed the
+                                                **   character, the character gone: it searches there, its own (the
+                                                **   user's, 2026-11-17: what's hidden found only so; searching is
+                                                **   anyone's, by its nature: tailing the character, the one-path plan's
+                                                **   stage 2, 2026-11-21), once till it senses it again; the world's, a
+                                                **   minute, the character's own search: its hidden doors, traps,
+                                                **   things, and one hiding there) */
         want |= TW_SEARCH;
         goto ask;
+    }
+    if (!want) {
+        return 0xFF;
     }
     if (idle && w >> 8 == TW_SEEN >> 8) {       /* (One seen out of its reach, the world's: to it) */
         x = a.x + (w & 15) - 8;
@@ -3603,9 +3608,10 @@ unsigned char __fastcall__ s_draw_on (unsigned char k)
     --md.drawn[k];
     refx = md.lsx[k];
     refy = md.lsy[k];
-    if ((K_HELP (K) & H_ROBS) && !md.asrch[k] && apart (a.x - refx, a.y - refy) <= 1) {
-        md.aloot[k] = NOW_T;                       /* (A robber there, the character gone: it searches as it decides, take_way's
-                                                **   TW_SEARCH, 2026-11-17) */
+    if (!md.asrch[k] && apart (a.x - refx, a.y - refy) <= 1) {
+        md.aloot[k] = NOW_T;                       /* (There, the character gone: it searches as it decides, take_way's
+                                                **   TW_SEARCH, 2026-11-17: a robber's then, anyone's hunting it now,
+                                                **   2026-11-21; folk, with hands, take_way's) */
     }
     return step_for (k, K.flags & K_LAIR ? 2 : 2 * K.range + 8, S_TOWARD);   /* (Not far from its lair: one that
                                                 **   keeps to it, a step or two) */

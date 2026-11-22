@@ -117,8 +117,6 @@ unsigned char __fastcall__ den_pry (unsigned n, unsigned char how);    /* (Part 
 #define PR_KNOWN        0x01                    /* (A hidden compartment the character's found reached: an errand's) */
 #define PR_QUIET        0x02                    /* (A lock not forced: an errand's, a robbery unawares) */
 #define PR_TIMED        0x04                    /* (Each opened its two seconds: not a robbery's, its reach's level's) */
-signed char __fastcall__ den_test (unsigned char p, signed char steps);  /* (Part 69) The referee's test of body bd's
-                                                **   own, by its sheet: its grade (act_test's, bd's: part 81's room) */
 signed char __fastcall__ act_test (unsigned char who, unsigned char p, signed char steps);
 void __fastcall__ den_fetch (const struct msg* m);  /* (Part 72: wfetch.c) Body bd's errand: a thing fetched taken
                                                 **   up, handed over; a gift taken (I_ROB's a: slice 4.8's) */

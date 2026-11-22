@@ -34,4 +34,14 @@ unsigned __fastcall__ rp_x (void* a);           /* (dq0lib.inc's: an XCALL of a 
 unsigned __fastcall__ act_noise (unsigned char who, unsigned char ac, unsigned x, unsigned y);
 signed char __fastcall__ act_test (unsigned char who, unsigned char p, signed char steps);
 
+/* ---- Search and hide, every actor's (the one-path plan's stage 2, 2026-11-21): the rules both sides read */
+#define HIDE_OF(g)      ((g) == G_WELL ? 12 : (g) == G_PASS ? 6 : (g) == G_FAIL ? 2 : 0)  /* (A thing concealed (the
+                                                **   conceal row's test): its hiding's steps by the grade g (a variable:
+                                                **   it's read thrice), the user's: 12, 6, 2, at a critical failure 0,
+                                                **   dust and corners) */
+#define FIND_STEPS(h)   (1 - (signed char) (h)) /* (One hiding found by a search (P_SEARCH): its cover's steps worse, one
+                                                **   easier; h its hiding, 1 + the cover's steps: ST_HID's, pc_hid's) */
+void __fastcall__ den_search (unsigned char dark);  /* (Part 94's: wsearch.c) Body bd's search about it, the character's
+                                                **   own (the search row's): its darkvision dark */
+
 #endif

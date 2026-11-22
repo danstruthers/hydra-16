@@ -36,7 +36,13 @@ unsigned __fastcall__ traced (const struct msg* m);     /* (Part 29) The traces 
                                                 **   the UI bank's tread): the tenths it took */
 unsigned __fastcall__ tr_words (unsigned w);    /* (Part 31) Their words (and E_VIEW V_TRACED): w back */
 unsigned char __fastcall__ tr_scent (unsigned char nose);   /* (Part 32) The way the character's scent goes from body
-                                                **   bd's square (wbody.h's), by its nose (a hunter's, STEP_SCENT):
-                                                **   H_*, or 0xFF none */
+                                                **   bd's square (wbody.h's), by its nose (a hunter's, STEP_SCENT),
+                                                **   sniffed (the act table's sniff, the character's own test: its time
+                                                **   on bd's ready): H_*, or 0xFF none (or missed, a critical failure) */
+#define TRACE_STEPS(sm, c)  ((sm) ? (2 * (c) - 6 < -8 ? -8 : 2 * (c) - 6 > 6 ? 6 : 2 * (c) - 6) :                              ((c) - 4 < -8 ? -8 : (c) - 4 > 6 ? 6 : (c) - 4))
+                                                /* (A reading's test's steps by the clearest trace's strength c (its
+                                                **   points: wtrace.c's found): a sniff (sm 1, P_NOTICE_SMELL) twice
+                                                **   them less 6, a track (P_TRACK) them less 4, -8 to 6: every actor's,
+                                                **   the character's traced, a hunter's tr_scent) */
 
 #endif

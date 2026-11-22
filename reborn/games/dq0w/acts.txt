@@ -53,3 +53,18 @@ dig         | 0      | DIG      | 0  | 6 | WORK  | DIGS      | WORK | DIG   | - 
 dug         | 0      | -        | 0  | 7 | WORK  | DUG       | -    | -     | -        | 2
 digbegin    | 0      | DIG      | 0  | 6 | WORK  | DIG       | WORK | DIG   | -        | 2
 roof        | 0      | -        | 0  | 7 | WORK  | ROOF      | -    | -     | -        | 2
+
+# ---- Search and hide (the one-path plan's stage 2, 2026-11-21: ONE-PATH.md's 2.1 and 2.7): the same rows for the
+# character and every actor.  search: a minute about it (dq0w.c's door_work begun, the character's; wsearch.c's
+# den_search, an actor's), its tests at each hidden thing's steps (P_SEARCH: wtrap.c's doors and traps, things.c's and
+# wsearch.c's things, the hidden ones; a wall's 2 easier, by touch 2 harder, the form's), its noise the character's
+# busy noise (the senses' 2: no event of its own), an actor's told (DE_SEARCHES, seen or heard).  hide: oneself into
+# cover (part 94's, both; no test as it's done: the lookers' Stealth test).  conceal: a thing hidden (things.c's s_hide,
+# the character's; a robber's stash, wfight.c's), its grade the hiding's steps (acts.h's HIDE_OF).  sniff, track: the
+# traces read (wtrace.c's, the character's; a hunter by smell's at its store sniff, wtrscent.c's: sniff's), their steps
+# by the clearest (the caller's)
+search      | 600    | SEARCH   | 0  | 2 | -     | SEARCHES  | -    | SEARCH | -       | 0
+hide        | 100    | -        | 0  | 0 | -     | -         | -    | HIDE  | -        | 0
+conceal     | 600    | CONCEAL  | 0  | 0 | -     | -         | -    | HIDE  | -        | 1
+sniff       | 30     | NOTICE_SMELL | 0 | 0 | - | -         | -    | SNIFF | -        | 0
+track       | 600    | TRACK    | 0  | 0 | -     | -         | -    | TRACK | -        | 0

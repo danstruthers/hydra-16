@@ -113,7 +113,10 @@ static unsigned char near_trap (void)
 ** eight squares round it and its own: a reach of 3); a wall's, that side's walls and doors (its heading pd's high bits:
 ** a door's trap, a hidden door; 2 steps the easier, the whole search on it); the floor's, its traps (no doors); for a
 ** thing or on one, none (the things' alone).  By touch (SF_TOUCH: in the dark), what's within reach whether it's seen
-** or not, and 2 steps the harder (the eye not to help the hands) */
+** or not, and 2 steps the harder (the eye not to help the hands).  Every actor's (the one-path plan's stage 2,
+** 2026-11-21): an actor's (wk.who, wsearch.c's den_search) by the same tests (ask_w's, its sheet), its whole minute
+** (its time spent at once, its own), the squares it sees its own (WK_SIGHT: by its eyes, not the character's), told
+** nothing (wsearch.c's to tell; wk.res what it found); what it finds found for every one, as the character's finds are */
 #define SEARCH_R        3
 static const unsigned char sq_[] = { 9, 4, 1, 0, 1, 4, 9 };    /* (A square's distance off, squared, by its offset) */
 
@@ -135,7 +138,7 @@ static void search (void)
                                                 **   its minute done, the hub's long task's, about as many squares as
                                                 **   that part of the 49, the nearest first) */
     i = (HUB->pc_task.done + 31) >> 5;
-    r = wk.link || i > 19 ? 19 : i;
+    r = wk.link || wk.who || i > 19 ? 19 : i;
     if ((touch || f == SF_NEAR || f == SF_FLOOR) && r > 3) {
         r = 3;                                  /* (Within reach: its own square and the eight round it) */
     }
@@ -144,8 +147,9 @@ static void search (void)
         for (a = 0; a <= 2 * SEARCH_R; ++a) {
             i = wk.fx - SEARCH_R + a;
             s = side & 1 ? a : b;               /* (A wall's: past the character that way) */
-            if (sq_[a] + sq_[b] >= r || (p = sq (i, j)) == 0 || (!touch && !(*p & T_VIS)) || (f == SF_WALL &&
-                (T_INSIDE (*p) || TILE (*p) == T_CORR || (side == 1 || side == 2 ? s <= SEARCH_R : s >= SEARCH_R)))) {
+            if (sq_[a] + sq_[b] >= r || (p = sq (i, j)) == 0 || (!touch && !(wk.who ? WK_SIGHT[b] >> a & 1 :
+                *p & T_VIS)) || (f == SF_WALL && (T_INSIDE (*p) || TILE (*p) == T_CORR ||
+                (side == 1 || side == 2 ? s <= SEARCH_R : s >= SEARCH_R)))) {
                 continue;                       /* (Beyond its reach, or unseen; a wall's: not that side's wall) */
             }
             if (((f != SF_WALL && trap_on (i, j, 0)) || (f != SF_FLOOR && trap_on (i, j, 1))) &&
@@ -153,8 +157,9 @@ static void search (void)
                 if (test (srch_p, wk.tq.state & TS_MAGIC ? HIDE_MAGICAL : HIDE_MECHANICAL,
                     m - (signed char) wk.tq.hide) > 0 && !wres) {
                     trap_state (wk.tq.state & ~TS_HIDDEN);
-                    told (E_TRAP, TO_FOUND << 8 | wk.tq.kind | wk.tq.trigger << 4 | touch << 4, 0);  /* (By touch:
-                                                **   its bit 7, the fingers' words) */
+                    if (!wk.who) {              /* (By touch: its bit 7, the fingers' words; an actor's untold) */
+                        told (E_TRAP, TO_FOUND << 8 | wk.tq.kind | wk.tq.trigger << 4 | touch << 4, 0);
+                    }
                     found |= 2;
                 }
                 p = sq (i, j);
@@ -176,9 +181,9 @@ static void search (void)
             }
         }
     }
-    if (wk.link) {                              /* (Searching as it goes, the world's: quietly, in no more time; res 1
-                                                **   if it found something) */
-        if (!(wk.res = found)) {
+    if (wk.link | wk.who) {                     /* (Searching as it goes, the world's: quietly, in no more time; res 1
+                                                **   if it found something; an actor's, untold) */
+        if (!(wk.res = found) || wk.who) {
             return;
         }
     } else {

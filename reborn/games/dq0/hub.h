@@ -664,7 +664,10 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_
     DE_TURNS, DE_PRIES,                         /* (A key turned in a box's lock, a box's lid forced: wfight.c's den_pry,
                                                 **   the act table's lidkey, lidforce, heard as the character's are; the
                                                 **   work's kinds, before DE_CLOSES, the fight's, 2026-11-19) */
-    DE_CLOSES,                                  /* (Closed with the character, its attack begun, its first blow the next:
+    DE_SEARCHES,                                /* (A search about it begun: the act table's search, its noise the
+                                                **   character's busy noise, told seen or heard: wsearch.c's, the
+                                                **   one-path plan's stage 2, 2026-11-21) */
+    DE_CLOSES,                                 /* (Closed with the character, its attack begun, its first blow the next:
                                                 **   the character's own first words the other way round, the user's
                                                 **   "The bandit closes with you.", 2026-11-17) */
     DE_AIMS };                                  /* (Its shot at the character begun: "The bandit takes aim at you.", the

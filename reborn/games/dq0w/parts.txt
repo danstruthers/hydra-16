@@ -97,7 +97,7 @@
 91  33  A denizen's weapon let fall, or broken (wlimbs.c: 2026-11-03)
 92  5   A request of the things served (things.c: part 10's till 2026-11-03)
 93  26  An arrival (dq0w.c: the main RAM's till 2026-11-03; overlay 19's, then 15's, till 2026-11-06)
-94  14  Hiding oneself (dq0w.c: 2026-11-04)
+94  14  Hiding oneself (dq0w.c: 2026-11-04); an actor's search, the character's own (wsearch.c: 2026-11-21)
 95  32  A drop found, a rope put in place, a grapple thrown up (wrope3.c)
 96  32  Rope and grapples: tied off, let down (wrope.c: 2026-11-04)
 97  32  Climbing, a round at a time, a rope's help (dq0w.c: part 2's till 2026-11-04)

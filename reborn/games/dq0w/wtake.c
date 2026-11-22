@@ -29,6 +29,7 @@
 #include "outfit.h"
 #include "wbody.h"
 #include "line.h"
+#include "acts.h"
 
 #pragma local-strings (on)
 #pragma code-name ("SW81CODE")
@@ -284,11 +285,9 @@ static unsigned char __fastcall__ got (unsigned i, unsigned char k, unsigned cha
 ** reach it wants (wanted's), by the take rule, got (held, told); none, the nearest one lying within four squares told
 ** its mind (the hub's dig_t, TW_SEEN | its offsets: it goes to it, and asks again).  Only what it senses (the user's,
 ** 2026-11-17): nothing hidden, a thing's square sensed (sensed's: by light or its darkvision, I_TAKE's b, a line clear
-** between; or underfoot).  Then its own search, if it's asked (TW_SEARCH: a robber where it last sensed the character),
-** nothing in its reach taken: a minute's (the character's search about it), each hidden thing within its reach that it
-** wants (not hidden by magic) tested by its sheet (P_SEARCH, as the character's: HIDE_MECHANICAL, den_test's), its
-** hiding the steps worse, by touch where it doesn't see the place two more (the character's search's own steps),
-** found, got; the rest left as they were, hidden */
+** between; or underfoot).  Its own search first, if it's asked (TW_SEARCH: a robber where it last sensed the
+** character): the character's search about it, wsearch.c's (a minute's, by its sheet, where it sees or feels the
+** place: the hidden doors, traps, things and ones hiding in its reach; what it finds uncovered), then its take as ever */
 void __fastcall__ s_den_take (const struct msg* m)
 {
     struct item* p;
@@ -302,6 +301,12 @@ void __fastcall__ s_den_take (const struct msg* m)
     }
     want = I_TAKE_WANT (*m);
     dark = I_TAKE_DARK (*m);
+    if (want & TW_SEARCH) {                     /* (Its own search first, a robber's where it lost the character: the
+                                                **   character's own, every actor's, wsearch.c's (the one-path plan's
+                                                **   stage 2, 2026-11-21): what it finds uncovered, taken as anything
+                                                **   lying is, below) */
+        den_search (dark);
+    }
     if ((want & TW_FOOD) && (i = held (1)) != 0) {   /* (Hungry, with food in hand: eaten, five minutes as the character's
                                                 **   meal; a lot one less; its mind told) */
         k = (p = item_at (i))->kind;
@@ -345,23 +350,6 @@ void __fastcall__ s_den_take (const struct msg* m)
         }
         if (cleared) {
             seen = 0;
-        }
-    }
-    if (want & TW_SEARCH) {                     /* (Its own search: a minute's, its reach) */
-        bd.ready += 600;
-        for (i = 0; (i = items (i, IN_SQUARE, 0)) != 0; ) {
-            if (ip->sn != bd.sn || (ip->flags & (I_HIDDEN | I_MAGIC)) != I_HIDDEN ||
-                (unsigned) ((dx = ip->x - bd.x) + 1) > 2 || (unsigned) ((dy = ip->y - bd.y) + 1) > 2 || home_near ()) {
-                continue;                       /* (Out of its reach; its own home's, its takings' stash, left) */
-            }
-            f = ip->hide;
-            if (!(c = wanted (k = ip->kind))) {
-                continue;
-            }
-            if (den_test (P_SEARCH, -(signed char) f - (!dark && unlit_at (bd.sn, bd.x + dx, bd.y + dy) ? 2 : 0)) >=
-                G_PASS && got (i, k, c)) {
-                seen = 0;
-            }
         }
     }
     hub_map (0);
