@@ -299,8 +299,8 @@ void s_den_intents (void)
             den_trod (I_STEP_HEAD (m));
             bd.x = x;
             bd.y = y;
-            if (npools) {
-                pool_step (bk + 1);             /* (Lamp oil there: slipped in, the user's H15, every actor's) */
+            if (npools & ~PC_WOKE) {
+                time_kept (POOL_OP + 1);                    /* (Lamp oil there: slipped in, the user's H15, every actor's) */
             }
             if (I_DEN_FACE (m) == 0xFF) {
                 bd.face = I_STEP_HEAD (m);      /* (Its way, unless its mind faces it another: one keeping its

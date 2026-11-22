@@ -45,7 +45,6 @@ unsigned long blow_t;                           /* (wbody.h's: a denizen's blow'
 #pragma rodata-name ("SW15RODATA")
 
 extern unsigned char pc_hit;                    /* (dq0w.c's: a blow at the character stops its long task, hard) */
-extern unsigned char pc_woke;                   /* (dq0w.c's: the character struck in its sleep, woken: K11's) */
 extern unsigned char flast;                     /* (dq0w.c's: who struck at the character last; act.fight fighting on's) */
 extern unsigned char pc_ko;                     /* (dq0w.c's: the character knocked senseless, main's to see) */
 extern unsigned char pc_waited;                 /* (dq0w.c's: its eyes and the time it believes looked to as it's free) */
@@ -171,7 +170,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     RS_ATTACK_WHEN (*r) = blow_t;
     pa = me == att ? bd.pos : HUB->pc_pos;     /* (Their bodies' positions, the world's: prone, the easier struck) */
     pd = me == att ? HUB->pc_pos : bd.pos;
-    sl = me != att ? bd.doing == DO_SLEEP : HUB->pc_task.kind == LT_SLEEP && !pc_woke;
+    sl = me != att ? bd.doing == DO_SLEEP : HUB->pc_task.kind == LT_SLEEP && !(npools & PC_WOKE);
     RS_ATTACK_FLAGS (*r) = bd.timid | (POS_LOW (pa) ? RS_PRONE_A : 0) | (POS_LOW (pd) ? RS_PRONE_D : 0) | (ra ? RS_REARM : 0) |
         ((sl || (me != att ? HUB->pc_hid && DO_UNAWARE (bd.doing) : bd.state > 1)) ? RS_ASLEEP : 0) |
         (HUB->folk[((def ? def : att) - 1) & 7] ? RS_THEY : 0);
@@ -300,7 +299,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         if (me != att) {
             bd.doing = DO_WATCH;
         } else {
-            pc_woke = 1;
+            npools |= PC_WOKE;
         }
     }
     if (ff & (me == att ? FF_A_DOWN : FF_D_DOWN)) {

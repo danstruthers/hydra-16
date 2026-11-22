@@ -4,8 +4,8 @@
 ** pool is made as oil's poured away or emptied out (wpour2.c's, every actor's); each actor that steps into it is asked
 ** to keep its feet (the referee's P_STUMBLE, act_test's, every actor's: fallen, prone, told as any fall is, the limbs'
 ** news); a lit thing lying in it, or a naked flame carried by one fallen in it, sets it alight; burning, it burns the
-** character in it (a burn, HC_FIRE, the firedamp's harm), then it's gone.  Swapped part 114's (dq0w.cfg's SW114): its
-** state the main RAM's, its code the part's.
+** character in it (a burn, HC_FIRE, the firedamp's harm), then it's gone.  Swapped part 99's (its room; its stub, pool): its
+** state the world bank's (wrec's pools, copied in for a call), but the count, the main RAM's.
 */
 
 #pragma local-strings (on)
@@ -30,17 +30,18 @@ struct pool {
     unsigned        till;                       /* Till then, the clock's minutes: dried, or burnt away */
     unsigned char   burns;                      /* Alight */
 };
-typedef char pool_fits[sizeof (struct pool) == 8 ? 1 : -1];   /* (dq0w.c's room for each) */
-extern struct pool pools[NPOOLS];               /* (dq0w.c's, the main RAM's: what lasts across the part's calls) */
-extern unsigned char npools;                    /* (How many there are, 0 none: the callers' cheap test) */
+typedef char pool_fits[sizeof (struct pool) * NPOOLS + 2 == sizeof WREC->pools ? 1 : -1];   /* (The world bank's room,
+                                                **   and the outfits' mark after them) */
+extern unsigned char npools;                    /* (dq0w.c's: how many there are, 0 none, the callers' cheap test) */
 
 void __fastcall__ air_harm (unsigned char a, unsigned char b, unsigned char c);    /* (Part 74's: a harm, the UI told) */
 
-#pragma code-name ("SW114CODE")
-#pragma rodata-name ("SW114RODATA")
-#pragma bss-name ("SW114RODATA")
+#pragma code-name ("SW99CODE")
+#pragma rodata-name ("SW99RODATA")
+#pragma bss-name ("SW99RODATA")
 #pragma static-locals (on)
 
+static struct pool pools[NPOOLS];               /* (The world bank's, wrec's pools, copied in for a call, and back) */
 static struct pool* p;
 
 /* The pool on stratum sn's square x, y, still there (those gone made free first): p, or 0 */
@@ -50,7 +51,7 @@ static struct pool* __fastcall__ pool_at (unsigned char sn, unsigned x, unsigned
     static unsigned char k;
 
     hub_map (0);
-    for (q = 0, npools = k = 0, p = pools; k < NPOOLS; ++k, ++p) {
+    for (q = 0, npools &= PC_WOKE, k = 0, p = pools; k < NPOOLS; ++k, ++p) {
         if (p->sn != 0xFF && p->till <= (unsigned) (HUB->now / 600)) {
             p->sn = 0xFF;                       /* (Dried, or burnt away) */
         }
@@ -67,7 +68,7 @@ static struct pool* __fastcall__ pool_at (unsigned char sn, unsigned x, unsigned
 
 /* Lamp oil poured out on stratum sn's square x, y: a pool there (one there already lies the longer; none free, the
 ** oldest's room) */
-void __fastcall__ s_pool_add (unsigned char sn, unsigned x, unsigned y)
+static void __fastcall__ pool_add (unsigned char sn, unsigned x, unsigned y)
 {
     static struct pool* q;
     static unsigned char k;
@@ -134,7 +135,7 @@ static unsigned char __fastcall__ flame (unsigned char who)
 /* An actor stepped onto its square (who: 0 the character, on its square; else body bd's, its entry plus 1): a pool there
 ** alight burns the character; else it's slippery, its feet kept or not (the referee's stumble roll, every actor's): fallen,
 ** prone, told as every fall is, a naked flame it carries setting it alight.  1 if it fell */
-unsigned char __fastcall__ s_pool_step (unsigned char who)
+static unsigned char __fastcall__ pool_step (unsigned char who)
 {
     static unsigned char sn;
     static unsigned x, y;
@@ -177,7 +178,7 @@ unsigned char __fastcall__ s_pool_step (unsigned char who)
 
 /* The pools' minute (the lights' minute, burn_job's): those gone made free; each set alight by a naked flame lying in
 ** it; the character in one alight burnt */
-void s_pool_time (void)
+static void pool_time (void)
 {
     static unsigned char k;
     static struct pool* q;
@@ -196,5 +197,75 @@ void s_pool_time (void)
             air_harm (HC_FIRE, 0, 2);
         }
     }
+    hub_map (0);
+}
+
+/* The flasks of oil an outfit made (outmake's: the character's kit, a denizen's things), their numbers past from: a pint
+** of lamp oil put in each, as in a vial (the user's H16, 2026-11-21: the flask a vessel, its oil a liquid in it) */
+static void __fastcall__ oil_new (unsigned from)
+{
+    static unsigned i, j;
+    static struct item* q;
+
+    for (i = 0; (i = items (i, IN_ACTOR | IN_DEN | IN_ITEM | IN_SQUARE, 0)) != 0; ) {
+        if (ip->kind != KI_OIL || ip->id <= from || items (0, IN_X | IN_ITEM, i)) {
+            continue;
+        }
+        for (j = 1; j < ilim && item_at (j)->kind; ++j) {
+        }
+        if (j >= ilim) {
+            break;
+        }
+        if (j >= ihigh) {
+            ihigh = j + 1;
+        }
+        q = item_at (j);
+        memset (q, 0, sizeof *q);
+        q->kind = KI_LAMP_OIL;
+        q->where = IW_ITEM;
+        q->x = i;
+        q->qty = 1;
+        q->fuel = OIL_PINT;
+        q->flags = item_at (i)->flags & I_KNOWN;
+    }
+}
+
+/* Part 99's way in for them (wtime.c's time_kept, its stub, its codes past any minute: no stub of their own, the main
+** RAM's room): POOL_OP, the character stepped onto its square, POOL_OP + 1 body bd (pool_step; the character fallen, prone); POOL_ADD + 0 or
+** 1, oil poured out where the character or body bd stands; POOL_TIME, the pools' minute; POOL_MARK, the things'
+** numbers so far marked (the world bank's, after the pools), an outfit to be made; POOL_FILL, the flasks of oil made since
+** it filled (oil_new).  The pools the world bank's, copied in and back */
+void __fastcall__ pool_op (unsigned w)
+{
+    static unsigned m;
+
+    hub_map (WORLD_BANK);
+    if (w >= POOL_MARK) {
+        if (w == POOL_MARK) {
+            m = item_at (0)->x;
+            hub_map (WORLD_BANK);
+            memcpy (WREC->pools + sizeof pools, &m, 2);
+        } else {
+            memcpy (&m, WREC->pools + sizeof pools, 2);
+            oil_new (m);
+        }
+        hub_map (0);
+        return;
+    }
+    memcpy (pools, WREC->pools, sizeof pools);
+    if (w == POOL_TIME) {
+        pool_time ();
+    } else if (w >= POOL_ADD) {
+        hub_map (0);
+        if (w > POOL_ADD) {
+            pool_add (bd.sn, bd.x, bd.y);
+        } else {
+            pool_add (HUB->pc_stratum, HUB->pc_x, HUB->pc_y);
+        }
+    } else {
+        pool_step (w == POOL_OP ? 0 : bk + 1); /* (POOL_OP + 1: body bd's, its actor) */
+    }
+    hub_map (WORLD_BANK);
+    memcpy (WREC->pools, pools, sizeof pools);
     hub_map (0);
 }

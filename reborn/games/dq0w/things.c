@@ -7688,7 +7688,9 @@ void s_kit (void)
         }
         box = 0;
         hub_map (0);
-        outmake (0);                            /* (Its outfit drawn: its things made) */
+        time_kept (POOL_MARK);
+        outmake (0);                            /* (Its outfit drawn: its things made; its flasks of oil filled, H16) */
+        time_kept (POOL_FILL);
         if (k == OF_CARRIED) {                  /* (Its kit carried on: each thing as it was, its wear, its life, its version,
                                                 **   its fuel, outfit.h's kitrec: it's the first made in the store, in the
                                                 **   file's order, what wasn't made passed over; coins as they're changed) */

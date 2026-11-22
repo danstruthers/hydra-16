@@ -183,11 +183,7 @@ unsigned char s_pour_said (void)
     if (E_L) {
         pour_in ();
         if (!E_Y && iq.plural == KI_LAMP_OIL) { /* (Lamp oil poured out: a pool where it stands, the user's H15) */
-            if (iq.to & TO_DEN) {
-                pool_add (bd.sn, bd.x, bd.y);
-            } else {
-                pool_add (HUB->pc_stratum, HUB->pc_x, HUB->pc_y);
-            }
+            time_kept (POOL_ADD + ((iq.to & TO_DEN) != 0));
         }
     }
     if (iq.to & TO_DEN) {

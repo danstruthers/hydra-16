@@ -142,8 +142,13 @@ static void __fastcall__ woke (unsigned n)
 }
 
 /* The clock's minute now, n: woken, or the hours awake (its stub's) */
+void __fastcall__ pool_op (unsigned w);         /* (wpool.c's, this part's: lamp oil's pools, H15, H16) */
 void __fastcall__ s_time_kept (unsigned n)
 {
+    if (n >= 0xFFF0) {
+        pool_op (n);                            /* (Past any minute: the pools' codes, wbody.h's POOL_OP ...) */
+        return;
+    }
     if (T.gone) {
         woke (n);
     } else {

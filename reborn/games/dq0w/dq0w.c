@@ -261,11 +261,8 @@ static unsigned char seen_now (void)
 /* The character's long task begun (HOUSE.md's long tasks: the hub's pc_task, the UI's bar): its kind, its length in
 ** its own units; what disturbs it from now on (a blow, a wound: pc_hit; a denizen not seen till now: pseen) */
 unsigned char pc_hit;                           /* (A blow at the character, or a wound: wfight.c's too) */
-unsigned char pools[3][8];                      /* (Lamp oil's pools on the floor, wpool.c's struct pool, NPOOLS:
-                                                **   the user's H15, 2026-11-21) */
-unsigned char npools;
-unsigned char pc_woke;                          /* (Struck in its sleep: a sleeper no more, from its first blow on
-                                                **   (wfight.c's, the user's K11, 2026-11-21), its sleep's stop to come) */
+unsigned char npools;                           /* (Lamp oil's pools on the floor, how many: the user's H15,
+                                                **   2026-11-21; they the world bank's, wrec's pools, wpool.c's) */
 struct pc_activity act;                        /* (activity.h's: what the character's doing, what's queued after.  Its
                                                 **   fight, fighting on's, part 24's: an enemy may engage the character,
                                                 **   looked at as it's free: | 1 a blow at it, wfight.c's, or its walk
@@ -285,7 +282,7 @@ static void __fastcall__ task (unsigned char kind, unsigned len)
     HUB->pc_task.foe = 0;
     HUB->pc_task.what = 0;
     HUB->pc_task.mins = 0;
-    pc_hit = pc_woke = 0;
+    pc_hit = 0;
     pt0 = HUB->now;
 }
 
@@ -4967,13 +4964,9 @@ void s_step_on (void)
         }
         x = HUB->pc_x + head_x[h];
         y = HUB->pc_y + head_y[h];
-        if ((blocked = den_on (x, y)) != 0) {
-            HUB->pc_face = h;
-            halt (0xFF);                        /* (A denizen come into its way: stopped short, told as it arrives) */
-            return;
-        }
-        if (pthing == pnext + 1 && tripped ()) {
-            HUB->pc_face = h;                   /* (Over a thing in its way in the dark, fallen, prone: up again a
+        if ((blocked = den_on (x, y)) != 0 || (pthing == pnext + 1 && tripped ())) {
+            HUB->pc_face = h;                   /* (A denizen come into its way: stopped short, told as it arrives; or
+                                                **   over a thing in its way in the dark, fallen, prone: up again a
                                                 **   round, the next move's or "get up", part 43's, slice 4.1b's) */
             halt (0xFF);
             return;
@@ -4989,9 +4982,12 @@ void s_step_on (void)
         HUB->pc_y = y;
         HUB->pc_face = h;
         ++pnext;
-        if (npools && pool_step (0)) {
-            halt (0xFF);                        /* (Slipped in lamp oil and fallen: its walk over there, the user's H15) */
-            return;
+        if (npools & ~PC_WOKE) {
+            time_kept (POOL_OP);
+            if (HUB->pc_pos == POS_PRONE) {
+                halt (0xFF);                    /* (Slipped in lamp oil and fallen: its walk over there, the user's H15) */
+                return;
+            }
         }
         if (!act.srch) {                            /* (A room searched whole's leg: its bar its whole time, stepping's) */
             HUB->pc_task.done = pnext;
@@ -6750,6 +6746,7 @@ void __fastcall__ s_intent_few (struct msg* m)
             task_for ((I_WAIT_HOW (*m) & (WA_SLEEP | WA_REST)) == WA_SLEEP ? LT_SLEEP : LT_WAIT, t);   /* (A wait longer than a round,
                                                 **   or a sleep: a long task, in minutes past 100 of them; a rest awake) */
             if (HUB->pc_task.kind == LT_SLEEP) {
+                npools &= ~PC_WOKE;             /* (A sleeper till it's struck: K11's, wfight.c's) */
                 looked (0);                     /* (Its eyes shut: the senses' look sees nothing as it sleeps, HOUSE.md's) */
                 spend (GA_REST, 0);             /* (And its hearing at half: the referee's summary) */
                 hub_map (0);
@@ -7548,8 +7545,8 @@ void s_burn_job (void)
     } else {
         burns_now ();                           /* (The lights burnt down, a game minute's: part 27's; a command's answer
                                                 **   first, some 200,000 cycles of the world's) */
-        if (npools) {
-            pool_time ();                       /* (Lamp oil's pools: the user's H15) */
+        if (npools & ~PC_WOKE) {
+            time_kept (POOL_TIME);                       /* (Lamp oil's pools: the user's H15) */
         }
     }
     hub_map (0);

@@ -1948,6 +1948,9 @@ struct wrec {
                                                 **   the maker's AH_ flags (0: none), its sn, cx, cy; stamp 0 */
     struct cslot    growing;                    /* The one it's growing ahead now (used 1), or none (0): with the
                                                 **   cache's table, a chunk made, made ahead or being grown, read */
+    unsigned char   pools[26];                  /* Lamp oil's pools on the floor (the world's: wpool.c's struct pool,
+                                                **   three; the user's H15, 2026-11-21), then the things' numbers as an
+                                                **   outfit's begun (its flasks filled after: H16's) */
 };
 
 /* The world's part of the save (DUNGEON.md: the save; save version 8 on): world.dat in the save folder, the world's to
@@ -2218,6 +2221,7 @@ struct wsave {
 **   own wrec.cpage world                                       (The change records' pages: the world's, store.c)
 **   own wrec.cstamp world
 **   own wrec.cgen world
+**   own wrec.pools world                                       (Lamp oil's pools on the floor: wpool.c's, H15)
 **   own banks(CHANGE_BANK(0),CHANGE_BANKS) world
 **   own bank(CMD_BANK) ui                                      (The commands text: the UI writes it, dq0c reads it)
 **   own bank(CMD_BANK,HUB_WINDOW+CQ_CMD,HUB_WINDOW+CQ_CMD+CMD_SIZE) commands  (dq0c's reply: a line's command)
