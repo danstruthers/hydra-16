@@ -870,6 +870,7 @@ function dq0Timer(m) {
   };
   const game = l => /^(?:\S*\/)?dq0( |$)/.test(l);
   timer.enters = enters;                        // (Each CR's: { t, pos, busy, line })
+  timer.at = i => measure({ line: enters[i].line, want: '*' }, enters[i], enters[i + 1]);   // (The ith CR's line timed, its answer's own words: sim/tools/lineprof.js's)
   timer.game = (n, cmds) => {
     const res = [];
     let i = -1;

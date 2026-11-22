@@ -139,6 +139,29 @@ Each sentence only in one run is shown with its counts. A test in `tests/noise.t
 timing, each with why), or a difference only in the list's noisy sentences, is marked as known noise; `--quiet`
 counts those without showing them. Any other difference is a change to what the player reads, to be meant.
 
+**A line's window profiled** (room6's profiler, a tool since speed9, 2026-11-22). A D17 measure that's slow, or one
+past 90%, is taken apart where it's spent: the test is run once to find its lines (each Enter's cycle and its answer's
+first letter, the test's dq0Timer), then again with the machine's profile on from the chosen line's Enter to its
+first letter. The emulator is the same cycle for cycle at one build, so the window is exact (the second run says so
+if it isn't).
+
+    node sim/tools/lineprof.js TEST [LINE] [--nth N] [--list] [--top N] [--lead N] [--out FILE]
+
+`--list` lists every line typed with its first letter; LINE (its first words) picks a line, the slowest of its
+typings unless `--nth N` (1 on: the test's own game, then the menacing and the played ones); no LINE, the slowest in
+the run. The report: the window's cycles by task (the UI, the world, the referee, the parser, the console, the
+kernel ...); each part a task copied into its swap area in the window (its cycle, the copy's cycles, sw_call's for a
+stub's call or sw_back's for a return into a part, and whose); the C functions that took the most, the runtime's
+helpers, the kernel's calls and the libraries' routines charged to the C function that called them (by the return
+addresses on the 6502's stack); and each routine with its two callers. `--lead N` starts the profile N cycles before
+the Enter (a part copied in, or a round's work begun, just before it). It works on any test that times its lines
+(`this.timer = dq0Timer(m)`); the hooks are the machine's `profileStep` (base/sim/lib/machine.js: each instruction
+in the profile's window; the runs before the window as quick as ever) and sim/test.js's `addInstrument`.
+
+The windows vary by build as much as by change: the same line's first letter swings 100,000-200,000 cycles as the
+code's layout moves and the background's work (a denizen's move, the world's minute, the senses' look, their parts
+copied in) lands in it or not. Compare what a window holds, not one number against another.
+
 ## The tiers
 
 **1. While working**: the agent's own tests, and `--near` its area:

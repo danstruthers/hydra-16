@@ -17,7 +17,7 @@
 //
 // createMachine(opt): opt.osrom, opt.pagedrom (the images, Uint8Arrays) and the options hydrasim.js documents
 // (modules, sharedU, model, ramFault, u7Fault, aciaLine, stuckIrq, acia, paste, input, sd: block devices, rtc,
-// rtcBatteryLow, clock, trace, watches, pcWatches, marks, profile, ymLog, vera), and opt.log(text) for the watches and
+// rtcBatteryLow, clock, trace, watches, pcWatches, marks, profile, profileTo, profileStep(task, page, pc, cycles, at): each instruction in the profile's window, ymLog, vera), and opt.log(text) for the watches and
 // marks.  opt.sound: the chips' sound made (audio.js: m.audio, its listeners given what each run made).  opt.pcHost: what the serial port sends goes through its push(byte, cycle), which gives back the bytes that
 // are the console's (the rest are /pc's frames: pchost.js, run.js --pc-dir), and its send(bytes) is what the PC
 // sends.  opt.pcHist: count the instructions run at each page:PC (pcHist).  run(limit) runs to a cycle; the rest is
@@ -405,7 +405,9 @@ function createMachine(opt) {
 
   // Run until cycle limit (or a halt)
   const traceLen = opt.trace === undefined ? 25 : opt.trace, pcWatches = opt.pcWatches || [], profileFrom = opt.profile === undefined ? -1 : opt.profile,
-    profileTo = opt.profileTo === undefined ? Infinity : opt.profileTo;
+    profileTo = opt.profileTo === undefined ? Infinity : opt.profileTo, profileStep = opt.profileStep || null;
+  const profiling = limit => profileFrom >= 0 && limit > profileFrom && cpu.cyc < profileTo;   // (The profile's window met in this run: till it, the quick
+                                                                                              //   runs, the same step for step)
   const I = FLAGS.I;
   const ring = core ? new Uint16Array(core.buf, core.RING, Math.max(1, traceLen) * 8) : new Uint16Array(Math.max(1, traceLen) * 8);   // The trace: the last traceLen instructions, a ring
   let ringAt = 0, ringN = 0;                                  //   (W T PC A X Y S P each), m.trace's list
@@ -452,13 +454,13 @@ function createMachine(opt) {
     if (guard && guard.sync) guard.sync(m);                   // (The guards' tables, for the tasks there now)
     quick();
     flush();
-    if (core && cpu.step === coreStep && !breaks.length && !calls && !opt.pcHist && profileFrom < 0 && !(opt.watches || []).length && pcWatches.length <= 4) runWasm(limit);   // (A step of its own: a test's look at each, nprof.js's)
+    if (core && cpu.step === coreStep && !breaks.length && !calls && !opt.pcHist && !profiling(limit) && !(opt.watches || []).length && pcWatches.length <= 4) runWasm(limit);   // (A step of its own: a test's look at each, nprof.js's)
     else runTo(limit);
     flush();
     if (audio) audio.pump(cpu.cyc);
   }
   function runTo(limit) {
-    if (!breaks.length && !calls && !traceLen && !opt.pcHist && profileFrom < 0) { runQuick(limit); return; }
+    if (!breaks.length && !calls && !traceLen && !opt.pcHist && !profiling(limit)) { runQuick(limit); return; }
     while (cpu.cyc < limit && !cpu.halted) {
       sync(cpu.cyc);
       if (irqDirty) { irqN = irqLine(); irqDirty = false; }
@@ -495,6 +497,7 @@ function createMachine(opt) {
       if (profileFrom >= 0 && c0 >= profileFrom && c0 < profileTo) {
         const pk = pT * 1048576 + pW * 65536 + cpu.lastPC, dc = cpu.cyc - c0;
         profHist.set(pk, (profHist.get(pk) || 0) + 1); profCyc.set(pk, (profCyc.get(pk) || 0) + dc); profTask[pT]++; profCount++; profCycles += dc;
+        if (profileStep) profileStep(pT, pW, cpu.lastPC, dc, c0);   // (A profiler's own look at each: sim/tools/lineprof.js)
       }
     }
   }

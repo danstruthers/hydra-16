@@ -117,9 +117,11 @@ function pcFolder(t, opt) {
 }
 
 // A test's instrument: the guards' (guardInstrument), a dq0 test's own (dq0Instrument), and its transcript, together
-// (each its part of the boot's options, the machine, the judging and a scene's state)
+// (each its part of the boot's options, the machine, the judging and a scene's state), and a tool's (addInstrument(f):
+// f(t) a part, or null; sim/tools/lineprof.js's)
+const extra = [];
 function instrument(t) {
-  const parts = [dq0Instrument(t), guardInstrument(t)].filter(Boolean);
+  const parts = [dq0Instrument(t), guardInstrument(t), ...extra.map(f => f(t))].filter(Boolean);
   if (!parts.length && !TRANSCRIPTS) return null;
   return {
     boot: Object.assign({}, ...parts.map(p => p.boot)),
@@ -362,4 +364,4 @@ if (require.main === module) {
   if (k >= 0) require('./tiers.js').main(argv[k + 1], [...argv.slice(0, k), ...argv.slice(k + 2)]);
   else runner.main(argv);
 }
-module.exports = { runTest: runner.runTest, runTestDl: runner.runTestDl, image };
+module.exports = { runTest: runner.runTest, runTestDl: runner.runTestDl, image, tests, addInstrument: f => extra.push(f) };
