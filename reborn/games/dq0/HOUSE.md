@@ -1520,6 +1520,16 @@ words):
   "You unstopper the flask of oil.").  Closed: nothing put in it or taken out, nor out of anything in it ("The sack is
   closed."); what's in it not seen, nor listed in what's carried ("a sack (closed)"), but weighed with it.  A lantern
   filled from a stoppered flask: unstoppered as it's poured and stoppered again, nothing asked (the fill's own time).
+- **A flask of oil is a vessel** *(the user's H16, 2026-11-21)*: a pint of lamp oil in it as it's made, a liquid as a
+  vial's (found lying, some of it dried, as its fuel was); emptied, filled with anything a vessel holds, a lantern filled
+  from the oil in it.  The flask alone a quarter pound, its pint of oil a pound.
+- **Lamp oil poured out lies on the floor** *(the user's H15, 2026-11-21, for review: its times the house's)*: a pool
+  where it's poured ("You pour the oil out of the vial: it pools on the floor."), an hour, then soaked away.  Slippery:
+  every actor stepping into it keeps its feet by the book's stumble roll (P_STUMBLE, as a thing in the way in the dark:
+  4 steps), or falls, prone ("The bandit slips in the oil on the floor, and falls."); one fallen in it carrying a naked
+  flame (a torch, a candle: not a lantern's, behind its glass) sets it alight, as a naked flame lying in it does, looked
+  at each minute.  Alight, it burns two minutes, then it's gone: the character in it, or stepping into it, burnt (a
+  burn, 2d6, the firedamp's harm).  At most three pools at once, the oldest's room the newest's.
 - **Locks:** a chest has one (its lid's); a found chest is locked one time in three (by its number, no dice).  Picked
   with lockpicks to hand (P_PICKLOCK, as a door's lock: a minute a try, 1 step harder and 1 more for every 3 of its
   make; no picks, refused), or forced (P_FORCE: a wooden one at no steps, another 2 harder, and 1 more for every 3 of
@@ -3828,7 +3838,9 @@ These are the house's.
 - **Lying down to sleep** *(the house's)*: a denizen asleep at its bed lies prone (a moment's), and gets up as it
   next acts (a step's or a blow's Rise, the referee's or the world's round, as one knocked down; else a Rise alone).
 - **A sleeper struck at** *(the book's Ignore, Combat 9; the null ruleset's two steps easier)*: a creature asleep
-  doesn't defend the blow that wakes it; prone, it's the easier struck as any prone.
+  doesn't defend the blow that wakes it; prone, it's the easier struck as any prone.  The first blow alone: it wakes
+  on it (a creature up and watching, the character's sleep stopped), every actor alike, the character as a creature
+  *(the user's K11, 2026-11-21)*.
 - **A body found on a record's rounds** *(the house's)*: one away from the character (not an actor), on watch at its
   rounds' place, that finds a body of its faction's not found yet within four squares: its faction's attitude to the
   character a step worse (as an actor's finding); the alarm raised out of the character's hearing: each of its

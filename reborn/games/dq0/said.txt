@@ -280,6 +280,8 @@ BEAT.fell           +"\nThe {name whose} throws you {its} {kind thing}; it falls
 BEAT.douse          +"\n{Actor} put{s} out {its} {kind thing}."
 BEAT.douse_near     +"\n{Actor} put{s} out the {kind thing}."
 BEAT.douse_more     +"\n{Actor} put{s} out another {kind thing}."
+BEAT.slip           +"\n{Actor} slip{s} in the oil on the floor, and fall{s}."
+BEAT.blaze          +"\nThe oil on the floor catches fire!"
 BEAT.unseen         "You hear something fall."
 
 # ---- The water's (E_BEAT's WB_WATER ... WB_DOUSED, the character's: wet its band, a swim's how; water_words' before,
@@ -993,7 +995,7 @@ LI.semi             +"; "
 @state      "{dur?| (nearly broken)| (battered)}{lt?| (lit)}{fuel?| (empty)| (spent)| (burning low)| (nearly spent)}"
             "{wear?| (dull)| (dulled)| (bloody)| (soiled)| (worn)}{shut?| (unstoppered)| (closed)}"
 
-LI.item             +"{nf?|{a} |some |{@n10} |{q} |{q} pints of }{pf?{text}|{plural}|{single}}{@state}"
+LI.item             +"{nf?|{a} |some |{@n10} |{q} |{q} pints of |a pint of }{pf?{text}|{plural}|{single}}{@state}"
 
 # ---- The rope's and the drag's (UK_SA, their codes past 127: items.h's SAY_AT2; wrope.h's rp_say, wdrag.c's dsay; their
 # free text before: narration as data's rest, 2026-11-15).  text the thing's name (what the rope's tied to, the thing

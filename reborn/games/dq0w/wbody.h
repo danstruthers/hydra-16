@@ -173,6 +173,12 @@ void __fastcall__ limb_news (unsigned w, unsigned char b);  /* (Part 49) The lim
 unsigned char __fastcall__ engaged (unsigned char eng, unsigned char def);  /* (dq0w.c's part 25) The engage
                                                 **   initiative test: eng engaging def (0 the character, else an
                                                 **   actor's entry plus 1) */
+unsigned char __fastcall__ pool_step (unsigned char who);     /* (Part 114: wpool.c) An actor stepped onto its
+                                                **   square (0 the character, else body bd's): a pool of oil there,
+                                                **   slipped in or burnt in; 1 fallen */
+void __fastcall__ pool_add (unsigned char sn, unsigned x, unsigned y);  /* (Part 114) Lamp oil poured out there */
+void pool_time (void);                          /* (Part 114) The pools' minute */
+extern unsigned char npools;                    /* (wpool.c's: how many pools there are) */
 extern unsigned char noinit;                    /* (dq0 -I: no engage initiative test: the tests') */
 
 #endif

@@ -223,7 +223,7 @@ struct burn {
     unsigned char   fuels;                      /* FU_*: a light's, those that renew it (0: none, it burns away); a
                                                 **   fuel's, what it is */
 };
-#define NBURNS          12
+#define NBURNS          11
 #define FU_OIL          0x01
 #define FU_PITCH        0x02
 #define FU_DRAW         0x04                    /* (Used up as it's drawn with: charcoal, chalk, a pencil, a quill, ink;

@@ -2215,7 +2215,7 @@ static unsigned char aw_of (void)
     if (kind_of (rec.kind)->flags & K_LIGHT) {
         return rec.flags & I_LIT ? AW_LIT : e ? AW_SPENT : AW_UNLIT;
     }
-    return e && (unsigned char) (rec.kind - KI_OIL) <= KI_PITCH - KI_OIL ? AW_EMPTY : AW_NONE;
+    return e && rec.kind == KI_PITCH ? AW_EMPTY : AW_NONE;   /* (A flask of oil a vessel, its oil a liquid in it: H16) */
 }
 
 /* Thing n's word, if another of its kind is at hand (carried, or lying within reach) and none of those is in its state:
@@ -2323,7 +2323,7 @@ void s_ix_make (void)
                                                 **   chooses as the world does, its choice made final, sway.c's bind) */
         if ((k->flags & K_CONTAINER) || (k->keeps & KF_ON)) {
             f |= CX_FILLS | CX_EMPTY;
-        } else if ((unsigned char) (rec.kind - KI_OIL) <= KI_PITCH - KI_OIL) {
+        } else if (rec.kind == KI_PITCH) {
             f |= j ? CX_FILLS | CX_EMPTY | CX_SPENT : CX_FILLS;
         } else if (j && (k->flags & K_LIGHT)) {
             f |= CX_SPENT;
@@ -2947,6 +2947,17 @@ static unsigned char __fastcall__ chain (unsigned i)
     return d;
 }
 
+/* Whether thing i's shut in, at any level out to where it lies (pick_'s: the user's H17, 2026-11-21) */
+static unsigned char __fastcall__ shut_in_any (unsigned i)
+{
+    for (; item_at (i)->where == IW_ITEM; i = item_at (i)->x) {
+        if (in_shut (i)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 /* ---- The thing named (name; how: TH_*, carried, lying about that it sees, either, to hand, in win), of several: of
 ** those the name fits (and the selector's state, wsel's: lit, not lit, open, closed, empty), the one most to hand, held
 ** first, then worn or hanging from the belt, then in what it carries (the shallower first), then lying within reach,
@@ -3091,14 +3102,17 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
                                                 **   ring, 2026-11-10) */
             }
         } else {
-            if (how == HW_CARRIED || d > 1 || ps != sn || (dx = px - x + 20) > 40 || (dy = py - y + 20) > 40 ||
-                (d && !(rec.y >= IC_MARK ? IC_PREP (rec.y) == CP_ON : kind_of (pk)->keeps & KF_ON) &&   /* (On a
-                                                **   chest's lid too, its compartment's prep: lying's, 2026-11-16) */
-                (how != HW_HAND || !(rec.flags & I_KNOWN) || !(kind_of (pk)->flags & K_CONTAINER) || in_shut (i))) ||
+            if (how == HW_CARRIED || ps != sn || (dx = px - x + 20) > 40 || (dy = py - y + 20) > 40 ||
+                (d && (d > 1 || !(rec.y >= IC_MARK ? IC_PREP (rec.y) == CP_ON : kind_of (pk)->keeps & KF_ON)) &&   /* (On
+                                                **   a chest's lid too, its compartment's prep: lying's, 2026-11-16) */
+                (how != HW_HAND || !(rec.flags & I_KNOWN) || !(kind_flags (item_at (rec.x)->kind) & K_CONTAINER) ||
+                shut_in_any (i))) ||
                                                 /* (To hand, in an open container set down too, one it knows is in it:
                                                 **   the user's reach, 2026-10-23, "a backpack on the ground ... is more
                                                 **   readily available"; DECISIONS.md's "in a container set down":
-                                                **   dq0disarm's gambeson in the pack it dropped, hear2's) */
+                                                **   dq0disarm's gambeson in the pack it dropped, hear2's; at any depth,
+                                                **   each level open, its reach a level's time more each (part 56's):
+                                                **   the user's H17, 2026-11-21) */
                 !(t = at (sn, px, py)) || (!(*t & T_VIS) &&
                 (how < HW_HAND || !(*t & T_SEEN) || !rec.id || room_of (sn, px, py) != room_of (sn, x, y)))) {
                 continue;                       /* (Lying about, or on a surface there, in sight, or remembered there
@@ -5501,7 +5515,7 @@ static void words (void)
         put (" ");
     }
     q = tw_sum ? tw_sum : tw.qty;
-    if (tw_n > 1 || (q == 1 && (twk->form & KF_COUNT))) {   /* (Alike, told together, "two sacks"; one of a lot, "a
+    if (tw_n > 1 || (q == 1 && (twk->form & (KF_COUNT | KF_LIQUID)) == KF_COUNT)) {   /* (Alike, told together, "two sacks"; one of a lot, "a
                                                 **   ration": as many's words them) */
         if ((q = tw_n > 1 ? tw_n : 1) == 1) {
             f = (twk->flags & K_PLURAL && !(twk->form & KF_COUNT) ? LN_SOME : LN_A) | (twk->form & KF_COUNT ? LN_SINGLE :
@@ -5510,8 +5524,8 @@ static void words (void)
             f = (q <= 10 && !(twk->form & KF_COUNT) ? LN_FEW : LN_COUNT) | (twk->flags & K_PLURAL ? 0 : LN_PLURAL);
         }
     } else {
-        f = q > 1 ? (twk->form & KF_LIQUID ? LN_PINTS : LN_COUNT) : twk->flags & K_PLURAL ? 0 : LN_A;   /* (Water's, lamp
-                                                **   oil's pints: H14, 2026-11-19) */
+        f = twk->form & KF_LIQUID ? (q > 1 ? LN_PINTS : LN_PINT) : q > 1 ? LN_COUNT : twk->flags & K_PLURAL ? 0 : LN_A;   /* (Water's, lamp
+                                                **   oil's pints: H14, 2026-11-19; one "a pint of", a flask of oil's, H16) */
     }
     s = !tw.dur_max ? 0 : tw.dur * 10 < tw.dur_max ? 1 : tw.dur * 3 < tw.dur_max ? 2 : 0;   /* (Nearly broken, battered) */
     s |= tw.flags & I_LIT ? 4 : 0;
@@ -5983,6 +5997,8 @@ static unsigned char __fastcall__ rnd (unsigned char n)
 ** crudely), its durability's most (its material's toughness, its weight, its quality) and what's left of it (a thing
 ** found lying in the dungeon is the worse for its years there); a portal's part's material and quality the maker's
 ** already (its portal's) */
+static unsigned __fastcall__ put_down (unsigned char kind, unsigned char where, unsigned char sn, unsigned x,
+    unsigned y, unsigned char qty);
 void __fastcall__ s_make_own (unsigned i)
 {
     struct item q;
@@ -6066,6 +6082,19 @@ void __fastcall__ s_make_own (unsigned i)
         own_comps (&q);                         /* (Its compartments past the first: part 61's) */
     }
     memcpy (item_at (i), &q, sizeof q);
+    if (q.kind == KI_OIL) {                     /* (A flask of oil a vessel, its pint of lamp oil a liquid in it, as a
+                                                **   vial's: the user's H16, 2026-11-21.  Found lying, some of it dried,
+                                                **   a sixteenth less a century of its stratum's age, as its fuel was) */
+        life = OIL_PINT;
+        if (q.where == IW_SQUARE) {
+            a = STRATUM (q.sn).age;
+            h = (unsigned char) (id * 37 + (id >> 3)) % 12 + 2;
+            life = h > a ? OIL_PINT / 8 * (h - a) / 2 : 0;
+        }
+        if (life && (i = put_down (KI_LAMP_OIL, IW_ITEM, 0, i, 0, 1)) != 0) {
+            item_at (i)->fuel = life;
+        }
+    }
 }
 
 /* A free record taken, its thing put down (where, sn, x, y, qty: the rest none, not yet its own): its number, or 0
@@ -6098,7 +6127,6 @@ static unsigned __fastcall__ put_down (unsigned char kind, unsigned char where, 
     }
     return 0;
 }
-
 
 /* Cache slot k's chunk's things put down, as the maker listed them stocking it (the world bank's stock: a thing on a
 ** square of the chunk, concealed or not; a portal's part, in its portal or by it, its make the portal's; a sconce's

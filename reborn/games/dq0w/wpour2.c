@@ -98,62 +98,12 @@ static unsigned __fastcall__ pints_of (unsigned f)
     return (f + OIL_PINT - 1) / OIL_PINT;
 }
 
-/* Lamp oil's measure g taken from what it's poured from: the flask's (iq.thick), or record E_L's, its pints as they're
-** left, none left gone */
-static void __fastcall__ oil_less (unsigned g)
-{
-    static struct item* q;
-
-    q = item_at (iq.thick ? E_N : E_L);
-    q->fuel -= g;
-    if (!iq.thick && !(q->qty = pints_of (q->fuel))) {
-        q->kind = 0;
-    }
-    hub_map (0);
-}
-
 static void pour_in (void)
 {
     static struct item c;
-    static unsigned i, mf, g;
+    static unsigned i, mf;
     static struct item* q;
 
-    if (iq.thick || (iq.size & 2)) {          /* (Lamp oil by its measure, minutes: the user's H14, 2026-11-19) */
-        mf = item_at (iq.thick ? E_N : E_L)->fuel;
-        if (!E_Y) {
-            oil_less (mf);                      /* (Poured away) */
-            return;
-        }
-        q = item_at (E_Y);
-        if (iq.size & 2) {
-            g = OIL_PINT - q->fuel;             /* (A flask filled as far as it takes) */
-            g = g < mf ? g : mf;
-            q->fuel += g;
-            iq.osel = g == mf ? iq.count : 0;
-            oil_less (g);
-            return;
-        }
-        for (i = 0; (i = items (i, IN_X | IN_ITEM, E_Y)) != 0 && (IC_OF (ip->y) || ip->kind != KI_LAMP_OIL); ) {
-        }
-        if (!i && (i = free_rec ()) != 0) {     /* (A flask's oil into a vessel: lamp oil, a record of its own) */
-            if (i >= ihigh) {
-                ihigh = i + 1;
-            }
-            q = item_at (i);
-            memset (q, 0, sizeof *q);
-            q->kind = KI_LAMP_OIL;
-            q->where = IW_ITEM;
-            q->x = E_Y;
-        }
-        if (i) {
-            q = item_at (i);
-            q->fuel += mf;
-            q->qty = pints_of (q->fuel);
-            oil_less (mf);
-        }
-        hub_map (0);
-        return;
-    }
     memcpy (&c, item_at (E_L), sizeof c);
     mf = c.kind != KI_LAMP_OIL ? 0 : iq.osel == c.qty ? c.fuel : iq.osel * OIL_PINT;   /* (Lamp oil's measure that goes:
                                                 **   whole pints, the last one's part with it all) */
@@ -218,7 +168,7 @@ static void __fastcall__ pints (unsigned char n, const char* l)
 /* The act (the solid things put out, the liquid poured: as wpour.c's s_pour found it may be), every actor's; the
 ** character's words (the UI bank's things_text, begun), its time in the reply's x: the thing emptied's kind iq.craft, the
 ** other's iq.quality (iq.value the other, 0 none; iq.to a surface), the liquid's iq.plural, how much of it iq.count, how
-** much went in iq.osel, a flask's oil iq.thick; the solid things put out iq.qty.  IR_OK */
+** much went in iq.osel; the solid things put out iq.qty.  IR_OK */
 unsigned char s_pour_said (void)
 {
     static char ln[14];
@@ -230,11 +180,18 @@ unsigned char s_pour_said (void)
     } else {
         out_all (HUB->pc_stratum, HUB->pc_x, HUB->pc_y);
     }
-    if (E_L || iq.thick) {
-        pour_in ();                             /* (A flask's oil too: poured away, or into another) */
+    if (E_L) {
+        pour_in ();
+        if (!E_Y && iq.plural == KI_LAMP_OIL) { /* (Lamp oil poured out: a pool where it stands, the user's H15) */
+            if (iq.to & TO_DEN) {
+                pool_add (bd.sn, bd.x, bd.y);
+            } else {
+                pool_add (HUB->pc_stratum, HUB->pc_x, HUB->pc_y);
+            }
+        }
     }
     if (iq.to & TO_DEN) {
-        bd.ready += TAKE_T * (iq.qty + (iq.count || iq.thick));
+        bd.ready += TAKE_T * (iq.qty + (iq.count != 0));
         ++HUB->den_seq;
         if (iq.qty && !E_Y) {
             seen_do (WB_DROP | (unsigned) iq.mat << 8);
@@ -244,7 +201,7 @@ unsigned char s_pour_said (void)
     k = iq.craft;
     ky = iq.quality;
     lq = iq.count;
-    strcpy (ln, iq.thick ? "oil" : lq ? name (iq.plural) : "");
+    strcpy (ln, lq ? name (iq.plural) : "");
     if (iq.qty) {
         put ("You empty the ");
         put (name (k));
@@ -270,7 +227,7 @@ unsigned char s_pour_said (void)
             if (*ln) {
                 put (" The ");
                 put (ln);
-                put (" runs away.");
+                put (iq.plural == KI_LAMP_OIL ? " pools on the floor." : " runs away.");
             }
         }
     } else if (iq.value && iq.osel < lq) {
@@ -286,7 +243,7 @@ unsigned char s_pour_said (void)
         put (ln);
         put (iq.value ? " into the " : " out of the ");
         put (name (iq.value ? ky : k));
-        put (".");
+        put (!iq.value && iq.plural == KI_LAMP_OIL ? ": it pools on the floor." : ".");
     }
     hub_map (0);
     HUB->ireq.x = TAKE_T * (iq.qty + (*ln != 0));   /* (A moment a handful, a take's; the pouring one) */

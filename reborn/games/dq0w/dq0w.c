@@ -123,7 +123,8 @@ unsigned char rs_said;                          /* (A room searched whole's: wha
 unsigned char kowed;                            /* (A stratum's populations owed at a real pace, its number plus 1:
                                                 **   wkept.c's, its kept rooms lit as they're done, kept_late: the
                                                 **   lights' minute's) */
-static unsigned char pc_down;                   /* (The character senseless: main's, its bearings off as it is) */
+unsigned char pc_down;                          /* (The character senseless: main's, its bearings off as it is; a game
+                                                **   carried on senseless, wgame.c's: off already, K16's) */
 unsigned char pc_ko;                            /* (Knocked senseless by a blow, its reply's: wfight.c's latch, main's
                                                 **   to see once, 2026-11-13) */
 struct work wk;
@@ -260,7 +261,12 @@ static unsigned char seen_now (void)
 /* The character's long task begun (HOUSE.md's long tasks: the hub's pc_task, the UI's bar): its kind, its length in
 ** its own units; what disturbs it from now on (a blow, a wound: pc_hit; a denizen not seen till now: pseen) */
 unsigned char pc_hit;                           /* (A blow at the character, or a wound: wfight.c's too) */
-struct pc_activity act;                         /* (activity.h's: what the character's doing, what's queued after.  Its
+unsigned char pools[3][8];                      /* (Lamp oil's pools on the floor, wpool.c's struct pool, NPOOLS:
+                                                **   the user's H15, 2026-11-21) */
+unsigned char npools;
+unsigned char pc_woke;                          /* (Struck in its sleep: a sleeper no more, from its first blow on
+                                                **   (wfight.c's, the user's K11, 2026-11-21), its sleep's stop to come) */
+struct pc_activity act;                        /* (activity.h's: what the character's doing, what's queued after.  Its
                                                 **   fight, fighting on's, part 24's: an enemy may engage the character,
                                                 **   looked at as it's free: | 1 a blow at it, wfight.c's, or its walk
                                                 **   stopped in a zone, looked at at once; 2 a command taking over a fight) */
@@ -279,7 +285,7 @@ static void __fastcall__ task (unsigned char kind, unsigned len)
     HUB->pc_task.foe = 0;
     HUB->pc_task.what = 0;
     HUB->pc_task.mins = 0;
-    pc_hit = 0;
+    pc_hit = pc_woke = 0;
     pt0 = HUB->now;
 }
 
@@ -4983,6 +4989,10 @@ void s_step_on (void)
         HUB->pc_y = y;
         HUB->pc_face = h;
         ++pnext;
+        if (npools && pool_step (0)) {
+            halt (0xFF);                        /* (Slipped in lamp oil and fallen: its walk over there, the user's H15) */
+            return;
+        }
         if (!act.srch) {                            /* (A room searched whole's leg: its bar its whole time, stepping's) */
             HUB->pc_task.done = pnext;
         }
@@ -7538,6 +7548,9 @@ void s_burn_job (void)
     } else {
         burns_now ();                           /* (The lights burnt down, a game minute's: part 27's; a command's answer
                                                 **   first, some 200,000 cycles of the world's) */
+        if (npools) {
+            pool_time ();                       /* (Lamp oil's pools: the user's H15) */
+        }
     }
     hub_map (0);
 }

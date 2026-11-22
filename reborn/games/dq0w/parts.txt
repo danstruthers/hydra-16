@@ -117,5 +117,6 @@
 111 30  A thing's things put out, a thing put down on a square within reach, every actor's (wempty.c: P4, P5, 2026-11-18)
 112 31  A thing's things put out, its liquid poured into another, every actor's (wpour.c: P4, H11, 2026-11-19)
 113 31  Its words (wpour2.c: H11, 2026-11-19)
+114 31  Lamp oil poured out lying on the floor a while, slippery, burning, every actor's (wpool.c: H15, 2026-11-21)
 stub start 3
 stub begin 3

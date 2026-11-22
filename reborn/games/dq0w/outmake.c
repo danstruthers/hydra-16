@@ -328,10 +328,14 @@ void __fastcall__ s_outmake (unsigned char who)
             hub_map (KIND_BANK);
             n = OF_N;
         }
-        if (e.flags & TF_FULL) {                /* (A waterskin full: its pints of water in it) */
+        if ((id = e.kind == KI_OIL) != 0 || (e.flags & TF_FULL)) {   /* (A waterskin full: its pints of water in it; a flask
+                                                **   of oil its pint of lamp oil, H16's) */
             kind_get (e.kind);
-            if ((i = make (KI_WATER, kk.cap_bulk, 4, PL_IN, i)) != 0) {
+            if ((i = make (id ? KI_LAMP_OIL : KI_WATER, kk.cap_bulk, 4, PL_IN, i)) != 0) {
                 own (i);
+                if (id) {
+                    item_at (i)->fuel = OIL_PINT;
+                }
             }
         }
     }
