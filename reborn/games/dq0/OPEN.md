@@ -105,6 +105,22 @@ only quit and help taken, nothing sensed). These are the rest.
   overlay, at a cost in time?
   - DECISIONS.md:5665-5666 (its point 7).
 
+## Denizens searching and hiding (one path, stage 2)
+
+From built/2026-11-21-op2b.md's open questions.
+- **S1. A secret door or trap a denizen finds is found for everyone** (built): the character sees the door, its walk
+  avoids the trap, as the character's finds already count for denizens. Keep, or knowers per faction or per finder
+  (the act audit's B10) before denizens spring traps?
+- **S2. Who searches**: hostile denizens tailing the character, and robbers (built). Also by their other natures
+  (exploring, patrolling)?
+- **S3. A denizen's search doesn't bring hiders of its own faction out of hiding** (built). Right?
+- **S4. A hunter's sniff of the scent store** costs 3 s and a test, a critical failure losing the trail (built). Test
+  its following of the fresh trail too?
+- **S5. A robber's critical failure hiding its stash** leaves it at hiding 0, still hidden (built). OK?
+- **S6. The null ruleset's senseless character** (bugs1's): save its time out with the game, as K16 does the
+  referee's?
+  - built/2026-11-21-bugs1.md, open question 4.
+
 ## The step planner, the reach and time
 
 - **T1. The reach isn't planned whole ahead.** Each step walks the tree again, since the world changes between steps
