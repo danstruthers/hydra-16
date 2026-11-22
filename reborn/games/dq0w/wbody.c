@@ -182,7 +182,7 @@ void s_den_intents (void)
     static int z;
 
     for (any = 0, hub_map (0); (t = HUB->di_tail) != HUB->di_head; hub_map (0), HUB->di_tail = (t + 1) % DI_SIZE) {
-        if (den_gw ()) {
+        if (den_held ()) {
             break;                              /* (The rest after the UI's command's answer; as main's job, after a
                                                 **   line's keys too, den_held's) */
         }

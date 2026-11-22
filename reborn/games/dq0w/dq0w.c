@@ -6110,6 +6110,7 @@ unsigned char __fastcall__ s_fight_on (unsigned char idle)
         if (HUB->pcsum.cond & C_STUNNED) {      /* (In shock, come round: in no state to fight, the referee's; the
                                                 **   fight over, told) */
             evb = 1;
+nofoe:
             event (E_TASK, 0, E_TASK_NOFOE_W1 (LT_FIGHT));
 over:
             HUB->pc_task.foe = 0;
@@ -6135,13 +6136,12 @@ over:
         if (h != 2 && (!h || !fsaid)) {
             if (!(k = fight_foe ())) {          /* (Its target beaten: the next, or none: told, but after a blow alone,
                                                 **   its words enough, "You finish the giant rat where it lies.") */
+                act.fight = 0;
                 if (HUB->pc_task.done > 1) {
                     evb = pshoot << 1;          /* (A missile's: "No foe is left in your sights.") */
-                    event (E_TASK, 0, E_TASK_NOFOE_W1 (LT_FIGHT));
+                    goto nofoe;                 /* (Told, the fight over: its code once, part 24's room) */
                 }
-                HUB->pc_task.foe = 0;
-                act.fight = 0;
-                return 0;
+                goto over;
             }
             evb = E_TASK_ENGAGED_B (k, 0, 1);
             event (E_TASK, 0, E_TASK_ENGAGED_W1 (TE_FIGHT, LT_FIGHT));
@@ -7424,9 +7424,13 @@ unsigned char ui_long (void)
 ** go; not keys_hold's free pass and hold again, the denizens three seconds behind at most, not slowed while the keys
 ** go on.  Each line's own (the hub's ui_keys, as the minds' gks and the senses' hks): a line let go and typed again
 ** before a pass saw no keys held again, not the last's hold run out, 2026-11-14.  1, held */
-static unsigned char dj;                        /* (The denizens' intents as main's job, den_job's) */
-static unsigned char den_held (void)
+static unsigned char dj;                        /* (The early jobs walked: the denizens' intents main's job, main's) */
+unsigned char den_held (void)
 {
+    if (!dj) {
+        return ui_first ();                     /* (Not main's job: a turn's wait, the populations' (wkept.c's) as
+                                                **   before, the command in hand alone) */
+    }
     hub_map (0);
     if (HUB->ui_cmd) {
         return gw_held (&gden, GW_REST) || ui_first ();   /* (A look one way's rest awaited at the real paces,
@@ -7501,22 +7505,6 @@ static unsigned char den_due (void)
     return DEN_INTENTS ();
 }
 
-/* The denizens' intents as main's job: each held as the row is (den_held: a line's keys from its first, not its
-** command alone), the rest after it: a line typed as they were carried out, an intent's parts' copies begun in its
-** window, 40,000 cycles each (speed10's, 2026-11-22) */
-unsigned char den_gw (void)                     /* (wbody.c's: each intent, den_held per intent as main's job, a
-                                                **   line's keys too; else ui_first's alone) */
-{
-    return dj ? den_held () : ui_first ();
-}
-
-static void den_job (void)
-{
-    dj = 1;
-    den_intents ();
-    dj = 0;
-}
-
 static unsigned char was_busy;                  /* (main's: its E_READY to come) */
 #define REST_IDLE       600                     /* (Ticks free before a look one way's rest is asked: three seconds, the
                                                 **   player reading, not typing on; a line come, none: 2026-11-18) */
@@ -7553,14 +7541,14 @@ static void blow_left (void)
     fdef = 0;
 }
 
-static struct gw gseq;                          /* (dseq's hold: a line's keys too, the one give-way's) */
 static unsigned char uf_held (void)
 {
-    return uf || (uf = ui_first ()) || gw_held (&gseq, GW_PACE);    /* (Asked as it's due, not the pass's top: a line
-                                                **   entered as the pass went on, its intents' work begun before it, the
-                                                **   senses' look of the bodies asked after it, in the line's window,
-                                                **   95,000 cycles, its intent not taken meanwhile: speed10's, 2026-11-22;
-                                                **   from its first key, as the denizens' intents) */
+    return uf || HUB->iq_head != HUB->iq_tail;  /* (And an intent in the ring: taken first, at the next pass's top.  A
+                                                **   line entered as this pass went on (uf its top's, none in hand then):
+                                                **   the senses' look of the bodies asked before its intent was taken,
+                                                **   95,000 cycles, dq0lookfar's turn left 666,845; held for the line's
+                                                **   whole hold instead, a look ahead after it waited on it, a pause of
+                                                **   1,900,000: speed10's, 2026-11-22) */
 }
 
 /* The denizens' bodies' changes: what it sees of them, looked at again, the UI told if it sees them otherwise, not on
@@ -7646,7 +7634,7 @@ unsigned char (* const jobs_held[]) (void) = {
 void (* const jobs_run[]) (void) = {
     stocks,                                     /* (Their things put down, marked so) */
     chart_job, trace_job,
-    den_job,                                    /* (The denizens' intents carried out) */
+    den_intents,                                /* (The denizens' intents carried out) */
     look_job, dseq_job, burn_job
 };
 #define JOBS_EARLY      (0 | 8 << 8)            /* (jobs' rows: the first's offset, the end's times 256, 2 a row) */
@@ -7695,8 +7683,13 @@ int main (int argc, char* argv[])
             lsq = HUB->cq.seq;
             tin = 0;
         }
+        dj = 1;                                 /* (The denizens' intents, as main's job, each held as their row is:
+                                                **   den_held's, a line's keys from its first, not its command alone; a
+                                                **   line typed as they were carried out, an intent's parts' copies
+                                                **   begun in its window, 40,000 cycles each: speed10's, 2026-11-22) */
         jobs (JOBS_EARLY);                      /* (The early jobs: the chunks stocked, the map making's, the traces',
                                                 **   the denizens' intents) */
+        dj = 0;
         while (hub_take (&m)) {
             tin = 1;                            /* (The line whose intent it is: a task it begins not held for it,
                                                 **   pc_held's; a task begun in the pass its line came in, 2026-11-06) */
