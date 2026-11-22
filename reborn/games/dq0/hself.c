@@ -113,8 +113,9 @@ void __fastcall__ s_self_do (unsigned h)
 
     switch ((unsigned char) h) {
     case H_STATUS:                              /* (The character's state: pace.c's "status", described (0); the line in
-                                                **   the main RAM, this part's own gone as part 4 comes in) */
-        strcpy (lb, "status");
+                                                **   the main RAM, this part's own gone as part 4 comes in; "double time",
+                                                **   the parser's pace alone, a jog there: the state told till 2026-11-21) */
+        strcpy (lb, cmd.action == VB_SET_PACE && !cmd.obj.word[0] ? "jog" : "status");
         pace_cmd (lb);
         break;
     case H_POWERS:

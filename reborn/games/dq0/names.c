@@ -167,7 +167,9 @@ unsigned char __fastcall__ o_names_in (const char* l)
     for (v = "name\0call\0rename\0dub\0forget\0unname\0"; *v; v += n + 1) {
         n = strlen (v);
         if (!strnicmp (l, v, n) && (!l[n] || l[n] == ' ')) {
-            r = NI_LINE;
+            if (*v != 'c' || strnicmp (l + 4, " on", 3) || (l[7] && l[7] != ' ')) {
+                r = NI_LINE;                    /* ("Call on", the intervention's: not a name's, 2026-11-21) */
+            }
             break;
         }
     }

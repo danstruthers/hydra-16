@@ -64,7 +64,7 @@ On **every** page:
 * `$FEFE`: two bytes that make the page's checksum (the hardware test's CRC of `$E000-$FEFF`) 0, set by the build.
 * `$FFFA`: the vectors.
 
-Page 0 is the scarce one (about 1.5K free); the others have plenty.  A system call whose routine is on another page is
+Page 0 is the scarce one (about 1K free; ERRSTR and its texts on page 2 since 2026-11-21); the others have plenty.  A system call whose routine is on another page is
 marked `far` in `api.def`: its jump table slot goes to a 6-byte stub on page 0 that makes the far call, which costs
 about 100 cycles.  `node tools/budget.js` shows each page's use.
 

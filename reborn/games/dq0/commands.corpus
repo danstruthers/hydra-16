@@ -469,6 +469,7 @@ pray	VB_PRAY	-	-	an hour of prayer: piety
 pray for a bonus to climbing	VB_PRAY_FOR	task=a bonus to climbing	-	a prayer that spends piety on an endeavour
 call on peoni for help	VB_CALL_INTERVENTION	deity=peoni;intent=help	deities=peoni	a call for divine intervention
 beseech larani	VB_CALL_INTERVENTION	deity=larani	deities=larani	beseech is a call
+call on	VB_CALL_INTERVENTION	-	-	alone: a call to its own deity, as pray alone is (2026-11-21: read as a name before)
 invoke divination	VB_INVOKE	invocation=divination	-	a ritual, not a spell
 perform blessing	VB_INVOKE	invocation=blessing	-	perform: a synonym of invoke
 chant exorcism on the goblin	VB_INVOKE	invocation=exorcism;target=goblin	near=goblin	an invocation on a target

@@ -353,10 +353,10 @@ static void status (void)
     char b[8];
     struct rs_summary* s = &HUB->pcsum;
     static const unsigned char rate[3] = { 100, 50, 33 };
-    unsigned char ep = harn_get_pp (&pc) - harn_get_up (&pc), k, w, g, v, l;
+    unsigned char up = harn_get_up (&pc), pp = up + harn_get_ep (&pc), ep = pp - up, k, w, g, v, l;
 
-    strcpy (HUB->pcstatus, "UP ");
-    strcat (HUB->pcstatus, utoa (harn_get_up (&pc), b, 10));
+    strcpy (HUB->pcstatus, "UP ");             /* (Its PP once: the load's sum each time, room6's) */
+    strcat (HUB->pcstatus, utoa (up, b, 10));
     tnow = HUB->now;
     if (pc.state == HARN_UNCONSCIOUS) {
         rouse (&pc, &pc_out, 0);                /* (Senseless: its shock rolls due by now, as its time comes) */
@@ -372,7 +372,7 @@ static void status (void)
                                                 **   senseless still, no turn of its own after; its status as it was) */
     }
     s->health = health_of (&pc);
-    k = harn_move (&pc);                       /* (Walking: half its Move, squares a round: Combat 6; in shock, half
+    k = pc.att[HARN_AGL] > pp ? pc.att[HARN_AGL] - pp : 1;  /* (harn_move's: walking: half its Move, squares a round: Combat 6; in shock, half
                                                 **   that, and no faster: Skills 22's walk or crawl at half move) */
     if (pc.state == HARN_SHOCK) {
         ++k;

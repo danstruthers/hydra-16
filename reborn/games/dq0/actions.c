@@ -77,7 +77,7 @@ static const struct row rows[NACTIONS] = {
     ROW (VB_FACE_DIRECTION, H_FACE, 0),
     ROW (VB_STEP_DIRECTION, H_GO, 0),           /* (pace.c's, the line's own, before s_command: a step; else a thing
                                                 **   said, "step onto the stairs", gone to) */
-    ROW (VB_SET_PACE, H_STATUS, 0),             /* (pace.c's; a pace it doesn't know, "double", the state told) */
+    ROW (VB_SET_PACE, H_STATUS, 0),             /* (pace.c's; "double time" alone a jog: hself.c's) */
     ROW (VB_PACE_SHOW, H_STATUS, 0),            /* ("pace" alone: the state, its pace with it) */
     ROW (VB_CHARGE, H_CHARGE, 0),
     ROW (VB_THROW_DIRECTION, H_THROW_WAY, 0),
