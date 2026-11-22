@@ -620,11 +620,11 @@ void __fastcall__ letters_in (char* l);         /* (Overlay 22's) The line's let
 unsigned char what_ask (void);                  /* (Overlay 22's) A command with nothing named asked about ("Drop what?
                                                 **   [a, d, f]"): 1, or 0 */
 void __fastcall__ walk_ahead (const char* name);    /* (sway.c's: a thing to take seen out of reach: its walk told before the world's asked) */
-#define W_DIG           (PA_PICK + 2)           /* (walk_says' name, a first word by what's asked: PA_* + 1 a portal's work, sway.c's) */
-#define W_SWAY          (PA_PICK + 3)
-#define W_PEER          (PA_PICK + 4)
-#define W_LISTEN        (PA_PICK + 5)
-#define W_SETOFF        (PA_PICK + 6)           /* (A walk a way, cmd.dir's: its set-off words, sway.c's setoff17) */
+#define W_DIG           (PA_SLAM + 2)           /* (walk_says' name, a first word by what's asked: PA_* + 1 a portal's work, sway.c's) */
+#define W_SWAY          (PA_SLAM + 3)
+#define W_PEER          (PA_SLAM + 4)
+#define W_LISTEN        (PA_SLAM + 5)
+#define W_SETOFF        (PA_SLAM + 6)           /* (A walk a way, cmd.dir's: its set-off words, sway.c's setoff17) */
 #define W_CLOSE         0x20                   /* (walk_says' name W_CLOSE + an attack's target, fight_target's: the
                                                 **   actor plus 1, | FT_CLOSE out of reach: its first words at once; */
 #define W_AIM           0x30                    /*   W_AIM + a shot's, the actor plus 1: "You take aim at the rat.") */

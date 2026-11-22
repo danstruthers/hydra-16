@@ -909,16 +909,26 @@ static unsigned char __fastcall__ side_k (unsigned char h)
 static unsigned __fastcall__ door_on (unsigned nx, unsigned ny)
 {
     struct portal* o;
+    struct trap* t;
     unsigned char s, d;
 
     if (TILE (C->tile[cy_][cx_]) != T_DOOR || !(o = portal_at (cx_, cy_)) || (o->state & PS_OPEN) || o->kind != PK_DOOR ||
         !(o->parts & PP_KNOWN) || (o->state & (PS_LOCKED | PS_BARRED | PS_WARDED | PS_HIDDEN)) || braced (sn_, nx, ny)) {
         return 0;                               /* (Braced: a chest against it, wdrag.c's: not opened as it goes) */
     }
+    for (s = C->ntraps, t = C->trap; s; --s, ++t) {
+        if (t->x == cx_ && t->y == cy_ && TS_SET (t->state) && t->trigger == TT_DOOR) {
+            return 0;                           /* (A trap on it: left shut, as a locked one is, its opening the door
+                                                **   work's (wdoor.c's, its trap set off): the act audit's B2,
+                                                **   2026-11-21) */
+        }
+    }
     s = o->state;
     d = o->parts;
     change (sn_, nx, ny, s | PS_OPEN, d, PORTAL_STATE);
     event (E_PORTAL, 0, E_PORTAL_W1 (PK_DOOR, 0, PO_OPENED));
+    act_noise (0, AC_OPEN, nx, ny);             /* (Heard, as the door work's opening is: the act table's open, every
+                                                **   actor's; silent before, 2026-11-21) */
     return 2 * stept;
 }
 
@@ -4295,7 +4305,7 @@ unsigned char __fastcall__ s_work (unsigned char what, unsigned x, unsigned y, u
         if (what == PA_BREAK || (k != PK_DOOR && k != PK_PORTCULLIS && what == PA_FORCE && !shut &&
             !(p->parts & PP_BARS))) {
             blows ();                           /* (Broken; a window forced, nothing shut or barred: its glass) */
-        } else if (k == PK_DOOR || what == PA_BAR || (k != PK_PORTCULLIS && (what <= PA_UNLOCK || what == PA_PICK || (what == PA_FORCE &&
+        } else if (k == PK_DOOR || what == PA_BAR || (k != PK_PORTCULLIS && (what <= PA_UNLOCK || what >= PA_PICK || (what == PA_FORCE &&
             shut)))) {
             doors ();                           /* (A door's; a window's shutters, as a door's) */
         } else {
@@ -6770,9 +6780,10 @@ void __fastcall__ s_intent_few (struct msg* m)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 7 (wwin.c's, its room): a stretch of the map drawn as the character goes (slice 4.2's) */
-#pragma code-name (push, "SW7CODE")
-#pragma rodata-name (push, "SW7RODATA")
+/* ==== Part 106 (part 7's, wwin.c's, its room; 106 the placer's since, kept there 2026-11-21: moved to part 110, the
+** small move's, it cost a fight's first letters 100,000 cycles): a stretch of the map drawn as the character goes (slice 4.2's) */
+#pragma code-name (push, "SW106CODE")
+#pragma rodata-name (push, "SW106RODATA")
 
 /* How true what it draws now is (the hub's pc_drawn: the referee's P_DRAW test, HOUSE.md's the map kept; a skill
 ** opened by it told, E_TASK's TE_LEARNT); its map's make the better or the worse for it (its quality, the mean of
@@ -6816,6 +6827,10 @@ void s_draw_test (void)
     drawn_down ();
     hub_map (0);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW7CODE")             /* (Things used up: part 7's still) */
+#pragma rodata-name (push, "SW7RODATA")
 
 /* ---- Things used up (HOUSE.md's, the user's, 2026-10-23: "Ink, pencils, charcoal, etc., should be used up
 ** eventually"), one way for every kind, by its data (as a light's fuel is: the item's fuel, its minutes left, its whole
@@ -6908,10 +6923,15 @@ unsigned char __fastcall__ s_use_key (const char* key)
 /* A drawing's minutes (DRAW_USE: a room come into, a way walked, mapping on paper) off what it draws with (the map
 ** making's, chart_w: things.c's chart_now, as the light's made, the handy ones by their keys): a point (charcoal,
 ** chalk, a pencil), else its quill and its ink; one spent, the map making made again (light_now's) */
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW106CODE")           /* (With the map's drawing, part 106's) */
+#pragma rodata-name (push, "SW106RODATA")
 #define DRAW_USE        2
+unsigned char __fastcall__ use_up (unsigned n, unsigned char by);  /* (Part 7's stub) */
 static void drawn_down (void)
 {
-    if (chart_w[2] ? s_use_up (chart_w[2], DRAW_USE) : s_use_up (chart_w[3], DRAW_USE) | s_use_up (chart_w[4],
+    if (chart_w[2] ? use_up (chart_w[2], DRAW_USE) : use_up (chart_w[3], DRAW_USE) | use_up (chart_w[4],
         DRAW_USE)) {
         light_now ();
     }

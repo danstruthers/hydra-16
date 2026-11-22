@@ -18,6 +18,8 @@
 #include "hub0.h"
 #include "world.h"
 #include "work.h"
+#include "wbody.h"
+#include "acts.h"
 
 #pragma code-name ("SW7CODE")
 #pragma rodata-name ("SW7RODATA")
@@ -41,9 +43,9 @@ static unsigned char __fastcall__ portcullis (unsigned char what)
         if (wk.pq.state & PS_OPEN) {
             return PO_IS_UP;
         }
-        if (wk.plan) {                          /* (Begun: ten seconds' straining, loud, its test at their end) */
-            noise (7);
-            timed (LT_BEND, 100);
+        if (wk.plan) {                          /* (Begun: ten seconds' straining, loud, its test at their end: the
+                                                **   act table's bend, every actor's noise and time, act_noise's) */
+            timed (LT_BEND, act_noise (wk.who, AC_BEND, wk.px, wk.py));
             return 0;
         }
         if (!G_OK (test (P_FORCE, PM_IRON, -6 - (signed char) (wk.pq.thick / TH_IN)))) {
@@ -61,20 +63,18 @@ static unsigned char __fastcall__ portcullis (unsigned char what)
     if (mine) {                                 /* (Its winch: cranked up, half a minute's winding, loud, a long task
                                                 **   it's up at the end of; or loosed, at once) */
         if (up && wk.plan) {
-            noise (5);
-            timed (LT_WIND, 300);
+            timed (LT_WIND, act_noise (wk.who, AC_WIND, wk.px, wk.py));
             return 0;
         }
         if (!up) {
-            wk.tt += 20;
-            noise (8);
+            wk.tt += act_noise (wk.who, AC_LOWER, wk.px, wk.py);
         }
     } else if (!up) {
         return PO_NO_WINCH;
     } else {
         if (wk.plan) {                          /* (By hand, from the far side: a round's heaving, its test at its
                                                 **   end) */
-            timed (LT_HEAVE, 100);
+            timed (LT_HEAVE, act_noise (wk.who, AC_HEAVE, wk.px, wk.py));
             return 0;
         }
         if (!G_OK (test (P_LIFT, 0, -6))) {
@@ -94,8 +94,7 @@ static unsigned char __fastcall__ window (unsigned char what)
     if (what == PA_FORCE) {                     /* (Its bars bent: the world sends only a barred window's here; ten
                                                 **   seconds' straining, loud, its test at their end) */
         if (wk.plan) {
-            noise (7);
-            timed (LT_BEND, 100);
+            timed (LT_BEND, act_noise (wk.who, AC_BEND, wk.px, wk.py));
             return 0;
         }
         if (!G_OK (test (P_FORCE, PM_IRON, -6))) {
@@ -111,7 +110,7 @@ static unsigned char __fastcall__ window (unsigned char what)
         }
         if (wk.pq.parts & PP_GLASS) {
             if (wk.plan) {                      /* (Half a minute's work, a long task: out at its end) */
-                timed (LT_PRISE, 300);
+                timed (LT_PRISE, act_noise (wk.who, AC_PRISE, wk.px, wk.py));
                 return 0;
             }
             wk.pq.parts &= ~PP_GLASS;
@@ -150,10 +149,14 @@ void s_portals (void)
     unsigned char out, what = wk.what;
 
     front ();
-    out = wk.pq.kind == PK_PORTCULLIS ? portcullis (what == PA_OPEN || what == PA_FORCE ? PA_RAISE : what == PA_CLOSE ?
-        PA_LOWER : what) : window (what);
+    out = wk.pq.kind == PK_PORTCULLIS ? portcullis (what == PA_OPEN || what == PA_FORCE ? PA_RAISE : what == PA_CLOSE ||
+        what == PA_SLAM ? PA_LOWER : what) : window (what);
     if (wk.task) {
         return;                                 /* (A timed work begun: nothing told yet) */
+    }
+    if (out == PO_RAISED || out == PO_HEAVED || out == PO_BENT) {
+        act_noise (wk.who, out == PO_BENT ? AC_BENT : AC_RAISED, wk.px, wk.py);   /* (Up, or its bars bent apart: heard,
+                                                **   every actor's, the act table's) */
     }
     tail (out);
     if (wk.through) {                           /* (On the far side) */

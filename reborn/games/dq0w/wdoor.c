@@ -33,7 +33,7 @@
 #include "workpart.h"
 
 extern unsigned char burn_ask;                  /* (things.h's) */
-unsigned door_key (void);                       /* (Part 80's, wport.c: a key that fits it, the actor's) */
+#define door_key()      tool_of (wk.who, KI_KEY, 0)     /* (A key that fits it, the actor's: wport.c's) */
 unsigned char __fastcall__ braced (unsigned char sn, unsigned x, unsigned y);   /* (Part 109's, wdrag.c) */
 
 /* A door's outcome's act (PO_*, AC_* in pairs): its noise, every actor's, by the act table's row (act_noise: the
@@ -42,7 +42,7 @@ unsigned char __fastcall__ braced (unsigned char sn, unsigned x, unsigned y);   
 ** quiet, heard close by (the user's, 2026-11-17) */
 static const unsigned char po_ac[] = {
     PO_OPENED, AC_OPEN, PO_CLOSED, AC_SHUT, PO_UNBARRED, AC_UNBAR, PO_LIFTED, AC_LIFT, PO_REBARRED, AC_BAR, PO_KEYED,
-    AC_UNLOCK, PO_KEY_LOCKED, AC_LOCK, PO_PICKED, AC_PICKED, PO_FORCED, AC_BURST, PO_HELD, AC_HELD, 0
+    AC_UNLOCK, PO_KEY_LOCKED, AC_LOCK, PO_PICKED, AC_PICKED, PO_FORCED, AC_BURST, PO_HELD, AC_HELD, PO_SLAMMED, AC_SLAM, 0
 };
 
 void s_doors (void)
@@ -54,7 +54,7 @@ void s_doors (void)
     hub_map (0);
     st = wk.who ? bd.step : HUB->pcsum.step ? HUB->pcsum.step : 10;  /* (An actor's, its own: wport.c's) */
     mine = wk.pq.bar == ((wk.pd + 2) & 3);      /* (The character on its bar's side) */
-    if (wk.pq.parts & PP_SKY && wk.pq.kind == PK_WINDOW) {
+    if (wk.pq.parts & PP_SKY && wk.pq.kind == PK_WINDOW && !wk.who) {
         burn_ask |= 2;                          /* (A window on the surface's shutters: the sky looked at, as it's
                                                 **   worked: part 76's, things.h's TS_ASK) */
     }
@@ -111,6 +111,7 @@ found:
                 door_state (wk.pq.state | PS_BARRED);
             }
             break;
+        case PA_SLAM:                           /* (Slammed: shut, its noise louder, below) */
         case PA_CLOSE:
             wk.tt += 2 * st;
             if (wk.pq.state & PS_WRECKED) {
@@ -118,7 +119,7 @@ found:
             } else if (!(wk.pq.state & PS_OPEN)) {
                 out = PO_IS_SHUT;
             } else {
-                out = PO_CLOSED;
+                out = what == PA_SLAM ? PO_SLAMMED : PO_CLOSED;
                 door_state (wk.pq.state & ~PS_OPEN);
             }
             break;
@@ -142,9 +143,16 @@ found:
                 door_state (wk.pq.state & ~PS_LOCKED);
                 break;
             }
-            if (wk.who && !wk.link) {
-                out = PO_NO_KEY;                /* (A denizen picks a lock only if its kind can (a robber's: its mind's,
-                                                **   wport.c's wk.link), its tools its own: the house's, 2026-11-02) */
+            if (wk.who && what == PA_UNLOCK) {
+                out = PO_NO_KEY;                /* (A denizen's unlocking its key alone: its picking its mind's to ask,
+                                                **   PA_PICK (a robber's kind: dq0d.c's door_way)) */
+                break;
+            }
+            if (wk.who && !tool_of (wk.who, KI_LOCKPICKS, 0)) {
+                out = PO_NO_PICKS;              /* (Its tools to hand, every actor's (the referee's Skills 23): the
+                                                **   character's the referee's to know, its CANT below; an actor's its
+                                                **   own things, wport.c's tool_of: the one-path plan's stage 2,
+                                                **   closures, 2026-11-21; a robber picked with none before) */
                 break;
             }
             g = test (P_PICKLOCK, wk.pq.lock, -(signed char) wk.pq.lock);
@@ -155,9 +163,9 @@ found:
             if (wk.plan) {                      /* (Begun, the means to hand (the referee's): a minute a try, the
                                                 **   test made again at its end, its outcome then; the lockpicks
                                                 **   got out first) */
-                act_noise (wk.who, AC_PICKING, wk.px, wk.py);   /* (Its scratching at the lock) */
-                timed (LT_PICK, 600);           /* (Its reach, the lockpicks got out, the world's steps first:
-                                                **   s_door_work's, reach_tool) */
+                timed (LT_PICK, act_noise (wk.who, AC_PICKING, wk.px, wk.py));   /* (Its scratching at the lock,
+                                                **   its time the row's; its reach, the lockpicks got out, the world's
+                                                **   steps first: s_door_work's, reach_tool) */
                 return;
             }
             if (g > 0) {
@@ -173,8 +181,7 @@ found:
                 break;
             }
             if (wk.plan) {                      /* (Begun: ten seconds' straining, loud, its test at their end) */
-                act_noise (wk.who, AC_FORCING, wk.px, wk.py);
-                timed (LT_FORCE, 100);
+                timed (LT_FORCE, act_noise (wk.who, AC_FORCING, wk.px, wk.py));
                 return;
             }
             g = test (P_FORCE, wk.pq.mat, (wk.pq.mat == PM_WOOD ? 0 : wk.pq.mat == PM_IRONBOUND ? -2 : -4) -
@@ -210,8 +217,12 @@ found:
     for (i = 0; po_ac[i] && po_ac[i] != out; i += 2) {
     }
     if (po_ac[i]) {
-        act_noise (wk.who, po_ac[i + 1] == AC_SHUT && wk.who && bd.doing == DO_FLEE ? AC_SLAM : po_ac[i + 1], wk.px,
-            wk.py);                             /* (Shut behind it as it flees: slammed, louder) */
+        i = po_ac[i + 1];
+        if (wk.pq.kind != PK_DOOR && i <= AC_SLAM) {
+            i = i == AC_OPEN ? AC_WOPEN : AC_WSHUT;     /* (A window's shutters: a door's numbers, told as shutters;
+                                                **   slammed, shut) */
+        }
+        act_noise (wk.who, i, wk.px, wk.py);
     }
     tail (out);
 }

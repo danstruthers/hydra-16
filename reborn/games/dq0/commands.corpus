@@ -129,6 +129,7 @@ put the sword away	VB_UNEQUIP_OBJECT	object=sword	-	put <object> away, the same 
 open the door	VB_OPEN_OBJECT	object=door	near=door	question 2
 open the right door	VB_OPEN_OBJECT	object=door;adj=right	near=door	adjective, not direction
 close the door	VB_CLOSE_OBJECT	object=door	near=door	question 2: a close action
+slam the door	VB_CLOSE_OBJECT	object=door	near=door	shut, louder (2026-11-21)
 close the lid	VB_CLOSE_OBJECT	object=lid	near=lid	question 2
 close the door carefully	VB_CLOSE_OBJECT	object=door;manner=carefully	near=door	manner
 

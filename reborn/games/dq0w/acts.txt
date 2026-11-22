@@ -38,7 +38,7 @@ held        | 0      | -        | 0  | 7 | DOOR  | HOLDS     | -    | -     | - 
 # ---- A lid, a drawer, a tie (things.c's s_shut_work, the character's; wfight.c's den_pry, an actor's reach into a box)
 lid         | 20     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
 lidkey      | 30     | -        | 0  | 1 | CLICK | TURNS     | -    | -     | KEY      | 1
-lidpick     | 600    | PICKLOCK | -1 | 1 | CLICK | TURNS     | -    | PICK  | LOCKPICKS| 2
+lidpick     | 600    | PICKLOCK | -1 | 1 | CLICK | PICKING   | -    | PICK  | LOCKPICKS| 2
 lidforce    | 100    | FORCE    | 0  | 6 | WORK  | PRIES     | WORK | FORCE | -        | 2
 
 # ---- Things (the take rule: wtake.c's, an actor's; the character's take its time the UI's I_WAIT, main.c's s_took_up:
@@ -68,3 +68,15 @@ hide        | 100    | -        | 0  | 0 | -     | -         | -    | HIDE  | - 
 conceal     | 600    | CONCEAL  | 0  | 0 | -     | -         | -    | HIDE  | -        | 1
 sniff       | 30     | NOTICE_SMELL | 0 | 0 | - | -         | -    | SNIFF | -        | 0
 track       | 600    | TRACK    | 0  | 0 | -     | -         | -    | TRACK | -        | 0
+# ---- A portcullis's and a window's (wwin.c's portcullis and window, every actor's through wk.who; an actor's told from
+# wport.c's own table before, the character's own numbers here, its noise none where an actor's was heard: the one-path
+# plan's stage 2, closures, 2026-11-21).  A window's shutters a door's (wdoor.c's), told as shutters
+wind        | 300    | -        | 0  | 5 | WORK  | WINDS     | -    | WIND  | -        | 2
+heave       | 100    | LIFT     | -6 | 7 | DOOR  | HEAVES    | WORK | HEAVE | -        | 2
+raised      | 0      | -        | 0  | 8 | DOOR  | RAISES    | -    | -     | -        | 2
+lower       | 20     | -        | 0  | 8 | DOOR  | LOWERS    | -    | -     | -        | 1
+bend        | 100    | FORCE    | -6 | 7 | WORK  | BENDS     | WORK | BEND  | -        | 2
+bent        | 0      | -        | 0  | 8 | DOOR  | BENT      | -    | -     | -        | 2
+prise       | 300    | -        | 0  | 0 | -     | -         | -    | PRISE | -        | 2
+wopen       | 2 step | -        | 0  | 2 | DOOR  | WOPENS    | -    | -     | -        | 1
+wshut       | 2 step | -        | 0  | 3 | DOOR  | WSHUTS    | -    | -     | -        | 1

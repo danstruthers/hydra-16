@@ -316,12 +316,14 @@ unsigned char s_errand (void)
         HUB->sway.ix = cmd.n;                   /* (Its distance: "follow me at 3 squares") */
     } else if (cmd.order >= OR_OPEN) {          /* (A door's errand, 2026-11-02: the door found, as the character's own
                                                 **   command finds it: its square) */
-        if (cmd.other.kind != OB_DOOR) {        /* (The errand's door: the parser's other, the errand's thing) */
+        if (cmd.other.kind != OB_DOOR && cmd.other.kind != OB_WINDOW && cmd.other.kind != OB_PORTC) {   /* (The errand's
+                                                **   door, window or portcullis: the parser's other, the errand's thing;
+                                                **   a door's alone before 2026-11-21) */
             msg ("Open which door?");           /* ("Ask it to ..." till 2026-11-17: an ally a person or a beast, not known
                                                 **   yet; "Fetch what?"'s way) */
             return 0;
         }
-        if (pick (OB_DOOR | PICK_TELL, cmd.other.lies) != 1) {
+        if (pick (cmd.other.kind | PICK_TELL, cmd.other.lies) != 1) {
             return 0;
         }
         hub_map (0);
