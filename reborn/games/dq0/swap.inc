@@ -19,9 +19,11 @@
 ; Before including it: zeropage.inc, BANKREG, _ovbank (the overlays' banks), ova and ovx (bytes kept, in the zero page: a stub's call
 ; is every call of a part's, some 120 cycles, and these are its most used), SWDEPTH (and
 ; SWFAST, if the parts are copied four pages a pass: a byte some 10 cycles, not 14, for some 130 bytes more code; SWMANY,
-; if there are more than 51 parts, past what an index of their records reaches: some 35 bytes more code); after it,
+; if there are more than 51 parts, past what an index of their records reaches: some 35 bytes more code; and with it
+; SWTABOV, if the records are to be kept in overlay SWTABOV's bank, not the main RAM: the config's segment SWTAB, in
+; that overlay's area, five bytes a part out of the main RAM; speed12, 2026-11-22); after it,
 ; the parts, SWPART n, ov (part n's image in the bank _ovbank[ov - 1]: overlay ov's, as a rule), in order from 1
-; (nothing else in RODATA between them), and the stubs.  The main code reads the overlays in before it calls one (the
+; (nothing else in RODATA, or SWTAB, between them), and the stubs.  The main code reads the overlays in before it calls one (the
 ; world's last three, dq0w.rop's, only at ropes_in: a part called sooner than that belongs in another's bank).
 ;
 ; The parts and the stubs are the build's (2026-11-06: games/dq0/parts.js, ENGINE-CRITIQUE.md's step 2): a task's
@@ -81,6 +83,10 @@ swload:
             lda         @rec + 2
             adc         #>(swtab - 5)
             sta         @rec + 2
+.ifdef SWTABOV
+            lda         _ovbank + SWTABOV - 1   ; (The records in overlay SWTABOV's bank, in the window: SWTABOV's)
+            sta         BANKREG
+.endif
             ldy         #4
 @rec:       lda         $FFFF,y
             sta         swrec,y
@@ -249,7 +255,11 @@ sw_back:
 ; its whole pages, its whole pages), from its link (NAME.cfg's SWn: where its code's linked to run, its size)
 .macro      SWPART      n, ov
             .pushseg
+.ifdef SWTABOV
+            .segment    "SWTAB"
+.else
             .rodata
+.endif
             .import     .ident(.concat("__SW", .string(n), "CODE_LOAD__"))
             .import     .ident(.concat("__SW", .string(n), "_START__"))
             .import     .ident(.concat("__SW", .string(n), "_LAST__"))
@@ -271,6 +281,10 @@ sw_back:
 
             .import     __SWAP_START__
 SWSTART     = __SWAP_START__
+.ifdef SWTABOV
+            .segment    "SWTAB"
+.else
             .rodata
-swtab:                                      ; (The parts' records follow it: SWPART 1 ...)
+.endif
+swtab:                                     ; (The parts' records follow it: SWPART 1 ...)
             .code
