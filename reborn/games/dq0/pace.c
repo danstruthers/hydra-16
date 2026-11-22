@@ -371,26 +371,23 @@ static const char pace_words[] =                /* (Each word after its length: 
     "\004foot\004feet\002ft\004yard\005yards\012autotarget\013auto-target\012autoengage\013auto-engage\010autofire"
     "\011autoshoot\004auto";
 
-#pragma bss-name (push, "OV16RODATA")          /* (In the overlay's bank, as its code: zero as it's read in) */
-static unsigned pl[32];                         /* Each first letter's (its low five bits') words' lengths, a bit each:
-                                                **   pace_words', made at the first line; a word whose letter and
-                                                **   length none has not looked for in them (the list's 66 words
-                                                **   compared with each word of the line, some 35,000 cycles of a
-                                                **   command's first letter, 2026-11-12) */
-static unsigned char pld;                       /*   (made) */
-#pragma bss-name (pop)
+static const unsigned pl[32] = {               /* Each first letter's (its low five bits') words' lengths, a bit each:
+                                                **   pace_words', the build's to hold to them (make.js's paceTable;
+                                                **   made at the first line till speed12, some 12,000 cycles of a
+                                                **   game's first "d"); a word whose letter and length none has not
+                                                **   looked for in them (the list's 66 words compared with each word
+                                                **   of the line, some 35,000 cycles of a command's first letter,
+                                                **   2026-11-12) */
+    0x0000, 0x0F10, 0x0090, 0x03E0, 0x0010, 0x0000, 0x0014, 0x0000, 0x0028, 0x0000, 0x0088, 0x0000, 0x0240, 0x0088,
+    0x0140, 0x0000, 0x0030, 0x0080, 0x0088, 0x07F0, 0x0070, 0x0000, 0x0000, 0x00D0, 0x0000, 0x0030, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000
+};
 
 unsigned char __fastcall__ o_pacing (const char* l)
 {
     static const char* p;
     static unsigned char n, k, w, words, ls;
 
-    if (!pld) {
-        for (p = pace_words; (k = *p) != 0; p += k + 1) {
-            pl[p[1] & 31] |= 1u << k;
-        }
-        pld = 1;
-    }
     w = ls = 0;
     for (words = 0; ; ++words) {
         while (*l == ' ' || *l == ',' || *l == '.' || *l == '!') {

@@ -3026,8 +3026,6 @@ void __fastcall__ s_begin (int argc, char* argv[])
     dots (3);                                   /* (Its first look to come: told, main's loop's dots; the help's line
                                                 **   with the first prompt, o_dots') */
     t_done ();
-    pacing ("");                                /* (Its words' table made now, not in the first line's answer: some
-                                                **   12,000 cycles of a first "d", speed12, 2026-11-22) */
 }
 
 /* The game's end: kept (as it ends: the game's quit, not lost), the world stopped.  An ending's, the character's sheet
