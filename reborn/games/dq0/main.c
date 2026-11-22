@@ -1799,7 +1799,7 @@ static unsigned char __fastcall__ launcher (const char* w)
 /* The denizen thing t names that the character sees, near or far: its entry plus 1; 0 none (why in lb) */
 static unsigned char __fastcall__ mark (const struct cthing* t)
 {
-    static struct cmd c;
+    struct cmd c;                               /* (On the C stack, not the main RAM's BSS: room6's) */
     unsigned char d;
 
     memcpy (&c, &cmd, sizeof c);
@@ -1811,7 +1811,7 @@ static unsigned char __fastcall__ mark (const struct cthing* t)
 
 static void __fastcall__ shot (unsigned char d, unsigned char s)
 {
-    static struct msg m;
+    struct msg m;                               /* (On the C stack, not the main RAM's BSS: room6's) */
 
     m.kind = I_ATTACK;
     m.who = 0;
