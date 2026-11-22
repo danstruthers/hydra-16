@@ -272,21 +272,31 @@ unsigned char s_den_legs (void)
 ** its number, outfits.js's: the index read in, the character's outfit's, as the game began), or its personal things
 ** (KT_PURSE: its kind's or its standing's): 1, or 0 (none, or no index: a kind with no things of its own, part 57 not
 ** called) */
+#pragma bss-name (push, "SW51RODATA")          /* (Its locals its part's own: no part swapped in while it runs) */
+static unsigned char hn, hf, rl, rh, ll, lh;
+static unsigned char* hq;
+#pragma bss-name (pop)
 static unsigned char __fastcall__ has_role (const struct msg* m)
 {
-    unsigned h, n;
-    unsigned char* q;
+    unsigned w;
 
     hub_map (CAT_BANK);
     if ((OF_INDEX[0] | OF_INDEX[1] << 8) != 0x464F) {
         return 0;
     }
-    if (I_KIT_DRAW (*m) & KT_PURSE) {
+    if ((hf = I_KIT_DRAW (*m)) & KT_PURSE) {
         return 1;
     }
-    for (n = OF_INDEX[3], q = OF_INDEX + 4; n; --n, q += 5) {
-        h = q[0] | q[1] << 8;
-        if (((I_KIT_DRAW (*m) & KT_ROLE) && h == '#' * 31 + I_KIT_DKIND (*m)) || ((I_KIT_DRAW (*m) & KT_LAIR) && h == '&' * 31 + I_KIT_DKIND (*m))) {
+    w = '#' * 31 + I_KIT_DKIND (*m);            /* (Its role's entry and its lair's, their two bytes each: worked out once,
+                                                **   not for each entry, the index walked a byte at a time; some 70,000
+                                                **   cycles a kit before, dq0felled's "d" as played: speed11's) */
+    rl = w;
+    rh = w >> 8;
+    w = '&' * 31 + I_KIT_DKIND (*m);
+    ll = w;
+    lh = w >> 8;
+    for (hn = OF_INDEX[3], hq = OF_INDEX + 4; hn; --hn, hq += 5) {
+        if (((hf & KT_ROLE) && hq[0] == rl && hq[1] == rh) || ((hf & KT_LAIR) && hq[0] == ll && hq[1] == lh)) {
             return 1;
         }
     }
@@ -684,7 +694,7 @@ void __fastcall__ s_den_enter (const struct msg* m)
 ** (2026-10-30: wshoot.c's, a launcher or a thing to throw): a thing of its own of that kind taken in hand from its back,
 ** its belt, its carrier, what it holds put up first (weapons, a shield: slung, hung on it, I_WORN), its round's; told
 ** (WB_READIES a launcher, WB_DRAWS a thing to throw), the referee told: 1; a light in its hand, or none of that kind, 0 */
-unsigned char __fastcall__ s_den_draw (unsigned char want)
+unsigned char __fastcall__ s_den_draws (unsigned char want)
 {
     static unsigned i, best, top;
     static struct item* p;

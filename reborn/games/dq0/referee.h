@@ -37,6 +37,8 @@ extern unsigned char tqual[NTOOLS];             /*   its quality (0-9), and its 
 #define T_LEFT  0x04                            /* (Held in the left hand: RS_EQUIP's marks, slice 4.1b's) */
 #define T_RIGHT 0x08                            /*   the right; both, a thing in both hands */
 void __fastcall__ equip_all (const char* keys); /* All that's to hand anew (RS_EQUIP 2's text) */
+extern unsigned char tgen;                      /* (What's to hand changed: bumped by equip_all, and by a ruleset's own
+                                                **   change to tools; what it keeps by the keys, kept by this) */
 unsigned char __fastcall__ has (const char* key);   /* A tool to hand, by its key ("picks") */
 
 extern unsigned long bseed;                     /* The bearings' own dice (rshouse.h's bdice) */
@@ -58,5 +60,16 @@ void rf_begin (void);                           /* As its dice are seeded (the g
 void __fastcall__ rf_answer (struct req* r);    /* A request answered (tp and tend at its text, its result 0): RS_SAVE's
                                                 **   the character's alone, the skeleton's the creatures' sheets after */
 void __fastcall__ rf_sheets (unsigned char back);   /* Its creatures' sheets written to beasts.dat (0), read back (1) */
+
+/* ---- The summary after a reply (the user's T4, 2026-11-22: "the referee's reply carries the blow's own summary fields,
+** the rest of the summary recomputed after it").  A reply carries the character's summary's fields its request changed
+** that the world reads as the reply comes (rs.h's struct rs_summary: cond, health, limbs, limp, step and gstep; and the
+** status line, pcstatus).  The rest of it (the senses, morale, load, power, lead, the map in mind, its traits: what no
+** blow, harm, time or exertion changes) a ruleset may leave for after the reply: rf_answer sets rf_later, and the
+** skeleton, its reply sent, lets the asker run first (a tick at most, at the real paces; at the turns pace none, the
+** tasks' turns as they were), then calls rf_after, always before it answers anything else.  A ruleset that keeps its summary whole in rf_answer never sets rf_later; its rf_after does nothing.
+** rf_after rolls no dice (the dice go by who asks: no one asks it) */
+extern unsigned char rf_later;                  /* (The skeleton's: set by rf_answer, cleared as rf_after's called) */
+void rf_after (void);                           /* The ruleset's: its summary's rest, after a reply that left it */
 
 #endif

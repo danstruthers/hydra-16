@@ -736,6 +736,7 @@ unsigned char __fastcall__ s_felt_stop (unsigned char h)
 ** or the game ending (the senses may be gone), not asked: what the character saw lit (T_VIS), or a room's own light,
 ** as before.  The hub's header in the window after */
 static unsigned char __fastcall__ ask_look (unsigned char kind);
+static unsigned char dseq;                      /* (The denizens' bodies' sequence last looked at: dseq_job's, a look's) */
 #pragma bss-name (push, "SW45RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
                                                 **   the main RAM's room, 2026-11-21) */
 unsigned char __fastcall__ s_unlit_at (unsigned char sn, unsigned x, unsigned y)
@@ -3481,6 +3482,20 @@ void __fastcall__ s_start (const char* dir)
 #pragma code-name (push, "SW37CODE")
 #pragma rodata-name (push, "SW37RODATA")
 
+/* A look asks the bodies' look itself (the user's T2, 2026-11-22): the denizens' bodies changed since they were last
+** looked at (the hub's den_seq), the senses asked to look at them again (LK_DENS, dseq_job's) before a look that tells
+** them from the senses' last look (a look one way's near part, LK_NEAR; a look one way's rest, LK_REST: neither looks at
+** the bodies itself, as a whole look does), so dseq_job can be held out of a line's window (uf_held's), the look not
+** telling them as they were.  Its news none (V_STIR): the look tells them */
+static void bodies_first (void)
+{
+    hub_map (0);
+    if (HUB->den_seq != dseq) {
+        dseq = HUB->den_seq;
+        ask_look (LK_DENS);
+    }
+}
+
 /* A look one way (I_LOOK's: HOUSE.md's looking one way): the senses' look about, and twice as far in the quarter
 ** ahead, their own record of it too (LK_WAY; LK_PEEK, t | 0x8000: through the closed door ahead's little window or
 ** spy-hole, the user's, 2026-11-14), t tenths; told the UI, E_VIEW V_LOOKED.  What's near told first (the user's,
@@ -3489,6 +3504,7 @@ void __fastcall__ s_start (const char* dir)
 void __fastcall__ s_look_way (unsigned t)
 {
     busy (t & 0x7FFF);
+    bodies_first ();
     HUB->look.kind = t & 0x8000 ? LK_PEEK : LK_NEAR;
     see (0);                                    /* (As a look's: the things round it first, as it's moved) */
     hub_map (0);
@@ -3512,6 +3528,7 @@ void __fastcall__ look_way (unsigned t);        /* (Its stub, bank.s's: intent_m
 ** E_VIEW V_LOOKED; as nothing's in hand (look_due's, ui_long's) */
 void s_look_rest (void)
 {
+    bodies_first ();
     HUB->way_want.st = WW_NONE;
     HUB->look.kind = LK_REST;
     see (0);
@@ -7466,8 +7483,7 @@ unsigned char act_next (void);
 ** stepped, each in its order; a row's rule asked only as it's due (ui_long and den_held count the time they hold from
 ** their first asking).  The table's columns three arrays, jobs.s's walk (the main RAM's room) */
 
-static unsigned char uf, dseq;                  /* (The UI's command in hand at the real paces, ui_first's, this pass;
-                                                **   the denizens' bodies' sequence last looked at) */
+static unsigned char uf;                        /* (The UI's command in hand at the real paces, ui_first's, this pass) */
 
 static unsigned char chart_due (void)
 {
@@ -7543,7 +7559,9 @@ static void blow_left (void)
 
 static unsigned char uf_held (void)
 {
-    return uf || HUB->iq_head != HUB->iq_tail;  /* (And an intent in the ring: taken first, at the next pass's top.  A
+    return uf || HUB->iq_head != HUB->iq_tail || ui_long ();   /* (And a line's keys from its first, KEY_HOLD ticks
+                                                **   at most, ui_long's: a look asks the bodies' look itself, T2's,
+                                                **   2026-11-22, bodies_first.  And an intent in the ring: taken first, at the next pass's top.  A
                                                 **   line entered as this pass went on (uf its top's, none in hand then):
                                                 **   the senses' look of the bodies asked before its intent was taken,
                                                 **   95,000 cycles, dq0lookfar's turn left 666,845; held for the line's
@@ -7552,8 +7570,9 @@ static unsigned char uf_held (void)
 }
 
 /* The denizens' bodies' changes: what it sees of them, looked at again, the UI told if it sees them otherwise, not on
-** its way somewhere: once stirred's.  Not while the UI's command is in hand at the real paces (uf_held): the senses'
-** look of them after its answer's begun, 2026-11-01 */
+** its way somewhere: once stirred's.  Not while the UI's command is in hand at the real paces, nor while a line's typed
+** (uf_held): the senses' look of them after its answer's begun, 2026-11-01; a look that needs them asks it itself
+** (bodies_first, T2's, 2026-11-22) */
 static void dseq_job (void)
 {
     hub_map (0);

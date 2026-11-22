@@ -98,7 +98,8 @@ function createAcia(env) {
     if (a.rxQueue[0] === '\u0101') {                           // \p: a prompt (one sent since the wait began), then on
       if (a.promptFrom < 0) a.promptFrom = a.sent;
       if (!prompted(t)) return;
-      a.rxQueue.shift(); a.promptFrom = -1; a.rxDelay = 20000 + PROMPT_LAG; if (!a.rxQueue.length) a.typedLast = t;
+      a.rxQueue.shift(); a.promptFrom = -1; a.rxDelay = 20000 + PROMPT_LAG + (a.linePause ? a.linePause(t) : 0); if (!a.rxQueue.length) a.typedLast = t;
+      // (a.linePause, a test's: a player's pause before the line's first key, its cycles, as the prompt's come: 0 none)
     }
     // (Held back by an XOFF: the serial port's keys, once what was on its way has gone; not a wait, nor the keyboard's)
     const stopped = a.held && !a.kbd && a.rxQueue.length && a.rxQueue[0] < '\u0100' && a.lag <= 0;

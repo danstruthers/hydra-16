@@ -207,7 +207,8 @@ Each task is started with the hub's segment, its role and the lib folder (hub.c:
 - **dq0harn** puts the skeleton in its main RAM and the house rules in its parts and overlays (RULESETS.md:84-86).
   **dq0null** puts them all in main RAM.
 - **A ruleset supplies:**
-  - rf_start, rf_begin, rf_answer and rf_sheets (referee.h:53-60);
+  - rf_start, rf_begin, rf_answer, rf_sheets and rf_after (referee.h: rf_after the summary's rest after a reply that
+    left it, rf_later set: the user's T4, 2026-11-22);
   - want_say and air_say (rshouse.h);
   - an answer to every RS_* request;
   - for the time between dungeons, an entry in rsmeta.h's RULESETS, and its acct_* and meta_* hooks;

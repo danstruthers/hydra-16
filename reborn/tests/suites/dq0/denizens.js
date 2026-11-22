@@ -9,7 +9,7 @@ const {
   T_ROCK, T_FLOOR, T_WALL, T_CORR, T_WINDOW, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks, stratumRec,
   dq0Story, dq0Prose, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Named, DQ0_I,
   dq0Typed, dq0Portal, dq0Rec, dq0Poke, dq0PcShock, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Alone, dq0Paces, dq0Own, dq0WhenFree,
-  dq0Asks, dq0HeldPaces, dq0PlayLetters,
+  dq0Asks, dq0HeldPaces, dq0PlayLetters, dq0FightPause,
   dq0Ad
 } = require('../../lib/dq0.js');
 const { target, D17 } = require('../../lib/trends.js');   // (The user's targets, D17, at 115,200 baud: each measure kept, those over and past 90% listed after the tests)
@@ -2219,7 +2219,7 @@ module.exports = {
         ...dq0Paces('dq0 -p t -s 3 -c /ram/c.hm -k pick -T', LETDENS), 'echo $status']) },
       start(m) {
         this.timer = dq0Timer(m);
-        dq0Asks(m, [3]); dq0PlayLetters(m, 1, 3); dq0WhenFree(m);   // (Each line typed as the character's free; the played game's
+        dq0Asks(m, [3]); dq0PlayLetters(m, 1, 3); dq0WhenFree(m); dq0FightPause(m);   // (Each line typed as the character's free; the played game's
                                                 //   scene set by the test's own lines though its letters are that game's: dq0Poke's, 2026-11-20)
         const self = this;
         self.dead = {};

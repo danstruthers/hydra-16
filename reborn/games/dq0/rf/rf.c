@@ -22,6 +22,8 @@ unsigned char getbank (void);                   /* (The referee's bank.s's: the 
 void __fastcall__ setbank (unsigned char b);
 
 unsigned long bseed;
+unsigned char rf_later;                         /* (A reply that left the summary's rest: referee.h's) */
+unsigned char tgen;                             /* (What's to hand changed: referee.h's) */
 
 /* ---- Words into a reply (from an overlay too: s may be in the window, where the hub is, so each character's taken
 ** with s's bank in, and put with the hub's) */
@@ -68,6 +70,7 @@ void __fastcall__ equip_all (const char* keys)
 {
     unsigned char k = 0, n, f, j;
 
+    ++tgen;
     memset (tools, 0, sizeof tools);
     while (*keys) {
         j = NTOOLS;
@@ -179,7 +182,19 @@ int main (int argc, char* argv[])
     hub_map (0);
     dice_to (3 + HUB->dice);                    /* (The streams begun: 3 + the hub's dice, dq0 -R's) */
     for (;;) {
-        hy_sem_acquire (HUB->sem[T_REFEREE]);   /* (Waiting costs nothing) */
+        if (rf_later) {                         /* (A reply that left the summary's rest, referee.h's: the asker first, a
+                                                **   tick at most; then the rest, before anything else is answered.  A
+                                                **   ring taken by the wait: the slots looked at below all the same) */
+            if (HUB->tpr) {
+                hy_sem_wait (HUB->sem[T_REFEREE], 1);   /* (At the real paces: at the turns pace no line races the
+                                                **   background, the tasks' turns kept as they were) */
+            }
+            rf_later = 0;
+            hub_map (0);
+            rf_after ();
+        } else {
+            hy_sem_acquire (HUB->sem[T_REFEREE]);   /* (Waiting costs nothing) */
+        }
         hub_map (0);
         if (HUB->quit) {
             break;

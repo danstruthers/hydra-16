@@ -65,6 +65,7 @@ const ASM = {
   items: {                                                      // games/dq0w/items.s: the item store
     REC: 'sizeof item', NITEMS: 'NITEMS', BANK0: 'ITEM_BANK (0)', ITEM_BANKS: 'ITEM_BANKS',
     I_KIND: 'item.kind', I_FLAGS: 'item.flags', I_WHERE: 'item.where', I_X: 'item.x',
+    I_OWNER: 'item.owner', I_HIDE: 'item.hide', IW_DEN: 'IW_DEN', A_DID: 'actor.did',     // (den_draw's: the world's)
   },
   letter: { NLET: 'NLET', LT_REC: 'LT_REC', CIX: 'sizeof cix', CIX_LET: 'cix.let' },   // games/dq0w/letter.s
   pulse: { SND_GRID: 'SND_GRID', SND_W: 'SND_W' },              // games/dq0p/pulse.s: the sound's grid
