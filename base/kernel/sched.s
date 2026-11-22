@@ -83,7 +83,12 @@ K_SCHED_RESUME:
             jmp         IRQ_EXIT
 
 ; A note pending: taken now (the trampoline, in the task) if the task is in its own code, W = 0 and its PC below
-; $E000, and its handler isn't running (but for a kill); else when it is
+; $E000, and its handler isn't running (but for a kill); else when it is.  Or at a system call's last instruction
+; back to the program (page 0's: an RTS, or a CLC or SEC before one), the program's return address above the frame:
+; the call's end made through the notes (K_NOTE_RETURN, as K_NOTE_CHECK's), its results the frame's.  A task spinning
+; on a short call (TICKS: a tick that comes in its IRQs-off time is taken just after it, in the kernel) took its
+; notes only as a switch found it in its own code, and a kill could wait as long as the spin (sched1's, 2026-11-21).
+; The look in the task, IRQs on (but for the kernel task's zero page, a moment)
 K_SCHED_NOTED:
             lda         TK_INNOTE
             beq         :+
@@ -96,8 +101,61 @@ K_SCHED_NOTED:
             bne         K_SCHED_RESUME
             lda         $0100 + FR_PCH,X
             cmp         #>BIOS_BASE
-            bcs         K_SCHED_RESUME
+            bcs         @kernel
             jmp         K_NOTE_TRAMP
+
+@kernel:                                                    ; (.A: its PC's high byte; .X: S)
+            cli
+            cpx         #$FF - FRAME_SIZE - 2               ; (Room above the frame for a return address?)
+            bcs         @resume
+            ldy         $0100 + FR_PCL,X
+            sei
+            ldx         T_REGISTER
+            stz         T_REGISTER                          ; ---- The kernel task's zero page (not its stack)
+            sta         K0_NPC + 1
+            sty         K0_NPC
+            ldy         #1
+            lda         (K0_NPC),Y
+            tay                                             ; (.Y: the next instruction's)
+            lda         (K0_NPC)
+            stx         T_REGISTER                          ; ---- Back
+            cli
+            cmp         #OP_RTS                             ; .Y: its carry ($FF: the frame's)
+            beq         @rts
+            cpy         #OP_RTS
+            bne         @resume
+            ldy         #0
+            cmp         #OP_CLC
+            beq         @call
+            iny
+            cmp         #OP_SEC
+            beq         @call
+@resume:
+            sei
+            jmp         K_SCHED_RESUME
+
+@rts:
+            ldy         #$FF
+@call:
+            tsx
+            lda         $0100 + FRAME_SIZE + 2,X            ; The return address: in the program's code?
+            cmp         #>BIOS_BASE - 1                     ;   (Below $DF00: its RTS's below $E000)
+            bcs         @resume                             ; (No: a return within the kernel)
+            lda         $0100 + FR_P,X
+            and         #$FE
+            cpy         #0
+            beq         :+
+            ora         #$01
+            iny
+            bne         :+
+            lda         $0100 + FR_P,X                      ; (An RTS: the frame's own)
+:
+            sta         $0100 + FR_P,X
+            lda         #<K_NOTE_RETURN                     ; Its end through the notes: from the RTS on, the
+            sta         $0100 + FR_PCL,X                    ;   return address its
+            lda         #>K_NOTE_RETURN
+            sta         $0100 + FR_PCH,X
+            bra         @resume
 
 ; The next task to run.  The foreground first (TF_FORE: TASKFORE's), while there may be some (K0_FORES), in its turn
 ; (K0_FMODE 0: FORE_RUN ticks at most, from the tick it began, K0_FTICK; a pick with none of it able to run begins

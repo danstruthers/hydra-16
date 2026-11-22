@@ -389,7 +389,10 @@ Notes are Plan 9's signals, numbered:
 * **`NOTE`** sends one to a task, or to a **note group** (`NOTE_GROUP | g`): every task in it.  A child is in its
   parent's group unless `SPAWN_NEWGROUP` gives it one of its own.
 * **A task takes its notes in its own code, never inside the kernel**: when the scheduler switches to it and its frame
-  is in its own code, or at the end of a system call that waits, which then returns `E_INTR`.
+  is in its own code, or at the end of a system call that waits, which then returns `E_INTR`.  A switch that finds it
+  at a call's last instruction back to the program (an `RTS`, or a `CLC` or `SEC` before one: a tick taken just
+  after `TICKS`'s IRQs-off time) ends the call there through the notes, so a task spinning on such a call is reached
+  as soon as one spinning in its own code.
 * **`NOTIFY`** sets a handler: it's called with `.A` = the note, and returns C = 0 to go on where the task was, or C = 1
   for the default.  With no handler, the default ends the task with 128 + the note's Unix number.
 * A note that comes while the handler runs waits for it (except a kill).

@@ -14,6 +14,11 @@
 child:      .res        1
 child2:     .res        1
 got:        .res        1                                   ; The note this task's handler got
+lat:        .res        1                                   ; A kill's ticks, from NOTE to WAIT's end
+was:        .res        1                                   ;   (and the tick as it was sent)
+round:      .res        1                                   ; The TICKS spinners' round ...
+worst:      .res        1                                   ;   their most ticks past the one in its own code ...
+codes:      .res        1                                   ;   and their codes but 137 (or 0)
 
 .bss
 msg:        .res        32
@@ -85,14 +90,46 @@ main:
             CHILD       s_s28                               ; (Spinning, in its own code: it never waits)
             sta         child
             jsr         nap
-            lda         child
-            ldx         #NOTE_KILL
-            jsr         NOTE
-            WAITMSG     child
-            txa
+            jsr         kill
             EXPECT_A    137, "a kill, to a child that spins: 137"
             lda         msg
             EXPECT_A    'k', "and the message killed"
+            lda         was
+            sta         lat
+
+            stz         worst                               ; Spinning on TICKS alone, in the kernel the most of its
+            stz         codes                               ;   time: a note taken as the call returns (sched.s's
+            lda         #8                                  ;   K_SCHED_NOTED, 2026-11-21), 8 times, each a tick
+            sta         round                               ;   later than the last
+@spin:
+            lda         #0
+            CHILD       s_sf0
+            sta         child
+            lda         round
+            ldx         #0
+            jsr         SLEEP
+            jsr         kill
+            cmp         #137
+            beq         :+
+            sta         codes
+:
+            lda         was
+            sec
+            sbc         lat
+            bcc         :+
+            cmp         worst
+            bcc         :+
+            sta         worst
+:
+            dec         round
+            bne         @spin
+            lda         codes
+            EXPECT_A    0, "a kill, to a child that spins on TICKS: 137, 8 times"
+            lda         worst
+            cmp         #2
+            lda         #0
+            rol
+            EXPECT_A    0, "and as soon as the one in its own code (a tick more at most)"
 
             lda         #0
             CHILD       s_b
@@ -227,6 +264,22 @@ handler:
             rts
 
 ; A moment for a child to start (and pause)
+; A kill to child, and its WAIT: .A its code; was the ticks from NOTE to WAIT's end
+kill:
+            jsr         TICKS
+            sta         was
+            lda         child
+            ldx         #NOTE_KILL
+            jsr         NOTE
+            WAITMSG     child
+            phx
+            jsr         TICKS
+            sec
+            sbc         was
+            sta         was
+            pla
+            rts
+
 nap:
             lda         #3
             ldx         #0
@@ -236,6 +289,7 @@ nap:
 s_child:    .byte       "#m/t_child", 0
 s_p:        .byte       "p", 0, 0
 s_s28:      .byte       "s28", 0, 0
+s_sf0:      .byte       "Sf0", 0, 0
 s_b:        .byte       "b", 0, 0
 s_n:        .byte       "n", 0, 0
 s_d:        .byte       "d", 0, 0

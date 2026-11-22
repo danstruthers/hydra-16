@@ -185,6 +185,9 @@ TA_NOTIFY       = $022C         ; (2) Its note handler (NOTIFY), or 0
 TA_SERVEVEC     = $022E         ; (2) Its serve entry (SCALL)
 TA_NAME         = $0230         ; (16) Its name, zero-terminated
 OP_JMP          = $4C           ; (TA_IRQJMP's: JMP absolute)
+OP_RTS          = $60           ; (The scheduler's look at a call's last instructions: sched.s, K_SCHED_NOTED)
+OP_CLC          = $18
+OP_SEC          = $38
 .assert     TA_IRQVEC = TA_IRQJMP + 1, error, "TA_IRQJMP: a JMP to TA_IRQVEC"
 TA_OWNERS       = $0240         ; (18: IRQ_LINES) Each IRQ line's owner task ($FF: none): a copy in every task, so
                                 ;   the IRQ dispatcher reads it where it is (IRQ_OWN writes them all)
@@ -206,6 +209,7 @@ K0_TICKS        = $22           ; (4) The tick count (TICK_HZ a second; TICKS gi
 K0_SPAWNF       = $27           ; SPAWN's flags (SPAWN_*), in its KCALL
 K0_BOOT         = $28           ; (4) The clock at tick 0: seconds since 2000-01-01 (time.s: TIME is it + the ticks
                                 ;   since, in seconds)
+K0_NPC          = $2C           ; (2) The scheduler's, a moment: a noted task's PC, its instruction looked at
 K0_MODMASK      = $2F           ; (2) The RAM modules installed (bit = module)
 K0_MODCOUNT     = $31           ;   and how many
 K0_PTR          = $32           ; (2) KCALL routines' pointers and scratch
