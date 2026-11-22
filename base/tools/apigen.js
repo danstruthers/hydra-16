@@ -129,8 +129,9 @@ function errorsInc(errors) {
 
 function errText(errors) {
   let s = header(';', 'errtext.s - the error codes\' texts, for ERRSTR');
-  s += '; Entries: the code, then the text, zero-terminated; a code of 0 ends the table.' + CRLF + CRLF;
-  s += '.export     ERR_TEXTS' + CRLF + '.segment "KRODATA"' + CRLF + 'ERR_TEXTS:' + CRLF;
+  s += '; Entries: the code, then the text, zero-terminated; a code of 0 ends the table.  On BIOS ROM page 2, with ERRSTR' + CRLF +
+    '; (sys.s): page 0\'s room, 2026-11-21.' + CRLF + CRLF;
+  s += '.export     ERR_TEXTS' + CRLF + '.segment "KRODATA_P2"' + CRLF + 'ERR_TEXTS:' + CRLF;
   for (const e of errors) s += '            .byte       ' + hx(e.code, 2) + ', "' + e.text + '", 0' + CRLF;
   s += '            .byte       0' + CRLF;
   return s;

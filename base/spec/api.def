@@ -56,7 +56,7 @@ call SYSINFO system impl=K_SYSINFO
   hl:     -> .A .X r0
   doc:    What the system has.
 
-call ERRSTR system impl=K_ERRSTR
+call ERRSTR system impl=K_ERRSTR far
   in:     .A = an error code; r0 = a buffer (32 bytes)
   out:    the error's text in the buffer, zero-terminated ("error $xx" for an unknown code)
   errors: -

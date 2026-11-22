@@ -93,6 +93,48 @@ K_SYSINFO:
             clc
             rts
 
+; A spare slot in the jump table
+K_NOSYS:
+            FAIL        E_NOSYS
+
+; ****************************************************************************
+; The debugging calls (dbg: for the tests; unstable).  DBG_SCALL is SCALL itself (call.s)
+
+; DBG_KCOPY: r2 bytes between r0 (here) and r1 (in task .A); C = 0 here to there, C = 1 there to here
+K_DBG_KCOPY:
+            php
+            cmp         #TASKS
+            bcs         @srch
+            tax
+            lda         r0
+            sta         K_PTR
+            lda         r0 + 1
+            sta         K_PTR + 1
+            lda         r1
+            sta         K_PTR2
+            lda         r1 + 1
+            sta         K_PTR2 + 1
+            lda         r2
+            sta         K_CNT
+            lda         r2 + 1
+            sta         K_CNT + 1
+            txa
+            plp
+            jmp         K_KCOPY
+
+@srch:
+            plp
+            FAIL        E_SRCH
+
+.segment "KRODATA"
+K_STR_HWT:      .byte   "HWT!"                              ; (REBOOT_HWTEST's word: post.s has it too)
+
+; ****************************************************************************
+; ERRSTR, on BIOS ROM page 2 with its texts (errtext.s): a far call (api.def), rare, for messages; page 0's room
+; (2026-11-21)
+
+.segment "KCODE_P2"
+
 ; ERRSTR: error .A's text into the 32 bytes at r0 (zero-terminated; "error $xx" for a code it doesn't know)
 K_ERRSTR:
             sta         K_A
@@ -167,42 +209,6 @@ K_ERRSTR:
 :
             rts
 
-; A spare slot in the jump table
-K_NOSYS:
-            FAIL        E_NOSYS
-
-; ****************************************************************************
-; The debugging calls (dbg: for the tests; unstable).  DBG_SCALL is SCALL itself (call.s)
-
-; DBG_KCOPY: r2 bytes between r0 (here) and r1 (in task .A); C = 0 here to there, C = 1 there to here
-K_DBG_KCOPY:
-            php
-            cmp         #TASKS
-            bcs         @srch
-            tax
-            lda         r0
-            sta         K_PTR
-            lda         r0 + 1
-            sta         K_PTR + 1
-            lda         r1
-            sta         K_PTR2
-            lda         r1 + 1
-            sta         K_PTR2 + 1
-            lda         r2
-            sta         K_CNT
-            lda         r2 + 1
-            sta         K_CNT + 1
-            txa
-            plp
-            jmp         K_KCOPY
-
-@srch:
-            plp
-            FAIL        E_SRCH
-
-.segment "KRODATA"
+.segment "KRODATA_P2"
 K_STR_ERRNUM:   .byte   "error $"
 K_STR_ERRNUM_END:
-
-.segment "KRODATA"
-K_STR_HWT:      .byte   "HWT!"                              ; (REBOOT_HWTEST's word: post.s has it too)
