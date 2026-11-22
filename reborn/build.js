@@ -287,6 +287,74 @@ function partsChecked(sources, objdir, cfg) {
     'another bank\'s code or data (build.js\'s partsChecked):\n  ' + faults.join('\n  '));
 }
 
+// A game's overlays' calls into its swapped parts checked for the window (savecrash's, 2026-11-19: "save", overlay 7's,
+// called part 14's s_save_game, which left the hub's bank in the window, and the part's return went on into the hub's
+// header as code).  A part's stub returns into the overlay's code at the window: the part, and what it calls, must
+// leave the window as it found it.  From the C alone (its functions by their #pragma code-name: OVn's an overlay's,
+// SWn's a part's, s_NAME the part's function its stub NAME calls; a file's static functions its own): each call from
+// an overlay's function to a part's stub, its part followed through what it calls (C functions; another part's
+// through its stub) for a hub_map with no hub_back in the same function (hub_here ... hub_back puts the window back;
+// hub_mem and the assembly's own aren't followed).  A call known to be safe (a path that maps nothing) is a source's
+// "windowcheck: NAME" on its line or the two after.  Throws, with each
+function windowChecked(sources) {
+  const fns = new Map(), local = new Map();
+  for (const f of sources.filter(f => f.endsWith('.c'))) {
+    const lines = fs.readFileSync(f, 'latin1').split(/\r?\n/), stack = [], mine = new Map();
+    let seg = 'CODE', m;
+    local.set(f, mine);
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i];
+      if ((m = /^#pragma\s+code-name\s*\(\s*push\s*,\s*"(\w+)"\s*\)/.exec(l))) { stack.push(seg); seg = m[1]; continue; }
+      if (/^#pragma\s+code-name\s*\(\s*pop\s*\)/.test(l)) { seg = stack.pop() || 'CODE'; continue; }
+      if ((m = /^#pragma\s+code-name\s*\(\s*"(\w+)"\s*\)/.exec(l))) { seg = m[1]; continue; }
+      if ((m = /^(static\s+)?(?!const\b|extern\b|typedef\b|#)[A-Za-z_][\w\s*]*?\b(\w+)\s*\(([^;{}]*)\)\s*$/.exec(l)) && lines[i + 1] === '{') {
+        let j = i + 2;
+        const body = [];
+        while (j < lines.length && lines[j] !== '}') body.push(lines[j++]);
+        const text = body.join('\n').replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/"(?:[^"\\]|\\.)*"/g, '""');
+        const fn = { name: m[2], seg, text, file: f, raw: body, at: i + 3 };
+        (m[1] ? mine : fns).set(m[2], fn);
+        i = j;
+      }
+    }
+  }
+  const find = (f, n) => local.get(f.file).get(n) || fns.get(n);
+  const part = n => { const p = fns.get('s_' + n); return p && /^SW\d+/.test(p.seg) ? p : null; };
+  const calls = t => [...new Set([...t.matchAll(/\b([A-Za-z_]\w*)\s*\(/g)].map(m => m[1]))];
+  const memo = new Map();
+  const leaves = (f, seen) => {                  // (Why f may return with another bank in the window; or null)
+    if (memo.has(f)) return memo.get(f);
+    if (seen.has(f)) return null;
+    seen.add(f);
+    let why = null;
+    if (!/\bhub_back\s*\(/.test(f.text)) {
+      if (/\bhub_map\s*\(/.test(f.text)) why = f.name + ' (hub_map)';
+      else for (const c of calls(f.text)) {
+        const g = part(c) || find(f, c), w = g && g !== f ? leaves(g, seen) : null;
+        if (w) { why = f.name + ' -> ' + w; break; }
+      }
+    }
+    memo.set(f, why);
+    return why;
+  };
+  const faults = [];
+  let n = 0;
+  for (const f of [...fns.values(), ...[...local.values()].flatMap(m => [...m.values()])]) {
+    if (!/^OV\d+/.test(f.seg)) continue;
+    for (const c of calls(f.text)) {
+      const p = local.get(f.file).has(c) ? null : part(c), w = p ? leaves(p, new Set()) : null;
+      n += p ? 1 : 0;
+      if (!w) continue;
+      const k = f.raw.findIndex(l => new RegExp('\\b' + c + '\\s*\\(').test(l.replace(/\/\*.*?\*\//g, '')));
+      if (new RegExp('windowcheck:\\s*' + c + '\\b').test(f.raw.slice(k, k + 3).join('\n'))) continue;
+      faults.push(path.basename(f.file) + ':' + (f.at + k) + ' ' + f.name + ' (' + f.seg + ') calls ' + c + ' (' + p.seg + '\'s s_' + c + '): ' + w);
+    }
+  }
+  if (faults.length) throw new Error('an overlay\'s call into a swapped part that may leave another bank in the window (build.js\'s windowChecked; ' +
+    'put it back, hub_here ... hub_back, or mark a call known safe "windowcheck: NAME"):\n  ' + faults.join('\n  '));
+  return n;
+}
+
 // The games' room: each C program of games/ (its map, obj/games/NAME/NAME.map, and its link, its own NAME.cfg or
 // sdk/c/hydra.cfg): its main RAM free, from its BSS's end to its swapped parts' area (__SWAP_START__: games/dq0/
 // swap.inc), or, with none, to the C stack's least room (__RAMTOP__ - __STACKMIN__); each overlay's bytes free (OVn,
@@ -400,6 +468,7 @@ function cprog(dir, objdir, out, extra = []) {
     objs = compileC(csources(dir), objdir, cc, ovls);
   }
   if (fs.existsSync(own)) partsChecked(csources(dir), objdir, fs.readFileSync(own, 'latin1'));
+  if (fs.existsSync(own)) windowChecked(csources(dir));
   run(LD65, ['-C', fs.existsSync(own) ? own : at('sdk', 'c', 'hydra.cfg'), '-o', out, '-m', path.join(objdir, name + '.map'), '-Ln', path.join(objdir, name + '.lbl'),
     ...objs, at('obj', 'sdk', 'c', 'hydra.lib')]);
   exportsOf.set(name, writeExports(path.join(objdir, name + '.map'), out.replace(/\.hyx$/, '') + '.exp'));
@@ -809,4 +878,4 @@ if (require.main === module) {
   failed(null);
 }
 
-module.exports = { build, buildBoth, buildGames, buildModule, readManifest, hwtest, prog, clib, cprog, headroom, lastBuildFailed };
+module.exports = { build, buildBoth, buildGames, buildModule, readManifest, hwtest, prog, clib, cprog, headroom, lastBuildFailed, windowChecked };
