@@ -279,6 +279,9 @@ unsigned char __fastcall__ harn_get_ip (const harn_char* c);
 unsigned char __fastcall__ harn_get_fp (const harn_char* c);
 unsigned char __fastcall__ harn_get_up (const harn_char* c);
 unsigned char __fastcall__ harn_get_ep (const harn_char* c);
+extern const harn_char* harn_ep_of;             /* (A character whose EP harn_get_ep gives as harn_ep_kept, the program's
+                                                **   to set while its load and endurance can't change: 0 none) */
+extern unsigned char harn_ep_kept;
 unsigned char __fastcall__ harn_get_pp (const harn_char* c);
 
 /* ---- Tests (Skills 5, 21-22) */

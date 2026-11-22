@@ -241,6 +241,7 @@ ovcall:
             OVFN        dealt, 10           ; (Overlay 10's, 2026-11-19: overlay 2's room)
             OVFN        aspect_of, 10
             OVFN        harn_fall, 10       ; (HarnMaster's falls, the library's: hfall.c, the main RAM's room)
+            OVFN        test, 10            ; (A purpose's test: dq0harn.c's, the main RAM's room, speed12)
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0harn.cfg's SWAP, a part at a time,
 ; copied there from overlay 4's bank as it's called)

@@ -301,11 +301,20 @@ unsigned char __fastcall__ harn_get_up (const harn_char* c)
     return harn_get_ip (c) + harn_get_fp (c);
 }
 
-/* EP: the load over endurance, rounded (Combat 2: "rounded off to the nearest whole number") */
+/* EP: the load over endurance, rounded (Combat 2: "rounded off to the nearest whole number").  The program's character
+** harn_ep_of's, harn_ep_kept (set while its load and endurance can't change: a blow's dozen calls one reckoning,
+** dq0harn's) */
+const harn_char* harn_ep_of;
+unsigned char harn_ep_kept;
+
 unsigned char __fastcall__ harn_get_ep (const harn_char* c)
 {
-    unsigned char e = harn_end (c);
+    unsigned char e;
 
+    if (c == harn_ep_of) {
+        return harn_ep_kept;
+    }
+    e = harn_end (c);
     return (harn_get_load (c) * 2 + e) / (2 * e);
 }
 
