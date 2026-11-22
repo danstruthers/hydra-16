@@ -1,5 +1,5 @@
 # deities.txt - (the bare world: ../../WORLDS.md) its one deity, in the first world's deities.txt's form (its keys
-# there; lore.h's struct deity): dq0d's make.js makes it this world's deities.dat (lib/dq0/worlds/bare/deities.dat), and
+# there; lore.h's struct deity): dq0d's make.js makes it this world's deities.dat (lib/worlds/bare/deities.dat), and
 # its name gods.txt, the command parser's word for it as a game in this world begins (dq0 -w bare: "call on Wend").
 
 deity     | Wend

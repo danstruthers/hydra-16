@@ -1,6 +1,6 @@
 # peoples.txt - (the bare world: ../../WORLDS.md) its peoples and their ways of building, in the first world's
 # peoples.txt's form (its keys there; lore.h's struct people): dq0d's make.js makes it this world's peoples.dat
-# (lib/dq0/worlds/bare/peoples.dat), which nothing reads at run time yet.
+# (lib/worlds/bare/peoples.dat), which nothing reads at run time yet.
 
 people    | the Hearthfolk | hearth
 kinds     | bandit banlord

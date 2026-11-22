@@ -21,7 +21,7 @@ int __fastcall__ lines_open (const char* path);
 unsigned char __fastcall__ read_line (struct line* l, char* t);
 void lines_close (void);
 
-/* ---- The data file (a world's history.dat, lib/dq0/worlds/NAME's: themegen's make.js's, the world's history.txt with the
+/* ---- The data file (a world's history.dat, lib/worlds/NAME's: themegen's make.js's, the world's history.txt with the
 ** goal kinds and the bestiary: ../dq0/WORLDS.md), its keys (make.js's KEYS); its text in banks of the program's own,
 ** each read leaving the window as it was (a bank program's in it, as it calls) */
 enum { TK_PEOPLE = 1, TK_LAND, TK_WORK, TK_NAME, TK_BUILT, TK_REUSED, TK_NOUN, TK_ENDED, TK_CLUE, TK_ROOMS, TK_USES,

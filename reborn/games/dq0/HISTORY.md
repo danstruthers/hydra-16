@@ -31,7 +31,7 @@ when and why each piece was decided, in the user's words, DECISIONS.md's.
   planned: the theme checker's, below, and the maker's).  Its words are data: the world's history.txt (WORLDS.md: the
   peoples, the lands, the tongues, the works, how eras end, the strata's names, the clues, the rooms' words, the mints;
   the first world's, games/dq0/worlds/first, the default), goals.txt (the goal kinds, the game's), made each world's
-  lib/dq0/worlds/NAME/history.dat at build time by its make.js, which holds every goal kind to a theme's (its lines
+  lib/worlds/NAME/history.dat at build time by its make.js, which holds every goal kind to a theme's (its lines
   compiled and checked, their slots filled) and every world to what themegen wants of one.  themegen -w NAME makes a
   history in another world (dq0 -w NAME's).
 - **themec** (games/themec): `themec [-o RECORD] THEME` compiles a theme into its record (theme.h's struct theme:

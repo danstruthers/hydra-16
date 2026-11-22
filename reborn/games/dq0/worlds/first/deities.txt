@@ -1,7 +1,7 @@
 # deities.txt - (the first world: ../../WORLDS.md) its deities: its pantheon, the one every region shares (modelled on
 # what HarnMaster Religion's entries cover: a deity's domains, temper, followers, holy days, symbols, temples,
 # servants and enemies; the names and the words the game's own).  dq0d's make.js makes it this world's deities.dat
-# (lib/dq0/worlds/first/deities.dat: lore.h's struct deity a deity, 64 bytes, the first none, its name the count; their
+# (lib/worlds/first/deities.dat: lore.h's struct deity a deity, 64 bytes, the first none, its name the count; their
 # words after), which nothing reads at run time yet (the history's generator to come: who worshipped what, what their
 # temples were like, which of the bestiary serve which god); and the deities' names, gods.txt (the first world the
 # default, its names obj/games/dq0g.txt too, for the UI: the catalogue's bank's last records, each deity's name a word

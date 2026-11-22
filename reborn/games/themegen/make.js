@@ -1,7 +1,7 @@
 // make.js - (themegen) its data files, after its build (build.js calls build): each world's (../dq0/worlds/NAME:
 // ../dq0/WORLDS.md) history.txt (the history's words), with goals.txt (the goal kinds, the game's) and the bestiary
 // (../dq0d/kinds.txt and factions.txt: the kinds that may live in a dungeon, by style and stratum, and their factions,
-// the game's), made obj/games/worlds/NAME/history.dat (the card's lib/dq0/worlds/NAME/history.dat), which themegen
+// the game's), made obj/games/worlds/NAME/history.dat (the card's lib/worlds/NAME/history.dat), which themegen
 // reads as it starts (themegen -w NAME; the default world's with none):
 // "TG", 1, the lines' count (two bytes), each line's key (themegen.c's TK_*) and its place in the text (two bytes),
 // then the text: each line its values' count and its values, each 0-ended, no line across an 8K bank's edge (themegen

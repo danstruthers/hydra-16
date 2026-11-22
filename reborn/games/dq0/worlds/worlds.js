@@ -1,6 +1,6 @@
 // worlds.js - the worlds (../WORLDS.md): a folder here each, its name the world's (dq0 -w NAME, themegen -w NAME; 8
 // letters at most, the save's), its files history.txt (themegen's make.js: history.dat), peoples.txt and deities.txt
-// (dq0d's make.js: peoples.dat, deities.dat and gods.txt), on the card in lib/dq0/worlds/NAME.  The default world, a
+// (dq0d's make.js: peoples.dat, deities.dat and gods.txt), on the card in lib/worlds/NAME.  The default world, a
 // game's with no -w: the first (theme.h's WORLD_DEFAULT), its files on the card lib/dq0's own as they were
 // (themegen.dat, dq0f.dat, dq0g.dat: sdcard.txt's); its deities' names the catalogue's bank's too (dq0w's make.js:
 // obj/games/dq0g.txt), so a game in it opens no file of them.  The build's alone: nothing on the card reads this.

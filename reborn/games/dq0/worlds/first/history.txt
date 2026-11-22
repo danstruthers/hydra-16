@@ -2,7 +2,7 @@
 # began with (G3: its own peoples and names, none of HarnWorld's), its peoples, its lands, what the peoples made and how
 # it ended, the strata's names, the clues each era leaves, the rooms' words and their light; its tongues' sounds, the
 # realms and mints of today, and which of its peoples hold, settle or raid.  themegen's make.js makes it this world's
-# history.dat (lib/dq0/worlds/first/history.dat) with goals.txt and the bestiary (dq0d/kinds.txt, factions.txt);
+# history.dat (lib/worlds/first/history.dat) with goals.txt and the bestiary (dq0d/kinds.txt, factions.txt);
 # themegen reads it as it starts (themegen -w first, or no -w: the default world).  The same line format as a theme's (a
 # key and its values between bars; a line begun with spaces goes on with the one before).  In the words, a slot is a %
 # and a letter, filled as the history's made:

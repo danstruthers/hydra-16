@@ -57,7 +57,7 @@ struct save {
     unsigned char   plain;                      /* (The map in plain letters, bit 0: the player's, dq0.h's; bits 1-7 a
                                                 **   vow of fasting's time left as it was kept, in FAST_STEPs rounded
                                                 **   up, 0 none: hself.c's fasting, the user's, 2026-11-11) */
-    char            world[9];                   /* The world (dq0 -w NAME's, WORLDS.md's: lib/dq0/worlds/NAME; "" the
+    char            world[9];                   /* The world (dq0 -w NAME's, WORLDS.md's: lib/worlds/NAME; "" the
                                                 **   default), last: the outcome and Q where they were */
 };
 

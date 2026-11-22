@@ -1,6 +1,6 @@
 /*
 ** lore.h - Dingus Quest Zero's worlds' lore, as data (Phase 3D: the history's; ../dq0/WORLDS.md): a world's peoples and
-** their ways of building (games/dq0/worlds/NAME/peoples.txt, made lib/dq0/worlds/NAME/peoples.dat) and its deities
+** their ways of building (games/dq0/worlds/NAME/peoples.txt, made lib/worlds/NAME/peoples.dat) and its deities
 ** (deities.txt, made deities.dat), each file a
 ** record a people (or a deity), the first none (its name's first byte the records' count), then their words, each
 ** 0-ended, an offset from the file's start (0: none).  make.js lays them out the same.  And the kinds' habitats, the

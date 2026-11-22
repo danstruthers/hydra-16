@@ -12,7 +12,7 @@
 ** is outside the game while it runs), into /ram/dq0.hm; a ruleset with none makes its own.  The rules: the ruleset's
 ** name (RULESETS.md: harn, HarnMaster's, if none's given; null, flat odds), its referee libdir/dq0NAME (the save's: a
 ** game carried on keeps its own).  The world: its name (WORLDS.md: first, the game's own, if none's given; bare), its
-** files libdir/worlds/NAME (the save's too; a dungeon after the first the last one's, unless -w says another).  The tests' own: -C, -a, -T, -K (the kit as it was before the outfits, the denizens
+** files gamedir/lib/worlds/NAME (the save's too; a dungeon after the first the last one's, unless -w says another).  The tests' own: -C, -a, -T, -K (the kit as it was before the outfits, the denizens
 ** with none of theirs: their dice as they were), and -I (no engage initiative test, nor a grope's test
 ** while engaged: HOUSE.md's, the user's way to keep the tests' fights as they were).
 **
@@ -838,14 +838,14 @@ static void world_words (void)
 
 #pragma code-name (push, "SW7CODE")             /* (Part 7's: part 1 full) */
 #pragma rodata-name (push, "SW7RODATA")
-/* Another world's deities' names (WORLDS.md: lib/dq0/worlds/NAME/gods.txt, spaces between) into the parser's words at n,
+/* Another world's deities' names (WORLDS.md: lib/worlds/NAME/gods.txt, spaces between) into the parser's words at n,
 ** the commands' bank mapped after */
 void s_gods (void)
 {
     int fd, got;
 
-    strcpy (lb + 300, libdir);
-    strcat (lb + 300, "/worlds/");
+    strcpy (lb + 300, gamedir);
+    strcat (lb + 300, "/lib/worlds/");
     strcat (lb + 300, sv.world);
     strcat (lb + 300, "/gods.txt");
     if ((fd = open (lb + 300, O_RDONLY)) >= 0) {
@@ -2940,7 +2940,7 @@ unsigned char __fastcall__ s_args (int argc, char* argv[])
         } else if (!strcmp (argv[i], "-r") && i + 1 < argc) {
             rules = argv[++i];                  /* (The ruleset, by its name: its referee dq0NAME) */
         } else if (!strcmp (argv[i], "-w") && i + 1 < argc) {
-            wname = argv[++i];                  /* (The world, by its name: lib/dq0/worlds/NAME) */
+            wname = argv[++i];                  /* (The world, by its name: lib/worlds/NAME) */
         } else if (!strcmp (argv[i], "-p") && i + 1 < argc) {
             ++i;
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :

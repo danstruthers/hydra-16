@@ -51,10 +51,10 @@ games/lib/dq0/dq0d.exp ../obj/games/dq0d.exp ;   its exports, for its bank progr
 games/lib/dq0/popgen.bp ../obj/bank/popgen.bp ;   populations from a theme's inhabitants
 games/lib/dq0/dq0g.dat ../obj/games/worlds/first/deities.dat ;   the worlds (games/dq0/WORLDS.md): the default's
 games/lib/dq0/dq0f.dat ../obj/games/worlds/first/peoples.dat ;   deities and peoples (lore.h) here as they were, its
-games/lib/dq0/worlds/bare/deities.dat ../obj/games/worlds/bare/deities.dat ;   history below; another's in a folder
-games/lib/dq0/worlds/bare/peoples.dat ../obj/games/worlds/bare/peoples.dat
-games/lib/dq0/worlds/bare/gods.txt ../obj/games/worlds/bare/gods.txt
-games/lib/dq0/worlds/bare/history.dat ../obj/games/worlds/bare/history.dat
+games/lib/worlds/bare/deities.dat ../obj/games/worlds/bare/deities.dat ;   history below; another's lib/worlds/NAME
+games/lib/worlds/bare/peoples.dat ../obj/games/worlds/bare/peoples.dat ;   (not in lib/dq0: its files' places, and so
+games/lib/worlds/bare/gods.txt ../obj/games/worlds/bare/gods.txt ;   the start's opens, as they were)
+games/lib/worlds/bare/history.dat ../obj/games/worlds/bare/history.dat
 games/lib/dq0/inhabit.txt ../games/dq0d/inhabit.txt ;   a theme file's inhabitants, by hand
 games/lib/dq0/dq0s  ../obj/games/dq0s.hyx
 games/lib/dq0/dq0s.dat ../obj/games/dq0s.dat

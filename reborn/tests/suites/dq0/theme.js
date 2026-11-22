@@ -231,7 +231,7 @@ module.exports = {
           const t = saidTheme(out, 'cat /ram/w' + s + '/theme.txt'), b = t.match(first);
           if (b) f.push('seed ' + s + ': the first world\'s "' + b[0] + '" in it: ' + JSON.stringify(t.slice(Math.max(0, b.index - 100), b.index + 60)));
         }
-        if (!/% echo nosuch \$status\nnosuch 1\n/.test(o) || !/its world's data \(lib\/dq0\/worlds\/nosuch\/history\.dat\) not found/.test(o)) f.push('a world that isn\'t one not refused: ' + JSON.stringify(o.slice(o.indexOf('nosuch'), o.indexOf('nosuch') + 200)));
+        if (!/% echo nosuch \$status\nnosuch 1\n/.test(o) || !/its world's data \(\S*\/lib\/worlds\/nosuch\/history\.dat\) not found/.test(o)) f.push('a world that isn\'t one not refused: ' + JSON.stringify(o.slice(o.indexOf('nosuch'), o.indexOf('nosuch') + 200)));
         const p = dq0Prose(out), bare = p.slice(p.indexOf('dq0 -w bare'), p.indexOf('dq0 -r null -p t -d /ram/bw')), kept = p.slice(p.indexOf('dq0 -r null -p t -d /ram/bw'), p.indexOf('dq0 -r null -p t -s 70000')), dflt = p.slice(p.indexOf('dq0 -r null -p t -s 70000'));
         if (!/there is an old place\./.test(bare)) f.push('the game in the bare world: not its story: ' + JSON.stringify(bare.slice(0, 600)));
         const after = (s, cmd) => ((new RegExp('> ' + cmd + '\\s*(?:> ' + cmd + ')?\\s*([^>]*)').exec(s) || [])[1] || '');   // (Its words: the line's echo once)

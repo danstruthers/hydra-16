@@ -1,6 +1,6 @@
 # peoples.txt - (the first world: ../../WORLDS.md) its peoples and their ways of building: who comes to a region in its
 # history, what they build there and how it looks.  dq0d's make.js makes it this world's peoples.dat
-# (lib/dq0/worlds/first/peoples.dat: lore.h's struct people a people, 64 bytes, the first none, its name the count;
+# (lib/worlds/first/peoples.dat: lore.h's struct people a people, 64 bytes, the first none, its name the count;
 # their words after), which nothing reads at run time yet (GAME-CRITIQUE.md's 5.4; the history's generator, histgen,
 # reads the world's history.txt's peoples, which aren't these: the user's, 2026-11-17, neither set canonical): for the
 # history to come, an

@@ -43,7 +43,7 @@
 #define THEME_SIZE      0x1000                  /* A theme's bytes in dq0t.dat (its record, then its words) */
 #define WORLD_DEFAULT   "first"                 /* The default world (WORLDS.md; worlds.js's DEFAULT): its files lib/dq0's
                                                 **   own as they were (themegen.dat, dq0f.dat, dq0g.dat), another's
-                                                **   lib/dq0/worlds/NAME's; the save's world "" */
+                                                **   lib/worlds/NAME's; the save's world "" */
 #define THEME_HEAD      1739                    /* (struct theme's: themec's words after it; make.js's, the build's) */
 #define NTKINDS         8                       /* Its own kinds of things, */
 #define KI_THEME        120                     /*   the catalogue's from here to KI_THEME + NTKINDS - 1 (items.h's

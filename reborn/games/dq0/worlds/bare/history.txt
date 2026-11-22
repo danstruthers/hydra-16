@@ -3,7 +3,7 @@
 # it.  Two peoples, two lands, two tongues, one deity; no raiders (so no prisoner's goal and no scourge's), no people's
 # faction that holds its works, no colony; the bestiary's factions that live in it its folk lines' alone.  Its keys and
 # slots are the first world's history.txt's (WORLDS.md has them all); themegen's make.js makes it this world's
-# history.dat (lib/dq0/worlds/bare/history.dat), holding it to what themegen wants.
+# history.dat (lib/worlds/bare/history.dat), holding it to what themegen wants.
 
 people   | hearthfolk | 1 | dressed | lowland upland | keep temple town tomb | hearth | hearthmk
 people   | delvers | 2 | hewn | upland | mine hold tomb | delving | tally

@@ -19,18 +19,19 @@ plays as it did.  This is what a world supplies, who reads it, and what the game
     makes them **peoples.dat** and **deities.dat**, and the deities' names, spaces between, **gods.txt**);
   - **tongues.h**, if it has one: its tongues' sounds in C, for what names things with no world's data at hand (the
     first world's alone: below).  themegen's make.js holds it to the history's tongue lines.
-- **On the card:** lib/dq0/worlds/NAME/history.dat, peoples.dat, deities.dat and gods.txt (sdcard/sdcard.txt); the
+- **On the card:** lib/worlds/NAME/history.dat, peoples.dat, deities.dat and gods.txt (sdcard/sdcard.txt); the
   default world's (theme.h's WORLD_DEFAULT, "first") lib/dq0's own as they were, themegen.dat, dq0f.dat and dq0g.dat
-  (its gods.txt none: its names are the catalogue's).  So the card's lib/dq0 is as it was but for the worlds folder: a
-  first build with every world in lib/dq0/worlds moved the start's file opens (lib/dq0 three entries the shorter), and
-  with them the real-time games' timing: dq0letstow's "f, menacing" 783,437 cycles, dq0fightcmd's and dq0fightmid's
-  fights met at other moments.  dq0 -w first is the default (its save's world "").
+  (its gods.txt none: its names are the catalogue's).  So the card's lib/dq0 is as it was, its files' places and the
+  start's opens with them: a first build with every world in lib/dq0/worlds (lib/dq0 three entries shorter, one folder
+  more) moved the real-time games' timing (dq0letstow's "f, menacing" 783,437 cycles, dq0fightcmd's and dq0fightmid's
+  fights met at other moments; dq0felled's "go left, played" 694,494 with the folder alone).  dq0 -w first is the
+  default (its save's world "").
 - **Chosen at the start:** dq0 -w NAME (the first world if none's given: games/dq0/worlds/worlds.js's DEFAULT), kept in
   the save (game.dat's head, its last field: life.h's struct save's world, "" the default; SAVE_VER 46).  A game carried
   on keeps its own; a dungeon after the first is in the last dungeon's world, unless -w says another; the rumours
   between dungeons (dq0life's themegen -r) are made in it too.
 - **Who reads it:**
-  - **themegen** (themegen -w NAME: lib/dq0/worlds/NAME/history.dat), as a new game's history is made (a seed of
+  - **themegen** (themegen -w NAME: lib/worlds/NAME/history.dat), as a new game's history is made (a seed of
     65,536 or more, or dq0 -t's), and its bank programs: histgen (the region, the eras, the strata's names, the
     inhabitants), goalgen (the goal's guardians, its people's names), linegen (the story's and the clues' words, the
     rooms' words, the mints) and namegen (every name, by the world's tongue's sounds).  What it makes is the theme
