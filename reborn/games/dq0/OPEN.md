@@ -67,27 +67,11 @@ L1-L5 from DECISIONS.md:5878-5885, "No look when the light's the same".
 - **L5. A sconce's torch gone out in a room lit by its lamps**: no look; the sconce's torch shown unlit at the next
   look (built). Keep it?
 
-
 ## Hands, lights and the pack
 
 H8 from built/2026-11-17-things.md; its other questions were answered on 2026-11-17 (DECISIONS.md).
 - **H8. The thing a tool is for is kept in hand only when its request names it.** A rope tied to a held spike keeps
   the rope and stows the spike. Protect it by the act instead?
-- **H15. Lamp oil spilt on the floor** ("pour out the oil", "empty the vial" with lamp oil in it): built, it's gone,
-  as water poured away is. Should it lie there a while instead, burning if a flame reaches it, or slippery underfoot?
-  Neither is built: a new behaviour the user hasn't asked for.
-  - built/2026-11-19-oil1.md, its open question 1.
-
-
-
-- **H16. The flask of oil as an ordinary container?** It keeps its oil as fuel, not as a liquid inside it, so it can't
-  hold water and pours by measure (built). Make it a container holding lamp oil, like the vial?
-  - built/2026-11-19-oil1.md, open question 2.
-
-- **H17. How deep in a container set down is a thing "to hand"?** A thing in an open container lying within reach is
-  now to hand by name, one level deep, if the character knows it's there (built). A thing in a sack inside a pack on
-  the floor isn't ("take the X from the sack" works). Deeper levels to hand too, each taking more time?
-  - built/2026-11-20-hear2.md, open question 2.
 
 ## Knocked out
 
@@ -120,29 +104,6 @@ only quit and help taken, nothing sensed). These are the rest.
   test of each event against a black-out, is called on every event: leave it in main RAM (built), or move it to an
   overlay, at a cost in time?
   - DECISIONS.md:5665-5666 (its point 7).
-
-- **K10. A command typed mid-round of the character's own fight** waits for the whole round: the referee's test, the
-  world's swaps and the blow's words come first, then the command's answer (built; first letters 500K-630K, under the
-  720K target). Tell the command's own first words first ("You stop fighting." before the blow), reordering what's told?
-  - built/2026-11-20-start2.md, open question 1.
-- **K11. A sleeper struck takes the blow undefended** (RS_ASLEEP), the character as a sleeping creature already was
-  (built, felled1's, one path). A sleeper struck by a killer can die from the first blow. Keep it?
-  - built/2026-11-21-felled1.md.
-- **K12. A creature nobody asks about** rolls all its due shock rolls the next time it's asked (built), like the
-  late denizen's catch-up all at once. Keep it?
-  - built/2026-11-21-felled1.md, open questions.
-- **K13. The character's state reads "senseless"** for the whole black-out (built), not its coming-round state set
-  as it falls. Keep it?
-  - built/2026-11-21-felled1.md, open questions.
-- **K14. A knockout from a fall or a trap** now goes through the same path as a blow's, its rolls a round each
-  (built). Keep it?
-  - built/2026-11-21-felled1.md, open questions.
-- **K15. A new wound or fatigue during the black-out** changes the penalty for the rolls after it (built). The old
-  code fixed the penalty as the blow fell. Keep it?
-  - built/2026-11-21-felled1.md, open questions.
-- **K16. A game loaded mid black-out** starts its rolls again from its next round, since the roll counts aren't
-  saved (built). Save them?
-  - built/2026-11-21-felled1.md, open questions.
 
 ## The step planner, the reach and time
 

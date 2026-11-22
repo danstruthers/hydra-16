@@ -6940,3 +6940,19 @@ M3-M5), with the images' commit.
   passes, not an hour of rolls at once at the moment it falls. The same rule and the same odds; the dice fall in
   another order, so a fight's exact outcome can change. Chosen so that a command typed as a foe falls is answered in
   time (D17): an hour of rolls at once cost up to ~730K cycles.
+
+## Knocked out, oil and reach: the user's answers (2026-11-21)
+
+- **A sleeper struck wakes on the first blow** (K11): the first blow lands undefended, and wakes the sleeper; for
+  every actor alike, the character and every creature (one path). Not "struck undefended till it dies".
+- **A command typed mid-round waits for the round** (K10): the blow's words first, then the command's, as built.
+- **A senseless creature nobody asks about catches up its rolls when next asked** (K12), as built.
+- **The character reads "senseless" for the whole black-out** (K13), as built.
+- **A knockout from a fall or a trap goes the same way as a blow's** (K14), its rolls a round each, as built.
+- **A wound or fatigue taken while out makes the later rolls harder** (K15), as built.
+- **The shock rolls' counts are saved with the game** (K16): a game loaded mid black-out goes on where it was.
+- **Lamp oil poured out lies on the floor a while** (H15): a pool that burns if a flame reaches it, and is slippery
+  underfoot, for every actor.
+- **The flask of oil is an ordinary container** (H16) holding lamp oil as a liquid, like the vial: emptied, refilled
+  with anything.
+- **A thing known in a container within reach is to hand at any depth** (H17), each level deeper taking more time.
