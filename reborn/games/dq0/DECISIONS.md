@@ -6933,3 +6933,10 @@ M3-M5), with the images' commit.
   behind a resting character can pick the purse before it's seen.
 - **The start's work finishes before the first prompt** (the denizens' kits, the map's scan), so the first command
   is answered on time; the start takes a little longer.
+
+## A senseless foe's shock rolls as its time passes (the user's, 2026-11-21)
+
+- **A foe knocked senseless rolls its shock test as its time comes**, each round (or minute) as the game's time
+  passes, not an hour of rolls at once at the moment it falls. The same rule and the same odds; the dice fall in
+  another order, so a fight's exact outcome can change. Chosen so that a command typed as a foe falls is answered in
+  time (D17): an hour of rolls at once cost up to ~730K cycles.
