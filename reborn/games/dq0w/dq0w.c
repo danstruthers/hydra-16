@@ -2821,6 +2821,41 @@ void __fastcall__ s_bearings_off (unsigned feet)
         event (E_BEARING, 0, k);
     }
 }
+
+/* A senseless one (who: 0 the character, else an actor's entry plus 1), its shock rolls due by now asked (RS_ROUSE: a
+** round each as the game's time passes, the user's, 2026-11-21): the tenths it's senseless still (its next roll's,
+** the reply's w2), 0 come round (a referee with none, 0).  Every actor's by this one ask: a denizen's as its time out
+** comes (wbody.c's den_intents, its busy time its next roll's); the character's, main's each time round as it lies
+** senseless (the referee's summary, or a blow's latch, pc_ko), its bearings off as it falls first (once: pc_down),
+** asked as its time comes (the hub's pc_out, pc_ready: its busy time then its next roll's).  Before the denizens'
+** turns, so none finds it free between its rolls; main's branch one call (its room) */
+unsigned __fastcall__ s_out_still (unsigned char who)
+{
+    static unsigned t;
+
+    hub_map (0);
+    if (!who) {
+        if (!pc_down) {
+            s_bearings_off (BO_OUT);            /* (Knocked senseless: its bearings astray as it comes round, slice
+                                                **   4.2's; and fallen, up again as it comes round, the book's Rise,
+                                                **   as every actor's, 2026-10-29) */
+            hub_map (0);
+        }
+        if (!HUB->pc_out || HUB->now < HUB->pc_ready) {
+            return 0;
+        }
+    }
+    W_SLOT.kind = RS_ROUSE;
+    W_SLOT.actor = who;
+    W_SLOT.w2 = 0;
+    hub_ask (SLOT_WORLD);
+    t = W_SLOT.w2;
+    W_SLOT.state = REQ_FREE;
+    if (!who) {
+        HUB->pc_ready = HUB->now + t;
+    }
+    return t;
+}
 #pragma bss-name (pop)
 
 #pragma code-name (pop)
@@ -7613,11 +7648,9 @@ int main (int argc, char* argv[])
         if (!(((unsigned char) HUB->pcsum.cond & C_UNCONSCIOUS) | pc_ko)) {
             pc_down = 0;                        /* (A blow's knockout latched as its reply came, wfight.c's: seen
                                                 **   though it's over before this pass looks, 2026-11-13) */
-        } else if (!pc_down) {
-            bearings_off (BO_OUT);              /* (Knocked senseless: its bearings astray as it comes round, part
-                                                **   52's) */
-            /* (And fallen: up again as it comes round, the book's Rise, as every
-                                                **   actor's, 2026-10-29) */
+        } else {
+            out_still (0);                      /* (Senseless: its bearings off as it falls, its shock rolls due asked
+                                                **   as their time comes, part 52's: the user's, 2026-11-21) */
         }
         pc_ko = 0;
         ++HUB->beat[T_WORLD];

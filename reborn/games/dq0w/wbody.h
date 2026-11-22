@@ -137,6 +137,8 @@ unsigned char __fastcall__ den_first (unsigned char k, unsigned char away);    /
 unsigned char __fastcall__ unlit_at (unsigned char sn, unsigned x, unsigned y);  /* (dq0w.c's) A square dark to
                                                 **   a denizen: unseen lit, no room's own light (the chunk in the window) */
 void equip_now (void);                          /* (Part 49: wlimbs.c) What's to hand told the referee at once */
+unsigned __fastcall__ out_still (unsigned char who);    /* (Part 52: dq0w.c) A senseless one's shock rolls due
+                                                **   asked (RS_ROUSE): the tenths it's senseless still, 0 come round */
 void __fastcall__ drop_held (unsigned char h, unsigned char ring);   /* (Part 49) What the character holds in hands h
                                                 **   (DH_*) let go of, fumbled: told in the denizens' ring (ring 1) or
                                                 **   the world's */

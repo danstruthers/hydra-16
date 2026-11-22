@@ -339,3 +339,4 @@ RS_DICE         a(how) seeded:0; b rest; w1 seed; x faces  -> c unrolled; w1 rol
 RS_WIELD        b thing; x[0-1] held[]  -> result which  # (At a thing; the kinds held; 1 x[0]'s, 2 x[1]'s, 0 none)
 RS_OUTFIT       -  -> result none; a level; w1 money; w2 seed; x[0-1] tags[]; x[2] heft; x[3] bears
                 # (0xFF none; its wealth; farthings; its draw's seed; its tags' bits (the ruleset's); its weapons' version; quarter pounds)
+RS_ROUSE        -  -> w2 out                # (Its shock rolls due by now: the tenths it's senseless still, 0 come round, 0xFFFF dead)

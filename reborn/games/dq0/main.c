@@ -916,6 +916,25 @@ unsigned char stir_held;                        /* (A denizen's stir held while 
 ** now 458,000-516,000; a look's or what's carried typed then the slower, 320,000 at most).  Overlay 13's, the hub's fields through hub_mem (the main RAM's room, 2026-11-20) */
 #pragma code-name (push, "OV13CODE")
 #pragma rodata-name (push, "OV13RODATA")
+/* The character's black-out's end (out_until) come by an event's clock: senseless still, as the world has it (the hub's
+** pc_out: its shock rolls a round each as its time comes, the user's, 2026-11-21; each round's busy time, pc_ready, its
+** next), its end the world's next (out_until moved on): 1; come round, 0 (numb's) */
+unsigned char o_still_out (void)
+{
+    unsigned char c;
+    unsigned long r;
+
+    hub_mem (0, &c, (const void*) &HUB->pc_out, 1);
+    if (!c) {
+        return 0;
+    }
+    hub_mem (0, &r, (const void*) &HUB->pc_ready, 4);
+    if (r > out_until) {
+        out_until = r;
+    }
+    return 1;
+}
+
 void o_fore_sync (void)
 {
     unsigned char q[2], c, k, f, r[5];
@@ -1043,7 +1062,7 @@ static void __fastcall__ numb (const struct msg* m)
 {
     unsigned char k = out_told;
 
-    if (k && m->t >= out_until) {
+    if (k && m->t >= out_until && !still_out ()) {
         out_told = 0;
         if (k & 2) {
             look (0);                           /* (Its light changed as it lay: the place as it is now, those there) */

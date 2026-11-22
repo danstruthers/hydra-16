@@ -216,12 +216,19 @@ void s_den_intents (void)
         }
         BD_GET ((m.who - 1) & 7);
         was = bd.doing;
-        if (was == DO_DOWN && bd.ready > HUB->now && m.kind != I_ENTER && m.kind != I_LEAVE) {
-            m.kind = I_WAIT;                    /* (Senseless till it comes round: it does nothing meanwhile, its mind's
-                                                **   intent posted before it fell, or a rouse, no matter; it lies
-                                                **   there, its doing kept, 2026-10-29) */
-            I_WAIT_TENTHS (m) = 0;
-            I_WAIT_DOING (m) = I_WAIT_FACE (m) = 0xFF;
+        if (was == DO_DOWN && m.kind != I_ENTER && m.kind != I_LEAVE) {
+            if (bd.ready <= HUB->now) {
+                bd.ready = HUB->now + out_still (bk + 1);   /* (Its time out come: its shock rolls due by now
+                                                **   asked, as the character's are: senseless still, its next
+                                                **   roll's, 2026-11-21) */
+            }
+            if (bd.ready > HUB->now) {
+                m.kind = I_WAIT;                /* (Senseless till it comes round: it does nothing meanwhile, its
+                                                **   mind's intent posted before it fell, or a rouse, no matter; it
+                                                **   lies there, its doing kept, 2026-10-29) */
+                I_WAIT_TENTHS (m) = 0;
+                I_WAIT_DOING (m) = I_WAIT_FACE (m) = 0xFF;
+            }
         }
         if (I_DEN_DOING (m) != 0xFF) {
             bd.doing = I_DEN_DOING (m);

@@ -357,12 +357,20 @@ static void status (void)
 
     strcpy (HUB->pcstatus, "UP ");
     strcat (HUB->pcstatus, utoa (harn_get_up (&pc), b, 10));
+    tnow = HUB->now;
+    if (pc.state == HARN_UNCONSCIOUS) {
+        rouse (&pc, &pc_out, 0);                /* (Senseless: its shock rolls due by now, as its time comes) */
+    }
     s->cond = conditions ();
-    if (pc_out > (tnow = HUB->now)) {
+    if (pc_out > tnow) {
         s->cond |= C_UNCONSCIOUS;               /* (Senseless till it comes round: the minds' to know it helpless) */
     }
     strcat (HUB->pcstatus, s->cond & C_UNCONSCIOUS ? word[1] : pc.state ? word[pc.state & 3] : s->cond & C_BLEEDING ?
         " BLEEDING" : "");
+    if (ko_at[0]) {
+        s->cond |= C_UNCONSCIOUS;               /* (Its fall's time kept till it comes round: dead as it lay, the world's
+                                                **   senseless still, no turn of its own after; its status as it was) */
+    }
     s->health = health_of (&pc);
     k = harn_move (&pc);                       /* (Walking: half its Move, squares a round: Combat 6; in shock, half
                                                 **   that, and no faster: Skills 22's walk or crawl at half move) */
@@ -472,6 +480,7 @@ void __fastcall__ s_load_pc (struct req* r)
     strncpy (path, r->text, sizeof path - 1);
     RS_LOAD_PC_BAD (*r) = 1;
     memset (pc_dr, 0, sizeof pc_dr);           /* (No dressings: its file's "dressed" line's) */
+    unrouse ();                                 /* (Not senseless: its shock rolls none, felled1's) */
     pv.hr = pd.hr = afffl = 0;                 /* (No venom, no sickness, no rest yet: its file's "body" line's; */
     body_line (path, 3);                       /*   no skills used yet, its "body u" lines') */
     rest_m = HUB->pcsum.timesense = 0;
@@ -848,12 +857,18 @@ void __fastcall__ rf_answer (struct req* r)
     signed char g;
 
     stress_lv = 0;                              /* (A skill's use here routine, but as it's found below: skills.c's) */
+    if (pc.state == HARN_UNCONSCIOUS && r->kind != RS_DICE) {
+        tnow = HUB->now;
+        rouse (&pc, &pc_out, 0);                /* (The character senseless: its shock rolls due by now first, whatever's
+                                                **   asked, as its time comes; its time out the next's, 2026-11-21) */
+    }
     switch (r->kind) {
     case RS_NEW_ACTOR:                          /* (The fights': overlay 2's, in a copy, as the harm's) */
         strncpy (bkey, r->text, sizeof bkey - 1);
     case RS_ATTACK:
     case RS_MORALE:
     case RS_WIELD:                              /* (What it would strike with: gear.c's, through fight's) */
+    case RS_ROUSE:                              /* (A senseless one's shock rolls due: fight.c's) */
         tnow = r->kind == RS_ATTACK && RS_ATTACK_WHEN (*r) ? RS_ATTACK_WHEN (*r) : HUB->now;   /* (A blow at its
                                                 **   moment, the world's: a denizen's its intent's, 2026-11-13) */
         nobreak = HUB->pc_lump & PL_NOFACE;
