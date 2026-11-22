@@ -76,7 +76,7 @@ module.exports = {
           '\u0101? ENV$("window") = "0"\r' + '\u010110 print "prog"\r' + '\u0101run\r' + '\u0101exit\r' +
           '\u0101echo $status\r',
       },
-      expect: ['% basic\n> PRINT "Hello, World"; 2 + 3 * 4; 10 / 4; 2 ^ 70\nHello, World 14  5/2  1180591620717411303424 \n> ',
+      expect: ['% basic\nHyBASIC (QuickBASIC\'s kind), BYE to end\n> PRINT "Hello, World"; 2 + 3 * 4; 10 / 4; 2 ^ 70\nHello, World 14  5/2  1180591620717411303424 \n> ',
         'sqr(-4)\n-1  1  7 abA 2i \n> ',
         '> LIST\n10 FOR i = 1 TO 3: GOSUB 100: NEXT: PRINT "done"\n20 END\n100 PRINT i; i * i;: RETURN\n> RUN\n 1  1  2  4  3  9 done\n> ',
         '> RUN\n 3 two\nName? Ann\nHi Ann\n 14 \n> ',
@@ -102,7 +102,7 @@ module.exports = {
         '> PRINT FRE() > 10000\n-1 \n',
         'PRINT x(10000)\n 7 \n',
         'PRINT s$(300)\n 300abcdefghijklmnopqrstuvwxyz\n> BYE\n',
-        '% basic -l\n/ram> print 1 + 1\n 2 \n/ram> echo hello from rc\nhello from rc\n/ram> x = 5\n/ram> ? x * 2\n 10 \n/ram> ls /rom/lib/basic\nprofile.bas\n/ram> cd /rom\n/rom> ',
+        '% basic -l\nHyBASIC (QuickBASIC\'s kind), BYE to end\n/ram> print 1 + 1\n 2 \n/ram> echo hello from rc\nhello from rc\n/ram> x = 5\n/ram> ? x * 2\n 10 \n/ram> ls /rom/lib/basic\nprofile.bas\n/ram> cd /rom\n/rom> ',
         '/rom> echo $status\n0\n/rom> cd /none\n/none: not found\n/rom> echo s=$status\ns=not found\n/rom> %echo forced\nforced\n',
         '/rom> bind\nusage: bind [-a|-b] [-c] new old\n/rom> ? ENV$("window") = "0"\n-1 \n/rom> 10 print "prog"\n/rom> run\nprog\n/rom> exit\n% echo $status\n1\n%'],
       check(m) {

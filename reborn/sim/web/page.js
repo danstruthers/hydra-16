@@ -1,7 +1,8 @@
 // page.js - the browser emulator's page (sim/web.js bundles it with web/page.html): the Hydra-16 runs in a Web Worker
 // (web/worker.js), and this is the rest of the PC around it.
 //   The serial console: a terminal, the VT100 the tests hold the console against (lib/vt.js), drawn on a canvas, its
-// keys sent as a PC terminal (xterm's) sends them, its size told as the PC tool tells it (ESC [ 8 ; rows ; columns t,
+// keys sent as a PC terminal (xterm's) sends them (web/keys.js: through a hidden textarea, so a layout's dead keys
+// and an IME compose their text), its size told as the PC tool tells it (ESC [ 8 ; rows ; columns t,
 // when the Hydra asks with ESC [ 18 t, and as it changes), the mouse's reports when the Hydra asks for them (?1000,
 // ?1006), and the wheel scrolling back through its lines when it doesn't.  A drag selects text and copies it.
 //   The Vera X's screen (Setup: the card in slot 0): its frames as the worker draws them (each line in its time), and
@@ -15,6 +16,7 @@ const { VT } = require('../../../base/sim/lib/vt.js');
 const { KEYNUM } = require('../../../base/sim/lib/keynum.js');
 const { WORKLET } = require('../../../base/sim/lib/worklet.js');
 const { mkfs } = require('./mkfs.js');
+const { LATIN9, latin9, KeyInput } = require('./keys.js');
 
 const $ = id => document.getElementById(id);
 const CLOCK = 3.579545e6;
@@ -137,16 +139,14 @@ function showStatus() {
 // The 16 colours (Windows Terminal's Campbell), and ISO-8859-15's characters where they aren't Latin-1's
 const COLOURS = ['#0c0c0c', '#c50f1f', '#13a10e', '#c19c00', '#0037da', '#881798', '#3a96dd', '#cccccc',
   '#767676', '#e74856', '#16c60c', '#f9f1a5', '#3b78ff', '#b4009e', '#61d6d6', '#f2f2f2'];
-const LATIN9 = { 0xA4: '€', 0xA6: 'Š', 0xA8: 'š', 0xB4: 'Ž', 0xB8: 'ž', 0xBC: 'Œ', 0xBD: 'œ', 0xBE: 'Ÿ' };
-const TO_LATIN9 = Object.fromEntries(Object.entries(LATIN9).map(([k, v]) => [v, +k]));
 // The DEC Special Graphics ($5F-$7E: vt.js keeps them as 0-31)
 const DEC = ' ◆▒␉␌␍␊°±␤␋┘┐┌└┼⎺⎻─⎼⎽├┤┴┬│≤≥π≠£·';
 const glyph = c => c < 0x20 ? DEC[c] : LATIN9[c] || String.fromCharCode(c);
 
 class Term extends VT {
-  constructor(canvas) {
+  constructor(canvas, kbd) {
     super({ cols: 80, rows: 24, scrollback: 1000 });
-    this.cv = canvas; this.cx = canvas.getContext('2d');
+    this.cv = canvas; this.cx = canvas.getContext('2d'); this.kbd = kbd;
     this.modes = {}; this.back = 0; this.sel = null; this.dirty = true; this.blink = true;
     this.font = '15px "Cascadia Mono", "Cascadia Code", Consolas, "DejaVu Sans Mono", Menlo, monospace';
   }
@@ -172,7 +172,7 @@ class Term extends VT {
   draw() {
     if (!this.dirty) return;
     this.dirty = false;
-    const cx = this.cx, cw = this.cw, ch = this.ch, rows = this.view(), focused = document.activeElement === this.cv;
+    const cx = this.cx, cw = this.cw, ch = this.ch, rows = this.view(), focused = document.activeElement === this.kbd;
     cx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     cx.font = this.font; cx.textBaseline = 'middle';
     const top = this.sb.length - this.back;
@@ -239,7 +239,7 @@ class Term extends VT {
   }
 }
 
-const term = new Term($('term'));
+const term = new Term($('term'), $('kbd'));
 const send = s => { if (s) worker.postMessage({ type: 'keys', s }); };
 function tellSize() { send('\x1b[8;' + term.rows + ';' + term.cols + 't'); }
 function setSize(v) {
@@ -250,51 +250,23 @@ function setSize(v) {
 }
 $('size').value = setup.size;
 setSize(setup.size);
-$('size').addEventListener('change', e => { setSize(e.target.value); term.cv.focus(); });
+$('size').addEventListener('change', e => { setSize(e.target.value); term.focus(); });
 
-// A key as xterm sends it (the Hydra's console reads a PC terminal's keys: modules/cons)
-const FKEYS = { F1: 'OP', F2: 'OQ', F3: 'OR', F4: 'OS', F5: '[15~', F6: '[17~', F7: '[18~', F8: '[19~', F9: '[20~', F10: '[21~', F11: '[23~', F12: '[24~' };
-const TILDE = { Insert: 2, Delete: 3, PageUp: 5, PageDown: 6 };
-const CURSOR = { ArrowUp: 'A', ArrowDown: 'B', ArrowRight: 'C', ArrowLeft: 'D', Home: 'H', End: 'F' };
-function keyText(e) {
-  const mod = 1 + (e.shiftKey ? 1 : 0) + (e.altKey ? 2 : 0) + (e.ctrlKey ? 4 : 0);
-  if (CURSOR[e.key]) return mod > 1 ? '\x1b[1;' + mod + CURSOR[e.key] : (term.modes[1] ? '\x1bO' : '\x1b[') + CURSOR[e.key];
-  if (TILDE[e.key]) return '\x1b[' + TILDE[e.key] + (mod > 1 ? ';' + mod : '') + '~';
-  if (FKEYS[e.key]) return '\x1b' + FKEYS[e.key];
-  const alt = e.altKey ? '\x1b' : '';
-  switch (e.key) {
-    case 'Enter': return alt + '\r';
-    case 'Backspace': return alt + (e.ctrlKey ? '\x08' : '\x7f');
-    case 'Tab': return e.shiftKey ? '\x1b[Z' : alt + '\t';
-    case 'Escape': return '\x1b';
-  }
-  if (e.ctrlKey && !e.altKey) {                               // Ctrl and a key: its control character
-    if (e.code.startsWith('Key')) return String.fromCharCode(e.code.charCodeAt(3) & 0x1F);
-    const c = { Space: 0, Digit2: 0, BracketLeft: 27, Backslash: 28, BracketRight: 29, Digit6: 30, Minus: 31, Slash: 31 }[e.code];
-    return c === undefined ? null : String.fromCharCode(c);
-  }
-  if (e.key.length !== 1 || e.metaKey) return null;
-  const b = latin9(e.key);
-  return b === null ? null : alt + b;
-}
-const latin9 = s => {
-  let out = '';
-  for (const ch of s) {
-    const c = ch.codePointAt(0), b = TO_LATIN9[ch] !== undefined ? TO_LATIN9[ch] : c < 256 && !LATIN9[c] ? c : -1;
-    if (b >= 0) out += String.fromCharCode(b);
-  }
-  return out || null;
-};
-
-term.cv.addEventListener('keydown', e => {
+// The keys (web/keys.js): as xterm sends them (the Hydra's console reads a PC terminal's keys: modules/cons), from the
+// hidden textarea that has the terminal's focus; what a layout's dead keys (or an IME) compose, its text
+const keys = new KeyInput(s => { term.sel = null; term.back = 0; term.dirty = true; send(s); });
+const kbd = term.kbd;
+term.focus = () => kbd.focus({ preventScroll: true });
+kbd.addEventListener('keydown', e => {
   if (e.ctrlKey && e.shiftKey && e.code === 'KeyC') { e.preventDefault(); copy(term.sel ? term.selText() : term.allText()); return; }
   if (e.ctrlKey && e.shiftKey && e.code === 'KeyV') { e.preventDefault(); pasteClipboard(); return; }
-  const s = keyText(e);
-  if (s === null) return;
-  e.preventDefault();
-  term.sel = null; term.back = 0; term.dirty = true;
-  send(s);
+  if (keys.keydown(e, term.modes[1])) e.preventDefault();
 });
+let composing = false;
+kbd.addEventListener('compositionstart', () => { composing = true; });
+kbd.addEventListener('compositionend', e => { composing = false; keys.compositionend(e); kbd.value = ''; });
+kbd.addEventListener('input', e => { keys.input(e); if (!composing) kbd.value = ''; });
+term.cv.addEventListener('focus', () => term.focus());       // (The canvas's focus, the textarea's)
 function pasteText(t) {
   const s = latin9(t.replace(/\r\n?/g, '\n').replace(/\n/g, '\r'));
   if (!s) return;
@@ -305,7 +277,7 @@ async function pasteClipboard() {
 }
 let pasteWanted = false;
 document.addEventListener('paste', e => {
-  if (document.activeElement !== term.cv && !pasteWanted) return;
+  if (document.activeElement !== kbd && !pasteWanted) return;
   pasteWanted = false;
   e.preventDefault();
   pasteText(e.clipboardData.getData('text'));
@@ -320,14 +292,14 @@ function flash(t) {
   flashTimer = setTimeout(() => { el.textContent = was; }, 1500);
 }
 $('copy').addEventListener('click', () => copy(term.allText()));
-$('paste').addEventListener('click', () => { pasteClipboard(); term.cv.focus(); });
+$('paste').addEventListener('click', () => { pasteClipboard(); term.focus(); });
 
 // The mouse: the Hydra's (?1000, its reports SGR's with ?1006), or the selection and the scrollback
 const report = (b, c, up) => send(term.modes[1006] ? '\x1b[<' + b + ';' + (c.x + 1) + ';' + (c.y + 1) + (up ? 'm' : 'M')
   : '\x1b[M' + String.fromCharCode(32 + (up ? 3 : b), 33 + c.x, 33 + c.y));
 let dragging = false;
 term.cv.addEventListener('mousedown', e => {
-  term.cv.focus();
+  term.focus();
   const c = term.cell(e);
   if (term.modes[1000] && !e.shiftKey) { e.preventDefault(); report(e.button, c, false); return; }
   if (e.button !== 0) return;
@@ -355,8 +327,8 @@ term.cv.addEventListener('wheel', e => {
   if (term.modes[1000]) { report(d < 0 ? 64 : 65, term.cell(e), false); return; }
   term.back = Math.max(0, Math.min(term.sb.length, term.back - d * 3)); term.dirty = true;
 }, { passive: false });
-term.cv.addEventListener('focus', () => { term.dirty = true; });
-term.cv.addEventListener('blur', () => { term.dirty = true; });
+kbd.addEventListener('focus', () => { term.dirty = true; });
+kbd.addEventListener('blur', () => { term.dirty = true; });
 setInterval(() => { term.blink = !term.blink; term.dirty = true; }, 530);
 
 // ---- The Vera X's screen
@@ -426,8 +398,8 @@ $('sound').addEventListener('click', () => { if (sound.ctx) soundOff(); else sou
 // ---- The controls
 
 let paused = false;
-$('power').addEventListener('click', () => { power(); term.cv.focus(); });
-$('reset').addEventListener('click', () => { worker.postMessage({ type: 'reset' }); term.cv.focus(); });
+$('power').addEventListener('click', () => { power(); term.focus(); });
+$('reset').addEventListener('click', () => { worker.postMessage({ type: 'reset' }); term.focus(); });
 $('pause').addEventListener('click', () => {
   paused = !paused;
   worker.postMessage({ type: 'pause', on: paused });
@@ -492,7 +464,7 @@ dlg.addEventListener('close', () => {
   Object.assign(setup, { vera: $('o-vera').checked, smc: $('o-smc').checked, rtc: $('o-rtc').checked, modules: +$('o-modules').value });
   store.set(setup);
   power();
-  term.cv.focus();
+  term.focus();
 });
 
 // ---- Drawing, and the start
@@ -520,6 +492,6 @@ $('build').textContent = $('roms').dataset.build || '';
     await idb.put('sd0', cards.sd0);
   }
   await power();
-  term.cv.focus();
+  term.focus();
   requestAnimationFrame(frame);
 })();

@@ -21,7 +21,10 @@
   .pane { display: flex; flex-direction: column; gap: 6px; min-width: 0; max-width: 100%; }
   .pane .label { color: var(--dim); display: flex; gap: 10px; justify-content: space-between; flex-wrap: wrap; }
   canvas { display: block; max-width: 100%; outline: 2px solid transparent; outline-offset: 2px; }
-  canvas:focus { outline-color: var(--focus); }
+  canvas:focus, #termbox:focus-within #term { outline-color: var(--focus); }
+  #termwrap { position: relative; max-width: 100%; }
+  #kbd { position: absolute; left: 0; top: 0; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; resize: none;
+    overflow: hidden; white-space: pre; caret-color: transparent; }
   #term { background: #0c0c0c; cursor: text; }
   #screen { width: 640px; aspect-ratio: 4 / 3; height: auto; image-rendering: pixelated; background: #000; }
   details { max-width: 980px; margin: 0 auto; padding: 0 16px 16px; color: var(--dim); }
@@ -68,7 +71,11 @@
         <button id="paste" title="Paste the clipboard's text as keys (Ctrl+Shift+V)">Paste</button>
       </span>
     </div>
-    <canvas id="term" tabindex="0" aria-label="The Hydra's serial console"></canvas>
+    <div id="termwrap">
+      <canvas id="term" tabindex="-1" aria-hidden="true"></canvas>
+      <textarea id="kbd" aria-label="The Hydra's serial console" autocomplete="off" autocorrect="off" autocapitalize="off"
+        spellcheck="false" tabindex="0"></textarea>
+    </div>
   </section>
   <section class="pane" id="screenbox" hidden>
     <div class="label"><span id="vstate">Vera X: configuring</span><span id="kstate"></span></div>

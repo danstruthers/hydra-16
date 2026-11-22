@@ -438,6 +438,7 @@ hylang> exit
 
 ```
 /> basic
+HyBASIC (QuickBASIC's kind), BYE to end
 > PRINT 1 / 3 + 1 / 6; 2 ^ 70
  1/2  1180591620717411303424
 > 10 FOR i = 1 TO 3: PRINT i; i / 4: NEXT

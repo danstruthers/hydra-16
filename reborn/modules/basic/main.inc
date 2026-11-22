@@ -101,9 +101,9 @@ main:
 :
             lda         argp                                ; A script: basic file args
             ora         argp + 1
-            beq         prompt
+            beq         greet
             lda         (argp)
-            beq         prompt
+            beq         greet
             inc         script
             tsx
             stx         top_s
@@ -116,6 +116,20 @@ main:
             lda         end_status
             jmp         EXITS
 s_nolib:    .byte       "no numbers library", 0
+
+; ---- The banner (the console's, not a script's: as forth's and hylang's), then the prompt
+
+greet:
+            lda         interactive
+            beq         prompt
+            ldx         #0
+:
+            lda         s_banner,x
+            beq         prompt
+            jsr         out_byte
+            inx
+            bra         :-
+s_banner:   .byte       "HyBASIC (QuickBASIC's kind), BYE to end", LF, 0
 
 ; ---- The prompt: a line read, run at once
 

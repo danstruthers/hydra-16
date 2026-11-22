@@ -12,7 +12,8 @@
 //   --out FILE      the page (default bin/hydra-16.html, as build.js makes it)
 //   --serve [PORT]  then serve it at http://localhost:PORT (8017), till Ctrl-C
 //   --check         then run the page's worker (the bundle, as the page starts it) in Node: boot HydraOS in it, type at
-//                   its console, and see the answer; and hold web/mkfs.js's new card against sim/tools/hydrafs.js's
+//                   its console, and see the answer; hold web/mkfs.js's new card against sim/tools/hydrafs.js's; and
+//                   web/keys.js against key events as browsers give them (a US layout's, a US-International one's)
 // Build first (node build.js): the images are bin/'s.
 //   The scripts are bundled as CommonJS modules (each require('./x.js') a path relative to its file, named by its
 // path from the repository's root): the board's emulator, base/sim/lib/machine.js and what it needs, and
@@ -121,6 +122,59 @@ function check(out) {
   });
 }
 
+// web/keys.js's bytes for keys typed, as browsers give them: a US layout's, and a US-International one's dead keys
+// (' " ` ~ ^) as Firefox gives them (the key after a dead key, then its text: an input event) and as Chrome does
+// (composition events); special keys, Ctrl's, Alt's, AltGr's; text the Hydra's character set lacks.  [] if all's well
+function checkKeys() {
+  const { KeyInput, latin9 } = require('./web/keys.js');
+  const CODE = { "'": 'Quote', '"': 'Quote', '`': 'Backquote', '~': 'Backquote', '^': 'Digit6', ' ': 'Space' };
+  const key = (k, o = {}) => Object.assign({ key: k, code: CODE[k] || (/^[a-z]$/i.test(k) ? 'Key' + k.toUpperCase() : k),
+    shiftKey: false, ctrlKey: false, altKey: false, metaKey: false, isComposing: false, keyCode: 0,
+    getModifierState: m => m === 'AltGraph' && !!o.altGr }, o);
+  // Each step: ['us', c] a key typed on a US layout; ['k', e] a keydown; ['in', data] an input event (insertText);
+  // ['ic', data] a composition's input event; ['ce', data] a compositionend
+  const us = t => [...t].map(c => ['k', key(c, { shiftKey: /[A-Z"~^]/.test(c) })]);
+  const ff = (accent, k, text) => [['k', key('Dead', { code: CODE[accent] })], ['k', key(k)], ['in', text]];
+  const cr = (accent, k, text) => [['k', key('Dead', { code: CODE[accent] })], ['ic', accent],
+    ['k', key(k, { isComposing: true, keyCode: 229 })], ['ce', text], ['ic', text]];
+  const cases = [
+    ['US: PRINT "Hi" and Enter', [...us('PRINT "Hi"'), ['k', key('Enter')]], 'PRINT "Hi"\r'],
+    ['US-Intl, Firefox: PRINT "Hi" ("H, then " and space)', [...us('PRINT '), ...ff('"', 'H', '"H'), ...us('i'), ...ff('"', ' ', '"')], 'PRINT "Hi"'],
+    ['US-Intl, Chrome: PRINT "Hi"', [...us('PRINT '), ...cr('"', 'H', '"H'), ...us('i'), ...cr('"', ' ', '"')], 'PRINT "Hi"'],
+    ["US-Intl, Firefox: ' and space, ` and space, ~ and space, ^ and space", [...ff("'", ' ', "'"), ...ff('`', ' ', '`'), ...ff('~', ' ', '~'), ...ff('^', ' ', '^')], "'`~^"],
+    ["US-Intl, Chrome: ' and space, ` and space, ~ and space, ^ and space", [...cr("'", ' ', "'"), ...cr('`', ' ', '`'), ...cr('~', ' ', '~'), ...cr('^', ' ', '^')], "'`~^"],
+    ["US-Intl, Firefox: ' a, ~ n, ^ e, \" u, ` a (composed)", [...ff("'", 'á', 'á'), ...ff('~', 'ñ', 'ñ'), ...ff('^', 'ê', 'ê'), ...ff('"', 'ü', 'ü'), ...ff('`', 'à', 'à')], '\xe1\xf1\xea\xfc\xe0'],
+    ["US-Intl, Chrome: ' a, ~ n (composed)", [...cr("'", 'a', 'á'), ...cr('~', 'n', 'ñ')], '\xe1\xf1'],
+    ["US-Intl: ' t (no letter: both)", [...ff("'", 't', "'t"), ...cr("'", 't', "'t")], "'t't"],
+    ['A dead key, then Enter', [['k', key('Dead', { code: 'Quote' })], ['k', key('Enter')]], '\r'],
+    ['A key held for a dead key, no text after it: sent at the next key', [['k', key('Dead', { code: 'Quote' })], ['k', key('a')], ...us('b')], 'ab'],
+    ['Special keys', [['k', key('ArrowUp')], ['k', key('F1')], ['k', key('Backspace')], ['k', key('Tab')], ['k', key('Delete')], ['k', key('Escape')]], '\x1b[A\x1bOP\x7f\t\x1b[3~\x1b'],
+    ['Ctrl-C, Alt-x, Ctrl-Alt-ArrowLeft', [['k', key('c', { ctrlKey: true })], ['k', key('x', { altKey: true })], ['k', key('ArrowLeft', { ctrlKey: true, altKey: true })]], '\x03\x1bx\x1b[1;7D'],
+    ['AltGr (Ctrl and Alt too, on Windows): é and €', [['k', key('é', { ctrlKey: true, altKey: true, altGr: true, code: 'KeyE' })], ['k', key('€', { ctrlKey: true, altKey: true, altGr: true, code: 'Digit5' })]], '\xe9\xa4'],
+    ['An IME\'s text (composed)', [['k', key('Process', { keyCode: 229 })], ['ic', 'e'], ['ce', 'é']], '\xe9'],
+  ];
+  const bad = [];
+  for (const [what, steps, want] of cases) {
+    let got = '';
+    const ki = new KeyInput(t => { got += t; });
+    for (const [t, v] of steps) {
+      if (t === 'k') ki.keydown(v, false);
+      else if (t === 'in') ki.input({ inputType: 'insertText', data: v });
+      else if (t === 'ic') ki.input({ inputType: 'insertCompositionText', data: v });
+      else if (t === 'ce') ki.compositionend({ data: v });
+    }
+    if (got !== want) bad.push(what + ': ' + JSON.stringify(got) + ', not ' + JSON.stringify(want));
+  }
+  const up = new KeyInput(() => {});
+  if (up.keydown(key('ArrowUp'), true) !== true) bad.push('ArrowUp: not taken');
+  let app = ''; new KeyInput(t => { app += t; }).keydown(key('ArrowUp'), true);
+  if (app !== '\x1bOA') bad.push('ArrowUp in the cursor keys\' application mode: ' + JSON.stringify(app));
+  for (const [t, want] of [['ẽ', '~e'], ['ǎ', '^a'], ['´', "'"], ['¨', '"'], ['€', '\xa4'], ['Ž', '\xb4'], ['Ç', '\xc7'], ['ő', '"o'], ['日', null]]) {
+    if (latin9(t) !== want) bad.push('latin9(' + t + '): ' + JSON.stringify(latin9(t)) + ', not ' + JSON.stringify(want));
+  }
+  return bad;
+}
+
 // web/mkfs.js's card against hydrafs.js's, the same stamp
 function checkMkfs() {
   const hfs = require('./tools/hydrafs.js'), { mkfs } = require('./web/mkfs.js'), os = require('os');
@@ -155,12 +209,14 @@ async function main(argv) {
   if (doCheck) {
     const mk = checkMkfs();
     console.log('web/mkfs.js: ' + (mk ? 'the same card as hydrafs.js makes' : 'NOT the card hydrafs.js makes'));
+    const kb = checkKeys();
+    console.log('web/keys.js: ' + (kb.length ? 'WRONG:\n  ' + kb.join('\n  ') : 'every key as it should be'));
     const c = await check(out);
     console.log('the worker: ' + (c.ok ? 'booted HydraOS, and 1 2 + . gave 3' : 'FAILED' + (c.fail ? ' (' + c.fail + ')' : '') + '; its console:\n' + c.text));
-    if (!mk || !c.ok) process.exit(1);
+    if (!mk || kb.length || !c.ok) process.exit(1);
   }
   if (port) serve(out, port);
 }
 
 if (require.main === module) main(process.argv.slice(2));
-module.exports = { build, bundle };
+module.exports = { build, bundle, checkKeys };
