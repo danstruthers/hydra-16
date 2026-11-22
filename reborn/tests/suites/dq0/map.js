@@ -1705,7 +1705,9 @@ module.exports = {
         if (!h.after || !h.after.pc.skew) f.push('come round below from a fall: the human\'s north not astray (' + (h.after && h.after.pc.skew) + ')');
         if (tests(hd).length || !hd.after || hd.after.pc.skew) f.push('come round below from a fall: the dwarf tested, or astray');
         // Knocked senseless (the hand-written theme's rats, seed 3: dq0senseless's): tested as it's out, astray
-        const o = T.of('dq0 -p t -s 3 -c /ram/s.hm -T -d /ram/g'), out1 = T.slice(o.k).find(t => t.after && (t.after.sum.cond & 2));
+        // (Its knockout the line its blow came in (E_FIGHT at it, FF_D_DOWN), felled1's, 2026-11-21: come round a round or two
+        // later in it, its shock rolls as their time comes, the summary after the line no longer senseless, as it was left)
+        const o = T.of('dq0 -p t -s 3 -c /ram/s.hm -T -d /ram/g'), out1 = T.slice(o.k).find(t => dq0Ev(t, 'E_FIGHT', { def: 0 }).some(e => e.ff & 4));
         if (!out1) f.push('never knocked senseless');
         else if (tests(out1).length !== 1) f.push('knocked senseless (' + out1.line + '): not tested as it\'s out (' + JSON.stringify(tests(out1)) + ')');
         // The kobold warren (seed 517): fallen in, tested as it begins; a jump down its ledge (10 feet), tested

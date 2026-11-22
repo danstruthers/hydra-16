@@ -169,47 +169,92 @@ static unsigned char __fastcall__ shock_fails (unsigned char up, unsigned char e
     return s > e;
 }
 
-/* Knocked senseless (its shock roll failed): the rounds till c comes round, by the book's shock rolls, a round each,
-** within an hour (then anyway: the character's last shock roll the book's, in shock or not), in tenths.  Each round
-** harn_wake's (a shock roll not over Endurance wakes it, one more says whether it's in shock), its penalty and its
-** Endurance found once (ref1, 2026-11-20: an hour's 360 rounds of calls 4.5M cycles of the referee's, a line waiting) */
-unsigned __fastcall__ o_wake_out (harn_char* c)
-{
-    unsigned k;
-    unsigned char up = harn_get_up (c), e = harn_end (c);
+/* Each senseless one's fall (the clock's) and the shock rolls made since, by its index (0 the character, an actor's
+** entry plus 1): rouse's.  Not kept with the game: a game loaded with one senseless, its rolls begun again from its next */
+unsigned long ko_at[NACTORS + 1];
+unsigned ko_n[NACTORS + 1];
 
-    if (c->state == HARN_UNCONSCIOUS && up > e && !dice_hook) {
-        xs_jump ((unsigned long) 359 * up);     /* (Its every shock roll failed, its least, up, over e: the hour's
-                                                **   rounds out, 359 rolls' numbers passed over, the dice after them
-                                                **   the same: xsjump.c's) */
-        k = 360;
-    } else
-    for (k = 1; k < 360; ++k) {
-        if (c->state == HARN_UNCONSCIOUS && !shock_fails (up, e)) {
+/* The character not senseless, none of its shock rolls kept: its file read (load_pc's, here for overlay 4's room) */
+void o_unrouse (void)
+{
+    pc_out = ko_at[0] = 0;
+}
+
+/* c senseless (its index i: ko_at's), its time out (*o: a creature's bs.out, the character's pc_out) the clock its next
+** shock roll's: the book's shock rolls, a round each, as the game's time passes (the user's, 2026-11-21: not an hour of
+** rolls at once as it falls; the same rule and the same odds, the dice in another order).  Each round's due by now
+** (tnow) rolled, as harn_wake's: one not over Endurance wakes it, one more says whether it's in shock (its shock five
+** hours, H5); within an hour of its fall (its 359 rolls failed, it comes round anyway: the character's last shock roll
+** the book's, in shock or not, a creature as it is).  None before *o (a choke's minute: grapple.c's).  Its rolls all
+** sure to fail (its least, UP, over Endurance) passed over at once (xsjump.c's: the dice after them the same).  *o after:
+** its next roll's, or the round it came round in */
+void __fastcall__ o_rouse (harn_char* c, unsigned long* o, unsigned char i)
+{
+    static unsigned n, m;
+    static unsigned char up, e;
+
+    if (c->state != HARN_UNCONSCIOUS) {
+        return;
+    }
+    if (!ko_at[i]) {                            /* (Its fall not known: a game loaded, a sheet senseless; from its time
+                                                **   out, its next roll's, or, none, as if it fell now) */
+        ko_n[i] = 0;
+        if (!*o) {
+            ko_at[i] = tnow;
+            *o = tnow + 100;
+            return;
+        }
+        ko_at[i] = *o >= 100 ? *o - 100 : 0;
+    }
+    if (tnow < *o) {
+        return;
+    }
+    n = (unsigned) ((tnow - ko_at[i]) / 100);
+    if (n > 360) {
+        n = 360;
+    }
+    up = harn_get_up (c);
+    e = harn_end (c);
+    if (up > e && !dice_hook && ko_n[i] < 359 && n > ko_n[i]) {
+        m = (n < 359 ? n : 359) - ko_n[i];      /* (Every roll a failure: their numbers passed over) */
+        xs_jump ((unsigned long) m * up);
+        ko_n[i] += m;
+    }
+    while (ko_n[i] < n) {
+        if (++ko_n[i] >= 360) {                 /* (An hour: come round) */
+            if (c == &pc) {
+                c->state = harn_shock_roll (c) ? HARN_SHOCK : HARN_CONSCIOUS;
+            } else {
+                c->state = HARN_CONSCIOUS;
+            }
+            break;
+        }
+        if (!shock_fails (up, e)) {
             if (shock_fails (up, e)) {
                 c->state = HARN_SHOCK;
                 c->shockhr = 5;
             } else {
                 c->state = HARN_CONSCIOUS;
             }
-        }
-        if (c->state != HARN_UNCONSCIOUS) {
             break;
         }
     }
-    if (c == &pc && c->state == HARN_UNCONSCIOUS) {
-        c->state = harn_shock_roll (c) ? HARN_SHOCK : HARN_CONSCIOUS;
+    *o = ko_at[i] + (unsigned long) ko_n[i] * 100 + (c->state == HARN_UNCONSCIOUS ? 100 : 0);
+    if (c->state != HARN_UNCONSCIOUS) {
+        ko_at[i] = 0;
     }
-    return k * 100;
 }
 
-/* A fight's (fight.c's strike, through bank.s's stub): c knocked senseless, its tenths out (wake's); *o its time out
-** (a creature's bs.out, the character's pc_out) the later of its own and that (out already, struck again as it lies:
-** AF_AGAIN in *f, its black-out told once); a creature lies there till then (its sheet's state), the character comes
-** round as the UI waits it out (it can't defend meanwhile) */
+/* A fight's (fight.c's strike, through bank.s's stub), the harm's: c knocked senseless (its index the character's, 0,
+** or the creature unpacked's, crw): its fall now, its first shock roll a round on (rouse's, as its time comes); *o its
+** time out (a creature's bs.out, the character's pc_out) the later of its own and that (out already, struck again as
+** it lies: AF_AGAIN in *f, its black-out told once); the tenths till then.  A creature lies there, the character
+** comes round as the UI waits it out (it can't defend meanwhile), each round's roll asked as its time comes (the
+** world's RS_ROUSE, or any ask of it) */
 unsigned __fastcall__ o_knocked_out (harn_char* c, unsigned long* o, unsigned char* f)
 {
-    unsigned w = o_wake_out (c);
+    unsigned w = 100;
+    unsigned char i = c == &pc ? 0 : crw;
 
     if (*o > tnow) {
         *f |= AF_AGAIN;
@@ -218,11 +263,12 @@ unsigned __fastcall__ o_knocked_out (harn_char* c, unsigned long* o, unsigned ch
         }
     }
     *o = tnow + w;
+    ko_at[i] = tnow;
+    ko_n[i] = 0;
     if (c != &pc) {
-        bs.state = c->state == HARN_SHOCK ? bs.state | BS_SHOCKED : bs.state & ~BS_SHOCKED;  /* (Its last shock
-                                                **   roll's: it comes round in shock, fight.c's unpack) */
-        c->state = HARN_UNCONSCIOUS;
+        bs.state &= ~BS_SHOCKED;
     }
+    c->state = HARN_UNCONSCIOUS;
     return w;
 }
 #pragma code-name (pop)
@@ -265,7 +311,7 @@ void __fastcall__ o_harm (struct req* r)
 {
     static harn_injury d;
     struct rs_effect* e = (struct rs_effect*) RS_HARM_EFFECTS (*r);
-    unsigned char how = 0, aspect, zone = HARN_MID, n = pc.ninj, w, loc = 0xFF;
+    unsigned char how = 0, aspect, zone = HARN_MID, n = pc.ninj, w, loc = 0xFF, g = 0;
     int impact;
 
     memset (RS_HARM_EFFECTS (*r), 0, sizeof RS_HARM_EFFECTS (*r));
@@ -336,8 +382,8 @@ void __fastcall__ o_harm (struct req* r)
     } else if (how & HARN_FALL_WRENCHED) {
         RS_HARM_BAND (*r) = HARN_MINOR;
     }
-    if (pc.state == HARN_UNCONSCIOUS) {         /* (Senseless: a shock roll a round to come round) */
-        RS_HARM_OUT (*r) = wake_out (&pc);
+    if (pc.state == HARN_UNCONSCIOUS) {         /* (Senseless: a shock roll a round to come round, as its time comes) */
+        RS_HARM_OUT (*r) = knocked_out (&pc, &pc_out, &g);
     }
     if (RS_HARM_CAUSE (*r) == HC_STRUCK) {                    /* (Enough: the referee's say) */
         RS_HARM_STOP (*r) = pc.state != HARN_CONSCIOUS || RS_HARM_OUT (*r) || RS_HARM_BAND (*r) >= HARN_SERIOUS || part_levels (HARN_LOC (loc)) >= 3;

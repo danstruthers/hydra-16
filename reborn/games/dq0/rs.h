@@ -502,6 +502,12 @@ enum {
                                                 **   name (its outfit's section), then a line each its open skills'
                                                 **   names, the highest first (each its section's: weapons, tools);
                                                 **   result 0, or 0xFF none (the kit as it was) */
+    RS_ROUSE                                    /* A senseless one (actor: 0 the character, else its entry plus 1),
+                                                **   its time out come: its shock rolls due by now rolled, a round each
+                                                **   as the game's time passes (the user's, 2026-11-21) -> w2 the tenths
+                                                **   it's senseless still (its next roll's), 0 come round (a referee
+                                                **   with no such rolls: 0, the world's w2 as it asked; dead as it
+                                                **   lay, 0xFFFF: it never comes round) */
 };
 #define RD_DEITY        5                       /* (RS_DESCRIBE's b: the deity the character worships, its name) */
 

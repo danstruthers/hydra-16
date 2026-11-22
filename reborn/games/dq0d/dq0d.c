@@ -4733,7 +4733,9 @@ int main (int argc, char* argv[])
             pcrest = pcbusy && (HUB->pc_task.kind == LT_WAIT || HUB->pc_task.kind == LT_SLEEP) && !HUB->pc_task.asking;
             pclie = pcrest && (HUB->pc_task.kind == LT_SLEEP || (HUB->pc_pos & ~POS_CROUCHED));
             pcdead = (HUB->pcsum.cond & C_DEAD) != 0;
-            pchelp = (HUB->pcsum.cond & C_STUNNED) || ((HUB->pcsum.cond & C_UNCONSCIOUS) && pcbusy);
+            pchelp = (HUB->pcsum.cond & C_STUNNED) || ((HUB->pcsum.cond & C_UNCONSCIOUS) && (pcbusy || HUB->pc_out));
+                                                /* (Senseless, as the world has it (pc_out) though its busy time's only
+                                                **   its next shock roll's, a round on: felled1, 2026-11-21) */
             if ((pcfeign = pcx == fgx && pcy == fgy && HUB->pc_pos == POS_PRONE && HUB->pc_task.kind == LT_WAIT) != 0) {
                 fgon = 1;                       /* (Feigning, seen so: its pretence over as it isn't, 2026-11-10) */
             } else if (fgon || pcx != fgx || pcy != fgy) {

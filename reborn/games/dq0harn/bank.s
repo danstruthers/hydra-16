@@ -193,7 +193,8 @@ ovcall:
             OVFN        harm, 1
             OVFN        wound, 1
             OVFN        wound_words, 1
-            OVFN        wake_out, 10        ; (Its rounds out, the harm's and the blow's: ref1, 2026-11-20)
+            OVFN        unrouse, 10         ; (Its file read: none of them, load_pc's: overlay 4's room, felled1)
+            OVFN        rouse, 10           ; (A senseless one's shock rolls as their time comes: felled1, 2026-11-21)
             OVFN        knocked_out, 10     ; (Overlay 1's room, the rounds out worked quicker: ref1, 2026-11-20)
             OVFN        fight, 2
             OVFN        pc_armour, 3

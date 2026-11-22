@@ -61,7 +61,8 @@ static const char natural[][8] = { "", "bite", "claws", "sting", "horns", "talon
 /* ---- A creature's sheet, unpacked (into a HarnMaster character, for the book's functions) and packed again */
 
 harn_char cr;                                   /* (The creature in the fight; heal.c's too) */
-static unsigned char crn;                       /*   and its sheet's number */
+static unsigned char crn;                       /*   and its sheet's number, */
+unsigned char crw;                              /*   and its actor's entry plus 1 (sheet.c's rouse, knocked_out) */
 unsigned long pc_out;                           /* (The character senseless till then: it can't defend; dq0harn.h's) */
 unsigned char prones;                           /* (The request's: the attacker prone, RS_PRONE_A; the defender,
                                                 **   RS_PRONE_D: their bodies' positions, the world's) */
@@ -83,17 +84,21 @@ static const struct bkind* __fastcall__ unpack (unsigned char who)
     cr.att[HARN_WIL] = bs.att[4];
     cr.att[HARN_WT] = bs.wt * 4;
     cr.state = bs.state & 3;
-    if (cr.state == HARN_UNCONSCIOUS && tnow >= bs.out) {
-        cr.state = bs.state & BS_SHOCKED ? HARN_SHOCK : HARN_CONSCIOUS;    /* (Come round: in shock, or not, as
-                                                **   its last shock roll had it, sheet.c's wake; slice 4.3's) */
-        bs.state &= ~BS_SHOCKED;
-        bs.out = 5;                             /* (In shock, H5: Physician 4) */
-    }
-    cr.shockhr = cr.state == HARN_SHOCK ? (unsigned char) bs.out : 0;
     cr.bl = bs.bl;
     cr.fl = bb.fl;                              /* (Its fatigue: in the universal penalty, every test of its) */
     cr.ninj = bs.ninj;
     memcpy (cr.inj, bs.inj, sizeof bs.inj);
+    crw = who;
+    if (cr.state == HARN_UNCONSCIOUS && tnow >= bs.out) {
+        rouse (&cr, &bs.out, who);              /* (Senseless: its shock rolls due by now, sheet.c's, a round each as its
+                                                **   time comes, the user's, 2026-11-21) */
+        if (cr.state != HARN_UNCONSCIOUS) {
+            bs.out = 5;                         /* (Come round: in shock, H5: Physician 4) */
+        }
+        bs.state = cr.state | (bs.state & BS_DISARMED);
+        sheet_put (crn);                        /* (Its rolls kept, whatever's asked of it) */
+    }
+    cr.shockhr = cr.state == HARN_SHOCK ? (unsigned char) bs.out : 0;
     b = beast (bs.kind ? bs.kind - 1 : 0);
     cplan = b->flags;                           /* (Its body: on two legs, on four, its limbs' rules, gear.c's) */
     return b;
@@ -521,6 +526,7 @@ static void new_beast (void)
         return;
     }
     aden[k] = n;
+    ko_at[k + 1] = 0;                           /* (Its fall not known: a senseless one's rolls from its next, rouse's) */
     dwr[k] = 0xFF;                              /* (Its things untold yet: the world's RS_EQUIP, as it comes near) */
     for (j = 0; j < NBEASTS && strcmp (beast (j)->key, bkey); ++j) {
     }
@@ -675,6 +681,18 @@ void __fastcall__ o_fight (struct req* r)
         return;
     case RS_WIELD:
         pc_wield (r);
+        return;
+    case RS_ROUSE:                              /* (A senseless one's shock rolls due by now, the world's as its time
+                                                **   comes: w2 the tenths it's senseless still, 0 come round;
+                                                **   dead as it lay, never: 0xFFFF, no round of its own after) */
+        if (r->actor) {
+            unpack (r->actor);
+            r->w2 = cr.state == HARN_UNCONSCIOUS ? (unsigned) (bs.out - tnow) : cr.state == HARN_DEAD ? 0xFFFF : 0;
+        } else {
+            rouse (&pc, &pc_out, 0);
+            r->w2 = pc.state == HARN_DEAD ? 0xFFFF : pc_out > tnow ? (unsigned) (pc_out - tnow) : 0;   /* (Its time out ahead:
+                                                **   senseless, its next roll's; or out till then, whatever its state) */
+        }
         return;
     }
     if (r->other == RS_THING) {

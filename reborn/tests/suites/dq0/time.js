@@ -295,7 +295,10 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm', 'douse the torch', 'wait 8 hours', 'status', 'wait 3 hours 20 minutes', 'wait 3 hours and 20 minutes', 'rest', 'sleep 8 hours', 'quit',
         'dq0 -p n -s 3 -c /ram/c.hm', 'douse the torch', 'wait 8 hours', 'quit',
         'dq0 -p t -s 21 -c /ram/c.hm -T', 'd', 'wait 8 hours', 'no', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', 'sleep 8 hours', 'quit', 'echo $status']) },
+        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -R 1', 'sleep 8 hours', 'quit', 'echo $status']) },
+      // (The bitten sleep -R 1, felled1's, 2026-11-21: a sleeping character struck as a sleeper is, no defence (RS_ASLEEP, one
+      // path), and a felled one's rolls a round each: at -R 0 the first bite knocked it senseless, in shock after, its rest
+      // the night; a search of -R 1-12 found all but 9)
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], o = dq0Prose(out);

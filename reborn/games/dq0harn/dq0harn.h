@@ -165,8 +165,14 @@ void __fastcall__ wound_words (char* w, unsigned char sev, unsigned char loc, un
     unsigned char by);                          /* A wound's words into w, the main RAM's ("a serious bite to your
                                                 **   right elbow (S2)"; by | BY_ITS, "to its"; sev HARN_KILL, a death's) */
 void __fastcall__ xs_jump (unsigned long n);    /* (Overlay 10's: xsjump.c) The dice stream moved on n numbers */
-unsigned __fastcall__ wake_out (harn_char* c);   /* (Overlay 10's) Knocked senseless: its tenths out, the book's
-                                                **   shock rolls a round (sheet.c's) */
+void __fastcall__ rouse (harn_char* c, unsigned long* o, unsigned char i);    /* (Overlay 10's: sheet.c) A senseless
+                                                **   one's shock rolls due by now, one a round as its time comes */
+void unrouse (void);                            /* (Overlay 10's: sheet.c) The character not senseless, its rolls none:
+                                                **   a file read (load_pc's; overlay 4's room, part 1's image there) */
+extern unsigned long ko_at[NACTORS + 1];        /* (sheet.c's: each senseless one's fall, 0 the character, an actor's
+                                                **   entry plus 1; */
+extern unsigned ko_n[NACTORS + 1];              /*   its shock rolls since) */
+extern unsigned char crw;                       /* (fight.c's: the creature unpacked, its actor's entry plus 1) */
 unsigned __fastcall__ knocked_out (harn_char* c, unsigned long* o, unsigned char* f);  /* Knocked senseless: the
                                                 **   tenths till it comes round, *o its time out (AF_AGAIN in *f) */
 

@@ -171,10 +171,12 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     pa = me == att ? bd.pos : HUB->pc_pos;     /* (Their bodies' positions, the world's: prone, the easier struck) */
     pd = me == att ? HUB->pc_pos : bd.pos;
     RS_ATTACK_FLAGS (*r) = bd.timid | (POS_LOW (pa) ? RS_PRONE_A : 0) | (POS_LOW (pd) ? RS_PRONE_D : 0) | (ra ? RS_REARM : 0) |
-        ((me != att ? bd.doing == DO_SLEEP || (HUB->pc_hid && DO_UNAWARE (bd.doing)) : bd.state > 1) ? RS_ASLEEP : 0) |
+        ((me != att ? bd.doing == DO_SLEEP || (HUB->pc_hid && DO_UNAWARE (bd.doing)) : bd.state > 1 || HUB->pc_task.kind == LT_SLEEP) ? RS_ASLEEP : 0) |
         (HUB->folk[((def ? def : att) - 1) & 7] ? RS_THEY : 0);
                                                 /* (A sleeper struck at: no defence, the book's Ignore, 2026-11-02; and
                                                 **   one that hasn't seen a blow from hiding coming, 2026-11-04; the
+                                                **   character asleep, as a creature is (one path: dq0killrest's,
+                                                **   felled1, 2026-11-21); the
                                                 **   creature struck a person, the hub's folk: the referee's words) */
     g = z & AIM_GRAPPLE ? z & 7 : GM_NONE;      /* (A grapple: its move, HOUSE.md's grappling, 2026-11-09) */
     if (g) {
