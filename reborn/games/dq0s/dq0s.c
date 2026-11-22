@@ -394,6 +394,7 @@ static const unsigned char den_ws[] = {
                                                 **   opening's, as the character's PO_UNBARRED is played: 2026-11-17) */
     WS_CLICK, WS_DIG,                           /* (DE_TURNS, DE_PRIES: a box's key turned, its lid forced, as the
                                                 **   character's E_NOISE NZ_CLICK and NZ_WORK are played, 2026-11-19) */
+    NO_WS,                                      /* (DE_SEARCHES: none of its own, as before the merge of op2b and op2a) */
     WS_OPEN, WS_SHUT                            /* (DE_WOPENS, DE_WSHUTS: a window's shutters, as the character's are
                                                 **   played, its E_PORTAL's: 2026-11-21) */
 };
