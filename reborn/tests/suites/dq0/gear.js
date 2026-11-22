@@ -2595,7 +2595,7 @@ module.exports = {
         const games = o.split(/% dq0 -p t -s 3 -c \/ram\/\w\.hm/).slice(1);
         const inv = g => { const i = games[g].indexOf('You carry'); return i < 0 ? '' : games[g].slice(i, games[g].indexOf('In all', i)); };
         const a = inv(0), b = inv(1), c = inv(2), d = inv(3);
-        if (!/a lantern \(lit[^)]*\), in your left hand/.test(a) || !/two flasks of oil/.test(a) || /torch/.test(a)) f.push('160 pennies: not a lantern lit and two flasks, no torch: ' + a);
+        if (!/a lantern \(lit[^)]*\), in your left hand/.test(a) || (/two flasks of oil/.test(a) ? 2 : (a.match(/a flask of oil/g) || []).length) !== 2 || /torch/.test(a)) f.push('160 pennies: not a lantern lit and two flasks, no torch: ' + a);
         for (const [s, w] of [[b, 'a poor serf'], [c, 'a slave'], [d, 'a serf of 80 pennies']]) {
           if (!/a torch \(lit[^)]*\), in your left hand/.test(s) || !/two torches/.test(s) || !/a flask of oil/.test(s) || /lantern/.test(s)) f.push(w + ': not a torch lit, two spare and a flask: ' + s);
         }

@@ -93,10 +93,11 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
                                                 **   of a few minutes: slice 4.1's) */
     { "well", 0, 255, 255, 0, 0, 0, 0, 8, "", MT_STONE, AP_STONE, 0, KF_FIXED },   /* (Its stone curb: never taken
                                                 **   up; its water the water's work's, to come) */
-    { "flask of oil", K_CONTAINER | K_HAND, 1, 1, 1, 4, 0, 0, 1, "", MT_CLAY, AP_POTTERY, 4, KF_LIQUID | KF_STOPPER },   /* (A
+    { "flask of oil", K_CONTAINER | K_HAND, 1, 1, 1, 4, 0, 0, 1, "", MT_CLAY, AP_POTTERY, 8, KF_LIQUID | KF_STOPPER },   /* (A
                                                 **   vessel, a pint of lamp oil in it as it's made, a liquid as a
                                                 **   vial's: emptied, filled with anything (the user's H16,
-                                                **   2026-11-21); a lantern's fill, a torch's, from it) */
+                                                **   2026-11-21); a lantern's fill, a torch's, from it; its worth
+                                                **   as it's bought, full, the outfits' and the market's) */
     { "pot of pitch", K_HAND, 6, 2, 0, 0, 0, 0, 2, "", MT_CLAY, AP_POTTERY, 8, KF_LID },   /* (A torch's) */
     { "sconce", 0, 6, 2, 3, 8, 0, 0, 12, "", MT_IRON, AP_METAL, 16, KF_ON | KF_FIXED },  /* (On a room's wall, fixed: a
                                                 **   torch in it, the maker's: DUNGEON.md, light kept) */

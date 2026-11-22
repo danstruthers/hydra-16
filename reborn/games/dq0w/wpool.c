@@ -39,9 +39,12 @@ void __fastcall__ air_harm (unsigned char a, unsigned char b, unsigned char c); 
 #pragma code-name ("SW99CODE")
 #pragma rodata-name ("SW99RODATA")
 #pragma bss-name ("SW99RODATA")
-#pragma static-locals (on)
+#pragma static-locals (off)                     /* (Its locals on the C stack: a call to another part
+                                                **   (the referee's test, the limbs' news, a harm) copies this one in
+                                                **   again after it, its own statics as its image has them) */
 
-static struct pool pools[NPOOLS];               /* (The world bank's, wrec's pools, copied in for a call, and back) */
+static struct pool pools[NPOOLS];               /* (The world bank's, wrec's pools, copied in (pin) and back (pout),
+                                                **   none of it held across a call to another part) */
 static struct pool* p;
 
 /* The pool on stratum sn's square x, y, still there (those gone made free first): p, or 0 */
@@ -95,16 +98,29 @@ static void __fastcall__ pool_add (unsigned char sn, unsigned x, unsigned y)
     }
 }
 
-/* Pool p set alight: it burns a while, then it's gone; told the character if it's near enough to see it (its stratum,
-** within its eyes' reach) */
-static void lit (void)
+/* The pools copied in from the world bank (wrec's), and back */
+static void pin (void)
+{
+    hub_map (WORLD_BANK);
+    memcpy (pools, WREC->pools, sizeof pools);
+    hub_map (0);
+}
+
+static void pout (void)
+{
+    hub_map (WORLD_BANK);
+    memcpy (WREC->pools, pools, sizeof pools);
+    hub_map (0);
+}
+
+/* Pool p set alight (kept as pout puts it back): it burns a while, then it's gone; 1 if the character's near enough to
+** see it (its stratum, within its eyes' reach), told after (the limbs' news, another part's) */
+static unsigned char lit (void)
 {
     hub_map (0);
     p->burns = 1;
     p->till = (unsigned) (HUB->now / 600) + BURN_T;
-    if (p->sn == HUB->pc_stratum && p->x - HUB->pc_x + 8 <= 16 && p->y - HUB->pc_y + 8 <= 16) {
-        limb_news (WB_BLAZE, 0);
-    }
+    return p->sn == HUB->pc_stratum && p->x - HUB->pc_x + 8 <= 16 && p->y - HUB->pc_y + 8 <= 16;
 }
 
 /* Whether a naked flame (a lit thing that isn't hung in a lantern's glass: a torch, a candle) lies on pool p's square, or
@@ -137,8 +153,8 @@ static unsigned char __fastcall__ flame (unsigned char who)
 ** prone, told as every fall is, a naked flame it carries setting it alight.  1 if it fell */
 static unsigned char __fastcall__ pool_step (unsigned char who)
 {
-    static unsigned char sn;
-    static unsigned x, y;
+    unsigned char sn, b;
+    unsigned x, y;
 
     hub_map (0);
     if (who) {
@@ -150,10 +166,13 @@ static unsigned char __fastcall__ pool_step (unsigned char who)
         x = HUB->pc_x;
         y = HUB->pc_y;
     }
-    if (!pool_at (sn, x, y)) {
+    pin ();
+    b = pool_at (sn, x, y) ? 1 + p->burns : 0;
+    pout ();
+    if (!b) {
         return 0;
     }
-    if (p->burns) {
+    if (b > 1) {
         if (!who) {
             air_harm (HC_FIRE, 0, 2);           /* (A burn, 2d6: the burning oil about its feet) */
         }
@@ -169,35 +188,45 @@ static unsigned char __fastcall__ pool_step (unsigned char who)
         HUB->pc_pos = POS_PRONE;
     }
     limb_news (WB_SLIP, who ? who | 0x80 : 0);  /* (Slipped in the oil and fallen: seen, or heard near, as a fall is) */
-    pool_at (sn, x, y);
-    if (flame (who)) {
-        lit ();
+    pin ();
+    if (pool_at (sn, x, y) && flame (who)) {
+        b = lit ();
+        pout ();
+        if (b) {
+            limb_news (WB_BLAZE, 0);
+        }
     }
     return 1;
 }
 
 /* The pools' minute (the lights' minute, burn_job's): those gone made free; each set alight by a naked flame lying in
-** it; the character in one alight burnt */
+** it; the character in one alight burnt (told, burnt, once they're put back) */
 static void pool_time (void)
 {
-    static unsigned char k;
-    static struct pool* q;
+    unsigned char k, seen = 0, burnt = 0;
 
+    pin ();
     pool_at (0xFF, 0, 0);
-    for (k = 0, q = pools; k < NPOOLS; ++k, ++q) {
-        if (q->sn == 0xFF) {
+    for (k = 0; k < NPOOLS; ++k) {
+        p = pools + k;
+        if (p->sn == 0xFF) {
             continue;
         }
-        p = q;
         if (!p->burns && flame (0xFF)) {
-            lit ();
+            seen |= lit ();
         }
         hub_map (0);
         if (p->burns && p->sn == HUB->pc_stratum && p->x == HUB->pc_x && p->y == HUB->pc_y) {
-            air_harm (HC_FIRE, 0, 2);
+            burnt = 1;
         }
     }
-    hub_map (0);
+    pout ();
+    if (seen) {
+        limb_news (WB_BLAZE, 0);
+    }
+    if (burnt) {
+        air_harm (HC_FIRE, 0, 2);
+    }
 }
 
 /* The flasks of oil an outfit made (outmake's: the character's kit, a denizen's things), their numbers past from: a pint
@@ -237,35 +266,33 @@ static void __fastcall__ oil_new (unsigned from)
 ** it filled (oil_new).  The pools the world bank's, copied in and back */
 void __fastcall__ pool_op (unsigned w)
 {
-    static unsigned m;
+    unsigned m;
 
-    hub_map (WORLD_BANK);
     if (w >= POOL_MARK) {
         if (w == POOL_MARK) {
             m = item_at (0)->x;
             hub_map (WORLD_BANK);
             memcpy (WREC->pools + sizeof pools, &m, 2);
         } else {
+            hub_map (WORLD_BANK);
             memcpy (&m, WREC->pools + sizeof pools, 2);
             oil_new (m);
         }
         hub_map (0);
         return;
     }
-    memcpy (pools, WREC->pools, sizeof pools);
     if (w == POOL_TIME) {
         pool_time ();
     } else if (w >= POOL_ADD) {
-        hub_map (0);
+        pin ();
         if (w > POOL_ADD) {
             pool_add (bd.sn, bd.x, bd.y);
         } else {
             pool_add (HUB->pc_stratum, HUB->pc_x, HUB->pc_y);
         }
+        pout ();
     } else {
         pool_step (w == POOL_OP ? 0 : bk + 1); /* (POOL_OP + 1: body bd's, its actor) */
     }
-    hub_map (WORLD_BANK);
-    memcpy (WREC->pools, pools, sizeof pools);
     hub_map (0);
 }
