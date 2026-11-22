@@ -526,7 +526,9 @@ static void new_beast (void)
         return;
     }
     aden[k] = n;
-    ko_at[k + 1] = 0;                           /* (Its fall not known: a senseless one's rolls from its next, rouse's) */
+    bread (fb, KOS + n * 6, &ko_at[k + 1], 4);  /* (Its fall and rolls as its sheet keeps them, the save's too: the
+                                                **   user's K16, 2026-11-21; none, 0, from its next, rouse's) */
+    bread (fb, KOS + n * 6 + 4, &ko_n[k + 1], 2);
     dwr[k] = 0xFF;                              /* (Its things untold yet: the world's RS_EQUIP, as it comes near) */
     for (j = 0; j < NBEASTS && strcmp (beast (j)->key, bkey); ++j) {
     }

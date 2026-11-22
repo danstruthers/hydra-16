@@ -143,7 +143,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     struct fight* f;
     unsigned char ff, c, out, me, wh, n, i, dh, cd, ra;
     unsigned w2;
-    unsigned char pa, pd, fa, fd, g;
+    unsigned char pa, pd, fa, fd, g, sl;
     const struct rs_effect* e;
 
     me = bk + 1;
@@ -170,14 +170,16 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     RS_ATTACK_WHEN (*r) = blow_t;
     pa = me == att ? bd.pos : HUB->pc_pos;     /* (Their bodies' positions, the world's: prone, the easier struck) */
     pd = me == att ? HUB->pc_pos : bd.pos;
+    sl = me != att ? bd.doing == DO_SLEEP : HUB->pc_task.kind == LT_SLEEP && !(npools & PC_WOKE);
     RS_ATTACK_FLAGS (*r) = bd.timid | (POS_LOW (pa) ? RS_PRONE_A : 0) | (POS_LOW (pd) ? RS_PRONE_D : 0) | (ra ? RS_REARM : 0) |
-        ((me != att ? bd.doing == DO_SLEEP || (HUB->pc_hid && DO_UNAWARE (bd.doing)) : bd.state > 1 || HUB->pc_task.kind == LT_SLEEP) ? RS_ASLEEP : 0) |
+        ((sl || (me != att ? HUB->pc_hid && DO_UNAWARE (bd.doing) : bd.state > 1)) ? RS_ASLEEP : 0) |
         (HUB->folk[((def ? def : att) - 1) & 7] ? RS_THEY : 0);
-                                                /* (A sleeper struck at: no defence, the book's Ignore, 2026-11-02; and
-                                                **   one that hasn't seen a blow from hiding coming, 2026-11-04; the
-                                                **   character asleep, as a creature is (one path: dq0killrest's,
-                                                **   felled1, 2026-11-21); the
-                                                **   creature struck a person, the hub's folk: the referee's words) */
+                                                /* (A sleeper struck at: no defence, the book's Ignore, 2026-11-02, the
+                                                **   first blow only, it wakes (sl, below: the user's K11, 2026-11-21);
+                                                **   and one that hasn't seen a blow from hiding coming, 2026-11-04;
+                                                **   the character asleep, as a creature is (one path: dq0killrest's,
+                                                **   felled1, 2026-11-21); the creature struck a person, the hub's
+                                                **   folk: the referee's words) */
     g = z & AIM_GRAPPLE ? z & 7 : GM_NONE;      /* (A grapple: its move, HOUSE.md's grappling, 2026-11-09) */
     if (g) {
         if (g != GM_BREAK && GRIP_OF (grip) != def) {
@@ -290,6 +292,16 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     hub_map (0);
     r->state = REQ_FREE;
     bt = (blow_t ? blow_t : HUB->now) + w2;     /* (Senseless till then, from its moment, as the referee has it) */
+    if (sl) {                                   /* (A sleeper struck wakes on the first blow, every actor alike: the
+                                                **   user's K11, 2026-11-21; a creature up and watching, as one shaken
+                                                **   awake is (the minds' SW_WAKE), the character's sleep over as its
+                                                **   long task's stop comes, struck as a sleeper no more meanwhile) */
+        if (me != att) {
+            bd.doing = DO_WATCH;
+        } else {
+            npools |= PC_WOKE;
+        }
+    }
     if (ff & (me == att ? FF_A_DOWN : FF_D_DOWN)) {
         bd.doing = DO_DOWN;                     /* (Senseless: it falls, and lies there till it comes round; up again,
                                                 **   its turn, the book's Rise, 2026-10-29) */

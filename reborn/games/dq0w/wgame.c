@@ -401,6 +401,7 @@ void s_world_keep (void)
 
 /* A game carried on: the world's part of its save read back (the clock, the character's place, state and bearings, the
 ** puzzle's, the strata's records: the world begins from them, s_begin) */
+extern unsigned char pc_down;                   /* (dq0w.c's) */
 static void world_back (void)
 {
     struct wsave w;
@@ -437,6 +438,12 @@ static void world_back (void)
         }
         memcpy (&HUB->tb, &w.tb, sizeof w.tb); /* (The time of day it believes: part 76's) */
         done_ = w.done;
+        if (HUB->pcsum.cond & C_UNCONSCIOUS) {  /* (Kept senseless, the referee's file read: out still, its shock
+                                                **   rolls asked as main goes round, its bearings off already (the
+                                                **   user's K16, 2026-11-21) */
+            pc_down = HUB->pc_out = 1;
+            HUB->pc_ready = HUB->now;
+        }
         hub_map (WORLD_BANK);
         read (fd, WREC->strata, sizeof WREC->strata);
     }

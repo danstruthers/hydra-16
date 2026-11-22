@@ -174,6 +174,19 @@ void __fastcall__ limb_news (unsigned w, unsigned char b);  /* (Part 49) The lim
 unsigned char __fastcall__ engaged (unsigned char eng, unsigned char def);  /* (dq0w.c's part 25) The engage
                                                 **   initiative test: eng engaging def (0 the character, else an
                                                 **   actor's entry plus 1) */
+void __fastcall__ time_kept (unsigned n);       /* (Part 99's stub, wtime.c's: the clock's minute n; past any minute,
+                                                **   POOL_OP's codes, lamp oil's pools (the user's H15) and the flasks'
+                                                **   oil (H16), wpool.c's pool_op: no stub of their own, the main RAM's
+                                                **   room) */
+#define POOL_OP         0xFFF0                  /* (The character stepped onto its square, + 1 body bd: slipped in it,
+                                                **   prone, or burnt in it) */
+#define POOL_ADD        0xFFF9                  /* (+ 0 the character, 1 body bd: oil poured out where it stands) */
+#define POOL_TIME       0xFFFB                  /* (Their minute) */
+#define POOL_MARK       0xFFFC                  /* (The things' numbers so far marked, an outfit to be made) */
+#define POOL_FILL       0xFFFD                  /* (The flasks of oil made since the mark filled) */
+extern unsigned char npools;                    /* (dq0w.c's: how many pools there are, its low bits; | PC_WOKE, the
+                                                **   character struck in its sleep, K11's, wfight.c's) */
+#define PC_WOKE         0x80
 extern unsigned char noinit;                    /* (dq0 -I: no engage initiative test: the tests') */
 
 #endif

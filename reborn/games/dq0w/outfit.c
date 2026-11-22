@@ -23,6 +23,8 @@
 #include "things.h"
 #include "trace.h"
 #include "outfit.h"
+void __fastcall__ time_kept (unsigned n);       /* (Part 99's: past any minute, wpool.c's, H16's flasks filled: wbody.h's
+                                                **   POOL_MARK, POOL_FILL) */
 
 #pragma code-name ("SW57CODE")
 #pragma rodata-name ("SW57RODATA")
@@ -203,7 +205,9 @@ void __fastcall__ s_den_kit (const struct msg* m)
     ost.kit = 0;
     hub_map (KIND_BANK);
     if (OF_N) {
+        time_kept (0xFFFC);
         outmake (1);
+        time_kept (0xFFFD);                     /* (Its flasks of oil filled: H16's, POOL_MARK and POOL_FILL) */
     }
     hub_map (0);
 }

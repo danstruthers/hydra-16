@@ -603,12 +603,15 @@ module.exports = {
     { name: 'dq0jobs', ...dq0JobsTest() },
     { name: 'dq0hold', ...dq0HoldTest() },
     {
+      // (Its third game's kit a chalk and a candle more (-k lockpicks,chalk,candle), ans1's, 2026-11-22: a found chest locked one
+      // time in three by its number, every thing's one more since a flask of oil's oil is a record of its own (H16): two more
+      // things, the chest's number one that locks again, the picking's scene as it was)
       name: 'dq0timed', meaning: true, what: 'Dingus Quest Zero\'s timed work (the user\'s playtest, 2026-10-22: "It would be better if the first half (for example "You study the mechanism a while") comes out first, followed by, as the task timer expires, the second part"; HOUSE.md\'s long tasks): whatever spends time and whose outcome is a test a long task of its own, its first words at once (E_TASK TE_BEGUN, the clock where the command found it), its test made and its outcome told as its time\'s done (the clock its time on), stopped first, nothing: at seed 7 a thief (Lockcraft 95) finds a dart trap on a door (three searches), sets to making out its mechanism and is stopped at once (TE_STOPPED, no outcome: nothing made out), makes it out (LT_STUDY, TO_ASSESSED its minute on), disarms it (LT_DISARM, TO_DISARMED its minute on), the door opened and nothing set off; at seed 16 a door forced (LT_FORCE, its outcome its ten seconds on, the walk up to it with them); at seed 3 a track read (LT_TRACK, the reading, V_TRACED, its minute on), and another stopped at once (none read); at seed 17 a found chest walked over to and its lock picked (the things\' own: a long task of the UI\'s, LT_PICK, a minute, the things asked as it\'s begun and as it\'s done), a dagger hidden (LT_HIDE, a minute, hidden at its end); the words in order, each first half before its second',
       init: 't_rc', cycles: 2400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'hmchar -q -s 1 -u feudal -c thief -o /ram/t.hm',
         'echo ml lck 95 >> /ram/t.hm', 'dq0 -p t -s 7 -c /ram/t.hm', 'search', 'search', 'search', 'face south', 'disarm']) + 'stop\r' +
         dq0Typed(['disarm', 'disarm', 'open', 'quit', 'dq0 -p t -s 16 -c /ram/c.hm -T', 'face east', 'force', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'track',
-        'track']) + 'stop tracking\r' + dq0Typed(['quit', 'dq0 -p t -s 17 -c /ram/c.hm -T -k lockpicks', 'wait', 'wait', 'wait', 'open the chest',
+        'track']) + 'stop tracking\r' + dq0Typed(['quit', 'dq0 -p t -s 17 -c /ram/c.hm -T -k lockpicks,chalk,candle', 'wait', 'wait', 'wait', 'open the chest',
         'pick the lock of the chest', 'hide the dagger', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {

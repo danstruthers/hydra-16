@@ -260,7 +260,7 @@ static void wants_read (void)
         if (!used_up (K[k].o.kind) || gone[k]) {
             continue;
         }
-        if (K[k].dur_max && !K[k].fuel && (K[k].o.kind == KI_TORCH || K[k].o.kind == KI_CANDLE || K[k].o.kind == KI_OIL || K[k].o.kind == KI_PITCH)) {
+        if (K[k].dur_max && !K[k].fuel && (K[k].o.kind == KI_TORCH || K[k].o.kind == KI_CANDLE || K[k].o.kind == KI_PITCH)) {   /* (A flask of oil a vessel, its oil in it: H16) */
             gone[k] = 1;
             continue;
         }

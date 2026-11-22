@@ -1455,7 +1455,7 @@ module.exports = {
           'At your feet lie a table, a sack and a chest. On the table lie two chisels.', '> close the chest', 'You close the chest.',
           '> examine the chest', 'It\'s closed.', 'It\'s made of wood', '> lock the chest', 'The chest has a lock, but you have no key to it.',
           '> pick the lock of the chest', 'The chest isn\'t locked.', '> force the chest', 'You open the chest: it\'s empty.', '> open the flask of oil',
-          'You unstopper the flask of oil: it\'s full.', '> i', 'a flask of oil (unstoppered)',
+          'You unstopper the flask of oil, revealing a pint of oil.', '> i', 'a flask of oil (unstoppered)',
           '> close the flask', 'You stopper the flask of oil.', '> open the torch', 'You can\'t open the torch.'], f, 'the words: ');
         const inv = s.slice(s.indexOf('> i', s.indexOf('> take the rations from the sack')), s.indexOf('> open the sack'));
         if (/sack \(closed\) \(in it/.test(inv) || /in it: 3 rations/.test(inv)) f.push('what\'s in the closed sack listed: ' + inv);
@@ -1756,7 +1756,7 @@ module.exports = {
         const { IC_MARK, CP_IN } = require('../../../games/dq0/hubgen.js').load().C;   // (items.h's)
         inTurn(s, ['> stow the tinderbox', 'Stow it where? (b) the backpack, the side pocket, (f) the pouch', '> pocket', 'You stow the tinderbox in your side pocket.',
           '> stow the flask', 'Stow it where?', 'the side pocket', '> side pocket', 'You stow the flask of oil in your side pocket.', '> look in the side pocket',
-          'In the side pocket lie a tinderbox and a flask of oil.', '> close the pocket', 'You tie the side pocket shut.'], f, 'the words: ');
+          'In the side pocket lie a tinderbox and a flask of oil (full).', '> close the pocket', 'You tie the side pocket shut.'], f, 'the words: ');
         const st = T.of('look in the side pocket').after, pk = st && st.items.find(i => i.name === 'backpack');
         for (const n of ['tinderbox', 'flask of oil']) {
           const t = st && pk && st.items.find(i => i.name === n && i.where === 'IW_ITEM' && i.x === pk.n);
@@ -1871,7 +1871,7 @@ module.exports = {
           'lock', '> check the chest for traps', 'The chest shows no sign of a trap', '> check its condition', 'The chest is',
           '> open the chest', 'You open the chest: it\'s empty.', '> look at the sack', 'It\'s tied shut.', '> look at the rations',
           'The sack is closed.', '> open the sack', 'You untie the sack, revealing 3 rations.', '> open the flask of oil',
-          'You unstopper the flask of oil: it\'s full.', '> hit the door with the hammer', 'You have no hammer to hand.', '> open the door',
+          'You unstopper the flask of oil, revealing a pint of oil.', '> hit the door with the hammer', 'You have no hammer to hand.', '> open the door',
           'You open the door, revealing a passage, 30 feet of it.', '> check the door for traps', 'You go over it carefully, and find no trap.',
           '> examine the door', 'A door of', '> judge the door', 'You judge it', '> examine the lock of the door', '> condition of the door',
           'It shows no damage.', '> assess the door', 'There\'s no price to put on it'], f, 'the words: ');
@@ -2633,7 +2633,7 @@ module.exports = {
         const games = o.split(/% dq0 -p t -s 3 -c \/ram\/\w\.hm/).slice(1);
         const inv = g => { const i = games[g].indexOf('You carry'); return i < 0 ? '' : games[g].slice(i, games[g].indexOf('In all', i)); };
         const a = inv(0), b = inv(1), c = inv(2), d = inv(3);
-        if (!/a lantern \(lit[^)]*\), in your left hand/.test(a) || !/two flasks of oil/.test(a) || /torch/.test(a)) f.push('160 pennies: not a lantern lit and two flasks, no torch: ' + a);
+        if (!/a lantern \(lit[^)]*\), in your left hand/.test(a) || (/two flasks of oil/.test(a) ? 2 : (a.match(/a flask of oil/g) || []).length) !== 2 || /torch/.test(a)) f.push('160 pennies: not a lantern lit and two flasks, no torch: ' + a);
         for (const [s, w] of [[b, 'a poor serf'], [c, 'a slave'], [d, 'a serf of 80 pennies']]) {
           if (!/a torch \(lit[^)]*\), in your left hand/.test(s) || !/two torches/.test(s) || !/a flask of oil/.test(s) || /lantern/.test(s)) f.push(w + ': not a torch lit, two spare and a flask: ' + s);
         }
@@ -2778,7 +2778,7 @@ module.exports = {
         want('empty the sack', /You empty the sack out at your feet\./, 'not emptied at its feet');
         want('empty the sack', /The sack is empty\./, 'not told empty', 1);
         want('empty the sack onto the table', /You empty the sack onto the table\./, 'not emptied onto the table');
-        want('empty the flask of oil', /You pour the oil out of the flask of oil\./, 'its oil not poured away');
+        want('empty the flask of oil', /You pour the oil out of the flask of oil: it pools on the floor\./, 'its oil not poured away, a pool (H15)');
         want('empty the torch', /The torch isn't a thing to empty\./, 'not refused');
         want('empty the sack', /The sack is closed\./, 'a tied sack not refused', 2);
         want('put the key in the corner', /You put the iron key in the corner\./, 'not put in the corner');
@@ -2826,6 +2826,74 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0deepreach', near: ['gear'], what: "Dingus Quest Zero's things to hand at any depth in a container set down (the user's H17, 2026-11-21: a thing the character knows is in a container within reach is to hand at any depth, each level deeper taking more time): at seed 3 (-T, a sack more in the kit) the tinderbox put in the sack, the sack in the backpack, the backpack taken off and set down, looked into and the sack in it (what's in them known): \"hold the tinderbox\" (a handling, the reach's to hand) finds it two deep (not \"You have no tinderbox to hand.\"), its reach two levels' time (part 56's R_IN each), more than the same thing's one level after (put in the pack itself)",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        "dq0 -p t -s 3 -c /ram/c.hm -T -K -k 'sack'", 'put the tinderbox in the sack', 'put the sack in the backpack', 'take off the backpack', 'drop the backpack', 'look in the backpack', 'look in the sack',
+        'hold the tinderbox', 'inventory', 'put the tinderbox in the backpack', 'hold the tinderbox', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const A = dq0Answers(m.out), T = dq0Turns(m), f = [], a = (l, n = 0) => (A.filter(x => x.cmd === l)[n] || { text: '(no answer)' }).text;
+        if (/no tinderbox to hand/.test(a('hold the tinderbox'))) f.push('the tinderbox two deep in the pack set down not to hand: ' + a('hold the tinderbox').slice(0, 200));
+        if (!/tinderbox/.test(a('hold the tinderbox'))) f.push('the tinderbox not taken: ' + a('hold the tinderbox').slice(0, 200));
+        if (!/a tinderbox, in your/.test(a('inventory'))) f.push('the tinderbox not in hand after: ' + a('inventory').slice(0, 300));
+        const took = (l, n = 0) => { const t = T.filter(x => x.line === l)[n]; return t && t.at && t.after ? t.after.now - t.at.now : -1; };
+        if (!(took('hold the tinderbox') > took('hold the tinderbox', 1) && took('hold the tinderbox', 1) > 0)) f.push('two levels deep not the longer reach: ' + took('hold the tinderbox') + ' tenths, one level ' + took('hold the tinderbox', 1));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0oilpool', near: ['gear', 'denizens'], what: "Dingus Quest Zero's flask of oil a vessel, and lamp oil poured out a pool (the user's H16 and H15, 2026-11-21): at seed 2 (-T, a kit of a lantern, a flask of oil and a vial; its waterskin filled below, dq0pour's) the flask's oil looked at in it (a pint of oil, a liquid), the lantern lit, burnt ten minutes and filled from the flask, the flask emptied into the vial, then filled with water from the waterskin and its water poured out, the vial's oil poured out: told it pools there; at seed 3 the flask's oil poured out at the character's feet, stepped off and back onto: a stumble roll asked of the character there (P_STUMBLE, every actor's one ask); its lit torch dropped in it, a minute on: the oil catches fire, and burns the character standing in it (E_HARM); and (dq0noise's bandits, seed 1) the oil poured out a step on, the character stepping back off it, a hostile bandit put two squares ahead, beyond the pool: coming on through it, asked the same stumble roll (its actor's)",
+      init: 't_rc', cycles: 5000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        "dq0 -p t -s 2 -c /ram/c.hm -T -k 'lantern,flask of oil,vial'", 'd', 'n', 'fill the waterskin', 's', 'open the flask of oil', 'look in the flask of oil', 'light the lantern', 'wait 10 minutes',
+        'fill the lantern from the flask of oil', 'open the vial', 'pour the oil into the vial', 'open the waterskin', 'pour the water into the flask of oil', 'look in the flask of oil',
+        'empty the flask of oil', 'empty the vial', 'quit',
+        "dq0 -p t -s 3 -c /ram/c.hm -T -k 'flask of oil'", 'open the flask of oil', 'empty the flask of oil', 'step back', 'step forward', 'drop the torch', 'wait 1 minute', 'quit',
+        'dq0sky=0', 'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'flask of oil'", 'open the flask of oil', 'step forward', 'empty the flask of oil', 'step back', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        const ahead = (h, L, K, at, named) => {      // (A hostile bandit two squares ahead of the character, the pool between)
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
+          if (k === undefined) return;
+          const d = h[L.pcFace] & 7, x = (h[L.pcX] | h[L.pcX + 1] << 8) + 2 * [0, 1, 1, 1, 0, -1, -1, -1][d], y = (h[L.pcY] | h[L.pcY + 1] << 8) + 2 * [-1, -1, 0, 1, 1, 1, 0, -1][d];
+          const R = dq0Rec(m), o = R.at(h[at(k) + L.aDen]), w16 = (a, v) => { h[a] = v & 255; h[a + 1] = v >> 8 & 255; }, r16 = (q, v) => { R.mem[o + q] = v & 255; R.mem[o + q + 1] = v >> 8 & 255; };
+          w16(at(k) + L.aX, x); w16(at(k) + L.aY, y); h[at(k) + L.aSn] = h[L.pcSn]; h[at(k) + L.aPos] = K.POS_STANDING;
+          r16(R.X, x); r16(R.Y, y); R.mem[o + R.SN] = h[L.pcSn];
+          h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_HOSTILE;
+          h[at(k) + L.aDoing] = K.DO_WATCH;
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+        };
+        dq0Poke(m, [{ g: 3, line: 'wait', n: 1, call: ahead }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const A = dq0Answers(m.out), T = dq0Turns(m), f = [], a = (l, n = 0) => (A.filter(x => x.cmd === l)[n] || { text: '(no answer)' }).text;
+        const want = (l, re, why, n) => { if (!re.test(a(l, n))) f.push('"' + l + '" ' + why + ': ' + a(l, n).slice(0, 200)); };
+        want('look in the flask of oil', /a pint of oil/, 'its oil not a liquid in it (H16)');
+        want('fill the lantern from the flask of oil', /You fill the lantern from the flask of oil/, 'the lantern not filled from the flask (H16)');
+        want('pour the oil into the vial', /You pour the oil into the vial\./, "the flask's oil not poured into the vial");
+        want('pour the water into the flask of oil', /You pour [^.]*water into the flask of oil/, 'the flask not filled with water (H16)');
+        want('look in the flask of oil', /a pint of water/, 'the flask not holding water', 1);
+        want('empty the vial', /You pour the oil out of the vial: it pools on the floor\./, 'the oil poured out not a pool (H15)');
+        want('empty the flask of oil', /You pour the oil out of the flask of oil: it pools on the floor\./, 'the flask\'s oil poured out not a pool (H15)', 1);
+        const games = [], g = [];
+        for (const t of T) { if (/^dq0 /.test(t.line)) games.push(g.splice(0)); g.push(t); }
+        games.push(g.splice(0)); games.shift();
+        if (games.length !== 3) return [...f, 'the three games not played: ' + games.length];
+        const stumbles = (gm, who) => gm.flatMap(t => t.replies.filter(r => r.rs === 'RS_TEST' && r.ask.purpose === 'P_STUMBLE' && (who ? r.actor : !r.actor)));
+        const g2 = games[1], from = g2.findIndex(t => t.line === 'step back');
+        if (from < 0 || !stumbles(g2.slice(from), 0).length) f.push('no stumble roll asked of the character stepping into the oil');
+        const fire = g2.slice(g2.findIndex(t => t.line === 'drop the torch')), words = fire.map(t => a(t.line)).join(' ');
+        if (!/The oil on the floor catches fire!/.test(words)) f.push('the pool not set alight by the torch dropped in it: ' + words.slice(0, 300));
+        if (!fire.some(t => dq0Ev(t, 'E_HARM', {}).length)) f.push('the character in the burning oil not burnt (E_HARM)');
+        if (!stumbles(games[2], 1).length) f.push('no stumble roll asked of the bandit coming into the oil (one path)');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0oil', near: ['gear'], what: "Dingus Quest Zero's lamp oil a liquid of its own (the user's H14, 2026-11-19): at seed 3 (-T, a kit of a lantern, a flask of oil, a vial and an iron pot) the flask's oil poured into the vial (a pint of lamp oil there), the vial emptied into the pot on the floor, the pot's emptied back into the vial, the lantern lit and burnt an hour, then filled from the vial (its oil the less), the rest poured back into the flask, the vial empty after ('The vial is empty.'); the flask's poured into the waterskin, which then won't be filled with water (two liquids don't mix, H13), and poured out; the flask empty; each pour's, empty's and fill's first letter held to D17",
       init: 't_rc', cycles: 600e6 + OIL.length * 150e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
@@ -2844,7 +2912,7 @@ module.exports = {
         want('empty the vial', /The vial is empty\./, 'the vial not empty after');
         want('pour the oil into the waterskin', /You pour the oil into the waterskin\./, "the flask's oil not poured into the waterskin");
         want('fill the waterskin', /You'd have to empty the waterskin first\./, 'water filled on its oil');
-        want('empty the waterskin', /You pour the oil out of the waterskin\./, "the waterskin's oil not poured out");
+        want('empty the waterskin', /You pour the oil out of the waterskin: it pools on the floor\./, "the waterskin's oil not poured out, a pool (H15)");
         want('empty the flask', /The flask of oil is empty\./, 'an empty flask not told');
         this.notes = [];
         for (const r of this.timer.game(0, OIL.filter(l => /^(pour|empty|fill) /.test(l)).map(l => ({ line: l, want: 'You|The' })))) {

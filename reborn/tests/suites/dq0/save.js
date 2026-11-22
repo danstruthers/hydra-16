@@ -2,6 +2,8 @@
 // save.js - Dingus Quest Zero's tests: saving and the life between dungeons.  (tests.js, the index: the suites in
 // their order; ../../lib: the helpers they share)
 'use strict';
+const fs = require('fs');
+const path = require('path');
 const { card, typed } = require('../../lib/common.js');
 const {
   xdBytes, saidTheme, DQ0_MAKE, dq0Life, dq0Turns, dq0Rep, dq0Need, dq0Carried, dq0Here, dq0Holder, dq0View, dq0TypedAsk,
@@ -887,6 +889,49 @@ module.exports = {
           for (const n of KEPT) if (num(w2, n) !== num(w1, n)) f.push(s + ': written back, world.dat\'s ' + n + ' ' + num(w2, n) + ', not ' + num(w1, n));
           if (!xdBytes(out, 'xd /ram/k' + s + '/d1/dens.dat').length) f.push(s + ': no dens.dat');
         }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0saveout', near: ['save', 'fight'], what: "Dingus Quest Zero's shock rolls kept with the game (the user's K16, 2026-11-21: a game loaded mid black-out goes on where it was): at seed 3 the character knocked senseless (a scene's: the referee's sheet senseless, its fall now, its time out five minutes on, the world's out), quit as it lies there (the quit's save), carried on: the referee's fall and rolls (ko_at, ko_n) and its time out (pc_out) read back as they were kept (its file's body line), the world's character senseless still (the hub's pc_out); and an actor's kept by its sheet (its fall and rolls set as it quit: saved in the sheets past the denizens' records, KOSAVE) read back the same, its sheet's entry in the fb bank's KOS as RS_NEW_ACTOR finds it",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/o', 'turn left', 'quit', 'dq0 -p t -d /ram/o', 'save', 'look', 'quit', 'echo $status']) },
+      start(m) {
+        const lbl = () => fs.readFileSync(path.join(__dirname, '..', '..', '..', 'obj', 'games', 'dq0harn', 'dq0harn.lbl'), 'latin1');
+        const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) \\._' + n + '$', 'm').exec(lbl())[1], 16);
+        const H = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'sdk', 'c', 'include', 'harn.h'), 'latin1'), def = n => +new RegExp('#define\\s+' + n + '\\s+(\\d+)').exec(H)[1];
+        const STATE = 2 * 24 + 10 + def('HARN_MEDMAX') + 2 * def('HARN_PSYMAX') + 1 + def('HARN_MAXSKILLS') + 3;
+        const PCOUT = require('../../../games/dq0/hubgen.js').load().off('struct hub', 'pc_out');
+        const KOS = n => 0x800 + 0x100 + 6 * n;   // (Sheet n's entry: dq0harn.h's KOS, by sheet)
+        const ram = () => m.taskRam[m.dq0.bank(0)[12 + 3]], u32 = (r, a) => (r[a] | r[a + 1] << 8 | r[a + 2] << 16 | r[a + 3] << 24) >>> 0;
+        const fbMem = () => { const r = ram(), t = m.dq0.bank(0)[12 + 3]; return m.taskBankMem(t, r[ad('fb')]); };
+        m.kept = [];
+        const read = () => { const r = ram(), fb = fbMem(); return { at: u32(r, ad('ko_at')), n: r[ad('ko_n')] | r[ad('ko_n') + 1] << 8, out: u32(r, ad('pc_out')),
+          state: r[ad('pc') + STATE], hubOut: m.dq0.bank(0)[PCOUT], kos: fb ? Array.from(fb.subarray(KOS(m.kosN), KOS(m.kosN) + 6)) : null }; };
+        dq0Poke(m, [{ g: 1, line: 'quit', n: 1, call: () => {
+          const h = m.dq0.bank(0), { L } = m.dq0.layout(), r = ram(), now = (h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16 | h[L.now + 3] << 24) >>> 0;
+          const w = (a, v, n) => { for (let i = 0; i < n; i++) r[a + i] = v >>> (8 * i) & 255; };
+          r[ad('pc') + STATE] = 3;                  // (HARN_UNCONSCIOUS)
+          w(ad('ko_at'), now, 4); w(ad('ko_n'), 2, 2); w(ad('pc_out'), (now + 3000) >>> 0, 4);
+          h[PCOUT] = 1;
+          m.kosN = r[ad('aden')]; w(ad('ko_at') + 4, 0x1234, 4); w(ad('ko_n') + 2, 5, 2);   // (Actor 0's, its sheet aden[0]'s: kept as the save's, KOSAVE)
+          const fb = fbMem(); if (fb) [0x34, 0x12, 0, 0, 5, 0].forEach((v, i) => { fb[KOS(m.kosN) + i] = v; });
+          m.kept.push(read());
+        } }, { g: 2, line: 'look', n: 1, call: () => m.kept.push(read()) }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], [a, b] = m.kept || [];
+        if (!a || !b) return ['the scene not set or not read back: ' + JSON.stringify(m.kept)];
+        if (!a.at) f.push('the fall not set as it quit: ' + JSON.stringify(a));
+        if (b.at !== a.at) f.push('its fall not read back as kept: ' + a.at + ' then ' + b.at);
+        if (b.n !== a.n) f.push('its shock rolls made not read back as kept: ' + a.n + ' then ' + b.n);
+        if (b.out !== a.out) f.push('its time out not read back as kept: ' + a.out + ' then ' + b.out);
+        if (b.state !== 3) f.push('not senseless still, carried on: its state ' + b.state);
+        if (!b.hubOut) f.push('the world not holding it senseless, carried on (pc_out)');
+        if (JSON.stringify(b.kos) !== JSON.stringify(a.kos)) f.push('a creature\'s fall and rolls (KOS) not read back from beasts.dat: ' + JSON.stringify(a.kos) + ' then ' + JSON.stringify(b.kos));
         return f;
       },
       sdcard: true

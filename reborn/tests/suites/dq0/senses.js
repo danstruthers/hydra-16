@@ -1213,7 +1213,7 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k lantern',
         'wait 45 minutes', 'wait 10 minutes', 'wait 10 minutes', 'look', 'light the lantern', 'wait 20 minutes', 'fill the lantern', 'drop the torch',
         'light torch', 'get the torch', 'dip the torch in the oil', 'quit',
-        'dq0 -p t -s 7 -c /ram/c.hm -T', 'look', 'wait 2 minutes', 'get the candle stubs', 'light the candle stubs', 'drop the candle stubs', 'wait 10 minutes', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm -T', 'look', 'wait 2 minutes', 'get the candle stubs', 'light the candle stubs', 'drop the candle stubs', 'wait 15 minutes', 'quit',
         'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
@@ -1221,7 +1221,7 @@ module.exports = {
         const named = (st, n) => dq0Carried(st).filter(i => i.name === n);
         const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -k lantern');
         if (!g.after) return ['the first game not begun'];
-        const kit = g.after, torches = named(kit, 'torch'), flask = named(kit, 'flask of oil')[0], lantern = named(kit, 'lantern')[0];
+        const kit = g.after, torches = named(kit, 'torch'), flask = named(kit, 'oil')[0], lantern = named(kit, 'lantern')[0];   // (The flask's oil a liquid in it, its measure its own: H16, 2026-11-21)
         if (torches.length !== 2 || torches.filter(i => i.flags & I.LIT).length !== 1 || !torches.every(i => i.fuel === 60)) f.push('the kit not a torch lit and a spare, an hour each: ' + JSON.stringify(torches.map(i => [i.flags, i.fuel])));
         if (!flask || flask.fuel !== 360) f.push('the kit\'s flask of oil not a lantern\'s fill (360 minutes): ' + (flask && flask.fuel));
         if (!lantern || lantern.fuel !== 360) f.push('the lantern not full: ' + (lantern && lantern.fuel));
@@ -1243,7 +1243,7 @@ module.exports = {
         inTurn(s, ['> wait 10 minutes', 'Your torch is burning low.', '> wait 10 minutes', 'Your torch gutters and goes out: you stop waiting.', 'It is dark.',
           '> look', 'It is dark.'], f, 'the torch\'s words: ');
         const lit = T.of('light the lantern'), w4 = T.after(lit, 'wait 20 minutes'), fl = T.of('fill the lantern');
-        const lan = st => st && named(st, 'lantern')[0], fla = st => st && named(st, 'flask of oil')[0];
+        const lan = st => st && named(st, 'lantern')[0], fla = st => st && named(st, 'oil')[0];   // (The flask's oil: H16's)
         if (!lan(w4.after) || lan(w4.after).fuel !== 340 || !(lan(w4.after).flags & I.LIT)) f.push('the lantern not burnt 20 minutes: ' + JSON.stringify(lan(w4.after)));
         if (!dq0Rep(fl, 'ireq', { kind: 'IO_FILL', result: 'IR_OK' }).length) f.push('the lantern not filled (' + JSON.stringify(fl.replies.filter(r => r.req === 'ireq').map(r => r.kind + ' ' + r.result)) + ')');
         if (!lan(fl.after) || lan(fl.after).fuel !== 360 || !fla(fl.after) || fla(fl.after).fuel !== 340) f.push('the oil not moved to the lantern: ' + JSON.stringify([lan(fl.after), fla(fl.after)].map(i => i && i.fuel)));
@@ -1267,14 +1267,14 @@ module.exports = {
         const g2 = T.of('dq0 -p t -s 7 -c /ram/c.hm -T'), lk = T.after(g2, 'look'), stub = st => st && st.items.find(i => i.name === 'candle stubs' && (i.where !== 'IW_SQUARE' || i.sn === st.pc.sn));   // (A held thing's sn its hand: slice 4.1b's)
         const found = stub(lk.after);
         if (!found || !found.id || found.where !== 'IW_SQUARE' || !(found.fuel > 0 && found.fuel < 25)) f.push('the chapel\'s candle stubs not found with some life left, less than a whole one\'s: ' + JSON.stringify(found));
-        const ls = T.of('light the candle stubs'), ds = T.of('drop the candle stubs'), w5 = T.after(ds, 'wait 10 minutes');
+        const ls = T.of('light the candle stubs'), ds = T.of('drop the candle stubs'), w5 = T.after(ds, 'wait 15 minutes');   // (15 minutes, not 10: the stubs' life by their number, each thing's one more since the flask's oil is a record of its own, H16, 2026-11-21: more life left in them)
         if (!stub(ls.after) || !(stub(ls.after).flags & I.LIT)) f.push('the stubs not lit');
         if (!dq0Here(ds.after).some(i => i.name === 'candle stubs' && (i.flags & I.LIT))) f.push('the stubs not put down lit');
         dq0Need(f, w5, 'E_TASK', { te: 'TE_OUT', lamp: K.KI_STUBS, seen: true }, 'the stubs lying there not seen to go out');
         dq0Need(f, w5, 'E_LIGHT', { w1: ds.after && ds.after.pc.x, w2: ds.after && ds.after.pc.y }, 'no E_LIGHT at their square, the light layer out of date');
         if (stub(w5.after)) f.push('the stubs not burnt away: ' + JSON.stringify(stub(w5.after)));
         if (!w5.after || w5.after.now - ds.after.now < 6000) f.push('the wait stopped by a light it doesn\'t carry');
-        inTurn(s, ['> wait 10 minutes', 'The candle stubs gutter and go out.'], f, 'the stubs\' words: ');
+        inTurn(s, ['> wait 15 minutes', 'The candle stubs gutter and go out.'], f, 'the stubs\' words: ');
         return f;
       },
       sdcard: true

@@ -592,8 +592,8 @@ enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE, IR_NO, IR_FIXED, IR_FUMBL
                                                 **   next seven | 0x80, its kind's name, SAY_SEP: worded by said.txt's
                                                 **   LI.item, the UI's list renderer; the look's lists, the user's,
                                                 **   2026-11-16) */
-enum { LN_NONE, LN_A, LN_SOME, LN_FEW, LN_COUNT, LN_PINTS };    /* (SAY_LI's count: none, "a", "some", "two", "12",
-                                                **   "12 pints of") */
+enum { LN_NONE, LN_A, LN_SOME, LN_FEW, LN_COUNT, LN_PINTS, LN_PINT };   /* (SAY_LI's count: none, "a", "some", "two", "12",
+                                                **   "12 pints of", "a pint of") */
 #define LN_PLURAL       8                       /* (Its noun made more than one, "sacks") */
 #define LN_SINGLE       16                      /*   (or one of a lot's, "a ration", "a penny") */
 enum {

@@ -1015,13 +1015,55 @@ module.exports = {
         const T = dq0Turns(m), f = [], RS_ATTACK = m.dq0.layout().K.RS_ATTACK, sl = T.of('sleep'), s = dq0Prose(out);
         if (sl.k < 0) return ['the game not played'];
         const all = [sl, ...T.filter(t => t.k > sl.k)];
-        if (!all.some(t => dq0Rep(t, 'slot0', { kind: RS_ATTACK, w2: v => v & 0x80 }).length)) f.push('no blow at the sleeper with no defence (RS_ASLEEP)');
+        // (The blow as it was asked, its flags (msgs.def's RS_ATTACK w2): RS_ASLEEP its first alone, the sleeper woken by it (the
+        // user's K11, 2026-11-21); the reply's w2 its time out, not the flags, read before)
+        const asleep = all.flatMap(t => dq0Rep(t, 'slot0', { kind: RS_ATTACK, other: 0 })).filter(e => e.ask.asleep);
+        if (asleep.length !== 1) f.push('not one blow at the sleeper with no defence (RS_ASLEEP), its first: ' + asleep.length);
         if (!/You settle down to sleep for eight hours\.[\s\S]*strikes at you/.test(s)) f.push('the sleeper not struck: ' + JSON.stringify(s.slice(s.indexOf('> sleep'), s.indexOf('> sleep') + 400)));
         // (A person not seen, "something": its words a thing's, "its", not a person's "their", the user's people "they",
         // 2026-11-17: blows.c's, not a word of what can't be seen)
         if (!/Something strikes at you with its /.test(s)) f.push('the cultist unseen not "Something strikes at you with its ...": ' + JSON.stringify(s.slice(s.indexOf('> sleep'), s.indexOf('> sleep') + 400)));
         const told = s.match(/[^.!?]*\b[Ss]omething\b[^.!?]*\b(?:they|their|them)\b[^.!?]*[.!?]/);
         if (told) f.push('one not seen given a person\'s words: ' + JSON.stringify(told[0]));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0wakeblow', near: ['denizens', 'fight'], what: 'Dingus Quest Zero\'s sleeper struck wakes on the first blow (the user\'s K11, 2026-11-21: the first blow lands undefended, the book\'s Ignore, RS_ASLEEP, and wakes the sleeper; every actor alike, the world\'s one blow, wfight.c): a creature asleep (dq0noise\'s hand-written theme, its bandits at seed 1, one put beside the character asleep) attacked twice, the first blow at it with no defence and none after, the bandit awake from the first on (not DO_SLEEP); and the character asleep in the dark among hostile cultists (dq0killrest\'s theme, the character tough: Endurance 99), the first blow at it with no defence, none after, its sleep stopped by it (E_TASK TE_HIT)',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'dq0hour=128', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'attack the bandit', 'attack the bandit', 'quit',
+        'hmchar -q -s 23 -u feudal -c hunter -o /ram/d.hm', 'echo att str 99 >> /ram/d.hm', 'echo att sta 99 >> /ram/d.hm', 'echo att wil 99 >> /ram/d.hm', 'mkdir /ram/h',
+        "echo 'faction | Foes | cultist | 0-0 | 30 | - | 0 | h | -' > /ram/h/theme.txt", 'dq0 -p t -s 1 -c /ram/d.hm -T -d /ram/h', 'douse the torch', 'sleep', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'attack the bandit', n: 1, name: 'bandit', set: { attitude: 3, doing: 10 }, beside: 4 }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], { K } = m.dq0.layout(), RS_ATTACK = K.RS_ATTACK, games = [], g = [];
+        for (const t of T) { if (/^dq0 /.test(t.line)) games.push(g.splice(0)); g.push(t); }
+        games.push(g.splice(0)); games.shift();
+        if (games.length !== 2) return ['the two games not played: ' + games.length];
+        // (The creature asleep: the character's blows at it, as asked; the first with no defence, the rest not)
+        const at = games[0].flatMap(t => dq0Rep(t, 'slot0', { kind: RS_ATTACK, actor: 0 }).filter(e => e.other));
+        if (at.length < 2) f.push('the bandit not struck at twice: ' + at.length);
+        else {
+          if (!(at[0].ask.asleep)) f.push('the sleeping bandit\'s first blow not undefended (RS_ASLEEP)');
+          if (at.slice(1).some(e => e.ask.asleep)) f.push('a blow after the first at the bandit undefended still: ' + at.map(e => e.ask.asleep).join(' '));
+        }
+        const a1 = games[0].find(t => t.line === 'attack the bandit'), who = at.length ? at[0].other - 1 : -1;
+        const doing = a1 && a1.after && who >= 0 ? (a1.after.actors[who] || {}).doing : undefined;
+        if (doing === 'DO_SLEEP') f.push('the bandit asleep still after the first blow');
+        // (The character asleep: the cultists' blows at it, the first with no defence, none after; its sleep stopped)
+        const sl = games[1].find(t => t.line === 'sleep'), on = sl ? games[1].slice(games[1].indexOf(sl)) : [];
+        const bl = on.flatMap(t => dq0Rep(t, 'slot0', { kind: RS_ATTACK, other: 0 }).filter(e => e.actor));
+        if (bl.length < 2) f.push('the sleeper not struck at twice: ' + bl.length);
+        else {
+          if (!(bl[0].ask.asleep)) f.push('the sleeping character\'s first blow not undefended (RS_ASLEEP)');
+          if (bl.slice(1).some(e => e.ask.asleep)) f.push('a blow after the first at the character undefended still: ' + bl.map(e => e.ask.asleep).join(' '));
+        }
+        if (!on.some(t => dq0Ev(t, 'E_TASK', { te: 'TE_HIT', task: 'LT_SLEEP' }).length)) f.push('the sleep not stopped by the blow');
         return f;
       },
       sdcard: true

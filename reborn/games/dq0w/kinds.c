@@ -93,8 +93,12 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
                                                 **   of a few minutes: slice 4.1's) */
     { "well", 0, 255, 255, 0, 0, 0, 0, 8, "", MT_STONE, AP_STONE, 0, KF_FIXED },   /* (Its stone curb: never taken
                                                 **   up; its water the water's work's, to come) */
-    { "flask of oil", K_HAND, 4, 1, 0, 0, 0, 0, 1, "", MT_CLAY, AP_POTTERY, 8, KF_STOPPER },   /* (A light's fuel: a lantern's
-                                                **   fill, a torch's; slice 4.1's, the stopped branch's) */
+    { "flask of oil", K_CONTAINER | K_HAND, 0, 1, 1, 4, 0, 0, 1, "", MT_CLAY, AP_POTTERY, 8, KF_LIQUID | KF_STOPPER },   /* (A
+                                                **   vessel, a pint of lamp oil in it as it's made, a liquid as a
+                                                **   vial's: emptied, filled with anything (the user's H16,
+                                                **   2026-11-21); a lantern's fill, a torch's, from it; its worth
+                                                **   as it's bought, full, the outfits' and the market's; its weight its
+                                                **   oil's, a pound, the flask under a quarter) */
     { "pot of pitch", K_HAND, 6, 2, 0, 0, 0, 0, 2, "", MT_CLAY, AP_POTTERY, 8, KF_LID },   /* (A torch's) */
     { "sconce", 0, 6, 2, 3, 8, 0, 0, 12, "", MT_IRON, AP_METAL, 16, KF_ON | KF_FIXED },  /* (On a room's wall, fixed: a
                                                 **   torch in it, the maker's: DUNGEON.md, light kept) */
@@ -270,6 +274,7 @@ const struct comp comps[] = {
     { KI_QUIVER, CP_IN, KF_SOLID, 4, 24, FM_ARROW, 0 },
     { KI_BODY, CP_ON, 0, 60, 400, 0, 0 },       /* (What a denizen wore and carried) */
     { KI_POT, CP_IN, SS | KF_LIQUID | KF_LID, 6, 48, 0, 0 },
+    { KI_OIL, CP_IN, KF_LIQUID | KF_STOPPER, 1, 4, 0, 0 },     /* (A flask of oil, H16's) */
     { KI_SCONCE, CP_ON, 0, 3, 8, 0, 0 },        /* (A torch in it: its words "in", things.c's) */
     { KI_SCABBARD, CP_IN, KF_SOLID, 4, 24, FM_SWORD, 0 },
     { KI_SHEATH, CP_IN, KF_SOLID, 1, 8, FM_KNIFE, 0 },
@@ -308,7 +313,7 @@ const char cnouns[NCN][CN_LEN] = { "", "lid", "", "drawer", "side pocket", "fals
 ** drawing: a stick of charcoal four hours, chalk three, a pencil twenty, a horn of ink ten, a quill thirty */
 const struct burn burns[NBURNS] = {
     { KI_TORCH, 6, FU_OIL | FU_PITCH }, { KI_CANDLE, 24, 0 }, { KI_LANTERN, 36, FU_OIL }, { KI_STUBS, 3, 0 },
-    { KI_OIL, 36, FU_OIL }, { KI_PITCH, 24, FU_PITCH },
+    { KI_PITCH, 24, FU_PITCH },
     { KI_CHARCOAL, 24, FU_DRAW }, { KI_CHALK, 18, FU_DRAW }, { KI_PENCIL, 120, FU_DRAW }, { KI_INK, 60, FU_DRAW },
     { KI_QUILL, 180, FU_DRAW },
     { KI_TINDERBOX, 3, FU_DRAW }                /* (Thirty lightings, one off as it catches: HOUSE.md's fire-maker) */

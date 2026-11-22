@@ -172,12 +172,11 @@ static unsigned char __fastcall__ the (unsigned char k, const char* s)
 ** Into the other: the solid things, and the liquid as far as there's room (the rest stays: pour_in's).  Refused: not a
 ** thing that holds things, closed (sealed, locked), nothing in it; the other not one that holds things, closed, no
 ** room in it for the solid ones; for the liquid, not one that holds a liquid, full, or another liquid in it already (no
-** mixing: a vessel holds one liquid, the user's H11, 2026-11-19).  A flask's oil only poured away: a lantern's filled
-** from it (IO_FILL) */
+** mixing: a vessel holds one liquid, the user's H11, 2026-11-19); a flask of oil a vessel as any (H16) */
 static unsigned char empty (void)
 {
-    static unsigned char k, ky, sh, f, oil, any, lk, yk, room;
-    static unsigned lq, cap, yf;
+    static unsigned char k, ky, sh, f, any, lk, yk, room;
+    static unsigned lq, cap;
     static const char* ln;
     static char lb[14];
     static struct item* q;
@@ -251,7 +250,6 @@ static unsigned char empty (void)
     q = item_at (E_N);
     k = q->kind;
     sh = q->shut;
-    oil = k == KI_OIL && q->fuel;
     any = items (0, IN_X | IN_ITEM, E_N) != 0;
     for (E_I = 0; !E_L && (E_I = items (E_I, IN_X | IN_ITEM, E_N)) != 0; ) {
         if (!IC_OF (ip->y)) {
@@ -273,7 +271,6 @@ static unsigned char empty (void)
         q = item_at (E_Y);
         ky = q->kind;
         f = q->shut;
-        yf = q->fuel;
         for (E_I = 0; (E_I = items (E_I, IN_X | IN_ITEM, E_Y)) != 0; ) {
             if (!IC_OF (ip->y)) {
                 k = ip->kind;
@@ -285,39 +282,19 @@ static unsigned char empty (void)
         }
         k = item_at (E_N)->kind;
     }
-    if (oil && E_Y) {
-        lk = KI_LAMP_OIL;                       /* (A flask's oil poured into a vessel: lamp oil, a pint at most, the
-                                                **   user's H14, 2026-11-19) */
-        lq = 1;
-    }
-    ln = oil ? "oil" : lq ? strcpy (lb, name (lk)) : "";
+    ln = lq ? strcpy (lb, name (lk)) : "";
     hub_map (KIND_BANK);
-    if (!(CATALOGUE[k].flags & K_CONTAINER) && !oil) {
-        return the (k, k == KI_OIL ? " is empty." : " isn't a thing to empty.");   /* (A flask of oil poured out: empty,
-                                                **   H14's) */
+    if (!(CATALOGUE[k].flags & K_CONTAINER)) {
+        return the (k, " isn't a thing to empty.");
     }
     if (sh & IS_CLOSED) {
         return the (k, sh & IS_LOCKED ? " is locked." : " is closed.");
     }
-    if (!any && !oil) {
+    if (!any) {
         return the (k, " is empty.");
     }
     iq.osel = lq;
-    if (E_Y && ky == KI_OIL) {                  /* (Into a flask of oil: its lamp oil, as far as it takes, H14's) */
-        if (E_B || !lq || lk != KI_LAMP_OIL) {
-            put ("The flask of oil won't hold ");
-            put (lq && !E_B ? ln : "them");
-            put (".");
-            return IR_NO;
-        }
-        if (f & IS_CLOSED) {
-            return the (ky, " is closed.");
-        }
-        if (yf >= OIL_PINT) {
-            return the (ky, " is full.");
-        }
-        iq.size |= 2;                           /* (By its measure, minutes: wpour2.c's pour_in) */
-    } else if (E_Y) {
+    if (E_Y) {                                  /* (A flask of oil a vessel as any: the user's H16, 2026-11-21) */
         hub_map (KIND_BANK);
         if (!(CATALOGUE[ky].flags & K_CONTAINER) && !(CATALOGUE[ky].keeps & KF_ON)) {
             return the (ky, " won't hold them.");
@@ -357,9 +334,8 @@ static unsigned char empty (void)
             if (room < lq) {
                 iq.osel = room;
             }
-            if (!yk && (room < lq || oil) && !free_rec ()) {
-                return the (ky, " is full.");   /* (No record for the part poured, or the flask's oil: as full,
-                                                **   nothing poured) */
+            if (!yk && room < lq && !free_rec ()) {
+                return the (ky, " is full.");   /* (No record for the part poured: as full, nothing poured) */
             }
         }
     }
@@ -367,7 +343,6 @@ static unsigned char empty (void)
     iq.quality = ky;
     iq.plural = lk;
     iq.count = lq;
-    iq.thick = oil;
     return pour_said ();
 }
 
