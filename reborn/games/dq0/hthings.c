@@ -477,7 +477,7 @@ unsigned char __fastcall__ o_things_work (unsigned char h)
         if (!cmd.other.word[0] && (cmd.other.kind == OB_PILLAR || cmd.other.kind == OB_WINDOW)) {
             strcpy (cmd.other.word, cmd.other.kind == OB_PILLAR ? "pillar" : "bars");
         }
-        if (hide (HD_ROPE)) {
+        if (hide (HD_ROPE)) {                   /* (windowcheck: hide: HD_ROPE's return comes before anything that maps) */
             worked (othings (IO_HIDE | IO_STEPS | IO_GO, cmd.obj.word, cmd.other.word,
                 d | IO_ROPE | (action == VB_UNTIE_OBJECT ? RP_UNTIE : cmd.aux)));
             break;

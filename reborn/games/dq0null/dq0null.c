@@ -36,6 +36,9 @@ static unsigned char gait = GA_WALK, watch;     /* (Its file's pace and watchful
 static unsigned char ntongue;                   /* (Its tongues and scripts past its own, read) */
 static unsigned char wounds;                    /* The character's, and each creature's (by its record) */
 static unsigned char tended;                    /* (The character's wounds tended: slice 4.3's simple way) */
+unsigned long pc_out;                           /* (The character senseless till then, a choke's minute: the minds' to
+                                                **   know it helpless, RS_ROUSE's to answer; 0 none.  dq0harn's name,
+                                                **   the tests' dq0PcShock's) */
 static unsigned rest_m;                         /* (Its rest toward the next wound healed: minutes, RS_TIME's) */
 static char news[72];                           /* (What time did to it: RS_DESCRIBE b 4's) */
 static unsigned char sheet[NSHEETS];
@@ -144,9 +147,10 @@ static void status (void)
 {
     struct rs_summary* s = &HUB->pcsum;
 
-    strcpy (HUB->pcstatus, wounds >= TOUGH ? "DEAD" : wounds ? "HURT" : "");
+    strcpy (HUB->pcstatus, wounds >= TOUGH ? "DEAD" : pc_out > HUB->now ? "OUT" : wounds ? "HURT" : "");
     memset (s, 0, sizeof *s);
-    s->cond = wounds >= TOUGH ? C_DEAD : 0;
+    s->cond = wounds >= TOUGH ? C_DEAD : pc_out > HUB->now ? C_UNCONSCIOUS : 0;   /* (Senseless till it comes round: the
+                                                **   minds' to know it helpless, as dq0harn's) */
     s->health = health (wounds, TOUGH);
     s->step = step[GA_WALK];
     memcpy (s->gstep, step, sizeof step);
@@ -482,6 +486,9 @@ static void __fastcall__ grapple (struct req* r)
         e->cond = C_UNCONSCIOUS;
         RS_ATTACK_LEFT (*r) = FF_D_DOWN;
         RS_ATTACK_OUT (*r) = 600;
+        if (!r->other) {
+            pc_out = HUB->now + 600;             /* (The character: senseless the minute, its summary's) */
+        }
     }
     put ("\n\n\n");
 }
@@ -515,6 +522,11 @@ static void __fastcall__ attack (struct req* r)
     if ((a && d && !(mw & MS_STRAY)) || (a ? sheet[aden[(a - 1) & 7]] >= BTOUGH : wounds >= TOUGH)) {
         RS_ATTACK_OUTCOME (*r) = 0xFF;                       /* (Creatures fighting each other: none, but a missile's stray at one
                                                 **   beside its mark, 2026-10-30; the attacker dead) */
+        return;
+    }
+    if (pc_out > HUB->now && (!a || (!d && !(f & RS_KILLER)))) {
+        RS_ATTACK_OUTCOME (*r) = 0xFF;                       /* (The character senseless: it can't strike, and a blow at it is
+                                                **   held, the minds' to say, but a killer's, as dq0harn's) */
         return;
     }
     dw = d ? &sheet[aden[(d - 1) & 7]] : &wounds;
@@ -921,6 +933,18 @@ void __fastcall__ rf_answer (struct req* r)
             } else {
                 put ("No wounds.");
             }
+        }
+        break;
+    case RS_ROUSE:                              /* (Its time out come: no shock rolls, the null's; the character's
+                                                **   minute out, if it isn't up, the tenths still to go) */
+        r->w2 = 0;
+        if (!r->actor && pc_out) {
+            if (pc_out > HUB->now) {
+                r->w2 = (unsigned) (pc_out - HUB->now);
+            } else {
+                pc_out = 0;
+            }
+            status ();
         }
         break;
     default:

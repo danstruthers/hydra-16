@@ -685,9 +685,18 @@ function dq0Sheet(m) {
   return { mem, at: n => 32 * n, STATE: 7, OUT: 28 };
 }
 // The character senseless for the tenths given and come round in shock (a scene's, the referee's pc and pc_out: harn.h's struct harn_char,
-// dq0harn's own): its shock rolls the book's dice, in shock or not as they fall (2026-11-03)
+// dq0harn's own): its shock rolls the book's dice, in shock or not as they fall (2026-11-03).  RULES=null: the null referee's pc_out, and the
+// world's pc_out and pc_ready as a blow's knockout sets them (no shock: up as its time's come)
 function dq0PcShock(m, tenths) {
   const h = m.dq0.bank(0), { L } = m.dq0.layout(), ram = m.taskRam[h[12 + 3]], root = path.join(TESTS, '..');
+  if (process.env.RULES === 'null') {
+    const nl = fs.readFileSync(path.join(root, 'obj', 'games', 'dq0null', 'dq0null.lbl'), 'latin1'), at = parseInt(/^al ([0-9A-F]+) ._pc_out$/m.exec(nl)[1], 16);
+    const till = ((h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16 | h[L.now + 3] << 24) + tenths) >>> 0;
+    for (let i = 0; i < 4; i++) ram[at + i] = till >>> (8 * i) & 255;
+    h[L.pcOut] = 1;                            // (And the world's, as a blow's knockout leaves it: wfight.c's, its busy time's end)
+    for (let i = 0; i < 4; i++) h[L.pcReady + i] = till >>> (8 * i) & 255;
+    return;
+  }
   const lbl = fs.readFileSync(path.join(root, 'obj', 'games', 'dq0harn', 'dq0harn.lbl'), 'latin1'), ad = n => parseInt(new RegExp('^al ([0-9A-F]+) \\._' + n + '$', 'm').exec(lbl)[1], 16);
   const H = fs.readFileSync(path.join(root, 'sdk', 'c', 'include', 'harn.h'), 'latin1'), def = n => +new RegExp('#define\\s+' + n + '\\s+(\\d+)').exec(H)[1];
   const STATE = 2 * 24 + 10 + def('HARN_MEDMAX') + 2 * def('HARN_PSYMAX') + 1 + def('HARN_MAXSKILLS') + 3, now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16 | h[L.now + 3] << 24, till = (now + tenths) >>> 0;

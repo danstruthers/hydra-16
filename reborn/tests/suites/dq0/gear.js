@@ -2334,7 +2334,9 @@ module.exports = {
           }
           return read(r, t);
         };
-        cpu.step = v => { step(v); if (due && cpu.cyc >= due) { due = 0; a.rxQueue.unshift(...'stop\r'); } };
+        // (Not into a line being typed: the inventory's typed as the reach is over, its stop then none, as its Enter comes;
+        //  bugs1's, 2026-11-21: "inventstop" typed, the stop let in between its keys)
+        cpu.step = v => { step(v); if (due && cpu.cyc >= due && typed === '' && !a.rdrf) { due = 0; a.rxQueue.unshift(...'stop\r'); } };
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -2513,6 +2515,42 @@ module.exports = {
           if (!/You lay the torch on the ground, still burning\./.test(t)) f.push('game ' + g + ': the torch not laid down for the rations\' hand, its weapon kept: ' + t.slice(t.indexOf('> take the rations'), t.indexOf('> take the rations') + 400));
           if (/You stow the sword|You put the sword/.test(t)) f.push('game ' + g + ': the sword put away in a fight');
           if (!/a sword, in your/.test(i)) f.push('game ' + g + ': the sword not still in hand: ' + i.slice(0, 300));
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      // (A flight typed between two steps of a reach: reach1's open question 2, 2026-11-20; bugs1's, 2026-11-21)
+      name: 'dq0reachflee2', reach: true, near: ['gear', 'fight'], what: 'Dingus Quest Zero\'s flight typed exactly between two steps of a reach engaged (HOUSE.md\'s breaking off at once): dq0reachflee\'s first scene (seed 7, the ghoul engaging it, the sword and the lit torch in hand, "take the rations from the backpack" typed ahead), "flee" typed 1M and 2M cycles after "You lay the torch on the ground, still burning." (as the torch\'s step ends and the pack\'s begins): the reach stopped there, no further step (the pack still worn, the rations not got out), and the flight from the ghoul at once, before the next line typed ("inventory") is answered (reach1\'s: the flight waited till after it)',
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: (() => {
+        const game = ["dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T", 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait'];
+        return dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', ...game]) + 'take the rations from the backpack\r' +
+          dq0Typed(['inventory', 'quit', ...game]) + 'take the rations from the backpack\r' + dq0Typed(['inventory', 'quit', 'echo $status']);
+      })() },
+      start(m) {
+        dq0Poke(m, [1, 2].map(g => ({ g, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } })));
+        const a = m.acia, cpu = m.cpu, step = cpu.step.bind(cpu);
+        let due = 0;
+        cpu.step = v => { step(v); if (due && cpu.cyc >= due) { due = 0; a.rxQueue.unshift(...'flee\r'); a.promptFrom = -1; } };
+        const later = c => () => { due = cpu.cyc + c; };
+        dq0OnWords(m, [{ g: 1, line: 'take the rations from the backpack', n: 1, words: 'You lay the torch on the ground, still burning.', call: later(1000000) },
+          { g: 2, line: 'take the rations from the backpack', n: 1, words: 'You lay the torch on the ground, still burning.', call: later(2000000) }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const s = dq0Prose(out), f = [], gs = [];
+        for (let i = s.indexOf('% dq0 '); i >= 0; i = s.indexOf('% dq0 ', i + 1)) gs.push(i);
+        const game = g => s.slice(gs[g - 1], gs[g] === undefined ? s.length : gs[g]);
+        for (const g of [1, 2]) {
+          const t = game(g), a = t.indexOf('flee > flee'), fl = a < 0 ? '' : t.slice(a, t.indexOf('> inventory', a));
+          if (!fl) { f.push('game ' + g + ': no flee typed in the reach: ' + t.slice(t.indexOf('> take the rations'), t.indexOf('> take the rations') + 600)); continue; }
+          if (!/You stop (?:there|taking off the backpack)\./.test(fl)) f.push('game ' + g + ': the reach not stopped as the flee came: ' + fl.slice(0, 600));
+          if (!/You break away from the ghoul\./.test(fl)) f.push('game ' + g + ': the flight not at once, before the next line\'s answer: ' + fl.slice(0, 600) + ' ... ' + t.slice(t.indexOf('> inventory', a), t.indexOf('> inventory', a) + 400));
+          if (/You get out the rations|You put on the backpack|You take off the backpack/.test(fl.slice(0, Math.max(0, fl.indexOf('You break away'))))) f.push('game ' + g + ': a step after the flee: ' + fl.slice(0, 600));
+          const i = t.slice(t.indexOf('> inventory > inventory'));
+          if (!/\(b\) a backpack, worn/.test(i) || /rations \(\w+\), in your|rations, in your/.test(i)) f.push('game ' + g + ': the pack not still worn, or the rations got out: ' + i.slice(0, 300));
         }
         return f;
       },

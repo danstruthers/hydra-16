@@ -3107,14 +3107,20 @@ int main (int argc, char* argv[])
             }
             if (l && busy && (held = !k || (k = at_once (l)) != 1)) {
                 if ((took = k >= 2) != 0) {
-                    intend2 (I_STOP, 1, 0);     /* (A fight taken over: its round out, then the command; a line that
-                                                **   breaks off, its long task stopped at once, task.c's free_cmd 3) */
                     hub_map (0);
                     if (k == 3 && reach >= 5 && (!HUB->pc_task.kind || HUB->pc_task.kind == LT_FIGHT)) {
                         took = HUB->pc_task.kind;   /* (No fight to stop now: fighting on begun after, stopped for it) */
                         task_words (TE_IDLE, 0);    /* (A reach's step with no long task to stop, engaged a round's
                                                 **   action, or a fight between its steps: the reach ends where it
                                                 **   stands, the pack's place told, then the line) */
+                    }
+                    if (took) {
+                        intend2 (I_STOP, 1, 0); /* (A fight taken over: its round out, then the command; a line that
+                                                **   breaks off, its long task stopped at once, task.c's free_cmd 3.
+                                                **   Nothing to stop, a reach's step engaged a round's action: none, its
+                                                **   round's own E_READY the line's; a stop's after it a second, the line
+                                                **   taken at the first and its answer let a line typed after it go
+                                                **   first, a flight held past the next line: reach1's, 2026-11-20) */
                     }
                 }
                 HUB->ui_cmd = 0;                /* (Held: the next waits for the character, not parsed again) */

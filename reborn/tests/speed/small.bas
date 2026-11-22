@@ -1,5 +1,5 @@
 ' small.bas - one operation 200 times a stretch, BASIC's cycles a pass (sim/speed.js)
-A = 1.5: B = 2.25: C = 1 / 3: D = 1 / 7: E = 123456789012: F = 987654321098: G = 3: DIM AR(200)
+A = 1.5: B = 2.25: C = 1 / 3: D = 1 / 7: E = 123456789012: F = 987654321098: G = 3: H = 1000: K = 1001: DIM AR(200)
 POKE &H6F, 1: FOR I = 1 TO 200: NEXT
 POKE &H6F, 2: FOR I = 1 TO 200: X = I: NEXT
 POKE &H6F, 3: FOR I = 1 TO 200: X = I + G: NEXT
@@ -20,4 +20,6 @@ POKE &H6F, 16: FOR I = 1 TO 200: X = FIX(I / G): NEXT
 POKE &H6F, 17: FOR I = 1 TO 200: X = INT(-I / G): NEXT
 POKE &H6F, 18: FOR I = 1 TO 200: X = I * G: NEXT
 POKE &H6F, 19: FOR I = 1 TO 200: X = I * G / G: NEXT
+POKE &H6F, 20: FOR I = 1 TO 200: X = I / H: NEXT
+POKE &H6F, 21: FOR I = 1 TO 200: X = I / K: NEXT
 POKE &H6F, 0: PRINT X

@@ -2,6 +2,7 @@
 ; t_child - a program the tests start, to do one thing, named by its arguments: a letter, then a hex byte (hh):
 ;   "e" c       end with code c (a character) and its arguments as the message
 ;   "s" hh      spin (no yields) for hh ticks, then end with code 0
+;   "S" hh      spin on TICKS alone (no yields, its time mostly in the kernel) for hh ticks, then end with code 0
 ;   "y" hh      yield hh times, then end with code 0
 ;   "k"         end with code = the tick count's low byte when it started
 ;   "p"         pause until woken (WAKE), then end with code "p"
@@ -82,6 +83,18 @@ op_s:
             sbc         start                               ;   every tick land there, so a kill waited 37 ticks)
             cmp         param
             bcc         :--
+            lda         #0
+            bra         end
+
+op_ss:
+            jsr         TICKS
+            sta         start
+:
+            jsr         TICKS                               ; (TICKS alone: a tick that comes in its IRQs-off time is
+            sec                                             ;   taken just after it, in the kernel: a note there taken
+            sbc         start                               ;   as the call returns, sched.s's K_SCHED_NOTED)
+            cmp         param
+            bcc         :-
             lda         #0
             bra         end
 
@@ -371,10 +384,10 @@ exec_child:
             jmp         end
 
 .rodata
-ops:        .byte       "esykpocgndtbrwihmjfvxXq"
+ops:        .byte       "esykpocgndtbrwihmjfvxXqS"
 OPS         = * - ops
 op_vec:     .word       op_e, op_s, op_y, op_k, op_p, op_o, op_c, op_g, op_n, op_d, op_t, op_b, op_r, op_w, op_i
-            .word       op_h, op_m, op_j, op_f, op_v, op_x, op_xx, op_q
+            .word       op_h, op_m, op_j, op_f, op_v, op_x, op_xx, op_q, op_ss
 s_x:        .byte       "x", 0
 s_cc:       .byte       "C"
 s_c1ctl:    .byte       "#c1/consctl", 0
