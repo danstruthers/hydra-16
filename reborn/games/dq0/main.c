@@ -2841,6 +2841,25 @@ unsigned char __fastcall__ s_feature (unsigned char obj, unsigned char how)
     return r;
 }
 
+/* A thing gone up to or through (H_GO's, hmove.c's do_go: go_after 2, through a door or a passage; 1, up to it): found,
+** walked up to, its first words; then the walk.  As the command's last step, from the main RAM (act's): part 2 not copied
+** back over this part for it (speed9, 2026-11-22: a walk to a door, part 13 copied in, then part 2 again, some 45,000 cycles
+** before its first letter) */
+unsigned char go_after;
+void s_go_up_to (void)
+{
+    unsigned char d = go_after - 1;
+
+    go_after = 0;
+    if (s_feature (cmd.obj.kind | PICK_TELL, d ? (reach ? FG_GO | FW_NONE : FG_GO) : FG_GO | FG_FAR)) {
+        if (d) {
+            intend (I_GO, cmd.obj.lies);
+        } else {
+            intend2 (I_GOTO, tx, ty);
+        }
+    }
+}
+
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 #pragma code-name (push, "SW7CODE")
@@ -3036,6 +3055,16 @@ void s_finish (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+/* A command carried out (part 2's), and its last step if it left one (a thing gone up to: go_after, part 13's go_up_to),
+** called from here after the command's part has returned, so its part isn't copied back over the step's for nothing */
+static void act (char* l)
+{
+    command (l);
+    if (go_after) {
+        go_up_to ();
+    }
+}
+
 int main (int argc, char* argv[])
 {
     unsigned shown = 0, t;
@@ -3115,7 +3144,7 @@ int main (int argc, char* argv[])
                                                 **   kept carried out again, its end; till the next's, s_command's) */
             hub_map (0);
             HUB->ui_giving = 1;                 /* (Being given, as a line's command: ui_giving's) */
-            command (0);
+            act (0);
             hub_map (0);
             HUB->ui_giving = 0;
             hub_ring (T_WORLD);
@@ -3207,7 +3236,7 @@ int main (int argc, char* argv[])
                 cq_drop ();                     /* (Its names made theirs: the line as it is now posted again) */
             }
             if (k != NL_DONE) {
-                command (l);                    /* (The character free; or a command that wants nothing of it:
+                act (l);                        /* (The character free; or a command that wants nothing of it:
                                                 **   held, the next waits for it to be free, not parsed again) */
                 if (k == NL_DEN) {
                     names_den ();               /* (A denizen named: its name recorded) */

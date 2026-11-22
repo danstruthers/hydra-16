@@ -38,15 +38,9 @@ static void do_go (void)
             }
             return;
         }
-        d = d && (cmd.obj.kind == OB_DOOR || cmd.obj.kind == OB_PASSAGE);    /* (Through it: walked up to first,
-                                                **   its first words told as that began; else up to it, its own walk) */
-        if (feature (cmd.obj.kind | PICK_TELL, d ? (reach ? FG_GO | FW_NONE : FG_GO) : FG_GO | FG_FAR)) {
-            if (d) {
-                intend (I_GO, cmd.obj.lies);
-            } else {
-                intend2 (I_GOTO, tx, ty);
-            }
-        }
+        go_after = 1 + (d && (cmd.obj.kind == OB_DOOR || cmd.obj.kind == OB_PASSAGE));   /* (Through it: walked up
+                                                **   to first, its first words told as that began; else up to it, its own
+                                                **   walk: part 13's go_up_to, after the command, main.c's act) */
     } else if (cmd.dir == GO_UP || cmd.dir == GO_DOWN) {
         intend (I_CLIMB, cmd.dir == GO_UP ? DIR_UP : DIR_DOWN);    /* (Up or down: the stairs, a ladder) */
     } else if (cmd.dir != 0xFF) {

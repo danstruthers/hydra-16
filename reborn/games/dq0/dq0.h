@@ -542,6 +542,8 @@ void __fastcall__ begin (int argc, char* argv[]);   /* Part 1 (main.c): the argu
 void finish (void);                             /* Part 1: the game kept, the world stopped */
 void save_game (void);                          /* Part 14: the game kept (if it's kept: -d), the window kept */
 void __fastcall__ command (char* l);            /* Part 2 (main.c): a command, the parser's, carried out */
+void go_up_to (void);                           /* Part 13 (main.c): a thing gone up to or through, after a command (act's) */
+extern unsigned char go_after;                  /* (main.c's, go_up_to's: 2 through it, a door, a passage; 1 up to it) */
 void ready (void);                              /* Part 2 (main.c): nothing, the part copied in for the next */
 void __fastcall__ cq_post (const char* l);      /* Part 2 (main.c): a line posted to the command parser (dq0c) */
 signed char __fastcall__ cq_cmd (const char* l);   /* Part 2 (main.c): the command line l makes, dq0c's (l posted
