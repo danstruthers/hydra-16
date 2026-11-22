@@ -176,6 +176,14 @@ static void head (void)
     }
 }
 
+/* Faction f a people's (the world's holds lines: the first world's dwarves, elves and soldiers); with all, or a colony
+** (its colony line: the gargun), its raiders (the kobolds) or the dead (the bestiary's) */
+static unsigned char __fastcall__ peoples_of (const char* f, unsigned char all)
+{
+    return data (TK_HOLDS, f, 0) || all && (data (TK_COLONY, f, 0) || !strcmp (f, "dead") ||
+        data (TK_RAIDERS, 0, 0) && !strcmp (f, D.v[1]));
+}
+
 /* The story made: the place, its eras, who has it now, the goal, why the character came (%Y) */
 static void story_line (void)
 {
@@ -202,10 +210,10 @@ static void story_line (void)
         }
         strcat (story, ".");
     }
-    for (k = 0; k < nf && !among (fa[k].name, "dwarves elves soldiers"); ++k) {
+    for (k = 0; k < nf && !peoples_of (fa[k].name, 0); ++k) {
     }                                           /* (A people that holds it still first, 2026-10-29; else the dead, the
-                                                **   gargun, the kobolds: the first of them) */
-    for (k = k < nf ? k : 0; k < nf && !among (fa[k].name, "dwarves elves soldiers dead kobolds gargun"); ++k) {
+                                                **   colony, the raiders: the first of them) */
+    for (k = k < nf ? k : 0; k < nf && !peoples_of (fa[k].name, 1); ++k) {
     }
     if (data (TK_NOW, k < nf ? fa[k].name : nf ? fa[nf - 1].name : "vermin", 0)) {
         strcat (story, " ");
@@ -235,17 +243,20 @@ static void story_line (void)
 /* The region's mints (a region given without any, a rumour's: made all the same) */
 static void mint_lines (void)
 {
-    static char nm[16], adj[16];
-    unsigned char e, n;
+    static char nm[16], adj[16], wy[4];
+    unsigned char e, n, t;
     struct era* r;
 
-    for (e = 0; e < 4; ++e) {                   /* (Its mints, 2026-10-28, the user's "each coin should include its
-                                                **   provenance": today's, the region's own realm, two neighbours (one
-                                                **   in two times hard to pass), the dwarves' hold, gold and taken at
-                                                **   par, as Azadmere's are; named in the men's tongue and the
-                                                **   dwarves', from the seed: none of the history's dice spent; each
-                                                **   its word, its name and an, or n after a vowel) */
-        strcpy (nm, name_of (e == 3 ? 1 : 2, NG_PLACE, seed ^ (0x6D696E74UL + e * 0x9E37UL)));
+    for (e = 0; data (TK_REALM, 0, e); ++e) {   /* (Its mints, 2026-10-28, the user's "each coin should include its
+                                                **   provenance": today's, the world's realm lines (the first world's:
+                                                **   the region's own realm, two neighbours, one in two times hard to
+                                                **   pass, the dwarves' hold, gold and taken at par, as Azadmere's are;
+                                                **   named in the men's tongue and the dwarves'), from the seed: none of
+                                                **   the history's dice spent; each its word, its name and an, or n after
+                                                **   a vowel) */
+        t = atoi (D.v[0]);
+        strncpy (wy, D.v[1], sizeof wy - 1);
+        strcpy (nm, name_of (t, NG_PLACE, seed ^ (0x6D696E74UL + e * 0x9E37UL)));
         strcpy (adj, nm);
         n = strlen (adj);
         if (n < 14) {
@@ -255,17 +266,18 @@ static void mint_lines (void)
         val (nm);
         val (adj);
         val ("now");
-        val (e == 0 ? "l" : e == 3 ? "gp" : e == 2 && (seed & 4) ? "h" : "-");
+        val (*wy != '?' ? wy : seed & 4 ? wy + 1 : "-");
         end_line ();
     }
-    for (e = 0, r = er; e < ne; ++e, ++r) {     /* (Of old: each era's people who struck coin, the kobolds and the
-                                                **   hill-men none, the dwarves' gold too; their word their name) */
-        if (strcmp (r->kind, "kobolds") && strcmp (r->kind, "hill-men")) {
+    for (e = 0, r = er; e < ne; ++e, ++r) {     /* (Of old: each era's people who struck coin, the world's coin lines (the
+                                                **   first world's: the kobolds and the hill-men none, the dwarves' gold);
+                                                **   their word their name) */
+        if (data (TK_COIN, r->kind, 0)) {
             begin_line ("mint");
             val (r->pthe);
             val (r->people);
             valn (e + 1);
-            val (strcmp (r->kind, "dwarves") ? "-" : "g");
+            val (D.v[1]);
             end_line ();
         }
     }

@@ -53,6 +53,8 @@ climb       thing=VB_CLIMB way=VB_CLIMB alone=VB_CLIMB unsaid=front skill=P_CLIM
 jump        thing=VB_JUMP way=VB_JUMP alone=VB_JUMP skill=P_JUMP
 open        thing=VB_OPEN_OBJECT unsaid=front aux=PA_OPEN
 close       thing=VB_CLOSE_OBJECT unsaid=front aux=PA_CLOSE
+slam        thing=VB_CLOSE_OBJECT unsaid=front aux=PA_SLAM      # (new, 2026-11-21: shut, louder, a fleeing denizen's
+                                                                #   own: the one-path plan's stage 2, closures)
 unlock      thing=VB_UNLOCK_OBJECT unsaid=front aux=PA_UNLOCK skill=P_PICKLOCK
 picklock    thing=VB_UNLOCK_OBJECT unsaid=front aux=PA_PICK skill=P_PICKLOCK     # (A lock picked, no key tried: "pick the
                                                                      #   lock", the user's, 2026-11-17)
@@ -329,6 +331,7 @@ open = open
 o = open
 close = close
 shut = close
+slam = slam
 unlock = unlock
 pick = get
 lock = lock

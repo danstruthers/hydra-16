@@ -100,7 +100,7 @@
 <unequip>        ::= <UNEQUIP> [ <object> [ <from-phrase:other> ] ] | "put" <object> "away" | "take" <object> "off"   (* "remove
                                                  the key from the chest": taken from it (2026-11-17) *)   (* "put away the sword", "put the sword away", "take the helm off" *)
 <open>           ::= "o" [ <object> [ <USING> <object:tool> ] ]   (* "open" alone: what's in front *)
-<close>          ::= "close" [ <object> ]           (* "close look" is <DETAIL> <LOOK>, not this *)
+<close>          ::= ( "close" | "slam" ) [ <object> ]   (* "close look" is <DETAIL> <LOOK>, not this; "slam the door": shut, louder (2026-11-21) *)
 <from-phrase>    ::= "from" <object> | "out" "of" <object>
 <off-phrase>     ::= "off" <object>
 
@@ -128,7 +128,7 @@
 <say>            ::= <SAY> <quoted-text> | <VOLUME-SAY> <quoted-text> [ "!" ]   (* yell, scream, whisper *)
 <tell>           ::= <TELL> <object> [ "to" | "about" ] ( <quoted-text> | <object:other> | <phrase:other> | <errand:other> ) | <TELL> <object> "that" <text:other> { <text:other> }   (* "tell the goblin that the bridge is out" *)
 <errand>         ::= ( "fetch" | "bring" | "retrieve" ) [ "me" ] <object> | ( "follow" | "come" ) [ "me" ] "at" <number> [ "space" | "spaces" | "square" | "squares" ]
-                   | ( "open" | "close" | "shut" | "unlock" ) <object>   (* an errand at a door, 2026-11-02: "ask the dwarf to open the door" *)   (* an ally's errand (slice 4.8): "tell Grub to fetch the key", "ask the dwarf to bring me the torch", "tell Grub to follow me at 3 squares" *)
+                   | ( "open" | "close" | "shut" | "unlock" | "lock" | "bar" | "rebar" | "unbar" | "unbolt" | "force" | "pick" ) <object>   (* an errand at a door, 2026-11-02: "ask the dwarf to open the door"; lock, bar, unbar, force, pick the lock: 2026-11-21 *)   (* an ally's errand (slice 4.8): "tell Grub to fetch the key", "ask the dwarf to bring me the torch", "tell Grub to follow me at 3 squares" *)
 <cast>           ::= <CAST> [ <det> ] [ <spell-word> ] [ "spell" ] [ <at-phrase:other> ]       (* "concentrate" alone: the spell in use *)
 <eat>            ::= <EAT> [ <object> ]   (* "eat" alone: a meal from what it carries, as "drink" alone drinks (2026-11-17) *)
 <drink>          ::= <DRINK> [ "from" <object> | <object> ]

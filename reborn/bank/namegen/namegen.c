@@ -1,37 +1,27 @@
 /*
-** namegen.c - (a bank program: sdk/c/include/bankprog.h) names in the tongues of Dingus Quest Zero's own world (G3:
-** none of HarnWorld's): a person's, a place's or a people's, made of a tongue's sounds (its onsets, vowels and
-** codas) from a seed, the same name for the same seed every time (its own dice: its caller's go on as they were).
-** themegen's (the region, its peoples, their places and their great ones, a prisoner, a seeker); and from the shell,
-** bankrun's: "bankrun namegen.bp TONGUE [N [SEED]]" says N names of each form in the tongue.
-**
-** The tongues (theme.h's struct tera's tongue, history.txt's peoples'): 1 the dwarves' (hard), 2 the men's (round),
-** 3 the elves' (soft), 4 the hill-men's (rough), 5 the kobolds' (yapping), 6 the sun-priests' (hissing).
+** namegen.c - (a bank program: sdk/c/include/bankprog.h) names in a world's tongues (games/dq0/WORLDS.md): a person's, a
+** place's or a people's, made of a tongue's sounds (its onsets, vowels and codas, and a people's ending: the caller's,
+** the world's tongue line's) from a seed, the same name for the same seed every time (its own dice: its caller's go on
+** as they were).  themegen's (the region, its peoples, their places and their great ones, a prisoner, a seeker: the
+** world's tongues, its history.dat's); and from the shell, bankrun's: "bankrun namegen.bp TONGUE [N [SEED]]" says N
+** names of each form in the first world's tongue (its tongues.h's, as the programs between dungeons have them).
 */
 
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
 
-/* A name asked for: its seed, tongue (1 ...) and form; the name back in out */
+/* A name asked for: its seed, tongue (1 ...: its number, for the dice) and form, and the tongue's sounds (its onsets,
+** its vowels, its codas, words a space between, and a people's ending); the name back in out */
 struct nq {
     unsigned long   seed;
     unsigned char   tongue, form;
     char            out[16];
+    const char* const* snd;
 };
 enum { NG_PERSON, NG_PLACE, NG_PEOPLE };
 
-#define TONGUES         6
-
-/* Each tongue's sounds: its onsets, its vowels, its codas (words, a space between), and a people's ending */
-static const char* const sounds[TONGUES][4] = {
-    { "kh dr gr b d th k g br z n m r t", "a u o i a u ai", "n r m k d rd rn zd l th g", "im" },
-    { "v m c t s l d r h b f", "a e i o a e ae", "n r s l m d nd st", "ar" },
-    { "l s th v n f m r", "ae e i ia a ei", "l n s th r", "ai" },
-    { "g h r w b gr hr br th", "u o a ea", "th g rd lf n m", "ings" },
-    { "k y sk g z sn kr", "i a ee", "k p x t", "ik" },
-    { "s sh v z h m th", "e a i ou", "sh s th n l", "ani" }
-};
+#include "../../games/dq0/worlds/first/tongues.h"   /* (The first world's: bankrun's, and the programs between dungeons') */
 
 static unsigned long x;                         /* (Its dice: xorshift32, as dice.h's) */
 
@@ -81,7 +71,7 @@ static unsigned char __fastcall__ bad (const char* o)
 /* A name (q's tongue, form and seed): its length (4-8 letters; a people's 4-10) */
 unsigned char __fastcall__ name (struct nq* q)
 {
-    const char* const* t = sounds[(q->tongue ? q->tongue - 1 : 0) % TONGUES];
+    const char* const* t = q->snd;
     unsigned char tries, n, syl, i, place = q->form == NG_PLACE;
 
     x = q->seed * 2654435761UL + q->tongue * 40503U + q->form + 1;
@@ -134,6 +124,7 @@ int __fastcall__ run (int argc, char** argv)
         return 1;
     }
     q.tongue = atoi (argv[1]);
+    q.snd = ng_first[(q.tongue ? q.tongue - 1 : 0) % NG_FIRST];
     n = argc > 2 ? atoi (argv[2]) : 6;
     q.seed = argc > 3 ? atoi (argv[3]) : 1;
     for (f = 0; f < 3; ++f) {

@@ -58,10 +58,11 @@ extern unsigned char rmode;                     /* Making rumours (themegen -r):
 unsigned char __fastcall__ era_now (unsigned char k);   /* Stratum k's era now (its last layer built or reused's) */
 unsigned char __fastcall__ lives (unsigned char b, unsigned char k);    /* The bestiary's kind b can live in k */
 int __fastcall__ work_of (const char* s);       /* WK_*, or -1 */
-const char* __fastcall__ peoples (const char* f);  /* Faction f one of the history's peoples' (the dwarves, the elves,
-                                                **   the soldiers, the gargun: 2026-10-29): its kinds, pk_era the era
-                                                **   its place is (1 on; 0, it isn't there), pk_lead its leader's key; or
-                                                **   NULL, none of them */
+const char* __fastcall__ peoples (const char* f);  /* Faction f one of the history's peoples' (the world's holds and
+                                                **   colony lines: the first world's dwarves, elves, soldiers and
+                                                **   gargun, 2026-10-29): its kinds, pk_era the era its place is (1 on;
+                                                **   0, it isn't there), pk_lead its leader's key; or NULL, none of
+                                                **   them.  Its kinds and its leader in D: the caller's D lost */
 extern unsigned char pk_era;
 extern const char* pk_lead;
 const char* __fastcall__ purpose_words (unsigned char p);
@@ -104,6 +105,7 @@ extern struct line* const Dp;
 #define D               (*Dp)
 #endif
 
-/* namegen (the bank program): a name, of a tongue and form, from a seed */
+/* namegen (the bank program): a name, of a tongue (the world's tongue line's number; 0 its common tongue) and form, from
+** a seed.  D lost: none of the caller's in it */
 enum { NG_PERSON, NG_PLACE, NG_PEOPLE };
 const char* __fastcall__ name_of (unsigned char tongue, unsigned char form, unsigned long seed);

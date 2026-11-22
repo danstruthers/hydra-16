@@ -5,8 +5,10 @@
 ** ../dq0/themes/1crypt.txt's): the region, its peoples and eras, the strata each era left as layers, the inhabitants
 ** now, the goal and its clues, the names and the story.  games/dq0/HISTORY.md has the design.
 **
-** themegen [-s seed] [-t theme] [-o folder] [-l lib] [-q] [-r n]
+** themegen [-s seed] [-w world] [-t theme] [-o folder] [-l lib] [-q] [-r n]
 **   -s seed    the same history each time (default: the clock's)
+**   -w world   the world it's made in (../dq0/WORLDS.md: its peoples, lands, tongues and words, lib/worlds/WORLD's
+**              history.dat; default: the first, the game's own, lib/dq0/themegen.dat)
 **   -t theme   a theme written by hand: what it gives kept, the rest made to fit it (by groups: the theme's name and
 **              story, and why the character came; the region; the peoples and the eras; the strata and their layers;
 **              the rooms' words; the inhabitants; the goal and its puzzle).  Without it, the folder's quest.txt, if it
@@ -14,7 +16,7 @@
 **   -o folder  theme.txt (the theme, to read) written there, then themec run in themegen's place (Plan 9's exec)
 **              to compile it there into theme.dat (the record the game reads) and check it (the theme checker:
 **              every goal reachable, every faction placed)
-**   -l lib     the game's lib folder (themegen.dat, the bank programs and themegen's exports): default, its own
+**   -l lib     the game's lib folder (the worlds, the bank programs and themegen's exports): default, its own
 **              folder's lib/dq0
 **   -q         the theme not said (without -o it's said, to read)
 **   -r n       n rumours made from the seed, not a theme (dq0life's, between two dungeons): each a place's region and a
@@ -27,9 +29,10 @@
 ** seed, its save folder (or /ram/dq0).
 **
 ** The work is its bank programs' (sdk/c/include/bankprog.h: each called as a function from a RAM bank of themegen's
-** own, working on the history here in themegen's main RAM): histgen (the region, the eras, the strata, the
-** inhabitants), goalgen (the goal), linegen (the theme's lines from them all, a hand-written theme's groups as they
-** are), and namegen (names).  What they call of themegen's is here (themegen.h): the data's lines (data.c), the
+** own, working on the history here in themegen's main RAM): histgen (the region, the eras, the strata), goalgen (the
+** inhabitants, histgen's till 2026-11-21, and the goal), linegen (the theme's lines from them all, a hand-written theme's
+** groups as they are), and namegen (names, in the world's tongues).  Its words, its peoples, its lands and its tongues
+** are the world's (-w: ../dq0/WORLDS.md).  What they call of themegen's is here (themegen.h): the data's lines (data.c), the
 ** words' slots filled, the lines emitted.
 */
 
@@ -44,6 +47,7 @@
 
 static const char* tfile;
 static const char* outdir;
+static const char* wname = WORLD_DEFAULT;       /* (-w's: the world, its folder lib/worlds/NAME; the default's lib/dq0) */
 static char lib[48];
 static unsigned char quiet, bad, progress;
 
@@ -103,17 +107,13 @@ unsigned char __fastcall__ lives (unsigned char b, unsigned char k)
     return k >= p->d0 && k <= p->d1 && (p->styles & style_bits (st[k < ns ? k : ns - 1].styles));
 }
 
-/* The history's peoples' factions (histgen's inhabitants, 2026-10-29: Phase 4's peoples): the dwarves, the elves and
-** the men's soldiers where an era of theirs holds its works still (its era theirs); the gargun in mountains, hills or
-** forest where the dwarves' works were lost and none hold theirs (the book's: their colonies in abandoned Khuzdul
-** halls), a tribe of one or two of their kinds (white orcs in cold mountains; else, by the dice, brown orcs ruled by
-** black ones, red orcs, or brown and small orcs); the dwarves' elder, the soldiers' captain and the gargun's king their
-** leaders */
-static const char* const pname[] = { "dwarves", "elves", "soldiers", "gargun" };
-static const char* const pera[] = { "dwarves", "elves", "men", "dwarves" };
-static const char* const pkinds[] = { "khuzwar khuzmin", "sindwar", "manarms", "kyani", "hyeka khanu", "viasal",
-    "hyeka arak" };
-static const char* const plead[] = { "khuzeld", 0, "captain", "garking" };
+/* The history's peoples' factions (goalgen's inhabitants, 2026-10-29: Phase 4's peoples; the world's holds, colony and
+** tribe lines, ../dq0/WORLDS.md): a people's where an era of theirs holds its works still (its era theirs: the first
+** world's dwarves, elves and the men's soldiers); a colony where a people's works were lost and none hold theirs, in
+** the lands the world gives (the first world's gargun, in the dwarves' lost halls in mountains, hills or forest: the
+** book's colonies in abandoned Khuzdul halls), a tribe of its kinds (the first tribe line's where it's found, there: the
+** white orcs in cold mountains; else, by the dice, one of the rest); each its leader, the world's.  Its kinds and its
+** leader in D (the caller's line copied out first): good till the data's next line is asked for */
 unsigned char pk_era;
 const char* pk_lead;
 
@@ -129,25 +129,27 @@ static unsigned char __fastcall__ era_of (const char* kind, unsigned char held)
     return 0;
 }
 
+static char plead[8];
 const char* __fastcall__ peoples (const char* f)
 {
-    unsigned char p;
-
-    for (p = 0; p < 4 && strcmp (f, pname[p]); ++p) {
+    if (data (TK_HOLDS, f, 0)) {                /* (A people's that holds its works: faction, people, kinds, leader) */
+        pk_lead = strcmp (D.v[3], "-") ? D.v[3] : 0;
+        pk_era = era_of (D.v[1], 1);
+        return D.v[2];
     }
-    if (p == 4) {
+    if (!data (TK_COLONY, f, 0)) {              /* (A colony: faction, people, lands, leader) */
         return 0;
     }
-    pk_lead = plead[p];
-    pk_era = era_of (pera[p], p != 3);
-    if (p == 3) {
-        if (era_of (pera[0], 1) || !among (land, "mountains hills forest")) {
-            pk_era = 0;
-        } else if (pk_era && (strcmp (land, "mountains") || strcmp (climate, "cold"))) {
-            p = 4 + random (3);
-        }
+    pk_lead = strcmp (D.v[3], "-") ? strncpy (plead, D.v[3], sizeof plead - 1) : 0;
+    pk_era = era_of (D.v[1], 0);
+    if (era_of (D.v[1], 1) || !among (land, D.v[2])) {
+        pk_era = 0;
     }
-    return pkinds[p];
+    data (TK_TRIBE, f, 0);                      /* (Its tribe: faction, kinds, where; the first's where it's found) */
+    if (pk_era && (!among (land, D.v[2]) || !among (climate, D.v[2]))) {
+        data (TK_TRIBE, f, 1 + random (tg_count (TK_TRIBE, f) - 1));
+    }
+    return D.v[1];
 }
 
 int __fastcall__ work_of (const char* s)
@@ -259,14 +261,22 @@ static struct nq {
     unsigned long   seed;
     unsigned char   tongue, form;
     char            out[16];
+    char**          snd;
 } nq;
 
+/* (A name in the world's tongue's sounds, its tongue line's: tongue 0 its common one; the data's line D, so none of the
+** callers' is in D as they ask) */
 const char* __fastcall__ name_of (unsigned char tongue, unsigned char form, unsigned long seed)
 {
+    if (!tongue && data (TK_COMMON, 0, 0)) {
+        tongue = atoi (D.v[0]);
+    }
     nq.seed = seed;
     nq.tongue = tongue;
     nq.form = form;
-    if (!namer || bank_call (namer, unsigned char __fastcall__ (*)(struct nq*), &nq) == 0xFFFF) {
+    nq.snd = D.v + 1;
+    if (!namer || !data (TK_TONGUE, 0, (tongue ? tongue - 1 : 0) % tg_count (TK_TONGUE, 0)) ||
+        bank_call (namer, unsigned char __fastcall__ (*)(struct nq*), &nq) == 0xFFFF) {
         strcpy (nq.out, "Nameless");            /* (No namegen: a name all the same) */
     }
     return nq.out;
@@ -567,7 +577,7 @@ int main (int argc, char* argv[])
 
     seed = hy_time () ^ hy_ticks ();
     for (i = 1; i < argc; ++i) {
-        if (i + 1 < argc && argv[i][0] == '-' && strchr ("stolra", argv[i][1]) && !argv[i][2]) {
+        if (i + 1 < argc && argv[i][0] == '-' && strchr ("stolraw", argv[i][1]) && !argv[i][2]) {
             switch (argv[i++][1]) {
             case 'a':
                 amask = atoi (argv[i]);
@@ -586,6 +596,9 @@ int main (int argc, char* argv[])
             case 'o':
                 outdir = argv[i];
                 break;
+            case 'w':
+                wname = argv[i];
+                break;
             default:
                 strncpy (lib, argv[i], sizeof lib - 1);
             }
@@ -594,7 +607,7 @@ int main (int argc, char* argv[])
         } else if (!strcmp (argv[i], "-p")) {
             progress = 1;
         } else {
-            say ("usage: themegen [-s seed] [-t theme] [-o folder] [-l lib] [-q] [-p] [-r n [-a kinds]]\n");
+            say ("usage: themegen [-s seed] [-w world] [-t theme] [-o folder] [-l lib] [-q] [-p] [-r n [-a kinds]]\n");
             return 1;
         }
     }
@@ -607,8 +620,17 @@ int main (int argc, char* argv[])
         strcpy (lib, gamedir);
         strcat (lib, "/lib/dq0");
     }
-    if (tg_load (in_ (lib, "themegen.dat"))) {
-        say ("themegen: its data (lib/dq0/themegen.dat) not found\n");
+    strcpy (txt, in_ (lib, "themegen.dat"));    /* (The world's history: lib/worlds/NAME/history.dat, beside lib/dq0;
+                                                **   the default world's lib/dq0/themegen.dat, as it was) */
+    if (strcmp (wname, WORLD_DEFAULT) && (slash = strrchr (txt, '/')) != 0 && (*slash = 0, slash = strrchr (txt, '/')) != 0) {
+        strcpy (slash, "/worlds/");
+        strncat (slash, wname, 8);
+        strcat (slash, "/history.dat");
+    }
+    if (tg_load (txt)) {
+        say ("themegen: its world's data (");
+        say (txt);
+        say (") not found\n");
         return 1;
     }
     bestiary ();
@@ -645,9 +667,9 @@ int main (int argc, char* argv[])
         }
     }
     rseed (seed ^ 0x48495354UL);
-    bank_call (hist, void (*)(void));           /* (The region, the eras, the strata, the inhabitants) */
+    bank_call (hist, void (*)(void));           /* (The region, the eras, the strata) */
     step ();
-    bank_call (goal, void (*)(void));           /* (The goal) */
+    bank_call (goal, void (*)(void));           /* (The inhabitants, the goal) */
     bank_call (lines, void (*)(void));          /* (The theme's lines) */
     step ();
     check_layers ();

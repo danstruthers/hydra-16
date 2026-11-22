@@ -157,6 +157,44 @@ function dq0Played(m) {
 }
 const WSND = { dig: 64, open: 65, shut: 66, blow: 67, smash: 68, chains: 69, click: 73, bar: 74 };
 
+// The one-path plan's stage 2 parity scenes (closures, 2026-11-21: ONE-PATH.md's 2.7): dq0allydoor's (seed 1's
+// bandits, the door ahead opened and shut, a bandit put beyond it as 'look' is typed, dq0DoorScene's, and made the
+// character's ally), how its own pokes then (dq0DoorScene's how); asks: the lines it's kept allied at (dq0Poke's)
+function dq0ParScene(m, asks, how) {
+  dq0Poke(m, [{ g: 1, line: 'look', n: 1, name: 'bandit', set: { attitude: 5, doing: 0 } }, ...asks.map(line => ({ g: 1, line, n: 1, name: 'bandit', set: { attitude: 5 } }))]);
+  dq0DoorScene(m, 'look', 'bandit', how);
+}
+
+// A scene's own pokes at a line's Enter, each time it's typed: fn (h, L, K), the hub's bank 0 and the layout's
+// Every denizen's lockpicks made a rope (a scene's: none to pick a lock with, the one-path plan's tool rule, 2026-11-21): how many
+function dq0NoPicks(m) {
+  const { L, K } = m.dq0.layout(), per = Math.floor(0x2000 / L.itemSize);
+  let n = 0;
+  for (let i = 1; i < L.nitems; i++) {
+    const b = m.dq0.bank(L.item0 + Math.floor(i / per)), q = (i % per) * L.itemSize;
+    if (b && b[q + L.iKind] === K.KI_LOCKPICKS && b[q + L.iWhere] !== K.IW_ACTOR && b[q + L.iWhere] !== K.IW_SQUARE) { b[q + L.iKind] = K.KI_ROPE; n++; }
+  }
+  return n;
+}
+
+function dq0OnLine(m, line, fn) {
+  const a = m.acia, read = a.read;
+  let typed = '';
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) {
+        if (typed === line && m.dq0 && m.dq0.bank(0)) {
+          const { L, K } = m.dq0.layout();
+          fn(m.dq0.bank(0), L, K);
+        }
+        typed = '';
+      } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+}
+
 const LETDENS = ['look', 'around', 'look at B', 'talk to C', 'attack C', 'attack A', 'around'];   // (dq0letdens' lines)
 
 module.exports = {
@@ -1211,7 +1249,9 @@ module.exports = {
         'drop the case', 'force the case', 'open the case', 'put the pennies in the case', 'close the case', 'take the case', 'i', 'wait', 'wait', 'i', 'quit',
         'echo $status']) },
       start(m) {
-        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, name: 'bandit', beside: 'face', engage: true }, { g: 1, line: 'wait', n: 1, call: () => dq0PcShock(m, 3000) }]);
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, name: 'bandit', beside: 'face', engage: true }, { g: 1, line: 'wait', n: 1, call: () => dq0PcShock(m, 3000) },
+          { g: 1, line: 'wait', n: 1, call: (h, L, K) => dq0NoPicks(m) }]);   // (No robber's lockpicks: it forces the case, the test's act, not
+                                                //   picks it, a bandit's purse's since 2026-11-21: dq0parlid's)
         const a = m.acia, read = a.read, IS_CLOSED = 1, IS_LOCKED = 2, IS_LOCK = 4;
         const shut = { 'force the case': IS_CLOSED | IS_LOCK | IS_LOCKED, 'open the case': IS_CLOSED, 'take the case': IS_CLOSED | IS_LOCK | IS_LOCKED };
         let typed = '';
@@ -1419,6 +1459,63 @@ module.exports = {
         const bad = rats.filter(q => !rule(q));
         if (bad.length) f.push('a rat\'s sniff not at the strength\'s steps: ' + JSON.stringify(bad.map(q => [q.actor, q.steps])));
         this.notes = ['the character ' + JSON.stringify(mine.map(q => [q.steps, q.grade])) + ', the rats ' + JSON.stringify(rats.map(q => [q.actor, q.steps, q.grade]))];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0parlid', meaning: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's one path for every actor, closures (ONE-PATH.md's stage 2, 2026-11-21: the act audit's G-8, a denizen picking a lid's lock): a lid's lock picked by the character and by a robber by the same row and the same test: at seed 1 (dq0actlid's bandits and case, dq0 -k with lockpicks), the case set down, its own lock locked (its record's shut poked as 'unlock the case' is typed: no key to it, so picked), picked by the character (a long task, a minute: its noise the lidpick row's, quiet, E_NOISE NZ_CLICK where it stands; its test the referee's P_PICKLOCK, its steps by the case's make); the case opened, the pennies put in it, closed, locked again (poked as 'take the case' is typed), taken up; a bandit put beside the character, engaged, the character senseless (dq0PcShock's): its robber goes through its things and gets at the coins in the locked case with its own lockpicks (a bandit's purse's, outfits.txt; wfight.c's den_pry: its key, else its lockpicks, else forced) by the same row (E_DEN DE_PICKING, as quiet) and the same test (P_PICKLOCK, its own sheet's, at the same steps for the same case)",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k case,lockpicks',
+        'drop the case', 'unlock the case', 'open the case', 'put the pennies in the case', 'close the case', 'take the case', 'i', 'wait', 'wait', 'i', 'quit',
+        'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, name: 'bandit', beside: 'face', engage: true }, { g: 1, line: 'wait', n: 1, call: () => dq0PcShock(m, 3000) }, { g: 1, line: 'wait', n: 1, call: (h, L, K, at, named) => {   // (The character's lockpicks the robber's own,
+            const per = Math.floor(0x2000 / L.itemSize), k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');   //   its things': its purse's
+            const did = k === undefined ? 0 : h[at(k) + L.aDid] | h[at(k) + L.aDid + 1] << 8;   //   lockpicks, a bandit's, not always made by then)
+            for (let i = 1; did && i < L.nitems; i++) {
+              const b = m.dq0.bank(L.item0 + Math.floor(i / per)), q = (i % per) * L.itemSize;
+              if (b && b[q + L.iKind] === K.KI_LOCKPICKS && b[q + L.iWhere] === K.IW_ACTOR) { b[q + L.iWhere] = K.IW_DEN; b[q + L.iOwner] = did & 255; b[q + L.iHide] = did >> 8; m.robPicks = i; }
+            }
+          } }]);
+        const a = m.acia, read = a.read, IS_CLOSED = 1, IS_LOCKED = 2, IS_LOCK = 4;
+        const shut = { 'unlock the case': IS_CLOSED | IS_LOCK | IS_LOCKED, 'open the case': IS_CLOSED, 'take the case': IS_CLOSED | IS_LOCK | IS_LOCKED };
+        let typed = '';
+        m.locked = [];
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (shut[typed] !== undefined && m.dq0) {   // (The case's lock: its record's shut, the item store's)
+                const { L, K } = m.dq0.layout(), per = Math.floor(0x2000 / L.itemSize);
+                for (let i = 1; i < L.nitems; i++) {
+                  const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+                  if (b && b[o + L.iKind] === K.KI_CASE) { b[o + L.iShut] = shut[typed]; m.locked.push(typed); break; }   // (The kit's: the first made)
+                }
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), A = dq0Acts(), { K } = m.dq0.layout();
+        if (m.locked.length !== 3) return ['the case not given its lock as the lines were typed: ' + JSON.stringify(m.locked)];
+        const u = T.of('unlock the case'), all = T.flatMap(t => t.replies).filter(q => q.kind === K.RS_TEST && q.a === A.lidpick.p);
+        const mine = all.filter(q => q.actor === 0), theirs = all.filter(q => q.actor > 0);
+        if (!dq0Ev(T.and(u), 'E_NOISE', { a: A.lidpick.loud, b: A.lidpick.nz }).length) f.push('the character\'s picking made no noise by its row (E_NOISE ' + A.lidpick.loud + ', ' + A.lidpick.nz + '): ' + dq0Evs(u));
+        if (!mine.length) f.push('the character\'s picking not tested (RS_TEST P_PICKLOCK, actor 0)');
+        const picks = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.a === A.lidpick.de);
+        if (!picks.length) f.push('the robber never picked the case\'s lock (E_DEN DE_PICKING)');
+        for (const e of picks) if (e.b !== A.lidpick.loud) f.push('the robber\'s picking not by its row: loud ' + e.b + ' not ' + A.lidpick.loud);
+        if (!theirs.length) f.push('the robber\'s picking not tested by its own sheet (RS_TEST P_PICKLOCK, its actor)');
+        if (mine.length && theirs.length && mine[0].steps !== theirs[0].steps) f.push('the same case picked at different steps: the character\'s ' + mine[0].steps + ', the robber\'s ' + theirs[0].steps);
+        if (!m.robPicks) f.push('the robber not given its lockpicks as the first wait was typed');
+        this.notes = ['steps ' + (mine[0] && mine[0].steps) + ' ' + (theirs[0] && theirs[0].steps) + '; the robber\'s picking ' + (theirs[0] && theirs[0].grade > 0 ? 'opened it' : 'failed')];
+        if (f.length) f.push(s.slice(s.indexOf('> unlock the case'), s.indexOf('> unlock the case') + 2500));
         return f;
       },
       sdcard: true
@@ -1874,6 +1971,201 @@ module.exports = {
         for (const e of opens) if (e.w1 !== m.door.door[0] || e.w2 !== m.door.door[1]) f.push('a door opened not the one asked: ' + [e.w1, e.w2]);
         if (!/The bandit opens the door\./.test(s)) f.push('its opening not seen: "The bandit opens the door."');
         if (f.length) f.push(s.slice(s.indexOf('> look'), s.indexOf('> look') + 1500));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0parbar', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's one path for every actor, closures (ONE-PATH.md's stage 2, 2026-11-21: the act audit's G-5, a denizen's bar): a door barred and its bar lifted out by the character and by an ally, by the same code (wdoor.c's PA_BAR and PA_LIFT, the act table's bar and lift rows: their time, twice the actor's step, and their noise, quiet, at the door).  dq0allydoor's scene (seed 1's bandits, the door ahead opened and shut, a bandit put beyond it and made the character's ally, asked to wait), the door given brackets and barred from the character's side (its portal record's state, bar side and features poked as 'look' is typed), the character's bar (dq0 -k bar) made wide enough to span it: 'unbar the door' (PO_LIFTED: E_NOISE by the lift row at the door), 'bar the door' (PO_REBARRED: by the bar row); then the door unbarred again, its bar side the bandit's and the bar lying at the bandit's feet (poked as the first wait's typed): 'ask the bandit to bar the door' (OR_BAR, its errand's PA_BAR: the widest bar in its reach, wport.c's den_bar, the character's own rule) bars it (E_DEN DE_BARS at the door by the bar row: 'The bandit sets the bar in its brackets: the door is barred.', or a bar dropping; played as a bar, as the character's is); a denizen could set no bar before (wk.link was its picking)",
+      init: 't_rc', cycles: 3000e6,
+      machine: { ymLog: true, input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k bar',
+        'open the door', 'close the door', 'look', 'ask the bandit to wait', 'unbar the door', 'bar the door', 'wait', 'ask the bandit to bar the door', 'wait', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'look', n: 1, item: { bar: { size: 15 } } }]);
+        dq0ParScene(m, ['ask the bandit to wait', 'ask the bandit to bar the door'], (h, o, L, K) => {
+          const f = h[L.pcFace], u16 = q => h[q] | h[q + 1] << 8;
+          const x = u16(L.pcX) + [0, 1, 1, 1, 0, -1, -1, -1][f], y = u16(L.pcY) + [-1, -1, 0, 1, 1, 1, 0, -1][f];
+          const live = !(f & 1) && dq0PortalAt(m, h[L.pcSn], x, y);   // (Its state, 3: barred; its bar's side, 7: the character's; its features, 12: brackets)
+          if (live) { live.b[live.o + 3] = (live.b[live.o + 3] & ~1) | 4; live.b[live.o + 7] = ((f >> 1) + 2) & 3; live.b[live.o + 12] |= 4; m.par = { face: f, door: [x, y], sn: h[L.pcSn] }; }
+        });
+        dq0OnLine(m, 'wait', (h, L, K) => {   // (The door unbarred, its bar side the bandit's, the bar the character set in it at the bandit's feet)
+          if (!m.par || !m.door || m.par.bar !== undefined) return;
+          const live = dq0PortalAt(m, m.par.sn, ...m.par.door), per = Math.floor(0x2000 / L.itemSize);
+          if (live) { live.b[live.o + 3] &= ~5; live.b[live.o + 7] = m.par.face >> 1; }
+          for (let i = 1; i < L.nitems; i++) {
+            const b = m.dq0.bank(L.item0 + Math.floor(i / per)), q = (i % per) * L.itemSize;
+            if (b && b[q + L.iKind] === K.KI_BAR && b[q + L.iWhere] === K.IW_PORTAL) {
+              b[q + L.iWhere] = K.IW_SQUARE; b[q + L.iSn] = m.par.sn;
+              b[q + L.iX] = m.door.beyond[0] & 255; b[q + L.iX + 1] = m.door.beyond[0] >> 8; b[q + L.iY] = m.door.beyond[1] & 255; b[q + L.iY + 1] = m.door.beyond[1] >> 8;
+              m.par.bar = i;
+              break;
+            }
+          }
+        });
+        dq0Played(m);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), A = dq0Acts();
+        if (!m.door || !m.par) return ['the scene not set: no bandit near, or no door ahead with a floor beyond it: ' + JSON.stringify(m.doorWhy)];
+        const [dx, dy] = m.door.door;
+        for (const [line, r, po] of [['unbar the door', A.lift, 'PO_LIFTED'], ['bar the door', A.bar, 'PO_REBARRED']]) {
+          const t = T.of(line);
+          if (!dq0Ev(t, 'E_PORTAL', { po }).length) { f.push('"' + line + '" not ' + po + ': ' + dq0Evs(t)); continue; }
+          const me = dq0Ev(t, 'E_NOISE', { a: r.loud, b: r.nz });
+          if (!me.length) f.push('"' + line + '" made no noise by its row (E_NOISE ' + r.loud + ', ' + r.nz + '): ' + dq0Evs(t));
+          else if (me[0].w1 !== dx || me[0].w2 !== dy) f.push('"' + line + '"\'s noise not at the door: ' + [me[0].w1, me[0].w2]);
+        }
+        if (m.par.bar === undefined) f.push('the character\'s bar not found set in the door\'s brackets as the first wait was typed');
+        const a = T.of('ask the bandit to bar the door');
+        if (a.k < 0 || !dq0Rep(a, 'sway', { kind: 'SW_ORDER', order: 'OR_BAR', result: 'SR_OK' }).length) f.push('the ally not asked to bar the door (' + JSON.stringify(a.replies.filter(r => r.req === 'sway')) + ')');
+        const dens = T.filter(t => a.k >= 0 && t.k >= a.k).flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.door.k + 1);
+        const bars = dens.filter(e => e.a === A.bar.de);
+        if (!bars.length) f.push('the ally never barred the door (E_DEN DE_BARS): ' + JSON.stringify(dens.map(e => [e.a, e.b, e.w1, e.w2])));
+        for (const e of bars) {
+          if (e.b !== A.bar.loud) f.push('the ally\'s bar not by its row: loud ' + e.b + ' not ' + A.bar.loud);
+          if (e.w1 !== dx || e.w2 !== dy) f.push('the ally barred a door not the one asked: ' + [e.w1, e.w2]);
+        }
+        if (bars.length && !/The bandit sets the bar in its brackets: the door is barred\.|a bar dropping/.test(s)) f.push('its barring neither seen nor heard');
+        if (bars.length && !m.played.some(p => p.who === m.door.k + 1 && p.snd === WSND.bar)) f.push('its barring not played as a bar (the world\'s *bar), as the character\'s is: ' + JSON.stringify(m.played.filter(p => p.who)));
+        this.notes = ['the ally after its order: ' + dens.map(e => e.a).join(' ')];
+        if (f.length) f.push(s.slice(s.indexOf('> unbar the door'), s.indexOf('> unbar the door') + 1800));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0parpick', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's one path for every actor, closures (ONE-PATH.md's stage 2, 2026-11-21: the act audit's B4, a lock picked only with lockpicks, every actor's): a door's lock picked by the character and by an ally by the same code (wdoor.c's PA_PICK: a minute's timed work, the act table's picking row its time and noise, quiet, at the door; the referee's P_PICKLOCK at the lock's steps): dq0allydoor's scene (seed 1's bandits, the character with lockpicks, dq0 -k), the door locked (its portal record's state and lock poked as 'look' is typed), the bandit asked to wait; 'pick the lock' (E_NOISE by the picking row at the door, RS_TEST P_PICKLOCK, actor 0); the door locked again (as the first wait's typed); 'ask the bandit to pick the door' (OR_PICK, its errand's PA_PICK, begun and done, with its own lockpicks, a bandit's purse's: outfits.txt) (E_DEN DE_PICKING by the row, RS_TEST P_PICKLOCK of its own sheet at the same steps); then every denizen's lockpicks taken from it and the door locked again (as the third wait's typed): asked again, it can't (PO_NO_PICKS, no test): a robber picked with none before",
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k lockpicks',
+        'open the door', 'close the door', 'look', 'ask the bandit to wait', 'pick the lock', 'wait', 'ask the bandit to pick the door', 'wait 2 minutes', 'wait',
+        'ask the bandit to pick the door', 'wait 2 minutes', 'quit', 'echo $status']) },
+      start(m) {
+        dq0ParScene(m, ['ask the bandit to wait', 'ask the bandit to pick the door'], (h, o, L, K) => {
+          const f = h[L.pcFace], u16 = q => h[q] | h[q + 1] << 8;
+          const x = u16(L.pcX) + [0, 1, 1, 1, 0, -1, -1, -1][f], y = u16(L.pcY) + [-1, -1, 0, 1, 1, 1, 0, -1][f];
+          const live = !(f & 1) && dq0PortalAt(m, h[L.pcSn], x, y);   // (Its state, 3: locked; its lock, 4: three steps worse)
+          if (live) { live.b[live.o + 3] = (live.b[live.o + 3] & ~1) | 2; live.b[live.o + 4] = 3; m.par = { door: [x, y], sn: h[L.pcSn], waits: 0 }; }
+        });
+        dq0OnLine(m, 'wait', (h, L, K) => {   // (Each wait: the door locked again; the second, every denizen's lockpicks a rope)
+          if (!m.par) return;
+          const live = dq0PortalAt(m, m.par.sn, ...m.par.door);
+          if (live) live.b[live.o + 3] = (live.b[live.o + 3] & ~1) | 2;
+          if (++m.par.waits === 2) {
+            const per = Math.floor(0x2000 / L.itemSize);
+            m.par.taken = 0;
+            for (let i = 1; i < L.nitems; i++) {
+              const b = m.dq0.bank(L.item0 + Math.floor(i / per)), q = (i % per) * L.itemSize;
+              if (b && b[q + L.iKind] === K.KI_LOCKPICKS && b[q + L.iWhere] !== K.IW_ACTOR && b[q + L.iWhere] !== K.IW_SQUARE) { b[q + L.iKind] = K.KI_ROPE; m.par.taken++; }
+            }
+          }
+        });
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), A = dq0Acts(), { K } = m.dq0.layout();
+        if (!m.door || !m.par) return ['the scene not set: no bandit near, or no door ahead with a floor beyond it: ' + JSON.stringify(m.doorWhy)];
+        const [dx, dy] = m.door.door, k = m.door.k + 1;
+        const p = T.of('pick the lock'), me = dq0Ev(p, 'E_NOISE', { a: A.picking.loud, b: A.picking.nz });
+        if (!me.length) f.push('the character\'s picking made no noise by its row (E_NOISE ' + A.picking.loud + ', ' + A.picking.nz + '): ' + dq0Evs(p));
+        else if (me[0].w1 !== dx || me[0].w2 !== dy) f.push('the character\'s picking not heard at the door: ' + [me[0].w1, me[0].w2]);
+        const tests = T.flatMap(t => t.replies.map(q => Object.assign({ line: t.k }, q))).filter(q => q.kind === K.RS_TEST && q.a === A.picking.p);
+        const a1 = T.of('ask the bandit to pick the door'), a2 = a1.k < 0 ? a1 : T.of('ask the bandit to pick the door', a1.k + 1);
+        const mine = tests.filter(q => q.actor === 0), theirs = tests.filter(q => q.actor === k && q.line >= a1.k && (a2.k < 0 || q.line < a2.k));
+        const after = tests.filter(q => q.actor === k && a2.k >= 0 && q.line >= a2.k);
+        if (!mine.length) f.push('the character\'s picking not tested (RS_TEST P_PICKLOCK, actor 0)');
+        if (a1.k < 0 || !dq0Rep(a1, 'sway', { kind: 'SW_ORDER', order: 'OR_PICK', result: 'SR_OK' }).length) f.push('the ally not asked to pick the lock (' + JSON.stringify(a1.replies.filter(r => r.req === 'sway')) + ')');
+        const dens = T.filter(t => a1.k >= 0 && t.k >= a1.k && (a2.k < 0 || t.k < a2.k)).flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === k);
+        const picking = dens.filter(e => e.a === A.picking.de);
+        if (!picking.length) f.push('the ally never picked at the lock (E_DEN DE_PICKING): ' + JSON.stringify(dens.map(e => [e.a, e.b])));
+        for (const e of picking) {
+          if (e.b !== A.picking.loud) f.push('the ally\'s picking not by its row: loud ' + e.b + ' not ' + A.picking.loud);
+          if (e.w1 !== dx || e.w2 !== dy) f.push('the ally picked at a door not the one asked: ' + [e.w1, e.w2]);
+        }
+        if (!theirs.length) f.push('the ally\'s picking not tested by its own sheet (RS_TEST P_PICKLOCK, its actor)');
+        if (mine.length && theirs.length && mine[0].steps !== theirs[0].steps) f.push('the same lock picked at different steps: the character\'s ' + mine[0].steps + ', the ally\'s ' + theirs[0].steps);
+        if (!m.par.taken) f.push('no denizen\'s lockpicks found to take as the second wait was typed');
+        if (after.length) f.push('the ally picked the lock with no lockpicks (RS_TEST P_PICKLOCK after they were taken)');
+        if (a2.k >= 0 && T.filter(t => t.k >= a2.k).flatMap(t => t.dens).some(e => e.kind === 'E_DEN' && e.who === k && e.a === A.picking.de)) f.push('the ally set to picking with no lockpicks (E_DEN DE_PICKING)');
+        this.notes = ['steps ' + (mine[0] && mine[0].steps) + ' ' + (theirs[0] && theirs[0].steps) + '; picked: the character ' + (mine.length > 0 && mine[mine.length - 1].grade > 0) + ', the ally ' + (theirs.length > 0 && theirs[theirs.length - 1].grade > 0)];
+        if (f.length) f.push(s.slice(s.indexOf('> pick the lock'), s.indexOf('> pick the lock') + 2000));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0parslam', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's one path for every actor, closures (ONE-PATH.md's stage 2, 2026-11-21: the act audit's G-20, the character's slam): 'slam the door' (a new verb: PA_SLAM, wdoor.c's shut, every actor's) slams the door ahead shut by the act table's slam row, as a fleeing denizen's is (dq0denportal's bandit: PA_SLAM its mind's now, its noise the same row's): PO_SLAMMED, 'You slam the door shut.' (the piece @slam, DEN.slams' too), heard by the minds (E_NOISE by the row, louder than a shut, at the door) and played as a door shutting (the world's *shut); 'slam the case' shuts the case as 'close' does",
+      init: 't_rc', cycles: 1500e6,
+      machine: { ymLog: true, input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k case',
+        'open the door', 'slam the door', 'drop the case', 'open the case', 'slam the case', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Played(m);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), A = dq0Acts(), { K } = m.dq0.layout();
+        const t = T.of('slam the door'), o = dq0Ev(T.of('open the door'), 'E_NOISE', { a: A.open.loud, b: A.open.nz });
+        if (!dq0Ev(t, 'E_PORTAL', { po: 'PO_SLAMMED' }).length) f.push('"slam the door" not PO_SLAMMED: ' + dq0Evs(t));
+        if (!/> slam the door[^>]*You slam the door shut\./.test(s)) f.push('"slam the door" not "You slam the door shut."');
+        const me = dq0Ev(t, 'E_NOISE', { a: A.slam.loud, b: A.slam.nz });
+        if (!me.length) f.push('the slam made no noise by its row (E_NOISE ' + A.slam.loud + ', ' + A.slam.nz + '): ' + dq0Evs(t));
+        else if (o.length && (me[0].w1 !== o[0].w1 || me[0].w2 !== o[0].w2)) f.push('the slam not heard at the door: ' + [me[0].w1, me[0].w2]);
+        if (A.slam.loud <= A.shut.loud) f.push('the slam row no louder than the shut row');
+        if (A.slam.de !== K.DE_SLAMS) f.push('the slam row not the fleeing denizen\'s DE_SLAMS');
+        if (!m.played.some(p => p.who === 0 && p.snd === WSND.shut)) f.push('the slam not played as a door shutting (the world\'s *shut)');
+        if (!/> slam the case[^>]*You close the case\./.test(s)) f.push('"slam the case" not "You close the case."');
+        if (f.length) f.push(s.slice(s.indexOf('> open the door'), s.indexOf('> open the door') + 1200));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0parwin', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's one path for every actor, closures (ONE-PATH.md's stage 2, 2026-11-21: the act audit's G-6, a denizen at a window): a window's shutters opened and shut by the character and by an ally by the same code (wdoor.c's, a window's shutters a door's: the act table's wopen and wshut rows, a door's numbers, told as shutters), wport.c taking a window now (its shutters, its bars bent, its pane worked out; climbed through not yet, the climb's): dq0sky's window (seed 1, dq0sky=1: a window on the surface to the east, given shutters, shut, as 'open the window' is typed), a hand-written theme's bandits; 'open the window', 'close the window' (E_NOISE by the rows at the window), the character stepped back from it and a bandit put before the window (dq0Poke's beside, the way the character faces) and made its ally; 'ask the bandit to open the window' (OR_OPEN, the errand's window: E_DEN DE_WOPENS at the window by the wopen row, 'The bandit opens the shutters.' or shutters opening), 'ask the bandit to close the window' (DE_WSHUTS by the wshut row)",
+      init: 't_rc', cycles: 3000e6,
+      machine: { ymLog: true, input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0sky=1', 'dq0hour=12',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
+        'look east', 'open the window', 'close the window', 'step back', 'look', 'ask the bandit to open the window', 'wait', 'ask the bandit to close the window', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        dq0OnLine(m, 'open the window', (h, L, K) => {   // (The nearest window given shutters, shut: its portal record's parts, 8, and state, 3)
+          const u16 = q => h[q] | h[q + 1] << 8, px = u16(L.pcX), py = u16(L.pcY);
+          for (let r = 1; r <= 3 && !m.win; r++) for (let dy = -r; dy <= r && !m.win; dy++) for (let dx = -r; dx <= r && !m.win; dx++) {
+            const p = dq0PortalAt(m, h[L.pcSn], px + dx, py + dy);
+            if (p && p.b[p.o + 2] === 1) { p.b[p.o + 8] |= 2; p.b[p.o + 3] &= ~1; m.win = [px + dx, py + dy]; }
+          }
+        });
+        dq0Poke(m, [{ g: 1, line: 'look', n: 1, name: 'bandit', beside: 'face', set: { attitude: 5, doing: 0 } },
+          ...['ask the bandit to open the window', 'ask the bandit to close the window'].map(line => ({ g: 1, line, n: 1, name: 'bandit', set: { attitude: 5 } }))]);
+        dq0Played(m);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Prose(out), A = dq0Acts(), { K } = m.dq0.layout();
+        let win = null;
+        for (const [line, r] of [['open the window', A.wopen], ['close the window', A.wshut]]) {
+          const t = T.of(line), me = dq0Ev(t, 'E_NOISE', { a: r.loud, b: r.nz });
+          if (!dq0Ev(t, 'E_PORTAL', { po: line[0] === 'o' ? 'PO_OPENED' : 'PO_CLOSED' }).length) f.push('"' + line + '" not done: ' + dq0Evs(t));
+          if (!me.length) f.push('"' + line + '" made no noise by its row (E_NOISE ' + r.loud + ', ' + r.nz + '): ' + dq0Evs(t));
+          else win = win || [me[0].w1, me[0].w2];
+        }
+        if (!win) return f.concat(['no window worked by the character: ' + s.slice(s.indexOf('> look southwest'), s.indexOf('> look southwest') + 1200)]);
+        const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.a >= K.DE_OPENS);
+        for (const [line, r, words] of [['ask the bandit to open the window', A.wopen, /The bandit opens the shutters\.|shutters opening/], ['ask the bandit to close the window', A.wshut, /The bandit closes the shutters\.|shutters shutting/]]) {
+          const a = T.of(line);
+          if (a.k < 0 || !dq0Rep(a, 'sway', { kind: 'SW_ORDER', result: 'SR_OK' }).length) f.push('"' + line + '" not taken (' + JSON.stringify(a.replies.filter(q => q.req === 'sway')) + ')');
+          const e = dens.filter(e => e.a === r.de);
+          if (!e.length) f.push('the ally never ' + r.name + ' (E_DEN ' + r.de + '): ' + JSON.stringify(dens.map(e => [e.a, e.b, e.w1, e.w2])));
+          for (const x of e) {
+            if (x.b !== r.loud) f.push('the ally\'s ' + r.name + ' not by its row: loud ' + x.b + ' not ' + r.loud);
+            if (x.w1 !== win[0] || x.w2 !== win[1]) f.push('the ally worked a window not the character\'s: ' + [x.w1, x.w2] + ' not ' + win);
+          }
+          if (e.length && r === A.wshut && !words.test(s)) f.push('the ally\'s ' + r.name + ' neither seen nor heard as shutters');   // (Its opening,
+                                                //   quiet (2), told or not by the UI's hearing rule as a door's opening is: caps.c's den_heard)
+        }
+        if (/The bandit opens the door\.|The bandit closes the door\./.test(s)) f.push('the ally\'s shutters told as a door\'s');
+        if (f.length) f.push(s.slice(s.indexOf('> look east'), s.indexOf('> step back') + 1500));
         return f;
       },
       sdcard: true

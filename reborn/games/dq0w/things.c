@@ -108,7 +108,6 @@ unsigned char textile (void);                   /* Part 107: a cloth torn up, wa
 extern const struct kind kinds[];               /* (kinds.c's: in the catalogue's bank) */
 extern const unsigned char throws[];            /* (kinds.c's: a kind's reach, thrown) */
 unsigned char __fastcall__ throw_at (const char* name);    /* Part 88 */
-unsigned door_key (void);                       /* (Part 80's, wport.c: a key that fits, the actor's) */
 
 /* A buffer in the main RAM (the words said, the kit's names, the store kept a piece at a time) */
 static char tbuf[80];
@@ -3221,7 +3220,7 @@ unsigned char __fastcall__ s_tool_reach (const char* keys)
     unsigned i = 0;
 
     if (!*keys) {                               /* (The door's key: the one that fits, part 80's) */
-        if ((i = door_key ()) != 0) {
+        if ((i = tool_of (0, KI_KEY, 0)) != 0) {   /* (The work's door's key: wport.c's) */
             reach_from (i);
             return reach_step (i, RS_TOOL);
         }

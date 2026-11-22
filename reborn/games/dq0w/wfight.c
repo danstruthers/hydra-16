@@ -659,7 +659,7 @@ unsigned __fastcall__ s_act_noise (unsigned char who, unsigned char ac, unsigned
 unsigned char __fastcall__ s_den_pry (unsigned n, unsigned char how)
 {
     struct item* q;
-    unsigned c, h, i, j, id;
+    unsigned c, h, i, id;
     unsigned char cc, b;
 
     for (c = n; item_at (c)->where == IW_ITEM; c = h) {
@@ -674,28 +674,23 @@ unsigned char __fastcall__ s_den_pry (unsigned n, unsigned char how)
         }
         if (cc ? q->fuel & CS_AT (cc, CS_LOCKED) : q->shut & IS_LOCKED) {
             id = q->id;
-            b = q->mat == MT_WOOD ? 0 : 2;
-            b += q->quality / 3;                /* (Forcing's steps, the character's: wood or not, how well made) */
-            for (i = 0; bd.did && (i = items (i, IN_DEN | IN_ITEM, 0)) != 0; ) {
-                if (ip->kind != KI_KEY || (ip->size | ip->thick << 8) != id) {
-                    continue;
-                }
-                for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {
-                }
-                if (item_at (j)->where == IW_DEN && ip->owner == (unsigned char) bd.did && ip->hide == bd.did >> 8) {
-                    break;                      /* (Its own key that fits, on it or in its pouch: HOUSE.md's keys that
-                                                **   fit) */
-                }
-            }
-            if (i) {
+            i = q->mat == MT_WOOD ? 0 : 2;      /* (Forcing's steps, the character's: wood or not, how well made) */
+            b = q->quality / 3;
+            if (bd.did && tool_of (bk + 1, KI_KEY, id)) {   /* (Its own key that fits, on it or in its pouch: HOUSE.md's
+                                                **   keys that fit, wport.c's tool_of, every actor's) */
                 bd.ready += s_act_noise (bk + 1, AC_LIDKEY, bd.x, bd.y);   /* (Its key turned: the act table's row,
                                                 **   the character's time and noise, 2026-11-19) */
                 b = 0;
+            } else if (bd.did && tool_of (bk + 1, KI_LOCKPICKS, 0) && (bd.ready += s_act_noise (bk + 1, AC_LIDPICK, bd.x,
+                bd.y), s_act_test (bk + 1, P_PICKLOCK, -1 - (signed char) b) > 0)) {
+                b = 0;                          /* (Picked with its lockpicks, quiet, a minute: the character's own
+                                                **   test, its steps, its row, the act audit's G-8, 2026-11-21; none
+                                                **   before) */
             } else if (how & PR_QUIET) {
                 return 0;
             } else {
                 bd.ready += s_act_noise (bk + 1, AC_LIDFORCE, bd.x, bd.y);   /* (Forced: heard, as the character's) */
-                if (s_act_test (bk + 1, P_FORCE, -(signed char) b) <= 0) {
+                if (s_act_test (bk + 1, P_FORCE, -(signed char) (b + i)) <= 0) {
                     return 0;                   /* (Held: left, locked) */
                 }
                 b = 1;

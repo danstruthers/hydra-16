@@ -46,6 +46,13 @@ open = OR_OPEN                              # (new, 2026-11-02: an ally's errand
 close = OR_CLOSE                            #   open the door", its one path: the minds' I_PORTAL)
 shut = OR_CLOSE
 unlock = OR_UNLOCK
+lock = OR_LOCK                              # (new, 2026-11-21: the character's own door acts, every actor's: the
+bar = OR_BAR
+rebar = OR_BAR                              #   one-path plan's stage 2, closures; "bar" an alias of rebar)
+unbar = OR_UNBAR
+unbolt = OR_UNBAR
+force = OR_FORCE
+pick = OR_PICK
 
 [dirs]
 n = H_N

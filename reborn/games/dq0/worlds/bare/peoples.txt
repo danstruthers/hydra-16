@@ -1,0 +1,35 @@
+# peoples.txt - (the bare world: ../../WORLDS.md) its peoples and their ways of building, in the first world's
+# peoples.txt's form (its keys there; lore.h's struct people): dq0d's make.js makes it this world's peoples.dat
+# (lib/worlds/bare/peoples.dat), which nothing reads at run time yet.
+
+people    | the Hearthfolk | hearth
+kinds     | bandit banlord
+tongue    | hearth
+lands     | h p
+climate   | t
+builds    | keep temple cellars crypt halls
+styles    | b
+deities   | Wend
+walls     | walls of plain dressed stone
+doors     | plain oak doors
+light     | lit by lamps on the walls
+marks     | simple marks cut by the doors
+rooms     | room | hall | cell | vault | crypt | gallery | cave | store
+uses      | kitchen | pantry | barracks | armoury | chapel | bedchamber | solar | well room | cistern | gatehouse
+          | guardroom | workshop
+
+people    | the Delvers | delving
+kinds     | -
+tongue    | delving
+lands     | h m
+climate   | *
+builds    | works halls crypt
+styles    | m b
+deities   | Wend
+walls     | walls cut from the rock
+doors     | doors of split stone
+light     | lit by lamps in niches
+marks     | tally marks
+rooms     | room | hall | cell | vault | crypt | gallery | cave | store
+uses      | kitchen | pantry | barracks | armoury | chapel | bedchamber | solar | well room | cistern | gatehouse
+          | guardroom | workshop

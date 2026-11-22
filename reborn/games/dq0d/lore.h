@@ -1,14 +1,16 @@
 /*
-** lore.h - Dingus Quest Zero's world, as data (Phase 3D: the history's): its peoples and their ways of building
-** (games/dq0d/peoples.txt, made lib/dq0/dq0f.dat) and its deities (deities.txt, made lib/dq0/dq0g.dat), each file a
+** lore.h - Dingus Quest Zero's worlds' lore, as data (Phase 3D: the history's; ../dq0/WORLDS.md): a world's peoples and
+** their ways of building (games/dq0/worlds/NAME/peoples.txt, made lib/worlds/NAME/peoples.dat) and its deities
+** (deities.txt, made deities.dat), each file a
 ** record a people (or a deity), the first none (its name's first byte the records' count), then their words, each
 ** 0-ended, an offset from the file's start (0: none).  make.js lays them out the same.  And the kinds' habitats, the
 ** bits of the denizens' kinds' records (kinds.txt's, in dq0d.dat: struct dkind's form, land, climate and arms).
 **
 ** Their readers, to come (nothing reads the two files at run time yet: GAME-CRITIQUE.md's 5.4): the history's generator
 ** (what a region's eras were, who built what, to whom), and the clues and the stocking (a people's walls, doors and
-** marks; a deity's sign, its temples).  The UI has the deities' names from dq0g.txt (the catalogue's bank's last records:
-** each a word of the commands'), not dq0g.dat; the kinds' land and climate are read by nothing yet.
+** marks; a deity's sign, its temples).  The UI has the deities' names from the world's gods.txt (the default world's in
+** the catalogue's bank's last records: each a word of the commands'), not deities.dat; the kinds' land and climate are
+** read by nothing yet.
 */
 
 #ifndef _LORE_H
@@ -38,7 +40,7 @@ enum { LI_ANY, LI_DARK, LI_LIGHT };
 #define AR_TOUCH        0x40
 #define AR_WEAPON       0x80
 
-/* A people (dq0f.dat's: 64 bytes) */
+/* A people (peoples.dat's: 64 bytes) */
 #define NPEOPLE_KINDS   4
 struct people {
     char            name[24];                   /* "the Ardish" (the first record's name[0]: the count) */
@@ -47,7 +49,7 @@ struct people {
     char            tongue[8];
     unsigned char   builds;                     /* What its works are for: a bit each, 1 << P_* (theme.h's) */
     unsigned char   styles;                     /* The plans it builds to: a bit each, 1 << ST_* (level.h's) */
-    unsigned        deities;                    /* The deities it worships: a bit each, by dq0g.dat's number */
+    unsigned        deities;                    /* The deities it worships: a bit each, by deities.dat's number */
     unsigned char   lands, climate;             /* LA_*, CL_* */
     unsigned        walls, doors, light, marks; /* Its words (offsets) */
     unsigned        rooms;                      /* Its eight rooms' words, 0 after each, one after another */
@@ -55,7 +57,7 @@ struct people {
     unsigned char   spare[2];
 };
 
-/* A deity (dq0g.dat's: 64 bytes) */
+/* A deity (deities.dat's: 64 bytes) */
 enum { TE_GOOD, TE_NEUTRAL, TE_EVIL };          /* Its temper: good to evil, */
 enum { TE_ORDER, TE_BALANCE, TE_CHAOS };        /*   and order to chaos */
 enum { BU_NONE, BU_CRYPT, BU_BARROW, BU_PYRE, BU_EARTH };   /* How its faithful lie */

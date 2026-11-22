@@ -52,6 +52,16 @@ end with their open questions: copy them here when the branch is merged.
 - **D4. A spy-hole's cover left open** after a look, seen from the far side as a lit hole with an eye at it: not
   built. Wanted? The answer of 2026-11-17 that sight through a grille or spy-hole works both ways bears on it.
   - DECISIONS.md:5955, "Looking through a door's little window".
+- **D5. A portcullis's noise** (op2a's, one row for both): heaving 7, raised 8, bent bars 8, where the character made
+  none and a denizen did (built: the denizen's numbers for both); winding 5 for both (the character's; HOUSE.md said 7).
+  Which?
+- **D6. Kobolds and orcs** rob but carry no lockpicks, so they force locks instead of picking (built). Give them picks?
+- **D7. Lockpicks in a bandit's purse** are drawn when it's first met, so a robber may have none yet (built; the
+  bandit's own outfit section is full, 250 of 255 bytes). OK?
+- **D8. Forcing a braced door** ignores the chest against it, for both sides, so a hostile denizen bursts it (built).
+  Harder, or fail?
+- **D9. "The bandit goes to the door."** is also said for an errand at a window (built). Word it for a window?
+  - built/2026-11-21-op2a.md's open questions, for D5-D9.
 
 ## Light and the look
 
@@ -105,6 +115,22 @@ only quit and help taken, nothing sensed). These are the rest.
   overlay, at a cost in time?
   - DECISIONS.md:5665-5666 (its point 7).
 
+## Denizens searching and hiding (one path, stage 2)
+
+From built/2026-11-21-op2b.md's open questions.
+- **S1. A secret door or trap a denizen finds is found for everyone** (built): the character sees the door, its walk
+  avoids the trap, as the character's finds already count for denizens. Keep, or knowers per faction or per finder
+  (the act audit's B10) before denizens spring traps?
+- **S2. Who searches**: hostile denizens tailing the character, and robbers (built). Also by their other natures
+  (exploring, patrolling)?
+- **S3. A denizen's search doesn't bring hiders of its own faction out of hiding** (built). Right?
+- **S4. A hunter's sniff of the scent store** costs 3 s and a test, a critical failure losing the trail (built). Test
+  its following of the fresh trail too?
+- **S5. A robber's critical failure hiding its stash** leaves it at hiding 0, still hidden (built). OK?
+- **S6. The null ruleset's senseless character** (bugs1's): save its time out with the game, as K16 does the
+  referee's?
+  - built/2026-11-21-bugs1.md, open question 4.
+
 ## The step planner, the reach and time
 
 - **T1. The reach isn't planned whole ahead.** Each step walks the tree again, since the world changes between steps
@@ -133,6 +159,25 @@ only quit and help taken, nothing sensed). These are the rest.
   under linegen's THEME_SIZE, so that theme has one clue fewer (the other 59 of 60 seeds keep every clue). Accept,
   or grow the theme's room?
   - built/2026-11-17-text.md, its open question 3.
+
+## The world plug-in
+
+From built/2026-11-21-world1.md's open questions: what else a world decides (worlds "first", the default, and
+"bare", built; WORLDS.md).
+- **W1. The bestiary**: a world's? The creatures and factions are named after the first world's peoples and speak its
+  tongues.
+- **W2. The character's deity**: from the world? It's HarnMaster's (Agrik ... Siem), not the world's pantheon.
+- **W3. hmchar's cultures, tongues and scripts**: the world's, or the ruleset's?
+- **W4. The calendar** (harn.h's months): the world's?
+- **W5. The coins' names and worth** (pennies, crowns): the world's?
+- **W6. Regions**: made by the dice (built), or picked from a world's map of named places?
+- **W7. Stand-in themes**: each world its own? Today they're the first world's dungeons in any world.
+- **W8. Between dungeons** (on hold): the town's and scholar's names, the script ardic, the tongue common: the world's?
+- **W9. The world fixed for a life?** And a likely bug: the ruleset isn't carried to the next dungeon (without -r a
+  later dungeon goes back to HarnMaster).
+- **W10. One set of peoples per world**, once the history reads peoples.txt?
+- **W11. Rulesets and worlds paired** (Harn World with HarnMaster), or any ruleset in any world?
+- **W12. The world asked at the start**, like the pace?
 
 ## Architecture
 

@@ -1,7 +1,7 @@
 /*
 ** data.h - (themegen, themec) what the two have alike: a theme's lines (read from its file), themegen's data file
-** (themegen.dat, make.js's: the history's words, the goal kinds, the bestiary) in banks of their own, and the bestiary
-** from it.  data.c is theirs both (themec's includes it).
+** (a world's history.dat, make.js's: the world's history's words, the goal kinds, the bestiary) in banks of their own,
+** and the bestiary from it.  data.c is theirs both (themec's includes it).
 */
 
 #include "../dq0/hub.h"
@@ -21,11 +21,12 @@ int __fastcall__ lines_open (const char* path);
 unsigned char __fastcall__ read_line (struct line* l, char* t);
 void lines_close (void);
 
-/* ---- The data file (themegen.dat: make.js's), its keys (make.js's KEYS); its text in banks of the program's own,
+/* ---- The data file (a world's history.dat, lib/worlds/NAME's: themegen's make.js's, the world's history.txt with the
+** goal kinds and the bestiary: ../dq0/WORLDS.md), its keys (make.js's KEYS); its text in banks of the program's own,
 ** each read leaving the window as it was (a bank program's in it, as it calls) */
 enum { TK_PEOPLE = 1, TK_LAND, TK_WORK, TK_NAME, TK_BUILT, TK_REUSED, TK_NOUN, TK_ENDED, TK_CLUE, TK_ROOMS, TK_USES,
     TK_LIGHT, TK_FOLK, TK_NOW, TK_OPEN, TK_AGO, TK_GOAL = 20, TK_THING, TK_EXIT, TK_TITLE, TK_CALLED, TK_WHY, TK_THEME = 30,
-    TK_BEAST = 40, TK_FACTION };
+    TK_BEAST = 40, TK_FACTION, TK_TONGUE, TK_COMMON, TK_REALM, TK_COIN, TK_RAIDERS, TK_HOLDS, TK_COLONY, TK_TRIBE, TK_WILD };
 #define TK_THEMES       9                       /* (A goal's theme lines: kind piece rule story lock opened ending wayin wayout) */
 int __fastcall__ tg_load (const char* path);    /* Read in: 0, or -1 */
 void __fastcall__ tg_get (int i, struct line* l, char* text);  /* Line i's values */

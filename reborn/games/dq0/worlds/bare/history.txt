@@ -1,0 +1,94 @@
+# history.txt - (the bare world: ../../WORLDS.md) the smallest world the game plays in, as the null referee is the
+# smallest ruleset: proof that a world is swappable (dq0 -w bare, themegen -w bare), nothing of the first world's in
+# it.  Two peoples, two lands, two tongues, one deity; no raiders (so no prisoner's goal and no scourge's), no people's
+# faction that holds its works, no colony; the bestiary's factions that live in it its folk lines' alone.  Its keys and
+# slots are the first world's history.txt's (WORLDS.md has them all); themegen's make.js makes it this world's
+# history.dat (lib/worlds/bare/history.dat), holding it to what themegen wants.
+
+people   | hearthfolk | 1 | dressed | lowland upland | keep temple town tomb | hearth | hearthmk
+people   | delvers | 2 | hewn | upland | mine hold tomb | delving | tally
+
+land     | lowland | Vales Meads | chalk sandstone | river springs | mild wet
+land     | upland | Uplands Tors | granite slate | springs river | cold mild
+
+work     | keep | keep fortified | b | cellars | bn
+work     | temple | temple | b | crypt | bn
+work     | mine | works | m | works | mx
+work     | tomb | crypt | b | crypt | bn
+work     | town | cellars | b | halls | bn
+work     | hold | halls | b | keep open | b | works | m
+work     | deep | halls | n | halls | n
+
+name     | keep | 0 | %X Keep | the Old Keep
+name     | keep | 1 | %X Cellars | the Undercroft
+name     | temple | 0 | %X Shrine | the Shrine
+name     | temple | 1 | the Shrine Vaults | %X's Vault
+name     | mine | 0 | the %X Workings | the Upper Workings
+name     | mine | 1 | the Lower Workings | the %X Shafts
+name     | tomb | 0 | %X's Barrow | the Barrow
+name     | tomb | 1 | the Low Graves | the Grave Vaults
+name     | town | 0 | %X Cellars | the Town Cellars
+name     | town | 1 | the Buried Lanes | the Lower Lanes
+name     | hold | 0 | %X Hall | the Hall
+name     | hold | 1 | the Hall Gate | %X Deep
+name     | hold | 2 | the %X Cuttings | the Deep Cuttings
+name     | deep | 0 | the Hollows | the Dark Hollows
+name     | deep | 1 | the Low Water | the Pit
+
+built    | keep | %P %K built a keep there called %X, and %N kept it
+built    | temple | %P %K built a shrine there, and %N tended it
+built    | mine | %P %K cut the workings of %X under %R, and %N led them
+built    | tomb | %P %K buried their dead at %X, %N among them
+built    | town | %P %K built %X there over deep cellars, and %N ruled it
+built    | hold | %P %K cut the hall of %X into the rock, and %N ruled it
+reused   | keep | %P %K came later and made a keep of the old %W, and %N kept it
+reused   | temple | %P %K came later and made a shrine of the old %W, and %N tended it
+reused   | mine | %P %K came later and cut their way through the old %W, %N leading them
+reused   | tomb | %P %K came later and buried their dead in the old %W, %N among them
+reused   | town | %P %K came later and built over the old %W, and %N ruled it
+reused   | hold | %P %K came later and made their hall in the old %W, and %N ruled it
+
+noun     | keep | keep
+noun     | temple | shrine
+noun     | mine | workings
+noun     | tomb | graves
+noun     | town | cellars
+noun     | hold | hall
+
+ended    | abandoned | until they left it
+ended    | conquered | until %O took it from them
+ended    | collapsed | until the roof came down
+ended    | flooded | until the water rose and filled it
+ended    | cursed | until %N cursed it, and its dead rose
+ended    | held | and they keep it still
+
+clue     | keep | marker stone | f | 400 | 100 | 30 | stone | stone | 0 | The stone bears the marks of %P: %W.
+clue     | temple | shrine stone | f | 400 | 100 | 30 | stone | stone | 0 | The stone bears the marks of %P: %W.
+clue     | mine | tally slate | - | 6 | 3 | 10 | stone | stone | 0 | The slate is scratched with %P's tallies, and under them: %W.
+clue     | tomb | grave stone | f | 400 | 100 | 30 | stone | stone | 0 | The stone names the dead of %P: %W.
+clue     | town | daybook | - | 2 | 2 | 5 | other | book | 5 | The daybook's last pages are %P's: %W.
+clue     | hold | hall stone | f | 800 | 200 | 35 | stone | stone | 0 | The stone is cut with the marks of %P: %W.
+
+rooms    | default | room | hall | cell | vault | crypt | gallery | cave | store
+light    | default | lit by lamps on the walls
+
+folk     | vermin | the rats
+folk     | crawlers | the spiders
+folk     | dead | the dead
+folk     | beasts | the beasts
+folk     | outlaws | the outlaws
+now      | dead | Now the dead keep it.
+now      | beasts | Now beasts live in it.
+now      | outlaws | Now outlaws hide in it.
+now      | vermin | Now rats run in it.
+now      | crawlers | Now spiders spin in it.
+open     | Under %R there is an old place.
+ago      | %C centuries ago
+
+tongue   | 1 | h th w s m n | e a o | rth n s m | fold
+tongue   | 2 | d g k t | u o a | g k n | en
+common   | 1
+realm    | 1 | l
+realm    | 2 | -
+coin     | hearthfolk | -
+wild     | upland

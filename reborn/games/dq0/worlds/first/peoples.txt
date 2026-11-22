@@ -1,7 +1,9 @@
-# peoples.txt - (dq0d) the peoples of the game's own world and their ways of building: who comes to a region in its
-# history, what they build there and how it looks.  make.js makes it lib/dq0/dq0f.dat (lore.h's struct people a
-# people, 64 bytes, the first none, its name the count; their words after), which nothing reads at run time yet
-# (GAME-CRITIQUE.md's 5.4; the history's generator, histgen, reads history.txt's peoples): for the history to come, an
+# peoples.txt - (the first world: ../../WORLDS.md) its peoples and their ways of building: who comes to a region in its
+# history, what they build there and how it looks.  dq0d's make.js makes it this world's peoples.dat
+# (lib/worlds/first/peoples.dat: lore.h's struct people a people, 64 bytes, the first none, its name the count;
+# their words after), which nothing reads at run time yet (GAME-CRITIQUE.md's 5.4; the history's generator, histgen,
+# reads the world's history.txt's peoples, which aren't these: the user's, 2026-11-17, neither set canonical): for the
+# history to come, an
 # era's people builds a stratum to its purposes and styles, and the theme's words for it (its rooms, its uses, its
 # light) are that people's; its walls, doors and marks are the stocking's and the clues' words; the kinds of its folk
 # that live on are the inhabitants it can leave.

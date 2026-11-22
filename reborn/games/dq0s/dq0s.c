@@ -361,8 +361,8 @@ static unsigned char __fastcall__ world_sound (const struct msg* m)
         if (o == PO_OPENED || o == PO_FORCED || o == PO_UNBARRED) {
             return WORLD (WS_OPEN);
         }
-        if (o == PO_CLOSED || o == PO_LOWERED) {
-            return o == PO_CLOSED ? WORLD (WS_SHUT) : WORLD (WS_CHAINS);
+        if (o == PO_CLOSED || o == PO_SLAMMED || o == PO_LOWERED) {
+            return o != PO_LOWERED ? WORLD (WS_SHUT) : WORLD (WS_CHAINS);
         }
         if (o == PO_BROKE_DOWN || o == PO_SHATTERED || o == PO_SMASHED || o == PO_WRECKED) {
             return WORLD (WS_SMASH);
@@ -392,10 +392,13 @@ static const unsigned char den_ws[] = {
                                                 /* (DE_WINDS, HEAVES, RAISES, LOWERS, BENDS, BENT, PICKING, PICKS) */
     WS_OPEN,                                    /* (DE_UNBARRED: its bar lifted and the door opened at once, the
                                                 **   opening's, as the character's PO_UNBARRED is played: 2026-11-17) */
-    WS_CLICK, WS_DIG                            /* (DE_TURNS, DE_PRIES: a box's key turned, its lid forced, as the
+    WS_CLICK, WS_DIG,                           /* (DE_TURNS, DE_PRIES: a box's key turned, its lid forced, as the
                                                 **   character's E_NOISE NZ_CLICK and NZ_WORK are played, 2026-11-19) */
+    NO_WS,                                      /* (DE_SEARCHES: none of its own, as before the merge of op2b and op2a) */
+    WS_OPEN, WS_SHUT                            /* (DE_WOPENS, DE_WSHUTS: a window's shutters, as the character's are
+                                                **   played, its E_PORTAL's: 2026-11-21) */
 };
-typedef char den_ws_fits[sizeof den_ws == DE_PRIES - DE_DIG + 1 && DE_OPENS - DE_DIG == 3 && DE_ROOF - DE_DIG == 15 &&
+typedef char den_ws_fits[sizeof den_ws == DE_WSHUTS - DE_DIG + 1 && DE_OPENS - DE_DIG == 3 && DE_ROOF - DE_DIG == 15 &&
     DE_WINDS - DE_DIG == 18 ? 1 : -1];          /* (hub.h's DE_* as the table has them) */
 
 static void listen (void)
@@ -423,7 +426,7 @@ static void listen (void)
             heard (m.who, E_DEN_DKIND (m) % SND_KINDS * 2 + (E_DEN_DE (m) == DE_NOISE), E_DEN_LOUD (m), E_DEN_SX (m) - px,
                 E_DEN_SY (m) - py, E_DEN_BETWEEN (m));
         } else if (m.kind == E_DEN && E_DEN_LOUD (m) && E_DEN_SN (m) == sn &&
-            (unsigned char) (E_DEN_DE (m) - DE_DIG) <= DE_PRIES - DE_DIG &&
+            (unsigned char) (E_DEN_DE (m) - DE_DIG) <= DE_WSHUTS - DE_DIG &&
             (n = den_ws[E_DEN_DE (m) - DE_DIG]) != NO_WS) {
             heard (m.who, WORLD (n), E_DEN_LOUD (m), E_DEN_SX (m) - px, E_DEN_SY (m) - py, E_DEN_BETWEEN (m));
                                                 /* (A tunneller's spell, its way through, a builder's work, slice 4.11's
