@@ -330,11 +330,13 @@ static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char
 
 /* A sense, 0-9, from its attribute (3-18 as rolled: 10 or 11 an average 4 or 5); what hurts it comes later (an
 ** eye's or a head's wounds, a helm) */
+static const unsigned char sense_of[18] = { 0, 0, 0, 0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7, 8 };  /* ((v - 3) * 3 / 5,
+                                                **   none under 4: a blow's summary's divisions, speed10's) */
 static unsigned char __fastcall__ sense (unsigned char a)
 {
     unsigned v = pc.att[a];
 
-    return v <= 3 ? 0 : v >= 18 ? 9 : (v - 3) * 3 / 5;
+    return v >= 18 ? 9 : sense_of[v];
 }
 
 /* ---- Fatigue (sheet.c's spent: the book's movement fatigue) */
@@ -383,14 +385,19 @@ static void status (void)
                                                 **   fifth more time a square, slice 4.1b's) */
     s->limp = l = (v & LB_LEG_L ? 0 : lhurt[2]) + (v & LB_LEG_R ? 0 : lhurt[3]);
     w = k < 4 ? 50 : 200 / k;
-    s->step = w = (unsigned) w * (5 + l) / 5 > 255 ? 255 : (unsigned) w * (5 + l) / 5;
+    if (l) {                                    /* (A limp's: its fifths; none, the same, its divisions spared) */
+        w = (unsigned) w * (5 + l) / 5 > 255 ? 255 : (unsigned) w * (5 + l) / 5;
+    }
+    s->step = w;
     s->gstep[GA_CREEP] = w > 85 ? 255 : w + (w << 1);   /* (The game's: a sixth of its Move, a quarter; the book's: a
                                                 **   jog its Move, a run twice, a sprint three times) */
     s->gstep[GA_SLOW] = w > 127 ? 255 : w << 1;
     s->gstep[GA_WALK] = w;
     for (g = GA_JOG; g < NGAITS; ++g) {
         v = rate[g - GA_JOG] / k;
-        v = (unsigned) v * (5 + l) / 5 > 255 ? 255 : (unsigned) v * (5 + l) / 5;
+        if (l) {
+            v = (unsigned) v * (5 + l) / 5 > 255 ? 255 : (unsigned) v * (5 + l) / 5;
+        }
         s->gstep[g] = pc.state == HARN_SHOCK ? w : !v ? 1 : v < w ? v : w;
     }
     s->attacks = 1;

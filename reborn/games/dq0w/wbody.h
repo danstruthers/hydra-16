@@ -87,6 +87,8 @@ unsigned load_go (void);                        /* (Part 68's) A launcher loaded
 extern unsigned char kit_off;                   /* (dq0w.c's: a denizen's things given way to a command, 2; and 1, its lair's keys made) */
 unsigned char ui_first (void);                  /* (dq0w.c's) The UI's command in hand: the denizens' intents wait */
 unsigned char ui_long (void);                   /* (And a long job, a line being typed too) */
+unsigned char den_held (void);                  /* (dq0w.c's) The denizens' intents held: as main's job a line's keys
+                                                **   too, else the command in hand alone (ui_first's) */
 void den_intents (void);                        /* (Part 14) The denizens' intents carried out (the hub's di), they
                                                 **   rung after */
 #define DEN_INTENTS()   (HUB->di_tail != HUB->di_head)  /* (Some to carry out: the hub's header in the window) */

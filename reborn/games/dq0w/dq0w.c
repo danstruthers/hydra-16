@@ -6031,6 +6031,9 @@ static void __fastcall__ fight_begin (unsigned char k)
 /* Its blow at k: the character busy its round, the blow posted (the hub's pc_foe) and struck, at the real paces at
 ** once, at the turns pace as the clock moves on (turns_run's); its record's (the hub in the window) */
 static unsigned char ftired;                    /* (A level more tired by its fighting: asked, fight_on's) */
+static unsigned char fdef;                      /* (Its blow left to main, struck as part 24's caller returns: 1 asked,
+                                                **   2 left; part 24 not copied back over part 15 for a return alone,
+                                                **   40,000 cycles on a mid-round line's path, speed10's, 2026-11-22) */
 
 static void __fastcall__ fight_blow (unsigned char k)
 {
@@ -6048,7 +6051,11 @@ static void __fastcall__ fight_blow (unsigned char k)
     ++HUB->pc_task.done;
     HUB->pc_foe = k;
     if (HUB->tpr) {
-        pc_blow ();
+        if (fdef) {
+            fdef = 2;                           /* (Struck by main at once, its caller's return: fdef's) */
+        } else {
+            pc_blow ();
+        }
     }
 }
 
@@ -6073,6 +6080,7 @@ void __fastcall__ s_fight_go (const struct msg* m)
         return;                                 /* (A soft thing's: one attempt, no fight) */
     }
     fight_begin (I_ATTACK_FOE (*m) | TE_QUIET);
+    fdef = 1;
     fight_blow (I_ATTACK_FOE (*m));
 }
 
@@ -6092,6 +6100,7 @@ unsigned char __fastcall__ s_fight_on (unsigned char idle)
     if (rs_live) {
         return idle ? 3 : 0;                    /* (The reach's steps under way, its command asked again first) */
     }
+    fdef = 1;                                   /* (Its blow main's, as it returns: blow_left's) */
     hub_map (0);
     if (HUB->pc_task.kind == LT_FIGHT) {
         if (act.cut) {
@@ -6101,6 +6110,7 @@ unsigned char __fastcall__ s_fight_on (unsigned char idle)
         if (HUB->pcsum.cond & C_STUNNED) {      /* (In shock, come round: in no state to fight, the referee's; the
                                                 **   fight over, told) */
             evb = 1;
+nofoe:
             event (E_TASK, 0, E_TASK_NOFOE_W1 (LT_FIGHT));
 over:
             HUB->pc_task.foe = 0;
@@ -6126,13 +6136,12 @@ over:
         if (h != 2 && (!h || !fsaid)) {
             if (!(k = fight_foe ())) {          /* (Its target beaten: the next, or none: told, but after a blow alone,
                                                 **   its words enough, "You finish the giant rat where it lies.") */
+                act.fight = 0;
                 if (HUB->pc_task.done > 1) {
                     evb = pshoot << 1;          /* (A missile's: "No foe is left in your sights.") */
-                    event (E_TASK, 0, E_TASK_NOFOE_W1 (LT_FIGHT));
+                    goto nofoe;                 /* (Told, the fight over: its code once, part 24's room) */
                 }
-                HUB->pc_task.foe = 0;
-                act.fight = 0;
-                return 0;
+                goto over;
             }
             evb = E_TASK_ENGAGED_B (k, 0, 1);
             event (E_TASK, 0, E_TASK_ENGAGED_W1 (TE_FIGHT, LT_FIGHT));
@@ -7415,8 +7424,13 @@ unsigned char ui_long (void)
 ** go; not keys_hold's free pass and hold again, the denizens three seconds behind at most, not slowed while the keys
 ** go on.  Each line's own (the hub's ui_keys, as the minds' gks and the senses' hks): a line let go and typed again
 ** before a pass saw no keys held again, not the last's hold run out, 2026-11-14.  1, held */
-static unsigned char den_held (void)
+static unsigned char dj;                        /* (The early jobs walked: the denizens' intents main's job, main's) */
+unsigned char den_held (void)
 {
+    if (!dj) {
+        return ui_first ();                     /* (Not main's job: a turn's wait, the populations' (wkept.c's) as
+                                                **   before, the command in hand alone) */
+    }
     hub_map (0);
     if (HUB->ui_cmd) {
         return gw_held (&gden, GW_REST) || ui_first ();   /* (A look one way's rest awaited at the real paces,
@@ -7517,9 +7531,24 @@ static unsigned char dseq_due (void)
     return HUB->den_seq != dseq;
 }
 
+/* A blow left by part 24 (fdef: fight_on's, fight_go's) struck now, from the main RAM: part 15 copied in, and not
+** part 24 back after it for its return alone (speed10's, 2026-11-22) */
+static void blow_left (void)
+{
+    if (fdef == 2) {
+        pc_blow ();
+    }
+    fdef = 0;
+}
+
 static unsigned char uf_held (void)
 {
-    return uf;
+    return uf || HUB->iq_head != HUB->iq_tail;  /* (And an intent in the ring: taken first, at the next pass's top.  A
+                                                **   line entered as this pass went on (uf its top's, none in hand then):
+                                                **   the senses' look of the bodies asked before its intent was taken,
+                                                **   95,000 cycles, dq0lookfar's turn left 666,845; held for the line's
+                                                **   whole hold instead, a look ahead after it waited on it, a pause of
+                                                **   1,900,000: speed10's, 2026-11-22) */
 }
 
 /* The denizens' bodies' changes: what it sees of them, looked at again, the UI told if it sees them otherwise, not on
@@ -7654,8 +7683,13 @@ int main (int argc, char* argv[])
             lsq = HUB->cq.seq;
             tin = 0;
         }
+        dj = 1;                                 /* (The denizens' intents, as main's job, each held as their row is:
+                                                **   den_held's, a line's keys from its first, not its command alone; a
+                                                **   line typed as they were carried out, an intent's parts' copies
+                                                **   begun in its window, 40,000 cycles each: speed10's, 2026-11-22) */
         jobs (JOBS_EARLY);                      /* (The early jobs: the chunks stocked, the map making's, the traces',
                                                 **   the denizens' intents) */
+        dj = 0;
         while (hub_take (&m)) {
             tin = 1;                            /* (The line whose intent it is: a task it begins not held for it,
                                                 **   pc_held's; a task begun in the pass its line came in, 2026-11-06) */
@@ -7668,7 +7702,8 @@ int main (int argc, char* argv[])
                                                 **   comes only as its task is paused, asking: its E_READY still to come) */
             }
             if (!HUB->pc_out || m.kind == I_QUIT) {
-                intent (&m);                    /* (Senseless, nothing it means is done: the UI's line, typed before
+                intent (&m);
+                blow_left ();                   /* (Senseless, nothing it means is done: the UI's line, typed before
                                                 **   it knew, not taken; its E_READY as it comes round.  The quit taken,
                                                 **   whatever: 2026-11-13, the user's) */
             }
@@ -7710,6 +7745,7 @@ int main (int argc, char* argv[])
             }
             if (!took && (HUB->pc_task.kind == LT_FIGHT || act.fight)) {
                 took = fight_on (!was_busy);    /* (Fighting on's next blow, or begun: part 24's; 3, idle still) */
+                blow_left ();
             }
             if (took == 1) {
                 see (0);
