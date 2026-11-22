@@ -160,10 +160,10 @@ unsigned __fastcall__ harn_get_attr (const harn_char* c, unsigned char a)
     return a == HARN_END ? harn_end (c) : a < HARN_NATTRS ? c->att[a] : 0;
 }
 
-/* The average of three attributes, rounded half up */
+/* The average of three attributes, rounded half up: (2s + 3) / 6, which is (s + 1) / 3 for a whole s */
 unsigned char __fastcall__ harn_attr_avg (const harn_char* c, unsigned char a1, unsigned char a2, unsigned char a3)
 {
-    return ((c->att[a1] + c->att[a2] + c->att[a3]) * 2 + 3) / 6;
+    return (c->att[a1] + c->att[a2] + c->att[a3] + 1) / 3;
 }
 
 unsigned char __fastcall__ harn_end (const harn_char* c)
@@ -268,13 +268,17 @@ const harn_equip harn_equipment[1] = { { 0, 0, 0, 0xFF, 0 } };
 
 unsigned __fastcall__ harn_get_load (const harn_char* c)
 {
-    unsigned long tenths = 0;
-    unsigned char k;
+    unsigned t = 0, w;
+    unsigned char k, h = 0;
 
-    for (k = 0; k < c->neq; ++k) {
-        tenths += c->eq[k]->wt;
+    for (k = 0; k < c->neq; ++k) {              /* (The tenths in 16 bits, not 32: a dozen calls a blow, room6's; past
+                                                **   6,553 pounds, that, harn_get_ep's load * 2 wrapping long before) */
+        w = c->eq[k]->wt;
+        if ((t += w) < w) {
+            ++h;
+        }
     }
-    return tenths / 10;
+    return h ? 6553 : t / 10;
 }
 
 unsigned char __fastcall__ harn_get_ip (const harn_char* c)
