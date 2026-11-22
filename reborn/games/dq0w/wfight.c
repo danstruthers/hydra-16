@@ -614,11 +614,6 @@ signed char __fastcall__ s_act_test (unsigned char who, unsigned char p, signed 
     return g;
 }
 
-/* The referee's test of body bd's own (act_test's, its actor bd's: wtake.c's search's, its stub's, part 81's room) */
-signed char __fastcall__ s_den_test (unsigned char p, signed char steps)
-{
-    return s_act_test (bk + 1, p, steps);
-}
 
 /* An act's noise at square x, y (the act table's row ac: its loudness, the character's NZ_*, an actor's DE_*), every
 ** actor's (acts.h's act_noise: the one sender by who, the act table's stage 1, 2026-11-19): the character's an E_NOISE
@@ -737,8 +732,9 @@ unsigned char __fastcall__ s_den_pry (unsigned n, unsigned char how)
 void __fastcall__ s_den_rob (const struct msg* q)
 {
     struct msg m;                               /* (On the C stack: the main RAM's room, 2026-10-29) */
+    struct actq aq;
     unsigned i, n, x, y, box;
-    unsigned char kind, f, how, fac, pur;
+    unsigned char kind, f, how, fac, pur, hd = 0;
     unsigned char* s;
 
     if (I_ROB_ERRAND (*q)) {
@@ -785,8 +781,17 @@ void __fastcall__ s_den_rob (const struct msg* q)
             p->where = IW_ITEM;
             p->x = box;
         } else if (how == RB_HIDE) {
+            if (!hd) {                          /* (Its stash concealed, the first thing taken: the character's own hiding
+                                                **   of a thing, the act table's conceal row, its test by its sheet, its
+                                                **   minute: the one-path plan's stage 2, 2026-11-21) */
+                act_get (aq, AC_CONCEAL);
+                hd = s_act_test (bk + 1, aq.r.test, aq.r.steps);
+                hd = 0x80 | HIDE_OF ((signed char) hd);
+                bd.ready += aq.r.time;
+                p = item_at (i);
+            }
             p->flags = (p->flags & ~I_KNOWN) | I_HIDDEN;   /* (Its stash at its home: found by searching) */
-            p->hide = 1;
+            p->hide = hd & 0x7F;
         }
         ++n;
     }

@@ -4407,6 +4407,7 @@ static unsigned char __fastcall__ door_swing (const struct kind* k)
 
 void __fastcall__ s_door_work (unsigned char what)
 {
+    struct actq aq;
     unsigned long t;
     unsigned char p;
 
@@ -4432,7 +4433,8 @@ void __fastcall__ s_door_work (unsigned char what)
             HUB->pc_ready = HUB->now;
             return;
         }
-        t = tgx ? tgx : 600;
+        act_get (aq, AC_SEARCH);                /* (Its minute the act table's, every actor's: wsearch.c's) */
+        t = tgx ? tgx : aq.r.time;
         task (LT_SEARCH, t);
         busy (t);
         act.srch = 1;
@@ -6945,6 +6947,7 @@ void s_on_way (void)
 
 void __fastcall__ s_intent_more (struct msg* m)
 {
+    struct actq aq;
     unsigned char k, d;
 
     memcpy (&lw_m, m, sizeof lw_m);             /* (Kept: a tool's reach first, things.c's part 83) */
@@ -7054,7 +7057,9 @@ void __fastcall__ s_intent_more (struct msg* m)
             break;
         }
         if (k != TRC_FLOOR && (k == TRC_SMELL ? HUB->pcsum.smell != 0 : !d)) {
-            busy (I_TRACE_TENTHS (*m) ? I_TRACE_TENTHS (*m) : k == TRC_SMELL ? 30 : 600);   /* (A track's minute, a sniff's three seconds: a
+            act_get (aq, k == TRC_SMELL ? AC_SNIFF : AC_TRACK);
+            busy (I_TRACE_TENTHS (*m) ? I_TRACE_TENTHS (*m) : aq.r.time);   /* (A track's minute, a sniff's three seconds, the
+                                                **   act table's rows (every actor's: a hunter's sniff, wtrscent.c's): a
                                                 **   timed work, its test, the reading, at its end: work_done's;
                                                 **   too dark to see the floor, no nose, told at once) */
             act.work = LW_TRACE;
@@ -8232,11 +8237,11 @@ void s_step_loud (void)
 /* ==== Part 94: hiding oneself (A12, 2026-11-04: HOUSE.md's hiding oneself; the book's Stealth, Skills 9: it presumes
 ** reasonable cover, or poor light; it can't be tried in the sight of one watching).  Every actor's by this code: where
 ** it can hide (cover_of), hidden, out again; the looks at one hidden are the denizens' (dq0d's part 20), the character's
-** own at a denizen too, the senses leaving it out of what it sees (dq0p's dens.c) */
+** own at a denizen too, the senses leaving it out of what it sees (dq0p's dens.c).  Its time the act table's hide row,
+** every actor's; and an actor's search here too (wsearch.c's den_search: the one-path plan's stage 2, 2026-11-21) */
 #pragma code-name (push, "SW94CODE")
 #pragma rodata-name (push, "SW94RODATA")
 #pragma static-locals (push, off)
-#define HIDE_T          100                     /* (Tenths: ten seconds to get out of sight) */
 #define COVER_BULK      40                      /* (A thing big enough to hide behind: pints.  A cask, a table, a chest; */
 #define HEAP_BULK       8                       /*   a heap to get into: straw, furs) */
 
@@ -8312,6 +8317,7 @@ static unsigned char h_here (void)
 
 void __fastcall__ s_hid_op (unsigned char op)
 {
+    struct actq aq;                             /* (The act table's hide row: its ten seconds, every actor's) */
     unsigned char k, c;
     struct actor* q;
     unsigned char* p;
@@ -8339,8 +8345,9 @@ void __fastcall__ s_hid_op (unsigned char op)
             if (bd.state == 1 && (c = cover_of (bd.sn, bd.x, bd.y, !unlit_at (bd.sn, bd.x, bd.y))) & 7) {
                 bd.state = 1 | (1 + (c & 7)) << 1;
             }
+            act_get (aq, AC_HIDE);
+            bd.ready += aq.r.time;
             hub_map (0);
-            bd.ready += HIDE_T;
             return;
         }
         if (k == HD_FOUND) {
@@ -8384,7 +8391,8 @@ void __fastcall__ s_hid_op (unsigned char op)
                 }
                 hub_map (0);
                 if (c == HW_BARE && (h_here () & 7)) {
-                    busy (HIDE_T);              /* (Begun, as part 12's begun: its first words told) */
+                    act_get (aq, AC_HIDE);
+                    busy (aq.r.time);           /* (Begun, as part 12's begun: its first words told) */
                     act.work = LW_HIDE;
                     act_plan (AK_WORK);
                     task (LT_HIDE, went);

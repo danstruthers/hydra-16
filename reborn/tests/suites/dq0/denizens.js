@@ -1253,6 +1253,177 @@ module.exports = {
       sdcard: true
     },
     {
+      // (Search and hide, every actor's: the one-path plan's stage 2, 2026-11-21, ONE-PATH.md's 2.1 and 2.7)
+      name: 'dq0srchact', outfit: true, meaning: true, near: ['denizens', 'senses'], what: "Dingus Quest Zero's search, every actor's by the same code (ONE-PATH.md's 2.1 and 2.7: the one-path plan's stage 2, 2026-11-21; the user's, 2026-11-17: \"searching is anyone's\", \"a denizen's search seen or heard is told as the character's is\"): at seed 1 (dq0denfound's wary bandits, the start's cell lit by its sconce) the crowns hidden at the character's feet and made unknown, their hiding 2, and the cell's door made secret (its portal's state, PS_HIDDEN), both poked: the character's search about it (a minute, the act table's search row; no noise of its own but its busy noise, the row's loudness; the referee's P_SEARCH, actor 0, the door at 0 steps, the crowns at -2: wtrap.c's and things.c's tests); and the same scene, the character gone out through the door, shut, its torch out (dq0denfound's game 5), a bandit put on the crowns' square, hostile, drawn on to where it last sensed the character there: its own search, the character's (wsearch.c's den_search: its minute on its ready, told E_DEN DE_SEARCHES at the row's loudness; wtrap.c's search of the door by its own sight and its own sheet, the crowns by the same test, at the same steps); each find found as its test says (the door's PORTAL_STATE no longer hidden, handled (PP_KNOWN) by the character's find; the crowns known to the character, or uncovered by the bandit)",
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/h/theme.txt',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k crowns', 'hide the crowns', 'look', 'search', 'quit',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k crowns -R 17',
+        'hide the crowns', 'close the door', 'open the door', 'go through it', 'turn around', 'close the door ahead', 'put out the torch', 'turn around', 'go left', 'hide',
+        'wait', 'wait 1 minute', 'wait 1 minute', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        const lbl = () => fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+        const S = m.srch = { door: {}, hid: {}, put: null, ready: [] };
+        const u16 = (h, o) => h[o] | h[o + 1] << 8;
+        // (The crowns at the character's feet unknown, hidden at 2; the door it faces kept to be made secret: game g's)
+        const scene = g => (h, L, K) => {
+          const x = u16(h, L.pcX), y = u16(h, L.pcY), sn = h[L.pcSn], per = Math.floor(0x2000 / L.itemSize);
+          S.hid[g] = [x, y, sn];
+          for (let i = 1; i < L.nitems; i++) {
+            const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+            if (b && b[o + L.iKind] === K.KI_CROWNS && b[o + L.iWhere] === K.IW_SQUARE && b[o + L.iSn] === sn && u16(b, o + L.iX) === x && u16(b, o + L.iY) === y) {
+              b[o + L.iFlags] = b[o + L.iFlags] & ~0x20 | DQ0_I.HIDDEN; b[o + L.iHide] = 2; S.hid[g].push(i);
+            }
+          }
+          for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) {   // (The cell's door within a search's reach: seed 1's, two
+            const p = i * i + j * j < 19 && !S.door[g] && dq0Portal(m, sn, x + i, y + j);   //   squares south of the start)
+            if (p && p.kind === 0) S.door[g] = { x: x + i, y: y + j, sn };
+          }
+        };
+        const secret = g => { const d = S.door[g], p = d && dq0Portal(m, d.sn, d.x, d.y); if (p) { p.b[p.state] |= 0x20; d.made = 1; } };
+        // (Game 2's: a bandit on the crowns' square, hostile, drawn on to it: where it last sensed the character, dq0denfound's)
+        const searcher = (h, L, K, at, named) => {
+          const H = S.hid[2];
+          if (!H) return;
+          secret(2);
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
+          if (k === undefined) return;
+          dq0Alone(m, h, L, K, at, k);
+          const sn = h[L.pcSn], o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aDen]), w16 = (a, v) => { h[a] = v & 255; h[a + 1] = v >> 8 & 255; };
+          w16(o + L.aX, H[0]); w16(o + L.aY, H[1]); h[o + L.aSn] = sn; h[o + L.aDoing] = 0; h[o + L.aState] = 1; h[o + L.aPos] = K.POS_STANDING;
+          for (let i = 0; i < 4; i++) h[o + L.aReady + i] = h[L.hubNow + i];
+          R.mem[q + R.X] = H[0] & 255; R.mem[q + R.X + 1] = H[0] >> 8; R.mem[q + R.Y] = H[1] & 255; R.mem[q + R.Y + 1] = H[1] >> 8; R.mem[q + R.SN] = sn;
+          h[o + L.aAttitude] = R.mem[q + R.ATTITUDE] = K.AT_HOSTILE;
+          const ad = dq0Ad(lbl()), ram = m.taskRam[h[12 + 2]];
+          ram[ad('aloot') + k] = ram[ad('now') + 1];
+          ram[ad('drawn') + k] = 8; ram[ad('sres') + k] = 0; ram[ad('asrch') + k] = 0;
+          ram[ad('lsx') + 2 * k] = H[0] & 255; ram[ad('lsx') + 2 * k + 1] = H[0] >> 8;
+          ram[ad('lsy') + 2 * k] = H[1] & 255; ram[ad('lsy') + 2 * k + 1] = H[1] >> 8;
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+          S.put = { k, at: [H[0], H[1]] };
+        };
+        // (The bandit's ready as each line's typed after it's put: its minute's search on it)
+        const ready = (h, L) => { if (S.put) { const o = L.actor + S.put.k * L.actorSize + L.aReady; S.ready.push((h[o] | h[o + 1] << 8 | h[o + 2] << 16 | h[o + 3] << 24) >>> 0); } };
+        dq0Poke(m, [{ g: 1, line: 'look', n: 1, call: (h, L, K) => { scene(1)(h, L, K); secret(1); } },
+          { g: 2, line: 'close the door', n: 1, call: scene(2) }, { g: 2, line: 'wait', n: 1, call: searcher },
+          { g: 2, line: 'wait 1 minute', n: 1, call: ready }, { g: 2, line: 'wait 1 minute', n: 2, call: ready }, { g: 2, line: 'wait', n: 2, call: ready }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], A = dq0Acts(), { K } = m.dq0.layout(), S = m.srch, s = dq0Prose(out);
+        if (!S.door[1] || !S.door[1].made || S.hid[1].length < 4 || !S.door[2] || !S.door[2].made || !S.hid[2] || S.hid[2].length < 4 || !S.put) return ['the scenes not set: ' + JSON.stringify(S)];
+        const se = T.of('search'), q1 = T.of('quit'), q2 = T.of('quit', q1.k + 1), w0 = T.of('wait', q1.k + 1);
+        const tests = list => list.filter(q => q.kind === K.RS_TEST && q.a === A.search.p);
+        const mine = tests(se.replies).filter(q => q.actor === 0), theirs = tests(T.filter(t => t.k >= w0.k && t.k <= q2.k).flatMap(t => t.replies)).filter(q => q.actor === S.put.k + 1);
+        const at = (list, st) => list.filter(q => q.steps === st);
+        // (Its test: the same purpose, the same steps for the same door and the same crowns)
+        if (!at(mine, 0).length) f.push('the character\'s search not testing the secret door at 0 steps: ' + JSON.stringify(mine.map(q => [q.steps, q.grade])));
+        if (!at(mine, -2).length) f.push('the character\'s search not testing the crowns at -2 steps: ' + JSON.stringify(mine.map(q => [q.steps, q.grade])));
+        if (!at(theirs, 0).length) f.push('the bandit\'s search not testing the secret door at 0 steps (its own sheet): ' + JSON.stringify(theirs.map(q => [q.steps, q.grade])));
+        if (!at(theirs, -2).length) f.push('the bandit\'s search not testing the crowns at -2 steps (its own sheet): ' + JSON.stringify(theirs.map(q => [q.steps, q.grade])));
+        // (Its time: the row's minute, the character's clock and the bandit's ready)
+        const took = se.at && se.after ? se.after.now - se.at.now : -1;
+        if (took !== A.search.t) f.push('the character\'s search not the row\'s minute: ' + took);
+        const de = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.a === A.search.de && e.who === S.put.k + 1);
+        if (de.length !== 1) f.push('the bandit\'s search not told once (E_DEN DE_SEARCHES): ' + de.length);
+        else {
+          if (de[0].b !== A.search.loud) f.push('the bandit\'s search not as loud as the row: ' + de[0].b);
+          if (!S.ready.length || S.ready[0] < de[0].t + A.search.t) f.push('the bandit not busy the row\'s minute after its search began (' + de[0].t + '): ' + JSON.stringify(S.ready));
+        }
+        // (Its noise: the character's none of its own (its busy noise, the senses', the row's loudness: 2); the bandit's told)
+        if (A.search.nz !== 0xFF || A.search.loud !== 2) f.push('the search row not the character\'s busy noise: ' + JSON.stringify(A.search));
+        if (dq0Ev(se, 'E_NOISE', {}).length) f.push('the character\'s search made an event\'s noise: ' + dq0Evs(se));
+        // (Its effect, as each test went: the door no longer secret, the crowns found)
+        const rec = (t, d) => t.at && t.at.changes.find(c => c.what === 'PORTAL_STATE' && c.x === d.x && c.y === d.y);
+        const ok = list => list.some(q => q.grade > 0 && !q.result);
+        for (const [who, list, t, d] of [['the character', at(mine, 0), q1, S.door[1]], ['the bandit', at(theirs, 0), q2, S.door[2]]]) {
+          const r = rec(t, d), open = r && !(r.tile & 0x20);
+          if (ok(list) !== !!open) f.push(who + '\'s door test ' + JSON.stringify(list.map(q => [q.grade, q.result])) + ' but the door ' + (open ? 'found' : 'still secret') + ': ' + JSON.stringify(r));
+          if (r && open && who === 'the character' && !(r.elev & 0x80)) f.push(who + '\'s find of the door not handled as its own (PP_KNOWN): ' + JSON.stringify(r));
+        }
+        if (ok(at(mine, 0)) !== !!dq0Ev(se, 'E_PORTAL', { po: 'PO_FOUND' }).length) f.push('the character\'s door find not told as its test went: ' + dq0Evs(se));
+        const cr = (t, n) => t.at && t.at.items.find(i => i.n === n);
+        const c1 = cr(q1, S.hid[1][3]), c2 = cr(q2, S.hid[2][3]);
+        if (ok(at(mine, -2)) !== !!(c1 && (c1.flags & 0x20))) f.push('the character\'s crowns test ' + JSON.stringify(at(mine, -2).map(q => q.grade)) + ' but the crowns ' + JSON.stringify(c1));
+        if (ok(at(theirs, -2)) !== !!(c2 && !(c2.where === 'IW_SQUARE' && (c2.flags & DQ0_I.HIDDEN)))) f.push('the bandit\'s crowns test ' + JSON.stringify(at(theirs, -2).map(q => q.grade)) + ' but the crowns ' + JSON.stringify(c2));
+        this.notes = ['door ' + JSON.stringify([at(mine, 0).map(q => q.grade), at(theirs, 0).map(q => q.grade)]) + ', crowns ' + JSON.stringify([at(mine, -2).map(q => q.grade), at(theirs, -2).map(q => q.grade)]),
+          'the bandit\'s crowns at the end ' + JSON.stringify(c2 && [c2.where, c2.flags])];
+        if (f.length) f.push(s.slice(s.indexOf('> search'), s.indexOf('> search') + 600));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0hideact', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's hiding a thing, every actor's by the same code (ONE-PATH.md's 2.1 and 2.7: the one-path plan's stage 2, 2026-11-21; the audit's C14): the act table's conceal row, its minute and its test (the referee's P_CONCEAL, its steps the row's), its grade the hiding's steps (12, 6, 2, at a critical failure 0: acts.h's HIDE_OF): at seed 1 the crowns hidden by the character (\"hide the crowns\": actor 0, its clock a minute on, the crowns hidden and known, their hiding by the grade); and a tribe of brown orcs (dq0hoard's second game: seed 1, south of the start, a brown orc keeps its things hidden), the character knocked senseless and robbed by one, the takings hidden at its home (RB_HIDE) by its own test (its actor's, its sheet's), the same row's steps, its minute on its ready, each thing's hiding by its grade (a fixed 1 before, with no test and no time)",
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
+        'echo ml dag 5 >> /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0hour=128',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k crowns', 'hide the crowns', 'quit',
+        "echo 'faction | Tribe | hyeka | 0-0 | 96 | - | 0 | h | -' > /ram/h/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k dagger',
+        'defend none', 'hold the dagger', 'open the door', 's 3', ...Array(20).fill('wait'), 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], A = dq0Acts(), { K } = m.dq0.layout();
+        const HIDE_OF = g => g === 2 ? 12 : g === 1 ? 6 : g === -1 ? 2 : 0;   // (acts.h's: G_WELL, G_PASS, G_FAIL, G_BADLY)
+        const conceal = list => list.filter(q => q.kind === K.RS_TEST && q.a === A.conceal.p);
+        const hc = T.of('hide the crowns'), q1 = T.of('quit');
+        const mine = conceal(hc.replies);
+        if (mine.length !== 1 || mine[0].actor !== 0 || mine[0].steps !== A.conceal.s) f.push('the character\'s hiding not the row\'s test (P_CONCEAL, actor 0, ' + A.conceal.s + ' steps): ' + JSON.stringify(mine.map(q => [q.actor, q.steps])));
+        const took = hc.at && hc.after ? hc.after.now - hc.at.now : -1;
+        if (took !== A.conceal.t) f.push('the character\'s hiding not the row\'s minute: ' + took);
+        const c1 = q1.at && q1.at.items.find(i => i.name === 'crowns' && i.where === 'IW_SQUARE');
+        if (!c1 || !(c1.flags & DQ0_I.HIDDEN) || !(c1.flags & 0x20) || (mine[0] && c1.hide !== HIDE_OF(mine[0].grade))) f.push('the crowns not hidden, known, their hiding by the grade: ' + JSON.stringify(c1) + ' ' + JSON.stringify(mine.map(q => q.grade)));
+        const h2 = T.of('hold the dagger', q1.k + 1), q2 = T.of('quit', h2.k + 1);
+        if (!h2.after || !q2.at) return [...f, 'the second game not played'];
+        const robs = T.filter(t => t.k > h2.k).flatMap(t => dq0Ev(t, 'E_TASK', { te: 'TE_ROBBED' }));
+        if (robs.length !== 1) return [...f, 'the second game: not robbed once: ' + robs.length];
+        const by = robs[0].by + 1, theirs = conceal(T.filter(t => t.k > h2.k).flatMap(t => t.replies)).filter(q => q.actor === by);   // (E_TASK's by: its entry; an actor's, plus 1)
+        if (theirs.length !== 1 || theirs[0].steps !== A.conceal.s) f.push('the robber\'s stash not hidden by the row\'s test (P_CONCEAL, its actor, ' + A.conceal.s + ' steps): ' + JSON.stringify(theirs.map(q => [q.actor, q.steps])));
+        const b2 = dq0Carried(h2.after), taken = [dq0Named(b2, 'dagger')[0], dq0Named(b2, 'pennies')[0]].filter(Boolean), by2 = new Map(q2.at.items.map(i => [i.n, i]));
+        for (const t of taken) {
+          const i = by2.get(t.n);
+          if (!i || i.where !== 'IW_SQUARE' || !(i.flags & DQ0_I.HIDDEN) || (theirs[0] && i.hide !== HIDE_OF(theirs[0].grade))) f.push('the ' + t.name + ' not hidden at the robber\'s home by its grade: ' + JSON.stringify(i) + ' ' + JSON.stringify(theirs.map(q => q.grade)));
+        }
+        // (Its minute on the robber's ready: its next doing told no sooner)
+        const after = T.flatMap(t => t.dens).filter(e => e.who === by && e.t > robs[0].t);
+        if (after.length && after[0].t < robs[0].t + A.conceal.t) f.push('the robber about again within its minute\'s hiding: ' + JSON.stringify([robs[0].t, after[0]]));
+        this.notes = ['grades ' + JSON.stringify([mine.map(q => q.grade), theirs.map(q => q.grade)])];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0sniffact', near: ['denizens', 'senses'], what: "Dingus Quest Zero's sniff, every actor's by the same rule (ONE-PATH.md's 2.1 and 2.7, the one-path plan's stage 2, 2026-11-21: \"sniff\" and \"track\" for anyone, the audit's M1 and M2): the act table's sniff row, its three seconds and its test (the referee's P_NOTICE_SMELL), its steps by the clearest scent's strength (trace.h's TRACE_STEPS: twice its points less 6, -8 to 6), the character's and a hunter's by smell alike: dq0scent's scene (seed 3, the theme's hostile giant rats, a keen nose, held beside the squares the character walks out through the doorway and round the corner, its torch put out, five minutes there): the rats let go on its trail sniff the traces' store as their journal's trail runs out (wtrscent.c's, a store sniff each ten seconds at most: their test by their own sheets, its time on their ready, a critical failure the trail lost), and the character's own sniff at the end (\"sniff\": its test, actor 0, the turn three seconds)",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt', 'echo ml clu 60 >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', 'step west', 's', 'go west', 'go west', 'douse the lit torch', ...Array(5).fill('wait 1 minute'), 'sniff', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {      // (dq0scent's scene: the rats put in the room beside its trail and held, till it's round the corner)
+        const hold = (h, L) => { const now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16, t = now + 900; for (let k = 0; k < L.nactors; k++) { const o = L.actor + k * L.actorSize + L.aReady; if (h[L.actor + k * L.actorSize + L.aName]) { h[o] = t & 255; h[o + 1] = t >> 8 & 255; h[o + 2] = t >> 16 & 255; h[o + 3] = 0; } } };
+        const room = sq => (h, L) => { const R = dq0Rec(m); let n = 0; for (let k = 0; k < L.nactors; k++) if (h[L.actor + k * L.actorSize + L.aName]) { const a = L.actor + k * L.actorSize, o = R.at(h[a + L.aDen]), [x, y] = sq[n++ & 3]; h[a + L.aX] = R.mem[o + R.X] = x & 255; h[a + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8; h[a + L.aY] = R.mem[o + R.Y] = y & 255; h[a + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8; } h[L.denSeq] = h[L.denSeq] + 1 & 255; hold(h, L); };
+        dq0Poke(m, [{ g: 1, line: 'step west', n: 1, call: room([[32722, 32721], [32722, 32722], [32721, 32721], [32721, 32722]]) },
+          ...['douse the lit torch', 's', 'go west'].map(line => ({ g: 1, line, n: 1, call: hold })), { g: 1, line: 'go west', n: 2, call: hold }]);
+      },
+      check(m) {
+        const T = dq0Turns(m), f = [], A = dq0Acts(), { K } = m.dq0.layout();
+        const sniffs = list => list.filter(q => q.kind === K.RS_TEST && q.a === A.sniff.p);
+        const rule = q => q.steps >= -8 && q.steps <= 6 && !((q.steps - A.sniff.s) & 1);   // (Twice the points less 6, -8 to 6: even)
+        const sn = T.of('sniff'), mine = sniffs(sn.replies).filter(q => q.actor === 0);
+        if (mine.length !== 1) f.push('the character\'s sniff not tested once (P_NOTICE_SMELL, actor 0): ' + JSON.stringify(sniffs(sn.replies)));
+        else if (!rule(mine[0])) f.push('the character\'s sniff not at the strength\'s steps: ' + mine[0].steps);
+        const took = sn.at && sn.after ? sn.after.now - sn.at.now : -1;
+        if (took !== A.sniff.t) f.push('the character\'s sniff not the row\'s three seconds: ' + took);
+        const rats = sniffs(T.flatMap(t => t.replies)).filter(q => q.actor > 0);
+        if (!rats.length) f.push('no rat\'s store sniff tested by its own sheet (P_NOTICE_SMELL, its actor)');
+        const bad = rats.filter(q => !rule(q));
+        if (bad.length) f.push('a rat\'s sniff not at the strength\'s steps: ' + JSON.stringify(bad.map(q => [q.actor, q.steps])));
+        this.notes = ['the character ' + JSON.stringify(mine.map(q => [q.steps, q.grade])) + ', the rats ' + JSON.stringify(rats.map(q => [q.actor, q.steps, q.grade]))];
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0denpace', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's denizens' paces (the user's, 2026-11-03: \"walk unless hurried, and closing in to attack should be hurried unless they are cautious\": HOUSE.md's their paces), by the time between an actor's steps (its E_DEN DE_MOVEDs: the world's wbody.c, every actor's): a hand-written theme's hostile bandits (seed 1), a kind whose walk is 20 tenths a square: coming at the character, at its jog, 10; a theme's hostile giant rats (seed 3), a shy kind whose walk is 12, cautious: coming on at its walk, no quicker, for all it's hostile; both referees",
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'dq0hour=128',

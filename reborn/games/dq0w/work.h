@@ -78,9 +78,12 @@ struct work {
     unsigned        qx, qy;
     struct portal   pq;                         /* (The portal worked, as it was) */
     struct trap     tq;                         /* (The trap) */
-    struct msg      m;                          /* (An event told) */
+    struct msg      m;                          /* (An event told; an actor's search's sight, WK_SIGHT) */
 };
 extern struct work wk;
+#define WK_SIGHT        ((unsigned char*) &wk.m)    /* (An actor's search (wsearch.c's: no event of its own told,
+                                                **   wk.m free): the squares about it it sees, a byte a row of the
+                                                **   seven, a bit a square, its own the middle's; wtrap.c's to read) */
 #define W_BLOW          0xFD                    /* (A battering under way: its next blow as the character's free; */
 #define W_GONE          0xFE                    /*   the part given way at the last, told as it's free) */
 #define BLOWS           12                      /* (A battering's blows at most: its long task's length) */

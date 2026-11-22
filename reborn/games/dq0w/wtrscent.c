@@ -12,6 +12,7 @@
 #include "trace.h"
 #include "tstore.h"
 #include "wbody.h"
+#include "acts.h"
 
 #pragma static-locals (on)
 
@@ -42,14 +43,28 @@ static unsigned char chunk (void)
 ** went from there; else the freshest beside it, the way there; 0xFF, none (the journal not taken in first: the
 ** trail's newest the minds' own, dq0d.c's scent).  Each square's life its own, the longer by its passings and the
 ** character's stays there (hub.h's TR_MORE).  The one place the air layer will turn a trail downwind (slice
-** 4.5) */
+** 4.5).  Sniffed (the one-path plan's stage 2, 2026-11-21: "sniff" for anyone, the audit's M1, M2): the character's
+** own sniff, the act table's (its three seconds on its ready; the referee's test of its nose by its sheet, at the steps
+** the scent's strength gives, trace.h's TRACE_STEPS, as the character's sniff's: its clearest square's points, its
+** scent's life's less a point each doubling of its age, wtrace.c's found's), missed at a critical failure (none) */
+#pragma static-locals (push, off)
+static unsigned char __fastcall__ sniffed (unsigned char way, unsigned char c)
+{
+    struct actq q;                              /* (On the C stack: act_test swaps this part out, its statics too) */
+
+    act_get (q, AC_SNIFF);
+    bd.ready += q.r.time;
+    return act_test (bk + 1, q.r.test, q.r.steps + TRACE_STEPS (1, (signed char) c)) == G_BADLY ? 0xFF : way;
+}
+#pragma static-locals (pop)
+
 unsigned char __fastcall__ s_tr_scent (unsigned char nose)
 {
     static struct trace* p;
     static struct stratum* t;
     static unsigned life, a, best, b, q, now;
     static signed char dx, dy;
-    static unsigned char h, i, way, sm;
+    static unsigned char h, i, way, sm, c;
 
     hy_bank (ovbank[OVBANKS]);
     sm = TKN->smell[0];
@@ -73,6 +88,10 @@ unsigned char __fastcall__ s_tr_scent (unsigned char nose)
                 }
                 life = SCENT_LIFE (sm + TR_MORE (p->sc), nose);
                 if ((a = now - p->t) < life && (dx | dy ? way > H_NW || a < best : p->sq & TW_WAY)) {
+                    for (c = SCENT_LOG (sm + TR_MORE (p->sc), nose) + 1; a; a >>= 1) {
+                        --c;                    /* (Its strength: its points, less one each doubling of its age) */
+                    }
+                    a = now - p->t;
                     best = dx | dy ? a : 0;     /* (Its own square's first: the way the character went on) */
                     way = dx | dy ? bearing (dx, dy) : p->sq >> 10 & 7;
                     if (!(dx | dy)) {
@@ -87,7 +106,7 @@ done:
         way &= 6;                               /* (A diagonal only a diagonal way: else the four's, as ever) */
     }
     hub_map (0);
-    return way;
+    return way > H_NW ? way : sniffed (way, c);
 }
 
 #pragma code-name (pop)

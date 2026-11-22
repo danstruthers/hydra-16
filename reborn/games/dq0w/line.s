@@ -6,10 +6,12 @@
             .include    "line.inc"
 
 ; ln_seen: the same line, part 81's own (a denizen's take, what it sees: wtake.c's, 2026-11-17; a part's code calls
-; no other part's but through a stub, and the line's stub is part 65's): line ()'s arguments, its answer
-            .segment    "SW81CODE"
-            .export     _ln_seen
-_ln_seen:
+; no other part's but through a stub, and the line's stub is part 65's): line ()'s arguments, its answer; ln_seen94,
+; part 94's (an actor's search, the squares about it it sees: wsearch.c's, 2026-11-21)
+.macro      LNSEEN      seg, name
+            .segment    seg
+            .export     name
+name:
             sta         LZ_MODE
             ldy         #8
             lda         (sp),y
@@ -24,3 +26,6 @@ _ln_seen:
             jsr         addysp
             lda         #LN_LINE
             jmp         dq0x
+.endmacro
+            LNSEEN      "SW81CODE", _ln_seen
+            LNSEEN      "SW94CODE", _ln_seen94

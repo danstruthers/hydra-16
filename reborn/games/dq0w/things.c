@@ -6177,13 +6177,14 @@ unsigned __fastcall__ s_lay_body (unsigned char kind, unsigned char sn, unsigned
 /* (Part 13's: a rare command's) Hidden where the character stands (the user: hiding is a skill, Concealment; a thing's difficulty to find by the
 ** method's quality and the concealer's skill): its difficulty, in steps, the referee's test's (rs.h's P_CONCEAL: 12
 ** at a critical success, 6 a marginal one, 2 a marginal failure; at a critical failure 0, a floor's dust and corners
-** only); known to the character, who hid it */
+** only); known to the character, who hid it.  The act table's conceal row (the one-path plan's stage 2, 2026-11-21):
+** its minute, its test by the one sender (act_test: a robber's stash its own sheet's, wfight.c's), HIDE_OF's steps */
 unsigned char __fastcall__ drop (const char* name);
 #pragma code-name (push, "SW101CODE")
 #pragma rodata-name (push, "SW101RODATA")
 unsigned char __fastcall__ s_hide (const char* name)
 {
-    struct req* r;
+    struct actq q;
     signed char g;
     unsigned char d;
     unsigned n;
@@ -6203,24 +6204,18 @@ unsigned char __fastcall__ s_hide (const char* name)
         n = item_kind (n);
         hub_map (0);
         HUB->ireq.item = n;
-        HUB->ireq.qty = LT_HIDE;
-        HUB->ireq.x = 600;
+        act_get (q, AC_CONCEAL);
+        hub_map (0);
+        HUB->ireq.qty = q.r.task;
+        HUB->ireq.x = q.r.time;
         return IR_OK;
     }
     if (drop (name) != IR_OK) {
         return IR_NONE;
     }
-    hub_map (0);
-    r = &HUB->slot[SLOT_UI];                    /* (The UI's: it waits on this request meanwhile) */
-    r->kind = RS_TEST;
-    r->actor = 0;
-    RS_TEST_PURPOSE (*r) = P_CONCEAL;
-    RS_TEST_HOW (*r) = 0;
-    RS_TEST_STEPS (*r) = 0;
-    r = hub_ask (SLOT_UI);
-    g = RS_TEST_GRADE (*r);
-    r->state = REQ_FREE;
-    d = g == G_WELL ? 12 : g == G_PASS ? 6 : g == G_FAIL ? 2 : 0;
+    act_get (q, AC_CONCEAL);
+    g = act_test (0, q.r.test, q.r.steps);     /* (In the UI's slot: it waits on this request meanwhile) */
+    d = HIDE_OF (g);
     item_at (dropped)->flags |= I_HIDDEN | I_KNOWN;
     item_at (dropped)->hide = d;
     hub_map (0);
@@ -6881,23 +6876,11 @@ static const unsigned char d2_[7] = { 9, 4, 1, 0, 1, 4, 9 };   /* (A square's di
 unsigned char __fastcall__ on_it (unsigned n, unsigned char touch);   /* (Part 47's) */
 
 /* The referee's search test of the thing in rec, its hiding the steps worse (2 more by touch; ease the better, 2 for a
-** heap poked through, all the search on it): 1 if it's found */
+** heap poked through, all the search on it): 1 if it's found.  The one sender's (act_test, actor 0: an actor's search
+** the same test by its sheet, wsearch.c's, the one-path plan's stage 2) */
 static unsigned char __fastcall__ turned_up (unsigned char touch, unsigned char ease)
 {
-    struct req* r;
-    signed char g;
-
-    hub_map (0);
-    r = &HUB->slot[SLOT_UI];                    /* (The UI's: it waits on this request meanwhile) */
-    r->kind = RS_TEST;
-    r->actor = 0;
-    RS_TEST_PURPOSE (*r) = P_SEARCH;
-    RS_TEST_HOW (*r) = HIDE_MECHANICAL;
-    RS_TEST_STEPS (*r) = ease - (signed char) rec.hide - (touch ? 2 : 0);
-    r = hub_ask (SLOT_UI);
-    g = RS_TEST_GRADE (*r);
-    r->state = REQ_FREE;
-    return g >= G_PASS;
+    return act_test (0, P_SEARCH, ease - (signed char) rec.hide - (touch ? 2 : 0)) >= G_PASS;
 }
 
 /* The things lying on the squares within the search's reach (a square's distance off, squared, less than r) that the
@@ -7110,20 +7093,7 @@ static unsigned char __fastcall__ poked (unsigned n, unsigned char touch)
 ** 2026-11-16), the steps worse the better it's made, 2 more by touch, as hidden things' (part 46's turned_up): 1 found */
 static unsigned char __fastcall__ found_c (unsigned char touch)
 {
-    struct req* r;
-    signed char g;
-
-    hub_map (0);
-    r = &HUB->slot[SLOT_UI];
-    r->kind = RS_TEST;
-    r->actor = 0;
-    RS_TEST_PURPOSE (*r) = P_SEARCH;
-    RS_TEST_HOW (*r) = HIDE_MECHANICAL;
-    RS_TEST_STEPS (*r) = -(signed char) (rec.quality / 3) - (touch ? 2 : 0);
-    r = hub_ask (SLOT_UI);
-    g = RS_TEST_GRADE (*r);
-    r->state = REQ_FREE;
-    return g >= G_PASS;
+    return act_test (0, P_SEARCH, -(signed char) (rec.quality / 3) - (touch ? 2 : 0)) >= G_PASS;
 }
 
 unsigned char __fastcall__ s_on_it (unsigned n, unsigned char touch)

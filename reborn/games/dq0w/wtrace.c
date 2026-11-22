@@ -53,6 +53,7 @@
 #include "things.h"
 #include "line.h"
 #include "trace.h"
+#include "acts.h"
 #include "tstore.h"
 #include "../dq0/rp.h"
 
@@ -502,18 +503,20 @@ static const unsigned char feet_tread[5] = { 2, 4, 3, 3, 6 };
 
 unsigned __fastcall__ s_traced (const struct msg* m)
 {
-    static const unsigned took[3] = { 50, 600, 30 };   /* (TRC_*'s time: a look; a minute's study; a sniff) */
     static const unsigned char clear[3] = { 4, 2, 1 };  /* (How clearly a trail shows, at least, to be told) */
+    static struct actq aq;
     static struct trail* t;
     static unsigned w;
-    static signed char st, dx, dy;
+    static signed char dx, dy;
     static unsigned char i, j, k, best;
 
     ptread = feet_tread[feet ()];               /* (Part 31's) */
     how = I_TRACE_HOW (*m);                     /* (The journal taken in first, the chunks round the character too:
                                                 **   the caller's, tr_flush) */
     way = I_TRACE_SNIFF (*m);
-    w = I_TRACE_TENTHS (*m) ? I_TRACE_TENTHS (*m) : took[how];
+    act_get (aq, how == TRC_SMELL ? AC_SNIFF : AC_TRACK);   /* (Its time: a look's five seconds; a track's, a sniff's
+                                                **   the act table's, every actor's: a hunter's sniff, wtrscent.c's) */
+    w = I_TRACE_TENTHS (*m) ? I_TRACE_TENTHS (*m) : how == TRC_FLOOR ? 50 : aq.r.time;
     hub_map (0);
     ws = HUB->pc_stratum;
     wx = HUB->pc_x;
@@ -565,8 +568,7 @@ unsigned __fastcall__ s_traced (const struct msg* m)
     R.grade = G_PASS;
     if (how != TRC_FLOOR) {                     /* (The referee's test, the world's slot: Tracking, or a smell noticed,
                                                 **   at steps by the clearest) */
-        st = how == TRC_SMELL ? 2 * best - 6 : best - 4;
-        wsteps = st < -8 ? -8 : st > 6 ? 6 : st;
+        wsteps = TRACE_STEPS (how == TRC_SMELL, best);  /* (A hunter's sniff the same: wtrscent.c's) */
         R.grade = ask_w (RS_TEST, how == TRC_SMELL ? P_NOTICE_SMELL : P_TRACK, 0);
     }
     R.trod = best >= 4;

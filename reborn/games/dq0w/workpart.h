@@ -21,12 +21,8 @@
 /* A portal's state kept (handled: a walk may open it again, the user's) */
 static void __fastcall__ door_state (unsigned char st)
 {
-#ifdef W_FRONT
     keep (wk.px, wk.py, st, wk.pq.parts | (wk.who ? 0 : PP_KNOWN), PORTAL_STATE);  /* (An actor's handling not the
-                                                **   character's: wport.c's) */
-#else
-    keep (wk.px, wk.py, st, wk.pq.parts | PP_KNOWN, PORTAL_STATE);
-#endif
+                                                **   character's: wport.c's, wsearch.c's) */
 }
 
 #ifdef W_TRAPS
