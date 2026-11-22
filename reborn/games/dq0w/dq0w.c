@@ -6778,9 +6778,10 @@ void __fastcall__ s_intent_few (struct msg* m)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 7 (wwin.c's, its room): a stretch of the map drawn as the character goes (slice 4.2's) */
-#pragma code-name (push, "SW7CODE")
-#pragma rodata-name (push, "SW7RODATA")
+/* ==== Part 106 (part 7's, wwin.c's, its room; 106 the placer's since, kept there 2026-11-21: moved to part 110, the
+** small move's, it cost a fight's first letters 100,000 cycles): a stretch of the map drawn as the character goes (slice 4.2's) */
+#pragma code-name (push, "SW106CODE")
+#pragma rodata-name (push, "SW106RODATA")
 
 /* How true what it draws now is (the hub's pc_drawn: the referee's P_DRAW test, HOUSE.md's the map kept; a skill
 ** opened by it told, E_TASK's TE_LEARNT); its map's make the better or the worse for it (its quality, the mean of
@@ -6824,6 +6825,10 @@ void s_draw_test (void)
     drawn_down ();
     hub_map (0);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW7CODE")             /* (Things used up: part 7's still) */
+#pragma rodata-name (push, "SW7RODATA")
 
 /* ---- Things used up (HOUSE.md's, the user's, 2026-10-23: "Ink, pencils, charcoal, etc., should be used up
 ** eventually"), one way for every kind, by its data (as a light's fuel is: the item's fuel, its minutes left, its whole
@@ -6916,10 +6921,15 @@ unsigned char __fastcall__ s_use_key (const char* key)
 /* A drawing's minutes (DRAW_USE: a room come into, a way walked, mapping on paper) off what it draws with (the map
 ** making's, chart_w: things.c's chart_now, as the light's made, the handy ones by their keys): a point (charcoal,
 ** chalk, a pencil), else its quill and its ink; one spent, the map making made again (light_now's) */
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW106CODE")           /* (With the map's drawing, part 106's) */
+#pragma rodata-name (push, "SW106RODATA")
 #define DRAW_USE        2
+unsigned char __fastcall__ use_up (unsigned n, unsigned char by);  /* (Part 7's stub) */
 static void drawn_down (void)
 {
-    if (chart_w[2] ? s_use_up (chart_w[2], DRAW_USE) : s_use_up (chart_w[3], DRAW_USE) | s_use_up (chart_w[4],
+    if (chart_w[2] ? use_up (chart_w[2], DRAW_USE) : use_up (chart_w[3], DRAW_USE) | use_up (chart_w[4],
         DRAW_USE)) {
         light_now ();
     }

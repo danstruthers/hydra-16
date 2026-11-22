@@ -46,6 +46,8 @@ unsigned char __fastcall__ on_pc (unsigned i);  /* (Part 10's) */
 ** its id; 0 the work's door's, DOOR_KEY of wk's sn, px, py).  Its number, or 0.  Every actor's tools by one rule (a door's key, a lid's, lockpicks:
 ** the one-path plan's stage 2, closures, 2026-11-21; a door's key, s_door_key, and den_pry's own loop, a lid's, before;
 ** an actor's door key then only held, not in its pouch); the hub's header in the window after */
+#pragma code-name (push, "SW69CODE")             /* (Part 69's, the one senders': part 80's room) */
+#pragma rodata-name (push, "SW69RODATA")
 unsigned __fastcall__ s_tool_of (unsigned char who, unsigned char k, unsigned id)
 {
     unsigned i, j;
@@ -69,6 +71,8 @@ unsigned __fastcall__ s_tool_of (unsigned char who, unsigned char k, unsigned id
     hub_map (0);
     return r ? i : 0;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 static unsigned __fastcall__ apart (int ax, int ay)
 {
