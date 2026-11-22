@@ -162,6 +162,14 @@ only quit and help taken, nothing sensed). These are the rest.
   environmental sounds are in.
   - HOUSE.md:4291-4292; DECISIONS.md:526; SOUND.md:128.
 
+## The languages and the emulator
+
+- **E1. HyBASIC's banner** ("HyBASIC (QuickBASIC's kind), BYE to end", built): add a version or the free memory
+  (FRE())? HyForth's and hylang's show neither.
+  - built/2026-11-21-emu1.md, open question 1.
+- **E2. docs/01-overview.md's examples**: BASIC's now shows its banner, hylang's leaves its own out. Both, or neither?
+  - built/2026-11-21-emu1.md, open question 2.
+
 ## On hold: the between-dungeons work
 
 The town, the scholar's house, the account and prices are on hold (GAME-CRITIQUE.md:31). Their open questions:
