@@ -6,10 +6,13 @@
 // letter (the emulator's the same, cycle for cycle, each run at one build: the window's exact).  Every instruction in
 // the window is counted by task (the hub's task table: the UI, the world, the denizens, the referee ...) and by C
 // function, the runtime's helpers, the kernel's calls and the libraries' routines charged to the C function that
-// called them (by the return addresses on the 6502's stack, up to three deep); and each part a task copied into its
-// swap area (swload, ../games/dq0/swap.inc) with its cycle and the cycles the copy took.
+// called them (by the return addresses on the 6502's stack, up to three deep), a function in an overlay or a swapped
+// part named with it ("_o_pc_side(ov3)": the bank in the task's window, its ovbank's; "_has_role(p51)": its swapped;
+// which overlay or part each C function is in, from the cc65 output's segments, obj/games/TASK/*.s: speed11's); and
+// each part a task copied into its swap area (swload, ../games/dq0/swap.inc) with its cycle and the cycles the copy took.
 //
 // Usage: node sim/tools/lineprof.js TEST [LINE] [--nth N] [--list] [--top N] [--seed N] [--out FILE] [--lead N]
+//        node sim/tools/lineprof.js --sweep TEST ... [--lags L,L,...] [--jobs N] [--top N] [--seed N] [--all]
 //   TEST       a test that times its lines (a D17 test: this.timer = dq0Timer(m), tests/suites/dq0/*.js)
 //   LINE       the line typed, as the test types it (its first letters enough: "go left" for MID_MARK's "go left";
 //              "d$" that line alone);
@@ -23,6 +26,14 @@
 //   --timeline N  each task's run in the window of N cycles or more, in order (who ran when)
 //   --lead N   the profile begun N cycles before the Enter (what came just before it: a part copied in, a round's
 //              work begun); its cycles in the counts, its part loads at their (negative) cycles
+//   --sweep    (speed10's lag sweeps, a tool since speed11, 2026-11-22) each TEST run once at each lag (SIM_PROMPT_LAG,
+//              ../base/sim/lib/acia.js: a line's first key that many cycles later after its prompt, so its lines land at
+//              other phases of the background's work), the runs side by side (--list's, each its own process): every
+//              typing of every line in a game (not its dq0 line, nor quit; nor a soft question's yes or no, dq0Asks',
+//              unless --all) with its first letter at each lag, the --top N (default 15) by their worst; and each
+//              test's sum: the typings, their mean, those past 85%, 90% and 100% of D17's 720,000, the worst
+//   --lags     the lags (default 0,7000,13000,23000,31000,41000,53000,67000: speed10's eight, primes apart)
+//   --jobs N   runs at once (default: the processors less one, at most the lags)
 // The run's other checks are the test's as ever (its failures said, not the tool's): GUARDS, HUBOWN and TRANSCRIPTS
 // as sim/test.js has them.
 'use strict';
@@ -47,6 +58,30 @@ function near(L, a) {                                 // (The label at or below 
   while (lo <= hi) { const mid = (lo + hi) >> 1; if (L[mid][0] <= a) { best = L[mid]; lo = mid + 1; } else hi = mid - 1; }
   return best ? best[1] : '?' + a.toString(16);
 }
+function segsOf(dir) {                               // (A program's C names' segments: its cc65 .s files', name -> segment)
+  const seg = {};
+  if (!fs.existsSync(dir)) return seg;
+  for (const f of fs.readdirSync(dir).filter(x => x.endsWith('.s'))) {
+    let cur = 'CODE';
+    for (const l of fs.readFileSync(path.join(dir, f), 'latin1').split(/\r?\n/)) {
+      let m = /^\.segment\s+"([^"]+)"/.exec(l);
+      if (m) { cur = m[1]; continue; }
+      m = /^\.proc\s+(_\w+)/.exec(l) || /^(_\w+):/.exec(l);
+      if (m && !(m[1].slice(1) in seg)) seg[m[1].slice(1)] = cur;
+    }
+  }
+  return seg;
+}
+function byPart(L, seg, swap) {                       // (Its labels split by where they are and their segment: the main
+  const r = { main: [], ov: {}, sw: {} };              //   RAM's, each overlay's, each part's)
+  for (const x of L) {
+    const g = seg[x[1].replace(/^_/, '')] || '', o = /^OV(\d+)/.exec(g), w = /^SW(\d+)/.exec(g);
+    if (x[0] >= 0x8000) { if (o) (r.ov[o[1]] = r.ov[o[1]] || []).push(x); }
+    else if (x[0] >= swap) { if (w) (r.sw[w[1]] = r.sw[w[1]] || []).push(x); }
+    else r.main.push(x);
+  }
+  return r;
+}
 function dbgBanks(file, by) {                         // (ld65's debug file's labels by bank: by(seg line) its bank)
   const banks = [], bank = {};
   if (!fs.existsSync(file)) return banks;
@@ -67,8 +102,14 @@ function profiler(name, from, to) {
   const self = new Map(), calls = new Map(), loads = [], byTask = new Array(16).fill(0);
   let total = 0, run = null;
   const last = [], runs = [];
-  const lab = {}, swl = {};
-  for (const p of PROGS) { lab[p] = labels(path.join(ROOT, 'obj', 'games', p, p + '.lbl')); const s = lab[p].find(x => x[1] === 'swload'); if (s) swl[p] = s[0]; }
+  const lab = {}, swl = {}, parts = {};
+  for (const p of PROGS) {
+    lab[p] = labels(path.join(ROOT, 'obj', 'games', p, p + '.lbl'));
+    const s = lab[p].find(x => x[1] === 'swload'); if (s) swl[p] = s[0];
+    const at = n => { const x = lab[p].find(y => y[1] === n); return x ? x[0] : -1; };
+    const sa = (/^al ([0-9A-F]+) \.__SWAP_START__$/m.exec(fs.existsSync(path.join(ROOT, 'obj', 'games', p, p + '.lbl')) ? fs.readFileSync(path.join(ROOT, 'obj', 'games', p, p + '.lbl'), 'latin1') : '') || [])[1];
+    parts[p] = Object.assign(byPart(lab[p], segsOf(path.join(ROOT, 'obj', 'games', p)), sa ? parseInt(sa, 16) : 0x8000), { ovbank: at('_ovbank'), swapped: at('swapped'), swap: sa ? parseInt(sa, 16) : 0x8000 });
+  }
   const bios = dbgBanks(path.join(BASE, 'obj', 'kernel', 'bios.dbg'), s => { const b = /bank=(\d+)/.exec(s); return b ? +b[1] : null; });
   const mod = n => dbgBanks(path.join(ROOT, 'obj', 'modules', n, n + '.dbg'), s => { const o = /ooffs=(\d+)/.exec(s); return o ? Math.floor(+o[1] / 16384) : null; });
   const cons = mod('cons'), lib = mod('dq0lib');
@@ -85,7 +126,14 @@ function profiler(name, from, to) {
     if (pc >= 0xE000) return 'bios' + W + ':' + near(bios[W] || [], pc);
     if (pc >= 0xA000) return T === CONS_T ? 'cons:' + near(cons[bk - b0] || [], pc) : 'lib:' + near(lib[0] || [], pc);
     const p = taskOf()[T];
-    return p ? near(lab[p], pc) + (pc >= 0x8000 ? '(win)' : '') : '?' + pc.toString(16);
+    if (!p) return '?' + pc.toString(16);
+    const q = parts[p], r = m.taskRam[T];           // (An overlay's by the bank in its window, ovbank's; a part's by swapped)
+    if (pc >= 0x8000 && q.ovbank >= 0) {
+      for (let n = 1; n < 64; n++) if (r[q.ovbank + n - 1] === r[0] && q.ov[n]) return near(q.ov[n], pc) + '(ov' + n + ')';
+      return near(lab[p], pc) + '(win)';
+    }
+    if (pc >= q.swap && pc < 0x8000 && q.swapped >= 0 && q.sw[r[q.swapped]]) return near(q.sw[r[q.swapped]], pc) + '(p' + r[q.swapped] + ')';
+    return near(q.main.length ? q.main : lab[p], pc);
   };
   const step = (T, W, pc, dc, c0) => {
     total += dc;
@@ -141,9 +189,69 @@ function report(r, line, top, tl) {
   return out.join('\n');
 }
 
+// ---- The lag sweep (--sweep): each test at each lag, side by side
+const D17 = 720000, LAGS = [0, 7000, 13000, 23000, 31000, 41000, 53000, 67000];
+function listRun(name, lag, seed) {                 // (One run's --list at one lag: [{ i, first, line }], and its failures)
+  const { execFile } = require('child_process');
+  return new Promise(res => execFile(process.execPath, [__filename, name, '--list', '--seed', String(seed)],
+    { cwd: ROOT, maxBuffer: 1e8, env: Object.assign({}, process.env, { SIM_PROMPT_LAG: String(lag) }) }, (e, out, err) => {
+      const rows = [];
+      for (const l of out.split(/\r?\n/)) {
+        const m = /^\s*(\d+)\s+([\d,]+|-)  (.*)$/.exec(l);
+        if (m) rows.push({ i: +m[1], first: m[2] === '-' ? null : +m[2].replace(/,/g, ''), line: m[3] });
+      }
+      res({ lag, rows, fails: (err || '').split(/\r?\n/).filter(x => /^the test: |^lineprof: /.test(x)) });
+    }));
+}
+async function sweep(names, opt) {
+  const lags = opt.lags, jobs = Math.max(1, Math.min(opt.jobs || require('os').cpus().length - 1, lags.length * names.length));
+  const todo = [];
+  for (const n of names) for (const g of lags) todo.push({ n, g });
+  const done = new Map();
+  let next = 0;
+  const worker = async () => { while (next < todo.length) { const w = todo[next++]; done.set(w.n + ' ' + w.g, await listRun(w.n, w.g, opt.seed)); } };
+  await Promise.all(Array.from({ length: jobs }, worker));
+  const game = l => /^(?:\S*\/)?dq0( |$)/.test(l);
+  const fmt = v => v === undefined || v === null ? '-' : v.toLocaleString('en-US');
+  const pct = v => Math.round(100 * v / D17) + '%';
+  let failed = 0;
+  for (const n of names) {
+    const by = new Map();
+    for (const g of lags) {
+      const r = done.get(n + ' ' + g);
+      for (const f of r.fails) { console.log(n + ' at lag ' + g + ': ' + f); failed = 1; }
+      let inGame = false;
+      for (const x of r.rows) {                     // (A line in a game: after its dq0 line, before its quit)
+        if (game(x.line)) { inGame = true; continue; }
+        if (!inGame) continue;
+        if (x.line === 'quit') { inGame = false; continue; }
+        if (!opt.all && /^(yes|no)$/.test(x.line)) continue;
+        const k = x.i + ' ' + x.line;
+        if (!by.has(k)) by.set(k, { i: x.i, line: x.line, v: {} });
+        by.get(k).v[g] = x.first;
+      }
+    }
+    const rows = [...by.values()].map(r => Object.assign(r, { worst: Math.max(...lags.map(g => r.v[g] || 0)) }));
+    const all = [];
+    for (const r of rows) for (const g of lags) if (r.v[g] !== null && r.v[g] !== undefined) all.push(r.v[g]);
+    const mean = all.length ? Math.round(all.reduce((a, b) => a + b, 0) / all.length) : 0, worst = all.length ? Math.max(...all) : 0;
+    console.log(n + ': ' + rows.length + ' lines, ' + all.length + ' typings at ' + lags.length + ' lags; mean ' + fmt(mean) + ', past 85% ' +
+      all.filter(v => v > 0.85 * D17).length + ', past 90% ' + all.filter(v => v > 0.9 * D17).length + ', past D17 ' +
+      all.filter(v => v > D17).length + ', worst ' + fmt(worst) + ' (' + pct(worst) + ')');
+    console.log('    worst   line (its index, as --list numbers it)'.padEnd(48) + lags.map(g => ('lag ' + g).padStart(10)).join(''));
+    for (const r of rows.sort((a, b) => b.worst - a.worst).slice(0, opt.top))
+      console.log(fmt(r.worst).padStart(9) + ' ' + (String(r.i).padStart(4) + ' ' + r.line).slice(0, 38).padEnd(38) + lags.map(g => fmt(r.v[g]).padStart(10)).join(''));
+  }
+  return failed;
+}
+
 async function main(argv) {
-  const opt = { seed: 1, top: 60, nth: 0, list: false, out: '', lead: 0, timeline: 0, names: [] };
+  const opt = { seed: 1, top: 0, nth: 0, list: false, out: '', lead: 0, timeline: 0, names: [], sweep: false, lags: LAGS, jobs: 0, all: false };
   for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--sweep') { opt.sweep = true; continue; }
+    if (argv[i] === '--lags') { opt.lags = argv[++i].split(',').map(Number); continue; }
+    if (argv[i] === '--jobs') { opt.jobs = +argv[++i]; continue; }
+    if (argv[i] === '--all') { opt.all = true; continue; }
     if (argv[i] === '--nth') opt.nth = +argv[++i];
     else if (argv[i] === '--list') opt.list = true;
     else if (argv[i] === '--top') opt.top = +argv[++i];
@@ -151,9 +259,17 @@ async function main(argv) {
     else if (argv[i] === '--out') opt.out = argv[++i];
     else if (argv[i] === '--lead') opt.lead = +argv[++i];
     else if (argv[i] === '--timeline') opt.timeline = +argv[++i];
-    else if (argv[i].startsWith('-')) { console.error('usage: node sim/tools/lineprof.js TEST [LINE] [--nth N] [--list] [--top N] [--seed N] [--out FILE] [--lead N]'); process.exit(2); }
+    else if (argv[i].startsWith('-')) { console.error('usage: node sim/tools/lineprof.js TEST [LINE] [--nth N] [--list] [--top N] [--seed N] [--out FILE] [--lead N] [--timeline N]\n' +
+      '       node sim/tools/lineprof.js --sweep TEST ... [--lags L,L,...] [--jobs N] [--top N] [--seed N] [--all]'); process.exit(2); }
     else opt.names.push(argv[i]);
   }
+  if (opt.sweep) {
+    const T = require('../test.js');
+    for (const n of opt.names) if (!T.tests.find(x => x.name === n)) { console.error('lineprof: no test ' + n); process.exit(2); }
+    opt.top = opt.top || 15;
+    process.exit(await sweep(opt.names, opt));
+  }
+  opt.top = opt.top || 60;
   const [name, want] = opt.names;
   const T = require('../test.js');
   const t = T.tests.find(x => x.name === name);

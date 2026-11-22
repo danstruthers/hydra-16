@@ -145,7 +145,7 @@ first letter, the test's dq0Timer), then again with the machine's profile on fro
 first letter. The emulator is the same cycle for cycle at one build, so the window is exact (the second run says so
 if it isn't).
 
-    node sim/tools/lineprof.js TEST [LINE] [--nth N] [--list] [--top N] [--lead N] [--out FILE]
+    node sim/tools/lineprof.js TEST [LINE] [--nth N] [--list] [--top N] [--lead N] [--timeline N] [--out FILE]
 
 `--list` lists every line typed with its first letter; LINE (its first words) picks a line, the slowest of its
 typings unless `--nth N` (1 on: the test's own game, then the menacing and the played ones); no LINE, the slowest in
@@ -153,14 +153,35 @@ the run. The report: the window's cycles by task (the UI, the world, the referee
 kernel ...); each part a task copied into its swap area in the window (its cycle, the copy's cycles, sw_call's for a
 stub's call or sw_back's for a return into a part, and whose); the C functions that took the most, the runtime's
 helpers, the kernel's calls and the libraries' routines charged to the C function that called them (by the return
-addresses on the 6502's stack); and each routine with its two callers. `--lead N` starts the profile N cycles before
-the Enter (a part copied in, or a round's work begun, just before it). It works on any test that times its lines
+addresses on the 6502's stack), a function in an overlay or a swapped part named with it (`_o_pc_side(ov3)`, by the
+bank in the task's window and its ovbank; `_has_role(p51)`, by its swapped: since speed11, 2026-11-22, from the C
+files' segments in obj/games/TASK/*.s); and each routine with its two callers. `--lead N` starts the profile N cycles before
+the Enter (a part copied in, or a round's work begun, just before it). `--timeline N` lists, in order, each run of a
+task of N cycles or more in the window with its top functions: who ran when (a denizen's intent under way at the
+Enter, the referee's blow, the UI's answer). It works on any test that times its lines
 (`this.timer = dq0Timer(m)`); the hooks are the machine's `profileStep` (base/sim/lib/machine.js: each instruction
 in the profile's window; the runs before the window as quick as ever) and sim/test.js's `addInstrument`.
 
 The windows vary by build as much as by change: the same line's first letter swings 100,000-200,000 cycles as the
 code's layout moves and the background's work (a denizen's move, the world's minute, the senses' look, their parts
 copied in) lands in it or not. Compare what a window holds, not one number against another.
+
+**The lag sweep** (speed10's sweeps, a tool since speed11, 2026-11-22). One suite run is one phase of each race between
+a line and the background's work. `SIM_PROMPT_LAG=N` (base/sim/lib/acia.js) types every line's first key N cycles
+later after its prompt, so the same test lands its lines at other phases (sim/lib/scenes.js keys a scene by the lag).
+The sweep runs each test once at each lag, side by side, and gathers every typing of every line in a game (not its dq0
+line or its quit, nor a soft question's yes or no unless `--all`):
+
+    node sim/tools/lineprof.js --sweep TEST ... [--lags L,L,...] [--jobs N] [--top N] [--seed N] [--all]
+
+For each test: its typings, their mean, how many are past 85%, 90% and 100% of D17's 720,000, and the worst; then the
+`--top` lines (15) by their worst, with the first letter at each lag. The lags are speed10's eight by default (0, 7000,
+13000, 23000, 31000, 41000, 53000, 67000: each a prime of thousands, so no two runs land alike); `--jobs` runs at
+once (the processors less one). A run whose test fails is said, with its failures. Lag 0 is not quite the suite's
+run: SIM_PROMPT_LAG unset and 0 are scenes of their own (scenes.js keys a scene by the variable as given), and the
+same line can land 30,000 cycles apart in them. The eight D17 tests at eight lags take some
+twenty minutes on eight processors. Profile a slow typing it finds with `SIM_PROMPT_LAG=N node sim/tools/lineprof.js
+TEST LINE --nth K` (the same lag, the same window).
 
 ## The tiers
 
