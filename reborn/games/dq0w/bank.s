@@ -29,6 +29,8 @@ SWDEPTH     = 12                    ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
                                     ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
+SWTABOV     = 2                     ; (Their records in overlay 2's bank, dq0w.cfg's SWTAB: 565 bytes of the main RAM's
+                                    ;   room, speed12, 2026-11-22)
 OVBANKS     = OVLS                  ; The overlays (dq0w.cfg's OV1 ...: the build's count, OVLS; things.h's OVBANKS)
 
             .zeropage

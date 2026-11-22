@@ -57,6 +57,9 @@ dq0line         the turns pace's race: the denizens' turn after a line told as t
 # A run's end
 dq0peoplegen    its last prompt printed or not as its run ended
 
+# The sky by the clock: a look's words of the daylight go by the minute it lands
+dq0venom        its first look's skylight, at dawn's edge: its light ("daylight falling from it", "Fading light falls") by the minute the look lands (the user's, 2026-11-22)
+
 # Sentences told as the tasks' timing has them, in any test
 "Something stirs."   told or not as the minds' timing has a denizen move within hearing
 "Time passes."       told or not as the tasks' timing has the clock run on past a line

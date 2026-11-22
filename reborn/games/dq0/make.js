@@ -104,8 +104,24 @@ function helpWhole(dir) {
   return helpParts(fs.readFileSync(path.join(dir, 'help.txt'), 'latin1'));
 }
 
+// pace.c's pl[] (o_pacing's: each first letter's words' lengths, a bit each) held to its pace_words (speed12, 2026-11-22:
+// a table of the build's to keep, not made as the game runs, its overlay's bank as ld65 made it)
+function paceTable(dir) {
+  const s = fs.readFileSync(path.join(dir, 'pace.c'), 'latin1');
+  const w = /static const char pace_words\[\] =([^;]*);/.exec(s), t = /static const unsigned pl\[32\] = \{[\s\S]*?\*\/([^}]*)\}/.exec(s);
+  if (!w || !t) throw new Error('games/dq0/pace.c: no pace_words or pl[32]');
+  const str = [...w[1].matchAll(/"((?:[^"\\]|\\.)*)"/g)].map(x => x[1]).join('').replace(/\\([0-7]{1,3})/g, (x, o) => String.fromCharCode(parseInt(o, 8)));
+  const want = new Array(32).fill(0);
+  for (let i = 0; i < str.length; i += str.charCodeAt(i) + 1) want[str.charCodeAt(i + 1) & 31] |= 1 << str.charCodeAt(i);
+  const have = t[1].split(',').map(x => x.trim()).filter(Boolean).map(x => parseInt(x, 16));
+  const at = want.findIndex((v, k) => have[k] !== v);
+  if (at >= 0 || have.length !== 32) throw new Error('games/dq0/pace.c: pl[] not pace_words\' (letter ' + at + ': 0x' +
+    want[at].toString(16).toUpperCase().padStart(4, '0') + ')');
+}
+
 function build({ dir, objdir, say = () => {} }) {
   rowsSame(dir);
+  paceTable(dir);
   const help = helpWhole(dir);
   say('help.txt: ' + help.length + ' paragraphs, each printed whole (' + help.filter(p => p.length > 1).length + ' in parts, at a space)');
   say(coverage(dir, objdir));

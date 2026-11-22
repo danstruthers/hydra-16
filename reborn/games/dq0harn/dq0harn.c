@@ -110,7 +110,7 @@ void __fastcall__ kind_in (unsigned char k)
 
 /* The tool to hand that suits the material best (rshouse.h's house_dig_tool: its digger's number); it and the table part
 ** 3's, hdig.c (the main RAM's room, 2026-10-27) */
-static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char steps);
+signed char __fastcall__ test (harn_char* c, unsigned char p, signed char steps);  /* (Overlay 10's o_test, its stub) */
 
 /* A dig's test (RS_TEST's P_DIG): judged by the tool to hand that suits it best, its rate a spell at a marginal
 ** success (earth's untested: the tool's rate), its key and its wear in the reply */
@@ -206,6 +206,7 @@ static void __fastcall__ dig_of (struct req* r)
 /* ---- A purpose: the skill a GM would call for, or an attribute (an attribute | 0x80: tested times 5) */
 
 #define ATTR    0x80
+#pragma rodata-name (push, "OV10RODATA")       /* (With o_test, overlay 10's: the main RAM's room, speed12) */
 static const unsigned char purpose[P_THEME] = {
     HARN_AWA, HARN_AWA, HARN_AWA, HARN_AWA,                             /* Sight, sound, smell, search */
     HARN_STL, HARN_CLI, HARN_JMP, HARN_SWI, HARN_ACR, ATTR | HARN_STR, ATTR | HARN_STR,
@@ -233,6 +234,7 @@ static const unsigned char purpose[P_THEME] = {
     HARN_RAGR,                                                          /* A prayer: the deity's own Ritual
                                                                         **   (test's: Agrik's the first) */
 };
+#pragma rodata-name (pop)
 
 /* The referee's own skill (harn.h's a program's own, after the book's: its file's "ml 91 N" line): Drawing's
 ** specialty Cartography (Skills 14: poetic maps; a specialty chosen at 40 or more, opened at the skill's mastery,
@@ -301,7 +303,11 @@ unsigned char o_draw_learn (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char steps)
+/* A purpose's test (RS_TEST's, part 3's): overlay 10's, its stub test (the main RAM's room, speed12, 2026-11-22: no hub in
+** it) */
+#pragma code-name (push, "OV10CODE")
+#pragma rodata-name (push, "OV10RODATA")
+signed char __fastcall__ o_test (harn_char* c, unsigned char p, signed char steps)
 {
     if (p >= P_THEME) {
         return grade (harn_test (50 + STEP_PCT * steps));   /* (A theme's own: till themes say, an even chance) */
@@ -324,6 +330,8 @@ static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char
     }
     return test_sk (c, purpose[p], steps);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The character's state, in the hub's header: the UI's status line, and its summary (rs.h's: what the world
 ** needs often, its senses first: what it sees and hears is through them) */
@@ -944,7 +952,10 @@ void __fastcall__ rf_answer (struct req* r)
         }
         gseed = HUB->seed;
         memcpy (rq, r, sizeof rq);
+        harn_ep_kept = harn_get_ep (&pc);       /* (Its encumbrance once for the blow's dozen tests: no blow */
+        harn_ep_of = &pc;                       /*   changes its load or its endurance; speed12, 2026-11-22) */
         fight ((struct req*) rq);
+        harn_ep_of = 0;
         memcpy (r, rq, sizeof rq);
         status_now ();                          /* (The blow's own summary in the reply, the rest after it: */
         rf_later = 1;                           /*   rf_after's, the skeleton's, the user's T4, 2026-11-22) */
