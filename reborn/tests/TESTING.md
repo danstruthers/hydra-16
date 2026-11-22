@@ -183,6 +183,14 @@ same line can land 30,000 cycles apart in them. The eight D17 tests at eight lag
 twenty minutes on eight processors. Profile a slow typing it finds with `SIM_PROMPT_LAG=N node sim/tools/lineprof.js
 TEST LINE --nth K` (the same lag, the same window).
 
+**A player's pause in a fight** (the user's T3, 2026-11-22: "the band of lines typed mid-fight is judged with a player's
+pause between lines, not back to back"). tests/lib/dq0.js's `dq0FightPause(m)`: a line typed at its prompt while the
+character's in a fight (its long task fighting on, or a denizen fighting) has its first key a second later
+(`PLAYER_PAUSE`, 3,579,545 cycles at 3.58 MHz: a quick player reading the fight's last words), not at once; and a test
+that types lines mid-round with no prompt waited for (dq0fightmid's and dq0felled's `MID_MARK`) types each once the
+line before is answered (its prompt drawn again) and a second has passed. Only when a line is typed changes: each is
+timed from its Enter to the same targets. In dq0fightcmd, dq0fightmid, dq0felled and dq0letdens.
+
 ## The tiers
 
 **1. While working**: the agent's own tests, and `--near` its area:

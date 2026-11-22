@@ -933,11 +933,12 @@ function dq0Timer(m) {
 function anyWords(s, line, lim) {
   let j = s.indexOf('> ' + line);
   j = j >= 0 && j < 8 ? j + line.length + 2 : 0;
-  for (let news = 0; ; news = 1) {               // (A stir's list after its news: news too; one first, the answer's)
-    while (j < lim && s[j] === ' ') j++;
-    if (j >= lim) return -1;
-    const rest = s.slice(j, lim);
-    if (!/^(?:Something stirs|Nothing stirs in sight|You hear (?!nothing))/.test(rest) && (!news || !/^(?:\(|[^.!?]* gone from sight[.!?])/.test(rest))) return j;
+  for (let stir = 0; ; ) {                       // (A stir's list after its news: news too; one first, the answer's.
+    while (j < lim && s[j] === ' ') j++;          //   After a sound's words no list: "You hear .... (E) a body,
+    if (j >= lim) return -1;                      //   ahead" around's own, speed11's, 2026-11-22)
+    const rest = s.slice(j, lim), sound = /^You hear (?!nothing)/.test(rest);
+    if (!sound && !/^(?:Something stirs|Nothing stirs in sight)/.test(rest) && (!stir || !/^(?:\(|[^.!?]* gone from sight[.!?])/.test(rest))) return j;
+    stir = !sound;
     const e = /[.!?](?= |$)/.exec(rest);
     if (!e) return -1;
     j += e.index + 1;
@@ -978,6 +979,44 @@ function dq0Asks(m, gs) {
       tail = '';
     }
   };
+}
+// A player's pause between the lines typed mid-fight (the user's T3, 2026-11-22: "the band of lines typed mid-fight is
+// judged with a player's pause between lines, not back to back"; speed11's).  A player reads an answer before typing
+// the next line: PLAYER_PAUSE, a second at the board's 3.58 MHz, a quick player's (reading a line of the fight's words
+// and starting to type; the keys after the first as fast as ever).  Only when the next line is typed changes: every
+// line is timed from its Enter as before, to the same targets.  dq0FightPause(m): (1) a line typed at its prompt while
+// the character's in a fight (its long task fighting on, LT_FIGHT, or an actor fighting, DO_FIGHT, as the prompt comes)
+// has its first key PLAYER_PAUSE after the prompt (acia.js's linePause), not at once; (2) .ready(cyc), for a test's
+// lines typed mid-round with no prompt waited for (dq0fightmid's MID_MARK): true once the line before has been answered
+// (the prompt drawn on its row again after its Enter) and PLAYER_PAUSE has passed since.  Installed in the D17 tests
+// that type lines mid-fight: dq0fightcmd, dq0fightmid, dq0felled, dq0letdens
+const PLAYER_PAUSE = 3579545;
+function dq0FightPause(m) {
+  const a = m.acia, read = a.read, shown = a.shown;
+  let enter = -1, prompt = -1;
+  const fighting = () => {
+    try {
+      const h = m.dq0 && m.dq0.bank(0);
+      if (!h) return false;
+      const { L, K } = m.dq0.layout();
+      if (h[L.pcTask + L.ltKind] === K.LT_FIGHT) return true;
+      for (let k = 0; k < L.nactors; k++) if (h[L.actor + k * L.actorSize + L.aDoing] === K.DO_FIGHT) return true;
+      return false;
+    } catch (e) { return false; }
+  };
+  a.linePause = () => fighting() ? PLAYER_PAUSE : 0;
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf && a.rx === 13) { enter = t === undefined ? m.cpu.cyc : t; prompt = -1; }
+    return read(r, t);
+  };
+  let raw = '';                                 // (The prompt drawn on its row, dq0Timer's: ESC[K, perhaps the cursor
+  a.shown = (v, t) => {                         //   shown, then "> ", or two spaces while the character's busy,
+    shown(v, t);                                //   fighting on; the first after the line's Enter its answer's end)
+    raw = (raw + String.fromCharCode(v)).slice(-8);
+    if (prompt < 0 && enter >= 0 && /(\x1b\[K|\x1b\[\?25h)(> |  )$/.test(raw)) prompt = t === undefined ? m.cpu.cyc : t;
+  };
+  const ready = cyc => enter < 0 || (prompt >= 0 && cyc - prompt >= PLAYER_PAUSE);
+  return { ready, fighting };
 }
 // Each line typed only once the character's free (the user's D17: a line typed while the character is busy, fighting
 // or walking, fails the test; 2026-11-20, the coordinator's, dq0letdens' played game): a line come to its prompt held
@@ -1227,5 +1266,5 @@ module.exports = {
   dq0Never, dq0Carried, dq0Here, dq0Named, dq0Thing, dq0Holder, dq0View, DQ0_I, passings, dq0TypedAsk, dq0Typed,
   dq0PortalOff, dq0Portal, dq0RecPb, dq0Rec, dq0Alone, dq0Poke, dq0BodyFb, dq0Body, dq0SheetSb, dq0Sheet, dq0PcShock,
   dq0Grow, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Median, dq0Worst, dq0Waits, dq0Held, DQ0_ANSWERS, dq0AnswerTest, WORN,
-  DQ0_PLAYED, dq0Paces, dq0Own, dq0Asks, dq0HeldPaces, dq0LetterKeys, dq0PlayLetters, dq0WhenFree,
+  DQ0_PLAYED, dq0Paces, dq0Own, dq0Asks, dq0HeldPaces, dq0LetterKeys, dq0PlayLetters, dq0WhenFree, dq0FightPause, PLAYER_PAUSE,
 };
