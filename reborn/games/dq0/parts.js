@@ -205,12 +205,52 @@ function spread(text, list, sizes, file) {
   let r = tryIt(SPARE);
   if (r) return r;
   const fail = banks(text, list, sizes, file, 0);       // (Its throw the task's own, if none kept won't do)
-  const ks = [...new Set([...text.matchAll(/^\s*OV(\d+):/gm)].map(m => +m[1]))];
+  r = mended(fail, list, sizes, SPARE);                 // (The best fit's packing mended, its parts moved or swapped
+  if (r) return r;                                      //   till each bank keeps SPARE: speed9, 2026-11-22)
+  const ks =[...new Set([...text.matchAll(/^\s*OV(\d+):/gm)].map(m => +m[1]))];
   for (const k of ks) {                                // (One bank the reason: the most it can keep, the rest 64)
     const at = s => new Map([[k, s]]);
     if (tryIt(at(0))) return most(0, SPARE - 1, at);
   }
   return most(0, SPARE - 1, s => s) || fail;
+}
+
+// banks()'s packing (none kept) mended so each bank keeps SPARE free (one whose room without parts is less, what it
+// has): a bank short, one of its parts moved to a bank of its file that keeps its SPARE after, or else swapped with
+// a part of another such bank, the swap that leaves the two the most room; again till none is short (speed9,
+// 2026-11-22: the best fit, the biggest first, left 13 of the world's banks under 64 with 4,651 bytes to spare among
+// them).  The same each build (no chance in it).  r: banks()'s with spare 0.  OUT: banks()'s with spare, or null
+function mended(r, list, sizes, spare) {
+  const size = n => (sizes.get('SW' + n + 'CODE') || 0) + (sizes.get('SW' + n + 'RODATA') || 0);
+  const at = new Map(r.at), room = new Map(r.room), wish = new Map(list.parts.map(p => [p.n, p.ov]));
+  const own = new Map([...room].map(([k, x]) => [k, x + [...at].filter(([, b]) => b === k).reduce((t, [n]) => t + size(n), 0)]));
+  const want = k => Math.min(spare, Math.max(0, own.get(k)));
+  const ks = [...room.keys()].filter(k => [...at.values()].includes(k)).sort((a, b) => a - b);   // (Banks with parts)
+  const peers = k => ks.filter(b => b !== k && r.file.get(b) === r.file.get(k));
+  const inb = k => [...at].filter(([, b]) => b === k).map(([n]) => n).sort((a, b) => a - b);
+  const move = (n, from, to) => { at.set(n, to); room.set(from, room.get(from) + size(n)); room.set(to, room.get(to) - size(n)); };
+  for (let i = 0; i < 1000; i++) {
+    const k = ks.find(b => room.get(b) < want(b));
+    if (k === undefined) {
+      const moved = list.parts.filter(p => at.get(p.n) !== wish.get(p.n)).map(p => ({ n: p.n, from: p.ov, to: at.get(p.n), size: size(p.n) }));
+      return { at, moved, room, file: r.file, spare };
+    }
+    let best = null;                                    // (A move first; else the swap that leaves the most)
+    for (const n of inb(k)) {
+      for (const b of peers(k)) {
+        if (room.get(k) + size(n) >= want(k) && room.get(b) - size(n) >= want(b)) { best = { n, b }; break; }
+        for (const m of inb(b)) {
+          const d = size(n) - size(m), sc = Math.min(room.get(k) + d - want(k), room.get(b) - d - want(b));
+          if (sc >= 0 && (!best || sc > best.sc)) best = { n, b, m, sc };
+        }
+      }
+      if (best && best.m === undefined) break;
+    }
+    if (!best) return null;
+    move(best.n, k, best.b);
+    if (best.m !== undefined) move(best.m, best.b, k);
+  }
+  return null;
 }
 
 
