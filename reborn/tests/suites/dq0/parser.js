@@ -619,11 +619,13 @@ const COVER_LINES = ['double time', 'pass', 'call on', 'unmemorize the rat', 're
   'possess the rat', 'link the rat', 'intimidate the rat', 'command the rat', 'bluff the rat', 'deceive the rat', 'threaten the rat',
   'calm the rat', 'come', 'stay', 'dismiss the rat', 'grope for the key', 'find the key', 'dodge', 'block', 'counter the rat',
   'bid 5 pennies', 'watch the stars', 'short rest', 'short sleep', 'pause'];
+const COVER_SAID = [['double time', /^Pace: a jog\b/, 'no jog set (the state shown: bugs1\'s fault)'],   // (Answers held, room6's: the pace set, its
+  ['call on', /^You know no invocations\b/, 'not the powers\' refusal (read as a name: bugs1\'s fault)']];   //   words the jog's; the call the powers' refusal)
 function dq0CoverTest() {
   return {
     name: 'dq0cover', near: ['parser'], what: 'Dingus Quest Zero\'s commands no other test types (sim/tools/cmdcover.js), each typed ' +
       'once mid-game at seed 3 (-T): ' + COVER_LINES.join(', ') + ' (then Esc, the pause\'s end): each answered, not "I don\'t ' +
-      'understand", and the game on to its quit; "pause" pauses ("PAUSED" on the status line)',
+      'understand", and the game on to its quit; "double time" a jog set, "call on" the powers\' refusal (not a name\'s); "pause" pauses ("PAUSED" on the status line)',
     init: 't_rc', cycles: 600e6 + COVER_LINES.length * 120e6,
     machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
       'dq0 -p t -s 3 -c /ram/c.hm -T', ...COVER_LINES]) + '\u001b' + dq0Typed(['look', 'quit', 'echo $status']) },
@@ -636,6 +638,7 @@ function dq0CoverTest() {
         if (!a) { f.push('"' + l + '" not answered (the game ended before it?)'); continue; }
         if (l !== 'pause' && !a.text) f.push('"' + l + '": nothing said');
         if (/I don't understand/.test(a.text)) f.push('"' + l + '" not understood: ' + a.text.slice(0, 140));
+        for (const [k, re, why] of COVER_SAID) if (k === l && !re.test(a.text)) f.push('"' + l + '": ' + why + ': ' + a.text.slice(0, 140));
       }
       if (!/PAUSED/.test(out.slice(out.lastIndexOf('pause')))) f.push('"pause": not paused (no PAUSED on the status line)');
       return f;

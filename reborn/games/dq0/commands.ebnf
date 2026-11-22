@@ -344,7 +344,7 @@
 
 (* ---- Religion (HarnMaster Religion: prayer, divine intervention, performing invocations) ---- *)
 <pray>            ::= "pray" [ "for" <text> { <text> } ]        (* alone: an hour of prayer, for piety; "for": a prayer that spends piety on an endeavour *)
-<intervene>       ::= ( "call" "on" | "beseech" ) <DEITY> [ "for" <text> { <text> } ]   (* a call for divine intervention *)
+<intervene>       ::= ( "call" "on" | "beseech" ) [ <DEITY> [ "for" <text> { <text> } ] ]   (* a call for divine intervention; alone, to its own deity (as "pray" alone; 2026-11-21) *)
 <DEITY>           ::= <deity-name>                 (* the world's deities: an open name, given by the world, not the grammar *)
 <invoke>          ::= ( "invoke" | "perform" | "chant" ) <INVOCATION> [ "on" ] [ <object:other> ] [ "to" <DEITY:other> ]   (* clerics perform a ritual; the deity acts *)
 <INVOCATION>      ::= "divination" | "baptism" | "passage" "of" "the" "soul" | "consecration" | "exorcism" | "curse" | "blessing" | "balefire"
