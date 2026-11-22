@@ -11,7 +11,8 @@
 //
 // Usage: node sim/tools/lineprof.js TEST [LINE] [--nth N] [--list] [--top N] [--seed N] [--out FILE] [--lead N]
 //   TEST       a test that times its lines (a D17 test: this.timer = dq0Timer(m), tests/suites/dq0/*.js)
-//   LINE       the line typed, as the test types it (its first letters enough: "go left" for MID_MARK's "go left");
+//   LINE       the line typed, as the test types it (its first letters enough: "go left" for MID_MARK's "go left";
+//              "d$" that line alone);
 //              without it, the slowest first letter in the run
 //   --nth N    its Nth typing in the run (1 on: the test's own game, then dq0Paces' menacing and played); default: the
 //              slowest of them
@@ -166,7 +167,7 @@ async function main(argv) {
     for (const l of lines) console.log(String(l.i).padStart(4) + ' ' + (l.first === null ? '-' : l.first.toLocaleString('en-US')).padStart(9) + '  ' + l.line);
     process.exit(r1.failures.length ? 1 : 0);
   }
-  let pick = lines.filter(l => l.first !== null && (!want || l.line.startsWith(want)));
+  let pick = lines.filter(l => l.first !== null && (!want || (want.endsWith('$') ? l.line === want.slice(0, -1) : l.line.startsWith(want))));
   if (opt.nth) pick = pick.slice(opt.nth - 1, opt.nth);
   if (!pick.length) { console.error('lineprof: no line ' + JSON.stringify(want || '') + ' timed in ' + name); process.exit(2); }
   const line = pick.reduce((a, b) => b.first > a.first ? b : a);
