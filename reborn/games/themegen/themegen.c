@@ -8,7 +8,7 @@
 ** themegen [-s seed] [-w world] [-t theme] [-o folder] [-l lib] [-q] [-r n]
 **   -s seed    the same history each time (default: the clock's)
 **   -w world   the world it's made in (../dq0/WORLDS.md: its peoples, lands, tongues and words, lib/dq0/worlds/WORLD's
-**              history.dat; default: the first, the game's own)
+**              history.dat; default: the first, the game's own, lib/dq0/themegen.dat)
 **   -t theme   a theme written by hand: what it gives kept, the rest made to fit it (by groups: the theme's name and
 **              story, and why the character came; the region; the peoples and the eras; the strata and their layers;
 **              the rooms' words; the inhabitants; the goal and its puzzle).  Without it, the folder's quest.txt, if it
@@ -47,7 +47,7 @@
 
 static const char* tfile;
 static const char* outdir;
-static const char* wname = "first";             /* (-w's: the world, its folder lib/dq0/worlds/NAME) */
+static const char* wname = WORLD_DEFAULT;       /* (-w's: the world, its folder lib/dq0/worlds/NAME; the default's lib/dq0) */
 static char lib[48];
 static unsigned char quiet, bad, progress;
 
@@ -620,9 +620,13 @@ int main (int argc, char* argv[])
         strcpy (lib, gamedir);
         strcat (lib, "/lib/dq0");
     }
-    strcpy (txt, "worlds/");                    /* (The world's history: lib/dq0/worlds/NAME/history.dat) */
-    strncat (txt, wname, 8);
-    strcat (txt, "/history.dat");
+    strcpy (txt, "themegen.dat");               /* (The world's history: lib/dq0/worlds/NAME/history.dat; the default
+                                                **   world's lib/dq0/themegen.dat, as it was) */
+    if (strcmp (wname, WORLD_DEFAULT)) {
+        strcpy (txt, "worlds/");
+        strncat (txt, wname, 8);
+        strcat (txt, "/history.dat");
+    }
     if (tg_load (in_ (lib, txt))) {
         say ("themegen: its world's data (lib/dq0/");
         say (txt);

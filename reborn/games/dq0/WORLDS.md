@@ -19,7 +19,12 @@ plays as it did.  This is what a world supplies, who reads it, and what the game
     makes them **peoples.dat** and **deities.dat**, and the deities' names, spaces between, **gods.txt**);
   - **tongues.h**, if it has one: its tongues' sounds in C, for what names things with no world's data at hand (the
     first world's alone: below).  themegen's make.js holds it to the history's tongue lines.
-- **On the card:** lib/dq0/worlds/NAME/history.dat, peoples.dat, deities.dat and gods.txt (sdcard/sdcard.txt).
+- **On the card:** lib/dq0/worlds/NAME/history.dat, peoples.dat, deities.dat and gods.txt (sdcard/sdcard.txt); the
+  default world's (theme.h's WORLD_DEFAULT, "first") lib/dq0's own as they were, themegen.dat, dq0f.dat and dq0g.dat
+  (its gods.txt none: its names are the catalogue's).  So the card's lib/dq0 is as it was but for the worlds folder: a
+  first build with every world in lib/dq0/worlds moved the start's file opens (lib/dq0 three entries the shorter), and
+  with them the real-time games' timing: dq0letstow's "f, menacing" 783,437 cycles, dq0fightcmd's and dq0fightmid's
+  fights met at other moments.  dq0 -w first is the default (its save's world "").
 - **Chosen at the start:** dq0 -w NAME (the first world if none's given: games/dq0/worlds/worlds.js's DEFAULT), kept in
   the save (game.dat's head, its last field: life.h's struct save's world, "" the default; SAVE_VER 46).  A game carried
   on keeps its own; a dungeon after the first is in the last dungeon's world, unless -w says another; the rumours

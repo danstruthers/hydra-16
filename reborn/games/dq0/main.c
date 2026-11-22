@@ -267,8 +267,8 @@ unsigned char __fastcall__ s_history (unsigned long seed)
         sv.world[0] = 0;                        /* (Its world: -w's; else the last dungeon's save's, a dungeon after the
                                                 **   first, or a new life's in its folder; none, the default) */
     }
-    if (wname) {
-        strncpy (sv.world, wname, sizeof sv.world - 1);
+    if (wname) {                                /* (The default world's name, "": the default's own files) */
+        strncpy (sv.world, strcmp (wname, WORLD_DEFAULT) ? wname : "", sizeof sv.world - 1);
         sv.world[sizeof sv.world - 1] = 0;
     }
     if (!tfile && seed < 65536UL) {
