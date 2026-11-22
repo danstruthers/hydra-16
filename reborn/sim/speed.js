@@ -28,7 +28,7 @@ const PROGS = [
     ['X = I + G', 200], ['X = A + B (1.5 + 2.25)', 200], ['X = A * B', 200], ['X = I / G (3)', 200], ['X = C + D (1/3 + 1/7)', 200],
     ['X = E * F (12 digits)', 200], ['IF A < B', 200], ['X = INT(A)', 200], ['X = E + F (12 digits)', 200], ['X = I \\ G', 200],
     ['AR(I) = I', 200], ['X = A', 200], ['FOR X = 0 TO 20 STEP 0.1', 201],
-    ['X = FIX(I / G)', 200], ['X = INT(-I / G)', 200], ['X = I * G', 200], ['X = I * G / G (whole)', 200]] },
+    ['X = FIX(I / G)', 200], ['X = INT(-I / G)', 200], ['X = I * G', 200], ['X = I * G / G (whole)', 200], ['X = I / H (1000)', 200], ['X = I / K (1001)', 200]] },
   { name: 'math', file: 'math.bas', cmd: 'basic math.bas', mark: 0x6F, segs: [['the first SIN', 1], ['the first EXP', 1],
     ['EXP', 20], ['SIN', 20], ['LOG', 20], ['SQR', 20], ['ATN', 20], ['I ^ 0.37', 20], ['SIN, 30 digits', 20]] },
   { name: 'numh', file: 'numh.hl', cmd: 'hylang numh.hl', mark: 0x7FFF, segs: [['60! twenty times', 'ms'],
