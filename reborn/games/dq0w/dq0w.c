@@ -7415,6 +7415,7 @@ unsigned char ui_long (void)
 ** go; not keys_hold's free pass and hold again, the denizens three seconds behind at most, not slowed while the keys
 ** go on.  Each line's own (the hub's ui_keys, as the minds' gks and the senses' hks): a line let go and typed again
 ** before a pass saw no keys held again, not the last's hold run out, 2026-11-14.  1, held */
+static unsigned char dj;                        /* (The denizens' intents as main's job, den_job's) */
 static unsigned char den_held (void)
 {
     hub_map (0);
@@ -7491,6 +7492,22 @@ static unsigned char den_due (void)
     return DEN_INTENTS ();
 }
 
+/* The denizens' intents as main's job: each held as the row is (den_held: a line's keys from its first, not its
+** command alone), the rest after it: a line typed as they were carried out, an intent's parts' copies begun in its
+** window, 40,000 cycles each (speed10's, 2026-11-22) */
+unsigned char den_gw (void)                     /* (wbody.c's: each intent, den_held per intent as main's job, a
+                                                **   line's keys too; else ui_first's alone) */
+{
+    return dj ? den_held () : ui_first ();
+}
+
+static void den_job (void)
+{
+    dj = 1;
+    den_intents ();
+    dj = 0;
+}
+
 static unsigned char was_busy;                  /* (main's: its E_READY to come) */
 #define REST_IDLE       600                     /* (Ticks free before a look one way's rest is asked: three seconds, the
                                                 **   player reading, not typing on; a line come, none: 2026-11-18) */
@@ -7517,9 +7534,14 @@ static unsigned char dseq_due (void)
     return HUB->den_seq != dseq;
 }
 
+static struct gw gseq;                          /* (dseq's hold: a line's keys too, the one give-way's) */
 static unsigned char uf_held (void)
 {
-    return uf;
+    return uf || (uf = ui_first ()) || gw_held (&gseq, GW_PACE);    /* (Asked as it's due, not the pass's top: a line
+                                                **   entered as the pass went on, its intents' work begun before it, the
+                                                **   senses' look of the bodies asked after it, in the line's window,
+                                                **   95,000 cycles, its intent not taken meanwhile: speed10's, 2026-11-22;
+                                                **   from its first key, as the denizens' intents) */
 }
 
 /* The denizens' bodies' changes: what it sees of them, looked at again, the UI told if it sees them otherwise, not on
@@ -7605,7 +7627,7 @@ unsigned char (* const jobs_held[]) (void) = {
 void (* const jobs_run[]) (void) = {
     stocks,                                     /* (Their things put down, marked so) */
     chart_job, trace_job,
-    den_intents,                                /* (The denizens' intents carried out) */
+    den_job,                                    /* (The denizens' intents carried out) */
     look_job, dseq_job, burn_job
 };
 #define JOBS_EARLY      (0 | 8 << 8)            /* (jobs' rows: the first's offset, the end's times 256, 2 a row) */
