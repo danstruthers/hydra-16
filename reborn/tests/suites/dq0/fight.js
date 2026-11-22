@@ -2120,7 +2120,9 @@ module.exports = {
       name: 'dq0felled', near: ['fight', 'denizens'], what: "Dingus Quest Zero's foe felled while a line waits (reach1's find, 2026-11-20: dq0fightmid's \"go left\" once 6,506,445 cycles, the blow knocking the rat senseless as the line waited, the referee's own work 4.52M of it: its rounds out worked by the book's shock rolls, a round each, up to an hour's, each a die a point of its universal penalty), by the words and dq0Timer's times: dq0fightmid's rats at seed 5, one put before the character hostile and fighting it, and hurt (a minor wound of level 8: its every shock roll failed, the most rounds out the referee works: an hour's); then lines typed as the character's own blow is being worked (dq0fightmid's way): looks, a wait and a step; a blow felling the rat as one waits, and every first letter held to D17, at the normal pace, the menacing and as played",
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'echo ml swd 90 >> /ram/c.hm', 'echo b115200 >/dev/serctl',
-        'dq0 -p n -s 5 -c /ram/c.hm -k sword -T', ...FELLED, 'quit', ...dq0Paces('dq0 -p n -s 5 -c /ram/c.hm -k sword -T', FELLED), 'echo $status']).split('ā' + MID_MARK).join(MID_MARK) },
+        'dq0 -p n -s 5 -c /ram/c.hm -k sword -T', ...FELLED, 'quit', ...dq0Paces('dq0 -p n -s 5 -c /ram/c.hm -k sword -T', FELLED).map((l, i) => i ? l : l + ' -R 1'), 'echo $status']).split('ā' + MID_MARK).join(MID_MARK) },
+      // (The menacing game -R 1, felled1's, 2026-11-21: its felling as a line waits asked of every game again, and at -R 0 the
+      // rat fell dead there, a mortal gash, not senseless; a search of -R 1-12 found all but 3 and 9)
       start(m) {
         this.timer = dq0Timer(m);
         dq0Asks(m, [3]);
