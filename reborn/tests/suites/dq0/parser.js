@@ -609,6 +609,40 @@ function dq0ParseAnswersTest() {
     sdcard: true
   };
 }
+// Every command of the grammar typed once mid-game in some test (savecrash's, 2026-11-19: "save" went untested four
+// weeks, the suite's only "save" the quit's).  sim/tools/cmdcover.js lists the actions (actions.h's VB_*, as the parser
+// makes a line's: commands.verbs) and the verbs no other test types; this one types each, at seed 3 (-T), mid-game:
+// each answered (some words, not "I don't understand"), the game on to its quit (the guards on, as every test's).  The
+// actions no line makes (VB_THROW_DIRECTION, VB_ATTACK_SPLIT, VB_SEQUENCE, VB_ACTIVATE, VB_NEGOTIATE,
+// VB_JUDGE_SINCERITY: commands.actions' rows with no verb of commands.verbs) aren't the grammar's
+const COVER_LINES = ['double time', 'pass', 'call on', 'unmemorize the rat', 'research the rat', 'dispel the rat', 'release the rat',
+  'possess the rat', 'link the rat', 'intimidate the rat', 'command the rat', 'bluff the rat', 'deceive the rat', 'threaten the rat',
+  'calm the rat', 'come', 'stay', 'dismiss the rat', 'grope for the key', 'find the key', 'dodge', 'block', 'counter the rat',
+  'bid 5 pennies', 'watch the stars', 'short rest', 'short sleep', 'pause'];
+function dq0CoverTest() {
+  return {
+    name: 'dq0cover', near: ['parser'], what: 'Dingus Quest Zero\'s commands no other test types (sim/tools/cmdcover.js), each typed ' +
+      'once mid-game at seed 3 (-T): ' + COVER_LINES.join(', ') + ' (then Esc, the pause\'s end): each answered, not "I don\'t ' +
+      'understand", and the game on to its quit; "pause" pauses ("PAUSED" on the status line)',
+    init: 't_rc', cycles: 600e6 + COVER_LINES.length * 120e6,
+    machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+      'dq0 -p t -s 3 -c /ram/c.hm -T', ...COVER_LINES]) + '\u001b' + dq0Typed(['look', 'quit', 'echo $status']) },
+    expect: ['% echo $status'],
+    check(m, out) {
+      const A = dq0Answers(out), f = [];
+      if (process.env.DQ0_COVER) for (const l of COVER_LINES) console.log(l + ' => ' + ((A.find(x => x.cmd === l) || {}).text || '(none)'));
+      for (const l of [...COVER_LINES, 'look']) {
+        const a = A.find(x => x.cmd === l);
+        if (!a) { f.push('"' + l + '" not answered (the game ended before it?)'); continue; }
+        if (l !== 'pause' && !a.text) f.push('"' + l + '": nothing said');
+        if (/I don't understand/.test(a.text)) f.push('"' + l + '" not understood: ' + a.text.slice(0, 140));
+      }
+      if (!/PAUSED/.test(out.slice(out.lastIndexOf('pause')))) f.push('"pause": not paused (no PAUSED on the status line)');
+      return f;
+    },
+    sdcard: true
+  };
+}
 function dq0SweepTest(opt = {}) {
   const name = opt.name || 'dq0sweep', gapsOf = opt.gaps || SWEEP_GAPS, saidOf = opt.said || SWEEP_SAID, lines = dq0SweepLines(opt.verbs);
   return {
@@ -684,6 +718,7 @@ module.exports = {
       sdcard: true
     },
     dq0SweepTest(),
+    dq0CoverTest(),
     dq0SweepTest({ name: 'dq0sweep2', verbs: SWEEP2_VERBS, gaps: SWEEP2_GAPS, said: [], what: 'The second sweep, the other verbs: ' }),
     dq0ClosestTest(),
     dq0NameMatchTest(),
