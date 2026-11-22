@@ -1522,7 +1522,7 @@ words):
   filled from a stoppered flask: unstoppered as it's poured and stoppered again, nothing asked (the fill's own time).
 - **A flask of oil is a vessel** *(the user's H16, 2026-11-21)*: a pint of lamp oil in it as it's made, a liquid as a
   vial's (found lying, some of it dried, as its fuel was); emptied, filled with anything a vessel holds, a lantern filled
-  from the oil in it.  The flask alone a quarter pound, its pint of oil a pound; its worth as it's bought, full (2 pennies:
+  from the oil in it.  The flask alone under a quarter pound (nothing to the load: the old flask's pound its oil's), its pint of oil a pound; its worth as it's bought, full (2 pennies:
   the outfits', the market's), empty or not.
 - **Lamp oil poured out lies on the floor** *(the user's H15, 2026-11-21, for review: its times the house's)*: a pool
   where it's poured ("You pour the oil out of the vial: it pools on the floor."), an hour, then soaked away.  Slippery:

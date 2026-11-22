@@ -2740,7 +2740,7 @@ module.exports = {
         want('empty the sack', /You empty the sack out at your feet\./, 'not emptied at its feet');
         want('empty the sack', /The sack is empty\./, 'not told empty', 1);
         want('empty the sack onto the table', /You empty the sack onto the table\./, 'not emptied onto the table');
-        want('empty the flask of oil', /You pour the oil out of the flask of oil\./, 'its oil not poured away');
+        want('empty the flask of oil', /You pour the oil out of the flask of oil: it pools on the floor\./, 'its oil not poured away, a pool (H15)');
         want('empty the torch', /The torch isn't a thing to empty\./, 'not refused');
         want('empty the sack', /The sack is closed\./, 'a tied sack not refused', 2);
         want('put the key in the corner', /You put the iron key in the corner\./, 'not put in the corner');

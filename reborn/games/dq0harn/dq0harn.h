@@ -177,6 +177,9 @@ extern unsigned ko_n[NACTORS + 1];              /*   its shock rolls since) */
                                                 **   growth (skills.c's GROW): saved in beasts.dat with the bodies, read
                                                 **   back as it's an actor again, the user's K16, 2026-11-21) */
 #define KOSZ            (NSHEETS * 6)
+#define KOSAVE          ((char*) 0x8000 + 224 * sizeof (struct beast))  /* (The actors' falls and rolls as they're saved:
+                                                **   in sb past the denizens' records (dq0d's NDENS, 224), each its
+                                                **   sheet's number, ko_at, ko_n: beasts.dat no bigger, K16's) */
 extern unsigned char crw;                       /* (fight.c's: the creature unpacked, its actor's entry plus 1) */
 unsigned __fastcall__ knocked_out (harn_char* c, unsigned long* o, unsigned char* f);  /* Knocked senseless: the
                                                 **   tenths till it comes round, *o its time out (AF_AGAIN in *f) */

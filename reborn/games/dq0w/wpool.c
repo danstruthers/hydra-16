@@ -34,6 +34,7 @@ typedef char pool_fits[sizeof (struct pool) * NPOOLS + 2 == sizeof WREC->pools ?
                                                 **   and the outfits' mark after them) */
 extern unsigned char npools;                    /* (dq0w.c's: how many there are, 0 none, the callers' cheap test) */
 
+void __fastcall__ make_own (unsigned i);         /* (Part 13's) */
 void __fastcall__ air_harm (unsigned char a, unsigned char b, unsigned char c);    /* (Part 74's: a harm, the UI told) */
 
 #pragma code-name ("SW99CODE")
@@ -233,10 +234,12 @@ static void pool_time (void)
 ** of lamp oil put in each, as in a vial (the user's H16, 2026-11-21: the flask a vessel, its oil a liquid in it) */
 static void __fastcall__ oil_new (unsigned from)
 {
-    static unsigned i, j;
-    static struct item* q;
+    unsigned i, j;
+    struct item* q;
+    unsigned char f;
 
     for (i = 0; (i = items (i, IN_ACTOR | IN_DEN | IN_ITEM | IN_SQUARE, 0)) != 0; ) {
+        f = ip->flags & I_KNOWN;                /* (Its record's bank in the window now, not after) */
         if (ip->kind != KI_OIL || ip->id <= from || items (0, IN_X | IN_ITEM, i)) {
             continue;
         }
@@ -255,7 +258,9 @@ static void __fastcall__ oil_new (unsigned from)
         q->x = i;
         q->qty = 1;
         q->fuel = OIL_PINT;
-        q->flags = item_at (i)->flags & I_KNOWN;
+        q->flags = f;
+        q->mat = MT_OTHER;                      /* (Its make none to roll: the things' own dice as they were) */
+        make_own (j);                           /* (Its own number: part 13's; this part copied in again after) */
     }
 }
 

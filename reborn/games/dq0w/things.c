@@ -6093,6 +6093,8 @@ void __fastcall__ s_make_own (unsigned i)
         }
         if (life && (i = put_down (KI_LAMP_OIL, IW_ITEM, 0, i, 0, 1)) != 0) {
             item_at (i)->fuel = life;
+            item_at (i)->mat = MT_OTHER;        /* (Its make none to roll: the things' own dice as they were) */
+            s_make_own (i);                     /* (Its oil its own too: its number) */
         }
     }
 }

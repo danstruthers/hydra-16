@@ -585,12 +585,20 @@ void __fastcall__ s_rf_sheets (unsigned char back)
     unsigned off;
     char* p;
     int fd;
+    unsigned char k;
 
     memset (piece, 0, sizeof piece);
     fd = back < 2 ? sheets_open (back) : -1;
-    for (off = 0; off < 0x2000 + BBODIES + KOSZ; off += sizeof piece) {  /* (The sheets, then their bodies, fb's, then
-                                                **   their falls and shock rolls, fb's past the skills' growth: KOS,
-                                                **   K16's; a file from before them short, those none) */
+    for (k = 0; !back && k < NACTORS; ++k) {    /* (The actors' falls and shock rolls, K16's, kept in the sheets past
+                                                **   the denizens' records (KOSAVE): beasts.dat no bigger) */
+        piece[0] = aden[k];
+        memcpy (piece + 1, &ko_at[k + 1], 4);
+        memcpy (piece + 5, &ko_n[k + 1], 2);
+        bwrite (sb, KOSAVE + 7 * k, piece, 7);
+    }
+    for (off = 0; off < 0x2000 + BBODIES + (back == 2 ? KOSZ : 0); off += sizeof piece) {  /* (The sheets, then their
+                                                **   bodies, fb's; cleared, the falls and rolls by sheet too, fb's past
+                                                **   the skills' growth: KOS, K16's, not kept but the actors') */
         p = (char*) 0x8000 + (off & 0x1FFF) + (off >= 0x2000 + BBODIES ? 0x100 : 0);
         if (!back) {
             bread (off < 0x2000 ? sb : fb, p, piece, sizeof piece);
@@ -600,6 +608,13 @@ void __fastcall__ s_rf_sheets (unsigned char back)
                 memset (piece, 0, sizeof piece);
             }
             bwrite (off < 0x2000 ? sb : fb, p, piece, sizeof piece);
+        }
+    }
+    for (k = 0; back == 1 && k < NACTORS; ++k) {    /* (Read back: the actors' falls and rolls by their sheets, KOS,
+                                                **   as RS_NEW_ACTOR finds them) */
+        bread (sb, KOSAVE + 7 * k, piece, 7);
+        if (piece[1] | piece[2] | piece[3] | piece[4]) {
+            bwrite (fb, KOS + piece[0] * 6, piece + 1, 6);
         }
     }
     if (fd >= 0) {
