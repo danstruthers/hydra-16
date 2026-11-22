@@ -6956,3 +6956,13 @@ M3-M5), with the images' commit.
 - **The flask of oil is an ordinary container** (H16) holding lamp oil as a liquid, like the vial: emptied, refilled
   with anything.
 - **A thing known in a container within reach is to hand at any depth** (H17), each level deeper taking more time.
+
+## The command's window: the user's answers (2026-11-22)
+
+- **A creature's kit being made is not made resumable** (T1): its overshoot, when a kit is under way as a line
+  arrives, is left as it is.
+- **The band of lines typed mid-fight is judged with a player's pause between lines** (T3), not back to back.
+- **The referee's reply carries the blow's own summary fields** (T4: condition, health, limbs), the rest of the
+  summary recomputed after it: a change to the referee skeleton.
+- **A look asks for the bodies' look itself** (T2).
+- **The lag sweeps become a tool** (T5: lineprof --sweep).

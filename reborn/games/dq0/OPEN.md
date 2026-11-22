@@ -195,20 +195,6 @@ From built/2026-11-21-world1.md's open questions: what else a world decides (wor
 - **W11. Rulesets and worlds paired** (Harn World with HarnMaster), or any ruleset in any world?
 - **W12. The world asked at the start**, like the pace?
 
-## Speed (speed10, 2026-11-22)
-
-- **T1. Kit-making resumable?** A denizen's kit being made (outmake: world parts 99, 57, 51, 14) puts 150K+ cycles
-  into a line's window once under way. Keep the next item's index and leave the intent in the ring, as kit_off does
-  before the draws?
-- **T2. Should a look ask for the bodies' look itself?** The denizens a look reports wait on the world's bodies' look
-  (dseq_job), so that job cannot be held back before the line's intent.
-- **T3. The band judged with a player's pause between lines?** The tests type each line as the last is answered, so
-  any work held out of one window lands in the next.
-- **T4. The referee's reply carrying the blow's own summary fields**, the rest recomputed after it? A change to the
-  referee skeleton.
-- **T5. The lag sweeps as a tool** (lineprof --sweep, SIM_PROMPT_LAG at eight lags)?
-  - built/2026-11-21-speed10.md, its open questions.
-
 ## Architecture
 
 - **A1. Game code in the paged ROM, for good?** The user's answer of 2026-11-17: tried for one module, measured, then
