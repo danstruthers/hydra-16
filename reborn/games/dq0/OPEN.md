@@ -41,6 +41,9 @@ end with their open questions: copy them here when the branch is merged.
   - Not built: the shared paths (main.c's things, feature, reach_go) do those steps for every verb already, and the
     coverage report's "-" cells are where a row's refusal would go.
   - DECISIONS.md:6045, "The dispatch table's rest".
+- **P4. "double time"** sets a jog ("Pace: a jog (85 feet a round)", room6's, built). A jog, or a run?
+- **P5. "call on" alone** calls on the character's own deity, as "pray" alone does (room6's, built). Right?
+  - built/2026-11-21-room6.md, open questions 3 and 4.
 
 ## Doors, portcullises and windows
 
@@ -82,6 +85,16 @@ L1-L5 from DECISIONS.md:5878-5885, "No look when the light's the same".
 H8 from built/2026-11-17-things.md; its other questions were answered on 2026-11-17 (DECISIONS.md).
 - **H8. The thing a tool is for is kept in hand only when its request names it.** A rope tied to a held spike keeps
   the rope and stows the spike. Protect it by the act instead?
+- **H18. Oil pools' numbers** (ans1's own choice, built): a pool lies an hour, burns two minutes, three at most; its
+  burn 2d6; the stumble roll 4 steps harder. Right?
+- **H19. A creature in a burning pool isn't burnt** (built): the referee has no harm for a creature outside a blow.
+  Give it one?
+- **H20. Oil pools aren't saved with the game** (built). Save them?
+- **H21. The flask keeps its name** "flask of oil" whatever it holds, is worth a full one's 2 pennies even empty, and
+  weighs nothing by itself (the oil is the pound) (built). OK, or name it by its contents ("flask of water")?
+- **H22. Plain "take the X"** doesn't reach into containers (built; the chooser of other verbs does, at any depth, by
+  H17). Should it?
+  - built/2026-11-21-ans1.md's open questions, for H18-H22.
 
 ## Knocked out
 
@@ -114,6 +127,9 @@ only quit and help taken, nothing sensed). These are the rest.
   test of each event against a black-out, is called on every event: leave it in main RAM (built), or move it to an
   overlay, at a cost in time?
   - DECISIONS.md:5665-5666 (its point 7).
+- **K17. Only the eight actors' shock rolls are saved** (ans1's, built): a senseless creature not among the eight at
+  the save rolls again from its next round after a load. OK?
+  - built/2026-11-21-ans1.md, open question 6.
 
 ## Denizens searching and hiding (one path, stage 2)
 
