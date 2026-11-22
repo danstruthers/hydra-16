@@ -165,10 +165,12 @@ void __fastcall__ den_dig (const struct msg* m);    /* (Part 79: wdig.c) A tunne
                                                 **   4.11's), a spell at a time */
 void __fastcall__ den_enter (const struct msg* m);  /* (Part 60) Come near (I_ENTER's): its body's from it, its
                                                 **   things in the store, the referee told */
-unsigned char __fastcall__ den_draw (unsigned char want);  /* (Part 60) Its weapon drawn from its belt (or one it put
+unsigned char __fastcall__ den_draw (unsigned char want);  /* Its weapon drawn from its belt (or one it put
                                                 **   up), its hands empty of one: 1 (its round's), or 0; want not 0, a
                                                 **   thing of its own of that kind taken in hand, what it holds put up
-                                                **   (a launcher, a thing to throw: wshoot.c's) */
+                                                **   (a launcher, a thing to throw: wshoot.c's).  The main RAM's: part
+                                                **   60's den_draws asked only of one with a thing of its own */
+unsigned char __fastcall__ den_draws (unsigned char want);  /* (Part 60) den_draw's work */
 void __fastcall__ den_strip (unsigned body);    /* (Part 60) Dead: its things on its body (body, its remains), what
                                                 **   it held beside it */
 void __fastcall__ limb_news (unsigned w, unsigned char b);  /* (Part 49) The limbs' news, the denizens' ring's (E_BEAT's

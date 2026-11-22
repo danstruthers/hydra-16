@@ -8,6 +8,7 @@
 ;
 ;   struct item* __fastcall__ item_at (unsigned i);                         item i's record, its bank in the window
 ;   unsigned __fastcall__ items (unsigned i, unsigned char in, unsigned x); the next after i (0: none), ip its record
+;   unsigned char __fastcall__ den_draw (unsigned char want);                 the world's alone (wbody.h's): below
 
             .export     _item_at, _items, _ip
             .import     _hub_map, incsp3
@@ -113,6 +114,7 @@ _items:
             lda         (sp),y
             sta         at + 1
             jsr         incsp3
+items_from  =           *                   ; (den_draw's: from the one after at, want's, x none)
             inc         at                  ; From the one after i,
             bne         @in
             inc         at + 1
@@ -203,3 +205,43 @@ _items:
 @none:      lda         #0
             tax
             rts
+
+.ifndef ITEMS_ALL
+; den_draw (want): body bd's weapon drawn as it strikes, or a thing of its own of kind want taken in hand (wbody.h's), by
+; part 60's den_draws, asked only of one with a thing of its own (a record IW_DEN, its owner and hide its did): none, 0,
+; as den_draws's own first test has it (kit_next's), so a beast's every blow doesn't copy part 60 in over part 15 and
+; part 15 back after it, some 78,000 cycles of each round a denizen strikes in (speed11's, 2026-11-22: dq0fightcmd's
+; wait typed as a rat fought, 760,174).  The window as den_draws's test left it: an item bank, or as it was (no did)
+            .export     _den_draw
+            .import     _den_draws, _bd
+            .bss
+dwant:      .res        1
+            .code
+_den_draw:
+            sta         dwant
+            lda         _bd + A_DID
+            ora         _bd + A_DID + 1
+            beq         @none
+            lda         #1 << IW_DEN
+            sta         want
+            stz         at
+            stz         at + 1
+@again:     jsr         items_from          ; (Its next IW_DEN record: ptr1 and ip at it)
+            cpx         #0
+            bne         @mine
+            cmp         #0
+            beq         @none
+@mine:      ldy         #I_OWNER            ; (Its own: its did)
+            lda         (ptr1),y
+            cmp         _bd + A_DID
+            bne         @again
+            ldy         #I_HIDE
+            lda         (ptr1),y
+            cmp         _bd + A_DID + 1
+            bne         @again
+            lda         dwant
+            jmp         _den_draws
+@none:      lda         #0
+            tax
+            rts
+.endif
