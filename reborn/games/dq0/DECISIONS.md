@@ -6995,3 +6995,16 @@ M3-M5), with the images' commit.
   still takes it.
 - **Bandits, soldiers and cultists carry a torch and a tinderbox; dwarf miners a tinderbox** (climb1's question 6):
   their outfits changed, every test with their kit with them.
+- **The character robs one bound, held or asleep, as well as one senseless** (things1's question 10).
+- **A denizen that catches the character filching: its mind decides** (things1's question 9), its attitude moved
+  against the character by its own nature, not always to hostile.
+- **A robber carries its takings home** (things1's question 2, C10): on its body till its lair, so one killed on the
+  way gives them back.
+- **The minds use the new errands** (things1's question 1): a denizen wears armour it finds that's better, stows its
+  loot, gives a fellow food, a weapon or a light it needs, and drags furniture to brace a door.
+- **A filch is the character's Legerdemain against the victim's hearing** (things1's question 8): a new purpose.
+- **A wound from a trap or a fall tests a creature's courage as a blow's does** (step1's question 3).
+- **"You hear a cry of pain" is told only where it can be heard** (step1's question 4), by the senses' hearing like
+  any noise.
+- **Climbing out of a pit ends with a step onto its edge for every actor** (step1's question 6): the character pays
+  the step's time too.
