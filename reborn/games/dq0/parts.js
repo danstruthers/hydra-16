@@ -292,6 +292,8 @@ function make({ dir, objdir, compiled, own, sizes }) {
     throw new Error(task + ': ' + s.name + ' is in part ' + s.part + ', which parts.txt doesn\'t have');
   const src = path.join(dir, task + '.cfg'), out = path.join(objdir, task + '.cfg'), text = fs.readFileSync(src, 'latin1');
   if (sizes) banksChecked();
+  if (sizes) for (const s of ['SWSTP', 'SWSTL', 'SWSTH'])   // (The stubs' tables, swap.inc's SWSTUBOV: a byte a stub each, bank.s's,
+    if (new RegExp('^\\s*' + s + ':', 'm').test(text)) sizes.set(s, stubs.length);   //   its bank's own: room7, 2026-11-23)
   const placed = sizes ? spread(text, list, sizes, src) : { at: new Map(list.parts.map(p => [p.n, p.ov])), moved: [], spare: 0 };
   const put = { ...list, parts: list.parts.map(p => ({ ...p, ov: placed.at.get(p.n) })) };
   fs.writeFileSync(path.join(objdir, 'parts.inc'), inc(task, put, stubs));

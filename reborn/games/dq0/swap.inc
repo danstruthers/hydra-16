@@ -209,6 +209,40 @@ swload:
 ; main code's call keeps none: the part last there stays till another's wanted); the function called, .A and .X (its
 ; arguments) as they came; then the part kept in the area again (if there was one, and it's gone), .A, .X (its value;
 ; and sreg, a long's) as it left them.
+.ifdef SWSTUBOV
+            .import     __SWSTP_LOAD__, __SWSTL_LOAD__, __SWSTH_LOAD__
+sw_call2:                                   ; (A stub numbered 256 on: the tables' second page, swpage2's)
+            sta         ova
+            lda         #1
+            bra         swc
+sw_call:
+            sta         ova
+            lda         #0
+swc:        stx         ovx
+            plx                             ; (The stub's jsr: its number follows it)
+            stx         swip
+            plx
+            stx         swip + 1
+            tax
+            ldy         #1
+            lda         (swip),y            ; (Its number)
+            tay
+            lda         BANKREG
+            pha
+            lda         _ovbank + SWSTUBOV - 1  ; (The tables in overlay SWSTUBOV's bank, in the window meanwhile)
+            sta         BANKREG
+            txa
+            bne         swpage2
+            lda         __SWSTL_LOAD__,y    ; (Its function)
+            sta         swgo + 1
+            lda         __SWSTH_LOAD__,y
+            sta         swgo + 2
+            ldx         __SWSTP_LOAD__,y    ; (Its part)
+swgot:      pla
+            sta         BANKREG
+            txa
+            tay
+.else
 sw_call:
             sta         ova
             stx         ovx
@@ -218,13 +252,14 @@ sw_call:
             sta         swip + 1
             ldy         #2
             lda         (swip),y
-            sta         @go + 1
+            sta         swgo + 1
             iny
             lda         (swip),y
-            sta         @go + 2
+            sta         swgo + 2
             ldy         #1
             lda         (swip),y
             tay
+.endif
             lda         #0
             ldx         swsp
             beq         @keep
@@ -236,7 +271,7 @@ sw_call:
             jsr         swload
 @in:        lda         ova
             ldx         ovx
-@go:        jsr         $FFFF
+swgo:       jsr         $FFFF
 sw_back:
             sta         ova
             stx         ovx
@@ -250,6 +285,14 @@ sw_back:
 @out:       lda         ova
             ldx         ovx
             rts
+.ifdef SWSTUBOV
+swpage2:    lda         __SWSTL_LOAD__ + 256,y   ; (sw_call2's: the tables' second page; out of sw_call's way, its
+            sta         swgo + 1                 ;   inc swsp within 64 bytes of it, the guards' look: dq0guards)
+            lda         __SWSTH_LOAD__ + 256,y
+            sta         swgo + 2
+            ldx         __SWSTP_LOAD__ + 256,y
+            bra         swgot
+.endif
 
 ; A part: its record (the bank its image is in, _ovbank[ov - 1]; where it is in the window; its size: the bytes past
 ; its whole pages, its whole pages), from its link (NAME.cfg's SWn: where its code's linked to run, its size)
@@ -269,14 +312,38 @@ sw_back:
             .popseg
 .endmacro
 
-; A stub: name() calls part n's s_name(), its arguments and its value as they are
+; A stub: name() calls part n's s_name(), its arguments and its value as they are.  With SWSTUBOV, a stub is its call
+; and its number alone (4 bytes, not 6: the world's main RAM's room, room7, 2026-11-23), its part and its function in
+; three tables of a byte a stub in overlay SWSTUBOV's bank (the config's segments SWSTP, SWSTL, SWSTH), read by
+; sw_call (stubs 0-255) or sw_call2 (256 on: each table's second page), some 25 cycles a call more
+.ifdef SWSTUBOV
+swstubs     .set        0
+.endif
 .macro      SWFN        name, n
             .export     .ident(.concat("_", .string(name)))
             .import     .ident(.concat("_s_", .string(name)))
 .ident(.concat("_", .string(name))):
+.ifdef SWSTUBOV
+.if swstubs < 256
+            jsr         sw_call
+.else
+            jsr         sw_call2
+.endif
+            .byte       <swstubs
+            .pushseg
+            .segment    "SWSTP"
+            .byte       n
+            .segment    "SWSTL"
+            .byte       <.ident(.concat("_s_", .string(name)))
+            .segment    "SWSTH"
+            .byte       >.ident(.concat("_s_", .string(name)))
+            .popseg
+swstubs     .set        swstubs + 1
+.else
             jsr         sw_call
             .byte       n
             .word       .ident(.concat("_s_", .string(name)))
+.endif
 .endmacro
 
             .import     __SWAP_START__
