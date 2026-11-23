@@ -185,6 +185,7 @@ ovcall:
             OVFN        seen_words, 12
             OVFN        pick, 7
             OVFN        choose, 7
+            OVFN        wield, 14           ; (A blow with nothing named: choose.c's, part 9's till speed13, 2026-11-23)
             OVFN        resolve, 11
             OVFN        taken_next, 11
             OVFN        throw_said, 10
