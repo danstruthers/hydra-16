@@ -117,6 +117,8 @@ function banks(text, list, sizes, file, spare = 0) {
   for (const [k, c] of cap) room.set(k, c);
   for (const [, s, k] of block('SEGMENTS').matchAll(/^\s*(\w+):\s*load\s*=\s*OV(\d+)\b/gm))
     if (!/^SW\d+(CODE|RODATA)$/.test(s) && room.has(+k)) room.set(+k, room.get(+k) - (sizes.get(s) || 0));
+  for (const [, k] of block('SEGMENTS').matchAll(/^\s*SWTAB:\s*load\s*=\s*OV(\d+)\b/gm))   // (The parts' records, bank.s's: not in
+    if (!sizes.has('SWTAB') && room.has(+k)) room.set(+k, room.get(+k) - 5 * list.parts.length);   //   the objects' sizes; 5 bytes a part, swap.inc's SWPART)
   const keep = new Map([...room].map(([k, x]) => [k, closed.has(k) ? 0 : Math.min(typeof spare === 'number' ? spare : spare.has(k) ? spare.get(k) : SPARE, Math.max(0, x))]));   // (spare:
   for (const [k, x] of keep) room.set(k, room.get(k) - x);                                        //   each bank's kept free)
   const base = new Map(room);                           // (Each bank's room before any part's in it)

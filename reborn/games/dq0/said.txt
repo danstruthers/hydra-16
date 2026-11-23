@@ -293,6 +293,10 @@ BEAT.takes          +"\nThe {name whose} takes the {kind thing} from the {kind o
 BEAT.dons           +"\nThe {name whose} puts on {its} {kind thing}."
 BEAT.doffs          +"\nThe {name whose} takes off {its} {kind thing}."
 BEAT.hands_to       +"\nThe {name whose} hands {its} {kind thing} to the {name other}."
+BEAT.trap           +"\n{tk>2?{Actor} fall{s} into a pit{tk>1?!|, onto spikes!}|{tk-3?Stones crash down on {actor}"
+                    "|A blade scythes out of the wall at {actor}|Darts hiss out of the wall at {actor}"
+                    "|A cloud of choking gas billows up about {actor}|A bell clangs, loud and long}!{to?| {Actor} leap{s} clear."
+                    "| {Actor} hold{s} {its} breath and stagger{s} clear.| {Actor} choke{s} on it, and fall{s} senseless.}}"
 
 # ---- The water's (E_BEAT's WB_WATER ... WB_DOUSED, the character's: wet its band, a swim's how; water_words' before,
 # water.c, overlay 4)
@@ -632,7 +636,7 @@ SWAY.any[how=SW_FILCH]      "You slip a hand into {obj}'s purse."
 # the attacker's body.  A grapple's (O_HOLD ... O_LETGO): the character's hold.  (blows.c's fight_words and grip_words
 # before, overlays 6 and 19)
 
-own FIGHT gone bled bound stray
+own FIGHT gone bled bound stray hurt
 
 @A          "{w4?You|{au?The {w4}|Something}}"
 @a          "{w4?you|{au?the {w4}|something}}"
@@ -685,6 +689,7 @@ FIGHT.stumble           "{@blow}{f1?|{actor?, but stumble|, but stumbles}}{f2?|{
                         "|; you stumble}}.{@after}"
 FIGHT.advantage         "{@blow}{actor?; {dfolk?it slips|they slip} inside your guard|; you see an opening}.{@after}"
 FIGHT.any               "{@blow}.{@after}"
+FIGHT.hurt              "{au?{@A} is hurt by the {instr}: {w6}.{@after}|You hear a cry of pain{adead?.| that stops short.}}"
 
 # ---- A refusal (UK_NO: no, U_*, A_*: refuse.c's say_no, the one wording of its meaning; text the thing's name as it's
 # put in, "a door", "The giant rat"; a name not to be said, its nameless form, the next).  (refuse.c's said before,

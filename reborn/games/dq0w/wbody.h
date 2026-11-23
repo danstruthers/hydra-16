@@ -193,4 +193,21 @@ extern unsigned char npools;                    /* (dq0w.c's: how many pools the
 #define PC_WOKE         0x80
 extern unsigned char noinit;                    /* (dq0 -I: no engage initiative test: the tests') */
 
+/* The step and its hazards, every actor's (wstep.c, part 120: the one-path plan's stage 2, 2026-11-23) */
+unsigned char __fastcall__ den_hz (unsigned char d);   /* (dq0w.c's) Body bd's step its way d (before it: 1 it goes no
+                                                **   further, in its pit, a trap ahead noticed), or DT_ON (on its square
+                                                **   after: 1 dead of it): the step's cheap test (a pit it's in, a chunk
+                                                **   with traps, a pool), then part 120's den_trap */
+#define DT_ON           0xFF
+unsigned char __fastcall__ den_trap (unsigned char op, unsigned char d);  /* (Part 120) den_hz's work: its step's way d */
+#define DT_NOTICE       0                       /* (Before its step: in its pit, a round's climb; a hidden trap ahead
+                                                **   noticed, it stops short) */
+#define DT_SPRING       1                       /* (On x, y: the trap there set off) */
+#define DT_PIT          2                       /* (den_trap's: in a pit, a round's climb out) */
+void den_harm (void);                           /* (Part 121) Body bd's harm (RS_HARM, its actor: the world's slot's
+                                                **   request made, workpart.h's harm's) */
+void __fastcall__ trap_beat (unsigned char kind, unsigned w1);  /* (Part 120) A trap's outcome for body bd, told (an
+                                                **   actor's work's E_TRAP: dq0w.c's work_told) */
+extern unsigned char bclimb[NACTORS];           /* (wbody.c's: each body's climb out of its pit so far, feet) */
+
 #endif

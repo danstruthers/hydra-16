@@ -355,7 +355,9 @@ static void __fastcall__ wound_words (unsigned char n)
 static void __fastcall__ harm (struct req* r)
 {
     struct rs_effect* e = (struct rs_effect*) RS_HARM_EFFECTS (*r);
-    unsigned char n;
+    unsigned char n, t = r->actor ? BTOUGH : TOUGH;
+    unsigned char* dw = r->actor ? &sheet[aden[(r->actor - 1) & 7]] : &wounds;   /* (The character's, or a creature's:
+                                                **   its harm by the same rule, the one path's step, 2026-11-23) */
 
     memset (RS_HARM_EFFECTS (*r), 0, sizeof RS_HARM_EFFECTS (*r));
     tp = hurt;
@@ -363,7 +365,7 @@ static void __fastcall__ harm (struct req* r)
     *tp = 0;
     RS_HARM_BAND (*r) = 0;
     RS_HARM_OUT (*r) = 0;
-    if (r->other || wounds >= TOUGH) {
+    if (r->other || *dw >= t || (r->actor && RS_HARM_CAUSE (*r) == HC_STRUCK)) {
         r->result = 1;
         return;
     }
@@ -372,12 +374,12 @@ static void __fastcall__ harm (struct req* r)
     if (!n) {
         return;
     }
-    wounds += n;
-    e->target = 0;
-    e->kind = wounds >= TOUGH ? X_DEATH : X_WOUND;
+    *dw += n;
+    e->target = r->actor;
+    e->kind = *dw >= t ? X_DEATH : X_WOUND;
     e->band = RS_HARM_BAND (*r) = n >= 4 ? 3 : n >= 2 ? 2 : 1;
     e->phrase = 1;
-    e->cond = wounds >= TOUGH ? C_DEAD : 0;
+    e->cond = *dw >= t ? C_DEAD : 0;
     e->x[0] = 0;                                /* (Where: none said, the null's) */
     e->x[1] = AS_BLUNT;
     wound_words (n);

@@ -936,6 +936,7 @@ void __fastcall__ rf_answer (struct req* r)
     case RS_MORALE:
     case RS_WIELD:                              /* (What it would strike with: gear.c's, through fight's) */
     case RS_ROUSE:                              /* (A senseless one's shock rolls due: fight.c's) */
+fights:
         tnow = r->kind == RS_ATTACK && RS_ATTACK_WHEN (*r) ? RS_ATTACK_WHEN (*r) : HUB->now;   /* (A blow at its
                                                 **   moment, the world's: a denizen's its intent's, 2026-11-13) */
         nobreak = HUB->pc_lump & PL_NOFACE;
@@ -958,6 +959,9 @@ void __fastcall__ rf_answer (struct req* r)
     case RS_HARM:                               /* (Harm, wounds over time, first aid: overlay 6's, heal.c, in a */
     case RS_TIME:                               /*   copy, the part said copied for it; the harm overlay 1's, its */
     case RS_TREAT:                              /*   words a line) */
+        if (r->kind == RS_HARM && r->actor) {
+            goto fights;                        /* (A creature's harm: its sheet's, the fights' overlay's, 2026-11-23) */
+        }
         tnow = HUB->now;
         if (r->kind == RS_TREAT) {
             stress (r);

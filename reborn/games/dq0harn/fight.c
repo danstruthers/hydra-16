@@ -264,31 +264,19 @@ static unsigned char __fastcall__ is_prone (const struct side* s)
 #pragma code-name (push, "OV10CODE")
 #pragma rodata-name (push, "OV10RODATA")
 
-/* Side s strikes side t with n dice at zone z (or part, not 0xFF: a block's strike on what struck or blocked): the
-** impact, the armour there off it, the wound; its words into w (or the armour that stopped it: stop, AF_*, in the
-** reply's c) */
-void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, unsigned char z, unsigned char part,
-    char* w, unsigned char stop)
+/* Side t wounded at loc by aspect, impact the more past its armour (by: what dealt it, BY_*; s the striker's side, or 0
+** none, a harm's): the wound, its words into w, its effects (a stumble, a fumble, knocked senseless); a blow's and a
+** harm's alike (o_strike's, o_hbeast's: the one path's step, 2026-11-23) */
+static void __fastcall__ wounded (struct side* s, struct side* t, unsigned char loc, unsigned char aspect, int impact,
+    unsigned char by, char* w)
 {
-    unsigned char aspect = o_aspect_of (s, s == &A ? RS_ATTACK_ASPECT (*R) : AS_BEST), by = o_dealt (s), loc, f, p, sev, il;
     unsigned char th = t->who && (prones & RS_THEY) ? BY_THEIR : 0;   /* (A person's "their", 2026-11-17: the hub's folk,
                                                 **   the world's flag in the request, one source) */
     harn_char* c = t->c;
     harn_injury* j;
-    int impact;
+    unsigned char f, p, sev, il;
 
-    impact = dice (n, 6) + (int) n * ((int) s->size - (int) t->size) + s->imp[aspect];
-    loc = part != 0xFF ? (harn_is_limb (part) && random (2) ? part | HARN_RIGHT : part) : harn_strike_location (z);
-    p = guard (t, loc, aspect);
-    if (impact - p < 1) {                       /* (Stopped by its armour, or no harm) */
-        if (impact >= 1 && arm[0]) {
-            strcpy (w, !t->who ? your : th ? their : its);
-            strcat (w, arm);
-            RS_ATTACK_AF (*R) |= stop;
-        }
-        return;
-    }
-    if (!(f = wound (c, loc, aspect, impact - p, by))) {
+    if (!(f = wound (c, loc, aspect, impact, by))) {
         return;
     }
     if (f & HARN_W_DEAD) {                      /* (A mortal wound's kill roll: dead, no injury kept) */
@@ -310,9 +298,9 @@ void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, uns
         o_effect (t->who, X_DEATH, C_DEAD, HARN_KILL, loc, aspect);
         return;
     }
-    if (s->b && !t->who && (by == BY_BITE || by == BY_CLAWS)) {    /* (A venom, a disease: afflict.c's) */
+    if (s && s->b && !t->who && (by == BY_BITE || by == BY_CLAWS)) {    /* (A venom, a disease: afflict.c's) */
         strcpy (bkey, s->b->key);               /* (Its kind's key into the main RAM: the bestiary's the window's) */
-        if (envenom (bkey, loc, impact - p)) {
+        if (envenom (bkey, loc, impact)) {
             RS_ATTACK_AF (*R) |= AF_NEWS;                    /* (A venomous bite: its venom's course, heal.c's, told after) */
             if (out_t) {
                 RS_ATTACK_OUT (*R) = out_t;                  /* (Its ache's shock: senseless) */
@@ -330,6 +318,75 @@ void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, uns
         RS_ATTACK_OUT (*R) = knocked_out (c, t->who ? &bs.out : &pc_out, &RS_ATTACK_AF (*R));    /* (Senseless: the tenths till it comes
                                                 **   round, sheet.c's) */
         o_effect (t->who, X_COND_ON, C_UNCONSCIOUS, 0, 0, 0);
+    }
+}
+
+/* Side s strikes side t with n dice at zone z (or part, not 0xFF: a block's strike on what struck or blocked): the
+** impact, the armour there off it, the wound (wounded's); its words into w (or the armour that stopped it: stop, AF_*, in
+** the reply's c) */
+void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, unsigned char z, unsigned char part,
+    char* w, unsigned char stop)
+{
+    unsigned char aspect = o_aspect_of (s, s == &A ? RS_ATTACK_ASPECT (*R) : AS_BEST), by = o_dealt (s), loc, p;
+    int impact;
+
+    impact = dice (n, 6) + (int) n * ((int) s->size - (int) t->size) + s->imp[aspect];
+    loc = part != 0xFF ? (harn_is_limb (part) && random (2) ? part | HARN_RIGHT : part) : harn_strike_location (z);
+    p = guard (t, loc, aspect);
+    if (impact - p < 1) {                       /* (Stopped by its armour, or no harm) */
+        if (impact >= 1 && arm[0]) {
+            strcpy (w, !t->who ? your : prones & RS_THEY ? their : its);
+            strcat (w, arm);
+            RS_ATTACK_AF (*R) |= stop;
+        }
+        return;
+    }
+    wounded (s, t, loc, aspect, impact - p, by, w);
+}
+
+/* A creature's harm (RS_HARM at an actor, the world's: a fall, a trap's strike, a burn; the one path's step,
+** 2026-11-23), D its side (unpacked: o_fight's): the character's own rule (sheet.c's harm) by its sheet: a fall's
+** impact the book's (harn_fall), a strike's or a burn's its dice and more, its hide or what it wears off it; the wound
+** a blow's (hurt's: its shock, a stumble, a fumble, knocked senseless as a blow's, its rolls a round each: the user's
+** K14); its words in line[0], the worst wound's band in the reply's b, the bleeding's AF_BLEEDING in its c */
+void o_hbeast (void)
+{
+    const struct rs_effect* e = (const struct rs_effect*) RS_HARM_EFFECTS (*R);
+    unsigned char how = 0, aspect = HARN_BLUNT, zone = HARN_MID, loc, k, c = RS_HARM_CAUSE (*R);
+    int impact;
+
+    line[0][0] = 0;
+    if (c == HC_FALL) {
+        impact = harn_fall (&cr, RS_HARM_FEET (*R), RS_HARM_GROUND (*R), (RS_HARM_HOW (*R) & HF_CLEAR ? HARN_FALL_CLEAR :
+            0) | (RS_HARM_HOW (*R) & HF_HOLDS ? HARN_FALL_HOLDS : 0), &how);
+        if (how & HARN_FALL_FEET) {
+            zone = HARN_LOW;
+        }
+    } else {
+        impact = dice (RS_HARM_DICE (*R), 6) + (int) RS_HARM_IMPACT (*R);
+        aspect = c == HC_FIRE ? HARN_FIRE : RS_HARM_ASPECT (*R) & 3;
+        k = RS_HARM_ZONE (*R) & 3;
+        zone = k == Z_HIGH ? HARN_HIGH : k == Z_LOW ? HARN_LOW : HARN_MID;
+    }
+    memset (RS_HARM_EFFECTS (*R), 0, sizeof RS_HARM_EFFECTS (*R));
+    RS_HARM_BAND (*R) = 0;
+    RS_HARM_OUT (*R) = 0;
+    RS_ATTACK_AF (*R) = 0;
+    R->result = (how & HARN_FALL_CAUGHT) != 0;
+    loc = harn_strike_location (zone);
+    if (c != HC_FALL) {
+        impact -= guard (&D, loc, aspect);      /* (Its hide, or what it wears there) */
+    }
+    if (impact >= 1) {
+        wounded (0, &D, loc, aspect, impact, BY_ASPECT, line[0]);
+    }
+    for (k = 0; k < nfx; ++k, ++e) {
+        if (e->kind == X_WOUND || e->kind == X_DEATH) {
+            RS_HARM_BAND (*R) = e->band;
+        }
+    }
+    if (cond_of (&cr) & C_BLEEDING) {
+        RS_ATTACK_AF (*R) |= AF_BLEEDING;
     }
 }
 
@@ -695,6 +752,19 @@ void __fastcall__ o_fight (struct req* r)
             r->w2 = pc.state == HARN_DEAD ? 0xFFFF : pc_out > tnow ? (unsigned) (pc_out - tnow) : 0;   /* (Its time out ahead:
                                                 **   senseless, its next roll's; or out till then, whatever its state) */
         }
+        return;
+    case RS_HARM:                               /* (A creature's harm, the world's: a fall, a trap's strike, a burn, by its
+                                                **   sheet as the character's is by its own; the one path's step, 2026-11-23) */
+        D.b = unpack (r->actor);
+        D.c = &cr;
+        D.who = r->actor;
+        if (cr.state == HARN_DEAD || RS_HARM_CAUSE (*r) == HC_STRUCK) {
+            r->result = 1;                      /* (Dead already; a blow at a thing's own hurt, gear.c's) */
+            return;
+        }
+        hbeast ();
+        put (line[0]);
+        pack ();
         return;
     }
     if (r->other == RS_THING) {

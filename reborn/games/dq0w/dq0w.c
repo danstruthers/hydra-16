@@ -177,6 +177,10 @@ void __fastcall__ event (unsigned char kind, unsigned char who, unsigned w1)
 
 void __fastcall__ work_told (unsigned char kind, unsigned w1, unsigned char a)
 {
+    if (wk.who) {
+        trap_beat (kind, w1);                   /* (An actor's work, a trap's: its outcome told as seen, part 120's) */
+        return;
+    }
     hub_map (0);
     wk.m.kind = kind;
     wk.m.a = a;
@@ -184,6 +188,44 @@ void __fastcall__ work_told (unsigned char kind, unsigned w1, unsigned char a)
     wk.m.w2 = HUB->pc_y;
     wk.m.t = HUB->now;
     hub_event (&wk.m);
+}
+
+/* Body bd's step, its hazards (the one path's step, every actor's, 2026-11-23): its way d, before it, a round's climb
+** out of the pit it's in, a hidden trap ahead noticed (1: it goes no further); DT_ON, on its square after, a trap there
+** set off, lamp oil slipped in (the user's H15; 1: dead of it).  The cheap test the main RAM's: part 120 (and 99, the
+** pools') swapped in only where there's a pit, a trap on the square, a pool */
+static unsigned char trap_sq (void)           /* (C's square cx_, cy_ a set trap's, set off underfoot) */
+{
+    static struct trap* t;
+    static unsigned char n;
+
+    for (t = C->trap, n = C->ntraps; n; --n, ++t) {
+        if (t->x == cx_ && t->y == cy_ && TS_SET (t->state) && t->trigger != TT_DOOR) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+unsigned char __fastcall__ den_hz (unsigned char d)
+{
+    static unsigned char k;
+
+    k = d;
+    if (k == DT_ON) {
+        at (bd.sn, bd.x, bd.y);
+        if (trap_sq ()) {
+            den_trap (DT_SPRING, k);            /* (A trap on its square: set off, part 120's) */
+        }
+        if (bd.state && (npools & ~PC_WOKE)) {
+            time_kept (POOL_OP + 1);            /* (Lamp oil there: slipped in, the user's H15, every actor's) */
+        }
+        return !bd.state;
+    }
+    if (TILE (*at (bd.sn, bd.x, bd.y)) == T_PIT) {
+        return den_trap (DT_PIT, k);            /* (In a pit: a round's climb out) */
+    }
+    return at (bd.sn, bd.x + head_x[k], bd.y + head_y[k]) && trap_sq () && den_trap (DT_NOTICE, k);
 }
 
 /* What the character sees, changed (E_VIEW's why: V_*), told the UI */
@@ -2825,6 +2867,10 @@ void __fastcall__ s_bearings_off (unsigned feet)
 {
     static unsigned char k;
 
+    if (wk.who) {
+        return;                                 /* (An actor's trap, its gas choked on: the character's bearings none of
+                                                **   its, wstep.c's) */
+    }
     if (feet == BO_OUT) {                       /* (Main's: knocked senseless, fallen) */
         pc_down = 1;
         hub_map (0);

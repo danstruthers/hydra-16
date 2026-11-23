@@ -37,7 +37,8 @@ static void __fastcall__ trap_state (unsigned char st)
 #ifdef W_FRONT
 static void __fastcall__ told (unsigned char kind, unsigned w1, unsigned char a)
 {
-    if (wk.who) {                               /* (An actor's work: its outcome kept, the rest wport.c's to tell) */
+    if (wk.who && kind != E_TRAP) {             /* (An actor's work: its outcome kept, the rest wport.c's to tell; a
+                                                **   trap it set off told as it's seen, wstep.c's) */
         if (kind == E_PORTAL) {
             wk.out = w1 >> 8;                   /* (E_PORTAL's po) */
         }
@@ -58,6 +59,7 @@ void __fastcall__ bearings_off (unsigned feet); /* (Part 52's: dq0w.c, wbody.h's
 
 #ifdef W_HARM
 void harm_fx (void);                            /* (Part 49's: wlimbs.c) */
+void den_harm (void);                           /* (Part 121's: wstep.c, an actor's, the request made) */
 
 /* The referee's harm (rs.h's RS_HARM: cause a, and b, c, w1, w2 by it), the UI told (E_HARM), the time it's out for
 ** taken */
@@ -77,6 +79,10 @@ static void __fastcall__ harm (unsigned char a, unsigned char b, unsigned char c
     r->w2 = b >> 5;                             /* (A strike's: where, trap_harm's) */
     r->b &= a == HC_STRIKE ? 3 : 0xFF;
     r->text[0] = 0;
+    if (wk.who) {
+        den_harm ();                            /* (An actor's, the request made: its sheet's, its body's, part 121's) */
+        return;
+    }
     r = hub_ask (SLOT_WORLD);
     wk.tt += RS_HARM_OUT (*r);
     told (E_HARM, a | RS_HARM_BAND (*r) << 8 | (RS_HARM_OUT (*r) ? E_OUT : 0), 0);
@@ -141,8 +147,8 @@ static void front (void)
     for (k = 0; k < C->nportals && (C->portal[k].x != cx_ || C->portal[k].y != cy_); ++k) {
     }
     wk.pq = C->portal[k];
-    wk.armed = !wk.who && trap_on (wk.px, wk.py, 1) ? 1 | (wk.tq.state & TS_HIDDEN) : 0;  /* (An actor's: never
-                                                **   sprung, the house's: wport.c's) */
+    wk.armed = trap_on (wk.px, wk.py, 1) ? 1 | (wk.tq.state & TS_HIDDEN) : 0;  /* (Every actor's: the one path's
+                                                **   step, 2026-11-23) */
     wk.through = 0;
     wk.hb = 0;
     wk.hw = 0;
@@ -190,7 +196,8 @@ static void __fastcall__ spring (unsigned char on)
     if (o == TO_SPRUNG && k < TK_GAS) {
         harm (HC_STRIKE, trap_harm[k], trap_dice[k], wk.tq.power);
 #ifdef W_POISON
-        if (k == TK_DARTS && RS_HARM_BAND (HUB->slot[SLOT_WORLD]) && !((wk.tx ^ wk.ty) & 3)) {
+        if (k == TK_DARTS && RS_HARM_BAND (HUB->slot[SLOT_WORLD]) && !((wk.tx ^ wk.ty) & 3)) {   /* (An actor's band left 0:
+                                                **   the character's poison none of its, wstep.c's) */
             HUB->pc_aff = AK_DART;              /* (Poisoned, one dart trap in four by its square, a wound drawn: the
                                                 **   referee told with the bodies' time, at its next minute, part
                                                 **   70's; a door's needle not yet: part 5's room) */
