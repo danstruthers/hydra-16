@@ -1707,7 +1707,7 @@ static void hear (void)
             sn = pcs;
             loud = E_NOISE_LOUD (m);
         } else if (dplace != dend && hub_dnext (&dplace, &m)) {   /* (The denizens': an actor's, not heard by itself) */
-            if (m.kind != E_DEN || !E_DEN_LOUD (m) || E_DEN_DE (m) >= DE_CLOSES) {
+            if (m.kind != E_DEN || !E_DEN_LOUD (m) || (unsigned char) (E_DEN_DE (m) - DE_CLOSES) <= DE_AIMS - DE_CLOSES) {
                 continue;                       /* (A closing-in the character's words alone, the world's den_close:
                                                 **   no sound of its own, its steps heard as they're taken) */
             }
@@ -2881,6 +2881,17 @@ static unsigned char __fastcall__ s_claws_bite (unsigned char t)
     return m == MAT_EARTH || m == MAT_SOIL;
 }
 
+/* The tile a digger takes square p (just looked at, C its chunk's) for: a hidden door the wall it seems (the
+** character's, HOUSE.md's digging: found as its facing comes off, the world's dig_spell; the one-path plan's digging,
+** 2026-11-23) */
+static unsigned char __fastcall__ dug_as (const unsigned char* p)
+{
+    const struct portal* q;
+    unsigned char t = TILE (*p);
+
+    return t == T_DOOR && (q = portal_at (cx_, cy_)) != 0 && (q->state & PS_HIDDEN) ? T_WALL : t;
+}
+
 unsigned char __fastcall__ s_dig_way (unsigned char k)
 {
     unsigned char j, best = 0xFF, g, t, h;
@@ -2906,7 +2917,7 @@ unsigned char __fastcall__ s_dig_way (unsigned char k)
         ny = a.y + dir_y[j];
         if ((f = toward (nx - refx, ny - refy) + apart (nx - refx, ny - refy)) >= (DH (j) == h ? b0 : bf) || apart (nx - md.ahx[k], ny - md.ahy[k]) >
             2 * K.range + 8 || !(p = at (a.sn, nx, ny)) ||
-            ((t = TILE (*p)) != T_WALL && t != T_ROCK && t != T_RUBBLE) || (t != T_RUBBLE && g == DG_CLAWS &&
+            ((t = dug_as (p)) != T_WALL && t != T_ROCK && t != T_RUBBLE) || (t != T_RUBBLE && g == DG_CLAWS &&
             !s_claws_bite (t))) {
             continue;                           /* (No nearer, too far from home, not a thing it digs: claws alone
                                                 **   rubble, earth and soil, the one rule at work and coming at prey,

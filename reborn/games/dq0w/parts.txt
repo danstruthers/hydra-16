@@ -4,7 +4,7 @@
 # functions are in each is the C's (#pragma code-name "SWnCODE"); the stubs and the config's lines for them are the
 # build's (../dq0/parts.js: obj/games/dq0w/parts.inc and dq0w.cfg).  "stub NAME N": a part's stub that the C doesn't
 # show (its assembly's).
-1   22  Digging, and the rock it's into (overlay 22's, slice 4.10's)
+1   22  Digging, and the rock it's into (overlay 22's, slice 4.10's); one spell of digging, every actor's (2026-11-23)
 2   3   Climbing
 3   1   The dungeon begun, the strata below grown
 4   2   The change records' rarer work (store.c), the UI's requests; a thing of several, things moved by the count, what closes worked (things.c)
@@ -119,3 +119,4 @@
 113 31  Its words (wpour2.c: H11, 2026-11-19)
 stub start 3
 stub begin 3
+114 2   A spell of digging done, the character's (dq0w.c's s_dig_on: part 1's room, the one-path plan's digging, 2026-11-23)

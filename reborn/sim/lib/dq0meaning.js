@@ -230,7 +230,7 @@ function createRecorder() {
         kvalue: cat ? w16(cat, b[o + L.iKind] * L.kindSize + L.kValue) : 0, size: b[o + L.iSize], flags: b[o + L.iFlags], where: name('IW_SQUARE', b[o + L.iWhere]),
         sn: b[o + L.iSn], x: w16(b, o + L.iX), y: w16(b, o + L.iY), qty: b[o + L.iQty], id: w16(b, o + L.iId), fuel: w16(b, o + L.iFuel),
         thick: b[o + L.iThick], mat: b[o + L.iMat], quality: b[o + L.iQuality], shut: b[o + L.iShut],
-        dur: w16(b, o + L.iDur), durMax: w16(b, o + L.iDurMax),
+        dur: w16(b, o + L.iDur), durMax: w16(b, o + L.iDurMax), wear: b[o + L.iWear],
         did: b[o + L.iWhere] === K.IW_DEN ? b[o + L.iOwner] | b[o + L.iHide] << 8 : 0, owner: b[o + L.iOwner], hide: b[o + L.iHide],
         fits: b[o + L.iSize] | b[o + L.iThick] << 8 });   // (A key's lock, the thing's number: the belongings', 2026-10-27)
     }

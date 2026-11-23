@@ -6,4 +6,4 @@
 1   4   hmchar's file read and written (harnfile.c), the creatures' sheets kept
 2   5   The names (harnname.c), the tool a dig takes, a test's dice fixed
 3   4   A dig's tool, the tests' own (part 2's room, 2026-11-03)
-4   8   A writing read (the plan's step 9, 2026-11-06)
+4   8   A writing read (the plan's step 9, 2026-11-06); the tongues spoken (the one-path plan's digging, 2026-11-23: part 3's room)

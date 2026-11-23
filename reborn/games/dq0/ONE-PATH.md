@@ -67,6 +67,25 @@ its area's rows narrowed, below.)
   work); a robber's takings carried home and hidden there, not at a distance (C10, C14); no denizen tracks by prints,
   and a hunter follows the character's trail alone (M2's any actor's trail: stage 3); smell without asking (M1, the
   senses'); watched while hiding by the watcher's own eyes (B1); hidden compartments searched by a denizen (C5).
+
+**Done: stage 2's digging** (branch dig1, 2026-11-23; built/2026-11-23-dig1.md):
+- **One spell** (dq0w.c's dig_spell, part 1): the character's spell (part 1's s_dig_on) and a tunneller's (wdig.c) are
+  one code: the rock it's into, the referee's test by who, the referee's rate and wear, the rock's hardness, poor rock
+  come down, a hidden door dug into and found. The act audit's E1 and G-13 (its tools: its own things, bare hands, a
+  chisel with a hammer), H1's spell time and H2's noise.
+- **The act table**: the dig and digbegin rows carry the spell's ten minutes (SPELL, both sides' own, before); new rows
+  digfound (a hidden door found by a dig), hang and wallup (a builder's work: its time and its noise from the table).
+- **The referee**: P_DIG answered for every actor by rshouse.h's house_dig (both referees): an actor's tools listed in
+  the tools' own form, the house's table's new claws row (the world's own copy of the rates, wdig.c's, gone); the
+  grade by the creature's own sheet, as before.
+- **The minds**: a hidden door is dug at as the wall it seems (dq0d.c's dig_way: dug_as).
+- **Parity test**: dq0digact (the character's dig and a dwarf miner's: the query as it begins, the spells' ten
+  minutes, the noise, the test and the rate by the grade, the tool worn).
+- **Left in this area**: the character's building (hang a door, wall up a way: no decision says what it needs or how:
+  OPEN.md); a denizen digging down (no mind wants a shaft yet: OPEN.md); the roof's harm on a denizen (the world's harm
+  for an actor, G3: the step's branch); a denizen tiring by its spells (the one body clock, A6, Y9); an arm useless
+  stopping a denizen's chisel; the time of a denizen's spell spent while it's interrupted (Y8).
+
 **Done so far:**
 - **Stage 1, the world's part** (act1, 2026-11-19): the act table (games/dq0w/acts.txt) and one sender each for noise and
   the referee's test (acts.h's act_noise, act_test).

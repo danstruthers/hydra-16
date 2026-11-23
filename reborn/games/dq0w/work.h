@@ -9,18 +9,36 @@
 
 #include "activity.h"
 
-/* ---- dq0w.c's digging (the character's, parts 1, 19, 25; a tunneller's rock asked of part 1 too, wdig.c's) */
+/* ---- dq0w.c's digging (the character's, parts 1, 19, 25, 84; a tunneller's spell by part 1's too, wdig.c's: the
+** one-path plan's digging, 2026-11-23) */
 struct dig {
     unsigned char   d;                          /* DIR_N ... DIR_W, DIR_DOWN */
     unsigned char   mat;                        /* What it's into (rs.h's MAT_*: the referee judges the tools) */
-    unsigned char   rock;                       /* The rock last told (rock.h's RK_*: test_dig's; RK_NONE as it's
-                                                **   begun); DIG_ROCK, a tunneller's asked (dig_on's: its answer) */
+    unsigned char   rock;                       /* The rock last told (rock.h's RK_*: dig_spell's; RK_NONE as it's
+                                                **   begun) */
     unsigned        need, done;                 /* Half-feet (P_DIG's: bare hands half a foot a spell) */
     unsigned        x, y;                       /* The square dug */
+    unsigned char   sn;                         /* The digger's stratum and stand (dig_spell's: the character's, or */
+    unsigned        sx, sy;                     /*   an actor's, its caller's to set) */
+    unsigned char   found;                      /* (dig_spell's: a hidden door dug into, 0x10 | its stuff; 0x20 hidden
+                                                **   by magic; 0) */
+    signed char     grade;                      /* (dig_spell's: its grade, as returned) */
+    unsigned char   wear;                       /* (dig_spell's, an actor's: the wear its spell did the tool, key) */
+    char            key[8];
 };
 extern struct dig dig;
-#define DIG_ROCK        0xFE
 void dig_on (void);                             /* (Part 1's) */
+signed char __fastcall__ dig_spell (unsigned char who);  /* (Part 1's, dq0w.c's) A spell of digging, every actor's:
+                                                **   who 0 the character, an actor's entry plus 1, DIG_RECORD a
+                                                **   record's; its grade, DS_ROOF, DS_CANT */
+#define DIG_RECORD      (NACTORS + 1)           /* (dig_spell's who: a record's spell, away from the character; */
+#define DIG_ASK         0x40                    /*   | DIG_ASK, only whether anything it has bites; */
+#define DIG_LOOK        0xFF                    /*   DIG_LOOK, a wall looked at, the character's: wall_look) */
+#define DS_ROOF         0x7F                    /* (dig_spell's: poor rock come down on a spell gone badly, */
+#define DS_CANT         (-128)                  /*   nothing it has bites into it) */
+extern unsigned wear_did;                       /* (things.c's wear: the thing worn an actor's, its did; 0 the
+                                                **   character's) */
+void __fastcall__ wear (const char* key, unsigned char by);  /* (Part 40's: things.c) A tool worn by a spell of work */
 
 /* ---- store.c: the change records (world.h's), the world's alone to write */
 void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,

@@ -673,8 +673,11 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_
     DE_CLOSES,                                 /* (Closed with the character, its attack begun, its first blow the next:
                                                 **   the character's own first words the other way round, the user's
                                                 **   "The bandit closes with you.", 2026-11-17) */
-    DE_AIMS };                                  /* (Its shot at the character begun: "The bandit takes aim at you.", the
+    DE_AIMS,                                    /* (Its shot at the character begun: "The bandit takes aim at you.", the
                                                 **   character's "You take aim at ..." the other way round, 2026-11-18) */
+    DE_DIGFOUND };                              /* (A hidden door dug into, its facing off: found, every actor's dig,
+                                                **   the act table's digfound row: at the door's square, the one-path
+                                                **   plan's digging, 2026-11-23) */
                                                 /* E_DEN's what: a step, a
                                                 **   noise of its own (a squeak, a growl), the character sensed, lost
                                                 **   (its senses' own); a successor rallying its fellows at its post
