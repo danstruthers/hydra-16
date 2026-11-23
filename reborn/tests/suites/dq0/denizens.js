@@ -2965,7 +2965,10 @@ module.exports = {
         for (let i = 1; i < de.length; i++) if (de[i].t - de[i - 1].t < A.dig.t) f.push('the dwarf\'s spell sooner than the row\'s ten minutes: ' + JSON.stringify(de.map(e => [e.a, e.t])));
         if (de.filter(e => e.a !== C.DE_DUG).some(e => e.b !== A.dig.loud)) f.push('the dwarf\'s spells\' noise not the row\'s: ' + JSON.stringify(de.map(e => [e.a, e.b])));
         if (!de.some(e => e.a === C.DE_DUG)) f.push('the dwarf never through (DE_DUG)');
-        const fin = T.of('quit', T.of('wait 2 hours').k).at, all = fin ? fin.items.filter(i => i.name === 'pick' && i.did && fin.actors.some(a => a.k === D2.k && a.did === i.did)) : [];
+        // (The dwarf's pick as its dig ends, at the wait after its tunnel opens, not at the quit: by then the fight that
+        // follows may have taken it out of the actors, the character knocked senseless (room7, 2026-11-23: climb1's minds
+        // with dig1's scene))
+        const fin = T.of('wait', T.of('wait 2 hours').k).at, all = fin ? fin.items.filter(i => i.name === 'pick' && i.did && fin.actors.some(a => a.k === D2.k && a.did === i.did)) : [];
         const st = T.of('wait 2 hours').at, was = st ? st.items.filter(i => all.some(j => j.n === i.n)) : [];
         if (ts.some(q => q.w2) && !(all.length && was.length && all[0].wear > was[0].wear)) f.push('the dwarf\'s own pick not worn by its spells: ' + JSON.stringify([was.map(i => i.wear), all.map(i => i.wear)]));
         // (Game 3's: a hidden door dug into, found)
