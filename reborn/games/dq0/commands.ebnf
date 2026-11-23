@@ -34,7 +34,7 @@
                    | <break> | <raise> | <lower> | <bend> | <force> | <disarm> | <rebar> | <hang> | <tie> | <untie> | <combine>
                    | <appraise>
                    | <deceive> | <threaten> | <calm> | <befriend> | <approach> | <ally>
-                   | <swap> | <tend> | <trade> | <rip>
+                   | <swap> | <tend> | <trade> | <rip> | <rob> | <filch>
 
 (* ---- Observing (question 3: "look at" is a glance; question 4: "take a look" is a look) ---- *)
 <look>           ::= <LOOK> [ <look-target> ] | <LOOK> <object> "over" | <LOOK> "over" <object>   (* "look the torch over":
@@ -381,6 +381,8 @@
 <befriend>        ::= "befriend" <object>
 <approach>        ::= "approach" <object>                      (* up to it *)
 <ally>            ::= ( "come" | "heel" | "stay" ) [ "here" ] | "dismiss" <object>   (* an ally's request *)
+<rob>             ::= "rob" <object>                           (* one helpless robbed: what it holds, its coins (the one-path plan's stage 2, 2026-11-23) *)
+<filch>           ::= ( "filch" [ "from" ] | "steal" "from" ) <object>   (* a purse cut unnoticed: its coins *)
 
 (* ---- Psionic talents (HarnMaster core, Psionics: latent until found; the GM generates them) ---- *)
 <talk>            ::= "talk" [ "to" | "with" ] <object> [ "about" <text:other> { <text:other> } ]   (* a conversation: VB_TELL_OBJECT *)

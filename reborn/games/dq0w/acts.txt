@@ -80,3 +80,21 @@ bent        | 0      | -        | 0  | 8 | DOOR  | BENT      | -    | -     | - 
 prise       | 300    | -        | 0  | 0 | -     | -         | -    | PRISE | -        | 2
 wopen       | 2 step | -        | 0  | 2 | DOOR  | WOPENS    | -    | -     | -        | 1
 wshut       | 2 step | -        | 0  | 3 | DOOR  | WSHUTS    | -    | -     | -        | 1
+# ---- Things, every actor's (the one-path plan's stage 2, things and robbery, 2026-11-23: ONE-PATH.md's 2.1 and 2.7):
+# the character's own numbers (things.c's catalogue code: its handlings' times), read by both sides (wthings.c's, an
+# actor's: its errands FE_STOW ... FE_HAND; wtake.c's and wfetch.c's take).  hold: a thing taken into a hand; put: put
+# in or on another, stowed, hung; takeout: taken from another (its levels' reach on top, part 56's R_IN each: H17);
+# don, doff: worn, taken off; strip: a worn thing taken from a body (on top of the takeout's); give: handed to another;
+# drag: a heavy thing shoved or dragged a square (its test's steps by its weight, the caller's: wdrag.c's); rob: one
+# helpless robbed (its time the round's and its reach's, the caller's); filch: a purse cut unnoticed (its contest the
+# minds', the robber's Stealth against the other's hearing: dq0d's HM_FILCH and SW_FILCH)
+hold        | 10     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
+put         | 20     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
+takeout     | 20     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
+don         | 50     | -        | 0  | 0 | -     | -         | -    | -     | -        | 2
+doff        | 50     | -        | 0  | 0 | -     | -         | -    | -     | -        | 2
+strip       | 100    | -        | 0  | 0 | -     | -         | -    | -     | -        | 2
+give        | 20     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
+drag        | 50     | FORCE    | 2  | 3 | WORK  | DRAGS     | -    | -     | -        | 2
+rob         | 0      | -        | 0  | 0 | -     | -         | -    | -     | -        | 2
+filch       | 0      | STEALTH  | 0  | 0 | -     | -         | -    | -     | -        | 1

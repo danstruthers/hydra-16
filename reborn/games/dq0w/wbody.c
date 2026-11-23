@@ -33,7 +33,6 @@ struct msg bev;
 unsigned char bleeds;
 unsigned bled_at;
 
-unsigned char __fastcall__ handout (const struct msg* m);   /* (Part 111's: wempty.c, every actor's) */
 
 #pragma code-name ("SW14CODE")
 #pragma rodata-name ("SW14RODATA")
@@ -217,7 +216,9 @@ void s_den_intents (void)
         }
         BD_GET ((m.who - 1) & 7);
         was = bd.doing;
-        if (was == DO_DOWN && m.kind != I_ENTER && m.kind != I_LEAVE) {
+        if (was == DO_DOWN && m.kind != I_ENTER && m.kind != I_LEAVE &&
+            (m.kind != I_ROB || I_ROB_ERRAND (m) != FE_ROBBED)) {   /* (Robbed as it lies: the character's robbery,
+                                                **   2026-11-23) */
             if (bd.ready <= HUB->now) {
                 bd.ready = HUB->now + out_still (bk + 1);   /* (Its time out come: its shock rolls due by now
                                                 **   asked, as the character's are: senseless still, its next
@@ -324,11 +325,8 @@ void s_den_intents (void)
             bd.ready += bd.step;                /* (Its two squares at a jog) */
             told_den (I_GOTO_HEARD (m), I_GOTO_LOUD (m));
             break;
-        case I_ROB:
-            if (I_ROB_ERRAND (m) >= FE_EMPTY) { /* (Its thing's things put out, a thing put down on a square: the */
-                handout (&m);                   /*   character's own code, wempty.c's, P4's and P5's, 2026-11-18) */
-                break;
-            }
+        case I_ROB:                             /* (A robbery, an errand; its things handled by the character's own
+                                                **   code, wempty.c's and wthings.c's: part 80's, 2026-11-23) */
         case I_RISE:                            /* (Its position, its mind's: part 80's, part 14's room, 2026-11-03) */
         case I_CLIMB:                           /* (The rarer: an ally come along with the character; a robbery; */
         case I_PORTAL:                          /*   a door worked, the character's code, a thing taken, Phase 3C's: part 80's) */

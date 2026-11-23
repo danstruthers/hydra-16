@@ -28,6 +28,7 @@ extern char* tpe;
 extern unsigned char put_bank;
 unsigned __fastcall__ pick (const char* name, unsigned char how);   /* (Part 4's) */
 unsigned char pour (void);                      /* (Part 112's: wpour.c, IO_EMPTY, every actor's) */
+unsigned char __fastcall__ den_things (const struct msg* m);   /* (Part 114's: wthings.c, a denizen's things) */
 
 #pragma code-name ("SW111CODE")
 #pragma rodata-name ("SW111RODATA")
@@ -189,6 +190,10 @@ unsigned char __fastcall__ s_handout (const struct msg* m)
 
     if (!m) {
         return iq.kind == IO_EMPTY ? pour () : place ();
+    }
+    if (I_ROB_ERRAND (*m) > FE_PLACE) {
+        return den_things (m);                  /* (Its things handled by the character's rules, the act table's rows:
+                                                **   wthings.c's, part 114's, the one-path plan's stage 2, 2026-11-23) */
     }
     memcpy (&k, &iq, sizeof iq);
     iq.kind = I_ROB_ERRAND (*m) == FE_EMPTY ? IO_EMPTY : IO_PLACE;

@@ -38,6 +38,13 @@
 unsigned __fastcall__ weight_of (unsigned i);   /* (Part 10's) */
 unsigned char __fastcall__ throw_at (const char* name);    /* (Part 88's: things.c, every actor's; 0 body bd's, tk_x the thing) */
 extern unsigned tk_x, tk_y;
+unsigned char __fastcall__ den_things (const struct msg* m);   /* (Part 114's: wthings.c, a denizen's things by the
+                                                **   character's rules, the act table's rows) */
+unsigned __fastcall__ den_room (unsigned n);    /* (Part 114's: room on it, its hands full: its purse, its pack) */
+unsigned char __fastcall__ den_got (unsigned i, unsigned char tell);
+unsigned __fastcall__ den_tt (unsigned i);      /* (Part 114's: a taking's time) */   /* (Part 114's: a thing taken, its time, carried, told) */
+unsigned char __fastcall__ icomp (unsigned i);  /* (things.c's: thing i's compartment in what holds it, crow its row) */
+extern struct comp crow;
 unsigned char __fastcall__ ln_seen (unsigned char sn, unsigned x, unsigned y, unsigned tx, unsigned ty,
     unsigned char mode);                        /* (line.s's: the line's, this part's own) */
 
@@ -137,25 +144,22 @@ static void __fastcall__ rest (const struct msg* m)
 {
     unsigned n;
     unsigned char k;
-    struct actor q;
+    struct msg q2;
     struct item* p;
 
     if (I_ROB_ERRAND (*m) == FE_DROP) {
         while ((n = held (0)) != 0) {
             let_go (n);
         }
-    } else if (I_ROB_ERRAND (*m) == FE_PASS) {  /* (Food handed to a fellow beside it: none held, nothing, no time) */
+    } else if (I_ROB_ERRAND (*m) == FE_PASS) {  /* (Food handed to a fellow beside it: none held, nothing, no time; the
+                                                **   one hand of a thing, every actor's, wthings.c's FE_HAND: the
+                                                **   receiver's take rule, the give row, 2026-11-23) */
         if ((n = held (1)) != 0) {
-            hub_map (0);
-            memcpy (&q, &HUB->actor[I_ROB_FELLOW (*m) - 1], sizeof q);
-            if (q.state && q.sn == bd.sn && (unsigned) (q.x - bd.x + 1) <= 2 && (unsigned) (q.y - bd.y + 1) <= 2 &&
-                in_hands (q.did) < (q.body == BD_TWO ? 2 : 1)) {
-                k = item_at (n)->kind;
-                hold (n, &q);
-                bd.ready += 20;
-                news (WB_HANDS | (unsigned) k << 8);
-                ++HUB->den_seq;
-            }
+            memcpy (&q2, m, sizeof q2);
+            I_ROB_ERRAND (q2) = FE_HAND;
+            I_ROB_THING (q2) = n;
+            I_ROB_X (q2) = I_ROB_FELLOW (*m);
+            den_things (&q2);
         }
     } else {                                    /* (FE_THROW: its own, in hand or not) */
         p = item_at (I_ROB_THING (*m));
@@ -203,7 +207,7 @@ unsigned char __fastcall__ s_take_rule (unsigned n)
         if (w > (h ? FETCH_HANDS : FETCH_MOUTH)) {
             k = IR_HEAVY;
         } else {
-            k = in_hands (bd.did) >= (h ? 2 : 1) ? IR_FULL : item_at (n)->where != IW_ITEM ||
+            k = in_hands (bd.did) >= (h ? 2 : 1) && !den_room (n) ? IR_FULL : item_at (n)->where != IW_ITEM ||
                 den_pry (n, PR_KNOWN | PR_QUIET | PR_TIMED) ? IR_OK : IR_NOT_HERE;
         }
     }
@@ -235,6 +239,30 @@ static unsigned char __fastcall__ sensed (unsigned x, unsigned y, unsigned char 
     return !ln_seen (bd.sn, bd.x, bd.y, x, y, LN_SIGHT);
 }
 
+/* Thing i, in another, as body bd sees it lying: what it's in open all the way out (no lid down, no tie tied, no
+** hidden compartment: it's found only what it's found, the user's, 2026-11-17), lying on a square at the last (not
+** another's, not the character's); that record in ip (items ()'s: its square, for the look's tests), else 0.  A thing
+** in a container within reach to hand at any depth (the user's H17, 2026-11-21, every actor's) */
+static unsigned char __fastcall__ open_out (unsigned i)
+{
+    unsigned char c;
+
+    for (;;) {
+        ip = item_at (i);
+        if (ip->where != IW_ITEM) {
+            return ip->where == IW_SQUARE;
+        }
+        c = icomp (i);                          /* (Its compartment, crow its row) */
+        if (c && (crow.noun & CC_HIDDEN)) {
+            return 0;
+        }
+        i = item_at (i)->x;
+        if (item_at (i)->shut & IS_SHUT_C (c)) {
+            return 0;
+        }
+    }
+}
+
 /* Kind k as body bd wants it (want's): a weapon in hand, its having none (the catalogue's weapons held in a hand, not
 ** a lot counted); food; coins and jewels: its craft (AP_*) plus 1, or 0 */
 static unsigned char __fastcall__ wanted (unsigned char k)
@@ -254,26 +282,27 @@ static unsigned char __fastcall__ wanted (unsigned char k)
 ** wanted, its hands full of other things, put down as the character's busy hands' are, and still not taken) */
 static unsigned char __fastcall__ got (unsigned i, unsigned char k, unsigned char c)
 {
-    unsigned char f;
+    unsigned char f, w = c == AP_WEAPON + 1;
     unsigned s;
 
-    if ((cleared = (f = s_take_rule (i)) == IR_FULL && c == AP_WEAPON + 1) != 0 && (s = held (0)) != 0) {
-        let_go (s);
-        f = s_take_rule (i);
+    if ((cleared = w && in_hands (bd.did) >= (bd.body == BD_TWO ? 2 : 1)) != 0 && (s = held (0)) != 0) {
+        let_go (s);                             /* (A weapon wanted in hand, its hands full of other things) */
     }
-    if (f != IR_OK) {
+    if ((f = s_take_rule (i)) != IR_OK || (w && in_hands (bd.did) >= (bd.body == BD_TWO ? 2 : 1))) {
         return 0;
     }
-    bd.ready += 20;                             /* (Two seconds: stooped, taken up) */
-    if (c == AP_WEAPON + 1) {
+    if (w) {
+        bd.ready += den_tt (i);                 /* (Two seconds: stooped, taken up, the take row's; out of a thing the
+                                                **   takeout row's and its levels: wthings.c's, every taking's) */
         if (i != (bd.dropped & ~DR_OWN) || !bd.arm) {   /* (A weapon: in its hand as its own let fall is */
             bd.dropped = i | DR_OWN;            /*   taken up again, part 60's den_took; that one, */
             bd.arm = k;                         /*   as it is) */
         }
         den_took ();
     } else {
-        hold (i, &bd);
-        news (WB_PICKS | (unsigned) k << 8);
+        den_got (i, 1);                         /* (Its time, the take's or the takeout's and its reach; carried by
+                                                **   the character's rule, coins its purse, a hand, else its pack;
+                                                **   told: wthings.c's, 2026-11-23) */
         den_saw = 1;
     }
     hub_map (0);
@@ -323,14 +352,17 @@ void __fastcall__ s_den_take (const struct msg* m)
         return;
     }
 
-    for (i = 0; (i = items (i, IN_SQUARE, 0)) != 0; ) {
-        if (ip->sn != bd.sn || (unsigned) ((dx = ip->x - bd.x) + 4) > 8 || (unsigned) ((dy = ip->y - bd.y) + 4) > 8 ||
-            home_near () || (ip->flags & I_HIDDEN)) {
-            continue;                           /* (Out of its sight's four squares; at its own home, its lair's own
-                                                **   or its takings, left there; hidden: its search's alone) */
+    for (i = 0; (i = items (i, IN_SQUARE | IN_ITEM, 0)) != 0; ) {
+        if ((ip->flags & I_HIDDEN) || !(c = wanted (k = ip->kind)) || !open_out (i)) {
+            continue;                           /* (Hidden: its search's alone; not wanted; in a thing that's shut, or
+                                                **   not lying about: a thing in an open one seen in it, at any depth,
+                                                **   the one-path plan's stage 2, 2026-11-23, the user's H17; ip what
+                                                **   it's in at the last) */
         }
-        if (!(c = wanted (k = ip->kind))) {
-            continue;
+        if (ip->sn != bd.sn || (unsigned) ((dx = ip->x - bd.x) + 4) > 8 || (unsigned) ((dy = ip->y - bd.y) + 4) > 8 ||
+            home_near ()) {
+            continue;                           /* (Out of its sight's four squares; at its own home, its lair's own
+                                                **   or its takings, left there) */
         }
         d = dx < 0 ? -dx : dx;
         f = dy < 0 ? -dy : dy;

@@ -25,6 +25,8 @@
 #include "hub0.h"
 #include "world.h"
 #include "things.h"
+#include "wbody.h"
+#include "acts.h"
 
 extern struct ireq iq;                          /* (things.c's: the request's copy) */
 void __fastcall__ put (const char* s);          /* (tlist.s's: its words after the text) */
@@ -35,7 +37,6 @@ unsigned __fastcall__ pick (const char* name, unsigned char how);   /* (Part 4's
 unsigned __fastcall__ at_hand (const char* name);
 unsigned __fastcall__ weight_of (unsigned i);   /* (Part 10's) */
 #define HW_SEEN         2                       /* (things.c's pick: lying about, seen) */
-#define DRAG_T          50                      /* (Tenths: a shove's, a drag's strain) */
 #define D_SN            iq.craft                /* (The request's copy's own fields, past their use: the stratum, */
 #define D_N             iq.item                 /*   the thing, */
 #define D_WT            iq.dur                  /*   its weight, */
@@ -126,7 +127,7 @@ static void __fastcall__ dsay (unsigned char sa, const char* n)
 }
 
 /* From (x, y), heading h: a step's room (step8's), not a doorway, nothing heavy there but the thing, no one on it (the
-** character only if D_ONTO): 1 */
+** one dragging it only if D_ONTO: the character, or body bd, a denizen's, iq.to's TO_DEN): 1 */
 static unsigned char __fastcall__ room_to (unsigned x, unsigned y, unsigned char h)
 {
     static const struct actor* a;
@@ -141,42 +142,66 @@ static unsigned char __fastcall__ room_to (unsigned x, unsigned y, unsigned char
     if (TILE (*at (D_SN, tx, ty)) == T_DOOR || heavy_on (D_SN, tx, ty, D_N)) {
         return 0;
     }
-    hub_map (0);
-    if (HUB->pc_x == tx && HUB->pc_y == ty) {
-        return D_ONTO;
+    if ((iq.to & TO_DEN) && bd.x == tx && bd.y == ty) {
+        return D_ONTO;                          /* (Body bd's own square: its drag's, bd its own copy) */
     }
-    for (a = HUB->actor, i = NACTORS; i; --i, ++a) {
-        if (a->state && a->sn == D_SN && a->x == tx && a->y == ty) {
+    hub_map (0);
+    if (HUB->pc_x == tx && HUB->pc_y == ty && HUB->pc_stratum == D_SN) {
+        return iq.to & TO_DEN ? 0 : D_ONTO;
+    }
+    for (a = HUB->actor, i = 0; i < NACTORS; ++i, ++a) {
+        if (a->state && a->sn == D_SN && a->x == tx && a->y == ty && (!(iq.to & TO_DEN) || i != bk)) {
             return 0;
         }
     }
     return 1;
 }
 
+/* A heavy thing shoved a square away (DG_PUSH) or dragged a square toward (DG_PULL) the character (iq.name, the UI's), or
+** body bd (iq.to's TO_DEN: its thing iq.item lying beside it, its errand FE_DRAG's: wthings.c's), every actor's by the
+** act table's drag row (the one-path plan's stage 2, things and robbery, 2026-11-23): its strain's time, its noise (the
+** character's E_NOISE, an actor's E_DEN DE_DRAGS, told seen or heard), its test (P_FORCE by the actor's own sheet, the
+** row's steps the easier, a step the worse each 10 pounds).  A denizen's has no words of its own (its noise is its
+** telling), and its step back after a drag is its mind's, as the character's is the UI's */
+#define D_H             iq.quality              /* (Its heading: past the other parts' calls) */
+#define D_WHO           iq.plural               /* (Who: 0 the character, else body bd's entry plus 1) */
+#define D_T             iq.value                /* (Its time, the row's) */
 unsigned char s_drag (void)
 {
-    static struct msg m;
-    static struct req* r;
     static struct item* p;
     static unsigned x, y, ix, iy;
     static signed char dx, dy;
     static unsigned char h, k, ok;
-    static unsigned char* t;
-    static struct portal* q;
+    static unsigned char* q;
+    static struct portal* d;
 
     if (iq.to == DG_TASTE) {
         return taste ();
     }
-    if (!(D_N = pick (iq.name, HW_SEEN))) {
+    D_WHO = iq.to & TO_DEN ? bk + 1 : 0;
+    if (!D_WHO && !(iq.item = pick (iq.name, HW_SEEN))) {
         return IR_NONE;
     }
     D_WT = weight_of (D_N);                     /* (Its weight, what's in it too: the other parts called first, this
                                                 **   part's locals its image's again after them) */
-    hub_map (0);
-    D_SN = HUB->pc_stratum;
-    x = HUB->pc_x;
-    y = HUB->pc_y;
-    h = HUB->pc_face;
+    if (D_WHO) {
+        D_SN = bd.sn;
+        x = bd.x;
+        y = bd.y;
+        h = bd.face;
+        tp = tpe = &ok;                         /* (No words: put's room nil) */
+    } else {
+        hub_map (0);
+        D_SN = HUB->pc_stratum;
+        x = HUB->pc_x;
+        y = HUB->pc_y;
+        h = HUB->pc_face;
+        put_bank = UI_BANK;                     /* (The things' words begun) */
+        hub_map (UI_BANK);
+        tp = UIREC->things_text;
+        tpe = tp + sizeof UIREC->things_text - 1;
+        *tp = 0;
+    }
     p = item_at (D_N);
     k = p->kind;
     ix = p->x;
@@ -184,11 +209,6 @@ unsigned char s_drag (void)
     ok = p->where == IW_SQUARE && p->sn == D_SN;
     dx = ix - x;
     dy = iy - y;
-    put_bank = UI_BANK;                         /* (The things' words begun) */
-    hub_map (UI_BANK);
-    tp = UIREC->things_text;
-    tpe = tp + sizeof UIREC->things_text - 1;
-    *tp = 0;
     hub_map (KIND_BANK);
     if (!ok || CATALOGUE[k].bulk < DRAG_BULK || (CATALOGUE[k].keeps & KF_FIXED)) {
         ok = CATALOGUE[k].keeps & KF_FIXED;
@@ -196,6 +216,9 @@ unsigned char s_drag (void)
         return IR_NO;
     }
     if (dx < -1 || dx > 1 || dy < -1 || dy > 1) {
+        if (D_WHO) {
+            return IR_NOT_HERE;                 /* (Out of its reach: its mind's to go there) */
+        }
         hub_map (0);                            /* (Out of reach: the UI walks over to it first, then again) */
         HUB->ireq.x = ix;
         HUB->ireq.y = iy;
@@ -207,8 +230,8 @@ unsigned char s_drag (void)
         }
     }
     D_ONTO = 0;
-    if (iq.to) {                                /* (A drag: toward the character, and the character back a square, room
-                                                **   behind it first) */
+    if (iq.to & DG_PULL) {                      /* (A drag: toward the one dragging it, and it back a square after,
+                                                **   room behind it first) */
         h = (h + 4) & 7;
         if (!room_to (x, y, h)) {
             goto none;
@@ -217,27 +240,25 @@ unsigned char s_drag (void)
     }
     if (!room_to (ix, iy, h)) {
 none:
-        dsay (iq.to ? SA_NO_ROOM_DRAG : SA_NO_ROOM_SHOVE, name (k));
+        dsay (iq.to & DG_PULL ? SA_NO_ROOM_DRAG : SA_NO_ROOM_SHOVE, name (k));
         return IR_NO;
     }
-    hub_map (0);                                /* (The strain heard, whether it moves or not) */
-    m.kind = E_NOISE;
-    m.who = 0;
-    E_NOISE_LOUD (m) = 3;
-    E_NOISE_WHAT (m) = NZ_WORK;
-    E_NOISE_SX (m) = x;
-    E_NOISE_SY (m) = y;
-    m.t = HUB->now;
-    hub_event (&m);
-    r = &HUB->slot[SLOT_UI];                    /* (The UI's: it waits on this request meanwhile) */
-    r->kind = RS_TEST;
-    r->actor = 0;
-    RS_TEST_PURPOSE (*r) = P_FORCE;
-    RS_TEST_HOW (*r) = 0;
-    RS_TEST_STEPS (*r) = D_WT >= 440 ? -9 : 2 - (signed char) (D_WT / 40);   /* (A step the worse each 10 pounds) */
-    r = hub_ask (SLOT_UI);
-    ok = G_OK (RS_TEST_GRADE (*r));
-    r->state = REQ_FREE;
+    D_H = h;
+    D_T = act_noise (D_WHO, AC_DRAG, x, y);     /* (The strain heard, whether it moves or not: the row's) */
+    ok = G_OK (act_test (D_WHO, P_FORCE, (signed char) (2 - (D_WT >= 440 ? 11 : D_WT / 40))));   /* (Its strength,
+                                                **   the row's two steps the easier, a step the worse each 10 pounds:
+                                                **   the drag row's steps, 2) */
+    h = D_H;                                    /* (This part's again: its locals its image's) */
+    k = item_at (D_N)->kind;
+    if (D_WHO) {
+        tp = tpe = &ok;
+    } else {
+        put_bank = UI_BANK;
+        hub_map (UI_BANK);
+        tp = UIREC->things_text;
+        tpe = tp + sizeof UIREC->things_text - 1;
+        *tp = 0;
+    }
     if (!ok) {
         dsay (SA_STRAIN, name (k));
         h = 0xFF;
@@ -245,17 +266,22 @@ none:
         p = item_at (D_N);
         x = p->x += head_x[h];
         y = p->y += head_y[h];
-        dsay (iq.to ? SA_DRAG : SA_SHOVE, name (k));
+        dsay (iq.to & DG_PULL ? SA_DRAG : SA_SHOVE, name (k));
         for (k = DIR_N; k <= DIR_W; ++k) {      /* (Beside a door now: it braces it shut) */
-            if ((t = at (D_SN, x + dir_x[k], y + dir_y[k])) != 0 && TILE (*t) == T_DOOR &&
-                (q = portal_at (cx_, cy_)) != 0 && q->kind == PK_DOOR) {
+            if ((q = at (D_SN, x + dir_x[k], y + dir_y[k])) != 0 && TILE (*q) == T_DOOR &&
+                (d = portal_at (cx_, cy_)) != 0 && d->kind == PK_DOOR) {
                 dsay (SA_AGAINST, "");
                 break;
             }
         }
     }
     hub_map (0);
-    HUB->ireq.x = DRAG_T;
+    if (D_WHO) {
+        bd.ready += D_T;                        /* (Its strain's time, the row's) */
+        ++HUB->den_seq;
+        return ok ? IR_OK : IR_NO;
+    }
+    HUB->ireq.x = D_T;
     HUB->ireq.y = h;
     return IR_OK;
 }

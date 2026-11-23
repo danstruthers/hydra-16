@@ -465,6 +465,12 @@ static unsigned char __fastcall__ fits (unsigned n, unsigned c)
     return o_fits (n, c);
 }
 
+/* The same, for another part (ccomp the compartment: wthings.c's, an actor's put, the character's rule) */
+unsigned char __fastcall__ s_fits_c (unsigned n, unsigned c)
+{
+    return fits (n, c);
+}
+
 
 /* Within reach of the character (on a square next to it, or its own; or on a surface there); not down in a pit but
 ** its own square (the user's, 2026-11-18, H10: from inside it alone, every actor's: wtake.c's take rule the same) */
@@ -3654,7 +3660,6 @@ one:
 #pragma code-name (pop)
 unsigned char stow_where (void);                /* (Part 104's: its stub) */
 
-#define STRIP_T         100
 #define TK_N            5                       /* (The kinds "take all from" names, at most: more, "everything") */
 extern unsigned char tk_n;                      /* (Part 105's: the kinds taken, kept as they're taken; its stubs) */
 void __fastcall__ took_kind (unsigned n);
@@ -3663,6 +3668,7 @@ unsigned char __fastcall__ s_moved (unsigned char op)
 {
     static unsigned want, got, t, c;
     static unsigned char r, mode, times, kind, sa, away, parted;
+    static struct actq aq;
     unsigned n;
     char b[24];
 
@@ -3738,7 +3744,9 @@ unsigned char __fastcall__ s_moved (unsigned char op)
         t += took;
         if (win && op == IO_TAKE && (item_at (win)->kind == KI_BODY || item_at (win)->kind == KI_BONES) &&
             (kind_of (kind)->flags & K_WEAR)) {
-            t += STRIP_T;                       /* (Stripped from a body: twice a doff's 5 seconds, the user's, 2026-11-03) */
+            act_get (aq, AC_STRIP);             /* (Stripped from a body: twice a doff's 5 seconds, the user's, 2026-11-03;
+                                                **   the act table's strip row, every actor's) */
+            t += aq.r.time;
         }
         join (n);
         ++times;
@@ -6275,6 +6283,20 @@ unsigned __fastcall__ m2 (void* f, unsigned a, unsigned b);
 static struct item o;                           /* (A record copied out, for the code here) */
 
 #define B(v)            ((unsigned char) (v))   /* (A char's result) */
+
+/* The act table's row ac's time, its tenths (a handling's: the one table, every actor's, the one-path plan's stage 2,
+** things and robbery, 2026-11-23; wthings.c's the same rows): its row read into the C stack's block, the library's */
+#pragma static-locals (push, off)
+static unsigned char __fastcall__ act_t (unsigned char ac)
+{
+    struct actq q;
+
+    q.op = AC_ROW_E;
+    q.id = ac;
+    m1 (rp_x, (unsigned) &q);
+    return q.r.time;
+}
+#pragma static-locals (pop)
 #define KIND(i)         ((const struct kind*) m1 (kind_at, i))  /* (Item i's kind's, copied out: the kinds in their
                                                 **   own bank) */
 #define KIND_K(k)       ((const struct kind*) m1 (kind_of, k))
@@ -6564,7 +6586,7 @@ static unsigned char __fastcall__ stow (unsigned n, unsigned char put)
     cont = c;
     cont_c = cc;
     return yes (crow.prep == CP_HUNG ? SA_HANG : crow.prep == CP_ON && B (m1 (item_kind, c)) != KI_SCONCE ? SA_PUT_ON :
-        c == pack ? SA_STOW : SA_PUT_IN, 20);   /* (A sconce's: in it) */
+        c == pack ? SA_STOW : SA_PUT_IN, act_t (AC_PUT));   /* (A sconce's: in it; its time the act table's put row) */
 }
 
 /* The thing named (iq's name) in the other thing (iq's into: other's, in c), or on it: its number, named in xn; else
@@ -6629,7 +6651,7 @@ static unsigned char take_from (void)
         return hold (n);
     }
     cr = B (m2 (carry, n, !iq.count));          /* (In a hand, the pack only with both full or by the count: the user's, 2026-11-06) */
-    return carried (SA_TAKE, 20);
+    return carried (SA_TAKE, act_t (AC_TAKEOUT));
 }
 
 /* Worn (a thing held in the hand, not worn: held, equip's; "wear"'s, to DN_WORN, refused, 2026-11-09) */
@@ -6652,7 +6674,7 @@ static unsigned char __fastcall__ don (unsigned n)
     o_place (n, IW_ACTOR, 0, I_WORN);
     o.sn = wplace;                              /* (Its place: WP_NONE, one worn the one way) */
     m2 (store, (unsigned) &o, n);
-    return yes (SA_DON, 50);
+    return yes (SA_DON, act_t (AC_DON));
 }
 
 /* Taken off: into a hand, else the pack */
@@ -6663,7 +6685,7 @@ static unsigned char __fastcall__ doff (unsigned n)
         return no (SA_NOT_WORN);
     }
     cr = B (m2 (carry, n, 1));
-    return carried (SA_DOFF, 50);
+    return carried (SA_DOFF, act_t (AC_DOFF));
 }
 
 /* ---- Light: a flame to hand (part 10's flame, its room) */
@@ -7344,6 +7366,15 @@ static unsigned char __fastcall__ hand_for (unsigned n, unsigned char want)
 
 SAY_PUT (say48)
 
+/* The act table's row ac's time (a handling's, every actor's: the one-path plan's stage 2, things and robbery) */
+static unsigned __fastcall__ row_t (unsigned char ac)
+{
+    struct actq q;
+
+    act_get (q, ac);
+    return q.r.time;
+}
+
 /* A thing worn taken off with no hand free and no room in the pack (the doff's SA_HANDS, the catalogue's bank's, its room none):
 ** set down at the character's feet, said so, as "drop" would (the user's playtest, 2026-11-06: "take off the backpack" refused
 ** with its hands full, "drop backpack" not): the pack, a cloak, a helm, a belt, a ring alike.  Its time the doff's */
@@ -7367,7 +7398,7 @@ unsigned char __fastcall__ s_doff_feet (unsigned n)
     sky_ask (n);                                /* (On a shaft's head: it falls, part 17's) */
     text_new ();
     say48 (SA_DOFF_FEET, kind_of (item_kind (n))->name, "");
-    took = 50;
+    took = row_t (AC_DOFF);
     return IR_OK;
 }
 
@@ -7464,7 +7495,7 @@ unsigned char __fastcall__ s_hold_in (unsigned n, unsigned char want)
     p->flags = (p->flags & ~(I_HELD | I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | I_HELD;
     p->sn = h;
     hold_said (hcur ? SA_SHIFT : SA_HOLD, h);
-    took = 10;
+    took = row_t (AC_HOLD);
     return IR_OK;
 }
 #pragma register-vars (pop)
