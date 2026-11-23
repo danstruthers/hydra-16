@@ -126,5 +126,6 @@
 120 9   The step and its hazards, every actor's: a trap set off, a pit climbed out of (wstep.c: the one path's step, 2026-11-23)
 121 4   The world's harm to a body, every actor's (wstep.c: 2026-11-23)
 122 10  A trap an actor set off, told (wstep.c: 2026-11-23)
+123 33  Building, every actor's: a door hung, a way walled up (wbuild.c: the user's, 2026-11-23, build2)
 stub start 3
 stub begin 3

@@ -1091,3 +1091,12 @@ SA.not_on           +"{text?You find nothing on the {obj}.|You find no {text} on
 SA.no_fall          +"There's no well or shaft here for the {text} to fall down."
 SA.pit_fall         +"You let the {text} fall into the pit."
 SA.in_pit           +"The {text} {pl?is|are} down in the pit, out of reach: climb down to {pl?it|them} first."
+# (Building, every actor's: wbuild.c's IO_BUILD, the user's, 2026-11-23: a broken door's leaf hung again, a passage
+# walled up; text "" the spoil of its digging, else the rubble's stones)
+SA.hung             +"\nYou mend the broken leaf and hang the door again."
+SA.walled           +"\nYou wall up the way with {text?its spoil|stones from the rubble}."
+SA.build_bad        +"\nThe work goes badly: you leave it as it was."
+SA.no_hang_here     +"\nThere's no broken door ahead to hang."
+SA.no_wall_here     +"\nThere's no clear passage ahead to wall up."
+SA.build_hammer     +"\nYou have no hammer."
+SA.no_stones        +"\nYou have no stones to wall it up with."

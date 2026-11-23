@@ -3577,5 +3577,147 @@ module.exports = {
       },
       sdcard: true
     },
+    {
+      // (Building, every actor's: the user's, 2026-11-23, "The character builds anywhere, with materials"; build2)
+      name: 'dq0buildact', outfit: true, meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's building, every actor's by the same code (the user's, 2026-11-23: \"The character builds anywhere, with materials\"; ONE-PATH.md's 2.7, the act audit's G-17): at seed 1 (-R 7, a theme of dwarf miners, dq0 -k hammer) the character opens its cell's door, the door broken down (its portal's state poked, PS_WRECKED); with its hammer dropped, \"hang the door\" refused (\"You have no hammer.\"); with it, the door hung again (the things' IO_BUILD, wbuild.c's: the referee's Timbercraft, P_TIMBER, actor 0, the act table's hang row's steps; its noise the row's; its time the row's ten minutes, the UI's wait; done, the door's PORTAL_STATE shut and whole, else nothing); \"wall up\" facing the door refused; turned to the cell's wall, the square ahead made a passage (poked), \"wall up\" refused for want of stones, then with rubble poked beside it walled up (P_MASONRY, the wallup row's hour, the passage a wall, the rubble's square cleared); then a dwarf miner put beyond the door broken down again, its builder's intent posted as its mind would (I_KIT KT_BUILD at the door, then at a passage beyond it with rubble beside): the same test by its own sheet at the same steps, the same time on its ready, its noise the same row's (E_DEN DE_HANGS, DE_WALLS, told seen or heard), the same effects",
+      init: 't_rc', cycles: 4500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt",
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k hammer -R 7', 'open the door', 'wait', 'drop the hammer', 'hang the door', 'take the hammer',
+        'hang the door', 'wall up', 'turn left', 'wait', 'wall up', 'wait', 'wall up', 'turn right', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        const S = m.build = { notes: [] };
+        const HX = [0, 1, 1, 1, 0, -1, -1, -1], HY = [-1, -1, 0, 1, 1, 1, 0, -1];
+        const [TILE] = require('../../../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, tile)']);
+        const C = require('../../../sim/lib/dq0meaning.js').constants().names;
+        const u16 = (h, o) => h[o] | h[o + 1] << 8, u32 = (h, o) => (h[o] | h[o + 1] << 8 | h[o + 2] << 16 | h[o + 3] << 24) >>> 0;
+        const cell = (h, L, x, y) => {   // (Square x, y's tile byte in the chunks' cache: { b, i })
+          const w = m.dq0.bank(WORLD_BANK_N), sn = h[L.pcSn], st = stratumRec(m, sn), ox = x - st.x0, oy = y - st.y0;
+          for (let c = 0; c < 24; c++) {
+            const sl = CSLOT_AT + c * 8, b = m.dq0.bank(5 + Math.floor(c / 3)), o = (c % 3) * 0xAA0;
+            if (w[sl] && b && w[sl + 1] === sn && (w[sl + 2] | w[sl + 3] << 8) === ox >> 5 && (w[sl + 4] | w[sl + 5] << 8) === oy >> 5) return { b, i: o + TILE + (oy & 31) * 32 + (ox & 31) };
+          }
+          return null;
+        };
+        const tile = (h, L, x, y) => { const q = cell(h, L, x, y); return q ? q.b[q.i] & 15 : -1; };
+        const set = (h, L, x, y, t) => { const q = cell(h, L, x, y); if (q) q.b[q.i] = q.b[q.i] & 0xF0 | t; return !!q; };
+        const ahead = (h, L, n) => { const f = h[L.pcFace] & 7; return [u16(h, L.pcX) + n * HX[f], u16(h, L.pcY) + n * HY[f], f]; };
+        const wreck = (h, L) => {   // (The door ahead broken down: PS_WRECKED | PS_OPEN)
+          const [x, y, f] = ahead(h, L, 1), p = dq0Portal(m, h[L.pcSn], x, y);
+          if (p && p.kind === 0) { p.b[p.state] = 0x81; S.door = { x, y, sn: h[L.pcSn], face: f }; }
+          else S.notes.push('no door ahead: ' + JSON.stringify([x, y, tile(h, L, x, y)]));
+        };
+        const rubble = (h, L, x, y, not) => {   // (A square beside x, y made rubble: not the character's, not those given, no door)
+          for (let d = 0; d < 8; d++) {
+            const rx = x + HX[d], ry = y + HY[d];
+            if ((rx === u16(h, L.pcX) && ry === u16(h, L.pcY)) || not.some(([a, b]) => a === rx && b === ry) || [3, 5, 6, 7, 8].includes(tile(h, L, rx, ry))) continue;
+            set(h, L, rx, ry, 10);
+            return [rx, ry];
+          }
+          return null;
+        };
+        const rd = (h, L) => u32(h, L.actor + S.k * L.actorSize + L.aReady);
+        dq0Poke(m, [
+          { g: 1, line: 'wait', n: 1, call: (h, L) => wreck(h, L) },
+          { g: 1, line: 'wait', n: 2, call: (h, L) => {   // (Turned to the cell's wall: the square ahead a passage, none on it, no rubble by it)
+            const [x, y] = ahead(h, L, 1);
+            S.wall = { x, y, was: tile(h, L, x, y) };
+            if (!set(h, L, x, y, T_CORR)) S.notes.push('no square ahead to make a passage');
+          } },
+          { g: 1, line: 'wait', n: 3, call: (h, L) => { if (S.wall) S.rubble = rubble(h, L, S.wall.x, S.wall.y, S.door ? [[S.door.x, S.door.y]] : []); } },
+          { g: 1, line: 'wait', n: 4, call: (h, L, K, at, named) => {   // (The door broken down again; a dwarf miner beyond it, its builder's intent there)
+            wreck(h, L);
+            const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'dwarf miner');
+            if (k === undefined || !S.door) { S.notes.push('no dwarf miner: ' + [...Array(L.nactors).keys()].map(named)); return; }
+            dq0Alone(m, h, L, K, at, k);
+            S.k = k;
+            const [x, y, f] = ahead(h, L, 2), o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aDen]);
+            const w16 = (a, v) => { h[a] = v & 255; h[a + 1] = v >> 8 & 255; };
+            w16(o + L.aX, x); w16(o + L.aY, y); h[o + L.aSn] = h[L.pcSn]; h[o + L.aState] = 1; h[o + L.aPos] = K.POS_STANDING; h[o + L.aDoing] = K.DO_WAIT;
+            h[o + L.aFace] = (f + 4) & 7;
+            h[o + L.aAttitude] = R.mem[q + R.ATTITUDE] = K.AT_INDIFFERENT;
+            R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8; R.mem[q + R.SN] = h[L.pcSn];
+            const far = 3000 + u32(h, L.now);
+            for (let i = 0; i < 4; i++) h[o + L.aReady + i] = far >>> (8 * i) & 255;
+            S.dwarf = { x, y, hang: { now: u32(h, L.now) } };
+            h[L.denSeq] = h[L.denSeq] + 1 & 255;
+            dq0Intent(h, L, C.I_KIT, k, { a: C.KT_BUILD, b: (f + 4) & 7, w1: S.door.x, w2: S.door.y });
+          } },
+          { g: 1, line: 'wait', n: 5, call: (h, L) => {   // (Its ready after the door; then a passage beyond it, rubble beside, walled up)
+            if (S.k === undefined || !S.dwarf) return;
+            S.dwarf.hang.ready = rd(h, L);
+            const f = S.door.face, x = S.dwarf.x + HX[f], y = S.dwarf.y + HY[f];
+            if (!set(h, L, x, y, T_CORR)) return;
+            S.dwarf.wall = { x, y, now: u32(h, L.now), rubble: rubble(h, L, x, y, [[S.dwarf.x, S.dwarf.y], [S.door.x, S.door.y]]) };
+            dq0Intent(h, L, C.I_KIT, S.k, { a: C.KT_BUILD, b: f, w1: x, w2: y });
+          } },
+          { g: 1, line: 'wait', n: 6, call: (h, L) => {   // (Its ready after the wall; the door as it stands)
+            if (!S.dwarf || !S.dwarf.wall) return;
+            S.dwarf.wall.ready = rd(h, L);
+            const p = dq0Portal(m, S.door.sn, S.door.x, S.door.y);
+            S.dwarf.door = p ? p.b[p.state] : -1;
+            S.dwarf.tile = tile(h, L, S.dwarf.wall.x, S.dwarf.wall.y);
+          } },
+        ]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], A = dq0Acts(), s = dq0Prose(out), S = m.build;
+        const C = require('../../../sim/lib/dq0meaning.js').constants().names;
+        const tests = (t, who, p) => t.replies.filter(q => q.kind === C.RS_TEST && q.actor === who && q.a === p);
+        const changes = T.of('quit').at ? T.of('quit').at.changes : [];
+        const at = (c, x, y, what) => c.what === what && c.x === x && c.y === y;
+        if (!S.door || !S.wall || !S.rubble) return ['the scenes not set: ' + JSON.stringify(S)];
+        // (The character's: refused, no hammer; hung; refused, no passage; refused, no stones; walled up)
+        const h1 = T.of('hang the door'), h2 = T.of('hang the door', h1.k + 1), w1 = T.of('wall up'), w2 = T.of('wall up', w1.k + 1), w3 = T.of('wall up', w2.k + 1);
+        const words = t => dq0Prose(out).split('> ').filter(x => x.startsWith(t.line) && x.slice(t.line.length).trim())[T.filter(u => u.line === t.line && u.k <= t.k).length - 1] || '';   // (Its record's, not its echo's)
+        if (!/You have no hammer\./.test(words(h1)) || tests(h1, 0, A.hang.p).length) f.push('"hang the door" not refused for want of a hammer: ' + words(h1));
+        const ht = tests(h2, 0, A.hang.p);
+        if (ht.length !== 1 || ht[0].steps !== A.hang.s) f.push('the character\'s hang not one Timbercraft test at the row\'s steps: ' + JSON.stringify(ht.map(q => [q.a, q.steps, q.grade])));
+        const hn = dq0Ev(h2, 'E_NOISE');
+        if (!hn.some(e => e.loud === A.hang.loud)) f.push('the character\'s hang\'s noise not the row\'s: ' + JSON.stringify(hn.map(e => e.loud)));
+        if (!h2.intents.some(i => i.kind === 'I_WAIT' && i.tenths === A.hang.t)) f.push('the character\'s hang not the row\'s time: ' + JSON.stringify(h2.intents));
+        const hung = ht.length && ht[0].grade > 0;
+        if (hung && !(/You mend the broken leaf and hang the door again\./.test(words(h2)) && h2.after && h2.after.changes.some(c => at(c, S.door.x, S.door.y, 'PORTAL_STATE') && !(c.tile & 0x81))))
+          f.push('the door not hung though its test went ' + ht[0].grade + ': ' + words(h2));
+        if (ht.length && !hung && !/The work goes badly/.test(words(h2))) f.push('the hang gone badly not told: ' + words(h2));
+        if (!/no clear passage ahead to wall up/.test(words(w1))) f.push('"wall up" facing the door not refused: ' + words(w1));
+        if (!/You have no stones to wall it up with\./.test(words(w2))) f.push('"wall up" with no stones not refused: ' + words(w2));
+        const wt = tests(w3, 0, A.wallup.p);
+        if (wt.length !== 1 || wt[0].steps !== A.wallup.s) f.push('the character\'s wall not one Masonry test at the row\'s steps: ' + JSON.stringify(wt.map(q => [q.a, q.steps, q.grade])));
+        const wn = dq0Ev(w3, 'E_NOISE');
+        if (!wn.some(e => e.loud === A.wallup.loud)) f.push('the character\'s wall\'s noise not the row\'s: ' + JSON.stringify(wn.map(e => e.loud)));
+        if (!w3.intents.some(i => i.kind === 'I_WAIT' && i.tenths === 6 * A.wallup.t)) f.push('the character\'s wall not six of the row\'s spells: ' + JSON.stringify(w3.intents));
+        const walled = wt.length && wt[0].grade > 0, wa = w3.after ? w3.after.changes : [];
+        if (walled && !(wa.some(c => at(c, S.wall.x, S.wall.y, 'SQUARE') && c.tile === T_WALL) && wa.some(c => at(c, S.rubble[0], S.rubble[1], 'SQUARE') && c.tile === T_CORR) &&
+          /stones from the rubble/.test(words(w3)))) f.push('the way not walled up with the rubble\'s stones though its test went ' + wt[0].grade + ': ' + words(w3) + ' ' + JSON.stringify(wa.slice(-4)));
+        if (wt.length && !walled && wa.some(c => at(c, S.wall.x, S.wall.y, 'SQUARE') && c.tile === T_WALL)) f.push('walled up though its test failed');
+        // (The dwarf miner's: the same code)
+        if (S.k === undefined || !S.dwarf || !S.dwarf.wall) return [...f, 'the dwarf\'s scenes not set: ' + JSON.stringify(S)];
+        const by = S.k + 1, all = T.flatMap(t => t.replies), dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === by);
+        const dh = all.filter(q => q.kind === C.RS_TEST && q.actor === by && q.a === A.hang.p), dw = all.filter(q => q.kind === C.RS_TEST && q.actor === by && q.a === A.wallup.p);
+        if (dh.length !== 1 || dh[0].steps !== A.hang.s) f.push('the dwarf\'s hang not one Timbercraft test by its sheet at the row\'s steps: ' + JSON.stringify(dh.map(q => [q.steps, q.grade])));
+        if (dw.length !== 1 || dw[0].steps !== A.wallup.s) f.push('the dwarf\'s wall not one Masonry test by its sheet at the row\'s steps: ' + JSON.stringify(dw.map(q => [q.steps, q.grade])));
+        const dt = (r, n) => r.ready - r.now >= n && r.ready - r.now < n + 50;
+        if (!dt(S.dwarf.hang, A.hang.t)) f.push('the dwarf\'s hang not the row\'s time on its ready: ' + JSON.stringify(S.dwarf.hang));
+        if (!dt(S.dwarf.wall, 6 * A.wallup.t)) f.push('the dwarf\'s wall not six of the row\'s spells on its ready: ' + JSON.stringify(S.dwarf.wall));
+        const told = (de, x, y) => dens.filter(e => e.a === de && e.w1 === x && e.w2 === y);
+        if (dh.length && dh[0].grade > 0) {
+          const e = told(C.DE_HANGS, S.door.x, S.door.y);
+          if (e.length !== 1 || (e[0].b & 15) !== A.hang.loud) f.push('the dwarf\'s door hung not told once at the hang row\'s loudness: ' + JSON.stringify(e.map(x => x.b)));
+          if (S.dwarf.door !== 0) f.push('the dwarf\'s door not hung: its state ' + S.dwarf.door);
+        } else if (dh.length && !told(C.DE_NOISE, S.door.x, S.door.y).length) f.push('the dwarf\'s hang gone badly not heard');
+        if (dw.length && dw[0].grade > 0) {
+          const e = told(C.DE_WALLS, S.dwarf.wall.x, S.dwarf.wall.y);
+          if (e.length !== 1 || (e[0].b & 15) !== A.wallup.loud) f.push('the dwarf\'s wall not told once at the wallup row\'s loudness: ' + JSON.stringify(e.map(x => x.b)));
+          if (S.dwarf.tile !== T_WALL || !changes.some(c => at(c, S.dwarf.wall.x, S.dwarf.wall.y, 'SQUARE') && c.tile === T_WALL)) f.push('the dwarf\'s way not walled up: ' + S.dwarf.tile);
+          const r = S.dwarf.wall.rubble;
+          if (!r || !changes.some(c => at(c, r[0], r[1], 'SQUARE') && c.tile === T_CORR)) f.push('the dwarf\'s stones not the rubble\'s: ' + JSON.stringify(r));
+        }
+        this.notes = ['the character ' + JSON.stringify([ht.map(q => q.grade), wt.map(q => q.grade)]), 'the dwarf ' + JSON.stringify([dh.map(q => q.grade), dw.map(q => q.grade)]), ...S.notes];
+        return f;
+      },
+      sdcard: true
+    },
   ],
 };

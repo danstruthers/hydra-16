@@ -369,10 +369,27 @@ static void do_taste (void)
     intend2 (I_WAIT, 30, I_WAIT_W2 (0, 0, 1));
 }
 
+/* VB_BUILD (H_PUSH's row): a broken door ahead hung again, a passage ahead walled up (the verb's aux, BD_*: "hang the
+** door", "wall up the way"), the world's IO_BUILD (wbuild.c's, every actor's: the user's, 2026-11-23); its words the
+** world's, its time a wait (done, or gone badly) */
+static void do_build (void)
+{
+    unsigned char r;
+
+    HUB->ireq.to = cmd.aux;
+    r = things (IO_BUILD, "");
+    msg (tt ());
+    if (r == IR_OK) {
+        intend2 (I_WAIT, HUB->ireq.x, I_WAIT_W2 (0, 0, 1));
+    }
+}
+
 /* The verbs plan's B4's, by their handler's number (H_USE ... H_TASTE) */
 void __fastcall__ s_things_use (unsigned char h)
 {
-    if (h == H_USE) {
+    if (cmd.action == VB_BUILD) {
+        do_build ();
+    } else if (h == H_USE) {
         do_use ();
     } else if (h <= H_PULL) {
         do_shove (h == H_PULL);
