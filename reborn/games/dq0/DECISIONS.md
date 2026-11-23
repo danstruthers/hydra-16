@@ -6983,3 +6983,15 @@ M3-M5), with the images' commit.
   "F", the give-way after a walk's first words).
 - **All four of one-path stage 2's remaining areas start at once:** things and robbery; the step and its hazards;
   digging; climbing, links and lights.
+
+## Stage 2's questions, first round: the user's answers (2026-11-23)
+
+- **The character builds anywhere, with materials** (dig1's question 1): hanging a door and walling up a way at any
+  doorway or passage, not only a wrecked door's frame or a dug way; a hammer and a door's leaf or stones; a test
+  (Timbercraft or Masonry); the builders' times.
+- **Each faction knows its own traps** (step1's question 2): its own walked round from the start; another's known
+  only once found.
+- **A winged body passes over floor traps, pits and spilt oil** (step1's question 1); a door's or a wall's trap
+  still takes it.
+- **Bandits, soldiers and cultists carry a torch and a tinderbox; dwarf miners a tinderbox** (climb1's question 6):
+  their outfits changed, every test with their kit with them.
