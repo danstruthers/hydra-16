@@ -442,6 +442,8 @@ static unsigned char runs;                      /* (A flight's: at a run, whatev
                                                 **   charge's close-in, its pace, GA_*: I_CLOSE's run, B1's, 2026-11-10) */
 
 static unsigned char dark (void);
+static void clank_weigh (void);
+static void say_wait (void);
 
 static void paced (void)
 {
@@ -472,9 +474,37 @@ static void paced (void)
     HUB->pc_noise = 0xFF;                       /* (Its steps by its pace, the senses' to reckon; but creeping, or its
                                                 **   legs not whole, not standing: part 50's, slices 4.5, 4.6) */
     if (dk || (HUB->pcsum.cond & C_STUNNED) || HUB->pc_pos || HUB->pcsum.limp || (HUB->pcsum.limbs & (LB_LEG_L | LB_LEG_R)) ||
-        pmode || lsaid || !g || HUB->pc_clank == 0xFF) {
+        pmode || lsaid || !g || (HUB->pc_clank == 0xFF && HUB->pc_hid)) {
         legs (L_PACE);                          /* (In the dark, in shock, its legs not whole, or not standing: part 50's,
                                                 **   slice 4.1b's) */
+    } else if (HUB->pc_clank == 0xFF) {         /* (Its armour alone to weigh, after what's worn or held has changed: here,
+                                                **   as part 50's s_limbs_pace and s_step_loud would for it, standing, not
+                                                **   creeping, not hidden; its copy and part 9's back after it, some 60,000
+                                                **   cycles of a walk's first words: speed13, 2026-11-23) */
+        clank_weigh ();
+        HUB->pc_noise = (g == GA_WORK ? 3 : g < GA_WALK ? 2 : g) + HUB->pc_clank;
+    }
+}
+
+/* The character's armour weighed, if it's to be (the hub's pc_clank 0xFF: wlimbs.c's equip_now's): metal armour worn,
+** six pounds of it or more (mail, plate), 1; else 0.  The hub's header in the window after (paced's, part 50's
+** s_step_loud's) */
+static void clank_weigh (void)
+{
+    unsigned char q, k;                         /* (On the C stack: the main RAM's none) */
+    unsigned i;
+
+    hub_map (0);
+    for (i = 0, q = 0; HUB->pc_clank == 0xFF && (i = items (i, IN_X | IN_ACTOR, 0)) != 0; ) {
+        if ((ip->flags & I_WORN) && (unsigned char) (ip->mat - MT_IRON) < 3 && (k = ip->kind) != 0) {
+            hub_map (KIND_BANK);
+            q |= CATALOGUE[k].weight >= 24;     /* (Metal armour worn, six pounds of it: mail, plate) */
+        }
+        hub_map (0);
+    }
+    hub_map (0);
+    if (HUB->pc_clank == 0xFF) {
+        HUB->pc_clank = q;                      /* (Weighed once as what's worn changes: wlimbs.c's equip_now) */
     }
 }
 
@@ -6561,7 +6591,27 @@ void __fastcall__ out_tell (unsigned char h)
         hub_map (0);
         go_eq = HUB->eq_head;                   /* (Its words alone: no turn of the denizens' for them, turns_run's) */
     }
+    say_wait ();                                /* (The UI given the machine to say them: speed13, 2026-11-23) */
 }
+
+/* A move's first words just told (out_tell's, link_out's): the UI given the machine to say them, the world asleep till it
+** has (ui_eq's), SAY_WAIT at most, at the real paces: their first letter's window the UI's and the console's, not the
+** move's part copies' after it (speed12's for a climb, the user's D17; a walk's and a step's too, speed13) */
+#define SAY_WAIT        6                       /* (Ticks: some 107,000 cycles) */
+static void say_wait (void)
+{
+    unsigned t;
+
+    for (t = hy_ticks (); (unsigned) (hy_ticks () - t) < SAY_WAIT; ) {
+        hub_map (0);
+        if (!HUB->tpr || HUB->ui_eq == (unsigned char) HUB->eq_head) {
+            break;
+        }
+        hub_ring (T_UI);
+        hub_sleep (1);
+    }
+}
+
 static void __fastcall__ set_out (unsigned char h)
 {
     if (move.on && !out_told) {
@@ -6577,11 +6627,9 @@ static void __fastcall__ set_out (unsigned char h)
 ** is), not again as the climb's begun.  Part 2's, s_climb's */
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
-#define SAY_WAIT        6                       /* (Ticks: some 107,000 cycles) */
 static void __fastcall__ link_out (unsigned char k)
 {
     unsigned char alone;
-    unsigned t;
 
     if (left_lit) {
         lit_back (I_CLIMB | LB_GO);
@@ -6594,17 +6642,7 @@ static void __fastcall__ link_out (unsigned char k)
         hub_map (0);
         go_eq = HUB->eq_head;
     }
-    for (t = hy_ticks (); (unsigned) (hy_ticks () - t) < SAY_WAIT; ) {   /* (The UI given the machine to say them, the
-                                                **   world asleep till it has (ui_eq's), SAY_WAIT at most, at the real
-                                                **   paces: their first letter's window the UI's and the console's, not
-                                                **   the climb's part copies' after it; speed12, the user's D17) */
-        hub_map (0);
-        if (!HUB->tpr || HUB->ui_eq == (unsigned char) HUB->eq_head) {
-            break;
-        }
-        hub_ring (T_UI);
-        hub_sleep (1);
-    }
+    say_wait ();
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -8289,21 +8327,9 @@ static void legs_pace (void)
 
 void s_step_loud (void)
 {
-    unsigned char l, g, q, k;                   /* (On the C stack: the main RAM's none) */
-    unsigned i;
+    unsigned char l, g, q;                      /* (On the C stack: the main RAM's none) */
 
-    hub_map (0);
-    for (i = 0, q = 0; HUB->pc_clank == 0xFF && (i = items (i, IN_X | IN_ACTOR, 0)) != 0; ) {
-        if ((ip->flags & I_WORN) && (unsigned char) (ip->mat - MT_IRON) < 3 && (k = ip->kind) != 0) {
-            hub_map (KIND_BANK);
-            q |= CATALOGUE[k].weight >= 24;     /* (Metal armour worn, six pounds of it: mail, plate) */
-        }
-        hub_map (0);
-    }
-    hub_map (0);
-    if (HUB->pc_clank == 0xFF) {
-        HUB->pc_clank = q;                      /* (Weighed once as what's worn changes: wlimbs.c's equip_now) */
-    }
+    clank_weigh ();                             /* (Its armour weighed, if it's to be: the main RAM's, paced's too) */
     g = pace_;
     q = HUB->pc_qp;
     if (HUB->pc_hid && g != GA_CREEP) {

@@ -12,7 +12,7 @@
 **
 ** And a blow with nothing named (the user's, 2026-10-22: "I don't think it should auto-fallback to something better
 ** unless you have nothing at hand, and then it should ask for confirmation"; HOUSE.md's fights and portals): what's
-** in its hands strikes (of two, the referee's choice: wield's, part 9's, RS_WIELD), as a thing named does; its hands
+** in its hands strikes (of two, the referee's choice: wield's, overlay 14's, RS_WIELD), as a thing named does; its hands
 ** empty and a better thing carried (the referee's, by the reckoning a blow goes by), asked ("You can try
 ** battering it with your hands, but would you rather use your pick?"), the command kept: yes, with that thing (taken
 ** in hand as a thing named is, resolve.c's); no, or any other answer, bare-handed; a command instead, the blow let go.
@@ -316,23 +316,27 @@ unsigned char __fastcall__ o_choose (struct cmd* c)
     return 0;
 }
 
-#pragma code-name (push, "SW9CODE")
-#pragma rodata-name (push, "SW9RODATA")
+#pragma code-name (push, "OV14CODE")
+#pragma rodata-name (push, "OV14RODATA")
 #pragma local-strings (push, on)
 
-/* (Part 9's, its room: main-RAM code, the referee asked) A blow with nothing named (the command, cmd:
+/* (Overlay 14's, through its stub wield: part 9's till speed13, 2026-11-23, whose copy over part 2 and part 2's back
+** were 91,000 cycles of an attack's first letter) A blow with nothing named (the command, cmd:
 ** VB_ATTACK_OBJECT's at a denizen there to strike, but a kick's, a punch's, a head butt's; VB_BREAK_OBJECT's at a door,
 ** a window, a portcullis): what's in its hands strikes (the things' IO_HANDS; of two, the referee's choice,
 ** RS_WIELD's), strike that thing: 1; its hands empty, a better thing carried (RS_WIELD's key, its name the
 ** things' IO_WEAR's, worn by nothing), its name its other thing and the question put: 2 (dq0 -a's: yes, unasked, with
-** it: 1); else 0, its bare hands (the window put back).  At a door, a window, a portcullis a light in hand never
+** it: 1); else 0, its bare hands.  At a door, a window, a portcullis a light in hand never
 ** strikes (the user's, 2026-11-17: "nothing is battered with a light"): its hand as if empty, the other's thing, or the
-** better thing asked about (| 4: "no" its fist), or its bare hands, SK_PUNCH (its fist, the light kept in the other) */
+** better thing asked about (| 4: "no" its fist), or its bare hands, SK_PUNCH (its fist, the light kept in the other).
+** The hub read and written by hub_mem (the window's this overlay's), the things and the referee asked by wield_ask
+** (part 2's: o_choose's caller's, s_command's, there already) */
 #define USLOT           (HUB->slot[SLOT_UI])
-unsigned char s_wield (void)
+unsigned char __fastcall__ wield_ask (unsigned char op, unsigned char b);
+unsigned char o_wield (void)
 {
-    unsigned b;
-    unsigned char a = cmd.action, t, k, lit;
+    unsigned char a = cmd.action, t, k, lit = 0;
+    unsigned char x[2];
 
     if ((a == VB_ATTACK_OBJECT && cmd.aux != SK_BEST) || cmd.prep == PR_WITH || (a == VB_BREAK_OBJECT &&
         !cmd.obj.kind && cmd.obj.word[0])) {
@@ -344,40 +348,79 @@ unsigned char s_wield (void)
         return 0;                               /* (No denizen there to strike, nor a door, a window, a portcullis
                                                 **   seen: why not told as it's carried out, unasked, slice 4.1b's) */
     }
-    b = hub_here ();
-    hub_map (0);
-    things (IO_HANDS, "");
-    lit = t ? HUB->ireq.mat : 0;                /* (A door, a window, a portcullis: never battered with a light, the user's,
-                                                **   2026-11-17; a light in hand as if the hand were empty: its bits the
-                                                **   world's) */
-    USLOT.x[0] = lit & 1 ? 0 : (unsigned char) HUB->ireq.x;
-    USLOT.x[1] = lit & 2 ? 0 : (unsigned char) HUB->ireq.y;
+    wield_ask (IO_HANDS, 0);
+    if (t) {
+        hub_mem (0, &lit, &HUB->ireq.mat, 1);   /* (A door, a window, a portcullis: never battered with a light, the
+                                                **   user's, 2026-11-17; a light in hand as if the hand were empty: its
+                                                **   bits the world's) */
+    }
+    hub_mem (0, &x[0], &HUB->ireq.x, 1);        /* (Their low bytes: the kinds) */
+    hub_mem (0, &x[1], &HUB->ireq.y, 1);
+    if (lit & 1) {
+        x[0] = 0;
+    }
+    if (lit & 2) {
+        x[1] = 0;
+    }
+    hub_mem (0, USLOT.x, x, 2);
     if (lit) {
         lit = 4;
     }
-    ask_b (RS_WIELD, 0, t)->state = REQ_FREE;
-    if ((k = USLOT.result) != 0) {              /* (What's in its hands strikes: held already, nothing to take) */
-        strike = SK_OF (USLOT.x[k - 1]);
+    wield_ask (0, t);                           /* (RS_WIELD) */
+    hub_mem (0, &k, &USLOT.result, 1);
+    if (k != 0) {                               /* (What's in its hands strikes: held already, nothing to take) */
+        hub_mem (0, &k, &USLOT.x[k - 1], 1);
+        strike = SK_OF (k);
         k = 1;
-    } else if (USLOT.text[0]) {                 /* (Its hands empty, a better thing carried: asked about) */
-        HUB->ireq.to = 0;
-        things (IO_WEAR, USLOT.text);
-        strcpy (cmd.other.word, HUB->ireq.name);
+    } else if (hub_mem (0, &k, USLOT.text, 1), k) {  /* (Its hands empty, a better thing carried: asked about) */
+        wield_ask (IO_WEAR, 0);
+        hub_mem (0, cmd.other.word, HUB->ireq.name, sizeof cmd.other.word);
         k = 2 | lit;                            /* (A light in hand: no, its fist, o_choose's) */
         if (autogo) {
             cmd.prep = PR_WITH;
             k = 1;
         } else {
+            if (!t) {
+                hub_mem (0, &lit, &HUB->folk[((a & 0x0F) - 1) & 7], 1);
+            }
             sayf ("\nYou can %s, but would you rather %s your %s?", t ? "try battering it with your hands" :
-                HUB->folk[((a & 0x0F) - 1) & 7] ? "fight them with your fists" : "fight it with your fists",
+                lit ? "fight them with your fists" : "fight it with your fists",
                 t ? "use" : "draw", cmd.other.word);    /* (A person "them": the hub's folk, 2026-11-17) */
         }
     } else if (lit) {
         strike = SK_PUNCH;                      /* (A light in hand, nothing better: its bare hands, as with none, the
                                                 **   light kept in the other; SK_BEST the referee's would take the torch) */
     }
-    hub_back (b);
     return k;
+}
+
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+#pragma local-strings (push, on)
+
+/* (Part 2's, o_wield's: the commands' part, there as a command's carried out) The things asked from o_wield's overlay,
+** what's in its hands (IO_HANDS) or the tool with the referee's key worn by nothing (IO_WEAR, its key the slot's text:
+** its name back in the request's), or (op 0) the referee's choice (RS_WIELD, b its a door's, a window's, a
+** portcullis's), its reply let go; the hub's header in the window for it, then the window put back */
+unsigned char __fastcall__ s_wield_ask (unsigned char op, unsigned char b)
+{
+    unsigned w = hub_here ();
+
+    hub_map (0);
+    if (op == IO_WEAR) {
+        HUB->ireq.to = 0;
+        b = things (IO_WEAR, USLOT.text);
+    } else if (op) {
+        b = things (op, "");
+    } else {
+        ask_b (RS_WIELD, 0, b)->state = REQ_FREE;
+    }
+    hub_back (w);
+    return b;
 }
 
 #pragma local-strings (pop)
