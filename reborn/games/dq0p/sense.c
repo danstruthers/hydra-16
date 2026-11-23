@@ -89,13 +89,14 @@ unsigned char s_low_far (void)
 
 /* Square x, y of stratum sn lit, for every actor alike (the user's, 2026-11-17: a denizen sees by any light, the
 ** character's torch included; ONE-PATH.md's 2.2, the audit's S2): the light layer's there (a room's own light, a lit
-** thing lying, daylight), or a carried light's within its reach with a line clear from it (the character's; the
-** denizens' lights to come); a chunk not made, dark.  The world's ask (the hub's look, LK_LIT: its unlit_at that was,
-** what the character saw) */
+** thing lying, daylight), or a carried light's within its reach with a line clear from it (the character's; an
+** actor's, the world's alight, the one-path plan's lights, 2026-11-23); a chunk not made, dark.  The world's ask (the
+** hub's look, LK_LIT: its unlit_at that was, what the character saw) */
 unsigned char __fastcall__ s_lit_sq (unsigned char sn, unsigned x, unsigned y)
 {
-    static unsigned char own;
-    static unsigned d;
+    static unsigned char own, k, ap;
+    static unsigned d, ax, ay;
+    static const struct actor* a;
 
     if (!cached (sn, x, y)) {
         return 0;
@@ -105,11 +106,26 @@ unsigned char __fastcall__ s_lit_sq (unsigned char sn, unsigned x, unsigned y)
     }
     hub_map (0);
     own = HUB->pc_light * (HUB->pcsum.nightvision ? HUB->pcsum.nightvision : 1);
-    if (!own || HUB->pc_stratum != sn || (d = apart (x - HUB->pc_x, y - HUB->pc_y)) > own) {
-        return 0;
+    if (own && HUB->pc_stratum == sn && (d = apart (x - HUB->pc_x, y - HUB->pc_y)) <= own) {
+        ln_eye = LN_EYES (HUB->pc_pos);
+        if (!line (sn, HUB->pc_x, HUB->pc_y, x, y, LN_SIGHT)) {
+            return 1;
+        }
     }
-    ln_eye = LN_EYES (HUB->pc_pos);
-    return !line (sn, HUB->pc_x, HUB->pc_y, x, y, LN_SIGHT);
+    for (k = 0; k < NACTORS; ++k) {             /* (An actor's carried light: the same rule) */
+        hub_map (0);
+        a = &HUB->actor[k];
+        if ((own = HUB->alight[k] & AL_REACH) != 0 && (a->state & 1) && a->sn == sn && apart (x - a->x, y - a->y) <= own) {
+            ax = a->x;
+            ay = a->y;
+            ap = a->pos;
+            ln_eye = LN_EYES (ap);
+            if (!line (sn, ax, ay, x, y, LN_SIGHT)) {
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
 
 /* The world's ask (the hub's look, LK_LIT: square wx, wy of stratum wd), answered (its ch) */
@@ -158,6 +174,7 @@ void s_sense_actor (void)
     r->hear = hear;
     r->eyes = eyes;
     r->nose = nose;
+    r->light = HUB->alight[k] & AL_REACH;       /* (Its carried light: the world's alight) */
     r->flags = AS_SET;
     if (!j) {                                   /* (The target: the character) */
         tsn = HUB->pc_stratum;
@@ -170,7 +187,7 @@ void s_sense_actor (void)
         tsn = (t->state & 1) ? t->sn : 0xFF;
         tx = t->x;
         ty = t->y;
-        own = HUB->sens[j].light;
+        own = HUB->alight[j - 1] & AL_REACH;    /* (The world's: the one-path plan's lights, 2026-11-23) */
         pos = t->pos | (t->state > 1 ? PC_HID : 0);
     }
     res = 0;

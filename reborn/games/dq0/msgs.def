@@ -115,6 +115,8 @@ I_LOAD          -
 I_GATHER        a family                                # (FM_*: 0 any)
 I_NOISE         a loud; b what@NZ_WORK; w1 x; w2 y      # (A noise made: its loudness (1 a whisper, 3 a word, 6 a yell),
                                                         #   what it is (NZ_VOICE, NZ_KNOCK ...), its square, 0 the character's)
+I_LIGHT:den     < I_DEN; a lit; b dark                  # (A light of its own lit, 1, only where its square's dark to
+                                                        #   it; 0 put out: the one-path plan's lights, 2026-11-23)
 
 # ---- The events (E_*: the world's, what's happened; to the UI's ring (the hub's eq) and the denizens' (dq: E_DEN,
 # E_FIGHT, the limbs' E_BEAT); who 0 the character's).  A kind of many meanings has a form for each, chosen by a field's

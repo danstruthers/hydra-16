@@ -330,7 +330,8 @@ void s_den_intents (void)
                 break;
             }
         case I_RISE:                            /* (Its position, its mind's: part 80's, part 14's room, 2026-11-03) */
-        case I_CLIMB:                           /* (The rarer: an ally come along with the character; a robbery; */
+        case I_LIGHT:                           /* (The rarer: a light lit, put out; a flight crossed; a robbery; */
+        case I_CLIMB:
         case I_PORTAL:                          /*   a door worked, the character's code, a thing taken, Phase 3C's: part 80's) */
         case I_TAKE:
             den_more (&m);

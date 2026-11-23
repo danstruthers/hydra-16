@@ -117,5 +117,7 @@
 111 30  A thing's things put out, a thing put down on a square within reach, every actor's (wempty.c: P4, P5, 2026-11-18)
 112 31  A thing's things put out, its liquid poured into another, every actor's (wpour.c: P4, H11, 2026-11-19)
 113 31  Its words (wpour2.c: H11, 2026-11-19)
+114 4   One path: a flight crossed, every actor's (wflight.c: the one-path plan's stage 2, climbing and links, 2026-11-23)
+115 2   One path: an actor's lights lit, put out, summed (wlink.c: the one-path plan's stage 2, lights, 2026-11-23)
 stub start 3
 stub begin 3

@@ -231,7 +231,9 @@ static void sky_lamps (void)
 void __fastcall__ s_things_lamps (unsigned char sn, unsigned x, unsigned y)
 {
     const struct item* s;
+    const struct actor* a;
     unsigned i = 0;
+    unsigned char r;
 
     give_way ();
     nlamps = 0;
@@ -263,6 +265,16 @@ void __fastcall__ s_things_lamps (unsigned char sn, unsigned x, unsigned y)
             continue;                           /* (A sconce's torch lit: its room's own light, R_LIT, the world's) */
         }
         lamp_put (s->x, s->y, kind_of (rec.kind)->light);
+    }
+    for (i = 0; i < NACTORS; ++i) {             /* (Each actor's light it carries lit: a lamp at its square, as the
+                                                **   character's is its own, the world's alight: the one-path plan's
+                                                **   lights, 2026-11-23) */
+        hub_map (0);
+        a = &HUB->actor[i];
+        if ((r = HUB->alight[i] & AL_REACH) != 0 && (a->state & 1) && a->sn == sn && a->x - x + LAMP_FAR <= 2 * LAMP_FAR &&
+            a->y - y + LAMP_FAR <= 2 * LAMP_FAR) {
+            lamp_put (a->x, a->y, r);
+        }
     }
     light_lamps_end (sn);
 }

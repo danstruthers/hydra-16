@@ -80,3 +80,11 @@ bent        | 0      | -        | 0  | 8 | DOOR  | BENT      | -    | -     | - 
 prise       | 300    | -        | 0  | 0 | -     | -         | -    | PRISE | -        | 2
 wopen       | 2 step | -        | 0  | 2 | DOOR  | WOPENS    | -    | -     | -        | 1
 wshut       | 2 step | -        | 0  | 3 | DOOR  | WSHUTS    | -    | -     | -        | 1
+# ---- Links and lights (the one-path plan's stage 2, climbing and links, lights, 2026-11-23: wlink.c's, every actor's).
+# flight: a stairway's, a ladder's or a long slope's crossing, its time the flight's (acts.h's FLIGHT_T, by the
+# actor's step: the character's s_climb, an actor's den_flight), heard as its steps (an actor's told E_DEN DE_MOVED at
+# its arrival; the character's the senses' busy noise, a walk's 2).  kindle: a fire-maker's try (things.c's rs_draw's
+# five seconds, its grope, 4 harder in the dark), a lit light the flame else, at once.  douse: a light put out
+flight      | 0      | -        | 0  | 2 | -     | MOVED     | -    | -     | -        | 0
+kindle      | 50     | GROPE    | 0  | 0 | -     | -         | -    | -     | TINDERBOX| 1
+douse       | 10     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
