@@ -70,7 +70,9 @@ static unsigned char __fastcall__ taken (unsigned x, unsigned y)
 
 static unsigned char __fastcall__ open_sq (unsigned char* p)
 {
-    return p && (TILE (*p) == T_FLOOR || TILE (*p) == T_CORR || TILE (*p) == T_STEPS);
+    unsigned char t;                            /* (Its tile once: part 14's room, room7, 2026-11-23) */
+
+    return p && ((t = TILE (*p)) == T_FLOOR || t == T_CORR || t == T_STEPS);
 }
 
 /* What lies between body bd and the character, for those who hear it (SOUND.md: E_DEN's x[3]), by the senses' sound

@@ -194,39 +194,10 @@ void __fastcall__ work_told (unsigned char kind, unsigned w1, unsigned char a)
 ** out of the pit it's in, a hidden trap ahead noticed (1: it goes no further); DT_ON, on its square after, a trap there
 ** set off, lamp oil slipped in (the user's H15; 1: dead of it).  The cheap test the main RAM's: part 120 (and 99, the
 ** pools') swapped in only where there's a pit, a trap on the square, a pool */
-static unsigned char trap_sq (void)           /* (C's square cx_, cy_ a set trap's, set off underfoot) */
-{
-    static struct trap* t;
-    static unsigned char n;
-
-    for (t = C->trap, n = C->ntraps; n; --n, ++t) {
-        if (t->x == cx_ && t->y == cy_ && TS_SET (t->state) && t->trigger != TT_DOOR) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-unsigned char __fastcall__ den_hz (unsigned char d)
-{
-    static unsigned char k;
-
-    k = d;
-    if (k == DT_ON) {
-        at (bd.sn, bd.x, bd.y);
-        if (trap_sq ()) {
-            den_trap (DT_SPRING, k);            /* (A trap on its square: set off, part 120's) */
-        }
-        if (bd.state && (npools & ~PC_WOKE)) {
-            time_kept (POOL_OP + 1);            /* (Lamp oil there: slipped in, the user's H15, every actor's) */
-        }
-        return !bd.state;
-    }
-    if (TILE (*at (bd.sn, bd.x, bd.y)) == T_PIT) {
-        return den_trap (DT_PIT, k);            /* (In a pit: a round's climb out) */
-    }
-    return at (bd.sn, bd.x + head_x[k], bd.y + head_y[k]) && trap_sq () && den_trap (DT_NOTICE, k);
-}
+/* (In assembly since room7, 2026-11-23: hz.s's den_hz, its trap_sq with it, cc65's some 370 bytes of the main RAM's;
+** its constants wbody.h's) */
+typedef char hz_same[DT_ON == 0xFF && DT_NOTICE == 0 && DT_SPRING == 1 && DT_PIT == 2 && POOL_OP == 0xFFF0 &&
+    PC_WOKE == 0x80 ? 1 : -1];
 
 /* What the character sees, changed (E_VIEW's why: V_*), told the UI */
 static void __fastcall__ view (unsigned w)
@@ -585,13 +556,11 @@ static unsigned char __fastcall__ kept_tile (unsigned char t)
     return (t & T_VIS) || ((t & T_SEEN) && kept_left (&C->kept) >= KEPT_GONE);
 }
 
-/* Square x, y known to the character (kept_tile's) */
-static unsigned char __fastcall__ known_at (unsigned x, unsigned y)
-{
-    unsigned char* p = at (sn_, x, y);
-
-    return p && kept_tile (*p);
-}
+/* Square x, y known to the character (kept_tile's: known_at); in the dark, a square of chunk C it doesn't know, a door
+** or a passage's mouth it neither sees nor has seen, or has forgotten (unknown_: UNKNOWN, feeling the way's, below).
+** One source, a static copy in each part that asks (part 9's, part 54's: KNOWN_IN), the main RAM's till room7
+** (2026-11-23: its room, 77 bytes; no part's copy added) */
+#define KNOWN_FNS(s)    static unsigned char __fastcall__ known_at##s (unsigned x, unsigned y)                         {                             unsigned char* p = at (sn_, x, y);                             return p && kept_tile (*p);                         }                         static unsigned char __fastcall__ unknown_##s (unsigned char t)                         {                             return feel_ && !kept_tile (t);                         }
 
 static unsigned tgx, tgy;                       /* (The door meant: go's, below) */
 static unsigned char walked;
@@ -740,10 +709,6 @@ static unsigned char dark (void)
 ** by touch, the main RAM's */
 #define UNKNOWN(t)      unknown_ (t)            /* (In the dark, a square of chunk C it doesn't know: a door or a
                                                 **   passage's mouth it neither sees nor has seen, or has forgotten) */
-static unsigned char __fastcall__ unknown_ (unsigned char t)
-{
-    return feel_ && !kept_tile (t);
-}
 
 unsigned char __fastcall__ ahead (unsigned char h);     /* (Part 45's stubs) */
 unsigned char __fastcall__ felt_stop (unsigned char h);
@@ -1685,6 +1650,10 @@ static void climb_round_on (void)
 #pragma code-name (push, "SW9CODE")
 #pragma rodata-name (push, "SW9RODATA")
 
+KNOWN_FNS (9)                                   /* (Part 9's known_at, unknown_) */
+#define known_at        known_at9
+#define unknown_        unknown_9
+
 /* A way off to the side of the passage at (mx, my), heading h, that the character knows of: 1 (a fork it knows) */
 static unsigned char __fastcall__ side_known (unsigned char h)
 {
@@ -1910,6 +1879,8 @@ set_out:
     bound_for (mx, my);
 }
 
+#undef known_at
+#undef unknown_
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -2403,6 +2374,8 @@ void __fastcall__ s_grow_below (unsigned char n)
 
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
+
+#include "flight.inc"                           /* (FLIGHT_T's, s_climb's copy: room7's, 2026-11-23) */
 
 /* The link in the character's room the way d (up or down): its index in the stratum, the time to walk to it, or
 ** 0xFF; its way walked out again, so cut says if a trap's on it (the other walks' rule: one it knows of gone round) */
@@ -3078,6 +3051,10 @@ static unsigned char where (void)
 #pragma code-name (push, "SW54CODE")
 #pragma rodata-name (push, "SW54RODATA")
 
+KNOWN_FNS (54)                                  /* (Part 54's known_at, unknown_) */
+#define known_at        known_at54
+#define unknown_        unknown_54
+
 /* A way out of where the character stands (its first square, ex ey; from mx, my), weighed: a way it hasn't taken on
 ** this journey before one it has, any before the way it came (tbx, tby), then the nearest where it believes the place
 ** is (as the crow flies, near enough: the further way and half the other); kept if it's the best so far (tex ...) */
@@ -3170,6 +3147,8 @@ void s_way_out (void)
     hub_map (0);
 }
 
+#undef known_at
+#undef unknown_
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -7713,18 +7692,6 @@ static unsigned char uf_held (void)
 unsigned char dlit[NACTORS];                    /* (Each actor carrying a light lit: its reach, entry k; wlink.c's) */
 unsigned lmx[NACTORS], lmy[NACTORS];           /* (Where each lit one was last told: wlink.c's DL_MOVED) */
 unsigned char lms[NACTORS];
-
-/* A flight's crossing, tenths, every actor's (acts.h's FLIGHT_T: the character's s_climb, an actor's wflight.c
-** den_flight; the one-path plan's links, 2026-11-23) */
-unsigned long __fastcall__ flight_t (unsigned char k, unsigned char st, unsigned feet, unsigned char up)
-{
-    unsigned long t = (unsigned long) (feet + 1) * st;
-
-    if (k >= O_RAMP_UP) {
-        return t * (up ? 13 : 8) / 10;
-    }
-    return t * (k == O_LADDER_DOWN || k == O_LADDER_UP ? 2 : k == O_SHAFT_DOWN || k == O_SHAFT_UP ? 3 : 1) / (up ? 1 : 2);
-}
 
 static void dseq_job (void)
 {

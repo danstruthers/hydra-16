@@ -45,8 +45,8 @@ void __fastcall__ den_search (unsigned char dark);  /* (Part 94's: wsearch.c) Bo
                                                 **   own (the search row's): its darkvision dark */
 
 /* ---- Links and lights, every actor's (the one-path plan's stage 2, 2026-11-23): the rules both sides read */
-unsigned long __fastcall__ flight_t (unsigned char k, unsigned char st, unsigned feet, unsigned char up);   /* (dq0w.c's,
-                                                **   the main RAM's: FLIGHT_T's one code) */
+                                                /* (flight_t: flight.inc's, one source, a static copy in each part that
+                                                **   uses it, dq0w.c's part 2 and wflight.c's part 118: room7, 2026-11-23) */
 #define FLIGHT_T(k, st, feet, up)   flight_t ((k), (st), (feet), (up))
                                                 /* (A flight's crossing, tenths: link kind k, the actor's step st, the drop
                                                 **   between the floors in feet; a step's time a foot on a stairway, twice

@@ -194,7 +194,7 @@ extern unsigned char npools;                    /* (dq0w.c's: how many pools the
 extern unsigned char noinit;                    /* (dq0 -I: no engage initiative test: the tests') */
 
 /* The step and its hazards, every actor's (wstep.c, part 120: the one-path plan's stage 2, 2026-11-23) */
-unsigned char __fastcall__ den_hz (unsigned char d);   /* (dq0w.c's) Body bd's step its way d (before it: 1 it goes no
+unsigned char __fastcall__ den_hz (unsigned char d);   /* (hz.s's) Body bd's step its way d (before it: 1 it goes no
                                                 **   further, in its pit, a trap ahead noticed), or DT_ON (on its square
                                                 **   after: 1 dead of it): the step's cheap test (a pit it's in, a chunk
                                                 **   with traps, a pool), then part 120's den_trap */

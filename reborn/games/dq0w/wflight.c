@@ -19,6 +19,8 @@
 #pragma code-name ("SW118CODE")
 #pragma rodata-name ("SW118RODATA")
 
+#include "flight.inc"                           /* (FLIGHT_T's, den_flight's copy: room7's, 2026-11-23) */
+
 #define LINK_R          3                       /* (A flight within reach: its foot this far off at most, as an ally's
                                                 **   coming along was, the minds' anear) */
 
