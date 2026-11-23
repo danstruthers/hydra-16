@@ -45,13 +45,14 @@ lidforce    | 100    | FORCE    | 0  | 6 | WORK  | PRIES     | WORK | FORCE | - 
 # the same 20, the next step's to read the row)
 take        | 20     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
 
-# ---- Digging (dq0w.c's spell, the character's; wdig.c's, a tunneller's): its noise each spell (a tunneller's first
-# digbegin, its mind's word, DE_DIG; a spell gone badly in poor rock, roof); its time and its test
-# the referee's rate (dig_of), the spell's; dug, the way through, a tunneller's alone as yet (its DT_SEEN: wdig.c's
-# own den_told, its row the next step's)
-dig         | 0      | DIG      | 0  | 6 | WORK  | DIGS      | WORK | DIG   | -        | 2
+# ---- Digging (dq0w.c's part 84's dig_spell, every actor's: the character's spell, part 1's; a tunneller's, wdig.c's):
+# its time a spell, ten minutes (the one-path plan's digging, 2026-11-23: SPELL, both sides' own, before); its noise
+# each spell (a tunneller's first digbegin, its mind's word, DE_DIG; a spell gone badly in poor rock, roof); its test
+# the referee's, its rate by the grade (dig_of, house_dig); dug, the way through, a tunneller's alone as yet (its
+# DT_SEEN: wdig.c's own den_told, its row the next step's)
+dig         | 6000   | DIG      | 0  | 6 | WORK  | DIGS      | WORK | DIG   | -        | 2
 dug         | 0      | -        | 0  | 7 | WORK  | DUG       | -    | -     | -        | 2
-digbegin    | 0      | DIG      | 0  | 6 | WORK  | DIG       | WORK | DIG   | -        | 2
+digbegin    | 6000   | DIG      | 0  | 6 | WORK  | DIG       | WORK | DIG   | -        | 2
 roof        | 0      | -        | 0  | 7 | WORK  | ROOF      | -    | -     | -        | 2
 
 # ---- Search and hide (the one-path plan's stage 2, 2026-11-21: ONE-PATH.md's 2.1 and 2.7): the same rows for the
@@ -80,3 +81,39 @@ bent        | 0      | -        | 0  | 8 | DOOR  | BENT      | -    | -     | - 
 prise       | 300    | -        | 0  | 0 | -     | -         | -    | PRISE | -        | 2
 wopen       | 2 step | -        | 0  | 2 | DOOR  | WOPENS    | -    | -     | -        | 1
 wshut       | 2 step | -        | 0  | 3 | DOOR  | WSHUTS    | -    | -     | -        | 1
+# ---- Digging and building, the rest (the one-path plan's stage 2, digging, 2026-11-23: wdig.c's, every actor's by who).
+# digfound: a hidden door dug into, its facing off (dig_spell's find, the character's E_DIG D_FOUND; an actor's told,
+# DE_DIGFOUND, at the door): the spell's noise.  hang: a door broken down put up again, a spell's work (a builder's,
+# DE_HANGS, heard hammering); wallup: a way dug walled up, an hour's work, six of the row's spells (DE_WALLS, heard
+# stones being laid).  The character's building none yet (the user's to say: OPEN.md)
+digfound    | 0      | -        | 0  | 6 | WORK  | DIGFOUND  | -    | -     | -        | 2
+hang        | 6000   | -        | 0  | 4 | WORK  | HANGS     | WORK | -     | -        | 2
+wallup      | 6000   | -        | 0  | 4 | WORK  | WALLS     | WORK | -     | -        | 2
+
+# ---- Things, every actor's (the one-path plan's stage 2, things and robbery, 2026-11-23: ONE-PATH.md's 2.1 and 2.7):
+# the character's own numbers (things.c's catalogue code: its handlings' times), read by both sides (wthings.c's, an
+# actor's: its errands FE_STOW ... FE_HAND; wtake.c's and wfetch.c's take).  hold: a thing taken into a hand; put: put
+# in or on another, stowed, hung; takeout: taken from another (its levels' reach on top, part 56's R_IN each: H17);
+# don, doff: worn, taken off; strip: a worn thing taken from a body (on top of the takeout's); give: handed to another;
+# drag: a heavy thing shoved or dragged a square (its test's steps by its weight, the caller's: wdrag.c's); rob: one
+# helpless robbed (its time the round's and its reach's, the caller's); filch: a purse cut unnoticed (its contest the
+# minds', the robber's Stealth against the other's hearing: dq0d's HM_FILCH and SW_FILCH)
+hold        | 10     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
+put         | 20     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
+takeout     | 20     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
+don         | 50     | -        | 0  | 0 | -     | -         | -    | -     | -        | 2
+doff        | 50     | -        | 0  | 0 | -     | -         | -    | -     | -        | 2
+strip       | 100    | -        | 0  | 0 | -     | -         | -    | -     | -        | 2
+give        | 20     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
+drag        | 50     | FORCE    | 2  | 3 | WORK  | DRAGS     | -    | -     | -        | 2
+rob         | 0      | -        | 0  | 0 | -     | -         | -    | -     | -        | 2
+filch       | 0      | STEALTH  | 0  | 0 | -     | -         | -    | -     | -        | 1
+
+# ---- Links and lights (the one-path plan's stage 2, climbing and links, lights, 2026-11-23: wlink.c's, every actor's).
+# flight: a stairway's, a ladder's or a long slope's crossing, its time the flight's (acts.h's FLIGHT_T, by the
+# actor's step: the character's s_climb, an actor's den_flight), heard as its steps (an actor's told E_DEN DE_MOVED at
+# its arrival; the character's the senses' busy noise, a walk's 2).  kindle: a fire-maker's try (things.c's rs_draw's
+# five seconds, its grope, 4 harder in the dark), a lit light the flame else, at once.  douse: a light put out
+flight      | 0      | -        | 0  | 2 | -     | MOVED     | -    | -     | -        | 0
+kindle      | 50     | GROPE    | 0  | 0 | -     | -         | -    | -     | TINDERBOX| 1
+douse       | 10     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1

@@ -285,7 +285,18 @@ BEAT.douse_near     +"\n{Actor} put{s} out the {kind thing}."
 BEAT.douse_more     +"\n{Actor} put{s} out another {kind thing}."
 BEAT.slip           +"\n{Actor} slip{s} in the oil on the floor, and fall{s}."
 BEAT.blaze          +"\nThe oil on the floor catches fire!"
+BEAT.lights         +"\n{Actor} light{s} {its} {kind thing}."
 BEAT.unseen         "You hear something fall."
+BEAT.stows          +"\nThe {name whose} puts {its} {kind thing} away."
+BEAT.puts           +"\nThe {name whose} puts {its} {kind thing} {on?in|on} the {kind other}."
+BEAT.takes          +"\nThe {name whose} takes the {kind thing} from the {kind other}."
+BEAT.dons           +"\nThe {name whose} puts on {its} {kind thing}."
+BEAT.doffs          +"\nThe {name whose} takes off {its} {kind thing}."
+BEAT.hands_to       +"\nThe {name whose} hands {its} {kind thing} to the {name other}."
+BEAT.trap           +"\n{tk>2?{Actor} fall{s} into a pit{tk>1?!|, onto spikes!}|{tk-3?Stones crash down on {actor}"
+                    "|A blade scythes out of the wall at {actor}|Darts hiss out of the wall at {actor}"
+                    "|A cloud of choking gas billows up about {actor}|A bell clangs, loud and long}!{to?| {Actor} leap{s} clear."
+                    "| {Actor} hold{s} {its} breath and stagger{s} clear.| {Actor} choke{s} on it, and fall{s} senseless.}}"
 
 # ---- The water's (E_BEAT's WB_WATER ... WB_DOUSED, the character's: wet its band, a swim's how; water_words' before,
 # water.c, overlay 4)
@@ -379,6 +390,8 @@ TASK.out            +"{arg?\nYour {kind lamp} gutters and goes out|\nYour {kind 
 TASK.fetched        +"\n{Obj} {ft?picks up the {kind thing}|hands you the {kind thing}|can't find the {kind thing} where it lay"
                     "|can't carry the {kind thing}|has {they by?its|their} hands full: {they by?it|they} can't take the {kind thing}"
                     "|sets the {kind thing} down at your feet|takes the {kind thing}|can't get to the {kind thing}}."
+TASK.fetched[ft=FT_STOLEN]  +"\nYou take {obj}'s {kind thing}."
+TASK.fetched[ft=FT_BARE]    +"\nYou find nothing on {obj} worth the taking."
 TASK.robbed         +"{caught?{purse?\n{Obj} goes through your things as you lie helpless, and takes what {they by?it finds|they find}.|}"
                     "|{asleep?\nYou catch {obj} at your purse!|\nYou wake to find {obj} at your purse!}}"
 TASK.coins          "{arg?You find your coins gone: someone robbed you as you lay.|You come round to find someone has been through your things.}"
@@ -526,6 +539,8 @@ DEN.wshuts          +"{arg?\n{Actor} close{s} the shutters.|shutters shutting}"
 DEN.any             +"\n{Actor} {text}."
 DEN.closes          +"{arg?\n{@closes}.|something closing in}"
 DEN.aims            +"{arg?\n{@aims}.|a bowstring drawn}"
+DEN.digfound        +"{arg?\n{Actor} strike{s} a door behind the facing.|a scraping in rock}"
+DEN.drags           +"{arg?\n{Actor} strain{s} at something heavy.|something heavy scraping}"
 
 # ==== The UI's own kinds (dq0.h's UK_*, msgs.def's: no world's event, the UI's words of its own; narration as data,
 # stage 4, 2026-11-12).  The UI fills one and has it worded, as an outcome event is
@@ -604,6 +619,13 @@ SWAY.any[how=SW_ORDER]      "{order?|{obj?Your allies follow|{Obj} follows} you.
 SWAY.any[how=SW_GIVE]       "You offer {obj} the {text}. {@moved}"
 SWAY.any                    "{how?|You talk with|You try to win over|You spin a tale to|You threaten|You speak softly to"
                             "|You coax|} {obj}. {@moved}"
+SWAY.far[how=SW_ROB]        "{Obj} is out of your reach."
+SWAY.far[how=SW_FILCH]      "{Obj} is out of your reach."
+SWAY.cant[how=SW_ROB]       "{Obj} isn't helpless: {folk?it|they} would stop you."
+SWAY.cant[how=SW_FILCH]     "{Obj} is awake: {folk?it|they} would feel your hand."
+SWAY.wont[how=SW_FILCH]     "{Obj} wakes as your hand finds {folk?its|their} purse!"
+SWAY.any[how=SW_ROB]        "You go through {obj}'s things."
+SWAY.any[how=SW_FILCH]      "You slip a hand into {obj}'s purse."
 
 # ---- A blow (UK_FIGHT, an E_FIGHT's record worded: out, O_*, the UI's own gone, bled, bound for FO_*, and stray, a
 # miss's stray at one beside the mark; who the attacker, {actor?the character's|a denizen's}; w4 the attacker's name,
@@ -614,7 +636,7 @@ SWAY.any                    "{how?|You talk with|You try to win over|You spin a 
 # the attacker's body.  A grapple's (O_HOLD ... O_LETGO): the character's hold.  (blows.c's fight_words and grip_words
 # before, overlays 6 and 19)
 
-own FIGHT gone bled bound stray
+own FIGHT gone bled bound stray hurt
 
 @A          "{w4?You|{au?The {w4}|Something}}"
 @a          "{w4?you|{au?the {w4}|something}}"
@@ -667,6 +689,7 @@ FIGHT.stumble           "{@blow}{f1?|{actor?, but stumble|, but stumbles}}{f2?|{
                         "|; you stumble}}.{@after}"
 FIGHT.advantage         "{@blow}{actor?; {dfolk?it slips|they slip} inside your guard|; you see an opening}.{@after}"
 FIGHT.any               "{@blow}.{@after}"
+FIGHT.hurt              "{au?{@A} is hurt by the {instr}: {w6}.{@after}|You hear a cry of pain{adead?.| that stops short.}}"
 
 # ---- A refusal (UK_NO: no, U_*, A_*: refuse.c's say_no, the one wording of its meaning; text the thing's name as it's
 # put in, "a door", "The giant rat"; a name not to be said, its nameless form, the next).  (refuse.c's said before,

@@ -30,8 +30,10 @@
 #include "work.h"
 #include "wbody.h"
 #include "things.h"
+#include "acts.h"
 
 #pragma local-strings (on)
+unsigned char __fastcall__ handout (const struct msg* m);   /* (Part 111's: wempty.c, every actor's) */
 #pragma code-name ("SW80CODE")
 #pragma rodata-name ("SW80RODATA")             /* (No data of its own: its locals on the C stack, as it calls other
                                                 **   parts, which copy this one in again after) */
@@ -174,28 +176,30 @@ static unsigned char __fastcall__ taken (unsigned x, unsigned y)
 static void __fastcall__ den_portal (const struct msg* m);
 static void __fastcall__ door_keys (const struct msg* m);
 
-/* Body bd's rarer intents (part 14's room): an ally come along with the character, beside it (I_CLIMB: w1 w2 x[2]);
+/* Body bd's rarer intents (part 14's room): up or down a flight to stratum x[2] (I_CLIMB: part 118's, every actor's,
+** the one-path plan's, 2026-11-23); none within its reach, an ally come along with the character, beside it at w1 w2
+** (a shaft's climb, a rope's, a fall: not yet any actor's); a light of its own lit or put out (I_LIGHT: part 119's);
 ** a robbery, a round's work (I_ROB); its door work (I_PORTAL); a lair's doors' keys (I_KIT's KT_LAIR, part 51's: no
 ** body) */
 void __fastcall__ s_den_more (const struct msg* m)
 {
-    unsigned char* p;
-
-    if (m->kind == I_CLIMB) {
-        p = at (I_CLIMB_SN (*m), I_CLIMB_X (*m), I_CLIMB_Y (*m));
-        if (p && (TILE (*p) == T_FLOOR || TILE (*p) == T_CORR || TILE (*p) == T_STEPS) && !taken (I_CLIMB_X (*m), I_CLIMB_Y (*m))) {
-            bd.sn = I_CLIMB_SN (*m);
-            bd.x = I_CLIMB_X (*m);
-            bd.y = I_CLIMB_Y (*m);
-            bd.ready = HUB->now + 10;
-        }
-        hub_map (0);
+    if (m->kind == I_LIGHT) {
+        den_light (m);
+    } else if (m->kind == I_CLIMB) {
+        den_flight (m);                         /* (Part 118's: wflight.c) */
     } else if (m->kind == I_ROB) {
         hub_map (0);
-        if (I_ROB_ERRAND (*m) >= FE_DROP) {
+        if (I_ROB_ERRAND (*m) >= FE_EMPTY) {
+            handout (m);                        /* (Its thing's things put out, a thing put down on a square, its things
+                                                **   handled: the character's own code, wempty.c's, wthings.c's; part
+                                                **   14's till 2026-11-23, its room) */
+        } else if (I_ROB_ERRAND (*m) >= FE_DROP) {
             den_take (m);                       /* (The things' rest, by the character's rules, their own time: part 81's) */
         } else {
-            bd.ready += HUB->round;
+            if (I_ROB_ERRAND (*m) == FE_ROB) {
+                bd.ready += HUB->round;         /* (A robbery's round's work; an errand's its act's own, the act table's
+                                                **   rows: wfetch.c's, the one-path plan's stage 2, 2026-11-23) */
+            }
             den_rob (m);
         }
     } else if (m->kind == I_KIT) {
@@ -207,6 +211,10 @@ void __fastcall__ s_den_more (const struct msg* m)
         if (I_RISE_POS (*m) & POS_HIDE) {
             hid_op (HO_DEN | (I_RISE_POS (*m) & 7));   /* (Hiding oneself: part 94's) */
         } else if (I_RISE_POS (*m) != POS_STANDING) {
+            if (I_RISE_POS (*m) == POS_PRONE && dlit[bk]) {
+                den_lights (DL_DOUSE);          /* (Lain down to sleep: a rest puts a burning light out first, every
+                                                **   actor's, the user's, 2026-11-17: part 114's) */
+            }
             bd.pos = I_RISE_POS (*m);
             bd.ready += 10;
         } else if (bd.pos) {

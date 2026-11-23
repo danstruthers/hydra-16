@@ -34,7 +34,7 @@
 ** character searches as it goes) */
 static void step (void)
 {
-    if (!(wk.tq.state & TS_MAGIC) && G_OK (test (P_NOTICE_SIGHT, 1, -(signed char) wk.tq.hide))) {
+    if (!wk.who && !(wk.tq.state & TS_MAGIC) && G_OK (test (P_NOTICE_SIGHT, 1, -(signed char) wk.tq.hide))) {
         trap_state (wk.tq.state & ~TS_HIDDEN);
         trap_told (TO_NOTICED);
         return;

@@ -605,6 +605,9 @@ approach the door to the east	VB_APPROACH_OBJECT	object=door;lies=E	near=door	ap
 deceive the guard	VB_DECEIVE	target=guard	near=guard	deceive
 trick the guard	VB_DECEIVE	target=guard	near=guard	trick an alias of deceive
 threaten the guard	VB_THREATEN	target=guard	near=guard	threaten
+rob the bandit	VB_THREATEN	target=bandit	near=bandit	one helpless robbed (the one-path plan's stage 2, 2026-11-23)
+filch from the bandit	VB_THREATEN	target=bandit	near=bandit	a purse cut unnoticed
+steal from the bandit	VB_THREATEN	target=bandit	near=bandit	filch's
 scare the goblin	VB_THREATEN	target=goblin	near=goblin	scare an alias of threaten
 calm the dog	VB_CALM	target=dog	near=dog	calm
 soothe the dog	VB_CALM	target=dog	near=dog	soothe an alias of calm

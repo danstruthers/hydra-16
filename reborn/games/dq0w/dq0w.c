@@ -177,6 +177,10 @@ void __fastcall__ event (unsigned char kind, unsigned char who, unsigned w1)
 
 void __fastcall__ work_told (unsigned char kind, unsigned w1, unsigned char a)
 {
+    if (wk.who) {
+        trap_beat (kind, w1);                   /* (An actor's work, a trap's: its outcome told as seen, part 120's) */
+        return;
+    }
     hub_map (0);
     wk.m.kind = kind;
     wk.m.a = a;
@@ -185,6 +189,15 @@ void __fastcall__ work_told (unsigned char kind, unsigned w1, unsigned char a)
     wk.m.t = HUB->now;
     hub_event (&wk.m);
 }
+
+/* Body bd's step, its hazards (the one path's step, every actor's, 2026-11-23): its way d, before it, a round's climb
+** out of the pit it's in, a hidden trap ahead noticed (1: it goes no further); DT_ON, on its square after, a trap there
+** set off, lamp oil slipped in (the user's H15; 1: dead of it).  The cheap test the main RAM's: part 120 (and 99, the
+** pools') swapped in only where there's a pit, a trap on the square, a pool */
+/* (In assembly since room7, 2026-11-23: hz.s's den_hz, its trap_sq with it, cc65's some 370 bytes of the main RAM's;
+** its constants wbody.h's) */
+typedef char hz_same[DT_ON == 0xFF && DT_NOTICE == 0 && DT_SPRING == 1 && DT_PIT == 2 && POOL_OP == 0xFFF0 &&
+    PC_WOKE == 0x80 ? 1 : -1];
 
 /* What the character sees, changed (E_VIEW's why: V_*), told the UI */
 static void __fastcall__ view (unsigned w)
@@ -543,13 +556,11 @@ static unsigned char __fastcall__ kept_tile (unsigned char t)
     return (t & T_VIS) || ((t & T_SEEN) && kept_left (&C->kept) >= KEPT_GONE);
 }
 
-/* Square x, y known to the character (kept_tile's) */
-static unsigned char __fastcall__ known_at (unsigned x, unsigned y)
-{
-    unsigned char* p = at (sn_, x, y);
-
-    return p && kept_tile (*p);
-}
+/* Square x, y known to the character (kept_tile's: known_at); in the dark, a square of chunk C it doesn't know, a door
+** or a passage's mouth it neither sees nor has seen, or has forgotten (unknown_: UNKNOWN, feeling the way's, below).
+** One source, a static copy in each part that asks (part 9's, part 54's: KNOWN_IN), the main RAM's till room7
+** (2026-11-23: its room, 77 bytes; no part's copy added) */
+#define KNOWN_FNS(s)    static unsigned char __fastcall__ known_at##s (unsigned x, unsigned y)                         {                             unsigned char* p = at (sn_, x, y);                             return p && kept_tile (*p);                         }                         static unsigned char __fastcall__ unknown_##s (unsigned char t)                         {                             return feel_ && !kept_tile (t);                         }
 
 static unsigned tgx, tgy;                       /* (The door meant: go's, below) */
 static unsigned char walked;
@@ -698,10 +709,6 @@ static unsigned char dark (void)
 ** by touch, the main RAM's */
 #define UNKNOWN(t)      unknown_ (t)            /* (In the dark, a square of chunk C it doesn't know: a door or a
                                                 **   passage's mouth it neither sees nor has seen, or has forgotten) */
-static unsigned char __fastcall__ unknown_ (unsigned char t)
-{
-    return feel_ && !kept_tile (t);
-}
 
 unsigned char __fastcall__ ahead (unsigned char h);     /* (Part 45's stubs) */
 unsigned char __fastcall__ felt_stop (unsigned char h);
@@ -1643,6 +1650,10 @@ static void climb_round_on (void)
 #pragma code-name (push, "SW9CODE")
 #pragma rodata-name (push, "SW9RODATA")
 
+KNOWN_FNS (9)                                   /* (Part 9's known_at, unknown_) */
+#define known_at        known_at9
+#define unknown_        unknown_9
+
 /* A way off to the side of the passage at (mx, my), heading h, that the character knows of: 1 (a fork it knows) */
 static unsigned char __fastcall__ side_known (unsigned char h)
 {
@@ -1868,6 +1879,8 @@ set_out:
     bound_for (mx, my);
 }
 
+#undef known_at
+#undef unknown_
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -2362,6 +2375,8 @@ void __fastcall__ s_grow_below (unsigned char n)
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
 
+#include "flight.inc"                           /* (FLIGHT_T's, s_climb's copy: room7's, 2026-11-23) */
+
 /* The link in the character's room the way d (up or down): its index in the stratum, the time to walk to it, or
 ** 0xFF; its way walked out again, so cut says if a trap's on it (the other walks' rule: one it knows of gone round) */
 static unsigned char __fastcall__ link_here (unsigned char d, unsigned long* t)
@@ -2501,21 +2516,13 @@ void __fastcall__ s_climb (unsigned char d)
     move.y = lk->y;
     move.face = HUB->pc_face;
     move.dir = lk->kind;
-    /* (The flight: the drop between the floors, a step's time a foot on a stairway, twice on a ladder) */
+    /* (The flight: the drop between the floors, a step's time a foot on a stairway, twice on a ladder; a long slope
+    ** walked, its climb up strenuous work: every actor's, acts.h's FLIGHT_T, the one-path plan's, 2026-11-23) */
     feet = abs (STRATUM (sn_).datum - STRATUM (lk->to).datum);
-    if (lk->kind >= O_RAMP_UP) {                /* (A long slope, four feet along a foot of the drop, walked: eight
-                                                **   tenths of a step's time a foot down, thirteen up, the climb's
-                                                **   half a step a foot strenuous work: HOUSE.md's long slopes,
-                                                **   slice 4.10's) */
-        t += (unsigned long) (feet + 1) * stept * (d == DIR_UP ? 13 : 8) / 10;
-        if (d == DIR_UP) {
-            spend (GA_WORK, (unsigned) ((feet + 1) * stept) >> 1);
-            hub_map (0);
-        }
-    } else {
-    t += (unsigned long) (feet + 1) * stept *
-        (lk->kind == O_LADDER_DOWN || lk->kind == O_LADDER_UP ? 2 : lk->kind == O_SHAFT_DOWN ||
-        lk->kind == O_SHAFT_UP ? 3 : 1) / (d == DIR_UP ? 1 : 2);
+    t += FLIGHT_T (lk->kind, stept, feet, d == DIR_UP);
+    if (lk->kind >= O_RAMP_UP && d == DIR_UP) {
+        spend (GA_WORK, FLIGHT_WORK (stept, feet));
+        hub_map (0);
     }
     if (jump && lk->kind == O_SHAFT_DOWN) {     /* (Jumped down the shaft: a fall to its foot, told as fallen) */
         event (E_CLIMB, 0, E_CLIMB_W1 (K_JUMPED, feet > 255 ? 255 : feet));
@@ -2833,6 +2840,10 @@ void __fastcall__ s_bearings_off (unsigned feet)
 {
     static unsigned char k;
 
+    if (wk.who) {
+        return;                                 /* (An actor's trap, its gas choked on: the character's bearings none of
+                                                **   its, wstep.c's) */
+    }
     if (feet == BO_OUT) {                       /* (Main's: knocked senseless, fallen) */
         pc_down = 1;
         hub_map (0);
@@ -3040,6 +3051,10 @@ static unsigned char where (void)
 #pragma code-name (push, "SW54CODE")
 #pragma rodata-name (push, "SW54RODATA")
 
+KNOWN_FNS (54)                                  /* (Part 54's known_at, unknown_) */
+#define known_at        known_at54
+#define unknown_        unknown_54
+
 /* A way out of where the character stands (its first square, ex ey; from mx, my), weighed: a way it hasn't taken on
 ** this journey before one it has, any before the way it came (tbx, tby), then the nearest where it believes the place
 ** is (as the crow flies, near enough: the further way and half the other); kept if it's the best so far (tex ...) */
@@ -3132,6 +3147,8 @@ void s_way_out (void)
     hub_map (0);
 }
 
+#undef known_at
+#undef unknown_
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -3581,9 +3598,10 @@ void look_rest (void);                          /* (Its stub, bank.s's) */
 ** below doesn't reach under it).  The feet dug kept as it goes (a change record, DUG: HOUSE.md's what stopping
 ** costs, a hole half dug stays half dug), so a dig stopped and begun again on its square, the same way, goes on */
 
-#define SPELL           6000                    /* Tenths: ten minutes' work */
+#define SPELL           6000                    /* (Tenths: ten minutes' work, the act table's dig row's: acts.txt) */
 
-struct dig dig;                                 /* (work.h's: wdig.c's too, a tunneller's rock asked, part 1's) */
+struct dig dig;                                 /* (work.h's: wdig.c's too, a tunneller's spell, part 1's) */
+unsigned wear_did;                              /* (work.h's: things.c's wear, an actor's thing worn) */
 /* The half-feet of what it's into (mat) before the rock: a shaft's floor (earth or soil two feet, flags or masonry
 ** one, stone none: the rock's at once); a wall, all of it (2026-10-31: worked out, its byte the rock's) */
 #define DIG_TOP         (dig.d != DIR_DOWN ? 0xFF : dig.mat == MAT_EARTH || dig.mat == MAT_SOIL ? 4 : \
@@ -3608,13 +3626,10 @@ unsigned char __fastcall__ dig_kept (unsigned char begin);   /* (Part 19's: the 
 #include "../dq0/rock.h"
 static const unsigned char rk_hard[NRK] = RK_HARDNESS;
 static const unsigned char rk_quarters[4] = RK_QUARTERS;
-static unsigned char rk = 0;                    /* (The rock of the spell under way: test_dig's; and the feet it
-                                                **   made, made: both read in the same call of the part) */
-static unsigned char made = 0;
 
 /* The rock at the dig's point h half-feet in (RK_*; RK_NONE where it's not the rock: a floor's flags or earth, a
 ** wall's masonry): a shaft's, its depth that far below the floor, under the floor's own; a wall's or the rock's, at
-** the height of the character's middle */
+** the height of the digger's middle (its stand's) */
 static unsigned char __fastcall__ dig_rock (unsigned h)
 {
     int d;
@@ -3623,58 +3638,117 @@ static unsigned char __fastcall__ dig_rock (unsigned h)
         if (h < DIG_TOP) {
             return RK_NONE;
         }
-        d = (int) ((h - DIG_TOP) >> 1) - elev_at (sn_, dig.x, dig.y);
+        d = (int) ((h - DIG_TOP) >> 1) - elev_at (dig.sn, dig.x, dig.y);
     } else {
         if (dig.mat != MAT_STONE) {
             return RK_NONE;
         }
-        d = -3 - elev_at (sn_, mx, my);
+        d = -3 - elev_at (dig.sn, dig.sx, dig.sy);
     }
     hub_map (0);
-    return rock_kind (HUB->seed, d - STRATUM (sn_).datum, dig.x, dig.y);
+    return rock_kind (HUB->seed, d - STRATUM (dig.sn).datum, dig.x, dig.y);
 }
 #pragma data-name (pop)
 
-/* The referee's test of the character's digging (by what it has equipped): its grade, and the feet it made (made
-** 0xFF: nothing it has can dig that); the rock (rk), and the next event's b: the tool's and its wear's place (the
-** low two bits), the rock's kind times 16, and 8 if it's other than the half-foot's before (a shaft come down to the
-** rock, or into another bed of it) */
-static signed char test_dig (void)
+/* ---- One spell of digging, every actor's (the one-path plan's stage 2, digging, 2026-11-23: ONE-PATH.md's 2.1 and
+** 2.7, the act audit's E1 and G-13): the character's (s_dig_on, below) and a tunneller's (wdig.c's, part 79's, through
+** its stub), by one code: the rock it's into (dig_rock), the referee's test of it by who (RS_TEST's P_DIG: the tool to
+** hand that suits it best, its rate and its wear, rshouse.h's house_dig, every ruleset's; the character's test_dig and
+** wdig.c's own copy of the rates before), the rock's hardness the rate's, poor rock come down on a spell gone badly
+** (two feet of the hole in the rock filled again), the feet made, and a hidden door dug into, as the wall it seems
+** (its facing off: found for every one, as a search's find; the character's own handled, PP_KNOWN).  dig: what's dug
+** (d, mat, x, y, need, done, rock), the digger's stratum and stand (sn, sx, sy).  Who 0 the character (the tool
+** named, the hub's dig_name; its tool and wear for E_DIG: the hub's dig_tool, dig_wear, evb's), an actor's entry plus 1
+** (body bd: its tools listed in the slot's text by its caller, wdig.c's; the tool and its wear in dig.key, dig.wear,
+** for its caller to wear its own thing), DIG_RECORD a record's (away from the character: untested, the referee's rate
+** at a marginal success, RS_DIG_QUERY's); | DIG_ASK, only whether anything it has bites (RS_DIG_QUERY's: no dice, no
+** wear, nothing changed; the character's pc_dig (0), as its dig's begun).  Its grade (dig.grade too), DS_ROOF poor rock
+** come down, DS_CANT nothing it has bites into it; dig.done on, dig.found 0x10 | the door's stuff found, 0x20 hidden by
+** magic (no mark made), else 0.  Its locals the part's (static, in its image: no other part's called till the last) */
+#pragma static-locals (push, on)
+#pragma bss-name (push, "SW1RODATA")
+static void wall_look (void);
+signed char __fastcall__ s_dig_spell (unsigned char who)
 {
     struct req* r;
-    signed char g;
-    unsigned char n;
+    struct portal* q;
+    unsigned char rk, n, made, l, st, ask;
+    unsigned before;
+    unsigned char* p;
 
+    if (who == DIG_LOOK) {
+        here ();
+        wall_look ();                           /* (A wall looked at: I_TRACE's TRC_WALL) */
+        return 0;
+    }
+    ask = who & DIG_ASK;
+    who &= ~DIG_ASK;
+    before = dig.done;
     rk = dig_rock (dig.done);
     n = rk && rk != dig.rock ? 8 : 0;           /* (A rock new to it: told) */
     dig.rock = rk;
+    dig.found = dig.wear = 0;
     hub_map (0);
     r = &HUB->slot[SLOT_WORLD];
     r->kind = RS_TEST;
-    r->actor = 0;
+    r->actor = who;
+    r->other = 0;
     RS_TEST_PURPOSE (*r) = P_DIG;
     RS_TEST_MAT (*r) = dig.done < DIG_TOP ? dig.mat : MAT_STONE;     /* (Through the floor: the stratum's rock) */
-    RS_TEST_STEPS (*r) = 0;
-    strcpy (r->text, HUB->dig_name);            /* (The tool named, or "" the best to hand) */
+    RS_TEST_STEPS (*r) = ask || who == DIG_RECORD ? RS_DIG_QUERY : 0;
+    if (!who) {
+        strcpy (r->text, HUB->dig_name);        /* (The tool named, or "" the best to hand; an actor's tools listed
+                                                **   there already, its caller's) */
+    }
     r = hub_ask (SLOT_WORLD);
-    g = RS_TEST_GRADE (*r);
+    dig.grade = who == DIG_RECORD || ask ? G_PASS : RS_TEST_GRADE (*r);
     made = RS_TEST_CANT (*r) ? 0xFF : RS_TEST_RATE (*r);
-    if (rk && !RS_TEST_CANT (*r)) {                     /* (The rock's hardness: the rate in it, every ruleset's, HOUSE.md's
+    if (!who) {
+        evb = dig.done & 3;                     /* (Its tool and its wear, for the next event: E_DIG's, the UI's to
+                                                **   wear it) */
+        strncpy (HUB->dig_tool[evb], r->text, sizeof HUB->dig_tool[0] - 1);
+        HUB->dig_wear[evb] = RS_TEST_WEAR (*r);
+        evb |= rk << 4 | n;
+    } else if (!ask && who != DIG_RECORD && made != 0xFF) {
+        strncpy (dig.key, r->text, sizeof dig.key - 1);
+        dig.wear = RS_TEST_WEAR (*r);           /* (Its own thing to wear: its caller's, things.c's wear) */
+    }
+    r->state = REQ_FREE;
+    if (made == 0xFF) {
+        return dig.grade = DS_CANT;             /* (Nothing it has will bite into it) */
+    }
+    if (ask) {
+        return G_PASS;
+    }
+    if (rk) {                                   /* (The rock's hardness: the rate in it, every ruleset's, HOUSE.md's
                                                 **   rock's kinds and hardness) */
         made = (unsigned char) ((unsigned char) (made * rk_quarters[rk_hard[rk]] + 3) >> 2);
     }
-    evb = dig.done & 3;                           /* (Its tool and its wear, for the next event: E_DIG's) */
-    strncpy (HUB->dig_tool[evb], r->text, sizeof HUB->dig_tool[0] - 1);
-    HUB->dig_wear[evb] = RS_TEST_WEAR (*r);
-    evb |= rk << 4 | n;
-    r->state = REQ_FREE;
-    return g;
+    l = dig.d == DIR_DOWN ? DIG_TOP : 0;        /* (Where the rock begins) */
+    if (dig.grade == G_BADLY && RK_POOR (rk) && dig.done > l) {
+        dig.done -= dig.done - l > 4 ? 4 : dig.done - l;    /* (Poor rock: the roof come down on a spell gone badly,
+                                                **   two feet of the hole in the rock filled again, HOUSE.md's) */
+        dig.grade = DS_ROOF;
+    }
+    dig.done += made;
+    p = at (dig.sn, dig.x, dig.y);              /* (A hidden door, dug at as the wall it seems: HOUSE.md's) */
+    if (dig.d != DIR_DOWN && p && TILE (*p) == T_DOOR && (q = portal_at (cx_, cy_)) != 0) {
+        st = q->state;
+        if (st & PS_MAGIC) {
+            dig.done = before;                  /* (Hidden by magic: it turns the tool, no mark made) */
+            dig.found = 0x20;
+        } else if (st & PS_HIDDEN && dig.done >= (q->mat == PM_WOOD ? 1 : q->mat == PM_IRONBOUND ? 2 : 4)) {
+            dig.found = 0x10 | q->mat;
+            change (dig.sn, dig.x, dig.y, st & ~PS_HIDDEN, q->parts | (who ? 0 : PP_KNOWN), PORTAL_STATE);   /* (Found
+                                                **   for every one; the character's own handled, as a search's find:
+                                                **   another part's, the last thing done) */
+        }
+    }
+    hub_map (0);
+    return dig.grade;
 }
-
-static void spell (void)
-{
-    in_place (A_DIGGING, SPELL);
-}
+#pragma bss-name (pop)
+#pragma static-locals (pop)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -3788,6 +3862,7 @@ void __fastcall__ s_start_dig (unsigned char d)
 {
     unsigned char* p;
     unsigned char t, k;
+    struct actq aq;
 
     if (d >= 0xFC) {                            /* (Part 1's, the room's: the shaft through, a wall's words; its square
                                                 **   s_dig_on's here ()'s, the hub's header read: wall_look leaves its
@@ -3883,7 +3958,8 @@ void __fastcall__ s_start_dig (unsigned char d)
     }
     dig.rock = RK_NONE;
     dig_kept (1);                               /* (Told, begun: on from where it was left, a hole begun before) */
-    in_place (A_DIGGING, SPELL);               /* (Its first spell: spell ()'s, part 1's) */
+    act_get (aq, AC_DIGBEGIN);
+    in_place (A_DIGGING, aq.r.time);           /* (Its first spell: the act table's, as spell ()'s, part 1's) */
 }
 
 #pragma code-name (pop)
@@ -3892,8 +3968,8 @@ void __fastcall__ s_start_dig (unsigned char d)
 /* The character's dig's own (part 84's, overlay 22's, through its stub, HOUSE.md's digging, 2026-11-02).  0, a dig begun:
 ** nothing it has bites into dig.mat (the referee's RS_DIG_QUERY: no dice, no wear), or its best a chisel and no hammer,
 ** or an arm useless (the UI to word it, by what it carries): 1.  2, a spell's feet added (dig.done, the hub's
-** pc_task.done as it was): into a hidden door, as the wall it seems, its facing off (half a foot wooden, a foot
-** iron-bound, two feet else): found, its state's record, 0x10 | its stuff; hidden by magic: no mark made, 0x20; two spells running with nothing to show (the hub's foe a dig's count): asked, soft, 1.  3, a dig begun at a portal's
+** pc_task.done as it was): into a hidden door (dig_spell's dig.found): found, 0x10 | its stuff; hidden by magic, 0x20;
+** two spells running with nothing to show (the hub's foe a dig's count): asked, soft, 1.  3, a dig begun at a portal's
 ** square (dig.x, dig.y): 0 one hidden, as the wall it seems; else what it is, its kind plus 1 */
 #pragma code-name (push, "SW84CODE")
 #pragma rodata-name (push, "SW84RODATA")
@@ -3973,10 +4049,9 @@ unsigned char __fastcall__ s_pc_dig (unsigned char w)
         }
         return n;
     }
-    sn = HUB->pc_stratum;
-    p = at (sn, dig.x, dig.y);
-    q = p && TILE (*p) == T_DOOR ? portal_at (cx_, cy_) : 0;
     if (w == 3) {
+        p = at (HUB->pc_stratum, dig.x, dig.y);
+        q = p && TILE (*p) == T_DOOR ? portal_at (cx_, cy_) : 0;
         n = q ? (q->state & PS_HIDDEN ? 0 : q->kind + 1) : PK_WINDOW + 1;
         hub_map (0);
         if (n) {
@@ -3984,22 +4059,10 @@ unsigned char __fastcall__ s_pc_dig (unsigned char w)
         }
         return n;
     }
-    n = 0;
-    if (dig.d != DIR_DOWN && q) {
-        st = q->state;
-        pt = q->parts;
-        hm = q->mat;
-        hub_map (0);
-        if (st & PS_MAGIC) {
-            dig.done = HUB->pc_task.done;
-            n = 0x20;
-        } else if (st & PS_HIDDEN && dig.done >= (hm == PM_WOOD ? 1 : hm == PM_IRONBOUND ? 2 : 4)) {
-            change (sn, dig.x, dig.y, st & ~PS_HIDDEN, pt | PP_KNOWN, PORTAL_STATE);   /* (Handled, as a search's find) */
-            return 0x10 | hm;
-        }
+    if ((n = dig.found) & 0x10) {
+        return n;                               /* (A hidden door dug into: found, dig_spell's, every actor's) */
     }
-    hub_map (0);
-    st = HUB->pc_task.foe;                      /* (Spells running with nothing to show; 3, asked: once a dig) */
+    st = HUB->pc_task.foe;                     /* (Spells running with nothing to show; 3, asked: once a dig) */
     if (dig.done != HUB->pc_task.done) {
         st = st == 3 ? 3 : 0;
     } else if (st < 3) {
@@ -4065,6 +4128,23 @@ static void wall_look (void)
     start_dig (0xFC);
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* (Part 117's: a spell of digging done, the character's: part 1's room, the one-path plan's digging, 2026-11-23) */
+#pragma code-name (push, "SW117CODE")
+#pragma rodata-name (push, "SW117RODATA")
+
+/* A spell of digging begun, the character's: its time the act table's dig row, every actor's (the one-path plan's
+** digging, 2026-11-23: SPELL before, wdig.c's own besides) */
+static void spell (void)
+{
+    struct actq q;
+
+    act_get (q, AC_DIG);
+    in_place (A_DIGGING, q.r.time);
+}
+
 /* The roof come down on the digger (D_ROOF's, poor rock's: HOUSE.md's rock's kinds and hardness): dodged (the
 ** referee's P_DODGE_HAZARD, as a trap's), else a blunt strike from no one at its head and shoulders, the book's
 ** falling (Skills 8: 1d6 a ten feet's fall: the house's 1d6, stones off the roof a few feet over it), the referee's (RS_HARM's HC_STRIKE), told (E_HARM), the
@@ -4118,35 +4198,21 @@ void s_dig_on (void)
     unsigned char l;
     int z;
 
-    if (dig.rock == DIG_ROCK) {                 /* (A tunneller's: the rock at dig.x, dig.y, dig.need's depth, part
-                                                **   79's, wdig.c's) */
-        hub_map (0);
-        dig.rock = rock_kind (HUB->seed, (int) dig.need, dig.x, dig.y);
-        return;
-    }
     here ();
-    if (dig.rock == 0xFF) {
-        wall_look ();
-        return;
-    }
-    g = test_dig ();
-    if (made == 0xFF) {                         /* (Nothing it has will bite into it) */
+    dig.sn = sn_;                               /* (The digger's stratum and stand: the character's) */
+    dig.sx = mx;
+    dig.sy = my;
+    g = dig_spell (0);                          /* (The spell, every actor's: the one-path plan's digging) */
+    if (g == DS_CANT) {                         /* (Nothing it has will bite into it) */
         hub_map (0);
         evb = (dig.done < DIG_TOP ? dig.mat : MAT_STONE) + 1;
         event (E_DIG, 0, D_NO_TOOL << 8 | evb);   /* (What it's into) */
         return;
     }
-    l = dig.d == DIR_DOWN ? DIG_TOP : 0;        /* (Where the rock begins) */
-    if (g == G_BADLY && RK_POOR (rk) && dig.done > l) {
-        dig.done -= dig.done - l > 4 ? 4 : dig.done - l;    /* (Poor rock: the roof come down on a spell gone badly,
-                                                **   two feet of the hole in the rock filled again, HOUSE.md's) */
-        g = 0x7F;
-    }
-    dig.done += made;
-    l = pc_dig (2);      /* (A hidden door come to, two spells with nothing to show: part 79's) */
+    l = pc_dig (2);      /* (A hidden door come to, two spells with nothing to show: part 84's) */
     hub_map (0);
     HUB->pc_task.done = dig.done;
-    act_noise (0, g == 0x7F ? AC_ROOF : AC_DIG, HUB->pc_x, HUB->pc_y);    /* (A spell's noise, a roof come down's: a
+    act_noise (0, g == DS_ROOF ? AC_ROOF : AC_DIG, HUB->pc_x, HUB->pc_y);    /* (A spell's noise, a roof come down's: a
                                                 **   tunneller's, the act table's rows, 2026-11-19) */
     if (l & 0x10) {
         event (E_DIG, 0, E_DIG_W1 (D_FOUND, l & 3)); /* (Its facing dug off: the door behind it, a find) */
@@ -4158,12 +4224,12 @@ void s_dig_on (void)
     }
     if (dig.done < dig.need) {
         dig_kept (0);                           /* (The feet dug kept: stopped, it goes on from here) */
-        event (E_DIG, 0, E_DIG_W1 (g == G_WELL || g == G_PASS ? D_GOOD : g == G_FAIL ? D_POOR : g == 0x7F ? D_ROOF : D_SLIP,
+        event (E_DIG, 0, E_DIG_W1 (g == G_WELL || g == G_PASS ? D_GOOD : g == G_FAIL ? D_POOR : g == DS_ROOF ? D_ROOF : D_SLIP,
             dig.need - dig.done > 510 ? 255 : (dig.need - dig.done + 1) / 2));
         if (l & 1) {
             event (E_DIG, 0, E_DIG_W1 (D_PORTAL, 0xFE));   /* (Asked after it, soft) */
         }
-        if (g == 0x7F && dig.d != DIR_DOWN) {
+        if (g == DS_ROOF && dig.d != DIR_DOWN) {
             roof_harm ();                       /* (A tunnel's roof come down on the digger too; a shaft's sides
                                                 **   fall into the hole below it) */
         }
@@ -7155,8 +7221,7 @@ void __fastcall__ s_intent_more (struct msg* m)
         hub_map (0);
         if (k == TRC_WALL) {                    /* (A wall looked at, its rock: the dig's part's wall_look, slice
                                                 **   4.10's; three seconds) */
-            dig.rock = 0xFF;
-            dig_on ();
+            dig_spell (DIG_LOOK);              /* (Part 1's, the rock's code's) */
             busy (30);
             break;
         }
@@ -7624,8 +7689,20 @@ static unsigned char uf_held (void)
 ** its way somewhere: once stirred's.  Not while the UI's command is in hand at the real paces, nor while a line's typed
 ** (uf_held): the senses' look of them after its answer's begun, 2026-11-01; a look that needs them asks it itself
 ** (bodies_first, T2's, 2026-11-22) */
+unsigned char dlit[NACTORS];                    /* (Each actor carrying a light lit: its reach, entry k; wlink.c's) */
+unsigned lmx[NACTORS], lmy[NACTORS];           /* (Where each lit one was last told: wlink.c's DL_MOVED) */
+unsigned char lms[NACTORS];
+
 static void dseq_job (void)
 {
+    unsigned char k;
+
+    for (k = 0; k < NACTORS && !dlit[k]; ++k) {
+    }
+    if (k < NACTORS) {
+        den_lights (DL_MOVED);                  /* (An actor carrying a light lit: moved, the light layer near it,
+                                                **   part 115's, the one-path plan's lights, 2026-11-23) */
+    }
     hub_map (0);
     dseq = HUB->den_seq;
     if ((!move.on || move.how == A_DIGGING) && dens_seen ()) {
@@ -8466,7 +8543,8 @@ void __fastcall__ s_hid_op (unsigned char op)
     if (op & HO_DEN) {                          /* (Body bd's, its mind's) */
         k = op & 7;
         if (k == HD_IN) {
-            if (bd.state == 1 && (c = cover_of (bd.sn, bd.x, bd.y, !unlit_at (bd.sn, bd.x, bd.y))) & 7) {
+            if (bd.state == 1 && !dlit[bk] && (c = cover_of (bd.sn, bd.x, bd.y, !unlit_at (bd.sn, bd.x, bd.y))) & 7) {
+                                                /* (Not with a light lit: the character's own, HW_LIGHT, every actor's) */
                 bd.state = 1 | (1 + (c & 7)) << 1;
             }
             act_get (aq, AC_HIDE);
@@ -8641,7 +8719,7 @@ void s_burns_now (void)
     const struct burn* b;
     struct item* p;
     unsigned char* sq;
-    unsigned i, j, d, left, bf, wx, wy;
+    unsigned i, j, d, left, bf, wx, wy, wd;
     unsigned char mine, r, best, out, seen, ww, ws, low = 0, more = 0, same = 0, asked = burn_ask;
     char ln[14];
 
@@ -8660,7 +8738,7 @@ void s_burns_now (void)
     }
     best = out = seen = 0;
     bf = 0xFFFF;
-    for (i = 0; (i = items (i, IN_FLAGS | IN_SQUARE | IN_ACTOR | IN_ITEM | IN_PORTAL, I_LIT)) != 0; ) {
+    for (i = 0; (i = items (i, IN_FLAGS | IN_SQUARE | IN_ACTOR | IN_ITEM | IN_PORTAL | IN_DEN, I_LIT)) != 0; ) {
         memcpy (&q, ip, sizeof q);
         for (j = i; (p = item_at (j))->where == IW_ITEM; j = p->x) {   /* (Up to whoever has it, or where it lies) */
         }
@@ -8668,6 +8746,7 @@ void s_burns_now (void)
         ws = p->sn;
         wx = p->x;
         wy = p->y;
+        wd = p->owner | p->hide << 8;           /* (A denizen's own: its number) */
         mine = ww == IW_ACTOR && !wx;
         hub_map (KIND_BANK);
         r = mine ? CATALOGUE[q.kind].light : 0;
@@ -8703,8 +8782,26 @@ void s_burns_now (void)
             out = q.kind;                       /* (The character's: its light made again, below) */
             continue;
         }
+        if (ww == IW_DEN) {                     /* (A denizen's own, carried: its actor's lights made again, the light
+                                                **   layer near it; seen, told as one lying there is (the one-path
+                                                **   plan's lights, 2026-11-23: part 114's) */
+            hub_map (0);
+            for (r = 0; r < NACTORS && (!(HUB->actor[r].state & 1) || HUB->actor[r].did != wd); ++r) {
+            }
+            if (r < NACTORS) {
+                BD_GET (r);
+                den_lights (DL_OUT);
+                if (bd.sn == HUB->pc_stratum && (sq = at (bd.sn, bd.x, bd.y)) != 0 && (*sq & T_VIS)) {
+                    hub_map (0);
+                    evb = q.kind;               /* ("The torch gutters and goes out.") */
+                    event (E_TASK, 0, E_TASK_LIGHT_W1 (TE_OUT, LT_NONE, 1, 0));
+                    seen = 1;
+                }
+            }
+            continue;
+        }
         if (ww != IW_SQUARE && ww != IW_PORTAL) {
-            continue;                           /* (An actor's: the denizens' lights, to come) */
+            continue;                           /* (The character's own, put away) */
         }
         lm.kind = E_LIGHT;                      /* (One lying there: the light layer about it out of date) */
         E_LIGHT_SN (lm) = ws;

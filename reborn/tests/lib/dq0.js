@@ -457,6 +457,9 @@ function dq0Thing(s, name) {
   return all.find(i => carried.has(i.n)) || all.find(here) || all[0] || null;
 }
 const dq0Holder = (s, i) => s && i && i.where === 'IW_ITEM' ? s.items.find(j => j.n === i.x) || null : null;
+// (What holds thing i at the last, in the snapshot s: itself if it's in nothing; its holder's holder ... the things' own
+//   home, an actor's IW_DEN or the character's IW_ACTOR: the one-path plan's stage 2, things, 2026-11-23)
+const dq0Root = (s, i) => { for (let n = 0; i && i.where === 'IW_ITEM' && n < 8; n++) i = dq0Holder(s, i) || i; return i || {}; };
 // What the character perceives of the place (the senses' record, struct sight), the denizens aside (they go their own
 // ways), as one string: the same place seen the same, compared
 const dq0View = s => !s || !s.sight ? '' : JSON.stringify(Object.assign({}, s.sight, { seq: 0, dens: [], first: 0 }));
@@ -520,6 +523,17 @@ function dq0Alone(m, h, L, K, at, keep) {
     for (let i = 0; i < 4; i++) h[at(k) + L.aReady + i] = far >>> (8 * i) & 255;
   }
   h[L.denSeq] = h[L.denSeq] + 1 & 255;
+}
+
+// An intent posted for actor k, as its mind would (the hub's di ring, at its head: a dq0Poke's call, the minds quiet
+// then): kind (K.I_*), its fields { a, b, w1, w2, t, x: [4] } as struct msg lays them out (16 bytes: kind, who, a, b,
+// w1, w2, t, x[4]); I_DEN's doing and face (x[0], x[1]) 0xFF unless given.  The one-path plan's stage 2, things, 2026-11-23
+function dq0Intent(h, L, kind, k, f = {}) {
+  const head = h[L.diHead], o = L.diAt + head * L.msgSize, x = f.x || [0xFF, 0xFF, 0, 0];
+  const b = [kind, k + 1, f.a || 0, f.b || 0, (f.w1 || 0) & 255, (f.w1 || 0) >> 8 & 255, (f.w2 || 0) & 255, (f.w2 || 0) >> 8 & 255,
+    ...[0, 8, 16, 24].map(i => (f.t || 0) >>> i & 255), ...x];
+  for (let i = 0; i < 16; i++) h[o + i] = b[i];
+  h[L.diHead] = (head + 1) % L.diSize;
 }
 
 function dq0Poke(m, pokes) {
@@ -1263,7 +1277,7 @@ module.exports = {
   PK_PORTCULLIS, T_DOOR, T_STEPS, xdBytes, saidTheme, DQ0_MAKE, dq0Life, THEMEC, builtChunks, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N,
   CSLOT_AT, liveChunks, O_WAY_OUT, O_NOWHERE, stratumRec, dq0Made, chunkDiff, dq0StatusRows, dq0Story, dq0Prose, inTurn,
   DQ0_REPEATS, dq0Answers, dq0Repeats, dq0Doubled, dq0Lost, dq0Check, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need,
-  dq0Never, dq0Carried, dq0Here, dq0Named, dq0Thing, dq0Holder, dq0View, DQ0_I, passings, dq0TypedAsk, dq0Typed,
+  dq0Never, dq0Carried, dq0Here, dq0Named, dq0Thing, dq0Holder, dq0Root, dq0Intent, dq0View, DQ0_I, passings, dq0TypedAsk, dq0Typed,
   dq0PortalOff, dq0Portal, dq0RecPb, dq0Rec, dq0Alone, dq0Poke, dq0BodyFb, dq0Body, dq0SheetSb, dq0Sheet, dq0PcShock,
   dq0Grow, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Median, dq0Worst, dq0Waits, dq0Held, DQ0_ANSWERS, dq0AnswerTest, WORN,
   DQ0_PLAYED, dq0Paces, dq0Own, dq0Asks, dq0HeldPaces, dq0LetterKeys, dq0PlayLetters, dq0WhenFree, dq0FightPause, PLAYER_PAUSE,

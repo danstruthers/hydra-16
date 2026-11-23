@@ -570,7 +570,7 @@ unsigned char __fastcall__ o_den_heard (const struct msg* m)
     if (E_DEN_DE (*m) == DE_AIMS && !E_DEN_SEEN (*m)) {
         return 0xFF;                            /* (A shot's aim unseen: its shot heard as it comes, not its aim) */
     }
-    if (E_DEN_DE (*m) >= DE_CLOSES && E_DEN_SEEN (*m)) {
+    if ((unsigned char) (E_DEN_DE (*m) - DE_CLOSES) <= DE_AIMS - DE_CLOSES && E_DEN_SEEN (*m)) {
         return rel;                             /* (One seen closing with the character: told as its blow is, whatever's
                                                 **   heard, the user's, 2026-11-17) */
     }

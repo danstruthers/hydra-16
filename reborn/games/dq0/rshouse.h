@@ -19,18 +19,26 @@
 ** no test (bare hands half a foot of soft soil, nothing of hard-packed earth; every tool half as far in hard-packed
 ** earth as in soil); anything harder only with a pick, a Mining test each spell: its rate at a marginal success,
 ** twice at a critical, half at a marginal failure, none at a critical failure */
-#define RS_DIG_SHOVEL   { 3, 0, 0, 0, 6 }       /* (A shovel's rates and a pick's, the table's: a tunneller's too, the
-                                                **   world's, dq0w/wdig.c, slice 4.11's) */
+#define RS_DIG_SHOVEL   { 3, 0, 0, 0, 6 }       /* (A shovel's rates and a pick's, the table's: every actor's, the
+                                                **   referee's alone since the one-path plan's digging, 2026-11-23) */
 #define RS_DIG_PICK     { 2, 4, 2, 6, 4 }
 struct digger { char key[8]; unsigned char rate[5], wear[5]; };     /* (Earth, stone, masonry, flags, soil) */
 extern const struct digger digger[];
-#define NDIGGERS        9
+#define NDIGGERS        10                      /* (A burrower's claws the last, 2026-11-23) */
 #define DIG_TESTED(m)   ((m) != MAT_EARTH && (m) != MAT_SOIL)   /* (Earth dug at the tool's rate; the rest a Mining test) */
 
 /* The tool to hand that suits the material best (bare hands, digger's 0, if none does better; of two as good, the
 ** one it wears less), or the one named (name's key: the user's, 2026-11-03: a lesser tool named is used): its digger's
-** number (0 too if what's named is no digger) */
-unsigned char __fastcall__ house_dig_tool (unsigned char m, const char* name);
+** number (0 too if what's named is no digger).  What's to hand: the character's (list 0: tools, RS_EQUIP's), or an
+** actor's, list its keys in the same form (eight bytes each, NTOOLS at most, the first empty one the last: the world's,
+** its things' and its claws; the one-path plan's digging) */
+unsigned char __fastcall__ house_dig_tool (unsigned char m, const char* name, const char* list);
+
+/* A dig's tool and its rate, every actor's (RS_TEST's P_DIG, r: its material; the character's text the tool named, ""
+** the best to hand; an actor's, r->actor not 0, its tools listed, none named): the reply's text its key (and a better
+** one named at DIG_BETTER, the character's), its wear, its rate at a marginal success (RS_TEST_RATE), RS_TEST_CANT 1 if
+** nothing bites into it; the rate returned (0 none).  The test and the rate by its grade are the referee's */
+unsigned char __fastcall__ house_dig (struct req* r);
 
 /* ---- What a thing does swung (HOUSE.md's fights and portals, the user's, 2026-10-22: "I think it should try and use
 ** whatever you request, but if it is something soft ... it should reply with something like 'You attempt to batter the

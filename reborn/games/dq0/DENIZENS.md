@@ -626,6 +626,13 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
 - **Away from the character** (roam's records, part 9's wander): one at its dig's stand posts its spell coarse (I_KIT's
   KT_DIG, who 0: w1 w2 its face, x[2] its stratum, x[0] its tools), due again a spell on; the world digs it at once,
   untested, untold (wdig.c's), the hole and the way through kept as an actor's.
+- **One spell, every actor's** (the one-path plan's stage 2, digging, 2026-11-23: HOUSE.md's tunnellers, "One
+  code"): each of its spells is the character's own (dq0w.c's dig_spell, part 1's): the act table's dig row's ten
+  minutes and noise, the referee's test by its own sheet with the tool among its own things (and its claws) that
+  suits best, the referee's rate and wear (the world's copy of the rates gone), its own tool worn; a record's spell the
+  referee's rate unasked of dice (RS_DIG_QUERY). Asked as it begins whether anything it has bites (the character's
+  question). A hidden door is dug at as the wall it seems (the minds' dig_way: dug_as) and found as its facing comes
+  off (DE_DIGFOUND, the act table's digfound row).
 - **Poor rock** (wdig.c): a tunneller's spell critically failed in shale fills two feet of its hole again, told
   (DE_ROOF: "The dwarf miner is showered with rock from the roof.", heard rock falling; no harm: the referees' sheets
   are the character's).  Its spells and its way through played by the sound task (dq0s: a dig, a smash).

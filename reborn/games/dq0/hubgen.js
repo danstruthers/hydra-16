@@ -70,6 +70,11 @@ const ASM = {
   letter: { NLET: 'NLET', LT_REC: 'LT_REC', CIX: 'sizeof cix', CIX_LET: 'cix.let' },   // games/dq0w/letter.s
   pulse: { SND_GRID: 'SND_GRID', SND_W: 'SND_W' },              // games/dq0p/pulse.s: the sound's grid
   at: { CW: 'CW', M_CHUNK: 'M_CHUNK' },                         // games/dq0w/at.s: a chunk's width, the maker's chunk
+  hz: {                                                         // games/dq0w/hz.s: body bd's step, its hazards (den_hz)
+    CH_NTRAPS: 'chunk.ntraps', CH_TRAP: 'chunk.trap', TR_SIZE: 'sizeof trap', TR_X: 'trap.x', TR_Y: 'trap.y', TR_STATE: 'trap.state',
+    TR_TRIGGER: 'trap.trigger', TT_DOOR: 'TT_DOOR', TS_SPRUNG: 'TS_SPRUNG', TS_DISARMED: 'TS_DISARMED', TS_BROKEN: 'TS_BROKEN',
+    T_PIT: 'T_PIT', A_STATE: 'actor.state', A_SN: 'actor.sn', A_X: 'actor.x', A_Y: 'actor.y',
+  },
   sq: {                                                         // modules/dq0lib/sq.s: the chunks' cache, a stratum, a chunk
     SS: 'sizeof stratum', SS_X0: 'stratum.x0', SS_Y0: 'stratum.y0', SS_W: 'stratum.w', SS_H: 'stratum.h', WORLD_BANK: 'WORLD_BANK',
     PLAN_BANKS: 'PLAN_BANKS', NCSLOTS: 'NCSLOTS', CS_SIZE: 'sizeof cslot', CS_STAMP: 'cslot.stamp', W_CSLOT: 'wrec.cslot',

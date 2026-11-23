@@ -31,6 +31,8 @@ SWFAST      = 1                     ; (The parts copied four pages a pass: an an
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
 SWTABOV     = 2                     ; (Their records in overlay 2's bank, dq0w.cfg's SWTAB: 565 bytes of the main RAM's
                                     ;   room, speed12, 2026-11-22)
+SWSTUBOV    = 33                    ; (The stubs' tables in overlay 33's bank, dq0w.cfg's SWSTP ...: a stub 4 bytes, not
+                                    ;   6, the main RAM's room, room7, 2026-11-23)
 OVBANKS     = OVLS                  ; The overlays (dq0w.cfg's OV1 ...: the build's count, OVLS; things.h's OVBANKS)
 
             .zeropage

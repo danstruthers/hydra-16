@@ -355,7 +355,9 @@ static void __fastcall__ wound_words (unsigned char n)
 static void __fastcall__ harm (struct req* r)
 {
     struct rs_effect* e = (struct rs_effect*) RS_HARM_EFFECTS (*r);
-    unsigned char n;
+    unsigned char n, t = r->actor ? BTOUGH : TOUGH;
+    unsigned char* dw = r->actor ? &sheet[aden[(r->actor - 1) & 7]] : &wounds;   /* (The character's, or a creature's:
+                                                **   its harm by the same rule, the one path's step, 2026-11-23) */
 
     memset (RS_HARM_EFFECTS (*r), 0, sizeof RS_HARM_EFFECTS (*r));
     tp = hurt;
@@ -363,7 +365,7 @@ static void __fastcall__ harm (struct req* r)
     *tp = 0;
     RS_HARM_BAND (*r) = 0;
     RS_HARM_OUT (*r) = 0;
-    if (r->other || wounds >= TOUGH) {
+    if (r->other || *dw >= t || (r->actor && RS_HARM_CAUSE (*r) == HC_STRUCK)) {
         r->result = 1;
         return;
     }
@@ -372,12 +374,12 @@ static void __fastcall__ harm (struct req* r)
     if (!n) {
         return;
     }
-    wounds += n;
-    e->target = 0;
-    e->kind = wounds >= TOUGH ? X_DEATH : X_WOUND;
+    *dw += n;
+    e->target = r->actor;
+    e->kind = *dw >= t ? X_DEATH : X_WOUND;
     e->band = RS_HARM_BAND (*r) = n >= 4 ? 3 : n >= 2 ? 2 : 1;
     e->phrase = 1;
-    e->cond = wounds >= TOUGH ? C_DEAD : 0;
+    e->cond = *dw >= t ? C_DEAD : 0;
     e->x[0] = 0;                                /* (Where: none said, the null's) */
     e->x[1] = AS_BLUNT;
     wound_words (n);
@@ -668,28 +670,23 @@ void __fastcall__ rf_answer (struct req* r)
         ((struct rs_summary*) RS_NEW_ACTOR_SUMMARY (*r))->power = 10;
         break;
     case RS_TEST:
-        if (RS_TEST_PURPOSE (*r) == P_DIG && !r->actor) {       /* (The tool to hand that suits it best: the house's; a creature's,
-                                                **   a tunneller's, its grade alone, by its own dice as moving
-                                                **   quietly's, the world's the rest: slice 4.11's) */
+        if (RS_TEST_PURPOSE (*r) == P_DIG) {    /* (The tool to hand that suits it best, every actor's: the house's
+                                                **   (rshouse.h's house_dig, the one-path plan's digging, 2026-11-23);
+                                                **   a creature's grade by its own dice as moving quietly's) */
             m = RS_TEST_MAT (*r) > MAT_SOIL ? MAT_STONE : RS_TEST_MAT (*r);
-            t = house_dig_tool (m, r->text);
-            k = digger[t].rate[m];
-            if (r->text[0] && !t) {
-                k = 0;                          /* (Named, and no digger) */
-            }
-            g = house_dig_tool (m, "");
-            strcpy (r->text + DIG_BETTER, r->text[0] && digger[(unsigned char) g].rate[m] > k ? digger[(unsigned char) g].key : "");
-            strcpy (r->text, digger[t].key);
-            RS_TEST_WEAR (*r) = digger[t].wear[m];
-            if (!k) {
-                RS_TEST_CANT (*r) = 1;
-                RS_TEST_RATE (*r) = RS_TEST_WEAR (*r) = 0;
+            if (!(k = house_dig (r)) || RS_TEST_STEPS (*r) == RS_DIG_QUERY) {
                 break;
             }
-            if (RS_TEST_STEPS (*r) == RS_DIG_QUERY) {
-                break;
+            if (!DIG_TESTED (m)) {
+                g = G_PASS;                     /* (Earth: the tool's rate, untested) */
+            } else if (r->actor && r->other != RS_ASKER) {
+                QUIET_IN
+                g = flat (RS_TEST_STEPS (*r));
+                QUIET_OUT
+            } else {
+                g = flat (RS_TEST_STEPS (*r));
             }
-            g = RS_TEST_GRADE (*r) = DIG_TESTED (m) ? flat (RS_TEST_STEPS (*r)) : G_PASS;    /* (Earth: the tool's rate, untested) */
+            RS_TEST_GRADE (*r) = g;
             RS_TEST_RATE (*r) = g == G_WELL ? 2 * k : g == G_PASS ? k : g == G_FAIL ? k / 2 : 0;
             break;
         }

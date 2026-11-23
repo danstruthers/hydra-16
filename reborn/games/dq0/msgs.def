@@ -115,6 +115,8 @@ I_LOAD          -
 I_GATHER        a family                                # (FM_*: 0 any)
 I_NOISE         a loud; b what@NZ_WORK; w1 x; w2 y      # (A noise made: its loudness (1 a whisper, 3 a word, 6 a yell),
                                                         #   what it is (NZ_VOICE, NZ_KNOCK ...), its square, 0 the character's)
+I_LIGHT:den     < I_DEN; a lit; b dark                  # (A light of its own lit, 1, only where its square's dark to
+                                                        #   it; 0 put out: the one-path plan's lights, 2026-11-23)
 
 # ---- The events (E_*: the world's, what's happened; to the UI's ring (the hub's eq) and the denizens' (dq: E_DEN,
 # E_FIGHT, the limbs' E_BEAT); who 0 the character's).  A kind of many meanings has a form for each, chosen by a field's
@@ -206,6 +208,13 @@ E_BEAT:water    w1 beat:0-7==WB_WATER,WB_SWIM,WB_UNDER,WB_DOUSED@WB_QUIET wet:8-
 E_BEAT:search   b touch; w1 beat:0-7==WB_SEARCH@WB_QUIET rsw:8-15@RSW_BEGUN; w2 detail; x[0] mx; x[1] my
                 # (A room searched whole, as it goes: by touch; detail, a thing's item or kind, the block's (its
                 #   middle mx, my), as RSW_* says)
+E_BEAT:things   b whose; w1 beat:0-7==WB_STOWS,WB_PUTS,WB_TAKES,WB_DONS,WB_DOFFS,WB_HANDS_TO@WB_QUIET thing:8-15; w2 other:0-7 on:8
+                # (A denizen's things, the character's own acts (wthings.c's, 2026-11-23): b whose, the actor plus
+                #   1; the thing's kind; other, the thing it's put in or taken from (its kind), or the one it's
+                #   handed to (an actor plus 1); on, put on it)
+E_BEAT:trap     b whose; w1 beat:0-7==WB_TRAP@WB_QUIET to:8-11@TO_SPRUNG tk:12-15@TK_PIT
+                # (A trap an actor set off, seen: b whose, the actor plus 1, | 0x80 a fall unseen; how it came out,
+                #   TO_*; its kind, TK_*: the step's, every actor's, 2026-11-23)
 E_BEARING       w1 brg:0-7@BRG_NONE
 E_BEARING:sky   b sky; w1 brg:0-7==BRG_SKY@BRG_NONE refusal:8-15@SKP_NONE
                 # (The sky seen: b its phase, SKP_*, and what showed it; a shaft's refusal, w1's high byte, b none)

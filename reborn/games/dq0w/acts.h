@@ -44,4 +44,31 @@ signed char __fastcall__ act_test (unsigned char who, unsigned char p, signed ch
 void __fastcall__ den_search (unsigned char dark);  /* (Part 94's: wsearch.c) Body bd's search about it, the character's
                                                 **   own (the search row's): its darkvision dark */
 
+/* ---- Links and lights, every actor's (the one-path plan's stage 2, 2026-11-23): the rules both sides read */
+                                                /* (flight_t: flight.inc's, one source, a static copy in each part that
+                                                **   uses it, dq0w.c's part 2 and wflight.c's part 118: room7, 2026-11-23) */
+#define FLIGHT_T(k, st, feet, up)   flight_t ((k), (st), (feet), (up))
+                                                /* (A flight's crossing, tenths: link kind k, the actor's step st, the drop
+                                                **   between the floors in feet; a step's time a foot on a stairway, twice
+                                                **   on a ladder, halved down; a long slope four feet along a foot of the
+                                                **   drop, walked, eight tenths of a step a foot down, thirteen up:
+                                                **   HOUSE.md's, slice 4.10's; the character's s_climb, an actor's
+                                                **   den_flight) */
+#define FLIGHT_WORK(st, feet)       ((unsigned) (((feet) + 1) * (st)) >> 1)  /* (A long slope climbed: its strenuous
+                                                **   work, the character's GA_WORK; an actor's the one body clock's, to
+                                                **   come) */
+unsigned char __fastcall__ den_flight (const struct msg* m);    /* (Part 118's: wflight.c) Body bd up or down a flight
+                                                **   (I_CLIMB's): 1, or 0 none within reach (the caller's) */
+void __fastcall__ den_light (const struct msg* m);  /* (Part 119's: wlink.c) A light of body bd's own lit, put out */
+void __fastcall__ den_lights (unsigned char op);    /* (Part 119's: wlink.c) Body bd's lights: DL_SUM its hub's alight
+                                                **   made again; DL_MOVED, it stepped, lit (the light layer near it, a
+                                                **   look); DL_DOUSE, each it carries put out (lain down to sleep: a rest
+                                                **   puts a burning light out first, every actor's); DL_OUT, one burnt out */
+#define DL_SUM          0
+#define DL_MOVED        1
+#define DL_DOUSE        2
+#define DL_OUT          3                       /* (One of its lights burnt out: part 27's) */
+void __fastcall__ den_lsum (unsigned char nf);   /* (Part 60's: wlimbs.c) Body bd's lights into the hub's alight */
+extern unsigned char dlit[NACTORS];             /* (wlink.c's: each actor carrying a light lit, its reach) */
+
 #endif

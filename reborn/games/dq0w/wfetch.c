@@ -19,6 +19,7 @@
 #include "things.h"
 #include "wbody.h"
 #include "outfit.h"
+#include "acts.h"
 
 #pragma local-strings (on)
 #pragma code-name ("SW72CODE")
@@ -28,6 +29,8 @@ unsigned __fastcall__ weight_of (unsigned i);   /* (Part 10's) */
 unsigned char __fastcall__ take_rule (unsigned n);  /* (Part 81's, wtake.c: the take rule, tk_x, tk_y) */
 extern unsigned tk_x, tk_y;
 unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);   /* (Part 10's) */
+unsigned char __fastcall__ den_got (unsigned i, unsigned char tell);   /* (Part 114's: wthings.c, a thing taken by body
+                                                **   bd, its time and its carry, the character's rules) */
 void light_now (void);                          /* (Part 10's) */
 unsigned char __fastcall__ on_pc (unsigned i);  /* (Part 10's) */
 void __fastcall__ mix_join (unsigned i, unsigned n);   /* (Part 64's: two piles of coins' mints) */
@@ -91,6 +94,15 @@ static unsigned __fastcall__ lot (unsigned n, unsigned k)
 
 static void fit (void);
 
+/* The act table's give row's time (a thing handed over, every actor's: the one-path plan's stage 2, 2026-11-23) */
+static unsigned give_t (void)
+{
+    struct actq q;
+
+    act_get (q, AC_GIVE);
+    return q.r.time;
+}
+
 /* Body bd's errand (its intent, I_ROB with a: FE_TAKE, FE_GIVE, FE_GIFT; t the thing, w1 w2 where it lay; a gift's,
 ** a trade's, w1 a count of a lot split off, FE_GIFT's w2 1 kept, not held: the market's coins and goods, 2026-11-02) */
 void __fastcall__ s_den_fetch (const struct msg* q)
@@ -114,7 +126,9 @@ void __fastcall__ s_den_fetch (const struct msg* q)
             c = 0xFF;                           /* (Gone from where it lay) */
         }
         if (c == IR_OK) {
-            hold (n);
+            den_got (n, 0);                     /* (Its time, the take row's and its reach; carried, a hand first, else
+                                                **   its pack: the one-path plan's stage 2, things and robbery) */
+            den_equip ();
         }
         hub_map (0);
         told (c == IR_OK ? FT_TOOK : c == 0xFF ? FT_GONE : c == IR_NOT_HERE ? FT_FAR : c == IR_FULL ? FT_HANDS :
@@ -164,6 +178,7 @@ void __fastcall__ s_den_fetch (const struct msg* q)
         light_now ();
         den_eq_all = 1;
         den_equip ();                           /* (And the giver's: out of its hands) */
+        bd.ready += give_t ();                  /* (Handed over: the give row's, every actor's; a round before) */
         told (FT_GAVE, kind);
         return;
     }

@@ -32,8 +32,8 @@ unsigned char bps;
 struct msg bev;
 unsigned char bleeds;
 unsigned bled_at;
+unsigned char bclimb[NACTORS];                  /* (wbody.h's: each body's climb out of its pit so far, feet) */
 
-unsigned char __fastcall__ handout (const struct msg* m);   /* (Part 111's: wempty.c, every actor's) */
 
 #pragma code-name ("SW14CODE")
 #pragma rodata-name ("SW14RODATA")
@@ -70,7 +70,9 @@ static unsigned char __fastcall__ taken (unsigned x, unsigned y)
 
 static unsigned char __fastcall__ open_sq (unsigned char* p)
 {
-    return p && (TILE (*p) == T_FLOOR || TILE (*p) == T_CORR || TILE (*p) == T_STEPS);
+    unsigned char t;                            /* (Its tile once: part 14's room, room7, 2026-11-23) */
+
+    return p && ((t = TILE (*p)) == T_FLOOR || t == T_CORR || t == T_STEPS);
 }
 
 /* What lies between body bd and the character, for those who hear it (SOUND.md: E_DEN's x[3]), by the senses' sound
@@ -217,7 +219,9 @@ void s_den_intents (void)
         }
         BD_GET ((m.who - 1) & 7);
         was = bd.doing;
-        if (was == DO_DOWN && m.kind != I_ENTER && m.kind != I_LEAVE) {
+        if (was == DO_DOWN && m.kind != I_ENTER && m.kind != I_LEAVE &&
+            (m.kind != I_ROB || I_ROB_ERRAND (m) != FE_ROBBED)) {   /* (Robbed as it lies: the character's robbery,
+                                                **   2026-11-23) */
             if (bd.ready <= HUB->now) {
                 bd.ready = HUB->now + out_still (bk + 1);   /* (Its time out come: its shock rolls due by now
                                                 **   asked, as the character's are: senseless still, its next
@@ -269,6 +273,10 @@ void s_den_intents (void)
                 bd.ready += 10;
                 break;
             }
+            if (den_hz (d)) {
+                break;                          /* (In a pit, a round's climb out; a trap ahead noticed: the step's
+                                                **   hazards, every actor's, part 120's) */
+            }
             o = (unsigned char) apart (bd.x - bpx, bd.y - bpy);
             if (!I_STEP_COARSE (m)) {           /* (Its time: its step, uphill and steeply down more, on steps more, a
                                                 **   diagonal seven feet: the character's own, step_cost's, one body rule,
@@ -300,8 +308,8 @@ void s_den_intents (void)
             den_trod (I_STEP_HEAD (m));
             bd.x = x;
             bd.y = y;
-            if (npools & ~PC_WOKE) {
-                time_kept (POOL_OP + 1);                    /* (Lamp oil there: slipped in, the user's H15, every actor's) */
+            if (den_hz (DT_ON)) {               /* (A trap there set off; lamp oil, slipped in, the user's H15: */
+                break;                          /*   every actor's.  Dead of it: its step told no more) */
             }
             if (I_DEN_FACE (m) == 0xFF) {
                 bd.face = I_STEP_HEAD (m);      /* (Its way, unless its mind faces it another: one keeping its
@@ -324,13 +332,11 @@ void s_den_intents (void)
             bd.ready += bd.step;                /* (Its two squares at a jog) */
             told_den (I_GOTO_HEARD (m), I_GOTO_LOUD (m));
             break;
-        case I_ROB:
-            if (I_ROB_ERRAND (m) >= FE_EMPTY) { /* (Its thing's things put out, a thing put down on a square: the */
-                handout (&m);                   /*   character's own code, wempty.c's, P4's and P5's, 2026-11-18) */
-                break;
-            }
+        case I_ROB:                             /* (A robbery, an errand; its things handled by the character's own
+                                                **   code, wempty.c's and wthings.c's: part 80's, 2026-11-23) */
         case I_RISE:                            /* (Its position, its mind's: part 80's, part 14's room, 2026-11-03) */
-        case I_CLIMB:                           /* (The rarer: an ally come along with the character; a robbery; */
+        case I_LIGHT:                           /* (The rarer: a light lit, put out; a flight crossed; a robbery; */
+        case I_CLIMB:
         case I_PORTAL:                          /*   a door worked, the character's code, a thing taken, Phase 3C's: part 80's) */
         case I_TAKE:
             den_more (&m);

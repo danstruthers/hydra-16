@@ -24,6 +24,7 @@
 #include "wbody.h"
 #include "trace.h"
 #include "outfit.h"
+#include "acts.h"
 
 
 unsigned char den_eq_all;                       /* (s_den_equip's: told even with no things of its own left, its
@@ -649,6 +650,7 @@ void s_den_equip (void)
         ag |= AG_SHOOTS;                        /* (A thing to throw: its mind's to throw it, as a shot, wshoot.c's
                                                 **   to_throw's, 2026-10-30) */
     }
+    den_lsum (1);                               /* (Its lights, as its things are now: the hub's alight) */
     hub_map (0);
     HUB->agear[bk] = ag;
     r = &HUB->slot[SLOT_WORLD];
@@ -676,6 +678,8 @@ void __fastcall__ s_den_enter (const struct msg* m)
     bd.arm = 0;
     bleeds = I_ENTER_BLEEDING (*m) ? bleeds | 1 << bk : bleeds & ~(1 << bk);
     hub_map (0);
+    HUB->alight[bk] = 0;                        /* (Its lights none till its things are told: s_den_lsum's) */
+    dlit[bk] = 0;
     HUB->dig_t[bk] = HUB->agear[bk] = 0;        /* (Its entry's, the world's, its last actor's no longer: its mind told
                                                 **   nothing seen, eaten nor begun; its things as its gear makes them,
                                                 **   a beast's none: GAME-CRITIQUE.md's 3.5, 2026-11-17) */
@@ -822,6 +826,61 @@ void s_den_took (void)
     if (own) {
         s_den_equip ();
     }
+}
+
+/* ---- An actor's lights (the one-path plan's lights, 2026-11-23: wlink.c's, part 119, its own lights lit, put out) */
+
+/* Thing i's way up to whoever has it: body bd's own (worn, held, hung from it, or in what it carries), 1; and in a
+** carrier not a belt (its pack, a sack), 2 (wlink.c's the same) */
+static unsigned char __fastcall__ bd_own (unsigned i)
+{
+    struct item* p;
+    unsigned char in = 0, k;
+
+    for (;;) {
+        p = item_at (i);
+        if (p->where != IW_ITEM) {
+            break;
+        }
+        i = p->x;
+        k = item_at (i)->kind;
+        hub_map (KIND_BANK);
+        if (!(CATALOGUE[k].flags & K_BELT)) {
+            in = 1;
+        }
+    }
+    return p->where == IW_DEN && (p->owner | p->hide << 8) == bd.did ? 1 + in : 0;
+}
+
+/* Body bd's lights into the hub's alight (its carried light's reach, the brightest lit one it carries: in a hand, worn,
+** hung from its belt; AL_KIT a light of its own it could light, not spent; AL_NOFIRE kept, unless nf), and dlit (its
+** things told the referee, s_den_equip's; a light lit, put out, burnt out, wlink.c's) */
+void __fastcall__ s_den_lsum (unsigned char nf)
+{
+    unsigned i;
+    unsigned char r = 0, kit = 0, w, f, k, l;
+    struct item* p;
+
+    if (bd.did) {
+        for (i = 0; (i = items (i, IN_DEN | IN_ITEM, 0)) != 0; ) {
+            f = ip->flags;
+            k = ip->kind;
+            hub_map (KIND_BANK);
+            l = CATALOGUE[k].light;
+            if (!(CATALOGUE[k].flags & K_LIGHT) || !(w = bd_own (i))) {
+                continue;
+            }
+            if (!(f & I_LIT)) {
+                p = item_at (i);
+                kit |= !p->id || p->fuel || !burn_of (k);   /* (Not spent: a lantern dry, a torch burnt out) */
+            } else if (w == 1 && l > r) {
+                r = l;
+            }
+        }
+    }
+    hub_map (0);
+    HUB->alight[bk] = (r > AL_REACH ? AL_REACH : r) | (kit ? AL_KIT : 0) | (nf ? 0 : HUB->alight[bk] & AL_NOFIRE);
+    dlit[bk] = r;
 }
 
 #pragma code-name (pop)

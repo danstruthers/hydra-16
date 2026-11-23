@@ -17,6 +17,8 @@ RP_X        = 1                     ; (The record store's calls, ../dq0/rp.h's r
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: the swap study's, a fifth of the task's copies)
+SWSTUBOV    = 1                     ; (The stubs' tables in overlay 1's bank, dq0d.cfg's SWSTP ...: a stub 4 bytes, not 6,
+                                    ;   the main RAM's room, room7, 2026-11-23: ../dq0/swap.inc's)
 
             .zeropage
 ova:        .res        1           ; (.A and .X kept through a stub)

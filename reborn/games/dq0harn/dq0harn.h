@@ -314,6 +314,8 @@ void __fastcall__ effect (unsigned char target, unsigned char kind, unsigned con
     unsigned char loc, unsigned char aspect);   /* (fight.c's, through its stub) An effect of the reply's */
 void __fastcall__ strike (struct side* s, struct side* t, unsigned char n, unsigned char z, unsigned char part,
     char* w, unsigned char stop);               /* (fight.c's, through its stub) Side s strikes side t: n dice */
+void hbeast (void);                             /* (fight.c's, through its stub) A creature's harm, side D's (RS_HARM at
+                                                **   an actor) */
 
 /* grapple.c (overlay 9): grappling (RS_ATTACK's RS_GRAPPLE: fight.c's, its sides made; HOUSE.md's grappling) */
 void grip (void);

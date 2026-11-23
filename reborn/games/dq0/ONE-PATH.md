@@ -67,6 +67,47 @@ its area's rows narrowed, below.)
   work); a robber's takings carried home and hidden there, not at a distance (C10, C14); no denizen tracks by prints,
   and a hunter follows the character's trail alone (M2's any actor's trail: stage 3); smell without asking (M1, the
   senses'); watched while hiding by the watcher's own eyes (B1); hidden compartments searched by a denizen (C5).
+
+**Done: stage 2's digging** (branch dig1, 2026-11-23; built/2026-11-23-dig1.md):
+- **One spell** (dq0w.c's dig_spell, part 1): the character's spell (part 1's s_dig_on) and a tunneller's (wdig.c) are
+  one code: the rock it's into, the referee's test by who, the referee's rate and wear, the rock's hardness, poor rock
+  come down, a hidden door dug into and found. The act audit's E1 and G-13 (its tools: its own things, bare hands, a
+  chisel with a hammer), H1's spell time and H2's noise.
+- **The act table**: the dig and digbegin rows carry the spell's ten minutes (SPELL, both sides' own, before); new rows
+  digfound (a hidden door found by a dig), hang and wallup (a builder's work: its time and its noise from the table).
+- **The referee**: P_DIG answered for every actor by rshouse.h's house_dig (both referees): an actor's tools listed in
+  the tools' own form, the house's table's new claws row (the world's own copy of the rates, wdig.c's, gone); the
+  grade by the creature's own sheet, as before.
+- **The minds**: a hidden door is dug at as the wall it seems (dq0d.c's dig_way: dug_as).
+- **Parity test**: dq0digact (the character's dig and a dwarf miner's: the query as it begins, the spells' ten
+  minutes, the noise, the test and the rate by the grade, the tool worn).
+- **Left in this area**: the character's building (hang a door, wall up a way: no decision says what it needs or how:
+  OPEN.md); a denizen digging down (no mind wants a shaft yet: OPEN.md); the roof's harm on a denizen (the world's harm
+  for an actor, G3: the step's branch); a denizen tiring by its spells (the one body clock, A6, Y9); an arm useless
+  stopping a denizen's chisel; the time of a denizen's spell spent while it's interrupted (Y8).
+
+**Done: stage 2's things and robbery** (branch things1, 2026-11-23; built/2026-11-23-things1.md):
+- **The act table's rows** hold, put, takeout, don, doff, strip, give, drag, rob, filch (games/dq0w/acts.txt), read by
+  both sides: the character's handling times (things.c's catalogue code, part 48's hold and doff, part 35's strip),
+  an actor's (wthings.c, wtake.c, wfetch.c), the drag's time, noise and test (wdrag.c, every actor's: E_NOISE or E_DEN
+  DE_DRAGS, the referee's P_FORCE by the actor's own sheet).
+- **A denizen's things by the character's rules** (wthings.c, parts 114-116; I_ROB's errands FE_STOW, FE_PUT, FE_DON,
+  FE_DOFF, FE_DRAG, FE_HAND): put away (coins its purse, a family's carrier, its pack), put in or on a thing within
+  reach (o_fits, the character's), worn (a wearable alone), taken off, a heavy thing shoved or dragged, a thing handed
+  to another by the receiver's take rule; each its row's time and its reach (part 56's, every actor's), told as seen
+  (E_BEAT:things).  C6, G-9, G-10, G-11, C11's receiver.
+- **Its take** (wtake.c): sees things in open containers lying in its sight at any depth (H17), takes them out by the
+  take rule (its time the takeout row's and a level each; a worn kind from a body the strip row's more: looting), and
+  carries them by the character's carry (coins to its purse, a hand, else its pack: C1, C9); its hands full is no
+  longer IR_FULL while its pack or purse has room.  An ally's fetch the same, with its time (it had none).
+- **The character robs and filches** (G-18): "rob the bandit" (one senseless beside it: what it holds but a light lit,
+  and its coins), "filch from the bandit", "steal from" (one asleep, or senseless: its coins alone, the character's
+  Stealth against its hearing, caught it wakes); the minds' SW_ROB, SW_FILCH (dq0d's robbed), the world's FE_ROBBED
+  (wthings.c's den_robbed: the character's carry), each thing told.
+- **Parity tests:** dq0thingact (put, takeout, don, drag), dq0dentakein (a take from an open sack), dq0pcrob.
+- **Left in this area:** see built/2026-11-23-things1.md's open questions (C10's takings carried home, the grope for
+  a denizen, worn places for a denizen, the minds' use of the new errands, the character's take-up time the UI's).
+
 **Done so far:**
 - **Stage 1, the world's part** (act1, 2026-11-19): the act table (games/dq0w/acts.txt) and one sender each for noise and
   the referee's test (acts.h's act_noise, act_test).
