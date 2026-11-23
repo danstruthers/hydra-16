@@ -211,6 +211,10 @@ struct mind {
     /* ---- Its target (2026-11-19) */
     unsigned char   target[NACTORS];            /* (Who it's after: 0 the character, k + 1 actor k; set as it's
                                                 **   enlisted, the character, the minds' one target so far) */
+    unsigned char   alit[NACTORS];              /* (Each one's next ask to light a light it carries, where it's dark to
+                                                **   it: the clock's NOW_T; the one-path plan's lights, 2026-11-23) */
+    unsigned char   aflight[NACTORS];           /* (Each one crossing a flight, its time on its ready the world's: not
+                                                **   roused, its legs on the stairs; till it decides again) */
 };
 static struct mind md;
 #define WAY_HOLD(t)     ((unsigned char) (NOW_T + (t)) | 2)
@@ -2090,12 +2094,14 @@ unsigned char __fastcall__ s_shoots (unsigned char k, unsigned char ag)
 ** will be free, as the world will have it) */
 static unsigned char __fastcall__ decide (unsigned char k)
 {
-    unsigned char d = 0xFF, was, foe, ag, w, rng, of;
+    unsigned char d = 0xFF, was, foe, ag, w, rng, of, al;
 
     kind_get (md.akind[k]);
     memcpy (&a, &HUB->actor[k], sizeof a);
     of = a.face;
     ag = HUB->agear[k];                         /* (Its things, the world's: a launcher, a shot, slice 4.7's) */
+    al = HUB->alight[k];                        /* (Its lights, the world's: the one-path plan's, 2026-11-23) */
+    md.aflight[k] = 0;                          /* (Across, if it was crossing a flight) */
     stayed (k);
     wt = 0;
     wayj = 0xFF;
@@ -2187,6 +2193,17 @@ static unsigned char __fastcall__ decide (unsigned char k)
     } else if (!pcrest && (K.flags & K_LAIR ? !random (4) : random (3))) {
         d = step_for (k, rng, S_ANY);
     }                                           /* (The character resting: no idle wandering in its sight) */
+    if ((al & (AL_KIT | AL_REACH | AL_NOFIRE)) == AL_KIT && KF_LIGHT (K.form) == LI_LIGHT && a.doing != DO_SLEEP &&
+        a.doing != DO_DOWN && (signed char) (NOW_T - md.alit[k]) >= 0) {
+        md.alit[k] = NOW_T + 1;                 /* (One that wants light (kinds.txt's l, folk that carry their own), a
+                                                **   light of its own unlit, awake: lit where it's dark to it, the
+                                                **   world's (its rule the character's, part 114's), as it goes on with
+                                                **   what it decided; asked again in 25 seconds at most) */
+        I_LIGHT_DOING (im) = I_LIGHT_FACE (im) = 0xFF;
+        I_LIGHT_LIT (im) = 1;
+        I_LIGHT_DARK (im) = K.dark;
+        post (I_LIGHT, k + 1);
+    }
     if ((signed char) (NOW_T - md.aloot[k]) >= 0 && (w = take_way (d == 0xFF ? k | 0x80 : k)) != 0xFF) {
         d = w;                                  /* (A thing it wants lying in its reach taken up, the world's, as it
                                                 **   goes on with what it decided; idle, to one it saw: part 14's,
@@ -3352,6 +3369,7 @@ unsigned char __fastcall__ s_along (unsigned char k)
             post (I_CLIMB, k + 1);
             settle ();
             md.sgen[k] = 0;
+            md.aflight[k] = 1;                  /* (Its crossing's time its own: not roused from it) */
             return HUB->actor[k].sn == pcs;
         }
     }
@@ -3415,14 +3433,17 @@ static void tend (void)
         if (!q->name[0]) {
             continue;
         }
-        if (woke && (q->doing || up) && q->doing < DO_FIGHT && q->ready > now + 10) {
+        if (woke && (q->doing || up) && q->doing < DO_FIGHT && q->ready > now + 10 && !md.aflight[k]) {
             rouse (k, 1 + random (10));         /* (The character's changed: a watcher sees to it soon; not one
                                                 **   fighting, fleeing or senseless: its own time) */
             settle ();
         }
-        if (q->sn != pcs && md.anear[k] && q->attitude == AT_ALLIED && md.aorder[k] != OR_WAIT && !along (k) && fresh) {
-            continue;                           /* (An ally beside the character as it went up or down: with it,
-                                                **   as soon as there's a square beside it) */
+        if (q->sn != pcs && md.anear[k] && ((q->attitude == AT_ALLIED && md.aorder[k] != OR_WAIT) ||
+            (q->attitude == AT_HOSTILE && (q->doing == DO_COMING || q->doing == DO_FIGHT))) && !along (k) && fresh) {
+            continue;                           /* (An ally beside the character as it went up or down: with it, as
+                                                **   soon as there's a square beside it; a foe after it, or fighting
+                                                **   it: after it (its mind's, the one-path plan's links, 2026-11-23),
+                                                **   up or down the flight by the character's own rule, the world's) */
         }
         if (q->sn != pcs || apart (q->x - pcx, q->y - pcy) > ACT_R + 8) {
             retire (k);
@@ -5869,7 +5890,7 @@ static unsigned m0, dday;
                         X (alert) X (lsx) X (lsy) X (fooled) X (seenfoe) X (drawn) X (intr) X (anear) X (sniffed) \
                         X (shat) X (aorder) X (afetch) X (afx) X (afy) X (akeep) X (aloot) X (aroute) X (lstep) \
                         X (steps) X (stalk) X (stq) X (stn) X (fled) X (upto) X (aact) X (atx) X (aty) X (drunk) \
-                        X (aday) X (asrch) X (slk) X (atry) X (pway) X (target) X (hsrc) X (hat)
+                        X (aday) X (asrch) X (slk) X (atry) X (pway) X (target) X (hsrc) X (hat) X (alit) X (aflight)
 #define MF(f)           { offsetof (struct mind, f), sizeof md.f[0] },
 #define MS(f)           + sizeof md.f[0]
 typedef char mind_all[sizeof (struct mind) == NACTORS * (0 MIND_FIELDS (MS)) ? 1 : -1];

@@ -873,11 +873,14 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
        WB_DOUSE_MORE,                           /* (Another of the kind before it, within its reach) */
        WB_SLIP, WB_BLAZE,                       /* (Lamp oil on the floor, the user's H15, 2026-11-21, every actor's:
                                                 **   slipped in it and fallen; set alight, wpool.c's) */
-       WB_STOWS, WB_PUTS, WB_TAKES, WB_DONS, WB_DOFFS, WB_HANDS_TO };   /* (A denizen's things, the character's own acts,
+       WB_STOWS, WB_PUTS, WB_TAKES, WB_DONS, WB_DOFFS, WB_HANDS_TO,     /* (A denizen's things, the character's own acts,
                                                 **   wthings.c's (the one-path plan's stage 2, things and robbery,
                                                 **   2026-11-23), seen: its thing put away; put in another (w2 that one's
                                                 **   kind, | 0x100 on it); taken from another (w2 its kind); worn; taken
                                                 **   off; handed to another (w2 that one plus 1): E_BEAT:things */
+       WB_LIGHTS };                             /* (A light of its own lit by a denizen, its kind times 256: the one-path
+                                                **   plan's lights, 2026-11-23, wlink.c's; "You light the torch." the
+                                                **   character's own) */
 enum { RSW_BEGUN, RSW_GOES_ON, RSW_ALREADY, RSW_WALL, RSW_CORNER, RSW_MIDDLE, RSW_ROUND, RSW_END, RSW_FLOOR, RSW_DONE,
        RSW_THING };                             /* (WB_SEARCH's what: b 1 by touch; it begun, gone on with, done before;
                                                 **   along a wall, round a corner, the floor inside, a room of one stop;
@@ -1773,7 +1776,16 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned char ui_enter;            /* The UI's: a count of the lines entered (and of a held line taken up
                                                 **   again), each its own hold in the one give-way from its Enter, its
                                                 **   seq not yet posted (gw.s's: gw2, 2026-11-19) */
+    unsigned char   alight[NACTORS];            /* Each actor's lights (the world's, as its things change: the one-path
+                                                **   plan's lights, 2026-11-23): its carried light's reach, squares, the
+                                                **   brightest lit thing it carries (AL_REACH; 0 none: the senses' lamp at
+                                                **   its square, its sens light), | AL_KIT a light of its own it could
+                                                **   light, | AL_NOFIRE none of them lit for want of a flame (its mind
+                                                **   asks no more till its things change) */
 };
+#define AL_REACH        0x1F
+#define AL_NOFIRE       0x40
+#define AL_KIT          0x80
 enum { WW_NONE, WW_WANTED, WW_MADE };           /* (way_want's st) */
 #define AS_LISTEN       0x01                    /* (sens' flags: listening as it goes, hearing 2 better: the character's
                                                 **   WA_LISTEN, HOUSE.md's) */
@@ -2137,6 +2149,7 @@ struct wsave {
 **   own hub.dsave denizens +ui
 **   own hub.den_seq world
 **   own hub.agear world                                        (Each actor's things at a look: 2026-10-27)
+**   own hub.alight world                                       (Each actor's lights: the one-path plan's, 2026-11-23)
 **   own hub.pc_tx world
 **   own hub.pc_ty world
 **   own hub.dq_head world                                      (The denizens' events: the world's)

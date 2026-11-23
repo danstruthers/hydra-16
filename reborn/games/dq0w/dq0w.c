@@ -2501,21 +2501,13 @@ void __fastcall__ s_climb (unsigned char d)
     move.y = lk->y;
     move.face = HUB->pc_face;
     move.dir = lk->kind;
-    /* (The flight: the drop between the floors, a step's time a foot on a stairway, twice on a ladder) */
+    /* (The flight: the drop between the floors, a step's time a foot on a stairway, twice on a ladder; a long slope
+    ** walked, its climb up strenuous work: every actor's, acts.h's FLIGHT_T, the one-path plan's, 2026-11-23) */
     feet = abs (STRATUM (sn_).datum - STRATUM (lk->to).datum);
-    if (lk->kind >= O_RAMP_UP) {                /* (A long slope, four feet along a foot of the drop, walked: eight
-                                                **   tenths of a step's time a foot down, thirteen up, the climb's
-                                                **   half a step a foot strenuous work: HOUSE.md's long slopes,
-                                                **   slice 4.10's) */
-        t += (unsigned long) (feet + 1) * stept * (d == DIR_UP ? 13 : 8) / 10;
-        if (d == DIR_UP) {
-            spend (GA_WORK, (unsigned) ((feet + 1) * stept) >> 1);
-            hub_map (0);
-        }
-    } else {
-    t += (unsigned long) (feet + 1) * stept *
-        (lk->kind == O_LADDER_DOWN || lk->kind == O_LADDER_UP ? 2 : lk->kind == O_SHAFT_DOWN ||
-        lk->kind == O_SHAFT_UP ? 3 : 1) / (d == DIR_UP ? 1 : 2);
+    t += FLIGHT_T (lk->kind, stept, feet, d == DIR_UP);
+    if (lk->kind >= O_RAMP_UP && d == DIR_UP) {
+        spend (GA_WORK, FLIGHT_WORK (stept, feet));
+        hub_map (0);
     }
     if (jump && lk->kind == O_SHAFT_DOWN) {     /* (Jumped down the shaft: a fall to its foot, told as fallen) */
         event (E_CLIMB, 0, E_CLIMB_W1 (K_JUMPED, feet > 255 ? 255 : feet));
@@ -7672,8 +7664,32 @@ static unsigned char uf_held (void)
 ** its way somewhere: once stirred's.  Not while the UI's command is in hand at the real paces, nor while a line's typed
 ** (uf_held): the senses' look of them after its answer's begun, 2026-11-01; a look that needs them asks it itself
 ** (bodies_first, T2's, 2026-11-22) */
+unsigned char dlit[NACTORS];                    /* (Each actor carrying a light lit: its reach, entry k; wlink.c's) */
+unsigned lmx[NACTORS], lmy[NACTORS];           /* (Where each lit one was last told: wlink.c's DL_MOVED) */
+unsigned char lms[NACTORS];
+
+/* A flight's crossing, tenths, every actor's (acts.h's FLIGHT_T: the character's s_climb, an actor's wflight.c
+** den_flight; the one-path plan's links, 2026-11-23) */
+unsigned long __fastcall__ flight_t (unsigned char k, unsigned char st, unsigned feet, unsigned char up)
+{
+    unsigned long t = (unsigned long) (feet + 1) * st;
+
+    if (k >= O_RAMP_UP) {
+        return t * (up ? 13 : 8) / 10;
+    }
+    return t * (k == O_LADDER_DOWN || k == O_LADDER_UP ? 2 : k == O_SHAFT_DOWN || k == O_SHAFT_UP ? 3 : 1) / (up ? 1 : 2);
+}
+
 static void dseq_job (void)
 {
+    unsigned char k;
+
+    for (k = 0; k < NACTORS && !dlit[k]; ++k) {
+    }
+    if (k < NACTORS) {
+        den_lights (DL_MOVED);                  /* (An actor carrying a light lit: moved, the light layer near it,
+                                                **   part 115's, the one-path plan's lights, 2026-11-23) */
+    }
     hub_map (0);
     dseq = HUB->den_seq;
     if ((!move.on || move.how == A_DIGGING) && dens_seen ()) {
@@ -8514,7 +8530,8 @@ void __fastcall__ s_hid_op (unsigned char op)
     if (op & HO_DEN) {                          /* (Body bd's, its mind's) */
         k = op & 7;
         if (k == HD_IN) {
-            if (bd.state == 1 && (c = cover_of (bd.sn, bd.x, bd.y, !unlit_at (bd.sn, bd.x, bd.y))) & 7) {
+            if (bd.state == 1 && !dlit[bk] && (c = cover_of (bd.sn, bd.x, bd.y, !unlit_at (bd.sn, bd.x, bd.y))) & 7) {
+                                                /* (Not with a light lit: the character's own, HW_LIGHT, every actor's) */
                 bd.state = 1 | (1 + (c & 7)) << 1;
             }
             act_get (aq, AC_HIDE);
@@ -8689,7 +8706,7 @@ void s_burns_now (void)
     const struct burn* b;
     struct item* p;
     unsigned char* sq;
-    unsigned i, j, d, left, bf, wx, wy;
+    unsigned i, j, d, left, bf, wx, wy, wd;
     unsigned char mine, r, best, out, seen, ww, ws, low = 0, more = 0, same = 0, asked = burn_ask;
     char ln[14];
 
@@ -8708,7 +8725,7 @@ void s_burns_now (void)
     }
     best = out = seen = 0;
     bf = 0xFFFF;
-    for (i = 0; (i = items (i, IN_FLAGS | IN_SQUARE | IN_ACTOR | IN_ITEM | IN_PORTAL, I_LIT)) != 0; ) {
+    for (i = 0; (i = items (i, IN_FLAGS | IN_SQUARE | IN_ACTOR | IN_ITEM | IN_PORTAL | IN_DEN, I_LIT)) != 0; ) {
         memcpy (&q, ip, sizeof q);
         for (j = i; (p = item_at (j))->where == IW_ITEM; j = p->x) {   /* (Up to whoever has it, or where it lies) */
         }
@@ -8716,6 +8733,7 @@ void s_burns_now (void)
         ws = p->sn;
         wx = p->x;
         wy = p->y;
+        wd = p->owner | p->hide << 8;           /* (A denizen's own: its number) */
         mine = ww == IW_ACTOR && !wx;
         hub_map (KIND_BANK);
         r = mine ? CATALOGUE[q.kind].light : 0;
@@ -8751,8 +8769,26 @@ void s_burns_now (void)
             out = q.kind;                       /* (The character's: its light made again, below) */
             continue;
         }
+        if (ww == IW_DEN) {                     /* (A denizen's own, carried: its actor's lights made again, the light
+                                                **   layer near it; seen, told as one lying there is (the one-path
+                                                **   plan's lights, 2026-11-23: part 114's) */
+            hub_map (0);
+            for (r = 0; r < NACTORS && (!(HUB->actor[r].state & 1) || HUB->actor[r].did != wd); ++r) {
+            }
+            if (r < NACTORS) {
+                BD_GET (r);
+                den_lights (DL_OUT);
+                if (bd.sn == HUB->pc_stratum && (sq = at (bd.sn, bd.x, bd.y)) != 0 && (*sq & T_VIS)) {
+                    hub_map (0);
+                    evb = q.kind;               /* ("The torch gutters and goes out.") */
+                    event (E_TASK, 0, E_TASK_LIGHT_W1 (TE_OUT, LT_NONE, 1, 0));
+                    seen = 1;
+                }
+            }
+            continue;
+        }
         if (ww != IW_SQUARE && ww != IW_PORTAL) {
-            continue;                           /* (An actor's: the denizens' lights, to come) */
+            continue;                           /* (The character's own, put away) */
         }
         lm.kind = E_LIGHT;                      /* (One lying there: the light layer about it out of date) */
         E_LIGHT_SN (lm) = ws;

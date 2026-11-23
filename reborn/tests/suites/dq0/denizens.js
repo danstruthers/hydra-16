@@ -8,7 +8,7 @@ const { card, typed } = require('../../lib/common.js');
 const {
   T_ROCK, T_FLOOR, T_WALL, T_CORR, T_WINDOW, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks, stratumRec,
   dq0Story, dq0Prose, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Named, DQ0_I,
-  dq0Typed, dq0Portal, dq0Rec, dq0Poke, dq0PcShock, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Alone, dq0Paces, dq0Own, dq0WhenFree,
+  dq0Typed, dq0Portal, dq0Rec, dq0Sheet, dq0Poke, dq0PcShock, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Alone, dq0Paces, dq0Own, dq0WhenFree,
   dq0Asks, dq0HeldPaces, dq0PlayLetters, dq0FightPause,
   dq0Ad, dq0Root, dq0Holder, dq0Intent
 } = require('../../lib/dq0.js');
@@ -17,6 +17,29 @@ const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their f
 // The world's act table's rows by name (games/dq0w/acts.txt, acts.js's read: the one-path plan's stage 1, 2026-11-19): each
 // act's time, test, noise (loud; nz the character's E_NOISE's what, de an actor's E_DEN's), the same for every actor
 const dq0Acts = () => Object.fromEntries(require(path.join(TESTS, '..', 'games', 'dq0w', 'acts.js')).read(require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load()).map(r => [r.name, r]));
+// (Climbing and links, lights: the one-path plan's stage 2, 2026-11-23) A floor square (a room's or a passage's) at d
+// squares from the character on its stratum, no one on it: the way h (a heading) if it's given, else the first round
+// it from the north; [x, y] or null.  A stratum's datum, its floor's height (world.h's struct stratum's, at 5: the
+// world bank's record).  A flight's crossing, tenths (acts.h's FLIGHT_T: link kind k, step st, the drop in feet)
+function dq0FloorBy(m, h, L, d, way) {
+  const u16 = o => h[o] | h[o + 1] << 8, px = u16(L.pcX), py = u16(L.pcY), sn = h[L.pcSn], S = stratumRec(m, sn), C = S && liveChunks(m, sn);
+  const tile = (x, y) => { const b = C && C[((x - S.x0) >> 5) + ',' + ((y - S.y0) >> 5)]; return b ? b[443 + ((y - S.y0) & 31) * 32 + ((x - S.x0) & 31)] & 15 : -1; };
+  const taken = (x, y) => [...Array(L.nactors).keys()].some(k => { const o = L.actor + k * L.actorSize; return h[o + L.aState] && h[o + L.aSn] === sn && u16(o + L.aX) === x && u16(o + L.aY) === y; });
+  const dx = [0, 1, 1, 1, 0, -1, -1, -1], dy = [-1, -1, 0, 1, 1, 1, 0, -1];
+  for (const w of way === undefined ? [0, 1, 2, 3, 4, 5, 6, 7] : [way]) {
+    const x = px + d * dx[w], y = py + d * dy[w];
+    if ([T_FLOOR, T_CORR].includes(tile(x, y)) && !taken(x, y)) return [x, y];
+  }
+  return null;
+}
+function dq0Datum(m, sn) {
+  const banks = m.sharedBanks(), h0 = m.dq0.bank(0), keys = Object.keys(banks).map(Number).sort((a, b) => a - b);
+  const hub = keys.find(k => banks[k] === h0 || (banks[k].buffer === h0.buffer && banks[k].byteOffset === h0.byteOffset)), w = hub === undefined ? null : banks[hub + WORLD_BANK_N];
+  for (let i = 0; w && i < 8; i++) if (w[i * 79] && w[i * 79 + 1] === sn) return (w[i * 79 + 5] | w[i * 79 + 6] << 8) << 16 >> 16;
+  return null;
+}
+const dq0Flight = (k, st, feet, up) => k >= 8 ? Math.floor((feet + 1) * st * (up ? 13 : 8) / 10) :
+  Math.floor((feet + 1) * st * (k === 2 || k === 3 ? 2 : k === 5 || k === 6 ? 3 : 1) / (up ? 1 : 2));
 
 // Dingus Quest Zero's morale's own (dq0morale): at each line's Enter (the CR as the ACIA has it, the game still as it
 // stands), the pokes made (each { g: the game, 1 on, by the dq0 lines typed, line, n: its nth time typed in it, 1 on, k:
@@ -3143,6 +3166,66 @@ module.exports = {
       sdcard: true
     },
     {
+      // (Climbing and links, every actor's: the one-path plan's stage 2, 2026-11-23, ONE-PATH.md's 2.1 and 2.7, the act audit's A11, G-1)
+      name: 'dq0flightact', outfit: true, meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's flights between strata crossed by every actor by the same rule (ONE-PATH.md's 2.1 and 2.7: the one-path plan's stage 2, climbing and links, 2026-11-23; the act audit's A11 and G-1): a stairway's, a ladder's or a long slope's crossing its time the flight's, the drop between the floors at the actor's own step (acts.h's FLIGHT_T: the character's s_climb, an actor's wlink.c den_flight), told as a step (the act table's flight row).  At seed 1 (dq0denportal's wary bandits; the character begun at a way down, dq0 -T) a bandit put beside the character and made its ally (the scene set as 'look' is typed: the hub's actor and its record; the others sent far off), the character goes down ('d': its time the flight's at its step, and its walk to the flight's foot); the ally comes along down the same flight (its mind's I_CLIMB, as it did) by the character's rule, not put beside it in a second: its time on its ready the flight's at its own step, and its walk to the flight's foot a step a square (three at most), out at the flight's other end or beside it, on the stratum below, told there as its step is (E_DEN DE_MOVED by the flight row's loudness)",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
+        'look', 'd', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        const S = m.flight = { ready: [], dbg: [] }, r32 = (h, o) => (h[o] | h[o + 1] << 8 | h[o + 2] << 16 | h[o + 3] << 24) >>> 0;
+        const put = (h, L, K, at, named) => {
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
+          if (k === undefined) return;
+          dq0Alone(m, h, L, K, at, k);
+          const sq = dq0FloorBy(m, h, L, 1);
+          if (!sq) return;
+          const o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aDen]), w16 = (a, v) => { h[a] = v & 255; h[a + 1] = v >> 8 & 255; };
+          w16(o + L.aX, sq[0]); w16(o + L.aY, sq[1]); h[o + L.aSn] = h[L.pcSn]; h[o + L.aPos] = K.POS_STANDING; h[o + L.aDoing] = K.DO_FOLLOW;
+          R.mem[q + R.X] = sq[0] & 255; R.mem[q + R.X + 1] = sq[0] >> 8; R.mem[q + R.Y] = sq[1] & 255; R.mem[q + R.Y + 1] = sq[1] >> 8; R.mem[q + R.SN] = h[L.pcSn];
+          h[o + L.aAttitude] = R.mem[q + R.ATTITUDE] = K.AT_ALLIED;
+          for (let i = 0; i < 4; i++) h[o + L.aReady + i] = h[L.hubNow + i];
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+          S.k = k; S.step = h[o + L.aStep]; S.sq = sq;
+        };
+        const ready = (h, L) => { if (S.k !== undefined) S.ready.push({ now: r32(h, L.hubNow), ready: r32(h, L.actor + S.k * L.actorSize + L.aReady) }); };
+        const strata = h => { S.datum = [0, 1, 2, 3].map(sn => dq0Datum(m, sn)); };
+        const dbg = (h, L) => { if (S.k !== undefined) { const o = L.actor + S.k * L.actorSize; S.dbg.push([h[o + L.aSn], h[o + L.aX] | h[o + L.aX + 1] << 8, h[o + L.aY] | h[o + L.aY + 1] << 8, r32(h, o + L.aReady), r32(h, L.hubNow)]); } };
+        dq0Poke(m, [{ g: 1, line: 'look', n: 1, call: put }, { g: 1, line: 'd', n: 1, call: (h, L) => { dbg(h, L); } },
+          { g: 1, line: 'wait', n: 1, call: (h, L) => { ready(h, L); strata(h); dbg(h, L); } }, { g: 1, line: 'wait', n: 2, call: ready }, { g: 1, line: 'wait', n: 3, call: ready }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], A = dq0Acts(), { K } = m.dq0.layout(), S = m.flight, s = dq0Prose(out);
+        if (S.k === undefined) return ['the scene not set: no bandit, or no floor beside the character'];
+        const d = T.of('d'), q = T.of('quit');
+        if (!d.at || !d.after || d.after.pc.sn === d.at.pc.sn) return ['the character didn\'t go down: ' + dq0Evs(d)];
+        const st = stratumRec(m, d.at.pc.sn), lk = st && st.links.find(l => l.x === d.after.pc.x && l.y === d.after.pc.y && l.to === d.after.pc.sn);
+        if (!lk) return ['no link where the character came down: ' + JSON.stringify(st && st.links) + ' ' + JSON.stringify(d.after.pc)];
+        const feet = Math.abs(S.datum[d.at.pc.sn] - S.datum[d.after.pc.sn]), up = [K.O_STAIRS_UP, K.O_LADDER_UP, K.O_RAMP_UP].includes(lk.kind);
+        // (The character's: its walk to the foot and the flight, at its step)
+        const ct = d.after.now - d.at.now, cf = dq0Flight(lk.kind, d.at.sum.step, feet, up);
+        if (ct < cf) f.push('the character\'s crossing ' + ct + ' tenths, less than the flight\'s ' + cf + ' at its step ' + d.at.sum.step);
+        // (The ally's: told where it came out, on the stratum below, by the flight row; its time the flight's at its own step)
+        const de = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === S.k + 1 && e.sn === d.after.pc.sn && e.t >= d.at.now);
+        if (!de.length) f.push('the ally never told coming out below (E_DEN on stratum ' + d.after.pc.sn + ')');
+        else {
+          const e = de[0];
+          if (e.a !== A.flight.de || e.b !== A.flight.loud) f.push('its coming out not by the flight row: ' + [e.a, e.b] + ' not ' + [A.flight.de, A.flight.loud]);
+          if (Math.max(Math.abs(e.w1 - lk.x), Math.abs(e.w2 - lk.y)) > 1) f.push('it came out away from the flight\'s foot: ' + [e.w1, e.w2] + ' not by ' + [lk.x, lk.y]);
+          const r = S.ready.find(x => x.ready > e.t), bt = r ? r.ready - e.t : -1, bf = dq0Flight(lk.kind, S.step, feet, up), walk = bt - bf;
+          if (!r) f.push('its ready never past its coming out: ' + JSON.stringify(S.ready) + ' at ' + e.t);
+          else if (walk < 0 || walk >= 4 * S.step) f.push('its crossing ' + bt + ' tenths not the flight\'s ' + bf + ' at its step ' + S.step + ' and a walk of a step a square (three at most)');
+          this.notes = ['link ' + lk.kind + ' feet ' + feet + '; the character ' + ct + ' (flight ' + cf + ', step ' + d.at.sum.step + '); the ally ' + bt + ' (flight ' + bf + ', step ' + S.step + ')'];
+        }
+        const end = q.at && q.at.actors.find(a => a.k === S.k);
+        if (!end || end.sn !== d.after.pc.sn) f.push('the ally not on the stratum below at the end: ' + JSON.stringify(end));
+        if (f.length) f.push(s.slice(s.indexOf('> d'), s.indexOf('> d') + 800));
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0dentakein', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's denizen taking a thing from an open container lying by it (the user's, 2026-11-17: a denizen takes from containers as the character can; H17, 2026-11-21: a thing in a container within reach to hand at any depth, a level's more time each; the one-path plan's stage 2, things and robbery, 2026-11-23: the act audit's C2, C9): at seed 1 (dq0denportal's wary bandits, dq0 -k crowns) the crowns put in the kit's sack, the sack set down open; a bandit put beside it, its own take posted (I_TAKE, its wants TW_LOOT, as its mind would): it sees the crowns in the open sack and takes them (the takeout row's time and the sack's level, the character's own), into its purse (coins to the purse, the character's carry), told ('The bandit takes the crowns from the sack.'); the sack tied shut instead, it takes nothing (what's in a closed thing unseen)",
       init: 't_rc', cycles: 2400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'dq0hour=128',
@@ -3186,6 +3269,149 @@ module.exports = {
         if (t1 !== A.takeout.t + 20) f.push('its take not the takeout row\'s time and the sack\'s level (' + (A.takeout.t + 20) + '): ' + t1);
         if (c2.some(i => its(q2, i, 2))) f.push('the crowns in the sack tied shut taken: unseen, they should be left');
         this.notes = ['its time ' + t1];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0flightfoe', outfit: true, meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's foe after the character up or down a flight, its mind's choice (ONE-PATH.md's 2.7: the one-path plan's stage 2, climbing and links, 2026-11-23; the act audit's G-1: a denizen went up or down a way only as an ally, before): at seed 1 (dq0flightact's scene: the character begun at a way down, a bandit beside it its ally, come along down the flight) the bandit put back at the flight's top, on the stratum above, hostile, coming at the character, near it as it went (the scene set as the first wait's typed: the hub's actor and its record, the minds' anear, drawn and last-sensed square poked); its mind goes after it (a foe that was coming at the character or fighting it, near it as it went up or down: its I_CLIMB, as an ally's), down the same flight by the character's rule (the world's den_flight: its walk to the flight's foot and the flight at its own step, on its ready; not roused from it), out at the other end or beside it on the stratum below, told there as its step (E_DEN by the flight row)",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
+        'look', 'd', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        const S = m.flight = { ready: [] }, r32 = (h, o) => (h[o] | h[o + 1] << 8 | h[o + 2] << 16 | h[o + 3] << 24) >>> 0;
+        const ally = (h, L, K, at, named) => {
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
+          if (k === undefined) return;
+          dq0Alone(m, h, L, K, at, k);
+          const sq = dq0FloorBy(m, h, L, 1);
+          if (!sq) return;
+          const o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aDen]), w16 = (a, v) => { h[a] = v & 255; h[a + 1] = v >> 8 & 255; };
+          w16(o + L.aX, sq[0]); w16(o + L.aY, sq[1]); h[o + L.aSn] = h[L.pcSn]; h[o + L.aPos] = K.POS_STANDING; h[o + L.aDoing] = K.DO_FOLLOW;
+          R.mem[q + R.X] = sq[0] & 255; R.mem[q + R.X + 1] = sq[0] >> 8; R.mem[q + R.Y] = sq[1] & 255; R.mem[q + R.Y + 1] = sq[1] >> 8; R.mem[q + R.SN] = h[L.pcSn];
+          h[o + L.aAttitude] = R.mem[q + R.ATTITUDE] = K.AT_ALLIED;
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+          S.k = k; S.step = h[o + L.aStep]; S.top = [h[L.pcSn], h[L.pcX] | h[L.pcX + 1] << 8, h[L.pcY] | h[L.pcY + 1] << 8];
+        };
+        const foe = (h, L, K, at) => {   // (Back at the flight's top, beside its foot, hostile, coming: near the character as it went)
+          if (S.k === undefined || h[at(S.k) + L.aSn] === S.top[0]) return;
+          const o = at(S.k), R = dq0Rec(m), q = R.at(h[o + L.aDen]), w16 = (a, v) => { h[a] = v & 255; h[a + 1] = v >> 8 & 255; };
+          const x = S.top[1], y = S.top[2] + 1, px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8;
+          w16(o + L.aX, x); w16(o + L.aY, y); h[o + L.aSn] = S.top[0]; h[o + L.aDoing] = K.DO_COMING;
+          R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8; R.mem[q + R.SN] = S.top[0];
+          h[o + L.aAttitude] = R.mem[q + R.ATTITUDE] = K.AT_HOSTILE;
+          for (let i = 0; i < 4; i++) h[o + L.aReady + i] = h[L.hubNow + i];
+          const ad = dq0Ad(fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1')), ram = m.taskRam[h[12 + 2]];
+          ram[ad('drawn') + S.k] = 8; ram[ad('anear') + S.k] = 1;
+          ram[ad('lsx') + 2 * S.k] = px & 255; ram[ad('lsx') + 2 * S.k + 1] = px >> 8;
+          ram[ad('lsy') + 2 * S.k] = py & 255; ram[ad('lsy') + 2 * S.k + 1] = py >> 8;
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+          S.put = r32(h, L.hubNow);
+        };
+        const ready = (h, L) => { if (S.k !== undefined) S.ready.push(r32(h, L.actor + S.k * L.actorSize + L.aReady)); };
+        dq0Poke(m, [{ g: 1, line: 'look', n: 1, call: ally }, { g: 1, line: 'wait', n: 1, call: foe }, { g: 1, line: 'wait', n: 2, call: ready }, { g: 1, line: 'wait', n: 3, call: ready }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], A = dq0Acts(), S = m.flight, s = dq0Prose(out);
+        if (S.k === undefined || S.put === undefined) return ['the scene not set: no bandit, no floor beside the character, or it never came along: ' + JSON.stringify(S)];
+        const d = T.of('d'), w = T.of('wait'), q = T.of('quit');
+        const de = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === S.k + 1 && e.sn === d.after.pc.sn && e.t >= S.put && e.a === A.flight.de && e.b === A.flight.loud);
+        if (!de.length) f.push('the foe never came down after the character (E_DEN by the flight row on stratum ' + d.after.pc.sn + ')');
+        else {
+          if (Math.max(Math.abs(de[0].w1 - S.top[1]), Math.abs(de[0].w2 - S.top[2])) > 1) f.push('it came out away from the flight\'s foot: ' + [de[0].w1, de[0].w2]);
+          const st = stratumRec(m, S.top[0]), lk = st && st.links.find(l => l.x === S.top[1] && l.y === S.top[2]), feet = Math.abs(dq0Datum(m, S.top[0]) - dq0Datum(m, d.after.pc.sn));
+          const bf = lk ? dq0Flight(lk.kind, S.step, feet, false) : 0, r = S.ready.find(v => v > de[0].t), walk = r === undefined ? -1 : r - de[0].t - bf;
+          if (walk < 0) f.push('its crossing ' + (r - de[0].t) + ' tenths not the flight\'s ' + bf + ' at its step ' + S.step + ' and a walk of a step a square: ' + JSON.stringify(S.ready));
+          this.notes = ['the foe\'s crossing ' + (r - de[0].t) + ' (flight ' + bf + ', step ' + S.step + ')'];
+        }
+        const end = q.at && q.at.actors.find(a => a.k === S.k);
+        if (!end || end.sn !== d.after.pc.sn) f.push('the foe not on the stratum below at the end: ' + JSON.stringify(end));
+        if (f.length) f.push(s.slice(s.indexOf('> wait'), s.indexOf('> wait') + 800));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      // (Lights, every actor's: the one-path plan's stage 2, 2026-11-23, ONE-PATH.md's 2.2 and 2.7, the act audit's G-4, the sense audit's S2, S3)
+      name: 'dq0lightden', outfit: true, meaning: true, near: ['denizens', 'senses'], what: "Dingus Quest Zero's denizens' lights, every actor's by the character's rules (ONE-PATH.md's 2.2 and 2.7: the one-path plan's stage 2, lights, 2026-11-23; the act audit's G-4, the sense audit's S2 and S3): at seed 1 (dq0flightact's scene: a bandit beside the character made its ally, two of its own things in its purse made a torch and a tinderbox, as 'look' is typed: the item store's records, the hub's alight its AL_KIT) the character goes down the flight, the ally with it, and puts out its torch: the passage below dark.  Its mind (a kind that wants light, kinds.txt's l) lights it where it's dark to it (I_LIGHT; the world's wlink.c den_light): its tinderbox got out (a second), its tries the act table's kindle row (five seconds each, the referee's P_GROPE of its own sheet, 4 harder in the dark: the character's own), the torch got out of its purse into its hand, lit (told if seen: E_BEAT WB_LIGHTS, 'The bandit lights its torch.'; in the dark, not till its light shows it), its Dexterity poked to 18 (a deft one: its tries by its own die, RS_ASKER), its carried light the hub's alight, a lamp at its square for every looker (the senses': the character sees it by its light); its torch burning down as any light does (its fuel poked low as the second long wait's typed) and going out, told as one seen ('The torch gutters and goes out.'), its alight none after; and the character's own lighting in the same dark (the same P_GROPE at the same steps)",
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
+        'look', 'd', 'put out the torch',
+        'wait', 'wait', 'wait 2 minutes', 'wait 1 minute', 'wait 1 minute', 'wait 1 minute', 'light the torch', 'quit', 'echo $status']) },
+      start(m) {
+        const S = m.lit = { al: [] }, H = require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load(), AL = H.off('struct hub', 'alight');
+        const own = (h, L, K, did) => {   // (The bandit's own things and what's in them: the store's records)
+          const per = Math.floor(0x2000 / L.itemSize), rec = i => ({ b: m.dq0.bank(L.item0 + Math.floor(i / per)), o: (i % per) * L.itemSize });
+          const top = [], inn = [];
+          for (let i = 1; i < L.nitems; i++) { const { b, o } = rec(i); if (b && b[o + L.iKind] && b[o + L.iWhere] === K.IW_DEN && (b[o + L.iOwner] | b[o + L.iHide] << 8) === did) top.push(i); }
+          for (let i = 1; i < L.nitems; i++) { const { b, o } = rec(i); if (b && b[o + L.iKind] && b[o + L.iWhere] === K.IW_ITEM && top.includes(b[o + L.iX] | b[o + L.iX + 1] << 8)) inn.push(i); }
+          return { rec, top, inn };
+        };
+        const put = (h, L, K, at, named) => {
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
+          if (k === undefined) return;
+          dq0Alone(m, h, L, K, at, k);
+          const sq = dq0FloorBy(m, h, L, 1);
+          if (!sq) return;
+          const o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aDen]), w16 = (a, v) => { h[a] = v & 255; h[a + 1] = v >> 8 & 255; };
+          w16(o + L.aX, sq[0]); w16(o + L.aY, sq[1]); h[o + L.aSn] = h[L.pcSn]; h[o + L.aPos] = K.POS_STANDING; h[o + L.aDoing] = K.DO_FOLLOW;
+          R.mem[q + R.X] = sq[0] & 255; R.mem[q + R.X + 1] = sq[0] >> 8; R.mem[q + R.Y] = sq[1] & 255; R.mem[q + R.Y + 1] = sq[1] >> 8; R.mem[q + R.SN] = h[L.pcSn];
+          h[o + L.aAttitude] = R.mem[q + R.ATTITUDE] = K.AT_ALLIED;
+          for (let i = 0; i < 4; i++) h[o + L.aReady + i] = h[L.hubNow + i];
+          const did = h[o + L.aDid] | h[o + L.aDid + 1] << 8, { rec, inn } = own(h, L, K, did);
+          if (inn.length < 2) { S.why = 'its purse holds ' + inn.length + ' things'; return; }
+          const make = (i, kind, fuel) => { const { b, o: p } = rec(i); b[p + L.iKind] = kind; b[p + L.iFlags] = 0; b[p + L.iQty] = 1; b[p + L.iId] = 0xF0 + kind; b[p + L.iId + 1] = 0xFF; b[p + L.iFuel] = fuel & 255; b[p + L.iFuel + 1] = fuel >> 8; b[p + L.iShut] = 0; };
+          make(inn[0], K.KI_TORCH, 60);
+          make(inn[1], K.KI_TINDERBOX, 20);
+          const Sh = dq0Sheet(m);               // (A deft one, its Dexterity 18: its sheet's att[2], the grope's)
+          Sh.mem[Sh.at(h[o + L.aDen]) + 3] = 18;
+          h[AL + k] = 0x80;                     // (AL_KIT: its things as the world would have them told)
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+          S.k = k; S.torch = inn[0]; S.tinder = inn[1]; S.sq = sq;
+        };
+        const look = (h, L) => { if (S.k !== undefined) S.al.push(h[AL + S.k]); };
+        const low = (h, L, K) => {   // (Its torch near its end: burnt out in the minute)
+          look(h, L);
+          if (S.k === undefined) return;
+          const per = Math.floor(0x2000 / L.itemSize), b = m.dq0.bank(L.item0 + Math.floor(S.torch / per)), p = (S.torch % per) * L.itemSize;
+          if (b[p + L.iFlags] & 1) { b[p + L.iFuel] = 1; b[p + L.iFuel + 1] = 0; S.low = 1; }
+        };
+        dq0Poke(m, [{ g: 1, line: 'look', n: 1, call: put }, { g: 1, line: 'wait', n: 1, call: look }, { g: 1, line: 'wait', n: 2, call: look }, { g: 1, line: 'wait 1 minute', n: 1, call: look },
+          { g: 1, line: 'wait 1 minute', n: 2, call: low }, { g: 1, line: 'wait 1 minute', n: 3, call: look },
+          { g: 1, line: 'light the torch', n: 1, call: look }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], A = dq0Acts(), { K } = m.dq0.layout(), S = m.lit, s = dq0Prose(out);
+        if (S.k === undefined) return ['the scene not set: ' + (S.why || 'no bandit, or no floor by the character')];
+        const w0 = T.of('put out the torch'), lt = T.of('light the torch'), all = T.filter(t => t.k >= w0.k);
+        const grope = list => list.filter(q => q.kind === K.RS_TEST && q.a === A.kindle.p);
+        const theirs = grope(all.filter(t => t.k < lt.k).flatMap(t => t.replies)).filter(q => q.actor === S.k + 1);
+        const mine = grope(lt.replies).filter(q => q.actor === 0);
+        if (!theirs.length) f.push('the bandit never tried its tinderbox (RS_TEST P_GROPE, its own sheet)');
+        if (theirs.some(q => q.steps !== -4)) f.push('its tries not 4 harder in the dark: ' + JSON.stringify(theirs.map(q => q.steps)));
+        if (mine.length && theirs.length && mine[0].steps !== theirs[0].steps) f.push('the same dark, other steps: the character\'s ' + mine[0].steps + ', the bandit\'s ' + theirs[0].steps);
+        const lit = T.flatMap(t => t.dens).filter(e => e.kind === 'E_BEAT' && e.w1 % 256 === K.WB_LIGHTS);
+        if (!lit.length) f.push('its lighting never told (E_BEAT WB_LIGHTS)');
+        else if (lit[0].w1 >> 8 !== K.KI_TORCH) f.push('its lighting told of another thing: ' + (lit[0].w1 >> 8));
+        // (Its lighting told only if seen: in the dark, not till its own light shows it, as any act unseen)
+        const torchAt = t => t.at && t.at.items.find(i => i.n === S.torch);
+        const mid = T.of('wait 1 minute', w0.k), tm = torchAt(T.of('wait 1 minute', mid.k + 1));
+        if (!tm || !(tm.flags & DQ0_I.LIT) || (tm.where === 'IW_DEN') !== !!(tm.flags & DQ0_I.HELD)) f.push('its torch not lit, in its hand or hung at its belt, as the minute went on: ' + JSON.stringify(tm));
+        if (!S.al.some(v => (v & 0x1F) > 0)) f.push('its carried light never the hub\'s (alight): ' + JSON.stringify(S.al));
+        const lt0 = lit.length ? T.find(t => t.dens.includes(lit[0])) : null, seen = lt0 && T.filter(t => t.k > lt0.k && t.k < lt.k && t.at && t.at.sight && t.at.sight.dens.length);
+        if (lit.length && (!seen || !seen.length)) f.push('the bandit never seen by its light after it lit it');
+        if (!S.low) f.push('its torch not lit as the second minute began: not burnt down');
+        else {
+          const out1 = T.flatMap(t => t.events).filter(e => e.kind === 'E_TASK' && e.te === 'TE_OUT');
+          if (!/The torch gutters and goes out\./.test(s)) f.push('its torch\'s going out not told as one seen: "The torch gutters and goes out." ' + JSON.stringify(out1.map(e => e.w1)));
+          if ((S.al[S.al.length - 1] & 0x1F) !== 0) f.push('its carried light the hub\'s still, its torch burnt out: ' + JSON.stringify(S.al));
+        }
+        this.notes = ['its tries ' + JSON.stringify(theirs.map(q => [q.steps, q.grade])) + ', the character\'s ' + JSON.stringify(mine.map(q => [q.steps, q.grade])), 'alight ' + JSON.stringify(S.al)];
+        if (f.length) f.push(s.slice(s.indexOf('> wait'), s.indexOf('> wait') + 1500));
         return f;
       },
       sdcard: true
