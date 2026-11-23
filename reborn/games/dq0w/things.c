@@ -4786,17 +4786,21 @@ unsigned char s_gear_words (void)
 #pragma rodata-name (push, "SW40RODATA")
 
 /* The character's (on it, or in what it carries): part 10's on_pc, here too (wear's: a dig's every spell's, the
-** parts not swapped for it) */
+** parts not swapped for it); or, wear_did not 0, an actor's own (its thing, or in one of its: the one-path plan's
+** digging, 2026-11-23) */
 static unsigned char __fastcall__ on_me (unsigned i)
 {
     unsigned j;
+    const struct item* p;
 
     for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {
     }
-    return item_at (j)->where == IW_ACTOR && !item_at (j)->x;
+    p = item_at (j);
+    return wear_did ? p->where == IW_DEN && (p->owner | p->hide << 8) == wear_did : p->where == IW_ACTOR && !p->x;
 }
 
-/* A tool worn by a spell of work (the dig's: the referee's choice, by its key), by; its name in the request */
+/* A tool worn by a spell of work (the dig's: the referee's choice, by its key), by; its name in the request (the
+** character's; an actor's, wear_did its did, none: the UI's request left as it is) */
 void __fastcall__ s_wear (const char* key, unsigned char by)
 {
     char name[16];
@@ -4804,7 +4808,7 @@ void __fastcall__ s_wear (const char* key, unsigned char by)
     unsigned i = 0;
 
     strcpy (name, key);
-    while ((i = items (i, IN_ACTOR | IN_ITEM | IN_PORTAL, 0)) != 0) {
+    while ((i = items (i, wear_did ? IN_DEN | IN_ITEM : IN_ACTOR | IN_ITEM | IN_PORTAL, 0)) != 0) {
         fetch (&rec, i);
         if (!strcmp (kind_of (rec.kind)->tool, key) && on_me (i)) {
             p = item_at (i);
@@ -4814,7 +4818,9 @@ void __fastcall__ s_wear (const char* key, unsigned char by)
         }
     }
     hub_map (0);
-    strcpy (HUB->ireq.name, name);
+    if (!wear_did) {
+        strcpy (HUB->ireq.name, name);
+    }
 }
 
 #pragma code-name (pop)

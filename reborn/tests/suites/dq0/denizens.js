@@ -2883,5 +2883,87 @@ module.exports = {
       },
       sdcard: true
     },
+    {
+      // (Digging, every actor's: the one-path plan's stage 2, 2026-11-23, ONE-PATH.md's 2.1 and 2.7, the act audit's E1, G-13)
+      name: 'dq0digact', outfit: true, meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's digging, every actor's by the same code (ONE-PATH.md's 2.1 and 2.7: the one-path plan's stage 2, digging, 2026-11-23; the user's, 2026-11-17: \"the player and any agent's interaction with the world are handled the same, in all cases\"): the character with a pick digs the wall north of seed 374's start (\"dig north\": asked as it begins whether anything it has bites, the referee's RS_DIG_QUERY, actor 0; each spell the act table's dig row, ten minutes, its noise the row's, the referee's P_DIG test by its sheet, its rate the house's pick's by the grade, the pick worn), and dq0tunnel's dwarf miner digs round the portcullis let down (seed 1, -R 7: its own dig, the same spell, dq0w.c's dig_spell: asked as it begins, actor its own; each spell the row's ten minutes on its ready, its noise told at the row's loudness, the same test by its own sheet, the same rate by the grade for the same tool chosen by the referee among its things, its own pick worn); and a dwarf miner kept from the character by its cell's door made secret (its portal's state, PS_HIDDEN, poked; its search done already, the minds' asrch, so it's the dig that finds it) digs at the door as the wall it seems, and finds it as its facing comes off (E_DEN DE_DIGFOUND at the door, the act table's digfound row: the door no longer hidden, a find for every one, as the character's own dig finds one)",
+      init: 't_rc', cycles: 4500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'dq0hour=128',
+        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/h/theme.txt',
+        'dq0 -p t -s 374 -c /ram/c.hm -k pick -T', 'dig north', 'quit',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7', 'open the door', 'go through it', 'turn around', 'close the door ahead', 'wait', 'wait 2 hours', 'wait', 'quit',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -R 7', 'open the door', 'close the door', 'wait 1 minute', 'wait 30 minutes', 'wait 30 minutes', 'look', 'quit',
+        'echo $status']) },
+      start(m) {
+        dq0OnWords(m, [{ g: 2, line: 'wait 2 hours', n: 1, words: 'A fresh tunnel opens', text: 'stop\r' }]);   // (dq0tunnel's)
+        const others = (h, L) => { for (let k = 0; k < L.nactors; k++) if (h[L.actor + k * L.actorSize + L.aName] && (!m.door || k !== m.door.k)) h[L.actor + k * L.actorSize + L.aAttitude] = 3; };
+        dq0DoorScene(m, 'wait 1 minute', 'dwarf miner', (h, o, L, K) => {   // (Game 3's: the cell's door, shut, made secret; its search done)
+          m.g2 = m.door;
+          const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'), ad = dq0Ad(lbl), ram = m.taskRam[h[12 + 2]];
+          const k = (o - L.actor) / L.actorSize, f = h[L.pcFace], u16 = a => h[a] | h[a + 1] << 8;
+          const x = u16(L.pcX) + [0, 1, 1, 1, 0, -1, -1, -1][f], y = u16(L.pcY) + [-1, -1, 0, 1, 1, 1, 0, -1][f], p = dq0Portal(m, h[L.pcSn], x, y);
+          if (p) { p.b[p.state] |= 0x20; m.secret = { x, y, sn: h[L.pcSn] }; }
+          ram[ad('asrch') + k] = 1;
+        });
+        dq0Poke(m, [{ g: 2, line: 'wait 2 hours', n: 1, call: others }]);   // (The other miners let be: this one's the scene)
+        dq0DoorScene(m, 'wait', 'dwarf miner', (h, o, L, K) => {
+          const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'), ad = dq0Ad(lbl), ram = m.taskRam[h[12 + 2]];
+          const k = (o - L.actor) / L.actorSize, f = h[L.pcFace];
+          ram[ad('atry') + k] = ((f >> 1) + 2 & 3) | 3 << 2;   // (Its tries at the portcullis given up already: dq0tunnel's)
+        });
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], A = dq0Acts(), { K } = m.dq0.layout(), s = dq0Prose(out);
+        const C = require('../../../sim/lib/dq0meaning.js').constants().names;
+        const PICK = [2, 4, 2, 6, 4], rate = (g, k) => g === 2 ? 2 * k : g === 1 ? k : g === -1 ? k >> 1 : 0;
+        const digs = list => list.filter(q => q.kind === K.RS_TEST && q.a === A.dig.p);
+        // (The character's: dig north, its query and its spells)
+        const dg = T.of('dig north'), mine = digs(dg.replies).filter(q => q.actor === 0);
+        if (!mine.some(q => q.steps === 127)) f.push('the character\'s dig not asked as it began (RS_DIG_QUERY): ' + JSON.stringify(mine.map(q => q.steps)));
+        const ms = mine.filter(q => q.steps === 0);
+        if (!ms.length) f.push('the character dug no spell: ' + dq0Evs(dg));
+        for (const q of ms) if (q.w1 !== rate(q.grade, PICK[q.b > 4 ? 1 : q.b])) f.push('the character\'s spell\'s rate not the pick\'s by its grade: ' + JSON.stringify([q.b, q.grade, q.w1]));
+        const spells = dq0Ev(dg, 'E_DIG').filter(e => /^D_(GOOD|POOR|SLIP|ROOF|THROUGH|FOUND)$/.test(e.how));
+        for (let i = 1; i < spells.length; i++) if (spells[i].t - spells[i - 1].t !== A.dig.t) f.push('the character\'s spell not the row\'s ten minutes: ' + JSON.stringify(spells.map(e => [e.how, e.t])));
+        const nz = dq0Ev(dg, 'E_NOISE');
+        if (nz.length !== ms.length || nz.some(e => e.loud !== A.dig.loud)) f.push('the character\'s spells\' noise not the row\'s, one a spell: ' + JSON.stringify(nz.map(e => [e.loud, e.what])) + ' ' + ms.length);
+        const pk = s0 => s0 ? dq0Carried(s0).find(i => i.name === 'pick') : null, p0 = pk(dg.at), p1 = pk(dg.after);
+        if (ms.some(q => q.w2) && !(p0 && p1 && p1.wear > p0.wear)) f.push('the character\'s pick not worn by its spells: ' + JSON.stringify([p0 && p0.wear, p1 && p1.wear]));
+        // (The dwarf's: dq0tunnel's scene)
+        const D2 = m.g2;
+        if (!D2) return [...f, 'the dwarf\'s scenes not set: ' + JSON.stringify(m.doorWhy)];
+        const by = D2.k + 1, g2 = T.filter(t => t.game === T.of('wait 2 hours').game);
+        const theirs = digs(g2.flatMap(t => t.replies)).filter(q => q.actor === by), ts = theirs.filter(q => q.steps === 0);
+        if (!theirs.some(q => q.steps === 127)) f.push('the dwarf\'s dig not asked as it began (RS_DIG_QUERY, its actor): ' + JSON.stringify(theirs.map(q => q.steps)));
+        if (!ts.length) f.push('the dwarf dug no spell by the referee\'s test');
+        for (const q of ts) if (q.w1 !== rate(q.grade, PICK[q.b > 4 ? 1 : q.b])) f.push('the dwarf\'s spell\'s rate not the pick\'s by its grade: ' + JSON.stringify([q.b, q.grade, q.w1]));
+        const de = g2.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === by && [C.DE_DIG, C.DE_DIGS, C.DE_ROOF, C.DE_DUG].includes(e.a));
+        if (!de.length || de[0].a !== C.DE_DIG) f.push('the dwarf\'s dig not begun (DE_DIG): ' + JSON.stringify(de.map(e => [e.a, e.t])));
+        for (let i = 1; i < de.length; i++) if (de[i].t - de[i - 1].t < A.dig.t) f.push('the dwarf\'s spell sooner than the row\'s ten minutes: ' + JSON.stringify(de.map(e => [e.a, e.t])));
+        if (de.filter(e => e.a !== C.DE_DUG).some(e => e.b !== A.dig.loud)) f.push('the dwarf\'s spells\' noise not the row\'s: ' + JSON.stringify(de.map(e => [e.a, e.b])));
+        if (!de.some(e => e.a === C.DE_DUG)) f.push('the dwarf never through (DE_DUG)');
+        const fin = T.of('quit', T.of('wait 2 hours').k).at, all = fin ? fin.items.filter(i => i.name === 'pick' && i.did && fin.actors.some(a => a.k === D2.k && a.did === i.did)) : [];
+        const st = T.of('wait 2 hours').at, was = st ? st.items.filter(i => all.some(j => j.n === i.n)) : [];
+        if (ts.some(q => q.w2) && !(all.length && was.length && all[0].wear > was[0].wear)) f.push('the dwarf\'s own pick not worn by its spells: ' + JSON.stringify([was.map(i => i.wear), all.map(i => i.wear)]));
+        // (Game 3's: a hidden door dug into, found)
+        if (!m.door || m.door === D2 || !m.secret) f.push('the hidden door\'s scene not set: ' + JSON.stringify([m.doorWhy, m.secret]));
+        else {
+          const by3 = m.door.k + 1, w3 = T.of('wait 1 minute'), g3 = T.filter(t => t.k >= w3.k);
+          const fd = g3.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === by3 && e.a === C.DE_DIGFOUND);
+          const t3 = digs(g3.flatMap(t => t.replies)).filter(q => q.actor === by3 && q.steps === 0);
+          if (fd.length !== 1 || fd[0].w1 !== m.secret.x || fd[0].w2 !== m.secret.y) f.push('the dwarf\'s dig never found the hidden door, once, at the door (DE_DIGFOUND): ' + JSON.stringify(fd.map(e => [e.w1, e.w2, e.t])) + ' ' + JSON.stringify(m.secret) + ' its tests ' + JSON.stringify(t3.map(q => [q.b, q.grade, q.w1])));
+          else {
+            if (fd[0].b !== A.digfound.loud) f.push('the find not as loud as the digfound row: ' + fd[0].b);
+            const st = m.door.state(m.secret.x, m.secret.y);
+            if (st < 0 || (st & 0x20)) f.push('the door still hidden after its find: ' + st);
+            if (!/strikes a door behind the facing|a scraping in rock/.test(s.slice(s.lastIndexOf('> wait 1 minute')))) f.push('the find neither seen nor heard');
+          }
+        }
+        this.notes = ['the character ' + JSON.stringify(ms.map(q => [q.b, q.grade, q.w1])), 'the dwarf ' + JSON.stringify(ts.map(q => [q.b, q.grade, q.w1]))];
+        if (f.length) f.push(s.slice(s.indexOf('> dig north'), s.indexOf('> dig north') + 800));
+        return f;
+      },
+      sdcard: true
+    },
   ],
 };

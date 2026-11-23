@@ -129,14 +129,14 @@ static const unsigned char appraiser[NAP + 4] = {
 
 /* RS_TEST's own tests, through one stub (the main RAM's room): a dig's, moving quietly's, an appraisal's (by the
 ** craft that knows the thing) */
-static unsigned char __fastcall__ speaks (const char* t);
+unsigned char __fastcall__ speaks (const char* t);    /* (Part 4's: part 3's room, the one-path plan's digging, 2026-11-23) */
 void __fastcall__ s_dig_answer (struct req* r)
 {
     unsigned char sk, m;
     int e;
 
-    if (RS_TEST_PURPOSE (*r) == P_STEALTH || r->actor) {       /* (Moving quietly; or a creature's own test, a tunneller's dig: its
-                                                **   grade by its sheet, the world's the rest, slice 4.11's) */
+    if (RS_TEST_PURPOSE (*r) == P_STEALTH || (r->actor && RS_TEST_PURPOSE (*r) != P_DIG)) {   /* (Moving quietly; or a
+                                                **   creature's own test by its sheet; a dig, every actor's: dig_of) */
         s_quiet_test (r);
     } else if (RS_TEST_PURPOSE (*r) == P_APPRAISE) {
         sk = appraiser[RS_TEST_CRAFT (*r) < NAP + 4 ? RS_TEST_CRAFT (*r) : 0];
@@ -178,25 +178,19 @@ void __fastcall__ s_dig_answer (struct req* r)
 
 static void __fastcall__ dig_of (struct req* r)
 {
-    unsigned char m = RS_TEST_MAT (*r) > MAT_SOIL ? MAT_STONE : RS_TEST_MAT (*r), t = house_dig_tool (m, r->text), k = digger[t].rate[m],
-        b = house_dig_tool (m, "");
+    unsigned char m = RS_TEST_MAT (*r) > MAT_SOIL ? MAT_STONE : RS_TEST_MAT (*r), k;
 
-    if (r->text[0] && !t) {
-        k = 0;                                  /* (Named, and no digger) */
+    if (!(k = house_dig (r)) || RS_TEST_STEPS (*r) == RS_DIG_QUERY) {
+        return;                                 /* (Nothing bites; or only the tool and its rate asked: rshouse.h's,
+                                                **   every actor's, the one-path plan's digging, 2026-11-23) */
     }
-    strcpy (r->text + DIG_BETTER, r->text[0] && digger[b].rate[m] > k ? digger[b].key : "");
-    strcpy (r->text, digger[t].key);
-    RS_TEST_WEAR (*r) = digger[t].wear[m];
-    if (!k) {
-        RS_TEST_CANT (*r) = 1;
-        RS_TEST_RATE (*r) = 0;
-        RS_TEST_WEAR (*r) = 0;
-        return;
+    if (!DIG_TESTED (m)) {
+        RS_TEST_GRADE (*r) = G_PASS;
+    } else if (r->actor) {
+        s_quiet_test (r);                       /* (A creature's by its sheet, on dice of its own: slice 4.11's) */
+    } else {
+        RS_TEST_GRADE (*r) = test (&pc, RS_TEST_PURPOSE (*r), RS_TEST_STEPS (*r));
     }
-    if (RS_TEST_STEPS (*r) == RS_DIG_QUERY) {
-        return;
-    }
-    RS_TEST_GRADE (*r) = DIG_TESTED (m) ? test (&pc, RS_TEST_PURPOSE (*r), RS_TEST_STEPS (*r)) : G_PASS;
     RS_TEST_RATE (*r) = RS_TEST_GRADE (*r) == G_WELL ? 2 * k : RS_TEST_GRADE (*r) == G_PASS ? k : RS_TEST_GRADE (*r) == G_FAIL ? k / 2 : 0;
 }
 
@@ -679,10 +673,11 @@ void __fastcall__ s_rf_sheets (unsigned char back)
 #pragma rodata-name (pop)
 
 /* Whether it speaks tongue t (a word of tongues, a space before it, =its mastery after it if it isn't its own, its file's: part 2's,
-** the main RAM's room, 2026-10-31): 0, or its mastery in it (its own its Language's; 100 if it has none open) */
-#pragma code-name (push, "SW3CODE")
-#pragma rodata-name (push, "SW3RODATA")
-static unsigned char __fastcall__ speaks (const char* t)
+** the main RAM's room, 2026-10-31; part 4's since the one-path plan's digging, 2026-11-23, part 3's room): 0, or its
+** mastery in it (its own its Language's; 100 if it has none open) */
+#pragma code-name (push, "SW4CODE")
+#pragma rodata-name (push, "SW4RODATA")
+unsigned char __fastcall__ s_speaks (const char* t)
 {
     char* p = tongues;
     unsigned char n = strlen (t);

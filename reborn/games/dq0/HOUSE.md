@@ -3699,6 +3699,22 @@ through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rate
   to corner seven, rubble two; the hole kept as it goes (the change record DUG, the character's: the character can
   go on with a hole a denizen began, and the other way about); through, the square a passage (a diagonal's corners
   cut, as the character's).
+- **One code** *(the one-path plan's stage 2, digging, 2026-11-23: the user's "the player and any agent's interaction
+  with the world are handled the same, in all cases")*: each spell, the character's and a tunneller's, is the world's
+  one spell (dq0w.c's dig_spell): the act table's dig row its time (ten minutes) and its noise; the referee's test by
+  the digger (actor 0 the character, else the actor's own sheet) with the tool that suits best among what it has, the
+  referee's rate and wear (rshouse.h's house_dig: the world's own copy of the rates is gone, so a swapped referee's
+  rates reach the denizens too); the rock's hardness; poor rock coming down; the tool worn (a denizen's own pick
+  dulls as the character's does). What a denizen has to dig with is its own things (a pick, a shovel, a spade, a
+  mattock, a knife or a blade; a chisel only with a hammer to drive it) and a burrower's claws (the referee's table's
+  claws row, the house's numbers above), told the referee by their keys; bare hands too, in soft soil, as the
+  character's. It's asked, as its dig begins, whether anything it has bites (the character's own question as a dig's
+  begun), and gives up for five minutes if nothing does. A hidden door is dug at as the wall it seems, by any
+  digger, and found as its facing comes off: found for every one ("The dwarf miner strikes a door behind the
+  facing.", or heard as its digging); the character's own find is handled as a search's. A builder's work reads the
+  act table too (its hang and wallup rows: a spell, an hour). *Not yet*: a denizen tiring by its spells (the one body
+  clock, to come), the roof's harm on a denizen (the world's harm for an actor, the step's branch), a denizen digging
+  down (no mind yet wants a shaft: OPEN.md).
 - **A creature's test** *(the house's, both referees)*: the bestiary has no Mining, so a creature's dig is its
   Strength times five (HarnMaster's, its sheet's: as its Stealth is its Agility times five), its injuries' penalty off
   it, on dice of its own (moving quietly's: the game's other rolls as they were); the null ruleset's flat odds.

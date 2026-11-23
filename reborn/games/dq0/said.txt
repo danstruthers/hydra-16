@@ -526,6 +526,7 @@ DEN.wshuts          +"{arg?\n{Actor} close{s} the shutters.|shutters shutting}"
 DEN.any             +"\n{Actor} {text}."
 DEN.closes          +"{arg?\n{@closes}.|something closing in}"
 DEN.aims            +"{arg?\n{@aims}.|a bowstring drawn}"
+DEN.digfound        +"{arg?\n{Actor} strike{s} a door behind the facing.|a scraping in rock}"
 
 # ==== The UI's own kinds (dq0.h's UK_*, msgs.def's: no world's event, the UI's words of its own; narration as data,
 # stage 4, 2026-11-12).  The UI fills one and has it worded, as an outcome event is
