@@ -83,6 +83,9 @@ static signed char __fastcall__ den_test (unsigned char p, unsigned char b, sign
 ** told (E_FIGHT's FO_HURT: its words the referee's, the ring's third line; its fall senseless, its death), its legs as
 ** it leaves them, fallen prone, what it held let fall, bleeding; senseless till its time out (its shock rolls a round
 ** each as its time comes, the user's K14: a blow's way); dead, its remains where it lies (wfight.c's died) */
+static const char what_hurt[8][9] = { "fall\n\n", "fall\n\n", "spikes\n\n", "stones\n\n", "blade\n\n", "darts\n\n",
+    "gas\n\n", "bell\n\n" };                    /* (A trap's strike, by its kind, TK_*: the fights' words' weapon) */
+
 void s_den_harm (void)
 {
     struct req* r;
@@ -111,8 +114,10 @@ void s_den_harm (void)
             prone = 1;
         }
     }
-    t[0] = t[1] = '\n';
-    strncpy (t + 2, r->text, sizeof t - 3);
+    strcpy (t, r->a == HC_FALL ? "fall\n\n" : r->a == HC_FIRE ? "fire\n\n" : what_hurt[wk.tq.kind & 7]);   /* (What hurt
+                                                **   it, the ring's first line: a trap's, an actor's work's) */
+    i = strlen (t);
+    strncpy (t + i, r->text, sizeof t - 1 - i);
     t[sizeof t - 1] = 0;
     RS_HARM_BAND (*r) = 0;                      /* (The character's dart poison none of its: workpart.h's spring) */
     r->state = REQ_FREE;
