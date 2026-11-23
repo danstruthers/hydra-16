@@ -195,6 +195,35 @@ From built/2026-11-21-world1.md's open questions: what else a world decides (wor
 - **W11. Rulesets and worlds paired** (Harn World with HarnMaster), or any ruleset in any world?
 - **W12. The world asked at the start**, like the pace?
 
+## One-path stage 2's leftovers (2026-11-23: built/2026-11-23-{dig1,things1,climb1,step1,speed13,room7}.md)
+
+- **G1. A denizen digging down:** when would a mind want a shaft? (dig1 2)
+- **G2. A denizen tiring by its spells, falls, climbs:** waits on the one body clock. (dig1 4, climb1 5)
+- **G3. A denizen's useless arm stopping its chisel**, as the character's does? (dig1 5)
+- **G4. Wording:** "The dwarf miner strikes a door behind the facing." (dig1 6); a denizen's light going out told
+  as a lying light's; no "comes down the stairs" row (climb1 10); "strains at something heavy" unnamed, and "hands
+  ... to the soldier" for "to its fellow" (things1 11, 12); a trap's words only if its square was seen (step1 7).
+- **G5. A denizen's grope while engaged** (C17), **its worn places** (one of a kind only) (things1 3, 4).
+- **G6. The character's take-up and drop times the UI's own constants**, not the world's reply? (things1 5)
+- **G7. A gift to a denizen taken whatever its hands hold**: the receiver's take rule? (things1 6)
+- **G8. A sleeping denizen's hearing halved** in a filch, as the character's is? (things1 7)
+- **G9. An ally's errands now take their act's time, not a round; coins a denizen takes go to its purse.** Right?
+  (things1 13, 14)
+- **G10. Climbing by rounds for denizens** (shafts, ropes, ledges, pit sides, wells, windows, jumping down), now
+  step1's fall for an actor is in; rope acts for denizens (tie, untie, cut, spike, grapple). (climb1 1, 2)
+- **G11. Denizens changing stratum on their own** (patrols, fleeing up stairs). (climb1 3)
+- **G12. The walk to a flight's foot** counted straight, 3 squares at most, not the way-finder's path. (climb1 4)
+- **G13. Denizens refilling lanterns, putting out lights within reach as they rest; keepers relighting sconces**
+  (D1). (climb1 7)
+- **G14. A denizen's test sent without RS_ASKER** gets dice that repeat (search in a loop may too). (climb1 9)
+- **G15. A creature in a pit beside the character** fights from it, seen as "Something": rules? (step1 5)
+- **G16. Not built (no decision):** water (wading, swimming, breath, drowning); the dark's stumbles; darting past a
+  body; dart poison on a creature; a burning pool hurting a creature (H19); an alarm out of sight told. (step1)
+- **G17. dq0answer's things lines at 81-87%:** a speed branch of their own (ix_pick, o_pacing)? A referee's blow
+  giving way to a typed line? (speed13 1, 2)
+- **G18. 4-byte stubs in the UI too** (194 bytes where it's 99 over its floor)? dq0Poke re-poking until its write
+  takes (the dq0fightmid/dq0felled race)? (room7 1, 3)
+
 ## Architecture
 
 - **A1. Game code in the paged ROM, for good?** The user's answer of 2026-11-17: tried for one module, measured, then
