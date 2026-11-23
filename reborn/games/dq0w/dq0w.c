@@ -4114,9 +4114,9 @@ static void wall_look (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* (Part 114's: a spell of digging done, the character's: part 1's room, the one-path plan's digging, 2026-11-23) */
-#pragma code-name (push, "SW114CODE")
-#pragma rodata-name (push, "SW114RODATA")
+/* (Part 117's: a spell of digging done, the character's: part 1's room, the one-path plan's digging, 2026-11-23) */
+#pragma code-name (push, "SW117CODE")
+#pragma rodata-name (push, "SW117RODATA")
 
 /* A spell of digging begun, the character's: its time the act table's dig row, every actor's (the one-path plan's
 ** digging, 2026-11-23: SPELL before, wdig.c's own besides) */

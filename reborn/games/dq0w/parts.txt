@@ -120,6 +120,6 @@
 114 2   A denizen's things by the character's rules and the act table's rows: put away, put in, worn, taken off, handed over, carried (wthings.c: the one-path plan's stage 2, 2026-11-23)
 115 4   Its errands' rest: worn, taken off, handed over (wthings.c: part 114 full)
 116 3   A thing put away, put in or on another (wthings.c: parts 114 and 115 full)
+117 30  A spell of digging done, the character's (dq0w.c's s_dig_on: part 1's room, the one-path plan's digging, 2026-11-23)
 stub start 3
 stub begin 3
-114 2   A spell of digging done, the character's (dq0w.c's s_dig_on: part 1's room, the one-path plan's digging, 2026-11-23)
