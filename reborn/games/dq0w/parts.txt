@@ -117,5 +117,8 @@
 111 30  A thing's things put out, a thing put down on a square within reach, every actor's (wempty.c: P4, P5, 2026-11-18)
 112 31  A thing's things put out, its liquid poured into another, every actor's (wpour.c: P4, H11, 2026-11-19)
 113 31  Its words (wpour2.c: H11, 2026-11-19)
+114 9   The step and its hazards, every actor's: a trap set off, a pit climbed out of (wstep.c: the one path's step, 2026-11-23)
+115 4   The world's harm to a body, every actor's (wstep.c: 2026-11-23)
+116 10  A trap an actor set off, told (wstep.c: 2026-11-23)
 stub start 3
 stub begin 3

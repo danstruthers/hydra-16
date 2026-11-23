@@ -715,6 +715,8 @@ enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's
 #define FO_GONE         0xFF
 #define FO_BLED         0xFE                    /* (E_FIGHT's x[1]: no blow, but the attacker dead of its bleeding) */
 #define FO_BOUND        0xFD                    /*   (or its bleeding bound, the referee's: slice 4.3's) */
+#define FO_HURT         0xFC                    /*   (or hurt by the world: a fall, a trap, its words the referee's
+                                                **   harm's, the ring's third line; the step's, 2026-11-23) */
 #define FF_A_DOWN       0x01                    /* E_FIGHT's x[2]: the attacker knocked senseless, */
 #define FF_A_DEAD       0x02                    /*   dead, */
 #define FF_D_DOWN       0x04                    /*   the defender senseless, */
@@ -866,8 +868,10 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
                                                 **   first") */
        WB_DOUSE_NEAR,                           /* (One within its reach, not carried: the user's, 2026-11-18, L6) */
        WB_DOUSE_MORE,                           /* (Another of the kind before it, within its reach) */
-       WB_SLIP, WB_BLAZE };                     /* (Lamp oil on the floor, the user's H15, 2026-11-21, every actor's:
+       WB_SLIP, WB_BLAZE,                       /* (Lamp oil on the floor, the user's H15, 2026-11-21, every actor's:
                                                 **   slipped in it and fallen; set alight, wpool.c's) */
+       WB_TRAP };                               /* (A trap an actor set off, seen: w1's high byte its outcome (TO_*)
+                                                **   and its kind (TK_*) times 16; the step's, every actor's, 2026-11-23) */
 enum { RSW_BEGUN, RSW_GOES_ON, RSW_ALREADY, RSW_WALL, RSW_CORNER, RSW_MIDDLE, RSW_ROUND, RSW_END, RSW_FLOOR, RSW_DONE,
        RSW_THING };                             /* (WB_SEARCH's what: b 1 by touch; it begun, gone on with, done before;
                                                 **   along a wall, round a corner, the floor inside, a room of one stop;

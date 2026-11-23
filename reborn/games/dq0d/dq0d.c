@@ -964,7 +964,16 @@ static unsigned char __fastcall__ wades (unsigned char w, unsigned char sn, unsi
 static unsigned char __fastcall__ wet_ok (unsigned char w)
 {
     signed char dx, dy;
+    struct trap* t;
+    unsigned char n;
 
+    for (t = C->trap, n = C->ntraps; n; --n, ++t) {   /* (Nor a trap known (found, by any one: no knowers of their
+                                                **   own yet), underfoot: gone round, as the character's walk goes
+                                                **   round one it knows of; the step's, 2026-11-23) */
+        if (t->x == cx_ && t->y == cy_ && TS_SET (t->state) && !(t->state & TS_HIDDEN) && t->trigger != TT_DOOR) {
+            return 0;
+        }
+    }
     if (C->air) {
         dx = cx_ - C->ax;
         dy = cy_ - C->ay;

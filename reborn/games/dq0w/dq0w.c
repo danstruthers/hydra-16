@@ -177,6 +177,10 @@ void __fastcall__ event (unsigned char kind, unsigned char who, unsigned w1)
 
 void __fastcall__ work_told (unsigned char kind, unsigned w1, unsigned char a)
 {
+    if (wk.who) {
+        trap_beat (kind, w1);                   /* (An actor's work, a trap's: its outcome told as seen, part 114's) */
+        return;
+    }
     hub_map (0);
     wk.m.kind = kind;
     wk.m.a = a;
@@ -184,6 +188,31 @@ void __fastcall__ work_told (unsigned char kind, unsigned w1, unsigned char a)
     wk.m.w2 = HUB->pc_y;
     wk.m.t = HUB->now;
     hub_event (&wk.m);
+}
+
+/* Body bd's step, its hazards (the one path's step, every actor's, 2026-11-23): its way d, before it, a round's climb
+** out of the pit it's in, a hidden trap ahead noticed (1: it goes no further); DT_ON, on its square after, a trap there
+** set off, lamp oil slipped in (the user's H15; 1: dead of it).  The cheap test the main RAM's: part 114 (and 99, the
+** pools') swapped in only where there's a pit, a chunk with traps, a pool */
+unsigned char __fastcall__ den_hz (unsigned char d)
+{
+    static unsigned char k;
+
+    k = d;
+    if (TILE (*at (bd.sn, bd.x, bd.y)) == T_PIT && k != DT_ON) {
+        return den_trap (DT_PIT, k);            /* (In a pit: a round's climb out) */
+    }
+    if ((C->ntraps || (k != DT_ON && ((unsigned char) (cx_ + head_x[k]) >= CW || (unsigned char) (cy_ + head_y[k]) >= CW))) &&
+        den_trap (k == DT_ON, k)) {             /* (Its chunk's traps; its step into the next chunk: part 114's to see) */
+        return 1;
+    }
+    if (k != DT_ON) {
+        return 0;
+    }
+    if (bd.state && (npools & ~PC_WOKE)) {
+        time_kept (POOL_OP + 1);                /* (Lamp oil there: slipped in, the user's H15, every actor's) */
+    }
+    return !bd.state;
 }
 
 /* What the character sees, changed (E_VIEW's why: V_*), told the UI */
@@ -2803,6 +2832,10 @@ void __fastcall__ s_bearings_off (unsigned feet)
 {
     static unsigned char k;
 
+    if (wk.who) {
+        return;                                 /* (An actor's trap, its gas choked on: the character's bearings none of
+                                                **   its, wstep.c's) */
+    }
     if (feet == BO_OUT) {                       /* (Main's: knocked senseless, fallen) */
         pc_down = 1;
         hub_map (0);

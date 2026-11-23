@@ -32,6 +32,7 @@ unsigned char bps;
 struct msg bev;
 unsigned char bleeds;
 unsigned bled_at;
+unsigned char bclimb[NACTORS];                  /* (wbody.h's: each body's climb out of its pit so far, feet) */
 
 unsigned char __fastcall__ handout (const struct msg* m);   /* (Part 111's: wempty.c, every actor's) */
 
@@ -269,6 +270,10 @@ void s_den_intents (void)
                 bd.ready += 10;
                 break;
             }
+            if (den_hz (d)) {
+                break;                          /* (In a pit, a round's climb out; a trap ahead noticed: the step's
+                                                **   hazards, every actor's, part 114's) */
+            }
             o = (unsigned char) apart (bd.x - bpx, bd.y - bpy);
             if (!I_STEP_COARSE (m)) {           /* (Its time: its step, uphill and steeply down more, on steps more, a
                                                 **   diagonal seven feet: the character's own, step_cost's, one body rule,
@@ -300,8 +305,8 @@ void s_den_intents (void)
             den_trod (I_STEP_HEAD (m));
             bd.x = x;
             bd.y = y;
-            if (npools & ~PC_WOKE) {
-                time_kept (POOL_OP + 1);                    /* (Lamp oil there: slipped in, the user's H15, every actor's) */
+            if (den_hz (DT_ON)) {               /* (A trap there set off; lamp oil, slipped in, the user's H15: */
+                break;                          /*   every actor's.  Dead of it: its step told no more) */
             }
             if (I_DEN_FACE (m) == 0xFF) {
                 bd.face = I_STEP_HEAD (m);      /* (Its way, unless its mind faces it another: one keeping its

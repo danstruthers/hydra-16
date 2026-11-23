@@ -143,7 +143,7 @@ unsigned __fastcall__ o_fight_said (const struct msg* m)
     c.who = m->who;
     c.a = fl;
     c.b = f->which;
-    k = out == FO_GONE ? SAID_FIGHT_GONE : out == FO_BLED ? SAID_FIGHT_BLED : out == FO_BOUND ? SAID_FIGHT_BOUND :
+    k = out == FO_GONE ? SAID_FIGHT_GONE : out == FO_BLED ? SAID_FIGHT_BLED : out == FO_BOUND ? SAID_FIGHT_BOUND : out == FO_HURT ? SAID_FIGHT_HURT :
         out != O_RISE && (f->which & FW_STRAY) ? SAID_FIGHT_STRAY : out;
     c.w1 = k << 8 | (!*aw ? 5 : !strcmp (aw, "foot") ? 1 : !strcmp (aw, "head") ? 2 : !strcmp (aw, "bite") ? 3 :
         !strcmp (aw, "claws") ? 4 : 0) | (pc && (cmd.manner & MN_HARD) ? 8 : 0) | (harm_told & C_UNCONSCIOUS ? 16 : 0);

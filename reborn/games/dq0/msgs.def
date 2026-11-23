@@ -206,6 +206,9 @@ E_BEAT:water    w1 beat:0-7==WB_WATER,WB_SWIM,WB_UNDER,WB_DOUSED@WB_QUIET wet:8-
 E_BEAT:search   b touch; w1 beat:0-7==WB_SEARCH@WB_QUIET rsw:8-15@RSW_BEGUN; w2 detail; x[0] mx; x[1] my
                 # (A room searched whole, as it goes: by touch; detail, a thing's item or kind, the block's (its
                 #   middle mx, my), as RSW_* says)
+E_BEAT:trap     b whose; w1 beat:0-7==WB_TRAP@WB_QUIET to:8-11@TO_SPRUNG tk:12-15@TK_PIT
+                # (A trap an actor set off, seen: b whose, the actor plus 1, | 0x80 a fall unseen; how it came out,
+                #   TO_*; its kind, TK_*: the step's, every actor's, 2026-11-23)
 E_BEARING       w1 brg:0-7@BRG_NONE
 E_BEARING:sky   b sky; w1 brg:0-7==BRG_SKY@BRG_NONE refusal:8-15@SKP_NONE
                 # (The sky seen: b its phase, SKP_*, and what showed it; a shaft's refusal, w1's high byte, b none)

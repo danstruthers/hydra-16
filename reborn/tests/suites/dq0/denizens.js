@@ -2883,5 +2883,163 @@ module.exports = {
       },
       sdcard: true
     },
+    {
+      // (The step and its hazards, every actor's: the one-path plan's stage 2, 2026-11-23, ONE-PATH.md's 2.1 and 2.7)
+      name: 'dq0steptrap', outfit: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's trap underfoot, every actor's by the same code (ONE-PATH.md's 2.1 and 2.7: the one-path plan's stage 2, the step and its hazards, 2026-11-23; the act audit's G1 and G3): at seed 1 (wary giant rats) a covered pit, hidden at 20 and 6 feet deep, poked into the square ahead of the character (its chunk's trap records); the character steps onto it: the referee's P_NOTICE_SIGHT (a passing glance's, b 1) at its hiding's steps, then, not noticed, the pit given way (TRAP_STATE sprung) and the character's fall into it (RS_HARM HC_FALL, the floor, a clear fall, its depth); and the same scene with giant rats (hostile, no bow), one put two squares ahead, the pit between: coming on, the same test asked of it (its actor's, by its sheet), and, not noticed, the same pit given way and the same harm asked of it (RS_HARM at its actor: its sheet's wound, a blow's), told if seen ('The giant rat falls into a pit!'); in the pit, it climbs out a round at a time when it would leave it (the referee's P_CLIMB, its actor's), unless it fights from it, or lies senseless or dead",
+      init: 't_rc', cycles: 9000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'dq0hour=128', 'dq0sky=0',
+        "echo 'faction | Gnawers | rat | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/h/theme.txt',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'wait', 'step forward', 'wait', 'quit',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']) },
+      start(m) {
+        const S = m.step = { trap: {}, foe: undefined };
+        const HEAD_X = [0, 1, 1, 1, 0, -1, -1, -1], HEAD_Y = [-1, -1, 0, 1, 1, 1, 0, -1];
+        const [TILE, NTRAPS, TRAP, TSIZE] = require('../../../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, tile)', 'offsetof (struct chunk, ntraps)',
+          'offsetof (struct chunk, trap)', 'sizeof (struct trap)']);
+        // (A covered pit, hidden at 20, 6 feet deep, on the square beside the character: its chunk's trap records, game g's;
+        // the way it faces (game 1's, stepped onto), else the first of the four ways with floor two squares on (game 2's:
+        // the rat's straight way to it through the pit)
+        const pit = g => (h, L) => {
+          const w = m.dq0.bank(WORLD_BANK_N), sn = h[L.pcSn], st = stratumRec(m, sn), px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8;
+          const cell = (x, y) => {
+            const ox = x - st.x0, oy = y - st.y0;
+            for (let c = 0; c < 24; c++) {
+              const sl = CSLOT_AT + c * 8, b = m.dq0.bank(5 + Math.floor(c / 3)), o = (c % 3) * 0xAA0;
+              if (w[sl] && b && w[sl + 1] === sn && (w[sl + 2] | w[sl + 3] << 8) === ox >> 5 && (w[sl + 4] | w[sl + 5] << 8) === oy >> 5) return { b, o, lx: ox & 31, ly: oy & 31 };
+            }
+            return null;
+          };
+          const floor = (x, y) => { const q = cell(x, y); return q && (q.b[q.o + TILE + q.ly * 32 + q.lx] & 15) === T_FLOOR; };
+          const d = g === 1 ? h[L.pcFace] & 7 : [0, 2, 4, 6].find(e => floor(px + HEAD_X[e], py + HEAD_Y[e]) && floor(px + 2 * HEAD_X[e], py + 2 * HEAD_Y[e]));
+          if (d === undefined) return;
+          const x = px + HEAD_X[d], y = py + HEAD_Y[d], q = cell(x, y);
+          if (!q || !floor(x, y) || q.b[q.o + NTRAPS] >= 6) return;
+          const r = q.o + TRAP + q.b[q.o + NTRAPS]++ * TSIZE;
+          [q.lx, q.ly, 1, 0, 0x20, 20, 6].forEach((v, i) => { q.b[r + i] = v; });   // (TK_COVERED, TT_PLATE, TS_HIDDEN, its hiding, its feet)
+          S.trap[g] = { x, y, sn, face: d };
+        };
+        // (Game 2's: a hostile giant rat two squares ahead of the character, the pit between: dq0oilpool's scene, a beast with no bow)
+        const ahead = (h, L, K, at, named) => {
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j)), T2 = S.trap[2];
+          if (k === undefined || !T2) return;
+          dq0Alone(m, h, L, K, at, k);
+          const x = T2.x + HEAD_X[T2.face], y = T2.y + HEAD_Y[T2.face];
+          const R = dq0Rec(m), o = R.at(h[at(k) + L.aDen]), w16 = (a, v) => { h[a] = v & 255; h[a + 1] = v >> 8 & 255; }, r16 = (q, v) => { R.mem[o + q] = v & 255; R.mem[o + q + 1] = v >> 8 & 255; };
+          w16(at(k) + L.aX, x); w16(at(k) + L.aY, y); h[at(k) + L.aSn] = h[L.pcSn]; h[at(k) + L.aPos] = K.POS_STANDING;
+          r16(R.X, x); r16(R.Y, y); R.mem[o + R.SN] = h[L.pcSn];
+          h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_HOSTILE;
+          h[at(k) + L.aDoing] = 0;
+          const px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8;   // (Drawn on to the character's square,
+          const ad = dq0Ad(fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1')), ram = m.taskRam[h[12 + 2]];   //   dq0DoorScene's: the pit on its way)
+          ram[ad('drawn') + k] = 8;
+          ram[ad('lsx') + 2 * k] = px & 255; ram[ad('lsx') + 2 * k + 1] = px >> 8;
+          ram[ad('lsy') + 2 * k] = py & 255; ram[ad('lsy') + 2 * k + 1] = py >> 8;
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+          S.foe = k;
+        };
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, call: pit(1) }, { g: 2, line: 'wait', n: 1, call: pit(2) }, { g: 2, line: 'wait', n: 2, call: ahead }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], S = m.step, s = dq0Prose(out);
+        if (!S.trap[1] || !S.trap[2] || S.foe === undefined) return ['the scenes not set: ' + JSON.stringify(S)];
+        const games = [], g = [];
+        for (const t of T) { if (/^dq0 /.test(t.line)) games.push(g.splice(0)); g.push(t); }
+        games.push(g.splice(0)); games.shift();
+        if (games.length !== 2) return ['the two games not played: ' + games.length];
+        const who = [0, S.foe + 1], name = ['the character', 'the rat'];
+        const asks = (gm, w, rs, pred) => gm.flatMap(t => t.replies).filter(r => r.rs === rs && r.actor === w && pred(r.ask));
+        const changes = gm => gm.flatMap(t => [t.at, t.after].filter(Boolean).flatMap(x => x.changes || []));
+        const seen = [];
+        for (let i = 0; i < 2; i++) {
+          const gm = games[i], tr = S.trap[i + 1];
+          const n = asks(gm, who[i], 'RS_TEST', q => q.purpose === 'P_NOTICE_SIGHT' && q.how === 1);
+          const h = asks(gm, who[i], 'RS_HARM', q => q.cause === 'HC_FALL');
+          seen.push({ notice: n.map(r => [r.ask.steps, r.grade]), harm: h.map(r => [r.ask.ground, r.ask.how, r.ask.feet, r.reply.band, r.reply.out]) });
+          if (!n.length) { f.push(name[i] + ' asked no P_NOTICE_SIGHT (a passing glance\'s) stepping onto the hidden pit'); continue; }
+          if (n[0].ask.steps !== -20) f.push(name[i] + '\'s notice test not at the trap\'s hiding (-20): ' + n[0].ask.steps);
+          if (n[0].grade > 0) {
+            if (h.length) f.push(name[i] + ' noticed the pit, but fell into it');
+            continue;
+          }
+          if (h.length !== 1) { f.push(name[i] + ' not harmed once by the pit given way: ' + h.length); continue; }
+          if (h[0].ask.ground !== 'GR_FLOOR' || h[0].ask.how !== 1 || h[0].ask.feet !== 6) f.push(name[i] + '\'s fall not the pit\'s (the floor, a clear fall, 6 feet): ' + JSON.stringify(h[0].ask));
+          if (!changes(gm).some(c => c.what === 'TRAP_STATE' && c.x === tr.x && c.y === tr.y && (c.tile & 1))) f.push(name[i] + '\'s pit not kept sprung (TRAP_STATE)');
+        }
+        // (The two the same: the test's purpose, its how and its steps; the harm's cause, ground, how and feet)
+        if (seen[0].notice.length && seen[1].notice.length && seen[0].notice[0][0] !== seen[1].notice[0][0]) f.push('the two notice tests not at the same steps: ' + JSON.stringify(seen));
+        if (seen[0].harm.length && seen[1].harm.length && JSON.stringify(seen[0].harm[0].slice(0, 3)) !== JSON.stringify(seen[1].harm[0].slice(0, 3))) f.push('the two falls not the same harm: ' + JSON.stringify(seen));
+        // (The rat in its pit: told if seen; climbing out a round at a time, unless it lies senseless or dead)
+        this.notes = [JSON.stringify(seen)];
+        const fell = seen[1].harm.length === 1, h1 = fell && seen[1].harm[0];
+        const fought = games[1].flatMap(t => t.dens).some(e => e.kind === 'E_FIGHT' && (e.who === who[1] || e.def === who[1]) && !/HURT|252/.test(String(e.out)));
+        const climbs = asks(games[1], who[1], 'RS_TEST', q => q.purpose === 'P_CLIMB');
+        this.notes.push('the rat\'s climb rounds: ' + climbs.map(r => r.grade).join(' ') + (fought ? ' (it fought from the pit)' : ''));
+        if (fell && !h1[4] && h1[3] < 4 && !fought && !climbs.length) f.push('the rat in the pit, not fighting, not climbing out (P_CLIMB, its actor\'s)');
+        if (fell && !/The giant rat falls into a pit!|You hear something fall\./.test(s)) f.push('the rat\'s fall into the pit not told: ' + s.slice(-600));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      // (A door's trap, every actor's: the one-path plan's stage 2, the step and its hazards, 2026-11-23; the act audit's B9)
+      name: 'dq0doortrap', outfit: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's door's trap set off by whoever opens the door, every actor's by the same code (ONE-PATH.md's 2.1 and 2.7: the one-path plan's stage 2, 2026-11-23; the act audit's B9: workpart.h's front, the trap armed for every actor): at seed 1 (dq0denportal's wary bandits, the character with a rope and a shortsword) a scything blade, hidden at 10, its power 4, poked onto the door ahead (its chunk's trap records, TT_DOOR); the character opens the door: the trap set off (TRAP_STATE sprung), its dodge asked (the referee's P_DODGE_HAZARD, its power's half the steps worse), and, not dodged, its strike (RS_HARM HC_STRIKE: an edge's, at the middle, 2d6, its power more); and the same door, the character having opened and shut it, the blade poked on it, a hostile bandit put beyond it (dq0denportal's scene): it opens the door to come at the character, and the same trap goes off at it, the same dodge asked of it (its actor's, by its sheet), and, not dodged, the same strike (RS_HARM at its actor: its sheet's wound, a blow's)",
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/h/theme.txt',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k rope,shortsword', 'open the door', 'close the door', 'look', 'open the door', 'quit',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k rope,shortsword', 'open the door', 'close the door', 'wait', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']) },
+      start(m) {
+        const S = m.dtrap = {};
+        const HEAD_X = [0, 1, 1, 1, 0, -1, -1, -1], HEAD_Y = [-1, -1, 0, 1, 1, 1, 0, -1];
+        const [NTRAPS, TRAP, TSIZE] = require('../../../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, ntraps)', 'offsetof (struct chunk, trap)', 'sizeof (struct trap)']);
+        // (A scything blade on the door ahead of the character, hidden at 10, its power 4: its chunk's trap records, game g's)
+        const blade = g => (h, L) => {
+          const w = m.dq0.bank(WORLD_BANK_N), sn = h[L.pcSn], st = stratumRec(m, sn), d = h[L.pcFace] & 7;
+          const x = (h[L.pcX] | h[L.pcX + 1] << 8) + HEAD_X[d], y = (h[L.pcY] | h[L.pcY + 1] << 8) + HEAD_Y[d], ox = x - st.x0, oy = y - st.y0;
+          for (let c = 0; c < 24; c++) {
+            const sl = CSLOT_AT + c * 8, b = m.dq0.bank(5 + Math.floor(c / 3)), o = (c % 3) * 0xAA0;
+            if (!w[sl] || !b || w[sl + 1] !== sn || (w[sl + 2] | w[sl + 3] << 8) !== ox >> 5 || (w[sl + 4] | w[sl + 5] << 8) !== oy >> 5) continue;
+            if (b[o + NTRAPS] >= 6) return;
+            const q = o + TRAP + b[o + NTRAPS]++ * TSIZE;
+            [ox & 31, oy & 31, 4, 2, 0x20, 10, 4].forEach((v, i) => { b[q + i] = v; });   // (TK_BLADE, TT_DOOR, TS_HIDDEN, its hiding, its power)
+            S[g] = { x, y, sn };
+            return;
+          }
+        };
+        dq0DoorScene(m, 'wait', 'bandit');
+        dq0Poke(m, [{ g: 1, line: 'look', n: 1, call: blade(1) }, { g: 2, line: 'wait', n: 1, call: blade(2) }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], S = m.dtrap;
+        if (!S[1] || !S[2] || !m.door) return ['the scenes not set: ' + JSON.stringify([S, m.doorWhy])];
+        if (S[2].x !== m.door.door[0] || S[2].y !== m.door.door[1]) return ['the blade not on the bandit\'s door: ' + JSON.stringify([S[2], m.door.door])];
+        const games = [], g = [];
+        for (const t of T) { if (/^dq0 /.test(t.line)) games.push(g.splice(0)); g.push(t); }
+        games.push(g.splice(0)); games.shift();
+        if (games.length !== 2) return ['the two games not played: ' + games.length];
+        const who = [0, m.door.k + 1], name = ['the character', 'the bandit'];
+        const asks = (gm, w, rs, pred) => gm.flatMap(t => t.replies).filter(r => r.rs === rs && r.actor === w && pred(r.ask));
+        const changes = gm => gm.flatMap(t => [t.at, t.after].filter(Boolean).flatMap(x => x.changes || []));
+        const seen = [];
+        for (let i = 0; i < 2; i++) {
+          const gm = games[i], tr = S[i + 1];
+          const dodge = asks(gm, who[i], 'RS_TEST', q => q.purpose === 'P_DODGE_HAZARD');
+          const h = asks(gm, who[i], 'RS_HARM', q => q.cause === 'HC_STRIKE');
+          seen.push({ dodge: dodge.map(r => [r.ask.steps, r.grade]), harm: h.map(r => [r.ask.ground, r.ask.how, r.ask.feet, r.reply.band]) });   // (The request's b, c, w1 by the harm's default names: its aspect, its dice, its impact more)
+          if (!changes(gm).some(c => c.what === 'TRAP_STATE' && c.x === tr.x && c.y === tr.y && (c.tile & 1))) { f.push(name[i] + ' opened the door, its blade not set off (TRAP_STATE sprung)'); continue; }
+          if (dodge.length !== 1) { f.push(name[i] + ' not asked to dodge the blade once: ' + dodge.length); continue; }
+          if (dodge[0].ask.steps !== -2) f.push(name[i] + '\'s dodge not at its power\'s half (-2): ' + dodge[0].ask.steps);
+          if (dodge[0].grade > 0 ? h.length : h.length !== 1) f.push(name[i] + '\'s dodge ' + dodge[0].grade + ' but its strikes ' + h.length);
+          if (h.length && (h[0].ask.how !== 2 || h[0].ask.feet !== 4)) f.push(name[i] + '\'s strike not the blade\'s (2d6, 4 more): ' + JSON.stringify(h[0].ask));
+        }
+        if (seen[0].dodge.length && seen[1].dodge.length && seen[0].dodge[0][0] !== seen[1].dodge[0][0]) f.push('the two dodges not at the same steps: ' + JSON.stringify(seen));
+        if (seen[0].harm.length && seen[1].harm.length && JSON.stringify(seen[0].harm[0].slice(0, 3)) !== JSON.stringify(seen[1].harm[0].slice(0, 3))) f.push('the two strikes not the same: ' + JSON.stringify(seen));
+        this.notes = [JSON.stringify(seen)];
+        return f;
+      },
+      sdcard: true
+    },
   ],
 };
