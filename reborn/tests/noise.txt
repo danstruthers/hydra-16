@@ -74,3 +74,5 @@ prodcons        the OS demo's interleaving
 race            the OS demo's interleaving
 round           the PC tool passes the host file's time and inode
 dq0stopsweep    stops typed at fixed cycles land a step earlier or later as the code's speed moves (its truth checks hold)
+dq0felled       the real-time fight: its blows fall as the tasks' timing has them (the user's, 2026-11-23)
+dq0robbed       bandits met at other moments as the tasks' timing has them (the user's, 2026-11-23)

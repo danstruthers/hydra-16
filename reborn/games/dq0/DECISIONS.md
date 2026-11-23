@@ -6975,3 +6975,11 @@ M3-M5), with the images' commit.
 - **A line typed mid-round is made faster, not timed from the round's end** (speed11's question 6): its first
   letter still within 720,000 cycles of its Enter.
 - **dq0venom joins the known noise** (speed11's question 7): its skylight's light by the minute its look lands.
+
+## After speed12: the user's answers (2026-11-23)
+
+- **dq0felled and dq0robbed join the known noise** (speed12's question 1): their sentences by the tasks' timing.
+- **Features now, with a small speed branch alongside** for the leftovers (dq0letdens' "attack A", dq0letwhich's
+  "F", the give-way after a walk's first words).
+- **All four of one-path stage 2's remaining areas start at once:** things and robbery; the step and its hazards;
+  digging; climbing, links and lights.
