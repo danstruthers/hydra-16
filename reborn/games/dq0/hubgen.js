@@ -74,6 +74,7 @@ const ASM = {
     CH_NTRAPS: 'chunk.ntraps', CH_TRAP: 'chunk.trap', TR_SIZE: 'sizeof trap', TR_X: 'trap.x', TR_Y: 'trap.y', TR_STATE: 'trap.state',
     TR_TRIGGER: 'trap.trigger', TT_DOOR: 'TT_DOOR', TS_SPRUNG: 'TS_SPRUNG', TS_DISARMED: 'TS_DISARMED', TS_BROKEN: 'TS_BROKEN',
     T_PIT: 'T_PIT', A_STATE: 'actor.state', A_SN: 'actor.sn', A_X: 'actor.x', A_Y: 'actor.y',
+    A_BODY: 'actor.body', BD_WINGS: 'BD_WINGS', TR_HIDE: 'trap.hide', TR_KNOW: 'trap.know',   // (dq0d/ktrap.s's too)
   },
   sq: {                                                         // modules/dq0lib/sq.s: the chunks' cache, a stratum, a chunk
     SS: 'sizeof stratum', SS_X0: 'stratum.x0', SS_Y0: 'stratum.y0', SS_W: 'stratum.w', SS_H: 'stratum.h', WORLD_BANK: 'WORLD_BANK',

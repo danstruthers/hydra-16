@@ -3192,6 +3192,191 @@ module.exports = {
       sdcard: true
     },
     {
+      // (The step and its hazards' second round, the user's answers of 2026-11-23: each faction knows its own traps, a winged body over them)
+      name: 'dq0trapknow', near: ['denizens', 'map'], what: "Dingus Quest Zero's traps known by faction, and a winged body over a floor's traps (the user's, 2026-11-23: \"each faction knows its own traps: its own walked round from the start; another's known only once found\"; \"a winged body passes over floor traps, pits and spilt oil\"): at seed 1 (a theme's Brigands, bandits; then its Bats) a covered pit, hidden at 20 and 6 feet deep, poked into the square beside the character with floor beyond it, as dq0steptrap's; a hostile bandit put two squares off, the pit between, drawn on to the character (dq0 -K: the denizens' kit none, so it comes on, no bow).  The pit its faction's own (its knowers' bit, struct trap's know: dq0d's wet_ok, ktrap.s): its ways go round it, no notice test asked of it at the pit, never on it, the pit left set.  Another's (know 0): the bandit coming on asked the passing glance's notice test at the pit's hiding (P_NOTICE_SIGHT, b 1, -20: its actor's), and, noticed, the pit its faction's to know from then on (TRAP_STATE, its bit in the knowers, still hidden from the character), else fallen into.  A bat (its body winged) drawn on across the same pit (know 0): no test, no fall, the pit left set.  And a lair of folk placed, the minds' I_KIT KT_TRAPS (its faction, its home square) sent the world (wstep.c's own_traps: the traps underfoot in its chunk its faction's)",
+      init: 't_rc', cycles: 9000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'mkdir /ram/j', 'dq0hour=128', 'dq0sky=0',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/h/theme.txt',
+        "echo 'faction | Bats | bat | 0-0 | 30 | - | 0 | w | -' > /ram/j/theme.txt",
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait 1 minute', 'quit',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait 1 minute', 'quit',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/j', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']) },
+      start(m) {
+        const S = m.tknow = { trap: {}, foe: {}, kb: {} };
+        const HEAD_X = [0, 1, 1, 1, 0, -1, -1, -1], HEAD_Y = [-1, -1, 0, 1, 1, 1, 0, -1];
+        const [TILE, NTRAPS, TRAP, TSIZE, KNOW] = require('../../../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, tile)', 'offsetof (struct chunk, ntraps)',
+          'offsetof (struct chunk, trap)', 'sizeof (struct trap)', 'offsetof (struct trap, know)']);
+        // (The pit beside the character, the first of the four ways with floor two squares on: dq0steptrap's game 2)
+        const pit = g => (h, L) => {
+          const w = m.dq0.bank(WORLD_BANK_N), sn = h[L.pcSn], st = stratumRec(m, sn), px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8;
+          const cell = (x, y) => {
+            const ox = x - st.x0, oy = y - st.y0;
+            for (let c = 0; c < 24; c++) {
+              const sl = CSLOT_AT + c * 8, b = m.dq0.bank(5 + Math.floor(c / 3)), o = (c % 3) * 0xAA0;
+              if (w[sl] && b && w[sl + 1] === sn && (w[sl + 2] | w[sl + 3] << 8) === ox >> 5 && (w[sl + 4] | w[sl + 5] << 8) === oy >> 5) return { b, o, lx: ox & 31, ly: oy & 31 };
+            }
+            return null;
+          };
+          const floor = (x, y) => { const q = cell(x, y); return q && (q.b[q.o + TILE + q.ly * 32 + q.lx] & 15) === T_FLOOR; };
+          const d = [0, 2, 4, 6].find(e => floor(px + HEAD_X[e], py + HEAD_Y[e]) && floor(px + 2 * HEAD_X[e], py + 2 * HEAD_Y[e]));
+          if (d === undefined) return;
+          const x = px + HEAD_X[d], y = py + HEAD_Y[d], q = cell(x, y);
+          if (!q || q.b[q.o + NTRAPS] >= 6) return;
+          const r = q.o + TRAP + q.b[q.o + NTRAPS]++ * TSIZE;
+          [q.lx, q.ly, 1, 0, 0x20, 20, 6].forEach((v, i) => { q.b[r + i] = v; });   // (TK_COVERED, TT_PLATE, TS_HIDDEN, its hiding, its feet)
+          q.b[r + KNOW] = 0;
+          S.trap[g] = { x, y, sn, face: d, b: q.b, r };
+        };
+        // (One of the theme's put two squares off, the pit between, hostile, drawn on to the character: dq0steptrap's;
+        // game 1's pit its faction's own, its bit in the pit's knowers)
+        const ahead = g => (h, L, K, at, named) => {
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j)), T2 = S.trap[g];
+          if (k === undefined || !T2) return;
+          dq0Alone(m, h, L, K, at, k);
+          S.kb[g] = 1 << (h[at(k) + L.aFaction] & 7);
+          if (g === 1) T2.b[T2.r + KNOW] = S.kb[g];
+          const x = T2.x + HEAD_X[T2.face], y = T2.y + HEAD_Y[T2.face];
+          const R = dq0Rec(m), o = R.at(h[at(k) + L.aDen]), w16 = (a, v) => { h[a] = v & 255; h[a + 1] = v >> 8 & 255; }, r16 = (q, v) => { R.mem[o + q] = v & 255; R.mem[o + q + 1] = v >> 8 & 255; };
+          w16(at(k) + L.aX, x); w16(at(k) + L.aY, y); h[at(k) + L.aSn] = h[L.pcSn]; h[at(k) + L.aPos] = K.POS_STANDING;
+          r16(R.X, x); r16(R.Y, y); R.mem[o + R.SN] = h[L.pcSn];
+          h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_HOSTILE;
+          h[at(k) + L.aDoing] = 0;
+          const px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8;
+          const ad = dq0Ad(fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1')), ram = m.taskRam[h[12 + 2]];
+          ram[ad('drawn') + k] = 8;
+          ram[ad('lsx') + 2 * k] = px & 255; ram[ad('lsx') + 2 * k + 1] = px >> 8;
+          ram[ad('lsy') + 2 * k] = py & 255; ram[ad('lsy') + 2 * k + 1] = py >> 8;
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+          S.foe[g] = k;
+        };
+        dq0Poke(m, [1, 2, 3].flatMap(g => [{ g, line: 'wait', n: 1, call: pit(g) }, { g, line: 'wait', n: 2, call: ahead(g) }]));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], S = m.tknow;
+        if ([1, 2, 3].some(g => !S.trap[g] || S.foe[g] === undefined)) return ['the scenes not set: ' + JSON.stringify({ trap: Object.keys(S.trap), foe: S.foe })];
+        const games = [], g = [];
+        for (const t of T) { if (/^dq0 /.test(t.line)) games.push(g.splice(0)); g.push(t); }
+        games.push(g.splice(0)); games.shift();
+        if (games.length !== 3) return ['the three games not played: ' + games.length];
+        const name = ['the bandit (its own pit)', 'the bandit (another\'s pit)', 'the bat'];
+        const notes = [];
+        games.forEach((gm, i) => {
+          const tr = S.trap[i + 1], w = S.foe[i + 1] + 1;
+          const asks = (rs, pred) => gm.flatMap(t => t.replies).filter(r => r.rs === rs && r.actor === w && pred(r.ask));
+          const n = asks('RS_TEST', q => q.purpose === 'P_NOTICE_SIGHT' && q.how === 1 && q.steps === -20), h = asks('RS_HARM', q => q.cause === 'HC_FALL');
+          const ch = gm.flatMap(t => [t.at, t.after].filter(Boolean).flatMap(x => x.changes || [])).filter(c => c.what === 'TRAP_STATE' && c.x === tr.x && c.y === tr.y);
+          const moved = gm.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === w && e.de === 'DE_MOVED');
+          const at0 = (gm[0].at || {}).changes || [], end = (gm[gm.length - 1].after || {}).changes || [];   // (The change records' cache: a game's own, past its first line's)
+          const mine = l => l.filter(c => c.what === 'TRAP_STATE' && c.x === tr.x && c.y === tr.y && (c.tile & 1)).length;
+          const on = moved.some(e => e.sx === tr.x && e.sy === tr.y), sprung = mine(end) > mine(at0);
+          notes.push(name[i] + ': ' + JSON.stringify({ notice: n.map(r => r.grade), harm: h.length, steps: moved.length, on, changes: ch.map(c => [c.tile, c.elev]) }));
+          if (!moved.length) f.push(name[i] + ' never stepped (the scene not played)');
+          if (i !== 1) {
+            if (n.length) f.push(name[i] + ' asked the notice test at the pit, as one that doesn\'t know of it (or isn\'t over it)');
+            if (h.length || sprung) f.push(name[i] + ' fell into the pit');
+            if (i === 0 && on) f.push(name[i] + ' stepped onto its own pit (not gone round)');
+            return;
+          }
+          if (!n.length) { f.push(name[i] + ' asked no notice test coming onto another\'s pit'); return; }
+          if (n[0].grade > 0) {
+            if (h.length) f.push(name[i] + ' noticed the pit, but fell into it');
+            if (!ch.some(c => (c.elev & S.kb[2]) && (c.tile & 0x20) && !(c.tile & 1))) f.push(name[i] + '\'s find not kept its faction\'s (TRAP_STATE: its bit in the knowers, still hidden from the character): ' + JSON.stringify(ch));
+          } else if (h.length !== 1 || !sprung) f.push(name[i] + ' not fallen into the pit it didn\'t notice');
+        });
+        // (A lair of folk placed: its traps its faction's, the minds' I_KIT KT_TRAPS)
+        const kt = games[0].flatMap(t => t.intents).filter(e => e.kind === 'I_KIT' && (e.draw === 'KT_TRAPS' || e.draw === 0x40));
+        notes.push('KT_TRAPS: ' + JSON.stringify(kt.map(e => [e.faction, e.x, e.y])));
+        if (!kt.length) f.push('no lair of the Brigands told the world its traps (I_KIT KT_TRAPS)');
+        else if (kt.some(e => (1 << (e.faction & 7)) !== S.kb[1])) f.push('a KT_TRAPS not the bandits\' faction: ' + JSON.stringify(kt));
+        this.notes = notes;
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      // (The step and its hazards' second round, the user's answers of 2026-11-23: a trap's wound tests courage; a cry heard as any noise)
+      name: 'dq0trapheart', outfit: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's creature hurt by a trap, its courage tested as a blow's wound tests it, and its cry told only where it's heard (the user's, 2026-11-23: \"a wound from a trap or a fall tests a creature's courage as a blow's does\"; \"'You hear a cry of pain' is told only where it can be heard, by the senses' hearing like any noise\"): dq0doortrap's scene (seed 1, a theme's Brigands; the character opens and shuts the door ahead), a scything blade, hidden at 10, its power 9, poked onto the door, a hostile bandit put beyond it, its heart poked low (-20 steps: the field and its bonds against it).  It opens the door, the blade goes off at it (P_DODGE_HAZARD), and struck: the referee's harm asked with its heart and its shyness (RS_HARM's x[0], x[1], a blow's RS_ATTACK's), the reply what its courage left it in (FF_FLEES: it flees, DO_FLEE, told 'They flee.' if seen; AF_CAUTIOUS: it holds back); its wound told E_FIGHT FO_HURT with it; its cry an E_DEN of its own (DE_CRY, DE_CRYCUT dead of it), the senses' hearing's to tell ('You hear a cry of pain ...'), not the wound's words unseen",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/h', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/h/theme.txt",
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k rope,shortsword', 'open the door', 'close the door', 'wait', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']) },
+      start(m) {
+        const S = m.theart = {};
+        const HEAD_X = [0, 1, 1, 1, 0, -1, -1, -1], HEAD_Y = [-1, -1, 0, 1, 1, 1, 0, -1];
+        const [NTRAPS, TRAP, TSIZE] = require('../../../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, ntraps)', 'offsetof (struct chunk, trap)', 'sizeof (struct trap)']);
+        const blade = (h, L) => {
+          const w = m.dq0.bank(WORLD_BANK_N), sn = h[L.pcSn], st = stratumRec(m, sn), d = h[L.pcFace] & 7;
+          const x = (h[L.pcX] | h[L.pcX + 1] << 8) + HEAD_X[d], y = (h[L.pcY] | h[L.pcY + 1] << 8) + HEAD_Y[d], ox = x - st.x0, oy = y - st.y0;
+          for (let c = 0; c < 24; c++) {
+            const sl = CSLOT_AT + c * 8, b = m.dq0.bank(5 + Math.floor(c / 3)), o = (c % 3) * 0xAA0;
+            if (!w[sl] || !b || w[sl + 1] !== sn || (w[sl + 2] | w[sl + 3] << 8) !== ox >> 5 || (w[sl + 4] | w[sl + 5] << 8) !== oy >> 5) continue;
+            if (b[o + NTRAPS] >= 6) return;
+            const q = o + TRAP + b[o + NTRAPS]++ * TSIZE;
+            [ox & 31, oy & 31, 4, 2, 0x20, 10, 9, 0].forEach((v, i) => { b[q + i] = v; });   // (TK_BLADE, TT_DOOR, TS_HIDDEN, its hiding, its power, no knowers)
+            S.trap = { x, y, sn };
+            return;
+          }
+        };
+        const heart = (h, L) => { if (m.door) { h[L.actor + m.door.k * L.actorSize + L.aHeart] = 256 - 20; S.heart = -20; } };
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, call: blade }, { g: 1, line: 'wait', n: 1, call: heart }]);
+        dq0DoorScene(m, 'wait', 'bandit');   // (After: its scene set first as the line's typed, then the blade and the heart)
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], S = m.theart, s = dq0Prose(out), { K } = m.dq0.layout();
+        if (!S.trap || !m.door || S.heart === undefined) return ['the scene not set: ' + JSON.stringify([S, m.doorWhy])];
+        const w = m.door.k + 1, all = T.filter(t => t.k >= 0);
+        const dodge = all.flatMap(t => t.replies).filter(r => r.rs === 'RS_TEST' && r.actor === w && r.ask.purpose === 'P_DODGE_HAZARD');
+        const h = all.flatMap(t => t.replies).filter(r => r.rs === 'RS_HARM' && r.actor === w);
+        const fe = all.flatMap(t => t.dens).filter(e => e.kind === 'E_FIGHT' && e.who === w && /HURT|252/.test(String(e.out)));
+        const cry = all.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === w && /^DE_CRY/.test(String(e.de)));
+        this.notes = [JSON.stringify({ dodge: dodge.map(r => r.grade), harm: h.map(r => [r.ask.heart, r.ask.shy, r.reply.band, r.reply.out, r.reply.left, r.reply.af]),
+          fight: fe.map(e => e.ff), cry: cry.map(e => [e.de, e.seen, e.loud]) })];
+        if (!dodge.length) return ['the bandit not asked to dodge the blade (the door not opened by it)'];
+        if (dodge[0].grade > 0) { if (h.length) f.push('the blade dodged, but its harm asked'); return f; }
+        if (h.length !== 1) return ['the bandit\'s strike not asked once: ' + h.length];
+        const r = h[0];
+        if ((r.ask.heart << 24 >> 24) !== S.heart) f.push('its harm not asked with its heart (' + S.heart + '): ' + r.ask.heart);
+        if (!r.reply.band) return f;
+        if (!fe.length) f.push('its wound not told (E_FIGHT FO_HURT)');
+        const flees = (r.reply.left & 0x10) !== 0;
+        if (fe.length && ((fe[0].ff & 0x10) !== 0) !== flees) f.push('its wound\'s telling not what its courage left it in: ' + JSON.stringify([fe[0].ff, r.reply.left]));
+        if (flees) {
+          const later = all.filter(t => t.at && t.at.dens).flatMap(t => t.at.dens).some(d => d.doing === 'DO_FLEE' || d.doing === K.DO_FLEE);
+          this.notes.push('it fled: ' + later);
+        }
+        if (cry.length !== 1) f.push('its cry not an E_DEN of its own, once: ' + cry.length);
+        else {
+          const dead = fe.length && (fe[0].ff & 0x02);
+          if ((cry[0].de === 'DE_CRYCUT') !== !!dead) f.push('its cry not cut short as it died, or cut short alive: ' + JSON.stringify([cry[0].de, fe[0] && fe[0].ff]));
+          this.notes.push('its cry ' + (cry[0].seen ? 'seen' : /You hear (a |a muffled |muffled )?cry of pain/.test(s) ? 'heard' : 'not heard (by the senses\' rule: its loudness, the background, the hearing)'));
+        }
+        if (/You hear a cry of pain\.|that stops short\./.test(s)) f.push('the old words of a cry told, the wound\'s unseen: ' + s.slice(s.indexOf('cry of pain') - 100, s.indexOf('cry of pain') + 100));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0pitstep', meaning: true, near: ['map', 'body'], what: "Dingus Quest Zero's climb out of a pit ending with a step onto its edge, its time, for every actor (the user's, 2026-11-23: \"climbing out of a pit ends with a step onto its edge for every actor: the character pays the step's time too\"; a denizen's, wstep.c's, its I_STEP's): dq0stairtrap's scene (seed 38: the walk to the stairs stopped on a covered pit, fallen in, a slip back; climbed out again): the last round's time, from its E_CLIMB before to the K_UP, a round's and a step's more, where a round of the climb before it was a round's alone",
+      init: 't_rc', cycles: 600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 38 -c /ram/c.hm', 'se', 'walk to the door east',
+        'u', 'climb up', 'climb up', 'u', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [];
+        const t = T.filter(u => u.k >= T.of('u').k).find(u => u.events.some(e => e.kind === 'E_CLIMB' && e.how === 'K_UP'));
+        if (!t) return ['not climbed out of the pit (no K_UP)'];
+        const up = t.events.find(e => e.kind === 'E_CLIMB' && e.how === 'K_UP'), a = t.after;
+        const step = a && a.pc ? a.pc.ready - up.t : null;
+        this.notes = ['out at ' + up.t + ', free at ' + (a && a.pc && a.pc.ready) + ': its step ' + step];
+        if (step === null) return ['no state after the climb out'];
+        if (step < 5 || step > 40) f.push('the climb out not ended by a step\'s time (5 to 40 tenths) after it: ' + step);
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0pcrob', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's character robbing and filching a living denizen (ONE-PATH.md's 2.7: the one-path plan's stage 2, things and robbery, 2026-11-23; the denizens' own robbery the other way about): at seed 1 (dq0denportal's wary bandits) a bandit put beside the character, senseless: 'rob the bandit' (SW_ROB, the minds' robbed: its I_ROB FE_ROBBED, wthings.c's) goes through its things, what it holds and its coins taken into the character's hands, pack or purse by the character's carry, each told ('You take the bandit's ...'), the bandit's record no longer holding them; and a bandit put beside it asleep: 'filch from the bandit' (SW_FILCH) tests the character's Stealth against its hearing (the referee's P_STEALTH, actor 0; P_NOTICE_SOUND, its own sheet), its coins taken if the better is the character's, else caught ('wakes as your hand finds its purse'), as the tests went; a bandit awake refuses it",
       init: 't_rc', cycles: 2600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'dq0hour=128',

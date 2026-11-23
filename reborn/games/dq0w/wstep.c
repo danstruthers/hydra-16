@@ -3,13 +3,15 @@
 ** the user's, 2026-11-17: "the player and any agent's interaction with the world are handled the same, in all cases";
 ** the act audit's G1, G3, B9): a body's step onto a trap, the character's rule (wtrap.c's step and spring): a hidden one
 ** noticed in time (the referee's P_NOTICE_SIGHT, a passing glance's, its hiding the steps worse: it stops short, the trap
-** known to every one, as a search's find is) or set off (a pit fallen into, its spikes; a deadfall, a blade, darts
+** known to its faction, as a search's find is: the user's, 2026-11-23) or set off (a pit fallen into, its spikes; a deadfall, a blade, darts
 ** dodged or struck by; gas resisted or choked on, senseless a while; an alarm's bell); a door's trap set off as it opens
 ** it (wdoor.c's, by the same parts); the world's harm to a body (the referee's RS_HARM, its actor: a fall's, a trap's,
 ** its wound a blow's, knocked senseless as a blow's, its rolls a round each: the user's K14), told as the fights' words
 ** are (E_FIGHT, FO_HURT: its wound, its fall senseless or dead, the minds' to take to heart); one in a pit climbs out a
 ** round at a time (the character's pit's climb: P_CLIMB, its depth, a slip back to its floor, a bad one a fall).
-** A known trap is gone round, the denizens' walks' as the character's (dq0d's wet_ok).
+** A known trap is gone round, the denizens' walks' as the character's (dq0d's wet_ok): known to its faction (its own,
+** as its lair's placed: own_traps; another's found), the user's, 2026-11-23.  A winged body over a floor's traps, pits
+** and spilt oil (hz.s); its harm's wound tests its courage as a blow's (den_harm); its cry a noise (DE_CRY).
 **
 ** Swapped part 120's (../dq0/swap.inc: dq0w.cfg's SW120), through its stubs: den_trap (dq0w.c's den_hz, the step's
 ** cheap test: a pit, a chunk with traps); part 121's den_harm (workpart.h's harm, an actor's); part 122's trap_beat
@@ -99,10 +101,13 @@ void s_den_harm (void)
     r = &HUB->slot[SLOT_WORLD];
     r->actor = bk + 1;
     r->w2 |= HUB->folk[bk] ? RS_THEY : 0;       /* (A person's "their") */
+    RS_HARM_HEART (*r) = bd.heart;              /* (Its courage tested as it's wounded, as a blow's: its heart, shy; */
+    RS_HARM_SHY (*r) = bd.timid;                /*   the user's, 2026-11-23) */
     r = hub_ask (SLOT_WORLD);
     out = RS_HARM_OUT (*r);
     band = RS_HARM_BAND (*r);
-    af = RS_ATTACK_AF (*r);
+    af = RS_HARM_AF (*r);
+    ff = RS_HARM_LEFT (*r) & FF_FLEES;
     for (i = 0, e = (const struct rs_effect*) RS_HARM_EFFECTS (*r); i < RS_EFFECTS && e->kind; ++i, ++e) {
         if (e->kind == X_WOUND) {
             bd.move = e->cond >> 12 & 7;        /* (How its legs move it now, C_MOVE's) */
@@ -129,6 +134,10 @@ void s_den_harm (void)
         bd.ready = HUB->now + out;
         ff |= FF_A_DOWN;
         prone = 1;
+    } else if (ff & FF_FLEES) {
+        bd.doing = DO_FLEE;                     /* (Broken: it flees, a blow's way, wfight.c's) */
+    } else if (af & AF_CAUTIOUS) {
+        bd.ready += HUB->round;                 /* (Shaken: it holds back a round) */
     }
     if (prone) {
         bd.pos = POS_PRONE;
@@ -154,8 +163,11 @@ void s_den_harm (void)
         bev.t = HUB->now;
         hub_devent (&bev);
         fring = (fring + 1) % NFIGHTS;
+        den_told (ff & FF_A_DEAD ? DE_CRYCUT : DE_CRY, LOUD_HURT, bd.x, bd.y);    /* (Its cry, told only where it's
+                                                **   heard, as any noise: the senses' hearing, the UI's; seen, its
+                                                **   wound's words alone, the user's, 2026-11-23) */
     }
-    if (prone && !ff) {
+    if (prone && !(ff & ~FF_FLEES)) {
         limb_news (WB_FALLEN, (bk + 1) | 0x80);    /* (Fallen: seen, or heard near, as any fall) */
     }
     if (cd && !(ff & FF_A_DEAD)) {
@@ -215,6 +227,25 @@ void __fastcall__ s_trap_beat (unsigned char kind, unsigned w1)
         return;                                 /* (A pit's cover fallen in at a door: no one on it) */
     }
     limb_news (WB_TRAP | (unsigned) o << 8 | (unsigned) k << 12, (bk + 1) | (k <= TK_SPIKED || o == TO_CHOKED ? 0x80 : 0));
+}
+
+/* A lair of folk placed (I_KIT's KT_TRAPS, the minds' s_place; wlimbs.c's den_other): its faction (b) knows the traps
+** set underfoot in its chunk from now on, its own (their knowers, TRAP_STATE's: the user's, 2026-11-23, "each faction
+** knows its own traps"; a beast's lair's, the dead's, no one's) */
+void __fastcall__ s_own_traps (const struct msg* m)
+{
+    struct trap* t;
+    unsigned char i, kb = TRAP_KB (I_KIT_FACTION (*m)), sn = I_KIT_SN (*m);
+    unsigned x = I_KIT_X (*m), y = I_KIT_Y (*m);
+
+    for (i = 0; at (sn, x, y) && i < C->ntraps; ++i) {    /* (The chunk in the window again each time: change's leaves
+                                                **   the hub there) */
+        t = &C->trap[i];
+        if (t->trigger != TT_DOOR && !(t->know & kb)) {
+            change (sn, x - cx_ + t->x, y - cy_ + t->y, t->state, kb, TRAP_STATE);
+        }
+    }
+    hub_map (0);
 }
 
 #pragma code-name (pop)
@@ -284,10 +315,13 @@ unsigned char __fastcall__ s_den_trap (unsigned char op, unsigned char d)
         return 0;
     }
     if (op == DT_NOTICE) {
-        if (!(q.state & TS_HIDDEN) || (q.state & TS_MAGIC) || !G_OK (den_test (P_NOTICE_SIGHT, 1, -(signed char) q.hide))) {
+        n = TRAP_KB (bd.faction);
+        if (TRAP_KNOWN (&q, n) || (q.state & TS_MAGIC) || !G_OK (den_test (P_NOTICE_SIGHT, 1, -(signed char) q.hide))) {
             return 0;
         }
-        change (bd.sn, x, y, q.state & ~TS_HIDDEN, 0, TRAP_STATE);  /* (Known from now on, to every one) */
+        change (bd.sn, x, y, q.state, n, TRAP_STATE);   /* (Known from now on to its faction, the user's, 2026-11-23:
+                                                **   another's trap known once found; the character's own find its
+                                                **   TS_HIDDEN) */
         bd.ready += 10;
         return 1;
     }

@@ -332,6 +332,10 @@ enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, T_COMMA
                                                 **   character's rules: dq0w/wdig.c; w1 w2 the square it digs.  Who
                                                 **   0, a record's, away from the character: its spell at once,
                                                 **   untested, x[2] its stratum, x[0] its tools, slice 4.11's rest) */
+#define KT_TRAPS        0x40                    /* (I_KIT's a, who 0: a lair of folk placed, the traps set underfoot in
+                                                **   its chunk its faction's (b), known to it from now on (world.h's
+                                                **   struct trap's know: the world's own_traps, wstep.c's; the user's,
+                                                **   2026-11-23); w1 w2 its home square, x[2] its stratum) */
 #define KT_BUILD        0xC0                    /* (I_KIT's a, a builder's (slice 4.11's rest): a door broken down put
                                                 **   up again, or a way dug in walled up: w1 w2 its square, b the
                                                 **   heading to it; who as KT_DIG's, a record's x[2] its stratum: the
@@ -678,8 +682,12 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_
     DE_DIGFOUND,                              /* (A hidden door dug into, its facing off: found, every actor's dig,
                                                 **   the act table's digfound row: at the door's square, the one-path
                                                 **   plan's digging, 2026-11-23) */
-    DE_DRAGS };                                   /* (A heavy thing shoved or dragged, its strain: the act table's drag,
+    DE_DRAGS,                                     /* (A heavy thing shoved or dragged, its strain: the act table's drag,
                                                 **   the character's, wdrag.c's, every actor's, 2026-11-23) */
+    DE_CRY, DE_CRYCUT };                          /* (A cry of pain, hurt by the world (a fall, a trap: wstep.c's
+                                                **   den_harm), and one cut short, dead of it: told only where it's
+                                                **   heard, as any noise, the user's, 2026-11-23; the minds deaf to it,
+                                                **   as to a blow) */
                                                 /* E_DEN's what: a step, a
                                                 **   noise of its own (a squeak, a growl), the character sensed, lost
                                                 **   (its senses' own); a successor rallying its fellows at its post

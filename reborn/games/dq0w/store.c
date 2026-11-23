@@ -139,7 +139,14 @@ void __fastcall__ s_change (unsigned char sn, unsigned x, unsigned y, unsigned c
     struct opening* o;
     unsigned char i;
 
-    at (sn, x, y);
+    if (at (sn, x, y) && link == TRAP_STATE) {  /* (A trap's knowers only ever added to: those it has kept, the
+                                                **   factions' as each finds it, the user's, 2026-11-23) */
+        for (i = C->ntraps, t = C->trap; i; --i, ++t) {
+            if (t->x == cx_ && t->y == cy_) {
+                elev |= t->know;
+            }
+        }
+    }
     rec.sn = sn;
     rec.x = x;
     rec.y = y;
@@ -161,10 +168,11 @@ void __fastcall__ s_change (unsigned char sn, unsigned x, unsigned y, unsigned c
         } else if (link == AIR_STATE) {         /* (Its air's pocket: burnt off, its afterdamp, 2026-10-31) */
             C->air = tile;
             C->aat = elev;
-        } else if (link == TRAP_STATE) {        /* (A trap's: tile it) */
+        } else if (link == TRAP_STATE) {        /* (A trap's: tile it, elev its knowers) */
             for (i = C->ntraps, t = C->trap; i; --i, ++t) {
                 if (t->x == cx_ && t->y == cy_) {
                     t->state = tile;
+                    t->know = elev;
                 }
             }
         } else if (link == WELL_WET) {          /* (A well's water on its square, tile its surface: its room's level, or

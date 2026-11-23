@@ -2,7 +2,8 @@
 ; hz.s - (dq0w) body bd's step, its hazards (wbody.h's den_hz: the one path's step, every actor's, step1's, 2026-11-23):
 ; the cheap test, the main RAM's, before part 120 (wstep.c's den_trap) or part 99 (time_kept, the pools') is swapped
 ; in: its way d, before it, the pit it's in (a round's climb out) or a set trap on the square ahead (noticed: 1, it
-; goes no further); DT_ON, on its square after, a set trap there set off, lamp oil slipped in (1: dead of it).  In C in
+; goes no further); DT_ON, on its square after, a set trap there set off, lamp oil slipped in (1: dead of it); a winged
+; body none of them (the user's, 2026-11-23: it passes over a floor's traps, pits and spilt oil).  In C in
 ; dq0w.c till room7 (2026-11-23): some 370 bytes of cc65's, the world's main RAM's room; the same tests, the same calls.
 ;
 ;   unsigned char __fastcall__ den_hz (unsigned char d);
@@ -31,7 +32,13 @@ _den_hz:
             sta         hzk
             stz         hdx
             stz         hdy
+            ldx         _bd + A_BODY        ; (A winged body over a floor's traps, its pits and spilt oil, none of
+            cpx         #BD_WINGS           ;   them its: the user's, 2026-11-23; a door's trap still its, wdoor.c's)
+            bne         :+
             cmp         #DT_ON
+            beq         @ret
+            bra         none
+:           cmp         #DT_ON
             bne         @step
             jsr         atbd                ; (On its square: a set trap there set off, part 120's)
             jsr         trapsq

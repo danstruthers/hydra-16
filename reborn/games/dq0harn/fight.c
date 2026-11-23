@@ -762,7 +762,12 @@ void __fastcall__ o_fight (struct req* r)
             r->result = 1;                      /* (Dead already; a blow at a thing's own hurt, gear.c's) */
             return;
         }
+        sb = RS_HARM_SHY (*r) & 1;              /* (Shy, read before its effects take its place) */
         hbeast ();
+        tup = 0;
+        left (sb, heart);                       /* (Its courage tested as it's wounded, as a blow's is: its heart the
+                                                **   steps, the reply's grade FF_FLEES, AF_CAUTIOUS in its c; the
+                                                **   user's, 2026-11-23) */
         put (line[0]);
         pack ();
         return;

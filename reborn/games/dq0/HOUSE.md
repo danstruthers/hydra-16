@@ -3785,8 +3785,9 @@ These are the house's.
   window's shutters, bends its bars and works its pane out, and slams a door; an ally does any of them asked (lock,
   bar, unbar, force, pick: 2026-11-21, the one-path plan's stage 2).
 - **No trap sprung** *(the house's; left for now, the user's, 2026-11-03)*: a denizen never sets off a door's trap as it opens it, as it never sets
-  off one underfoot.  A faction knowing its own traps (and being caught by another's) is a planned item; till then
-  none is.
+  off one underfoot.  (Built since, step1 and step2, 2026-11-23: every actor sets off a trap underfoot and a door's;
+  each faction knows its own traps underfoot, those in a lair of its folk's chunk, as the lair's placed, and another's
+  once one of it finds it (noticed, searched for); a winged body passes over a floor's traps, pits and spilt oil.)
 - **A lock picked** *(2026-11-02, the house's)*: a robber's kind (kinds.txt's ways r: a bandit, a kobold, a brown orc,
   their leaders) with no key to a
   locked door picks its lock, by the character's code (a minute a try, its test the lock's steps worse), two tries,

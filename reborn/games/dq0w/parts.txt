@@ -126,5 +126,6 @@
 120 9   The step and its hazards, every actor's: a trap set off, a pit climbed out of (wstep.c: the one path's step, 2026-11-23)
 121 4   The world's harm to a body, every actor's (wstep.c: 2026-11-23)
 122 10  A trap an actor set off, told (wstep.c: 2026-11-23)
+123 33  A search, the character's, an actor's (wtsrch.c: wtrap.c's till 2026-11-23, part 8's room)
 stub start 3
 stub begin 3

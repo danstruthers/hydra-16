@@ -1633,8 +1633,20 @@ static void climb_round_on (void)
         }
         return;
     }
+    if (cl.up & 2) {                            /* (Out of a pit: its step onto its edge, its time, as every actor's is
+                                                **   (wstep.c's, a denizen's I_STEP): the user's, 2026-11-23) */
+        g = elev_at (sn_, HUB->pc_x, HUB->pc_y);
+        hub_map (0);
+        t = HUB->pc_x != cl.x && HUB->pc_y != cl.y ? SC_DIAG : 0;
+        g = elev_at (sn_, cl.x, cl.y) - g;
+        t |= TILE (*at (sn_, cl.x, cl.y)) == T_STEPS;
+        hub_map (0);
+    }
     HUB->pc_x = cl.x;
     HUB->pc_y = cl.y;
+    if (cl.up & 2) {
+        busy (cost (g, t));                     /* (Where it stands now: busy's pc_tx) */
+    }
     event (E_CLIMB, 0, E_CLIMB_W1 (cl.up ? K_UP : K_DOWN, 0));
     see (0);
 }
@@ -4408,7 +4420,7 @@ unsigned char __fastcall__ s_work (unsigned char what, unsigned x, unsigned y, u
     wk.open = 0;                                /* (No opening held: a timed work's begun shows nothing) */
     if (x == NO_SQ || what == W_STEP || what == PA_SEARCH || what == PA_DISARM || what == PA_CHECK) {
         wk.what = what;
-        traps ();
+        what == PA_SEARCH ? tsearch () : traps ();  /* (A search: part 123's, 2026-11-23) */
     } else {
         at (sn_, x, y);
         p = portal_at (cx_, cy_);               /* (The world found it: it's there) */
