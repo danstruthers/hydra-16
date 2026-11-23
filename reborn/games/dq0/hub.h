@@ -675,9 +675,11 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_
                                                 **   "The bandit closes with you.", 2026-11-17) */
     DE_AIMS,                                    /* (Its shot at the character begun: "The bandit takes aim at you.", the
                                                 **   character's "You take aim at ..." the other way round, 2026-11-18) */
-    DE_DIGFOUND };                              /* (A hidden door dug into, its facing off: found, every actor's dig,
+    DE_DIGFOUND,                              /* (A hidden door dug into, its facing off: found, every actor's dig,
                                                 **   the act table's digfound row: at the door's square, the one-path
                                                 **   plan's digging, 2026-11-23) */
+    DE_DRAGS };                                   /* (A heavy thing shoved or dragged, its strain: the act table's drag,
+                                                **   the character's, wdrag.c's, every actor's, 2026-11-23) */
                                                 /* E_DEN's what: a step, a
                                                 **   noise of its own (a squeak, a growl), the character sensed, lost
                                                 **   (its senses' own); a successor rallying its fellows at its post
@@ -869,8 +871,13 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
                                                 **   first") */
        WB_DOUSE_NEAR,                           /* (One within its reach, not carried: the user's, 2026-11-18, L6) */
        WB_DOUSE_MORE,                           /* (Another of the kind before it, within its reach) */
-       WB_SLIP, WB_BLAZE };                     /* (Lamp oil on the floor, the user's H15, 2026-11-21, every actor's:
+       WB_SLIP, WB_BLAZE,                       /* (Lamp oil on the floor, the user's H15, 2026-11-21, every actor's:
                                                 **   slipped in it and fallen; set alight, wpool.c's) */
+       WB_STOWS, WB_PUTS, WB_TAKES, WB_DONS, WB_DOFFS, WB_HANDS_TO };   /* (A denizen's things, the character's own acts,
+                                                **   wthings.c's (the one-path plan's stage 2, things and robbery,
+                                                **   2026-11-23), seen: its thing put away; put in another (w2 that one's
+                                                **   kind, | 0x100 on it); taken from another (w2 its kind); worn; taken
+                                                **   off; handed to another (w2 that one plus 1): E_BEAT:things */
 enum { RSW_BEGUN, RSW_GOES_ON, RSW_ALREADY, RSW_WALL, RSW_CORNER, RSW_MIDDLE, RSW_ROUND, RSW_END, RSW_FLOOR, RSW_DONE,
        RSW_THING };                             /* (WB_SEARCH's what: b 1 by touch; it begun, gone on with, done before;
                                                 **   along a wall, round a corner, the floor inside, a room of one stop;
@@ -1243,14 +1250,31 @@ enum { FE_ROB, FE_TAKE, FE_GIVE, FE_GIFT,       /* (I_ROB's a: a robbery; an all
                                                 **   weapon, no light, let fall where it stands, no time; the food it holds
                                                 **   handed to actor b less 1, beside it; thing t thrown at the character,
                                                 **   by the character's throw: wtake.c's) */
-       FE_EMPTY, FE_PLACE };                    /* (P4, P5, 2026-11-18, the character's own: its thing t's things put
+       FE_EMPTY, FE_PLACE,                      /* (P4, P5, 2026-11-18, the character's own: its thing t's things put
                                                 **   out at its feet (w1 0), or into thing w1, its liquid too (H11,
                                                 **   2026-11-19); thing t put down on square w1, w2 within its reach: wempty.c's, I_ROB:fetch's fields; no mind
                                                 **   posts them yet) */
-enum { FT_TOOK, FT_GAVE, FT_GONE, FT_HEAVY, FT_HANDS, FT_FEET, FT_GOT, FT_FAR };   /* (E_TASK TE_FETCHED's b's high
+       FE_STOW, FE_PUT, FE_DON, FE_DOFF,        /* (The one-path plan's stage 2, things and robbery, 2026-11-23: the
+                                                **   character's own acts, wthings.c's, the act table's rows: its thing t
+                                                **   put away (coins its purse, else its pack); put in or on thing w1
+                                                **   (w2 1 on it) within its reach or its own; worn (a wearable alone);
+                                                **   taken off, into a hand, else its pack, else at its feet; */
+       FE_DRAG,                                 /*   heavy thing t lying beside it shoved a square away from it (w2 0)
+                                                **   or dragged toward it, it a square back (w2 1): wdrag.c's; */
+       FE_HAND,                                 /*   thing t it holds handed to actor w1 less 1 beside it, by the
+                                                **   receiver's take rule (its hands, what it lifts): the give row's,
+                                                **   FE_PASS's food too.  No mind posts these yet: I_ROB:fetch's fields) */
+       FE_ROBBED };                             /* (The actor robbed by the character beside it (the minds' SW_ROB,
+                                                **   SW_FILCH: the one-path plan's stage 2, 2026-11-23): what it holds
+                                                **   but a light lit, and its coins, x[3] RB_PURSE its coins alone, taken
+                                                **   into the character's hands, pack or purse by its carry, each told
+                                                **   (E_TASK TE_FETCHED FT_STOLEN; none, FT_BARE): wthings.c's) */
+enum { FT_TOOK, FT_GAVE, FT_GONE, FT_HEAVY, FT_HANDS, FT_FEET, FT_GOT, FT_FAR,
+       FT_STOLEN, FT_BARE };   /* (E_TASK TE_FETCHED's b's high
                                                 **   bits: taken up, handed over, gone from where it lay, too heavy
                                                 **   for it, its hands full, set down at the character's feet (its own
-                                                **   hands full), a gift taken, no way to it) */
+                                                **   hands full), a gift taken, no way to it; taken from it by the
+                                                **   character's robbery, nothing to be had: FE_ROBBED's) */
 #define AM_HURT         0x01                    /* (An actor's mood: wounded, */
 #define AM_BERSERK      0x02                    /*   berserk, its courage's test's; */
 #define AM_LEADS        0x04                    /*   a successor at its leader's post: succession's, 2026-10-30; */
@@ -1284,8 +1308,13 @@ enum { SW_LOOK, SW_TALK, SW_PERSUADE, SW_DECEIVE, SW_THREATEN, SW_CALM, SW_BEFRI
                                                 **   (farthings, its condition's), its count iy; the coins, each side's
                                                 **   pennies, coin and its, their counts ncoin and nits; the reply's ix
                                                 **   the price, pennies) */
-       SW_ENTERTAIN };                          /* (One entertained: sung to, played or danced for, the referee's
+       SW_ENTERTAIN,                            /* (One entertained: sung to, played or danced for, the referee's
                                                 **   performing skill by the order: PF_*) */
+       SW_ROB, SW_FILCH };                      /* (One robbed by the character, the denizens' own robbery the other way
+                                                **   about (the one-path plan's stage 2, things and robbery, 2026-11-23):
+                                                **   one senseless beside it, what it holds and its coins; one asleep (or
+                                                **   senseless) beside it, its coins alone, the character's Stealth
+                                                **   against its hearing, the better caught (SR_WONT: it wakes) */
 enum { PF_ANY, PF_SING, PF_PLAY, PF_DANCE };    /* (SW_ENTERTAIN's order: the best of them, or the one said) */
 enum { OR_NONE, OR_FOLLOW, OR_WAIT, OR_HOME, OR_FETCH, OR_OPEN, OR_CLOSE, OR_UNLOCK,
        OR_LOCK, OR_BAR, OR_UNBAR, OR_FORCE, OR_PICK };   /* An ally's request (SW_ORDER's): follow the character, wait

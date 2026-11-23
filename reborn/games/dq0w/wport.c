@@ -32,6 +32,7 @@
 #include "things.h"
 
 #pragma local-strings (on)
+unsigned char __fastcall__ handout (const struct msg* m);   /* (Part 111's: wempty.c, every actor's) */
 #pragma code-name ("SW80CODE")
 #pragma rodata-name ("SW80RODATA")             /* (No data of its own: its locals on the C stack, as it calls other
                                                 **   parts, which copy this one in again after) */
@@ -192,10 +193,17 @@ void __fastcall__ s_den_more (const struct msg* m)
         hub_map (0);
     } else if (m->kind == I_ROB) {
         hub_map (0);
-        if (I_ROB_ERRAND (*m) >= FE_DROP) {
+        if (I_ROB_ERRAND (*m) >= FE_EMPTY) {
+            handout (m);                        /* (Its thing's things put out, a thing put down on a square, its things
+                                                **   handled: the character's own code, wempty.c's, wthings.c's; part
+                                                **   14's till 2026-11-23, its room) */
+        } else if (I_ROB_ERRAND (*m) >= FE_DROP) {
             den_take (m);                       /* (The things' rest, by the character's rules, their own time: part 81's) */
         } else {
-            bd.ready += HUB->round;
+            if (I_ROB_ERRAND (*m) == FE_ROB) {
+                bd.ready += HUB->round;         /* (A robbery's round's work; an errand's its act's own, the act table's
+                                                **   rows: wfetch.c's, the one-path plan's stage 2, 2026-11-23) */
+            }
             den_rob (m);
         }
     } else if (m->kind == I_KIT) {

@@ -4321,31 +4321,7 @@ static void __fastcall__ order (unsigned char k)
     }
 }
 
-/* A name given actor k (sw's word2, capitalised): a friend's or an ally's, kept in the head's names */
-static void __fastcall__ give_name (unsigned char k)
-{
-    struct actor* q = &HUB->actor[k];
-    unsigned char n;
-
-    if (sw.was < AT_FRIENDLY || !sw.word2[0]) {
-        sw.result = sw.word2[0] ? SR_NOT_ALLY : SR_CANT;
-        return;
-    }
-    den_get (q->den);
-    if ((n = name_of (D.id)) == NNAMES && (n = name_of (0)) == NNAMES) {
-        sw.result = SR_CANT;                    /* (Names enough given) */
-        return;
-    }
-    sw.word2[sizeof hd.names[0].name - 1] = 0;
-    if (sw.word2[0] >= 'a' && sw.word2[0] <= 'z') {
-        sw.word2[0] += 'A' - 'a';
-    }
-    hd.names[n].id = D.id;
-    strcpy (hd.names[n].name, sw.word2);
-    hub_map (0);
-    strcpy (q->name, sw.word2);
-}
-
+void __fastcall__ give_name (unsigned char k);  /* (Part 24's, below: s_sway's, part 2's room, 2026-11-23) */
 void __fastcall__ minded (unsigned char k);    /* (Part 24's, below: woken, goaded; to all in earshot) */
 
 /* The UI's request answered */
@@ -4398,7 +4374,7 @@ void s_sway (void)
             I_RISE_FACE (im) = q->face;
             post (I_RISE, k + 1);
         }
-        switch (q->doing == DO_DOWN && sw.kind ? 0xFF : sw.kind) {
+        switch (q->doing == DO_DOWN && (unsigned char) (sw.kind - 1) < SW_ROB - 1 ? 0xFF : sw.kind) {
         case 0xFF:
             sw.result = SR_DOWN;                /* (Senseless: it hears nothing, it takes no request, till it comes
                                                 **   round, 2026-10-29) */
@@ -4410,6 +4386,10 @@ void s_sway (void)
         case SW_ORDER:
             order (k);
             break;
+        case SW_ROB:                            /* (One robbed, the character's robbery: part 24's robbed, */
+        case SW_FILCH:                          /*   the one-path plan's stage 2, 2026-11-23; not roused, */
+            minded (k);                         /*   asleep still or senseless, or woken by it if it's */
+            goto unroused;                      /*   caught) */
         case SW_WAKE:                           /* (A sleeper woken, one goaded: part 24's provoke, */
         case SW_TAUNT:                          /*   2026-11-10) */
             minded (k);
@@ -4423,6 +4403,7 @@ void s_sway (void)
             break;
         }
         rouse (k, 1 | ROUSE_SET);               /* (It sees to what's changed at once) */
+unroused:
         md.sgen[k] = 0;
     }
     settle ();
@@ -4632,11 +4613,97 @@ static void crowd (void)
     }
 }
 
-/* s_sway's: actor k woken or goaded (SW_WAKE, SW_TAUNT); NACTORS, words to all in earshot (sw.order SWO_ALL) */
+/* A name given actor k (sw's word2, capitalised): a friend's or an ally's, kept in the head's names (s_sway's, part 2's
+** till 2026-11-23: its room, the character's robbery's) */
+void __fastcall__ s_give_name (unsigned char k)
+{
+    struct actor* q = &HUB->actor[k];
+    unsigned char n;
+
+    if (sw.was < AT_FRIENDLY || !sw.word2[0]) {
+        sw.result = sw.word2[0] ? SR_NOT_ALLY : SR_CANT;
+        return;
+    }
+    den_get (q->den);
+    if ((n = name_of (D.id)) == NNAMES && (n = name_of (0)) == NNAMES) {
+        sw.result = SR_CANT;                    /* (Names enough given) */
+        return;
+    }
+    sw.word2[sizeof hd.names[0].name - 1] = 0;
+    if (sw.word2[0] >= 'a' && sw.word2[0] <= 'z') {
+        sw.word2[0] += 'A' - 'a';
+    }
+    hd.names[n].id = D.id;
+    strcpy (hd.names[n].name, sw.word2);
+    hub_map (0);
+    strcpy (q->name, sw.word2);
+}
+
+/* Actor k robbed by the character (the one-path plan's stage 2, things and robbery, 2026-11-23: ONE-PATH.md's 2.7, the
+** character's robbery and filching, the denizens' own the other way about: s_den_rob's, HM_FILCH's), beside it: SW_ROB,
+** one senseless (helpless: the denizens rob one helpless), what it holds and its coins; SW_FILCH, one asleep (unaware:
+** the denizens filch one at rest), or senseless, its coins alone, the character's Stealth (the filch row's test: the
+** robber's, as HM_FILCH's) against its hearing (its own sheet's), the better caught at it (SR_WONT: nothing taken, it
+** wakes, up and watching, turned to the character and drawn on to it, as a sleeper woken).  Not caught, the world told
+** (its I_ROB, FE_ROBBED: the takings moved to the character by its carry, each told), a round's work, the character's */
+static void __fastcall__ robbed (unsigned char k)
+{
+    struct actor* q;
+    struct req* r;
+    signed char g;
+
+    hub_map (0);
+    q = &HUB->actor[k];
+    if (dist > 1) {
+        sw.result = SR_FAR;
+        return;
+    }
+    if (sw.kind == SW_ROB ? q->doing != DO_DOWN : q->doing != DO_DOWN && q->doing != DO_SLEEP) {
+        sw.result = SR_CANT;
+        return;
+    }
+    I_ROB_PURSE (im) = sw.kind == SW_FILCH ? RB_PURSE : 0;
+    if (q->doing == DO_SLEEP) {
+        sw.grade = g = said_test (P_STEALTH, 0, "");
+        hub_map (0);
+        r = DSLOT;
+        r->kind = RS_TEST;
+        r->actor = k + 1;
+        RS_TEST_PURPOSE (*r) = P_NOTICE_SOUND;
+        RS_TEST_HOW (*r) = 0;
+        RS_TEST_STEPS (*r) = 0;
+        r = hub_call (r, T_REFEREE);
+        r->state = REQ_FREE;
+        if ((signed char) RS_TEST_GRADE (*r) > g) {   /* (Its hearing's grade the better: the reply's, read as it's freed) */
+            sw.result = SR_WONT;                /* (Caught at it: it wakes, a sleeper woken's) */
+            I_ROUSE_DOING (im) = DO_WATCH;
+            I_ROUSE_FACE (im) = bearing (pcx - q->x, pcy - q->y);
+            I_ROUSE_TENTHS (im) = 1;
+            I_ROUSE_WHENEVER (im) = 1;
+            post (I_ROUSE, k + 1);
+            md.lsx[k] = pcx;
+            md.lsy[k] = pcy;
+            md.drawn[k] = DRAWN_N;
+            sw.t = 20;
+            return;
+        }
+    }
+    I_ROB_ERRAND (im) = FE_ROBBED;
+    I_ROB_THING (im) = 0;
+    I_DEN_DOING (im) = I_DEN_FACE (im) = 0xFF;
+    post (I_ROB, k + 1);
+    hub_map (0);
+    sw.t = HUB->round;                          /* (A round's work: the rob row's, the robber's) */
+}
+
+/* s_sway's: actor k woken or goaded (SW_WAKE, SW_TAUNT), robbed (SW_ROB, SW_FILCH); NACTORS, words to all in earshot
+** (sw.order SWO_ALL) */
 void __fastcall__ s_minded (unsigned char k)
 {
     if (k == NACTORS) {
         crowd ();
+    } else if (sw.kind >= SW_ROB) {
+        robbed (k);
     } else {
         provoke (k);
     }

@@ -10,7 +10,7 @@ const {
   dq0Story, dq0Prose, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Named, DQ0_I,
   dq0Typed, dq0Portal, dq0Rec, dq0Poke, dq0PcShock, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Alone, dq0Paces, dq0Own, dq0WhenFree,
   dq0Asks, dq0HeldPaces, dq0PlayLetters, dq0FightPause,
-  dq0Ad
+  dq0Ad, dq0Root, dq0Holder, dq0Intent
 } = require('../../lib/dq0.js');
 const { target, D17 } = require('../../lib/trends.js');   // (The user's targets, D17, at 115,200 baud: each measure kept, those over and past 90% listed after the tests)
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
@@ -1735,7 +1735,7 @@ module.exports = {
         const P = F.put[5], c5 = crowns(quit(4));
         if (!F.easy) f.push('the hidden crowns not found in the store at the hiding square: ' + JSON.stringify(F.hid));
         if (!P) f.push('no bandit put on the crowns\' square: ' + JSON.stringify(F.who));
-        else if (!c5.some(i => i.n === F.easy && i.where === 'IW_DEN' && i.did === P.did)) f.push('the hidden crowns not found by the bandit\'s search: ' + JSON.stringify(c5.map(i => [i.n, i.where, i.did, i.flags])));
+        else if (!c5.some(i => i.n === F.easy && (r => r.where === 'IW_DEN' && r.did === P.did)(dq0Root(quit(4).at, i)))) f.push('the hidden crowns not found by the bandit\'s search: ' + JSON.stringify(c5.map(i => [i.n, i.where, i.did, i.flags])));   // (Its own: held, or in its purse, coins' home: the one-path plan's stage 2, things, 2026-11-23)
         const tests5 = T.filter(t => t.game === 4).flatMap(t => t.replies).filter(r => r.req === 'slot0' && P && r.actor === P.k + 1).map(r => [r.rs, r.a, r.steps, r.grade]);
         const { K } = m.dq0.layout(), PS = K.P_SEARCH === undefined ? 3 : K.P_SEARCH;
         if (P && !tests5.some(r => r[0] === 'RS_TEST' && r[1] === PS)) f.push('no search of the bandit\'s own (the referee\'s P_SEARCH by its sheet): ' + JSON.stringify(tests5));
@@ -2334,7 +2334,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0denhands', near: ['denizens'], what: "Dingus Quest Zero's denizens and things by the character's rules, the rest of Phase 3C's one path (2026-11-04: DUNGEON.md's one path, DENIZENS.md's things handled, HOUSE.md's denizens handling things, for review), by the world's beats: dq0denfood's garrison (seed 2), rations the character's let fall, a soldier beside them, friendly, made hungry (dq0hungry's way): it takes them up (WB_PICKS), then eats them at its next look (WB_EATS: five minutes, its mind fed: the hub's dig_t TW_ATE, it wants no more); the next game, one takes them up and is fed, a fellow of its faction put beside it, made hungry: handed over (WB_HANDS: it eats them at its own next look, hungry still); the third, one that's taken them up made to flee (the minds' fled): it lets them fall (WB_DROP), no time, lying where it stood",
+      name: 'dq0denhands', near: ['denizens'], what: "Dingus Quest Zero's denizens and things by the character's rules, the rest of Phase 3C's one path (2026-11-04: DUNGEON.md's one path, DENIZENS.md's things handled, HOUSE.md's denizens handling things, for review), by the world's beats: dq0denfood's garrison (seed 2), rations the character's let fall, a soldier beside them, friendly, made hungry (dq0hungry's way): it takes them up (WB_PICKS), then eats them at its next look (WB_EATS: five minutes, its mind fed: the hub's dig_t TW_ATE, it wants no more); the next game, one takes them up and is fed, a fellow of its faction put beside it, made hungry: handed over (WB_HANDS_TO, the one hand of a thing, the receiver's take rule, the give row: it eats them at its own next look, hungry still); the third, one that's taken them up made to flee (the minds' fled): it lets them fall (WB_DROP), no time, lying where it stood",
       init: 't_rc', cycles: 4000e6,
       machine: { input: (() => {
         const game = d => ['dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/' + d, 'drop the rations', ...Array(12).fill('wait 1 minute'), 'quit'];
@@ -2396,10 +2396,10 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], beats = (g, w) => T.flatMap(t => [...t.events, ...t.dens]).filter(e => e.game === g && e.kind === 'E_BEAT' && e.beat === w);
-        this.notes = [0, 1, 2].map(g => ['WB_PICKS', 'WB_EATS', 'WB_HANDS', 'WB_DROP'].map(w => w + ' ' + beats(g, w).length).join(', '));
+        this.notes = [0, 1, 2].map(g => ['WB_PICKS', 'WB_EATS', 'WB_HANDS_TO', 'WB_DROP'].map(w => w + ' ' + beats(g, w).length).join(', '));
         if (!beats(0, 'WB_PICKS').length) f.push('the hungry soldier never took up the rations');
         if (!beats(0, 'WB_EATS').length) f.push('the hungry soldier, the rations in hand, never ate (WB_EATS)');
-        if (!beats(1, 'WB_HANDS').length) f.push('the fellow, hungry, was never handed the food (WB_HANDS)');
+        if (!beats(1, 'WB_HANDS_TO').length) f.push('the fellow, hungry, was never handed the food (WB_HANDS_TO: the one hand of a thing, every actor\'s, wthings.c\'s FE_HAND, 2026-11-23; WB_HANDS before)');
         if (!beats(2, 'WB_DROP').length) f.push('the one fleeing never let what it held fall (WB_DROP)');
         return f;
       },
@@ -2961,6 +2961,231 @@ module.exports = {
         }
         this.notes = ['the character ' + JSON.stringify(ms.map(q => [q.b, q.grade, q.w1])), 'the dwarf ' + JSON.stringify(ts.map(q => [q.b, q.grade, q.w1]))];
         if (f.length) f.push(s.slice(s.indexOf('> dig north'), s.indexOf('> dig north') + 800));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0thingact', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's things handled, every actor's by the same rules and the same rows (ONE-PATH.md's 2.1 and 2.7: the one-path plan's stage 2, things and robbery, 2026-11-23; the act audit's C2, C6, G-9, G-10, G-11): at seed 1 (dq0denportal's wary bandits, dq0 -k dagger, cloak, chest; the chest set a square off, room beyond it) the character drops its kit's sack, puts the dagger in it (the act table's put row and its reach, a level, part 56's R_IN), takes it from the sack (the takeout row and the level), wears the cloak (the don row), and pushes the chest a square (the drag row: its time, its noise, the referee's P_FORCE by its weight); the same scene again, each game in its own folder, the things laid down, the character a step aside, a bandit put where it stood, made its own (its dagger and cloak, IW_DEN, held), the others sent away and the minds quiet: its intents posted as its mind would (I_ROB FE_PUT, FE_TAKE, FE_DON, FE_DRAG: wthings.c's, wfetch.c's, wdrag.c's, the character's own code), each its time on its ready the character's, its noise the same row's (E_DEN DE_DRAGS, as loud as the character's E_NOISE), its test the same purpose at the same steps (its own sheet), its effect the character's (in the sack, out of it, worn, the chest a square on as its test went)",
+      init: 't_rc', cycles: 3200e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/h/theme.txt',
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k dagger,cloak,chest",
+        'drop the chest', 'wait', 'drop the sack', 'hold the dagger', 'put the dagger in the sack', 'take the dagger from the sack', 'drop the dagger', 'hold the cloak', 'wear the cloak', 'push the chest', 'quit',
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k dagger,cloak,chest",
+        'drop the chest', 'wait', 'drop the sack', 'drop the dagger', 'drop the cloak', 'step south', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        const S = m.tact = { k: null, ready: [], items: {} };
+        const u16 = (b, o) => b[o] | b[o + 1] << 8, w16 = (b, o, v) => { b[o] = v & 255; b[o + 1] = v >> 8 & 255; };
+        const store = (L, fn) => { const per = Math.floor(0x2000 / L.itemSize); for (let i = 1; i < L.nitems; i++) { const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize; if (b && b[o + L.iKind] && fn(i, b, o) === false) return; } };
+        const rd = (h, L) => { const o = L.actor + S.k * L.actorSize + L.aReady; return (h[o] | h[o + 1] << 8 | h[o + 2] << 16 | h[o + 3] << 24) >>> 0; };
+        // (The chest set a square from the character, room beyond it both ways it'll be pushed: the character's way and a
+        //   bandit's across it; the same square both games, the start's)
+        const spot = (h, L, K) => {
+          const px = u16(h, L.pcX), py = u16(h, L.pcY), sn = h[L.pcSn];
+          const st = stratumRec(m, sn), tile = (x, y) => { const c = st && liveChunks(m, sn)[((x - st.x0) >> 5) + ',' + ((y - st.y0) >> 5)]; return c ? c[443 + ((y - st.y0) & 31) * 32 + ((x - st.x0) & 31)] & 15 : -1; };
+          const ok = (x, y) => [1, 4].includes(tile(x, y)) && !(x === px && y === py);
+          for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1]]) {   // (Not south: the character steps that way in the second game, the bandit then where it stood, pushing the chest the same way)
+            const cx = px + dx, cy = py + dy, perp = [0, 0];
+            if (ok(cx, cy) && ok(cx + dx, cy + dy) && ok(px, py + 1)) {
+              store(L, (i, b, o) => { if (b[o + L.iKind] === K.KI_CHEST && b[o + L.iWhere] === K.IW_SQUARE) { w16(b, o + L.iX, cx); w16(b, o + L.iY, cy); return false; } });
+              S.chest = [cx, cy];
+              S.perp = perp;
+              S.p0 = [px, py];
+              return;
+            }
+          }
+        };
+        // (The bandit beside the things laid down: its own dagger and cloak, the sack and chest lying; the minds quiet, its ready held)
+        const scene = (h, L, K, at, named) => {
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
+          if (k === undefined || !S.chest) return;
+          dq0Alone(m, h, L, K, at, k);
+          S.k = k;
+          const sn = h[L.pcSn], x = S.p0[0], y = S.p0[1];   // (Where the character stood: it pushes the chest the same way, the character stepped aside)
+          const o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aDen]), did = u16(h, o + L.aDid);
+          const far = 3000 + (h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16);
+          for (let i = 0; i < 4; i++) h[o + L.aReady + i] = far >>> (8 * i) & 255;
+          w16(h, o + L.aX, x); w16(h, o + L.aY, y); h[o + L.aSn] = sn; h[o + L.aState] = 1; h[o + L.aPos] = K.POS_STANDING; h[o + L.aDoing] = K.DO_WAIT;
+          h[o + L.aAttitude] = R.mem[q + R.ATTITUDE] = K.AT_INDIFFERENT;
+          R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8; R.mem[q + R.SN] = sn;
+          store(L, (i, b, io) => {   // (A cloak of its own worn taken off: one of a kind worn at once, its don's the scene's)
+            if (b[io + L.iKind] === K.KI_CLOAK && b[io + L.iWhere] === K.IW_DEN && (b[io + L.iOwner] | b[io + L.iHide] << 8) === did) b[io + L.iFlags] &= ~4;
+          });
+          store(L, (i, b, io) => {
+            if (b[io + L.iWhere] !== K.IW_SQUARE || b[io + L.iSn] !== sn) return;
+            const kd = b[io + L.iKind], ix = u16(b, io + L.iX), iy = u16(b, io + L.iY);
+            if (kd === K.KI_CHEST) { if (ix === S.chest[0] && iy === S.chest[1]) S.items.chest = i; return; }
+            if (ix !== S.p0[0] || iy !== S.p0[1]) return;   // (The things laid down where the character stood)
+            if (kd === K.KI_DAGGER || kd === K.KI_CLOAK) {   // (Its own, held: IW_DEN at its lair's home, its number's)
+              b[io + L.iWhere] = K.IW_DEN; b[io + L.iOwner] = did & 255; b[io + L.iHide] = did >> 8; b[io + L.iFlags] |= 2;
+              S.items[kd === K.KI_DAGGER ? 'dagger' : 'cloak'] = i;
+            }
+            if (kd === K.KI_SACK) { S.items.sack = i; S.at = [u16(b, io + L.iX), u16(b, io + L.iY)]; }   // (At the character's feet, within its reach)
+            if (kd === K.KI_CHEST) S.items.chest = i;
+          });
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+        };
+        const post = (what, f) => (h, L, K) => { if (S.k === null || !S.items.dagger) return; S.ready.push([what, rd(h, L)]); dq0Intent(h, L, K.I_ROB, S.k, f(K)); };
+        const mark = (h, L) => { if (S.k !== null) S.ready.push(['end', rd(h, L)]); };
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, call: spot }, { g: 2, line: 'wait', n: 1, call: spot }, { g: 2, line: 'wait', n: 2, call: scene },
+          { g: 2, line: 'wait', n: 2, call: post('put', K => ({ a: K.FE_PUT, t: S.items.dagger, w1: S.items.sack, w2: 0 })) },
+          { g: 2, line: 'wait', n: 3, call: post('takeout', K => ({ a: K.FE_TAKE, t: S.items.dagger, w1: S.at[0], w2: S.at[1] })) },
+          { g: 2, line: 'wait', n: 4, call: post('don', K => ({ a: K.FE_DON, t: S.items.cloak })) },
+          { g: 2, line: 'wait', n: 5, call: post('drag', K => ({ a: K.FE_DRAG, t: S.items.chest, w2: 0 })) },
+          { g: 2, line: 'wait', n: 6, call: mark }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], A = dq0Acts(), { K } = m.dq0.layout(), S = m.tact;
+        if (S.k === null || !S.items.dagger || !S.items.sack || !S.items.cloak || !S.items.chest || S.ready.length < 5) return ['the scene not set: ' + JSON.stringify(S)];
+        const took = line => { const t = T.of(line); return t.at && t.after ? t.after.now - t.at.now : -1; };
+        const R_IN = 20, r = Object.fromEntries(S.ready.map(([w, v], i) => [w, i + 1 < S.ready.length ? S.ready[i + 1][1] - v : 0]));
+        // (Its time: the character's clock, the bandit's ready, by the same rows and the same reach)
+        const want = { put: A.put.t + R_IN, takeout: A.takeout.t + R_IN, don: A.don.t, drag: A.drag.t };
+        const mine = { put: took('put the dagger in the sack'), takeout: took('take the dagger from the sack'), don: took('wear the cloak'), drag: took('push the chest') };
+        for (const w of Object.keys(want)) {
+          if (mine[w] !== want[w]) f.push('the character\'s ' + w + ' not its row\'s time and its reach (' + want[w] + '): ' + mine[w]);
+          if (r[w] !== want[w]) f.push('the bandit\'s ' + w + ' not the character\'s time (' + want[w] + '): ' + r[w]);
+        }
+        // (Its noise and its test: the drag row's for both)
+        const pu = T.of('push the chest'), nz = dq0Ev(pu, 'E_NOISE', {});
+        if (!nz.length || nz[0].loud !== A.drag.loud) f.push('the character\'s push not heard as the drag row says: ' + dq0Evs(pu) + ' ' + JSON.stringify(nz));
+        const g2 = T.filter(t => t.game === 1), de = g2.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.a === A.drag.de && e.who === S.k + 1);
+        if (de.length !== 1 || (de[0].b & 15) !== A.drag.loud) f.push('the bandit\'s drag not told once as loud as the row (E_DEN DE_DRAGS): ' + JSON.stringify(de));
+        const mt = pu.replies.filter(q => q.kind === K.RS_TEST && q.actor === 0 && q.a === A.drag.p), bt = g2.flatMap(t => t.replies).filter(q => q.kind === K.RS_TEST && q.actor === S.k + 1 && q.a === A.drag.p);
+        if (mt.length !== 1 || bt.length !== 1 || mt[0].steps !== bt[0].steps) f.push('the drag\'s test not the same purpose at the same steps: ' + JSON.stringify([mt.map(q => q.steps), bt.map(q => q.steps)]));
+        // (Its effect, the character's: in the sack, out of it, worn, the chest a square on as its test went)
+        const last = T.filter(t => t.game === 1 && t.line === 'quit')[0], it = n => last && last.at && last.at.items.find(i => i.n === n);
+        const d = it(S.items.dagger), c = it(S.items.cloak), ch = it(S.items.chest);
+        if (!d || d.where !== 'IW_DEN') f.push('the dagger not the bandit\'s in hand again after its take: ' + JSON.stringify(d));
+        if (!c || c.where !== 'IW_DEN' || !(c.flags & DQ0_I.WORN)) f.push('the cloak not worn by the bandit: ' + JSON.stringify(c));
+        const moved = ch && S.chest && (ch.x !== S.chest[0] || ch.y !== S.chest[1]);
+        if (bt.length && (bt[0].grade > 0) !== !!moved) f.push('the chest ' + (moved ? 'moved' : 'not moved') + ' though the bandit\'s test went ' + bt[0].grade);
+        this.notes = ['times ' + JSON.stringify([mine, r]), 'drag steps ' + JSON.stringify([mt.map(q => [q.steps, q.grade]), bt.map(q => [q.steps, q.grade])])];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0pcrob', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's character robbing and filching a living denizen (ONE-PATH.md's 2.7: the one-path plan's stage 2, things and robbery, 2026-11-23; the denizens' own robbery the other way about): at seed 1 (dq0denportal's wary bandits) a bandit put beside the character, senseless: 'rob the bandit' (SW_ROB, the minds' robbed: its I_ROB FE_ROBBED, wthings.c's) goes through its things, what it holds and its coins taken into the character's hands, pack or purse by the character's carry, each told ('You take the bandit's ...'), the bandit's record no longer holding them; and a bandit put beside it asleep: 'filch from the bandit' (SW_FILCH) tests the character's Stealth against its hearing (the referee's P_STEALTH, actor 0; P_NOTICE_SOUND, its own sheet), its coins taken if the better is the character's, else caught ('wakes as your hand finds its purse'), as the tests went; a bandit awake refuses it",
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/h/theme.txt',
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k sack", 'wait', 'rob the bandit', 'i', 'quit',
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k sack", 'wait', 'filch from the bandit', 'wait', 'filch from the bandit', 'quit', 'echo $status']) },
+      start(m) {
+        const S = m.prob = { k: {}, did: {} };
+        const u16 = (b, o) => b[o] | b[o + 1] << 8;
+        const put = g => (h, L, K, at, named) => {
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
+          if (k === undefined) return;
+          dq0Alone(m, h, L, K, at, k);
+          S.k[g] = k;
+          S.did[g] = u16(h, at(k) + L.aDid);
+          const R = dq0Rec(m), q = R.at(h[at(k) + L.aDen]);
+          h[at(k) + L.aAttitude] = R.mem[q + R.ATTITUDE] = K.AT_INDIFFERENT;
+        };
+        const far = (h, L, k) => { const v = 3000 + (h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16), o = L.actor + k * L.actorSize + L.aReady; for (let i = 0; i < 4; i++) h[o + i] = v >>> (8 * i) & 255; };
+        const asleep = (h, L, K, at) => { if (S.k[2] !== undefined) { h[at(S.k[2]) + L.aDoing] = K.DO_SLEEP; far(h, L, S.k[2]); h[L.denSeq] = h[L.denSeq] + 1 & 255; } };
+        // (Its dagger in its hand: out of its sheath, held, its own: what a robbery takes besides its coins)
+        const armed = (h, L, K) => {
+          if (S.k[1] === undefined) return;
+          const per = Math.floor(0x2000 / L.itemSize), did = S.did[1], rec = i => { const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize; return { b, o }; };
+          let home = null;
+          for (let i = 1; i < L.nitems && !home; i++) { const { b, o } = rec(i); if (b && b[o + L.iKind] && b[o + L.iWhere] === K.IW_DEN && (b[o + L.iOwner] | b[o + L.iHide] << 8) === did) home = [b[o + L.iSn], u16(b, o + L.iX), u16(b, o + L.iY)]; }
+          for (let i = 1; i < L.nitems && home; i++) {
+            const { b, o } = rec(i);
+            if (!b || b[o + L.iKind] !== K.KI_DAGGER || b[o + L.iWhere] !== K.IW_ITEM) continue;
+            let j = u16(b, o + L.iX), r = rec(j), n = 0;
+            while (r.b && r.b[r.o + L.iWhere] === K.IW_ITEM && n++ < 6) { j = u16(r.b, r.o + L.iX); r = rec(j); }
+            if (!r.b || r.b[r.o + L.iWhere] !== K.IW_DEN || (r.b[r.o + L.iOwner] | r.b[r.o + L.iHide] << 8) !== did) continue;
+            b[o + L.iWhere] = K.IW_DEN; b[o + L.iOwner] = did & 255; b[o + L.iHide] = did >> 8; b[o + L.iFlags] |= 2;
+            b[o + L.iSn] = home[0]; b[o + L.iX] = home[1] & 255; b[o + L.iX + 1] = home[1] >> 8; b[o + L.iY] = home[2] & 255; b[o + L.iY + 1] = home[2] >> 8;
+            S.armed = i;
+            break;
+          }
+        };
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, call: put(1) }, { g: 1, line: 'wait', n: 1, name: 'bandit', beside: 'face', senseless: 3000 }, { g: 1, line: 'wait', n: 1, call: armed },
+          { g: 2, line: 'wait', n: 1, call: put(2) }, { g: 2, line: 'wait', n: 1, name: 'bandit', beside: 'face' },
+          { g: 2, line: 'wait', n: 1, call: asleep }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], { K } = m.dq0.layout(), S = m.prob, s = dq0Prose(out), G = s.split('% dq0 ').slice(1);
+        if (S.k[1] === undefined || S.k[2] === undefined) return ['the scenes not set: ' + JSON.stringify(S)];
+        const rob = T.of('rob the bandit'), r1 = T.after(rob, 'i');
+        if (!S.armed) f.push('the bandit not armed for the scene');
+        const theirs = (t, g) => t && t.at ? t.at.items.filter(i => dq0Root(t.at, i).where === 'IW_DEN' && dq0Root(t.at, i).did === S.did[g]) : [];
+        const had = theirs(rob, 1).filter(i => ['pennies', 'farthings', 'crowns'].includes(i.name) || (i.where === 'IW_DEN' && (i.flags & DQ0_I.HELD) && !(i.flags & 1)));
+        if (!/You go through the bandit's things\./.test(G[0])) f.push('the robbery not told: ' + G[0].slice(G[0].indexOf('> rob'), G[0].indexOf('> rob') + 300));
+        const after = r1.after || r1.at, mine = dq0Carried(after).map(i => i.n);
+        const left = had.filter(i => !mine.includes(i.n) && !(after && after.items.some(j => j.n === i.n && j.where === 'IW_SQUARE')));
+        if (!had.length) f.push('the bandit had nothing to rob: ' + JSON.stringify(theirs(rob, 1).map(i => [i.name, i.where, i.flags])));
+        if (left.length) f.push('robbed, its things left with it: ' + JSON.stringify(left.map(i => i.name)));
+        for (const i of had) if (!new RegExp('You take the bandit\'s ' + i.name).test(G[0])) f.push('not told taking its ' + i.name);
+        // (The filch: the character's Stealth against its hearing, as the tests went)
+        const fi = T.of('filch from the bandit', T.of('quit').k + 1), reps = fi.replies.filter(q => q.kind === K.RS_TEST);
+        const P_STEALTH = 4, P_NOTICE_SOUND = 1;
+        const st = reps.find(q => q.actor === 0 && q.a === P_STEALTH), no = reps.find(q => q.actor === S.k[2] + 1 && q.a === P_NOTICE_SOUND);
+        if (!st || !no) f.push('the filch not the character\'s Stealth against its hearing: ' + JSON.stringify(reps.map(q => [q.actor, q.a, q.grade])));
+        else {
+          const caught = no.grade > st.grade, g2 = G[1].slice(G[1].indexOf('> filch'));
+          if (caught !== /wakes as your hand finds its purse/.test(g2)) f.push('caught ' + caught + ' but told: ' + g2.slice(0, 200));
+          if (!caught && !/You slip a hand into the bandit's purse\./.test(g2)) f.push('not caught, the filch not told: ' + g2.slice(0, 200));
+          if (!caught && /You take the bandit's (?!pennies|farthings|crowns)/.test(g2.slice(0, g2.indexOf('> wait')))) f.push('a filch taking more than coins: ' + g2.slice(0, 300));
+          const again = G[1].slice(G[1].lastIndexOf('> filch'));
+          if (caught && !/is awake: it would feel your hand\./.test(again)) f.push('a bandit awake not refusing a filch: ' + again.slice(0, 200));
+          this.notes = ['filch grades ' + JSON.stringify([st.grade, no.grade])];
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0dentakein', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's denizen taking a thing from an open container lying by it (the user's, 2026-11-17: a denizen takes from containers as the character can; H17, 2026-11-21: a thing in a container within reach to hand at any depth, a level's more time each; the one-path plan's stage 2, things and robbery, 2026-11-23: the act audit's C2, C9): at seed 1 (dq0denportal's wary bandits, dq0 -k crowns) the crowns put in the kit's sack, the sack set down open; a bandit put beside it, its own take posted (I_TAKE, its wants TW_LOOT, as its mind would): it sees the crowns in the open sack and takes them (the takeout row's time and the sack's level, the character's own), into its purse (coins to the purse, the character's carry), told ('The bandit takes the crowns from the sack.'); the sack tied shut instead, it takes nothing (what's in a closed thing unseen)",
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/h/theme.txt',
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k crowns", 'drop the sack', 'put the crowns in the sack', 'wait', 'wait', 'quit',
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k crowns", 'drop the sack', 'put the crowns in the sack', 'close the sack', 'wait', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        const S = m.tin = { k: {}, did: {}, ready: {} };
+        const u16 = (b, o) => b[o] | b[o + 1] << 8;
+        const put = g => (h, L, K, at, named) => {
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
+          if (k === undefined) return;
+          dq0Alone(m, h, L, K, at, k);
+          S.k[g] = k;
+          S.did[g] = u16(h, at(k) + L.aDid);
+          const R = dq0Rec(m), q = R.at(h[at(k) + L.aDen]);
+          h[at(k) + L.aAttitude] = R.mem[q + R.ATTITUDE] = K.AT_INDIFFERENT;
+          h[at(k) + L.aDoing] = K.DO_WAIT;
+          const far = 3000 + (h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16);   // (Its mind quiet: free some five minutes on)
+          for (let i = 0; i < 4; i++) h[at(k) + L.aReady + i] = far >>> (8 * i) & 255;
+        };
+        const rd = (h, L, k) => { const o = L.actor + k * L.actorSize + L.aReady; return (h[o] | h[o + 1] << 8 | h[o + 2] << 16 | h[o + 3] << 24) >>> 0; };
+        const take = g => (h, L, K) => { if (S.k[g] === undefined) return; S.ready[g] = [rd(h, L, S.k[g])]; dq0Intent(h, L, K.I_TAKE, S.k[g], { a: 4, b: 0 }); };   // (TW_LOOT)
+        const end = g => (h, L) => { if (S.k[g] !== undefined && S.ready[g]) S.ready[g].push(rd(h, L, S.k[g])); };
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, name: 'bandit', beside: 'face' }, { g: 1, line: 'wait', n: 1, call: put(1) }, { g: 1, line: 'wait', n: 1, call: take(1) }, { g: 1, line: 'wait', n: 2, call: end(1) },
+          { g: 2, line: 'wait', n: 1, name: 'bandit', beside: 'face' }, { g: 2, line: 'wait', n: 1, call: put(2) }, { g: 2, line: 'wait', n: 1, call: take(2) }, { g: 2, line: 'wait', n: 2, call: end(2) }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], A = dq0Acts(), S = m.tin, s = dq0Prose(out), G = s.split('% dq0 ').slice(1);
+        if (S.k[1] === undefined || S.k[2] === undefined) return ['the scenes not set: ' + JSON.stringify(S)];
+        const q1 = T.filter(t => t.line === 'quit')[0], q2 = T.filter(t => t.line === 'quit')[1];
+        const cr = t => t && t.at ? t.at.items.filter(i => i.name === 'crowns') : [];
+        const c1 = cr(q1), c2 = cr(q2);
+        const its = (t, i, g) => dq0Root(t.at, i).where === 'IW_DEN' && dq0Root(t.at, i).did === S.did[g];
+        if (!c1.some(i => its(q1, i, 1))) f.push('the crowns in the open sack not taken by the bandit: ' + JSON.stringify(c1.map(i => [i.where, i.x])));
+        else if (!c1.some(i => its(q1, i, 1) && i.where === 'IW_ITEM' && (dq0Holder(q1.at, i) || {}).name === 'pouch')) f.push('the crowns not put in its purse (coins to the purse): ' + JSON.stringify(c1.map(i => [i.where, (dq0Holder(q1.at, i) || {}).name])));
+        const told = dq0Turns(m).filter(t => t.game === 0).flatMap(t => t.dens).filter(e => e.kind === 'E_BEAT' && e.whose === S.k[1] + 1);   // (Told if its square's in sight: E_BEAT:things WB_TAKES, the crowns from the sack)
+        if (told.length && !told.some(e => e.beat === 'WB_TAKES' && e.thing === m.dq0.layout().K.KI_CROWNS && e.other === m.dq0.layout().K.KI_SACK)) f.push('the take from the sack told otherwise: ' + JSON.stringify(told));
+        const t1 = S.ready[1] && S.ready[1][1] - S.ready[1][0];
+        if (t1 !== A.takeout.t + 20) f.push('its take not the takeout row\'s time and the sack\'s level (' + (A.takeout.t + 20) + '): ' + t1);
+        if (c2.some(i => its(q2, i, 2))) f.push('the crowns in the sack tied shut taken: unseen, they should be left');
+        this.notes = ['its time ' + t1];
         return f;
       },
       sdcard: true
