@@ -7008,3 +7008,19 @@ M3-M5), with the images' commit.
   any noise.
 - **Climbing out of a pit ends with a step onto its edge for every actor** (step1's question 6): the character pays
   the step's time too.
+
+## Stage 2's second round, its questions: the user's answers (2026-11-24)
+
+- **Every actor's test gets a fresh die of its own** (climb1 9, things2 12, build2 10): no more of the referee's
+  quiet dice repeating for a creature's tests when nothing else rolls.
+- **Binding, with a rope** (things2 1): "tie up the bandit" on one senseless or held; one bound can't act until it
+  slips free or is cut loose; the same rules for every actor.
+- **A door's leaf and stones are things to carry** (build2 1): taken from a broken door or rubble, carried, used at
+  any doorway or passage; a new door made where one is hung.
+- **The leaders carry a torch and a tinderbox too** (build2 8): the bandit lord, the captain, the priest.
+- **A torch hangs at the belt** (build2 9), as a lantern does: the pouch for it dropped.
+- **A creature turns to a cry of pain it hears** (step2 4), as to any noise, by its own nature.
+- **A faction knows its own door traps too** (step2 1): its folk pass them safely; strangers learn of one only by
+  finding it.
+- **The character learns of a trap it sees a creature find or step round** (step2 7).
+- **A winged body crosses an open pit** (step2 8), not only a covered one.
