@@ -311,7 +311,7 @@ module.exports = {
       name: 'dq0mine', outfit: true, meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's miners at their work (slice 4.11's rest, 2026-11-02: DENIZENS.md's tunnellers and builders, HOUSE.md's tunnellers, for review): a hand-written theme's dwarf miners (seed 374: their home south-west of the start, a copper seam crossing their chunk eight squares east of it, rock.h's; wary; a miner digs with the pick it carries, kinds.txt's ways m, outfits.txt's [role khuzmin]), the hour 8 in the morning (dq0hour: a diurnal miner's working hours, part 9's day), the character waiting in its cell six hours, out of their sight; the portcullis on their mine's way across raised (the scene set as the first long wait's typed: its state in the chunks' cache poked; a lowered one ends a mine's way, the minds raising none yet).  At its work (by the clock, part 9's SC_WORK: never polled) a miner digs its faction's mine (dq0d's work_dig, part 15's): from its lair's home across to its region's vein (rock.h's rock_vein: a seam of ore or quartz), then along it, the open squares and doorways on it walked through, its stand the square before its first wall, rock or rubble; a spell at a time, the world's (wdig.c, I_KIT's KT_DIG, by the character's rules: its pick's rate, its Strength test by its sheet), heard (E_DEN DE_DIG, 'a scraping in rock'), each square through a passage (DE_DUG) on the mine's line (the home's row between the home and the vein, or the vein's own squares at their row), none of them hostile",
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=8',
-        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 374 -c /ram/c.hm -T -d /ram/g',
+        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 374 -c /ram/c.hm -T -d /ram/g -R 1',
         'wait 2 hours', 'wait 2 hours', 'wait 2 hours', 'quit', 'echo $status']) },
       start(m) {
         const a = m.acia, read = a.read;
@@ -2914,7 +2914,7 @@ module.exports = {
         "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/h/theme.txt',
         'dq0 -p t -s 374 -c /ram/c.hm -k pick -T', 'dig north', 'quit',
         'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7', 'open the door', 'go through it', 'turn around', 'close the door ahead', 'wait', 'wait 2 hours', 'wait', 'quit',
-        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -R 7', 'open the door', 'close the door', 'wait 1 minute', 'wait 30 minutes', 'wait 30 minutes', 'look', 'quit',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h', 'open the door', 'close the door', 'wait 1 minute', 'wait 30 minutes', 'wait 30 minutes', 'look', 'quit',
         'echo $status']) },
       start(m) {
         dq0OnWords(m, [{ g: 2, line: 'wait 2 hours', n: 1, words: 'A fresh tunnel opens', text: 'stop\r' }]);   // (dq0tunnel's)
@@ -3467,6 +3467,17 @@ module.exports = {
           const make = (i, kind, fuel) => { const { b, o: p } = rec(i); b[p + L.iKind] = kind; b[p + L.iFlags] = 0; b[p + L.iQty] = 1; b[p + L.iId] = 0xF0 + kind; b[p + L.iId + 1] = 0xFF; b[p + L.iFuel] = fuel & 255; b[p + L.iFuel + 1] = fuel >> 8; b[p + L.iShut] = 0; };
           make(inn[0], K.KI_TORCH, 60);
           make(inn[1], K.KI_TINDERBOX, 20);
+          // (Its outfit's own torch, a bandit's since 2026-11-23 (the user's: bandits carry a torch and a tinderbox, a
+          // pouch of their own), made its rations: the scene's torch its only light, so its burning out leaves it none)
+          for (let i = 1; i < L.nitems; i++) {
+            if (i === inn[0]) continue;
+            let j = i;
+            const { b, o: p } = rec(i);
+            if (!b || b[p + L.iKind] !== K.KI_TORCH) continue;
+            for (let n = 0; n < 8 && rec(j).b[rec(j).o + L.iWhere] === K.IW_ITEM; n++) j = rec(j).b[rec(j).o + L.iX] | rec(j).b[rec(j).o + L.iX + 1] << 8;
+            const r = rec(j);
+            if (r.b[r.o + L.iWhere] === K.IW_DEN && (r.b[r.o + L.iOwner] | r.b[r.o + L.iHide] << 8) === did) b[p + L.iKind] = K.KI_RATIONS;
+          }
           const Sh = dq0Sheet(m);               // (A deft one, its Dexterity 18: its sheet's att[2], the grope's)
           Sh.mem[Sh.at(h[o + L.aDen]) + 3] = 18;
           h[AL + k] = 0x80;                     // (AL_KIT: its things as the world would have them told)

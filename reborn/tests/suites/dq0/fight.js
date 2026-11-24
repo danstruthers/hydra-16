@@ -124,7 +124,7 @@ module.exports = {
       init: 't_rc', cycles: 1200e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml shd 90 >> /ram/c.hm',
         'echo ml swd 20 >> /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,round shield,gambeson,mail hauberk'", 'drop the backpack', 'hold the sword', 'hold the round shield', 'wear the gambeson', 'wear the mail hauberk',
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,round shield,gambeson,mail hauberk' -R 1", 'drop the backpack', 'hold the sword', 'hold the round shield', 'wear the gambeson', 'wear the mail hauberk',
         'defend block', ...Array(30).fill('wait'), 'quit', 'echo $status']) },
       start(m) {
         dq0Poke(m, [0, 1, 2].map(k => k ? { g: 1, line: 'wait', n: 1, k, set: { attitude: 4, doing: 0 } } : { g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: 4 }));
@@ -205,7 +205,7 @@ module.exports = {
       name: 'dq0broke', outfit: true, asks: true, initiative: true, near: ['fight', 'gear'], what: "Dingus Quest Zero's weapons broken by the book (the user's, 2026-11-03; HOUSE.md's what strikes: Combat 12's Weapon Damage, 3d6 over its Weapon Quality, on a Block), every actor's: dq0shield's bandit set on the character, sword in hand, its stance a block: a block, weapon against weapon, breaks one of them: told, its pieces a 'broken weapon' on the floor, none of it in hand after; the character's next blow by its fists, or the bandit's",
       init: 't_rc', cycles: 2000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml swd 80 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'hold the sword', 'wear the gambeson', 'wear the mail hauberk', 'defend block', ...Array(30).fill('wait'), 'inventory', 'look', 'quit', 'echo $status']) },
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk' -R 1", 'drop the backpack', 'hold the sword', 'wear the gambeson', 'wear the mail hauberk', 'defend block', ...Array(30).fill('wait'), 'inventory', 'look', 'quit', 'echo $status']) },
       start(m) {
         dq0Poke(m, [0, 1, 2].map(k => k ? { g: 1, line: 'wait', n: 1, k, set: { attitude: 4, doing: 0 } } : { g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: 4 }));
       },

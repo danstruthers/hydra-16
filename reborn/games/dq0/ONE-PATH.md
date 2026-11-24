@@ -81,8 +81,7 @@ its area's rows narrowed, below.)
 - **The minds**: a hidden door is dug at as the wall it seems (dq0d.c's dig_way: dug_as).
 - **Parity test**: dq0digact (the character's dig and a dwarf miner's: the query as it begins, the spells' ten
   minutes, the noise, the test and the rate by the grade, the tool worn).
-- **Left in this area**: the character's building (hang a door, wall up a way: no decision says what it needs or how:
-  OPEN.md); a denizen digging down (no mind wants a shaft yet: OPEN.md); the roof's harm on a denizen (the world's harm
+- **Left in this area**: ~~the character's building (hang a door, wall up a way)~~ done (build2, below); a denizen digging down (no mind wants a shaft yet: OPEN.md); the roof's harm on a denizen (the world's harm
   for an actor, G3: the step's branch); a denizen tiring by its spells (the one body clock, A6, Y9); an arm useless
   stopping a denizen's chisel; the time of a denizen's spell spent while it's interrupted (Y8).
 
@@ -107,6 +106,21 @@ its area's rows narrowed, below.)
 - **Parity tests:** dq0thingact (put, takeout, don, drag), dq0dentakein (a take from an open sack), dq0pcrob.
 - **Left in this area:** see built/2026-11-23-things1.md's open questions (C10's takings carried home, the grope for
   a denizen, worn places for a denizen, the minds' use of the new errands, the character's take-up time the UI's).
+
+**Done: building** (branch build2, 2026-11-23; built/2026-11-23-build2.md; the user's "The character builds anywhere,
+with materials"):
+- **One build** (dq0w/wbuild.c, part 123): the character's "hang the door" and "wall up" (the things' IO_BUILD) and a
+  builder's I_KIT KT_BUILD (wdig.c) are one code: a broken door's leaf hung again in any doorway, a passage walled up
+  anywhere; a hammer (every actor's tool_of; a record's its outfit's); the leaf the broken door's own, the stones the
+  way's own spoil or rubble beside it; the referee's Timbercraft or Masonry (P_TIMBER, P_MASONRY) by the actor's own
+  sheet; the act table's hang and wallup rows' times and noise.  The act audit's G-17.
+- **Outfits**: bandits, soldiers and cultists carry a torch and a tinderbox, dwarf miners a tinderbox (climb1's
+  lighting then theirs).
+- **Parity test:** dq0buildact (the character's hang and wall, refusals, and a dwarf miner's, by the same tests, rows
+  and effects).
+- **Left in this area:** a door's leaf and stones as things carried; a new door hung in an empty doorway (a portal made
+  where there was none); a doorway walled up; the work's time interrupted part way (the character's a wait, its work
+  done as it begins).
 
 **Done so far:**
 - **Stage 1, the world's part** (act1, 2026-11-19): the act table (games/dq0w/acts.txt) and one sender each for noise and
