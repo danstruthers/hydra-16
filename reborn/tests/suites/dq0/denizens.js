@@ -1407,12 +1407,34 @@ module.exports = {
           ram[ad('lsy') + 2 * k] = H[1] & 255; ram[ad('lsy') + 2 * k + 1] = H[1] >> 8;
           h[L.denSeq] = h[L.denSeq] + 1 & 255;
           S.put = { k, at: [H[0], H[1]] };
+          S.world = h[12 + 1];                  // (The world's task and an actor's ready's offset: its search's start, below)
+          S.rd = L.aReady;
         };
         // (The bandit's ready as each line's typed after it's put: its minute's search on it)
         const ready = (h, L) => { if (S.put) { const o = L.actor + S.put.k * L.actorSize + L.aReady; S.ready.push((h[o] | h[o + 1] << 8 | h[o + 2] << 16 | h[o + 3] << 24) >>> 0); } };
         dq0Poke(m, [{ g: 1, line: 'look', n: 1, call: (h, L, K) => { scene(1)(h, L, K); secret(1); } },
           { g: 2, line: 'close the door', n: 1, call: scene(2) }, { g: 2, line: 'wait', n: 1, call: searcher },
           { g: 2, line: 'wait 1 minute', n: 1, call: ready }, { g: 2, line: 'wait 1 minute', n: 2, call: ready }, { g: 2, line: 'wait', n: 2, call: ready }]);
+        // (Its search's real start and end: its ready as the world takes the search up and as it's done, the body's copy
+        // (bd, bk) as its stub den_search is entered, the bandit's own, and as that call returns to its caller (its return
+        // address, the stack as it was); the minds' catch-up can have it begin before the moment it's told, and what it
+        // does after (its finds taken up) is its own time: the user's, 2026-11-24, build2's question 11)
+        const lbw = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0w', 'dq0w.lbl'), 'latin1');
+        const lw = n => parseInt(new RegExp('^al ([0-9A-F]+) \\._' + n + '$', 'm').exec(lbw)[1], 16), DS = lw('den_search'), BD = lw('bd'), BK = lw('bk');
+        const cpu = m.cpu, step = cpu.step.bind(cpu), rdy = r => { const o = BD + S.rd; return (r[o] | r[o + 1] << 8 | r[o + 2] << 16 | r[o + 3] << 24) >>> 0; };
+        let back = null;
+        cpu.step = v => {
+          if (S.put && S.ended === undefined && m.T === S.world) {
+            const r = m.taskRam[S.world];
+            if (!back && cpu.PC === DS && r[BK] === S.put.k) {
+              S.began = rdy(r);
+              back = { pc: (r[0x100 + ((cpu.S + 1) & 0xFF)] | r[0x100 + ((cpu.S + 2) & 0xFF)] << 8) + 1, s: (cpu.S + 2) & 0xFF };
+            } else if (back && cpu.PC === back.pc && cpu.S === back.s) {
+              S.ended = rdy(r);
+            }
+          }
+          return step(v);
+        };
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -1434,7 +1456,11 @@ module.exports = {
         if (de.length !== 1) f.push('the bandit\'s search not told once (E_DEN DE_SEARCHES): ' + de.length);
         else {
           if (de[0].b !== A.search.loud) f.push('the bandit\'s search not as loud as the row: ' + de[0].b);
-          if (!S.ready.length || S.ready[0] < de[0].t + A.search.t) f.push('the bandit not busy the row\'s minute after its search began (' + de[0].t + '): ' + JSON.stringify(S.ready));
+          if (S.began === undefined || S.ended === undefined) f.push('the bandit\'s search never taken up and done by the world (den_search): ' + JSON.stringify([S.began, S.ended]));
+          else if (S.ended !== S.began + A.search.t)        // (Its minute from its real start, exactly: the user's, 2026-11-24;
+            f.push('the bandit not busy exactly the row\'s minute from its search\'s start (' + S.began + ' to ' + S.ended + ', told at ' + de[0].t + ')');   //   the told moment before)
+          if (S.ended !== undefined && (!S.ready.length || S.ready[0] < S.ended)) f.push('the bandit\'s ready after its search less than as the search ended: ' + JSON.stringify([S.ended, S.ready]));
+          S.told = de[0].t;
         }
         // (Its noise: the character's none of its own (its busy noise, the senses', the row's loudness: 2); the bandit's told)
         if (A.search.nz !== 0xFF || A.search.loud !== 2) f.push('the search row not the character\'s busy noise: ' + JSON.stringify(A.search));
@@ -1453,7 +1479,8 @@ module.exports = {
         if (ok(at(mine, -2)) !== !!(c1 && (c1.flags & 0x20))) f.push('the character\'s crowns test ' + JSON.stringify(at(mine, -2).map(q => q.grade)) + ' but the crowns ' + JSON.stringify(c1));
         if (ok(at(theirs, -2)) !== !!(c2 && !(c2.where === 'IW_SQUARE' && (c2.flags & DQ0_I.HIDDEN)))) f.push('the bandit\'s crowns test ' + JSON.stringify(at(theirs, -2).map(q => q.grade)) + ' but the crowns ' + JSON.stringify(c2));
         this.notes = ['door ' + JSON.stringify([at(mine, 0).map(q => q.grade), at(theirs, 0).map(q => q.grade)]) + ', crowns ' + JSON.stringify([at(mine, -2).map(q => q.grade), at(theirs, -2).map(q => q.grade)]),
-          'the bandit\'s crowns at the end ' + JSON.stringify(c2 && [c2.where, c2.flags])];
+          'the bandit\'s crowns at the end ' + JSON.stringify(c2 && [c2.where, c2.flags]),
+          'the bandit\'s search: begun ' + S.began + ', done ' + S.ended + ', told at ' + S.told + ', its ready at the next line ' + S.ready[0]];
         if (f.length) f.push(s.slice(s.indexOf('> search'), s.indexOf('> search') + 600));
         return f;
       },
