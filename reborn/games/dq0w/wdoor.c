@@ -21,8 +21,8 @@
 #include "wbody.h"
 #include "acts.h"
 
-#pragma code-name ("SW5CODE")
-#pragma rodata-name ("SW5RODATA")
+#pragma code-name ("SW_doors_CODE")
+#pragma rodata-name ("SW_doors_RODATA")
 #pragma local-strings (on)
 
 #define W_TRAPS

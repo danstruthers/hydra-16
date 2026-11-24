@@ -39,8 +39,8 @@ signed char __fastcall__ ask_w (unsigned char kind, unsigned char a, unsigned ch
 extern unsigned char wres;
 extern signed char wsteps;
 
-#pragma code-name ("SW76CODE")
-#pragma rodata-name ("SW76RODATA")
+#pragma code-name ("SW_time_believed_CODE")
+#pragma rodata-name ("SW_time_believed_RODATA")
 #pragma local-strings (on)
 
 #define TB_START        18                      /* (The hour the game begins, as the denizens': at dusk, dq0d.c's) */
@@ -50,16 +50,16 @@ extern signed char wsteps;
 #define FELL            0xFFFF                  /* (T.gone: come round from a fall as the game begins) */
 #define T               (HUB->tb)
 
-#pragma bss-name (push, "SW76RODATA")           /* (Its own, wanted only as it runs: the main RAM's room) */
+#pragma bss-name (push, "SW_time_believed_RODATA")           /* (Its own, wanted only as it runs: the main RAM's room) */
 static unsigned n;                              /* (The clock's minute now) */
 #pragma bss-name (pop)
 static unsigned m;                              /* (The true minute of the day, now) */
 static int lo, hi;                              /* (The sky's: the part of the day, minutes) */
 
 /* ---- Part 99 (2026-11-04, the swap study's: part 76's room, an hour's test or a waking, seldom): the belief drifting */
-#pragma code-name (push, "SW99CODE")
-#pragma rodata-name (push, "SW99RODATA")
-#pragma bss-name (push, "SW99RODATA")
+#pragma code-name (push, "SW_time_drift_CODE")
+#pragma rodata-name (push, "SW_time_drift_RODATA")
+#pragma bss-name (push, "SW_time_drift_RODATA")
 static int d;                                   /* (A drift's minutes, its way the referee's) */
 #pragma bss-name (pop)
 
@@ -208,8 +208,8 @@ void __fastcall__ sky_seen (unsigned char kind);  /* (Part 77's, below: its stub
 #define SKY_BEGUN       0xFF
 
 /* ---- Part 77 (overlay 22's room): the sky seen, the game's start */
-#pragma code-name (push, "SW77CODE")
-#pragma rodata-name (push, "SW77RODATA")
+#pragma code-name (push, "SW_sky_seen_CODE")
+#pragma rodata-name (push, "SW_sky_seen_RODATA")
 
 /* The belief narrowed to the true time lying between minutes lo and hi of the day (the sky's light): where its own
 ** doubt and that meet, or that alone if they don't */

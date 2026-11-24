@@ -13,8 +13,8 @@
 #include "cmds.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a part's in it) */
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_commands_CODE")
+#pragma rodata-name (push, "SW_commands_RODATA")
 
 /* H_POWERS: a spell, a talent, an invocation: refused, true to the character (2026-11-09, the user's: the refusal the
 ** row's request, A_NO_MAGIC, A_NO_PSI, A_NO_GODS: actions.c's); an invocation's names the character's deity (the
@@ -22,8 +22,8 @@
 ** (the user's, 2026-11-17).  Part 24's, the commands seen to less often, through its stub powers (2026-11-11: part 2's
 ** room) */
 void powers (void);
-#pragma code-name (push, "SW24CODE")
-#pragma rodata-name (push, "SW24RODATA")
+#pragma code-name (push, "SW_rare_commands_CODE")
+#pragma rodata-name (push, "SW_rare_commands_RODATA")
 void s_powers (void)
 {
     struct req* r;
@@ -84,8 +84,8 @@ static void do_again (void)
 /* The last line typed that didn't say "again" (term.c's t_last) queued in its parts (parts.c's, as typed: lb keeps the
 ** line being typed meanwhile), then put first, before any typed ahead; none, or no room, said so.  Part 24's (part 2's
 ** room), through its stub again_go */
-#pragma code-name (push, "SW24CODE")
-#pragma rodata-name (push, "SW24RODATA")
+#pragma code-name (push, "SW_rare_commands_CODE")
+#pragma rodata-name (push, "SW_rare_commands_RODATA")
 void s_again_go (void)
 {
     unsigned d = qlen, e;
@@ -205,8 +205,8 @@ void __fastcall__ s_self_do (unsigned h)
 
 /* ---- Prayer and fasting (the plan's batch B5, 2026-11-10: the user's; DECISIONS.md's "Prayer, fasting, swimming and
 ** following"): part 27's, its own (part 2's room; the banks full: overlay 25 its image's), its stubs the build's */
-#pragma code-name (push, "SW27CODE")
-#pragma rodata-name (push, "SW27RODATA")
+#pragma code-name (push, "SW_self_verbs_CODE")
+#pragma rodata-name (push, "SW_self_verbs_RODATA")
 
 unsigned long fasting;                          /* (The vow's end, the clock's tenths: 0 none; feed.c's refusal.  The main
                                                 **   RAM's, not kept in a saved game) */

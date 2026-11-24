@@ -14,8 +14,8 @@
 #include "cmds.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a part's in it) */
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_commands_CODE")
+#pragma rodata-name (push, "SW_commands_RODATA")
 
 /* H_GO: a way, a thing gone up to or through, a place in the room */
 static void do_go (void)
@@ -106,8 +106,8 @@ void __fastcall__ s_moving_do (unsigned h)
 
 /* ---- Swimming and following (the plan's batch B6, 2026-11-10; DECISIONS.md's "Prayer, fasting, swimming and
 ** following"): part 27's, its own (part 2's room; the banks full: overlay 25 its image's), its stubs the build's */
-#pragma code-name (push, "SW27CODE")
-#pragma rodata-name (push, "SW27RODATA")
+#pragma code-name (push, "SW_self_verbs_CODE")
+#pragma rodata-name (push, "SW_self_verbs_RODATA")
 
 /* A swim (VB_SWIM; "dive", "tread water" the parser's): 1 a way or a thing said, swum to (the caller's H_GO: the
 ** world's water, its swimming where it's deep, water.c's words); else seen to here: out of its depth (the hub's pc_wet,

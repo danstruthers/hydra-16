@@ -49,7 +49,7 @@ _fl_ddh:    .res        32
 _fl_dcj:    .res        32
 buf:        .res        W
 
-            .segment    "SW5CODE"
+            .segment    "SW_pulse_CODE"
 
 ; A chunk's rectangle of squares (fl_src: its first, in its bank, fl_su and fl_sx its U and $00; fl_w across, h rows,
 ; CW apart) classified into the grid (fl_dst, in its bank, fl_du, fl_dx; SND_W apart) by their kinds (world.h's

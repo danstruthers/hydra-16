@@ -105,8 +105,8 @@ void __fastcall__ kind_in (unsigned char k)
     setbank (b);
 }
 
-#pragma code-name (push, "SW3CODE")
-#pragma rodata-name (push, "SW3RODATA")
+#pragma code-name (push, "SW_dig_tool_CODE")
+#pragma rodata-name (push, "SW_dig_tool_RODATA")
 
 /* The tool to hand that suits the material best (rshouse.h's house_dig_tool: its digger's number); it and the table part
 ** 3's, hdig.c (the main RAM's room, 2026-10-27) */
@@ -470,8 +470,8 @@ void rf_after (void)
     status_rest ();
 }
 
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW_sheets_CODE")
+#pragma rodata-name (push, "SW_sheets_RODATA")
 
 /* ---- hmchar's file: its own lines, the name and the occupation (and the game's: its pace, its watchfulness and its
 ** exertion toward the next fatigue level, "pace 2 1 1200": the pace and the watchfulness the world's, said in the reply
@@ -626,8 +626,8 @@ void __fastcall__ sheet_put (unsigned char n)
     bwrite (sb, (struct beast*) 0x8000 + n, &bs, sizeof bs);
 }
 
-#pragma code-name (push, "SW2CODE")             /* (Part 2's: part 1's room, 2026-10-27) */
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_names_CODE")             /* (Part 2's: part 1's room, 2026-10-27) */
+#pragma rodata-name (push, "SW_names_RODATA")
 
 /* The bank written to the save folder's beasts.dat (back 1: read from it, or cleared: none there; 2: cleared): the
 ** skeleton's rf_sheets (../dq0/referee.h's; the file opened by its sheets_open, rfsheets.c's, part 2's too) */
@@ -679,8 +679,8 @@ void __fastcall__ s_rf_sheets (unsigned char back)
 /* Whether it speaks tongue t (a word of tongues, a space before it, =its mastery after it if it isn't its own, its file's: part 2's,
 ** the main RAM's room, 2026-10-31; part 4's since the one-path plan's digging, 2026-11-23, part 3's room): 0, or its
 ** mastery in it (its own its Language's; 100 if it has none open) */
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW_read_tongues_CODE")
+#pragma rodata-name (push, "SW_read_tongues_RODATA")
 unsigned char __fastcall__ s_speaks (const char* t)
 {
     char* p = tongues;
@@ -699,8 +699,8 @@ unsigned char __fastcall__ s_speaks (const char* t)
 #pragma rodata-name (pop)
 
 /* ---- A writing read (RS_TEST's P_READ, rs.h's: the plan for the game between dungeons, its step 9): part 4's */
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW_read_tongues_CODE")
+#pragma rodata-name (push, "SW_read_tongues_RODATA")
 
 /* RS_HELLO's words after its generator's (rs.h's): the state C_STUNNED is, the book's shock (Combat 14); its own stance,
 ** D_OWN, the counterstrike, and that stance told (part 1's s_load_pc's, its room's: 2026-11-12) */
@@ -753,8 +753,8 @@ struct pstate ps;
 void __fastcall__ pace_set (unsigned char a);
 void __fastcall__ stress (struct req* r);
 void age_get (void);
-#pragma code-name (push, "SW3CODE")             /* (Part 3's: the main RAM's room, 2026-11-03) */
-#pragma rodata-name (push, "SW3RODATA")
+#pragma code-name (push, "SW_dig_tool_CODE")             /* (Part 3's: the main RAM's room, 2026-11-03) */
+#pragma rodata-name (push, "SW_dig_tool_RODATA")
 
 /* Its age, for the sheet (the plan for the game between dungeons, its step 8): by the life's record (life.h's, at the
 ** top of the save's folder: the year it was born, the day this dungeon began: its age as the dungeon began, LIFE_AGE's),
@@ -840,8 +840,8 @@ static unsigned drolled;                        /* The dice rolled */
 int __fastcall__ fixed (unsigned sides);        /* (Its stub, bank.s's: part 2's since 2026-10-31, the main RAM's room;
                                                 **   a test's alone) */
 
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_names_CODE")
+#pragma rodata-name (push, "SW_names_RODATA")
 
 int __fastcall__ s_fixed (unsigned sides)
 {
@@ -881,8 +881,8 @@ static unsigned char rq[offsetof (struct req, text)];  /* (A request's copy, for
 /* One side of two actors' tests (RS_CONTEST): who's test of purpose p, at the steps: the character's here (one
 ** senseless, or in shock, tests nothing: a critical failure), a creature's by its sheet (overlay 2's, in a copy) */
 signed char __fastcall__ side (unsigned char who, unsigned char p, signed char steps);
-#pragma code-name (push, "SW3CODE")             /* (Part 3's: the main RAM's room, 2026-11-03) */
-#pragma rodata-name (push, "SW3RODATA")
+#pragma code-name (push, "SW_dig_tool_CODE")             /* (Part 3's: the main RAM's room, 2026-11-03) */
+#pragma rodata-name (push, "SW_dig_tool_RODATA")
 signed char __fastcall__ s_side (unsigned char who, unsigned char p, signed char steps)
 {
     struct req* q = (struct req*) rq;
@@ -904,8 +904,8 @@ signed char __fastcall__ s_side (unsigned char who, unsigned char p, signed char
 /* Moving quietly's test (RS_TEST's P_STEALTH: slice 4.6's), by its own dice (rshouse.h's QUIET_IN's: the game's
 ** as they stand, mixed, and put back after), so the game's other tests roll as they did: the character's, or a
 ** creature's by its sheet (a hunter's stalk, the denizens'); part 2's, the main RAM's room */
-#pragma code-name (push, "SW3CODE")
-#pragma rodata-name (push, "SW3RODATA")
+#pragma code-name (push, "SW_dig_tool_CODE")
+#pragma rodata-name (push, "SW_dig_tool_RODATA")
 void __fastcall__ s_quiet_test (struct req* r)
 {
     if (r->other == RS_ASKER) {

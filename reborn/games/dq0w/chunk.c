@@ -19,7 +19,7 @@ static unsigned char shut_ok (void);
 extern unsigned char at_sn;                     /* (at.s's: at ()'s quick way, the stratum it found last: 0xFF none) */
 
 #ifndef CHUNK_READER
-#pragma code-name (push, "SW3CODE")             /* (The world's: its start's alone, part 3's, s_start's: the main RAM's
+#pragma code-name (push, "SW_dungeon_begin_CODE")             /* (The world's: its start's alone, part 3's, s_start's: the main RAM's
                                                 **   room, 2026-10-30) */
 #endif
 void __fastcall__ chunks_init (unsigned char who)
@@ -98,13 +98,14 @@ unsigned char __fastcall__ step_ok (unsigned char sn, unsigned x, unsigned y, un
 ** passage is one passage, a fork only where a way truly branches off): that square and this one going on side by side
 ** (both a way across d), nothing out of it this one hasn't too, and nothing past it that way (two squares across;
 ** three, the middle's the same).  (x, y) to d walkable, as step_ok has it */
-#ifdef BREADTH_PART2
-#pragma code-name (push, "SW2CODE")             /* (The senses': part 2's, a look's, sight.c's and felt's) */
+#ifdef BREADTH_IN                               /* (A reader's part, its chunk.c's "SW_name_": the senses' perceive, a
+                                                **   look's, sight.c's and felt's) */
+#pragma code-name (push, BREADTH_IN "CODE")
 #endif
 #pragma static-locals (push, on)
 #include "../dq0w/ways.inc"
 #pragma static-locals (pop)
-#ifdef BREADTH_PART2
+#ifdef BREADTH_IN
 #pragma code-name (pop)
 #endif
 #endif

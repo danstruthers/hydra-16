@@ -41,8 +41,8 @@ extern unsigned char put_bank;
 unsigned char __fastcall__ dig_kept (unsigned char begin);   /* (Part 19's: a record looked up, rec's) */
 extern struct change rec;                       /* (store.c's) */
 
-#pragma code-name (push, "SW124CODE")
-#pragma rodata-name (push, "SW124RODATA")
+#pragma code-name (push, "SW_build_CODE")
+#pragma rodata-name (push, "SW_build_RODATA")
 
 /* Anyone on stratum sn's square x, y (the character, an actor): 1 */
 static unsigned char __fastcall__ stood (unsigned char sn, unsigned x, unsigned y)

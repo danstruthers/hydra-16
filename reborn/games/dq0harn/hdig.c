@@ -3,7 +3,7 @@
 ** that suits, swapped part 3's, beside their one caller (dq0harn.c's dig_of)
 */
 
-#pragma code-name ("SW3CODE")
-#pragma rodata-name ("SW3RODATA")
+#pragma code-name ("SW_dig_tool_CODE")
+#pragma rodata-name ("SW_dig_tool_RODATA")
 
 #include "../dq0/rf/dig.c"

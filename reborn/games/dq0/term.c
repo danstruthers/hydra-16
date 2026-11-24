@@ -193,8 +193,8 @@ unsigned char t_getkey (void)
 void size (void);                               /* (Part 1's: its stub, bank.s) */
 static unsigned char both, kbd, whole;          /* (Both; the keyboard; the screen alone made so by the game, put
                                                 **   back as it ends) */
-#pragma code-name (push, "SW1CODE")             /* (The UI's part 1: as the terminal's set up) */
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW_start_end_CODE")             /* (The UI's part 1: as the terminal's set up) */
+#pragma rodata-name (push, "SW_start_end_RODATA")
 
 void s_size (void)
 {
@@ -244,8 +244,8 @@ void s_size (void)
 
 /* ---- The screen */
 
-#pragma code-name (push, "SW1CODE")             /* (Part 1's, its stub t_init, bank.s's: the main RAM's room) */
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW_start_end_CODE")             /* (Part 1's, its stub t_init, bank.s's: the main RAM's room) */
+#pragma rodata-name (push, "SW_start_end_RODATA")
 
 void s_t_init (void)
 {

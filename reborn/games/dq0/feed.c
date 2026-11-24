@@ -10,8 +10,8 @@
 #include "rs.h"
 #include "actions.h"
 
-#pragma code-name ("SW16CODE")
-#pragma rodata-name ("SW16RODATA")
+#pragma code-name ("SW_feed_CODE")
+#pragma rodata-name ("SW_feed_RODATA")
 #pragma local-strings (on)
 
 /* ---- Eating and drinking (slice 4.9: HOUSE.md's water, hunger and thirst, every ruleset's): "eat" a meal (five minutes,

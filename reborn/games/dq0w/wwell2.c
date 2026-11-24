@@ -16,9 +16,9 @@
 #include "things.h"
 
 #pragma local-strings (on)
-#pragma code-name ("SW104CODE")
-#pragma rodata-name ("SW104RODATA")
-#pragma bss-name ("SW104RODATA")
+#pragma code-name ("SW_well_drop_CODE")
+#pragma rodata-name ("SW_well_drop_RODATA")
+#pragma bss-name ("SW_well_drop_RODATA")
 
 unsigned __fastcall__ at_hand (const char* name);
 unsigned __fastcall__ seen_named (const char* name);

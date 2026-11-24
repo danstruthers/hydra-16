@@ -27,8 +27,8 @@
 #include "world.h"
 #include "work.h"
 
-#pragma code-name ("SW6CODE")
-#pragma rodata-name ("SW6RODATA")
+#pragma code-name ("SW_blows_CODE")
+#pragma rodata-name ("SW_blows_RODATA")
 #pragma local-strings (on)
 
 #define W_TRAPS

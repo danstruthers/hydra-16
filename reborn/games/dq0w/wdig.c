@@ -34,8 +34,8 @@
 #include "acts.h"
 
 #pragma local-strings (on)
-#pragma code-name ("SW79CODE")
-#pragma rodata-name ("SW79RODATA")             /* (No data of its own: its locals on the C stack, as it calls other
+#pragma code-name ("SW_den_dig_CODE")
+#pragma rodata-name ("SW_den_dig_RODATA")             /* (No data of its own: its locals on the C stack, as it calls other
                                                 **   parts, which copy this one in again after) */
 
 #define DUG_LOUD        7                       /* The way through: the spoil falling (the act table's dug row's, as

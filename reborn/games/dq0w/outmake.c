@@ -24,9 +24,9 @@
 #include "things.h"
 #include "outfit.h"
 
-#pragma code-name ("SW58CODE")
-#pragma rodata-name ("SW58RODATA")
-#pragma bss-name ("SW58RODATA")                 /* (Its own data: zeros each time it's copied in) */
+#pragma code-name ("SW_outmake_CODE")
+#pragma rodata-name ("SW_outmake_RODATA")
+#pragma bss-name ("SW_outmake_RODATA")                 /* (Its own data: zeros each time it's copied in) */
 #pragma local-strings (on)
 #pragma static-locals (on)
 

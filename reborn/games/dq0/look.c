@@ -130,8 +130,8 @@ void stir (void)
 typedef char panel_fits[PLINES * (PANEL + 1) <= sizeof lb ? 1 : -1];
 static unsigned char np;
 
-#pragma code-name (push, "SW3CODE")
-#pragma rodata-name (push, "SW3RODATA")
+#pragma code-name (push, "SW_map_CODE")
+#pragma rodata-name (push, "SW_map_RODATA")
 
 static void __fastcall__ pline (const char* s)
 {
@@ -205,7 +205,7 @@ static const char* const sgr[] = { "\x1b[97m", "\x1b[90m", "\x1b[33m", "\x1b[96m
 ** it along one of its two, a staircase of short steps, drawn '/' or '\' along it; a bend's corner alone stays '#'.  A
 ** row's worked out from the rows as drawn, two above it and two below, into the row shown (the same as the rows marked
 ** whole: a mark was a passage's square to the others; 2026-11-17, the map shown a row at a time) */
-#pragma bss-name (push, "SW3RODATA")            /* (Its state the part's own: none kept from one map to the next) */
+#pragma bss-name (push, "SW_map_RODATA")            /* (Its state the part's own: none kept from one map to the next) */
 static unsigned char ml[MAP_H], em;
 static const signed char ex[4] = { 0, 1, 0, -1 }, ey[4] = { -1, 0, 1, 0 };
 
@@ -394,8 +394,8 @@ void __fastcall__ s_map (const char* rules)
 
 char where_w[34];
 
-#pragma code-name (push, "SW8CODE")
-#pragma rodata-name (push, "SW8RODATA")
+#pragma code-name (push, "SW_where_CODE")
+#pragma rodata-name (push, "SW_where_RODATA")
 
 #define SC          sight_copy
 

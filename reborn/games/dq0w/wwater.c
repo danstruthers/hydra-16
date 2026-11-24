@@ -22,12 +22,12 @@ extern char* tp;
 extern char* tpe;
 extern unsigned char put_bank;
 
-#pragma code-name ("SW74CODE")
-#pragma rodata-name ("SW74RODATA")
+#pragma code-name ("SW_waterskin_CODE")
+#pragma rodata-name ("SW_waterskin_RODATA")
 #pragma local-strings (on)
 
-#pragma code-name (push, "SW75CODE")           /* (Part 75's: the water's depth, wading's) */
-#pragma rodata-name (push, "SW75RODATA")
+#pragma code-name (push, "SW_water_depth_CODE")           /* (Part 75's: the water's depth, wading's) */
+#pragma rodata-name (push, "SW_water_depth_RODATA")
 static const unsigned char bit[8] = { 1, 2, 4, 8, 16, 32, 64, 128 };
 
 /* The water at the character's square (the chunk's: world.h's): its depth in feet (0 none), | WET_RUNS running water;

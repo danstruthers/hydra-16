@@ -35,8 +35,8 @@ unsigned bled_at;
 unsigned char bclimb[NACTORS];                  /* (wbody.h's: each body's climb out of its pit so far, feet) */
 
 
-#pragma code-name ("SW14CODE")
-#pragma rodata-name ("SW14RODATA")
+#pragma code-name ("SW_den_bodies_CODE")
+#pragma rodata-name ("SW_den_bodies_RODATA")
 
 static unsigned __fastcall__ apart (int dx, int dy)
 {

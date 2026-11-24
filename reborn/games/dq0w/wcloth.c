@@ -24,8 +24,8 @@ extern char* tp;
 extern char* tpe;
 extern unsigned char put_bank;
 
-#pragma code-name ("SW108CODE")
-#pragma rodata-name ("SW108RODATA")
+#pragma code-name ("SW_textiles_CODE")
+#pragma rodata-name ("SW_textiles_RODATA")
 #pragma local-strings (on)
 
 /* How many bandages each cloth gives (the house's, the design's: a sheet's or a blanket's eight, a towel's three; never

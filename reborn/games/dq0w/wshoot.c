@@ -63,8 +63,8 @@ void __fastcall__ mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned tx
 static unsigned sl_item, sm_item;
 static unsigned char sl_kind, sl_held;
 
-#pragma code-name (push, "SW65CODE")
-#pragma rodata-name (push, "SW65RODATA")
+#pragma code-name (push, "SW_missiles_CODE")
+#pragma rodata-name (push, "SW_missiles_RODATA")
 
 /* A missile's short range, in squares (the book's Combat 16 Missile Data Table's; a thing thrown, the catalogue's) */
 static unsigned char __fastcall__ reach_of (unsigned char k)
@@ -88,7 +88,7 @@ static unsigned char __fastcall__ span (int dx, int dy)
 }
 
 /* ---- The line of fire (lof: no part called: line.inc's line in this part, ln_pass in the main RAM) */
-#pragma bss-name (push, "SW65RODATA")
+#pragma bss-name (push, "SW_missiles_RODATA")
 static unsigned char lsn, lme, ltgt, ld, lcover, lback;
 #pragma bss-name (pop)
 
@@ -348,8 +348,8 @@ unsigned char __fastcall__ s_shot_op (unsigned char op, unsigned char k, unsigne
 #pragma rodata-name (pop)
 
 /* ==== Part 66: the missiles gathered again */
-#pragma code-name (push, "SW66CODE")
-#pragma rodata-name (push, "SW66RODATA")
+#pragma code-name (push, "SW_gather_CODE")
+#pragma rodata-name (push, "SW_gather_RODATA")
 
 /* E_TASK told (w1, b), by the world's one sender (dq0w.c's event: this part's copy and part 68's gone, 2026-11-11) */
 #define told(w1, b)     (evb = (b), event (E_TASK, 0, (w1)))
@@ -483,8 +483,8 @@ unsigned __fastcall__ s_gath_op (unsigned char op, unsigned char a)
 #pragma rodata-name (pop)
 
 /* ==== Part 67: the character's shot, and where a missile falls */
-#pragma code-name (push, "SW67CODE")
-#pragma rodata-name (push, "SW67RODATA")
+#pragma code-name (push, "SW_shots_CODE")
+#pragma rodata-name (push, "SW_shots_RODATA")
 
 static unsigned char __fastcall__ span67 (int dx, int dy)
 {
@@ -734,8 +734,8 @@ unsigned char __fastcall__ s_pc_shot (unsigned char k)
 
 /* ==== Part 68: where a missile falls, a miss's stray (part 67's till 2026-10-30, its room: the denizens' shots), and a
 ** launcher loaded */
-#pragma code-name (push, "SW68CODE")
-#pragma rodata-name (push, "SW68RODATA")
+#pragma code-name (push, "SW_missile_fall_CODE")
+#pragma rodata-name (push, "SW_missile_fall_RODATA")
 
 static unsigned char __fastcall__ span68 (int dx, int dy)
 {

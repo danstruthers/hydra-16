@@ -24,7 +24,7 @@
                                     ;   the build's, ../dq0/hubgen.js)
 HALF        = NLET / 2
 
-            .segment    "SW102RODATA"
+            .segment    "SW_tell_apart_RODATA"
 _ixl_n:     .res        1           ; The things
 _ixl_t:     .res        2           ; The clock's stamp
 _ixl_old:   .res        2           ; ix as it was last made (the UI bank's, its let a hint)
@@ -37,7 +37,7 @@ e:          .res        1           ; (The first of the half looked through)
 o:          .res        2           ; (The longest ago so far)
 d:          .res        2
 
-            .segment    "SW102CODE"
+            .segment    "SW_tell_apart_CODE"
 
 ; .A = the letter whose word in low (ptr1) is key, or NLET
 find:       ldy         #0
@@ -260,11 +260,11 @@ pass2:      stz         m                   ; The second pass: those with none
 @next:      inc         m
             jmp         @one
 
-            .segment    "SW11RODATA"
+            .segment    "SW_things_listed_RODATA"
 lbuf:       .res        6               ; ("(aa) ")
 lkey:       .res        2
 
-            .segment    "SW11CODE"
+            .segment    "SW_things_listed_CODE"
 
 _lput:      sta         ptr1
             stx         ptr1 + 1

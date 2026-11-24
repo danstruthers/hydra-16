@@ -15,8 +15,8 @@
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a part's in it, an overlay's in it) */
 
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_commands_CODE")
+#pragma rodata-name (push, "SW_commands_RODATA")
 
 /* After a thing's handled (taken up, put down ...): its light changed (lit, put out, a torch put down), the world's
 ** look about in the new light; else the time it took (t tenths), quietly */
@@ -138,8 +138,8 @@ void __fastcall__ s_things_do (unsigned h)
 /* ---- The things' verbs the plan's batch B4 built (2026-11-10, DECISIONS.md's "The things' verbs: use, push, pull, touch,
 ** taste"): part 29's, part 2 full.  Its strings are its own: each said (msg, sayf, say_no copy it) before any other part's
 ** called, none kept across a call */
-#pragma code-name (push, "SW29CODE")
-#pragma rodata-name (push, "SW29RODATA")
+#pragma code-name (push, "SW_thing_verbs_CODE")
+#pragma rodata-name (push, "SW_thing_verbs_RODATA")
 
 /* The command carried out as verb v's, aux its request (0: the row's), the same things: its handler the dispatch table's
 ** (main.c's s_command's), its command kept as that verb's (a timed work's end, a walk over first: that verb again) */

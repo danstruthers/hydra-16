@@ -5,8 +5,8 @@
 ** give is in the part (but a sunsign's, in the main RAM): used before another part's called
 */
 
-#pragma code-name ("SW2CODE")
-#pragma rodata-name ("SW2RODATA")
+#pragma code-name ("SW_names_CODE")
+#pragma rodata-name ("SW_names_RODATA")
 #pragma local-strings (on)
 
 #define harn_attr_name      s_harn_attr_name

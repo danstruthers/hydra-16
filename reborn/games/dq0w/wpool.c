@@ -37,9 +37,9 @@ extern unsigned char npools;                    /* (dq0w.c's: how many there are
 void __fastcall__ make_own (unsigned i);         /* (Part 13's) */
 void __fastcall__ air_harm (unsigned char a, unsigned char b, unsigned char c);    /* (Part 74's: a harm, the UI told) */
 
-#pragma code-name ("SW99CODE")
-#pragma rodata-name ("SW99RODATA")
-#pragma bss-name ("SW99RODATA")
+#pragma code-name ("SW_time_drift_CODE")
+#pragma rodata-name ("SW_time_drift_RODATA")
+#pragma bss-name ("SW_time_drift_RODATA")
 #pragma static-locals (off)                     /* (Its locals on the C stack: a call to another part
                                                 **   (the referee's test, the limbs' news, a harm) copies this one in
                                                 **   again after it, its own statics as its image has them) */

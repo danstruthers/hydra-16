@@ -6,6 +6,6 @@
 #define HUB_DENQ                                /* (The denizens' events: theirs to hear, the world's to write) */
 #define HUB_NO_SEND                             /* (Nor intents sent this way, nor events: its intents are the hub's
                                                 **   di, its own) */
-#define HUB_ATTACH_P23                          /* (hub_attach in part 23, as it starts: dq0d.c's s_start; the main
+#define HUB_ATTACH_IN   "SW_start_"             /* (hub_attach in part start, as it starts: dq0d.c's s_start; the main
                                                 **   RAM's room, room8, 2026-11-24) */
 #include "../dq0/hub.c"

@@ -45,8 +45,8 @@
 /* ==== Part 17: the command (main.c's chores: the parser's VB_OBSERVE_DIRECTION, VB_OBSERVE_OBJECT,
 ** VB_OBSERVE_THROUGH, VB_LISTEN, VB_SMELL; and VB_TRACK, the traces read, slice 4.1's) */
 
-#pragma code-name (push, "SW17CODE")           /* (Part 17's: part 6's till 2026-11-01) */
-#pragma rodata-name (push, "SW17RODATA")
+#pragma code-name (push, "SW_look_way_CODE")           /* (Part 17's: part 6's till 2026-11-01) */
+#pragma rodata-name (push, "SW_look_way_RODATA")
 
 unsigned char __fastcall__ things (unsigned char op, const char* name);    /* (main.c's) */
 extern struct ireq judged;
@@ -237,8 +237,8 @@ static unsigned char examine (void)
 ** (resolve.c's: asked which, of several, its square in cmd.obj), else the nearest of that name (the world's IO_LOOK,
 ** LM_GO).  Walked to by the world's walk, stopping beside it (I_TAKE's a 2, walked on as it gets nearer: through a door
 ** it's seen through; a denizen, I_CLOSE's w1 1: up to it, as it moves, no blow); refused only for what it hasn't seen */
-#pragma code-name (push, "SW13CODE")           /* (Part 13's, called by its s_missiles: part 17's room) */
-#pragma rodata-name (push, "SW13RODATA")
+#pragma code-name (push, "SW_missiles_CODE")           /* (Part 13's, called by its s_missiles: part 17's room) */
+#pragma rodata-name (push, "SW_missiles_RODATA")
 void go_thing (void)
 {
     unsigned x = cmd.obj.x, y = cmd.obj.y;

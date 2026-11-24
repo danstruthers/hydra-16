@@ -47,8 +47,8 @@ char path[56];
 
 /* ==== Part 38 (its own, the main RAM's room: 2026-10-22): a change record kept and made, store_put and change
 ** through their stubs (the work's parts', a dig's, a door's, the kept rooms' lights', part 4's) */
-#pragma code-name (push, "SW38CODE")
-#pragma rodata-name (push, "SW38RODATA")
+#pragma code-name (push, "SW_change_put_CODE")
+#pragma rodata-name (push, "SW_change_put_RODATA")
 
 /* Page p's entry in the table (the world bank in the window) */
 static struct cpage* __fastcall__ page (unsigned char p)
@@ -57,7 +57,7 @@ static struct cpage* __fastcall__ page (unsigned char p)
     return &WREC->cpage[p];
 }
 
-#pragma data-name (push, "SW38RODATA")
+#pragma data-name (push, "SW_change_put_RODATA")
 static struct rpt cpf = { RP_FIND, NCPAGES, sizeof (struct cpage), 0x0E, WREC->cpage, offsetof (struct cpage, stamp) };
 #pragma data-name (pop)                         /* (The pages' table: the region wanted's pages found, the record
                                                 **   store's) */
@@ -230,8 +230,8 @@ void stocks (void)
     }
 }
 
-#pragma code-name (push, "SW38CODE")           /* (Part 38's, store_put's own, since 2026-11-17: part 4's room) */
-#pragma rodata-name (push, "SW38RODATA")
+#pragma code-name (push, "SW_change_put_CODE")           /* (Part 38's, store_put's own, since 2026-11-17: part 4's room) */
+#pragma rodata-name (push, "SW_change_put_RODATA")
 
 /* The chunks the maker stocked (their slots CS_FRESH), in the order it stocked them (each one's list's seq): their
 ** things put down (things.c's), and marked so, a record each (STOCKED, its first square), their slots as any other's;
@@ -275,8 +275,8 @@ void s_stocked (void)
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW_ui_requests_CODE")
+#pragma rodata-name (push, "SW_ui_requests_RODATA")
 
 /* The portal on the hub's wreq's square looked at closely (the UI's request, PA_EXAMINE: the square one it sees, on
 ** the character's stratum): its record copied into the hub's pview, its bar 1 if the character's on its bar's side;

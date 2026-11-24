@@ -30,9 +30,9 @@
 #include "work.h"
 #include "wbody.h"
 
-#pragma code-name ("SW120CODE")
-#pragma rodata-name ("SW120RODATA")
-#pragma bss-name ("SW120RODATA")
+#pragma code-name ("SW_step_CODE")
+#pragma rodata-name ("SW_step_RODATA")
+#pragma bss-name ("SW_step_RODATA")
 #pragma static-locals (off)
 
 extern unsigned char fring;                     /* (wfight.c's: the fights' ring's next) */
@@ -79,9 +79,9 @@ static signed char __fastcall__ den_test (unsigned char p, unsigned char b, sign
     return g;
 }
 
-#pragma code-name (push, "SW121CODE")          /* (Part 121's: part 120's room) */
-#pragma rodata-name (push, "SW121RODATA")
-#pragma bss-name (push, "SW121RODATA")
+#pragma code-name (push, "SW_harm_CODE")          /* (Part 121's: part 120's room) */
+#pragma rodata-name (push, "SW_harm_RODATA")
+#pragma bss-name (push, "SW_harm_RODATA")
 
 /* Body bd's harm (RS_HARM, its actor: the world's slot's request made, as workpart.h's harm, the character's): its wound
 ** told (E_FIGHT's FO_HURT: its words the referee's, the ring's third line; its fall senseless, its death), its legs as
@@ -192,9 +192,9 @@ void s_den_harm (void)
 #pragma rodata-name (pop)
 #pragma bss-name (pop)
 
-#pragma code-name (push, "SW122CODE")          /* (Part 122's: part 120's room) */
-#pragma rodata-name (push, "SW122RODATA")
-#pragma bss-name (push, "SW122RODATA")
+#pragma code-name (push, "SW_trap_told_CODE")          /* (Part 122's: part 120's room) */
+#pragma rodata-name (push, "SW_trap_told_RODATA")
+#pragma bss-name (push, "SW_trap_told_RODATA")
 
 /* A trap's outcome for body bd (the world's work for an actor, wk.who: dq0w.c's work_told's, E_TRAP's w1, wtrap.c's
 ** trap_told): told if it's seen (E_BEAT's WB_TRAP: the limbs' news; a pit's fall heard near), but one noticed (the

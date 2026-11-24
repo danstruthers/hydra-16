@@ -31,8 +31,8 @@
 #include "line.h"
 
 #pragma local-strings (on)
-#pragma code-name ("SW94CODE")
-#pragma rodata-name ("SW94RODATA")
+#pragma code-name ("SW_hide_self_CODE")
+#pragma rodata-name ("SW_hide_self_RODATA")
 
 unsigned char __fastcall__ ln_seen94 (unsigned char sn, unsigned x, unsigned y, unsigned tx, unsigned ty,
     unsigned char mode);                        /* (line.s's: the line's, this part's own) */

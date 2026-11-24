@@ -13,8 +13,8 @@
 #include "world.h"
 #include "work.h"
 
-#pragma code-name ("SW123CODE")
-#pragma rodata-name ("SW123RODATA")
+#pragma code-name ("SW_tsearch_CODE")
+#pragma rodata-name ("SW_tsearch_RODATA")
 #pragma local-strings (on)
 
 #define W_TRAPS

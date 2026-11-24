@@ -2,7 +2,7 @@
 ; line.s - (dq0w) one line between two squares, line.inc's: the game's library's (the paged ROM's), its stubs here,
 ; the line's in part 65 (its line of fire's, wshoot.c's lof: no other part draws one), the rest in the main RAM
 
-            .segment    "SW65CODE"
+            .segment    "SW_missiles_CODE"
             .include    "line.inc"
 
 ; ln_seen: the same line, part 81's own (a denizen's take, what it sees: wtake.c's, 2026-11-17; a part's code calls
@@ -27,5 +27,5 @@ name:
             lda         #LN_LINE
             jmp         dq0x
 .endmacro
-            LNSEEN      "SW81CODE", _ln_seen
-            LNSEEN      "SW94CODE", _ln_seen94
+            LNSEEN      "SW_take_rule_CODE", _ln_seen
+            LNSEEN      "SW_hide_self_CODE", _ln_seen94

@@ -197,9 +197,9 @@ static void apart (void)
 }
 
 /* ==== Part 7 (swapped: a look one way's near part's, its far check; the main RAM's room, 2026-11-17) */
-#pragma code-name (push, "SW7CODE")
-#pragma rodata-name (push, "SW7RODATA")
-#pragma bss-name (push, "SW7RODATA")            /* (Its statics its own: none kept from one call to the next) */
+#pragma code-name (push, "SW_way_near_CODE")
+#pragma rodata-name (push, "SW_way_near_RODATA")
+#pragma bss-name (push, "SW_way_near_RODATA")            /* (Its statics its own: none kept from one call to the next) */
 
 /* The squares g0 ... g1 of a way from square v on it: the nearest, gn, and the farthest, gf (255 at most) */
 static unsigned g0, g1;

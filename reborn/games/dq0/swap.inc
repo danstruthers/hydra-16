@@ -1,20 +1,21 @@
 ; ****************************************************************************
 ; swap.inc - Dingus Quest Zero's swapped code (a program's bank.s includes it): code that runs in the main RAM, but
-; only one part of it at a time, in an area of its own at the RAM's top (NAME.cfg's SWAP: SW1, SW2 ... all at its
-; start, under the C stack's least room), each part kept in an overlay's bank (its image linked there: OVn) and
-; copied into the area as it's called.  Unlike an overlay's (code in the window, which can't touch the hub or its
+; only one part of it at a time, in an area of its own at the RAM's top (NAME.cfg's SWAP: each part's SW_name area,
+; all at its start, under the C stack's least room), each part kept in an overlay's bank (its image linked there: OVn)
+; and copied into the area as it's called.  Unlike an overlay's (code in the window, which can't touch the hub or its
 ; banks while it runs), a part's code is the main RAM's: it reads and writes the hub as the main code does; so a
 ; command, an event, a task's start, can be moved out of the main RAM whole, as it is, and called through a stub.
 ;
-; A C file's code and read-only data go in part n with #pragma code-name ("SWnCODE"), rodata-name ("SWnRODATA")
-; (push and pop round some of a file's functions; and #pragma local-strings (on), so that a function's strings go
-; with it); its data and BSS stay in MAIN.  Its functions called from outside it are named s_name, each with a stub
-; here, SWFN name, n: the part that called it (if a part did) kept on a little stack, part n copied in (unless it's
-; there), s_name called, the caller's part copied back (unless it's still there), all of it sw_call's, a stub only
-; its call and the two numbers (6 bytes; 2026-11-04, the swap study's: a stub's 11 before).  So a part can call the main
-; code, the overlays and other parts (each call that swaps costs the copies: a part's bytes, about 14 cycles each);
-; but nothing outside part n (the main code, an overlay, another part) may call one of its functions or read its
-; data but through a stub (build.js checks it, in the compiler's output).
+; A C file's code and read-only data go in a part by its name, with #pragma code-name ("SW_name_CODE"), rodata-name
+; ("SW_name_RODATA") (push and pop round some of a file's functions; and #pragma local-strings (on), so that a
+; function's strings go with it); its data and BSS stay in MAIN.  Its functions called from outside it are named
+; s_name, each with a stub here, SWFN name, n (n the part's number, the build's): the part that called it (if a part
+; did) kept on a little stack, part n copied in (unless it's there), s_name called, the caller's part copied back
+; (unless it's still there), all of it sw_call's, a stub only its call and the two numbers (6 bytes; 2026-11-04, the
+; swap study's: a stub's 11 before).  So a part can call the main code, the overlays and other parts (each call that
+; swaps costs the copies: a part's bytes, about 14 cycles each); but nothing outside a part (the main code, an
+; overlay, another part) may call one of its functions or read its data but through a stub (build.js checks it, in
+; the compiler's output).
 ;
 ; Before including it: zeropage.inc, BANKREG, _ovbank (the overlays' banks), ova and ovx (bytes kept, in the zero page: a stub's call
 ; is every call of a part's, some 120 cycles, and these are its most used), SWDEPTH (and
@@ -22,21 +23,24 @@
 ; if there are more than 51 parts, past what an index of their records reaches: some 35 bytes more code; and with it
 ; SWTABOV, if the records are to be kept in overlay SWTABOV's bank, not the main RAM: the config's segment SWTAB, in
 ; that overlay's area, five bytes a part out of the main RAM; speed12, 2026-11-22); after it,
-; the parts, SWPART n, ov (part n's image in the bank _ovbank[ov - 1]: overlay ov's, as a rule), in order from 1
-; (nothing else in RODATA, or SWTAB, between them), and the stubs.  The main code reads the overlays in before it calls one (the
-; world's last three, dq0w.rop's, only at ropes_in: a part called sooner than that belongs in another's bank).
+; the parts, SWPART name, ov (the part's image in the bank _ovbank[ov - 1]: overlay ov's, as a rule), its number its
+; place among them, from 1 (nothing else in RODATA, or SWTAB, between them), and the stubs.  The main code reads the
+; overlays in before it calls one (the world's last three, dq0w.rop's, only at ropes_in: a part called sooner than
+; that belongs in another's bank).
 ;
-; The parts and the stubs are the build's (2026-11-06: games/dq0/parts.js, ENGINE-CRITIQUE.md's step 2): a task's
-; parts.txt says each part's bank (a wish: a bank too full, the build puts it in another of its file's) and what it's
-; for; its C's pragmas say which part each function is in; the build makes the SWPART and SWFN lines (a stub for each
-; s_name a part defines and something uses: parts.txt's "stub NAME n" for one the C doesn't show) into
-; obj/games/TASK/parts.inc, which bank.s .includes after this, and the config's SWn areas and segments (NAME.cfg's
-; #@SWMEMORY, #@SWSEGMENTS, #@SW n: a part's segments placed among its bank's others).  A function moved from part to
-; part is its pragma alone (2026-11-07: the calls routed by part, games/dq0/pack.js's route: s_name called from
-; outside its part made name, its stub's; name called from inside it made s_name, no stub's work; so either name does,
-; anywhere); a new part, a line of parts.txt.  A part past the area (__SWAPSIZE__) has pieces moved out by the build
-; (pack.js's plan: a function its stub calls and what only it reaches; none whose calls would carry a pointer, none
-; that assembly has a hand in), listed in the room table; a bank too full, parts moved to another (parts.js's banks).
+; The parts and the stubs are the build's (2026-11-06: games/dq0/parts.js, ENGINE-CRITIQUE.md's step 2; by name,
+; names1, 2026-11-24): a task's parts.txt names each part, says the bank it wishes (a bank, a group of banks, or none:
+; a bank too full, the build puts it in another of its file's) and what it's for; its C's pragmas say which part
+; each function is in, by its name; the build numbers the parts (their order in parts.txt) and makes the SWPART and
+; SWFN lines (a stub for each s_name a part defines and something uses: parts.txt's "stub NAME PART" for one the C
+; doesn't show) into obj/games/TASK/parts.inc, which bank.s .includes after this, and the config's SW_name areas and
+; segments (NAME.cfg's #@SWMEMORY, #@SWSEGMENTS, "#@SW name": a part's segments placed among its bank's others).  A
+; function moved from part to part is its pragma alone (2026-11-07: the calls routed by part, games/dq0/pack.js's
+; route: s_name called from outside its part made name, its stub's; name called from inside it made s_name, no
+; stub's work; so either name does, anywhere); a new part, a line of parts.txt.  A part past the area (__SWAPSIZE__)
+; has pieces moved out by the build (pack.js's plan: a function its stub calls and what only it reaches; none whose
+; calls would carry a pointer, none that assembly has a hand in), listed in the room table; a bank too full, parts
+; moved to another (parts.js's banks).
 
             .zeropage
 swapped:    .res        1                   ; The part in the area now (0: none)
@@ -307,23 +311,22 @@ swpage2:    lda         __SWSTL_LOAD__ + 256,y   ; (sw_call2's: the tables' seco
 .endif
 
 ; A part: its record (the bank its image is in, _ovbank[ov - 1]; where it is in the window; its size: the bytes past
-; its whole pages, its whole pages), from its link (NAME.cfg's SWn: where its code's linked to run, its size)
-.macro      SWPART      n, ov
+; its whole pages, its whole pages), from its link (NAME.cfg's SW_name: where its code's linked to run, its size)
+.macro      SWPART      name, ov
             .pushseg
 .ifdef SWTABOV
             .segment    "SWTAB"
 .else
             .rodata
 .endif
-            .import     .ident(.concat("__SW", .string(n), "CODE_LOAD__"))
-            .import     .ident(.concat("__SW", .string(n), "_START__"))
-            .import     .ident(.concat("__SW", .string(n), "_LAST__"))
+            .import     .ident(.concat("__SW_", .string(name), "_CODE_LOAD__"))
+            .import     .ident(.concat("__SW_", .string(name), "_START__"))
+            .import     .ident(.concat("__SW_", .string(name), "_LAST__"))
             .byte       ov - 1
-            .word       .ident(.concat("__SW", .string(n), "CODE_LOAD__"))
-            .word       .ident(.concat("__SW", .string(n), "_LAST__")) - .ident(.concat("__SW", .string(n), "_START__"))
+            .word       .ident(.concat("__SW_", .string(name), "_CODE_LOAD__"))
+            .word       .ident(.concat("__SW_", .string(name), "_LAST__")) - .ident(.concat("__SW_", .string(name), "_START__"))
             .popseg
 .endmacro
-
 ; A stub: name() calls part n's s_name(), its arguments and its value as they are.  With SWSTUBOV, a stub is its call
 ; and its number alone (4 bytes, not 6: the world's main RAM's room, room7, 2026-11-23), its part and its function in
 ; three tables of a byte a stub in overlay SWSTUBOV's bank (the config's segments SWSTP, SWSTL, SWSTH), read by
@@ -370,5 +373,5 @@ SWSTART     = __SWAP_START__
 .else
             .rodata
 .endif
-swtab:                                     ; (The parts' records follow it: SWPART 1 ...)
+swtab:                                     ; (The parts' records follow it: SWPART ..., the first part 1)
             .code

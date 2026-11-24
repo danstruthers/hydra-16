@@ -4,8 +4,8 @@
 ** none of it is in the main RAM but while it's at work; the library's taken no more
 */
 
-#pragma code-name ("SW1CODE")
-#pragma rodata-name ("SW1RODATA")
+#pragma code-name ("SW_sheets_CODE")
+#pragma rodata-name ("SW_sheets_RODATA")
 #pragma local-strings (on)
 
 #include "../../sdk/c/lib/harnfile.c"

@@ -51,9 +51,9 @@ unsigned char __fastcall__ snd_cost (unsigned x, unsigned y);
 unsigned char __fastcall__ s_snd_mask (unsigned x, unsigned y, unsigned char k);
 signed char __fastcall__ snd_wind (int dx, int dy);
 
-#pragma code-name (push, "SW6CODE")             /* (Part 6's, with the layer's readers: once a denizen's turn, the main
+#pragma code-name (push, "SW_den_senses_CODE")             /* (Part 6's, with the layer's readers: once a denizen's turn, the main
                                                 **   RAM's room) */
-#pragma rodata-name (push, "SW6RODATA")
+#pragma rodata-name (push, "SW_den_senses_RODATA")
 
 static unsigned __fastcall__ apart (int dx, int dy)
 {

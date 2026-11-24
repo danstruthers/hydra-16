@@ -14,8 +14,8 @@
 #include "hub.h"
 #include "actions.h"
 
-#pragma code-name ("SW20CODE")
-#pragma rodata-name ("SW20RODATA")
+#pragma code-name ("SW_errands_CODE")
+#pragma rodata-name ("SW_errands_RODATA")
 #pragma local-strings (on)
 
 /* ---- The market and entertaining (2026-11-02: DENIZENS.md's trading, HOUSE.md's the market, for review): the goods
@@ -25,9 +25,9 @@
 ** world telling the things changing hands (E_TASK's TE_FETCHED).  Its data the part's own (zeros as it's copied in) */
 unsigned char trade (void);                     /* (Part 15's stub) */
 
-#pragma code-name (push, "SW15CODE")            /* (Part 15's, the market's; the rest part 20's: its room, 2026-11-03) */
-#pragma rodata-name (push, "SW15RODATA")
-#pragma bss-name (push, "SW15RODATA")
+#pragma code-name (push, "SW_trade_CODE")            /* (Part 15's, the market's; the rest part 20's: its room, 2026-11-03) */
+#pragma rodata-name (push, "SW_trade_RODATA")
+#pragma bss-name (push, "SW_trade_RODATA")
 static char gd[16], wh[16], nm[16], nl[16];
 
 /* A word of the line's: in lower case into w (15 at most); the line on past it (the entertainment's verb) */

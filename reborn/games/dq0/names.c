@@ -139,8 +139,8 @@ static void count (void)
 
 /* Text t begun with key k (the case aside) up to a word's end there: its length, or 0 (part 6's alone: the main RAM's
 ** room, 2026-11-01) */
-#pragma code-name (push, "SW6CODE")
-#pragma rodata-name (push, "SW6RODATA")
+#pragma code-name (push, "SW_names_said_CODE")
+#pragma rodata-name (push, "SW_names_said_RODATA")
 static unsigned char __fastcall__ at_key (const char* t, const char* k)
 {
     unsigned char n = strlen (k);
@@ -186,8 +186,8 @@ unsigned char __fastcall__ o_names_in (const char* l)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW5CODE")            /* ---- Part 5: the commands */
-#pragma rodata-name (push, "SW5RODATA")
+#pragma code-name (push, "SW_names_given_CODE")            /* ---- Part 5: the commands */
+#pragma rodata-name (push, "SW_names_given_RODATA")
 
 /* A free entry (np, e cleared), or 0, told */
 static struct tname* free_one (void)
@@ -534,8 +534,8 @@ unsigned char __fastcall__ s_names_line (char* l)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW6CODE")            /* ---- Part 6: the words */
-#pragma rodata-name (push, "SW6RODATA")
+#pragma code-name (push, "SW_names_said_CODE")            /* ---- Part 6: the words */
+#pragma rodata-name (push, "SW_names_said_RODATA")
 
 /* ---- The words */
 

@@ -3,7 +3,7 @@
 ** its requests (hub.h's protocol: hub_post, hub_wait, hub_reply).
 ** Each program of the game's compiles this file with its own (games/dq0w ... include it, HUB_ATTACHED defined: they
 ** attach to the hub, so they take neither its making nor the spawning of tasks, which takes in stdio).  The UI's
-** making and spawning are its swapped part 1's (the start's and the end's: swap.inc), out of its main RAM.
+** making and spawning are its swapped part start_end's (the start's and the end's: swap.inc), out of its main RAM.
 */
 
 #include <stdlib.h>
@@ -24,29 +24,17 @@ static unsigned char seq;                       /* Its requests, counted (each o
 static unsigned char pend;                      /* A ring taken while it waited for a reply, not the reply's */
 
 /* Each bank's U and $00, kept, and bank 0 put at $8000 */
-#ifndef HUB_ATTACHED                            /* (The UI's: part 19's, the main RAM's room, 2026-11-02; */
-#pragma code-name (push, "SW19CODE")            /*   only as it starts: part 1's hub_create, through its stub) */
-#pragma rodata-name (push, "SW19RODATA")
+#ifndef HUB_ATTACHED                            /* (The UI's: its part reach_steps's, the main RAM's room, 2026-11-02; */
+#pragma code-name (push, "SW_reach_steps_CODE") /*   only as it starts: part start_end's hub_create, through its stub) */
+#pragma rodata-name (push, "SW_reach_steps_RODATA")
 int s_find_banks (void)
 #else
-#ifdef HUB_ATTACH_SW3                           /* (The world's: part 88's, with hub_attach, its start-up's) */
-#pragma code-name (push, "SW88CODE")
-#pragma rodata-name (push, "SW88RODATA")
-#endif
-#ifdef HUB_ATTACH_P3                            /* (The senses': part 3's, with hub_attach, as it starts: the main
-                                                **   RAM's room, 2026-11-06) */
-#pragma code-name (push, "SW3CODE")
-#pragma rodata-name (push, "SW3RODATA")
-#endif
-#ifdef HUB_ATTACH_P4                            /* (The referee's: part 4's, with hub_attach, as it starts, its
-                                                **   overlays read: the main RAM's room, 2026-11-18) */
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
-#endif
-#ifdef HUB_ATTACH_P23                           /* (The minds': part 23's, with hub_attach, as it starts: the main
-                                                **   RAM's room, room8, 2026-11-24) */
-#pragma code-name (push, "SW23CODE")
-#pragma rodata-name (push, "SW23RODATA")
+#ifdef HUB_ATTACH_IN                            /* (Another task's: the part with hub_attach, as it starts, its hub.c's
+                                                **   HUB_ATTACH_IN "SW_name_": the world's hub_attach, the senses'
+                                                **   way_record, 2026-11-06, the referee's read_tongues, 2026-11-18,
+                                                **   the minds' start, room8, 2026-11-24: the main RAM's room) */
+#pragma code-name (push, HUB_ATTACH_IN "CODE")
+#pragma rodata-name (push, HUB_ATTACH_IN "RODATA")
 #endif
 static int find_banks (void)
 #endif
@@ -66,8 +54,7 @@ static int find_banks (void)
     hub_map (0);
     return 0;
 }
-#if !defined (HUB_ATTACHED) || defined (HUB_ATTACH_SW3) || defined (HUB_ATTACH_P3) || defined (HUB_ATTACH_P4) || \
-    defined (HUB_ATTACH_P23)
+#if !defined (HUB_ATTACHED) || defined (HUB_ATTACH_IN)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 #endif
@@ -111,8 +98,8 @@ void __fastcall__ hub_back (unsigned w)
 #endif
 
 #ifndef HUB_ATTACHED
-#pragma code-name (push, "SW1CODE")             /* (The UI's part 1, the start's and the end's: dq0.cfg) */
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW_start_end_CODE")    /* (The UI's part start_end, the start's and the end's) */
+#pragma rodata-name (push, "SW_start_end_RODATA")
 int __fastcall__ hub_create (unsigned char banks)
 {
     int s = hy_seg_create (banks);
@@ -154,20 +141,9 @@ int __fastcall__ hub_create (unsigned char banks)
 #endif
 
 #ifdef HUB_ATTACHED                             /* (The UI's room: what it never does left out, here and below) */
-#if defined (HUB_ATTACH_SW3) || defined (HUB_ATTACH_P3) || defined (HUB_ATTACH_P4) || defined (HUB_ATTACH_P23)
-#ifdef HUB_ATTACH_SW3
-#pragma code-name (push, "SW88CODE")            /* (The world's: its start-up's, the main RAM's room) */
-#pragma rodata-name (push, "SW88RODATA")
-#elif defined (HUB_ATTACH_P4)
-#pragma code-name (push, "SW4CODE")             /* (The referee's: part 4's, as it starts) */
-#pragma rodata-name (push, "SW4RODATA")
-#elif defined (HUB_ATTACH_P23)
-#pragma code-name (push, "SW23CODE")            /* (The minds': part 23's, as they start) */
-#pragma rodata-name (push, "SW23RODATA")
-#else
-#pragma code-name (push, "SW3CODE")             /* (The senses': part 3's, as it starts) */
-#pragma rodata-name (push, "SW3RODATA")
-#endif
+#ifdef HUB_ATTACH_IN
+#pragma code-name (push, HUB_ATTACH_IN "CODE")  /* (The task's part as it starts, its hub.c's: the main RAM's room) */
+#pragma rodata-name (push, HUB_ATTACH_IN "RODATA")
 int __fastcall__ s_hub_attach (unsigned char s, unsigned char me)
 #else
 int __fastcall__ hub_attach (unsigned char s, unsigned char me)
@@ -182,7 +158,7 @@ int __fastcall__ hub_attach (unsigned char s, unsigned char me)
     smask = HUB->small ? 1 : MAXSTRATA - 1;     /* (dq0 -C: two of the strata's slots) */
     return 0;
 }
-#if defined (HUB_ATTACH_SW3) || defined (HUB_ATTACH_P3) || defined (HUB_ATTACH_P4) || defined (HUB_ATTACH_P23)
+#ifdef HUB_ATTACH_IN
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 #endif
@@ -316,8 +292,8 @@ unsigned char __fastcall__ hub_dnext (unsigned* place, struct msg* m)
 #endif
 
 #ifndef HUB_ATTACHED
-#pragma code-name (push, "SW1CODE")             /* (The UI's part 1, the start's and the end's: dq0.cfg) */
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW_start_end_CODE")    /* (The UI's part start_end, the start's and the end's) */
+#pragma rodata-name (push, "SW_start_end_RODATA")
 /* ---- A task of the game's: path, given the segment and its role (and more, a word or none) */
 
 /* A program started (hub_run: its task, or -1) and waited for (hub_join: its exit status, or -1): the meta programs' launcher
@@ -331,7 +307,7 @@ unsigned char __fastcall__ hub_dnext (unsigned* place, struct msg* m)
 
 int __fastcall__ hub_spawn (const char* path, unsigned char t, const char* more)
 {
-#pragma bss-name (push, "SW1RODATA")              /* (The part's own: the main RAM's room, 2026-11-11) */
+#pragma bss-name (push, "SW_start_end_RODATA")    /* (The part's own: the main RAM's room, 2026-11-11) */
     static char args[64];
 #pragma bss-name (pop)
     unsigned char n;

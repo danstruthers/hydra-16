@@ -15,7 +15,16 @@
 const fs = require('fs');
 const path = require('path');
 
-const partOf = seg => { const m = /^SW(\d+)(CODE|RODATA)$/.exec(seg || ''); return m ? +m[1] : 0; };
+// The task's parts, by name (a part's segments SW_name_CODE, SW_name_RODATA: parts.js's) and number (their order in
+// parts.txt): useParts (parts.js's read ()'s num) before the rest.  Inside, a part is its number, as swap.inc has it
+let NUM = new Map(), NAMES = [];
+function useParts(num) {
+  NUM = num;
+  NAMES = [];
+  for (const [n, k] of num) NAMES[k] = n;
+}
+const partOf = seg => { const m = /^SW_(\w+)_(CODE|RODATA)$/.exec(seg || ''); return m && NUM.get(m[1]) || 0; };
+const segName = (k, kind) => 'SW_' + NAMES[k] + '_' + kind;
 const TOKEN = /\b(_\w+|[LMS][0-9A-F]{4})\b/g;
 const stubbed = n => n.global && /^_s_/.test(n.name);
 
@@ -101,7 +110,7 @@ function readAsm(file, seen = new Set()) {
     const inc = /^\s*\.include\s+"([^"]+)"/.exec(l), f = inc && path.resolve(path.dirname(file), inc[1]);
     if (f && fs.existsSync(f)) { const r = readAsm(f, seen); r.defs.forEach(d => defs.add(d)); r.refs.forEach(d => refs.add(d)); continue; }
     if ((m = /^\s*\.segment\s+"?(\w+)"?/.exec(l))) seg = m[1];
-    if ((m = /^(\w+)\s*:/.exec(l)) && /^SW\d+/.test(seg)) defs.add(m[1]);
+    if ((m = /^(\w+)\s*:/.exec(l)) && /^SW_/.test(seg)) defs.add(m[1]);
     for (const [, n] of l.replace(/;.*/, '').matchAll(/\b(_\w+)\b/g)) refs.add(n);
   }
   return { defs, refs };
@@ -338,16 +347,16 @@ function apply(moves, objdir) {
     for (let i = 0; i < L.length; i++) {
       const pm = /^\.proc\s+(\w+)/.exec(L[i]), dm = /^(\w+)\s*:/.exec(L[i]), mv = (pm || dm) && want.get((pm || dm)[1]);
       if (pm && mv) {
-        const re = new RegExp('"SW' + mv.from + '(CODE|RODATA)"', 'g'), to = '"SW' + mv.to + '$1"';
+        const re = new RegExp('"SW_' + NAMES[mv.from] + '_(CODE|RODATA)"', 'g'), to = '"SW_' + NAMES[mv.to] + '_$1"';
         let j = out.length - 1;
         while (j >= 0 && !/^\s*\.segment\b/.test(out[j]) && !/^\.endproc/.test(out[j])) j--;
         if (j >= 0 && /^\s*\.segment\b/.test(out[j])) out[j] = out[j].replace(re, to);
         for (; i < L.length && !/^\.endproc/.test(L[i]); i++) out.push(L[i].replace(re, to));
         out.push(L[i]);
       } else if (dm && mv) {
-        out.push('.segment\t"SW' + mv.to + 'RODATA"', L[i]);
+        out.push('.segment\t"' + segName(mv.to, 'RODATA') + '"', L[i]);
         for (i++; i < L.length && /^\s+\.(byte|word|addr|res|dbyt|lobytes|hibytes|asciiz|faraddr|dword)\b/.test(L[i]); i++) out.push(L[i]);
-        out.push('.segment\t"SW' + mv.from + 'RODATA"');
+        out.push('.segment\t"' + segName(mv.from, 'RODATA') + '"');
         i--;
       } else {
         out.push(L[i]);
@@ -359,20 +368,21 @@ function apply(moves, objdir) {
   return changed;
 }
 
-module.exports = { objectSizes, readListing, readAsm, pieces, route, depths, plan, planChecked, apply };
+module.exports = { useParts, objectSizes, readListing, readAsm, pieces, route, depths, plan, planChecked, apply };
 
 if (require.main === module) {                          // (The report: node games/dq0/pack.js TASK [-v])
   const { execFileSync } = require('child_process');
   const task = process.argv[2], root = path.join(__dirname, '..', '..'), od = path.join(root, 'obj', 'games', task), dir = path.join(root, 'games', task);
   const src = fs.readdirSync(dir), lsts = src.filter(f => f.endsWith('.c')).map(f => path.join(od, f.replace(/\.c$/, '.lst')));
   const asm = src.filter(f => f.endsWith('.s') && f !== 'bank.s').map(f => path.join(dir, f));
+  useParts(require('./parts.js').read(path.join(dir, 'parts.txt')).num);
   const od65 = path.join(root, '..', 'base', 'tools', 'cc65', 'win64_hydra', 'bin', 'od65');
   const sizes = objectSizes(execFileSync(od65, ['--dump-segsize', ...lsts.map(f => f.replace(/\.lst$/, '.o'))], { encoding: 'latin1' }));
   const r = pieces({ lsts, asm, sizes });
   let free = 0, pinned = 0;
   for (const p of r.pieces) {
     if (p.pinned) pinned += p.bytes; else free += p.bytes;
-    if (process.argv[3] === '-v') console.log('part ' + p.part + ' ' + p.id + ' ' + p.bytes + ' (' + p.nodes.length + ')' + (p.pinned ? ' pinned: ' + p.pinned : ''));
+    if (process.argv[3] === '-v') console.log('part ' + NAMES[p.part] + ' ' + p.id + ' ' + p.bytes + ' (' + p.nodes.length + ')' + (p.pinned ? ' pinned: ' + p.pinned : ''));
   }
   const n = r.pieces.length, np = r.pieces.filter(p => p.pinned).length;
   console.log(task + ': ' + n + ' pieces in its parts, ' + (n - np) + ' free to move (' + free + ' bytes), ' + np + ' pinned (' + pinned + ' bytes)');

@@ -40,8 +40,8 @@ static unsigned char done_;                     /* (The rules done, a bit each: 
 extern unsigned char bold_;                     /* (dq0w.c's: a pace said outright, for the dark) */
 static char an[16], bn[16];                     /* (The things named) */
 
-#pragma code-name ("SW16CODE")
-#pragma rodata-name ("SW16RODATA")
+#pragma code-name ("SW_game_rules_CODE")
+#pragma rodata-name ("SW_game_rules_RODATA")
 
 /* ---- The theme's puzzle */
 
@@ -123,7 +123,7 @@ static void __fastcall__ took (unsigned char k)
 ** HOUSE.md's reading and clues): a sheet ("sheet": paper, parchment; its number in sheet_n), and a point that draws ("draw":
 ** charcoal, a pencil, chalk) or a quill and ink: 1, or 0 */
 static unsigned sheet_n;
-#pragma bss-name (push, "SW16RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
+#pragma bss-name (push, "SW_game_rules_RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
                                                 **   the main RAM's room, 2026-11-21) */
 static unsigned char copy_with (void)
 {

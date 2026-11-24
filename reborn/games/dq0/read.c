@@ -35,10 +35,10 @@
 
 /* ==== Part 26: the clues made, a reading's other words */
 
-#pragma code-name (push, "SW26CODE")
-#pragma rodata-name (push, "SW26RODATA")
-#pragma data-name (push, "SW26RODATA")
-#pragma bss-name (push, "SW26RODATA")
+#pragma code-name (push, "SW_clue_CODE")
+#pragma rodata-name (push, "SW_clue_RODATA")
+#pragma data-name (push, "SW_clue_RODATA")
+#pragma bss-name (push, "SW_clue_RODATA")
 #define K               K26                     /* (Its own) */
 #define path            path26
 static unsigned hs;                             /* (A writing's own dice: 16 bits, no long sums' code in the main RAM) */
@@ -309,10 +309,10 @@ void __fastcall__ s_swapped (unsigned char r)
 
 /* ==== Part 25: the reading */
 
-#pragma code-name (push, "SW25CODE")
-#pragma rodata-name (push, "SW25RODATA")
-#pragma data-name (push, "SW25RODATA")
-#pragma bss-name (push, "SW25RODATA")
+#pragma code-name (push, "SW_read_CODE")
+#pragma rodata-name (push, "SW_read_RODATA")
+#pragma data-name (push, "SW_read_RODATA")
+#pragma bss-name (push, "SW_read_RODATA")
 
 static struct clue K;                           /* The clue at hand */
 static char path[56];

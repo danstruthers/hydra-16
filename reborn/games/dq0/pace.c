@@ -20,8 +20,8 @@
 #include "level.h"
 
 #pragma local-strings (on)
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW_pace_CODE")
+#pragma rodata-name (push, "SW_pace_RODATA")
 
 #define NW      12
 unsigned char paced;

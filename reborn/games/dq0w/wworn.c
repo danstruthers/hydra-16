@@ -31,9 +31,9 @@ extern const unsigned char wroom[];
 unsigned char wplace = WP_NONE;                 /* (The place a thing's to be worn at, worn_at's: things.c's don's, WP_NONE
                                                 **   one worn the one way; the main RAM's, the catalogue's code reads it) */
 
-#pragma code-name ("SW107CODE")
-#pragma rodata-name ("SW107RODATA")
-#pragma bss-name ("SW107RODATA")                /* (Its own data, wanted only while it runs: not the main RAM's) */
+#pragma code-name ("SW_worn_CODE")
+#pragma rodata-name ("SW_worn_RODATA")
+#pragma bss-name ("SW_worn_RODATA")                /* (Its own data, wanted only while it runs: not the main RAM's) */
 #pragma local-strings (on)
 #pragma static-locals (on)
 

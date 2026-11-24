@@ -37,9 +37,9 @@ extern char path[56];                           /* (store.c's) */
 extern struct change buf[8];                    /* (store.c's: 64 bytes) */
 
 /* ==== Part 17: the table */
-#pragma code-name (push, "SW17CODE")
-#pragma rodata-name (push, "SW17RODATA")
-#pragma bss-name (push, "SW17RODATA")           /* (Its own data, what's wanted only while it runs: the main RAM's room) */
+#pragma code-name (push, "SW_item_pages_CODE")
+#pragma rodata-name (push, "SW_item_pages_RODATA")
+#pragma bss-name (push, "SW_item_pages_RODATA")           /* (Its own data, what's wanted only while it runs: the main RAM's room) */
 
 #pragma bss-name (push, "BSS")
 static unsigned char esn;                       /* (The chunk at hand: the main RAM's, wanted after a part's called) */
@@ -50,7 +50,7 @@ static unsigned pcx, pcy;                       /* (The character's chunk, and t
                                                 **   dq0 -C's, none) */
 static unsigned char pcs, rad;
 static unsigned char __fastcall__ kept_k (unsigned char k);
-#pragma data-name (push, "SW17RODATA")
+#pragma data-name (push, "SW_item_pages_RODATA")
 static struct rpt irt = { RP_FIND, NIRES, sizeof (struct ires), 0x3E, IPG->r, offsetof (struct ires, stamp), RTF_HAND | RTF_WIDE,
     0, { 0 }, 0, NIRES, 0, 0, 1, 2, 4, 0, 0, 0, kept_k };     /* (The table, the record store's: a chunk found, and a
                                                 **   free entry; the one made way for) */
@@ -285,9 +285,9 @@ void s_it_near (void)
 #pragma bss-name (pop)
 
 /* ==== Part 20: the files */
-#pragma code-name (push, "SW20CODE")
-#pragma rodata-name (push, "SW20RODATA")
-#pragma bss-name (push, "SW20RODATA")
+#pragma code-name (push, "SW_item_page_io_CODE")
+#pragma rodata-name (push, "SW_item_page_io_RODATA")
+#pragma bss-name (push, "SW_item_page_io_RODATA")
 
 #pragma bss-name (push, "BSS")
 static struct rpk it_kind;                      /* (Its versions counted: the main RAM's) */
@@ -296,7 +296,7 @@ static struct rpk it_kind;                      /* (Its versions counted: the ma
 #define RP_KIND         it_kind
 #include "../dq0/rp.inc"
 
-#pragma data-name (push, "SW20RODATA")
+#pragma data-name (push, "SW_item_page_io_RODATA")
 static struct rpg rg = { RP_GROUPS, 0, 0, 0, sizeof (struct igroup), offsetof (struct igroup, n), sizeof (struct item),
     buf };                                      /* (A region's file's groups, the record store's) */
 #pragma data-name (pop)

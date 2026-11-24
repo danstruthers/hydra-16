@@ -20,8 +20,8 @@
 #include "world.h"
 #include "work.h"
 
-#pragma code-name ("SW8CODE")
-#pragma rodata-name ("SW8RODATA")
+#pragma code-name ("SW_traps_CODE")
+#pragma rodata-name ("SW_traps_RODATA")
 #pragma local-strings (on)
 
 #define W_TRAPS

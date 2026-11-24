@@ -398,8 +398,8 @@ unsigned char o_wield (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_commands_CODE")
+#pragma rodata-name (push, "SW_commands_RODATA")
 #pragma local-strings (push, on)
 
 /* (Part 2's, o_wield's: the commands' part, there as a command's carried out) The things asked from o_wield's overlay,

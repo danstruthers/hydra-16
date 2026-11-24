@@ -16,9 +16,9 @@
 
 #pragma static-locals (on)
 
-#pragma code-name (push, "SW32CODE")
-#pragma rodata-name (push, "SW32RODATA")
-#pragma bss-name (push, "SW32RODATA")
+#pragma code-name (push, "SW_scent_CODE")
+#pragma rodata-name (push, "SW_scent_RODATA")
+#pragma bss-name (push, "SW_scent_RODATA")
 
 static unsigned char rsn;
 static unsigned rcx, rcy;

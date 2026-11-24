@@ -40,8 +40,8 @@
 #include "acts.h"
 
 #pragma local-strings (on)
-#pragma code-name ("SW119CODE")
-#pragma rodata-name ("SW119RODATA")
+#pragma code-name ("SW_den_lights_CODE")
+#pragma rodata-name ("SW_den_lights_RODATA")
 
 #define LAMP_NEAR       16                      /* (A lit actor this near the character: its look made again as its light
                                                 **   moves, changes) */

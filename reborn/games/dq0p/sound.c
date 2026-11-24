@@ -68,8 +68,8 @@ void snd_need (void)
 
 /* ==== Part 5: the pulse, and the layer read (swapped: a few times a minute at most; and the denizens' senses
 ** answered, sense.c's, once a denizen's turn) */
-#pragma code-name (push, "SW6CODE")             /* (Part 6's, the layer read: with the denizens' senses, sense.c's) */
-#pragma rodata-name (push, "SW6RODATA")
+#pragma code-name (push, "SW_den_senses_CODE")             /* (Part 6's, the layer read: with the denizens' senses, sense.c's) */
+#pragma rodata-name (push, "SW_den_senses_RODATA")
 
 static unsigned __fastcall__ apart (int dx, int dy)
 {
@@ -148,8 +148,8 @@ signed char __fastcall__ snd_wind (int dx, int dy)
 #pragma rodata-name (pop)
 
 /* ==== Part 5: the pulse (swapped: a few times a minute at most) */
-#pragma code-name (push, "SW5CODE")
-#pragma rodata-name (push, "SW5RODATA")
+#pragma code-name (push, "SW_pulse_CODE")
+#pragma rodata-name (push, "SW_pulse_RODATA")
 
 static unsigned char asn_ = 0xFF;               /* (The stratum the draught was last worked out for) */
 

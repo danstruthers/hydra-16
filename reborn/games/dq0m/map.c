@@ -25,8 +25,8 @@
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
 
-#pragma code-name ("SW1CODE")
-#pragma rodata-name ("SW1RODATA")
+#pragma code-name ("SW_map_CODE")
+#pragma rodata-name ("SW_map_RODATA")
 #pragma local-strings (on)
 #pragma static-locals (on)
 

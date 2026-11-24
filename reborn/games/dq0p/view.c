@@ -42,8 +42,8 @@
 #include "light.h"
 #include "eyes.h"
 
-#pragma code-name ("SW1CODE")                   /* (Part 1's, all of it: swapped, bank.s's stubs, once a look) */
-#pragma rodata-name ("SW1RODATA")
+#pragma code-name ("SW_look_CODE")                   /* (Part 1's, all of it: swapped, bank.s's stubs, once a look) */
+#pragma rodata-name ("SW_look_RODATA")
 
 #define EYE         5                           /* The eyes, feet above the floor */
 #define GRID        ((unsigned char*) 0x8000)   /* The grid (cast.s's): a row 128 bytes, a square two (its flags, its
@@ -90,11 +90,11 @@ extern unsigned char here_known;                /* (dq0p.c's: come to a square i
 ** the light, mapping as it goes on paper, drawn too (the view's run_d: the look's view first, dq0p.c's).  Part 4's
 ** (part 2's room for a passage's runs, sight.c's, 2026-11-01), with a copy of chunk.c's ways of its own (ways.inc's,
 ** renamed: the ways part 2's, its look's) */
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW_kept_CODE")
+#pragma rodata-name (push, "SW_kept_RODATA")
 #pragma static-locals (push, on)
-#pragma bss-name (push, "SW4RODATA")
-#pragma data-name (push, "SW4RODATA")
+#pragma bss-name (push, "SW_kept_RODATA")
+#pragma data-name (push, "SW_kept_RODATA")
 #define breadth         breadth4
 #define way_ok          way_ok4
 #define ways_from       ways_from4
@@ -334,8 +334,8 @@ static unsigned char __fastcall__ chunks (unsigned char on)
 }
 
 /* ==== Part 4 (its own, small: a look's, after the view's, dq0p.c's) */
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW_kept_CODE")
+#pragma rodata-name (push, "SW_kept_RODATA")
 
 /* What it keeps of chunk C as it comes to know it again (fr: the clock, the fade, how well it keeps what it sees: its
 ** mapmind, mapping as it goes, half that not, and a quarter of it): a passing more if it's come to see it again
@@ -401,7 +401,7 @@ static void __fastcall__ fresh (const struct fresh* fr)
 ** first heading, into the senses' bank (RUNS); a look one way's far part's, to a chunk it may not make (way_stop's) */
 #include "../dq0/run.h"
 typedef char runs_fit[sizeof (struct sight) <= RUN_AT ? 1 : -1];
-#pragma bss-name (push, "SW4RODATA")            /* (Its state the part's own: none kept from one call to the next) */
+#pragma bss-name (push, "SW_kept_RODATA")            /* (Its state the part's own: none kept from one call to the next) */
 static void runs (void)
 {
     static unsigned char r[8], d, n, h, sn, k, w, nh;

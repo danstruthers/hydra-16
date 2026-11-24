@@ -457,10 +457,10 @@ static void __fastcall__ kx_get (unsigned char k)
 
 /* The room of the chunk at ox, oy (stratum sn: a lair's, kind k's) its home's in: one of the uses its kind likes best
 ** (its home's, kinds.txt's: of the first of them the chunk has, one by the dice), else any; the chunk in the window */
-#pragma code-name (push, "SW8CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
-#pragma rodata-name (push, "SW8RODATA")
-#pragma code-name (push, "SW22CODE")
-#pragma rodata-name (push, "SW22RODATA")
+#pragma code-name (push, "SW_bodies_CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
+#pragma rodata-name (push, "SW_bodies_RODATA")
+#pragma code-name (push, "SW_bodies_rare_CODE")
+#pragma rodata-name (push, "SW_bodies_rare_RODATA")
 unsigned char __fastcall__ s_home_room (unsigned char k, unsigned char sn, unsigned ox, unsigned oy)
 {
     unsigned char u, r, n, j;
@@ -484,12 +484,12 @@ unsigned char __fastcall__ s_home_room (unsigned char k, unsigned char sn, unsig
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW_records_CODE")
+#pragma rodata-name (push, "SW_records_RODATA")
 
 /* The kinds read in (dir/dq0d.dat): 0, or -1 (part 4's: the start's) */
-#pragma code-name (push, "SW23CODE")
-#pragma rodata-name (push, "SW23RODATA")
+#pragma code-name (push, "SW_start_CODE")
+#pragma rodata-name (push, "SW_start_RODATA")
 static int __fastcall__ kinds_load (const char* dir)
 {
     static char path[64];
@@ -556,8 +556,8 @@ unsigned __fastcall__ apart (int dx, int dy);  /* |dx| or |dy|, the more (apart.
 /* ---- Populations: stratum n's decided as its plan is grown (its record and links whole: the hub's STRATUM (n),
 ** copied): for each kind that lives in its style at its depth, its lairs (by the stratum's ways, if it lairs there;
 ** else in a region of halls, a chunk of it), and the denizens in each, a record each */
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW_populations_CODE")
+#pragma rodata-name (push, "SW_populations_RODATA")
 
 /* Stratum n's plan's region idx's kind: in its plan bank, or (a big plan: more regions than PLAN_MAX, the maker's
 ** paged to the save folder) in its file there, plSS0000.dat, its regions in order */
@@ -602,7 +602,7 @@ static unsigned char __fastcall__ plan_kind (unsigned char n, unsigned idx)
 ** had there (its ways all taken, but lspill puts it in the halls then; no room for its records), else 1 (made, or no
 ** halls found for it).  Its numbers the stratum's seed's, in turn */
 static unsigned char lf, ln, ll, lspill;
-#pragma bss-name (push, "SW1RODATA")
+#pragma bss-name (push, "SW_populations_RODATA")
 static const struct link* lq;                   /* (Its own, wanted only as it runs) */
 #pragma bss-name (pop)
 
@@ -795,8 +795,8 @@ static void __fastcall__ post (unsigned char kind, unsigned char who);
 static void trodden (void);
 static void kitted (void);
 
-#pragma code-name (push, "SW3CODE")             /* (Part 3's since 2026-11-04: part 1's half that isn't populate's) */
-#pragma rodata-name (push, "SW3RODATA")
+#pragma code-name (push, "SW_placing_CODE")             /* (Part 3's since 2026-11-04: part 1's half that isn't populate's) */
+#pragma rodata-name (push, "SW_placing_RODATA")
 
 void __fastcall__ s_place (unsigned char i)
 {
@@ -916,8 +916,8 @@ void __fastcall__ s_place (unsigned char i)
 /* The lairs on the character's stratum whose chunks are its own or beside it, and made (the character's
 ** surroundings detailed: this task never makes a chunk to place a lair), placed: 1 if any was.  Part 13 (2026-11-01:
 ** the main RAM's room, the tunnellers'; alone, small: cheap to swap in, as it's called each time round after a move) */
-#pragma code-name (push, "SW13CODE")
-#pragma rodata-name (push, "SW13RODATA")
+#pragma code-name (push, "SW_lairs_near_CODE")
+#pragma rodata-name (push, "SW_lairs_near_RODATA")
 
 unsigned char s_nearby (void)
 {
@@ -1104,10 +1104,10 @@ static void settle (void)
 ** 2026-10-29, its theme's faction the robber's) placed on its stratum (RB_HOARD: the world puts the takings in the
 ** hoard there, b its kind's faction); else its own home, hidden there if its kind hides its things (RB_HIDE), else
 ** lying there (HOUSE.md's the robbers' takings, 2026-10-27); K its own again after */
-#pragma code-name (push, "SW8CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
-#pragma rodata-name (push, "SW8RODATA")
-#pragma code-name (push, "SW22CODE")
-#pragma rodata-name (push, "SW22RODATA")
+#pragma code-name (push, "SW_bodies_CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
+#pragma rodata-name (push, "SW_bodies_RODATA")
+#pragma code-name (push, "SW_bodies_rare_CODE")
+#pragma rodata-name (push, "SW_bodies_rare_RODATA")
 void __fastcall__ s_rob_to (unsigned char k)
 {
     unsigned char i, f = K.faction;
@@ -1171,7 +1171,7 @@ static unsigned refx, refy;                     /* (The square step_for's S_AWAY
                                                 **   a foe's, the one an ally follows to) */
 
 /* The name the character gave denizen number id (its entry in the head's names; id 0: a free one), or NNAMES */
-#pragma code-name (push, "SW8CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
+#pragma code-name (push, "SW_bodies_CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
 unsigned char __fastcall__ s_name_of (unsigned id)
 {
     unsigned char n;
@@ -1185,8 +1185,8 @@ unsigned char __fastcall__ s_name_of (unsigned id)
 /* Denizen D (its kind's record K) first met, as it's first made an actor: its personal things made (I_KIT's
 ** KT_PURSE, the world's draw: its purse, its trinkets, its valuables by its standing, the user's answer 6: made as it's
 ** first met, then kept), folk's only, if it has any standing (kinds.txt's) */
-#pragma code-name (push, "SW8CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
-#pragma rodata-name (push, "SW8RODATA")
+#pragma code-name (push, "SW_bodies_CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
+#pragma rodata-name (push, "SW_bodies_RODATA")
 void s_met (void)
 {
     unsigned char k = D.kind, f = K.faction;
@@ -1207,8 +1207,8 @@ void s_met (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW_records_CODE")
+#pragma rodata-name (push, "SW_records_RODATA")
 
 /* Actor k's place, time, attitude and request written back to its record */
 static void __fastcall__ write_back (unsigned char k)
@@ -1332,8 +1332,8 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
 #pragma rodata-name (pop)
 
 /* The denizens out near the character made actors, as there are entries free; those left over noted (nearx ...) */
-#pragma code-name (push, "SW11CODE")          /* (Part 11's, 2026-10-31: the main RAM's room) */
-#pragma rodata-name (push, "SW11RODATA")
+#pragma code-name (push, "SW_enlist_near_CODE")          /* (Part 11's, 2026-10-31: the main RAM's room) */
+#pragma rodata-name (push, "SW_enlist_near_RODATA")
 void s_enlist_near (void)
 {
     struct den* q = POP->den;
@@ -1522,8 +1522,8 @@ static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsig
 /* Actor a (the copy), out of the character's sight and not sensing it, moved coarsely (the turns pace's, catching
 ** up): a few squares' wander at a time, each a step of no time (I_STEP's STEP_COARSE: the world's), a while for them
 ** after (stopped as it comes into the character's sight).  Part 10's (2026-10-31: the main RAM's room) */
-#pragma code-name (push, "SW10CODE")
-#pragma rodata-name (push, "SW10RODATA")
+#pragma code-name (push, "SW_day_kept_CODE")
+#pragma rodata-name (push, "SW_day_kept_RODATA")
 void __fastcall__ s_coarse (unsigned char k, unsigned lim)
 {
     unsigned char t, d;
@@ -1557,13 +1557,13 @@ void __fastcall__ s_coarse (unsigned char k, unsigned lim)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW8CODE")             /* (Part 8's since 2026-10-31: part 4's room) */
-#pragma rodata-name (push, "SW8RODATA")
+#pragma code-name (push, "SW_bodies_CODE")             /* (Part 8's since 2026-10-31: part 4's room) */
+#pragma rodata-name (push, "SW_bodies_RODATA")
 
 /* Actor a (the copy), shy and cornered beside the character: it darts past it, to the square beyond (open, no one
 ** on it, no deeper water than it wades: dsx, dsy), a moment's dash; 1 if it can */
-#pragma code-name (push, "SW22CODE")
-#pragma rodata-name (push, "SW22RODATA")
+#pragma code-name (push, "SW_bodies_rare_CODE")
+#pragma rodata-name (push, "SW_bodies_rare_RODATA")
 unsigned char __fastcall__ s_dart (unsigned char k)
 {
     dsx = pcx + (pcx - a.x);
@@ -1630,8 +1630,8 @@ unsigned char __fastcall__ s_fends (unsigned char lim)
 
 /* Actor k (the copy a) hurt, nothing after it (decide's): home to its lair (its home square), there to rest a minute at
 ** a time (wt).  The step, or 0xFE */
-#pragma code-name (push, "SW22CODE")
-#pragma rodata-name (push, "SW22RODATA")
+#pragma code-name (push, "SW_bodies_rare_CODE")
+#pragma rodata-name (push, "SW_bodies_rare_RODATA")
 unsigned char __fastcall__ s_rests (unsigned char k)
 {
     unsigned char d = 0xFE;
@@ -1679,8 +1679,8 @@ unsigned char __fastcall__ s_homes (unsigned char k)
 
 /* The water's depth on the square at () found (C, cx_, cy_; under water: deep_at's), feet: a still pool's surface over
 ** its floor, or a stream's depth where it runs (the chunk's, the maker's: as the world's s_water_at has it) */
-#pragma code-name (push, "SW22CODE")
-#pragma rodata-name (push, "SW22RODATA")
+#pragma code-name (push, "SW_bodies_rare_CODE")
+#pragma rodata-name (push, "SW_bodies_rare_RODATA")
 unsigned char s_depth (void)
 {
     unsigned char r, n;
@@ -1723,8 +1723,8 @@ unsigned char __fastcall__ s_want_fl (unsigned char k)
 
 /* Food given actor k (a gift: s_gift's): ate 0, the steps more it's welcome by its hunger (hungry 2, very hungry 4);
 ** ate 1, it's eaten it */
-#pragma code-name (push, "SW22CODE")
-#pragma rodata-name (push, "SW22RODATA")
+#pragma code-name (push, "SW_bodies_rare_CODE")
+#pragma rodata-name (push, "SW_bodies_rare_RODATA")
 signed char __fastcall__ s_fed (unsigned char k, unsigned char ate)
 {
     unsigned char h;
@@ -1856,8 +1856,8 @@ heard:
 
 #define FLEE_T          24                      /* Turns a broken one flees for (a step each, or a moment) */
 
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW_records_CODE")
+#pragma rodata-name (push, "SW_records_RODATA")
 
 /* Actor k dead (the hub's entry as it is: its body the world's, gone): its record so, the entry free; its lair's
 ** keeping one keeper the fewer (none left: gone, kept no longer, the world's to see to its torches) */
@@ -1962,8 +1962,8 @@ static unsigned char __fastcall__ feels (unsigned char k)
 
 /* Actor k's (the copy's) attitude moved by what it senses of the character (it senses it now).  Part 8's (2026-11-02:
 ** the main RAM's room, the ways'; asked as feels has it) */
-#pragma code-name (push, "SW8CODE")
-#pragma rodata-name (push, "SW8RODATA")
+#pragma code-name (push, "SW_bodies_CODE")
+#pragma rodata-name (push, "SW_bodies_RODATA")
 /* Actor k (the copy), shy, the character too near (meets'): a step away; cornered beside it, past it (dart's square) */
 unsigned char __fastcall__ s_shies (unsigned char k)
 {
@@ -1995,8 +1995,8 @@ void __fastcall__ s_robs (unsigned char k)
     }
 }
 
-#pragma code-name (push, "SW22CODE")
-#pragma rodata-name (push, "SW22RODATA")
+#pragma code-name (push, "SW_bodies_rare_CODE")
+#pragma rodata-name (push, "SW_bodies_rare_RODATA")
 void __fastcall__ s_feel (unsigned char k)
 {
     struct actor* q = HUB->actor;
@@ -2081,8 +2081,8 @@ static unsigned char __fastcall__ meets (unsigned char k, unsigned char was)
 ** the traces' store, which keeps it all, each square's scent the longer for its passings and the character's stays
 ** there: hub.h's TR_MORE), 0xFB, at once if the last one led it on, else once each ten seconds (sniffed: till then);
 ** 0xFF, neither (part 5's, the main RAM's room: slice 4.5's) */
-#pragma code-name (push, "SW5CODE")
-#pragma rodata-name (push, "SW5RODATA")
+#pragma code-name (push, "SW_senses_CODE")
+#pragma rodata-name (push, "SW_senses_RODATA")
 unsigned char __fastcall__ s_scent (unsigned char k)
 {
     struct tstep* e;
@@ -2146,8 +2146,8 @@ static void __fastcall__ stayed (unsigned char k)
 ** and its missiles (the world's agear, AG_SHOOTS) and a shot to be had (AG_NOSHOT, the world's: none from where it
 ** stands, but the character's moved since it last shot or meant to, shat's); 1, facing it, the world's to say if it
 ** can.  Part 2's (the main RAM's room) */
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_sway_CODE")
+#pragma rodata-name (push, "SW_sway_RODATA")
 unsigned char __fastcall__ s_shoots (unsigned char k, unsigned char ag)
 {
     unsigned char h = (unsigned char) (pcx + 7 * pcy);
@@ -2432,8 +2432,8 @@ static unsigned char door_by (void)
 ** handled (PP_KNOWN) left open: it shuts it, and stands alert a while.  Each actor's tries at a door kept in atry (its
 ** way, the stage, the count); a door's lock or bar it can't get past turns it round, its steps' own way (greedy, as
 ** yet).  k's high bit: no step was found.  0xF8 (the intent posted), or 0xFF.  Part 14's */
-#pragma code-name (push, "SW14CODE")
-#pragma rodata-name (push, "SW14RODATA")
+#pragma code-name (push, "SW_doors_CODE")
+#pragma rodata-name (push, "SW_doors_RODATA")
 #pragma static-locals (push, off)               /* (On the C stack: the main RAM's none) */
 unsigned char __fastcall__ s_door_way (unsigned char k)
 {
@@ -2753,10 +2753,10 @@ static unsigned char dsn;
 ** call of another part comes back: none used after it) */
 #define MINE_LEN        64                      /* (Squares a mine goes, its way across and along, at most) */
 #define BURROW          8                       /* (Squares a burrow goes from its home) */
-#pragma code-name (push, "SW15CODE")
-#pragma rodata-name (push, "SW15RODATA")
-#pragma data-name (push, "SW15RODATA")         /* (rock.h's statics in the part, used only within a call) */
-#pragma bss-name (push, "SW15RODATA")
+#pragma code-name (push, "SW_tunnel_work_CODE")
+#pragma rodata-name (push, "SW_tunnel_work_RODATA")
+#pragma data-name (push, "SW_tunnel_work_RODATA")         /* (rock.h's statics in the part, used only within a call) */
+#pragma bss-name (push, "SW_tunnel_work_RODATA")
 #define ROCK_VEIN
 #define ROCK_LEAN
 #include "../dq0/rock.h"
@@ -2986,9 +2986,9 @@ stand:
 ** the world's to cut), within its reach of its home; the one it's digging kept while it's as near.  Posted (I_KIT's
 ** KT_DIG: a spell at a time, by the character's rules, the world's: dq0w/wdig.c, which judges what it's into): 0xF9;
 ** 0xFF, none.  Part 12's */
-#pragma code-name (push, "SW12CODE")
-#pragma rodata-name (push, "SW12RODATA")
-#pragma bss-name (push, "SW12RODATA")          /* (Its locals in the part: the main RAM's room, 2026-11-02) */
+#pragma code-name (push, "SW_tunnellers_CODE")
+#pragma rodata-name (push, "SW_tunnellers_RODATA")
+#pragma bss-name (push, "SW_tunnellers_RODATA")          /* (Its locals in the part: the main RAM's room, 2026-11-02) */
 /* Whether a burrower's claws bite tile t just looked at (C the chunk's): the stuff of a chunk's rock, or of a room's wall (a
 ** wall's room the first in the chunk with one of earth: the maker's walls are stone or masonry today): earth or soil,
 ** no rock of any kind (rubble is its caller's) */
@@ -3127,8 +3127,8 @@ typedef char rhead_fits[sizeof (struct rhead) <= RBASE - 0x8000 && RBASE - 0x800
 ** field's, if it's for that mark and reaches it; else (part 18's wfind) another's that does, or (k's high bit: no
 ** greedy step nearer) one found, if it may have one now.  The step (0-7), 0xF8 (a shut door on it worked: door_way's
 ** I_PORTAL), or 0xFF (none: the greedy step's) */
-#pragma code-name (push, "SW17CODE")
-#pragma rodata-name (push, "SW17RODATA")
+#pragma code-name (push, "SW_ways_CODE")
+#pragma rodata-name (push, "SW_ways_RODATA")
 unsigned char __fastcall__ s_way (unsigned char k)
 {
     struct rfield* r;
@@ -3195,9 +3195,9 @@ unsigned char __fastcall__ s_way (unsigned char k)
 
 /* Part 18's: a field found for actor k (the copy a) to refx, refy on its stratum (route), and wfind, the way's square
 ** where it stands (way's: its own field no longer for its mark) */
-#pragma code-name (push, "SW18CODE")
-#pragma rodata-name (push, "SW18RODATA")
-#pragma bss-name (push, "SW18RODATA")          /* (A row of it read in: the part's own, while it runs) */
+#pragma code-name (push, "SW_way_find_CODE")
+#pragma rodata-name (push, "SW_way_find_RODATA")
+#pragma bss-name (push, "SW_way_find_RODATA")          /* (A row of it read in: the part's own, while it runs) */
 static unsigned char rrow[RW_W], rdoor[RW_W];
 static signed char rerow[RW_W];
 #pragma bss-name (pop)
@@ -3460,8 +3460,8 @@ static unsigned char roam (void)
     return n;
 }
 
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW_records_CODE")
+#pragma rodata-name (push, "SW_records_RODATA")
 
 /* Ally k come along with the character, up or down: on a square beside it, open, no one's on it (its intent,
 ** I_CLIMB: the world puts it there).  1 if it is */
@@ -3595,11 +3595,11 @@ static void tend (void)
 
 static struct sway sw;
 
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_sway_CODE")
+#pragma rodata-name (push, "SW_sway_RODATA")
 
-#pragma code-name (push, "SW5CODE")
-#pragma rodata-name (push, "SW5RODATA")
+#pragma code-name (push, "SW_senses_CODE")
+#pragma rodata-name (push, "SW_senses_RODATA")
 
 /* A hunter's stalk begun (decide's, slices 4.5 and 4.6: HOUSE.md's sound, the air and moving quietly): its Stealth
 ** tested (the referee's, by its sheet, in the denizens' slot), its steps' loudness plus 1 by the grade: a success 0,
@@ -3616,8 +3616,8 @@ unsigned char __fastcall__ s_stalks (unsigned char k)
 ** by every actor's one test, part 20's.  A test of the hider's Stealth (the referee's, on the minds' own dice, a
 ** creature's by its sheet) at its cover's steps and how near the looker is; a success
 ** hides it; a critical failure's found; a marginal failure tests the looker's Awareness (the book's) */
-#pragma code-name (push, "SW20CODE")
-#pragma rodata-name (push, "SW20RODATA")
+#pragma code-name (push, "SW_hiding_CODE")
+#pragma rodata-name (push, "SW_hiding_RODATA")
 #pragma static-locals (push, off)
 
 static unsigned char __fastcall__ h_found (unsigned char hider, unsigned char looker, unsigned char hid, unsigned char lv)
@@ -3975,9 +3975,9 @@ void __fastcall__ s_regard (unsigned char f, unsigned char pts)
 ** interest, at steps by its attitude and its kind too; a critical success two steps, a success one, a critical failure
 ** an insult (a step back, the gift refused: grade G_BADLY), as far as friendly (a gift doesn't make an ally); taken (but
 ** refused), the world's to hand over (the UI's), and its faction's regard the more (reputation) */
-#pragma code-name (push, "SW16CODE")            /* (Part 16's since 2026-11-02: part 5's room, the market's beside it;
+#pragma code-name (push, "SW_gifts_CODE")            /* (Part 16's since 2026-11-02: part 5's room, the market's beside it;
                                                 **   a part of its own, seldom called) */
-#pragma rodata-name (push, "SW16RODATA")
+#pragma rodata-name (push, "SW_gifts_RODATA")
 #pragma static-locals (push, off)               /* (On the C stack: the main RAM's none) */
 static const unsigned means[5] = { 4, 16, 48, 192, 960 };   /* (Farthings: a penny, 4d, 12d, 48d, 240d) */
 
@@ -4226,7 +4226,7 @@ void __fastcall__ s_gift (unsigned char k)
 
 /* Whether name n (an actor's, or a kind's) is meant by w (the parser's word, in lower case): the start of one of its
 ** words ("rat", "giant", "grub") */
-#pragma bss-name (push, "SW2RODATA")           /* (Its buffer the part's own: the main RAM's room, 2026-11-02) */
+#pragma bss-name (push, "SW_sway_RODATA")           /* (Its buffer the part's own: the main RAM's room, 2026-11-02) */
 static unsigned char __fastcall__ called (const char* n, const char* w)
 {
     static char b[12];
@@ -4549,8 +4549,8 @@ unroused:
 
 /* ---- The minds, the verbs plan's batch B3 (2026-11-10, DECISIONS.md's "Words said, a knock, the minds swayed"):
 ** s_sway's, part 24's (its own: part 2's room, part 16's swap area full) */
-#pragma code-name (push, "SW24CODE")
-#pragma rodata-name (push, "SW24RODATA")
+#pragma code-name (push, "SW_minds_swayed_CODE")
+#pragma rodata-name (push, "SW_minds_swayed_RODATA")
 #pragma static-locals (push, off)               /* (On the C stack: the main RAM's none) */
 
 /* A test of the character's in the denizens' slot (purpose p, steps st), its words in tongue tg ("": none wanted): the
@@ -4874,14 +4874,14 @@ void __fastcall__ s_minded (unsigned char k)
 unsigned char __fastcall__ ovl_load (const char* dir);
 unsigned char __fastcall__ num (const char* s);
 
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW_records_CODE")
+#pragma rodata-name (push, "SW_records_RODATA")
 
 /* The task begun (argv: its hub, the world's task, its library's directory, dir; main's, the main RAM's room, 2026-11-06),
 ** its banks had, the hub attached: the kinds read in (dir's), the theme's denizens, the records new or the game's kept
 ** ones read back: 0, or -1 */
-#pragma code-name (push, "SW23CODE")
-#pragma rodata-name (push, "SW23RODATA")
+#pragma code-name (push, "SW_start_CODE")
+#pragma rodata-name (push, "SW_start_RODATA")
 
 int __fastcall__ s_start (char** argv)
 {
@@ -5063,15 +5063,15 @@ int main (int argc, char* argv[])
 /* ==== The records paged (see its head), what every call wants: part 1's, with populate that calls them most (part
 ** 3's till 2026-11-04, the swap study's: parts 1 and 3 and 4 put each other out, a third of this task's copies, a
 ** tenth of part 3's bytes run); a region not in the table, and one put out to make room, part 21's */
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW_populations_CODE")
+#pragma rodata-name (push, "SW_populations_RODATA")
 
 unsigned char rsn, rrx, rry;                    /* (A region: found, written, read) */
 static unsigned char ksn, krx, kry;             /* (The region at hand: not put out to make room for its own) */
 char vpth[56];
 
 /* Region rsn, rrx, rry's entry in the table, or 0xFF (a free one, rfree: 0xFF none: the record store's) */
-#pragma data-name (push, "SW1RODATA")
+#pragma data-name (push, "SW_populations_RODATA")
 static struct rpt drt = { RP_FIND, NDREG, sizeof hd.reg[0], 0x07, hd.reg, 3 /* (its stamp) */ };
 #pragma data-name (pop)
 unsigned char rfree;
@@ -5151,13 +5151,13 @@ void s_dneed (void)
 #pragma rodata-name (pop)
 
 /* ==== Part 21: a region not in the table, read in; one put out to make room (part 3's till 2026-11-04) */
-#pragma code-name (push, "SW21CODE")
-#pragma rodata-name (push, "SW21RODATA")
+#pragma code-name (push, "SW_regions_CODE")
+#pragma rodata-name (push, "SW_regions_RODATA")
 
 #pragma bss-name (push, "BSS")
 static struct rpk dn_kind;                      /* (Its versions counted: the main RAM's) */
 #pragma bss-name (pop)
-#pragma bss-name (push, "SW21RODATA")           /* (rp.inc's block, the part's own) */
+#pragma bss-name (push, "SW_regions_RODATA")           /* (rp.inc's block, the part's own) */
 #define RP_STATIC       static
 #define RP_KIND         dn_kind
 #include "../dq0/rp.inc"
@@ -5236,7 +5236,7 @@ static unsigned char __fastcall__ reg_out (unsigned char k)
 /* (make_room's: the lair and the denizen at hand kept, the records put out read through L and D) */
 static struct lair sl;
 static struct den sd;
-#pragma data-name (push, "SW21RODATA")
+#pragma data-name (push, "SW_regions_RODATA")
 static struct rpt dro = { RP_OLDEST, NDREG, sizeof hd.reg[0], 0x07, hd.reg, 3 /* (its stamp) */, RTF_HAND, 0, { 0 }, 0, 0, 0, 0, 0, 1, 2 };   /* (The table: the one made way for) */
 #pragma data-name (pop)
 unsigned char s_make_room (void)
@@ -5305,8 +5305,8 @@ unsigned char __fastcall__ s_reg_load (unsigned char sn, unsigned char rx, unsig
 #pragma rodata-name (pop)
 
 /* ==== Part 4: the regions round the character wanted, and the records kept */
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW_records_CODE")
+#pragma rodata-name (push, "SW_records_RODATA")
 
 /* (Part 3's, a copy of its own) */
 /* The region of the denizen in D (its square's; not placed, its lair's) into rsn, rrx, rry */
@@ -5326,9 +5326,9 @@ static void den_region4 (void)
 /* (Part 8's since 2026-10-31: part 4's room, then the main RAM's) The places kept lit (the hub's KEPT_AT) written to the
 ** save's dens.dat, after the records' bank (fd), a piece at a time through the main RAM; or read back (back: nothing
 ** there, none) */
-#pragma code-name (push, "SW8CODE")
-#pragma code-name (push, "SW22CODE")
-#pragma rodata-name (push, "SW22RODATA")
+#pragma code-name (push, "SW_bodies_CODE")
+#pragma code-name (push, "SW_bodies_rare_CODE")
+#pragma rodata-name (push, "SW_bodies_rare_RODATA")
 void __fastcall__ s_kept_file (int fd, unsigned char back)
 {
     unsigned off, n;
@@ -5434,9 +5434,9 @@ void __fastcall__ s_keep (unsigned char back)
 ** (hears the fight's din: its hearing, a fight as loud as the world's blows; not one senseless) tests at once (not one
 ** fleeing already), the fallen's influence gone, its bond to it gone if it was its leader (dead: known lost from then,
 ** its record's D_LOST; one that doesn't know of it keeps its bond, the fall unfelt till it's known: told, the hook). */
-#pragma code-name (push, "SW6CODE")
-#pragma rodata-name (push, "SW6RODATA")
-#pragma bss-name (push, "SW6RODATA")            /* (Its locals the part's own: the main RAM's room) */
+#pragma code-name (push, "SW_morale_CODE")
+#pragma rodata-name (push, "SW_morale_RODATA")
+#pragma bss-name (push, "SW_morale_RODATA")            /* (Its locals the part's own: the main RAM's room) */
 #pragma register-vars (push, on)                /* (Its records' pointers in the zero page) */
 
 #define FIELD_R         8                       /* Squares an actor's influence reaches (all of it beside one, half at
@@ -5833,9 +5833,9 @@ void __fastcall__ s_told (unsigned char j)
 #pragma rodata-name (pop)
 
 /* ==== Part 7 again: the bonds aged (part 6's room, 2026-10-30; not part 5, the hunters' own, copied in at every scent) */
-#pragma code-name (push, "SW7CODE")
-#pragma rodata-name (push, "SW7RODATA")
-#pragma bss-name (push, "SW7RODATA")
+#pragma code-name (push, "SW_succession_CODE")
+#pragma rodata-name (push, "SW_succession_RODATA")
+#pragma bss-name (push, "SW_succession_RODATA")
 #pragma register-vars (push, on)
 
 /* The bonds aged by the clock (roam's, a day or more gone since they last were): each record not an actor (an
@@ -5884,9 +5884,9 @@ void s_age (void)
 #pragma rodata-name (pop)
 
 /* ==== Part 7: succession (the user's, 2026-10-30: part 6's room) */
-#pragma code-name (push, "SW7CODE")
-#pragma rodata-name (push, "SW7RODATA")
-#pragma bss-name (push, "SW7RODATA")
+#pragma code-name (push, "SW_succession_CODE")
+#pragma rodata-name (push, "SW_succession_RODATA")
+#pragma bss-name (push, "SW_succession_RODATA")
 
 /* A leader dead (record x, its rank above the rank and file): its post taken by the most influential of those
 ** directly below it (the user's, 2026-10-30): of its faction's next rank down if it was the faction's highest (none
@@ -6028,8 +6028,8 @@ static unsigned m0, dday;
 #define MF(f)           { offsetof (struct mind, f), sizeof md.f[0] },
 #define MS(f)           + sizeof md.f[0]
 typedef char mind_all[sizeof (struct mind) == NACTORS * (0 MIND_FIELDS (MS)) ? 1 : -1];
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW_records_CODE")
+#pragma rodata-name (push, "SW_records_RODATA")
 static const struct { unsigned off; unsigned char n; } mfield[] = { MIND_FIELDS (MF) };
 #pragma static-locals (push, on)
 static void __fastcall__ fresh (unsigned char k)
@@ -6051,8 +6051,8 @@ static void __fastcall__ fresh (unsigned char k)
 static unsigned char __fastcall__ pastime (unsigned id);   /* (Below) */
 #define SOCIAL          0x3E                    /* (The pastimes a lair's at leisure share: dice to drink, PT_SOCIAL's) */
 
-#pragma code-name (push, "SW9CODE")
-#pragma rodata-name (push, "SW9RODATA")
+#pragma code-name (push, "SW_day_CODE")
+#pragma rodata-name (push, "SW_day_RODATA")
 
 static const unsigned cyc[3][3] = {             /* (A day's period, its waking and its waking hours, minutes from
                                                 **   midnight: diurnal, nocturnal, crepuscular) */
@@ -6265,8 +6265,8 @@ static void __fastcall__ meal (unsigned char k)
 /* The hour the game began at (hour0), as the day's first asked (sched's): the environment's dq0hour, a test's scene,
 ** else by the game's seed (the user's, 2026-11-03: "vary by game"), dq0 -E's dusk, the tests'.  Part 3's (part 9's room,
 ** and 10's) */
-#pragma code-name (push, "SW3CODE")
-#pragma rodata-name (push, "SW3RODATA")
+#pragma code-name (push, "SW_placing_CODE")
+#pragma rodata-name (push, "SW_placing_RODATA")
 void s_hour (void)
 {
     static struct hy_regs r;
@@ -6294,10 +6294,10 @@ void s_hour (void)
 ** (the house's: the intruder suspected), and each of its faction's actors' too, each woken, alerted (facing the
 ** shout, sensing again: a while still); a leader's body, each told of its leaders' deaths (part 6's hook, told: known
 ** lost, its courage tested).  K its own after.  Part 10's (asked only while its faction has a body not found: unf) */
-#pragma code-name (push, "SW10CODE")
-#pragma rodata-name (push, "SW10RODATA")
-#pragma code-name (push, "SW19CODE")
-#pragma rodata-name (push, "SW19RODATA")
+#pragma code-name (push, "SW_day_kept_CODE")
+#pragma rodata-name (push, "SW_day_kept_RODATA")
+#pragma code-name (push, "SW_body_found_CODE")
+#pragma rodata-name (push, "SW_body_found_RODATA")
 unsigned char __fastcall__ s_found (unsigned char k)
 {
     struct den* r = POP->den;
@@ -6355,8 +6355,8 @@ unsigned char __fastcall__ s_found (unsigned char k)
 ** they next reckon, part 6's), the finder's too.  Part 19's (part 10's room; asked only while its faction has a body not found: unf) */
 #define RF_R            24                      /* (The gathering's reach: an actor's, ACT_R) */
 #define RF_STAY         6000                    /* (Ten minutes there, at least) */
-#pragma code-name (push, "SW19CODE")
-#pragma rodata-name (push, "SW19RODATA")
+#pragma code-name (push, "SW_body_found_CODE")
+#pragma rodata-name (push, "SW_body_found_RODATA")
 void s_rfound (void)
 {
     struct den* r = POP->den;
@@ -6490,8 +6490,8 @@ unsigned char __fastcall__ s_wander (unsigned char lim)
 ** to its work's room and at work; on watch, walking its rounds (its lair's chunk's rooms in turn, a fellow on watch
 ** near talked to as it gets to each); out of the character's sight at the turns pace, coarsely, a few squares at a
 ** time.  Its step, 0xFE a wait (wt), or 0xFF (about: decide's own idle ways, as ever) */
-#pragma code-name (push, "SW10CODE")
-#pragma rodata-name (push, "SW10RODATA")
+#pragma code-name (push, "SW_day_kept_CODE")
+#pragma rodata-name (push, "SW_day_kept_RODATA")
 unsigned char __fastcall__ s_daily (unsigned char k)
 {
     struct actor* q;

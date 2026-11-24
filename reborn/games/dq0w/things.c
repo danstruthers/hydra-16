@@ -433,14 +433,14 @@ unsigned char __fastcall__ on_pc (unsigned i)
 }
 
 /* ==== Part 10: the requests answered, a thing handled (and what the catalogue's bank's code calls on: its stubs) */
-#pragma code-name (push, "SW10CODE")
-#pragma rodata-name (push, "SW10RODATA")
+#pragma code-name (push, "SW_things_CODE")
+#pragma rodata-name (push, "SW_things_RODATA")
 
 /* Where a thing lies about: on a square, or on a surface that is (a table's): the record on the square (its own, or
 ** the surface's, copied), or 0 */
 static const struct item* __fastcall__ lying (const struct item* q)
 {
-#pragma bss-name (push, "SW10RODATA")
+#pragma bss-name (push, "SW_things_RODATA")
     static struct item s;                       /* (Part 10's own: its one caller, s_in_reach, swaps no part in while
                                                 **   it's used; the main RAM's room, 2026-11-18) */
 #pragma bss-name (pop)
@@ -690,8 +690,8 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
 unsigned char __fastcall__ zone_step (unsigned ox, unsigned oy, unsigned x, unsigned y);  /* (dq0w.c's part 24) */
 
 #pragma static-locals (push, on)
-#pragma code-name (push, "SW56CODE")
-#pragma rodata-name (push, "SW56RODATA")
+#pragma code-name (push, "SW_reach_CODE")
+#pragma rodata-name (push, "SW_reach_RODATA")
 
 /* What reaching into container c is (rec its record, copied: what holds it, lw and lx): 0 open to the hand, a quick
 ** draw (not a container: a belt, a surface; one that hangs from a belt, a pouch, a quiver, a sheath; one worn, but a
@@ -823,8 +823,8 @@ unsigned __fastcall__ s_reach_done (unsigned char said)
 ** the pack goes back on as the character's free (rs_after_on, act.work's: the world's own step).  An intent's
 ** tool the same by the world alone (reach_do with its keys: lw_m asked again).  The requests that don't ask for the
 ** steps (IO_STEPS: a blow's weapon, a denizen's) keep the lump, reach_done's */
-#pragma code-name (push, "SW85CODE")
-#pragma rodata-name (push, "SW85RODATA")
+#pragma code-name (push, "SW_reach_steps_CODE")
+#pragma rodata-name (push, "SW_reach_steps_RODATA")
 #pragma register-vars (push, on)
 
 unsigned rs_pack;                               /* (The pack off for this handling) */
@@ -1039,8 +1039,8 @@ void __fastcall__ s_rs_queue (unsigned char e)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW87CODE")
-#pragma rodata-name (push, "SW87RODATA")
+#pragma code-name (push, "SW_reach_more_CODE")
+#pragma rodata-name (push, "SW_reach_more_RODATA")
 #pragma static-locals (push, off)
 
 /* A flame to hand (IO_LIGHT's, the catalogue's bank's light): a thing lit, carried or within reach, 1; or a fire-maker
@@ -1252,8 +1252,8 @@ static void __fastcall__ name_of (unsigned n, unsigned char first);     /* (The 
 static unsigned char __fastcall__ no (unsigned char n);
 static unsigned char __fastcall__ yes (unsigned char n, unsigned char t);
 static unsigned char __fastcall__ hold (unsigned n);
-#pragma code-name (push, "SW90CODE")
-#pragma rodata-name (push, "SW90RODATA")
+#pragma code-name (push, "SW_hands_free_CODE")
+#pragma rodata-name (push, "SW_hands_free_RODATA")
 #pragma static-locals (push, off)
 /* ---- Hands made free (the user's, 2026-11-03: "If your hands are busy and your want to ready tools or other things, it should
 ** probably put the other things away first (in their appropriate place) then take the tools in hand.  A torch would be placed in a
@@ -1476,8 +1476,8 @@ out:
 
 /* A step's end of these (rstep.edge, rstep.thing): the tool in hand, kept to go back; the tool back where it came from, or the pack; put in its
 ** place; slung.  (Part 75's: part 90's overlay's room, 2026-11-04) */
-#pragma code-name (push, "SW75CODE")
-#pragma rodata-name (push, "SW75RODATA")
+#pragma code-name (push, "SW_water_depth_CODE")
+#pragma rodata-name (push, "SW_water_depth_RODATA")
 void s_rs_did2 (void)
 {
     unsigned n = rstep.thing, c;
@@ -1604,8 +1604,8 @@ unsigned char __fastcall__ s_rs_more (unsigned char w)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW86CODE")
-#pragma rodata-name (push, "SW86RODATA")
+#pragma code-name (push, "SW_reach_do_CODE")
+#pragma rodata-name (push, "SW_reach_do_RODATA")
 
 /* ---- A torch dipped (HOUSE.md's a torch redipped: the user's, 2026-11-02, "Fumbling about in the dark should be
 ** difficult ..."; part 27's fill, past its refusals, each ask; RO_REDIP, handled the torch): the next step of what comes
@@ -2123,8 +2123,8 @@ back:
 
 /* ==== Part 92 (part 10's till 2026-11-03: every call a handling makes out to another part comes back here, and part 10
 ** all its 3,600 bytes each time: the user's D17): a request of the things served */
-#pragma code-name (push, "SW92CODE")
-#pragma rodata-name (push, "SW92RODATA")
+#pragma code-name (push, "SW_serve_CODE")
+#pragma rodata-name (push, "SW_serve_RODATA")
 
 /* (Part 92's own: none owed, serve's) */
 static void rclear10 (void)
@@ -2197,14 +2197,14 @@ void s_tools (void)
     HUB->ireq.y = hh;
 }
 
-#pragma code-name (push, "SW92CODE")
-#pragma rodata-name (push, "SW92RODATA")
+#pragma code-name (push, "SW_serve_CODE")
+#pragma rodata-name (push, "SW_serve_RODATA")
 
 /* What's in the character's hands (IO_HANDS: a blow with nothing named, the UI's), their kinds in the request's x, its
 ** main hand's (or a thing's in both), and y, its other's (0 none: held_kinds') */
 
-#pragma code-name (push, "SW102CODE")         /* (Part 102's, 2026-11-06: overlay 5's room, part 92's image's) */
-#pragma rodata-name (push, "SW102RODATA")
+#pragma code-name (push, "SW_tell_apart_CODE")         /* (Part 102's, 2026-11-06: overlay 5's room, part 92's image's) */
+#pragma rodata-name (push, "SW_tell_apart_RODATA")
 /* ---- A thing told apart (the user's playtest, 2026-11-06: "You put the torch in your backpack." of the spent one as a
 ** new one's lit): its state's word (AW_*), the thing in rec: a light lit, burnt out, or neither; a fuel empty */
 static unsigned char aw_of (void)
@@ -2280,7 +2280,7 @@ void __fastcall__ s_name_apart (unsigned i, char* d)
 
 /* What the character carries, for the UI's first words (the UI bank's ix, struct cix's: the store's order), made as what
 ** it carries changes (light_now's, serve's) */
-#pragma bss-name (push, "SW102RODATA")        /* (Part 102's image's, wanted only as it's made: the main RAM's room) */
+#pragma bss-name (push, "SW_tell_apart_RODATA")        /* (Part 102's image's, wanted only as it's made: the main RAM's room) */
 unsigned ixi[NIX];                              /* (Each one's record, */
 unsigned ixd[NIX];                              /*   its key in the letters, its id or its record's | LT_REC, */
 struct cix ixc[NIX];                            /*   its words for the UI: letter.s's too) */
@@ -2711,8 +2711,8 @@ unsigned char s_serve (void)
 
 /* ==== Part 13 (part 26's till 2026-10-28: overlay 9's room, the lights' burning's): the map making, as the light
 ** (slice 4.2's; the world's parts are 51 at most, swap.inc's table) */
-#pragma code-name (push, "SW13CODE")
-#pragma rodata-name (push, "SW13RODATA")
+#pragma code-name (push, "SW_item_store_CODE")
+#pragma rodata-name (push, "SW_item_store_RODATA")
 
 /* The character's map making (the hub's pc_chart and pc_map: DUNGEON.md, the map kept; HOUSE.md's), by what it
 ** carries: the things to draw a map with handy (in hand, or on the body, in nothing that isn't open to the hand:
@@ -2790,8 +2790,8 @@ void s_chart_now (void)
 #pragma rodata-name (pop)
 
 /* ==== Part 4 (store.c's, its room): a thing thrown */
-#pragma code-name (push, "SW88CODE")           /* (Part 4 full, 2026-11-03) */
-#pragma rodata-name (push, "SW88RODATA")
+#pragma code-name (push, "SW_hub_attach_CODE")           /* (Part 4 full, 2026-11-03) */
+#pragma rodata-name (push, "SW_hub_attach_RODATA")
 
 /* A thing thrown (the UI's IO_THROW, the character's: the same for every actor, as their minds come to throw), the
 ** one named that it carries ("": the first in its hands), at a mark (the request's x, y: a square it sees, a denizen's
@@ -2925,8 +2925,8 @@ unsigned char __fastcall__ s_throw_at (const char* name)
 /* ==== Part 4 (its room): a thing of several chosen (the user's, 2026-10-21: "There is also no way to disambiguate
 ** between which item of multiple that you want to use"); things moved by the count ("drop two sacks", "take 4
 ** rations"), a lot split and joined again; what closes worked (a lid, a tie, a stopper, a lock: "open the chest") */
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW_ui_requests_CODE")
+#pragma rodata-name (push, "SW_ui_requests_RODATA")
 #pragma static-locals (push, on)              /* (None called again before it's done: their code the less) */
 
 /* How thing i lies, for the chooser: how deep it is in others (0: in none), its outermost (on the character, on a
@@ -3018,7 +3018,7 @@ static unsigned char __fastcall__ name_comp (unsigned char k, const char* name)
     return named (kinds[k].name, name) ? 0 : comp_named (k, name);
 }
 
-#pragma bss-name (push, "SW4RODATA")            /* (pick_'s locals, static: part 4's own, none of its calls swapping a
+#pragma bss-name (push, "SW_ui_requests_RODATA")            /* (pick_'s locals, static: part 4's own, none of its calls swapping a
                                                 **   part in; the main RAM's room, 2026-11-18) */
 static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigned char* no)
 {
@@ -3238,8 +3238,8 @@ unsigned __fastcall__ s_look_pick (void)
 /* A tool used, got out first (HOUSE.md's handy tools: its reach owed, part 10's; part 4's, its room): the first the
 ** character carries whose key (the catalogue's: the referee's to choose by) is one of keys ("pick\0shovel\0": each
 ** 0-ended, an empty one last: a dig begun, a lock's picking) */
-#pragma code-name (push, "SW72CODE")            /* (Part 72's since 2026-11-02: part 4's room, overlay 2's) */
-#pragma rodata-name (push, "SW72RODATA")
+#pragma code-name (push, "SW_errands_CODE")            /* (Part 72's since 2026-11-02: part 4's room, overlay 2's) */
+#pragma rodata-name (push, "SW_errands_RODATA")
 unsigned char __fastcall__ s_tool_reach (const char* keys)
 {
     const char* k;
@@ -3274,8 +3274,8 @@ unsigned char __fastcall__ s_tool_reach (const char* keys)
 
 /* ==== Part 35 (its own, slice 4.1's: the user's, 2026-10-21): things moved by the count ("drop two sacks", "take 4
 ** rations"), a lot split and joined again */
-#pragma code-name (push, "SW35CODE")
-#pragma rodata-name (push, "SW35RODATA")
+#pragma code-name (push, "SW_by_count_CODE")
+#pragma rodata-name (push, "SW_by_count_RODATA")
 #pragma static-locals (push, on)
 
 /* ---- Taken up (n: seen, the chooser's): into the backpack if it fits (its room, its weight, what it keeps), else in
@@ -3322,8 +3322,8 @@ static unsigned char __fastcall__ get (unsigned n)
 ** hand: part 35's, the catalogue's bank's code's through its stub) */
 /* (Part 106's, where the packer put it to make part 35 fit: there by its pragma now, part 35 its headroom kept,
 ** 2026-11-18) */
-#pragma code-name (push, "SW106CODE")
-#pragma rodata-name (push, "SW106RODATA")
+#pragma code-name (push, "SW_grapple_CODE")
+#pragma rodata-name (push, "SW_grapple_RODATA")
 unsigned __fastcall__ s_shut_in (unsigned n)
 {
     unsigned c;
@@ -3344,9 +3344,9 @@ unsigned __fastcall__ s_shut_in (unsigned n)
 ** the request's x) and IR_NO (nothing about it changed); or (iq's to 1) it set in the door's brackets, a portal's part
 ** again on iq's square, the bar's side (the world's barred the door): part 35's, the catalogue's bank's room (its
 ** o_handle's through its stub) */
-#pragma code-name (push, "SW105CODE")           /* (Part 105's since 2026-11-06: part 4's room, the letters'; part 4's since
+#pragma code-name (push, "SW_inventory_CODE")           /* (Part 105's since 2026-11-06: part 4's room, the letters'; part 4's since
                                                 **   2026-11-03, part 35's room) */
-#pragma rodata-name (push, "SW105RODATA")
+#pragma rodata-name (push, "SW_inventory_RODATA")
 unsigned char s_bar_hand (void)
 {
     unsigned n, best;
@@ -3514,7 +3514,7 @@ static void take_keep (void)
 ** those alike once: two or more that differ, each one's id, kind, count and state (WS_*) into the text for the UI to
 ** word and ask ("12 7 1 1|13 7 1 2|"), IR_WHICH; else 0 (one, or all alike: the chooser's, as ever) */
 #define NWHICH          4
-#pragma bss-name (push, "SW35RODATA")           /* (Its locals the part's own: the main RAM's room) */
+#pragma bss-name (push, "SW_by_count_RODATA")           /* (Its locals the part's own: the main RAM's room) */
 static unsigned char which (void)
 {
     static unsigned id[NWHICH], q[NWHICH];
@@ -3573,9 +3573,9 @@ static unsigned char which (void)
 ** thing's id and each place's id in the text for the UI to ask where ("W12|30|30p|31|": p, the side pocket of that one);
 ** one, that one (the request made a put into it, "#" and its id, or "side pocket", the compartment by its own name; the
 ** pack's, a stow as ever); none, as ever */
-#pragma code-name (push, "SW74CODE")            /* (Part 74's: part 35's room, overlay 19's; not dq0w.rop's, part 104's,
+#pragma code-name (push, "SW_waterskin_CODE")            /* (Part 74's: part 35's room, overlay 19's; not dq0w.rop's, part 104's,
                                                 **   read in only as a rope's first wanted) */
-#pragma rodata-name (push, "SW74RODATA")
+#pragma rodata-name (push, "SW_waterskin_RODATA")
 #pragma static-locals (push, off)               /* (Its locals the C stack's: the catalogue's o_fits calls parts, this one
                                                 **   copied in again after, its own data as it was) */
 unsigned char s_stow_where (void)
@@ -3814,8 +3814,8 @@ unsigned char __fastcall__ s_moved (unsigned char op)
 /* How many of kind k, in words, into b: "a sack", "two sacks", "12 sacks"; a lot counted (KF_COUNT), its count in
 ** digits, "4 rations"; one of a lot, "a ration", "a penny" (part 105's since 2026-11-06, part 35's room: through its
 ** stub; an inventory's alike the quicker, part 105 the smaller to swap in) */
-#pragma code-name (push, "SW105CODE")
-#pragma rodata-name (push, "SW105RODATA")
+#pragma code-name (push, "SW_inventory_CODE")
+#pragma rodata-name (push, "SW_inventory_RODATA")
 void __fastcall__ s_many (char* b, unsigned n, unsigned char k)
 {
     static const char* const few[11] = { "no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
@@ -3906,8 +3906,8 @@ void __fastcall__ s_took_list (char* b)
 /* (Part 16's: I_TAKE's walk over to a thing, a count taken up as it gets there: the request as it was, its count;
 ** wgame.c's take_up, its one caller, in its part since 2026-11-18: part 35's room, its call of s_moved the swap
 ** take_up's call of it was) */
-#pragma code-name (push, "SW16CODE")
-#pragma rodata-name (push, "SW16RODATA")
+#pragma code-name (push, "SW_game_rules_CODE")
+#pragma rodata-name (push, "SW_game_rules_RODATA")
 unsigned char s_take_rest (void)
 {
     if (!take_cnt) {
@@ -3928,8 +3928,8 @@ unsigned char s_take_rest (void)
 #pragma rodata-name (pop)
 
 /* ==== Part 36 (its own, slice 4.1's): what closes worked; a tool's wear, a thing described (part 11's, its room) */
-#pragma code-name (push, "SW36CODE")
-#pragma rodata-name (push, "SW36RODATA")
+#pragma code-name (push, "SW_shut_work_CODE")
+#pragma rodata-name (push, "SW_shut_work_RODATA")
 #pragma static-locals (push, on)
 
 /* ---- What closes worked (IO_SHUT, the user's: "open the chest", "open the sack"; the catalogue's KF_CLOSES: a lid, a
@@ -4225,8 +4225,8 @@ done:
 #pragma static-locals (pop)
 
 /* ==== Part 61: what's in a thing (part 36's, its room: the keys that fit, 2026-10-27) */
-#pragma code-name (push, "SW61CODE")
-#pragma rodata-name (push, "SW61RODATA")
+#pragma code-name (push, "SW_inside_CODE")
+#pragma rodata-name (push, "SW_inside_RODATA")
 
 /* ---- What's in a thing, or on it (IO_INSIDE, the user's, 2026-10-21: "look in the sack", "look on the table", "look
 ** into the well"): the thing named (to hand: carried, or within reach; seen but out of reach, IR_NOT_HERE: the UI
@@ -4536,8 +4536,8 @@ void __fastcall__ s_slide (unsigned n)
 /* Box b locked, key k made to fit it alone (the kit's, dq0 -k's "chest,iron key": outmake.c's rule, every making's;
 ** HOUSE.md's keys that fit).  Part 13's, the stock's (part 61's till 2026-11-17: its room, the headroom rule's, a
 ** denizen's opening's slide) */
-#pragma code-name (push, "SW13CODE")
-#pragma rodata-name (push, "SW13RODATA")
+#pragma code-name (push, "SW_item_store_CODE")
+#pragma rodata-name (push, "SW_item_store_RODATA")
 void __fastcall__ s_kit_lock (unsigned b, unsigned k)
 {
     struct item* p;
@@ -4567,8 +4567,8 @@ void __fastcall__ s_kit_lock (unsigned b, unsigned k)
 #pragma rodata-name (pop)
 
 /* ==== Part 62: a denizen's things made out (2026-10-27) */
-#pragma code-name (push, "SW62CODE")
-#pragma rodata-name (push, "SW62RODATA")
+#pragma code-name (push, "SW_gear_words_CODE")
+#pragma rodata-name (push, "SW_gear_words_RODATA")
 
 /* (The list's last ", " made " and ": part 61's and_last, its own copy) */
 static void __fastcall__ and_last62 (char* from)
@@ -4794,8 +4794,8 @@ unsigned char s_gear_words (void)
 #pragma rodata-name (pop)
 
 /* (Part 40's, its room: part 36's once, part 11's before it) */
-#pragma code-name (push, "SW40CODE")
-#pragma rodata-name (push, "SW40RODATA")
+#pragma code-name (push, "SW_look_more_CODE")
+#pragma rodata-name (push, "SW_look_more_RODATA")
 
 /* The character's (on it, or in what it carries): part 10's on_pc, here too (wear's: a dig's every spell's, the
 ** parts not swapped for it); or, wear_did not 0, an actor's own (its thing, or in one of its: the one-path plan's
@@ -4844,8 +4844,8 @@ void __fastcall__ s_wear (const char* key, unsigned char by)
 /* ==== Part 39 (its own, 2026-10-22, the user's: "look at the chest", "examine the sword", "check its condition"): a
 ** thing looked at as anyone sees it, no test (IO_LOOK); its weight, its lock, it gone over for traps, part 40's, and a
 ** thing described for the appraiser there too (IO_DESCRIBE: part 36's once, its room) */
-#pragma code-name (push, "SW39CODE")
-#pragma rodata-name (push, "SW39RODATA")
+#pragma code-name (push, "SW_look_on_CODE")
+#pragma rodata-name (push, "SW_look_on_RODATA")
 #pragma static-locals (push, on)
 
 /* ---- A thing looked at (IO_LOOK: the request's to, LM_*), its words in the hub's text, as anyone sees it, no test:
@@ -5079,8 +5079,8 @@ feet:
 
 /* ==== Part 40 (its own, 2026-10-22): a thing's weight, its lock, it gone over for traps (part 39's look_at's: its
 ** name said already), and a thing described for the appraiser */
-#pragma code-name (push, "SW40CODE")
-#pragma rodata-name (push, "SW40RODATA")
+#pragma code-name (push, "SW_look_more_CODE")
+#pragma rodata-name (push, "SW_look_more_RODATA")
 #pragma static-locals (push, on)
 
 /* ---- A thing looked at closely (carried, or seen): what it truly is, in the request, for the appraiser's judgement
@@ -5146,7 +5146,7 @@ unsigned char __fastcall__ s_describe (const char* name)
     return IR_OK;
 }
 
-#pragma bss-name (push, "SW40RODATA")           /* (Its own data, wanted only while it runs: not the main RAM's) */
+#pragma bss-name (push, "SW_look_more_RODATA")           /* (Its own data, wanted only while it runs: not the main RAM's) */
 #pragma static-locals (push, on)
 /* The character's things as an outfit's list (outfit.h's struct ofit), its kit to carry on into a new dungeon (D8's,
 ** slice 4.4's): kit.dat in the save folder, written with the game (wgame.c's, LM_KIT: part 40's, none of
@@ -5333,8 +5333,8 @@ unsigned char __fastcall__ s_look_more (unsigned n, unsigned char mode)
 /* ==== Part 42 (its own, 2026-10-22): what a closer look at a thing shows (part 39's look_at's: its name said, its
 ** state told): what it's made of, its thickness, its wear, what's left of a light, a fuel, a lock's make; and its
 ** condition alone */
-#pragma code-name (push, "SW42CODE")
-#pragma rodata-name (push, "SW42RODATA")
+#pragma code-name (push, "SW_closer_CODE")
+#pragma rodata-name (push, "SW_closer_RODATA")
 #pragma static-locals (push, on)
 
 static const char matname[NMATS][8] = { "", "wood", "iron", "steel", "bronze", "leather", "hemp", "bone", "clay",
@@ -5388,7 +5388,7 @@ static void worn_words (void)
 ** (LM_COND: after its name, "... is battered, its edge dulled.") */
 /* Gone to a trap it knows of, the nearest in the chunk it's in ("go to the pit": the UI's resolve.c): where it is, as a
 ** thing's out of reach (the walk beside it, as near as it gets): ld the reply, IR_NOT_HERE; beside it, IR_OK; IR_NONE none */
-#pragma bss-name (push, "SW42RODATA")
+#pragma bss-name (push, "SW_closer_RODATA")
 static void spot_at (void)
 {
     static unsigned ox, oy;
@@ -5493,8 +5493,8 @@ void __fastcall__ s_closer (unsigned char mode)
 #pragma rodata-name (pop)
 
 /* ==== Part 11: what's carried listed, a search, a thing described, a thing hidden */
-#pragma code-name (push, "SW11CODE")
-#pragma rodata-name (push, "SW11RODATA")
+#pragma code-name (push, "SW_things_listed_CODE")
+#pragma rodata-name (push, "SW_things_listed_RODATA")
 
 /* ---- What the character carries, worded into the hub's text (things_text): each thing, and what's in it */
 
@@ -5790,8 +5790,8 @@ void s_list (void)
     put (" lb.");
 }
 
-#pragma code-name (push, "SW105CODE")
-#pragma rodata-name (push, "SW105RODATA")
+#pragma code-name (push, "SW_inventory_CODE")
+#pragma rodata-name (push, "SW_inventory_RODATA")
 /* What the character carries listed (IO_LIST): gathered first, then worded by part 11's s_list (part 105's, part 11's
 ** room: the letters, 2026-11-06; a part of its own, its swaps the shorter) */
 void s_inventory (void)
@@ -5849,9 +5849,9 @@ void __fastcall__ s_listed (unsigned n)
 #pragma rodata-name (pop)
 
 /* ==== Part 27 (dq0w.c's, the lights burning; its room): a light renewed */
-#pragma code-name (push, "SW100CODE")            /* (Part 100's since 2026-11-04, the swap study's: part 27's half, seldom run,
+#pragma code-name (push, "SW_refill_CODE")            /* (Part 100's since 2026-11-04, the swap study's: part 27's half, seldom run,
                                                 **   that every minute's look copied) */
-#pragma rodata-name (push, "SW100RODATA")
+#pragma rodata-name (push, "SW_refill_RODATA")
 
 SAY_PUT (say100)
 
@@ -5996,8 +5996,8 @@ unsigned char s_fill (void)
 
 /* ==== Part 13: the store's rarer work: begun, kept, the kit, the theme's kinds, a chunk's things and the remains
 ** put down */
-#pragma code-name (push, "SW13CODE")
-#pragma rodata-name (push, "SW13RODATA")
+#pragma code-name (push, "SW_item_store_CODE")
+#pragma rodata-name (push, "SW_item_store_RODATA")
 
 /* (Part 13's, with the kit that makes its things its own, ten at a time: once part 11's, the kit put out and in
 ** again for each) The materials' toughness (items.h's MT_*) */
@@ -6229,8 +6229,8 @@ unsigned __fastcall__ s_lay_body (unsigned char kind, unsigned char sn, unsigned
 ** only); known to the character, who hid it.  The act table's conceal row (the one-path plan's stage 2, 2026-11-21):
 ** its minute, its test by the one sender (act_test: a robber's stash its own sheet's, wfight.c's), HIDE_OF's steps */
 unsigned char __fastcall__ drop (const char* name);
-#pragma code-name (push, "SW101CODE")
-#pragma rodata-name (push, "SW101RODATA")
+#pragma code-name (push, "SW_hide_thing_CODE")
+#pragma rodata-name (push, "SW_hide_thing_RODATA")
 unsigned char __fastcall__ s_hide (const char* name)
 {
     struct actq q;
@@ -6926,8 +6926,8 @@ static unsigned char o_handle (void)
 ** dark by touch): the thing a search is for or on (IO_SEEK), and what a search turns up (IO_SEARCH, part 11's once), by
 ** its form (the world's srch_form: SF_*, | SF_TOUCH in the dark: HOUSE.md's searching); what's on a thing or in it,
 ** part 47's */
-#pragma code-name (push, "SW46CODE")
-#pragma rodata-name (push, "SW46RODATA")
+#pragma code-name (push, "SW_seek_CODE")
+#pragma rodata-name (push, "SW_seek_RODATA")
 #pragma static-locals (push, on)
 
 extern unsigned char srch_form;                 /* (dq0w.c's: the search under way's form) */
@@ -7148,8 +7148,8 @@ static unsigned char __fastcall__ poked (unsigned n, unsigned char touch)
 ** for a search said to be for them (by touch, SF_TRAPS: examine's, part 40's look_more: "The chest shows no sign of a
 ** trap ..."; the user's playtest, 2026-11-02: "it says 'no sign of a trap', but I am not looking for traps").  A room
 ** searched whole's look over a thing (IOS_THING), what a closer look shows besides (part 42's).  1 (its words) */
-#pragma code-name (push, "SW47CODE")
-#pragma rodata-name (push, "SW47RODATA")
+#pragma code-name (push, "SW_on_it_CODE")
+#pragma rodata-name (push, "SW_on_it_RODATA")
 #pragma static-locals (push, on)
 
 /* The referee's search test of a hidden compartment of the thing in rec (a false bottom, a secret drawer: the user's,
@@ -7267,8 +7267,8 @@ unsigned char __fastcall__ s_on_it (unsigned n, unsigned char touch)
 ** hands"); a useless arm's hand holds nothing (the user's, 2026-10-22: "For an arm or hand, that means no picking things
 ** up with that hand"), nor a two-handed thing; what's in them changed over ("swap hands").  The main hand is the
 ** referee's (its summary's limbs: the medical traits', left-handed, ambidextrous) */
-#pragma code-name (push, "SW48CODE")
-#pragma rodata-name (push, "SW48RODATA")
+#pragma code-name (push, "SW_work_done_CODE")
+#pragma rodata-name (push, "SW_work_done_RODATA")
 
 static const char* const hword[4] = { "", "left", "right", "both" };
 static unsigned char hmain, hdead, hused, hcur;  /* (The main hand, the useless ones, those holding something else, its
@@ -7514,8 +7514,8 @@ unsigned char __fastcall__ s_hold_in (unsigned n, unsigned char want)
 ** into the hub's text, its time in the request's x: IR_OK, or IR_NO (nothing held, a thing in both hands, a hand to go
 ** into useless) */
 void __fastcall__ hands_now (unsigned n);       /* (Its stub: part 48's) */
-#pragma code-name (push, "SW101CODE")
-#pragma rodata-name (push, "SW101RODATA")
+#pragma code-name (push, "SW_hide_thing_CODE")
+#pragma rodata-name (push, "SW_hide_thing_RODATA")
 SAY_PUT (say101)
 
 unsigned char s_swap (void)
@@ -7570,8 +7570,8 @@ unsigned char s_swap (void)
 #pragma rodata-name (pop)
 
 /* ==== Part 63 (2026-10-28: part 13's room, the coins'): the character's kit */
-#pragma code-name (push, "SW63CODE")
-#pragma rodata-name (push, "SW63RODATA")
+#pragma code-name (push, "SW_kit_CODE")
+#pragma rodata-name (push, "SW_kit_RODATA")
 #pragma static-locals (push, on)
 
 /* A free record taken, its thing put down (part 13's put_down, a copy of its own) */
@@ -7805,14 +7805,14 @@ void s_kit (void)
 ** no mix yet (its fuel 0) is given today's as it's first wanted (a purse, a hoard of now: four coins in five the
 ** region's own, the rest its neighbours' and the dwarves', the house's); an old era's coins are the maker's (its mint,
 ** whole: s_stock_down) */
-#pragma code-name (push, "SW64CODE")
-#pragma rodata-name (push, "SW64RODATA")
+#pragma code-name (push, "SW_mints_CODE")
+#pragma rodata-name (push, "SW_mints_RODATA")
 #pragma static-locals (push, on)
 
 static unsigned char cm_n, cm_era[TMINTS];      /* (The theme's mints: how many, each one's era) */
 /* (Each one's ways, and a pile's coins by mint, counts: part 64's own, each used with no part swapped in between, as
 ** s_mix_words' puts do; the main RAM's room, 2026-11-18) */
-#pragma bss-name (push, "SW64RODATA")
+#pragma bss-name (push, "SW_mints_RODATA")
 static unsigned char cm_ways[TMINTS];
 static unsigned cm_c[TMINTS + 1];
 #pragma bss-name (pop)
@@ -7847,7 +7847,7 @@ static void __fastcall__ cm_at (unsigned i)
 
 /* The groups made from the counts (cm_c, by mint), the four greatest, in fifteenths of their sum (each at least one,
 ** the greatest the rest), put in the pile's bytes (cm_b) */
-#pragma bss-name (push, "SW64RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
+#pragma bss-name (push, "SW_mints_RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
                                                 **   the main RAM's room, 2026-11-18) */
 static void cm_groups (void)
 {
@@ -7879,7 +7879,7 @@ static void cm_groups (void)
 /* Thing i's mix, if it's a pile of coins with none yet: today's (its numbers', no die: four coins in five, a fifth more
 ** or less, the region's own, the rest another's of today, a neighbour's or the dwarves'; a crown the gold one's, the
 ** dwarves') */
-#pragma bss-name (push, "SW64RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
+#pragma bss-name (push, "SW_mints_RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
                                                 **   the main RAM's room, 2026-11-18) */
 void __fastcall__ s_mix_need (unsigned i)
 {

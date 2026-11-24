@@ -32,7 +32,7 @@ unsigned char gchoke;                           /* (The rounds it's been choked,
 struct gleft glf;                               /* (wbody.h's: a blow's, for part 106's grip_left) */
 struct mshot mshot;                             /* (wbody.h's: a blow's missile, wshoot.c's) */
 extern unsigned char pshoot;                    /* (wshoot.c's: the character's fight a missile's) */
-#pragma bss-name (push, "SW15RODATA")
+#pragma bss-name (push, "SW_fight_blows_RODATA")
 static char wb[32];                             /* (A blow's words on their way to the ring, a piece at a time: part
                                                 **   15's image's, to_ring's alone, no part called as it's used; the
                                                 **   main RAM's room, 2026-10-29) */
@@ -41,8 +41,8 @@ static unsigned long bt;                        /* (A blow's moment, as its repl
 #pragma bss-name (pop)
 unsigned long blow_t;                           /* (wbody.h's: a denizen's blow's moment, its intent's; 0 the clock's) */
 
-#pragma code-name ("SW15CODE")
-#pragma rodata-name ("SW15RODATA")
+#pragma code-name ("SW_fight_blows_CODE")
+#pragma rodata-name ("SW_fight_blows_RODATA")
 
 extern unsigned char pc_hit;                    /* (dq0w.c's: a blow at the character stops its long task, hard) */
 extern unsigned char flast;                     /* (dq0w.c's: who struck at the character last; act.fight fighting on's) */
@@ -457,8 +457,8 @@ void s_pc_blow (void)
 /* ==== Part 106 (2026-11-09: part 15's room): grappling (HOUSE.md's grappling, the user's "full HarnMaster grappling":
 ** the hold the character has on a denizen, grip, kept as the blows leave it, a held one's intents its tries to break
 ** free, the hold let go) */
-#pragma code-name (push, "SW106CODE")
-#pragma rodata-name (push, "SW106RODATA")
+#pragma code-name (push, "SW_grapple_CODE")
+#pragma rodata-name (push, "SW_grapple_RODATA")
 
 /* Body bd's attack begun (s_den_intents' I_ATTACK, its doing not a fight's before it; at def, its aim z): a blow at the
 ** character, not a shot, told first as it closes with it (E_DEN's DE_CLOSES, the one sender's: "The bandit closes with
@@ -546,8 +546,8 @@ void __fastcall__ s_grip_held (struct msg* m)
     }
 }
 
-#pragma code-name (push, "SW37CODE")              /* (Part 37's, the intents': part 106's room in its bank) */
-#pragma rodata-name (push, "SW37RODATA")
+#pragma code-name (push, "SW_intent_more_CODE")              /* (Part 37's, the intents': part 106's room in its bank) */
+#pragma rodata-name (push, "SW_intent_more_RODATA")
 /* The hold let go (the player's "let go", or the character moved apart from the one it holds): told t 1 (E_FIGHT
 ** O_LETGO, its defender the one let go, the ring's record its name alone; none held, none: "You aren't holding
 ** anyone."), else quietly.  Its event as told's (part 15's), no blow at the character in it */
@@ -593,8 +593,8 @@ void __fastcall__ s_grip_off (unsigned char t)
 #pragma rodata-name (pop)
 
 /* ==== Part 69's (part 15's room, 2026-10-29; part 67's till 2026-10-30, the missiles' room: dq0w.cfg's SW69): a robbery */
-#pragma code-name ("SW69CODE")
-#pragma rodata-name ("SW69RODATA")
+#pragma code-name ("SW_robbery_CODE")
+#pragma rodata-name ("SW_robbery_RODATA")
 
 static struct item* p;
 

@@ -25,8 +25,8 @@
 #include "things.h"
 #include "wbody.h"
 
-#pragma code-name ("SW34CODE")
-#pragma rodata-name ("SW34RODATA")
+#pragma code-name ("SW_sconces_CODE")
+#pragma rodata-name ("SW_sconces_RODATA")
 #pragma local-strings (on)
 
 extern struct change rec;                       /* (store.c's: the record written) */
@@ -197,8 +197,8 @@ unsigned char __fastcall__ s_sconce_lights (unsigned char reach)
 ** maker would have kept lit had its keepers been placed (sconce.c's squares, by its dice, a copy; a room lit by its
 ** own light not), lit now (lit_late), one at a time; its locals the C stack's (a part it calls copies its image
 ** in again as it returns: none kept in its image) (the hub's header in the window after) */
-#pragma code-name (push, "SW71CODE")
-#pragma rodata-name (push, "SW71RODATA")
+#pragma code-name (push, "SW_kept_late_CODE")
+#pragma rodata-name (push, "SW_kept_late_RODATA")
 /* (Part 34's kept and room_lit, copies: no stubs for them, the main RAM's room) */
 /* Square x, y of stratum sn kept lit: within the range of a keeping whose keepers live (no further than their range
 ** either way from their lair's chunk's middle: the hub's places kept, the denizens'); the hub's header in the window

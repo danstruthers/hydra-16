@@ -32,8 +32,8 @@ unsigned char den_eq_all;                       /* (s_den_equip's: told even wit
                                                 **   bestiary's, untold) */
 
 #pragma local-strings (on)
-#pragma code-name ("SW49CODE")
-#pragma rodata-name ("SW49RODATA")
+#pragma code-name ("SW_limbs_CODE")
+#pragma rodata-name ("SW_limbs_RODATA")
 
 unsigned __fastcall__ weight_in (unsigned where, unsigned x);  /* (Part 10's, things.c's) */
 
@@ -228,8 +228,8 @@ void s_harm_fx (void)
 ** kept as the body's to take up again in its reach, its turn (the referee's RS_REARM, O_REARM); its legs at a move's
 ** start.  Its own part, the main RAM's room; and a denizen's things' making asked (part 60's once, 2026-10-29: its
 ** room, a shield readied) */
-#pragma code-name (push, "SW51CODE")
-#pragma rodata-name (push, "SW51RODATA")
+#pragma code-name (push, "SW_den_limbs_CODE")
+#pragma rodata-name (push, "SW_den_limbs_RODATA")
 
 static char dword[8];                           /* (Its weapon let fall, in a word: the referee's) */
 
@@ -273,7 +273,7 @@ unsigned char s_den_legs (void)
 ** its number, outfits.js's: the index read in, the character's outfit's, as the game began), or its personal things
 ** (KT_PURSE: its kind's or its standing's): 1, or 0 (none, or no index: a kind with no things of its own, part 57 not
 ** called) */
-#pragma bss-name (push, "SW51RODATA")          /* (Its locals its part's own: no part swapped in while it runs) */
+#pragma bss-name (push, "SW_den_limbs_RODATA")          /* (Its locals its part's own: no part swapped in while it runs) */
 static unsigned char hn, hf, rl, rh, ll, lh;
 static unsigned char* hq;
 #pragma bss-name (pop)
@@ -426,9 +426,9 @@ unsigned char s_den_reach (void)
 #pragma rodata-name (pop)
 
 void den_equip (void);
-#pragma code-name (push, "SW91CODE")            /* (Part 91's: part 60's room, 2026-11-03) */
-#pragma rodata-name (push, "SW91RODATA")
-#pragma bss-name (push, "SW91RODATA")
+#pragma code-name (push, "SW_den_drop_CODE")            /* (Part 91's: part 60's room, 2026-11-03) */
+#pragma rodata-name (push, "SW_den_drop_RODATA")
+#pragma bss-name (push, "SW_den_drop_RODATA")
 /* Its weapon on the floor (dword's kind: none of that name, nothing), beside it or where it stands (a d10: 1-6 the
 ** square that way, if it's open floor), kept as its (bd's arm, dropped), told (E_BEAT's WB_DROP, its kind, its b the
 ** body's: the denizens' ring, after the blow's words), the world to look about again.  A weapon of its own in its hand
@@ -501,15 +501,15 @@ void __fastcall__ s_den_drop (unsigned char den_brk)   /* (Broken as it's let fa
 
 /* ==== Part 60: the denizens' things (the outfits' gear, 2026-10-27), and a weapon let fall and taken up again (part
 ** 51's once: its room) */
-#pragma code-name (push, "SW60CODE")
-#pragma rodata-name (push, "SW60RODATA")
+#pragma code-name (push, "SW_den_things_CODE")
+#pragma rodata-name (push, "SW_den_things_RODATA")
 
 /* ---- The denizens' things (the outfits' gear, 2026-10-27: DENIZENS.md's gear; items.h's IW_DEN): made as a lair's
 ** placed (I_KIT's, the world's draw), filed at its lair's home, the actor's while it is one (its did: the hub's), told
 ** the referee as it comes near and as they change (RS_EQUIP's, the actor's), a weapon drawn from its belt before it
 ** strikes, on its body as it dies.  Their data the image's (each of these calls no part after it sets it: zeros each
 ** time it's copied in) */
-#pragma bss-name (push, "SW60RODATA")
+#pragma bss-name (push, "SW_den_things_RODATA")
 
 
 static struct kind dk;                          /* (A thing's kind, copied out) */

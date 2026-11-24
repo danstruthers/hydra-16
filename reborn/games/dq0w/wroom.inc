@@ -12,8 +12,8 @@
 ** done; so a second search goes on from there, or says it's done; a stop not finished isn't kept.  Every actor's rule
 ** where it applies: a denizen's search isn't asked for yet; its hook would be the same stops, wk.who its own.  A walk's
 ** leg goes by step_on, not arrive: no E_ARRIVE, no look told; but a hidden trap on its way, the walk's own way there */
-#pragma code-name (push, "SW82CODE")
-#pragma rodata-name (push, "SW82RODATA")
+#pragma code-name (push, "SW_room_search_CODE")
+#pragma rodata-name (push, "SW_room_search_RODATA")
 
 enum { RP_WALK = 1, RP_THINGS, RP_FLOOR, RP_TRAP };
 #define RS_FLOOR_T      100                     /* (A block's time, tenths: the search's own rate, a minute the 49 squares;
@@ -65,7 +65,7 @@ static void rs_rec (void)
 
 /* The block of stop rs_k (i, j among the blocks), the ring's side it lies on: 0 to 3, the north's on clockwise; 4 inside
 ** the outer ring */
-#pragma bss-name (push, "SW82RODATA")            /* (Its own, wanted only while it runs: no part called) */
+#pragma bss-name (push, "SW_room_search_RODATA")            /* (Its own, wanted only while it runs: no part called) */
 #pragma static-locals (push, on)
 static unsigned char __fastcall__ rs_block (unsigned char* pi, unsigned char* pj)
 {

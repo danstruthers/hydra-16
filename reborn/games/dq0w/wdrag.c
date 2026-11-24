@@ -42,9 +42,9 @@ unsigned __fastcall__ weight_of (unsigned i);   /* (Part 10's) */
 #define D_WT            iq.dur                  /*   its weight, */
 #define D_ONTO          iq.mat                  /*   the character's square its to go onto, a drag's) */
 
-#pragma code-name (push, "SW109CODE")
-#pragma rodata-name (push, "SW109RODATA")
-#pragma bss-name (push, "SW109RODATA")
+#pragma code-name (push, "SW_drag_CODE")
+#pragma rodata-name (push, "SW_drag_RODATA")
+#pragma bss-name (push, "SW_drag_RODATA")
 #pragma static-locals (push, on)
 
 /* A heavy thing (a kind shoved about, not carried: its bulk DRAG_BULK or more, not fixed where it stands) on stratum

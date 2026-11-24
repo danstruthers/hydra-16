@@ -29,9 +29,9 @@
 #include "things.h"
 
 #pragma local-strings (on)
-#pragma code-name ("SW103CODE")
-#pragma rodata-name ("SW103RODATA")
-#pragma bss-name ("SW103RODATA")               /* (Its statics its own, good only within a call that calls no stub) */
+#pragma code-name ("SW_well_CODE")
+#pragma rodata-name ("SW_well_RODATA")
+#pragma bss-name ("SW_well_RODATA")               /* (Its statics its own, good only within a call that calls no stub) */
 
 void __fastcall__ grow_below (unsigned char n);     /* (Part 3's) */
 void __fastcall__ put (const char* s);          /* (tlist.s's: the things' words, after those so far) */

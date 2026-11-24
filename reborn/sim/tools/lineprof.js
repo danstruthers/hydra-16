@@ -72,12 +72,12 @@ function segsOf(dir) {                               // (A program's C names' se
   }
   return seg;
 }
-function byPart(L, seg, swap) {                       // (Its labels split by where they are and their segment: the main
-  const r = { main: [], ov: {}, sw: {} };              //   RAM's, each overlay's, each part's)
-  for (const x of L) {
-    const g = seg[x[1].replace(/^_/, '')] || '', o = /^OV(\d+)/.exec(g), w = /^SW(\d+)/.exec(g);
+function byPart(L, seg, swap, parts) {                // (Its labels split by where they are and their segment: the main
+  const r = { main: [], ov: {}, sw: {}, names: parts.list };   //   RAM's, each overlay's, each part's, by its number:
+  for (const x of L) {                                 //   parts.js's names)
+    const g = seg[x[1].replace(/^_/, '')] || '', o = /^OV(\d+)/.exec(g), w = parts.of(g);
     if (x[0] >= 0x8000) { if (o) (r.ov[o[1]] = r.ov[o[1]] || []).push(x); }
-    else if (x[0] >= swap) { if (w) (r.sw[w[1]] = r.sw[w[1]] || []).push(x); }
+    else if (x[0] >= swap) { if (w) (r.sw[w] = r.sw[w] || []).push(x); }
     else r.main.push(x);
   }
   return r;
@@ -108,7 +108,8 @@ function profiler(name, from, to) {
     const s = lab[p].find(x => x[1] === 'swload'); if (s) swl[p] = s[0];
     const at = n => { const x = lab[p].find(y => y[1] === n); return x ? x[0] : -1; };
     const sa = (/^al ([0-9A-F]+) \.__SWAP_START__$/m.exec(fs.existsSync(path.join(ROOT, 'obj', 'games', p, p + '.lbl')) ? fs.readFileSync(path.join(ROOT, 'obj', 'games', p, p + '.lbl'), 'latin1') : '') || [])[1];
-    parts[p] = Object.assign(byPart(lab[p], segsOf(path.join(ROOT, 'obj', 'games', p)), sa ? parseInt(sa, 16) : 0x8000), { ovbank: at('_ovbank'), swapped: at('swapped'), swap: sa ? parseInt(sa, 16) : 0x8000 });
+    parts[p] = Object.assign(byPart(lab[p], segsOf(path.join(ROOT, 'obj', 'games', p)), sa ? parseInt(sa, 16) : 0x8000,
+      require('../../games/dq0/parts.js').names(path.join(ROOT, 'obj', 'games', p))), { ovbank: at('_ovbank'), swapped: at('swapped'), swap: sa ? parseInt(sa, 16) : 0x8000 });
   }
   const bios = dbgBanks(path.join(BASE, 'obj', 'kernel', 'bios.dbg'), s => { const b = /bank=(\d+)/.exec(s); return b ? +b[1] : null; });
   const mod = n => dbgBanks(path.join(ROOT, 'obj', 'modules', n, n + '.dbg'), s => { const o = /ooffs=(\d+)/.exec(s); return o ? Math.floor(+o[1] / 16384) : null; });
@@ -132,7 +133,7 @@ function profiler(name, from, to) {
       for (let n = 1; n < 64; n++) if (r[q.ovbank + n - 1] === r[0] && q.ov[n]) return near(q.ov[n], pc) + '(ov' + n + ')';
       return near(lab[p], pc) + '(win)';
     }
-    if (pc >= q.swap && pc < 0x8000 && q.swapped >= 0 && q.sw[r[q.swapped]]) return near(q.sw[r[q.swapped]], pc) + '(p' + r[q.swapped] + ')';
+    if (pc >= q.swap && pc < 0x8000 && q.swapped >= 0 && q.sw[r[q.swapped]]) return near(q.sw[r[q.swapped]], pc) + '(' + (q.names[r[q.swapped] - 1] || 'p' + r[q.swapped]) + ')';
     return near(q.main.length ? q.main : lab[p], pc);
   };
   const step = (T, W, pc, dc, c0) => {

@@ -21,8 +21,8 @@
 #include "tell.h"
 
 #pragma local-strings (on)
-#pragma code-name ("SW10CODE")
-#pragma rodata-name ("SW10RODATA")
+#pragma code-name ("SW_search_CODE")
+#pragma rodata-name ("SW_search_RODATA")
 
 extern unsigned char finds, busy;               /* (main.c's: a search's end awaited; the character busy) */
 unsigned char __fastcall__ things (unsigned char op, const char* name);    /* (main.c's) */

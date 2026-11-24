@@ -30,9 +30,9 @@ unsigned __fastcall__ pick (const char* name, unsigned char how);   /* (Part 4's
 unsigned char pour (void);                      /* (Part 112's: wpour.c, IO_EMPTY, every actor's) */
 unsigned char __fastcall__ den_things (const struct msg* m);   /* (Part 114's: wthings.c, a denizen's things) */
 
-#pragma code-name ("SW111CODE")
-#pragma rodata-name ("SW111RODATA")
-#pragma bss-name ("SW111RODATA")
+#pragma code-name ("SW_empty_CODE")
+#pragma rodata-name ("SW_empty_RODATA")
+#pragma bss-name ("SW_empty_RODATA")
 #pragma static-locals (on)
 
 /* A kind's name (the catalogue's) */

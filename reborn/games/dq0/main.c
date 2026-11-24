@@ -237,11 +237,11 @@ void __fastcall__ consctl (const char* what)
     }
 }
 
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW_start_end_CODE")
+#pragma rodata-name (push, "SW_start_end_RODATA")
 
-#pragma code-name (push, "SW7CODE")
-#pragma rodata-name (push, "SW7RODATA")
+#pragma code-name (push, "SW_game_args_CODE")
+#pragma rodata-name (push, "SW_game_args_RODATA")
 
 /* A game's own theme (theme.h): a game carried on, its save's (Q.theme 0xFF: its folder's); a new one's (a seed of
 ** 65,536 or more, or dq0 -t's) its region's history and its theme made by themegen from the game's seed, in the
@@ -381,8 +381,8 @@ struct req* __fastcall__ ask_b (unsigned char kind, unsigned char a, unsigned ch
 
 #define referee(kind, a)    ask_b ((kind), (a), 0)
 
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW_start_end_CODE")
+#pragma rodata-name (push, "SW_start_end_RODATA")
 
 /* The character's file read by the referee (its path in the slot already: character's): its name and its calling */
 static void load_pc (void)
@@ -473,8 +473,8 @@ static struct save sv;
 static unsigned char resumed;
 unsigned char plain;
 
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW_start_end_CODE")
+#pragma rodata-name (push, "SW_start_end_RODATA")
 
 static char* __fastcall__ save_path (const char* name)
 {
@@ -520,9 +520,9 @@ static unsigned char __fastcall__ life (unsigned char given)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW3CODE")             /* (Part 3's, the map's: part 1's room, slice 4.4's; none of the commands'
+#pragma code-name (push, "SW_map_CODE")             /* (Part 3's, the map's: part 1's room, slice 4.4's; none of the commands'
                                                 **   path the longer for it, part 13's copied in at every command) */
-#pragma rodata-name (push, "SW3RODATA")
+#pragma rodata-name (push, "SW_map_RODATA")
 
 /* The character's sheet (0), the referee's words; or the map (1), with its side's lines (part 2's room, 2026-11-03) */
 void __fastcall__ s_sheet_map (unsigned char what)
@@ -546,8 +546,8 @@ void __fastcall__ s_sheet_map (unsigned char what)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW14CODE")            /* (Part 14's since 2026-11-03: overlay 19's bank's room) */
-#pragma rodata-name (push, "SW14RODATA")
+#pragma code-name (push, "SW_positions_CODE")            /* (Part 14's since 2026-11-03: overlay 19's bank's room) */
+#pragma rodata-name (push, "SW_positions_RODATA")
 
 static char* __fastcall__ save_at (const char* name)
 {
@@ -611,8 +611,8 @@ void s_save_game (void)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW_start_end_CODE")
+#pragma rodata-name (push, "SW_start_end_RODATA")
 
 /* The save's names given (after its header) */
 static void __fastcall__ load_names (void)
@@ -644,14 +644,14 @@ void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsig
     hub_back (b);
 }
 
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW_start_end_CODE")
+#pragma rodata-name (push, "SW_start_end_RODATA")
 
 /* A task of the game's started, libdir/name in role t (more: its third argument, or none); or the game's over (but
 ** for the sound's: the game goes on silent) */
 static void __fastcall__ start (const char* name, unsigned char t, const char* more)
 {
-#pragma bss-name (push, "SW1RODATA")              /* (The part's own: no other part called while it's needed; the
+#pragma bss-name (push, "SW_start_end_RODATA")              /* (The part's own: no other part called while it's needed; the
                                                 **   main RAM's room, 2026-11-11) */
     static char path[56];
 #pragma bss-name (pop)
@@ -836,8 +836,8 @@ static void world_words (void)
     HUB->cq.state = REQ_FREE;
 }
 
-#pragma code-name (push, "SW7CODE")             /* (Part 7's: part 1 full) */
-#pragma rodata-name (push, "SW7RODATA")
+#pragma code-name (push, "SW_game_args_CODE")             /* (Part 7's: part 1 full) */
+#pragma rodata-name (push, "SW_game_args_RODATA")
 /* Another world's deities' names (WORLDS.md: lib/worlds/NAME/gods.txt, spaces between) into the parser's words at n,
 ** the commands' bank mapped after */
 void s_gods (void)
@@ -1340,8 +1340,8 @@ static unsigned char events (void)          /* (How many there were) */
 /* The character come down or up a way between strata (E_ARRIVE's A_DOWN, A_UP: the link's kind in w1's high four bits:
 ** a ladder, a stairway, a shaft, a long slope, slice 4.10's), told, and the game kept (main's events' till 2026-11-02:
 ** the main RAM's room; part 6's, its room) */
-#pragma code-name (push, "SW6CODE")
-#pragma rodata-name (push, "SW6RODATA")
+#pragma code-name (push, "SW_names_said_CODE")
+#pragma rodata-name (push, "SW_names_said_RODATA")
 void __fastcall__ s_came (const struct msg* m)
 {
     unsigned char k = E_ARRIVE_LINK (*m);
@@ -1368,8 +1368,8 @@ void __fastcall__ s_came (const struct msg* m)
 
 /* ==== Part 11: the rarer news of the world's, worded (events()'s, the character's: a dig, a ledge, a climb, a harm, a
 ** portal worked; its own part, the main RAM's room: slice 4.1b's) */
-#pragma code-name (push, "SW11CODE")
-#pragma rodata-name (push, "SW11RODATA")
+#pragma code-name (push, "SW_news_CODE")
+#pragma rodata-name (push, "SW_news_RODATA")
 
 /* The state a harm leaves the character in (shock, bleeding, a leg or an arm useless: rs.h's C_*, cond its low byte),
 ** said.txt's HARM.state: each once an answer, then "still" (a second harm's: a door battered, its trap after; task.c's
@@ -1585,8 +1585,8 @@ void __fastcall__ s_news (const struct msg* m)
 ** character itself (HOUSE.md's hiding oneself: the world's I_RISE, POS_HIDE): behind or in a thing said, one within
 ** reach, walked over to first; in the shadows, a doorway, the world's to say.  And its words as they're told
 ** (pose_words', E_BEAT WB_POSED's HW_WORDS: w no string, its address past the RAM) */
-#pragma code-name (push, "SW18CODE")
-#pragma rodata-name (push, "SW18RODATA")
+#pragma code-name (push, "SW_door_words_CODE")
+#pragma rodata-name (push, "SW_door_words_RODATA")
 static const char hw_said[] =               /* (By HW_*, one after another: a table's strings would be the main RAM's) */
     "\nYou crouch behind the %s, out of sight.\0" "\nYou get down into the %s, out of sight.\0"
     "\nYou press yourself into the doorway, out of sight.\0" "\nYou crouch among the rubble, out of sight.\0"
@@ -1690,8 +1690,8 @@ again:  HUB->ireq.to = reach == 4 ? IO_DONE : 0;
 ** hand", "in my off hand", "in my main hand"; slice 4.1b's), into shand (items.h's IH_*; IH_OTHER, the other one): a
 ** thing taken, put, held or worn so made a hold of it, into that hand ("take the torch in my right hand", "put the
 ** dagger in my other hand") */
-#pragma code-name (push, "SW23CODE")
-#pragma rodata-name (push, "SW23RODATA")
+#pragma code-name (push, "SW_limb_news_CODE")
+#pragma rodata-name (push, "SW_limb_news_RODATA")
 void s_hand_said (void)
 {
     unsigned char k = cmd.hand, a = cmd.action, h;
@@ -1717,8 +1717,8 @@ void s_hand_said (void)
 ** ...": not struck with another instead) */
 /* A denizen's things as the eyes make them out from here (the world's IO_GEAR: examined, or assessed, cmd's aux),
 ** after how it seems (deal's): HOUSE.md's three levels, the user's, 2026-10-27 */
-#pragma code-name (push, "SW3CODE")             /* (Part 3's since 2026-11-04, overlay 15's room) */
-#pragma rodata-name (push, "SW3RODATA")
+#pragma code-name (push, "SW_map_CODE")             /* (Part 3's since 2026-11-04, overlay 15's room) */
+#pragma rodata-name (push, "SW_map_RODATA")
 void s_gear_look (void)
 {
     HUB->ireq.to = (cmd.aux ? 2 : 1) | sight_get ()->eye << 4;
@@ -1764,8 +1764,8 @@ unsigned char s_hold_first (void)
 #pragma rodata-name (pop)
 
 /* ==== Part 13 (slice 4.7's): the missiles (overlay 1's bank, after its own) */
-#pragma code-name (push, "SW13CODE")
-#pragma rodata-name (push, "SW13RODATA")
+#pragma code-name (push, "SW_missiles_CODE")
+#pragma rodata-name (push, "SW_missiles_RODATA")
 
 /* ---- The missiles (slice 4.7's: DUNGEON.md's fights complete), s_command's: a shot ("shoot the bandit", "fire the
 ** bow at the rat", "shoot at the rat with my bow"; "shoot", the target), a throw at a denizen ("throw the dagger at
@@ -1913,8 +1913,8 @@ unsigned char s_missiles (void)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW11CODE")
-#pragma rodata-name (push, "SW11RODATA")
+#pragma code-name (push, "SW_news_CODE")
+#pragma rodata-name (push, "SW_news_RODATA")
 
 /* The hands' and limbs' commands (s_command's: slice 4.1b's): what's in its hands changed over ("swap hands", "switch
 ** hands": the things' IO_SWAP, its words, its time); getting up ("get up", "stand", "rise": the world's I_RISE, the
@@ -1965,8 +1965,8 @@ void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2)
     hub_back (b);
 }
 
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_commands_CODE")
+#pragma rodata-name (push, "SW_commands_RODATA")
 
 /* An intent sent: the character's busy with it */
 static void __fastcall__ sent (struct msg* m)
@@ -2117,8 +2117,8 @@ void to_hand (void)
 char dig_with[16];
 char dig_word[16];                              /* (The thing named to dig with, as said: resolve.c's; the world's dig_kind) */
 static unsigned char dug_rock;
-#pragma code-name (push, "SW14CODE")
-#pragma rodata-name (push, "SW14RODATA")
+#pragma code-name (push, "SW_positions_CODE")
+#pragma rodata-name (push, "SW_positions_RODATA")
 void __fastcall__ s_dig_used (unsigned bk)
 {
     static const char rocks[] = "shale\0flaky\0sandstone\0buff\0limestone\0pale grey\0slate\0"
@@ -2180,16 +2180,16 @@ void __fastcall__ s_dig_used (unsigned bk)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_commands_CODE")
+#pragma rodata-name (push, "SW_commands_RODATA")
 
 /* A portal's part, fixed in it (a door's bar, a window's pane or its bars: IR_FIXED, its square in the request's x,
 ** y): the portal at it or beside it faced, and the part lifted out (the maker's: a bar only from its side), then taken
 ** up (E_PORTAL's) */
 #undef work
 #undef intend
-#pragma code-name (push, "SW24CODE")
-#pragma rodata-name (push, "SW24RODATA")
+#pragma code-name (push, "SW_rare_commands_CODE")
+#pragma rodata-name (push, "SW_rare_commands_RODATA")
 void __fastcall__ s_lift (const char* name)
 {
     struct sight* s = sight_get ();
@@ -2278,8 +2278,8 @@ unsigned char news_due;                         /* (The body's news held as it s
 #define SW_QUIET    0x80
 #define dealt       (*(struct sway*) (lb + sizeof lb - sizeof (struct sway)))  /* (Its copy at lb's end: the
                                                 **   words, a line or two, go at its start) */
-#pragma code-name (push, "SW24CODE")
-#pragma rodata-name (push, "SW24RODATA")
+#pragma code-name (push, "SW_rare_commands_CODE")
+#pragma rodata-name (push, "SW_rare_commands_RODATA")
 unsigned char __fastcall__ s_deal (unsigned char how)
 {
     struct sway* s = &HUB->sway;
@@ -2317,8 +2317,8 @@ static unsigned char __fastcall__ at_once (const char* l)
     return free_cmd (l);                        /* (1 at once; 0 held; 2 held, its fight stopped for it: task.c's) */
 }
 
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_commands_CODE")
+#pragma rodata-name (push, "SW_commands_RODATA")
 
 /* A line typed as the character lies senseless, or waiting as it was knocked out (main's, out_told: told so): not
 ** taken, nor any behind it, its refusal said once (the user's, 2026-11-13: no commands queued through a black-out, to
@@ -2533,17 +2533,17 @@ static unsigned long seed;                      /* (Its seed: the clock's, as th
 static const char* file = "";                   /* (-c's: the character's file) */
 static const char* rules = "harn";              /* (The ruleset, if none's given: HarnMaster's) */
 
-#pragma code-name (push, "SW13CODE")           /* (Part 13's since 2026-11-02: part 7's room) */
-#pragma rodata-name (push, "SW13RODATA")
+#pragma code-name (push, "SW_missiles_CODE")           /* (Part 13's since 2026-11-02: part 7's room) */
+#pragma rodata-name (push, "SW_missiles_RODATA")
 
-#pragma code-name (push, "SW19CODE")
-#pragma rodata-name (push, "SW19RODATA")
+#pragma code-name (push, "SW_reach_steps_CODE")
+#pragma rodata-name (push, "SW_reach_steps_RODATA")
 #pragma local-strings (push, on)
 
-#pragma code-name (push, "SW22CODE")            /* (Part 22's: seldom, overlay 15 full) */
-#pragma rodata-name (push, "SW22RODATA")
+#pragma code-name (push, "SW_dungeon_dir_CODE")            /* (Part 22's: seldom, overlay 15 full) */
+#pragma rodata-name (push, "SW_dungeon_dir_RODATA")
 #pragma static-locals (push, on)
-#pragma bss-name (push, "SW22RODATA")           /* (Wanted only while it runs: not the main RAM's) */
+#pragma bss-name (push, "SW_dungeon_dir_RODATA")           /* (Wanted only while it runs: not the main RAM's) */
 
 /* The save's folder's dungeon, by the record of the life (life.h's: its head left in lb): its folder in spath (sdl), or d1 */
 void s_life_dir (void)
@@ -2572,10 +2572,10 @@ void s_life_dir (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW21CODE")            /* (Part 21's: seldom, overlay 15 full) */
-#pragma rodata-name (push, "SW21RODATA")
+#pragma code-name (push, "SW_life_record_CODE")            /* (Part 21's: seldom, overlay 15 full) */
+#pragma rodata-name (push, "SW_life_record_RODATA")
 #pragma static-locals (push, on)
-#pragma bss-name (push, "SW21RODATA")           /* (Wanted only while it runs: not the main RAM's) */
+#pragma bss-name (push, "SW_life_record_RODATA")           /* (Wanted only while it runs: not the main RAM's) */
 
 static char* ap;
 static void __fastcall__ arg (const char* s)
@@ -2862,8 +2862,8 @@ void s_go_up_to (void)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW7CODE")
-#pragma rodata-name (push, "SW7RODATA")
+#pragma code-name (push, "SW_game_args_CODE")
+#pragma rodata-name (push, "SW_game_args_RODATA")
 
 /* A place in the room the character's in (its square: sway.c's place_said, overlay 14's place_sq, P5's puts there too,
 ** 2026-11-18): the square there walked to (I_GOTO, a 1: the nearest the way reaches, a cave's rock about it); in the
@@ -2974,8 +2974,8 @@ unsigned char __fastcall__ s_args (int argc, char* argv[])
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW_start_end_CODE")
+#pragma rodata-name (push, "SW_start_end_RODATA")
 
 /* The game begun: its arguments, a game kept carried on, the title, the character, the world started */
 void __fastcall__ s_begin (int argc, char* argv[])
@@ -3313,15 +3313,15 @@ int main (int argc, char* argv[])
 
 /* ==== Part 14: the body's positions and the background, worded (slices 4.5 and 4.6: overlay 15's bank, the main
 ** RAM's room) */
-#pragma code-name (push, "SW14CODE")
-#pragma rodata-name (push, "SW14RODATA")
+#pragma code-name (push, "SW_positions_CODE")
+#pragma rodata-name (push, "SW_positions_RODATA")
 
 /* What waited for the character to be free (main's, seldom: part 2's, the main RAM's room, slice 4.2's; part 14's,
 ** part 2's room, 2026-10-29; part 12's, overlay 3 full, 2026-10-31) */
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW14CODE")            /* (Part 14's since 2026-11-04, overlay 15's room) */
-#pragma rodata-name (push, "SW14RODATA")
+#pragma code-name (push, "SW_positions_CODE")            /* (Part 14's since 2026-11-04, overlay 15's room) */
+#pragma rodata-name (push, "SW_positions_RODATA")
 void s_when_free (void)
 {
     if (rebar) {                                /* (A door barred: its bar set in its brackets, on the square the
@@ -3344,8 +3344,8 @@ void s_when_free (void)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW14CODE")
-#pragma rodata-name (push, "SW14RODATA")
+#pragma code-name (push, "SW_positions_CODE")
+#pragma rodata-name (push, "SW_positions_RODATA")
 
 /* A denizen's sound heard, or its doing seen (heard's, its weighing the main code's: m its event, rel which way it is),
 ** told: seen, said.txt's DEN row (its actor swapped into the row's words: "The dwarf opens the door.", the character's
@@ -3406,8 +3406,8 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
 ** Part 12's since 2026-10-31 (part 14's bank, overlay 3, full) */
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW12CODE")
-#pragma rodata-name (push, "SW12RODATA")
+#pragma code-name (push, "SW_tend_CODE")
+#pragma rodata-name (push, "SW_tend_RODATA")
 void __fastcall__ s_pose_words (unsigned w)
 {
     struct msg c;
@@ -3424,8 +3424,8 @@ void __fastcall__ s_pose_words (unsigned w)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW14CODE")
-#pragma rodata-name (push, "SW14RODATA")
+#pragma code-name (push, "SW_positions_CODE")
+#pragma rodata-name (push, "SW_positions_RODATA")
 
 /* The background and the air, worded (way.c's, slices 4.5's: the senses' sound layer's, the hub's pc_bg, air_h,
 ** air_s): a listen's end (what 0: heard nothing, what it hears behind it all; 1, heard something, the background

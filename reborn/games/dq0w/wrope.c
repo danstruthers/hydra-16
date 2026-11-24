@@ -14,8 +14,8 @@
 */
 
 #pragma local-strings (on)
-#pragma code-name ("SW96CODE")
-#pragma rodata-name ("SW96RODATA")
+#pragma code-name ("SW_rope_tie_CODE")
+#pragma rodata-name ("SW_rope_tie_RODATA")
 
 #include "wrope.h"
 

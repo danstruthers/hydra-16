@@ -53,8 +53,8 @@ unsigned char lgen;                             /* (light.h's) */
 static unsigned char k;
 static struct lslot* q;
 
-#pragma code-name (push, "SW3CODE")            /* (Part 3's, the start's: the main RAM's room, 2026-11-01) */
-#pragma rodata-name (push, "SW3RODATA")
+#pragma code-name (push, "SW_way_record_CODE")            /* (Part 3's, the start's: the main RAM's room, 2026-11-01) */
+#pragma rodata-name (push, "SW_way_record_RODATA")
 void s_light_init (void)
 {
     run_lb = lbank = hy_banks_alloc (1);
@@ -253,8 +253,8 @@ static void make (void)
 
 /* ---- Part 7's (swapped: with the lamps found, things.c's, part 1's before, 2026-11-17; part 3's, 2026-11-18): the
 ** lamps against the last look's */
-#pragma code-name (push, "SW7CODE")
-#pragma rodata-name (push, "SW7RODATA")
+#pragma code-name (push, "SW_way_near_CODE")
+#pragma rodata-name (push, "SW_way_near_RODATA")
 
 /* Those of list a (n of them) not in list b (m), stale round them */
 static void __fastcall__ gone (const struct lsrc* a, unsigned char n, const struct lsrc* b, unsigned char m)
@@ -294,8 +294,8 @@ void __fastcall__ light_lamps_end (unsigned char sn)
 
 /* ---- Part 1's (swapped: with the look's grid and its lines, view.c's and cast.s's): a lamp's light on a chunk (bank.s's
 ** stub) */
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW_look_CODE")
+#pragma rodata-name (push, "SW_look_RODATA")
 
 /* ---- A chunk's grid worked out */
 

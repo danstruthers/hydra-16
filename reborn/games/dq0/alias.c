@@ -48,8 +48,8 @@ unsigned char __fastcall__ o_alias_said (const char* l)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW9CODE")             /* ---- Part 9: the commands, a line made, the save's */
-#pragma rodata-name (push, "SW9RODATA")
+#pragma code-name (push, "SW_aliases_CODE")             /* ---- Part 9: the commands, a line made, the save's */
+#pragma rodata-name (push, "SW_aliases_RODATA")
 
 #define a           (*(struct talias*) (lb + 256))  /* An entry, copied out (lb's end: its start the line's, own's) */
 #define w           (lb + 368)                  /* A word of the line's (its case aside, 15 letters at most), */

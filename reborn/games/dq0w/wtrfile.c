@@ -21,9 +21,9 @@
 #pragma static-locals (on)
 
 /* ==== Part 30: the store's files (its chunks' records written to their regions' files, read back) */
-#pragma code-name (push, "SW30CODE")
-#pragma rodata-name (push, "SW30RODATA")
-#pragma bss-name (push, "SW30RODATA")
+#pragma code-name (push, "SW_trace_files_CODE")
+#pragma rodata-name (push, "SW_trace_files_RODATA")
+#pragma bss-name (push, "SW_trace_files_RODATA")
 
 #include "tput.inc"
 
@@ -34,7 +34,7 @@ static struct rpk tr_kind;                      /* (Its versions counted: the ma
 #define RP_KIND         tr_kind
 #include "../dq0/rp.inc"
 
-#pragma data-name (push, "SW30RODATA")
+#pragma data-name (push, "SW_trace_files_RODATA")
 static struct rpg rg = { RP_GROUPS, 0, 0, 0, sizeof (struct tgroup), offsetof (struct tgroup, n), sizeof (struct trace),
     buf };                                      /* (A region's file's groups, the record store's) */
 #pragma data-name (pop)

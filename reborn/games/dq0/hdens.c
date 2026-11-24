@@ -13,8 +13,8 @@
 #include "cmds.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a part's in it) */
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_commands_CODE")
+#pragma rodata-name (push, "SW_commands_RODATA")
 
 /* A grapple's move g (rs.h's GM_*, | GT_TRY: blows.c's grapple, overlay 19's: HOUSE.md's grappling, 2026-11-09) sent
 ** (I_ATTACK, its b AIM_GRAPPLE | the move), or why not said; GT_TRY's none beside, 0, nothing said */
@@ -85,9 +85,9 @@ static void do_fight (void)
 ** words its own, said from it (the main RAM's sayf, msg); its state the part's own (none kept from one command to the
 ** next, and no other part called while it's needed) */
 void __fastcall__ fights (unsigned char h);
-#pragma code-name (push, "SW24CODE")
-#pragma rodata-name (push, "SW24RODATA")
-#pragma bss-name (push, "SW24RODATA")
+#pragma code-name (push, "SW_rare_commands_CODE")
+#pragma rodata-name (push, "SW_rare_commands_RODATA")
+#pragma bss-name (push, "SW_rare_commands_RODATA")
 
 static unsigned char k, d, e, n;
 static int dx, dy;

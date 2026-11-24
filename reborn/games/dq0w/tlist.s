@@ -108,7 +108,7 @@ copy:       sta         ptr1
 @none:      ldy         #0
             bra         @end
 
-            .segment    "SW11CODE"
+            .segment    "SW_things_listed_CODE"
 
 _next_got:  ldx         #0              ; .X = the entry to look from
             lda         _nx_n

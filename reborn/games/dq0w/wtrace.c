@@ -65,9 +65,9 @@
 unsigned char tr_n;                             /* (The journalling parts' own: trod.inc) */
 
 /* ==== Part 28: the store, the journal taken in */
-#pragma code-name (push, "SW28CODE")
-#pragma rodata-name (push, "SW28RODATA")
-#pragma bss-name (push, "SW28RODATA")           /* (Its own data, what's wanted only while it runs: the main RAM's room) */
+#pragma code-name (push, "SW_trace_store_CODE")
+#pragma rodata-name (push, "SW_trace_store_RODATA")
+#pragma bss-name (push, "SW_trace_store_RODATA")           /* (Its own data, what's wanted only while it runs: the main RAM's room) */
 
 #include "tput.inc"
 
@@ -85,7 +85,7 @@ static void own (void)
     hy_bank (ovbank[OVBANKS]);
 }
 
-#pragma data-name (push, "SW28RODATA")
+#pragma data-name (push, "SW_trace_store_RODATA")
 static struct rpt tct = { RP_FIND, NTCH, sizeof (struct tch), 0xF2, THD->ch, offsetof (struct tch, stamp), RTF_FREE | RTF_WIDE,
     &THD->stamp, { 0 }, 0, 0, 0, 1, 1, 4, 6 };   /* (The directory, the record store's: a chunk found, its stamp the
                                                 **   newest; the one made way for, but the nine round the character) */
@@ -302,9 +302,9 @@ void __fastcall__ s_tr_flush (unsigned char keep)
 #pragma bss-name (pop)
 
 /* ==== Part 29: the traces read (I_TRACE's, the UI's: HOUSE.md's light and traces) */
-#pragma code-name (push, "SW29CODE")
-#pragma rodata-name (push, "SW29RODATA")
-#pragma bss-name (push, "SW29RODATA")
+#pragma code-name (push, "SW_traces_read_CODE")
+#pragma rodata-name (push, "SW_traces_read_RODATA")
+#pragma bss-name (push, "SW_traces_read_RODATA")
 
 #define NFOUND          6                       /* (The kinds read about the character, at most) */
 #define SR              6                       /* (A smell's reach one way, squares) */

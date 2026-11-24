@@ -742,9 +742,9 @@ unsigned __fastcall__ o_des_add (const char* w, unsigned n)
 #pragma code-name (pop)
 
 /* ==== Part 22's (seldom: the save, its start) */
-#pragma code-name (push, "SW22CODE")
-#pragma rodata-name (push, "SW22RODATA")
-#pragma bss-name (push, "SW22RODATA")
+#pragma code-name (push, "SW_dungeon_dir_CODE")
+#pragma rodata-name (push, "SW_dungeon_dir_RODATA")
+#pragma bss-name (push, "SW_dungeon_dir_RODATA")
 
 #define LETS        (offsetof (struct uirec, cap) + sizeof UIREC->cap - offsetof (struct uirec, low))
 typedef char lets_fit[offsetof (struct uirec, lowt) == offsetof (struct uirec, low) + sizeof UIREC->low &&

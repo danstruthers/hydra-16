@@ -22,8 +22,8 @@
 #include "acts.h"
 
 #pragma local-strings (on)
-#pragma code-name ("SW72CODE")
-#pragma rodata-name ("SW72RODATA")
+#pragma code-name ("SW_errands_CODE")
+#pragma rodata-name ("SW_errands_RODATA")
 
 unsigned __fastcall__ weight_of (unsigned i);   /* (Part 10's) */
 unsigned char __fastcall__ take_rule (unsigned n);  /* (Part 81's, wtake.c: the take rule, tk_x, tk_y) */
@@ -39,7 +39,7 @@ void __fastcall__ mix_join (unsigned i, unsigned n);   /* (Part 64's: two piles 
                                                 **   one without hands, in its mouth, 3 lb: HOUSE.md's fetching) */
 #define FETCH_MOUTH     12
 
-#pragma bss-name (push, "SW72RODATA")
+#pragma bss-name (push, "SW_errands_RODATA")
 static struct item rec;                         /* (A lot's part split off, a gift's count: part 72's image's, no part
                                                 **   called as it's used; the main RAM's room) */
 #pragma bss-name (pop)
@@ -205,7 +205,7 @@ void __fastcall__ s_den_fetch (const struct msg* q)
 ** things left out, the heaviest first (a lot's one at a time: two spare torches), till it weighs that at most or nothing's left
 ** to leave: never what it wears for clothes and shoes, its pack, its belt and what hangs from it (a waterskin, full), a
 ** container with something in it, its light lit, its fire-maker, its food.  Not refunded: left at home */
-#pragma bss-name (push, "SW72RODATA")           /* (Its own data, wanted only while it runs: not the main RAM's) */
+#pragma bss-name (push, "SW_errands_RODATA")           /* (Its own data, wanted only while it runs: not the main RAM's) */
 static void fit (void)
 {
     static const unsigned char keep[] = { KI_CLOTHES, KI_SANDALS, KI_SHOES, KI_TINDERBOX, KI_RATIONS };

@@ -23,9 +23,9 @@
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 #pragma static-locals (on)                      /* (Smaller: none of it's called again before it returns) */
 
-#pragma code-name (push, "SW18CODE")
-#pragma rodata-name (push, "SW18RODATA")
-#pragma bss-name (push, "SW18RODATA")           /* (Its own data, what's wanted only while it runs: the main RAM's room) */
+#pragma code-name (push, "SW_change_files_CODE")
+#pragma rodata-name (push, "SW_change_files_RODATA")
+#pragma bss-name (push, "SW_change_files_RODATA")           /* (Its own data, what's wanted only while it runs: the main RAM's room) */
 
 #pragma bss-name (push, "BSS")
 static struct rpk rg_kind;                      /* (Its versions counted: the main RAM's) */
@@ -40,7 +40,7 @@ extern unsigned char rsn, rrx, rry;             /* (store.c's: the region wanted
 extern struct change rec;                       /*   the record written, */
 extern struct change buf[8];                    /*   records through the main RAM, */
 extern char path[56];                           /*   a file's name) */
-#pragma data-name (push, "SW18RODATA")
+#pragma data-name (push, "SW_change_files_RODATA")
 static struct rpt cpt = { RP_OLDEST, NCPAGES, sizeof (struct cpage), 0x0E, WREC->cpage, offsetof (struct cpage, stamp),
     RTF_FREE | RTF_HAND, 0, { 0 }, 0, 0, 0, 0xFF };     /* (The pages' table: a page made room for) */
 #pragma data-name (pop)
@@ -192,12 +192,12 @@ void s_store_save (void)
 #pragma bss-name (pop)
 
 /* ==== Part 19: the game begun, the item store kept */
-#pragma code-name (push, "SW19CODE")
-#pragma rodata-name (push, "SW19RODATA")
-#pragma bss-name (push, "SW19RODATA")
+#pragma code-name (push, "SW_game_files_CODE")
+#pragma rodata-name (push, "SW_game_files_RODATA")
+#pragma bss-name (push, "SW_game_files_RODATA")
 
 static struct vfh bh;
-#pragma data-name (push, "SW19RODATA")
+#pragma data-name (push, "SW_game_files_RODATA")
 static struct rpt cpf = { RP_FIND, NCPAGES, sizeof (struct cpage), 0x0E, WREC->cpage, offsetof (struct cpage, stamp) };
 #pragma data-name (pop)                         /* (The pages' table: a region's pages found, the record store's) */
 

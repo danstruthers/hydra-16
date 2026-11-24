@@ -26,9 +26,9 @@
 void __fastcall__ time_kept (unsigned n);       /* (Part 99's: past any minute, wpool.c's, H16's flasks filled: wbody.h's
                                                 **   POOL_MARK, POOL_FILL) */
 
-#pragma code-name ("SW57CODE")
-#pragma rodata-name ("SW57RODATA")
-#pragma bss-name ("SW57RODATA")                 /* (Its own data: none of it wanted across a call of part 59's,
+#pragma code-name ("SW_outfit_CODE")
+#pragma rodata-name ("SW_outfit_RODATA")
+#pragma bss-name ("SW_outfit_RODATA")                 /* (Its own data: none of it wanted across a call of part 59's,
                                                 **   which puts this part out and in again) */
 #pragma local-strings (on)
 

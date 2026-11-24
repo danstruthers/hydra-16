@@ -189,11 +189,11 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
 ** chunks round them reached); and in the same pass of the store, the records lying on squares near it, for
 ** things_seen (nearv) */
 #define LAMP_R          28
-#pragma code-name (push, "SW7CODE")             /* (Part 7's: once a look, bank.s's stub; part 1's before, the packer's
+#pragma code-name (push, "SW_way_near_CODE")             /* (Part 7's: once a look, bank.s's stub; part 1's before, the packer's
                                                 **   to move out of it for the swap area's room, 2026-11-17; part 3's,
                                                 **   loaded again for way.c's, 2026-11-18) */
-#pragma rodata-name (push, "SW7RODATA")
-#pragma bss-name (push, "SW7RODATA")            /* (Its statics its own: the code the less, no main RAM) */
+#pragma rodata-name (push, "SW_way_near_RODATA")
+#pragma bss-name (push, "SW_way_near_RODATA")            /* (Its statics its own: the code the less, no main RAM) */
 #pragma static-locals (push, on)
 void give_way (void);                           /* (dq0p.c's: the look giving way to the UI's command in hand) */
 

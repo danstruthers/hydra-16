@@ -13,8 +13,8 @@
 #include "world.h"
 #include "work.h"
 
-#pragma code-name ("SW83CODE")
-#pragma rodata-name ("SW83RODATA")
+#pragma code-name ("SW_room_tests_CODE")
+#pragma rodata-name ("SW_room_tests_RODATA")
 #pragma local-strings (on)
 
 #define W_TRAPS

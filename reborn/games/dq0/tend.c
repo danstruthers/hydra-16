@@ -19,8 +19,8 @@
 #include "rs.h"
 #include "actions.h"
 
-#pragma code-name ("SW12CODE")
-#pragma rodata-name ("SW12RODATA")
+#pragma code-name ("SW_tend_CODE")
+#pragma rodata-name ("SW_tend_RODATA")
 #pragma local-strings (on)
 
 /* ---- In shock (the book's, Combat 14: it may rest, be led away, or make a half move): what it may still do, every

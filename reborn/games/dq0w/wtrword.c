@@ -23,9 +23,9 @@
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 #pragma static-locals (on)
 
-#pragma code-name (push, "SW31CODE")
-#pragma rodata-name (push, "SW31RODATA")
-#pragma bss-name (push, "SW31RODATA")
+#pragma code-name (push, "SW_trace_words_CODE")
+#pragma rodata-name (push, "SW_trace_words_RODATA")
+#pragma bss-name (push, "SW_trace_words_RODATA")
 
 static struct tread R;
 

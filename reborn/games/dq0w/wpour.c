@@ -27,9 +27,9 @@ extern unsigned char put_bank;
 unsigned __fastcall__ pick (const char* name, unsigned char how);   /* (Part 4's) */
 unsigned char pour_said (void);                 /* (Part 113's: wpour2.c, the act and its words) */
 
-#pragma code-name ("SW112CODE")
-#pragma rodata-name ("SW112RODATA")
-#pragma bss-name ("SW112RODATA")
+#pragma code-name ("SW_pour_CODE")
+#pragma rodata-name ("SW_pour_RODATA")
+#pragma bss-name ("SW_pour_RODATA")
 #pragma static-locals (on)
 
 /* A kind's name (the catalogue's) */

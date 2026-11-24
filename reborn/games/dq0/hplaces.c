@@ -14,8 +14,8 @@
 #include "cmds.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a part's in it) */
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_commands_CODE")
+#pragma rodata-name (push, "SW_commands_RODATA")
 
 /* A portal worked (pa: PA_*; cmd.obj.kind a door, a window, or either): found, walked up to, its blow's thing in hand,
 ** faced, its first words (part 13's feature; or which, asked; walked up to first, then again), then the world's work */
@@ -32,8 +32,8 @@ void __fastcall__ s_portal (unsigned char pa)
 /* Up or down (h: H_CLIMB's; H_JUMP's, down a ledge or a shaft, a fall; into a well): a well's shaft down or out of it
 ** (2026-11-06); through a window, the portal's.  "Go down the well" too, a move's.  (rarer's, part 24's, till stage 3;
 ** part 24's again, 2026-11-11: part 2's room) */
-#pragma code-name (push, "SW24CODE")
-#pragma rodata-name (push, "SW24RODATA")
+#pragma code-name (push, "SW_rare_commands_CODE")
+#pragma rodata-name (push, "SW_rare_commands_RODATA")
 void __fastcall__ s_climb (unsigned char h)
 {
     unsigned char d;

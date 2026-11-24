@@ -32,8 +32,8 @@
 #include "acts.h"
 
 #pragma local-strings (on)
-#pragma code-name ("SW81CODE")
-#pragma rodata-name ("SW81RODATA")
+#pragma code-name ("SW_take_rule_CODE")
+#pragma rodata-name ("SW_take_rule_RODATA")
 
 unsigned __fastcall__ weight_of (unsigned i);   /* (Part 10's) */
 unsigned char __fastcall__ throw_at (const char* name);    /* (Part 88's: things.c, every actor's; 0 body bd's, tk_x the thing) */

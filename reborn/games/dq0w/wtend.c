@@ -20,8 +20,8 @@
 
 unsigned char __fastcall__ on_pc (unsigned i);   /* (Part 10's stub: carried by the character) */
 
-#pragma code-name ("SW70CODE")
-#pragma rodata-name ("SW70RODATA")
+#pragma code-name ("SW_tend_CODE")
+#pragma rodata-name ("SW_tend_RODATA")
 #pragma local-strings (on)
 
 extern unsigned char pc_hit;                    /* (dq0w.c's: a hurt stops its long task, hard) */

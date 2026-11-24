@@ -59,8 +59,8 @@ static struct rpt srt = { RP_FIND, NSREG, sizeof sreg[0], 0x07, sreg, 3, RTF_HAN
                                                 /* (Its table, the record store's: a region found, one made way for) */
 void __fastcall__ wet_put (struct chunk* k, unsigned xy, unsigned char tile);  /* (Part 2's, below) */
 
-#pragma code-name (push, "SW2CODE")           /* (Part 2's since 2026-11-06, once: the main RAM's room, a well's water) */
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_seen_save_CODE")           /* (Part 2's since 2026-11-06, once: the main RAM's room, a well's water) */
+#pragma rodata-name (push, "SW_seen_save_RODATA")
 void s_changes_init (void)
 {
     int b = hy_banks_alloc (SEEN_BANKS + 2);
@@ -602,8 +602,8 @@ void o_pl_flush (void)
 ** seen in the chunks in the cache kept first (seen_keep), so nothing seen is lost.  (The change records are the
 ** world's: its changes.dat and the regions' files.)  0, or -1 */
 
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_seen_save_CODE")
+#pragma rodata-name (push, "SW_seen_save_RODATA")
 
 static int __fastcall__ open_in (const char* name, int how)
 {

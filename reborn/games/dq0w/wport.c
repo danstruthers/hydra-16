@@ -34,8 +34,8 @@
 
 #pragma local-strings (on)
 unsigned char __fastcall__ handout (const struct msg* m);   /* (Part 111's: wempty.c, every actor's) */
-#pragma code-name ("SW80CODE")
-#pragma rodata-name ("SW80RODATA")             /* (No data of its own: its locals on the C stack, as it calls other
+#pragma code-name ("SW_den_doors_CODE")
+#pragma rodata-name ("SW_den_doors_RODATA")             /* (No data of its own: its locals on the C stack, as it calls other
                                                 **   parts, which copy this one in again after) */
 
 #define FORCE_T         100                     /* (Forcing's ten seconds: wdoor.c's) */
@@ -48,8 +48,8 @@ unsigned char __fastcall__ on_pc (unsigned i);  /* (Part 10's) */
 ** its id; 0 the work's door's, DOOR_KEY of wk's sn, px, py).  Its number, or 0.  Every actor's tools by one rule (a door's key, a lid's, lockpicks:
 ** the one-path plan's stage 2, closures, 2026-11-21; a door's key, s_door_key, and den_pry's own loop, a lid's, before;
 ** an actor's door key then only held, not in its pouch); the hub's header in the window after */
-#pragma code-name (push, "SW69CODE")             /* (Part 69's, the one senders': part 80's room) */
-#pragma rodata-name (push, "SW69RODATA")
+#pragma code-name (push, "SW_robbery_CODE")             /* (Part 69's, the one senders': part 80's room) */
+#pragma rodata-name (push, "SW_robbery_RODATA")
 unsigned __fastcall__ s_tool_of (unsigned char who, unsigned char k, unsigned id)
 {
     unsigned i, j;

@@ -21,8 +21,8 @@
 #include "wbody.h"
 #include "acts.h"
 
-#pragma code-name ("SW7CODE")
-#pragma rodata-name ("SW7RODATA")
+#pragma code-name ("SW_portals_CODE")
+#pragma rodata-name ("SW_portals_RODATA")
 #pragma local-strings (on)
 
 #define W_HARM

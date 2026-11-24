@@ -39,9 +39,9 @@
 #include "wbody.h"
 #include "acts.h"
 
-#pragma code-name ("SW114CODE")
-#pragma rodata-name ("SW114RODATA")
-#pragma bss-name ("SW114RODATA")
+#pragma code-name ("SW_den_acts_CODE")
+#pragma rodata-name ("SW_den_acts_RODATA")
+#pragma bss-name ("SW_den_acts_RODATA")
 
 extern struct ireq iq;                          /* (things.c's: the request's copy) */
 unsigned __fastcall__ weight_of (unsigned i);   /* (Part 10's) */
@@ -290,9 +290,9 @@ unsigned char __fastcall__ s_den_got (unsigned i, unsigned char tell)
 }
 
 /* ==== Part 115's (part 114 full): the errands' rest, worn, taken off, handed over; through part 114's stubs */
-#pragma code-name ("SW115CODE")
-#pragma rodata-name ("SW115RODATA")
-#pragma bss-name ("SW115RODATA")
+#pragma code-name ("SW_den_errands_CODE")
+#pragma rodata-name ("SW_den_errands_RODATA")
+#pragma bss-name ("SW_den_errands_RODATA")
 
 unsigned char __fastcall__ den_own (unsigned i, unsigned did);   /* (Part 114's, above: its stubs) */
 unsigned char __fastcall__ den_hands (unsigned did);
@@ -547,9 +547,9 @@ unsigned char __fastcall__ s_den_things (const struct msg* m)
 }
 
 /* ==== Part 116's (parts 114 and 115 full): a thing put away, put in or on another; through part 114's stubs */
-#pragma code-name ("SW116CODE")
-#pragma rodata-name ("SW116RODATA")
-#pragma bss-name ("SW116RODATA")
+#pragma code-name ("SW_den_store_CODE")
+#pragma rodata-name ("SW_den_store_RODATA")
+#pragma bss-name ("SW_den_store_RODATA")
 
 void __fastcall__ den_putin (unsigned n, unsigned c, unsigned char cc);   /* (Part 114's: its stubs) */
 unsigned __fastcall__ den_home (unsigned n, unsigned char cr);

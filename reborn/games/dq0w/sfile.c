@@ -19,9 +19,9 @@
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 #pragma static-locals (on)
 
-#pragma code-name (push, "SW22CODE")
-#pragma rodata-name (push, "SW22RODATA")
-#pragma bss-name (push, "SW22RODATA")           /* (Its own data, what's wanted only while it runs: the main RAM's room) */
+#pragma code-name (push, "SW_strata_out_CODE")
+#pragma rodata-name (push, "SW_strata_out_RODATA")
+#pragma bss-name (push, "SW_strata_out_RODATA")           /* (Its own data, what's wanted only while it runs: the main RAM's room) */
 
 #pragma bss-name (push, "BSS")
 static struct rpk st_kind;                      /* (Its versions counted: the main RAM's) */

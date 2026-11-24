@@ -19,9 +19,9 @@
 extern struct ireq iq;                          /* (things.c's: the request's copy) */
 void __fastcall__ put (const char* s);          /* (tlist.s's: its words after the text) */
 
-#pragma code-name ("SW113CODE")
-#pragma rodata-name ("SW113RODATA")
-#pragma bss-name ("SW113RODATA")
+#pragma code-name ("SW_pour_words_CODE")
+#pragma rodata-name ("SW_pour_words_RODATA")
+#pragma bss-name ("SW_pour_words_RODATA")
 #pragma static-locals (on)
 
 #define TAKE_T          20                      /* (Tenths: a thing taken out, a take's moment, wtake.c's got) */

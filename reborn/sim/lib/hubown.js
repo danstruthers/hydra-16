@@ -75,7 +75,7 @@ function map() {
 
 // A program's labels (obj/games/NAME/NAME.lbl): [addr, name] sorted, and its swap area's start (a label there is
 // one of its swapped parts', which of them not known: the nearest's name, "swapped"); and the UI's hub_create, its
-// bytes (NAME.map: hub.o's SW1CODE, that function alone)
+// bytes (NAME.map: hub.o's SW_start_end_CODE, the UI's part, that function alone)
 const lblCache = {};
 function lbls(prog) {
   if (lblCache[prog]) return lblCache[prog];
@@ -89,7 +89,7 @@ function lbls(prog) {
       if (k[2].startsWith('_') && !k[2].startsWith('__')) out.list.push([a, k[2].slice(1)]);
     }
     const map = fs.readFileSync(path.join(ROOT, 'obj', 'games', prog, prog + '.map'), 'latin1');
-    const k = map.match(/^hub\.o:\r?\n(?:\s+\w+\s+Offs=.*\r?\n)*?\s+SW1CODE\s+Offs=[0-9A-F]+\s+Size=([0-9A-F]+)/m);
+    const k = map.match(/^hub\.o:\r?\n(?:\s+\w+\s+Offs=.*\r?\n)*?\s+SW_start_end_CODE\s+Offs=[0-9A-F]+\s+Size=([0-9A-F]+)/m);
     const e = out.list.find(x => x[1] === 'hub_create');
     if (k && e) out.create = [e[0], e[0] + parseInt(k[1], 16)];
   } catch (e) { /* (None: addresses alone) */ }

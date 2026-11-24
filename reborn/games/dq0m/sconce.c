@@ -11,8 +11,8 @@
 ** (Swapped part 3's, the maker's: ../dq0/swap.inc, dq0m.cfg's SW3, overlay 6's bank; called through bank.s's stub.)
 */
 
-#pragma code-name ("SW3CODE")
-#pragma rodata-name ("SW3RODATA")
+#pragma code-name ("SW_sconces_CODE")
+#pragma rodata-name ("SW_sconces_RODATA")
 
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"

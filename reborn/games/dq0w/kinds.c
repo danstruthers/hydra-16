@@ -372,7 +372,7 @@ typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
 ** a hand's, the off hand's first, then the other's), the locations it may be worn at (a bit each).  Then how many
 ** things worn in those places one place holds (a ring's four a hand, the user's; the neck three, the face one, the
 ** ears a pair).  Swapped part 107's (things.c's worn places, wworn.c), not the catalogue's bank's: its room */
-#pragma rodata-name (push, "SW107RODATA")
+#pragma rodata-name (push, "SW_worn_RODATA")
 #define L(h)    (1 << (h))
 const struct wplace wplaces[NWPLACES] = {
     { KI_RING, PB_HAND, L (PB_HAND) },      /* (By the hand alone: not by the finger, the user's) */

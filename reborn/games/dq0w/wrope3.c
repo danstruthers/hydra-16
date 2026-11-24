@@ -4,8 +4,8 @@
 */
 
 #pragma local-strings (on)
-#pragma code-name ("SW95CODE")
-#pragma rodata-name ("SW95RODATA")
+#pragma code-name ("SW_rope_set_CODE")
+#pragma rodata-name ("SW_rope_set_RODATA")
 
 #define RP_THROWN
 #include "wrope.h"
@@ -35,7 +35,7 @@ static unsigned char rp_pit (void)
 /* The drop down from where the character stands (up: the height above it), the R_*'s: a shaft on its own square (the top of
 ** one going down; going up, one open to the sky its hold at the roof, no top on any stratum); in a pit, up, its edge; a
 ** ledge, or down a pit, beside it, the four ways, the way it faces first.  1, or 0 none */
-#pragma bss-name (push, "SW95RODATA")
+#pragma bss-name (push, "SW_rope_set_RODATA")
 #pragma static-locals (push, on)
 static unsigned char __fastcall__ rp_scan (unsigned char up)
 {

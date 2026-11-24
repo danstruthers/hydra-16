@@ -16,8 +16,8 @@
 #include "acts.h"
 
 #pragma local-strings (on)
-#pragma code-name ("SW118CODE")
-#pragma rodata-name ("SW118RODATA")
+#pragma code-name ("SW_flight_CODE")
+#pragma rodata-name ("SW_flight_RODATA")
 
 #include "flight.inc"                           /* (FLIGHT_T's, den_flight's copy: room7's, 2026-11-23) */
 
