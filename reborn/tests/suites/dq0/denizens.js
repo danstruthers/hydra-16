@@ -3614,13 +3614,26 @@ module.exports = {
           if (S.a[1] === undefined) return;
           const did = S.did[1][0], [x, y, sn] = S.p0[1];
           let torches = 0;
+          // (The two bandits' own torches, their outfits' since 2026-11-23 (build2: bandits carry a torch and a tinderbox,
+          // a pouch of their own), made rations, as dq0lightden's are: A's torches the scene's two alone, B with no light
+          // of its own; and the two the character's, none of a denizen's.  room8, 2026-11-24: with its kit's torch A
+          // handed B that one and kept both of the scene's)
+          const recs = new Map();
+          store(L, (i, b, o) => { recs.set(i, [b, o]); });
+          const rootDid = i => {
+            let j = i;
+            for (let n = 0; n < 8 && recs.has(j) && recs.get(j)[0][recs.get(j)[1] + L.iWhere] === K.IW_ITEM; n++) j = u16(recs.get(j)[0], recs.get(j)[1] + L.iX);
+            const r = recs.get(j);
+            return r && r[0][r[1] + L.iWhere] === K.IW_DEN ? r[0][r[1] + L.iOwner] | r[0][r[1] + L.iHide] << 8 : -1;
+          };
+          for (const [i, [b, o]] of recs) if (b[o + L.iKind] === K.KI_TORCH && S.did[1].includes(rootDid(i))) b[o + L.iKind] = K.KI_RATIONS;
           store(L, (i, b, o) => {
             const kd = b[o + L.iKind];
             if (b[o + L.iWhere] === K.IW_SQUARE && b[o + L.iSn] === sn && u16(b, o + L.iX) === x && u16(b, o + L.iY) === y) {
               if (kd === K.KI_DAGGER) { own(L, K, b, o, did, 2); S.items.dagger = i; }
               if (kd === K.KI_CROWNS) { own(L, K, b, o, did, 2); S.items.crowns = i; }
               if (kd === K.KI_MAIL_HAUBERK) { own(L, K, b, o, did, 0); S.items.hauberk = i; }
-            } else if (kd === K.KI_TORCH && torches < 2 && !(b[o + L.iFlags] & 1) && b[o + L.iWhere] === K.IW_ITEM) {
+            } else if (kd === K.KI_TORCH && torches < 2 && !(b[o + L.iFlags] & 1) && b[o + L.iWhere] === K.IW_ITEM && rootDid(i) < 0) {
               own(L, K, b, o, did, 0); S.items['torch' + torches++] = i;
             }
           });
