@@ -211,6 +211,7 @@ swload:
 ; and sreg, a long's) as it left them.
 .ifdef SWSTUBOV
             .import     __SWSTP_LOAD__, __SWSTL_LOAD__, __SWSTH_LOAD__
+.ifdef SWSTUB2                              ; (More than 256 stubs: SWSTUB2's, the world's)
 sw_call2:                                   ; (A stub numbered 256 on: the tables' second page, swpage2's)
             sta         ova
             lda         #1
@@ -224,6 +225,15 @@ swc:        stx         ovx
             plx
             stx         swip + 1
             tax
+.else                                       ; (256 at most: one page of each table, 29 bytes less, room8, 2026-11-24)
+sw_call:
+            sta         ova
+            stx         ovx
+            pla                             ; (The stub's jsr: its number follows it)
+            sta         swip
+            pla
+            sta         swip + 1
+.endif
             ldy         #1
             lda         (swip),y            ; (Its number)
             tay
@@ -231,8 +241,10 @@ swc:        stx         ovx
             pha
             lda         _ovbank + SWSTUBOV - 1  ; (The tables in overlay SWSTUBOV's bank, in the window meanwhile)
             sta         BANKREG
+.ifdef SWSTUB2
             txa
             bne         swpage2
+.endif
             lda         __SWSTL_LOAD__,y    ; (Its function)
             sta         swgo + 1
             lda         __SWSTH_LOAD__,y
@@ -285,7 +297,7 @@ sw_back:
 @out:       lda         ova
             ldx         ovx
             rts
-.ifdef SWSTUBOV
+.ifdef SWSTUB2
 swpage2:    lda         __SWSTL_LOAD__ + 256,y   ; (sw_call2's: the tables' second page; out of sw_call's way, its
             sta         swgo + 1                 ;   inc swsp within 64 bytes of it, the guards' look: dq0guards)
             lda         __SWSTH_LOAD__ + 256,y
@@ -315,7 +327,8 @@ swpage2:    lda         __SWSTL_LOAD__ + 256,y   ; (sw_call2's: the tables' seco
 ; A stub: name() calls part n's s_name(), its arguments and its value as they are.  With SWSTUBOV, a stub is its call
 ; and its number alone (4 bytes, not 6: the world's main RAM's room, room7, 2026-11-23), its part and its function in
 ; three tables of a byte a stub in overlay SWSTUBOV's bank (the config's segments SWSTP, SWSTL, SWSTH), read by
-; sw_call (stubs 0-255) or sw_call2 (256 on: each table's second page), some 25 cycles a call more
+; sw_call (stubs 0-255) or sw_call2 (256 on: each table's second page, SWSTUB2's), some 25 cycles a call more (SWSTUB2 not
+; set: a task of 256 stubs at most, the tables' one page, sw_call alone, some 20)
 .ifdef SWSTUBOV
 swstubs     .set        0
 .endif
@@ -327,7 +340,11 @@ swstubs     .set        0
 .if swstubs < 256
             jsr         sw_call
 .else
+.ifdef SWSTUB2
             jsr         sw_call2
+.else
+            .error      "More than 256 stubs: SWSTUB2 wanted in bank.s (swap.inc's sw_call2)"
+.endif
 .endif
             .byte       <swstubs
             .pushseg

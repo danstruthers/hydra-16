@@ -57,10 +57,12 @@ void __fastcall__ ask_maker (unsigned char kind, unsigned char sn, unsigned cx, 
     }
 }
 
+#ifndef CHUNK_NO_ELEV                           /* (A task that never asks a square's height: the minds', its room) */
 signed char __fastcall__ elev_at (unsigned char sn, unsigned x, unsigned y)
 {
     return at (sn, x, y) ? C->elev[cy_][cx_] : 0;
 }
+#endif
 
 /* From (x, y) to the square beside it d: its kind can be walked, and the rise or fall isn't more than a step's
 ** (more on steps) */
