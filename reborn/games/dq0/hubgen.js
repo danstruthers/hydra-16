@@ -557,6 +557,24 @@ function versions(j, sources) {
   return { HUB_VERSION: hub, SAVE_VER: save };
 }
 
+// versions()'s rules held, each build (generate's), on a dq0hub.json made up: a saved struct's field moved changes
+// both, a number of the hub's alone HUB_VERSION, SAVE_FORMAT alone SAVE_VER, a saved source's text SAVE_VER, a version's
+// own value neither; each in its range
+function versionsChecked() {
+  const f = { magic: [0, 2], version: [2, 1], ver_hi: [3, 1], 'a.b': [0, 1], low: [0, 2], cap: [2, 4] };
+  const S = Object.fromEntries(SAVED.layout.map(s => [s.split(':')[0], { size: 4, f }]));
+  const C = Object.fromEntries(SAVED.counts.map(n => [n, 1]));
+  const j = (o = {}) => ({ C: { ...C, SAVE_FORMAT: 1, HUB_VERSION: 9, SAVE_VER: 9, X: 1, ...o.C }, enums: [], records: {}, S: { ...S, ...o.S } });
+  const src = ['a'], v = versions(j(), src), w = o => versions(j(o), o.src || src);
+  const moved = w({ S: { save: { size: 4, f: { ...f, ver_hi: [1, 1] } } } }), num = w({ C: { X: 2 } }), fmt = w({ C: { SAVE_FORMAT: 2 } });
+  const text = w({ src: ['b'] }), own = w({ C: { HUB_VERSION: 1, SAVE_VER: 2 } });
+  const ok = moved.HUB_VERSION !== v.HUB_VERSION && moved.SAVE_VER !== v.SAVE_VER && num.HUB_VERSION !== v.HUB_VERSION && num.SAVE_VER === v.SAVE_VER &&
+    fmt.HUB_VERSION === v.HUB_VERSION && fmt.SAVE_VER !== v.SAVE_VER && text.SAVE_VER !== v.SAVE_VER && text.HUB_VERSION === v.HUB_VERSION &&
+    own.HUB_VERSION === v.HUB_VERSION && own.SAVE_VER === v.SAVE_VER && [v, moved, num, fmt, text].every(x => x.HUB_VERSION >= 1 &&
+    x.HUB_VERSION <= 255 && x.SAVE_VER >= 1 && x.SAVE_VER <= 65535);
+  if (!ok) throw new Error('games/dq0/hubgen.js: versions() not as its rules say (versionsChecked)');
+}
+
 // dq0ver.h's text
 function verHeader(v) {
   return ['/* dq0ver.h - made by the build (games/dq0/hubgen.js) from the headers\' layouts: not to be edited.  HUB_VERSION (hub.h\'s)',
@@ -604,6 +622,7 @@ function generate(opt) {
   if (!fs.existsSync(REC_H) || fs.readFileSync(REC_H, 'latin1') !== recText) fs.writeFileSync(REC_H, recText, 'latin1');   //   before cc65)
   const sources = savedSources();                       // (SAVED's own structs: SAVE_VER's, in the key)
   savedChecked();
+  versionsChecked();
   if (!fs.existsSync(VER_H)) fs.writeFileSync(VER_H, verHeader({ HUB_VERSION: 0, SAVE_VER: 0 }), 'latin1');   // (Till the
   for (const t of [...raw, act, msgsText, recText, ...sources, fs.readFileSync(__filename, 'latin1')]) hash.update(t);   //   layouts are
   const key = hash.digest('hex'), incs = Object.keys(ASM).map(k => path.join(GEN, 'dq0hub_' + k + '.inc'));   //   known: hub.h
