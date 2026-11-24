@@ -1,5 +1,7 @@
 # One path for every actor: the plan
 
+The one-path rewrite plan is in N:/.claude/critique/DQ0-CRITIQUE.md, section 4, and will be written into this file when it starts.
+
 The user's rule (2026-11-17; DECISIONS.md, "One path for every actor"): "Please make sure that the player and any
 agent's interaction with the world are handled the same, in all cases."
 
@@ -26,17 +28,22 @@ its area's rows narrowed, below.)
    eyes have no facing.
 2. **No denizen fights another.** Both referees refuse it, the minds target only the character, allies never strike,
    rival factions never clash.
-3. **Traps and harm.** Denizens never spring a trap, underfoot or on a door, and the world can harm a denizen only by
-   a blow.
-4. **Moving.** Denizens can't use stairs, ladders or shafts on their own (an ally is put beside the character), can't
-   climb, have no swimming test, never drown, choke or stumble in the dark; bad air is only a wall to them.
+3. **Traps and harm.** ~~Denizens never spring a trap, underfoot or on a door, and the world can harm a denizen only by
+   a blow.~~ No longer true (step1, step2): a denizen springs a floor trap, and a trap or a fall harms it
+   (dq0w/wstep.c:93-189, 330-338).
+4. **Moving.** Denizens can't use shafts or ropes on their own (an ally is put beside the character where no flight
+   joins the strata), have no swimming test, never drown or stumble in the dark. Since step1, step2 and climb1:
+   denizens cross stairs, ladders and slopes (dq0w/wflight.c), but only when chasing or following; they climb out of
+   pits; and bad air chokes them (dq0w/wstep.c:211-216).
 5. **The body.** Fatigue, encumbrance, useless arms, shock and the Rise test bind only the character. A creature
    dodges or counters without limit, against the one-foe-per-blocker rule.
 6. **Hearing.** Three formulas. The character's door work is silent to the minds; a denizen's walk is half as loud as
    the character's; a denizen's armour never clanks.
-7. **Light.** Denizens carry none; the character's torch counts as dark to them (`unlit_at`).
-8. **Robbery.** Takings vanish to the lair; robbers pick locks without picks; a hostile is held for ever at a braced
-   door.
+7. **Light.** ~~Denizens carry none; the character's torch counts as dark to them (`unlit_at`).~~ No longer true
+   (climb1): folk carry lights and light them by the character's rules, and any actor's carried light is seen by every
+   looker (dq0w/wlink.c, part 119; built/2026-11-23-climb1.md). This file has no section of its own for it yet.
+8. **Robbery.** ~~Takings vanish to the lair; robbers pick locks without picks~~ (now carried home, things2; picks
+   needed, op2a: below); a hostile is held for ever at a braced door.
 9. **Dealing.** Talk, trade, orders and robbery go one way only, and no denizen speaks.
 10. **Time.** Typing costs the denizens time while the character's steps and blows go on.
 11. **Search.** ~~A denizen's reaches one square, finds no doors or traps, and is never told.~~ Done (stage 2, op2b,
@@ -81,7 +88,7 @@ its area's rows narrowed, below.)
 - **The minds**: a hidden door is dug at as the wall it seems (dq0d.c's dig_way: dug_as).
 - **Parity test**: dq0digact (the character's dig and a dwarf miner's: the query as it begins, the spells' ten
   minutes, the noise, the test and the rate by the grade, the tool worn).
-- **Left in this area**: ~~the character's building (hang a door, wall up a way)~~ done (build2, below); a denizen digging down (no mind wants a shaft yet: OPEN.md); the roof's harm on a denizen (the world's harm
+- **Left in this area**: ~~the character's building (hang a door, wall up a way)~~ done (build2, below); a denizen digging down (when a mind wants a shaft: ASSUMED.md's G1); the roof's harm on a denizen (the world's harm
   for an actor, G3: the step's branch); a denizen tiring by its spells (the one body clock, A6, Y9); an arm useless
   stopping a denizen's chisel; the time of a denizen's spell spent while it's interrupted (Y8).
 
@@ -98,13 +105,15 @@ its area's rows narrowed, below.)
 
 **Done: stage 2's things and robbery** (branch things1, 2026-11-23; built/2026-11-23-things1.md):
 - **The act table's rows** hold, put, takeout, don, doff, strip, give, drag, rob, filch (games/dq0w/acts.txt), read by
-  both sides: the character's handling times (things.c's catalogue code, part 48's hold and doff, part 35's strip),
+  both sides, with three exceptions (the critique of 2026-11-24): the rob and filch rows (and dig's AC_DUG) are read by
+  no code; the give row is read on the denizens' side alone (the character's gift is a literal 20); and P_FILCH is
+  written into the minds. Read by both: the character's handling times (things.c's catalogue code, part 48's hold and doff, part 35's strip),
   an actor's (wthings.c, wtake.c, wfetch.c), the drag's time, noise and test (wdrag.c, every actor's: E_NOISE or E_DEN
   DE_DRAGS, the referee's P_FORCE by the actor's own sheet).
 - **A denizen's things by the character's rules** (wthings.c, parts 114-116; I_ROB's errands FE_STOW, FE_PUT, FE_DON,
   FE_DOFF, FE_DRAG, FE_HAND): put away (coins its purse, a family's carrier, its pack), put in or on a thing within
   reach (o_fits, the character's), worn (a wearable alone), taken off, a heavy thing shoved or dragged, a thing handed
-  to another by the receiver's take rule; each its row's time and its reach (part 56's, every actor's), told as seen
+  to another by the receiver's take rule (re-implemented in wthings.c's `hand`, not called; FE_GIFT skips it); each its row's time and its reach (part 56's, every actor's), told as seen
   (E_BEAT:things).  C6, G-9, G-10, G-11, C11's receiver.
 - **Its take** (wtake.c): sees things in open containers lying in its sight at any depth (H17), takes them out by the
   take rule (its time the takeout row's and a level each; a worn kind from a body the strip row's more: looting), and
@@ -112,7 +121,7 @@ its area's rows narrowed, below.)
   longer IR_FULL while its pack or purse has room.  An ally's fetch the same, with its time (it had none).
 - **The character robs and filches** (G-18): "rob the bandit" (one senseless beside it: what it holds but a light lit,
   and its coins), "filch from the bandit", "steal from" (one asleep, or senseless: its coins alone, the character's
-  Stealth against its hearing, caught it wakes); the minds' SW_ROB, SW_FILCH (dq0d's robbed), the world's FE_ROBBED
+  Legerdemain, P_FILCH, since things2, against its hearing, caught it wakes); the minds' SW_ROB, SW_FILCH (dq0d's robbed), the world's FE_ROBBED
   (wthings.c's den_robbed: the character's carry), each thing told.
 - **Parity tests:** dq0thingact (put, takeout, don, drag), dq0dentakein (a take from an open sack), dq0pcrob.
 - **Left in this area:** see built/2026-11-23-things1.md's open questions (C10's takings carried home, the grope for
