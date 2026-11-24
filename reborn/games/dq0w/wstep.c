@@ -37,7 +37,9 @@
 
 extern unsigned char fring;                     /* (wfight.c's: the fights' ring's next) */
 extern unsigned char bclimb[NACTORS];           /* (wbody.c's: each body's climb out of its pit so far, feet) */
-#define LOUD_HURT       3                       /* (A cry of pain: a word's, the house's) */
+#define LOUD_HURT       5                       /* (A cry of pain: a fight's din, wfight.c's LOUD_FIGHT (a word's 3 till
+                                                **   2026-11-23, when it was told at any distance; heard now as any noise
+                                                **   is, a word's never carried past the background: step2's, the house's) */
 #define CHOKE_T         300                     /* (A gas trap's: senseless half a minute a point of its power, wtrap.c's) */
 
 /* C's trap on square x, y of body bd's stratum that's set and set off underfoot (not a door's): into q, 1; or 0 */

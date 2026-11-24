@@ -86,6 +86,17 @@ its area's rows narrowed, below.)
   for an actor, G3: the step's branch); a denizen tiring by its spells (the one body clock, A6, Y9); an arm useless
   stopping a denizen's chisel; the time of a denizen's spell spent while it's interrupted (Y8).
 
+**Done: stage 2's step, its second round** (branch step2, 2026-11-23; built/2026-11-23-step2.md; step1's before it):
+- **Each faction knows its own traps** (the user's): a trap's knowers (world.h's struct trap's know, a bit a faction,
+  TRAP_STATE's elev); a lair of folk placed marks its chunk's floor traps its faction's (I_KIT KT_TRAPS, wstep.c's
+  own_traps); a denizen's notice or search find its faction's alone, the character's its own (TS_HIDDEN); the minds'
+  walks go round what their faction knows (wet_ok, ktrap.s).
+- **A winged body over a floor's traps, pits and spilt oil** (hz.s, the minds' WA_WINGS); a door's trap still its.
+- **A wound from a trap or a fall tests courage** as a blow's (RS_HARM's heart and shy, both referees).
+- **A cry of pain heard as any noise** (E_DEN DE_CRY, DE_CRYCUT: the UI's hearing rule).
+- **The climb out of a pit ends with a step's time** for the character too (dq0w.c's climb_round_on).
+- **Parity tests:** dq0trapknow, dq0trapheart, dq0pitstep.
+
 **Done: stage 2's things and robbery** (branch things1, 2026-11-23; built/2026-11-23-things1.md):
 - **The act table's rows** hold, put, takeout, don, doff, strip, give, drag, rob, filch (games/dq0w/acts.txt), read by
   both sides: the character's handling times (things.c's catalogue code, part 48's hold and doff, part 35's strip),
