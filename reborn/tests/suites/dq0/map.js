@@ -1316,7 +1316,8 @@ module.exports = {
         'dq0 -p t -s 17 -c /ram/c.hm -T', 'd', 'quit', 'dq0 -p t -s 2 -c /ram/c.hm -T', 'd', 'quit', 'echo $status']) },
       start(m) {
         m.runs = [];
-        const scan = () => { const r = []; for (let c = 0; c < 24; c++) { const b = m.dq0.bank(5 + Math.floor(c / 3)); if (!b) continue; const o = (c % 3) * 0xAA0; if (b[o + 0xA8C] & 0x40) r.push(b[o + 0xA8B]); } m.runs.push(r); };
+        const [WRUNS, WLEV0, NROOMS] = require('../../../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, wruns)', 'offsetof (struct chunk, wlev)', 'NROOMS']), WLEV = WLEV0 + NROOMS;   // (Its passages' running bit, their water: world.h's, the build's)
+        const scan = () => { const r = []; for (let c = 0; c < 24; c++) { const b = m.dq0.bank(5 + Math.floor(c / 3)); if (!b) continue; const o = (c % 3) * 0xAA0; if (b[o + WRUNS] & 0x40) r.push(b[o + WLEV]); } m.runs.push(r); };
         dq0Poke(m, [{ g: 1, line: 'quit', n: 1, call: scan }, { g: 2, line: 'quit', n: 1, call: scan }]);
       },
       expect: ['% echo $status'],

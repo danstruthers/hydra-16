@@ -106,6 +106,7 @@ static void __fastcall__ change_put (struct chunk* k, unsigned char lx, unsigned
     signed char elev, unsigned char link)
 {
     struct room* r;
+    struct trap* t;
     unsigned char i;
 
     if (link == STOCKED || link == DUG) {       /* (Its things put down: the record only a mark; a hole dug part way:
@@ -131,10 +132,11 @@ static void __fastcall__ change_put (struct chunk* k, unsigned char lx, unsigned
         k->aat = elev;
         return;
     }
-    if (link == TRAP_STATE) {                   /* (A trap's: tile it) */
-        for (i = 0; i < k->ntraps; ++i) {
-            if (k->trap[i].x == lx && k->trap[i].y == ly) {
-                k->trap[i].state = tile;
+    if (link == TRAP_STATE) {                   /* (A trap's: tile it, elev its knowers) */
+        for (i = k->ntraps, t = k->trap; i; --i, ++t) {
+            if (t->x == lx && t->y == ly) {
+                t->state = tile;
+                t->know = elev;
             }
         }
         return;

@@ -306,6 +306,11 @@ static unsigned char __fastcall__ has_role (const struct msg* m)
 
 void __fastcall__ s_den_other (const struct msg* m)
 {
+    if (I_KIT_DRAW (*m) == KT_TRAPS) {
+        own_traps (m);                          /* (A lair of folk placed: its chunk's traps its faction's, part 122's,
+                                                **   2026-11-23) */
+        return;
+    }
     if (I_KIT_DRAW (*m) & KT_DIG) {
         look_more (0, LM_ROPES);                /* (Part 79 read in, the first time: things.c's) */
         den_dig (m);                            /* (Not things: a tunneller's dig, part 79's, slice 4.11's) */

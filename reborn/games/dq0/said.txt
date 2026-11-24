@@ -541,6 +541,8 @@ DEN.closes          +"{arg?\n{@closes}.|something closing in}"
 DEN.aims            +"{arg?\n{@aims}.|a bowstring drawn}"
 DEN.digfound        +"{arg?\n{Actor} strike{s} a door behind the facing.|a scraping in rock}"
 DEN.drags           +"{arg?\n{Actor} strain{s} at something heavy.|something heavy scraping}"
+DEN.cry             +"{arg?|a cry of pain}"
+DEN.crycut          +"{arg?|a cry of pain cut short}"
 
 # ==== The UI's own kinds (dq0.h's UK_*, msgs.def's: no world's event, the UI's words of its own; narration as data,
 # stage 4, 2026-11-12).  The UI fills one and has it worded, as an outcome event is
@@ -690,7 +692,7 @@ FIGHT.stumble           "{@blow}{f1?|{actor?, but stumble|, but stumbles}}{f2?|{
                         "|; you stumble}}.{@after}"
 FIGHT.advantage         "{@blow}{actor?; {dfolk?it slips|they slip} inside your guard|; you see an opening}.{@after}"
 FIGHT.any               "{@blow}.{@after}"
-FIGHT.hurt              "{au?{@A} is hurt by the {instr}: {w6}.{@after}|You hear a cry of pain{adead?.| that stops short.}}"
+FIGHT.hurt              "{au?{@A} is hurt by the {instr}: {w6}.{@after}|}"
 
 # ---- A refusal (UK_NO: no, U_*, A_*: refuse.c's say_no, the one wording of its meaning; text the thing's name as it's
 # put in, "a door", "The giant rat"; a name not to be said, its nameless form, the next).  (refuse.c's said before,

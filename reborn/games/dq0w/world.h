@@ -167,7 +167,7 @@ enum { PM_WOOD, PM_IRONBOUND, PM_IRON, PM_STONE };
 #define PORTAL_STATE    0xFE                    /* (A change record's link for a portal's state: tile its state,
                                                 **   elev its parts) */
 #define PORTAL_HARM     0xFB                    /* (And for the harm it's taken: tile it) */
-#define TRAP_STATE      0xFC                    /* (And for a trap's: tile its state) */
+#define TRAP_STATE      0xFC                    /* (And for a trap's: tile its state, elev its knowers) */
 #define STOCKED         0xFD                    /* (And a chunk's things put down: x, y its first square; the record
                                                 **   only a mark) */
 #define DUG             0xFA                    /* (And a hole dug part way, its square's: tile its half-feet dug,
@@ -200,7 +200,16 @@ struct trap {
     unsigned char   power;                      /* A pit's depth in feet; else how hard it strikes, its impact more
                                                 **   (1-9: the referee's points; half that the steps worse it is to
                                                 **   dodge or resist, to make out and to disarm) */
+    unsigned char   know;                       /* The factions that know of it, a bit each (TRAP_KB: the hub's actor's
+                                                **   faction, 0-7, 0 those of none), the denizens' (the user's,
+                                                **   2026-11-23: each faction knows its own traps, set as its lair's
+                                                **   placed, the world's own_traps; another's once one of it finds it,
+                                                **   noticed or searched for); the character's TS_HIDDEN, its own.  One
+                                                **   in plain sight (hide 0) known to all.  Kept with its state
+                                                **   (TRAP_STATE's elev, the knowers only ever added to) */
 };
+#define TRAP_KB(f)      (1 << ((f) & 7))        /* (Faction f's bit in a trap's know) */
+#define TRAP_KNOWN(t, kb)   (!(t)->hide || ((t)->know & (kb)))  /* (Trap t known to those of knowers' bit kb) */
 enum { TK_PIT, TK_COVERED, TK_SPIKED, TK_DEADFALL, TK_BLADE, TK_DARTS, TK_GAS, TK_ALARM };   /* A pit (open,
                                                 **   covered, spiked and covered), a deadfall, a scything blade,
                                                 **   darts or needles, gas, an alarm */

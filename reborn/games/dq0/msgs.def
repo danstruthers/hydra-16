@@ -316,8 +316,10 @@ RS_ATTACK:thing c run; w2(flags) shy:0; x[0-3] resist[]; x[4-7] when
                 #   it takes, by aspect; a part struck: hurt enough to stop, its band, out for; stopped short; a weapon
                 #   broken, the hands that let go)
 RS_ATTACK:rise  -> result outcome@O_MISS; a down            # (O_RISE: 1 still down)
-RS_HARM         a cause@HC_FALL; b ground@GR_FLOOR; c how; w1 feet  -> result caught; b band; w2 out; x effects
-                # (HC_FALL: how HF_*.  A hold grabbed; the worst wound's band; the tenths it's out for)
+RS_HARM         a cause@HC_FALL; b ground@GR_FLOOR; c how; w1 feet; x[0] heart; x[1] shy  -> result caught; b band; c af; w2 out; grade left; x effects
+                # (HC_FALL: how HF_*.  A hold grabbed; the worst wound's band; the tenths it's out for.  At an actor:
+                #   its heart and shy as a blow's (RS_ATTACK's), its courage tested as it's wounded, left FF_FLEES,
+                #   af AF_CAUTIOUS, AF_BLEEDING, 2026-11-23)
 RS_HARM:strike  a cause@HC_FALL; b aspect@AS_BLUNT; c dice; w1 impact; w2 zone@Z_MID     # (HC_STRIKE, HC_FIRE: d6s)
 RS_HARM:struck  a cause@HC_FALL; c part; w1 impact; w2 run  -> result stop; b band; w2 out; x effects
                 # (HC_STRUCK: the striker's own part; the blow's number in a run; hurt enough to stop)

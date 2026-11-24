@@ -10,7 +10,7 @@
 ** acts.h's FIND_STEPS).  Its reach the character's: three squares it sees (by its eyes, the line from them; by light
 ** where it stands, or its darkvision, as the character's search by sight is), or by touch in the dark its own square
 ** and the eight round it.  What it finds is found for every one, as the character's finds are: a hidden door a door, a
-** trap known (no knowers of their own yet: ONE-PATH.md's open question), a thing uncovered (no longer hidden: its take
+** door's trap known; a trap underfoot known to its faction alone (the user's, 2026-11-23), a thing uncovered (no longer hidden: its take
 ** to take it, wtake.c's), one hiding out of hiding (the character's hiding ended, told: HD_FOUND's).
 **
 ** Part 94's (dq0w.c's hiding oneself, its room), through its stub den_search (bank.s's): wtake.c's (a robber come to
@@ -72,6 +72,8 @@ void __fastcall__ s_den_search (unsigned char dark)
     wk.fy = bd.y;
     wk.what = PA_SEARCH;
     wk.pd = touch ? SF_ABOUT | SF_TOUCH : SF_ABOUT;
+    wk.armed = TRAP_KB (bd.faction);            /* (Its faction's bit in a trap's knowers: the floor's traps it finds
+                                                **   its faction's to know, wtrap.c's search, 2026-11-23) */
     ln_eye = LN_EYES (bd.pos);
     for (b = 0; !touch && b <= 2 * SEARCH_R; ++b) {   /* (The squares about it it sees, by the line from its eyes) */
         for (a = 0; a <= 2 * SEARCH_R; ++a) {
@@ -82,7 +84,7 @@ void __fastcall__ s_den_search (unsigned char dark)
         }
     }
     srch_p = P_SEARCH;
-    traps ();                                   /* (The hidden doors and traps: wtrap.c's search, by its sheet) */
+    tsearch ();                                 /* (The hidden doors and traps: wtsrch.c's search, by its sheet) */
     if (wk.res & 1) {
         den_saw = 1;                            /* (A door found: the world to look about again) */
     }

@@ -113,7 +113,7 @@ dq0Life.C = name => { const v = dq0Hub().C[name]; if (v === undefined) throw new
 // of themes ({ name, text }) its { status, said, data, words }
 const THEMEC = themes => require('../../tools/themec.js').compile(themes);
 function builtChunks(m, sn) {
-  const out = [], C = { room: 8, zone: 56, portal: 219, tile: 443, elev: 1467, pceil: 2555 };
+  const out = [], C = { room: 8, zone: 56, portal: 219, tile: 443, elev: 1467, pceil: CH_PCEIL };
   for (const b of cacheBanks(m)) {
     for (let k = 0; k < 3; k++) {
       const o = k * 0xAA0, nr = b[o + 5], nz = b[o + 6], np = b[o + C.portal - 1];
@@ -142,7 +142,12 @@ function builtChunks(m, sn) {
 // records, 8 of 79 bytes, then the slots, 8 bytes each: used, sn, cx, cy, stamp), each slot used holding a chunk of sn
 // read from its cache bank (world.h's CACHE_BANK: 5 + k / 3, CHUNK_AT: (k % 3) * 0xAA0), its 2,707 bytes (struct
 // chunk's), by its place: { 'cx,cy': bytes }; the hub's banks the shared ones from its bank 0's (its magic "DQ") on
-const CHUNK_BYTES = 2707, CHUNK_KEPT = 2556, WORLD_BANK_N = 21, CSLOT_AT = 8 * 79;
+// (struct chunk's traps and what's after them, world.h's by the build's layout: a trap's knowers, 2026-11-23, made it 8
+// bytes, pceil and kept the later; CH_NTRAPS its count, CH_TRAP the first, TR_SIZE each, TR_STATE, TR_HIDE in it)
+const [CH_NTRAPS, CH_TRAP, TR_SIZE, TR_STATE, TR_HIDE, CH_PCEIL, CHUNK_KEPT, CHUNK_BYTES] = require('../../sim/lib/hubown.js').evaluate([
+  'offsetof (struct chunk, ntraps)', 'offsetof (struct chunk, trap)', 'sizeof (struct trap)', 'offsetof (struct trap, state)',
+  'offsetof (struct trap, hide)', 'offsetof (struct chunk, pceil)', 'offsetof (struct chunk, kept)', 'sizeof (struct chunk)']);
+const WORLD_BANK_N = 21, CSLOT_AT = 8 * 79;
 function liveChunks(m, sn) {
   const banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b);
   const hub = keys.find(k => banks[k][0] === 0x44 && banks[k][1] === 0x51), out = {};
@@ -207,7 +212,7 @@ function dq0Made(t, m) {
 }
 // Two chunks' bytes compared (struct chunk's: rooms from 8, 8 bytes each, their flags the 5th; openings 188-217, their
 // count at 7; portals from 219, 14 bytes each, their state, parts, harm the 4th, 9th and 14th; squares from 443, their
-// floors from 1467; traps from 2513, 7 bytes each, their state the 5th): the squares' seen, visible and drawn bits
+// floors from 1467; traps from CH_TRAP, TR_SIZE bytes each, their state at TR_STATE): the squares' seen, visible and drawn bits
 // (T_SEEN, T_VIS, T_DRAWN) and the rooms' visited (R_VISITED) aside, each byte that differs by what it is: portal, trap, square,
 // opening, or other (none should be: the maker's own)
 function chunkDiff(a, b) {
@@ -219,7 +224,7 @@ function chunkDiff(a, b) {
     if (i >= 8 && i < 56 && (i - 8) % 8 === 4) { x &= ~1; y &= ~1; }
     if (x === y) continue;
     if (i >= 219 && i < 443 && [3, 8, 13].includes((i - 219) % 14)) d.portal++;
-    else if (i >= 2513 && i < 2555 && (i - 2513) % 7 === 4) d.trap++;
+    else if (i >= CH_TRAP && i < CH_TRAP + 6 * TR_SIZE && (i - CH_TRAP) % TR_SIZE === TR_STATE) d.trap++;
     else if (i >= 443 && i < 1467) d.square++;
     else if (i >= 1467 && i < 2491 && (a[i - 1024] & 0x0F) !== (b[i - 1024] & 0x0F)) d.square++;   // (A changed square's floor)
     else if (i === 7 || (i >= 188 && i < 218)) d.opening++;
@@ -358,8 +363,8 @@ function dq0Repeats(name, out) {
   }
   return found;
 }
-// The hub's live chunks (world.h's struct chunk: portals from 219, 14 bytes each, their count at 218; traps from 2513,
-// 7 bytes each, their count at 2512), each with two portals or two traps on one square: 'sn:cx,cy: 2 portals at x,y'
+// The hub's live chunks (world.h's struct chunk: portals from 219, 14 bytes each, their count at 218; traps from CH_TRAP,
+// TR_SIZE bytes each, their count at CH_NTRAPS), each with two portals or two traps on one square: 'sn:cx,cy: 2 portals at x,y'
 function dq0Doubled(m) {
   const banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b), f = [];
   const hub = keys.find(k => banks[k][0] === 0x44 && banks[k][1] === 0x51);
@@ -369,7 +374,7 @@ function dq0Doubled(m) {
     const s = CSLOT_AT + k * 8, b = banks[hub + 5 + Math.floor(k / 3)];
     if (!w[s] || !b) continue;
     const o = (k % 3) * 0xAA0, at = w[s + 1] + ':' + (w[s + 2] | w[s + 3] << 8) + ',' + (w[s + 4] | w[s + 5] << 8);
-    for (const [what, n, from, size, max] of [['portals', b[o + 218], 219, 14, 16], ['traps', b[o + 2512], 2513, 7, 6]]) {
+    for (const [what, n, from, size, max] of [['portals', b[o + 218], 219, 14, 16], ['traps', b[o + CH_NTRAPS], CH_TRAP, TR_SIZE, 6]]) {
       const on = new Map();
       for (let i = 0; i < n && i < max; i++) { const p = o + from + i * size, sq = b[p] + ',' + b[p + 1]; on.set(sq, (on.get(sq) || 0) + 1); }
       for (const [sq, c] of on) if (c > 1) f.push(at + ': ' + c + ' ' + what + ' at ' + sq);
@@ -595,7 +600,7 @@ function dq0Poke(m, pokes) {
                 const sl = CSLOT_AT + c * 8, b = m.dq0.bank(5 + Math.floor(c / 3));
                 if (!w[sl] || !b) continue;
                 const o = (c % 3) * 0xAA0;
-                if (p.traps.hide !== undefined) for (let i = 0; i < b[o + 2512] && i < 6; i++) if (b[o + 2513 + i * 7 + 4] & 0x20) b[o + 2513 + i * 7 + 5] = p.traps.hide;
+                if (p.traps.hide !== undefined) for (let i = 0; i < b[o + CH_NTRAPS] && i < 6; i++) if (b[o + CH_TRAP + i * TR_SIZE + TR_STATE] & 0x20) b[o + CH_TRAP + i * TR_SIZE + TR_HIDE] = p.traps.hide;
                 const px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8, st = stratumRec(m, h[L.pcSn]), ox = px - (st ? st.x0 : 0), oy = py - (st ? st.y0 : 0);
                 if (p.traps.plates && w[sl + 1] === h[L.pcSn] && (w[sl + 2] | w[sl + 3] << 8) === ox >> 5 && (w[sl + 4] | w[sl + 5] << 8) === oy >> 5) {
                   const lx = ox & 31, ly = oy & 31;
@@ -603,10 +608,10 @@ function dq0Poke(m, pokes) {
                     const a = o + 8 + r * 8, rx = b[a], ry = b[a + 1], rw = b[a + 2], rh = b[a + 3];
                     if (lx < rx || ly < ry || lx >= rx + rw || ly >= ry + rh) continue;
                     for (let j = 0; j < rh; j += 3) for (let i = 0; i < rw; i += 3) {
-                      const n = b[o + 2512], q = o + 2513 + n * 7;
+                      const n = b[o + CH_NTRAPS], q = o + CH_TRAP + n * TR_SIZE;
                       if (n >= 6 || (lx - rx >> 0) - i >= 0 && lx - rx - i < 3 && ly - ry - j >= 0 && ly - ry - j < 3) continue;
-                      b[q] = rx + i + 1; b[q + 1] = ry + j + 1; b[q + 2] = K.TK_ALARM; b[q + 3] = K.TT_PLATE; b[q + 4] = 0x20; b[q + 5] = p.traps.hide || 0; b[q + 6] = 1;
-                      b[o + 2512] = n + 1;
+                      b[q] = rx + i + 1; b[q + 1] = ry + j + 1; b[q + 2] = K.TK_ALARM; b[q + 3] = K.TT_PLATE; b[q + 4] = 0x20; b[q + 5] = p.traps.hide || 0; b[q + 6] = 1; for (let z = 7; z < TR_SIZE; z++) b[q + z] = 0;
+                      b[o + CH_NTRAPS] = n + 1;
                     }
                   }
                   for (let i = 0; i < b[o + 218]; i++) b[o + 219 + i * 14 + 3] |= 0x20;

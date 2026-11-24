@@ -2478,7 +2478,7 @@ module.exports = {
         // (reach1's, 2026-11-20: a step's words told as it's done, so typed as the pack comes off is typed in the round after the
         //  step before's words, the torch laid down (LATER cycles on: a line typed just between two steps, a flight's held to
         //  the reach's end, the report's); the crowbar's, as the fight takes its round after "You reach for your backpack.")
-        const a = m.acia, cpu = m.cpu, step = cpu.step.bind(cpu), LATER = 3000000;   // (3M cycles: in the pack's round; 1M and
+        const a = m.acia, cpu = m.cpu, step = cpu.step.bind(cpu), LATER = 3100000;   // (3.1M cycles since step2, 2026-11-23: at 3M the typed flee's echo met the status line's redraw, "f" and "lee" apart, the layout's timing; in the pack's round; 1M and
                                                 // 2M land as the step changes, the flight held past the inventory, the report's)
         let due = 0, text = '';
         cpu.step = v => { step(v); if (due && cpu.cyc >= due) { due = 0; a.rxQueue.unshift(...text); a.promptFrom = -1; } };
