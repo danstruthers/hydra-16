@@ -520,7 +520,7 @@ row, and keeps similar verbs' timings consistent.
 
 ### 3.4 Freeing a hand
 
-The user's rule (2026-11-03, DECISIONS.md:1748): put the other things away "in their appropriate place" before taking
+The user's rule (2026-11-03, DECISIONS.md:1705): put the other things away "in their appropriate place" before taking
 a tool in hand. A torch goes into a sconce or is laid on the ground; a sword goes into its scabbard.
 
 The rule says where each thing goes. The code (things.c:1170-1180's s_room) frees whichever hand is "next in the way",
@@ -679,7 +679,7 @@ Lore and scourge goals come only from rumours, which are on hold.
   dungeon's way out is open from the start.
 - Nothing tells the goal again: no command repeats the story, and a resumed game doesn't (theme.c:105-108).
 
-The user has said the game "is about solving a puzzle" (DECISIONS.md:1720).
+The user has said the game "is about solving a puzzle" (DECISIONS.md:1677).
 
 ### 5.2 Size without guidance
 
@@ -850,7 +850,7 @@ The build's "under 512 free" warning lists about 90 items every time, so nobody 
 - dq0answer's per-command budgets, "brought down ... to just over what's measured ... never raised"
   (dq0.js:844-857);
 - dq0traces' step: 1.8M, then 1.9M, 1.95M and 1.92M, with no player target behind it;
-- the start's budget, raised to 245M, though the user said the start's time isn't a concern (DECISIONS.md:3197).
+- the start's budget, raised to 245M, though the user said the start's time isn't a concern (built/2026-11-11-decisions-archive.md:64).
 
 **Layout noise.** The measured costs move with memory layout alone: "the world's BSS moved six bytes and dq0traces'
 step cost 1,922,509". So the ratchets fail on layout noise, and code is shaped to pass them:
@@ -870,7 +870,7 @@ step cost 1,922,509". So the ratchets fail on layout noise, and code is shaped t
 - **The turns pace is meant to be the same game whatever the tasks' timing** (hub.h:1098).
   - Yet twelve tests on the accepted noise list run only at the turns pace, and still differ between builds.
   - Two races (dq0reachstop, dq0tiring) were accepted rather than fixed; the user accepted that on 2026-11-11
-    (DECISIONS.md:3799-3802).
+    (built/2026-11-11-decisions-archive.md:673-676).
   - A lockstep would end both: the UI takes the next line only when the world, the minds and the senses are idle. Then
     every turns-pace test can be held to an exact transcript, and the soak's -same check can run across builds.
 - **The real-time paces are not reproducible, by design.**

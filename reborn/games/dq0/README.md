@@ -192,7 +192,7 @@ Each task is started with the hub's segment, its role and the lib folder (hub.c:
   keeps its state across calls.
   - The tasks that read the chunks (the world, the minds and the senses) end their own zero page at $43
     (dq0w/dq0w.cfg:18, dq0d/dq0d.cfg:15, dq0p/dq0p.cfg:20). One more zero-page variable of theirs fails their link:
-    that is the check (DECISIONS.md:5778-5780).
+    that is the check (built/2026-11-14-decisions-archive.md:199-201).
   - The UI, the maker and the HarnMaster referee keep $22-$7F.
 
 ### The referee
@@ -535,7 +535,7 @@ The narration is data: every sentence the player reads should be a row of said.t
    - **The world's sentence about things:** the world writes SAY_AT, the SA_* code | 0x80, the names and SAY_SEP into
      things_text (items.h:554-562; dq0w/wcloth.c's told). There are 158 SA codes, so a new one is past 127 and must
      be written with SAY_AT2, as dq0w/wdrag.c does.
-4. **Mind the room.** The rows live in overlays 28, 29 and 30 (1, 6 and 3,223 bytes free, DECISIONS.md:6456), and a
+4. **Mind the room.** The rows live in overlays 28, 29 and 30 (1, 6 and 3,223 bytes free, built/2026-11-16-decisions-archive.md:118), and a
    kind's rows must sit whole in one bank, the first with room (saidgen.js:391-399). So a row added to a kind in 28
    or 29 moves the whole kind to a later bank, which said_b reads more slowly: that once pushed dq0answer over its
    time budget.
@@ -564,7 +564,7 @@ The worked example is the whetstone (9ef6bf42, 2026-11-02); for a weapon, the ma
    for a holder without rows, or rows without a holder.
 5. **Words**: nothing to add; the kind's name is its noun (the match: dq0w/things.c:397-423; plurals: said.c:186-192).
    **The catch:** a name word the parser already knows is copied into the kinds' bank, and that bank is full: two
-   more words ("side" and "bottom") were 10 bytes over (DECISIONS.md:6613-6614). A new name word the parser knows
+   more words ("side" and "bottom") were 10 bytes over (built/2026-11-16-decisions-archive.md:276-277). A new name word the parser knows
    fails the build.
 6. **The referee (HarnMaster)**: a melee weapon is a row in dq0harn/weapons.h keyed by its tool key, above the torch,
    stick, club, staff and shield rows (gear.c finds those by position), and its Weapon Quality in gear.c's wqs[] at
