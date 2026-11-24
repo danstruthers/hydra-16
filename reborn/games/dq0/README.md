@@ -30,6 +30,8 @@ given beside it.
 - **HOUSE.md**: the house rules: every rule the game makes where HarnMaster is silent, with its numbers and where the
   code applies it. Its last two sections are what's decided but not built, and what's open.
 - **RULESETS.md**: the referee's interface (rs.h) and the two rulesets.
+- **WORLD-MODEL.md**: the rules of the world, drawn from the user's decisions. Read it first: a behaviour it settles is
+  decided, not asked.
 - **DECISIONS.md**: the user's decisions, dated. Before 2026-11-17 it also took the "as built, for review" reports;
   new ones go in built/, one file a branch.
 - **ENGINE-CRITIQUE.md, COMMANDS-CRITIQUE.md, GAME-CRITIQUE.md**: critiques and plans. GAME-CRITIQUE.md's section 10

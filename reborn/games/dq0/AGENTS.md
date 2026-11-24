@@ -5,8 +5,17 @@ is built; OPEN.md holds the open questions; ../../tests/TESTING.md says which te
 
 ## Scope
 
-- **Change only what your task says.** A behaviour change the task and the user's decisions don't cover needs the
-  user's decision: don't build it; put it in OPEN.md (and in your report) as an open question.
+- **Read WORLD-MODEL.md first.** It holds the rules of the world, drawn from the user's decisions.
+- **Decide what the rules settle.** A behaviour settled by a rule in WORLD-MODEL.md, by a recorded case of the same
+  class, or by the book is yours to decide. Build it at the full generality the rule implies (for every actor, P2),
+  and list it in your report's **Assumptions**, citing the rule. For a number, use the book's figure, or else a
+  realistic house figure marked tunable.
+- **Ask only** when two rules conflict, when no rule covers a matter of taste, puzzle, balance or presentation
+  (WORLD-MODEL.md section 9), when a change is irreversible or wide, or when it would reverse a recorded decision. Then
+  put it in OPEN.md and your report, and ask for the rule, not the case: the rule you would add or change, and
+  the cases it settles.
+- **Engineering and tests are yours** (WORLD-MODEL.md section 8). Report the choice and its numbers; don't ask.
+- **Change only what your task says**, apart from what the rules above make yours.
 - **Work in your own worktree and branch.** Several agents build at once on one machine; stay out of the files another
   branch owns, and keep edits to shared files small.
 - **Shared tables: add at the end.** In said.txt, msgs.def and records.def, add rows at the end of a section rather
@@ -36,15 +45,14 @@ is built; OPEN.md holds the open questions; ../../tests/TESTING.md says which te
   - 2,048 bytes in every other task;
   - 512 bytes in themec and themegen.
 
-  At a46c5c38: dq0 3,043; dq0w 2,285; dq0d 2,988; dq0p 4,430; dq0m 3,852; dq0harn 2,067. The build fails a task
-  below its floor (build.js's FLOORS). The UI's main RAM is the tightest room in the game (43 bytes over its floor at
-  a46c5c38): put new code in overlays and swapped parts, not there.
+  At ae74df17: dq0 3,263; dq0w 2,326; dq0d 2,406; dq0p 2,290; dq0m 2,202; dq0harn 2,182. The build fails a task
+  below its floor (build.js's FLOORS). The UI's main RAM is the tightest room in the game: put new code in overlays
+  and swapped parts, not there.
 - **The headroom rule** (the user's, 2026-11-17): a part or bank under 64 bytes free, or a measure past 90% of its
   target, has its room or time won back before the next feature. The build lists the first (its "headroom" lines),
   the suite the second (after the tests).
 - **Overlays** are 8K banks in each task's .cfg, with bank.s's OVMAX (OVBANKS in the world) and ovbank[]. The three
-  must agree. In the world, dq0w/make.js checks them; elsewhere nothing does (the UI's dq0.h still declares
-  ovbank[27] against bank.s's OVMAX of 30).
+  must agree. In the world, dq0w/make.js checks them; elsewhere nothing does.
 - **The fill rule.** An overlay followed by another in the same file needs `fill = yes, fillval = $FF` in its .cfg
   line. Without it the banks after it load shifted. Only the world's make.js checks this, so check it in the others.
 - **Swapped parts** are set in parts.txt, `#@SWn` lines and `#pragma code-name (push, "SWnCODE")`, and packed by
@@ -82,7 +90,7 @@ is built; OPEN.md holds the open questions; ../../tests/TESTING.md says which te
 
 ## Tests
 
-- `node sim/test.js` runs all 460 tests, ten minutes or more alone, longer while others build: run it in the
+- `node sim/test.js` runs every test (542 at ae74df17), ten minutes or more alone, longer while others build: run it in the
   background. `node sim/test.js NAME ...` runs a few; `--near AREA` and `--changed REF` choose them
   (../../tests/TESTING.md).
 - Run the relevant tests while you work, and the whole suite at the end. All must pass, the trends apart.
@@ -106,6 +114,7 @@ is built; OPEN.md holds the open questions; ../../tests/TESTING.md says which te
 - **DECISIONS.md holds the user's decisions only**, dated, in the user's words where there are some. Don't add
   anything else to it.
 - **"As built" reports** go in games/dq0/built/<date>-<name>.md, one file a branch: what was built and why, what the
-  player sees differently, the room and timing before and after, and the open questions.
-- **Open questions** go in OPEN.md, under their area. When the user answers one, the answer goes in DECISIONS.md and
+  player sees differently, the room and timing before and after, the **Assumptions** (each behaviour decided by a
+  rule in WORLD-MODEL.md, with the rule), and the open questions.
+- **Open questions** go in OPEN.md, under their area, and only those the Scope rules say to ask. When the user answers one, the answer goes in DECISIONS.md and
   the question leaves OPEN.md.
