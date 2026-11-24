@@ -33,10 +33,11 @@ given beside it.
 - **WORLD-MODEL.md**: the rules of the world, drawn from the user's decisions. Read it first: a behaviour it settles is
   decided, not asked.
 - **DECISIONS.md**: the user's decisions, dated. Before 2026-11-17 it also took the "as built, for review" reports;
-  new ones go in built/, one file a branch.
+  those are now in built/<date>-decisions-archive.md, and new ones go in built/, one file a branch.
 - **ENGINE-CRITIQUE.md, COMMANDS-CRITIQUE.md, GAME-CRITIQUE.md**: critiques and plans. GAME-CRITIQUE.md's section 10
   is the current order of work.
-- **OPEN.md**: every open question, in one place.
+- **OPEN.md**: the questions still the user's, asked as rules, and an engineering backlog.
+- **ASSUMED.md**: open questions a rule of WORLD-MODEL.md answers, with the answers taken; the user may veto them.
 - **AGENTS.md**: the working rules for anyone, person or agent, who changes the game.
 - **../../tests/TESTING.md**: the test tiers and how to pick the tests a change can affect.
 

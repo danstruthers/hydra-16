@@ -3714,7 +3714,7 @@ through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rate
   facing.", or heard as its digging); the character's own find is handled as a search's. A builder's work reads the
   act table too (its hang and wallup rows: a spell, an hour). *Not yet*: a denizen tiring by its spells (the one body
   clock, to come), the roof's harm on a denizen (the world's harm for an actor, the step's branch), a denizen digging
-  down (no mind yet wants a shaft: OPEN.md).
+  down (when a mind wants a shaft: ASSUMED.md's G1).
 - **A creature's test** *(the house's, both referees)*: the bestiary has no Mining, so a creature's dig is its
   Strength times five (HarnMaster's, its sheet's: as its Stealth is its Agility times five), its injuries' penalty off
   it, on dice of its own (moving quietly's: the game's other rolls as they were); the null ruleset's flat odds.
