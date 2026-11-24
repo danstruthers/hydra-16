@@ -263,7 +263,7 @@ unsigned char __fastcall__ s_history (unsigned long seed)
     if (resumed) {
         return Q.theme;                         /* (Its world its save's) */
     }
-    if (sv.magic != SAVE_MAGIC || sv.version != SAVE_VER) {
+    if (!SAVE_IS (sv)) {
         sv.world[0] = 0;                        /* (Its world: -w's; else the last dungeon's save's, a dungeon after the
                                                 **   first, or a new life's in its folder; none, the default) */
     }
@@ -418,7 +418,7 @@ static void load_pc (void)
 ** (dq0p's), the referee's pc.hm, the world's change records (changes.dat and the regions' rg*.dat: world.h's) and
 ** the maker's seen.dat */
 
-/* SAVE_VER, life.h's: (2: the items' records with their size, the portals' make; 3, the
+/* SAVE_FORMAT, life.h's (SAVE_VER, all of it till 2026-11-24, then its hand part): (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -493,7 +493,7 @@ static unsigned char __fastcall__ life (unsigned char given)
     if (savedir) {
         life_dir ();
         if ((fd = open (save_path ("game.dat"), O_RDONLY)) >= 0) {
-            if (read (fd, &sv, sizeof sv) == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER && !sv.q.done) {
+            if (read (fd, &sv, sizeof sv) == sizeof sv && SAVE_IS (sv) && !sv.q.done) {
                 n = LF_GOING;
             }
             close (fd);
@@ -590,7 +590,8 @@ void s_save_game (void)
         HUB->wreq.state = REQ_FREE;
     }
     sv.magic = SAVE_MAGIC;
-    sv.version = SAVE_VER;
+    sv.version = (unsigned char) SAVE_VER;
+    sv.ver_hi = SAVE_VER >> 8;
     sv.pace = pace | hard << 7;                 /* (Hard mode, its top bit: slice 4.4's) */
     sv.seed = HUB->seed;
     sv.outcome = Q.solved ? LO_SOLVED : Q.done == END_LEFT ? LO_LEFT : Q.done ? LO_DIED : LO_NONE;

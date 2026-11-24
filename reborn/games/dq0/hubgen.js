@@ -21,7 +21,8 @@
 // The values come from cc65 itself: a C file of `const long vN = (long) (EXPR);`, one for each name, field and size,
 // compiled once and read back from its assembly (an expression cc65 can't make a constant of, a #define of code, is
 // left out: its line dropped and the file compiled again).  Made again only when an input changes (its key: the
-// headers', the catalogue's and this file's hash).
+// headers', the catalogue's, SAVED's structs' and this file's hash).
+//   - obj/gen/dq0ver.h: HUB_VERSION and SAVE_VER, hashes of the layouts (versions, below), not numbers bumped by hand.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -508,6 +509,88 @@ function msgsMake(forms, named, defs, names) {
   return { text, forms: res, outcome };
 }
 
+// ---- The versions (obj/gen/dq0ver.h, the build's: names1, 2026-11-24; both were bumped by hand, and two branches bumped
+// them alike).  HUB_VERSION (hub.h's: the tasks attach to a hub of their own build's) 1 to 255, a hash of everything
+// dq0hub.json says, the versions apart; SAVE_VER (life.h's: a save of another version isn't carried on) 1 to 65,535, a
+// hash of SAVE_FORMAT (life.h's, the hand part: a change the layouts don't show) and SAVED's layouts.
+// SAVED: what reaches the save's files (game.dat, world.dat, items.dat, the region files, dens.dat, seen.dat,
+// names.dat, the clues', the traces', kit.dat): layout, the structs these headers lay out (dq0hub.json's S: each
+// field's offset and size; "NAME:first-last" those fields alone, offsets from the first's); counts, the numbers that
+// size a saved array; source, a task's own structs, each by its declaration's text (its file's, the comments and the
+// spacing apart: what's in it, not what its dimensions' names come to).  A struct written to a save that isn't here
+// fails the build (savedChecked)
+const SAVED = {
+  layout: ['save', 'quest', 'wsave', 'stratum', 'item', 'change', 'vfh', 'kept', 'tname', 'talias', 'clue', 'uirec:low-cap'],
+  counts: ['TNAMES', 'NITEMS', 'ITEM_BANKS', 'MAXSTRATA', 'NLET'],
+  source: [['dq0d/dq0d.c', 'den'], ['dq0d/dq0d.c', 'lair'], ['dq0m/changes.c', 'seen'], ['dq0w/outfit.h', 'kitrec'],
+    ['dq0w/things.h', 'igroup'], ['dq0w/things.h', 'ires'], ['dq0w/tstore.h', 'trace'], ['dq0w/tstore.h', 'tgroup']],
+};
+const VER_H = path.join(GEN, 'dq0ver.h'), VERSIONS = ['HUB_VERSION', 'SAVE_VER', 'SAVE_FORMAT'];
+const sha = x => parseInt(crypto.createHash('sha1').update(typeof x === 'string' ? x : JSON.stringify(x)).digest('hex').slice(0, 8), 16);
+
+// SAVED's source structs' texts, each its declaration's, its comments and spacing taken out
+function savedSources() {
+  return SAVED.source.map(([f, s]) => {
+    const t = clean(fs.readFileSync(path.join(DQ0, '..', f), 'latin1')), m = new RegExp('\\bstruct\\s+' + s + '\\s*\\{').exec(t);
+    if (!m) throw new Error('hubgen: SAVED\'s struct ' + s + ' not in games/' + f + ' (moved? hubgen.js\'s SAVED)');
+    let d = 1, i = m.index + m[0].length;
+    for (; i < t.length && d; i++) if (t[i] === '{') d++; else if (t[i] === '}') d--;
+    return s + ' ' + t.slice(m.index, i).replace(/\s+/g, ' ');
+  });
+}
+
+// The versions, from a dq0hub.json's C, enums, S and records (theirs less the versions) and SAVED's sources
+function versions(j, sources) {
+  const C = Object.fromEntries(Object.entries(j.C).filter(([n]) => !VERSIONS.includes(n)));
+  const hub = 1 + sha({ C, enums: j.enums, S: j.S, records: j.records }) % 255;
+  const lay = SAVED.layout.map(spec => {
+    const [s, span] = spec.split(':'), S = j.S[s];
+    if (!S) throw new Error('hubgen: SAVED\'s struct ' + s + ' not laid out (hubgen.js\'s SAVED)');
+    if (!span) return [s, S];
+    const [a, b] = span.split('-'), fa = S.f[a], fb = S.f[b];
+    if (!fa || !fb) throw new Error('hubgen: SAVED\'s ' + spec + ': no field ' + (fa ? b : a));
+    return [spec, Object.entries(S.f).filter(([, f]) => f[0] >= fa[0] && f[0] < fb[0] + fb[1]).map(([p, f]) => [p, f[0] - fa[0], ...f.slice(1)])];
+  });
+  const counts = SAVED.counts.map(n => { if (j.C[n] === undefined) throw new Error('hubgen: SAVED\'s ' + n + ': no such number'); return [n, j.C[n]]; });
+  if (j.C.SAVE_FORMAT === undefined) throw new Error('hubgen: no SAVE_FORMAT (life.h)');
+  const save = 1 + sha({ format: j.C.SAVE_FORMAT, lay, counts, sources }) % 65535;
+  return { HUB_VERSION: hub, SAVE_VER: save };
+}
+
+// dq0ver.h's text
+function verHeader(v) {
+  return ['/* dq0ver.h - made by the build (games/dq0/hubgen.js) from the headers\' layouts: not to be edited.  HUB_VERSION (hub.h\'s)',
+    '** a hash of every number and layout of the hub\'s headers; SAVE_VER (life.h\'s) one of SAVE_FORMAT and the saved structs\'',
+    '** layouts (hubgen.js\'s SAVED) */', '#ifndef _DQ0VER_H', '#define _DQ0VER_H',
+    '#define HUB_VERSION     ' + v.HUB_VERSION, '#define SAVE_VER        ' + v.SAVE_VER + 'u', '#endif', ''].join('\r\n');
+}
+
+// Every struct a dq0 task writes whole to a file (write (fd, &x, sizeof x), write (fd, b, n * sizeof (struct x)): x a
+// struct's, declared in its file) in SAVED (its layout's, or its source's), so a change in one's layout is a new
+// SAVE_VER; or in NOT_SAVED, written but not to the save.  OUT: the structs found
+const NOT_SAVED = new Set([]);
+function savedChecked() {
+  const known = new Set([...SAVED.layout.map(s => s.split(':')[0]), ...SAVED.source.map(([, s]) => s), ...NOT_SAVED]), faults = [], found = new Set();
+  for (const t of ['dq0', 'dq0w', 'dq0d', 'dq0m', 'dq0p', 'dq0harn']) {
+    const dir = path.join(DQ0, '..', t);
+    for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.c'))) {
+      const text = clean(fs.readFileSync(path.join(dir, f), 'latin1'));
+      for (const m of text.matchAll(/\bwrite\s*\(\s*\w+\s*,\s*&?\s*(\w+)\s*,\s*([^;]*?)\)\s*;/g)) {
+        let s = (/sizeof\s*\(\s*struct\s+(\w+)\s*\)/.exec(m[2]) || [])[1];
+        if (!s && new RegExp('sizeof\\s*\\(?\\s*' + m[1] + '\\b').test(m[2])) {
+          const d = new RegExp('\\bstruct\\s+(\\w+)\\s+\\**\\s*' + m[1] + '\\s*[;=\\[]').exec(text);
+          s = d && d[1];
+        }
+        if (!s) continue;
+        found.add(s);
+        if (!known.has(s)) faults.push(t + '/' + f + ': struct ' + s + ' written (' + m[0].replace(/\s+/g, ' ') + ')');
+      }
+    }
+  }
+  if (faults.length) throw new Error('hubgen: a struct written to a file that SAVE_VER doesn\'t follow (hubgen.js\'s SAVED, or NOT_SAVED):\n  ' + faults.join('\n  '));
+  return found;
+}
+
 // ---- The build's step: OPT { cc65: { bin, flags: [cc65's -t, --cpu, its include folders] }, say }.  OUT: what it
 // made (load ()'s)
 function generate(opt) {
@@ -519,11 +602,15 @@ function generate(opt) {
   const msgsText = fs.readFileSync(MSGS, 'latin1');
   const recs = recordsRead(fs.readFileSync(RECORDS, 'latin1')), recText = recordsHeader(recs);   // (The records' header:
   if (!fs.existsSync(REC_H) || fs.readFileSync(REC_H, 'latin1') !== recText) fs.writeFileSync(REC_H, recText, 'latin1');   //   before cc65)
-  for (const t of [...raw, act, msgsText, recText, fs.readFileSync(__filename, 'latin1')]) hash.update(t);
-  const key = hash.digest('hex'), incs = Object.keys(ASM).map(k => path.join(GEN, 'dq0hub_' + k + '.inc'));
-  try {
+  const sources = savedSources();                       // (SAVED's own structs: SAVE_VER's, in the key)
+  savedChecked();
+  if (!fs.existsSync(VER_H)) fs.writeFileSync(VER_H, verHeader({ HUB_VERSION: 0, SAVE_VER: 0 }), 'latin1');   // (Till the
+  for (const t of [...raw, act, msgsText, recText, ...sources, fs.readFileSync(__filename, 'latin1')]) hash.update(t);   //   layouts are
+  const key = hash.digest('hex'), incs = Object.keys(ASM).map(k => path.join(GEN, 'dq0hub_' + k + '.inc'));   //   known: hub.h
+  try {                                                                                                      //   includes it)
     const j = JSON.parse(fs.readFileSync(JSON_OUT, 'utf8'));
-    if (j.key === key && [...incs, MSG_H, REC_H].every(f => fs.existsSync(f))) return (LOADED = wrap(j));
+    if (j.key === key && [...incs, MSG_H, REC_H].every(f => fs.existsSync(f)) && fs.readFileSync(VER_H, 'latin1') === verHeader(j.C))
+      return (LOADED = wrap(j));
   } catch (e) { /* (Made again) */ }
   const texts = [...raw.map(clean), clean(act), clean(recText)];
   const { defs, enums } = scan(texts), named = structs(texts);
@@ -571,6 +658,9 @@ function generate(opt) {
     if (!S[r.name]) throw new Error('hubgen: records.def: struct ' + r.name + ' not laid out');   //   fields' types, for
     j.records[r.name] = { file: r.file, magic: r.magic, version: r.version, fields: r.fields.map(f => [f.name, f.type]) };   //   the decoder)
   }
+  Object.assign(C, versions(j, sources));               // (The versions, from the layouts: dq0ver.h, hub.h's and
+  if (!fs.existsSync(VER_H) || fs.readFileSync(VER_H, 'latin1') !== verHeader(C))   //   life.h's; dq0hub.json's C, the
+    fs.writeFileSync(VER_H, verHeader(C), 'latin1');                                 //   assembly's)
   let H = wrap(j);
   // (The payloads by offset, for the tests' decoders: each kind's form, KIND or KIND:FORM, its fields [name, offset,
   // bytes, lo, hi, enum]; each slot's width held to cc65's)

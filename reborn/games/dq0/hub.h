@@ -26,56 +26,11 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     56                    /* (2: the command parser's role and request, dq0c; 3: its meaning;
-                                                **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
-                                                **   parser's command, struct cmd, and P_THROW's ability; 6: the
-                                                **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
-                                                **   I_TAKE's walk alone, TE_ENGAGED, TE_FAR; 8: I_LOOK, V_LOOKED,
-                                                **   LK_WAY, a look one way's record, WAY_SEEN; 9: fighting on,
-                                                **   LT_FIGHT, the long task's foe, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE,
-                                                **   I_STOP's w1; 10: the lights burning, pc_fuel, pc_left, TE_LOW,
-                                                **   TE_OUT; the items' records' fuel; the traces, I_TRACE, I_TROD,
-                                                **   I_SWEPT, V_TRACED, the traces' journal, TJ_AT, the UI bank's
-                                                **   tread, dsense's nose; the places kept lit, KEPT_AT; 11: the
-                                                **   things' requests' selectors and count, IO_SHUT, IO_INSIDE,
-                                                **   PA_LOCK, the selectors SL_OTHER ... SL_EMPTY, the items'
-                                                **   records' shut, WB_CROSS; 12: the traces' stays, TS_STAY, a
-                                                **   trail's strength; 13: the timed work's long tasks, LT_STUDY ... LT_HIDE, the long
-                                                **   task's what, TE_BEGUN, TE_ASK_SHORT, I_WAIT's kind, a battering's beats, WB_TELLS ...;
-                                                **   14: the player's shortcuts, ALIAS_AT; 15: the dark's walks and the search's forms, WB_FEEL ...
-                                                **   WB_SHORT, FA_*, GA_SAID, GOING_BOLD, SF_*, PA_SEARCH's b and w1, IO_SEEK, STEP_FEELS, rs.h's
-                                                **   P_STUMBLE; 16: the hands and limbs, pc_shand, the blows' x[2],
-                                                **   items.h's IH_*, IO_SWAP, rs.h's summary's limbs and limp, P_RISE,
-                                                **   C_LAME ..., I_RISE, the actors' move, arm and dropped, RS_REARM,
-                                                **   O_REARM; 17: the bearings, pc_skew, pc_lost; 18: the map making,
-                                                **   pc_chart, pc_map; 19: the bearings' E_BEARING; 20: the kinds in
-                                                **   a bank of their own, KIND_BANK, NKINDS 128; 21: the outfits, gear,
-                                                **   GE_OLD, rs.h's RS_OUTFIT; 22: the denizens' gear, I_KIT, the
-                                                **   actors' did, hx, hy, hsn, WB_DRAWS; 23: their belongings, I_KIT's
-                                                **   a and b, I_ROB's x[2], the actors' agear; 24: the long durations,
-                                                **   I_WAIT's a (WA_MIN, WA_SLEEP), E_TIME's b, the long task's mins;
-                                                **   25: the sound and the air, pc_noise, pc_mask, pc_bg, air_h,
-                                                **   air_s, dsense's noise and cost, the sound layer's grid, SND_*,
-                                                **   I_RISE's w1 a body's position; 26: an actor's body, BD_*;
-                                                **   27: morale, an actor's heart, lead, power, mood, serve and
-                                                **   contact, AM_*, rs.h's summary's lead, RS_ATTACK's x[0]; 28, its bonds,
-                                                **   AM_LEADS, DE_RALLY: succession; 30, the auto-target range,
-                                                **   pc_auto, WS_AUTO; a stray's FW_STRAY; 31: an ally's errands and gifts,
-                                                **   the sway's item, ix, iy and actor, SW_GIVE, I_ROB's a (FE_*),
-                                                **   TE_FETCHED; 32: ui_giving; 33, hunger and thirst,
-                                                **   the water, pc_hunger ... pc_swat, WB_WATER ... WB_DOUSED; 34, the air and
-                                                **   the afflictions, pc_air ... pc_dose; 35, the time of day believed,
-                                                **   tb, BRG_SKY, rs.h's TIME_STEPS and timesense; 36, the
-                                                **   tunnellers, I_KIT's KT_DIG, DG_*, dig_t, DE_DIG, DE_DUG, AG_PICK,
-                                                **   AG_SPADE, DO_DIG; 37, the market's: the sway's word2 its coins
-                                                **   (SW_COIN ...), SW_BUY ... SW_ENTERTAIN, OR_OPEN ..., SR_WONT ...;
-                                                **   39, a room searched whole: SF_ROOM, SF_TRAPS, WB_SEARCH, RSW_*, RC_*,
-                                                **   IOS_*; 53, LT_DIP, SL_SPENT, SL_FULL, the UI bank's ix (what's
-                                                **   carried: the UI's first words), a thing told apart, AW_*; 54, the letters: the UI bank's low and
-                                                **   cap, struct cix's let, NLET, LT_REC, struct ucap, CW_*;
-                                                **   55, the denizens' capitals: struct sden's den; 56, the bodies: the
-                                                **   character actor 0, bodies[] and pc, its fields' old names laid over
-                                                **   it, ONE-PATH.md's stage 1) */
+#include "dq0ver.h"                             /* HUB_VERSION, the build's (games/dq0/hubgen.js): 1 to 255, a hash of
+                                                **   every number and layout these headers give (obj/gen/dq0hub.json's,
+                                                **   the versions apart), so every task built from them agrees and one
+                                                **   built from others doesn't attach (hub_attach); nothing to bump by
+                                                **   hand (it was, 2 to 56 till 2026-11-24: git log has what each was) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
