@@ -185,51 +185,8 @@ ovcall:
 .endmacro
 
 ; The overlays' functions (dq0.h has them with their overlays)
-            OVFN        grow_built, 1
-            OVFN        join, 2
-            OVFN        crossings, 2
-            OVFN        slants, 2           ; (The caves' diagonal ways: 2026-10-31, overlay 3's room; 2's, 1's room, 2026-11-17)
-            OVFN        grow_caves, 3
-            OVFN        cavern, 8           ; (The great caverns: slice 4.10's, caves.c's in overlay 8, 3's room)
-            OVFN        wet_chunk, 6        ; (The water: slice 4.9's, caves.c's in overlay 6, 3's room)
-            OVFN        air_pocket, 3       ; (The air: 2026-10-31)
-            OVFN        water_plan, 5
-            OVFN        stock, 7
-            OVFN        plan_stratum, 4
-            OVFN        links_down, 4
-            OVFN        chunk_edges, 4
-            OVFN        place_pieces, 5
-            OVFN        fixtures, 5
-            OVFN        pl_get, 2
-            OVFN        pl_put, 2
-            OVFN        pl_new, 2
-            OVFN        pl_flush, 2
-            OVFN        layer_at, 7
-            OVFN        uses, 7
-            OVFN        coin_mint, 5
-            OVFN        sky, 9              ; (What shows the sky: sky.c, 2026-11-03)
-            OVFN        place, 9            ; (The placers and the dice's keys: place.c, 2026-11-11)
-            OVFN        dkey, 9
-            OVFN        rstream, 9
-            OVFN        defended, 9
-            OVFN        put_window, 5       ; (The placers' hooks: fixtures.c's, stock.c's)
-            OVFN        put_portc, 5
-            OVFN        put_trap, 5
-            OVFN        put_dtrap, 5
-            OVFN        put_mark, 7
-            OVFN        ahead_at, 10        ; (The chunks made ahead: ahead.c, 2026-11-17)
-            OVFN        ahead_found, 10
-            OVFN        ahead_drop, 10
-            OVFN        ahead_none, 10
-            OVFN        ahead_init, 10
-            OVFN        ahead_room, 10
-            OVFN        ahead_next, 10
-            OVFN        ahead_still, 10
-            OVFN        ahead_mine, 10
-            OVFN        ahead_take, 10
-            OVFN        ahead_keep, 10
-            OVFN        grow, 10            ; (make.c's: a chunk grown, the main RAM's room)
-            OVFN        detail, 10          ; (plan.c's: a region's details, overlay 4's room)
+            .include    "ovfn.inc"          ; (Each o_NAME an overlay's C defines and something calls: its stub, NAME,
+                                            ;   the build's: ../dq0/parts.js's ovstubs)
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0m.cfg's SWAP, a part at a time, copied
 ; there from overlay 6's bank as it's called)

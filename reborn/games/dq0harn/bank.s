@@ -184,65 +184,8 @@ ovcall:
 .endmacro
 
 ; The overlays' functions (dq0harn.h has them with their overlays)
-            OVFN        sheet, 1
-            OVFN        outfit_of, 6        ; (Overlay 1's room, slice 4.4's; 7's, 2026-11-18)
-            OVFN        brief, 1
-            OVFN        state, 1
-            OVFN        spent, 9            ; (Overlay 1's room, the dressings': 2026-11-10)
-            OVFN        noticing, 1
-            OVFN        harm, 1
-            OVFN        wound, 1
-            OVFN        wound_words, 1
-            OVFN        unrouse, 10         ; (Its file read: none of them, load_pc's: overlay 4's room, felled1)
-            OVFN        rouse, 10           ; (A senseless one's shock rolls as their time comes: felled1, 2026-11-21)
-            OVFN        knocked_out, 10     ; (Overlay 1's room, the rounds out worked quicker: ref1, 2026-11-20)
-            OVFN        fight, 2
-            OVFN        pc_armour, 3
-            OVFN        den_equip, 3
-            OVFN        den_side, 3
-            OVFN        den_armour, 3
-            OVFN        pc_side, 3
-            OVFN        pc_defence, 3
-            OVFN        pc_wield, 3
-            OVFN        limbs_of, 5
-            OVFN        cond_of, 5
-            OVFN        rise_of, 5
-            OVFN        hit_thing, 5
-            OVFN        health_of, 5
-            OVFN        fumbled, 5
-            OVFN        wq_of, 3            ; (A weapon's quality: the book's Weapon Damage, 2026-11-03)
-            OVFN        w_damage, 3
-            OVFN        wound_drops, 5
-            OVFN        test_sk, 5
-            OVFN        draw_test, 5
-            OVFN        bearing_of, 5
-            OVFN        beast_flags, 2
-            OVFN        body_req, 6
-            OVFN        envenom, 8          ; (The afflictions, 2026-10-31: afflict.c)
-            OVFN        body_state, 8
-            OVFN        aff_time, 8
-            OVFN        body_line, 8
-            OVFN        shot, 7             ; (A missile's attack, slice 4.7's: missile.c, heal.c's overlay)
-            OVFN        want, 7             ; (Hunger and thirst, slice 4.9's: want.c)
-            OVFN        tire, 7             ; (A creature's fatigue, 2026-10-31: tire.c)
-            OVFN        worked, 7
-            OVFN        want_fl, 7
-            OVFN        skill_used, 7       ; (Skills by use, the load's free pounds, slice 4.4's: skills.c)
-            OVFN        develop, 7
-            OVFN        skill_line, 7       ; (Its growth's lines in its file: 2026-11-03)
-            OVFN        set_load, 7
-            OVFN        equip, 7            ; (The main RAM's room, D13's)
-            OVFN        heft, 7             ; (A weapon's version, D13's: skills.c)
-            OVFN        grip, 9             ; (Grappling: grapple.c, 2026-11-09)
-            OVFN        treat, 9            ; (First aid, the dressings: dress.c, 2026-11-10, heal.c's room)
-            OVFN        dress_line, 9       ; (Their file's line: part 1's room)
-            OVFN        effect, 10          ; (Its calls of fight.c's)
-            OVFN        strike, 10
-            OVFN        dealt, 10           ; (Overlay 10's, 2026-11-19: overlay 2's room)
-            OVFN        aspect_of, 10
-            OVFN        harn_fall, 10       ; (HarnMaster's falls, the library's: hfall.c, the main RAM's room)
-            OVFN        test, 10            ; (A purpose's test: dq0harn.c's, the main RAM's room, speed12)
-            OVFN        hbeast, 10          ; (A creature's harm, a fall's, a trap's: step1, 2026-11-23)
+            .include    "ovfn.inc"          ; (Each o_NAME an overlay's C defines and something calls: its stub, NAME,
+                                            ;   the build's: ../dq0/parts.js's ovstubs)
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0harn.cfg's SWAP, a part at a time,
 ; copied there from overlay 4's bank as it's called)
