@@ -11,22 +11,24 @@
 //   - the link's config, OBJDIR/NAME.cfg: the task's own NAME.cfg with its #@SWMEMORY and #@SWSEGMENTS lines made the
 //     parts' (each part's run area SWn, its code and read-only data loaded into its overlay bank, run there); a line
 //     #@SW n puts part n's segments there instead, its image's place among its bank's others (the UI's dq0.cfg).
-// parts.txt: a line a part, "N OV what it's for", in order from 1; "stub NAME N" a stub the C doesn't show; # begins a
-// comment.
+// parts.txt: a line a part, "N OV what it's for", in order from 1; "stub NAME N" a stub the C doesn't show; "spare N"
+// each bank's room kept free, if its parts allow (without, SPARE: 64, the headroom rule's); # begins a comment.
 'use strict';
 const fs = require('fs');
 const path = require('path');
 
-// A task's parts.txt: { parts: [{ n, ov, what }], extra: [{ name, part }] }
+// A task's parts.txt: { parts: [{ n, ov, what }], extra: [{ name, part }], spare: bytes, or undefined }
 function read(file) {
   const parts = [], extra = [];
+  let spare;
   fs.readFileSync(file, 'latin1').split(/\r?\n/).forEach((l, i) => {
     const t = l.replace(/#.*/, '').trim();
     let m;
     if (!t) return;
     if ((m = /^stub\s+(\w+)\s+(\d+)$/.exec(t))) extra.push({ name: m[1], part: +m[2] });
+    else if ((m = /^spare\s+(\d+)$/.exec(t))) spare = +m[1];
     else if ((m = /^(\d+)\s+(\d+)(?:\s+(.*))?$/.exec(t))) parts.push({ n: +m[1], ov: +m[2], what: m[3] || '' });
-    else throw new Error(file + ' line ' + (i + 1) + ': not a part ("N OV what") nor a stub ("stub NAME N"): ' + l);
+    else throw new Error(file + ' line ' + (i + 1) + ': not a part ("N OV what"), a stub ("stub NAME N") nor a spare ("spare N"): ' + l);
   });
   const seen = new Set();
   parts.forEach((p, i) => {                             // (swap.inc's records: in order from 1, an index each)
@@ -34,7 +36,7 @@ function read(file) {
     seen.add(p.n);
   });
   for (const s of extra) if (!seen.has(s.part)) throw new Error(file + ': stub ' + s.name + '\'s part ' + s.part + ' not a part of its');
-  return { parts, extra };
+  return { parts, extra, spare };
 }
 
 // The stubs wanted: compiled are the C's assembly (OBJDIR's .s of each .c), own the folder's own assembly (less
@@ -119,7 +121,7 @@ function banks(text, list, sizes, file, spare = 0) {
     if (!/^SW\d+(CODE|RODATA)$/.test(s) && room.has(+k)) room.set(+k, room.get(+k) - (sizes.get(s) || 0));
   for (const [, k] of block('SEGMENTS').matchAll(/^\s*SWTAB:\s*load\s*=\s*OV(\d+)\b/gm))   // (The parts' records, bank.s's: not in
     if (!sizes.has('SWTAB') && room.has(+k)) room.set(+k, room.get(+k) - 5 * list.parts.length);   //   the objects' sizes; 5 bytes a part, swap.inc's SWPART)
-  const keep = new Map([...room].map(([k, x]) => [k, closed.has(k) ? 0 : Math.min(typeof spare === 'number' ? spare : spare.has(k) ? spare.get(k) : SPARE, Math.max(0, x))]));   // (spare:
+  const keep = new Map([...room].map(([k, x]) => [k, closed.has(k) ? 0 : Math.min(typeof spare === 'number' ? spare : spare.has(k) ? spare.get(k) : spareOf(list), Math.max(0, x))]));   // (spare:
   for (const [k, x] of keep) room.set(k, room.get(k) - x);                                        //   each bank's kept free)
   const base = new Map(room);                           // (Each bank's room before any part's in it)
   const size = p => (sizes.get('SW' + p.n + 'CODE') || 0) + (sizes.get('SW' + p.n + 'RODATA') || 0);
@@ -199,22 +201,24 @@ function banks(text, list, sizes, file, spare = 0) {
 // spread over every bank, not piled in a few: 64 in each if the task's parts fit so; else the bank whose keeping it
 // stops them fitting keeps the most that lets them, each other 64 (a bank whose own code leaves less keeps what it
 // has, no part put in it); else (two such) the most each bank alike.  spare: banks()'s, Map bank -> bytes or a
-// number.  OUT: banks()'s, its spare that
-const SPARE = 64;
+// number.  OUT: banks()'s, its spare that.  (A task's parts.txt may keep more in each, its "spare N": the world's 128,
+// room8, 2026-11-24, the next round's room spread over its banks)
+const SPARE = 64, spareOf = list => list.spare !== undefined ? list.spare : SPARE;
 function spread(text, list, sizes, file) {
+  const S = spareOf(list);
   const tryIt = s => { try { return banks(text, list, sizes, file, s); } catch (e) { return null; } };
   const most = (lo, hi, at) => { let r = null; while (lo < hi) { const mid = (lo + hi + 1) >> 1, m = tryIt(at(mid)); if (m) { lo = mid; r = m; } else hi = mid - 1; } return r || tryIt(at(lo)); };
-  let r = tryIt(SPARE);
+  let r = tryIt(S);
   if (r) return r;
   const fail = banks(text, list, sizes, file, 0);       // (Its throw the task's own, if none kept won't do)
-  r = mended(fail, list, sizes, SPARE);                 // (The best fit's packing mended, its parts moved or swapped
-  if (r) return r;                                      //   till each bank keeps SPARE: speed9, 2026-11-22)
+  r = mended(fail, list, sizes, S);                     // (The best fit's packing mended, its parts moved or swapped
+  if (r) return r;                                      //   till each bank keeps S: speed9, 2026-11-22)
   const ks =[...new Set([...text.matchAll(/^\s*OV(\d+):/gm)].map(m => +m[1]))];
-  for (const k of ks) {                                // (One bank the reason: the most it can keep, the rest 64)
+  for (const k of ks) {                                // (One bank the reason: the most it can keep, the rest S)
     const at = s => new Map([[k, s]]);
-    if (tryIt(at(0))) return most(0, SPARE - 1, at);
+    if (tryIt(at(0))) return most(0, S - 1, at);
   }
-  return most(0, SPARE - 1, s => s) || fail;
+  return most(0, S - 1, s => s) || fail;
 }
 
 // banks()'s packing (none kept) mended so each bank keeps SPARE free (one whose room without parts is less, what it
@@ -301,7 +305,7 @@ function make({ dir, objdir, compiled, own, sizes }) {
   fs.writeFileSync(path.join(objdir, 'parts.inc'), inc(task, put, stubs));
   fs.writeFileSync(out, cfg(text, put, src));
   fs.writeFileSync(path.join(objdir, 'placed.txt'), placed.moved.map(m => m.n + ' ' + m.from + ' ' + m.to + ' ' + m.size + '\n').join(''));
-  fs.writeFileSync(path.join(objdir, 'spare.txt'), (typeof placed.spare === 'number' ? placed.spare : [...placed.spare].map(([k, s]) => 'OV' + k + ' ' + s + ', the rest ' + SPARE).join('')) + '\n');   // (Each bank's room kept free: the room table's)
+  fs.writeFileSync(path.join(objdir, 'spare.txt'), (typeof placed.spare === 'number' ? placed.spare : [...placed.spare].map(([k, s]) => 'OV' + k + ' ' + s + ', the rest ' + spareOf(list)).join('')) + '\n');   // (Each bank's room kept free: the room table's)
   return out;
 }
 
