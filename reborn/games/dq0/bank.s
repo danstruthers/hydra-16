@@ -165,7 +165,7 @@ ovcall:
             .include    "ovfn.inc"          ; (Each o_NAME an overlay's C defines and something calls: its stub, NAME,
                                             ;   the build's: ../dq0/parts.js's ovstubs)
 
-; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)
+; ---- The swapped parts (swap.inc; dq0.cfg's SW_name: each in the main RAM's area as it's called)
 
             .include    "swap.inc"
 
